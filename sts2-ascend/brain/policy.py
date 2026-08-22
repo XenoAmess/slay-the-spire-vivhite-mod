@@ -99,6 +99,7 @@ class Policy:
         self.know = know
         self.rng = rng or random.Random()
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
+        self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
@@ -253,15 +254,26 @@ class Policy:
             good_cards += 1
 
         boss_row = (m.get("boss_node") or {}).get("row")
+        if boss_row is None:
+            # 地图载荷缺 boss_node 键（第 27~28 局实证：投影把 Boss 当普通节点扣 45 点先验，
+            # F16 实际 77% 血被报成"预计进 Boss 血量 35%"）——退化用图中最深行推断 Boss 行
+            rows = sorted({int(n.get("row", 0)) for n in m.get("nodes", [])})
+            if len(rows) >= 2:
+                boss_row = rows[-1]
         graph = {(n["row"], n["col"]): n for n in m.get("nodes", [])}
 
         def node_factor(nt: str, gnode: dict | None, hpp: float):
             """单节点权重修正系数与说明。"""
             if nt == "Elite":
-                if hpp < pol["elite_min_hp_pct"]:
-                    return 0.1, f"血量{hpp:.0%}<{pol['elite_min_hp_pct']:.0%}，规避精英"
                 if good_cards < pol.get("elite_min_deck_cards", 4):
                     return 0.1, f"非基础牌仅{good_cards}张(<{pol.get('elite_min_deck_cards', 4)})，卡组强度不足规避精英"
+                hard = float(pol["elite_min_hp_pct"])
+                soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
+                if hpp < soft:
+                    return 0.1, f"血量{hpp:.0%}<{soft:.0%}，规避精英"
+                if hpp < hard:
+                    # 灰区不再一刀切：第 28 局 F12 以 78% 血与 0.80 硬线差 2% 而错过精英
+                    return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
                 return 1.0, "血量与卡组达标，精英奖励价值高"
             if nt == "RestSite":
                 if hpp < pol["rest_urgent_hp_pct"]:
@@ -376,6 +388,7 @@ class Policy:
         if self._cur_turn != round_no:
             self._cur_turn = round_no
             self._failed_this_turn = set()
+            self._saw_playable_this_turn = False
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
             self._potion_tried = set()
@@ -393,17 +406,26 @@ class Policy:
 
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
         # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
+        # 实测：回合过渡窗口可达 5 秒（空手→能量回满→手牌逐张浮现→play_card 开放），
+        # 因此用"本回合是否进入过可出牌状态"区分两种情形：
+        #   - 已进入过 → 现在没的出 = 真的出完了，短确认即结束回合（不拖节奏）
+        #   - 从未进入 → 还在抽牌/开局触发动画里，必须长耐心等待（15 次≈9 秒）
         if not can_play:
             if can_end:
                 self._end_stall += 1
-                if self._end_stall < 4:
-                    hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
-                    return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/4，{hand_desc}）", wait=0.6)
-                # 连续多次确认无牌可出（如无能量），才允许结束回合
+                hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
+                if self._saw_playable_this_turn:
+                    if self._end_stall < 2:
+                        return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
+                    self._end_stall = 0
+                    return Decision("end_turn", {}, "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合", wait=1.2)
+                if self._end_stall < 15:
+                    return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
                 self._end_stall = 0
-                return Decision("end_turn", {}, "战斗：确认无牌可出（可能无能量），结束回合", wait=1.2)
+                return Decision("end_turn", {}, "战斗：手牌长时间未就绪（疑似全部不可用），结束回合", wait=1.2)
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
+        self._saw_playable_this_turn = True
 
         # potion check (elite/boss or lethal danger)
         hard = ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player") or block_gap >= my_hp
@@ -497,23 +519,32 @@ class Policy:
                 eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
                 score = eff * atk_damp + pol["kill_bonus"] * len(killable)
+                if lethal and not killable:
+                    # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
+                    score *= 0.35
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 return score, None, f"群体伤害≈{eff}"
-            best_t, best_s, why = None, -1.0, ""
+            best_t, best_s, why, best_kill = None, -1.0, "", False
             for e in enemies:
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 s = (eff + threat * 0.3) * atk_damp
-                if eff >= e.get("current_hp", 9999):
+                killed = eff >= e.get("current_hp", 9999)
+                if killed:
                     s += pol["kill_bonus"]  # 击杀直接消灭意图来源，不吃衰减
                     why = f"可击杀{e['name']}"
                 if best_t is None or s > best_s:
                     valid = card.get("valid_target_indices") or []
                     if not card.get("requires_target") or not valid or e.get("index") in valid:
-                        best_t, best_s = e.get("index"), s
+                        best_t, best_s, best_kill = e.get("index"), s, killed
                         if not why:
                             why = f"单体伤害≈{eff}"
+            # 致死回合里"打不死人的大伤害"是自杀牌：
+            # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
+            # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
+            if lethal and not best_kill:
+                best_s *= 0.35
             if cost == 0:
                 best_s += pol["free_card_bonus"]
             return best_s, best_t, why
