@@ -115,6 +115,59 @@ def main() -> int:
     p2 = float(re.search(r"进 Boss 血量 ?(\d+)%", map_reason(25)).group(1))
     assert p2 < p1, f"幕数缩放失效: F5 预计 {p1}% / F25 预计 {p2}%"
 
+    # 3d) 致死回合：打不死人的大伤害攻击必须让位于格挡
+    # （第 28 局 Boss 战终盘：1 血面对 11 点意图，重锤 42 伤抢走全部能量，无甲吃刀阵亡）
+    lethal_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 9,
+        "combat": {"player": {"current_hp": 1, "max_hp": 80, "block": 0, "energy": 3},
+                   "hand": [
+                       {"index": 0, "card_id": "BLUDGEON", "name": "重锤", "playable": True,
+                        "energy_cost": 3, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 42}]},
+                       {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                        "energy_cost": 1, "requires_target": False,
+                        "rules_text": "获得5点格挡",
+                        "dynamic_values": [{"name": "Block", "current_value": 5}]}],
+                   "enemies": [{"index": 0, "enemy_id": "VANTOM", "name": "墨影幻灵", "current_hp": 60,
+                                "max_hp": 250, "block": 0, "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 11}]}]},
+        "run": {"current_hp": 1, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+    }
+    d_lethal = pol.decide(lethal_state, ctx)
+    assert d_lethal.action == "play_card" and d_lethal.params.get("card_index") == 1, \
+        f"致死回合必须优先格挡: {d_lethal.params}（{d_lethal.reason}）"
+
+    # 3e) 精英灰区：血量介于 soft~hard 之间谨慎可行，低于 soft 才一票规避
+    # （第 28 局 F12 以 78% 血撞上 0.80 硬线差 2% 错过精英）
+    def elite_reason(hp_now: int) -> str:
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0, "node_type": "Elite"}], "nodes": []},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 200, "floor": 10,
+                      "deck": [{"card_id": f"CARD_{i}"} for i in range(6)]}}
+        return pol.decide(st, ctx).reason
+
+    old_elite = know.policy["elite_min_hp_pct"]
+    know.policy["elite_min_hp_pct"] = 0.72
+    know.policy["elite_soft_hp_pct"] = 0.62
+    r_grey = elite_reason(56)   # 70%：灰区
+    r_low = elite_reason(40)    # 50%：<soft 规避
+    assert "规避精英" not in r_grey and "灰区" in r_grey, f"精英灰区失效: {r_grey}"
+    assert "规避精英" in r_low, f"低血规避精英失效: {r_low}"
+    know.policy["elite_min_hp_pct"] = old_elite
+    know.policy.pop("elite_soft_hp_pct", None)
+
+    # 3f) Boss 行终端语义：地图缺 boss_node 键时按图最深行推断，
+    # 进 Boss 血量投影不得再扣 Boss 自身战损（旧版 62/80 血被投影成 35%）
+    boss_map = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                "map": {"available_nodes": [{"index": 0, "row": 16, "col": 3, "node_type": "Boss"}],
+                        "nodes": [{"row": 1, "col": 0, "node_type": "Monster",
+                                   "children": [{"row": 16, "col": 3}]},
+                                  {"row": 16, "col": 3, "node_type": "Boss"}]},
+                "run": {"current_hp": 62, "max_hp": 80, "gold": 0, "floor": 16, "deck": []}}
+    d_boss = pol.decide(boss_map, ctx)
+    m_boss = re.search(r"进 Boss 血量 ?(\d+)%", d_boss.reason)
+    assert m_boss and int(m_boss.group(1)) >= 77, f"Boss 终端投影失效: {d_boss.reason}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"

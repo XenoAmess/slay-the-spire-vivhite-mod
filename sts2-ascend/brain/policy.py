@@ -143,8 +143,21 @@ class Policy:
         if handler is None:
             return self._unknown(state, ctx)
         try:
-            return handler(state, ctx)
+            decision = handler(state, ctx)
+            self._decide_errors = 0
+            return decision
         except Exception as exc:  # never crash the loop on a policy bug
+            self._decide_errors = getattr(self, "_decide_errors", 0) + 1
+            # 连续异常（如代码/知识库版本错位的 AttributeError）会每 tick 空转僵死，
+            # 看门狗的 abandon_run 在 MAP 等屏幕上又不可用——连续异常时改发安全动作自救：
+            if self._decide_errors >= 10:
+                actions = state.get("available_actions", [])
+                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed"):
+                    if safe in actions:
+                        return Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0)
+                if "choose_map_node" in actions:
+                    return Decision("choose_map_node", {"option_index": 0},
+                                    f"决策连续异常×{self._decide_errors}，盲选 0 号地图节点自救（{exc}）", wait=1.0)
             return Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0)
 
     # ------------------------------------------------------------------
@@ -332,9 +345,17 @@ class Policy:
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
                     notes.append(note)
-                cur_hp -= priors.get(nt, 8) * deck_ease * act_mul
+                # 掉血先验：静态值与实测场均掉血（rooms 数据）加权混合；
+                # 无实测数据时按敌人统计的总体校准系数放大，修复静态先验系统性低估
+                prior = self.know.room_damage_prior(nt, float(priors.get(nt, 8)))
+                # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
+                # 不扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
+                # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
+                if boss_row is not None and key[0] >= boss_row:
+                    continue
+                cur_hp -= prior * deck_ease * act_mul
                 if nt == "Unknown" and act_idx >= 1:
-                    cur_hp -= priors.get(nt, 8) * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
+                    cur_hp -= prior * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
                     cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
                 if cur_hp <= 0:
@@ -894,21 +915,29 @@ class Policy:
         deck = run.get("deck", [])
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
+        pol = self.know.policy
 
-        need_heal = hp_pct < self.know.policy["rest_heal_threshold"] or not upgradable or smith is None
-        if heal and need_heal:
+        # 锻造区间：血量 ≥ smith_min_hp_pct 即可锻造。旧逻辑回血阈值 70% 过高，
+        # 第 28 局连续两个篝火都在 46%/48% 回血、整局零锻造，卡组停在基础形态
+        smith_ok = smith is not None and bool(upgradable)
+        heal_line = float(pol.get("smith_min_hp_pct", pol["rest_heal_threshold"]))
+        if heal and (hp_pct < heal_line or not smith_ok):
             # 回血将溢出（接近回满）且仍有可升级卡：改锻造，不浪费篝火
-            if smith and upgradable and hp_pct + heal_frac >= 0.97:
+            if smith_ok and hp_pct + heal_frac >= 0.97:
                 return Decision("choose_rest_option", {"option_index": smith["index"]},
                                 f"篝火：回血将溢出（{hp_pct:.0%}+{heal_frac:.0%}≥97%），改为锻造升级",
                                 tags=[("rest", "smith")], wait=1.2)
             return Decision("choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：休息回血（当前 {hp_pct:.0%} < {self.know.policy['rest_heal_threshold']:.0%}）",
+                            f"篝火：休息回血（当前 {hp_pct:.0%} < {heal_line:.0%}）",
                             tags=[("rest", "heal")], wait=1.2)
-        if smith:
+        if smith_ok:
             return Decision("choose_rest_option", {"option_index": smith["index"]},
-                            f"篝火：锻造升级（血量 {hp_pct:.0%} 尚安全）",
+                            f"篝火：锻造升级（血量 {hp_pct:.0%} ≥ 安全线 {heal_line:.0%}，升级降低后续战损）",
                             tags=[("rest", "smith")], wait=1.2)
+        if heal:
+            return Decision("choose_rest_option", {"option_index": heal["index"]},
+                            f"篝火：休息回血（无升级目标，当前 {hp_pct:.0%}）",
+                            tags=[("rest", "heal")], wait=1.2)
         pick = options[0]
         return Decision("choose_rest_option", {"option_index": pick["index"]},
                         f"篝火：选择 {pick.get('title')}", tags=[("rest", pick.get("option_id"))], wait=1.0)

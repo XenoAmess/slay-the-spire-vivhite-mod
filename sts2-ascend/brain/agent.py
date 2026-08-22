@@ -174,6 +174,7 @@ class Agent:
             died_here = screen == "GAME_OVER" and not victory_screen
             hp_lost = max(0, c["hp_start"] - hp)
             self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=not died_here, died=died_here)
+            self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
             note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died_here else "")
             self.ctx.combat_notes.append(note)
             if died_here:

@@ -28,6 +28,7 @@ DEFAULT_POLICY = {
     "play_threshold": 0.4,        # min score to bother playing a card
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
+    "elite_soft_hp_pct": 0.62,    # 精英灰区下限：血量介于 soft~min 之间谨慎进精英（0.5 权重），不再一刀切规避
     "rest_urgent_hp_pct": 0.35,   # below this hp% rest sites are strongly preferred
     "shop_min_gold": 140,         # below this gold shops lose value
     "room_weights": {"Monster": 1.2, "Elite": 2.0, "RestSite": 1.0, "Shop": 1.1,
@@ -42,6 +43,7 @@ DEFAULT_POLICY = {
     # --- rest ---
     "rest_heal_threshold": 0.6,   # heal if hp% below this, else smith
     "rest_heal_fraction": 0.30,   # 篝火回血量估计（占最大生命比例）：溢出判断 + 路径血量模拟共用
+    "smith_min_hp_pct": 0.55,     # 血量高于此值优先锻造升级（回血线过高 → 整局零锻造、卡组停在基础形态）
     # --- map path planning（全路径规划的血量模拟先验） ---
     "path_danger_priors": {"Monster": 8, "Unknown": 10, "Elite": 28, "Boss": 45,
                            "Event": 0, "Shop": 0, "Treasure": 0, "RestSite": 0, "Ancient": 0},
@@ -79,7 +81,7 @@ DEFAULT_STATS = {
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths}
-    "rooms": {},    # node_type -> {visits, outcome_sum}
+    "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
 }
 
 
@@ -121,6 +123,10 @@ class Knowledge:
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
+        # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
+        for e in self.stats["rooms"].values():
+            e.setdefault("hp_lost_sum", 0.0)
+            e.setdefault("damage_events", 0)
 
     # ---------- persistence ----------
 
@@ -157,6 +163,33 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
+    def combat_calibration(self) -> float:
+        """敌人实测数据的 encounter 加权场均掉血 / 基准12 → 静态先验的整体校准系数。
+
+        敌人统计（enemies）按战斗逐场累积、样本远多于 rooms，可先行校准：
+        当前全场均值约 13~14 → 系数 ~1.1，Monster 先验 8→9、Elite 28→31。
+        """
+        en = self.stats["enemies"]
+        tot_n = sum(e.get("encounters", 0) for e in en.values())
+        if not tot_n:
+            return 1.0
+        mean = sum(e.get("hp_lost_sum", 0.0) for e in en.values()) / tot_n
+        return clamp(mean / 12.0, 0.9, 1.5)
+
+    def room_damage_prior(self, node_type: str, static_prior: float) -> float:
+        """路径模拟掉血先验的动态校准：rooms 实测场均掉血与静态先验加权混合。
+
+        样本 <3 时回落静态先验 × 敌人统计整体校准系数；3~10 线性加权；
+        ≥10 封顶 70% 实测权重（修复 Elite 静态先验 28 vs 实测 40+ 的低估）。
+        """
+        e = self.stats["rooms"].get(node_type)
+        if not e or e.get("damage_events", 0) < 3:
+            cal = self.combat_calibration() if static_prior > 0 else 1.0
+            return float(static_prior) * cal
+        measured = e["hp_lost_sum"] / max(1, e["damage_events"])
+        w = min(0.7, e["damage_events"] / 10.0)
+        return (1.0 - w) * float(static_prior) + w * measured
+
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty."""
         opts = self.stats["events"].get(event_id, {})
@@ -176,6 +209,13 @@ class Knowledge:
         e["hp_lost_sum"] += max(0.0, hp_lost)
         e["wins"] += 1 if won else 0
         e["deaths"] += 1 if died else 0
+
+    def commit_room_damage(self, node_type: str, hp_lost: float) -> None:
+        """按房间类型累计战斗掉血（供路径先验动态校准）。"""
+        e = self.stats["rooms"].setdefault(
+            node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
+        e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
+        e["damage_events"] = e.get("damage_events", 0) + 1
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float, gold_delta: float, died: bool) -> None:
         opts = self.stats["events"].setdefault(event_id, {})
