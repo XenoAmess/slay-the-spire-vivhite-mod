@@ -3327,3 +3327,523 @@ ound_bonus": 6.0,
 [21:15:17] [COMBAT/F17] 战斗：确认无牌可出（可能无能量），结束回合
   ↳ 动作 end_turn 返回 completed: Action completed.
 [21:15:18] [COMBAT/F17] 战斗：回合过渡中，等待
+[21:15:19] [GAME_OVER/F17] 对局结束：失败（层数 17），正在总结复盘…
+[agent] 战斗失败：F17 Boss战 掉血18（阵亡）
+
+
+## 第 21 局复盘（2026-08-22 21:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TWIN_STRIKE, SHRUG_IT_OFF, HOWL_FROM_BEYOND, BLUDGEON, MANGLE, BLUDGEON, BLUDGEON, SHRUG_IT_OFF, TWIN_STRIKE, HEADBUTT, IRON_WAVE, EVIL_EYE, POMMEL_STRIKE, MANGLE, MANGLE
+- 本局遗物：JUZU_BRACELET, 地精之角
+- 战斗记录：F9 Monster战 掉血29; F14 Elite战 掉血40; F15 Monster战 掉血15; F17 Boss战 掉血7; F17 Boss战 掉血18; F17 Boss战 掉血18（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，UPPERCUT(21分/12局)
+- 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，STRIKE_IRONCLAD(9分/5局)
+- 策略进化：block_safety: 1.90 → 1.95（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.136 → 0.132（经验累积，探索衰减）
+- 生涯战绩：0/21 胜，当前目标进阶 0
+
+[agent] 对局日志已保存：20260822-211519_J1F8U3JX0ERS.json
+[llm] 优先模型 openrouter/stealth/ox-alpha 失败冷却中（剩余 344 分钟）
+[git] 已自动存档：chore(sts2-ascend): 第21局存档（负 F17 进阶0，生涯 0胜/21局）
+[21:15:24] [GAME_OVER/F17] 结算：返回主菜单，备战下一局
+[runner 21:15:24] �����쳣�˳���rc=4294967295����� 2465s��
+[agent] sts2-ascend 自主学习智能体启动
+[agent] 知识库：D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\knowledge
+[agent] 已连接 mod v0.9.0（游戏 v0.111.0）
+[agent] 生涯战绩：0/21 胜｜当前目标进阶 0
+[21:15:30] [MAIN_MENU/F0] 主菜单：开启新的一局（标准模式）
+  ↳ 动作 open_character_select 返回 completed: Action completed.
+[21:15:31] [CHARACTER_SELECT/F0] 出发！角色=铁甲战士 进阶=0
+  ↳ 动作 embark 返回 completed: Action completed.
+[21:15:37] [EVENT/F1] 事件【涅奥】：探索未知选项「小型扭蛋」（探索率 0.13）
+
+[agent] ===== 新对局开始：FZGWE2U1B5J6（进阶 0）=====
+  ↳ 动作 choose_event_option 返回 completed: Action completed.
+[21:15:38] [REWARD/F1] 领取奖励：餐券
+[agent] 事件结算：NEOW/NEOW.pages.INITIAL.options.SMALL_CAPSULE → 生命 +0，金币 +0
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:15:39] [EVENT/F1] 事件：已结束，继续
+  ↳ 动作 choose_event_option 返回 completed: Event proceeded.
+[21:15:40] [MAP/F1] 路径规划：Monster(1,4)（路径分 19.32，预计进 Boss 血量 12%；前期需要战斗积累卡牌）；候选：Monster(1,1)=15.81|前期需要战斗积累卡牌 / Monster(1,3)=14.31|前期需要战斗积累卡牌 / Monster(1,4)=19.32|前期需要战斗积累卡牌 / Monster(1,6)=-85.52|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:15:44] [COMBAT/F2] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=FUZZY_WURM_CRAWLER｜历史场均掉血 4.0｜房间类型 Monster
+[21:15:44] [COMBAT/F2] 战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8）；敌意图总伤4，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:15:46] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤4，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:15:47] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（1/4，打击✗,打击✗,打击✗）
+[21:15:47] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（2/4，打击✗,打击✗,打击✗）
+[21:15:48] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（3/4，打击✗,打击✗,打击✗）
+[21:15:49] [COMBAT/F2] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:15:50] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:50] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:51] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:52] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:52] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:53] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:54] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:54] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤0，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:15:55] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤0，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:15:56] [COMBAT/F2] 战斗：评估后无值得出的牌（打击✓,防御✓,防御✓），结束回合（敌意图总伤0，我方80血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:15:58] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:58] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:59] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:15:59] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:00] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:01] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:01] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:02] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:03] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:03] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:04] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤11，我方80血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:05] [COMBAT/F2] 战斗：评估后无值得出的牌（防御✓,打击✓,防御✓），结束回合（敌意图总伤11，我方80血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:16:06] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:07] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:08] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:08] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:09] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:10] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:10] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:11] [COMBAT/F2] 战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8）；敌意图总伤11，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:12] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:13] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（1/4，打击✗,打击✗,打击✗）
+[21:16:14] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（2/4，打击✗,打击✗,打击✗）
+[21:16:14] [COMBAT/F2] 战斗：手牌未就绪，等待稳定（3/4，打击✗,打击✗,打击✗）
+[21:16:15] [COMBAT/F2] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:16:16] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:17] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:18] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:18] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:19] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:19] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:20] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:21] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:21] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:22] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤0，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:23] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤0，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:24] [COMBAT/F2] 战斗：评估后无值得出的牌（打击✓,防御✓,打击✓），结束回合（敌意图总伤0，我方68血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:16:25] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:26] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:26] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:27] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:28] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:28] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:29] [COMBAT/F2] 战斗：回合过渡中，等待
+[21:16:30] [COMBAT/F2] 战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8）；敌意图总伤18，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:31] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤18，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:32] [COMBAT/F2] 战斗：等待敌人就绪
+[21:16:32] [COMBAT/F2] 战斗：等待敌人就绪
+[21:16:33] [COMBAT/F2] 战斗：等待敌人就绪
+[21:16:34] [COMBAT/F2] 战斗：等待敌人就绪
+[21:16:34] [REWARD/F2] 领取奖励：19金币
+[agent] 战斗结束：F2 Monster战 掉血6（剩余 74 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:16:35] [REWARD/F2] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:16:36] [CARD_SELECTION/F2] 选择卡牌：【双重打击】
+[21:16:37] [REWARD/F2] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[21:16:38] [MAP/F2] 路径规划：Monster(2,4)（路径分 19.48，预计进 Boss 血量 14%；前期需要战斗积累卡牌）；候选：Monster(2,4)=19.48|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:16:41] [COMBAT/F3] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=NIBBIT｜历史场均掉血 10.4｜房间类型 Monster
+[21:16:41] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:42] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:43] [COMBAT/F3] 战斗：打出【双重打击】→小啃兽（单体伤害≈10）；敌意图总伤12，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:44] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤12，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:45] [COMBAT/F3] 战斗：打出【打击】→小啃兽（单体伤害≈6）；敌意图总伤12，我方74血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:46] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（1/4，打击✗,打击✗）
+[21:16:47] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（2/4，打击✗,打击✗）
+[21:16:47] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（3/4，打击✗,打击✗）
+[21:16:48] [COMBAT/F3] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:16:49] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:50] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:50] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:51] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:52] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:52] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤6，我方67血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:53] [COMBAT/F3] 战斗：打出【痛击】→小啃兽（单体伤害≈8）；敌意图总伤6，我方67血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:16:55] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（1/4，打击✗,防御✗,打击✗）
+[21:16:55] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（2/4，打击✗,防御✗,打击✗）
+[21:16:56] [COMBAT/F3] 战斗：手牌未就绪，等待稳定（3/4，打击✗,防御✗,打击✗）
+[21:16:57] [COMBAT/F3] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:16:58] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:58] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:16:59] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:17:00] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:17:00] [COMBAT/F3] 战斗：回合过渡中，等待
+[21:17:01] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤0，我方66血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:03] [COMBAT/F3] 战斗：打出【双重打击】→小啃兽（单体伤害≈5）；敌意图总伤0，我方66血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:05] [COMBAT/F3] 战斗：打出【打击】→小啃兽（单体伤害≈6）；敌意图总伤0，我方66血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:06] [COMBAT/F3] 战斗：等待敌人就绪
+[21:17:06] [COMBAT/F3] 战斗：等待敌人就绪
+[21:17:07] [REWARD/F3] 领取奖励：18金币
+[agent] 战斗结束：F3 Monster战 掉血2（剩余 72 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:17:08] [REWARD/F3] 领取奖励：格挡药水
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:17:08] [REWARD/F3] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:17:09] [CARD_SELECTION/F3] 选择卡牌：【跃跃欲试】
+[21:17:10] [REWARD/F3] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[21:17:11] [MAP/F3] 路径规划：Monster(3,4)（路径分 19.49，预计进 Boss 血量 26%；前期需要战斗积累卡牌）；候选：Monster(3,4)=19.49|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:17:14] [COMBAT/F4] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_S｜历史场均掉血 3.6｜房间类型 Monster
+[21:17:15] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:15] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:16] [COMBAT/F4] 战斗：打出【防御】（格挡5）；敌意图总伤4，我方72血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:17] [COMBAT/F4] 战斗：打出【打击】→树枝史莱姆（小）（单体伤害≈6）；敌意图总伤4，我方72血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:18] [COMBAT/F4] 战斗：评估后无值得出的牌（防御✓,防御✓,防御✓），结束回合（敌意图总伤4，我方72血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:17:19] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:20] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:21] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:21] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:22] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:22] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:23] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:24] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:24] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:25] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:26] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:26] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:27] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:27] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:28] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:29] [COMBAT/F4] 战斗：打出【双重打击】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤15，我方72血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:30] [COMBAT/F4] 战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6）；敌意图总伤11，我方72血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:31] [COMBAT/F4] 战斗：评估后无值得出的牌（打击✓,打击✓,打击✓），结束回合（敌意图总伤11，我方72血/0甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:17:32] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:33] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:33] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:34] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:35] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:35] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:36] [COMBAT/F4] 战斗：打出【痛击】→树叶史莱姆（中）（单体伤害≈8）；敌意图总伤0，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:39] [COMBAT/F4] 战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:40] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（1/4，跃跃欲试✗,防御✗,打击✗）
+[21:17:41] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（2/4，跃跃欲试✗,防御✗,打击✗）
+[21:17:42] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（3/4，跃跃欲试✗,防御✗,打击✗）
+[21:17:42] [COMBAT/F4] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:17:44] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:44] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:45] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:45] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:46] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:47] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:47] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:48] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:49] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:49] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:50] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:51] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:51] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:52] [COMBAT/F4] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:53] [COMBAT/F4] 战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6）；敌意图总伤11，我方61血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:54] [COMBAT/F4] 战斗：打出【黏液】（功能牌（抽牌1/回能））；敌意图总伤11，我方61血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:17:55] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（1/4，黏液✗,黏液✗,打击✗）
+[21:17:56] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（2/4，黏液✗,黏液✗,打击✗）
+[21:17:56] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（3/4，黏液✗,黏液✗,打击✗）
+[21:17:57] [COMBAT/F4] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:17:58] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:59] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:17:59] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:00] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:01] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:01] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:02] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:03] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:03] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:04] [COMBAT/F4] 战斗：打出【双重打击】→树叶史莱姆（中）（可击杀树叶史莱姆（中））；敌意图总伤0，我方55血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:06] [COMBAT/F4] 战斗：打出【打击】→树叶史莱姆（小）（单体伤害≈6）；敌意图总伤0，我方55血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:07] [COMBAT/F4] 战斗：打出【黏液】（功能牌（抽牌1/回能））；敌意图总伤0，我方55血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:08] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（1/4，防御✗,防御✗,打击✗）
+[21:18:09] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（2/4，防御✗,防御✗,打击✗）
+[21:18:09] [COMBAT/F4] 战斗：手牌未就绪，等待稳定（3/4，防御✗,防御✗,打击✗）
+[21:18:10] [COMBAT/F4] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:18:11] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:12] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:12] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:13] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:14] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:14] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:15] [COMBAT/F4] 战斗：回合过渡中，等待
+[21:18:16] [COMBAT/F4] 战斗：打出【痛击】→树叶史莱姆（小）（可击杀树叶史莱姆（小））；敌意图总伤3，我方55血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:16] [COMBAT/F4] 战斗：等待敌人就绪
+[21:18:17] [COMBAT/F4] 战斗：等待敌人就绪
+[21:18:18] [COMBAT/F4] 战斗：等待敌人就绪
+[21:18:18] [REWARD/F4] 领取奖励：12金币
+[agent] 战斗结束：F4 Monster战 掉血11（剩余 61 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:18:19] [REWARD/F4] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:18:20] [CARD_SELECTION/F4] 选择卡牌：【飞剑回旋镖】
+[21:18:21] [REWARD/F4] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[21:18:22] [MAP/F4] 路径规划：Unknown(4,4)（路径分 21.27，预计进 Boss 血量 26%）；候选：Unknown(4,4)=21.27
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:18:25] [EVENT/F5] 事件【混沌芳香】：选择「放任自流」（经验价值 0.0）；放任自流=0.0(n=1) / 维持理智=0.0(n=0)
+  ↳ 动作 choose_event_option 返回 completed: Action completed.
+[21:18:26] [CARD_SELECTION/F5] 变化卡牌：【打击】（最无价值）
+[agent] 事件结算：AROMA_OF_CHAOS/AROMA_OF_CHAOS.pages.INITIAL.options.LET_GO → 生命 +0，金币 +0
+  ↳ 动作 select_deck_card 返回 completed: Action completed.
+[21:18:28] [EVENT/F5] 事件：已结束，继续
+  ↳ 动作 choose_event_option 返回 completed: Event proceeded.
+[21:18:29] [MAP/F5] 路径规划：Monster(5,4)（路径分 24.15，预计进 Boss 血量 42%；前期需要战斗积累卡牌）；候选：Monster(5,4)=24.15|前期需要战斗积累卡牌 / Shop(5,5)=-89.76|金币148足够
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:18:32] [COMBAT/F6] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=FLYCONID+SNAPPING_JAXFRUIT｜历史场均掉血 14.0｜房间类型 Monster
+[21:18:32] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:33] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:34] [COMBAT/F6] 战斗：打出【跃跃欲试】（格挡15）；敌意图总伤11，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:35] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（1/4，防御✗,防御✗,飞剑回旋镖✗,焚烧✗）
+[21:18:35] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（2/4，防御✗,防御✗,飞剑回旋镖✗,焚烧✗）
+[21:18:36] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（3/4，防御✗,防御✗,飞剑回旋镖✗,焚烧✗）
+[21:18:37] [COMBAT/F6] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:18:38] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:39] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:39] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:40] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:41] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:41] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:42] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:42] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:43] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:44] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:44] [COMBAT/F6] 战斗：打出【双重打击】→飞蝇菌子（单体伤害≈10）；敌意图总伤16，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:46] [COMBAT/F6] 战斗：打出【痛击】→飞蝇菌子（单体伤害≈8）；敌意图总伤16，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:47] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（1/4，打击✗,打击✗,防御✗）
+[21:18:48] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（2/4，打击✗,打击✗,防御✗）
+[21:18:48] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（3/4，打击✗,打击✗,防御✗）
+[21:18:49] [COMBAT/F6] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:18:50] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:51] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:51] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:52] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:53] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:53] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:54] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:55] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:55] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:18:56] [COMBAT/F6] 战斗：打出【打击】→闪光贾克斯果（单体伤害≈6）；敌意图总伤7，我方45血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:18:58] [COMBAT/F6] 战斗：打出【焚烧】（群体伤害≈16）；敌意图总伤7，我方45血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:00] [COMBAT/F6] 战斗：打出【防御】（格挡3）；敌意图总伤7，我方45血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:01] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（1/4，打击✗,防御✗）
+[21:19:02] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（2/4，打击✗,防御✗）
+[21:19:02] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（3/4，打击✗,防御✗）
+[21:19:03] [COMBAT/F6] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:19:04] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:05] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:05] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:06] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:07] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:07] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:08] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:09] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:09] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:10] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:10] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:11] [COMBAT/F6] 战斗：打出【跃跃欲试】（格挡15）；敌意图总伤25，我方41血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:12] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（1/4，打击✗,打击✗,痛击✗,防御✗）
+[21:19:13] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（2/4，打击✗,打击✗,痛击✗,防御✗）
+[21:19:13] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（3/4，打击✗,打击✗,痛击✗,防御✗）
+[21:19:14] [COMBAT/F6] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:19:15] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:16] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:17] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:17] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:18] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:19] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:19] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:20] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:20] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:21] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:22] [COMBAT/F6] 战斗：打出【防御】（格挡3）；敌意图总伤32，我方31血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:24] [COMBAT/F6] 战斗：打出【双重打击】→闪光贾克斯果（单体伤害≈10）；敌意图总伤32，我方31血/3甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:25] [COMBAT/F6] 战斗：打出【焚烧】（群体伤害≈16）；敌意图总伤32，我方31血/3甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:27] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（1/4，飞剑回旋镖✗,打击✗）
+[21:19:28] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（2/4，飞剑回旋镖✗,打击✗）
+[21:19:29] [COMBAT/F6] 战斗：手牌未就绪，等待稳定（3/4，飞剑回旋镖✗,打击✗）
+[21:19:29] [COMBAT/F6] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:19:31] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:31] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:32] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:32] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:33] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:34] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:34] [COMBAT/F6] 战斗：回合过渡中，等待
+[21:19:35] [COMBAT/F6] 战斗：打出【痛击】→飞蝇菌子（单体伤害≈8）；敌意图总伤0，我方18血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:36] [COMBAT/F6] 战斗：打出【打击】→飞蝇菌子（可击杀飞蝇菌子）；敌意图总伤0，我方18血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:37] [COMBAT/F6] 战斗：等待敌人就绪
+[21:19:38] [COMBAT/F6] 战斗：等待敌人就绪
+[21:19:38] [COMBAT/F6] 战斗：等待敌人就绪
+[21:19:39] [COMBAT/F6] 战斗：等待敌人就绪
+[21:19:40] [REWARD/F6] 领取奖励：17金币
+[agent] 战斗结束：F6 Monster战 掉血37（剩余 24 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:19:40] [REWARD/F6] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[21:19:41] [CARD_SELECTION/F6] 选择卡牌：【御血术】
+[21:19:42] [REWARD/F6] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[21:19:43] [MAP/F6] 路径规划：Monster(6,3)（路径分 15.66，预计进 Boss 血量 8%；前期需要战斗积累卡牌）；候选：Monster(6,3)=15.66|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[21:19:46] [COMBAT/F7] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=FOGMOG｜历史场均掉血 12.0｜房间类型 Monster
+[21:19:47] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:47] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:48] [COMBAT/F7] 战斗：打出【痛击】→雾菇（单体伤害≈8）；敌意图总伤0，我方24血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:49] [COMBAT/F7] 战斗：打出【打击】→雾菇（单体伤害≈6）；敌意图总伤0，我方24血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:50] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（1/4，防御✗,跃跃欲试✗,防御✗）
+[21:19:51] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（2/4，防御✗,跃跃欲试✗,防御✗）
+[21:19:52] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（3/4，防御✗,跃跃欲试✗,防御✗）
+[21:19:52] [COMBAT/F7] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:19:54] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:54] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:55] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:56] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:56] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:57] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:58] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:19:58] [COMBAT/F7] 战斗：打出【打击】→利齿之眼（可击杀利齿之眼）；敌意图总伤8，我方24血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:19:59] [COMBAT/F7] 战斗：打出【防御】（格挡5）；敌意图总伤8，我方24血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:00] [COMBAT/F7] 战斗：评估后无值得出的牌（打击✓,防御✓,打击✓），结束回合（敌意图总伤8，我方24血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:20:02] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:02] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:03] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:03] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:04] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:05] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:05] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:06] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:07] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:07] [COMBAT/F7] 战斗：打出【焚烧】（群体伤害≈16）；敌意图总伤15，我方21血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:11] [COMBAT/F7] 战斗：打出【御血术】→雾菇（单体伤害≈15）；敌意图总伤15，我方21血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:12] [COMBAT/F7] 战斗：打出【防御】（格挡5）；敌意图总伤15，我方19血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:13] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（1/4，飞剑回旋镖✗,双重打击✗）
+[21:20:14] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（2/4，飞剑回旋镖✗,双重打击✗）
+[21:20:15] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（3/4，飞剑回旋镖✗,双重打击✗）
+[21:20:15] [COMBAT/F7] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:20:16] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:17] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:18] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:18] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:19] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:20] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:20] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:21] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:22] [COMBAT/F7] 战斗：低血量使用防御/回复药水【格挡药水】
+  ↳ 动作 use_potion 返回 completed: Action completed.
+[21:20:23] [COMBAT/F7] 战斗：打出【打击】→利齿之眼（可击杀利齿之眼）；敌意图总伤9，我方9血/12甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:24] [COMBAT/F7] 战斗：打出【防御】（格挡5）；敌意图总伤9，我方9血/12甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:25] [COMBAT/F7] 战斗：评估后无值得出的牌（跃跃欲试✗,防御✓,打击✓），结束回合（敌意图总伤9，我方9血/17甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:20:27] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:27] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:28] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:28] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:29] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:30] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:30] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:31] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:32] [COMBAT/F7] 战斗：打出【防御】（格挡5）；敌意图总伤10，我方9血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:34] [COMBAT/F7] 战斗：打出【御血术】→利齿之眼（可击杀利齿之眼）；敌意图总伤10，我方9血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:35] [COMBAT/F7] 战斗：打出【打击】→雾菇（单体伤害≈6）；敌意图总伤10，我方7血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:36] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（1/4，打击✗,痛击✗）
+[21:20:37] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（2/4，打击✗,痛击✗）
+[21:20:37] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（3/4，打击✗,痛击✗）
+[21:20:38] [COMBAT/F7] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:20:39] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:40] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:41] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:41] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:42] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:43] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:43] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:44] [COMBAT/F7] 战斗：回合过渡中，等待
+[21:20:45] [COMBAT/F7] 战斗：打出【跃跃欲试】（格挡15）；敌意图总伤17，我方2血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[21:20:46] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（1/4，防御✗,打击✗,双重打击✗,打击✗）
+[21:20:46] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（2/4，防御✗,打击✗,双重打击✗,打击✗）
+[21:20:47] [COMBAT/F7] 战斗：手牌未就绪，等待稳定（3/4，防御✗,打击✗,双重打击✗,打击✗）
+[21:20:48] [COMBAT/F7] 战斗：确认无牌可出（可能无能量），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[21:20:49] [COMBAT/F7] 战斗：回合过渡中，等待
