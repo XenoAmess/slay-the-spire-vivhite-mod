@@ -1049,3 +1049,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(9分/8局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/81 胜，当前目标进阶 0
+
+## 第 82 局复盘（2026-08-23 07:32）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：THUNDERCLAP, HOWL_FROM_BEYOND, HEMOKINESIS, DEFEND_IRONCLAD, DISMANTLE, TRUE_GRIT, BREAKTHROUGH, TRUE_GRIT, STONE_ARMOR
+- 本局遗物：CANDELABRA
+- 战斗记录：F6 Monster战 掉血19; F7 Monster战 掉血18; F9 Monster战 掉血46; F15 Monster战 掉血0; F17 Boss战 掉血45; F17 Boss战 掉血36（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(22分/2局)，MANGLE(21分/19局)，BARRICADE(20分/2局)，IMPERVIOUS(19分/5局)，CONFLAGRATION(19分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/82 胜，当前目标进阶 0
