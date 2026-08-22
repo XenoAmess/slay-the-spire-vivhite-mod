@@ -86,3 +86,14 @@
 - 当前低价值卡牌：SWORD_BOOMERANG(8分/3局)，SETUP_STRIKE(9分/3局)，UPPERCUT(9分/2局)
 - 策略进化：block_safety: 1.45 → 1.50（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.202 → 0.196（经验累积，探索衰减）
 - 生涯战绩：0/8 胜，当前目标进阶 0
+
+## 第 9 局复盘（2026-08-22 15:29）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：RAMPAGE, UPPERCUT, HEADBUTT, UPPERCUT, BREAKTHROUGH, BLUDGEON, BLUDGEON, SWORD_BOOMERANG, SHRUG_IT_OFF, BLUDGEON, WHIRLWIND, VICIOUS, IMPERVIOUS, UPPERCUT, TWIN_STRIKE, STOMP, SPITE, BLUDGEON, MANGLE, ULTIMATE_STRIKE, IRON_WAVE, TRUE_GRIT, MANGLE, FIGHT_ME, HEADBUTT, SWORD_BOOMERANG, HOWL_FROM_BEYOND, MANGLE, POMMEL_STRIKE, RAMPAGE
+- 本局遗物：HORN_CLEAT, 铜质鳞片, ETERNAL_FEATHER, 闪亮口红
+- 战斗记录：F28 Unknown战 掉血13; F30 Monster战 掉血6; F31 Elite战 掉血14; F31 Elite战 掉血0; F33 Boss战 掉血15; F33 Boss战 掉血65（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，TWIN_STRIKE(25分/2局)，UPPERCUT(23分/5局)，RAMPAGE(22分/4局)，WHIRLWIND(21分/2局)
+- 当前低价值卡牌：SETUP_STRIKE(9分/3局)，HEMOKINESIS(13分/2局)，SPITE(15分/5局)
+- 策略进化：block_safety: 1.50 → 1.55（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.196 → 0.190（经验累积，探索衰减）
+- 生涯战绩：0/9 胜，当前目标进阶 0
