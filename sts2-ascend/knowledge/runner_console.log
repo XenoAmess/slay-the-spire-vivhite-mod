@@ -24711,3 +24711,62 @@ Update todos and give the ≤200-char summary.
 [03:49:18] [COMBAT/F7] 战斗：回合过渡中，等待
 [03:49:19] [COMBAT/F7] 战斗：回合过渡中，等待
 [03:49:19] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:20] [COMBAT/F7] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+共享同一套门槛；③阶段目标从"活着到 Boss"变为"杀死 Boss"，下轮审计攻防天平是否过矫（格挡气候 vs 斩杀线）；观察 AoE 入组率、KIN Boss 死亡率、NEOW 采样发散、营养牡蛎复选率。
+```
+
+Then verify appended by reading tail.
+`lessons.md` 正在被运行中的大脑主动写入（已追加 runs 58-59）。为了安全地进行追加而不覆盖并发写入，我将通过一个临时文件使用 Python 追加字节数据：
+⚙ write {}
+· tokens 166595 ·
+⚙ bash {}
+· tokens 166713 ·
+💭 Appended. Now verify:
+1. lessons.md tail contains the new section
+2. meta_review.md section is in place
+3. Run selfcheck one final time to confirm everything still passes
+
+Also double-check the policy.py changes compile fine (selfcheck already passed after all policy edits — yes, I ran it after all 4 policy.py edits + selfcheck edits; it printed SELFCHECK OK).
+
+Wait, actually let me re-verify the sequence: I edited policy.py (4 edits), then selfcheck.py (2 edits), then ran selfcheck → SELFCHECK OK. Yes that was after ALL code edits. Good.
+
+Let me do final verification of file tails and re-run selfcheck once more for certainty (cheap).
+正在验证所有变更：
+⚙ bash {}
+· tokens 167012 ·
+💭 Everything is in place (console mojibake is just GBK display; files are UTF-8 — the earlier Python read of the run logs and my Edit-tool reads showed correct Chinese, and the appends used explicit UTF-8).
+
+Final state:
+1. ✅ 归因分析 done (deep log analysis)
+2. ✅ meta_review.md appended with new section
+3. ✅ Code changes: policy.py ×4 (event tie-break, monster boost gate, AoE pricing, selection skip guard); no knowledge.json schema change so no knowledge.py migration needed
+4. ✅ selfcheck.py updated + SELFCHECK OK
+5. ✅ lessons.md 🧠 section appended
+6. ✅ No git ops, no process ops, nothing outside sts2-ascend modified
+
+Now output the summary ≤200 字.
+复盘完成，SELFCHECK OK。
+
+**第 56~57 局总结**：56 局漏斗消耗死（F4 岔路 44% 血仍吃前期怪物加成 ×1.25 压过 Unknown）；57 局健康运营进 Boss 但卡组 0 AoE/最大单发 24，双子 Boss 七回合斩杀失败（KIN 双子 12战7死 升格头号杀手）。四项代码修复：①事件全零平值改选样本最少项（破「涅奥的苦痛」n=8 锁死）；②CARD_SELECTION 补阈值守卫（-3.9 基础牌不再硬塞）；③floor≤8 怪房加成加 62% 血量门槛；④AoE 定价随存量递减 +3/+2/+0.5。参数零改动，新增 3v/3w/3x 与重写 3j 共五组断言锁死行为，报告与经验已分别写入 meta_review.md 和 lessons.md。
+· tokens 167918 ·
+
+[03:49:21] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:21] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:22] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:22] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:23] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:24] [COMBAT/F7] 战斗：打出【暴走】→飞蝇菌子（单体伤害≈10）；敌意图总伤16，我方64血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[03:49:25] [COMBAT/F7] 战斗：打出【剑柄打击】→飞蝇菌子（单体伤害≈9）；敌意图总伤16，我方64血/0甲
+[git] 已自动存档：feat(sts2-ascend): 第56~57局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+  ↳ 动作 play_card 返回 completed: Action completed.
+[03:49:27] [COMBAT/F7] 战斗：打出【打击】→飞蝇菌子（单体伤害≈6）；敌意图总伤16，我方64血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[03:49:28] [COMBAT/F7] 战斗：本回合已无牌可出，确认结束（防御✗,闪电霹雳✗,打击✗）
+[03:49:28] [COMBAT/F7] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[03:49:30] [COMBAT/F7] 战斗：回合过渡中，等待
+[03:49:30] [COMBAT/F7] 战斗：回合过渡中，等待
