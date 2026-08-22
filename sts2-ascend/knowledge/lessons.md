@@ -305,3 +305,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/3局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：elite_min_hp_pct: 0.75 → 0.80（精英战阵亡，进场血量 12%，提高精英回避线）；exploration_rate: 0.124 → 0.120（经验累积，探索衰减）
 - 生涯战绩：0/24 胜，当前目标进阶 0
+
+## 第 25 局复盘（2026-08-22 21:42）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：BLUDGEON, POMMEL_STRIKE, EXPECT_A_FIGHT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血11; F3 Monster战 掉血7; F4 Monster战 掉血6; F5 Monster战 掉血56（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，UPPERCUT(21分/12局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：block_safety: 2.05 → 2.10（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.120 → 0.117（经验累积，探索衰减）
+- 生涯战绩：0/25 胜，当前目标进阶 0
