@@ -152,3 +152,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)，UNRELENTING(10分/3局)
 - 策略进化：elite_min_hp_pct: 0.70 → 0.75（精英战阵亡，进场血量 1%，提高精英回避线）；exploration_rate: 0.173 → 0.168（经验累积，探索衰减）
 - 生涯战绩：0/13 胜，当前目标进阶 0
+
+## 第 14 局复盘（2026-08-22 17:34）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：UPPERCUT, BREAKTHROUGH, SHRUG_IT_OFF, TWIN_STRIKE, UNRELENTING, SPITE, UPPERCUT, TRUE_GRIT, ANGER, VICIOUS, FEEL_NO_PAIN, TRUE_GRIT, UNRELENTING
+- 本局遗物：WHETSTONE, 闪亮口红
+- 战斗记录：F6 Monster战 掉血5; F8 Monster战 掉血20; F13 Monster战 掉血16; F14 Elite战 掉血23; F15 Monster战 掉血10; F17 Boss战 掉血57（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，FIGHT_ME(22分/3局)，TRUE_GRIT(22分/3局)，RAMPAGE(22分/4局)，IRON_WAVE(21分/3局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)，PILLAGE(11分/2局)
+- 策略进化：block_safety: 1.65 → 1.70（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.168 → 0.163（经验累积，探索衰减）
+- 生涯战绩：0/14 胜，当前目标进阶 0
