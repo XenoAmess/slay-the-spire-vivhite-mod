@@ -845,3 +845,14 @@
 - 修复②败局竞速 v1：回合边界采样净损血 EMA，外推 ≤2 回合死亡且血 ≤60% 时解除能量预留、攻击提速 ×1.3（与孤注一掷互斥防双重放大）——单回合阈值（lethal/pyrrhic）挡不住叠力量型 Boss 的多回合死亡趋势。
 - 经验沉淀：①投影不进评分就只是日记，任何"已知结论"要追问是否进了惩罚函数；②生存判定需要时间维度，快照只能做下限保护；③修复验证以决策日志行为标记为准而非代码库状态（两局都跑在上轮修复生效前的旧进程里）；④"谁杀的"看敌人统计、"为什么走到那里"看路径统计，两者不可互相替代。
 - 观察点：入场线生效后进 Boss 血量中位能否 ≥65%；败局竞速触发频率与胜率；CEREMONIAL_BEAST/KIN 死亡率 <30%；新日志应出现「优先续航路线」「败局竞速全攻」标记。
+
+## 第 65 局复盘（2026-08-23 04:34）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：HEADBUTT, DEFEND_IRONCLAD, DEFEND_IRONCLAD, VICIOUS, DEFEND_IRONCLAD, SHRUG_IT_OFF, SHRUG_IT_OFF, SHRUG_IT_OFF, SHRUG_IT_OFF, CRUELTY, CRUELTY, JUGGLING, SHRUG_IT_OFF, SALVO
+- 本局遗物：PARRYING_SHIELD
+- 战斗记录：F6 Monster战 掉血0; F8 Monster战 掉血7; F8 Monster战 掉血11; F11 Unknown战 掉血0; F11 Unknown战 掉血44; F11 Unknown战 掉血13（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/5局)，UPPERCUT(17分/22局)，UNMOVABLE(17分/3局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/65 胜，当前目标进阶 0
