@@ -328,12 +328,17 @@ class Viewer:
 
     # ----- 内容摄入 -----
     def add_text(self, text: str, style: str = "body") -> None:
-        for raw in text.splitlines() or [""]:
+        added = False
+        for raw in text.splitlines():
             for seg in self._wrap(raw):
+                if not seg.strip():
+                    continue  # 纯空白行直接忽略（否则会不停追加空行，观感怪异）
                 self.lines.append((seg, style))
                 self.total_chars += len(seg)
+                added = True
         self.lines = self.lines[-MAX_LINES:]
-        self.rain_pulse = 2.4
+        if added:
+            self.rain_pulse = 2.4
         low = text.lower()
         if "selfcheck ok" in low:
             self.flash_until = time.time() + 0.8
