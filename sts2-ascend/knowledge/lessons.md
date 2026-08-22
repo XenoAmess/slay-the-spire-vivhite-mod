@@ -141,3 +141,14 @@
 - 当前低价值卡牌：SETUP_STRIKE(10分/4局)，DISMANTLE(13分/2局)，SPITE(14分/9局)
 - 策略进化：block_safety: 1.60 → 1.65（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.179 → 0.173（经验累积，探索衰减）
 - 生涯战绩：0/12 胜，当前目标进阶 0
+
+## 第 13 局复盘（2026-08-22 17:24）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：STRIKE_IRONCLAD, DEFEND_IRONCLAD, UNRELENTING, STRIKE_IRONCLAD, STRIKE_IRONCLAD, WHIRLWIND, VICIOUS, PILLAGE, VICIOUS, SWORD_BOOMERANG, STRIKE_IRONCLAD, SETUP_STRIKE, HEADBUTT, STRIKE_IRONCLAD, SWORD_BOOMERANG, UNRELENTING
+- 本局遗物：无
+- 战斗记录：F7 Unknown战 掉血1; F7 Unknown战 掉血9; F9 Elite战 掉血1; F9 Elite战 掉血0; F9 Elite战 掉血41; F9 Elite战 掉血1（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，FIGHT_ME(22分/3局)，UPPERCUT(22分/6局)，RAMPAGE(22分/4局)，TWIN_STRIKE(21分/3局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)，UNRELENTING(10分/3局)
+- 策略进化：elite_min_hp_pct: 0.70 → 0.75（精英战阵亡，进场血量 1%，提高精英回避线）；exploration_rate: 0.173 → 0.168（经验累积，探索衰减）
+- 生涯战绩：0/13 胜，当前目标进阶 0
