@@ -371,3 +371,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.103 → 0.100（经验累积，探索衰减）
 - 生涯战绩：0/30 胜，当前目标进阶 0
+
+## 第 31 局复盘（2026-08-22 23:16）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：STRIKE_IRONCLAD, TWIN_STRIKE, SHRUG_IT_OFF, VICIOUS, HEADBUTT, TWIN_STRIKE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血4; F3 Monster战 掉血3; F4 Monster战 掉血0; F6 Monster战 掉血50; F7 Monster战 掉血0; F7 Monster战 掉血30（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(21分/4局)，UPPERCUT(19分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：exploration_rate: 0.100 → 0.097（经验累积，探索衰减）
+- 生涯战绩：0/31 胜，当前目标进阶 0
