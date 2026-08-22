@@ -2,3 +2,5 @@ GPT2InferenceModel has generative capabilities, as `prepare_inputs_for_generatio
   - If you're using `trust_remote_code=True`, you can get rid of this warning by loading the model with an auto class. See https://huggingface.co/docs/transformers/en/model_doc/auto#auto-classes
   - If you are the owner of the model architecture code, please modify your model class such that it inherits from `GenerationMixin` (after `PreTrainedModel`, otherwise you'll get an exception).
   - If you are not the owner of the model architecture class, please contact the model code owner to update it.
+Passing a tuple of `past_key_values` is deprecated and will be removed in Transformers v4.53.0. You should pass an instance of `Cache` instead, e.g. `past_key_values=DynamicCache.from_legacy_cache(past_key_values)`.
+  0%|          | 0/25 [00:00<?, ?it/s]  4%|¨…         | 1/25 [02:11<52:46, 131.92s/it] 16%|¨€¨„        | 4/25 [02:12<08:44, 24.99s/it]  16%|¨€¨„        | 4/25 [02:30<08:44, 24.99s/it] 20%|¨€¨€        | 5/25 [03:45<14:39, 43.99s/it]
