@@ -1,5 +1,5 @@
 {
- "block_safety": 1.8,
+ "block_safety": 1.85,
  "power_round_bonus": 6.0,
  "kill_bonus": 12.0,
  "free_card_bonus": 1.5,
@@ -28,8 +28,23 @@
  "removal_enabled": true,
  "removal_gold_reserve": 60,
  "rest_heal_threshold": 0.7,
- "exploration_rate": 0.14895651096470125,
+ "exploration_rate": 0.14448781563576021,
  "exploration_decay": 0.97,
  "exploration_min": 0.05,
- "potion_hard_only": true
+ "potion_hard_only": true,
+ "rest_heal_fraction": 0.3,
+ "path_danger_priors": {
+  "Monster": 8,
+  "Unknown": 10,
+  "Elite": 28,
+  "Boss": 45,
+  "Event": 0,
+  "Shop": 0,
+  "Treasure": 0,
+  "RestSite": 0,
+  "Ancient": 0
+ },
+ "path_hp_floor_pct": 0.35,
+ "path_death_penalty": 100.0,
+ "elite_min_deck_cards": 4
 }

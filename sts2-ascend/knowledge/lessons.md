@@ -211,3 +211,14 @@
   2) 复盘固定检查项：跨子系统一致性（选牌端 vs 战斗端 vs 地图端的攻防价值观是否互相矛盾）。
   3) decide() 会吞异常保活、selfcheck 只测不抛异常——新决策逻辑必须配最小场景断言测试，否则 bug 静默变成错误决策（本次变量遮蔽 bug 即靠场景测试抓到）。
   4) 活着到 Boss 只是及格线，Boss 掉血 36~80 说明决定变量是斩杀线；下轮复盘开始统计 Boss 战回合数。
+
+## 第 18 局复盘（2026-08-22 12:22）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：HEADBUTT, ARMAMENTS, UNRELENTING, RAMPAGE, SWORD_BOOMERANG, RAMPAGE, TWIN_STRIKE, UNRELENTING, STOMP, RAMPAGE, SWORD_BOOMERANG, RAMPAGE, VICIOUS, CINDER, UNRELENTING, UPPERCUT, BATTLE_TRANCE, RUPTURE, UPPERCUT, CINDER, FIEND_FIRE, CINDER, THUNDERCLAP, UPPERCUT
+- 本局遗物：斗篷扣, ORICHALCUM
+- 战斗记录：F19 Monster战 掉血1; F19 Monster战 掉血0; F21 Monster战 掉血18; F22 Unknown战 掉血8; F22 Unknown战 掉血0; F22 Unknown战 掉血59（阵亡）
+- 当前高价值卡牌：MANGLE(29分/4局)，STOMP(28分/2局)，FIGHT_ME(22分/3局)，CINDER(22分/3局)，IRON_WAVE(21分/3局)
+- 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.80 → 1.85（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.149 → 0.144（经验累积，探索衰减）
+- 生涯战绩：0/18 胜，当前目标进阶 0
