@@ -994,3 +994,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/76 胜，当前目标进阶 0
+
+## 第 77 局复盘（2026-08-23 06:36）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：THUNDERCLAP, HEADBUTT, SHRUG_IT_OFF, BLUDGEON, BLUDGEON, TAUNT, HEADBUTT, BLUDGEON, ANGER, MANGLE, FIGHT_ME, MANGLE, PACTS_END, STAMPEDE, MANGLE, MANGLE, CONFLAGRATION, MANGLE, TRUE_GRIT, HOWL_FROM_BEYOND, BLUDGEON, UPPERCUT, MANGLE, MANGLE
+- 本局遗物：战纹涂料, NUNCHAKU
+- 战斗记录：F20 Monster战 掉血8; F21 Monster战 掉血44; F21 Monster战 掉血0; F22 Monster战 掉血10; F22 Monster战 掉血0; F22 Monster战 掉血15（阵亡）
+- 当前高价值卡牌：MANGLE(21分/18局)，CONFLAGRATION(20分/2局)，IMPERVIOUS(19分/5局)，STOMP(18分/7局)，UPPERCUT(17分/26局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/77 胜，当前目标进阶 0
