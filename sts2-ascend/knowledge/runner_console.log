@@ -11516,3 +11516,69 @@ Untracked files:
 [01:21:29] [REWARD/F12] 一键收取奖励并继续
   ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
 [01:21:30] [MAP/F12] 路径规划：Unknown(12,5)（路径分 15.65，预计进 Boss 血量 35%）；候选：Unknown(12,5)=15.65
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ate"]=0 临时置零再测。selfcheck 里 pol 是 Policy 实例，know 可访问。
+
+先看 selfcheck.py 现有结构，找插入点。
+**修复 6：selfcheck.py** 追加回归测试。先看现有结构：
+⚙ read {}
+· tokens 122073 ·
+⚙ read {}
+· tokens 124549 ·
+💭 在 3o 之后、4 之前插入新测试：
+- 3p) 第 41 局复刻：59% 血 Elite(soft 线下) vs Monster → 必须选 Monster（tier 0 < tier 1）。注意当前 policy elite_min=0.82 → soft=0.67。59% < 67% ✓ 触发硬规避。但真实知识库 real 的 policy 也是 0.82。这里用的是空库 know（DEFAULT elite_min_hp_pct=0.55！soft=0.62 默认）。空库下 elite_min=0.55：hpp=59% ≥ soft 62%？0.59 < 0.62 ✓ 仍触发。但 hpp=0.59 < hard=0.55？不，0.59 > 0.55 → 灰区 0.5 权重 tier…… 灰区 gate_f=0.5 > 0.1 → tier=0！那 Monster(59%≥45% gate) tier=0 同层比分数，Elite 有 Boss 权重 10 的子树分可能更高！测试会 flaky。
+  
+  所以 3p 测试要显式设 policy：know.policy["elite_min_hp_pct"]=0.82（模拟当前真实值）。soft=max(0.35, 0.82-0.15)=0.67。59%<67% → gate_f=0.1 tier=1。Monster 59%≥0.45 → tier=0。Monster 必胜。✓
+  
+  另外血量用 47/80=58.75%。floor=10 复刻第 41 局。
+
+- 3q) 事件证伪让位：know.policy["exploration_rate"]=0 禁探索；events 数据：OPT_A {n:4, hp_delta_sum:0, gold_delta_sum:0, deaths:0}（v=0）、OPT_B n=0。options 顺序 A 在前。断言选 B（index 1）。
+  注意 event_option_value 返回 (0.0, 4) 和 (0.0, 0)。sort 后 scored[0]=A(n=4)。v=0≤0 且 n=4≥2 → fresh=[B] → 选 B。✓
+  
+  还要验证反向：全部选项都有样本时不受影响——可省。
+
+- 3r) 统计对账迁移：新临时目录 tmp2，写 runs/ 下三个文件：
+  - 20260101-000000_REAL1.json: decisions=[{...}], floor=17, ascension=0, victory=false
+  - 20260101-000001_REAL2.json: decisions=[{...}], floor=11, ascension=0, victory=false
+  - 20260101-000002_GHOST.json: decisions=[], floor=11, victory=false（幽灵）
+  - _wip_X.json: 任意（应被忽略）
+  stats.json: global.runs=3, floors_total=39, reconciled 无
+  progression.json: runs_by_ascension {"0": 3}
+  加载后断言 runs==2、floors_total==28、runs_by_ascension["0"]==2、reconciled_runs_v2 True。
+  再次加载（save 后）确认幂等：reconciled 标记存在直接跳过。✓
+
+写这些测试。注意 selfcheck 的 tmp 目录由 tempfile.mkdtemp 创建，测试后不清理（现状如此，跟随）。
+
+knowledge.Knowledge(tmp2) 的构造需要 root/runs 目录——构造函数会 mkdir。我先写文件再构造：需要先 (tmp2/"runs").mkdir(parents=True)。
+
+stats.json 内容：{"version":1, "global":{...}}。_load_json 读它。global 缺的键 setdefault 补。✓
+在 3o 与 4 之间插入三组回归测试：
+⚙ edit {}
+· tokens 93975 ·
+
+[llm] 自检失败（冒烟）： n <module>
+    sys.exit(main())
+             ~~~~^^
+  File "D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\brain\selfcheck.py", line 289, in main
+    assert d_tie.params.get("option_index") == 1, f"�¼�ƽֵ����ƫ���������ѡ��: {d_tie.reason}"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: �¼�ƽֵ����ƫ���������ѡ��: �¼���ƽֵ���ԡ���ѡ��δ֪��������ֵ 0.0������֪��=0.0(n=4) / δ֪��=0.0(n=0)
+
+[llm] 复盘变更未通过自检，执行 git 回滚
+[git] 路径回滚到 1010ee7d（6 条路径）：成功
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:21:34] [COMBAT/F13] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=BRUTE_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER+TRACKER_RUBY_RAIDER｜历史场均掉血 30.0｜房间类型 Unknown
+[01:21:35] [COMBAT/F13] 战斗：回合过渡中，等待
+[01:21:35] [COMBAT/F13] 战斗：回合过渡中，等待
+[01:21:36] [COMBAT/F13] 战斗：打出【岿然不动】（格挡30）；敌意图总伤7，我方30血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:21:37] [COMBAT/F13] 战斗：打出【打击】→劫掠者暴徒（单体伤害≈6）；敌意图总伤7，我方30血/30甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:21:38] [COMBAT/F13] 战斗：本回合已无牌可出，确认结束（打击✗,受伤✗,余烬✗）
+[git] 已自动存档：revert(sts2-ascend): 第41~42局复盘未过自检，路径回滚到 1010ee7d
+[llm] 已回滚到复盘前备份点 1010ee7d（本次变更废弃，报告副本在 code_backups）
+[01:21:39] [COMBAT/F13] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:21:40] [COMBAT/F13] 战斗：回合过渡中，等待
+[01:21:41] [COMBAT/F13] 战斗：回合过渡中，等待
