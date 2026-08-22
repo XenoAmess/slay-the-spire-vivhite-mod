@@ -308,6 +308,50 @@ def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, 
 # 直播流：把复盘会话的 stdout 实时写到 review_live.stream，并拉起悬浮窗
 # ---------------------------------------------------------------------------
 
+class OpencodeJsonTranslator:
+    """把 opencode `--format json` 的事件流逐行翻译成可读直播文本。
+
+    事件形如 {"type": "text", "part": {"id": ..., "type": "text", "text": ...}}。
+    text/reasoning 事件是同一 part 的增量快照（全量重复推送），按 part id 去重只输出增量。
+    """
+
+    def __init__(self) -> None:
+        self._seen: dict[str, int] = {}
+
+    def feed(self, raw: str) -> list[str]:
+        s = raw.strip()
+        if not s:
+            return []
+        if not s.startswith("{"):
+            return [s]
+        try:
+            evt = json.loads(s)
+        except json.JSONDecodeError:
+            return [s]
+        part = evt.get("part") or {}
+        ptype = part.get("type") or evt.get("type") or ""
+        pid = str(part.get("id") or "")
+        if ptype in ("text", "reasoning"):
+            text = part.get("text") or ""
+            prev = self._seen.get(pid, 0)
+            if len(text) <= prev:
+                return []
+            self._seen[pid] = len(text)
+            prefix = "💭 " if ptype == "reasoning" and prev == 0 else ""
+            return [prefix + text[prev:]]
+        if ptype in ("tool", "tool-call", "tool_call", "tool-use", "tool-result", "tool_result"):
+            name = part.get("tool") or part.get("name") or "tool"
+            brief = json.dumps(part.get("input") or part.get("args") or {},
+                               ensure_ascii=False)[:160]
+            return [f"⚙ {name} {brief}"]
+        if ptype == "patch":
+            files = part.get("files") or []
+            return ["📦 修改 " + ", ".join(str(f).split("/")[-1] for f in files)]
+        if ptype == "step-finish":
+            tok = (part.get("tokens") or {}).get("total")
+            return [f"· tokens {tok} ·"] if tok else []
+        return []   # step-start 等噪音不显示
+
 def _launch_viewer(cfg: dict, log) -> None:
     """拉起直播悬浮窗（独立进程，它的死活绝不影响复盘）。"""
     if not cfg.get("viewer_enabled", True) or not VIEWER_PATH.exists():
@@ -341,9 +385,11 @@ def _stream_end(payload: dict) -> None:
         pass
 
 
-def _stream_run(cmd: list[str], timeout_sec: int) -> tuple[int, str, bool]:
+def _stream_run(cmd: list[str], timeout_sec: int,
+                translate=None) -> tuple[int, str, bool]:
     """流式执行命令：stdout/stderr 合并逐行实时写入 LIVE_STREAM，同时收集全文。
 
+    translate（可选）：把每个原始输出行映射为 0~N 个展示行（如 OpencodeJsonTranslator.feed）。
     返回 (returncode, 全文输出, 是否超时)。超时则 kill 进程。
     """
     env = dict(os.environ)
@@ -376,12 +422,16 @@ def _stream_run(cmd: list[str], timeout_sec: int) -> tuple[int, str, bool]:
             if ln is None:
                 break
             if ln:
-                lines.append(ln)
-                try:
-                    stream.write(ln)
-                    stream.flush()
-                except OSError:
-                    pass
+                out_lines = translate(ln) if translate else [ln]
+                for ol in out_lines:
+                    if not ol.endswith("\n"):
+                        ol += "\n"
+                    lines.append(ol)
+                    try:
+                        stream.write(ol)
+                        stream.flush()
+                    except OSError:
+                        pass
             if time.monotonic() > deadline:
                 timed_out = True
                 try:
@@ -470,6 +520,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     cmd = [
         binary, "run",
         "--model", model_id,
+        "--format", "json",      # JSON 事件流（含 text/reasoning/tool），直播翻译成人话
+        "--thinking",            # 显示思维链
     ]
     if variant:
         cmd += ["--variant", variant]
@@ -488,8 +540,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     rc, out, timed_out = -1, "", False
     eff_timeout_min = float(cfg.get("preferred_timeout_min", 40)) if source == "preferred" \
         else float(cfg.get("timeout_min", 25))
+    translator = OpencodeJsonTranslator()
     try:
-        rc, out, timed_out = _stream_run(cmd, int(eff_timeout_min * 60))
+        rc, out, timed_out = _stream_run(cmd, int(eff_timeout_min * 60), translate=translator.feed)
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
         if timed_out:
             log(f"[llm] 复盘超时（{eff_timeout_min:.0f} 分钟），本次作废")
