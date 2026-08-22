@@ -934,3 +934,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/71 胜，当前目标进阶 0
+
+## 第 72 局复盘（2026-08-23 05:37）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 WRIGGLER
+- 本局拿牌：INFLAME, VICIOUS
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F4 Monster战 掉血3; F5 Unknown战 掉血80（阵亡）
+- 当前高价值卡牌：MANGLE(20分/11局)，IMPERVIOUS(20分/4局)，STOMP(18分/6局)，UPPERCUT(17分/24局)，UNMOVABLE(17分/5局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/72 胜，当前目标进阶 0

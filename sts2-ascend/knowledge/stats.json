@@ -1,9 +1,9 @@
 {
  "version": 1,
  "global": {
-  "runs": 71,
+  "runs": 72,
   "wins": 0,
-  "floors_total": 870.0,
+  "floors_total": 875.0,
   "best_floor": 33,
   "deaths_by_enemy": {
    "BYGONE_EFFIGY": 3,
@@ -19,7 +19,7 @@
    "CEREMONIAL_BEAST": 7,
    "THE_OBSCURA": 1,
    "FOGMOG": 4,
-   "WRIGGLER": 1,
+   "WRIGGLER": 2,
    "LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_M+TWIG_SLIME_S": 2,
    "INKLET": 1,
    "FUZZY_WURM_CRAWLER": 1,
@@ -70,9 +70,9 @@
    "bias": 0.0
   },
   "STRIKE_IRONCLAD": {
-   "seen": 497,
+   "seen": 502,
    "picked": 12,
-   "plays": 1547,
+   "plays": 1567,
    "outcome_sum": 124.0,
    "bias": 0.0
   },
@@ -84,9 +84,9 @@
    "bias": 0.0
   },
   "BASH": {
-   "seen": 130,
+   "seen": 131,
    "picked": 6,
-   "plays": 493,
+   "plays": 500,
    "outcome_sum": 43.0,
    "bias": 0.0
   },
@@ -105,7 +105,7 @@
    "bias": 0.0
   },
   "ANGER": {
-   "seen": 61,
+   "seen": 62,
    "picked": 10,
    "plays": 60,
    "outcome_sum": 153.0,
@@ -119,9 +119,9 @@
    "bias": 0.0
   },
   "DEFEND_IRONCLAD": {
-   "seen": 551,
+   "seen": 555,
    "picked": 8,
-   "plays": 1354,
+   "plays": 1367,
    "outcome_sum": 74.0,
    "bias": 0.0
   },
@@ -189,10 +189,10 @@
    "bias": 0.0
   },
   "VICIOUS": {
-   "seen": 34,
-   "picked": 13,
-   "plays": 17,
-   "outcome_sum": 186.0,
+   "seen": 35,
+   "picked": 14,
+   "plays": 18,
+   "outcome_sum": 191.0,
    "bias": 0.0
   },
   "HEADBUTT": {
@@ -219,7 +219,7 @@
   "SLIMED": {
    "seen": 25,
    "picked": 0,
-   "plays": 93,
+   "plays": 94,
    "outcome_sum": 0.0,
    "bias": 0.0
   },
@@ -231,7 +231,7 @@
    "bias": 0.0
   },
   "BODY_SLAM": {
-   "seen": 49,
+   "seen": 50,
    "picked": 2,
    "plays": 4,
    "outcome_sum": 20.0,
@@ -385,17 +385,17 @@
    "bias": 0.0
   },
   "JUGGLING": {
-   "seen": 12,
+   "seen": 13,
    "picked": 2,
    "plays": 0,
    "outcome_sum": 28.0,
    "bias": 0.0
   },
   "INFLAME": {
-   "seen": 16,
-   "picked": 3,
+   "seen": 17,
+   "picked": 4,
    "plays": 7,
-   "outcome_sum": 40.0,
+   "outcome_sum": 45.0,
    "bias": 0.0
   },
   "FORGOTTEN_RITUAL": {
@@ -588,7 +588,7 @@
    "bias": 0.0
   },
   "DRUM_OF_BATTLE": {
-   "seen": 9,
+   "seen": 10,
    "picked": 2,
    "plays": 8,
    "outcome_sum": 12.0,
@@ -1215,10 +1215,10 @@
    "boss_deaths": 0
   },
   "NIBBIT": {
-   "encounters": 76,
-   "hp_lost_sum": 741.0,
+   "encounters": 77,
+   "hp_lost_sum": 742.0,
    "deaths": 5,
-   "wins": 71,
+   "wins": 72,
    "boss_encounters": 0,
    "boss_hp_lost_sum": 0.0,
    "boss_deaths": 0
@@ -1296,10 +1296,10 @@
    "boss_deaths": 0
   },
   "LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_S": {
-   "encounters": 22,
-   "hp_lost_sum": 72.0,
+   "encounters": 23,
+   "hp_lost_sum": 75.0,
    "deaths": 0,
-   "wins": 22,
+   "wins": 23,
    "boss_encounters": 0,
    "boss_hp_lost_sum": 0.0,
    "boss_deaths": 0
@@ -1422,9 +1422,9 @@
    "boss_deaths": 0
   },
   "WRIGGLER": {
-   "encounters": 4,
-   "hp_lost_sum": 47.0,
-   "deaths": 1,
+   "encounters": 5,
+   "hp_lost_sum": 127.0,
+   "deaths": 2,
    "wins": 3,
    "boss_encounters": 0,
    "boss_hp_lost_sum": 0.0,
@@ -1876,6 +1876,13 @@
     "gold_delta_sum": 0.0,
     "deaths": 0,
     "card_delta_sum": 0.0
+   },
+   "NEOW.pages.INITIAL.options.POMANDER": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0
    }
   },
   "BYRDONIS_NEST": {
@@ -2049,10 +2056,11 @@
     "deaths": 0
    },
    "THIS_OR_THAT.pages.INITIAL.options.ORNATE": {
-    "n": 1,
+    "n": 2,
     "hp_delta_sum": 0.0,
     "gold_delta_sum": 0.0,
-    "deaths": 0
+    "deaths": 0,
+    "card_delta_sum": 1.0
    }
   },
   "THE_FUTURE_OF_POTIONS": {
@@ -2104,15 +2112,22 @@
     "hp_delta_sum": -8.0,
     "gold_delta_sum": 75.0,
     "deaths": 0
+   },
+   "DENSE_VEGETATION.pages.REST.options.FIGHT": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0
    }
   }
  },
  "rooms": {
   "Monster": {
-   "visits": 386,
-   "outcome_sum": 5099.0,
-   "hp_lost_sum": 3388.0,
-   "damage_events": 326
+   "visits": 388,
+   "outcome_sum": 5109.0,
+   "hp_lost_sum": 3392.0,
+   "damage_events": 328
   },
   "RestSite": {
    "visits": 107,
@@ -2127,10 +2142,10 @@
    "damage_events": 19
   },
   "Unknown": {
-   "visits": 84,
-   "outcome_sum": 1223.0,
-   "hp_lost_sum": 273.0,
-   "damage_events": 16
+   "visits": 86,
+   "outcome_sum": 1233.0,
+   "hp_lost_sum": 353.0,
+   "damage_events": 17
   },
   "Treasure": {
    "visits": 39,
