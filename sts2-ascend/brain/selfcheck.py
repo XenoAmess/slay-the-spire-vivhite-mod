@@ -819,6 +819,187 @@ def main() -> int:
     assert ag_fresh.know.stats["global"]["runs"] == runs_before, "幻影局被计入生涯统计"
     assert list((tmp_agent / "runs").glob("*.json")) == [], "幻影局日志被写入 runs/"
 
+    # 3aa) 组合战损维度姿态（第 64 局复盘）：FLYCONID+SNAPPING_JAXFRUIT 式组合
+    #      死亡率仅 15% 但场均掉血 25.8（32% 血条）——旧判定只看死亡率，中性姿态下
+    #      50 血对 26 意图仍全攻半防两回合被打穿。传 max_hp 按战损占比收紧；
+    #      不传 max_hp 保持向后兼容（纯死亡率判定）
+    know.stats.setdefault("enemies", {})["LOSSY_DUO"] = {
+        "encounters": 13, "hp_lost_sum": 335.0, "deaths": 2, "wins": 11}
+    st_loss = know.enemy_stance("LOSSY_DUO", None, 80)
+    assert st_loss["urgent_hp_pct"] > 0.45 and st_loss["atk_mult"] < 1.0 \
+        and "高危" in st_loss.get("danger", ""), f"组合战损姿态失效: {st_loss}"
+    st_compat = know.enemy_stance("LOSSY_DUO")
+    assert st_compat["atk_mult"] == 1.0 and "danger" not in st_compat, \
+        f"不传 max_hp 应保持旧死亡率判定: {st_compat}"
+
+    # 3bb) 高危组合解锁药水（第 64 局复盘）：普通房遭遇场均战损 ≥30% 血条的组合时，
+    #      增益药水必须立即可用——旧门槛只认精英/Boss 房，异鱼之油拖到 9 血才掏出来
+    def comp_potion_state():
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+            "combat": {"player": {"current_hp": 50, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "M", "name": "小怪",
+                                    "current_hp": 30, "max_hp": 30, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 10}]}]},
+            "run": {"current_hp": 50, "max_hp": 80, "gold": 0, "floor": 5, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "OIL_P", "name": "异鱼之油",
+                                 "description": "获得2点力量。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+
+    ctx.current_combat_is_hard = False
+    ctx.combat = {"comp_id": "LOSSY_DUO", "node_type": "Monster"}  # 场均 25.8 ≥ 24 → 硬仗
+    d_cp1 = pol.decide(comp_potion_state(), ctx)
+    assert d_cp1.action == "use_potion", f"高危组合未解锁增益药水: {d_cp1.action}（{d_cp1.reason}）"
+    ctx.combat = {"comp_id": "HARMLESS", "node_type": "Monster"}   # 无数据组合（先验12<24）不得烧药
+    d_cp2 = pol.decide(comp_potion_state(), ctx)
+    assert d_cp2.action != "use_potion", f"低危组合烧掉增益药水: {d_cp2.action}（{d_cp2.reason}）"
+    ctx.combat = None
+
+    # 3cc) Boss 前夜智能锻造（第 63 局复盘）：满血进 Boss 仍被仪式兽 85 点战损处决——
+    #      Boss 分档实测场均战损 ≥ 满血且入场线已达标时，回血是无效投资，
+    #      必须改锻造缩短战斗；样本不足或战损低于满血时维持「优先回血」
+    know.stats["enemies"]["BOSS_HOG"] = {
+        "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
+        "boss_encounters": 2, "boss_hp_lost_sum": 170.0, "boss_deaths": 1}
+    know.stats["enemies"]["BOSS_PIG"] = {
+        "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
+        "boss_encounters": 2, "boss_hp_lost_sum": 180.0, "boss_deaths": 1}
+    rest_boss_state = dict(rest_state)
+    rest_boss_state["run"] = {"current_hp": 62, "max_hp": 80, "gold": 0, "floor": 15,
+                              "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}
+    bl, bn = know.boss_loss_stats()
+    assert bn == 4 and abs(bl - 87.5) < 1e-6, f"Boss 分档统计错误: {bl}/{bn}"
+    ctx.rest_before_boss = True
+    d_eve_smith = pol.decide(rest_boss_state, ctx)
+    assert d_eve_smith.tags[0] == ("rest", "smith"), f"Boss前夜智能锻造未触发: {d_eve_smith.reason}"
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 120.0  # 均值降至 72.5 < 80
+    d_eve_heal = pol.decide(rest_boss_state, ctx)
+    assert d_eve_heal.tags[0] == ("rest", "heal"), f"战损低于满血应回血: {d_eve_heal.reason}"
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 180.0
+    rest_low = dict(rest_boss_state)
+    rest_low["run"] = dict(rest_boss_state["run"], current_hp=38)  # 47.5% < 入场线 65%
+    d_eve_low = pol.decide(rest_low, ctx)
+    assert d_eve_low.tags[0] == ("rest", "heal"), f"入场线未达标应回血: {d_eve_low.reason}"
+    ctx.rest_before_boss = False
+
+    # 3dd) 事件加牌稀释记账（第 63 局复盘）：带走这颗蛋把不可打出的鸟蛋混进卡组
+    #      （Boss 战多次占据手牌 ✗ 位），结算只记 hp/gold 全零看似免费——
+    #      card_delta 记账后每净增 1 张牌 -2 分，强正收益事件不被误伤
+    know.commit_event_option("EGG_EV", "TAKE", 0.0, 0.0, died=False, deck_delta=1)
+    v_egg, n_egg = know.event_option_value("EGG_EV", "TAKE")
+    assert v_egg <= -2.0 and n_egg == 1, f"加牌稀释代价未入账: {v_egg}"
+    know.commit_event_option("GIFT_EV", "CARD", 0.0, 200.0, died=False, deck_delta=1)
+    v_gift, _ = know.event_option_value("GIFT_EV", "CARD")
+    assert v_gift > 0.0, f"强正收益加牌不应被误伤: {v_gift}"
+
+    # 3ee) 事件结算管线：pending_event 元组新增卡组规模字段后读写两端必须一致
+    ag.ctx.reset_for("RUN_EVT", 0)
+    ag._track({"screen": "EVENT", "run_id": "RUN_EVT",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                       "deck": [{"card_id": "A"}]}},
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "PLUMB_EV", "TAKE")]))
+    ag._track({"screen": "MAP", "run_id": "RUN_EVT",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 60, "floor": 3,
+                       "deck": [{"card_id": "A"}, {"card_id": "EGG"}]}},
+              policy.Decision(action=None))
+    pe = tknow.stats["events"].get("PLUMB_EV", {}).get("TAKE")
+    assert pe and pe["n"] == 1 and pe.get("card_delta_sum") == 1.0 \
+        and pe["gold_delta_sum"] == 10.0 and pe["hp_delta_sum"] == 0.0, \
+        f"事件卡牌增量管线断裂: {pe}"
+
+    # 3ff) 出牌黑名单索引漂移防护（第 65~66 局复盘实锤）：mod 手牌 index 是位置
+    #      序号，打出一张牌后剩余牌 index 集体前移；叠加旧版把成功状态 completed
+    #      当失败拉黑——每打出一张牌就误杀一张未出牌。66 局 F5：5 张手打出 2 张后
+    #      双打击同时被误拉黑，1 能量弃权白吃 15 意图；65 局 F11 致死回合手握打击
+    #      同型阵亡。修复后黑名单以「手牌数量未变」为有效期，手牌一变整体释放；
+    #      手牌未变的 409 重试防护保持精确拉黑不变。
+    raiders = [{"index": 0, "enemy_id": "RAIDER", "name": "劫掠者", "current_hp": 40,
+                "max_hp": 40, "block": 0, "is_alive": True, "is_hittable": True,
+                "intents": [{"total_damage": 15}]}]
+
+    def poison_hand(n_strikes):
+        cards = [{"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                  "energy_cost": 1, "requires_target": False, "rules_text": "获得5点格挡",
+                  "dynamic_values": [{"name": "Block", "current_value": 5}]}]
+        for i in range(n_strikes):
+            cards.append({"index": i + 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                          "playable": True, "energy_cost": 1, "requires_target": True,
+                          "valid_target_indices": [0],
+                          "dynamic_values": [{"name": "Damage", "current_value": 6}]})
+        return cards
+
+    def poison_state(energy, hand):
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+                "turn": 99,
+                "combat": {"player": {"current_hp": 87, "max_hp": 87, "block": 5,
+                                      "energy": energy},
+                           "hand": hand, "enemies": raiders},
+                "run": {"current_hp": 87, "max_hp": 87, "gold": 0, "floor": 5, "deck": []}}
+
+    h_left = [dict(c, index=i) for i, c in enumerate(poison_hand(2))]  # 打出2张后剩3→2张打击
+    pol.decide(poison_state(1, [dict(c) for c in h_left]), ctx)        # 建立回合上下文
+    pol._failed_this_turn = {0, 1}     # 复现旧版级联误拉黑：两张打击全在黑名单
+    pol._failed_hand_len = 4           # 且失败发生在更早的 4 张手时期
+    d_pf = pol.decide(poison_state(1, [dict(c) for c in h_left]), ctx)
+    assert d_pf.action == "play_card" and d_pf.params.get("card_index") == 0, \
+        f"手牌已变化时旧黑名单必须整体释放（66局F5弃权复现）: {d_pf.action}（{d_pf.reason}）"
+    pol._failed_this_turn = {1}        # 同尺寸手牌：被拉黑实例仍须精确跳过（31局语义）
+    pol._failed_hand_len = len(h_left)
+    d_pg = pol.decide(poison_state(1, [dict(c) for c in h_left]), ctx)
+    assert d_pg.action == "play_card" and d_pg.params.get("card_index") == 0, \
+        f"同尺寸手牌的黑名单防护失效: {d_pg.params}（{d_pg.reason}）"
+
+    # 3gg) 高危组合（死亡率维度）自动认定硬仗（第 65~66 局复盘）：头号杀手
+    #      FUZZY_WURM+SHRINKER_BEETLE 25战11死（44%）多出现在普通怪房，
+    #      _start_combat 旧逻辑只认 Elite/Boss 房——药水 premium 门对它永不开启，
+    #      两局均带药进坟。死亡率 ≥ danger_comp_hard_death_rate 的组合自动升级；
+    #      负例：低死亡率且场均战损 <30% 血条的温和组合不得误判。
+    tknow.stats.setdefault("enemies", {})["DEATHLY_DUO"] = {
+        "encounters": 9, "hp_lost_sum": 180.0, "deaths": 4, "wins": 5}   # 44%死/场均20(<24)
+    tknow.stats["enemies"]["MILD_DUO"] = {
+        "encounters": 8, "hp_lost_sum": 160.0, "deaths": 1, "wins": 7}   # 12.5%死/场均20
+    ag._start_combat({"max_hp": 80, "floor": 5}, "DEATHLY_DUO", "Monster", 80)
+    assert ag.ctx.current_combat_is_hard, \
+        "死亡率≥30%的普通房组合应自动认定为硬仗（解锁药水）"
+    ag._start_combat({"max_hp": 80, "floor": 5}, "MILD_DUO", "Monster", 80)
+    assert not ag.ctx.current_combat_is_hard, "低危组合不应被误判为硬仗"
+    ag.ctx.combat = None
+    ag.ctx.current_combat_is_hard = False
+
+    # 3hh) 拿牌门槛随卡组膨胀动态抬升（第 65 局复盘）：固定阈值 2.0 下 14 张/局的
+    #      注水照单全收（SHRUG_IT_OFF×5 成 24 张卡组），-0.9/张 减分压不住 8 分
+    #      格挡牌——软上限形同虚设。超软上限后门槛每张 +1.5，越臃肿越只拿精品；
+    #      小卡组行为不变（同一张牌在空卡组下照常可拿）。
+    bloated = [{"card_id": f"BLOAT_ATK_{i}", "card_type": "Attack", "energy_cost": 1}
+               for i in range(22)]
+    mid_skill = {"index": 0, "card_id": "GUARD_SMALL", "name": "小盾", "card_type": "Skill",
+                 "energy_cost": 1, "rules_text": "获得4点格挡",
+                 "dynamic_values": [{"name": "Block", "current_value": 4}]}
+    v_mid = pol.eval_reward_card(dict(mid_skill), [dict(c) for c in bloated])
+    thr_bloat = pol._pick_threshold(bloated)
+    assert v_mid >= float(know.policy["card_pick_threshold"]), \
+        f"对照失效：基础阈值下该牌本应达标 v={v_mid:.2f}"
+    assert v_mid < thr_bloat, \
+        f"膨胀门槛未抬过边际牌价值: v={v_mid:.2f} thr={thr_bloat:.2f}"
+    bloat_state = {"screen": "CARD_SELECTION",
+                   "available_actions": ["select_deck_card", "skip_reward_cards"],
+                   "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                                 "min_select": 1, "selected_count": 0, "can_confirm": False,
+                                 "cards": [dict(mid_skill)]},
+                   "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 9,
+                           "deck": [dict(c) for c in bloated]}}
+    d_bl1 = pol.decide(bloat_state, ctx)
+    assert d_bl1.action == "skip_reward_cards", \
+        f"膨胀卡组应跳过平庸牌: {d_bl1.action}（{d_bl1.reason}）"
+    bloat_state["run"]["deck"] = []
+    d_bl2 = pol.decide(bloat_state, ctx)
+    assert d_bl2.action == "select_deck_card", \
+        f"空卡组应照常拿牌: {d_bl2.action}（{d_bl2.reason}）"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

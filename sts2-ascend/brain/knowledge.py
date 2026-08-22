@@ -57,6 +57,7 @@ DEFAULT_POLICY = {
     "deck_soft_cap": 20,          # 非基础牌软上限：超出后每张候选牌都贬值（膨胀稀释抽牌质量）
     "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
     "min_block_cards": 5,         # 格挡来源（含初始防牌）少于该数 → 格挡技能增值
+    "pick_threshold_per_overflow": 1.5,  # 拿牌门槛随膨胀抬升：每超软上限一张，门槛 +1.5（第 65 局 24 张卡组实证：固定阈值压不住注水）
     # --- events ---
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay
@@ -71,6 +72,12 @@ DEFAULT_POLICY = {
     "boss_entry_penalty": 110.0,    # 路径投影入 Boss 血量每差满血 100% 的评分惩罚：让续航路线能压过消耗路线
     "hopeless_race_hp_frac": 0.6,   # 败局竞速启用血线：≤60% 最大生命才允许进入竞速模式
     "hopeless_race_horizon": 2.0,   # 按近期净损速率外推 N 回合内死亡 → 判定被动防守不可行
+    # --- 战斗端补丁键（第 65~66 局复盘） ---
+    "danger_comp_hard_death_rate": 0.30,  # 历史死亡率 ≥ 此值的敌人组合自动认定为硬仗（解锁药水投入；头号杀手 FUZZY+SHRINKER 44% 死亡率此前在普通怪房带药进坟）
+    # --- 组合感知与 Boss 前夜（第 62~64 局复盘） ---
+    "comp_loss_stance_frac": 0.28,  # 敌方组合场均战损占最大生命比达到此值 → 即使死亡率<30%也视同高危收紧姿态
+    "potion_comp_loss_frac": 0.30,  # 敌方组合场均战损占比达到此值 → 解锁增益/攻击药水（不再只认精英/Boss 房）
+    "boss_eve_smith_min_samples": 3,  # Boss 前夜智能锻造所需的 Boss 分档最小样本数
 }
 
 DEFAULT_PROGRESSION = {
@@ -136,6 +143,12 @@ class Knowledge:
         for e in self.stats["rooms"].values():
             e.setdefault("hp_lost_sum", 0.0)
             e.setdefault("damage_events", 0)
+        # 迁移：旧版 enemies 条目没有 Boss 分档字段（第 63 局复盘新增：
+        # 满血进 Boss 仍被仪式兽 85 点战损处决，需要 Boss 专属战损统计校准篝火策略）
+        for e in self.stats.get("enemies", {}).values():
+            e.setdefault("boss_encounters", 0)
+            e.setdefault("boss_hp_lost_sum", 0.0)
+            e.setdefault("boss_deaths", 0)
         # 一次性幻影局数据修复（自检加载真实库时应传 repair_phantoms=False，
         # 避免在运行中的大脑落盘前抢先改写/置标记）
         if repair_phantoms:
@@ -223,13 +236,20 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
-    def enemy_stance(self, comp_id: str | None, node_type: str | None = None) -> dict:
+    def enemy_stance(self, comp_id: str | None, node_type: str | None = None,
+                     max_hp: int | None = None) -> dict:
         """按敌人组合历史战绩生成战斗姿态修正（无数据/低危→中性）。
 
         高危组合（样本≥3 且死亡率≥30%）自动收紧生存线：提高紧急血量阈值、
         压低进攻权重、抬高格挡权重。动机：FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
         10 战 6 死、场均掉血 25（全档案最致命），此前战斗端对它零感知，
         与打杂兵用同一套节奏反复送死。
+
+        战损维度触发（第 62~64 局复盘新增）：死亡率不是唯一的危险信号——
+        FLYCONID+SNAPPING_JAXFRUIT 13 战仅 15% 死亡率却场均掉血 25.8（32% 血条），
+        中性姿态下引擎在 50 血对 26 意图时仍全攻半防，两回合被打穿。
+        场均战损 ≥ comp_loss_stance_frac × 最大生命同样视同高危
+        （需调用方传入 max_hp；不传则退化为纯死亡率判定，向后兼容）。
 
         Boss 战反转姿态（node_type="Boss"）：Boss 的死因是斩杀线不足——
         第 35 局仪式兽战拖到 8 回合被逐轮升级的意图磨死，压攻击只会拖长战斗、
@@ -244,16 +264,27 @@ class Knowledge:
             return base
         n = e.get("encounters", 0)
         deaths = e.get("deaths", 0)
+        sev_parts = []
         if n >= 3 and deaths / n >= 0.30:
-            sev = min(1.0, (deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
+            sev_parts.append((deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
+        frac_thr = float(self.policy.get("comp_loss_stance_frac", 0.28))
+        if n >= 3 and max_hp and e.get("hp_lost_sum", 0.0) / n >= float(max_hp) * frac_thr:
+            loss_frac = e["hp_lost_sum"] / n / float(max_hp)
+            sev_parts.append((loss_frac - frac_thr) / 0.22)  # 场均战损占比越高越危险
+        if sev_parts:
+            sev = min(1.0, max(sev_parts))
             if node_type == "Boss":
                 base["atk_mult"] = round(1.0 + 0.10 * sev, 3)
                 base["blk_mult"] = round(1.0 + 0.08 * sev, 3)
                 base["danger"] = f"高危Boss（{n}战{deaths}死），速战速决"
             else:
-                base["urgent_hp_pct"] = round(0.45 + 0.15 * sev, 3)
+                # 第 65~66 局复盘加强：头号杀手 FUZZY+SHRINKER（44% 死亡率，两局
+                # 连续死于它）旧系数只换来格挡 +7%、紧急线 +7%，响应过于温和——
+                # 紧急线 +0.20/格挡 +0.30；攻击压制维持 -0.15 不变（对磨血型组合
+                # 拖长战斗同样致命，防而不缩才是正确姿态）
+                base["urgent_hp_pct"] = round(0.45 + 0.20 * sev, 3)
                 base["atk_mult"] = round(1.0 - 0.15 * sev, 3)
-                base["blk_mult"] = round(1.0 + 0.15 * sev, 3)
+                base["blk_mult"] = round(1.0 + 0.30 * sev, 3)
                 base["danger"] = f"高危组合（{n}战{deaths}死）"
         return base
 
@@ -285,24 +316,53 @@ class Knowledge:
         return (1.0 - w) * float(static_prior) + w * measured
 
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
-        """Return (score, sample_count). Score mixes hp/gold deltas and death penalty."""
+        """Return (score, sample_count). Score mixes hp/gold deltas and death penalty.
+
+        加牌稀释代价（第 62~64 局复盘新增）：事件结算此前只记即时 hp/gold，
+        「带走这颗蛋」把不可打出的鸟蛋混进卡组（Boss 战多次占据手牌 ✗ 位），
+        结算却记 0/0 看似免费。每净增 1 张牌按 -2 计稀释代价，
+        强正收益（hp/gold）仍可覆盖——拿真牌的事件不会被误伤。
+        """
         opts = self.stats["events"].get(event_id, {})
         e = opts.get(option_key)
         if not e or not e["n"]:
             return 0.0, 0
         hp_avg = e["hp_delta_sum"] / e["n"]
         gold_avg = e["gold_delta_sum"] / e["n"]
+        card_avg = float(e.get("card_delta_sum", 0.0)) / e["n"]
         death_rate = e["deaths"] / e["n"]
-        return hp_avg * 1.0 + gold_avg * 0.02 - death_rate * 40.0, e["n"]
+        return (hp_avg * 1.0 + gold_avg * 0.02 - card_avg * 2.0
+                - death_rate * 40.0), e["n"]
 
     # ---------- online commits ----------
 
-    def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool) -> None:
+    def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool,
+                           node_type: str | None = None) -> None:
         e = self.stats["enemies"].setdefault(comp_id, {"encounters": 0, "hp_lost_sum": 0.0, "deaths": 0, "wins": 0})
         e["encounters"] += 1
         e["hp_lost_sum"] += max(0.0, hp_lost)
         e["wins"] += 1 if won else 0
         e["deaths"] += 1 if died else 0
+        # Boss 分档统计（第 63 局复盘新增）：Boss 战损远高于同名怪普通战
+        # （仪式兽普通场均 32 vs Boss 战 85），混在一起会系统性低估 Boss 威胁，
+        # 「Boss 前夜优先回血」的合理性判断依赖这份数据
+        if node_type == "Boss":
+            e["boss_encounters"] = e.get("boss_encounters", 0) + 1
+            e["boss_hp_lost_sum"] = e.get("boss_hp_lost_sum", 0.0) + max(0.0, hp_lost)
+            e["boss_deaths"] = e.get("boss_deaths", 0) + (1 if died else 0)
+
+    def boss_loss_stats(self) -> tuple[float, int]:
+        """全部分档 Boss 战的（场均掉血绝对值, 样本数）。
+
+        第 63 局复盘新增：满血进 Boss 仍被仪式兽 85 点战损处决——
+        「Boss 前夜优先回血」隐含假设回血量能覆盖预期战损；当实测 Boss
+        场均战损 ≥ 满血时该假设崩塌，回血是无效投资，锻造缩短战斗才是活路。
+        """
+        tot_n = tot_loss = 0.0
+        for e in self.stats.get("enemies", {}).values():
+            tot_n += float(e.get("boss_encounters", 0) or 0)
+            tot_loss += float(e.get("boss_hp_lost_sum", 0.0) or 0.0)
+        return (tot_loss / tot_n if tot_n else 0.0), int(tot_n)
 
     def commit_room_damage(self, node_type: str, hp_lost: float) -> None:
         """按房间类型累计战斗掉血（供路径先验动态校准）。"""
@@ -311,12 +371,14 @@ class Knowledge:
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
         e["damage_events"] = e.get("damage_events", 0) + 1
 
-    def commit_event_option(self, event_id: str, option_key: str, hp_delta: float, gold_delta: float, died: bool) -> None:
+    def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
+                            gold_delta: float, died: bool, deck_delta: int = 0) -> None:
         opts = self.stats["events"].setdefault(event_id, {})
         e = opts.setdefault(option_key, {"n": 0, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0})
         e["n"] += 1
         e["hp_delta_sum"] += hp_delta
         e["gold_delta_sum"] += gold_delta
+        e["card_delta_sum"] = float(e.get("card_delta_sum", 0.0)) + float(deck_delta)
         e["deaths"] += 1 if died else 0
 
     def commit_card_seen(self, card_id: str) -> None:

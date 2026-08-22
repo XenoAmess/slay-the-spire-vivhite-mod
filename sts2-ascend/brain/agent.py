@@ -83,7 +83,7 @@ class RunContext:
     decisions: list = field(default_factory=list)     # full decision log
     combat: dict | None = None                        # active combat tracker
     combat_notes: list = field(default_factory=list)
-    pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor)
+    pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor, deck_size_before)
     died_in_combat: dict | None = None                # set when the run ended inside a combat
     died_to_event: tuple | None = None                # (event_id, option_key) when an event killed us
     combat_bridge: tuple | None = None                # (comp_id, floor, ts) 转阶段过场挂起标记
@@ -194,11 +194,14 @@ class Agent:
 
         # event outcome commit on screen change
         if self.ctx.pending_event is not None and screen != "EVENT":
-            event_id, key, hp0, gold0, floor0 = self.ctx.pending_event
+            event_id, key, hp0, gold0, floor0, deck0 = self.ctx.pending_event
             victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
             died_here = screen == "GAME_OVER" and not victory_screen
-            self.know.commit_event_option(event_id, key, hp - hp0, gold - gold0, died=died_here)
-            log(f"[agent] 事件结算：{event_id}/{key} → 生命 {hp - hp0:+}，金币 {gold - gold0:+}" + ("（致死）" if died_here else ""))
+            deck_delta = len(run.get("deck", []) or []) - deck0
+            self.know.commit_event_option(event_id, key, hp - hp0, gold - gold0,
+                                          died=died_here, deck_delta=deck_delta)
+            log(f"[agent] 事件结算：{event_id}/{key} → 生命 {hp - hp0:+}，金币 {gold - gold0:+}，"
+                f"卡牌 {deck_delta:+d}" + ("（致死）" if died_here else ""))
             if died_here:
                 self.ctx.died_to_event = (event_id, key)
             self.ctx.pending_event = None
@@ -206,7 +209,8 @@ class Agent:
         # credit tags from the decision just made
         for tag in decision.tags:
             if tag[0] == "event_choice":
-                self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0))
+                self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
+                                          len(run.get("deck", []) or []))
             elif tag[0] == "rest":
                 if tag[1] == "heal" and hp >= run.get("max_hp", 1) - 2:
                     self.ctx.rests_healed_at_full += 1
@@ -230,6 +234,14 @@ class Agent:
         self.ctx.combat = {"comp_id": comp or "unknown", "hp_start": hp, "floor": run.get("floor", 0),
                            "node_type": node_type, "hp_start_pct": hp / max_hp}
         self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
+        # 高危组合自动升级硬仗（第 65~66 局复盘）：历史死亡率 ≥30% 的杀手组合
+        # （FUZZY_WURM+SHRINKER_BEETLE 25战11死、KIN 双子 15战9死）大量出现在
+        # 普通怪房，药水 premium 门此前对它们永不开启——两局均带药进坟。
+        # 按统计实锤解锁增益/攻击药水投入，与 Elite/Boss 同一待遇。
+        e = self.know.stats.get("enemies", {}).get(self.ctx.combat["comp_id"])
+        rate_gate = float(self.know.policy.get("danger_comp_hard_death_rate", 0.30))
+        if e and e.get("encounters", 0) >= 3 and e.get("deaths", 0) / max(1, e["encounters"]) >= rate_gate:
+            self.ctx.current_combat_is_hard = True
         danger = self.know.enemy_danger(comp)
         log(f"[agent] 进入战斗：敌方={comp}｜历史场均掉血 {danger:.1f}｜房间类型 {node_type}")
 
@@ -238,7 +250,8 @@ class Agent:
         if c is None:
             return
         hp_lost = max(0, c["hp_start"] - hp)
-        self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=won, died=died)
+        self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=won, died=died,
+                                     node_type=c.get("node_type"))
         self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
         note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died else "")
         self.ctx.combat_notes.append(note)
@@ -379,7 +392,12 @@ class Agent:
                 try:
                     resp = self.client.act(decision.action, **decision.params)
                     status = resp.get("status", "?")
-                    if status not in ("ok", "success", "pending", "stable"):
+                    # "completed" 是 mod 对成功动作的标准返回（第 65~66 局复盘实锤）：
+                    # 旧白名单漏掉它，导致每张成功打出的牌都被 note_action_failed
+                    # 拉黑；叠加手牌位置索引前移，等于每打出一张牌就误杀一张
+                    # 未出牌——65 局致死回合手握打击被禁玩阵亡、66 局 F5 双打击
+                    # 被禁玩后 1 能量弃权白吃 15 意图
+                    if status not in ("ok", "success", "pending", "stable", "completed"):
                         log(f"  ↳ 动作 {decision.action} 返回 {status}: {resp.get('message', '')}")
                         self.policy.note_action_failed(decision.action, decision.tags)
                 except ConnectionDown:

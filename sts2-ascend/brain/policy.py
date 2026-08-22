@@ -111,6 +111,7 @@ class Policy:
         self._sel_tried: set = set()  # card indices already clicked this screen
         self._cur_turn = None       # combat turn tracking
         self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
+        self._failed_hand_len = -1  # 记录失败时的手牌数量：index 是位置序号，手牌一变即失效
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
@@ -129,6 +130,13 @@ class Policy:
         按 hand index 记账而非 card_id：第 31 局 F7 终局一张防御 409（瞬时时序抖动）
         把同 id 的两张防御全部拉黑，剩 18 点意图无甲吃刀阵亡——
         惩罚必须精确到打失败的那一张，同 id 的其他副本不受连坐。
+
+        生命周期（第 65~66 局复盘）：mod 的手牌 index 是位置序号，打出一张牌后
+        剩余牌的 index 集体前移——黑名单一旦跨手牌变化仍生效，就会把"顶到被拉黑
+        槽位上的无辜卡"整体禁玩（66 局 F5 双打击被误拉黑后 1 能量弃权白吃 15 意图；
+        65 局致死回合手握打击同型阵亡）。_combat 端以"手牌数量未变"为黑名单有效期：
+        手牌一变（有牌打出/被消耗）立即整体释放；真正的 409 防护不受影响——
+        失败后下一 tick 手牌未变，该实例仍被精确拉黑。
         """
         if action == "play_card":
             for t in tags or []:
@@ -573,7 +581,14 @@ class Policy:
         if self._cur_turn != round_no:
             self._cur_turn = round_no
             self._failed_this_turn = set()
+            self._failed_hand_len = -1
             self._saw_playable_this_turn = False
+        # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
+        # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
+        # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
+        if len(hand) != self._failed_hand_len:
+            self._failed_this_turn = set()
+        self._failed_hand_len = len(hand)
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
             self._potion_tried = set()
@@ -649,25 +664,32 @@ class Policy:
         self._end_stall = 0
         self._saw_playable_this_turn = True
 
-        # 药水使用门槛：精英/Boss、致死威胁，以及"低血量且有缺口"。
+        # 敌方组合历史战绩 → 战斗姿态与药水门槛的共同输入，必须先于药水分级读取：
+        # 高危组合自动转防守（见 knowledge.enemy_stance；Boss 房间反转姿态：
+        # 斩杀线不足时压攻击=拖长战斗多吃意图）。第 64 局实证：
+        # FLYCONID+SNAPPING_JAXFRUIT 场均掉血 25.8（32% 血条）但死亡率仅 15%，
+        # 姿态中性 + 药水被"非精英房不用"锁死，异鱼之油拖到 9 血才掏出来。
+        cctx = getattr(ctx, "combat", None) or {}
+        comp_id = cctx.get("comp_id") or None
+        stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
+        comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
+        danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
+
+        # 药水使用门槛：精英/Boss、致死威胁、"低血量且有缺口"，以及
+        # "敌方组合本身就是硬仗"（场均战损 ≥ potion_comp_loss_frac × 最大生命——
+        # 对这类组合按普通战囤药水等于把救命资源带进坟墓）。
         # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
         # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
         low_hp_bleeding = my_hp <= 0.35 * my_max_hp and block_gap > 0
-        # premium：值得动用增益药水的场合（硬房/真致死）。普通消耗战哪怕低血也留着——
+        # premium：值得动用增益药水的场合（硬房/真致死/高危组合）。普通消耗战哪怕低血也留着——
         # 第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，Boss 战空手阵亡。
         premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
-                       or block_gap >= my_hp)
+                       or block_gap >= my_hp
+                       or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp)
         hard = (premium or low_hp_bleeding)
         potion_dec = self._maybe_potion(state, ctx, hard, premium)
         if potion_dec is not None:
             return potion_dec
-
-        # 敌方组合历史战绩 → 战斗姿态（高危组合自动转防守，见 knowledge.enemy_stance；
-        # Boss 房间反转姿态：斩杀线不足时压攻击=拖长战斗多吃意图）
-        cctx = getattr(ctx, "combat", None) or {}
-        comp_id = cctx.get("comp_id") or None
-        stance = self.know.enemy_stance(comp_id, cctx.get("node_type"))
-        danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
 
         # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
         # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
@@ -1039,6 +1061,27 @@ class Policy:
     # rewards / selection / bundles / chest / capstone
     # ------------------------------------------------------------------
 
+    def _pick_threshold(self, deck: list[dict]) -> float:
+        """动态拿牌门槛：非基础牌超出软上限后线性抬升（每超一张 +1.5）。
+
+        第 65 局实证：固定阈值 2.0 下 24 张卡组照拿不误（SHRUG_IT_OFF×5）——
+        deck_overflow_penalty 的 -0.9/张 减分压不住 8+ 分的格挡牌，软上限形同
+        虚设；膨胀稀释抽牌质量 → 战斗拖长 → 慢性失血，是 0/66 的慢性根因之一。
+        卡组越臃肿越只拿精品：门槛抬到与"边际牌价值"同量级才能真实拦住注水。
+        """
+        pol = self.know.policy
+        base = float(pol["card_pick_threshold"])
+        if not deck:
+            return base
+        good = sum(1 for c in deck
+                   if not ("STRIKE" in (c.get("card_id") or "").upper()
+                           or "DEFEND" in (c.get("card_id") or "").upper()
+                           or is_bad_card(c)))
+        overflow = good - float(pol.get("deck_soft_cap", 20))
+        if overflow <= 0:
+            return base
+        return base + overflow * float(pol.get("pick_threshold_per_overflow", 1.5))
+
     def eval_reward_card(self, card: dict, deck: list[dict]) -> float:
         pol = self.know.policy
         dmg, block, hits = card_numbers(card)
@@ -1138,13 +1181,14 @@ class Policy:
                 vals.append(f"{c.get('name')}={v:.1f}")
                 if v > best_v:
                     best, best_v = c, v
-            if best_v >= pol["card_pick_threshold"] and "choose_reward_card" in actions:
+            pick_line = self._pick_threshold(deck)
+            if best_v >= pick_line and "choose_reward_card" in actions:
                 return Decision("choose_reward_card", {"option_index": best["index"]},
-                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}）；候选：{', '.join(vals)}",
+                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
                                 tags=[("card_pick", best.get("card_id"))], wait=0.8)
             if "skip_reward_cards" in actions:
                 return Decision("skip_reward_cards", {},
-                                f"奖励选牌：全部跳过（最高价值 {best_v:.1f} < 阈值 {pol['card_pick_threshold']}）；候选：{', '.join(vals)}",
+                                f"奖励选牌：全部跳过（最高价值 {best_v:.1f} < 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
                                 wait=0.8)
 
         # claim simple rewards (gold / relic / potion)；失败过的（如药水栏满）不再重试
@@ -1254,16 +1298,14 @@ class Policy:
             scored = sorted(((self.eval_reward_card(c, deck), c) for c in candidates),
                             key=lambda t: -t[0])
             best_v, pick = scored[0]
+            pick_line = self._pick_threshold(deck)
             # 跳过守卫（第 56 局实证）：经"打开卡牌奖励"进入的本屏没有阈值判断，
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
-            # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛。
-            # 服务端提供 skip 动作且全员低于阈值 → 放弃；无跳过动作（强制选择屏）
-            # 则退回最小恶选择
-            if (best_v < self.know.policy["card_pick_threshold"]
-                    and "skip_reward_cards" in actions):
+            # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
+            # （第 65~66 局复盘：门槛升级为随卡组膨胀动态抬升）
+            if best_v < pick_line and "skip_reward_cards" in actions:
                 return Decision("skip_reward_cards", {},
-                                f"选牌界面：全部低于拾取阈值（最高 {best_v:.1f} < "
-                                f"{self.know.policy['card_pick_threshold']}），跳过不拿",
+                                f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)
             tag = "card_pick"
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
@@ -1368,24 +1410,37 @@ class Policy:
             return Decision(None, {}, "篝火：等待选项", wait=0.8)
 
         hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
+        max_hp = max(1, run.get("max_hp", 1))
         heal = next((o for o in options if o.get("option_id", "").upper() == "HEAL"), None)
         smith = next((o for o in options if "SMITH" in o.get("option_id", "").upper()), None)
         deck = run.get("deck", [])
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
+        smith_ok = smith is not None and bool(upgradable)
 
-        # Boss 前夜篝火：回血优先于锻造，除非血量已接近满（第 48 局复盘实证）。
-        # 常规的"回血将溢出→改锻造"分支在此不适用——溢出的几点血量远低于
-        # Boss 预期战损（先验 45+），能多回一点是一点
+        # Boss 前夜篝火：默认回血优先于锻造（第 48 局复盘实证：72% 锻造后
+        # Boss 战 -58 正好打死，回血 +24 即可保命）。但该规则隐含"回血量能覆盖
+        # 预期战损"的假设——第 63 局满血(100%)进 Boss 仍被仪式兽 85 点战损处决：
+        # 当 Boss 分档实测场均战损 ≥ 满血时，回多少都是无效投资，
+        # 入场线已达标的前提下锻造缩短战斗才是唯一活路（样本不足时保持旧规则）
         if getattr(ctx, "rest_before_boss", False) and heal is not None and hp_pct < 0.95:
+            boss_loss, boss_n = self.know.boss_loss_stats()
+            min_n = int(pol.get("boss_eve_smith_min_samples", 3))
+            entry_line = float(pol.get("boss_entry_min_hp_pct", 0.65))
+            if (smith_ok and boss_n >= min_n and boss_loss >= max_hp
+                    and hp_pct >= entry_line):
+                return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                f"篝火：Boss 前夜改锻造（入场线 {entry_line:.0%} 已达标 {hp_pct:.0%}；"
+                                f"历史Boss场均战损{boss_loss:.0f}≥满血、样本{boss_n}——"
+                                f"回血救不了败局，提速斩杀才是活路）",
+                                tags=[("rest", "smith")], wait=1.2)
             return Decision("choose_rest_option", {"option_index": heal["index"]},
                             f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}，Boss 预期战损过半，锻造不救命）",
                             tags=[("rest", "heal")], wait=1.2)
 
         # 锻造区间：血量 ≥ smith_min_hp_pct 即可锻造。旧逻辑回血阈值 70% 过高，
         # 第 28 局连续两个篝火都在 46%/48% 回血、整局零锻造，卡组停在基础形态
-        smith_ok = smith is not None and bool(upgradable)
         heal_line = float(pol.get("smith_min_hp_pct", pol["rest_heal_threshold"]))
         if heal and (hp_pct < heal_line or not smith_ok):
             # 回血将溢出（接近回满）且仍有可升级卡：改锻造，不浪费篝火
