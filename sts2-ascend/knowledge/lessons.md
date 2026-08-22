@@ -457,3 +457,14 @@
 - 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：exploration_rate: 0.086 → 0.084（经验累积，探索衰减）
 - 生涯战绩：0/36 胜，当前目标进阶 0
+
+## 第 37 局复盘（2026-08-23 00:19）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：CINDER, DISMANTLE, RAMPAGE, BODY_SLAM, BATTLE_TRANCE, BLUDGEON, SHRUG_IT_OFF
+- 本局遗物：无
+- 战斗记录：F3 Monster战 掉血7; F4 Monster战 掉血0; F5 Monster战 掉血42; F6 Monster战 掉血8; F8 Monster战 掉血24; F8 Monster战 掉血23（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(22分/8局)，FIGHT_ME(21分/4局)，UPPERCUT(19分/15局)
+- 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：exploration_rate: 0.084 → 0.081（经验累积，探索衰减）
+- 生涯战绩：0/37 胜，当前目标进阶 0
