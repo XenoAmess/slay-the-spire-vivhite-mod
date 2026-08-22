@@ -15,6 +15,10 @@ from dataclasses import dataclass, field
 
 from knowledge import Knowledge, clamp
 
+# 精英闸门在负分区间的加性罚基数：乘法折扣对负分会"越乘越好"（第 43 局实证），
+# 必须换成加性重罚才能保证闸门在任何符号区间都只降分不升分
+_ELITE_GATE_NEG_PENALTY = 50.0
+
 
 @dataclass
 class Decision:
@@ -110,6 +114,7 @@ class Policy:
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
+        self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -455,7 +460,10 @@ class Policy:
                 if nt == "RestSite":
                     cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
                 if cur_hp <= 0:
-                    score -= pol.get("path_death_penalty", 100.0)
+                    # 死亡投影保留"撑得更久"的序信息：死得越晚罚得越轻。
+                    # 第 43 局实证：低血量时所有候选都吃满 -100，候选间评分差被压成
+                    # 噪声，能续命的篝火与当场暴毙的精英无法区分（还给了闸门反转可乘之机）
+                    score -= max(0.0, pol.get("path_death_penalty", 100.0) - 3.0 * min(depth, 15))
                     break
             final_pct = max(0.0, cur_hp) / max_hp
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
@@ -474,9 +482,19 @@ class Policy:
                     best_ps, best_pnotes, best_pproj = ps, pnotes, pproj
             if nt == "Elite" and elite_gate_f < 1.0:
                 # 精英闸门乘在整条候选路径总分上（而非只罚首节点权重）：
-                # 子树优势（精英后接篝火/宝箱的组合分）曾完全吞掉首节点减权
-                best_ps *= elite_gate_f
+                # 子树优势（精英后接篝火/宝箱的组合分）曾完全吞掉首节点减权。
+                # 第 43 局实证：低血量全路径投影死亡（总分≈-110）时，×0.1 反而把
+                # 精英从 -110 抬到 -11，压过篝火(-109)——负分区间乘法是奖励不是
+                # 惩罚。改为：正分区间维持乘法语义；负分区间加性重罚，保证闸门
+                # 在任何符号下都只降分不升分。
+                gated = best_ps * elite_gate_f
+                if gated < best_ps:
+                    best_ps = gated
+                else:
+                    best_ps -= (1.0 - elite_gate_f) * _ELITE_GATE_NEG_PENALTY
                 if elite_gate_note:
+                    # 闸门已否决时删去 node_factor 的正面注释，避免理由自相矛盾
+                    best_pnotes = [x for x in best_pnotes if "达标，精英奖励价值高" not in x]
                     best_pnotes.append(elite_gate_note)
             label = f"{nt}({n['row']},{n['col']})"
             details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
@@ -601,11 +619,12 @@ class Policy:
                 continue
             if c.get("index") in self._failed_this_turn:
                 continue
-            # 需要目标但当前无有效目标：跳过（否则服务端 409）
-            if c.get("requires_target"):
-                valid = c.get("valid_target_indices") or []
-                if not any(e.get("index") in valid for e in enemies):
-                    continue
+            # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
+            # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、
+            # 对 14 点意图弃权结束回合；第 45 局同型流失反复出现（欺凌✓不打出）。
+            # 现改为照常评分参选，出牌时兜底指向最高威胁存活敌人；若真非法，
+            # 服务端 409 拒绝一次并由实例黑名单接管——代价一个 tick，
+            # 远小于整回合弃权白吃整套意图。
             cost = c.get("energy_cost", 0)
             if c.get("costs_x"):
                 cost = energy  # dump all energy
@@ -632,6 +651,9 @@ class Policy:
                     target = max(pool, key=threat) if pool else None
                 if target is not None:
                     params["target_index"] = target
+                    _valid_now = card.get("valid_target_indices") or []
+                    if _valid_now and target not in _valid_now:
+                        why += "；原目标列表已过期，兜底切换最高威胁存活敌人"
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
@@ -721,20 +743,20 @@ class Policy:
                     score += pol["free_card_bonus"]
                 return score, None, f"群体伤害≈{eff}"
             best_t, best_s, why, best_kill = None, -1.0, "", False
-            for e in enemies:
+            _valid = (card.get("valid_target_indices") or []) if card.get("requires_target") else []
+            # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
+            # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
+            _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
+            for e in _pool:
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 s = (eff + threat * 0.3) * atk_damp
                 killed = eff >= e.get("current_hp", 9999)
                 if killed:
                     s += pol["kill_bonus"]  # 击杀直接消灭意图来源，不吃衰减
-                    why = f"可击杀{e['name']}"
                 if best_t is None or s > best_s:
-                    valid = card.get("valid_target_indices") or []
-                    if not card.get("requires_target") or not valid or e.get("index") in valid:
-                        best_t, best_s, best_kill = e.get("index"), s, killed
-                        if not why:
-                            why = f"单体伤害≈{eff}"
+                    best_t, best_s, best_kill = e.get("index"), s, killed
+                    why = f"可击杀{e['name']}" if killed else f"单体伤害≈{eff}"
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
@@ -997,10 +1019,21 @@ class Policy:
             return Decision(None, {}, f"选牌界面（{kind}）：无候选，等待", wait=0.8)
 
         # 屏幕身份 + 防重复点击记忆（重复点同一张卡可能反选/空转）
-        screen_key = ((state.get("run") or {}).get("floor", 0), kind, prompt, len(cards))
+        floor_no = (state.get("run") or {}).get("floor", 0)
+        screen_key = (floor_no, kind, prompt, len(cards))
         if screen_key != self._sel_key:
             self._sel_key = screen_key
             self._sel_tried = set()
+
+        # 删牌语义判定：关键词（remove/移除/删除）+ 商店删牌动作握手双保险。
+        # 第 43/44 局实证：界面 kind/prompt 不含已知关键词时，删牌屏被当成通用
+        # 拿牌屏按"最高价值"点选，把余烬+/上勾拳当垃圾删了——发起方知道上下文，
+        # 显式握手优先于文案猜测
+        blob = f"{kind} {prompt}".lower()
+        removing = ("remove" in blob or "移除" in blob or "删除" in blob
+                    or self._removal_pending_floor == floor_no)
+        if self._removal_pending_floor == floor_no:
+            self._removal_pending_floor = -1  # 握手消费，防残留误触发
 
         # 已达选择数量且可确认 → 先确认（升级/删除等分支也必须走这里，否则永远循环）
         min_sel = sel.get("min_select", 1)
@@ -1009,7 +1042,6 @@ class Policy:
             return Decision("confirm_selection", {}, f"选牌界面（{kind}）：已选 {sel.get('selected_count')} 张，确认",
                             wait=0.9)
 
-        removing = "remove" in kind or "删除" in prompt
         upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
         transforming = "transform" in kind or "变化" in prompt
 
@@ -1104,6 +1136,10 @@ class Policy:
             junk = [c for c in deck if is_bad_card(c)
                     or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))]
             if junk and "remove_card_at_shop" in actions:
+                # 握手：下一个 CARD_SELECTION 屏就是删牌选择——不能依赖界面文案猜语义
+                # （第 43/44 局实证：识别失败落入通用拿牌分支，付费删掉了余烬+/上勾拳
+                #  两张全队最强的牌）
+                self._removal_pending_floor = floor
                 return Decision("remove_card_at_shop", {},
                                 f"商店：付费删牌（预留 {pol['removal_gold_reserve']} 金后仍充足）",
                                 tags=[("shop_remove", None)], wait=0.9)
@@ -1207,10 +1243,28 @@ class Policy:
             return Decision(None, {}, "事件：全部锁定，等待", wait=0.8)
 
         pol = self.know.policy
+
+        def _norm_key(o) -> str:
+            raw = o.get("text_key") or o.get("title") or str(o["index"])
+            return re.sub(r"\s+", "", str(raw))
+
+        def _lookup(ev_id: str, key: str) -> tuple[float, int]:
+            # 读取侧聚合：精确键优先，其次跨页尾键（.options.X）。
+            # 第 43 局实证：真理石板四页各自 n=0、"继 续 解 读"空格变体再分裂，
+            # 探索把每一页都当新选项重试，单事件放血 -39——同一语义的经验必须
+            # 跨页共享才能凑到最小样本数；写入侧键同步去空白，历史数据无需迁移
+            tail = key.split(".")[-1]
+            best_v, best_n = 0.0, 0
+            for k in dict.fromkeys([key, tail]):
+                v, n = self.know.event_option_value(ev_id, k)
+                if n > best_n:
+                    best_v, best_n = v, n
+            return best_v, best_n
+
         scored = []
         for o in candidates:
-            key = o.get("text_key") or o.get("title") or str(o["index"])
-            v, n = self.know.event_option_value(event_id, key)
+            key = _norm_key(o)
+            v, n = _lookup(event_id, key)
             scored.append((v, n, key, o))
         # epsilon exploration among under-sampled options
         # 已知负收益（价值 ≤ -5，如吃过大亏的选项）不再浪费探索次数；

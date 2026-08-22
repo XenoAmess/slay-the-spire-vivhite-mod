@@ -431,6 +431,99 @@ def main() -> int:
         f"精英/Boss 战增益药水必须投入: {d_p1.action}（{d_p1.reason}）"
     ctx.current_combat_is_hard = False
 
+    # 3n) 精英闸门不得在负分区间反转（第 43 局 F10 实证）：
+    #     低血量全路径投影死亡时，旧版 ×0.1 把精英 -110 抬到 -11 压过篝火 -109，
+    #     20 血走进 BYGONE_EFFIGY 阵亡。修复后：正分乘法/负分加性重罚，
+    #     且死亡投影按存活深度递减罚分——深图低血时篝火必须胜出
+    def deep_elite_vs_rest(hp_now: int):
+        heads = [
+            {"index": 0, "row": 1, "col": 0, "node_type": "Elite",
+             "children": [{"row": 2, "col": 0}]},
+            {"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+             "children": [{"row": 2, "col": 1}]},
+        ]
+        chain = []
+        for r in range(2, 17):
+            for c in (0, 1):
+                gnode = {"row": r, "col": c,
+                         "node_type": "Boss" if r == 16 else "Monster"}
+                if r < 16:
+                    gnode["children"] = [{"row": r + 1, "col": c}]
+                chain.append(gnode)
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": heads + chain,
+                      "boss_node": {"row": 16}},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+        return pol.decide(st, ctx)
+
+    d_gate = deep_elite_vs_rest(20)  # 25% 血：精英闸门触发 + 全路径投影死亡
+    assert d_gate.params.get("option_index") == 1, \
+        f"负分区间闸门反转未修复（低血深图应选篝火而非精英）: {d_gate.reason}"
+    assert "规避精英" in d_gate.reason, f"精英规避注释缺失: {d_gate.reason}"
+
+    # 3o) 商店删牌语义：关键词缺失时由握手标志兜底，且必须删最无价值牌而非最高价值牌
+    #     （第 43 局 F7 删掉余烬+、第 44 局 F9 删掉上勾拳——付费删掉自己最强的牌）
+    def removal_state(prompt_txt, kind_txt=""):
+        return {"screen": "CARD_SELECTION",
+                "available_actions": ["select_deck_card", "confirm_selection"],
+                "selection": {"kind": kind_txt, "prompt": prompt_txt, "min_select": 1,
+                              "selected_count": 0, "can_confirm": False,
+                              "cards": [
+                                  {"index": 0, "card_id": "SHRUG_IT_OFF", "name": "耸肩卸力",
+                                   "card_type": "Skill", "energy_cost": 1,
+                                   "rules_text": "获得8点格挡",
+                                   "dynamic_values": [{"name": "Block", "current_value": 8}]},
+                                  {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                                   "card_type": "Attack", "energy_cost": 1,
+                                   "dynamic_values": [{"name": "Damage", "current_value": 6}]}]},
+                "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
+
+    pol._removal_pending_floor = 9  # 模拟 remove_card_at_shop 刚发出（文案不可识别）
+    d_rm1 = pol.decide(removal_state("请选择一张卡"), ctx)
+    assert d_rm1.tags and d_rm1.tags[0][0] == "card_remove" and d_rm1.params.get("option_index") == 1, \
+        f"删牌握手失败（应删打击而非高价值防牌）: {d_rm1.reason}"
+    d_rm2 = pol.decide(removal_state("移除一张牌。"), ctx)  # 关键词路径（握手已消费）
+    assert d_rm2.tags and d_rm2.tags[0][0] == "card_remove", f"删牌关键词识别失败: {d_rm2.reason}"
+    d_rm3 = pol.decide(removal_state("选择一张牌加入你的牌组。"), ctx)  # 负例：普通拿牌屏
+    assert d_rm3.tags and d_rm3.tags[0][0] == "card_pick", f"普通拿牌屏被误判为删牌: {d_rm3.reason}"
+
+    # 3p) 目标列表过期不得弃权整回合（第 44 局 F6 实证：斩杀后 4 张可出攻击被
+    #     静默跳过，对 14 点意图结束回合）——应兜底打向存活敌人
+    stale_target_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+        "combat": {"player": {"current_hp": 50, "max_hp": 80, "block": 0, "energy": 2},
+                   "hand": [{"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                             "playable": True, "energy_cost": 1, "requires_target": True,
+                             "valid_target_indices": [7],  # 过期：存活敌人是 0
+                             "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+                   "enemies": [{"index": 0, "enemy_id": "E", "name": "怪", "current_hp": 20,
+                                "max_hp": 30, "block": 0, "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 10}]}]},
+        "run": {"current_hp": 50, "max_hp": 80, "gold": 0, "floor": 6, "deck": []},
+    }
+    d_st = pol.decide(stale_target_state, ctx)
+    assert d_st.action == "play_card" and d_st.params.get("target_index") == 0, \
+        f"目标列表过期必须兜底出牌而非结束回合: {d_st.action}（{d_st.reason}）"
+    assert "过期" in d_st.reason or "兜底" in d_st.reason, f"兜底注释缺失: {d_st.reason}"
+
+    # 3q) 多页事件经验跨页聚合：尾键(.options.X)命中历史负收益时不得再选该选项
+    #     （第 43 局实证：真理石板每页 n=0 被当新选项反复解读，单事件 -39）
+    know.stats.setdefault("events", {})["WS_EV"] = {
+        "CONTINUE": {"n": 2, "hp_delta_sum": -60.0, "gold_delta_sum": 0.0, "deaths": 0}}
+    ws_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                "event": {"event_id": "WS_EV", "title": "跨页聚合测试", "is_finished": False,
+                          "options": [
+                              {"index": 0, "title": "继 续 解 读",
+                               "text_key": "WS_EV.pages.DECIPHER_9.options.CONTINUE",
+                               "is_locked": False, "is_proceed": False},
+                              {"index": 1, "title": "放弃",
+                               "text_key": "WS_EV.pages.INITIAL.options.GIVE_UP",
+                               "is_locked": False, "is_proceed": False}]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 7, "deck": []}}
+    pol_ws = policy.Policy(know, random.Random(2))  # 首抽 0.956 > 探索率 → 走利用路径
+    d_ws = pol_ws.decide(ws_state, ctx)
+    assert d_ws.params.get("option_index") == 1, f"跨页尾键聚合失效（负收益选项被重选）: {d_ws.reason}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"
