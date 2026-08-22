@@ -36408,3 +36408,57 @@ Count roughly: ~170 chars. Good.
 [06:09:37] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
 [06:09:39] [COMBAT/F2] 战斗：回合过渡中，等待
 [06:09:39] [COMBAT/F2] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ bash {}
+· tokens 215063 ·
+⚙ bash {}
+· tokens 215745 ·
+💭 Both files appended. Now verify the appended content renders correctly (UTF-8 no BOM, readable). Read back tails of both files.
+验证追加内容编码正确：
+⚙ bash {}
+· tokens 215919 ·
+⚙ read {}
+· tokens 215953 ·
+⚙ todowrite {}
+💭 Both appended correctly. Final steps:
+1. Re-run selfcheck one more time to be safe (nothing changed in .py since last OK run except selfcheck itself — which was after the fix... actually the last selfcheck run WAS with all final code. But I edited only the replay script (temp, outside brain) since then. No need.
+
+Wait — actually let me double-check: after the successful SELFCHECK OK run, did I modify any .py under sts2-ascend? No — only temp replay script and knowledge md files. Good.
+
+2. Update todos to completed.
+3. Final summary ≤200 chars per task instruction ("完成后，用 200 字以内输出本次复盘总结").
+
+Also confirm no git operations were done ✓, no processes touched ✓, only sts2-ascend/ modified ✓ (policy.py, knowledge.py, selfcheck.py, meta_review.md, lessons.md).
+
+One last sanity: make sure policy.json on disk wasn't corrupted and new keys will setdefault properly — Knowledge.__init__ fills from DEFAULT_POLICY at next load; running process unaffected until restart (noted). Also verify nothing else references `_hybrid_defense` incorrectly — selfcheck passed including combat paths.
+
+Summary within 200 chars (Chinese characters ~200): draft:
+
+第71局复盘完成。铁证两缺陷：①Vantom每阶段强制献祭手牌，旧逻辑按最高价值交牌，五连喂掉火焰屏障+×3/耸肩+×2致防御自拆；②火焰屏障+（伤6挡16）被当弱攻击，致死回合弃权。修复：战斗手牌按badness献祭最差牌；混合牌攻防双面向取优；拾取端同名递减-3/张、拿了不打-4、攻击枯竭加码。新增3ii/3jj/3kk回归，SELFCHECK OK，真实库复现三场景全部翻转。报告已写入meta_review.md与lessons.md。
+
+That's about 200. Good.
+· tokens 217625 ·
+**复盘总结（第 71 局）**
+
+日志铁证两个 Boss 战缺陷：① Vantom 每阶段强制从手牌献祭一张，旧逻辑按“最高价值”点选，五连喂掉火焰屏障+×3/耸肩+×2，伤口在手却视而不见，防御自拆后意图 26→32 崩盘；② 火焰屏障+（伤6挡16）被当弱攻击评分，致死回合弃权阵亡。修复：combat_hand 选屏按 badness 交最差牌；混合牌攻防双面向取优；拾取端同名重复每张 −3、「拿了不打」−4、攻击枯竭加码。新增 3ii/3jj/3kk 回归，SELFCHECK OK，真实知识库复现三场景全部翻转。报告已入 meta_review.md 与 lessons.md。
+· tokens 218144 ·
+
+[06:09:40] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:41] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:41] [COMBAT/F2] 战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方68血/0甲
+[06:09:44] [COMBAT/F2] 战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方68血/0甲
+[git] 已自动存档：feat(sts2-ascend): 第71局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[06:09:45] [COMBAT/F2] 战斗：评估后无值得出的牌（贪婪✗,防御✓,防御✓），结束回合（敌意图总伤0，我方68血/0甲）
+[06:09:47] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:47] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:48] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:48] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:49] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:50] [COMBAT/F2] 战斗：回合过渡中，等待
+[06:09:50] [COMBAT/F2] 战斗：打出【痛击】→树枝史莱姆（中）（可击杀树枝史莱姆（中））；敌意图总伤11，我方68血/0甲
+  ↳ 动作 play_card 失败：invalid_action: Action is not available in the current state. (http=409)
+[06:09:51] [COMBAT/F2] 战斗：打出【痛击】→树枝史莱姆（中）（可击杀树枝史莱姆（中））；敌意图总伤11，我方68血/0甲
+[06:09:53] [COMBAT/F2] 战斗：等待敌人就绪
+[06:09:53] [COMBAT/F2] 战斗：等待敌人就绪
