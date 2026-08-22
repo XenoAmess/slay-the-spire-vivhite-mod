@@ -63,6 +63,9 @@ DEFAULT_POLICY = {
     "exploration_min": 0.05,
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
+    # --- 战斗端补丁键（第 58~59 局复盘） ---
+    "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
+    "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）
 }
 
 DEFAULT_PROGRESSION = {

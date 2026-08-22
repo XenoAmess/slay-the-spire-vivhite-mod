@@ -572,7 +572,8 @@ def main() -> int:
 
     # 3u) 重生召唤物识别（第 52~53 局利齿之眼实证：单场被预测击杀 10+ 次，
     #     次次复活，kill_bonus 把输出全部吸走，雾菇本体意图 8→23 磨穿 80 血）：
-    #     同一敌人同场被预测击杀 ≥2 次仍存活 → 击杀奖励 ×0.25，输出转向本体
+    #     同一敌人同场被预测击杀 ≥2 次仍存活 → 击杀奖励归零（第 58 局升级，
+    #     旧 ×0.25 压不住过量伤害满额计分的虚高），输出转向本体
     def spike_combat():
         return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 3,
                 "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
@@ -602,6 +603,62 @@ def main() -> int:
     d_k2 = pol.decide(spike_combat(), ctx)
     assert d_k2.action == "play_card" and d_k2.params.get("target_index") == 1, \
         f"重生召唤物不应再吸引输出（应转火高威胁本体）: {d_k2.reason}"
+    # 第 58 局复盘升级：确认重生体后击杀奖励必须归零（×0.25 曾压不住
+    # 过量伤害满额 + 威胁分成的虚高，利齿之眼被追杀 13 次磨穿 83 血）
+    assert pol._kill_bonus({"enemy_id": "RESPAWN_ADD"}, 6, 28, know.policy) == 0.0, \
+        "重生召唤物击杀奖励未归零"
+    assert pol._kill_bonus({"enemy_id": "FRESH_MOB"}, 6, 28, know.policy) > 0.0, \
+        "正常敌人击杀奖励不应受影响"
+
+    # 3x') 孤注一掷回合（第 59 局 Boss 战 T6 实证）：16 血/5 甲对 18 意图、
+    #      手牌全是攻击无格挡牌——旧逻辑把全部攻击压到禁玩线，3 能量原样结束
+    #      回合白吃 13 刀后下回合必死；修复后必须倾泻输出抢斩杀
+    desperate_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 6,
+        "combat": {"player": {"current_hp": 16, "max_hp": 80, "block": 5, "energy": 3},
+                   "hand": [
+                       {"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": True,
+                        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 6}]},
+                       {"index": 1, "card_id": "STRIKE_PLUS", "name": "打击+", "playable": True,
+                        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 9}]},
+                       {"index": 2, "card_id": "ANGER", "name": "愤怒", "playable": True,
+                        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+                   "enemies": [{"index": 0, "enemy_id": "KIN_PRIEST", "name": "同族神官",
+                                "current_hp": 40, "max_hp": 80, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 18}]}]},
+        "run": {"current_hp": 16, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+    }
+    d_des = pol.decide(desperate_state, ctx)
+    assert d_des.action == "play_card", \
+        f"无甲可补的致死回合必须孤注一掷输出而非弃权: {d_des.action}（{d_des.reason}）"
+
+    # 3x'') 溢出格挡贬值（第 59 局 Boss 首回合实证：缺口 13 却连打坚毅24+重振精神10
+    #       共 34 甲、3 能量零输出）——缺口补满后的纯溢出防牌须跌破出牌阈值，
+    #       能量让给输出
+    overblock_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+        "combat": {"player": {"current_hp": 55, "max_hp": 80, "block": 30, "energy": 3},
+                   "hand": [
+                       {"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                        "energy_cost": 1, "requires_target": False,
+                        "rules_text": "获得5点格挡",
+                        "dynamic_values": [{"name": "Block", "current_value": 5}]},
+                       {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": True,
+                        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+                   "enemies": [{"index": 0, "enemy_id": "KIN_BOSS", "name": "同族Boss",
+                                "current_hp": 120, "max_hp": 160, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 10}]}]},
+        "run": {"current_hp": 55, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+    }
+    d_ob = pol.decide(overblock_state, ctx)
+    assert d_ob.action == "play_card" and d_ob.params.get("card_index") == 1, \
+        f"缺口已满时溢出格挡不得挤占输出: {d_ob.params}（{d_ob.reason}）"
 
     # 3v) 前期怪物加成的健康门槛（第 56 局复盘）：floor<=8 的 ×1.25 积累加成只在
     #     血量健康(≥警戒带62%)时生效——44%~62% 警戒带内曾吃满加成以 0.96 分压过

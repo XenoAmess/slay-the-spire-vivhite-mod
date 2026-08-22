@@ -732,6 +732,10 @@ class Policy:
 
         能量预留：缺口未补、手里有格挡牌且「这张攻击 + 最便宜格挡 > 现有能量」
         时，非击杀攻击让路——先补防再输出，避免下一轮无甲吃整套意图。
+
+        孤注一掷（第 59 局复盘新增）：致死缺口在手却无任何可负担格挡牌时，
+        防御路线已不存在，解除非击杀攻击的禁玩压制并提速（desperate_atk_mult），
+        抢斩杀让敌人意图作废是唯一活路——旧逻辑此局面 3 能量原样结束回合白吃刀。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -750,6 +754,10 @@ class Policy:
         # （第 36 局 Boss 战：20 血对 27 意图，8 甲硬吃 19 剩 1 血，下回合必死）
         pyrrhic = gap > 0 and (my_hp - gap) <= 0.12 * my_max_hp
         lethal = gap >= my_hp or pyrrhic or (forced_kill and gap > 0)
+        # 孤注一掷（第 59 局 Boss 战 T6 实证）：致死缺口在手、却没有任何可负担的
+        # 格挡牌时，旧逻辑把全部非击杀攻击压到禁玩线、3 能量原样结束回合白吃
+        # 13 刀——无甲可补时防御已不可能，唯一活路是抢斩杀让敌人意图作废。
+        desperate = lethal and not reserve_for_block
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         if lethal:
             atk_damp, blk_boost = 0.55, 1.8
@@ -762,6 +770,8 @@ class Policy:
         # 多敌战斗格挡增值：意图来源越多战斗越长、漏伤越多（第 52~55 局四场
         # 致命战全是 2~3 体组合、滚动总意图 15~26），每点格挡的期望价值更高
         blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
+        if desperate:
+            atk_damp *= float(pol.get("desperate_atk_mult", 1.3))
 
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
@@ -771,7 +781,14 @@ class Policy:
         if dmg > 0:
             total = dmg * hits
             if aoe:
-                eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
+                eff = 0
+                for e in enemies:
+                    e_eff = max(1, total - e.get("block", 0))
+                    if self._is_respawn_add(e):
+                        # 确认重生体：过量伤害记到当前血量为止（第 58 局实证：
+                        # 11 点伤害砸 5 血利齿之眼按 11 计分，虚高吸走输出）
+                        e_eff = min(e_eff, max(1, e.get("current_hp", 9999)))
+                    eff += e_eff
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
                 score = eff * atk_damp + sum(
                     self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
@@ -779,7 +796,7 @@ class Policy:
                     for e in killable)
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
-                if lethal and not killable:
+                if lethal and not killable and not desperate:
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
                     score = min(score, floor_score)
                 if self_cost and lethal and len(killable) < len(enemies):
@@ -793,9 +810,19 @@ class Policy:
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
             _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
             for e in _pool:
+                resp = self._is_respawn_add(e)
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
-                s = (eff + threat * 0.3) * atk_damp
+                if resp:
+                    # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
+                    # 输出、本体雾菇意图滚到 22 的教训）：
+                    #   ① 过量伤害只记到当前血量——打不死的部分是纯浪费；
+                    #   ② 威胁分成清零——杀它一次只延迟一回合，消除不了长期威胁；
+                    #   ③ 击杀奖励归零（_kill_bonus 内 ×0）
+                    eff = min(eff, max(1, e.get("current_hp", 9999)))
+                    s = eff * atk_damp
+                else:
+                    s = (eff + threat * 0.3) * atk_damp
                 killed = eff >= e.get("current_hp", 9999)
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol)
@@ -805,14 +832,17 @@ class Policy:
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
-            if lethal and not best_kill:
+            # 但孤注一掷回合例外：无甲可补时输出就是唯一的防御。
+            if lethal and not best_kill and not desperate:
                 best_s = min(best_s, floor_score)
             elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
                 best_s -= 8.0  # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）
+            elif desperate and not best_kill:
+                why += "｜无甲孤注抢斩杀"
             elif self_cost:
                 if best_kill and len(enemies) == 1:
                     pass  # 击杀最后一个敌人直接终局，自残值得
-                elif lethal:
+                elif lethal and not desperate:
                     best_s = min(best_s, floor_score)
                 else:
                     best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))  # 血越少自残越贵
@@ -823,7 +853,11 @@ class Policy:
         # --- 防御/技能牌（有格挡数值） ---
         if block > 0:
             useful = min(block, max(0, incoming - my_block))
-            score = (useful * 1.05 * pol["block_safety"] + (block - useful) * 0.2) * blk_boost
+            # 溢出格挡大幅贬值（第 59 局 Boss 首回合实证：缺口 13 却连打坚毅24+
+            # 重振精神10 共 34 甲，3 能量零输出——溢出按 block_excess_value 计分，
+            # 缺口补满后的纯溢出防牌应跌破出牌阈值，把能量还给输出）
+            score = (useful * 1.05 * pol["block_safety"]
+                     + (block - useful) * float(pol.get("block_excess_value", 0.2))) * blk_boost
             why = f"格挡{block}"
             dr = draw_amount(card)
             if dr:
@@ -837,7 +871,8 @@ class Policy:
         dr = draw_amount(card)
         if dr > 0 or "能量" in text or "energy" in text.lower():
             score = 2.0 + dr * 1.5
-            if lethal:
+            # 孤注一掷回合例外：多抽一张攻击牌就是多一分抢斩杀的弹药
+            if lethal and not desperate:
                 score = min(score, floor_score)  # 致死回合抽牌/回能救不了命
             if cost == 0:
                 score += pol["free_card_bonus"]
@@ -851,20 +886,27 @@ class Policy:
             score += pol["free_card_bonus"]
         return score, None, f"能力/增益牌（第{round_no}回合）"
 
+    def _is_respawn_add(self, enemy: dict) -> bool:
+        """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。"""
+        kid = enemy.get("enemy_id") or enemy.get("name") or ""
+        return self._combat_kills.get(kid, 0) >= 2
+
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict) -> float:
-        """击杀奖励按「消除的威胁占比」折算，并对已证实的重生召唤物强衰减。
+        """击杀奖励按「消除的威胁占比」折算，并对已证实的重生召唤物归零。
 
         第 52~53 局实证：利齿之眼每回合被【可击杀】斩首又复活，kill_bonus=12
         吸引引擎单场追杀召唤物 10+ 次，雾菇本体意图 8→23 滚雪球把 80 血磨穿——
-        击杀的价值在消灭未来的意图来源，目标威胁占比越低越不值钱；同一敌人
-        本场已被预测击杀 ≥2 次仍存活即为重生体（阈值 2 可吸收偶发 409/未命中
-        的误计），奖励降至 1/4。空档回合（intent 全 0）按全额计：抢在召唤物
-        产出意图之前清场仍有价值。
+        击杀的价值在消灭未来的意图来源，目标威胁占比越低越不值钱。
+        第 58 局再实证：×0.25 的衰减仍压不过"过量伤害记满额 + 威胁分成"的虚高，
+        利齿之眼被预测击杀 13 次、本体只挨 6 刀，83 血整场送光——重生体的击杀
+        奖励必须彻底归零，配合评分端的三重压制（过量封顶/威胁清零）才能扭转目标。
+        空档回合（intent 全 0）按全额计：抢在召唤物产出意图之前清场仍有价值。
         """
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
-        mult = 0.25 if self._combat_kills.get(kid, 0) >= 2 else 1.0
+        if self._combat_kills.get(kid, 0) >= 2:
+            return 0.0
         share = 1.0 if incoming <= 0 else min(1.0, max(0.0, threat) / incoming)
-        return pol["kill_bonus"] * (0.4 + 0.6 * share) * mult
+        return pol["kill_bonus"] * (0.4 + 0.6 * share)
 
     def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False):
         run = state.get("run") or {}
