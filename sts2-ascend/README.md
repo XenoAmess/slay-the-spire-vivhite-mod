@@ -53,30 +53,29 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
    事件致死→收敛探索率；胜利→放宽进攻性并提升目标进阶。全部钳制在安全区间内。
 4. **自我总结**：以上全部变化以中文写入 `lessons.md`，形成可读的"成长日记"。
 
-## 大模型复盘（优先模型每局 / 回退每 10 局）
+## 大模型复盘（异步追及队列：游玩零等待）
 
-内置的统计学习只会调既有参数。**每局结束后**，大脑先探测优先模型
-**Ox Alpha Free**（`openrouter/stealth/ox-alpha`，以 `opencode models` 清单为准）：
+**每局结束后**，大脑只做一件事：把复盘请求写入 `knowledge/review_queue.json`，然后**立即开下一局**。
+复盘由独立工作线程在后台串行消化——若一局结束时上一场复盘还没完，请求在队列里累积，
+下一场复盘**一次性分析多局**（追及队列，积压上限 `review_queue_max` 批）。
 
-- **可用** → 用它**每局**做一次复盘（`preferred_every_runs`，默认 1）
-- **不可用**（未列出/探测失败/失败冷却中）→ 回退 `kimi-for-coding/k3`，**每 10 局**一次
-  （`review_every_runs`）；优先模型执行失败会进入 6 小时冷却（`preferred_failure_cooldown_min`），
-  避免每局白等一个超时
+模型双轨：优先 **Ox Alpha Free**（`openrouter/stealth/ox-alpha`，以 `opencode models` 清单为准）
+可用则每局复盘；不可用则回退 `kimi-for-coding/k3` 每 10 局一次。优先模型执行失败进入 6 小时冷却
+（`preferred_failure_cooldown_min`），避免反复白等超时。
+
+并发安全设计：
+
+- autogit 全局 git 锁，游玩线程与复盘线程不撞 index.lock
+- 复盘激活期间，每局自动存档**只提交 `knowledge/`**，不会把复盘 agent 改了一半的代码卷进去
+- 自检失败用**路径级回滚**（`git restore --source`），不会抹掉复盘期间产生的对局存档
+- 复盘产生变更 → 本局结束的安全点以退出码 42 自重启加载；起不来则 runner 按标记回滚
 
 复盘以 **OpenCode 无头会话**（`opencode run`，走本机已有授权，无需 API key）执行，
-由大模型做教练级复盘——**广权限 + git 安全网**：
+可修改 `sts2-ascend/` 下任何文件（改数据结构必须同步迁移 `knowledge.py` 与现有数据）。
+复盘报告：`knowledge/meta_review.md`；新经验同步进 `lessons.md`。
 
-- 可修改 `sts2-ascend/` 下**任何文件**：策略参数、知识库数据结构、决策代码、配置
-  （改数据结构必须同步迁移 `knowledge.py` 与现有数据）
-- **改前**：大脑自动 commit 全量备份并推送（备份点）
-- **改后**：强制自检（全模块编译 + 假状态冒烟 + 真实知识库兼容加载），通过才提交；
-  失败则 `git reset --hard` 回滚到备份点，本次变更作废
-- **重启加载**：复盘产生变更后大脑以退出码 42 通知 runner 重启；
-  若新代码起不来，`runner.py` 按重启标记再次 git 回滚并自动还原——改坏了最多损失一局时间
-- 复盘报告：`knowledge/meta_review.md`；新经验同步进 `lessons.md`
-
-手动立即触发一次复盘：`py brain/llm_review.py --now`（会先打印本次选用的模型与节奏）。
-配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/冷却/禁用）。
+手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。
+配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。
 
 ## 复盘直播悬浮窗（ASCEND-VISION）
 
@@ -99,8 +98,9 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 
 ```
 runner.py（监督进程：拉起大脑 / 退出码42重启 / 崩溃自动回滚）
-  └─ py -m brain（决策主循环）
-        └─ 每局探测 ox-alpha 可用性 → opencode run（可用：ox-alpha 每局复盘 / 否则 k3 每10局）
+  └─ py -m brain（决策主循环，游玩不中断）
+        ├─ 每局结束 → 入队 review_queue.json
+        └─ 复盘工作线程（串行消化，可多局合并）→ opencode run（ox-alpha / k3）→ 直播悬浮窗
 ```
 
 每局结束自动 `git commit+push` 存档（`brain/autogit.py`），进化历史全程可追溯。

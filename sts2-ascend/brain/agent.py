@@ -239,9 +239,9 @@ class Agent:
         })
         log(f"[agent] 对局日志已保存：{path.name}")
         self.know.save()
-        # 每 N 局触发一次大模型复盘（默认 10 局；未配置 API key 时自动跳过）
+        # 每局结束把复盘请求投入异步队列（工作线程消化，游玩不等待；多局积压会合并追及）
         if llm_review is not None:
-            llm_review.maybe_review(self, log=log)
+            llm_review.enqueue_review(self, log=log)
         # 每局结束自动把进化记忆 commit+push 到仓库（失败不影响游玩）
         if autogit is not None:
             g = self.know.stats["global"]

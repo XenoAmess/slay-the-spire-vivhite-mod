@@ -261,3 +261,14 @@
 - 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，STRIKE_IRONCLAD(9分/5局)
 - 策略进化：block_safety: 1.85 → 1.90（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.140 → 0.136（经验累积，探索衰减）
 - 生涯战绩：0/20 胜，当前目标进阶 0
+
+## 第 21 局复盘（2026-08-22 21:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TWIN_STRIKE, SHRUG_IT_OFF, HOWL_FROM_BEYOND, BLUDGEON, MANGLE, BLUDGEON, BLUDGEON, SHRUG_IT_OFF, TWIN_STRIKE, HEADBUTT, IRON_WAVE, EVIL_EYE, POMMEL_STRIKE, MANGLE, MANGLE
+- 本局遗物：JUZU_BRACELET, 地精之角
+- 战斗记录：F9 Monster战 掉血29; F14 Elite战 掉血40; F15 Monster战 掉血15; F17 Boss战 掉血7; F17 Boss战 掉血18; F17 Boss战 掉血18（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，UPPERCUT(21分/12局)
+- 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，STRIKE_IRONCLAD(9分/5局)
+- 策略进化：block_safety: 1.90 → 1.95（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.136 → 0.132（经验累积，探索衰减）
+- 生涯战绩：0/21 胜，当前目标进阶 0

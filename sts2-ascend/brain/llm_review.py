@@ -1,4 +1,4 @@
-"""LLM 元复盘 —— 每局后探测优先模型，可用则每局复盘，否则每 N 局用 k3 复盘。
+"""LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
   - 优先模型 preferred_model（默认 openrouter/stealth/ox-alpha，即 Ox Alpha Free）：
@@ -7,15 +7,21 @@
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
     分钟，期间直接回退，避免每局白等一个超时。
 
-设计要点：
-  - 不直接调模型裸 API（裸 API 只能输出文本，没法真正改代码）；
-    而是 spawn `opencode run` 无头会话——带完整工具链的智能体，走本机 OpenCode 授权。
-  - **广权限 + git 安全网**：复盘 agent 可改 sts2-ascend/ 下任何文件（代码/数据结构/配置）。
-    改前宿主大脑自动 commit 备份；改后自检（编译+冒烟+真实知识库兼容），通过才提交，
-    失败则 `git reset --hard` 回滚到备份点；重启后若新代码起不来，runner 按标记再回滚一次。
-  - 复盘完成后大脑以退出码 42 请求 runner 重启，加载新策略/新代码。
+异步架构（2026-08-22 起）：
+  - agent.py 每局 finalize 后调用 enqueue_review()：只把请求写入 knowledge/review_queue.json
+    并确保工作线程存活，主循环立即开下一局，**零等待**。
+  - 工作线程 _worker_loop 串行消化队列：一局结束若上一场复盘未完，请求在队列累积，
+    下一场复盘一次性分析多局（追及队列）。
+  - 并发安全：autogit 全局 git 锁；复盘激活期间对局存档只提交 knowledge/（不卷入半成品代码）；
+    自检失败用路径级回滚（restore_paths），不会抹掉复盘期间产生的对局存档。
+  - 复盘完成若产生变更：标记 request_restart，主循环在下一局间安全点以退出码 42 自重启加载。
 
-触发：agent.py 每局 finalize 后调用 maybe_review()；手动触发 `py brain/llm_review.py --now`。
+设计要点（继承）：
+  - 不直接调模型裸 API；spawn `opencode run` 无头会话——带完整工具链的智能体，走本机 OpenCode 授权。
+  - 广权限 + git 安全网：可改 sts2-ascend/ 下任何文件；改前备份、改后自检、失败回滚。
+  - 复盘过程经 review_live.stream 直播给 review_viewer.py 悬浮窗。
+
+手动触发 `py brain/llm_review.py --now`（同步执行，用于人工调试）。
 任何异常只记日志，绝不中断游玩主循环。
 """
 from __future__ import annotations
@@ -65,6 +71,8 @@ def load_llm_config() -> dict:
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
+        # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
+        "review_queue_max": 5,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
     return merged
@@ -122,7 +130,8 @@ def _recent_run_summaries(n: int) -> list[dict]:
     return out
 
 
-def build_prompt(know, cfg: dict, every: int | None = None) -> str:
+def build_prompt(know, cfg: dict, every: int | None = None,
+                 batch_runs: list[int] | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 10))
     packet = {
         "runs_summary": _recent_run_summaries(n),
@@ -133,7 +142,15 @@ def build_prompt(know, cfg: dict, every: int | None = None) -> str:
     if lessons_path.exists():
         lessons_tail = lessons_path.read_text(encoding="utf-8")[-2500:]
 
-    return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。每 {every or cfg.get('review_every_runs', 10)} 局你做一次大模型复盘。
+    cadence = every or cfg.get('review_every_runs', 10)
+    if batch_runs and len(batch_runs) > 1:
+        scope = f"本次复盘覆盖第 {batch_runs[0]}~{batch_runs[-1]} 局（共 {len(batch_runs)} 局，异步追及队列）"
+    elif batch_runs:
+        scope = f"本次复盘覆盖第 {batch_runs[0]} 局"
+    else:
+        scope = f"每 {cadence} 局你做一次大模型复盘"
+
+    return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
 智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
 
 # 数据摘要（已内嵌，完整文件可按需深读）
@@ -366,11 +383,15 @@ def _run_selfcheck(log) -> bool:
 
 
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
-               source: str = "fallback") -> bool:
+               source: str = "fallback", batch_runs: list[int] | None = None,
+               async_mode: bool = False) -> bool:
     """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
 
     流程：改前 commit 备份 → opencode 广权限复盘 → 自检 → 通过则提交/请求重启，失败则 git 回滚。
     source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
+    async_mode=True（异步队列工作线程调用）时：
+      - 复盘期间 autogit 对局存档只提交 knowledge/（不卷入半成品代码）
+      - 自检失败的回滚是路径级的（restore_paths），不会抹掉复盘期间产生的对局存档
     """
     cfg = load_llm_config()
     if not cfg.get("enabled"):
@@ -385,13 +406,15 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
 
     runs = know.stats["global"]["runs"]
-    # 1) 改前备份：把当前知识库+代码先提交推送
-    autogit.commit_progress(f"chore(sts2-ascend): 第{runs}局后复盘前备份", log=log)
+    batch_txt = f"第{batch_runs[0]}~{batch_runs[-1]}局" if batch_runs and len(batch_runs) > 1 \
+        else f"第{batch_runs[0]}局" if batch_runs else f"第{runs}局"
+    # 1) 改前备份：把当前知识库+代码先提交推送（此时复盘未激活，全量提交）
+    autogit.commit_progress(f"chore(sts2-ascend): {batch_txt}后复盘前备份", log=log)
     pre_head = autogit.head()
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
-    log(f"[llm] ===== 启动大模型复盘（{model} via opencode [{source}]，备份点 {pre_head[:8]}）=====")
-    prompt = build_prompt(know, cfg, every)
+    log(f"[llm] ===== 启动大模型复盘（{model} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
+    prompt = build_prompt(know, cfg, every, batch_runs)
     try:
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
     except OSError:
@@ -410,6 +433,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     _stream_begin({"model": model, "source": source, "run": runs, "time": stamp})
     _launch_viewer(cfg, log)
 
+    autogit.set_review_active(True)     # 此后对局存档只提交 knowledge/
     rc, out, timed_out = -1, "", False
     try:
         rc, out, timed_out = _stream_run(cmd, int(cfg.get("timeout_min", 25)) * 60)
@@ -433,39 +457,52 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     finally:
         _stream_end({"exit": rc, "timeout": timed_out})
 
-    # 2) 无变更则无需提交/重启
-    if not autogit.has_changes():
-        log("[llm] 复盘未产生任何文件变更，跳过提交")
-        return False
+    try:
+        # 2) 无变更则无需提交/重启
+        if not autogit.has_changes():
+            log("[llm] 复盘未产生任何文件变更，跳过提交")
+            return False
 
-    # 3) 自检：编译 + 冒烟（含真实知识库结构兼容校验）
-    if not _run_selfcheck(log):
-        log("[llm] 复盘变更未通过自检，执行 git 回滚")
+        # 3) 自检：编译 + 冒烟（含真实知识库结构兼容校验）
+        if not _run_selfcheck(log):
+            log("[llm] 复盘变更未通过自检，执行 git 回滚")
+            try:
+                backup = KNOWLEDGE_DIR / "code_backups" / f"failed_review_{time.strftime('%Y%m%d-%H%M%S')}.md"
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                if REVIEW_LOG.exists():
+                    shutil.copy2(REVIEW_LOG, backup)
+            except OSError:
+                pass
+            if async_mode:
+                # 路径级回滚：只还原复盘可触碰的路径，保留复盘期间的对局存档
+                autogit.restore_paths(pre_head, [
+                    "sts2-ascend/brain", "sts2-ascend/scripts",
+                    "sts2-ascend/knowledge/policy.json", "sts2-ascend/knowledge/stats.json",
+                    "sts2-ascend/knowledge/lessons.md", "sts2-ascend/knowledge/meta_review.md",
+                ], log=log)
+                autogit.commit_progress(
+                    f"revert(sts2-ascend): {batch_txt}复盘未过自检，路径回滚到 {pre_head[:8]}", log=log)
+            else:
+                autogit.reset_hard(pre_head, log=log)
+            log(f"[llm] 已回滚到复盘前备份点 {pre_head[:8]}（本次变更废弃，报告副本在 code_backups）")
+            return False
+
+        # 4) 提交复盘变更
+        autogit.commit_progress(f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）", log=log)
+
+        # 5) 写重启标记并请求重启（runner 若发现新代码起不来，会按 marker 回滚到 pre_head）
         try:
-            backup = KNOWLEDGE_DIR / "code_backups" / f"failed_review_{time.strftime('%Y%m%d-%H%M%S')}.md"
-            backup.parent.mkdir(parents=True, exist_ok=True)
-            if REVIEW_LOG.exists():
-                shutil.copy2(REVIEW_LOG, backup)
+            MARKER_FILE.write_text(json.dumps({"pre_head": pre_head, "time": stamp}), encoding="utf-8")
         except OSError:
             pass
-        autogit.reset_hard(pre_head, log=log)
-        log(f"[llm] 已回滚到复盘前备份点 {pre_head[:8]}（本次变更废弃，报告副本在 code_backups）")
-        return False
-
-    # 4) 提交复盘变更
-    autogit.commit_progress(f"feat(sts2-ascend): 第{runs}局后 LLM 复盘变更（详见 knowledge/meta_review.md）", log=log)
-
-    # 5) 写重启标记并请求重启（runner 若发现新代码起不来，会按 marker 回滚到 pre_head）
-    try:
-        MARKER_FILE.write_text(json.dumps({"pre_head": pre_head, "time": stamp}), encoding="utf-8")
-    except OSError:
-        pass
-    log("[llm] 复盘变更已提交，重启大脑以加载…")
-    return True
+        log("[llm] 复盘变更已提交，重启大脑以加载…")
+        return True
+    finally:
+        autogit.set_review_active(False)
 
 
 def maybe_review(agent, log=print) -> None:
-    """agent.py 每局结束后调用。先探测优先模型可用性决定复盘节奏；复盘执行过则在主菜单安全点自重启。"""
+    """【已废弃，保留兼容】同步复盘入口。新架构用 enqueue_review（异步不阻塞游玩）。"""
     cfg = load_llm_config()
     if not cfg.get("enabled"):
         return
@@ -480,6 +517,107 @@ def maybe_review(agent, log=print) -> None:
     agent.know.save()
     if executed:
         log("[llm] 复盘完成，回到主菜单后自动重启大脑以加载新策略/代码…")
+        agent.request_restart = True
+
+
+# ---------------------------------------------------------------------------
+# 异步复盘队列（追及队列）——每局结束只入队，工作线程串行消化，游玩零等待
+# ---------------------------------------------------------------------------
+
+QUEUE_FILE = KNOWLEDGE_DIR / "review_queue.json"
+_worker_started = False
+_worker_lock = threading.Lock()
+
+
+def _load_queue() -> dict:
+    try:
+        return json.loads(QUEUE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"pending": [], "reviewing": None}
+
+
+def _save_queue(q: dict) -> None:
+    try:
+        QUEUE_FILE.write_text(json.dumps(q, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def enqueue_review(agent, log=print) -> None:
+    """agent.py 每局结束后调用：按节奏入队复盘请求并确保工作线程存活。
+
+    绝不阻塞游玩主循环——复盘由工作线程异步执行；若一局结束时上一场复盘还没完，
+    请求在队列里累积，下一场复盘会一次性分析多局（追及）。
+    """
+    cfg = load_llm_config()
+    if not cfg.get("enabled"):
+        return
+    runs = agent.know.stats["global"]["runs"]
+    last = agent.know.progression.get("last_llm_review_run", 0)
+    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
+    model, every, source = resolve_review_plan(cfg, binary, log=log)
+    if runs - last < every:
+        return
+    agent.know.progression["last_llm_review_run"] = runs
+    agent.know.save()
+    q = _load_queue()
+    q.setdefault("pending", []).append({"run": runs, "time": time.strftime("%Y-%m-%d %H:%M")})
+    q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 5))):]
+    _save_queue(q)
+    log(f"[llm] 复盘请求已入队（第{runs}局，待消化 {len(q['pending'])} 批），游玩不等待")
+    _ensure_worker(agent, log)
+
+
+def _ensure_worker(agent, log) -> None:
+    global _worker_started
+    with _worker_lock:
+        if _worker_started:
+            return
+        _worker_started = True
+    threading.Thread(target=_worker_loop, args=(agent, log), daemon=True,
+                     name="llm-review-worker").start()
+    log("[llm] 异步复盘工作线程已启动")
+
+
+def _worker_loop(agent, log) -> None:
+    # 进程重启后清理残留的 reviewing 标记（上一场复盘子进程已随旧大脑消亡）
+    q = _load_queue()
+    if q.get("reviewing"):
+        log("[llm] 清理残留的复盘标记（上次复盘随进程重启中断）")
+        q["reviewing"] = None
+        _save_queue(q)
+    while True:
+        try:
+            q = _load_queue()
+            pending = q.get("pending", [])
+            if pending and not q.get("reviewing"):
+                batch = list(pending)
+                q["pending"] = []
+                q["reviewing"] = {"runs": [p["run"] for p in batch],
+                                  "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+                _save_queue(q)
+                try:
+                    _run_batch_review(agent, batch, log)
+                finally:
+                    q = _load_queue()
+                    q["reviewing"] = None
+                    _save_queue(q)
+            time.sleep(5)
+        except Exception as exc:
+            log(f"[llm] 复盘工作线程异常（已忽略，30s 后继续）：{exc}")
+            time.sleep(30)
+
+
+def _run_batch_review(agent, batch: list[dict], log) -> None:
+    cfg = load_llm_config()
+    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
+    model, every, source = resolve_review_plan(cfg, binary, log=log)
+    runs_list = [p["run"] for p in batch]
+    log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}）")
+    executed = run_review(agent.know, log=log, model=model, every=every, source=source,
+                          batch_runs=runs_list, async_mode=True)
+    if executed:
+        log("[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…")
         agent.request_restart = True
 
 
