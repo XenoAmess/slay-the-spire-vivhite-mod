@@ -148,8 +148,9 @@ class Agent:
         gold = run.get("gold", self.ctx.last_gold)
         asc = run.get("ascension", self.ctx.ascension)
 
-        # new run detection
-        if run_id != self.ctx.run_id and screen not in ("MAIN_MENU",) and run:
+        # new run detection（排除 GAME_OVER/MAIN_MENU：大脑重启后首见幽灵结算屏，
+        # 若据此 reset_for 会把一局从未参与的对局归档成一败，虚增统计——第 26 局实证）
+        if (run_id != self.ctx.run_id and screen not in ("MAIN_MENU", "GAME_OVER") and run):
             if self.ctx.run_id != "run_unknown" and not self.ctx.run_finalized and self.ctx.decisions:
                 # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
                 log("[agent] 检测到上一局异常结束，按失败归档")
@@ -174,6 +175,7 @@ class Agent:
             died_here = screen == "GAME_OVER" and not victory_screen
             hp_lost = max(0, c["hp_start"] - hp)
             self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=not died_here, died=died_here)
+            self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
             note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died_here else "")
             self.ctx.combat_notes.append(note)
             if died_here:
@@ -223,6 +225,12 @@ class Agent:
 
     def _finalize(self, victory: bool, floor: int) -> None:
         if self.ctx.run_finalized:
+            return
+        # 幽灵结算屏保护：本进程从未做过任何决策、未进过任何战斗（大脑重启后
+        # 恰逢上一局的结算画面）→ 不计入统计，避免虚增一败污染学习数据
+        if not self.ctx.decisions and not self.ctx.combat_notes:
+            self.ctx.run_finalized = True
+            log(f"[agent] 疑似幽灵结算屏（floor={floor}），本进程无任何决策，跳过归档")
             return
         self.ctx.run_finalized = True
         self.runs_played += 1

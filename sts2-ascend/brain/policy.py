@@ -391,6 +391,13 @@ class Policy:
         my_max_hp = max(1, player.get("max_hp", my_hp))
         block_gap = max(0, incoming - my_block)
 
+        # 敌方组合威胁感知：历史场均掉血数据反哺战斗评分（FUZZY_WURM 组合 7战5死
+        # 场均掉血 26，此前引擎对它毫无感知，按普通怪打法反复送死）
+        comp_id = "+".join(sorted({(e.get("enemy_id") or "?") for e in combat.get("enemies", [])
+                                   if e.get("is_alive")})) if combat.get("enemies") else ""
+        threat = self.know.threat_mult(comp_id) if comp_id else 1.0
+        fight_hp_lost = max(0, (ctx.combat or {}).get("hp_start", my_hp) - my_hp) if ctx.combat else 0
+
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
         # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
         if not can_play:
@@ -405,8 +412,10 @@ class Policy:
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
 
-        # potion check (elite/boss or lethal danger)
-        hard = ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player") or block_gap >= my_hp
+        # potion check (elite/boss, lethal danger, or historically deadly comp)
+        hard = (ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
+                or block_gap >= my_hp
+                or threat > 1.0 and self.know.enemy_danger(comp_id) >= 18.0)
         potion_dec = self._maybe_potion(state, ctx, hard)
         if potion_dec is not None:
             return potion_dec
@@ -428,7 +437,7 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                   my_hp, my_max_hp)
+                                                   my_hp, my_max_hp, threat, fight_hp_lost)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -450,9 +459,10 @@ class Policy:
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
+            threat_note = f"；敌组合历史威胁{threat:.1f}×" if threat > 1.05 else ""
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
-                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲",
+                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{threat_note}",
                             tags=[("play_card", card.get("card_id"))], wait=0.6)
 
         if can_end:
@@ -464,7 +474,8 @@ class Policy:
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
-                    my_hp: int = 9999, my_max_hp: int = 9999):
+                    my_hp: int = 9999, my_max_hp: int = 9999,
+                    threat: float = 1.0, fight_hp_lost: int = 0):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -472,6 +483,10 @@ class Policy:
 
         生存权重：残血且敌意图可能致死时，压低攻击、抬高格挡——
         第 18 局 F22 致命战在意图 44~50 时仍连续输出不补防，直接阵亡。
+
+        threat：敌方组合历史威胁系数（场均掉血数据反哺，≥1.0）；
+        fight_hp_lost：本场已掉血——慢性失血同样触发防御戒备，
+        避免"每回合意图不高→从不补防→整场磨掉 30~56 血"的死法。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -482,13 +497,14 @@ class Policy:
         hp_pct = my_hp / max(1, my_max_hp)
         gap = max(0, incoming - my_block)
         lethal = gap >= my_hp              # 本回合就可能被打死
-        urgent = gap > 0 and hp_pct < 0.45  # 慢性失血下的低血量状态
+        chronic = fight_hp_lost >= 0.3 * my_max_hp   # 本场已被磨掉三成血量
+        urgent = gap > 0 and (hp_pct < 0.45 or chronic)  # 慢性失血下的低血量状态
         if lethal:
-            atk_damp, blk_boost = 0.55, 1.8
+            atk_damp, blk_boost = 0.55, 1.8 * threat
         elif urgent:
-            atk_damp, blk_boost = 0.75, 1.4
+            atk_damp, blk_boost = 0.75, 1.4 * threat
         else:
-            atk_damp, blk_boost = 1.0, 1.0
+            atk_damp, blk_boost = min(1.0, 1.0 / threat), 1.0 * threat
 
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:

@@ -79,7 +79,7 @@ DEFAULT_STATS = {
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths}
-    "rooms": {},    # node_type -> {visits, outcome_sum}
+    "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
 }
 
 
@@ -121,6 +121,10 @@ class Knowledge:
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
+        # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
+        for e in self.stats["rooms"].values():
+            e.setdefault("hp_lost_sum", 0.0)
+            e.setdefault("damage_events", 0)
 
     # ---------- persistence ----------
 
@@ -157,6 +161,27 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
+    def threat_mult(self, comp_id: str) -> float:
+        """战斗端威胁系数：历史场均掉血越高的组合，防御权重放大越多。
+
+        基准 12（未知敌人的先验危险度）→ 1.0；场均 26+ 的杀手组合顶到 1.6。
+        只放大不缩小：对已知软柿子也不冒进，避免小样本反向冒险。
+        """
+        return clamp(self.enemy_danger(comp_id) / 12.0, 1.0, 1.6)
+
+    def room_damage_prior(self, node_type: str, static_prior: float) -> float:
+        """路径模拟掉血先验的动态校准：实测场均掉血与静态先验加权混合。
+
+        样本 <3 用纯静态；3~10 线性加权；≥10 封顶 70% 实测权重。
+        修复 Elite 静态先验 28 vs 实测 40+ 的系统性低估。
+        """
+        e = self.stats["rooms"].get(node_type)
+        if not e or e.get("damage_events", 0) < 3:
+            return float(static_prior)
+        measured = e["hp_lost_sum"] / max(1, e["damage_events"])
+        w = min(0.7, e["damage_events"] / 10.0)
+        return (1.0 - w) * float(static_prior) + w * measured
+
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty."""
         opts = self.stats["events"].get(event_id, {})
@@ -176,6 +201,13 @@ class Knowledge:
         e["hp_lost_sum"] += max(0.0, hp_lost)
         e["wins"] += 1 if won else 0
         e["deaths"] += 1 if died else 0
+
+    def commit_room_damage(self, node_type: str, hp_lost: float) -> None:
+        """按房间类型累计战斗掉血（供路径先验动态校准）。"""
+        e = self.stats["rooms"].setdefault(
+            node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
+        e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
+        e["damage_events"] = e.get("damage_events", 0) + 1
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float, gold_delta: float, died: bool) -> None:
         opts = self.stats["events"].setdefault(event_id, {})
