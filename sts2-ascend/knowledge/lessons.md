@@ -349,3 +349,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.110 → 0.107（经验累积，探索衰减）
 - 生涯战绩：0/28 胜，当前目标进阶 0
+
+## 第 29 局复盘（2026-08-22 22:13）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 MAWLER
+- 本局拿牌：WHIRLWIND, SWORD_BOOMERANG, MOLTEN_FIST, MOLTEN_FIST, MOLTEN_FIST, TRUE_GRIT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血16; F3 Monster战 掉血2; F4 Monster战 掉血2; F5 Monster战 掉血23; F7 Monster战 掉血37（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，HOWL_FROM_BEYOND(22分/3局)，UPPERCUT(20分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：exploration_rate: 0.107 → 0.103（经验累积，探索衰减）
+- 生涯战绩：0/29 胜，当前目标进阶 0
