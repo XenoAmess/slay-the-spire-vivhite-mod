@@ -7,5 +7,14 @@
   "watchdog_escalate_after": 25,
   "watchdog_abandon_after": 90,
   "max_runs": 0,
-  "seed": null
+  "seed": null,
+  "llm": {
+    "enabled": true,
+    "runner": "opencode",
+    "opencode_bin": "opencode",
+    "model": "kimi-for-coding/k3",
+    "review_every_runs": 10,
+    "timeout_min": 25,
+    "max_runs_in_packet": 10
+  }
 }

@@ -749,7 +749,9 @@ class Policy:
                     best, best_v = b, v
             return Decision("choose_bundle", {"option_index": best["index"]},
                             f"卡包选择：选包{best['index']}（总价值 {best_v:.1f}）；{' / '.join(detail)}",
-                            tags=[("bundle_pick", best["index"])], wait=0.8)
+                            tags=[("bundle_pick", best["index"])]
+                                 + [("card_pick", c.get("card_id")) for c in best.get("cards", []) if c.get("card_id")],
+                            wait=0.8)
         if "confirm_bundle" in actions:
             return Decision("confirm_bundle", {}, "卡包选择：确认", wait=0.8)
         return Decision(None, {}, "卡包选择：等待", wait=0.7)

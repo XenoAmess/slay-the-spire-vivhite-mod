@@ -8,6 +8,7 @@ Usage:  py -m brain            (from sts2-ascend/ directory)
 from __future__ import annotations
 
 import json
+import os
 import random
 import subprocess
 import sys
@@ -19,6 +20,11 @@ from client import ConnectionDown, Sts2Client
 from knowledge import Knowledge
 from policy import Policy
 from reflect import finalize_run
+
+try:
+    import llm_review
+except Exception:  # LLM 复盘是可选模块，导入失败不影响游玩
+    llm_review = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -100,6 +106,7 @@ class Agent:
         self.last_sig = None
         self.same_count = 0
         self.runs_played = 0
+        self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
 
     # ---------------- game process management ----------------
 
@@ -228,6 +235,9 @@ class Agent:
         })
         log(f"[agent] 对局日志已保存：{path.name}")
         self.know.save()
+        # 每 N 局触发一次大模型复盘（默认 10 局；未配置 API key 时自动跳过）
+        if llm_review is not None:
+            llm_review.maybe_review(self, log=log)
 
     # ---------------- watchdog ----------------
 
@@ -291,6 +301,13 @@ class Agent:
                 floor = go.get("floor") or (self.ctx.decisions[-1]["floor"] if self.ctx.decisions else 0)
                 self._finalize(bool(go.get("is_victory")), int(floor or 0))
                 continue
+
+            # LLM 改了代码：在主菜单安全点自重启以加载新逻辑
+            if self.request_restart and state.get("screen") == "MAIN_MENU":
+                log("[agent] 自重启中（加载 LLM 修复后的代码）…")
+                self.know.save()
+                os.chdir(BASE_DIR)
+                os.execv(sys.executable, [sys.executable, "-u", "-m", "brain"])
 
             forced = self._watchdog(state)
             if forced:

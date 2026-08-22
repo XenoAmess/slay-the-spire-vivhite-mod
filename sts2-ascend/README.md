@@ -53,6 +53,21 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
    事件致死→收敛探索率；胜利→放宽进攻性并提升目标进阶。全部钳制在安全区间内。
 4. **自我总结**：以上全部变化以中文写入 `lessons.md`，形成可读的"成长日记"。
 
+## 大模型复盘（每 10 局）
+
+内置的统计学习只会调既有参数。**每 10 局**，大脑会暂停并启动一次
+**OpenCode 无头会话**（`opencode run`，模型 `kimi-for-coding/k3`，走本机已有授权，无需 API key），
+由大模型做教练级复盘：
+
+- 读取最近对局摘要 + 全部统计 → 写复盘报告到 `knowledge/meta_review.md`
+- **有界直接调整** `policy.json` 参数 / 卡牌 `bias`（区间钳制，逐项写明理由）
+- 发现 `brain/policy.py` 明确逻辑缺陷时可直接改代码（强制 `py_compile` 验证，仅此一个文件可动）
+- 复盘完成后大脑在主菜单**自动自重启**（`os.execv`）加载新策略与新代码
+
+安全约束（写在复盘提示词里，优先级最高）：禁止 git 操作、禁止动进程、禁止删文件、
+禁止改历史对局日志。手动立即触发一次复盘：`py brain/llm_review.py --now`。
+配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/禁用）。
+
 ## 与上游 mod 的关系
 
 - `third_party/dist/`：上游 release 包（默认 v0.9.0，由 Deploy-Mod.ps1 自动下载，不入库）
