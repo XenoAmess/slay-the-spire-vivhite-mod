@@ -743,3 +743,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/57 胜，当前目标进阶 0
+
+## 第 58 局复盘（2026-08-23 03:33）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 EYE_WITH_TEETH+FOGMOG
+- 本局拿牌：MOLTEN_FIST, SHRUG_IT_OFF, INFLAME, FIGHT_ME
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血6; F3 Monster战 掉血1; F5 Monster战 掉血0; F6 Monster战 掉血54; F6 Monster战 掉血29（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/4局)，THUNDERCLAP(18分/3局)，UPPERCUT(17分/20局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/58 胜，当前目标进阶 0
