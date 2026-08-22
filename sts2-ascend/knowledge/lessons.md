@@ -185,3 +185,14 @@
 - 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.75 → 1.80（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.158 → 0.154（经验累积，探索衰减）
 - 生涯战绩：0/16 胜，当前目标进阶 0
+
+## 第 17 局复盘（2026-08-22 11:46）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：BLUDGEON, TRUE_GRIT, FEEL_NO_PAIN, OFFERING
+- 本局遗物：无
+- 战斗记录：F2 Unknown战 掉血22; F3 Monster战 掉血2; F3 Monster战 掉血1; F4 Unknown战 掉血5; F5 Monster战 掉血19; F6 Monster战 掉血19（阵亡）
+- 当前高价值卡牌：MANGLE(29分/4局)，FIGHT_ME(22分/3局)，IRON_WAVE(21分/3局)，UPPERCUT(21分/9局)，TWIN_STRIKE(20分/4局)
+- 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
+- 策略进化：exploration_rate: 0.154 → 0.149（经验累积，探索衰减）
+- 生涯战绩：0/17 胜，当前目标进阶 0
