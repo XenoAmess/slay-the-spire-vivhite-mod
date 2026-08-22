@@ -41778,3 +41778,73 @@ That's about 200. Good.
 [07:26:37] [CARD_SELECTION/F5] 选择卡牌：【防御】（价值 -13.5）；候选：防御=-13.5 / 防御=-13.5 / 防御=-13.5 / 防御=-13.5
 [agent] 事件结算：SELF_HELP_BOOK/SELF_HELP_BOOK.pages.INITIAL.options.READ_PASSAGE → 生命 +0，金币 +0，卡牌 +0
 [07:26:38] [EVENT/F5] 事件：已结束，继续
+[07:26:39] [MAP/F5] 路径规划：Monster(5,4)（路径分 23.40，预计进 Boss 血量 95%；前期需要战斗积累卡牌）；候选：Monster(5,4)=23.40|前期需要战斗积累卡牌 / Unknown(5,5)=22.85
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ me view the tail of selfcheck.py first, then make all edits.
+现在我已经掌握了整体情况。让我查看一下 selfcheck 的末尾部分，然后实施修复。
+⚙ read {}
+· tokens 198552 ·
+💭 Note test 3kk: fb_lethal has hand with ONLY the block card (playable=True) → affordable → no wait → plays block ✓ unaffected by my change.
+
+Now implement all edits.
+
+1. knowledge.py:
+   - DEFAULT_POLICY: add desperate_confirm_ticks + boss_eve_smith_heal_mult
+   - DEFAULT_STATS: rooms_act
+   - __init__: setdefault rooms_act
+   - commit_room_damage: act param
+   - room_damage_prior_act method
+
+2. policy.py: __init__ fields; _combat streak+wait+pass desp_ok; _score_play param; _rest boss-eve condition; _map simulate use room_damage_prior_act.
+
+3. agent.py: _settle_combat pass act.
+
+4. selfcheck.py: adapt 3x'; add 3ll (fake desperate), 3mm (lethal wait), 3nn (boss eve smith), 3oo (rooms_act).
+
+Wait — ordering: I'll name new tests 3ll/3mm/3nn/3oo sequentially after 3kk.
+
+For the map test (3oo), note existing test 3c asserts p2 < p1 using real-ish empty knowledge — my change must not break it: with no rooms_act data, fallback to old behavior ✓ identical.
+
+For _map simulate, current line:
+```python
+                prior = self.know.room_damage_prior(nt, float(priors.get(nt, 8)))
+```
+Replace with:
+```python
+                prior = self.know.room_damage_prior_act(nt, float(priors.get(nt, 8)), act_idx)
+```
+act_idx is in scope (computed before paths). ✓
+
+commit_room_damage signature change: called only from agent._settle_combat (grep to confirm) and maybe selfcheck. Let me grep for commit_room_damage usage.
+现在我来进行实现。首先，对 `knowledge.py` 进行修改：
+⚙ bash {}
+· tokens 201402 ·
+⚙ edit {}
+· tokens 202217 ·
+⚙ edit {}
+· tokens 202534 ·
+⚙ edit {}
+· tokens 202879 ·
+现在是具有幕数感知能力的 `room_damage_prior` 和 commit 函数：
+⚙ edit {}
+· tokens 203692 ·
+⚙ edit {}
+· tokens 204179 ·
+现在修改 `policy.py` —— 包括 `__init__` 字段、`_combat` 中的 `fake-desperate` 防护、`_score_play` 参数、`_map` 的 `act-aware` 先验，以及 `_rest` 的 `boss-eve` 条件：
+⚙ edit {}
+· tokens 204539 ·
+⚙ edit {}
+· tokens 204900 ·
+
+[07:26:42] [COMBAT/F6] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=CUBEX_CONSTRUCT｜历史场均掉血 5.6｜房间类型 Monster
+[07:26:43] [COMBAT/F6] 战斗：回合过渡中，等待
+[07:26:43] [COMBAT/F6] 战斗：回合过渡中，等待
+[07:26:44] [COMBAT/F6] 战斗：打出【彼岸咆哮】（群体伤害≈18）；敌意图总伤0，我方80血/0甲
+[git] 已自动存档：feat(sts2-ascend): 第79局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[07:26:45] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（御血术✗,防御✗,打击✗,打击✗）
+[07:26:46] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[07:26:47] [COMBAT/F6] 战斗：回合过渡中，等待
+[07:26:48] [COMBAT/F6] 战斗：回合过渡中，等待
