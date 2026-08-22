@@ -553,3 +553,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/4局)
 - 策略进化：exploration_rate: 0.063 → 0.062（经验累积，探索衰减）
 - 生涯战绩：0/46 胜，当前目标进阶 0
+
+## 第 47 局复盘（2026-08-23 01:34）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, COLOSSUS, SHRUG_IT_OFF, MOLTEN_FIST, TAUNT, SWORD_BOOMERANG, INFLAME, FIGHT_ME, FIGHT_ME, SPITE, RAMPAGE, THUNDERCLAP, RAGE
+- 本局遗物：摆动球, ORICHALCUM
+- 战斗记录：F13 Monster战 掉血23; F14 Monster战 掉血0; F15 Monster战 掉血8; F17 Boss战 掉血0; F17 Boss战 掉血29; F17 Boss战 掉血19（阵亡）
+- 当前高价值卡牌：HOWL_FROM_BEYOND(25分/2局)，IMPERVIOUS(23分/2局)，STOMP(23分/3局)，MANGLE(21分/10局)，THUNDERCLAP(20分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/4局)
+- 策略进化：exploration_rate: 0.062 → 0.060（经验累积，探索衰减）
+- 生涯战绩：0/47 胜，当前目标进阶 0
