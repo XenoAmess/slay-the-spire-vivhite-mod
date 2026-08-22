@@ -983,3 +983,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/75 胜，当前目标进阶 0
+
+## 第 76 局复盘（2026-08-23 06:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, SECOND_WIND, THUNDERCLAP, SHRUG_IT_OFF, TWIN_STRIKE, WHIRLWIND, ARMAMENTS, THE_GAMBIT, THRUMMING_HATCHET, FEEL_NO_PAIN, HOWL_FROM_BEYOND, CINDER
+- 本局遗物：苦无, POCKETWATCH
+- 战斗记录：F8 Elite战 掉血59; F9 Unknown战 掉血0; F9 Unknown战 掉血0; F9 Unknown战 掉血8; F14 Monster战 掉血13; F17 Boss战 掉血42（阵亡）
+- 当前高价值卡牌：MANGLE(20分/11局)，IMPERVIOUS(19分/5局)，STOMP(18分/7局)，UPPERCUT(17分/25局)，UNMOVABLE(17分/6局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/76 胜，当前目标进阶 0
