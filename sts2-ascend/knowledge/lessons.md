@@ -425,3 +425,14 @@
 - 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：exploration_rate: 0.091 → 0.089（经验累积，探索衰减）
 - 生涯战绩：0/34 胜，当前目标进阶 0
+
+## 第 35 局复盘（2026-08-22 23:45）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：SPITE
+- 本局遗物：无
+- 战斗记录：F15 Unknown战 掉血0; F17 Boss战 掉血66（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(22分/8局)，FIGHT_ME(21分/4局)，UPPERCUT(19分/15局)
+- 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：exploration_rate: 0.089 → 0.086（经验累积，探索衰减）
+- 生涯战绩：0/35 胜，当前目标进阶 0
