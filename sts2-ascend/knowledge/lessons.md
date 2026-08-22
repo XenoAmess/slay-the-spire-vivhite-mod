@@ -816,3 +816,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/62 胜，当前目标进阶 0
+
+## 第 63 局复盘（2026-08-23 04:21）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：BREAKTHROUGH, STOMP, HOWL_FROM_BEYOND, BLUDGEON, CINDER, ANGER
+- 本局遗物：LETTER_OPENER
+- 战斗记录：F4 Monster战 掉血7; F5 Monster战 掉血34; F5 Monster战 掉血0; F9 Unknown战 掉血28; F12 Monster战 掉血22; F17 Boss战 掉血85（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/5局)，UPPERCUT(17分/22局)，UNMOVABLE(17分/3局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/63 胜，当前目标进阶 0
