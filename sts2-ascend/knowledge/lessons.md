@@ -250,3 +250,14 @@
 - 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
 - 策略进化：exploration_rate: 0.144 → 0.140（经验累积，探索衰减）
 - 生涯战绩：0/19 胜，当前目标进阶 0
+
+## 第 20 局复盘（2026-08-22 21:06）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：HEADBUTT, BASH, DEFEND_IRONCLAD, RUPTURE, BASH, BASH, BATTLE_TRANCE, BASH, CINDER, TRUE_GRIT
+- 本局遗物：无
+- 战斗记录：F4 Monster战 掉血10; F4 Monster战 掉血0; F5 Monster战 掉血17; F5 Monster战 掉血11; F6 Monster战 掉血35; F7 Monster战 掉血13（阵亡）
+- 当前高价值卡牌：MANGLE(29分/4局)，STOMP(28分/2局)，FIGHT_ME(22分/3局)，IRON_WAVE(21分/3局)，UPPERCUT(21分/12局)
+- 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，STRIKE_IRONCLAD(9分/5局)
+- 策略进化：block_safety: 1.85 → 1.90（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.140 → 0.136（经验累积，探索衰减）
+- 生涯战绩：0/20 胜，当前目标进阶 0
