@@ -61,6 +61,17 @@ Set-Clipboard "card VIVHITE_CARD_VIVHITE_STRIKE"
 
 游戏内控制台：按 `` ` ``（0xC0）开启；`card <ID>` 发卡到手牌、`dump` 导出全部 ID、`win/kill/heal` 等详见教程站。
 
+## 子项目：sts2-ascend（自动游玩智能体）
+
+`sts2-ascend/` 是独立的自动游玩子项目：基于上游 mod [CharTyr/STS2-Agent](https://github.com/CharTyr/STS2-Agent)
+（游戏内 HTTP API，`mods/` 根目录部署 `STS2AIAgent.dll/.pck/mod_id.json`，端口 8080+），
+外挂一个纯 Python 标准库的自主学习大脑（`sts2-ascend/brain/`）。
+
+- 启动：`powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1`
+- 大脑记忆在 `sts2-ascend/knowledge/`（stats/policy/progression/lessons/runs，已 gitignore，**不要手工改**）
+- 上游 release 包在 `sts2-ascend/third_party/dist/`（gitignore，由 `scripts/Deploy-Mod.ps1` 自动下载）
+- 详细见 `sts2-ascend/README.md` 与 `docs/2026-08-22-sts2-ascend自动游玩智能体.md`
+
 ## 工作流程规则
 
 ### 1. 完成后默认提交并推送

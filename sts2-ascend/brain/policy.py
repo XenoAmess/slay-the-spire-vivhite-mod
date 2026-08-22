@@ -1,0 +1,808 @@
+"""Decision engine — one Decision per screen, driven by live state + learned knowledge.
+
+Every decision carries:
+  action   : the /action name to POST
+  params   : option_index / card_index / target_index / command
+  reason   : Chinese natural-language rationale (局势分析总结)
+  tags     : credit-assignment markers, e.g. ("card_pick", card_id)
+  ctx_ops  : side effects on RunContext (tracked in agent.py)
+"""
+from __future__ import annotations
+
+import random
+import re
+from dataclasses import dataclass, field
+
+from knowledge import Knowledge, clamp
+
+
+@dataclass
+class Decision:
+    action: str | None = None          # None = wait (do nothing this tick)
+    params: dict = field(default_factory=dict)
+    reason: str = ""
+    tags: list = field(default_factory=list)
+    wait: float = 0.5                  # seconds to wait after executing
+
+
+# ---------------------------------------------------------------------------
+# card feature extraction
+# ---------------------------------------------------------------------------
+
+_NUM = r"(\d+)"
+
+def _text(card: dict) -> str:
+    return card.get("resolved_rules_text") or card.get("rules_text") or ""
+
+
+def card_numbers(card: dict) -> tuple[int, int, int]:
+    """(damage_per_hit, block, hits) from dynamic_values, falling back to text parse."""
+    dmg = block = 0
+    hits = 1
+    for dv in card.get("dynamic_values") or []:
+        name = (dv.get("name") or "").lower()
+        val = dv.get("current_value", dv.get("base_value", 0)) or 0
+        if "damage" in name or "伤害" in name:
+            dmg = int(val)
+        elif "block" in name or "格挡" in name:
+            block = int(val)
+        elif "hit" in name or "次数" in name:
+            hits = max(1, int(val))
+    text = _text(card)
+    if dmg == 0:
+        m = re.search(_NUM + r"\s*点伤害|deal\s+" + _NUM + r"\s+damage", text, re.I)
+        if m:
+            dmg = int(next(g for g in m.groups() if g))
+    if block == 0:
+        m = re.search(_NUM + r"\s*点格挡|gain\s+" + _NUM + r"\s+block|" + _NUM + r"\s+block", text, re.I)
+        if m:
+            block = int(next(g for g in m.groups() if g))
+    if hits == 1:
+        m = re.search(r"(\d+)\s*次|x(\d+)\b|twice|两次", text, re.I)
+        if m:
+            g = next((g for g in m.groups() if g and g.isdigit()), None)
+            if g:
+                hits = max(1, int(g))
+            elif m.group(0) in ("twice", "两次"):
+                hits = 2
+    return dmg, block, hits
+
+
+def card_type(card: dict) -> str:
+    return card.get("card_type") or ""
+
+
+def is_attack(card: dict) -> bool:
+    return card_type(card).lower() == "attack"
+
+
+def is_power(card: dict) -> bool:
+    return card_type(card).lower() == "power"
+
+
+def is_skill(card: dict) -> bool:
+    return card_type(card).lower() == "skill"
+
+
+def is_bad_card(card: dict) -> bool:
+    return card_type(card).lower() in ("status", "curse")
+
+
+def draw_amount(card: dict) -> int:
+    text = _text(card)
+    m = re.search(r"抽\s*" + _NUM + r"\s*张|draw\s+" + _NUM, text, re.I)
+    return int(next(g for g in m.groups() if g)) if m else 0
+
+
+class Policy:
+    def __init__(self, know: Knowledge, rng: random.Random | None = None):
+        self.know = know
+        self.rng = rng or random.Random()
+        self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
+        self._shop_done_floor = -1  # floor of the shop we already finished evaluating
+
+    # ------------------------------------------------------------------
+    # top-level router
+    # ------------------------------------------------------------------
+
+    def decide(self, state: dict, ctx) -> Decision:
+        screen = state.get("screen", "UNKNOWN")
+        handler = {
+            "MAIN_MENU": self._main_menu,
+            "CHARACTER_SELECT": self._character_select,
+            "MAP": self._map,
+            "COMBAT": self._combat,
+            "REWARD": self._reward,
+            "CARD_SELECTION": self._card_selection,
+            "SHOP": self._shop,
+            "REST": self._rest,
+            "CHEST": self._chest,
+            "EVENT": self._event,
+            "MODAL": self._modal,
+            "GAME_OVER": self._game_over,
+            "TIMELINE": self._timeline,
+            "BUNDLE_SELECTION": self._bundle,
+            "CAPSTONE": self._capstone,
+        }.get(screen)
+        if handler is None:
+            return self._unknown(state, ctx)
+        try:
+            return handler(state, ctx)
+        except Exception as exc:  # never crash the loop on a policy bug
+            return Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0)
+
+    # ------------------------------------------------------------------
+    # menu / character select / timeline
+    # ------------------------------------------------------------------
+
+    def _main_menu(self, state: dict, ctx) -> Decision:
+        actions = state.get("available_actions", [])
+        timeline = state.get("timeline")
+        if timeline and timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
+            return Decision("confirm_timeline_overlay", {}, "主菜单：确认时间线弹层", wait=0.8)
+        if timeline and timeline.get("can_choose_epoch") and "choose_timeline_epoch" in actions:
+            slots = [s for s in timeline.get("slots", []) if s.get("is_actionable")]
+            if slots:
+                return Decision("choose_timeline_epoch", {"option_index": slots[0]["index"]},
+                                f"主菜单：选择时间线节点 {slots[0].get('title')}", wait=0.8)
+        if "continue_run" in actions:
+            return Decision("continue_run", {}, "主菜单：检测到进行中的存档，继续对局", wait=1.2)
+        if "open_character_select" in actions:
+            return Decision("open_character_select", {}, "主菜单：开启新的一局（标准模式）", wait=1.2)
+        return Decision(None, {}, "主菜单：无可用动作，等待", wait=1.0)
+
+    def _timeline(self, state: dict, ctx) -> Decision:
+        return self._main_menu(state, ctx)
+
+    def _character_select(self, state: dict, ctx) -> Decision:
+        cs = state.get("character_select") or {}
+        chars = cs.get("characters", [])
+        target = self.know.progression.get("character", "IRONCLAD")
+        chosen = None
+        for c in chars:
+            cid = (c.get("character_id") or "").upper()
+            if c.get("is_locked") or c.get("is_random"):
+                continue
+            if target in cid:
+                chosen = c
+                break
+        if chosen is None:  # fallback: first unlocked non-random (leftmost warrior)
+            for c in chars:
+                if not c.get("is_locked") and not c.get("is_random"):
+                    chosen = c
+                    break
+        if chosen is None:
+            return Decision(None, {}, "选角界面：未找到可用角色", wait=1.0)
+        if not chosen.get("is_selected"):
+            return Decision("select_character", {"option_index": chosen["index"]},
+                            f"选择角色：{chosen.get('name')}（目标角色 {target}）",
+                            tags=[("character", chosen.get("character_id"))], wait=0.8)
+
+        # ascension ladder
+        current = cs.get("ascension", 0)
+        goal = min(self.know.progression.get("current_ascension", 0), cs.get("max_ascension", 0))
+        if current < goal and cs.get("can_increase_ascension") and "increase_ascension" in state.get("available_actions", []):
+            return Decision("increase_ascension", {}, f"调整进阶：{current} → {current + 1}（目标 {goal}）", wait=0.5)
+        if current > goal and cs.get("can_decrease_ascension") and "decrease_ascension" in state.get("available_actions", []):
+            return Decision("decrease_ascension", {}, f"调整进阶：{current} → {current - 1}（目标 {goal}）", wait=0.5)
+
+        if cs.get("can_embark") and "embark" in state.get("available_actions", []):
+            return Decision("embark", {}, f"出发！角色={chosen.get('name')} 进阶={current}",
+                            tags=[("embark", current)], wait=2.0)
+        return Decision(None, {}, f"选角界面：等待可出发状态（asc={current}）", wait=0.8)
+
+    # ------------------------------------------------------------------
+    # map
+    # ------------------------------------------------------------------
+
+    def _map(self, state: dict, ctx) -> Decision:
+        m = state.get("map") or {}
+        nodes = m.get("available_nodes", [])
+        if not nodes:
+            return Decision(None, {}, "地图：暂无可走节点", wait=0.8)
+        run = state.get("run") or {}
+        hp_pct = (run.get("current_hp", 1) / max(1, run.get("max_hp", 1)))
+        gold = run.get("gold", 0)
+        floor = run.get("floor", 0)
+        pol = self.know.policy
+        weights = pol["room_weights"]
+
+        # room danger learning: average hp loss per node type biases weights
+        def learned_room_factor(node_type: str) -> float:
+            e = self.know.stats["rooms"].get(node_type)
+            if not e or e["visits"] < 3:
+                return 1.0
+            avg = e["outcome_sum"] / e["visits"]
+            glob = self.know.global_avg_outcome()
+            return clamp(1.0 + (avg - glob) / 50.0, 0.5, 1.5)
+
+        boss_row = (m.get("boss_node") or {}).get("row")
+        graph = {(n["row"], n["col"]): n for n in m.get("nodes", [])}
+
+        def lookahead(node) -> float:
+            gnode = graph.get((node["row"], node["col"]))
+            if not gnode:
+                return 0.0
+            best = 0.0
+            for child in gnode.get("children", []):
+                ctype = (graph.get((child["row"], child["col"])) or {}).get("node_type", "Unknown")
+                best = max(best, weights.get(ctype, 1.0))
+            return best
+
+        best_node, best_score, best_detail = None, -1e9, ""
+        details = []
+        for n in nodes:
+            nt = n.get("node_type", "Unknown")
+            w = weights.get(nt, 1.0) * learned_room_factor(nt)
+            note = []
+            if nt == "Elite":
+                if hp_pct < pol["elite_min_hp_pct"]:
+                    w *= 0.1
+                    note.append(f"血量{hp_pct:.0%}<{pol['elite_min_hp_pct']:.0%}，规避精英")
+                else:
+                    note.append("血量充足，精英奖励价值高")
+            elif nt == "RestSite":
+                if hp_pct < pol["rest_urgent_hp_pct"]:
+                    w *= 2.5
+                    note.append("低血量急需休息")
+                elif boss_row is not None and n["row"] >= boss_row - 1:
+                    w *= 2.0
+                    note.append("Boss 前休整")
+            elif nt == "Shop":
+                if gold >= pol["shop_min_gold"]:
+                    w *= 1.4
+                    note.append(f"金币{gold}足够")
+                else:
+                    w *= 0.6
+                    note.append("金币不足")
+            elif nt == "Monster":
+                if floor <= 8:
+                    w *= 1.25
+                    note.append("前期需要战斗积累卡牌")
+            score = w + pol["lookahead_weight"] * lookahead(n)
+            details.append(f"{nt}({n['row']},{n['col']})={score:.2f}{'|' + ','.join(note) if note else ''}")
+            if score > best_score:
+                best_node, best_score = n, score
+                best_detail = f"{nt}({n['row']},{n['col']})"
+
+        ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
+        return Decision("choose_map_node", {"option_index": best_node["index"]},
+                        f"地图选路：{best_detail}（评分 {best_score:.2f}）；候选：{' / '.join(details)}",
+                        tags=ctx_ops_tags, wait=1.5)
+
+    # ------------------------------------------------------------------
+    # combat
+    # ------------------------------------------------------------------
+
+    def _combat(self, state: dict, ctx) -> Decision:
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+        enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
+        hand = combat.get("hand", [])
+        energy = player.get("energy", 0)
+        round_no = state.get("turn") or 1
+        pol = self.know.policy
+        actions = state.get("available_actions", [])
+        can_play = "play_card" in actions
+        can_end = "end_turn" in actions
+
+        if not enemies:
+            if can_end:
+                return Decision("end_turn", {}, "战斗：场上无有效敌人，结束回合", wait=1.0)
+            return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
+
+        incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
+        my_block = player.get("block", 0)
+        my_hp = player.get("current_hp", 1)
+        block_gap = max(0, incoming - my_block)
+
+        # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
+        # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
+        if not can_play:
+            if can_end:
+                self._end_stall += 1
+                if self._end_stall < 4:
+                    hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
+                    return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/4，{hand_desc}）", wait=0.6)
+                # 连续多次确认无牌可出（如无能量），才允许结束回合
+                self._end_stall = 0
+                return Decision("end_turn", {}, "战斗：确认无牌可出（可能无能量），结束回合", wait=1.2)
+            return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
+        self._end_stall = 0
+
+        # potion check (elite/boss or lethal danger)
+        hard = ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player") or block_gap >= my_hp
+        potion_dec = self._maybe_potion(state, ctx, hard)
+        if potion_dec is not None:
+            return potion_dec
+
+        best = None  # (score, card, target_index, why)
+        for c in hand:
+            if not c.get("playable"):
+                continue
+            cost = c.get("energy_cost", 0)
+            if c.get("costs_x"):
+                cost = energy  # dump all energy
+            if cost > energy:
+                continue
+            score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol)
+            score += self.know.card_value(c.get("card_id", "")) * 0.3
+            if best is None or score > best[0]:
+                best = (score, c, target, why)
+
+        if best and best[0] > pol["play_threshold"]:
+            _, card, target, why = best
+            params = {"card_index": card["index"]}
+            if card.get("requires_target") and target is not None:
+                params["target_index"] = target
+            tname = ""
+            if target is not None:
+                tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
+            return Decision("play_card", params,
+                            f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
+                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲",
+                            tags=[("play_card", card.get("card_id"))], wait=0.6)
+
+        if can_end:
+            hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
+            risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""
+            return Decision("end_turn", {},
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}",
+                            wait=1.2)
+        return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
+
+    def _score_play(self, card, enemies, incoming, my_block, round_no, pol):
+        """战斗中手牌评分。
+
+        注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
+        必须从 dynamic_values / 文本 / target_type 推断牌的功能。
+        """
+        dmg, block, hits = card_numbers(card)
+        cost = card.get("energy_cost", 0)
+        text = _text(card)
+        aoe = ("所有敌人" in text or "all enemies" in text.lower()
+               or (card.get("target_type") or "") == "AllEnemies")
+
+        # --- 攻击牌（有伤害数值） ---
+        if dmg > 0:
+            total = dmg * hits
+            if aoe:
+                eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
+                killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
+                score = eff + pol["kill_bonus"] * len(killable)
+                if cost == 0:
+                    score += pol["free_card_bonus"]
+                return score, None, f"群体伤害≈{eff}"
+            best_t, best_s, why = None, -1.0, ""
+            for e in enemies:
+                eff = max(1, total - e.get("block", 0))
+                threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
+                s = eff + threat * 0.3
+                if eff >= e.get("current_hp", 9999):
+                    s += pol["kill_bonus"]
+                    why = f"可击杀{e['name']}"
+                if best_t is None or s > best_s:
+                    valid = card.get("valid_target_indices") or []
+                    if not card.get("requires_target") or not valid or e.get("index") in valid:
+                        best_t, best_s = e.get("index"), s
+                        if not why:
+                            why = f"单体伤害≈{eff}"
+            if cost == 0:
+                best_s += pol["free_card_bonus"]
+            return best_s, best_t, why
+
+        # --- 防御/技能牌（有格挡数值） ---
+        if block > 0:
+            useful = min(block, max(0, incoming - my_block))
+            score = useful * 1.05 * pol["block_safety"] + (block - useful) * 0.2
+            why = f"格挡{block}"
+            dr = draw_amount(card)
+            if dr:
+                score += dr * 1.5
+                why += f"/抽牌{dr}"
+            if cost == 0:
+                score += pol["free_card_bonus"]
+            return score, None, why
+
+        # --- 功能牌（抽牌/回能/特殊效果） ---
+        dr = draw_amount(card)
+        if dr > 0 or "能量" in text or "energy" in text.lower():
+            score = 2.0 + dr * 1.5
+            if cost == 0:
+                score += pol["free_card_bonus"]
+            return score, None, f"功能牌（抽牌{dr}/回能）"
+
+        # --- 无直接数值：按能力牌处理，开局回合优先 ---
+        score = (pol["power_round_bonus"] if round_no <= 2 else 1.5)
+        if cost == 0:
+            score += pol["free_card_bonus"]
+        return score, None, f"能力/增益牌（第{round_no}回合）"
+
+    def _maybe_potion(self, state, ctx, hard: bool):
+        run = state.get("run") or {}
+        pol = self.know.policy
+        if pol.get("potion_hard_only") and not hard:
+            return None
+        combat = state.get("combat") or {}
+        enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
+        for p in run.get("potions", []):
+            if not p.get("occupied") or not p.get("can_use"):
+                continue
+            desc = (p.get("description") or "")
+            name = p.get("name") or ""
+            usage = (p.get("usage") or "").lower()
+            if "combat" not in usage and "战斗" not in usage and usage:
+                continue
+            needs_target = bool(p.get("requires_target"))
+            target = None
+            if needs_target:
+                valid = p.get("valid_target_indices") or []
+                target = next((e["index"] for e in enemies if e["index"] in valid), None)
+                if target is None:
+                    continue
+            if ("伤害" in desc or "damage" in desc.lower() or "攻击" in desc) and enemies:
+                params = {"option_index": p["index"]}
+                if target is not None:
+                    params["target_index"] = target
+                return Decision("use_potion", params, f"战斗：使用攻击药水【{name}】（硬仗/危急）",
+                                tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+            if ("格挡" in desc or "生命" in desc or "回复" in desc or "block" in desc.lower() or "heal" in desc.lower()):
+                if (state.get("combat", {}).get("player", {}).get("current_hp", 1)
+                        < 0.35 * state.get("combat", {}).get("player", {}).get("max_hp", 1)):
+                    return Decision("use_potion", {"option_index": p["index"]},
+                                    f"战斗：低血量使用防御/回复药水【{name}】",
+                                    tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+        return None
+
+    # ------------------------------------------------------------------
+    # rewards / selection / bundles / chest / capstone
+    # ------------------------------------------------------------------
+
+    def eval_reward_card(self, card: dict, deck: list[dict]) -> float:
+        pol = self.know.policy
+        dmg, block, hits = card_numbers(card)
+        cost = card.get("energy_cost", 0)
+        value = 0.0
+        if is_attack(card):
+            value += dmg * hits * 1.0 + (1.0 if cost <= 1 else 0.0)
+        elif is_skill(card):
+            value += block * 0.8 + draw_amount(card) * 1.5
+        elif is_power(card):
+            value += 5.0
+        elif is_bad_card(card):
+            value -= 10.0
+        value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)
+        # deck shape: keep attack ratio reasonable
+        n_attack = sum(1 for c in deck if is_attack(c))
+        if deck and n_attack / max(1, len(deck)) < 0.3 and is_attack(card):
+            value += 1.5
+        if cost >= 3:
+            value -= 1.0
+        value += self.know.card_value(card.get("card_id", ""))
+        self.know.commit_card_seen(card.get("card_id", ""))
+        return value
+
+    def _reward(self, state: dict, ctx) -> Decision:
+        r = state.get("reward") or {}
+        actions = state.get("available_actions", [])
+        run = state.get("run") or {}
+        deck = run.get("deck", [])
+        pol = self.know.policy
+
+        # card choice pending?
+        cards = r.get("card_options", [])
+        if r.get("pending_card_choice") and cards:
+            best, best_v = None, -1e9
+            vals = []
+            for c in cards:
+                v = self.eval_reward_card(c, deck)
+                vals.append(f"{c.get('name')}={v:.1f}")
+                if v > best_v:
+                    best, best_v = c, v
+            if best_v >= pol["card_pick_threshold"] and "choose_reward_card" in actions:
+                return Decision("choose_reward_card", {"option_index": best["index"]},
+                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}）；候选：{', '.join(vals)}",
+                                tags=[("card_pick", best.get("card_id"))], wait=0.8)
+            if "skip_reward_cards" in actions:
+                return Decision("skip_reward_cards", {},
+                                f"奖励选牌：全部跳过（最高价值 {best_v:.1f} < 阈值 {pol['card_pick_threshold']}）；候选：{', '.join(vals)}",
+                                wait=0.8)
+
+        # claim simple rewards (gold / relic / potion)
+        for opt in r.get("rewards", []):
+            if not opt.get("claimable"):
+                continue
+            rtype = opt.get("reward_type", "")
+            if rtype in ("Gold", "Relic", "Potion") and "claim_reward" in actions:
+                tags = [("relic_pick", opt.get("description", ""))] if rtype == "Relic" else []
+                return Decision("claim_reward", {"option_index": opt["index"]},
+                                f"领取奖励：{opt.get('description')}", tags=tags, wait=0.7)
+            if rtype in ("Card", "SpecialCard") and "claim_reward" in actions:
+                return Decision("claim_reward", {"option_index": opt["index"]},
+                                f"打开卡牌奖励：{opt.get('description')}", wait=0.7)
+
+        if r.get("can_proceed") and "proceed" in actions:
+            return Decision("proceed", {}, "奖励结算完毕，继续前进", wait=1.0)
+        if "collect_rewards_and_proceed" in actions:
+            return Decision("collect_rewards_and_proceed", {}, "一键收取奖励并继续", wait=1.0)
+        return Decision(None, {}, "奖励界面：等待可操作", wait=0.8)
+
+    def _card_selection(self, state: dict, ctx) -> Decision:
+        sel = state.get("selection") or {}
+        actions = state.get("available_actions", [])
+        cards = sel.get("cards", [])
+        kind = (sel.get("kind") or "").lower()
+        prompt = sel.get("prompt") or ""
+        if not cards:
+            return Decision(None, {}, f"选牌界面（{kind}）：无候选，等待", wait=0.8)
+
+        removing = "remove" in kind or "删除" in prompt
+        upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
+        transforming = "transform" in kind or "变化" in prompt
+
+        if removing or transforming:
+            # worst first: curse > status > unupgraded basic strike > lowest value
+            def badness(c):
+                t = card_type(c).lower()
+                if t == "curse":
+                    return 100
+                if t == "status":
+                    return 90
+                cid = (c.get("card_id") or "").upper()
+                if "STRIKE" in cid and not c.get("upgraded"):
+                    return 50
+                return -self.eval_reward_card(c, [])
+            pick = max(cards, key=badness)
+            verb = "删除" if removing else "变化"
+            return Decision("select_deck_card", {"option_index": pick["index"]},
+                            f"{verb}卡牌：【{pick.get('name')}】（最无价值）",
+                            tags=[("card_remove" if removing else "card_transform", pick.get("card_id"))], wait=0.8)
+
+        if upgrading:
+            best, best_v = None, -1e9
+            for c in cards:
+                if c.get("upgraded"):
+                    continue
+                v = self.eval_reward_card(c, []) + (2.0 if is_attack(c) else 0.0)
+                if v > best_v:
+                    best, best_v = c, v
+            if best is None:
+                best = cards[0]
+            return Decision("select_deck_card", {"option_index": best["index"]},
+                            f"升级卡牌：【{best.get('name')}】",
+                            tags=[("card_upgrade", best.get("card_id"))], wait=0.8)
+
+        # generic choose-a-card: take the best
+        best = max(cards, key=lambda c: self.eval_reward_card(c, []))
+        d = Decision("select_deck_card", {"option_index": best["index"]},
+                     f"选择卡牌：【{best.get('name')}】",
+                     tags=[("card_pick", best.get("card_id"))], wait=0.8)
+        if sel.get("requires_confirmation") and sel.get("can_confirm") and "confirm_selection" in actions:
+            d = Decision("confirm_selection", {}, f"确认选择：【{best.get('name')}】", wait=0.8)
+        return d
+
+    def _chest(self, state: dict, ctx) -> Decision:
+        chest = state.get("chest") or {}
+        actions = state.get("available_actions", [])
+        if not chest.get("is_opened") and "open_chest" in actions:
+            return Decision("open_chest", {}, "宝箱：开启", wait=1.0)
+        relics = chest.get("relic_options", [])
+        if relics and not chest.get("has_relic_been_claimed") and "choose_treasure_relic" in actions:
+            best = max(relics, key=lambda r: self.know.relic_value(r.get("relic_id", "")))
+            return Decision("choose_treasure_relic", {"option_index": best["index"]},
+                            f"宝箱：选择遗物【{best.get('name')}】",
+                            tags=[("relic_pick", best.get("relic_id"))], wait=0.9)
+        if "proceed" in actions:
+            return Decision("proceed", {}, "宝箱：离开", wait=1.0)
+        return Decision(None, {}, "宝箱：等待", wait=0.8)
+
+    # ------------------------------------------------------------------
+    # shop / rest
+    # ------------------------------------------------------------------
+
+    def _shop(self, state: dict, ctx) -> Decision:
+        shop = state.get("shop") or {}
+        run = state.get("run") or {}
+        actions = state.get("available_actions", [])
+        gold = run.get("gold", 0)
+        deck = run.get("deck", [])
+        pol = self.know.policy
+        floor = run.get("floor", 0)
+
+        if not shop.get("is_open"):
+            if self._shop_done_floor == floor:
+                if "proceed" in actions:
+                    return Decision("proceed", {}, "商店：本店已评估过，离开", wait=1.0)
+            elif shop.get("can_open") and "open_shop_inventory" in actions:
+                return Decision("open_shop_inventory", {}, "商店：打开货架", wait=0.9)
+            if "proceed" in actions:
+                return Decision("proceed", {}, "商店：离开", wait=1.0)
+            return Decision(None, {}, "商店：等待", wait=0.8)
+
+        # card removal first if we have junk
+        removal = shop.get("card_removal")
+        if (pol.get("removal_enabled") and removal and removal.get("available") and not removal.get("used")
+                and removal.get("enough_gold") and gold - removal.get("price", 999) >= pol["removal_gold_reserve"]):
+            junk = [c for c in deck if is_bad_card(c)
+                    or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))]
+            if junk and "remove_card_at_shop" in actions:
+                return Decision("remove_card_at_shop", {},
+                                f"商店：付费删牌（预留 {pol['removal_gold_reserve']} 金后仍充足）",
+                                tags=[("shop_remove", None)], wait=0.9)
+
+        best_action, best_score, best_reason, best_tags = None, -1e9, "", []
+        for c in shop.get("cards", []):
+            if not c.get("is_stocked") or not c.get("enough_gold"):
+                continue
+            v = self.eval_reward_card(c, deck) - c.get("price", 0) / 120.0
+            if v > best_score:
+                best_action = ("buy_card", c["index"])
+                best_score = v
+                best_reason = f"购买卡牌【{c.get('name')}】（{c.get('price')}金，价值{v:.1f}）"
+                best_tags = [("card_pick", c.get("card_id")), ("shop_buy_card", c.get("card_id"))]
+        for r in shop.get("relics", []):
+            if not r.get("is_stocked") or not r.get("enough_gold"):
+                continue
+            v = 3.0 + self.know.relic_value(r.get("relic_id", "")) - r.get("price", 0) / 120.0
+            if v > best_score:
+                best_action = ("buy_relic", r["index"])
+                best_score = v
+                best_reason = f"购买遗物【{r.get('name')}】（{r.get('price')}金，价值{v:.1f}）"
+                best_tags = [("relic_pick", r.get("relic_id")), ("shop_buy_relic", r.get("relic_id"))]
+        if best_action and best_score > pol["shop_relic_threshold"]:
+            action, idx = best_action
+            if action in actions:
+                return Decision(action, {"option_index": idx}, f"商店：{best_reason}", tags=best_tags, wait=0.9)
+
+        if shop.get("can_close") and "close_shop_inventory" in actions:
+            self._shop_done_floor = floor  # 标记本店已评估，防止 开→关→开 死循环
+            return Decision("close_shop_inventory", {}, "商店：货架无值得购买，关闭", wait=0.8)
+        if "proceed" in actions:
+            return Decision("proceed", {}, "商店：离开", wait=1.0)
+        return Decision(None, {}, "商店：等待", wait=0.8)
+
+    def _rest(self, state: dict, ctx) -> Decision:
+        rest = state.get("rest") or {}
+        run = state.get("run") or {}
+        actions = state.get("available_actions", [])
+        options = [o for o in rest.get("options", []) if o.get("is_enabled")]
+        if not options:
+            if "proceed" in actions:
+                return Decision("proceed", {}, "篝火：无可选项目，离开", wait=1.0)
+            return Decision(None, {}, "篝火：等待选项", wait=0.8)
+
+        hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
+        heal = next((o for o in options if o.get("option_id", "").upper() == "HEAL"), None)
+        smith = next((o for o in options if "SMITH" in o.get("option_id", "").upper()), None)
+        deck = run.get("deck", [])
+        upgradable = [c for c in deck if not c.get("upgraded")]
+
+        if heal and (hp_pct < self.know.policy["rest_heal_threshold"] or not upgradable or smith is None):
+            return Decision("choose_rest_option", {"option_index": heal["index"]},
+                            f"篝火：休息回血（当前 {hp_pct:.0%} < {self.know.policy['rest_heal_threshold']:.0%}）",
+                            tags=[("rest", "heal")], wait=1.2)
+        if smith:
+            return Decision("choose_rest_option", {"option_index": smith["index"]},
+                            f"篝火：锻造升级（血量 {hp_pct:.0%} 尚安全）",
+                            tags=[("rest", "smith")], wait=1.2)
+        pick = options[0]
+        return Decision("choose_rest_option", {"option_index": pick["index"]},
+                        f"篝火：选择 {pick.get('title')}", tags=[("rest", pick.get("option_id"))], wait=1.0)
+
+    # ------------------------------------------------------------------
+    # event / modal / game over / unknown
+    # ------------------------------------------------------------------
+
+    def _event(self, state: dict, ctx) -> Decision:
+        ev = state.get("event") or {}
+        actions = state.get("available_actions", [])
+        options = ev.get("options", [])
+        if not options:
+            return Decision(None, {}, "事件：无选项，等待", wait=0.8)
+        event_id = ev.get("event_id", "unknown")
+
+        if ev.get("is_finished"):
+            proceed = next((o for o in options if o.get("is_proceed")), None)
+            if proceed and "choose_event_option" in actions:
+                return Decision("choose_event_option", {"option_index": proceed["index"]},
+                                "事件：已结束，继续", wait=1.0)
+
+        candidates = [o for o in options if not o.get("is_locked") and not o.get("will_kill_player")]
+        if not candidates:
+            candidates = [o for o in options if not o.get("is_locked")]
+        if not candidates:
+            return Decision(None, {}, "事件：全部锁定，等待", wait=0.8)
+
+        pol = self.know.policy
+        scored = []
+        for o in candidates:
+            key = o.get("text_key") or o.get("title") or str(o["index"])
+            v, n = self.know.event_option_value(event_id, key)
+            scored.append((v, n, key, o))
+        # epsilon exploration among under-sampled options
+        if self.rng.random() < pol["exploration_rate"]:
+            fresh = [s for s in scored if s[1] < 3]
+            if fresh:
+                v, n, key, o = self.rng.choice(fresh)
+                return Decision("choose_event_option", {"option_index": o["index"]},
+                                f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）",
+                                tags=[("event_choice", event_id, key)], wait=1.0)
+        scored.sort(key=lambda s: s[0], reverse=True)
+        v, n, key, o = scored[0]
+        lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
+        return Decision("choose_event_option", {"option_index": o["index"]},
+                        f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}",
+                        tags=[("event_choice", event_id, key)], wait=1.0)
+
+    def _bundle(self, state: dict, ctx) -> Decision:
+        """开局祝福/特殊界面的卡牌包选择（BUNDLE_SELECTION）。"""
+        bundles = state.get("bundles") or []
+        actions = state.get("available_actions", [])
+        deck = (state.get("run") or {}).get("deck", [])
+        if bundles and "choose_bundle" in actions:
+            best, best_v, detail = None, -1e9, []
+            for b in bundles:
+                v = sum(self.eval_reward_card(c, deck) for c in b.get("cards", []))
+                names = "、".join(c.get("name", "?") for c in b.get("cards", []))
+                detail.append(f"包{b['index']}[{names}]={v:.1f}")
+                if v > best_v:
+                    best, best_v = b, v
+            return Decision("choose_bundle", {"option_index": best["index"]},
+                            f"卡包选择：选包{best['index']}（总价值 {best_v:.1f}）；{' / '.join(detail)}",
+                            tags=[("bundle_pick", best["index"])], wait=0.8)
+        if "confirm_bundle" in actions:
+            return Decision("confirm_bundle", {}, "卡包选择：确认", wait=0.8)
+        return Decision(None, {}, "卡包选择：等待", wait=0.7)
+
+    def _capstone(self, state: dict, ctx) -> Decision:
+        cap = state.get("capstone") or {}
+        options = cap.get("options", [])
+        actions = state.get("available_actions", [])
+        if options and "choose_capstone_option" in actions:
+            # 暂无语义学习数据，默认选第一个（通常为继续/前进类）
+            pick = options[0]
+            return Decision("choose_capstone_option", {"option_index": pick.get("index", pick.get("i", 0))},
+                            f"顶石界面：选择「{pick.get('line')}」",
+                            tags=[("capstone", pick.get("line"))], wait=1.0)
+        return Decision(None, {}, "顶石界面：等待", wait=0.7)
+
+    def _modal(self, state: dict, ctx) -> Decision:
+        modal = state.get("modal") or {}
+        actions = state.get("available_actions", [])
+        if modal.get("can_confirm") and "confirm_modal" in actions:
+            return Decision("confirm_modal", {}, f"弹窗：确认（{modal.get('type_name')}）", wait=0.7)
+        if modal.get("can_dismiss") and "dismiss_modal" in actions:
+            return Decision("dismiss_modal", {}, f"弹窗：关闭（{modal.get('type_name')}）", wait=0.7)
+        return Decision(None, {}, "弹窗：等待", wait=0.6)
+
+    def _game_over(self, state: dict, ctx) -> Decision:
+        go = state.get("game_over") or {}
+        actions = state.get("available_actions", [])
+        victory = bool(go.get("is_victory"))
+        if not ctx.run_finalized:
+            ctx.finalize_requested = True  # agent.py performs reflection once
+            return Decision(None, {}, f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），正在总结复盘…", wait=0.5)
+        if go.get("can_continue") and "continue_run" in actions:
+            return Decision("continue_run", {}, "结算：继续（进入下一阶段）", wait=1.5)
+        if go.get("can_return_to_main_menu") and "return_to_main_menu" in actions:
+            return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局", wait=1.5)
+        if "proceed" in actions:
+            return Decision("proceed", {}, "结算：继续", wait=1.2)
+        return Decision(None, {}, "结算：等待", wait=0.8)
+
+    def _unknown(self, state: dict, ctx) -> Decision:
+        # 按载荷兜底路由，防新屏幕名漏网
+        if state.get("bundles"):
+            return self._bundle(state, ctx)
+        if state.get("capstone"):
+            return self._capstone(state, ctx)
+        actions = state.get("available_actions", [])
+        if "choose_bundle" in actions:
+            return self._bundle(state, ctx)
+        if "choose_capstone_option" in actions:
+            return self._capstone(state, ctx)
+        if "confirm_modal" in actions:
+            return Decision("confirm_modal", {}, "未知界面：尝试确认弹窗", wait=0.7)
+        if "proceed" in actions:
+            return Decision("proceed", {}, "未知界面：尝试继续", wait=0.8)
+        return Decision(None, {}, f"未知界面（{state.get('screen')}）：观察中", wait=1.0)
