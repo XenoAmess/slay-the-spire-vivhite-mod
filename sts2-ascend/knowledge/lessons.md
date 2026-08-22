@@ -130,3 +130,14 @@
 - 当前低价值卡牌：SETUP_STRIKE(10分/4局)，DISMANTLE(13分/2局)，HEMOKINESIS(13分/4局)
 - 策略进化：elite_min_hp_pct: 0.65 → 0.70（精英战阵亡，进场血量 42%，提高精英回避线）；exploration_rate: 0.184 → 0.179（经验累积，探索衰减）
 - 生涯战绩：0/11 胜，当前目标进阶 0
+
+## 第 12 局复盘（2026-08-22 17:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：FIGHT_ME, HEADBUTT, HEMOKINESIS, BREAKTHROUGH, HEMOKINESIS, IRON_WAVE, FIGHT_ME, UPPERCUT, HEMOKINESIS, HEMOKINESIS
+- 本局遗物：缩放仪, PERMAFROST, 招架盾
+- 战斗记录：F14 Elite战 掉血22; F15 Monster战 掉血0; F15 Monster战 掉血8; F17 Boss战 掉血23; F17 Boss战 掉血42; F17 Boss战 掉血15（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，VICIOUS(22分/2局)，FIGHT_ME(22分/3局)，UPPERCUT(22分/6局)，RAMPAGE(22分/4局)
+- 当前低价值卡牌：SETUP_STRIKE(10分/4局)，DISMANTLE(13分/2局)，SPITE(14分/9局)
+- 策略进化：block_safety: 1.60 → 1.65（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.179 → 0.173（经验累积，探索衰减）
+- 生涯战绩：0/12 胜，当前目标进阶 0
