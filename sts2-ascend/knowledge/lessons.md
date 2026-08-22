@@ -1005,3 +1005,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/77 胜，当前目标进阶 0
+
+## 第 78 局复盘（2026-08-23 06:48）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：THUNDERCLAP, CINDER, SECOND_WIND, SHRUG_IT_OFF, FLAME_BARRIER, SWORD_BOOMERANG, ANGER, RAMPAGE, UNMOVABLE
+- 本局遗物：PEN_NIB
+- 战斗记录：F6 Monster战 掉血24; F7 Monster战 掉血32; F12 Monster战 掉血7; F14 Monster战 掉血7; F15 Monster战 掉血19; F17 Boss战 掉血63（阵亡）
+- 当前高价值卡牌：MANGLE(21分/18局)，CONFLAGRATION(20分/2局)，IMPERVIOUS(19分/5局)，STOMP(18分/7局)，UPPERCUT(17分/26局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/78 胜，当前目标进阶 0
