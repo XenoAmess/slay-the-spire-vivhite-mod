@@ -502,3 +502,24 @@ Starting brain via runner (auto-restart + auto-rollback; Ctrl+C to stop)...
 [agent] 对局日志已保存：20260822-114652_JRB6NPS12YHV.json
 [git] 已自动存档：chore(sts2-ascend): 第17局后复盘前备份
 [llm] ===== 启动大模型复盘（openrouter/stealth/ox-alpha via opencode [preferred]，备份点 22cb6166）=====
+[llm] 复盘会话结束（exit=0）。输出尾部：
+现在我来检查 `lessons.md` 的格式以及 `llm_review.py`，以了解审查流程：
+我已经掌握了完整的情况。让我来制定工作计划并进行实施。
+现在开始实现。首先，重写 `policy.py` 中的 `_map` —— 将贪婪的 1 步前瞻替换为包含 HP 模拟的完整路径规划器（这可以修复导致强制进入精英怪而死亡的问题）：
+现在进行 `eval_reward_card` 的重构以及 `_rest` 溢出修复：
+现在，我将在 `knowledge.py` 的 `DEFAULT_POLICY` 中添加新的策略键，并提高 `reflect.py` 中的 `block_safety` 上限：
+现在运行 selfcheck：
+SELFCHECK OK. Let me run a quick functional sanity test of the new path planner against the exact "forced elite" scenario that killed runs Y1ZK023DQ8W4 / HATZYDJMQ4M4:
+发现了一个真正的 bug（`simulate` 中的变量遮蔽 —— `selfcheck` 已将其捕获，因为 `decide()` 会吞掉异常）。正在修复：
+Planner works correctly. One refinement needed: danger priors ignore deck strength, making the planner too cowardly with a strong deck at full HP (elite scored -101 due to projected "death"). Adding a deck-ease discount on combat priors:
+规划器现在表现正常了 —— 弱卡组可以避开精英怪漏斗，强卡组则不再灾难性地过度畏惧精英怪。正在更新待办事项并撰写文档：
+最终验证 —— 自检以及针对新的卡牌评估逻辑的快速行为测试：
+测试阈值设置过于严格（惩罚生效：攻击力 11→8.5，格挡 8.7 现在胜出）。正在修正断言：
+所有检查已通过。正在对完整的变更集进行最终审查：
+我的变更集包括 `policy.py`、`knowledge.py`、`reflect.py`、`policy.json`、`meta_review.md` 和 `lessons.md`（其他已修改的文件属于主机大脑未提交的工作——保持不变）。所有验证均已通过：`SELFCHECK OK` + 针对性的规划器/卡牌评估断言测试。
+**复盘总结（第 11~17 局，0/17 胜）**
+
+死因结构升级：精英战成第一杀手（-69/-44/-43 大失血），且深挖日志发现两局致命精英是**地图唯一候选**——贪心逐格选路的前期分支把后续逼进漏斗，×0.1 软回避失效；另有满血弱卡进精英送 69 血、17 局仅拿 1 张防牌 vs block_safety 顶格的攻防价值观脱节、Boss 掉血 36~80 斩杀线不足。
+
+本次从代码治病：①`_map` 重写为全路径规划器（DFS 到 Boss + 场均掉血先验模拟血量，投影死亡 -100 分，卡组强度折算先验）；②精英双门槛 `elite_min_deck_cards=4`；③选牌端攻击过剩 -2.5/防御稀缺 +1.5/自残牌 -2.0；④篝火溢出改锻造。新增 5 个 policy 键（自动迁移），block_safety 上限提至 2.1。修复中抓到变量遮蔽 bug（decide 吞异常险些静默）。SELFCHECK OK + 规划器/选卡场景断言全部通过，报告与经验已写入 meta_review.md 与 lessons.md。
+
