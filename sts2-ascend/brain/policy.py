@@ -106,6 +106,8 @@ class Policy:
         self._sel_tried: set = set()  # card indices already clicked this screen
         self._cur_turn = None       # combat turn tracking
         self._failed_this_turn: set = set()  # card_ids that failed to play this turn
+        self._potion_combat = None  # combat instance identity for potion blacklist
+        self._potion_tried: set = set()      # potion indices already attempted this combat
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌（防 409 重试刷屏）。"""
@@ -214,6 +216,15 @@ class Policy:
         if not nodes:
             return Decision(None, {}, "地图：暂无可走节点", wait=0.8)
         run = state.get("run") or {}
+
+        # 永久增益类 AnyTime 药水（如加最大生命）：拿到就用，不占战斗决策
+        for p in run.get("potions", []):
+            if p.get("occupied") and p.get("can_use") and (p.get("usage") or "").lower() == "anytime":
+                desc = p.get("description") or ""
+                if "最大生命" in desc or "MaxHp" in desc:
+                    return Decision("use_potion", {"option_index": p["index"]},
+                                    f"地图：使用永久增益药水【{p.get('name')}】",
+                                    tags=[("use_potion", p.get("potion_id"))], wait=0.7)
         hp_pct = (run.get("current_hp", 1) / max(1, run.get("max_hp", 1)))
         gold = run.get("gold", 0)
         floor = run.get("floor", 0)
@@ -302,6 +313,9 @@ class Policy:
         if self._cur_turn != round_no:
             self._cur_turn = round_no
             self._failed_this_turn = set()
+        if self._potion_combat is not ctx.combat:
+            self._potion_combat = ctx.combat
+            self._potion_tried = set()
 
         if not enemies:
             if can_end:
@@ -461,6 +475,8 @@ class Policy:
         for p in run.get("potions", []):
             if not p.get("occupied") or not p.get("can_use"):
                 continue
+            if p["index"] in self._potion_tried:
+                continue  # 尝试过但没生效（如时机不合法），本场战斗不再重复
             desc = (p.get("description") or "")
             name = p.get("name") or ""
             usage = (p.get("usage") or "").lower()
@@ -474,6 +490,7 @@ class Policy:
                 if target is None:
                     continue
             if ("伤害" in desc or "damage" in desc.lower() or "攻击" in desc) and enemies:
+                self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
@@ -482,6 +499,7 @@ class Policy:
             if ("格挡" in desc or "生命" in desc or "回复" in desc or "block" in desc.lower() or "heal" in desc.lower()):
                 if (state.get("combat", {}).get("player", {}).get("current_hp", 1)
                         < 0.35 * state.get("combat", {}).get("player", {}).get("max_hp", 1)):
+                    self._potion_tried.add(p["index"])
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)

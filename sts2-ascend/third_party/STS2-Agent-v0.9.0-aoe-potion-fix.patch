@@ -1,0 +1,20 @@
+﻿diff --git a/STS2AIAgent/Game/GameActionService.cs b/STS2AIAgent/Game/GameActionService.cs
+index 4031508..b58d69f 100644
+--- a/STS2AIAgent/Game/GameActionService.cs
++++ b/STS2AIAgent/Game/GameActionService.cs
+@@ -1,4 +1,4 @@
+-using Godot;
++锘縰sing Godot;
+ using System.Reflection;
+ using MegaCrit.Sts2.Core.Combat;
+ using MegaCrit.Sts2.Core.Entities.Cards;
+@@ -3852,6 +3852,9 @@ internal static class GameActionService
+             TargetType.AnyEnemy => ResolvePotionEnemyTarget(request, combatState, potion),
+             TargetType.AnyPlayer when GameStateService.PotionRequiresTarget(combatState, potion) => ResolvePotionPlayerTarget(request, combatState, potion),
+             TargetType.TargetedNoCreature => null,
++            TargetType.AllEnemies => null,
++            TargetType.AllAllies => null,
++            TargetType.RandomEnemy => null,
+             _ => potion.Owner.Creature
+         };
+     }
