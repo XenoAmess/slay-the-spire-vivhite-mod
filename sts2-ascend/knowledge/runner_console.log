@@ -28672,3 +28672,41 @@ Changes not staged for commit:
 [04:32:45] [COMBAT/F11] 战斗：回合过渡中，等待
 [04:32:46] [COMBAT/F11] 战斗：回合过渡中，等待
 [04:32:47] [COMBAT/F11] 战斗：回合过渡中，等待
+[04:32:47] [COMBAT/F11] 战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤24，我方55血/0甲；⚠高危组合（21战9死），转防守节奏
+[llm] 复盘会话结束（exit=0）。输出尾部：
+实际行为为准（本局有无「孤注」标记），不能以代码库状态为准。观察点设计时要留"修复生效前后"的分界标记。
+4. 地图结构伤害：60 局的死因不是 NIBBIT（64战场均10血）而是"9 层无篝火+7 连战"的结构。敌人统计回答"谁杀的"，路径统计才能回答"为什么走到那里"。
+5. 观察点（留给下轮）：①boss_entry 罚分后 F12+ 续航路线选择率与进 Boss 血量分布（目标中位 ≥65%）；②败局竞速出现频率（高频=中段失血仍未治本）与其胜率；③CEREMONIAL_BEAST/KIN 双子死亡率能否 <30%；④修复生效标记：新对局日志应开始出现「优先续航」「败局竞速」字样。
+
+lessons.md 🧠 section — condensed version (~15 lines).
+
+Also per AGENTS.md workflow rules: "完成后默认提交并推送" BUT the review prompt explicitly overrides: 禁止任何 git 操作 (最高优先级覆盖 AGENTS.md 默认规则). So NO commit/push. Also docs/ 经验总结 rule from AGENTS.md — the review prompt says write into sts2-ascend/knowledge/meta_review.md and lessons.md, and forbids modifying files outside sts2-ascend/. docs/ is outside → forbidden. Prompt overrides.
+
+Write the two files now. Get current time first.
+**SELFCHECK OK** —— 全部通过。现在获取时间戳并写入复盘报告：
+⚙ bash {}
+· tokens 200491 ·
+⚙ bash {}
+· tokens 202135 ·
+⚙ bash {}
+· tokens 202646 ·
+💭 Verify the appended content renders correctly (encoding check) and do a final selfcheck run to be safe (files were only appended markdown since last OK, but cheap to confirm). Also verify meta_review/lessons tails.
+⚙ bash {}
+验证写入内容与最终自检：
+⚙ bash {}
+· tokens 202848 ·
+💭 All done:
+1. ✅ Read review_prompt_latest.md fully
+2. ✅ Attribution analysis done (both run logs read in full, code traced)
+3. ✅ meta_review.md appended with dated section (归因/调整/经验)
+4. ✅ Code changes: policy.py (Boss entry line penalty + hopeless race mode), knowledge.py (4 new DEFAULT_POLICY keys via setdefault — zero migration), selfcheck.py (3y + 3z regression tests)
+5. ✅ lessons.md 🧠 section appended
+6. ✅ SELFCHECK OK
+7. ✅ No git operations, no processes touched, only files under sts2-ascend/ modified
+
+Final summary ≤200 chars as required.
+复盘完成。总结：
+
+第 60 局死于“9 层无篝火+7 连战”的地图结构消耗（旧代码弃权实证）；第 61 局运营最佳却因路径投影从不进评分而 44% 血进 Boss 被处决，且意图递增的温水煮蛙无竞速判定。修复①Boss 入场线：投影 <65% 按差值罚分，让续航路线压过消耗路线；②败局竞速：净损 EMA 外推 ≤2 回合必死时解除能量预留、攻击提速 ×1.3。新增 4 个 policy 键（零迁移）、2 组回归测试，SELFCHECK OK，报告已写入 meta_review.md 与 lessons.md。
+· tokens 203440 ·
+
