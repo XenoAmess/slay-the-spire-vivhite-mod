@@ -542,3 +542,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.072 → 0.070（经验累积，探索衰减）
 - 生涯战绩：0/42 胜，当前目标进阶 0
+
+## 第 43 局复盘（2026-08-23 00:59）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：UNRELENTING, FEEL_NO_PAIN, CINDER, TAUNT, CINDER, CINDER, BLUDGEON, IRON_WAVE
+- 本局遗物：铲子, HAPPY_FLOWER
+- 战斗记录：F2 Monster战 掉血6; F4 Monster战 掉血0; F5 Monster战 掉血0; F8 Elite战 掉血15; F11 Elite战 掉血20（阵亡）
+- 当前高价值卡牌：HOWL_FROM_BEYOND(25分/2局)，STOMP(23分/3局)，MANGLE(21分/10局)，UPPERCUT(19分/16局)，RAMPAGE(18分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：elite_min_hp_pct: 0.82 → 0.87（精英战阵亡，进场血量 57%，提高精英回避线）；exploration_rate: 0.070 → 0.067（经验累积，探索衰减）
+- 生涯战绩：0/43 胜，当前目标进阶 0
