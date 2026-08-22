@@ -1016,3 +1016,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/78 胜，当前目标进阶 0
+
+## 第 79 局复盘（2026-08-23 07:06）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：SHRUG_IT_OFF, UPPERCUT, RAMPAGE, CINDER, FLAME_BARRIER, FIEND_FIRE, TAUNT, MAYHEM, DRUM_OF_BATTLE, SHRUG_IT_OFF, BATTLE_TRANCE, BARRICADE, BREAKTHROUGH, UNRELENTING, THUNDERCLAP, UNMOVABLE, SHRUG_IT_OFF
+- 本局遗物：PEAR, 闪亮口红
+- 战斗记录：F19 Monster战 掉血3; F20 Monster战 掉血15; F21 Monster战 掉血40; F22 Monster战 掉血0; F22 Monster战 掉血8; F23 Monster战 掉血24（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(22分/2局)，MANGLE(21分/18局)，BARRICADE(20分/2局)，CONFLAGRATION(20分/2局)，IMPERVIOUS(19分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(9分/8局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/79 胜，当前目标进阶 0
