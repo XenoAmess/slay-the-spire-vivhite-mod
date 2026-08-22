@@ -119,3 +119,14 @@
 - **block_safety 手动加速 1.60 → 1.70**：自动 +0.05/局 的进化速率追不上失血速度，大复盘负责校正慢变量。
 - **AoE（WHIRLWIND）价值上调**：2 次死于多怪组合补刀，AoE 缩短多怪战回合数。
 - **事件学习正常**：真理石板 DECIPHER 已收敛为 -34 HP 负经验，贪心会自然回避，无需人工干预事件表。
+
+## 第 11 局复盘（2026-08-22 15:48）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：VICIOUS, POMMEL_STRIKE, SETUP_STRIKE, SPITE, HEADBUTT, JUGGERNAUT, SPITE, SWORD_BOOMERANG, SPITE
+- 本局遗物：梨子, 锚, TUNING_FORK
+- 战斗记录：F6 Monster战 掉血8; F7 Elite战 掉血23; F9 Elite战 掉血0; F9 Elite战 掉血69; F12 Elite战 掉血0; F12 Elite战 掉血38（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，UPPERCUT(23分/5局)，IRON_WAVE(23分/2局)，VICIOUS(22分/2局)，RAMPAGE(22分/4局)
+- 当前低价值卡牌：SETUP_STRIKE(10分/4局)，DISMANTLE(13分/2局)，HEMOKINESIS(13分/4局)
+- 策略进化：elite_min_hp_pct: 0.65 → 0.70（精英战阵亡，进场血量 42%，提高精英回避线）；exploration_rate: 0.184 → 0.179（经验累积，探索衰减）
+- 生涯战绩：0/11 胜，当前目标进阶 0
