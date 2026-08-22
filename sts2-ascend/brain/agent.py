@@ -86,6 +86,7 @@ class RunContext:
     pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor)
     died_in_combat: dict | None = None                # set when the run ended inside a combat
     died_to_event: tuple | None = None                # (event_id, option_key) when an event killed us
+    combat_bridge: tuple | None = None                # (comp_id, floor, ts) 转阶段过场挂起标记
     last_hp: int = 0
     last_gold: int = 0
     rests_healed_at_full: int = 0
@@ -158,34 +159,34 @@ class Agent:
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
 
         # combat enter/exit tracking
-        if screen == "COMBAT" and self.ctx.combat is None:
-            enemies = (state.get("combat") or {}).get("enemies", [])
-            comp = "+".join(sorted({(e.get("enemy_id") or "?") for e in enemies if e.get("is_alive")}))
+        # 战斗连续性：Boss/精英转阶段过场、结算弹层会让屏幕在 COMBAT↔MODAL 间闪断。
+        # 旧逻辑按"离开战斗屏"立即结算并重建上下文，同一场 Boss 战被拆成 2~3 条统计
+        # （第 36 批 DW7 局 F17 实证：一场掉血被记为 1/18/38 三笔）——场均掉血被稀释、
+        # enemy_stance 死亡率失真、药水黑名单误重置。现在过场类屏幕只挂起不结算，
+        # 回到同组合同层的战斗视为延续（ctx.combat 对象身份不变，药水黑名单随之保留）。
+        if screen == "COMBAT":
+            enemies_now = (state.get("combat") or {}).get("enemies", [])
+            comp = "+".join(sorted({(e.get("enemy_id") or "?") for e in enemies_now if e.get("is_alive")}))
             node_type = next((t[1] for t in reversed(self.ctx.credit_tags) if t[0] == "map_node"), "Unknown")
-            max_hp = max(1, run.get("max_hp", 1))
-            self.ctx.combat = {"comp_id": comp or "unknown", "hp_start": hp, "floor": run.get("floor", 0),
-                               "node_type": node_type, "hp_start_pct": hp / max_hp}
-            self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
-            danger = self.know.enemy_danger(comp)
-            log(f"[agent] 进入战斗：敌方={comp}｜历史场均掉血 {danger:.1f}｜房间类型 {node_type}")
+            if self.ctx.combat is None:
+                self._start_combat(run, comp, node_type, hp)
+            elif self.ctx.combat_bridge:
+                b_comp, b_floor, _b_ts = self.ctx.combat_bridge
+                self.ctx.combat_bridge = None
+                if b_comp != (comp or "unknown") or b_floor != run.get("floor", 0):
+                    log(f"[agent] 过场后战斗对象变化（{b_comp}→{comp or 'unknown'}），结算前段再开新账")
+                    self._settle_combat(hp, won=True, died=False)
+                    self._start_combat(run, comp, node_type, hp)
+                else:
+                    log("[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）")
         elif screen != "COMBAT" and self.ctx.combat is not None:
-            c = self.ctx.combat
             victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
             died_here = screen == "GAME_OVER" and not victory_screen
-            hp_lost = max(0, c["hp_start"] - hp)
-            self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=not died_here, died=died_here)
-            self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
-            note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died_here else "")
-            self.ctx.combat_notes.append(note)
-            if died_here:
-                self.ctx.died_in_combat = c
-                self.ctx.death_hp_pct_at_entry = c.get("hp_start_pct")
-                self.ctx.death_was_elite = c.get("node_type") == "Elite"
-                log(f"[agent] 战斗失败：{note}")
+            if not died_here and screen in ("MODAL", "UNKNOWN", "TIMELINE"):
+                # 疑似转阶段过场：挂起等待重连；若下一帧是 MAP/REWARD 等真实流转再结算
+                self.ctx.combat_bridge = (self.ctx.combat["comp_id"], self.ctx.combat["floor"], time.time())
             else:
-                log(f"[agent] 战斗结束：{note}（剩余 {hp} 血）")
-            self.ctx.combat = None
-            self.ctx.current_combat_is_hard = False
+                self._settle_combat(hp, won=not died_here, died=died_here)
 
         # event outcome commit on screen change
         if self.ctx.pending_event is not None and screen != "EVENT":
@@ -219,6 +220,33 @@ class Agent:
                 "floor": run.get("floor", 0), "hp": hp, "gold": gold,
                 "action": decision.action, "params": decision.params, "reason": decision.reason,
             })
+
+    def _start_combat(self, run: dict, comp: str, node_type: str, hp: int) -> None:
+        max_hp = max(1, run.get("max_hp", 1))
+        self.ctx.combat = {"comp_id": comp or "unknown", "hp_start": hp, "floor": run.get("floor", 0),
+                           "node_type": node_type, "hp_start_pct": hp / max_hp}
+        self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
+        danger = self.know.enemy_danger(comp)
+        log(f"[agent] 进入战斗：敌方={comp}｜历史场均掉血 {danger:.1f}｜房间类型 {node_type}")
+
+    def _settle_combat(self, hp: int, won: bool, died: bool) -> None:
+        c = self.ctx.combat
+        if c is None:
+            return
+        hp_lost = max(0, c["hp_start"] - hp)
+        self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=won, died=died)
+        self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
+        note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died else "")
+        self.ctx.combat_notes.append(note)
+        if died:
+            self.ctx.died_in_combat = c
+            self.ctx.death_hp_pct_at_entry = c.get("hp_start_pct")
+            self.ctx.death_was_elite = c.get("node_type") == "Elite"
+            log(f"[agent] 战斗失败：{note}")
+        else:
+            log(f"[agent] 战斗结束：{note}（剩余 {hp} 血）")
+        self.ctx.combat = None
+        self.ctx.current_combat_is_hard = False
 
     # ---------------- reflection ----------------
 

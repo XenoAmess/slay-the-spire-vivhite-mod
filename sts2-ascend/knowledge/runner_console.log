@@ -8357,3 +8357,26 @@ Starting brain via runner (auto-restart + auto-rollback; Ctrl+C to stop)...
 - 生涯战绩：0/40 胜，当前目标进阶 0
 
 [agent] 对局日志已保存：20260823-004606_AX5KWVUBJ1ZF.json
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 复盘请求已入队（第40局，待消化 4 批），游玩不等待
+[git] 已自动存档：chore(sts2-ascend): 第40局存档（负 F13 进阶0，生涯 0胜/40局）（复盘进行中，仅 knowledge/）
+[00:46:15] [GAME_OVER/F13] 结算：返回主菜单，备战下一局
+  ↳ 动作 return_to_main_menu 返回 completed: Action completed.
+[00:46:18] [MAIN_MENU/F0] 主菜单：检查时间线可解锁项（优先解锁新内容）
+  ↳ 动作 open_timeline 返回 completed: Action completed.
+[00:46:19] [MAIN_MENU/F0] 主菜单：时间线无新解锁，关闭弹层
+  ↳ 动作 close_main_menu_submenu 返回 completed: Action completed.
+[00:46:20] [MAIN_MENU/F0] 主菜单：开启新的一局（标准模式）
+  ↳ 动作 open_character_select 返回 completed: Action completed.
+[00:46:21] [CHARACTER_SELECT/F0] 出发！角色=铁甲战士 进阶=0
+  ↳ 动作 embark 返回 completed: Action completed.
+[00:46:29] [EVENT/F1] 事件【涅奥】：选择「小型扭蛋」（经验价值 0.0）；小型扭蛋=0.0(n=2) / 涅奥的苦痛=0.0(n=5) / 树叶药膏=0.0(n=0)
+
+[agent] ===== 新对局开始：FTFN0CXHPZG3（进阶 0）=====
+  ↳ 动作 choose_event_option 返回 completed: Action completed.
+[00:46:30] [REWARD/F1] 领取奖励：活动星图
+[agent] 事件结算：NEOW/NEOW.pages.INITIAL.options.SMALL_CAPSULE → 生命 +0，金币 +0
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[00:46:31] [EVENT/F1] 事件：已结束，继续
+  ↳ 动作 choose_event_option 返回 completed: Event proceeded.
+[00:46:32] [MAP/F1] 路径规划：Monster(1,6)（路径分 24.59，预计进 Boss 血量 100%；前期需要战斗积累卡牌）；候选：Monster(1,2)=24.57|前期需要战斗积累卡牌 / Monster(1,3)=24.06|前期需要战斗积累卡牌 / Monster(1,4)=24.07|前期需要战斗积累卡牌 / Monster(1,6)=24.59|前期需要战斗积累卡牌

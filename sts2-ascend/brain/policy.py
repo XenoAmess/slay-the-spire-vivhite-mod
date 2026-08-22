@@ -109,6 +109,7 @@ class Policy:
         self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
+        self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -275,6 +276,37 @@ class Policy:
     # map
     # ------------------------------------------------------------------
 
+    def _elite_path_gate(self, pol: dict, priors: dict, hp: int, max_hp: int,
+                         good_cards: int, act_mul: float) -> tuple[float, str]:
+        """精英进场闸门：按实测战损投影"打完精英还剩多少血"，不达标整条候选路径重罚。
+
+        第 36 局实证：71% 血进灰区精英单场 -44（77% 现血）+ 两瓶药水，连锁三个
+        篝火回血、零锻造，Boss 战全盘崩盘。旧灰区 ×0.5 只罚首节点权重，
+        压不住子树优势（精英后接篝火回血的路径组合分反而更高）——闸门必须乘在
+        候选总分上：选精英等于承诺承担它的全部后果。
+
+        卡组强度只按封顶折扣折抵精英战损（牌数≠质量，全价折抵曾让投影过度乐观；
+        simulate() 内部模拟仍用全额折扣，闸门独立更保守，二者取严不冲突）。
+        """
+        hpp = hp / max(1, max_hp)
+        if good_cards < pol.get("elite_min_deck_cards", 4):
+            return 0.1, (f"非基础牌仅{good_cards}张(<{pol.get('elite_min_deck_cards', 4)})，"
+                         f"卡组强度不足规避精英")
+        hard = float(pol["elite_min_hp_pct"])
+        soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
+        if hpp < soft:
+            return 0.1, f"血量{hpp:.0%}<{soft:.0%}，规避精英"
+        prior = self.know.room_damage_prior("Elite", float(priors.get("Elite", 28)))
+        deck_relief = min(0.20, 0.02 * good_cards)
+        proj = hpp - prior * act_mul * (1.0 - deck_relief) / max(1, max_hp)
+        req = float(pol.get("path_hp_floor_pct", 0.35)) + 0.10 / max(1.0, act_mul)
+        if proj < req:
+            return 0.1, (f"血量{hpp:.0%}进精英预计战后仅剩{max(0.0, proj):.0%}"
+                         f"(需求≥{req:.0%})，规避精英")
+        if hpp < hard:
+            return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
+        return 1.0, ""
+
     def _map(self, state: dict, ctx) -> Decision:
         m = state.get("map") or {}
         nodes = m.get("available_nodes", [])
@@ -307,7 +339,13 @@ class Policy:
                 return 1.0
             avg = e["outcome_sum"] / e["visits"]
             glob = self.know.global_avg_outcome()
-            return clamp(1.0 + (avg - glob) / 50.0, 0.5, 1.5)
+            f = clamp(1.0 + (avg - glob) / 50.0, 0.5, 1.5)
+            if node_type == "Elite":
+                # 精英的到访记录天然集中在"走得远的强局"（幸存者偏差），
+                # 该因子本意衡量房间价值，不应给高危房额外加分（第 36 局 F11
+                # 精英因此被抬到 19.47 分压过 Unknown 17.66）
+                f = min(f, 1.0)
+            return f
 
         # 卡组强度：非基础牌数量（精英进场门槛之一）
         good_cards = 0
@@ -365,6 +403,9 @@ class Policy:
         acts = pol.get("path_act_scale") or [1.0]
         act_idx = min(len(acts) - 1, max(0, (floor - 1) // 17))
         act_mul = float(acts[act_idx]) if isinstance(acts[act_idx], (int, float)) else 1.0
+
+        elite_gate_f, elite_gate_note = self._elite_path_gate(
+            pol, priors, hp, max_hp, good_cards, act_mul)
 
         def paths_from(start_key) -> list[list[tuple]]:
             out: list[list[tuple]] = []
@@ -431,6 +472,12 @@ class Policy:
                 ps, pnotes, pproj = simulate(n, pth)
                 if ps > best_ps:
                     best_ps, best_pnotes, best_pproj = ps, pnotes, pproj
+            if nt == "Elite" and elite_gate_f < 1.0:
+                # 精英闸门乘在整条候选路径总分上（而非只罚首节点权重）：
+                # 子树优势（精英后接篝火/宝箱的组合分）曾完全吞掉首节点减权
+                best_ps *= elite_gate_f
+                if elite_gate_note:
+                    best_pnotes.append(elite_gate_note)
             label = f"{nt}({n['row']},{n['col']})"
             details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
             if best_ps > best_score:
@@ -470,9 +517,22 @@ class Policy:
             self._potion_tried = set()
 
         if not enemies:
+            # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
+            # 旧逻辑直接结束回合白扔能量（整轮输出窗口作废，战斗被拖长多吃意图）。
+            # 手牌能量俱在时先等几个 tick，过场通常会自行恢复。
             if can_end:
+                playable_left = any(c.get("playable") and c.get("energy_cost", 0) <= energy
+                                    for c in hand)
+                if playable_left and energy > 0:
+                    self._phase_stall += 1
+                    if self._phase_stall <= 6:
+                        return Decision(None, {}, f"战斗：暂无可打目标但手牌能量俱在（疑似转阶段过场），等待（{self._phase_stall}/6）", wait=0.7)
+                    self._phase_stall = 0
+                    return Decision("end_turn", {}, "战斗：转阶段等待超时，结束回合保底", wait=1.0)
+                self._phase_stall = 0
                 return Decision("end_turn", {}, "战斗：场上无有效敌人，结束回合", wait=1.0)
             return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
+        self._phase_stall = 0
 
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
         my_block = player.get("block", 0)
@@ -507,9 +567,12 @@ class Policy:
         # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
         # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
         low_hp_bleeding = my_hp <= 0.35 * my_max_hp and block_gap > 0
-        hard = (ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
-                or block_gap >= my_hp or low_hp_bleeding)
-        potion_dec = self._maybe_potion(state, ctx, hard)
+        # premium：值得动用增益药水的场合（硬房/真致死）。普通消耗战哪怕低血也留着——
+        # 第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，Boss 战空手阵亡。
+        premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
+                       or block_gap >= my_hp)
+        hard = (premium or low_hp_bleeding)
+        potion_dec = self._maybe_potion(state, ctx, hard, premium)
         if potion_dec is not None:
             return potion_dec
 
@@ -524,6 +587,15 @@ class Policy:
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
         forced_kill = bool(combat.get("end_turn_will_kill_player"))
+        # 能量预留：缺口未补且手里还有可负担的格挡牌时，非击杀攻击不得吃掉
+        # 补防所需的最低能量——第 36 批 F17 Boss 战实证：先挥霍能量打输出，
+        # 下一轮 20 点意图来袭时手持两张防御却 0 能量，无甲硬吃。
+        gap_now = max(0, incoming - my_block)
+        affordable_blk_costs = [c.get("energy_cost", 0) for c in hand
+                                if c.get("playable") and c.get("index") not in self._failed_this_turn
+                                and card_numbers(c)[1] > 0 and c.get("energy_cost", 0) <= energy]
+        reserve_for_block = gap_now > 0 and bool(affordable_blk_costs)
+        min_blk_cost = min(affordable_blk_costs) if affordable_blk_costs else 99
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -540,7 +612,8 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                  my_hp, my_max_hp, stance, forced_kill)
+                                                  my_hp, my_max_hp, stance, forced_kill,
+                                                  reserve_for_block, min_blk_cost, energy)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -570,14 +643,19 @@ class Policy:
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""
+            skipped_by_energy = [c for c in hand if c.get("playable")
+                                 and c.get("index") not in self._failed_this_turn
+                                 and c.get("energy_cost", 0) > energy]
+            energy_note = f"；{len(skipped_by_energy)}张可出牌因能量不足弃用" if skipped_by_energy else ""
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{danger_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
-                    forced_kill: bool = False):
+                    forced_kill: bool = False, reserve_for_block: bool = False,
+                    min_blk_cost: int = 99, cur_energy: int = 0):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -590,6 +668,9 @@ class Policy:
         自残代价：「失去X点生命」的攻击牌按当前血量扣分；致死回合里
         无法终结战斗的自残攻击 = 加速死亡，直接禁玩
         （第 29 局终局 9 血面对 28 点意图先打【御血术】自掉 2 血再阵亡）。
+
+        能量预留：缺口未补、手里有格挡牌且「这张攻击 + 最便宜格挡 > 现有能量」
+        时，非击杀攻击让路——先补防再输出，避免下一轮无甲吃整套意图。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -604,7 +685,10 @@ class Policy:
         # gap>0 时以服务端为准——回合内已打出的格挡会让本地算术"提前脱险"，
         # 但服务端的 end_turn_will_kill_player 看到的是真实结算投影
         # （第 31 局 F7 终局：17 血对 18 意图，本地补 5 甲后误判安全改打打击，阵亡）
-        lethal = gap >= my_hp or (forced_kill and gap > 0)
+        # 惨胜防线（pyrrhic）：补防后剩余缺口虽不致死，却会把血量打穿到 12% 皮血线
+        # （第 36 局 Boss 战：20 血对 27 意图，8 甲硬吃 19 剩 1 血，下回合必死）
+        pyrrhic = gap > 0 and (my_hp - gap) <= 0.12 * my_max_hp
+        lethal = gap >= my_hp or pyrrhic or (forced_kill and gap > 0)
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         if lethal:
             atk_damp, blk_boost = 0.55, 1.8
@@ -626,6 +710,8 @@ class Policy:
                 eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
                 score = eff * atk_damp + pol["kill_bonus"] * len(killable)
+                if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
+                    score -= 8.0  # 给格挡让路：这点能量留着补缺口
                 if lethal and not killable:
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
                     score = min(score, floor_score)
@@ -654,6 +740,8 @@ class Policy:
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
             if lethal and not best_kill:
                 best_s = min(best_s, floor_score)
+            elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
+                best_s -= 8.0  # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）
             elif self_cost:
                 if best_kill and len(enemies) == 1:
                     pass  # 击杀最后一个敌人直接终局，自残值得
@@ -696,7 +784,7 @@ class Policy:
             score += pol["free_card_bonus"]
         return score, None, f"能力/增益牌（第{round_no}回合）"
 
-    def _maybe_potion(self, state, ctx, hard: bool):
+    def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False):
         run = state.get("run") or {}
         pol = self.know.policy
         if pol.get("potion_hard_only") and not hard:
@@ -729,6 +817,10 @@ class Policy:
             is_buff = ("力量" in desc or "strength" in desc_l or "敏捷" in desc
                        or "dexterity" in desc_l or "能量" in desc or "energy" in desc_l
                        or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l)
+            # 增益药水的价值在长战/硬仗兑现：普通战（哪怕低血放血）不构成使用理由，
+            # 跳过且不计入 tried——本场若恶化成致死局仍可立即启用
+            if is_buff and not premium:
+                continue
             if (is_damage or is_buff) and enemies:
                 self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
@@ -745,13 +837,15 @@ class Policy:
                                     f"战斗：低血量使用防御/回复药水【{name}】",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)
             # 兜底：硬仗（致死/精英/低血放血）里无法分类的药水也值得一试——
-            # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）
+            # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）。
+            # 仅限 premium 场合：普通战里不可分类的药水同样保留（防绕过增益保留策略）
             cb_player = (state.get("combat") or {}).get("player") or {}
             cb_hp = cb_player.get("current_hp", 1)
             cb_max = max(1, cb_player.get("max_hp", 1))
             cb_incoming = sum((it.get("total_damage") or 0)
                               for e in enemies for it in (e.get("intents") or []))
-            if enemies and cb_incoming > cb_player.get("block", 0) and cb_hp <= 0.5 * cb_max:
+            if (premium and enemies and cb_incoming > cb_player.get("block", 0)
+                    and cb_hp <= 0.5 * cb_max):
                 self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
@@ -1119,14 +1213,18 @@ class Policy:
             v, n = self.know.event_option_value(event_id, key)
             scored.append((v, n, key, o))
         # epsilon exploration among under-sampled options
+        # 已知负收益（价值 ≤ -5，如吃过大亏的选项）不再浪费探索次数；
+        # 探索只在真正欠采样的选项里挑
         if self.rng.random() < pol["exploration_rate"]:
-            fresh = [s for s in scored if s[1] < 3]
+            fresh = [s for s in scored if s[1] < 3 and s[0] > -5.0]
             if fresh:
                 v, n, key, o = self.rng.choice(fresh)
                 return Decision("choose_event_option", {"option_index": o["index"]},
                                 f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）",
                                 tags=[("event_choice", event_id, key)], wait=1.0)
-        scored.sort(key=lambda s: s[0], reverse=True)
+        # 平值时按样本数优先：价值同为 0.0 时旧逻辑按选项原始顺序取第一个，
+        # 曾把 石炉加湿器(n=0) 排在 失物盒(n=3) 前面——经验多的选项更可信
+        scored.sort(key=lambda s: (s[0], s[1]), reverse=True)
         v, n, key, o = scored[0]
         lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
         return Decision("choose_event_option", {"option_index": o["index"]},

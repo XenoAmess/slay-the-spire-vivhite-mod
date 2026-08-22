@@ -186,6 +186,9 @@ class Knowledge:
         Boss 战反转姿态（node_type="Boss"）：Boss 的死因是斩杀线不足——
         第 35 局仪式兽战拖到 8 回合被逐轮升级的意图磨死，压攻击只会拖长战斗、
         多吃整轮意图；高危 Boss 应保持甚至强化进攻速战速决。
+        但第 36 局同族神官 Boss 战实证：格挡缺口才是压死骆驼的最后一根稻草
+        （52 血进场、每回合 5~9 甲硬吃 13~27 意图）——高危 Boss 在提速的
+        同时也要小幅抬格挡，少挨一刀多活一轮。
         """
         base = {"urgent_hp_pct": 0.45, "atk_mult": 1.0, "blk_mult": 1.0}
         e = (self.stats.get("enemies") or {}).get(comp_id or "")
@@ -197,6 +200,7 @@ class Knowledge:
             sev = min(1.0, (deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
             if node_type == "Boss":
                 base["atk_mult"] = round(1.0 + 0.10 * sev, 3)
+                base["blk_mult"] = round(1.0 + 0.08 * sev, 3)
                 base["danger"] = f"高危Boss（{n}战{deaths}死），速战速决"
             else:
                 base["urgent_hp_pct"] = round(0.45 + 0.15 * sev, 3)

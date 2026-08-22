@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import random
 import re
 import sys
 import tempfile
@@ -137,8 +138,11 @@ def main() -> int:
     assert d_lethal.action == "play_card" and d_lethal.params.get("card_index") == 1, \
         f"致死回合必须优先格挡: {d_lethal.params}（{d_lethal.reason}）"
 
-    # 3e) 精英灰区：血量介于 soft~hard 之间谨慎可行，低于 soft 才一票规避
-    # （第 28 局 F12 以 78% 血撞上 0.80 硬线差 2% 错过精英）
+    # 3e) 精英进场闸门（第 36 局复盘重构）：静态血量线之外增加实测战损投影——
+    #     血量进精英"预计战后血量"低于安全线时整条候选路径 ×0.1 规避。
+    #     空知识库下 Elite 先验 28、卡组折扣 min(0.2, 2%×6张)=12% → 战损 24.6：
+    #     80% 血 → 战后 49% ≥ 45% 需求 → 放行；70% 血 → 战后 39% → 投影规避；
+    #     50% 血 → 低于 soft 线静态规避
     def elite_reason(hp_now: int) -> str:
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0, "node_type": "Elite"}], "nodes": []},
@@ -149,9 +153,11 @@ def main() -> int:
     old_elite = know.policy["elite_min_hp_pct"]
     know.policy["elite_min_hp_pct"] = 0.72
     know.policy["elite_soft_hp_pct"] = 0.62
-    r_grey = elite_reason(56)   # 70%：灰区
+    r_go = elite_reason(64)     # 80%：血量与战后余量双达标，放行
+    r_proj = elite_reason(56)   # 70%：投影战后仅 39% < 45% 需求 → 规避
     r_low = elite_reason(40)    # 50%：<soft 规避
-    assert "规避精英" not in r_grey and "灰区" in r_grey, f"精英灰区失效: {r_grey}"
+    assert "规避精英" not in r_go and "灰区" not in r_go, f"精英放行失效: {r_go}"
+    assert "规避精英" in r_proj and "预计战后" in r_proj, f"精英投影闸门失效: {r_proj}"
     assert "规避精英" in r_low, f"低血规避精英失效: {r_low}"
     know.policy["elite_min_hp_pct"] = old_elite
     know.policy.pop("elite_soft_hp_pct", None)
@@ -176,6 +182,11 @@ def main() -> int:
     assert stance_bad["urgent_hp_pct"] > 0.5 and stance_bad["blk_mult"] > 1.0 \
         and "高危" in stance_bad.get("danger", ""), f"高危组合姿态失效: {stance_bad}"
     assert know.enemy_stance("UNKNOWN_COMP")["atk_mult"] == 1.0, "未知组合应为中性姿态"
+    # 第 36 局复盘：高危 Boss 提速的同时也要抬格挡（52 血进场每回合 5~9 甲
+    # 硬吃 13~27 意图被磨死——少挨一刀多活一轮）
+    stance_boss = know.enemy_stance("DUMMY_BRUTE+DUMMY_HEXER", "Boss")
+    assert stance_boss["atk_mult"] > 1.0 and stance_boss["blk_mult"] > 1.0 \
+        and "高危Boss" in stance_boss.get("danger", ""), f"高危Boss姿态失效: {stance_boss}"
 
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
                    "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
@@ -261,6 +272,164 @@ def main() -> int:
         "dynamic_values": [{"name": "Damage", "current_value": 6}]}, [])
     assert v_basic < know.policy["card_pick_threshold"], \
         f"未升级基础打击在奖励端未被抑制: v={v_basic}"
+
+    # 3j) 事件平值按样本数优先：价值同为 0.0 时不得按选项原始顺序盲取第一个
+    #     （第 36 批实证：石炉加湿器(n=0) 排在 失物盒(n=3) 前面被选中）
+    know.stats.setdefault("events", {})["TIE_EV"] = {
+        "OPT_KNOWN": {"n": 4, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0}}
+    tie_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                 "event": {"event_id": "TIE_EV", "title": "平值测试", "is_finished": False,
+                           "options": [{"index": 0, "title": "未知项", "text_key": "OPT_FRESH",
+                                        "is_locked": False, "is_proceed": False},
+                                       {"index": 1, "title": "已知项", "text_key": "OPT_KNOWN",
+                                        "is_locked": False, "is_proceed": False}]},
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+    pol_exploit = policy.Policy(know, random.Random(2))  # 首抽 0.956 > 探索率 → 走利用路径
+    d_tie = pol_exploit.decide(tie_state, ctx)
+    assert d_tie.params.get("option_index") == 1, f"事件平值必须偏向样本多的选项: {d_tie.reason}"
+
+    # 3k) 探索不碰已知负收益选项（吃过 -34 血的选项不再被探索重试）
+    know.stats["events"]["NEG_EV"] = {
+        "OPT_BAD": {"n": 2, "hp_delta_sum": -68.0, "gold_delta_sum": 0.0, "deaths": 0}}
+
+    class _AlwaysExploreFirstChoiceRng:
+        def random(self) -> float:
+            return 0.01
+
+        def choice(self, seq):
+            return seq[0]
+
+    neg_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                 "event": {"event_id": "NEG_EV", "title": "负收益测试", "is_finished": False,
+                           "options": [{"index": 0, "title": "大亏项", "text_key": "OPT_BAD",
+                                        "is_locked": False, "is_proceed": False},
+                                       {"index": 1, "title": "新项", "text_key": "OPT_NEW",
+                                        "is_locked": False, "is_proceed": False}]},
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
+    pol_neg = policy.Policy(know, _AlwaysExploreFirstChoiceRng())
+    d_neg = pol_neg.decide(neg_state, ctx)
+    assert d_neg.params.get("option_index") == 1 and "探索" in d_neg.reason, \
+        f"探索必须回避已知负收益选项: {d_neg.reason}"
+
+    # 3l) 能量预留：缺口未补且能量不足以「攻击后再补防」时，格挡先行
+    #     （第 36 批 F17 Boss 战：先挥霍输出，下轮 20 意图手持防御却 0 能量）
+    def reserve_combat(hp_now, block_now, energy_now, hand):
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+                "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": block_now,
+                                      "energy": energy_now},
+                           "hand": hand,
+                           "enemies": [{"index": 0, "enemy_id": "BRUISER", "name": "壮汉",
+                                        "current_hp": 100, "max_hp": 120, "block": 0,
+                                        "is_alive": True, "is_hittable": True,
+                                        "intents": [{"total_damage": 12}]}]},
+                "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
+
+    heavy = {"index": 0, "card_id": "HEAVY_BLOW", "name": "重击", "playable": True,
+             "energy_cost": 2, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 12}]}
+    big_defend = {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                  "energy_cost": 1, "requires_target": False,
+                  "rules_text": "获得10点格挡",
+                  "dynamic_values": [{"name": "Block", "current_value": 10}]}
+    d_r1 = pol.decide(reserve_combat(50, 0, 2, [dict(heavy), dict(big_defend)]), ctx)
+    assert d_r1.action == "play_card" and d_r1.params.get("card_index") == 1, \
+        f"能量不足两用时必须先补防: {d_r1.params}（{d_r1.reason}）"
+    d_r2 = pol.decide(reserve_combat(50, 10, 2, [dict(heavy)]), ctx)
+    assert d_r2.action == "play_card" and d_r2.params.get("card_index") == 0, \
+        f"缺口已补后攻击应恢复正常评分: {d_r2.params}（{d_r2.reason}）"
+
+    # 3m) 战斗连续性：转阶段过场闪断不得把同一场战斗拆成多条统计
+    #     （第 36 批 DW7 局 F17 一场 Boss 战被记为掉血 1/18/38 三笔，
+    #      场均掉血被稀释、enemy_stance 死亡率失真、药水黑名单误重置）
+    import agent as agent_mod
+    tmp_agent = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-agent-"))
+    agent_mod.KNOWLEDGE_DIR = tmp_agent
+    agent_mod._LOG_PATH = tmp_agent / "brain.log"
+    ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    tknow = ag.know
+
+    def trk(st):
+        ag._track(st, policy.Decision(action=None))
+
+    def trk_state(hp, comp="E1", screen="COMBAT", victory=None, floor=17):
+        st = {"screen": screen, "run_id": "RUN_T",
+              "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": floor}}
+        if screen == "COMBAT":
+            st["combat"] = {"enemies": [{"enemy_id": comp, "is_alive": True}]}
+        if screen == "GAME_OVER":
+            st["game_over"] = {"is_victory": bool(victory)}
+        return st
+
+    trk(trk_state(80))                                     # 进入战斗 E1
+    assert ag.ctx.combat and ag.ctx.combat["comp_id"] == "E1"
+    trk(trk_state(80, screen="MODAL"))                     # 转阶段过场：挂起不结算
+    assert tknow.stats["enemies"].get("E1") is None and ag.ctx.combat_bridge is not None
+    trk(trk_state(72))                                     # 重连：延续同一场战斗
+    assert tknow.stats["enemies"].get("E1") is None and ag.ctx.combat["hp_start"] == 80
+    trk(trk_state(40, screen="GAME_OVER", victory=False))  # 阵亡：一次性结算
+    e1 = tknow.stats["enemies"].get("E1")
+    assert e1 and e1["encounters"] == 1 and e1["deaths"] == 1 and e1["hp_lost_sum"] == 40, f"E1={e1}"
+    assert ag.ctx.died_in_combat is not None and ag.ctx.combat_notes[-1].endswith("（阵亡）")
+    # 过场后战斗对象变化：先结算旧账再开新账
+    trk(trk_state(40, comp="E2"))
+    trk(trk_state(40, comp="E2", screen="MODAL"))
+    trk(trk_state(35, comp="E3"))
+    e2 = tknow.stats["enemies"].get("E2")
+    assert e2 and e2["encounters"] == 1 and e2["wins"] == 1, f"E2={e2}"
+    assert ag.ctx.combat and ag.ctx.combat["comp_id"] == "E3"
+
+    # 3j) 惨胜防线（第 36 局复盘新增）：补防后剩余缺口虽不致死、但会把血量
+    #     打穿到 12% 皮血线以下时，非击杀攻击必须让位于格挡。
+    #     （第 36 局 Boss 战：20 血对 27 意图，8 甲硬吃 19 剩 1 血下回合必死；
+    #      本用例复刻该局面——36 血/5 甲对 33 意图，缺口 28 不致死但战后仅剩 8 血）
+    pyrrhic_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 6,
+        "combat": {"player": {"current_hp": 36, "max_hp": 80, "block": 5, "energy": 3},
+                   "hand": [
+                       {"index": 0, "card_id": "BLUDGEON", "name": "重锤", "playable": True,
+                        "energy_cost": 3, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 42}]},
+                       {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                        "energy_cost": 1, "requires_target": False,
+                        "rules_text": "获得5点格挡",
+                        "dynamic_values": [{"name": "Block", "current_value": 5}]}],
+                   "enemies": [{"index": 0, "enemy_id": "KIN_PRIEST", "name": "同族神官",
+                                "current_hp": 60, "max_hp": 80, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 33}]}]},
+        "run": {"current_hp": 36, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+    }
+    d_py = pol.decide(pyrrhic_state, ctx)
+    assert d_py.action == "play_card" and d_py.params.get("card_index") == 1, \
+        f"惨胜防线失效（血量将被打穿到皮血线仍选输出）: {d_py.params}（{d_py.reason}）"
+
+    # 3k) 药水分级（第 36 局复盘新增）：增益药水只进精英/Boss/致死局，
+    #     普通消耗战哪怕低血放血也不许烧（第 36 局 F15 把异鱼之油倒进净损
+    #     2 血的顺风波，Boss 战空手阵亡）
+    def potion_state() -> dict:
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+            "combat": {"player": {"current_hp": 24, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "M", "name": "小怪",
+                                    "current_hp": 30, "max_hp": 30, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 10}]}]},
+            "run": {"current_hp": 24, "max_hp": 80, "gold": 0, "floor": 14, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "STRENGTH_P", "name": "力量药水",
+                                 "description": "获得2点力量。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+
+    ctx.current_combat_is_hard = False
+    d_p0 = pol.decide(potion_state(), ctx)
+    assert d_p0.action != "use_potion", \
+        f"普通战低血不得烧增益药水: {d_p0.action}（{d_p0.reason}）"
+    ctx.current_combat_is_hard = True
+    d_p1 = pol.decide(potion_state(), ctx)
+    assert d_p1.action == "use_potion", \
+        f"精英/Boss 战增益药水必须投入: {d_p1.action}（{d_p1.reason}）"
+    ctx.current_combat_is_hard = False
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
