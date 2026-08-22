@@ -14504,3 +14504,51 @@ AssertionError: �¼�ƽֵ����ƫ���������ѡ��: �
   ↳ 动作 select_deck_card 返回 completed: Action completed.
 [01:56:30] [COMBAT/F2] 战斗：打出【打击+】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤7，我方80血/5甲
 [agent] 进入战斗：敌方=LEAF_SLIME_S+TWIG_SLIME_M+TWIG_SLIME_S｜历史场均掉血 4.0｜房间类型 Monster
+[llm] 复盘会话结束（exit=0）。输出尾部：
+tly on the REAL knowledge base (the selfcheck already loads real knowledge at the end and runs a combat decision, which passed). Let me additionally verify the deep-map scenario against the real policy values (elite_min_hp_pct=0.87) to make sure the run-43 F10 situation now picks RestSite. Actually my 3n test used the tmp knowledge base. Let me quickly simulate the exact run-43 F10 numbers with real policy: hp 20/80... actually real elite_min_hp_pct=0.87, soft=0.62 — gate f=0.1 via hpp<soft ✓ same as test. Fine.
+
+Also double-check I haven't broken the `_map` note dedupe filter string matching: node_factor Elite positive note is "血量与卡组达标，精英奖励价值高" — filter removes entries containing "达标，精英奖励价值高" ✓.
+
+Now write documentation:
+1. meta_review.md — append new section.
+2. lessons.md — append 🧠 section.
+
+Then final summary ≤200 chars. No git ops (prohibited).
+
+Let me get current time for the section title.
+SELFCHECK OK（含新增 4 组断言全部通过）。现在写入复盘文档：
+⚙ bash {}
+· tokens 193672 ·
+⚙ bash {}
+· tokens 195492 ·
+⚙ bash {}
+· tokens 196007 ·
+⚙ bash {}
+· tokens 196097 ·
+💭 Everything is in place:
+- policy.py: 4 code fixes (gate sign-awareness, death-depth discount, removal handshake + keywords, stale-target fallback in both `_combat` and `_score_play`, event key normalization)
+- selfcheck.py: 4 new assertion groups, SELFCHECK OK
+- meta_review.md: new section appended
+- lessons.md: 🧠 section appended
+- No git operations performed (prohibited)
+- No processes touched, no files outside sts2-ascend/ modified (runner_console.log was modified by the running brain itself, not me)
+
+Final summary ≤200 characters (字). The task says "完成后，用 200 字以内输出本次复盘总结。"
+复盘完成，SELFCHECK OK。总结：
+
+**第43~45局归因**：三局均死于修复缺陷而非策略——①精英闸门乘法在负分区间反向激励（-113.8×0.1=-11.38压过篝火，20血进精英阵亡）；②删牌屏关键词识别失败，两局付费删掉余烬+/上勾拳；③击杀后目标列表过期致可出牌被静默跳过、整回合弃权（F6 -56血主因）；④多页事件键碎片化，真理石板单事件放血39。
+
+**调整**（policy.py 四处代码修复+4组selfcheck断言，参数零改动）：闸门符号感知（负分改加性罚）、死亡投影按存活深度递减保留序信息、删牌握手标志双保险、目标过期兜底打最高威胁敌人、事件键尾键跨页聚合。经验已沉淀至 meta_review.md 与 lessons.md。
+· tokens 196528 ·
+
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:56:31] [COMBAT/F2] 战斗：打出【打击】→树叶史莱姆（小）（单体伤害≈6）；敌意图总伤3，我方80血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:56:33] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗）
+[01:56:33] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[git] 已自动存档：feat(sts2-ascend): 第43~45局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[01:56:35] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:56:36] [COMBAT/F2] 战斗：回合过渡中，等待
