@@ -149,6 +149,18 @@ class Knowledge:
         shrunk = (e["outcome_sum"] + SHRINK_K * self.global_avg_outcome()) / (e["picked"] + SHRINK_K)
         return (shrunk - self.global_avg_outcome()) + e.get("bias", 0.0)
 
+    def card_is_proven_bad(self, card_id: str) -> bool:
+        """统计实锤的低价值牌：样本 ≥4 局且场均收益比全局均值低 4+ 层。
+
+        动机（第 30~32 局复盘）：EXPECT_A_FIGHT(6.6分/5局)、BASH(7.2分/6局) 长期
+        低于平均仍被反复拾取——learned bias（±4 上限）在奖励端 12+ 的启发式基础分
+        面前是噪声。此判定供奖励端 -12 分硬回避，比人工 bias 更根本、随数据自演化。
+        """
+        e = self.stats["cards"].get(card_id)
+        if not e or e.get("picked", 0) < 4:
+            return False
+        return (e["outcome_sum"] / e["picked"]) < self.global_avg_outcome() - 4.0
+
     def relic_value(self, relic_id: str) -> float:
         e = self.stats["relics"].get(relic_id)
         if not e or not e["picked"]:
@@ -163,13 +175,17 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
-    def enemy_stance(self, comp_id: str | None) -> dict:
+    def enemy_stance(self, comp_id: str | None, node_type: str | None = None) -> dict:
         """按敌人组合历史战绩生成战斗姿态修正（无数据/低危→中性）。
 
         高危组合（样本≥3 且死亡率≥30%）自动收紧生存线：提高紧急血量阈值、
         压低进攻权重、抬高格挡权重。动机：FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
         10 战 6 死、场均掉血 25（全档案最致命），此前战斗端对它零感知，
         与打杂兵用同一套节奏反复送死。
+
+        Boss 战反转姿态（node_type="Boss"）：Boss 的死因是斩杀线不足——
+        第 35 局仪式兽战拖到 8 回合被逐轮升级的意图磨死，压攻击只会拖长战斗、
+        多吃整轮意图；高危 Boss 应保持甚至强化进攻速战速决。
         """
         base = {"urgent_hp_pct": 0.45, "atk_mult": 1.0, "blk_mult": 1.0}
         e = (self.stats.get("enemies") or {}).get(comp_id or "")
@@ -179,10 +195,14 @@ class Knowledge:
         deaths = e.get("deaths", 0)
         if n >= 3 and deaths / n >= 0.30:
             sev = min(1.0, (deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
-            base["urgent_hp_pct"] = round(0.45 + 0.15 * sev, 3)
-            base["atk_mult"] = round(1.0 - 0.15 * sev, 3)
-            base["blk_mult"] = round(1.0 + 0.15 * sev, 3)
-            base["danger"] = f"高危组合（{n}战{deaths}死）"
+            if node_type == "Boss":
+                base["atk_mult"] = round(1.0 + 0.10 * sev, 3)
+                base["danger"] = f"高危Boss（{n}战{deaths}死），速战速决"
+            else:
+                base["urgent_hp_pct"] = round(0.45 + 0.15 * sev, 3)
+                base["atk_mult"] = round(1.0 - 0.15 * sev, 3)
+                base["blk_mult"] = round(1.0 + 0.15 * sev, 3)
+                base["danger"] = f"高危组合（{n}战{deaths}死）"
         return base
 
     def combat_calibration(self) -> float:

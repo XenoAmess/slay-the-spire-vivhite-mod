@@ -160,12 +160,17 @@ class Policy:
             # 看门狗的 abandon_run 在 MAP 等屏幕上又不可用——连续异常时改发安全动作自救：
             if self._decide_errors >= 10:
                 actions = state.get("available_actions", [])
-                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed"):
+                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
+                             "skip_reward_cards", "confirm_selection", "confirm_bundle",
+                             "dismiss_modal", "open_chest", "close_shop_inventory"):
                     if safe in actions:
                         return Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0)
-                if "choose_map_node" in actions:
-                    return Decision("choose_map_node", {"option_index": 0},
-                                    f"决策连续异常×{self._decide_errors}，盲选 0 号地图节点自救（{exc}）", wait=1.0)
+                for indexed in ("select_deck_card", "choose_reward_card", "choose_rest_option",
+                                "choose_event_option", "choose_treasure_relic", "choose_bundle",
+                                "claim_reward", "resolve_rewards", "choose_map_node"):
+                    if indexed in actions:
+                        return Decision(indexed, {"option_index": 0},
+                                        f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}）", wait=1.0)
             return Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0)
 
     # ------------------------------------------------------------------
@@ -508,9 +513,11 @@ class Policy:
         if potion_dec is not None:
             return potion_dec
 
-        # 敌方组合历史战绩 → 战斗姿态（高危组合自动转防守，见 knowledge.enemy_stance）
-        comp_id = ((getattr(ctx, "combat", None) or {}).get("comp_id")) or None
-        stance = self.know.enemy_stance(comp_id)
+        # 敌方组合历史战绩 → 战斗姿态（高危组合自动转防守，见 knowledge.enemy_stance；
+        # Boss 房间反转姿态：斩杀线不足时压攻击=拖长战斗多吃意图）
+        cctx = getattr(ctx, "combat", None) or {}
+        comp_id = cctx.get("comp_id") or None
+        stance = self.know.enemy_stance(comp_id, cctx.get("node_type"))
         danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
 
         best = None  # (score, card, target_index, why)
@@ -792,6 +799,11 @@ class Policy:
         elif is_bad_card(card):
             value -= 10.0
         value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)
+        # 未升级基础牌不提升卡组强度：出现在卡牌奖励里等于浪费名额
+        # （第 33 局 F2 把【打击】当奖励拿走）
+        _cid = (card.get("card_id") or "").upper()
+        if not card.get("upgraded") and (_cid.startswith("STRIKE_") or _cid.startswith("DEFEND_")):
+            value -= 4.0
         # 自残牌在慢性失血环境下额外惩罚（BREAKTHROUGH/HEMOKINESIS 类）
         if re.search(r"失去\s*\d+\s*点?生命|lose\s+\d+\s*(?:hp|health|life)", _text(card), re.I):
             value -= 2.0
@@ -938,9 +950,16 @@ class Policy:
             tag = "card_upgrade"
             reason = f"升级卡牌：【{pick.get('name')}】"
         else:
-            pick = max(candidates, key=lambda c: self.eval_reward_card(c, []))
+            # 必须用真实卡组上下文评估：第 34 局经此路径连拿 7 张全攻牌、
+            # 第 33 局拿进基础【打击】——空卡组评估时攻击占比恒为中性 0.45，
+            # 攻击乘法衰减与格挡稀缺增值双双失效
+            deck = (state.get("run") or {}).get("deck", [])
+            scored = sorted(((self.eval_reward_card(c, deck), c) for c in candidates),
+                            key=lambda t: -t[0])
+            best_v, pick = scored[0]
             tag = "card_pick"
-            reason = f"选择卡牌：【{pick.get('name')}】"
+            detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
+            reason = f"选择卡牌：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"
 
         self._sel_tried.add(pick["index"])
         return Decision("select_deck_card", {"option_index": pick["index"]},

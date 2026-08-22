@@ -206,6 +206,62 @@ def main() -> int:
     assert "高危" in d_self.reason, f"高危组合提示缺失: {d_self.reason}"
     ctx.combat = None
 
+    # 3h) 服务端致死判定 + 409 黑名单精确到卡牌实例
+    #     （第 31 局 F7 终局：17 血对 18 意图，一张防御 409 把同 id 两张防御全部拉黑，
+    #      改打打击后无甲吃 18 刀阵亡——手牌里其实还压着可用的防御）
+    def _defend(idx):
+        return {"index": idx, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "rules_text": "获得5点格挡",
+                "dynamic_values": [{"name": "Block", "current_value": 5}]}
+
+    _strike = {"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": True,
+               "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+               "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    forced_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 4,
+        "combat": {"player": {"current_hp": 17, "max_hp": 80, "block": 0, "energy": 3},
+                   "end_turn_will_kill_player": True,
+                   "hand": [dict(_strike), _defend(1), _defend(2)],
+                   "enemies": [{"index": 0, "enemy_id": "FUZZY_WURM", "name": "毛绒伏地虫",
+                                "current_hp": 30, "max_hp": 30, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 18}]}]},
+        "run": {"current_hp": 17, "max_hp": 80, "gold": 0, "floor": 7, "deck": []},
+    }
+    d_f1 = pol.decide(forced_state, ctx)
+    assert d_f1.action == "play_card" and d_f1.params.get("card_index") in (1, 2), \
+        f"服务端致死判定必须先补防: {d_f1.params}（{d_f1.reason}）"
+    # 模拟这张防御打出失败（409）：只拉黑该实例，另一张同 id 防御必须仍可选
+    failed_idx = d_f1.params.get("card_index")
+    pol.note_action_failed("play_card", list(d_f1.tags))
+    d_f2 = pol.decide(forced_state, ctx)
+    assert d_f2.action == "play_card" and d_f2.params.get("card_index") != failed_idx \
+        and d_f2.params.get("card_index") in (1, 2), \
+        f"409 黑名单不得连坐同 id 其他副本: {d_f2.params}（{d_f2.reason}）"
+    # 已补 5 甲但服务端仍判定致死 → 必须继续补防而非输出（本地算术已"脱险"）
+    # （换新回合数触发黑名单自然清空，聚焦验证 forced_kill 语义本身）
+    forced_state["turn"] = 5
+    forced_state["combat"]["player"]["block"] = 5
+    forced_state["combat"]["hand"] = [dict(_strike), _defend(1)]
+    d_f3 = pol.decide(forced_state, ctx)
+    assert d_f3.action == "play_card" and d_f3.params.get("card_index") == 1, \
+        f"服务端致死未解除前必须继续补防: {d_f3.params}（{d_f3.reason}）"
+
+    # 3i) 奖励端抑制：统计实锤差牌（≥4局且场均低于全局均值4+）与未升级基础打/防牌
+    know.stats.setdefault("cards", {})["PROVEN_DUD"] = {
+        "seen": 9, "picked": 5, "plays": 20, "outcome_sum": 25.0, "bias": 0.0}
+    dud = {"card_id": "PROVEN_DUD", "name": "废牌", "card_type": "Skill", "energy_cost": 1,
+           "rules_text": "获得 8 点格挡。抽 1 张牌。",
+           "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    v_dud = pol.eval_reward_card(dict(dud), [])
+    assert v_dud < know.policy["card_pick_threshold"], f"实锤低价值牌未被回避: v={v_dud}"
+    v_basic = pol.eval_reward_card({
+        "card_id": "STRIKE_IRONCLAD", "card_type": "Attack", "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 6}]}, [])
+    assert v_basic < know.policy["card_pick_threshold"], \
+        f"未升级基础打击在奖励端未被抑制: v={v_basic}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"
