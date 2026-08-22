@@ -42,7 +42,6 @@ DEFAULT_POLICY = {
     # --- rest ---
     "rest_heal_threshold": 0.6,   # heal if hp% below this, else smith
     "rest_heal_fraction": 0.30,   # 篝火回血量估计（占最大生命比例）：溢出判断 + 路径血量模拟共用
-    "smith_min_hp_pct": 0.55,     # 血量高于此值优先锻造升级（旧逻辑 70% 阈值导致整局零锻造）
     # --- map path planning（全路径规划的血量模拟先验） ---
     "path_danger_priors": {"Monster": 8, "Unknown": 10, "Elite": 28, "Boss": 45,
                            "Event": 0, "Shop": 0, "Treasure": 0, "RestSite": 0, "Ancient": 0},
@@ -61,7 +60,6 @@ DEFAULT_POLICY = {
     "exploration_min": 0.05,
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
-    "potion_danger_hp_lost": 18.0,  # 历史场均掉血 ≥ 此值的敌人组合视同硬仗（允许用药）
 }
 
 DEFAULT_PROGRESSION = {
@@ -81,7 +79,7 @@ DEFAULT_STATS = {
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths}
-    "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
+    "rooms": {},    # node_type -> {visits, outcome_sum}
 }
 
 
@@ -123,10 +121,6 @@ class Knowledge:
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
-        # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
-        for e in self.stats["rooms"].values():
-            e.setdefault("hp_lost_sum", 0.0)
-            e.setdefault("damage_events", 0)
 
     # ---------- persistence ----------
 
@@ -163,27 +157,6 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
-    def threat_mult(self, comp_id: str) -> float:
-        """战斗端威胁系数：历史场均掉血越高的组合，防御权重放大越多。
-
-        基准 12（未知敌人的先验危险度）→ 1.0；场均 26+ 的杀手组合顶到 1.6。
-        只放大不缩小：对已知软柿子也不冒进，避免小样本反向冒险。
-        """
-        return clamp(self.enemy_danger(comp_id) / 12.0, 1.0, 1.6)
-
-    def room_damage_prior(self, node_type: str, static_prior: float) -> float:
-        """路径模拟掉血先验的动态校准：实测场均掉血与静态先验加权混合。
-
-        样本 <3 用纯静态；3~10 线性加权；≥10 封顶 70% 实测权重。
-        修复 Elite 静态先验 28 vs 实测 40+ 的系统性低估。
-        """
-        e = self.stats["rooms"].get(node_type)
-        if not e or e.get("damage_events", 0) < 3:
-            return float(static_prior)
-        measured = e["hp_lost_sum"] / max(1, e["damage_events"])
-        w = min(0.7, e["damage_events"] / 10.0)
-        return (1.0 - w) * float(static_prior) + w * measured
-
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty."""
         opts = self.stats["events"].get(event_id, {})
@@ -203,13 +176,6 @@ class Knowledge:
         e["hp_lost_sum"] += max(0.0, hp_lost)
         e["wins"] += 1 if won else 0
         e["deaths"] += 1 if died else 0
-
-    def commit_room_damage(self, node_type: str, hp_lost: float) -> None:
-        """按房间类型累计战斗掉血（供路径先验动态校准）。"""
-        e = self.stats["rooms"].setdefault(
-            node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
-        e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
-        e["damage_events"] = e.get("damage_events", 0) + 1
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float, gold_delta: float, died: bool) -> None:
         opts = self.stats["events"].setdefault(event_id, {})

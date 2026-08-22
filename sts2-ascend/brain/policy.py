@@ -105,33 +105,16 @@ class Policy:
         self._sel_key = None        # card-selection screen identity
         self._sel_tried: set = set()  # card indices already clicked this screen
         self._cur_turn = None       # combat turn tracking
-        self._failed_this_turn: set = set()  # 本回合出牌失败的牌（card_id 或 idx:N 兜底键）
-        self._play_fail_streak = 0  # 本回合连续出牌失败次数（熔断器）
-        self._cb_combat = None      # 战斗实例身份（换战斗时清空失败记忆）
+        self._failed_this_turn: set = set()  # card_ids that failed to play this turn
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
 
-    @staticmethod
-    def _fail_key(card: dict) -> tuple:
-        """出牌失败黑名单键：card_id 缺失的载荷（历史死锁根源）用 idx 兜底。"""
-        cid = card.get("card_id")
-        return (f"idx:{card.get('index')}",) if not cid else (cid, f"idx:{card.get('index')}")
-
-    def note_action_failed(self, action: str, tags: list, params: dict | None = None) -> None:
-        """agent 在执行失败时回调：本回合内不再尝试这张牌（防 409 重试刷屏）。
-
-        历史教训：挑衅(TAUNT) 载荷缺 card_id 且缺 requires_target，旧逻辑
-        既拉不进黑名单又发不出目标，导致每秒重试的死锁（生涯 4625 次 409）。
-        现在无论载荷质量如何都记 idx 键，并累计连续失败供熔断器兜底。
-        """
+    def note_action_failed(self, action: str, tags: list) -> None:
+        """agent 在执行失败时回调：本回合内不再尝试这张牌（防 409 重试刷屏）。"""
         if action == "play_card":
             for t in tags or []:
                 if t[0] == "play_card" and t[1]:
                     self._failed_this_turn.add(t[1])
-            ci = (params or {}).get("card_index")
-            if ci is not None:
-                self._failed_this_turn.add(f"idx:{ci}")
-            self._play_fail_streak += 1
 
     # ------------------------------------------------------------------
     # top-level router
@@ -337,17 +320,9 @@ class Policy:
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
                     notes.append(note)
-                # 掉血先验：静态值与实测场均掉血（rooms 数据）加权混合，
-                # 修复 Elite 先验 28 vs 实测 40+ 的系统性低估
-                prior = self.know.room_damage_prior(nt, float(priors.get(nt, 8)))
-                # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
-                # 不再扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
-                # 导致"预计进 Boss 血量 11%"实为"打完 Boss 后血量"，严重误导决策与复盘）
-                if boss_row is not None and key[0] >= boss_row:
-                    continue
-                cur_hp -= prior * deck_ease * act_mul
+                cur_hp -= priors.get(nt, 8) * deck_ease * act_mul
                 if nt == "Unknown" and act_idx >= 1:
-                    cur_hp -= prior * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
+                    cur_hp -= priors.get(nt, 8) * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
                     cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
                 if cur_hp <= 0:
@@ -401,17 +376,9 @@ class Policy:
         if self._cur_turn != round_no:
             self._cur_turn = round_no
             self._failed_this_turn = set()
-            self._play_fail_streak = 0
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
-            self._cb_combat = ctx.combat
-            self._failed_this_turn = set()
-            self._play_fail_streak = 0
             self._potion_tried = set()
-        elif self._cb_combat is not ctx.combat:
-            self._cb_combat = ctx.combat
-            self._failed_this_turn = set()
-            self._play_fail_streak = 0
 
         if not enemies:
             if can_end:
@@ -423,13 +390,6 @@ class Policy:
         my_hp = player.get("current_hp", 1)
         my_max_hp = max(1, player.get("max_hp", my_hp))
         block_gap = max(0, incoming - my_block)
-
-        # 敌方组合威胁感知：历史场均掉血数据反哺战斗评分（FUZZY_WURM 组合 7战5死
-        # 场均掉血 26，此前引擎对它毫无感知，按普通怪打法反复送死）
-        comp_id = "+".join(sorted({(e.get("enemy_id") or "?") for e in combat.get("enemies", [])
-                                   if e.get("is_alive")})) if combat.get("enemies") else ""
-        threat = self.know.threat_mult(comp_id) if comp_id else 1.0
-        fight_hp_lost = max(0, (ctx.combat or {}).get("hp_start", my_hp) - my_hp) if ctx.combat else 0
 
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
         # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
@@ -445,10 +405,8 @@ class Policy:
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
 
-        # potion check (elite/boss, lethal danger, or historically deadly comp)
-        hard = (ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
-                or block_gap >= my_hp
-                or self.know.enemy_danger(comp_id) >= pol.get("potion_danger_hp_lost", 18.0))
+        # potion check (elite/boss or lethal danger)
+        hard = ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player") or block_gap >= my_hp
         potion_dec = self._maybe_potion(state, ctx, hard)
         if potion_dec is not None:
             return potion_dec
@@ -470,7 +428,7 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                   my_hp, my_max_hp, threat, fight_hp_lost)
+                                                   my_hp, my_max_hp)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -492,10 +450,9 @@ class Policy:
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
-            threat_note = f"；敌组合历史威胁{threat:.1f}×" if threat > 1.05 else ""
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
-                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{threat_note}",
+                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲",
                             tags=[("play_card", card.get("card_id"))], wait=0.6)
 
         if can_end:
@@ -507,8 +464,7 @@ class Policy:
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
-                    my_hp: int = 9999, my_max_hp: int = 9999,
-                    threat: float = 1.0, fight_hp_lost: int = 0):
+                    my_hp: int = 9999, my_max_hp: int = 9999):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -516,10 +472,6 @@ class Policy:
 
         生存权重：残血且敌意图可能致死时，压低攻击、抬高格挡——
         第 18 局 F22 致命战在意图 44~50 时仍连续输出不补防，直接阵亡。
-
-        threat：敌方组合历史威胁系数（场均掉血数据反哺，≥1.0）；
-        fight_hp_lost：本场已掉血——慢性失血同样触发防御戒备，
-        避免"每回合意图不高→从不补防→整场磨掉 30~56 血"的死法。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -530,14 +482,13 @@ class Policy:
         hp_pct = my_hp / max(1, my_max_hp)
         gap = max(0, incoming - my_block)
         lethal = gap >= my_hp              # 本回合就可能被打死
-        chronic = fight_hp_lost >= 0.3 * my_max_hp   # 本场已被磨掉三成血量
-        urgent = gap > 0 and (hp_pct < 0.45 or chronic)  # 慢性失血下的低血量状态
+        urgent = gap > 0 and hp_pct < 0.45  # 慢性失血下的低血量状态
         if lethal:
-            atk_damp, blk_boost = 0.55, 1.8 * threat
+            atk_damp, blk_boost = 0.55, 1.8
         elif urgent:
-            atk_damp, blk_boost = 0.75, 1.4 * threat
+            atk_damp, blk_boost = 0.75, 1.4
         else:
-            atk_damp, blk_boost = min(1.0, 1.0 / threat), 1.0 * threat
+            atk_damp, blk_boost = 1.0, 1.0
 
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
@@ -664,12 +615,9 @@ class Policy:
                 value += 1.5  # 输出不足时额外鼓励补攻击
         elif is_skill(card):
             value += block * 0.8 + draw_amount(card) * 1.5
-            # 格挡来源需求随卡组规模成长：卡组越大单回合抽到防牌的概率越低，
-            # 绝对数门槛（初始 4 张防牌很快满足）不足以反映稀释——按比例抬高要求
-            if block > 0 and deck:
-                target_block = max(pol.get("min_block_cards", 5), round(len(deck) * 0.30))
-                if n_block < target_block:
-                    value += 1.5
+            # 格挡来源绝对数稀缺（初始 4 张防牌很快被稀释，旧占比判定 <20% 几乎不触发）
+            if block > 0 and deck and n_block < pol.get("min_block_cards", 5):
+                value += 1.5
         elif is_power(card):
             value += 5.0
         elif is_bad_card(card):
@@ -915,30 +863,21 @@ class Policy:
         deck = run.get("deck", [])
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
-        pol = self.know.policy
 
-        # 锻造区间：血量 ≥ smith_min_hp_pct 即可锻造——旧逻辑回血阈值 70% 过高，
-        # 导致几乎每个篝火都在回血、整局 0 锻造，卡组永远停在基础形态
-        # （慢性失血 → 无力升级 → 掉更多血 的恶性循环）。
-        smith_ok = smith is not None and bool(upgradable)
-        heal_line = float(pol.get("smith_min_hp_pct", pol["rest_heal_threshold"]))
-        if heal and (hp_pct < heal_line or not smith_ok):
+        need_heal = hp_pct < self.know.policy["rest_heal_threshold"] or not upgradable or smith is None
+        if heal and need_heal:
             # 回血将溢出（接近回满）且仍有可升级卡：改锻造，不浪费篝火
-            if smith_ok and hp_pct + heal_frac >= 0.97:
+            if smith and upgradable and hp_pct + heal_frac >= 0.97:
                 return Decision("choose_rest_option", {"option_index": smith["index"]},
                                 f"篝火：回血将溢出（{hp_pct:.0%}+{heal_frac:.0%}≥97%），改为锻造升级",
                                 tags=[("rest", "smith")], wait=1.2)
             return Decision("choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：休息回血（当前 {hp_pct:.0%} < {heal_line:.0%}）",
+                            f"篝火：休息回血（当前 {hp_pct:.0%} < {self.know.policy['rest_heal_threshold']:.0%}）",
                             tags=[("rest", "heal")], wait=1.2)
-        if smith_ok:
+        if smith:
             return Decision("choose_rest_option", {"option_index": smith["index"]},
-                            f"篝火：锻造升级（血量 {hp_pct:.0%} ≥ 安全线 {heal_line:.0%}，升级降低后续战损）",
+                            f"篝火：锻造升级（血量 {hp_pct:.0%} 尚安全）",
                             tags=[("rest", "smith")], wait=1.2)
-        if heal:
-            return Decision("choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：休息回血（无升级目标，当前 {hp_pct:.0%}）",
-                            tags=[("rest", "heal")], wait=1.2)
         pick = options[0]
         return Decision("choose_rest_option", {"option_index": pick["index"]},
                         f"篝火：选择 {pick.get('title')}", tags=[("rest", pick.get("option_id"))], wait=1.0)

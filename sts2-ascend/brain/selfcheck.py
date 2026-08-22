@@ -115,33 +115,6 @@ def main() -> int:
     p2 = float(re.search(r"进 Boss 血量 ?(\d+)%", map_reason(25)).group(1))
     assert p2 < p1, f"幕数缩放失效: F5 预计 {p1}% / F25 预计 {p2}%"
 
-    # 3d) 篝火端：血量在锻造区间（≥smith_min_hp_pct 且 <回血阈值）应优先锻造
-    def rest_decision(hp: int):
-        st = {"screen": "REST", "available_actions": ["choose_rest_option"],
-              "rest": {"options": [
-                  {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
-                  {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
-              "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": 6,
-                      "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}}
-        return pol.decide(st, ctx)
-
-    d_mid = rest_decision(47)   # 59%：介于 smith_min(55%) 与回血阈值(60%) 之间 → 锻造
-    d_low = rest_decision(32)   # 40%：低于 smith_min → 回血
-    assert d_mid.params.get("option_index") == 1, f"锻造区间失效: {d_mid.reason}"
-    assert d_low.params.get("option_index") == 0, f"低血量回血失效: {d_low.reason}"
-
-    # 3e) 威胁系数与动态先验（合成数据，不依赖真实统计值）
-    know.stats["enemies"]["KILLER_COMP"] = {
-        "encounters": 4, "hp_lost_sum": 100.0, "deaths": 1, "wins": 3}
-    assert know.threat_mult("KILLER_COMP") == 1.6, \
-        f"威胁封顶失效: {know.threat_mult('KILLER_COMP')}"
-    assert know.threat_mult("UNKNOWN_COMP") == 1.0, "未知组合威胁应为中性 1.0"
-    know.stats["rooms"]["Elite"] = {
-        "visits": 10, "outcome_sum": 120.0, "hp_lost_sum": 420.0, "damage_events": 10}
-    dyn = know.room_damage_prior("Elite", 28.0)
-    assert 28.0 < dyn < 42.0, f"动态先验校准失效: {dyn}"
-    assert know.room_damage_prior("NoDataRoom", 7.0) == 7.0, "无实测数据应回落静态先验"
-
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"

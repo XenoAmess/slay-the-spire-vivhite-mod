@@ -455,21 +455,12 @@ class Viewer:
 
     @staticmethod
     def _classify(ln: str) -> str:
-        stripped = ln.lstrip()
-        if stripped.startswith("💭"):
-            return "reasoning"
-        if stripped.startswith("⚙"):
-            return "tool"
-        if stripped.startswith("📦"):
-            return "patch"
-        if stripped.startswith("· tokens"):
-            return "stats"
         low = ln.lower()
         if "selfcheck ok" in low:
             return "gold"
         if any(k in low for k in ("error", "traceback", "失败", "exception")):
             return "error"
-        if stripped.startswith(("$", ">", "●", "✓")) or "edit(" in low or "bash(" in low:
+        if ln.lstrip().startswith(("$", ">", "●", "✓")) or "edit(" in low or "bash(" in low:
             return "tool"
         if ".py" in low or ".json" in low or ".md" in low:
             return "path"
