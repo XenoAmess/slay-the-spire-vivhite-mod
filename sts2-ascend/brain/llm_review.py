@@ -461,6 +461,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
     except OSError:
         pass
+    # 提示词包可达数万字，超过 Windows 命令行 32767 上限（WinError 206）——
+    # 完整提示词落盘为 review_prompt_latest.md，命令行只传一句引导，让复盘 agent 自己读文件。
+    rel_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+    short_prompt = (f"请立即用读文件工具完整阅读 {rel_prompt}（本场复盘的完整任务书已写好），"
+                    f"并严格按其中全部指示执行。")
 
     cmd = [
         binary, "run",
@@ -472,7 +477,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         "--title", f"sts2-ascend 复盘 {stamp}",
         "--dir", str(REPO_DIR),
         "--auto",
-        prompt,
+        short_prompt,
     ]
 
     # 直播流开启 + 拉起悬浮窗（哨兵/meta 先行，viewer 据此渲染标题）
@@ -498,9 +503,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if source == "preferred":
             _mark_preferred_ok(entry)
     except Exception as exc:
+        # 启动期异常（如 WinError 206 命令行过长）属本地环境问题，非模型故障，不记冷却
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
-        if source == "preferred":
-            _mark_preferred_failure(cfg, log, entry, str(exc)[:120])
         return False
     finally:
         _stream_end({"exit": rc, "timeout": timed_out})
@@ -521,6 +525,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                     shutil.copy2(REVIEW_LOG, backup)
             except OSError:
                 pass
+            autogit.set_review_active(False)    # 回滚提交需要 brain/ 全量范围
             if async_mode:
                 # 路径级回滚：只还原复盘可触碰的路径，保留复盘期间的对局存档
                 autogit.restore_paths(pre_head, [
@@ -535,7 +540,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             log(f"[llm] 已回滚到复盘前备份点 {pre_head[:8]}（本次变更废弃，报告副本在 code_backups）")
             return False
 
-        # 4) 提交复盘变更
+        # 4) 提交复盘变更（先解锁收窄标记，复盘自身的提交必须是全量范围）
+        autogit.set_review_active(False)
         autogit.commit_progress(f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）", log=log)
 
         # 5) 写重启标记并请求重启（runner 若发现新代码起不来，会按 marker 回滚到 pre_head）
@@ -680,7 +686,7 @@ def main() -> None:
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     model, every, source = resolve_review_plan(cfg, binary)
     print(f"plan: model={model} every={every} source={source}")
-    executed = run_review(know, model=model, every=every, source=source)
+    executed = run_review(know, model=model, every=every, source=source, async_mode=True)
     print(f"done, executed={executed}")
 
 
