@@ -48,6 +48,12 @@ DEFAULT_POLICY = {
     "path_hp_floor_pct": 0.35,    # 路径投影进 Boss 血量低于此值 → 按差值惩罚
     "path_death_penalty": 100.0,  # 路径投影中途死亡的评分惩罚
     "elite_min_deck_cards": 4,    # 非基础牌少于此数时规避精英（卡组强度门槛，血量门槛之外的第二道闸）
+    "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
+    "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数
+    # --- 卡组构建 ---
+    "deck_soft_cap": 20,          # 非基础牌软上限：超出后每张候选牌都贬值（膨胀稀释抽牌质量）
+    "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
+    "min_block_cards": 5,         # 格挡来源（含初始防牌）少于该数 → 格挡技能增值
     # --- events ---
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay

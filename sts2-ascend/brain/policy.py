@@ -280,6 +280,12 @@ class Policy:
         # ---- 全路径规划：从每个候选节点枚举到 Boss 行的所有路径，
         # 按历史场均掉血先验模拟沿途血量演进，投影死亡/低血进 Boss 重罚。
         # 解决贪心逐格选路的盲区：早期分支把后续逼进"唯一可选的精英"。----
+        # 幕数缩放：先验来自一幕场均，二/三幕怪物伤害显著升级，必须放大
+        # （第 18 局 F22 Unknown 连环遭遇战一场 -59，恒定先验完全低估）
+        acts = pol.get("path_act_scale") or [1.0]
+        act_idx = min(len(acts) - 1, max(0, (floor - 1) // 17))
+        act_mul = float(acts[act_idx]) if isinstance(acts[act_idx], (int, float)) else 1.0
+
         def paths_from(start_key) -> list[list[tuple]]:
             out: list[list[tuple]] = []
 
@@ -314,7 +320,9 @@ class Policy:
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
                     notes.append(note)
-                cur_hp -= priors.get(nt, 8) * deck_ease
+                cur_hp -= priors.get(nt, 8) * deck_ease * act_mul
+                if nt == "Unknown" and act_idx >= 1:
+                    cur_hp -= priors.get(nt, 8) * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
                     cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
                 if cur_hp <= 0:
@@ -380,6 +388,7 @@ class Policy:
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
         my_block = player.get("block", 0)
         my_hp = player.get("current_hp", 1)
+        my_max_hp = max(1, player.get("max_hp", my_hp))
         block_gap = max(0, incoming - my_block)
 
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
@@ -418,7 +427,8 @@ class Policy:
                 cost = energy  # dump all energy
             if cost > energy:
                 continue
-            score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol)
+            score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
+                                                   my_hp, my_max_hp)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -453,11 +463,15 @@ class Policy:
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
-    def _score_play(self, card, enemies, incoming, my_block, round_no, pol):
+    def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
+                    my_hp: int = 9999, my_max_hp: int = 9999):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
         必须从 dynamic_values / 文本 / target_type 推断牌的功能。
+
+        生存权重：残血且敌意图可能致死时，压低攻击、抬高格挡——
+        第 18 局 F22 致命战在意图 44~50 时仍连续输出不补防，直接阵亡。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -465,13 +479,24 @@ class Policy:
         aoe = ("所有敌人" in text or "all enemies" in text.lower()
                or (card.get("target_type") or "") == "AllEnemies")
 
+        hp_pct = my_hp / max(1, my_max_hp)
+        gap = max(0, incoming - my_block)
+        lethal = gap >= my_hp              # 本回合就可能被打死
+        urgent = gap > 0 and hp_pct < 0.45  # 慢性失血下的低血量状态
+        if lethal:
+            atk_damp, blk_boost = 0.55, 1.8
+        elif urgent:
+            atk_damp, blk_boost = 0.75, 1.4
+        else:
+            atk_damp, blk_boost = 1.0, 1.0
+
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
             total = dmg * hits
             if aoe:
                 eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
-                score = eff + pol["kill_bonus"] * len(killable)
+                score = eff * atk_damp + pol["kill_bonus"] * len(killable)
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 return score, None, f"群体伤害≈{eff}"
@@ -479,9 +504,9 @@ class Policy:
             for e in enemies:
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
-                s = eff + threat * 0.3
+                s = (eff + threat * 0.3) * atk_damp
                 if eff >= e.get("current_hp", 9999):
-                    s += pol["kill_bonus"]
+                    s += pol["kill_bonus"]  # 击杀直接消灭意图来源，不吃衰减
                     why = f"可击杀{e['name']}"
                 if best_t is None or s > best_s:
                     valid = card.get("valid_target_indices") or []
@@ -496,7 +521,7 @@ class Policy:
         # --- 防御/技能牌（有格挡数值） ---
         if block > 0:
             useful = min(block, max(0, incoming - my_block))
-            score = useful * 1.05 * pol["block_safety"] + (block - useful) * 0.2
+            score = (useful * 1.05 * pol["block_safety"] + (block - useful) * 0.2) * blk_boost
             why = f"格挡{block}"
             dr = draw_amount(card)
             if dr:
@@ -569,36 +594,45 @@ class Policy:
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
         value = 0.0
+
+        # --- 卡组形态上下文 ---
+        n_attack = sum(1 for c in deck if is_attack(c)) if deck else 0
+        ratio = n_attack / len(deck) if deck else 0.45  # 无卡组上下文（升级/删除）按中性占比
+        n_block = sum(1 for c in deck
+                      if (is_skill(c) and card_numbers(c)[1] > 0)
+                      or "DEFEND" in (c.get("card_id") or "").upper()) if deck else 0
+        good_cards = sum(1 for c in deck
+                         if not ("STRIKE" in (c.get("card_id") or "").upper()
+                                 or "DEFEND" in (c.get("card_id") or "").upper()
+                                 or is_bad_card(c))) if deck else 0
+
+        # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
+        # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠
         if is_attack(card):
-            value += dmg * hits * 1.0 + (1.0 if cost <= 1 else 0.0)
+            atk_scale = clamp(1.3 - 1.4 * ratio, 0.15, 1.2)
+            value += (dmg * hits * 1.0 + (1.0 if cost <= 1 else 0.0)) * atk_scale
+            if ratio < 0.35:
+                value += 1.5  # 输出不足时额外鼓励补攻击
         elif is_skill(card):
             value += block * 0.8 + draw_amount(card) * 1.5
+            # 格挡来源绝对数稀缺（初始 4 张防牌很快被稀释，旧占比判定 <20% 几乎不触发）
+            if block > 0 and deck and n_block < pol.get("min_block_cards", 5):
+                value += 1.5
         elif is_power(card):
             value += 5.0
         elif is_bad_card(card):
             value -= 10.0
         value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)
-        # deck shape: 攻击占比双向调节 + 防御稀缺加成
-        # （17 局只拿过 1 张 DEFEND：选牌端偏爱攻击、战斗端 block_safety 顶格，攻防失衡是失血根因之一）
-        if deck:
-            n_attack = sum(1 for c in deck if is_attack(c))
-            ratio = n_attack / max(1, len(deck))
-            if is_attack(card):
-                if ratio < 0.35:
-                    value += 1.5
-                elif ratio > 0.55:
-                    value -= 2.5  # 攻击过剩稀释抽牌质量，拖长战斗
-            if block > 0:
-                n_block = sum(1 for c in deck
-                              if (is_skill(c) and card_numbers(c)[1] > 0)
-                              or "DEFEND" in (c.get("card_id") or "").upper())
-                if n_block / max(1, len(deck)) < 0.2:
-                    value += 1.5  # 防御稀缺，格挡技能增值
         # 自残牌在慢性失血环境下额外惩罚（BREAKTHROUGH/HEMOKINESIS 类）
         if re.search(r"失去\s*\d+\s*点?生命|lose\s+\d+\s*(?:hp|health|life)", _text(card), re.I):
             value -= 2.0
         if cost >= 3:
             value -= 1.0
+        # 卡组规模软上限：非基础牌超出后逐张贬值——膨胀稀释抽牌质量是战斗拖长的根因
+        if deck:
+            overflow = good_cards - pol.get("deck_soft_cap", 20)
+            if overflow > 0:
+                value -= overflow * pol.get("deck_overflow_penalty", 0.9)
         value += self.know.card_value(card.get("card_id", ""))
         self.know.commit_card_seen(card.get("card_id", ""))
         return value
@@ -644,6 +678,10 @@ class Policy:
             if key in self._reward_tried:
                 continue
             if rtype in ("Gold", "Relic", "Potion") and "claim_reward" in actions:
+                if rtype == "Potion":
+                    pots = run.get("potions", [])
+                    if pots and all(p.get("occupied") for p in pots):
+                        continue  # 药水栏已满：领取必失败，直接放弃避免重试空转
                 self._reward_tried.add(key)
                 tags = [("relic_pick", opt.get("description", ""))] if rtype == "Relic" else []
                 return Decision("claim_reward", {"option_index": opt["index"]},

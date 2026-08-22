@@ -139,6 +139,13 @@ class DbSource:
                         return []
                     self.session_id = row[0]
                     self.meta = {"title": row[1], "model": row[2], "time_created": row[3]}
+                    # 跳过 user 提示词（几万字的数据包不属于"推理过程"），从 assistant 输出开始播
+                    db2 = db.execute(
+                        "SELECT m.time_created FROM part p JOIN message m ON p.message_id = m.id "
+                        "WHERE p.session_id=? AND json_extract(m.data, '$.role') != 'user' "
+                        "ORDER BY m.time_created LIMIT 1", (self.session_id,)).fetchone()
+                    if db2 and db2[0]:
+                        self.last_ts = db2[0] - 1
                 rows = db.execute(
                     "SELECT time_created, data FROM part WHERE session_id=? AND time_created>? "
                     "ORDER BY time_created", (self.session_id, self.last_ts)).fetchall()
@@ -419,7 +426,10 @@ class Viewer:
                 self.model_name = raw_model
                 tc = m.get("time_created")
                 if tc:
-                    self.start_time = time.time() - max(0, time.time() - tc / 1000)
+                    age = time.time() - tc / 1000
+                    if 0 < age < 6 * 3600:
+                        self.start_time = time.time() - age
+                    # 时钟偏移或会话太旧：保持查看器启动时刻，避免 T+ 显示失真
             for style, text in self.source.poll():
                 self.add_text(text, style)
             if self.source.ended:
@@ -441,11 +451,11 @@ class Viewer:
     def _render_text(self, dt: float, now: float) -> None:
         total = sum(len(t) for t, _ in self.lines)
         backlog = total - self.reveal
-        cps = 140.0 if backlog < 300 else backlog * 2.0
+        cps = max(260.0, min(backlog * 2.5, 8000.0))   # 快速追平但不至于瞬移
         self.reveal = min(float(total), self.reveal + cps * dt)
 
         self.canvas.delete("txt")
-        max_visible = (self.win_h - 90) // LINE_H
+        max_visible = (self.win_h - 130) // LINE_H   # 顶部 HUD(~78px) + 底部横幅(~50px) 避让
         visible = self.lines[-max_visible:]
         base = total - sum(len(t) for t, _ in visible)   # 可见区之前的字符数
         y0 = 78
