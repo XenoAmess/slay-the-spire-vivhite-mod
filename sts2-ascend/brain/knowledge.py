@@ -58,6 +58,11 @@ DEFAULT_POLICY = {
     "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
     "min_block_cards": 5,         # 格挡来源（含初始防牌）少于该数 → 格挡技能增值
     "pick_threshold_per_overflow": 1.5,  # 拿牌门槛随膨胀抬升：每超软上限一张，门槛 +1.5（第 65 局 24 张卡组实证：固定阈值压不住注水）
+    # --- 卡组构建补丁（第 71 局复盘） ---
+    "duplicate_pick_penalty": 3.0,  # 卡组已有≥2张同(基础)id牌后，每再拿一张的减分（71 局 SHRUG×5/FB×4 实证）
+    "unplayed_min_picked": 4,       # 「拿了不打」判定的最小生涯拾取局数
+    "unplayed_play_rate": 0.5,      # plays/picked ≤ 此值视为「拿了不打」（71 局 FLAME_BARRIER 13拿6打）
+    "unplayed_card_penalty": 4.0,   # 「拿了不打」的牌在拾取端的额外减分
     # --- events ---
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay

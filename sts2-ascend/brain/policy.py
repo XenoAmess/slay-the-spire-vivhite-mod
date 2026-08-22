@@ -853,6 +853,29 @@ class Policy:
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
         floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
 
+        def _hybrid_defense() -> tuple[float, str] | None:
+            """混合牌（伤害与格挡并存，如火焰屏障系）的防御面向评分。
+
+            第 71 局 Boss 终盘实证（05:33:08）：火焰屏障+被解析成 6 点弱攻击，
+            致死回合（服务端 end_turn_will_kill_player）被压到禁玩线弃权——
+            而它的本体是 16 点格挡，足以完全抵消当轮意图救回一命。
+            card_numbers 的 dmg>0 分支会遮蔽格挡价值，攻防两面必须取优：
+            有缺口时防御面向往往远高于弱攻击面，无缺口时自动回落攻击面。
+            """
+            if block <= 0:
+                return None
+            useful_b = min(block, max(0, incoming - my_block))
+            s = (useful_b * 1.05 * pol["block_safety"]
+                 + (block - useful_b) * float(pol.get("block_excess_value", 0.03))) * blk_boost
+            why_b = f"格挡{block}"
+            dr_b = draw_amount(card)
+            if dr_b:
+                s += dr_b * 1.5
+                why_b += f"/抽牌{dr_b}"
+            if cost == 0:
+                s += pol["free_card_bonus"]
+            return s, why_b
+
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
             total = dmg * hits
@@ -879,6 +902,9 @@ class Policy:
                     score = min(score, floor_score)
                 if cost == 0:
                     score += pol["free_card_bonus"]
+                hb = _hybrid_defense()
+                if hb is not None and hb[0] > score:
+                    return hb[0], None, hb[1]
                 return score, None, f"群体伤害≈{eff}"
             best_t, best_s, why, best_kill = None, -1.0, "", False
             _valid = (card.get("valid_target_indices") or []) if card.get("requires_target") else []
@@ -926,6 +952,9 @@ class Policy:
                     best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))  # 血越少自残越贵
             if cost == 0:
                 best_s += pol["free_card_bonus"]
+            hb = _hybrid_defense()
+            if hb is not None and hb[0] > best_s:
+                return hb[0], None, hb[1]
             return best_s, best_t, why
 
         # --- 防御/技能牌（有格挡数值） ---
@@ -1112,7 +1141,9 @@ class Policy:
             atk_scale = clamp(1.3 - 1.4 * ratio, 0.15, 1.2)
             value += (dmg * hits * 1.0 + (1.0 if cost <= 1 else 0.0)) * atk_scale
             if ratio < 0.35:
-                value += 1.5  # 输出不足时额外鼓励补攻击
+                # 输出不足时额外鼓励补攻击；越枯竭越急迫（第 71 局终局卡组
+                # 攻击占比 ~20%，Boss 战输出跌到裸打击水平）
+                value += 1.5 + min(2.5, (0.35 - ratio) * 12.0)
             # AoE 定价随存量递减（第 56~57 局复盘）：致死榜前列全是多体/召唤组合
             # （第 57 局 16 张入组牌 0 张群体攻击，双子 Boss 七回合斩杀失败），
             # 首张群体攻击是结构性稀缺资源(+3)；已有 1 张仍增值(+2)；
@@ -1149,6 +1180,21 @@ class Policy:
         # 删除/变化场景里该惩罚反而抬高其"最该删"排序，语义自洽
         if not card.get("upgraded") and ("STRIKE" in cid or "DEFEND" in cid):
             value -= 4.0
+        # 同名重复递减（第 71 局实锤）：单局拿进 SHRUG_IT_OFF×5 / FLAME_BARRIER×4——
+        # 同名牌边际收益骤减且稀释抽牌质量。按基础 id（去升级后缀）计数，
+        # 已有 ≥2 张起每再拿一张线性加重扣分，把名额让给卡组缺的维度
+        _base_id = cid.rstrip("+")
+        _copies = sum(1 for c in deck
+                      if ((c.get("card_id") or "").upper().rstrip("+") == _base_id)) if deck else 0
+        if _copies >= 2:
+            value -= (_copies - 1) * float(pol.get("duplicate_pick_penalty", 3.0))
+        # 「拿了不打」贬值（第 71 局实证）：FLAME_BARRIER 生涯 13 拿 6 打——
+        # 长期占据手牌打不出去的牌等于卡组注水。生涯 picked≥unplayed_min_picked
+        # 且 plays ≤ unplayed_play_rate × picked 时，拾取端额外惩罚
+        _e_card = self.know.stats.get("cards", {}).get(_base_id) or {}
+        if (_e_card.get("picked", 0) >= int(pol.get("unplayed_min_picked", 4))
+                and _e_card.get("plays", 0) <= float(pol.get("unplayed_play_rate", 0.5)) * _e_card["picked"]):
+            value -= float(pol.get("unplayed_card_penalty", 4.0))
         # 统计实锤的低价值牌（样本≥4 且场均显著低于全局均值）硬性回避：
         # EXPECT_A_FIGHT(6.6分/5局)、BASH(7.2分/6局) 的 learned value ≈ -2.8，
         # 压不住格挡/抽牌启发式的 12+ 基础分，必须用大额惩罚对冲
@@ -1259,24 +1305,36 @@ class Policy:
 
         upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
         transforming = "transform" in kind or "变化" in prompt
+        # 战斗中手牌强制选牌（kind=combat_hand_select）＝敌方献祭语义：
+        # Vantom 每阶段结束强制从手牌交出一张（第 71 局 Boss 战五连献祭——
+        # 通用"最高价值"分支把火焰屏障+×3、耸肩无视+×2 亲手喂给 Boss，
+        # 伤口×2~3 在候选里却视而不见，防御核心被拆光后意图 26→32 磨死）。
+        # 敌方强制的交牌永远交最不值钱者：状态牌 > 未升级基础牌 > 低价值牌。
+        tribute = ("combat_hand" in kind) and not upgrading
 
         candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
 
+        def badness(c):
+            t = card_type(c).lower()
+            if t == "curse":
+                return 100
+            if t == "status":
+                return 90
+            cid = (c.get("card_id") or "").upper()
+            if "STRIKE" in cid and not c.get("upgraded"):
+                return 50
+            return -self.eval_reward_card(c, [])
+
         if removing or transforming:
-            def badness(c):
-                t = card_type(c).lower()
-                if t == "curse":
-                    return 100
-                if t == "status":
-                    return 90
-                cid = (c.get("card_id") or "").upper()
-                if "STRIKE" in cid and not c.get("upgraded"):
-                    return 50
-                return -self.eval_reward_card(c, [])
             pick = max(candidates, key=badness)
             verb = "删除" if removing else "变化"
             tag = "card_remove" if removing else "card_transform"
             reason = f"{verb}卡牌：【{pick.get('name')}】（最无价值）"
+        elif tribute:
+            pick = max(candidates, key=badness)
+            tag = "card_sacrifice"
+            reason = (f"战斗献祭：【{pick.get('name')}】（敌方强制交牌，交出最无价值者；"
+                      f"候选：{' / '.join(c.get('name', '?') for c in candidates)}）")
         elif upgrading:
             best, best_v = None, -1e9
             for c in candidates:

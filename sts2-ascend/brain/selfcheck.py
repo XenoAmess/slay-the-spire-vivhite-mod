@@ -1000,6 +1000,114 @@ def main() -> int:
     assert d_bl2.action == "select_deck_card", \
         f"空卡组应照常拿牌: {d_bl2.action}（{d_bl2.reason}）"
 
+    # 3ii) 战斗中手牌献祭（第 71 局实锤）：Vantom 每阶段结束强制从手牌交一张，
+    #      旧通用分支按"最高价值"点选——五连献祭把火焰屏障+×3/耸肩无视+×2 喂给
+    #      Boss，伤口在候选里却视而不见，防御核心被拆光后意图 26→32 磨死。
+    #      修复后 combat_hand 选屏按 badness 交最不值钱者，且逐张递进；
+    #      负例：普通拿牌屏（无 combat_hand 语义）仍取最高价值。
+    tribute_cards = [
+        {"index": 0, "card_id": "SHRUG_IT_OFF", "name": "耸肩无视+", "card_type": "Skill",
+         "energy_cost": 1, "rules_text": "获得11点格挡。抽1张牌。",
+         "dynamic_values": [{"name": "Block", "current_value": 11},
+                            {"name": "Draw", "current_value": 1}]},
+        {"index": 1, "card_id": "WOUND", "name": "伤口", "card_type": "Status",
+         "energy_cost": 1, "rules_text": "无法打出。"},
+        {"index": 2, "card_id": "STRIKE_IRONCLAD", "name": "打击", "card_type": "Attack",
+         "energy_cost": 1, "upgraded": False,
+         "dynamic_values": [{"name": "Damage", "current_value": 6}]}]
+    tribute_state = {"screen": "CARD_SELECTION",
+                     "available_actions": ["select_deck_card"],
+                     "selection": {"kind": "combat_hand_select", "prompt": "选择一张牌。",
+                                   "min_select": 1, "selected_count": 0, "can_confirm": False,
+                                   "cards": [dict(c) for c in tribute_cards]},
+                     "run": {"current_hp": 32, "max_hp": 80, "gold": 37, "floor": 71, "deck": []}}
+    d_tb1 = pol.decide(dict(tribute_state), ctx)
+    assert d_tb1.params.get("option_index") == 1 and "献祭" in d_tb1.reason, \
+        f"战斗献祭必须交出最不值钱的牌（应选伤口而非耸肩无视）: {d_tb1.reason}"
+    d_tb2 = pol.decide(dict(tribute_state), ctx)
+    assert d_tb2.params.get("option_index") == 2 and "献祭" in d_tb2.reason, \
+        f"多次献祭应逐张交出次差者（伤口已交出后应交打击）: {d_tb2.reason}"
+    gain_state = {"screen": "CARD_SELECTION",
+                  "available_actions": ["select_deck_card"],
+                  "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                                "min_select": 1, "selected_count": 0, "can_confirm": False,
+                                "cards": [dict(c) for c in tribute_cards]},
+                  "run": {"current_hp": 60, "max_hp": 80, "gold": 37, "floor": 71, "deck": []}}
+    d_tg = pol.decide(gain_state, ctx)
+    assert d_tg.params.get("option_index") == 0 and "献祭" not in d_tg.reason, \
+        f"普通拿牌屏被误判为献祭: {d_tg.reason}"
+
+    # 3jj) 同名重复递减 + 「拿了不打」贬值（第 71 局）：单局 SHRUG_IT_OFF×5、
+    #      FLAME_BARRIER 生涯 13 拿 6 打——同名牌从第 3 张起每张 -3，
+    #      长期打不出去的牌拾取端额外 -4；健康出牌率的对照牌不受影响。
+    guard_card = {"card_id": "GUARD_WALL", "name": "高墙", "card_type": "Skill",
+                  "energy_cost": 1, "rules_text": "获得8点格挡。",
+                  "dynamic_values": [{"name": "Block", "current_value": 8}]}
+
+    def guard_deck(n):
+        return [dict(guard_card) for _ in range(n)]
+
+    v_g0 = pol.eval_reward_card(dict(guard_card), [])
+    v_g2 = pol.eval_reward_card(dict(guard_card), guard_deck(2))
+    v_g3 = pol.eval_reward_card(dict(guard_card), guard_deck(3))
+    v_g4 = pol.eval_reward_card(dict(guard_card), guard_deck(4))
+    thr_pick = float(know.policy["card_pick_threshold"])
+    assert v_g0 >= thr_pick, f"首张合格防牌应可拿: {v_g0:.2f}"
+    # 已有 2 张时候选 -3；此后每多一张再 -3（deck 非空使格挡稀缺 +1.5 生效，
+    # 故首段差值为 -3+1.5=1.5）
+    assert abs((v_g0 - v_g2) - 1.5) < 1e-6, \
+        f"同名重复第3张应-3(叠加稀缺+1.5): {v_g0:.2f}→{v_g2:.2f}"
+    for prev, cur in ((v_g2, v_g3), (v_g3, v_g4)):
+        assert abs((prev - cur) - 3.0) < 1e-6, \
+            f"同名重复递减步长应为-3: {prev:.2f}→{cur:.2f}"
+    assert v_g2 >= thr_pick > v_g3, \
+        f"递减阈值穿越点错误: v_g2={v_g2:.2f} v_g3={v_g3:.2f}"
+    know.stats.setdefault("cards", {})["NEVER_PLAYED"] = {
+        "seen": 20, "picked": 13, "plays": 6, "outcome_sum": 130.0, "bias": 0.0}
+    know.stats["cards"]["ALWAYS_PLAYED"] = {
+        "seen": 20, "picked": 10, "plays": 40, "outcome_sum": 100.0, "bias": 0.0}
+    np_card = dict(guard_card, card_id="NEVER_PLAYED")
+    ap_card = dict(guard_card, card_id="ALWAYS_PLAYED")
+    v_np = pol.eval_reward_card(np_card, [])
+    v_ap = pol.eval_reward_card(ap_card, [])
+    assert v_ap - v_np >= 3.9, \
+        f"「拿了不打」贬值失效: never={v_np:.2f} always={v_ap:.2f}"
+
+    # 3kk) 混合牌攻防双面向（第 71 局 Boss 终盘 05:33:08 实证）：火焰屏障+
+    #      （伤害6+格挡16）被解析成弱攻击，致死回合被压到禁玩线弃权阵亡——
+    #      其本体格挡足以完全抵消当轮意图。有缺口时防御面向必须胜出；
+    #      无缺口时攻击面向自动回落（负例：满甲空意图仍正常输出）。
+    fb_plus = {"index": 0, "card_id": "FLAME_BARRIER", "name": "火焰屏障+", "playable": True,
+               "energy_cost": 1, "requires_target": False,
+               "rules_text": "获得16点格挡。下个敌人回合开始时，对攻击你的敌人造成等量伤害。",
+               "dynamic_values": [{"name": "Damage", "current_value": 6},
+                                  {"name": "Block", "current_value": 16}]}
+    fb_lethal = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 21,
+        "combat": {"player": {"current_hp": 27, "max_hp": 80, "block": 0, "energy": 3},
+                   "end_turn_will_kill_player": True,
+                   "hand": [dict(fb_plus)],
+                   "enemies": [{"index": 0, "enemy_id": "VANTOM", "name": "墨影幻灵",
+                                "current_hp": 90, "max_hp": 173, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 15}]}]},
+        "run": {"current_hp": 27, "max_hp": 80, "gold": 37, "floor": 17, "deck": []}}
+    d_fb = pol.decide(fb_lethal, ctx)
+    assert d_fb.action == "play_card" and "格挡16" in d_fb.reason, \
+        f"混合牌致死回合应走防御面向补防而非弃权: {d_fb.action}（{d_fb.reason}）"
+    fb_calm = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 22,
+        "combat": {"player": {"current_hp": 27, "max_hp": 80, "block": 30, "energy": 3},
+                   "hand": [dict(fb_plus)],
+                   "enemies": [{"index": 0, "enemy_id": "VANTOM", "name": "墨影幻灵",
+                                "current_hp": 90, "max_hp": 173, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": []}]},
+        "run": {"current_hp": 27, "max_hp": 80, "gold": 37, "floor": 17, "deck": []}}
+    d_fbc = pol.decide(fb_calm, ctx)
+    assert d_fbc.action == "play_card" and "伤害≈6" in d_fbc.reason, \
+        f"缺口已满时混合牌应回落攻击面: {d_fbc.action}（{d_fbc.reason}）"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
