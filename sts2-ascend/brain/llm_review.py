@@ -1,4 +1,11 @@
-"""LLM 元复盘 —— 每 N 局调用 OpenCode（kimi-for-coding/k3）做一次教练级复盘。
+"""LLM 元复盘 —— 每局后探测优先模型，可用则每局复盘，否则每 N 局用 k3 复盘。
+
+模型策略（见 config.json 的 llm 节）：
+  - 优先模型 preferred_model（默认 openrouter/stealth/ox-alpha，即 Ox Alpha Free）：
+    每局结束后探测 `opencode models`，在清单里且无失败冷却 → 每局复盘一次。
+  - 回退模型 model（默认 kimi-for-coding/k3）：优先模型不可用 → 每 review_every_runs 局复盘。
+  - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
+    分钟，期间直接回退，避免每局白等一个超时。
 
 设计要点：
   - 不直接调模型裸 API（裸 API 只能输出文本，没法真正改代码）；
@@ -29,6 +36,7 @@ CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 PROMPT_FILE = KNOWLEDGE_DIR / "review_prompt_latest.md"
 REVIEW_LOG = KNOWLEDGE_DIR / "meta_review.md"
 MARKER_FILE = KNOWLEDGE_DIR / "pending_restart.json"
+PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 
 
 def load_llm_config() -> dict:
@@ -46,6 +54,11 @@ def load_llm_config() -> dict:
         "review_every_runs": 10,
         "timeout_min": 25,
         "max_runs_in_packet": 10,
+        # Ox Alpha Free（openrouter/stealth/ox-alpha）：可用时每局复盘
+        "preferred_model": "openrouter/stealth/ox-alpha",
+        "preferred_every_runs": 1,
+        "preferred_failure_cooldown_min": 360,
+        "models_probe_timeout_sec": 60,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
     return merged
@@ -103,7 +116,7 @@ def _recent_run_summaries(n: int) -> list[dict]:
     return out
 
 
-def build_prompt(know, cfg: dict) -> str:
+def build_prompt(know, cfg: dict, every: int | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 10))
     packet = {
         "runs_summary": _recent_run_summaries(n),
@@ -114,7 +127,7 @@ def build_prompt(know, cfg: dict) -> str:
     if lessons_path.exists():
         lessons_tail = lessons_path.read_text(encoding="utf-8")[-2500:]
 
-    return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。每 {cfg.get('review_every_runs', 10)} 局你做一次大模型复盘。
+    return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。每 {every or cfg.get('review_every_runs', 10)} 局你做一次大模型复盘。
 智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
 
 # 数据摘要（已内嵌，完整文件可按需深读）
@@ -150,6 +163,85 @@ def build_prompt(know, cfg: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 优先模型可用性探测（每局一次，带失败冷却）
+# ---------------------------------------------------------------------------
+
+def _load_preferred_state() -> dict:
+    try:
+        return json.loads(PREFERRED_STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_preferred_state(state: dict) -> None:
+    try:
+        PREFERRED_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _preferred_cooldown_remaining() -> float:
+    """优先模型失败冷却剩余秒数（0 表示未在冷却中）。"""
+    until = float(_load_preferred_state().get("unavailable_until", 0) or 0)
+    return max(0.0, until - time.time())
+
+
+def _mark_preferred_failure(cfg: dict, log, reason: str) -> None:
+    cooldown_min = float(cfg.get("preferred_failure_cooldown_min", 360))
+    _save_preferred_state({
+        "unavailable_until": time.time() + cooldown_min * 60,
+        "last_failure": reason,
+        "last_failure_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+    })
+    log(f"[llm] 优先模型复盘失败（{reason}），{cooldown_min:.0f} 分钟内回退普通模型")
+
+
+def _mark_preferred_ok() -> None:
+    state = _load_preferred_state()
+    if state.get("unavailable_until"):
+        state["unavailable_until"] = 0
+        _save_preferred_state(state)
+
+
+def _query_available_models(binary: str, cfg: dict, log) -> set[str] | None:
+    """运行 `opencode models` 返回可用模型 id 集合；探测失败返回 None。"""
+    timeout = int(cfg.get("models_probe_timeout_sec", 60))
+    try:
+        proc = subprocess.run([binary, "models"], capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=timeout)
+    except Exception as exc:
+        log(f"[llm] 模型清单探测异常：{exc}")
+        return None
+    if proc.returncode != 0:
+        log(f"[llm] 模型清单探测失败（exit={proc.returncode}）：{(proc.stderr or '')[-200:]}")
+        return None
+    return {ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()}
+
+
+def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, int, str]:
+    """决定本轮复盘的 (模型, 复盘间隔局数, 来源)。
+
+    优先模型可用（在 `opencode models` 清单里且不在失败冷却期）→ 每局复盘；
+    否则回退 cfg["model"] 按 review_every_runs 间隔复盘。
+    """
+    fallback = (cfg["model"], max(1, int(cfg.get("review_every_runs", 10))), "fallback")
+    preferred = cfg.get("preferred_model")
+    if not preferred or not binary:
+        return fallback
+    cooldown = _preferred_cooldown_remaining()
+    if cooldown > 0:
+        log(f"[llm] 优先模型 {preferred} 失败冷却中（剩余 {cooldown / 60:.0f} 分钟）")
+        return fallback
+    models = _query_available_models(binary, cfg, log)
+    if models is None:
+        return fallback
+    if preferred in models:
+        return preferred, max(1, int(cfg.get("preferred_every_runs", 1))), "preferred"
+    log(f"[llm] 优先模型 {preferred} 不在可用清单，回退 {fallback[0]}（每 {fallback[1]} 局）")
+    return fallback
+
+
+# ---------------------------------------------------------------------------
 # review execution
 # ---------------------------------------------------------------------------
 
@@ -174,10 +266,12 @@ def _run_selfcheck(log) -> bool:
     return True
 
 
-def run_review(know, log=print) -> bool:
+def run_review(know, log=print, model: str | None = None, every: int | None = None,
+               source: str = "fallback") -> bool:
     """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
 
     流程：改前 commit 备份 → opencode 广权限复盘 → 自检 → 通过则提交/请求重启，失败则 git 回滚。
+    source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
     """
     cfg = load_llm_config()
     if not cfg.get("enabled"):
@@ -187,6 +281,7 @@ def run_review(know, log=print) -> bool:
     if not binary:
         log(f"[llm] 未找到 opencode 可执行文件（{cfg.get('opencode_bin')}），跳过本次复盘")
         return False
+    model = model or cfg["model"]
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
 
@@ -196,8 +291,8 @@ def run_review(know, log=print) -> bool:
     pre_head = autogit.head()
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
-    log(f"[llm] ===== 启动大模型复盘（{cfg['model']} via opencode，备份点 {pre_head[:8]}）=====")
-    prompt = build_prompt(know, cfg)
+    log(f"[llm] ===== 启动大模型复盘（{model} via opencode [{source}]，备份点 {pre_head[:8]}）=====")
+    prompt = build_prompt(know, cfg, every)
     try:
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
     except OSError:
@@ -205,7 +300,7 @@ def run_review(know, log=print) -> bool:
 
     cmd = [
         binary, "run",
-        "--model", cfg["model"],
+        "--model", model,
         "--title", f"sts2-ascend 复盘 {stamp}",
         "--dir", str(REPO_DIR),
         "--auto",
@@ -218,12 +313,20 @@ def run_review(know, log=print) -> bool:
         log(f"[llm] 复盘会话结束（exit={proc.returncode}）。输出尾部：\n{(proc.stdout or '')[-2000:]}")
         if proc.returncode != 0:
             log(f"[llm] stderr 尾部：{(proc.stderr or '')[-800:]}")
+            if source == "preferred":
+                _mark_preferred_failure(cfg, log, f"exit={proc.returncode}")
             return False
+        if source == "preferred":
+            _mark_preferred_ok()
     except subprocess.TimeoutExpired:
         log(f"[llm] 复盘超时（{cfg.get('timeout_min')} 分钟），本次作废")
+        if source == "preferred":
+            _mark_preferred_failure(cfg, log, "timeout")
         return False
     except Exception as exc:
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
+        if source == "preferred":
+            _mark_preferred_failure(cfg, log, str(exc)[:120])
         return False
 
     # 2) 无变更则无需提交/重启
@@ -258,14 +361,17 @@ def run_review(know, log=print) -> bool:
 
 
 def maybe_review(agent, log=print) -> None:
-    """agent.py 每局结束后调用。到局数就复盘；复盘执行过则在主菜单安全点自重启。"""
+    """agent.py 每局结束后调用。先探测优先模型可用性决定复盘节奏；复盘执行过则在主菜单安全点自重启。"""
     cfg = load_llm_config()
-    every = max(1, int(cfg.get("review_every_runs", 10)))
+    if not cfg.get("enabled"):
+        return
+    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
+    model, every, source = resolve_review_plan(cfg, binary, log=log)
     runs = agent.know.stats["global"]["runs"]
     last = agent.know.progression.get("last_llm_review_run", 0)
     if runs - last < every:
         return
-    executed = run_review(agent.know, log=log)
+    executed = run_review(agent.know, log=log, model=model, every=every, source=source)
     agent.know.progression["last_llm_review_run"] = runs
     agent.know.save()
     if executed:
@@ -280,7 +386,11 @@ def main() -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from knowledge import Knowledge
     know = Knowledge(KNOWLEDGE_DIR)
-    executed = run_review(know)
+    cfg = load_llm_config()
+    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
+    model, every, source = resolve_review_plan(cfg, binary)
+    print(f"plan: model={model} every={every} source={source}")
+    executed = run_review(know, model=model, every=every, source=source)
     print(f"done, executed={executed}")
 
 

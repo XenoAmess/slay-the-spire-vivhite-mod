@@ -53,10 +53,17 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
    事件致死→收敛探索率；胜利→放宽进攻性并提升目标进阶。全部钳制在安全区间内。
 4. **自我总结**：以上全部变化以中文写入 `lessons.md`，形成可读的"成长日记"。
 
-## 大模型复盘（每 10 局）
+## 大模型复盘（优先模型每局 / 回退每 10 局）
 
-内置的统计学习只会调既有参数。**每 10 局**，大脑会暂停并启动一次
-**OpenCode 无头会话**（`opencode run`，模型 `kimi-for-coding/k3`，走本机已有授权，无需 API key），
+内置的统计学习只会调既有参数。**每局结束后**，大脑先探测优先模型
+**Ox Alpha Free**（`openrouter/stealth/ox-alpha`，以 `opencode models` 清单为准）：
+
+- **可用** → 用它**每局**做一次复盘（`preferred_every_runs`，默认 1）
+- **不可用**（未列出/探测失败/失败冷却中）→ 回退 `kimi-for-coding/k3`，**每 10 局**一次
+  （`review_every_runs`）；优先模型执行失败会进入 6 小时冷却（`preferred_failure_cooldown_min`），
+  避免每局白等一个超时
+
+复盘以 **OpenCode 无头会话**（`opencode run`，走本机已有授权，无需 API key）执行，
 由大模型做教练级复盘——**广权限 + git 安全网**：
 
 - 可修改 `sts2-ascend/` 下**任何文件**：策略参数、知识库数据结构、决策代码、配置
@@ -68,15 +75,15 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
   若新代码起不来，`runner.py` 按重启标记再次 git 回滚并自动还原——改坏了最多损失一局时间
 - 复盘报告：`knowledge/meta_review.md`；新经验同步进 `lessons.md`
 
-手动立即触发一次复盘：`py brain/llm_review.py --now`。
-配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/禁用）。
+手动立即触发一次复盘：`py brain/llm_review.py --now`（会先打印本次选用的模型与节奏）。
+配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/冷却/禁用）。
 
 ## 进程结构
 
 ```
 runner.py（监督进程：拉起大脑 / 退出码42重启 / 崩溃自动回滚）
   └─ py -m brain（决策主循环）
-        └─ 每10局 → opencode run（kimi-for-coding/k3 复盘会话）
+        └─ 每局探测 ox-alpha 可用性 → opencode run（可用：ox-alpha 每局复盘 / 否则 k3 每10局）
 ```
 
 每局结束自动 `git commit+push` 存档（`brain/autogit.py`），进化历史全程可追溯。
