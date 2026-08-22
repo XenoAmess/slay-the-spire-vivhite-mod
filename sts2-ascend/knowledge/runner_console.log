@@ -8575,3 +8575,51 @@ Starting brain via runner (auto-restart + auto-rollback; Ctrl+C to stop)...
 [00:48:35] [COMBAT/F4] 战斗：回合过渡中，等待
 [agent] 进入战斗：敌方=LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_S｜历史场均掉血 5.0｜房间类型 Monster
 [00:48:35] [COMBAT/F4] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ NOT edit stats.json/policy.json (I'm not planning to) — only .py and .md files. Good thing this round's changes are all code + docs.
+
+Note the borderline case proj 44.75% vs req 45% — fine.
+
+Now everything checks out:
+- Run-36 scenario (71% HP): elite gated ×0.1 ✓
+- ≥75% HP allowed ✓
+
+Next: verify potion tiering quickly via a small scenario test (selfcheck 3k already covers it and passed).
+
+Now write the meta_review.md section and lessons.md 🧠 section. Get current timestamp first.
+
+Also per instructions: "改完任何 .py 后必须运行 selfcheck" — done after all edits? I edited selfcheck.py itself last among .py edits... I ran it AFTER all py edits including selfcheck changes. knowledge.py/policy.py/selfcheck.py all covered in that run. ✓ No further .py changes planned.
+
+Timestamp: let me get current time.
+Elite 先验已随实时对局漂移为 26.5（宿主大脑正在边玩边写 stats.json），闸门公式自适应正常：71% 血进精英被 ×0.1 规避、≥75% 放行。所有 `.py` 修改已完成且 SELFCHECK 通过。现在写复盘报告与经验沉淀。
+⚙ bash {}
+· tokens 137875 ·
+⚙ bash {}
+· tokens 139896 ·
+💭 Now append the lessons.md 🧠 section. lessons.md is appended by the host automatically with per-run summaries; I need to append a 🧠-titled section. Let me check the end of lessons.md to match format (I saw it in the prompt: "## 🧠 第 30~32 局复盘经验（2026-08-22 23:57）" style). Append after run 36 summary.
+⚙ bash {}
+· tokens 140498 ·
+💭 Now verify the appended content looks right and re-run selfcheck one final time to be safe (no .py changes since last run, but cheap insurance). Also confirm no git operations. Let me view the tail of both md files to confirm encoding is correct (UTF-8, Chinese readable).
+⚙ bash {}
+· tokens 140694 ·
+⚙ todowrite {}
+· tokens 141399 ·
+**复盘总结（第 36 局，2026-08-23 00:45）**
+
+死因链：71% 血进灰区精英单场 -44+两瓶药 → 三篝火全变回血、零锻造 → 65% 血空药水进 Boss → 格挡缺口被磨死。最刺眼发现：路径模拟器全对（预计 65%、实到 65%），是目标函数错了。
+
+五项代码修复：①精英进场闸门按实测战损投影“战后血量”，不达标整条路径 ×0.1；②增益药水只进精英/Boss/致死局（premium 分级）；③高危 Boss 同时抬格挡权重；④惨胜防线——血量将被打穿到 12% 皮血线时按致死回合处理；⑤Elite 房间价值因子封顶防幸存者偏差。SELFCHECK OK，报告已入 meta_review.md，经验已入 lessons.md。
+· tokens 141898 ·
+
+[00:48:36] [COMBAT/F4] 战斗：回合过渡中，等待
+[00:48:36] [COMBAT/F4] 战斗：打出【痛击】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤7，我方73血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:48:38] [COMBAT/F4] 战斗：打出【打击】→树叶史莱姆（小）（单体伤害≈6）；敌意图总伤3，我方73血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:48:39] [COMBAT/F4] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗,防御✗）
+[00:48:39] [COMBAT/F4] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[00:48:41] [COMBAT/F4] 战斗：回合过渡中，等待
+[git] 已自动存档：feat(sts2-ascend): 第36局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
