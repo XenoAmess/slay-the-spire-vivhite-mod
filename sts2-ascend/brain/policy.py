@@ -117,6 +117,11 @@ class Policy:
         self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
         self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
         self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
+        self._race_combat = None    # 战斗实例身份（败局竞速检测用）
+        self._race_round = None     # 已采样的回合号
+        self._race_prev_hp = None   # 回合边界观测血量
+        self._race_loss_rate = 0.0  # 近期每回合净损血 EMA
+        self._race_rounds = 0       # 完成的回合边界采样数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -493,6 +498,16 @@ class Policy:
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
             if final_pct < floor_pct:
                 score -= (floor_pct - final_pct) * 40.0
+            # Boss 入场要求线（第 60~61 局复盘）：投影此前只作日志注释不进评分，
+            # 「预计进 Boss 血量 44%」照样沿 Monster 链一路磨到 Boss 门前。
+            # Boss 场均战损≈45（半个最大生命），低于要求线的入场是数学必死局——
+            # 按差值重罚，让 F10+ 的篝火/商店续航路线能压过继续消耗的战斗路线
+            need_pct = float(pol.get("boss_entry_min_hp_pct", 0.65))
+            if (boss_row is not None and path_keys
+                    and int(path_keys[-1][0]) >= int(boss_row)
+                    and final_pct < need_pct):
+                score -= (need_pct - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
+                notes.append(f"进Boss血量预计{final_pct:.0%}<{need_pct:.0%}，优先续航路线")
             return score, notes, final_pct
 
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
@@ -565,6 +580,14 @@ class Policy:
         if self._kills_combat is not ctx.combat:
             self._kills_combat = ctx.combat
             self._combat_kills = {}
+        # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
+        # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
+        if ctx.combat is None or self._race_combat is not ctx.combat:
+            self._race_combat = ctx.combat
+            self._race_round = None
+            self._race_prev_hp = None
+            self._race_loss_rate = 0.0
+            self._race_rounds = 0
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -589,6 +612,19 @@ class Policy:
         my_hp = player.get("current_hp", 1)
         my_max_hp = max(1, player.get("max_hp", my_hp))
         block_gap = max(0, incoming - my_block)
+
+        # 败局竞速采样：回合边界记录净损血 EMA。取上一回合结束时的血量与本回合
+        # 开始时的差值——已包含我方全部防御决策的净效果，速率居高不下即代表
+        # "边防边耗"的防守路线本身已经失效（61 局 Boss 战意图 19→21→23→25
+        # 递增，每单回合都够不上 lethal，引擎持续半攻半防温水等死）
+        if self._race_round != round_no:
+            if self._race_round is not None and self._race_prev_hp is not None:
+                loss = max(0.0, float(self._race_prev_hp - my_hp))
+                self._race_loss_rate = (loss if self._race_rounds == 0
+                                        else 0.7 * self._race_loss_rate + 0.3 * loss)
+                self._race_rounds += 1
+            self._race_round = round_no
+        self._race_prev_hp = my_hp
 
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
         # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
@@ -633,6 +669,15 @@ class Policy:
         stance = self.know.enemy_stance(comp_id, cctx.get("node_type"))
         danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
 
+        # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
+        # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
+        # 唯一可能翻转时间线的动作是抢在死亡倒计时之前终止战斗
+        race_allin = (
+            self._race_rounds >= 1 and self._race_loss_rate >= 1.0
+            and my_hp <= float(pol.get("hopeless_race_hp_frac", 0.6)) * my_max_hp
+            and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
+        )
+
         best = None  # (score, card, target_index, why)
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
@@ -664,7 +709,8 @@ class Policy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
                                                   my_hp, my_max_hp, stance, forced_kill,
-                                                  reserve_for_block, min_blk_cost, energy)
+                                                  reserve_for_block and not race_allin,
+                                                  min_blk_cost, energy, race_allin)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -716,7 +762,7 @@ class Policy:
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
                     forced_kill: bool = False, reserve_for_block: bool = False,
-                    min_blk_cost: int = 99, cur_energy: int = 0):
+                    min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -736,6 +782,11 @@ class Policy:
         孤注一掷（第 59 局复盘新增）：致死缺口在手却无任何可负担格挡牌时，
         防御路线已不存在，解除非击杀攻击的禁玩压制并提速（desperate_atk_mult），
         抢斩杀让敌人意图作废是唯一活路——旧逻辑此局面 3 能量原样结束回合白吃刀。
+
+        败局竞速（第 60~61 局复盘新增）：净损速率外推 horizon 回合内必死时，
+        即便单回合还有格挡可补也不许再"边防边耗"——温水路线的每一分格挡都只是
+        延缓死亡（61 局 Boss T3~T5 意图 19→21→23→25，T4 手握五张攻击全弃权）。
+        解除能量预留并提速输出；与孤注一掷互斥触发提速，避免双重放大。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -758,6 +809,9 @@ class Policy:
         # 格挡牌时，旧逻辑把全部非击杀攻击压到禁玩线、3 能量原样结束回合白吃
         # 13 刀——无甲可补时防御已不可能，唯一活路是抢斩杀让敌人意图作废。
         desperate = lethal and not reserve_for_block
+        # 败局竞速：整场被判负但单回合尚不致死——desperate 只救"当场必死"，
+        # 这里救的是"两回合内必死"；二者互斥计提速，保证任何局面只放大一次
+        race_allin = hopeless_race and not desperate
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         if lethal:
             atk_damp, blk_boost = 0.55, 1.8
@@ -770,7 +824,7 @@ class Policy:
         # 多敌战斗格挡增值：意图来源越多战斗越长、漏伤越多（第 52~55 局四场
         # 致命战全是 2~3 体组合、滚动总意图 15~26），每点格挡的期望价值更高
         blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
-        if desperate:
+        if desperate or race_allin:
             atk_damp *= float(pol.get("desperate_atk_mult", 1.3))
 
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
@@ -796,7 +850,7 @@ class Policy:
                     for e in killable)
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
-                if lethal and not killable and not desperate:
+                if lethal and not killable and not (desperate or race_allin):
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
                     score = min(score, floor_score)
                 if self_cost and lethal and len(killable) < len(enemies):
@@ -832,13 +886,15 @@ class Policy:
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
-            # 但孤注一掷回合例外：无甲可补时输出就是唯一的防御。
-            if lethal and not best_kill and not desperate:
+            # 但孤注一掷/败局竞速回合例外：防守已不可能或已被证伪时，输出就是唯一的防御。
+            if lethal and not best_kill and not (desperate or race_allin):
                 best_s = min(best_s, floor_score)
             elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
                 best_s -= 8.0  # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）
             elif desperate and not best_kill:
                 why += "｜无甲孤注抢斩杀"
+            elif race_allin and not best_kill:
+                why += "｜败局竞速全攻"
             elif self_cost:
                 if best_kill and len(enemies) == 1:
                     pass  # 击杀最后一个敌人直接终局，自残值得
@@ -871,8 +927,8 @@ class Policy:
         dr = draw_amount(card)
         if dr > 0 or "能量" in text or "energy" in text.lower():
             score = 2.0 + dr * 1.5
-            # 孤注一掷回合例外：多抽一张攻击牌就是多一分抢斩杀的弹药
-            if lethal and not desperate:
+            # 孤注一掷/败局竞速回合例外：多抽一张攻击牌就是多一分抢斩杀的弹药
+            if lethal and not (desperate or race_allin):
                 score = min(score, floor_score)  # 致死回合抽牌/回能救不了命
             if cost == 0:
                 score += pol["free_card_bonus"]

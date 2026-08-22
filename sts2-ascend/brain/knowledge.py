@@ -66,6 +66,11 @@ DEFAULT_POLICY = {
     # --- 战斗端补丁键（第 58~59 局复盘） ---
     "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
     "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）
+    # --- 战略层补丁键（第 60~61 局复盘） ---
+    "boss_entry_min_hp_pct": 0.65,  # 进 Boss 血量要求线：Boss 场均战损约半个最大生命，60~61 批次 44%~69% 入场 5 连亡
+    "boss_entry_penalty": 110.0,    # 路径投影入 Boss 血量每差满血 100% 的评分惩罚：让续航路线能压过消耗路线
+    "hopeless_race_hp_frac": 0.6,   # 败局竞速启用血线：≤60% 最大生命才允许进入竞速模式
+    "hopeless_race_horizon": 2.0,   # 按近期净损速率外推 N 回合内死亡 → 判定被动防守不可行
 }
 
 DEFAULT_PROGRESSION = {

@@ -660,6 +660,91 @@ def main() -> int:
     assert d_ob.action == "play_card" and d_ob.params.get("card_index") == 1, \
         f"缺口已满时溢出格挡不得挤占输出: {d_ob.params}（{d_ob.reason}）"
 
+    # 3y) Boss 入场血量要求线（第 60~61 局复盘）：路径投影此前只写进日志注释，
+    #     「预计进 Boss 44%」照样沿 Monster 链磨到 Boss 门前（61 局 44% 入场被
+    #     仪式兽处决；历史 44%~69% 入场 5 连亡）。低于要求线(65%)的投影按差值
+    #     重罚——同一张地图，惩罚关闭时怪物积累路线胜出，惩罚生效后续航路线反超
+    gate_map = {
+        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [
+                    {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                     "children": [{"row": 2, "col": 0}]},
+                    {"index": 1, "row": 1, "col": 1, "node_type": "Shop",
+                     "children": [{"row": 2, "col": 0}]}],
+                "nodes": [
+                    {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                     "children": [{"row": 2, "col": 0}]},
+                    {"index": 1, "row": 1, "col": 1, "node_type": "Shop",
+                     "children": [{"row": 2, "col": 0}]},
+                    {"row": 2, "col": 0, "node_type": "Boss"}],
+                "boss_node": {"row": 2}},
+        "run": {"current_hp": 56, "max_hp": 80, "gold": 0, "floor": 14, "deck": []}}
+    know.policy["boss_entry_penalty"] = 0.0    # 复现旧行为：无入场要求线
+    d_gate_off = pol.decide(dict(gate_map), ctx)
+    assert d_gate_off.params.get("option_index") == 0, \
+        f"基线失效（无惩罚时怪物积累路线应胜出）: {d_gate_off.reason}"
+    know.policy["boss_entry_penalty"] = 110.0  # 生效：低投影入场被重罚，商店续航反超
+    d_gate_on = pol.decide(dict(gate_map), ctx)
+    assert d_gate_on.params.get("option_index") == 1, \
+        f"Boss 入场要求线未生效（打一场后仅剩60%进场应让位续航路线）: {d_gate_on.reason}"
+    solo_map = {
+        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [
+                    {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                     "children": [{"row": 2, "col": 0}]}],
+                "nodes": [
+                    {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                     "children": [{"row": 2, "col": 0}]},
+                    {"row": 2, "col": 0, "node_type": "Boss"}],
+                "boss_node": {"row": 2}},
+        "run": {"current_hp": 48, "max_hp": 80, "gold": 0, "floor": 14, "deck": []}}
+    d_solo = pol.decide(solo_map, ctx)
+    assert "进Boss血量预计" in d_solo.reason and "优先续航" in d_solo.reason, \
+        f"低投影入场未在决策理由中标注: {d_solo.reason}"
+
+    # 3z) 败局竞速（第 61 局 Boss 战 T3~T5 实证：意图 19→21→23→25 递增、净损
+    #     速率 ~14/回合对 30 余血，每单回合都够不上 lethal/pyrrhic，引擎持续
+    #     半攻半防温水等死）。按净损 EMA 外推 ≤2 回合必死时：解除能量预留并
+    #     提速输出——打击必须压过防御；负例：无失血历史的新战斗中防御仍应胜出
+    def race_state(hp_now, turn_no, combat_obj):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": combat_obj,
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    def race_combat(hp_now):
+        return {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 1},
+                "hand": [
+                    {"index": 0, "card_id": "RACE_STRIKE", "name": "重击", "playable": True,
+                     "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                     "dynamic_values": [{"name": "Damage", "current_value": 15}]},
+                    {"index": 1, "card_id": "RACE_GUARD", "name": "铁壁", "playable": True,
+                     "energy_cost": 1, "requires_target": False,
+                     "rules_text": "获得9点格挡",
+                     "dynamic_values": [{"name": "Block", "current_value": 9}]}],
+                "enemies": [{"index": 0, "enemy_id": "CEREMONIAL", "name": "仪式兽",
+                             "current_hp": 200, "max_hp": 240, "block": 0,
+                             "is_alive": True, "is_hittable": True,
+                             "intents": [{"total_damage": 12}]}]}
+
+    cb_race = race_combat(56)
+    ctx.combat = cb_race
+    for hp_now, turn_no in ((56, 1), (44, 2), (33, 3)):   # R1~R3：建立净损采样
+        cb_race["player"]["current_hp"] = hp_now          # 游戏端每 tick 上报新血量
+        pol.decide(race_state(hp_now, turn_no, cb_race), ctx)
+    cb_race["player"]["current_hp"] = 22
+    d_race = pol.decide(race_state(22, 4, cb_race), ctx)  # R4：外推 ≤2 回合死亡 → 竞速
+    assert d_race.action == "play_card" and d_race.params.get("card_index") == 0 \
+        and "败局竞速" in d_race.reason, \
+        f"败局竞速未触发（死亡倒计时内应全力输出而非补防）: {d_race.action}（{d_race.reason}）"
+    cb_fresh = race_combat(22)                           # 同局面但无失血历史的新战斗
+    ctx.combat = cb_fresh
+    d_ctrl = pol.decide(race_state(22, 1, cb_fresh), ctx)
+    assert d_ctrl.action == "play_card" and d_ctrl.params.get("card_index") == 1, \
+        f"败局竞速误触发（无失血历史不得放弃防御）: {d_ctrl.params}（{d_ctrl.reason}）"
+    ctx.combat = None
+
     # 3v) 前期怪物加成的健康门槛（第 56 局复盘）：floor<=8 的 ×1.25 积累加成只在
     #     血量健康(≥警戒带62%)时生效——44%~62% 警戒带内曾吃满加成以 0.96 分压过
     #     Unknown 岔路（25.52 vs 24.56），随后漏斗行军阵亡
