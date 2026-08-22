@@ -17823,3 +17823,64 @@ Final summary ≤200 characters (字). The task says "完成后，用 200 字以
 [02:33:09] [COMBAT/F8] 战斗：打出【挑衅】→藤蔓蹒跚者（格挡6）；敌意图总伤16，我方46血/7甲
   ↳ 动作 play_card 返回 completed: Action completed.
 [02:33:10] [COMBAT/F8] 战斗：打出【防御】（格挡5）；敌意图总伤16，我方46血/13甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[llm] 复盘会话结束（exit=0）。输出尾部：
+）：①修复后生涯统计应稳定在真实值（下次复盘核对 runs 是否 = 台账数-0）；②Boss 前夜篝火回血率应为 100%（<95% 血时）；③EYE_WITH_TEETH+FOGMOG 等 2 战样本组合满 3 战后 stance 接管效果。
+
+Hmm, need to keep it reasonably concise but complete. Also mention 第 50 局's actual gameplay briefly. OK.
+
+For lessons.md 🧠 section:
+
+## 🧠 第 50~51 局复盘经验（2026-08-23 02:xx）
+
+1. **幻影局根治**：重启落在结算屏时，GAME_OVER 帧上的旧 run_id 只是回声——新对局识别已排除该屏，且零决策对局一律不入账/存档/触发复盘。历史上 4 个幻影局（19/26/42/51）已由一次性迁移从生涯统计中扣除（-4 局 -56 层），标记 phantom_repair_v1 幂等。
+2. **死因标注纠偏**："失败但无死亡数据"现在如实写"无记录（数据缺失）"，不再冒充"无（胜利）"。
+3. **Boss 前夜篝火必回血**：地图选中 boss_row-1 的篝火时，<95% 血强制休息（48 局实证：72% 血锻造后 Boss 战 -58 正好打死，回血可 +24 保命）；≥95% 才锻造。
+4. 本轮五项修复全部落在代码层（agent/knowledge/policy/reflect/selfcheck），policy.json 参数零改动；新增 selfcheck 断言 3r/3s 锁死行为。
+
+Then final summary ≤200 字.
+
+Let me get current time for the headers. It's 2026-08-23, time now ~? Let me check quickly with PowerShell. Actually the log shows reviews around 02:01; now is later. Let me get the time.
+现在正在将评审报告追加到 `meta_review.md`：
+⚙ bash {}
+· tokens 142075 ·
+⚙ bash {}
+· tokens 143883 ·
+💭 Now append the lessons.md 🧠 section. The lessons.md tail currently ends with the 第 51 局复盘 entry. Append the new 🧠 section.
+⚙ bash {}
+· tokens 144356 ·
+⚙ todowrite {}
+💭 All done:
+1. ✅ Read review prompt fully
+2. ✅ Attribution analysis (phantom runs root cause, pre-boss smith issue, run 50 combat)
+3. ✅ meta_review.md appended with dated section
+4. ✅ Code fixes: agent.py, knowledge.py, policy.py, reflect.py — all inside sts2-ascend/
+5. ✅ selfcheck passes (SELFCHECK OK)
+6. ✅ lessons.md 🧠 section appended
+7. ✅ No git ops, no process start/stop, nothing outside sts2-ascend/ modified
+
+Update todos and give the ≤200-char summary.
+· tokens 144784 ·
+**复盘总结（第 50~51 局）**
+
+核心发现：第 51 局是幻影局——大脑重启落在上一局结算屏，GAME_OVER 帧的旧 run_id 回声被当成新对局二次结算入账。同型事故共 4 次（19/26/42/51 局），生涯统计灌水 4 局 56 层。修复：新对局识别排除 GAME_OVER、零决策 finalize 守卫、按 runs/ 台账一次性回滚统计（幂等标记）；另修死因“无（胜利）”误标、Boss 前夜篝火强制回血（48 局实证 72% 血锻造后 -58 阵亡）。新增 selfcheck 3r/3s 断言，SELFCHECK OK。报告已入 meta_review.md 与 lessons.md。
+· tokens 145294 ·
+
+[02:33:12] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（痛击✗）
+[02:33:12] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[02:33:14] [COMBAT/F8] 战斗：回合过渡中，等待
+[02:33:15] [COMBAT/F8] 战斗：回合过渡中，等待
+[02:33:15] [COMBAT/F8] 战斗：回合过渡中，等待
+[02:33:16] [COMBAT/F8] 战斗：回合过渡中，等待
+[02:33:17] [COMBAT/F8] 战斗：回合过渡中，等待
+[git] 已自动存档：feat(sts2-ascend): 第50~51局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[02:33:17] [COMBAT/F8] 战斗：回合过渡中，等待
+[02:33:18] [COMBAT/F8] 战斗：打出【打击】→藤蔓蹒跚者（单体伤害≈6）；敌意图总伤12，我方46血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[02:33:21] [COMBAT/F8] 战斗：打出【坚毅】（格挡7）；敌意图总伤12，我方46血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[02:33:22] [COMBAT/F8] 战斗：打出【挑衅】→藤蔓蹒跚者（格挡6）；敌意图总伤12，我方46血/7甲
+  ↳ 动作 play_card 返回 completed: Action completed.
