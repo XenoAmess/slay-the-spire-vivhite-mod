@@ -520,3 +520,14 @@
 4. **生存判定要有余量维度**：lethal 与安全之间隔着"惨胜区"。补防后剩余缺口会把血量打穿到 max_hp 12% 以下时按致死回合处理（可击杀豁免）——20 血吃穿到 1 血不是脱险，是死缓。
 5. **高危 Boss 提速也要抬格挡**：KIN 双子 8 战 4 死的败因是格挡缺口（5~11 甲硬吃 13~27 意图），enemy_stance 的 Boss 分支现在同时抬 atk/blk。
 6. **统计因子防幸存者偏差**：learned_room_factor 用 outcome 加权房间时，精英房到访记录天然来自强局——对风险类节点该因子封顶 1.0，只许减不许加。
+
+## 第 41 局复盘（2026-08-23 00:54）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：ARMAMENTS, UNRELENTING, IRON_WAVE, SHRUG_IT_OFF, BLUDGEON, TRUE_GRIT
+- 本局遗物：活动星图, SHOVEL
+- 战斗记录：F5 Monster战 掉血1; F6 Monster战 掉血18; F6 Monster战 掉血0; F8 Monster战 掉血0; F8 Monster战 掉血12; F11 Elite战 掉血50（阵亡）
+- 当前高价值卡牌：HOWL_FROM_BEYOND(25分/2局)，STOMP(23分/3局)，MANGLE(21分/10局)，UPPERCUT(19分/16局)，RAMPAGE(18分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：elite_min_hp_pct: 0.77 → 0.82（精英战阵亡，进场血量 59%，提高精英回避线）；exploration_rate: 0.074 → 0.072（经验累积，探索衰减）
+- 生涯战绩：0/41 胜，当前目标进阶 0
