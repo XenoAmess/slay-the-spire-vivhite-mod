@@ -856,3 +856,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/65 胜，当前目标进阶 0
+
+## 第 66 局复盘（2026-08-23 04:41）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：TAUNT, CINDER, STAMPEDE, SWORD_BOOMERANG, HOWL_FROM_BEYOND, SALVO
+- 本局遗物：无
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血4; F5 Monster战 掉血53; F6 Monster战 掉血19; F7 Monster战 掉血6; F7 Monster战 掉血9（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/5局)，UPPERCUT(17分/22局)，UNMOVABLE(17分/3局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/66 胜，当前目标进阶 0
