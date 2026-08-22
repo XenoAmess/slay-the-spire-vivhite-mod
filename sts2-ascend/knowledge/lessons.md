@@ -174,3 +174,14 @@
 - 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.70 → 1.75（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.163 → 0.158（经验累积，探索衰减）
 - 生涯战绩：0/15 胜，当前目标进阶 0
+
+## 第 16 局复盘（2026-08-22 18:07）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：RAMPAGE, RAMPAGE, BLUDGEON, UPPERCUT, FISTICUFFS, INFLAME, BLUDGEON, MANGLE
+- 本局遗物：孙子兵法, 灯笼
+- 战斗记录：F12 Unknown战 掉血17; F14 Monster战 掉血21; F15 Elite战 掉血43; F17 Boss战 掉血36（阵亡）
+- 当前高价值卡牌：MANGLE(29分/4局)，FIGHT_ME(22分/3局)，TRUE_GRIT(22分/3局)，IRON_WAVE(21分/3局)，UPPERCUT(21分/9局)
+- 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.75 → 1.80（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.158 → 0.154（经验累积，探索衰减）
+- 生涯战绩：0/16 胜，当前目标进阶 0
