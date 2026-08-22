@@ -542,3 +542,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.072 → 0.070（经验累积，探索衰减）
 - 生涯战绩：0/42 胜，当前目标进阶 0
+
+## 第 46 局复盘（2026-08-23 01:22）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 BRUTE_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：IMPERVIOUS, MOLTEN_FIST, RAMPAGE, STONE_ARMOR, CINDER, DISMANTLE, TWIN_STRIKE, SHRUG_IT_OFF, RAGE
+- 本局遗物：STONE_CRACKER
+- 战斗记录：F4 Monster战 掉血2; F6 Monster战 掉血23; F7 Monster战 掉血11; F8 Monster战 掉血5; F12 Monster战 掉血25; F13 Unknown战 掉血30（阵亡）
+- 当前高价值卡牌：HOWL_FROM_BEYOND(25分/2局)，IMPERVIOUS(23分/2局)，STOMP(23分/3局)，MANGLE(21分/10局)，FIGHT_ME(18分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/4局)
+- 策略进化：exploration_rate: 0.063 → 0.062（经验累积，探索衰减）
+- 生涯战绩：0/46 胜，当前目标进阶 0
