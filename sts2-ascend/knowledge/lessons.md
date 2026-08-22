@@ -163,3 +163,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)，PILLAGE(11分/2局)
 - 策略进化：block_safety: 1.65 → 1.70（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.168 → 0.163（经验累积，探索衰减）
 - 生涯战绩：0/14 胜，当前目标进阶 0
+
+## 第 15 局复盘（2026-08-22 17:40）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：BASH, SWORD_BOOMERANG, RAMPAGE, ANGER
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血26; F3 Monster战 掉血6; F4 Monster战 掉血2; F5 Monster战 掉血4; F6 Monster战 掉血42（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，FIGHT_ME(22分/3局)，TRUE_GRIT(22分/3局)，IRON_WAVE(21分/3局)，UPPERCUT(21分/8局)
+- 当前低价值卡牌：BASH(8分/2局)，STRIKE_IRONCLAD(9分/5局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.70 → 1.75（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.163 → 0.158（经验累积，探索衰减）
+- 生涯战绩：0/15 胜，当前目标进阶 0
