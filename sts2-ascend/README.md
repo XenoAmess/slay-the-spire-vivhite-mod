@@ -78,6 +78,23 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 手动立即触发一次复盘：`py brain/llm_review.py --now`（会先打印本次选用的模型与节奏）。
 配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/冷却/禁用）。
 
+## 复盘直播悬浮窗（ASCEND-VISION）
+
+每次复盘启动时，大脑会自动拉起一个**赛博青蓝主题的直播悬浮窗**（`brain/review_viewer.py`），
+把 opencode 复盘的推理过程实时投到屏幕上：
+
+- 复盘 stdout 由大脑流式写入 `knowledge/review_live.stream`（`[LIVE-START]/[LIVE-END]` 哨兵），
+  viewer 进程 tail 该文件渲染——viewer 的死活绝不影响复盘本身
+- 无边框半透明置顶、**点击穿透**（不挡游戏操作），停靠屏幕右上角
+- 特效：青色数字雨背景（新消息脉冲加速）、打字机逐字输出、工具调用品红高亮、
+  `SELFCHECK OK` 金色闪光、结束定格 30 秒后淡出
+- 手动用法：
+  - `py brain/review_viewer.py --demo` 演示全部特效（不依赖游戏/复盘）
+  - `py brain/review_viewer.py --attach-current` 只读轮询 `opencode.db`，回放最近一场复盘
+    （含 💭 思维链，已结束的会话停留 10 分钟）
+  - `--interactive` 可拖拽/ESC 关闭（关闭点击穿透）
+- 开关：`config.json` 的 `llm.viewer_enabled`（默认 true）
+
 ## 进程结构
 
 ```

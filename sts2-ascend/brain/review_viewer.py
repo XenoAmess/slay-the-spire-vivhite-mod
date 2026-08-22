@@ -19,12 +19,15 @@ import json
 import math
 import os
 import random
+import re
 import sqlite3
 import sys
 import time
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")   # opencode 偶尔漏出的 ANSI 转义
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -104,7 +107,7 @@ class StreamSource:
                 f.seek(self.offset)
                 data = f.read()
                 self.offset = f.tell()
-            return data.splitlines()
+            return [_ANSI_RE.sub("", ln) for ln in data.splitlines()]
         except OSError:
             return []
 
@@ -337,15 +340,29 @@ class Viewer:
 
     def _wrap(self, s: str) -> list[str]:
         max_px = WIN_W - 24
-        if self.font.measure(s) <= max_px:
+        if not s:
             return [s]
-        out, cur = [], ""
+        # 字符宽度缓存：逐字 measure 一次，O(n) 完成折行（启动大量灌入时不卡）
+        wcache = getattr(self, "_char_w", None)
+        if wcache is None:
+            wcache = self._char_w = {}
+
+        def w_of(ch: str) -> int:
+            w = wcache.get(ch)
+            if w is None:
+                w = self.font.measure(ch)
+                wcache[ch] = w
+            return w
+
+        out, cur, cur_w = [], "", 0
         for ch in s:
-            if self.font.measure(cur + ch) > max_px:
+            cw = w_of(ch)
+            if cur_w + cw > max_px and cur:
                 out.append(cur)
-                cur = ch
+                cur, cur_w = ch, cw
             else:
                 cur += ch
+                cur_w += cw
         out.append(cur)
         return out
 
@@ -361,8 +378,16 @@ class Viewer:
             self._check_end(now)
         except Exception as exc:
             self._debug_exc(exc)
+        if self._fading:
+            t = (now - self._fade_start) / FADE_SEC
+            if t >= 1.0:
+                self._quit()
+                return
+            self.root.attributes("-alpha", max(0.0, 0.92 * (1 - t)))
+        self.root.after(33, self._frame)
 
     def _debug_exc(self, exc: Exception) -> None:
+        """帧内异常兜底：记录到 viewer_exc.log，绝不让 viewer 崩溃影响复盘。"""
         try:
             p = KNOWLEDGE_DIR / "viewer_exc.log"
             if p.exists() and p.stat().st_size > 20000:
@@ -372,13 +397,6 @@ class Viewer:
                 f.write("".join(traceback.format_exception(exc))[-1500:] + "\n---\n")
         except Exception:
             pass
-        if self._fading:
-            t = (now - self._fade_start) / FADE_SEC
-            if t >= 1.0:
-                self._quit()
-                return
-            self.root.attributes("-alpha", max(0.0, 0.92 * (1 - t)))
-        self.root.after(33, self._frame)
 
     _fading = False
     _fade_start = 0.0
@@ -451,7 +469,11 @@ class Viewer:
     def _render_text(self, dt: float, now: float) -> None:
         total = sum(len(t) for t, _ in self.lines)
         backlog = total - self.reveal
-        cps = max(260.0, min(backlog * 2.5, 8000.0))   # 快速追平但不至于瞬移
+        # 巨量灌入（启动追平/回放）时直接跳到尾部，只动画最后一段，避免启动卡顿
+        if backlog > 6000:
+            self.reveal = float(total - 1200)
+            backlog = 1200
+        cps = max(260.0, min(backlog * 2.5, 8000.0))
         self.reveal = min(float(total), self.reveal + cps * dt)
 
         self.canvas.delete("txt")
