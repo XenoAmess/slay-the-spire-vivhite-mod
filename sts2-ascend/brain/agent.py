@@ -343,11 +343,13 @@ class Agent:
                     status = resp.get("status", "?")
                     if status not in ("ok", "success", "pending", "stable"):
                         log(f"  ↳ 动作 {decision.action} 返回 {status}: {resp.get('message', '')}")
+                        self.policy.note_action_failed(decision.action, decision.tags)
                 except ConnectionDown:
                     log("[agent] 动作执行时断线")
                     time.sleep(3)
                 except Exception as exc:
                     log(f"  ↳ 动作 {decision.action} 失败：{exc}")
+                    self.policy.note_action_failed(decision.action, decision.tags)
                     time.sleep(self.cfg["action_settle"])
                 time.sleep(max(decision.wait, self.cfg["action_settle"]))
             else:

@@ -104,6 +104,15 @@ class Policy:
         self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
         self._sel_key = None        # card-selection screen identity
         self._sel_tried: set = set()  # card indices already clicked this screen
+        self._cur_turn = None       # combat turn tracking
+        self._failed_this_turn: set = set()  # card_ids that failed to play this turn
+
+    def note_action_failed(self, action: str, tags: list) -> None:
+        """agent 在执行失败时回调：本回合内不再尝试这张牌（防 409 重试刷屏）。"""
+        if action == "play_card":
+            for t in tags or []:
+                if t[0] == "play_card" and t[1]:
+                    self._failed_this_turn.add(t[1])
 
     # ------------------------------------------------------------------
     # top-level router
@@ -290,6 +299,10 @@ class Policy:
         can_play = "play_card" in actions
         can_end = "end_turn" in actions
 
+        if self._cur_turn != round_no:
+            self._cur_turn = round_no
+            self._failed_this_turn = set()
+
         if not enemies:
             if can_end:
                 return Decision("end_turn", {}, "战斗：场上无有效敌人，结束回合", wait=1.0)
@@ -324,6 +337,13 @@ class Policy:
         for c in hand:
             if not c.get("playable"):
                 continue
+            if c.get("card_id") in self._failed_this_turn:
+                continue
+            # 需要目标但当前无有效目标：跳过（否则服务端 409）
+            if c.get("requires_target"):
+                valid = c.get("valid_target_indices") or []
+                if not any(e.get("index") in valid for e in enemies):
+                    continue
             cost = c.get("energy_cost", 0)
             if c.get("costs_x"):
                 cost = energy  # dump all energy
@@ -337,8 +357,17 @@ class Policy:
         if best and best[0] > pol["play_threshold"]:
             _, card, target, why = best
             params = {"card_index": card["index"]}
-            if card.get("requires_target") and target is not None:
-                params["target_index"] = target
+            if card.get("requires_target"):
+                if target is None:
+                    # 非攻击类指向牌（如施加 debuff 的技能）：兜底选威胁最高的敌人
+                    valid = card.get("valid_target_indices") or []
+                    def threat(idx):
+                        e = next((x for x in enemies if x.get("index") == idx), None)
+                        return sum((it.get("total_damage") or 0) for it in (e or {}).get("intents", [])) if e else 0
+                    pool = [i for i in valid if any(e.get("index") == i for e in enemies)] or [e["index"] for e in enemies]
+                    target = max(pool, key=threat) if pool else None
+                if target is not None:
+                    params["target_index"] = target
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
