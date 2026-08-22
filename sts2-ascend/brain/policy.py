@@ -176,11 +176,30 @@ class Policy:
                                 f"主菜单：选择时间线节点 {slots[0].get('title')}", wait=0.8)
         if "continue_run" in actions:
             return Decision("continue_run", {}, "主菜单：检测到进行中的存档，继续对局", wait=1.2)
+        # 一局结束后：时间线有新解锁项（obtained 未 complete）时优先去解锁
+        if getattr(ctx, "check_timeline", False):
+            ctx.check_timeline = False
+            if "open_timeline" in actions:
+                return Decision("open_timeline", {}, "主菜单：检查时间线可解锁项（优先解锁新内容）", wait=1.0)
         if "open_character_select" in actions:
             return Decision("open_character_select", {}, "主菜单：开启新的一局（标准模式）", wait=1.2)
         return Decision(None, {}, "主菜单：无可用动作，等待", wait=1.0)
 
     def _timeline(self, state: dict, ctx) -> Decision:
+        actions = state.get("available_actions", [])
+        timeline = state.get("timeline") or {}
+        # 1) 解锁页/查看页弹层优先确认
+        if timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
+            return Decision("confirm_timeline_overlay", {}, "时间线：确认解锁页", wait=0.8)
+        # 2) 有新获得（obtained 未 complete）的槽位 → 优先解锁
+        unlockable = [s for s in timeline.get("slots", []) if (s.get("state") or "") == "obtained"]
+        if unlockable and "choose_timeline_epoch" in actions:
+            s = unlockable[0]
+            return Decision("choose_timeline_epoch", {"option_index": s["index"]},
+                            f"时间线：优先解锁新内容【{s.get('title')}】", wait=1.0)
+        # 3) 没有可解锁项 → 关闭时间线回主菜单开新局
+        if "close_main_menu_submenu" in actions:
+            return Decision("close_main_menu_submenu", {}, "时间线：无可解锁项，返回主菜单", wait=0.8)
         return self._main_menu(state, ctx)
 
     def _character_select(self, state: dict, ctx) -> Decision:
@@ -511,7 +530,7 @@ class Policy:
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
-                    my_hp: int = 9999, my_max_hp: int = 9999):
+                    my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -519,6 +538,11 @@ class Policy:
 
         生存权重：残血且敌意图可能致死时，压低攻击、抬高格挡——
         第 18 局 F22 致命战在意图 44~50 时仍连续输出不补防，直接阵亡。
+
+        高危姿态：enemy_stance 对高死亡率组合收紧 atk/blk 权重与紧急线。
+        自残代价：「失去X点生命」的攻击牌按当前血量扣分；致死回合里
+        无法终结战斗的自残攻击 = 加速死亡，直接禁玩
+        （第 29 局终局 9 血面对 28 点意图先打【御血术】自掉 2 血再阵亡）。
         """
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -526,16 +550,23 @@ class Policy:
         aoe = ("所有敌人" in text or "all enemies" in text.lower()
                or (card.get("target_type") or "") == "AllEnemies")
 
+        st = stance or {}
         hp_pct = my_hp / max(1, my_max_hp)
         gap = max(0, incoming - my_block)
         lethal = gap >= my_hp              # 本回合就可能被打死
-        urgent = gap > 0 and hp_pct < 0.45  # 慢性失血下的低血量状态
+        urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         if lethal:
             atk_damp, blk_boost = 0.55, 1.8
         elif urgent:
             atk_damp, blk_boost = 0.75, 1.4
         else:
             atk_damp, blk_boost = 1.0, 1.0
+        atk_damp *= float(st.get("atk_mult", 1.0))
+        blk_boost *= float(st.get("blk_mult", 1.0))
+
+        m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
+        self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
+        floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
 
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
@@ -546,7 +577,9 @@ class Policy:
                 score = eff * atk_damp + pol["kill_bonus"] * len(killable)
                 if lethal and not killable:
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
-                    score *= 0.35
+                    score = min(score, floor_score)
+                if self_cost and lethal and len(killable) < len(enemies):
+                    score = min(score, floor_score)
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 return score, None, f"群体伤害≈{eff}"
@@ -569,7 +602,14 @@ class Policy:
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
             if lethal and not best_kill:
-                best_s *= 0.35
+                best_s = min(best_s, floor_score)
+            elif self_cost:
+                if best_kill and len(enemies) == 1:
+                    pass  # 击杀最后一个敌人直接终局，自残值得
+                elif lethal:
+                    best_s = min(best_s, floor_score)
+                else:
+                    best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))  # 血越少自残越贵
             if cost == 0:
                 best_s += pol["free_card_bonus"]
             return best_s, best_t, why
@@ -591,12 +631,16 @@ class Policy:
         dr = draw_amount(card)
         if dr > 0 or "能量" in text or "energy" in text.lower():
             score = 2.0 + dr * 1.5
+            if lethal:
+                score = min(score, floor_score)  # 致死回合抽牌/回能救不了命
             if cost == 0:
                 score += pol["free_card_bonus"]
             return score, None, f"功能牌（抽牌{dr}/回能）"
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
         score = (pol["power_round_bonus"] if round_no <= 2 else 1.5)
+        if lethal:
+            score = min(score, floor_score)  # 致死回合上能力=放弃格挡能量
         if cost == 0:
             score += pol["free_card_bonus"]
         return score, None, f"能力/增益牌（第{round_no}回合）"
@@ -625,12 +669,20 @@ class Policy:
                 target = next((e["index"] for e in enemies if e["index"] in valid), None)
                 if target is None:
                     continue
-            if ("伤害" in desc or "damage" in desc.lower() or "攻击" in desc) and enemies:
+            desc_l = desc.lower()
+            # 攻击类（伤害/攻击）与增益类（力量/敏捷/能量/抽牌）战斗药水都应在硬仗投入使用：
+            # 第 28 局囤力量/敏捷/迅捷三瓶增益药水全程未用（含死局战）带进坟墓
+            is_damage = "伤害" in desc or "damage" in desc_l or "攻击" in desc
+            is_buff = ("力量" in desc or "strength" in desc_l or "敏捷" in desc
+                       or "dexterity" in desc_l or "能量" in desc or "energy" in desc_l
+                       or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l)
+            if (is_damage or is_buff) and enemies:
                 self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
-                return Decision("use_potion", params, f"战斗：使用攻击药水【{name}】（硬仗/危急）",
+                kind = "攻击" if is_damage else "增益"
+                return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
             if ("格挡" in desc or "生命" in desc or "回复" in desc or "block" in desc.lower() or "heal" in desc.lower()):
                 if (state.get("combat", {}).get("player", {}).get("current_hp", 1)
@@ -1044,6 +1096,7 @@ class Policy:
         if go.get("can_continue") and "continue_run" in actions:
             return Decision("continue_run", {}, "结算：继续（进入下一阶段）", wait=1.5)
         if go.get("can_return_to_main_menu") and "return_to_main_menu" in actions:
+            ctx.check_timeline = True  # 回主菜单后优先检查时间线可解锁项
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局", wait=1.5)
         if "proceed" in actions:
             return Decision("proceed", {}, "结算：继续", wait=1.2)

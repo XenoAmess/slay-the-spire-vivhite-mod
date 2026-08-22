@@ -168,6 +168,44 @@ def main() -> int:
     m_boss = re.search(r"进 Boss 血量 ?(\d+)%", d_boss.reason)
     assert m_boss and int(m_boss.group(1)) >= 77, f"Boss 终端投影失效: {d_boss.reason}"
 
+    # 3g) 自残牌约束：致死回合里无法终结战斗的自残攻击必须让位于格挡
+    #     （第 29 局终局：9 血面对 28 点意图先打【御血术】自掉 2 血再阵亡）
+    know.stats.setdefault("enemies", {})["DUMMY_BRUTE+DUMMY_HEXER"] = {
+        "encounters": 5, "hp_lost_sum": 150.0, "deaths": 4, "wins": 1}
+    stance_bad = know.enemy_stance("DUMMY_BRUTE+DUMMY_HEXER")
+    assert stance_bad["urgent_hp_pct"] > 0.5 and stance_bad["blk_mult"] > 1.0 \
+        and "高危" in stance_bad.get("danger", ""), f"高危组合姿态失效: {stance_bad}"
+    assert know.enemy_stance("UNKNOWN_COMP")["atk_mult"] == 1.0, "未知组合应为中性姿态"
+
+    hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
+                   "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                   "rules_text": "失去 2 点生命，造成 18 点伤害。",
+                   "dynamic_values": [{"name": "Damage", "current_value": 18}]}
+    ctx.combat = {"comp_id": "DUMMY_BRUTE+DUMMY_HEXER"}
+    self_lethal_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 3,
+        "combat": {"player": {"current_hp": 9, "max_hp": 80, "block": 0, "energy": 3},
+                   "hand": [
+                       dict(hemokinesis),
+                       {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御", "playable": True,
+                        "energy_cost": 1, "requires_target": False,
+                        "rules_text": "获得5点格挡",
+                        "dynamic_values": [{"name": "Block", "current_value": 5}]}],
+                   "enemies": [
+                       {"index": 0, "enemy_id": "KIN_FOLLOWER", "name": "同族信徒", "current_hp": 10,
+                        "max_hp": 30, "block": 0, "is_alive": True, "is_hittable": True,
+                        "intents": [{"total_damage": 10}]},
+                       {"index": 1, "enemy_id": "KIN_PRIEST", "name": "同族神官", "current_hp": 40,
+                        "max_hp": 50, "block": 0, "is_alive": True, "is_hittable": True,
+                        "intents": [{"total_damage": 18}]}]},
+        "run": {"current_hp": 9, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+    }
+    d_self = pol.decide(self_lethal_state, ctx)
+    assert d_self.action == "play_card" and d_self.params.get("card_index") == 1, \
+        f"致死回合自残牌必须让位格挡: {d_self.params}（{d_self.reason}）"
+    assert "高危" in d_self.reason, f"高危组合提示缺失: {d_self.reason}"
+    ctx.combat = None
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
     real = knowledge.Knowledge(BRAIN.parent / "knowledge")
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"
