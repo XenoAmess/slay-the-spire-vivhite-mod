@@ -19,13 +19,18 @@
     "runner": "opencode",
     "opencode_bin": "opencode",
     "model": "kimi-for-coding/k3",
-    "review_every_runs": 10,
+    "review_every_runs": 5,
     "timeout_min": 25,
     "max_runs_in_packet": 10,
-    "preferred_model": "openrouter/stealth/ox-alpha",
     "preferred_every_runs": 1,
-    "preferred_failure_cooldown_min": 360,
+    "preferred_failure_cooldown_min": 60,
     "models_probe_timeout_sec": 60,
-    "viewer_enabled": true
+    "viewer_enabled": true,
+    "preferred_models": [
+      "opencode/ox-alpha@max",
+      "openrouter/stealth/ox-alpha@max"
+    ],
+    "preferred_timeout_cooldown_min": 30,
+    "preferred_timeout_min": 40
   }
 }

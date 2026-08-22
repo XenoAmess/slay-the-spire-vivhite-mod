@@ -59,9 +59,15 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 复盘由独立工作线程在后台串行消化——若一局结束时上一场复盘还没完，请求在队列里累积，
 下一场复盘**一次性分析多局**（追及队列，积压上限 `review_queue_max` 批）。
 
-模型双轨：优先 **Ox Alpha Free**（`openrouter/stealth/ox-alpha`，以 `opencode models` 清单为准）
-可用则每局复盘；不可用则回退 `kimi-for-coding/k3` 每 10 局一次。优先模型执行失败进入 6 小时冷却
-（`preferred_failure_cooldown_min`），避免反复白等超时。
+模型按**优先链**逐条检查（`opencode models` 清单为准，条目形如 `provider/model[@variant]`）：
+
+1. `opencode/ox-alpha@max` — Ox Alpha Free (Unlimited) · OpenCode Zen · max
+2. `openrouter/stealth/ox-alpha@max` — Ox Alpha · OpenRouter · max
+3. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
+
+命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
+每个条目**独立失败冷却**：超时冷却 30 分钟（免费模型拥堵常见，从宽），
+硬失败（exit≠0/异常）冷却 60 分钟（`preferred_*_cooldown_min`）。
 
 并发安全设计：
 
