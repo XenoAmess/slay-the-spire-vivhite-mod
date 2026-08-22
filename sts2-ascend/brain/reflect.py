@@ -107,10 +107,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         ((cid, e) for cid, e in know.stats["cards"].items() if e["picked"] >= 2 and cid not in top_ids),
         key=lambda kv: (kv[1]["outcome_sum"] / kv[1]["picked"]))[:3]]
 
+    # 死因标注：失败但无死亡记录时不得标成"胜利"（第 51 局幻影局实证误导复盘）
+    death_txt = (f"敌人组合 {died_to_enemy}" if died_to_enemy
+                 else f"事件 {died_to_event}" if died_to_event
+                 else ("无（胜利）" if victory else "无记录（数据缺失）"))
     lines = [
         f"\n## 第 {know.stats['global']['runs']} 局复盘（{time.strftime('%Y-%m-%d %H:%M')}）",
         f"- 结果：{'🏆 胜利' if victory else '💀 失败'}｜进阶 {asc}｜到达层数 {final_floor}｜当局评分 {outcome:.0f}",
-        f"- 死因：{('敌人组合 ' + died_to_enemy) if died_to_enemy else ('事件 ' + died_to_event) if died_to_event else '无（胜利）'}",
+        f"- 死因：{death_txt}",
         f"- 本局拿牌：{', '.join(picked_cards) if picked_cards else '无'}",
         f"- 本局遗物：{', '.join(picked_relics) if picked_relics else '无'}",
         f"- 战斗记录：{'; '.join(ctx.combat_notes[-6:]) if ctx.combat_notes else '无'}",

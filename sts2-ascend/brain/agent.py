@@ -95,6 +95,7 @@ class RunContext:
     current_combat_is_hard: bool = False
     run_finalized: bool = False
     finalize_requested: bool = False
+    rest_before_boss: bool = False   # 本次地图选择指向 Boss 前夜的篝火（_rest 消费）
 
     def reset_for(self, run_id: str, ascension: int):
         self.__init__(run_id=run_id, ascension=ascension, started_at=time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -150,7 +151,10 @@ class Agent:
         asc = run.get("ascension", self.ctx.ascension)
 
         # new run detection
-        if run_id != self.ctx.run_id and screen not in ("MAIN_MENU",) and run:
+        # GAME_OVER 屏必须排除（第 50~51 局复盘）：大脑重启落在上一局结算屏时，
+        # 新进程会把旧 run_id 回声当成新对局，随后在 GAME_OVER 上二次结算出
+        # 零决策幻影局（第 19/26/42/51 局四次实证，生涯统计被灌水 4 局 56 层）
+        if run_id != self.ctx.run_id and screen not in ("MAIN_MENU", "GAME_OVER") and run:
             if self.ctx.run_id != "run_unknown" and not self.ctx.run_finalized and self.ctx.decisions:
                 # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
                 log("[agent] 检测到上一局异常结束，按失败归档")
@@ -254,6 +258,11 @@ class Agent:
         if self.ctx.run_finalized:
             return
         self.ctx.run_finalized = True
+        # 幻影局守卫（第 50~51 局复盘）：真实对局至少有涅奥事件一条决策，
+        # 零决策必为结算屏回声幻影——不得入账/存日志/触发复盘与 git 存档
+        if not self.ctx.decisions and not victory:
+            log("[agent] ⚠ 忽略零数据幻影对局（重启落在结算屏的旧对局回声），不计入统计")
+            return
         self.runs_played += 1
         lesson = finalize_run(self.know, self.ctx, victory, floor)
         log("\n" + lesson)

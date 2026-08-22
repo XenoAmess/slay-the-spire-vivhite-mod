@@ -524,8 +524,51 @@ def main() -> int:
     d_ws = pol_ws.decide(ws_state, ctx)
     assert d_ws.params.get("option_index") == 1, f"跨页尾键聚合失效（负收益选项被重选）: {d_ws.reason}"
 
-    # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）
-    real = knowledge.Knowledge(BRAIN.parent / "knowledge")
+    # 3r) Boss 前夜篝火优先回血（第 48 局实证：72% 血锻造后 Boss 战 -58 正好打死）
+    rest_state = {
+        "screen": "REST", "available_actions": ["choose_rest_option"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 58, "max_hp": 80, "gold": 0, "floor": 15,
+                "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]},
+    }
+    ctx.rest_before_boss = False
+    d_rest_norm = pol.decide(rest_state, ctx)
+    # 常规逻辑：72% ≥ 安全线 55% → 锻造
+    assert d_rest_norm.tags and d_rest_norm.tags[0] == ("rest", "smith"), \
+        f"常规篝火应锻造: {d_rest_norm.reason}"
+    ctx.rest_before_boss = True
+    d_rest_boss = pol.decide(rest_state, ctx)
+    assert d_rest_boss.tags and d_rest_boss.tags[0] == ("rest", "heal"), \
+        f"Boss 前夜应优先回血: {d_rest_boss.reason}"
+    ctx.rest_before_boss = False
+
+    # 3s) 幻影局防护（第 50~51 局复盘）：大脑重启落在上一局结算屏时，
+    #     旧 run_id 回声不得被当成新对局；零数据对局不得入账/存日志/触发复盘与 git
+    agent_mod.llm_review = None   # 幻影 finalize 若发生会入队真实复盘请求，测试中必须禁用
+    agent_mod.autogit = None      # 同理禁用自动 git 存档
+    ag_fresh = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))  # 模拟重启后的新大脑进程
+    assert ag_fresh.ctx.run_id == "run_unknown"
+    go_echo = {"screen": "GAME_OVER", "run_id": "RUN_DEAD",
+               "game_over": {"is_victory": False, "floor": 11},
+               "run": {"current_hp": 0, "max_hp": 80, "gold": 99, "floor": 11}}
+    ag_fresh._track(go_echo, policy.Decision(action=None))
+    assert ag_fresh.ctx.run_id == "run_unknown", \
+        f"结算屏旧 run_id 回声被误判为新对局: {ag_fresh.ctx.run_id}"
+    ag_fresh._track({"screen": "EVENT", "run_id": "RUN_NEW",
+                     "run": {"current_hp": 80, "max_hp": 80, "gold": 99, "floor": 1}},
+                    policy.Decision(action=None))
+    assert ag_fresh.ctx.run_id == "RUN_NEW", f"正常新对局未被识别: {ag_fresh.ctx.run_id}"
+    runs_before = ag_fresh.know.stats["global"]["runs"]
+    ag_fresh._finalize(victory=False, floor=6)
+    assert ag_fresh.know.stats["global"]["runs"] == runs_before, "幻影局被计入生涯统计"
+    assert list((tmp_agent / "runs").glob("*.json")) == [], "幻影局日志被写入 runs/"
+
+    # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
+    #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
+    #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
+    real = knowledge.Knowledge(BRAIN.parent / "knowledge", repair_phantoms=False)
     assert real.stats.get("global") is not None and real.policy, "knowledge structure broken"
     pol2 = policy.Policy(real)
     assert pol2.decide(fake_states[1], ctx) is not None

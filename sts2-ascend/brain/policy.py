@@ -504,6 +504,11 @@ class Policy:
                 best_notes, best_proj = best_pnotes, best_pproj
 
         note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
+        # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
+        # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
+        ctx.rest_before_boss = (best_node.get("node_type") == "RestSite"
+                                and boss_row is not None
+                                and int(best_node.get("row", -999)) == int(boss_row) - 1)
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
         return Decision("choose_map_node", {"option_index": best_node["index"]},
                         f"路径规划：{best_detail}（路径分 {best_score:.2f}，预计进 Boss 血量 {best_proj:.0%}{note_txt}）；"
@@ -1192,6 +1197,14 @@ class Policy:
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
+
+        # Boss 前夜篝火：回血优先于锻造，除非血量已接近满（第 48 局复盘实证）。
+        # 常规的"回血将溢出→改锻造"分支在此不适用——溢出的几点血量远低于
+        # Boss 预期战损（先验 45+），能多回一点是一点
+        if getattr(ctx, "rest_before_boss", False) and heal is not None and hp_pct < 0.95:
+            return Decision("choose_rest_option", {"option_index": heal["index"]},
+                            f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}，Boss 预期战损过半，锻造不救命）",
+                            tags=[("rest", "heal")], wait=1.2)
 
         # 锻造区间：血量 ≥ smith_min_hp_pct 即可锻造。旧逻辑回血阈值 70% 过高，
         # 第 28 局连续两个篝火都在 46%/48% 回血、整局零锻造，卡组停在基础形态

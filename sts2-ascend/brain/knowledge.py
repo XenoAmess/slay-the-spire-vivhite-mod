@@ -109,7 +109,7 @@ def clamp(value: float, lo: float, hi: float) -> float:
 
 
 class Knowledge:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, repair_phantoms: bool = True):
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / "runs").mkdir(exist_ok=True)
@@ -127,6 +127,45 @@ class Knowledge:
         for e in self.stats["rooms"].values():
             e.setdefault("hp_lost_sum", 0.0)
             e.setdefault("damage_events", 0)
+        # 一次性幻影局数据修复（自检加载真实库时应传 repair_phantoms=False，
+        # 避免在运行中的大脑落盘前抢先改写/置标记）
+        if repair_phantoms:
+            self._repair_phantom_runs()
+
+    def _repair_phantom_runs(self) -> None:
+        """一次性修复：把历史上误入账的幻影局从生涯统计中扣除。
+
+        幻影局指纹：runs/ 日志零决策且非胜利——真实对局至少有涅奥事件一条决策。
+        每个幻影局曾使 global.runs/floors_total、progression.runs_by_ascension
+        各 +1，并多衰减一次探索率。标记键 stats.phantom_repair_v1 防重复执行；
+        以 runs/ 文件（不可变历史）为准而非计数器本身，对中途漂移稳健。
+        """
+        if self.stats.get("phantom_repair_v1"):
+            return
+        n_phantom, lost_floors, by_asc = 0, 0.0, {}
+        for p in sorted((self.root / "runs").glob("*.json")):
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            if d.get("decisions") or d.get("victory") or not d.get("run_id"):
+                continue
+            n_phantom += 1
+            lost_floors += float(d.get("floor") or 0)
+            asc = str(d.get("ascension", 0))
+            by_asc[asc] = by_asc.get(asc, 0) + 1
+        if n_phantom:
+            g = self.stats["global"]
+            g["runs"] = max(0, int(g.get("runs", 0)) - n_phantom)
+            g["floors_total"] = max(0.0, float(g.get("floors_total", 0.0)) - lost_floors)
+            rba = self.progression.setdefault("runs_by_ascension", {})
+            for asc, cnt in by_asc.items():
+                rba[asc] = max(0, int(rba.get(asc, 0)) - cnt)
+            decay = float(self.policy.get("exploration_decay", 0.97)) or 0.97
+            self.policy["exploration_rate"] = clamp(
+                float(self.policy.get("exploration_rate", 0.25)) / (decay ** n_phantom), 0.0, 1.0)
+            self.save()
+        self.stats["phantom_repair_v1"] = True
 
     # ---------- persistence ----------
 
