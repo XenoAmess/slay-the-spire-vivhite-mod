@@ -371,3 +371,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.103 → 0.100（经验累积，探索衰减）
 - 生涯战绩：0/30 胜，当前目标进阶 0
+
+## 第 31 局复盘（2026-08-22 22:24）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：BLUDGEON, RUPTURE, FLAME_BARRIER, FEEL_NO_PAIN, VICIOUS
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血11; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血31; F6 Monster战 掉血33; F8 Elite战 掉血38（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，HOWL_FROM_BEYOND(22分/3局)，UPPERCUT(20分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：elite_min_hp_pct: 0.80 → 0.85（精英战阵亡，进场血量 48%，提高精英回避线）；exploration_rate: 0.100 → 0.097（经验累积，探索衰减）
+- 生涯战绩：0/31 胜，当前目标进阶 0
