@@ -75,3 +75,14 @@
 - 当前低价值卡牌：SWORD_BOOMERANG(8分/3局)，SETUP_STRIKE(9分/3局)，UPPERCUT(9分/2局)
 - 策略进化：block_safety: 1.40 → 1.45（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.208 → 0.202（经验累积，探索衰减）
 - 生涯战绩：0/7 胜，当前目标进阶 0
+
+## 第 8 局复盘（2026-08-22 15:10）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：HEADBUTT, BREAKTHROUGH, SHRUG_IT_OFF
+- 本局遗物：无
+- 战斗记录：F13 Unknown战 掉血11（阵亡）
+- 当前高价值卡牌：HEMOKINESIS(13分/2局)，HEADBUTT(13分/3局)，SHRUG_IT_OFF(12分/2局)，BREAKTHROUGH(12分/3局)，RAMPAGE(11分/2局)
+- 当前低价值卡牌：SWORD_BOOMERANG(8分/3局)，SETUP_STRIKE(9分/3局)，UPPERCUT(9分/2局)
+- 策略进化：block_safety: 1.45 → 1.50（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.202 → 0.196（经验累积，探索衰减）
+- 生涯战绩：0/8 胜，当前目标进阶 0

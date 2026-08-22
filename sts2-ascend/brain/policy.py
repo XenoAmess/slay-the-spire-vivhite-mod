@@ -102,6 +102,8 @@ class Policy:
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
+        self._sel_key = None        # card-selection screen identity
+        self._sel_tried: set = set()  # card indices already clicked this screen
 
     # ------------------------------------------------------------------
     # top-level router
@@ -554,12 +556,26 @@ class Policy:
         if not cards:
             return Decision(None, {}, f"选牌界面（{kind}）：无候选，等待", wait=0.8)
 
+        # 屏幕身份 + 防重复点击记忆（重复点同一张卡可能反选/空转）
+        screen_key = ((state.get("run") or {}).get("floor", 0), kind, prompt, len(cards))
+        if screen_key != self._sel_key:
+            self._sel_key = screen_key
+            self._sel_tried = set()
+
+        # 已达选择数量且可确认 → 先确认（升级/删除等分支也必须走这里，否则永远循环）
+        min_sel = sel.get("min_select", 1)
+        if (sel.get("can_confirm") and sel.get("selected_count", 0) >= min_sel
+                and "confirm_selection" in actions):
+            return Decision("confirm_selection", {}, f"选牌界面（{kind}）：已选 {sel.get('selected_count')} 张，确认",
+                            wait=0.9)
+
         removing = "remove" in kind or "删除" in prompt
         upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
         transforming = "transform" in kind or "变化" in prompt
 
+        candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
+
         if removing or transforming:
-            # worst first: curse > status > unupgraded basic strike > lowest value
             def badness(c):
                 t = card_type(c).lower()
                 if t == "curse":
@@ -570,34 +586,31 @@ class Policy:
                 if "STRIKE" in cid and not c.get("upgraded"):
                     return 50
                 return -self.eval_reward_card(c, [])
-            pick = max(cards, key=badness)
+            pick = max(candidates, key=badness)
             verb = "删除" if removing else "变化"
-            return Decision("select_deck_card", {"option_index": pick["index"]},
-                            f"{verb}卡牌：【{pick.get('name')}】（最无价值）",
-                            tags=[("card_remove" if removing else "card_transform", pick.get("card_id"))], wait=0.8)
-
-        if upgrading:
+            tag = "card_remove" if removing else "card_transform"
+            reason = f"{verb}卡牌：【{pick.get('name')}】（最无价值）"
+        elif upgrading:
             best, best_v = None, -1e9
-            for c in cards:
+            for c in candidates:
                 if c.get("upgraded"):
                     continue
                 v = self.eval_reward_card(c, []) + (2.0 if is_attack(c) else 0.0)
                 if v > best_v:
                     best, best_v = c, v
             if best is None:
-                best = cards[0]
-            return Decision("select_deck_card", {"option_index": best["index"]},
-                            f"升级卡牌：【{best.get('name')}】",
-                            tags=[("card_upgrade", best.get("card_id"))], wait=0.8)
+                best = candidates[0]
+            pick = best
+            tag = "card_upgrade"
+            reason = f"升级卡牌：【{pick.get('name')}】"
+        else:
+            pick = max(candidates, key=lambda c: self.eval_reward_card(c, []))
+            tag = "card_pick"
+            reason = f"选择卡牌：【{pick.get('name')}】"
 
-        # generic choose-a-card: take the best
-        best = max(cards, key=lambda c: self.eval_reward_card(c, []))
-        d = Decision("select_deck_card", {"option_index": best["index"]},
-                     f"选择卡牌：【{best.get('name')}】",
-                     tags=[("card_pick", best.get("card_id"))], wait=0.8)
-        if sel.get("requires_confirmation") and sel.get("can_confirm") and "confirm_selection" in actions:
-            d = Decision("confirm_selection", {}, f"确认选择：【{best.get('name')}】", wait=0.8)
-        return d
+        self._sel_tried.add(pick["index"])
+        return Decision("select_deck_card", {"option_index": pick["index"]},
+                        reason, tags=[(tag, pick.get("card_id"))], wait=0.8)
 
     def _chest(self, state: dict, ctx) -> Decision:
         chest = state.get("chest") or {}
