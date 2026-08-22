@@ -100,6 +100,8 @@ class Policy:
         self.rng = rng or random.Random()
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
+        self._reward_floor = -1     # reward screen identity tracking
+        self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
 
     # ------------------------------------------------------------------
     # top-level router
@@ -488,6 +490,12 @@ class Policy:
         run = state.get("run") or {}
         deck = run.get("deck", [])
         pol = self.know.policy
+        floor = run.get("floor", 0)
+
+        # 换层/换屏时重置"已尝试"记忆
+        if floor != self._reward_floor:
+            self._reward_floor = floor
+            self._reward_tried = set()
 
         # card choice pending?
         cards = r.get("card_options", [])
@@ -508,23 +516,33 @@ class Policy:
                                 f"奖励选牌：全部跳过（最高价值 {best_v:.1f} < 阈值 {pol['card_pick_threshold']}）；候选：{', '.join(vals)}",
                                 wait=0.8)
 
-        # claim simple rewards (gold / relic / potion)
+        # claim simple rewards (gold / relic / potion)；失败过的（如药水栏满）不再重试
         for opt in r.get("rewards", []):
             if not opt.get("claimable"):
                 continue
             rtype = opt.get("reward_type", "")
+            key = (rtype, opt.get("description", ""))
+            if key in self._reward_tried:
+                continue
             if rtype in ("Gold", "Relic", "Potion") and "claim_reward" in actions:
+                self._reward_tried.add(key)
                 tags = [("relic_pick", opt.get("description", ""))] if rtype == "Relic" else []
                 return Decision("claim_reward", {"option_index": opt["index"]},
                                 f"领取奖励：{opt.get('description')}", tags=tags, wait=0.7)
             if rtype in ("Card", "SpecialCard") and "claim_reward" in actions:
+                self._reward_tried.add(key)
                 return Decision("claim_reward", {"option_index": opt["index"]},
                                 f"打开卡牌奖励：{opt.get('description')}", wait=0.7)
 
+        # 仍有未尝试但领取失败的奖励（如药水栏满）→ 放弃它们直接前进
+        skipped = [k[1] for k in self._reward_tried
+                   if any(o.get("claimable") and o.get("reward_type") == k[0] and o.get("description") == k[1]
+                          for o in r.get("rewards", []))]
+        note = f"（放弃无法领取的：{'、'.join(skipped)}）" if skipped else ""
         if r.get("can_proceed") and "proceed" in actions:
-            return Decision("proceed", {}, "奖励结算完毕，继续前进", wait=1.0)
+            return Decision("proceed", {}, f"奖励结算完毕{note}，继续前进", wait=1.0)
         if "collect_rewards_and_proceed" in actions:
-            return Decision("collect_rewards_and_proceed", {}, "一键收取奖励并继续", wait=1.0)
+            return Decision("collect_rewards_and_proceed", {}, f"一键收取奖励并继续{note}", wait=1.0)
         return Decision(None, {}, "奖励界面：等待可操作", wait=0.8)
 
     def _card_selection(self, state: dict, ctx) -> Decision:
