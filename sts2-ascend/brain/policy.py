@@ -106,16 +106,24 @@ class Policy:
         self._sel_key = None        # card-selection screen identity
         self._sel_tried: set = set()  # card indices already clicked this screen
         self._cur_turn = None       # combat turn tracking
-        self._failed_this_turn: set = set()  # card_ids that failed to play this turn
+        self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
 
     def note_action_failed(self, action: str, tags: list) -> None:
-        """agent 在执行失败时回调：本回合内不再尝试这张牌（防 409 重试刷屏）。"""
+        """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
+
+        按 hand index 记账而非 card_id：第 31 局 F7 终局一张防御 409（瞬时时序抖动）
+        把同 id 的两张防御全部拉黑，剩 18 点意图无甲吃刀阵亡——
+        惩罚必须精确到打失败的那一张，同 id 的其他副本不受连坐。
+        """
         if action == "play_card":
             for t in tags or []:
-                if t[0] == "play_card" and t[1]:
-                    self._failed_this_turn.add(t[1])
+                if t[0] == "play_card_index":
+                    try:
+                        self._failed_this_turn.add(int(t[1]))
+                    except (TypeError, ValueError):
+                        pass
 
     # ------------------------------------------------------------------
     # top-level router
@@ -170,10 +178,23 @@ class Policy:
         if timeline and timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
             return Decision("confirm_timeline_overlay", {}, "主菜单：确认时间线弹层", wait=0.8)
         if timeline and timeline.get("can_choose_epoch") and "choose_timeline_epoch" in actions:
-            slots = [s for s in timeline.get("slots", []) if s.get("is_actionable")]
-            if slots:
-                return Decision("choose_timeline_epoch", {"option_index": slots[0]["index"]},
-                                f"主菜单：选择时间线节点 {slots[0].get('title')}", wait=0.8)
+            # 只点 obtained（新获得待确认）的槽位；complete 的点开只是查看——
+            # 曾因此把同一个已完成槽位无限重复点击（is_actionable 含 complete）。
+            # 另用 timeline_tried 防"点了状态不变"的兜底循环。
+            tried = getattr(ctx, "timeline_tried", None)
+            if tried is None:
+                tried = ctx.timeline_tried = set()
+            new_slots = [s for s in timeline.get("slots", [])
+                         if (s.get("state") or "") == "obtained" and s.get("index") not in tried]
+            if new_slots:
+                s = new_slots[0]
+                tried.add(s.get("index"))
+                return Decision("choose_timeline_epoch", {"option_index": s["index"]},
+                                f"主菜单：解锁时间线新内容【{s.get('title')}】", wait=0.8)
+            # 没有新内容 → 关闭时间线弹层，继续主流程
+            if "close_main_menu_submenu" in actions:
+                ctx.timeline_tried = set()
+                return Decision("close_main_menu_submenu", {}, "主菜单：时间线无新解锁，关闭弹层", wait=0.8)
         if "continue_run" in actions:
             return Decision("continue_run", {}, "主菜单：检测到进行中的存档，继续对局", wait=1.2)
         # 一局结束后：时间线有新解锁项（obtained 未 complete）时优先去解锁
@@ -191,14 +212,20 @@ class Policy:
         # 1) 解锁页/查看页弹层优先确认
         if timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
             return Decision("confirm_timeline_overlay", {}, "时间线：确认解锁页", wait=0.8)
-        # 2) 有新获得（obtained 未 complete）的槽位 → 优先解锁
-        unlockable = [s for s in timeline.get("slots", []) if (s.get("state") or "") == "obtained"]
+        # 2) 有新获得（obtained 未 complete）且未点过的槽位 → 优先解锁
+        tried = getattr(ctx, "timeline_tried", None)
+        if tried is None:
+            tried = ctx.timeline_tried = set()
+        unlockable = [s for s in timeline.get("slots", [])
+                      if (s.get("state") or "") == "obtained" and s.get("index") not in tried]
         if unlockable and "choose_timeline_epoch" in actions:
             s = unlockable[0]
+            tried.add(s.get("index"))
             return Decision("choose_timeline_epoch", {"option_index": s["index"]},
                             f"时间线：优先解锁新内容【{s.get('title')}】", wait=1.0)
         # 3) 没有可解锁项 → 关闭时间线回主菜单开新局
         if "close_main_menu_submenu" in actions:
+            ctx.timeline_tried = set()
             return Decision("close_main_menu_submenu", {}, "时间线：无可解锁项，返回主菜单", wait=0.8)
         return self._main_menu(state, ctx)
 
@@ -317,6 +344,10 @@ class Policy:
                     return 1.4, f"金币{gold}足够"
                 return 0.6, "金币不足"
             elif nt == "Monster":
+                # 低血量时"前期积累卡牌"必须让位于生存：
+                # 第 30 局 21% 血仍以 1.25 加成走进第 7 连战阵亡
+                if hpp < pol["rest_urgent_hp_pct"]:
+                    return 0.45, f"血量{hpp:.0%}过低，避免无谓消耗战"
                 if floor <= 8:
                     return 1.25, "前期需要战斗积累卡牌"
             return 1.0, ""
@@ -467,8 +498,12 @@ class Policy:
         self._end_stall = 0
         self._saw_playable_this_turn = True
 
-        # potion check (elite/boss or lethal danger)
-        hard = ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player") or block_gap >= my_hp
+        # 药水使用门槛：精英/Boss、致死威胁，以及"低血量且有缺口"。
+        # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
+        # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
+        low_hp_bleeding = my_hp <= 0.35 * my_max_hp and block_gap > 0
+        hard = (ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
+                or block_gap >= my_hp or low_hp_bleeding)
         potion_dec = self._maybe_potion(state, ctx, hard)
         if potion_dec is not None:
             return potion_dec
@@ -479,10 +514,13 @@ class Policy:
         danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
 
         best = None  # (score, card, target_index, why)
+        # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
+        # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
+        forced_kill = bool(combat.get("end_turn_will_kill_player"))
         for c in hand:
             if not c.get("playable"):
                 continue
-            if c.get("card_id") in self._failed_this_turn:
+            if c.get("index") in self._failed_this_turn:
                 continue
             # 需要目标但当前无有效目标：跳过（否则服务端 409）
             if c.get("requires_target"):
@@ -495,7 +533,7 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                  my_hp, my_max_hp, stance)
+                                                  my_hp, my_max_hp, stance, forced_kill)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -520,7 +558,8 @@ class Policy:
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
-                            tags=[("play_card", card.get("card_id"))], wait=0.6)
+                            tags=[("play_card", card.get("card_id")),
+                                  ("play_card_index", card.get("index"))], wait=0.6)
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""
@@ -530,7 +569,8 @@ class Policy:
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
-                    my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None):
+                    my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
+                    forced_kill: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -553,7 +593,11 @@ class Policy:
         st = stance or {}
         hp_pct = my_hp / max(1, my_max_hp)
         gap = max(0, incoming - my_block)
-        lethal = gap >= my_hp              # 本回合就可能被打死
+        # 本回合就可能被打死：本地算术 + 服务端判定双保险。
+        # gap>0 时以服务端为准——回合内已打出的格挡会让本地算术"提前脱险"，
+        # 但服务端的 end_turn_will_kill_player 看到的是真实结算投影
+        # （第 31 局 F7 终局：17 血对 18 意图，本地补 5 甲后误判安全改打打击，阵亡）
+        lethal = gap >= my_hp or (forced_kill and gap > 0)
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         if lethal:
             atk_damp, blk_boost = 0.55, 1.8
@@ -660,7 +704,9 @@ class Policy:
             desc = (p.get("description") or "")
             name = p.get("name") or ""
             usage = (p.get("usage") or "").lower()
-            if "combat" not in usage and "战斗" not in usage and usage:
+            # combat/战斗/anytime 都允许在战斗中使用（第 30 局敏捷药水疑因
+            # usage 分类不符被整场跳过，带进坟墓）
+            if usage and not any(k in usage for k in ("combat", "战斗", "anytime", "任意", "any")):
                 continue
             needs_target = bool(p.get("requires_target"))
             target = None
@@ -691,6 +737,21 @@ class Policy:
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+            # 兜底：硬仗（致死/精英/低血放血）里无法分类的药水也值得一试——
+            # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）
+            cb_player = (state.get("combat") or {}).get("player") or {}
+            cb_hp = cb_player.get("current_hp", 1)
+            cb_max = max(1, cb_player.get("max_hp", 1))
+            cb_incoming = sum((it.get("total_damage") or 0)
+                              for e in enemies for it in (e.get("intents") or []))
+            if enemies and cb_incoming > cb_player.get("block", 0) and cb_hp <= 0.5 * cb_max:
+                self._potion_tried.add(p["index"])
+                params = {"option_index": p["index"]}
+                if target is not None:
+                    params["target_index"] = target
+                return Decision("use_potion", params,
+                                f"战斗：硬仗兜底使用药水【{name}】（描述无法分类，宁滥勿囤）",
+                                tags=[("use_potion", p.get("potion_id"))], wait=0.6)
         return None
 
     # ------------------------------------------------------------------
@@ -741,6 +802,16 @@ class Policy:
             overflow = good_cards - pol.get("deck_soft_cap", 20)
             if overflow > 0:
                 value -= overflow * pol.get("deck_overflow_penalty", 0.9)
+        cid = (card.get("card_id") or "").upper()
+        # 奖励端不拿未升级的基础打/防牌（生涯从奖励拾取 STRIKE_IRONCLAD×10 次）。
+        # 删除/变化场景里该惩罚反而抬高其"最该删"排序，语义自洽
+        if not card.get("upgraded") and ("STRIKE" in cid or "DEFEND" in cid):
+            value -= 4.0
+        # 统计实锤的低价值牌（样本≥4 且场均显著低于全局均值）硬性回避：
+        # EXPECT_A_FIGHT(6.6分/5局)、BASH(7.2分/6局) 的 learned value ≈ -2.8，
+        # 压不住格挡/抽牌启发式的 12+ 基础分，必须用大额惩罚对冲
+        if self.know.card_is_proven_bad(card.get("card_id", "")):
+            value -= 12.0
         value += self.know.card_value(card.get("card_id", ""))
         self.know.commit_card_seen(card.get("card_id", ""))
         return value
