@@ -1027,3 +1027,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(9分/8局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/79 胜，当前目标进阶 0
+
+## 第 80 局复盘（2026-08-23 07:17）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：MANGLE, BREAKTHROUGH, CINDER, CONFLAGRATION, STOMP, SECOND_WIND, STOMP, SPITE, EVIL_EYE, ANGER, BLUDGEON
+- 本局遗物：VAMBRACE
+- 战斗记录：F9 Monster战 掉血31; F9 Monster战 掉血0; F12 Monster战 掉血10; F14 Monster战 掉血0; F15 Monster战 掉血14; F17 Boss战 掉血64（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(22分/2局)，MANGLE(21分/19局)，BARRICADE(20分/2局)，IMPERVIOUS(19分/5局)，CONFLAGRATION(19分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(9分/8局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/80 胜，当前目标进阶 0
