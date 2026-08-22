@@ -26,6 +26,11 @@ try:
 except Exception:  # LLM 复盘是可选模块，导入失败不影响游玩
     llm_review = None
 
+try:
+    import autogit
+except Exception:
+    autogit = None
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
@@ -238,6 +243,13 @@ class Agent:
         # 每 N 局触发一次大模型复盘（默认 10 局；未配置 API key 时自动跳过）
         if llm_review is not None:
             llm_review.maybe_review(self, log=log)
+        # 每局结束自动把进化记忆 commit+push 到仓库（失败不影响游玩）
+        if autogit is not None:
+            g = self.know.stats["global"]
+            result = "胜" if victory else "负"
+            autogit.commit_progress(
+                f"chore(sts2-ascend): 第{g['runs']}局存档（{result} F{floor} 进阶{self.ctx.ascension}，生涯 {g['wins']}胜/{g['runs']}局）",
+                log=log)
 
     # ---------------- watchdog ----------------
 

@@ -1,5 +1,10 @@
-# runtime knowledge (the agent's evolving memory) — intentionally not committed
-knowledge/
+# runtime knowledge — 智能体的进化记忆，纳入版本管理（每局结束自动 commit+push）
+# 以下高频/再生成文件除外：
+knowledge/brain.log
+knowledge/brain.err.log
+knowledge/review_prompt_latest.md
+knowledge/code_backups/
+knowledge/screenshot*.png
 
 # downloaded upstream release artifacts
 third_party/dist/
