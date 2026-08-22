@@ -97,3 +97,25 @@
 - 当前低价值卡牌：SETUP_STRIKE(9分/3局)，HEMOKINESIS(13分/2局)，SPITE(15分/5局)
 - 策略进化：block_safety: 1.50 → 1.55（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.196 → 0.190（经验累积，探索衰减）
 - 生涯战绩：0/9 胜，当前目标进阶 0
+
+## 第 10 局复盘（2026-08-22 15:35）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：SPITE, DISMANTLE, POMMEL_STRIKE, DISMANTLE, HEMOKINESIS, TWIN_STRIKE, HEMOKINESIS, IRON_WAVE, UNRELENTING
+- 本局遗物：小血瓶, ANCHOR, 永恒羽毛
+- 战斗记录：F4 Monster战 掉血0; F7 Monster战 掉血11; F8 Monster战 掉血23; F11 Elite战 掉血44; F12 Monster战 掉血5; F13 Monster战 掉血24（阵亡）
+- 当前高价值卡牌：MANGLE(33分/3局)，UPPERCUT(23分/5局)，IRON_WAVE(23分/2局)，RAMPAGE(22分/4局)，TWIN_STRIKE(21分/3局)
+- 当前低价值卡牌：SETUP_STRIKE(9分/3局)，DISMANTLE(13分/2局)，HEMOKINESIS(13分/4局)
+- 策略进化：block_safety: 1.55 → 1.60（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.190 → 0.184（经验累积，探索衰减）
+- 生涯战绩：0/10 胜，当前目标进阶 0
+
+## 🧠 第 1~10 局大复盘经验沉淀（2026-08-22 15:40，大模型教练）
+
+- **核心死因是普通战 attrition，不是补刀怪**：7/10 局死于第一幕，致死战掉血少（-1~-24），真凶是此前 F5~F8 的 -20~-34 普通怪战。复盘要看完整 combat_notes 链。
+- **卡组膨胀是输出密度不足的根因**：最佳局拿了 29 张牌；card_pick_threshold 2.0 → 3.0，只拿高价值牌，宁可跳牌。下轮观察：若拿牌 <5/局则回调 2.5。
+- **高价值牌（优先拿）**：MANGLE(33) > UPPERCUT(23.4) > IRON_WAVE(23) > RAMPAGE(22) > TWIN_STRIKE(21) > WHIRLWIND(21) > HEADBUTT(20.8) > BLUDGEON(19.3)。
+- **低价值牌（主动规避）**：SETUP_STRIKE(8.7，bias -1.5)、HEMOKINESIS(13.0 且自残，bias -1.0)、DISMANTLE(13.0)。自残牌在失血环境下要额外惩罚。
+- **精英线 0.65 → 0.70**：65% 血 + 膨胀卡组进精英期望为负（F11 精英 -44 后 F13 即死）。
+- **block_safety 手动加速 1.60 → 1.70**：自动 +0.05/局 的进化速率追不上失血速度，大复盘负责校正慢变量。
+- **AoE（WHIRLWIND）价值上调**：2 次死于多怪组合补刀，AoE 缩短多怪战回合数。
+- **事件学习正常**：真理石板 DECIPHER 已收敛为 -34 HP 负经验，贪心会自然回避，无需人工干预事件表。
