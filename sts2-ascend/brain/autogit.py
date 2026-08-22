@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 from pathlib import Path
@@ -19,19 +20,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BASE_DIR.parent
 
 _GIT_LOCK = threading.Lock()
-_review_active = False
+REVIEW_ACTIVE_FILE = BASE_DIR / "knowledge" / "review_active.flag"
 
 
 def set_review_active(active: bool) -> None:
-    """标记复盘会话进行中（由 llm_review 的工作线程调用）。"""
-    global _review_active
-    with _GIT_LOCK:
-        _review_active = active
+    """标记复盘会话进行中（由 llm_review 调用）。文件+pid 形式，跨进程可见。"""
+    try:
+        if active:
+            REVIEW_ACTIVE_FILE.write_text(str(os.getpid()), encoding="utf-8")
+        else:
+            REVIEW_ACTIVE_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def is_review_active() -> bool:
-    with _GIT_LOCK:
-        return _review_active
+    """复盘是否进行中（含跨进程场景：手动 --now 复盘时游玩侧存档也会收窄范围）。
+
+    标记文件里的 pid 已死则视为残留标记，自动清理。"""
+    try:
+        if not REVIEW_ACTIVE_FILE.exists():
+            return False
+        pid = int(REVIEW_ACTIVE_FILE.read_text().strip() or "0")
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            REVIEW_ACTIVE_FILE.unlink(missing_ok=True)
+            return False
+    except (OSError, ValueError):
+        return False
 
 
 def _git(args: list[str], timeout: int = 90) -> subprocess.CompletedProcess:

@@ -283,3 +283,14 @@
 - 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，STRIKE_IRONCLAD(9分/5局)
 - 策略进化：block_safety: 1.95 → 2.00（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.132 → 0.128（经验累积，探索衰减）
 - 生涯战绩：0/22 胜，当前目标进阶 0
+
+## 第 23 局复盘（2026-08-22 21:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：STRIKE_IRONCLAD, IRON_WAVE, UNMOVABLE, UNMOVABLE, SHRUG_IT_OFF, STRIKE_IRONCLAD, CINDER, TWIN_STRIKE, HEADBUTT, IRON_WAVE, SHRUG_IT_OFF, TWIN_STRIKE, DISMANTLE, CINDER, SHRUG_IT_OFF, POMMEL_STRIKE, DISMANTLE, SHRUG_IT_OFF, SWORD_BOOMERANG, SHRUG_IT_OFF, SHRUG_IT_OFF
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F15 Monster战 掉血4; F15 Monster战 掉血0; F15 Monster战 掉血4; F17 Boss战 掉血0; F17 Boss战 掉血22; F17 Boss战 掉血22（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，UPPERCUT(21分/12局)
+- 当前低价值卡牌：BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 2.00 → 2.05（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.128 → 0.124（经验累积，探索衰减）
+- 生涯战绩：0/23 胜，当前目标进阶 0

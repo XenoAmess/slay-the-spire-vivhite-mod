@@ -61,13 +61,22 @@ def load_llm_config() -> dict:
         "runner": "opencode",
         "opencode_bin": "opencode",
         "model": "kimi-for-coding/k3",
-        "review_every_runs": 10,
+        "review_every_runs": 5,
         "timeout_min": 25,
         "max_runs_in_packet": 10,
-        # Ox Alpha Free（openrouter/stealth/ox-alpha）：可用时每局复盘
-        "preferred_model": "openrouter/stealth/ox-alpha",
+        # 优先模型链（按优先级；条目形如 provider/model[@variant]）：
+        # 1) Ox Alpha Free (Unlimited) · OpenCode Zen · max —— 若在 opencode models 清单则用
+        # 2) Ox Alpha · OpenRouter · max（stealth 马甲，当前可见条目）
+        "preferred_models": [
+            "opencode/ox-alpha@max",
+            "openrouter/stealth/ox-alpha@max",
+        ],
         "preferred_every_runs": 1,
-        "preferred_failure_cooldown_min": 360,
+        # 失败冷却：超时通常是免费模型慢/拥堵（异步后台跑无碍），冷却从宽；硬失败（exit!=0/异常）才长冷却
+        "preferred_timeout_cooldown_min": 30,
+        "preferred_failure_cooldown_min": 60,
+        # 异步复盘不阻塞游玩，优先模型的超时可放宽
+        "preferred_timeout_min": 40,
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
@@ -203,27 +212,54 @@ def _save_preferred_state(state: dict) -> None:
         pass
 
 
-def _preferred_cooldown_remaining() -> float:
-    """优先模型失败冷却剩余秒数（0 表示未在冷却中）。"""
-    until = float(_load_preferred_state().get("unavailable_until", 0) or 0)
+def _preferred_entries(cfg: dict) -> list[str]:
+    """优先模型链（按优先级排序）。每项形如 'provider/model' 或 'provider/model@variant'。"""
+    entries = cfg.get("preferred_models")
+    if isinstance(entries, list) and entries:
+        return [str(e) for e in entries if e]
+    single = cfg.get("preferred_model")
+    return [single] if single else []
+
+
+def _parse_entry(entry: str) -> tuple[str, str | None]:
+    """'openrouter/stealth/ox-alpha@max' → ('openrouter/stealth/ox-alpha', 'max')。"""
+    if "@" in entry:
+        m, v = entry.rsplit("@", 1)
+        return m, (v or None)
+    return entry, None
+
+
+def _entry_state(entry: str) -> dict:
+    return _load_preferred_state().get("entries", {}).get(entry, {})
+
+
+def _write_entry_state(entry: str, data: dict) -> None:
+    state = _load_preferred_state()
+    state.setdefault("entries", {})[entry] = data
+    _save_preferred_state(state)
+
+
+def _preferred_cooldown_remaining(entry: str) -> float:
+    """该优先模型失败冷却剩余秒数（0 表示未在冷却中）。"""
+    until = float(_entry_state(entry).get("unavailable_until", 0) or 0)
     return max(0.0, until - time.time())
 
 
-def _mark_preferred_failure(cfg: dict, log, reason: str) -> None:
-    cooldown_min = float(cfg.get("preferred_failure_cooldown_min", 360))
-    _save_preferred_state({
+def _mark_preferred_failure(cfg: dict, log, entry: str, reason: str, kind: str = "failure") -> None:
+    """优先模型失败冷却（按条目独立计时）。kind="timeout" 从宽，硬失败从严。"""
+    key = "preferred_timeout_cooldown_min" if kind == "timeout" else "preferred_failure_cooldown_min"
+    cooldown_min = float(cfg.get(key, 30 if kind == "timeout" else 60))
+    _write_entry_state(entry, {
         "unavailable_until": time.time() + cooldown_min * 60,
         "last_failure": reason,
         "last_failure_time": time.strftime("%Y-%m-%d %H:%M:%S"),
     })
-    log(f"[llm] 优先模型复盘失败（{reason}），{cooldown_min:.0f} 分钟内回退普通模型")
+    log(f"[llm] 优先模型 {entry} 复盘失败（{reason}），{cooldown_min:.0f} 分钟内跳过该条目")
 
 
-def _mark_preferred_ok() -> None:
-    state = _load_preferred_state()
-    if state.get("unavailable_until"):
-        state["unavailable_until"] = 0
-        _save_preferred_state(state)
+def _mark_preferred_ok(entry: str) -> None:
+    if _entry_state(entry).get("unavailable_until"):
+        _write_entry_state(entry, {"unavailable_until": 0})
 
 
 def _query_available_models(binary: str, cfg: dict, log) -> set[str] | None:
@@ -242,25 +278,29 @@ def _query_available_models(binary: str, cfg: dict, log) -> set[str] | None:
 
 
 def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, int, str]:
-    """决定本轮复盘的 (模型, 复盘间隔局数, 来源)。
+    """决定本轮复盘的 (模型条目, 复盘间隔局数, 来源)。
 
-    优先模型可用（在 `opencode models` 清单里且不在失败冷却期）→ 每局复盘；
-    否则回退 cfg["model"] 按 review_every_runs 间隔复盘。
+    按优先链逐条检查（在 `opencode models` 清单里且不在失败冷却期），命中即用、每局复盘；
+    全部不可用则回退 cfg["model"] 按 review_every_runs 间隔复盘。
+    条目形如 'provider/model' 或 'provider/model@variant'。
     """
-    fallback = (cfg["model"], max(1, int(cfg.get("review_every_runs", 10))), "fallback")
-    preferred = cfg.get("preferred_model")
-    if not preferred or not binary:
+    fallback = (cfg["model"], max(1, int(cfg.get("review_every_runs", 5))), "fallback")
+    entries = _preferred_entries(cfg)
+    if not entries or not binary:
         return fallback
-    cooldown = _preferred_cooldown_remaining()
-    if cooldown > 0:
-        log(f"[llm] 优先模型 {preferred} 失败冷却中（剩余 {cooldown / 60:.0f} 分钟）")
-        return fallback
-    models = _query_available_models(binary, cfg, log)
-    if models is None:
-        return fallback
-    if preferred in models:
-        return preferred, max(1, int(cfg.get("preferred_every_runs", 1))), "preferred"
-    log(f"[llm] 优先模型 {preferred} 不在可用清单，回退 {fallback[0]}（每 {fallback[1]} 局）")
+    models: set[str] | None = None
+    for entry in entries:
+        model_id, _variant = _parse_entry(entry)
+        cooldown = _preferred_cooldown_remaining(entry)
+        if cooldown > 0:
+            log(f"[llm] 优先模型 {entry} 冷却中（剩余 {cooldown / 60:.0f} 分钟），看下一优先")
+            continue
+        if models is None:
+            models = _query_available_models(binary, cfg, log) or set()
+        if model_id in models:
+            return entry, max(1, int(cfg.get("preferred_every_runs", 1))), "preferred"
+        log(f"[llm] 优先模型 {model_id} 不在可用清单，看下一优先")
+    log(f"[llm] 优先模型全部不可用，回退 {fallback[0]}（每 {fallback[1]} 局）")
     return fallback
 
 
@@ -402,6 +442,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         log(f"[llm] 未找到 opencode 可执行文件（{cfg.get('opencode_bin')}），跳过本次复盘")
         return False
     model = model or cfg["model"]
+    entry = model                       # 条目原文（含 @variant），用于冷却记账与展示
+    model_id, variant = _parse_entry(entry)
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
 
@@ -413,7 +455,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     pre_head = autogit.head()
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
-    log(f"[llm] ===== 启动大模型复盘（{model} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
+    log(f"[llm] ===== 启动大模型复盘（{entry} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
     prompt = build_prompt(know, cfg, every, batch_runs)
     try:
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
@@ -422,7 +464,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
 
     cmd = [
         binary, "run",
-        "--model", model,
+        "--model", model_id,
+    ]
+    if variant:
+        cmd += ["--variant", variant]
+    cmd += [
         "--title", f"sts2-ascend 复盘 {stamp}",
         "--dir", str(REPO_DIR),
         "--auto",
@@ -430,29 +476,31 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     ]
 
     # 直播流开启 + 拉起悬浮窗（哨兵/meta 先行，viewer 据此渲染标题）
-    _stream_begin({"model": model, "source": source, "run": runs, "time": stamp})
+    _stream_begin({"model": entry, "source": source, "run": runs, "time": stamp})
     _launch_viewer(cfg, log)
 
     autogit.set_review_active(True)     # 此后对局存档只提交 knowledge/
     rc, out, timed_out = -1, "", False
+    eff_timeout_min = float(cfg.get("preferred_timeout_min", 40)) if source == "preferred" \
+        else float(cfg.get("timeout_min", 25))
     try:
-        rc, out, timed_out = _stream_run(cmd, int(cfg.get("timeout_min", 25)) * 60)
+        rc, out, timed_out = _stream_run(cmd, int(eff_timeout_min * 60))
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
         if timed_out:
-            log(f"[llm] 复盘超时（{cfg.get('timeout_min')} 分钟），本次作废")
+            log(f"[llm] 复盘超时（{eff_timeout_min:.0f} 分钟），本次作废")
             if source == "preferred":
-                _mark_preferred_failure(cfg, log, "timeout")
+                _mark_preferred_failure(cfg, log, entry, "timeout", kind="timeout")
             return False
         if rc != 0:
             if source == "preferred":
-                _mark_preferred_failure(cfg, log, f"exit={rc}")
+                _mark_preferred_failure(cfg, log, entry, f"exit={rc}")
             return False
         if source == "preferred":
-            _mark_preferred_ok()
+            _mark_preferred_ok(entry)
     except Exception as exc:
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
         if source == "preferred":
-            _mark_preferred_failure(cfg, log, str(exc)[:120])
+            _mark_preferred_failure(cfg, log, entry, str(exc)[:120])
         return False
     finally:
         _stream_end({"exit": rc, "timeout": timed_out})
