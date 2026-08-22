@@ -123,6 +123,8 @@ class Policy:
         self._race_prev_hp = None   # 回合边界观测血量
         self._race_loss_rate = 0.0  # 近期每回合净损血 EMA
         self._race_rounds = 0       # 完成的回合边界采样数
+        self._desp_combat = None    # 战斗实例身份（假孤注观测确认用）
+        self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -603,6 +605,10 @@ class Policy:
             self._race_prev_hp = None
             self._race_loss_rate = 0.0
             self._race_rounds = 0
+        # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
+        if self._desp_combat is not ctx.combat:
+            self._desp_combat = ctx.combat
+            self._desp_streak = 0
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，

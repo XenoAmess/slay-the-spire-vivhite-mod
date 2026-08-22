@@ -83,6 +83,9 @@ DEFAULT_POLICY = {
     "comp_loss_stance_frac": 0.28,  # 敌方组合场均战损占最大生命比达到此值 → 即使死亡率<30%也视同高危收紧姿态
     "potion_comp_loss_frac": 0.30,  # 敌方组合场均战损占比达到此值 → 解锁增益/攻击药水（不再只认精英/Boss 房）
     "boss_eve_smith_min_samples": 3,  # Boss 前夜智能锻造所需的 Boss 分档最小样本数
+    "boss_eve_smith_heal_mult": 1.0,  # Boss 前夜改锻造的战损线：场均Boss战损 ≥ 回血量×此倍数即视为"回血救不了"（79局复盘：旧条件 ≥满血 永远够不到，实测场均≈28）
+    # --- 执行端补丁键（第 79 局复盘） ---
+    "desperate_confirm_ticks": 2,  # 孤注一掷观测确认窗：致死且无可负担格挡须连续 N tick 一致才允许孤注（防手牌渲染瞬时不完整触发假孤注，79局F23 实证）
 }
 
 DEFAULT_PROGRESSION = {
@@ -103,6 +106,7 @@ DEFAULT_STATS = {
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths}
     "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
+    "rooms_act": {},  # "{node_type}@{act}" -> {hp_lost_sum, damage_events}（分幕掉血，第79局复盘新增）
 }
 
 
@@ -154,6 +158,9 @@ class Knowledge:
             e.setdefault("boss_encounters", 0)
             e.setdefault("boss_hp_lost_sum", 0.0)
             e.setdefault("boss_deaths", 0)
+        # 迁移：分幕掉血统计（第 79 局复盘新增：跨幕混算的 Monster 场均 ~9.9
+        # 让二幕投影系统性乐观——预测进 Boss 82% 实际两场战斗后剩 27%）
+        self.stats.setdefault("rooms_act", {})
         # 一次性幻影局数据修复（自检加载真实库时应传 repair_phantoms=False，
         # 避免在运行中的大脑落盘前抢先改写/置标记）
         if repair_phantoms:
@@ -320,6 +327,22 @@ class Knowledge:
         w = min(0.7, e["damage_events"] / 10.0)
         return (1.0 - w) * float(static_prior) + w * measured
 
+    def room_damage_prior_act(self, node_type: str, static_prior: float, act: int) -> float:
+        """分幕掉血先验（第 79 局复盘新增）：优先用本幕实测场均掉血。
+
+        跨幕混算的 Monster 场均 ~9.9 是"一幕便宜 + 二幕昂贵"的平均假象——
+        二幕单场大失血型组合（SPINY_TOAD 本批 -40/-29）让投影系统性乐观，
+        F20 选路预测进 Boss 82%，两场战斗后实际只剩 27%。有分幕样本（≥3）
+        时以更高实测权重混合；无分幕数据时回落跨幕旧口径（向后兼容，无需迁移）。
+        """
+        e = self.stats.get("rooms_act", {}).get(f"{node_type}@{act}")
+        if not e or e.get("damage_events", 0) < 3:
+            return self.room_damage_prior(node_type, static_prior)
+        baseline = self.room_damage_prior(node_type, static_prior)
+        measured = e["hp_lost_sum"] / max(1, e["damage_events"])
+        w = min(0.85, e["damage_events"] / 8.0)
+        return (1.0 - w) * baseline + w * measured
+
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty.
 
@@ -369,12 +392,22 @@ class Knowledge:
             tot_loss += float(e.get("boss_hp_lost_sum", 0.0) or 0.0)
         return (tot_loss / tot_n if tot_n else 0.0), int(tot_n)
 
-    def commit_room_damage(self, node_type: str, hp_lost: float) -> None:
-        """按房间类型累计战斗掉血（供路径先验动态校准）。"""
+    def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None) -> None:
+        """按房间类型累计战斗掉血（供路径先验动态校准）。
+
+        act 传入时同步写入分幕键（第 79 局复盘新增）：跨幕混算的场均掉血
+        掩盖了二幕伤害升级，路径投影因此系统性乐观。旧 rooms 聚合键保持
+        原样写入（learned_room_factor 等旧消费方不受影响）。
+        """
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
         e["damage_events"] = e.get("damage_events", 0) + 1
+        if act is not None:
+            ra = self.stats.setdefault("rooms_act", {}).setdefault(
+                f"{node_type}@{int(act)}", {"hp_lost_sum": 0.0, "damage_events": 0})
+            ra["hp_lost_sum"] += max(0.0, hp_lost)
+            ra["damage_events"] += 1
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
                             gold_delta: float, died: bool, deck_delta: int = 0) -> None:
