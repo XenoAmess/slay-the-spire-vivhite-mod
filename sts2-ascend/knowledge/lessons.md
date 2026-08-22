@@ -827,3 +827,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/63 胜，当前目标进阶 0
+
+## 第 64 局复盘（2026-08-23 04:25）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：DISMANTLE, IRON_WAVE, SHRUG_IT_OFF, DRAMATIC_ENTRANCE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血16; F4 Monster战 掉血12; F5 Monster战 掉血42; F5 Monster战 掉血9（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/5局)，UPPERCUT(17分/22局)，UNMOVABLE(17分/3局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/64 胜，当前目标进阶 0
