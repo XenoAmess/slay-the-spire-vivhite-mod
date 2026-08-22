@@ -349,3 +349,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.110 → 0.107（经验累积，探索衰减）
 - 生涯战绩：0/28 胜，当前目标进阶 0
+
+## 第 29 局复盘（2026-08-22 23:04）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：FIGHT_ME
+- 本局遗物：无
+- 战斗记录：F17 Unknown战 掉血35; F17 Unknown战 掉血11（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(21分/4局)，UPPERCUT(20分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：exploration_rate: 0.107 → 0.103（经验累积，探索衰减）
+- 生涯战绩：0/29 胜，当前目标进阶 0
