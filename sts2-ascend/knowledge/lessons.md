@@ -327,3 +327,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.117 → 0.113（经验累积，探索衰减）
 - 生涯战绩：0/26 胜，当前目标进阶 0
+
+## 第 27 局复盘（2026-08-22 21:58）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FLYCONID+LEAF_SLIME_M
+- 本局拿牌：POMMEL_STRIKE, HOWL_FROM_BEYOND, RAMPAGE, UPPERCUT, HEADBUTT, UPPERCUT, TRUE_GRIT, RAMPAGE, HEADBUTT, IRON_WAVE, UPPERCUT, THE_GAMBIT
+- 本局遗物：SPARKLING_ROUGE
+- 战斗记录：F8 Monster战 掉血4; F8 Monster战 掉血0; F11 Monster战 掉血7; F11 Monster战 掉血0; F12 Monster战 掉血1; F15 Monster战 掉血44（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，MANGLE(24分/7局)，FIGHT_ME(22分/3局)，HOWL_FROM_BEYOND(22分/3局)，UPPERCUT(20分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(6分/4局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
+- 策略进化：exploration_rate: 0.113 → 0.110（经验累积，探索衰减）
+- 生涯战绩：0/27 胜，当前目标进阶 0
