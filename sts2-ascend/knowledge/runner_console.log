@@ -32347,3 +32347,48 @@ Final summary ≤200 chars as required.
 [05:13:20] [COMBAT/F5] 战斗：回合过渡中，等待
 [05:13:21] [COMBAT/F5] 战斗：回合过渡中，等待
 [05:13:21] [COMBAT/F5] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+..." was visible mid-file. The LAST section before mine — I saw its content (归因/调整表/经验知识 ending with "5. **修复验证继续以日志行为标记为准**...62~64 三局的病根指标"). The header of that section I never actually saw in my reads! It might be titled differently, e.g. "第 62~64 局复盘（异步追及队列，模型教练）" or with different spacing. My grep pattern "第 62~64 局复盘" returned 0 — but the CONTENT mentions "62~64 三局" and "第 63 局复盘"/"第 64 局复盘" etc.
+
+Wait, actually — maybe their section header uses a different format like "第 62~64 批次" or full-width tilde "～"? Let me check what headers exist now to confirm nothing was lost.
+检查 62~64 节的实际标题格式（确认未被我的追加破坏）：
+⚙ bash {}
+· tokens 195443 ·
+💭 All good — the 62~64 section header uses "｜" separator and different wording ("第 62~64 局大复盘"), which is why my grep missed it. Both sections coexist intact:
+- Line 603: 62~64 section (theirs)
+- Line 635: 65~66 section (mine)
+
+lessons.md similarly fine (899). SELFCHECK OK.
+
+Everything is complete:
+1. ✅ 归因分析 done (documented in meta_review.md)
+2. ✅ meta_review.md appended with new section
+3. ✅ Code changes: agent.py (2 fixes), policy.py (2 fixes), knowledge.py (2 keys + stance strengthening), selfcheck.py (3 regression tests) — all under sts2-ascend/
+4. ✅ selfcheck passes: SELFCHECK OK
+5. ✅ No git operations, no process management, no files outside sts2-ascend/ touched, no run logs deleted
+6. Final: ≤200 char summary in Chinese.
+
+Summary draft (~180 chars):
+复盘65~66局：日志实锤重大缺陷——mod成功状态"completed"不在白名单，每张成功打出的牌被当失败拉黑；叠加手牌位置索引前移，误杀未出牌（66局F5双打击弃权、65局致死回合手握打击阵亡）。修复：白名单+黑名单绑定手牌数量有效期；死亡率≥30%组合自动认定硬仗解锁药水；高危姿态加强；拿牌门槛随卡组膨胀抬升。自检OK，报告已写入meta_review.md与lessons.md。
+
+Count roughly: ~170 chars. Good.
+全部完成：两节文档共存完好（603 行为 62~64 节、635 行为本批新节），SELFCHECK OK。
+
+## 本次复盘总结
+
+65~66 局日志实锤波及全史的代码缺陷：mod 成功动作返回 "completed" 不在白名单，每张成功打出的牌被当失败拉黑；叠加手牌位置索引前移，误禁无辜未出牌——66 局 F5 双打击被禁玩弃权、65 局致死回合手握打击阵亡，「孤注一掷」被静默废掉。已修：①白名单补 "completed"；②黑名单以「手牌数量未变」为有效期；③死亡率≥30% 组合自动认定硬仗解锁药水（补上战损维度漏掉的处决型杀手）；④高危姿态格挡/紧急线加强；⑤拿牌门槛随卡组膨胀抬升。自检通过，报告与经验已写入 meta_review.md、lessons.md。
+· tokens 196162 ·
+
+[05:13:22] [COMBAT/F5] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方83血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[05:13:24] [COMBAT/F5] 战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤11，我方83血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[05:13:25] [COMBAT/F5] 战斗：打出【黏液】（功能牌（抽牌1/回能））；敌意图总伤11，我方83血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[05:13:26] [COMBAT/F5] 战斗：评估后无值得出的牌（心神不宁✓,打击✗,防御✗），结束回合（敌意图总伤11，我方83血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[git] 已自动存档：feat(sts2-ascend): 第65~66局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[05:13:27] [COMBAT/F5] 战斗：回合过渡中，等待
+[05:13:28] [COMBAT/F5] 战斗：回合过渡中，等待
