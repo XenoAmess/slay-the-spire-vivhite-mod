@@ -468,13 +468,16 @@ class Viewer:
 
     def _render_text(self, dt: float, now: float) -> None:
         total = sum(len(t) for t, _ in self.lines)
-        backlog = total - self.reveal
-        # 巨量灌入（启动追平/回放）时直接跳到尾部，只动画最后一段，避免启动卡顿
-        if backlog > 6000:
-            self.reveal = float(total - 1200)
-            backlog = 1200
-        cps = max(260.0, min(backlog * 2.5, 8000.0))
-        self.reveal = min(float(total), self.reveal + cps * dt)
+        if total == 0:
+            self.canvas.delete("txt")
+            return
+        # 追加滚动式：最后一行之前的所有内容瞬时上屏（老行只往上顶、不被改写），
+        # 打字机动画只作用于最新一行——终端式观感。
+        last_len = len(self.lines[-1][0])
+        floor = float(total - last_len)
+        if self.reveal < floor:
+            self.reveal = floor
+        self.reveal = min(float(total), self.reveal + 220.0 * dt)
 
         self.canvas.delete("txt")
         max_visible = (self.win_h - 130) // LINE_H   # 顶部 HUD(~78px) + 底部横幅(~50px) 避让

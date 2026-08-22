@@ -382,3 +382,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，DEFEND_IRONCLAD(8分/2局)
 - 策略进化：exploration_rate: 0.100 → 0.097（经验累积，探索衰减）
 - 生涯战绩：0/31 胜，当前目标进阶 0
+
+## 第 32 局复盘（2026-08-22 23:21）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：SPITE, FLAME_BARRIER, FLAME_BARRIER, DRUM_OF_BATTLE, SPITE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血6; F3 Monster战 掉血3; F4 Monster战 掉血2; F6 Monster战 掉血0; F6 Monster战 掉血69（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(24分/7局)，FIGHT_ME(21分/4局)，UPPERCUT(19分/15局)
+- 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：exploration_rate: 0.097 → 0.094（经验累积，探索衰减）
+- 生涯战绩：0/32 胜，当前目标进阶 0

@@ -454,6 +454,11 @@ class Policy:
         if potion_dec is not None:
             return potion_dec
 
+        # 敌方组合历史战绩 → 战斗姿态（高危组合自动转防守，见 knowledge.enemy_stance）
+        comp_id = ((getattr(ctx, "combat", None) or {}).get("comp_id")) or None
+        stance = self.know.enemy_stance(comp_id)
+        danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
+
         best = None  # (score, card, target_index, why)
         for c in hand:
             if not c.get("playable"):
@@ -471,7 +476,7 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                   my_hp, my_max_hp)
+                                                  my_hp, my_max_hp, stance)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -495,14 +500,13 @@ class Policy:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
-                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲",
+                            f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
                             tags=[("play_card", card.get("card_id"))], wait=0.6)
-
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{danger_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

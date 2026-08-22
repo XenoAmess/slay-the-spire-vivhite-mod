@@ -1,9 +1,10 @@
-"""大脑监督进程 —— 负责拉起/重启/崩溃回滚。
+"""大脑监督进程 —— 负责拉起/重启/崩溃恢复。
 
 - 大脑以退出码 42 表示"LLM 复盘改了代码，请重启我"
-- 大脑重启前会把 brain/*.py 快照到 knowledge/code_backups/pre_restart_<ts>/ 并写 pending_restart.json
-- 若重启后进程很快异常退出且 marker 仍在（说明新代码起不来），runner 自动还原快照再重启
-- 任何非零退出都会尝试重启（最多连续 5 次快速崩溃后放弃），保证无人值守韧性
+- 异常退出时**先重试**：每次间隔 60 秒，最多连续 5 次快速崩溃（存活 <90s 才算快速崩溃）
+- **回滚是最后手段**：仅当连续 5 次快速崩溃、且存在复盘重启标记（pending_restart.json，
+  说明可能是复盘改坏了代码）时，才按标记回滚到复盘前备份点，然后继续重试
+- 任何非零退出都会尝试重启，保证无人值守韧性
 
 用法: py brain/runner.py   （替代直接 py -m brain）
 """
@@ -22,6 +23,7 @@ MARKER = KNOWLEDGE_DIR / "pending_restart.json"
 RESTART_CODE = 42
 MAX_FAST_CRASHES = 5
 FAST_CRASH_SECONDS = 90
+RETRY_INTERVAL_SECONDS = 60
 
 
 def log(msg: str) -> None:
@@ -74,16 +76,19 @@ def main() -> int:
             log("大脑正常退出，监督进程结束")
             return 0
 
-        # 异常退出
-        fast_crashes = fast_crashes + 1 if alive_s < FAST_CRASH_SECONDS else 0
-        log(f"大脑异常退出（rc={rc}，存活 {alive_s:.0f}s）")
-        if MARKER.exists():
-            log("检测到重启标记：疑似 LLM 复盘改坏了代码，执行自动回滚")
+        # 异常退出：先耐心重试，回滚只是最后手段
+        fast_crashes = 0 if alive_s > FAST_CRASH_SECONDS else fast_crashes + 1
+        log(f"大脑异常退出（rc={rc}，存活 {alive_s:.0f}s，连续快速崩溃 {fast_crashes}/{MAX_FAST_CRASHES}）")
+
+        if fast_crashes >= MAX_FAST_CRASHES and MARKER.exists():
+            log(f"连续 {MAX_FAST_CRASHES} 次快速崩溃且存在复盘重启标记——疑似复盘改坏了代码，执行最后手段：回滚")
             rollback_from_marker()
-        if fast_crashes >= MAX_FAST_CRASHES:
-            log(f"连续 {MAX_FAST_CRASHES} 次快速崩溃，放弃重启（游戏不受影响，需人工检查）")
-            return 1
-        time.sleep(5)
+            fast_crashes = 0
+        time.sleep(RETRY_INTERVAL_SECONDS)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
 
 
 if __name__ == "__main__":

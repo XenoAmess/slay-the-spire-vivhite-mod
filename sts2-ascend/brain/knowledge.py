@@ -163,6 +163,28 @@ class Knowledge:
             return 12.0  # unknown = moderately dangerous prior
         return e["hp_lost_sum"] / e["encounters"]
 
+    def enemy_stance(self, comp_id: str | None) -> dict:
+        """按敌人组合历史战绩生成战斗姿态修正（无数据/低危→中性）。
+
+        高危组合（样本≥3 且死亡率≥30%）自动收紧生存线：提高紧急血量阈值、
+        压低进攻权重、抬高格挡权重。动机：FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+        10 战 6 死、场均掉血 25（全档案最致命），此前战斗端对它零感知，
+        与打杂兵用同一套节奏反复送死。
+        """
+        base = {"urgent_hp_pct": 0.45, "atk_mult": 1.0, "blk_mult": 1.0}
+        e = (self.stats.get("enemies") or {}).get(comp_id or "")
+        if not e:
+            return base
+        n = e.get("encounters", 0)
+        deaths = e.get("deaths", 0)
+        if n >= 3 and deaths / n >= 0.30:
+            sev = min(1.0, (deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
+            base["urgent_hp_pct"] = round(0.45 + 0.15 * sev, 3)
+            base["atk_mult"] = round(1.0 - 0.15 * sev, 3)
+            base["blk_mult"] = round(1.0 + 0.15 * sev, 3)
+            base["danger"] = f"高危组合（{n}战{deaths}死）"
+        return base
+
     def combat_calibration(self) -> float:
         """敌人实测数据的 encounter 加权场均掉血 / 基准12 → 静态先验的整体校准系数。
 
