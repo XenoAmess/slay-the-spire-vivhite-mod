@@ -23,9 +23,11 @@ from __future__ import annotations
 import json
 import os
 import py_compile
+import queue
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -37,6 +39,8 @@ PROMPT_FILE = KNOWLEDGE_DIR / "review_prompt_latest.md"
 REVIEW_LOG = KNOWLEDGE_DIR / "meta_review.md"
 MARKER_FILE = KNOWLEDGE_DIR / "pending_restart.json"
 PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
+LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
+VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
 
 
 def load_llm_config() -> dict:
@@ -59,6 +63,8 @@ def load_llm_config() -> dict:
         "preferred_every_runs": 1,
         "preferred_failure_cooldown_min": 360,
         "models_probe_timeout_sec": 60,
+        # 复盘直播悬浮窗（review_viewer.py）
+        "viewer_enabled": True,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
     return merged
@@ -242,6 +248,99 @@ def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, 
 
 
 # ---------------------------------------------------------------------------
+# 直播流：把复盘会话的 stdout 实时写到 review_live.stream，并拉起悬浮窗
+# ---------------------------------------------------------------------------
+
+def _launch_viewer(cfg: dict, log) -> None:
+    """拉起直播悬浮窗（独立进程，它的死活绝不影响复盘）。"""
+    if not cfg.get("viewer_enabled", True) or not VIEWER_PATH.exists():
+        return
+    try:
+        creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                         | getattr(subprocess, "DETACHED_PROCESS", 0)
+                         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        subprocess.Popen([sys.executable, "-u", str(VIEWER_PATH)],
+                         cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=creationflags, close_fds=True)
+        log("[llm] 直播悬浮窗已拉起")
+    except Exception as exc:
+        log(f"[llm] 直播悬浮窗拉起失败（不影响复盘）：{exc}")
+
+
+def _stream_begin(meta: dict) -> None:
+    try:
+        LIVE_STREAM.write_text("[LIVE-START] " + json.dumps(meta, ensure_ascii=False) + "\n",
+                               encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _stream_end(payload: dict) -> None:
+    try:
+        with LIVE_STREAM.open("a", encoding="utf-8") as f:
+            f.write("[LIVE-END] " + json.dumps(payload, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _stream_run(cmd: list[str], timeout_sec: int) -> tuple[int, str, bool]:
+    """流式执行命令：stdout/stderr 合并逐行实时写入 LIVE_STREAM，同时收集全文。
+
+    返回 (returncode, 全文输出, 是否超时)。超时则 kill 进程。
+    """
+    env = dict(os.environ)
+    env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
+    env["TERM"] = "dumb"
+    proc = subprocess.Popen(
+        cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace", bufsize=1, env=env)
+
+    q: queue.Queue[str | None] = queue.Queue()
+
+    def _reader() -> None:
+        try:
+            for ln in proc.stdout or []:
+                q.put(ln)
+        finally:
+            q.put(None)
+
+    threading.Thread(target=_reader, daemon=True).start()
+
+    deadline = time.monotonic() + timeout_sec
+    lines: list[str] = []
+    timed_out = False
+    with LIVE_STREAM.open("a", encoding="utf-8") as stream:
+        while True:
+            try:
+                ln = q.get(timeout=0.2)
+            except queue.Empty:
+                ln = ""
+            if ln is None:
+                break
+            if ln:
+                lines.append(ln)
+                try:
+                    stream.write(ln)
+                    stream.flush()
+                except OSError:
+                    pass
+            if time.monotonic() > deadline:
+                timed_out = True
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+                break
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        pass
+    rc = proc.returncode if proc.returncode is not None else -1
+    return rc, "".join(lines), timed_out
+
+
+# ---------------------------------------------------------------------------
 # review execution
 # ---------------------------------------------------------------------------
 
@@ -306,28 +405,33 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         "--auto",
         prompt,
     ]
+
+    # 直播流开启 + 拉起悬浮窗（哨兵/meta 先行，viewer 据此渲染标题）
+    _stream_begin({"model": model, "source": source, "run": runs, "time": stamp})
+    _launch_viewer(cfg, log)
+
+    rc, out, timed_out = -1, "", False
     try:
-        proc = subprocess.run(cmd, cwd=str(REPO_DIR), capture_output=True, text=True,
-                              encoding="utf-8", errors="replace",
-                              timeout=int(cfg.get("timeout_min", 25)) * 60)
-        log(f"[llm] 复盘会话结束（exit={proc.returncode}）。输出尾部：\n{(proc.stdout or '')[-2000:]}")
-        if proc.returncode != 0:
-            log(f"[llm] stderr 尾部：{(proc.stderr or '')[-800:]}")
+        rc, out, timed_out = _stream_run(cmd, int(cfg.get("timeout_min", 25)) * 60)
+        log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
+        if timed_out:
+            log(f"[llm] 复盘超时（{cfg.get('timeout_min')} 分钟），本次作废")
             if source == "preferred":
-                _mark_preferred_failure(cfg, log, f"exit={proc.returncode}")
+                _mark_preferred_failure(cfg, log, "timeout")
+            return False
+        if rc != 0:
+            if source == "preferred":
+                _mark_preferred_failure(cfg, log, f"exit={rc}")
             return False
         if source == "preferred":
             _mark_preferred_ok()
-    except subprocess.TimeoutExpired:
-        log(f"[llm] 复盘超时（{cfg.get('timeout_min')} 分钟），本次作废")
-        if source == "preferred":
-            _mark_preferred_failure(cfg, log, "timeout")
-        return False
     except Exception as exc:
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
         if source == "preferred":
             _mark_preferred_failure(cfg, log, str(exc)[:120])
         return False
+    finally:
+        _stream_end({"exit": rc, "timeout": timed_out})
 
     # 2) 无变更则无需提交/重启
     if not autogit.has_changes():

@@ -225,11 +225,15 @@ class Policy:
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"地图：使用永久增益药水【{p.get('name')}】",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.7)
-        hp_pct = (run.get("current_hp", 1) / max(1, run.get("max_hp", 1)))
+        hp = run.get("current_hp", 1)
+        max_hp = max(1, run.get("max_hp", 1))
+        hp_pct = hp / max_hp
         gold = run.get("gold", 0)
         floor = run.get("floor", 0)
         pol = self.know.policy
         weights = pol["room_weights"]
+        priors = pol.get("path_danger_priors", {})
+        heal_frac = pol.get("rest_heal_fraction", 0.30)
 
         # room danger learning: average hp loss per node type biases weights
         def learned_room_factor(node_type: str) -> float:
@@ -240,58 +244,109 @@ class Policy:
             glob = self.know.global_avg_outcome()
             return clamp(1.0 + (avg - glob) / 50.0, 0.5, 1.5)
 
+        # 卡组强度：非基础牌数量（精英进场门槛之一）
+        good_cards = 0
+        for c in run.get("deck", []):
+            cid = (c.get("card_id") or "").upper()
+            if "STRIKE" in cid or "DEFEND" in cid or is_bad_card(c):
+                continue
+            good_cards += 1
+
         boss_row = (m.get("boss_node") or {}).get("row")
         graph = {(n["row"], n["col"]): n for n in m.get("nodes", [])}
 
-        def lookahead(node) -> float:
-            gnode = graph.get((node["row"], node["col"]))
-            if not gnode:
-                return 0.0
-            best = 0.0
-            for child in gnode.get("children", []):
-                ctype = (graph.get((child["row"], child["col"])) or {}).get("node_type", "Unknown")
-                best = max(best, weights.get(ctype, 1.0))
-            return best
+        def node_factor(nt: str, gnode: dict | None, hpp: float):
+            """单节点权重修正系数与说明。"""
+            if nt == "Elite":
+                if hpp < pol["elite_min_hp_pct"]:
+                    return 0.1, f"血量{hpp:.0%}<{pol['elite_min_hp_pct']:.0%}，规避精英"
+                if good_cards < pol.get("elite_min_deck_cards", 4):
+                    return 0.1, f"非基础牌仅{good_cards}张(<{pol.get('elite_min_deck_cards', 4)})，卡组强度不足规避精英"
+                return 1.0, "血量与卡组达标，精英奖励价值高"
+            if nt == "RestSite":
+                if hpp < pol["rest_urgent_hp_pct"]:
+                    return 2.5, "低血量急需休息"
+                if boss_row is not None and (gnode or {}).get("row", 0) >= boss_row - 1:
+                    return 2.0, "Boss 前休整"
+            elif nt == "Shop":
+                if gold >= pol["shop_min_gold"]:
+                    return 1.4, f"金币{gold}足够"
+                return 0.6, "金币不足"
+            elif nt == "Monster":
+                if floor <= 8:
+                    return 1.25, "前期需要战斗积累卡牌"
+            return 1.0, ""
 
-        best_node, best_score, best_detail = None, -1e9, ""
+        # ---- 全路径规划：从每个候选节点枚举到 Boss 行的所有路径，
+        # 按历史场均掉血先验模拟沿途血量演进，投影死亡/低血进 Boss 重罚。
+        # 解决贪心逐格选路的盲区：早期分支把后续逼进"唯一可选的精英"。----
+        def paths_from(start_key) -> list[list[tuple]]:
+            out: list[list[tuple]] = []
+
+            def dfs(key, path):
+                g = graph.get(key)
+                children = [c for c in ((g or {}).get("children") or [])
+                            if (c.get("row"), c.get("col")) not in path]
+                row = key[0]
+                if (not children or len(path) > 40 or len(out) >= 512
+                        or (boss_row is not None and row >= boss_row)):
+                    out.append(list(path))
+                    return
+                for ch in children:
+                    ck = (ch.get("row"), ch.get("col"))
+                    path.append(ck)
+                    dfs(ck, path)
+                    path.pop()
+
+            dfs(start_key, [start_key])
+            return out or [[start_key]]
+
+        def simulate(start_node, path_keys):
+            # 卡组越强战斗越短：掉血先验按非基础牌数打折（每张 -3%，最多 -40%）
+            deck_ease = 1.0 - min(0.40, 0.03 * good_cards)
+            score, cur_hp, notes = 0.0, float(hp), []
+            for depth, key in enumerate(path_keys):
+                gnode = graph.get(key) or {}
+                nt = start_node.get("node_type", "Unknown") if depth == 0 else gnode.get("node_type", "Unknown")
+                hpp = max(0.0, cur_hp) / max_hp
+                factor, note = node_factor(nt, gnode, hpp)
+                w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
+                score += w * (0.97 ** depth)
+                if note and depth == 0:
+                    notes.append(note)
+                cur_hp -= priors.get(nt, 8) * deck_ease
+                if nt == "RestSite":
+                    cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
+                if cur_hp <= 0:
+                    score -= pol.get("path_death_penalty", 100.0)
+                    break
+            final_pct = max(0.0, cur_hp) / max_hp
+            floor_pct = pol.get("path_hp_floor_pct", 0.35)
+            if final_pct < floor_pct:
+                score -= (floor_pct - final_pct) * 40.0
+            return score, notes, final_pct
+
+        best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
         details = []
         for n in nodes:
             nt = n.get("node_type", "Unknown")
-            w = weights.get(nt, 1.0) * learned_room_factor(nt)
-            note = []
-            if nt == "Elite":
-                if hp_pct < pol["elite_min_hp_pct"]:
-                    w *= 0.1
-                    note.append(f"血量{hp_pct:.0%}<{pol['elite_min_hp_pct']:.0%}，规避精英")
-                else:
-                    note.append("血量充足，精英奖励价值高")
-            elif nt == "RestSite":
-                if hp_pct < pol["rest_urgent_hp_pct"]:
-                    w *= 2.5
-                    note.append("低血量急需休息")
-                elif boss_row is not None and n["row"] >= boss_row - 1:
-                    w *= 2.0
-                    note.append("Boss 前休整")
-            elif nt == "Shop":
-                if gold >= pol["shop_min_gold"]:
-                    w *= 1.4
-                    note.append(f"金币{gold}足够")
-                else:
-                    w *= 0.6
-                    note.append("金币不足")
-            elif nt == "Monster":
-                if floor <= 8:
-                    w *= 1.25
-                    note.append("前期需要战斗积累卡牌")
-            score = w + pol["lookahead_weight"] * lookahead(n)
-            details.append(f"{nt}({n['row']},{n['col']})={score:.2f}{'|' + ','.join(note) if note else ''}")
-            if score > best_score:
-                best_node, best_score = n, score
-                best_detail = f"{nt}({n['row']},{n['col']})"
+            best_ps, best_pnotes, best_pproj = -1e9, [], 0.0
+            for pth in paths_from((n["row"], n["col"])):
+                ps, pnotes, pproj = simulate(n, pth)
+                if ps > best_ps:
+                    best_ps, best_pnotes, best_pproj = ps, pnotes, pproj
+            label = f"{nt}({n['row']},{n['col']})"
+            details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
+            if best_ps > best_score:
+                best_node, best_score = n, best_ps
+                best_detail = label
+                best_notes, best_proj = best_pnotes, best_pproj
 
+        note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
         return Decision("choose_map_node", {"option_index": best_node["index"]},
-                        f"地图选路：{best_detail}（评分 {best_score:.2f}）；候选：{' / '.join(details)}",
+                        f"路径规划：{best_detail}（路径分 {best_score:.2f}，预计进 Boss 血量 {best_proj:.0%}{note_txt}）；"
+                        f"候选：{' / '.join(details)}",
                         tags=ctx_ops_tags, wait=1.5)
 
     # ------------------------------------------------------------------
@@ -523,10 +578,25 @@ class Policy:
         elif is_bad_card(card):
             value -= 10.0
         value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)
-        # deck shape: keep attack ratio reasonable
-        n_attack = sum(1 for c in deck if is_attack(c))
-        if deck and n_attack / max(1, len(deck)) < 0.3 and is_attack(card):
-            value += 1.5
+        # deck shape: 攻击占比双向调节 + 防御稀缺加成
+        # （17 局只拿过 1 张 DEFEND：选牌端偏爱攻击、战斗端 block_safety 顶格，攻防失衡是失血根因之一）
+        if deck:
+            n_attack = sum(1 for c in deck if is_attack(c))
+            ratio = n_attack / max(1, len(deck))
+            if is_attack(card):
+                if ratio < 0.35:
+                    value += 1.5
+                elif ratio > 0.55:
+                    value -= 2.5  # 攻击过剩稀释抽牌质量，拖长战斗
+            if block > 0:
+                n_block = sum(1 for c in deck
+                              if (is_skill(c) and card_numbers(c)[1] > 0)
+                              or "DEFEND" in (c.get("card_id") or "").upper())
+                if n_block / max(1, len(deck)) < 0.2:
+                    value += 1.5  # 防御稀缺，格挡技能增值
+        # 自残牌在慢性失血环境下额外惩罚（BREAKTHROUGH/HEMOKINESIS 类）
+        if re.search(r"失去\s*\d+\s*点?生命|lose\s+\d+\s*(?:hp|health|life)", _text(card), re.I):
+            value -= 2.0
         if cost >= 3:
             value -= 1.0
         value += self.know.card_value(card.get("card_id", ""))
@@ -754,8 +824,15 @@ class Policy:
         smith = next((o for o in options if "SMITH" in o.get("option_id", "").upper()), None)
         deck = run.get("deck", [])
         upgradable = [c for c in deck if not c.get("upgraded")]
+        heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
 
-        if heal and (hp_pct < self.know.policy["rest_heal_threshold"] or not upgradable or smith is None):
+        need_heal = hp_pct < self.know.policy["rest_heal_threshold"] or not upgradable or smith is None
+        if heal and need_heal:
+            # 回血将溢出（接近回满）且仍有可升级卡：改锻造，不浪费篝火
+            if smith and upgradable and hp_pct + heal_frac >= 0.97:
+                return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                f"篝火：回血将溢出（{hp_pct:.0%}+{heal_frac:.0%}≥97%），改为锻造升级",
+                                tags=[("rest", "smith")], wait=1.2)
             return Decision("choose_rest_option", {"option_index": heal["index"]},
                             f"篝火：休息回血（当前 {hp_pct:.0%} < {self.know.policy['rest_heal_threshold']:.0%}）",
                             tags=[("rest", "heal")], wait=1.2)

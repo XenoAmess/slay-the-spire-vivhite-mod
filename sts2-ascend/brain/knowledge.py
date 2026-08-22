@@ -41,6 +41,13 @@ DEFAULT_POLICY = {
     "removal_gold_reserve": 60,   # keep this much gold after paying removal
     # --- rest ---
     "rest_heal_threshold": 0.6,   # heal if hp% below this, else smith
+    "rest_heal_fraction": 0.30,   # 篝火回血量估计（占最大生命比例）：溢出判断 + 路径血量模拟共用
+    # --- map path planning（全路径规划的血量模拟先验） ---
+    "path_danger_priors": {"Monster": 8, "Unknown": 10, "Elite": 28, "Boss": 45,
+                           "Event": 0, "Shop": 0, "Treasure": 0, "RestSite": 0, "Ancient": 0},
+    "path_hp_floor_pct": 0.35,    # 路径投影进 Boss 血量低于此值 → 按差值惩罚
+    "path_death_penalty": 100.0,  # 路径投影中途死亡的评分惩罚
+    "elite_min_deck_cards": 4,    # 非基础牌少于此数时规避精英（卡组强度门槛，血量门槛之外的第二道闸）
     # --- events ---
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay

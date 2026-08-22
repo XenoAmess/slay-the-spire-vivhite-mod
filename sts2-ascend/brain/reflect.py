@@ -17,7 +17,7 @@ BOUNDS = {
     "elite_min_hp_pct": (0.35, 0.9),
     "rest_heal_threshold": (0.35, 0.85),
     "rest_urgent_hp_pct": (0.2, 0.6),
-    "block_safety": (0.6, 1.8),
+    "block_safety": (0.6, 2.1),
     "card_pick_threshold": (0.0, 6.0),
     "shop_relic_threshold": (0.0, 4.0),
     "power_round_bonus": (2.0, 10.0),
