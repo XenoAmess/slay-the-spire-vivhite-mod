@@ -17,7 +17,9 @@ BOUNDS = {
     "elite_min_hp_pct": (0.35, 0.9),
     "rest_heal_threshold": (0.35, 0.85),
     "rest_urgent_hp_pct": (0.2, 0.6),
-    "block_safety": (0.6, 2.1),
+    # 上限从 2.1 放宽到 2.6：连续多局普通战斗阵亡把旧顶格值锁死，无法继续进化
+    "block_safety": (0.6, 2.6),
+    "rest_heal_fraction": (0.22, 0.45),
     "card_pick_threshold": (0.0, 6.0),
     "shop_relic_threshold": (0.0, 4.0),
     "power_round_bonus": (2.0, 10.0),
@@ -63,6 +65,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                      f"精英战阵亡，进场血量 {ctx.death_hp_pct_at_entry:.0%}，提高精英回避线")
         if died_to_enemy and not ctx.death_was_elite:
             _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
+            # 进击杀战时血量已不足三成：说明此前慢性失血未回住，
+            # 加大篝火单次回血量（数据：多局以 11%~24% 血量硬闯 Boss/精英阵亡）
+            if ctx.death_hp_pct_at_entry is not None and ctx.death_hp_pct_at_entry < 0.35:
+                _adj(know, "rest_heal_fraction", 0.02, changes,
+                     f"击杀战进场血量仅 {ctx.death_hp_pct_at_entry:.0%}，加大篝火回血力度")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:

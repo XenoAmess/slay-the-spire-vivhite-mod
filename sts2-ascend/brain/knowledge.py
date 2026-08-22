@@ -42,6 +42,7 @@ DEFAULT_POLICY = {
     # --- rest ---
     "rest_heal_threshold": 0.6,   # heal if hp% below this, else smith
     "rest_heal_fraction": 0.30,   # 篝火回血量估计（占最大生命比例）：溢出判断 + 路径血量模拟共用
+    "smith_min_hp_pct": 0.55,     # 血量高于此值优先锻造升级（旧逻辑 70% 阈值导致整局零锻造）
     # --- map path planning（全路径规划的血量模拟先验） ---
     "path_danger_priors": {"Monster": 8, "Unknown": 10, "Elite": 28, "Boss": 45,
                            "Event": 0, "Shop": 0, "Treasure": 0, "RestSite": 0, "Ancient": 0},
@@ -60,6 +61,7 @@ DEFAULT_POLICY = {
     "exploration_min": 0.05,
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
+    "potion_danger_hp_lost": 18.0,  # 历史场均掉血 ≥ 此值的敌人组合视同硬仗（允许用药）
 }
 
 DEFAULT_PROGRESSION = {
