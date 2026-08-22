@@ -9603,3 +9603,607 @@ Untracked files:
 - 生涯战绩：0/43 胜，当前目标进阶 0
 
 [agent] 对局日志已保存：20260823-005918_R6U7WCQXGQ7W.json
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 复盘请求已入队（第43局，待消化 1 批），游玩不等待
+[git] 已自动存档：chore(sts2-ascend): 第43局存档（负 F11 进阶0，生涯 0胜/43局）（复盘进行中，仅 knowledge/）
+[00:59:25] [GAME_OVER/F11] 结算：返回主菜单，备战下一局
+  ↳ 动作 return_to_main_menu 返回 completed: Action completed.
+[00:59:29] [MAIN_MENU/F0] 主菜单：检查时间线可解锁项（优先解锁新内容）
+  ↳ 动作 open_timeline 返回 completed: Action completed.
+[00:59:30] [MAIN_MENU/F0] 主菜单：时间线无新解锁，关闭弹层
+  ↳ 动作 close_main_menu_submenu 返回 completed: Action completed.
+[00:59:31] [MAIN_MENU/F0] 主菜单：开启新的一局（标准模式）
+  ↳ 动作 open_character_select 返回 completed: Action completed.
+[00:59:32] [CHARACTER_SELECT/F0] 出发！角色=铁甲战士 进阶=0
+  ↳ 动作 embark 返回 completed: Action completed.
+[00:59:38] [EVENT/F1] 事件【涅奥】：选择「涅奥的护符」（经验价值 0.0）；涅奥的护符=0.0(n=0) / 轰鸣海螺=0.0(n=0) / 巨大扭蛋=0.0(n=0)
+
+[agent] ===== 新对局开始：3785M7URDZC5（进阶 0）=====
+  ↳ 动作 choose_event_option 返回 completed: Action completed.
+[00:59:39] [EVENT/F1] 事件：已结束，继续
+  ↳ 动作 choose_event_option 返回 completed: Event proceeded.
+[00:59:41] [MAP/F1] 路径规划：Monster(1,2)（路径分 28.00，预计进 Boss 血量 81%；前期需要战斗积累卡牌）；候选：Monster(1,0)=26.03|前期需要战斗积累卡牌 / Monster(1,2)=28.00|前期需要战斗积累卡牌 / Monster(1,3)=26.57|前期需要战斗积累卡牌 / Monster(1,4)=25.39|前期需要战斗积累卡牌 / Monster(1,5)=25.41|前期需要战斗积累卡牌
+[agent] 事件结算：NEOW/NEOW.pages.INITIAL.options.NEOWS_TALISMAN → 生命 +0，金币 +0
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[00:59:45] [COMBAT/F2] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=SHRINKER_BEETLE｜历史场均掉血 4.1｜房间类型 Monster
+[00:59:45] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:46] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈6）；敌意图总伤0，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:47] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈6）；敌意图总伤0，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:48] [COMBAT/F2] 战斗：打出【防御+】（格挡8）；敌意图总伤0，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:49] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（打击✗,防御✗）
+[00:59:49] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[00:59:51] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:51] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:52] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:53] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:53] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:54] [COMBAT/F2] 战斗：回合过渡中，等待
+[00:59:54] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤7，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:56] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤7，我方80血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:57] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤7，我方80血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[00:59:58] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（打击+✗,痛击✗）
+[00:59:58] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[00:59:59] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:00] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:01] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:01] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:02] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:03] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:03] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:04] [COMBAT/F2] 战斗：打出【防御+】（格挡8）；敌意图总伤13，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:05] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤13，我方80血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:06] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤13，我方80血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:07] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（打击+✗,打击✗）
+[01:00:08] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:00:09] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:09] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:10] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:11] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:11] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:12] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:13] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤7，我方75血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:14] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤7，我方75血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:15] [COMBAT/F2] 战斗：评估后无值得出的牌（防御✓,防御✓,痛击✗），结束回合（敌意图总伤7，我方75血/5甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:00:16] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:16] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:17] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:18] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:18] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:19] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:20] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:20] [COMBAT/F2] 战斗：打出【防御+】（格挡8）；敌意图总伤13，我方73血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:21] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤13，我方73血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:22] [COMBAT/F2] 战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤13，我方73血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:23] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗）
+[01:00:24] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:00:26] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:26] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:27] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:28] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:28] [COMBAT/F2] 战斗：回合过渡中，等待
+[01:00:29] [COMBAT/F2] 战斗：打出【打击+】→缩小甲虫（可击杀缩小甲虫）；敌意图总伤7，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:30] [COMBAT/F2] 战斗：等待敌人就绪
+[01:00:30] [COMBAT/F2] 战斗：等待敌人就绪
+[01:00:31] [COMBAT/F2] 战斗：等待敌人就绪
+[01:00:31] [REWARD/F2] 领取奖励：15金币
+[agent] 战斗结束：F2 Monster战 掉血6（剩余 74 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:00:32] [REWARD/F2] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:00:33] [CARD_SELECTION/F2] 选择卡牌：【铁斩波】（价值 5.2）；候选：铁斩波=5.2 / 熔融之拳=5.0 / 全身撞击=0.3
+[01:00:34] [REWARD/F2] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[01:00:35] [MAP/F2] 路径规划：Monster(2,2)（路径分 25.75，预计进 Boss 血量 89%；前期需要战斗积累卡牌）；候选：Monster(2,2)=25.75|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:00:38] [COMBAT/F3] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=FUZZY_WURM_CRAWLER｜历史场均掉血 3.6｜房间类型 Monster
+[01:00:39] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:39] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:40] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤4，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:41] [COMBAT/F3] 战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8）；敌意图总伤4，我方74血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:42] [COMBAT/F3] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗,铁斩波✗）
+[01:00:43] [COMBAT/F3] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:00:44] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:45] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:45] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:46] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:47] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:47] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:48] [COMBAT/F3] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤0，我方74血/0甲
+  ↳ 动作 play_card 失败：invalid_action: Action is not available in the current state. (http=409)
+[01:00:49] [COMBAT/F3] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤0，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:50] [COMBAT/F3] 战斗：打出【防御+】（格挡8）；敌意图总伤0，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:51] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤0，我方74血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:00:52] [COMBAT/F3] 战斗：本回合已无牌可出，确认结束（打击✗,防御✗）
+[01:00:52] [COMBAT/F3] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:00:54] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:54] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:55] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:56] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:56] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:00:57] [COMBAT/F3] 战斗：打出【打击+】→毛绒伏地虫（单体伤害≈9）；敌意图总伤11，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:00] [COMBAT/F3] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:01] [COMBAT/F3] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤11，我方74血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:02] [COMBAT/F3] 战斗：本回合已无牌可出，确认结束（痛击✗,打击✗）
+[01:01:03] [COMBAT/F3] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:01:04] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:05] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:05] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:06] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:07] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:07] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:08] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:08] [COMBAT/F3] 战斗：打出【防御+】（格挡8）；敌意图总伤11，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:09] [COMBAT/F3] 战斗：打出【铁斩波】→毛绒伏地虫（单体伤害≈5）；敌意图总伤11，我方68血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:11] [COMBAT/F3] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤11，我方68血/13甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:12] [COMBAT/F3] 战斗：本回合已无牌可出，确认结束（防御✗,防御✗）
+[01:01:12] [COMBAT/F3] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:01:14] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:14] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:15] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:15] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:16] [COMBAT/F3] 战斗：回合过渡中，等待
+[01:01:17] [COMBAT/F3] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤0，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:20] [COMBAT/F3] 战斗：打出【打击+】→毛绒伏地虫（可击杀毛绒伏地虫）；敌意图总伤0，我方68血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:20] [COMBAT/F3] 战斗：等待敌人就绪
+[01:01:21] [COMBAT/F3] 战斗：等待敌人就绪
+[01:01:22] [COMBAT/F3] 战斗：等待敌人就绪
+[01:01:22] [COMBAT/F3] 战斗：等待敌人就绪
+[01:01:23] [REWARD/F3] 领取奖励：17金币
+[agent] 战斗结束：F3 Monster战 掉血0（剩余 74 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:01:24] [REWARD/F3] 领取奖励：肌肉药水
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:01:24] [REWARD/F3] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:01:25] [CARD_SELECTION/F3] 选择卡牌：【上勾拳】（价值 11.6）；候选：上勾拳=11.6 / 撕裂=6.2 / 全身撞击=0.2
+[01:01:26] [REWARD/F3] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[01:01:27] [MAP/F3] 路径规划：Monster(3,2)（路径分 23.06，预计进 Boss 血量 100%；前期需要战斗积累卡牌）；候选：Monster(3,2)=23.06|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:01:30] [COMBAT/F4] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=NIBBIT｜历史场均掉血 11.8｜房间类型 Monster
+[01:01:31] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:31] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:32] [COMBAT/F4] 战斗：打出【痛击】→小啃兽（单体伤害≈8）；敌意图总伤12，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:33] [COMBAT/F4] 战斗：打出【防御】（格挡5）；敌意图总伤12，我方74血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:34] [COMBAT/F4] 战斗：本回合已无牌可出，确认结束（打击✗,防御✗,防御✗）
+[01:01:35] [COMBAT/F4] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:01:36] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:37] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:37] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:38] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:39] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:39] [COMBAT/F4] 战斗：打出【上勾拳】→小啃兽（单体伤害≈13）；敌意图总伤6，我方67血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:41] [COMBAT/F4] 战斗：打出【防御+】（格挡8）；敌意图总伤4，我方67血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:42] [COMBAT/F4] 战斗：本回合已无牌可出，确认结束（打击+✗,打击✗,打击✗）
+[01:01:43] [COMBAT/F4] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:01:44] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:45] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:45] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:46] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:47] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:47] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:48] [COMBAT/F4] 战斗：打出【铁斩波】→小啃兽（单体伤害≈1）；敌意图总伤0，我方67血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:51] [COMBAT/F4] 战斗：打出【打击】→小啃兽（单体伤害≈6）；敌意图总伤0，我方67血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:52] [COMBAT/F4] 战斗：打出【防御】（格挡5）；敌意图总伤0，我方67血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:01:53] [COMBAT/F4] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗）
+[01:01:53] [COMBAT/F4] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:01:55] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:55] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:56] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:56] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:57] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:58] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:58] [COMBAT/F4] 战斗：回合过渡中，等待
+[01:01:59] [COMBAT/F4] 战斗：打出【打击+】→小啃兽（可击杀小啃兽）；敌意图总伤14，我方67血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:00] [COMBAT/F4] 战斗：等待敌人就绪
+[01:02:00] [COMBAT/F4] 战斗：等待敌人就绪
+[01:02:01] [REWARD/F4] 领取奖励：20金币
+[agent] 战斗结束：F4 Monster战 掉血1（剩余 73 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:02:02] [REWARD/F4] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:02:03] [CARD_SELECTION/F4] 选择卡牌：【撕裂】（价值 6.2）；候选：撕裂=6.2 / 突破=4.0 / 完美打击=-3.3
+[01:02:03] [REWARD/F4] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[01:02:04] [MAP/F4] 路径规划：Unknown(4,2)（路径分 23.98，预计进 Boss 血量 71%）；候选：Unknown(4,2)=23.98
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:02:08] [EVENT/F5] 事件【多尼斯异鸟巢】：选择「吃掉这颗蛋」（经验价值 7.0）；吃掉这颗蛋=7.0(n=3) / 带走这颗蛋=0.0(n=0)
+  ↳ 动作 choose_event_option 返回 completed: Action completed.
+[01:02:09] [EVENT/F5] 事件：已结束，继续
+  ↳ 动作 choose_event_option 返回 completed: Event proceeded.
+[01:02:10] [MAP/F5] 路径规划：Monster(5,2)（路径分 23.52，预计进 Boss 血量 100%；前期需要战斗积累卡牌）；候选：Monster(5,2)=23.52|前期需要战斗积累卡牌
+[agent] 事件结算：BYRDONIS_NEST/BYRDONIS_NEST.pages.INITIAL.options.EAT → 生命 +7，金币 +0
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:02:13] [COMBAT/F6] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=BRUTE_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER+TRACKER_RUBY_RAIDER｜历史场均掉血 4.0｜房间类型 Monster
+[01:02:14] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:14] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:15] [COMBAT/F6] 战斗：打出【上勾拳】→劫掠者暴徒（单体伤害≈13）；敌意图总伤7，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:17] [COMBAT/F6] 战斗：打出【防御+】（格挡8）；敌意图总伤5，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:18] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（打击✗,防御✗,打击✗）
+[01:02:18] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:02:20] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:20] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:21] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:22] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:22] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:23] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:23] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:24] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:25] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:25] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:26] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:27] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:27] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:28] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:29] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:29] [COMBAT/F6] 战斗：打出【打击+】→劫掠者追踪手（单体伤害≈9）；敌意图总伤22，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:30] [COMBAT/F6] 战斗：打出【打击】→劫掠者追踪手（单体伤害≈6）；敌意图总伤22，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:31] [COMBAT/F6] 战斗：打出【防御】（格挡3）；敌意图总伤22，我方80血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:32] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（铁斩波✗,撕裂✗）
+[01:02:33] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:02:34] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:35] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:36] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:36] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:37] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:38] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:38] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:39] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:39] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:40] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:41] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:42] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:42] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:43] [COMBAT/F6] 战斗：打出【痛击】→劫掠者暴徒（单体伤害≈8）；敌意图总伤18，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:46] [COMBAT/F6] 战斗：打出【防御+】（格挡6）；敌意图总伤18，我方61血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:02:47] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（打击✗,防御✗,打击✗）
+[01:02:47] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:02:49] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:49] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:50] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:51] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:51] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:52] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:53] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:53] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:54] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:54] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:55] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:56] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:57] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:57] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:58] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:02:59] [COMBAT/F6] 战斗：打出【上勾拳】→劫掠者追踪手（可击杀劫掠者暴徒）；敌意图总伤22，我方49血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:00] [COMBAT/F6] 战斗：评估后无值得出的牌（打击+✓,打击✓,铁斩波✓,打击✓），结束回合（敌意图总伤14，我方49血/0甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:03:01] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:02] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:02] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:03] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:04] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:04] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:05] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:06] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:06] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:07] [COMBAT/F6] 战斗：打出【防御】（格挡5）；敌意图总伤13，我方35血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:09] [COMBAT/F6] 战斗：打出【防御】（格挡5）；敌意图总伤13，我方35血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:10] [COMBAT/F6] 战斗：打出【打击】→劫掠者暴徒（单体伤害≈6）；敌意图总伤13，我方35血/10甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:11] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（撕裂✗,铁斩波✗）
+[01:03:12] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:03:13] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:14] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:14] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:15] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:16] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:16] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:17] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:18] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:18] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:19] [COMBAT/F6] 战斗：打出【打击+】→劫掠者暴徒（可击杀劫掠者暴徒）；敌意图总伤14，我方32血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:20] [COMBAT/F6] 战斗：打出【痛击】→劫掠者弩手（单体伤害≈5）；敌意图总伤14，我方32血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:21] [COMBAT/F6] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗,打击✗）
+[01:03:22] [COMBAT/F6] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:03:23] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:24] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:25] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:25] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:26] [COMBAT/F6] 战斗：回合过渡中，等待
+[01:03:27] [COMBAT/F6] 战斗：打出【上勾拳】→劫掠者弩手（单体伤害≈13）；敌意图总伤0，我方18血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:29] [COMBAT/F6] 战斗：等待敌人就绪
+[01:03:30] [COMBAT/F6] 战斗：等待敌人就绪
+[01:03:30] [COMBAT/F6] 战斗：等待敌人就绪
+[01:03:31] [REWARD/F6] 领取奖励：15金币
+[agent] 战斗结束：F6 Monster战 掉血56（剩余 24 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:03:32] [REWARD/F6] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:03:33] [CARD_SELECTION/F6] 选择卡牌：【暴走】（价值 10.9）；候选：暴走=10.9 / 壁垒=5.6 / 完美打击=-3.1
+[01:03:33] [REWARD/F6] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[01:03:35] [MAP/F6] 路径规划：RestSite(6,2)（路径分 26.52，预计进 Boss 血量 80%；低血量急需休息）；候选：RestSite(6,2)=26.52|低血量急需休息 / Monster(6,3)=-113.28|血量28%过低，避免无谓消耗战
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:03:38] [REST/F7] 篝火：休息回血（当前 28% < 55%）
+  ↳ 动作 choose_rest_option 返回 completed: Action completed.
+[01:03:39] [REST/F7] 篝火：无可选项目，离开
+  ↳ 动作 proceed 返回 completed: Action completed.
+[01:03:40] [MAP/F7] 路径规划：Monster(7,1)（路径分 23.73，预计进 Boss 血量 79%；前期需要战斗积累卡牌）；候选：Monster(7,1)=23.73|前期需要战斗积累卡牌
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:03:44] [COMBAT/F8] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=FLYCONID+SNAPPING_JAXFRUIT｜历史场均掉血 19.4｜房间类型 Monster
+[01:03:44] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:45] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:46] [COMBAT/F8] 战斗：打出【防御+】（格挡8）；敌意图总伤14，我方50血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:47] [COMBAT/F8] 战斗：打出【防御】（格挡5）；敌意图总伤14，我方50血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:48] [COMBAT/F8] 战斗：打出【打击】→飞蝇菌子（单体伤害≈6）；敌意图总伤14，我方50血/13甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:49] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（打击✗,撕裂✗）
+[01:03:49] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:03:51] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:51] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:52] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:53] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:53] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:54] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:54] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:03:55] [COMBAT/F8] 战斗：打出【打击+】→飞蝇菌子（单体伤害≈9）；敌意图总伤13，我方49血/0甲
+  ↳ 动作 play_card 失败：invalid_action: Action is not available in the current state. (http=409)
+[01:03:56] [COMBAT/F8] 战斗：打出【上勾拳】→飞蝇菌子（单体伤害≈13）；敌意图总伤13，我方49血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:58] [COMBAT/F8] 战斗：打出【暴走】→飞蝇菌子（单体伤害≈10）；敌意图总伤11，我方49血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:03:59] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（打击+✗,打击✗,防御✗）
+[01:04:00] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:04:01] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:02] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:02] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:03] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:04] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:04] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:05] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:05] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:06] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:07] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:07] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:08] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:09] [COMBAT/F8] 战斗：打出【防御】（格挡3）；敌意图总伤7，我方38血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:10] [COMBAT/F8] 战斗：打出【铁斩波】→闪光贾克斯果（单体伤害≈5）；敌意图总伤7，我方38血/3甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:12] [COMBAT/F8] 战斗：打出【打击】→闪光贾克斯果（单体伤害≈6）；敌意图总伤7，我方38血/6甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:13] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（痛击✗,打击✗）
+[01:04:13] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:04:15] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:15] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:16] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:17] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:17] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:18] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:18] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:19] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:20] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:20] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:21] [COMBAT/F8] 战斗：打出【暴走】→飞蝇菌子（可击杀飞蝇菌子）；敌意图总伤29，我方37血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:22] [COMBAT/F8] 战斗：打出【防御】（格挡3）；敌意图总伤13，我方37血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:23] [COMBAT/F8] 战斗：评估后无值得出的牌（上勾拳✗,防御+✓,防御✓），结束回合（敌意图总伤13，我方37血/3甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:04:24] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:25] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:25] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:26] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:27] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:27] [COMBAT/F8] 战斗：打出【打击】→闪光贾克斯果（单体伤害≈6）；敌意图总伤16，我方27血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:31] [COMBAT/F8] 战斗：打出【防御】（格挡5）；敌意图总伤16，我方27血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:32] [COMBAT/F8] 战斗：打出【打击+】→闪光贾克斯果（单体伤害≈9）；敌意图总伤16，我方27血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:33] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（撕裂✗,打击✗）
+[01:04:33] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:04:35] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:35] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:36] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:37] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:37] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:38] [COMBAT/F8] 战斗：等待出牌时机
+[01:04:38] [COMBAT/F8] 战斗：回合过渡中，等待
+[01:04:39] [COMBAT/F8] 战斗：打出【上勾拳】→闪光贾克斯果（可击杀闪光贾克斯果）；敌意图总伤13，我方16血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:04:40] [COMBAT/F8] 战斗：等待敌人就绪
+[01:04:40] [COMBAT/F8] 战斗：等待敌人就绪
+[01:04:41] [COMBAT/F8] 战斗：等待敌人就绪
+[01:04:42] [COMBAT/F8] 战斗：等待敌人就绪
+[01:04:43] [COMBAT/F8] 战斗：等待敌人就绪
+[01:04:43] [REWARD/F8] 领取奖励：11金币
+[agent] 战斗结束：F8 Monster战 掉血28（剩余 22 血）
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:04:44] [REWARD/F8] 领取奖励：熔炉的祝福
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:04:45] [REWARD/F8] 打开卡牌奖励：将一张牌添加到你的牌组。
+  ↳ 动作 claim_reward 返回 completed: Action completed.
+[01:04:45] [CARD_SELECTION/F8] 选择卡牌：【头槌】（价值 5.4）；候选：头槌=5.4 / 破灭=0.0 / 完美打击=-3.2
+[01:04:46] [REWARD/F8] 一键收取奖励并继续
+  ↳ 动作 collect_rewards_and_proceed 返回 completed: Action completed.
+[01:04:47] [MAP/F8] 路径规划：Shop(8,1)（路径分 21.76，预计进 Boss 血量 57%；金币177足够）；候选：Shop(8,1)=21.76|金币177足够
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:04:50] [SHOP/F9] 商店：打开货架
+  ↳ 动作 open_shop_inventory 返回 completed: Action completed.
+[01:04:51] [SHOP/F9] 商店：付费删牌（预留 60 金后仍充足）
+  ↳ 动作 remove_card_at_shop 返回 completed: Action completed.
+[01:04:52] [CARD_SELECTION/F9] 选择卡牌：【上勾拳】（价值 11.0）；候选：上勾拳=11.0 / 暴走=10.2 / 防御+=6.7 / 撕裂=6.2 / 头槌=5.1 / 铁斩波=4.6 / 打击+=2.4 / 防御=-3.7 / 防御=-3.7 / 防御=-3.7 / 打击=-6.7 / 打击=-6.7 / 打击=-6.7 / 打击=-6.7 / 痛击=-11.8
+  ↳ 动作 select_deck_card 返回 completed: Action completed.
+[01:04:53] [SHOP/F9] 商店：购买卡牌【岩石铠甲】（73金，价值5.8）
+  ↳ 动作 buy_card 返回 completed: Action completed.
+[01:04:54] [SHOP/F9] 商店：货架无值得购买，关闭
+  ↳ 动作 close_shop_inventory 返回 completed: Action completed.
+[01:04:55] [SHOP/F9] 商店：本店已评估过，离开
+  ↳ 动作 proceed 返回 completed: Action completed.
+[01:04:56] [MAP/F9] 路径规划：Treasure(9,0)（路径分 19.58，预计进 Boss 血量 57%）；候选：Treasure(9,0)=19.58
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:04:59] [CHEST/F10] 宝箱：开启
+  ↳ 动作 open_chest 返回 completed: Action completed.
+[01:05:01] [CHEST/F10] 宝箱：选择遗物【小血瓶】
+  ↳ 动作 choose_treasure_relic 返回 completed: Action completed.
+[01:05:01] [CHEST/F10] 宝箱：离开
+  ↳ 动作 proceed 返回 completed: Action completed.
+[01:05:03] [MAP/F10] 路径规划：Shop(10,0)（路径分 18.62，预计进 Boss 血量 57%；金币不足）；候选：Shop(10,0)=18.62|金币不足
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:05:06] [SHOP/F11] 商店：打开货架
+  ↳ 动作 open_shop_inventory 返回 completed: Action completed.
+[01:05:07] [SHOP/F11] 商店：购买卡牌【火焰屏障】（39金，价值10.1）
+  ↳ 动作 buy_card 返回 completed: Action completed.
+[01:05:08] [SHOP/F11] 商店：货架无值得购买，关闭
+  ↳ 动作 close_shop_inventory 返回 completed: Action completed.
+[01:05:08] [SHOP/F11] 商店：本店已评估过，离开
+  ↳ 动作 proceed 返回 completed: Action completed.
+[01:05:10] [MAP/F11] 路径规划：Monster(11,0)（路径分 18.48，预计进 Boss 血量 58%；血量25%过低，避免无谓消耗战）；候选：Monster(11,0)=18.48|血量25%过低，避免无谓消耗战
+  ↳ 动作 choose_map_node 返回 completed: Action completed.
+[01:05:13] [COMBAT/F12] 战斗：回合过渡中，等待
+[agent] 进入战斗：敌方=INKLET｜历史场均掉血 13.4｜房间类型 Monster
+[01:05:14] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:14] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:15] [COMBAT/F12] 战斗：打出【防御】（格挡5）；敌意图总伤12，我方24血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:16] [COMBAT/F12] 战斗：打出【痛击】→墨宝（单体伤害≈8）；敌意图总伤12，我方24血/5甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:18] [COMBAT/F12] 战斗：本回合已无牌可出，确认结束（打击✗,撕裂✗,打击✗）
+[01:05:18] [COMBAT/F12] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:05:20] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:20] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:21] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:21] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:22] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:23] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:23] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:24] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:25] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:25] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:26] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:27] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:27] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:28] [COMBAT/F12] 战斗：硬仗使用增益药水【肌肉药水】
+  ↳ 动作 use_potion 返回 completed: Action completed.
+[01:05:29] [COMBAT/F12] 战斗：硬仗兜底使用药水【熔炉的祝福】（描述无法分类，宁滥勿囤）
+  ↳ 动作 use_potion 返回 completed: Action completed.
+[01:05:31] [COMBAT/F12] 战斗：打出【防御+】（格挡8）；敌意图总伤19，我方17血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:32] [COMBAT/F12] 战斗：打出【防御+】（格挡8）；敌意图总伤19，我方17血/8甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:33] [COMBAT/F12] 战斗：打出【打击+】→墨宝（可击杀墨宝）；敌意图总伤19，我方17血/16甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:34] [COMBAT/F12] 战斗：本回合已无牌可出，确认结束（火焰屏障+✗,铁斩波+✗）
+[01:05:35] [COMBAT/F12] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:05:37] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:38] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:39] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:39] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:40] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:41] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:41] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:42] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:43] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:43] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:44] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:45] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:45] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:46] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:46] [COMBAT/F12] 战斗：打出【暴走】→墨宝（可击杀墨宝）；敌意图总伤16，我方14血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:47] [COMBAT/F12] 战斗：评估后无值得出的牌（岩石铠甲✓,防御✓,打击✓,打击+✓），结束回合（敌意图总伤6，我方14血/0甲）
+  ↳ 动作 end_turn 返回 completed: Action completed.
+[01:05:49] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:49] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:50] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:51] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:51] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:52] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:53] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:53] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:54] [COMBAT/F12] 战斗：等待出牌时机
+[01:05:55] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:55] [COMBAT/F12] 战斗：回合过渡中，等待
+[01:05:56] [COMBAT/F12] 战斗：打出【防御】（格挡5）；敌意图总伤16，我方8血/0甲
+  ↳ 动作 play_card 返回 completed: Action completed.
+[01:05:57] [COMBAT/F12] 战斗：评估后无值得出的牌（头槌✓,铁斩波+✓,岩石铠甲✓,撕裂✓），结束回合（敌意图总伤16，我方8血/5甲）；警告：结束回合可能致死！
+  ↳ 动作 end_turn 返回 completed: Action completed.
