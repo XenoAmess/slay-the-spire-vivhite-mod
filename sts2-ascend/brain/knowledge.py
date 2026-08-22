@@ -30,6 +30,7 @@ DEFAULT_POLICY = {
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.62,    # 精英灰区下限：血量介于 soft~min 之间谨慎进精英（0.5 权重），不再一刀切规避
     "rest_urgent_hp_pct": 0.35,   # below this hp% rest sites are strongly preferred
+    "rest_wary_hp_pct": 0.62,     # 血量警戒带：urgent 线以上、该线以下的灰区篝火获中等加权（第 54 局 47.5% 血商店压过篝火后被迫进精英）
     "shop_min_gold": 140,         # below this gold shops lose value
     "room_weights": {"Monster": 1.2, "Elite": 2.0, "RestSite": 1.0, "Shop": 1.1,
                      "Treasure": 1.4, "Unknown": 1.15, "Event": 1.1, "Boss": 10.0},

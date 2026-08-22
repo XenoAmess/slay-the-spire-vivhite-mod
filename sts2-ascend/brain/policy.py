@@ -115,6 +115,8 @@ class Policy:
         self._potion_tried: set = set()      # potion indices already attempted this combat
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
         self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
+        self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
+        self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -387,6 +389,10 @@ class Policy:
                     return 2.5, "低血量急需休息"
                 if boss_row is not None and (gnode or {}).get("row", 0) >= boss_row - 1:
                     return 2.0, "Boss 前休整"
+                # 警戒带（第 54 局实证：47.5% 血不在急需线内，篝火无任何加权，
+                # 被"金币足够"的商店以 0.54 分压过，随后被迫 48% 血进精英阵亡）
+                if hpp < pol.get("rest_wary_hp_pct", 0.62):
+                    return 1.7, "血量偏低（<62%），优先休整续航"
             elif nt == "Shop":
                 if gold >= pol["shop_min_gold"]:
                     return 1.4, f"金币{gold}足够"
@@ -397,7 +403,12 @@ class Policy:
                 if hpp < pol["rest_urgent_hp_pct"]:
                     return 0.45, f"血量{hpp:.0%}过低，避免无谓消耗战"
                 if floor <= 8:
-                    return 1.25, "前期需要战斗积累卡牌"
+                    # 第 56 局实证：加成无健康门槛，44% 血仍以 1.25 吃满，
+                    # F4 岔路以 0.96 分压过 Unknown（25.52 vs 24.56），错失
+                    # 商店/事件/休息多样性后漏斗行军阵亡——警戒带内回落中性
+                    if hpp >= pol.get("rest_wary_hp_pct", 0.62):
+                        return 1.25, "前期需要战斗积累卡牌"
+                    return 1.0, "血量偏低，前期积累让位续航"
             return 1.0, ""
 
         # ---- 全路径规划：从每个候选节点枚举到 Boss 行的所有路径，
@@ -437,10 +448,21 @@ class Policy:
             # 卡组越强战斗越短：掉血先验按非基础牌数打折（每张 -3%，最多 -40%）
             deck_ease = 1.0 - min(0.40, 0.03 * good_cards)
             score, cur_hp, notes = 0.0, float(hp), []
+            mid_gate_hit = False
             for depth, key in enumerate(path_keys):
                 gnode = graph.get(key) or {}
                 nt = start_node.get("node_type", "Unknown") if depth == 0 else gnode.get("node_type", "Unknown")
                 hpp = max(0.0, cur_hp) / max_hp
+                # 中段精英复检闸门：外层闸门只查候选首节点，第 54 局 F12 商店路径
+                # 的子树里藏着 F13 精英，47.5% 血被"金币足够"抬进精英漏斗。
+                # 逐节点选路意味着中段精英尚未承诺（后续仍可改道），罚分取外层
+                # 闸门的一半强度、加性实现（符号安全），仅作子树前景的投影修正
+                if nt == "Elite" and depth >= 1:
+                    gf, _gnote = self._elite_path_gate(pol, priors, int(round(cur_hp)), max_hp,
+                                                        good_cards, act_mul)
+                    if gf < 1.0:
+                        score -= (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5
+                        mid_gate_hit = True
                 factor, note = node_factor(nt, gnode, hpp)
                 w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
                 score += w * (0.97 ** depth)
@@ -466,6 +488,8 @@ class Policy:
                     score -= max(0.0, pol.get("path_death_penalty", 100.0) - 3.0 * min(depth, 15))
                     break
             final_pct = max(0.0, cur_hp) / max_hp
+            if mid_gate_hit:
+                notes.append("路径中段含未达标精英，投影罚分")
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
             if final_pct < floor_pct:
                 score -= (floor_pct - final_pct) * 40.0
@@ -538,6 +562,9 @@ class Policy:
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
             self._potion_tried = set()
+        if self._kills_combat is not ctx.combat:
+            self._kills_combat = ctx.combat
+            self._combat_kills = {}
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -644,6 +671,13 @@ class Policy:
 
         if best and best[0] > pol["play_threshold"]:
             _, card, target, why = best
+            # 记录"预测击杀"：同一敌人本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
+            # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）
+            if target is not None and isinstance(why, str) and why.startswith("可击杀"):
+                tgt = next((e for e in enemies if e.get("index") == target), None)
+                if tgt is not None:
+                    kid = tgt.get("enemy_id") or tgt.get("name") or ""
+                    self._combat_kills[kid] = self._combat_kills.get(kid, 0) + 1
             params = {"card_index": card["index"]}
             if card.get("requires_target"):
                 if target is None:
@@ -725,6 +759,9 @@ class Policy:
             atk_damp, blk_boost = 1.0, 1.0
         atk_damp *= float(st.get("atk_mult", 1.0))
         blk_boost *= float(st.get("blk_mult", 1.0))
+        # 多敌战斗格挡增值：意图来源越多战斗越长、漏伤越多（第 52~55 局四场
+        # 致命战全是 2~3 体组合、滚动总意图 15~26），每点格挡的期望价值更高
+        blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
 
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
@@ -736,7 +773,10 @@ class Policy:
             if aoe:
                 eff = sum(max(1, total - e.get("block", 0)) for e in enemies)
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
-                score = eff * atk_damp + pol["kill_bonus"] * len(killable)
+                score = eff * atk_damp + sum(
+                    self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
+                                     incoming, pol)
+                    for e in killable)
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
                 if lethal and not killable:
@@ -758,7 +798,7 @@ class Policy:
                 s = (eff + threat * 0.3) * atk_damp
                 killed = eff >= e.get("current_hp", 9999)
                 if killed:
-                    s += pol["kill_bonus"]  # 击杀直接消灭意图来源，不吃衰减
+                    s += self._kill_bonus(e, threat, incoming, pol)
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
                     why = f"可击杀{e['name']}" if killed else f"单体伤害≈{eff}"
@@ -810,6 +850,21 @@ class Policy:
         if cost == 0:
             score += pol["free_card_bonus"]
         return score, None, f"能力/增益牌（第{round_no}回合）"
+
+    def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict) -> float:
+        """击杀奖励按「消除的威胁占比」折算，并对已证实的重生召唤物强衰减。
+
+        第 52~53 局实证：利齿之眼每回合被【可击杀】斩首又复活，kill_bonus=12
+        吸引引擎单场追杀召唤物 10+ 次，雾菇本体意图 8→23 滚雪球把 80 血磨穿——
+        击杀的价值在消灭未来的意图来源，目标威胁占比越低越不值钱；同一敌人
+        本场已被预测击杀 ≥2 次仍存活即为重生体（阈值 2 可吸收偶发 409/未命中
+        的误计），奖励降至 1/4。空档回合（intent 全 0）按全额计：抢在召唤物
+        产出意图之前清场仍有价值。
+        """
+        kid = enemy.get("enemy_id") or enemy.get("name") or ""
+        mult = 0.25 if self._combat_kills.get(kid, 0) >= 2 else 1.0
+        share = 1.0 if incoming <= 0 else min(1.0, max(0.0, threat) / incoming)
+        return pol["kill_bonus"] * (0.4 + 0.6 * share) * mult
 
     def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False):
         run = state.get("run") or {}
@@ -903,6 +958,13 @@ class Policy:
                                  or "DEFEND" in (c.get("card_id") or "").upper()
                                  or is_bad_card(c))) if deck else 0
 
+        def _is_aoe(c: dict) -> bool:
+            t = _text(c)
+            return ("所有敌人" in t or "all enemies" in t.lower()
+                    or (c.get("target_type") or "") == "AllEnemies")
+
+        n_aoe = sum(1 for c in deck if _is_aoe(c)) if deck else 0
+
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
         # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠
         if is_attack(card):
@@ -910,6 +972,12 @@ class Policy:
             value += (dmg * hits * 1.0 + (1.0 if cost <= 1 else 0.0)) * atk_scale
             if ratio < 0.35:
                 value += 1.5  # 输出不足时额外鼓励补攻击
+            # AoE 定价随存量递减（第 56~57 局复盘）：致死榜前列全是多体/召唤组合
+            # （第 57 局 16 张入组牌 0 张群体攻击，双子 Boss 七回合斩杀失败），
+            # 首张群体攻击是结构性稀缺资源(+3)；已有 1 张仍增值(+2)；
+            # ≥2 张后边际价值快速回落(+0.5)，名额让给其他维度
+            if _is_aoe(card):
+                value += 3.0 if n_aoe == 0 else (2.0 if n_aoe == 1 else 0.5)
         elif is_skill(card):
             value += block * 0.8 + draw_amount(card) * 1.5
             # 格挡来源绝对数稀缺（初始 4 张防牌很快被稀释，旧占比判定 <20% 几乎不触发）
@@ -1088,6 +1156,17 @@ class Policy:
             scored = sorted(((self.eval_reward_card(c, deck), c) for c in candidates),
                             key=lambda t: -t[0])
             best_v, pick = scored[0]
+            # 跳过守卫（第 56 局实证）：经"打开卡牌奖励"进入的本屏没有阈值判断，
+            # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
+            # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛。
+            # 服务端提供 skip 动作且全员低于阈值 → 放弃；无跳过动作（强制选择屏）
+            # 则退回最小恶选择
+            if (best_v < self.know.policy["card_pick_threshold"]
+                    and "skip_reward_cards" in actions):
+                return Decision("skip_reward_cards", {},
+                                f"选牌界面：全部低于拾取阈值（最高 {best_v:.1f} < "
+                                f"{self.know.policy['card_pick_threshold']}），跳过不拿",
+                                tags=[("card_skip", None)], wait=0.8)
             tag = "card_pick"
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
             reason = f"选择卡牌：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"
@@ -1289,10 +1368,18 @@ class Policy:
                 return Decision("choose_event_option", {"option_index": o["index"]},
                                 f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）",
                                 tags=[("event_choice", event_id, key)], wait=1.0)
-        # 平值时按样本数优先：价值同为 0.0 时旧逻辑按选项原始顺序取第一个，
-        # 曾把 石炉加湿器(n=0) 排在 失物盒(n=3) 前面——经验多的选项更可信
+        # 有实证收益（>0）时：价值优先，平值按样本数优先（石炉加湿器教训：
+        # 经验多比原始顺序可信）。全零平值反转（第 56~57 局实证）：事件结算只记
+        # 即时 hp/gold，祝福类选项长期记 0——按样本最大排序会把选择永久锁死在
+        # 首个采样过的选项上，「涅奥的苦痛」n=8 连续重选，营养牡蛎(+11/次)式的
+        # 正收益选项永远等不到被发现。并列 0 时改选样本最少者主动分散采样；
+        # 任一选项显现非零收益后自动恢复"价值→样本"贪心。
         scored.sort(key=lambda s: (s[0], s[1]), reverse=True)
-        v, n, key, o = scored[0]
+        if scored[0][0] > 0.0:
+            v, n, key, o = scored[0]
+        else:
+            pool = [s for s in scored if s[0] == scored[0][0]]
+            v, n, key, o = min(pool, key=lambda s: s[1])
         lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
         return Decision("choose_event_option", {"option_index": o["index"]},
                         f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}",

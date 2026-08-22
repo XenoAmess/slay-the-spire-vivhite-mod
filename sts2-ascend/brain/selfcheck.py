@@ -273,8 +273,11 @@ def main() -> int:
     assert v_basic < know.policy["card_pick_threshold"], \
         f"未升级基础打击在奖励端未被抑制: v={v_basic}"
 
-    # 3j) 事件平值按样本数优先：价值同为 0.0 时不得按选项原始顺序盲取第一个
-    #     （第 36 批实证：石炉加湿器(n=0) 排在 失物盒(n=3) 前面被选中）
+    # 3j) 事件平值语义（第 56~57 局复盘改版）：
+    #     a) 有实证收益的选项必须立即胜出（价值优先，平值才按样本数——石炉加湿器教训）
+    #     b) 全零平值改选样本最少的选项分散采样：事件结算只记即时 hp/gold，祝福类
+    #        选项长期记 0，按样本最大排序会把「涅奥的苦痛」(n=8) 永久锁死，
+    #        营养牡蛎(+11/次)式的正收益选项永远无法被发现
     know.stats.setdefault("events", {})["TIE_EV"] = {
         "OPT_KNOWN": {"n": 4, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0}}
     tie_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
@@ -286,7 +289,18 @@ def main() -> int:
                  "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
     pol_exploit = policy.Policy(know, random.Random(2))  # 首抽 0.956 > 探索率 → 走利用路径
     d_tie = pol_exploit.decide(tie_state, ctx)
-    assert d_tie.params.get("option_index") == 1, f"事件平值必须偏向样本多的选项: {d_tie.reason}"
+    assert d_tie.params.get("option_index") == 0 and "探索" not in d_tie.reason, \
+        f"全零平值应选样本最少选项收集信息（不得锁死高样本项/不得走探索分支）: {d_tie.reason}"
+    # 出现实证收益选项后恢复"价值→样本"贪心
+    know.stats["events"]["TIE_EV"]["OPT_GOOD"] = {
+        "n": 2, "hp_delta_sum": 40.0, "gold_delta_sum": 0.0, "deaths": 0}
+    tie_state["event"]["options"].append(
+        {"index": 2, "title": "收益项", "text_key": "OPT_GOOD",
+         "is_locked": False, "is_proceed": False})
+    pol_exploit2 = policy.Policy(know, random.Random(2))
+    d_tie2 = pol_exploit2.decide(tie_state, ctx)
+    assert d_tie2.params.get("option_index") == 2 and "探索" not in d_tie2.reason, \
+        f"正收益选项必须胜出（价值→样本贪心恢复）: {d_tie2.reason}"
 
     # 3k) 探索不碰已知负收益选项（吃过 -34 血的选项不再被探索重试）
     know.stats["events"]["NEG_EV"] = {
@@ -543,6 +557,104 @@ def main() -> int:
     assert d_rest_boss.tags and d_rest_boss.tags[0] == ("rest", "heal"), \
         f"Boss 前夜应优先回血: {d_rest_boss.reason}"
     ctx.rest_before_boss = False
+
+    # 3t) 血量警戒带（第 54 局 F12 实证）：47.5% 血不在急需线内、篝火零加权，
+    #     Shop(16.60|金币足够) 以 0.54 分压过 RestSite(16.06)，随后被迫 48% 血
+    #     撞进子树里唯一的精英阵亡。45%~62% 区间篝火必须获得中等加权
+    wary_state = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                  "map": {"available_nodes": [
+                      {"index": 0, "row": 1, "col": 0, "node_type": "Monster"},
+                      {"index": 1, "row": 1, "col": 1, "node_type": "RestSite"}], "nodes": []},
+                  "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+    d_wary = pol.decide(wary_state, ctx)
+    assert d_wary.params.get("option_index") == 1 and "血量偏低" in d_wary.reason, \
+        f"警戒带(50%血)应优先休整而非怪物连战: {d_wary.reason}"
+
+    # 3u) 重生召唤物识别（第 52~53 局利齿之眼实证：单场被预测击杀 10+ 次，
+    #     次次复活，kill_bonus 把输出全部吸走，雾菇本体意图 8→23 磨穿 80 血）：
+    #     同一敌人同场被预测击杀 ≥2 次仍存活 → 击杀奖励 ×0.25，输出转向本体
+    def spike_combat():
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 3,
+                "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                           "hand": [
+                               {"index": 0, "card_id": "CARD_STAB", "name": "小刺", "playable": True,
+                                "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                                "dynamic_values": [{"name": "Damage", "current_value": 6}]},
+                               {"index": 1, "card_id": "CARD_CLEAVE", "name": "重劈", "playable": True,
+                                "energy_cost": 2, "requires_target": True,
+                                "valid_target_indices": [0, 1],
+                                "dynamic_values": [{"name": "Damage", "current_value": 12}]}],
+                           "enemies": [
+                               {"index": 0, "enemy_id": "RESPAWN_ADD", "name": "利齿之眼",
+                                "current_hp": 5, "max_hp": 30, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 6}]},
+                               {"index": 1, "enemy_id": "FOG_SOURCE", "name": "雾菇本体",
+                                "current_hp": 60, "max_hp": 70, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 22}]}]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+
+    d_k1 = pol.decide(spike_combat(), ctx)
+    assert d_k1.action == "play_card" and d_k1.params.get("target_index") == 0, \
+        f"首次可击杀召唤物仍应优先斩杀: {d_k1.reason}"
+    pol._combat_kills["RESPAWN_ADD"] = 2  # 模拟同场已两次预测击杀后它仍在场
+    d_k2 = pol.decide(spike_combat(), ctx)
+    assert d_k2.action == "play_card" and d_k2.params.get("target_index") == 1, \
+        f"重生召唤物不应再吸引输出（应转火高威胁本体）: {d_k2.reason}"
+
+    # 3v) 前期怪物加成的健康门槛（第 56 局复盘）：floor<=8 的 ×1.25 积累加成只在
+    #     血量健康(≥警戒带62%)时生效——44%~62% 警戒带内曾吃满加成以 0.96 分压过
+    #     Unknown 岔路（25.52 vs 24.56），随后漏斗行军阵亡
+    def monster_map_reason(hp_now: int) -> str:
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                           "node_type": "Monster"}], "nodes": []},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+        return pol.decide(st, ctx).reason
+
+    assert "前期需要战斗积累卡牌" in monster_map_reason(70), \
+        f"健康血量应保留前期积累加成: {monster_map_reason(70)}"
+    assert ("前期需要战斗积累卡牌" not in monster_map_reason(45)
+            and "让位续航" in monster_map_reason(45)), \
+        f"警戒带内前期加成必须失效: {monster_map_reason(45)}"
+
+    # 3w) AoE 稀缺定价随存量递减（第 57 局 Boss 战实证）：16 张入组牌 0 张群体攻击，
+    #     双子 Boss 七回合斩杀失败——首张 AoE 显著溢价(+3)，已有两张后回落(+0.5)
+    aoe_card = {"card_id": "WHIRLWIND", "name": "旋风斩", "card_type": "Attack",
+                "energy_cost": 1, "rules_text": "对所有敌人造成 5 点伤害。",
+                "dynamic_values": [{"name": "Damage", "current_value": 5}]}
+    plain_deck = [{"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1}
+                  for i in range(6)]
+    aoe_deck = plain_deck[:4] + [
+        {"card_id": "THUNDERCLAP_A", "card_type": "Attack", "energy_cost": 1,
+         "rules_text": "对所有敌人造成 4 点伤害。"},
+        {"card_id": "THUNDERCLAP_B", "card_type": "Attack", "energy_cost": 1,
+         "rules_text": "对所有敌人造成 4 点伤害。"}]
+    v_aoe_fresh = pol.eval_reward_card(dict(aoe_card), [dict(c) for c in plain_deck])
+    v_aoe_dup = pol.eval_reward_card(dict(aoe_card), [dict(c) for c in aoe_deck])
+    assert v_aoe_fresh - v_aoe_dup >= 2.0, \
+        f"AoE 稀缺定价失效: fresh={v_aoe_fresh:.2f} dup={v_aoe_dup:.2f}"
+
+    # 3x) 选牌界面跳过守卫（第 56 局 F2 实证）：经"打开卡牌奖励"进入的选牌屏没有
+    #     阈值判断，-3.9 的未升级防御被硬塞进卡组；有 skip 动作且全员低于阈值应放弃，
+    #     无跳过动作的强制选择屏则退回最小恶选择
+    junk_pick_state = {
+        "screen": "CARD_SELECTION",
+        "available_actions": ["select_deck_card", "skip_reward_cards"],
+        "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。", "min_select": 1,
+                      "selected_count": 0, "can_confirm": False,
+                      "cards": [{"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                                 "card_type": "Skill", "energy_cost": 1,
+                                 "dynamic_values": [{"name": "Block", "current_value": 5}]}]},
+        "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 2, "deck": []}}
+    d_junk = pol.decide(junk_pick_state, ctx)
+    assert d_junk.action == "skip_reward_cards", \
+        f"全负候选且有跳过动作时应放弃不拿: {d_junk.action}（{d_junk.reason}）"
+    junk_pick_state["available_actions"] = ["select_deck_card"]
+    d_junk2 = pol.decide(junk_pick_state, ctx)
+    assert d_junk2.action == "select_deck_card", \
+        f"无跳过动作的强制屏应退回最小恶选择: {d_junk2.action}（{d_junk2.reason}）"
 
     # 3s) 幻影局防护（第 50~51 局复盘）：大脑重启落在上一局结算屏时，
     #     旧 run_id 回声不得被当成新对局；零数据对局不得入账/存日志/触发复盘与 git
