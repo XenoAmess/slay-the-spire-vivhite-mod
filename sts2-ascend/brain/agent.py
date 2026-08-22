@@ -8,7 +8,6 @@ Usage:  py -m brain            (from sts2-ascend/ directory)
 from __future__ import annotations
 
 import json
-import os
 import random
 import subprocess
 import sys
@@ -250,6 +249,10 @@ class Agent:
             autogit.commit_progress(
                 f"chore(sts2-ascend): 第{g['runs']}局存档（{result} F{floor} 进阶{self.ctx.ascension}，生涯 {g['wins']}胜/{g['runs']}局）",
                 log=log)
+        # LLM 复盘提交了变更：立即以退出码 42 请求 runner 重启（此时处于局间，重启无损）
+        if self.request_restart:
+            log("[agent] 复盘变更已落盘，请求 runner 重启大脑…")
+            sys.exit(42)
 
     # ---------------- watchdog ----------------
 
@@ -287,6 +290,7 @@ class Agent:
         log(f"[agent] 已连接 mod v{health.get('mod_version')}（游戏 {health.get('game_version')}）")
         g = self.know.stats["global"]
         log(f"[agent] 生涯战绩：{g['wins']}/{g['runs']} 胜｜当前目标进阶 {self.know.progression['current_ascension']}")
+        self._boot_ticks = 0  # 稳定运行 50 tick 后删除重启标记（向 runner 证明新代码可用）
 
         while True:
             if self.cfg["max_runs"] and self.runs_played >= self.cfg["max_runs"]:
@@ -307,19 +311,19 @@ class Agent:
                 time.sleep(2)
                 continue
 
+            self._boot_ticks += 1
+            if self._boot_ticks == 50:
+                try:
+                    (KNOWLEDGE_DIR / "pending_restart.json").unlink(missing_ok=True)
+                except OSError:
+                    pass
+
             # run finalization hook (policy asked for it on GAME_OVER)
             if self.ctx.finalize_requested and not self.ctx.run_finalized:
                 go = state.get("game_over") or {}
                 floor = go.get("floor") or (self.ctx.decisions[-1]["floor"] if self.ctx.decisions else 0)
                 self._finalize(bool(go.get("is_victory")), int(floor or 0))
                 continue
-
-            # LLM 改了代码：在主菜单安全点自重启以加载新逻辑
-            if self.request_restart and state.get("screen") == "MAIN_MENU":
-                log("[agent] 自重启中（加载 LLM 修复后的代码）…")
-                self.know.save()
-                os.chdir(BASE_DIR)
-                os.execv(sys.executable, [sys.executable, "-u", "-m", "brain"])
 
             forced = self._watchdog(state)
             if forced:

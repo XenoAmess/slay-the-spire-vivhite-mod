@@ -20,6 +20,6 @@ if (-not $proc) {
     Write-Host "Game already running (pid $($proc[0].Id))"
 }
 
-Write-Host "Starting brain (Ctrl+C to stop)..."
+Write-Host "Starting brain via runner (auto-restart + auto-rollback; Ctrl+C to stop)..."
 Set-Location $root
-py -3 -u -m brain
+py -3 -u brain\runner.py

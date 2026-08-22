@@ -57,16 +57,29 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 
 内置的统计学习只会调既有参数。**每 10 局**，大脑会暂停并启动一次
 **OpenCode 无头会话**（`opencode run`，模型 `kimi-for-coding/k3`，走本机已有授权，无需 API key），
-由大模型做教练级复盘：
+由大模型做教练级复盘——**广权限 + git 安全网**：
 
-- 读取最近对局摘要 + 全部统计 → 写复盘报告到 `knowledge/meta_review.md`
-- **有界直接调整** `policy.json` 参数 / 卡牌 `bias`（区间钳制，逐项写明理由）
-- 发现 `brain/policy.py` 明确逻辑缺陷时可直接改代码（强制 `py_compile` 验证，仅此一个文件可动）
-- 复盘完成后大脑在主菜单**自动自重启**（`os.execv`）加载新策略与新代码
+- 可修改 `sts2-ascend/` 下**任何文件**：策略参数、知识库数据结构、决策代码、配置
+  （改数据结构必须同步迁移 `knowledge.py` 与现有数据）
+- **改前**：大脑自动 commit 全量备份并推送（备份点）
+- **改后**：强制自检（全模块编译 + 假状态冒烟 + 真实知识库兼容加载），通过才提交；
+  失败则 `git reset --hard` 回滚到备份点，本次变更作废
+- **重启加载**：复盘产生变更后大脑以退出码 42 通知 runner 重启；
+  若新代码起不来，`runner.py` 按重启标记再次 git 回滚并自动还原——改坏了最多损失一局时间
+- 复盘报告：`knowledge/meta_review.md`；新经验同步进 `lessons.md`
 
-安全约束（写在复盘提示词里，优先级最高）：禁止 git 操作、禁止动进程、禁止删文件、
-禁止改历史对局日志。手动立即触发一次复盘：`py brain/llm_review.py --now`。
+手动立即触发一次复盘：`py brain/llm_review.py --now`。
 配置项见 `brain/config.json` 的 `llm` 节（可改间隔局数/模型/禁用）。
+
+## 进程结构
+
+```
+runner.py（监督进程：拉起大脑 / 退出码42重启 / 崩溃自动回滚）
+  └─ py -m brain（决策主循环）
+        └─ 每10局 → opencode run（kimi-for-coding/k3 复盘会话）
+```
+
+每局结束自动 `git commit+push` 存档（`brain/autogit.py`），进化历史全程可追溯。
 
 ## 与上游 mod 的关系
 
