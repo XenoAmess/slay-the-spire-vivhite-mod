@@ -867,3 +867,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/66 胜，当前目标进阶 0
+
+## 第 67 局复盘（2026-08-23 04:47）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 MAWLER
+- 本局拿牌：HOWL_FROM_BEYOND, EVIL_EYE, HAND_OF_GREED, PACTS_END, IRON_WAVE, SPITE, FLAME_BARRIER, FLAME_BARRIER, SPITE
+- 本局遗物：POTION_BELT
+- 战斗记录：F2 Monster战 掉血13; F3 Monster战 掉血9; F5 Monster战 掉血6; F6 Monster战 掉血0; F9 Monster战 掉血41; F12 Monster战 掉血12（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(23分/2局)，MANGLE(21分/10局)，STOMP(19分/5局)，UPPERCUT(17分/22局)，UNMOVABLE(17分/3局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/67 胜，当前目标进阶 0
