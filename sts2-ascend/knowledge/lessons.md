@@ -912,3 +912,14 @@
 - 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/69 胜，当前目标进阶 0
+
+## 第 70 局复盘（2026-08-23 05:20）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHRUG_IT_OFF, RESTLESSNESS, THUNDERCLAP, BLUDGEON, CINDER, SHRUG_IT_OFF, CINDER, RUPTURE, HEADBUTT, MANGLE, STOMP, UNMOVABLE
+- 本局遗物：PEN_NIB
+- 战斗记录：F6 Monster战 掉血34; F12 Monster战 掉血24; F14 Monster战 掉血6; F15 Monster战 掉血13; F17 Boss战 掉血40; F17 Boss战 掉血45（阵亡）
+- 当前高价值卡牌：IMPERVIOUS(21分/3局)，MANGLE(20分/11局)，STOMP(18分/6局)，UPPERCUT(17分/24局)，UNMOVABLE(17分/4局)
+- 当前低价值卡牌：DRUM_OF_BATTLE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/70 胜，当前目标进阶 0
