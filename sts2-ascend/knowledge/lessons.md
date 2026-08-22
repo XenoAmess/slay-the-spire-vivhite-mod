@@ -479,3 +479,14 @@
 - 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：exploration_rate: 0.081 → 0.079（经验累积，探索衰减）
 - 生涯战绩：0/38 胜，当前目标进阶 0
+
+## 第 39 局复盘（2026-08-23 00:37）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：SHRUG_IT_OFF, HEMOKINESIS, BULLY, SHRUG_IT_OFF, UNRELENTING, MANGLE, DISMANTLE, VICIOUS, HELLRAISER, FIGHT_ME, MANGLE, FIGHT_ME
+- 本局遗物：赤牛, MERCURY_HOURGLASS
+- 战斗记录：F8 Monster战 掉血5; F9 Elite战 掉血31; F9 Elite战 掉血3; F12 Monster战 掉血4; F14 Monster战 掉血2; F17 Boss战 掉血59（阵亡）
+- 当前高价值卡牌：STOMP(28分/2局)，HOWL_FROM_BEYOND(25分/2局)，MANGLE(21分/10局)，FIGHT_ME(20分/6局)，UPPERCUT(19分/16局)
+- 当前低价值卡牌：FLAME_BARRIER(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：exploration_rate: 0.079 → 0.076（经验累积，探索衰减）
+- 生涯战绩：0/39 胜，当前目标进阶 0
