@@ -188,6 +188,7 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as exc:
-        log(f"致命异常（静默退出）：{exc}")
+        import traceback
+        log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-1000:]}")
         release_voice_lock()
         sys.exit(0)

@@ -44,10 +44,19 @@ VOICE_LOCK = KNOWLEDGE_DIR / "voice_speaker.lock"
 
 
 def _pid_alive(pid: int) -> bool:
+    """进程存活检查。os.kill(pid,0) 在 Windows 上偶发 SystemError 风格的 ctypes 错误
+    （"returned a result with an exception set"），会绕过 OSError 捕获搞崩整个朗读器——
+    改用 OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) 这个稳的路径。"""
+    if pid <= 0:
+        return False
     try:
-        os.kill(pid, 0)
-        return True
-    except (OSError, ValueError):
+        import ctypes
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+        return False
+    except Exception:
         return False
 
 

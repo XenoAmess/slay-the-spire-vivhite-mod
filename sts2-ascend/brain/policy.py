@@ -1184,7 +1184,7 @@ class Policy:
 
         if best and best[0] > pol["play_threshold"]:
             _, card, target, why = best
-            if "消耗" in _text(card):
+            if _exhausts_other_cards(card):
                 self._exhaust_plays += 1
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)

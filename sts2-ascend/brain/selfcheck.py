@@ -707,6 +707,76 @@ def main() -> int:
     assert d_ob.action == "play_card" and d_ob.params.get("card_index") == 1, \
         f"缺口已满时溢出格挡不得挤占输出: {d_ob.params}（{d_ob.reason}）"
 
+    # 3x''') 消耗螺旋治理边界修正（第 135 局复盘，F11 精英战被异蛙寄生虫 -76 实证）：
+    #       ① 彼岸咆哮（"…若这张牌在你的消耗牌堆中…"）仅提及消耗牌堆，不得计入
+    #       消耗上限——旧纯文本匹配让 11 张卡组（上限=1）打一张彼岸咆哮就锁死坚毅；
+    #       ② 致死回合豁免上限：21 血对 12 意图、坚毅是唯一格挡牌时，烧一张牌
+    #       换活命永远值得（旧逻辑禁玩 → 白吃整轮意图进入死亡螺旋）
+    HOWL = {"index": 0, "card_id": "HOWL_FROM_BEYOND", "name": "彼岸咆哮", "playable": True,
+            "energy_cost": 3, "requires_target": False,
+            "rules_text": "对所有敌人造成18点伤害。 在你的回合结束时，如果这张牌在你的消耗牌堆中，则将其打出。",
+            "dynamic_values": [{"name": "Damage", "current_value": 18}]}
+    GRIT = {"index": 1, "card_id": "TRUE_GRIT", "name": "坚毅", "playable": True,
+            "energy_cost": 1, "requires_target": False,
+            "rules_text": "获得7点格挡。 随机消耗1张牌。",
+            "dynamic_values": [{"name": "Block", "current_value": 7}]}
+    INFC2 = {"index": 2, "card_id": "INFECTION", "name": "感染", "playable": False,
+             "energy_cost": 99, "requires_target": False, "rules_text": "不可打出。"}
+    INFC3 = {"index": 3, "card_id": "INFECTION", "name": "感染", "playable": False,
+             "energy_cost": 99, "requires_target": False, "rules_text": "不可打出。"}
+    assert not policy._exhausts_other_cards(HOWL), "彼岸咆哮（仅提及消耗牌堆）被误判为消耗其他牌"
+    assert policy._exhausts_other_cards(GRIT), "坚毅（随机消耗1张牌）未被识别为消耗其他牌"
+    ex_saved = pol._exhaust_plays
+    try:
+        # ① 打出彼岸咆哮不得占用消耗计数
+        pol._exhaust_plays = 0
+        howl_state = {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 3,
+            "combat": {"player": {"current_hp": 70, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [HOWL],
+                       "enemies": [{"index": 0, "enemy_id": "X", "name": "怪", "current_hp": 100,
+                                    "max_hp": 100, "block": 0, "is_alive": True, "is_hittable": True,
+                                    "intents": []}]},
+            "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 11,
+                    "deck": [{}] * 11},
+        }
+        d_howl = pol.decide(howl_state, ctx)
+        assert d_howl.action == "play_card" and d_howl.params.get("card_index") == 0, \
+            f"彼岸咆哮应正常打出: {d_howl.action}（{d_howl.reason}）"
+        assert pol._exhaust_plays == 0, \
+            f"彼岸咆哮不得占用消耗上限计数: {pol._exhaust_plays}"
+        # ② 上限占满（=1）且非致死回合：坚毅仍被锁（僵局防护不松）
+        pol._exhaust_plays = 1
+        grit_lock_state = {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 4,
+            "combat": {"player": {"current_hp": 60, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [GRIT],
+                       "enemies": [{"index": 0, "enemy_id": "X", "name": "怪", "current_hp": 100,
+                                    "max_hp": 100, "block": 0, "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 6}]}]},
+            "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 11,
+                    "deck": [{}] * 11},
+        }
+        d_lock = pol.decide(grit_lock_state, ctx)
+        assert not (d_lock.action == "play_card" and d_lock.params.get("card_index") == 1), \
+            f"非致死回合消耗上限占满后坚毅应被锁定: {d_lock.params}（{d_lock.reason}）"
+        # ③ 致死回合（21 血对 12 意图，惨胜线内）：上限豁免，坚毅必须打出
+        lethal_grit_state = {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 5,
+            "combat": {"player": {"current_hp": 21, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [GRIT, INFC2, INFC3],
+                       "enemies": [{"index": 0, "enemy_id": "X", "name": "怪", "current_hp": 100,
+                                    "max_hp": 100, "block": 0, "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 12}]}]},
+            "run": {"current_hp": 21, "max_hp": 80, "gold": 0, "floor": 11,
+                    "deck": [{}] * 11},
+        }
+        d_lethal = pol.decide(lethal_grit_state, ctx)
+        assert d_lethal.action == "play_card" and d_lethal.params.get("card_index") == 1, \
+            f"致死回合消耗上限必须豁免（坚毅是唯一活路）: {d_lethal.action} {d_lethal.params}（{d_lethal.reason}）"
+    finally:
+        pol._exhaust_plays = ex_saved
+
     # 3y) Boss 入场血量要求线（第 60~61 局复盘）：路径投影此前只写进日志注释，
     #     「预计进 Boss 44%」照样沿 Monster 链磨到 Boss 门前（61 局 44% 入场被
     #     仪式兽处决；历史 44%~69% 入场 5 连亡）。低于要求线(65%)的投影按差值
@@ -1341,8 +1411,12 @@ def main() -> int:
 
     # 3rr) 精英死亡演化改接悲观系数（第 86~87 批复盘）：elite_min_hp_pct 已在
     #      0.9 上限顶格空转——精英死亡信号必须驱动仍有余量的新旋钮，
-    #      且胜利时双向释放（演化必须可逆）
+    #      且胜利时双向释放（演化必须可逆）。
+    #      第 135 局复盘细化：只有灰区进场（<硬线）的精英死亡才喂灰区系数；
+    #      满血线以上进场阵亡（135 局 95% 血进精英 -76）是实战执行/卡组强度
+    #      的证据，错位吸收只会让这条无释放通道的棘轮漂向 2.5 上限空转
     eknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-grey-")))
+    eknow.policy["elite_min_hp_pct"] = 0.9  # 复刻运行库顶格状态（默认 0.55 下 0.86 不算灰区）
     ectx = SimpleNamespace(
         died_to_event=None,
         died_in_combat={"comp_id": "BYGONE_EFFIGY", "rounds": 6, "node_type": "Elite"},
@@ -1350,7 +1424,15 @@ def main() -> int:
         credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
     finalize_run(eknow, ectx, victory=False, final_floor=17)
     assert abs(eknow.policy["elite_grey_safety_mult"] - 1.7) < 1e-9, \
-        f"精英死亡未上调灰区悲观系数: {eknow.policy['elite_grey_safety_mult']}"
+        f"灰区精英死亡未上调灰区悲观系数: {eknow.policy['elite_grey_safety_mult']}"
+    fctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "PHROG_PARASITE", "rounds": 9, "node_type": "Elite"},
+        death_was_elite=True, death_hp_pct_at_entry=0.95,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    finalize_run(eknow, fctx, victory=False, final_floor=11)
+    assert abs(eknow.policy["elite_grey_safety_mult"] - 1.7) < 1e-9, \
+        f"满血线进场精英死亡不应喂灰区系数（错位吸收复发）: {eknow.policy['elite_grey_safety_mult']}"
     vctx = SimpleNamespace(
         died_to_event=None, died_in_combat=None,
         death_was_elite=False, death_hp_pct_at_entry=None,

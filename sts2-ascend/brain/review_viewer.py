@@ -60,10 +60,16 @@ FADE_SEC = 2.0
 # ---------------------------------------------------------------------------
 
 def _pid_alive(pid: int) -> bool:
+    """os.kill(pid,0) 在 Windows 上偶发 SystemError 风格异常，改用 OpenProcess。"""
+    if pid <= 0:
+        return False
     try:
-        os.kill(pid, 0)
-        return True
-    except (OSError, ValueError):
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+        return False
+    except Exception:
         return False
 
 

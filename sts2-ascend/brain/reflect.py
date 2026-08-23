@@ -73,8 +73,18 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                      f"精英战阵亡，进场血量 {ctx.death_hp_pct_at_entry:.0%}，提高精英回避线")
             # elite_min_hp_pct 已在 0.9 上限顶格空转（第 86~87 批复盘）——
             # 精英死亡信号改接灰区悲观系数：战损重尾证据越积越多，复核越保守
-            _adj(know, "elite_grey_safety_mult", 0.2, changes,
-                 "精英战阵亡，灰区悲观投影系数上调")
+            # 第 135 局复盘修正：只有「灰区进场」（血量 < 硬线）的精英死亡才是
+            # 灰区投影的证据。满血线以上进场仍阵亡（135 局 95% 血进精英被异蛙
+            # 寄生虫 -76），病因在实战执行/卡组强度，灰区系数吸收纯属错位——
+            # 0 胜生涯下胜利释放（-0.1）永不触发，这是又一条漂向 2.5 上限的
+            # 单向棘轮，必须只喂它属于自己的证据
+            if ctx.death_hp_pct_at_entry < pol["elite_min_hp_pct"]:
+                _adj(know, "elite_grey_safety_mult", 0.2, changes,
+                     "精英战灰区进场阵亡，灰区悲观投影系数上调")
+            else:
+                changes.append(f"精英战阵亡但满血线进场（{ctx.death_hp_pct_at_entry:.0%}≥"
+                               f"{pol['elite_min_hp_pct']:.0%}）——证据指向实战执行/卡组强度，"
+                               "灰区悲观系数不吸收")
         if died_to_enemy and not ctx.death_was_elite:
             if stall_death:
                 rounds_s = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
