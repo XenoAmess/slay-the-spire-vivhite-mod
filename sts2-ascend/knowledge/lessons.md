@@ -1242,3 +1242,21 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.56 → 1.41（长战实证过度龟防会拖长战斗，小幅回调）
 - 生涯战绩：0/95 胜，当前目标进阶 0
+
+## 🧠 第 92~93 局复盘经验（2026-08-23 10:10）
+- **时序澄清**：两局均运行于 90~91 批变更（09:52 提交）之前的旧代码，竞速投影尚未生效——死法属旧代码遗产；94 局（新代码首局）一幕 Boss 总战损仅 61，首次完整扛过一幕 Boss。
+- **敌人分「数值型」与「时间型」**：93 局 FUZZY+SHRINKER（生涯头号杀手，14 死）杀伤来自意图滚雪球 4→7→24→…→31，引擎却按死亡率信号切入防守姿态（atk×0.85/blk×1.30）反向用药——格挡买断当轮买不断下一轮，7 回合磨死时全场最大格挡仅 13。已接入 `_esc_rounds` 持续升级计数：升级轨迹≥2 次即打开斩杀竞速投影账本、存活分母取当前意图（EMA 在单调爬升下严重滞后）、并解除高危姿态攻防压制、同步改写「转防守节奏」矛盾文案。
+- **门槛按杀伤机制设而非体型设**：`kill_race_min_enemy_hp=80` 把"血池小"当"无需竞速"，恰好豁免了最需要竞速的滚雪球组合——开账问题应是"战斗是否随时间变贵"，不是"它够不够大"。
+- **同一信号不同病因禁共用旋钮**：block_safety 三连降（1.90→1.51）源于把非 Boss 长战死亡也归因"龟防拖长"；实为有效格挡不足。现防御释放仅限 Boss 长战，非 Boss 长战阵亡改为上调防御；疲劳压制改随连战深度递增（×0.75 起每场 -0.06），治 93 局 0.37 分压过商店的近局翻车。
+- 上批观察点①②③④因时序顺延未验证；⑤部分验证（94 局 Boss 通过）。本批新观察点：①升级型低血池战斗 T3~T5 出现竞速投影且无矛盾文案；②非 Boss 长战进化显示「上调防御权重」；③连战≥5 出现疲劳压制×0.63 级乘数；④block_safety 停止单向下行；⑤kill_bonus「距上限仅余」留痕持续核对。
+
+## 第 96 局复盘（2026-08-23 10:19）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：THUNDERCLAP, FIGHT_ME, TRUE_GRIT, SHRUG_IT_OFF, TAUNT, HOWL_FROM_BEYOND, RAMPAGE, UNRELENTING, BATTLE_TRANCE, FISTICUFFS, FIEND_FIRE, FIGHT_ME, HEADBUTT, CINDER, CINDER, UPPERCUT, MAYHEM, FEEL_NO_PAIN, SWORD_BOOMERANG, COLOSSUS
+- 本局遗物：草莓, VAMBRACE, 地精之角, BLOOD_VIAL, ODDLY_SMOOTH_STONE, LASTING_CANDY
+- 战斗记录：F19 Monster战 掉血5; F21 Monster战 掉血19; F21 Monster战 掉血0; F23 Monster战 掉血37; F31 Elite战 掉血30; F31 Elite战 掉血38（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，COLOSSUS(24分/2局)，FISTICUFFS(24分/2局)，MANGLE(21分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/96 胜，当前目标进阶 0
