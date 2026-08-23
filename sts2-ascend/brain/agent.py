@@ -183,6 +183,11 @@ class Agent:
                     self._start_combat(run, comp, node_type, hp)
                 else:
                     log("[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）")
+            # 回合数采样（第 82~83 批复盘）：记录战斗进行到的最大回合数，
+            # 供复盘区分「长战磨死」与「短时爆毙」，分别演化进攻/防御参数
+            turn_no = state.get("turn")
+            if isinstance(turn_no, int) and self.ctx.combat is not None:
+                self.ctx.combat["rounds"] = max(int(self.ctx.combat.get("rounds", 0)), turn_no)
         elif screen != "COMBAT" and self.ctx.combat is not None:
             victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
             died_here = screen == "GAME_OVER" and not victory_screen

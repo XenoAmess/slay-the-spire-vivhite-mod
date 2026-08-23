@@ -680,6 +680,16 @@ class Policy:
         stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
         comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
         danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
+        # Boss 攻坚提速（第 82~83 批复盘）：生涯死亡榜前四名中三个是 Boss
+        # （同族双子 190+58 血 12 死、仪式兽 252 血 10 死、墨影幻灵 173 血 8 死），
+        # Boss 意图逐轮升级、拖一轮就多吃一轮整套意图——第 82 局以 95% 血进
+        # 一幕 Boss 仍被两阶段共 81 点战损处决。全体 Boss 战给攻击评分加全局
+        # 乘区（与高危姿态叠加），缩短战斗本身就是最大的减伤。
+        if cctx.get("node_type") == "Boss":
+            boss_boost = float(pol.get("boss_atk_mult", 1.15))
+            if boss_boost > 1.0:
+                stance["atk_mult"] = round(stance.get("atk_mult", 1.0) * boss_boost, 3)
+                danger_note += f"；Boss攻坚提速×{boss_boost:.2f}"
 
         # 药水使用门槛：精英/Boss、致死威胁、"低血量且有缺口"，以及
         # "敌方组合本身就是硬仗"（场均战损 ≥ potion_comp_loss_frac × 最大生命——
@@ -1311,6 +1321,12 @@ class Policy:
 
         upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
         transforming = "transform" in kind or "变化" in prompt
+        # 牌堆顶选择（第 82~83 批复盘）：头槌系攻击命中后要求"从弃牌堆选一张
+        # 置于抽牌堆顶"——选最强牌正是正确语义，但它不是拿牌，不得计入
+        # card_pick 污染信用账本（第 83 局实证：一局内头槌多次触发，暴走被
+        # 记成 9 拿，卡牌学习数据的 picked/outcome_sum 被系统性灌水）
+        top_of_pile = any(k in blob for k in ("抽牌堆", "弃牌堆", "牌堆顶", "置顶",
+                                              "draw pile", "discard pile", "top of"))
         # 战斗中手牌强制选牌（kind=combat_hand_select）＝敌方献祭语义：
         # Vantom 每阶段结束强制从手牌交出一张（第 71 局 Boss 战五连献祭——
         # 通用"最高价值"分支把火焰屏障+×3、耸肩无视+×2 亲手喂给 Boss，
@@ -1371,9 +1387,10 @@ class Policy:
                 return Decision("skip_reward_cards", {},
                                 f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)
-            tag = "card_pick"
+            tag = "card_top_pick" if top_of_pile else "card_pick"
+            verb = "牌堆顶选择" if top_of_pile else "选择卡牌"
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
-            reason = f"选择卡牌：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"
+            reason = f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"
 
         self._sel_tried.add(pick["index"])
         return Decision("select_deck_card", {"option_index": pick["index"]},

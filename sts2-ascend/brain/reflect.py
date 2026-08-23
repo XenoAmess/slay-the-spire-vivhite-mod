@@ -18,6 +18,7 @@ BOUNDS = {
     "rest_heal_threshold": (0.35, 0.85),
     "rest_urgent_hp_pct": (0.2, 0.6),
     "block_safety": (0.6, 2.1),
+    "kill_bonus": (6.0, 20.0),
     "card_pick_threshold": (0.0, 6.0),
     "shop_relic_threshold": (0.0, 4.0),
     "power_round_bonus": (2.0, 10.0),
@@ -62,7 +63,19 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 _adj(know, "elite_min_hp_pct", 0.05, changes,
                      f"精英战阵亡，进场血量 {ctx.death_hp_pct_at_entry:.0%}，提高精英回避线")
         if died_to_enemy and not ctx.death_was_elite:
-            _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
+            # 死亡模式分流（第 82~83 批复盘）：block_safety 此前是只升不降的
+            # 单向棘轮（83 局 0 胜把它顶到 2.1 上限），而死亡榜前列全是血量
+            # 170+ 的 Boss/高血组合——长战磨死的正确演化方向是进攻（更快清场
+            # = 更少挨意图轮次），不是继续加防。按战斗时长分流：
+            #   长战（≥4 回合）磨死 → 提升击杀奖励 + 小幅释放防御棘轮
+            #   短时爆毙 → 维持旧逻辑上调防御权重
+            rounds = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
+            if rounds >= 4:
+                _adj(know, "kill_bonus", 1.0, changes,
+                     f"长战磨死（{rounds}回合），提升击杀奖励加快清场")
+                _adj(know, "block_safety", -0.05, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+            else:
+                _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:
