@@ -1071,3 +1071,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/83 胜，当前目标进阶 0
+
+## 第 84 局复盘（2026-08-23 08:04）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：CINDER, THUNDERCLAP, IRON_WAVE, TAUNT, UNRELENTING, UPPERCUT, ARMAMENTS
+- 本局遗物：无
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血18; F7 Monster战 掉血31; F9 Monster战 掉血0; F9 Monster战 掉血6; F9 Monster战 掉血46（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/42局)，BARRICADE(20分/2局)，TAUNT(20分/27局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/84 胜，当前目标进阶 0
