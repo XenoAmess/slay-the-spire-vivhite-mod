@@ -80,6 +80,9 @@ def load_llm_config() -> dict:
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
+        # 语音朗读器（tts/speaker.py）：sapi=系统语音实时 / indextts=克隆音色全程（很慢） /
+        # hybrid=SAPI 直播 + 克隆音色读结论 / off=关闭
+        "tts_mode": "hybrid",
         # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
         "review_queue_max": 5,
     }
@@ -325,6 +328,25 @@ def _launch_viewer(cfg: dict, log) -> None:
         log(f"[llm] 直播悬浮窗拉起失败（不影响复盘）：{exc}")
 
 
+def _launch_speaker(cfg: dict, log) -> None:
+    """拉起语音朗读器（SAPI 实时 + 可选 index-tts 克隆音色结论；独立进程）。"""
+    mode = str(cfg.get("tts_mode", "hybrid"))
+    speaker = BASE_DIR / "tts" / "speaker.py"
+    if mode == "off" or not speaker.exists():
+        return
+    try:
+        creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                         | getattr(subprocess, "DETACHED_PROCESS", 0)
+                         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        subprocess.Popen([sys.executable, "-u", str(speaker), mode],
+                         cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=creationflags, close_fds=True)
+        log(f"[llm] 语音朗读器已拉起（{mode}）")
+    except Exception as exc:
+        log(f"[llm] 语音朗读器拉起失败（不影响复盘）：{exc}")
+
+
 def _stream_begin(meta: dict) -> None:
     try:
         LIVE_STREAM.write_text("[LIVE-START] " + json.dumps(meta, ensure_ascii=False) + "\n",
@@ -533,9 +555,10 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         short_prompt,
     ]
 
-    # 直播流开启 + 拉起悬浮窗（哨兵/meta 先行，viewer 据此渲染标题）
+    # 直播流开启 + 拉起悬浮窗/语音朗读器（哨兵/meta 先行）
     _stream_begin({"model": entry, "source": source, "run": runs, "time": stamp})
     _launch_viewer(cfg, log)
+    _launch_speaker(cfg, log)
 
     autogit.set_review_active(True)     # 此后对局存档只提交 knowledge/
     rc, out, timed_out = -1, "", False

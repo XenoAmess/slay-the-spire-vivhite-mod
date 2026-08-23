@@ -1,13 +1,14 @@
-"""ASCEND-VOICE —— 复盘直播语音朗读器（index-tts 旁路进程）。
+"""ASCEND-VOICE —— 复盘直播语音朗读器（stdlib 版，随大脑 Python 直接运行）。
 
-在 index-tts 的 uv 虚拟环境中运行（由 llm_review 复盘启动时自动拉起，也可手动）：
+模式（argv[1] 或环境变量 TTS_MODE）：
+  sapi     —— Windows 自带语音（Microsoft Huihui，中文女声）实时朗读直播流，零成本零延迟
+  indextts —— 全部用 index-tts 克隆音色（GTX 1060 上很慢，仅离线适用）
+  hybrid   —— 直播过程走 SAPI；复盘结束时的结论段用 index-tts 克隆音色朗读（默认）
 
-  uv run --project third_party/index-tts python tts/speaker.py          # 直播模式
-  uv run --project third_party/index-tts python tts/speaker.py --test   # 合成一句试听
+手动：
+  py -3 tts/speaker.py                 # 直播模式（tail review_live.stream）
+  py -3 tts/speaker.py --test          # SAPI 试听一句
 
-数据源：knowledge/review_live.stream（与直播悬浮窗同一份）。
-行为：断句 → 过滤（工具/统计/代码行不读）→ 队列（积压丢旧读新）→ IndexTTS-2.5
-克隆 tts/reference_voice_15s.wav 的音色合成 → winsound 播放 → LIVE-END 后自动退出。
 任何异常只写日志，绝不影响复盘与游玩。
 """
 from __future__ import annotations
@@ -15,11 +16,10 @@ from __future__ import annotations
 import os
 import queue
 import re
-import shutil
+import subprocess
 import sys
 import threading
 import time
-import winsound
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent           # sts2-ascend/
@@ -27,17 +27,27 @@ TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 STREAM_FILE = KNOWLEDGE_DIR / "review_live.stream"
 LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
-OUT_WAV = TTS_DIR / "speaker_out.wav"
-INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
+SUMMARY_TEXT_FILE = TTS_DIR / "conclusion_text.txt"
+SPEAK_ONCE = TTS_DIR / "speak_once.py"
 
-DURATION_FACTOR = 0.9       # 稍快
+DURATION_FACTOR = 0.9       # index-tts 语速（稍快）
+SAPI_RATE = 1               # SAPI 语速（-10~10）
 MAX_QUEUE = 2               # 积压超过 2 句丢最旧
-MAX_SENTENCE = 90           # 超长强制断句
+MAX_SENTENCE = 90
 TERMINATORS = "。！？!?\n"
 SOFT_BREAKS = "，、；;：:"
 
-_tts = None
-_tts_lock = threading.Lock()
+_SAPI_PS = r"""
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Add-Type -AssemblyName System.Speech
+$s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+try { $s.SelectVoice('Microsoft Huihui Desktop') } catch {}
+$s.Rate = __RATE__
+while (($line = [Console]::In.ReadLine()) -ne $null) {
+    if ($line.Trim()) { $s.Speak($line) }
+}
+"""
 
 
 def log(msg: str) -> None:
@@ -64,8 +74,6 @@ def speakable(line: str) -> bool:
 
 
 class SentenceSplitter:
-    """流式断句：终结符断句，超长按软断点/硬切。"""
-
     def __init__(self) -> None:
         self.buf = ""
 
@@ -95,42 +103,63 @@ class SentenceSplitter:
         return [tail] if tail else []
 
 
-def _init_engine():
-    """加载 IndexTTS-2.5（GTX 1060 无 bf16 硬件加速，用默认精度；OOM 自动退 CPU）。"""
-    global _tts
-    sys.path.insert(0, str(INDEXTTS_DIR))
-    from indextts.infer_v2_5 import IndexTTS2
-    ckpt = INDEXTTS_DIR / "checkpoints"
+class SapiSpeaker:
+    """常驻 PowerShell + System.Speech，逐行阻塞朗读（管道即队列）。"""
+
+    def __init__(self) -> None:
+        script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE))
+        self.proc = subprocess.Popen(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            text=True, encoding="utf-8", errors="replace")
+
+    def say(self, text: str) -> None:
+        try:
+            if self.proc.poll() is None:
+                self.proc.stdin.write(text + "\n")
+                self.proc.stdin.flush()
+        except (OSError, ValueError):
+            pass
+
+    def close(self) -> None:
+        try:
+            if self.proc.poll() is None:
+                self.proc.stdin.close()
+                self.proc.wait(timeout=5)
+        except Exception:
+            pass
+        try:
+            self.proc.kill()
+        except Exception:
+            pass
+
+
+def _speak_conclusion_indextts(text: str) -> None:
+    """用克隆音色读结论段：写文本到文件，spawn uv venv 里的 speak_once.py。"""
     try:
-        _tts = IndexTTS2(cfg_path=str(ckpt / "config.yaml"), model_dir=str(ckpt), use_bf16=False)
-        log("引擎已加载（GPU）")
+        SUMMARY_TEXT_FILE.write_text(text, encoding="utf-8")
+    except OSError:
+        return
+    uv = shutil_which_uv()
+    if not uv or not SPEAK_ONCE.exists():
+        return
+    try:
+        subprocess.Popen([uv, "run", "--project", str(BASE_DIR / "third_party" / "index-tts"),
+                          "python", str(SPEAK_ONCE), str(SUMMARY_TEXT_FILE)],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        log("结论段已交给 index-tts（克隆音色，后台合成）")
     except Exception as exc:
-        log(f"GPU 加载失败（{exc}），退 CPU")
-        _tts = IndexTTS2(cfg_path=str(ckpt / "config.yaml"), model_dir=str(ckpt),
-                         use_bf16=False, device="cpu")
-        log("引擎已加载（CPU）")
+        log(f"index-tts 结论朗读启动失败：{exc}")
 
 
-def _synthesize_and_play(text: str) -> None:
-    ref = TTS_DIR / "reference_voice_15s.wav"
-    if not ref.exists():
-        ref = TTS_DIR / "reference_voice.wav"
-    with _tts_lock:
-        _tts.infer(spk_audio_prompt=str(ref), text=text, lang="ZH",
-                   output_path=str(OUT_WAV), duration_factor=DURATION_FACTOR, verbose=False)
-    winsound.PlaySound(str(OUT_WAV), winsound.SND_FILENAME)
-
-
-def _voice_worker(q: queue.Queue, stop: threading.Event) -> None:
-    while not stop.is_set() or not q.empty():
-        try:
-            sent = q.get(timeout=0.5)
-        except queue.Empty:
-            continue
-        try:
-            _synthesize_and_play(sent)
-        except Exception as exc:
-            log(f"合成/播放失败（跳过本句）：{exc}")
+def shutil_which_uv() -> str | None:
+    import shutil as _sh
+    found = _sh.which("uv")
+    if found:
+        return found
+    candidate = Path.home() / ".local" / "bin" / "uv.exe"
+    return str(candidate) if candidate.exists() else None
 
 
 def _tail_lines(state: dict) -> list[str]:
@@ -150,26 +179,48 @@ def _tail_lines(state: dict) -> list[str]:
 
 
 def main() -> int:
+    mode = "hybrid"
+    for a in sys.argv[1:]:
+        if a in ("sapi", "indextts", "hybrid"):
+            mode = a
+    mode = os.environ.get("TTS_MODE", mode)
+
     if "--test" in sys.argv:
-        log("试听模式")
-        _init_engine()
-        _synthesize_and_play("你好，我是白绮的教练。复盘直播语音链路已打通。")
+        spk = SapiSpeaker()
+        spk.say("你好，我是白绮的教练。SAPI 语音链路已打通。")
+        time.sleep(4)
+        spk.close()
         return 0
 
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
-    _init_engine()
+
+    sapi = SapiSpeaker() if mode in ("sapi", "hybrid") else None
+    log(f"语音朗读器上线（模式 {mode}）")
 
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
-    stop = threading.Event()
-    threading.Thread(target=_voice_worker, args=(q, stop), daemon=True).start()
-
     splitter = SentenceSplitter()
     state = {"offset": 0}
     ended = False
     end_at = 0.0
-    log("语音朗读器上线")
+    recent_texts: list[str] = []
+
+    def pump() -> None:
+        while True:
+            try:
+                sent = q.get(timeout=0.5)
+            except queue.Empty:
+                if ended:
+                    return
+                continue
+            if sapi:
+                sapi.say(sent)
+            recent_texts.append(sent)
+            del recent_texts[:-8]
+
+    threading.Thread(target=pump, daemon=True).start()
+
     while True:
         for ln in _tail_lines(state):
             if ln.startswith("[LIVE-END]"):
@@ -181,7 +232,7 @@ def main() -> int:
             for sent in splitter.feed(ln):
                 if q.full():
                     try:
-                        q.get_nowait()      # 丢最旧，读最新
+                        q.get_nowait()
                     except queue.Empty:
                         pass
                 q.put(sent)
@@ -192,7 +243,12 @@ def main() -> int:
             if time.time() - end_at > 3 and q.empty():
                 break
         time.sleep(0.5)
-    stop.set()
+
+    if mode in ("indextts", "hybrid") and recent_texts:
+        conclusion = "。".join(recent_texts[-4:])[:300]
+        _speak_conclusion_indextts(conclusion)
+    if sapi:
+        sapi.close()
     log("语音朗读器退出")
     return 0
 
