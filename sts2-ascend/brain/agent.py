@@ -118,6 +118,7 @@ class Agent:
         self.same_count = 0
         self.runs_played = 0
         self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
+        self._last_policy_refresh = 0.0  # 策略热同步节流（第 123~124 局复盘）
 
     # ---------------- game process management ----------------
 
@@ -532,6 +533,22 @@ class Agent:
                     (KNOWLEDGE_DIR / "pending_restart.json").unlink(missing_ok=True)
                 except OSError:
                     pass
+
+            # 策略热同步（第 123~124 局复盘）：长驻进程此前只在启动时执行
+            # setdefault——复盘会话给 DEFAULT_POLICY 新增的键（如 122 批的
+            # elite_grey_survival_floor）要等重启才可见，运行库 JSON 的冷修改
+            # 也要等下一次 save 才被三方合并采纳。122 批核心修复因此在第
+            # 123~126 局全程为死代码。每 20 秒吸收一次磁盘外部修改与代码
+            # 新增默认键，让复盘产物分钟级生效而无需等待局间重启。
+            now_ts = time.time()
+            if now_ts - self._last_policy_refresh >= 20.0:
+                self._last_policy_refresh = now_ts
+                try:
+                    changed = self.know.refresh_policy()
+                    if changed:
+                        log(f"[agent] 策略热同步生效：{', '.join(sorted(changed))}")
+                except Exception as exc:
+                    log(f"[agent] 策略热同步失败（忽略，不影响游玩）：{exc}")
 
             # run finalization hook (policy asked for it on GAME_OVER)
             if self.ctx.finalize_requested and not self.ctx.run_finalized:

@@ -454,6 +454,17 @@ class Policy:
             else:
                 break
 
+        # 绝境口径（第 126 局复盘）：真实血量低于急需线时，投影切换到悲观战损。
+        # 均值账在重尾分布前系统性高估生存——126 局 F5 单场 -52 在账面上只值 ~7，
+        # 随后 35% 血仍敢进战斗。绝境下的问题不是「平均掉几滴」而是「坏抽能不能活」
+        rest_dire = hp_pct < float(pol.get("rest_urgent_hp_pct", 0.45))
+        dire_loss_mult = float(pol.get("path_dire_loss_mult", 1.7)) if rest_dire else 1.0
+        # 绝境篝火优先门（第 126 局复盘核心缺陷）：35% 血时 Monster(6,2)=22.09 压过
+        # 眼前的 RestSite(6,1)=9.82，原因是战斗子树里藏着 2~3 个未来篝火的 +30%
+        # 全额幻想回血账（投影宣称打完怪进 Boss 还有 94%），下一战 -28 直接阵亡。
+        # 眼前有救命篝火时，非休整候选必须整体压制，除非它真的好到打折仍能胜出
+        dire_rest_available = any(n.get("node_type") == "RestSite" for n in nodes)
+
         boss_row = (m.get("boss_node") or {}).get("row")
         if boss_row is None:
             # 地图载荷缺 boss_node 键（第 27~28 局实证：投影把 Boss 当普通节点扣 45 点先验，
@@ -576,6 +587,11 @@ class Policy:
             raw_penalty = 0.0
             mid_gate_hit = False
             died_mid = False
+            # 投影内连战计数沿路径递推（第 126 局复盘）：旧版把真实连战数当常量
+            # 套在所有深度上——fresh 状态下投影 5 连战全程零疲劳，链越长相对越
+            # 划算，「穿过未来营地的怪物链」幻想由此再添一层补贴。
+            # 以真实连战数起步，遇战斗节点 +1、遇非战斗清零；depth 0 语义与旧版一致
+            proj_streak = combat_streak
             for depth, key in enumerate(path_keys):
                 gnode = graph.get(key) or {}
                 nt = start_node.get("node_type", "Unknown") if depth == 0 else gnode.get("node_type", "Unknown")
@@ -592,13 +608,17 @@ class Policy:
                         raw_penalty += (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5 * (mid_decay ** depth)
                         mid_gate_hit = True
                 factor, note = node_factor(nt, gnode, hpp)
-                if nt == "Monster" and combat_streak >= 3:
+                if nt in ("Monster", "Elite", "Unknown"):
+                    eff_streak, proj_streak = proj_streak, proj_streak + 1
+                else:
+                    eff_streak, proj_streak = 0, 0
+                if nt == "Monster" and eff_streak >= 3:
                     # 疲劳随连战深度递增（第 92~93 批复盘）：固定 0.75 让 93 局
                     # 连续第 4~5 战仍以 0.37 分优势压过商店，最终满血差被打穿——
                     # 每多连一场，惩罚再加深一档（下限 0.45 防止彻底禁战斗）
-                    fatigue_f = max(0.45, 0.75 - 0.06 * (combat_streak - 3))
+                    fatigue_f = max(0.45, 0.75 - 0.06 * (eff_streak - 3))
                     factor *= fatigue_f
-                    note = (note + "；" if note else "") + f"连续作战{combat_streak}场，疲劳压制×{fatigue_f:.2f}"
+                    note = (note + "；" if note else "") + f"连续作战{eff_streak}场，疲劳压制×{fatigue_f:.2f}"
                 w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
@@ -611,7 +631,8 @@ class Policy:
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
                 if boss_row is not None and key[0] >= boss_row:
                     continue
-                cur_hp -= prior * deck_ease * act_mul
+                cur_hp -= prior * deck_ease * act_mul * (
+                    dire_loss_mult if nt in ("Monster", "Elite", "Unknown") else 1.0)
                 if nt == "Unknown" and act_idx >= 1:
                     cur_hp -= prior * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
@@ -692,6 +713,17 @@ class Policy:
                     # 闸门已否决时删去 node_factor 的正面注释，避免理由自相矛盾
                     best_pnotes = [x for x in best_pnotes if "达标，精英奖励价值高" not in x]
                     best_pnotes.append(elite_gate_note)
+            if nt != "RestSite" and rest_dire and dire_rest_available:
+                # 绝境篝火优先门（第 126 局复盘）：与精英闸门同一正乘负加模式，
+                # 保证任何符号下都只降分不升分。眼前就有救命篝火时，「穿过未来
+                # 营地继续战斗」的幻想账必须整体打折——除非打折后仍真的好过休息
+                rgate = clamp(float(pol.get("dire_rest_gate_mult", 0.55)), 0.05, 1.0)
+                gated = best_ps * rgate
+                if gated < best_ps:
+                    best_ps = gated
+                else:
+                    best_ps -= (1.0 - rgate) * _ELITE_GATE_NEG_PENALTY
+                best_pnotes.append(f"绝境{hp_pct:.0%}遇休整候选，非休整路线压制×{rgate:.2f}")
             label = f"{nt}({n['row']},{n['col']})"
             details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
             if best_ps > best_score:

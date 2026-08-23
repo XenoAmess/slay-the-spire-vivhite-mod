@@ -12,6 +12,7 @@ so the very next decision of the same session benefits.
 """
 from __future__ import annotations
 
+import copy
 import json
 import math
 import time
@@ -128,6 +129,14 @@ DEFAULT_POLICY = {
                                          # （中间岔口可改道），且休息回血会提高后续真实闸门的通过率——107 局 29% 血
                                          # 时唯一篝火因子树深处藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。
                                          # 近处精英（54 局商店下一层藏 F13 精英）衰减后仍保留主要威慑
+    # --- 绝境行军治理（第 126 局复盘） ---
+    "path_dire_loss_mult": 1.7,   # 绝境投影悲观战损乘区：血量<rest_urgent_hp_pct 时战斗节点先验×此值。
+                                  # 均值账在重尾前高估生存——126 局 F5 单场 -52 在账面只值 ~7 点，
+                                  # 35% 血仍敢进战斗，下一战 -28 阵亡；绝境下要问的是「坏抽能否活命」
+    "dire_rest_gate_mult": 0.55,  # 绝境篝火优先门：血量<rest_urgent 且候选含 RestSite 时，
+                                  # 非 RestSite 候选整条路径总分×此值（负分区间加性重罚，与精英闸门同模式）。
+                                  # 126 局 35% 血 Monster(6,2)=22.09 压过眼前 RestSite(6,1)=9.82——
+                                  # 战斗子树里 2~3 个未来篝火的 +30% 幻想回血账反超救命休息
     # --- 消耗螺旋治理（第 109 局复盘） ---
     "exhaust_play_penalty": 3.0,  # 消耗类牌逐次递增罚分：坚毅每打一次随机烧一张手牌，109 局 INKLET 三连波
                                   # 里 66 次坚毅把全部攻击牌烧成完美无限僵局（600+ 回合拖崩 runner）。
@@ -279,14 +288,61 @@ class Knowledge:
                     disk = loaded
             except (json.JSONDecodeError, OSError):
                 disk = {}
+        self._adopt_disk_policy(disk)
+        _save_json(path, self.policy)
+        self._policy_sync = dict(self.policy)
+
+    def _adopt_disk_policy(self, disk: dict) -> list[str]:
+        """按三方合并语义把磁盘 policy 并入内存，返回被采纳的键名（供留痕）。
+
+        本进程未动过的键（内存==基准）采纳磁盘值；演化过的键保留内存值；
+        内存与基准都没有的全新键同样采纳——这是外部新增键进入长驻进程的
+        唯一不重启通道（第 123~124 局复盘实证：122 批复盘只改了代码默认值
+        而没写运行库 JSON，重启前该修复对运行中的大脑完全不可见）。
+        """
         base = getattr(self, "_policy_sync", None)
+        adopted: list[str] = []
         if isinstance(base, dict):
             for k, disk_v in disk.items():
                 mine = self.policy.get(k, _MISSING)
                 if base.get(k, _MISSING) == mine and disk_v != mine:
-                    self.policy[k] = disk_v  # 本进程未动过的键：外部修改实时生效
-        _save_json(path, self.policy)
-        self._policy_sync = dict(self.policy)
+                    self.policy[k] = disk_v
+                    adopted.append(k)
+        return adopted
+
+    def refresh_policy(self) -> list[str]:
+        """运行中进程的策略热同步（第 123~124 局复盘新增），返回生效键列表。
+
+        缺陷定性（122~124 批实证）：LLM 复盘在独立会话里给 DEFAULT_POLICY
+        新增 elite_grey_survival_floor=0.40 并依赖「加载器 setdefault 自动补齐
+        运行库」——但 setdefault 只在进程启动时执行，长驻大脑不重启就永远
+        看不到新键，_elite_grey_veto 沿旧舒适线语义空转，122 批核心修复在
+        第 123~126 局全程为死代码。两条外部通道由此接入主循环周期调用：
+          1) 磁盘 policy.json 的外部修改/新增键 → 三方合并实时采纳；
+          2) 进程已加载代码里的 DEFAULT_POLICY 新增键 → deepcopy 兜底补齐
+             （deepcopy 防止嵌套默认值与模块常量共享引用被运行时污染；
+             代码本身的更新仍走 request_restart→exit42 重启通道）。
+        只读磁盘 + 内存合并，不立即写盘（持久化交给既有的 save 节奏，
+        避免与外部复盘会话的写入互相踩踏）。
+        """
+        path = self.root / "policy.json"
+        disk = {}
+        if path.exists():
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    disk = loaded
+            except (json.JSONDecodeError, OSError):
+                disk = {}
+        adopted = self._adopt_disk_policy(disk)
+        added: list[str] = []
+        for k, v in DEFAULT_POLICY.items():
+            if k not in self.policy:
+                self.policy[k] = copy.deepcopy(v)
+                added.append(k)
+        if adopted or added:
+            self._policy_sync = dict(self.policy)
+        return adopted + added
 
     # ---------- value estimates (shrunk toward prior) ----------
 

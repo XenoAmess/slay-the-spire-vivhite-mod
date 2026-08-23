@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -96,6 +97,21 @@ def restore_paths(from_commit: str, paths: list[str], log=print) -> bool:
     return ok
 
 
+def _push_with_retry(log=print, attempts: int = 3) -> bool:
+    """推送并重试（网络抖动 curl 56 是常客）。间隔 5s/15s/30s。最终失败只记日志。"""
+    delay = 5
+    for i in range(attempts):
+        p = _git(["push"], timeout=120)
+        if p.returncode == 0:
+            return True
+        err = ((p.stderr or "") + (p.stdout or "")).strip()[:200]
+        log(f"[git] 推送失败（第 {i + 1}/{attempts} 次，{delay}s 后重试）：{err}")
+        time.sleep(delay)
+        delay *= 3
+    log("[git] 推送多次失败，本次放弃（下次提交时会带上未推送的提交）")
+    return False
+
+
 def commit_progress(message: str, log=print) -> bool:
     """提交 sts2-ascend/ 变更（遵循 .gitignore）并推送。返回是否真的产生了新提交。
 
@@ -110,11 +126,10 @@ def commit_progress(message: str, log=print) -> bool:
                 return False
             log(f"[git] 自动提交被跳过：{out.strip()[:200]}")
             return False
-        p = _git(["push"], timeout=120)
-        if p.returncode != 0:
-            log(f"[git] 自动推送失败（不影响游玩，下次再试）：{(p.stderr or '').strip()[:200]}")
+        if _push_with_retry(log):
+            log(f"[git] 已自动存档并推送：{message}" + ("（复盘进行中，仅 knowledge/）" if scope != "sts2-ascend" else ""))
         else:
-            log(f"[git] 已自动存档：{message}" + ("（复盘进行中，仅 knowledge/）" if scope != "sts2-ascend" else ""))
+            log(f"[git] 已自动存档（推送待重试）：{message}")
         return True
     except Exception as exc:
         log(f"[git] 自动存档异常（已忽略）：{exc}")

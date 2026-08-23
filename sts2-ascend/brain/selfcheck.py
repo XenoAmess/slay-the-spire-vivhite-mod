@@ -1946,6 +1946,161 @@ def main() -> int:
         f"事件战斗延迟结算管线断裂: {pe2}"
     assert not ag.ctx.died_to_event, "无死亡不应产生事件致死归因"
 
+    # 3zc) 策略热同步（第 123~124 局复盘核心修复）：122 批复盘给 DEFAULT_POLICY
+    #      新增 elite_grey_survival_floor=0.40 并依赖「加载器 setdefault 自动补齐」
+    #      ——但 setdefault 只在进程启动时执行，长驻大脑不重启就看不到新键，
+    #      该修复在第 123~126 局全程为死代码（运行库日志持续打印旧舒适线
+    #      「<60%」文案即铁证）。refresh_policy 必须在不重启的前提下：
+    #      ① 采纳磁盘新增键（复刻「进程早于键存在」：内存与基准快照都没有）；
+    #      ② 采纳本进程未动过的既有键的外部修改；
+    #      ③ 不覆盖本进程已演化的键（三方合并语义不变）；
+    #      ④ 兜底补齐 DEFAULT_POLICY 缺失键且与模块常量深拷贝隔离。
+    hdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-refresh-"))
+    hknow = knowledge.Knowledge(hdir)
+    hknow.policy.pop("elite_grey_survival_floor", None)
+    hknow._policy_sync.pop("elite_grey_survival_floor", None)  # 模拟进程早于该键存在
+    _disk = dict(hknow.policy)
+    _disk["elite_grey_survival_floor"] = 0.40
+    (hdir / "policy.json").write_text(
+        json.dumps(_disk, ensure_ascii=False), encoding="utf-8")
+    changed = hknow.refresh_policy()
+    assert "elite_grey_survival_floor" in changed, f"磁盘新增键未被采纳: {changed}"
+    assert abs(hknow.policy["elite_grey_survival_floor"] - 0.40) < 1e-9, \
+        f"热同步后新键值错误: {hknow.policy['elite_grey_survival_floor']}"
+    # ② 既有键外部修改（内存未动过 → 采纳磁盘）
+    hknow.save()
+    _disk = dict(hknow.policy)
+    _disk["block_safety"] = 0.77
+    (hdir / "policy.json").write_text(
+        json.dumps(_disk, ensure_ascii=False), encoding="utf-8")
+    changed = hknow.refresh_policy()
+    assert "block_safety" in changed and abs(hknow.policy["block_safety"] - 0.77) < 1e-9, \
+        f"外部冷修改未被热同步采纳: {changed}"
+    # ③ 本进程演化过的键不被磁盘回滚
+    hknow.policy["block_safety"] = 1.05   # 模拟 reflect 演化（内存 != 基准）
+    changed = hknow.refresh_policy()
+    assert "block_safety" not in changed and abs(hknow.policy["block_safety"] - 1.05) < 1e-9, \
+        f"进程演化值被磁盘覆盖: {changed} -> {hknow.policy['block_safety']}"
+    # ④ DEFAULT_POLICY 兜底补齐 + 深拷贝隔离
+    del hknow.policy["kill_race_enabled"]
+    hknow.refresh_policy()
+    assert hknow.policy.get("kill_race_enabled") is True, \
+        f"DEFAULT_POLICY 缺失键未兜底补齐: {hknow.policy.get('kill_race_enabled')}"
+    hknow.policy["room_weights"]["Monster"] = 9.9
+    assert knowledge.DEFAULT_POLICY["room_weights"]["Monster"] == 1.2, \
+        "热同步补齐的嵌套默认值与模块常量共享引用（污染源）"
+
+    # 3zd) 绝境篝火优先门（第 126 局复盘核心缺陷）：35% 血时 Monster(6,2)=22.09
+    #      压过眼前的 RestSite(6,1)=9.82——战斗子树里藏着 2~3 个未来篝火的 +30%
+    #      幻想回血账（投影宣称打完怪进 Boss 还有 94%），下一战 -28 直接阵亡。
+    #      修复：血量<急需线且候选含篝火时，非休整候选整条路径 ×0.55（负分区间
+    #      加性重罚，与精英闸门同模式）。用例复刻该岔路结构：Monster 子树含两个
+    #      未来篝火（幻想账），RestSite 子树平铺轻量节点
+    dr_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-direrest-"))
+    dr_know = knowledge.Knowledge(dr_dir)
+    dr_pol = policy.Policy(dr_know)
+
+    def dire_rest_trap_map(hp_now: int):
+        heads = [
+            {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+             "children": [{"row": 2, "col": 0}]},
+            {"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+             "children": [{"row": 2, "col": 1}]},
+        ]
+        col0 = ["RestSite", "Treasure", "Event", "RestSite", "Treasure", "Event", "Monster"]
+        col1 = ["Monster", "Treasure", "Event", "Monster", "Treasure", "Event"]
+        nodes = list(heads)
+        for ci, plan in ((0, col0), (1, col1)):
+            row = 2
+            for nt in plan:
+                gnode = {"row": row, "col": ci, "node_type": nt}
+                nxt = {"row": row + 1, "col": ci} if row < 7 else {"row": 9, "col": ci}
+                if not (nt == "Monster" and row == 8):
+                    gnode["children"] = [nxt]
+                nodes.append(gnode)
+                row += 1
+            nodes.append({"row": 9, "col": ci, "node_type": "Boss"})
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": nodes,
+                      "boss_node": {"row": 9}},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0,
+                      "floor": 12, "deck": []}}
+        return dr_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    saved_gate = dr_know.policy.get("dire_rest_gate_mult")
+    d_trap = dire_rest_trap_map(24)   # 30% 血：绝境
+    m_tm = re.search(r"Monster\(1,0\)=(-?[0-9.]+)", d_trap.reason)
+    m_tr = re.search(r"RestSite\(1,1\)=(-?[0-9.]+)", d_trap.reason)
+    assert m_tm and m_tr, f"绝境篝火用例候选缺失: {d_trap.reason}"
+    assert d_trap.params.get("option_index") == 1 and m_tr and \
+        float(m_tm.group(1)) < float(m_tr.group(1)), \
+        f"绝境遇眼前篝火仍选战斗候选（126 局病灶复发）: {d_trap.reason}"
+    assert "非休整路线压制" in d_trap.reason, f"绝境闸门未留痕: {d_trap.reason}"
+    # 对照：关闭闸门后怪物幻想账反超（旧缺陷复现，证明用例确实压在缺陷上）
+    dr_know.policy["dire_rest_gate_mult"] = 1.0
+    d_off = dire_rest_trap_map(24)
+    dr_know.policy["dire_rest_gate_mult"] = 0.55 if saved_gate is None else saved_gate
+    assert d_off.params.get("option_index") == 0 and "非休整路线压制" not in d_off.reason, \
+        f"关闭闸门后应复现怪物幻想账反超（用例失真）: {d_off.reason}"
+    # 健康血量不受门扭曲：满血时怪物侧本就该胜出且无压制留痕
+    d_hp = dire_rest_trap_map(80)
+    assert d_hp.params.get("option_index") == 0 and "非休整路线压制" not in d_hp.reason, \
+        f"健康血量被绝境门误伤: {d_hp.reason}"
+
+    # 3ze) 投影内连战疲劳沿路径递推（第 126 局复盘）：旧版把真实连战数当常量套
+    #      在所有深度——fresh 状态下投影 5 连战全程零疲劳，「穿过未来营地的怪物
+    #      链」越深相对越划算。新语义以真实连战数起步、遇战斗 +1、遇非战斗清零：
+    #      同一张纯怪物链地图，携带连战史(streak=2)时的评分必须低于无史(streak=0)
+    def chain_map_reason(tags):
+        stx = type("ChainCtx", (), {"credit_tags": tags})()
+        heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                  "children": [{"row": r + 1, "col": 0}]}]
+        chain = []
+        for r in range(2, 8):
+            g = {"row": r, "col": 0, "node_type": "Boss" if r == 7 else "Monster"}
+            if r < 7:
+                g["children"] = [{"row": r + 1, "col": 0}]
+            chain.append(g)
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": heads + chain,
+                      "boss_node": {"row": 7}},
+              "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 12, "deck": []}}
+        return dr_pol.decide(st, stx).reason
+
+    r_s0 = chain_map_reason([])
+    r_s2 = chain_map_reason([("map_node", "Monster")] * 2)
+    p_s0 = float(re.search(r"Monster\(1,0\)=(-?[0-9.]+)", r_s0).group(1))
+    p_s2 = float(re.search(r"Monster\(1,0\)=(-?[0-9.]+)", r_s2).group(1))
+    assert p_s2 < p_s0, \
+        f"投影内连战疲劳未沿深度递推（新旧评分应分离）: streak0={p_s0} streak2={p_s2}"
+
+    # 3zf) 绝境悲观战损乘区 path_dire_loss_mult（第 126 局复盘）：均值账在重尾前
+    #      高估生存——F5 单场 -52 在账面只值 ~7 点。血量<急需线时战斗先验×1.7，
+    #      同一单怪路径的进 Boss 投影必须显著下调；健康血量不受影响
+    def dire_loss_proj(hp_now: int, mult: float | None = None):
+        saved = dr_know.policy.get("path_dire_loss_mult")
+        if mult is not None:
+            dr_know.policy["path_dire_loss_mult"] = mult
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                           "node_type": "Monster"}], "nodes": []},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+        reason = dr_pol.decide(st, type("C", (), {"credit_tags": []})()).reason
+        if mult is not None:
+            if saved is None:
+                dr_know.policy.pop("path_dire_loss_mult", None)
+            else:
+                dr_know.policy["path_dire_loss_mult"] = saved
+        return float(re.search(r"进 Boss 血量 ?(\d+)%", reason).group(1))
+
+    p_dire_on = dire_loss_proj(24)          # 30% 血 < 急需线 35%：悲观口径生效
+    p_dire_off = dire_loss_proj(24, 1.0)    # 关闭乘区：均值口径
+    p_healthy = dire_loss_proj(80)          # 满血：不受乘区影响
+    assert p_dire_on < p_dire_off <= p_healthy and abs(p_dire_off - p_healthy) > 40, \
+        (f"绝境悲观战损乘区失效: on={p_dire_on}% off={p_dire_off}% healthy={p_healthy}%")
+    assert abs(p_dire_on - round((24 - 8 * 1.7) / 80 * 100)) <= 1, \
+        f"悲观乘区数值不符（应≈均值守恒×1.7）: {p_dire_on}%"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

@@ -332,9 +332,9 @@ def _launch_viewer(cfg: dict, log) -> None:
 
 
 def _launch_speaker(cfg: dict, log) -> None:
-    """拉起语音朗读器。tts_mode: nano=全克隆音色(MOSS-Nano，允许滞后) / sapi=系统语音实时 /
-    hybrid=SAPI直播+克隆结论 / off=关闭。独立进程，死活不影响复盘。"""
-    mode = str(cfg.get("tts_mode", "nano"))
+    """拉起语音朗读器。tts_mode: edge=edge-tts统一嗓音(默认,云端零算力) / nano=全克隆音色 /
+    hybrid=SAPI直播+克隆结论 / sapi=纯系统语音 / off=关闭。独立进程，死活不影响复盘。"""
+    mode = str(cfg.get("tts_mode", "edge"))
     if mode == "off":
         return
     try:
@@ -342,7 +342,16 @@ def _launch_speaker(cfg: dict, log) -> None:
                          | getattr(subprocess, "DETACHED_PROCESS", 0)
                          | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         cmd = None
-        if mode == "nano":
+        if mode == "edge":
+            edge = BASE_DIR / "tts" / "edge_speaker.py"
+            uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
+            if edge.exists() and Path(uv).exists():
+                cmd = [uv, "run", "--no-project", "--with", "edge-tts",
+                       "--with", "imageio-ffmpeg", "python", str(edge)]
+            else:
+                log("[llm] edge-tts 环境未就绪，语音回退 hybrid")
+                mode = "hybrid"
+        elif mode == "nano":
             nano = BASE_DIR / "tts" / "nano_speaker.py"
             moss_ready = (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists()
             uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
@@ -352,8 +361,8 @@ def _launch_speaker(cfg: dict, log) -> None:
                        "--with", "torch", "--with", "torchaudio",
                        "python", str(nano)]
             else:
-                log("[llm] MOSS-Nano 未就绪，语音回退 sapi")
-                mode = "sapi"
+                log("[llm] MOSS-Nano 未就绪，语音回退 hybrid")
+                mode = "hybrid"
         if cmd is None:
             speaker = BASE_DIR / "tts" / "speaker.py"
             if not speaker.exists():
