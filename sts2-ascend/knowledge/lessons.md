@@ -2679,3 +2679,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；deck_burst_floor: 36.00 → 37.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
 - 生涯战绩：0/218 胜，当前目标进阶 0
+
+## 第 219 局复盘（2026-08-24 07:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, DISMANTLE, TRUE_GRIT, CRUELTY, IRON_WAVE, FEEL_NO_PAIN, MOLTEN_FIST, DISMANTLE, CINDER, BREAKTHROUGH, SWORD_BOOMERANG, VICIOUS
+- 本局遗物：STRAWBERRY
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血39; F7 Monster战 掉血24; F8 Monster战 掉血0; F13 Monster战 掉血30; F17 Boss战 掉血52（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FIEND_FIRE(26分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/219 胜，当前目标进阶 0
