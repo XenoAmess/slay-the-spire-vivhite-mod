@@ -1803,3 +1803,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据
 - 生涯战绩：0/139 胜，当前目标进阶 0
+
+## 第 140 局复盘（2026-08-23 18:32）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, SECOND_WIND, CINDER, THUNDERCLAP, THUNDERCLAP, FLAME_BARRIER, CONFLAGRATION
+- 本局遗物：双截棍
+- 战斗记录：F8 Monster战 掉血17; F11 Monster战 掉血13; F12 Elite战 掉血28; F14 Monster战 掉血11; F15 Monster战 掉血2; F17 Boss战 掉血51（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，THRASH(22分/7局)，BARRICADE(22分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/140 胜，当前目标进阶 0
