@@ -2049,3 +2049,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
 - 生涯战绩：0/162 胜，当前目标进阶 0
+
+## 第 163 局复盘（2026-08-23 21:43）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：RAMPAGE, TAUNT, MOLTEN_FIST, UNRELENTING, TAUNT, RAMPAGE, RUPTURE, BLUDGEON, HOWL_FROM_BEYOND, JUGGERNAUT, TAUNT, FLAME_BARRIER, THE_GAMBIT, STOMP, SHRUG_IT_OFF, HEMOKINESIS, VICIOUS
+- 本局遗物：WAR_PAINT, 蜡制芒果, 蜡制古钱币, 蜡制摆动球, 蜡制臂甲, 蜡制药水腰带, ANCHOR
+- 战斗记录：F14 Monster战 掉血12; F15 Monster战 掉血3; F17 Boss战 掉血17; F19 Monster战 掉血9; F20 Monster战 掉血16; F22 Monster战 掉血76（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/163 胜，当前目标进阶 0
