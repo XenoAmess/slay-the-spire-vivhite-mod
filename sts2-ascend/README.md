@@ -105,15 +105,16 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 复盘启动时还会拉起语音朗读器（`tts/speaker.py`），把模型的分析过程**读出声**：
 
 - **SAPI 实时朗读**（Windows 自带中文女声 Huihui，零成本零延迟）跟进直播流
-- **克隆音色读结论**（hybrid 模式）：复盘结束时用 index-tts 以 `tts/reference_voice_15s.wav`
-  的音色朗读结论段（GTX 1060 上合成需数分钟，后台进行不碍事）
+- **克隆音色读结论**（hybrid 模式）：复盘结束时用 **MOSS-TTS-Nano**（0.1B，ONNX CPU，本机 RTF≈2.6）
+  以 `tts/reference_voice_48k.wav` 的音色朗读结论段（后台合成 ~1.5 分钟，不碍事）
 - 朗读队列"丢旧读新"（积压>2 句丢最旧），保证听到的永远是最新分析
-- 换音色：替换 `tts/reference_voice_15s.wav`（10~30 秒干净单人语音，会被 gitignore）
+- 换音色：替换 `tts/reference_voice_48k.wav`（48kHz 立体声）与 `reference_voice_15s.wav`（24kHz 单声道，备选）
 - 模式：`config.json` 的 `llm.tts_mode` = `sapi`（纯系统语音）/ `indextts`（全程克隆音色，很慢）
   / `hybrid`（默认）/ `off`
-- 手动试听：`py -3 tts/speaker.py --test`
+- 手动试听：`py -3 tts/speaker.py --test`；手动克隆朗读：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/speak_once.py <文本文件>`
 
-index-tts 环境在 `third_party/index-tts/`（uv venv，gitignore），模型为 IndexTTS-2.5（ModelScope 下载）。
+TTS 环境在 `third_party/`（uv 旁路，gitignore）：MOSS-Nano 为主力克隆引擎（选型实测见
+`docs/2026-08-23-TTS框架选型预研.md`；GTX 1060 的 GPU 加速四条路已实测全不通，用 CPU 4 线程）。
 
 ## 进程结构
 

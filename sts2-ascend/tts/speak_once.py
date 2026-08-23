@@ -1,20 +1,26 @@
-"""一次性克隆音色朗读：index-tts 合成文本文件内容并播放（在 uv venv 中运行）。
+"""一次性克隆音色朗读：MOSS-TTS-Nano（ONNX CPU）合成文本文件内容并播放。
 
-用法（由 speaker.py 在复盘结束时调用）：
-  uv run --project third_party/index-tts python tts/speak_once.py <文本文件路径>
+由 speaker.py 在复盘结束时调用：
+  uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio \
+      python tts/speak_once.py <文本文件路径>
+
+引擎选择：默认 MOSS-Nano（本机 RTF≈2.6）；`--engine indextts` 可回退 IndexTTS-2.5（更慢）。
+GTX 1060 的 GPU 加速四条路均已实测不通（cudnn9 弃 Pascal / DirectML 需新版 Windows），见 docs。
 """
 from __future__ import annotations
 
 import sys
 import time
-import winsound
+import wave
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
+MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
 LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
+REF_48K = TTS_DIR / "reference_voice_48k.wav"
 
 
 def log(msg: str) -> None:
@@ -25,32 +31,58 @@ def log(msg: str) -> None:
         pass
 
 
-def main() -> int:
-    if len(sys.argv) < 2:
-        return 1
-    text = Path(sys.argv[1]).read_text(encoding="utf-8").strip()
-    if not text:
-        return 0
+def _synth_moss(text: str, out: Path) -> None:
+    """MOSS-TTS-Nano ONNX CPU 合成（stdlib wave 读参考音频，绕开 torchaudio/torchcodec）。"""
+    import numpy as np
+    sys.path.insert(0, str(MOSS_DIR))
+    from onnx_tts_runtime import OnnxTtsRuntime
+
+    def _load_wav_stdlib(self, path):
+        with wave.open(str(path), "rb") as w:
+            data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+            data = data.astype(np.float32) / 32768.0
+            ch = w.getnchannels()
+            data = data.reshape(-1, ch).T.copy()
+        return data[np.newaxis, :, :].astype(np.float32)
+
+    OnnxTtsRuntime._load_reference_audio = _load_wav_stdlib
+    ref = REF_48K if REF_48K.exists() else TTS_DIR / "reference_voice.wav"
+    rt = OnnxTtsRuntime(model_dir=MOSS_DIR / "models")
+    rt.synthesize(text=text, prompt_audio_path=str(ref),
+                  output_audio_path=str(out), enable_wetext=False)
+
+
+def _synth_indextts(text: str, out: Path) -> None:
+    import os
     sys.path.insert(0, str(INDEXTTS_DIR))
     from indextts.infer_v2_5 import IndexTTS2
     ckpt = INDEXTTS_DIR / "checkpoints"
-    import os
-    # GTX 1060 与游戏抢 GPU 时合成会病态慢（实测 25 分钟不出一句），默认 CPU；
-    # 要试 GPU 可设 TTS_DEVICE=cuda:0。use_accel 打开 GPT2 加速引擎（老 CPU 上最实在的一档提速）。
-    device = os.environ.get("TTS_DEVICE") or "cpu"
-    t0 = time.time()
     tts = IndexTTS2(cfg_path=str(ckpt / "config.yaml"), model_dir=str(ckpt),
-                    use_bf16=False, device=device)
-    log(f"引擎加载 {time.time() - t0:.0f}s")
+                    use_bf16=False, device=os.environ.get("TTS_DEVICE") or "cpu")
     ref = TTS_DIR / "reference_voice_15s.wav"
-    if not ref.exists():
-        ref = TTS_DIR / "reference_voice.wav"
-    out = TTS_DIR / "conclusion.wav"
-    log(f"开始合成（{len(text)} 字，device={device}）")
-    t0 = time.time()
     tts.infer(spk_audio_prompt=str(ref), text=text, lang="ZH",
               output_path=str(out), duration_factor=0.9, verbose=False)
+
+
+def main() -> int:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    engine = "moss"
+    if "--engine" in sys.argv:
+        engine = sys.argv[sys.argv.index("--engine") + 1]
+    if not args:
+        return 1
+    text = Path(args[0]).read_text(encoding="utf-8").strip()
+    if not text:
+        return 0
+    out = TTS_DIR / "conclusion.wav"
+    t0 = time.time()
+    log(f"开始合成（{len(text)} 字，引擎 {engine}）")
+    if engine == "indextts":
+        _synth_indextts(text, out)
+    else:
+        _synth_moss(text, out)
     log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
+    import winsound
     winsound.PlaySound(str(out), winsound.SND_FILENAME)
     return 0
 

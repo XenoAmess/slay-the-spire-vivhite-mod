@@ -156,7 +156,7 @@ class SapiSpeaker:
 
 
 def _speak_conclusion_indextts(text: str) -> None:
-    """用克隆音色读结论段：写文本到文件，spawn uv venv 里的 speak_once.py。"""
+    """用克隆音色读结论段：写文本到文件，spawn 旁路环境里的 speak_once.py（默认 MOSS-Nano 引擎）。"""
     try:
         SUMMARY_TEXT_FILE.write_text(text, encoding="utf-8")
     except OSError:
@@ -164,14 +164,19 @@ def _speak_conclusion_indextts(text: str) -> None:
     uv = shutil_which_uv()
     if not uv or not SPEAK_ONCE.exists():
         return
+    if not (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists():
+        log("MOSS-Nano 模型未就绪，跳过克隆音色结论")
+        return
     try:
-        subprocess.Popen([uv, "run", "--project", str(BASE_DIR / "third_party" / "index-tts"),
+        subprocess.Popen([uv, "run", "--no-project",
+                          "--with", "onnxruntime", "--with", "sentencepiece",
+                          "--with", "torch", "--with", "torchaudio",
                           "python", str(SPEAK_ONCE), str(SUMMARY_TEXT_FILE)],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        log("结论段已交给 index-tts（克隆音色，后台合成）")
+        log("结论段已交给 MOSS-Nano（克隆音色，后台合成）")
     except Exception as exc:
-        log(f"index-tts 结论朗读启动失败：{exc}")
+        log(f"克隆音色结论朗读启动失败：{exc}")
 
 
 def shutil_which_uv() -> str | None:
