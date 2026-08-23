@@ -2126,3 +2126,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.84 → 0.86（Boss 低血进场磨死（进场 64%），入场血量要求线上调）
 - 生涯战绩：0/169 胜，当前目标进阶 0
+
+## 第 170 局复盘（2026-08-23 22:33）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：SHRUG_IT_OFF, DISMANTLE, FEEL_NO_PAIN, BURNING_PACT, BOLAS, STOMP
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F5 Monster战 掉血1; F6 Monster战 掉血11; F8 Elite战 掉血73（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/170 胜，当前目标进阶 0
