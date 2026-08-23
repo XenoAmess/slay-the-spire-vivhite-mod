@@ -2159,3 +2159,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.86 → 0.88（Boss 低血进场磨死（进场 39%），入场血量要求线上调）
 - 生涯战绩：0/172 胜，当前目标进阶 0
+
+## 第 173 局复盘（2026-08-23 23:05）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：MOLTEN_FIST, TAUNT, HELLRAISER, UNRELENTING, STOMP, DRAMATIC_ENTRANCE, VICIOUS, UNRELENTING, BATTLE_TRANCE, IMPERVIOUS, IMPERVIOUS, THUNDERCLAP, CINDER, MANGLE, PANIC_BUTTON
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F15 Monster战 掉血5; F17 Boss战 掉血20; F19 Monster战 掉血14; F20 Monster战 掉血27; F22 Monster战 掉血8; F23 Monster战 掉血42（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，FISTICUFFS(27分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/173 胜，当前目标进阶 0
