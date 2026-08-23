@@ -9944,3 +9944,53 @@ Changes not staged for commit:
 [18:42:50] [COMBAT/F8] 战斗：回合过渡中，等待
 [18:42:51] [COMBAT/F8] 战斗：回合过渡中，等待
 [18:42:52] [COMBAT/F8] 战斗：打出【痛击】→方柱构装体（单体伤害≈8｜无甲孤注抢斩杀）；敌意图总伤13，我方20血/0甲
+[18:42:53] [COMBAT/F8] 战斗：打出【打击】→方柱构装体（单体伤害≈6｜无甲孤注抢斩杀）；敌意图总伤13，我方20血/0甲
+[llm] 复盘会话结束（exit=0）。输出尾部：
+24→34) 缺的是卡组强度不是血量。(12→46) 已让引擎弱卡组时敢打精英补遗物、战斗里优先集火会加Buff的神官，(32→78) 别再养肥了挨打。(8→86). ~86 chars ✓ under 100.
+
+Hmm "一三七局" for TTS is fine ("第一三七局"? reads odd). Better: "第一百三十七局". Recount: 这两局说明白一件事：(10) 第一百三十七局资源满分、满血进Boss照样被打空，缺的是卡组强度不是血量。(≈35→45) 这批两个改进：卡组弱时敢打精英补遗物，战斗里优先集火会加Buff的辅助怪。(≈34→79) 别再满血送人头了。(9→88). 
+
+Let me finalize: "这两局证明：满血进Boss也会被整管打空，缺的是卡组强度不是血量。本批改进：卡组弱时敢打精英补遗物，战斗里优先集火会加Buff的辅助怪。" Count: 这两局证明：(6) 满血进Boss也会被整管打空，(14→20) 缺的是卡组强度不是血量。(12→32) 本批改进：(5→37) 卡组弱时敢打精英补遗物，(12→49) 战斗里优先集火会加Buff的辅助怪。(17→66). ~66 chars ✓. Colloquial, TTS-friendly, single line.
+
+Write with UTF-8 via python to be safe (Add-Content -Encoding UTF8 writes UTF-8 with BOM in PS5.1; the Write tool writes UTF-8 no BOM presumably). Previous conclusion.txt content displayed garbled in console but was readable by the pipeline before. I'll use py -3 to write exact UTF-8 without BOM... Actually check existing file's encoding first? The tts pipeline reads it somehow and worked historically (conclusion.wav exists). Simplest: write via Python with utf-8 encoding (no BOM), consistent with repo files.
+追加 lessons.md 经验节与 review_conclusion.txt 短评：
+⚙ bash {}
+· tokens 232261 ·
+⚙ bash {}
+· tokens 232336 ·
+⚙ todowrite {}
+💭 All done:
+- SELFCHECK OK (final re-run confirms)
+- Changes confined to sts2-ascend/ (runner_console.log / third_party / tts changes are from the running host brain, not me — I didn't touch them)
+- No git operations performed ✓
+- No processes touched ✓
+
+Update todos to completed and give the ≤200字 summary.
+· tokens 232828 ·
+复盘完成（第 136~137 局），SELFCHECK OK，未做任何 git/进程操作。
+
+**总结**：136 局二幕力竭（绝境机械正常运转）；137 局资源执行满分、满血进 Boss 仍整管打空——证明入场血量已非生死变量，瓶颈是卡组强度。核心病灶：灰区精英系数(2.3)、Boss 入场线(0.90)、防御棘轮三条单向安全棘轮联立，把智能体优化进「满血送人头」局部最优。修复四项：①多敌战斗零伤害辅助体（双子神官，头号杀手 46 战 24 死）定向集火 +8；②弱卡组（爆发<30）灰区精英生存线饥饿豁免 0.12，卡组成型自动失效；③事件减牌计价符号修正（滑脚木桥曾虚标 +2 分四连跨掉四张牌）；④运行库热写入 boss_entry 0.80（已被运行中大脑采纳并棘轮至 0.82，通道验证通过）、dire_first_fight_floor 0.09。新增 4 组回归用例，报告已写入 meta_review.md / lessons.md / review_conclusion.txt。
+· tokens 233437 ·
+
+[18:42:53] [COMBAT/F8] 战斗：本回合已无牌可出，确认结束（突破✗,贪婪✗,打击✗）
+[18:42:54] [COMBAT/F8] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[18:42:55] [COMBAT/F8] 战斗：回合过渡中，等待
+[18:42:56] [COMBAT/F8] 战斗：回合过渡中，等待
+[18:42:57] [COMBAT/F8] 战斗：回合过渡中，等待
+[18:42:57] [COMBAT/F8] 战斗：回合过渡中，等待
+[18:42:58] [COMBAT/F8] 战斗：硬仗使用增益药水【流动铜液】
+[git] 已自动存档并推送：feat(sts2-ascend): 第136~137局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[18:42:59] [COMBAT/F8] 战斗：低血兜底使用药水【技能药水】（描述无法分类，宁滥勿囤）
+[18:43:00] [CARD_SELECTION/F8] 选择卡牌：【战鼓】（价值 3.4）；候选：战鼓=3.4 / 主宰=1.6 / 破灭=0.0
+[18:43:01] [COMBAT/F8] 战斗：硬仗使用增益药水【迅捷药水】
+[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）
+[18:43:03] [COMBAT/F8] 战斗：打出【愤怒】→方柱构装体（可击杀方柱构装体）；敌意图总伤15，我方7血/0甲；意图升级+2，防御前置
+[18:43:04] [REWARD/F8] 领取奖励：20金币
+[18:43:05] [REWARD/F8] 打开卡牌奖励：将一张牌添加到你的牌组。
+[18:43:06] [CARD_SELECTION/F8] 选择卡牌：【撕裂】（价值 8.8）；候选：撕裂=8.8 / 绯红披风=6.9 / 灰烬打击=-1.9
+[18:43:07] [REWARD/F8] 一键收取奖励并继续
+[18:43:08] [MAP/F8] 路径规划：Unknown(8,0)（路径分 -51.49，预计进 Boss 血量 0%；投影中途死亡）；候选：Unknown(8,0)=-51.49|投影中途死亡
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 异步复盘启动：覆盖第 [138, 139, 140, 141] 局（模型 openrouter/stealth/ox-alpha@max）
