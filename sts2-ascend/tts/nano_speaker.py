@@ -29,7 +29,6 @@ TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 STREAM_FILE = KNOWLEDGE_DIR / "review_live.stream"
 LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
-LOCK_FILE = KNOWLEDGE_DIR / "voice_nano.lock"
 MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
 TMP_DIR = TTS_DIR / "voice_tmp"
 REF_48K = TTS_DIR / "reference_voice_48k.wav"
@@ -49,37 +48,11 @@ def log(msg: str) -> None:
         pass
 
 
-def _pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except (OSError, ValueError):
-        return False
-
-
-def acquire_lock() -> bool:
-    try:
-        if LOCK_FILE.exists():
-            old = int(LOCK_FILE.read_text().strip() or "0")
-            if old and _pid_alive(old):
-                return False
-        LOCK_FILE.write_text(str(os.getpid()))
-        return True
-    except (OSError, ValueError):
-        return True
-
-
-def release_lock() -> None:
-    try:
-        LOCK_FILE.unlink(missing_ok=True)
-    except OSError:
-        pass
-
-
 # ---- 复用 speaker.py 的过滤与断句（单一事实来源） ----
 sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, speakable, lang_of, SapiSpeaker,  # noqa: E402
-                     get_voice_state, start_volume_hotkeys)
+                     get_voice_state, start_volume_hotkeys,
+                     acquire_voice_lock, release_voice_lock)
 
 
 class NanoEngine:
@@ -140,7 +113,7 @@ def main() -> int:
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
-    if not acquire_lock():
+    if not acquire_voice_lock():
         log("已有朗读器在跑，本实例退出")
         return 0
 
@@ -242,7 +215,7 @@ def main() -> int:
             time.sleep(2)
 
     sapi.close()
-    release_lock()
+    release_voice_lock()
     log("朗读器退出（全部读完）")
     return 0
 
@@ -253,5 +226,5 @@ if __name__ == "__main__":
     except Exception as exc:
         import traceback
         log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-1200:]}")
-        release_lock()
+        release_voice_lock()
         sys.exit(0)

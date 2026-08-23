@@ -99,6 +99,20 @@ def draw_amount(card: dict) -> int:
     return int(next(g for g in m.groups() if g)) if m else 0
 
 
+def _exhausts_other_cards(card: dict) -> bool:
+    """这张牌是否会消耗掉别的牌（坚毅/燃烧契约型），而非仅在文本里提及
+    「消耗牌堆」或只消耗自身。只有前者才参与消耗螺旋上限与递增罚分——
+    第 135 局复盘：彼岸咆哮的「若在你的消耗牌堆中，则将其打出」被旧的
+    纯文本匹配误计为消耗牌，打一张就占满小卡组的每场上限(=1)，坚毅此后
+    整场被锁，致死回合唯一格挡牌遭禁玩而阵亡。"""
+    text = _text(card)
+    if not text:
+        return False
+    if re.search(r"随机消耗|消耗\s*\d+\s*张|消耗.{0,4}手牌", text):
+        return True
+    return bool(re.search(r"exhaust\s+(?:a|an|another|\d+)\s+(?:random\s+)?card", text, re.I))
+
+
 class Policy:
     def __init__(self, know: Knowledge, rng: random.Random | None = None):
         self.know = know
@@ -1115,9 +1129,19 @@ class Policy:
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4
         # （107 局引入）在多波房间会放大成 12+ 张消耗，且不随卡组厚度缩放。
         # 现在：上限按卡组规模折算（小卡组烧不起），评分端再叠加逐次递增罚分。
+        # 第 135 局复盘修正两点：
+        #   ① 计数对象改为「消耗其他牌」的牌（见 _exhausts_other_cards）——
+        #      彼岸咆哮这类仅提及消耗牌堆的牌不再占位锁死坚毅；
+        #   ② 致死回合（本地算术/惨胜线/服务端判定）豁免上限——烧一张牌换
+        #      当场活命永远值得，僵局防护只针对非致死的温水回合。
         deck_n = len(((state.get("run") or {}).get("deck")) or [])
         max_exhaust_plays = max(1, min(4, deck_n // 8))
         exhaust_penalty_step = float(pol.get("exhaust_play_penalty", 3.0))
+        exhaust_unclog_bonus = float(pol.get("exhaust_unclog_bonus", 2.0))
+        gap_pre = max(0, incoming - my_block)
+        lethal_now = (gap_pre >= my_hp
+                      or (gap_pre > 0 and (my_hp - gap_pre) <= 0.12 * my_max_hp)
+                      or (forced_kill and gap_pre > 0))
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -1125,7 +1149,8 @@ class Policy:
                 continue
             # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"
             #（第 107 局实证，上限随卡组规模折算见第 109 局复盘）
-            if "消耗" in _text(c) and self._exhaust_plays >= max_exhaust_plays:
+            if (_exhausts_other_cards(c) and not lethal_now
+                    and self._exhaust_plays >= max_exhaust_plays):
                 continue
             # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
             # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、
@@ -1144,8 +1169,15 @@ class Policy:
                                                    min_blk_cost, energy, race_allin, kill_race)
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
-            if "消耗" in _text(c):
+            if _exhausts_other_cards(c):
                 score -= self._exhaust_plays * exhaust_penalty_step
+                # 卡手修正（第 135 局复盘）：手牌被不可出牌（感染/诅咒/状态）
+                # 占满时，「消耗一张牌」是清手牌手段而非纯代价——135 局 F11
+                # 精英战感染×3 卡手，坚毅手握整场未打，格挡与烧牌双价值空转
+                if exhaust_unclog_bonus > 0:
+                    clogged = sum(1 for h in hand if h is not c and not h.get("playable"))
+                    if clogged:
+                        score += min(clogged, 2) * exhaust_unclog_bonus
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)

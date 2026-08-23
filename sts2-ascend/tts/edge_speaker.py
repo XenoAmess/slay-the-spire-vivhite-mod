@@ -34,7 +34,8 @@ MAX_QUEUE = 256
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, speakable, SapiSpeaker,  # noqa: E402
-                     get_voice_state, start_volume_hotkeys, log as _sapi_log)
+                     get_voice_state, start_volume_hotkeys,
+                     acquire_voice_lock, release_voice_lock)
 
 
 def log(msg: str) -> None:
@@ -115,6 +116,9 @@ def main() -> int:
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
+    if not acquire_voice_lock():
+        log("已有朗读器在跑（单实例锁），本实例退出")
+        return 0
 
     start_volume_hotkeys()
     eng = EdgeEngine()
@@ -175,6 +179,7 @@ def main() -> int:
 
     if eng._sapi is not None:
         eng._sapi.close()
+    release_voice_lock()
     log("edge 朗读器退出")
     return 0
 
@@ -184,4 +189,5 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as exc:
         log(f"致命异常（静默退出）：{exc}")
+        release_voice_lock()
         sys.exit(0)

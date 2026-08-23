@@ -39,6 +39,37 @@ MAX_SENTENCE = 90
 TERMINATORS = "。！？!?\n"
 SOFT_BREAKS = "，、；;：:"
 
+# ---- 语音单实例锁（所有朗读器共享，防双音齐发） ----
+VOICE_LOCK = KNOWLEDGE_DIR / "voice_speaker.lock"
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def acquire_voice_lock() -> bool:
+    try:
+        if VOICE_LOCK.exists():
+            old = int(VOICE_LOCK.read_text().strip() or "0")
+            if old and _pid_alive(old):
+                return False
+        VOICE_LOCK.write_text(str(os.getpid()))
+        return True
+    except (OSError, ValueError):
+        return True
+
+
+def release_voice_lock() -> None:
+    try:
+        VOICE_LOCK.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 # ---- 音量控制（跨进程共享：knowledge/voice_volume.json） ----
 VOLUME_FILE = KNOWLEDGE_DIR / "voice_volume.json"
 
@@ -208,10 +239,13 @@ class SapiSpeaker:
     def __init__(self) -> None:
         script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE)).replace(
             "__TMPWAV__", str(self.TMP_IN).replace("\\", "/"))
+        creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         self.proc = subprocess.Popen(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            text=True, encoding="utf-8", errors="replace", bufsize=1)
+            text=True, encoding="utf-8", errors="replace", bufsize=1,
+            creationflags=creationflags)
         self._ack_lock = threading.Lock()
 
     def say(self, text: str, wait: bool = True) -> None:
@@ -334,6 +368,9 @@ def main() -> int:
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
+    if not acquire_voice_lock():
+        log("已有朗读器在跑（单实例锁），本实例退出")
+        return 0
 
     sapi = SapiSpeaker() if mode in ("sapi", "hybrid") else None
     start_volume_hotkeys()
@@ -406,6 +443,7 @@ def main() -> int:
             _speak_conclusion_indextts(conclusion)
     if sapi:
         sapi.close()
+    release_voice_lock()
     log("语音朗读器退出")
     return 0
 
@@ -415,4 +453,5 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as exc:
         log(f"致命异常（静默退出）：{exc}")
+        release_voice_lock()
         sys.exit(0)
