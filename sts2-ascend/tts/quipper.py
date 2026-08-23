@@ -2,7 +2,7 @@
 
 设计（按用户要求）：
   - **每次都用 LLM 现写**：无固定池。投喂当前战况 + 人设 prompt 给一个免费模型
-    （默认 openrouter/google/gemma-4-26b-a4b-it:free，cfg llm.quip_model 可改），
+    （默认 minimax-cn-coding-plan/MiniMax-M3，cfg llm.quip_model 可改），
     生成 10 字内随性短评（高随机、像人）。
   - **节奏**：上一条**播完之后**才开始计时，随机 20~45 秒后看下一条。
   - **互斥**：与 edge/SAPI 长篇朗读可同时；与克隆总结音（speak_once）互斥——
@@ -68,7 +68,7 @@ def _quip_model() -> str:
             return str(m)
     except (OSError, json.JSONDecodeError):
         pass
-    return "openrouter/openrouter/free"
+    return "minimax-cn-coding-plan/MiniMax-M3"
 
 
 # ---------------------------------------------------------------------------
