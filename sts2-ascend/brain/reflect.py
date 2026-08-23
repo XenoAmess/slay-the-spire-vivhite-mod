@@ -23,6 +23,10 @@ BOUNDS = {
     "shop_relic_threshold": (0.0, 4.0),
     "power_round_bonus": (2.0, 10.0),
     "shop_min_gold": (60, 260),
+    "boss_atk_mult": (1.0, 1.8),   # Boss 战攻击全局乘区的可演化区间（第 84~85 批复盘接入）
+    # 第 86~87 批复盘接入：灰区精英悲观系数 / Boss 入场血量要求线
+    "elite_grey_safety_mult": (1.0, 2.5),
+    "boss_entry_min_hp_pct": (0.50, 0.90),
 }
 
 
@@ -62,6 +66,10 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             if ctx.death_hp_pct_at_entry < pol["elite_min_hp_pct"] + 0.15:
                 _adj(know, "elite_min_hp_pct", 0.05, changes,
                      f"精英战阵亡，进场血量 {ctx.death_hp_pct_at_entry:.0%}，提高精英回避线")
+            # elite_min_hp_pct 已在 0.9 上限顶格空转（第 86~87 批复盘）——
+            # 精英死亡信号改接灰区悲观系数：战损重尾证据越积越多，复核越保守
+            _adj(know, "elite_grey_safety_mult", 0.2, changes,
+                 "精英战阵亡，灰区悲观投影系数上调")
         if died_to_enemy and not ctx.death_was_elite:
             # 死亡模式分流（第 82~83 批复盘）：block_safety 此前是只升不降的
             # 单向棘轮（83 局 0 胜把它顶到 2.1 上限），而死亡榜前列全是血量
@@ -71,15 +79,31 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             #   短时爆毙 → 维持旧逻辑上调防御权重
             rounds = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
             if rounds >= 4:
-                _adj(know, "kill_bonus", 1.0, changes,
+                # 步长按战斗时长分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
+                # 速度要 ~30 局才能把 block_safety 从 2.1 拉回有效区间——
+                # 8 回合 Boss 磨死的证据强度是 4 回合的两倍，步长应随之放大
+                scale = min(3.0, rounds / 4.0)
+                _adj(know, "kill_bonus", 1.0 * scale, changes,
                      f"长战磨死（{rounds}回合），提升击杀奖励加快清场")
-                _adj(know, "block_safety", -0.05, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+                _adj(know, "block_safety", -0.05 * scale, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+                # Boss 攻坚乘区演化（第 84~85 批复盘新增）：死亡榜前六全是
+                # F17 一幕 Boss（84~85 批 10 局中 6 局），入场血量从 52%~95%
+                # 全数阵亡——瓶颈是战斗时长而非入场血量。Boss 长战磨死时
+                # 单独加码 boss_atk_mult（不动普通战斗的攻防平衡）
+                if (ctx.died_in_combat or {}).get("node_type") == "Boss":
+                    _adj(know, "boss_atk_mult", 0.05, changes,
+                         f"Boss 长战磨死（{rounds}回合），攻坚乘区提速")
+                    # 入场线同步缓升（第 86~87 批复盘）：提速治"打不死"，
+                    # 入场线治"扛不住"——两轴并行，单靠任一侧都收敛不了
+                    _adj(know, "boss_entry_min_hp_pct", 0.02, changes,
+                         "Boss 长战磨死，入场血量要求线上调")
             else:
                 _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
+        _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 

@@ -29,6 +29,8 @@ DEFAULT_POLICY = {
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.62,    # 精英灰区下限：血量介于 soft~min 之间谨慎进精英（0.5 权重），不再一刀切规避
+    "elite_grey_safety_mult": 1.5,  # 灰区精英悲观系数（第 86~87 批复盘）：均值战损×此值做尾部复核——87 局 86% 血进旧日雕像实测 -54 ≈ 均值 3 倍
+    "elite_grey_proj_floor": 0.60,  # 灰区精英悲观投影线：悲观投影战后血量低于此值 → 整条候选路径规避精英
     "rest_urgent_hp_pct": 0.35,   # below this hp% rest sites are strongly preferred
     "rest_wary_hp_pct": 0.62,     # 血量警戒带：urgent 线以上、该线以下的灰区篝火获中等加权（第 54 局 47.5% 血商店压过篝火后被迫进精英）
     "shop_min_gold": 140,         # below this gold shops lose value
@@ -73,12 +75,13 @@ DEFAULT_POLICY = {
     "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
     "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）
     # --- 战略层补丁键（第 60~61 局复盘） ---
-    "boss_entry_min_hp_pct": 0.65,  # 进 Boss 血量要求线：Boss 场均战损约半个最大生命，60~61 批次 44%~69% 入场 5 连亡
+    "boss_entry_min_hp_pct": 0.72,  # 进 Boss 血量要求线（第 86~87 批复盘 0.65→0.72）：近 10 局入 Boss ≥95% 的 1 胜 1 负、66%~79% 的 5 局全灭——生还分界实测在 ~95%，旧线明显偏低
     "boss_entry_penalty": 110.0,    # 路径投影入 Boss 血量每差满血 100% 的评分惩罚：让续航路线能压过消耗路线
     "hopeless_race_hp_frac": 0.6,   # 败局竞速启用血线：≤60% 最大生命才允许进入竞速模式
     "hopeless_race_horizon": 2.0,   # 按近期净损速率外推 N 回合内死亡 → 判定被动防守不可行
     # --- 战斗端补丁键（第 65~66 局复盘） ---
     "danger_comp_hard_death_rate": 0.30,  # 历史死亡率 ≥ 此值的敌人组合自动认定为硬仗（解锁药水投入；头号杀手 FUZZY+SHRINKER 44% 死亡率此前在普通怪房带药进坟）
+    "danger_comp_stance_death_rate": 0.25,  # 姿态收紧专用的更低门槛（第 84~85 批复盘）：药水门槛 0.30 让头号杀手 FUZZY+SHRINKER（41战12死=29.3%）恰好漏网，enemy_stance 对它输出完全中性——防御姿态必须比药水解锁更灵敏
     # --- 组合感知与 Boss 前夜（第 62~64 局复盘） ---
     "comp_loss_stance_frac": 0.28,  # 敌方组合场均战损占最大生命比达到此值 → 即使死亡率<30%也视同高危收紧姿态
     "potion_comp_loss_frac": 0.30,  # 敌方组合场均战损占比达到此值 → 解锁增益/攻击药水（不再只认精英/Boss 房）
@@ -279,12 +282,17 @@ class Knowledge:
         n = e.get("encounters", 0)
         deaths = e.get("deaths", 0)
         sev_parts = []
-        if n >= 3 and deaths / n >= 0.30:
-            sev_parts.append((deaths / n - 0.30) / 0.30)  # 死亡率越高收得越紧
+        # 死亡率门槛与斜率（第 84~85 批复盘校准）：旧门槛 0.30 + 斜率 1/0.30
+        # 让头号杀手 FUZZY_WURM+SHRINKER_BEETLE（41战12死=29.3%）恰好漏网，
+        # 姿态输出完全中性——防御姿态门槛必须低于药水解锁门槛（0.30），
+        # 且斜率收紧到 1/0.15（40% 死亡率即接近满档）
+        stance_rate_gate = float(self.policy.get("danger_comp_stance_death_rate", 0.25))
+        if n >= 3 and deaths / n >= stance_rate_gate:
+            sev_parts.append((deaths / n - stance_rate_gate) / 0.15)  # 死亡率越高收得越紧
         frac_thr = float(self.policy.get("comp_loss_stance_frac", 0.28))
         if n >= 3 and max_hp and e.get("hp_lost_sum", 0.0) / n >= float(max_hp) * frac_thr:
             loss_frac = e["hp_lost_sum"] / n / float(max_hp)
-            sev_parts.append((loss_frac - frac_thr) / 0.22)  # 场均战损占比越高越危险
+            sev_parts.append((loss_frac - frac_thr) / 0.12)  # 场均战损占比越高越危险
         if sev_parts:
             sev = min(1.0, max(sev_parts))
             if node_type == "Boss":

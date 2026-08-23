@@ -858,9 +858,10 @@ def main() -> int:
     assert d_cp2.action != "use_potion", f"低危组合烧掉增益药水: {d_cp2.action}（{d_cp2.reason}）"
     ctx.combat = None
 
-    # 3cc) Boss 前夜智能锻造（第 63 局复盘）：满血进 Boss 仍被仪式兽 85 点战损处决——
-    #      Boss 分档实测场均战损 ≥ 满血且入场线已达标时，回血是无效投资，
-    #      必须改锻造缩短战斗；样本不足或战损低于满血时维持「优先回血」
+    # 3cc) Boss 前夜智能锻造（第 63 局复盘，第 84~85 批接线 heal_mult）：
+    #      boss_eve_smith_heal_mult 此前从未被读取、条件退化回旧版「≥满血」；
+    #      接线后战损线 = 回血量(30%×最大生命)×倍数。实测 Boss 分档场均 23.8，
+    #      对 80 血角色恰好压线——场均 ≥24 时入场线达标则改锻造，否则回血
     know.stats["enemies"]["BOSS_HOG"] = {
         "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
         "boss_encounters": 2, "boss_hp_lost_sum": 170.0, "boss_deaths": 1}
@@ -875,9 +876,11 @@ def main() -> int:
     ctx.rest_before_boss = True
     d_eve_smith = pol.decide(rest_boss_state, ctx)
     assert d_eve_smith.tags[0] == ("rest", "smith"), f"Boss前夜智能锻造未触发: {d_eve_smith.reason}"
-    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 120.0  # 均值降至 72.5 < 80
+    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 46.0   # 场均值降至 22.5 < 回血量 24
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 44.0
     d_eve_heal = pol.decide(rest_boss_state, ctx)
-    assert d_eve_heal.tags[0] == ("rest", "heal"), f"战损低于满血应回血: {d_eve_heal.reason}"
+    assert d_eve_heal.tags[0] == ("rest", "heal"), f"战损低于回血量应回血: {d_eve_heal.reason}"
+    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 170.0
     know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 180.0
     rest_low = dict(rest_boss_state)
     rest_low["run"] = dict(rest_boss_state["run"], current_hp=38)  # 47.5% < 入场线 65%
@@ -1107,6 +1110,149 @@ def main() -> int:
     d_fbc = pol.decide(fb_calm, ctx)
     assert d_fbc.action == "play_card" and "伤害≈6" in d_fbc.reason, \
         f"缺口已满时混合牌应回落攻击面: {d_fbc.action}（{d_fbc.reason}）"
+
+    # 3mm) 意图升级防御前置（第 84~85 批复盘）：升级型敌人（毛绒伏地虫
+    #      4→7→24→…→31、仪式兽 Boss 18→20→22→24→26）在意图跳升回合，
+    #      防御价值与紧急线同步上调——旧引擎只看当轮意图，升级前夜照常
+    #      倾泻输出，两局均在跳升后 2~3 回合内被磨死
+    def esc_state(turn_no, incoming):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": 40, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "ESC_BLADE", "name": "利刃", "playable": True,
+                            "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+                           {"index": 1, "card_id": "ESC_WALL", "name": "壁垒", "playable": True,
+                            "energy_cost": 1, "requires_target": False,
+                            "rules_text": "获得10点格挡",
+                            "dynamic_values": [{"name": "Block", "current_value": 10}]}],
+                       "enemies": [{"index": 0, "enemy_id": "RISER", "name": "蓄力怪",
+                                    "current_hp": 60, "max_hp": 80, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
+
+    pol_esc_ctrl = policy.Policy(know, random.Random(7))   # 对照：无历史的新战斗
+    d_esc0 = pol_esc_ctrl.decide(esc_state(2, 12), ctx)
+    assert d_esc0.action == "play_card" and d_esc0.params.get("card_index") == 0, \
+        f"对照失效（无升级历史时输出应胜出）: {d_esc0.reason}"
+    ctx.combat = {"comp_id": "RISER"}                      # 绑定战斗实例身份供轨迹采样
+    pol_esc = policy.Policy(know, random.Random(7))
+    pol_esc.decide(esc_state(1, 7), ctx)                   # R1：低意图（升级前夜）
+    d_esc1 = pol_esc.decide(esc_state(2, 12), ctx)         # R2：意图 +5 跳升
+    assert d_esc1.action == "play_card" and d_esc1.params.get("card_index") == 1 \
+        and "意图升级" in d_esc1.reason, \
+        f"意图跳升回合应防御前置: {d_esc1.action}（{d_esc1.reason}）"
+    ctx.combat = None
+
+    # 3nn) 连续作战疲劳压制（第 84~85 批复盘）：84 局 F2~F9 七连战、第 RJG 局
+    #      F2~F8 七连战，均力竭阵亡于链尾——地图投影按场均先验线性扣血，
+    #      捕捉不到复利式疲劳。连续 ≥3 个战斗节点后怪物权重必须被压制
+    def streak_reason(tags):
+        stx = type("StreakCtx", (), {"credit_tags": tags})()
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                           "node_type": "Monster"}], "nodes": []},
+              "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+        return pol.decide(st, stx).reason
+
+    r_fresh = streak_reason([])
+    r_tired = streak_reason([("map_node", "Monster")] * 4)
+    assert "前期需要战斗积累卡牌" in r_fresh and "疲劳压制" not in r_fresh, \
+        f"对照失效（无连战史应保留积累加成）: {r_fresh}"
+    assert "疲劳压制" in r_tired, f"连续作战疲劳未生效: {r_tired}"
+
+    # 3oo) 姿态死亡率门槛与斜率校准（第 84~85 批复盘）：头号杀手
+    #      FUZZY_WURM+SHRINKER_BEETLE 41战12死=29.3%，旧公式（门槛0.30）
+    #      输出完全中性——防御姿态门槛(0.25)必须低于药水解锁门槛(0.30)且更陡
+    know.stats.setdefault("enemies", {})["NEAR_GATE_KILLER"] = {
+        "encounters": 41, "hp_lost_sum": 766.0, "deaths": 12, "wins": 29}
+    st_ng = know.enemy_stance("NEAR_GATE_KILLER", None, 80)
+    assert st_ng["urgent_hp_pct"] > 0.45 and st_ng["blk_mult"] > 1.0 \
+        and st_ng["atk_mult"] < 1.0 and "高危" in st_ng.get("danger", ""), \
+        f"29%死亡率组合的姿态仍为中性: {st_ng}"
+    assert know.enemy_stance("NO_DATA_COMP")["atk_mult"] == 1.0, "无数据组合应为中性"
+
+    # 3pp) Boss 长战磨死的演化分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
+    #      速度需 ~30 局才能把 block_safety 拉回有效区——步长须按战斗时长放大，
+    #      且 Boss 长战单独加码 boss_atk_mult（不动普通战斗攻防平衡）
+    from types import SimpleNamespace
+    from reflect import finalize_run
+    rknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-reflect-")))
+    rctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BOSS_X", "rounds": 8, "node_type": "Boss"},
+        death_was_elite=False, death_hp_pct_at_entry=0.9,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    finalize_run(rknow, rctx, victory=False, final_floor=17)
+    assert abs(rknow.policy["boss_atk_mult"] - 1.20) < 1e-9, \
+        f"boss_atk_mult 未演化: {rknow.policy['boss_atk_mult']}"
+    assert abs(rknow.policy["kill_bonus"] - 14.0) < 1e-9, \
+        f"kill_bonus 步长未按时长分级: {rknow.policy['kill_bonus']}"
+    assert rknow.policy["block_safety"] < 1.0, \
+        f"block_safety 未释放: {rknow.policy['block_safety']}"
+
+    # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘）：87 局以 86% 血（灰区）
+    #      接受旧日雕像，实测战损 54（64% 血条）≈ Elite 实测场均的 3 倍——
+    #      均值先验 + 灰区 0.5 谨慎权重挡不住战损分布的重尾。灰区内改用
+    #      「均值 × 悲观系数」复核：悲观投影战后血量 < 投影线 → 整条路径规避；
+    #      硬线以上不受影响；悲观系数/投影线放宽后同一局面恢复灰区放行。
+    def grey_elite_reason(hp_now: int):
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                           "node_type": "Elite"}], "nodes": []},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 200, "floor": 10,
+                      "deck": [{"card_id": f"CARD_{i}"} for i in range(6)]}}
+        return pol.decide(st, ctx).reason
+
+    # 隔离此前用例灌入的 rooms/enemies 实测数据（否则校准系数漂移，
+    # 断言数值不可复现）；退出前恢复
+    saved_rooms_elite_q = know.stats.setdefault("rooms", {}).pop("Elite", None)
+    saved_enemies_q = know.stats.get("enemies", {})
+    know.stats["enemies"] = {}
+    old_hard_q = know.policy["elite_min_hp_pct"]
+    know.policy["elite_min_hp_pct"] = 0.90          # 灰区 62%~90%
+    know.policy["elite_soft_hp_pct"] = 0.62
+    r_veto = grey_elite_reason(69)   # 86%：悲观投影战后仅剩 40% < 60% → 规避
+    assert "规避精英" in r_veto and "预计战后" in r_veto, \
+        f"灰区悲观复核未拦截（87 局同款入场血量）: {r_veto}"
+    r_hard = grey_elite_reason(73)   # 91% ≥ 硬线：不受灰区复核影响
+    assert "规避精英" not in r_hard and "灰区" not in r_hard, \
+        f"硬线以上被悲观复核误伤: {r_hard}"
+    know.policy["elite_grey_safety_mult"] = 1.0      # 演化放宽：悲观系数→1.0、投影线→0.55
+    know.policy["elite_grey_proj_floor"] = 0.55
+    r_loose = grey_elite_reason(69)
+    assert "规避精英" not in r_loose and "灰区" in r_loose, \
+        f"悲观参数敏感性失效（放宽后应恢复灰区放行）: {r_loose}"
+    know.policy["elite_min_hp_pct"] = old_hard_q
+    know.policy.pop("elite_soft_hp_pct", None)
+    know.policy.pop("elite_grey_safety_mult", None)
+    know.policy.pop("elite_grey_proj_floor", None)
+    if saved_rooms_elite_q is not None:
+        know.stats["rooms"]["Elite"] = saved_rooms_elite_q
+    know.stats["enemies"] = saved_enemies_q
+
+    # 3rr) 精英死亡演化改接悲观系数（第 86~87 批复盘）：elite_min_hp_pct 已在
+    #      0.9 上限顶格空转——精英死亡信号必须驱动仍有余量的新旋钮，
+    #      且胜利时双向释放（演化必须可逆）
+    eknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-grey-")))
+    ectx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BYGONE_EFFIGY", "rounds": 6, "node_type": "Elite"},
+        death_was_elite=True, death_hp_pct_at_entry=0.86,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    finalize_run(eknow, ectx, victory=False, final_floor=17)
+    assert abs(eknow.policy["elite_grey_safety_mult"] - 1.7) < 1e-9, \
+        f"精英死亡未上调灰区悲观系数: {eknow.policy['elite_grey_safety_mult']}"
+    vctx = SimpleNamespace(
+        died_to_event=None, died_in_combat=None,
+        death_was_elite=False, death_hp_pct_at_entry=None,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    finalize_run(eknow, vctx, victory=True, final_floor=20)
+    assert abs(eknow.policy["elite_grey_safety_mult"] - 1.6) < 1e-9, \
+        f"胜利未释放灰区悲观系数（单向棘轮复发）: {eknow.policy['elite_grey_safety_mult']}"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

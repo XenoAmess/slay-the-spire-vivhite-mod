@@ -125,6 +125,8 @@ class Policy:
         self._race_rounds = 0       # 完成的回合边界采样数
         self._desp_combat = None    # 战斗实例身份（假孤注观测确认用）
         self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
+        self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
+        self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -325,9 +327,37 @@ class Policy:
         if proj < req:
             return 0.1, (f"血量{hpp:.0%}进精英预计战后仅剩{max(0.0, proj):.0%}"
                          f"(需求≥{req:.0%})，规避精英")
+        veto_f, veto_note = self._elite_grey_veto(pol, prior, act_mul, hpp,
+                                                  good_cards, max_hp)
+        if veto_f is not None:
+            return veto_f, veto_note
         if hpp < hard:
             return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
         return 1.0, ""
+
+    def _elite_grey_veto(self, pol: dict, prior: float, act_mul: float, hpp: float,
+                         good_cards: int, max_hp: int) -> tuple[float | None, str]:
+        """灰区精英悲观投影复核（第 86~87 批复盘新增）。
+
+        第 87 局实证：86% 血（灰区内）接受旧日雕像，实测战损 54（64% 血条），
+        约为 Elite 实测场均（16~20）的 3 倍——灰区的 0.5 谨慎权重挡不住
+        战损分布的重尾。均值回答"平均会怎样"，灰区决策必须回答"坏了会怎样"：
+        以「均值先验 × 悲观系数」复核，悲观投影战后血量低于灰区投影线时
+        整条候选路径规避精英。硬线以上（≥elite_min_hp_pct）不受影响。
+        返回 (None, "") 表示不处于灰区或复核通过。
+        """
+        hard = float(pol["elite_min_hp_pct"])
+        soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
+        if not (soft <= hpp < hard):
+            return None, ""
+        relief = min(0.20, 0.02 * good_cards)
+        safety = float(pol.get("elite_grey_safety_mult", 1.5))
+        proj = hpp - prior * act_mul * (1.0 - relief) * safety / max(1, max_hp)
+        floor = float(pol.get("elite_grey_proj_floor", 0.60))
+        if proj >= floor:
+            return None, ""
+        return 0.1, (f"血量{hpp:.0%}灰区精英预计战后仅剩{max(0.0, proj):.0%}"
+                     f"(<{floor:.0%})，规避精英")
 
     def _map(self, state: dict, ctx) -> Decision:
         m = state.get("map") or {}
@@ -377,6 +407,19 @@ class Policy:
                 continue
             good_cards += 1
 
+        # 连续作战长度（第 84~85 批复盘）：自最近一个非战斗节点以来的连续
+        # 战斗节点数。Monster 链行军的战损是复利结算的——84 局 F2~F9 七连战
+        # （中途仅一次篝火）、第 RJG 局 F2~F8 七连战，两局均在链尾力竭阵亡。
+        # 地图投影按场均先验线性扣血，捕捉不到这种递增疲劳
+        combat_streak = 0
+        for tag in reversed(getattr(ctx, "credit_tags", None) or []):
+            if not tag or tag[0] != "map_node":
+                continue
+            if tag[1] in ("Monster", "Elite", "Unknown"):
+                combat_streak += 1
+            else:
+                break
+
         boss_row = (m.get("boss_node") or {}).get("row")
         if boss_row is None:
             # 地图载荷缺 boss_node 键（第 27~28 局实证：投影把 Boss 当普通节点扣 45 点先验，
@@ -397,6 +440,13 @@ class Policy:
                     return 0.1, f"血量{hpp:.0%}<{soft:.0%}，规避精英"
                 if hpp < hard:
                     # 灰区不再一刀切：第 28 局 F12 以 78% 血与 0.80 硬线差 2% 而错过精英
+                    # 但灰区必须通过悲观投影复核（第 87 局 86% 血进旧日雕像实测 -54）
+                    prior_e = self.know.room_damage_prior(
+                        "Elite", float(priors.get("Elite", 28)))
+                    veto_f, veto_note = self._elite_grey_veto(
+                        pol, prior_e, act_mul, hpp, good_cards, max_hp)
+                    if veto_f is not None:
+                        return veto_f, veto_note
                     return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
                 return 1.0, "血量与卡组达标，精英奖励价值高"
             if nt == "RestSite":
@@ -479,6 +529,9 @@ class Policy:
                         score -= (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5
                         mid_gate_hit = True
                 factor, note = node_factor(nt, gnode, hpp)
+                if nt == "Monster" and combat_streak >= 3:
+                    factor *= 0.75
+                    note = (note + "；" if note else "") + f"连续作战{combat_streak}场，疲劳压制"
                 w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
@@ -605,6 +658,8 @@ class Policy:
             self._race_prev_hp = None
             self._race_loss_rate = 0.0
             self._race_rounds = 0
+            self._intent_prev = 0
+            self._intent_trend = 0
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
         if self._desp_combat is not ctx.combat:
             self._desp_combat = ctx.combat
@@ -644,6 +699,16 @@ class Policy:
                 self._race_loss_rate = (loss if self._race_rounds == 0
                                         else 0.7 * self._race_loss_rate + 0.3 * loss)
                 self._race_rounds += 1
+            # 意图升级轨迹采样（第 84~85 批复盘）：84 局毛绒伏地虫战意图
+            # 4→7→24→18→9→25→31、85 局仪式兽 Boss 战 18→20→22→24→26——
+            # 升级型敌人每拖一轮就更难挡，而旧引擎只看"本回合意图"，在升级
+            # 前夜（低意图回合）照常倾泻输出，两局均在意图跳升后 2~3 回合内死亡。
+            # 回合边界记录增量，供姿态层提前抬防御/紧急线
+            if self._race_rounds >= 1:
+                self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
+            else:
+                self._intent_trend = 0
+            self._intent_prev = int(incoming)
             self._race_round = round_no
         self._race_prev_hp = my_hp
 
@@ -679,7 +744,20 @@ class Policy:
         comp_id = cctx.get("comp_id") or None
         stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
         comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
-        danger_note = f"；⚠{stance['danger']}，转防守节奏" if stance.get("danger") else ""
+        # 姿态方向决定文案（第 84~85 批复盘）：高危 Boss 姿态实为提速进攻，
+        # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志
+        if stance.get("danger"):
+            tone = "提速斩杀" if stance.get("atk_mult", 1.0) >= 1.0 else "转防守节奏"
+            danger_note = f"；⚠{stance['danger']}，{tone}"
+        else:
+            danger_note = ""
+        # 意图升级防御前置（第 84~85 批复盘）：升级型敌人意图跳升回合，
+        # 格挡价值与紧急线同步上调——现在多挡一点，是为升级后的更难回合买血
+        esc = int(getattr(self, "_intent_trend", 0) or 0)
+        if esc > 0:
+            stance["blk_mult"] = round(stance.get("blk_mult", 1.0) * (1.0 + min(0.24, 0.04 * esc)), 3)
+            stance["urgent_hp_pct"] = round(min(0.65, stance.get("urgent_hp_pct", 0.45) + min(0.10, 0.02 * esc)), 3)
+            danger_note += f"；意图升级+{esc}，防御前置"
         # Boss 攻坚提速（第 82~83 批复盘）：生涯死亡榜前四名中三个是 Boss
         # （同族双子 190+58 血 12 死、仪式兽 252 血 10 死、墨影幻灵 173 血 8 死），
         # Boss 意图逐轮升级、拖一轮就多吃一轮整套意图——第 82 局以 95% 血进
@@ -1509,11 +1587,15 @@ class Policy:
             boss_loss, boss_n = self.know.boss_loss_stats()
             min_n = int(pol.get("boss_eve_smith_min_samples", 3))
             entry_line = float(pol.get("boss_entry_min_hp_pct", 0.65))
-            if (smith_ok and boss_n >= min_n and boss_loss >= max_hp
+            # 战损线按「回血量 × heal_mult」计（第 84~85 批复盘接线）：
+            # 79 局复盘定义的 boss_eve_smith_heal_mult 此前从未被读取，
+            # 条件一直退化回旧版 `≥满血`（实测 Boss 分档场均 23.8，永远够不到）
+            heal_amount = heal_frac * max_hp * float(pol.get("boss_eve_smith_heal_mult", 1.0))
+            if (smith_ok and boss_n >= min_n and boss_loss >= heal_amount
                     and hp_pct >= entry_line):
                 return Decision("choose_rest_option", {"option_index": smith["index"]},
                                 f"篝火：Boss 前夜改锻造（入场线 {entry_line:.0%} 已达标 {hp_pct:.0%}；"
-                                f"历史Boss场均战损{boss_loss:.0f}≥满血、样本{boss_n}——"
+                                f"历史Boss场均战损{boss_loss:.0f}≥回血量{heal_amount:.0f}、样本{boss_n}——"
                                 f"回血救不了败局，提速斩杀才是活路）",
                                 tags=[("rest", "smith")], wait=1.2)
             return Decision("choose_rest_option", {"option_index": heal["index"]},

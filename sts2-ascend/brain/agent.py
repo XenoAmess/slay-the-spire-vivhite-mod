@@ -257,7 +257,11 @@ class Agent:
         hp_lost = max(0, c["hp_start"] - hp)
         self.know.commit_enemy_fight(c["comp_id"], hp_lost, won=won, died=died,
                                      node_type=c.get("node_type"))
-        self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost)
+        # 分幕掉血入账（第 84~85 批复盘接线）：commit_room_damage 的 act 参数
+        # 此前从未被传入，rooms_act 恒为空——分幕投影先验（第 79 批复盘核心修复）
+        # 实际一直在回落跨幕混算旧口径，二幕怪物伤害升级仍被系统性低估
+        act_no = (int(c.get("floor", 1) or 1) - 1) // 17 + 1
+        self.know.commit_room_damage(c.get("node_type", "Unknown"), hp_lost, act=act_no)
         note = f"F{c['floor']} {c['node_type']}战 掉血{hp_lost}" + ("（阵亡）" if died else "")
         self.ctx.combat_notes.append(note)
         if died:
