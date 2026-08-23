@@ -70265,3 +70265,196 @@ Let me read the whole reflect.py to fix this properly.
 [14:23:59] [COMBAT/F17] 战斗：等待敌人就绪
 [14:23:59] [COMBAT/F17] 战斗：等待敌人就绪
 [14:24:00] [COMBAT/F17] 战斗：等待敌人就绪
+[14:24:01] [REWARD/F17] 领取奖励：100金币
+[llm] 复盘会话结束（exit=0）。输出尾部：
+eath causes**: KIN_FOLLOWER+KIN_PRIEST 18 deaths — this is a specific comp where PRIEST heals/buffs FOLLOWER. 38 fights, 31.1 avg hp lost, 47% death rate. CEREMONIAL_BEAST 15 deaths/38 (39%), 29.1 avg. FUZZY_WURM_CRAWLER+SHRINKER_BEETLE 15/53 (28%), 20.6 avg. VANTOM 11/36 (31%), 23.1.
+
+   These four comps account for 59 of ~130 total deaths. The agent lacks targeted counter-play: e.g., vs healing priest, kill priority; vs beast, burst timing. Does policy.py have per-comp tactics? There's "danger_comp_hard_death_rate": 0.3, "danger_comp_stance_death_rate": 0.25 — some handling exists.
+
+7. **Energy/card efficiency**: avg outcomes around 14-18 per play. STRIKE avg 10.3 over 2839 plays — strikes remain the workhorse. BASH avg 7.2 (low value confirmed). SETUP_STRIKE 9.4, EXPECT_A_FIGHT 6.6 — low-value picks still happening (picked 5, 6, 1 times).
+
+Now what adjustments can I make? The instructions encourage CODE changes over parameter tweaks. Let me look at the actual code to find fixable defects.
+
+I should read:
+- sts2-ascend/brain/policy.py
+- sts2-ascend/brain/knowledge.py
+- sts2-ascend/brain/selfcheck.py
+- maybe other brain modules (map/path planning, combat)
+
+Let me explore the directory structure first.
+
+Plan:
+1. Read brain code (policy.py, knowledge.py, others).
+2. Identify concrete defects (e.g., status-card playing, projection bugs with Ancient node, boss-eve rest-vs-smith logic).
+3. Make targeted code fixes + maybe small param changes.
+4. Write meta_review.md section + lessons.md 🧠 section.
+5. Run selfcheck.
+6. Summarize ≤200 chars.
+
+Note the prohibitions: no git ops, no process management, only touch sts2-ascend/, don't delete runs logs, no dep installs. Also AGENTS.md default rules about commit/push/docs are overridden by the review prompt's 禁止事项 (highest priority). So: no git commit, and docs/ writing outside sts2-ascend is prohibited — the meta_review.md and lessons.md inside sts2-ascend serve that purpose.
+
+Let me start exploring.
+⚙ bash {}
+· tokens 46430 ·
+
+[14:24:01] [REWARD/F17] 打开卡牌奖励：将一张牌添加到你的牌组。
+[14:24:02] [CARD_SELECTION/F17] 选择卡牌：【坚定不移】（价值 8.8）；候选：坚定不移=8.8 / 痛殴=8.7 / 黑暗之拥=7.0
+[14:24:03] [REWARD/F17] 一键收取奖励并继续
+[14:24:05] [MAP/F17] 路径规划：Ancient(0,3)（路径分 -55.81，预计进 Boss 血量 0%；投影中途死亡）；候选：Ancient(0,3)=-55.81|投影中途死亡
+[git] 已自动存档：feat(sts2-ascend): 第110~113局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[14:24:08] [EVENT/F18] 事件【特兹卡塔拉】：选择「南瓜蜡烛」（经验价值 0.0）；营养汤=0.0(n=1) / 烘焙手套=0.0(n=1) / 南瓜蜡烛=0.0(n=0)
+[14:24:09] [EVENT/F18] 事件：已结束，继续
+[14:24:10] [MAP/F18] 路径规划：Monster(1,2)（路径分 12.85，预计进 Boss 血量 95%；路径中段含未达标精英，投影罚分）；候选：Monster(1,2)=12.85|路径中段含未达标精英，投影罚分 / Monster(1,5)=10.94|路径中段含未达标精英，投影罚分
+[agent] 事件结算：TEZCATARA/TEZCATARA.pages.INITIAL.options.PUMPKIN_CANDLE → 生命 +0，金币 +0，卡组 +0
+[14:24:13] [COMBAT/F19] 战斗：回合过渡中，等待
+[agent] 战斗结束：F17 Boss战 掉血65
+[agent] 进入战斗：敌方=BOWLBUG_NECTAR+BOWLBUG_ROCK｜历史场均掉血 12.4｜房间类型 Monster
+[14:24:13] [COMBAT/F19] 战斗：打出【打击】→盛碗虫（石）（单体伤害≈6）；敌意图总伤18，我方90血/0甲
+[14:24:14] [COMBAT/F19] 战斗：打出【打击】→盛碗虫（石）（单体伤害≈6）；敌意图总伤18，我方90血/0甲
+[14:24:15] [COMBAT/F19] 战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤18，我方90血/0甲
+[14:24:17] [COMBAT/F19] 战斗：打出【与我一战！】→盛碗虫（石）（单体伤害≈10）；敌意图总伤18，我方90血/7甲
+[14:24:18] [COMBAT/F19] 战斗：本回合已无牌可出，确认结束（防御✗,防御✗,重锤✗,痛击✗）
+[14:24:19] [COMBAT/F19] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:24:20] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:21] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:21] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:22] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:23] [COMBAT/F19] 战斗：打出【契约终结+】（群体伤害≈54）；敌意图总伤16，我方78血/0甲
+[14:24:24] [COMBAT/F19] 战斗：打出【闪电霹雳】（群体伤害≈14）；敌意图总伤16，我方78血/0甲
+[14:24:25] [COMBAT/F19] 战斗：打出【打击】→盛碗虫（石）（单体伤害≈9）；敌意图总伤16，我方78血/0甲
+[14:24:26] [COMBAT/F19] 战斗：打出【武装】（格挡5）；敌意图总伤16，我方78血/0甲
+[14:24:27] [COMBAT/F19] 战斗：打出【防御+】（格挡8）；敌意图总伤16，我方78血/5甲
+[14:24:27] [COMBAT/F19] 战斗：本回合已无牌可出，确认结束（空手）
+[14:24:28] [COMBAT/F19] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:24:29] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:30] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:31] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:31] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:32] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:33] [COMBAT/F19] 战斗：打出【余烬】→盛碗虫（石）（可击杀盛碗虫（石））；敌意图总伤34，我方75血/0甲；意图升级+18，防御前置
+[14:24:34] [COMBAT/F19] 战斗：打出【余烬】→盛碗虫（蜜）（单体伤害≈21）；敌意图总伤18，我方75血/0甲；意图升级+18，防御前置
+[14:24:35] [COMBAT/F19] 战斗：本回合已无牌可出，确认结束（防御✗）
+[14:24:35] [COMBAT/F19] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:24:37] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:37] [COMBAT/F19] 战斗：回合过渡中，等待
+[14:24:38] [COMBAT/F19] 战斗：打出【打击】→盛碗虫（蜜）（可击杀盛碗虫（蜜））；敌意图总伤18，我方57血/0甲
+[14:24:39] [REWARD/F19] 领取奖励：19金币
+[14:24:40] [REWARD/F19] 打开卡牌奖励：将一张牌添加到你的牌组。
+[14:24:41] [CARD_SELECTION/F19] 选择卡牌：【暴走】（价值 10.0）；候选：暴走=10.0 / 双重打击+=8.7 / 撕裂=7.1
+[14:24:42] [REWARD/F19] 一键收取奖励并继续
+[14:24:43] [MAP/F19] 路径规划：Monster(2,1)（路径分 18.73，预计进 Boss 血量 83%；进Boss血量预计83%<87%，优先续航路线）；候选：Monster(2,1)=18.73|进Boss血量预计83%<87%，优先续航路线
+[14:24:46] [COMBAT/F20] 战斗：回合过渡中，等待
+[agent] 战斗结束：F19 Monster战 掉血27
+[agent] 进入战斗：敌方=THIEVING_HOPPER｜历史场均掉血 8.6｜房间类型 Monster
+[14:24:46] [COMBAT/F20] 战斗：打出【重锤】→偷窃草蜢（单体伤害≈32）；敌意图总伤17，我方63血/0甲
+[14:24:47] [COMBAT/F20] 战斗：打出【坚毅】（格挡7）；敌意图总伤17，我方63血/0甲
+[14:24:48] [COMBAT/F20] 战斗：本回合已无牌可出，确认结束（暴走✗,防御✗）
+[14:24:49] [COMBAT/F20] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:24:50] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:24:51] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:24:51] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:24:52] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:24:53] [COMBAT/F20] 战斗：打出【与我一战！】→偷窃草蜢（单体伤害≈10）；敌意图总伤0，我方53血/0甲
+[14:24:54] [COMBAT/F20] 战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤0，我方53血/0甲
+[14:24:55] [COMBAT/F20] 战斗：打出【打击】→偷窃草蜢（单体伤害≈9）；敌意图总伤0，我方53血/0甲
+[14:24:56] [COMBAT/F20] 战斗：打出【打击】→偷窃草蜢（单体伤害≈9）；敌意图总伤0，我方53血/0甲
+[14:24:57] [COMBAT/F20] 战斗：本回合已无牌可出，确认结束（防御✗,打击✗,睡眠不佳✗,防御✗）
+[14:24:58] [COMBAT/F20] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:24:59] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:00] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:01] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:01] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:02] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:03] [COMBAT/F20] 战斗：打出【余烬】→偷窃草蜢（可击杀偷窃草蜢）；敌意图总伤22，我方53血/0甲；意图升级+22，防御前置
+[14:25:04] [COMBAT/F20] 战斗：打出【打击】→偷窃草蜢（可击杀偷窃草蜢）；敌意图总伤22，我方53血/0甲；意图升级+22，防御前置
+[14:25:05] [COMBAT/F20] 战斗：本回合已无牌可出，确认结束（睡眠不佳✗,坚定不移✗,火焰屏障✗）
+[14:25:05] [COMBAT/F20] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:25:07] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:07] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:08] [COMBAT/F20] 战斗：回合过渡中，等待
+[14:25:09] [COMBAT/F20] 战斗：打出【武装】（格挡5）；敌意图总伤15，我方31血/0甲
+[14:25:10] [CARD_SELECTION/F20] 升级卡牌：【余烬】
+[14:25:11] [COMBAT/F20] 战斗：打出【防御】（格挡5）；敌意图总伤15，我方31血/5甲
+[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）
+[14:25:12] [COMBAT/F20] 战斗：打出【暴走】→偷窃草蜢（可击杀偷窃草蜢）；敌意图总伤15，我方31血/10甲
+[14:25:13] [REWARD/F20] 领取奖励：17金币
+[14:25:13] [REWARD/F20] 领取奖励：易伤药水
+[14:25:14] [REWARD/F20] 打开卡牌奖励：取回你被偷走的牌。
+[14:25:15] [REWARD/F20] 打开卡牌奖励：将一张牌添加到你的牌组。
+[14:25:16] [CARD_SELECTION/F20] 选择卡牌：【踩踏+】（价值 11.2）；候选：踩踏+=11.2 / 铁斩波=4.8 / 惊逃=2.3
+[14:25:17] [REWARD/F20] 一键收取奖励并继续
+[14:25:18] [MAP/F20] 路径规划：Monster(3,0)（路径分 0.42，预计进 Boss 血量 100%；血量41%过低，避免无谓消耗战；路径中段含未达标精英，投影罚分）；候选：Monster(3,0)=0.42|血量41%过低，避免无谓消耗战；路径中段含未达标精英，投影罚分 / Unknown(3,2)=0.09|进Boss血量预计65%<87%，优先续航路线
+[14:25:20] [COMBAT/F21] 战斗：回合过渡中，等待
+[agent] 战斗结束：F20 Monster战 掉血26
+[agent] 进入战斗：敌方=OVICOPTER｜历史场均掉血 12.0｜房间类型 Monster
+[14:25:21] [COMBAT/F21] 战斗：打出【重锤】→直飞产卵虫（单体伤害≈32）；敌意图总伤0，我方37血/0甲
+[14:25:22] [COMBAT/F21] 战斗：打出【契约终结+】（群体伤害≈24）；敌意图总伤0，我方37血/0甲
+[14:25:23] [COMBAT/F21] 战斗：打出【暴走】→直飞产卵虫（单体伤害≈10）；敌意图总伤0，我方37血/0甲
+[14:25:24] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（余烬✗,防御✗）
+[14:25:24] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:25:26] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:26] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:27] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:28] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:28] [COMBAT/F21] 战斗：打出【踩踏+】（群体伤害≈60）；敌意图总伤16，我方37血/0甲；意图升级+16，防御前置
+[14:25:29] [COMBAT/F21] 战斗：打出【武装】（格挡5）；敌意图总伤16，我方37血/0甲；意图升级+16，防御前置
+[14:25:30] [CARD_SELECTION/F21] 升级卡牌：【与我一战！】
+[14:25:31] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（痛击✗,与我一战！+✗,打击✗）
+[agent] 过场后战斗对象变化（OVICOPTER→OVICOPTER+TOUGH_EGG），结算前段再开新账
+[agent] 进入战斗：敌方=OVICOPTER+TOUGH_EGG｜历史场均掉血 12.0｜房间类型 Monster
+[14:25:32] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:25:33] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:34] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:34] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:35] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:36] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:36] [COMBAT/F21] 战斗：打出【坚毅】（格挡7）；敌意图总伤15，我方26血/0甲
+[14:25:37] [COMBAT/F21] 战斗：打出【闪电霹雳】（群体伤害≈12）；敌意图总伤15，我方26血/7甲
+[14:25:39] [COMBAT/F21] 战斗：打出【打击】→直飞产卵虫（单体伤害≈6）；敌意图总伤15，我方26血/7甲
+[14:25:40] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（睡眠不佳✗）
+[14:25:40] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:25:42] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:42] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:43] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:43] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:44] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:45] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:45] [COMBAT/F21] 战斗：打出【火焰屏障】（格挡12）；敌意图总伤12，我方18血/0甲
+[14:25:46] [COMBAT/F21] 战斗：打出【打击】→幼虫（单体伤害≈6）；敌意图总伤12，我方18血/12甲；斩杀竞速投影：击杀还需8回合>可存活2回合，全攻提速
+[14:25:47] [COMBAT/F21] 战斗：评估后无值得出的牌（睡眠不佳✗,防御✓,防御✓,防御✓），结束回合（敌意图总伤12，我方18血/12甲）；斩杀竞速投影：击杀还需6回合>可存活2回合，全攻提速
+[14:25:49] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:49] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:50] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:51] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:51] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:52] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:25:53] [COMBAT/F21] 战斗：硬仗使用增益药水【易伤药水】
+[14:25:55] [COMBAT/F21] 战斗：打出【余烬】→幼虫（可击杀幼虫）；敌意图总伤36，我方18血/0甲；意图升级+24，防御前置；斩杀竞速投影：击杀还需9回合>可存活3回合，全攻提速
+[14:25:56] [COMBAT/F21] 战斗：打出【与我一战！+】→直飞产卵虫（单体伤害≈12｜无甲孤注抢斩杀）；敌意图总伤30，我方18血/0甲；意图升级+24，防御前置；斩杀竞速投影：击杀还需8回合>可存活3回合，全攻提速
+[14:25:58] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（打击✗,坚定不移✗,打击✗）
+[14:25:58] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:26:00] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:00] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:01] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:02] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:03] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:03] [COMBAT/F21] 战斗：回合过渡中，等待
+[14:26:04] [GAME_OVER/F21] 对局结束：失败（层数 21），正在总结复盘…
+[agent] 战斗失败：F21 Monster战 掉血37（阵亡）
+[agent] 战斗失败：F21 Monster战 掉血37（阵亡，含5回合全场）
+
+
+## 第 114 局复盘（2026-08-23 14:26）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：THUNDERCLAP, ARMAMENTS, CINDER, CINDER, FLAME_BARRIER, BATTLE_TRANCE, PACTS_END, TRUE_GRIT, BLUDGEON, UNMOVABLE, RAMPAGE, STOMP
+- 本局遗物：TUNING_FORK
+- 战斗记录：F14 Monster战 掉血26; F15 Monster战 掉血13; F17 Boss战 掉血65; F19 Monster战 掉血27; F20 Monster战 掉血26; F21 Monster战 掉血37（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，THRASH(23分/2局)，MANGLE(21分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.20 → 1.25（非 Boss 战斗长战阵亡（5回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/114 胜，当前目标进阶 0
+
+[agent] 对局日志已保存：20260823-142604_XJHKBHU8LXLJ.json
