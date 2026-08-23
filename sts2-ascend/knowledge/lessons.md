@@ -1961,3 +1961,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.30 → 3.60（Boss 高血进场长战死（72%，5回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 4.50 → 5.00（Boss 高血进场长战死（5回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/154 胜，当前目标进阶 0
+
+## 第 155 局复盘（2026-08-23 20:38）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FLYCONID+TWIG_SLIME_M
+- 本局拿牌：THUNDERCLAP, HOWL_FROM_BEYOND, FLAME_BARRIER, TRUE_GRIT, CINDER, TAUNT, TAUNT, CINDER, VICIOUS
+- 本局遗物：PETRIFIED_TOAD
+- 战斗记录：F7 Monster战 掉血9; F8 Monster战 掉血36; F11 Monster战 掉血13; F13 Monster战 掉血22; F14 Monster战 掉血14; F15 Monster战 掉血14（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，BARRICADE(22分/4局)，FASTEN(22分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/155 胜，当前目标进阶 0
