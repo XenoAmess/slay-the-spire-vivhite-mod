@@ -109,7 +109,9 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 - 合成/播放流水线并行；参考音色 `tts/reference_voice_48k.wav`（48kHz 立体声，替换即换音色）
 - 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
 - 单实例锁：复盘连开时只有一个朗读器在跑，新流截断自动接续
-- 模式：`config.json` 的 `llm.tts_mode` = `nano`（默认）/ `sapi`（系统语音实时）/ `hybrid` / `off`
+- 模式：`config.json` 的 `llm.tts_mode` = `hybrid`（默认：SAPI 实时直播 + 克隆音色读结论）/ `nano`（全克隆音色，滞后大）/ `sapi`（纯系统语音）/ `off`
+- **音量控制**：`Ctrl+Alt+↑` 调大 / `Ctrl+Alt+↓` 调小（±10%，最大 200%）/ `Ctrl+Alt+M` 静音切换；
+  悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）
 - 手动试听：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/nano_speaker.py --test`
 
 TTS 环境在 `third_party/`（uv 旁路，gitignore）。选型实测见 `docs/2026-08-23-TTS框架选型预研.md`。
