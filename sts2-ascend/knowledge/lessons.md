@@ -2104,3 +2104,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 84%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.10 → 5.40（Boss 高血进场长战死（100%，13回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 7.50 → 8.00（Boss 高血进场长战死（13回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/167 胜，当前目标进阶 0
+
+## 第 168 局复盘（2026-08-23 22:21）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：PILLAGE, STOMP, FLAME_BARRIER, MOLTEN_FIST, HOWL_FROM_BEYOND, MOLTEN_FIST, FLAME_BARRIER, STOMP, INFLAME, SWORD_BOOMERANG, SHRUG_IT_OFF
+- 本局遗物：白银熔炉, 华美发束, PERMAFROST
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血28; F6 Monster战 掉血24; F8 Monster战 掉血22; F14 Monster战 掉血13; F17 Boss战 掉血60（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.40 → 5.70（Boss 高血进场长战死（75%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 8.00 → 8.50（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）
+- 生涯战绩：0/168 胜，当前目标进阶 0
