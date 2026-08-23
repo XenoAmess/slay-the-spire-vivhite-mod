@@ -340,6 +340,12 @@ class Agent:
         if c is None:
             return
         hp_lost = max(0, c["hp_start"] - hp)
+        # 血池/火力观测合并（第 138~141 批复盘）：policy 端逐 tick 把本场观测
+        # 写在 ctx.combat 上（obs_* 键），结算时并入聚合账——多阶段战斗按
+        # 「血池取最大段、火力求和」口径合并，flush 时一次性入统计库
+        obs_pool = float(c.get("obs_hp_pool") or 0.0)
+        obs_fire = float(c.get("obs_fire_sum") or 0.0)
+        obs_fr = int(c.get("obs_fire_rounds") or 0)
         agg = self.ctx.combat_agg
         # open 聚合账 = 一场多阶段战斗仍在进行：同层任何后续结算都并入它，
         # 无论本次流转是阶段切换（split）还是真实终结屏（GAME_OVER 致死等）
@@ -353,6 +359,9 @@ class Agent:
             agg["rounds"] = max(int(agg.get("rounds", 0) or 0), int(c.get("rounds", 0) or 0))
             agg["won"] = bool(won) and not agg["died"]
             agg["died"] = agg["died"] or bool(died)
+            agg["obs_hp_pool"] = max(float(agg.get("obs_hp_pool", 0.0) or 0.0), obs_pool)
+            agg["obs_fire_sum"] = float(agg.get("obs_fire_sum", 0.0) or 0.0) + obs_fire
+            agg["obs_fire_rounds"] = int(agg.get("obs_fire_rounds", 0) or 0) + obs_fr
             # 非分段流转 = 战斗真实终结：关闭挂起账（等换层/终局落库）
             agg["open"] = bool(split)
         else:
@@ -360,7 +369,9 @@ class Agent:
                    "node_type": c.get("node_type"), "hp_lost_sum": max(0.0, hp_lost),
                    "rounds": int(c.get("rounds", 0) or 0), "won": bool(won),
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
-                   "open": bool(split)}
+                   "open": bool(split),
+                   "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
+                   "obs_fire_rounds": obs_fr}
             self.ctx.combat_agg = agg
         if died:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
@@ -386,7 +397,10 @@ class Agent:
             return
         self.know.commit_enemy_fight(agg["comp_id"], float(agg.get("hp_lost_sum", 0.0)),
                                      won=bool(agg.get("won")), died=bool(agg.get("died")),
-                                     node_type=agg.get("node_type"))
+                                     node_type=agg.get("node_type"),
+                                     hp_pool=(float(agg.get("obs_hp_pool", 0.0)) or None),
+                                     fire_sum=float(agg.get("obs_fire_sum", 0.0) or 0.0),
+                                     fire_rounds=int(agg.get("obs_fire_rounds", 0) or 0))
         # 分幕掉血入账（第 84~85 批复盘接线）：act 参数按整场战斗的楼层归幕
         act_no = (int(agg.get("floor") or 1) - 1) // 17 + 1
         self.know.commit_room_damage(agg.get("node_type") or "Unknown",

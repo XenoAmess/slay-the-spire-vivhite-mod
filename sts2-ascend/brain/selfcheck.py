@@ -2340,6 +2340,43 @@ def main() -> int:
     assert abs(p_dire_on - round((24 - 8 * 1.7) / 80 * 100)) <= 1, \
         f"悲观乘区数值不符（应≈均值守恒×1.7）: {p_dire_on}%"
 
+    # 3yk) Boss 入场线证据上限 boss_entry_evidence_hp_cap（第 146~147 局复盘）：
+    #      旧条件「进场<线即上调」循环自证——143/146/147 局 66%/80%/100% 进场照输
+    #      仍三连 +0.02（0.82→0.88），110 罚差刷屏「优先续航路线」扭曲选路（147 局
+    #      全程仅 ~6 场战斗的续航畸形路线进 Boss）。中带进场（证据上限≤entry<线）
+    #      死亡不再喂棘轮、证据改接 burst_starve；真正极低血（<上限）进场磨死照常
+    #      上调（证据语义保留）；高血进场（≥线）沿用 138~141 批分流不变。
+    eknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-entrycap-")))
+    eknow.policy["boss_entry_min_hp_pct"] = 0.84
+    ectx = _RC()
+    ectx.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss", "rounds": 8}
+    ectx.death_hp_pct_at_entry = 0.75   # 中带：≥证据上限 0.65 但 < 线 0.84
+    bsb_ek = eknow.policy["burst_starve_bonus_base"]
+    be_ek = eknow.policy["boss_entry_min_hp_pct"]
+    ek_lesson = reflect.finalize_run(eknow, ectx, victory=False, final_floor=17)
+    assert abs(eknow.policy["boss_entry_min_hp_pct"] - be_ek) < 1e-9, \
+        f"中带进场死亡仍喂入场线棘轮（循环自证复发）: {be_ek} -> {eknow.policy['boss_entry_min_hp_pct']}"
+    assert eknow.policy["burst_starve_bonus_base"] > bsb_ek, \
+        "中带进场 Boss 长战死证据未改接拿牌端输出饥饿"
+    assert "中带进场" in ek_lesson, f"中带分流未在复盘日志留痕: {ek_lesson}"
+    # 对照①：真正极低血进场（0.50 < 0.65）照常上调入场线（证据语义保留）
+    ectx2 = _RC()
+    ectx2.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss", "rounds": 8}
+    ectx2.death_hp_pct_at_entry = 0.50
+    be_ek2 = eknow.policy["boss_entry_min_hp_pct"]
+    reflect.finalize_run(eknow, ectx2, victory=False, final_floor=17)
+    assert eknow.policy["boss_entry_min_hp_pct"] > be_ek2, \
+        f"极低血进场磨死未上调入场线（证据语义被误伤）: {be_ek2} -> {eknow.policy['boss_entry_min_hp_pct']}"
+    # 对照②：高血进场（≥线）旧语义不变——停止上调 + 证据改接 + 高血留痕
+    ectx3 = _RC()
+    ectx3.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss", "rounds": 8}
+    ectx3.death_hp_pct_at_entry = 0.95
+    be_ek3 = eknow.policy["boss_entry_min_hp_pct"]
+    ek_lesson3 = reflect.finalize_run(eknow, ectx3, victory=False, final_floor=17)
+    assert abs(eknow.policy["boss_entry_min_hp_pct"] - be_ek3) < 1e-9, \
+        "高血进场仍上调入场线（138~141 分流被破坏）"
+    assert "高血进场" in ek_lesson3, f"高血分流留痕缺失: {ek_lesson3}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

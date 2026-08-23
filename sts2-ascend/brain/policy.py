@@ -155,6 +155,11 @@ class Policy:
         self._krace_round = None    # 上次计回合的回合号
         self._incoming_ema = 0.0    # 敌意图总伤 EMA（回合边界采样，竞速投影的可存活账）
         self._esc_rounds = 0        # 意图持续升级计数（第 92~93 批复盘）：趋势≥2 的回合边界数
+        # 敌方血池/火力观测（第 138~141 批复盘）：本场学习样本，结算时经 agent 入库，
+        # 供地图端 Boss 攻坚投影与 Boss 前夜篝火决策使用
+        self._vit_pool_max = 0.0    # 本场观测到的敌方总血池最大值（非召唤杂兵 max_hp 合计）
+        self._vit_fire_sum = 0.0    # 本场逐轮原始意图总伤累计（格挡前口径）
+        self._vit_fire_rounds = 0   # 火力采样轮数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。

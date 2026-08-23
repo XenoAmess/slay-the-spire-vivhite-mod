@@ -33,7 +33,7 @@ RATE = "+10%"
 MAX_QUEUE = 256
 
 sys.path.insert(0, str(TTS_DIR))
-from speaker import (SentenceSplitter, speakable, SapiSpeaker,  # noqa: E402
+from speaker import (SentenceSplitter, FenceStripper, speakable, SapiSpeaker,  # noqa: E402
                      get_voice_state, start_volume_hotkeys,
                      acquire_voice_lock, release_voice_lock)
 
@@ -128,6 +128,7 @@ def main() -> int:
 
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
     splitter = SentenceSplitter()
+    fence = FenceStripper()
     state = {"offset": 0}
     ended = False
     end_at = 0.0
@@ -191,6 +192,9 @@ def main() -> int:
                         continue
                     if ln.startswith("[LIVE-START]"):
                         ended = False
+                        continue
+                    ln = fence.feed(ln)      # 剥掉 ``` 围栏代码块（跨报文状态机）
+                    if not ln.strip():
                         continue
                     if not speakable(ln):
                         continue

@@ -50,7 +50,7 @@ def log(msg: str) -> None:
 
 # ---- 复用 speaker.py 的过滤与断句（单一事实来源） ----
 sys.path.insert(0, str(TTS_DIR))
-from speaker import (SentenceSplitter, speakable, lang_of, SapiSpeaker,  # noqa: E402
+from speaker import (SentenceSplitter, FenceStripper, speakable, lang_of, SapiSpeaker,  # noqa: E402
                      get_voice_state, start_volume_hotkeys,
                      acquire_voice_lock, release_voice_lock)
 
@@ -172,6 +172,7 @@ def main() -> int:
     threading.Thread(target=play_worker, daemon=True).start()
 
     splitter = SentenceSplitter()
+    fence = FenceStripper()
     state = {"offset": 0}
     log("MOSS-Nano 朗读器上线（中文=白绮克隆音色，英文=SAPI，严格按序，允许滞后读完）")
 
@@ -191,6 +192,9 @@ def main() -> int:
                         continue
                     if ln.startswith("[LIVE-START]"):
                         ended.clear()
+                        continue
+                    ln = fence.feed(ln)      # 剥掉 ``` 围栏代码块（跨报文状态机）
+                    if not ln.strip():
                         continue
                     if not speakable(ln):
                         continue

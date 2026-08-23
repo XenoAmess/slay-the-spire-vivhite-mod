@@ -84,6 +84,10 @@ DEFAULT_POLICY = {
                                     # 入场血量在当前卡组强度下不构成生死变量，而 110 罚差系统性压制宝箱/商店/精英供电路线；
                                     # 默认值保持 0.72 供新库起步）
     "boss_entry_penalty": 110.0,    # 路径投影入 Boss 血量每差满血 100% 的评分惩罚：让续航路线能压过消耗路线
+    "boss_entry_evidence_hp_cap": 0.65,  # 入场线证据上限（第 146~147 批复盘）：只有低于此值的进场磨死才喂
+                                         # boss_entry_min_hp_pct 棘轮——63/124/137/143/146/147 局 66%~100% 进场
+                                         # 全灭，0.65+ 带内血量已被证伪为生死变量；旧条件「进场<线即上调」是
+                                         # 循环自证（旋钮自定义证据阈值），0 胜生涯无释放通道必漂向 0.90
     "hopeless_race_hp_frac": 0.6,   # 败局竞速启用血线：≤60% 最大生命才允许进入竞速模式
     "hopeless_race_horizon": 2.0,   # 按近期净损速率外推 N 回合内死亡 → 判定被动防守不可行
     # --- 战斗端补丁键（第 65~66 局复盘） ---
@@ -242,6 +246,16 @@ class Knowledge:
             e.setdefault("boss_encounters", 0)
             e.setdefault("boss_hp_lost_sum", 0.0)
             e.setdefault("boss_deaths", 0)
+        # 迁移：敌人血池/火力观测字段（第 138~141 批复盘新增）。138~141 四局
+        # 全部死于 F17 一幕 Boss（入场 60%~100% 全数打空、含满血局），路径投影
+        # 只回答「带多少血进 Boss」从不回答「这套卡组杀得死 Boss 吗」——攻坚
+        # 投影需要敌方总血池与逐轮意图火力两件先验。缺键即视为无数据
+        # （getter 返回 None），历史数据无需回填，向后兼容
+        for e in self.stats.get("enemies", {}).values():
+            e.setdefault("hp_pool_sum", 0.0)
+            e.setdefault("hp_pool_n", 0)
+            e.setdefault("fire_sum", 0.0)
+            e.setdefault("fire_rounds", 0)
         # 迁移：分幕掉血统计（第 79 局复盘新增：跨幕混算的 Monster 场均 ~9.9
         # 让二幕投影系统性乐观——预测进 Boss 82% 实际两场战斗后剩 27%）
         self.stats.setdefault("rooms_act", {})
@@ -568,7 +582,10 @@ class Knowledge:
     # ---------- online commits ----------
 
     def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool,
-                           node_type: str | None = None) -> None:
+                           node_type: str | None = None,
+                           hp_pool: float | None = None,
+                           fire_sum: float | None = None,
+                           fire_rounds: int | None = None) -> None:
         e = self.stats["enemies"].setdefault(comp_id, {"encounters": 0, "hp_lost_sum": 0.0, "deaths": 0, "wins": 0})
         e["encounters"] += 1
         e["hp_lost_sum"] += max(0.0, hp_lost)
@@ -581,6 +598,15 @@ class Knowledge:
             e["boss_encounters"] = e.get("boss_encounters", 0) + 1
             e["boss_hp_lost_sum"] = e.get("boss_hp_lost_sum", 0.0) + max(0.0, hp_lost)
             e["boss_deaths"] = e.get("boss_deaths", 0) + (1 if died else 0)
+        # 血池/火力观测入账（第 138~141 批复盘新增）：供 Boss 攻坚投影与
+        # Boss 前夜篝火决策使用。血池按「场」记均值样本（多阶段聚合已取最大段），
+        # 火力按「轮」累加（逐轮意图采样，格挡前口径）
+        if hp_pool is not None and hp_pool > 0:
+            e["hp_pool_sum"] = float(e.get("hp_pool_sum", 0.0)) + float(hp_pool)
+            e["hp_pool_n"] = int(e.get("hp_pool_n", 0)) + 1
+        if fire_rounds:
+            e["fire_sum"] = float(e.get("fire_sum", 0.0)) + max(0.0, float(fire_sum or 0.0))
+            e["fire_rounds"] = int(e.get("fire_rounds", 0)) + int(fire_rounds)
 
     def boss_loss_stats(self) -> tuple[float, int]:
         """全部分档 Boss 战的（场均掉血绝对值, 样本数）。
@@ -594,6 +620,46 @@ class Knowledge:
             tot_n += float(e.get("boss_encounters", 0) or 0)
             tot_loss += float(e.get("boss_hp_lost_sum", 0.0) or 0.0)
         return (tot_loss / tot_n if tot_n else 0.0), int(tot_n)
+
+    def enemy_hp_pool(self, comp_id: str | None) -> float | None:
+        """该敌人组合的平均总血池（非召唤杂兵的最大生命合计）；无数据返回 None。"""
+        e = (self.stats.get("enemies") or {}).get(comp_id or "")
+        n = int((e or {}).get("hp_pool_n", 0) or 0)
+        if not e or n < 1:
+            return None
+        return float(e["hp_pool_sum"]) / n
+
+    def enemy_fire_rate(self, comp_id: str | None) -> float | None:
+        """该敌人组合的场均逐轮意图火力（每回合期望伤害，格挡前口径）。"""
+        e = (self.stats.get("enemies") or {}).get(comp_id or "")
+        n = int((e or {}).get("fire_rounds", 0) or 0)
+        if not e or n < 1:
+            return None
+        return float(e.get("fire_sum", 0.0)) / n
+
+    def boss_vitals_worst(self) -> tuple[float | None, float | None]:
+        """已学习 Boss 组合中最凶的一组（血池、火力）估计。
+
+        只认 boss_encounters≥2 的组合（Boss 分档计数由 commit_enemy_fight 维护，
+        普通怪房同名组合不会误入）；样本门槛：血池 ≥2 场、火力 ≥4 轮，
+        不够则返回 (None, None) 让调用方退化为无投影行为（冷启动安全）。
+        取最凶而非均值：攻坚投影回答的是「最坏的 Boss 能不能杀」，乐观账
+        会在轮换到强 Boss 时重演满血败局。
+        """
+        worst_pool: float | None = None
+        worst_fire: float | None = None
+        for e in (self.stats.get("enemies") or {}).values():
+            if int(e.get("boss_encounters", 0) or 0) < 2:
+                continue
+            pn = int(e.get("hp_pool_n", 0) or 0)
+            if pn >= 2:
+                v = float(e.get("hp_pool_sum", 0.0)) / pn
+                worst_pool = v if worst_pool is None else max(worst_pool, v)
+            fr = int(e.get("fire_rounds", 0) or 0)
+            if fr >= 4:
+                v = float(e.get("fire_sum", 0.0)) / fr
+                worst_fire = v if worst_fire is None else max(worst_fire, v)
+        return worst_pool, worst_fire
 
     def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None) -> None:
         """按房间类型累计战斗掉血（供路径先验动态校准）。

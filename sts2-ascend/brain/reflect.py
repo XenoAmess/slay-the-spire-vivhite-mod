@@ -27,6 +27,9 @@ BOUNDS = {
     # 第 86~87 批复盘接入：灰区精英悲观系数 / Boss 入场血量要求线
     "elite_grey_safety_mult": (1.0, 2.5),
     "boss_entry_min_hp_pct": (0.50, 0.90),
+    # 第 138~141 批复盘接入：Boss 高血进场长战死证据的承接旋钮（拿牌端输出饥饿）
+    "burst_starve_bonus_base": (0.0, 8.0),
+    "burst_starve_bonus_extra_max": (0.0, 12.0),
 }
 
 
@@ -133,10 +136,49 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                     # 单独加码 boss_atk_mult（不动普通战斗的攻防平衡）
                     _adj(know, "boss_atk_mult", 0.05, changes,
                          f"Boss 长战磨死（{rounds}回合），攻坚乘区提速")
-                    # 入场线同步缓升（第 86~87 批复盘）：提速治"打不死"，
-                    # 入场线治"扛不住"——两轴并行，单靠任一侧都收敛不了
-                    _adj(know, "boss_entry_min_hp_pct", 0.02, changes,
-                         "Boss 长战磨死，入场血量要求线上调")
+                    # 入场线证据分流（第 138~141 批复盘）：这条线的语义是「低血进场
+                    # 扛不住」，只有低血进场被磨死才是它的证据。满血/高血进场照样
+                    # 整管打空（63/124/137 局 ≥95% 三连、本批 138~141 四局 60%~100%
+                    # 含教科书级满血局）时继续上调，只会逼智能体为攒血放弃精英/
+                    # 商店/宝箱——卡组更弱、Boss 更打不过的正反馈死循环（安全棘轮
+                    # 联立陷阱的复发形态）。与第 135 批 elite_grey_safety_mult 的
+                    # 修正同构：各旋钮只吃属于自己的证据
+                    _entry = ctx.death_hp_pct_at_entry
+                    be_step = 0.02
+                    be_head = BOUNDS["boss_entry_min_hp_pct"][1] - pol["boss_entry_min_hp_pct"]
+                    # 证据上限（第 146~147 批复盘）：旧条件「进场<线即上调」让旋钮
+                    # 自定义自己的证据阈值（循环自证）——143/146/147 局进场
+                    # 66%/80%/100% 全部照输却仍三连 +0.02（0.82→0.88），加上此前
+                    # 63/124/137 局 ≥95% 满血进场全数整管打空：0.65 以上带内入场
+                    # 血量已被反复证伪为生死变量。0 胜生涯里该棘轮无释放通道，
+                    # 必然漂到 0.90 上限并全程刷屏「优先续航路线」扭曲选路
+                    # （147 局全程仅 ~6 场战斗的续航畸形路线进 Boss 即实证）。
+                    # 只有真正极低血（<证据上限）进场磨死才是入场线的证据
+                    _ev_cap = float(pol.get("boss_entry_evidence_hp_cap", 0.65))
+                    if _entry is not None and _entry < min(pol["boss_entry_min_hp_pct"], _ev_cap):
+                        if be_head >= be_step:
+                            _adj(know, "boss_entry_min_hp_pct", be_step, changes,
+                                 f"Boss 低血进场磨死（进场 {_entry:.0%}），入场血量要求线上调")
+                        else:
+                            changes.append(f"boss_entry_min_hp_pct {pol['boss_entry_min_hp_pct']:.2f} "
+                                           f"距上限仅余 {be_head:.2f}(<步长{be_step:.2f})，停止加码")
+                    else:
+                        if _entry is None or _entry >= pol["boss_entry_min_hp_pct"]:
+                            _band = (f"高血进场（{'?' if _entry is None else f'{_entry:.0%}'}"
+                                     f"≥线 {pol['boss_entry_min_hp_pct']:.0%}）")
+                        else:
+                            _band = f"中带进场（{_entry:.0%}，≥证据上限 {_ev_cap:.0%}）"
+                        changes.append(
+                            f"Boss 长战磨死但{_band}——入场血量非生死变量，"
+                            "入场线停止上调；证据改接拿牌端输出饥饿")
+                        # 高血进场 Boss 长战死的真正根因是卡组击杀速率不足：
+                        # 喂给拾取端输出饥饿旋钮，让拿牌对高质攻击更饥渴，
+                        # 从源头缩短战斗（参数治不了的病从代码/结构侧治）
+                        _adj(know, "burst_starve_bonus_base", 0.3, changes,
+                             f"Boss 高血进场长战死（{'?' if _entry is None else f'{_entry:.0%}'}，"
+                             f"{rounds}回合），拿牌端攻击饥饿基础分加码")
+                        _adj(know, "burst_starve_bonus_extra_max", 0.5, changes,
+                             f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高")
                 elif kb_head >= kb_step:
                     _adj(know, "block_safety", 0.05, changes,
                          f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")

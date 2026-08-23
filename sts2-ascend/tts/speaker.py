@@ -420,6 +420,7 @@ def main() -> int:
 
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
     splitter = SentenceSplitter()
+    fence = FenceStripper()
     state = {"offset": 0}
     ended = False
     end_at = 0.0
@@ -450,6 +451,9 @@ def main() -> int:
             if ln.startswith("[LIVE-START]"):
                 ended = False
                 stream_started_at = time.time()
+                continue
+            ln = fence.feed(ln)          # 剥掉 ``` 围栏代码块（跨报文状态机）
+            if not ln.strip():
                 continue
             if not speakable(ln):
                 continue
