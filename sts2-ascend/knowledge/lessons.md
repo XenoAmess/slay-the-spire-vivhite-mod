@@ -1538,3 +1538,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.75 → 1.80（Boss 长战磨死（5回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.89 → 0.90（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/118 胜，当前目标进阶 0
+
+## 第 119 局复盘（2026-08-23 15:05）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：UNRELENTING, MOLTEN_FIST, CONFLAGRATION, THUNDERCLAP, CINDER, SECOND_WIND, SWORD_BOOMERANG, EVIL_EYE, DISMANTLE, INFLAME, HOWL_FROM_BEYOND, SHRUG_IT_OFF, COLOSSUS, FEEL_NO_PAIN, ARMAMENTS, PACTS_END, RAMPAGE
+- 本局遗物：彩虹戒指, GAME_PIECE, ANCHOR, 蜡制意外光滑的石头, 蜡制紫水晶茄子, 蜡制灯笼, 蜡制百年积木, 蜡制臂甲, POTION_BELT
+- 战斗记录：F19 Monster战 掉血1; F20 Monster战 掉血10; F21 Monster战 掉血39; F24 Monster战 掉血12; F30 Monster战 掉血49; F31 Monster战 掉血19（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，COLOSSUS(22分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.35 → 1.40（非 Boss 战斗长战阵亡（4回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/119 胜，当前目标进阶 0

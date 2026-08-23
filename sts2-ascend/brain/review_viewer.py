@@ -432,6 +432,8 @@ class Viewer:
                         self.start_time = now
                         self.lines.clear()
                         self.reveal = 0.0
+                        self.ended = False        # 新复盘开始：清结束横幅，继续直播
+                        self.end_at = None
                     except json.JSONDecodeError:
                         pass
                 elif ln.startswith("[LIVE-END] "):
@@ -588,6 +590,8 @@ class Viewer:
     def _check_end(self, now: float) -> None:
         if not self.ended or not self.end_at or self._fading:
             return
+        if self.mode == "live":
+            return  # 直播模式常驻：复盘结束后停留（横幅+待命），下一场 LIVE-START 自动接续
         linger = ATTACH_LINGER_SEC if self.mode == "attach" else END_LINGER_SEC
         if now - self.end_at > linger:
             self._fading = True
