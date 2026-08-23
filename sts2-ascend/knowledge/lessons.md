@@ -2474,3 +2474,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿
 - 生涯战绩：0/200 胜，当前目标进阶 0
+
+## 第 201 局复盘（2026-08-24 04:28）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：BREAKTHROUGH, UNRELENTING, FLAME_BARRIER, MOLTEN_FIST, FIGHT_ME, ARMAMENTS, SPITE, DEMON_FORM, SALVO
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F5 Unknown战 掉血10; F6 Monster战 掉血4; F7 Monster战 掉血35; F11 Unknown战 掉血37; F13 Unknown战 掉血3; F14 Monster战 掉血15（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/201 胜，当前目标进阶 0
