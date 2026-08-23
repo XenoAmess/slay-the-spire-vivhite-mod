@@ -1201,3 +1201,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus: 19.00 → 20.00（长战磨死（15回合），提升击杀奖励加快清场）；block_safety: 1.75 → 1.60（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.20 → 1.25（Boss 长战磨死（15回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.67 → 0.69（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/92 胜，当前目标进阶 0
+
+## 第 93 局复盘（2026-08-23 09:41）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：INFLAME, THUNDERCLAP, FEEL_NO_PAIN, RAMPAGE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血28; F6 Monster战 掉血52（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，BARRICADE(20分/2局)，RAMPAGE(20分/45局)，TAUNT(19分/32局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.60 → 1.51（长战实证过度龟防会拖长战斗，小幅回调）
+- 生涯战绩：0/93 胜，当前目标进阶 0
