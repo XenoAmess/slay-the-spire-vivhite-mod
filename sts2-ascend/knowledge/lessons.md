@@ -1346,3 +1346,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.32 → 1.26（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.35 → 1.40（Boss 长战磨死（5回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.73 → 0.75（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/102 胜，当前目标进阶 0
+
+## 第 103 局复盘（2026-08-23 11:19）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：ULTIMATE_STRIKE, CINDER, SPITE, HOWL_FROM_BEYOND, WHIRLWIND, SHRUG_IT_OFF, THE_GAMBIT
+- 本局遗物：RAINBOW_RING
+- 战斗记录：F5 Monster战 掉血8; F6 Monster战 掉血0; F9 Monster战 掉血13; F11 Monster战 掉血3; F12 Monster战 掉血0; F15 Monster战 掉血68（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，COLOSSUS(22分/3局)，ULTIMATE_STRIKE(22分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.26 → 1.31（非 Boss 战斗长战阵亡（4回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/103 胜，当前目标进阶 0
