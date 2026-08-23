@@ -2027,3 +2027,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
 - 生涯战绩：0/160 胜，当前目标进阶 0
+
+## 第 161 局复盘（2026-08-23 21:30）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：SWORD_BOOMERANG, CINDER, UNRELENTING, CINDER, EVIL_EYE, EVIL_EYE, FLAME_BARRIER, UNRELENTING, CONFLAGRATION, SHRUG_IT_OFF, THUNDERCLAP, SHRUG_IT_OFF, PILLAGE, MAYHEM, TAUNT, SHRUG_IT_OFF, BLUDGEON, MOLTEN_FIST, ANGER, DISINTEGRATION, MIND_ROT, DISINTEGRATION, SLOTH, DISINTEGRATION
+- 本局遗物：卷轴箱, 寻龙尺, BAG_OF_PREPARATION, VENERABLE_TEA_SET
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血27; F22 Monster战 掉血13; F23 Monster战 掉血18; F30 Monster战 掉血2; F33 Boss战 掉血57（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.20 → 4.50（Boss 高血进场长战死（71%，10回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.00 → 6.50（Boss 高血进场长战死（10回合），缺口越深纠偏上限越高）
+- 生涯战绩：0/161 胜，当前目标进阶 0
