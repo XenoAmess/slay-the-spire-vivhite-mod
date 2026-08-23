@@ -2265,3 +2265,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.85 → 1.90（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/181 胜，当前目标进阶 0
+
+## 第 182 局复盘（2026-08-24 00:19）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 MYTE
+- 本局拿牌：BLUDGEON, BATTLE_TRANCE, SPITE, BURNING_PACT, BREAKTHROUGH, JUGGERNAUT, SHRUG_IT_OFF, THUNDERCLAP, STOMP
+- 本局遗物：BRONZE_SCALES
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血15; F19 Monster战 掉血27; F21 Monster战 掉血16; F22 Monster战 掉血29; F23 Monster战 掉血33（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.90 → 1.95（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/182 胜，当前目标进阶 0
