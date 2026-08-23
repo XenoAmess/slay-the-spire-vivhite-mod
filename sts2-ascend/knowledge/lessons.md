@@ -1643,3 +1643,20 @@
 - 当前低价值卡牌：DRAMATIC_ENTRANCE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据
 - 生涯战绩：0/127 胜，当前目标进阶 0
+
+## 🧠 第 123~124 局复盘沉淀（2026-08-23 17:06）
+- **本批定性**：两局均 💀17 层、同死于 KIN 双子 Boss。123 局进场仅 48%、全程零遗物零精英（旧灰区语义否决）；124 局路径执行近乎完美——F12 灰区精英「取损失最小项」仅 -13（悲观预测 -44）、满血 100% 进 Boss 仍 -80 阵亡。资源管理满分也输，瓶颈正式从入场资源转移到战斗内战力。
+- **结构性修复（本批核心）：第 122 批核心修复从未生效**。122 批把 elite_grey_survival_floor=0.40 写进代码默认值并假设「加载器 setdefault 自动补齐运行库」——但 setdefault 只在进程启动时执行，长驻大脑不重启就看不到；123~126 局日志持续打印旧文案「(<60%)」即铁证。已修复：①把键直接写入运行库 policy.json（三方合并器在下次 save 即采纳，无需重启）；②knowledge.py 新增 refresh_policy() 热同步 + agent 主循环每 20 秒调用（磁盘外部修改/新增键分钟级生效，DEFAULT 缺失键 deepcopy 兜底）；③selfcheck 3zc 回归保护。
+- **经验教训**：①「改了代码」≠「改了行为」——复盘会话与长驻进程是两个世界，policy.json 才是实时共享内存；策略语义变更必须先写运行库 JSON 再改代码默认值，缺一不可。②验证修复要看运行时留痕（日志文案级信号），不是看代码存在与否——122 批报告完整、自检通过，照样静默失效 4 局。③满血败局是最干净的归因样本：124 局天然排除入场资源变量，一局顶十局实验。
+- 观察点：①灰区文案应变「(<40%)」或 [79%,90%) 出现谨慎放行；②Elite 到访率回升（基线 0.37/局）；③brain.log 出现「策略热同步生效」留痕；④连续 3 局灰区精英战后 <30% 暴毙则 survival_floor 上调 45%；⑤Boss 击杀率与遗物/升级数相关性是否转正。
+
+## 第 128 局复盘（2026-08-23 17:08）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：MANGLE, BREAKTHROUGH, JUGGLING, HEMOKINESIS, ARMAMENTS, BLUDGEON, BLUDGEON, MOLTEN_FIST, HOWL_FROM_BEYOND, TAUNT, JUGGERNAUT, TRUE_GRIT, RUPTURE, ANGER, THUNDERCLAP, TRUE_GRIT
+- 本局遗物：BOWLER_HAT, RAINBOW_RING
+- 战斗记录：F17 Boss战 掉血65; F19 Monster战 掉血17; F21 Monster战 掉血20; F23 Monster战 掉血25; F29 Monster战 掉血33; F30 Monster战 掉血32（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，MANGLE(22分/21局)
+- 当前低价值卡牌：DRAMATIC_ENTRANCE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.50 → 1.55（非 Boss 战斗长战阵亡（6回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/128 胜，当前目标进阶 0
