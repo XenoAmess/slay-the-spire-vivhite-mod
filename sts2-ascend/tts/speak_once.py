@@ -32,8 +32,8 @@ def log(msg: str) -> None:
         pass
 
 
-def _synth_moss_play(text: str) -> None:
-    """MOSS-Nano 逐句合成+逐句播放（长文按句切开，治长句又快又含糊的问题）。"""
+def _synth_moss_all(text: str) -> list:
+    """MOSS-Nano 逐句合成，全部存好再返回 wav 文件列表（播放阶段连续播放不卡）。"""
     import re as _re
     import numpy as np
     sys.path.insert(0, str(MOSS_DIR))
@@ -67,7 +67,7 @@ def _synth_moss_play(text: str) -> None:
         else:
             sentences.append(p)
 
-    import winsound
+    files: list = []
     for i, sent in enumerate(sentences):
         if not sent:
             continue
@@ -84,9 +84,9 @@ def _synth_moss_play(text: str) -> None:
             w.setsampwidth(2)
             w.setframerate(sr)
             w.writeframes(pcm.tobytes())
-        log(f"  句{i + 1}/{len(sentences)}（{len(sent)}字）播放：{sent[:30]}")
-        winsound.PlaySound(str(seg), winsound.SND_FILENAME)
-        seg.unlink(missing_ok=True)
+        files.append(seg)
+        log(f"  句{i + 1}/{len(sentences)}（{len(sent)}字）已合成：{sent[:30]}")
+    return files
 
 
 def _synth_indextts(text: str, out: Path) -> None:
@@ -114,12 +114,13 @@ def main() -> int:
     out = TTS_DIR / "conclusion.wav"
     t0 = time.time()
     log(f"开始合成（{len(text)} 字，引擎 {engine}）")
-    moss_direct_play = engine != "indextts"
+    moss_files: list = []
     if engine == "indextts":
         _synth_indextts(text, out)
-        log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
+        log(f"合成完成，耗时 {time.time() - t0:.0f}s，待播（{out.stat().st_size} bytes）")
     else:
-        log("MOSS 逐句合成播放中…")
+        moss_files = _synth_moss_all(text)      # 先全部合成存好（静默，不占麦）
+        log(f"全部 {len(moss_files)} 句合成完成，耗时 {time.time() - t0:.0f}s，待连续播放")
     import winsound
     # 若白绮吐槽员正在说话：等它说完，再多等 5 秒才播总结（互不抢麦）
     quip_speaking = KNOWLEDGE_DIR / "voice_quip_speaking.flag"
@@ -135,10 +136,12 @@ def main() -> int:
     except OSError:
         pass
     try:
-        if moss_direct_play:
-            _synth_moss_play(text)          # MOSS 逐句合成逐句播
-        else:
+        if engine == "indextts":
             winsound.PlaySound(str(out), winsound.SND_FILENAME)
+        else:
+            for seg in moss_files:              # 一次性连续播完
+                winsound.PlaySound(str(seg), winsound.SND_FILENAME)
+                seg.unlink(missing_ok=True)
     finally:
         busy.unlink(missing_ok=True)
     return 0
