@@ -46,6 +46,7 @@ CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 
 MIN_GAP, MAX_GAP = 20, 45        # 上一条播完后的随机间隔（秒）
 LLM_TIMEOUT = 45                 # 免费路由拥堵时快速失败转保底（90s 太久会显得哑巴）
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)   # 隐藏进程里调 console 程序必须加，否则弹黑窗
 API = "http://127.0.0.1:8080"
 FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败时的兜底一句
 
@@ -219,7 +220,8 @@ def _llm_generate(brief: str) -> str | None:
         proc = subprocess.run([binary, "run", "--model", _quip_model(),
                                "--dir", str(BASE_DIR.parent), prompt],
                               capture_output=True, text=True, encoding="utf-8",
-                              errors="replace", timeout=LLM_TIMEOUT)
+                              errors="replace", timeout=LLM_TIMEOUT,
+                              creationflags=_NO_WINDOW)
         out = (proc.stdout or "").strip()
         if not out:
             return None
@@ -249,7 +251,8 @@ def _llm_audit(brief: str, quip: str) -> bool:
         proc = subprocess.run([binary, "run", "--model", _quip_model(),
                                "--dir", str(BASE_DIR.parent), prompt],
                               capture_output=True, text=True, encoding="utf-8",
-                              errors="replace", timeout=LLM_TIMEOUT)
+                              errors="replace", timeout=LLM_TIMEOUT,
+                              creationflags=_NO_WINDOW)
         out = (proc.stdout or "").strip()
         first = out.splitlines()[0].strip().upper() if out else ""
         ok = first.startswith("PASS")      # 显式合法才算过（未知报错/异常 → False）

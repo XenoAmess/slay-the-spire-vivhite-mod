@@ -69,7 +69,8 @@ class EdgeEngine:
             if not (mp3.exists() and mp3.stat().st_size > 1000):
                 raise RuntimeError("mp3 empty")
             subprocess.run([self._ffmpeg, "-y", "-i", str(mp3), "-ar", "24000", "-ac", "1",
-                            str(wav)], capture_output=True, timeout=60)
+                            str(wav)], capture_output=True, timeout=60,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             return wav.exists()
         except Exception as exc:
             log(f"edge-tts 合成失败：{exc}")
