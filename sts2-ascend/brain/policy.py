@@ -131,6 +131,7 @@ class Policy:
         self._stall_no_progress = 0  # 连续无进展回合数
         self._stall_turn_seen = None
         self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
+        self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
         self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
         # 斩杀竞速投影（第 90~91 批复盘）：本场已打出的期望总伤 / 出牌回合数
@@ -169,6 +170,8 @@ class Policy:
 
     def decide(self, state: dict, ctx) -> Decision:
         screen = state.get("screen", "UNKNOWN")
+        if screen != "UNKNOWN":
+            self._unknown_stall = 0
         handler = {
             "MAIN_MENU": self._main_menu,
             "CHARACTER_SELECT": self._character_select,
@@ -2177,6 +2180,30 @@ class Policy:
             return Decision("proceed", {}, "结算：继续", wait=1.2)
         return Decision(None, {}, "结算：等待", wait=0.8)
 
+    def _click_game_point(self, fx: float = 0.5, fy: float = 0.87) -> bool:
+        """真实鼠标点击游戏窗口内相对坐标（解锁/提示屏确认按钮的兜底手段）。"""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            u32 = ctypes.windll.user32
+            hwnd = u32.FindWindowW(None, "Slay the Spire 2")
+            if not hwnd:
+                return False
+            rect = wintypes.RECT()
+            u32.GetWindowRect(hwnd, ctypes.byref(rect))
+            x = rect.left + int((rect.right - rect.left) * fx)
+            y = rect.top + int((rect.bottom - rect.top) * fy)
+            u32.SetForegroundWindow(hwnd)
+            time.sleep(0.3)
+            u32.SetCursorPos(x, y)
+            time.sleep(0.06)
+            u32.mouse_event(0x0002, 0, 0, 0, 0)   # LEFTDOWN
+            time.sleep(0.08)
+            u32.mouse_event(0x0004, 0, 0, 0, 0)   # LEFTUP
+            return True
+        except Exception:
+            return False
+
     def _unknown(self, state: dict, ctx) -> Decision:
         # 按载荷兜底路由，防新屏幕名漏网
         if state.get("bundles"):
@@ -2189,7 +2216,14 @@ class Policy:
         if "choose_capstone_option" in actions:
             return self._capstone(state, ctx)
         if "confirm_modal" in actions:
-            return Decision("confirm_modal", {}, "未知界面：尝试确认弹窗", wait=0.7)
+            return Decision("confirm_modal", {}, "未知界面：确认弹窗", wait=0.7)
         if "proceed" in actions:
             return Decision("proceed", {}, "未知界面：尝试继续", wait=0.8)
-        return Decision(None, {}, f"未知界面（{state.get('screen')}）：观察中", wait=1.0)
+        # 无任何可用动作的界面（如"解锁遗物！"这类展示屏，mod 未路由）：
+        # 滞留 12 tick 后兜底点击屏幕底部中央（这类屏的确认按钮都在那里）
+        self._unknown_stall += 1
+        if self._unknown_stall >= 12:
+            self._unknown_stall = 0
+            if self._click_game_point(0.5, 0.87):
+                return Decision(None, {}, "未知界面：无可用动作，点击底部确认按钮区域兜底", wait=1.5)
+        return Decision(None, {}, f"未知界面（{state.get('screen')}）：观察中（{self._unknown_stall}/12）", wait=1.0)
