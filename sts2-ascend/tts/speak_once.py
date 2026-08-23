@@ -101,6 +101,18 @@ def _synth_indextts(text: str, out: Path) -> None:
               output_path=str(out), duration_factor=0.9, verbose=False)
 
 
+
+def _hide_own_console() -> None:
+    """uv run 拉起的包装 python 会被 Windows 分配可见控制台（uv 不传递隐藏标志），
+    进程启动后自隐藏，治常驻黑窗。"""
+    try:
+        import ctypes
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
+    except Exception:
+        pass
+
 def main() -> int:
     _hide_own_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]

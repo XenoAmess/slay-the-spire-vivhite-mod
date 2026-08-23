@@ -106,6 +106,18 @@ def _play_wav_with_gain(wav: Path) -> None:
     winsound.PlaySound(str(wav), winsound.SND_FILENAME)
 
 
+
+def _hide_own_console() -> None:
+    """uv run 拉起的包装 python 会被 Windows 分配可见控制台（uv 不传递隐藏标志），
+    进程启动后自隐藏，治常驻黑窗。"""
+    try:
+        import ctypes
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)  # SW_HIDE
+    except Exception:
+        pass
+
 def main() -> int:
     _hide_own_console()
     if "--test" in sys.argv:
