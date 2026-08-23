@@ -120,6 +120,45 @@ class Agent:
         self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
         self._last_policy_refresh = 0.0  # 策略热同步节流（第 123~124 局复盘）
 
+    # ---------------- quipper（白绮碎碎念） ----------------
+
+    def _launch_quipper(self) -> None:
+        """启动白绮碎碎念进程（克隆音色低频短评）。它自己有活锁，重复拉起会自动退出。"""
+        try:
+            lock = KNOWLEDGE_DIR / "voice_quipper.lock"
+            if lock.exists():
+                try:
+                    pid = int(lock.read_text().strip() or "0")
+                    if pid > 0:
+                        import ctypes
+                        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+                        if h:
+                            ctypes.windll.kernel32.CloseHandle(h)
+                            return  # 已在跑
+                except (OSError, ValueError):
+                    pass
+            quipper = BASE_DIR / "tts" / "quipper.py"
+            moss_ready = (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists()
+            if not quipper.exists() or not moss_ready:
+                return
+            import shutil
+            uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
+            if not Path(uv).exists():
+                return
+            creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                             | getattr(subprocess, "DETACHED_PROCESS", 0)
+                             | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            subprocess.Popen([uv, "run", "--no-project",
+                              "--with", "onnxruntime", "--with", "sentencepiece",
+                              "--with", "torch", "--with", "torchaudio",
+                              "python", str(quipper)],
+                             cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             creationflags=creationflags, close_fds=True)
+            log("[agent] 白绮碎碎念已拉起")
+        except Exception as exc:
+            log(f"[agent] 碎碎念拉起失败（不影响游玩）：{exc}")
+
     # ---------------- game process management ----------------
 
     def _game_process_count(self) -> int:
@@ -501,6 +540,7 @@ class Agent:
     def run(self) -> None:
         log("[agent] sts2-ascend 自主学习智能体启动")
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
+        self._launch_quipper()
         self.ensure_game()
         health = self.client.health()
         log(f"[agent] 已连接 mod v{health.get('mod_version')}（游戏 {health.get('game_version')}）")

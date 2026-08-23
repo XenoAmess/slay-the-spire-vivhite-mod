@@ -9,6 +9,7 @@ GTX 1060 的 GPU 加速四条路均已实测不通（cudnn9 弃 Pascal / DirectM
 """
 from __future__ import annotations
 
+import os
 import sys
 import time
 import wave
