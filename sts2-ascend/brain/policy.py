@@ -160,6 +160,14 @@ class Policy:
         self._vit_pool_max = 0.0    # 本场观测到的敌方总血池最大值（非召唤杂兵 max_hp 合计）
         self._vit_fire_sum = 0.0    # 本场逐轮原始意图总伤累计（格挡前口径）
         self._vit_fire_rounds = 0   # 火力采样轮数
+        self._vit_combat = None     # 战斗实例身份（观测采样隔离用，第 214 批补全写入侧）
+        self._vit_round_seen = None # 上次火力采样的回合号
+        # 同事件实例内重复选择记忆（第 214 批复盘）：滑脚木桥「再撑一会」连选 5 次，
+        # 结算端 pending_event 被后选覆盖导致该选项永远 n=0——「全零并列选样本最少」
+        # 规则于是每局反复选中它，单事件白掉 5 张牌。同实例内已选次数计入有效样本
+        # 并附停滞罚分：选过却没离开事件的选项就是「没解决问题」的实证
+        self._event_inst = None         # 当前事件实例身份 (run_id, event_id, floor)
+        self._event_picks: dict = {}    # 本实例内各选项已选次数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -1006,6 +1014,32 @@ class Policy:
         my_hp = player.get("current_hp", 1)
         my_max_hp = max(1, player.get("max_hp", my_hp))
         block_gap = max(0, incoming - my_block)
+
+        # 敌方血池/火力观测写入侧（第 214 批补全）：第 138~141 批铺好了 agent 合并
+        # 与 knowledge 入库/读取端，但本写入侧在复盘回滚中丢失——全库 hp_pool_n=0、
+        # fire_rounds=0，boss_vitals_worst 恒 (None,None)，「Boss 攻坚投影」成了
+        # 无米之炊。血池只在见到本战斗实例的首个有效帧采样（召唤物尚未登场，天然
+        # 贴合「非召唤杂兵」口径，多阶段战斗逐段各采、agent 端取最大段）；火力按
+        # 回合边界采格挡前意图总伤。消费端（攻坚投影/篝火精算）留待后续复盘接线
+        if isinstance(ctx.combat, dict):
+            if self._vit_combat is not ctx.combat:
+                self._vit_combat = ctx.combat
+                self._vit_pool_max = 0.0
+                self._vit_fire_sum = 0.0
+                self._vit_fire_rounds = 0
+                self._vit_round_seen = None
+            if self._vit_pool_max <= 0.0:
+                pool = sum(float(e.get("max_hp", 0) or 0) for e in combat.get("enemies", [])
+                           if e.get("is_alive"))
+                if pool > 0.0:
+                    self._vit_pool_max = pool
+            if self._vit_round_seen != round_no:
+                self._vit_round_seen = round_no
+                self._vit_fire_sum += float(incoming)
+                self._vit_fire_rounds += 1
+            ctx.combat["obs_hp_pool"] = self._vit_pool_max
+            ctx.combat["obs_fire_sum"] = self._vit_fire_sum
+            ctx.combat["obs_fire_rounds"] = self._vit_fire_rounds
 
         # 败局竞速采样：回合边界记录净损血 EMA。取上一回合结束时的血量与本回合
         # 开始时的差值——已包含我方全部防御决策的净效果，速率居高不下即代表
@@ -2173,12 +2207,14 @@ class Policy:
         if getattr(ctx, "rest_before_boss", False) and heal is not None and hp_pct < 0.95:
             boss_loss, boss_n = self.know.boss_loss_stats()
             min_n = int(pol.get("boss_eve_smith_min_samples", 3))
-            entry_line = float(pol.get("boss_entry_min_hp_pct", 0.65))
-            # 锻造线（第 97~98 批复盘）：战损合并记账后 Boss 整场场均战损（≈50~80）
-            # 必然 ≥ 回血量(24)，仅凭战损条件会在 72% 血也改锻造——重演第 48 局惨案。
-            # 回血在其价值过半溢出之前仍是有效投资：血量 + 回血量×(1-浪费比) ≥ 满血
-            # （默认允许浪费一半）才值得放弃回血的保命价值去换锻造的全局复利
-            smith_line = max(entry_line, float(pol.get("boss_eve_smith_hp_pct", 0.85)))
+            # 锻造线（第 214 批证据带修正）：旧锚 max(入场线,0.85) 在入场线顶格
+            # 0.88 后恒为 88%——65%~88% 带内的 Boss 前夜全部回血。而 138~147 批
+            # 已把该带证伪为非生死变量（0.65~1.00 入场血量 8+ 局不影响生还率），
+            # 带内回血换不来生还率，锻造提速才兑付（本批实证：76%/79% 两局回血
+            # 后满血进 Boss 照样整管打空，升级却永久留在卡组里）。线锚改为证据
+            # 上限：≥65% 即允许锻造，<65% 仍是真求生区维持回血（48 局惨案带）
+            smith_line = max(float(pol.get("boss_entry_evidence_hp_cap", 0.65)),
+                             float(pol.get("boss_eve_smith_hp_pct", 0.85)))
             # 战损线按「回血量 × heal_mult」计（第 84~85 批复盘接线）：
             # 79 局复盘定义的 boss_eve_smith_heal_mult 此前从未被读取，
             # 条件一直退化回旧版 `≥满血`（实测 Boss 分档场均 23.8，永远够不到）
@@ -2274,6 +2310,12 @@ class Policy:
         if not candidates:
             return Decision(None, {}, "事件：全部锁定，等待", wait=0.8)
 
+        # 事件实例身份切换时重置重复选择记忆（同实例重选 = 上次选择没解决问题）
+        inst = (state.get("run_id"), event_id, (state.get("run") or {}).get("floor", 0))
+        if self._event_inst != inst:
+            self._event_inst = inst
+            self._event_picks = {}
+
         pol = self.know.policy
 
         def _norm_key(o) -> str:
@@ -2297,6 +2339,12 @@ class Policy:
         for o in candidates:
             key = _norm_key(o)
             v, n = _lookup(event_id, key)
+            repeats = self._event_picks.get(key, 0)
+            if repeats:
+                # 同实例重选停滞罚分（第 214 批复盘）：已选次数计入样本并倒扣价值，
+                # 一次重选即让 -1 的已知选项反超 0 分的原地踏步选项
+                n += repeats
+                v -= 3.0 * repeats
             scored.append((v, n, key, o))
         # epsilon exploration among under-sampled options
         # 已知负收益（价值 ≤ -5，如吃过大亏的选项）不再浪费探索次数；
@@ -2305,6 +2353,7 @@ class Policy:
             fresh = [s for s in scored if s[1] < 3 and s[0] > -5.0]
             if fresh:
                 v, n, key, o = self.rng.choice(fresh)
+                self._event_picks[key] = self._event_picks.get(key, 0) + 1
                 return Decision("choose_event_option", {"option_index": o["index"]},
                                 f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）",
                                 tags=[("event_choice", event_id, key)], wait=1.0)
@@ -2321,6 +2370,7 @@ class Policy:
             pool = [s for s in scored if s[0] == scored[0][0]]
             v, n, key, o = min(pool, key=lambda s: s[1])
         lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
+        self._event_picks[key] = self._event_picks.get(key, 0) + 1
         return Decision("choose_event_option", {"option_index": o["index"]},
                         f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}",
                         tags=[("event_choice", event_id, key)], wait=1.0)

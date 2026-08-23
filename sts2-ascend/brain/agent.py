@@ -294,9 +294,26 @@ class Agent:
         # credit tags from the decision just made
         for tag in decision.tags:
             if tag[0] == "event_choice":
-                self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
-                                          len(run.get("deck", []) or []))
-                self.ctx.pending_event_own = None  # 新选项重置自身效果快照
+                # 事件内换项抉择先行结算（第 214 批复盘）：同一事件未离场就改选
+                # 其他选项（滑脚木桥「再撑一会」单局八连后才换跨越），旧逻辑直接
+                # 覆盖 pending_event——除最后一次外全部选择永不入账，n 恒 0 被
+                # 「样本最少」规则反复选中。改选时按当前观测增量把上一次选择落库。
+                # 同键重挂（同选项的 tick 级重试）不结算也不刷新快照——点击未落地
+                # 的重试不应产生幻影样本，最终结算仍从首次选择起量
+                prev = self.ctx.pending_event
+                if prev is not None and prev[0] == tag[1] and prev[1] != tag[2]:
+                    deck_now = len(run.get("deck", []) or [])
+                    self.know.commit_event_option(prev[0], prev[1], hp - prev[2], gold - prev[3],
+                                                  died=False, deck_delta=deck_now - prev[5])
+                    log(f"[agent] 事件内换项抉择：先行结算 {prev[0]}/{prev[1]} → "
+                        f"生命 {hp - prev[2]:+}，金币 {gold - prev[3]:+}，卡组 {deck_now - prev[5]:+d}")
+                    self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
+                                              deck_now)
+                    self.ctx.pending_event_own = None  # 新选项重置自身效果快照
+                elif prev is None or prev[0] != tag[1]:
+                    self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
+                                              len(run.get("deck", []) or []))
+                    self.ctx.pending_event_own = None  # 新选项重置自身效果快照
             elif tag[0] == "rest":
                 if tag[1] == "heal" and hp >= run.get("max_hp", 1) - 2:
                     self.ctx.rests_healed_at_full += 1
@@ -438,6 +455,14 @@ class Agent:
         # 零决策必为结算屏回声幻影——不得入账/存日志/触发复盘与 git 存档
         if not self.ctx.decisions and not victory:
             log("[agent] ⚠ 忽略零数据幻影对局（重启落在结算屏的旧对局回声），不计入统计")
+            return
+        # 断线重连残缺局守卫（第 214 批复盘）：重连落在局中途的旧对局只剩尾部
+        # 几条决策（LE23B03412FL：4 决策 F17 阵亡）——卡牌/房间/敌人归因全是
+        # 断章取义，入账即污染演化证据与死亡榜。正常打到 F10+ 的对局决策数
+        # 必然过百，「决策极少却楼层颇深」只可能是残缺局：忽略之，不入账不演化
+        if not victory and floor >= 10 and len(self.ctx.decisions) < 10:
+            log(f"[agent] ⚠ 忽略断线重连残缺对局（仅 {len(self.ctx.decisions)} 条决策却到 F{floor}），"
+                "不计入统计")
             return
         self.runs_played += 1
         # 终局前落库挂起的战斗聚合账（第 97~98 批复盘）：胜利结算屏触发的

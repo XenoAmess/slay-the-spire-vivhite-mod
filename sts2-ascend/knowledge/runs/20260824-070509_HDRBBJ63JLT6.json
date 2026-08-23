@@ -1,0 +1,300 @@
+{
+ "run_id": "HDRBBJ63JLT6",
+ "ascension": 0,
+ "started_at": "2026-08-24 07:04:23",
+ "victory": false,
+ "floor": 24,
+ "decisions": [
+  {
+   "t": "07:04:23",
+   "screen": "CRYSTAL_SPHERE",
+   "floor": 23,
+   "hp": 27,
+   "gold": 327,
+   "action": "crystal_clear_cell",
+   "params": {
+    "x": 5,
+    "y": 6,
+    "tool": "big"
+   },
+   "reason": "占卜：big点(5,6)，新清9格其中好物9格（剩3次）"
+  },
+  {
+   "t": "07:04:24",
+   "screen": "CRYSTAL_SPHERE",
+   "floor": 23,
+   "hp": 27,
+   "gold": 327,
+   "action": "crystal_clear_cell",
+   "params": {
+    "x": 4,
+    "y": 9,
+    "tool": "big"
+   },
+   "reason": "占卜：big点(4,9)，新清9格其中好物7格（剩2次）"
+  },
+  {
+   "t": "07:04:26",
+   "screen": "CRYSTAL_SPHERE",
+   "floor": 23,
+   "hp": 27,
+   "gold": 327,
+   "action": "crystal_clear_cell",
+   "params": {
+    "x": 2,
+    "y": 4,
+    "tool": "big"
+   },
+   "reason": "占卜：big点(2,4)，新清9格其中好物6格（剩1次）"
+  },
+  {
+   "t": "07:04:28",
+   "screen": "REWARD",
+   "floor": 23,
+   "hp": 27,
+   "gold": 327,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：10金币"
+  },
+  {
+   "t": "07:04:28",
+   "screen": "REWARD",
+   "floor": 23,
+   "hp": 27,
+   "gold": 337,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "07:04:29",
+   "screen": "CARD_SELECTION",
+   "floor": 23,
+   "hp": 27,
+   "gold": 337,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【踩踏】（价值 12.8）；候选：踩踏=12.8 / 岩石铠甲=7.8 / 无惧疼痛=6.3"
+  },
+  {
+   "t": "07:04:30",
+   "screen": "REWARD",
+   "floor": 23,
+   "hp": 27,
+   "gold": 337,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续（放弃无法领取的：10金币）"
+  },
+  {
+   "t": "07:04:31",
+   "screen": "CRYSTAL_SPHERE",
+   "floor": 23,
+   "hp": 27,
+   "gold": 347,
+   "action": "proceed",
+   "params": {},
+   "reason": "占卜：完成，继续"
+  },
+  {
+   "t": "07:04:32",
+   "screen": "MAP",
+   "floor": 23,
+   "hp": 27,
+   "gold": 347,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(6,3)（路径分 -53.25，预计进 Boss 血量 0%；血量34%过低，避免无谓消耗战；投影中途死亡）；候选：Monster(6,3)=-53.25|血量34%过低，避免无谓消耗战；投影中途死亡"
+  },
+  {
+   "t": "07:04:37",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【与我一战！】→猎人杀手（单体伤害≈10）；敌意图总伤0，我方27血/0甲"
+  },
+  {
+   "t": "07:04:38",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→猎人杀手（单体伤害≈9）；敌意图总伤0，我方27血/0甲"
+  },
+  {
+   "t": "07:04:40",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "07:04:43",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤18，我方27血/0甲；意图升级+18，防御前置"
+  },
+  {
+   "t": "07:04:44",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【暴走+】→猎人杀手（单体伤害≈12）；敌意图总伤18，我方27血/5甲；意图升级+18，防御前置；斩杀竞速投影：击杀还需11回合>可存活5回合，全攻提速"
+  },
+  {
+   "t": "07:04:45",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤18，我方27血/5甲；意图升级+18，防御前置"
+  },
+  {
+   "t": "07:04:47",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 27,
+   "gold": 347,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "07:04:51",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【岿然不动+】（格挡40）；敌意图总伤24，我方14血/0甲；意图升级+6，防御前置；斩杀竞速投影：击杀还需6回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:04:52",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【战斗专注+】（功能牌（抽牌4/回能））；敌意图总伤24，我方14血/40甲；意图升级+6，防御前置；斩杀竞速投影：击杀还需9回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:04:55",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 6,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【暴走】→猎人杀手（单体伤害≈11）；敌意图总伤24，我方14血/40甲；意图升级+6，防御前置；斩杀竞速投影：击杀还需9回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:04:57",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "07:05:01",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【暴走+】→猎人杀手（单体伤害≈23｜无甲孤注抢斩杀）；敌意图总伤24，我方14血/0甲；斩杀竞速投影：击杀还需6回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:05:02",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【与我一战！】→猎人杀手（单体伤害≈14｜无甲孤注抢斩杀）；敌意图总伤24，我方14血/0甲；斩杀竞速投影：击杀还需3回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:05:04",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤27，我方14血/0甲；斩杀竞速投影：击杀还需2回合>可存活1回合，全攻提速"
+  },
+  {
+   "t": "07:05:06",
+   "screen": "COMBAT",
+   "floor": 24,
+   "hp": 14,
+   "gold": 347,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  }
+ ],
+ "combat_notes": [
+  "F24 Monster战 掉血27（阵亡）"
+ ]
+}

@@ -74,13 +74,17 @@ class Sts2Client:
     def data(self, collection: str):
         return self._request("GET", f"/data/{collection}")
 
-    def act(self, action: str, *, card_index=None, target_index=None, option_index=None, command=None) -> dict:
+    def act(self, action: str, *, card_index=None, target_index=None, option_index=None, command=None,
+            x=None, y=None, tool=None) -> dict:
         payload = {
             "action": action,
             "card_index": card_index,
             "target_index": target_index,
             "option_index": option_index,
             "command": command,
+            "x": x,
+            "y": y,
+            "tool": tool,
             "client_context": {"source": "sts2-ascend-brain"},
         }
         return self._request("POST", "/action", payload, is_action=True)

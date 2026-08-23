@@ -968,6 +968,19 @@ def main() -> int:
     assert ag_fresh.know.stats["global"]["runs"] == runs_before, "幻影局被计入生涯统计"
     assert list((tmp_agent / "runs").glob("*.json")) == [], "幻影局日志被写入 runs/"
 
+    # 2b2) 断线重连残缺局守卫（第 214 批复盘）：重连落在局中途的旧对局只剩尾部
+    #      几条决策（LE23B03412FL：4 决策 F17 阵亡）——卡牌/房间/敌人归因全是
+    #      断章取义，入账即污染演化证据：F≥10 且决策 <10 的败局必须整体忽略
+    ag.ctx.reset_for("RUN_PARTIAL", 0)
+    ag.ctx.decisions = [{"t": f"00:00:0{i}", "screen": "MAP", "floor": 16 + (i % 2),
+                         "hp": 40, "gold": 0, "action": "choose_map_node",
+                         "params": {}, "reason": "x"} for i in range(4)]
+    runs_before = ag.know.stats["global"]["runs"]
+    logs_before = set((tmp_agent / "runs").glob("*.json"))
+    ag._finalize(victory=False, floor=17)
+    assert ag.know.stats["global"]["runs"] == runs_before, "断线重连残缺局被计入生涯统计"
+    assert set((tmp_agent / "runs").glob("*.json")) == logs_before, "残缺局日志被写入 runs/"
+
     # 3aa) 组合战损维度姿态（第 64 局复盘）：FLYCONID+SNAPPING_JAXFRUIT 式组合
     #      死亡率仅 15% 但场均掉血 25.8（32% 血条）——旧判定只看死亡率，中性姿态下
     #      50 血对 26 意图仍全攻半防两回合被打穿。传 max_hp 按战损占比收紧；
@@ -1034,10 +1047,13 @@ def main() -> int:
     know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 170.0
     know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 180.0
     rest_mid = dict(rest_boss_state)
-    rest_mid["run"] = dict(rest_boss_state["run"], current_hp=62)  # 77.5% < 锻造线 85%
+    rest_mid["run"] = dict(rest_boss_state["run"], current_hp=62)  # 77.5% ∈ 证据带 [65%,88%)
     d_eve_mid = pol.decide(rest_mid, ctx)
-    assert d_eve_mid.tags[0] == ("rest", "heal"), \
-        f"锻造线以下的回血价值不应被放弃（48局复现）: {d_eve_mid.reason}"
+    # 第 214 批证据带修正：0.65~1.00 带内入场血量已被 8+ 局证伪为非生死变量，
+    # 带内回血换不来生还率——Boss 前夜在证据带内应改锻造提速（旧版期望回血，
+    # 锚的是第 48 局惨案；该案例早于带内政伪证据，已被新证据覆盖）
+    assert d_eve_mid.tags[0] == ("rest", "smith"), \
+        f"证据带内的 Boss 前夜应改锻造提速（214批修正）: {d_eve_mid.reason}"
     rest_low = dict(rest_boss_state)
     rest_low["run"] = dict(rest_boss_state["run"], current_hp=38)  # 47.5% < 入场线 65%
     d_eve_low = pol.decide(rest_low, ctx)
@@ -1074,6 +1090,78 @@ def main() -> int:
     assert pe and pe["n"] == 1 and pe.get("card_delta_sum") == 1.0 \
         and pe["gold_delta_sum"] == 10.0 and pe["hp_delta_sum"] == 0.0, \
         f"事件卡牌增量管线断裂: {pe}"
+
+    # 3ee2) 事件内换项抉择先行结算 + 同实例重选停滞罚分（第 214 批复盘）：
+    #      滑脚木桥「再撑一会」单局八连——旧逻辑 pending_event 被后选覆盖，
+    #      除最后一次外永不入账，n 恒 0 被「样本最少」规则反复选中。
+    #      a) agent 端：同事件未离场改选其他选项时，上一次选择必须立即落库；
+    #         同键重挂（tick 级重试）不产生幻影样本
+    ag.ctx.reset_for("RUN_EVT2", 0)
+    ev2_state = {"screen": "EVENT", "run_id": "RUN_EVT2",
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
+                         "deck": [{"card_id": "A"}, {"card_id": "B"}]}}
+    ag._track(ev2_state, policy.Decision(action="choose_event_option",
+                                         tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
+    ag._track(ev2_state, policy.Decision(action="choose_event_option",
+                                         tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
+    hold0 = tknow.stats["events"].get("BRIDGE_EV", {}).get("HOLD")
+    assert not hold0, f"同键 tick 重试产生了幻影样本: {hold0}"
+    ev2_state2 = {"screen": "EVENT", "run_id": "RUN_EVT2",
+                  "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
+                          "deck": [{"card_id": "A"}]}}  # 第一次选择后掉了一张牌
+    ag._track(ev2_state2, policy.Decision(action="choose_event_option",
+                                          tags=[("event_choice", "BRIDGE_EV", "CROSS")]))
+    hold = tknow.stats["events"].get("BRIDGE_EV", {}).get("HOLD")
+    assert hold and hold["n"] == 1 and hold.get("card_delta_sum") == -1.0, \
+        f"事件内换项抉择未先行结算（上一次选择被吞）: {hold}"
+    #      b) policy 端：同实例已选次数计入样本并倒扣价值，-1 已知项反超 0 分原地踏步项
+    know.stats["events"]["BRIDGE_POL"] = {
+        "CROSS": {"n": 10, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0,
+                  "card_delta_sum": -10.0}}
+    bridge_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                    "run_id": "RUN_BRIDGE",
+                    "event": {"event_id": "BRIDGE_POL", "title": "滑脚木桥", "is_finished": False,
+                              "options": [{"index": 0, "title": "再撑一会", "text_key": "HOLD",
+                                           "is_locked": False, "is_proceed": False},
+                                          {"index": 1, "title": "跨越", "text_key": "CROSS",
+                                           "is_locked": False, "is_proceed": False}]},
+                    "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
+    pol_bridge = policy.Policy(know, random.Random(2))
+    d_b1 = pol_bridge.decide(bridge_state, ctx)
+    assert d_b1.params.get("option_index") == 0, f"首次应选 0 分未知项: {d_b1.reason}"
+    d_b2 = pol_bridge.decide(bridge_state, ctx)
+    assert d_b2.params.get("option_index") == 1, \
+        f"同实例重选必须吃停滞罚分（旧版会无限重选原地踏步项）: {d_b2.reason}"
+    #      c) 跨实例（换楼层/换 run）罚分自动清零，不影响正常事件选择
+    bridge_state3 = dict(bridge_state, run_id="RUN_BRIDGE2")
+    pol_bridge2 = policy.Policy(know, random.Random(2))
+    d_b3 = pol_bridge2.decide(bridge_state3, ctx)
+    assert d_b3.params.get("option_index") == 0, f"新实例不应继承停滞罚分: {d_b3.reason}"
+
+    # 3ee3) 敌方血池/火力观测写入侧（第 214 批补全）：首帧采血池（非召唤口径）、
+    #      回合边界采格挡前火力，经 ctx.combat 的 obs_* 键交给 agent 结算入库——
+    #      此前写入侧在回滚中丢失，全库 hp_pool_n=0、boss_vitals_worst 恒 None
+    ctx.combat = {"comp_id": "VIT_DUO", "node_type": "Boss"}
+    vit_state = {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+                 "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                            "hand": [],
+                            "enemies": [{"index": 0, "enemy_id": "VIT_A", "name": "甲",
+                                         "current_hp": 100, "max_hp": 120, "block": 0,
+                                         "is_alive": True, "is_hittable": True,
+                                         "intents": [{"total_damage": 10}]},
+                                        {"index": 1, "enemy_id": "VIT_B", "name": "乙",
+                                         "current_hp": 50, "max_hp": 60, "block": 0,
+                                         "is_alive": True, "is_hittable": True,
+                                         "intents": [{"total_damage": 6}]}]},
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+    pol.decide(vit_state, ctx)
+    assert ctx.combat.get("obs_hp_pool") == 180.0 \
+        and ctx.combat.get("obs_fire_rounds") == 1 and ctx.combat.get("obs_fire_sum") == 16.0, \
+        f"血池/火力观测写入侧断裂: {ctx.combat}"
+    pol.decide(dict(vit_state, turn=2), ctx)
+    assert ctx.combat.get("obs_fire_rounds") == 2 and ctx.combat.get("obs_fire_sum") == 32.0 \
+        and ctx.combat.get("obs_hp_pool") == 180.0, f"火力回合边界采样断裂: {ctx.combat}"
+    ctx.combat = None
 
     # 3ff) 出牌黑名单索引漂移防护（第 65~66 局复盘实锤）：mod 手牌 index 是位置
     #      序号，打出一张牌后剩余牌 index 集体前移；叠加旧版把成功状态 completed
