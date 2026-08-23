@@ -80,9 +80,9 @@ def load_llm_config() -> dict:
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
-        # 语音朗读器（tts/speaker.py）：sapi=系统语音实时 / indextts=克隆音色全程（很慢） /
-        # hybrid=SAPI 直播 + 克隆音色读结论 / off=关闭
-        "tts_mode": "hybrid",
+        # 语音朗读器（tts/）：nano=全克隆音色(MOSS-Nano，允许滞后，默认) / sapi=系统语音实时 /
+        # hybrid=SAPI直播+克隆结论 / off=关闭
+        "tts_mode": "nano",
         # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
         "review_queue_max": 5,
     }
@@ -329,17 +329,34 @@ def _launch_viewer(cfg: dict, log) -> None:
 
 
 def _launch_speaker(cfg: dict, log) -> None:
-    """拉起语音朗读器（SAPI 实时 + 可选 index-tts 克隆音色结论；独立进程）。"""
-    mode = str(cfg.get("tts_mode", "hybrid"))
-    speaker = BASE_DIR / "tts" / "speaker.py"
-    if mode == "off" or not speaker.exists():
+    """拉起语音朗读器。tts_mode: nano=全克隆音色(MOSS-Nano，允许滞后) / sapi=系统语音实时 /
+    hybrid=SAPI直播+克隆结论 / off=关闭。独立进程，死活不影响复盘。"""
+    mode = str(cfg.get("tts_mode", "nano"))
+    if mode == "off":
         return
     try:
         creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                          | getattr(subprocess, "DETACHED_PROCESS", 0)
                          | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
-        subprocess.Popen([sys.executable, "-u", str(speaker), mode],
-                         cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
+        cmd = None
+        if mode == "nano":
+            nano = BASE_DIR / "tts" / "nano_speaker.py"
+            moss_ready = (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists()
+            uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
+            if nano.exists() and moss_ready and Path(uv).exists():
+                cmd = [uv, "run", "--no-project",
+                       "--with", "onnxruntime", "--with", "sentencepiece",
+                       "--with", "torch", "--with", "torchaudio",
+                       "python", str(nano)]
+            else:
+                log("[llm] MOSS-Nano 未就绪，语音回退 sapi")
+                mode = "sapi"
+        if cmd is None:
+            speaker = BASE_DIR / "tts" / "speaker.py"
+            if not speaker.exists():
+                return
+            cmd = [sys.executable, "-u", str(speaker), mode]
+        subprocess.Popen(cmd, cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=creationflags, close_fds=True)
         log(f"[llm] 语音朗读器已拉起（{mode}）")
