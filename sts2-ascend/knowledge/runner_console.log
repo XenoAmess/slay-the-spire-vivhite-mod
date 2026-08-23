@@ -72267,3 +72267,127 @@ Let me set up todos and start exploring the codebase.
 [14:51:38] [COMBAT/F14] 战斗：回合过渡中，等待
 [14:51:39] [COMBAT/F14] 战斗：回合过渡中，等待
 [14:51:39] [COMBAT/F14] 战斗：打出【火焰屏障】（格挡12）；敌意图总伤12，我方38血/0甲；意图升级+12，防御前置
+[14:51:41] [COMBAT/F14] 战斗：打出【打击】→蛇行扼杀者（单体伤害≈6）；敌意图总伤12，我方38血/12甲；意图升级+12，防御前置
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ I add to DEFAULT_POLICY get setdefault'ed only on next Knowledge() load (next brain restart). Since the host commits after review and presumably restarts the brain for the next run, that's fine. I can also directly add the new keys into knowledge/policy.json with chosen values so they're visible/tunable — the three-way merge treats "disk value with memory untouched" as adopt; new keys not in memory... hmm, merge iterates disk keys: `mine = self.policy.get(k, _MISSING)`; if missing and disk_v != mine → sets policy[k] = disk_v. So adding keys to policy.json on disk WILL be adopted by the running brain on next save. 
+
+But careful: if I add a key to policy.json that DEFAULT_POLICY doesn't have, it persists fine. If I add to both, consistent. I'll add new keys to DEFAULT_POLICY AND set initial values in policy.json.
+
+4. Write meta_review.md section + lessons.md 🧠 section.
+
+5. Run selfcheck.
+
+Let me now read agent.py and selfcheck.py.
+· tokens 141228 ·
+💭 Now I understand the agent. Key facts:
+- `_start_combat` has access to `run` and combat enemies via state at track time... actually `_start_combat(run, comp, node_type, hp)` — it doesn't receive enemy HP. But `_track` has access to `enemies_now` with current_hp/max_hp. To track boss HP I'd modify `_track` to pass enemy total max HP into `_start_combat`, store in ctx.combat["enemy_hp_total"], then aggregate into agg and commit to knowledge.
+
+- The brain restarts after review (exit 42 → runner restarts), so my code changes WILL take effect for run 118. Good — llm_review.py sets request_restart presumably when review modified code. Let me check llm_review.py quickly for how it detects changes... Actually the prompt says "宿主大脑在复盘前后自动完成 git" and "复盘后变更会被提交". And agent._finalize: if self.request_restart → exit 42. Let me peek at llm_review.py to see how my changes get committed & whether request_restart gets set (it likely compares repo dirty state after review).
+
+Let me quickly scan llm_review.py.
+⚙ bash {}
+· tokens 151332 ·
+
+[14:51:42] [COMBAT/F14] 战斗：本回合已无牌可出，确认结束（藏宝图✗,打击✗,残酷✗）
+[14:51:43] [COMBAT/F14] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:51:44] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:45] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:45] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:46] [COMBAT/F14] 战斗：打出【上勾拳】→蛇行扼杀者（单体伤害≈13）；敌意图总伤0，我方32血/0甲
+[git] 已自动存档：feat(sts2-ascend): 第117局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[14:51:47] [COMBAT/F14] 战斗：打出【打击】→蛇行扼杀者（单体伤害≈6）；敌意图总伤0，我方32血/0甲
+[14:51:48] [COMBAT/F14] 战斗：本回合已无牌可出，确认结束（防御✗,防御✗,黏液✗）
+[14:51:49] [COMBAT/F14] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:51:50] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:51] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:52] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:52] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:51:53] [COMBAT/F14] 战斗：打出【武装】（格挡5）；敌意图总伤7，我方26血/0甲；意图升级+7，防御前置
+[14:51:54] [CARD_SELECTION/F14] 升级卡牌：【余烬】
+[14:51:55] [COMBAT/F14] 战斗：打出【飞剑回旋镖】→蛇行扼杀者（单体伤害≈9）；敌意图总伤7，我方26血/5甲；意图升级+7，防御前置
+[agent] 过场后战斗对象变化（LEAF_SLIME_M+SLITHERING_STRANGLER→SLITHERING_STRANGLER），结算前段再开新账
+[agent] 进入战斗：敌方=SLITHERING_STRANGLER｜历史场均掉血 0.6｜房间类型 Unknown
+[14:51:56] [COMBAT/F14] 战斗：打出【防御】（格挡5）；敌意图总伤7，我方26血/5甲
+[14:51:57] [COMBAT/F14] 战斗：本回合已无牌可出，确认结束（余烬✗,余烬+✗）
+[14:51:57] [COMBAT/F14] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:51:59] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:52:00] [COMBAT/F14] 战斗：回合过渡中，等待
+[14:52:00] [COMBAT/F14] 战斗：打出【黏液】（功能牌（抽牌1/回能））；敌意图总伤0，我方20血/0甲
+[14:52:02] [COMBAT/F14] 战斗：打出【余烬+】→蛇行扼杀者（可击杀蛇行扼杀者）；敌意图总伤0，我方20血/4甲
+[14:52:03] [REWARD/F14] 领取奖励：16金币
+[14:52:04] [REWARD/F14] 打开卡牌奖励：将一张牌添加到你的牌组。
+[14:52:05] [CARD_SELECTION/F14] 选择卡牌：【火焰屏障】（价值 12.5）；候选：火焰屏障=12.5 / 闪电霹雳=8.0 / 好勇斗狠=6.0
+[14:52:05] [REWARD/F14] 一键收取奖励并继续
+[14:52:07] [MAP/F14] 路径规划：Shop(14,1)（路径分 -13.20，预计进 Boss 血量 62%；金币不足；进Boss血量预计62%<89%，优先续航路线）；候选：Shop(14,1)=-13.20|金币不足；进Boss血量预计62%<89%，优先续航路线 / Monster(14,2)=-19.61|血量32%过低，避免无谓消耗战；进Boss血量预计55%<89%，优先续航路线
+[14:52:09] [SHOP/F15] 商店：打开货架
+[14:52:10] [SHOP/F15] 商店：购买卡牌【应急按钮】（83金，价值24.5≥门槛2.0）
+[14:52:11] [SHOP/F15] 商店：货架无值得购买，关闭
+[14:52:12] [SHOP/F15] 商店：本店已评估过，离开
+[14:52:13] [MAP/F15] 路径规划：RestSite(15,1)（路径分 -13.47，预计进 Boss 血量 62%；低血量急需休息；进Boss血量预计62%<89%，优先续航路线）；候选：RestSite(15,1)=-13.47|低血量急需休息；进Boss血量预计62%<89%，优先续航路线
+[14:52:16] [REST/F16] 篝火：Boss 前夜优先回血（当前 32%；血量32%<锻造线89%，回血仍是有效投资）
+[14:52:17] [REST/F16] 篝火：无可选项目，离开
+[14:52:18] [MAP/F16] 路径规划：Boss(16,3)（路径分 -16.54，预计进 Boss 血量 62%；进Boss血量预计62%<89%，优先续航路线）；候选：Boss(16,3)=-16.54|进Boss血量预计62%<89%，优先续航路线
+[14:52:21] [COMBAT/F17] 战斗：回合过渡中，等待
+[agent] 战斗结束：F14 Unknown战 掉血23
+[agent] 进入战斗：敌方=CEREMONIAL_BEAST｜历史场均掉血 30.8｜房间类型 Boss
+[14:52:22] [COMBAT/F17] 战斗：硬仗使用增益药水【明晰提取物】
+[14:52:23] [COMBAT/F17] 战斗：打出【余烬】→仪式兽（单体伤害≈18）；敌意图总伤0，我方50血/10甲；⚠高危Boss（40战16死），速战速决，提速斩杀；Boss攻坚提速×1.75
+[14:52:24] [COMBAT/F17] 战斗：评估后无值得出的牌（防御✓,藏宝图✗,火焰屏障✗,防御✓），结束回合（敌意图总伤0，我方50血/10甲）；⚠高危Boss（40战16死），速战速决，提速斩杀；Boss攻坚提速×1.75
+[14:52:26] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:26] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:27] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:27] [COMBAT/F17] 战斗：打出【余烬】→仪式兽（单体伤害≈18）；敌意图总伤18，我方50血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+18，防御前置；Boss攻坚提速×1.75
+[14:52:28] [COMBAT/F17] 战斗：打出【飞剑回旋镖】→仪式兽（单体伤害≈9）；敌意图总伤18，我方50血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+18，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需12回合>可存活9回合，全攻提速
+[14:52:30] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（打击✗,打击✗,火焰屏障✗）
+[14:52:30] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:52:32] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:32] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:33] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:34] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:34] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:35] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:36] [COMBAT/F17] 战斗：打出【痛击】→仪式兽（单体伤害≈8）；敌意图总伤20，我方32血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需9回合>可存活2回合，全攻提速
+[14:52:37] [COMBAT/F17] 战斗：打出【打击】→仪式兽（单体伤害≈6）；敌意图总伤20，我方32血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需11回合>可存活2回合，全攻提速
+[14:52:38] [COMBAT/F17] 战斗：评估后无值得出的牌（防御✗,无惧疼痛✗,武装✗,应急按钮✓），结束回合（敌意图总伤20，我方32血/0甲）；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需10回合>可存活2回合，全攻提速
+[14:52:39] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:40] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:40] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:41] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:42] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:42] [COMBAT/F17] 战斗：打出【防御】（格挡5）；敌意图总伤22，我方12血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需10回合>可存活1回合，全攻提速
+[14:52:45] [COMBAT/F17] 战斗：打出【火焰屏障】（格挡12）；敌意图总伤22，我方12血/5甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需13回合>可存活1回合，全攻提速
+[14:52:46] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（残酷✗,打击✗,防御✗,痛击✗）
+[14:52:46] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[14:52:48] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:48] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:49] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:50] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:50] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:51] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:52] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:52] [COMBAT/F17] 战斗：打出【火焰屏障】（格挡12）；敌意图总伤24，我方7血/0甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需12回合>可存活0回合，全攻提速
+[14:52:53] [COMBAT/F17] 战斗：打出【武装】（格挡5）；敌意图总伤24，我方7血/12甲；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需14回合>可存活0回合，全攻提速
+[14:52:54] [CARD_SELECTION/F17] 升级卡牌：【应急按钮】
+[14:52:55] [COMBAT/F17] 战斗：评估后无值得出的牌（应急按钮+✓,防御✗,防御✗），结束回合（敌意图总伤24，我方7血/17甲）；警告：结束回合可能致死！；⚠高危Boss（40战16死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.75；斩杀竞速投影：击杀还需14回合>可存活0回合，全攻提速
+[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）
+[14:52:56] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:57] [COMBAT/F17] 战斗：回合过渡中，等待
+[14:52:58] [GAME_OVER/F17] 对局结束：失败（层数 17），正在总结复盘…
+[agent] 战斗失败：F17 Boss战 掉血50（阵亡）
+[agent] 战斗失败：F17 Boss战 掉血50（阵亡，含5回合全场）
+
+
+## 第 118 局复盘（2026-08-23 14:52）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：CINDER, CRUELTY, FLAME_BARRIER, FEEL_NO_PAIN, CINDER, SWORD_BOOMERANG, HOWL_FROM_BEYOND, ARMAMENTS, UPPERCUT, FLAME_BARRIER, PANIC_BUTTON
+- 本局遗物：ANCHOR
+- 战斗记录：F5 Monster战 掉血17; F6 Monster战 掉血1; F9 Monster战 掉血22; F12 Monster战 掉血31; F14 Unknown战 掉血23; F17 Boss战 掉血50（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，THRASH(22分/5局)，MANGLE(21分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.75 → 1.80（Boss 长战磨死（5回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.89 → 0.90（Boss 长战磨死，入场血量要求线上调）
+- 生涯战绩：0/118 胜，当前目标进阶 0
+
+[agent] 对局日志已保存：20260823-145258_D3J0MWQL76EY.json
