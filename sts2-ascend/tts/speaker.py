@@ -344,6 +344,7 @@ def main() -> int:
     state = {"offset": 0}
     ended = False
     end_at = 0.0
+    stream_started_at = time.time()
     recent_texts: list[str] = []
 
     def pump() -> None:
@@ -367,6 +368,10 @@ def main() -> int:
                 ended = True
                 end_at = time.time()
                 continue
+            if ln.startswith("[LIVE-START]"):
+                ended = False
+                stream_started_at = time.time()
+                continue
             if not speakable(ln):
                 continue
             for sent in splitter.feed(ln):
@@ -385,9 +390,20 @@ def main() -> int:
                 break
         time.sleep(0.5)
 
-    if mode in ("indextts", "hybrid") and recent_texts:
-        conclusion = "。".join(recent_texts[-4:])[:300]
-        _speak_conclusion_indextts(conclusion)
+    if mode in ("indextts", "hybrid"):
+        # 优先朗读复盘 agent 专为语音写的短评（review_conclusion.txt，100 字内）；
+        # 只有它是本场复盘新写的（mtime 晚于本场开始）才用，否则回退流尾部
+        conclusion = ""
+        concl_file = KNOWLEDGE_DIR / "review_conclusion.txt"
+        try:
+            if concl_file.exists() and concl_file.stat().st_mtime >= stream_started_at:
+                conclusion = concl_file.read_text(encoding="utf-8").strip()[:200]
+        except OSError:
+            pass
+        if not conclusion and recent_texts:
+            conclusion = "。".join(recent_texts[-4:])[:300]
+        if conclusion:
+            _speak_conclusion_indextts(conclusion)
     if sapi:
         sapi.close()
     log("语音朗读器退出")
