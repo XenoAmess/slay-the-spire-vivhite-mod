@@ -1600,6 +1600,40 @@ def main() -> int:
     assert rknow.policy["boss_entry_min_hp_pct"] > be_b2, \
         f"Boss 长战阵亡未上调入场血量线: {be_b2} -> {rknow.policy['boss_entry_min_hp_pct']}"
 
+    # 3zg) 防御棘轮代偿治理（第 127~130 批复盘）：kill_bonus 顶格后，非 Boss
+    #      长战死的 +0.05 仍灌进 block_safety——128/129/130 连续三局 1.50→1.65，
+    #      0 胜生涯下胜利释放（-0.02）永不触发，单向棘轮必然漂到 2.1 空转。
+    #      长战证据语义是「时长/输出不足」，主旋钮顶格后防御端停止代偿加码；
+    #      短时爆毙（<4回合）的「没挡住」证据不受影响。
+    gdir2 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-drift-"))
+    gknow2 = knowledge.Knowledge(gdir2)
+    gknow2.policy["kill_bonus"] = 20.0     # 顶格（上限）
+    gknow2.policy["block_safety"] = 1.65   # 128~130 局三连 +0.05 后的实景值
+    gctx3 = _RC()
+    gctx3.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster", "rounds": 10}
+    glesson3 = reflect.finalize_run(gknow2, gctx3, victory=False, final_floor=8)
+    assert abs(gknow2.policy["block_safety"] - 1.65) < 1e-9, \
+        f"kill_bonus 顶格后长战证据仍溢入防御棘轮: {gknow2.policy['block_safety']}"
+    assert abs(gknow2.policy["kill_bonus"] - 20.0) < 1e-9, \
+        f"顶格旋钮仍被加码: {gknow2.policy['kill_bonus']}"
+    assert "停止代偿加码" in glesson3, f"代偿治理未在复盘日志留痕: {glesson3}"
+    # 对照①：kill_bonus 有行程时，92~93 批语义不变（双旋钮并行加码）
+    gknow2.policy["kill_bonus"] = 12.0
+    gctx4 = _RC()
+    gctx4.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster", "rounds": 7}
+    bs_g4 = gknow2.policy["block_safety"]
+    reflect.finalize_run(gknow2, gctx4, victory=False, final_floor=6)
+    assert gknow2.policy["block_safety"] > bs_g4, \
+        f"kill_bonus 有行程时长战死未上调防御（92~93 语义被破坏）: {bs_g4} -> {gknow2.policy['block_safety']}"
+    # 对照②：kill_bonus 顶格 + 短时爆毙（<4回合）——「没挡住」证据照常上调
+    gknow2.policy["kill_bonus"] = 20.0
+    gctx5 = _RC()
+    gctx5.died_in_combat = {"comp_id": "BURST_COMP", "node_type": "Monster", "rounds": 2}
+    bs_g5 = gknow2.policy["block_safety"]
+    reflect.finalize_run(gknow2, gctx5, victory=False, final_floor=5)
+    assert gknow2.policy["block_safety"] > bs_g5, \
+        f"短时爆毙的防御证据被误伤: {bs_g5} -> {gknow2.policy['block_safety']}"
+
     # 3wz) 溢出型大格挡贬值（第 94~95 批复盘）：94 局 Boss 战开局 87 血对意图
     #      7/17 连打两张岿然不动+(40挡)，~56 点溢出甲 ≈ 4 能量没换成伤害，
     #      Boss 多活两轮升级意图。有用部分不足牌面一半且血量宽裕时，大挡按
@@ -1993,9 +2027,10 @@ def main() -> int:
     # 3zd) 绝境篝火优先门（第 126 局复盘核心缺陷）：35% 血时 Monster(6,2)=22.09
     #      压过眼前的 RestSite(6,1)=9.82——战斗子树里藏着 2~3 个未来篝火的 +30%
     #      幻想回血账（投影宣称打完怪进 Boss 还有 94%），下一战 -28 直接阵亡。
-    #      修复：血量<急需线且候选含篝火时，非休整候选整条路径 ×0.55（负分区间
-    #      加性重罚，与精英闸门同模式）。用例复刻该岔路结构：Monster 子树含两个
-    #      未来篝火（幻想账），RestSite 子树平铺轻量节点
+    #      修复三层：①未来篝火回血按深度折减（幸存条件品）②非休整候选首战
+    #      生存复核（悲观战损后≤生存线即加性重罚）③软压制 ×0.55。
+    #      用例复刻该岔路结构：Monster 子树含三个未来篝火（幻想账），RestSite
+    #      子树平铺轻量节点；25% 血时旧账面「打完怪照样 51% 进 Boss」
     dr_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-direrest-"))
     dr_know = knowledge.Knowledge(dr_dir)
     dr_pol = policy.Policy(dr_know)
@@ -2007,18 +2042,15 @@ def main() -> int:
             {"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
              "children": [{"row": 2, "col": 1}]},
         ]
-        col0 = ["RestSite", "Treasure", "Event", "RestSite", "Treasure", "Event", "Monster"]
+        col0 = ["RestSite", "Treasure", "RestSite", "Treasure", "RestSite", "Event", "Monster"]
         col1 = ["Monster", "Treasure", "Event", "Monster", "Treasure", "Event"]
         nodes = list(heads)
         for ci, plan in ((0, col0), (1, col1)):
-            row = 2
-            for nt in plan:
-                gnode = {"row": row, "col": ci, "node_type": nt}
-                nxt = {"row": row + 1, "col": ci} if row < 7 else {"row": 9, "col": ci}
-                if not (nt == "Monster" and row == 8):
-                    gnode["children"] = [nxt]
-                nodes.append(gnode)
-                row += 1
+            for i, nt in enumerate(plan):
+                nxt = {"row": 9, "col": ci} if i == len(plan) - 1 \
+                    else {"row": 3 + i, "col": ci}
+                nodes.append({"row": 2 + i, "col": ci, "node_type": nt,
+                              "children": [nxt]})
             nodes.append({"row": 9, "col": ci, "node_type": "Boss"})
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": heads, "nodes": nodes,
@@ -2027,25 +2059,43 @@ def main() -> int:
                       "floor": 12, "deck": []}}
         return dr_pol.decide(st, type("C", (), {"credit_tags": []})())
 
+    def trap_scores(decision):
+        mm = re.search(r"Monster\(1,0\)=(-?[0-9.]+)", decision.reason)
+        mr = re.search(r"RestSite\(1,1\)=(-?[0-9.]+)", decision.reason)
+        return (float(mm.group(1)) if mm else None,
+                float(mr.group(1)) if mr else None)
+
+    d_trap = dire_rest_trap_map(20)   # 25% 血：绝境
+    s_m, s_r = trap_scores(d_trap)
+    assert d_trap.params.get("option_index") == 1 and s_m is not None and s_m < s_r, \
+        f"绝境遇眼前篝火仍选战斗候选（126 局病灶复发）: M={s_m} R={s_r}（{d_trap.reason}）"
+    assert "生存复核" in d_trap.reason, f"绝境首战生存复核未留痕: {d_trap.reason}"
+    # 对照：两层闸门全关后怪物幻想账反超（旧缺陷复现，证明用例确实压在缺陷上）
     saved_gate = dr_know.policy.get("dire_rest_gate_mult")
-    d_trap = dire_rest_trap_map(24)   # 30% 血：绝境
-    m_tm = re.search(r"Monster\(1,0\)=(-?[0-9.]+)", d_trap.reason)
-    m_tr = re.search(r"RestSite\(1,1\)=(-?[0-9.]+)", d_trap.reason)
-    assert m_tm and m_tr, f"绝境篝火用例候选缺失: {d_trap.reason}"
-    assert d_trap.params.get("option_index") == 1 and m_tr and \
-        float(m_tm.group(1)) < float(m_tr.group(1)), \
-        f"绝境遇眼前篝火仍选战斗候选（126 局病灶复发）: {d_trap.reason}"
-    assert "非休整路线压制" in d_trap.reason, f"绝境闸门未留痕: {d_trap.reason}"
-    # 对照：关闭闸门后怪物幻想账反超（旧缺陷复现，证明用例确实压在缺陷上）
+    saved_pen = dr_know.policy.get("dire_first_fight_penalty")
     dr_know.policy["dire_rest_gate_mult"] = 1.0
-    d_off = dire_rest_trap_map(24)
+    dr_know.policy["dire_first_fight_penalty"] = 0.0
+    d_off = dire_rest_trap_map(20)
     dr_know.policy["dire_rest_gate_mult"] = 0.55 if saved_gate is None else saved_gate
-    assert d_off.params.get("option_index") == 0 and "非休整路线压制" not in d_off.reason, \
-        f"关闭闸门后应复现怪物幻想账反超（用例失真）: {d_off.reason}"
+    dr_know.policy["dire_first_fight_penalty"] = 45.0 if saved_pen is None else saved_pen
+    off_m, off_r = trap_scores(d_off)
+    assert d_off.params.get("option_index") == 0 and off_m > off_r, \
+        f"关闭闸门后应复现怪物幻想账反超（用例失真）: M={off_m} R={off_r}（{d_off.reason}）"
     # 健康血量不受门扭曲：满血时怪物侧本就该胜出且无压制留痕
     d_hp = dire_rest_trap_map(80)
-    assert d_hp.params.get("option_index") == 0 and "非休整路线压制" not in d_hp.reason, \
-        f"健康血量被绝境门误伤: {d_hp.reason}"
+    hp_m, _hp_r = trap_scores(d_hp)
+    assert d_hp.params.get("option_index") == 0 and "生存复核" not in d_hp.reason \
+        and "非休整路线压制" not in d_hp.reason, \
+        f"健康血量被绝境门误伤: M={hp_m}（{d_hp.reason}）"
+    # 强制行军不受误伤：绝境但候选无篝火时，唯一战斗节点照常可选
+    st_forced = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                 "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                              "node_type": "Monster"}], "nodes": []},
+                 "run": {"current_hp": 20, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+    d_forced = dr_pol.decide(st_forced, type("C", (), {"credit_tags": []})())
+    assert d_forced.params.get("option_index") == 0 \
+        and "生存复核" not in d_forced.reason and "非休整路线压制" not in d_forced.reason, \
+        f"无篝火候选的强制行军被绝境门误伤: {d_forced.reason}"
 
     # 3ze) 投影内连战疲劳沿路径递推（第 126 局复盘）：旧版把真实连战数当常量套
     #      在所有深度——fresh 状态下投影 5 连战全程零疲劳，「穿过未来营地的怪物
@@ -2054,7 +2104,7 @@ def main() -> int:
     def chain_map_reason(tags):
         stx = type("ChainCtx", (), {"credit_tags": tags})()
         heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
-                  "children": [{"row": r + 1, "col": 0}]}]
+                  "children": [{"row": 2, "col": 0}]}]
         chain = []
         for r in range(2, 8):
             g = {"row": r, "col": 0, "node_type": "Boss" if r == 7 else "Monster"}

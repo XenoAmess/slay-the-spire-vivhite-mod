@@ -648,7 +648,15 @@ class Policy:
                     will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55)) or (
                         boss_eve and hpp_now < float(pol.get("boss_eve_smith_hp_pct", 0.85)))
                     if will_heal:
-                        cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
+                        # 绝境下的未来篝火是「幸存条件品」：能否走到它、走到时是否
+                        # 还需要它都不确定（第 126 局复盘）。眼前的篝火全额记账，
+                        # 沿途更深的篝火按深度折减——否则怪物子树里堆 2~3 个未来
+                        # 篝火就能凭空捏出「打完怪进 Boss 还有 94%」的幻想账，
+                        # 反超眼前的救命休息
+                        gain = heal_frac * max_hp
+                        if depth >= 1 and rest_dire:
+                            gain *= float(pol.get("path_dire_heal_depth_decay", 0.85)) ** depth
+                        cur_hp = min(float(max_hp), cur_hp + gain)
                 if cur_hp <= 0:
                     # 死亡投影保留"撑得更久"的序信息：死得越晚罚得越轻。
                     # 第 43 局实证：低血量时所有候选都吃满 -100，候选间评分差被压成
@@ -714,16 +722,39 @@ class Policy:
                     best_pnotes = [x for x in best_pnotes if "达标，精英奖励价值高" not in x]
                     best_pnotes.append(elite_gate_note)
             if nt != "RestSite" and rest_dire and dire_rest_available:
-                # 绝境篝火优先门（第 126 局复盘）：与精英闸门同一正乘负加模式，
-                # 保证任何符号下都只降分不升分。眼前就有救命篝火时，「穿过未来
-                # 营地继续战斗」的幻想账必须整体打折——除非打折后仍真的好过休息
+                # 绝境篝火优先门（第 126 局复盘）：两层不对称压制——
+                # ①首战生存复核：沿该候选的投影路径找到第一场战斗，按悲观战损
+                #   （先验×幕数×绝境乘区×安全系数）复核「打完眼前这一战还剩多少」，
+                #   跌破生存线即加性重罚。均值账说战斗便宜，但 25% 血时坏抽一刀就死
+                #   ——这正是 126 局 F5 单场 -52 的教训；眼前的篝火不存在这个问题。
+                # ②软压制：未触发①的非休整候选整体 ×gate（负分区间加性兜底，
+                #   与精英闸门同模式，保证任何符号下只降分不升分）
                 rgate = clamp(float(pol.get("dire_rest_gate_mult", 0.55)), 0.05, 1.0)
-                gated = best_ps * rgate
-                if gated < best_ps:
-                    best_ps = gated
+                first_loss = 0.0
+                for pdepth, pkey in enumerate(best_ppath or []):
+                    pg = graph.get(pkey) or {}
+                    pnt = n.get("node_type", "Unknown") if pdepth == 0 \
+                        else pg.get("node_type", "Unknown")
+                    if pnt in ("Monster", "Elite", "Unknown"):
+                        first_loss = self.know.room_damage_prior(
+                            pnt, float(priors.get(pnt, 8))) * deck_ease * act_mul
+                        break
+                safety = float(pol.get("dire_first_fight_safety", 1.5))
+                proj_hp = hp - first_loss * dire_loss_mult * safety
+                floor_hp = max_hp * float(pol.get("dire_first_fight_floor", 0.05))
+                if first_loss > 0.0 and proj_hp <= floor_hp:
+                    best_ps -= float(pol.get("dire_first_fight_penalty", 45.0))
+                    best_pnotes.append(
+                        f"绝境{hp_pct:.0%}首战悲观仅剩{max(0.0, proj_hp):.0f}"
+                        f"/{max_hp}(≤{floor_hp:.0f})，生存复核重罚")
                 else:
-                    best_ps -= (1.0 - rgate) * _ELITE_GATE_NEG_PENALTY
-                best_pnotes.append(f"绝境{hp_pct:.0%}遇休整候选，非休整路线压制×{rgate:.2f}")
+                    gated = best_ps * rgate
+                    if gated < best_ps:
+                        best_ps = gated
+                    else:
+                        best_ps -= (1.0 - rgate) * _ELITE_GATE_NEG_PENALTY
+                    best_pnotes.append(
+                        f"绝境{hp_pct:.0%}遇休整候选，非休整路线压制×{rgate:.2f}")
             label = f"{nt}({n['row']},{n['col']})"
             details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
             if best_ps > best_score:

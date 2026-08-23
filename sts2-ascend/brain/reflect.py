@@ -127,9 +127,22 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                     # 入场线治"扛不住"——两轴并行，单靠任一侧都收敛不了
                     _adj(know, "boss_entry_min_hp_pct", 0.02, changes,
                          "Boss 长战磨死，入场血量要求线上调")
-                else:
+                elif kb_head >= kb_step:
                     _adj(know, "block_safety", 0.05, changes,
                          f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")
+                else:
+                    # 第 127~130 批复盘：长战信号的主承接旋钮 kill_bonus 顶格后，
+                    # 防御棘轮仍在代偿吸收——128/129/130 连续三局 +0.05
+                    # （1.50→1.65），而生涯 0 胜使 -0.02 胜利释放永不触发，
+                    # block_safety 必然单调漂到 2.1 上限后空转。长战证据的语义
+                    # 是「战斗时长/输出不足」，92~93 批的防御加码本是与
+                    # kill_bonus 并行的伴随项；主旋钮顶格后继续灌防御 = 顶格
+                    # 证据的错位吸收（88~89 批原则：余量不足停止加码并留痕，
+                    # 把证据留给复盘设计接替旋钮）。对意图升级型敌人，防御加码
+                    # 拖长战斗反而是死因本身。短时爆毙（<4回合）分支不受影响
+                    # ——那才是真正的「没挡住」证据
+                    changes.append(f"非 Boss 长战阵亡（{rounds}回合），kill_bonus 顶格——"
+                                   "长战证据不再溢入 block_safety，防御棘轮停止代偿加码")
             else:
                 _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
         if died_to_event:
