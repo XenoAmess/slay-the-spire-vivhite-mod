@@ -2137,3 +2137,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/170 胜，当前目标进阶 0
+
+## 第 171 局复盘（2026-08-23 22:47）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：RUPTURE, PILLAGE, SHRUG_IT_OFF, HOWL_FROM_BEYOND, BREAKTHROUGH, CINDER, RAMPAGE, BATTLE_TRANCE, CINDER, TAUNT, FISTICUFFS, FEED, CINDER, HOWL_FROM_BEYOND, FLAME_BARRIER, RUPTURE, TRUE_GRIT, BREAKTHROUGH, BREAKTHROUGH
+- 本局遗物：PANTOGRAPH, GAME_PIECE, BAG_OF_MARBLES, 风箱
+- 战斗记录：F17 Boss战 掉血51; F19 Monster战 掉血10; F21 Monster战 掉血6; F23 Monster战 掉血38; F31 Elite战 掉血34; F33 Elite战 掉血40（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，FISTICUFFS(27分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：elite_grey_safety_mult: 2.30 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/171 胜，当前目标进阶 0
