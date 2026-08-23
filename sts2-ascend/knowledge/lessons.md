@@ -2115,3 +2115,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.40 → 5.70（Boss 高血进场长战死（75%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 8.00 → 8.50（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/168 胜，当前目标进阶 0
+
+## 第 169 局复盘（2026-08-23 22:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BATTLE_TRANCE, FLAME_BARRIER, THUNDERCLAP, PILLAGE, ANGER, UPPERCUT, TRUE_GRIT, INFLAME, SWORD_BOOMERANG, STONE_ARMOR, THUNDERCLAP, BLUDGEON, MANGLE, CINDER
+- 本局遗物：LANTERN
+- 战斗记录：F6 Monster战 掉血31; F9 Monster战 掉血12; F11 Monster战 掉血14; F13 Unknown战 掉血19; F14 Monster战 掉血19; F17 Boss战 掉血51（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.84 → 0.86（Boss 低血进场磨死（进场 64%），入场血量要求线上调）
+- 生涯战绩：0/169 胜，当前目标进阶 0
