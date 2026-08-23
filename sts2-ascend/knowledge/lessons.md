@@ -1877,3 +1877,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.86 → 0.88（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/147 胜，当前目标进阶 0
+
+## 第 148 局复盘（2026-08-23 19:34）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 MYTE
+- 本局拿牌：ANGER, TRUE_GRIT, THRUMMING_HATCHET, HEADBUTT, THUNDERCLAP, HOWL_FROM_BEYOND, DISMANTLE, JUGGERNAUT, MOLTEN_FIST, EVIL_EYE
+- 本局遗物：POCKETWATCH, HAPPY_FLOWER
+- 战斗记录：F11 Monster战 掉血7; F17 Boss战 掉血53; F19 Monster战 掉血22; F20 Monster战 掉血17; F21 Monster战 掉血35; F22 Monster战 掉血17（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，BARRICADE(22分/4局)，JUGGERNAUT(22分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.70 → 1.75（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/148 胜，当前目标进阶 0
