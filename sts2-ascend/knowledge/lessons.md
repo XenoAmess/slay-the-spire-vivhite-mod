@@ -1220,3 +1220,14 @@
 - **门槛要双向行程**：拿牌门槛有膨胀抬升无单薄折扣，91 局 16 张卡组整场只拿 6 张、越弱越不敢拿。新增 deck_thin_core=8/discount=0.35：非基础牌每缺 1 张门槛 -0.35。
 - **留痕矛盾等于投毒**：91 局 F14「Elite=1.37|规避精英」同框——闸门否决但其余候选更差的正确取舍被日志说成自相矛盾。被否决仍当选时留痕改为「取损失最小项」。
 - 上批观察点核对：①硬仗前 3 回合用药通过；②kill_bonus 机制未违反且已顶格 20；③boss_entry 0.72 再被冲（回写事故，已根治）；④斩杀回合数投影本批落地。本批新观察点：①长战 T4+ 出现「斩杀竞速投影」留痕且奢侈格挡消失；②单薄期不再整屏跳过奖励；③冷修改在完整 finalize 周期后存活；④kill_bonus 下次长战 Boss 阵亡应见「距上限仅余」留痕；⑤若一幕 Boss 仍 0 胜，把 burst_floor 与 Boss 血量档挂钩（252 血需 burst≥40）。
+
+## 第 94 局复盘（2026-08-23 09:58）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：RAMPAGE, IMPERVIOUS, HEADBUTT, FLAME_BARRIER, EVIL_EYE, CONFLAGRATION, STOMP, SPITE, THUNDERCLAP, UNRELENTING, RUPTURE
+- 本局遗物：HAPPY_FLOWER, 彩虹戒指
+- 战斗记录：F23 Monster战 掉血21; F23 Monster战 掉血0; F23 Monster战 掉血0; F24 Monster战 掉血0; F24 Monster战 掉血14; F24 Monster战 掉血5（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，CONFLAGRATION(20分/4局)，BARRICADE(20分/2局)，RAMPAGE(20分/46局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.51 → 1.56（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/94 胜，当前目标进阶 0
