@@ -32,7 +32,8 @@ DEFAULT_POLICY = {
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.62,    # 精英灰区下限：血量介于 soft~min 之间谨慎进精英（0.5 权重），不再一刀切规避
     "elite_grey_safety_mult": 1.5,  # 灰区精英悲观系数（第 86~87 批复盘）：均值战损×此值做尾部复核——87 局 86% 血进旧日雕像实测 -54 ≈ 均值 3 倍
-    "elite_grey_proj_floor": 0.60,  # 灰区精英悲观投影线：悲观投影战后血量低于此值 → 整条候选路径规避精英
+    "elite_grey_proj_floor": 0.60,  # 灰区精英悲观投影线（旧舒适线语义，仅作旧库回退）：悲观投影战后血量低于此值 → 整条候选路径规避精英
+    "elite_grey_survival_floor": 0.40,  # 灰区精英悲观生存线（第 122 局复盘）：复核问题改为「悲观情形是否仍能活命」——旧舒适线 60% 在实测先验下需入场血量 ≥95%~104%，灰区分支沦为死代码、精英被事实硬门在 ≥90% 血（122 局仅 45 次到访，遗物断供）
     "rest_urgent_hp_pct": 0.35,   # below this hp% rest sites are strongly preferred
     "rest_wary_hp_pct": 0.62,     # 血量警戒带：urgent 线以上、该线以下的灰区篝火获中等加权（第 54 局 47.5% 血商店压过篝火后被迫进精英）
     "shop_min_gold": 140,         # below this gold shops lose value

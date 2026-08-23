@@ -354,14 +354,26 @@ class Policy:
 
     def _elite_grey_veto(self, pol: dict, prior: float, act_mul: float, hpp: float,
                          good_cards: int, max_hp: int) -> tuple[float | None, str]:
-        """灰区精英悲观投影复核（第 86~87 批复盘新增）。
+        """灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）。
 
         第 87 局实证：86% 血（灰区内）接受旧日雕像，实测战损 54（64% 血条），
         约为 Elite 实测场均（16~20）的 3 倍——灰区的 0.5 谨慎权重挡不住
-        战损分布的重尾。均值回答"平均会怎样"，灰区决策必须回答"坏了会怎样"：
-        以「均值先验 × 悲观系数」复核，悲观投影战后血量低于灰区投影线时
-        整条候选路径规避精英。硬线以上（≥elite_min_hp_pct）不受影响。
-        返回 (None, "") 表示不处于灰区或复核通过。
+        战损分布的重尾，灰区决策必须回答"坏了会怎样"。
+
+        但旧复核的问法是「悲观情形是否仍舒适」（战后 ≥60%），第 122 局复盘
+        证明该问法在实测数据下数学不可满足：Elite 生涯场均战损 19.2（混合
+        先验 ≈20.3）、卡组折抵上限 20%、悲观系数 1.9，血池 72~88 时灰区放行
+        所需入场血量 ≥95%~104%，全面越过 90% 硬线——灰区分支自 87 批落地起
+        即为死代码，精英被事实硬门在 ≥90% 血：122 局仅 45 次到访（0.37/局），
+        遗物断供（122 局全程唯一遗物 ANCHOR）→ 卡组输出速率不足 → Boss 磨死
+        （KIN 双子/CEREMONIAL 两大一幕 Boss 死亡率 47%/40%）。
+
+        复核问题改为「悲观情形是否仍能活命」：战后跌破生存线
+        elite_grey_survival_floor（默认 40%，与 path_hp_floor_pct 同级的危险区
+        概念）才整条候选路径规避精英；线上放行但保留 0.5 灰区谨慎权重。
+        悲观情形活命 + 均值情形舒适（均值投影战后 ~57%~71%）+ 0.5 折权，
+        三层保守叠加足以吸收 87 局式重尾，无需再让门槛不可达。
+        硬线以上不受影响。返回 (None, "") 表示不处于灰区或复核通过。
         """
         hard = float(pol["elite_min_hp_pct"])
         soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
@@ -370,7 +382,12 @@ class Policy:
         relief = min(0.20, 0.02 * good_cards)
         safety = float(pol.get("elite_grey_safety_mult", 1.5))
         proj = hpp - prior * act_mul * (1.0 - relief) * safety / max(1, max_hp)
-        floor = float(pol.get("elite_grey_proj_floor", 0.60))
+        if "elite_grey_survival_floor" in pol:
+            # 新语义：悲观情形活命线（第 122 局复盘）
+            floor = float(pol["elite_grey_survival_floor"])
+        else:
+            # 旧库兼容：无新键时沿用旧舒适线语义
+            floor = float(pol.get("elite_grey_proj_floor", 0.60))
         if proj >= floor:
             return None, ""
         return 0.1, (f"血量{hpp:.0%}灰区精英预计战后仅剩{max(0.0, proj):.0%}"

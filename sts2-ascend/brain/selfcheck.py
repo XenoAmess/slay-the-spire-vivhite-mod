@@ -1251,11 +1251,13 @@ def main() -> int:
     assert abs(rknow.policy["block_safety"] - 1.0) < 1e-9, \
         f"Boss 长战阵亡不得再动普通战防御权重: {rknow.policy['block_safety']}"
 
-    # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘）：87 局以 86% 血（灰区）
-    #      接受旧日雕像，实测战损 54（64% 血条）≈ Elite 实测场均的 3 倍——
-    #      均值先验 + 灰区 0.5 谨慎权重挡不住战损分布的重尾。灰区内改用
-    #      「均值 × 悲观系数」复核：悲观投影战后血量 < 投影线 → 整条路径规避；
-    #      硬线以上不受影响；悲观系数/投影线放宽后同一局面恢复灰区放行。
+    # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
+    #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
+    #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、
+    #      精英被事实硬门在 ≥90% 血。新问法「悲观情形是否仍能活命」：
+    #      elite_grey_survival_floor（默认 40%）。默认悲观系数 1.5 下 86% 血
+    #      灰区放行（0.5 谨慎权重保留）；精英死亡棘轮把悲观系数推到 1.9 后
+    #      同一局面恢复规避——演化旋钮继续承担尾部威慑；硬线以上不受影响。
     def grey_elite_reason(hp_now: int):
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
@@ -1270,26 +1272,72 @@ def main() -> int:
     saved_enemies_q = know.stats.get("enemies", {})
     know.stats["enemies"] = {}
     old_hard_q = know.policy["elite_min_hp_pct"]
+    old_safety_q = know.policy["elite_grey_safety_mult"]
     know.policy["elite_min_hp_pct"] = 0.90          # 灰区 62%~90%
     know.policy["elite_soft_hp_pct"] = 0.62
-    r_veto = grey_elite_reason(69)   # 86%：悲观投影战后仅剩 40% < 60% → 规避
-    assert "规避精英" in r_veto and "预计战后" in r_veto, \
-        f"灰区悲观复核未拦截（87 局同款入场血量）: {r_veto}"
+    know.policy["elite_grey_safety_mult"] = 1.5     # 默认悲观系数
+    r_grey = grey_elite_reason(69)   # 86%：悲观投影战后 40% ≥ 生存线 40% → 灰区放行
+    assert "规避精英" not in r_grey and "灰区" in r_grey, \
+        f"生存线语义未放行灰区精英（旧舒适线死代码应修复）: {r_grey}"
     r_hard = grey_elite_reason(73)   # 91% ≥ 硬线：不受灰区复核影响
     assert "规避精英" not in r_hard and "灰区" not in r_hard, \
         f"硬线以上被悲观复核误伤: {r_hard}"
-    know.policy["elite_grey_safety_mult"] = 1.0      # 演化放宽：悲观系数→1.0、投影线→0.55
-    know.policy["elite_grey_proj_floor"] = 0.55
-    r_loose = grey_elite_reason(69)
-    assert "规避精英" not in r_loose and "灰区" in r_loose, \
-        f"悲观参数敏感性失效（放宽后应恢复灰区放行）: {r_loose}"
+    know.policy["elite_grey_safety_mult"] = 1.9      # 精英死亡棘轮演化值（运行库实况）
+    r_ratchet = grey_elite_reason(69)
+    assert "规避精英" in r_ratchet and "预计战后" in r_ratchet, \
+        f"悲观系数棘轮失效（1.9 下 86% 血应恢复规避）: {r_ratchet}"
     know.policy["elite_min_hp_pct"] = old_hard_q
+    know.policy["elite_grey_safety_mult"] = old_safety_q
     know.policy.pop("elite_soft_hp_pct", None)
-    know.policy.pop("elite_grey_safety_mult", None)
-    know.policy.pop("elite_grey_proj_floor", None)
     if saved_rooms_elite_q is not None:
         know.stats["rooms"]["Elite"] = saved_rooms_elite_q
     know.stats["enemies"] = saved_enemies_q
+
+    # 3qq2) 灰区否决语义修复（第 122 局复盘）：旧「舒适线 60%」在实测先验下
+    #       数学不可满足——Elite 混合先验 ≈20.3、折抵上限 20%、悲观系数 1.9、
+    #       血池 80 → 灰区放行需入场血量 ≥98.6%，全面越过 90% 硬线，灰区
+    #       分支沦为死代码，精英被事实硬门在 ≥90% 血（122 局仅 45 次到访）。
+    #       新语义只要求「悲观情形仍能活命」（elite_grey_survival_floor=40%）。
+    #       直接单测 _elite_grey_veto：同一悲观投影 46%（≥40% 且 <60%）应从
+    #       「规避」翻转为「放行」；跌破生存线仍规避；旧键回退路径保持原判。
+    gv_pol = know.policy
+    gv_saved_floor = gv_pol.pop("elite_grey_survival_floor", None)
+    gv_saved_hard = gv_pol.get("elite_min_hp_pct")
+    gv_saved_soft = gv_pol.pop("elite_soft_hp_pct", None)
+    gv_saved_safety = gv_pol.get("elite_grey_safety_mult")
+    try:
+        # 复刻运行库灰区带宽与精英死亡棘轮演化值，保证断言数学可复现
+        gv_pol["elite_min_hp_pct"] = 0.90
+        gv_pol["elite_soft_hp_pct"] = 0.62
+        gv_pol["elite_grey_safety_mult"] = 1.9
+        veto_fallback = pol._elite_grey_veto(gv_pol, 20.3, 1.0, 0.85, 10, 80)
+        assert veto_fallback[0] is not None and "规避精英" in veto_fallback[1], \
+            f"无新键时应回退旧舒适线语义: {veto_fallback}"
+        gv_pol["elite_grey_survival_floor"] = 0.40
+        gv_pess = 0.85 - 20.3 * 1.0 * (1.0 - 0.20) * 1.9 / 80
+        assert abs(gv_pess - 0.464) < 0.01, f"用例前提失真: {gv_pess}"
+        veto_pass = pol._elite_grey_veto(gv_pol, 20.3, 1.0, 0.85, 10, 80)
+        assert veto_pass == (None, ""), \
+            f"生存线语义未放行灰区精英(悲观投影{gv_pess:.0%}≥40%): {veto_pass}"
+        veto_dire = pol._elite_grey_veto(gv_pol, 20.3, 1.0, 0.70, 10, 80)
+        assert veto_dire[0] is not None and "规避精英" in veto_dire[1], \
+            f"悲观投影跌破生存线未拦截: {veto_dire}"
+        veto_outside = pol._elite_grey_veto(gv_pol, 20.3, 1.0, 0.55, 10, 80)
+        assert veto_outside == (None, ""), \
+            f"soft 线以下应由外层静态规避而非灰区复核处理: {veto_outside}"
+    finally:
+        if gv_saved_floor is not None:
+            gv_pol["elite_grey_survival_floor"] = gv_saved_floor
+        else:
+            gv_pol.pop("elite_grey_survival_floor", None)
+        if gv_saved_hard is not None:
+            gv_pol["elite_min_hp_pct"] = gv_saved_hard
+        if gv_saved_soft is not None:
+            gv_pol["elite_soft_hp_pct"] = gv_saved_soft
+        else:
+            gv_pol.pop("elite_soft_hp_pct", None)
+        if gv_saved_safety is not None:
+            gv_pol["elite_grey_safety_mult"] = gv_saved_safety
 
     # 3rr) 精英死亡演化改接悲观系数（第 86~87 批复盘）：elite_min_hp_pct 已在
     #      0.9 上限顶格空转——精英死亡信号必须驱动仍有余量的新旋钮，
