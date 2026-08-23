@@ -185,6 +185,7 @@ class Policy:
             "EVENT": self._event,
             "MODAL": self._modal,
             "GAME_OVER": self._game_over,
+            "UNLOCK": self._unlock_screen,
             "TIMELINE": self._timeline,
             "BUNDLE_SELECTION": self._bundle,
             "CAPSTONE": self._capstone,
@@ -2203,6 +2204,15 @@ class Policy:
             return True
         except Exception:
             return False
+
+    def _unlock_screen(self, state: dict, ctx) -> Decision:
+        """新内容解锁展示屏（新遗物/新卡等，mod UNLOCK 路由 + confirm_unlock 动作）。"""
+        unlock = state.get("unlock") or {}
+        items = "、".join(unlock.get("items") or [])
+        if "confirm_unlock" in state.get("available_actions", []):
+            label = f"【{items}】" if items else ""
+            return Decision("confirm_unlock", {}, f"解锁新内容{label}，确认收下", wait=1.2)
+        return Decision(None, {}, "解锁界面：等待确认按钮就绪", wait=0.8)
 
     def _unknown(self, state: dict, ctx) -> Decision:
         # 按载荷兜底路由，防新屏幕名漏网
