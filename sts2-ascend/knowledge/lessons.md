@@ -1593,3 +1593,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据
 - 生涯战绩：0/123 胜，当前目标进阶 0
+
+## 第 124 局复盘（2026-08-23 16:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：THUNDERCLAP, COLOSSUS, BREAKTHROUGH, MOLTEN_FIST, SHRUG_IT_OFF, STOMP, CRUELTY, TRUE_GRIT
+- 本局遗物：SPARKLING_ROUGE, 永冻冰晶
+- 战斗记录：F5 Monster战 掉血7; F9 Monster战 掉血10; F12 Elite战 掉血13; F14 Monster战 掉血3; F15 Monster战 掉血0; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，MANGLE(21分/20局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/124 胜，当前目标进阶 0
