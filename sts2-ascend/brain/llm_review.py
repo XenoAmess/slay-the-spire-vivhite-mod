@@ -713,15 +713,25 @@ def enqueue_review(agent, log=print) -> None:
     if not cfg.get("enabled"):
         return
     runs = agent.know.stats["global"]["runs"]
-    last = agent.know.progression.get("last_llm_review_run", 0)
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     model, every, source = resolve_review_plan(cfg, binary, log=log)
-    if runs - last < every:
-        return
-    agent.know.progression["last_llm_review_run"] = runs
+    if source == "fallback":
+        # 兜底节奏独立记账：preferred 尝试（无论成败）不得刷新兜底计数——
+        # 否则优先链持续失败时每局都刷新 last，兜底门槛永远攒不够
+        # （第 177~204 局实证：ox-alpha 连挂 28 局，k3 一次都没兜上）。
+        last = agent.know.progression.get("last_fallback_review_run", 0)
+        if runs - last < every:
+            return
+        agent.know.progression["last_fallback_review_run"] = runs
+    else:
+        last = agent.know.progression.get("last_llm_review_run", 0)
+        if runs - last < every:
+            return
+        agent.know.progression["last_llm_review_run"] = runs
     agent.know.save()
     q = _load_queue()
-    q.setdefault("pending", []).append({"run": runs, "time": time.strftime("%Y-%m-%d %H:%M")})
+    q.setdefault("pending", []).append({"run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
+                                        "model": model, "every": every, "source": source})
     q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 5))):]
     _save_queue(q)
     log(f"[llm] 复盘请求已入队（第{runs}局，待消化 {len(q['pending'])} 批），游玩不等待")
@@ -771,7 +781,15 @@ def _worker_loop(agent, log) -> None:
 def _run_batch_review(agent, batch: list[dict], log) -> None:
     cfg = load_llm_config()
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    model, every, source = resolve_review_plan(cfg, binary, log=log)
+    # 尊重入队时的来源决策：批中含 fallback 项则整场用兜底模型。
+    # 执行时无脑重解析会被"刚出冷却的优先模型"抢回去再失败一次——
+    # 入队时刻的 fallback 判定（优先链当时在冷却）才是有效的。
+    fallback_items = [p for p in batch if p.get("source") == "fallback" and p.get("model")]
+    if fallback_items:
+        picked = fallback_items[-1]
+        model, every, source = picked["model"], int(picked.get("every", 5)), "fallback"
+    else:
+        model, every, source = resolve_review_plan(cfg, binary, log=log)
     runs_list = [p["run"] for p in batch]
     log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}）")
     executed = run_review(agent.know, log=log, model=model, every=every, source=source,
