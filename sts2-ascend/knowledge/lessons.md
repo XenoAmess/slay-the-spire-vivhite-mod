@@ -1111,3 +1111,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/86 胜，当前目标进阶 0
+
+## 第 87 局复盘（2026-08-23 08:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：MOLTEN_FIST, SWORD_BOOMERANG, CRUELTY, CINDER, TAUNT, BREAKTHROUGH, RAMPAGE, CINDER, FIGHT_ME, SHRUG_IT_OFF, TAUNT
+- 本局遗物：PENDULUM, 小血瓶
+- 战斗记录：F7 Monster战 掉血5; F12 Monster战 掉血0; F14 Elite战 掉血48; F15 Monster战 掉血9; F15 Monster战 掉血0; F17 Boss战 掉血42（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/43局)，BARRICADE(20分/2局)，TAUNT(19分/30局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus: 12.00 → 13.00（长战磨死（6回合），提升击杀奖励加快清场）；block_safety: 2.10 → 2.05（长战实证过度龟防会拖长战斗，小幅回调）
+- 生涯战绩：0/87 胜，当前目标进阶 0
