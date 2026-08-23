@@ -70,6 +70,7 @@ Set-Clipboard "card VIVHITE_CARD_VIVHITE_STRIKE"
 - 启动：`powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1`
 - 大脑记忆在 `sts2-ascend/knowledge/`（stats/policy/progression/lessons/runs，已 gitignore，**不要手工改**）
 - 上游 release 包在 `sts2-ascend/third_party/dist/`（gitignore，由 `scripts/Deploy-Mod.ps1` 自动下载）
+- 上游修复流程：先在 fork（XenoAmess/STS2-Agent，本地克隆 `sts2-ascend/third_party/STS2-Agent`）main 验证，再拉分支提 PR。已提：#46（AoE药水）、#47（UNLOCK屏）、#48（CRYSTAL_SPHERE 占卜屏完整支持）。**注意**：Deploy-Mod.ps1 重新部署会覆盖回上游 release dll，PR 未合并前需重新拷贝 fork 构建的 dll
 - 详细见 `sts2-ascend/README.md` 与 `docs/2026-08-22-sts2-ascend自动游玩智能体.md`
 
 ## 工作流程规则
