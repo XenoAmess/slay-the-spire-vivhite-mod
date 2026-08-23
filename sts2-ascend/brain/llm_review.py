@@ -123,13 +123,19 @@ def _recent_run_summaries(n: int) -> list[dict]:
     run_dir = KNOWLEDGE_DIR / "runs"
     if not run_dir.exists():
         return []
-    files = sorted(run_dir.glob("*.json"), key=lambda p: p.name)[-n:]
-    out = []
-    for f in files:
+    # 进行中对局不入摘要（第 218 批复盘）：增量存档的 in_progress 文件是
+    # 半局数据，混进复盘摘要会把「还在打的一局」当完整对局误读
+    files = []
+    for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name):
         try:
-            d = json.loads(f.read_text(encoding="utf-8"))
+            d = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
+        if d.get("in_progress"):
+            continue
+        files.append((p, d))
+    out = []
+    for f, d in files[-n:]:
         decisions = d.get("decisions", [])
         out.append({
             "run_id": d.get("run_id"), "victory": d.get("victory"), "floor": d.get("floor"),

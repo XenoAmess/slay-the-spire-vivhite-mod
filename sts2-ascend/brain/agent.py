@@ -219,6 +219,18 @@ class Agent:
                 self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
             self.ctx.reset_for(run_id, asc)
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
+            # 断线重连续接局史（第 218 批复盘）：大脑在局中途崩溃/签名故障自杀后，
+            # 新进程遇同 run_id 旧账另起——218 局 F23 重启把 23 层深局记成
+            # 24 决策/1 拿牌/0 遗物的残缺局，复盘数据全被带歪。增量落盘的
+            # 决策与战斗记录在此接回，重连不再丢局史。
+            prior = self.know.load_run_log(run_id)
+            if prior and (prior.get("decisions") or prior.get("combat_notes")):
+                self.ctx.decisions = list(prior.get("decisions") or [])
+                self.ctx.combat_notes = list(prior.get("combat_notes") or [])
+                if prior.get("started_at"):
+                    self.ctx.started_at = prior["started_at"]
+                log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
+                    f"{len(self.ctx.combat_notes)} 条战斗记录）")
 
         # combat enter/exit tracking
         # 战斗连续性：Boss/精英转阶段过场、结算弹层会让屏幕在 COMBAT↔MODAL 间闪断。
@@ -331,6 +343,71 @@ class Agent:
                 "floor": run.get("floor", 0), "hp": hp, "gold": gold,
                 "action": decision.action, "params": decision.params, "reason": decision.reason,
             })
+            self._save_run_progress(run)
+
+    def _save_run_progress(self, run: dict, force: bool = False) -> None:
+        """对局日志增量存档（第 218 批复盘）：旧实现只在终局落盘——大脑在局
+        中途崩溃/自杀重启（218 局 F23 签名故障）时，前半局决策与战斗记录全灭，
+        重连进程另起新账把深局记成残缺局。现在每 15 条决策（或换层）落盘一次，
+        重连时按 run_id 接续，崩溃最多丢失最近十几条决策。"""
+        if not self.ctx.decisions or self.ctx.run_id == "run_unknown":
+            return
+        floor = run.get("floor", 0)
+        if not force:
+            last_n, last_f = getattr(self, "_rlog_mark", (0, -1))
+            if len(self.ctx.decisions) - last_n < 15 and floor == last_f:
+                return
+        self._rlog_mark = (len(self.ctx.decisions), floor)
+        try:
+            self.know.save_run_log(self.ctx.run_id, {
+                "run_id": self.ctx.run_id,
+                "ascension": self.ctx.ascension,
+                "started_at": self.ctx.started_at,
+                "victory": False,
+                "in_progress": True,
+                "floor": floor,
+                "decisions": self.ctx.decisions,
+                "combat_notes": self.ctx.combat_notes,
+            })
+        except OSError:
+            pass
+
+    def _note_signature_failure(self, action: str, exc: Exception) -> None:
+        """签名级动作失败熔断（第 218 批复盘）：长驻进程不热重载代码——复盘
+        把 client.act 签名更新落盘后，旧进程载入时的 act 仍是老版本，policy
+        新代码传入的 x/y/tool 触发 TypeError 仍每 tick 重试同一动作，218 局
+        F23 连刷 75 秒直到看门狗杀进程、前半局局史全灭。「unexpected keyword
+        argument」类 TypeError 是永久性代码错位，重试永远不会成功：同一动作
+        三连即存档局史并请求 runner 重启加载磁盘新代码；若近期已因此重启过
+        （磁盘代码同源故障，重启无用），改为进程内拉黑该动作避免重启死循环。"""
+        if not isinstance(exc, TypeError) or "argument" not in str(exc):
+            return
+        fails = getattr(self, "_sig_fails", None)
+        if fails is None:
+            fails = self._sig_fails = {}
+        fails[action] = fails.get(action, 0) + 1
+        if fails[action] < 3:
+            return
+        fails[action] = 0
+        marker = KNOWLEDGE_DIR / "stale_code_restart.json"
+        try:
+            info = json.loads(marker.read_text(encoding="utf-8")) if marker.exists() else {}
+        except (OSError, json.JSONDecodeError):
+            info = {}
+        if info.get("action") == action and time.time() - float(info.get("ts", 0) or 0) < 900:
+            log(f"[agent] 动作 {action} 签名故障且 15 分钟内重启未愈（磁盘代码同源），"
+                "进程内拉黑该动作，等待复盘修复")
+            self.policy.mark_action_broken(action)
+            return
+        log(f"[agent] 动作 {action} 连续签名故障（进程代码落后于磁盘），"
+            "存档局史并请求 runner 重启加载新代码")
+        try:
+            marker.write_text(json.dumps({"ts": time.time(), "action": action}), encoding="utf-8")
+        except OSError:
+            pass
+        last_floor = self.ctx.decisions[-1].get("floor", 0) if self.ctx.decisions else 0
+        self._save_run_progress({"floor": last_floor}, force=True)
+        sys.exit(42)
 
     def _start_combat(self, run: dict, comp: str, node_type: str, hp: int) -> None:
         # 同层多段战斗聚合（第 97~98 批复盘）：多阶段 Boss 的阶段切换会以
@@ -688,6 +765,7 @@ class Agent:
                 except Exception as exc:
                     log(f"  ↳ 动作 {decision.action} 失败：{exc}")
                     self.policy.note_action_failed(decision.action, decision.tags)
+                    self._note_signature_failure(decision.action, exc)
                     time.sleep(self.cfg["action_settle"])
                 time.sleep(max(decision.wait, self.cfg["action_settle"]))
             else:

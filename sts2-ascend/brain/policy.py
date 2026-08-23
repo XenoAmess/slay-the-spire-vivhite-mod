@@ -168,6 +168,14 @@ class Policy:
         # 并附停滞罚分：选过却没离开事件的选项就是「没解决问题」的实证
         self._event_inst = None         # 当前事件实例身份 (run_id, event_id, floor)
         self._event_picks: dict = {}    # 本实例内各选项已选次数
+        # 进程级动作拉黑（第 218 批复盘）：签名级 TypeError（进程代码落后于
+        # 磁盘）在本进程内永远失败，agent 熔断后把动作名记到这里，decide
+        # 拦截被拉黑动作改发安全替代，不再每 tick 重试注定失败的调用
+        self._broken_actions: set = set()
+
+    def mark_action_broken(self, action: str) -> None:
+        """进程内永久拉黑一个动作名（签名不匹配等代码错位，重试必败）。"""
+        self._broken_actions.add(action)
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -223,6 +231,16 @@ class Policy:
         try:
             decision = handler(state, ctx)
             self._decide_errors = 0
+            if decision.action and decision.action in self._broken_actions:
+                actions = state.get("available_actions", [])
+                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
+                             "skip_reward_cards", "confirm_selection", "confirm_bundle",
+                             "dismiss_modal", "open_chest", "close_shop_inventory"):
+                    if safe in actions:
+                        return Decision(safe, {},
+                                        f"动作 {decision.action} 本进程签名不匹配已拉黑，改用 {safe}", wait=1.0)
+                return Decision(None, {},
+                                f"动作 {decision.action} 本进程签名不匹配已拉黑，无安全替代，等待", wait=1.5)
             return decision
         except Exception as exc:  # never crash the loop on a policy bug
             self._decide_errors = getattr(self, "_decide_errors", 0) + 1

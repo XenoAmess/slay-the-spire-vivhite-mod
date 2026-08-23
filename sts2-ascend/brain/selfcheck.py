@@ -981,6 +981,45 @@ def main() -> int:
     assert ag.know.stats["global"]["runs"] == runs_before, "断线重连残缺局被计入生涯统计"
     assert set((tmp_agent / "runs").glob("*.json")) == logs_before, "残缺局日志被写入 runs/"
 
+    # 2c) 对局日志按 run_id 复用 + 断线重连续接局史（第 218 批复盘实证）：大脑
+    #     在 F23 签名故障自杀，终局才落盘的旧实现让前半局决策/战斗记录全灭，
+    #     重连进程另起新账把 24 层深局记成 24 决策/1 拿牌/0 遗物的残缺局。
+    #     增量存档必须复用同一文件，重连进程必须接回既有局史
+    p1 = know.save_run_log("RUN_REUSE", {"run_id": "RUN_REUSE", "decisions": [1]})
+    p2 = know.save_run_log("RUN_REUSE", {"run_id": "RUN_REUSE", "decisions": [1, 2]})
+    assert p1 == p2, f"同 run_id 应复用同一日志文件: {p1} vs {p2}"
+    assert json.loads(p2.read_text(encoding="utf-8"))["decisions"] == [1, 2], "终稿未覆盖增量稿"
+    assert know.load_run_log("RUN_REUSE")["decisions"] == [1, 2], "既有局史读不回"
+    assert know.load_run_log("RUN_NOPE") is None, "无日志的 run_id 应返回 None"
+    ag_crash = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    st_ev = {"screen": "EVENT", "run_id": "RUN_CRASH",
+             "run": {"current_hp": 70, "max_hp": 80, "gold": 10, "floor": 5}}
+    ag_crash._track(st_ev, policy.Decision(action="choose_event_option", reason="x"))
+    ag_crash._save_run_progress({"floor": 5}, force=True)   # 崩溃前最后一次增量落盘
+    ag_rejoin = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))  # 模拟重启后的新进程
+    ag_rejoin._track(st_ev, policy.Decision(action=None))
+    assert len(ag_rejoin.ctx.decisions) == 1, \
+        f"断线重连未接回决策史: {len(ag_rejoin.ctx.decisions)} 条"
+    assert ag_rejoin.ctx.started_at == ag_crash.ctx.started_at, "断线重连未保留开局时间"
+
+    # 2d) 签名故障动作进程内拉黑（第 218 批复盘）：被拉黑动作不再发出——
+    #     有安全替代改发安全动作，无替代时原地等待而非重试必败调用
+    pol.mark_action_broken("crystal_clear_cell")
+    cs_broken = {"screen": "CRYSTAL_SPHERE", "available_actions": ["crystal_clear_cell"],
+                 "crystal_sphere": {"is_finished": False, "grid_width": 11, "grid_height": 11,
+                                    "hidden_cells": [[0, 0], [1, 1]], "items": [],
+                                    "divinations_left": 3},
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 23, "deck": []}}
+    d_broken = pol.decide(cs_broken, ctx)
+    assert d_broken.action != "crystal_clear_cell", f"拉黑动作仍被发出: {d_broken.action}"
+    cs_safe = dict(cs_broken)
+    cs_safe["available_actions"] = ["crystal_clear_cell", "proceed"]
+    d_safe = pol.decide(cs_safe, ctx)
+    assert d_safe.action == "proceed", f"拉黑后未改发安全替代: {d_safe.action}"
+    pol._broken_actions.clear()
+    d_ok = pol.decide(cs_broken, ctx)
+    assert d_ok.action == "crystal_clear_cell", f"清空拉黑后正常动作未恢复: {d_ok.action}"
+
     # 3aa) 组合战损维度姿态（第 64 局复盘）：FLYCONID+SNAPPING_JAXFRUIT 式组合
     #      死亡率仅 15% 但场均掉血 25.8（32% 血条）——旧判定只看死亡率，中性姿态下
     #      50 血对 26 意图仍全攻半防两回合被打穿。传 max_hp 按战损占比收紧；

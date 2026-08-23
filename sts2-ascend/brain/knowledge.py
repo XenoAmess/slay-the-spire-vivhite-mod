@@ -743,8 +743,31 @@ class Knowledge:
         with path.open("a", encoding="utf-8") as f:
             f.write(text.rstrip() + "\n")
 
+    def _run_log_path(self, run_id: str) -> Path | None:
+        """已有同 run_id 的对局日志（取命名最新者）——增量存档复用同一文件。"""
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in run_id)[:80] or "run"
+        try:
+            matches = sorted((self.root / "runs").glob(f"*_{safe}.json"))
+        except OSError:
+            return None
+        return matches[-1] if matches else None
+
+    def load_run_log(self, run_id: str) -> dict | None:
+        """读取同 run_id 的既有对局日志（断线重连续接局史用）；无则 None。"""
+        p = self._run_log_path(run_id)
+        if p is None:
+            return None
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        return d if isinstance(d, dict) else None
+
     def save_run_log(self, run_id: str, log: dict) -> Path:
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in run_id)[:80] or "run"
-        path = self.root / "runs" / f"{time.strftime('%Y%m%d-%H%M%S')}_{safe}.json"
+        # 同一对局复用同一文件（第 218 批复盘）：局中途增量存档 + 终局定稿
+        # 写的是同一 run_id——各开新文件会让崩溃重启把一局拆成两条残缺日志
+        path = self._run_log_path(run_id) \
+            or (self.root / "runs" / f"{time.strftime('%Y%m%d-%H%M%S')}_{safe}.json")
         _save_json(path, log)
         return path
