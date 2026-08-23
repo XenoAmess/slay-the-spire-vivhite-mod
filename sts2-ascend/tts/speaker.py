@@ -41,11 +41,15 @@ _SAPI_PS = r"""
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Add-Type -AssemblyName System.Speech
-$s = New-Object System.Speech.Synthesis.SpeechSynthesizer
-try { $s.SelectVoice('Microsoft Huihui Desktop') } catch {}
-$s.Rate = __RATE__
+$zh = New-Object System.Speech.Synthesis.SpeechSynthesizer
+try { $zh.SelectVoice('Microsoft Huihui Desktop') } catch {}
+$zh.Rate = __RATE__
+$en = New-Object System.Speech.Synthesis.SpeechSynthesizer
+try { $en.SelectVoice('Microsoft Zira Desktop') } catch {}
+$en.Rate = __RATE__
 while (($line = [Console]::In.ReadLine()) -ne $null) {
-    if ($line.Trim()) { $s.Speak($line) }
+    if ($line.StartsWith('en|')) { $en.Speak($line.Substring(3)) }
+    elseif ($line.StartsWith('zh|')) { $zh.Speak($line.Substring(3)) }
 }
 """
 
@@ -60,17 +64,34 @@ def log(msg: str) -> None:
         pass
 
 
+_CODE_RE = re.compile(
+    r'[{}\[\]]'                       # 括号结构（JSON/代码）
+    r'|"\w+"\s*:'                     # "key": value
+    r'|==|!=|<=|>='                   # 比较运算
+    r'|\w+\.(?:py|json|md|log|yaml|yml|toml|wav|txt|ps1)\b'   # 文件名
+    r'|\w+\(.*\)'                     # 函数调用 f(...)
+    r'|^\s*[/\]<>$|]'                 # 路径/命令行开头
+)
+
+
 def speakable(line: str) -> bool:
-    """几乎全读：只跳过哨兵/统计/工具/代码行。"""
+    """只读直播窗里的分析/思维链文字：哨兵/统计/工具/代码/JSON/路径行一律不读。"""
     s = line.strip()
     if not s or s.startswith(("[LIVE-", "· tokens", "⚙", "📦")):
+        return False
+    if _CODE_RE.search(s):
         return False
     cjk = sum(1 for ch in s if "\u4e00" <= ch <= "\u9fff")
     if cjk == 0:
         alpha = sum(c.isalpha() for c in s)
-        if alpha / max(1, len(s)) < 0.5:      # 纯符号/路径/代码行
+        if alpha / max(1, len(s)) < 0.5:      # 纯符号/数据行
             return False
     return True
+
+
+def lang_of(sent: str) -> str:
+    """含中文按中文读，纯英文按英文读（避免英文句里的数字被中文念出来）。"""
+    return "zh" if any("\u4e00" <= ch <= "\u9fff" for ch in sent) else "en"
 
 
 class SentenceSplitter:
@@ -116,7 +137,7 @@ class SapiSpeaker:
     def say(self, text: str) -> None:
         try:
             if self.proc.poll() is None:
-                self.proc.stdin.write(text + "\n")
+                self.proc.stdin.write(lang_of(text) + "|" + text + "\n")
                 self.proc.stdin.flush()
         except (OSError, ValueError):
             pass
@@ -187,8 +208,9 @@ def main() -> int:
 
     if "--test" in sys.argv:
         spk = SapiSpeaker()
-        spk.say("你好，我是白绮的教练。SAPI 语音链路已打通。")
-        time.sleep(4)
+        spk.say("你好，我是白绮的教练。语音链路已打通。")
+        spk.say("Turn 5 had 4 block and 2 strikes, intent 27.")
+        time.sleep(8)
         spk.close()
         return 0
 

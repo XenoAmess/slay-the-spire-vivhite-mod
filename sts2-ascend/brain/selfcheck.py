@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import random
 import re
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -1333,6 +1334,73 @@ def main() -> int:
         f"触底旋钮仍被释放: {gknow.policy['block_safety']}"
     assert "停止加码" in glesson and "停止释放" in glesson, \
         f"顶格治理未在复盘日志留痕: {glesson}"
+
+    # 3vv) policy.json 三方合并写盘（第 90~91 批复盘）：运行中的大脑 finalize
+    #      曾用内存旧值整体回写 policy.json——86~87 批写入的 boss_entry=0.72
+    #      被冲掉成 0.65、88~89 批注册的 deck_burst_floor 在本批复盘进行中
+    #      被整键冲掉（复盘期间实测复现）。外部冷修改必须在对局落盘后存活。
+    mdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-merge-"))
+    mknow = knowledge.Knowledge(mdir)
+    mknow.save()                                    # 建立基准
+    disk_path = mdir / "policy.json"
+    disk_now = json.loads(disk_path.read_text(encoding="utf-8"))
+    disk_now["boss_entry_min_hp_pct"] = 0.72        # 外部冷修改（复盘会话写入）
+    disk_now.pop("kill_race_enabled", None)         # 外部新增键被旧进程冲掉的形态
+    disk_now["brand_new_external_key"] = 1.0        # 外部新增键
+    disk_path.write_text(json.dumps(disk_now, ensure_ascii=False), encoding="utf-8")
+    mknow.policy["kill_bonus"] = 18.0               # 本进程演化（内存值 ≠ 基准）
+    mknow.save()
+    after = json.loads(disk_path.read_text(encoding="utf-8"))
+    assert abs(after["boss_entry_min_hp_pct"] - 0.72) < 1e-9, \
+        f"外部冷修改被回写冲掉: {after['boss_entry_min_hp_pct']}"
+    assert abs(after["kill_bonus"] - 18.0) < 1e-9, \
+        f"本进程演化值被磁盘覆盖: {after['kill_bonus']}"
+    assert after.get("brand_new_external_key") == 1.0, "外部新增键丢失"
+    assert "kill_race_enabled" in after, "默认键未回填"
+    assert abs(mknow.policy["boss_entry_min_hp_pct"] - 0.72) < 1e-9, "外部修改未实时采纳进内存"
+
+    # 3ww) 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤）：91 局 Boss 战
+    #      65 血入场、输出 ~25/回合、仪式兽 252 血——击杀需 9+ 回合而意图逐轮
+    #      滚升，引擎却把能量花在挑衅(挡6)/武装(挡5)这类奢侈格挡上逐回合买命，
+    #      最终差 ~30 伤输掉竞速。实测输出速率证明击杀回合数超出可存活回合数
+    #      时：奢侈格挡贬值、攻击提速（与 desperate/race_allin 互斥不叠加）。
+    krc = type("KRCtx", (), {"combat": None, "current_combat_is_hard": True,
+                             "credit_tags": []})()
+    krc.combat = {"comp_id": "RACE_BOSS", "node_type": "Boss"}
+
+    def krace_state(turn_no, hp_now, incoming=22):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "KR_HIT", "name": "竞速斩", "playable": True,
+                            "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 12}]},
+                           {"index": 1, "card_id": "KR_LUX", "name": "奢侈挡", "playable": True,
+                            "requires_target": False,
+                            "rules_text": "获得6点格挡",
+                            "dynamic_values": [{"name": "Block", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "RACE_BOSS", "name": "仪式兽",
+                                    "current_hp": 200, "max_hp": 252, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    pol_kr = policy.Policy(know, random.Random(11))
+    pol_kr.decide(krace_state(1, 65), krc)          # T1：样本不足，不武装
+    pol_kr.decide(krace_state(2, 55), krc)          # T2：样本仍不足
+    d_kr = pol_kr.decide(krace_state(3, 45), krc)   # T3：实测 ~24伤/回合 vs 200 血、意图 22/回合 → 投影必败
+    assert d_kr.action == "play_card" and d_kr.params.get("card_index") == 0, \
+        f"斩杀竞速失败时奢侈格挡仍胜出: {d_kr.action}（{d_kr.reason}）"
+    assert "斩杀竞速投影" in d_kr.reason, f"竞速投影未留痕: {d_kr.reason}"
+    # 对照：意图轻微（5/回合，血量账宽裕）时同一战斗不得触发竞速——防守路线可行
+    pol_kr2 = policy.Policy(know, random.Random(11))
+    pol_kr2.decide(krace_state(1, 80, incoming=5), krc)
+    pol_kr2.decide(krace_state(2, 80, incoming=5), krc)
+    d_kr2 = pol_kr2.decide(krace_state(3, 80, incoming=5), krc)
+    assert "斩杀竞速投影" not in d_kr2.reason, f"防守可行时误触发竞速投影: {d_kr2.reason}"
+    krc.combat = None
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

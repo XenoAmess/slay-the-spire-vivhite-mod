@@ -19,6 +19,8 @@ from pathlib import Path
 
 SHRINK_K = 6.0  # shrinkage strength toward prior mean
 
+_MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
+
 DEFAULT_POLICY = {
     # --- combat ---
     "block_safety": 1.0,          # scales how much we value blocking
@@ -91,6 +93,15 @@ DEFAULT_POLICY = {
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---
     "deck_burst_floor": 30.0,  # 卡组爆发吞吐量门槛：按「伤害/能耗」降序装满3能量的期望伤害低于此值视为输出饥饿（起步卡组≈18），高质攻击拿牌加分
+    # --- 卡组单薄感知（第 90~91 批复盘） ---
+    "deck_thin_core": 8,          # 非基础牌少于此数视为卡组单薄：抽5张的方差让爆发曲线无法稳定组装（91 局 16 张卡组进 Boss，长战后期手牌全是打击）
+    "deck_thin_discount": 0.35,   # 单薄期每缺 1 张核心牌降低拾取门槛的幅度（门槛只升不降曾让 91 局整场只拿 6 张牌）
+    # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
+    "kill_race_enabled": True,
+    "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）
+    "kill_race_margin": 1.5,         # 预计击杀回合数超出可存活回合数此余量 → 判定防守路线已被数学证伪
+    "kill_race_atk_mult": 1.25,      # 竞速失败时攻击提速乘区（与 desperate/race_allin 不叠加）
+    "kill_race_blk_mult": 0.70,      # 竞速失败时格挡权重乘区：买不到胜利的奢侈格挡把能量还给输出（致死当回合格挡仍由 lethal 分支兜底）
     # --- 执行端补丁键（第 79 局复盘） ---
     "desperate_confirm_ticks": 2,  # 孤注一掷观测确认窗：致死且无可负担格挡须连续 N tick 一致才允许孤注（防手牌渲染瞬时不完整触发假孤注，79局F23 实证）
 }
@@ -155,6 +166,8 @@ class Knowledge:
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
+        # 三方合并写盘的基准点（第 90~91 批复盘）：加载即快照，save 时逐键对比
+        self._policy_sync = dict(self.policy)
         # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
         for e in self.stats["rooms"].values():
             e.setdefault("hp_lost_sum", 0.0)
@@ -212,8 +225,40 @@ class Knowledge:
 
     def save(self) -> None:
         _save_json(self.root / "stats.json", self.stats)
-        _save_json(self.root / "policy.json", self.policy)
+        self._save_policy_merged()
         _save_json(self.root / "progression.json", self.progression)
+
+    def _save_policy_merged(self) -> None:
+        """policy.json 三方合并写盘：本进程演化值优先，外部冷修改保留。
+
+        缺陷（第 90~91 批复盘定性）：异步 LLM 复盘在独立会话里改 policy.json，
+        而运行中的大脑每局 finalize 会用内存旧值整体回写——86~87 批写入的
+        boss_entry_min_hp_pct=0.72 曾被冲掉回 0.65，91 局又在 0.65 基础上
+        演化到 0.67，冷修改两次被静默回滚，复盘决策凭空蒸发。
+
+        以「上次同步点 _policy_sync」为基准逐键三方合并：
+          内存值 == 基准值 → 该键本进程没动过 → 采纳磁盘值（外部修改实时生效）
+          内存值 != 基准值 → 该键是本进程演化产物 → 保留内存值
+        合并结果回填内存并刷新基准；磁盘不可读时退化为整体回写（旧行为）。
+        stats/progression 只有本进程写入，维持整体写盘不变。
+        """
+        path = self.root / "policy.json"
+        disk = {}
+        if path.exists():
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    disk = loaded
+            except (json.JSONDecodeError, OSError):
+                disk = {}
+        base = getattr(self, "_policy_sync", None)
+        if isinstance(base, dict):
+            for k, disk_v in disk.items():
+                mine = self.policy.get(k, _MISSING)
+                if base.get(k, _MISSING) == mine and disk_v != mine:
+                    self.policy[k] = disk_v  # 本进程未动过的键：外部修改实时生效
+        _save_json(path, self.policy)
+        self._policy_sync = dict(self.policy)
 
     # ---------- value estimates (shrunk toward prior) ----------
 

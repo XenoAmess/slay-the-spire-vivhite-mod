@@ -127,6 +127,12 @@ class Policy:
         self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
         self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
+        # 斩杀竞速投影（第 90~91 批复盘）：本场已打出的期望总伤 / 出牌回合数
+        self._krace_combat = None   # 战斗实例身份
+        self._krace_dmg = 0.0       # 本场已打出攻击卡的期望总伤累计
+        self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
+        self._krace_round = None    # 上次计回合的回合号
+        self._incoming_ema = 0.0    # 敌意图总伤 EMA（回合边界采样，竞速投影的可存活账）
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -606,6 +612,15 @@ class Policy:
                 best_notes, best_proj = best_pnotes, best_pproj
 
         note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
+        # 留痕诚实化（第 90~91 批复盘）：91 局 F14 以 55% 血选了精英（闸门否决后
+        # 1.37 分仍压过 -13/-18 的其余候选，实战只掉 13 血属正确取舍），但日志
+        # 同时出现「Elite=1.37|规避精英」的自相矛盾留痕，污染复盘归因——
+        # 被否决仍当选时必须写明「取损失最小项」，让复盘能区分误判与无奈
+        if (best_node is not None and best_node.get("node_type") == "Elite"
+                and elite_gate_f < 1.0 and elite_gate_note):
+            best_notes = [x for x in best_notes if x != elite_gate_note]
+            best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
+            note_txt = f"；{'；'.join(best_notes)}"
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
         ctx.rest_before_boss = (best_node.get("node_type") == "RestSite"
@@ -660,6 +675,10 @@ class Policy:
             self._race_rounds = 0
             self._intent_prev = 0
             self._intent_trend = 0
+            self._krace_dmg = 0.0
+            self._krace_turns = 0
+            self._krace_round = None
+            self._incoming_ema = 0.0
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
         if self._desp_combat is not ctx.combat:
             self._desp_combat = ctx.combat
@@ -708,6 +727,13 @@ class Policy:
                 self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
             else:
                 self._intent_trend = 0
+            # 意图 EMA（第 90~91 批复盘）：斩杀竞速投影的「可存活回合」分母——
+            # 净损速率含我方格挡决策的净效果，开局头两回合用它会被格挡稀释，
+            # 意图 EMA 才是敌人火力本身的账
+            if self._race_rounds == 0:
+                self._incoming_ema = float(incoming)
+            else:
+                self._incoming_ema = 0.7 * self._incoming_ema + 0.3 * float(incoming)
             self._intent_prev = int(incoming)
             self._race_round = round_no
         self._race_prev_hp = my_hp
@@ -800,6 +826,36 @@ class Policy:
             and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
         )
 
+        # 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地）：
+        # 91 局一幕 Boss 战实证——65 血入场、输出 ~25/回合、仪式兽 252 血，
+        # 击杀需 ~9 回合而意图 18→24 每回合滚升，引擎却还在用挑衅(挡6)/武装
+        # (挡5)这类奢侈格挡逐回合买命，最终差 ~30 伤输掉斩杀竞速。逐回合贪心
+        # 看不见这场数学必败：以「本场实测输出速率 vs 意图火力」做攻速对账，
+        # 击杀所需回合数超出可存活回合数 + 余量 → 判定防守路线已被证伪，
+        # 奢侈格挡贬值、攻击提速，把每一分能量押进唯一的活路——提前终结战斗。
+        # 头两回合不武装（输出速率样本不足，避免误判）；与 desperate/race_allin
+        # 不重复放大（同一局面只提速一次）。
+        kill_race = False
+        if pol.get("kill_race_enabled", True) and self._krace_turns >= 2:
+            enemy_hp_total = 0
+            for e in enemies:
+                if self._is_respawn_add(e):
+                    continue
+                try:
+                    enemy_hp_total += max(0, int(e.get("current_hp") or 0))
+                except (TypeError, ValueError):
+                    continue
+            if enemy_hp_total >= float(pol.get("kill_race_min_enemy_hp", 80.0)):
+                dpt = self._krace_dmg / max(1, self._krace_turns)
+                loss_rate = self._race_loss_rate if (
+                    self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
+                tsurv = my_hp / max(1.0, loss_rate)
+                ttk = enemy_hp_total / max(1.0, dpt)
+                if ttk > tsurv + float(pol.get("kill_race_margin", 1.5)):
+                    kill_race = True
+                    danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
+                                    f"可存活{tsurv:.0f}回合，全攻提速")
+
         best = None  # (score, card, target_index, why)
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
@@ -831,14 +887,25 @@ class Policy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
                                                   my_hp, my_max_hp, stance, forced_kill,
-                                                  reserve_for_block and not race_allin,
-                                                  min_blk_cost, energy, race_allin)
+                                                  reserve_for_block and not race_allin and not kill_race,
+                                                  min_blk_cost, energy, race_allin, kill_race)
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
 
         if best and best[0] > pol["play_threshold"]:
             _, card, target, why = best
+            # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
+            _kd, _kb, _kh = card_numbers(card)
+            if _kd > 0:
+                _est = float(_kd * _kh)
+                if "所有敌人" in _text(card) or "all enemies" in _text(card).lower() \
+                        or (card.get("target_type") or "") == "AllEnemies":
+                    _est *= max(1, len(enemies))
+                self._krace_dmg += _est
+            if self._krace_round != round_no:
+                self._krace_round = round_no
+                self._krace_turns += 1
             # 记录"预测击杀"：同一敌人本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
             # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）
             if target is not None and isinstance(why, str) and why.startswith("可击杀"):
@@ -884,7 +951,8 @@ class Policy:
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
                     forced_kill: bool = False, reserve_for_block: bool = False,
-                    min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False):
+                    min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
+                    kill_race: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -948,6 +1016,11 @@ class Policy:
         blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
         if desperate or race_allin:
             atk_damp *= float(pol.get("desperate_atk_mult", 1.3))
+        # 斩杀竞速失败（第 90~91 批复盘）：与孤注一掷/败局竞速互斥放大——
+        # 已在提速的局面不再叠加，只补「奢侈格挡贬值」这半边
+        if kill_race and not desperate and not race_allin:
+            atk_damp *= float(pol.get("kill_race_atk_mult", 1.25))
+            blk_boost *= float(pol.get("kill_race_blk_mult", 0.70))
 
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
@@ -1190,6 +1263,30 @@ class Policy:
     # rewards / selection / bundles / chest / capstone
     # ------------------------------------------------------------------
 
+    def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
+        """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
+
+        第 88~89 批复盘新增（原为 eval_reward_card 内联逻辑，第 90~91 批复盘
+        提取为公共方法）：斩杀竞速投影在战斗头两回合（实测速率样本不足时）
+        也需要卡组理论爆发做先验估计，两处必须共用同一套口径。
+        """
+        burst_energy, burst = energy, 0.0
+        _burst_cards = []
+        for c in deck or []:
+            d, _b, h = card_numbers(c)
+            if d > 0 and is_attack(c):
+                _cost = max(1, c.get("energy_cost", 1) or 1)
+                _burst_cards.append((d * h / _cost, _cost, d * h))
+        _burst_cards.sort(reverse=True)
+        for _eff, _cost, _tot in _burst_cards:
+            if burst_energy <= 0:
+                break
+            if _cost > burst_energy:
+                continue
+            burst += _tot
+            burst_energy -= _cost
+        return burst
+
     def _pick_threshold(self, deck: list[dict]) -> float:
         """动态拿牌门槛：非基础牌超出软上限后线性抬升（每超一张 +1.5）。
 
@@ -1197,6 +1294,11 @@ class Policy:
         deck_overflow_penalty 的 -0.9/张 减分压不住 8+ 分的格挡牌，软上限形同
         虚设；膨胀稀释抽牌质量 → 战斗拖长 → 慢性失血，是 0/66 的慢性根因之一。
         卡组越臃肿越只拿精品：门槛抬到与"边际牌价值"同量级才能真实拦住注水。
+
+        单薄折扣（第 90~91 批复盘）：91 局 16 张卡组进 Boss（非基础牌仅 6 张），
+        整场只拿 6 张牌——长战后期抽牌全是打击。门槛此前只升不降，而单薄卡组
+        的真正问题是「量不足」：抽 5 张的方差让爆发曲线无法稳定组装，此时
+        及格线以上的牌都该收，每缺 1 张核心牌门槛按 discount 递减。
         """
         pol = self.know.policy
         base = float(pol["card_pick_threshold"])
@@ -1207,9 +1309,13 @@ class Policy:
                            or "DEFEND" in (c.get("card_id") or "").upper()
                            or is_bad_card(c)))
         overflow = good - float(pol.get("deck_soft_cap", 20))
-        if overflow <= 0:
-            return base
-        return base + overflow * float(pol.get("pick_threshold_per_overflow", 1.5))
+        thr = base
+        if overflow > 0:
+            thr += overflow * float(pol.get("pick_threshold_per_overflow", 1.5))
+        core = float(pol.get("deck_thin_core", 8))
+        if good < core:
+            thr -= (core - good) * float(pol.get("deck_thin_discount", 0.35))
+        return max(0.0, thr)
 
     def eval_reward_card(self, card: dict, deck: list[dict]) -> float:
         pol = self.know.policy
@@ -1241,21 +1347,7 @@ class Policy:
         # 水平，88% 血进一幕 Boss、11 回合仅打出 ~198 伤输掉斩杀竞速。
         # 生涯 0/89 胜、Boss 阵亡遍布 52%~99% 入场血量：卡组强度而非入场血量
         # 才是当前瓶颈，拿牌端必须对绝对输出缺口敏感
-        burst_energy, burst = 3.0, 0.0
-        _burst_cards = []
-        for c in deck or []:
-            d, _b, h = card_numbers(c)
-            if d > 0 and is_attack(c):
-                _cost = max(1, c.get("energy_cost", 1) or 1)
-                _burst_cards.append((d * h / _cost, _cost, d * h))
-        _burst_cards.sort(reverse=True)
-        for _eff, _cost, _tot in _burst_cards:
-            if burst_energy <= 0:
-                break
-            if _cost > burst_energy:
-                continue
-            burst += _tot
-            burst_energy -= _cost
+        burst = self.deck_burst(deck)
         burst_starved = bool(deck) and burst < float(pol.get("deck_burst_floor", 30.0))
 
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
