@@ -1671,3 +1671,14 @@
 - 当前低价值卡牌：DRAMATIC_ENTRANCE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.55 → 1.60（非 Boss 战斗长战阵亡（10回合），死因是有效格挡不足而非龟防——上调防御权重）
 - 生涯战绩：0/129 胜，当前目标进阶 0
+
+## 第 130 局复盘（2026-08-23 17:22）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：EVIL_EYE, UNRELENTING, SHRUG_IT_OFF, BLUDGEON, BREAKTHROUGH, THUNDERCLAP, DRAMATIC_ENTRANCE, PYRE, CINDER, FLAME_BARRIER, STOMP, UNRELENTING, CONFLAGRATION, DISMANTLE, PYRE, HEADBUTT
+- 本局遗物：STRIKE_DUMMY, 小血瓶
+- 战斗记录：F15 Monster战 掉血11; F17 Boss战 掉血62; F19 Monster战 掉血0; F20 Monster战 掉血24; F21 Monster战 掉血40; F22 Monster战 掉血20（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/7局)，MANGLE(22分/21局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.60 → 1.65（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/130 胜，当前目标进阶 0
