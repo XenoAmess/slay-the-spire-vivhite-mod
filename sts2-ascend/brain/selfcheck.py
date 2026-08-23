@@ -1231,7 +1231,10 @@ def main() -> int:
 
     # 3pp) Boss 长战磨死的演化分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
     #      速度需 ~30 局才能把 block_safety 拉回有效区——步长须按战斗时长放大，
-    #      且 Boss 长战单独加码 boss_atk_mult（不动普通战斗攻防平衡）
+    #      且 Boss 长战单独加码 boss_atk_mult（不动普通战斗攻防平衡）。
+    #      第 107~108 批复盘追加：block_safety 的 Boss 释放分支整体移除——
+    #      攻坚已由专属双轴承担，防御释放只剩跨语义振荡源（107 局降防 →
+    #      108 局普通长战死升防，普通战防御权重永远定不准）
     from types import SimpleNamespace
     from reflect import finalize_run
     rknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-reflect-")))
@@ -1245,8 +1248,8 @@ def main() -> int:
         f"boss_atk_mult 未演化: {rknow.policy['boss_atk_mult']}"
     assert abs(rknow.policy["kill_bonus"] - 14.0) < 1e-9, \
         f"kill_bonus 步长未按时长分级: {rknow.policy['kill_bonus']}"
-    assert rknow.policy["block_safety"] < 1.0, \
-        f"block_safety 未释放: {rknow.policy['block_safety']}"
+    assert abs(rknow.policy["block_safety"] - 1.0) < 1e-9, \
+        f"Boss 长战阵亡不得再动普通战防御权重: {rknow.policy['block_safety']}"
 
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘）：87 局以 86% 血（灰区）
     #      接受旧日雕像，实测战损 54（64% 血条）≈ Elite 实测场均的 3 倍——
@@ -1368,13 +1371,15 @@ def main() -> int:
     assert abs(v_weak_on - v_weak_off) < 1e-6, \
         f"打击级弱攻击被饥饿加成虚高: on={v_weak_on:.2f} off={v_weak_off:.2f}"
 
-    # 3uu) 长战演化顶格治理（第 88~89 批复盘）：kill_bonus 13→14→15、
-    #      block_safety 2.05→2.00→1.95 单向漂移——0 胜生涯里「长战磨死」每局
-    #      触发，信号只会把旋钮推向边界。余量不足一步时停止加码并显式留痕；
-    #      行程充足时行为与旧版一致（3pp 已覆盖）
+    # 3uu) 长战演化顶格治理（第 88~89 批复盘）：kill_bonus 13→14→15 单向漂移
+    #      ——0 胜生涯里「长战磨死」每局触发，信号只会把旋钮推向边界。余量不足
+    #      一步时停止加码并显式留痕；行程充足时行为与旧版一致（3pp 已覆盖）。
+    #      第 107~108 批复盘：Boss 长战的 block_safety 释放分支已整体移除，
+    #      触底「停止释放」留痕随之退役——普通战防御权重不再被 Boss 死亡信号
+    #      单向拖低（旧 0.6 下限正是被它磨穿的）
     gknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-gov-")))
     gknow.policy["kill_bonus"] = 19.5     # 距上限 0.5 < 步长 2.0
-    gknow.policy["block_safety"] = 0.65   # 距下限 0.05 < 步长 0.1
+    gknow.policy["block_safety"] = 0.65
     gctx = SimpleNamespace(
         died_to_event=None,
         died_in_combat={"comp_id": "BOSS_Y", "rounds": 8, "node_type": "Boss"},
@@ -1384,8 +1389,8 @@ def main() -> int:
     assert abs(gknow.policy["kill_bonus"] - 19.5) < 1e-9, \
         f"顶格旋钮仍被加码: {gknow.policy['kill_bonus']}"
     assert abs(gknow.policy["block_safety"] - 0.65) < 1e-9, \
-        f"触底旋钮仍被释放: {gknow.policy['block_safety']}"
-    assert "停止加码" in glesson and "停止释放" in glesson, \
+        f"Boss 长战阵亡仍触碰普通战防御权重: {gknow.policy['block_safety']}"
+    assert "停止加码" in glesson, \
         f"顶格治理未在复盘日志留痕: {glesson}"
 
     # 3vv) policy.json 三方合并写盘（第 90~91 批复盘）：运行中的大脑 finalize
@@ -1530,13 +1535,22 @@ def main() -> int:
         f"非 Boss 长战阵亡仍在释放防御: {bs_before} -> {rknow.policy['block_safety']}"
     assert rknow.policy["kill_bonus"] > kb_before or kb_before >= reflect.BOUNDS["kill_bonus"][1], \
         "非 Boss 长战阵亡未提升击杀奖励"
-    # Boss 长战仍走释放分支
+    # Boss 长战走攻坚专属旋钮（第 107~108 批复盘）：不再释放 block_safety——
+    # 该规则是第 82~83 批引入的（当时还没有 boss_atk_mult 分轴），如今形成
+    # 跨语义振荡源：107 局 Boss 磨死降防 → 108 局普通长战死升防，普通战
+    # 防御权重在两种真实死亡信号间打摆永远定不准
     rctx2 = _RC()
     rctx2.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss", "rounds": 8}
     bs_b2 = rknow.policy["block_safety"]
+    bam_b2 = rknow.policy["boss_atk_mult"]
+    be_b2 = rknow.policy["boss_entry_min_hp_pct"]
     reflect.finalize_run(rknow, rctx2, victory=False, final_floor=9)
-    assert rknow.policy["block_safety"] < bs_b2, \
-        f"Boss 长战阵亡未释放防御: {bs_b2} -> {rknow.policy['block_safety']}"
+    assert abs(rknow.policy["block_safety"] - bs_b2) < 1e-9, \
+        f"Boss 长战阵亡仍在释放防御（跨语义振荡复发）: {bs_b2} -> {rknow.policy['block_safety']}"
+    assert rknow.policy["boss_atk_mult"] > bam_b2, \
+        f"Boss 长战阵亡未提速攻坚乘区: {bam_b2} -> {rknow.policy['boss_atk_mult']}"
+    assert rknow.policy["boss_entry_min_hp_pct"] > be_b2, \
+        f"Boss 长战阵亡未上调入场血量线: {be_b2} -> {rknow.policy['boss_entry_min_hp_pct']}"
 
     # 3wz) 溢出型大格挡贬值（第 94~95 批复盘）：94 局 Boss 战开局 87 血对意图
     #      7/17 连打两张岿然不动+(40挡)，~56 点溢出甲 ≈ 4 能量没换成伤害，
@@ -1682,6 +1696,105 @@ def main() -> int:
     assert m_dying and -100.0 < float(m_dying.group(1)) < 0, \
         f"垂死路径评分仍被三重罚分饱和: {m_dying.group(1)}（{d_ds.reason}）"
     assert "投影中途死亡" in d_ds.reason, f"死亡投影未留痕: {d_ds.reason}"
+
+    # 3xy2) 投影罚分软饱和（第 108 局复盘）：二幕开局全线评分曾饱和在 -159~-193、
+    #       「预计进Boss血量 0%」，房间权重/休整加成等正信号在罚分竞赛中失声，
+    #       决策退化为比拼「投影死得早晚」。压扁后：大额罚分渐近饱和上限（任何
+    #       候选的罚分贡献 ≤ path_penalty_saturation），候选间保序且保留可辨差距；
+    #       小额罚分近似线性不受伤（3y 的门槛翻转语义不变，已在前序用例验证）
+    sq_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-squash-"))
+    sq_know = knowledge.Knowledge(sq_dir)
+    sq_pol = policy.Policy(sq_know)
+
+    def act2_map(hp_now):
+        heads = [
+            {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+             "children": [{"row": 2, "col": 0}]},
+            {"index": 1, "row": 1, "col": 1, "node_type": "Shop",
+             "children": [{"row": 2, "col": 1}]},
+        ]
+        chain_a = []
+        for r in range(2, 13):
+            g = {"row": r, "col": 0, "node_type": "Boss" if r == 12 else "Monster"}
+            if r < 12:
+                g["children"] = [{"row": r + 1, "col": 0}]
+            chain_a.append(g)
+        chain_b = []
+        for r in range(2, 13):
+            nt = "Monster" if r == 11 else ("Boss" if r == 12 else "Event")
+            g = {"row": r, "col": 1, "node_type": nt}
+            if r < 12:
+                g["children"] = [{"row": r + 1, "col": 1}]
+            chain_b.append(g)
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": heads + chain_a + chain_b,
+                      "boss_node": {"row": 12}},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0,
+                      "floor": 20, "deck": []}}
+        return sq_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    d_sq = act2_map(45)      # 二幕 56% 血：怪物链半路暴毙 vs 商店+事件链低血进场
+    m_chain = re.search(r"Monster\(1,0\)=(-?[0-9.]+)", d_sq.reason)
+    m_shop = re.search(r"Shop\(1,1\)=(-?[0-9.]+)", d_sq.reason)
+    assert m_chain and m_shop, f"软饱和用例候选缺失: {d_sq.reason}"
+    sc_chain, sc_shop = float(m_chain.group(1)), float(m_shop.group(1))
+    sat_cap = float(sq_know.policy["path_penalty_saturation"])
+    assert -sat_cap - 10.0 < sc_chain < 0, \
+        f"死亡路径罚分未饱和（应渐近 ±{sat_cap:.0f} 内）: {sc_chain}（{d_sq.reason}）"
+    assert sc_shop > sc_chain, \
+        f"软饱和破坏候选保序: shop={sc_shop} chain={sc_chain}"
+
+    # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
+    #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
+    #       depth 越深的精英越不是承诺（中间岔口可改道），罚分须随深度衰减；
+    #       近处精英威慑仍保留主要强度（54 局商店下一层藏精英的教训不回退）
+    md_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-midgate-"))
+    md_know = knowledge.Knowledge(md_dir)
+    md_know.policy["elite_min_hp_pct"] = 0.90   # 复刻运行值：62%~90% 灰区存在
+    md_know.policy["elite_soft_hp_pct"] = 0.62
+    md_know.policy["path_hp_floor_pct"] = 0.20  # 屏蔽血量线/Boss入场线，
+    md_know.policy["boss_entry_min_hp_pct"] = 0.30  # 只留 mid_gate 单变量
+    md_pol = policy.Policy(md_know)
+
+    def midgate_map(elite_depth: int):
+        """RestSite 首节点(r1) + 三层链(r2~r4，其中一层为 Elite) + Boss(r5)。
+
+        elite_depth 为链内序数（2/3/4 行），对应路径投影中的 depth 1/2/3。
+        """
+        def build(col):
+            nodes = []
+            for row in (2, 3, 4):
+                d = row - 1                      # 投影 depth：r2→1 ... r4→3
+                nt = "Elite" if d == elite_depth - 1 else "Event"
+                nodes.append({"row": row, "col": col, "node_type": nt,
+                              "children": [{"row": row + 1, "col": col}]})
+            return nodes
+        left = [{"index": 0, "row": 1, "col": 0, "node_type": "RestSite",
+                 "children": [{"row": 2, "col": 0}]}]
+        right = [{"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+                  "children": [{"row": 2, "col": 1}]}]
+        lchain = build(0) + [{"row": 5, "col": 0, "node_type": "Boss"}]
+        rchain = build(1) + [{"row": 5, "col": 1, "node_type": "Boss"}]
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": left + right, "nodes": left + right + lchain + rchain,
+                      "boss_node": {"row": 5}},
+              "run": {"current_hp": 50, "max_hp": 80, "gold": 0, "floor": 10,
+                      "deck": [{"card_id": f"CARD_{i}"} for i in range(6)]}}
+        return md_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    d_near = midgate_map(2)    # 精英在 depth1（紧邻篝火）：威慑基本保持
+    d_far = midgate_map(4)     # 精英在 depth3（深处）：承诺度低应显著减罚
+
+    d_near = midgate_map(2)    # 精英在 depth1（紧邻篝火）：威慑基本保持
+    d_far = midgate_map(4)     # 精英在 depth3（深处）：承诺度低应显著减罚
+    m_near = re.search(r"RestSite\(1,0\)=(-?[0-9.]+)", d_near.reason)
+    m_far = re.search(r"RestSite\(1,1\)=(-?[0-9.]+)", d_far.reason)
+    assert m_near and m_far, f"mid_gate 用例候选缺失: {d_near.reason} / {d_far.reason}"
+    assert float(m_far.group(1)) > float(m_near.group(1)) + 3.0, \
+        f"远处精英罚分未随深度衰减: near={m_near.group(1)} far={m_far.group(1)}"
+    for dd in (d_near, d_far):
+        assert "路径中段含未达标精英" in dd.reason, \
+            f"mid_gate 罚分留痕丢失: {dd.reason}"
 
     # 3xz) 绝境投影篝火回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，
     #      而地图端全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——

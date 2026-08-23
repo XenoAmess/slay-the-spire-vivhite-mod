@@ -9,6 +9,7 @@ Every decision carries:
 """
 from __future__ import annotations
 
+import math
 import random
 import re
 from dataclasses import dataclass, field
@@ -525,8 +526,28 @@ class Policy:
         # 卡组越强战斗越短：掉血先验按非基础牌数打折（每张 -3%，最多 -40%）
         deck_ease = 1.0 - min(0.40, 0.03 * good_cards)
 
+        # 投影罚分软饱和（第 107~108 批复盘）：死亡/血量线/Boss入场/中段精英四类
+        # 罚分累计后经 sat*tanh(raw/sat) 压扁。96 局去重治的是「同一坏结局记多次
+        # 账」；本修复治「多候选同时吃满大额罚分」——108 局二幕开局全线 -159~-193，
+        # 房间权重、休整加成等正信号在罚分竞赛中失声，评分退化为比拼「投影死得
+        # 早晚」（先验误差 × 幕数乘区的复利噪声）。tanh 单调保序（死亡深度的梯度
+        # 信息不丢），小罚分近似线性（既有门槛翻转语义不变），大额罚分渐进饱和。
+        pen_sat = float(pol.get("path_penalty_saturation", 70.0))
+
+        def squash_penalty(raw: float) -> float:
+            if raw <= 0.0 or pen_sat <= 0.0:
+                return raw
+            return pen_sat * math.tanh(raw / pen_sat)
+
+        # 中段精英罚分的深度衰减：逐节点选路下 depth 越深的精英越不是承诺
+        # （中间岔口可改道），且篝火回血会抬高后续真实闸门的通过率——107 局
+        # 29% 血时唯一篝火因子树深处藏精英被罚到 -84，压过 Monster(-0.94)
+        # 放弃救命休息；近处精英（54 局商店下一层）衰减有限威慑仍在
+        mid_decay = float(pol.get("elite_mid_gate_depth_decay", 0.85))
+
         def simulate(start_node, path_keys):
             score, cur_hp, notes = 0.0, float(hp), []
+            raw_penalty = 0.0
             mid_gate_hit = False
             died_mid = False
             for depth, key in enumerate(path_keys):
@@ -536,12 +557,13 @@ class Policy:
                 # 中段精英复检闸门：外层闸门只查候选首节点，第 54 局 F12 商店路径
                 # 的子树里藏着 F13 精英，47.5% 血被"金币足够"抬进精英漏斗。
                 # 逐节点选路意味着中段精英尚未承诺（后续仍可改道），罚分取外层
-                # 闸门的一半强度、加性实现（符号安全），仅作子树前景的投影修正
+                # 闸门的一半强度、加性实现（符号安全），并随深度衰减，仅作子树
+                # 前景的投影修正
                 if nt == "Elite" and depth >= 1:
                     gf, _gnote = self._elite_path_gate(pol, priors, int(round(cur_hp)), max_hp,
                                                         good_cards, act_mul)
                     if gf < 1.0:
-                        score -= (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5
+                        raw_penalty += (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5 * (mid_decay ** depth)
                         mid_gate_hit = True
                 factor, note = node_factor(nt, gnode, hpp)
                 if nt == "Monster" and combat_streak >= 3:
@@ -584,7 +606,7 @@ class Policy:
                     # 死亡投影保留"撑得更久"的序信息：死得越晚罚得越轻。
                     # 第 43 局实证：低血量时所有候选都吃满 -100，候选间评分差被压成
                     # 噪声，能续命的篝火与当场暴毙的精英无法区分（还给了闸门反转可乘之机）
-                    score -= max(0.0, pol.get("path_death_penalty", 100.0) - 3.0 * min(depth, 15))
+                    raw_penalty += max(0.0, pol.get("path_death_penalty", 100.0) - 3.0 * min(depth, 15))
                     died_mid = True
                     break
             final_pct = max(0.0, cur_hp) / max_hp
@@ -594,13 +616,16 @@ class Policy:
             # 与死亡是同一坏结局的三次记账——96 局二幕全图被叠加罚到 -165~-195、
             # 「预计进Boss血量 0%」而实际一路零伤事件走到 70% 血，评分彻底失去
             # 分辨力。中途死亡只记一次；撑到 Boss 但血量不达标的候选反而应优于
-            # 半路暴毙（存活深度信息由死亡罚分的 -3/深度梯度保留）
+            # 半路暴毙（存活深度信息由死亡罚分的 -3/深度梯度保留）。
+            # 107~108 批追加软饱和：去重治「多次记账」，饱和治「多候选同时吃满
+            # 大额罚分」——两类候选都触底后仍保留单调序与可辨识差异
+            score -= squash_penalty(raw_penalty)
             if died_mid:
                 notes.append("投影中途死亡")
                 return score, notes, final_pct
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
             if final_pct < floor_pct:
-                score -= (floor_pct - final_pct) * 40.0
+                raw_penalty += (floor_pct - final_pct) * 40.0
             # Boss 入场要求线（第 60~61 局复盘）：投影此前只作日志注释不进评分，
             # 「预计进 Boss 血量 44%」照样沿 Monster 链一路磨到 Boss 门前。
             # Boss 场均战损≈45（半个最大生命），低于要求线的入场是数学必死局——
@@ -609,8 +634,10 @@ class Policy:
             if (boss_row is not None and path_keys
                     and int(path_keys[-1][0]) >= int(boss_row)
                     and final_pct < need_pct):
-                score -= (need_pct - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
+                raw_penalty += (need_pct - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
                 notes.append(f"进Boss血量预计{final_pct:.0%}<{need_pct:.0%}，优先续航路线")
+            if raw_penalty > 0.0:
+                score -= squash_penalty(raw_penalty)
             return score, notes, final_pct
 
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0

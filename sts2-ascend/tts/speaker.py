@@ -32,7 +32,7 @@ SPEAK_ONCE = TTS_DIR / "speak_once.py"
 
 DURATION_FACTOR = 0.9       # index-tts 语速（稍快）
 SAPI_RATE = 1               # SAPI 语速（-10~10）
-MAX_QUEUE = 2               # 积压超过 2 句丢最旧
+MAX_QUEUE = 10              # 积压超过 10 句丢最旧（防内存溢出）
 MAX_SENTENCE = 90
 TERMINATORS = "。！？!?\n"
 SOFT_BREAKS = "，、；;：:"

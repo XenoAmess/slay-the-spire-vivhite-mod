@@ -91,25 +91,22 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 # 顶死后重演 86~87 批诊断过的「空转旋钮」。演化前先查行程：
                 # 余量不足一步时停止加码并显式留痕，把证据留给下一批复盘
                 # 设计接替旋钮（顶格旋钮代谢原则的代码化）
-                kb_step, bs_step = 1.0 * scale, 0.05 * scale
+                kb_step = 1.0 * scale
                 kb_head = BOUNDS["kill_bonus"][1] - pol["kill_bonus"]
-                bs_room = pol["block_safety"] - BOUNDS["block_safety"][0]
                 if kb_head >= kb_step:
                     _adj(know, "kill_bonus", kb_step, changes,
                          f"长战磨死（{rounds}回合），提升击杀奖励加快清场")
                 else:
                     changes.append(f"kill_bonus {pol['kill_bonus']:.2f} 距上限仅余 {kb_head:.2f}"
                                    f"(<步长{kb_step:.2f})，长战信号停止加码——顶格旋钮不再吸收证据")
-                # 防御释放仅限 Boss 长战（第 92~93 批复盘纠偏）：非 Boss 高危组合
-                # 的死因是「有效格挡不足」而非「龟防拖长战斗」——93 局 FUZZY+SHRINKER
-                # 7 回合磨死时全场最大单回合格挡 13、意图已滚到 31，此时释放防御
-                # 权重是反向用药。非 Boss 长战与短战同向：上调防御权重
+                # 防御释放已从 Boss 长战分支移除（第 107~108 批复盘）：该规则是
+                # 第 82~83 批引入的，当时还没有 boss_atk_mult 分轴；如今 Boss 攻坚
+                # 已由专属旋钮（boss_atk_mult 提速 + boss_entry_min_hp_pct 入场线）
+                # 承担，block_safety 再参与就形成跨语义振荡源——107 局 Boss 磨死
+                # 降防（1.07→1.00）、108 局普通长战死升防（1.00→1.05），两种真实
+                # 死亡信号让普通战的防御权重永远定不准。block_safety 只服务普通
+                # 战斗语义，Boss 长战证据全部流向攻坚双轴
                 if death_node == "Boss":
-                    if bs_room >= bs_step:
-                        _adj(know, "block_safety", -bs_step, changes, "长战实证过度龟防会拖长战斗，小幅回调")
-                    else:
-                        changes.append(f"block_safety {pol['block_safety']:.2f} 距下限仅余 {bs_room:.2f}"
-                                       f"(<步长{bs_step:.2f})，停止释放——防棘轮触底后继续失真")
                     # Boss 攻坚乘区演化（第 84~85 批复盘新增）：死亡榜前六全是
                     # F17 一幕 Boss（84~85 批 10 局中 6 局），入场血量从 52%~95%
                     # 全数阵亡——瓶颈是战斗时长而非入场血量。Boss 长战磨死时
