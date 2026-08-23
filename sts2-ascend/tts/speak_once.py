@@ -100,7 +100,15 @@ def main() -> int:
         _synth_moss(text, out)
     log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
     import winsound
-    winsound.PlaySound(str(out), winsound.SND_FILENAME)
+    busy = KNOWLEDGE_DIR / "voice_clone_busy.flag"
+    try:
+        busy.write_text(str(os.getpid()), encoding="utf-8")   # 吐槽员见此标志让位
+    except OSError:
+        pass
+    try:
+        winsound.PlaySound(str(out), winsound.SND_FILENAME)
+    finally:
+        busy.unlink(missing_ok=True)
     return 0
 
 

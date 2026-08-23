@@ -657,6 +657,38 @@ def main() -> int:
     assert pol._kill_bonus({"enemy_id": "FRESH_MOB"}, 6, 28, know.policy) > 0.0, \
         "正常敌人击杀奖励不应受影响"
 
+    # 3yh) 多敌战斗辅助体转火（第 136~137 批复盘）：头号杀手同族双子（生涯46战24死）
+    #      的神官本回合零伤害意图（治疗/增益型）——威胁分成恒为 0，旧评分永远把它排
+    #      最后，信徒被持续强化、意图逐轮滚升，拖长战斗正是死因形态。零伤害意图的
+    #      辅助体获得定向转火加分；负例：辅助体转为攻击意图后恢复常规威胁评分。
+    def support_state(sup_threat):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+            "combat": {"player": {"current_hp": 70, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [{"index": 0, "card_id": "SUP_STRIKE", "name": "打击",
+                                 "playable": True, "energy_cost": 1, "requires_target": True,
+                                 "valid_target_indices": [0, 1],
+                                 "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                       "enemies": [
+                           {"index": 0, "enemy_id": "KIN_PRIEST_T", "name": "同族神官",
+                            "current_hp": 30, "max_hp": 50, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": sup_threat}]},
+                           {"index": 1, "enemy_id": "KIN_FOLLOWER_T", "name": "同族信徒",
+                            "current_hp": 120, "max_hp": 190, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": 20}]}]},
+            "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    d_sup = pol.decide(support_state(0), ctx)
+    assert d_sup.action == "play_card" and d_sup.params.get("target_index") == 0 \
+        and "辅助" in d_sup.reason, \
+        f"零伤害辅助体未被优先转火: {d_sup.reason}（{d_sup.params}）"
+    d_sup2 = pol.decide(support_state(4), ctx)
+    assert d_sup2.action == "play_card" and d_sup2.params.get("target_index") == 1 \
+        and "辅助体优先转火" not in d_sup2.reason, \
+        f"辅助体转攻击意图后应恢复威胁评分: {d_sup2.reason}（{d_sup2.params}）"
+
     # 3x') 孤注一掷回合（第 59 局 Boss 战 T6 实证）：16 血/5 甲对 18 意图、
     #      手牌全是攻击无格挡牌——旧逻辑把全部攻击压到禁玩线，3 能量原样结束
     #      回合白吃 13 刀后下回合必死；修复后必须倾泻输出抢斩杀
@@ -1021,6 +1053,11 @@ def main() -> int:
     know.commit_event_option("GIFT_EV", "CARD", 0.0, 200.0, died=False, deck_delta=1)
     v_gift, _ = know.event_option_value("GIFT_EV", "CARD")
     assert v_gift > 0.0, f"强正收益加牌不应被误伤: {v_gift}"
+    # 减牌计价（第 136~137 批复盘）：滑脚木桥「跨越」每跨一次随机掉一张牌
+    # （card_avg=-1），旧公式反号虚标 +2 分导致四连跨白掉四张牌——净减牌必须计罚
+    know.commit_event_option("LOSS_EV", "DROP", 0.0, 0.0, died=False, deck_delta=-1)
+    v_drop, n_drop = know.event_option_value("LOSS_EV", "DROP")
+    assert v_drop <= -0.99 and n_drop == 1, f"减牌事件未按失去卡值计罚: {v_drop}/{n_drop}"
 
     # 3ee) 事件结算管线：pending_event 元组新增卡组规模字段后读写两端必须一致
     ag.ctx.reset_for("RUN_EVT", 0)
@@ -1408,6 +1445,76 @@ def main() -> int:
             gv_pol.pop("elite_soft_hp_pct", None)
         if gv_saved_safety is not None:
             gv_pol["elite_grey_safety_mult"] = gv_saved_safety
+
+    # 3yi) 灰区精英的输出饥饿豁免（第 136~137 批复盘）：137 局 88% 血灰区精英被
+    #      否决（悲观投影战后仅剩36%）而满血进 Boss 照样整管打空——弱卡组跳过
+    #      精英等于选择慢性死亡（遗物断供→输出不足→Boss 磨死）。爆发低于
+    #      deck_burst_floor 时生存线下调 elite_grey_starve_relief；强卡组（非饥饿）
+    #      维持原威慑。直接单测 veto 函数，隔离地图端 good_cards/先验的干扰。
+    #      数值复刻运行库：safety=2.3、先验 20.3、86% 血、折抵 20% → 悲观投影 39.3%
+    yv_pol = know.policy
+    yv_saved = {k: yv_pol.get(k) for k in ("elite_grey_survival_floor", "elite_grey_starve_relief")}
+    yv_saved_hard2, yv_saved_soft2, yv_saved_safety2 = (
+        yv_pol.get("elite_min_hp_pct"), yv_pol.pop("elite_soft_hp_pct", None),
+        yv_pol.get("elite_grey_safety_mult"))
+    try:
+        yv_pol["elite_min_hp_pct"] = 0.90
+        yv_pol["elite_soft_hp_pct"] = 0.62
+        yv_pol["elite_grey_safety_mult"] = 2.3
+        yv_pol["elite_grey_survival_floor"] = 0.40
+        yv_pol["elite_grey_starve_relief"] = 0.12
+        veto_strong = pol._elite_grey_veto(yv_pol, 20.3, 1.0, 0.86, 10, 80, burst_starved=False)
+        assert veto_strong[0] is not None and "规避精英" in veto_strong[1] \
+            and "饥饿豁免" not in veto_strong[1], f"强卡组灰区威慑失效: {veto_strong}"
+        veto_weak = pol._elite_grey_veto(yv_pol, 20.3, 1.0, 0.86, 10, 80, burst_starved=True)
+        assert veto_weak == (None, ""), \
+            f"输出饥饿豁免未放行灰区精英（投影39%≥28%）: {veto_weak}"
+        veto_dire2 = pol._elite_grey_veto(yv_pol, 20.3, 1.0, 0.62, 10, 80, burst_starved=True)
+        assert veto_dire2[0] is not None and "饥饿豁免至28%" in veto_dire2[1], \
+            f"豁免不是无底洞（跌破豁免线仍须拦截）: {veto_dire2}"
+    finally:
+        for k, v in yv_saved.items():
+            if v is not None:
+                yv_pol[k] = v
+            else:
+                yv_pol.pop(k, None)
+        if yv_saved_hard2 is not None:
+            yv_pol["elite_min_hp_pct"] = yv_saved_hard2
+        if yv_saved_soft2 is not None:
+            yv_pol["elite_soft_hp_pct"] = yv_saved_soft2
+
+    # 3yj) 饥饿豁免集成口径：弱爆发卡组（全防御技能，burst=0）在 86% 血的灰区精英
+    #      应放行到「谨慎评估」而非「规避精英」——复刻 137 局 RestSite(10,4) 压过
+    #      Elite(10,5) 的病灶岔路。rooms/enemies 注入隔离真实库数据干扰
+    saved_rooms_yj = know.stats.setdefault("rooms", {}).pop("Elite", None)
+    saved_enemies_yj = know.stats.get("enemies", {})
+    know.stats["enemies"] = {}
+    know.stats["rooms"]["Elite"] = {"visits": 10, "outcome_sum": 0.0,
+                                    "hp_lost_sum": 203.0, "damage_events": 10}
+    old_hard_yj = know.policy["elite_min_hp_pct"]
+    old_safety_yj = know.policy["elite_grey_safety_mult"]
+    try:
+        know.policy["elite_min_hp_pct"] = 0.90
+        know.policy["elite_grey_safety_mult"] = 2.3
+        starved_map = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                       "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                                    "node_type": "Elite"}], "nodes": []},
+                       "run": {"current_hp": 69, "max_hp": 80, "gold": 200, "floor": 10,
+                               "deck": [{"card_id": f"GUARD_{i}", "card_type": "Skill",
+                                         "energy_cost": 1, "rules_text": "获得4点格挡",
+                                         "dynamic_values": [{"name": "Block", "current_value": 4}]}
+                                        for i in range(10)]}}
+        d_yj = pol.decide(starved_map, ctx)
+        assert "规避精英" not in d_yj.reason and "谨慎评估" in d_yj.reason, \
+            f"饥饿豁免未在地图端放行灰区精英: {d_yj.reason}"
+    finally:
+        know.policy["elite_min_hp_pct"] = old_hard_yj
+        know.policy["elite_grey_safety_mult"] = old_safety_yj
+        know.stats["enemies"] = saved_enemies_yj
+        if saved_rooms_yj is not None:
+            know.stats["rooms"]["Elite"] = saved_rooms_yj
+        else:
+            know.stats["rooms"].pop("Elite", None)
 
     # 3rr) 精英死亡演化改接悲观系数（第 86~87 批复盘）：elite_min_hp_pct 已在
     #      0.9 上限顶格空转——精英死亡信号必须驱动仍有余量的新旋钮，

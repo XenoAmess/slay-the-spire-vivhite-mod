@@ -332,7 +332,8 @@ class Policy:
     # ------------------------------------------------------------------
 
     def _elite_path_gate(self, pol: dict, priors: dict, hp: int, max_hp: int,
-                         good_cards: int, act_mul: float) -> tuple[float, str]:
+                         good_cards: int, act_mul: float,
+                         burst_starved: bool = False) -> tuple[float, str]:
         """精英进场闸门：按实测战损投影"打完精英还剩多少血"，不达标整条候选路径重罚。
 
         第 36 局实证：71% 血进灰区精英单场 -44（77% 现血）+ 两瓶药水，连锁三个
@@ -359,7 +360,7 @@ class Policy:
             return 0.1, (f"血量{hpp:.0%}进精英预计战后仅剩{max(0.0, proj):.0%}"
                          f"(需求≥{req:.0%})，规避精英")
         veto_f, veto_note = self._elite_grey_veto(pol, prior, act_mul, hpp,
-                                                  good_cards, max_hp)
+                                                  good_cards, max_hp, burst_starved)
         if veto_f is not None:
             return veto_f, veto_note
         if hpp < hard:
@@ -367,7 +368,8 @@ class Policy:
         return 1.0, ""
 
     def _elite_grey_veto(self, pol: dict, prior: float, act_mul: float, hpp: float,
-                         good_cards: int, max_hp: int) -> tuple[float | None, str]:
+                         good_cards: int, max_hp: int,
+                         burst_starved: bool = False) -> tuple[float | None, str]:
         """灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）。
 
         第 87 局实证：86% 血（灰区内）接受旧日雕像，实测战损 54（64% 血条），
@@ -388,6 +390,14 @@ class Policy:
         悲观情形活命 + 均值情形舒适（均值投影战后 ~57%~71%）+ 0.5 折权，
         三层保守叠加足以吸收 87 局式重尾，无需再让门槛不可达。
         硬线以上不受影响。返回 (None, "") 表示不处于灰区或复核通过。
+
+        输出饥饿豁免（第 136~137 批复盘）：137 局 88% 血灰区精英被否决
+        （悲观投影战后仅剩36%），同期满血进 Boss 照样整管打空——卡组弱到
+        「跳过精英也必输 Boss」时，风险定价必须计入机会成本：精英是遗物/
+        高质牌的唯一稳定供给，全部让给篝火等于选择慢性死亡（122 局诊断的
+        遗物断供→输出不足→Boss 磨死因果链）。爆发吞吐量低于 deck_burst_floor
+        时生存线下调 elite_grey_starve_relief；卡组成型后豁免自动消失，
+        棘轮威慑对强卡组原样生效。
         """
         hard = float(pol["elite_min_hp_pct"])
         soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
@@ -402,10 +412,17 @@ class Policy:
         else:
             # 旧库兼容：无新键时沿用旧舒适线语义
             floor = float(pol.get("elite_grey_proj_floor", 0.60))
-        if proj >= floor:
+        eff_floor, starve_note = floor, ""
+        if burst_starved:
+            rel = clamp(float(pol.get("elite_grey_starve_relief", 0.0)),
+                        0.0, max(0.0, floor - 0.05))
+            if rel > 0:
+                eff_floor = floor - rel
+                starve_note = f"，饥饿豁免至{eff_floor:.0%}"
+        if proj >= eff_floor:
             return None, ""
         return 0.1, (f"血量{hpp:.0%}灰区精英预计战后仅剩{max(0.0, proj):.0%}"
-                     f"(<{floor:.0%})，规避精英")
+                     f"(<{floor:.0%}{starve_note})，规避精英")
 
     def _map(self, state: dict, ctx) -> Decision:
         m = state.get("map") or {}
@@ -503,7 +520,7 @@ class Policy:
                     prior_e = self.know.room_damage_prior(
                         "Elite", float(priors.get("Elite", 28)))
                     veto_f, veto_note = self._elite_grey_veto(
-                        pol, prior_e, act_mul, hpp, good_cards, max_hp)
+                        pol, prior_e, act_mul, hpp, good_cards, max_hp, burst_starved)
                     if veto_f is not None:
                         return veto_f, veto_note
                     return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
@@ -550,8 +567,14 @@ class Policy:
         act_idx = min(len(acts) - 1, max(0, (floor - 1) // 17))
         act_mul = float(acts[act_idx]) if isinstance(acts[act_idx], (int, float)) else 1.0
 
+        # 输出饥饿判定（第 136~137 批复盘）：爆发吞吐量低于门槛的卡组处于
+        # 「跳过精英也必输 Boss」状态，灰区精英复核据此豁免部分生存线
+        run_deck = run.get("deck", [])
+        burst_starved = bool(run_deck) and self.deck_burst(run_deck) < float(
+            pol.get("deck_burst_floor", 30.0))
+
         elite_gate_f, elite_gate_note = self._elite_path_gate(
-            pol, priors, hp, max_hp, good_cards, act_mul)
+            pol, priors, hp, max_hp, good_cards, act_mul, burst_starved)
 
         def paths_from(start_key) -> list[list[tuple]]:
             out: list[list[tuple]] = []
@@ -617,7 +640,7 @@ class Policy:
                 # 前景的投影修正
                 if nt == "Elite" and depth >= 1:
                     gf, _gnote = self._elite_path_gate(pol, priors, int(round(cur_hp)), max_hp,
-                                                        good_cards, act_mul)
+                                                        good_cards, act_mul, burst_starved)
                     if gf < 1.0:
                         raw_penalty += (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5 * (mid_decay ** depth)
                         mid_gate_hit = True
@@ -1390,6 +1413,12 @@ class Policy:
                     return hb[0], None, hb[1]
                 return score, None, f"群体伤害≈{eff}"
             best_t, best_s, why, best_kill = None, -1.0, "", False
+            # 辅助体转火（第 136~137 批复盘）：多敌战斗中本回合零伤害意图的敌人
+            # （治疗/增益/蓄力型）威胁分成恒为 0，旧评分永远把它排最后——头号杀手
+            # 同族双子（生涯 46 战 24 死）的神官持续强化信徒、意图逐轮滚升，
+            # 拖长战斗正是死因形态。击杀辅助消除的是未来的意图增长，
+            # 给予定向转火加分（重生召唤物与单敌战斗除外）
+            sup_bonus = float(pol.get("support_target_bonus", 0.0))
             _valid = (card.get("valid_target_indices") or []) if card.get("requires_target") else []
             # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
@@ -1398,6 +1427,7 @@ class Policy:
                 resp = self._is_respawn_add(e)
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
+                is_support = (not resp and len(enemies) > 1 and threat <= 0 and sup_bonus > 0)
                 if resp:
                     # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
                     # 输出、本体雾菇意图滚到 22 的教训）：
@@ -1408,12 +1438,16 @@ class Policy:
                     s = eff * atk_damp
                 else:
                     s = (eff + threat * 0.3) * atk_damp
+                    if is_support:
+                        s += sup_bonus
                 killed = eff >= e.get("current_hp", 9999)
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol)
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
-                    why = f"可击杀{e['name']}" if killed else f"单体伤害≈{eff}"
+                    why = f"可击杀{e['name']}" if killed else (
+                        f"辅助体优先转火：{e['name']}（零伤害意图，放生=纵容其强化队友）"
+                        if is_support else f"单体伤害≈{eff}")
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
