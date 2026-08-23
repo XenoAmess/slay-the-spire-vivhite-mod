@@ -2331,3 +2331,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.90 → 7.20（非 Boss 长战磨死（8回合）且 kill_bonus 顶格，攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 10.50 → 11.00（非 Boss 长战磨死（8回合）且 kill_bonus 顶格，缺口越深纠偏上限越高）
 - 生涯战绩：0/187 胜，当前目标进阶 0
+
+## 第 188 局复盘（2026-08-24 02:46）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：HOWL_FROM_BEYOND, EVIL_EYE, UPPERCUT, RAMPAGE, BREAKTHROUGH, CINDER, SHRUG_IT_OFF, EVIL_EYE, TAUNT, PILLAGE, VICIOUS, IMPERVIOUS
+- 本局遗物：音叉, RED_MASK
+- 战斗记录：F4 Monster战 掉血10; F5 Monster战 掉血13; F6 Monster战 掉血17; F8 Elite战 掉血28; F11 Monster战 掉血16; F17 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 7.20 → 7.50（Boss 高血进场长战死（89%，11回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 11.00 → 11.50（Boss 高血进场长战死（11回合），缺口越深纠偏上限越高）
+- 生涯战绩：0/188 胜，当前目标进阶 0
