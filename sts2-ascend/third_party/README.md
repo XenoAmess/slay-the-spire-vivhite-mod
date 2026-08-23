@@ -21,6 +21,16 @@
 **fix/potion-aoe-target-resolution**（commit `bf61078`，已在 fork `main`）：
 
 - 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/46
+
+**fix/unlock-screen-action**（commit `04e2e75`，已在 fork `main`）：
+
+- 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/47
+- 问题：赛后/里程碑的整屏解锁展示（"解锁遗物！"等）不被路由——`/state` 返回 `UNKNOWN` 且
+  `available_actions` 为空，自动游玩在该屏永久卡死。
+- 修复：`NUnlockScreen => "UNLOCK"` 路由 + `unlock` payload（类型/解锁项名称/can_confirm）+
+  新动作 `confirm_unlock`（点击 `_unlockConfirmButton` 关屏）。
+- 验证：Release 构建 0 警告 0 错误；该屏罕见未真机复现，大脑侧已加 `UNLOCK` 屏处理。
+- 大脑侧兜底（不依赖新 mod 版本）：UNKNOWN 屏滞留 12 tick 后点击底部确认区（临时方案保留）。
 - 问题：`use_potion` 对 AoE/随机目标药水（如爆炸药瓶 EXPLOSIVE_AMPOULE）永远 pending——
   `GameActionService.ResolvePotionTarget` 的 switch 未覆盖 `AllEnemies/AllAllies/RandomEnemy`，
   落入默认分支返回 `potion.Owner.Creature`，游戏静默丢弃非法目标。
