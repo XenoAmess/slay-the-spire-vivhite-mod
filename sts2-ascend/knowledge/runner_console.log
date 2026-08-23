@@ -4989,3 +4989,101 @@ Update todos and give ≤200 char summary.
 [17:32:01] [COMBAT/F17] 战斗：打出【挑衅】→同族信徒（格挡6）；敌意图总伤5，我方60血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需13回合>可存活5回合，全攻提速
 [17:32:02] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（防御✗,彼岸咆哮✗,防御✗）
 [17:32:03] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:32:04] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:05] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:05] [COMBAT/F17] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=1）。输出尾部：
+hout -Encoding in PS5.1 assumes ANSI(GBK) → mojibake display. Earlier when I read lessons.md with the Read tool, Chinese displayed correctly, and my bash appends used UTF-8. To be sure, verify with the Read tool (which reads UTF-8) on the tail.
+
+2. **review_conclusion.txt displays as mojibake even with -Encoding UTF8?!** "??????..." — that's bad. I wrote it with the Write tool (should be UTF-8 no BOM). Get-Content -Encoding UTF8 should decode it... but output shows garbage like '?????'. Hmm wait — the console itself is GBK; PowerShell decoded UTF-8 into proper .NET strings, then console re-encoded to GBK for display — should show Chinese-ish mojibake not question marks. Question marks typically mean lossy conversion. OR the Write tool wrote UTF-8 and something's off. Let me check bytes with Read tool / python.
+
+Also note git status shows runner_console.log modified (by running brain, not me — fine, host handles). third_party/MOSS-TTS-Nano shows '?' (submodule-ish state, untouched by me). review_conclusion.txt untracked new ✓.
+
+Also lessons.md tail reveals runs 129/130 already finished (block_safety now 1.65, 0/130 wins) — brain is live and evolving; my report references remain accurate for 125~126.
+
+Verify encodings properly with Python.
+控制台乱码可能只是显示问题，用 Python 校验磁盘字节编码。
+⚙ bash {}
+· tokens 235589 ·
+💭 All three files decode as valid UTF-8 (the mojibake in output is purely the GBK console display; python printed the decoded-then-reencoded string badly but the file itself is utf8-ok). Wait — review_conclusion.txt is 246 bytes for ~82 chars → 82×3 = 246 ✓ consistent with UTF-8 Chinese. Good.
+
+But hold on — one concern: the TTS pipeline that reads review_conclusion.txt — how does the host read it? Presumably Python with UTF-8 ✓.
+
+Now, let me do a final review of the complete diff of my code changes to make sure everything is coherent and nothing stray got in. Check git diff stat numbers and skim policy.py diff.
+编码全部正确（控制台乱码仅为显示问题）。最后过一遍代码变更全貌。
+⚙ bash {}
+· tokens 236034 ·
+
+[llm] 复盘超时（40 分钟），本次作废
+[llm] 优先模型 openrouter/stealth/ox-alpha@max 复盘失败（timeout），30 分钟内跳过该条目
+[17:32:06] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:06] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:07] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:08] [COMBAT/F17] 战斗：打出【上勾拳】→同族神官（单体伤害≈13）；敌意图总伤27，我方60血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需13回合>可存活2回合，全攻提速
+[17:32:09] [COMBAT/F17] 战斗：打出【打击】→同族信徒（单体伤害≈6）；敌意图总伤24，我方60血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需13回合>可存活2回合，全攻提速
+[17:32:10] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（耸肩无视✗,岩石铠甲✗,耸肩无视✗）
+[17:32:10] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:32:12] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:12] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:13] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:14] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:14] [COMBAT/F17] 战斗：回合过渡中，等待
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 优先模型 openrouter/stealth/ox-alpha@max 冷却中（剩余 30 分钟），看下一优先
+[llm] 优先模型全部不可用，回退 kimi-for-coding/k3（每 5 局）
+[llm] 异步复盘启动：覆盖第 [127, 128, 129, 130] 局（模型 kimi-for-coding/k3）
+[17:32:15] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:15] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:16] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:17] [COMBAT/F17] 战斗：打出【拆卸】→同族信徒（单体伤害≈16）；敌意图总伤22，我方36血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需12回合>可存活2回合，全攻提速
+[17:32:18] [COMBAT/F17] 战斗：打出【打击】→同族信徒（单体伤害≈6）；敌意图总伤22，我方36血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需12回合>可存活2回合，全攻提速
+[git] 已自动存档：chore(sts2-ascend): 第127~130局后复盘前备份（复盘进行中，仅 knowledge/）
+[17:32:18] [COMBAT/F17] 战斗：打出【防御】（格挡3）；敌意图总伤22，我方36血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需11回合>可存活2回合，全攻提速
+[llm] ===== 启动大模型复盘（kimi-for-coding/k3 via opencode [fallback]，第127~130局，备份点 84a76790）=====
+[llm] 直播悬浮窗已拉起
+[llm] 语音朗读器已拉起（edge）
+[17:32:19] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（坚毅✗,防御✗）
+[17:32:20] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:32:21] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:22] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:23] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:23] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:24] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:24] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:25] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:26] [COMBAT/F17] 战斗：打出【火焰屏障】（格挡12）；敌意图总伤24，我方17血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需11回合>可存活1回合，全攻提速
+[17:32:27] [COMBAT/F17] 战斗：打出【拆卸】→同族神官（单体伤害≈12｜无甲孤注抢斩杀）；敌意图总伤24，我方17血/12甲；⚠高危Boss（44战22死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需12回合>可存活1回合，全攻提速
+[17:32:28] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（打击✗,邪眼✗,打击✗）
+[17:32:28] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:32:29] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:30] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:31] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:31] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:32] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:33] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:33] [COMBAT/F17] 战斗：打出【打击】→同族信徒（单体伤害≈6｜无甲孤注抢斩杀）；敌意图总伤23，我方5血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需10回合>可存活0回合，全攻提速
+[17:32:35] [COMBAT/F17] 战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤23，我方5血/0甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需11回合>可存活0回合，全攻提速
+[17:32:36] [COMBAT/F17] 战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤23，我方5血/8甲；⚠高危Boss（44战22死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需11回合>可存活0回合，全攻提速
+[17:32:37] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（防御✗,打击✗,打击✗,防御✗）
+[17:32:38] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:32:39] [COMBAT/F17] 战斗：回合过渡中，等待
+[17:32:40] [GAME_OVER/F17] 对局结束：失败（层数 17），正在总结复盘…
+[agent] 战斗失败：F17 Boss战 掉血80（阵亡）
+[agent] 战斗失败：F17 Boss战 掉血80（阵亡，含8回合全场）
+
+
+## 第 131 局复盘（2026-08-23 17:32）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：STONE_ARMOR, DISMANTLE, SHRUG_IT_OFF, SHRUG_IT_OFF, UPPERCUT, TRUE_GRIT, FLAME_BARRIER, HOWL_FROM_BEYOND, TAUNT, UPPERCUT, DISMANTLE, EVIL_EYE
+- 本局遗物：NUNCHAKU
+- 战斗记录：F7 Monster战 掉血10; F8 Monster战 掉血27; F11 Monster战 掉血4; F12 Monster战 掉血0; F14 Monster战 掉血17; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/7局)，MANGLE(22分/21局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/131 胜，当前目标进阶 0
+
+[agent] 对局日志已保存：20260823-173240_0QC7D0CZZPXV.json
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 优先模型 openrouter/stealth/ox-alpha@max 冷却中（剩余 29 分钟），看下一优先
+[llm] 优先模型全部不可用，回退 kimi-for-coding/k3（每 5 局）
