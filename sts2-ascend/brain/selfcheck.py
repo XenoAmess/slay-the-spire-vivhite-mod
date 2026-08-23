@@ -2435,6 +2435,62 @@ def main() -> int:
         "高血进场仍上调入场线（138~141 分流被破坏）"
     assert "高血进场" in ek_lesson3, f"高血分流留痕缺失: {ek_lesson3}"
 
+    # 3zm) 长战证据接替旋钮 + 爆毙重分类（第 167~176 批复盘）：
+    #      ①kill_bonus 顶格的非 Boss 长战死证据不再丢弃——改接 burst_starve
+    #      双旋钮（与 Boss 高血进场长战死同构：「杀得慢」→ 拿牌端输出饥饿）；
+    #      ②4 回合整管打空（dpr≥14）按「没挡住」爆毙重分类，证据归 block_safety；
+    #      ③dpr 低于阈值的真长战不误伤；④旧记录无 hp_lost 字段时维持原口径。
+    zdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-grind-"))
+    # ①顶格长战死：证据改接 burst_starve，防御端不代偿
+    zknow = knowledge.Knowledge(zdir)
+    zknow.policy["kill_bonus"] = 20.0
+    zctx = _RC()
+    zctx.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
+                           "rounds": 10, "hp_lost": 50.0}
+    zb0 = zknow.policy["burst_starve_bonus_base"]
+    zx0 = zknow.policy["burst_starve_bonus_extra_max"]
+    zbs0 = zknow.policy["block_safety"]
+    zlesson = reflect.finalize_run(zknow, zctx, victory=False, final_floor=8)
+    assert abs(zknow.policy["block_safety"] - zbs0) < 1e-9, \
+        f"顶格长战死仍代偿加码防御: {zbs0} -> {zknow.policy['block_safety']}"
+    assert zknow.policy["burst_starve_bonus_base"] > zb0, \
+        "顶格长战死证据未改接 burst_starve_bonus_base"
+    assert zknow.policy["burst_starve_bonus_extra_max"] > zx0, \
+        "顶格长战死证据未改接 burst_starve_bonus_extra_max"
+    assert "停止代偿加码" in zlesson and "证据改接拿牌端输出饥饿" in zlesson, \
+        f"接替旋钮留痕缺失: {zlesson}"
+    # ②爆毙重分类：4 回合 -64（dpr=16 ≥ 14）→ block_safety 通道，不喂 burst_starve
+    zctx2 = _RC()
+    zctx2.died_in_combat = {"comp_id": "INKLET", "node_type": "Monster",
+                            "rounds": 4, "hp_lost": 64.0}
+    zb1 = zknow.policy["burst_starve_bonus_base"]
+    zbs1 = zknow.policy["block_safety"]
+    zlesson2 = reflect.finalize_run(zknow, zctx2, victory=False, final_floor=14)
+    assert zknow.policy["block_safety"] > zbs1, \
+        f"高速失血爆毙未上调防御（误留在长战通道）: {zbs1} -> {zknow.policy['block_safety']}"
+    assert abs(zknow.policy["burst_starve_bonus_base"] - zb1) < 1e-9, \
+        "爆毙证据误喂 burst_starve（证据归属混淆）"
+    assert "高速失血爆毙" in zlesson2, f"爆毙重分类未留痕: {zlesson2}"
+    # ③真长战不误伤：6 回合 -66（dpr=11 < 14）仍走长战通道
+    zctx3 = _RC()
+    zctx3.died_in_combat = {"comp_id": "FUZZY_WURM_CRAWLER+SHRINKER_BEETLE",
+                            "node_type": "Monster", "rounds": 6, "hp_lost": 66.0}
+    zb2 = zknow.policy["burst_starve_bonus_base"]
+    zbs2 = zknow.policy["block_safety"]
+    reflect.finalize_run(zknow, zctx3, victory=False, final_floor=5)
+    assert zknow.policy["burst_starve_bonus_base"] > zb2, \
+        "低 dpr 真长战被误重分类为爆毙（长战证据丢失）"
+    assert abs(zknow.policy["block_safety"] - zbs2) < 1e-9, \
+        "低 dpr 真长战误伤防御棘轮"
+    # ④向后兼容：旧记录无 hp_lost 字段（dpr 未知）维持回合数口径
+    zctx4 = _RC()
+    zctx4.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster", "rounds": 10}
+    zb3 = zknow.policy["burst_starve_bonus_base"]
+    zlesson4 = reflect.finalize_run(zknow, zctx4, victory=False, final_floor=8)
+    assert zknow.policy["burst_starve_bonus_base"] > zb3, \
+        "无 hp_lost 旧记录未维持长战口径"
+    assert "停止代偿加码" in zlesson4, f"无 hp_lost 旧记录留痕缺失: {zlesson4}"
+
     # 3yl) 全场皆为已证实重生体时解除重生压制（第 152 局 F6 实证）：墨宝 1 血
     #      不死阶段被重生标记三重压制（eff 封顶 1/威胁清零/击杀奖励归零），打击
     #      评分跌破出牌阈值——58 个 tick 满手攻击空过、65 回合白掉 54 血，直到
@@ -2459,6 +2515,10 @@ def main() -> int:
                                 "intents": [{"total_damage": 3}]}]},
                 "run": {"current_hp": 47, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
     pol._combat_kills["INKLET_T"] = 2   # 模拟同场已两次预测击杀后它仍在场（1 血不死）
+    # 906~908 行按战斗实例更替清空击杀计数：手动播种后必须同步认领当前战斗
+    # 实例，否则下一次 decide 检测到「战斗变更」先把播种清掉（167~176 批
+    # 复盘发现的既有测试脆弱点——断言依赖上一个用例留下的实例身份）
+    pol._kills_combat = ctx.combat
     d_ink = pol.decide(inklet_state(), ctx)
     assert d_ink.action == "play_card" and d_ink.params.get("target_index") == 0, \
         f"全场皆重生体时仍拒绝出牌（152 局 F6 空过复发）: {d_ink.action}（{d_ink.reason}）"

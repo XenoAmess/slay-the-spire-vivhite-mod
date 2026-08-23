@@ -205,10 +205,28 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                     # 把证据留给复盘设计接替旋钮）。对意图升级型敌人，防御加码
                     # 拖长战斗反而是死因本身。短时爆毙（<4回合）分支不受影响
                     # ——那才是真正的「没挡住」证据
+                    #
+                    # 接替旋钮落地（第 167~176 批复盘）：173~176 连续四局长战死
+                    # 证据在 kill_bonus 顶格后被整体丢弃（学习停摆）。与 Boss
+                    # 高血进场长战死同构——「杀得慢」的证据喂给拿牌端输出饥饿
+                    # （burst_starve 双旋钮，行程 5.7/8.0 与 8.5/12.0 尚有余量），
+                    # 从源头提高卡组击杀速率；防御端仍不代偿
                     changes.append(f"非 Boss 长战阵亡（{rounds}回合），kill_bonus 顶格——"
-                                   "长战证据不再溢入 block_safety，防御棘轮停止代偿加码")
+                                   "长战证据不再溢入 block_safety，防御棘轮停止代偿加码；"
+                                   "证据改接拿牌端输出饥饿")
+                    _adj(know, "burst_starve_bonus_base", 0.3, changes,
+                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
+                         "攻击饥饿基础分加码")
+                    _adj(know, "burst_starve_bonus_extra_max", 0.5, changes,
+                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
+                         "缺口越深纠偏上限越高")
             else:
-                _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
+                if burst_death:
+                    _adj(know, "block_safety", 0.05, changes,
+                         f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
+                         f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）——按「没挡住」证据上调防御权重")
+                else:
+                    _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:
