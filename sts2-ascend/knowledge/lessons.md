@@ -2624,3 +2624,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/213 胜，当前目标进阶 0
+
+## 第 214 局复盘（2026-08-24 06:11）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：TRUE_GRIT, RUPTURE, BREAKTHROUGH, BLUDGEON, THUNDERCLAP, SHRUG_IT_OFF, BLUDGEON, TAUNT
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血19; F5 Monster战 掉血30; F6 Monster战 掉血19; F7 Monster战 掉血0; F11 Monster战 掉血40（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，CRIMSON_MANTLE(26分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；deck_burst_floor: 33.00 → 34.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
+- 生涯战绩：0/214 胜，当前目标进阶 0
