@@ -66,3 +66,20 @@ mod 里 `BuildAvailableActions`（ActionDescriptor 列表，供 MCP tools）和
 
 - 上游 PR：<https://github.com/CharTyr/STS2-Agent/pull/48>
 - fork 分支：`XenoAmess/STS2-Agent` 的 `feat/crystal-sphere-screen`
+
+## 追加：同日第二起占卜屏卡死（大脑侧契约缺口）
+
+mod 修好一周后（实际数小时）占卜屏再次卡死——本次 mod/屏幕识别/动作全部正常，
+根因在大脑侧：**`Sts2Client.act()` 只接受 card_index/target_index/option_index，
+`_crystal_sphere` 策略传 `x/y/tool` 直接 TypeError**，动作每 tick 失败形成死循环
+（决策正常、执行炸掉，日志里 `决策 占卜：big点(5,6)` + `act() got an unexpected
+keyword argument 'x'` 成对出现就是判据）。
+
+**教训：mod API 新增动作参数时，大脑 HTTP 客户端必须同步加字段**——
+这是一条跨仓库（fork mod ↔ 工作区大脑）的隐性契约，两边任何一边缺位都表现为
+"屏幕识别正常但无限僵死"。修复：`client.act()` 增加 `x/y/tool` 关键字参数
+（6520d95 + autogit 存档）。
+
+顺带根治了同日三次咬人的 `review_active.flag` 陈旧 bug：run_review 的
+超时/exit≠0/异常路径在 finally 里补 `set_review_active(False)`（原先这些
+提前 return 走不到后处理段的清理）。
