@@ -146,7 +146,7 @@ def main() -> int:
                 if ended:
                     return
                 continue
-            wav = TTS_DIR / f"edge_pf_{wid}.wav"
+            wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
             ok = eng.synth_to_wav(sent, wav)
             with done_cond:
                 done[seq] = (wav if ok else None, sent)
@@ -167,10 +167,15 @@ def main() -> int:
             try:
                 if wav is not None:
                     _play_wav_with_gain(wav)
+                    try:
+                        wav.unlink(missing_ok=True)     # 播完即删，控制磁盘占用
+                    except OSError:
+                        pass
                 else:
                     eng.say_fallback(sent)
             except Exception as exc:
-                log(f"播放失败：{exc}")
+                import traceback
+                log(f"播放失败：{exc!r}\n{traceback.format_exc()[-500:]}")
             counters["played"] += 1
 
     threading.Thread(target=player, daemon=True).start()
