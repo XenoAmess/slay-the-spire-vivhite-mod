@@ -756,11 +756,28 @@ class Policy:
             # Boss 场均战损≈45（半个最大生命），低于要求线的入场是数学必死局——
             # 按差值重罚，让 F10+ 的篝火/商店续航路线能压过继续消耗的战斗路线
             need_pct = float(pol.get("boss_entry_min_hp_pct", 0.65))
-            if (boss_row is not None and path_keys
-                    and int(path_keys[-1][0]) >= int(boss_row)
-                    and final_pct < need_pct):
-                raw_penalty += (need_pct - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
-                notes.append(f"进Boss血量预计{final_pct:.0%}<{need_pct:.0%}，优先续航路线")
+            # 输出饥饿豁免（第 209 批复盘）：与灰区精英豁免
+            # （elite_grey_starve_relief，136~137 批）同构。入场血量在 0.65~1.00
+            # 带内已被 63/124/137/143/146/147/167/208 八局证伪为生死变量——208 局
+            # 51% 进 KIN 双子，6 回合总伤 ~142 而击杀投影还需 8~15 回合，满血进场
+            # 只多活 2~3 回合结局不变。饥饿卡组的瓶颈是卡组强度：为堆血放弃战斗/
+            # 商店/宝箱只会让卡组更弱（安全螺旋）。饥饿时入场线按比例放宽，罚分
+            # 仍作用于放宽后的线以下；绝境闸门（血量地板/死亡投影）不受影响
+            need_eff = need_pct
+            if burst_starved:
+                _relief = clamp(float(pol.get("boss_entry_starve_relief", 0.0)), 0.0, 0.5)
+                if _relief > 0.0:
+                    need_eff = need_pct * (1.0 - _relief)
+            _to_boss = (boss_row is not None and path_keys
+                        and int(path_keys[-1][0]) >= int(boss_row))
+            if _to_boss and final_pct < need_eff:
+                raw_penalty += (need_eff - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
+                _relax = f"（饥饿放宽自{need_pct:.0%}）" if need_eff < need_pct - 1e-9 else ""
+                notes.append(f"进Boss血量预计{final_pct:.0%}<{need_eff:.0%}{_relax}，优先续航路线")
+            elif _to_boss and need_eff < need_pct - 1e-9 and final_pct < need_pct:
+                # 豁免生效的可观测留痕（复盘核对点）：罚分被饥饿豁免免除
+                notes.append(f"输出饥饿，Boss入场线放宽至{need_eff:.0%}"
+                             f"（预计{final_pct:.0%}免于续航罚分）")
             if raw_penalty > 0.0:
                 score -= squash_penalty(raw_penalty)
             return score, notes, final_pct

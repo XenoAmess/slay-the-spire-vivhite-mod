@@ -2491,6 +2491,103 @@ def main() -> int:
         "无 hp_lost 旧记录未维持长战口径"
     assert "停止代偿加码" in zlesson4, f"无 hp_lost 旧记录留痕缺失: {zlesson4}"
 
+    # 3zn) 输出饥饿证据链的二次接替（第 209 批复盘）：burst_starve 双旋钮顶格
+    #      （8.0/12.0，206~208 三连实证 _adj 空转、证据蒸发）后，长战证据递归
+    #      改接 deck_burst_floor——加分数值顶死就加宽饥饿带，让顶格加分惠及
+    #      更多卡组状态；floor 也顶格（45）则停止吸收并显式留痕
+    ndir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-starve2-"))
+    nknow = knowledge.Knowledge(ndir)
+    nknow.policy["kill_bonus"] = 20.0
+    nknow.policy["burst_starve_bonus_base"] = 8.0     # 顶格
+    nknow.policy["burst_starve_bonus_extra_max"] = 12.0  # 顶格
+    # ①非 Boss 长战死 + 双旋钮顶格 → deck_burst_floor +1.0，防御端不代偿
+    nctx = _RC()
+    nctx.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
+                           "rounds": 10, "hp_lost": 50.0}
+    nf0 = nknow.policy["deck_burst_floor"]
+    nbs0 = nknow.policy["block_safety"]
+    nlesson = reflect.finalize_run(nknow, nctx, victory=False, final_floor=8)
+    assert abs(nknow.policy["block_safety"] - nbs0) < 1e-9, \
+        f"二次接替仍代偿加码防御: {nbs0} -> {nknow.policy['block_safety']}"
+    assert abs(nknow.policy["deck_burst_floor"] - (nf0 + 1.0)) < 1e-9, \
+        f"双旋钮顶格后证据未改接饥饿带宽度: {nf0} -> {nknow.policy['deck_burst_floor']}"
+    assert "饥饿带加宽" in nlesson, f"二次接替留痕缺失: {nlesson}"
+    # ②Boss 高血进场长战死 + 双旋钮顶格 → 同通道改接饥饿带
+    nctx2 = _RC()
+    nctx2.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss",
+                            "rounds": 9, "hp_lost": 70.0}
+    nctx2.death_hp_pct_at_entry = 0.9
+    nf1 = nknow.policy["deck_burst_floor"]
+    nlesson2 = reflect.finalize_run(nknow, nctx2, victory=False, final_floor=17)
+    assert nknow.policy["deck_burst_floor"] > nf1, \
+        "Boss 高血进场长战死（双旋钮顶格）未改接饥饿带宽度"
+    assert "饥饿带加宽" in nlesson2, f"Boss 分支二次接替留痕缺失: {nlesson2}"
+    # ③饥饿带也顶格（45）→ 停止吸收并留痕，证据不再空转（留给复盘）
+    nknow.policy["deck_burst_floor"] = 45.0
+    nctx3 = _RC()
+    nctx3.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
+                            "rounds": 10, "hp_lost": 50.0}
+    nlesson3 = reflect.finalize_run(nknow, nctx3, victory=False, final_floor=8)
+    assert abs(nknow.policy["deck_burst_floor"] - 45.0) < 1e-9, \
+        f"顶格饥饿带仍被加码: {nknow.policy['deck_burst_floor']}"
+    assert "输出饥饿证据停止吸收" in nlesson3, f"顶格停止吸收留痕缺失: {nlesson3}"
+    # 对照：双旋钮有行程时主通道原样生效、饥饿带不抢跑
+    ndir2 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-starve2b-"))
+    nknow2 = knowledge.Knowledge(ndir2)
+    nknow2.policy["kill_bonus"] = 20.0
+    nctx4 = _RC()
+    nctx4.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
+                            "rounds": 10, "hp_lost": 50.0}
+    nb0 = nknow2.policy["burst_starve_bonus_base"]
+    reflect.finalize_run(nknow2, nctx4, victory=False, final_floor=8)
+    assert nknow2.policy["burst_starve_bonus_base"] > nb0, \
+        "双旋钮有行程时主通道未生效"
+    assert abs(nknow2.policy["deck_burst_floor"] - 30.0) < 1e-9, \
+        f"双旋钮有行程时饥饿带抢跑: {nknow2.policy['deck_burst_floor']}"
+
+    # 3zo) Boss 入场线的输出饥饿豁免（第 209 批复盘）：与灰区精英豁免
+    #      （elite_grey_starve_relief，136~137 批）同构——0.65~1.00 带内入场
+    #      血量已八局证伪为生死变量（208 局 51% 进 KIN 双子，满血也只多活
+    #      2~3 回合），饥饿卡组为堆血放弃战斗/商店是安全螺旋。饥饿时入场线
+    #      0.88×(1-0.15)≈0.75：投影 80% 进场免于续航罚分并留痕；强卡组
+    #      （非饥饿）罚分原样生效
+    er_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-entryrelief-"))
+    er_know = knowledge.Knowledge(er_dir)
+    er_know.policy["boss_entry_min_hp_pct"] = 0.88   # 复刻运行值
+    er_know.policy["boss_entry_starve_relief"] = 0.15
+    er_pol = policy.Policy(er_know)
+
+    def _atk_card(cid, dmg, cost=1):
+        return {"card_id": cid, "card_type": "Attack", "energy_cost": cost,
+                "dynamic_values": [{"name": "Damage", "current_value": dmg}]}
+
+    def entry_map(deck):
+        head = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                 "children": [{"row": 2, "col": 0}]}]
+        chain = [{"row": 2, "col": 0, "node_type": "Monster",
+                  "children": [{"row": 3, "col": 0}]},
+                 {"row": 3, "col": 0, "node_type": "Boss"}]
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": head, "nodes": head + chain,
+                      "boss_node": {"row": 3}},
+              "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                      "floor": 10, "deck": deck}}
+        return er_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    # 饥饿卡组（burst 18 < 30）：投影 80% 进场 ≥ 放宽线 74.8% → 免罚 + 留痕
+    d_starve = entry_map([_atk_card("STRIKE_IRONCLAD", 6) for _ in range(6)])
+    assert "Boss入场线放宽" in d_starve.reason, \
+        f"饥饿豁免留痕缺失: {d_starve.reason}"
+    assert "优先续航路线" not in d_starve.reason, \
+        f"饥饿卡组仍吃入场线罚分（豁免未生效）: {d_starve.reason}"
+    # 强卡组（burst 44 ≥ 30）：投影 ~81% < 线 88% → 罚分原样生效，不误豁免
+    d_strong = entry_map([_atk_card("BLUDGEON_T", 32)]
+                         + [_atk_card("STRIKE_IRONCLAD", 6) for _ in range(5)])
+    assert "优先续航路线" in d_strong.reason, \
+        f"强卡组入场线罚分被误豁免: {d_strong.reason}"
+    assert "入场线放宽" not in d_strong.reason, \
+        f"强卡组误触发饥饿豁免: {d_strong.reason}"
+
     # 3yl) 全场皆为已证实重生体时解除重生压制（第 152 局 F6 实证）：墨宝 1 血
     #      不死阶段被重生标记三重压制（eff 封顶 1/威胁清零/击杀奖励归零），打击
     #      评分跌破出牌阈值——58 个 tick 满手攻击空过、65 回合白掉 54 血，直到

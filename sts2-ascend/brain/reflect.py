@@ -29,6 +29,10 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 第 138~141 批复盘接入：Boss 高血进场长战死证据的承接旋钮（拿牌端输出饥饿）
     "burst_starve_bonus_base": (0.0, 8.0),
     "burst_starve_bonus_extra_max": (0.0, 12.0),
+    # 第 209 批复盘接入：burst_starve 双旋钮顶格（8/12，206~208 三连实证空转）
+    # 后的同语义接替旋钮——加分数值顶死就加宽饥饿带，让更多卡组状态享受
+    # 顶格加分（下限 25 防饥饿带消失，上限 45 防全卡组恒饥饿使加分失去区分度）
+    "deck_burst_floor": (25.0, 45.0),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -36,6 +40,29 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
 # 顶格期该证据直接丢弃。每回合失血 ≥ 此值时，死因语义是「没挡住」而非
 # 「输出不足」，证据归 block_safety（短时爆毙通道）而非长战通道
 BURST_DEATH_DPR = 14.0
+
+
+def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_extra: str) -> None:
+    """长战磨死证据喂拿牌端输出饥饿双旋钮；双旋钮顶格后改接饥饿带宽度。
+
+    顶格旋钮代谢（第 209 批复盘）：burst_starve 双旋钮 206~208 三连顶格
+    （8.0/12.0 = 上限），留痕写着「证据改接拿牌端输出饥饿」而 _adj 实际
+    空转——最高频死亡模式的证据再次蒸发（173~176 批「学习停摆」在接替
+    旋钮上的复发）。加分数值顶死后，同语义方向是加宽饥饿带
+    （deck_burst_floor）：更多卡组状态被认定输出饥饿，顶格加分因此在
+    更多奖励屏真实生效；45 封顶后停止吸收并显式留痕，把证据留给下一批
+    复盘设计战斗端接替旋钮（顶格旋钮代谢原则的递归应用）。
+    """
+    pre = len(changes)
+    _adj(know, "burst_starve_bonus_base", 0.3, changes, why_base)
+    _adj(know, "burst_starve_bonus_extra_max", 0.5, changes, why_extra)
+    if len(changes) == pre:
+        pre2 = len(changes)
+        _adj(know, "deck_burst_floor", 1.0, changes,
+             "burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态）")
+        if len(changes) == pre2:
+            changes.append("burst_starve 双旋钮与 deck_burst_floor 均顶格——"
+                           "输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮")
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -185,12 +212,13 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                             "入场线停止上调；证据改接拿牌端输出饥饿")
                         # 高血进场 Boss 长战死的真正根因是卡组击杀速率不足：
                         # 喂给拾取端输出饥饿旋钮，让拿牌对高质攻击更饥渴，
-                        # 从源头缩短战斗（参数治不了的病从代码/结构侧治）
-                        _adj(know, "burst_starve_bonus_base", 0.3, changes,
-                             f"Boss 高血进场长战死（{'?' if _entry is None else f'{_entry:.0%}'}，"
-                             f"{rounds}回合），拿牌端攻击饥饿基础分加码")
-                        _adj(know, "burst_starve_bonus_extra_max", 0.5, changes,
-                             f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高")
+                        # 从源头缩短战斗（参数治不了的病从代码/结构侧治）；
+                        # 双旋钮顶格后由 _adj_burst_starve 改接饥饿带宽度
+                        _adj_burst_starve(
+                            know, changes,
+                            f"Boss 高血进场长战死（{'?' if _entry is None else f'{_entry:.0%}'}，"
+                            f"{rounds}回合），拿牌端攻击饥饿基础分加码",
+                            f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高")
                 elif kb_head >= kb_step:
                     _adj(know, "block_safety", 0.05, changes,
                          f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")
@@ -209,17 +237,18 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                     # 接替旋钮落地（第 167~176 批复盘）：173~176 连续四局长战死
                     # 证据在 kill_bonus 顶格后被整体丢弃（学习停摆）。与 Boss
                     # 高血进场长战死同构——「杀得慢」的证据喂给拿牌端输出饥饿
-                    # （burst_starve 双旋钮，行程 5.7/8.0 与 8.5/12.0 尚有余量），
-                    # 从源头提高卡组击杀速率；防御端仍不代偿
+                    # （burst_starve 双旋钮，已顶格 8.0/12.0），从源头提高卡组
+                    # 击杀速率；防御端仍不代偿。第 209 批：双旋钮顶格后由
+                    # _adj_burst_starve 递归改接饥饿带宽度（deck_burst_floor）
                     changes.append(f"非 Boss 长战阵亡（{rounds}回合），kill_bonus 顶格——"
                                    "长战证据不再溢入 block_safety，防御棘轮停止代偿加码；"
                                    "证据改接拿牌端输出饥饿")
-                    _adj(know, "burst_starve_bonus_base", 0.3, changes,
-                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
-                         "攻击饥饿基础分加码")
-                    _adj(know, "burst_starve_bonus_extra_max", 0.5, changes,
-                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
-                         "缺口越深纠偏上限越高")
+                    _adj_burst_starve(
+                        know, changes,
+                        f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
+                        "攻击饥饿基础分加码",
+                        f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
+                        "缺口越深纠偏上限越高")
             else:
                 if burst_death:
                     _adj(know, "block_safety", 0.05, changes,
