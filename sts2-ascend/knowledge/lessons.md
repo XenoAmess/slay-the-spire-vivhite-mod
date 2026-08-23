@@ -1505,3 +1505,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.25 → 1.30（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/115 胜，当前目标进阶 0
+
+## 第 116 局复盘（2026-08-23 14:39）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：TRUE_GRIT, ANGER, FLAME_BARRIER, THRASH, STRATAGEM, POMMEL_STRIKE, THRASH, SWORD_BOOMERANG, BATTLE_TRANCE, ULTIMATE_STRIKE, BREAKTHROUGH, TRUE_GRIT, PACTS_END, THRASH, HOWL_FROM_BEYOND
+- 本局遗物：GORGET
+- 战斗记录：F7 Monster战 掉血0; F14 Monster战 掉血0; F17 Boss战 掉血36; F19 Monster战 掉血50; F20 Monster战 掉血26; F21 Monster战 掉血17（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，THRASH(22分/5局)，MANGLE(21分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.30 → 1.35（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/116 胜，当前目标进阶 0
