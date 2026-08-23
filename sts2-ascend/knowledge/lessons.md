@@ -2071,3 +2071,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.82 → 0.84（Boss 低血进场磨死（进场 54%），入场血量要求线上调）
 - 生涯战绩：0/164 胜，当前目标进阶 0
+
+## 第 165 局复盘（2026-08-23 21:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：UNRELENTING, SPITE, DISMANTLE, SHRUG_IT_OFF, DISMANTLE, SWORD_BOOMERANG, BATTLE_TRANCE, SHRUG_IT_OFF, STONE_ARMOR, SWORD_BOOMERANG, TAUNT
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F6 Monster战 掉血19; F7 Unknown战 掉血26; F9 Monster战 掉血3; F11 Monster战 掉血9; F14 Monster战 掉血4; F17 Boss战 掉血67（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.50 → 4.80（Boss 高血进场长战死（84%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.50 → 7.00（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）
+- 生涯战绩：0/165 胜，当前目标进阶 0
