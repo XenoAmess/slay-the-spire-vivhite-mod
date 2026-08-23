@@ -337,7 +337,7 @@ def main() -> int:
 
     sapi = SapiSpeaker() if mode in ("sapi", "hybrid") else None
     start_volume_hotkeys()
-    log(f"语音朗读器上线（模式 {mode}，音量控制：Ctrl+Alt+↑/↓ 调音量，Ctrl+Alt+M 静音）")
+    log(f"语音朗读器上线（模式 {mode}，音量控制：Ctrl+Shift+Alt+↑/↓ 调音量，Ctrl+Shift+Alt+M 静音）")
 
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
     splitter = SentenceSplitter()
