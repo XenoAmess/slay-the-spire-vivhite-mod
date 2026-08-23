@@ -2232,3 +2232,14 @@
 - **走廊协同组合是隐形精英**：FUZZY_WURM_CRAWLER+SHRINKER_BEETLE 生涯 71 战 16 死（22.5%），缩攻+拖时间的协同正中输出不足的软肋——路径危险先验按房间类型（Monster=8）估价，对这类组合系统性偏低，但在地图端无法预知组合，真正的解法仍是提高卡组击杀速率（本批证据通道的目的地）。
 - **既有测试脆弱点修复**：selfcheck 3yl「解除重生压制」断言在 HEAD 已静默失败——policy 按战斗实例身份清空 _combat_kills，测试播种后未认领实例身份。教训：手动播种内部状态时必须与被测代码的状态门对齐，且自检要全量跑、不能只看新增用例。
 - 观察点：非 Boss 长战死留痕出现「证据改接拿牌端输出饥饿」；爆毙局出现「高速失血爆毙」留痕；burst_starve 双旋钮顶格（8/12）后若长战死照旧，下批评估战斗端接替旋钮。
+
+## 第 179 局复盘（2026-08-23 23:51）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：THUNDERCLAP, SHRUG_IT_OFF, SHRUG_IT_OFF, BLUDGEON, STONE_ARMOR, THUNDERCLAP, FIGHT_ME, MOLTEN_FIST, PACTS_END, INFLAME, CINDER, MOLTEN_FIST, ULTIMATE_STRIKE, STOMP, ARMAMENTS, UNRELENTING, DISMANTLE, MIND_ROT, DISINTEGRATION
+- 本局遗物：MERCURY_HOURGLASS, 灯笼, 餐券, GORGET
+- 战斗记录：F23 Monster战 掉血5; F25 Monster战 掉血14; F28 Monster战 掉血14; F30 Monster战 掉血29; F31 Monster战 掉血16; F33 Boss战 掉血47（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/179 胜，当前目标进阶 0
