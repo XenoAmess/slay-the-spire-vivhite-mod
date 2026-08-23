@@ -1100,3 +1100,14 @@
 - **演化必须双向可逆**：block_safety 被单向棘轮顶到 2.1 上限（83 局 0 胜只加不减），龟防对高血敌人=温水煮蛙。reflect 现按战斗时长分流：长战磨死（≥4回合）→ kill_bonus +1 且防御 −0.05；短暴毙 → 防御 +0.05（旧逻辑）。
 - **选屏语义看上游动作**：83 局战斗中反复"选择暴走+"曾疑似献祭最优牌，实为头槌效果（弃牌堆置顶抽牌堆顶，选最强正确）；但旧代码把它记成 card_pick 灌水信用账本（单局暴走虚计 9 拿）——现以 card_top_pick 单列。
 - 下批核对：①Boss 战日志出现「Boss攻坚提速×1.15」；②本局拿牌不再含头槌重复计数；③连续长战磨死时 kill_bonus 应爬升、block_safety 缓释。
+
+## 第 86 局复盘（2026-08-23 08:25）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, BREAKTHROUGH, TRUE_GRIT, EVIL_EYE, BREAKTHROUGH, UPPERCUT, TRUE_GRIT, RUPTURE, CINDER, HEMOKINESIS
+- 本局遗物：NUNCHAKU
+- 战斗记录：F6 Monster战 掉血26; F7 Monster战 掉血9; F9 Monster战 掉血13; F13 Monster战 掉血13; F15 Monster战 掉血11; F17 Boss战 掉血53（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/42局)，BARRICADE(20分/2局)，TAUNT(19分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/86 胜，当前目标进阶 0
