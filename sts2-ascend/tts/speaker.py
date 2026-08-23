@@ -21,6 +21,7 @@ import subprocess
 import sys
 import threading
 import time
+import winsound
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent           # sts2-ascend/
@@ -45,7 +46,7 @@ VOLUME_FILE = KNOWLEDGE_DIR / "voice_volume.json"
 def get_voice_state() -> dict:
     try:
         d = json.loads(VOLUME_FILE.read_text(encoding="utf-8"))
-        return {"volume": max(0, min(200, int(d.get("volume", 100)))),
+        return {"volume": max(0, min(400, int(d.get("volume", 100)))),
                 "muted": bool(d.get("muted", False))}
     except (OSError, ValueError, json.JSONDecodeError):
         return {"volume": 100, "muted": False}
@@ -54,7 +55,7 @@ def get_voice_state() -> dict:
 def set_voice_state(volume: int | None = None, muted: bool | None = None) -> dict:
     st = get_voice_state()
     if volume is not None:
-        st["volume"] = max(0, min(200, int(volume)))
+        st["volume"] = max(0, min(400, int(volume)))
     if muted is not None:
         st["muted"] = bool(muted)
     try:
@@ -65,7 +66,8 @@ def set_voice_state(volume: int | None = None, muted: bool | None = None) -> dic
 
 
 def start_volume_hotkeys() -> None:
-    """Ctrl+Alt+↑/↓ 调音量（±10），Ctrl+Alt+M 静音切换。轮询实现，无需窗口聚焦。"""
+    """Ctrl+Shift+Alt+↑/↓ 调音量（±10），Ctrl+Shift+Alt+M 静音切换。
+    轮询实现无需窗口聚焦；避开与网易云音乐冲突的 Ctrl+Alt 组合。"""
     import ctypes
 
     def _loop() -> None:
@@ -74,21 +76,22 @@ def start_volume_hotkeys() -> None:
         while True:
             try:
                 ctrl = bool(u32.GetAsyncKeyState(0x11) & 0x8000)
+                shift = bool(u32.GetAsyncKeyState(0x10) & 0x8000)
                 alt = bool(u32.GetAsyncKeyState(0x12) & 0x8000)
                 up = bool(u32.GetAsyncKeyState(0x26) & 0x8000)
                 down = bool(u32.GetAsyncKeyState(0x28) & 0x8000)
                 mute = bool(u32.GetAsyncKeyState(0x4D) & 0x8000)   # M 键
-                if ctrl and alt and up and not prev["up"]:
+                combo = ctrl and shift and alt
+                if combo and up and not prev["up"]:
                     st = set_voice_state(volume=get_voice_state()["volume"] + 10)
                     log(f"音量 +10 → {st['volume']}%")
-                if ctrl and alt and down and not prev["down"]:
+                if combo and down and not prev["down"]:
                     st = set_voice_state(volume=get_voice_state()["volume"] - 10)
                     log(f"音量 -10 → {st['volume']}%")
-                if ctrl and alt and mute and not prev["mute"]:
+                if combo and mute and not prev["mute"]:
                     st = set_voice_state(muted=not get_voice_state()["muted"])
                     log("静音" if st["muted"] else f"取消静音（{st['volume']}%）")
-                prev = {"up": up and ctrl and alt, "down": down and ctrl and alt,
-                        "mute": mute and ctrl and alt}
+                prev = {"up": up and combo, "down": down and combo, "mute": mute and combo}
             except Exception:
                 pass
             time.sleep(0.12)
@@ -105,18 +108,18 @@ $zh.Rate = __RATE__
 $en = New-Object System.Speech.Synthesis.SpeechSynthesizer
 try { $en.SelectVoice('Microsoft Zira Desktop') } catch {}
 $en.Rate = __RATE__
-$volFile = '__VOLFILE__'
+$tmp = '__TMPWAV__'
 while (($line = [Console]::In.ReadLine()) -ne $null) {
-    $vol = 100; $muted = $false
-    try {
-        $j = Get-Content $volFile -Raw -ErrorAction Stop | ConvertFrom-Json
-        $vol = [Math]::Min(100, [Math]::Max(0, [int]$j.volume))
-        $muted = [bool]$j.muted
-    } catch {}
-    if ($muted) { $vol = 0 }
-    $zh.Volume = $vol; $en.Volume = $vol
-    if ($line.StartsWith('en|')) { $en.Speak($line.Substring(3)) }
-    elseif ($line.StartsWith('zh|')) { $zh.Speak($line.Substring(3)) }
+    $use = $zh; $txt = $line
+    if ($line.StartsWith('en|')) { $use = $en; $txt = $line.Substring(3) }
+    elseif ($line.StartsWith('zh|')) { $txt = $line.Substring(3) }
+    if ($txt.Trim()) {
+        try {
+            $use.SetOutputToWaveFile($tmp)
+            $use.Speak($txt)
+            $use.SetOutputToNull()
+        } catch {}
+    }
     [Console]::Out.WriteLine('ok')
     [Console]::Out.Flush()
 }
@@ -194,11 +197,17 @@ class SentenceSplitter:
 
 
 class SapiSpeaker:
-    """常驻 PowerShell + System.Speech，逐行朗读；每句读完回执 ok（保证多引擎混排时顺序不乱）。"""
+    """常驻 PowerShell + System.Speech 合成到 wav，Python 侧按音量增益后播放。
+
+    改走文件是因为 SAPI 的 Volume 属性上限只有 100——想更响必须波形增益。
+    每句读完回执 ok（保证多引擎混排时顺序不乱）。"""
+
+    TMP_IN = TTS_DIR / "sapi_tmp.wav"
+    TMP_OUT = TTS_DIR / "sapi_play.wav"
 
     def __init__(self) -> None:
         script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE)).replace(
-            "__VOLFILE__", str(VOLUME_FILE).replace("\\", "/"))
+            "__TMPWAV__", str(self.TMP_IN).replace("\\", "/"))
         self.proc = subprocess.Popen(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -212,10 +221,38 @@ class SapiSpeaker:
             with self._ack_lock:
                 self.proc.stdin.write(lang_of(text) + "|" + text + "\n")
                 self.proc.stdin.flush()
-                if wait:  # 等朗读完成回执；超时兜底防死锁
+                if wait:  # 等合成完成回执
                     self.proc.stdout.readline()
+            self._play_with_gain()
         except (OSError, ValueError):
             pass
+
+    def _play_with_gain(self) -> None:
+        import array
+        import wave
+        if not self.TMP_IN.exists():
+            return
+        st = get_voice_state()
+        gain = 0.0 if st["muted"] else st["volume"] / 100.0
+        try:
+            with wave.open(str(self.TMP_IN), "rb") as w:
+                frames = w.readframes(w.getnframes())
+                params = w.getparams()
+            if abs(gain - 1.0) > 0.01:
+                a = array.array("h")
+                a.frombytes(frames)
+                for i, s in enumerate(a):
+                    a[i] = max(-32768, min(32767, int(s * gain)))
+                frames = a.tobytes()
+            with wave.open(str(self.TMP_OUT), "wb") as w:
+                w.setparams(params)
+                w.writeframes(frames)
+            winsound.PlaySound(str(self.TMP_OUT), winsound.SND_FILENAME)
+        except Exception:
+            try:  # 兜底：不增益直接播
+                winsound.PlaySound(str(self.TMP_IN), winsound.SND_FILENAME)
+            except Exception:
+                pass
 
     def close(self) -> None:
         try:
