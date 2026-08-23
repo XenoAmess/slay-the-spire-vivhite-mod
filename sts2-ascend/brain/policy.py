@@ -126,6 +126,11 @@ class Policy:
         self._race_rounds = 0       # 完成的回合边界采样数
         self._desp_combat = None    # 战斗实例身份（假孤注观测确认用）
         self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
+        self._stall_combat = None   # 战斗实例身份（僵局检测用）
+        self._stall_min_hp = 99999  # 本场敌人总血量的历史最低值
+        self._stall_no_progress = 0  # 连续无进展回合数
+        self._stall_turn_seen = None
+        self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
         self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
         # 斩杀竞速投影（第 90~91 批复盘）：本场已打出的期望总伤 / 出牌回合数
@@ -786,6 +791,41 @@ class Policy:
             return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
         self._phase_stall = 0
 
+        # ---- 战斗僵局检测与升级 ----
+        # 实证（第 107 局）：坚毅(True Grit)每回合消耗随机牌，360+ 回合后攻击牌全部进消耗堆，
+        # 敌人 INKLET 剩 1 血永远不死 → 无限死循环。机制：
+        #   turn≥100 → 置标志请求 agent 启动 AI 死循环分析（一场一次）
+        #   turn≥150 且 30 回合无掉血进展 → 判定死循环，摆烂送死结束本局
+        #   turn≥120 或 AI 判 offense → 绕过评分阈值，有攻击牌就打
+        enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
+        if self._stall_combat is not ctx.combat:
+            self._stall_combat = ctx.combat
+            self._stall_min_hp = enemy_hp_total
+            self._stall_no_progress = 0
+            self._stall_turn_seen = round_no
+            self._exhaust_plays = 0
+        if self._stall_turn_seen != round_no:
+            if enemy_hp_total < self._stall_min_hp:
+                self._stall_min_hp = enemy_hp_total
+                self._stall_no_progress = 0
+            else:
+                self._stall_no_progress += 1
+            self._stall_turn_seen = round_no
+
+        if round_no >= 100 and not getattr(ctx, "stall_analysis_asked", False):
+            ctx.stall_analysis_asked = True
+            ctx.stall_analysis_needed = True   # agent 主循环拾取并启动 AI 死循环分析
+
+        giveup = (getattr(ctx, "force_giveup", False)
+                  or (round_no >= 150 and self._stall_no_progress >= 30
+                      and not getattr(ctx, "stall_grind_grace", False)))
+        if giveup:
+            if can_end:
+                return Decision("end_turn", {},
+                                f"战斗：僵局判定无伤害手段（回合{round_no}，{self._stall_no_progress}回合无进展），摆烂送死以终结本局",
+                                wait=0.8)
+            return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
+
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
         my_block = player.get("block", 0)
         my_hp = player.get("current_hp", 1)
@@ -987,6 +1027,9 @@ class Policy:
                 continue
             if c.get("index") in self._failed_this_turn:
                 continue
+            # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"（第 107 局实证）
+            if self._exhaust_plays >= 4 and "消耗" in _text(c):
+                continue
             # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
             # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、
             # 对 14 点意图弃权结束回合；第 45 局同型流失反复出现（欺凌✓不打出）。
@@ -1008,6 +1051,8 @@ class Policy:
 
         if best and best[0] > pol["play_threshold"]:
             _, card, target, why = best
+            if "消耗" in _text(card):
+                self._exhaust_plays += 1
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)
             if _kd > 0:
@@ -1049,6 +1094,25 @@ class Policy:
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
                             tags=[("play_card", card.get("card_id")),
                                   ("play_card_index", card.get("index"))], wait=0.6)
+        # 僵局强攻（turn≥120 或 AI 判 offense）：绕过评分阈值，任何伤害牌打最低血敌人
+        if round_no >= 120 or getattr(ctx, "force_offense", False):
+            for c in hand:
+                if not c.get("playable") or c.get("index") in self._failed_this_turn:
+                    continue
+                cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
+                if cost > energy:
+                    continue
+                _fd, _fh, _fhits = card_numbers(c)
+                if _fd <= 0:
+                    continue
+                tgt = min(enemies, key=lambda e: e.get("current_hp", 9999))
+                params = {"card_index": c["index"]}
+                if c.get("requires_target"):
+                    params["target_index"] = tgt.get("index")
+                return Decision("play_card", params,
+                                f"战斗：僵局强攻（回合{round_no}）打出【{c.get('name')}】→{tgt.get('name')}",
+                                tags=[("play_card", c.get("card_id")),
+                                      ("play_card_index", c.get("index"))], wait=0.6)
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""

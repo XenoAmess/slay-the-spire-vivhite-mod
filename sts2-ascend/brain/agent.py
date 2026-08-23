@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,6 +33,7 @@ except Exception:
     autogit = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_DIR = BASE_DIR.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 _LOG_PATH = KNOWLEDGE_DIR / "brain.log"
@@ -392,6 +395,69 @@ class Agent:
             log("[agent] 复盘变更已落盘，请求 runner 重启大脑…")
             sys.exit(42)
 
+    # ---------------- stuck-combat AI analysis ----------------
+
+    def _launch_stuck_analysis(self, state: dict) -> None:
+        """战斗超 100 回合：异步启动 AI 分析，判定 grind/offense/giveup。"""
+        th = getattr(self, "_stuck_thread", None)
+        if th is not None and th.is_alive():
+            return
+        self._stuck_thread = threading.Thread(target=self._stuck_analysis_run,
+                                              args=(state,), daemon=True,
+                                              name="stall-analysis")
+        self._stuck_thread.start()
+        log("[stall] 战斗回合超限，已自主启动 AI 死循环分析…")
+
+    def _stuck_analysis_run(self, state: dict) -> None:
+        try:
+            import shutil
+            binary = shutil.which("opencode")
+            if not binary:
+                log("[stall] 未找到 opencode，跳过 AI 分析（确定性兜底仍生效）")
+                return
+            combat = state.get("combat") or {}
+            run = state.get("run") or {}
+            player = combat.get("player") or {}
+            turn = state.get("turn") or 0
+            enemies = [{"id": e.get("enemy_id"), "hp": f"{e.get('current_hp')}/{e.get('max_hp')}",
+                        "block": e.get("block"),
+                        "intents": [i.get("intent_type") for i in e.get("intents", [])]}
+                       for e in combat.get("enemies", [])]
+            hand = [c.get("card_id") for c in combat.get("hand", [])]
+            deck = [c.get("card_id") for c in (run.get("deck") or [])]
+            model = (self.cfg.get("llm") or {}).get("model", "kimi-for-coding/k3")
+            prompt = (
+                f"杀戮尖塔2自动游玩 agent 的一场战斗已经进行了 {turn} 回合仍未结束。"
+                "请判断这是正常磨血还是死循环，并给出处置。\n\n"
+                f"敌人: {json.dumps(enemies, ensure_ascii=False)}\n"
+                f"我方: hp {player.get('current_hp')}/{player.get('max_hp')}, "
+                f"格挡 {player.get('block')}, 能量 {player.get('energy')}\n"
+                f"手牌: {json.dumps(hand, ensure_ascii=False)}\n"
+                f"卡组: {json.dumps(deck, ensure_ascii=False)}\n\n"
+                "判定规则：\n"
+                "- 敌人血量在持续下降，我方迟早能赢 → grind（正常磨血，继续打）\n"
+                "- 我方手里/卡组里还有伤害手段但一直没正确用出来 → offense（应立即无视评分阈值强攻）\n"
+                "- 我方已无任何伤害手段（攻击牌被消耗/转化殆尽，或敌人机制无法被伤害）→ giveup（死循环，应停止一切出牌快速送死结束本局）\n\n"
+                "第一行严格输出：VERDICT: grind 或 VERDICT: offense 或 VERDICT: giveup\n"
+                "第二行用一句中文给出理由。"
+            )
+            proc = subprocess.run([binary, "run", "--model", model, "--dir", str(REPO_DIR), prompt],
+                                  capture_output=True, text=True, encoding="utf-8",
+                                  errors="replace", timeout=300)
+            out = proc.stdout or ""
+            m = re.search(r"VERDICT:\s*(grind|offense|giveup)", out)
+            verdict = m.group(1) if m else None
+            reason = out.strip().splitlines()[1][:120] if verdict and len(out.strip().splitlines()) > 1 else ""
+            log(f"[stall] AI 死循环分析结论：{verdict or '未解析出'} {reason}")
+            if verdict == "giveup":
+                self.ctx.force_giveup = True
+            elif verdict == "offense":
+                self.ctx.force_offense = True
+            elif verdict == "grind":
+                self.ctx.stall_grind_grace = True
+        except Exception as exc:
+            log(f"[stall] AI 死循环分析失败（确定性兜底仍生效）：{exc}")
+
     # ---------------- watchdog ----------------
 
     def _signature(self, state: dict):
@@ -468,6 +534,11 @@ class Agent:
                 decision = type("D", (), {"action": forced, "params": {}, "reason": "看门狗介入", "tags": [], "wait": 1.0})()
             else:
                 decision = self.policy.decide(state, self.ctx)
+
+            # 战斗回合超限（≥100）→ 大脑自主启动 AI 死循环分析（异步，不阻塞游玩）
+            if getattr(self.ctx, "stall_analysis_needed", False):
+                self.ctx.stall_analysis_needed = False
+                self._launch_stuck_analysis(state)
 
             if decision.reason:
                 floor = (state.get("run") or {}).get("floor", 0)
