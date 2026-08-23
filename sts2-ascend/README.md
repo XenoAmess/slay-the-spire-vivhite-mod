@@ -102,19 +102,17 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 
 ## 语音朗读（ASCEND-VOICE）
 
-复盘启动时还会拉起语音朗读器（`tts/speaker.py`），把模型的分析过程**读出声**：
+复盘启动时还会拉起语音朗读器，把模型的分析过程**读出声**。默认 **nano 模式**：
+全程用 **MOSS-TTS-Nano** 以白绮克隆音色朗读（0.1B ONNX CPU，本机 RTF≈2.6）：
 
-- **SAPI 实时朗读**（Windows 自带中文女声 Huihui，零成本零延迟）跟进直播流
-- **克隆音色读结论**（hybrid 模式）：复盘结束时用 **MOSS-TTS-Nano**（0.1B，ONNX CPU，本机 RTF≈2.6）
-  以 `tts/reference_voice_48k.wav` 的音色朗读结论段（后台合成 ~1.5 分钟，不碍事）
-- 朗读队列"丢旧读新"（积压>2 句丢最旧），保证听到的永远是最新分析
-- 换音色：替换 `tts/reference_voice_48k.wav`（48kHz 立体声）与 `reference_voice_15s.wav`（24kHz 单声道，备选）
-- 模式：`config.json` 的 `llm.tts_mode` = `sapi`（纯系统语音）/ `indextts`（全程克隆音色，很慢）
-  / `hybrid`（默认）/ `off`
-- 手动试听：`py -3 tts/speaker.py --test`；手动克隆朗读：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/speak_once.py <文本文件>`
+- **允许滞后**：朗读队列上限 4096 句（超出丢最老防溢出），复盘结束后也会把积压内容读完才退出
+- 合成/播放流水线并行；参考音色 `tts/reference_voice_48k.wav`（48kHz 立体声，替换即换音色）
+- 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
+- 单实例锁：复盘连开时只有一个朗读器在跑，新流截断自动接续
+- 模式：`config.json` 的 `llm.tts_mode` = `nano`（默认）/ `sapi`（系统语音实时）/ `hybrid` / `off`
+- 手动试听：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/nano_speaker.py --test`
 
-TTS 环境在 `third_party/`（uv 旁路，gitignore）：MOSS-Nano 为主力克隆引擎（选型实测见
-`docs/2026-08-23-TTS框架选型预研.md`；GTX 1060 的 GPU 加速四条路已实测全不通，用 CPU 4 线程）。
+TTS 环境在 `third_party/`（uv 旁路，gitignore）。选型实测见 `docs/2026-08-23-TTS框架选型预研.md`。
 
 ## 进程结构
 
