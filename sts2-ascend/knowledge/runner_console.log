@@ -51826,3 +51826,74 @@ Mark todos complete and give ≤200 char summary.
 [09:52:08] [COMBAT/F17] 战斗：回合过渡中，等待
 [09:52:09] [COMBAT/F17] 战斗：回合过渡中，等待
 [09:52:09] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:10] [COMBAT/F17] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+GH 等；部分满足
+③kill_bonus 再动伴随留痕 — 未违反机制但已顶格20，下次应见留痕
+④boss_entry 稳定0.72 — 违反（0.67→0.69），根因热回写，本次根治
+⑤斩杀回合数投影 — 本次落地
+
+Now write meta_review.md append. Get current time for the title. Use PowerShell time.
+自检通过。现在撰写复盘报告并追加到 meta_review.md：
+⚙ bash {}
+· tokens 166388 ·
+⚙ bash {}
+· tokens 166492 ·
+⚙ bash {}
+· tokens 166600 ·
+⚙ write {}
+💭 Console mojibake again but the file ends with the 88-89 review's 观察点 item 6 + newline. I'll append my new section with a Python script writing UTF-8 (to avoid PowerShell here-string encoding issues). Let me write the report content to a temp file with the write tool, then append via Python.
+· tokens 169068 ·
+⚙ bash {}
+· tokens 169170 ·
+💭 Now append the lessons.md 🧠 section. Condensed version. Let me write it to temp file and append.
+现在追加 lessons.md 的 🧠 经验节：
+⚙ write {}
+· tokens 169895 ·
+⚙ bash {}
+· tokens 170031 ·
+💭 Both files appended, selfcheck still OK.
+
+Now verify my policy.json edit survived (the running brain may have clobbered again). Let me check current state of policy.json.
+最后验证 policy.json 的修改是否仍在（运行中的大脑可能再次回写）：
+⚙ bash {}
+· tokens 170203 ·
+💭 All values intact:
+- boss_entry_min_hp_pct = 0.72 (restored)
+- deck_burst_floor = 30.0 (re-written)
+- new keys present
+
+Everything done per task book:
+1. ✅ 归因分析 complete
+2. ✅ meta_review.md appended with dated section
+3. ✅ Modified files under sts2-ascend/ only: knowledge.py (merge save + new keys), policy.py (kill race, thin threshold, honest trace), policy.json, selfcheck.py (regression tests 3vv/3ww), lessons.md appended
+4. ✅ selfcheck.py run → SELFCHECK OK
+5. ✅ No git ops, no process management, no files outside sts2-ascend/, no deletions of runs/
+
+Final output: ≤200 chars summary (Chinese).
+复盘完成。总结：
+
+**归因**：90局过一幕Boss后死于二幕四连战消耗；91局65血入Boss、~25伤/回合对252血仪式兽，奢侈格挡买命9回合差30伤输掉斩杀竞速——逐回合贪心算不出必败局。**根治**：①policy.json三方合并写盘（复盘期间实测deck_burst_floor被冲掉，热回写缺陷活证据）；②落地斩杀竞速投影（核对项⑤）：实测攻速vs火力对账，必败时奢侈格挡贬值、攻击提速；③单薄卡组拿牌门槛递减；④恢复boss_entry=0.72、留痕诚实化。自检SELFCHECK OK，报告已写入meta_review.md与lessons.md。
+· tokens 170635 ·
+
+[09:52:11] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:11] [COMBAT/F17] 战斗：打出【暴走】→墨影幻灵（单体伤害≈25）；敌意图总伤16，我方61血/0甲；⚠高危Boss（31战10死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.25
+[09:52:12] [COMBAT/F17] 战斗：打出【突破】（群体伤害≈9）；敌意图总伤16，我方61血/0甲；⚠高危Boss（31战10死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.25
+[09:52:14] [COMBAT/F17] 战斗：打出【防御】（格挡5）；敌意图总伤16，我方60血/0甲；⚠高危Boss（31战10死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.25
+[09:52:15] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（伤口✗,伤口✗）
+[09:52:15] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[git] 已自动存档：feat(sts2-ascend): 第90~91局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[09:52:17] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:17] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:18] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:19] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:19] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:20] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:21] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:21] [COMBAT/F17] 战斗：回合过渡中，等待
+[09:52:22] [COMBAT/F17] 战斗：打出【头槌】→墨影幻灵（单体伤害≈9）；敌意图总伤28，我方49血/0甲；⚠高危Boss（31战10死），速战速决，提速斩杀；意图升级+12，防御前置；Boss攻坚提速×1.25
+[09:52:24] [COMBAT/F17] 战斗：打出【痛击】→墨影幻灵（单体伤害≈8）；敌意图总伤28，我方49血/0甲；⚠高危Boss（31战10死），速战速决，提速斩杀；意图升级+12，防御前置；Boss攻坚提速×1.25
+[llm] 优先模型 opencode/ox-alpha 不在可用清单，看下一优先
+[llm] 异步复盘启动：覆盖第 [92, 93] 局（模型 openrouter/stealth/ox-alpha@max）
