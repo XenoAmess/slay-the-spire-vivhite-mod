@@ -334,10 +334,11 @@ def main() -> int:
                 continue
             for sent in splitter.feed(ln):
                 if q.full():
-                    try:
-                        q.get_nowait()
-                    except queue.Empty:
-                        pass
+                    for _ in range(MAX_QUEUE // 2):      # 到顶立刻丢最老的一半
+                        try:
+                            q.get_nowait()
+                        except queue.Empty:
+                            break
                 q.put(sent)
         if ended:
             for sent in splitter.flush():

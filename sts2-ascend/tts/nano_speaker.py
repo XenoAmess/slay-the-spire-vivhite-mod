@@ -34,7 +34,7 @@ MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
 TMP_DIR = TTS_DIR / "voice_tmp"
 REF_48K = TTS_DIR / "reference_voice_48k.wav"
 
-MAX_TEXT_QUEUE = 4096       # 文本句队列上限（超出丢最老）
+MAX_TEXT_QUEUE = 256        # 文本句队列上限；到顶时立刻丢弃最老的一半
 PLAY_BUFFER = 4             # 预合成 wav 缓冲上限（控制磁盘占用）
 MAX_SENTENCE = 90
 
@@ -223,10 +223,11 @@ def main() -> int:
                         continue
                     for sent in splitter.feed(ln):
                         if text_q.full():
-                            try:
-                                text_q.get_nowait()
-                            except queue.Empty:
-                                pass
+                            for _ in range(MAX_TEXT_QUEUE // 2):   # 到顶立刻丢最老的一半
+                                try:
+                                    text_q.get_nowait()
+                                except queue.Empty:
+                                    break
                         text_q.put(sent)
             if ended.is_set():
                 for sent in splitter.flush():
