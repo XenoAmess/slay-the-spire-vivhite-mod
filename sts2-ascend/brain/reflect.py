@@ -83,9 +83,27 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 # 速度要 ~30 局才能把 block_safety 从 2.1 拉回有效区间——
                 # 8 回合 Boss 磨死的证据强度是 4 回合的两倍，步长应随之放大
                 scale = min(3.0, rounds / 4.0)
-                _adj(know, "kill_bonus", 1.0 * scale, changes,
-                     f"长战磨死（{rounds}回合），提升击杀奖励加快清场")
-                _adj(know, "block_safety", -0.05 * scale, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+                # 顶格治理（第 88~89 批复盘）：kill_bonus 13→14→15、block_safety
+                # 2.05→2.00→1.95 连续单向漂移——0 胜生涯里「长战磨死」几乎每局
+                # 触发，而长战的真正根因多是卡组输出不足（参数制造不出伤害），
+                # 信号只会把两个旋钮单调推向边界（kill_bonus 上限 20 / 下限 0.6），
+                # 顶死后重演 86~87 批诊断过的「空转旋钮」。演化前先查行程：
+                # 余量不足一步时停止加码并显式留痕，把证据留给下一批复盘
+                # 设计接替旋钮（顶格旋钮代谢原则的代码化）
+                kb_step, bs_step = 1.0 * scale, 0.05 * scale
+                kb_head = BOUNDS["kill_bonus"][1] - pol["kill_bonus"]
+                bs_room = pol["block_safety"] - BOUNDS["block_safety"][0]
+                if kb_head >= kb_step:
+                    _adj(know, "kill_bonus", kb_step, changes,
+                         f"长战磨死（{rounds}回合），提升击杀奖励加快清场")
+                else:
+                    changes.append(f"kill_bonus {pol['kill_bonus']:.2f} 距上限仅余 {kb_head:.2f}"
+                                   f"(<步长{kb_step:.2f})，长战信号停止加码——顶格旋钮不再吸收证据")
+                if bs_room >= bs_step:
+                    _adj(know, "block_safety", -bs_step, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+                else:
+                    changes.append(f"block_safety {pol['block_safety']:.2f} 距下限仅余 {bs_room:.2f}"
+                                   f"(<步长{bs_step:.2f})，停止释放——防棘轮触底后继续失真")
                 # Boss 攻坚乘区演化（第 84~85 批复盘新增）：死亡榜前六全是
                 # F17 一幕 Boss（84~85 批 10 局中 6 局），入场血量从 52%~95%
                 # 全数阵亡——瓶颈是战斗时长而非入场血量。Boss 长战磨死时

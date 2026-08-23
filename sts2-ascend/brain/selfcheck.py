@@ -1254,6 +1254,86 @@ def main() -> int:
     assert abs(eknow.policy["elite_grey_safety_mult"] - 1.6) < 1e-9, \
         f"胜利未释放灰区悲观系数（单向棘轮复发）: {eknow.policy['elite_grey_safety_mult']}"
 
+    # 3ss) 姿态-药水门槛一致性（第 88 局复盘）：头号杀手 FUZZY+SHRINKER 式组合
+    #      （死亡率 29.3% < 硬仗门槛 0.30、场均战损 18.7 < 0.30×80=24）此前从两条
+    #      药水门槛的缝隙漏网——88 局 F8 姿态系统从第 1 回合就警告「⚠高危组合」，
+    #      攻击药水却被锁到 20 血、意图已滚到 38。姿态认定高危的战斗，药水门必须
+    #      同步开启（同一证据，同一结论）；无数据组合仍不得烧药
+    def gap_potion_state():
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": 64, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "K", "name": "毛绒伏地虫",
+                                    "current_hp": 30, "max_hp": 30, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 4}]}]},
+            "run": {"current_hp": 64, "max_hp": 80, "gold": 0, "floor": 8, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "ATK_P", "name": "攻击药水",
+                                 "description": "造成12点伤害。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+
+    ctx.current_combat_is_hard = False
+    ctx.combat = {"comp_id": "NEAR_GATE_KILLER", "node_type": "Monster"}  # 29.3%死/场均18.7：姿态高危但两条药水门槛都不触发
+    d_gap1 = pol.decide(gap_potion_state(), ctx)
+    assert d_gap1.action == "use_potion", \
+        f"姿态高危组合未解锁攻击药水（88局F8复现）: {d_gap1.action}（{d_gap1.reason}）"
+    ctx.combat = {"comp_id": "NO_DATA_COMP", "node_type": "Monster"}
+    d_gap2 = pol.decide(gap_potion_state(), ctx)
+    assert d_gap2.action != "use_potion", \
+        f"无数据组合误烧攻击药水: {d_gap2.action}（{d_gap2.reason}）"
+    ctx.combat = None
+    ctx.current_combat_is_hard = False
+
+    # 3tt) 输出饥饿感知拿牌（第 88~89 批复盘）：占比维度看不见「量足质弱」——
+    #      89 局卡组攻击占比达标、回合爆发仍是几张 6 伤打击的水平，88% 血进
+    #      一幕 Boss 11 回合仅打出 ~198 伤输掉斩杀竞速。爆发吞吐量低于
+    #      deck_burst_floor 时，高质攻击（单牌总伤 ≥12 且 ≥7 伤/能耗）获得加分；
+    #      弱攻击（打击级）不得因饥饿虚高（保护 3a 的占比衰减语义）。
+    #      用同一副卡组切换门槛做隔离，排除占比上下文的混淆
+    def _mk_strike(i):
+        return {"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+
+    starved_deck = ([_mk_strike(i) for i in range(5)]
+                    + [{"card_id": f"DEFEND_{i}", "card_type": "Skill", "energy_cost": 1,
+                        "dynamic_values": [{"name": "Block", "current_value": 5}]} for i in range(4)])
+    big_atk = {"card_id": "CINDER", "name": "余烬", "card_type": "Attack", "energy_cost": 2,
+               "dynamic_values": [{"name": "Damage", "current_value": 18}]}
+    saved_floor_t = know.policy.get("deck_burst_floor", 30.0)
+    know.policy["deck_burst_floor"] = 30.0   # 起步型卡组爆发 18 → 饥饿
+    v_big_on = pol.eval_reward_card(dict(big_atk), [dict(c) for c in starved_deck])
+    v_weak_on = pol.eval_reward_card(dict(weak_atk), [dict(c) for c in starved_deck])
+    know.policy["deck_burst_floor"] = 0.0    # 关闭饥饿判定（其余评分路径完全一致）
+    v_big_off = pol.eval_reward_card(dict(big_atk), [dict(c) for c in starved_deck])
+    v_weak_off = pol.eval_reward_card(dict(weak_atk), [dict(c) for c in starved_deck])
+    know.policy["deck_burst_floor"] = saved_floor_t
+    assert v_big_on - v_big_off >= 2.5, \
+        f"输出饥饿未给高质攻击加分: on={v_big_on:.2f} off={v_big_off:.2f}"
+    assert abs(v_weak_on - v_weak_off) < 1e-6, \
+        f"打击级弱攻击被饥饿加成虚高: on={v_weak_on:.2f} off={v_weak_off:.2f}"
+
+    # 3uu) 长战演化顶格治理（第 88~89 批复盘）：kill_bonus 13→14→15、
+    #      block_safety 2.05→2.00→1.95 单向漂移——0 胜生涯里「长战磨死」每局
+    #      触发，信号只会把旋钮推向边界。余量不足一步时停止加码并显式留痕；
+    #      行程充足时行为与旧版一致（3pp 已覆盖）
+    gknow = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-gov-")))
+    gknow.policy["kill_bonus"] = 19.5     # 距上限 0.5 < 步长 2.0
+    gknow.policy["block_safety"] = 0.65   # 距下限 0.05 < 步长 0.1
+    gctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BOSS_Y", "rounds": 8, "node_type": "Boss"},
+        death_was_elite=False, death_hp_pct_at_entry=0.9,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    glesson = finalize_run(gknow, gctx, victory=False, final_floor=17)
+    assert abs(gknow.policy["kill_bonus"] - 19.5) < 1e-9, \
+        f"顶格旋钮仍被加码: {gknow.policy['kill_bonus']}"
+    assert abs(gknow.policy["block_safety"] - 0.65) < 1e-9, \
+        f"触底旋钮仍被释放: {gknow.policy['block_safety']}"
+    assert "停止加码" in glesson and "停止释放" in glesson, \
+        f"顶格治理未在复盘日志留痕: {glesson}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

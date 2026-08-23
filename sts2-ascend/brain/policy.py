@@ -777,9 +777,15 @@ class Policy:
         low_hp_bleeding = my_hp <= 0.35 * my_max_hp and block_gap > 0
         # premium：值得动用增益药水的场合（硬房/真致死/高危组合）。普通消耗战哪怕低血也留着——
         # 第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，Boss 战空手阵亡。
+        # 姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损 0.30×血条）比姿态门槛
+        # （0.25 / 0.28×血条）更迟钝，头号杀手 FUZZY+SHRINKER（29.3%/场均18.7<24）恰好
+        # 从两条药水门槛的缝隙漏网——88 局 F8 姿态系统从第 1 回合就警告「⚠高危组合」，
+        # 攻击药水却被锁到 20 血、格挡药水 33 血才掏出（意图已滚到 38）。同一份历史证据
+        # 已经把姿态推入防守，药水门必须同步开启，否则「知道危险」和「动用储备」脱节
         premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
                        or block_gap >= my_hp
-                       or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp)
+                       or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp
+                       or bool(stance.get("danger")))
         hard = (premium or low_hp_bleeding)
         potion_dec = self._maybe_potion(state, ctx, hard, premium)
         if potion_dec is not None:
@@ -1229,6 +1235,29 @@ class Policy:
 
         n_aoe = sum(1 for c in deck if _is_aoe(c)) if deck else 0
 
+        # 卡组爆发吞吐量（第 88~89 批复盘新增）：按「伤害/能耗」降序贪心装满
+        # 一回合 3 能量的期望伤害。攻击占比维度（ratio）看不见「量足质弱」的
+        # 输出饥饿——第 89 局卡组攻击占比达标，回合爆发却仍是几张 6 伤打击的
+        # 水平，88% 血进一幕 Boss、11 回合仅打出 ~198 伤输掉斩杀竞速。
+        # 生涯 0/89 胜、Boss 阵亡遍布 52%~99% 入场血量：卡组强度而非入场血量
+        # 才是当前瓶颈，拿牌端必须对绝对输出缺口敏感
+        burst_energy, burst = 3.0, 0.0
+        _burst_cards = []
+        for c in deck or []:
+            d, _b, h = card_numbers(c)
+            if d > 0 and is_attack(c):
+                _cost = max(1, c.get("energy_cost", 1) or 1)
+                _burst_cards.append((d * h / _cost, _cost, d * h))
+        _burst_cards.sort(reverse=True)
+        for _eff, _cost, _tot in _burst_cards:
+            if burst_energy <= 0:
+                break
+            if _cost > burst_energy:
+                continue
+            burst += _tot
+            burst_energy -= _cost
+        burst_starved = bool(deck) and burst < float(pol.get("deck_burst_floor", 30.0))
+
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
         # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠
         if is_attack(card):
@@ -1238,6 +1267,11 @@ class Policy:
                 # 输出不足时额外鼓励补攻击；越枯竭越急迫（第 71 局终局卡组
                 # 攻击占比 ~20%，Boss 战输出跌到裸打击水平）
                 value += 1.5 + min(2.5, (0.35 - ratio) * 12.0)
+            # 绝对输出饥饿（第 88~89 批复盘）：占比达标但全是低伤打击时，
+            # 高质攻击（单牌总伤 ≥12 且 ≥7 伤/能耗，即显著强于打击）额外加分——
+            # 质量门槛确保只奖励「替换打击级输出」的牌，弱攻击不因饥饿而虚高
+            if burst_starved and dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0:
+                value += 3.0
             # AoE 定价随存量递减（第 56~57 局复盘）：致死榜前列全是多体/召唤组合
             # （第 57 局 16 张入组牌 0 张群体攻击，双子 Boss 七回合斩杀失败），
             # 首张群体攻击是结构性稀缺资源(+3)；已有 1 张仍增值(+2)；
