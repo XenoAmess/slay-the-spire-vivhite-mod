@@ -68,7 +68,7 @@ def _quip_model() -> str:
             return str(m)
     except (OSError, json.JSONDecodeError):
         pass
-    return "openrouter/google/gemma-4-26b-a4b-it:free"
+    return "openrouter/openrouter/free"
 
 
 # ---------------------------------------------------------------------------
