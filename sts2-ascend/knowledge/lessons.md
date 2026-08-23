@@ -2038,3 +2038,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.20 → 4.50（Boss 高血进场长战死（71%，10回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.00 → 6.50（Boss 高血进场长战死（10回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/161 胜，当前目标进阶 0
+
+## 第 162 局复盘（2026-08-23 21:35）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：WHIRLWIND, CINDER, TRUE_GRIT, JUGGERNAUT, SHRUG_IT_OFF
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血6; F4 Monster战 掉血2; F5 Monster战 掉血59; F6 Monster战 掉血12（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，CRIMSON_MANTLE(25分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/162 胜，当前目标进阶 0
