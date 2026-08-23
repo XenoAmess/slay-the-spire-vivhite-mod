@@ -69972,3 +69972,64 @@ meta_review.md 追加成功。现在写 lessons.md 的 🧠 沉淀节：
 [14:20:33] [SHOP/F11] 商店：打开货架
 [14:20:34] [SHOP/F11] 商店：付费删牌（预留 60 金后仍充足）
 [14:20:35] [CARD_SELECTION/F11] 删除卡牌：【愧疚】（最无价值）
+[14:20:36] [SHOP/F11] 商店：购买卡牌【契约终结】（77金，价值17.4≥门槛1.6）
+[llm] 复盘会话结束（exit=0）。输出尾部：
+Ctx.combat=None mostly; `self._stall_combat is not ctx.combat` → None is None → keeps old... whatever, giveup gated by turn≥100. Only poison_state hits 99 < 100 ✓.
+
+- Fix B wiring test: simulate ag: start combat, set ctx.stall_giveup=True, settle with died=True → assert died_in_combat["stall"] is True; new combat resets flag. Add to 3m area or new block.
+
+Also **update the comment** at policy.py line 1030 and stall block comment lines 794-799 to cite run 109.
+
+Let me also double-check `_start_combat` definition to place the flag reset. Search agent.py.
+我已经掌握了完整信息。现在开始实施修复。首先是核心修复 A —— `policy.py` 中的消耗螺旋遏制：
+⚙ read {}
+· tokens 212155 ·
+💭 Now I'll make all the edits. Start with policy.py Fix A (exhaust spiral), Fix B tag (giveup), Fix C (thresholds), Fix D (capstone).
+现在开始应用修复。**修复 A**：`policy.py` 中的动态消耗上限 + 递增惩罚：
+⚙ edit {}
+· tokens 214223 ·
+⚙ edit {}
+· tokens 214528 ·
+**Fix C**: faster stall detection + **Fix B** tag on the giveup decision:
+⚙ edit {}
+· tokens 215754 ·
+**修复 D**：capstone blind-pick 改进：
+⚙ edit {}
+· tokens 216292 ·
+现在将新的 policy key `exhaust_play_penalty` 添加到 `knowledge.py` 中：
+⚙ bash {}
+· tokens 216363 ·
+⚙ read {}
+· tokens 216556 ·
+⚙ edit {}
+· tokens 217750 ·
+现在 **Fix B** 的 agent.py 端 —— 在战斗开始时重置标志，并在死亡时进行记录：
+⚙ edit {}
+· tokens 218036 ·
+⚙ edit {}
+· tokens 218377 ·
+⚙ read {}
+现在来看 `reflect.py` 这一侧 —— 将 tuner knobs 与 stall-concede deaths 隔离开来：
+· tokens 218455 ·
+⚙ edit {}
+· tokens 220295 ·
+💭 Wait, I made a mistake — I wrote `return "\n".join(changes) if False else lesson_tail(...)` which references a non-existent function `lesson_tail`. That was sloppy. I need to see the full structure of finalize_run to understand how it ends (what it returns, what other steps happen after policy evolution) so the stall-death path can skip ONLY the knob adjustments but still run everything else (lessons writing, progression updates etc.).
+
+Let me read the whole reflect.py to fix this properly.
+⚙ read {}
+我刚才编辑得不够严谨——让我完整阅读一下 `reflect.py`，以便妥善构建 `early-skip`：
+· tokens 220465 ·
+
+[14:20:37] [SHOP/F11] 商店：购买卡牌【坚毅】（52金，价值7.6≥门槛2.0）
+[14:20:38] [SHOP/F11] 商店：货架无值得购买，关闭
+[14:20:38] [SHOP/F11] 商店：本店已评估过，离开
+[14:20:40] [MAP/F11] 路径规划：Unknown(11,0)（路径分 9.60，预计进 Boss 血量 79%；进Boss血量预计79%<87%，优先续航路线）；候选：Unknown(11,0)=9.60|进Boss血量预计79%<87%，优先续航路线
+[git] 已自动存档：feat(sts2-ascend): 第109局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[14:20:42] [EVENT/F12] 事件【无休之处】：选择「就这样休息」（经验价值 36.1）；就这样休息=36.1(n=3) / 杀死树木=0.0(n=0)
+[14:20:43] [EVENT/F12] 事件：已结束，继续
+[14:20:45] [MAP/F12] 路径规划：RestSite(12,1)（路径分 15.79，预计进 Boss 血量 90%）；候选：Monster(12,0)=15.66 / RestSite(12,1)=15.79
+[agent] 事件结算：UNREST_SITE/UNREST_SITE.pages.INITIAL.options.REST → 生命 +58，金币 +0，卡组 +1
+[14:20:47] [REST/F13] 篝火：锻造升级（血量 100% ≥ 安全线 55%，升级降低后续战损）
+[14:20:49] [CARD_SELECTION/F13] 升级卡牌：【契约终结】
