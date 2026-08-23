@@ -1160,3 +1160,14 @@
 - **顶格旋钮代谢**：elite_min_hp_pct 顶在 0.9 后精英死亡信号空转——信号改接 elite_grey_safety_mult（精英死亡 +0.2／胜利 -0.1，区间 1.0~2.5）。给信号接旋钮前先确认旋钮还有行程。
 - **归因沿血量时间线回溯**：87 局死因是 Boss，根因是灰区精英赌输——终局死因只是链条最后一环，修第一个非必要冒险才有杠杆。
 - 下批核对：①地图日志出现「灰区精英预计战后…规避精英」且灰区精英拾取归零；②Boss 入场血量 ≥72% 成为常态；③精英再阵亡时 elite_grey_safety_mult 应爬升、胜利后回落。
+
+## 第 90 局复盘（2026-08-23 09:11）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：THUNDERCLAP, THUNDERCLAP, DISMANTLE, SHRUG_IT_OFF, BREAKTHROUGH, TAUNT, FLAME_BARRIER, SHRUG_IT_OFF, BREAKTHROUGH, FIGHT_ME
+- 本局遗物：PERMAFROST
+- 战斗记录：F12 Unknown战 掉血13; F14 Monster战 掉血11; F17 Boss战 掉血41; F19 Monster战 掉血23; F20 Monster战 掉血6; F21 Monster战 掉血51（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/43局)，BARRICADE(20分/2局)，TAUNT(19分/31局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus: 15.00 → 16.00（长战磨死（9回合），提升击杀奖励加快清场）；block_safety: 1.95 → 1.90（长战实证过度龟防会拖长战斗，小幅回调）
+- 生涯战绩：0/90 胜，当前目标进阶 0
