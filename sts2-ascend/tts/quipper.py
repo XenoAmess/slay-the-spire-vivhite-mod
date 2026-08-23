@@ -35,6 +35,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
+INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
 LOG_FILE = KNOWLEDGE_DIR / "tts_quipper.log"
 LOCK_FILE = KNOWLEDGE_DIR / "voice_quipper.lock"
 BUSY_FLAG = KNOWLEDGE_DIR / "voice_clone_busy.flag"          # 总结音占用（speak_once 写）
@@ -72,10 +73,61 @@ def _quip_model() -> str:
 
 
 # ---------------------------------------------------------------------------
-# MOSS-Nano 引擎（常驻）与播放
+# 克隆音色引擎（可配置：indextts 默认 / moss）
 # ---------------------------------------------------------------------------
 
+def _clone_engine() -> str:
+    try:
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        eng = (cfg.get("tts") or {}).get("clone_engine")
+        if eng:
+            return str(eng)
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "indextts"
+
+
+def _apply_gain_play(path: Path) -> None:
+    """统一增益播放（0~400%，静音跳过）。"""
+    import numpy as np
+    st = get_voice_state()
+    if st["muted"] or st["volume"] <= 0:
+        return
+    gain = st["volume"] / 100.0
+    with wave.open(str(path), "rb") as w:
+        frames = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+        params = w.getparams()
+    pcm = (frames.astype(np.float32) / 32768.0 * gain).clip(-1, 1)
+    pcm16 = (pcm * 32767).astype(np.int16)
+    with wave.open(str(path), "wb") as w:
+        w.setparams(params)
+        w.writeframes(pcm16.tobytes())
+    winsound.PlaySound(str(path), winsound.SND_FILENAME)
+
+
+class IndexQuip:
+    """IndexTTS-2.5 克隆音色（CPU，质量高但每句要数分钟——用户指定切回此引擎）。"""
+
+    def __init__(self) -> None:
+        sys.path.insert(0, str(INDEXTTS_DIR))
+        from indextts.infer_v2_5 import IndexTTS2
+        ckpt = INDEXTTS_DIR / "checkpoints"
+        t0 = time.time()
+        self.tts = IndexTTS2(cfg_path=str(ckpt / "config.yaml"), model_dir=str(ckpt),
+                             use_bf16=False, device="cpu")
+        self.ref = str(TTS_DIR / "reference_voice_15s.wav")
+        log(f"引擎就绪（index-tts，{time.time() - t0:.0f}s）")
+
+    def play(self, text: str) -> None:
+        out = TTS_DIR / "quip_tmp.wav"
+        self.tts.infer(spk_audio_prompt=self.ref, text=text, lang="ZH",
+                       output_path=str(out), duration_factor=0.9, verbose=False)
+        _apply_gain_play(out)
+
+
 class NanoQuip:
+    """MOSS-TTS-Nano 克隆音色（ONNX CPU，快，备选）。"""
+
     def __init__(self) -> None:
         sys.path.insert(0, str(MOSS_DIR))
         from onnx_tts_runtime import OnnxTtsRuntime
@@ -94,16 +146,12 @@ class NanoQuip:
         self.rt = OnnxTtsRuntime(model_dir=MOSS_DIR / "models")
         ref = REF_48K if REF_48K.exists() else TTS_DIR / "reference_voice.wav"
         self.codes = self.rt.encode_reference_audio(str(ref))
-        log(f"引擎就绪（{time.time() - t0:.0f}s）")
+        log(f"引擎就绪（MOSS-Nano，{time.time() - t0:.0f}s）")
 
     def play(self, text: str) -> None:
-        st = get_voice_state()
-        if st["muted"] or st["volume"] <= 0:
-            return
-        gain = st["volume"] / 100.0
         r = self.rt.synthesize_single_chunk(text=text, prompt_audio_codes=self.codes, streaming=False)
         import numpy as np
-        wav = np.asarray(r["waveform"], dtype=np.float32) * gain
+        wav = np.asarray(r["waveform"], dtype=np.float32)
         sr = int(self.rt.codec_meta["codec_config"]["sample_rate"])
         ch = int(self.rt.codec_meta["codec_config"]["channels"])
         pcm = (wav.clip(-1, 1) * 32767).astype(np.int16)
@@ -114,7 +162,7 @@ class NanoQuip:
             w.setsampwidth(2)
             w.setframerate(sr)
             w.writeframes(pcm.tobytes())
-        winsound.PlaySound(str(TMP_WAV), winsound.SND_FILENAME)
+        _apply_gain_play(TMP_WAV)
 
 
 # ---------------------------------------------------------------------------
@@ -243,12 +291,16 @@ def main() -> int:
     except OSError:
         pass
 
-    if not (MOSS_DIR / "models").exists():
-        log("MOSS 模型未就绪，退出")
-        return 0
-    eng = NanoQuip()
+    engine = _clone_engine()
+    if engine == "moss" and not (MOSS_DIR / "models").exists():
+        log("MOSS 模型未就绪，回退 indextts")
+        engine = "indextts"
+    if engine == "indextts" and not (INDEXTTS_DIR / "checkpoints" / "config.yaml").exists():
+        log("index-tts 模型未就绪，回退 moss")
+        engine = "moss"
+    eng = NanoQuip() if engine == "moss" else IndexQuip()
     rng = random.Random()
-    log(f"白绮碎碎念 v2 上线（LLM 现写：{_quip_model()}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）")
+    log(f"白绮碎碎念 v2 上线（LLM 现写：{_quip_model()}，克隆引擎：{engine}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）")
 
     last_play_end = 0.0
     next_gap = rng.uniform(MIN_GAP, MAX_GAP)

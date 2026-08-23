@@ -138,24 +138,37 @@ class Agent:
                 except (OSError, ValueError):
                     pass
             quipper = BASE_DIR / "tts" / "quipper.py"
-            moss_ready = (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists()
-            if not quipper.exists() or not moss_ready:
+            if not quipper.exists():
                 return
             import shutil
             uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
             if not Path(uv).exists():
                 return
+            # 克隆引擎决定运行环境（indextts 用其 venv；moss 用临时环境）
+            engine = "indextts"
+            try:
+                cfg = json.loads((BASE_DIR / "brain" / "config.json").read_text(encoding="utf-8"))
+                engine = str((cfg.get("tts") or {}).get("clone_engine") or "indextts")
+            except (OSError, json.JSONDecodeError):
+                pass
+            if engine == "indextts" and (BASE_DIR / "third_party" / "index-tts" / "checkpoints").exists():
+                cmd = [uv, "run", "--project", str(BASE_DIR / "third_party" / "index-tts"),
+                       "python", str(quipper)]
+            elif (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists():
+                cmd = [uv, "run", "--no-project",
+                       "--with", "onnxruntime", "--with", "sentencepiece",
+                       "--with", "torch", "--with", "torchaudio",
+                       "python", str(quipper)]
+            else:
+                return
             creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                              | getattr(subprocess, "DETACHED_PROCESS", 0)
                              | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
-            subprocess.Popen([uv, "run", "--no-project",
-                              "--with", "onnxruntime", "--with", "sentencepiece",
-                              "--with", "torch", "--with", "torchaudio",
-                              "python", str(quipper)],
+            subprocess.Popen(cmd,
                              cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=creationflags, close_fds=True)
-            log("[agent] 白绮碎碎念已拉起")
+            log(f"[agent] 白绮碎碎念已拉起（引擎 {engine}）")
         except Exception as exc:
             log(f"[agent] 碎碎念拉起失败（不影响游玩）：{exc}")
 

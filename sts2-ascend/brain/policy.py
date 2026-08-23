@@ -336,9 +336,25 @@ class Policy:
     # map
     # ------------------------------------------------------------------
 
+    def _act_danger(self, nt: str, priors: dict, act_no: int,
+                    act_mul: float) -> tuple[float, float, bool]:
+        """路径投影掉血先验的分幕实证口径（第 148~160 批复盘接入）。
+
+        第 79 批写好的 room_damage_prior_act 此前从未被任何调用方使用
+        （死代码），rooms_act 分幕数据持续采集 80+ 局却零消费——投影一直在用
+        跨幕混算先验 × 静态 path_act_scale。接入后：rooms_act 有本幕样本
+        （≥3 场）时返回实证先验且幕数乘区归 1（实测场均已含幕间难度跃迁，
+        再乘 act_mul 是双重计费）；样本不足时回落跨幕先验 × act_mul 旧口径。
+        返回 (先验, 生效幕数乘区, 是否命中分幕实证)。
+        """
+        prior, act_specific = self.know.room_damage_prior_act(
+            nt, float(priors.get(nt, 8)), act_no)
+        return prior, (1.0 if act_specific else act_mul), act_specific
+
     def _elite_path_gate(self, pol: dict, priors: dict, hp: int, max_hp: int,
                          good_cards: int, act_mul: float,
-                         burst_starved: bool = False) -> tuple[float, str]:
+                         burst_starved: bool = False,
+                         act_no: int | None = None) -> tuple[float, str]:
         """精英进场闸门：按实测战损投影"打完精英还剩多少血"，不达标整条候选路径重罚。
 
         第 36 局实证：71% 血进灰区精英单场 -44（77% 现血）+ 两瓶药水，连锁三个
@@ -357,14 +373,18 @@ class Policy:
         soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
         if hpp < soft:
             return 0.1, f"血量{hpp:.0%}<{soft:.0%}，规避精英"
-        prior = self.know.room_damage_prior("Elite", float(priors.get("Elite", 28)))
+        if act_no is not None:
+            prior, eff_mul, _ = self._act_danger("Elite", priors, act_no, act_mul)
+        else:
+            prior = self.know.room_damage_prior("Elite", float(priors.get("Elite", 28)))
+            eff_mul = act_mul
         deck_relief = min(0.20, 0.02 * good_cards)
-        proj = hpp - prior * act_mul * (1.0 - deck_relief) / max(1, max_hp)
+        proj = hpp - prior * eff_mul * (1.0 - deck_relief) / max(1, max_hp)
         req = float(pol.get("path_hp_floor_pct", 0.35)) + 0.10 / max(1.0, act_mul)
         if proj < req:
             return 0.1, (f"血量{hpp:.0%}进精英预计战后仅剩{max(0.0, proj):.0%}"
                          f"(需求≥{req:.0%})，规避精英")
-        veto_f, veto_note = self._elite_grey_veto(pol, prior, act_mul, hpp,
+        veto_f, veto_note = self._elite_grey_veto(pol, prior, eff_mul, hpp,
                                                   good_cards, max_hp, burst_starved)
         if veto_f is not None:
             return veto_f, veto_note
@@ -522,10 +542,10 @@ class Policy:
                 if hpp < hard:
                     # 灰区不再一刀切：第 28 局 F12 以 78% 血与 0.80 硬线差 2% 而错过精英
                     # 但灰区必须通过悲观投影复核（第 87 局 86% 血进旧日雕像实测 -54）
-                    prior_e = self.know.room_damage_prior(
-                        "Elite", float(priors.get("Elite", 28)))
+                    prior_e, gate_mul, _ = self._act_danger(
+                        "Elite", priors, act_no, act_mul)
                     veto_f, veto_note = self._elite_grey_veto(
-                        pol, prior_e, act_mul, hpp, good_cards, max_hp, burst_starved)
+                        pol, prior_e, gate_mul, hpp, good_cards, max_hp, burst_starved)
                     if veto_f is not None:
                         return veto_f, veto_note
                     return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
@@ -571,6 +591,9 @@ class Policy:
         acts = pol.get("path_act_scale") or [1.0]
         act_idx = min(len(acts) - 1, max(0, (floor - 1) // 17))
         act_mul = float(acts[act_idx]) if isinstance(acts[act_idx], (int, float)) else 1.0
+        # 分幕序号（与 agent 结算侧 act_no=(floor-1)//17+1 同口径）：
+        # rooms_act 的键后缀，供分幕实证先验查询
+        act_no = act_idx + 1
 
         # 输出饥饿判定（第 136~137 批复盘）：爆发吞吐量低于门槛的卡组处于
         # 「跳过精英也必输 Boss」状态，灰区精英复核据此豁免部分生存线
@@ -579,7 +602,8 @@ class Policy:
             pol.get("deck_burst_floor", 30.0))
 
         elite_gate_f, elite_gate_note = self._elite_path_gate(
-            pol, priors, hp, max_hp, good_cards, act_mul, burst_starved)
+            pol, priors, hp, max_hp, good_cards, act_mul, burst_starved,
+            act_no=act_no)
 
         def paths_from(start_key) -> list[list[tuple]]:
             out: list[list[tuple]] = []
@@ -645,7 +669,8 @@ class Policy:
                 # 前景的投影修正
                 if nt == "Elite" and depth >= 1:
                     gf, _gnote = self._elite_path_gate(pol, priors, int(round(cur_hp)), max_hp,
-                                                        good_cards, act_mul, burst_starved)
+                                                        good_cards, act_mul, burst_starved,
+                                                        act_no=act_no)
                     if gf < 1.0:
                         raw_penalty += (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5 * (mid_decay ** depth)
                         mid_gate_hit = True
@@ -665,18 +690,20 @@ class Policy:
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
                     notes.append(note)
-                # 掉血先验：静态值与实测场均掉血（rooms 数据）加权混合；
-                # 无实测数据时按敌人统计的总体校准系数放大，修复静态先验系统性低估
-                prior = self.know.room_damage_prior(nt, float(priors.get(nt, 8)))
+                # 掉血先验：分幕实证优先（rooms_act 有本幕样本时幕数乘区归 1，
+                # 实测场均已含幕效应）；无分幕样本回落静态/跨幕混合 × act_mul
+                prior, node_act_mul, node_act_specific = self._act_danger(
+                    nt, priors, act_no, act_mul)
                 # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
                 # 不扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
                 if boss_row is not None and key[0] >= boss_row:
                     continue
-                cur_hp -= prior * deck_ease * act_mul * (
+                cur_hp -= prior * deck_ease * node_act_mul * (
                     dire_loss_mult if nt in ("Monster", "Elite", "Unknown") else 1.0)
-                if nt == "Unknown" and act_idx >= 1:
-                    cur_hp -= prior * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
+                if nt == "Unknown" and act_idx >= 1 and not node_act_specific:
+                    # 二幕遭遇战加价仅旧口径追加；分幕实证已含该效应，不重复计费
+                    cur_hp -= prior * deck_ease * node_act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
                     # 投影与行为一致（第 99~102 批复盘）：篝火并非总是回血——
                     # _rest 在血量 ≥ 锻造安全线时会改锻造（非 Boss 前夜），Boss 前夜
@@ -778,8 +805,8 @@ class Policy:
                     pnt = n.get("node_type", "Unknown") if pdepth == 0 \
                         else pg.get("node_type", "Unknown")
                     if pnt in ("Monster", "Elite", "Unknown"):
-                        first_loss = self.know.room_damage_prior(
-                            pnt, float(priors.get(pnt, 8))) * deck_ease * act_mul
+                        _fp, _fm, _ = self._act_danger(pnt, priors, act_no, act_mul)
+                        first_loss = _fp * deck_ease * _fm
                         break
                 safety = float(pol.get("dire_first_fight_safety", 1.5))
                 proj_hp = hp - first_loss * dire_loss_mult * safety
@@ -836,8 +863,8 @@ class Policy:
                 if boss_row is not None and key[0] >= int(boss_row):
                     break  # Boss 前夜的入场血量问题由 boss-eve 分支处理
                 if nnt in ("Monster", "Elite"):
-                    prior = self.know.room_damage_prior(nnt, float(priors.get(nnt, 8)))
-                    next_fight_loss = prior * deck_ease * act_mul / max_hp
+                    _np, _nm, _ = self._act_danger(nnt, priors, act_no, act_mul)
+                    next_fight_loss = _np * deck_ease * _nm / max_hp
                     break
         ctx.rest_next_fight_loss_frac = next_fight_loss
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
@@ -1139,6 +1166,17 @@ class Policy:
             if float(stance.get("blk_mult", 1.0)) > 1.0:
                 stance["blk_mult"] = 1.0
 
+        # 全场皆为已证实重生体时解除重生压制（第 152 局 F6 实证）：墨宝 1 血
+        # 不死阶段被重生标记三重压制（eff 封顶 1、威胁清零、击杀奖励归零），
+        # 打击评分 1.0+负 learned value 跌破出牌阈值——58 个 tick 满手攻击空过，
+        # 65 回合 5 分钟白掉 54 血，直到僵局强攻（turn≥60）一刀终结。
+        # 重生压制的初衷（52~53/58 局利齿之眼）是「杀召唤物无意义、应转火本体」，
+        # 前提是场上还有本体可打；当存活敌人全是重生体时，压制让「不打」成为
+        # 唯一选择——拒绝出牌永远是比「打重生体」更差的答案，必须放开。
+        all_respawn = all(self._is_respawn_add(e) for e in enemies)
+        if all_respawn:
+            danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
+
         best = None  # (score, card, target_index, why)
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
@@ -1194,7 +1232,8 @@ class Policy:
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
                                                    my_hp, my_max_hp, stance, forced_kill,
                                                    reserve_for_block and not race_allin and not kill_race,
-                                                   min_blk_cost, energy, race_allin, kill_race)
+                                                   min_blk_cost, energy, race_allin, kill_race,
+                                                   all_respawn=all_respawn)
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _exhausts_other_cards(c):
@@ -1290,7 +1329,7 @@ class Policy:
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
                     forced_kill: bool = False, reserve_for_block: bool = False,
                     min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
-                    kill_race: bool = False):
+                    kill_race: bool = False, all_respawn: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -1394,7 +1433,7 @@ class Policy:
                 eff = 0
                 for e in enemies:
                     e_eff = max(1, total - e.get("block", 0))
-                    if self._is_respawn_add(e):
+                    if self._is_respawn_add(e) and not all_respawn:
                         # 确认重生体：过量伤害记到当前血量为止（第 58 局实证：
                         # 11 点伤害砸 5 血利齿之眼按 11 计分，虚高吸走输出）
                         e_eff = min(e_eff, max(1, e.get("current_hp", 9999)))
@@ -1402,7 +1441,7 @@ class Policy:
                 killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
                 score = eff * atk_damp + sum(
                     self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
-                                     incoming, pol)
+                                     incoming, pol, ignore_respawn=all_respawn)
                     for e in killable)
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
@@ -1429,7 +1468,7 @@ class Policy:
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
             _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
             for e in _pool:
-                resp = self._is_respawn_add(e)
+                resp = self._is_respawn_add(e) and not all_respawn
                 eff = max(1, total - e.get("block", 0))
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 is_support = (not resp and len(enemies) > 1 and threat <= 0 and sup_bonus > 0)
@@ -1447,7 +1486,7 @@ class Policy:
                         s += sup_bonus
                 killed = eff >= e.get("current_hp", 9999)
                 if killed:
-                    s += self._kill_bonus(e, threat, incoming, pol)
+                    s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
                     why = f"可击杀{e['name']}" if killed else (
@@ -1532,7 +1571,8 @@ class Policy:
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
         return self._combat_kills.get(kid, 0) >= 2
 
-    def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict) -> float:
+    def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
+                    ignore_respawn: bool = False) -> float:
         """击杀奖励按「消除的威胁占比」折算，并对已证实的重生召唤物归零。
 
         第 52~53 局实证：利齿之眼每回合被【可击杀】斩首又复活，kill_bonus=12
@@ -1542,9 +1582,11 @@ class Policy:
         利齿之眼被预测击杀 13 次、本体只挨 6 刀，83 血整场送光——重生体的击杀
         奖励必须彻底归零，配合评分端的三重压制（过量封顶/威胁清零）才能扭转目标。
         空档回合（intent 全 0）按全额计：抢在召唤物产出意图之前清场仍有价值。
+        ignore_respawn（第 152 局复盘）：场上存活敌人全是已证实重生体时，
+        归零击杀奖励等于禁止终结战斗——此时压制解除，奖励照常计。
         """
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
-        if self._combat_kills.get(kid, 0) >= 2:
+        if not ignore_respawn and self._combat_kills.get(kid, 0) >= 2:
             return 0.0
         share = 1.0 if incoming <= 0 else min(1.0, max(0.0, threat) / incoming)
         return pol["kill_bonus"] * (0.4 + 0.6 * share)

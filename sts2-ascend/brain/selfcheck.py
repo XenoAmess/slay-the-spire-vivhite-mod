@@ -1926,6 +1926,64 @@ def main() -> int:
     assert abs(pknow.room_damage_prior("RareRoom", 10.0) - 10.0) < 1e-9, \
         f"小样本房间发生率未保守回退: {pknow.room_damage_prior('RareRoom', 10.0)}"
 
+    # 3xz) 分幕实证先验接入（第 148~160 批复盘）：room_damage_prior_act 自第 79 批
+    #      落地起从未被任何调用方使用（死代码），rooms_act 分幕数据持续采集 80+ 局
+    #      零消费——投影一直用跨幕混算先验 × 静态 path_act_scale。接入后命中分幕
+    #      实证时幕数乘区必须归 1：实测场均已含幕效应，再乘 act_mul 是双重计费
+    #      （Elite 二幕：跨幕 blended 22.7×1.7=38.7 vs 本幕实证 34.0，叠加则 45.9）
+    ac_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-actprior-"))
+    ac_know = knowledge.Knowledge(ac_dir)
+    ac_know.stats["rooms"]["Monster"] = {"visits": 600, "outcome_sum": 0.0,
+                                         "hp_lost_sum": 4800.0, "damage_events": 600}
+    ac_know.stats["rooms"]["Elite"] = {"visits": 55, "outcome_sum": 0.0,
+                                       "hp_lost_sum": 1125.0, "damage_events": 55}
+    # 无分幕数据 → 回落跨幕口径并标记未命中
+    p_m1, hit_m1 = ac_know.room_damage_prior_act("Monster", 8.0, 2)
+    assert not hit_m1 and abs(p_m1 - 8.0) < 1e-9, \
+        f"无分幕样本未回落跨幕口径: {p_m1}, hit={hit_m1}"
+    # 有分幕样本（Monster@2 实测 30/场）→ 高权重实证混合，命中标记 True
+    ac_know.stats["rooms_act"]["Monster@2"] = {"hp_lost_sum": 300.0, "damage_events": 10}
+    p_m2, hit_m2 = ac_know.room_damage_prior_act("Monster", 8.0, 2)
+    exp_m2 = 0.15 * 8.0 + 0.85 * 30.0
+    assert hit_m2 and abs(p_m2 - exp_m2) < 1e-9, \
+        f"分幕实证先验错误: {p_m2}（期望 {exp_m2}）, hit={hit_m2}"
+    # 二幕精英：实证 34.0 低于跨幕×1.7 旧口径 38.7——双重计费拆除后精英威胁
+    # 不再被静态幕数系数虚抬（二幕遗物供给通道）
+    ac_know.stats["rooms_act"]["Elite@2"] = {"hp_lost_sum": 102.0, "damage_events": 3}
+    p_e2, hit_e2 = ac_know.room_damage_prior_act("Elite", 28.0, 2)
+    exp_e2 = (1 - 3 / 8) * (0.3 * 28.0 + 0.7 * (1125.0 / 55)) + (3 / 8) * 34.0
+    assert hit_e2 and abs(p_e2 - exp_e2) < 1e-9, \
+        f"精英分幕先验错误: {p_e2}（期望 {exp_e2:.2f}）"
+    assert p_e2 < (0.3 * 28.0 + 0.7 * (1125.0 / 55)) * 1.7, \
+        f"幕效应双重计费未拆除: {p_e2}"
+    # _act_danger：命中时幕数乘区归 1，未命中时维持 act_mul
+    ac_pol = policy.Policy(ac_know)
+    _ap, _am, _aspec = ac_pol._act_danger("Monster", {}, 2, 1.7)
+    assert _aspec and _am == 1.0, f"命中分幕实证时幕数乘区未归 1: {_am}"
+    _ap2, _am2, _aspec2 = ac_pol._act_danger("Unknown", {}, 2, 1.7)
+    assert not _aspec2 and _am2 == 1.7, f"未命中分幕实证时幕数乘区丢失: {_am2}"
+    # 集成：二幕地图投影使用分幕实证——满血、两场 Monster 到 Boss，
+    # 旧口径投影 66%（8×1.7×2），新口径投影 33%（26.7×2，乘区归 1）
+    def act2_proj_map():
+        heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                  "children": [{"row": 2, "col": 0}]}]
+        rest_nodes = [
+            {"row": 2, "col": 0, "node_type": "Monster",
+             "children": [{"row": 3, "col": 0}]},
+            {"row": 3, "col": 0, "node_type": "Boss"},
+        ]
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": heads + rest_nodes,
+                      "boss_node": {"row": 3}},
+              "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                      "floor": 20, "deck": []}}
+        return ac_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    d_ac = act2_proj_map()
+    m_ac = re.search(r"预计进 Boss 血量 (\d+)%", d_ac.reason)
+    assert m_ac and m_ac.group(1) == "33", \
+        f"二幕投影未使用分幕实证（旧口径为 66%）: {d_ac.reason}"
+
     # 3xy) 路径投影罚分去重（第 96 局复盘）：死亡投影曾与血量线/Boss入场线
     #      三重叠加（同一坏结局记三次账），二幕全图饱和在 -165~-195。中途死亡
     #      只记一次后：垂死路径的评分须回到 -100 以内（保留存活深度梯度），
@@ -2376,6 +2434,63 @@ def main() -> int:
     assert abs(eknow.policy["boss_entry_min_hp_pct"] - be_ek3) < 1e-9, \
         "高血进场仍上调入场线（138~141 分流被破坏）"
     assert "高血进场" in ek_lesson3, f"高血分流留痕缺失: {ek_lesson3}"
+
+    # 3yl) 全场皆为已证实重生体时解除重生压制（第 152 局 F6 实证）：墨宝 1 血
+    #      不死阶段被重生标记三重压制（eff 封顶 1/威胁清零/击杀奖励归零），打击
+    #      评分跌破出牌阈值——58 个 tick 满手攻击空过、65 回合白掉 54 血，直到
+    #      僵局强攻（turn≥60）一刀终结。压制的前提是「场上还有本体可打」；存活
+    #      敌人全是重生体时拒绝出牌是最差解，必须恢复正常评分终结战斗。
+    def inklet_state():
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 9,
+                "combat": {"player": {"current_hp": 47, "max_hp": 80, "block": 0, "energy": 3},
+                           "hand": [
+                               {"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                                "playable": True, "energy_cost": 1, "requires_target": True,
+                                "valid_target_indices": [0],
+                                "dynamic_values": [{"name": "Damage", "current_value": 6}]},
+                               {"index": 1, "card_id": "BASH", "name": "痛击",
+                                "playable": True, "energy_cost": 1, "requires_target": True,
+                                "valid_target_indices": [0],
+                                "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                           "enemies": [
+                               {"index": 0, "enemy_id": "INKLET_T", "name": "墨宝",
+                                "current_hp": 1, "max_hp": 40, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 3}]}]},
+                "run": {"current_hp": 47, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
+    pol._combat_kills["INKLET_T"] = 2   # 模拟同场已两次预测击杀后它仍在场（1 血不死）
+    d_ink = pol.decide(inklet_state(), ctx)
+    assert d_ink.action == "play_card" and d_ink.params.get("target_index") == 0, \
+        f"全场皆重生体时仍拒绝出牌（152 局 F6 空过复发）: {d_ink.action}（{d_ink.reason}）"
+    assert "解除重生压制" in d_ink.reason, f"全场重生体解除压制未留痕: {d_ink.reason}"
+    # 对照①：场上还有正常敌人时压制原样生效（52~53/58 局语义不破坏）——
+    # 已证实重生体不应再吸引输出，转火高威胁本体
+    def mixed_state():
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 9,
+                "combat": {"player": {"current_hp": 47, "max_hp": 80, "block": 0, "energy": 3},
+                           "hand": [
+                               {"index": 0, "card_id": "CARD_CLEAVE_T", "name": "重劈",
+                                "playable": True, "energy_cost": 1, "requires_target": True,
+                                "valid_target_indices": [0, 1],
+                                "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                           "enemies": [
+                               {"index": 0, "enemy_id": "INKLET_T", "name": "墨宝",
+                                "current_hp": 1, "max_hp": 40, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 3}]},
+                               {"index": 1, "enemy_id": "BODY_MAIN_T", "name": "本体",
+                                "current_hp": 60, "max_hp": 70, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 20}]}]},
+                "run": {"current_hp": 47, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
+    d_mix = pol.decide(mixed_state(), ctx)
+    assert d_mix.action == "play_card" and d_mix.params.get("target_index") == 1, \
+        f"有本体可打时重生体仍吸引输出（58 局压制被破坏）: {d_mix.reason}"
+    # 对照②：_kill_bonus 的 ignore_respawn 通道——解除时奖励恢复、默认调用不受影响
+    assert pol._kill_bonus({"enemy_id": "INKLET_T"}, 3, 3, know.policy) == 0.0, \
+        "默认口径下重生体击杀奖励未归零"
+    assert pol._kill_bonus({"enemy_id": "INKLET_T"}, 3, 3, know.policy, ignore_respawn=True) > 0.0, \
+        "ignore_respawn 通道未恢复击杀奖励"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

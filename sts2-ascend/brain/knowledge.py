@@ -536,8 +536,9 @@ class Knowledge:
         rate = self.room_combat_rate(node_type)
         return blended * rate
 
-    def room_damage_prior_act(self, node_type: str, static_prior: float, act: int) -> float:
-        """分幕掉血先验（第 79 局复盘新增）：优先用本幕实测场均掉血。
+    def room_damage_prior_act(self, node_type: str, static_prior: float,
+                              act: int) -> tuple[float, bool]:
+        """分幕掉血先验（第 79 局复盘新增；第 148~160 批复盘首次接入调用方）。
 
         跨幕混算的 Monster 场均 ~9.9 是"一幕便宜 + 二幕昂贵"的平均假象——
         二幕单场大失血型组合（SPINY_TOAD 本批 -40/-29）让投影系统性乐观，
@@ -545,14 +546,20 @@ class Knowledge:
         时以更高实测权重混合；无分幕数据时回落跨幕旧口径（向后兼容，无需迁移）。
         实测项同步乘战斗发生率（第 96 局复盘）：与跨幕口径保持同一语义
         （E[掉血|到访]），否则分幕样本一够数就会把发生率折扣重新冲掉。
+
+        返回 (先验, 是否命中分幕实证)。命中时实测场均已包含幕间难度跃迁，
+        调用方不得再乘 path_act_scale——否则幕效应被双重计费（第 148~160 批
+        实证：Elite 二幕实测场均 34.0，旧口径 blended 22.7×1.7=38.7，若叠加
+        再乘 1.7 则虚高至 45.9）；未命中时调用方照常乘幕数系数。
         """
         e = self.stats.get("rooms_act", {}).get(f"{node_type}@{act}")
         if not e or e.get("damage_events", 0) < 3:
-            return self.room_damage_prior(node_type, static_prior)
+            return self.room_damage_prior(node_type, static_prior), False
         baseline = self.room_damage_prior(node_type, static_prior)
         measured = e["hp_lost_sum"] / max(1, e["damage_events"])
         w = min(0.85, e["damage_events"] / 8.0)
-        return (1.0 - w) * baseline + w * measured * self.room_combat_rate(node_type)
+        return ((1.0 - w) * baseline
+                + w * measured * self.room_combat_rate(node_type)), True
 
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty.

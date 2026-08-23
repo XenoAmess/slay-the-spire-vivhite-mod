@@ -84,7 +84,7 @@ def _synth_indextts(text: str, out: Path) -> None:
 
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    engine = "moss"
+    engine = "indextts"
     if "--engine" in sys.argv:
         engine = sys.argv[sys.argv.index("--engine") + 1]
     if not args:
