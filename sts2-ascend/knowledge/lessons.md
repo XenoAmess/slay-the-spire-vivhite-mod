@@ -2690,3 +2690,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/219 胜，当前目标进阶 0
+
+## 第 220 局复盘（2026-08-24 07:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：JUGGLING, TRUE_GRIT, ANGER, FASTEN, CINDER, STAMPEDE, PACTS_END, TAUNT, ANGER, STONE_ARMOR
+- 本局遗物：准备背包, ANCHOR
+- 战斗记录：F8 Elite战 掉血28; F9 Unknown战 掉血13; F12 Monster战 掉血25; F14 Unknown战 掉血2; F14 Unknown战 掉血7; F17 Boss战 掉血70（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FIEND_FIRE(26分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；deck_burst_floor: 37.00 → 38.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
+- 生涯战绩：0/220 胜，当前目标进阶 0
