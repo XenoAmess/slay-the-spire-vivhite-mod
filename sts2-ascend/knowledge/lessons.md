@@ -1972,3 +1972,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
 - 生涯战绩：0/155 胜，当前目标进阶 0
+
+## 第 156 局复盘（2026-08-23 20:46）
+- 结果：💀 失败｜进阶 0｜到达层数 20｜当局评分 20
+- 死因：敌人组合 THIEVING_HOPPER
+- 本局拿牌：HOWL_FROM_BEYOND, FEEL_NO_PAIN, THUNDERCLAP, RAGE, FIGHT_ME, TRUE_GRIT, BLUDGEON, CRIMSON_MANTLE, MOLTEN_FIST, THUNDERCLAP, TRUE_GRIT, DARK_EMBRACE, MOLTEN_FIST
+- 本局遗物：FROZEN_EGG
+- 战斗记录：F12 Monster战 掉血0; F14 Monster战 掉血16; F15 Monster战 掉血0; F17 Boss战 掉血11; F19 Monster战 掉血65; F20 Monster战 掉血15（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，CRIMSON_MANTLE(26分/2局)，FISTICUFFS(24分/2局)，BARRICADE(22分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.80 → 1.85（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/156 胜，当前目标进阶 0
