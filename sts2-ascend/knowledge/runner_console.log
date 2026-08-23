@@ -6433,3 +6433,60 @@ Now, let me do a final review of the complete diff of my code changes to make su
   ↳ 动作 play_card 失败：invalid_action: Action is not available in the current state. (http=409)
 [17:52:17] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤11，我方79血/0甲
 [17:52:17] [COMBAT/F2] 战斗：打出【打击】→毛绒伏地虫（单体伤害≈6）；敌意图总伤11，我方79血/0甲
+[llm] 复盘会话结束（exit=0）。输出尾部：
+查触发条件是否过严（≤5% 血条）。
+
+lessons.md 🧠 section — condensed version.
+
+review_conclusion.txt — spoken, ≤100 chars, one line. E.g.:
+"这四局打得其实不差，一百二十八局还冲到三十层。老问题还是 Boss 打不动。这次抓到个隐患：击杀奖励顶格后，证据全溢进防御权重，越死越龟。已经修好，连败期旋钮不会再空转了。"
+
+Count chars — need ≤100 字. Let me draft: "这四局其实有进步，一百二十八局冲到三十层，精英也敢打了。但抓到一个隐患：击杀奖励顶格后，长战证据全溢进防御权重，越输越龟。已修好，连败期旋钮不会再空转。" ~80 chars. Good.
+
+Write files.
+现在写三份产出。先追加 meta_review.md：
+⚙ bash {}
+· tokens 99873 ·
+💭 PowerShell doesn't support heredoc. Write the script to a temp file then run it. Or simpler: build the section text in a python file in temp dir.
+⚙ write {}
+· tokens 103037 ·
+⚙ bash {}
+· tokens 103140 ·
+💭 All written. Conclusion 75 chars ≤100. 
+
+Final verification: re-run selfcheck once more (already OK after edits — nothing changed in .py since). Confirm no git operations. Also double check the reflect.py edit didn't break lesson flow: in the stall_death branch there's `return ... if False else lesson_tail(...)` — untouched.
+
+One more sanity check: in finalize_run, when kb capped and non-boss long-fight, we append the trace — good. Also confirm `kb_head`/`kb_step` are defined before the branch — yes, defined above in same scope.
+
+Also verify review_conclusion.txt content and that lessons/meta appended correctly (tail check via read tool quickly).
+⚙ bash {}
+· tokens 103467 ·
+⚙ read {}
+· tokens 103676 ·
+💭 All done (console mojibake was just GBK display; file is correct UTF-8 single line). Selfcheck OK. No git operations performed. Did not touch anything outside sts2-ascend/. 
+
+Final summary ≤200字.
+复盘完成（第 127~130 局），自检 SELFCHECK OK，未做任何 git 操作。
+
+**归因**：127 局一幕 Boss -77（续航到位仍差斩杀线）；128 局 💀30 本批最佳（Boss -65 过关后二幕力竭）；129 局早期方差暴毙（绝境门落地前）；130 局精英实战 -30（灰区修复生效铁证）、满血进 Boss 仍 -62。瓶颈确认在卡组输出端，参数已全顶格。前批修复经行为级留痕核验通过（<40% 文案时间戳重合、×0.55 软压制分数反推）。
+
+**核心修复**：kill_bonus 顶格后长战证据溢入 block_safety（三连 +0.05 至 1.65，0 胜下永不释放的单向棘轮）。已改为以 kill_bonus 行程为门，顶格即停止代偿加码并留痕；短时爆毙分支不动。新增 selfcheck 3zg 三向回归。
+
+产出已写入 meta_review.md、lessons.md（🧠节）、review_conclusion.txt（75 字口播稿）。
+· tokens 104130 ·
+
+[17:52:18] [COMBAT/F2] 战斗：打出【防御】（格挡5）；敌意图总伤11，我方79血/0甲
+[17:52:19] [COMBAT/F2] 战斗：本回合已无牌可出，确认结束（防御✗,防御✗）
+[17:52:20] [COMBAT/F2] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[17:52:21] [COMBAT/F2] 战斗：回合过渡中，等待
+[17:52:22] [COMBAT/F2] 战斗：回合过渡中，等待
+[17:52:22] [COMBAT/F2] 战斗：回合过渡中，等待
+[17:52:23] [COMBAT/F2] 战斗：打出【痛击】→毛绒伏地虫（可击杀毛绒伏地虫）；敌意图总伤0，我方73血/0甲
+[17:52:24] [REWARD/F2] 领取奖励：10金币
+[git] 已自动存档：feat(sts2-ascend): 第127~130局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[17:52:24] [REWARD/F2] 打开卡牌奖励：将一张牌添加到你的牌组。
+[17:52:25] [CARD_SELECTION/F2] 选择卡牌：【耸肩无视】（价值 11.0）；候选：耸肩无视=11.0 / 突破=9.0 / 全身撞击=-0.1
+[17:52:26] [REWARD/F2] 一键收取奖励并继续
+[17:52:27] [MAP/F2] 路径规划：Monster(2,5)（路径分 23.74，预计进 Boss 血量 96%；前期需要战斗积累卡牌）；候选：Monster(2,5)=23.74|前期需要战斗积累卡牌
