@@ -1735,6 +1735,56 @@ def main() -> int:
     assert d_sg2.action == "buy_card", \
         f"单薄卡组下合格牌被误拒: {d_sg2.action}（{d_sg2.reason}）"
 
+    # 3za) 拾取端 learned value 封顶（第 106 局复盘核心修复）：outcome=到达层数
+    #      是幸存者偏差噪声——能被拾取的前提就是活到奖励屏，早楼层 offered 的牌
+    #      自动积累高 outcome。RAMPAGE 靠 +6 学习分在 55 局里自我强化循环拾取
+    #      （106 局又拿 3 张）。封顶后学习信号只保留方向：场均 20 vs 全局 10 的
+    #      「热门牌」相对无名牌的拾取优势必须 ≤ card_value_pick_cap。
+    learn_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-cap-"))
+    lknow = knowledge.Knowledge(learn_dir)
+    lknow.stats.setdefault("cards", {})["HOT_STUFF"] = {
+        "seen": 40, "picked": 30, "plays": 120, "outcome_sum": 600.0, "bias": 0.0}  # 场均20 vs 全局10
+    hot_card = {"card_id": "HOT_STUFF", "name": "热门牌", "card_type": "Attack",
+                "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    plain_card = dict(hot_card, card_id="PLAIN_STUFF", name="无名牌")
+    pol_cap = policy.Policy(lknow)
+    v_hot = pol_cap.eval_reward_card(dict(hot_card), [])
+    v_plain = pol_cap.eval_reward_card(dict(plain_card), [])
+    cv_cap = float(lknow.policy["card_value_pick_cap"])
+    assert v_hot - v_plain <= cv_cap + 1e-6, \
+        f"learned value 拾取端未封顶: {v_hot:.2f}-{v_plain:.2f}>{cv_cap}"
+
+    # 3zb) 事件触发战斗的延迟结算（第 106 局复盘数据修复）：「茂密的植被-战！」
+    #      在随后的战斗中把感染×3 打进牌堆，旧逻辑进战瞬间结算 deck_delta 恒 0
+    #      ——事件端把「污染卡组」当免费。新语义：hp/金币按离开事件屏瞬间的
+    #      快照记账（事件自身即时效果，不含战斗损耗）；卡组增量用战后 live 值；
+    #      战斗中的死亡不归因给事件选项（归敌人组合）。
+    ag.ctx.reset_for("RUN_EVT2", 0)
+
+    def evt_flow_state(screen, hp, gold, deck_len):
+        st = {"screen": screen, "run_id": "RUN_EVT2",
+              "run": {"current_hp": hp, "max_hp": 80, "gold": gold, "floor": 14,
+                      "deck": [{"card_id": f"C{i}"} for i in range(deck_len)]}}
+        if screen == "COMBAT":
+            st["combat"] = {"enemies": [{"enemy_id": "VEG_BUG", "is_alive": True}]}
+        return st
+
+    ag._track(evt_flow_state("EVENT", 80, 50, 1),
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "VEG_EV", "FIGHT")]))
+    # 进战 tick：事件已发放 +20 金（即时效果），hp 未变——快照应冻结在此
+    ag._track(evt_flow_state("COMBAT", 80, 70, 1), policy.Decision(action=None))
+    assert tknow.stats["events"].get("VEG_EV", {}).get("FIGHT") is None, \
+        "事件触发的战斗在进战瞬间就被提前结算（旧 bug 复发）"
+    # 战后流转：战斗损耗 -14hp 与战利品金币不归属事件，卡组增量 +3（感染×3）入账
+    ag._track(evt_flow_state("MAP", 66, 70, 4), policy.Decision(action=None))
+    pe2 = tknow.stats["events"]["VEG_EV"]["FIGHT"]
+    assert pe2["n"] == 1 and pe2["card_delta_sum"] == 3.0 \
+        and pe2["hp_delta_sum"] == 0.0 and pe2["gold_delta_sum"] == 20.0, \
+        f"事件战斗延迟结算管线断裂: {pe2}"
+    assert not ag.ctx.died_to_event, "无死亡不应产生事件致死归因"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

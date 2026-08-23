@@ -204,24 +204,43 @@ class Agent:
                 self._settle_combat(hp, won=not died_here, died=died_here)
 
         # event outcome commit on screen change
-        if self.ctx.pending_event is not None and screen != "EVENT":
-            event_id, key, hp0, gold0, floor0, deck0 = self.ctx.pending_event
-            victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
-            died_here = screen == "GAME_OVER" and not victory_screen
-            deck_delta = len(run.get("deck", []) or []) - deck0
-            self.know.commit_event_option(event_id, key, hp - hp0, gold - gold0,
-                                          died=died_here, deck_delta=deck_delta)
-            log(f"[agent] 事件结算：{event_id}/{key} → 生命 {hp - hp0:+}，金币 {gold - gold0:+}，"
-                f"卡牌 {deck_delta:+d}" + ("（致死）" if died_here else ""))
-            if died_here:
-                self.ctx.died_to_event = (event_id, key)
-            self.ctx.pending_event = None
+        # 事件触发战斗的延迟结算（第 106 局复盘）：「茂密的植被-战！」会在
+        # 随后的战斗中把感染×3 打进牌堆，旧逻辑在进战瞬间结算，deck_delta
+        # 恒记 0——事件学习端把「污染卡组」当免费，战！以 0 分力压坚持跋涉。
+        # 现在：离开事件屏的第一个 tick 先快照 hp/金币（事件自身的即时效果，
+        # 不含后续战斗损耗），战斗/过场屏只挂起不结算；真实流转屏（MAP/
+        # REWARD/GAME_OVER…）才落库——卡组增量用战后 live 值补记，状态牌
+        # 污染从此入账。战斗中的死亡不归因给事件选项（因果链归敌人组合，
+        # 保住 deaths_by_enemy 排行榜对姿态演化的驱动）。
+        if self.ctx.pending_event is not None:
+            if screen in ("COMBAT", "MODAL"):
+                if self.ctx.pending_event_own is None:
+                    self.ctx.pending_event_own = (hp, gold)
+            elif screen != "EVENT":
+                event_id, key, hp0, gold0, floor0, deck0 = self.ctx.pending_event
+                own_hp, own_gold = self.ctx.pending_event_own or (hp, gold)
+                through_combat = self.ctx.pending_event_own is not None
+                victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
+                died_here = screen == "GAME_OVER" and not victory_screen
+                deck_delta = len(run.get("deck", []) or []) - deck0
+                self.know.commit_event_option(event_id, key, own_hp - hp0, own_gold - gold0,
+                                              died=(died_here and not through_combat),
+                                              deck_delta=deck_delta)
+                log(f"[agent] 事件结算：{event_id}/{key} → 生命 {own_hp - hp0:+}，金币 {own_gold - gold0:+}，"
+                    f"卡组 {deck_delta:+d}"
+                    + ("（经战斗延迟记账，死亡归因敌方组合）" if through_combat else "")
+                    + ("（致死）" if died_here and not through_combat else ""))
+                if died_here and not through_combat:
+                    self.ctx.died_to_event = (event_id, key)
+                self.ctx.pending_event = None
+                self.ctx.pending_event_own = None
 
         # credit tags from the decision just made
         for tag in decision.tags:
             if tag[0] == "event_choice":
                 self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
                                           len(run.get("deck", []) or []))
+                self.ctx.pending_event_own = None  # 新选项重置自身效果快照
             elif tag[0] == "rest":
                 if tag[1] == "heal" and hp >= run.get("max_hp", 1) - 2:
                     self.ctx.rests_healed_at_full += 1

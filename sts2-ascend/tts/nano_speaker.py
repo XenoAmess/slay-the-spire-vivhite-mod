@@ -78,7 +78,7 @@ def release_lock() -> None:
 
 # ---- 复用 speaker.py 的过滤与断句（单一事实来源） ----
 sys.path.insert(0, str(TTS_DIR))
-from speaker import SentenceSplitter, speakable  # noqa: E402
+from speaker import SentenceSplitter, speakable, lang_of, SapiSpeaker  # noqa: E402
 
 
 class NanoEngine:
@@ -141,14 +141,16 @@ def main() -> int:
 
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     eng = NanoEngine()
+    sapi = SapiSpeaker()      # 英文句走系统英文嗓音（即时），中文走克隆音色
 
     text_q: queue.Queue[str] = queue.Queue(maxsize=MAX_TEXT_QUEUE)
-    play_q: queue.Queue[Path] = queue.Queue(maxsize=PLAY_BUFFER)
+    play_q: queue.Queue[tuple] = queue.Queue(maxsize=PLAY_BUFFER)
     ended = threading.Event()
     synth_idle = threading.Event()
     counter = {"n": 0}
 
     def synth_worker() -> None:
+        """严格按队列顺序：英文直接转播放队列（SAPI），中文先合成 wav 再入播放队列。"""
         while True:
             try:
                 sent = text_q.get(timeout=0.5)
@@ -158,25 +160,32 @@ def main() -> int:
                 continue
             synth_idle.clear()
             try:
-                counter["n"] += 1
-                out = TMP_DIR / f"sent_{counter['n'] % 100:03d}.wav"
-                eng.synth(sent, out)
-                play_q.put(out)     # 缓冲满则自然阻塞（背压）
+                if lang_of(sent) == "en":
+                    play_q.put(("sapi", sent))
+                else:
+                    counter["n"] += 1
+                    out = TMP_DIR / f"sent_{counter['n'] % 100:03d}.wav"
+                    eng.synth(sent, out)
+                    play_q.put(("wav", out))     # 缓冲满则自然阻塞（背压）
             except Exception as exc:
                 log(f"合成失败（跳过）：{exc}")
             finally:
                 synth_idle.set()
 
     def play_worker() -> None:
+        """严格按序播放：SAPI 等回执、wav 等播完——两种嗓音不错乱。"""
         while True:
             try:
-                wav_path = play_q.get(timeout=0.5)
+                kind, payload = play_q.get(timeout=0.5)
             except queue.Empty:
                 if ended.is_set() and text_q.empty():
                     return
                 continue
             try:
-                winsound.PlaySound(str(wav_path), winsound.SND_FILENAME)
+                if kind == "sapi":
+                    sapi.say(payload, wait=True)
+                else:
+                    winsound.PlaySound(str(payload), winsound.SND_FILENAME)
             except Exception as exc:
                 log(f"播放失败：{exc}")
 
@@ -185,7 +194,7 @@ def main() -> int:
 
     splitter = SentenceSplitter()
     state = {"offset": 0}
-    log("MOSS-Nano 全克隆音色朗读器上线（允许滞后，读完为止）")
+    log("MOSS-Nano 朗读器上线（中文=白绮克隆音色，英文=SAPI，严格按序，允许滞后读完）")
 
     while True:
         try:
@@ -225,6 +234,7 @@ def main() -> int:
             log(f"主循环异常（继续）：{exc}")
             time.sleep(2)
 
+    sapi.close()
     release_lock()
     log("朗读器退出（全部读完）")
     return 0

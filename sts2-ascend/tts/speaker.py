@@ -50,6 +50,8 @@ $en.Rate = __RATE__
 while (($line = [Console]::In.ReadLine()) -ne $null) {
     if ($line.StartsWith('en|')) { $en.Speak($line.Substring(3)) }
     elseif ($line.StartsWith('zh|')) { $zh.Speak($line.Substring(3)) }
+    [Console]::Out.WriteLine('ok')
+    [Console]::Out.Flush()
 }
 """
 
@@ -125,20 +127,25 @@ class SentenceSplitter:
 
 
 class SapiSpeaker:
-    """常驻 PowerShell + System.Speech，逐行阻塞朗读（管道即队列）。"""
+    """常驻 PowerShell + System.Speech，逐行朗读；每句读完回执 ok（保证多引擎混排时顺序不乱）。"""
 
     def __init__(self) -> None:
         script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE))
         self.proc = subprocess.Popen(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
-            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            text=True, encoding="utf-8", errors="replace")
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            text=True, encoding="utf-8", errors="replace", bufsize=1)
+        self._ack_lock = threading.Lock()
 
-    def say(self, text: str) -> None:
+    def say(self, text: str, wait: bool = True) -> None:
         try:
-            if self.proc.poll() is None:
+            if self.proc.poll() is not None:
+                return
+            with self._ack_lock:
                 self.proc.stdin.write(lang_of(text) + "|" + text + "\n")
                 self.proc.stdin.flush()
+                if wait:  # 等朗读完成回执；超时兜底防死锁
+                    self.proc.stdout.readline()
         except (OSError, ValueError):
             pass
 
