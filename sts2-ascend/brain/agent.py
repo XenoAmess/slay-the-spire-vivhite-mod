@@ -391,6 +391,10 @@ class Agent:
             # 且死亡是整场战斗的绝对终结（不存在后续分段）
             self.ctx.died_in_combat = {"comp_id": agg["comp_id"], "node_type": agg["node_type"],
                                        "rounds": agg["rounds"], "floor": agg.get("floor"),
+                                       # 全场掉血（第 167~176 批复盘新增）：长战/爆毙的
+                                       # 分类不能只看回合数——4 回合掉 64 血是「没挡住」
+                                       # 的爆毙而非磨死，reflect 按每回合失血率分流证据
+                                       "hp_lost": float(agg.get("hp_lost_sum", 0.0) or 0.0),
                                        # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动送死，
                                        # 血量损失全发生在「停止防御」之后——与格挡/击杀权重无关，
                                        # 标记随死亡归因传递，reflect 据此隔离攻防旋钮

@@ -23,18 +23,18 @@
     "timeout_min": 25,
     "max_runs_in_packet": 10,
     "preferred_every_runs": 1,
-    "preferred_failure_cooldown_min": 60,
+    "preferred_failure_cooldown_min": 5,
     "models_probe_timeout_sec": 60,
     "viewer_enabled": true,
     "preferred_models": [
       "opencode/ox-alpha@max",
       "openrouter/stealth/ox-alpha@max"
     ],
-    "preferred_timeout_cooldown_min": 30,
+    "preferred_timeout_cooldown_min": 5,
     "preferred_timeout_min": 40,
     "tts_mode": "edge"
   },
   "tts": {
-    "clone_engine": "indextts"
+    "clone_engine": "moss"
   }
 }

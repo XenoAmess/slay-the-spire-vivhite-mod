@@ -13,8 +13,7 @@ import time
 from knowledge import Knowledge, clamp
 
 # bounded ranges for every mutable policy knob
-BOUNDS = {
-    "elite_min_hp_pct": (0.35, 0.9),
+BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     "rest_heal_threshold": (0.35, 0.85),
     "rest_urgent_hp_pct": (0.2, 0.6),
     "block_safety": (0.6, 2.1),
@@ -31,6 +30,12 @@ BOUNDS = {
     "burst_starve_bonus_base": (0.0, 8.0),
     "burst_starve_bonus_extra_max": (0.0, 12.0),
 }
+
+# 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
+# 174 局 INKLET 4 回合整管 -64（每回合 16 血）被误判成「磨死」——kill_bonus
+# 顶格期该证据直接丢弃。每回合失血 ≥ 此值时，死因语义是「没挡住」而非
+# 「输出不足」，证据归 block_safety（短时爆毙通道）而非长战通道
+BURST_DEATH_DPR = 14.0
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -102,7 +107,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             #   短时爆毙 → 维持旧逻辑上调防御权重
             rounds = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
             death_node = (ctx.died_in_combat or {}).get("node_type")
-            if rounds >= 4:
+            # 爆毙重分类（第 167~176 批复盘）：回合数 ≥4 但每回合失血 ≥ 阈值的
+            # 死亡是「没挡住」的爆毙（174 局 INKLET 4 回合 -64，dpr=16），不是
+            # 「输出不足」的磨死——两类证据各有归属，混喂会让爆毙证据在
+            # kill_bonus 顶格期凭空蒸发。旧记录无 hp_lost 字段时维持原口径
+            _hp_lost = (ctx.died_in_combat or {}).get("hp_lost")
+            _dpr = (_hp_lost / max(1, rounds)) if _hp_lost is not None else None
+            burst_death = _dpr is not None and rounds >= 4 and _dpr >= BURST_DEATH_DPR
+            if rounds >= 4 and not burst_death:
                 # 步长按战斗时长分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
                 # 速度要 ~30 局才能把 block_safety 从 2.1 拉回有效区间——
                 # 8 回合 Boss 磨死的证据强度是 4 回合的两倍，步长应随之放大

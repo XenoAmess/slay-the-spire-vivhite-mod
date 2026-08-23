@@ -72,9 +72,9 @@ def load_llm_config() -> dict:
             "openrouter/stealth/ox-alpha@max",
         ],
         "preferred_every_runs": 1,
-        # 失败冷却：超时通常是免费模型慢/拥堵（异步后台跑无碍），冷却从宽；硬失败（exit!=0/异常）才长冷却
-        "preferred_timeout_cooldown_min": 30,
-        "preferred_failure_cooldown_min": 60,
+        # 失败冷却：超时/硬失败统一 5 分钟（短冷却，别让模型长期缺席复盘）
+        "preferred_timeout_cooldown_min": 5,
+        "preferred_failure_cooldown_min": 5,
         # 异步复盘不阻塞游玩，优先模型的超时可放宽
         "preferred_timeout_min": 40,
         "models_probe_timeout_sec": 60,

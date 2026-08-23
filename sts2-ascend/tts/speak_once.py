@@ -32,8 +32,9 @@ def log(msg: str) -> None:
         pass
 
 
-def _synth_moss(text: str, out: Path) -> None:
-    """MOSS-TTS-Nano ONNX CPU 合成（stdlib wave 读参考音频，绕开 torchaudio/torchcodec）。"""
+def _synth_moss_play(text: str) -> None:
+    """MOSS-Nano 逐句合成+逐句播放（长文按句切开，治长句又快又含糊的问题）。"""
+    import re as _re
     import numpy as np
     sys.path.insert(0, str(MOSS_DIR))
     from onnx_tts_runtime import OnnxTtsRuntime
@@ -49,25 +50,43 @@ def _synth_moss(text: str, out: Path) -> None:
     OnnxTtsRuntime._load_reference_audio = _load_wav_stdlib
     ref = REF_48K if REF_48K.exists() else TTS_DIR / "reference_voice.wav"
     rt = OnnxTtsRuntime(model_dir=MOSS_DIR / "models")
-    rt.synthesize(text=text, prompt_audio_path=str(ref),
-                  output_audio_path=str(out), enable_wetext=False)
-    # 音量增益（与朗读器共享 voice_volume.json）
-    try:
-        sys.path.insert(0, str(TTS_DIR))
-        from speaker import get_voice_state
-        st = get_voice_state()
-        gain = 0.0 if st["muted"] else st["volume"] / 100.0
-        if abs(gain - 1.0) > 0.01:
-            with wave.open(str(out), "rb") as w:
-                frames = w.readframes(w.getnframes())
-                params = w.getparams()
-            pcm = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0 * gain
-            pcm16 = (np.clip(pcm, -1, 1) * 32767).astype(np.int16)
-            with wave.open(str(out), "wb") as w:
-                w.setparams(params)
-                w.writeframes(pcm16.tobytes())
-    except Exception:
-        pass
+    codes = rt.encode_reference_audio(str(ref))
+
+    sys.path.insert(0, str(TTS_DIR))
+    from speaker import get_voice_state
+    st = get_voice_state()
+    gain = 0.0 if st["muted"] else st["volume"] / 100.0
+
+    # 切成短句（句号/问号/叹号/分号/换行），过长的再按逗号软切
+    parts = [p.strip() for p in _re.split(r"(?<=[。！？!?；;\n])", text) if p.strip()]
+    sentences: list[str] = []
+    for p in parts:
+        if len(p) > 45:
+            subs = [s.strip() for s in _re.split(r"(?<=[，,、：:])", p) if s.strip()]
+            sentences.extend(subs)
+        else:
+            sentences.append(p)
+
+    import winsound
+    for i, sent in enumerate(sentences):
+        if not sent:
+            continue
+        r = rt.synthesize_single_chunk(text=sent, prompt_audio_codes=codes, streaming=False)
+        wav = np.asarray(r["waveform"], dtype=np.float32) * gain
+        sr = int(rt.codec_meta["codec_config"]["sample_rate"])
+        ch = int(rt.codec_meta["codec_config"]["channels"])
+        pcm = (wav.clip(-1, 1) * 32767).astype(np.int16)
+        if pcm.ndim == 1:
+            pcm = pcm[:, np.newaxis]
+        seg = TTS_DIR / f"concl_{i:02d}.wav"
+        with wave.open(str(seg), "wb") as w:
+            w.setnchannels(ch)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(pcm.tobytes())
+        log(f"  句{i + 1}/{len(sentences)}（{len(sent)}字）播放：{sent[:30]}")
+        winsound.PlaySound(str(seg), winsound.SND_FILENAME)
+        seg.unlink(missing_ok=True)
 
 
 def _synth_indextts(text: str, out: Path) -> None:
@@ -84,7 +103,7 @@ def _synth_indextts(text: str, out: Path) -> None:
 
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    engine = "indextts"
+    engine = "moss"
     if "--engine" in sys.argv:
         engine = sys.argv[sys.argv.index("--engine") + 1]
     if not args:
@@ -95,11 +114,12 @@ def main() -> int:
     out = TTS_DIR / "conclusion.wav"
     t0 = time.time()
     log(f"开始合成（{len(text)} 字，引擎 {engine}）")
+    moss_direct_play = engine != "indextts"
     if engine == "indextts":
         _synth_indextts(text, out)
+        log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
     else:
-        _synth_moss(text, out)
-    log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
+        log("MOSS 逐句合成播放中…")
     import winsound
     # 若白绮吐槽员正在说话：等它说完，再多等 5 秒才播总结（互不抢麦）
     quip_speaking = KNOWLEDGE_DIR / "voice_quip_speaking.flag"
@@ -115,7 +135,10 @@ def main() -> int:
     except OSError:
         pass
     try:
-        winsound.PlaySound(str(out), winsound.SND_FILENAME)
+        if moss_direct_play:
+            _synth_moss_play(text)          # MOSS 逐句合成逐句播
+        else:
+            winsound.PlaySound(str(out), winsound.SND_FILENAME)
     finally:
         busy.unlink(missing_ok=True)
     return 0

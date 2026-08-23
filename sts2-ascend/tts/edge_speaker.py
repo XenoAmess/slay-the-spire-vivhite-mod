@@ -57,12 +57,13 @@ class EdgeEngine:
         self._sapi_lock = threading.Lock()
 
     def synth_to_wav(self, text: str, wav: Path) -> bool:
-        """合成 text 到 wav（未增益）。成功返回 True。"""
+        """合成 text 到 wav（未增益）。成功返回 True。带 30s 超时——挂死请求不能拖垮整条流水线。"""
         mp3 = wav.with_suffix(".mp3")
 
         async def _run() -> None:
             import edge_tts
-            await edge_tts.Communicate(text, VOICE, rate=RATE).save(str(mp3))
+            await asyncio.wait_for(edge_tts.Communicate(text, VOICE, rate=RATE).save(str(mp3)),
+                                   timeout=30)
         try:
             asyncio.run(_run())
             if not (mp3.exists() and mp3.stat().st_size > 1000):
@@ -158,10 +159,17 @@ def main() -> int:
     def player() -> None:
         while True:
             with done_cond:
+                waited = 0.0
                 while counters["played"] not in done:
                     done_cond.wait(timeout=0.5)
+                    waited += 0.5
                     if ended and counters["played"] >= counters["put"] and q.empty():
                         return
+                    if waited > 90:
+                        # 某句合成 90s 还没好（挂死/超时）→ 跳过它，别让整条流水线陪葬
+                        log(f"第 {counters['played']} 句合成超时未归，跳过")
+                        done[counters["played"]] = (None, None)
+                        break
             seq = counters["played"]
             wav, sent = done.pop(seq)
             try:
@@ -171,7 +179,7 @@ def main() -> int:
                         wav.unlink(missing_ok=True)     # 播完即删，控制磁盘占用
                     except OSError:
                         pass
-                else:
+                elif sent:
                     eng.say_fallback(sent)
             except Exception as exc:
                 import traceback
