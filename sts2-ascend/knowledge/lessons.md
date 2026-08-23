@@ -2287,3 +2287,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.95 → 2.00（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/183 胜，当前目标进阶 0
+
+## 第 184 局复盘（2026-08-24 00:34）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：TAUNT, MOLTEN_FIST, MOLTEN_FIST, BREAKTHROUGH
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血12; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血12; F6 Unknown战 掉血64（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.30 → 6.60（非 Boss 长战磨死（9回合）且 kill_bonus 顶格，攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 9.50 → 10.00（非 Boss 长战磨死（9回合）且 kill_bonus 顶格，缺口越深纠偏上限越高）
+- 生涯战绩：0/184 胜，当前目标进阶 0
