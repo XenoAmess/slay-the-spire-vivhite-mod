@@ -276,6 +276,7 @@ class Agent:
         self.ctx.combat = {"comp_id": comp or "unknown", "hp_start": hp, "floor": run.get("floor", 0),
                            "node_type": node_type, "hp_start_pct": hp / max_hp}
         self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
+        self.ctx.stall_giveup = False  # 僵局摆烂标记按场清零（第 109 局复盘：归因隔离）
         # 高危组合自动升级硬仗（第 65~66 局复盘）：历史死亡率 ≥30% 的杀手组合
         # （FUZZY_WURM+SHRINKER_BEETLE 25战11死、KIN 双子 15战9死）大量出现在
         # 普通怪房，药水 premium 门此前对它们永不开启——两局均带药进坟。
@@ -325,7 +326,11 @@ class Agent:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
             # 且死亡是整场战斗的绝对终结（不存在后续分段）
             self.ctx.died_in_combat = {"comp_id": agg["comp_id"], "node_type": agg["node_type"],
-                                       "rounds": agg["rounds"], "floor": agg.get("floor")}
+                                       "rounds": agg["rounds"], "floor": agg.get("floor"),
+                                       # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动送死，
+                                       # 血量损失全发生在「停止防御」之后——与格挡/击杀权重无关，
+                                       # 标记随死亡归因传递，reflect 据此隔离攻防旋钮
+                                       "stall": bool(getattr(self.ctx, "stall_giveup", False))}
             self.ctx.death_hp_pct_at_entry = agg.get("hp_start_pct")
             self.ctx.death_was_elite = agg.get("node_type") == "Elite"
             self._flush_combat_agg()

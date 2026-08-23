@@ -61,8 +61,13 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
 
     # ---------------- policy evolution ----------------
     changes: list[str] = []
+    # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动停止防御送死，血量
+    # 损失全部发生在「摆烂」之后——把它当成「格挡不足/击杀太慢」的证据是
+    # 归因错位：109 局正是这样把 block_safety 1.05→1.10 推高的。摆烂死对
+    # 攻防旋钮均无责，只留痕并把注意力指向卡组输出手段的丢失
+    stall_death = bool((ctx.died_in_combat or {}).get("stall"))
     if not victory:
-        if died_to_enemy and ctx.death_hp_pct_at_entry is not None and ctx.death_was_elite:
+        if died_to_enemy and ctx.death_hp_pct_at_entry is not None and ctx.death_was_elite and not stall_death:
             if ctx.death_hp_pct_at_entry < pol["elite_min_hp_pct"] + 0.15:
                 _adj(know, "elite_min_hp_pct", 0.05, changes,
                      f"精英战阵亡，进场血量 {ctx.death_hp_pct_at_entry:.0%}，提高精英回避线")
@@ -71,6 +76,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             _adj(know, "elite_grey_safety_mult", 0.2, changes,
                  "精英战阵亡，灰区悲观投影系数上调")
         if died_to_enemy and not ctx.death_was_elite:
+            if stall_death:
+                rounds_s = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
+                changes.append(f"僵局摆烂死（{rounds_s}回合）不计入 kill_bonus/block_safety"
+                               "——死因是卡组失去输出手段（消耗螺旋/攻击耗尽），攻防旋钮均无责")
+                return "\n".join(changes) if False else lesson_tail(know, changes, ctx, victory, final_floor)
             # 死亡模式分流（第 82~83 批复盘）：block_safety 此前是只升不降的
             # 单向棘轮（83 局 0 胜把它顶到 2.1 上限），而死亡榜前列全是血量
             # 170+ 的 Boss/高血组合——长战磨死的正确演化方向是进攻（更快清场

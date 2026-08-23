@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import queue
 import re
@@ -37,6 +38,63 @@ MAX_SENTENCE = 90
 TERMINATORS = "。！？!?\n"
 SOFT_BREAKS = "，、；;：:"
 
+# ---- 音量控制（跨进程共享：knowledge/voice_volume.json） ----
+VOLUME_FILE = KNOWLEDGE_DIR / "voice_volume.json"
+
+
+def get_voice_state() -> dict:
+    try:
+        d = json.loads(VOLUME_FILE.read_text(encoding="utf-8"))
+        return {"volume": max(0, min(200, int(d.get("volume", 100)))),
+                "muted": bool(d.get("muted", False))}
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {"volume": 100, "muted": False}
+
+
+def set_voice_state(volume: int | None = None, muted: bool | None = None) -> dict:
+    st = get_voice_state()
+    if volume is not None:
+        st["volume"] = max(0, min(200, int(volume)))
+    if muted is not None:
+        st["muted"] = bool(muted)
+    try:
+        VOLUME_FILE.write_text(json.dumps(st), encoding="utf-8")
+    except OSError:
+        pass
+    return st
+
+
+def start_volume_hotkeys() -> None:
+    """Ctrl+Alt+↑/↓ 调音量（±10），Ctrl+Alt+M 静音切换。轮询实现，无需窗口聚焦。"""
+    import ctypes
+
+    def _loop() -> None:
+        prev = {"up": False, "down": False, "mute": False}
+        u32 = ctypes.windll.user32
+        while True:
+            try:
+                ctrl = bool(u32.GetAsyncKeyState(0x11) & 0x8000)
+                alt = bool(u32.GetAsyncKeyState(0x12) & 0x8000)
+                up = bool(u32.GetAsyncKeyState(0x26) & 0x8000)
+                down = bool(u32.GetAsyncKeyState(0x28) & 0x8000)
+                mute = bool(u32.GetAsyncKeyState(0x4D) & 0x8000)   # M 键
+                if ctrl and alt and up and not prev["up"]:
+                    st = set_voice_state(volume=get_voice_state()["volume"] + 10)
+                    log(f"音量 +10 → {st['volume']}%")
+                if ctrl and alt and down and not prev["down"]:
+                    st = set_voice_state(volume=get_voice_state()["volume"] - 10)
+                    log(f"音量 -10 → {st['volume']}%")
+                if ctrl and alt and mute and not prev["mute"]:
+                    st = set_voice_state(muted=not get_voice_state()["muted"])
+                    log("静音" if st["muted"] else f"取消静音（{st['volume']}%）")
+                prev = {"up": up and ctrl and alt, "down": down and ctrl and alt,
+                        "mute": mute and ctrl and alt}
+            except Exception:
+                pass
+            time.sleep(0.12)
+
+    threading.Thread(target=_loop, daemon=True, name="volume-hotkeys").start()
+
 _SAPI_PS = r"""
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -47,7 +105,16 @@ $zh.Rate = __RATE__
 $en = New-Object System.Speech.Synthesis.SpeechSynthesizer
 try { $en.SelectVoice('Microsoft Zira Desktop') } catch {}
 $en.Rate = __RATE__
+$volFile = '__VOLFILE__'
 while (($line = [Console]::In.ReadLine()) -ne $null) {
+    $vol = 100; $muted = $false
+    try {
+        $j = Get-Content $volFile -Raw -ErrorAction Stop | ConvertFrom-Json
+        $vol = [Math]::Min(100, [Math]::Max(0, [int]$j.volume))
+        $muted = [bool]$j.muted
+    } catch {}
+    if ($muted) { $vol = 0 }
+    $zh.Volume = $vol; $en.Volume = $vol
     if ($line.StartsWith('en|')) { $en.Speak($line.Substring(3)) }
     elseif ($line.StartsWith('zh|')) { $zh.Speak($line.Substring(3)) }
     [Console]::Out.WriteLine('ok')
@@ -130,7 +197,8 @@ class SapiSpeaker:
     """常驻 PowerShell + System.Speech，逐行朗读；每句读完回执 ok（保证多引擎混排时顺序不乱）。"""
 
     def __init__(self) -> None:
-        script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE))
+        script = _SAPI_PS.replace("__RATE__", str(SAPI_RATE)).replace(
+            "__VOLFILE__", str(VOLUME_FILE).replace("\\", "/"))
         self.proc = subprocess.Popen(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -231,7 +299,8 @@ def main() -> int:
         return 0
 
     sapi = SapiSpeaker() if mode in ("sapi", "hybrid") else None
-    log(f"语音朗读器上线（模式 {mode}）")
+    start_volume_hotkeys()
+    log(f"语音朗读器上线（模式 {mode}，音量控制：Ctrl+Alt+↑/↓ 调音量，Ctrl+Alt+M 静音）")
 
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
     splitter = SentenceSplitter()

@@ -78,7 +78,8 @@ def release_lock() -> None:
 
 # ---- 复用 speaker.py 的过滤与断句（单一事实来源） ----
 sys.path.insert(0, str(TTS_DIR))
-from speaker import SentenceSplitter, speakable, lang_of, SapiSpeaker  # noqa: E402
+from speaker import (SentenceSplitter, speakable, lang_of, SapiSpeaker,  # noqa: E402
+                     get_voice_state, start_volume_hotkeys)
 
 
 class NanoEngine:
@@ -111,6 +112,10 @@ class NanoEngine:
         wav = np.asarray(r["waveform"], dtype=np.float32)
         sr = int(self.rt.codec_meta["codec_config"]["sample_rate"])
         ch = int(self.rt.codec_meta["codec_config"]["channels"])
+        # 音量增益（静音=0；SAPI 上限 100%，MOSS 可到 200% 并防削波）
+        st = get_voice_state()
+        gain = 0.0 if st["muted"] else st["volume"] / 100.0
+        wav = wav * gain
         pcm = (wav.clip(-1, 1) * 32767).astype(np.int16)
         if pcm.ndim == 1:
             pcm = pcm[:, np.newaxis]
@@ -142,6 +147,7 @@ def main() -> int:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     eng = NanoEngine()
     sapi = SapiSpeaker()      # 英文句走系统英文嗓音（即时），中文走克隆音色
+    start_volume_hotkeys()    # Ctrl+Alt+↑/↓ 音量，Ctrl+Alt+M 静音
 
     text_q: queue.Queue[str] = queue.Queue(maxsize=MAX_TEXT_QUEUE)
     play_q: queue.Queue[tuple] = queue.Queue(maxsize=PLAY_BUFFER)

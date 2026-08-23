@@ -50,6 +50,23 @@ def _synth_moss(text: str, out: Path) -> None:
     rt = OnnxTtsRuntime(model_dir=MOSS_DIR / "models")
     rt.synthesize(text=text, prompt_audio_path=str(ref),
                   output_audio_path=str(out), enable_wetext=False)
+    # 音量增益（与朗读器共享 voice_volume.json）
+    try:
+        sys.path.insert(0, str(TTS_DIR))
+        from speaker import get_voice_state
+        st = get_voice_state()
+        gain = 0.0 if st["muted"] else st["volume"] / 100.0
+        if abs(gain - 1.0) > 0.01:
+            with wave.open(str(out), "rb") as w:
+                frames = w.readframes(w.getnframes())
+                params = w.getparams()
+            pcm = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0 * gain
+            pcm16 = (np.clip(pcm, -1, 1) * 32767).astype(np.int16)
+            with wave.open(str(out), "wb") as w:
+                w.setparams(params)
+                w.writeframes(pcm16.tobytes())
+    except Exception:
+        pass
 
 
 def _synth_indextts(text: str, out: Path) -> None:

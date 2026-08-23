@@ -794,9 +794,12 @@ class Policy:
         # ---- 战斗僵局检测与升级 ----
         # 实证（第 107 局）：坚毅(True Grit)每回合消耗随机牌，360+ 回合后攻击牌全部进消耗堆，
         # 敌人 INKLET 剩 1 血永远不死 → 无限死循环。机制：
-        #   turn≥100 → 置标志请求 agent 启动 AI 死循环分析（一场一次）
-        #   turn≥150 且 30 回合无掉血进展 → 判定死循环，摆烂送死结束本局
+        #   turn≥60 → 置标志请求 agent 启动 AI 死循环分析（一场一次）
+        #   turn≥100 且 20 回合无掉血进展 → 判定死循环，摆烂送死结束本局
         #   turn≥120 或 AI 判 offense → 绕过评分阈值，有攻击牌就打
+        # 第 109 局复盘加急：旧线(150/30)下无输出卡组的僵局要拖 3 小时+，
+        # runner 被拖到异常退出（rc=4294967295）丢掉前 8 层决策日志——
+        # 「无进展」计数只在敌人总血量下降时归零，正常磨血战不受收紧影响
         enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
         if self._stall_combat is not ctx.combat:
             self._stall_combat = ctx.combat
@@ -812,18 +815,19 @@ class Policy:
                 self._stall_no_progress += 1
             self._stall_turn_seen = round_no
 
-        if round_no >= 100 and not getattr(ctx, "stall_analysis_asked", False):
+        if round_no >= 60 and not getattr(ctx, "stall_analysis_asked", False):
             ctx.stall_analysis_asked = True
             ctx.stall_analysis_needed = True   # agent 主循环拾取并启动 AI 死循环分析
 
         giveup = (getattr(ctx, "force_giveup", False)
-                  or (round_no >= 150 and self._stall_no_progress >= 30
+                  or (round_no >= 100 and self._stall_no_progress >= 20
                       and not getattr(ctx, "stall_grind_grace", False)))
         if giveup:
+            ctx.stall_giveup = True   # 复盘归因标记：摆烂死不得喂给攻防旋钮（reflect 消费）
             if can_end:
                 return Decision("end_turn", {},
                                 f"战斗：僵局判定无伤害手段（回合{round_no}，{self._stall_no_progress}回合无进展），摆烂送死以终结本局",
-                                wait=0.8)
+                                tags=[("stall_giveup", round_no)], wait=0.8)
             return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
 
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
@@ -1022,13 +1026,22 @@ class Policy:
                                 and card_numbers(c)[1] > 0 and c.get("energy_cost", 0) <= energy]
         reserve_for_block = gap_now > 0 and bool(affordable_blk_costs)
         min_blk_cost = min(affordable_blk_costs) if affordable_blk_costs else 99
+        # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
+        # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
+        # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4
+        # （107 局引入）在多波房间会放大成 12+ 张消耗，且不随卡组厚度缩放。
+        # 现在：上限按卡组规模折算（小卡组烧不起），评分端再叠加逐次递增罚分。
+        deck_n = len(((state.get("run") or {}).get("deck")) or [])
+        max_exhaust_plays = max(1, min(4, deck_n // 8))
+        exhaust_penalty_step = float(pol.get("exhaust_play_penalty", 3.0))
         for c in hand:
             if not c.get("playable"):
                 continue
             if c.get("index") in self._failed_this_turn:
                 continue
-            # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"（第 107 局实证）
-            if self._exhaust_plays >= 4 and "消耗" in _text(c):
+            # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"
+            #（第 107 局实证，上限随卡组规模折算见第 109 局复盘）
+            if "消耗" in _text(c) and self._exhaust_plays >= max_exhaust_plays:
                 continue
             # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
             # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、
@@ -1042,9 +1055,13 @@ class Policy:
             if cost > energy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
-                                                  my_hp, my_max_hp, stance, forced_kill,
-                                                  reserve_for_block and not race_allin and not kill_race,
-                                                  min_blk_cost, energy, race_allin, kill_race)
+                                                   my_hp, my_max_hp, stance, forced_kill,
+                                                   reserve_for_block and not race_allin and not kill_race,
+                                                   min_blk_cost, energy, race_allin, kill_race)
+            # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
+            # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
+            if "消耗" in _text(c):
+                score -= self._exhaust_plays * exhaust_penalty_step
             score += self.know.card_value(c.get("card_id", "")) * 0.3
             if best is None or score > best[0]:
                 best = (score, c, target, why)
@@ -2120,8 +2137,16 @@ class Policy:
         options = cap.get("options", [])
         actions = state.get("available_actions", [])
         if options and "choose_capstone_option" in actions:
-            # 暂无语义学习数据，默认选第一个（通常为继续/前进类）
-            pick = options[0]
+            # 第 109 局实证：F9 顶石界面把翻页键「LeftArrow」当选项点掉。
+            # 优先继续/确认类字样，箭头/返回类排最后，其余居中；平局保序回退首项
+            def _opt_rank(o):
+                line = str(o.get("line") or "")
+                if any(k in line for k in ("继续", "确认", "前进", "Continue", "Proceed", "Confirm")):
+                    return 2
+                if any(k in line.lower() for k in ("arrow", "back", "左", "右", "返回")):
+                    return 0
+                return 1
+            pick = max(options, key=_opt_rank)
             return Decision("choose_capstone_option", {"option_index": pick.get("index", pick.get("i", 0))},
                             f"顶石界面：选择「{pick.get('line')}」",
                             tags=[("capstone", pick.get("line"))], wait=1.0)

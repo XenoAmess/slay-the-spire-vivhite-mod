@@ -524,6 +524,16 @@ class Viewer:
             return DIM, self.font_dim
         return FG, self.font
 
+    def _volume_label(self, now: float) -> str:
+        if now - getattr(self, "_vol_check", 0.0) > 1.0:
+            self._vol_check = now
+            try:
+                d = json.loads((KNOWLEDGE_DIR / "voice_volume.json").read_text(encoding="utf-8"))
+                self._vol_label = "🔇" if d.get("muted") else f"🔊 {int(d.get('volume', 100))}%"
+            except Exception:
+                self._vol_label = ""
+        return getattr(self, "_vol_label", "")
+
     def _render_hud(self, now: float) -> None:
         self.canvas.delete("hud")
         c = self.canvas
@@ -545,6 +555,10 @@ class Viewer:
         c.create_text(12, 46, anchor="nw",
                       text=f"T+{elapsed // 60:02d}:{elapsed % 60:02d} · {self.total_chars} chars",
                       fill=DIM, font=self.font_dim, tags="hud")
+        vol = self._volume_label(now)
+        if vol:
+            c.create_text(WIN_W - 46, 40, anchor="nw", text=vol,
+                          fill=CYAN, font=self.font_dim, tags="hud")
         # 旋转弧线 Loader（结束后变金）
         ang = (now * 240) % 360
         color = GOLD if self.ended else CYAN
