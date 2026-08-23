@@ -47,70 +47,72 @@ def log(msg: str) -> None:
 
 
 class EdgeEngine:
-    """edge-tts 合成（mp3 → ffmpeg 转 wav → 增益播放）；失败回退 SAPI。"""
+    """edge-tts 合成（mp3 → ffmpeg 转 wav）；失败回退 SAPI。供 3 并发预取工作线程调用。"""
 
     def __init__(self) -> None:
         import edge_tts  # noqa: F401
         import imageio_ffmpeg
         self._ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
-        self._fail_count = 0
         self._sapi = None       # 懒加载 SAPI 兜底
+        self._sapi_lock = threading.Lock()
 
-    def _synth(self, text: str, mp3: Path) -> bool:
+    def synth_to_wav(self, text: str, wav: Path) -> bool:
+        """合成 text 到 wav（未增益）。成功返回 True。"""
+        mp3 = wav.with_suffix(".mp3")
+
         async def _run() -> None:
             import edge_tts
             await edge_tts.Communicate(text, VOICE, rate=RATE).save(str(mp3))
         try:
             asyncio.run(_run())
-            return mp3.exists() and mp3.stat().st_size > 1000
+            if not (mp3.exists() and mp3.stat().st_size > 1000):
+                raise RuntimeError("mp3 empty")
+            subprocess.run([self._ffmpeg, "-y", "-i", str(mp3), "-ar", "24000", "-ac", "1",
+                            str(wav)], capture_output=True, timeout=60)
+            return wav.exists()
         except Exception as exc:
             log(f"edge-tts 合成失败：{exc}")
             return False
 
-    def say(self, text: str) -> None:
-        st = get_voice_state()
-        gain = 0.0 if st["muted"] else st["volume"] / 100.0
-        if gain <= 0:
-            return
-        mp3 = TTS_DIR / "edge_tmp.mp3"
-        wav = TTS_DIR / "edge_tmp.wav"
-        ok = self._synth(text, mp3)
-        if ok:
-            try:
-                subprocess.run([self._ffmpeg, "-y", "-i", str(mp3), "-ar", "24000", "-ac", "1",
-                                str(wav)], capture_output=True, timeout=60)
-                import array
-                import wave
-                import winsound
-                with wave.open(str(wav), "rb") as w:
-                    frames = w.readframes(w.getnframes())
-                    params = w.getparams()
-                if abs(gain - 1.0) > 0.01:
-                    a = array.array("h")
-                    a.frombytes(frames)
-                    for i, s in enumerate(a):
-                        a[i] = max(-32768, min(32767, int(s * gain)))
-                    frames = a.tobytes()
-                with wave.open(str(wav), "wb") as w:
-                    w.setparams(params)
-                    w.writeframes(frames)
-                winsound.PlaySound(str(wav), winsound.SND_FILENAME)
-                self._fail_count = 0
-                return
-            except Exception as exc:
-                log(f"edge 播放失败：{exc}")
-        # 回退 SAPI
-        self._fail_count += 1
-        if self._sapi is None:
-            self._sapi = SapiSpeaker()
-        self._sapi.say(text)
+    def say_fallback(self, text: str) -> None:
+        with self._sapi_lock:
+            if self._sapi is None:
+                self._sapi = SapiSpeaker()
+            self._sapi.say(text)
+
+
+def _play_wav_with_gain(wav: Path) -> None:
+    import array
+    import wave
+    import winsound
+    st = get_voice_state()
+    gain = 0.0 if st["muted"] else st["volume"] / 100.0
+    if gain <= 0:
+        return
+    with wave.open(str(wav), "rb") as w:
+        frames = w.readframes(w.getnframes())
+        params = w.getparams()
+    if abs(gain - 1.0) > 0.01:
+        a = array.array("h")
+        a.frombytes(frames)
+        for i, s in enumerate(a):
+            a[i] = max(-32768, min(32767, int(s * gain)))
+        frames = a.tobytes()
+    with wave.open(str(wav), "wb") as w:
+        w.setparams(params)
+        w.writeframes(frames)
+    winsound.PlaySound(str(wav), winsound.SND_FILENAME)
 
 
 def main() -> int:
     if "--test" in sys.argv:
         eng = EdgeEngine()
-        eng.say("你好，我是白绮的教练，edge 统一嗓音上线。")
-        eng.say("Turn five had four block and two strikes, intent twenty-seven.")
+        w1 = TTS_DIR / "edge_test1.wav"
+        if eng.synth_to_wav("你好，我是白绮的教练，edge 统一嗓音上线。", w1):
+            _play_wav_with_gain(w1)
+        w2 = TTS_DIR / "edge_test2.wav"
+        if eng.synth_to_wav("Turn five had four block and two strikes, intent twenty-seven.", w2):
+            _play_wav_with_gain(w2)
         return 0
 
     if not STREAM_FILE.exists():
@@ -130,17 +132,47 @@ def main() -> int:
     ended = False
     end_at = 0.0
 
-    def pump() -> None:
+    # ---- 3 并发预取流水线：边播边预合成后 3 句，消除句间卡顿 ----
+    done: dict[int, tuple] = {}          # seq -> (wav_path | None, text)
+    done_cond = threading.Condition()
+    counters = {"put": 0, "played": 0}
+
+    def synth_worker(wid: int) -> None:
         while True:
             try:
-                sent = q.get(timeout=0.5)
+                seq, sent = q.get(timeout=0.5)
             except queue.Empty:
                 if ended:
                     return
                 continue
-            eng.say(sent)
+            wav = TTS_DIR / f"edge_pf_{wid}.wav"
+            ok = eng.synth_to_wav(sent, wav)
+            with done_cond:
+                done[seq] = (wav if ok else None, sent)
+                done_cond.notify_all()
 
-    threading.Thread(target=pump, daemon=True).start()
+    for _wid in range(3):
+        threading.Thread(target=synth_worker, args=(_wid,), daemon=True).start()
+
+    def player() -> None:
+        while True:
+            with done_cond:
+                while counters["played"] not in done:
+                    done_cond.wait(timeout=0.5)
+                    if ended and counters["played"] >= counters["put"] and q.empty():
+                        return
+            seq = counters["played"]
+            wav, sent = done.pop(seq)
+            try:
+                if wav is not None:
+                    _play_wav_with_gain(wav)
+                else:
+                    eng.say_fallback(sent)
+            except Exception as exc:
+                log(f"播放失败：{exc}")
+            counters["played"] += 1
+
+    threading.Thread(target=player, daemon=True).start()
 
     while True:
         try:
@@ -169,8 +201,9 @@ def main() -> int:
                                     q.get_nowait()
                                 except queue.Empty:
                                     break
-                        q.put(sent)
-            if ended and time.time() - end_at > 3 and q.empty():
+                        q.put((counters["put"], sent))
+                        counters["put"] += 1
+            if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
                 break
             time.sleep(0.5)
         except Exception as exc:

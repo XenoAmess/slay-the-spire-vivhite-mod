@@ -1,14 +1,17 @@
-"""白绮碎碎念（quipper）——克隆音色的低频随机战况点评。
+"""白绮碎碎念（quipper v2）——克隆音色的战况即兴点评。
 
-设计：
-  - 轮询游戏 mod API，仅在"有局面变化"时，按随机间隔（45~100s 抖动）插一句 10 字内短评
-  - 克隆音色（MOSS-Nano），与长篇朗读器（edge/SAPI）可同时发声
-  - 但绝不和白绮自己的"克隆总结音"（speak_once 结论段）同时读——靠 voice_clone_busy.flag 互斥
-  - 模型"像人"靠两层：内置白绮人设短句池（分场景）+ 每周一次的 LLM 批量补货 quips_llm.txt
-  - 尊重全局音量/静音（voice_volume.json）、单实例锁（voice_quipper.lock）
-  - 任何异常只记日志，绝不影响任何其他组件
+设计（按用户要求）：
+  - **每次都用 LLM 现写**：无固定池。投喂当前战况 + 人设 prompt 给一个免费模型
+    （默认 openrouter/google/gemma-4-26b-a4b-it:free，cfg llm.quip_model 可改），
+    生成 10 字内随性短评（高随机、像人）。
+  - **节奏**：上一条**播完之后**才开始计时，随机 20~45 秒后看下一条。
+  - **互斥**：与 edge/SAPI 长篇朗读可同时；与克隆总结音（speak_once）互斥——
+    本进程说话时写 voice_quip_speaking.flag，speak_once 会等它播完再等 5 秒。
+    总结音占用（voice_clone_busy.flag）时本进程让位。
+  - LLM 失败的兜底：一句万能短评（"稳住"）——不读固定池。
+  - 单实例锁 voice_quipper.lock；尊重全局音量/静音。
 
-运行（uv 旁路，由大脑在启动时拉起）：
+运行（uv 旁路，由大脑启动时拉起）：
   uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio \
       python tts/quipper.py
 """
@@ -16,8 +19,9 @@ from __future__ import annotations
 
 import json
 import os
-import queue
 import random
+import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -33,14 +37,16 @@ KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
 LOG_FILE = KNOWLEDGE_DIR / "tts_quipper.log"
 LOCK_FILE = KNOWLEDGE_DIR / "voice_quipper.lock"
-BUSY_FLAG = KNOWLEDGE_DIR / "voice_clone_busy.flag"      # 克隆总结音占用标志（speak_once 写）
-LLM_QUIPS = TTS_DIR / "quips_llm.txt"
+BUSY_FLAG = KNOWLEDGE_DIR / "voice_clone_busy.flag"          # 总结音占用（speak_once 写）
+SPEAKING_FLAG = KNOWLEDGE_DIR / "voice_quip_speaking.flag"   # 本进程正在说话（speak_once 读）
 TMP_WAV = TTS_DIR / "quip_tmp.wav"
 REF_48K = TTS_DIR / "reference_voice_48k.wav"
+CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 
-MIN_GAP, MAX_GAP = 45, 100        # 两句之间的随机间隔（秒）
-HARD_MIN_GAP = 35                 # 硬下限
+MIN_GAP, MAX_GAP = 20, 45        # 上一条播完后的随机间隔（秒）
+LLM_TIMEOUT = 90
 API = "http://127.0.0.1:8080"
+FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败时的兜底一句
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import get_voice_state  # noqa: E402
@@ -54,56 +60,23 @@ def log(msg: str) -> None:
         pass
 
 
-# ---------------------------------------------------------------------------
-# 白绮短句池（10 字内为主；分场景）
-# ---------------------------------------------------------------------------
-
-QUIPS: dict[str, list[str]] = {
-    "general": [
-        "稳了稳了", "这波可以", "继续冲", "看着还行", "我在看哦", "不错嘛", "加油加油",
-        "挺好挺好", "稳一手", "别急别急", "慢慢打", "可以的", "有点东西", "妙啊",
-        "嗯哼", "就这样打", "我看好你", "稳住别慌",
-    ],
-    "advantage": [
-        "这局有戏", "打得漂亮", "就要赢了", "好顺啊", "这伤害绝了", "碾压局", "舒服了",
-        "这卡组成了", "芜湖起飞", "太猛了吧",
-    ],
-    "danger": [
-        "血量告急", "要没了要没了", "苟住苟住", "别贪了", "快回血啊", "这波悬",
-        "吓我一跳", "稳住别浪", "心凉了半截", "别送啊",
-    ],
-    "combat_start": ["开打开打", "上啊", "揍他", "新一场来了", "干就完了", "来吧来吧"],
-    "boss": ["精英诶，小心", "Boss了！稳住", "这场硬", "大场面来了", "决战了啊"],
-    "kill": ["杀了杀了", "好杀", "漂亮", "一个倒下", "再见啦", "拿下"],
-    "map": ["往哪走呢", "选条路", "这条路看着肥", "走这边？", "前面有啥"],
-    "shop": ["买买买", "金币够吗", "看看有啥货", "剁手时间", "老板大气"],
-    "rest": ["歇会儿", "回口血", "烤火烤火", "休息一下", "喝口水"],
-    "event": ["啥事呢", "看戏看戏", "这事件有意思", "哟，彩蛋"],
-    "idle": ["无聊了", "还在打呀", "慢慢磨", "有点困", "我睡着了吗", "快点嘛"],
-    "potion": ["喝药喝药", "干了这瓶", "好药水"],
-}
-
-
-def _load_quips() -> dict[str, list[str]]:
-    pool = {k: list(v) for k, v in QUIPS.items()}
+def _quip_model() -> str:
     try:
-        if LLM_QUIPS.exists():
-            extra = [ln.strip() for ln in LLM_QUIPS.read_text(encoding="utf-8").splitlines()
-                     if ln.strip() and len(ln.strip()) <= 20]
-            if extra:
-                pool["general"] += extra
-    except OSError:
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        m = (cfg.get("llm") or {}).get("quip_model")
+        if m:
+            return str(m)
+    except (OSError, json.JSONDecodeError):
         pass
-    return pool
+    return "openrouter/google/gemma-4-26b-a4b-it:free"
 
 
 # ---------------------------------------------------------------------------
-# 引擎（MOSS-Nano，常驻）与播放
+# MOSS-Nano 引擎（常驻）与播放
 # ---------------------------------------------------------------------------
 
 class NanoQuip:
     def __init__(self) -> None:
-        import numpy as np  # noqa
         sys.path.insert(0, str(MOSS_DIR))
         from onnx_tts_runtime import OnnxTtsRuntime
 
@@ -123,7 +96,7 @@ class NanoQuip:
         self.codes = self.rt.encode_reference_audio(str(ref))
         log(f"引擎就绪（{time.time() - t0:.0f}s）")
 
-    def say(self, text: str) -> None:
+    def play(self, text: str) -> None:
         st = get_voice_state()
         if st["muted"] or st["volume"] <= 0:
             return
@@ -145,7 +118,7 @@ class NanoQuip:
 
 
 # ---------------------------------------------------------------------------
-# 游戏状态
+# 战况采集
 # ---------------------------------------------------------------------------
 
 def _get_state() -> dict | None:
@@ -157,31 +130,19 @@ def _get_state() -> dict | None:
         return None
 
 
-def _pick_category(st: dict) -> str:
-    screen = st.get("screen", "")
-    combat = st.get("combat") or {}
+def _state_brief(st: dict) -> str:
+    screen = st.get("screen", "?")
     run = st.get("run") or {}
+    parts = [f"界面={screen}", f"层数={run.get('floor', '?')}", f"血量={run.get('current_hp', '?')}/{run.get('max_hp', '?')}"]
+    combat = st.get("combat")
     if screen == "COMBAT" and combat:
-        hp = (combat.get("player") or {}).get("current_hp", 99)
-        maxhp = max(1, (combat.get("player") or {}).get("max_hp", 99))
-        if hp / maxhp < 0.35:
-            return "danger"
-        enemies = combat.get("enemies") or []
-        if any((e.get("is_alive") and (e.get("current_hp", 1) / max(1, e.get("max_hp", 1))) < 0.25) for e in enemies):
-            return "kill"
-        room = (run.get("room_type") or "")
-        if "Boss" in room or "Elite" in room:
-            return "boss"
-        return "combat_start" if (st.get("turn") or 9) <= 2 else "general"
-    if screen == "MAP":
-        return "map"
-    if screen == "SHOP":
-        return "shop"
-    if screen == "REST":
-        return "rest"
-    if screen == "EVENT":
-        return "event"
-    return "general"
+        p = combat.get("player") or {}
+        parts.append(f"回合={st.get('turn', '?')} 能量={p.get('energy', '?')} 格挡={p.get('block', 0)}")
+        enemies = [f"{e.get('name')}{e.get('current_hp')}/{e.get('max_hp')}"
+                   for e in (combat.get("enemies") or []) if e.get("is_alive")]
+        if enemies:
+            parts.append("敌人=" + ",".join(enemies[:3]))
+    return "；".join(str(x) for x in parts)
 
 
 def _sig(st: dict) -> tuple:
@@ -192,35 +153,35 @@ def _sig(st: dict) -> tuple:
 
 
 # ---------------------------------------------------------------------------
-# LLM 批量补货（每周一次，后台线程，一次调用产 50 句）
+# LLM 现写短评
 # ---------------------------------------------------------------------------
 
-def _maybe_refill_llm() -> None:
+def _llm_quip(brief: str) -> str | None:
+    binary = shutil.which("opencode")
+    if not binary:
+        return None
+    prompt = (
+        "你是「白绮」，一位正在围观杀戮尖塔2自动对局的温柔俏皮小教练。"
+        f"当前战况：{brief}\n"
+        "请据此即兴说一句短评/吐槽。要求：10 个汉字以内、口语化、像真人随口说的、可以俏皮一点。"
+        "只输出这句话本身——不要引号、不要解释、不要任何其他内容。"
+    )
     try:
-        if LLM_QUIPS.exists() and time.time() - LLM_QUIPS.stat().st_mtime < 7 * 86400:
-            return
-    except OSError:
-        return
-
-    def _job() -> None:
-        import shutil
-        binary = shutil.which("opencode")
-        if not binary:
-            return
-        prompt = (
-            f"请为杀戮尖塔2的自动游玩解说写 50 句超短吐槽/点评，角色是「白绮」（温柔俏皮的小教练）。"
-            f"要求：每句 10 个汉字以内、口语化、像真人随口说的；涵盖顺风/逆风/击杀/逛街/商店/休息/无聊等场景；"
-            f"每行一句，不要编号不要解释。把全部句子直接写入文件 {LLM_QUIPS.as_posix()}（UTF-8，覆盖写）。"
-            "写完回复 OK 即可。"
-        )
-        try:
-            subprocess.run([binary, "run", "--model", "kimi-for-coding/k3", "--dir", str(BASE_DIR.parent),
-                            "--auto", prompt], capture_output=True, timeout=420)
-            log("LLM 短句池补货完成")
-        except Exception as exc:
-            log(f"LLM 补货失败（用内置池）：{exc}")
-
-    threading.Thread(target=_job, daemon=True).start()
+        proc = subprocess.run([binary, "run", "--model", _quip_model(),
+                               "--dir", str(BASE_DIR.parent), prompt],
+                              capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=LLM_TIMEOUT)
+        out = (proc.stdout or "").strip()
+        if not out:
+            return None
+        line = out.splitlines()[0].strip().strip('"\'“”‘’')
+        line = re.sub(r"^[（(\[].*?[)）\]]", "", line).strip()
+        if not line:
+            return None
+        return line[:20]
+    except Exception as exc:
+        log(f"LLM 短评失败：{exc}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -256,43 +217,47 @@ def main() -> int:
     if not (MOSS_DIR / "models").exists():
         log("MOSS 模型未就绪，退出")
         return 0
-    _maybe_refill_llm()
     eng = NanoQuip()
-    pool = _load_quips()
     rng = random.Random()
-    log("白绮碎碎念上线")
+    log(f"白绮碎碎念 v2 上线（LLM 现写：{_quip_model()}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）")
 
-    last_quip = 0.0
+    last_play_end = 0.0
     next_gap = rng.uniform(MIN_GAP, MAX_GAP)
     last_sig = None
 
     while True:
-        time.sleep(5)
+        time.sleep(3)
         try:
             st = _get_state()
             if not st:
                 continue
             screen = st.get("screen", "")
             run = st.get("run")
-            # 只在一局进行中插话
             if not run or screen in ("MAIN_MENU", "CHARACTER_SELECT", "GAME_OVER", "UNKNOWN", "UNLOCK"):
                 continue
-            # 克隆总结音占用时让位
-            if BUSY_FLAG.exists():
+            if BUSY_FLAG.exists():            # 总结音在播 → 让位
                 continue
             sig = _sig(st)
+            if sig == last_sig:               # 局面没变化
+                continue
             now = time.time()
-            if sig == last_sig:
+            if now - last_play_end < next_gap:   # 上条播完后还没攒够间隔
                 continue
-            if now - last_quip < max(HARD_MIN_GAP, next_gap):
-                continue
+
+            brief = _state_brief(st)
+            text = _llm_quip(brief)
+            if not text:
+                text = rng.choice(FALLBACK_QUIPS)
             last_sig = sig
-            cat = _pick_category(st)
-            text = rng.choice(pool.get(cat, pool["general"]) + pool["general"])
-            last_quip = now
+            log(f"[{screen}] {text}（战况：{brief}）")
+
+            SPEAKING_FLAG.write_text(str(os.getpid()), encoding="utf-8")
+            try:
+                eng.play(text)
+            finally:
+                SPEAKING_FLAG.unlink(missing_ok=True)
+            last_play_end = time.time()
             next_gap = rng.uniform(MIN_GAP, MAX_GAP)
-            log(f"[{cat}] {text}")
-            eng.say(text)
         except Exception as exc:
             log(f"循环异常（继续）：{exc}")
 
@@ -301,5 +266,6 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception as exc:
-        log(f"致命异常（静默退出）：{exc}")
+        import traceback
+        log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-800:]}")
         sys.exit(0)

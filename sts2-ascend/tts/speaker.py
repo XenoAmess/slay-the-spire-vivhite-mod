@@ -206,6 +206,39 @@ def lang_of(sent: str) -> str:
     return "zh" if any("\u4e00" <= ch <= "\u9fff" for ch in sent) else "en"
 
 
+class FenceStripper:
+    """流式剥离 ``` 围栏代码块内容（围栏标记可跨行、可跨报文）。
+
+    兜底：围栏内容超过 600 字仍未闭合，视为误判——恢复朗读，防止整段被吞。"""
+
+    def __init__(self) -> None:
+        self.in_fence = False
+        self._bt = 0            # 连续反引号计数（跨行延续）
+        self._fence_chars = 0
+
+    def feed(self, line: str) -> str:
+        out: list[str] = []
+        for ch in line:
+            if ch == "`":
+                self._bt += 1
+                if self._bt >= 3:
+                    self.in_fence = not self.in_fence
+                    self._fence_chars = 0
+                    self._bt = 0
+                continue
+            if self._bt:
+                if not self.in_fence:
+                    out.append("`" * self._bt)
+                self._bt = 0
+            if self.in_fence:
+                self._fence_chars += 1
+                if self._fence_chars > 600:
+                    self.in_fence = False      # 兜底：异常长围栏当误判处理
+                continue
+            out.append(ch)
+        return "".join(out)
+
+
 class SentenceSplitter:
     def __init__(self) -> None:
         self.buf = ""

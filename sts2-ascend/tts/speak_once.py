@@ -101,6 +101,14 @@ def main() -> int:
         _synth_moss(text, out)
     log(f"合成完成，耗时 {time.time() - t0:.0f}s，播放（{out.stat().st_size} bytes）")
     import winsound
+    # 若白绮吐槽员正在说话：等它说完，再多等 5 秒才播总结（互不抢麦）
+    quip_speaking = KNOWLEDGE_DIR / "voice_quip_speaking.flag"
+    wait_start = time.time()
+    while quip_speaking.exists() and time.time() - wait_start < 90:
+        time.sleep(1)
+    if quip_speaking.exists():
+        log("等待吐槽员超时（90s），强行播放")
+    time.sleep(5)
     busy = KNOWLEDGE_DIR / "voice_clone_busy.flag"
     try:
         busy.write_text(str(os.getpid()), encoding="utf-8")   # 吐槽员见此标志让位
