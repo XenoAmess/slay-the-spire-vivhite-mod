@@ -80,9 +80,9 @@ def load_llm_config() -> dict:
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
-        # 语音朗读器（tts/）：nano=全克隆音色(MOSS-Nano，允许滞后，默认) / sapi=系统语音实时 /
-        # hybrid=SAPI直播+克隆结论 / off=关闭
-        "tts_mode": "nano",
+        # 语音朗读器（tts/）：hybrid=SAPI实时直播+克隆音色读结论(默认) / nano=全克隆音色(滞后大) /
+        # sapi=纯系统语音 / off=关闭
+        "tts_mode": "hybrid",
         # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
         "review_queue_max": 5,
     }
