@@ -184,31 +184,33 @@ def _llm_generate(brief: str) -> str | None:
 
 
 def _llm_audit(brief: str, quip: str) -> bool:
-    """第二轮：内容审计。偏离场景/不适合直播/违反敏感条例 → False（弃句）。
-    审计服务本身失败时放行（兜底，避免全军覆没）。"""
+    """第二轮：内容审计。**必须模型显式输出 PASS 才算通过**——
+    未知报错/异常一律判不通过（否则有把报错报文直接读出来的风险）。"""
     binary = shutil.which("opencode")
     if not binary:
-        return True
+        return False
     prompt = (
         "你是直播内容审计员。下面这句是一个游戏解说 AI 根据战况即兴说的短评。\n"
         f"战况：{brief}\n"
         f"短评：「{quip}」\n"
         "审计三项：1) 与战况场景相关（不离题）；2) 适合作为直播内容说出（无脏字/敏感/违规内容）；"
-        "3) 符合内容安全条例。\n只输出一个词 PASS 或 FAIL。任一项不过就 FAIL。"
+        "3) 符合内容安全条例。\n"
+        "三项全过才在第一行输出 PASS；任一项不过输出 FAIL。不要输出任何其他内容。"
     )
     try:
         proc = subprocess.run([binary, "run", "--model", _quip_model(),
                                "--dir", str(BASE_DIR.parent), prompt],
                               capture_output=True, text=True, encoding="utf-8",
                               errors="replace", timeout=LLM_TIMEOUT)
-        out = (proc.stdout or "").strip().upper()
-        verdict = "PASS" in out and "FAIL" not in out
-        if not verdict:
-            log(f"审计未通过：「{quip}」（{out[:60]}）")
-        return verdict
+        out = (proc.stdout or "").strip()
+        first = out.splitlines()[0].strip().upper() if out else ""
+        ok = first.startswith("PASS")      # 显式合法才算过（未知报错/异常 → False）
+        if not ok:
+            log(f"审计未通过：「{quip}」（{first[:60] or '空响应'}）")
+        return ok
     except Exception as exc:
-        log(f"审计调用失败（放行）：{exc}")
-        return True
+        log(f"审计调用异常（判不通过）：{exc}")
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -272,15 +274,18 @@ def main() -> int:
                 continue
 
             brief = _state_brief(st)
-            text = _llm_generate(brief)
-            if text and not _llm_audit(brief, text):
-                # 审计不过：这句不读了，等下一轮（同样的局面不再重试）
-                last_sig = sig
-                last_play_end = time.time()
-                next_gap = rng.uniform(MIN_GAP, MAX_GAP)
-                continue
+            # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
+            text = None
+            for attempt in range(6):
+                cand = _llm_generate(brief)
+                if not cand:
+                    break                          # 生成失败 → 直接走保底
+                if _llm_audit(brief, cand):
+                    text = cand
+                    break
+                log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
             if not text:
-                text = rng.choice(FALLBACK_QUIPS)   # 生成失败兜底一句
+                text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
             last_sig = sig
             log(f"[{screen}] {text}（战况：{brief}）")
 
