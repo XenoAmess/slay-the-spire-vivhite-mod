@@ -2485,3 +2485,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/201 胜，当前目标进阶 0
+
+## 第 202 局复盘（2026-08-24 04:41）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：RAGE, BATTLE_TRANCE, ANGER, FLAME_BARRIER, MAYHEM, HEADBUTT, SWORD_BOOMERANG, TAUNT, OFFERING, FIGHT_ME, ANGER, UPPERCUT, HEADBUTT, BATTLE_TRANCE, BREAKTHROUGH, PYRE, CONFLAGRATION, SWORD_BOOMERANG, TRUE_GRIT, TAUNT
+- 本局遗物：LASTING_CANDY
+- 战斗记录：F15 Monster战 掉血34; F17 Boss战 掉血23; F19 Monster战 掉血24; F20 Monster战 掉血15; F21 Monster战 掉血19; F22 Monster战 掉血22（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，FIEND_FIRE(27分/4局)，MAYHEM(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/202 胜，当前目标进阶 0
