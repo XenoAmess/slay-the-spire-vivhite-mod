@@ -45494,3 +45494,65 @@ commit_room_damage signature change: called only from agent._settle_combat (grep
 [08:19:40] [COMBAT/F7] 战斗：回合过渡中，等待
 [08:19:41] [COMBAT/F7] 战斗：回合过渡中，等待
 [08:19:41] [COMBAT/F7] 战斗：打出【防御】（格挡5）；敌意图总伤17，我方36血/0甲；⚠高危组合（24战4死），转防守节奏
+[08:19:43] [COMBAT/F7] 战斗：打出【余烬】→雾菇（可击杀雾菇）；敌意图总伤17，我方36血/5甲；⚠高危组合（24战4死），转防守节奏
+[llm] 复盘会话结束（exit=0）。输出尾部：
+h tolerance.
+仅为浮点精度问题 (2.1−0.05=2.0500…03) — 行为正确：
+⚙ bash {}
+· tokens 183190 ·
+💭 All three changes verified:
+1. Boss battles show "Boss assault speed boost ×1.15" and normal battles don't ✓
+2. Draw pile top selection tag=card_top_pick, normal card-taking tag=card_pick ✓
+3. reflect: prolonged battle death kill_bonus 12→13 + block_safety 2.1→2.05; short sudden death block_safety rises back ✓
+
+Run selfcheck one more time (final confirmation after all edits — already did after edits but before the last policy.json edit... actually selfcheck was run AFTER all .py edits. policy.json edit came before selfcheck? Let me check order: edits to policy.py, knowledge.py, agent.py, reflect.py → policy.json edit → selfcheck run → verify scripts. Yes selfcheck ran after everything. But let me re-run once more to be extra safe since it's cheap.
+
+Then write meta_review.md section + lessons.md 🧠 section.
+⚙ bash {}
+· tokens 183456 ·
+⚙ todowrite {}
+· tokens 183624 ·
+💭 Now write the meta_review.md section. I need to read meta_review.md's head to see the heading format (title with datetime). The tail showed sections like "### 一、归因分析" etc. Let me check the top-level section title format quickly.
+⚙ bash {}
+· tokens 184001 ·
+⚙ bash {}
+· tokens 186480 ·
+现在将 🧠 经验部分追加到 lessons.md 中：
+⚙ bash {}
+· tokens 187059 ·
+⚙ bash {}
+· tokens 187149 ·
+💭 Everything done:
+- SELFCHECK OK (final)
+- No git operations (per prohibition)
+- meta_review.md and lessons.md updated
+- runner_console.log modified — that's the running brain's own log, not my change. Fine.
+
+Final summary ≤200 chars.
+复盘完成。总结（第 82~83 局）：
+
+**归因**：交叉比对怪物图鉴发现死亡榜前三全是 Boss（同族双子/仪式兽/墨影幻灵，190~252 血）——Boss 攻坚失败占生涯死亡 1/3；82 局 95% 血进 Boss 仍亡，证明入场血量线只是必要条件，战斗时长才是致命项；block_safety 被单向棘轮顶死 2.1 上限，龟防拖长战斗。另澄清 83 局战斗中反复“选暴走+”实为头槌置顶语义（非误献祭），但被误记 card_pick 灌水信用账本。
+
+**调整**：①policy.py Boss 战全局攻击提速 ×1.15；②agent 记录战斗回合数，reflect 按死亡模式分流演化（长战磨死→kill_bonus+1 且防御缓释，短暴毙→加防）；③头槌类选屏改记 card_top_pick，不再污染卡牌学习数据。selfcheck OK，报告已入 meta_review.md / lessons.md。
+· tokens 187572 ·
+
+[08:19:44] [COMBAT/F7] 战斗：等待敌人就绪
+[08:19:45] [COMBAT/F7] 战斗：等待敌人就绪
+[08:19:45] [COMBAT/F7] 战斗：等待敌人就绪
+[08:19:46] [COMBAT/F7] 战斗：等待敌人就绪
+[08:19:47] [REWARD/F7] 领取奖励：20金币
+[agent] 战斗结束：F7 Monster战 掉血9（剩余 42 血）
+[08:19:47] [REWARD/F7] 领取奖励：铁心药水
+[08:19:48] [REWARD/F7] 打开卡牌奖励：将一张牌添加到你的牌组。
+[08:19:49] [CARD_SELECTION/F7] 选择卡牌：【邪眼】（价值 8.5）；候选：邪眼=8.5 / 头槌=6.6 / 地狱之刃=0.8
+[git] 自动推送失败（不影响游玩，下次再试）：error: RPC failed; curl 56 Recv failure: Connection was reset
+send-pack: unexpected disconnect while reading sideband packet
+fatal: the remote end hung up unexpectedly
+Everything up-to-date
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[08:19:50] [REWARD/F7] 一键收取奖励并继续
+[08:19:51] [MAP/F7] 路径规划：RestSite(7,6)（路径分 22.74，预计进 Boss 血量 88%；血量偏低（<62%），优先休整续航）；候选：RestSite(7,6)=22.74|血量偏低（<62%），优先休整续航
+[08:19:54] [REST/F8] 篝火：休息回血（当前 52% < 55%）
+[08:19:55] [REST/F8] 篝火：无可选项目，离开
+[08:19:56] [MAP/F8] 路径规划：Monster(8,6)（路径分 21.03，预计进 Boss 血量 88%；前期需要战斗积累卡牌）；候选：Monster(8,6)=21.03|前期需要战斗积累卡牌
