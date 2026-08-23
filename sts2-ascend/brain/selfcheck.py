@@ -388,10 +388,55 @@ def main() -> int:
     # 过场后战斗对象变化：先结算旧账再开新账
     trk(trk_state(40, comp="E2"))
     trk(trk_state(40, comp="E2", screen="MODAL"))
-    trk(trk_state(35, comp="E3"))
+    trk(trk_state(35, comp="E3", floor=18))  # 真实流转必然换层：同层分段属多阶段战斗
     e2 = tknow.stats["enemies"].get("E2")
     assert e2 and e2["encounters"] == 1 and e2["wins"] == 1, f"E2={e2}"
     assert ag.ctx.combat and ag.ctx.combat["comp_id"] == "E3"
+
+    # 3m2) 同层多段战斗聚合（第 97~98 批复盘）：97 局一场仪式兽（实际掉血
+    #      45+0+35=80）被阶段切换拆成 3 条统计——boss_loss_stats 场均被稀释成
+    #      22.9/段（真实 ≈65），Boss 前夜智能锻造「战损≥回血量」条件以 1.1 之差
+    #      永不触发，敌人死亡率分母同步灌水。修复后同层分段必须合并为一场。
+    ag_bs = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    tknow_bs = ag_bs.know
+
+    def boss_phase(floor, hp_start, hp_end, rounds=3):
+        ag_bs._start_combat({"max_hp": 80, "floor": floor}, "PHASE_BOSS", "Boss", hp_start)
+        ag_bs.ctx.combat["rounds"] = rounds
+        ag_bs._settle_combat(hp_end, won=True, died=False, split=True)
+
+    boss_phase(17, 80, 62)     # 阶段1：-18 挂账（旧版此处立即入账 → 拆分复发）
+    assert tknow_bs.stats["enemies"].get("PHASE_BOSS") is None, \
+        "阶段1结算被立即入账（多段拆分复发）"
+    boss_phase(17, 62, 30)     # 阶段2：同层开账不冲销，并段累计 -48
+    assert tknow_bs.stats["enemies"].get("PHASE_BOSS") is None, \
+        "阶段2结算被独立入账"
+    boss_phase(18, 30, 5)      # 换层开战：冲销上一层合并账（整场 -48 一条记录）
+    e_bs = tknow_bs.stats["enemies"].get("PHASE_BOSS") or {}
+    assert e_bs.get("encounters") == 1 and abs(e_bs.get("hp_lost_sum", 0) - 50) < 1e-9 \
+        and e_bs.get("wins") == 1, f"同层两段未合并为一场: {e_bs}"
+    bl_bs, bn_bs = tknow_bs.boss_loss_stats()
+    assert bn_bs == 1 and abs(bl_bs - 50.0) < 1e-9, \
+        f"Boss 分档口径未按整场计（{bl_bs}/{bn_bs}），智能锻造校准仍失真"
+    assert ag_bs.ctx.combat_notes == ["F17 Boss战 掉血50"], \
+        f"战斗记录应合并为单条: {ag_bs.ctx.combat_notes}"
+    # 致死分段立即落库 + 归因口径取整场（入场血量取首段、回合数取各段最长）
+    ag_bs._start_combat({"max_hp": 80, "floor": 19}, "PHASE_BOSS2", "Boss", 76)
+    ag_bs.ctx.combat["rounds"] = 3
+    ag_bs._settle_combat(66, won=True, died=False, split=True)   # 阶段1：-10 挂起(open)
+    ag_bs._start_combat({"max_hp": 80, "floor": 19}, "PHASE_BOSS2", "Boss", 66)
+    assert tknow_bs.stats["enemies"].get("PHASE_BOSS2") is None, \
+        "同层开新账误冲销了进行中的多阶段聚合账"
+    ag_bs.ctx.combat["rounds"] = 4
+    ag_bs._settle_combat(20, won=False, died=True)               # 阶段2 内阵亡：整场一次性落库
+    e_bd = tknow_bs.stats["enemies"]["PHASE_BOSS2"]
+    assert e_bd["encounters"] == 1 and e_bd["deaths"] == 1 \
+        and abs(e_bd["hp_lost_sum"] - 56) < 1e-9, f"致死合并失败: {e_bd}"
+    assert abs((ag_bs.ctx.death_hp_pct_at_entry or 0) - 0.95) < 1e-9, \
+        f"死亡入场血量应取首段（整场进场时）: {ag_bs.ctx.death_hp_pct_at_entry}"
+    assert ag_bs.ctx.died_in_combat["rounds"] == 4, \
+        f"死亡回合数应取全场最长: {ag_bs.ctx.died_in_combat}"
+    ag_bs.ctx.combat = None
 
     # 3j) 惨胜防线（第 36 局复盘新增）：补防后剩余缺口虽不致死、但会把血量
     #     打穿到 12% 皮血线以下时，非击杀攻击必须让位于格挡。
@@ -549,6 +594,7 @@ def main() -> int:
                 "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]},
     }
     ctx.rest_before_boss = False
+    ctx.rest_proj_hp_pct = 1.0  # 本用例只验证常规线：隔离此前深图用例泄漏的绝境投影
     d_rest_norm = pol.decide(rest_state, ctx)
     # 常规逻辑：72% ≥ 安全线 55% → 锻造
     assert d_rest_norm.tags and d_rest_norm.tags[0] == ("rest", "smith"), \
@@ -869,12 +915,14 @@ def main() -> int:
     know.stats["enemies"]["BOSS_PIG"] = {
         "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
         "boss_encounters": 2, "boss_hp_lost_sum": 180.0, "boss_deaths": 1}
-    rest_boss_state = dict(rest_state)
-    rest_boss_state["run"] = {"current_hp": 62, "max_hp": 80, "gold": 0, "floor": 15,
-                              "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}
     bl, bn = know.boss_loss_stats()
     assert bn == 4 and abs(bl - 87.5) < 1e-6, f"Boss 分档统计错误: {bl}/{bn}"
     ctx.rest_before_boss = True
+    # 锻造线（第 97~98 批复盘）：血量 + 回血量×0.5 ≥ 满血（≥85%）才改锻造——
+    # 战损合并记账后整场 Boss 战损必然 ≥ 回血量，72% 血也去锻造会重演第 48 局惨案
+    rest_boss_state = dict(rest_state)
+    rest_boss_state["run"] = {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 15,
+                              "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}
     d_eve_smith = pol.decide(rest_boss_state, ctx)
     assert d_eve_smith.tags[0] == ("rest", "smith"), f"Boss前夜智能锻造未触发: {d_eve_smith.reason}"
     know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 46.0   # 场均值降至 22.5 < 回血量 24
@@ -883,6 +931,11 @@ def main() -> int:
     assert d_eve_heal.tags[0] == ("rest", "heal"), f"战损低于回血量应回血: {d_eve_heal.reason}"
     know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 170.0
     know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 180.0
+    rest_mid = dict(rest_boss_state)
+    rest_mid["run"] = dict(rest_boss_state["run"], current_hp=62)  # 77.5% < 锻造线 85%
+    d_eve_mid = pol.decide(rest_mid, ctx)
+    assert d_eve_mid.tags[0] == ("rest", "heal"), \
+        f"锻造线以下的回血价值不应被放弃（48局复现）: {d_eve_mid.reason}"
     rest_low = dict(rest_boss_state)
     rest_low["run"] = dict(rest_boss_state["run"], current_hp=38)  # 47.5% < 入场线 65%
     d_eve_low = pol.decide(rest_low, ctx)
@@ -1550,11 +1603,137 @@ def main() -> int:
     d_pot = pol_pot.decide(pot_state("获得1点能力。"), potc)
     assert d_pot.action == "use_potion", \
         f"能力类增益药水未在高危战斗开局兑现: {d_pot.action}（{d_pot.reason}）"
+    # 第 96 局复盘（兑现 94~95 批处方）：「能力/power」补词后又漏出第三批无法
+    # 分类的药水（缚魂/无色/固化——96 局 Boss 战全部睡到 38% 血才被兜底掏出，
+    # 其中固化药水单瓶 +33 甲）。premium 硬仗前 3 回合未知类别直接放行。
     pol_pot2 = policy.Policy(know_es, random.Random(5))
     d_pot2 = pol_pot2.decide(pot_state("闻起来像草莓。"), potc)
-    assert d_pot2.action == "play_card", \
-        f"无法分类药水在满血时被兜底浪费: {d_pot2.action}（{d_pot2.reason}）"
+    assert d_pot2.action == "use_potion" and "硬仗开局" in d_pot2.reason, \
+        f"premium硬仗T1未知类别药水未被放行: {d_pot2.action}（{d_pot2.reason}）"
+    # 对照：非 premium 普通战中未知类别仍保留（防绕过增益保留策略）
+    potc.combat = {"comp_id": "HARMLESS", "node_type": "Monster"}
+    pol_pot3 = policy.Policy(know_es, random.Random(5))
+    d_pot3 = pol_pot3.decide(pot_state("闻起来像草莓。"), potc)
+    assert d_pot3.action == "play_card", \
+        f"普通战兜底浪费未知类别药水: {d_pot3.action}（{d_pot3.reason}）"
     potc.combat = None
+
+    # 3xx) 房间先验战斗发生率条件化（第 96 局复盘核心修复）：生涯 Unknown
+    #      到访 148 次仅 33 次开战（22%）——damage_events 只统计真打了仗的样本，
+    #      零伤事件到访从未进入分母，旧口径把 E[伤|开战] 当 E[伤|到访] 用：
+    #      二幕每个 Unknown 被按满额战斗×1.6 计费（~35点），96 局路径分饱和在
+    #      -165~-195、全图投影「进Boss血量 0%」而实际一路零伤事件走到 70% 血。
+    prdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rate-"))
+    pknow = knowledge.Knowledge(prdir)
+    pknow.stats["rooms"]["Unknown"] = {"visits": 100, "outcome_sum": 0.0,
+                                       "hp_lost_sum": 300.0, "damage_events": 20}
+    pknow.stats["rooms"]["Monster"] = {"visits": 600, "outcome_sum": 0.0,
+                                       "hp_lost_sum": 4800.0, "damage_events": 600}
+    # Unknown：measured=15, w=0.7 → blended=13.5，rate=20/100=0.2 → 2.7
+    assert abs(pknow.room_damage_prior("Unknown", 10.0) - 2.7) < 1e-9, \
+        f"Unknown 先验未按战斗发生率折价: {pknow.room_damage_prior('Unknown', 10.0)}"
+    # Monster：几乎每访必战（rate=1.0）→ 维持原口径不被折价
+    assert abs(pknow.room_damage_prior("Monster", 8.0) - 8.0) < 1e-9, \
+        f"高频开战房间被误折价: {pknow.room_damage_prior('Monster', 8.0)}"
+    # 样本不足（到访<5）保守回退 1.0：维持必战假设
+    pknow.stats["rooms"]["RareRoom"] = {"visits": 3, "outcome_sum": 0.0,
+                                        "hp_lost_sum": 30.0, "damage_events": 3}
+    assert abs(pknow.room_damage_prior("RareRoom", 10.0) - 10.0) < 1e-9, \
+        f"小样本房间发生率未保守回退: {pknow.room_damage_prior('RareRoom', 10.0)}"
+
+    # 3xy) 路径投影罚分去重（第 96 局复盘）：死亡投影曾与血量线/Boss入场线
+    #      三重叠加（同一坏结局记三次账），二幕全图饱和在 -165~-195。中途死亡
+    #      只记一次后：垂死路径的评分须回到 -100 以内（保留存活深度梯度），
+    #      且「撑到 Boss 但血量不达标」的续航路线必须胜过半路暴毙路线。
+    ds_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-destack-"))
+    ds_know = knowledge.Knowledge(ds_dir)
+    ds_pol = policy.Policy(ds_know)
+
+    def destack_map(hp_now):
+        heads = [
+            {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+             "children": [{"row": 2, "col": 0}]},
+            {"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+             "children": [{"row": 2, "col": 1}]},
+        ]
+        chain_a = []
+        for r in range(2, 13):
+            g = {"row": r, "col": 0, "node_type": "Boss" if r == 12 else "Monster"}
+            if r < 12:
+                g["children"] = [{"row": r + 1, "col": 0}]
+            chain_a.append(g)
+        chain_b = []
+        for r in range(2, 13):
+            nt = "Monster" if r == 11 else ("Boss" if r == 12 else "Event")
+            g = {"row": r, "col": 1, "node_type": nt}
+            if r < 12:
+                g["children"] = [{"row": r + 1, "col": 1}]
+            chain_b.append(g)
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": heads + chain_a + chain_b,
+                      "boss_node": {"row": 12}},
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+        return ds_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    d_ds = destack_map(30)   # 37% 血：怪物链半路暴毙 vs 篝火+事件链续航进场
+    assert d_ds.params.get("option_index") == 1, \
+        f"去重后续航路线未胜出: {d_ds.reason}"
+    m_dying = re.search(r"Monster\(1,0\)=(-?[0-9.]+)", d_ds.reason)
+    assert m_dying and -100.0 < float(m_dying.group(1)) < 0, \
+        f"垂死路径评分仍被三重罚分饱和: {m_dying.group(1)}（{d_ds.reason}）"
+    assert "投影中途死亡" in d_ds.reason, f"死亡投影未留痕: {d_ds.reason}"
+
+    # 3xz) 绝境投影篝火回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，
+    #      而地图端全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——
+    #      随后 F23 -37、F31 被漏斗逼进强制精英 -68 阵亡。投影绝望时篝火的
+    #      第一职责是把血量带回安全区，锻造让位；接近满血时仍锻造不浪费。
+    def dire_rest_state():
+        return {"screen": "REST", "available_actions": ["choose_rest_option"],
+                "rest": {"options": [
+                    {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+                    {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+                "run": {"current_hp": 69, "max_hp": 87, "gold": 0, "floor": 22,
+                        "deck": [{"card_id": "RAMPAGE_X", "upgraded": False}]}}
+    ctx.rest_proj_hp_pct = 0.36   # 复现 96 局 F22 决策时的投影值
+    d_dire = pol.decide(dire_rest_state(), ctx)
+    assert d_dire.tags and d_dire.tags[0] == ("rest", "heal") and "绝境" in d_dire.reason, \
+        f"绝境投影未改回血: {d_dire.reason}"
+    ctx.rest_proj_hp_pct = 0.85   # 投影健康：维持锻造长线投资
+    d_norm = pol.decide(dire_rest_state(), ctx)
+    assert d_norm.tags and d_norm.tags[0] == ("rest", "smith"), \
+        f"投影健康时不应放弃锻造: {d_norm.reason}"
+    ctx.rest_proj_hp_pct = 0.36   # 回血边际不足最大生命 8%（84/87）→ 仍锻造
+    st_high = dire_rest_state()
+    st_high["run"] = dict(st_high["run"], current_hp=84)
+    d_high = pol.decide(st_high, ctx)
+    assert d_high.tags and d_high.tags[0] == ("rest", "smith"), \
+        f"回血将溢出时仍应锻造: {d_high.reason}"
+    ctx.rest_proj_hp_pct = 1.0    # 还原，防泄漏后续用例
+
+    # 3ya) 商店购卡与奖励端同门槛（第 96 局复盘）：F30 卡组已在软上限边缘，
+    #      商店仍按固定阈值 1.0 买进净价值仅 3.0 的巨像（73金）——同一张牌在
+    #      奖励端会因动态拾取门槛被拒。膨胀卡组下商店必须拒收注水牌；
+    #      单薄卡组下合格牌照常可买（门槛不能一刀切杀死商店价值）。
+    def shop_gate_state(deck):
+        return {"screen": "SHOP",
+                "available_actions": ["buy_card", "close_shop_inventory"],
+                "shop": {"is_open": True, "can_close": True,
+                         "cards": [{"index": 0, "card_id": "SHOP_SMALL_GUARD", "name": "小盾",
+                                    "card_type": "Skill", "energy_cost": 1,
+                                    "is_stocked": True, "enough_gold": True, "price": 75,
+                                    "rules_text": "获得4点格挡",
+                                    "dynamic_values": [{"name": "Block", "current_value": 4}]}],
+                         "relics": [], "card_removal": None},
+                "run": {"current_hp": 68, "max_hp": 87, "gold": 500, "floor": 30,
+                        "deck": [dict(c) for c in deck]}}
+    bloat_deck = [{"card_id": f"BLOAT_A_{i}", "card_type": "Attack", "energy_cost": 1}
+                  for i in range(22)]
+    d_sg1 = pol.decide(shop_gate_state(bloat_deck), ctx)
+    assert d_sg1.action == "close_shop_inventory", \
+        f"膨胀卡组下商店仍买入低于动态门槛的注水牌: {d_sg1.action}（{d_sg1.reason}）"
+    d_sg2 = pol.decide(shop_gate_state([]), ctx)
+    assert d_sg2.action == "buy_card", \
+        f"单薄卡组下合格牌被误拒: {d_sg2.action}（{d_sg2.reason}）"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

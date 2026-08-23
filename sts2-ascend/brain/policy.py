@@ -522,11 +522,13 @@ class Policy:
             dfs(start_key, [start_key])
             return out or [[start_key]]
 
+        # 卡组越强战斗越短：掉血先验按非基础牌数打折（每张 -3%，最多 -40%）
+        deck_ease = 1.0 - min(0.40, 0.03 * good_cards)
+
         def simulate(start_node, path_keys):
-            # 卡组越强战斗越短：掉血先验按非基础牌数打折（每张 -3%，最多 -40%）
-            deck_ease = 1.0 - min(0.40, 0.03 * good_cards)
             score, cur_hp, notes = 0.0, float(hp), []
             mid_gate_hit = False
+            died_mid = False
             for depth, key in enumerate(path_keys):
                 gnode = graph.get(key) or {}
                 nt = start_node.get("node_type", "Unknown") if depth == 0 else gnode.get("node_type", "Unknown")
@@ -565,16 +567,37 @@ class Policy:
                 if nt == "Unknown" and act_idx >= 1:
                     cur_hp -= prior * deck_ease * act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
                 if nt == "RestSite":
-                    cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
+                    # 投影与行为一致（第 99~102 批复盘）：篝火并非总是回血——
+                    # _rest 在血量 ≥ 锻造安全线时会改锻造（非 Boss 前夜），Boss 前夜
+                    # ≥85% 也可能锻造。旧投影无条件 +30%，系统性高估锻造路线的
+                    # 进 Boss 血量：100 局 F12 篝火投影「预计 98%」，实际锻造后
+                    # 以 82% 进场被 70 点战损处决——投影乐观反过来为锻造背书，
+                    # 形成循环论证。这里按投影血量镜像 _rest 的核心规则
+                    # （绝境回血/溢出改锻造属二阶修正，不入投影）
+                    hpp_now = max(0.0, cur_hp) / max_hp
+                    boss_eve = boss_row is not None and key[0] == int(boss_row) - 1
+                    will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55)) or (
+                        boss_eve and hpp_now < float(pol.get("boss_eve_smith_hp_pct", 0.85)))
+                    if will_heal:
+                        cur_hp = min(float(max_hp), cur_hp + heal_frac * max_hp)
                 if cur_hp <= 0:
                     # 死亡投影保留"撑得更久"的序信息：死得越晚罚得越轻。
                     # 第 43 局实证：低血量时所有候选都吃满 -100，候选间评分差被压成
                     # 噪声，能续命的篝火与当场暴毙的精英无法区分（还给了闸门反转可乘之机）
                     score -= max(0.0, pol.get("path_death_penalty", 100.0) - 3.0 * min(depth, 15))
+                    died_mid = True
                     break
             final_pct = max(0.0, cur_hp) / max_hp
             if mid_gate_hit:
                 notes.append("路径中段含未达标精英，投影罚分")
+            # 罚分去重（第 96 局复盘）：死亡投影已是最重罚分，血量线/Boss入场线
+            # 与死亡是同一坏结局的三次记账——96 局二幕全图被叠加罚到 -165~-195、
+            # 「预计进Boss血量 0%」而实际一路零伤事件走到 70% 血，评分彻底失去
+            # 分辨力。中途死亡只记一次；撑到 Boss 但血量不达标的候选反而应优于
+            # 半路暴毙（存活深度信息由死亡罚分的 -3/深度梯度保留）
+            if died_mid:
+                notes.append("投影中途死亡")
+                return score, notes, final_pct
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
             if final_pct < floor_pct:
                 score -= (floor_pct - final_pct) * 40.0
@@ -591,14 +614,15 @@ class Policy:
             return score, notes, final_pct
 
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
+        best_path = []
         details = []
         for n in nodes:
             nt = n.get("node_type", "Unknown")
-            best_ps, best_pnotes, best_pproj = -1e9, [], 0.0
+            best_ps, best_pnotes, best_pproj, best_ppath = -1e9, [], 0.0, []
             for pth in paths_from((n["row"], n["col"])):
                 ps, pnotes, pproj = simulate(n, pth)
                 if ps > best_ps:
-                    best_ps, best_pnotes, best_pproj = ps, pnotes, pproj
+                    best_ps, best_pnotes, best_pproj, best_ppath = ps, pnotes, pproj, pth
             if nt == "Elite" and elite_gate_f < 1.0:
                 # 精英闸门乘在整条候选路径总分上（而非只罚首节点权重）：
                 # 子树优势（精英后接篝火/宝箱的组合分）曾完全吞掉首节点减权。
@@ -621,6 +645,7 @@ class Policy:
                 best_node, best_score = n, best_ps
                 best_detail = label
                 best_notes, best_proj = best_pnotes, best_pproj
+                best_path = best_ppath
 
         note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
         # 留痕诚实化（第 90~91 批复盘）：91 局 F14 以 55% 血选了精英（闸门否决后
@@ -637,6 +662,26 @@ class Policy:
         ctx.rest_before_boss = (best_node.get("node_type") == "RestSite"
                                 and boss_row is not None
                                 and int(best_node.get("row", -999)) == int(boss_row) - 1)
+        # 绝境投影传递（第 96 局复盘）：把「沿选中路径打下去预计进 Boss 的血量」
+        # 交给 _rest——投影绝望（<rest_dire_proj_pct）时篝火回血优先于锻造
+        ctx.rest_proj_hp_pct = best_proj
+        # 下一战预演传递（第 99~102 批复盘）：篝火若选了锻造，紧接着的第一场
+        # 战斗要把血量打到什么位置？99 局 61% 血在强制精英前夜锻造，精英 -49
+        # 正好处决（回血 +24 即可生还）；100 局 62% 血锻造后 82% 进 Boss 被
+        # 70 点战损收走。沿选中路径找首个必经战斗节点（Monster/Elite），把它的
+        # 期望战损（占血条比例）交给 _rest 做锻造前预演；无必经战斗则归零
+        next_fight_loss = 0.0
+        if best_node.get("node_type") == "RestSite":
+            for key in (best_path or [])[1:]:
+                gnode = graph.get(key) or {}
+                nnt = gnode.get("node_type", "Unknown")
+                if boss_row is not None and key[0] >= int(boss_row):
+                    break  # Boss 前夜的入场血量问题由 boss-eve 分支处理
+                if nnt in ("Monster", "Elite"):
+                    prior = self.know.room_damage_prior(nnt, float(priors.get(nnt, 8)))
+                    next_fight_loss = prior * deck_ease * act_mul / max_hp
+                    break
+        ctx.rest_next_fight_loss_frac = next_fight_loss
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
         return Decision("choose_map_node", {"option_index": best_node["index"]},
                         f"路径规划：{best_detail}（路径分 {best_score:.2f}，预计进 Boss 血量 {best_proj:.0%}{note_txt}）；"
@@ -1299,20 +1344,30 @@ class Policy:
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)
             # 兜底：硬仗（致死/精英/低血放血）里无法分类的药水也值得一试——
             # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）。
-            # 仅限 premium 场合：普通战里不可分类的药水同样保留（防绕过增益保留策略）
+            # 默认反转（第 96 局复盘，兑现 94~95 批处方）：「能力/power」补词后
+            # 又漏出第三批无法分类的药水（缚魂/无色/固化——96 局 Boss 战三者全部
+            # 睡到 38% 血才被旧兜底掏出，其中固化药水单瓶 +33 甲）。增益类药水的
+            # 价值随战斗剩余时长衰减，premium 硬仗的前 3 回合正是兑现窗口：
+            # 未知类别直接放行，不再等血量跌破 50%。普通战仍保留（防绕过增益保留策略）
             cb_player = (state.get("combat") or {}).get("player") or {}
             cb_hp = cb_player.get("current_hp", 1)
             cb_max = max(1, cb_player.get("max_hp", 1))
             cb_incoming = sum((it.get("total_damage") or 0)
                               for e in enemies for it in (e.get("intents") or []))
-            if (premium and enemies and cb_incoming > cb_player.get("block", 0)
-                    and cb_hp <= 0.5 * cb_max):
+            try:
+                cb_turn = int(state.get("turn") or 99)
+            except (TypeError, ValueError):
+                cb_turn = 99
+            early_premium = premium and enemies and cb_turn <= 3
+            if early_premium or (premium and enemies and cb_incoming > cb_player.get("block", 0)
+                                 and cb_hp <= 0.5 * cb_max):
                 self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
+                when_txt = "硬仗开局" if early_premium else "低血兜底"
                 return Decision("use_potion", params,
-                                f"战斗：硬仗兜底使用药水【{name}】（描述无法分类，宁滥勿囤）",
+                                f"战斗：{when_txt}使用药水【{name}】（描述无法分类，宁滥勿囤）",
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
         return None
 
@@ -1418,9 +1473,15 @@ class Policy:
                 value += 1.5 + min(2.5, (0.35 - ratio) * 12.0)
             # 绝对输出饥饿（第 88~89 批复盘）：占比达标但全是低伤打击时，
             # 高质攻击（单牌总伤 ≥12 且 ≥7 伤/能耗，即显著强于打击）额外加分——
-            # 质量门槛确保只奖励「替换打击级输出」的牌，弱攻击不因饥饿而虚高
-            if burst_starved and dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0:
-                value += 3.0
+            # 质量门槛确保只奖励「替换打击级输出」的牌，弱攻击不因饥饿而虚高。
+            # 加分随缺口深度放大（第 106 局复盘）：固定 +3 压不过 learned value
+            # 的 ±6 摆动与格挡牌基础分，106 局爆发 18~21(<30) 照旧拿了一堆
+            # 防御/功能牌，Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速——
+            # 缺口越深（burst 距门槛越远）纠偏力度越大，burst≈0 时达 base+extra
+            if dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0 and burst_starved:
+                deficit = clamp(1.0 - burst / max(1e-6, float(pol.get("deck_burst_floor", 30.0))), 0.0, 1.0)
+                value += (float(pol.get("burst_starve_bonus_base", 3.0))
+                          + float(pol.get("burst_starve_bonus_extra_max", 4.0)) * deficit)
             # AoE 定价随存量递减（第 56~57 局复盘）：致死榜前列全是多体/召唤组合
             # （第 57 局 16 张入组牌 0 张群体攻击，双子 Boss 七回合斩杀失败），
             # 首张群体攻击是结构性稀缺资源(+3)；已有 1 张仍增值(+2)；
@@ -1477,7 +1538,13 @@ class Policy:
         # 压不住格挡/抽牌启发式的 12+ 基础分，必须用大额惩罚对冲
         if self.know.card_is_proven_bad(card.get("card_id", "")):
             value -= 12.0
-        value += self.know.card_value(card.get("card_id", ""))
+        # 拾取端 learned value 封顶（第 106 局复盘）：outcome=到达层数是
+        # 幸存者偏差噪声——能被拾取的前提就是活到奖励屏，早楼层 offered 的牌
+        # 自动积累高 outcome。RAMPAGE 靠 +6 学习分在 55 局里自我强化循环拾取
+        # （106 局又拿 3 张），FIEND_FIRE n=4 收缩后仍摆动 +7.6。封顶保留
+        # 学习信号的方向、砍掉幅度；战斗端本就 ×0.3 不受影响
+        _cv_cap = float(pol.get("card_value_pick_cap", 3.0))
+        value += clamp(self.know.card_value(cid), -_cv_cap, _cv_cap)
         self.know.commit_card_seen(card.get("card_id", ""))
         return value
 
@@ -1619,11 +1686,18 @@ class Policy:
             reason = (f"战斗献祭：【{pick.get('name')}】（敌方强制交牌，交出最无价值者；"
                       f"候选：{' / '.join(c.get('name', '?') for c in candidates)}）")
         elif upgrading:
+            # 锻造目标与卡组爆发缺口联动（第 106 局复盘）：爆发饥饿时升级
+            # 攻击牌的优先级加倍——升级是免费的战力放大，缺输出的局面把砧
+            # 让给防御/功能牌等于浪费整个篝火
+            _up_deck = (state.get("run") or {}).get("deck", [])
+            _up_floor = float(self.know.policy.get("deck_burst_floor", 30.0))
+            _up_starved = bool(_up_deck) and self.deck_burst(_up_deck) < _up_floor
+            _atk_bonus = 4.0 if _up_starved else 2.0
             best, best_v = None, -1e9
             for c in candidates:
                 if c.get("upgraded"):
                     continue
-                v = self.eval_reward_card(c, []) + (2.0 if is_attack(c) else 0.0)
+                v = self.eval_reward_card(c, []) + (_atk_bonus if is_attack(c) else 0.0)
                 if v > best_v:
                     best, best_v = c, v
             if best is None:
@@ -1710,15 +1784,22 @@ class Policy:
                                 f"商店：付费删牌（预留 {pol['removal_gold_reserve']} 金后仍充足）",
                                 tags=[("shop_remove", None)], wait=0.9)
 
+        # 卡牌购买与奖励端同门槛（第 96 局复盘）：F30 卡组已在软上限边缘，
+        # 商店仍按固定阈值 1.0 买进净价值仅 3.0 的巨像等注水牌（73 金）——
+        # 同一张牌在奖励端会因动态拾取门槛被拒。卡牌购买必须通过
+        # max(动态拾取门槛, 商店基线)；遗物/药水不受卡组膨胀约束，维持原基线
+        shop_pick_line = max(float(pol["shop_relic_threshold"]), self._pick_threshold(deck))
         best_action, best_score, best_reason, best_tags = None, -1e9, "", []
         for c in shop.get("cards", []):
             if not c.get("is_stocked") or not c.get("enough_gold"):
                 continue
             v = self.eval_reward_card(c, deck) - c.get("price", 0) / 120.0
+            if v <= shop_pick_line:
+                continue
             if v > best_score:
                 best_action = ("buy_card", c["index"])
                 best_score = v
-                best_reason = f"购买卡牌【{c.get('name')}】（{c.get('price')}金，价值{v:.1f}）"
+                best_reason = f"购买卡牌【{c.get('name')}】（{c.get('price')}金，价值{v:.1f}≥门槛{shop_pick_line:.1f}）"
                 best_tags = [("card_pick", c.get("card_id")), ("shop_buy_card", c.get("card_id"))]
         for r in shop.get("relics", []):
             if not r.get("is_stocked") or not r.get("enough_gold"):
@@ -1770,24 +1851,61 @@ class Policy:
             boss_loss, boss_n = self.know.boss_loss_stats()
             min_n = int(pol.get("boss_eve_smith_min_samples", 3))
             entry_line = float(pol.get("boss_entry_min_hp_pct", 0.65))
+            # 锻造线（第 97~98 批复盘）：战损合并记账后 Boss 整场场均战损（≈50~80）
+            # 必然 ≥ 回血量(24)，仅凭战损条件会在 72% 血也改锻造——重演第 48 局惨案。
+            # 回血在其价值过半溢出之前仍是有效投资：血量 + 回血量×(1-浪费比) ≥ 满血
+            # （默认允许浪费一半）才值得放弃回血的保命价值去换锻造的全局复利
+            smith_line = max(entry_line, float(pol.get("boss_eve_smith_hp_pct", 0.85)))
             # 战损线按「回血量 × heal_mult」计（第 84~85 批复盘接线）：
             # 79 局复盘定义的 boss_eve_smith_heal_mult 此前从未被读取，
             # 条件一直退化回旧版 `≥满血`（实测 Boss 分档场均 23.8，永远够不到）
             heal_amount = heal_frac * max_hp * float(pol.get("boss_eve_smith_heal_mult", 1.0))
             if (smith_ok and boss_n >= min_n and boss_loss >= heal_amount
-                    and hp_pct >= entry_line):
+                    and hp_pct >= smith_line):
                 return Decision("choose_rest_option", {"option_index": smith["index"]},
-                                f"篝火：Boss 前夜改锻造（入场线 {entry_line:.0%} 已达标 {hp_pct:.0%}；"
-                                f"历史Boss场均战损{boss_loss:.0f}≥回血量{heal_amount:.0f}、样本{boss_n}——"
+                                f"篝火：Boss 前夜改锻造（血量 {hp_pct:.0%} ≥ 锻造线 {smith_line:.0%}；"
+                                f"历史Boss整场场均战损{boss_loss:.0f}≥回血量{heal_amount:.0f}、样本{boss_n}——"
                                 f"回血救不了败局，提速斩杀才是活路）",
                                 tags=[("rest", "smith")], wait=1.2)
+            why_heal = (f"历史Boss战损{boss_loss:.0f}<回血量{heal_amount:.0f}或样本不足({boss_n})"
+                        if boss_n < min_n or boss_loss < heal_amount
+                        else f"血量{hp_pct:.0%}<锻造线{smith_line:.0%}，回血仍是有效投资")
             return Decision("choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}，Boss 预期战损过半，锻造不救命）",
+                            f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}；{why_heal}）",
                             tags=[("rest", "heal")], wait=1.2)
 
         # 锻造区间：血量 ≥ smith_min_hp_pct 即可锻造。旧逻辑回血阈值 70% 过高，
         # 第 28 局连续两个篝火都在 46%/48% 回血、整局零锻造，卡组停在基础形态
         heal_line = float(pol.get("smith_min_hp_pct", pol["rest_heal_threshold"]))
+        # 绝境投影回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，而地图端
+        # 全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——随后 F23
+        # -37、F31 被地图漏斗逼进强制精英 -68 阵亡。长线投资的前提是活到兑付日，
+        # 投影绝望时回血优先于锻造；边际回复不足最大生命 8%（接近满血、回了个
+        # 寂寞）时仍锻造，不浪费篝火
+        dire_line = float(pol.get("rest_dire_proj_pct", 0.45))
+        proj = getattr(ctx, "rest_proj_hp_pct", None)
+        dire_gain = min(heal_frac * max_hp, max_hp - run.get("current_hp", 0))
+        if (heal and smith_ok and proj is not None and proj < dire_line
+                and hp_pct >= heal_line and dire_gain >= 0.08 * max_hp):
+            return Decision("choose_rest_option", {"option_index": heal["index"]},
+                            f"篝火：绝境投影优先回血（路径投影进Boss仅{proj:.0%}<{dire_line:.0%}，"
+                            f"前路战损预期压倒锻造收益；本次可回复{dire_gain:.0f}点）",
+                            tags=[("rest", "heal")], wait=1.2)
+        # 锻造前下一战预演（第 99~102 批复盘）：地图端已把「沿选中路径首个必经
+        # 战斗的期望战损」传来。放弃回血去锻造的前提是下一战打完还站得住——
+        # 99 局 61% 血在强制精英前夜锻造，精英 -49 正好处决（回血 +24 即可生还）；
+        # 若「当前血量 - 期望战损」跌破紧急线，先把血量垫回安全区再上砧。
+        # 边际回复不足 8% 血条（接近满血）时不浪费篝火，维持锻造
+        next_loss = float(getattr(ctx, "rest_next_fight_loss_frac", 0.0) or 0.0)
+        urgent_line = float(pol.get("rest_urgent_hp_pct", 0.45))
+        if (heal and smith_ok and hp_pct >= heal_line and next_loss > 0.0
+                and hp_pct - next_loss < urgent_line
+                and dire_gain >= 0.08 * max_hp):
+            return Decision("choose_rest_option", {"option_index": heal["index"]},
+                            f"篝火：锻造预演改回血（下一战期望战损{next_loss:.0%}，"
+                            f"锻造后预计仅剩{hp_pct - next_loss:.0%}<紧急线{urgent_line:.0%}；"
+                            f"先回血{heal_frac:.0%}垫安全区）",
+                            tags=[("rest", "heal")], wait=1.2)
         if heal and (hp_pct < heal_line or not smith_ok):
             # 回血将溢出（接近回满）且仍有可升级卡：改锻造，不浪费篝火
             if smith_ok and hp_pct + heal_frac >= 0.97:

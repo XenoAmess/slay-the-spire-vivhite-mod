@@ -89,6 +89,9 @@ DEFAULT_POLICY = {
     "potion_comp_loss_frac": 0.30,  # 敌方组合场均战损占比达到此值 → 解锁增益/攻击药水（不再只认精英/Boss 房）
     "boss_eve_smith_min_samples": 3,  # Boss 前夜智能锻造所需的 Boss 分档最小样本数
     "boss_eve_smith_heal_mult": 1.0,  # Boss 前夜改锻造的战损线：场均Boss战损 ≥ 回血量×此倍数即视为"回血救不了"（79局复盘：旧条件 ≥满血 永远够不到，实测场均≈28）
+    "boss_eve_smith_hp_pct": 0.85,  # Boss 前夜改锻造的入场血量线：多阶段战损按整场合并后（第 97~98 批复盘）整场战损≈65 必然≥回血量24，
+                                    # 若只看战损条件会在 72% 血也去锻造、重演第 48 局惨案——回血在其价值过半溢出（血量+回血量×0.5≥满血）
+                                    # 之前仍是有效投资，此时优先回血保入场线
     # --- Boss 攻坚（第 82~83 批复盘） ---
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---
@@ -104,6 +107,16 @@ DEFAULT_POLICY = {
     "kill_race_blk_mult": 0.70,      # 竞速失败时格挡权重乘区：买不到胜利的奢侈格挡把能量还给输出（致死当回合格挡仍由 lethal 分支兜底）
     # --- 执行端补丁键（第 79 局复盘） ---
     "desperate_confirm_ticks": 2,  # 孤注一掷观测确认窗：致死且无可负担格挡须连续 N tick 一致才允许孤注（防手牌渲染瞬时不完整触发假孤注，79局F23 实证）
+    # --- 绝境投影与统计口径（第 96 局复盘） ---
+    "rest_dire_proj_pct": 0.45,   # 绝境投影线：路径投影进Boss血量低于此值时，篝火回血优先于锻造（96局F22 在79%血锻造后 F23-37/F31强制精英阵亡）
+    "proven_bad_margin": 3.0,     # 「统计实锤差牌」判定边际：场均低于全局均值此值即硬回避（旧 4.0 让 SETUP_STRIKE 9.4/BULLY 10.0 长期卡在缝隙反复被拿）
+    # --- 拾取端学习信号治理（第 106 局复盘） ---
+    "card_value_pick_cap": 3.0,   # 拾取端 card_value 贡献封顶（±）：outcome=到达层数是幸存者偏差噪声（能被拾取的前提就是活到奖励屏），
+                                  # RAMPAGE 靠 +6 学习分在 55 局里自我强化循环拾取（106 局又拿 3 张）——学习信号保留方向、砍掉摆动幅度
+    "burst_starve_bonus_base": 3.0,       # 输出饥饿对高质攻击的基础加分（原固定 +3）
+    "burst_starve_bonus_extra_max": 4.0,  # 输出饥饿加分随缺口深度放大上限：106 局整场爆发 18~21(<门槛30) 只吃 +3，
+                                          # 压不过 learned value 摆动与格挡牌基础分——Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速；
+                                          # 缺口越深加成越大（burst=0 时达 base+extra_max）
 }
 
 DEFAULT_PROGRESSION = {
@@ -275,16 +288,19 @@ class Knowledge:
         return (shrunk - self.global_avg_outcome()) + e.get("bias", 0.0)
 
     def card_is_proven_bad(self, card_id: str) -> bool:
-        """统计实锤的低价值牌：样本 ≥4 局且场均收益比全局均值低 4+ 层。
+        """统计实锤的低价值牌：样本 ≥4 局且场均收益比全局均值低 proven_bad_margin+。
 
         动机（第 30~32 局复盘）：EXPECT_A_FIGHT(6.6分/5局)、BASH(7.2分/6局) 长期
         低于平均仍被反复拾取——learned bias（±4 上限）在奖励端 12+ 的启发式基础分
         面前是噪声。此判定供奖励端 -12 分硬回避，比人工 bias 更根本、随数据自演化。
+        边际参数化（第 96 局复盘）：旧硬编码 4.0 让 SETUP_STRIKE(9.4)、BULLY(10.0)
+        恰好卡在判定线外反复入组；默认收紧到 3.0，由 policy.json 可继续演化。
         """
         e = self.stats["cards"].get(card_id)
         if not e or e.get("picked", 0) < 4:
             return False
-        return (e["outcome_sum"] / e["picked"]) < self.global_avg_outcome() - 4.0
+        margin = float(self.policy.get("proven_bad_margin", 3.0))
+        return (e["outcome_sum"] / e["picked"]) < self.global_avg_outcome() - margin
 
     def relic_value(self, relic_id: str) -> float:
         e = self.stats["relics"].get(relic_id)
@@ -370,11 +386,33 @@ class Knowledge:
         mean = sum(e.get("hp_lost_sum", 0.0) for e in en.values()) / tot_n
         return clamp(mean / 12.0, 0.9, 1.5)
 
+    def room_combat_rate(self, node_type: str) -> float:
+        """房间战斗发生率：P(进入该类型房间后真的开战)。
+
+        第 96 局复盘新增：damage_events 只统计「该房间真的打了仗」的样本
+        （_settle_combat 才入账），而 Unknown/Event 类房间大量是事件/商店/宝箱——
+        零战损的到访从未进入分母。生涯实测 Unknown 到访 148 次仅 33 次开战（22%），
+        投影却按满额战斗计费，96 局二幕 3 个 Unknown 全是事件（其一还回血 +10），
+        路径分饱和在 -165~-195、全图被投影成「进Boss血量 0%」，评分彻底失去分辨力。
+        样本不足（到访 <5）时保守返回 1.0（视同必战，维持旧口径）。
+        """
+        e = self.stats["rooms"].get(node_type)
+        if not e:
+            return 1.0
+        visits = int(e.get("visits", 0) or 0)
+        if visits < 5:
+            return 1.0
+        return clamp(e.get("damage_events", 0) / visits, 0.05, 1.0)
+
     def room_damage_prior(self, node_type: str, static_prior: float) -> float:
         """路径模拟掉血先验的动态校准：rooms 实测场均掉血与静态先验加权混合。
 
         样本 <3 时回落静态先验 × 敌人统计整体校准系数；3~10 线性加权；
         ≥10 封顶 70% 实测权重（修复 Elite 静态先验 28 vs 实测 40+ 的低估）。
+        发生率条件化（第 96 局复盘）：混合结果再乘 P(开战)，把先验语义从
+        E[掉血|打了仗] 修正为路径投影真正需要的 E[掉血|到访]——Unknown 类
+        房间按开战率 22% 折价后，二幕单个 Unknown 的期望掉血从 ~35 回落到 ~5，
+        与实测一致（多数 Unknown 是零伤事件）。
         """
         e = self.stats["rooms"].get(node_type)
         if not e or e.get("damage_events", 0) < 3:
@@ -382,7 +420,9 @@ class Knowledge:
             return float(static_prior) * cal
         measured = e["hp_lost_sum"] / max(1, e["damage_events"])
         w = min(0.7, e["damage_events"] / 10.0)
-        return (1.0 - w) * float(static_prior) + w * measured
+        blended = (1.0 - w) * float(static_prior) + w * measured
+        rate = self.room_combat_rate(node_type)
+        return blended * rate
 
     def room_damage_prior_act(self, node_type: str, static_prior: float, act: int) -> float:
         """分幕掉血先验（第 79 局复盘新增）：优先用本幕实测场均掉血。
@@ -391,6 +431,8 @@ class Knowledge:
         二幕单场大失血型组合（SPINY_TOAD 本批 -40/-29）让投影系统性乐观，
         F20 选路预测进 Boss 82%，两场战斗后实际只剩 27%。有分幕样本（≥3）
         时以更高实测权重混合；无分幕数据时回落跨幕旧口径（向后兼容，无需迁移）。
+        实测项同步乘战斗发生率（第 96 局复盘）：与跨幕口径保持同一语义
+        （E[掉血|到访]），否则分幕样本一够数就会把发生率折扣重新冲掉。
         """
         e = self.stats.get("rooms_act", {}).get(f"{node_type}@{act}")
         if not e or e.get("damage_events", 0) < 3:
@@ -398,7 +440,7 @@ class Knowledge:
         baseline = self.room_damage_prior(node_type, static_prior)
         measured = e["hp_lost_sum"] / max(1, e["damage_events"])
         w = min(0.85, e["damage_events"] / 8.0)
-        return (1.0 - w) * baseline + w * measured
+        return (1.0 - w) * baseline + w * measured * self.room_combat_rate(node_type)
 
     def event_option_value(self, event_id: str, option_key: str) -> tuple[float, int]:
         """Return (score, sample_count). Score mixes hp/gold deltas and death penalty.
