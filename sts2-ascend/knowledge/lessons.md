@@ -2707,3 +2707,14 @@
 - 对局日志改为增量落盘（每 15 决策或换层，带 in_progress 标记）+ 重连按 run_id 接续局史；save_run_log 同 run_id 复用同一文件。218 局曾被记成「24 决策/拿牌仅 STOMP/0 遗物」的假数据并照常喂演化（24≥10 绕过残缺局守卫）——只在终局落盘的日志等于没有日志。
 - 复盘摘要（llm_review）跳过 in_progress 半局文件；看到与历史趋势剧烈背离的单局记录，先怀疑数据通路再怀疑策略。
 - 死因格局不变：一幕 Boss 输出缺口（KIN 双子 32 死 / VANTOM 30 / CEREMONIAL_BEAST 28）；本批未动策略参数，deck_burst_floor 已 38，逼近 45 顶格后按预案评估战斗端接替旋钮。
+
+## 第 221 局复盘（2026-08-24 07:25）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：HAVOC, FLAME_BARRIER, SHRUG_IT_OFF
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血47; F6 Monster战 掉血33（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FIEND_FIRE(26分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（11回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；deck_burst_floor: 38.00 → 39.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
+- 生涯战绩：0/221 胜，当前目标进阶 0
