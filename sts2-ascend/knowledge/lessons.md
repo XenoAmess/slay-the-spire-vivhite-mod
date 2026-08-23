@@ -1928,3 +1928,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.00 → 3.30（Boss 高血进场长战死（90%，10回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 4.00 → 4.50（Boss 高血进场长战死（10回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/151 胜，当前目标进阶 0
+
+## 第 152 局复盘（2026-08-23 20:15）
+- 结果：💀 失败｜进阶 0｜到达层数 19｜当局评分 19
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：CRUELTY, RUPTURE, RUPTURE, BLUDGEON, MANGLE, HELLRAISER, PANIC_BUTTON, CINDER, EVIL_EYE, CINDER, MOLTEN_FIST, IMPERVIOUS
+- 本局遗物：LANTERN
+- 战斗记录：F6 Monster战 掉血54; F9 Monster战 掉血29; F12 Monster战 掉血24; F14 Monster战 掉血4; F17 Boss战 掉血44; F19 Monster战 掉血80（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，BARRICADE(22分/4局)，FASTEN(22分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/152 胜，当前目标进阶 0
