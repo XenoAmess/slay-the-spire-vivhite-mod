@@ -1728,3 +1728,47 @@ Starting brain via runner (auto-restart + auto-rollback; Ctrl+C to stop)...
 [16:45:32] [COMBAT/F21] 战斗：打出【邪眼】（格挡8）；敌意图总伤13，我方66血/0甲；⚠高危组合（6战2死），转防守节奏；意图升级+16，防御前置
 [16:45:33] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（痛击✗,防御✗,与我一战！✗）
 [16:45:34] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[llm] 复盘会话结束（exit=0）。输出尾部：
+ntradicts the earlier dump showing `\_elite_grey_veto\`.
+
+Wait — maybe the file actually contained BOTH? No. Let me just re-dump that line to verify current state.
+⚙ bash {}
+· tokens 114166 ·
+⚙ bash {}
+· tokens 114308 ·
+💭 Still `\_elite_grey_veto\` — my earlier replace didn't match due to escaping (bad count was 0, and the "fixed: 1" count was matching the pre-existing backtick usage elsewhere in the file... wait no, count was on the NEW t which equals old t unchanged; it found 1 occurrence of `` `_elite_grey_veto` `` somewhere earlier in the file? Possibly from a previous batch review mentioning it. Fine.)
+
+Fix properly using Edit tool now — I know the exact line. The Edit tool requires the file to have been read first. I haven't Read meta_review.md with the read tool in this session (only bash tail). The edit tool may error "must use Read at least once". Let me read a small slice of meta_review.md around the end via read tool, then edit.
+⚙ bash {}
+· tokens 114642 ·
+💭 Fixed: now 2 correct backtick occurrences (one from an earlier batch's review + mine), 0 backslash leftovers.
+
+Now re-run selfcheck one final time to be sure nothing else broke (docs don't affect it, but cheap insurance — actually already passed after code changes; docs are .md only. Skip? The instruction: run selfcheck after modifying any .py — done, passed. The doc append doesn't require rerun. But to be thorough and since host may verify, quickly rerun anyway... it takes a while (the earlier runs took ~30-60s). It already printed SELFCHECK OK after final code state; no code changed since. Skip rerun.
+
+Update todos and give ≤200 char summary.
+⚙ todowrite {}
+修复完成。收尾更新任务状态：
+· tokens 115011 ·
+**复盘总结（第 122 局）**：核心发现——精英灰区悲观复核数学不可满足（放行需入场血量 ≥95%~104%，越过 90% 硬线），灰区分支恒假成死代码，精英被事实硬门：122 局仅 45 次到访、遗物断供 → 输出不足 → Boss 磨死的因果闭环锁死全部胜机。已将复核问法改为「悲观情形仍能活命」（新键 elite_grey_survival_floor=0.40，旧键回退），灰区恢复约 [79%,90%) 带宽，尾部威慑交由死亡棘轮弹性承担；重写 3qq、新增 3qq2 用例，SELFCHECK OK，报告与经验已沉淀至 meta_review.md 与 lessons.md。
+· tokens 115416 ·
+
+[16:45:35] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:36] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:36] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:37] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:38] [COMBAT/F21] 战斗：打出【无情猛攻+】→寄生惧魔（可击杀寄生惧魔）；敌意图总伤19，我方61血/0甲；⚠高危组合（6战2死），提速斩杀（竞速解除防御压制）；斩杀竞速投影：击杀还需5回合>可存活3回合，全攻提速
+[16:45:39] [COMBAT/F21] 战斗：打出【打击】→胧光怪（单体伤害≈10）；敌意图总伤0，我方61血/0甲；⚠高危组合（6战2死），转防守节奏
+[16:45:40] [COMBAT/F21] 战斗：打出【打击】→胧光怪（单体伤害≈10）；敌意图总伤0，我方61血/0甲；⚠高危组合（6战2死），转防守节奏
+[git] 已自动存档：feat(sts2-ascend): 第122局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[16:45:41] [COMBAT/F21] 战斗：本回合已无牌可出，确认结束（撕裂✗,坚毅✗）
+[16:45:41] [COMBAT/F21] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[16:45:43] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:43] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:44] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:45] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:45] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:46] [COMBAT/F21] 战斗：回合过渡中，等待
+[16:45:46] [COMBAT/F21] 战斗：打出【与我一战！】→胧光怪（单体伤害≈18）；敌意图总伤38，我方61血/0甲；⚠高危组合（6战2死），转防守节奏；意图升级+19，防御前置
+[16:45:48] [COMBAT/F21] 战斗：打出【防御+】（格挡8）；敌意图总伤39，我方61血/0甲；⚠高危组合（6战2死），转防守节奏；意图升级+19，防御前置
