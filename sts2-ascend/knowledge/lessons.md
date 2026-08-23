@@ -1368,3 +1368,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.31 → 1.24（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.40 → 1.45（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.75 → 0.77（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/104 胜，当前目标进阶 0
+
+## 第 105 局复盘（2026-08-23 11:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, HEADBUTT, ARMAMENTS, THUNDERCLAP, CINDER, SHRUG_IT_OFF, SWORD_BOOMERANG, TAUNT, ARMAMENTS, FLAME_BARRIER
+- 本局遗物：GORGET
+- 战斗记录：F14 Monster战 掉血7; F14 Monster战 掉血0; F15 Monster战 掉血4; F17 Boss战 掉血58; F17 Boss战 掉血0; F17 Boss战 掉血10（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，COLOSSUS(22分/3局)，ULTIMATE_STRIKE(22分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.24 → 1.16（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.45 → 1.50（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.77 → 0.79（Boss 长战磨死，入场血量要求线上调）
+- 生涯战绩：0/105 胜，当前目标进阶 0
