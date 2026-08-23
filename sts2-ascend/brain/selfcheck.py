@@ -1402,6 +1402,160 @@ def main() -> int:
     assert "斩杀竞速投影" not in d_kr2.reason, f"防守可行时误触发竞速投影: {d_kr2.reason}"
     krc.combat = None
 
+    # 3wx) 升级触发竞速 + 高危姿态解除（第 92~93 批复盘）：93 局 FUZZY+SHRINKER
+    #      总血量 <80，旧门 min_enemy_hp=80 永远不开账；高危姿态压攻击(×0.85)
+    #      抬格挡(×1.30)对滚雪球意图（4→7→24→…→31）恰好是反向用药——7 回合
+    #      磨死。现在：持续升级(_esc_rounds≥2)同样开门、存活分母取当前意图
+    #      （EMA 滞后修正）、竞速路线解除防御压制并改写矛盾文案。
+    kdir_es = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-esc-"))
+    know_es = knowledge.Knowledge(kdir_es)
+    know_es.stats["enemies"]["RAMP_COMP"] = {
+        "encounters": 5, "deaths": 3, "hp_lost_sum": 150.0, "wins": 2}
+    krc_es = type("KRCtx", (), {"combat": None, "current_combat_is_hard": True,
+                                "credit_tags": []})()
+    krc_es.combat = {"comp_id": "RAMP_COMP", "node_type": "Monster"}
+
+    def esc_state(turn_no, hp_now, incoming, ehp):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "ES_HIT", "name": "竞速斩", "playable": True,
+                            "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 12}]},
+                           {"index": 1, "card_id": "ES_LUX", "name": "奢侈挡", "playable": True,
+                            "requires_target": False,
+                            "rules_text": "获得6点格挡",
+                            "dynamic_values": [{"name": "Block", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "RAMP_COMP", "name": "滚雪球虫",
+                                    "current_hp": ehp, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
+
+    pol_es = policy.Policy(know_es, random.Random(7))
+    pol_es.decide(esc_state(1, 65, 4, 60), krc_es)     # T1：意图 4 基准采样
+    pol_es.decide(esc_state(2, 55, 7, 48), krc_es)     # T2：趋势+3，升级计数 1
+    d_es = pol_es.decide(esc_state(3, 30, 24, 36), krc_es)  # T3：趋势+17 计数 2 → 开账
+    assert d_es.action == "play_card" and d_es.params.get("card_index") == 0, \
+        f"升级型低血池组合未走竞速路线: {d_es.action}（{d_es.reason}）"
+    assert "斩杀竞速投影" in d_es.reason, f"升级门未开账: {d_es.reason}"
+    assert "竞速解除防御压制" in d_es.reason, \
+        f"高危防御姿态未被竞速解除/文案未改写: {d_es.reason}"
+    assert "转防守节奏" not in d_es.reason, f"矛盾留痕残留: {d_es.reason}"
+    # 对照：同一低血池组合但意图平稳（无升级轨迹）→ 门不开，不得误触发
+    pol_es2 = policy.Policy(knowledge.Knowledge(kdir_es), random.Random(7))
+    pol_es2.decide(esc_state(1, 65, 4, 60), krc_es)
+    pol_es2.decide(esc_state(2, 55, 4, 48), krc_es)
+    d_es2 = pol_es2.decide(esc_state(3, 30, 4, 36), krc_es)
+    assert "斩杀竞速投影" not in d_es2.reason, f"无升级轨迹误开账: {d_es2.reason}"
+    krc_es.combat = None
+
+    # 3wy) 演化纠偏（第 92~93 批复盘）：非 Boss 长战阵亡不得再释放 block_safety
+    #      （93 局 FUZZY+SHRINKER 7 回合磨死被旧规则判成「龟防拖长」扣防，
+    #      实际死因是有效格挡不足——方向完全相反）
+    rdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-refl-"))
+    rknow = knowledge.Knowledge(rdir)
+
+    class _RC:
+        def __init__(self):
+            self.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster", "rounds": 7}
+            self.death_was_elite = False
+            self.death_hp_pct_at_entry = 0.6
+            self.died_to_event = None
+            self.credit_tags = []
+            self.ascension = 0
+            self.rests_healed_at_full = 0
+            self.combat_notes = []
+
+    rctx = _RC()
+    bs_before = rknow.policy["block_safety"]
+    kb_before = rknow.policy["kill_bonus"]
+    reflect.finalize_run(rknow, rctx, victory=False, final_floor=6)
+    assert rknow.policy["block_safety"] > bs_before, \
+        f"非 Boss 长战阵亡仍在释放防御: {bs_before} -> {rknow.policy['block_safety']}"
+    assert rknow.policy["kill_bonus"] > kb_before or kb_before >= reflect.BOUNDS["kill_bonus"][1], \
+        "非 Boss 长战阵亡未提升击杀奖励"
+    # Boss 长战仍走释放分支
+    rctx2 = _RC()
+    rctx2.died_in_combat = {"comp_id": "BOSS_X", "node_type": "Boss", "rounds": 8}
+    bs_b2 = rknow.policy["block_safety"]
+    reflect.finalize_run(rknow, rctx2, victory=False, final_floor=9)
+    assert rknow.policy["block_safety"] < bs_b2, \
+        f"Boss 长战阵亡未释放防御: {bs_b2} -> {rknow.policy['block_safety']}"
+
+    # 3wz) 溢出型大格挡贬值（第 94~95 批复盘）：94 局 Boss 战开局 87 血对意图
+    #      7/17 连打两张岿然不动+(40挡)，~56 点溢出甲 ≈ 4 能量没换成伤害，
+    #      Boss 多活两轮升级意图。有用部分不足牌面一半且血量宽裕时，大挡按
+    #      纯溢出计价跌破出牌阈值；高意图回合与低血量（urgent/lethal）不受影响。
+    kdir_ov = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-overblock-"))
+    know_ov = knowledge.Knowledge(kdir_ov)
+    ovc = type("OVCtx", (), {"combat": None, "current_combat_is_hard": False,
+                             "credit_tags": []})()
+    ovc.combat = {"comp_id": None, "node_type": "Monster"}
+
+    def ov_wall_state(hp_now, incoming):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [{"index": 0, "card_id": "OV_WALL", "name": "巨墙", "playable": True,
+                                 "energy_cost": 2, "requires_target": False,
+                                 "rules_text": "获得40点格挡",
+                                 "dynamic_values": [{"name": "Block", "current_value": 40}]}],
+                       "enemies": [{"index": 0, "enemy_id": "OV_FOE", "name": "试法者",
+                                    "current_hp": 50, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    pol_ov = policy.Policy(know_ov, random.Random(5))
+    d_ov1 = pol_ov.decide(ov_wall_state(76, 5), ovc)
+    assert d_ov1.action == "end_turn", \
+        f"血量宽裕时溢出大挡未被贬值仍被打出: {d_ov1.action}（{d_ov1.reason}）"
+    d_ov2 = pol_ov.decide(ov_wall_state(30, 45), ovc)
+    assert d_ov2.action == "play_card", \
+        f"高意图回合右尺寸大挡被误贬值弃用: {d_ov2.action}（{d_ov2.reason}）"
+    d_ov3 = pol_ov.decide(ov_wall_state(24, 8), ovc)
+    assert d_ov3.action == "play_card", \
+        f"紧急线以下大挡被误贬值弃用（低血量防御不得缩水）: {d_ov3.action}（{d_ov3.reason}）"
+    ovc.combat = None
+
+    # 3xa) 增益药水分类补「能力/power」（第 94~95 批复盘）：95 局能力药水因描述
+    #      不含任何已知关键词，premium 门（高危姿态 T1 即开）形同虚设，直到
+    #      20 血才被 ≤50% 兜底分支掏出。高危组合+满血+增益药水应在第 1 回合兑现；
+    #      对照：描述完全无法分类的药水在满血时不得被兜底浪费。
+    potc = type("PotCtx", (), {"combat": None, "current_combat_is_hard": False,
+                               "credit_tags": []})()
+    potc.combat = {"comp_id": "RAMP_COMP", "node_type": "Monster"}
+
+    def pot_state(desc):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [{"index": 0, "card_id": "POT_HIT", "name": "打击", "playable": True,
+                                 "energy_cost": 1, "requires_target": True,
+                                 "valid_target_indices": [0],
+                                 "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "RAMP_COMP", "name": "滚雪球虫",
+                                    "current_hp": 40, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 4}]}]},
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 6, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "POT_POWER", "name": "能力药水",
+                                 "description": desc, "usage": "combat", "occupied": True,
+                                 "can_use": True, "requires_target": False}]}}
+
+    pol_pot = policy.Policy(know_es, random.Random(5))
+    d_pot = pol_pot.decide(pot_state("获得1点能力。"), potc)
+    assert d_pot.action == "use_potion", \
+        f"能力类增益药水未在高危战斗开局兑现: {d_pot.action}（{d_pot.reason}）"
+    pol_pot2 = policy.Policy(know_es, random.Random(5))
+    d_pot2 = pol_pot2.decide(pot_state("闻起来像草莓。"), potc)
+    assert d_pot2.action == "play_card", \
+        f"无法分类药水在满血时被兜底浪费: {d_pot2.action}（{d_pot2.reason}）"
+    potc.combat = None
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

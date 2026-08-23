@@ -78,6 +78,7 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             #   长战（≥4 回合）磨死 → 提升击杀奖励 + 小幅释放防御棘轮
             #   短时爆毙 → 维持旧逻辑上调防御权重
             rounds = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
+            death_node = (ctx.died_in_combat or {}).get("node_type")
             if rounds >= 4:
                 # 步长按战斗时长分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
                 # 速度要 ~30 局才能把 block_safety 从 2.1 拉回有效区间——
@@ -99,22 +100,29 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 else:
                     changes.append(f"kill_bonus {pol['kill_bonus']:.2f} 距上限仅余 {kb_head:.2f}"
                                    f"(<步长{kb_step:.2f})，长战信号停止加码——顶格旋钮不再吸收证据")
-                if bs_room >= bs_step:
-                    _adj(know, "block_safety", -bs_step, changes, "长战实证过度龟防会拖长战斗，小幅回调")
-                else:
-                    changes.append(f"block_safety {pol['block_safety']:.2f} 距下限仅余 {bs_room:.2f}"
-                                   f"(<步长{bs_step:.2f})，停止释放——防棘轮触底后继续失真")
-                # Boss 攻坚乘区演化（第 84~85 批复盘新增）：死亡榜前六全是
-                # F17 一幕 Boss（84~85 批 10 局中 6 局），入场血量从 52%~95%
-                # 全数阵亡——瓶颈是战斗时长而非入场血量。Boss 长战磨死时
-                # 单独加码 boss_atk_mult（不动普通战斗的攻防平衡）
-                if (ctx.died_in_combat or {}).get("node_type") == "Boss":
+                # 防御释放仅限 Boss 长战（第 92~93 批复盘纠偏）：非 Boss 高危组合
+                # 的死因是「有效格挡不足」而非「龟防拖长战斗」——93 局 FUZZY+SHRINKER
+                # 7 回合磨死时全场最大单回合格挡 13、意图已滚到 31，此时释放防御
+                # 权重是反向用药。非 Boss 长战与短战同向：上调防御权重
+                if death_node == "Boss":
+                    if bs_room >= bs_step:
+                        _adj(know, "block_safety", -bs_step, changes, "长战实证过度龟防会拖长战斗，小幅回调")
+                    else:
+                        changes.append(f"block_safety {pol['block_safety']:.2f} 距下限仅余 {bs_room:.2f}"
+                                       f"(<步长{bs_step:.2f})，停止释放——防棘轮触底后继续失真")
+                    # Boss 攻坚乘区演化（第 84~85 批复盘新增）：死亡榜前六全是
+                    # F17 一幕 Boss（84~85 批 10 局中 6 局），入场血量从 52%~95%
+                    # 全数阵亡——瓶颈是战斗时长而非入场血量。Boss 长战磨死时
+                    # 单独加码 boss_atk_mult（不动普通战斗的攻防平衡）
                     _adj(know, "boss_atk_mult", 0.05, changes,
                          f"Boss 长战磨死（{rounds}回合），攻坚乘区提速")
                     # 入场线同步缓升（第 86~87 批复盘）：提速治"打不死"，
                     # 入场线治"扛不住"——两轴并行，单靠任一侧都收敛不了
                     _adj(know, "boss_entry_min_hp_pct", 0.02, changes,
                          "Boss 长战磨死，入场血量要求线上调")
+                else:
+                    _adj(know, "block_safety", 0.05, changes,
+                         f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")
             else:
                 _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
         if died_to_event:

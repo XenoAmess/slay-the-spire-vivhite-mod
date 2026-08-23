@@ -133,6 +133,7 @@ class Policy:
         self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
         self._krace_round = None    # 上次计回合的回合号
         self._incoming_ema = 0.0    # 敌意图总伤 EMA（回合边界采样，竞速投影的可存活账）
+        self._esc_rounds = 0        # 意图持续升级计数（第 92~93 批复盘）：趋势≥2 的回合边界数
 
     def note_action_failed(self, action: str, tags: list) -> None:
         """agent 在执行失败时回调：本回合内不再尝试这张牌实例（防 409 重试刷屏）。
@@ -466,6 +467,12 @@ class Policy:
                     return 1.7, "血量偏低（<62%），优先休整续航"
             elif nt == "Shop":
                 if gold >= pol["shop_min_gold"]:
+                    # 血量警戒带内商店增值（第 94~95 批复盘）：药水/遗物是休息的
+                    # 代偿资源——94 局二幕 F20 岔路 Shop(24.75) 以 0.53 分之差输给
+                    # Monster(25.28)，随后无篝火六连战斗力竭阵亡；低血量时商店的
+                    # 即时救命价值（防御/回复药水）应高于常规权重
+                    if hpp < pol.get("rest_wary_hp_pct", 0.62):
+                        return 1.6, f"金币{gold}足够；血量{hpp:.0%}偏低，药水遗物可代偿休整"
                     return 1.4, f"金币{gold}足够"
                 return 0.6, "金币不足"
             elif nt == "Monster":
@@ -536,8 +543,12 @@ class Policy:
                         mid_gate_hit = True
                 factor, note = node_factor(nt, gnode, hpp)
                 if nt == "Monster" and combat_streak >= 3:
-                    factor *= 0.75
-                    note = (note + "；" if note else "") + f"连续作战{combat_streak}场，疲劳压制"
+                    # 疲劳随连战深度递增（第 92~93 批复盘）：固定 0.75 让 93 局
+                    # 连续第 4~5 战仍以 0.37 分优势压过商店，最终满血差被打穿——
+                    # 每多连一场，惩罚再加深一档（下限 0.45 防止彻底禁战斗）
+                    fatigue_f = max(0.45, 0.75 - 0.06 * (combat_streak - 3))
+                    factor *= fatigue_f
+                    note = (note + "；" if note else "") + f"连续作战{combat_streak}场，疲劳压制×{fatigue_f:.2f}"
                 w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
@@ -679,6 +690,7 @@ class Policy:
             self._krace_turns = 0
             self._krace_round = None
             self._incoming_ema = 0.0
+            self._esc_rounds = 0
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
         if self._desp_combat is not ctx.combat:
             self._desp_combat = ctx.combat
@@ -725,6 +737,12 @@ class Policy:
             # 回合边界记录增量，供姿态层提前抬防御/紧急线
             if self._race_rounds >= 1:
                 self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
+                # 持续升级计数（第 92~93 批复盘）：93 局 FUZZY+SHRINKER 战意图
+                # 4→7→24→18→13→25→31 滚雪球——单看「本回合跳升」会把它当一次性
+                # 事件防御前置，而滚雪球的正确读法是「每拖一轮都更贵」。
+                # 趋势≥2 的边界累计出现 2 次即认定持续升级（供竞速投影开门）
+                if self._intent_trend >= 2:
+                    self._esc_rounds += 1
             else:
                 self._intent_trend = 0
             # 意图 EMA（第 90~91 批复盘）：斩杀竞速投影的「可存活回合」分母——
@@ -771,9 +789,13 @@ class Policy:
         stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
         comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
         # 姿态方向决定文案（第 84~85 批复盘）：高危 Boss 姿态实为提速进攻，
-        # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志
+        # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志。
+        # tone 记入独立变量：若后续斩杀竞速投影解除防御压制（93 局实证），
+        # 文案必须同步改写——矛盾留痕等于投毒复盘
+        stance_defensive_tone = False
         if stance.get("danger"):
-            tone = "提速斩杀" if stance.get("atk_mult", 1.0) >= 1.0 else "转防守节奏"
+            stance_defensive_tone = stance.get("atk_mult", 1.0) < 1.0
+            tone = "提速斩杀" if not stance_defensive_tone else "转防守节奏"
             danger_note = f"；⚠{stance['danger']}，{tone}"
         else:
             danger_note = ""
@@ -845,16 +867,35 @@ class Policy:
                     enemy_hp_total += max(0, int(e.get("current_hp") or 0))
                 except (TypeError, ValueError):
                     continue
-            if enemy_hp_total >= float(pol.get("kill_race_min_enemy_hp", 80.0)):
+            # 开账门槛（第 92~93 批复盘扩展）：大血池（≥80）之外，「意图持续升级」
+            # 同样必须开账——93 局 FUZZY+SHRINKER 总血量不足 80，旧门永远不开，
+            # 防守姿态压着攻击把 7 回合磨死在意图 31 的滚雪球下。升级型敌人
+            # （毛绒伏地虫/仪式兽/墨影幻灵）的杀伤来自时间而非血量，血池小≠竞速豁免
+            esc_gate = getattr(self, "_esc_rounds", 0) >= 2
+            if enemy_hp_total >= float(pol.get("kill_race_min_enemy_hp", 80.0)) or esc_gate:
                 dpt = self._krace_dmg / max(1, self._krace_turns)
                 loss_rate = self._race_loss_rate if (
                     self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
+                if esc_gate:
+                    # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
+                    # 而当轮意图已 25），持续升级时存活分母至少取当前意图
+                    loss_rate = max(loss_rate, float(incoming))
                 tsurv = my_hp / max(1.0, loss_rate)
                 ttk = enemy_hp_total / max(1.0, dpt)
                 if ttk > tsurv + float(pol.get("kill_race_margin", 1.5)):
                     kill_race = True
                     danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                     f"可存活{tsurv:.0f}回合，全攻提速")
+        if kill_race:
+            # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
+            # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。
+            # 攻击压制解除、格挡增益封顶，能量全部让位输出
+            if float(stance.get("atk_mult", 1.0)) < 1.0:
+                stance["atk_mult"] = 1.0
+                if stance_defensive_tone:
+                    danger_note = danger_note.replace("转防守节奏", "提速斩杀（竞速解除防御压制）")
+            if float(stance.get("blk_mult", 1.0)) > 1.0:
+                stance["blk_mult"] = 1.0
 
         best = None  # (score, card, target_index, why)
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
@@ -1133,12 +1174,24 @@ class Policy:
         # --- 防御/技能牌（有格挡数值） ---
         if block > 0:
             useful = min(block, max(0, incoming - my_block))
-            # 溢出格挡大幅贬值（第 59 局 Boss 首回合实证：缺口 13 却连打坚毅24+
-            # 重振精神10 共 34 甲，3 能量零输出——溢出按 block_excess_value 计分，
-            # 缺口补满后的纯溢出防牌应跌破出牌阈值，把能量还给输出）
-            score = (useful * 1.05 * pol["block_safety"]
-                     + (block - useful) * float(pol.get("block_excess_value", 0.2))) * blk_boost
-            why = f"格挡{block}"
+            # 溢出型大格挡贬值（第 94~95 批复盘）：有用量只有缺口那么大，
+            # 但 2 费 40 挡在 7 点意图面前花掉的是 2 点能量——94 局 Boss 战
+            # 开局 87 血对意图 7/17 连打两张岿然不动+，~56 点溢出甲 ≈ 4 能量
+            # 没换成伤害，Boss 多活两轮 26/16 的升级意图（战损 61、二幕以 26%
+            # 血入场后力竭）。斩杀竞速投影治「防守已被证伪」，这里治
+            # 「防守根本不必要」：有用部分不足牌面一半且血量不在紧急线内时，
+            # 该牌按纯溢出计价跌破出牌阈值；高意图回合（右尺寸）与低血量
+            # （urgent/lethal）不受影响。
+            if useful < block * 0.5 and not lethal and not urgent:
+                score = useful * float(pol.get("block_excess_value", 0.03))
+                why = f"格挡{block}｜溢出大挡贬值"
+            else:
+                # 溢出格挡大幅贬值（第 59 局 Boss 首回合实证：缺口 13 却连打坚毅24+
+                # 重振精神10 共 34 甲，3 能量零输出——溢出按 block_excess_value 计分，
+                # 缺口补满后的纯溢出防牌应跌破出牌阈值，把能量还给输出）
+                score = (useful * 1.05 * pol["block_safety"]
+                         + (block - useful) * float(pol.get("block_excess_value", 0.2))) * blk_boost
+                why = f"格挡{block}"
             dr = draw_amount(card)
             if dr:
                 score += dr * 1.5
@@ -1218,9 +1271,13 @@ class Policy:
             # 攻击类（伤害/攻击）与增益类（力量/敏捷/能量/抽牌）战斗药水都应在硬仗投入使用：
             # 第 28 局囤力量/敏捷/迅捷三瓶增益药水全程未用（含死局战）带进坟墓
             is_damage = "伤害" in desc or "damage" in desc_l or "攻击" in desc
+            # 「能力/ power」补入（第 94~95 批复盘）：95 局能力药水因描述不含
+            # 任何已知关键词，premium 门（高危姿态 T1 即开）形同虚设，直到
+            # 20 血才被 ≤50% 兜底分支掏出——晚了 7 个回合的增益等于没有
             is_buff = ("力量" in desc or "strength" in desc_l or "敏捷" in desc
                        or "dexterity" in desc_l or "能量" in desc or "energy" in desc_l
-                       or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l)
+                       or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l
+                       or "能力" in desc or "power" in desc_l)
             # 增益药水的价值在长战/硬仗兑现：普通战（哪怕低血放血）不构成使用理由，
             # 跳过且不计入 tried——本场若恶化成致死局仍可立即启用
             if is_buff and not premium:
