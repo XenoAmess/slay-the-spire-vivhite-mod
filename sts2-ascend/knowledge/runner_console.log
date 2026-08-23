@@ -73541,3 +73541,168 @@ Let me quickly scan llm_review.py.
 [15:10:33] [COMBAT/F15] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
 [15:10:34] [COMBAT/F15] 战斗：回合过渡中，等待
 [15:10:35] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:36] [COMBAT/F15] 战斗：回合过渡中，等待
+[llm] 复盘会话结束（exit=0）。输出尾部：
+Monster early act 2, and path_act_scale[1]=1.7 already raises danger. Maybe add post_boss_cautious window: first N nodes of act 2 avoid Monster when HP < X%.
+
+C. **Enemy comp danger learning**: deaths_by_enemy shows KIN_FOLLOWER+KIN_PRIEST etc. There's already danger_comp_hard_death_rate=0.3. Maybe the comp-specific loss estimates exist. Could improve: use per-comp avg_hp_lost directly in path scoring instead of generic priors.
+
+D. **Card pick improvements**: duplicate_pick_penalty exists (RAMPAGE 57 picks!). unplayed_card_penalty exists. CINDER 80 picks with avg 16.8 — it's fine? But RAMPAGE picked 57 with bias 1.2 — the bias system reinforces. Maybe cap duplicates harder: duplicate_pick_penalty 3.0 clearly insufficient against value 19.8. Consider raising duplicate_pick_penalty or making it scale with copies already owned (quadratic).
+
+E. **Block sufficiency**: block_safety raised to 1.40 but deaths continue "死因是有效格挡不足". Maybe the real fix is deck composition: min_block_cards=5 might be too low; or the play policy doesn't play enough block when facing multi-hit enemies.
+
+But without seeing the code I can't be precise. Let me explore the repo now.
+
+Plan:
+1. Read brain/*.py files (policy.py, knowledge.py, selfcheck.py, others).
+2. Analyze.
+3. Make targeted changes (code > params).
+4. Update meta_review.md (append section), lessons.md (append 🧠 section).
+5. Run selfcheck.
+6. Output ≤200 char summary.
+
+Note: AGENTS.md default rules (commit+push, write docs/) are overridden by the prompt's 禁止事项. So no git ops, no docs outside sts2-ascend.
+
+Let me start exploring.
+⚙ bash {}
+· tokens 45082 ·
+💭 Let me read the key brain files: policy.py (decision engine), knowledge.py, selfcheck.py, and also look at meta_review.md tail and lessons.md tail for context. policy.py is probably big. Let me read them.
+⚙ bash {}
+· tokens 47764 ·
+⚙ read {}
+· tokens 47817 ·
+⚙ read {}
+文件较大——我来继续阅读 policy.py。
+· tokens 63509 ·
+💭 Let me continue reading policy.py from 1554.
+⚙ read {}
+· tokens 77878 ·
+
+[15:10:36] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:37] [COMBAT/F15] 战斗：打出【旋风斩】（群体伤害≈10）；敌意图总伤11，我方56血/0甲
+[15:10:38] [COMBAT/F15] 战斗：本回合已无牌可出，确认结束（武装✗,打击✗,痛击✗,打击+✗）
+[15:10:39] [COMBAT/F15] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:10:40] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:41] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:42] [COMBAT/F15] 战斗：回合过渡中，等待
+[git] 已自动存档：feat(sts2-ascend): 第119局 LLM 复盘变更（详见 knowledge/meta_review.md）
+[llm] 复盘变更已提交，重启大脑以加载…
+[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…
+[15:10:42] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:43] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:44] [COMBAT/F15] 战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤8，我方45血/0甲
+[15:10:45] [COMBAT/F15] 战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6）；敌意图总伤8，我方45血/8甲
+[15:10:46] [COMBAT/F15] 战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6）；敌意图总伤8，我方45血/8甲
+[15:10:47] [COMBAT/F15] 战斗：本回合已无牌可出，确认结束（防御✗,武装✗,黏液✗）
+[15:10:48] [COMBAT/F15] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:10:49] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:50] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:51] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:51] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:52] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:52] [COMBAT/F15] 战斗：打出【防御+】（格挡8）；敌意图总伤11，我方45血/0甲；意图升级+3，防御前置
+[15:10:53] [COMBAT/F15] 战斗：打出【旋风斩】（群体伤害≈10）；敌意图总伤11，我方45血/8甲；意图升级+3，防御前置
+[15:10:54] [COMBAT/F15] 战斗：本回合已无牌可出，确认结束（黏液✗,余烬+✗,黏液✗）
+[15:10:55] [COMBAT/F15] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:10:56] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:57] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:58] [COMBAT/F15] 战斗：回合过渡中，等待
+[15:10:58] [COMBAT/F15] 战斗：打出【打击+】→树枝史莱姆（中）（可击杀树枝史莱姆（中））；敌意图总伤0，我方42血/0甲
+[15:10:59] [REWARD/F15] 领取奖励：11金币
+[15:11:00] [REWARD/F15] 打开卡牌奖励：将一张牌添加到你的牌组。
+[15:11:01] [CARD_SELECTION/F15] 升级卡牌：【劫掠】
+[15:11:02] [REWARD/F15] 一键收取奖励并继续
+[15:11:03] [MAP/F15] 路径规划：RestSite(15,3)（路径分 4.86，预计进 Boss 血量 82%；Boss 前休整；进Boss血量预计82%<90%，优先续航路线）；候选：RestSite(15,3)=4.86|Boss 前休整；进Boss血量预计82%<90%，优先续航路线
+[15:11:06] [REST/F16] 篝火：Boss 前夜优先回血（当前 52%；血量52%<锻造线90%，回血仍是有效投资）
+[15:11:07] [REST/F16] 篝火：无可选项目，离开
+[15:11:08] [MAP/F16] 路径规划：Boss(16,3)（路径分 1.76，预计进 Boss 血量 82%；进Boss血量预计82%<90%，优先续航路线）；候选：Boss(16,3)=1.76|进Boss血量预计82%<90%，优先续航路线
+[15:11:11] [COMBAT/F17] 战斗：回合过渡中，等待
+[agent] 战斗结束：F15 Monster战 掉血25
+[agent] 进入战斗：敌方=KIN_FOLLOWER+KIN_PRIEST｜历史场均掉血 31.2｜房间类型 Boss
+[15:11:11] [COMBAT/F17] 战斗：硬仗使用增益药水【痊愈药水】
+[15:11:13] [COMBAT/F17] 战斗：硬仗使用增益药水【虚弱药水】
+[15:11:14] [COMBAT/F17] 战斗：硬仗使用增益药水【缚魂药水】
+[15:11:16] [COMBAT/F17] 战斗：打出【余烬+】→同族神官（单体伤害≈24）；敌意图总伤9，我方75血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80
+[15:11:17] [COMBAT/F17] 战斗：打出【旋风斩】（群体伤害≈15）；敌意图总伤9，我方75血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80
+[15:11:18] [COMBAT/F17] 战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤9，我方75血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80
+[15:11:19] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（防御✗,劫掠✗,打击✗,痛击✗,耸肩无视✗,打击✗）
+[15:11:20] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:11:21] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:22] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:23] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:23] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:24] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:24] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:25] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:26] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:26] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:27] [COMBAT/F17] 战斗：打出【余烬+】→同族神官（单体伤害≈24）；敌意图总伤17，我方66血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；意图升级+4，防御前置；Boss攻坚提速×1.80
+[15:11:28] [COMBAT/F17] 战斗：打出【打击+】→同族神官（单体伤害≈9）；敌意图总伤17，我方66血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；意图升级+4，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活5回合，全攻提速
+[15:11:29] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（无情猛攻✗,防御✗）
+[15:11:29] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:11:31] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:31] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:32] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:33] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:33] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:34] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:34] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:35] [COMBAT/F17] 战斗：打出【防御+】（格挡8）；敌意图总伤15，我方49血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需5回合>可存活3回合，全攻提速
+[15:11:37] [COMBAT/F17] 战斗：打出【武装】（格挡5）；敌意图总伤15，我方49血/8甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活3回合，全攻提速
+[15:11:37] [CARD_SELECTION/F17] 升级卡牌：【防御】
+[15:11:38] [COMBAT/F17] 战斗：评估后无值得出的牌（防御+✓,余烬+✗,防御✓），结束回合（敌意图总伤15，我方49血/13甲）；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活3回合，全攻提速
+[agent] 战斗屏幕重连：同组合同层，按同一场战斗延续（统计不重复结算）
+[15:11:40] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:40] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:41] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:41] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:42] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:43] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:43] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:44] [COMBAT/F17] 战斗：打出【无情猛攻】→同族信徒（单体伤害≈14）；敌意图总伤7，我方47血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活4回合，全攻提速
+[15:11:45] [COMBAT/F17] 战斗：打出【旋风斩】（群体伤害≈15）；敌意图总伤7，我方47血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活4回合，全攻提速
+[15:11:46] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（打击✗,余烬+✗,打击+✗）
+[15:11:47] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:11:48] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:49] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:50] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:50] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:51] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:51] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:52] [COMBAT/F17] 战斗：打出【痛击】→同族神官（单体伤害≈8）；敌意图总伤27，我方40血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活1回合，全攻提速
+[15:11:53] [COMBAT/F17] 战斗：打出【劫掠】→同族神官（单体伤害≈6）；敌意图总伤27，我方40血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活1回合，全攻提速
+[15:11:54] [COMBAT/F17] 战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤27，我方40血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活1回合，全攻提速
+[15:11:56] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（防御✗,打击✗,耸肩无视✗,余烬+✗,打击✗,防御+✗）
+[15:11:57] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:11:59] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:11:59] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:00] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:00] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:01] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:02] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:02] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:03] [COMBAT/F17] 战斗：打出【无情猛攻】→同族信徒（单体伤害≈14｜无甲孤注抢斩杀）；敌意图总伤22，我方13血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活1回合，全攻提速
+[15:12:04] [COMBAT/F17] 战斗：打出【旋风斩】（群体伤害≈15）；敌意图总伤22，我方13血/0甲；⚠高危Boss（39战18死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需6回合>可存活1回合，全攻提速
+[15:12:05] [COMBAT/F17] 战斗：本回合已无牌可出，确认结束（余烬+✗,痛击✗,防御+✗）
+[15:12:06] [COMBAT/F17] 战斗：确认无牌可出（能量耗尽或全部不可用），结束回合
+[15:12:07] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:08] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:09] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:09] [COMBAT/F17] 战斗：回合过渡中，等待
+[15:12:10] [GAME_OVER/F17] 对局结束：失败（层数 17），正在总结复盘…
+[agent] 战斗失败：F17 Boss战 掉血75（阵亡）
+[agent] 战斗失败：F17 Boss战 掉血75（阵亡，含6回合全场）
+
+
+## 第 120 局复盘（2026-08-23 15:12）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, WHIRLWIND, BATTLE_TRANCE, UNRELENTING, CINDER, ARMAMENTS, SHRUG_IT_OFF
+- 本局遗物：MEAL_TICKET
+- 战斗记录：F6 Monster战 掉血36; F8 Monster战 掉血0; F11 Monster战 掉血17; F13 Monster战 掉血0; F15 Monster战 掉血25; F17 Boss战 掉血75（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，COLOSSUS(22分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/120 胜，当前目标进阶 0
+
+[agent] 对局日志已保存：20260823-151211_AQFCX36L7WTP.json
