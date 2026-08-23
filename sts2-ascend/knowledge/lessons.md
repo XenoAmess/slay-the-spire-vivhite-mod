@@ -1632,3 +1632,14 @@
 - 当前低价值卡牌：DRAMATIC_ENTRANCE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.45 → 1.50（非 Boss 战斗长战阵亡（8回合），死因是有效格挡不足而非龟防——上调防御权重）
 - 生涯战绩：0/126 胜，当前目标进阶 0
+
+## 第 127 局复盘（2026-08-23 16:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：DISMANTLE, TAUNT, CINDER, BATTLE_TRANCE, DISMANTLE, ARMAMENTS, CINDER, BREAKTHROUGH
+- 本局遗物：STRAWBERRY
+- 战斗记录：F7 Monster战 掉血6; F8 Monster战 掉血5; F9 Monster战 掉血8; F11 Monster战 掉血6; F14 Monster战 掉血23; F17 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，MANGLE(21分/20局)
+- 当前低价值卡牌：DRAMATIC_ENTRANCE(6分/2局)，EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/127 胜，当前目标进阶 0
