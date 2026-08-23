@@ -26,6 +26,10 @@ DEFAULT_POLICY = {
     # --- combat ---
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
+    "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——
+                                       # Boss/大血池长战中力量源（恶魔形态类）早一回合上场多一档全程增益，
+                                       # 旧固定 6.0/1.5 在 Boss 攻坚 ×1.8 下整场输给攻击牌（DEMON_FORM 2拿0打）
+    "power_longfight_hp_div": 30.0,    # 长战加成的血池除数：每 30 点存活敌血 +1 分（250 血 Boss 封顶 7）
     "kill_bonus": 12.0,           # bonus for securing a kill
     "free_card_bonus": 1.5,       # small bonus for 0-cost plays
     "play_threshold": 0.4,        # min score to bother playing a card

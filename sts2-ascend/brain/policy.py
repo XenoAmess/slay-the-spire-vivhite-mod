@@ -1629,12 +1629,35 @@ class Policy:
             return score, None, f"功能牌（抽牌{dr}/回能）"
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
-        score = (pol["power_round_bonus"] if round_no <= 2 else 1.5)
+        # 长战加成（第 223 批复盘）：能力牌的价值随战斗预期长度复利——Boss/大血池
+        # 战斗要打 6~10 回合，力量源（恶魔形态/点燃/撕裂）每早一回合上场就多一档
+        # 全程增益。旧评分与战斗时长脱钩（固定 6.0/1.5），在 Boss 攻坚 ×1.8 下
+        # 整场输给攻击牌：生涯 DEMON_FORM 2 拿 0 打——3 费整回合换 6 分永远轮不上，
+        # scaling 卡在最需要它的长战里上不了场；而 219/220/223 三局 Boss 死的
+        # 斩杀竞速投影（击杀 6~7 回合 > 可存活 2 回合）正是缺这一档复利输出。
+        # 按存活敌血池线性加成（封顶）：低意图窗口（Boss 蓄力/增益回合）能力牌
+        # 压过打击上砧，高意图回合攻击/格挡原样优先；第 3 回合起加成减半
+        # （晚上场复利打折）。走廊小血池战斗加成 ≤1.5，不扭曲既有节奏。
+        base = float(pol["power_round_bonus"] if round_no <= 2 else 1.5)
+        pool = 0.0
+        for e in enemies:
+            try:
+                pool += max(0.0, float(e.get("current_hp") or 0.0))
+            except (TypeError, ValueError):
+                continue
+        lf = min(float(pol.get("power_longfight_bonus_max", 7.0)),
+                 pool / max(1.0, float(pol.get("power_longfight_hp_div", 30.0))))
+        if round_no > 2:
+            lf *= 0.5
+        score = base + lf
         if lethal:
             score = min(score, floor_score)  # 致死回合上能力=放弃格挡能量
         if cost == 0:
             score += pol["free_card_bonus"]
-        return score, None, f"能力/增益牌（第{round_no}回合）"
+        why = f"能力/增益牌（第{round_no}回合）"
+        if lf >= 1.5:
+            why += f"｜长战加成+{lf:.1f}（敌血池{pool:.0f}）"
+        return score, None, why
 
     def _is_respawn_add(self, enemy: dict) -> bool:
         """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。"""

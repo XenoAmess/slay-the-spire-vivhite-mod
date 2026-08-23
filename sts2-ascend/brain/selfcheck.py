@@ -2776,6 +2776,45 @@ def main() -> int:
     assert pol._kill_bonus({"enemy_id": "INKLET_T"}, 3, 3, know.policy, ignore_respawn=True) > 0.0, \
         "ignore_respawn 通道未恢复击杀奖励"
 
+    # 3zp) 能力牌长战加成（第 223 批复盘）：能力牌价值须随战斗预期长度复利——
+    #      旧固定 6.0/1.5 在 Boss 攻坚 ×1.8 下整场输给攻击牌（生涯 DEMON_FORM
+    #      2 拿 0 打：3 费整回合换 6 分永远轮不上），scaling 卡在最需要它的
+    #      长战里上不了场。按存活敌血池线性加成（封顶 7、每 30 血 +1）：
+    #      大血池低意图窗口能力牌压过打击上砧；小血池与晚回合不扭曲既有节奏
+    def power_state(turn_no, pool_hp):
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": turn_no,
+                "combat": {"player": {"current_hp": 60, "max_hp": 80, "block": 0, "energy": 3},
+                           "hand": [
+                               {"index": 0, "card_id": "STRIKE_T", "name": "打击",
+                                "playable": True, "energy_cost": 1, "requires_target": True,
+                                "valid_target_indices": [0],
+                                "dynamic_values": [{"name": "Damage", "current_value": 6}]},
+                               {"index": 1, "card_id": "DEMON_FORM_T", "name": "恶魔形态",
+                                "playable": True, "energy_cost": 3, "requires_target": False,
+                                "rules_text": "在每回合开始时获得2点力量"}],
+                           "enemies": [
+                               {"index": 0, "enemy_id": "BIG_BOSS_T", "name": "巨像",
+                                "current_hp": pool_hp, "max_hp": pool_hp, "block": 0,
+                                "is_alive": True, "is_hittable": True,
+                                "intents": [{"total_damage": 10}]}]},
+                "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+    # ①大血池（250）第 1 回合：能力 6+7=13 > 打击 (6+10×0.3)=9 → 上能力并留痕
+    pol_lf1 = policy.Policy(know, random.Random(5))
+    d_lf1 = pol_lf1.decide(power_state(1, 250), ctx)
+    assert d_lf1.action == "play_card" and d_lf1.params.get("card_index") == 1 \
+        and "长战加成" in d_lf1.reason, \
+        f"大血池低意图窗口能力牌应压过打击（DEMON_FORM 0打病灶未愈）: {d_lf1.action}（{d_lf1.reason}）"
+    # ②小血池（20）：能力 6+0.7 < 打击 9 → 节奏不扭曲
+    pol_lf2 = policy.Policy(know, random.Random(5))
+    d_lf2 = pol_lf2.decide(power_state(1, 20), ctx)
+    assert d_lf2.action == "play_card" and d_lf2.params.get("card_index") == 0, \
+        f"小血池战斗节奏被长战加成扭曲: {d_lf2.action}（{d_lf2.reason}）"
+    # ③晚回合（第 5 回合）：加成减半 1.5+3.5=5 < 打击 9 → 不再上能力
+    pol_lf3 = policy.Policy(know, random.Random(5))
+    d_lf3 = pol_lf3.decide(power_state(5, 250), ctx)
+    assert d_lf3.action == "play_card" and d_lf3.params.get("card_index") == 0, \
+        f"晚回合能力牌加成未减半: {d_lf3.action}（{d_lf3.reason}）"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
