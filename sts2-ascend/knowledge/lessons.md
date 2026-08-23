@@ -1888,3 +1888,21 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.70 → 1.75（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/148 胜，当前目标进阶 0
+
+## 🧠 第 146~147 局复盘经验（2026-08-23 19:42，教练批注）
+- **入场线棘轮的循环自证已被实证并拆除**：旧规则「进场血量<线就上调线」让旋钮自定义证据阈值，143/146/147 局进场 66%/80%/100% 全灭仍三连 +0.02（0.82→0.88）。新规则：只有真正极低血（<boss_entry_evidence_hp_cap=0.65）进场磨死才喂入场线；中带/高血进场长战死证据统一改接拿牌端输出饥饿（burst_starve 双旋钮）。运行库同步回拨 0.88→0.80（错位证据产物，非合法演化值）。
+- **147 局是「安全但弱」局部最优的路线级铁证**：0.88 线 + 110 罚差刷屏「优先续航路线」，全程仅 ~6 场战斗、7 拾取的贫血卡组满血进 Boss 被 -80 整管打空。入场血量在 0.65 以上带内已被六局（63/124/137/143/146/147）证伪为生死变量。
+- **方法论**：①「低于某线就提高该线」的演化规则必须配绝对证据上限，否则 0 胜生涯必漂向边界；②异步架构下先用留痕文案判定对局由哪版代码游玩，再归因——本批三连棘轮全是 138~141 批分流修复落盘前的旧代码产物；③安全参数的产出要用它声称保护的结局（Boss 生还率）计量，投入递增产出为零的防线应降级而非加码。
+- 观察点：入场线应停 0.80；burst_starve 双旋钮开始累积；「优先续航路线」刷屏频率下降、战斗房到访率回升。
+
+
+## 第 149 局复盘（2026-08-23 19:46）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_NECTAR+BOWLBUG_ROCK
+- 本局拿牌：IRON_WAVE, SHRUG_IT_OFF, FIGHT_ME, BREAKTHROUGH, UPPERCUT, MOLTEN_FIST, RAGE, UPPERCUT, CINDER, HOWL_FROM_BEYOND, BATTLE_TRANCE, HELLRAISER, UNRELENTING, RAMPAGE, FASTEN, HEADBUTT, CRUELTY, THE_GAMBIT, TAUNT, DISMANTLE
+- 本局遗物：ANCHOR
+- 战斗记录：F15 Monster战 掉血18; F17 Boss战 掉血47; F19 Monster战 掉血33; F20 Monster战 掉血14; F22 Monster战 掉血18; F23 Monster战 掉血15（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，BARRICADE(22分/4局)，FASTEN(22分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.75 → 1.80（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/149 胜，当前目标进阶 0
