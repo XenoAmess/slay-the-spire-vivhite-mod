@@ -2276,3 +2276,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.90 → 1.95（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/182 胜，当前目标进阶 0
+
+## 第 183 局复盘（2026-08-24 00:29）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：RAMPAGE, THUNDERCLAP, UPPERCUT, CINDER, EVIL_EYE, MOLTEN_FIST, MOLTEN_FIST, JUGGERNAUT, BLUDGEON, FEEL_NO_PAIN, STOMP, THE_GAMBIT
+- 本局遗物：怀表, MEAT_ON_THE_BONE
+- 战斗记录：F14 Monster战 掉血1; F17 Boss战 掉血63; F19 Monster战 掉血22; F20 Monster战 掉血8; F21 Monster战 掉血22; F23 Monster战 掉血38（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 1.95 → 2.00（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/183 胜，当前目标进阶 0
