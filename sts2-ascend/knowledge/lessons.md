@@ -2591,3 +2591,14 @@
 - **安全门槛要成对设计豁免**：精英灰区有饥饿豁免而 Boss 入场线没有，同一安全螺旋治一漏一。本批为入场线补 boss_entry_starve_relief=0.15（饥饿时 0.88→~0.75，卡组成型自动消失）。
 - **症状≠死因，归因用边际思维**：208 局 51% 进 KIN 双子，满血进场只多活 2~3 回合而击杀需 8~15 回合——低血进场是卡组弱的症状。0.65~1.00 带内入场血量已八局证伪为生死变量。
 - 观察点：饥饿带爬升与「入场线放宽」留痕、续航刷屏频率下降、floor 45 顶格后的战斗端接替评估、断线重连残缺记录（LE23B03412FL 型）对演化的污染。
+
+## 第 211 局复盘（2026-08-24 05:50）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：UPPERCUT, HEMOKINESIS, MOLTEN_FIST, MOLTEN_FIST, BATTLE_TRANCE, BLUDGEON, MANGLE, IMPERVIOUS, VICIOUS
+- 本局遗物：PARRYING_SHIELD
+- 战斗记录：F6 Monster战 掉血25; F7 Monster战 掉血0; F9 Monster战 掉血12; F11 Monster战 掉血18; F12 Monster战 掉血3; F17 Boss战 掉血37（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，FIEND_FIRE(27分/4局)，MAYHEM(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/211 胜，当前目标进阶 0
