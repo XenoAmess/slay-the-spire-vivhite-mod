@@ -1231,3 +1231,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：block_safety: 1.51 → 1.56（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/94 胜，当前目标进阶 0
+
+## 第 95 局复盘（2026-08-23 10:03）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：CINDER, HEMOKINESIS, TAUNT, SHRUG_IT_OFF, AGGRESSION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血2; F3 Monster战 掉血0; F5 Monster战 掉血0; F6 Monster战 掉血60; F6 Monster战 掉血20（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，CONFLAGRATION(20分/4局)，BARRICADE(20分/2局)，RAMPAGE(20分/46局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.56 → 1.41（长战实证过度龟防会拖长战斗，小幅回调）
+- 生涯战绩：0/95 胜，当前目标进阶 0
