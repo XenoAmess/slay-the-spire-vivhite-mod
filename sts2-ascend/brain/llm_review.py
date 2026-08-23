@@ -608,6 +608,12 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             return False
         if source == "preferred":
             _mark_preferred_ok(entry)
+        # 复盘会话成功（不论是否产生文件变更）——刷新成功标记，兜底守卫以此为准
+        know.progression["last_successful_review_run"] = runs
+        try:
+            know.save()
+        except OSError:
+            pass
     except Exception as exc:
         # 启动期异常（如 WinError 206 命令行过长）属本地环境问题，非模型故障，不记冷却
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
@@ -715,6 +721,15 @@ def enqueue_review(agent, log=print) -> None:
     runs = agent.know.stats["global"]["runs"]
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     model, every, source = resolve_review_plan(cfg, binary, log=log)
+    # 成功复盘守卫：优先链"轮流失败→冷却→过期→再失败"会让 plan 在实践中永远落在
+    # preferred（第 177~207 局实证：条目1 永久不在模型清单只跳过不记冷却，条目2
+    # 失败-冷却5分钟-过期-再失败，30 局零成功零兜底）——plan 来源判兜底不可达，
+    # 必须按"距上次成功复盘的局数"强制切兜底。
+    last_ok = agent.know.progression.get("last_successful_review_run", 0)
+    starve_every = max(1, int(cfg.get("review_every_runs", 5)))
+    if source == "preferred" and runs - last_ok >= starve_every:
+        model, every, source = cfg["model"], starve_every, "fallback"
+        log(f"[llm] 距上次成功复盘已 {runs - last_ok} 局，强制兜底 {model}")
     if source == "fallback":
         # 兜底节奏独立记账：preferred 尝试（无论成败）不得刷新兜底计数——
         # 否则优先链持续失败时每局都刷新 last，兜底门槛永远攒不够
