@@ -202,6 +202,7 @@ class Policy:
             "REST": self._rest,
             "CHEST": self._chest,
             "EVENT": self._event,
+            "CRYSTAL_SPHERE": self._crystal_sphere,
             "MODAL": self._modal,
             "GAME_OVER": self._game_over,
             "UNLOCK": self._unlock_screen,
@@ -2306,6 +2307,77 @@ class Policy:
         return Decision("choose_event_option", {"option_index": o["index"]},
                         f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}",
                         tags=[("event_choice", event_id, key)], wait=1.0)
+
+    def _crystal_sphere(self, state: dict, ctx) -> Decision:
+        """水晶球占卜小游戏（CRYSTAL_SPHERE）。
+
+        机制（游戏源码实证）：11x11 雾格，每次点格消耗 1 次占卜（大占卜清 3x3，
+        小占卜清 1 格，费用相同）；物品占多格，全格清开即揭示并在结束时发放——
+        包括诅咒；占卜次数必须全部用完才会出现 proceed。
+        策略：贪心最大化"新清开的好物格"，绝不点完坏物品的剩余格；
+        无利可图时用小占卜点已清开的格子安全空耗次数。
+        """
+        actions = state.get("available_actions", [])
+        cs = state.get("crystal_sphere") or {}
+        if cs.get("is_finished") or "crystal_clear_cell" not in actions:
+            if "proceed" in actions:
+                return Decision("proceed", {}, "占卜：完成，继续", wait=1.0)
+            return Decision(None, {}, "占卜：等待界面就绪", wait=0.8)
+
+        w, h = cs.get("grid_width", 11), cs.get("grid_height", 11)
+        hidden = {(c[0], c[1]) for c in cs.get("hidden_cells", [])}
+        good_hidden: set = set()
+        bad_sets: list = []
+        for it in cs.get("items", []):
+            hs = {(c[0], c[1]) for c in it.get("hidden_cells", [])}
+            if not hs:
+                continue
+            if it.get("is_good"):
+                good_hidden |= hs
+            else:
+                bad_sets.append(hs)
+
+        def completes_bad(newly: set) -> bool:
+            # 本次点击若覆盖某坏物品的全部剩余隐藏格 → 揭示诅咒，禁止
+            return any(hs and hs <= newly for hs in bad_sets)
+
+        def big_area(cx: int, cy: int) -> set:
+            return {(x, y) for x in range(cx - 1, cx + 2) for y in range(cy - 1, cy + 2)
+                    if 0 <= x < w and 0 <= y < h}
+
+        best = None  # (score, tool, cell)  score=(好物新格, -触及坏格, 总新格)
+        for cx in range(w):
+            for cy in range(h):
+                newly = {c for c in big_area(cx, cy) if c in hidden}
+                if not newly or completes_bad(newly):
+                    continue
+                score = (len(newly & good_hidden),
+                         -len(newly & set().union(*bad_sets)) if bad_sets else 0,
+                         len(newly))
+                if best is None or score > best[0]:
+                    best = (score, "big", (cx, cy))
+        for cell in hidden:
+            newly = {cell}
+            if completes_bad(newly):
+                continue
+            score = (1 if cell in good_hidden else 0, 0, 1)
+            if best is None or score > best[0]:
+                best = (score, "small", cell)
+
+        if best and best[0][0] > 0:
+            (gain, _, total), tool, (cx, cy) = best
+            return Decision("crystal_clear_cell", {"x": cx, "y": cy, "tool": tool},
+                            f"占卜：{tool}点({cx},{cy})，新清{total}格其中好物{gain}格"
+                            f"（剩{cs.get('divinations_left')}次）", wait=1.2)
+
+        # 无好物可揭：点已清开的格子空耗剩余次数（绝不碰坏物品）
+        clear_cells = [(x, y) for x in range(w) for y in range(h) if (x, y) not in hidden]
+        if clear_cells:
+            sx, sy = clear_cells[0]
+            return Decision("crystal_clear_cell", {"x": sx, "y": sy, "tool": "small"},
+                            f"占卜：无利可图，空点({sx},{sy})安全消耗次数"
+                            f"（剩{cs.get('divinations_left')}次）", wait=1.2)
+        return Decision(None, {}, "占卜：无可行动格子，等待", wait=0.8)
 
     def _bundle(self, state: dict, ctx) -> Decision:
         """开局祝福/特殊界面的卡牌包选择（BUNDLE_SELECTION）。"""

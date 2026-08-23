@@ -2309,3 +2309,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.60 → 6.90（Boss 高血进场长战死（91%，11回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 10.00 → 10.50（Boss 高血进场长战死（11回合），缺口越深纠偏上限越高）
 - 生涯战绩：0/185 胜，当前目标进阶 0
+
+## 第 186 局复盘（2026-08-24 02:09）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：SALVO, MOLTEN_FIST, HOWL_FROM_BEYOND, WHIRLWIND, RAMPAGE, SHRUG_IT_OFF, CRIMSON_MANTLE, SHRUG_IT_OFF, HOWL_FROM_BEYOND, MOLTEN_FIST, THE_GAMBIT, MANGLE, TRUE_GRIT
+- 本局遗物：REGAL_PILLOW, 药水腰带, RAINBOW_RING
+- 战斗记录：F15 Monster战 掉血20; F17 Boss战 掉血66; F19 Monster战 掉血19; F20 Monster战 掉血1; F22 Monster战 掉血22; F27 Monster战 掉血44（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/5局)，MIND_ROT(33分/2局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：block_safety: 2.00 → 2.05（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/186 胜，当前目标进阶 0
