@@ -2181,3 +2181,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
 - 生涯战绩：0/174 胜，当前目标进阶 0
+
+## 第 175 局复盘（2026-08-23 23:14）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：MOLTEN_FIST, JUGGLING
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血6; F4 Monster战 掉血7; F5 Monster战 掉血66（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/4局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)，FISTICUFFS(27分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码
+- 生涯战绩：0/175 胜，当前目标进阶 0
