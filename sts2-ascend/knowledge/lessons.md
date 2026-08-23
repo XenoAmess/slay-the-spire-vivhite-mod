@@ -1472,3 +1472,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.65 → 1.70（Boss 长战磨死（8回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.85 → 0.87（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/112 胜，当前目标进阶 0
+
+## 第 113 局复盘（2026-08-23 14:16）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：TAUNT, CINDER, CINDER, BREAKTHROUGH, BLUDGEON, THRASH, PILLAGE, IRON_WAVE, BREAKTHROUGH
+- 本局遗物：开心小花, MOLTEN_EGG
+- 战斗记录：F13 Monster战 掉血14; F15 Unknown战 掉血0; F17 Boss战 掉血30; F19 Monster战 掉血32; F20 Monster战 掉血20; F23 Monster战 掉血28（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，THRASH(23分/2局)，MANGLE(21分/19局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.15 → 1.20（非 Boss 战斗长战阵亡（6回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/113 胜，当前目标进阶 0
