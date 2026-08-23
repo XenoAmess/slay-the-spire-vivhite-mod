@@ -2408,3 +2408,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/194 胜，当前目标进阶 0
+
+## 第 195 局复盘（2026-08-24 03:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：RUPTURE, THUNDERCLAP, DISMANTLE, MOLTEN_FIST, FLAME_BARRIER, TRUE_GRIT, THUNDERCLAP
+- 本局遗物：LETTER_OPENER
+- 战斗记录：F3 Monster战 掉血1; F4 Monster战 掉血1; F6 Monster战 掉血20; F12 Monster战 掉血7; F14 Monster战 掉血12; F17 Boss战 掉血72（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/6局)，MIND_ROT(33分/3局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿
+- 生涯战绩：0/195 胜，当前目标进阶 0
