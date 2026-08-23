@@ -2602,3 +2602,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/211 胜，当前目标进阶 0
+
+## 第 212 局复盘（2026-08-24 05:56）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：STOMP, BREAKTHROUGH, SHRUG_IT_OFF, HEADBUTT, BATTLE_TRANCE, MOLTEN_FIST, ARMAMENTS, THUNDERCLAP, CINDER
+- 本局遗物：弹珠袋, WAR_PAINT
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血6; F5 Monster战 掉血6; F6 Monster战 掉血13; F14 Elite战 掉血60; F17 Boss战 掉血44（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，FIEND_FIRE(27分/4局)，MAYHEM(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/212 胜，当前目标进阶 0
