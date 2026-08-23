@@ -2441,3 +2441,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/197 胜，当前目标进阶 0
+
+## 第 198 局复盘（2026-08-24 04:04）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：BLUDGEON, RAMPAGE, FIGHT_ME, WHIRLWIND, TAUNT, BLUDGEON, SHRUG_IT_OFF, SPITE, THE_GAMBIT
+- 本局遗物：VAJRA
+- 战斗记录：F6 Monster战 掉血0; F7 Monster战 掉血10; F9 Monster战 掉血10; F12 Monster战 掉血10; F15 Monster战 掉血35; F17 Boss战 掉血48（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/6局)，MIND_ROT(33分/3局)，SLOTH(33分/2局)，MAYHEM(29分/3局)，FIEND_FIRE(27分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/198 胜，当前目标进阶 0
