@@ -1190,3 +1190,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus: 16.00 → 19.00（长战磨死（16回合），提升击杀奖励加快清场）；block_safety: 1.90 → 1.75（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.15 → 1.20（Boss 长战磨死（16回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.65 → 0.67（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/91 胜，当前目标进阶 0
+
+## 第 92 局复盘（2026-08-23 09:36）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：BREAKTHROUGH, SHRUG_IT_OFF, FLAME_BARRIER, TAUNT, FLAME_BARRIER, RAMPAGE, SHRUG_IT_OFF, RAGE, THINKING_AHEAD, TRUE_GRIT
+- 本局遗物：STONE_CRACKER, WHETSTONE, POTION_BELT, PERMAFROST
+- 战斗记录：F7 Monster战 掉血18; F12 Monster战 掉血0; F15 Monster战 掉血0; F15 Monster战 掉血38; F17 Boss战 掉血7; F17 Boss战 掉血41（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/44局)，BARRICADE(20分/2局)，TAUNT(19分/32局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus: 19.00 → 20.00（长战磨死（15回合），提升击杀奖励加快清场）；block_safety: 1.75 → 1.60（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.20 → 1.25（Boss 长战磨死（15回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.67 → 0.69（Boss 长战磨死，入场血量要求线上调）
+- 生涯战绩：0/92 胜，当前目标进阶 0

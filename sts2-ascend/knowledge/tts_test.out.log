@@ -1,0 +1,23 @@
+>> QwenEmotion not loaded (use_qwen_emo=False)
+>> GPT weights restored from: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\third_party\index-tts\checkpoints\gpt.pth
+>> semantic_codec weights restored from: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\third_party\index-tts\checkpoints\codec.pth
+>> semantic_codec weights restored cost:  3.1530402999997023
+cfm loaded
+length_regulator loaded
+>> s2mel weights restored from: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\third_party\index-tts\checkpoints\s2mel.pth
+>> campplus_model weights restored from: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\third_party\index-tts\checkpoints\hf_cache\campplus_cn_common.bin
+Loading config.json from local directory
+Loading weights from local directory
+Removing weight norm...
+>> bigvgan weights restored from: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\third_party\index-tts\checkpoints\hf_cache\bigvgan
+>> starting inference...
+text after normalization: ÄãºÃ.
+Use the specified emotion vector
+torch.Size([1, 23552])
+>> gpt_gen_time: 11.41 seconds
+>> s2mel_time: 137.24 seconds
+>> bigvgan_time: 4.13 seconds
+>> Total inference time: 191.04 seconds
+>> Generated audio length: 1.07 seconds
+>> RTF: 178.8547
+>> wav file saved to: D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\tts\speaker_out.wav
