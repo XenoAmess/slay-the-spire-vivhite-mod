@@ -1571,3 +1571,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据
 - 生涯战绩：0/121 胜，当前目标进阶 0
+
+## 第 122 局复盘（2026-08-23 16:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BREAKTHROUGH, SPITE, THRASH, HAND_OF_GREED, TRUE_GRIT, RAMPAGE, STRATAGEM, SWORD_BOOMERANG, UNRELENTING, THUNDERCLAP, BREAKTHROUGH
+- 本局遗物：ANCHOR
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血27; F8 Monster战 掉血18; F12 Monster战 掉血25; F14 Monster战 掉血19; F17 Boss战 掉血38（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，FISTICUFFS(24分/2局)，CONFLAGRATION(22分/6局)，COLOSSUS(22分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据
+- 生涯战绩：0/122 胜，当前目标进阶 0
