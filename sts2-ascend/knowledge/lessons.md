@@ -1082,3 +1082,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/84 胜，当前目标进阶 0
+
+## 第 85 局复盘（2026-08-23 08:14）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：THUNDERCLAP, CINDER, STOMP, TAUNT, SHRUG_IT_OFF, TWIN_STRIKE, HEMOKINESIS, TRUE_GRIT, ARMAMENTS, CRUELTY, DRUM_OF_BATTLE, INFLAME, THUNDERCLAP
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F15 Monster战 掉血5; F15 Monster战 掉血4; F15 Monster战 掉血12; F15 Monster战 掉血0; F17 Boss战 掉血26; F17 Boss战 掉血29（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(26分/3局)，MANGLE(21分/19局)，RAMPAGE(20分/42局)，BARRICADE(20分/2局)，TAUNT(19分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/85 胜，当前目标进阶 0
