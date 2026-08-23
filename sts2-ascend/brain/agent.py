@@ -425,6 +425,11 @@ class Agent:
                        for e in combat.get("enemies", [])]
             hand = [c.get("card_id") for c in combat.get("hand", [])]
             deck = [c.get("card_id") for c in (run.get("deck") or [])]
+            # 牌堆信息（关键：攻击牌是否已被消耗光）
+            av = state.get("agent_view") or {}
+            avc = av.get("combat") or {}
+            piles = {k: [x.get("line") for x in (avc.get(k) or [])]
+                     for k in ("draw", "discard", "exhaust")}
             model = (self.cfg.get("llm") or {}).get("model", "kimi-for-coding/k3")
             prompt = (
                 f"杀戮尖塔2自动游玩 agent 的一场战斗已经进行了 {turn} 回合仍未结束。"
@@ -433,11 +438,12 @@ class Agent:
                 f"我方: hp {player.get('current_hp')}/{player.get('max_hp')}, "
                 f"格挡 {player.get('block')}, 能量 {player.get('energy')}\n"
                 f"手牌: {json.dumps(hand, ensure_ascii=False)}\n"
-                f"卡组: {json.dumps(deck, ensure_ascii=False)}\n\n"
+                f"卡组: {json.dumps(deck, ensure_ascii=False)}\n"
+                f"牌堆(抽/弃/消耗): {json.dumps(piles, ensure_ascii=False)}\n\n"
                 "判定规则：\n"
                 "- 敌人血量在持续下降，我方迟早能赢 → grind（正常磨血，继续打）\n"
                 "- 我方手里/卡组里还有伤害手段但一直没正确用出来 → offense（应立即无视评分阈值强攻）\n"
-                "- 我方已无任何伤害手段（攻击牌被消耗/转化殆尽，或敌人机制无法被伤害）→ giveup（死循环，应停止一切出牌快速送死结束本局）\n\n"
+                "- 我方已无任何伤害手段（攻击牌被消耗/转化殆尽——注意查看消耗堆！）→ giveup（死循环，应停止一切出牌快速送死结束本局）\n\n"
                 "第一行严格输出：VERDICT: grind 或 VERDICT: offense 或 VERDICT: giveup\n"
                 "第二行用一句中文给出理由。"
             )
