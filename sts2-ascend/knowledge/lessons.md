@@ -2718,3 +2718,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（11回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；deck_burst_floor: 38.00 → 39.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
 - 生涯战绩：0/221 胜，当前目标进阶 0
+
+## 第 222 局复盘（2026-08-24 07:34）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：UNRELENTING, CINDER, TRUE_GRIT, TAUNT, UPPERCUT, CRUELTY, UNRELENTING, FIEND_FIRE, IMPERVIOUS, CINDER, RUPTURE, FLAME_BARRIER
+- 本局遗物：LANTERN
+- 战斗记录：F14 Monster战 掉血0; F15 Monster战 掉血0; F17 Boss战 掉血67; F19 Monster战 掉血1; F20 Monster战 掉血11; F21 Monster战 掉血79（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FISTICUFFS(26分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；deck_burst_floor: 39.00 → 40.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
+- 生涯战绩：0/222 胜，当前目标进阶 0
