@@ -44,7 +44,7 @@ REF_48K = TTS_DIR / "reference_voice_48k.wav"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 
 MIN_GAP, MAX_GAP = 20, 45        # 上一条播完后的随机间隔（秒）
-LLM_TIMEOUT = 90
+LLM_TIMEOUT = 45                 # 免费路由拥堵时快速失败转保底（90s 太久会显得哑巴）
 API = "http://127.0.0.1:8080"
 FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败时的兜底一句
 
