@@ -393,6 +393,7 @@ def _tail_lines(state: dict) -> list[str]:
 
 
 def main() -> int:
+    _hide_own_console()
     mode = "hybrid"
     for a in sys.argv[1:]:
         if a in ("sapi", "indextts", "hybrid"):

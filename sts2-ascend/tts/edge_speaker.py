@@ -107,6 +107,7 @@ def _play_wav_with_gain(wav: Path) -> None:
 
 
 def main() -> int:
+    _hide_own_console()
     if "--test" in sys.argv:
         eng = EdgeEngine()
         w1 = TTS_DIR / "edge_test1.wav"

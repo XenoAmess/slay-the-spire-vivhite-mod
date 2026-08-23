@@ -102,6 +102,7 @@ def _synth_indextts(text: str, out: Path) -> None:
 
 
 def main() -> int:
+    _hide_own_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     engine = "moss"
     if "--engine" in sys.argv:
