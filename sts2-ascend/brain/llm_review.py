@@ -729,7 +729,6 @@ def enqueue_review(agent, log=print) -> None:
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     if source == "preferred" and runs - last_ok >= starve_every:
         model, every, source = cfg["model"], starve_every, "fallback"
-        log(f"[llm] 距上次成功复盘已 {runs - last_ok} 局，强制兜底 {model}")
     if source == "fallback":
         # 兜底节奏独立记账：preferred 尝试（无论成败）不得刷新兜底计数——
         # 否则优先链持续失败时每局都刷新 last，兜底门槛永远攒不够
@@ -749,7 +748,8 @@ def enqueue_review(agent, log=print) -> None:
                                         "model": model, "every": every, "source": source})
     q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 5))):]
     _save_queue(q)
-    log(f"[llm] 复盘请求已入队（第{runs}局，待消化 {len(q['pending'])} 批），游玩不等待")
+    starve_note = f"（距上次成功复盘 {runs - last_ok} 局，守卫触发）" if source == "fallback" and runs - last_ok >= starve_every else ""
+    log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     _ensure_worker(agent, log)
 
 
