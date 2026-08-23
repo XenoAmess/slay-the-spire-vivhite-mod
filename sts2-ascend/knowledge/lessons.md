@@ -1313,3 +1313,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.35 → 1.27（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.30 → 1.35（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.71 → 0.73（Boss 长战磨死，入场血量要求线上调）
 - 生涯战绩：0/100 胜，当前目标进阶 0
+
+## 第 101 局复盘（2026-08-23 11:02）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：MOLTEN_FIST, ARMAMENTS, RAMPAGE, HEADBUTT, TRUE_GRIT, SWORD_BOOMERANG, CINDER, THUNDERCLAP, TAUNT, IMPERVIOUS
+- 本局遗物：NUNCHAKU
+- 战斗记录：F13 Monster战 掉血15; F13 Monster战 掉血0; F14 Monster战 掉血13; F14 Monster战 掉血0; F15 Monster战 掉血11; F15 Monster战 掉血8（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，ULTIMATE_STRIKE(25分/2局)，FISTICUFFS(24分/2局)，COLOSSUS(22分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，BURNING_PACT(8分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.27 → 1.32（非 Boss 战斗长战阵亡（5回合），死因是有效格挡不足而非龟防——上调防御权重）
+- 生涯战绩：0/101 胜，当前目标进阶 0
