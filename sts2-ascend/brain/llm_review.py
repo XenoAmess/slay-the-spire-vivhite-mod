@@ -620,6 +620,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         return False
     finally:
         _stream_end({"exit": rc, "timeout": timed_out})
+        if timed_out or rc != 0:
+            # 失败/超时/异常路径在上方提前 return，走不到后处理段的
+            # set_review_active(False)——flag 陈旧会永久卡住 autogit 宽窄判断
+            # （一日内三次实证）。成功路径保持 True 到后处理结束。
+            autogit.set_review_active(False)
 
     try:
         # 2) 无变更则无需提交/重启
