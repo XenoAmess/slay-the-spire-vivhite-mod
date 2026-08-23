@@ -1269,3 +1269,14 @@
 - **参数面观察**：boss_entry 0.72 冷恢复再次按三方合并规则败给内存演化值 0.69——该旋钮已是演化资产，冷修改无效属预期行为非事故。
 - 上批观察点核对：④距上限留痕通过；⑤burst_floor↔Boss 档挂钩触发条件解除（一幕 Boss 已胜）不实施；①②顺延至 96 局（修复未在窗口内生效）。
 - 观察点（下批复盘核对）：①96 局起竞速投影留痕首验；②舒适局不再出现 2 费大挡、Boss 战损应显著低于 61；③警戒带内商店出现「代偿休整」留痕；④非 Boss 长战阵亡后 block_safety 上调首验；⑤能力类药水硬仗 T1~T3 兑现。
+
+## 第 97 局复盘（2026-08-23 10:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：CINDER, ULTIMATE_STRIKE, TRUE_GRIT, COLOSSUS, ANGER, RUPTURE, CINDER, IRON_WAVE, THUNDERCLAP, CINDER, THUNDERCLAP, TRUE_GRIT, DISMANTLE, TRUE_GRIT, VICIOUS
+- 本局遗物：精准剪刀, 诅咒珍珠, GAME_PIECE
+- 战斗记录：F12 Monster战 掉血13; F14 Unknown战 掉血8; F15 Monster战 掉血14; F17 Boss战 掉血45; F17 Boss战 掉血0; F17 Boss战 掉血35（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(27分/4局)，MAYHEM(27分/2局)，ULTIMATE_STRIKE(25分/2局)，FISTICUFFS(24分/2局)，COLOSSUS(22分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(7分/6局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；block_safety: 1.41 → 1.30（长战实证过度龟防会拖长战斗，小幅回调）；boss_atk_mult: 1.25 → 1.30（Boss 长战磨死（9回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.69 → 0.71（Boss 长战磨死，入场血量要求线上调）
+- 生涯战绩：0/97 胜，当前目标进阶 0
