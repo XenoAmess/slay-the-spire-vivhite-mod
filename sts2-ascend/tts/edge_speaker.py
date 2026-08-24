@@ -161,7 +161,21 @@ def main() -> int:
     q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
     splitter = SentenceSplitter()
     fence = FenceStripper()
-    state = {"offset": 0}
+    # 中途启动只追直播前沿，不重放历史：整段重放会让队列瞬间打满、
+    # 丢弃区间恰好压在播放器脚下（丢队沙漠的引信）。直播旁白要的是"现在"。
+    # 对齐到行首（8KB 尾部起点可能切在行中间）。
+    try:
+        _size = STREAM_FILE.stat().st_size
+        _seek = max(0, _size - 8192)
+        with STREAM_FILE.open("r", encoding="utf-8", errors="replace") as _f:
+            _f.seek(_seek)
+            _tail = _f.read()
+            _nl = _tail.find("\n")
+            if 0 <= _nl < len(_tail) - 1:
+                _seek = _seek + _nl + 1
+        state = {"offset": _seek}
+    except OSError:
+        state = {"offset": 0}
     ended = False
     end_at = 0.0
 
@@ -289,11 +303,18 @@ def main() -> int:
                         continue
                     for sent in splitter.feed(ln):
                         if q.full():
-                            for _ in range(MAX_QUEUE // 2):
-                                try:
-                                    q.get_nowait()
-                                except queue.Empty:
-                                    break
+                            # 队列打满丢最老一半。丢弃必须同步标记 done 并唤醒播放器：
+                            # 否则被丢句永远无结果，播放器在丢弃区间每句空等 90 个
+                            # waited-秒（约 40~76 真实秒）才静默跳过——上百句的丢弃区
+                            # 就是 1.5~3 小时静默沙漠（2026-08-24 占卜日事故实证）
+                            with done_cond:
+                                for _ in range(MAX_QUEUE // 2):
+                                    try:
+                                        dropped_seq, _ = q.get_nowait()
+                                    except queue.Empty:
+                                        break
+                                    done[dropped_seq] = (None, None)
+                                done_cond.notify_all()
                         q.put((counters["put"], sent))
                         counters["put"] += 1
             if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
