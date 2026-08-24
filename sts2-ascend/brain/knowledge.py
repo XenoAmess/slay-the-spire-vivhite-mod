@@ -247,6 +247,12 @@ DEFAULT_POLICY = {
                                        # 卡组处于「跳过精英也必输 Boss」状态——精英是遗物/高质牌唯一稳定供给，
                                        # 全让给篝火=慢性死亡（122 批遗物断供因果链）。灰区生存线下调此值，
                                        # 卡组成型后豁免自动消失；137 局 88% 血灰区精英被否决即本病灶样本
+    "elite_healthy_entry_pct": 0.75,   # 健康进场子账本的入场血量线（第 396 局批次复盘）：Elite 战损统计存在
+                                       # 选择性偏差——健康状态从不主动打精英，全量样本几乎全是低血被迫战，
+                                       # 场均被抬到 ~24~40，灰区悲观复核（×safety 2.5）数学上永不可满足，
+                                       # 规避→样本更坏→更规避自我强化。≥此血量的 Elite 战斗额外计入
+                                       # hp_lost_sum_hi/damage_events_hi 子账本，闸门定价优先消费之；
+                                       # 子账本 <3 样本时回落旧口径，行为零变化
 }
 
 DEFAULT_PROGRESSION = {
@@ -818,7 +824,8 @@ class Knowledge:
         return worst_pool, worst_fire
 
     def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None,
-                           floor: int | None = None) -> None:
+                           floor: int | None = None,
+                           hp_start_pct: float | None = None) -> None:
         """按房间类型累计战斗掉血（供路径先验动态校准）。
 
         act 传入时同步写入分幕键（第 79 局复盘新增）：跨幕混算的场均掉血
@@ -835,18 +842,38 @@ class Knowledge:
         的尾部记忆，与事件层 hp_min（255~257 批）同构。旧条目缺键视为
         无尾部样本（None），自新样本起累积，不捏造回填。rooms/rooms_act/
         rooms_band 三级全部维护尾部记忆。
+
+        健康进场子账本（第 396 局批次复盘新增）：Elite 战损统计的选择性
+        偏差——健康状态几乎从不主动打精英，全量账本被低血被迫战垄断
+        （一幕 Elite 场均 ~24、灰区悲观复核数学上永不可满足）。hp_start_pct
+        ≥ elite_healthy_entry_pct 的 Elite 战斗额外计入 hp_lost_sum_hi/
+        damage_events_hi 子账本（rooms 与 rooms_act 两级；band 样本太薄不写），
+        供 elite_prior_healthy 消费。旧条目无此键即从空累积，历史数据不回填。
         """
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
         e["damage_events"] = e.get("damage_events", 0) + 1
         e["hp_lost_max"] = max(float(e.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+        _is_healthy_elite = (node_type == "Elite" and hp_start_pct is not None
+                             and float(hp_start_pct) >= float(
+                                 self.policy.get("elite_healthy_entry_pct", 0.75)))
+        if _is_healthy_elite:
+            e["hp_lost_sum_hi"] = e.get("hp_lost_sum_hi", 0.0) + max(0.0, hp_lost)
+            e["damage_events_hi"] = int(e.get("damage_events_hi", 0)) + 1
+            e["hp_lost_max_hi"] = max(float(e.get("hp_lost_max_hi") or 0.0),
+                                      max(0.0, float(hp_lost)))
         if act is not None:
             ra = self.stats.setdefault("rooms_act", {}).setdefault(
                 f"{node_type}@{int(act)}", {"hp_lost_sum": 0.0, "damage_events": 0})
             ra["hp_lost_sum"] += max(0.0, hp_lost)
             ra["damage_events"] += 1
             ra["hp_lost_max"] = max(float(ra.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+            if _is_healthy_elite:
+                ra["hp_lost_sum_hi"] = float(ra.get("hp_lost_sum_hi", 0.0)) + max(0.0, hp_lost)
+                ra["damage_events_hi"] = int(ra.get("damage_events_hi", 0)) + 1
+                ra["hp_lost_max_hi"] = max(float(ra.get("hp_lost_max_hi") or 0.0),
+                                           max(0.0, float(hp_lost)))
             if floor is not None and int(floor) >= 1:
                 row_in_act = (int(floor) - 1) % 17 + 1
                 rb = self.stats.setdefault("rooms_band", {}).setdefault(
@@ -856,6 +883,30 @@ class Knowledge:
                 rb["damage_events"] += 1
                 rb["hp_lost_max"] = max(float(rb.get("hp_lost_max") or 0.0),
                                         max(0.0, float(hp_lost)))
+
+    def elite_prior_healthy(self, act: int, static_prior: float) -> tuple[float, bool]:
+        """健康进场精英实证先验（第 396 局批次复盘新增）。
+
+        因果链：健康状态从不主动打精英 → Elite 全量战损样本被低血被迫战
+        垄断（本批留痕「Elite先验13→14/38→39」）→ 灰区悲观复核
+        （先验×折抵上限×safety 2.5 ≈ 半管以上血）在 62%~90% 灰区带内
+        数学不可满足 → 更规避 → 遗物/高质牌断供 → 卡组弱 → Boss 磨死
+        （122 批已诊断的因果闭环，缺的是统计端的解法）。
+
+        本口径回答「像现在这样健康地进场会掉多少」：rooms_act[f"Elite@{act}"]
+        的健康子账本（≥3 样本）均值 × 战斗发生率，命中时幕数乘区归 1
+        （分幕实测已含幕效应，与 room_damage_prior_act 同语义）；样本不足
+        回落旧口径 (room_damage_prior_act)，行为与旧版严格一致。
+        返回 (先验, 是否命中健康实证)。
+        """
+        ra = self.stats.get("rooms_act", {}).get(f"Elite@{int(act)}")
+        n_hi = int((ra or {}).get("damage_events_hi", 0) or 0)
+        if ra is not None and n_hi >= 3:
+            avg = float(ra["hp_lost_sum_hi"]) / n_hi
+            return avg * self.room_combat_rate("Elite"), True
+        prior, _act_specific = self.room_damage_prior_act("Elite", static_prior, act)
+        return prior, False
+
 
     def room_damage_band_stats(self, node_type: str, act: int,
                                row_in_act: int,

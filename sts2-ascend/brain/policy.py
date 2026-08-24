@@ -440,8 +440,20 @@ class Policy:
         soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
         if hpp < soft:
             return 0.1, f"血量{hpp:.0%}<{soft:.0%}，规避精英"
+        # 健康进场实证先验（第 396 局批次复盘）：Elite 全量样本被低血被迫战
+        # 垄断（选择性偏差），灰区悲观复核在旧先验下数学不可满足——规避→
+        # 样本更坏→更规避自我强化。健康子账本成熟（≥3）时改答「像现在这样
+        # 健康地进场会掉多少」，命中时幕数乘区归 1（分幕实测已含幕效应）；
+        # 未命中回落旧口径，行为与旧版严格一致。留痕带来源便于复盘核对。
+        src_note = ""
         if act_no is not None:
-            prior, eff_mul, _ = self._act_danger("Elite", priors, act_no, act_mul)
+            _prior_h, _hit_h = self.know.elite_prior_healthy(
+                act_no, float(priors.get("Elite", 28)))
+            if _hit_h:
+                prior, eff_mul = _prior_h, 1.0
+                src_note = f"（健康进场实证先验{prior:.0f}）"
+            else:
+                prior, eff_mul, _ = self._act_danger("Elite", priors, act_no, act_mul)
         else:
             prior = self.know.room_damage_prior("Elite", float(priors.get("Elite", 28)))
             eff_mul = act_mul
@@ -450,13 +462,13 @@ class Policy:
         req = float(pol.get("path_hp_floor_pct", 0.35)) + 0.10 / max(1.0, act_mul)
         if proj < req:
             return 0.1, (f"血量{hpp:.0%}进精英预计战后仅剩{max(0.0, proj):.0%}"
-                         f"(需求≥{req:.0%})，规避精英")
+                         f"(需求≥{req:.0%})，规避精英{src_note}")
         veto_f, veto_note = self._elite_grey_veto(pol, prior, eff_mul, hpp,
                                                   good_cards, max_hp, burst_starved)
         if veto_f is not None:
-            return veto_f, veto_note
+            return veto_f, veto_note + src_note
         if hpp < hard:
-            return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估"
+            return 0.5, f"血量{hpp:.0%}处于精英灰区({soft:.0%}~{hard:.0%})，谨慎评估{src_note}"
         return 1.0, ""
 
     def _elite_grey_veto(self, pol: dict, prior: float, act_mul: float, hpp: float,

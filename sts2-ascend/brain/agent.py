@@ -606,12 +606,15 @@ class Agent:
                                      fire_rounds=int(agg.get("obs_fire_rounds", 0) or 0))
         # 分幕掉血入账（第 84~85 批复盘接线）：act 参数按整场战斗的楼层归幕；
         # floor 同步入账分幕分层段键 rooms_band（第 266 局批次复盘新增）——
-        # 同幕怪物池随楼层递增，全幕均值把后段杀手组合摊薄成便宜战
+        # 同幕怪物池随楼层递增，全幕均值把后段杀手组合摊薄成便宜战。
+        # hp_start_pct 同步入账（第 396 局批次复盘新增）：Elite 的健康进场
+        # 子账本靠它分流——健康状态主动打的精英与低血被迫打的精英是两个分布
         _fl = int(agg.get("floor") or 1)
         act_no = (_fl - 1) // 17 + 1
         self.know.commit_room_damage(agg.get("node_type") or "Unknown",
                                      float(agg.get("hp_lost_sum", 0.0)), act=act_no,
-                                     floor=_fl)
+                                     floor=_fl,
+                                     hp_start_pct=agg.get("hp_start_pct"))
         note = (f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
                 + ("（阵亡）" if agg.get("died") else ""))
         self.ctx.combat_notes.append(note)

@@ -2188,6 +2188,105 @@ def main() -> int:
         else:
             know.stats["rooms"].pop("Elite", None)
 
+    # 3yh) 精英健康进场子账本（第 396 局批次复盘）：Elite 全量战损样本被低血
+    #      被迫战垄断——健康状态从不主动打精英（生涯 396 局仅 166 次到访），
+    #      污染先验让灰区悲观复核数学不可满足，规避→样本更坏→更规避自我强化。
+    #      ≥elite_healthy_entry_pct 进场的 Elite 战斗额外计入 hp_lost_sum_hi/
+    #      damage_events_hi 子账本；成熟（≥3 样本）时闸门改答「像现在这样健康地
+    #      进场会掉多少」（幕数乘区归 1），未成熟回落旧口径行为严格一致。
+    _yh_keys = ("elite_min_hp_pct", "elite_soft_hp_pct", "elite_grey_safety_mult",
+                "elite_grey_survival_floor")
+    _yh_pol_saved = {k: know.policy.get(k) for k in _yh_keys}
+    _yh_rooms_e = know.stats.get("rooms", {}).get("Elite")
+    _yh_rooms_m = know.stats.get("rooms", {}).get("Monster")
+    _yh_ract_e = know.stats.get("rooms_act", {}).get("Elite@1")
+    _yh_ract_m = know.stats.get("rooms_act", {}).get("Monster@1")
+    _yh_rband_e = know.stats.get("rooms_band", {}).get("Elite@1_b3")
+    _yh_rband_m = know.stats.get("rooms_band", {}).get("Monster@1_b3")
+    _yh_enemies = know.stats.get("enemies", {})
+    try:
+        # 夹具隔离：enemies 置空使 combat_calibration=1.0；摘除将被写入的真实库键，
+        # 使断言数值完全由注入数据决定
+        know.stats["enemies"] = {}
+        know.policy["elite_min_hp_pct"] = 0.90
+        know.policy["elite_soft_hp_pct"] = 0.62
+        know.policy["elite_grey_safety_mult"] = 2.5
+        know.policy["elite_grey_survival_floor"] = 0.40
+        know.stats.setdefault("rooms", {})["Elite"] = {
+            "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 244.0, "damage_events": 10}
+        know.stats["rooms"].pop("Monster", None)
+        know.stats.setdefault("rooms_act", {}).pop("Elite@1", None)
+        know.stats["rooms_act"].pop("Monster@1", None)
+        know.stats.setdefault("rooms_band", {}).pop("Elite@1_b3", None)
+        know.stats["rooms_band"].pop("Monster@1_b3", None)
+        # 未成熟回落（hi 子账本不存在→旧口径）：污染先验下灰区复核应否决且无健康留痕
+        know.stats.setdefault("rooms_act", {})["Elite@1"] = {
+            "hp_lost_sum": 2440.0, "damage_events": 100}
+        pr_fb, hit_fb = know.elite_prior_healthy(1, 28.0)
+        assert hit_fb is False, f"未成熟时不应命中健康实证: {pr_fb}, {hit_fb}"
+        gf_fb, note_fb = pol._elite_path_gate(
+            know.policy, know.policy["path_danger_priors"], 64, 80, 10, 1.0,
+            False, act_no=1)
+        assert "健康进场实证先验" not in note_fb and "规避精英" in note_fb, \
+            f"未成熟回落路径行为异常: {gf_fb}, {note_fb}"
+        # 写入分流：高血 Elite 入健康子账本，低血 Elite 不入，Monster 高血也不入
+        for _ in range(3):
+            know.commit_room_damage("Elite", 12.0, act=1, floor=13, hp_start_pct=0.90)
+        know.commit_room_damage("Elite", 60.0, act=1, floor=14, hp_start_pct=0.50)
+        know.commit_room_damage("Monster", 30.0, act=1, floor=14, hp_start_pct=0.95)
+        ra_yh = know.stats["rooms_act"]["Elite@1"]
+        assert int(ra_yh.get("damage_events_hi", 0)) == 3 and abs(
+            float(ra_yh.get("hp_lost_sum_hi", 0.0)) - 36.0) < 1e-9, \
+            f"健康子账本分流失败: {ra_yh}"
+        assert int(ra_yh["damage_events"]) == 104, f"全量账被健康分流挤占: {ra_yh}"
+        assert "damage_events_hi" not in know.stats["rooms_act"]["Monster@1"], \
+            "Monster 不应写健康子账本"
+        assert know.stats["rooms"]["Elite"].get("damage_events_hi") == 3, \
+            "跨幕条目健康子账本未同步写入"
+        # 成熟命中（hi 场均 12）：同参数下灰区复核放行到谨慎评估并留痕来源
+        ra_yh["hp_lost_sum_hi"] = 36.0
+        ra_yh["damage_events_hi"] = 3
+        pr_h, hit_h = know.elite_prior_healthy(1, 28.0)
+        assert hit_h is True and abs(pr_h - 12.0) < 1e-6, \
+            f"健康实证先验数值错误: {pr_h}, {hit_h}（期望 12×发生率1.0）"
+        gf_h, note_h = pol._elite_path_gate(
+            know.policy, know.policy["path_danger_priors"], 64, 80, 10, 1.0,
+            False, act_no=1)
+        assert gf_h == 0.5 and "谨慎评估" in note_h \
+            and "健康进场实证先验" in note_h, \
+            f"健康实证未放行灰区精英或留痕缺失: {gf_h}, {note_h}"
+    finally:
+        for k, v in _yh_pol_saved.items():
+            if v is not None:
+                know.policy[k] = v
+            else:
+                know.policy.pop(k, None)
+        know.stats["enemies"] = _yh_enemies
+        if _yh_rooms_e is None:
+            know.stats.get("rooms", {}).pop("Elite", None)
+        else:
+            know.stats["rooms"]["Elite"] = _yh_rooms_e
+        if _yh_rooms_m is None:
+            know.stats.get("rooms", {}).pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _yh_rooms_m
+        if _yh_ract_e is None:
+            know.stats.get("rooms_act", {}).pop("Elite@1", None)
+        else:
+            know.stats["rooms_act"]["Elite@1"] = _yh_ract_e
+        if _yh_ract_m is None:
+            know.stats.get("rooms_act", {}).pop("Monster@1", None)
+        else:
+            know.stats["rooms_act"]["Monster@1"] = _yh_ract_m
+        if _yh_rband_e is None:
+            know.stats.get("rooms_band", {}).pop("Elite@1_b3", None)
+        else:
+            know.stats["rooms_band"]["Elite@1_b3"] = _yh_rband_e
+        if _yh_rband_m is None:
+            know.stats.get("rooms_band", {}).pop("Monster@1_b3", None)
+        else:
+            know.stats["rooms_band"]["Monster@1_b3"] = _yh_rband_m
+
     # 3rr) 精英死亡演化改接悲观系数（第 86~87 批复盘）：elite_min_hp_pct 已在
     #      0.9 上限顶格空转——精英死亡信号必须驱动仍有余量的新旋钮，
     #      且胜利时双向释放（演化必须可逆）。
