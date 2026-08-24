@@ -1,40 +1,41 @@
 {
-  "api_ports": [
-    8080,
-    8081,
-    8082,
-    8083,
-    8084
+ "api_ports": [
+  8080,
+  8081,
+  8082,
+  8083,
+  8084
+ ],
+ "game_exe": "G:\\SteamLibrary\\steamapps\\common\\Slay the Spire 2\\launch_vulkan.bat",
+ "game_process_hint": "SlayTheSpire2",
+ "poll_interval": 0.6,
+ "action_settle": 0.4,
+ "watchdog_escalate_after": 25,
+ "watchdog_abandon_after": 90,
+ "max_runs": 0,
+ "seed": null,
+ "llm": {
+  "enabled": true,
+  "runner": "opencode",
+  "opencode_bin": "opencode",
+  "model": "kimi-for-coding/k3",
+  "review_every_runs": 5,
+  "timeout_min": 25,
+  "max_runs_in_packet": 10,
+  "preferred_every_runs": 1,
+  "preferred_failure_cooldown_min": 5,
+  "models_probe_timeout_sec": 60,
+  "viewer_enabled": true,
+  "preferred_models": [
+   "opencode/ox-alpha@max",
+   "openrouter/stealth/ox-alpha@max"
   ],
-  "game_exe": "G:\\SteamLibrary\\steamapps\\common\\Slay the Spire 2\\launch_vulkan.bat",
-  "game_process_hint": "SlayTheSpire2",
-  "poll_interval": 0.6,
-  "action_settle": 0.4,
-  "watchdog_escalate_after": 25,
-  "watchdog_abandon_after": 90,
-  "max_runs": 0,
-  "seed": null,
-  "llm": {
-    "enabled": true,
-    "runner": "opencode",
-    "opencode_bin": "opencode",
-    "model": "kimi-for-coding/k3",
-    "review_every_runs": 5,
-    "timeout_min": 25,
-    "max_runs_in_packet": 10,
-    "preferred_every_runs": 1,
-    "preferred_failure_cooldown_min": 5,
-    "models_probe_timeout_sec": 60,
-    "viewer_enabled": true,
-    "preferred_models": [
-      "opencode/ox-alpha@max",
-      "openrouter/stealth/ox-alpha@max"
-    ],
-    "preferred_timeout_cooldown_min": 5,
-    "preferred_timeout_min": 40,
-    "tts_mode": "edge"
-  },
-  "tts": {
-    "clone_engine": "moss"
-  }
+  "preferred_timeout_cooldown_min": 5,
+  "preferred_timeout_min": 40,
+  "tts_mode": "edge",
+  "review_queue_max": 10
+ },
+ "tts": {
+  "clone_engine": "moss"
+ }
 }

@@ -732,20 +732,23 @@ def enqueue_review(agent, log=print) -> None:
     runs = agent.know.stats["global"]["runs"]
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     model, every, source = resolve_review_plan(cfg, binary, log=log)
-    # 成功复盘守卫：优先链"轮流失败→冷却→过期→再失败"会让 plan 在实践中永远落在
-    # preferred（第 177~207 局实证：条目1 永久不在模型清单只跳过不记冷却，条目2
-    # 失败-冷却5分钟-过期-再失败，30 局零成功零兜底）——plan 来源判兜底不可达，
-    # 必须按"距上次成功复盘的局数"强制切兜底。
+    # 成功复盘守卫 v2：距上次成功复盘 >= 阈值即视为"饥饿"。饥饿时**交替出牌**
+    # 而非锁死兜底——v1 的无条件强制 k3 在 k3 本身不可用时形成死锁：
+    # 守卫强制 k3 → k3 失败 → 永无成功 → 永远强制 k3，ox-alpha 复活也
+    # 没机会被探测（第 267~366 局实证：100 局零成功，last_llm_review_run 冻结在 266）。
+    # 交替规则：上次尝试是 fallback 就放行优先链（恢复探测），否则强制兜底；
+    # 任一路成功即刷新 last_successful_review_run、退出饥饿态。
     last_ok = agent.know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
-    if source == "preferred" and runs - last_ok >= starve_every:
-        model, every, source = cfg["model"], starve_every, "fallback"
+    starved = runs - last_ok >= starve_every
+    if starved and source == "preferred":
+        if agent.know.progression.get("last_review_attempt_source") != "fallback":
+            model, every, source = cfg["model"], starve_every, "fallback"
     if source == "fallback":
-        # 兜底节奏独立记账：preferred 尝试（无论成败）不得刷新兜底计数——
-        # 否则优先链持续失败时每局都刷新 last，兜底门槛永远攒不够
-        # （第 177~204 局实证：ox-alpha 连挂 28 局，k3 一次都没兜上）。
+        # 兜底节奏独立记账（preferred 尝试不得刷新兜底计数）；
+        # 饥饿态下豁免节奏门槛——交替本身就是节奏，再卡门槛会漏掉轮次。
         last = agent.know.progression.get("last_fallback_review_run", 0)
-        if runs - last < every:
+        if not starved and runs - last < every:
             return
         agent.know.progression["last_fallback_review_run"] = runs
     else:
@@ -753,13 +756,14 @@ def enqueue_review(agent, log=print) -> None:
         if runs - last < every:
             return
         agent.know.progression["last_llm_review_run"] = runs
+    agent.know.progression["last_review_attempt_source"] = source
     agent.know.save()
     q = _load_queue()
     q.setdefault("pending", []).append({"run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
                                         "model": model, "every": every, "source": source})
-    q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 5))):]
+    q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 10))):]
     _save_queue(q)
-    starve_note = f"（距上次成功复盘 {runs - last_ok} 局，守卫触发）" if source == "fallback" and runs - last_ok >= starve_every else ""
+    starve_note = f"（距上次成功复盘 {runs - last_ok} 局，交替出牌）" if starved else ""
     log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     _ensure_worker(agent, log)
 
@@ -807,13 +811,13 @@ def _worker_loop(agent, log) -> None:
 def _run_batch_review(agent, batch: list[dict], log) -> None:
     cfg = load_llm_config()
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    # 尊重入队时的来源决策：批中含 fallback 项则整场用兜底模型。
-    # 执行时无脑重解析会被"刚出冷却的优先模型"抢回去再失败一次——
-    # 入队时刻的 fallback 判定（优先链当时在冷却）才是有效的。
-    fallback_items = [p for p in batch if p.get("source") == "fallback" and p.get("model")]
-    if fallback_items:
-        picked = fallback_items[-1]
-        model, every, source = picked["model"], int(picked.get("every", 5)), "fallback"
+    # 尊重入队时的来源决策，且以**最新一条**为准：饥饿交替出牌时批次常混含
+    # 两种来源，若按"含 fallback 即整场 k3"则优先链的恢复探测永远轮不到。
+    # 最新入队项携带的是入队时刻最新的世界状态。
+    planned = [p for p in batch if p.get("source") and p.get("model")]
+    if planned:
+        picked = planned[-1]
+        model, every, source = picked["model"], int(picked.get("every", 5)), picked["source"]
     else:
         model, every, source = resolve_review_plan(cfg, binary, log=log)
     runs_list = [p["run"] for p in batch]
