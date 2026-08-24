@@ -4813,3 +4813,25 @@
 - 调整：Boss 前夜进攻药水预留——距下一个 Boss ≤2 层的普通房封存进攻/增益药水（致死/低血交药线立即解封；精英/Boss 房不受限），新键 potion_boss_reserve_floors=2，selfcheck 3k3 五断言回归通过
 - 经验：①消耗品定价必须含时间轴——价值窗口是「能改变结局的那一场」，不是「眼前这场危不危险」；②同一份战略证据要接到所有资源端口（血量/金币/药水/篝火），漏一个口资源就在那里流失；③轻取样本与处决样本同样珍贵——KMT8 的 -21 证明上限够赢一幕 Boss，问题是「不稳定地赢」
 - 观察点：Boss 前两层普通房 use_potion 应归零；带药进 Boss 比例上升、一幕 Boss 战损分布左移；「便宜组合重尾」（小啃兽场均 7.9 单场 -52）n≥3 时补下限组合尾部记忆
+
+## 第 389 局复盘（2026-08-25 04:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：PANACHE, BATTLE_TRANCE, ULTIMATE_STRIKE, THUNDERCLAP, JUGGERNAUT, RAMPAGE, IRON_WAVE, SWORD_BOOMERANG, BATTLE_TRANCE, FASTEN, FEEL_NO_PAIN
+- 本局遗物：红面具, STONE_CALENDAR
+- 战斗记录：F7 Elite战 掉血40; F11 Monster战 掉血4; F13 Monster战 掉血4; F14 Monster战 掉血20; F15 Unknown战 掉血0; F17 Boss战 掉血56（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FEED(24分/23局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/389 胜，当前目标进阶 0
+
+## 第 390 局复盘（2026-08-25 04:51）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：THUNDERCLAP, HEMOKINESIS, TAUNT, VICIOUS, CRUELTY, SWORD_BOOMERANG, SHRUG_IT_OFF, COLOSSUS, THRASH, BLUDGEON, BLUDGEON, STONE_ARMOR, UNMOVABLE, TRUE_GRIT, BREAKTHROUGH
+- 本局遗物：GORGET, STRIKE_DUMMY
+- 战斗记录：F17 Boss战 掉血44; F19 Monster战 掉血15; F21 Monster战 掉血15; F22 Monster战 掉血24; F23 Monster战 掉血14; F27 Elite战 掉血36（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FEED(24分/23局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/390 胜，当前目标进阶 0
