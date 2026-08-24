@@ -4876,3 +4876,14 @@
 - 调整：输出饥饿卡组（爆发<45）Boss 药水预留窗由 2 层加宽至 potion_starved_reserve_floors=6 层（距 Boss ≤6 层普通怪房封存进攻/增益药水）；强卡组窗口不变防囤药入坟复发；致死判定/交药线/精英 Boss 房三口解封保留；selfcheck 3k3b 三断言回归通过
 - 经验：①预留机制的覆盖面要与「谁在输」对齐——统一窗口保护不了异质卡组，饥饿卡组的每场普通硬仗都是假硬仗，真硬仗只有一个；②验证「正确但不够」的决策要用反事实对照（XYUR 满血进场看似白搭，不做才是必死），不能只看绝对结局；③同一份战略证据的全端口盘点要定期复检——端口接了不等于接满，接满不等于对准了真正在输的人群
 - 观察点：饥饿卡组距 Boss ≤6 层普通房 use_potion 应归零（致死/交药线除外）；带进攻药水进一幕 Boss 比例上升、Boss 战损分布左移；强卡组行为必须不变（囤药入坟复发即回调）；200+ 金币进 Boss 的局应减少（URZB 带 251 金全程零消费）；一幕 Boss 死亡率能否从本批 3/5 回落
+
+## 第 394 局复盘（2026-08-25 05:22）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：TAUNT, THUNDERCLAP, ARMAMENTS, BREAKTHROUGH, UPPERCUT, SHRUG_IT_OFF, RUPTURE, UPPERCUT, STOMP
+- 本局遗物：OLD_COIN
+- 战斗记录：F7 Monster战 掉血7; F9 Monster战 掉血9; F11 Monster战 掉血0; F13 Monster战 掉血0; F14 Monster战 掉血19; F15 Monster战 掉血46（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/8局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/394 胜，当前目标进阶 0
