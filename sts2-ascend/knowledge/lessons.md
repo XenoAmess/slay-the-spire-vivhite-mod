@@ -3717,3 +3717,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/297 胜，当前目标进阶 0
+
+## 第 298 局复盘（2026-08-24 16:57）
+- 结果：💀 失败｜进阶 0｜到达层数 19｜当局评分 19
+- 死因：敌人组合 TUNNELER
+- 本局拿牌：BREAKTHROUGH, FLAME_BARRIER, HOWL_FROM_BEYOND, MOLTEN_FIST, TAUNT, MASTER_OF_STRATEGY, ARMAMENTS, TAUNT, CINDER, BURNING_PACT, DRAMATIC_ENTRANCE, TRUE_GRIT, PYRE, FEED
+- 本局遗物：STRAWBERRY
+- 战斗记录：F7 Monster战 掉血14; F9 Monster战 掉血1; F12 Monster战 掉血13; F15 Monster战 掉血0; F17 Boss战 掉血41; F19 Monster战 掉血87（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/298 胜，当前目标进阶 0
