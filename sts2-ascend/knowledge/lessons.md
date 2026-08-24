@@ -4662,3 +4662,14 @@
 - 观察点：①事件结算日志出现「遗物±N/药水±N」留痕（重启后生效）；②PAEL 类选项
   价值是否开始分化（n≥3 时）；③二幕净损螺旋局的输出缺口是否随遗物供给改善收窄。
 - 生涯战绩：0/376 胜，当前目标进阶 0
+
+## 第 378 局复盘（2026-08-25 03:11）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：FIGHT_ME, BREAKTHROUGH, HEMOKINESIS, FIGHT_ME, SHRUG_IT_OFF, VICIOUS, STONE_ARMOR, ARMAMENTS, JUGGERNAUT, OFFERING, MOLTEN_FIST, TRUE_GRIT, SHRUG_IT_OFF, THUNDERCLAP, HEADBUTT, TAUNT, JUGGLING, FASTEN, WHIRLWIND
+- 本局遗物：PENDULUM, 草莓, LUCKY_FYSH, VAJRA
+- 战斗记录：F15 Elite战 掉血3; F17 Boss战 掉血73; F19 Monster战 掉血14; F21 Monster战 掉血20; F23 Monster战 掉血30; F31 Elite战 掉血75（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/378 胜，当前目标进阶 0
