@@ -4920,3 +4920,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/397 胜，当前目标进阶 0
+
+## 第 398 局复盘（2026-08-25 05:51）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：ANGER, SWORD_BOOMERANG, HOWL_FROM_BEYOND, STOMP, SECOND_WIND, RAMPAGE, INFLAME, HEMOKINESIS, JUGGLING, UNRELENTING, STONE_ARMOR, SECOND_WIND, DARK_EMBRACE
+- 本局遗物：SHURIKEN
+- 战斗记录：F5 Monster战 掉血9; F6 Monster战 掉血6; F8 Monster战 掉血22; F9 Monster战 掉血19; F12 Monster战 掉血0; F17 Boss战 掉血78（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(25分/9局)，FIEND_FIRE(24分/11局)，FEED(24分/24局)，EQUILIBRIUM(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（98%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/398 胜，当前目标进阶 0
