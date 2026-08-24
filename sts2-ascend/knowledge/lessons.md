@@ -2911,3 +2911,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/235 胜，当前目标进阶 0
+
+## 第 236 局复盘（2026-08-24 09:33）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_NECTAR+BOWLBUG_ROCK
+- 本局拿牌：CINDER, BLUDGEON, HOWL_FROM_BEYOND, STOMP, VICIOUS, RAMPAGE, DISMANTLE, ARMAMENTS, MASTER_OF_STRATEGY, TAUNT, MOLTEN_FIST, HOWL_FROM_BEYOND, SHRUG_IT_OFF, FIGHT_ME
+- 本局遗物：STONE_CALENDAR, CENTENNIAL_PUZZLE
+- 战斗记录：F8 Monster战 掉血15; F12 Monster战 掉血1; F17 Boss战 掉血39; F19 Monster战 掉血20; F20 Monster战 掉血32; F22 Monster战 掉血28（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)，CRIMSON_MANTLE(24分/10局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/236 胜，当前目标进阶 0
