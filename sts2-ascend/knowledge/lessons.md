@@ -4695,3 +4695,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/380 胜，当前目标进阶 0
+
+## 第 381 局复盘（2026-08-25 03:37）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：FASTEN, THRASH, DRUM_OF_BATTLE, JUGGLING, SWORD_BOOMERANG, UNRELENTING, FEED, STONE_ARMOR, ARMAMENTS, PACTS_END, SHRUG_IT_OFF, CINDER, MANGLE, RAGE, INFLAME, BLUDGEON
+- 本局遗物：餐券, TUNING_FORK
+- 战斗记录：F15 Monster战 掉血18; F17 Boss战 掉血21; F19 Monster战 掉血0; F20 Monster战 掉血33; F22 Monster战 掉血10; F30 Elite战 掉血80（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/381 胜，当前目标进阶 0
