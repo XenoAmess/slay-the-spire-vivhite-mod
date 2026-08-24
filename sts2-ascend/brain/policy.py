@@ -1998,12 +1998,25 @@ class Policy:
         但 premium 统计恐惧门会让它们持续前倾兑付进普通怪房。规则：
         - 距下一个 Boss ≤ potion_boss_reserve_floors 层才生效（远端战斗照旧投放，
           不回潮「囤药带进坟墓」旧病——第 28/30~32 局教训）；
+        - 输出饥饿卡组加宽预留窗（第 386~390 批复盘）：deck_burst < deck_burst_floor
+          时窗口放宽到 potion_starved_reserve_floors（默认 6 层）。本批五局实证：
+          竞速投影全线「击杀还需 N 回合 > 可存活 M 回合」的饥饿卡组，进攻药水
+          仍在 Boss 前 4~7 层的普通房被统计恐惧门放行烧掉（LK4C 局 F10 爆炸
+          药水、3QQC 局 F13 速度+增益药水），到 F17 一幕 Boss 全部空手或只剩
+          零头，竞速差 3~7 回合处决——饥饿卡组的 Boss 竞速是唯一胜机，普通房
+          的「硬」改变不了结局，Boss 房的「硬」直接决定结局。强卡组不受影响，
+          解封三口（致死判定/交药线/精英Boss房）原样保留；
         - 仅封普通房：Elite/Boss 节点药水照常投入（精英换遗物值得花弹药）；
         - 解封口：服务端致死判定在场，或血量已跌破交药线（保命优先于囤积）。
         """
         reserve = int(pol.get("potion_boss_reserve_floors", 2))
         if reserve <= 0:
             return False
+        # 输出饥饿卡组：预留窗加宽到 potion_starved_reserve_floors（第 386~390 批）
+        _deck_now = run.get("deck") or []
+        if _deck_now and self.deck_burst(_deck_now) < float(
+                pol.get("deck_burst_floor", 30.0)):
+            reserve = max(reserve, int(pol.get("potion_starved_reserve_floors", 6)))
         try:
             f = int(run.get("floor", 0) or 0)
         except (TypeError, ValueError):

@@ -538,7 +538,12 @@ def main() -> int:
     #      Boss 斩杀竞速差 3~7 回合空手阵亡。距 Boss ≤2 层的普通怪房封存进攻/
     #      增益药水；精英/Boss 房、服务端致死、低血交药线三口解封不受限。
     #      远端（>窗口）普通高危房照旧投放——防「囤药带进坟墓」旧病回潮。
-    def reserve_potion_state(floor_no: int, lethal: bool = False, hp: int = 60) -> dict:
+    #      第 386~390 批复盘追加：输出饥饿卡组（deck_burst < deck_burst_floor）
+    #      的预留窗加宽到 potion_starved_reserve_floors——本批五局竞速投影全线
+    #      「击杀还需>可存活」，LK4C 局 F10 爆炸药水、3QQC 局 F13 速度+增益
+    #      药水仍被统计恐惧门烧进普通怪房，F17 一幕 Boss 空手输掉竞速。
+    def reserve_potion_state(floor_no: int, lethal: bool = False, hp: int = 60,
+                             deck: list | None = None) -> dict:
         st = {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
             "combat": {"player": {"current_hp": hp, "max_hp": 80, "block": 0, "energy": 3},
@@ -547,7 +552,8 @@ def main() -> int:
                                     "current_hp": 30, "max_hp": 30, "block": 0,
                                     "is_alive": True, "is_hittable": True,
                                     "intents": [{"total_damage": 10}]}]},
-            "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": floor_no, "deck": [],
+            "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": floor_no,
+                    "deck": list(deck or []),
                     "potions": [{"index": 0, "potion_id": "ATTACK_P", "name": "攻击药水",
                                  "description": "获得2点力量。", "occupied": True,
                                  "can_use": True, "usage": "combat"}]},
@@ -555,6 +561,11 @@ def main() -> int:
         if lethal:
             st["combat"]["end_turn_will_kill_player"] = True
         return st
+
+    _starved_deck = [{"card_id": "DEFEND_IRONCLAD", "card_type": "Skill",
+                      "energy_cost": 1, "rules_text": "获得5点格挡。"}] * 10
+    _strong_deck = [{"card_id": "HEAVY_BLADE", "card_type": "Attack", "energy_cost": 1,
+                     "dynamic_values": [{"name": "Damage", "base_value": 16}]}] * 6
 
     ctx.current_combat_is_hard = True   # 高危组合门常开，复刻 BNSJ F15 场景
     ctx.combat = {"comp_id": "M", "node_type": "Monster"}
@@ -577,6 +588,22 @@ def main() -> int:
     d_lowhp = pol.decide(reserve_potion_state(15, hp=24), ctx)   # 24/80 < 交药线 35%
     assert d_lowhp.action == "use_potion", \
         f"血量跌破交药线必须解封（保命优先于囤积）: {d_lowhp.action}（{d_lowhp.reason}）"
+    # 3k3b) 输出饥饿卡组的加宽预留窗（第 386~390 批复盘）：
+    #       饥饿卡组（爆发<45）距 Boss 5 层的普通怪房必须封存——LK4C 局 F10
+    #       爆炸药水、3QQC 局 F13 速度+增益药水的复刻位；强卡组同楼层照旧投放；
+    #       饥饿但跌破交药线仍立即解封
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_starve_hold = pol.decide(reserve_potion_state(12, deck=_starved_deck), ctx)
+    assert d_starve_hold.action != "use_potion", \
+        f"饥饿卡组距Boss≤6层普通房应封存进攻药水: {d_starve_hold.action}（{d_starve_hold.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_strong_far = pol.decide(reserve_potion_state(12, deck=_strong_deck), ctx)
+    assert d_strong_far.action == "use_potion", \
+        f"强卡组预留窗不得被加宽（防囤药入坟）: {d_strong_far.action}（{d_strong_far.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_starve_valve = pol.decide(reserve_potion_state(12, hp=24, deck=_starved_deck), ctx)
+    assert d_starve_valve.action == "use_potion", \
+        f"饥饿封存下交药线解封口必须保留: {d_starve_valve.action}（{d_starve_valve.reason}）"
     ctx.combat = None
     ctx.current_combat_is_hard = False
 
