@@ -4443,3 +4443,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/363 胜，当前目标进阶 0
+
+## 第 364 局复盘（2026-08-25 01:22）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：DEFEND_IRONCLAD, FIGHT_ME, FIGHT_ME, CINDER, BREAKTHROUGH, CINDER, CONFLAGRATION, BRAND, CINDER, TAUNT, STONE_ARMOR, TRUE_GRIT, BREAKTHROUGH, UNMOVABLE, CINDER, TWIN_STRIKE, CINDER, BLUDGEON, BLUDGEON, THRASH, BLUDGEON
+- 本局遗物：涅奥的苦痛, 涅奥的护符, UNCEASING_TOP
+- 战斗记录：F14 Unknown战 掉血6; F17 Boss战 掉血55; F19 Monster战 掉血19; F21 Monster战 掉血16; F22 Monster战 掉血21; F24 Monster战 掉血24（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，OFFERING(26分/9局)，FORGOTTEN_RITUAL(25分/2局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/364 胜，当前目标进阶 0
