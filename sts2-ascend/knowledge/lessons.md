@@ -2831,3 +2831,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮与 deck_burst_floor 均顶格——输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮
 - 生涯战绩：0/230 胜，当前目标进阶 0
+
+## 第 231 局复盘（2026-08-24 08:48）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：FIGHT_ME, SHRUG_IT_OFF, BREAKTHROUGH, THRUMMING_HATCHET, BREAKTHROUGH, FEED, SHRUG_IT_OFF, SHRUG_IT_OFF, DISMANTLE, TAUNT, CINDER, CINDER, SWORD_BOOMERANG, RAMPAGE, RUPTURE, PACTS_END, OFFERING, COLOSSUS, UNRELENTING, BATTLE_TRANCE, HEMOKINESIS
+- 本局遗物：STRAWBERRY
+- 战斗记录：F12 Monster战 掉血12; F15 Monster战 掉血3; F17 Boss战 掉血60; F19 Monster战 掉血20; F20 Monster战 掉血23; F22 Monster战 掉血50（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FISTICUFFS(26分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮与 deck_burst_floor 均顶格——输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮
+- 生涯战绩：0/231 胜，当前目标进阶 0
