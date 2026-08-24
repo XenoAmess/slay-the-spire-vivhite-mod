@@ -3629,3 +3629,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/289 胜，当前目标进阶 0
+
+## 第 290 局复盘（2026-08-24 15:56）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：HEMOKINESIS, TAUNT, TRUE_GRIT, CINDER, THUNDERCLAP, EVIL_EYE, CRUELTY, BREAKTHROUGH, ANGER, TAUNT, UNRELENTING, THRASH, BLUDGEON, SHRUG_IT_OFF, TRUE_GRIT
+- 本局遗物：SHURIKEN, 药水腰带, PERMAFROST
+- 战斗记录：F13 Monster战 掉血0; F15 Unknown战 掉血21; F17 Boss战 掉血61; F19 Monster战 掉血30; F22 Monster战 掉血18; F28 Elite战 掉血87（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/290 胜，当前目标进阶 0
