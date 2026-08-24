@@ -5058,3 +5058,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/408 胜，当前目标进阶 0
+
+## 第 409 局复盘（2026-08-25 07:09）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：ULTIMATE_STRIKE, EVIL_EYE, BREAKTHROUGH, SHRUG_IT_OFF, FIGHT_ME, SHRUG_IT_OFF, HEADBUTT, CINDER, MOLTEN_FIST, ULTIMATE_STRIKE
+- 本局遗物：ANCHOR, 战纹涂料
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血34; F7 Monster战 掉血19; F14 Monster战 掉血6; F15 Elite战 掉血54; F17 Boss战 掉血12（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，VOLLEY(25分/9局)，THRUMMING_HATCHET(24分/8局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/409 胜，当前目标进阶 0
