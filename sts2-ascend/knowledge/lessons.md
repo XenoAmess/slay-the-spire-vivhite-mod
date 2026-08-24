@@ -3497,3 +3497,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
 - 策略进化：potion_block_hp_pct: 0.60 → 0.65（高速失血爆毙（5回合掉血82，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/277 胜，当前目标进阶 0
+
+## 第 278 局复盘（2026-08-24 14:28）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：SHRUG_IT_OFF, BASH, STOMP, SHRUG_IT_OFF, THE_GAMBIT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F5 Monster战 掉血0; F6 Monster战 掉血0; F7 Unknown战 掉血25; F8 Elite战 掉血55（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/278 胜，当前目标进阶 0
