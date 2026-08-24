@@ -533,6 +533,53 @@ def main() -> int:
         f"精英/Boss 战增益药水必须投入: {d_p1.action}（{d_p1.reason}）"
     ctx.current_combat_is_hard = False
 
+    # 3k3) Boss 前夜进攻药水预留（第 380~385 批复盘新增）：BNSJ 局 F4/F14/F15
+    #      三瓶进攻药水全数前倾消费（两瓶倒在净损 0/-5 的普通怪房），F17 一幕
+    #      Boss 斩杀竞速差 3~7 回合空手阵亡。距 Boss ≤2 层的普通怪房封存进攻/
+    #      增益药水；精英/Boss 房、服务端致死、低血交药线三口解封不受限。
+    #      远端（>窗口）普通高危房照旧投放——防「囤药带进坟墓」旧病回潮。
+    def reserve_potion_state(floor_no: int, lethal: bool = False, hp: int = 60) -> dict:
+        st = {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": hp, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "M", "name": "小怪",
+                                    "current_hp": 30, "max_hp": 30, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 10}]}]},
+            "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": floor_no, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "ATTACK_P", "name": "攻击药水",
+                                 "description": "获得2点力量。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+        if lethal:
+            st["combat"]["end_turn_will_kill_player"] = True
+        return st
+
+    ctx.current_combat_is_hard = True   # 高危组合门常开，复刻 BNSJ F15 场景
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_hold = pol.decide(reserve_potion_state(15), ctx)   # 距 Boss 17-15=2 ≤ 窗口
+    assert d_hold.action != "use_potion", \
+        f"Boss 临门普通房必须封存进攻药水: {d_hold.action}（{d_hold.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_far = pol.decide(reserve_potion_state(10), ctx)    # 距 Boss 7 > 窗口
+    assert d_far.action == "use_potion", \
+        f"远端普通高危房应照旧投放（防囤药入坟）: {d_far.action}（{d_far.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_unseal = pol.decide(reserve_potion_state(15, lethal=True), ctx)
+    assert d_unseal.action == "use_potion", \
+        f"服务端致死必须立即解封: {d_unseal.action}（{d_unseal.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Elite"}
+    d_elite_rm = pol.decide(reserve_potion_state(15), ctx)
+    assert d_elite_rm.action == "use_potion", \
+        f"精英房预留不适用（换遗物值得花弹药）: {d_elite_rm.action}（{d_elite_rm.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_lowhp = pol.decide(reserve_potion_state(15, hp=24), ctx)   # 24/80 < 交药线 35%
+    assert d_lowhp.action == "use_potion", \
+        f"血量跌破交药线必须解封（保命优先于囤积）: {d_lowhp.action}（{d_lowhp.reason}）"
+    ctx.combat = None
+    ctx.current_combat_is_hard = False
+
     # 3n) 精英闸门不得在负分区间反转（第 43 局 F10 实证）：
     #     低血量全路径投影死亡时，旧版 ×0.1 把精英 -110 抬到 -11 压过篝火 -109，
     #     20 血走进 BYGONE_EFFIGY 阵亡。修复后：正分乘法/负分加性重罚，

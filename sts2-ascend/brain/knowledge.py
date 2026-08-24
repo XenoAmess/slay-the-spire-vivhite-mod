@@ -108,6 +108,12 @@ DEFAULT_POLICY = {
                                       # 被链内强制战 -55 抬走；均值账看不见的重尾由 hp_min 补位
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
+    "potion_boss_reserve_floors": 2,  # Boss 前夜进攻药水预留窗口（第 380~385 批复盘新增）：
+                                      # 距下一个 Boss ≤N 层的普通房里，进攻/增益药水封存
+                                      # 留给 Boss 斩杀竞速；当场致死或血量跌破交药线立即
+                                      # 解封，防御/回复药水与精英/Boss 房不受限。BNSJ 局
+                                      # 实证：F4/F14/F15 三瓶前倾消费后 F17 竞速空手阵亡。
+                                      # 0 = 关闭预留（回退旧行为）
     "potion_block_hp_pct": 0.35,  # 药水提前交药线（第 236 局复盘新增，block_safety 顶格后的
                                   # 爆毙/短时死亡接替旋钮）：硬仗中血量低于此比例即掏防御/回复
                                   # 药水，并同步放宽「低血放血」硬仗判定——TNWN 局 40%~50% 血

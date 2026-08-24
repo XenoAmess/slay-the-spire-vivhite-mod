@@ -1,0 +1,249 @@
+{
+ "run_id": "URZBKNTD0CWJ",
+ "ascension": 0,
+ "started_at": "2026-08-25 04:33:06",
+ "victory": false,
+ "in_progress": true,
+ "floor": 3,
+ "decisions": [
+  {
+   "t": "04:33:06",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「铅制镇纸」（经验价值 0.0）；新叶=0.0(n=14) / 铅制镇纸=0.0(n=13) / 巨大扭蛋=-4.0(n=2)"
+  },
+  {
+   "t": "04:33:07",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【神气制胜】（价值 8.8）；候选：神气制胜=8.8 / 净化=0.8"
+  },
+  {
+   "t": "04:33:08",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "04:33:09",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(1,3)（路径分 -35.88，预计进 Boss 血量 81%；前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计81%免于续航罚分））；候选：Monster(1,1)=-35.96|前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计85%免于续航罚分） / Monster(1,3)=-35.88|前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计81%免于续航罚分） / Monster(1,4)=-35.93|前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计85%免于续航罚分） / Monster(1,6)=-58.01|前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "04:33:12",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤7，我方80血/0甲"
+  },
+  {
+   "t": "04:33:13",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤3，我方80血/0甲"
+  },
+  {
+   "t": "04:33:15",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "04:33:19",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【神气制胜】（群体伤害≈20）；敌意图总伤11，我方80血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "04:33:21",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤11，我方80血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "04:33:21",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（辅助体优先转火：树叶史莱姆（小）（零伤害意图，放生=纵容其强化队友））；敌意图总伤11，我方80血/5甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "04:33:22",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（可击杀树叶史莱姆（小））；敌意图总伤11，我方80血/5甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "04:33:24",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "04:33:26",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 74,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤11，我方74血/0甲"
+  },
+  {
+   "t": "04:33:27",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 74,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤11，我方74血/5甲"
+  },
+  {
+   "t": "04:33:28",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 74,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤11，我方74血/10甲"
+  },
+  {
+   "t": "04:33:30",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 74,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "04:33:33",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 73,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方73血/0甲"
+  },
+  {
+   "t": "04:33:34",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 73,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方73血/0甲"
+  },
+  {
+   "t": "04:33:35",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 73,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（中）（单体伤害≈6）；敌意图总伤0，我方73血/0甲"
+  },
+  {
+   "t": "04:33:36",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 73,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "04:33:39",

@@ -1916,6 +1916,15 @@ class Policy:
                        or "dexterity" in desc_l or "能量" in desc or "energy" in desc_l
                        or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l
                        or "能力" in desc or "power" in desc_l)
+            # Boss 前夜进攻药水预留（第 380~385 批复盘）：BNSJ 局实证——F4 力量/
+            # F14 易伤/F15 攻击三瓶进攻药水在 Boss 前全数前倾兑付（其中两瓶倒在
+            # 净损 0/-5 的普通怪房），F17 一幕 Boss 斩杀竞速差 3~7 回合空手阵亡。
+            # premium 的统计恐惧门（高危组合/高期望战损）对普通房照常开门，而
+            # 进攻/增益药水的真正兑现窗口是 Boss 竞速——距下一个 Boss ≤N 层的
+            # 普通房里封存进攻类药水；当场致死或血量跌破交药线立即解封，
+            # 防御/回复药水与精英/Boss 房不受限（详见 _hold_offensive_potion）
+            if (is_damage or is_buff) and self._hold_offensive_potion(ctx, run, pol, combat):
+                continue  # 封存且不计入 tried——本场若恶化成致死局仍可立即启用
             # 增益药水的价值在长战/硬仗兑现：普通战（哪怕低血放血）不构成使用理由，
             # 跳过且不计入 tried——本场若恶化成致死局仍可立即启用
             if is_buff and not premium:
@@ -1955,7 +1964,8 @@ class Policy:
                 cb_turn = int(state.get("turn") or 99)
             except (TypeError, ValueError):
                 cb_turn = 99
-            early_premium = premium and enemies and cb_turn <= 3
+            early_premium = (premium and enemies and cb_turn <= 3
+                             and not self._hold_offensive_potion(ctx, run, pol, combat))
             if early_premium or (premium and enemies and cb_incoming > cb_player.get("block", 0)
                                  and cb_hp <= 0.5 * cb_max):
                 self._potion_tried.add(p["index"])
@@ -1967,6 +1977,49 @@ class Policy:
                                 f"战斗：{when_txt}使用药水【{name}】（描述无法分类，宁滥勿囤）",
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
         return None
+
+    @staticmethod
+    def _floors_to_boss(floor_no: int) -> int:
+        """距下一个 Boss 的层数（幕长为常量：一幕 Boss F17、二幕 F33，三幕按 51 估算）。
+
+        生涯 320 场一幕 Boss 全部落在 F17、24 场二幕 Boss 全部落在 F33——
+        幕边界是可靠常量，无需地图负载即可推算。
+        """
+        if floor_no <= 17:
+            return 17 - floor_no
+        if floor_no <= 33:
+            return 33 - floor_no
+        return 51 - floor_no
+
+    def _hold_offensive_potion(self, ctx, run: dict, pol: dict, combat: dict) -> bool:
+        """Boss 前夜进攻药水预留判定（第 380~385 批复盘新增）。
+
+        进攻/增益药水的价值窗口是 Boss 斩杀竞速（「输出缺口是唯一主矛盾」教义），
+        但 premium 统计恐惧门会让它们持续前倾兑付进普通怪房。规则：
+        - 距下一个 Boss ≤ potion_boss_reserve_floors 层才生效（远端战斗照旧投放，
+          不回潮「囤药带进坟墓」旧病——第 28/30~32 局教训）；
+        - 仅封普通房：Elite/Boss 节点药水照常投入（精英换遗物值得花弹药）；
+        - 解封口：服务端致死判定在场，或血量已跌破交药线（保命优先于囤积）。
+        """
+        reserve = int(pol.get("potion_boss_reserve_floors", 2))
+        if reserve <= 0:
+            return False
+        try:
+            f = int(run.get("floor", 0) or 0)
+        except (TypeError, ValueError):
+            return False
+        if f <= 0 or self._floors_to_boss(f) > reserve:
+            return False
+        node_t = ((getattr(ctx, "combat", None) or {}).get("node_type")) or ""
+        if node_t in ("Elite", "Boss"):
+            return False
+        if combat.get("end_turn_will_kill_player"):
+            return False
+        pl = combat.get("player") or {}
+        _line = float(pol.get("potion_block_hp_pct", 0.35))
+        if pl.get("current_hp", 1) <= _line * max(1, pl.get("max_hp", 1)):
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # rewards / selection / bundles / chest / capstone
