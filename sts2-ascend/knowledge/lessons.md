@@ -4961,3 +4961,14 @@
 - 调整：给 Elite 记第二本账——commit_room_damage 新增 hp_start_pct 入参，≥elite_healthy_entry_pct(0.75) 的精英战额外入 hp_lost_sum_hi/damage_events_hi 健康子账本；新方法 elite_prior_healthy 在子账本 ≥3 样本时接管闸门定价（命中留痕「健康进场实证先验X」），未成熟回落旧口径行为严格一致；selfcheck 新增 3yh 四断言回归通过；零参数改动
 - 经验：①选择性偏差会自我强化成闭环——行为塑造数据、数据又加固行为，凡按历史均值定价的门槛必须先问样本是谁在什么状态下被迫产生的；②分层账本是通用解——不改行为不拍阈值，让同类进场条件的样本单独记账，门槛随数据成熟自然解锁、清零即可回滚；③「数学不可满足」是死代码判据——审门槛要算整条输入带的极值可达性，不能抽样看案例（同一函数两度失守的教训）
 - 观察点：「健康进场实证先验X」留痕出现；主动精英到访率能否从 0.42/局 回升、灰区放行替代否决；遗物/局与 Boss 竞速缺口是否收敛；Unknown 重尾即死（04VB 式 -67）复发则启动尾部全价化；强卡组行为必须不变（健康账只接 Elite 闸门）
+
+## 第 401 局复盘（2026-08-25 06:11）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+BRUTE_RUBY_RAIDER
+- 本局拿牌：JUGGLING, THUNDERCLAP, UNRELENTING, SHRUG_IT_OFF, CINDER, SWORD_BOOMERANG, SHRUG_IT_OFF, THUNDERCLAP
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F6 Monster战 掉血48; F7 Monster战 掉血9; F9 Monster战 掉血2; F11 Monster战 掉血12; F13 Monster战 掉血18; F14 Monster战 掉血15（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(25分/9局)，FIEND_FIRE(24分/11局)，FEED(24分/24局)，EQUILIBRIUM(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/401 胜，当前目标进阶 0
