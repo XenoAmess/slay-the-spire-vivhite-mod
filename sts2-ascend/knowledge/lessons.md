@@ -4454,3 +4454,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/364 胜，当前目标进阶 0
+
+## 第 365 局复盘（2026-08-25 01:33）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：THUNDERCLAP, CINDER, BLUDGEON, CRIMSON_MANTLE, VICIOUS, CRIMSON_MANTLE, ANGER, ARMAMENTS, SECOND_WIND, SWORD_BOOMERANG, SHRUG_IT_OFF, DISMANTLE, FEED, INFLAME, STRATAGEM, ARMAMENTS, PACTS_END, BLUDGEON
+- 本局遗物：活动星图, RAZOR_TOOTH
+- 战斗记录：F14 Monster战 掉血5; F15 Monster战 掉血12; F17 Boss战 掉血62; F19 Monster战 掉血47; F20 Monster战 掉血14; F22 Monster战 掉血19（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，OFFERING(26分/9局)，FORGOTTEN_RITUAL(25分/2局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/365 胜，当前目标进阶 0
