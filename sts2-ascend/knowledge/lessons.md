@@ -5122,3 +5122,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/413 胜，当前目标进阶 0
+
+## 第 414 局复盘（2026-08-25 07:41）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：CINDER, THUNDERCLAP, THUNDERCLAP, SHRUG_IT_OFF, RAMPAGE, MANGLE, EVIL_EYE
+- 本局遗物：MEAL_TICKET
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血27; F7 Monster战 掉血29; F8 Monster战 掉血8; F11 Monster战 掉血34; F12 Monster战 掉血18（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，VOLLEY(25分/9局)，THRUMMING_HATCHET(24分/8局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/414 胜，当前目标进阶 0
