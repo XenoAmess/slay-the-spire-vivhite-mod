@@ -800,15 +800,50 @@ def _ensure_worker(agent, log) -> None:
     log("[llm] 异步复盘工作线程已启动")
 
 
+def _kill_orphan_review_processes(log) -> None:
+    """清理上一个大脑进程死亡后遗留的孤儿复盘 opencode。
+
+    大脑被杀/崩溃时，正在执行的复盘子进程会被系统收养继续跑——它改的文件
+    没人收集、reviewing 标记没人清。worker 启动时（自身尚无在跑复盘，安全）
+    按命令行特征精确击杀：标题 ASCII 前缀 sts2-ascend + --auto（用户自己的
+    opencode 会话不带这两个组合，绝不误伤）。
+    """
+    try:
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'opencode' "
+             "-and $_.CommandLine -match 'sts2-ascend' -and $_.CommandLine -match '--auto' } "
+             "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+            capture_output=True, timeout=30, creationflags=creationflags)
+        log("[llm] 已清理遗留的孤儿复盘进程（如有）")
+    except Exception as exc:
+        log(f"[llm] 孤儿复盘进程清理失败（不影响运行）：{exc}")
+
+
 def _worker_loop(agent, log) -> None:
-    # 进程重启后清理残留的 reviewing 标记（上一场复盘子进程已随旧大脑消亡）
+    # 进程重启后：先清孤儿（避免与重跑的复盘双写），再把 reviewing 的对局
+    # 重新入队——此前直接丢弃标记，被中断复盘覆盖的对局永远丢失复盘。
+    _kill_orphan_review_processes(log)
     q = _load_queue()
     if q.get("reviewing"):
-        log("[llm] 清理残留的复盘标记（上次复盘随进程重启中断）")
+        lost_runs = list((q["reviewing"] or {}).get("runs") or [])
+        if lost_runs:
+            log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
+            cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
+            requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
+                        for r in lost_runs]
+            q["pending"] = (requeued + q.get("pending", []))[-cap:]
         q["reviewing"] = None
         _save_queue(q)
     while True:
         try:
+            # request_restart 已置位 = 本进程已判定待重启（局间 sys.exit(42)）。
+            # 此时严禁再开新复盘：开跑即随进程死亡被孤儿化，覆盖的对局丢失
+            # （复盘 C 局中完成置位 → worker 又开跑 A → 局末退场掐断 A，实证路径）。
+            if getattr(agent, "request_restart", False):
+                time.sleep(5)
+                continue
             q = _load_queue()
             pending = q.get("pending", [])
             if pending and not q.get("reviewing"):
