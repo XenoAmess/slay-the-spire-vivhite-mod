@@ -3,7 +3,8 @@
  "ascension": 0,
  "started_at": "2026-08-24 11:35:56",
  "victory": false,
- "floor": 31,
+ "in_progress": true,
+ "floor": 0,
  "decisions": [
   {
    "t": "11:35:56",
@@ -5417,6 +5418,26 @@
    "action": "end_turn",
    "params": {},
    "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "11:48:31",
+   "screen": "GAME_OVER",
+   "floor": 31,
+   "hp": 0,
+   "gold": 100,
+   "action": "return_to_main_menu",
+   "params": {},
+   "reason": "结算：返回主菜单，备战下一局"
+  },
+  {
+   "t": "11:48:35",
+   "screen": "MAIN_MENU",
+   "floor": 0,
+   "hp": 0,
+   "gold": 100,
+   "action": "open_timeline",
+   "params": {},
+   "reason": "主菜单：检查时间线可解锁项（优先解锁新内容）"
   }
  ],
  "combat_notes": [
