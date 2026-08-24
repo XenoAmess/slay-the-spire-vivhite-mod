@@ -2895,6 +2895,49 @@ def main() -> int:
     assert float(m_shop_pt.group(1)) > float(m_shop_pt0.group(1)), \
         f"药水档未提升商店评分: {m_shop_pt.group(1)} vs {m_shop_pt0.group(1)}"
 
+    # 3xy2-c) 绝境资源节点偏好（403~406 批次复盘）：全部候选路径都投影中途死亡时，
+    #       死亡罚分软饱和把候选差压成噪声级，评分退化为比拼死得早晚——EQ04 局 F3
+    #       商店(468金可换战力/删诅咒)以 0.61 分之差输给又一场白死的怪物战。
+    #       全候选死亡投影且存在 Shop/Treasure/Event 首节点时：资源节点加
+    #       path_doomed_value_bonus 正分胜出并留痕；无资源节点时行为不变
+    dv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-doomval-"))
+    dv_know = knowledge.Knowledge(dv_dir)
+    dv_pol = policy.Policy(dv_know)
+
+    def doomval_map(second_head):
+        """Monster 链(col0，depth0 开战) vs 第二候选(col1)；双方均投影中途死亡。
+
+        hp=20/80：怪物链第 3 场战斗(depth2)打死；商店/怪物链首场延后到 depth1、
+        第 3 场(depth3)打死——两列都在半路暴毙，触发绝境偏好条件。
+        """
+        heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                  "children": [{"row": 2, "col": 0}]},
+                 {"index": 1, "row": 1, "col": 1, "node_type": second_head,
+                  "children": [{"row": 2, "col": 1}]}]
+        all_nodes = list(heads)
+        for col in (0, 1):
+            for r in range(2, 13):
+                g = {"row": r, "col": col,
+                     "node_type": "Boss" if r == 12 else "Monster"}
+                if r < 12:
+                    g["children"] = [{"row": r + 1, "col": col}]
+                all_nodes.append(g)
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": heads, "nodes": all_nodes,
+                      "boss_node": {"row": 12}},
+              "run": {"current_hp": 20, "max_hp": 80, "gold": 200,
+                      "floor": 5, "deck": []}}
+        return dv_pol.decide(st, type("C", (), {"credit_tags": []})())
+
+    d_dv_shop = doomval_map("Shop")
+    assert "绝境全候选死亡投影" in d_dv_shop.reason, \
+        f"绝境偏好未留痕: {d_dv_shop.reason}"
+    assert re.search(r"路径规划：Shop\(1,1\)", d_dv_shop.reason), \
+        f"绝境时资源节点未胜出: {d_dv_shop.reason}"
+    d_dv_mon = doomval_map("Monster")   # 对照组：无价值节点，行为不变
+    assert "绝境全候选死亡投影" not in d_dv_mon.reason, \
+        f"无价值节点时误留痕: {d_dv_mon.reason}"
+
     # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
     #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
     #       depth 越深的精英越不是承诺（中间岔口可改道），罚分须随深度衰减；

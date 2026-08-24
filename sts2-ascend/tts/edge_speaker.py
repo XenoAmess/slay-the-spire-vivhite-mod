@@ -193,7 +193,11 @@ def main() -> int:
                 try:
                     seq, sent = q.get(timeout=0.5)
                 except queue.Empty:
-                    if ended:
+                    # 仅当"复盘结束且播放器已追平"才收工。此前只看 ended+队列空：
+                    # 复盘间隙队列恰好排空而播放器还在播存量 → 3 个 worker 集体
+                    # 退出 → 下一场复盘开始后无人合成 → 僵尸朗读器静默数小时
+                    # （520 句心跳戛然而止实证）。
+                    if ended and counters["played"] >= counters["put"]:
                         return
                     continue
                 wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
@@ -229,8 +233,25 @@ def main() -> int:
                 log(f"合成线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
                 time.sleep(1)
 
+    worker_threads: list = []
+
+    def spawn_worker() -> None:
+        t = threading.Thread(target=synth_worker, args=(len(worker_threads),), daemon=True)
+        worker_threads.append(t)
+        t.start()
+
+    def ensure_workers() -> None:
+        """worker 灭绝即重新拉起（双保险：退出条件收紧后仍留兜底），并大声记日志。"""
+        alive = [t for t in worker_threads if t.is_alive()]
+        if len(alive) < 3:
+            log(f"[edge-voice] 合成线程仅存 {len(alive)}/3，重新补齐（防僵尸朗读器）")
+            del worker_threads[:]
+            worker_threads.extend(alive)
+            for _ in range(3 - len(alive)):
+                spawn_worker()
+
     for _wid in range(3):
-        threading.Thread(target=synth_worker, args=(_wid,), daemon=True).start()
+        spawn_worker()
 
     def player() -> None:
         while True:
@@ -280,6 +301,7 @@ def main() -> int:
 
     while True:
         try:
+            ensure_workers()     # 合成线程灭绝兜底：灭绝即补齐并大声记日志
             size = STREAM_FILE.stat().st_size
             if size < state["offset"]:
                 state["offset"] = 0

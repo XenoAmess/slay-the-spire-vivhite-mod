@@ -984,9 +984,7 @@ class Policy:
                 score -= squash_penalty(raw_penalty)
             return score, notes, final_pct
 
-        best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
-        best_path = []
-        details = []
+        cand = []
         for n in nodes:
             nt = n.get("node_type", "Unknown")
             best_ps, best_pnotes, best_pproj, best_ppath = -1e9, [], 0.0, []
@@ -1045,13 +1043,35 @@ class Policy:
                         best_ps -= (1.0 - rgate) * _ELITE_GATE_NEG_PENALTY
                     best_pnotes.append(
                         f"绝境{hp_pct:.0%}遇休整候选，非休整路线压制×{rgate:.2f}")
-            label = f"{nt}({n['row']},{n['col']})"
-            details.append(f"{label}={best_ps:.2f}{'|' + '；'.join(best_pnotes) if best_pnotes else ''}")
-            if best_ps > best_score:
-                best_node, best_score = n, best_ps
+            cand.append({"node": n, "nt": nt, "ps": best_ps, "notes": best_pnotes,
+                         "proj": best_pproj, "path": best_ppath,
+                         "doomed": any("投影中途死亡" in x for x in best_pnotes)})
+        # 绝境资源节点偏好（403~406 批次复盘）：全部候选都投影中途死亡时，
+        # 死亡罚分经软饱和后候选差只剩 <1 分的噪声级，评分退化为比拼死得早晚；
+        # 此时金币/宝箱/事件换卡牌、删诅咒、买药水是唯一还能改变时间线的杠杆
+        # （EQ04 局 F3：468 金商店以 0.61 分之差输给又一场白死的怪物战，
+        # 五连战后 F6 阵亡）。仅在全候选死亡投影且存在纯价值节点时加成，
+        # 健康局面零影响
+        _doom_bonus = float(pol.get("path_doomed_value_bonus", 8.0))
+        if cand and _doom_bonus > 0.0 and all(c["doomed"] for c in cand):
+            _value_nts = ("Shop", "Treasure", "Event")
+            if any(c["nt"] in _value_nts for c in cand):
+                for c in cand:
+                    if c["nt"] in _value_nts:
+                        c["ps"] += _doom_bonus
+                        c["notes"].append(
+                            f"绝境全候选死亡投影，优先{c['nt']}换战力(+{_doom_bonus:.0f})")
+        best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
+        best_path = []
+        details = []
+        for c in cand:
+            label = f"{c['nt']}({c['node']['row']},{c['node']['col']})"
+            details.append(f"{label}={c['ps']:.2f}{'|' + '；'.join(c['notes']) if c['notes'] else ''}")
+            if c["ps"] > best_score:
+                best_node, best_score = c["node"], c["ps"]
                 best_detail = label
-                best_notes, best_proj = best_pnotes, best_pproj
-                best_path = best_ppath
+                best_notes, best_proj = c["notes"], c["proj"]
+                best_path = c["path"]
 
         note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
         # 留痕诚实化（第 90~91 批复盘）：91 局 F14 以 55% 血选了精英（闸门否决后
