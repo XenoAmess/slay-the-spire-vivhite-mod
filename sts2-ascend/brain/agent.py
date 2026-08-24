@@ -76,6 +76,28 @@ def load_config() -> dict:
     return cfg
 
 
+def _event_reward_sig(run: dict) -> tuple:
+    """事件奖励签名（第 372~373 局批次复盘）：(遗物 id 元组, 占用药水槽数)。
+
+    佩尔/特兹卡塔拉/木雕这类「给遗物」的事件此前在结算账本上全是 0.0——
+    账本只认 hp/gold/card，而遗物断供恰是当前版本输出不足的上游病因之一。
+    选择时记下签名、结算时做差，遗物/药水收益从此入账。
+    run 载荷缺 relics/potions 键（旧服务端/测试桩）时按空处理。
+    """
+    relic_ids = tuple(sorted(str(r.get("relic_id") or "")
+                             for r in (run.get("relics") or []) if isinstance(r, dict)))
+    potion_slots = sum(1 for p in (run.get("potions") or [])
+                       if isinstance(p, dict) and p.get("occupied"))
+    return relic_ids, potion_slots
+
+
+def _reward_delta(old_sig: tuple, new_sig: tuple) -> tuple:
+    """签名差值 → (净增遗物数, 净增药水槽数)。替换（换遗物）按数量差近似。"""
+    old_ids, new_ids = set(old_sig[0]), set(new_sig[0])
+    return (len(new_ids - old_ids) - len(old_ids - new_ids),
+            new_sig[1] - old_sig[1])
+
+
 @dataclass
 class RunContext:
     """Per-run tracking for credit assignment and reflection."""
@@ -87,7 +109,7 @@ class RunContext:
     combat: dict | None = None                        # active combat tracker
     combat_agg: dict | None = None                    # 同层多段战斗聚合账（第 97~98 批复盘）
     combat_notes: list = field(default_factory=list)
-    pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor, deck_size_before)
+    pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor, deck_size_before, relic_ids, potion_slots)
     pending_event_own: tuple | None = None            # (hp, gold) 事件自身即时效果快照：离开事件屏瞬间采样（106 局复盘）
     event_chain: list = field(default_factory=list)   # 同事件内已先行结算的祖先选项 [(event_id, key)]（第 237~238 批复盘）
     pending_event_fight_loss: float = 0.0             # 事件触发战斗的掉血暂存（死亡时战斗账先于事件账落库）
@@ -296,12 +318,22 @@ class Agent:
                 if self.ctx.pending_event_own is None:
                     self.ctx.pending_event_own = (hp, gold)
             elif screen != "EVENT":
-                event_id, key, hp0, gold0, floor0, deck0 = self.ctx.pending_event
+                # 兼容旧格式 6 元组：缺签名位补空（进程热替换边界）
+                _pe = self.ctx.pending_event
+                if len(_pe) < 8:
+                    _pe = tuple(_pe) + ((), 0)
+                event_id, key, hp0, gold0, floor0, deck0, rel0, pot0 = _pe
                 own_hp, own_gold = self.ctx.pending_event_own or (hp, gold)
                 through_combat = self.ctx.pending_event_own is not None
                 victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
                 died_here = screen == "GAME_OVER" and not victory_screen
                 deck_delta = len(run.get("deck", []) or []) - deck0
+                # 遗物/药水净增量（第 372~373 局批次复盘）：选择前后签名做差，
+                # 「给遗物的选项记 0 分」的学习盲区从此闭合。run 载荷在终局屏
+                # 可能已被清空——此时按签名不变处理，避免把死亡结算成「丢光遗物」
+                relic_delta, potion_delta = _reward_delta(
+                    (rel0, pot0),
+                    _event_reward_sig(run) if run else (rel0, pot0))
                 # 战斗掉血：优先读尚未落库的聚合账（战后正常流转）；死亡时战斗账
                 # 已先行 flush，改读 _flush_combat_agg 留下的暂存
                 fight_loss = 0.0
@@ -314,14 +346,16 @@ class Agent:
                 self.know.commit_event_option(event_id, key, own_hp - hp0 - fight_loss,
                                               own_gold - gold0,
                                               died=(died_here and not through_combat),
-                                              deck_delta=deck_delta)
+                                              deck_delta=deck_delta,
+                                              relic_delta=relic_delta,
+                                              potion_delta=potion_delta)
                 # 祖先选项链追加等额掉血样本（「休息」引出强制战页之类）
                 if fight_loss > 0.0:
                     for anc_id, anc_key in self.ctx.event_chain:
                         self.know.commit_event_option(anc_id, anc_key, -fight_loss, 0.0,
                                                       died=False, deck_delta=0)
                 log(f"[agent] 事件结算：{event_id}/{key} → 生命 {own_hp - hp0 - fight_loss:+}，金币 {own_gold - gold0:+}，"
-                    f"卡组 {deck_delta:+d}"
+                    f"卡组 {deck_delta:+d}，遗物 {relic_delta:+d}，药水 {potion_delta:+d}"
                     + (f"（经战斗延迟记账，战斗掉血 {fight_loss:.0f} 归因选项链"
                        f"（含祖先 {len(self.ctx.event_chain)} 环），死亡归因敌方组合）" if through_combat else "")
                     + ("（致死）" if died_here and not through_combat else ""))
@@ -344,19 +378,26 @@ class Agent:
                 prev = self.ctx.pending_event
                 if prev is not None and prev[0] == tag[1] and prev[1] != tag[2]:
                     deck_now = len(run.get("deck", []) or [])
+                    # 兼容旧格式 6 元组（进程热替换/测试桩）：缺签名位按空处理
+                    _rel0 = prev[6] if len(prev) > 6 else ()
+                    _pot0 = prev[7] if len(prev) > 7 else 0
+                    _sw_rel, _sw_pot = _reward_delta((_rel0, _pot0),
+                                                     _event_reward_sig(run))
                     self.know.commit_event_option(prev[0], prev[1], hp - prev[2], gold - prev[3],
-                                                  died=False, deck_delta=deck_now - prev[5])
+                                                  died=False, deck_delta=deck_now - prev[5],
+                                                  relic_delta=_sw_rel, potion_delta=_sw_pot)
                     log(f"[agent] 事件内换项抉择：先行结算 {prev[0]}/{prev[1]} → "
-                        f"生命 {hp - prev[2]:+}，金币 {gold - prev[3]:+}，卡组 {deck_now - prev[5]:+d}")
+                        f"生命 {hp - prev[2]:+}，金币 {gold - prev[3]:+}，卡组 {deck_now - prev[5]:+d}，"
+                        f"遗物 {_sw_rel:+d}，药水 {_sw_pot:+d}")
                     # 祖先链记账（第 237~238 批复盘）：若后续选项触发战斗，战斗
                     # 掉血会给本环追加等额样本——引出强制战页的选择必须看见代价
                     self.ctx.event_chain.append((prev[0], prev[1]))
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
-                                              deck_now)
+                                              deck_now) + _event_reward_sig(run)
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
                 elif prev is None or prev[0] != tag[1]:
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
-                                              len(run.get("deck", []) or []))
+                                              len(run.get("deck", []) or [])) + _event_reward_sig(run)
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
                     self.ctx.event_chain = []  # 新事件重置祖先链
                     self.ctx.pending_event_fight_loss = 0.0

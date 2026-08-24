@@ -1034,9 +1034,15 @@ class Policy:
         # 战斗要把血量打到什么位置？99 局 61% 血在强制精英前夜锻造，精英 -49
         # 正好处决（回血 +24 即可生还）；100 局 62% 血锻造后 82% 进 Boss 被
         # 70 点战损收走。沿选中路径找首个必经战斗节点（Monster/Elite），把它的
-        # 期望战损（占血条比例）交给 _rest 做锻造前预演；无必经战斗则归零
+        # 期望战损（占血条比例）交给 _rest 做锻造前预演；无必经战斗则归零。
+        # 连战累计预演（第 370~371 局复盘）：单战预演看不见「打完一场还有一场」
+        # 的连环偿债——371 局 65% 血在双怪物前夜按单场期望（~13%）判定安全上砧，
+        # 随后两连战 -32/-20 连环处决；当时回血 +24 即可全活。改为把沿路径的
+        # 连续战斗节点逐场累加（至多 3 场：更远的战斗隔着恢复节点，不属于本次
+        # 锻造的偿债窗口）；首个非战斗节点即截断——血量语境被它重置
         next_fight_loss = 0.0
         if best_node.get("node_type") == "RestSite":
+            _preview_fights = 0
             for key in (best_path or [])[1:]:
                 gnode = graph.get(key) or {}
                 nnt = gnode.get("node_type", "Unknown")
@@ -1045,7 +1051,11 @@ class Policy:
                 if nnt in ("Monster", "Elite"):
                     _np, _nm, _ = self._act_danger(nnt, priors, act_no, act_mul,
                                                    row_in_act=key[0])
-                    next_fight_loss = _np * deck_ease * _nm / max_hp
+                    next_fight_loss += _np * deck_ease * _nm / max_hp
+                    _preview_fights += 1
+                    if _preview_fights >= 3:
+                        break
+                else:
                     break
         ctx.rest_next_fight_loss_frac = next_fight_loss
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
@@ -2552,10 +2562,12 @@ class Policy:
                             f"篝火：绝境投影优先回血（路径投影进Boss仅{proj:.0%}<{dire_line:.0%}，"
                             f"前路战损预期压倒锻造收益；本次可回复{dire_gain:.0f}点）",
                             tags=[("rest", "heal")], wait=1.2)
-        # 锻造前下一战预演（第 99~102 批复盘）：地图端已把「沿选中路径首个必经
-        # 战斗的期望战损」传来。放弃回血去锻造的前提是下一战打完还站得住——
-        # 99 局 61% 血在强制精英前夜锻造，精英 -49 正好处决（回血 +24 即可生还）；
-        # 若「当前血量 - 期望战损」跌破紧急线，先把血量垫回安全区再上砧。
+        # 锻造前预演（第 99~102 批复盘，第 370~371 局扩展为连战累计）：地图端
+        # 已把「沿选中路径首个恢复节点之前的连续战斗期望战损合计」传来。放弃
+        # 回血去锻造的前提是这段连战打完还站得住——99 局 61% 血在强制精英前夜
+        # 锻造，精英 -49 正好处决（回血 +24 即可生还）；371 局 65% 血在双怪物
+        # 前夜按单场账锻造，两连战 -32/-20 连环处决（回血 +24 即可全活）。
+        # 若「当前血量 - 累计期望战损」跌破紧急线，先把血量垫回安全区再上砧。
         # 边际回复不足 8% 血条（接近满血）时不浪费篝火，维持锻造
         next_loss = float(getattr(ctx, "rest_next_fight_loss_frac", 0.0) or 0.0)
         urgent_line = float(pol.get("rest_urgent_hp_pct", 0.45))
@@ -2563,8 +2575,8 @@ class Policy:
                 and hp_pct - next_loss < urgent_line
                 and dire_gain >= 0.08 * max_hp):
             return Decision("choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：锻造预演改回血（下一战期望战损{next_loss:.0%}，"
-                            f"锻造后预计仅剩{hp_pct - next_loss:.0%}<紧急线{urgent_line:.0%}；"
+                            f"篝火：锻造预演改回血（前方必经战斗期望战损合计{next_loss:.0%}，"
+                            f"打完预计仅剩{hp_pct - next_loss:.0%}<紧急线{urgent_line:.0%}；"
                             f"先回血{heal_frac:.0%}垫安全区）",
                             tags=[("rest", "heal")], wait=1.2)
         if heal and (hp_pct < heal_line or not smith_ok):

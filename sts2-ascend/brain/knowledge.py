@@ -245,7 +245,7 @@ DEFAULT_STATS = {
     "cards": {},    # id -> {seen, picked, plays, outcome_sum, bias}
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
-    "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min}
+    "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min, card/relic/potion_delta_sum}
     "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
     "rooms_act": {},  # "{node_type}@{act}" -> {hp_lost_sum, damage_events}（分幕掉血，第79局复盘新增）
     "rooms_band": {},  # "{node_type}@{act}_b{band}" -> {hp_lost_sum, damage_events, hp_lost_max}
@@ -675,6 +675,14 @@ class Knowledge:
         为正——滑脚木桥「跨越」每跨一次随机掉一张牌（card_avg=-1）却被虚标
         +2 分，四连跨白掉四张牌。净减牌改为按失去平均卡值 -1/张计罚
         （半价：个别事件的减牌可能是去除诅咒的收益，不按全价反推）。
+
+        遗物/药水收益入账（第 372~373 局批次复盘新增）：佩尔/特兹卡塔拉/
+        木雕这类「给遗物」的事件此前全部记 0.0——结算账本只认 hp/gold/card，
+        遗物断供恰是当前版本卡组输出不足的上游病因之一，事件学习端却对
+        唯一的稳定遗物供给视而不见，选项间只能靠样本数瞎选。结算时按
+        选择前后遗物/药水签名的净增量记账：遗物按 event_relic_value 计价
+        （对标商店遗物基线 3.0 打折：随机遗物含垃圾）、药水按
+        event_potion_value 计价（药水位有限且品质随机，半价处理）。
         """
         opts = self.stats["events"].get(event_id, {})
         e = opts.get(option_key)
@@ -685,7 +693,11 @@ class Knowledge:
         card_avg = float(e.get("card_delta_sum", 0.0)) / e["n"]
         death_rate = e["deaths"] / e["n"]
         card_term = (-2.0 * card_avg) if card_avg > 0 else (1.0 * card_avg)
+        relic_avg = float(e.get("relic_delta_sum", 0.0)) / e["n"]
+        potion_avg = float(e.get("potion_delta_sum", 0.0)) / e["n"]
         return (hp_avg * 1.0 + gold_avg * 0.02 + card_term
+                + relic_avg * float(self.policy.get("event_relic_value", 2.5))
+                + potion_avg * float(self.policy.get("event_potion_value", 1.0))
                 - death_rate * 40.0), e["n"]
 
     def event_option_worst(self, event_id: str, option_key: str) -> float | None:
@@ -871,13 +883,18 @@ class Knowledge:
         return None
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
-                            gold_delta: float, died: bool, deck_delta: int = 0) -> None:
+                            gold_delta: float, died: bool, deck_delta: int = 0,
+                            relic_delta: int = 0, potion_delta: int = 0) -> None:
         opts = self.stats["events"].setdefault(event_id, {})
         e = opts.setdefault(option_key, {"n": 0, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0})
         e["n"] += 1
         e["hp_delta_sum"] += hp_delta
         e["gold_delta_sum"] += gold_delta
         e["card_delta_sum"] = float(e.get("card_delta_sum", 0.0)) + float(deck_delta)
+        # 遗物/药水净增量（第 372~373 局批次复盘新增）：agent 端按选择前后
+        # 的遗物/药水签名差值传入；旧库条目无此键，按 .get 缺省 0 兼容
+        e["relic_delta_sum"] = float(e.get("relic_delta_sum", 0.0)) + float(relic_delta)
+        e["potion_delta_sum"] = float(e.get("potion_delta_sum", 0.0)) + float(potion_delta)
         e["deaths"] += 1 if died else 0
         # 最坏情况记忆（第 255~257 批次复盘）：逐样本取最小生命增量，
         # 供事件层「吃下即死」闸门做尾部复核；None 表示尚无尾部样本

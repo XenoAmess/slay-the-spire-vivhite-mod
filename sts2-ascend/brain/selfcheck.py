@@ -1559,6 +1559,60 @@ def main() -> int:
     d_b3 = pol_bridge2.decide(bridge_state3, ctx)
     assert d_b3.params.get("option_index") == 0, f"新实例不应继承停滞罚分: {d_b3.reason}"
 
+    # 3ee4) 事件遗物/药水收益入账（第 372~373 局批次复盘）：佩尔/特兹卡塔拉/
+    #      木雕类「给遗物」的选项此前在结算账本上全是 0.0——账本只认 hp/gold/card，
+    #      而遗物断供恰是当前版本输出不足的上游病因之一。结算端按选择前后
+    #      遗物/药水签名做差入账，估值端计价后给遗物的选项必须反超真零收益项
+    ag.ctx.reset_for("RUN_EVT_R", 0)
+    _rel_a = {"screen": "EVENT", "run_id": "RUN_EVT_R",
+              "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 4,
+                      "deck": [{"card_id": "A"}],
+                      "relics": [{"relic_id": "BURNING_BLOOD"}],
+                      "potions": [{"occupied": False}]}}
+    ag._track(_rel_a, policy.Decision(action="choose_event_option",
+                                      tags=[("event_choice", "PAEL_EV", "FLESH")]))
+    ag._track({"screen": "MAP", "run_id": "RUN_EVT_R",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 5,
+                       "deck": [{"card_id": "A"}],
+                       "relics": [{"relic_id": "BURNING_BLOOD"},
+                                  {"relic_id": "PAELS_FLESH"}],
+                       "potions": [{"occupied": False}]}},
+              policy.Decision(action=None))
+    pe_r = tknow.stats["events"].get("PAEL_EV", {}).get("FLESH")
+    assert pe_r and pe_r["n"] == 1 and pe_r.get("relic_delta_sum") == 1.0 \
+        and pe_r.get("potion_delta_sum") == 0.0, f"事件遗物增量管线断裂: {pe_r}"
+    v_relic, n_relic = tknow.event_option_value("PAEL_EV", "FLESH")
+    assert v_relic >= 2.0 and n_relic == 1, f"遗物收益未计入事件价值: {v_relic}"
+    #      药水栏位占用变化同样入账
+    ag.ctx.reset_for("RUN_EVT_P", 0)
+    ag._track({"screen": "EVENT", "run_id": "RUN_EVT_P",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 6,
+                       "deck": [{"card_id": "A"}], "relics": [],
+                       "potions": [{"occupied": False}]}},
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "COURIER_EV", "GRAB")]))
+    ag._track({"screen": "MAP", "run_id": "RUN_EVT_P",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 7,
+                       "deck": [{"card_id": "A"}], "relics": [],
+                       "potions": [{"occupied": True}]}},
+              policy.Decision(action=None))
+    pe_p = tknow.stats["events"].get("COURIER_EV", {}).get("GRAB")
+    assert pe_p and pe_p.get("potion_delta_sum") == 1.0 \
+        and pe_p.get("relic_delta_sum") == 0.0, f"事件药水增量管线断裂: {pe_p}"
+    #      终局屏 run 载荷被清空时按「签名不变」处理——不得把死亡结算成丢光遗物
+    ag.ctx.reset_for("RUN_EVT_D", 0)
+    ag._track({"screen": "EVENT", "run_id": "RUN_EVT_D",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 8,
+                       "deck": [{"card_id": "A"}],
+                       "relics": [{"relic_id": "BURNING_BLOOD"}]}},
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "DEATH_EV", "RIP")]))
+    ag._track({"screen": "GAME_OVER", "run_id": "RUN_EVT_D", "run": {}},
+              policy.Decision(action=None))
+    pe_d = tknow.stats["events"].get("DEATH_EV", {}).get("RIP")
+    assert pe_d and pe_d["n"] == 1 and pe_d.get("relic_delta_sum") == 0.0, \
+        f"终局空载荷被误结算成遗物损失: {pe_d}"
+
     # 3ee3) 敌方血池/火力观测写入侧（第 214 批补全）：首帧采血池（非召唤口径）、
     #      回合边界采格挡前火力，经 ctx.combat 的 obs_* 键交给 agent 结算入库——
     #      此前写入侧在回滚中丢失，全库 hp_pool_n=0、boss_vitals_worst 恒 None
@@ -2746,6 +2800,56 @@ def main() -> int:
     assert d_high.tags and d_high.tags[0] == ("rest", "smith"), \
         f"回血将溢出时仍应锻造: {d_high.reason}"
     ctx.rest_proj_hp_pct = 1.0    # 还原，防泄漏后续用例
+
+    # 3xz-bis) 锻造预演连战累计（第 370~371 局复盘）：371 局 65% 血在双怪物
+    #      前夜按「单场期望战损」判定安全上砧，随后两连战 -32/-20 连环处决；
+    #      当时回血 +24 即可全活。地图端预演必须累计连续战斗节点——双怪链的
+    #      累计账打穿紧急线时篝火改回血；单怪链控制组维持锻造（防退化为永远
+    #      回血、卡组停摆）。
+    cg_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-chainprev-"))
+    cg_know = knowledge.Knowledge(cg_dir)
+    cg_know.policy["path_danger_priors"]["Monster"] = 15   # 单场 15/80≈18.75%
+    cg_pol = policy.Policy(cg_know)
+
+    def chain_preview_map(monster_rows):
+        """RestSite(1) 唯一头节点 + monster_rows 指定行放 Monster（其余 Event）+ Boss(5)。"""
+        head = [{"index": 0, "row": 1, "col": 0, "node_type": "RestSite",
+                 "children": [{"row": 2, "col": 0}]}]
+        chain = []
+        for row in range(2, 5):
+            nt = "Monster" if row in monster_rows else "Event"
+            g = {"row": row, "col": 0, "node_type": nt}
+            if row < 4:
+                g["children"] = [{"row": row + 1, "col": 0}]
+            chain.append(g)
+        chain.append({"row": 5, "col": 0, "node_type": "Boss"})
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": head, "nodes": head + chain,
+                      "boss_node": {"row": 5}},
+              "run": {"current_hp": 65, "max_hp": 80, "gold": 0, "floor": 8,
+                      "deck": []}}
+        return cg_pol.decide(st, ctx)
+
+    st_rest = {"screen": "REST", "available_actions": ["choose_rest_option"],
+               "rest": {"options": [
+                   {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+                   {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+               "run": {"current_hp": 52, "max_hp": 80, "gold": 0, "floor": 9,
+                       "deck": [{"card_id": "STRIKE_X", "upgraded": False}]}}
+    chain_preview_map({2, 3})                  # 篝火后双怪连战：累计 30/80=37.5%
+    assert abs(getattr(ctx, "rest_next_fight_loss_frac", 0.0) - 0.375) < 1e-6, \
+        f"连战预演未累计: {ctx.rest_next_fight_loss_frac}"
+    ctx.rest_proj_hp_pct = 1.0                 # 投影健康，隔离绝境分支
+    d_heal2 = pol.decide(st_rest, ctx)
+    assert d_heal2.tags and d_heal2.tags[0] == ("rest", "heal") and "预演" in d_heal2.reason, \
+        f"双怪前夜未触发预演回血: {d_heal2.reason}"
+    chain_preview_map({2})                     # 控制：单怪链预演 15/80=18.75%
+    assert abs(getattr(ctx, "rest_next_fight_loss_frac", 0.0) - 0.1875) < 1e-6, \
+        f"单战预演值异常: {ctx.rest_next_fight_loss_frac}"
+    ctx.rest_proj_hp_pct = 1.0
+    d_smith2 = pol.decide(st_rest, ctx)
+    assert d_smith2.tags and d_smith2.tags[0] == ("rest", "smith"), \
+        f"单怪链不应放弃锻造: {d_smith2.reason}"
 
     # 3ya) 商店购卡与奖励端同门槛（第 96 局复盘）：F30 卡组已在软上限边缘，
     #      商店仍按固定阈值 1.0 买进净价值仅 3.0 的巨像（73金）——同一张牌在
