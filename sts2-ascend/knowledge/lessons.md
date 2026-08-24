@@ -4201,3 +4201,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（87%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/341 胜，当前目标进阶 0
+
+## 第 342 局复盘（2026-08-24 22:46）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：ANGER, CINDER, HEMOKINESIS, INFLAME, TAUNT, UNMOVABLE, STONE_ARMOR, FLAME_BARRIER, CINDER, HEMOKINESIS, PANIC_BUTTON, UNRELENTING, DEMON_FORM, DISMANTLE, UPPERCUT, CINDER, STONE_ARMOR, THRASH, FIGHT_ME, BATTLE_TRANCE
+- 本局遗物：MEAL_TICKET, 磨刀石, 开信刀, RED_MASK
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血19; F22 Monster战 掉血40; F27 Monster战 掉血17; F29 Monster战 掉血44; F30 Monster战 掉血23（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，VOLLEY(27分/5局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/10局)，DARK_EMBRACE(23分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/342 胜，当前目标进阶 0
