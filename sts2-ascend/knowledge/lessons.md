@@ -4738,3 +4738,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/382 胜，当前目标进阶 0
+
+## 第 383 局复盘（2026-08-25 03:52）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：FLAME_BARRIER, FORGOTTEN_RITUAL, FLAME_BARRIER, BREAKTHROUGH, PACTS_END, SHRUG_IT_OFF, MOLTEN_FIST, STONE_ARMOR, CONFLAGRATION
+- 本局遗物：RED_MASK, 古茶具套装
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血7; F9 Monster战 掉血0; F12 Monster战 掉血0; F15 Elite战 掉血38; F17 Boss战 掉血68（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/383 胜，当前目标进阶 0
