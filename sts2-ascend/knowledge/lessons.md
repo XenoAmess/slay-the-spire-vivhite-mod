@@ -4727,3 +4727,14 @@
   供给是否反弹恶化（过猛则 deck_extra 回调 2）；③长链路线频次是否收敛；④一幕 Boss
   死亡率回升（3/10，两局满血）是轮换运气还是趋势。
 - 生涯战绩：0/379 胜，当前目标进阶 0
+
+## 第 382 局复盘（2026-08-25 03:44）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：ANGER, CINDER, INFLAME, SHRUG_IT_OFF, THUNDERCLAP, MOLTEN_FIST, SWORD_BOOMERANG, PYRE, STOMP, STONE_ARMOR, CRUELTY, CINDER, SHRUG_IT_OFF, BREAKTHROUGH, RUPTURE, CRIMSON_MANTLE
+- 本局遗物：WHETSTONE, 棋子
+- 战斗记录：F6 Monster战 掉血10; F8 Monster战 掉血4; F11 Monster战 掉血5; F14 Elite战 掉血6; F15 Monster战 掉血1; F17 Boss战 掉血67（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/382 胜，当前目标进阶 0
