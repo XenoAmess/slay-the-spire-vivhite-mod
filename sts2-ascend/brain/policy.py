@@ -704,6 +704,11 @@ class Policy:
         burst_starved = bool(run_deck) and self.deck_burst(run_deck) < float(
             pol.get("deck_burst_floor", 30.0))
 
+        # Boss 前夜竞速必败预演（第 397~402 批复盘）：与 _rest 的竞速必败改锻造
+        # 同口径，投影镜像不得与实际篝火行为脱钩（99~102/228/244 批教训）。
+        # 判定不随路径变化，路径枚举前算一次
+        eve_doomed, eve_doom_note = self._boss_race_doomed(run_deck, max_hp)
+
         elite_gate_f, elite_gate_note = self._elite_path_gate(
             pol, priors, hp, max_hp, good_cards, act_mul, burst_starved,
             act_no=act_no, deck_req=elite_deck_req)
@@ -881,11 +886,14 @@ class Policy:
                         _pess = _bl * float(pol.get("boss_eve_pess_mult", 1.5))
                         _margin = float(pol.get("boss_eve_safe_margin_frac", 0.10)) * max_hp
                         _eff = min(_heal_amt, max_hp - max(0.0, cur_hp))
-                        _smith_proj = (_bn >= int(pol.get("boss_eve_smith_min_samples", 3))
-                                       and _bl >= _heal_amt
-                                       and (_eff < 0.08 * max_hp
-                                            or (cur_hp - _pess > _margin
-                                                and hpp_now >= eve_smith_line)))
+                        # 竞速必败镜像（第 397~402 批复盘）：必败对局的前夜一律
+                        # 投影为锻造（回血零生存价值），与 _rest 行为同口径
+                        _smith_proj = (eve_doomed
+                                       or (_bn >= int(pol.get("boss_eve_smith_min_samples", 3))
+                                           and _bl >= _heal_amt
+                                           and (_eff < 0.08 * max_hp
+                                                or (cur_hp - _pess > _margin
+                                                    and hpp_now >= eve_smith_line))))
                         will_heal = not _smith_proj
                     else:
                         will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55))
@@ -1990,6 +1998,41 @@ class Policy:
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
         return None
 
+    def _boss_race_doomed(self, deck: list[dict], max_hp: int) -> tuple[bool, str]:
+        """Boss 竞速必败预演（第 397~402 批复盘新增；兑现第 214 批遗留的
+        「攻坚投影·篝火端消费」接线）。
+
+        本批五场 Boss 死亡全部发生在「前夜翻转带回血」之后：入场 57%~100%、
+        战损 -46~-80 整管打空。竞速必败的对局里 Boss 的伤害会一直流到打死你
+        为止——多 24 点入场血只是多吃几轮意图，回血的边际生存价值恒为零；
+        而锻造缩短战斗是唯一可能翻转时间线的杠杆。
+
+        判定与战斗端斩杀竞速投影同式对账：learned Boss 血池/火力均值
+        （boss_race_vitals，138~141 批入库）× deck_burst×kill_race_prior_eff，
+        满血可存活回合数仍追不上击杀所需回合数即判必败。
+        数据未成熟/零爆发/竞速关闭时返回 False，行为与旧版严格一致。
+        注意口径局限：均值含二三幕 Boss，对一幕前夜略偏悲观——方向与证据
+        一致（当前卡组层级的前夜回血已被反复证伪），可接受。
+        """
+        pol = self.know.policy
+        if not pol.get("kill_race_enabled", True):
+            return False, ""
+        pool, fire = self.know.boss_race_vitals()
+        if not pool or not fire or not max_hp:
+            return False, ""
+        burst = self.deck_burst(deck or [])
+        if burst <= 0:
+            return False, ""
+        dpt = burst * float(pol.get("kill_race_prior_eff", 0.55))
+        ttk = pool / max(1.0, dpt)
+        tsurv = float(max_hp) / max(1.0, fire)
+        if ttk <= tsurv + float(pol.get("kill_race_margin", 1.5)):
+            return False, ""
+        note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
+                f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
+                f"先验输出{dpt:.0f}/回合），必败局的伤害会流到打死为止")
+        return True, note
+
     @staticmethod
     def _floors_to_boss(floor_no: int) -> int:
         """距下一个 Boss 的层数（幕长为常量：一幕 Boss F17、二幕 F33，三幕按 51 估算）。
@@ -2619,6 +2662,17 @@ class Policy:
                     return Decision("choose_rest_option", {"option_index": smith["index"]},
                                     f"篝火：Boss 前夜溢出区改锻造（血量 {hp_pct:.0%} 接近满血，"
                                     f"有效回血仅{eff_heal:.0f}点<8%血条，回血无效投资）",
+                                    tags=[("rest", "smith")], wait=1.2)
+                # 竞速必败改锻造（第 397~402 批复盘）：本批五场 Boss 死亡全部
+                # 在前夜回血之后（入场 57%~100%、战损 -46~-80 整管打空）——
+                # 满血进场也追不上击杀曲线的对局，回血买不到生还，升级缩短
+                # 战斗是唯一可能翻盘的杠杆。翻转带/安全区的旧裁决只对
+                # 「竞速可赢」的对局继续生效
+                _doomed, _doom_note = self._boss_race_doomed(deck, max_hp)
+                if _doomed:
+                    return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                    f"篝火：Boss 前夜竞速必败改锻造（当前 {hp_pct:.0%}；{_doom_note}；"
+                                    f"本次可升级{len(upgradable)}张，缩短战斗是唯一杠杆）",
                                     tags=[("rest", "smith")], wait=1.2)
                 if cur_hp - pess <= margin:
                     return Decision("choose_rest_option", {"option_index": heal["index"]},

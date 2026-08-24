@@ -179,7 +179,10 @@ DEFAULT_POLICY = {
     "kill_race_prior_eff": 0.55,     # 首回合攻坚先验折算率（第 255 批复盘）：实测输出速率不足两回合时，
                                      # 用 deck_burst×此值做悲观 DPS 开账——Boss 战头 1~2 回合不再盲防
                                      # （252 局 F5 劫掠者三连 T1~T3 意图 22→32 还在打坚毅补防）；
-                                     # 零爆发不预测（无从竞速），两回合后自动切回实测口径
+                                     # 零爆发不预测（无从竞速），两回合后自动切回实测口径。
+                                     # 第 397~402 批复盘起为可演化旋钮（BOUNDS 0.35~0.55）：饥饿链
+                                     # 全顶格后 Boss 竞速败北证据改接此处下调——战斗端更早全攻提速、
+                                     # 篝火端 _boss_race_doomed 更早把前夜转锻造
     # --- 执行端补丁键（第 79 局复盘） ---
     "desperate_confirm_ticks": 2,  # 孤注一掷观测确认窗：致死且无可负担格挡须连续 N tick 一致才允许孤注（防手牌渲染瞬时不完整触发假孤注，79局F23 实证）
     # --- 绝境投影与统计口径（第 96 局复盘） ---
@@ -822,6 +825,34 @@ class Knowledge:
                 v = float(e.get("fire_sum", 0.0)) / fr
                 worst_fire = v if worst_fire is None else max(worst_fire, v)
         return worst_pool, worst_fire
+
+    def boss_race_vitals(self) -> tuple[float | None, float | None]:
+        """已学习 Boss 组合的血池/火力均值估计（样本加权，第 397~402 批复盘新增）。
+
+        兑现第 214 批遗留的「攻坚投影篝火端消费」：hp_pool/fire 自 138~141 批
+        入库以来只有 boss_vitals_worst（最凶口径）一个读取方，篝火精算一直无米下锅。
+        前夜裁决回答的是「像现在这套卡组打下一个普通 Boss 能不能赢」——取均值
+        而非最凶（最凶含二三幕特化 Boss，会把一幕前夜全面判死）；资格门槛与
+        boss_vitals_worst 相同（boss_encounters≥2、血池≥2 场、火力≥4 轮），
+        聚合总量不足（血池 <2 场或火力 <4 轮）时返回 (None, None) 让调用方
+        退化为旧行为（冷启动安全）。
+        """
+        tot_pool = tot_pool_n = 0.0
+        tot_fire = tot_fr = 0.0
+        for e in (self.stats.get("enemies") or {}).values():
+            if int(e.get("boss_encounters", 0) or 0) < 2:
+                continue
+            pn = int(e.get("hp_pool_n", 0) or 0)
+            if pn >= 2:
+                tot_pool += float(e.get("hp_pool_sum", 0.0) or 0.0)
+                tot_pool_n += pn
+            fr = int(e.get("fire_rounds", 0) or 0)
+            if fr >= 4:
+                tot_fire += float(e.get("fire_sum", 0.0) or 0.0)
+                tot_fr += fr
+        pool = (tot_pool / tot_pool_n) if tot_pool_n >= 2 else None
+        fire = (tot_fire / tot_fr) if tot_fr >= 4 else None
+        return pool, fire
 
     def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None,
                            floor: int | None = None,

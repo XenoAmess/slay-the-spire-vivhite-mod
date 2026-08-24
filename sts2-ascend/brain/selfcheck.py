@@ -4083,6 +4083,106 @@ def main() -> int:
         f"脏戳字段的读端复原失效（floor/victory 按决策轨迹复原）: {stamp}"
     llm_review_mod.KNOWLEDGE_DIR = _kr_backup
 
+    # 3br) Boss 前夜竞速必败改锻造（第 397~402 批复盘）：本批五场 Boss 死亡全部
+    #      发生在前夜翻转带回血之后（入场 57%~100%、战损 -46~-80 整管打空）——
+    #      满血也追不上击杀曲线的对局里回血零生存价值。消费 138~141 批入库的
+    #      Boss 血池/火力均值（boss_race_vitals，兑现第 214 批遗留的篝火端消费），
+    #      与战斗端斩杀竞速同式对账；数据未成熟时回落旧三区裁决
+    br_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bosrace-"))
+    br_know = knowledge.Knowledge(br_dir)
+    br_know.stats["enemies"]["BR_BOSS_A"] = {
+        "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+        "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+        "hp_pool_sum": 320.0, "hp_pool_n": 2, "fire_sum": 80.0, "fire_rounds": 8}
+    br_know.stats["enemies"]["BR_BOSS_B"] = {
+        "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+        "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+        "hp_pool_sum": 320.0, "hp_pool_n": 2, "fire_sum": 80.0, "fire_rounds": 8}
+    br_pol = policy.Policy(br_know, random.Random(13))
+    _vp, _vf = br_know.boss_race_vitals()
+    assert _vp is not None and abs(_vp - 160.0) < 1e-6 and _vf is not None and abs(_vf - 10.0) < 1e-6, \
+        f"Boss 血池火力均值读取失效: {_vp}/{_vf}"
+    br_weak_deck = [{"card_id": f"BR_S{i}", "card_type": "Attack", "energy_cost": 1,
+                     "dynamic_values": [{"name": "Damage", "current_value": 6}]} for i in range(5)]
+    # 弱卡组（burst≈18→先验9.9/回合）：击杀需 16 回合 > 满血可存活 8 回合 → 必败 → 前夜锻造
+    br_rest_weak = {
+        "screen": "REST", "available_actions": ["choose_rest_option"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 48, "max_hp": 80, "gold": 0, "floor": 16, "deck": br_weak_deck}}
+    br_ctx = SimpleNamespace(rest_before_boss=True, rest_proj_hp_pct=1.0,
+                             rest_next_fight_loss_frac=0.0)
+    d_br_weak = br_pol.decide(br_rest_weak, br_ctx)
+    assert d_br_weak.tags and d_br_weak.tags[0] == ("rest", "smith") and "竞速必败" in d_br_weak.reason, \
+        f"竞速必败的前夜应改锻造: {d_br_weak.action}（{d_br_weak.reason}）"
+    # 强卡组对照（3×15伤攻击 burst=45→先验24.75）：击杀需 6.5 ≤ 8+1.5 → 可赢 → 旧裁决回血
+    br_strong_deck = [{"card_id": f"BR_BIG{i}", "card_type": "Attack", "energy_cost": 1,
+                       "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
+    br_rest_strong = dict(br_rest_weak)
+    br_rest_strong["run"] = dict(br_rest_weak["run"], deck=br_strong_deck)
+    d_br_strong = br_pol.decide(br_rest_strong, br_ctx)
+    assert d_br_strong.tags and d_br_strong.tags[0] == ("rest", "heal"), \
+        f"竞速可赢的强卡组前夜应维持旧回血裁决: {d_br_strong.reason}"
+    # 数据未成熟回落（无血池/火力学样的空库）：行为与旧版严格一致（翻转带回血）
+    nv_pol = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bosrace2-"))),
+                           random.Random(13))
+    d_br_nv = nv_pol.decide(dict(br_rest_weak,
+                                 run=dict(br_rest_weak["run"],
+                                          **{"deck": br_weak_deck})), br_ctx)
+    assert d_br_nv.tags and d_br_nv.tags[0] == ("rest", "heal"), \
+        f"无 Boss 实证时前夜应回落旧口径回血: {d_br_nv.reason}"
+    # 地图投影镜像一致性：必败对局下投影把前夜篝火记为锻造（不回血），预计进 Boss 血量更低
+    def br_map_reason(pknow):
+        pmap = policy.Policy(pknow, random.Random(13))
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [
+                  {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
+                   "children": [{"row": 17, "col": 0}]},
+                  {"index": 1, "row": 17, "col": 0, "node_type": "Boss"}],
+                  "nodes": [
+                      {"row": 16, "col": 0, "node_type": "RestSite"},
+                      {"row": 17, "col": 0, "node_type": "Boss"}]},
+              "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 16, "deck": br_weak_deck}}
+        return pmap.decide(st, br_ctx).reason
+    _proj_doom = float(re.search(r"进 Boss 血量 ?(\d+)%", br_map_reason(br_know)).group(1))
+    _proj_nv = float(re.search(r"进 Boss 血量 ?(\d+)%", br_map_reason(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bosrace3-"))))).group(1))
+    assert _proj_doom < _proj_nv, \
+        f"投影镜像未与必败锻造口径同步: 必败{_proj_doom}% 应低于 无数据{_proj_nv}%"
+    br_ctx.rest_before_boss = False
+
+    # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
+    #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
+    #      链未顶格时不接替；胜利按 +0.03 向锚点回收
+    bs_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr-"))
+    bs_know = knowledge.Knowledge(bs_dir)
+    bs_know.policy.update({"burst_starve_bonus_base": 8.0, "burst_starve_bonus_extra_max": 12.0,
+                           "deck_burst_floor": 45.0, "boss_eve_smith_hp_pct": 0.45,
+                           "power_longfight_bonus_max": 12.0, "kill_race_prior_eff": 0.55})
+    bs_ctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_BOSS_A", "node_type": "Boss", "rounds": 8,
+                        "floor": 17, "hp_lost": 78.0, "stall": False},
+        death_was_elite=False, death_hp_pct_at_entry=0.98, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[])
+    reflect.finalize_run(bs_know, bs_ctx, victory=False, final_floor=17)
+    assert abs(bs_know.policy["kill_race_prior_eff"] - 0.52) < 1e-9, \
+        f"顶格链后竞速败北证据未接替 kill_race_prior_eff: {bs_know.policy['kill_race_prior_eff']}"
+    # 对照：链条未顶格（默认值）时证据被四级链吸收，不接替
+    bs2_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr2-")))
+    reflect.finalize_run(bs2_know, bs_ctx, victory=False, final_floor=17)
+    assert abs(bs2_know.policy["kill_race_prior_eff"] - 0.55) < 1e-9, \
+        f"链条未顶格却提前接替: {bs2_know.policy['kill_race_prior_eff']}"
+    # 胜利回收：0.52 → 0.55 锚点
+    bs_win_ctx = SimpleNamespace(
+        died_to_event=None, died_in_combat=None, death_was_elite=False,
+        death_hp_pct_at_entry=None, credit_tags=[], rests_healed_at_full=0,
+        ascension=0, combat_notes=[])
+    reflect.finalize_run(bs_know, bs_win_ctx, victory=True, final_floor=20)
+    assert abs(bs_know.policy["kill_race_prior_eff"] - 0.55) < 1e-9, \
+        f"胜利未回收竞速先验折算率: {bs_know.policy['kill_race_prior_eff']}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

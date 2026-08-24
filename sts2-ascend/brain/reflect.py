@@ -70,6 +70,12 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     #     长战能力牌在走廊战早上场。下限 12.0 防小怪战也被高额加成扭曲节奏。
     "power_longfight_bonus_max": (4.0, 12.0),
     "power_longfight_hp_div": (12.0, 30.0),
+    # 第 397~402 批复盘接入：输出饥饿接替链的第五级旋钮——burst_starve 双旋钮、
+    # 饥饿带、双锻造线与长战加成全部顶格后，Boss 竞速败北证据改接竞速先验折算率：
+    # 每次下调让 deck_burst×eff 的 DPS 开账更悲观 → 战斗端更早全攻提速、
+    # 篝火端前夜更早转锻造（缩短战斗的两端杠杆同时前移）。下限 0.35 防
+    # 先验归零使首回合竞速账永久全开；上限 0.55 即默认锚点，胜利回收
+    "kill_race_prior_eff": (0.35, 0.55),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -80,7 +86,7 @@ BURST_DEATH_DPR = 14.0
 
 
 def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_extra: str,
-                      node_kind: str = "normal") -> None:
+                      node_kind: str = "normal") -> bool:
     """长战磨死证据喂拿牌端输出饥饿双旋钮；双旋钮顶格后改接饥饿带宽度。
 
     顶格旋钮代谢（第 209 批复盘）：burst_starve 双旋钮 206~208 三连顶格
@@ -105,7 +111,11 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
     Boss 证据抬能力牌长战加成上限（Boss 血池恒吃封顶，抬顶才有效），
     普通证据压长战加成血池分母（走廊血池够不到封顶，提折算率才有效）；
     双旋钮也顶格/触底才彻底封账并显式留痕（顶格代谢原则的递归终点）。
+
+    返回是否成功吸收（False = 四级链全部顶格/触底，调用方负责下一级接替——
+    第 397~402 批复盘起 Boss 侧由 kill_race_prior_eff 下调承接）。
     """
+    _start = len(changes)
     pre = len(changes)
     _adj(know, "burst_starve_bonus_base", 0.3, changes, why_base)
     _adj(know, "burst_starve_bonus_extra_max", 0.5, changes, why_extra)
@@ -140,6 +150,7 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
                     if len(changes) == pre4:
                         changes.append("burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算"
                                        "均顶格——输出饥饿证据彻底停止吸收")
+    return len(changes) > _start
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -308,13 +319,35 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                         # 高血进场 Boss 长战死的真正根因是卡组击杀速率不足：
                         # 喂给拾取端输出饥饿旋钮，让拿牌对高质攻击更饥渴，
                         # 从源头缩短战斗（参数治不了的病从代码/结构侧治）；
-                        # 双旋钮顶格后由 _adj_burst_starve 改接饥饿带宽度
+                        # 双旋钮顶格后由 _adj_burst_starve 改接饥饿带宽度。
+                        # 吸收判定按旋钮实值对比（终局封账消息也是 append，
+                        # 不能拿 changes 长度当吸收依据）
+                        _starved_knobs = ("burst_starve_bonus_base", "burst_starve_bonus_extra_max",
+                                          "deck_burst_floor", "boss_eve_smith_hp_pct",
+                                          "power_longfight_bonus_max", "power_longfight_hp_div",
+                                          "smith_min_hp_pct")
+                        _starved_before = {k: know.policy.get(k) for k in _starved_knobs}
                         _adj_burst_starve(
                             know, changes,
                             f"Boss 高血进场长战死（{'?' if _entry is None else f'{_entry:.0%}'}，"
                             f"{rounds}回合），拿牌端攻击饥饿基础分加码",
                             f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高",
                             node_kind="boss")
+                        _starved_absorbed = any(know.policy.get(k) != v
+                                                for k, v in _starved_before.items())
+                        if not _starved_absorbed:
+                            # 五级接替（第 397~402 批复盘）：饥饿链全顶格后，Boss 竞速
+                            # 败北证据改接竞速先验折算率下调——deck_burst×eff 的 DPS
+                            # 开账更悲观 → 战斗端更早全攻提速、篝火端前夜更早转锻造
+                            # （本批五场前夜回血后的整管打空证明回血已零生存价值）
+                            _kr_step = 0.03
+                            _kr_head = pol["kill_race_prior_eff"] - BOUNDS["kill_race_prior_eff"][0]
+                            if _kr_head >= _kr_step:
+                                _adj(know, "kill_race_prior_eff", -_kr_step, changes,
+                                     "饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调"
+                                     "（更早全攻提速+前夜更早转锻造）")
+                            else:
+                                changes.append("kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收")
                 elif kb_head >= kb_step:
                     _adj(know, "block_safety", 0.05, changes,
                          f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")
@@ -405,6 +438,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol.get("power_longfight_hp_div", 30.0) < 30.0:
             _adj(know, "power_longfight_hp_div", 2.0, changes,
                  "胜利证明当前长战加成折算可行，小幅回收")
+        # 竞速先验折算率的胜利回收（第 397~402 批复盘，接替链有降必有升）：
+        # 只回收被棘轮压低的部分（<0.55 默认锚点），健康值不动
+        if pol.get("kill_race_prior_eff", 0.55) < 0.55:
+            _adj(know, "kill_race_prior_eff", 0.03, changes,
+                 "胜利证明当前竞速先验折算可行，小幅回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 
