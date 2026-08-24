@@ -4355,3 +4355,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/355 胜，当前目标进阶 0
+
+## 第 356 局复盘（2026-08-25 00:23）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：COLOSSUS, THUNDERCLAP, COLOSSUS, THUNDERCLAP, HEMOKINESIS, DISMANTLE, TAUNT, BLUDGEON
+- 本局遗物：CANDELABRA, 护喉甲
+- 战斗记录：F3 Monster战 掉血0; F8 Monster战 掉血0; F11 Elite战 掉血18; F13 Unknown战 掉血0; F14 Monster战 掉血3; F17 Boss战 掉血75（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)，OFFERING(24分/7局)，MAYHEM(24分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/356 胜，当前目标进阶 0
