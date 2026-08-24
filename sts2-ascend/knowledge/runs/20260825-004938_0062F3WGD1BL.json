@@ -3,7 +3,8 @@
  "ascension": 0,
  "started_at": "2026-08-25 00:49:38",
  "victory": false,
- "floor": 17,
+ "in_progress": true,
+ "floor": 0,
  "decisions": [
   {
    "t": "00:49:38",
@@ -3321,6 +3322,26 @@
    "action": "end_turn",
    "params": {},
    "reason": "战斗：评估后无值得出的牌（打击✗,烙印✓），结束回合（敌意图总伤20，我方6血/5甲）；警告：结束回合可能致死！；⚠高危Boss（97战40死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "00:57:50",
+   "screen": "GAME_OVER",
+   "floor": 17,
+   "hp": 0,
+   "gold": 269,
+   "action": "return_to_main_menu",
+   "params": {},
+   "reason": "结算：返回主菜单，备战下一局"
+  },
+  {
+   "t": "00:57:52",
+   "screen": "MAIN_MENU",
+   "floor": 0,
+   "hp": 0,
+   "gold": 269,
+   "action": "open_timeline",
+   "params": {},
+   "reason": "主菜单：检查时间线可解锁项（优先解锁新内容）"
   }
  ],
  "combat_notes": [
