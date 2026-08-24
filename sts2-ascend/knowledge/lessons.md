@@ -3530,3 +3530,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（67%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/280 胜，当前目标进阶 0
+
+## 第 281 局复盘（2026-08-24 14:44）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 SLITHERING_STRANGLER+SNAPPING_JAXFRUIT
+- 本局拿牌：DEMON_FORM, BREAKTHROUGH, STOMP
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血6; F3 Monster战 掉血2; F4 Monster战 掉血3; F5 Monster战 掉血33; F7 Unknown战 掉血18; F8 Monster战 掉血29（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 16.00 → 14.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/281 胜，当前目标进阶 0
