@@ -2982,3 +2982,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/240 胜，当前目标进阶 0
+
+## 第 241 局复盘（2026-08-24 10:09）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：MOLTEN_FIST, HEMOKINESIS, SECOND_WIND, BURNING_PACT, MOLTEN_FIST, BREAKTHROUGH, BLUDGEON, UNMOVABLE, SHRUG_IT_OFF, BLUDGEON, HAND_OF_GREED, THUNDERCLAP, HOWL_FROM_BEYOND, TRUE_GRIT
+- 本局遗物：MERCURY_HOURGLASS, 开信刀, 草莓, BLOOD_VIAL
+- 战斗记录：F19 Monster战 掉血12; F22 Monster战 掉血9; F27 Monster战 掉血21; F29 Unknown战 掉血26; F30 Monster战 掉血19; F31 Monster战 掉血11（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/241 胜，当前目标进阶 0
