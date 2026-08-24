@@ -4498,3 +4498,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/368 胜，当前目标进阶 0
+
+## 第 369 局复盘（2026-08-25 02:01）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：THUNDERCLAP, FORGOTTEN_RITUAL
+- 本局遗物：无
+- 战斗记录：F12 Monster战 掉血17; F15 Monster战 掉血3; F19 Monster战 掉血0; F20 Monster战 掉血6; F21 Monster战 掉血26; F22 Monster战 掉血48（阵亡）
+- 当前高价值卡牌：OFFERING(26分/9局)，EQUILIBRIUM(25分/7局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)，FORGOTTEN_RITUAL(24分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/369 胜，当前目标进阶 0
