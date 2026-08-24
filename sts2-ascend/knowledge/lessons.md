@@ -5047,3 +5047,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/407 胜，当前目标进阶 0
+
+## 第 408 局复盘（2026-08-25 07:02）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：THUNDERCLAP, MOLTEN_FIST, JUGGLING, FIGHT_ME, RUPTURE, SECOND_WIND, FLAME_BARRIER, STONE_ARMOR, CRIMSON_MANTLE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血4; F6 Monster战 掉血63; F7 Elite战 掉血13（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，VOLLEY(25分/9局)，THRUMMING_HATCHET(24分/8局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/408 胜，当前目标进阶 0
