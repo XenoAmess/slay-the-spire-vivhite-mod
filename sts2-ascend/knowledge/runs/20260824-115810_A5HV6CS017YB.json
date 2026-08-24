@@ -4,7 +4,7 @@
  "started_at": "2026-08-24 11:58:10",
  "victory": false,
  "in_progress": true,
- "floor": 7,
+ "floor": 8,
  "decisions": [
   {
    "t": "11:58:10",
@@ -1248,11 +1248,81 @@
     "card_index": 4
    },
    "reason": "战斗：打出【踩踏】（群体伤害≈12）；敌意图总伤18，我方39血/0甲；意图升级+18，防御前置"
+  },
+  {
+   "t": "12:01:08",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 45,
+   "gold": 32,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：20金币"
+  },
+  {
+   "t": "12:01:09",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 45,
+   "gold": 52,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "12:01:10",
+   "screen": "CARD_SELECTION",
+   "floor": 7,
+   "hp": 45,
+   "gold": 52,
+   "action": "skip_reward_cards",
+   "params": {},
+   "reason": "选牌界面：全部低于拾取门槛（最高 -0.2 < 1.0），跳过不拿"
+  },
+  {
+   "t": "12:01:11",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 45,
+   "gold": 52,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续（放弃无法领取的：将一张牌添加到你的牌组。）"
+  },
+  {
+   "t": "12:01:12",
+   "screen": "MAP",
+   "floor": 7,
+   "hp": 45,
+   "gold": 52,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 3
+   },
+   "reason": "路径规划：Monster(7,5)（路径分 21.13，预计进 Boss 血量 76%；血量偏低，前期积累让位续航；输出饥饿，Boss入场线放宽至75%（预计76%免于续航罚分））；候选：Elite(7,0)=0.16|血量56%<62%，规避精英；进Boss血量预计58%<75%（饥饿放宽自88%），优先续航路线；血量56%<62%，规避精英 / Unknown(7,2)=18.75|进Boss血量预计72%<75%（饥饿放宽自88%），优先续航路线 / RestSite(7,4)=-0.22|血量偏低（<62%），优先休整续航；进Boss血量预计55%<75%（饥饿放宽自88%），优先续航路线 / Monster(7,5)=21.13|血量偏低，前期积累让位续航；输出饥饿，Boss入场线放宽至75%（预计76%免于续航罚分）"
+  },
+  {
+   "t": "12:01:15",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 45,
+   "gold": 52,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【余烬】→墨宝（可击杀墨宝）；敌意图总伤12，我方45血/0甲"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血8",
   "F4 Monster战 掉血1",
-  "F5 Monster战 掉血4"
+  "F5 Monster战 掉血4",
+  "F7 Monster战 掉血30"
  ]
 }
