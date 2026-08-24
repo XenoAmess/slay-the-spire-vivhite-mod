@@ -3453,3 +3453,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
 - 策略进化：potion_block_hp_pct: 0.55 → 0.60（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/273 胜，当前目标进阶 0
+
+## 第 274 局复盘（2026-08-24 13:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：CINDER, FLAME_BARRIER, SHRUG_IT_OFF, TRUE_GRIT, INFLAME, CINDER, UPPERCUT, RUPTURE, TAUNT, HEMOKINESIS, DISMANTLE
+- 本局遗物：POTION_BELT, 餐券
+- 战斗记录：F8 Monster战 掉血4; F11 Monster战 掉血0; F12 Monster战 掉血0; F14 Elite战 掉血23; F15 Monster战 掉血2; F17 Boss战 掉血79（阵亡）
+- 当前高价值卡牌：FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/9局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 11.00 → 11.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/274 胜，当前目标进阶 0
