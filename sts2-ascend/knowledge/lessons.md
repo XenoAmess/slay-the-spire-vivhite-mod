@@ -3409,3 +3409,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 10.00 → 10.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
 - 生涯战绩：0/269 胜，当前目标进阶 0
+
+## 第 270 局复盘（2026-08-24 13:26）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：RAMPAGE, BREAKTHROUGH, UNMOVABLE, SECOND_WIND, BURNING_PACT, UNRELENTING, SHRUG_IT_OFF, CINDER, TAUNT, TRUE_GRIT, TAUNT, DEMON_FORM, BLUDGEON, MOLTEN_FIST, WHIRLWIND
+- 本局遗物：TUNING_FORK
+- 战斗记录：F13 Monster战 掉血5; F17 Boss战 掉血54; F19 Monster战 掉血16; F20 Monster战 掉血7; F22 Monster战 掉血34; F23 Monster战 掉血33（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/9局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：potion_block_hp_pct: 0.50 → 0.55（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/270 胜，当前目标进阶 0
