@@ -3992,3 +3992,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：高速失血爆毙（4回合掉血59，每回合15≥14）但 block_safety 2.10 顶格——爆毙证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/322 胜，当前目标进阶 0
+
+## 第 323 局复盘（2026-08-24 20:20）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHRUG_IT_OFF, SHRUG_IT_OFF, FLAME_BARRIER, UPPERCUT, SHRUG_IT_OFF, PILLAGE, STONE_ARMOR, DISMANTLE, UNRELENTING, CINDER
+- 本局遗物：STONE_CRACKER
+- 战斗记录：F7 Monster战 掉血2; F8 Monster战 掉血12; F12 Monster战 掉血24; F14 Monster战 掉血8; F15 Monster战 掉血9; F17 Boss战 掉血65（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/323 胜，当前目标进阶 0
