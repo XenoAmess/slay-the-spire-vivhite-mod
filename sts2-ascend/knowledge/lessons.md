@@ -2922,3 +2922,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/236 胜，当前目标进阶 0
+
+## 第 237 局复盘（2026-08-24 09:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, DEFEND_IRONCLAD, TAUNT, SWORD_BOOMERANG, VICIOUS, MOLTEN_FIST, SWORD_BOOMERANG, EVIL_EYE, THRASH, CRIMSON_MANTLE
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F8 Monster战 掉血9; F9 Monster战 掉血29; F11 Monster战 掉血0; F12 Monster战 掉血13; F15 Monster战 掉血2; F17 Boss战 掉血50（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/237 胜，当前目标进阶 0
