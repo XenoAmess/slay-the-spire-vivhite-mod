@@ -220,34 +220,47 @@ def main() -> int:
 
     def player() -> None:
         while True:
-            with done_cond:
-                waited = 0.0
-                while counters["played"] not in done:
-                    done_cond.wait(timeout=0.5)
-                    waited += 0.5
-                    if ended and counters["played"] >= counters["put"] and q.empty():
-                        return
-                    if waited > 90:
-                        # 某句合成 90s 还没好（挂死/超时）→ 用 SAPI 兜底读出原文，别让流水线陪葬也别静默
-                        seq_to = counters["played"]
-                        log(f"第 {seq_to} 句合成超时未归，SAPI 兜底")
-                        done[seq_to] = (None, inflight.pop(seq_to, None))
-                        break
-            seq = counters["played"]
-            wav, sent = done.pop(seq)
             try:
-                if wav is not None:
-                    _play_wav_with_gain(wav)
-                    try:
-                        wav.unlink(missing_ok=True)     # 播完即删，控制磁盘占用
-                    except OSError:
-                        pass
-                elif sent:
-                    eng.say_fallback(sent)
+                with done_cond:
+                    waited = 0.0
+                    while counters["played"] not in done:
+                        done_cond.wait(timeout=0.5)
+                        waited += 0.5
+                        if ended and counters["played"] >= counters["put"] and q.empty():
+                            return
+                        if waited > 90:
+                            # 某句迟迟无结果。诚实区分两种情况：
+                            # 有原文（合成真挂了）→ SAPI 兜底读出来；
+                            # 无原文（该句被队列丢弃，worker 从未见过）→ 直接跳过，
+                            # 此前这里谎报"SAPI 兜底"实则什么都没读（丢队沙漠事故）。
+                            seq_to = counters["played"]
+                            sent_to = inflight.pop(seq_to, None)
+                            if sent_to:
+                                log(f"第 {seq_to} 句合成超时未归，SAPI 兜底")
+                            else:
+                                log(f"第 {seq_to} 句无合成结果且无原文，静默跳过")
+                            done[seq_to] = (None, sent_to)
+                            break
+                seq = counters["played"]
+                wav, sent = done.pop(seq)
+                try:
+                    if wav is not None:
+                        _play_wav_with_gain(wav)
+                        try:
+                            wav.unlink(missing_ok=True)     # 播完即删，控制磁盘占用
+                        except OSError:
+                            pass
+                    elif sent:
+                        eng.say_fallback(sent)
+                except Exception as exc:
+                    import traceback
+                    log(f"播放失败：{exc!r}\n{traceback.format_exc()[-500:]}")
+                counters["played"] += 1
             except Exception as exc:
+                # 播放器线程死亡 = 永久静默且无人知晓
                 import traceback
-                log(f"播放失败：{exc!r}\n{traceback.format_exc()[-500:]}")
-            counters["played"] += 1
+                log(f"播放线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
+                time.sleep(1)
 
     threading.Thread(target=player, daemon=True).start()
 
