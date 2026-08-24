@@ -410,7 +410,8 @@ class Policy:
     def _elite_path_gate(self, pol: dict, priors: dict, hp: int, max_hp: int,
                          good_cards: int, act_mul: float,
                          burst_starved: bool = False,
-                         act_no: int | None = None) -> tuple[float, str]:
+                         act_no: int | None = None,
+                         deck_req: int | None = None) -> tuple[float, str]:
         """精英进场闸门：按实测战损投影"打完精英还剩多少血"，不达标整条候选路径重罚。
 
         第 36 局实证：71% 血进灰区精英单场 -44（77% 现血）+ 两瓶药水，连锁三个
@@ -420,10 +421,20 @@ class Policy:
 
         卡组强度只按封顶折扣折抵精英战损（牌数≠质量，全价折抵曾让投影过度乐观；
         simulate() 内部模拟仍用全额折扣，闸门独立更保守，二者取严不冲突）。
+
+        deck_req（第374~379批次复盘）：调用方可传入加码后的卡组门槛——前期
+        （floor ≤ elite_early_floor_max）精英要求 elite_min_deck_cards +
+        elite_early_deck_extra 张非基础牌。374~379 批 QZLQ 局 F7 精英在
+        「血量与卡组达标」（≥90% 血 + 恰好 4 张非基础牌）的放行下被单场 -80
+        整管抬走：开局卡组里 60% 还是基础打/防，4 张门槛形同虚设，而前期
+        精英的重尾（本批两场 -75/-80）是即死风险，遗物收益根本兑付不了。
+        中后期精英不受影响（136~137 批「饥饿卡组靠精英供血」教义保留）。
         """
         hpp = hp / max(1, max_hp)
-        if good_cards < pol.get("elite_min_deck_cards", 4):
-            return 0.1, (f"非基础牌仅{good_cards}张(<{pol.get('elite_min_deck_cards', 4)})，"
+        req_n = int(deck_req) if deck_req and int(deck_req) > 0 \
+            else int(pol.get("elite_min_deck_cards", 4))
+        if good_cards < req_n:
+            return 0.1, (f"非基础牌仅{good_cards}张(<{req_n})，"
                          f"卡组强度不足规避精英")
         hard = float(pol["elite_min_hp_pct"])
         soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
@@ -558,6 +569,15 @@ class Policy:
                 continue
             good_cards += 1
 
+        # 前期精英卡组门槛加码（第374~379批次复盘）：开局阶段（floor ≤
+        # elite_early_floor_max）精英要求额外 elite_early_deck_extra 张非基础牌。
+        # QZLQ 局 F7 精英以 4 张门槛压线放行后被 -80 整管抬走——开局卡组大半
+        # 还是基础牌，4 张证明不了输出成型，而前期精英的重尾是即死风险。
+        # 中后期自动回到基础门槛，饥饿供血教义不受影响
+        elite_deck_req = int(pol.get("elite_min_deck_cards", 4))
+        if floor <= int(pol.get("elite_early_floor_max", 8)):
+            elite_deck_req += max(0, int(pol.get("elite_early_deck_extra", 3)))
+
         # 连续作战长度（第 84~85 批复盘）：自最近一个非战斗节点以来的连续
         # 战斗节点数。Monster 链行军的战损是复利结算的——84 局 F2~F9 七连战
         # （中途仅一次篝火）、第 RJG 局 F2~F8 七连战，两局均在链尾力竭阵亡。
@@ -594,8 +614,9 @@ class Policy:
         def node_factor(nt: str, gnode: dict | None, hpp: float):
             """单节点权重修正系数与说明。"""
             if nt == "Elite":
-                if good_cards < pol.get("elite_min_deck_cards", 4):
-                    return 0.1, f"非基础牌仅{good_cards}张(<{pol.get('elite_min_deck_cards', 4)})，卡组强度不足规避精英"
+                if good_cards < elite_deck_req:
+                    return 0.1, (f"非基础牌仅{good_cards}张(<{elite_deck_req})，"
+                                 f"卡组强度不足规避精英")
                 hard = float(pol["elite_min_hp_pct"])
                 soft = float(pol.get("elite_soft_hp_pct", max(0.35, hard - 0.15)))
                 if hpp < soft:
@@ -673,7 +694,7 @@ class Policy:
 
         elite_gate_f, elite_gate_note = self._elite_path_gate(
             pol, priors, hp, max_hp, good_cards, act_mul, burst_starved,
-            act_no=act_no)
+            act_no=act_no, deck_req=elite_deck_req)
 
         def paths_from(start_key) -> list[list[tuple]]:
             out: list[list[tuple]] = []
@@ -744,7 +765,7 @@ class Policy:
                 if nt == "Elite" and depth >= 1:
                     gf, _gnote = self._elite_path_gate(pol, priors, int(round(cur_hp)), max_hp,
                                                         good_cards, act_mul, burst_starved,
-                                                        act_no=act_no)
+                                                        act_no=act_no, deck_req=elite_deck_req)
                     if gf < 1.0:
                         raw_penalty += (1.0 - gf) * _ELITE_GATE_NEG_PENALTY * 0.5 * (mid_decay ** depth)
                         mid_gate_hit = True
