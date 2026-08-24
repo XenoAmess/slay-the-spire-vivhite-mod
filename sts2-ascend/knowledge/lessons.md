@@ -3761,3 +3761,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：potion_block_hp_pct: 0.75 → 0.80（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/301 胜，当前目标进阶 0
+
+## 第 302 局复盘（2026-08-24 17:29）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：BLUDGEON, SHRUG_IT_OFF, ANGER, SHRUG_IT_OFF, FEED, UNRELENTING, JUGGERNAUT, ANGER, RESTLESSNESS, BREAKTHROUGH, RUPTURE, HOWL_FROM_BEYOND, BATTLE_TRANCE, RUPTURE, THE_GAMBIT, SHRUG_IT_OFF
+- 本局遗物：GAMBLING_CHIP, 摆动球
+- 战斗记录：F14 Monster战 掉血11; F15 Monster战 掉血0; F17 Boss战 掉血61; F19 Monster战 掉血0; F21 Monster战 掉血0; F25 Monster战 掉血88（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：高速失血爆毙（4回合掉血88，每回合22≥14）但 block_safety 2.10 顶格——爆毙证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/302 胜，当前目标进阶 0
