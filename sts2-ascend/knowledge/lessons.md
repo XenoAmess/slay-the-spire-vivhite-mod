@@ -4377,3 +4377,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/357 胜，当前目标进阶 0
+
+## 第 358 局复盘（2026-08-25 00:41）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：RUPTURE, TAUNT, ANGER, FIGHT_ME, MOLTEN_FIST, FLAME_BARRIER, ANGER, MOLTEN_FIST, DISMANTLE, THUNDERCLAP, OFFERING, RUPTURE, SECOND_WIND, DISMANTLE, FIGHT_ME, TAUNT, BREAKTHROUGH, TRUE_GRIT, STRATAGEM, RUPTURE, CINDER
+- 本局遗物：GIRYA, 打击木偶, BAG_OF_MARBLES, PETRIFIED_TOAD, POTION_BELT, 碎石钻
+- 战斗记录：F17 Boss战 掉血33; F19 Monster战 掉血12; F21 Monster战 掉血1; F23 Monster战 掉血47; F31 Elite战 掉血19; F33 Elite战 掉血49（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，OFFERING(25分/8局)，FORGOTTEN_RITUAL(25分/2局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/358 胜，当前目标进阶 0
