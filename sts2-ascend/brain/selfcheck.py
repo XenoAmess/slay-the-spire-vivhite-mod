@@ -1291,6 +1291,41 @@ def main() -> int:
     assert d_bl2.action == "select_deck_card", \
         f"空卡组应照常拿牌: {d_bl2.action}（{d_bl2.reason}）"
 
+    # 3hh-bis) 单薄卡组正价值保底（第 236 局复盘）：VS71 局开局连战五场零拿牌
+    #          ——0.8 分的正价值候选被 1.0 门槛拦下（单薄折扣未触底），随后
+    #          F5 -47/F6 -33 饿死。卡组单薄（非基础牌 < core）时，严格正价值
+    #          候选不再因低于门槛被跳过；膨胀卡组照旧跳过（门槛防注水语义
+    #          不变）；负价值候选照旧跳过（3x 已覆盖）
+    pebble = {"index": 0, "card_id": "GUARD_PEBBLE", "name": "小卵石", "card_type": "Skill",
+              "energy_cost": 1, "rules_text": "获得1点格挡",
+              "dynamic_values": [{"name": "Block", "current_value": 1}]}
+    thin_deck = ([{"card_id": f"WALL_{i}", "card_type": "Skill", "energy_cost": 1,
+                   "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(6)]
+                 + [{"card_id": f"BASIC_STRIKE_{i}", "card_type": "Attack", "energy_cost": 1}
+                    for i in range(4)])   # good=6 < core 8：单薄；门槛=2.0-2×0.35=1.3
+    thin_state = {"screen": "CARD_SELECTION",
+                  "available_actions": ["select_deck_card", "skip_reward_cards"],
+                  "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                                "min_select": 1, "selected_count": 0, "can_confirm": False,
+                                "cards": [dict(pebble)]},
+                  "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 31,
+                          "deck": [dict(c) for c in thin_deck]}}
+    assert pol._pick_threshold(thin_state["run"]["deck"]) > 0.8, "前置失效：小卵石应低于动态门槛"
+    d_th1 = pol.decide(thin_state, ctx)
+    assert d_th1.action == "select_deck_card", \
+        f"单薄卡组的正价值候选不得因门槛跳过（VS71局零拿牌复现）: {d_th1.action}（{d_th1.reason}）"
+    bloated_deck2 = [dict(c, card_id=f"BLOAT2_ATK_{i}") for i, c in enumerate(bloated)]
+    fat_state = {"screen": "CARD_SELECTION",
+                 "available_actions": ["select_deck_card", "skip_reward_cards"],
+                 "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                               "min_select": 1, "selected_count": 0, "can_confirm": False,
+                               "cards": [dict(pebble)]},
+                 "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 32,
+                         "deck": [dict(c) for c in bloated_deck2]}}
+    d_th2 = pol.decide(fat_state, ctx)
+    assert d_th2.action == "skip_reward_cards", \
+        f"膨胀卡组的低于门槛候选仍应跳过（防注水语义回退）: {d_th2.action}（{d_th2.reason}）"
+
     # 3ii) 战斗中手牌献祭（第 71 局实锤）：Vantom 每阶段结束强制从手牌交一张，
     #      旧通用分支按"最高价值"点选——五连献祭把火焰屏障+×3/耸肩无视+×2 喂给
     #      Boss，伤口在候选里却视而不见，防御核心被拆光后意图 26→32 磨死。
@@ -1704,6 +1739,42 @@ def main() -> int:
     d_gap2 = pol.decide(gap_potion_state(), ctx)
     assert d_gap2.action != "use_potion", \
         f"无数据组合误烧攻击药水: {d_gap2.action}（{d_gap2.reason}）"
+    ctx.combat = None
+    ctx.current_combat_is_hard = False
+
+    # 3ss-bis) 药水提前交药线（第 236 局复盘，爆毙/短时死亡的接替旋钮）：
+    #          TNWN 局 40%~50% 血硬仗干瞪眼、拖到 10/80 才喝药——防御/回复
+    #          药水的开喝血线由 potion_block_hp_pct 控制（默认 0.35 与旧行为
+    #          一致），演化上调后在无数据组合的普通硬仗里也提前开喝；
+    #          默认线下同血量照旧不喝（旧行为回归防护）
+    def heal_potion_state(hp_now: int):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 5,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "H", "name": "硬仗怪",
+                                    "current_hp": 30, "max_hp": 30, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 12}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 9,
+                    "deck": [],
+                    "potions": [{"index": 0, "potion_id": "BLOCK_P", "name": "格挡药水",
+                                 "description": "获得12点格挡。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+
+    saved_pot_line = know.policy.get("potion_block_hp_pct", 0.35)
+    know.policy["potion_block_hp_pct"] = 0.60
+    ctx.combat = {"comp_id": "NO_DATA_COMP_PL", "node_type": "Monster"}  # 无数据组合：premium 不开，只靠放血线
+    d_pl1 = pol.decide(heal_potion_state(44), ctx)   # 55% 血：旧线 35% 够不到，新线 60% 应喝
+    assert d_pl1.action == "use_potion" and "交药线" in d_pl1.reason, \
+        f"交药线上调后未提前使用防御药水: {d_pl1.action}（{d_pl1.reason}）"
+    know.policy["potion_block_hp_pct"] = saved_pot_line
+    ctx.combat = {"comp_id": "NO_DATA_COMP_PL2", "node_type": "Monster"}  # 新战斗实例：绕开药水尝试黑名单
+    d_pl2 = pol.decide(heal_potion_state(44), ctx)
+    assert d_pl2.action != "use_potion", \
+        f"默认交药线被误抬（旧行为回归防护失效）: {d_pl2.action}（{d_pl2.reason}）"
+    know.policy["potion_block_hp_pct"] = saved_pot_line
     ctx.combat = None
     ctx.current_combat_is_hard = False
 
@@ -2938,39 +3009,68 @@ def main() -> int:
     assert abs(sknow.policy["smith_min_hp_pct"] - 0.60) < 1e-9, \
         f"健康常规锻造线被胜利误推: {sknow.policy['smith_min_hp_pct']}"
 
-    # 3zu) 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘）：block_safety 顶格
-    #      2.1 时，爆毙（dpr≥14）与短时（<4回合）死亡不得静默蒸发（233 局二幕
-    #      Boss 5 回合 -71 曾零留痕「本局无参数调整」）——显式封账留痕；
-    #      有余量时旧行为不变（照旧 +0.05 吸收）
+    # 3zu) 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘引入，第 236 局复盘
+    #      落地接替旋钮）：block_safety 顶格 2.1 时，「没挡住」证据改接药水提前
+    #      交药线 potion_block_hp_pct（231~233 批工作单「药水提前交药时机 /
+    #      爆毙专属预演」二选一的选型兑现）；接替旋钮也顶格（0.80）才显式封账
+    #      留痕；block_safety 有余量时旧行为不变；胜利对称释放接替旋钮
     udir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-burstcap-"))
     uknow = knowledge.Knowledge(udir)
     uknow.policy.update(block_safety=2.1, kill_bonus=20.0,
                         burst_starve_bonus_base=8.0, burst_starve_bonus_extra_max=12.0,
                         deck_burst_floor=45.0, smith_min_hp_pct=0.45)
-    # ① 爆毙 + 顶格：数值不动且显式留痕
+    # ① 爆毙 + 顶格：block_safety 不动，接替旋钮吸收（+0.05）
     uctx = _RC()
     uctx.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
                            "rounds": 5, "hp_lost": 71.0}
     ulesson = reflect.finalize_run(uknow, uctx, victory=False, final_floor=33)
     assert abs(uknow.policy["block_safety"] - 2.1) < 1e-9, \
         f"顶格后爆毙仍加码: {uknow.policy['block_safety']}"
-    assert "爆毙证据停止吸收" in ulesson, f"爆毙顶格封账留痕缺失: {ulesson}"
-    # ② 短时死亡（<4回合）+ 顶格：数值不动且显式留痕
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.40) < 1e-9, \
+        f"爆毙证据未接替到药水交药线: {uknow.policy['potion_block_hp_pct']}"
+    assert "药水提前交药线" in ulesson, f"接替旋钮留痕缺失: {ulesson}"
+    # ② 短时死亡（<4回合）+ 顶格：同一接替旋钮继续吸收
     uctx2 = _RC()
     uctx2.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
                             "rounds": 3, "hp_lost": 14.0}
     ulesson2 = reflect.finalize_run(uknow, uctx2, victory=False, final_floor=23)
-    assert abs(uknow.policy["block_safety"] - 2.1) < 1e-9, \
-        f"顶格后短时死亡仍加码: {uknow.policy['block_safety']}"
-    assert "短时死亡证据停止吸收" in ulesson2, f"短时死亡顶格封账留痕缺失: {ulesson2}"
-    # ③ 有余量时旧行为不变：爆毙证据照旧 +0.05 吸收
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.45) < 1e-9, \
+        f"短时死亡证据未接替到药水交药线: {uknow.policy['potion_block_hp_pct']}"
+    assert "药水提前交药线" in ulesson2, f"短时死亡接替留痕缺失: {ulesson2}"
+    # ③ 双重顶格：交药线也到 0.80 上限 → 显式封账留痕（231~233 批语义保留）
+    uknow.policy["potion_block_hp_pct"] = 0.80
+    uctx_b = _RC()
+    uctx_b.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
+                             "rounds": 5, "hp_lost": 71.0}
+    ulesson_b = reflect.finalize_run(uknow, uctx_b, victory=False, final_floor=33)
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.80) < 1e-9, \
+        f"双重顶格后接替旋钮仍被加码: {uknow.policy['potion_block_hp_pct']}"
+    assert "爆毙证据停止吸收" in ulesson_b, f"爆毙顶格封账留痕缺失: {ulesson_b}"
+    uctx_s = _RC()
+    uctx_s.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
+                             "rounds": 3, "hp_lost": 14.0}
+    ulesson_s = reflect.finalize_run(uknow, uctx_s, victory=False, final_floor=23)
+    assert "短时死亡证据停止吸收" in ulesson_s, f"短时死亡顶格封账留痕缺失: {ulesson_s}"
+    # ④ 有余量时旧行为不变：爆毙证据照旧由 block_safety +0.05 吸收，
+    #    接替旋钮不得重复吸收同一份证据
     uknow.policy["block_safety"] = 2.0
+    uknow.policy["potion_block_hp_pct"] = 0.35
     uctx3 = _RC()
     uctx3.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
                             "rounds": 5, "hp_lost": 71.0}
     reflect.finalize_run(uknow, uctx3, victory=False, final_floor=33)
     assert abs(uknow.policy["block_safety"] - 2.05) < 1e-9, \
         f"有余量时爆毙证据未吸收: {uknow.policy['block_safety']}"
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
+        f"防御有余量时接替旋钮被误吸: {uknow.policy['potion_block_hp_pct']}"
+    # ⑤ 胜利释放：只回收被棘轮抬高的部分（>0.35 锚点），健康值不被推低
+    uknow.policy["potion_block_hp_pct"] = 0.40
+    reflect.finalize_run(uknow, _RC(), victory=True, final_floor=20)
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
+        f"胜利未释放药水交药线（单向棘轮复发）: {uknow.policy['potion_block_hp_pct']}"
+    reflect.finalize_run(uknow, _RC(), victory=True, final_floor=21)
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
+        f"健康交药线被胜利误推: {uknow.policy['potion_block_hp_pct']}"
 
     # 3zs) 「拿了不打」偏置封禁 + 榜单过滤（第 228 批复盘）：DISINTEGRATION 类
     #      不可打出牌（7拿0打）靠幸存者偏差把 outcome 抬到 33、bias 涨到 +4 上限，

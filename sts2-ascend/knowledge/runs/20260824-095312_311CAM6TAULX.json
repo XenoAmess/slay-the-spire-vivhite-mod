@@ -1,0 +1,271 @@
+{
+ "run_id": "311CAM6TAULX",
+ "ascension": 0,
+ "started_at": "2026-08-24 09:53:12",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "09:53:12",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「失物盒」（经验价值 0.0）；铅制镇纸=0.0(n=9) / 失物盒=0.0(n=8) / 寻龙尺=-1.0(n=2)"
+  },
+  {
+   "t": "09:53:13",
+   "screen": "REWARD",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：格挡药水"
+  },
+  {
+   "t": "09:53:14",
+   "screen": "REWARD",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "09:53:14",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【火焰屏障】（价值 13.7）；候选：火焰屏障=13.7 / 撕裂=8.8 / 熔融之拳=8.1"
+  },
+  {
+   "t": "09:53:15",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "09:53:17",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,0)（路径分 25.38，预计进 Boss 血量 75%；前期需要战斗积累卡牌；进Boss血量预计75%<75%（饥饿放宽自88%），优先续航路线）；候选：Monster(1,0)=25.38|前期需要战斗积累卡牌；进Boss血量预计75%<75%（饥饿放宽自88%），优先续航路线 / Monster(1,2)=25.20|前期需要战斗积累卡牌；进Boss血量预计75%<75%（饥饿放宽自88%），优先续航路线 / Monster(1,5)=-10.56|前期需要战斗积累卡牌；路径中段含未达标精英，投影罚分；进Boss血量预计56%<75%（饥饿放宽自88%），优先续航路线"
+  },
+  {
+   "t": "09:53:20",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6）；敌意图总伤0，我方80血/0甲"
+  },
+  {
+   "t": "09:53:21",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6）；敌意图总伤0，我方80血/0甲"
+  },
+  {
+   "t": "09:53:22",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（防御✓,防御✓,火焰屏障✗），结束回合（敌意图总伤0，我方80血/0甲）"
+  },
+  {
+   "t": "09:53:25",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤7，我方80血/0甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "09:53:26",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤7，我方80血/5甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "09:53:27",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（防御✓,打击✓,痛击✗），结束回合（敌意图总伤7，我方80血/5甲）；意图升级+7，防御前置"
+  },
+  {
+   "t": "09:53:30",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤13，我方78血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "09:53:31",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤13，我方78血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "09:53:32",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤13，我方78血/5甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "09:53:33",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "09:53:36",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【火焰屏障】（格挡12）；敌意图总伤7，我方75血/0甲"
+  },
+  {
+   "t": "09:53:37",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4）；敌意图总伤7，我方75血/12甲"
+  },
+  {
+   "t": "09:53:39",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "09:53:41",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→缩小甲虫（单体伤害≈5）；敌意图总伤13，我方75血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "09:53:43",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤13，我方75血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "09:53:45",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 75,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  }
+ ],
+ "combat_notes": []
+}

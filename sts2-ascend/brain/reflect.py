@@ -49,8 +49,15 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 永久升级，145 场 Boss 实证锻造次数/升级牌打出是最强生还区分项），且
     # 常规篝火服务的是每一场走廊战，战场归属正确（非 227 批警告的错位吸收）。
     # 下限 0.45 与 rest_urgent_hp_pct 对齐：低于此值的回血是真求生区，且有
-    # 绝境投影/下一战预演双守卫兜底翻回回血，不许再压
+    #     绝境投影/下一战预演双守卫兜底翻回回血，不许再压
     "smith_min_hp_pct": (0.45, 0.70),
+    # 第 236 局复盘接入：爆毙/短时死亡通道的接替旋钮（兑现 231~233 批工作单——
+    # 「药水提前交药时机 / 爆毙专属预演」二选一，本批选型前者）。block_safety
+    # 顶格后，「没挡住」的证据改接药水提前交药线 potion_block_hp_pct：
+    # 每 +0.05，硬仗中防御/回复药水的开喝血线提前 5%，放血判定同步放宽——
+    # TNWN 局 40%~50% 血硬仗干瞪眼、拖到 10/80 才喝药的实证。下限 0.35 为
+    # 原始默认；上限 0.80 防止交药线吞掉整个血条区间使防御/回复药水失去时机区分度
+    "potion_block_hp_pct": (0.35, 0.80),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -117,6 +124,20 @@ def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) 
     if abs(new - old) > 1e-9:
         know.policy[key] = new
         changes.append(f"{key}: {old:.2f} → {new:.2f}（{why}）")
+
+
+def _adj_potion_line(know: Knowledge, changes: list[str], evidence: str) -> bool:
+    """爆毙/短时死亡证据的接替旋钮（第 236 局复盘）：block_safety 顶格后，
+    「没挡住」的证据改接药水提前交药线 potion_block_hp_pct——防御权重已经
+    加不动，正确的响应不是把同一格挡再估值，而是让下一场硬仗更早把
+    防御/回复药水喝掉（231~233 批工作单「药水提前交药时机」选项落地）。
+    返回是否成功吸收（False = 接替旋钮也已顶格，调用方负责封账留痕）。
+    """
+    pre = len(changes)
+    _adj(know, "potion_block_hp_pct", 0.05, changes,
+         f"{evidence}且 block_safety 顶格——证据改接药水提前交药线"
+         "（更早喝下防御/回复药水，不再加码已顶格的格挡权重）")
+    return len(changes) > pre
 
 
 def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
@@ -302,24 +323,26 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 # 本分支——_adj 空转且零留痕，复盘只见「本局无参数调整」，与
                 # 88~89 批顶格旋钮代谢原则（余量不足必须显式留痕）同一缺陷的
                 # 静默版。长战分支 127~130 批就加了余量检查，本分支补上同款：
-                # 有行程照旧吸收，无行程显式封账留痕，把证据摆到复盘桌面上
+                # 有行程照旧吸收，无行程先走接替旋钮（第 236 局复盘选型落地），
+                # 接替旋钮也顶格才显式封账留痕，把证据摆到复盘桌面上
                 _bs_step = 0.05
                 _bs_head = BOUNDS["block_safety"][1] - pol["block_safety"]
                 if burst_death:
+                    _burst_evidence = (f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，"
+                                       f"每回合{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）")
                     if _bs_head >= _bs_step:
                         _adj(know, "block_safety", _bs_step, changes,
-                             f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
-                             f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）——按「没挡住」证据上调防御权重")
-                    else:
+                             f"{_burst_evidence}——按「没挡住」证据上调防御权重")
+                    elif not _adj_potion_line(know, changes, _burst_evidence):
                         changes.append(
-                            f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
-                            f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）但 block_safety "
+                            f"{_burst_evidence}但 block_safety "
                             f"{pol['block_safety']:.2f} 顶格——爆毙证据停止吸收并留痕，"
                             "接替旋钮留待复盘设计")
                 else:
                     if _bs_head >= _bs_step:
                         _adj(know, "block_safety", _bs_step, changes, "普通战斗阵亡，略微上调防御权重")
-                    else:
+                    elif not _adj_potion_line(know, changes,
+                                              f"普通战斗短时阵亡（{rounds}回合）"):
                         changes.append(
                             f"普通战斗短时阵亡（{rounds}回合）但 block_safety "
                             f"{pol['block_safety']:.2f} 顶格——短时死亡证据停止吸收并留痕，"
@@ -340,6 +363,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol.get("smith_min_hp_pct", 0.55) < 0.55:
             _adj(know, "smith_min_hp_pct", 0.05, changes,
                  "胜利证明当前常规回血线可行，小幅上调回收")
+        # 药水提前交药线的胜利释放（第 236 局复盘，与锻造线释放同构）：
+        # 接替链有降必有升；只回收被棘轮抬高的部分（>0.35 锚点），健康值不动
+        if pol.get("potion_block_hp_pct", 0.35) > 0.35:
+            _adj(know, "potion_block_hp_pct", -0.05, changes,
+                 "胜利证明当前交药时机可行，小幅回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 

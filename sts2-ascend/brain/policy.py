@@ -1166,7 +1166,11 @@ class Policy:
         # 对这类组合按普通战囤药水等于把救命资源带进坟墓）。
         # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
         # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
-        low_hp_bleeding = my_hp <= 0.35 * my_max_hp and block_gap > 0
+        # 低血线接 potion_block_hp_pct（第 236 局复盘）：block_safety 顶格后
+        # 爆毙证据的接替旋钮——TNWN 局 40%~50% 血的硬仗干瞪眼、拖到 10/80
+        # 才喝药；交药线随演化提前，放血判定与防御/回复分支共用同一条线
+        _potion_line = float(pol.get("potion_block_hp_pct", 0.35))
+        low_hp_bleeding = my_hp <= _potion_line * my_max_hp and block_gap > 0
         # premium：值得动用增益药水的场合（硬房/真致死/高危组合）。普通消耗战哪怕低血也留着——
         # 第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，Boss 战空手阵亡。
         # 姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损 0.30×血条）比姿态门槛
@@ -1739,11 +1743,15 @@ class Policy:
                 return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
             if ("格挡" in desc or "生命" in desc or "回复" in desc or "block" in desc.lower() or "heal" in desc.lower()):
+                # 交药线接 potion_block_hp_pct（第 236 局复盘）：默认 0.35 与旧
+                # 行为一致，爆毙/短时死亡证据在 block_safety 顶格后把它逐步提前
+                _pot_line = float(pol.get("potion_block_hp_pct", 0.35))
                 if (state.get("combat", {}).get("player", {}).get("current_hp", 1)
-                        < 0.35 * state.get("combat", {}).get("player", {}).get("max_hp", 1)):
+                        < _pot_line * state.get("combat", {}).get("player", {}).get("max_hp", 1)):
                     self._potion_tried.add(p["index"])
                     return Decision("use_potion", {"option_index": p["index"]},
-                                    f"战斗：低血量使用防御/回复药水【{name}】",
+                                    f"战斗：低血量使用防御/回复药水【{name}】"
+                                    f"（交药线 {_pot_line:.0%}）",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)
             # 兜底：硬仗（致死/精英/低血放血）里无法分类的药水也值得一试——
             # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）。
@@ -1802,6 +1810,26 @@ class Policy:
             burst_energy -= _cost
         return burst
 
+    def _deck_good_count(self, deck: list[dict]) -> int:
+        """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
+        return sum(1 for c in deck
+                   if not ("STRIKE" in (c.get("card_id") or "").upper()
+                           or "DEFEND" in (c.get("card_id") or "").upper()
+                           or is_bad_card(c)))
+
+    def _thin_deck_must_pick(self, deck: list[dict], best_v: float) -> bool:
+        """单薄卡组正价值保底（第 236 局复盘）：卡组单薄（非基础牌 < core）时，
+        严格正价值的候选不再因低于拾取门槛被跳过——VS71 局开局连战五场
+        零拿牌，0.8 分的正价值候选被 1.0 门槛拦下，饿死在 F6。门槛防的是
+        膨胀卡组注水，单薄卡组的病是量不足（deck_thin_core 教义的自然延伸：
+        单薄折扣已把门槛降向 0，但折扣未触底前仍会漏杀正价值候选）。
+        负价值候选（诅咒/状态/未升级基础牌/实锤差牌）不在此列，照旧跳过。
+        """
+        if best_v <= 0:
+            return False
+        core = float(self.know.policy.get("deck_thin_core", 8))
+        return self._deck_good_count(deck) < core
+
     def _pick_threshold(self, deck: list[dict]) -> float:
         """动态拿牌门槛：非基础牌超出软上限后线性抬升（每超一张 +1.5）。
 
@@ -1819,10 +1847,7 @@ class Policy:
         base = float(pol["card_pick_threshold"])
         if not deck:
             return base
-        good = sum(1 for c in deck
-                   if not ("STRIKE" in (c.get("card_id") or "").upper()
-                           or "DEFEND" in (c.get("card_id") or "").upper()
-                           or is_bad_card(c)))
+        good = self._deck_good_count(deck)
         overflow = good - float(pol.get("deck_soft_cap", 20))
         thr = base
         if overflow > 0:
@@ -1979,7 +2004,8 @@ class Policy:
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
                                 tags=[("card_pick", best.get("card_id"))], wait=0.8)
-            if "skip_reward_cards" in actions:
+            if best_v < pick_line and "skip_reward_cards" in actions \
+                    and not self._thin_deck_must_pick(deck, best_v):
                 return Decision("skip_reward_cards", {},
                                 f"奖励选牌：全部跳过（最高价值 {best_v:.1f} < 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
                                 wait=0.8)
@@ -2121,7 +2147,8 @@ class Policy:
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
             # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
             # （第 65~66 局复盘：门槛升级为随卡组膨胀动态抬升）
-            if best_v < pick_line and "skip_reward_cards" in actions:
+            if best_v < pick_line and "skip_reward_cards" in actions \
+                    and not self._thin_deck_must_pick(deck, best_v):
                 return Decision("skip_reward_cards", {},
                                 f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)

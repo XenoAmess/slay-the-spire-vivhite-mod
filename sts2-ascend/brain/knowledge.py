@@ -79,6 +79,11 @@ DEFAULT_POLICY = {
     "exploration_min": 0.05,
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
+    "potion_block_hp_pct": 0.35,  # 药水提前交药线（第 236 局复盘新增，block_safety 顶格后的
+                                  # 爆毙/短时死亡接替旋钮）：硬仗中血量低于此比例即掏防御/回复
+                                  # 药水，并同步放宽「低血放血」硬仗判定——TNWN 局 40%~50% 血
+                                  # 硬仗干瞪眼、拖到 10/80 血才喝药的实证。演化区间 0.35~0.80，
+                                  # 「没挡住」的证据不再蒸发，而是让下一场硬仗更早喝药
     # --- 战斗端补丁键（第 58~59 局复盘） ---
     "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
     "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）
