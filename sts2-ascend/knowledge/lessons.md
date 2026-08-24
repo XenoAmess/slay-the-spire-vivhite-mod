@@ -4410,3 +4410,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：精英战阵亡但满血线进场（92%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/360 胜，当前目标进阶 0
+
+## 第 361 局复盘（2026-08-25 00:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：TRUE_GRIT, IRON_WAVE, CINDER, SHRUG_IT_OFF, MOLTEN_FIST, FEEL_NO_PAIN, DISMANTLE, THUNDERCLAP, SHRUG_IT_OFF, UNRELENTING, UNRELENTING
+- 本局遗物：PARRYING_SHIELD
+- 战斗记录：F6 Monster战 掉血20; F8 Monster战 掉血29; F12 Monster战 掉血7; F14 Monster战 掉血13; F15 Monster战 掉血2; F17 Boss战 掉血72（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，OFFERING(25分/8局)，FORGOTTEN_RITUAL(25分/2局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/361 胜，当前目标进阶 0
