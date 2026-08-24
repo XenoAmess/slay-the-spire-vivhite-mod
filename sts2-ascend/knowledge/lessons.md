@@ -4179,3 +4179,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/339 胜，当前目标进阶 0
+
+## 第 340 局复盘（2026-08-24 22:27）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：UPPERCUT, STOMP, BLUDGEON, SHRUG_IT_OFF, RAMPAGE, TAUNT, ULTIMATE_STRIKE, CINDER, RUPTURE, ANGER, IMPERVIOUS, FEED, INFLAME, TWIN_STRIKE, EQUILIBRIUM, UPPERCUT, SHRUG_IT_OFF, THUNDERCLAP, SWORD_BOOMERANG
+- 本局遗物：TUNING_FORK, 准备背包, 地精之角, LETTER_OPENER
+- 战斗记录：F17 Boss战 掉血72; F19 Monster战 掉血24; F21 Monster战 掉血12; F23 Monster战 掉血18; F25 Elite战 掉血51; F28 Monster战 掉血47（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，VOLLEY(27分/5局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/10局)，DARK_EMBRACE(23分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/340 胜，当前目标进阶 0
