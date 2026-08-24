@@ -3252,3 +3252,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/259 胜，当前目标进阶 0
+
+## 第 260 局复盘（2026-08-24 12:23）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：IRON_WAVE, TAUNT, TAUNT, COLOSSUS, BURNING_PACT, HEMOKINESIS, TRUE_GRIT, DISMANTLE, DEMON_FORM, RESTLESSNESS, CRIMSON_MANTLE, STOMP, BLUDGEON
+- 本局遗物：POCKETWATCH
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血52; F19 Monster战 掉血14; F20 Monster战 掉血17; F21 Monster战 掉血17; F22 Monster战 掉血32（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，FIEND_FIRE(25分/8局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 24.00 → 22.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/260 胜，当前目标进阶 0
