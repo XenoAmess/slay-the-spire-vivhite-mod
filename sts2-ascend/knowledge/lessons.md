@@ -4909,3 +4909,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/396 胜，当前目标进阶 0
+
+## 第 397 局复盘（2026-08-25 05:45）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：WHIRLWIND, STONE_ARMOR, EQUILIBRIUM, COLOSSUS, PYRE, TRUE_GRIT, FLAME_BARRIER, MOLTEN_FIST
+- 本局遗物：ORNAMENTAL_FAN
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血1; F7 Monster战 掉血6; F9 Monster战 掉血44; F13 Monster战 掉血35; F14 Monster战 掉血18（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(25分/9局)，FIEND_FIRE(24分/11局)，FEED(24分/24局)，DARK_EMBRACE(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/397 胜，当前目标进阶 0
