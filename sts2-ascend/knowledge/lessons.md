@@ -3365,3 +3365,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 9.00 → 9.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
 - 生涯战绩：0/265 胜，当前目标进阶 0
+
+## 第 266 局复盘（2026-08-24 12:59）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：STOMP, MOLTEN_FIST, INFLAME, PANIC_BUTTON, FLAME_BARRIER, TAUNT, FLAME_BARRIER
+- 本局遗物：涅奥的牺牲, 轰鸣海螺
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F5 Monster战 掉血1; F6 Monster战 掉血48; F7 Unknown战 掉血12; F9 Monster战 掉血43（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/9局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 20.00 → 18.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/266 胜，当前目标进阶 0
