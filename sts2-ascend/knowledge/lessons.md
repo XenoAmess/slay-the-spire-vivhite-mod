@@ -3860,3 +3860,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/310 胜，当前目标进阶 0
+
+## 第 311 局复盘（2026-08-24 18:47）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：THUNDERCLAP, UNRELENTING, UNRELENTING, FORGOTTEN_RITUAL, RUPTURE, BLUDGEON, PANIC_BUTTON, UPPERCUT, FIGHT_ME, UNRELENTING, SHRUG_IT_OFF, STONE_ARMOR, SWORD_BOOMERANG, UPPERCUT, CONFLAGRATION, FLAME_BARRIER, BOLAS, HOWL_FROM_BEYOND, BLUDGEON, TRUE_GRIT, TAUNT, VICIOUS, DISINTEGRATION, MIND_ROT, DISINTEGRATION, DISINTEGRATION, WASTE_AWAY, WASTE_AWAY
+- 本局遗物：FROZEN_EGG, PANTOGRAPH, 磨刀石, 蜡制钢笔尖, 蜡制招架盾, 蜡制佛珠手链, 蜡制红面具, 蜡制紫水晶茄子, MUMMIFIED_HAND
+- 战斗记录：F19 Monster战 掉血15; F20 Monster战 掉血9; F25 Monster战 掉血2; F29 Monster战 掉血0; F31 Monster战 掉血14; F33 Boss战 掉血91（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/311 胜，当前目标进阶 0
