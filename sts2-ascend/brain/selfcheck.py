@@ -3756,6 +3756,56 @@ def main() -> int:
     assert abs(v_strong2 - v_plain2) < 1e-9, \
         f"卡组成型后成长牌仍吃饥饿加分: {v_strong2 - v_plain2:.2f}"
 
+    # 3zz) 终局日志防回写 + 复盘摘要的脏戳豁免（第 369 局复盘）：218 批的增量
+    #      存档落地后，「结算屏→回主菜单→检查时间线」等后继决策会以增量稿
+    #      格式（in_progress=true/victory=false/floor=当前屏）盖回已定稿日志
+    #      ——141 个已完成局被永久打上「进行中」脏戳，_recent_run_summaries
+    #      把它们全部过滤后，复盘数据包只能拿一百多局前的旧局当样本
+    #      （第 263~369 局的复盘摘要整体失真）。两道修复各配回归：
+    #      ①定稿后 _save_run_progress 一律只读；②摘要对「轨迹含 GAME_OVER
+    #      的 in_progress 文件」按完成局放行，真进行中局仍排除。
+    import llm_review as llm_review_mod
+    _kr_backup = llm_review_mod.KNOWLEDGE_DIR
+    ag_fin = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    st_map = {"screen": "MAP", "run_id": "RUN_FIN",
+              "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 6}}
+    ag_fin._track(st_map, policy.Decision(action="choose_map_node", reason="x"))
+    assert ag_fin.ctx.run_finalized is False, "对局未结束不应处于定稿态"
+    ag_fin._save_run_progress({"floor": 6}, force=True)
+    log_path = next((tmp_agent / "runs").glob("*_RUN_FIN.json"))
+    raw = json.loads(log_path.read_text(encoding="utf-8"))
+    assert raw.get("in_progress") is True and raw.get("floor") == 6, \
+        f"增量稿应带进行中标记: {raw.get('in_progress')}/{raw.get('floor')}"
+    ag_fin._finalize(victory=False, floor=6)
+    raw = json.loads(log_path.read_text(encoding="utf-8"))
+    assert "in_progress" not in raw and raw.get("floor") == 6 and raw.get("victory") is False, \
+        f"终稿语义缺失: in_progress={'in_progress' in raw}, floor={raw.get('floor')}"
+    st_mm = {"screen": "MAIN_MENU", "run_id": "RUN_FIN",
+             "run": {"current_hp": 0, "max_hp": 80, "gold": 0, "floor": 0}}
+    ag_fin._track(st_mm, policy.Decision(action="open_timeline",
+                                         reason="主菜单：检查时间线可解锁项（优先解锁新内容）"))
+    raw = json.loads(log_path.read_text(encoding="utf-8"))
+    assert "in_progress" not in raw, "定稿日志被结算后继决策回写成进行中（脏戳复发）"
+    llm_review_mod.KNOWLEDGE_DIR = tmp_agent
+    tknow.save_run_log("RUN_LIVE", {"run_id": "RUN_LIVE", "in_progress": True,
+                                    "victory": False, "floor": 12,
+                                    "decisions": [{"screen": "COMBAT", "action": "play_card"}]})
+    tknow.save_run_log("RUN_STAMP", {"run_id": "RUN_STAMP", "in_progress": True,
+                                     "victory": False, "floor": 0,
+                                     "decisions": [{"screen": "COMBAT", "action": "play_card", "floor": 9},
+                                                   {"screen": "GAME_OVER", "action": None, "floor": 17,
+                                                    "reason": "对局结束：胜利（层数 17），正在总结复盘…"},
+                                                   {"screen": "MAIN_MENU", "action": "open_timeline",
+                                                    "floor": 0}]})
+    summaries = llm_review_mod._recent_run_summaries(10)
+    summ_ids = {s["run_id"] for s in summaries}
+    assert "RUN_STAMP" in summ_ids, f"定稿后被盖脏戳的完成局未进摘要: {sorted(summ_ids)}"
+    assert "RUN_LIVE" not in summ_ids, f"真进行中对局混进了摘要: {sorted(summ_ids)}"
+    stamp = next(s for s in summaries if s["run_id"] == "RUN_STAMP")
+    assert stamp["floor"] == 17 and stamp["victory"] is True, \
+        f"脏戳字段的读端复原失效（floor/victory 按决策轨迹复原）: {stamp}"
+    llm_review_mod.KNOWLEDGE_DIR = _kr_backup
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

@@ -386,6 +386,14 @@ class Agent:
         重连时按 run_id 接续，崩溃最多丢失最近十几条决策。"""
         if not self.ctx.decisions or self.ctx.run_id == "run_unknown":
             return
+        # 终局定稿后禁止增量覆盖（第 369 局复盘）：结算屏之后的「回主菜单/
+        # 检查时间线」等后继决策会以增量稿格式（in_progress=true/victory=
+        # false/floor=当前屏）盖回已定稿日志——141 个已完成局被永久打上
+        # 「进行中」脏戳，复盘摘要把它们全部过滤后只能拿一百多局前的旧局
+        # 当样本（第 263~369 局的复盘数据包因此整体失真）。定稿只出自
+        # _finalize 的 save_run_log，此后对局日志一律只读。
+        if self.ctx.run_finalized:
+            return
         floor = run.get("floor", 0)
         if not force:
             last_n, last_f = getattr(self, "_rlog_mark", (0, -1))

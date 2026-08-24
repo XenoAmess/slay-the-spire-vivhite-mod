@@ -124,7 +124,12 @@ def _recent_run_summaries(n: int) -> list[dict]:
     if not run_dir.exists():
         return []
     # 进行中对局不入摘要（第 218 批复盘）：增量存档的 in_progress 文件是
-    # 半局数据，混进复盘摘要会把「还在打的一局」当完整对局误读
+    # 半局数据，混进复盘摘要会把「还在打的一局」当完整对局误读。
+    # 脏戳豁免（第 369 局复盘）：历史库存在「终局定稿后被结算屏后继决策
+    # 回写增量稿」的已完成局——决策轨迹里已出现 GAME_OVER 的 in_progress
+    # 文件必为定稿后被盖脏戳的完整体，按完成局放行；真进行中的对局轨迹里
+    # 不可能出现 GAME_OVER，照常排除。否则摘要把近百余局全部过滤，
+    # 复盘数据包永远停留在旧局（第 263~369 局实证）。
     files = []
     for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name):
         try:
@@ -132,13 +137,29 @@ def _recent_run_summaries(n: int) -> list[dict]:
         except (json.JSONDecodeError, OSError):
             continue
         if d.get("in_progress"):
-            continue
+            trail = d.get("decisions") or []
+            if not any(isinstance(x, dict) and x.get("screen") == "GAME_OVER"
+                       for x in trail):
+                continue
         files.append((p, d))
     out = []
     for f, d in files[-n:]:
         decisions = d.get("decisions", [])
+        # 脏戳字段的读端复原（第 369 局复盘）：被回写的文件顶层 floor=0/
+        # victory=false 是脏值，决策轨迹才是真账——层数取轨迹最大值，
+        # 胜负按 GAME_OVER 屏结算文案复原；干净文件两段逻辑零改动。
+        floor = int(d.get("floor") or 0)
+        trail_max = max((int(x.get("floor") or 0) for x in decisions
+                         if isinstance(x, dict)), default=0)
+        if trail_max > floor:
+            floor = trail_max
+        victory = bool(d.get("victory"))
+        if not victory and any(isinstance(x, dict) and x.get("screen") == "GAME_OVER"
+                               and "胜利" in str(x.get("reason") or "")
+                               for x in decisions):
+            victory = True
         out.append({
-            "run_id": d.get("run_id"), "victory": d.get("victory"), "floor": d.get("floor"),
+            "run_id": d.get("run_id"), "victory": victory, "floor": floor,
             "ascension": d.get("ascension"), "decisions": len(decisions),
             "combat_notes": d.get("combat_notes", []),
             "key_reasons": [x.get("reason", "") for x in decisions
