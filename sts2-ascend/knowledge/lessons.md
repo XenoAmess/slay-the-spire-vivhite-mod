@@ -3354,3 +3354,14 @@
   偏差是否收窄；④是否误伤被迫低血行军的绝境局；⑤Elite 尾部定价与灰区
   闸门（×2.5）叠加是否过度威慑致精英绝迹（若出现考虑 Elite 豁免）。
 - 生涯战绩：0/262 胜，当前目标进阶 0
+
+## 第 265 局复盘（2026-08-24 12:54）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：THUNDERCLAP, BREAKTHROUGH, DRUM_OF_BATTLE, BLUDGEON, COLOSSUS, MOLTEN_FIST, STONE_ARMOR, COLOSSUS, CINDER, MOLTEN_FIST, BREAKTHROUGH, CINDER, ARMAMENTS, FIEND_FIRE
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F7 Monster战 掉血22; F8 Monster战 掉血4; F9 Monster战 掉血15; F12 Monster战 掉血28; F15 Monster战 掉血21; F17 Boss战 掉血55（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/9局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 9.00 → 9.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/265 胜，当前目标进阶 0
