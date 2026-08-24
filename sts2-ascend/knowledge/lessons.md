@@ -3772,3 +3772,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：高速失血爆毙（4回合掉血88，每回合22≥14）但 block_safety 2.10 顶格——爆毙证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/302 胜，当前目标进阶 0
+
+## 第 303 局复盘（2026-08-24 17:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：INFLAME, CINDER, UPPERCUT, SWORD_BOOMERANG, WHIRLWIND, MOLTEN_FIST, STONE_ARMOR, SHRUG_IT_OFF
+- 本局遗物：无
+- 战斗记录：F6 Monster战 掉血15; F8 Unknown战 掉血11; F12 Monster战 掉血9; F14 Monster战 掉血0; F15 Monster战 掉血9; F17 Boss战 掉血73（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/303 胜，当前目标进阶 0
