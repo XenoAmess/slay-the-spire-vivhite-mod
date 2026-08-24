@@ -379,6 +379,26 @@ class Policy:
             nt, float(priors.get(nt, 8)), act_no)
         return prior, (1.0 if act_specific else act_mul), act_specific
 
+    def _streak_loss_mult(self, pol: dict, nt: str, eff_streak: int) -> float:
+        """连战战损疲劳递增（第 255 批复盘）：连续第 4 场战斗起，投影先验按
+        1 + path_streak_loss_step ×(n-2) 逐场放大（封顶 path_streak_loss_cap）。
+
+        权重端早有同语义的疲劳压制（×0.75 起步），但战损端仍按场均线性扣血——
+        欲望被压低、代价没变贵，长链的生存账系统性乐观。实证三局同一形态：
+        VS71 局 F2~F5 四连战（0/0/0/-47 后 F6 阵亡）、EHSL 局 F2~F5 四连战
+        （F5 劫掠者三连 -72 阵亡）、7RJ9 局 F2~F5 连战（Unknown -55 后阵亡）
+        ——链尾实际战损 47~72，而投影只按 Monster 先验 ~10/场线性记账。
+        只作用于投影（真实战斗由 fatigue 权重与姿态系统接管），RestSite 等非
+        战斗节点清零连战后自然回到 1.0。
+        """
+        if nt not in ("Monster", "Elite", "Unknown") or eff_streak < 3:
+            return 1.0
+        step = float(pol.get("path_streak_loss_step", 0.06))
+        if step <= 0.0:
+            return 1.0
+        cap = float(pol.get("path_streak_loss_cap", 1.30))
+        return min(cap, 1.0 + step * (eff_streak - 2))
+
     def _elite_path_gate(self, pol: dict, priors: dict, hp: int, max_hp: int,
                          good_cards: int, act_mul: float,
                          burst_starved: bool = False,
@@ -721,6 +741,9 @@ class Policy:
                     eff_streak, proj_streak = proj_streak, proj_streak + 1
                 else:
                     eff_streak, proj_streak = 0, 0
+                # 连战战损疲劳递增（第 255 批复盘）：权重端疲劳压制之外，
+                # 投影的掉血账也要随连战深度变贵（欲望压低+代价抬价缺一不可）
+                streak_loss_mult = self._streak_loss_mult(pol, nt, eff_streak)
                 if nt == "Monster" and eff_streak >= 3:
                     # 疲劳随连战深度递增（第 92~93 批复盘）：固定 0.75 让 93 局
                     # 连续第 4~5 战仍以 0.37 分优势压过商店，最终满血差被打穿——
@@ -728,6 +751,8 @@ class Policy:
                     fatigue_f = max(0.45, 0.75 - 0.06 * (eff_streak - 3))
                     factor *= fatigue_f
                     note = (note + "；" if note else "") + f"连续作战{eff_streak}场，疲劳压制×{fatigue_f:.2f}"
+                elif streak_loss_mult > 1.0 and depth == 0 and note:
+                    note += f"；连战战损递增×{streak_loss_mult:.2f}"
                 w = weights.get(nt, 1.0) * learned_room_factor(nt) * factor
                 score += w * (0.97 ** depth)
                 if note and depth == 0:
@@ -741,8 +766,8 @@ class Policy:
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
                 if boss_row is not None and key[0] >= boss_row:
                     continue
-                cur_hp -= prior * deck_ease * node_act_mul * (
-                    dire_loss_mult if nt in ("Monster", "Elite", "Unknown") else 1.0)
+                cur_hp -= (prior * deck_ease * node_act_mul * streak_loss_mult
+                           * (dire_loss_mult if nt in ("Monster", "Elite", "Unknown") else 1.0))
                 if nt == "Unknown" and act_idx >= 1 and not node_act_specific:
                     # 二幕遭遇战加价仅旧口径追加；分幕实证已含该效应，不重复计费
                     cur_hp -= prior * deck_ease * node_act_mul * (pol.get("unknown_gauntlet_act2_mult", 1.6) - 1.0)
@@ -1196,17 +1221,23 @@ class Policy:
         # 才喝药；交药线随演化提前，放血判定与防御/回复分支共用同一条线
         _potion_line = float(pol.get("potion_block_hp_pct", 0.35))
         low_hp_bleeding = my_hp <= _potion_line * my_max_hp and block_gap > 0
-        # premium：值得动用增益药水的场合（硬房/真致死/高危组合）。普通消耗战哪怕低血也留着——
-        # 第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，Boss 战空手阵亡。
-        # 姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损 0.30×血条）比姿态门槛
-        # （0.25 / 0.28×血条）更迟钝，头号杀手 FUZZY+SHRINKER（29.3%/场均18.7<24）恰好
-        # 从两条药水门槛的缝隙漏网——88 局 F8 姿态系统从第 1 回合就警告「⚠高危组合」，
-        # 攻击药水却被锁到 20 血、格挡药水 33 血才掏出（意图已滚到 38）。同一份历史证据
-        # 已经把姿态推入防守，药水门必须同步开启，否则「知道危险」和「动用储备」脱节
+        # premium：值得动用增益药水的场合（硬房/真致死/高危组合/意图滚雪球确认）。
+        # 普通消耗战哪怕低血也留着——第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，
+        # Boss 战空手阵亡。姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损
+        # 0.30×血条）比姿态门槛（0.25 / 0.28×血条）更迟钝，头号杀手 FUZZY+SHRINKER
+        # （29.3%/场均18.7<24）恰好从两条药水门槛的缝隙漏网——88 局 F8 姿态系统
+        # 从第 1 回合就警告「⚠高危组合」，攻击药水却被锁到 20 血、格挡药水 33 血才
+        # 掏出（意图已滚到 38）。同一份历史证据已经把姿态推入防守，药水门必须同步
+        # 开启，否则「知道危险」和「动用储备」脱节。
+        # 意图滚雪球确认（_esc_rounds≥2，第 255 批复盘补第四条缝）：低死亡率低战损
+        # 的升级型组合（252 局 F5 劫掠者三连，8 战仅 1 死、场均 26.4 恰好压线）
+        # 三条历史门槛全部漏网，能量药水睡到 19 血才掏——增益的价值随剩余战斗
+        # 时长衰减，等血量跌破线再喝等于把复利窗口烧掉；持续升级确认即视为硬仗
         premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
                        or block_gap >= my_hp
                        or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp
-                       or bool(stance.get("danger")))
+                       or bool(stance.get("danger"))
+                       or getattr(self, "_esc_rounds", 0) >= 2)
         hard = (premium or low_hp_bleeding)
         potion_dec = self._maybe_potion(state, ctx, hard, premium)
         if potion_dec is not None:
@@ -1231,7 +1262,7 @@ class Policy:
         # 头两回合不武装（输出速率样本不足，避免误判）；与 desperate/race_allin
         # 不重复放大（同一局面只提速一次）。
         kill_race = False
-        if pol.get("kill_race_enabled", True) and self._krace_turns >= 2:
+        if pol.get("kill_race_enabled", True):
             enemy_hp_total = 0
             for e in enemies:
                 if self._is_respawn_add(e):
@@ -1246,19 +1277,36 @@ class Policy:
             # （毛绒伏地虫/仪式兽/墨影幻灵）的杀伤来自时间而非血量，血池小≠竞速豁免
             esc_gate = getattr(self, "_esc_rounds", 0) >= 2
             if enemy_hp_total >= float(pol.get("kill_race_min_enemy_hp", 80.0)) or esc_gate:
-                dpt = self._krace_dmg / max(1, self._krace_turns)
-                loss_rate = self._race_loss_rate if (
-                    self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
-                if esc_gate:
-                    # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
-                    # 而当轮意图已 25），持续升级时存活分母至少取当前意图
-                    loss_rate = max(loss_rate, float(incoming))
-                tsurv = my_hp / max(1.0, loss_rate)
-                ttk = enemy_hp_total / max(1.0, dpt)
-                if ttk > tsurv + float(pol.get("kill_race_margin", 1.5)):
-                    kill_race = True
-                    danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
-                                    f"可存活{tsurv:.0f}回合，全攻提速")
+                # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
+                # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的
+                # 正是这两回合（252 局 F5 劫掠者三连：T1~T3 意图 22→32 还在打坚毅
+                # 补防）。血池第 1 帧就可见、卡组爆发是现成 DPS 先验：实测样本不足
+                # 两回合时用 deck_burst × kill_race_prior_eff 悲观折算开账；零爆发
+                # 不预测（没有弹药的局面无从竞速），两回合后自动切回实测速率口径。
+                # Boss 血池实证（stats hp_pool）：KIN 双子 ~307 / 仪式兽 ~252 /
+                # VANTOM ~173，逐轮火力 ~13——防守线在数学上普遍不可行，早一回合
+                # 竞速就是早一回合止损
+                if self._krace_turns >= 2:
+                    dpt = self._krace_dmg / max(1, self._krace_turns)
+                    dpt_src = f"实测{dpt:.0f}伤/回合"
+                else:
+                    _prior_eff = float(pol.get("kill_race_prior_eff", 0.55))
+                    _deck_now = ((state.get("run") or {}).get("deck")) or []
+                    dpt = self.deck_burst(_deck_now) * _prior_eff
+                    dpt_src = f"先验{dpt:.0f}伤/回合" if dpt > 0 else ""
+                if dpt > 0:
+                    loss_rate = self._race_loss_rate if (
+                        self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
+                    if esc_gate:
+                        # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
+                        # 而当轮意图已 25），持续升级时存活分母至少取当前意图
+                        loss_rate = max(loss_rate, float(incoming))
+                    tsurv = my_hp / max(1.0, loss_rate)
+                    ttk = enemy_hp_total / max(1.0, dpt)
+                    if ttk > tsurv + float(pol.get("kill_race_margin", 1.5)):
+                        kill_race = True
+                        danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
+                                        f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速")
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
             # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。
@@ -1948,6 +1996,17 @@ class Policy:
                 value += 1.5
         elif is_power(card):
             value += 5.0
+            # 输出饥饿时的成长牌增值（第 255 批复盘）：Boss 攻坚的死因形态是
+            # 「即时伤害不够、长战无成长」——力量型能力每早一回合上场就全程
+            # 复利加成（223 批已在战斗端给能力牌长战加成，拾取端此前仍按
+            # 平面 5 分定价）。与高质攻击的饥饿加分同构：缺口越深纠偏越大；
+            # 「拿了不打」惩罚与重复贬值照常生效，防止为饥饿囤死牌
+            if burst_starved and re.search(
+                    r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
+                    _text(card), re.I):
+                _p_deficit = clamp(1.0 - burst / max(1e-6, float(pol.get("deck_burst_floor", 30.0))), 0.0, 1.0)
+                value += (float(pol.get("power_starve_bonus_base", 2.0))
+                          + float(pol.get("power_starve_bonus_extra_max", 4.0)) * _p_deficit)
         elif is_bad_card(card):
             value -= 10.0
         value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)

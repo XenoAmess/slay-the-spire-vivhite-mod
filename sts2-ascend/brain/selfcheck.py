@@ -3265,6 +3265,136 @@ def main() -> int:
         f"正常出牌的高收益牌被误伤: {bknow.stats['cards']['OFTEN_CAST']['bias']}"
     assert "NEVER_CAST" not in blesson, f"拿了不打的牌仍出现在复盘榜单: {blesson}"
 
+    # 3zv) 首回合攻坚先验（第 255 批复盘）：旧版竞速判定要求实测满两回合才允许
+    #      开账，Boss 战头 1~2 回合仍在按防守姿态花能量（252 局 F5 劫掠者三连：
+    #      T1~T3 意图 22→32 还在打坚毅补防，能量药水睡到 19 血）。血池第 1 帧
+    #      可见、卡组爆发是现成 DPS 先验：样本不足时用 deck_burst × 0.55 悲观
+    #      折算开账；零爆发不预测（无从竞速），两回合后自动切回实测口径
+    prc1 = type("PRCtx", (), {"combat": None, "current_combat_is_hard": False,
+                              "credit_tags": []})()
+    prc1.combat = {"comp_id": "KR1_BOSS", "node_type": "Boss"}
+
+    def krace1_state(turn_no, hp_now, incoming, deck):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "KR1_HIT", "name": "竞速斩", "playable": True,
+                            "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 12}]},
+                           {"index": 1, "card_id": "KR1_LUX", "name": "奢侈挡", "playable": True,
+                            "requires_target": False,
+                            "rules_text": "获得6点格挡",
+                            "dynamic_values": [{"name": "Block", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "KR1_BOSS", "name": "攻坚巨兽",
+                                    "current_hp": 200, "max_hp": 252, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17, "deck": deck}}
+
+    weak_deck = [{"card_id": f"WK_STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
+                  "dynamic_values": [{"name": "Damage", "current_value": 6}]} for i in range(4)]
+    # ① 弱爆发（burst≈18→先验9.9/回合）对 200 血池：T1 即判必败竞速，攻击胜过奢侈格挡
+    pol_kr3 = policy.Policy(know, random.Random(11))
+    d_kr3 = pol_kr3.decide(krace1_state(1, 65, 22, weak_deck), prc1)
+    assert d_kr3.action == "play_card" and d_kr3.params.get("card_index") == 0, \
+        f"首回合攻坚先验未提速（弱爆发对大血池）: {d_kr3.action}（{d_kr3.reason}）"
+    assert "斩杀竞速投影" in d_kr3.reason and "先验" in d_kr3.reason, \
+        f"开局先验未留痕: {d_kr3.reason}"
+    # ② 对照：强爆发+宽裕血量账（tsurv 16 > ttk 6）→ 防守路线可行，不得误触发
+    strong_deck = [{"card_id": f"ST_HIT_{i}", "card_type": "Attack", "energy_cost": 1,
+                    "dynamic_values": [{"name": "Damage", "current_value": 20}]} for i in range(3)]
+    pol_kr4 = policy.Policy(know, random.Random(11))
+    d_kr4 = pol_kr4.decide(krace1_state(1, 80, 5, strong_deck), prc1)
+    assert "斩杀竞速投影" not in d_kr4.reason, f"防守可行时误触发开局先验: {d_kr4.reason}"
+    # ③ 对照：空卡组（零爆发）不预测——保持旧「实测两回合」口径
+    pol_kr5 = policy.Policy(know, random.Random(11))
+    d_kr5 = pol_kr5.decide(krace1_state(1, 65, 22, []), prc1)
+    assert "斩杀竞速投影" not in d_kr5.reason, f"零爆发不应预测竞速: {d_kr5.reason}"
+    prc1.combat = None
+
+    # 3zw) 意图滚雪球确认解锁增益药水（第 255 批复盘）：低死亡率低战损的升级型
+    #      组合从三条历史药水门槛的缝隙漏网（252 局 F5 劫掠者三连 8 战仅 1 死），
+    #      _esc_rounds≥2（持续升级确认）即视为硬仗——增益的价值随剩余战斗时长
+    #      衰减，等血量跌破线再喝等于把复利窗口烧掉
+    pec = type("PECtx", (), {"combat": None, "current_combat_is_hard": False,
+                             "credit_tags": []})()
+    pec.combat = {"comp_id": "ESC_POT_COMP", "node_type": "Monster"}
+
+    def esc_pot_state(turn_no, incoming):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": 65, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "EP_HIT", "name": "打击", "playable": True,
+                            "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 12}]}],
+                       "enemies": [{"index": 0, "enemy_id": "ESC_POT_COMP", "name": "滚雪球虫",
+                                    "current_hp": 36, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": 65, "max_hp": 80, "gold": 0, "floor": 6, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "POT_ENERGY", "name": "能量药水",
+                                 "description": "获得2点能量", "occupied": True,
+                                 "can_use": True, "usage": "Combat"}]}}
+
+    pol_ep = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-esapot-"))),
+                           random.Random(7))
+    pol_ep.decide(esc_pot_state(1, 4), pec)     # T1：意图基准采样
+    pol_ep.decide(esc_pot_state(2, 7), pec)     # T2：趋势+3，升级计数 1（尚未确认）
+    d_ep = pol_ep.decide(esc_pot_state(3, 24), pec)  # T3：趋势+17 计数 2 → 硬仗确认
+    assert d_ep.action == "use_potion", \
+        f"滚雪球确认后增益药水仍未解锁: {d_ep.action}（{d_ep.reason}）"
+    # 对照：意图平稳（无升级轨迹）→ 不构成硬仗，药水保留
+    pol_ep2 = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-esapot2-"))),
+                            random.Random(7))
+    pol_ep2.decide(esc_pot_state(1, 7), pec)
+    pol_ep2.decide(esc_pot_state(2, 7), pec)
+    d_ep2 = pol_ep2.decide(esc_pot_state(3, 7), pec)
+    assert d_ep2.action != "use_potion", \
+        f"意图平稳时误耗增益药水: {d_ep2.action}（{d_ep2.reason}）"
+    pec.combat = None
+
+    # 3zx) 连战战损疲劳递增（第 255 批复盘）：权重端早有疲劳压制但投影战损仍线性
+    #      ——VS71/EHSL/7RJ9 三局链尾实际 -47~-72 而投影按 ~10/场记账。
+    #      连续第 4 场起先验×(1+0.06×(n-2))逐场放大，封顶 1.30；非战斗节点清零
+    slm_pol = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slm-"))),
+                            random.Random(3))
+    _slm_p = slm_pol.know.policy
+    assert abs(slm_pol._streak_loss_mult(_slm_p, "Monster", 3) - 1.06) < 1e-9, "连战战损递增步长错误"
+    assert abs(slm_pol._streak_loss_mult(_slm_p, "Monster", 6) - 1.24) < 1e-9, "连战战损递增累计错误"
+    assert abs(slm_pol._streak_loss_mult(_slm_p, "Monster", 99) - 1.30) < 1e-9, "连战战损递增未封顶"
+    assert slm_pol._streak_loss_mult(_slm_p, "Monster", 2) == 1.0, "第 3 连战即加价（应自第 4 场起）"
+    assert slm_pol._streak_loss_mult(_slm_p, "RestSite", 9) == 1.0, "非战斗节点被误加价"
+    _slm_p["path_streak_loss_step"] = 0.0
+    assert slm_pol._streak_loss_mult(_slm_p, "Monster", 9) == 1.0, "step=0 未关闭递增"
+
+    # 3zy) 输出饥饿的成长牌增值（第 255 批复盘）：Boss 攻坚死因形态是「即时伤害
+    #      不够、长战无成长」——力量型能力每早一回合上场就全程复利。拾取端此前
+    #      平面 5 分定价；饥饿时力量文本的能力牌按缺口深度加分（base2+extra4）
+    ph_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powhun-"))
+    ph_know = knowledge.Knowledge(ph_dir)
+    ph_pol = policy.Policy(ph_know, random.Random(5))
+    starve_deck = [{"card_id": f"PH_D{i}", "card_type": "Skill", "energy_cost": 1,
+                    "rules_text": "获得5点格挡"} for i in range(10)]
+    pow_strong = {"card_id": "INFLAME_T", "name": "点燃", "card_type": "Power", "energy_cost": 1,
+                  "rules_text": "获得2点力量"}
+    pow_plain = {"card_id": "PLAIN_POW_T", "name": "平平能力", "card_type": "Power", "energy_cost": 1,
+                 "rules_text": "你的回合开始时风平浪静"}
+    v_strong = ph_pol.eval_reward_card(dict(pow_strong), list(starve_deck))
+    v_plain = ph_pol.eval_reward_card(dict(pow_plain), list(starve_deck))
+    assert abs((v_strong - v_plain) - 6.0) < 1e-9, \
+        f"饥饿成长牌加分缺失或数值不符: {v_strong - v_plain:.2f}（期望 2+4×缺口1.0）"
+    fed_deck = list(starve_deck) + [
+        {"card_id": f"PH_BIG{i}", "card_type": "Attack", "energy_cost": 1,
+         "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
+    v_strong2 = ph_pol.eval_reward_card(dict(pow_strong), list(fed_deck))
+    v_plain2 = ph_pol.eval_reward_card(dict(pow_plain), list(fed_deck))
+    assert abs(v_strong2 - v_plain2) < 1e-9, \
+        f"卡组成型后成长牌仍吃饥饿加分: {v_strong2 - v_plain2:.2f}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
