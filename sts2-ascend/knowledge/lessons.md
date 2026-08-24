@@ -4333,3 +4333,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/353 胜，当前目标进阶 0
+
+## 第 354 局复盘（2026-08-25 00:10）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEADBUTT, MOLTEN_FIST, STONE_ARMOR, BATTLE_TRANCE, BLUDGEON, ARMAMENTS, CINDER, BATTLE_TRANCE, STONE_ARMOR, CINDER, BREAKTHROUGH, STONE_ARMOR, SHRUG_IT_OFF, SECOND_WIND
+- 本局遗物：STRAWBERRY, 棋子
+- 战斗记录：F6 Monster战 掉血0; F9 Monster战 掉血23; F11 Unknown战 掉血20; F12 Elite战 掉血11; F15 Monster战 掉血17; F17 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)，OFFERING(24分/7局)，MAYHEM(24分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/354 胜，当前目标进阶 0
