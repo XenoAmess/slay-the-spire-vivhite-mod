@@ -4157,3 +4157,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/337 胜，当前目标进阶 0
+
+## 第 338 局复盘（2026-08-24 22:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, CINDER, STONE_ARMOR, TAUNT, STOMP, MOLTEN_FIST, ULTIMATE_DEFEND, SHRUG_IT_OFF, STOMP, FLAME_BARRIER
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F7 Monster战 掉血9; F9 Monster战 掉血34; F11 Monster战 掉血14; F12 Monster战 掉血0; F14 Monster战 掉血6; F17 Boss战 掉血59（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/10局)，DARK_EMBRACE(23分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/338 胜，当前目标进阶 0
