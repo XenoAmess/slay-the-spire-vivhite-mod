@@ -4025,3 +4025,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/325 胜，当前目标进阶 0
+
+## 第 326 局复盘（2026-08-24 20:37）
+- 结果：💀 失败｜进阶 0｜到达层数 4｜当局评分 4
+- 死因：敌人组合 LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_S
+- 本局拿牌：RAMPAGE, THE_GAMBIT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F4 Monster战 掉血80（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)，FISTICUFFS(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/326 胜，当前目标进阶 0
