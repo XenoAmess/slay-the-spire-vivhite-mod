@@ -2768,3 +2768,14 @@
 - **接替链分「构成」与「使用」双通道**：拿牌端饥饿带加宽（38→42）五局未改 Boss 结局——卡组构成端已治到边际，同一缺口的另一半是已拿的牌打不出去。评估接替旋钮先问「缺口在构成端还是使用端」；218 批预案的「战斗端接替旋钮」本批落地为能力牌长战加成。
 - 低频卡「拿了不打」信号靠复盘巡检：unplayed 惩罚 picked≥4 才生效，2 拿 0 打永远够不到触发线；生涯 plays/picked 比异常的卡是战斗端评分病灶的雷达。
 - 观察点：①Boss 战「长战加成」留痕与能力牌 R1~2 上场率；②一幕 Boss 战损/击杀回合数变化；③走廊小怪战是否被加成误伤（误伤则下调 hp_div）；④deck_burst_floor 顶格 45 后的停止吸收留痕。
+
+## 第 226 局复盘（2026-08-24 08:03）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：IRON_WAVE, JUGGLING, IRON_WAVE, UNRELENTING, EVIL_EYE, FEEL_NO_PAIN, UPPERCUT, MOLTEN_FIST
+- 本局遗物：JUZU_BRACELET
+- 战斗记录：F7 Monster战 掉血11; F9 Monster战 掉血2; F12 Monster战 掉血0; F14 Monster战 掉血7; F15 Monster战 掉血13; F17 Boss战 掉血64（阵亡）
+- 当前高价值卡牌：DISINTEGRATION(33分/7局)，MIND_ROT(33分/4局)，SLOTH(33分/2局)，MAYHEM(27分/4局)，FISTICUFFS(26分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；deck_burst_floor: 43.00 → 44.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））
+- 生涯战绩：0/226 胜，当前目标进阶 0
