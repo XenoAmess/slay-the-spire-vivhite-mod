@@ -170,22 +170,50 @@ def main() -> int:
     inflight: dict[int, str] = {}        # seq -> text（合成中登记，供超时路径兜底取回原文）
     done_cond = threading.Condition()
     counters = {"put": 0, "played": 0}
+    # 合成健康度：连续失败熔断 + 心跳可观测（静默必须可诊断）
+    synth_stats = {"ok": 0, "fail": 0, "consec_fail": 0, "sapi_until": 0.0, "next_beat": 20}
 
     def synth_worker(wid: int) -> None:
         while True:
             try:
-                seq, sent = q.get(timeout=0.5)
-            except queue.Empty:
-                if ended:
-                    return
-                continue
-            wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
-            inflight[seq] = sent
-            ok = eng.synth_to_wav(sent, wav)
-            inflight.pop(seq, None)
-            with done_cond:
-                done[seq] = (wav if ok else None, sent)
-                done_cond.notify_all()
+                try:
+                    seq, sent = q.get(timeout=0.5)
+                except queue.Empty:
+                    if ended:
+                        return
+                    continue
+                wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
+                if time.time() < synth_stats["sapi_until"]:
+                    # 熔断期：不再尝试 edge（网络性死亡防全哑），直接交 SAPI 兜底
+                    with done_cond:
+                        done[seq] = (None, sent)
+                        done_cond.notify_all()
+                    continue
+                inflight[seq] = sent
+                ok = eng.synth_to_wav(sent, wav)
+                inflight.pop(seq, None)
+                if ok:
+                    synth_stats["ok"] += 1
+                    synth_stats["consec_fail"] = 0
+                else:
+                    synth_stats["fail"] += 1
+                    synth_stats["consec_fail"] += 1
+                    if synth_stats["consec_fail"] >= 5:
+                        synth_stats["sapi_until"] = time.time() + 600
+                        synth_stats["consec_fail"] = 0
+                        log("edge-tts 连续 5 次合成失败，熔断 10 分钟：期间全部走 SAPI 兜底")
+                total = synth_stats["ok"] + synth_stats["fail"]
+                if total >= synth_stats["next_beat"]:
+                    synth_stats["next_beat"] = total + 20
+                    log(f"合成心跳：成功 {synth_stats['ok']} / 失败 {synth_stats['fail']}")
+                with done_cond:
+                    done[seq] = (wav if ok else None, sent)
+                    done_cond.notify_all()
+            except Exception as exc:
+                # worker 线程静默死亡 = 该句永不完成且无人知晓（stderr 进隐藏控制台不可见）
+                import traceback
+                log(f"合成线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
+                time.sleep(1)
 
     for _wid in range(3):
         threading.Thread(target=synth_worker, args=(_wid,), daemon=True).start()
