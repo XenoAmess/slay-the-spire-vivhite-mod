@@ -2649,15 +2649,19 @@ def main() -> int:
     assert nknow.policy["deck_burst_floor"] > nf1, \
         "Boss 高血进场长战死（双旋钮顶格）未改接饥饿带宽度"
     assert "饥饿带加宽" in nlesson2, f"Boss 分支二次接替留痕缺失: {nlesson2}"
-    # ③饥饿带也顶格（45）→ 停止吸收并留痕，证据不再空转（留给复盘）
+    # ③饥饿带也顶格（45）→ 普通节点证据按第 229 批三级接替改接常规锻造线
+    #   （smith_min_hp_pct -0.05），不再静默停止吸收
     nknow.policy["deck_burst_floor"] = 45.0
+    nknow.policy["smith_min_hp_pct"] = 0.55
     nctx3 = _RC()
     nctx3.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
                             "rounds": 10, "hp_lost": 50.0}
     nlesson3 = reflect.finalize_run(nknow, nctx3, victory=False, final_floor=8)
     assert abs(nknow.policy["deck_burst_floor"] - 45.0) < 1e-9, \
         f"顶格饥饿带仍被加码: {nknow.policy['deck_burst_floor']}"
-    assert "输出饥饿证据停止吸收" in nlesson3, f"顶格停止吸收留痕缺失: {nlesson3}"
+    assert abs(nknow.policy["smith_min_hp_pct"] - 0.50) < 1e-9, \
+        f"三级接替未改接常规锻造线: {nknow.policy['smith_min_hp_pct']}"
+    assert "常规锻造线" in nlesson3, f"三级接替留痕缺失: {nlesson3}"
     # 对照：双旋钮有行程时主通道原样生效、饥饿带不抢跑
     ndir2 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-starve2b-"))
     nknow2 = knowledge.Knowledge(ndir2)
@@ -2869,19 +2873,20 @@ def main() -> int:
     assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.45) < 1e-9, \
         f"锻造线触底仍被压低: {zknow2.policy['boss_eve_smith_hp_pct']}"
     assert "均顶格" in zlesson6, f"彻底封账留痕缺失: {zlesson6}"
-    # 对照：普通怪房长战死在全顶格下不得动前夜锻造线（错位吸收防护）
+    # 对照：普通怪房长战死在全顶格下不得动前夜锻造线（错位吸收防护）；
+    # 第 229 批起改接常规锻造线 smith_min_hp_pct（见 3zt 全量用例）
     ndir3 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-evechain-n-"))
     nknow3 = knowledge.Knowledge(ndir3)
     nknow3.policy.update(kill_bonus=20.0, burst_starve_bonus_base=8.0,
                          burst_starve_bonus_extra_max=12.0, deck_burst_floor=45.0,
-                         boss_eve_smith_hp_pct=0.60)
+                         boss_eve_smith_hp_pct=0.60, smith_min_hp_pct=0.55)
     nctx5 = _RC()
     nctx5.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
                             "rounds": 10, "hp_lost": 50.0}
     nlesson5 = reflect.finalize_run(nknow3, nctx5, victory=False, final_floor=8)
     assert abs(nknow3.policy["boss_eve_smith_hp_pct"] - 0.60) < 1e-9, \
         f"普通怪房长战死错位吸收了前夜锻造线: {nknow3.policy['boss_eve_smith_hp_pct']}"
-    assert "输出饥饿证据停止吸收" in nlesson5, f"普通节点封账留痕缺失: {nlesson5}"
+    assert "常规锻造线" in nlesson5, f"普通节点接替常规锻造线留痕缺失: {nlesson5}"
     # 胜利释放：被棘轮压下去的锻造线回升，健康值(≥0.65)不被推过证据上限
     vctx2b = _RC()
     reflect.finalize_run(zknow2, vctx2b, victory=True, final_floor=20)  # 0.45 → 0.50
@@ -2892,6 +2897,80 @@ def main() -> int:
     reflect.finalize_run(zknow2, vctx2c, victory=True, final_floor=21)
     assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.70) < 1e-9, \
         f"健康锻造线被胜利误推: {zknow2.policy['boss_eve_smith_hp_pct']}"
+
+    # 3zt) 普通怪房长战死证据的常规锻造线接替（第 229 批复盘）：burst_starve
+    #      双旋钮+饥饿带全部顶格后，非 Boss 长战磨死（222/228/229 二幕连战力竭型）
+    #      改接 smith_min_hp_pct（-0.05，下限 0.45 对齐紧急回血线）；
+    #      触底彻底封账留痕；胜利对称释放只回收 <0.55 锚点部分
+    sdir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-smithline-"))
+    sknow = knowledge.Knowledge(sdir)
+    sknow.policy.update(kill_bonus=20.0, burst_starve_bonus_base=8.0,
+                        burst_starve_bonus_extra_max=12.0, deck_burst_floor=45.0,
+                        boss_eve_smith_hp_pct=0.60, smith_min_hp_pct=0.55,
+                        block_safety=2.1)
+    sctx = _RC()
+    sctx.died_in_combat = {"comp_id": "ACT2_GAUNTLET", "node_type": "Monster",
+                           "rounds": 8, "hp_lost": 40.0}
+    slesson = reflect.finalize_run(sknow, sctx, victory=False, final_floor=23)
+    assert abs(sknow.policy["smith_min_hp_pct"] - 0.50) < 1e-9, \
+        f"常规锻造线接替未生效: {sknow.policy['smith_min_hp_pct']}"
+    assert abs(sknow.policy["boss_eve_smith_hp_pct"] - 0.60) < 1e-9, \
+        f"普通节点证据错位吸收前夜锻造线: {sknow.policy['boss_eve_smith_hp_pct']}"
+    assert abs(sknow.policy["block_safety"] - 2.1) < 1e-9, \
+        f"防御棘轮被代偿加码: {sknow.policy['block_safety']}"
+    assert "常规锻造线" in slesson, f"接替留痕缺失: {slesson}"
+    # 触底封账：0.45 不再下降且显式留痕（学习停摆必须可见，不许静默丢证据）
+    sknow.policy["smith_min_hp_pct"] = 0.45
+    sctx2 = _RC()
+    sctx2.died_in_combat = {"comp_id": "ACT2_GAUNTLET", "node_type": "Monster",
+                            "rounds": 8, "hp_lost": 40.0}
+    slesson2 = reflect.finalize_run(sknow, sctx2, victory=False, final_floor=23)
+    assert abs(sknow.policy["smith_min_hp_pct"] - 0.45) < 1e-9, \
+        f"常规锻造线触底仍被压低: {sknow.policy['smith_min_hp_pct']}"
+    assert "彻底停止吸收" in slesson2, f"彻底封账留痕缺失: {slesson2}"
+    # 胜利释放：被压下去的常规锻造线回升至锚点 0.55；健康值(≥0.55)不被推高
+    sknow.policy["smith_min_hp_pct"] = 0.50
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=20)
+    assert abs(sknow.policy["smith_min_hp_pct"] - 0.55) < 1e-9, \
+        f"胜利未释放常规锻造线: {sknow.policy['smith_min_hp_pct']}"
+    sknow.policy["smith_min_hp_pct"] = 0.60
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=21)
+    assert abs(sknow.policy["smith_min_hp_pct"] - 0.60) < 1e-9, \
+        f"健康常规锻造线被胜利误推: {sknow.policy['smith_min_hp_pct']}"
+
+    # 3zu) 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘）：block_safety 顶格
+    #      2.1 时，爆毙（dpr≥14）与短时（<4回合）死亡不得静默蒸发（233 局二幕
+    #      Boss 5 回合 -71 曾零留痕「本局无参数调整」）——显式封账留痕；
+    #      有余量时旧行为不变（照旧 +0.05 吸收）
+    udir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-burstcap-"))
+    uknow = knowledge.Knowledge(udir)
+    uknow.policy.update(block_safety=2.1, kill_bonus=20.0,
+                        burst_starve_bonus_base=8.0, burst_starve_bonus_extra_max=12.0,
+                        deck_burst_floor=45.0, smith_min_hp_pct=0.45)
+    # ① 爆毙 + 顶格：数值不动且显式留痕
+    uctx = _RC()
+    uctx.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
+                           "rounds": 5, "hp_lost": 71.0}
+    ulesson = reflect.finalize_run(uknow, uctx, victory=False, final_floor=33)
+    assert abs(uknow.policy["block_safety"] - 2.1) < 1e-9, \
+        f"顶格后爆毙仍加码: {uknow.policy['block_safety']}"
+    assert "爆毙证据停止吸收" in ulesson, f"爆毙顶格封账留痕缺失: {ulesson}"
+    # ② 短时死亡（<4回合）+ 顶格：数值不动且显式留痕
+    uctx2 = _RC()
+    uctx2.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
+                            "rounds": 3, "hp_lost": 14.0}
+    ulesson2 = reflect.finalize_run(uknow, uctx2, victory=False, final_floor=23)
+    assert abs(uknow.policy["block_safety"] - 2.1) < 1e-9, \
+        f"顶格后短时死亡仍加码: {uknow.policy['block_safety']}"
+    assert "短时死亡证据停止吸收" in ulesson2, f"短时死亡顶格封账留痕缺失: {ulesson2}"
+    # ③ 有余量时旧行为不变：爆毙证据照旧 +0.05 吸收
+    uknow.policy["block_safety"] = 2.0
+    uctx3 = _RC()
+    uctx3.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
+                            "rounds": 5, "hp_lost": 71.0}
+    reflect.finalize_run(uknow, uctx3, victory=False, final_floor=33)
+    assert abs(uknow.policy["block_safety"] - 2.05) < 1e-9, \
+        f"有余量时爆毙证据未吸收: {uknow.policy['block_safety']}"
 
     # 3zs) 「拿了不打」偏置封禁 + 榜单过滤（第 228 批复盘）：DISINTEGRATION 类
     #      不可打出牌（7拿0打）靠幸存者偏差把 outcome 抬到 33、bias 涨到 +4 上限，

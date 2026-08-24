@@ -41,6 +41,16 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 零锻造局占阵亡组 31% vs 生还组 10%）。下限 0.45：低于此值的前夜回血
     # 服务的是「走到 Boss 之前别死」的真求生区，不许再压
     "boss_eve_smith_hp_pct": (0.45, 0.85),
+    # 第 229 批复盘接入：普通怪房长战磨死证据的三级接替旋钮——burst_starve
+    # 双旋钮与饥饿带全部顶格后，把常规篝火锻造线 smith_min_hp_pct 下调：
+    # 222/228/229 连续三局活过一幕 Boss 后死于二幕走廊连战力竭（满血进二幕
+    # 照样 5 场走廊 -80），而演化留痕清一色「输出饥饿证据停止吸收」——最高频
+    # 新死亡模式的证据再次蒸发。语义与 Boss 侧前夜锻造线同构（一次性回血换
+    # 永久升级，145 场 Boss 实证锻造次数/升级牌打出是最强生还区分项），且
+    # 常规篝火服务的是每一场走廊战，战场归属正确（非 227 批警告的错位吸收）。
+    # 下限 0.45 与 rest_urgent_hp_pct 对齐：低于此值的回血是真求生区，且有
+    # 绝境投影/下一战预演双守卫兜底翻回回血，不许再压
+    "smith_min_hp_pct": (0.45, 0.70),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -66,9 +76,13 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
         高血进场照样被磨死 = 回血买不到生还，唯一能带走的是永久战力。
         普通怪房长战死不得喂这条线（前夜锻造线与走廊战斗无关，
         错位吸收是 88~89/127~130 批反复清算过的老病）。
-      普通节点证据 → 维持停止吸收留痕，证据留给下一批复盘。
+      普通节点证据 → smith_min_hp_pct 下调（第 229 批复盘）：常规篝火
+        锻造线每 -0.05，45%~55% 血带的篝火从一次性回血转成永久升级。
+        与 Boss 侧同构但战场归属正确：常规篝火服务的是走廊战本身，
+        二幕连战力竭（222/228/229 满血进二幕 5 场 -80）正是它的证据。
+        下限 0.45 与紧急回血线对齐，绝境投影/下一战预演双守卫照旧兜底。
 
-    锻造线也触底（0.45）则彻底封账并显式留痕（顶格代谢原则的递归终点）。
+    两条锻造线都触底（0.45）则彻底封账并显式留痕（顶格代谢原则的递归终点）。
     """
     pre = len(changes)
     _adj(know, "burst_starve_bonus_base", 0.3, changes, why_base)
@@ -87,8 +101,13 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
                     changes.append("burst_starve 双旋钮、饥饿带与前夜锻造线均顶格——"
                                    "输出饥饿证据停止吸收")
             else:
-                changes.append("burst_starve 双旋钮与 deck_burst_floor 均顶格——"
-                               "输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮")
+                pre3 = len(changes)
+                _adj(know, "smith_min_hp_pct", -0.05, changes,
+                     "饥饿带顶格，非 Boss 长战磨死证据改接常规锻造线"
+                     "（一次性回血换永久升级，惠及每一场走廊战）")
+                if len(changes) == pre3:
+                    changes.append("burst_starve 双旋钮、饥饿带与常规锻造线均顶格——"
+                                   "输出饥饿证据彻底停止吸收")
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -278,12 +297,33 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                         "缺口越深纠偏上限越高",
                         node_kind="normal")
             else:
+                # 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘）：block_safety
+                # 顶格 2.1 后，233 局二幕 Boss 5 回合 -71（dpr 14.2≥14）撞上
+                # 本分支——_adj 空转且零留痕，复盘只见「本局无参数调整」，与
+                # 88~89 批顶格旋钮代谢原则（余量不足必须显式留痕）同一缺陷的
+                # 静默版。长战分支 127~130 批就加了余量检查，本分支补上同款：
+                # 有行程照旧吸收，无行程显式封账留痕，把证据摆到复盘桌面上
+                _bs_step = 0.05
+                _bs_head = BOUNDS["block_safety"][1] - pol["block_safety"]
                 if burst_death:
-                    _adj(know, "block_safety", 0.05, changes,
-                         f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
-                         f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）——按「没挡住」证据上调防御权重")
+                    if _bs_head >= _bs_step:
+                        _adj(know, "block_safety", _bs_step, changes,
+                             f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
+                             f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）——按「没挡住」证据上调防御权重")
+                    else:
+                        changes.append(
+                            f"高速失血爆毙（{rounds}回合掉血{_hp_lost:.0f}，每回合"
+                            f"{_dpr:.0f}≥{BURST_DEATH_DPR:.0f}）但 block_safety "
+                            f"{pol['block_safety']:.2f} 顶格——爆毙证据停止吸收并留痕，"
+                            "接替旋钮留待复盘设计")
                 else:
-                    _adj(know, "block_safety", 0.05, changes, "普通战斗阵亡，略微上调防御权重")
+                    if _bs_head >= _bs_step:
+                        _adj(know, "block_safety", _bs_step, changes, "普通战斗阵亡，略微上调防御权重")
+                    else:
+                        changes.append(
+                            f"普通战斗短时阵亡（{rounds}回合）但 block_safety "
+                            f"{pol['block_safety']:.2f} 顶格——短时死亡证据停止吸收并留痕，"
+                            "接替旋钮留待复盘设计")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:
@@ -295,6 +335,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol["boss_eve_smith_hp_pct"] < 0.65:
             _adj(know, "boss_eve_smith_hp_pct", 0.05, changes,
                  "胜利证明当前前夜回血线可行，小幅上调回收")
+        # 常规锻造线的胜利释放（第 229 批复盘，与前夜线同构）：只回收被
+        # 普通怪房长战死证据压下去的部分（<0.55 默认锚点），健康值不被推高
+        if pol.get("smith_min_hp_pct", 0.55) < 0.55:
+            _adj(know, "smith_min_hp_pct", 0.05, changes,
+                 "胜利证明当前常规回血线可行，小幅上调回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 
