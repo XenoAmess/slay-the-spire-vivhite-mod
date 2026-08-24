@@ -2254,7 +2254,7 @@ def main() -> int:
     sq_know = knowledge.Knowledge(sq_dir)
     sq_pol = policy.Policy(sq_know)
 
-    def act2_map(hp_now):
+    def act2_map(hp_now, gold=0):
         heads = [
             {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
              "children": [{"row": 2, "col": 0}]},
@@ -2277,7 +2277,7 @@ def main() -> int:
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": heads, "nodes": heads + chain_a + chain_b,
                       "boss_node": {"row": 12}},
-              "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0,
+              "run": {"current_hp": hp_now, "max_hp": 80, "gold": gold,
                       "floor": 20, "deck": []}}
         return sq_pol.decide(st, type("C", (), {"credit_tags": []})())
 
@@ -2291,6 +2291,21 @@ def main() -> int:
         f"死亡路径罚分未饱和（应渐近 ±{sat_cap:.0f} 内）: {sc_chain}（{d_sq.reason}）"
     assert sc_shop > sc_chain, \
         f"软饱和破坏候选保序: shop={sc_shop} chain={sc_chain}"
+
+    # 3xy2-bis) 商店药水档（第 248 批复盘）：gold < shop_min_gold(140) 但够买药水
+    #       （≥shop_potion_gold 60）时商店不再被「金币不足」0.6 整体压死——
+    #       药水是爆毙通道唯一稳定补给（237 局 120+ 金死携从未进店）。
+    #       够药水档 → 理由留痕「够买药水」且分值高于 0 金档；0 金照旧「金币不足」
+    d_pt = act2_map(60, gold=100)   # 75% 血、100 金：够买药水档（正常血量 1.0 权重）
+    assert "够买药水" in d_pt.reason, f"药水档商店未留痕: {d_pt.reason}"
+    assert "金币不足" not in d_pt.reason, f"药水档被误压成金币不足: {d_pt.reason}"
+    d_pt0 = act2_map(60, gold=30)   # 30 金：连药水都买不起，照旧 0.6 压死
+    assert "金币不足" in d_pt0.reason, f"0 金档商店误抬: {d_pt0.reason}"
+    m_shop_pt = re.search(r"Shop\(1,1\)=(-?[0-9.]+)", d_pt.reason)
+    m_shop_pt0 = re.search(r"Shop\(1,1\)=(-?[0-9.]+)", d_pt0.reason)
+    assert m_shop_pt and m_shop_pt0, f"药水档用例候选缺失: {d_pt.reason}"
+    assert float(m_shop_pt.group(1)) > float(m_shop_pt0.group(1)), \
+        f"药水档未提升商店评分: {m_shop_pt.group(1)} vs {m_shop_pt0.group(1)}"
 
     # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
     #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
@@ -2395,6 +2410,33 @@ def main() -> int:
     d_sg2 = pol.decide(shop_gate_state([]), ctx)
     assert d_sg2.action == "buy_card", \
         f"单薄卡组下合格牌被误拒: {d_sg2.action}（{d_sg2.reason}）"
+
+    # 3ya-bis) 货架药水购买（第 248 批复盘）：药水是爆毙通道唯一稳定补给，
+    #      但货架药水此前完全不在评估范围。防御/回复药低血急需应成交；
+    #      高价无法分类药不得挤占预算（价值 < 门槛 → 关店）
+    def shop_potion_state(hp_now, potion):
+        return {"screen": "SHOP",
+                "available_actions": ["buy_card", "buy_potion", "close_shop_inventory"],
+                "shop": {"is_open": True, "can_close": True,
+                         "cards": [], "relics": [], "card_removal": None,
+                         "potions": [potion]},
+                "run": {"current_hp": hp_now, "max_hp": 80, "gold": 500, "floor": 30,
+                        "deck": []}}
+    block_pot = {"index": 0, "potion_id": "BLOCK_POTION", "name": "格挡药水",
+                 "rarity": "Common", "usage": "CombatOnly", "price": 75,
+                 "is_stocked": True, "enough_gold": True}
+    d_sp1 = pol.decide(shop_potion_state(24, block_pot), ctx)   # 30% 血：防御药急需
+    assert d_sp1.action == "buy_potion", \
+        f"低血防御/回复药未成交: {d_sp1.action}（{d_sp1.reason}）"
+    mystery_pot = {"index": 0, "potion_id": "MYSTERY_POTION", "name": "神秘药水",
+                   "rarity": "Rare", "usage": "CombatOnly", "price": 200,
+                   "is_stocked": True, "enough_gold": True}
+    d_sp2 = pol.decide(shop_potion_state(24, mystery_pot), ctx)  # 高价未知药：1.2-1.67<门槛
+    assert d_sp2.action == "close_shop_inventory", \
+        f"高价无法分类药挤占预算: {d_sp2.action}（{d_sp2.reason}）"
+    d_sp3 = pol.decide(shop_potion_state(24, dict(block_pot, enough_gold=False)), ctx)
+    assert d_sp3.action == "close_shop_inventory", \
+        f"无空位/金不足的药水被误买: {d_sp3.action}（{d_sp3.reason}）"
 
     # 3za) 拾取端 learned value 封顶（第 106 局复盘核心修复）：outcome=到达层数
     #      是幸存者偏差噪声——能被拾取的前提就是活到奖励屏，早楼层 offered 的牌

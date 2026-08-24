@@ -42,6 +42,7 @@ DEFAULT_POLICY = {
     "rest_urgent_hp_pct": 0.35,   # below this hp% rest sites are strongly preferred
     "rest_wary_hp_pct": 0.62,     # 血量警戒带：urgent 线以上、该线以下的灰区篝火获中等加权（第 54 局 47.5% 血商店压过篝火后被迫进精英）
     "shop_min_gold": 140,         # below this gold shops lose value
+    "shop_potion_gold": 60,       # 药水档（第 248 批复盘）：低于 shop_min_gold 但够买药水时商店保留中等权重——药水是爆毙通道唯一稳定补给，140 硬线曾让低金币段商店整体离场（237 局 120+ 金死携从未进店）
     "room_weights": {"Monster": 1.2, "Elite": 2.0, "RestSite": 1.0, "Shop": 1.1,
                      "Treasure": 1.4, "Unknown": 1.15, "Event": 1.1, "Boss": 10.0},
     "lookahead_weight": 0.35,     # 1-step lookahead contribution on map

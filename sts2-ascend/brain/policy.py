@@ -601,6 +601,15 @@ class Policy:
                     if hpp < pol.get("rest_wary_hp_pct", 0.62):
                         return 1.6, f"金币{gold}足够；血量{hpp:.0%}偏低，药水遗物可代偿休整"
                     return 1.4, f"金币{gold}足够"
+                # 药水档（第 248 批复盘）：140 硬线以下商店被整体 0.6 压死，而
+                # 药水（约 50~100 金）正是爆毙通道「没挡住」的唯一稳定补给——
+                # 236 批把交药时机提前后，供给端不能继续断供。237 局 120+ 金币
+                # 死携从未进店即此形态。药水档分值压在休整权重（1.7/2.5）之下，
+                # 不改变危险血量的篝火优先级
+                if gold >= float(pol.get("shop_potion_gold", 60)):
+                    if hpp < pol.get("rest_wary_hp_pct", 0.62):
+                        return 1.3, f"金币{gold}够买药水；血量{hpp:.0%}偏低，药水可代偿休整"
+                    return 1.0, f"金币{gold}够买药水档位"
                 return 0.6, "金币不足"
             elif nt == "Monster":
                 # 低血量时"前期积累卡牌"必须让位于生存：
@@ -2256,6 +2265,23 @@ class Policy:
                 best_score = v
                 best_reason = f"购买遗物【{r.get('name')}】（{r.get('price')}金，价值{v:.1f}）"
                 best_tags = [("relic_pick", r.get("relic_id")), ("shop_buy_relic", r.get("relic_id"))]
+        # 药水购买（第 248 批复盘）：货架药水此前完全不在评估范围——商店是
+        # 药水的唯一稳定供给，而药水正是爆毙通道「没挡住」的执行端资源
+        # （236 批交药线提前只解决了「何时喝」，没解决「有没有」）。防御/回复
+        # 药按低血急需定价，攻击/增益药按爆发缺口定价，与遗物同池竞价、同门槛
+        # 成交；enough_gold 已含空药水位校验（服务端口径），无需额外查栏位
+        hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
+        potion_starved = bool(deck) and self.deck_burst(deck) < float(
+            pol.get("deck_burst_floor", 30.0))
+        for pt in shop.get("potions", []):
+            if not pt.get("is_stocked") or not pt.get("enough_gold"):
+                continue
+            v = self._shop_potion_value(pt, hp_pct, potion_starved)
+            if v > best_score:
+                best_action = ("buy_potion", pt["index"])
+                best_score = v
+                best_reason = f"购买药水【{pt.get('name')}】（{pt.get('price')}金，价值{v:.1f}）"
+                best_tags = [("shop_buy_potion", pt.get("potion_id"))]
         if best_action and best_score > pol["shop_relic_threshold"]:
             action, idx = best_action
             if action in actions:
@@ -2267,6 +2293,31 @@ class Policy:
         if "proceed" in actions:
             return Decision("proceed", {}, "商店：离开", wait=1.0)
         return Decision(None, {}, "商店：等待", wait=0.8)
+
+    def _shop_potion_value(self, pt: dict, hp_pct: float, burst_starved: bool) -> float:
+        """货架药水定价（第 248 批复盘）。
+
+        货架载荷没有描述文本（仅 name/potion_id/rarity/usage/price），分类
+        只能靠名称与 ID 关键词，与 _maybe_potion 的使用端分类同一套词表：
+        - 防御/回复类：价值随失血加深——低血时它是下一场硬仗的命；
+        - 攻击/增益类：爆发饥饿的卡组折价买下回合输出，成型卡组只给基线；
+        - 无法分类：保守基线（宁缺毋滥，避免为未知效果挤占遗物预算）。
+        统一减 price/120（与遗物同口径的金币机会成本）。
+        """
+        blob = f"{pt.get('name') or ''} {pt.get('potion_id') or ''}".lower()
+        price = pt.get("price", 0) or 0
+        if any(k in blob for k in ("格挡", "生命", "回复", "治疗", "屏障", "护甲",
+                                   "block", "heal", "health", "regen", "barrier")):
+            base = 1.6 + 2.4 * (1.0 - hp_pct)
+        elif any(k in blob for k in ("力量", "敏捷", "能量", "抽", "伤害", "攻击",
+                                     "火焰", "毒", "雷", "爆炸", "能力",
+                                     "strength", "dexterity", "energy", "draw",
+                                     "damage", "attack", "fire", "poison",
+                                     "lightning", "explosive", "power")):
+            base = 1.8 + (0.8 if burst_starved else 0.0)
+        else:
+            base = 1.2
+        return base - price / 120.0
 
     def _rest(self, state: dict, ctx) -> Decision:
         rest = state.get("rest") or {}
