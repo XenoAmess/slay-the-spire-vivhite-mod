@@ -4102,3 +4102,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/332 胜，当前目标进阶 0
+
+## 第 333 局复盘（2026-08-24 21:34）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：TAUNT, INFLAME, INFLAME, STOMP, STOMP, TAUNT, STOMP, EVIL_EYE, CONFLAGRATION, ANGER, MOLTEN_FIST, COLOSSUS, HOWL_FROM_BEYOND, TRUE_GRIT, THRASH, JUGGLING, TWIN_STRIKE
+- 本局遗物：ANCHOR, PEAR
+- 战斗记录：F19 Monster战 掉血1; F20 Monster战 掉血0; F21 Monster战 掉血1; F22 Monster战 掉血32; F25 Monster战 掉血21; F33 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/10局)，FISTICUFFS(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/333 胜，当前目标进阶 0
