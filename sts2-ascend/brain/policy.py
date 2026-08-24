@@ -715,6 +715,10 @@ class Policy:
             raw_penalty = 0.0
             mid_gate_hit = False
             died_mid = False
+            # 投影途中最低存活血量（近死带计价用，第 255~257 批次复盘）：
+            # 只记节点结算后的存活状态；开局血量本身不入账（计价对象是
+            # 「这条路把你带到多险」，不是「你现在多险」）
+            min_surv_hpp = 1.0
             # 投影内连战计数沿路径递推（第 126 局复盘）：旧版把真实连战数当常量
             # 套在所有深度上——fresh 状态下投影 5 连战全程零疲劳，链越长相对越
             # 划算，「穿过未来营地的怪物链」幻想由此再添一层补贴。
@@ -761,6 +765,29 @@ class Policy:
                 # 实测场均已含幕效应）；无分幕样本回落静态/跨幕混合 × act_mul
                 prior, node_act_mul, node_act_specific = self._act_danger(
                     nt, priors, act_no, act_mul)
+                # 尾部战损定价（第 258~262 批次复盘）：掉血先验是场均账，而单场
+                # 实测尾部可达场均 3~5 倍——262 局 49% 血进 Monster 投影仅 ~9 点
+                # （账面安全），实战 -39 阵亡；VS71 局 F5 单场 -47、8NRJ 局 F5
+                # 单场 -30，全发生在 45%~75% 的「非绝境」带内（dire_loss_mult
+                # 只管 <45%）。与事件层 hp_min（255~257 批）、近死带折价同构：
+                # 血量跌破警戒带后，「坏一场能不能活」比「平均掉几滴」更接近
+                # 生死——按距带顶的深度把先验线性拉向实测尾部（半价入账：尾部
+                # 是极值不是常态，全价等于按最坏一场定价所有战斗），满血段
+                # 零影响；只抬价不压价，方向单调安全。
+                if nt in ("Monster", "Elite", "Unknown"):
+                    _worst = self.know.room_damage_worst(nt, act_no)
+                    if _worst is not None:
+                        _band = float(pol.get("path_tail_hp_band_pct", 0.62))
+                        _hpp_now = max(0.0, cur_hp) / max_hp
+                        if 0.0 < _band and _hpp_now < _band:
+                            _risk = (_band - _hpp_now) / _band
+                            _tail = _worst * float(pol.get("path_tail_loss_frac", 0.5))
+                            _p0 = prior
+                            prior += max(0.0, _tail - _p0) * _risk
+                            if depth == 0 and prior - _p0 >= 1.0:
+                                notes.append(
+                                    f"低血尾部定价：{nt}先验{_p0:.0f}→{prior:.0f}"
+                                    f"（实测单场最差{_worst:.0f}）")
                 # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
                 # 不扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
@@ -808,6 +835,8 @@ class Policy:
                         if depth >= 1 and rest_dire:
                             gain *= float(pol.get("path_dire_heal_depth_decay", 0.85)) ** depth
                         cur_hp = min(float(max_hp), cur_hp + gain)
+                if cur_hp > 0.0:
+                    min_surv_hpp = min(min_surv_hpp, cur_hp / max_hp)
                 if cur_hp <= 0:
                     # 死亡投影保留"撑得更久"的序信息：死得越晚罚得越轻。
                     # 第 43 局实证：低血量时所有候选都吃满 -100，候选间评分差被压成
@@ -829,6 +858,20 @@ class Policy:
             if died_mid:
                 notes.append("投影中途死亡")
                 return score, notes, final_pct
+            # 近死带计价（第 255~257 批次复盘）：投影中途血量跌破近死带但没死透
+            # 时旧账零罚分——257 局 64% 血进精英，投影明示「战后仅剩 3%」，该路径
+            # 仍以 1.03 分压过「进 Boss 65%」的 Unknown(-1.63)，实战 -51 阵亡。
+            # 3% 不是计划是运气：掉血先验是均值，尾部一刀就死，「走完还剩 3%」
+            # 与「走完还剩 35%」在旧账里同价。按最深凹陷深度线性折价（与死亡
+            # 罚分的「死得越晚越轻」同族：活得越险越贵），汇入第二段 squash
+            # 与其他罚分一起饱和。与终点血量线（path_hp_floor_pct）语义不同：
+            # 地板罚「到 Boss 时太残」，近死带罚「路上险些暴毙」——凹陷后被
+            # 篝火抬回的路径终点体面、途中仍是用运气换来的
+            grave_pct = float(pol.get("path_graveyard_hp_pct", 0.0))
+            if grave_pct > 0.0 and min_surv_hpp < grave_pct:
+                raw_penalty += ((grave_pct - min_surv_hpp)
+                                * float(pol.get("path_graveyard_penalty", 150.0)))
+                notes.append(f"投影途中近死{min_surv_hpp:.0%}(<{grave_pct:.0%})，幸存按运气计价")
             floor_pct = pol.get("path_hp_floor_pct", 0.35)
             if final_pct < floor_pct:
                 raw_penalty += (floor_pct - final_pct) * 40.0
@@ -2555,10 +2598,24 @@ class Policy:
                     best_v, best_n = v, n
             return best_v, best_n
 
+        def _lookup_worst(ev_id: str, key: str) -> float | None:
+            # 最坏情况记忆的读取侧聚合（第 255~257 批次复盘）：与 _lookup 同
+            # 口径跨页共享，取各键 hp_min 的最小者（任一页面留下过致死尾部，
+            # 同语义选项都继承这份警惕）
+            tail = key.split(".")[-1]
+            worst = None
+            for k in dict.fromkeys([key, tail]):
+                w = self.know.event_option_worst(ev_id, k)
+                if w is not None:
+                    worst = w if worst is None else min(worst, w)
+            return worst
+
         scored = []
+        worst_by_key: dict[str, float | None] = {}
         for o in candidates:
             key = _norm_key(o)
             v, n = _lookup(event_id, key)
+            worst_by_key[key] = _lookup_worst(event_id, key)
             repeats = self._event_picks.get(key, 0)
             if repeats:
                 # 同实例重选停滞罚分（第 214 批复盘）：已选次数计入样本并倒扣价值，
@@ -2566,6 +2623,34 @@ class Policy:
                 n += repeats
                 v -= 3.0 * repeats
             scored.append((v, n, key, o))
+        # 最坏情况生存闸门（第 255~257 批次复盘新增）：事件价值是全局均值账，
+        # 而「均值正收益、尾部能致死」的选项在低血量时是另一道题——7RJ9 局
+        # 31% 血在茂密的植被选「休息」（均值 +10.5，n=8），被链内强制战 -55
+        # 抬走（次层 F6 再 -25 阵亡）；同页「坚持跋涉」仅 -8 血本可生还。
+        # 均值账永远看不见这条重尾，hp_min 尾部记忆（含事件链强制战的祖先
+        # 归因样本）让做选择的那一环看见最坏情况：历史单次最差掉血超过
+        # 当前血量（留 event_worst_margin_frac 余量）的选项，只要存在安全
+        # 替代即出局；全员致死时保留原池强行择损（不制造无牌可出）
+        my_hp = int((state.get("run") or {}).get("current_hp", 1) or 1)
+        max_hp = max(1, int((state.get("run") or {}).get("max_hp", 1) or 1))
+        _worst_margin = float(pol.get("event_worst_margin_frac", 0.05)) * max_hp
+        veto_note = ""
+        lethal_keys = set()
+        lethal_descs = []
+        for s in scored:
+            _w = worst_by_key.get(s[2])
+            if _w is not None and my_hp + _w <= _worst_margin:
+                lethal_keys.add(s[2])
+                lethal_descs.append(f"「{s[3].get('title')}」历史最差{_w:.0f}血")
+        if lethal_keys:
+            _safe_scored = [s for s in scored if s[2] not in lethal_keys]
+            if _safe_scored:
+                scored = _safe_scored
+                veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
+                             f"当前{my_hp}血吃下即死，改选安全项")
+            else:
+                veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
+                             f"当前{my_hp}血吃下即死，但无安全替代，强行择损")
         # epsilon exploration among under-sampled options
         # 已知负收益（价值 ≤ -5，如吃过大亏的选项）不再浪费探索次数；
         # 探索只在真正欠采样的选项里挑
@@ -2575,7 +2660,7 @@ class Policy:
                 v, n, key, o = self.rng.choice(fresh)
                 self._event_picks[key] = self._event_picks.get(key, 0) + 1
                 return Decision("choose_event_option", {"option_index": o["index"]},
-                                f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）",
+                                f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）{veto_note}",
                                 tags=[("event_choice", event_id, key)], wait=1.0)
         # 有实证收益（>0）时：价值优先，平值按样本数优先（石炉加湿器教训：
         # 经验多比原始顺序可信）。全零平值反转（第 56~57 局实证）：事件结算只记
@@ -2592,7 +2677,7 @@ class Policy:
         lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
         self._event_picks[key] = self._event_picks.get(key, 0) + 1
         return Decision("choose_event_option", {"option_index": o["index"]},
-                        f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}",
+                        f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}{veto_note}",
                         tags=[("event_choice", event_id, key)], wait=1.0)
 
     def _crystal_sphere(self, state: dict, ctx) -> Decision:

@@ -61,6 +61,16 @@ DEFAULT_POLICY = {
                            "Event": 0, "Shop": 0, "Treasure": 0, "RestSite": 0, "Ancient": 0},
     "path_hp_floor_pct": 0.35,    # 路径投影进 Boss 血量低于此值 → 按差值惩罚
     "path_death_penalty": 100.0,  # 路径投影中途死亡的评分惩罚
+    "path_graveyard_hp_pct": 0.10,  # 近死带（第 255~257 批次复盘）：投影途中血量跌破此线即按
+                                    # 凹陷深度折价——257 局投影「精英战后仅剩 3%」的路径仍压过
+                                    # 安全候选，实战 -51 阵亡；3% 不是计划是运气，先验是均值
+    "path_graveyard_penalty": 150.0,  # 近死带折价系数：每 1.0 比例凹陷深度的罚分
+    "path_tail_hp_band_pct": 0.62,   # 尾部定价血量带（第 258~262 批次复盘）：投影血量跌破此带后，
+                                     # 战斗先验按距带顶深度向实测单场最差战损（hp_lost_max）混合——
+                                     # 262 局 49% 血进 Monster 投影仅 ~9 点（场均账），实战 -39 阵亡；
+                                     # 带内的问题是「坏一场能不能活」而非「平均掉几滴」。满血段零影响
+    "path_tail_loss_frac": 0.5,      # 尾部入账折价：最差样本是极值不是常态，半价折算后再与
+                                     # 场均先验按深度线性混合（全价等于按最坏一场定价所有战斗）
     "elite_min_deck_cards": 4,    # 非基础牌少于此数时规避精英（卡组强度门槛，血量门槛之外的第二道闸）
     "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
     "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数
@@ -78,6 +88,10 @@ DEFAULT_POLICY = {
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay
     "exploration_min": 0.05,
+    "event_worst_margin_frac": 0.05,  # 最坏情况闸门的生存余量（占最大生命，第 255~257 批次复盘）：
+                                      # 选项历史单次最差生命增量 hp_min 满足 当前血+hp_min ≤ 余量 时
+                                      # 判定「吃下即死」——7RJ9 局 31% 血选均值 +10.5 的「休息」，
+                                      # 被链内强制战 -55 抬走；均值账看不见的重尾由 hp_min 补位
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
     "potion_block_hp_pct": 0.35,  # 药水提前交药线（第 236 局复盘新增，block_safety 顶格后的
@@ -224,7 +238,7 @@ DEFAULT_STATS = {
     "cards": {},    # id -> {seen, picked, plays, outcome_sum, bias}
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
-    "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths}
+    "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min}
     "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
     "rooms_act": {},  # "{node_type}@{act}" -> {hp_lost_sum, damage_events}（分幕掉血，第79局复盘新增）
 }
@@ -293,6 +307,14 @@ class Knowledge:
         # 迁移：分幕掉血统计（第 79 局复盘新增：跨幕混算的 Monster 场均 ~9.9
         # 让二幕投影系统性乐观——预测进 Boss 82% 实际两场战斗后剩 27%）
         self.stats.setdefault("rooms_act", {})
+        # 迁移：事件选项最坏情况记忆字段（第 255~257 批次复盘新增）。hp_min 记
+        # 该选项历史单次最差生命增量（含事件链强制战的祖先归因样本）。历史聚合
+        # 数据无法反推逐样本尾部（hp_delta_sum/n 拆不出单次极值），旧条目显式
+        # 置 None 标记「无尾部数据」而非捏造回填，尾部自新样本起累积；
+        # getter 对 None/缺键一律返回 None，向后兼容
+        for _ev_opts in self.stats.get("events", {}).values():
+            for e in _ev_opts.values():
+                e.setdefault("hp_min", None)
         # 一次性幻影局数据修复（自检加载真实库时应传 repair_phantoms=False，
         # 避免在运行中的大脑落盘前抢先改写/置标记）
         if repair_phantoms:
@@ -620,6 +642,21 @@ class Knowledge:
         return (hp_avg * 1.0 + gold_avg * 0.02 + card_term
                 - death_rate * 40.0), e["n"]
 
+    def event_option_worst(self, event_id: str, option_key: str) -> float | None:
+        """该选项历史单次最差生命增量（最坏情况记忆，第 255~257 批次复盘新增）。
+
+        均值账在重尾分布前系统性乐观：「茂密的植被-休息」均值 +3.3（含回血），
+        尾部样本 -51.7（链内强制战把 31% 血的局直接抬走）。事件学习端若只看
+        均值，低血量时会把「可能致死」当「小赚」。hp_min 含事件链强制战的
+        祖先归因样本（agent 把战斗掉血等额追加给引出战斗页的选项）。
+        无尾部数据（新事件/旧库迁移条目）返回 None。
+        """
+        e = self.stats["events"].get(event_id, {}).get(option_key)
+        if not e:
+            return None
+        w = e.get("hp_min")
+        return float(w) if w is not None else None
+
     # ---------- online commits ----------
 
     def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool,
@@ -708,16 +745,43 @@ class Knowledge:
         act 传入时同步写入分幕键（第 79 局复盘新增）：跨幕混算的场均掉血
         掩盖了二幕伤害升级，路径投影因此系统性乐观。旧 rooms 聚合键保持
         原样写入（learned_room_factor 等旧消费方不受影响）。
+
+        最坏情况战损记忆（第 258~262 批次复盘）：逐样本维护 hp_lost_max
+        （单场最差掉血）——场均账在重尾分布前系统性乐观，262 局 49% 血进
+        Monster 投影仅 ~9 点战损、实战 -39 阵亡；投影需要「坏一场掉多少」
+        的尾部记忆，与事件层 hp_min（255~257 批）同构。旧条目缺键视为
+        无尾部样本（None），自新样本起累积，不捏造回填。
         """
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
         e["damage_events"] = e.get("damage_events", 0) + 1
+        e["hp_lost_max"] = max(float(e.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
         if act is not None:
             ra = self.stats.setdefault("rooms_act", {}).setdefault(
                 f"{node_type}@{int(act)}", {"hp_lost_sum": 0.0, "damage_events": 0})
             ra["hp_lost_sum"] += max(0.0, hp_lost)
             ra["damage_events"] += 1
+            ra["hp_lost_max"] = max(float(ra.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+
+    def room_damage_worst(self, node_type: str, act: int | None = None) -> float | None:
+        """该房间类型历史单场最差掉血（重尾记忆，第 258~262 批次复盘新增）。
+
+        分幕样本（damage_events≥3）优先——尾部同样含幕间难度跃迁，跨幕混算
+        会把一幕的便宜尾部摊薄；无分幕尾部时回落跨幕条目（样本≥5）。旧库
+        迁移条目无 hp_lost_max 键，返回 None（无尾部样本），调用方维持旧
+        均值口径——尾部自新样本起累积，宁可缺账不可捏造。
+        """
+        if act is not None:
+            ra = self.stats.get("rooms_act", {}).get(f"{node_type}@{int(act)}")
+            if (ra and ra.get("hp_lost_max") is not None
+                    and int(ra.get("damage_events", 0) or 0) >= 3):
+                return float(ra["hp_lost_max"])
+        e = self.stats.get("rooms", {}).get(node_type)
+        if (e and e.get("hp_lost_max") is not None
+                and int(e.get("damage_events", 0) or 0) >= 5):
+            return float(e["hp_lost_max"])
+        return None
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
                             gold_delta: float, died: bool, deck_delta: int = 0) -> None:
@@ -728,6 +792,10 @@ class Knowledge:
         e["gold_delta_sum"] += gold_delta
         e["card_delta_sum"] = float(e.get("card_delta_sum", 0.0)) + float(deck_delta)
         e["deaths"] += 1 if died else 0
+        # 最坏情况记忆（第 255~257 批次复盘）：逐样本取最小生命增量，
+        # 供事件层「吃下即死」闸门做尾部复核；None 表示尚无尾部样本
+        _prev_min = e.get("hp_min")
+        e["hp_min"] = float(hp_delta) if _prev_min is None else min(float(_prev_min), float(hp_delta))
 
     def commit_card_seen(self, card_id: str) -> None:
         e = self.stats["cards"].setdefault(card_id, {"seen": 0, "picked": 0, "plays": 0, "outcome_sum": 0.0, "bias": 0.0})

@@ -326,6 +326,47 @@ def main() -> int:
     assert d_neg.params.get("option_index") == 1 and "探索" in d_neg.reason, \
         f"探索必须回避已知负收益选项: {d_neg.reason}"
 
+    # 3k2) 最坏情况生存闸门（第 255~257 批次复盘）：均值账看不见的重尾由
+    #      hp_min 补位——7RJ9 局 31% 血选均值 +10.5 的「休息」被链内强制战
+    #      -55 抬走。历史单次最差掉血超过当前血量（留余量）的选项，存在
+    #      安全替代时必须出局；全员致死时保留原池强行择损（不制造无牌可出）
+    know.commit_event_option("WORST_EV", "REST", 10.0, 0.0, died=False)
+    know.commit_event_option("WORST_EV", "REST", -55.0, 0.0, died=False)
+    _w_rest = know.event_option_worst("WORST_EV", "REST")
+    assert _w_rest == -55.0, f"hp_min 应逐样本取最小: {_w_rest}"
+    assert know.event_option_worst("WORST_EV", "NOPE") is None, "未知选项应无尾部数据"
+    assert know.event_option_worst("NOPE_EV", "REST") is None, "未知事件应无尾部数据"
+    _wv, _wn = know.event_option_value("WORST_EV", "REST")
+    assert _wv < 0.0 and _wn == 2, f"均值账不受 hp_min 影响: {_wv}/{_wn}"
+    # 均值正收益但尾部致死：+8 均值(+80/10) 配 -55 尾部，低血时必须让位安全项
+    know.stats["events"]["WORST_EV2"] = {
+        "REST": {"n": 10, "hp_delta_sum": 80.0, "gold_delta_sum": 0.0,
+                 "deaths": 0, "hp_min": -55.0}}
+    worst_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                   "event": {"event_id": "WORST_EV2", "title": "茂密的植被", "is_finished": False,
+                             "options": [{"index": 0, "title": "休息", "text_key": "REST",
+                                          "is_locked": False, "is_proceed": False},
+                                         {"index": 1, "title": "坚持跋涉", "text_key": "TRUDGE_ON",
+                                          "is_locked": False, "is_proceed": False}]},
+                   "run": {"current_hp": 30, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
+    pol_worst = policy.Policy(know, random.Random(2))
+    d_worst = pol_worst.decide(worst_state, ctx)
+    assert d_worst.params.get("option_index") == 1 and "最坏情况闸门" in d_worst.reason, \
+        f"30 血时尾部 -55 的选项必须被闸门否决（即使均值更高）: {d_worst.reason}"
+    # 满血时间门静默：80 血 + (-55) = 25 > 余量 4，均值高者照常胜出
+    worst_state["run"] = dict(worst_state["run"], current_hp=80)
+    pol_worst2 = policy.Policy(know, random.Random(2))
+    d_worst2 = pol_worst2.decide(worst_state, ctx)
+    assert d_worst2.params.get("option_index") == 0 and "最坏情况闸门" not in d_worst2.reason, \
+        f"满血时最坏情况闸门不应触发: {d_worst2.reason}"
+    # 全员致死：唯一选项尾部致死也得选（不制造无牌可出）
+    worst_state["event"]["options"] = [worst_state["event"]["options"][0]]
+    worst_state["run"] = dict(worst_state["run"], current_hp=30)
+    pol_worst3 = policy.Policy(know, random.Random(2))
+    d_worst3 = pol_worst3.decide(worst_state, ctx)
+    assert d_worst3.params.get("option_index") == 0 and "强行择损" in d_worst3.reason, \
+        f"无安全替代时必须保留原池强行择损: {d_worst3.reason}"
+
     # 3l) 能量预留：缺口未补且能量不足以「攻击后再补防」时，格挡先行
     #     （第 36 批 F17 Boss 战：先挥霍输出，下轮 20 意图手持防御却 0 能量）
     def reserve_combat(hp_now, block_now, energy_now, hand):
@@ -520,6 +561,135 @@ def main() -> int:
     assert d_gate.params.get("option_index") == 1, \
         f"负分区间闸门反转未修复（低血深图应选篝火而非精英）: {d_gate.reason}"
     assert "规避精英" in d_gate.reason, f"精英规避注释缺失: {d_gate.reason}"
+
+    # 3n2) 投影近死带计价（第 255~257 批次复盘）：中途血量跌破近死带但没死透
+    #      的路径旧账零罚分——257 局 64% 血进精英，投影明示「战后仅剩 3%」仍
+    #      以 1.03 分压过安全候选，实战 -51 阵亡。凹陷后被篝火抬回的路径终点
+    #      体面、途中是运气：最深凹陷深度必须折价为罚分
+    dip_heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                  "children": [{"row": 2, "col": 0}]}]
+    dip_chain = []
+    for r, nt in ((2, "Monster"), (3, "Monster"), (4, "Monster"),
+                  (5, "RestSite"), (6, "Boss")):
+        gnode = {"row": r, "col": 0, "node_type": nt}
+        if r < 6:
+            gnode["children"] = [{"row": r + 1, "col": 0}]
+        dip_chain.append(gnode)
+    dip_st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": dip_heads, "nodes": dip_heads + dip_chain,
+                      "boss_node": {"row": 6}},
+              "run": {"current_hp": 39, "max_hp": 80, "gold": 0, "floor": 5,
+                      "deck": [{"card_id": "STRIKE_IRONCLAD"}] * 4}}
+    # 39 血四连战投影：39→31→23→15→~7（≈8% 跌破 10% 近死带）→ 篝火抬回。
+    # 先验钉死（rooms 实测 10 场场均 8）——否则共享夹具里前面用例留下的高危
+    # 敌人条目会把 combat_calibration 顶到 1.5，静态先验 8→12，投影直接死亡
+    _rooms_old = know.stats.get("rooms", {}).get("Monster")
+    know.stats.setdefault("rooms", {})["Monster"] = {
+        "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10}
+    try:
+        pol_dip = policy.Policy(know, random.Random(2))
+        d_dip_on = pol_dip.decide(dip_st, ctx)
+    finally:
+        if _rooms_old is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _rooms_old
+    assert "近死" in d_dip_on.reason, f"近死带投影未折价留痕: {d_dip_on.reason}"
+    m_on = re.search(r"路径分 (-?\d+\.\d+)", d_dip_on.reason)
+    assert m_on, f"路径分解析失败: {d_dip_on.reason}"
+    _grave_old = know.policy.get("path_graveyard_hp_pct")
+    know.policy["path_graveyard_hp_pct"] = 0.0  # 关闭近死带 → 同图不得折价
+    know.stats.setdefault("rooms", {})["Monster"] = {
+        "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10}
+    try:
+        pol_dip2 = policy.Policy(know, random.Random(2))
+        d_dip_off = pol_dip2.decide(dip_st, ctx)
+    finally:
+        know.policy["path_graveyard_hp_pct"] = _grave_old
+        if _rooms_old is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _rooms_old
+    assert "近死" not in d_dip_off.reason, f"近死带关闭后不应留痕: {d_dip_off.reason}"
+    m_off = re.search(r"路径分 (-?\d+\.\d+)", d_dip_off.reason)
+    assert m_off and float(m_on.group(1)) < float(m_off.group(1)), \
+        f"近死带折价未体现为罚分（开 {m_on and m_on.group(1)} vs 关 {m_off and m_off.group(1)}）"
+
+    # 3n3) 尾部战损定价（第 258~262 批次复盘）：掉血先验是场均账，单场实测尾部
+    #      可达 3~5 倍——262 局 49% 血进 Monster 投影仅 ~9 点（账面安全），实战
+    #      -39 阵亡。血量跌破警戒带后先验必须向实测单场最差（hp_lost_max）混合；
+    #      满血段零影响；关闭旋钮（带=0）后同图同分、不留痕
+    # getter 单测：分幕样本优先、旧库缺键条目（无 hp_lost_max）返回 None
+    know.stats.setdefault("rooms_act", {})["Monster@1"] = {
+        "hp_lost_sum": 80.0, "damage_events": 10, "hp_lost_max": 50.0}
+    assert know.room_damage_worst("Monster", 1) == 50.0, \
+        f"分幕尾部记忆读取失败: {know.room_damage_worst('Monster', 1)}"
+    know.stats["rooms_act"]["ZZ_LEGACY@1"] = {"hp_lost_sum": 10.0, "damage_events": 9}
+    assert know.room_damage_worst("ZZ_LEGACY", 1) is None, \
+        "旧库缺 hp_lost_max 键的条目必须视为无尾部样本（None）"
+    know.stats["rooms_act"].pop("ZZ_LEGACY", None)
+    tail_heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                   "children": [{"row": 2, "col": 0}]}]
+    tail_chain = []
+    for r, nt in ((2, "Monster"), (3, "RestSite"), (4, "Boss")):
+        gnode = {"row": r, "col": 0, "node_type": nt}
+        if r < 4:
+            gnode["children"] = [{"row": r + 1, "col": 0}]
+        tail_chain.append(gnode)
+    tail_st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+               "map": {"available_nodes": tail_heads, "nodes": tail_heads + tail_chain,
+                       "boss_node": {"row": 4}},
+               "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 5,
+                       "deck": [{"card_id": "STRIKE_IRONCLAD"}] * 4}}
+    # 40 血（50%）跌破警戒带 62%：首场先验 8 应向尾部 50×0.5=25 混合抬价。
+    # 钉死 rooms 先验（与 3n2 同因：防共享夹具的敌人条目顶满 combat_calibration）
+    _rooms_old2 = know.stats.get("rooms", {}).get("Monster")
+    _ract_old2 = know.stats.get("rooms_act", {}).get("Monster@1")
+    know.stats.setdefault("rooms", {})["Monster"] = {
+        "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10,
+        "hp_lost_max": 50.0}
+    know.stats.setdefault("rooms_act", {})["Monster@1"] = {
+        "hp_lost_sum": 80.0, "damage_events": 10, "hp_lost_max": 50.0}
+    try:
+        pol_tail = policy.Policy(know, random.Random(2))
+        d_tail_on = pol_tail.decide(tail_st, ctx)
+    finally:
+        if _rooms_old2 is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _rooms_old2
+        if _ract_old2 is None:
+            know.stats["rooms_act"].pop("Monster@1", None)
+        else:
+            know.stats["rooms_act"]["Monster@1"] = _ract_old2
+    assert "尾部定价" in d_tail_on.reason, f"尾部定价未留痕: {d_tail_on.reason}"
+    m_ton = re.search(r"路径分 (-?\d+\.\d+)", d_tail_on.reason)
+    assert m_ton, f"路径分解析失败: {d_tail_on.reason}"
+    _band_old = know.policy.get("path_tail_hp_band_pct")
+    know.policy["path_tail_hp_band_pct"] = 0.0  # 关闭尾部定价 → 同图不留痕、不抬价
+    know.stats.setdefault("rooms", {})["Monster"] = {
+        "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10,
+        "hp_lost_max": 50.0}
+    know.stats.setdefault("rooms_act", {})["Monster@1"] = {
+        "hp_lost_sum": 80.0, "damage_events": 10, "hp_lost_max": 50.0}
+    try:
+        pol_tail2 = policy.Policy(know, random.Random(2))
+        d_tail_off = pol_tail2.decide(tail_st, ctx)
+    finally:
+        know.policy["path_tail_hp_band_pct"] = _band_old
+        if _rooms_old2 is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _rooms_old2
+        if _ract_old2 is None:
+            know.stats["rooms_act"].pop("Monster@1", None)
+        else:
+            know.stats["rooms_act"]["Monster@1"] = _ract_old2
+    assert "尾部定价" not in d_tail_off.reason, f"尾部定价关闭后不应留痕: {d_tail_off.reason}"
+    m_toff = re.search(r"路径分 (-?\d+\.\d+)", d_tail_off.reason)
+    assert m_toff and float(m_ton.group(1)) < float(m_toff.group(1)), \
+        f"尾部定价未体现为投影罚分（开 {m_ton and m_ton.group(1)} vs 关 {m_toff and m_toff.group(1)}）"
+
 
     # 3o) 商店删牌语义：关键词缺失时由握手标志兜底，且必须删最无价值牌而非最高价值牌
     #     （第 43 局 F7 删掉余烬+、第 44 局 F9 删掉上勾拳——付费删掉自己最强的牌）
