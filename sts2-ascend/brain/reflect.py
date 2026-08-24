@@ -58,6 +58,18 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # TNWN 局 40%~50% 血硬仗干瞪眼、拖到 10/80 才喝药的实证。下限 0.35 为
     # 原始默认；上限 0.80 防止交药线吞掉整个血条区间使防御/回复药水失去时机区分度
     "potion_block_hp_pct": (0.35, 0.80),
+    # 第 237~238 批复盘接入：长战磨死证据的四级接替旋钮（兑现 229 批观察点⑤
+    # 预案——常规/前夜锻造线 238~239 局双双触底，长战证据再次「彻底停止吸收」）。
+    # 两条证据链分接两个不同旋钮，防双吃且战场归属各自正确：
+    #   Boss 节点证据 → power_longfight_bonus_max：Boss 血池 250~400 时长战
+    #     加成恒被 7.0 封顶（pool/30 早超顶），抬顶直接提高力量源（恶魔形态/
+    #     点燃）在 Boss 长战的上场优先级——223 批实证 scaling 卡在最需要它的
+    #     长战里上不了场。下限 4.0 防加成消失，上限 12.0 防能力牌压制一切。
+    #   普通节点证据 → power_longfight_hp_div：走廊血池 50~150 远够不到加成
+    #     封顶，抬上限无用；减小血池分母（每 −2）让同一血池折算更高加成，
+    #     长战能力牌在走廊战早上场。下限 12.0 防小怪战也被高额加成扭曲节奏。
+    "power_longfight_bonus_max": (4.0, 12.0),
+    "power_longfight_hp_div": (12.0, 30.0),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -89,7 +101,10 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
         二幕连战力竭（222/228/229 满血进二幕 5 场 -80）正是它的证据。
         下限 0.45 与紧急回血线对齐，绝境投影/下一战预演双守卫照旧兜底。
 
-    两条锻造线都触底（0.45）则彻底封账并显式留痕（顶格代谢原则的递归终点）。
+    两条锻造线都触底（0.45）则按节点分流四级接替（第 237~238 批复盘）：
+    Boss 证据抬能力牌长战加成上限（Boss 血池恒吃封顶，抬顶才有效），
+    普通证据压长战加成血池分母（走廊血池够不到封顶，提折算率才有效）；
+    双旋钮也顶格/触底才彻底封账并显式留痕（顶格代谢原则的递归终点）。
     """
     pre = len(changes)
     _adj(know, "burst_starve_bonus_base", 0.3, changes, why_base)
@@ -105,16 +120,26 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
                      "饥饿带顶格，Boss 长战磨死证据改接前夜锻造线"
                      "（带内回血无生存价值，一次性回血换永久升级）")
                 if len(changes) == pre3:
-                    changes.append("burst_starve 双旋钮、饥饿带与前夜锻造线均顶格——"
-                                   "输出饥饿证据停止吸收")
+                    pre4 = len(changes)
+                    _adj(know, "power_longfight_bonus_max", 0.5, changes,
+                         "前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限"
+                         "（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧）")
+                    if len(changes) == pre4:
+                        changes.append("burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限"
+                                       "均顶格——输出饥饿证据停止吸收")
             else:
                 pre3 = len(changes)
                 _adj(know, "smith_min_hp_pct", -0.05, changes,
                      "饥饿带顶格，非 Boss 长战磨死证据改接常规锻造线"
                      "（一次性回血换永久升级，惠及每一场走廊战）")
                 if len(changes) == pre3:
-                    changes.append("burst_starve 双旋钮、饥饿带与常规锻造线均顶格——"
-                                   "输出饥饿证据彻底停止吸收")
+                    pre4 = len(changes)
+                    _adj(know, "power_longfight_hp_div", -2.0, changes,
+                         "常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算"
+                         "（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成）")
+                    if len(changes) == pre4:
+                        changes.append("burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算"
+                                       "均顶格——输出饥饿证据彻底停止吸收")
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -191,7 +216,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 rounds_s = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
                 changes.append(f"僵局摆烂死（{rounds_s}回合）不计入 kill_bonus/block_safety"
                                "——死因是卡组失去输出手段（消耗螺旋/攻击耗尽），攻防旋钮均无责")
-                return "\n".join(changes) if False else lesson_tail(know, changes, ctx, victory, final_floor)
+                # 第 244 批复盘修复：此处旧代码 early-return 并调用全仓库不存在的
+                # lesson_tail（半成品重构残留，`if False else` 暴露改了一半）——
+                # stall 死一旦发生即抛 NameError 崩掉大脑进程（靠 runner 重启兜底），
+                # 且崩溃前跳过了卡牌 bias/探索衰减/进阶爬梯/lesson 落盘。改为跳过
+                # 下方攻防线分流（stall 对攻防旋钮无责的教义不变），走统一收尾
             # 死亡模式分流（第 82~83 批复盘）：block_safety 此前是只升不降的
             # 单向棘轮（83 局 0 胜把它顶到 2.1 上限），而死亡榜前列全是血量
             # 170+ 的 Boss/高血组合——长战磨死的正确演化方向是进攻（更快清场
@@ -207,7 +236,7 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             _hp_lost = (ctx.died_in_combat or {}).get("hp_lost")
             _dpr = (_hp_lost / max(1, rounds)) if _hp_lost is not None else None
             burst_death = _dpr is not None and rounds >= 4 and _dpr >= BURST_DEATH_DPR
-            if rounds >= 4 and not burst_death:
+            if not stall_death and rounds >= 4 and not burst_death:
                 # 步长按战斗时长分级（第 84~85 批复盘）：固定 ±0.05/+1 的释放
                 # 速度要 ~30 局才能把 block_safety 从 2.1 拉回有效区间——
                 # 8 回合 Boss 磨死的证据强度是 4 回合的两倍，步长应随之放大
@@ -317,7 +346,7 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
                         "缺口越深纠偏上限越高",
                         node_kind="normal")
-            else:
+            elif not stall_death:
                 # 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘）：block_safety
                 # 顶格 2.1 后，233 局二幕 Boss 5 回合 -71（dpr 14.2≥14）撞上
                 # 本分支——_adj 空转且零留痕，复盘只见「本局无参数调整」，与
@@ -368,6 +397,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol.get("potion_block_hp_pct", 0.35) > 0.35:
             _adj(know, "potion_block_hp_pct", -0.05, changes,
                  "胜利证明当前交药时机可行，小幅回收")
+        # 能力牌长战加成双旋钮的胜利释放（第 237~238 批复盘，接替链有降必有升）：
+        # 只回收被推离默认锚点的部分（上限 >7.0 / 分母 <30.0），健康值不动
+        if pol.get("power_longfight_bonus_max", 7.0) > 7.0:
+            _adj(know, "power_longfight_bonus_max", -0.5, changes,
+                 "胜利证明当前长战加成上限可行，小幅回收")
+        if pol.get("power_longfight_hp_div", 30.0) < 30.0:
+            _adj(know, "power_longfight_hp_div", 2.0, changes,
+                 "胜利证明当前长战加成折算可行，小幅回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 

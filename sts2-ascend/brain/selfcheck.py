@@ -1059,10 +1059,14 @@ def main() -> int:
     assert d_cp2.action != "use_potion", f"低危组合烧掉增益药水: {d_cp2.action}（{d_cp2.reason}）"
     ctx.combat = None
 
-    # 3cc) Boss 前夜智能锻造（第 63 局复盘，第 84~85 批接线 heal_mult）：
-    #      boss_eve_smith_heal_mult 此前从未被读取、条件退化回旧版「≥满血」；
-    #      接线后战损线 = 回血量(30%×最大生命)×倍数。实测 Boss 分档场均 23.8，
-    #      对 80 血角色恰好压线——场均 ≥24 时入场线达标则改锻造，否则回血
+    # 3cc) Boss 前夜三区生存余量裁决（第 244 批复盘改版，取代 63/214/228 批口径）：
+    #      旧判据「场均战损≥回血量 且 血量≥锻造线 → 锻造」是方向性错误的边际分析——
+    #      240~243 批五局前夜锻造后以 0.4~7 点血量差被一幕 Boss 处决，全部落在
+    #      「回血即可翻盘」的翻转带内；唯一前夜回血的 8VT5 局以 1% 生还。
+    #      新判据按悲观战损（场均×boss_eve_pess_mult=1.5）分三区：
+    #        溢出区（有效回血<8%血条）→ 锻造（63 局教义的唯一保留点）
+    #        翻转带（不回血预期余量 ≤ 安全余量 0.10×最大生命）→ 回血
+    #        安全区（稳过悲观战损 且 ≥锻造线）→ 锻造
     know.stats["enemies"]["BOSS_HOG"] = {
         "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
         "boss_encounters": 2, "boss_hp_lost_sum": 170.0, "boss_deaths": 1}
@@ -1072,31 +1076,48 @@ def main() -> int:
     bl, bn = know.boss_loss_stats()
     assert bn == 4 and abs(bl - 87.5) < 1e-6, f"Boss 分档统计错误: {bl}/{bn}"
     ctx.rest_before_boss = True
-    # 锻造线（第 97~98 批复盘）：血量 + 回血量×0.5 ≥ 满血（≥85%）才改锻造——
-    # 战损合并记账后整场 Boss 战损必然 ≥ 回血量，72% 血也去锻造会重演第 48 局惨案
     rest_boss_state = dict(rest_state)
     rest_boss_state["run"] = {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 15,
                               "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}
-    d_eve_smith = pol.decide(rest_boss_state, ctx)
-    assert d_eve_smith.tags[0] == ("rest", "smith"), f"Boss前夜智能锻造未触发: {d_eve_smith.reason}"
+    # 超凶 Boss（场均 87.5 > 满血）：悲观战损 131.25，70 血余量远低于安全线——
+    # 旧 63 批口径此处锻造（「战损≥满血则回血无效」），但 70 血仍有 10 点有效
+    # 回血：回血是唯一确定性的生存增量，翻转带必须回血
+    d_eve_flip = pol.decide(rest_boss_state, ctx)
+    assert d_eve_flip.tags[0] == ("rest", "heal"), \
+        f"超凶Boss翻转带应回血（244批三区裁决）: {d_eve_flip.reason}"
     know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 46.0   # 场均值降至 22.5 < 回血量 24
     know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 44.0
     d_eve_heal = pol.decide(rest_boss_state, ctx)
     assert d_eve_heal.tags[0] == ("rest", "heal"), f"战损低于回血量应回血: {d_eve_heal.reason}"
-    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 170.0
-    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 180.0
-    rest_mid = dict(rest_boss_state)
-    rest_mid["run"] = dict(rest_boss_state["run"], current_hp=62)  # 77.5% ∈ 证据带 [65%,88%)
-    d_eve_mid = pol.decide(rest_mid, ctx)
-    # 第 214 批证据带修正：0.65~1.00 带内入场血量已被 8+ 局证伪为非生死变量，
-    # 带内回血换不来生还率——Boss 前夜在证据带内应改锻造提速（旧版期望回血，
-    # 锚的是第 48 局惨案；该案例早于带内政伪证据，已被新证据覆盖）
-    assert d_eve_mid.tags[0] == ("rest", "smith"), \
-        f"证据带内的 Boss 前夜应改锻造提速（214批修正）: {d_eve_mid.reason}"
-    rest_low = dict(rest_boss_state)
-    rest_low["run"] = dict(rest_boss_state["run"], current_hp=38)  # 47.5% < 入场线 65%
-    d_eve_low = pol.decide(rest_low, ctx)
-    assert d_eve_low.tags[0] == ("rest", "heal"), f"入场线未达标应回血: {d_eve_low.reason}"
+    # 翻转带实证回归（240~243 批）：场均 45、血量 66%（≥旧锻造线 65%）——
+    # 旧口径此处锻造（K0P4 局随后以 4 点血量差被处决），新口径必须回血
+    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 90.0
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 90.0
+    rest_flip = dict(rest_boss_state)
+    rest_flip["run"] = dict(rest_boss_state["run"], current_hp=53)  # 66.25%，悲观 67.5
+    d_eve_flip2 = pol.decide(rest_flip, ctx)
+    assert d_eve_flip2.tags[0] == ("rest", "heal"), \
+        f"翻转带（66%血/场均45）应回血（K0P4局处决差回归）: {d_eve_flip2.reason}"
+    # 溢出区：接近满血（有效回血 5 < 8%×80=6.4）→ 锻造（63 局教义保留点）
+    rest_full = dict(rest_boss_state)
+    rest_full["run"] = dict(rest_boss_state["run"], current_hp=75)  # 93.75%
+    d_eve_ovf = pol.decide(rest_full, ctx)
+    assert d_eve_ovf.tags[0] == ("rest", "smith"), \
+        f"接近满血的前夜应锻造（回血无效投资）: {d_eve_ovf.reason}"
+    # 安全区：场均 30（悲观 45）、血量 70（余量 25 > 8 且 87.5% ≥ 锻造线 65%）→ 锻造
+    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 60.0
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 60.0
+    d_eve_safe = pol.decide(rest_boss_state, ctx)
+    assert d_eve_safe.tags[0] == ("rest", "smith"), \
+        f"安全区（稳过悲观战损且≥锻造线）应锻造: {d_eve_safe.reason}"
+    # 余量达标但血量低于锻造线 → 回血（场均 26.67、血量 63.75%：余量 11>8 但 <65%）
+    know.stats["enemies"]["BOSS_HOG"]["boss_hp_lost_sum"] = 53.33
+    know.stats["enemies"]["BOSS_PIG"]["boss_hp_lost_sum"] = 53.33
+    rest_below = dict(rest_boss_state)
+    rest_below["run"] = dict(rest_boss_state["run"], current_hp=51)
+    d_eve_below = pol.decide(rest_below, ctx)
+    assert d_eve_below.tags[0] == ("rest", "heal"), \
+        f"余量达标但低于锻造线应回血: {d_eve_below.reason}"
     ctx.rest_before_boss = False
 
     # 3dd) 事件加牌稀释记账（第 63 局复盘）：带走这颗蛋把不可打出的鸟蛋混进卡组
@@ -2395,11 +2416,13 @@ def main() -> int:
     assert v_hot - v_plain <= cv_cap + 1e-6, \
         f"learned value 拾取端未封顶: {v_hot:.2f}-{v_plain:.2f}>{cv_cap}"
 
-    # 3zb) 事件触发战斗的延迟结算（第 106 局复盘数据修复）：「茂密的植被-战！」
-    #      在随后的战斗中把感染×3 打进牌堆，旧逻辑进战瞬间结算 deck_delta 恒 0
-    #      ——事件端把「污染卡组」当免费。新语义：hp/金币按离开事件屏瞬间的
-    #      快照记账（事件自身即时效果，不含战斗损耗）；卡组增量用战后 live 值；
-    #      战斗中的死亡不归因给事件选项（归敌人组合）。
+    # 3zb) 事件触发战斗的延迟结算（第 106 局复盘数据修复 + 第 237~238 批归因
+    #      扩展）：「茂密的植被-战！」在随后的战斗中把感染×3 打进牌堆，旧逻辑
+    #      进战瞬间结算 deck_delta 恒 0——事件端把「污染卡组」当免费。语义：
+    #      hp/金币按离开事件屏瞬间的快照记账（事件自身即时效果）；卡组增量用
+    #      战后 live 值；战斗中的死亡不归因给事件选项（归敌人组合）；第 237~238
+    #      批起战斗掉血叠加归因到引发战斗的选项（快照把 -54 强制战藏成 0.0，
+    #      237/238 两局实证被错选成系统性失血）。
     ag.ctx.reset_for("RUN_EVT2", 0)
 
     def evt_flow_state(screen, hp, gold, deck_len):
@@ -2417,13 +2440,71 @@ def main() -> int:
     ag._track(evt_flow_state("COMBAT", 80, 70, 1), policy.Decision(action=None))
     assert tknow.stats["events"].get("VEG_EV", {}).get("FIGHT") is None, \
         "事件触发的战斗在进战瞬间就被提前结算（旧 bug 复发）"
-    # 战后流转：战斗损耗 -14hp 与战利品金币不归属事件，卡组增量 +3（感染×3）入账
+    # 战后流转：战斗掉血 -14 归因到引发战斗的选项（237~238 批新语义），
+    # 战利品金币仍不归属事件，卡组增量 +3（感染×3）入账
     ag._track(evt_flow_state("MAP", 66, 70, 4), policy.Decision(action=None))
     pe2 = tknow.stats["events"]["VEG_EV"]["FIGHT"]
     assert pe2["n"] == 1 and pe2["card_delta_sum"] == 3.0 \
-        and pe2["hp_delta_sum"] == 0.0 and pe2["gold_delta_sum"] == 20.0, \
+        and pe2["hp_delta_sum"] == -14.0 and pe2["gold_delta_sum"] == 20.0, \
         f"事件战斗延迟结算管线断裂: {pe2}"
     assert not ag.ctx.died_to_event, "无死亡不应产生事件致死归因"
+
+    # 3zv) 事件战掉血的选项链归因（第 237~238 批复盘核心修复）：「茂密的植被」
+    #       INITIAL 页选「休息」(回血+7) → 次页只有强制「战！」→ 战斗 -14。
+    #      旧语义：休息账面 +7、战！账面 0.0——必亏链被当免费反复选（237/238
+    #      两局同一剧本连掉 55/54）。新语义：战！按快照效果−战斗掉血记 -14；
+    #      祖先「休息」追加等额 -14 样本（是它把局面推进了强制战页）；
+    #      敌人组合账不受影响（姿态/先验演化的数据源不变）；
+    #      死亡路径下战斗账先行落库，掉血经暂存照样归因，事件死亡标志保持关闭
+    ag.ctx.reset_for("RUN_EVT3", 0)
+
+    def evt_chain_state(screen, hp, gold, deck_len, comp="VEG_BUG"):
+        st = {"screen": screen, "run_id": "RUN_EVT3",
+              "run": {"current_hp": hp, "max_hp": 80, "gold": gold, "floor": 14,
+                      "deck": [{"card_id": f"C{i}"} for i in range(deck_len)]}}
+        if screen == "COMBAT":
+            st["combat"] = {"enemies": [{"enemy_id": comp, "is_alive": True}]}
+        if screen == "GAME_OVER":
+            st["game_over"] = {"is_victory": False}
+        return st
+
+    # 页1 选「休息」→ 页2 选「战！」（换项先行结算 +7）→ 战斗 -14 → MAP
+    ag._track(evt_chain_state("EVENT", 80, 50, 1),
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "VEG3_EV", "REST")]))
+    ag._track(evt_chain_state("EVENT", 87, 50, 1),
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "VEG3_EV", "FIGHT")]))
+    ag._track(evt_chain_state("COMBAT", 87, 50, 1), policy.Decision(action=None))
+    ag._track(evt_chain_state("MAP", 73, 50, 4), policy.Decision(action=None))
+    ev_rest = tknow.stats["events"]["VEG3_EV"]["REST"]
+    ev_fight = tknow.stats["events"]["VEG3_EV"]["FIGHT"]
+    assert ev_fight["n"] == 1 and ev_fight["hp_delta_sum"] == -14.0, \
+        f"引发战斗的选项未承担战斗掉血: {ev_fight}"
+    assert ev_rest["n"] == 2 and ev_rest["hp_delta_sum"] == -7.0, \
+        f"祖先选项未追加战斗掉血样本（应为 +7 与 -14 两条）: {ev_rest}"
+    agg3 = ag.ctx.combat_agg
+    assert agg3 and agg3.get("from_event") and agg3["hp_lost_sum"] == 14.0 \
+        and agg3["comp_id"] == "VEG_BUG", \
+        f"事件战聚合账未正确标记/累计（敌人组合账数据源被破坏）: {agg3}"
+    # 死亡路径：战斗账先于事件账落库，掉血经暂存归因；事件死亡标志保持关闭
+    ag.ctx.reset_for("RUN_EVT4", 0)
+    ag._track(evt_chain_state("EVENT", 80, 50, 1),
+              policy.Decision(action="choose_event_option",
+                              tags=[("event_choice", "VEG4_EV", "FIGHT")]))
+    ag._track(evt_chain_state("COMBAT", 80, 50, 1, comp="VEG4_BUG"),
+              policy.Decision(action=None))
+    ag._track(evt_chain_state("GAME_OVER", 0, 50, 1, comp="VEG4_BUG"),
+              policy.Decision(action=None))
+    ev_dead = tknow.stats["events"]["VEG4_EV"]["FIGHT"]
+    assert ev_dead["n"] == 1 and ev_dead["hp_delta_sum"] == -80.0 \
+        and ev_dead["deaths"] == 0, \
+        f"死亡路径战斗掉血未归因选项/死亡标志泄漏: {ev_dead}"
+    assert tknow.stats["enemies"]["VEG4_BUG"]["deaths"] == 1, \
+        "事件战死亡的敌人组合归因被破坏"
+    assert not ag.ctx.died_to_event, "事件战死亡被误记为事件致死"
+    assert ag.ctx.pending_event is None and ag.ctx.pending_event_fight_loss == 0.0, \
+        "事件结算后暂存状态未清理"
 
     # 3zc) 策略热同步（第 123~124 局复盘核心修复）：122 批复盘给 DEFAULT_POLICY
     #      新增 elite_grey_survival_floor=0.40 并依赖「加载器 setdefault 自动补齐」
@@ -2890,32 +2971,35 @@ def main() -> int:
     assert d_lf3.action == "play_card" and d_lf3.params.get("card_index") == 0, \
         f"晚回合能力牌加成未减半: {d_lf3.action}（{d_lf3.reason}）"
 
-    # 3zq) Boss 前夜锻造线公式修复（第 228 批复盘）：证据上限由「地板」改「天花板」——
-    #      旧 max() 让 boss_eve_smith_hp_pct 低于 0.65 的取值全部失效（隐性死旋钮，
-    #      演化链永远推不动的假接替）。min() 语义下配置 0.55 时，57% 血的前夜从回血
-    #      转为锻造（0.65~1.00 带内入场血量已被证伪为非生死变量，回血无生存价值）；
-    #      对照：配置 0.65 时行为与 214 批一致；地图投影镜像与 _rest 同口径
+    # 3zq) Boss 前夜锻造线旋钮语义收窄（第 244 批复盘）：三区生存余量裁决下，
+    #      boss_eve_smith_hp_pct 只在「安全区」（不回血也稳过悲观战损）内裁决
+    #      锻造/回血——翻转带与溢出区不再经过它（旧 228 批用例的血量/战损组合
+    #      在新口径下全部落入翻转带，已不再触及旋钮，此处用安全区组合重锚）。
+    #      场均 24（悲观 36）、血量 60%：余量 12>8 属安全区；线 0.55 → 锻造，
+    #      线 0.65 → 回血（214 批对照口径不变）。地图投影镜像与 _rest 同口径
+    know.stats["enemies"].pop("BOSS_HOG", None)
+    know.stats["enemies"].pop("BOSS_PIG", None)
     know.stats.setdefault("enemies", {})["BOSS_EVE_T"] = {
         "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
-        "boss_encounters": 3, "boss_hp_lost_sum": 150.0, "boss_deaths": 1}
+        "boss_encounters": 3, "boss_hp_lost_sum": 72.0, "boss_deaths": 1}
     eve_line_state = {
         "screen": "REST", "available_actions": ["choose_rest_option"],
         "rest": {"options": [
             {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
             {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
-        "run": {"current_hp": 46, "max_hp": 80, "gold": 0, "floor": 16,
+        "run": {"current_hp": 48, "max_hp": 80, "gold": 0, "floor": 16,
                 "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}}
     saved_eve_line = know.policy.get("boss_eve_smith_hp_pct")
     ctx.rest_before_boss = True
     ctx.rest_proj_hp_pct = 1.0
-    know.policy["boss_eve_smith_hp_pct"] = 0.55   # 57.5% ≥ 55% → 锻造
+    know.policy["boss_eve_smith_hp_pct"] = 0.55   # 60% ≥ 55% → 安全区锻造
     d_eve55 = pol.decide(dict(eve_line_state), ctx)
     assert d_eve55.tags and d_eve55.tags[0] == ("rest", "smith"), \
-        f"锻造线下调后带内前夜应改锻造: {d_eve55.reason}"
-    know.policy["boss_eve_smith_hp_pct"] = 0.65   # 对照：214 批口径不变
+        f"安全区内锻造线下调后应改锻造: {d_eve55.reason}"
+    know.policy["boss_eve_smith_hp_pct"] = 0.65   # 对照：60% < 65% → 回血
     d_eve65 = pol.decide(dict(eve_line_state), ctx)
     assert d_eve65.tags and d_eve65.tags[0] == ("rest", "heal"), \
-        f"锻造线 0.65 时低血前夜仍应回血: {d_eve65.reason}"
+        f"锻造线 0.65 时低于线的前夜仍应回血: {d_eve65.reason}"
     if saved_eve_line is not None:
         know.policy["boss_eve_smith_hp_pct"] = saved_eve_line
     else:
@@ -2938,12 +3022,22 @@ def main() -> int:
     assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.55) < 1e-9, \
         f"三级接替未下调前夜锻造线: {zknow2.policy['boss_eve_smith_hp_pct']}"
     assert "前夜锻造线" in zlesson5, f"三级接替留痕缺失: {zlesson5}"
-    # 触底封账：0.45 不再下降且显式留痕
+    # 触底改接四级旋钮（第 237~238 批复盘）：0.45 不再下降，Boss 长战证据改接
+    # 能力牌长战加成上限 power_longfight_bonus_max（Boss 血池恒吃 7.0 封顶）
     zknow2.policy["boss_eve_smith_hp_pct"] = 0.45
     zlesson6 = reflect.finalize_run(zknow2, bctx2, victory=False, final_floor=17)
     assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.45) < 1e-9, \
         f"锻造线触底仍被压低: {zknow2.policy['boss_eve_smith_hp_pct']}"
-    assert "均顶格" in zlesson6, f"彻底封账留痕缺失: {zlesson6}"
+    assert abs(zknow2.policy["power_longfight_bonus_max"] - 7.5) < 1e-9, \
+        f"Boss 长战证据未接替到长战加成上限: {zknow2.policy['power_longfight_bonus_max']}"
+    assert "长战加成上限" in zlesson6, f"四级接替留痕缺失: {zlesson6}"
+    # 双顶格封账：加成上限也顶格（12.0）才显式封账留痕
+    zknow2.policy["power_longfight_bonus_max"] = 12.0
+    zlesson6b = reflect.finalize_run(zknow2, bctx2, victory=False, final_floor=17)
+    assert abs(zknow2.policy["power_longfight_bonus_max"] - 12.0) < 1e-9, \
+        f"长战加成上限顶格后仍被加码: {zknow2.policy['power_longfight_bonus_max']}"
+    assert "均顶格" in zlesson6b, f"彻底封账留痕缺失: {zlesson6b}"
+    zknow2.policy["power_longfight_bonus_max"] = 7.0  # 复位，避免污染后续胜利释放断言
     # 对照：普通怪房长战死在全顶格下不得动前夜锻造线（错位吸收防护）；
     # 第 229 批起改接常规锻造线 smith_min_hp_pct（见 3zt 全量用例）
     ndir3 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-evechain-n-"))
@@ -2957,6 +3051,8 @@ def main() -> int:
     nlesson5 = reflect.finalize_run(nknow3, nctx5, victory=False, final_floor=8)
     assert abs(nknow3.policy["boss_eve_smith_hp_pct"] - 0.60) < 1e-9, \
         f"普通怪房长战死错位吸收了前夜锻造线: {nknow3.policy['boss_eve_smith_hp_pct']}"
+    assert abs(nknow3.policy["power_longfight_hp_div"] - 30.0) < 1e-9, \
+        f"常规锻造线有余量时四级旋钮被误吸（防双吃失效）: {nknow3.policy['power_longfight_hp_div']}"
     assert "常规锻造线" in nlesson5, f"普通节点接替常规锻造线留痕缺失: {nlesson5}"
     # 胜利释放：被棘轮压下去的锻造线回升，健康值(≥0.65)不被推过证据上限
     vctx2b = _RC()
@@ -2989,8 +3085,11 @@ def main() -> int:
         f"普通节点证据错位吸收前夜锻造线: {sknow.policy['boss_eve_smith_hp_pct']}"
     assert abs(sknow.policy["block_safety"] - 2.1) < 1e-9, \
         f"防御棘轮被代偿加码: {sknow.policy['block_safety']}"
+    assert abs(sknow.policy["power_longfight_hp_div"] - 30.0) < 1e-9, \
+        f"锻造线有余量时四级旋钮被误吸（防双吃失效）: {sknow.policy['power_longfight_hp_div']}"
     assert "常规锻造线" in slesson, f"接替留痕缺失: {slesson}"
-    # 触底封账：0.45 不再下降且显式留痕（学习停摆必须可见，不许静默丢证据）
+    # 触底改接四级旋钮（第 237~238 批复盘）：0.45 不再下降，普通长战证据改压
+    # 能力牌长战加成血池分母 power_longfight_hp_div（走廊血池够不到加成封顶）
     sknow.policy["smith_min_hp_pct"] = 0.45
     sctx2 = _RC()
     sctx2.died_in_combat = {"comp_id": "ACT2_GAUNTLET", "node_type": "Monster",
@@ -2998,7 +3097,19 @@ def main() -> int:
     slesson2 = reflect.finalize_run(sknow, sctx2, victory=False, final_floor=23)
     assert abs(sknow.policy["smith_min_hp_pct"] - 0.45) < 1e-9, \
         f"常规锻造线触底仍被压低: {sknow.policy['smith_min_hp_pct']}"
-    assert "彻底停止吸收" in slesson2, f"彻底封账留痕缺失: {slesson2}"
+    assert abs(sknow.policy["power_longfight_hp_div"] - 28.0) < 1e-9, \
+        f"普通长战证据未接替到长战加成折算: {sknow.policy['power_longfight_hp_div']}"
+    assert "长战加成折算" in slesson2, f"四级接替留痕缺失: {slesson2}"
+    # 双触底封账：分母也触底（12.0）才显式彻底封账留痕（学习停摆必须可见）
+    sknow.policy["power_longfight_hp_div"] = 12.0
+    sctx2b = _RC()
+    sctx2b.died_in_combat = {"comp_id": "ACT2_GAUNTLET", "node_type": "Monster",
+                             "rounds": 8, "hp_lost": 40.0}
+    slesson2b = reflect.finalize_run(sknow, sctx2b, victory=False, final_floor=23)
+    assert abs(sknow.policy["power_longfight_hp_div"] - 12.0) < 1e-9, \
+        f"长战加成折算触底后仍被压低: {sknow.policy['power_longfight_hp_div']}"
+    assert "彻底停止吸收" in slesson2b, f"彻底封账留痕缺失: {slesson2b}"
+    sknow.policy["power_longfight_hp_div"] = 30.0  # 复位，避免污染后续胜利释放断言
     # 胜利释放：被压下去的常规锻造线回升至锚点 0.55；健康值(≥0.55)不被推高
     sknow.policy["smith_min_hp_pct"] = 0.50
     reflect.finalize_run(sknow, _RC(), victory=True, final_floor=20)
@@ -3008,6 +3119,24 @@ def main() -> int:
     reflect.finalize_run(sknow, _RC(), victory=True, final_floor=21)
     assert abs(sknow.policy["smith_min_hp_pct"] - 0.60) < 1e-9, \
         f"健康常规锻造线被胜利误推: {sknow.policy['smith_min_hp_pct']}"
+    # 长战加成双旋钮的胜利释放（第 237~238 批）：只回收被推离默认锚点的部分
+    # （血池分母 <30 回升、加成上限 >7 回收），健康值不被推过锚点
+    sknow.policy["power_longfight_hp_div"] = 26.0
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=22)
+    assert abs(sknow.policy["power_longfight_hp_div"] - 28.0) < 1e-9, \
+        f"胜利未释放长战加成折算: {sknow.policy['power_longfight_hp_div']}"
+    sknow.policy["power_longfight_hp_div"] = 30.0
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=23)
+    assert abs(sknow.policy["power_longfight_hp_div"] - 30.0) < 1e-9, \
+        f"健康长战加成折算被胜利误推: {sknow.policy['power_longfight_hp_div']}"
+    sknow.policy["power_longfight_bonus_max"] = 8.0
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=24)
+    assert abs(sknow.policy["power_longfight_bonus_max"] - 7.5) < 1e-9, \
+        f"胜利未回收长战加成上限: {sknow.policy['power_longfight_bonus_max']}"
+    sknow.policy["power_longfight_bonus_max"] = 7.0
+    reflect.finalize_run(sknow, _RC(), victory=True, final_floor=25)
+    assert abs(sknow.policy["power_longfight_bonus_max"] - 7.0) < 1e-9, \
+        f"健康长战加成上限被胜利误推: {sknow.policy['power_longfight_bonus_max']}"
 
     # 3zu) 爆毙/短时死亡通道的顶格治理（第 231~233 批复盘引入，第 236 局复盘
     #      落地接替旋钮）：block_safety 顶格 2.1 时，「没挡住」证据改接药水提前

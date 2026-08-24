@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 import random
 import re
+import time
 from dataclasses import dataclass, field
 
 from knowledge import Knowledge, clamp
@@ -739,15 +740,30 @@ class Policy:
                 if nt == "RestSite":
                     # 投影与行为一致（第 99~102 批复盘）：篝火并非总是回血——
                     # _rest 在血量 ≥ 锻造安全线时会改锻造（非 Boss 前夜），Boss 前夜
-                    # ≥85% 也可能锻造。旧投影无条件 +30%，系统性高估锻造路线的
+                    # 按三区裁决也可能锻造。旧投影无条件 +30%，系统性高估锻造路线的
                     # 进 Boss 血量：100 局 F12 篝火投影「预计 98%」，实际锻造后
                     # 以 82% 进场被 70 点战损处决——投影乐观反过来为锻造背书，
                     # 形成循环论证。这里按投影血量镜像 _rest 的核心规则
                     # （绝境回血/溢出改锻造属二阶修正，不入投影）
+                    # 第 244 批复盘：Boss 前夜镜像同步三区生存余量裁决——
+                    # 仅「有效回血<8%血条（溢出区）」或「不回血也稳过悲观战损且
+                    # 血量 ≥ 锻造线（安全区）」时投影锻造，其余一律投影回血
                     hpp_now = max(0.0, cur_hp) / max_hp
                     boss_eve = boss_row is not None and key[0] == int(boss_row) - 1
-                    will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55)) or (
-                        boss_eve and hpp_now < eve_smith_line)
+                    if boss_eve:
+                        _bl, _bn = self.know.boss_loss_stats()
+                        _heal_amt = heal_frac * max_hp * float(pol.get("boss_eve_smith_heal_mult", 1.0))
+                        _pess = _bl * float(pol.get("boss_eve_pess_mult", 1.5))
+                        _margin = float(pol.get("boss_eve_safe_margin_frac", 0.10)) * max_hp
+                        _eff = min(_heal_amt, max_hp - max(0.0, cur_hp))
+                        _smith_proj = (_bn >= int(pol.get("boss_eve_smith_min_samples", 3))
+                                       and _bl >= _heal_amt
+                                       and (_eff < 0.08 * max_hp
+                                            or (cur_hp - _pess > _margin
+                                                and hpp_now >= eve_smith_line)))
+                        will_heal = not _smith_proj
+                    else:
+                        will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55))
                     if will_heal:
                         # 绝境下的未来篝火是「幸存条件品」：能否走到它、走到时是否
                         # 还需要它都不确定（第 126 局复盘）。眼前的篝火全额记账，
@@ -1616,7 +1632,7 @@ class Policy:
                 # 重振精神10 共 34 甲，3 能量零输出——溢出按 block_excess_value 计分，
                 # 缺口补满后的纯溢出防牌应跌破出牌阈值，把能量还给输出）
                 score = (useful * 1.05 * pol["block_safety"]
-                         + (block - useful) * float(pol.get("block_excess_value", 0.2))) * blk_boost
+                         + (block - useful) * float(pol.get("block_excess_value", 0.03))) * blk_boost
                 why = f"格挡{block}"
             dr = draw_amount(card)
             if dr:
@@ -2272,42 +2288,57 @@ class Policy:
         pol = self.know.policy
         smith_ok = smith is not None and bool(upgradable)
 
-        # Boss 前夜篝火：默认回血优先于锻造（第 48 局复盘实证：72% 锻造后
-        # Boss 战 -58 正好打死，回血 +24 即可保命）。但该规则隐含"回血量能覆盖
-        # 预期战损"的假设——第 63 局满血(100%)进 Boss 仍被仪式兽 85 点战损处决：
-        # 当 Boss 分档实测场均战损 ≥ 满血时，回多少都是无效投资，
-        # 入场线已达标的前提下锻造缩短战斗才是唯一活路（样本不足时保持旧规则）
+        # Boss 前夜篝火：三区生存余量裁决（第 244 批复盘改版）。
+        # 旧判据「场均战损 ≥ 回血量 且 血量 ≥ 锻造线 → 锻造」是方向性错误的边际
+        # 分析：回血是篝火能提供的唯一确定性生存增量，判据不是「回血能否覆盖
+        # 全场战损」，而是「回血能否把处决翻转成残血生还」。240~243 批实证：
+        # 57%/66%/74%/80%/88% 五局前夜锻造后，分别以 0.4~7 点血量差被一幕 Boss
+        # 处决——全部落在「回血即可翻盘」的翻转带内；同期唯一前夜回血的
+        # 8VT5 局以 1% 血量生还。旧「0.65~1.00 带内入场血量证伪为非生死变量」
+        # 是 n=8 的噪声结论（幸存者偏差），本批以翻转带处决差直接证伪。
+        # 按悲观战损（场均 × boss_eve_pess_mult）分三区：
+        #   溢出区：有效回血 <8% 血条（接近满血）→ 回血是无效投资，锻造
+        #           （63 局满血被 85 点处决的教义在此保留：回血量为零才真无效）
+        #   翻转带：不回血的预期余量（血量-悲观战损）≤ 安全余量 → 回血
+        #   安全区：不回血也稳过悲观战损 且 血量 ≥ 锻造线 → 锻造投资未来
         if getattr(ctx, "rest_before_boss", False) and heal is not None and hp_pct < 0.95:
             boss_loss, boss_n = self.know.boss_loss_stats()
             min_n = int(pol.get("boss_eve_smith_min_samples", 3))
-            # 锻造线（第 214 批证据带修正）：旧锚 max(入场线,0.85) 在入场线顶格
-            # 0.88 后恒为 88%——65%~88% 带内的 Boss 前夜全部回血。而 138~147 批
-            # 已把该带证伪为非生死变量（0.65~1.00 入场血量 8+ 局不影响生还率），
-            # 带内回血换不来生还率，锻造提速才兑付（本批实证：76%/79% 两局回血
-            # 后满血进 Boss 照样整管打空，升级却永久留在卡组里）。线锚改为证据
-            # 上限：≥65% 即允许锻造，<65% 仍是真求生区维持回血（48 局惨案带）
-            # 第 228 批复盘：证据上限由「地板」改为「天花板」——旧 max() 公式让
-            # boss_eve_smith_hp_pct 低于 0.65 的任何取值全部失效（隐性死旋钮，
-            # 演化链永远推不动的假接替）。min() 语义下配置值可在证据带（0.65~1.00
-            # 已被证伪为非生死变量）内自由下调：带内前夜回血无生存价值，锻造线
-            # 下调即把一次性回血转成永久升级；运行库现值 0.65 时行为不变。
-            # 地图端投影镜像（simulate 的 will_heal）与 _rest 共用同一合成口径
+            # 锻造线旋钮语义保留（安全区的血量门槛）：演化链胜利释放/证据接替
+            # 照旧作用于它；地图端投影镜像（simulate 的 will_heal）同口径
             smith_line = min(float(pol.get("boss_eve_smith_hp_pct", 0.85)),
                              float(pol.get("boss_entry_evidence_hp_cap", 0.65)))
-            # 战损线按「回血量 × heal_mult」计（第 84~85 批复盘接线）：
-            # 79 局复盘定义的 boss_eve_smith_heal_mult 此前从未被读取，
-            # 条件一直退化回旧版 `≥满血`（实测 Boss 分档场均 23.8，永远够不到）
             heal_amount = heal_frac * max_hp * float(pol.get("boss_eve_smith_heal_mult", 1.0))
-            if (smith_ok and boss_n >= min_n and boss_loss >= heal_amount
-                    and hp_pct >= smith_line):
-                return Decision("choose_rest_option", {"option_index": smith["index"]},
-                                f"篝火：Boss 前夜改锻造（血量 {hp_pct:.0%} ≥ 锻造线 {smith_line:.0%}；"
-                                f"历史Boss整场场均战损{boss_loss:.0f}≥回血量{heal_amount:.0f}、样本{boss_n}——"
-                                f"回血救不了败局，提速斩杀才是活路）",
-                                tags=[("rest", "smith")], wait=1.2)
+            cur_hp = float(run.get("current_hp", 0))
+            pess = boss_loss * float(pol.get("boss_eve_pess_mult", 1.5))
+            margin = float(pol.get("boss_eve_safe_margin_frac", 0.10)) * max_hp
+            eff_heal = min(heal_amount, max_hp - cur_hp)
+            if smith_ok and boss_n >= min_n and boss_loss >= heal_amount:
+                if eff_heal < 0.08 * max_hp:
+                    return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                    f"篝火：Boss 前夜溢出区改锻造（血量 {hp_pct:.0%} 接近满血，"
+                                    f"有效回血仅{eff_heal:.0f}点<8%血条，回血无效投资）",
+                                    tags=[("rest", "smith")], wait=1.2)
+                if cur_hp - pess <= margin:
+                    return Decision("choose_rest_option", {"option_index": heal["index"]},
+                                    f"篝火：Boss 前夜翻转带回血（当前 {hp_pct:.0%}；不回血预期余量"
+                                    f"{cur_hp - pess:.0f}≤安全余量{margin:.0f}（悲观战损{pess:.0f}="
+                                    f"场均{boss_loss:.0f}×{float(pol.get('boss_eve_pess_mult', 1.5)):.1f}），"
+                                    f"回血{eff_heal:.0f}点直接兑换生还率）",
+                                    tags=[("rest", "heal")], wait=1.2)
+                if hp_pct >= smith_line:
+                    return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                    f"篝火：Boss 前夜安全区改锻造（血量 {hp_pct:.0%} ≥ 锻造线 "
+                                    f"{smith_line:.0%}，且不回血预期余量{cur_hp - pess:.0f}>"
+                                    f"安全余量{margin:.0f}——稳过悲观战损，升级投资未来）",
+                                    tags=[("rest", "smith")], wait=1.2)
+                return Decision("choose_rest_option", {"option_index": heal["index"]},
+                                f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}；余量达标但"
+                                f"血量<锻造线{smith_line:.0%}，回血仍是有效投资）",
+                                tags=[("rest", "heal")], wait=1.2)
             why_heal = (f"历史Boss战损{boss_loss:.0f}<回血量{heal_amount:.0f}或样本不足({boss_n})"
                         if boss_n < min_n or boss_loss < heal_amount
-                        else f"血量{hp_pct:.0%}<锻造线{smith_line:.0%}，回血仍是有效投资")
+                        else "无锻造目标")
             return Decision("choose_rest_option", {"option_index": heal["index"]},
                             f"篝火：Boss 前夜优先回血（当前 {hp_pct:.0%}；{why_heal}）",
                             tags=[("rest", "heal")], wait=1.2)

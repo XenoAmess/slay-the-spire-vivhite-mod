@@ -89,6 +89,8 @@ class RunContext:
     combat_notes: list = field(default_factory=list)
     pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor, deck_size_before)
     pending_event_own: tuple | None = None            # (hp, gold) 事件自身即时效果快照：离开事件屏瞬间采样（106 局复盘）
+    event_chain: list = field(default_factory=list)   # 同事件内已先行结算的祖先选项 [(event_id, key)]（第 237~238 批复盘）
+    pending_event_fight_loss: float = 0.0             # 事件触发战斗的掉血暂存（死亡时战斗账先于事件账落库）
     died_in_combat: dict | None = None                # set when the run ended inside a combat
     died_to_event: tuple | None = None                # (event_id, option_key) when an event killed us
     combat_bridge: tuple | None = None                # (comp_id, floor, ts) 转阶段过场挂起标记
@@ -280,6 +282,15 @@ class Agent:
         # REWARD/GAME_OVER…）才落库——卡组增量用战后 live 值补记，状态牌
         # 污染从此入账。战斗中的死亡不归因给事件选项（因果链归敌人组合，
         # 保住 deaths_by_enemy 排行榜对姿态演化的驱动）。
+        # 战斗掉血归因到选项链（第 237~238 批复盘）：快照语义把战斗损耗
+        # 排除在事件 hp 账外——「茂密的植被」休息→战！链中休息账面 +7 回血、
+        # 战！账面 0.0，而强制战 237/238 两局连掉 55/54 血；事件学习端把
+        # 必亏选项当免费反复选（战！n=19 价值 0.0）。战斗掉血本就全额记
+        # 敌人组合账（姿态/先验演化不受影响），此处叠加一份因果归因：
+        # 当前挂起选项按「快照效果 − 战斗掉血」记账；同事件内已先行结算的
+        # 祖先选项（event_chain，如引出强制战页的「休息」）各追加一条等额
+        # 掉血样本——是「休息」而非「战！」把局面推进了强制战页，代价必须
+        # 让做选择的那一环看见。金币仍按快照（战利品属战斗经济）。
         if self.ctx.pending_event is not None:
             if screen in ("COMBAT", "MODAL"):
                 if self.ctx.pending_event_own is None:
@@ -291,17 +302,35 @@ class Agent:
                 victory_screen = screen == "GAME_OVER" and bool((state.get("game_over") or {}).get("is_victory"))
                 died_here = screen == "GAME_OVER" and not victory_screen
                 deck_delta = len(run.get("deck", []) or []) - deck0
-                self.know.commit_event_option(event_id, key, own_hp - hp0, own_gold - gold0,
+                # 战斗掉血：优先读尚未落库的聚合账（战后正常流转）；死亡时战斗账
+                # 已先行 flush，改读 _flush_combat_agg 留下的暂存
+                fight_loss = 0.0
+                if through_combat:
+                    agg = self.ctx.combat_agg
+                    if agg is not None and agg.get("from_event"):
+                        fight_loss = float(agg.get("hp_lost_sum", 0.0) or 0.0)
+                    else:
+                        fight_loss = float(self.ctx.pending_event_fight_loss or 0.0)
+                self.know.commit_event_option(event_id, key, own_hp - hp0 - fight_loss,
+                                              own_gold - gold0,
                                               died=(died_here and not through_combat),
                                               deck_delta=deck_delta)
-                log(f"[agent] 事件结算：{event_id}/{key} → 生命 {own_hp - hp0:+}，金币 {own_gold - gold0:+}，"
+                # 祖先选项链追加等额掉血样本（「休息」引出强制战页之类）
+                if fight_loss > 0.0:
+                    for anc_id, anc_key in self.ctx.event_chain:
+                        self.know.commit_event_option(anc_id, anc_key, -fight_loss, 0.0,
+                                                      died=False, deck_delta=0)
+                log(f"[agent] 事件结算：{event_id}/{key} → 生命 {own_hp - hp0 - fight_loss:+}，金币 {own_gold - gold0:+}，"
                     f"卡组 {deck_delta:+d}"
-                    + ("（经战斗延迟记账，死亡归因敌方组合）" if through_combat else "")
+                    + (f"（经战斗延迟记账，战斗掉血 {fight_loss:.0f} 归因选项链"
+                       f"（含祖先 {len(self.ctx.event_chain)} 环），死亡归因敌方组合）" if through_combat else "")
                     + ("（致死）" if died_here and not through_combat else ""))
                 if died_here and not through_combat:
                     self.ctx.died_to_event = (event_id, key)
                 self.ctx.pending_event = None
                 self.ctx.pending_event_own = None
+                self.ctx.event_chain = []
+                self.ctx.pending_event_fight_loss = 0.0
 
         # credit tags from the decision just made
         for tag in decision.tags:
@@ -319,6 +348,9 @@ class Agent:
                                                   died=False, deck_delta=deck_now - prev[5])
                     log(f"[agent] 事件内换项抉择：先行结算 {prev[0]}/{prev[1]} → "
                         f"生命 {hp - prev[2]:+}，金币 {gold - prev[3]:+}，卡组 {deck_now - prev[5]:+d}")
+                    # 祖先链记账（第 237~238 批复盘）：若后续选项触发战斗，战斗
+                    # 掉血会给本环追加等额样本——引出强制战页的选择必须看见代价
+                    self.ctx.event_chain.append((prev[0], prev[1]))
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
                                               deck_now)
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
@@ -326,6 +358,8 @@ class Agent:
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
                                               len(run.get("deck", []) or []))
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
+                    self.ctx.event_chain = []  # 新事件重置祖先链
+                    self.ctx.pending_event_fight_loss = 0.0
             elif tag[0] == "rest":
                 if tag[1] == "heal" and hp >= run.get("max_hp", 1) - 2:
                     self.ctx.rests_healed_at_full += 1
@@ -421,7 +455,11 @@ class Agent:
             self._flush_combat_agg()
         max_hp = max(1, run.get("max_hp", 1))
         self.ctx.combat = {"comp_id": comp or "unknown", "hp_start": hp, "floor": run.get("floor", 0),
-                           "node_type": node_type, "hp_start_pct": hp / max_hp}
+                           "node_type": node_type, "hp_start_pct": hp / max_hp,
+                           # 事件触发战斗标记（第 237~238 批复盘）：pending_event 存活
+                           # 期间开打的战斗只能由该事件直接引发（事件屏→战斗/过场屏
+                           # 不结算），掉血将在事件结算时归因到选项链
+                           "from_event": self.ctx.pending_event is not None}
         self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
         self.ctx.stall_giveup = False  # 僵局摆烂标记按场清零（第 109 局复盘：归因隔离）
         # 高危组合自动升级硬仗（第 65~66 局复盘）：历史死亡率 ≥30% 的杀手组合
@@ -463,6 +501,7 @@ class Agent:
             agg = None
         if joinable:
             agg["hp_lost_sum"] += max(0.0, hp_lost)
+            agg["from_event"] = bool(agg.get("from_event")) or bool(c.get("from_event"))
             agg["rounds"] = max(int(agg.get("rounds", 0) or 0), int(c.get("rounds", 0) or 0))
             agg["won"] = bool(won) and not agg["died"]
             agg["died"] = agg["died"] or bool(died)
@@ -476,7 +515,7 @@ class Agent:
                    "node_type": c.get("node_type"), "hp_lost_sum": max(0.0, hp_lost),
                    "rounds": int(c.get("rounds", 0) or 0), "won": bool(won),
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
-                   "open": bool(split),
+                   "open": bool(split), "from_event": bool(c.get("from_event")),
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
                    "obs_fire_rounds": obs_fr}
             self.ctx.combat_agg = agg
@@ -506,6 +545,10 @@ class Agent:
         agg = self.ctx.combat_agg
         if not agg:
             return
+        # 事件触发战斗的掉血暂存（第 237~238 批复盘）：死亡时本账先于事件账
+        # 落库，pending_event 结算点读不到聚合账——掉血在此暂存交给事件结算
+        if agg.get("from_event") and self.ctx.pending_event is not None:
+            self.ctx.pending_event_fight_loss = float(agg.get("hp_lost_sum", 0.0) or 0.0)
         self.know.commit_enemy_fight(agg["comp_id"], float(agg.get("hp_lost_sum", 0.0)),
                                      won=bool(agg.get("won")), died=bool(agg.get("died")),
                                      node_type=agg.get("node_type"),
