@@ -3309,3 +3309,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 22.00 → 20.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
 - 生涯战绩：0/262 胜，当前目标进阶 0
+
+## 第 263 局复盘（2026-08-24 12:42）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：CINDER, UNRELENTING, BREAKTHROUGH, CINDER, THUNDERCLAP, RAMPAGE, CONFLAGRATION, HEMOKINESIS, HEADBUTT, IMPERVIOUS, STONE_ARMOR, HAND_OF_GREED, CINDER, STONE_ARMOR, RAGE, EVIL_EYE, SHRUG_IT_OFF, DISMANTLE, BLUDGEON, CINDER
+- 本局遗物：CANDELABRA, 招财异鱼, 音叉, ORNAMENTAL_FAN
+- 战斗记录：F22 Monster战 掉血17; F23 Monster战 掉血16; F25 Elite战 掉血15; F30 Monster战 掉血19; F31 Monster战 掉血0; F33 Boss战 掉血58（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，FIEND_FIRE(25分/8局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 8.00 → 8.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/263 胜，当前目标进阶 0
