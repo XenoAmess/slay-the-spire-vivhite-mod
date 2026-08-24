@@ -3,7 +3,8 @@
  "ascension": 0,
  "started_at": "2026-08-24 14:44:23",
  "victory": false,
- "floor": 31,
+ "in_progress": true,
+ "floor": 0,
  "decisions": [
   {
    "t": "14:44:23",
@@ -4714,6 +4715,26 @@
    "action": "end_turn",
    "params": {},
    "reason": "战斗：评估后无值得出的牌（黑暗之拥✗,撕裂✓），结束回合（敌意图总伤23，我方9血/0甲）；警告：结束回合可能致死！；意图升级+23，防御前置"
+  },
+  {
+   "t": "14:55:28",
+   "screen": "GAME_OVER",
+   "floor": 31,
+   "hp": 0,
+   "gold": 156,
+   "action": "return_to_main_menu",
+   "params": {},
+   "reason": "结算：返回主菜单，备战下一局"
+  },
+  {
+   "t": "14:55:32",
+   "screen": "MAIN_MENU",
+   "floor": 0,
+   "hp": 0,
+   "gold": 156,
+   "action": "open_timeline",
+   "params": {},
+   "reason": "主菜单：检查时间线可解锁项（优先解锁新内容）"
   }
  ],
  "combat_notes": [
