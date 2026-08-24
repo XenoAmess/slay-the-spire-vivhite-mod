@@ -5014,3 +5014,14 @@
 - 观察点：「Boss 前夜竞速必败改锻造」留痕出现、前夜回血占比下降；kill_race_prior_eff 开始下行；强卡组恢复前夜回血旧行为（豁免通道）；一幕 Boss 死亡率能否从 ~57% 抬头
 - 生涯战绩：0/402 胜，当前目标进阶 0
 
+
+## 第 405 局复盘（2026-08-25 06:48）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：HOWL_FROM_BEYOND, FIGHT_ME, COLOSSUS, THUNDERCLAP, CRUELTY, OMNISLICE, INFLAME, MANGLE, EQUILIBRIUM, JUGGLING, DEMON_FORM, IMPERVIOUS, HEMOKINESIS, STOMP, SWORD_BOOMERANG, PACTS_END, TAUNT, THRUMMING_HATCHET, UNRELENTING, UNRELENTING, DISINTEGRATION, MIND_ROT, DISINTEGRATION, DISINTEGRATION
+- 本局遗物：JUZU_BRACELET, GREMLIN_HORN
+- 战斗记录：F20 Monster战 掉血14; F23 Monster战 掉血0; F28 Monster战 掉血24; F30 Monster战 掉血18; F31 Monster战 掉血23; F33 Boss战 掉血53（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，VOLLEY(25分/9局)，THRUMMING_HATCHET(24分/8局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（66%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/405 胜，当前目标进阶 0
