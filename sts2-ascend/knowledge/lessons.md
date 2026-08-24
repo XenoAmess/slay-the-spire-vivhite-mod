@@ -3079,3 +3079,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/247 胜，当前目标进阶 0
+
+## 第 248 局复盘（2026-08-24 10:56）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 LEAF_SLIME_M+SLITHERING_STRANGLER
+- 本局拿牌：UPPERCUT, SHRUG_IT_OFF, FEED, HEMOKINESIS, ROLLING_BOULDER, TAUNT, HEADBUTT, CRUELTY, SEEKER_STRIKE, HEMOKINESIS, DEFEND_IRONCLAD, TAUNT, ROLLING_BOULDER, SWORD_BOOMERANG, HEADBUTT
+- 本局遗物：PENDULUM
+- 战斗记录：F4 Unknown战 掉血54; F5 Monster战 掉血0; F8 Monster战 掉血21; F9 Unknown战 掉血37; F12 Monster战 掉血11; F13 Monster战 掉血27（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带与常规锻造线均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/248 胜，当前目标进阶 0
