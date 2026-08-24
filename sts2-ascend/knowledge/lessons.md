@@ -3486,3 +3486,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/276 胜，当前目标进阶 0
+
+## 第 277 局复盘（2026-08-24 14:24）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：CINDER, PANACHE, THUNDERCLAP, THUNDERCLAP, BATTLE_TRANCE, RAMPAGE, MOLTEN_FIST, SECOND_WIND, UNRELENTING, STOMP, CRUELTY, STONE_ARMOR, AGGRESSION, SECOND_WIND, CINDER, VOLLEY, THE_GAMBIT, IRON_WAVE, TRUE_GRIT, BLUDGEON, SHRUG_IT_OFF, PILLAGE, TRUE_GRIT
+- 本局遗物：地精之角, PEAR, 药水腰带, LANTERN
+- 战斗记录：F22 Monster战 掉血19; F24 Unknown战 掉血0; F25 Monster战 掉血16; F29 Monster战 掉血19; F30 Monster战 掉血10; F33 Boss战 掉血82（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
+- 策略进化：potion_block_hp_pct: 0.60 → 0.65（高速失血爆毙（5回合掉血82，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/277 胜，当前目标进阶 0
