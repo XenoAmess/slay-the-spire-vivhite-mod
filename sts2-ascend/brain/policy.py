@@ -500,6 +500,11 @@ class Policy:
         weights = pol["room_weights"]
         priors = pol.get("path_danger_priors", {})
         heal_frac = pol.get("rest_heal_fraction", 0.30)
+        # Boss 前夜锻造线合成口径（第 228 批复盘）：与 _rest 的 smith_line 同式，
+        # 投影镜像不得与实际篝火行为脱钩（旧镜像读裸配置、_rest 读 max 合成，
+        # 配置值低于证据上限时两者分叉）
+        eve_smith_line = min(float(pol.get("boss_eve_smith_hp_pct", 0.85)),
+                             float(pol.get("boss_entry_evidence_hp_cap", 0.65)))
 
         # room danger learning: average hp loss per node type biases weights
         def learned_room_factor(node_type: str) -> float:
@@ -742,7 +747,7 @@ class Policy:
                     hpp_now = max(0.0, cur_hp) / max_hp
                     boss_eve = boss_row is not None and key[0] == int(boss_row) - 1
                     will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55)) or (
-                        boss_eve and hpp_now < float(pol.get("boss_eve_smith_hp_pct", 0.85)))
+                        boss_eve and hpp_now < eve_smith_line)
                     if will_heal:
                         # 绝境下的未来篝火是「幸存条件品」：能否走到它、走到时是否
                         # 还需要它都不确定（第 126 局复盘）。眼前的篝火全额记账，
@@ -2254,8 +2259,14 @@ class Policy:
             # 带内回血换不来生还率，锻造提速才兑付（本批实证：76%/79% 两局回血
             # 后满血进 Boss 照样整管打空，升级却永久留在卡组里）。线锚改为证据
             # 上限：≥65% 即允许锻造，<65% 仍是真求生区维持回血（48 局惨案带）
-            smith_line = max(float(pol.get("boss_entry_evidence_hp_cap", 0.65)),
-                             float(pol.get("boss_eve_smith_hp_pct", 0.85)))
+            # 第 228 批复盘：证据上限由「地板」改为「天花板」——旧 max() 公式让
+            # boss_eve_smith_hp_pct 低于 0.65 的任何取值全部失效（隐性死旋钮，
+            # 演化链永远推不动的假接替）。min() 语义下配置值可在证据带（0.65~1.00
+            # 已被证伪为非生死变量）内自由下调：带内前夜回血无生存价值，锻造线
+            # 下调即把一次性回血转成永久升级；运行库现值 0.65 时行为不变。
+            # 地图端投影镜像（simulate 的 will_heal）与 _rest 共用同一合成口径
+            smith_line = min(float(pol.get("boss_eve_smith_hp_pct", 0.85)),
+                             float(pol.get("boss_entry_evidence_hp_cap", 0.65)))
             # 战损线按「回血量 × heal_mult」计（第 84~85 批复盘接线）：
             # 79 局复盘定义的 boss_eve_smith_heal_mult 此前从未被读取，
             # 条件一直退化回旧版 `≥满血`（实测 Boss 分档场均 23.8，永远够不到）

@@ -33,6 +33,14 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 后的同语义接替旋钮——加分数值顶死就加宽饥饿带，让更多卡组状态享受
     # 顶格加分（下限 25 防饥饿带消失，上限 45 防全卡组恒饥饿使加分失去区分度）
     "deck_burst_floor": (25.0, 45.0),
+    # 第 228 批复盘接入：长战磨死证据的三级接替旋钮（仅 Boss 节点证据）——
+    # burst_starve 双旋钮与饥饿带全部顶格后，把 Boss 前夜锻造线下调：
+    # 0.65~1.00 带内入场血量已被十余局证伪为非生死变量 → 带内前夜回血无
+    # 生存价值，下调即让更多前夜从一次性回血转成永久升级（145 场一幕 Boss
+    # 实证：生还组场均前夜前锻造 1.67 次/升级牌打出 6.0 张 vs 阵亡组 1.14/3.4，
+    # 零锻造局占阵亡组 31% vs 生还组 10%）。下限 0.45：低于此值的前夜回血
+    # 服务的是「走到 Boss 之前别死」的真求生区，不许再压
+    "boss_eve_smith_hp_pct": (0.45, 0.85),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -42,7 +50,8 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
 BURST_DEATH_DPR = 14.0
 
 
-def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_extra: str) -> None:
+def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_extra: str,
+                      node_kind: str = "normal") -> None:
     """长战磨死证据喂拿牌端输出饥饿双旋钮；双旋钮顶格后改接饥饿带宽度。
 
     顶格旋钮代谢（第 209 批复盘）：burst_starve 双旋钮 206~208 三连顶格
@@ -50,8 +59,16 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
     空转——最高频死亡模式的证据再次蒸发（173~176 批「学习停摆」在接替
     旋钮上的复发）。加分数值顶死后，同语义方向是加宽饥饿带
     （deck_burst_floor）：更多卡组状态被认定输出饥饿，顶格加分因此在
-    更多奖励屏真实生效；45 封顶后停止吸收并显式留痕，把证据留给下一批
-    复盘设计战斗端接替旋钮（顶格旋钮代谢原则的递归应用）。
+    更多奖励屏真实生效；45 封顶后按节点分流三级接替——
+
+      Boss 节点证据 → boss_eve_smith_hp_pct 下调（第 228 批复盘）：
+        前夜锻造线每 -0.05，带内前夜从回血转锻造。语义忠实于证据本身：
+        高血进场照样被磨死 = 回血买不到生还，唯一能带走的是永久战力。
+        普通怪房长战死不得喂这条线（前夜锻造线与走廊战斗无关，
+        错位吸收是 88~89/127~130 批反复清算过的老病）。
+      普通节点证据 → 维持停止吸收留痕，证据留给下一批复盘。
+
+    锻造线也触底（0.45）则彻底封账并显式留痕（顶格代谢原则的递归终点）。
     """
     pre = len(changes)
     _adj(know, "burst_starve_bonus_base", 0.3, changes, why_base)
@@ -61,8 +78,17 @@ def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_ex
         _adj(know, "deck_burst_floor", 1.0, changes,
              "burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态）")
         if len(changes) == pre2:
-            changes.append("burst_starve 双旋钮与 deck_burst_floor 均顶格——"
-                           "输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮")
+            if node_kind == "boss":
+                pre3 = len(changes)
+                _adj(know, "boss_eve_smith_hp_pct", -0.05, changes,
+                     "饥饿带顶格，Boss 长战磨死证据改接前夜锻造线"
+                     "（带内回血无生存价值，一次性回血换永久升级）")
+                if len(changes) == pre3:
+                    changes.append("burst_starve 双旋钮、饥饿带与前夜锻造线均顶格——"
+                                   "输出饥饿证据停止吸收")
+            else:
+                changes.append("burst_starve 双旋钮与 deck_burst_floor 均顶格——"
+                               "输出饥饿证据停止吸收，留待复盘设计战斗端接替旋钮")
 
 
 def _adj(know: Knowledge, key: str, delta: float, changes: list[str], why: str) -> None:
@@ -218,7 +244,8 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                             know, changes,
                             f"Boss 高血进场长战死（{'?' if _entry is None else f'{_entry:.0%}'}，"
                             f"{rounds}回合），拿牌端攻击饥饿基础分加码",
-                            f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高")
+                            f"Boss 高血进场长战死（{rounds}回合），缺口越深纠偏上限越高",
+                            node_kind="boss")
                 elif kb_head >= kb_step:
                     _adj(know, "block_safety", 0.05, changes,
                          f"非 Boss 战斗长战阵亡（{rounds}回合），死因是有效格挡不足而非龟防——上调防御权重")
@@ -248,7 +275,8 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
                         "攻击饥饿基础分加码",
                         f"非 Boss 长战磨死（{rounds}回合）且 kill_bonus 顶格，"
-                        "缺口越深纠偏上限越高")
+                        "缺口越深纠偏上限越高",
+                        node_kind="normal")
             else:
                 if burst_death:
                     _adj(know, "block_safety", 0.05, changes,
@@ -261,15 +289,31 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
+        # 第 228 批复盘：前夜锻造线的胜利释放（与灰区悲观系数释放同构）——
+        # 接替链有降必有升；只回收被棘轮压下去的部分（<0.65 锚点），防止
+        # 单向演化残留，也避免健康值被胜利推过证据上限
+        if pol["boss_eve_smith_hp_pct"] < 0.65:
+            _adj(know, "boss_eve_smith_hp_pct", 0.05, changes,
+                 "胜利证明当前前夜回血线可行，小幅上调回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 
     # card biases: cards picked often but with below-average outcomes get penalized
+    # 「拿了不打」偏置封禁（第 228 批复盘）：outcome=到达层数是幸存者偏差——
+    # DISINTEGRATION/MIND_ROT 这类不可打出的诅咒牌（生涯 7 拿 0 打/4 拿 0 打）
+    # 靠「拿得晚→活得久」把 outcome 抬到 33 分、bias 一路 +0.2 涨到 +4 上限，
+    # 复盘日志把它们供成「当前高价值卡牌」污染归因。判据与拾取端
+    # unplayed_card_penalty 同一（picked≥4 且 plays ≤ play_rate×picked）：
+    # 打不出去的牌不给正偏置，且逐局向负漂移；plays 字段缺失按 0 处理
     global_avg = know.global_avg_outcome()
+    _unplayed_rate = float(pol.get("unplayed_play_rate", 0.5))
     for cid, e in know.stats["cards"].items():
         if e["picked"] >= 4:
             mean = e["outcome_sum"] / e["picked"]
-            if mean < global_avg - 8:
+            unplayed = float(e.get("plays", 0) or 0) <= _unplayed_rate * e["picked"]
+            if unplayed:
+                e["bias"] = clamp(e.get("bias", 0.0) - 0.3, -4.0, 4.0)
+            elif mean < global_avg - 8:
                 e["bias"] = clamp(e.get("bias", 0.0) - 0.3, -4.0, 4.0)
             elif mean > global_avg + 8:
                 e["bias"] = clamp(e.get("bias", 0.0) + 0.2, -4.0, 4.0)
@@ -293,12 +337,20 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             changes.append(f"进阶提升：{asc} → {prog['current_ascension']}（胜利解锁更高难度）")
 
     # ---------------- lesson text ----------------
+    # 「拿了不打」的牌不得进入高价值榜（第 228 批复盘）：DISINTEGRATION(7拿0打)
+    # 曾以 33 分长期占据榜首误导复盘归因——榜单只反映「拿着它的局走得多远」，
+    # 与卡牌本身价值无关。与偏置封禁同一判据
+    def _is_played_card(e) -> bool:
+        return float(e.get("plays", 0) or 0) > _unplayed_rate * e["picked"]
+
     top_cards = sorted(
-        ((cid, e) for cid, e in know.stats["cards"].items() if e["picked"] >= 2),
+        ((cid, e) for cid, e in know.stats["cards"].items()
+         if e["picked"] >= 2 and _is_played_card(e)),
         key=lambda kv: -(kv[1]["outcome_sum"] / kv[1]["picked"]))[:5]
     top_ids = {c for c, _ in top_cards}
     worst_cards = [kv for kv in sorted(
-        ((cid, e) for cid, e in know.stats["cards"].items() if e["picked"] >= 2 and cid not in top_ids),
+        ((cid, e) for cid, e in know.stats["cards"].items()
+         if e["picked"] >= 2 and cid not in top_ids and _is_played_card(e)),
         key=lambda kv: (kv[1]["outcome_sum"] / kv[1]["picked"]))[:3]]
 
     # 死因标注：失败但无死亡记录时不得标成"胜利"（第 51 局幻影局实证误导复盘）

@@ -2815,6 +2815,106 @@ def main() -> int:
     assert d_lf3.action == "play_card" and d_lf3.params.get("card_index") == 0, \
         f"晚回合能力牌加成未减半: {d_lf3.action}（{d_lf3.reason}）"
 
+    # 3zq) Boss 前夜锻造线公式修复（第 228 批复盘）：证据上限由「地板」改「天花板」——
+    #      旧 max() 让 boss_eve_smith_hp_pct 低于 0.65 的取值全部失效（隐性死旋钮，
+    #      演化链永远推不动的假接替）。min() 语义下配置 0.55 时，57% 血的前夜从回血
+    #      转为锻造（0.65~1.00 带内入场血量已被证伪为非生死变量，回血无生存价值）；
+    #      对照：配置 0.65 时行为与 214 批一致；地图投影镜像与 _rest 同口径
+    know.stats.setdefault("enemies", {})["BOSS_EVE_T"] = {
+        "encounters": 6, "hp_lost_sum": 200.0, "deaths": 2, "wins": 4,
+        "boss_encounters": 3, "boss_hp_lost_sum": 150.0, "boss_deaths": 1}
+    eve_line_state = {
+        "screen": "REST", "available_actions": ["choose_rest_option"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 46, "max_hp": 80, "gold": 0, "floor": 16,
+                "deck": [{"card_id": "STRIKE_IRONCLAD", "upgraded": False}]}}
+    saved_eve_line = know.policy.get("boss_eve_smith_hp_pct")
+    ctx.rest_before_boss = True
+    ctx.rest_proj_hp_pct = 1.0
+    know.policy["boss_eve_smith_hp_pct"] = 0.55   # 57.5% ≥ 55% → 锻造
+    d_eve55 = pol.decide(dict(eve_line_state), ctx)
+    assert d_eve55.tags and d_eve55.tags[0] == ("rest", "smith"), \
+        f"锻造线下调后带内前夜应改锻造: {d_eve55.reason}"
+    know.policy["boss_eve_smith_hp_pct"] = 0.65   # 对照：214 批口径不变
+    d_eve65 = pol.decide(dict(eve_line_state), ctx)
+    assert d_eve65.tags and d_eve65.tags[0] == ("rest", "heal"), \
+        f"锻造线 0.65 时低血前夜仍应回血: {d_eve65.reason}"
+    if saved_eve_line is not None:
+        know.policy["boss_eve_smith_hp_pct"] = saved_eve_line
+    else:
+        know.policy.pop("boss_eve_smith_hp_pct", None)
+    ctx.rest_before_boss = False
+
+    # 3zr) 长战证据三级接替（第 228 批复盘）：burst_starve 双旋钮+饥饿带全部顶格后，
+    #      Boss 节点证据改接前夜锻造线 boss_eve_smith_hp_pct（-0.05，下限 0.45）；
+    #      普通怪房长战死不得错位吸收（维持停止吸收留痕）；触底封账留痕；胜利对称释放
+    zdir2 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-evechain-"))
+    zknow2 = knowledge.Knowledge(zdir2)
+    zknow2.policy.update(kill_bonus=20.0, burst_starve_bonus_base=8.0,
+                         burst_starve_bonus_extra_max=12.0, deck_burst_floor=45.0,
+                         boss_eve_smith_hp_pct=0.60)
+    bctx2 = _RC()
+    bctx2.died_in_combat = {"comp_id": "BOSS_Z", "node_type": "Boss",
+                            "rounds": 9, "hp_lost": 70.0}
+    bctx2.death_hp_pct_at_entry = 0.88
+    zlesson5 = reflect.finalize_run(zknow2, bctx2, victory=False, final_floor=17)
+    assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.55) < 1e-9, \
+        f"三级接替未下调前夜锻造线: {zknow2.policy['boss_eve_smith_hp_pct']}"
+    assert "前夜锻造线" in zlesson5, f"三级接替留痕缺失: {zlesson5}"
+    # 触底封账：0.45 不再下降且显式留痕
+    zknow2.policy["boss_eve_smith_hp_pct"] = 0.45
+    zlesson6 = reflect.finalize_run(zknow2, bctx2, victory=False, final_floor=17)
+    assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.45) < 1e-9, \
+        f"锻造线触底仍被压低: {zknow2.policy['boss_eve_smith_hp_pct']}"
+    assert "均顶格" in zlesson6, f"彻底封账留痕缺失: {zlesson6}"
+    # 对照：普通怪房长战死在全顶格下不得动前夜锻造线（错位吸收防护）
+    ndir3 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-evechain-n-"))
+    nknow3 = knowledge.Knowledge(ndir3)
+    nknow3.policy.update(kill_bonus=20.0, burst_starve_bonus_base=8.0,
+                         burst_starve_bonus_extra_max=12.0, deck_burst_floor=45.0,
+                         boss_eve_smith_hp_pct=0.60)
+    nctx5 = _RC()
+    nctx5.died_in_combat = {"comp_id": "RAMP_COMP", "node_type": "Monster",
+                            "rounds": 10, "hp_lost": 50.0}
+    nlesson5 = reflect.finalize_run(nknow3, nctx5, victory=False, final_floor=8)
+    assert abs(nknow3.policy["boss_eve_smith_hp_pct"] - 0.60) < 1e-9, \
+        f"普通怪房长战死错位吸收了前夜锻造线: {nknow3.policy['boss_eve_smith_hp_pct']}"
+    assert "输出饥饿证据停止吸收" in nlesson5, f"普通节点封账留痕缺失: {nlesson5}"
+    # 胜利释放：被棘轮压下去的锻造线回升，健康值(≥0.65)不被推过证据上限
+    vctx2b = _RC()
+    reflect.finalize_run(zknow2, vctx2b, victory=True, final_floor=20)  # 0.45 → 0.50
+    assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.50) < 1e-9, \
+        f"胜利未释放前夜锻造线: {zknow2.policy['boss_eve_smith_hp_pct']}"
+    zknow2.policy["boss_eve_smith_hp_pct"] = 0.70   # 高于锚点：健康值不得被推高
+    vctx2c = _RC()
+    reflect.finalize_run(zknow2, vctx2c, victory=True, final_floor=21)
+    assert abs(zknow2.policy["boss_eve_smith_hp_pct"] - 0.70) < 1e-9, \
+        f"健康锻造线被胜利误推: {zknow2.policy['boss_eve_smith_hp_pct']}"
+
+    # 3zs) 「拿了不打」偏置封禁 + 榜单过滤（第 228 批复盘）：DISINTEGRATION 类
+    #      不可打出牌（7拿0打）靠幸存者偏差把 outcome 抬到 33、bias 涨到 +4 上限，
+    #      复盘日志供成「当前高价值卡牌」。判据与拾取端 unplayed_card_penalty 同一：
+    #      picked≥4 且 plays ≤ play_rate×picked → bias 只降不升；lessons 高价值榜
+    #      与低价值榜同时排除该类牌（既非价值信号也非负样本，是使用故障）
+    bdir2 = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-biasban-"))
+    bknow = knowledge.Knowledge(bdir2)
+    bknow.stats.setdefault("cards", {})["NEVER_CAST"] = {
+        "seen": 9, "picked": 5, "plays": 0, "outcome_sum": 160.0, "bias": 2.0}
+    bknow.stats["cards"]["OFTEN_CAST"] = {
+        "seen": 9, "picked": 5, "plays": 25, "outcome_sum": 160.0, "bias": 0.0}
+    bk_ctx = SimpleNamespace(
+        died_to_event=None, died_in_combat=None, death_was_elite=False,
+        death_hp_pct_at_entry=None, credit_tags=[], rests_healed_at_full=0,
+        ascension=0, combat_notes=[])
+    blesson = reflect.finalize_run(bknow, bk_ctx, victory=False, final_floor=8)
+    assert bknow.stats["cards"]["NEVER_CAST"]["bias"] < 2.0, \
+        f"拿了不打的牌 bias 未被封禁: {bknow.stats['cards']['NEVER_CAST']['bias']}"
+    assert bknow.stats["cards"]["OFTEN_CAST"]["bias"] > 0.0, \
+        f"正常出牌的高收益牌被误伤: {bknow.stats['cards']['OFTEN_CAST']['bias']}"
+    assert "NEVER_CAST" not in blesson, f"拿了不打的牌仍出现在复盘榜单: {blesson}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
