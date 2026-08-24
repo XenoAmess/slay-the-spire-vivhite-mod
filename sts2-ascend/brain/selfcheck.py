@@ -7,6 +7,7 @@ from __future__ import annotations
 import random
 import re
 import json
+import math
 import sys
 import tempfile
 from pathlib import Path
@@ -690,6 +691,192 @@ def main() -> int:
     assert m_toff and float(m_ton.group(1)) < float(m_toff.group(1)), \
         f"尾部定价未体现为投影罚分（开 {m_ton and m_ton.group(1)} vs 关 {m_toff and m_toff.group(1)}）"
 
+    # 4na) 分幕分层段实证战损（第 266 局批次复盘）：同幕怪物池随楼层递增——
+    #      一幕前段 NIBBIT 场均 8.3、后段 VANTOM/KIN/CEREMONIAL 场均 41~43
+    #      且贡献生涯前三死因，全幕均值账把后段杀手摊薄成「便宜战」。commit
+    #      三级双写（rooms/rooms_act/rooms_band），先验查询按 层段→分幕→跨幕 回落，
+    #      样本不足宁可缺账（None）
+    know.stats.setdefault("rooms_band", {})
+    know.stats["rooms_band"]["ZZB4@1_b3"] = {
+        "hp_lost_sum": 160.0, "damage_events": 4, "hp_lost_max": 60.0}
+    b_avg, b_worst, b_n = know.room_damage_band_stats("ZZB4", 1, 13)
+    assert (round(b_avg, 6), b_worst, b_n) == (40.0, 60.0, 4), \
+        f"层段统计读取失败: {b_avg},{b_worst},{b_n}"
+    know.stats["rooms_band"]["ZZB4@1_b2"] = {
+        "hp_lost_sum": 30.0, "damage_events": 2, "hp_lost_max": 20.0}
+    assert know.room_damage_band_stats("ZZB4", 1, 8) is None, "样本<3 的层段不应出账"
+    assert know.room_damage_worst("ZZB4", 1, row_in_act=13) == 60.0, "层段尾部记忆读取失败"
+    assert know.room_damage_worst("ZZB4", 1, row_in_act=8) is None, \
+        "样本不足的层段必须视为无尾部样本（回落口径也不得捏造）"
+    # commit 双写：floor=14 → 幕内行 14 → band 3，且 rooms/rooms_act 旧键同步
+    know.stats.setdefault("rooms", {})["ZZB4"] = {
+        "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10}
+    know.commit_room_damage("ZZB4", 33.0, act=1, floor=14)
+    rb = know.stats["rooms_band"].get("ZZB4@1_b3")
+    assert rb and rb["damage_events"] == 5 and abs(rb["hp_lost_max"] - 60.0) < 1e-9, \
+        f"分层段入账失败: {rb}"
+    ra_z = know.stats["rooms_act"].get("ZZB4@1")
+    assert ra_z and ra_z["damage_events"] == 1, f"分幕旧键未同步写入: {ra_z}"
+    # 先验细化：同钉子数据下后段(band3)实证先验必须贵于全幕口径且命中标记为真
+    _p_late, _hit_late = know.room_damage_prior_act("ZZB4", 8.0, 1, row_in_act=13)
+    _p_act, _hit_act = know.room_damage_prior_act("ZZB4", 8.0, 1)
+    _p_base = know.room_damage_prior("ZZB4", 8.0)
+    assert _hit_late and not _hit_act, \
+        f"命中标记错误: late={_hit_late} act={_hit_act}"
+    assert _p_late > max(_p_act, _p_base), \
+        f"层段先验未比全幕口径更贵: late={_p_late:.2f} act={_p_act:.2f} base={_p_base:.2f}"
+    know.stats["rooms"].pop("ZZB4", None)
+    know.stats["rooms_act"].pop("ZZB4@1", None)
+    know.stats["rooms_band"].pop("ZZB4@1_b3", None)
+    know.stats["rooms_band"].pop("ZZB4@1_b2", None)
+
+    # 4nb) 单场尾部生存复核（第 266 局批次复盘）：尾部定价只抬均价且随血带深度
+    #      缩水——266 局 54% 血规划时留痕「先验9→11（最差48）」，下一战实际 -43。
+    #      投影必须用实测单场最差回答「坏一场能不能活」：最坏打完跌破近死带即按
+    #      缺口深度加性罚分；关闭旋钮不留痕不罚分；满血段天然零触发；最差值取
+    #      层段记忆（55）而非全幕记忆（50）
+    veto_heads = [{"index": 0, "row": 12, "col": 0, "node_type": "Monster",
+                   "children": [{"row": 13, "col": 0}]}]
+    veto_chain = [{"row": 13, "col": 0, "node_type": "Boss"}]
+    veto_st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+               "map": {"available_nodes": veto_heads, "nodes": veto_heads + veto_chain,
+                       "boss_node": {"row": 13}},
+               "run": {"current_hp": 43, "max_hp": 80, "gold": 0, "floor": 1,
+                       "deck": [{"card_id": "STRIKE_IRONCLAD"}] * 4}}
+
+    def _pin_veto_data():
+        know.stats.setdefault("rooms", {})["Monster"] = {
+            "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10,
+            "hp_lost_max": 48.0}
+        know.stats.setdefault("rooms_act", {})["Monster@1"] = {
+            "hp_lost_sum": 80.0, "damage_events": 10, "hp_lost_max": 50.0}
+        know.stats.setdefault("rooms_band", {})["Monster@1_b3"] = {
+            "hp_lost_sum": 100.0, "damage_events": 5, "hp_lost_max": 55.0}
+
+    _v_rooms = know.stats.get("rooms", {}).get("Monster")
+    _v_ract = know.stats.get("rooms_act", {}).get("Monster@1")
+    _v_rband = know.stats.get("rooms_band", {}).get("Monster@1_b3")
+    _v_pen = know.policy.get("path_tail_veto_penalty")
+    try:
+        _pin_veto_data()
+        d_v_on = policy.Policy(know, random.Random(2)).decide(veto_st, ctx)
+        know.policy["path_tail_veto_penalty"] = 0.0
+        d_v_off = policy.Policy(know, random.Random(2)).decide(veto_st, ctx)
+        know.policy["path_tail_veto_penalty"] = _v_pen  # 恢复后再测满血段（排除旋钮干扰）
+        veto_st["run"]["current_hp"] = 79
+        d_v_full = policy.Policy(know, random.Random(2)).decide(veto_st, ctx)
+    finally:
+        know.policy["path_tail_veto_penalty"] = _v_pen
+        if _v_rooms is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _v_rooms
+        if _v_ract is None:
+            know.stats["rooms_act"].pop("Monster@1", None)
+        else:
+            know.stats["rooms_act"]["Monster@1"] = _v_ract
+        if _v_rband is None:
+            know.stats.get("rooms_band", {}).pop("Monster@1_b3", None)
+        else:
+            know.stats["rooms_band"]["Monster@1_b3"] = _v_rband
+    assert "尾部生存复核" in d_v_on.reason, f"尾部生存复核未触发: {d_v_on.reason}"
+    assert "最差55" in d_v_on.reason, \
+        f"生存复核未取层段尾部记忆(应55而非全幕50): {d_v_on.reason}"
+    m_von = re.search(r"路径分 (-?\d+\.\d+)", d_v_on.reason)
+    m_voff = re.search(r"路径分 (-?\d+\.\d+)", d_v_off.reason)
+    assert m_von and m_voff and float(m_von.group(1)) < float(m_voff.group(1)), \
+        f"尾部生存复核未体现为罚分（开 {m_von and m_von.group(1)} vs 关 {m_voff and m_voff.group(1)}）"
+    assert "尾部生存复核" not in d_v_off.reason, "复核旋钮关闭后不应留痕"
+    assert "尾部生存复核" not in d_v_full.reason and "尾部定价" not in d_v_full.reason, \
+        f"满血段不应触发尾部定价/复核: {d_v_full.reason}"
+
+    # 4nc) 投影罚分段间清零（第 266 局批次复盘修正）：行前段累计的 raw_penalty
+    #      未清零就被第二段 squash 整体携带重扣——中段精英等行前段罚分被记两次账，
+    #      违反 96 局「同一坏结局只记一次账」。构造「Monster→精英(depth1)→Boss」
+    #      单链，逐项复算路径分并要求严格一致（携带重扣会立刻破坏等式）
+    dd_heads = [{"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+                 "children": [{"row": 2, "col": 0}]}]
+    dd_mid = {"row": 2, "col": 0, "node_type": "Elite", "children": [{"row": 3, "col": 0}]}
+    dd_boss = {"row": 3, "col": 0, "node_type": "Boss"}
+    dd_deck = [{"card_id": "STRIKE_IRONCLAD"}] * 4
+    dd_st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+             "map": {"available_nodes": dd_heads, "nodes": dd_heads + [dd_mid, dd_boss],
+                     "boss_node": {"row": 3}},
+             "run": {"current_hp": 72, "max_hp": 80, "gold": 0, "floor": 3,
+                     "deck": dd_deck}}
+    _d_rooms_m = know.stats.get("rooms", {}).get("Monster")
+    _d_rooms_e = know.stats.get("rooms", {}).get("Elite")
+    _d_ract_m = know.stats.get("rooms_act", {}).get("Monster@1")
+    _d_ract_e = know.stats.get("rooms_act", {}).get("Elite@1")
+    _d_rband_b1 = know.stats.get("rooms_band", {}).get("Monster@1_b1")
+    _d_relief = know.policy.get("boss_entry_starve_relief")
+    try:
+        # 钉死输入：rooms 无尾部记忆（旧库形态）、无分幕/层段键 → 先验走跨幕口径，
+        # 与测试内复算共用同一 getter，夹具污染被自然抵消
+        know.stats.setdefault("rooms", {})["Monster"] = {
+            "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10}
+        know.stats["rooms"].pop("Elite", None)
+        know.stats.setdefault("rooms_act", {}).pop("Monster@1", None)
+        know.stats["rooms_act"].pop("Elite@1", None)
+        know.stats.setdefault("rooms_band", {}).pop("Monster@1_b1", None)
+        know.policy["boss_entry_starve_relief"] = 0.0
+        pol_dd = policy.Policy(know, random.Random(2))
+        d_dd = pol_dd.decide(dd_st, ctx)
+        # —— 复算（与 simulate() 同一公式与常量来源；先验/入场线项自实际留痕
+        #      反推，隔离共享夹具的策略值与敌人校准污染——本测试只验「段间账目」）——
+        m_fin = re.search(r"预计进\s*Boss\s*血量\s*(\d+)%", d_dd.reason)
+        assert m_fin, f"进Boss血量解析失败: {d_dd.reason}"
+        final_pct = int(m_fin.group(1)) / 100.0
+        # 入场线罚分用实际生效线（留痕里的 <X%，含饥饿放宽后的值）反推
+        m_line = re.search(r"进Boss血量预计\d+%<(\d+)%", d_dd.reason)
+        p_entry = ((int(m_line.group(1)) / 100.0 - final_pct)
+                   * float(know.policy["boss_entry_penalty"])) if m_line else 0.0
+        bs = pol_dd.deck_burst(dd_deck) < float(know.policy.get("deck_burst_floor", 30.0))
+        gf, _gn = pol_dd._elite_path_gate(
+            know.policy, know.policy["path_danger_priors"],
+            72, 80, 0, 1.0, bs, act_no=1)
+        decay = float(know.policy.get("elite_mid_gate_depth_decay", 0.85))
+        mid_raw = (1.0 - gf) * 50.0 * 0.5 * (decay ** 1)
+        p_floor = (0.35 - final_pct) * 40.0 if final_pct < 0.35 else 0.0
+        sat = float(know.policy["path_penalty_saturation"])
+
+        def _sq(x):
+            return sat * math.tanh(x / sat) if x > 0 else x
+
+        w = know.policy["room_weights"]
+        expected = (w["Monster"] * 1.25          # depth0 前期积累加成（90%≥62%）
+                    + w["Elite"] * 0.1 * 0.97     # depth1 卡组不足规避因子
+                    + w["Boss"] * 0.97 ** 2
+                    - _sq(mid_raw)                # 第一段：行前段（中段精英投影罚分）
+                    - _sq(p_entry + p_floor))     # 第二段：仅含行后段追加（入场线/地板），
+                                                  # 行前段旧账已被段间清零摘除
+        m_dd = re.search(r"路径分 (-?\d+\.\d+)", d_dd.reason)
+        assert m_dd, f"路径分解析失败: {d_dd.reason}"
+        assert abs(float(m_dd.group(1)) - expected) < 2.0, \
+            f"罚分段间账目不平（疑似携带重扣回潮）: 实际 {m_dd.group(1)} vs 复算 {expected:.4f}"
+    finally:
+        know.policy["boss_entry_starve_relief"] = _d_relief
+        if _d_rooms_m is None:
+            know.stats["rooms"].pop("Monster", None)
+        else:
+            know.stats["rooms"]["Monster"] = _d_rooms_m
+        if _d_rooms_e is None:
+            know.stats["rooms"].pop("Elite", None)
+        else:
+            know.stats["rooms"]["Elite"] = _d_rooms_e
+        if _d_ract_m is None:
+            know.stats.get("rooms_act", {}).pop("Monster@1", None)
+        else:
+            know.stats["rooms_act"]["Monster@1"] = _d_ract_m
+        if _d_ract_e is None:
+            know.stats.get("rooms_act", {}).pop("Elite@1", None)
+        else:
+            know.stats["rooms_act"]["Elite@1"] = _d_ract_e
+        if _d_rband_b1 is None:
+            know.stats.get("rooms_band", {}).pop("Monster@1_b1", None)
+        else:
+            know.stats["rooms_band"]["Monster@1_b1"] = _d_rband_b1
+
 
     # 3o) 商店删牌语义：关键词缺失时由握手标志兜底，且必须删最无价值牌而非最高价值牌
     #     （第 43 局 F7 删掉余烬+、第 44 局 F9 删掉上勾拳——付费删掉自己最强的牌）
@@ -999,11 +1186,15 @@ def main() -> int:
                 "boss_node": {"row": 2}},
         "run": {"current_hp": 56, "max_hp": 80, "gold": 0, "floor": 14, "deck": []}}
     know.policy["boss_entry_penalty"] = 0.0    # 复现旧行为：无入场要求线
+    _veto_saved_3y = know.policy.get("path_tail_veto_penalty")
+    know.policy["path_tail_veto_penalty"] = 0.0  # 隔离尾部生存复核（4nb 单测覆盖），
+                                                 # 本组只验证入场线惩罚的开/关差分
     d_gate_off = pol.decide(dict(gate_map), ctx)
     assert d_gate_off.params.get("option_index") == 0, \
         f"基线失效（无惩罚时怪物积累路线应胜出）: {d_gate_off.reason}"
     know.policy["boss_entry_penalty"] = 110.0  # 生效：低投影入场被重罚，商店续航反超
     d_gate_on = pol.decide(dict(gate_map), ctx)
+    know.policy["path_tail_veto_penalty"] = _veto_saved_3y
     assert d_gate_on.params.get("option_index") == 1, \
         f"Boss 入场要求线未生效（打一场后仅剩60%进场应让位续航路线）: {d_gate_on.reason}"
     solo_map = {

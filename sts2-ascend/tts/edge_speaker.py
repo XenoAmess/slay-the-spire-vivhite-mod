@@ -57,21 +57,30 @@ class EdgeEngine:
         self._sapi_lock = threading.Lock()
 
     def synth_to_wav(self, text: str, wav: Path) -> bool:
-        """合成 text 到 wav（未增益）。成功返回 True。带 30s 超时——挂死请求不能拖垮整条流水线。"""
-        mp3 = wav.with_suffix(".mp3")
+        """合成 text 到 wav（未增益）。成功返回 True。
 
-        async def _run() -> None:
-            import edge_tts
-            await asyncio.wait_for(edge_tts.Communicate(text, VOICE, rate=RATE).save(str(mp3)),
-                                   timeout=30)
+        合成走子进程（python -m edge_tts）+ subprocess.run(timeout) 硬杀：
+        曾在进程内 asyncio.wait_for(30s) 被 edge_tts/aiohttp 的取消挂死绕过——
+        三个合成线程全部卡死、每句 90s 空转跳过、朗读永久沉默（第 651~660+ 句实证）。
+        子进程超时会被可靠杀死，失败即回退 SAPI，杜绝"全静默"事故。
+        """
+        mp3 = wav.with_suffix(".mp3")
         try:
-            asyncio.run(_run())
-            if not (mp3.exists() and mp3.stat().st_size > 1000):
-                raise RuntimeError("mp3 empty")
+            proc = subprocess.run([sys.executable, "-m", "edge_tts",
+                                   "--voice", VOICE, f"--rate={RATE}",
+                                   "--text", text, "--write-media", str(mp3)],
+                                  capture_output=True, timeout=35,
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if proc.returncode != 0 or not (mp3.exists() and mp3.stat().st_size > 1000):
+                err = (proc.stderr or b"").decode("utf-8", "replace")[-200:]
+                raise RuntimeError(f"edge_tts rc={proc.returncode} {err}")
             subprocess.run([self._ffmpeg, "-y", "-i", str(mp3), "-ar", "24000", "-ac", "1",
                             str(wav)], capture_output=True, timeout=60,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             return wav.exists()
+        except subprocess.TimeoutExpired:
+            log("edge-tts 合成硬超时（35s 子进程已杀），跳过")
+            return False
         except Exception as exc:
             log(f"edge-tts 合成失败：{exc}")
             return False
@@ -150,6 +159,7 @@ def main() -> int:
 
     # ---- 3 并发预取流水线：边播边预合成后 3 句，消除句间卡顿 ----
     done: dict[int, tuple] = {}          # seq -> (wav_path | None, text)
+    inflight: dict[int, str] = {}        # seq -> text（合成中登记，供超时路径兜底取回原文）
     done_cond = threading.Condition()
     counters = {"put": 0, "played": 0}
 
@@ -162,7 +172,9 @@ def main() -> int:
                     return
                 continue
             wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
+            inflight[seq] = sent
             ok = eng.synth_to_wav(sent, wav)
+            inflight.pop(seq, None)
             with done_cond:
                 done[seq] = (wav if ok else None, sent)
                 done_cond.notify_all()
@@ -180,9 +192,10 @@ def main() -> int:
                     if ended and counters["played"] >= counters["put"] and q.empty():
                         return
                     if waited > 90:
-                        # 某句合成 90s 还没好（挂死/超时）→ 跳过它，别让整条流水线陪葬
-                        log(f"第 {counters['played']} 句合成超时未归，跳过")
-                        done[counters["played"]] = (None, None)
+                        # 某句合成 90s 还没好（挂死/超时）→ 用 SAPI 兜底读出原文，别让流水线陪葬也别静默
+                        seq_to = counters["played"]
+                        log(f"第 {seq_to} 句合成超时未归，SAPI 兜底")
+                        done[seq_to] = (None, inflight.pop(seq_to, None))
                         break
             seq = counters["played"]
             wav, sent = done.pop(seq)

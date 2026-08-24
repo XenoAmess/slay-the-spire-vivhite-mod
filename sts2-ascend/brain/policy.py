@@ -365,7 +365,7 @@ class Policy:
     # ------------------------------------------------------------------
 
     def _act_danger(self, nt: str, priors: dict, act_no: int,
-                    act_mul: float) -> tuple[float, float, bool]:
+                    act_mul: float, row_in_act: int | None = None) -> tuple[float, float, bool]:
         """路径投影掉血先验的分幕实证口径（第 148~160 批复盘接入）。
 
         第 79 批写好的 room_damage_prior_act 此前从未被任何调用方使用
@@ -373,10 +373,18 @@ class Policy:
         跨幕混算先验 × 静态 path_act_scale。接入后：rooms_act 有本幕样本
         （≥3 场）时返回实证先验且幕数乘区归 1（实测场均已含幕间难度跃迁，
         再乘 act_mul 是双重计费）；样本不足时回落跨幕先验 × act_mul 旧口径。
-        返回 (先验, 生效幕数乘区, 是否命中分幕实证)。
+
+        row_in_act 传入时进一步查分幕分层段实证（第 266 局批次复盘）：
+        同幕怪物池随楼层递增，一幕全幕均值 ~10 把后段 VANTOM/KIN/
+        CEREMONIAL（场均 41~43、生涯前三死因）摊薄成「便宜战」——266 局
+        54% 血规划 F8 战斗时投影按 ~11 记账、下一战实际 -43。层段命中同样
+        归 1 幕数乘区（实测已含段间难度跃迁）。Elite 路径闸门维持分幕口径
+        不传行号：灰区悲观复核有自己的标定语义，叠加层段抬价会把精英彻底
+        挤出地图（258~262 批观察点⑤的既定担忧）。
+        返回 (先验, 生效幕数乘区, 是否命中分幕/分层段实证)。
         """
         prior, act_specific = self.know.room_damage_prior_act(
-            nt, float(priors.get(nt, 8)), act_no)
+            nt, float(priors.get(nt, 8)), act_no, row_in_act=row_in_act)
         return prior, (1.0 if act_specific else act_mul), act_specific
 
     def _streak_loss_mult(self, pol: dict, nt: str, eff_streak: int) -> float:
@@ -762,9 +770,11 @@ class Policy:
                 if note and depth == 0:
                     notes.append(note)
                 # 掉血先验：分幕实证优先（rooms_act 有本幕样本时幕数乘区归 1，
-                # 实测场均已含幕效应）；无分幕样本回落静态/跨幕混合 × act_mul
+                # 实测场均已含幕效应）；无分幕样本回落静态/跨幕混合 × act_mul。
+                # 行号传入后进一步细化到分幕分层段实证（第 266 局批次复盘）：
+                # 同幕怪物池随楼层递增，全幕均值把后段杀手摊薄成便宜战
                 prior, node_act_mul, node_act_specific = self._act_danger(
-                    nt, priors, act_no, act_mul)
+                    nt, priors, act_no, act_mul, row_in_act=key[0])
                 # 尾部战损定价（第 258~262 批次复盘）：掉血先验是场均账，而单场
                 # 实测尾部可达场均 3~5 倍——262 局 49% 血进 Monster 投影仅 ~9 点
                 # （账面安全），实战 -39 阵亡；VS71 局 F5 单场 -47、8NRJ 局 F5
@@ -775,7 +785,7 @@ class Policy:
                 # 是极值不是常态，全价等于按最坏一场定价所有战斗），满血段
                 # 零影响；只抬价不压价，方向单调安全。
                 if nt in ("Monster", "Elite", "Unknown"):
-                    _worst = self.know.room_damage_worst(nt, act_no)
+                    _worst = self.know.room_damage_worst(nt, act_no, row_in_act=key[0])
                     if _worst is not None:
                         _band = float(pol.get("path_tail_hp_band_pct", 0.62))
                         _hpp_now = max(0.0, cur_hp) / max_hp
@@ -788,6 +798,27 @@ class Policy:
                                 notes.append(
                                     f"低血尾部定价：{nt}先验{_p0:.0f}→{prior:.0f}"
                                     f"（实测单场最差{_worst:.0f}）")
+                # 单场尾部生存复核（第 266 局批次复盘）：尾部定价只抬「均价」，
+                # 且随血带深度缩水——266 局 54% 血规划 Monster 时留痕
+                # 「先验9→11（最差48）」，下一战实际 -43 阵亡：均价涨 2 点回答
+                # 不了「坏一场能不能活」。这里用实测单场最差做生存复核（全价、
+                # 不折半——问的是尾部本身），最坏打完跌破近死带即按缺口深度
+                # 加性罚分；满血段天然零触发（最差 <90% 血条够不着近死线）。
+                # Elite 不入此闸：灰区悲观复核（×safety）已覆盖同构风险，
+                # 双闸叠加会把精英彻底挤出地图（258~262 批观察点⑤）。
+                if nt in ("Monster", "Unknown") and float(
+                        pol.get("path_tail_veto_penalty", 45.0)) > 0.0:
+                    _vw = self.know.room_damage_worst(nt, act_no, row_in_act=key[0])
+                    if _vw is not None:
+                        _sf = max_hp * float(pol.get("path_graveyard_hp_pct", 0.10))
+                        _tail_hp = cur_hp - _vw
+                        if _tail_hp <= _sf:
+                            _gap = clamp((_sf - _tail_hp) / max(_sf, 1.0), 0.0, 2.0)
+                            raw_penalty += _gap * float(pol.get("path_tail_veto_penalty", 45.0))
+                            if depth == 0:
+                                notes.append(
+                                    f"低血尾部生存复核：单场最差{_vw:.0f}打完仅剩"
+                                    f"{max(0.0, _tail_hp):.0f}(≤{_sf:.0f})，尾部罚分")
                 # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
                 # 不扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
@@ -855,6 +886,12 @@ class Policy:
             # 107~108 批追加软饱和：去重治「多次记账」，饱和治「多候选同时吃满
             # 大额罚分」——两类候选都触底后仍保留单调序与可辨识差异
             score -= squash_penalty(raw_penalty)
+            # 段间清零（第 266 局批次复盘修正）：raw_penalty 是投影内累计账，
+            # 第一段 squash 后不清零，行后段（近死带/血量地板/Boss入场）追加的
+            # 罚分会连同行前段旧账在第二段被整体再扣一次——行前段罚分（中段
+            # 精英/尾部复核）被双重记账，违反 96 局「同一坏结局只记一次账」的
+            # 去重原则。两段各自饱和、互不携带
+            raw_penalty = 0.0
             if died_mid:
                 notes.append("投影中途死亡")
                 return score, notes, final_pct
@@ -947,7 +984,8 @@ class Policy:
                     pnt = n.get("node_type", "Unknown") if pdepth == 0 \
                         else pg.get("node_type", "Unknown")
                     if pnt in ("Monster", "Elite", "Unknown"):
-                        _fp, _fm, _ = self._act_danger(pnt, priors, act_no, act_mul)
+                        _fp, _fm, _ = self._act_danger(pnt, priors, act_no, act_mul,
+                                                       row_in_act=pkey[0])
                         first_loss = _fp * deck_ease * _fm
                         break
                 safety = float(pol.get("dire_first_fight_safety", 1.5))
@@ -1005,7 +1043,8 @@ class Policy:
                 if boss_row is not None and key[0] >= int(boss_row):
                     break  # Boss 前夜的入场血量问题由 boss-eve 分支处理
                 if nnt in ("Monster", "Elite"):
-                    _np, _nm, _ = self._act_danger(nnt, priors, act_no, act_mul)
+                    _np, _nm, _ = self._act_danger(nnt, priors, act_no, act_mul,
+                                                   row_in_act=key[0])
                     next_fight_loss = _np * deck_ease * _nm / max_hp
                     break
         ctx.rest_next_fight_loss_frac = next_fight_loss

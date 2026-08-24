@@ -71,6 +71,13 @@ DEFAULT_POLICY = {
                                      # 带内的问题是「坏一场能不能活」而非「平均掉几滴」。满血段零影响
     "path_tail_loss_frac": 0.5,      # 尾部入账折价：最差样本是极值不是常态，半价折算后再与
                                      # 场均先验按深度线性混合（全价等于按最坏一场定价所有战斗）
+    "path_tail_veto_penalty": 45.0,  # 单场尾部生存复核罚分基数（第 266 局批次复盘）：投影对
+                                     # Monster/Unknown 用实测单场最差（hp_lost_max，全价不折半）
+                                     # 复核「坏一场能不能活」——最坏打完跌破近死带即按缺口深度
+                                     # ×此值加性罚分。尾部定价只抬均价且随血带深度缩水，266 局
+                                     # 54% 血规划时留痕「先验9→11（最差48）」，下一战实际 -43
+                                     # 阵亡：均价涨 2 点回答不了生还问题。Elite 不入此闸
+                                     # （灰区悲观复核已覆盖同构风险，叠加会把精英挤出地图）
     "elite_min_deck_cards": 4,    # 非基础牌少于此数时规避精英（卡组强度门槛，血量门槛之外的第二道闸）
     "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
     "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数
@@ -241,6 +248,10 @@ DEFAULT_STATS = {
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min}
     "rooms": {},    # node_type -> {visits, outcome_sum, hp_lost_sum, damage_events}
     "rooms_act": {},  # "{node_type}@{act}" -> {hp_lost_sum, damage_events}（分幕掉血，第79局复盘新增）
+    "rooms_band": {},  # "{node_type}@{act}_b{band}" -> {hp_lost_sum, damage_events, hp_lost_max}
+                       # （分幕分层段掉血，第 266 局批次复盘新增：band 1=幕内1~5层、
+                       #   2=6~11层、3=12层起——VANTOM/KIN/CEREMONIAL 等场均 40+ 的
+                       #   杀手组合集中在幕内后段，全幕均值账把它们摊薄到 ~10）
 }
 
 
@@ -265,6 +276,22 @@ def _save_json(path: Path, data) -> None:
 
 def clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
+
+
+def act_floor_band(row_in_act: int) -> int:
+    """幕内层段号（第 266 局批次复盘）：1=前段(1~5层)、2=中段(6~11层)、3=后段(12层起)。
+
+    同幕怪物池按楼层递增（一幕前段 NIBBIT 场均 8.3、后段 VANTOM/KIN/
+    CEREMONIAL 场均 41~43），层段是比「幕」更细一格的难度坐标。传入的
+    row 既可以是地图节点行号（1 起、已含幕内语义），也可以是绝对层数——
+    调用方保证传入前已折算为幕内行号。
+    """
+    r = max(1, int(row_in_act))
+    if r <= 5:
+        return 1
+    if r <= 11:
+        return 2
+    return 3
 
 
 class Knowledge:
@@ -307,6 +334,11 @@ class Knowledge:
         # 迁移：分幕掉血统计（第 79 局复盘新增：跨幕混算的 Monster 场均 ~9.9
         # 让二幕投影系统性乐观——预测进 Boss 82% 实际两场战斗后剩 27%）
         self.stats.setdefault("rooms_act", {})
+        # 迁移：分幕分层段掉血统计（第 266 局批次复盘新增）。同幕内怪物池按
+        # 楼层递增（一幕前段 NIBBIT 场均 8.3、后段 VANTOM/KIN/CEREMONIAL
+        # 场均 41~43 且贡献生涯前三死因），全幕均值把后段杀手摊薄成「便宜战」。
+        # 纯增量结构：旧库无此键即从空累积，历史聚合拆不出逐样本层段，不回填
+        self.stats.setdefault("rooms_band", {})
         # 迁移：事件选项最坏情况记忆字段（第 255~257 批次复盘新增）。hp_min 记
         # 该选项历史单次最差生命增量（含事件链强制战的祖先归因样本）。历史聚合
         # 数据无法反推逐样本尾部（hp_delta_sum/n 拆不出单次极值），旧条目显式
@@ -593,7 +625,7 @@ class Knowledge:
         return blended * rate
 
     def room_damage_prior_act(self, node_type: str, static_prior: float,
-                              act: int) -> tuple[float, bool]:
+                              act: int, row_in_act: int | None = None) -> tuple[float, bool]:
         """分幕掉血先验（第 79 局复盘新增；第 148~160 批复盘首次接入调用方）。
 
         跨幕混算的 Monster 场均 ~9.9 是"一幕便宜 + 二幕昂贵"的平均假象——
@@ -603,11 +635,25 @@ class Knowledge:
         实测项同步乘战斗发生率（第 96 局复盘）：与跨幕口径保持同一语义
         （E[掉血|到访]），否则分幕样本一够数就会把发生率折扣重新冲掉。
 
-        返回 (先验, 是否命中分幕实证)。命中时实测场均已包含幕间难度跃迁，
-        调用方不得再乘 path_act_scale——否则幕效应被双重计费（第 148~160 批
-        实证：Elite 二幕实测场均 34.0，旧口径 blended 22.7×1.7=38.7，若叠加
-        再乘 1.7 则虚高至 45.9）；未命中时调用方照常乘幕数系数。
+        分幕再分层段（第 266 局批次复盘）：row_in_act 传入时优先查
+        rooms_band 层段实证（≥3 场）——同幕内怪物池按楼层递增，一幕全幕
+        均值 ~10 把后段 VANTOM/KIN/CEREMONIAL（场均 41~43、生涯前三死因）
+        摊薄成「便宜战」，路径投影因此敢在 F13~15 排三连战再进 Boss。
+        基线取分幕口径（而非跨幕），层段账是对分幕账的进一步细化。
+
+        返回 (先验, 是否命中分幕/分层段实证)。命中时实测场均已包含幕间/段间
+        难度跃迁，调用方不得再乘 path_act_scale——否则幕效应被双重计费
+        （第 148~160 批实证：Elite 二幕实测场均 34.0，旧口径 blended 22.7×1.7=38.7，
+        若叠加再乘 1.7 则虚高至 45.9）；未命中时调用方照常乘幕数系数。
         """
+        if row_in_act is not None:
+            b = self.room_damage_band_stats(node_type, act, row_in_act)
+            if b is not None:
+                b_avg, _b_worst, b_n = b
+                baseline = self.room_damage_prior_act(node_type, static_prior, act)[0]
+                w = min(0.85, b_n / 8.0)
+                return ((1.0 - w) * baseline
+                        + w * b_avg * self.room_combat_rate(node_type)), True
         e = self.stats.get("rooms_act", {}).get(f"{node_type}@{act}")
         if not e or e.get("damage_events", 0) < 3:
             return self.room_damage_prior(node_type, static_prior), False
@@ -739,18 +785,24 @@ class Knowledge:
                 worst_fire = v if worst_fire is None else max(worst_fire, v)
         return worst_pool, worst_fire
 
-    def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None) -> None:
+    def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None,
+                           floor: int | None = None) -> None:
         """按房间类型累计战斗掉血（供路径先验动态校准）。
 
         act 传入时同步写入分幕键（第 79 局复盘新增）：跨幕混算的场均掉血
         掩盖了二幕伤害升级，路径投影因此系统性乐观。旧 rooms 聚合键保持
         原样写入（learned_room_factor 等旧消费方不受影响）。
 
+        act+floor 同时传入时再写分幕分层段键 rooms_band（第 266 局批次复盘
+        新增）：同幕内怪物池按楼层递增，全幕均值把后段杀手组合摊薄成便宜战。
+        幕内行号由绝对层数折算（(floor-1)%17+1），与地图节点行号同口径。
+
         最坏情况战损记忆（第 258~262 批次复盘）：逐样本维护 hp_lost_max
         （单场最差掉血）——场均账在重尾分布前系统性乐观，262 局 49% 血进
         Monster 投影仅 ~9 点战损、实战 -39 阵亡；投影需要「坏一场掉多少」
         的尾部记忆，与事件层 hp_min（255~257 批）同构。旧条目缺键视为
-        无尾部样本（None），自新样本起累积，不捏造回填。
+        无尾部样本（None），自新样本起累积，不捏造回填。rooms/rooms_act/
+        rooms_band 三级全部维护尾部记忆。
         """
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
@@ -763,15 +815,50 @@ class Knowledge:
             ra["hp_lost_sum"] += max(0.0, hp_lost)
             ra["damage_events"] += 1
             ra["hp_lost_max"] = max(float(ra.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+            if floor is not None and int(floor) >= 1:
+                row_in_act = (int(floor) - 1) % 17 + 1
+                rb = self.stats.setdefault("rooms_band", {}).setdefault(
+                    f"{node_type}@{int(act)}_b{act_floor_band(row_in_act)}",
+                    {"hp_lost_sum": 0.0, "damage_events": 0})
+                rb["hp_lost_sum"] += max(0.0, hp_lost)
+                rb["damage_events"] += 1
+                rb["hp_lost_max"] = max(float(rb.get("hp_lost_max") or 0.0),
+                                        max(0.0, float(hp_lost)))
 
-    def room_damage_worst(self, node_type: str, act: int | None = None) -> float | None:
+    def room_damage_band_stats(self, node_type: str, act: int,
+                               row_in_act: int,
+                               min_events: int = 3) -> tuple[float, float, int] | None:
+        """分幕分层段掉血统计（第 266 局批次复盘新增）：返回 (场均, 单场最差, 样本数)。
+
+        同幕怪物池随楼层递增——一幕前段 NIBBIT 场均 8.3、后段 VANTOM/
+        KIN/CEREMONIAL 场均 41~43 且贡献生涯前三死因，全幕均值账把后段
+        杀手摊薄成「便宜战」。层段样本 <min_events 时返回 None（宁可缺账
+        不可捏造，调用方回落分幕/跨幕口径）；旧库条目无 hp_lost_max 时
+        worst 返回 None 由调用方按无尾部处理。
+        """
+        rb = (self.stats.get("rooms_band") or {}).get(
+            f"{node_type}@{int(act)}_b{act_floor_band(row_in_act)}")
+        if not rb or int(rb.get("damage_events", 0) or 0) < min_events:
+            return None
+        n = int(rb["damage_events"])
+        avg = float(rb["hp_lost_sum"]) / n
+        worst = float(rb["hp_lost_max"]) if rb.get("hp_lost_max") is not None else None
+        return avg, worst, n
+
+    def room_damage_worst(self, node_type: str, act: int | None = None,
+                          row_in_act: int | None = None) -> float | None:
         """该房间类型历史单场最差掉血（重尾记忆，第 258~262 批次复盘新增）。
 
-        分幕样本（damage_events≥3）优先——尾部同样含幕间难度跃迁，跨幕混算
-        会把一幕的便宜尾部摊薄；无分幕尾部时回落跨幕条目（样本≥5）。旧库
-        迁移条目无 hp_lost_max 键，返回 None（无尾部样本），调用方维持旧
-        均值口径——尾部自新样本起累积，宁可缺账不可捏造。
+        分幕分层段样本（damage_events≥3）优先——尾部同样含幕间/段间难度
+        跃迁，混算会把昂贵层段的尾部摊薄；无层段尾部时回落分幕条目
+        （≥3 场），再回落跨幕条目（样本≥5）。旧库迁移条目无 hp_lost_max 键，
+        返回 None（无尾部样本），调用方维持旧均值口径——尾部自新样本起累积，
+        宁可缺账不可捏造。
         """
+        if act is not None and row_in_act is not None:
+            b = self.room_damage_band_stats(node_type, act, row_in_act)
+            if b is not None and b[1] is not None:
+                return b[1]
         if act is not None:
             ra = self.stats.get("rooms_act", {}).get(f"{node_type}@{int(act)}")
             if (ra and ra.get("hp_lost_max") is not None
