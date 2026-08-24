@@ -4972,3 +4972,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/401 胜，当前目标进阶 0
+
+## 第 402 局复盘（2026-08-25 06:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHRUG_IT_OFF, HOWL_FROM_BEYOND, TWIN_STRIKE, TWIN_STRIKE, DISMANTLE, FLAME_BARRIER, DISMANTLE, TAUNT, FIEND_FIRE, DISMANTLE, CINDER, CINDER, TRUE_GRIT, FIGHT_ME, BATTLE_TRANCE, RUPTURE
+- 本局遗物：ART_OF_WAR, 赤牛
+- 战斗记录：F7 Monster战 掉血11; F9 Monster战 掉血6; F11 Elite战 掉血9; F14 Monster战 掉血0; F15 Monster战 掉血10; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(25分/9局)，FEED(24分/24局)，EQUILIBRIUM(24分/8局)，MAYHEM(24分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/402 胜，当前目标进阶 0
