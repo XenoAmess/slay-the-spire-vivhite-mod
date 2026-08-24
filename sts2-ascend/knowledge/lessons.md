@@ -3464,3 +3464,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 11.00 → 11.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
 - 生涯战绩：0/274 胜，当前目标进阶 0
+
+## 第 275 局复盘（2026-08-24 13:56）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：THUNDERCLAP, DISMANTLE, UNRELENTING, TWIN_STRIKE, BURNING_PACT, MOLTEN_FIST, RUPTURE, BATTLE_TRANCE, STONE_ARMOR
+- 本局遗物：地精之角, REGAL_PILLOW
+- 战斗记录：F8 Monster战 掉血4; F11 Unknown战 掉血21; F12 Monster战 掉血9; F14 Monster战 掉血0; F15 Monster战 掉血6; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/9局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 11.50 → 12.00（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/275 胜，当前目标进阶 0

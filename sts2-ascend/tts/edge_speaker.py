@@ -66,10 +66,18 @@ class EdgeEngine:
         """
         mp3 = wav.with_suffix(".mp3")
         try:
-            proc = subprocess.run([sys.executable, "-m", "edge_tts",
+            # 必须用真实解释器（sys._base_executable）而非 sys.executable：
+            # uv 旁路环境里 sys.executable 是 shim 跳板，会再孵化孙进程——
+            # 超时杀掉的只是跳板，孙进程握着管道不放，subprocess.run 永远读不到
+            # EOF 而挂死（第 3~8 句连续超时实证）。直跑真实解释器无孙进程可杀得干净。
+            # PYTHONPATH 传递当前 sys.path，保证真实解释器能 import edge_tts。
+            env = os.environ.copy()
+            env["PYTHONPATH"] = os.pathsep.join(p for p in sys.path if p)
+            real_py = getattr(sys, "_base_executable", None) or sys.executable
+            proc = subprocess.run([real_py, "-m", "edge_tts",
                                    "--voice", VOICE, f"--rate={RATE}",
                                    "--text", text, "--write-media", str(mp3)],
-                                  capture_output=True, timeout=35,
+                                  capture_output=True, timeout=35, env=env,
                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             if proc.returncode != 0 or not (mp3.exists() and mp3.stat().st_size > 1000):
                 err = (proc.stderr or b"").decode("utf-8", "replace")[-200:]
