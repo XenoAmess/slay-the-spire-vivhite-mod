@@ -3739,3 +3739,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
 - 生涯战绩：0/299 胜，当前目标进阶 0
+
+## 第 300 局复盘（2026-08-24 17:10）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：STONE_ARMOR, SHRUG_IT_OFF, BREAKTHROUGH, TRUE_GRIT, HOWL_FROM_BEYOND, MOLTEN_FIST, RUPTURE, RUPTURE, STONE_ARMOR, THE_GAMBIT
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F5 Monster战 掉血13; F6 Monster战 掉血4; F9 Monster战 掉血25; F12 Monster战 掉血5; F14 Monster战 掉血7; F17 Boss战 掉血74（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：potion_block_hp_pct: 0.70 → 0.75（高速失血爆毙（5回合掉血74，每回合15≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/300 胜，当前目标进阶 0
