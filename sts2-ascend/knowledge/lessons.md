@@ -5089,3 +5089,14 @@
 - 观察点：重启后「竞速必败改锻造」「绝境资源节点换战力(+8)」两类留痕出现；kill_race_prior_eff 启动下行；EQ04 型开局改走商店且存活率抬升；一幕 Boss 两连强势能否延续
 - 生涯战绩：0/406 胜，当前目标进阶 0
 
+
+## 第 411 局复盘（2026-08-25 07:21）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：HOWL_FROM_BEYOND, RUPTURE, BURNING_PACT, CINDER, WHIRLWIND, CINDER, IRON_WAVE, JUGGLING, JUGGLING, THUNDERCLAP
+- 本局遗物：BELLOWS, 护喉甲
+- 战斗记录：F6 Monster战 掉血7; F11 Monster战 掉血9; F13 Unknown战 掉血12; F14 Monster战 掉血0; F15 Elite战 掉血15; F17 Boss战 掉血45（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，VOLLEY(25分/9局)，THRUMMING_HATCHET(24分/8局)，FEED(24分/24局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/411 胜，当前目标进阶 0
