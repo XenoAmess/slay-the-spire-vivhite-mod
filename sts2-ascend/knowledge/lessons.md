@@ -3959,3 +3959,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/319 胜，当前目标进阶 0
+
+## 第 320 局复盘（2026-08-24 19:53）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：HOWL_FROM_BEYOND, BLUDGEON, JUGGERNAUT, TRUE_GRIT, FEEL_NO_PAIN, IRON_WAVE, DRUM_OF_BATTLE, MOLTEN_FIST, SWORD_BOOMERANG, MANGLE, THUNDERCLAP, CINDER, BATTLE_TRANCE, CINDER, SWORD_BOOMERANG, FLAME_BARRIER, BLUDGEON, SHRUG_IT_OFF, UNRELENTING, TAUNT
+- 本局遗物：STRIKE_DUMMY, LANTERN, LASTING_CANDY, 皇家枕头
+- 战斗记录：F19 Monster战 掉血24; F20 Monster战 掉血22; F22 Monster战 掉血18; F25 Monster战 掉血5; F28 Elite战 掉血20; F30 Unknown战 掉血39（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/320 胜，当前目标进阶 0
