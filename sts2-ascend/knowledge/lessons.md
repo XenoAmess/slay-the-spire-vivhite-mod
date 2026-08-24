@@ -3805,3 +3805,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/305 胜，当前目标进阶 0
+
+## 第 306 局复盘（2026-08-24 17:55）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BLUDGEON, MOLTEN_FIST, FLAME_BARRIER, PANIC_BUTTON, UNRELENTING, CRUELTY, THE_GAMBIT, HEADBUTT, THUNDERCLAP
+- 本局遗物：VAJRA
+- 战斗记录：F6 Monster战 掉血0; F8 Monster战 掉血0; F9 Monster战 掉血6; F12 Monster战 掉血13; F15 Unknown战 掉血0; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/306 胜，当前目标进阶 0
