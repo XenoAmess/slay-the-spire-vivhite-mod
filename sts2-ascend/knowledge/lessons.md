@@ -3750,3 +3750,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：potion_block_hp_pct: 0.70 → 0.75（高速失血爆毙（5回合掉血74，每回合15≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/300 胜，当前目标进阶 0
+
+## 第 301 局复盘（2026-08-24 17:20）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_NECTAR+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：FEED, FLAME_BARRIER, ANGER, IRON_WAVE, EVIL_EYE, TAUNT, CINDER, INFLAME, SHRUG_IT_OFF, TAUNT, INFLAME, HOWL_FROM_BEYOND, FEED, EVIL_EYE, MOLTEN_FIST
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F17 Boss战 掉血44; F19 Monster战 掉血15; F20 Monster战 掉血9; F21 Monster战 掉血30; F22 Monster战 掉血13; F25 Unknown战 掉血44（阵亡）
+- 当前高价值卡牌：VOLLEY(27分/5局)，EQUILIBRIUM(26分/5局)，FISTICUFFS(26分/4局)，MAYHEM(25分/5局)，FIEND_FIRE(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：potion_block_hp_pct: 0.75 → 0.80（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/301 胜，当前目标进阶 0
