@@ -3142,3 +3142,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：potion_block_hp_pct: 0.40 → 0.45（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/251 胜，当前目标进阶 0
+
+## 第 252 局复盘（2026-08-24 11:25）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+BRUTE_RUBY_RAIDER
+- 本局拿牌：BATTLE_TRANCE, TRUE_GRIT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血4; F3 Monster战 掉血0; F4 Monster战 掉血4; F5 Monster战 掉血72（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)，FIEND_FIRE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 30.00 → 28.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/252 胜，当前目标进阶 0
