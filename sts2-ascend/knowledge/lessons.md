@@ -3320,3 +3320,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 8.00 → 8.50（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
 - 生涯战绩：0/263 胜，当前目标进阶 0
+
+## 第 264 局复盘（2026-08-24 12:48）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：CINDER, PYRE, MOLTEN_FIST, VOLLEY, RUPTURE, GOLD_AXE, SHRUG_IT_OFF, BLUDGEON, SPITE
+- 本局遗物：无
+- 战斗记录：F4 Monster战 掉血0; F7 Monster战 掉血40; F9 Monster战 掉血15; F11 Unknown战 掉血0; F15 Monster战 掉血4; F17 Boss战 掉血81（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，FIEND_FIRE(25分/8局)，EQUILIBRIUM(25分/4局)，ULTIMATE_DEFEND(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（93%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 8.50 → 9.00（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/264 胜，当前目标进阶 0
