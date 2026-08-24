@@ -4234,3 +4234,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/344 胜，当前目标进阶 0
+
+## 第 345 局复盘（2026-08-24 23:06）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BREAKTHROUGH, TRUE_GRIT, UNRELENTING, HEMOKINESIS, CINDER, MANGLE, INFLAME, EVIL_EYE, MAYHEM, BREAKTHROUGH, FISTICUFFS, ARMAMENTS, SHRUG_IT_OFF, SWORD_BOOMERANG
+- 本局遗物：POCKETWATCH, GAMBLING_CHIP
+- 战斗记录：F7 Unknown战 掉血12; F8 Monster战 掉血0; F11 Monster战 掉血10; F14 Monster战 掉血5; F15 Monster战 掉血9; F17 Boss战 掉血78（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，VOLLEY(27分/5局)，FIEND_FIRE(24分/11局)，MAYHEM(24分/6局)，DARK_EMBRACE(23分/6局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（98%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/345 胜，当前目标进阶 0
