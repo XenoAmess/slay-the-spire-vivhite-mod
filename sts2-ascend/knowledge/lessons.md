@@ -3230,3 +3230,14 @@
 - **观察点**：①Boss 战 T1「竞速投影·先验」留痕频率与胜率；②升级组合能量药水使用
   回合提前量；③四连战以上链尾阵亡（F5/F6 型）是否消失；④力量牌拾取量与 plays；
   ⑤248 批商店药水成交率。
+
+## 第 258 局复盘（2026-08-24 12:04）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VICIOUS, CINDER, MOLTEN_FIST, STOMP, CINDER, RUPTURE, BLUDGEON, SHRUG_IT_OFF, VICIOUS, INFLAME
+- 本局遗物：VAMBRACE
+- 战斗记录：F7 Monster战 掉血30; F8 Monster战 掉血13; F9 Monster战 掉血24; F14 Monster战 掉血18; F15 Monster战 掉血6; F17 Boss战 掉血56（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，FIEND_FIRE(25分/8局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 7.50 → 8.00（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））
+- 生涯战绩：0/258 胜，当前目标进阶 0
