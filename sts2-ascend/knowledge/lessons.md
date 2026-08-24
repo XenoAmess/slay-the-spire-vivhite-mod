@@ -4760,3 +4760,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/384 胜，当前目标进阶 0
+
+## 第 385 局复盘（2026-08-25 04:09）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：TAUNT, THUNDERCLAP, THRUMMING_HATCHET, ARMAMENTS, STONE_ARMOR, CRIMSON_MANTLE, THUNDERCLAP, RAMPAGE, FEED, CINDER, HEADBUTT, SWORD_BOOMERANG, BREAKTHROUGH, SECOND_WIND, SHRUG_IT_OFF, BREAKTHROUGH
+- 本局遗物：招架盾, HORN_CLEAT, 赤牛, MERCURY_HOURGLASS, 准备背包
+- 战斗记录：F25 Monster战 掉血5; F27 Monster战 掉血0; F29 Elite战 掉血15; F30 Monster战 掉血0; F31 Unknown战 掉血47; F33 Boss战 掉血51（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FEED(24分/23局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/385 胜，当前目标进阶 0
