@@ -4555,3 +4555,14 @@
 - 观察点：①下批 runs_summary 应出现 8/25 真实近局；②首个胜利局日志须 victory=true 且无
   in_progress（3zz 保护）；③F31+ 深局占比与二幕 Boss 到访率趋势。
 - 生涯战绩：0/369 胜，当前目标进阶 0
+
+## 第 372 局复盘（2026-08-25 02:31）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：TWIN_STRIKE, TAUNT, RAMPAGE, DISMANTLE, HOWL_FROM_BEYOND, RUPTURE, TAUNT, HEADBUTT, IMPERVIOUS, CINDER, DARK_EMBRACE, HOWL_FROM_BEYOND, TAUNT, HOWL_FROM_BEYOND, PANACHE, CRUELTY, STONE_ARMOR, BREAKTHROUGH
+- 本局遗物：BELLOWS, 百年积木, BAG_OF_PREPARATION
+- 战斗记录：F17 Boss战 掉血63; F19 Monster战 掉血33; F23 Monster战 掉血15; F25 Monster战 掉血36; F28 Monster战 掉血26; F30 Unknown战 掉血50（阵亡）
+- 当前高价值卡牌：VOLLEY(26分/7局)，OFFERING(26分/9局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/372 胜，当前目标进阶 0
