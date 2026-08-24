@@ -4673,3 +4673,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/378 胜，当前目标进阶 0
+
+## 第 379 局复盘（2026-08-25 03:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：FLAME_BARRIER, BURNING_PACT, UPPERCUT, UPPERCUT, UPPERCUT, STONE_ARMOR, CINDER, BREAKTHROUGH, SALVO
+- 本局遗物：UNCEASING_TOP
+- 战斗记录：F5 Monster战 掉血0; F6 Unknown战 掉血23; F7 Monster战 掉血36; F12 Monster战 掉血9; F15 Monster战 掉血20; F17 Boss战 掉血76（阵亡）
+- 当前高价值卡牌：OFFERING(26分/10局)，VOLLEY(26分/7局)，EQUILIBRIUM(25分/7局)，FIEND_FIRE(24分/11局)，DARK_EMBRACE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收
+- 生涯战绩：0/379 胜，当前目标进阶 0
