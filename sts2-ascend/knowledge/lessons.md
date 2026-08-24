@@ -4388,3 +4388,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/358 胜，当前目标进阶 0
+
+## 第 359 局复盘（2026-08-25 00:45）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 CUBEX_CONSTRUCT
+- 本局拿牌：SHRUG_IT_OFF, CINDER
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血7; F5 Monster战 掉血65（阵亡）
+- 当前高价值卡牌：EQUILIBRIUM(27分/6局)，OFFERING(25分/8局)，FORGOTTEN_RITUAL(25分/2局)，VOLLEY(25分/6局)，FIEND_FIRE(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/359 胜，当前目标进阶 0
