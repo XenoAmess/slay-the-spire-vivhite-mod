@@ -3175,3 +3175,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/254 胜，当前目标进阶 0
+
+## 第 255 局复盘（2026-08-24 11:48）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：ANGER, SHRUG_IT_OFF, DISMANTLE, SHRUG_IT_OFF, CINDER, FIGHT_ME, STONE_ARMOR, BURNING_PACT, BATTLE_TRANCE, EVIL_EYE, THUNDERCLAP, THUNDERCLAP, FIEND_FIRE, SHRUG_IT_OFF, CONFLAGRATION, CINDER, BATTLE_TRANCE, ARMAMENTS, ARMAMENTS, FLAME_BARRIER, DISMANTLE, BREAKTHROUGH, EVIL_EYE
+- 本局遗物：BLOOD_VIAL, 古茶具套装, PEN_NIB
+- 战斗记录：F20 Monster战 掉血4; F22 Monster战 掉血17; F24 Monster战 掉血19; F25 Monster战 掉血15; F30 Monster战 掉血20; F31 Monster战 掉血45（阵亡）
+- 当前高价值卡牌：MAYHEM(27分/4局)，FISTICUFFS(26分/4局)，FIEND_FIRE(25分/8局)，VOLLEY(25分/2局)，EQUILIBRIUM(25分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(9分/7局)，SETUP_STRIKE(9分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 26.00 → 24.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/255 胜，当前目标进阶 0
