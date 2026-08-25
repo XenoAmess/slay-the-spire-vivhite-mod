@@ -2053,6 +2053,29 @@ class Policy:
                 f"先验输出{dpt:.0f}/回合），必败局的伤害会流到打死为止")
         return True, note
 
+    def required_deck_burst(self, max_hp: int) -> float | None:
+        """竞速及格线：追平 learned Boss（血池/火力）所需的卡组理论爆发。
+
+        第422局复盘新增。静态 deck_burst_floor=30 只回答「卡组比打击流强多少」，
+        不回答「这套输出够不够杀 Boss」——422 局 burst≈33 高于静态门槛，全程被
+        当「非饥饿」卡组对待：力量药水在 Boss 前 3 层的普通房被放行烧掉、商店
+        金币先买了功能牌，最终空手走进必败竞速（先验 13/回合 vs 血池253/火力14）。
+        本方法把「饥饿线」换成真实对账：required_dpt = 血池 ÷ 满血可存活回合
+        （= pool×fire/max_hp），再除以 kill_race_prior_eff 还原成理论爆发口径；
+        夹在 [deck_burst_floor, 3×deck_burst_floor] 内防数据噪声把线抬到天上。
+        数据未成熟/竞速关闭时返回 None——调用方必须回落静态门槛（行为与旧版一致）。
+        """
+        pol = self.know.policy
+        if not pol.get("kill_race_enabled", True):
+            return None
+        pool, fire = self.know.boss_race_vitals()
+        if not pool or not fire or not max_hp:
+            return None
+        eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
+        floor_b = float(pol.get("deck_burst_floor", 30.0))
+        req_dpt = float(pool) * float(fire) / max(1.0, float(max_hp))
+        return clamp(req_dpt / eff, floor_b, floor_b * 3.0)
+
     @staticmethod
     def _floors_to_boss(floor_no: int) -> int:
         """距下一个 Boss 的层数（幕长为常量：一幕 Boss F17、二幕 F33，三幕按 51 估算）。
@@ -2087,11 +2110,18 @@ class Policy:
         reserve = int(pol.get("potion_boss_reserve_floors", 2))
         if reserve <= 0:
             return False
-        # 输出饥饿卡组：预留窗加宽到 potion_starved_reserve_floors（第 386~390 批）
+        # 输出饥饿卡组：预留窗加宽到 potion_starved_reserve_floors（第 386~390 批）。
+        # 第422局复盘：饥饿线从静态 deck_burst_floor 升级为竞速及格线
+        # required_deck_burst（learned Boss 血池/火力对账）——burst≈33 的卡组
+        # 高于静态门槛却远低于杀 Boss 所需，旧口径把它当「强卡组」放行烧药；
+        # 数据未成熟时回落静态门槛（行为与旧版一致）
         _deck_now = run.get("deck") or []
-        if _deck_now and self.deck_burst(_deck_now) < float(
-                pol.get("deck_burst_floor", 30.0)):
-            reserve = max(reserve, int(pol.get("potion_starved_reserve_floors", 6)))
+        if _deck_now:
+            _req_line = self.required_deck_burst(max(1, int(run.get("max_hp", 1) or 1)))
+            _starve_line = (_req_line if _req_line is not None
+                            else float(pol.get("deck_burst_floor", 30.0)))
+            if self.deck_burst(_deck_now) < _starve_line:
+                reserve = max(reserve, int(pol.get("potion_starved_reserve_floors", 6)))
         try:
             f = int(run.get("floor", 0) or 0)
         except (TypeError, ValueError):
@@ -2104,7 +2134,11 @@ class Policy:
         if combat.get("end_turn_will_kill_player"):
             return False
         pl = combat.get("player") or {}
-        _line = float(pol.get("potion_block_hp_pct", 0.35))
+        # 解封血线（第422局复盘）：与防御端「提前交药线」potion_block_hp_pct
+        # 解耦。旧版复用该键，其被爆毙证据推到顶格 0.80 后，预留窗内只要
+        # 掉血<20% 就放行烧药，封存形同虚设；缺键回落旧键（兼容旧库）
+        _line = float(pol.get("potion_hold_release_hp_pct",
+                              pol.get("potion_block_hp_pct", 0.35)))
         if pl.get("current_hp", 1) <= _line * max(1, pl.get("max_hp", 1)):
             return False
         return True
@@ -2584,12 +2618,33 @@ class Policy:
         # 药按低血急需定价，攻击/增益药按爆发缺口定价，与遗物同池竞价、同门槛
         # 成交；enough_gold 已含空药水位校验（服务端口径），无需额外查栏位
         hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
-        potion_starved = bool(deck) and self.deck_burst(deck) < float(
-            pol.get("deck_burst_floor", 30.0))
+        # 输出饥饿判定接竞速及格线（第422局复盘，口径同 _hold_offensive_potion）；
+        # 数据未成熟回落静态门槛
+        _req_line = self.required_deck_burst(max(1, int(run.get("max_hp", 1) or 1)))
+        potion_starved = bool(deck) and self.deck_burst(deck) < (
+            _req_line if _req_line is not None
+            else float(pol.get("deck_burst_floor", 30.0)))
+        # Boss 预留窗内进攻药竞价加成（第422局复盘）：饥饿卡组的 Boss 竞速是
+        # 唯一胜机（386~390 批教义），但同池竞价里功能牌 6~9 分稳定压过药水
+        # 基分 2~3 分——422 局商店路由理由明写「金币80够买药水档位」，到店却
+        # 先花 39 金买了岩石铠甲，预算跌破药水档（60金）后空手离店。预留窗内
+        # 给分类成功的进攻药一次性加价，保证「路由为买药进店」的预算不被截胡
+        _reserve_bonus = 0.0
+        if potion_starved:
+            try:
+                _sf = int(floor or 0)
+            except (TypeError, ValueError):
+                _sf = 0
+            if (_sf > 0 and self._floors_to_boss(_sf)
+                    <= int(pol.get("potion_starved_reserve_floors", 6))):
+                _reserve_bonus = float(pol.get("shop_potion_reserve_bonus", 6.0))
         for pt in shop.get("potions", []):
             if not pt.get("is_stocked") or not pt.get("enough_gold"):
                 continue
             v = self._shop_potion_value(pt, hp_pct, potion_starved)
+            if (_reserve_bonus > 0 and v > 0
+                    and self._potion_class(pt) == "offensive"):
+                v += _reserve_bonus
             if v > best_score:
                 best_action = ("buy_potion", pt["index"])
                 best_score = v
@@ -2617,20 +2672,34 @@ class Policy:
         - 无法分类：保守基线（宁缺毋滥，避免为未知效果挤占遗物预算）。
         统一减 price/120（与遗物同口径的金币机会成本）。
         """
-        blob = f"{pt.get('name') or ''} {pt.get('potion_id') or ''}".lower()
         price = pt.get("price", 0) or 0
-        if any(k in blob for k in ("格挡", "生命", "回复", "治疗", "屏障", "护甲",
-                                   "block", "heal", "health", "regen", "barrier")):
+        cls = self._potion_class(pt)
+        if cls == "defensive":
             base = 1.6 + 2.4 * (1.0 - hp_pct)
-        elif any(k in blob for k in ("力量", "敏捷", "能量", "抽", "伤害", "攻击",
-                                     "火焰", "毒", "雷", "爆炸", "能力",
-                                     "strength", "dexterity", "energy", "draw",
-                                     "damage", "attack", "fire", "poison",
-                                     "lightning", "explosive", "power")):
+        elif cls == "offensive":
             base = 1.8 + (0.8 if burst_starved else 0.0)
         else:
             base = 1.2
         return base - price / 120.0
+
+    @staticmethod
+    def _potion_class(pt: dict) -> str:
+        """货架药水分类（'defensive' | 'offensive' | 'unknown'）。
+
+        第422局复盘从 _shop_potion_value 内联词表提取：预留窗竞价加成需要
+        只对进攻/增益药生效，与使用端 _maybe_potion 的分类同一套词表。
+        """
+        blob = f"{pt.get('name') or ''} {pt.get('potion_id') or ''}".lower()
+        if any(k in blob for k in ("格挡", "生命", "回复", "治疗", "屏障", "护甲",
+                                   "block", "heal", "health", "regen", "barrier")):
+            return "defensive"
+        if any(k in blob for k in ("力量", "敏捷", "能量", "抽", "伤害", "攻击",
+                                   "火焰", "毒", "雷", "爆炸", "能力",
+                                   "strength", "dexterity", "energy", "draw",
+                                   "damage", "attack", "fire", "poison",
+                                   "lightning", "explosive", "power")):
+            return "offensive"
+        return "unknown"
 
     def _rest(self, state: dict, ctx) -> Decision:
         rest = state.get("rest") or {}

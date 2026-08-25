@@ -4226,6 +4226,88 @@ def main() -> int:
     assert abs(bs_know.policy["kill_race_prior_eff"] - 0.55) < 1e-9, \
         f"胜利未回收竞速先验折算率: {bs_know.policy['kill_race_prior_eff']}"
 
+    # 3bt) 竞速及格线与预留解耦（第422局复盘）：burst≈33 的卡组高于静态
+    #      deck_burst_floor=30、却远低于杀 learned Boss 所需（血池160/火力10/
+    #      满血存活8回合 → 及格线36.4）——旧口径把它当「非饥饿」卡组：力量
+    #      药水在距 Boss 3 层的普通怪房被放行烧掉（旧版复用顶格 0.80 的
+    #      potion_block_hp_pct 当解封口），商店路由理由明写「够买药水档位」
+    #      到店却先花金币买功能牌、预算跌破药水档空手离店，最终空手走进必败
+    #      竞速。修复三件套：required_deck_burst 竞速及格线 + 解封血线独立
+    #      旋钮 potion_hold_release_hp_pct(0.45) + 预留窗内货架进攻药竞价加成
+    _req_burst = br_pol.required_deck_burst(80)
+    assert _req_burst is not None and abs(_req_burst - 160.0 * 10.0 / 80.0 / 0.55) < 1e-6, \
+        f"竞速及格线计算失效: {_req_burst}"
+    bt_race_deck = [{"card_id": f"BT_A{i}", "card_type": "Attack", "energy_cost": 1,
+                     "dynamic_values": [{"name": "Damage", "current_value": 11}]}
+                    for i in range(3)]   # burst=33：静态门槛下的「强卡组」
+
+    def bt_potion_state(hp_now: int) -> dict:
+        return {"screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+                "turn": 1,
+                "combat": {"player": {"current_hp": hp_now, "max_hp": 80,
+                                      "block": 0, "energy": 3},
+                           "hand": [],
+                           "enemies": [{"index": 0, "enemy_id": "M", "name": "小怪",
+                                        "current_hp": 30, "max_hp": 30, "block": 0,
+                                        "is_alive": True, "is_hittable": True,
+                                        "intents": [{"total_damage": 7}]}]},
+                "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 14,
+                        "deck": list(bt_race_deck),
+                        "potions": [{"index": 0, "potion_id": "STRENGTH_P",
+                                     "name": "力量药水", "description": "获得2点力量。",
+                                     "occupied": True, "can_use": True,
+                                     "usage": "combat"}]}}
+
+    bt_ctx = SimpleNamespace(combat={"comp_id": "BT_M", "node_type": "Monster"},
+                             current_combat_is_hard=True)
+    # 复刻 422 局 F14 场景（距 Boss 3 层普通房、54%~75% 血）：竞速饥饿口径下
+    # 预留窗加宽生效，且新解封线 0.45 不再被 50%~75% 血触发——旧口径全放行
+    d_bt_hold = br_pol.decide(bt_potion_state(60), bt_ctx)
+    assert d_bt_hold.action != "use_potion", \
+        f"竞速饥饿卡组距Boss3层普通房应封存进攻药水: {d_bt_hold.action}（{d_bt_hold.reason}）"
+    d_bt_mid = br_pol.decide(bt_potion_state(42), bt_ctx)
+    assert d_bt_mid.action != "use_potion", \
+        f"解封线0.45下52%血不得放行烧药（旧口径0.80会烧）: {d_bt_mid.action}（{d_bt_mid.reason}）"
+    d_bt_low = br_pol.decide(bt_potion_state(24), bt_ctx)
+    assert d_bt_low.action == "use_potion", \
+        f"真濒死仍须立即解封（保命优先于囤积）: {d_bt_low.action}（{d_bt_low.reason}）"
+    # 无 Boss 实证的空库：及格线回落 None→静态门槛，burst33≥30 视作强卡组，
+    # 距 Boss 3 层照旧投放（防「囤药入坟」旧病回潮）
+    nv2_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-btline-"))), random.Random(13))
+    assert nv2_pol.required_deck_burst(80) is None, "无 Boss 实证时竞速及格线应为 None"
+    d_bt_nv = nv2_pol.decide(bt_potion_state(60), bt_ctx)
+    assert d_bt_nv.action == "use_potion", \
+        f"无实证时静态门槛行为必须保持: {d_bt_nv.action}（{d_bt_nv.reason}）"
+
+    # 商店竞价保护：预留窗内进攻药加成压过可选卡；窗外加成关闭
+    def bt_shop_state(floor_no: int) -> dict:
+        return {"screen": "SHOP",
+                "available_actions": ["buy_card", "buy_potion", "close_shop_inventory"],
+                "shop": {"is_open": True, "can_close": True,
+                         "cards": [{"index": 0, "card_id": "BT_SMALL_GUARD", "name": "小盾",
+                                    "card_type": "Skill", "energy_cost": 1,
+                                    "is_stocked": True, "enough_gold": True, "price": 75,
+                                    "rules_text": "获得4点格挡",
+                                    "dynamic_values": [{"name": "Block", "current_value": 4}]}],
+                         "relics": [], "card_removal": None,
+                         "potions": [{"index": 0, "potion_id": "STRENGTH_POTION",
+                                      "name": "力量药水", "rarity": "Uncommon",
+                                      "usage": "CombatOnly", "price": 50,
+                                      "is_stocked": True, "enough_gold": True}]},
+                "run": {"current_hp": 60, "max_hp": 80, "gold": 500, "floor": floor_no,
+                        "deck": list(bt_race_deck)}}
+
+    d_bt_shop = br_pol.decide(bt_shop_state(12), br_ctx)
+    assert d_bt_shop.action == "buy_potion" and "药水" in d_bt_shop.reason, \
+        f"预留窗内进攻药应加价压过可选卡（422局岩石铠甲截胡药水预算的复刻位）: " \
+        f"{d_bt_shop.action}（{d_bt_shop.reason}）"
+    d_bt_farshop = br_pol.decide(bt_shop_state(10), br_ctx)
+    assert d_bt_farshop.action == "buy_card", \
+        f"预留窗外竞价加成必须关闭（防为囤药牺牲战力投资）: " \
+        f"{d_bt_farshop.action}（{d_bt_farshop.reason}）"
+
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
