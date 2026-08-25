@@ -6491,3 +6491,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.42 → 0.45（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/528 胜，当前目标进阶 0
+
+## 第 529 局复盘（2026-08-25 22:06）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：BREAKTHROUGH, HOWL_FROM_BEYOND, UNRELENTING, UNRELENTING, BATTLE_TRANCE, HEMOKINESIS, SHRUG_IT_OFF, RUPTURE, CRUELTY, INFLAME, CINDER, CRIMSON_MANTLE, RAMPAGE, CONFLAGRATION, CINDER, TRUE_GRIT, FEED, DISMANTLE, BATTLE_TRANCE, CINDER, DISINTEGRATION, MIND_ROT, DISINTEGRATION, DISINTEGRATION
+- 本局遗物：孙子兵法, MEAL_TICKET, ANCHOR, 草莓, 闪亮口红, PEAR
+- 战斗记录：F22 Monster战 掉血40; F23 Monster战 掉血2; F25 Monster战 掉血5; F28 Monster战 掉血45; F31 Unknown战 掉血14; F33 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，PRIMAL_FORCE(24分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/36局)，FEED(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.42 → 0.45（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/529 胜，当前目标进阶 0
