@@ -5390,3 +5390,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/436 胜，当前目标进阶 0
+
+## 第 437 局复盘（2026-08-25 10:44）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：MAYHEM, FIGHT_ME, BREAKTHROUGH, INFLAME, COLOSSUS, PACTS_END, RAMPAGE, SHRUG_IT_OFF
+- 本局遗物：VENERABLE_TEA_SET, 小血瓶
+- 战斗记录：F5 Monster战 掉血5; F6 Monster战 掉血28; F8 Monster战 掉血9; F14 Monster战 掉血31; F15 Elite战 掉血18; F17 Boss战 掉血36（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/437 胜，当前目标进阶 0
