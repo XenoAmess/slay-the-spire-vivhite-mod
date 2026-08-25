@@ -6024,3 +6024,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/490 胜，当前目标进阶 0
+
+## 第 491 局复盘（2026-08-25 16:57）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：TRUE_GRIT, UNRELENTING, EVIL_EYE, SHRUG_IT_OFF, MOLTEN_FIST, PANACHE, TAUNT, SECOND_WIND, FEED, HOWL_FROM_BEYOND, FIGHT_ME, STONE_ARMOR, SHRUG_IT_OFF, TAUNT, RAMPAGE
+- 本局遗物：STRAWBERRY, VENERABLE_TEA_SET, 准备背包, BLOOD_VIAL, WHETSTONE, 送货员
+- 战斗记录：F19 Monster战 掉血2; F20 Monster战 掉血21; F24 Monster战 掉血32; F28 Elite战 掉血21; F30 Monster战 掉血15; F33 Boss战 掉血86（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，VOLLEY(24分/10局)，FEED(24分/29局)，PANACHE(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：danger_comp_blk_boost: 0.30 → 0.35（高速失血爆毙（5回合掉血86，每回合17≥14）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））
+- 生涯战绩：0/491 胜，当前目标进阶 0
