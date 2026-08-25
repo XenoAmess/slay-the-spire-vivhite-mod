@@ -5346,3 +5346,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/432 胜，当前目标进阶 0
+
+## 第 433 局复盘（2026-08-25 10:16）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：BREAKTHROUGH, EVIL_EYE, CINDER, CRIMSON_MANTLE, EVIL_EYE, BLUDGEON, WHIRLWIND, CONFLAGRATION, RAMPAGE, INFLAME, SHRUG_IT_OFF, MAYHEM, TRUE_GRIT, THUNDERCLAP, COLOSSUS, CINDER, SHRUG_IT_OFF, BLUDGEON, JUGGLING, HOWL_FROM_BEYOND
+- 本局遗物：VAMBRACE, ANCHOR, BLOOD_VIAL, 药水腰带
+- 战斗记录：F22 Monster战 掉血7; F23 Unknown战 掉血6; F25 Monster战 掉血13; F30 Monster战 掉血4; F31 Elite战 掉血39; F33 Boss战 掉血42（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，MAYHEM(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/433 胜，当前目标进阶 0
