@@ -4054,7 +4054,9 @@ def main() -> int:
 
     # 3zy) 输出饥饿的成长牌增值（第 255 批复盘）：Boss 攻坚死因形态是「即时伤害
     #      不够、长战无成长」——力量型能力每早一回合上场就全程复利。拾取端此前
-    #      平面 5 分定价；饥饿时力量文本的能力牌按缺口深度加分（base2+extra4）
+    #      平面 5 分定价；饥饿时力量文本的能力牌按缺口深度加分（base+extra）。
+    #      第429~434批复盘扩展：加分之上叠加「成长引擎稀缺」结构分——卡组零引擎
+    #      全额、1 台减半、≥cap 归零（首台点燃是刚需，第三张恶魔形态是注水）
     ph_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powhun-"))
     ph_know = knowledge.Knowledge(ph_dir)
     ph_pol = policy.Policy(ph_know, random.Random(5))
@@ -4066,8 +4068,20 @@ def main() -> int:
                  "rules_text": "你的回合开始时风平浪静"}
     v_strong = ph_pol.eval_reward_card(dict(pow_strong), list(starve_deck))
     v_plain = ph_pol.eval_reward_card(dict(pow_plain), list(starve_deck))
-    assert abs((v_strong - v_plain) - 6.0) < 1e-9, \
-        f"饥饿成长牌加分缺失或数值不符: {v_strong - v_plain:.2f}（期望 2+4×缺口1.0）"
+    _ph_b = float(ph_know.policy["power_starve_bonus_base"])
+    _ph_x = float(ph_know.policy["power_starve_bonus_extra_max"])
+    _ph_s = float(ph_know.policy.get("scaling_engine_pick_bonus", 7.0))
+    assert abs((v_strong - v_plain) - (_ph_b + _ph_x + _ph_s)) < 1e-9, \
+        f"饥饿成长牌加分缺失或数值不符: {v_strong - v_plain:.2f}（期望 base+extra×缺口1.0+稀缺满档）"
+    eng1_deck = list(starve_deck) + [dict(pow_strong, card_id="INFLAME_E1")]
+    eng2_deck = eng1_deck + [dict(pow_strong, card_id="INFLAME_E2")]
+    d_eng = []
+    for _eng_deck in (starve_deck, eng1_deck, eng2_deck):
+        d_eng.append(ph_pol.eval_reward_card(dict(pow_strong), list(_eng_deck))
+                     - ph_pol.eval_reward_card(dict(pow_plain), list(_eng_deck)))
+    assert abs(d_eng[0] - (_ph_b + _ph_x + _ph_s)) < 1e-9, "零引擎稀缺加分缺失"
+    assert abs((d_eng[0] - d_eng[1]) - _ph_s / 2.0) < 1e-9, "1台引擎时稀缺未减半"
+    assert abs((d_eng[1] - d_eng[2]) - _ph_s / 2.0) < 1e-9, "引擎数达cap后稀缺未归零"
     fed_deck = list(starve_deck) + [
         {"card_id": f"PH_BIG{i}", "card_type": "Attack", "energy_cost": 1,
          "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
@@ -4075,6 +4089,29 @@ def main() -> int:
     v_plain2 = ph_pol.eval_reward_card(dict(pow_plain), list(fed_deck))
     assert abs(v_strong2 - v_plain2) < 1e-9, \
         f"卡组成型后成长牌仍吃饥饿加分: {v_strong2 - v_plain2:.2f}"
+
+    # 3zy-bis（第429~434批复盘）：锻造屏在饥饿卡组下优先升级成长引擎——
+    # 回归保护点：①升级分支此前没有任何带非空卡组的用例（空卡组短路饥饿门，
+    # 曾险些掩盖作用域缺陷）；②力量牌须凭锻造端加分压过攻击候选并留痕来源；
+    # ③整条路径走真实 decide()，防静默吞异常退化为永远选攻击。
+    up_state = {
+        "screen": "CARD_SELECTION",
+        "available_actions": ["select_deck_card", "confirm_selection"],
+        "selection": {"kind": "upgrade", "prompt": "升级", "min_select": 1,
+                      "selected_count": 0, "can_confirm": False,
+                      "cards": [
+                          {"index": 0, "card_id": "UP_BIG_ATK", "name": "重击",
+                           "card_type": "Attack", "energy_cost": 1,
+                           "dynamic_values": [{"name": "Damage", "current_value": 15}]},
+                          {"index": 1, "card_id": "INFLAME_UP_T", "name": "点燃",
+                           "card_type": "Power", "energy_cost": 1,
+                           "rules_text": "获得2点力量"}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 10,
+                "deck": [dict(c) for c in starve_deck]}}
+    d_up = ph_pol.decide(up_state, type("UCtx", (), {})())
+    assert d_up.action == "select_deck_card" and d_up.params.get("option_index") == 1, \
+        f"饥饿锻造未优先成长引擎: {d_up.action}（{d_up.reason}）"
+    assert "优先升级成长引擎" in d_up.reason, f"锻造端引擎门控留痕缺失: {d_up.reason}"
 
     # 3zz) 终局日志防回写 + 复盘摘要的脏戳豁免（第 369 局复盘）：218 批的增量
     #      存档落地后，「结算屏→回主菜单→检查时间线」等后继决策会以增量稿

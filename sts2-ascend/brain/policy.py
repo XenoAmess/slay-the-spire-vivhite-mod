@@ -2163,6 +2163,20 @@ class Policy:
     # rewards / selection / bundles / chest / capstone
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _is_scaling_power(card: dict) -> bool:
+        """力量/伤害成长型能力牌判定（第429~434批复盘新增）。
+
+        拾取端与锻造端必须共用同一口径，否则出现「拾取认得点燃、锻造不认得」
+        的半接线断层（第423~428批复盘教义：教义落地必须验收到最后一个消费端）。
+        判定沿用第 255 批的文本正则：获得力量 / 伤害提高类描述。
+        """
+        if not is_power(card):
+            return False
+        return bool(re.search(
+            r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
+            _text(card), re.I))
+
     def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
 
@@ -2311,12 +2325,25 @@ class Policy:
             # 复利加成（223 批已在战斗端给能力牌长战加成，拾取端此前仍按
             # 平面 5 分定价）。与高质攻击的饥饿加分同构：缺口越深纠偏越大；
             # 「拿了不打」惩罚与重复贬值照常生效，防止为饥饿囤死牌
-            if burst_starved and re.search(
-                    r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
-                    _text(card), re.I):
+            if burst_starved and self._is_scaling_power(card):
                 _p_deficit = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
                 value += (float(pol.get("power_starve_bonus_base", 2.0))
                           + float(pol.get("power_starve_bonus_extra_max", 4.0)) * _p_deficit)
+                # 成长引擎稀缺加分（第429~434批复盘新增）：饥饿纠偏此前只看
+                # 「缺口深度」不看「卡组已有几台成长引擎」——434 局 9 拿 0 张
+                # 力量牌、生涯 INFLAME 仅 72 拿，前夜竞速预演全线「先验输出
+                # 12/回合 vs 血池254」。数学上首台点燃在 7 回合长战里 ≈ +30 伤，
+                # 恰好是本批 Boss 败局的典型差距，但旧加分上限 6 分压不过高质
+                # 攻击的 20 分饥饿加分，引擎永远竞争不过又一张打击。稀缺度按
+                # 已有引擎数线性衰减：零引擎全额、1 台减半、≥cap 归零——
+                # 防「为饥饿囤三张恶魔形态」的反向注水
+                if deck:
+                    _engines = sum(1 for c in deck if self._is_scaling_power(c))
+                else:
+                    _engines = 0
+                _cap_e = max(1.0, float(pol.get("scaling_engine_deck_cap", 2.0)))
+                _scarcity = clamp((_cap_e - _engines) / _cap_e, 0.0, 1.0)
+                value += float(pol.get("scaling_engine_pick_bonus", 7.0)) * _scarcity
         elif is_bad_card(card):
             value -= 10.0
         value += pol["rarity_bonus"].get(card.get("rarity", ""), 0.0)
@@ -2515,15 +2542,26 @@ class Policy:
             # 让给防御/功能牌等于浪费整个篝火。
             # 饥饿线对账化（第423~428批复盘，_starve_line）：burst 高于静态带
             # 却远低于杀 Boss 所需的卡组旧口径判「非饥饿」，升级端对缺口失明
+            # 成长引擎优先（第429~434批复盘新增）：输出饥饿或前夜竞速必败时，
+            # 升级力量成长牌额外结构性加分。长战复利口径：点燃+每点力量对
+            # 后续每刀全程加成，7 回合 Boss 战 ≈ +30 伤，高于多数单卡升级的
+            # +3~6 面值；而旧评估 eval_reward_card(c, []) 里力量牌基础分 ~5-7，
+            # 大攻击 ~20+，砧子永远落在攻击上（434 局前夜「可升级15张」仍无
+            # 一台成型引擎）。门控在饥饿/必败局：走廊健康局面不扭曲既有节奏
             _up_deck = (state.get("run") or {}).get("deck", [])
             _up_mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             _up_starved = bool(_up_deck) and self.deck_burst(_up_deck) < self._starve_line(_up_mh)
+            _up_doomed, _ = self._boss_race_doomed(_up_deck, _up_mh)
             _atk_bonus = 4.0 if _up_starved else 2.0
+            _scale_up_bonus = (float(self.know.policy.get("upgrade_scaling_power_bonus", 16.0))
+                               if (_up_starved or _up_doomed) else 0.0)
             best, best_v = None, -1e9
             for c in candidates:
                 if c.get("upgraded"):
                     continue
                 v = self.eval_reward_card(c, []) + (_atk_bonus if is_attack(c) else 0.0)
+                if _scale_up_bonus > 0.0 and self._is_scaling_power(c):
+                    v += _scale_up_bonus
                 if v > best_v:
                     best, best_v = c, v
             if best is None:
@@ -2531,6 +2569,8 @@ class Policy:
             pick = best
             tag = "card_upgrade"
             reason = f"升级卡牌：【{pick.get('name')}】"
+            if _scale_up_bonus > 0.0 and self._is_scaling_power(pick):
+                reason += f"（{'前夜竞速必败' if _up_doomed else '输出饥饿'}，优先升级成长引擎 +{_scale_up_bonus:.0f}）"
         else:
             # 必须用真实卡组上下文评估：第 34 局经此路径连拿 7 张全攻牌、
             # 第 33 局拿进基础【打击】——空卡组评估时攻击占比恒为中性 0.45，
