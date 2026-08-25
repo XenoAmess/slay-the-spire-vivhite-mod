@@ -148,6 +148,7 @@ class Policy:
         self._stall_turn_seen = None
         self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
+        self._unlock_stall = 0      # UNLOCK 已识别但 API 确认动作缺失时的独立鼠标兜底计数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
         self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
         # 斩杀竞速投影（第 90~91 批复盘）：本场已打出的期望总伤 / 出牌回合数
@@ -209,6 +210,8 @@ class Policy:
         screen = state.get("screen", "UNKNOWN")
         if screen != "UNKNOWN":
             self._unknown_stall = 0
+        if screen != "UNLOCK":
+            self._unlock_stall = 0
         handler = {
             "MAIN_MENU": self._main_menu,
             "CHARACTER_SELECT": self._character_select,
@@ -3706,10 +3709,29 @@ class Policy:
         """新内容解锁展示屏（新遗物/新卡等，mod UNLOCK 路由 + confirm_unlock 动作）。"""
         unlock = state.get("unlock") or {}
         items = "、".join(unlock.get("items") or [])
-        if "confirm_unlock" in state.get("available_actions", []):
+        actions = state.get("available_actions", [])
+        if "confirm_unlock" in actions:
+            self._unlock_stall = 0
             label = f"【{items}】" if items else ""
             return Decision("confirm_unlock", {}, f"解锁新内容{label}，确认收下", wait=1.2)
-        return Decision(None, {}, "解锁界面：等待确认按钮就绪", wait=0.8)
+        # 双保险：曾出现 mod 已识别 NUnlockRelicsScreen，但因私有基类字段反射
+        # 漏查而永久给出 can_confirm=false/actions=[]。不要把已识别的 UNLOCK
+        # 排除在 UNKNOWN 鼠标兜底之外；连续观察后点击画面底部中央的确认按钮。
+        self._unlock_stall += 1
+        if self._unlock_stall >= 12:
+            self._unlock_stall = 0
+            clicked = self._click_game_point(0.5, 0.89)
+            probe = (f"type={unlock.get('unlock_type') or 'unknown'}, "
+                     f"can_confirm={unlock.get('can_confirm')}, actions={actions}")
+            return Decision(None, {},
+                            f"解锁界面 API 长时间无确认动作（{probe}），"
+                            f"鼠标兜底点击{'已发送' if clicked else '失败'}",
+                            wait=1.5)
+        return Decision(None, {},
+                        f"解锁界面：等待确认按钮就绪（{self._unlock_stall}/12；"
+                        f"type={unlock.get('unlock_type') or 'unknown'}；"
+                        f"can_confirm={unlock.get('can_confirm')}；actions={actions}）",
+                        wait=0.8)
 
     def _unknown(self, state: dict, ctx) -> Decision:
         # 按载荷兜底路由，防新屏幕名漏网

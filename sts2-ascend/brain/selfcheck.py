@@ -5047,6 +5047,35 @@ def main() -> int:
     assert d_skip.action == "skip_reward_cards", \
         f"有跳过动作的低价值屏未跳过: {d_skip.action}（{d_skip.reason}）"
 
+    # 3zx) 解锁展示屏双通道（第551局后现场修复）：mod 正常暴露动作时走 HTTP；
+    #      已识别 UNLOCK 但 can_confirm=false/actions=[] 连续 12 tick 时，必须像
+    #      UNKNOWN 旧路由一样点击底部确认区，不能因“识别成功”反而永久等待。
+    ul_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-unlock-")))
+    ul_pol = policy.Policy(ul_know)
+    ul_ctx = SimpleNamespace()
+    ul_ready = {
+        "screen": "UNLOCK", "available_actions": ["confirm_unlock"],
+        "unlock": {"unlock_type": "NUnlockRelicsScreen",
+                   "items": ["红头骨"], "can_confirm": True}}
+    d_ul_ready = ul_pol.decide(ul_ready, ul_ctx)
+    assert d_ul_ready.action == "confirm_unlock", \
+        f"解锁 API 正常时未确认: {d_ul_ready.action}（{d_ul_ready.reason}）"
+    ul_stuck = {
+        "screen": "UNLOCK", "available_actions": [],
+        "unlock": {"unlock_type": "NUnlockRelicsScreen",
+                   "items": ["红头骨"], "can_confirm": False}}
+    ul_clicks = []
+    ul_pol._click_game_point = lambda x, y: ul_clicks.append((x, y)) or True
+    for i in range(11):
+        d_ul_wait = ul_pol.decide(ul_stuck, ul_ctx)
+        assert d_ul_wait.action is None and not ul_clicks, \
+            f"解锁兜底过早触发（tick {i + 1}）: {d_ul_wait.reason}"
+    d_ul_fallback = ul_pol.decide(ul_stuck, ul_ctx)
+    assert d_ul_fallback.action is None and ul_clicks == [(0.5, 0.89)] \
+            and "鼠标兜底点击已发送" in d_ul_fallback.reason, \
+        f"解锁无动作未触发鼠标兜底: clicks={ul_clicks}（{d_ul_fallback.reason}）"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
