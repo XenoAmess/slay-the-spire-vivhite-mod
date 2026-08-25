@@ -6096,3 +6096,14 @@
 - **修复**：①kill_race_prior_eff 回收通道死锁解锁——该旋钮被长战死证据棘轮压到 0.37 触底，唯一回升通道却挂整局胜利（0/494 永不触发），形成「越悲观→越自证→越无法回升」闭环；本批六场一幕 Boss 全判必败、三场实际打赢，反向证据无窗口入账。reflect 新增部分胜利释放：非胜利局跨过幕界（F18+ 击败过一幕 Boss）且不死于此场 Boss 战时 +0.03 向锚点 0.55 回收。②教练校准 0.37→0.42（必败预判误报率 50% 的一次性部分回收）。③policy 入场线二值判定加 1e-9 浮点容差（2RSHS 局「预计75%<75%」矛盾留痕）。selfcheck 新增 3bs-2 正反例三连。SELFCHECK OK。
 - **经验**：①校准旋钮的释放条件必须与「该口径的直接反证」挂钩而非整局胜利这类高阶事件——否则误差单向累积成死锁；棘轮设计有降必有升，升的钥匙就是降所依据证据的反面。②「预判必败却打赢」是最值钱的免费校准样本，同时验证执行端、证伪预演端——复盘应主动检索预演结论与实战结局的错位样本，不只盯死亡记录。③浮点比例量做二值阈值比较必须带 epsilon，否则压线案例被表示误差翻转判定留下矛盾账目。④死墙会移动：旧墙修复兑现后瓶颈自然转移（本批 F17→F23~F33），应分开归因「修复是否兑现」与「新墙长什么样」。
 - **观察区（留待下批）**：eff 释放在跨幕局的到账频率（近期跨幕率约四成）；必败预判 Boss 战损是否从 70+ 收窄；F22~F23 重锤段入场血量分布是否上移；danger_comp_blk_boost 0.35→0.40 后二幕爆毙形态是否消失。
+
+## 第 497 局复盘（2026-08-25 17:55）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：FLAME_BARRIER, JUGGLING, BATTLE_TRANCE, BREAKTHROUGH, FIGHT_ME, JUGGLING, STONE_ARMOR, SWORD_BOOMERANG, BATTLE_TRANCE, HEMOKINESIS, AGGRESSION, CONFLAGRATION, SHRUG_IT_OFF, PANIC_BUTTON, THRASH, BREAKTHROUGH, CINDER, ANGER, CINDER, DISMANTLE, JUGGERNAUT, MOLTEN_FIST, DISINTEGRATION, MIND_ROT, DISINTEGRATION, DISINTEGRATION
+- 本局遗物：ETERNAL_FEATHER, BRONZE_SCALES
+- 战斗记录：F22 Monster战 掉血9; F25 Monster战 掉血28; F28 Monster战 掉血2; F30 Monster战 掉血6; F31 Monster战 掉血39; F33 Boss战 掉血68（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，VOLLEY(24分/10局)，HAND_OF_GREED(24分/17局)，CONFLAGRATION(24分/32局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/497 胜，当前目标进阶 0
