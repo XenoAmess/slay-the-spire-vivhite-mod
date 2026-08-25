@@ -612,7 +612,7 @@ try {
         @{ Path = (Join-Path $root "knowledge\voice_speaker.lock"); Scripts = @((Join-Path $root "tts\edge_speaker.py"), (Join-Path $root "tts\nano_speaker.py"), (Join-Path $root "tts\speaker.py")) },
         @{ Path = (Join-Path $root "knowledge\voice_nano.lock"); Scripts = @((Join-Path $root "tts\nano_speaker.py")) },
         @{ Path = (Join-Path $root "knowledge\voice_quip_speaking.flag"); Scripts = @((Join-Path $root "tts\quipper.py")) },
-        @{ Path = (Join-Path $root "knowledge\voice_clone_busy.flag"); Scripts = @((Join-Path $root "tts\speak_once.py")) },
+        @{ Path = (Join-Path $root "knowledge\voice_clone_busy.flag"); Scripts = @((Join-Path $root "tts\quipper.py")) },
         @{ Path = (Join-Path $root "knowledge\review_active.flag"); Pattern = '(^|\s)-m\s+brain(\s|$)' },
         @{ Path = $runnerPidFile; Scripts = @($runnerPath) },
         @{ Path = $brainPidFile; Pattern = '(^|\s)-m\s+brain(\s|$)' }

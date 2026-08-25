@@ -149,19 +149,24 @@ compact 只减少当前 checkout、文件扫描和后续提示词成本；普通
 
 ## 语音朗读（ASCEND-VOICE）
 
-复盘启动时还会按配置拉起语音朗读器，把模型的分析过程**读出声**。当前默认是 **edge 模式**；
-白绮碎碎念的克隆引擎则是 MOSS-TTS-Nano。`nano` 模式可全程用克隆音色朗读（0.1B ONNX CPU，本机 RTF≈2.6）：
+白绮碎碎念和复盘朗读现在都走 **IndexTTS-2.5 GPU**。`quipper.py` 是唯一常驻模型 owner；
+`speaker.py` 通过仅监听 localhost、带 session 校验的队列提交复盘句子，两条链不会各占一份模型：
 
-- **允许滞后**：朗读队列上限 4096 句（超出丢最老防溢出），复盘结束后也会把积压内容读完才退出
-- 合成/播放流水线并行；参考音色 `tts/reference_voice_48k.wav`（48kHz 立体声，替换即换音色）
+- 默认配置：`llm.tts_mode=indextts`、`tts.clone_engine=indextts`、`device=cuda:0`
+- GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；禁用 BF16、
+  FlashAttention、CUDA 自定义 kernel 和 torch.compile
+- 固定参考音色 `tts/reference_voice_15s.wav` 首次生成条件缓存；只在参考阶段使用的 Wav2Vec/CAMPPlus
+  随后从显卡卸载，不参与每句合成
+- 复盘直播最多保留 8 句最新内容；`LIVE-END` 会丢弃过时积压，让结论优先于直播正文，直播正文又优先于碎碎念
 - 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
-- 单实例锁：复盘连开时只有一个朗读器在跑，新流截断自动接续
-- 模式：`config.json` 的 `llm.tts_mode` = `edge`（默认）/ `hybrid`（SAPI 实时直播 + 克隆结论）/ `nano`（全克隆音色，滞后大）/ `sapi`（纯系统语音）/ `off`
+- GPU owner 和复盘朗读器各有 session-scoped 单实例锁；CUDA 不可用时明确失败，绝不静默回退 CPU 或加载第二份模型
+- 兼容模式仍可选：`llm.tts_mode` = `hybrid` / `sapi` / `edge` / `nano` / `off`
 - **音量控制**：`Ctrl+Shift+Alt+↑` 调大 / `Ctrl+Shift+Alt+↓` 调小（±10%）/ `Ctrl+Shift+Alt+M` 静音切换；
   悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）
-- 手动试听：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/nano_speaker.py --test`
+- 手动一次性朗读：先启动整套，再运行 `py -3 tts/speak_once.py <UTF-8文本文件>`；它只提交给现有 owner，不会另载模型
 
-TTS 环境在 `third_party/`（uv 旁路，gitignore）。选型实测见 `docs/2026-08-23-TTS框架选型预研.md`。
+TTS 环境在 `third_party/index-tts/`（uv 旁路，gitignore）。GPU 改造与实测见
+`docs/2026-08-26-IndexTTS-GPU双路共享.md`。
 
 ## 进程结构
 
@@ -170,9 +175,9 @@ Start-Agent.ps1（session + PID 身份记录，默认后台）
   ├─ SlayTheSpire2.exe（Vulkan）
   └─ runner.py（拉起大脑 / 退出码42重启 / 崩溃自动回滚）
         └─ py -m brain（决策主循环）
-              ├─ quipper.py（白绮碎碎念，环境可用时）
+              ├─ quipper.py（唯一 IndexTTS GPU owner + 白绮碎碎念）
               ├─ 每局结束 → review_queue.json
-              └─ 复盘线程 → opencode → viewer / speaker（按需）
+              └─ 复盘线程 → opencode → viewer / speaker（speaker 提交到同一 GPU owner）
 
 Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏关窗
 ```
