@@ -1765,12 +1765,18 @@ class Policy:
         # 孤注一掷（第 59 局 Boss 战 T6 实证）：致死缺口在手、却没有任何可负担的
         # 格挡牌时，旧逻辑把全部非击杀攻击压到禁玩线、3 能量原样结束回合白吃
         # 13 刀——无甲可补时防御已不可能，唯一活路是抢斩杀让敌人意图作废。
-        desperate = lethal and not reserve_for_block
+        # 败局竞速局吞并孤注一掷（第514~517批复盘）：竞速已判必败时，致死回合
+        # 若仍落入 desperate 的 0.55 攻击衰减+1.8 格挡增益，执行层就在逐回合
+        # 买命——「必败局的伤害会流到打死为止」的直接执行层病灶；判死局的
+        # 唯一翻盘路径是把每一分能量押进输出，让实测 dpt 有机会上修推翻投影。
+        desperate = lethal and not reserve_for_block and not hopeless_race
         # 败局竞速：整场被判负但单回合尚不致死——desperate 只救"当场必死"，
         # 这里救的是"两回合内必死"；二者互斥计提速，保证任何局面只放大一次
         race_allin = hopeless_race and not desperate
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
-        if lethal:
+        # 败局竞速豁免（第514~517批复盘）：判死局的致死回合不再压攻击抬格挡——
+        # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留
+        if lethal and not race_allin:
             atk_damp, blk_boost = 0.55, 1.8
         elif urgent:
             atk_damp, blk_boost = 0.75, 1.4
@@ -2521,7 +2527,9 @@ class Policy:
         core = float(self.know.policy.get("deck_thin_core", 8))
         return self._deck_good_count(deck) < core
 
-    def _pick_threshold(self, deck: list[dict]) -> float:
+    def _pick_threshold(self, deck: list[dict],
+                        max_hp: int | None = None,
+                        act: int | None = None) -> float:
         """动态拿牌门槛：非基础牌超出软上限后线性抬升（每超一张 +1.5）。
 
         第 65 局实证：固定阈值 2.0 下 24 张卡组照拿不误（SHRUG_IT_OFF×5）——
@@ -2533,6 +2541,11 @@ class Policy:
         整场只拿 6 张牌——长战后期抽牌全是打击。门槛此前只升不降，而单薄卡组
         的真正问题是「量不足」：抽 5 张的方差让爆发曲线无法稳定组装，此时
         及格线以上的牌都该收，每缺 1 张核心牌门槛按 discount 递减。
+
+        输出饥饿减免（第514~517批复盘）：接通 pick_threshold_starve_relief 死键
+        ——该键此前只存在于 policy.json，代码零消费，「饥饿降门槛」从未生效。
+        卡组爆发低于竞速及格线时按缺口深度比例降低门槛（深缺口最多 -2.5），
+        与拾取端饥饿加分同向：把边际攻击/引擎变便宜，而不是拦在及格线外。
         """
         pol = self.know.policy
         base = float(pol["card_pick_threshold"])
@@ -2546,6 +2559,13 @@ class Policy:
         core = float(pol.get("deck_thin_core", 8))
         if good < core:
             thr -= (core - good) * float(pol.get("deck_thin_discount", 0.35))
+        relief = float(pol.get("pick_threshold_starve_relief", 0.0))
+        if relief > 0.0 and max_hp:
+            _burst = self.deck_burst(deck)
+            _line = self._starve_line(max_hp, act=act)
+            if _burst < _line:
+                _deficit = clamp(1.0 - _burst / max(1e-6, _line), 0.0, 1.0)
+                thr -= relief * _deficit
         return max(0.0, thr)
 
     def eval_reward_card(self, card: dict, deck: list[dict],
@@ -2750,7 +2770,7 @@ class Policy:
                 vals.append(f"{c.get('name')}={v:.1f}")
                 if v > best_v:
                     best, best_v = c, v
-            pick_line = self._pick_threshold(deck)
+            pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
             if best_v >= pick_line and "choose_reward_card" in actions:
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
@@ -2844,7 +2864,7 @@ class Policy:
 
         candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
 
-        def badness(c):
+        def badness(c, for_removal=False):
             t = card_type(c).lower()
             if t == "curse":
                 return 100
@@ -2853,10 +2873,17 @@ class Policy:
             cid = (c.get("card_id") or "").upper()
             if "STRIKE" in cid and not c.get("upgraded"):
                 return 50
+            # 删牌语义扩展（第514~517批复盘）：未升级防御在打击之后、普通牌之前——
+            # 防御技面值保底分(~8.7)让它们在拾取端持续注水（DEFEND 生涯 12848 次），
+            # 而 junk 名单只认打击，防御臃肿永不可逆；输出饥饿主矛盾下，
+            # 超出 min_block_cards 的冗余防御是「删掉最不心疼」的候选。
+            # 仅付费删牌/变化生效，战斗献祭(tribute)不适用
+            if for_removal and "DEFEND" in cid and not c.get("upgraded"):
+                return 40
             return -self.eval_reward_card(c, [])
 
         if removing or transforming:
-            pick = max(candidates, key=badness)
+            pick = max(candidates, key=lambda c: badness(c, True))
             verb = "删除" if removing else "变化"
             tag = "card_remove" if removing else "card_transform"
             reason = f"{verb}卡牌：【{pick.get('name')}】（最无价值）"
@@ -2890,7 +2917,12 @@ class Policy:
             for c in candidates:
                 if c.get("upgraded"):
                     continue
-                v = self.eval_reward_card(c, []) + (_atk_bonus if is_attack(c) else 0.0)
+                # 真实卡组上下文（第514~517批复盘）：旧版传空卡组 []，攻击占比
+                # 恒为中性 0.45、格挡稀缺与饥饿加分全部失效——与拿牌端第 33/34 局
+                # 同型病灶。传入真实卡组后，饥饿局的高质攻击 +8~12 与占比衰减
+                # 才能真实参与砧子分配
+                v = self.eval_reward_card(c, _up_deck, max_hp=_up_mh,
+                                          act=_up_act) + (_atk_bonus if is_attack(c) else 0.0)
                 # 第470局批复盘：引擎加分只给触发条件可满足的成长牌——470 局
                 # 零自残卡组里撕裂连续两次吃满 +16 引擎分上砧，两次锻造全废
                 if (_scale_up_bonus > 0.0 and self._is_scaling_power(c)
@@ -2916,7 +2948,7 @@ class Policy:
             scored = sorted(((self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act), c) for c in candidates),
                             key=lambda t: -t[0])
             best_v, pick = scored[0]
-            pick_line = self._pick_threshold(deck)
+            pick_line = self._pick_threshold(deck, max_hp=_mh, act=_sel_act)
             # 跳过守卫（第 56 局实证）：经"打开卡牌奖励"进入的本屏没有阈值判断，
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
             # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
@@ -2977,8 +3009,17 @@ class Policy:
         removal = shop.get("card_removal")
         if (pol.get("removal_enabled") and removal and removal.get("available") and not removal.get("used")
                 and removal.get("enough_gold") and gold - removal.get("price", 999) >= pol["removal_gold_reserve"]):
+            # 防御臃肿纳入删卡候选（第514~517批复盘）：junk 旧名单只认诅咒/状态/
+            # 未升级打击，防御技在拾取端被面值保底分持续注水却永不可删——
+            # DEFEND 生涯打出 12848 次、耸肩类拿 342 张。守卫：卡组格挡密度
+            # 高于 min_block_cards 时才把未升级防御列为可删，防御底线不失守。
+            _n_block = sum(1 for c in deck
+                           if (is_skill(c) and card_numbers(c)[1] > 0)
+                           or "DEFEND" in (c.get("card_id") or "").upper())
             junk = [c for c in deck if is_bad_card(c)
-                    or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))]
+                    or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))
+                    or ("DEFEND" in (c.get("card_id") or "").upper() and not c.get("upgraded")
+                        and _n_block > float(pol.get("min_block_cards", 5)))]
             # 膨胀卡组的重复注水（第435~440批复盘）：旧 junk 判据只认诅咒/状态/
             # 未升级打击——打击升完或拿光后，31 张的臃肿卡组（本批 781P 局
             # 「可升级31张」）在商店永远不触发删牌，抽牌质量被同名三连稀释。
@@ -3006,9 +3047,10 @@ class Policy:
         # 商店仍按固定阈值 1.0 买进净价值仅 3.0 的巨像等注水牌（73 金）——
         # 同一张牌在奖励端会因动态拾取门槛被拒。卡牌购买必须通过
         # max(动态拾取门槛, 商店基线)；遗物/药水不受卡组膨胀约束，维持原基线
-        shop_pick_line = max(float(pol["shop_relic_threshold"]), self._pick_threshold(deck))
         _shop_mh = max(1, int(run.get("max_hp", 1) or 1))
         _shop_act = self._floor_act(floor)
+        shop_pick_line = max(float(pol["shop_relic_threshold"]),
+                             self._pick_threshold(deck, max_hp=_shop_mh, act=_shop_act))
         best_action, best_score, best_reason, best_tags = None, -1e9, "", []
         for c in shop.get("cards", []):
             if not c.get("is_stocked") or not c.get("enough_gold"):

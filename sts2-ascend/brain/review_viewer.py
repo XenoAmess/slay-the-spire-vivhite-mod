@@ -82,12 +82,22 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-def acquire_lock() -> bool:
-    """原子抢锁：O_CREAT|O_EXCL 独占创建；已存在则查 pid 活性，死锁接管。
+LOCK_STALE_SEC = 15
 
-    此前实现是"读改写"且任何异常默认放行（return True）——两个实例同时
-    启动撞出 OSError 就双双运行（双悬浮窗抢焦点事故）。失败必须拒绝。"""
+
+def acquire_lock() -> bool:
+    """心跳锁：持有者每 5s 触摸锁文件（mtime 即生命信号），mtime 超过
+    LOCK_STALE_SEC 视为死锁接管。pid/映像名判活在 python 进程生态里会被
+    pid 复用反复毒锁（悬浮窗消失事故：锁 pid 被自家 python 复用 → 永久锁死）。"""
     for _ in range(3):
+        try:
+            if LOCK_FILE.exists():
+                age = time.time() - LOCK_FILE.stat().st_mtime
+                if age < LOCK_STALE_SEC:
+                    return False
+                LOCK_FILE.unlink(missing_ok=True)
+        except OSError:
+            return False
         try:
             fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             try:
@@ -95,20 +105,8 @@ def acquire_lock() -> bool:
             finally:
                 os.close(fd)
             return True
-        except FileExistsError:
-            try:
-                old = int(LOCK_FILE.read_text().strip() or "0")
-                if old and _pid_alive(old):
-                    return False
-                LOCK_FILE.unlink(missing_ok=True)       # 死锁接管
-            except (OSError, ValueError):
-                try:
-                    LOCK_FILE.unlink(missing_ok=True)
-                except OSError:
-                    return False
         except OSError:
-            pass
-        time.sleep(0.2)
+            time.sleep(0.2)
     return False
 
 
@@ -438,6 +436,12 @@ class Viewer:
     def _frame(self) -> None:
         now = time.time()
         dt = 0.033
+        if now - getattr(self, "_last_beat", 0) > 5:
+            self._last_beat = now
+            try:
+                LOCK_FILE.touch()      # 心跳：mtime 即生命信号（心跳锁）
+            except OSError:
+                pass
         try:
             self._poll_source(now)
             self._update_rain(dt)
@@ -640,7 +644,7 @@ class Viewer:
                           font=self.font_hud, tags="hud")
         # SELFCHECK 金色闪光
         if now < self.flash_until:
-            k = (self.flash_until - now) / 0.8
+            k = max(0.0, min(1.0, (self.flash_until - now) / 0.8))
             flash = f"#{0xff:02x}{0xd1:02x}{int(0x66 * k):02x}"
             c.create_rectangle(0, 64, WIN_W, self.win_h, outline=flash, width=4, tags="hud")
 
