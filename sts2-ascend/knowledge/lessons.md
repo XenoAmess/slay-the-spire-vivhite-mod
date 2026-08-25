@@ -6747,3 +6747,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/550 胜，当前目标进阶 0
+
+## 第 551 局复盘（2026-08-26 01:12）
+- 结果：💀 失败｜进阶 0｜到达层数 40｜当局评分 40
+- 死因：敌人组合 SCROLL_OF_BITING
+- 本局拿牌：CINDER, RAMPAGE, FORGOTTEN_RITUAL, UNRELENTING, TRUE_GRIT, UNMOVABLE, FIEND_FIRE, HOWL_FROM_BEYOND, CINDER, BLUDGEON, DEMON_FORM, BREAKTHROUGH, HEADBUTT, MOLTEN_FIST, SWORD_BOOMERANG, JUGGLING, PACTS_END, VICIOUS, FIGHT_ME, FEED, DISMANTLE, SWORD_BOOMERANG, CINDER, DISMANTLE
+- 本局遗物：佛珠手链, MOLTEN_EGG, CENTENNIAL_PUZZLE, BOWLER_HAT, STRAWBERRY
+- 战斗记录：F33 Boss战 掉血28; F35 Monster战 掉血21; F36 Monster战 掉血0; F37 Monster战 掉血13; F39 Monster战 掉血18; F40 Monster战 掉血55（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)，PRIMAL_FORCE(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.45 → 0.48（行至 F40（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/551 胜，当前目标进阶 0
