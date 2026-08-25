@@ -6780,3 +6780,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/553 胜，当前目标进阶 0
+
+## 第 554 局复盘（2026-08-26 02:24）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：JUGGLING, CINDER, TAUNT, PILLAGE, SHRUG_IT_OFF, CINDER, PANIC_BUTTON, BLUDGEON, UNRELENTING, UNRELENTING, IMPERVIOUS, DRUM_OF_BATTLE, DARK_EMBRACE
+- 本局遗物：VENERABLE_TEA_SET, 锚
+- 战斗记录：F14 Monster战 掉血0; F15 Monster战 掉血0; F17 Boss战 掉血49; F19 Monster战 掉血17; F20 Monster战 掉血1; F21 Monster战 掉血62（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.54（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/554 胜，当前目标进阶 0
