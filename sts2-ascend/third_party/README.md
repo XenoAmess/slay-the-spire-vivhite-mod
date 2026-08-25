@@ -4,7 +4,7 @@
 
 - **上游**：https://github.com/CharTyr/STS2-Agent
 - **我方 fork**：https://github.com/XenoAmess/STS2-Agent（本地克隆在 `third_party/STS2-Agent/`，已 gitignore）
-- **基线版本**：v0.9.0（`upstream/main` HEAD = `f362f73`）
+- **基线版本**：v0.9.0（`upstream/main` HEAD = `ca2a788`，已包含合并的 PR #46/#47）
 
 ### 维护工作流（重要）
 
@@ -24,7 +24,9 @@
 
 **fix/unlock-screen-action**（初始 commit `04e2e75`，确认按钮补丁 `985f8c3`，已在 fork `main`）：
 
-- 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/47
+- 初始 UNLOCK 支持（已合并）：https://github.com/CharTyr/STS2-Agent/pull/47
+- private 基类确认按钮后续修复（新 PR，commit `71fa12f`）：
+  https://github.com/CharTyr/STS2-Agent/pull/49
 - 问题：赛后/里程碑的整屏解锁展示（"解锁遗物！"等）不被路由——`/state` 返回 `UNKNOWN` 且
   `available_actions` 为空，自动游玩在该屏永久卡死。
 - 修复：`NUnlockScreen => "UNLOCK"` 路由 + `unlock` payload（类型/解锁项名称/can_confirm）+
@@ -34,7 +36,7 @@
   所以能读到派生类 `_relics`，却永远读不到确认按钮。现在沿 `BaseType` 逐层查找，另以
   `NUnlockConfirmButton` 节点树查询兜底，并节流记录声明类型、节点路径、visible/enabled。
 - 验证：现场 `/state`、游戏 `sts2.xml` 元数据和 HTTP 503 三方闭环；新增派生实例读取 private
-  基类字段/属性测试；Release 构建 0 警告 0 错误，全部 C# 测试与 Python selfcheck 通过。
+  基类字段/属性测试；Release 构建 0 警告 0 错误，38 项 C# 测试与 Python selfcheck 通过。
 - 大脑侧兜底（不依赖 mod 正常暴露动作）：UNKNOWN 或已识别 UNLOCK 屏滞留 12 tick 后，
   点击底部确认区；UNLOCK 日志同步输出类型、can_confirm 和 actions，避免再次静默空转。
 - 问题：`use_potion` 对 AoE/随机目标药水（如爆炸药瓶 EXPLOSIVE_AMPOULE）永远 pending——
