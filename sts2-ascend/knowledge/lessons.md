@@ -5272,3 +5272,14 @@
 - **分层承诺要显式传递**：地图层以「够买药水档位」给商店加分，商店竞价却不知道这个承诺——跨层意图本次用预留窗内进攻药 +6 竞价加成兜住，长期应把路由意图写入 ctx。
 - 前夜锻造 vs 回血的生死差双方都在噪声带（422 局差 4 血可回 24；同批锻造后 4 死 4 生）：不翻案，继续积累样本；若再现 ≥2 例「可回血即生还」再给必败分支加边际对账。
 - 代码级改动需进程重启生效（两个新键已热写入 policy.json）；验证窗口在重启后批次，勿把时滞误读为失效。
+
+## 第 427 局复盘（2026-08-25 09:35）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：TAUNT, BREAKTHROUGH, TAUNT, VICIOUS, UPPERCUT, INFLAME, IRON_WAVE, INFLAME, FLAME_BARRIER, STOMP, DRAMATIC_ENTRANCE
+- 本局遗物：LUCKY_FYSH, GREMLIN_HORN
+- 战斗记录：F4 Monster战 掉血7; F5 Monster战 掉血1; F6 Monster战 掉血15; F9 Monster战 掉血5; F12 Monster战 掉血65; F15 Elite战 掉血40（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/427 胜，当前目标进阶 0
