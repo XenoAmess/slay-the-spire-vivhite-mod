@@ -1458,7 +1458,33 @@ class Policy:
                         loss_rate = max(loss_rate, float(incoming))
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
-                    if ttk > tsurv + float(pol.get("kill_race_margin", 1.5)):
+                    _race_margin = float(pol.get("kill_race_margin", 1.5))
+                    race_lost = ttk > tsurv + _race_margin
+                    # 防守线复核（第435~440批复盘）：旧投影的可存活回合数=裸血÷意图
+                    # 火力——把格挡整项忽略，而格挡吞吐恰是防守路线可行性的第一变量。
+                    # 后果是自证死期的预言闭环：投影判死 → 全攻提速 blk×0.7 →
+                    # 不再买命 → 更早被打空 → 「验证」了投影（本批 S42CX 局 89% 血
+                    # 进一幕 Boss 照样 5~6 回合整管打空，实测战损≈全额火力×回合数，
+                    # 说明全程几乎没挡）。修复：进攻线判负后补算防守线——用卡组
+                    # 格挡吞吐×同一折算率估持续买命量，净火力下的可存活回合数若能
+                    # 追上击杀所需回合数，则防守路线可行，维持攻防节奏不全攻。
+                    # 意图滚雪球局（esc_gate）豁免复核：对逐轮升级的敌人拖延正是
+                    # 91 局教义否定的死法；格挡吞吐≤0 的卡组复核自然不触发，
+                    # 行为与旧版严格一致（冷启动安全）
+                    if race_lost and not esc_gate:
+                        _cr_deck = ((state.get("run") or {}).get("deck")) or []
+                        _cr_eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
+                        _blk_rate = min(max(0.0, loss_rate - 1.0),
+                                        self.deck_block_burst(_cr_deck) * _cr_eff)
+                        if _blk_rate > 0:
+                            _net_fire = max(1.0, loss_rate - _blk_rate)
+                            _tsurv_def = my_hp / _net_fire
+                            if ttk <= _tsurv_def + _race_margin:
+                                race_lost = False
+                                danger_note += (f"；防守线复核：格挡吞吐{_blk_rate:.0f}/回合，"
+                                                f"净火力{_net_fire:.0f}→可存活{_tsurv_def:.0f}"
+                                                f"回合≥击杀所需{ttk:.0f}，维持攻防节奏不全攻")
+                    if race_lost:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速")
@@ -2032,7 +2058,14 @@ class Policy:
         判定与战斗端斩杀竞速投影同式对账：learned Boss 血池/火力均值
         （boss_race_vitals，138~141 批入库）× deck_burst×kill_race_prior_eff，
         满血可存活回合数仍追不上击杀所需回合数即判必败。
-        数据未成熟/零爆发/竞速关闭时返回 False，行为与旧版严格一致。
+        防守线复核（第435~440批复盘）：进攻线（裸血÷火力）判负后，补算
+        「持续买命」路线——deck_block_burst×同一折算率估每回合可持续的格挡量，
+        净火力下的存活回合数追得上击杀所需即不判必败（回血重新成为有效投资，
+        前夜裁决交还旧三区口径）。本批六场 F17 Boss 死亡的竞速账全部按裸血
+        开出「击杀需16~22回合>可存活6回合」，而实测战损≈全额火力×回合数——
+        全攻提速下根本没挡；把格挡计入后相当一部分一幕对局是可赢的磨垒局，
+        旧投影把它们集体误判成必败并驱动了错误的前夜锻造与全段路径绝望化。
+        数据未成熟/零爆发/零格挡/竞速关闭时返回 False，行为与旧版严格一致。
         注意口径局限：均值含二三幕 Boss，对一幕前夜略偏悲观——方向与证据
         一致（当前卡组层级的前夜回血已被反复证伪），可接受。
         """
@@ -2045,11 +2078,20 @@ class Policy:
         burst = self.deck_burst(deck or [])
         if burst <= 0:
             return False, ""
-        dpt = burst * float(pol.get("kill_race_prior_eff", 0.55))
+        eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
+        margin = float(pol.get("kill_race_margin", 1.5))
+        dpt = burst * eff
         ttk = pool / max(1.0, dpt)
         tsurv = float(max_hp) / max(1.0, fire)
-        if ttk <= tsurv + float(pol.get("kill_race_margin", 1.5)):
+        if ttk <= tsurv + margin:
             return False, ""
+        # 防守线复核：格挡吞吐>0 且净火力下能磨到击杀线 → 不判必败
+        blk_rate = min(max(0.0, float(fire) - 1.0),
+                       self.deck_block_burst(deck or []) * eff)
+        if blk_rate > 0:
+            tsurv_def = float(max_hp) / max(1.0, float(fire) - blk_rate)
+            if ttk <= tsurv_def + margin:
+                return False, ""
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
                 f"先验输出{dpt:.0f}/回合），必败局的伤害会流到打死为止")
@@ -2200,6 +2242,34 @@ class Policy:
             burst += _tot
             burst_energy -= _cost
         return burst
+
+    def deck_block_burst(self, deck: list[dict], energy: float = 3.0) -> float:
+        """卡组一回合期望格挡吞吐量：与 deck_burst 同式贪心，按「格挡/能耗」装满 energy。
+
+        第435~440批复盘新增（防守线复核的供给侧）：斩杀竞速投影此前只算
+        「裸血 ÷ 意图火力」的可存活回合数——把格挡整项忽略，而当前卡组的
+        格挡吞吐恰恰是决定「防守路线是否可行」的第一变量（S42CX 局 89% 血
+        进一幕 Boss 照样 5~6 回合整管打空：竞速投影提前判死 → 全攻提速
+        blk×0.7 → 不买命 → 自证死期）。口径与 deck_burst 严格同源：
+        同一贪心、同一能量预算、同一 prior_eff 悲观折算——两条路线的账本
+        必须用同一把尺，否则复核本身就是新的乐观偏差。
+        """
+        block_energy, block = energy, 0.0
+        _block_cards = []
+        for c in deck or []:
+            _d, b, _h = card_numbers(c)
+            if b > 0 and not is_bad_card(c):
+                _cost = max(1, c.get("energy_cost", 1) or 1)
+                _block_cards.append((b / _cost, _cost, b))
+        _block_cards.sort(reverse=True)
+        for _eff, _cost, _tot in _block_cards:
+            if block_energy <= 0:
+                break
+            if _cost > block_energy:
+                continue
+            block += _tot
+            block_energy -= _cost
+        return block
 
     def _deck_good_count(self, deck: list[dict]) -> int:
         """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
@@ -2643,6 +2713,20 @@ class Policy:
                 and removal.get("enough_gold") and gold - removal.get("price", 999) >= pol["removal_gold_reserve"]):
             junk = [c for c in deck if is_bad_card(c)
                     or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))]
+            # 膨胀卡组的重复注水（第435~440批复盘）：旧 junk 判据只认诅咒/状态/
+            # 未升级打击——打击升完或拿光后，31 张的臃肿卡组（本批 781P 局
+            # 「可升级31张」）在商店永远不触发删牌，抽牌质量被同名三连稀释。
+            # 软上限溢出≥2 时，同名第三张起视为注水纳入删除候选；具体删哪张
+            # 仍由后续选牌屏的最无价值者排序决定（语义不变，只放宽付费资格）
+            if deck:
+                _ovf = self._deck_good_count(deck) - float(pol.get("deck_soft_cap", 20))
+                if _ovf >= 2:
+                    _copies: dict[str, int] = {}
+                    for c in deck:
+                        _bid = ((c.get("card_id") or "").upper().rstrip("+"))
+                        _copies[_bid] = _copies.get(_bid, 0) + 1
+                    junk = junk + [c for c in deck
+                                   if _copies.get((c.get("card_id") or "").upper().rstrip("+"), 0) >= 3]
             if junk and "remove_card_at_shop" in actions:
                 # 握手：下一个 CARD_SELECTION 屏就是删牌选择——不能依赖界面文案猜语义
                 # （第 43/44 局实证：识别失败落入通用拿牌分支，付费删掉了余烬+/上勾拳

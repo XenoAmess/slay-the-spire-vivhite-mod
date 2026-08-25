@@ -3993,7 +3993,49 @@ def main() -> int:
     pol_kr5 = policy.Policy(know, random.Random(11))
     d_kr5 = pol_kr5.decide(krace1_state(1, 65, 22, []), prc1)
     assert "斩杀竞速投影" not in d_kr5.reason, f"零爆发不应预测竞速: {d_kr5.reason}"
+    # ④ 防守线复核（第435~440批复盘）：进攻线判负但格挡吞吐足以把净火力压到
+    #    「可存活回合数≥击杀所需」时，防守路线可行——不得全攻提速，留痕复核
+    guard_deck = [{"card_id": "GD_HIT", "card_type": "Attack", "energy_cost": 3,
+                   "dynamic_values": [{"name": "Damage", "current_value": 26}]}] + \
+                  [{"card_id": f"GD_SHLD_{i}", "card_type": "Skill", "energy_cost": 1,
+                    "dynamic_values": [{"name": "Block", "current_value": 10}]} for i in range(4)]
+    pol_kr6 = policy.Policy(know, random.Random(11))
+    d_kr6 = pol_kr6.decide(krace1_state(1, 65, 20, guard_deck), prc1)
+    assert "斩杀竞速投影" not in d_kr6.reason and "防守线复核" in d_kr6.reason, \
+        f"防守线可行时仍全攻提速: {d_kr6.reason}"
     prc1.combat = None
+
+    # 3bx) 前夜必败预演的防守线复核（第435~440批复盘）：与战斗端同构——
+    #      裸血账判负后补算持续买命路线，格挡吞吐能磨到击杀线则不判必败，
+    #      前夜裁决交还旧三区口径（低血前夜恢复回血而非盲目锻造）
+    bl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-blkrelief-"))
+    bl_know = knowledge.Knowledge(bl_dir)
+    for _k in ("BR2_BOSS_A", "BR2_BOSS_B"):
+        bl_know.stats["enemies"][_k] = {
+            "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+            "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+            "hp_pool_sum": 320.0, "hp_pool_n": 2, "fire_sum": 80.0, "fire_rounds": 8}
+    bl_pol = policy.Policy(bl_know, random.Random(13))
+    bl_grind_deck = [{"card_id": f"BL_S{i}", "card_type": "Attack", "energy_cost": 1,
+                      "dynamic_values": [{"name": "Damage", "current_value": 6}]} for i in range(5)] + \
+                    [{"card_id": f"BL_SHLD_{i}", "card_type": "Skill", "energy_cost": 1,
+                      "dynamic_values": [{"name": "Block", "current_value": 10}]} for i in range(4)]
+    bl_rest = {
+        "screen": "REST", "available_actions": ["choose_rest_option"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 48, "max_hp": 80, "gold": 0, "floor": 16, "deck": bl_grind_deck}}
+    bl_ctx = SimpleNamespace(rest_before_boss=True, rest_proj_hp_pct=1.0,
+                             rest_next_fight_loss_frac=0.0)
+    d_bl_heal = bl_pol.decide(bl_rest, bl_ctx)
+    assert d_bl_heal.tags and d_bl_heal.tags[0] == ("rest", "heal") and "竞速必败" not in d_bl_heal.reason, \
+        f"防守线可行的磨垒卡组前夜被误判必败锻造: {d_bl_heal.action}（{d_bl_heal.reason}）"
+    # 对照：同一卡组换掉格挡（纯弱攻）→ 防守线失效 → 维持必败锻造口径
+    bl_all_atk_deck = [c for c in bl_grind_deck if c["card_type"] == "Attack"]
+    d_bl_smith = bl_pol.decide(dict(bl_rest, run=dict(bl_rest["run"], deck=bl_all_atk_deck)), bl_ctx)
+    assert d_bl_smith.tags and d_bl_smith.tags[0] == ("rest", "smith") and "竞速必败" in d_bl_smith.reason, \
+        f"零格挡卡组的必败预演被防守线复核误放行: {d_bl_smith.action}（{d_bl_smith.reason}）"
 
     # 3zw) 意图滚雪球确认解锁增益药水（第 255 批复盘）：低死亡率低战损的升级型
     #      组合从三条历史药水门槛的缝隙漏网（252 局 F5 劫掠者三连 8 战仅 1 死），
