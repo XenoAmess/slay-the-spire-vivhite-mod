@@ -704,7 +704,14 @@ class Policy:
         # 时用竞速及格线——burst 高于静态带的卡组同样在输掉竞速（本批六局
         # 全数阵亡于必败预演），入场线/精英豁免必须对真实缺口开放
         run_deck = run.get("deck", [])
-        burst_starved = bool(run_deck) and self.deck_burst(run_deck) < self._starve_line(max_hp)
+        # 缺口深度随饥饿标志一并留档（第495~498局批复盘）：投影端战损上浮
+        # 与锻造预演需要「差多远」的连续量，不能只有布尔饥饿标志
+        _burst_val = self.deck_burst(run_deck)
+        _line_val = self._starve_line(max_hp)
+        burst_starved = bool(run_deck) and _burst_val < _line_val
+        starve_deficit = clamp(1.0 - (_burst_val / _line_val if burst_starved else 1.0),
+                               0.0, 1.0)
+        _starve_loss_frac = float(pol.get("path_starve_loss_frac", 0.0))
 
         # Boss 前夜竞速必败预演（第 397~402 批复盘）：与 _rest 的竞速必败改锻造
         # 同口径，投影镜像不得与实际篝火行为脱钩（99~102/228/244 批教训）。
@@ -859,6 +866,20 @@ class Policy:
                                 notes.append(
                                     f"低血尾部生存复核：单场最差{_vw:.0f}打完仅剩"
                                     f"{max(0.0, _tail_hp):.0f}(≤{_sf:.0f})，尾部罚分")
+                # 输出饥饿战损上浮（第495~498局批复盘新增）：掉血先验是「历史
+                # 平均卡组」的场均账，而战损与战斗时长正相关——爆发缺口大的
+                # 卡组连最便宜的组合（496 局 F15 方柱构装体，生涯场均 6.6）
+                # 也能拖成 -57 的消耗战。按缺口深度把战斗先验线性放大（上限
+                # path_starve_loss_frac），让选路在健康带就看见饥饿的复利代价；
+                # 绝境带（<45%）已有 dire_loss_mult 1.7 悲观口径，不叠加重复计费。
+                # 卡组成型后上浮自动归零，方向单调安全
+                if (nt in ("Monster", "Elite", "Unknown") and burst_starved
+                        and dire_loss_mult == 1.0 and _starve_loss_frac > 0.0):
+                    _sv_mult = 1.0 + _starve_loss_frac * starve_deficit
+                    prior *= _sv_mult
+                    if depth == 0 and starve_deficit >= 0.15:
+                        notes.append(f"输出饥饿战损上浮×{_sv_mult:.2f}"
+                                     f"（缺口{starve_deficit:.0%}）")
                 # Boss 行节点是路径终点：投影语义为"进入该节点的血量"，
                 # 不扣 Boss 自身战损（旧版把 45 点 Boss 先验也扣进去，
                 # 导致第 28 局实际以 77% 血进 Boss 却被投影成 35%，严重误导决策与复盘）
@@ -1063,16 +1084,32 @@ class Policy:
         # 此时金币/宝箱/事件换卡牌、删诅咒、买药水是唯一还能改变时间线的杠杆
         # （EQ04 局 F3：468 金商店以 0.61 分之差输给又一场白死的怪物战，
         # 五连战后 F6 阵亡）。仅在全候选死亡投影且存在纯价值节点时加成，
-        # 健康局面零影响
+        # 健康局面零影响。
+        # 存活价值节点反超扩展（第495~498局批复盘）：饱和账的另一面是「死亡
+        # 罚分 ~70 打平甚至反超存活节点的续航罚分」——UNPSGREBQ2TU 局 F21
+        # 商店路径投影存活（进Boss 53%）却以 8.62 分之差输给死亡投影的
+        # Unknown，「全候选死亡」前提不成立、加成未触发，白死一场。当评分
+        # 最高的候选是死亡投影而存在存活的纯价值节点时，同样对后者加成：
+        # 「活着走到商店/宝箱」永远优于「沿死亡路线多活两格」
         _doom_bonus = float(pol.get("path_doomed_value_bonus", 8.0))
-        if cand and _doom_bonus > 0.0 and all(c["doomed"] for c in cand):
+        if cand and _doom_bonus > 0.0:
             _value_nts = ("Shop", "Treasure", "Event")
-            if any(c["nt"] in _value_nts for c in cand):
+            _all_doomed = all(c["doomed"] for c in cand)
+            _has_value = any(c["nt"] in _value_nts for c in cand)
+            if _all_doomed and _has_value:
                 for c in cand:
                     if c["nt"] in _value_nts:
                         c["ps"] += _doom_bonus
                         c["notes"].append(
                             f"绝境全候选死亡投影，优先{c['nt']}换战力(+{_doom_bonus:.0f})")
+            elif _has_value:
+                _best_c = max(cand, key=lambda c: c["ps"])
+                if _best_c["doomed"]:
+                    for c in cand:
+                        if c["nt"] in _value_nts and not c["doomed"]:
+                            c["ps"] += _doom_bonus
+                            c["notes"].append(
+                                f"绝境最高分为死亡路线，存活{c['nt']}改判优先(+{_doom_bonus:.0f})")
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
         best_path = []
         details = []
@@ -1124,6 +1161,11 @@ class Policy:
                 if nnt in ("Monster", "Elite"):
                     _np, _nm, _ = self._act_danger(nnt, priors, act_no, act_mul,
                                                    row_in_act=key[0])
+                    # 与路径投影同一把尺（第495~498局批复盘）：饥饿卡组的预演
+                    # 战损同样按缺口上浮，否则砧前预演系统性乐观、放行连环偿债
+                    if (burst_starved and dire_loss_mult == 1.0
+                            and _starve_loss_frac > 0.0):
+                        _np *= 1.0 + _starve_loss_frac * starve_deficit
                     next_fight_loss += _np * deck_ease * _nm / max_hp
                     _preview_fights += 1
                     if _preview_fights >= 3:

@@ -78,6 +78,12 @@ DEFAULT_POLICY = {
                                      # 54% 血规划时留痕「先验9→11（最差48）」，下一战实际 -43
                                      # 阵亡：均价涨 2 点回答不了生还问题。Elite 不入此闸
                                      # （灰区悲观复核已覆盖同构风险，叠加会把精英挤出地图）
+    "path_starve_loss_frac": 0.35,   # 输出饥饿战损上浮上限（第495~498局批复盘）：掉血先验是「历史平均
+                                     # 卡组」的场均账，而战损随战斗时长增长——爆发缺口大的卡组连最便宜
+                                     # 的组合（496 局 F15 方柱构装体，生涯场均 6.6）也能拖成 -57 的
+                                     # 消耗战。健康带（非绝境）战斗节点先验按 1+此值×缺口深度 放大，
+                                     # 让选路提前看见饥饿的复利代价；绝境带已有 dire_loss_mult 不叠加。
+                                     # 卡组成型后上浮自动归零；0 = 关闭
     "elite_min_deck_cards": 4,    # 非基础牌少于此数时规避精英（卡组强度门槛，血量门槛之外的第二道闸）
     "elite_early_floor_max": 8,   # 前期精英加码窗口上限楼层（第374~379批次复盘）：QZLQ 局 F7 精英
                                   # 以 4 张非基础牌压线放行（≥90% 血"双达标"）后被单场 -80 整管抬走
@@ -94,7 +100,11 @@ DEFAULT_POLICY = {
                                      # 以 0.61 分之差输给又一场白死的怪物战，随后连战五场阵亡。
                                      # 此时金币/宝箱/事件是唯一还能改变时间线的杠杆：纯价值节点
                                      # （Shop/Treasure/Event）加此正分，让「先换战力再赴死」压过
-                                     # 「白死一场」。仅全候选死亡投影时触发，健康局面零影响
+                                     # 「白死一场」。仅全候选死亡投影时触发，健康局面零影响。
+                                     # 存活价值节点反超扩展（第495~498局批复盘）：当评分最高的候选
+                                     # 是死亡投影而存在存活的 Shop/Treasure/Event 时，同样对后者
+                                     # 加成——UNPSGREBQ2TU 局 F21 商店（投影存活 53%）以 8.62 分
+                                     # 之差输给死亡投影的 Unknown，旧「全候选死亡」前提漏掉该形态
     # --- 卡组构建 ---
     "deck_soft_cap": 20,          # 非基础牌软上限：超出后每张候选牌都贬值（膨胀稀释抽牌质量）
     "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
@@ -319,7 +329,10 @@ DEFAULT_PROGRESSION = {
 DEFAULT_STATS = {
     "version": 1,
     "global": {"runs": 0, "wins": 0, "floors_total": 0, "best_floor": 0,
-               "deaths_by_enemy": {}, "deaths_by_event": {}},
+               "deaths_by_enemy": {}, "deaths_by_event": {},
+               # 精英死亡进场血量分带（第495~498局批复盘新增）：low=低于软线进场，
+               # healthy=软线以上进场。区分「被迫行军死」与「闸门/执行端漏放行死」
+               "elite_death_entry_band": {"low": 0, "healthy": 0}},
     "cards": {},    # id -> {seen, picked, plays, outcome_sum, bias}
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}

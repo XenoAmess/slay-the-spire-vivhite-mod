@@ -658,6 +658,10 @@ def main() -> int:
     # 39 血四连战投影：39→31→23→15→~7（≈8% 跌破 10% 近死带）→ 篝火抬回。
     # 先验钉死（rooms 实测 10 场场均 8）——否则共享夹具里前面用例留下的高危
     # 敌人条目会把 combat_calibration 顶到 1.5，静态先验 8→12，投影直接死亡
+    # 饥饿上浮同步归零隔离（第495~498局批复盘）：本用例校准于旧口径，
+    # 输出饥饿战损上浮的行为由 3bw 专项用例覆盖
+    _svfrac_old = know.policy.get("path_starve_loss_frac")
+    know.policy["path_starve_loss_frac"] = 0.0
     _rooms_old = know.stats.get("rooms", {}).get("Monster")
     know.stats.setdefault("rooms", {})["Monster"] = {
         "visits": 10, "outcome_sum": 0.0, "hp_lost_sum": 80.0, "damage_events": 10}
@@ -689,6 +693,10 @@ def main() -> int:
     m_off = re.search(r"路径分 (-?\d+\.\d+)", d_dip_off.reason)
     assert m_off and float(m_on.group(1)) < float(m_off.group(1)), \
         f"近死带折价未体现为罚分（开 {m_on and m_on.group(1)} vs 关 {m_off and m_off.group(1)}）"
+    if _svfrac_old is None:
+        know.policy.pop("path_starve_loss_frac", None)
+    else:
+        know.policy["path_starve_loss_frac"] = _svfrac_old
 
     # 3n3) 尾部战损定价（第 258~262 批次复盘）：掉血先验是场均账，单场实测尾部
     #      可达 3~5 倍——262 局 49% 血进 Monster 投影仅 ~9 点（账面安全），实战
@@ -884,6 +892,10 @@ def main() -> int:
     _d_ract_e = know.stats.get("rooms_act", {}).get("Elite@1")
     _d_rband_b1 = know.stats.get("rooms_band", {}).get("Monster@1_b1")
     _d_relief = know.policy.get("boss_entry_starve_relief")
+    # 饥饿上浮同步归零隔离（第495~498局批复盘）：本用例按旧口径逐项复算路径分，
+    # 输出饥饿战损上浮的账目由 3bw 专项用例单独覆盖
+    _d_svfrac = know.policy.get("path_starve_loss_frac")
+    know.policy["path_starve_loss_frac"] = 0.0
     try:
         # 钉死输入：rooms 无尾部记忆（旧库形态）、无分幕/层段键 → 先验走跨幕口径，
         # 与测试内复算共用同一 getter，夹具污染被自然抵消
@@ -930,6 +942,10 @@ def main() -> int:
             f"罚分段间账目不平（疑似携带重扣回潮）: 实际 {m_dd.group(1)} vs 复算 {expected:.4f}"
     finally:
         know.policy["boss_entry_starve_relief"] = _d_relief
+        if _d_svfrac is None:
+            know.policy.pop("path_starve_loss_frac", None)
+        else:
+            know.policy["path_starve_loss_frac"] = _d_svfrac
         if _d_rooms_m is None:
             know.stats["rooms"].pop("Monster", None)
         else:

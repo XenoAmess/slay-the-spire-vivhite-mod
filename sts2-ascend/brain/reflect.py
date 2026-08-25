@@ -249,6 +249,19 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 changes.append(f"精英战阵亡但满血线进场（{ctx.death_hp_pct_at_entry:.0%}≥"
                                f"{pol['elite_min_hp_pct']:.0%}）——证据指向实战执行/卡组强度，"
                                "灰区悲观系数不吸收")
+        # 精英死亡进场血量分带遥测（第495~498局批复盘）：本批 4 局中 2 局死于
+        # 精英战（-63/-71 单场），致命精英在选路端均被闸门否决过（「取损失最小项」
+        # 被迫进场）或以低于软线的血量抵达——低血被迫进场与高血主动进场是两种
+        # 不同病灶（前者无解需改行军，后者才是闸门/执行端问题），分账计数供
+        # 后续批复盘定量归因。纯增量键，旧库缺键由 setdefault 补齐
+        if died_to_enemy and ctx.death_was_elite:
+            _band = know.stats["global"].setdefault(
+                "elite_death_entry_band", {"low": 0, "healthy": 0})
+            _soft_e = float(pol.get(
+                "elite_soft_hp_pct", max(0.35, pol["elite_min_hp_pct"] - 0.15)))
+            _bk = ("low" if (ctx.death_hp_pct_at_entry is not None
+                             and ctx.death_hp_pct_at_entry < _soft_e) else "healthy")
+            _band[_bk] = int(_band.get(_bk, 0)) + 1
         if died_to_enemy and not ctx.death_was_elite:
             if stall_death:
                 rounds_s = int((ctx.died_in_combat or {}).get("rounds", 0) or 0)
