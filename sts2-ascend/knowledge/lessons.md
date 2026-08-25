@@ -6228,3 +6228,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：danger_comp_blk_boost: 0.40 → 0.45（普通战斗短时阵亡（3回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））；kill_race_prior_eff: 0.39 → 0.42（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/507 胜，当前目标进阶 0
+
+## 第 508 局复盘（2026-08-25 19:18）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 SLITHERING_STRANGLER+TWIG_SLIME_S
+- 本局拿牌：BREAKTHROUGH, FLAME_BARRIER, BREAKTHROUGH, THRASH, SWORD_BOOMERANG, CINDER, THE_GAMBIT, INFLAME
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F4 Monster战 掉血3; F5 Monster战 掉血0; F7 Monster战 掉血10; F9 Monster战 掉血25; F11 Unknown战 掉血17; F14 Monster战 掉血48（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，FEED(24分/32局)，VOLLEY(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：danger_comp_blk_boost: 0.45 → 0.50（普通战斗短时阵亡（2回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））
+- 生涯战绩：0/508 胜，当前目标进阶 0
