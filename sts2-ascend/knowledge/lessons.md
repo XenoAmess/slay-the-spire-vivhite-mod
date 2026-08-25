@@ -6552,3 +6552,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/533 胜，当前目标进阶 0
+
+## 第 534 局复盘（2026-08-25 22:46）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：EVIL_EYE, CINDER, UPPERCUT, COLOSSUS, UNRELENTING, EVIL_EYE, SPITE
+- 本局遗物：BELLOWS, NUNCHAKU
+- 战斗记录：F5 Monster战 掉血1; F6 Monster战 掉血18; F7 Unknown战 掉血52; F14 Unknown战 掉血12; F15 Monster战 掉血13; F17 Boss战 掉血50（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，PRIMAL_FORCE(24分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/36局)，FEED(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/534 胜，当前目标进阶 0
