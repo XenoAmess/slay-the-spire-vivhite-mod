@@ -6450,3 +6450,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/525 胜，当前目标进阶 0
+
+## 第 526 局复盘（2026-08-25 21:33）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：ULTIMATE_STRIKE, ANGER, EVIL_EYE, SWORD_BOOMERANG, DISMANTLE, WHIRLWIND, TRUE_GRIT, BREAKTHROUGH, MOLTEN_FIST, BLUDGEON, INFLAME, DISMANTLE, JUGGLING, IMPERVIOUS, UPPERCUT, SHRUG_IT_OFF, SHRUG_IT_OFF, UPPERCUT, BREAKTHROUGH, RUPTURE, PRIMAL_FORCE, CINDER, HEADBUTT
+- 本局遗物：PEN_NIB, ANCHOR, 自成型黏土
+- 战斗记录：F22 Monster战 掉血2; F25 Monster战 掉血0; F28 Monster战 掉血13; F29 Monster战 掉血8; F30 Elite战 掉血18; F31 Monster战 掉血11（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，PRIMAL_FORCE(24分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/34局)，FEED(24分/33局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：danger_comp_blk_boost: 0.55 → 0.60（普通战斗短时阵亡（3回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））；kill_race_prior_eff: 0.36 → 0.39（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/526 胜，当前目标进阶 0
