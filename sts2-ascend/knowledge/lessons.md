@@ -6428,3 +6428,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/523 胜，当前目标进阶 0
+
+## 第 524 局复盘（2026-08-25 21:17）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：EVIL_EYE, THUNDERCLAP, BATTLE_TRANCE, SWORD_BOOMERANG, STONE_ARMOR, SWORD_BOOMERANG
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血4; F4 Monster战 掉血0; F6 Monster战 掉血20; F7 Monster战 掉血53; F9 Elite战 掉血36（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/34局)，FEED(24分/33局)，MANGLE(24分/59局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/524 胜，当前目标进阶 0
