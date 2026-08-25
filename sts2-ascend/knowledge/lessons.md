@@ -6068,3 +6068,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/494 胜，当前目标进阶 0
+
+## 第 495 局复盘（2026-08-25 17:32）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：CINDER, TRUE_GRIT, THUNDERCLAP, SPITE, INFLAME, TWIN_STRIKE, TRUE_GRIT, UPPERCUT, STOMP, ULTIMATE_STRIKE, CONFLAGRATION, PILLAGE, UNRELENTING, INFLAME
+- 本局遗物：PEN_NIB, 水银沙漏
+- 战斗记录：F14 Monster战 掉血1; F15 Monster战 掉血0; F17 Boss战 掉血49; F19 Monster战 掉血14; F23 Monster战 掉血20; F24 Elite战 掉血63（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，VOLLEY(24分/10局)，HAND_OF_GREED(24分/17局)，PANACHE(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/495 胜，当前目标进阶 0
