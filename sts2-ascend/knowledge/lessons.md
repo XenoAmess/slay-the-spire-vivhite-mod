@@ -6239,3 +6239,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：danger_comp_blk_boost: 0.45 → 0.50（普通战斗短时阵亡（2回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））
 - 生涯战绩：0/508 胜，当前目标进阶 0
+
+## 第 509 局复盘（2026-08-25 19:24）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：TAUNT, PILLAGE, HOWL_FROM_BEYOND, HEMOKINESIS, TAUNT, RUPTURE, UPPERCUT, STOMP, ARMAMENTS
+- 本局遗物：VAMBRACE
+- 战斗记录：F2 Monster战 掉血14; F5 Monster战 掉血0; F8 Monster战 掉血0; F12 Monster战 掉血17; F15 Unknown战 掉血0; F17 Boss战 掉血72（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，FEED(24分/32局)，VOLLEY(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/509 胜，当前目标进阶 0
