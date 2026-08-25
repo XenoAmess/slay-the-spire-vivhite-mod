@@ -5379,3 +5379,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/435 胜，当前目标进阶 0
+
+## 第 436 局复盘（2026-08-25 10:37）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：MOLTEN_FIST, FLAME_BARRIER, VICIOUS, RUPTURE, STOMP, PANIC_BUTTON, TRUE_GRIT, STOMP, COLOSSUS, HEMOKINESIS, MOLTEN_FIST, STONE_ARMOR
+- 本局遗物：HORN_CLEAT
+- 战斗记录：F6 Monster战 掉血19; F8 Monster战 掉血39; F12 Monster战 掉血20; F13 Monster战 掉血0; F14 Monster战 掉血18; F17 Boss战 掉血42（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，MAYHEM(24分/8局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/436 胜，当前目标进阶 0
