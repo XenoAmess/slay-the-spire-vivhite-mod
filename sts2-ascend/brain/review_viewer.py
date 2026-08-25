@@ -707,6 +707,11 @@ def main() -> None:
         mode = "attach"
     else:
         mode = "live"
+    try:
+        with (KNOWLEDGE_DIR / "viewer_boot.log").open("a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%H:%M:%S')}] pid={os.getpid()} main-entered mode={mode}\n")
+    except OSError:
+        pass
     if mode != "demo" and not acquire_lock():
         return
     try:

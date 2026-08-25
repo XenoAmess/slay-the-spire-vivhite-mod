@@ -6480,3 +6480,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/527 胜，当前目标进阶 0
+
+## 第 528 局复盘（2026-08-25 21:52）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：SHRUG_IT_OFF, POMMEL_STRIKE, BURNING_PACT, INFLAME, TRUE_GRIT, ROLLING_BOULDER, CINDER, BLUDGEON, STOMP, STONE_ARMOR, CONFLAGRATION, INFLAME, PACTS_END, JUGGLING
+- 本局遗物：HAPPY_FLOWER, 百年积木
+- 战斗记录：F13 Monster战 掉血6; F15 Monster战 掉血9; F17 Boss战 掉血62; F19 Monster战 掉血23; F20 Monster战 掉血21; F21 Monster战 掉血36（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，PRIMAL_FORCE(24分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/35局)，FEED(24分/33局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.42 → 0.45（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/528 胜，当前目标进阶 0
