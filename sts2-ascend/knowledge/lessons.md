@@ -6469,3 +6469,14 @@
 - 封禁链要验收终点而非中间环节：228 批封了 bias 与榜单就算闭环，虚假学分仍从 card_value 流入拾取决策。治理污染链必须沿数据流走到最终决策点确认拦截。
 - 本批亮点：第526局实战击败一幕Boss抵达二幕F31（生涯最深之一），kill_race_prior_eff 获部分胜利释放（0.36→0.39）——输出缺口教义首见兑付信号。
 - 生涯战绩：0/526 胜（本批覆盖时点），当前目标进阶 0
+
+## 第 527 局复盘（2026-08-25 21:43）
+- 结果：💀 失败｜进阶 0｜到达层数 19｜当局评分 19
+- 死因：敌人组合 TUNNELER
+- 本局拿牌：EQUILIBRIUM, MOLTEN_FIST, BREAKTHROUGH, TAUNT, TAUNT, DRUM_OF_BATTLE, DARK_EMBRACE, MOLTEN_FIST, PACTS_END
+- 本局遗物：巨大扭蛋, 铅制镇纸, PENDULUM
+- 战斗记录：F12 Monster战 掉血5; F13 Monster战 掉血0; F14 Unknown战 掉血0; F15 Monster战 掉血13; F17 Boss战 掉血59; F19 Monster战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，PRIMAL_FORCE(24分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/34局)，FEED(24分/33局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/527 胜，当前目标进阶 0

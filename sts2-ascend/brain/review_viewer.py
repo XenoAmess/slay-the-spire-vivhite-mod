@@ -261,13 +261,25 @@ class Viewer:
         else:
             self.source = StreamSource()
 
+        self._boot("init-start")
         self._build_ui()
+        self._boot("ui-built")
         self._build_rain()
+        self._boot("init-done")
+
+    def _boot(self, msg: str) -> None:
+        """启动轨迹：卡死定位用（py-spy 不支持 3.14 抓不了栈）。"""
+        try:
+            with (KNOWLEDGE_DIR / "viewer_boot.log").open("a", encoding="utf-8") as f:
+                f.write(f"[{time.strftime('%H:%M:%S')}] pid={os.getpid()} {msg}\n")
+        except OSError:
+            pass
 
     # ----- UI 构建 -----
     def _build_ui(self) -> None:
         r = tk.Tk()
         self.root = r
+        self._boot("tk-created")
         r.title("ASCEND-VISION")
         r.overrideredirect(True)
         r.attributes("-topmost", True)
@@ -295,6 +307,7 @@ class Viewer:
             self.canvas.bind("<B1-Motion>", self._on_drag)
             r.bind("<Escape>", lambda _e: self._quit())
         r.update()
+        self._boot("ui-mapped")
         if not self.interactive:
             self._make_focus_invisible()
             self._set_clickthrough()
@@ -436,6 +449,9 @@ class Viewer:
     def _frame(self) -> None:
         now = time.time()
         dt = 0.033
+        if not getattr(self, "_boot_f1", False):
+            self._boot_f1 = True
+            self._boot("frame-first")
         if now - getattr(self, "_last_beat", 0) > 5:
             self._last_beat = now
             try:
@@ -673,6 +689,7 @@ class Viewer:
         os._exit(0)
 
     def run(self) -> None:
+        self._boot("run-entered")
         self.root.after(33, self._frame)
         try:
             self.root.mainloop()
