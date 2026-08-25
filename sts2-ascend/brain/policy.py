@@ -1474,22 +1474,35 @@ class Policy:
                     # 说明全程几乎没挡）。修复：进攻线判负后补算防守线——用卡组
                     # 格挡吞吐×同一折算率估持续买命量，净火力下的可存活回合数若能
                     # 追上击杀所需回合数，则防守路线可行，维持攻防节奏不全攻。
-                    # 意图滚雪球局（esc_gate）豁免复核：对逐轮升级的敌人拖延正是
-                    # 91 局教义否定的死法；格挡吞吐≤0 的卡组复核自然不触发，
-                    # 行为与旧版严格一致（冷启动安全）
-                    if race_lost and not esc_gate:
+                    # 意图滚雪球局的豁免取消（第454局批复盘）：旧版对 esc_gate 局
+                    # 跳过复核——理由是「对逐轮升级的敌人拖延正是死法」，但该论据
+                    # 只在竞速可赢时成立；竞速已判负时全攻提速=吃满升级意图的
+                    # 最大自伤（454批三连实证：97BKP/X299/WS5HUHJW 对毛绒伏地虫
+                    # 组合 R2~R3 即判「击杀需5>可存活3」转全攻，实际靠顺手格挡
+                    # 又活了 5~8 回合、差一刀斩杀——格挡恰是这类战斗的第一生存
+                    # 变量）。修复：滚雪球局同样复核，但按更严口径——折算率用
+                    # 独立的 kill_race_blk_eff（格挡实现率与输出折算率是两种物理
+                    # 量：prior_eff 被 Boss 竞速败北证据压到 0.37 后，防守线被
+                    # 连带压死成死代码），且不给 margin 余量（意图逐轮上涨吃余量）
+                    if race_lost:
                         _cr_deck = ((state.get("run") or {}).get("deck")) or []
-                        _cr_eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
+                        _cr_eff = max(0.05, float(pol.get(
+                            "kill_race_blk_eff",
+                            float(pol.get("kill_race_prior_eff", 0.55)))))
                         _blk_rate = min(max(0.0, loss_rate - 1.0),
                                         self.deck_block_burst(_cr_deck) * _cr_eff)
                         if _blk_rate > 0:
                             _net_fire = max(1.0, loss_rate - _blk_rate)
                             _tsurv_def = my_hp / _net_fire
-                            if ttk <= _tsurv_def + _race_margin:
+                            # 滚雪球局零余量过线；普通局维持原 margin 口径
+                            _def_margin = 0.0 if esc_gate else _race_margin
+                            if ttk <= _tsurv_def + _def_margin:
                                 race_lost = False
+                                _esc_mark = "（滚雪球零余量）" if esc_gate else ""
                                 danger_note += (f"；防守线复核：格挡吞吐{_blk_rate:.0f}/回合，"
                                                 f"净火力{_net_fire:.0f}→可存活{_tsurv_def:.0f}"
-                                                f"回合≥击杀所需{ttk:.0f}，维持攻防节奏不全攻")
+                                                f"回合≥击杀所需{ttk:.0f}，维持攻防节奏不全攻"
+                                                f"{_esc_mark}")
                     if race_lost:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
@@ -2092,8 +2105,13 @@ class Policy:
         if ttk <= tsurv + margin:
             return False, ""
         # 防守线复核：格挡吞吐>0 且净火力下能磨到击杀线 → 不判必败
+        # 折算率用独立的 kill_race_blk_eff（第454局批复盘）：格挡实现率与输出
+        # 折算率是两种物理量，prior_eff 被 Boss 竞速败北证据压到下限后防守线
+        # 被连带压死——与战斗端复核同源同修，防篝火端镜像脱钩（397~402 批教义）
+        _blk_eff = max(0.05, float(pol.get(
+            "kill_race_blk_eff", eff)))
         blk_rate = min(max(0.0, float(fire) - 1.0),
-                       self.deck_block_burst(deck or []) * eff)
+                       self.deck_block_burst(deck or []) * _blk_eff)
         if blk_rate > 0:
             tsurv_def = float(max_hp) / max(1.0, float(fire) - blk_rate)
             if ttk <= tsurv_def + margin:

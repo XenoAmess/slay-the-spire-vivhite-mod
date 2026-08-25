@@ -4005,6 +4005,73 @@ def main() -> int:
         f"防守线可行时仍全攻提速: {d_kr6.reason}"
     prc1.combat = None
 
+    # 3kv) 滚雪球局的防守线复核（第454局批复盘）：旧版对 esc_gate 局豁免复核——
+    #      454 批三连死（97BKP/X299/WS5HUHJW 对毛绒伏地虫组合）R2~R3 即判
+    #      「击杀需5>可存活3」转全攻提速，实际靠顺手格挡又活 5~8 回合差一刀
+    #      斩杀——格挡恰是升级型战斗的第一生存变量。修复后滚雪球局同样复核，
+    #      格挡折算率走独立 kill_race_blk_eff（0.70），且零余量过线
+    esc_ctx = type("ESCCTX", (), {"combat": None, "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+    esc_ctx.combat = {"comp_id": "ESC_RACE_COMP", "node_type": "Monster"}
+
+    def esc_race_state(turn_no, hp_now, incoming, deck, t3_attack=False):
+        if turn_no < 3:
+            hand = [
+                {"index": 0, "card_id": "ER_HIT", "name": "速攻", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+                {"index": 1, "card_id": "ER_HIT2", "name": "速攻二号", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        elif t3_attack:
+            hand = [{"index": 0, "card_id": "ER_HIT3", "name": "孤注攻击", "playable": True,
+                     "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                     "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        else:
+            hand = [{"index": 0, "card_id": "ER_SHLD_A", "name": "壁垒甲", "playable": True,
+                     "requires_target": False,
+                     "dynamic_values": [{"name": "Block", "current_value": 8}]}]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "ESC_RACE_COMP", "name": "滚雪球伏地虫",
+                                    "current_hp": 55, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5, "deck": deck}}
+
+    esc_blk_deck = [{"card_id": f"ER_S_{i}", "card_type": "Skill", "energy_cost": 1,
+                     "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(3)]
+    # ① 滚雪球局+有格挡：意图 4→7→24 确认持续升级，竞速裸血判负后复核通过
+    #    （吞吐24×0.70=16.8 → 净火力7.2 → 可存活9回合≥击杀5.5），不全攻且留痕零余量
+    pol_escr = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck-"))),
+                             random.Random(11))
+    pol_escr.decide(esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    pol_escr.decide(esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    d_e1 = pol_escr.decide(esc_race_state(3, 71, 24, esc_blk_deck), esc_ctx)
+    assert ("斩杀竞速投影" not in d_e1.reason and "防守线复核" in d_e1.reason
+            and "滚雪球零余量" in d_e1.reason), \
+        f"滚雪球局防守线可行仍全攻提速: {d_e1.action}（{d_e1.reason}）"
+    # ② 对照：零格挡卡组复核自然不触发——维持全攻提速（冷启动安全不回潮）
+    pol_escr2 = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck2-"))),
+                              random.Random(11))
+    pol_escr2.decide(esc_race_state(1, 71, 4, []), esc_ctx)
+    pol_escr2.decide(esc_race_state(2, 71, 7, []), esc_ctx)
+    d_e2 = pol_escr2.decide(esc_race_state(3, 71, 24, [], t3_attack=True), esc_ctx)
+    assert "斩杀竞速投影" in d_e2.reason and "防守线复核" not in d_e2.reason, \
+        f"零格挡卡组的滚雪球竞速被误放行: {d_e2.action}（{d_e2.reason}）"
+    # ③ 对照：火力压倒格挡（40 意图 > 吞吐16.8 的净火力口径）——零余量下复核
+    #    必须仍判负，防复核沦为无条件否决竞速
+    pol_escr3 = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck3-"))),
+                              random.Random(11))
+    pol_escr3.decide(esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    pol_escr3.decide(esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    d_e3 = pol_escr3.decide(esc_race_state(3, 71, 40, esc_blk_deck), esc_ctx)
+    assert "斩杀竞速投影" in d_e3.reason and "防守线复核" not in d_e3.reason, \
+        f"火力压倒性格挡时复核未判负: {d_e3.action}（{d_e3.reason}）"
+
     # 3bx) 前夜必败预演的防守线复核（第435~440批复盘）：与战斗端同构——
     #      裸血账判负后补算持续买命路线，格挡吞吐能磨到击杀线则不判必败，
     #      前夜裁决交还旧三区口径（低血前夜恢复回血而非盲目锻造）
