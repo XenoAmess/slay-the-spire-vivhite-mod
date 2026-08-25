@@ -5587,3 +5587,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/452 胜，当前目标进阶 0
+
+## 第 453 局复盘（2026-08-25 12:24）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：SHRUG_IT_OFF, SHRUG_IT_OFF, JUGGERNAUT, SHRUG_IT_OFF, DISMANTLE, FIGHT_ME, TRUE_GRIT, WHIRLWIND
+- 本局遗物：WAR_PAINT
+- 战斗记录：F5 Monster战 掉血34; F6 Monster战 掉血22; F9 Monster战 掉血24; F11 Monster战 掉血3; F12 Monster战 掉血0; F14 Elite战 掉血20（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)，VOLLEY(24分/10局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/453 胜，当前目标进阶 0
