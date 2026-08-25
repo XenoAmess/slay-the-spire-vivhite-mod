@@ -6035,3 +6035,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：danger_comp_blk_boost: 0.30 → 0.35（高速失血爆毙（5回合掉血86，每回合17≥14）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））
 - 生涯战绩：0/491 胜，当前目标进阶 0
+
+## 第 492 局复盘（2026-08-25 17:01）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：MOLTEN_FIST, TRUE_GRIT, THE_GAMBIT, CINDER, FEED
+- 本局遗物：NUNCHAKU
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F6 Unknown战 掉血21; F12 Elite战 掉血42（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，VOLLEY(24分/10局)，PANACHE(24分/8局)，FEED(23分/30局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/492 胜，当前目标进阶 0
