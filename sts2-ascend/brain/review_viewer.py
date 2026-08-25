@@ -694,7 +694,14 @@ def main() -> None:
         return
     try:
         Viewer(mode, interactive=interactive).run()
-    except Exception:
+    except Exception as exc:
+        # 尸检日志：viewer 之死必须留痕（此前静默 release，消失无迹可寻）
+        try:
+            import traceback
+            with (KNOWLEDGE_DIR / "viewer_exc.log").open("a", encoding="utf-8") as f:
+                f.write("".join(traceback.format_exception(exc))[-1500:] + "\n===main-exit===\n")
+        except OSError:
+            pass
         release_lock()
 
 

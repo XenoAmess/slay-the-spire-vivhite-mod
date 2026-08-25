@@ -1006,7 +1006,15 @@ class Policy:
             # （本批 2RSHS 局 F9「预计进Boss血量 75%<75%」），final_pct 的
             # 表示误差会把它判成不达标吃续航罚分并留下自相矛盾的留痕——
             # 二值判定必须带 epsilon，比例罚分（血量地板）不受影响不动
-            if _to_boss and final_pct < need_eff - 1e-9:
+            if _to_boss and eve_doomed:
+                # 竞速必败豁免（第524局批复盘新增）：_boss_race_doomed 判死的
+                # 对局里满血进场也追不上击杀曲线，入场血量已被多批实证为非生死
+                # 变量（本批 75%~100% 进场全数整管打空）——续航罚分只会把选路
+                # 推向「囤血等死」，与候选端的战力节点倾斜配套（见下方
+                # race_doom_power_bonus）。留痕供复盘核对豁免触发率
+                notes.append("竞速必败预演成立，Boss入场血量线豁免"
+                             "（满血亦追不上击杀曲线，续航罚分不计）")
+            elif _to_boss and final_pct < need_eff - 1e-9:
                 raw_penalty += (need_eff - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
                 _relax = f"（饥饿放宽自{need_pct:.0%}）" if need_eff < need_pct - 1e-9 else ""
                 notes.append(f"进Boss血量预计{final_pct:.0%}<{need_eff:.0%}{_relax}，优先续航路线")
@@ -1111,6 +1119,21 @@ class Policy:
                             c["ps"] += _doom_bonus
                             c["notes"].append(
                                 f"绝境最高分为死亡路线，存活{c['nt']}改判优先(+{_doom_bonus:.0f})")
+        # 竞速必败的战力节点倾斜（第524局批复盘新增）：竞速预演判死时，剩余
+        # 层数内唯一可能翻转时间线的是战力增量（金币/卡牌/遗物/事件收益），
+        # 入场血量的边际价值归零——本批四局前夜竞速必败仍按「囤血」逻辑选路
+        # （RestSite 链 + 续航罚分导向），最终以 75%~100% 血整管打空。对纯价值
+        # 节点加成；触发条件与 path_doomed_value_bonus（投影死亡）独立，二者
+        # 可叠加（判死 + 投影死亡的商店是双重杠杆）。精英不参与：灰区闸门仍是
+        # 即死风险的守门人，不能被必败加成重新放行
+        _race_bonus = float(pol.get("race_doom_power_bonus", 10.0))
+        if eve_doomed and _race_bonus > 0.0:
+            for c in cand:
+                if c["nt"] in ("Shop", "Treasure", "Event"):
+                    c["ps"] += _race_bonus
+                    c["notes"].append(
+                        f"竞速必败预演：优先{c['nt']}换战力(+{_race_bonus:.0f}，"
+                        f"入场血量已非生死变量)")
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
         best_path = []
         details = []
@@ -2730,6 +2753,14 @@ class Policy:
         if (_e_card.get("picked", 0) >= int(pol.get("unplayed_min_picked", 4))
                 and _e_card.get("plays", 0) <= float(pol.get("unplayed_play_rate", 0.5)) * _e_card["picked"]):
             value -= float(pol.get("unplayed_card_penalty", 4.0))
+            # 零出牌硬回避（第524局批复盘）：plays==0 的牌战斗端从未打出过——
+            # DISINTEGRATION(26拿0打)/MIND_ROT(12)/SLOTH(6)/WASTE_AWAY(5) 的
+            # 「不可打出」面板被 card_numbers 解析成高伤攻击后，饥饿加分（可达
+            # +20）长期压过 -4 旧罚分，选取率仍高达 74%，入组即死注水。零出牌
+            # 实证升级为一票否决；删除/献祭端复用本函数，负值越大越先删/先交，
+            # 语义自洽。若引擎日后能打出它，plays>0 后否决自动解除（自愈）
+            if not int(_e_card.get("plays", 0) or 0):
+                value -= float(pol.get("never_played_veto_penalty", 40.0))
         # 统计实锤的低价值牌（样本≥4 且场均显著低于全局均值）硬性回避：
         # EXPECT_A_FIGHT(6.6分/5局)、BASH(7.2分/6局) 的 learned value ≈ -2.8，
         # 压不住格挡/抽牌启发式的 12+ 基础分，必须用大额惩罚对冲

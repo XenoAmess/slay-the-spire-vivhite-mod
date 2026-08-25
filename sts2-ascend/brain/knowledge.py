@@ -105,6 +105,12 @@ DEFAULT_POLICY = {
                                      # 是死亡投影而存在存活的 Shop/Treasure/Event 时，同样对后者
                                      # 加成——UNPSGREBQ2TU 局 F21 商店（投影存活 53%）以 8.62 分
                                      # 之差输给死亡投影的 Unknown，旧「全候选死亡」前提漏掉该形态
+    "race_doom_power_bonus": 10.0,  # 竞速必败预演成立时的战力节点倾斜（第524局批复盘新增）：
+                                    # _boss_race_doomed 判死 = 满血进场也追不上击杀曲线，
+                                    # 入场血量的边际价值归零（本批四局以75%~100%血整管打空），
+                                    # 剩余层数内唯一可能翻转时间线的是战力增量。对
+                                    # Shop/Treasure/Event 候选加此正分；精英不参与（灰区
+                                    # 闸门仍是即死风险的守门人），健康局面（未判死）零影响
     # --- 卡组构建 ---
     "deck_soft_cap": 20,          # 非基础牌软上限：超出后每张候选牌都贬值（膨胀稀释抽牌质量）
     "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
@@ -115,6 +121,11 @@ DEFAULT_POLICY = {
     "unplayed_min_picked": 4,       # 「拿了不打」判定的最小生涯拾取局数
     "unplayed_play_rate": 0.5,      # plays/picked ≤ 此值视为「拿了不打」（71 局 FLAME_BARRIER 13拿6打）
     "unplayed_card_penalty": 4.0,   # 「拿了不打」的牌在拾取端的额外减分
+    "never_played_veto_penalty": 40.0,  # 零出牌实证的一票否决（第524局批复盘新增）：picked≥4 且
+                                        # plays==0 = 战斗端从未打出过的死牌——DISINTEGRATION(26拿0打)/
+                                        # MIND_ROT(12)/SLOTH(6)/WASTE_AWAY(5) 靠「不可打出」面板被解析成
+                                        # 高伤攻击，饥饿加分高达 +20 压不住 -4 旧罚分，选取率仍 74%。
+                                        # 删除/献祭端复用同一评估函数，负值越大越先删/先交，语义自洽
     "starve_defense_suppress_max": 0.30,  # 输出饥饿时纯格挡技能的拾取贬值上限（第509~515局批复盘新增）：
                                           # 缺口深度 × 此值 = 压价比例——饥饿加分链顶格后高质攻击同分满额，
                                           # 纯防御仍按原价竞争名额，深缺口局卡组构成对缺口失明。
@@ -590,7 +601,14 @@ class Knowledge:
         e = self.stats["cards"].get(card_id)
         if not e or not e["picked"]:
             return e.get("bias", 0.0) if e else 0.0
-        mean = e["outcome_sum"] / e["picked"]
+        # 零出牌不享 outcome 学分（第524局批复盘）：outcome=到达层数是「拾取即
+        # 记分」的幸存者偏差账，picked>0 而 plays==0 的牌从未被战斗端打出过，
+        # 其学分全部来自「拿它的局恰好走得远」，与卡牌价值无关——DISINTEGRATION
+        # 凭虚假场均 33 把 learned value 抬到 +11.8（拾取端封顶后仍 +3），
+        # 与 -4 的 unplayed 罚分对冲后净 +7，长期通过拾取门槛。零出牌时只保留
+        # bias（228 批已封禁其正向增长），让拾取端的实证否决全权接管
+        if not int(e.get("plays", 0) or 0):
+            return e.get("bias", 0.0)
         shrunk = (e["outcome_sum"] + SHRINK_K * self.global_avg_outcome()) / (e["picked"] + SHRINK_K)
         return (shrunk - self.global_avg_outcome()) + e.get("bias", 0.0)
 
