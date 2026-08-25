@@ -980,7 +980,11 @@ class Policy:
                     need_eff = need_pct * (1.0 - _relief)
             _to_boss = (boss_row is not None and path_keys
                         and int(path_keys[-1][0]) >= int(boss_row))
-            if _to_boss and final_pct < need_eff:
+            # 浮点边界容差（第 494 局批复盘）：投影终点恰好落在入场线上时
+            # （本批 2RSHS 局 F9「预计进Boss血量 75%<75%」），final_pct 的
+            # 表示误差会把它判成不达标吃续航罚分并留下自相矛盾的留痕——
+            # 二值判定必须带 epsilon，比例罚分（血量地板）不受影响不动
+            if _to_boss and final_pct < need_eff - 1e-9:
                 raw_penalty += (need_eff - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
                 _relax = f"（饥饿放宽自{need_pct:.0%}）" if need_eff < need_pct - 1e-9 else ""
                 notes.append(f"进Boss血量预计{final_pct:.0%}<{need_eff:.0%}{_relax}，优先续航路线")

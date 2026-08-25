@@ -4592,6 +4592,45 @@ def main() -> int:
     assert abs(bs_know.policy["kill_race_prior_eff"] - 0.55) < 1e-9, \
         f"胜利未回收竞速先验折算率: {bs_know.policy['kill_race_prior_eff']}"
 
+    # 3bs-2) 部分胜利释放（第 494 局批复盘新增）：非胜利局但已跨过幕界
+    #        （F18+ 即实战击败过一幕 Boss）且最终死于非 Boss 节点——折算率
+    #        按步长向锚点释放；正死于 Boss 战的同场不释放（其长战证据已另行
+    #        开账，防同局降/释对冲）；F17 内死亡（Boss 未被击败）不释放。
+    #        正例：压到 0.37 触底的折算率 + F31 精英阵亡 → 0.40
+    bsp_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr3-")))
+    bsp_know.policy["kill_race_prior_eff"] = 0.37
+    bsp_ctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_ELITE_A", "node_type": "Elite", "rounds": 6,
+                        "floor": 31, "hp_lost": 52.0, "stall": False},
+        death_was_elite=True, death_hp_pct_at_entry=0.4, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[])
+    reflect.finalize_run(bsp_know, bsp_ctx, victory=False, final_floor=31)
+    assert abs(bsp_know.policy["kill_race_prior_eff"] - 0.40) < 1e-9, \
+        f"跨幕局未获部分胜利释放: {bsp_know.policy['kill_race_prior_eff']}"
+    # 反例一：同场正死于 Boss 战（node_type=Boss）→ 不释放
+    bsn_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr4-")))
+    bsn_know.policy["kill_race_prior_eff"] = 0.37
+    reflect.finalize_run(bsn_know, SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_BOSS_B", "node_type": "Boss", "rounds": 8,
+                        "floor": 33, "hp_lost": 86.0, "stall": False},
+        death_was_elite=False, death_hp_pct_at_entry=0.9, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[]),
+        victory=False, final_floor=33)
+    assert abs(bsn_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
+        f"死于Boss战的跨幕局不应释放: {bsn_know.policy['kill_race_prior_eff']}"
+    # 反例二：未跨幕界（F17 死于一幕 Boss）→ 不释放
+    reflect.finalize_run(bsn_know, SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_BOSS_C", "node_type": "Boss", "rounds": 8,
+                        "floor": 17, "hp_lost": 80.0, "stall": False},
+        death_was_elite=False, death_hp_pct_at_entry=1.0, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[]),
+        victory=False, final_floor=17)
+    assert abs(bsn_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
+        f"未跨幕界不应释放: {bsn_know.policy['kill_race_prior_eff']}"
+
     # 3bt) 竞速及格线与预留解耦（第422局复盘）：burst≈33 的卡组高于静态
     #      deck_burst_floor=30、却远低于杀 learned Boss 所需（血池160/火力10/
     #      满血存活8回合 → 及格线36.4）——旧口径把它当「非饥饿」卡组：力量
