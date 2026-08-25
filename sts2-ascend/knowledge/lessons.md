@@ -5221,3 +5221,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/422 胜，当前目标进阶 0
+
+## 第 423 局复盘（2026-08-25 09:09）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：TWIN_STRIKE, SWORD_BOOMERANG, UNRELENTING, STOMP, DARK_EMBRACE, IRON_WAVE, MOLTEN_FIST, JUGGLING, UNMOVABLE, UPPERCUT, THUNDERCLAP
+- 本局遗物：LUCKY_FYSH, 草莓
+- 战斗记录：F7 Monster战 掉血1; F9 Monster战 掉血15; F12 Monster战 掉血5; F13 Elite战 掉血34; F14 Unknown战 掉血8; F17 Boss战 掉血23（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(26分/11局)，EQUILIBRIUM(25分/9局)，FEED(25分/25局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/423 胜，当前目标进阶 0
