@@ -5494,3 +5494,14 @@
 - 演化旋钮要查全部消费端：kill_race_prior_eff 被五级接替压到 0.37 后 dpt 全面悲观，竞速误触发面从 Boss 战溢出到 ≥80 血池的普通怪房（F5-F6 连败形态吻合），提前引爆绝望螺旋。
 - 膨胀卡组删除断供：打击升完/拿光后旧 junk 判据永不触发删牌，「可升级31张」照旧注水；软上限溢出≥2 时同名第三张起纳入删除候选。
 - 观察点：「防守线复核」留痕频率、一幕 Boss 通过率、前夜回血/锻造比例、普通房连败形态是否消失。
+
+## 第 445 局复盘（2026-08-25 11:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HOWL_FROM_BEYOND, WHIRLWIND, PACTS_END, ARMAMENTS, TAUNT, FLAME_BARRIER, JUGGERNAUT, BREAKTHROUGH, HOWL_FROM_BEYOND
+- 本局遗物：JUZU_BRACELET, THE_COURIER, 干瘪之手, 地精之角
+- 战斗记录：F7 Monster战 掉血27; F9 Monster战 掉血16; F12 Elite战 掉血2; F14 Elite战 掉血26; F15 Monster战 掉血11; F17 Boss战 掉血49（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/445 胜，当前目标进阶 0
