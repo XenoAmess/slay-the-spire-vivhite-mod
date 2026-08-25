@@ -2710,6 +2710,128 @@ def main() -> int:
         f"普通战兜底浪费未知类别药水: {d_pot3.action}（{d_pot3.reason}）"
     potc.combat = None
 
+    # 3xa-bis（第470局批复盘）：已识别的防御/回复类药水不得经「无法分类」兜底
+    #           被 premium 硬仗开局白喝——470 局 F7 以 91/91 满血、意图 14 的
+    #           轻量战把格挡药水倒进兜底通道（交药线门槛未到却一路落穿），五层
+    #           后的死亡战手里再无防御资源。修复：识别为防御类的药水在门槛未到
+    #           时显式保留；应急解封口（服务端致死判定/本地缺口吞血条）照旧放行
+    pol_pot4 = policy.Policy(know_es, random.Random(5))
+    potc.combat = {"comp_id": "RAMP_COMP", "node_type": "Monster"}
+    d_pot4 = pol_pot4.decide(pot_state("获得12点格挡。"), potc)
+    assert d_pot4.action == "play_card" and "药水" not in d_pot4.reason, \
+        f"满血时防御药水仍被兜底白喝: {d_pot4.action}（{d_pot4.reason}）"
+    st_emg = pot_state("获得12点格挡。")
+    st_emg["combat"]["end_turn_will_kill_player"] = True
+    pol_pot5 = policy.Policy(know_es, random.Random(5))
+    d_pot5 = pol_pot5.decide(st_emg, potc)
+    assert d_pot5.action == "use_potion" and "交药线" in d_pot5.reason, \
+        f"致死局防御药水应急解封失效: {d_pot5.action}（{d_pot5.reason}）"
+    potc.combat = None
+
+    # 3xa-ter（第470局批复盘）：条件型成长引擎（撕裂族）的触发条件卡组无法满足
+    #           时按死牌治理——470 局零自残卡组里撕裂被三端加成：商店 76 金购入、
+    #           连续两次锻造 +16 引擎分、三场战斗 T1 上砧（含死亡战），全程零触发。
+    #           战斗端：死牌评分压到出牌阈值之下，攻击正常上砧；
+    #           对照组：卡组补入自残源后撕裂恢复引擎待遇；
+    #           锻造端：+16 引擎分不再喂给触发条件不可满足的能力牌。
+    def rupture_state(deck):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": 70, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "RUPT_T", "name": "撕裂", "playable": True,
+                            "energy_cost": 1, "requires_target": False, "card_type": "Power",
+                            "resolved_rules_text": "每当你失去生命时，获得1点力量。"},
+                           {"index": 1, "card_id": "RP_HIT", "name": "打击", "playable": True,
+                            "energy_cost": 1, "requires_target": True,
+                            "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "NO_DATA_RUP", "name": "试裂兽",
+                                    "current_hp": 120, "max_hp": 140, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 10}]}]},
+            "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 6,
+                    "deck": [dict(c) for c in deck]}}
+
+    plain_deck = ([_mk_strike(i) for i in range(4)]
+                  + [{"card_id": f"RP_DEF{i}", "card_type": "Skill", "energy_cost": 1,
+                      "dynamic_values": [{"name": "Block", "current_value": 5}]} for i in range(4)])
+    sd_deck = list(plain_deck) + [
+        {"card_id": "HEMO_T", "card_type": "Attack", "energy_cost": 1,
+         "resolved_rules_text": "失去4点生命，造成10点伤害。"}]
+    rup_ctx = type("RupCtx", (), {"current_combat_is_hard": False, "credit_tags": []})()
+    rup_ctx.combat = {"comp_id": "NO_DATA_RUP", "node_type": "Monster"}
+    pol_rup1 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rupt1-"))), random.Random(5))
+    d_rup_dead = pol_rup1.decide(rupture_state(plain_deck), rup_ctx)
+    assert d_rup_dead.action == "play_card" and d_rup_dead.params.get("card_index") == 1, \
+        f"零自残卡组里死引擎仍压过攻击上砧: {d_rup_dead.action}（{d_rup_dead.reason}）"
+    assert "死牌" in d_rup_dead.reason or d_rup_dead.params.get("card_index") == 1, \
+        f"死牌留痕缺失: {d_rup_dead.reason}"
+    pol_rup2 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rupt2-"))), random.Random(5))
+    d_rup_live = pol_rup2.decide(rupture_state(sd_deck), rup_ctx)
+    assert d_rup_live.action == "play_card" and d_rup_live.params.get("card_index") == 0 \
+        and "撕裂" in d_rup_live.reason, \
+        f"有自残源后撕裂未恢复引擎待遇: {d_rup_live.action}（{d_rup_live.reason}）"
+
+    upk_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ruptup-"))
+    upk_now = knowledge.Knowledge(upk_dir)
+    up_pol = policy.Policy(upk_now, random.Random(5))
+    up_deck = ([_mk_strike(i) for i in range(5)]
+               + [{"card_id": f"RUPT_DEF{i}", "card_type": "Skill", "energy_cost": 1,
+                   "dynamic_values": [{"name": "Block", "current_value": 5}]} for i in range(3)])
+    up_state = {
+        "screen": "CARD_SELECTION",
+        "available_actions": ["select_deck_card", "confirm_selection"],
+        "selection": {"kind": "upgrade", "prompt": "升级", "min_select": 1,
+                      "selected_count": 0, "can_confirm": False,
+                      "cards": [
+                          {"index": 0, "card_id": "RUPT_UP", "name": "撕裂",
+                           "card_type": "Power", "energy_cost": 1,
+                           "rules_text": "每当你失去生命时，获得1点力量。"},
+                          {"index": 1, "card_id": "BIG_ATK_UP", "name": "重击",
+                           "card_type": "Attack", "energy_cost": 1,
+                           "dynamic_values": [{"name": "Damage", "current_value": 15}]}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 10,
+                "deck": [dict(c) for c in up_deck]}}
+    d_upr = up_pol.decide(up_state, type("UCtxR", (), {})())
+    assert d_upr.action == "select_deck_card" and d_upr.params.get("option_index") == 1, \
+        f"触发条件不可满足的成长牌仍吃锻造端加分: {d_upr.action}（{d_upr.reason}）"
+    assert "成长引擎" not in d_upr.reason, \
+        f"死引擎锻造留痕残留: {d_upr.reason}"
+
+    # 3xa-quater（第470局批复盘）：短时死亡证据的第三级接替旋钮——高危组合
+    #           防御姿态斜率 danger_comp_blk_boost。block_safety 与药水交药线
+    #           双顶格后，证据改接组合专属姿态（战场归属正确）；默认值=旧
+    #           硬编码 0.30 行为零跳变；演化后 enemy_stance 斜率同步生效；
+    #           胜利时回收（接替链有降必有升）。
+    dcb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-dcb-"))
+    dcb_know = knowledge.Knowledge(dcb_dir)
+    dcb_know.stats["enemies"]["KILLER_COMP"] = {
+        "encounters": 10, "deaths": 6, "hp_lost_sum": 500.0, "wins": 4}
+    st_dcb0 = dcb_know.enemy_stance("KILLER_COMP", "Monster", 80)
+    assert abs(st_dcb0["blk_mult"] - 1.30) < 1e-9, \
+        f"默认斜率应为旧锚点1.30: {st_dcb0['blk_mult']}"
+    dcb_know.policy["danger_comp_blk_boost"] = 0.45
+    st_dcb1 = dcb_know.enemy_stance("KILLER_COMP", "Monster", 80)
+    assert abs(st_dcb1["blk_mult"] - 1.45) < 1e-9, \
+        f"斜率演化未在组合姿态生效: {st_dcb1['blk_mult']}"
+    dcb2_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sdeath-"))
+    dcb2_know = knowledge.Knowledge(dcb2_dir)
+    dcb2_know.policy["block_safety"] = 2.10      # 一级顶格
+    dcb2_know.policy["potion_block_hp_pct"] = 0.80  # 二级顶格
+    sd_ctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "SD_COMP", "rounds": 3, "node_type": "Monster"},
+        death_was_elite=False, death_hp_pct_at_entry=0.9,
+        credit_tags=[], rests_healed_at_full=0, ascension=0, combat_notes=[])
+    sd_lesson = finalize_run(dcb2_know, sd_ctx, victory=False, final_floor=12)
+    assert abs(dcb2_know.policy["danger_comp_blk_boost"] - 0.35) < 1e-9, \
+        f"三级链未吸收短时死亡证据: {dcb2_know.policy['danger_comp_blk_boost']}"
+    assert "组合防御姿态斜率" in sd_lesson and "接替旋钮留待复盘设计" not in sd_lesson, \
+        f"三级接替留痕异常: {sd_lesson[:300]}"
+
     # 3xx) 房间先验战斗发生率条件化（第 96 局复盘核心修复）：生涯 Unknown
     #      到访 148 次仅 33 次开战（22%）——damage_events 只统计真打了仗的样本，
     #      零伤事件到访从未进入分母，旧口径把 E[伤|开战] 当 E[伤|到访] 用：
@@ -3889,7 +4011,8 @@ def main() -> int:
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.45) < 1e-9, \
         f"短时死亡证据未接替到药水交药线: {uknow.policy['potion_block_hp_pct']}"
     assert "药水提前交药线" in ulesson2, f"短时死亡接替留痕缺失: {ulesson2}"
-    # ③ 双重顶格：交药线也到 0.80 上限 → 显式封账留痕（231~233 批语义保留）
+    # ③ 双重顶格：交药线也到 0.80 上限 → 第三级接替（第470局批复盘）：
+    #    证据改接高危组合防御姿态斜率 danger_comp_blk_boost（+0.05）
     uknow.policy["potion_block_hp_pct"] = 0.80
     uctx_b = _RC()
     uctx_b.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
@@ -3897,7 +4020,15 @@ def main() -> int:
     ulesson_b = reflect.finalize_run(uknow, uctx_b, victory=False, final_floor=33)
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.80) < 1e-9, \
         f"双重顶格后接替旋钮仍被加码: {uknow.policy['potion_block_hp_pct']}"
-    assert "爆毙证据停止吸收" in ulesson_b, f"爆毙顶格封账留痕缺失: {ulesson_b}"
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.35) < 1e-9, \
+        f"三级接替（组合姿态斜率）未吸收爆毙证据: {uknow.policy['danger_comp_blk_boost']}"
+    assert "组合防御姿态斜率" in ulesson_b, f"三级接替留痕缺失: {ulesson_b}"
+    # ③-bis 三级全顶格：斜率也到 0.60 上限 → 显式封账留痕
+    uknow.policy["danger_comp_blk_boost"] = 0.60
+    ulesson_b2 = reflect.finalize_run(uknow, uctx_b, victory=False, final_floor=33)
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.60) < 1e-9, \
+        f"三级顶格后仍被加码: {uknow.policy['danger_comp_blk_boost']}"
+    assert "爆毙证据停止吸收" in ulesson_b2, f"三级全顶格封账留痕缺失: {ulesson_b2}"
     uctx_s = _RC()
     uctx_s.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
                              "rounds": 3, "hp_lost": 14.0}
@@ -3920,9 +4051,13 @@ def main() -> int:
     reflect.finalize_run(uknow, _RC(), victory=True, final_floor=20)
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
         f"胜利未释放药水交药线（单向棘轮复发）: {uknow.policy['potion_block_hp_pct']}"
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.55) < 1e-9, \
+        f"胜利未回收组合姿态斜率: {uknow.policy['danger_comp_blk_boost']}"
     reflect.finalize_run(uknow, _RC(), victory=True, final_floor=21)
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
         f"健康交药线被胜利误推: {uknow.policy['potion_block_hp_pct']}"
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.50) < 1e-9, \
+        f"健康姿态斜率被胜利误推: {uknow.policy['danger_comp_blk_boost']}"
 
     # 3zs) 「拿了不打」偏置封禁 + 榜单过滤（第 228 批复盘）：DISINTEGRATION 类
     #      不可打出牌（7拿0打）靠幸存者偏差把 outcome 抬到 33、bias 涨到 +4 上限，

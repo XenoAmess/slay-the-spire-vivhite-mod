@@ -172,6 +172,14 @@ DEFAULT_POLICY = {
     # --- 组合感知与 Boss 前夜（第 62~64 局复盘） ---
     "comp_loss_stance_frac": 0.28,  # 敌方组合场均战损占最大生命比达到此值 → 即使死亡率<30%也视同高危收紧姿态
     "potion_comp_loss_frac": 0.30,  # 敌方组合场均战损占比达到此值 → 解锁增益/攻击药水（不再只认精英/Boss 房）
+    "danger_comp_blk_boost": 0.30,  # 高危组合防御姿态的格挡增益斜率（第470局批复盘新增，短时死亡证据的
+                                    # 第三级接替旋钮）：enemy_stance 非Boss分支 blk_mult = 1+此值×sev。
+                                    # 动机：生涯死亡榜前三全是普通怪房里的杀手组合（VANTOM 134战78死58%、
+                                    # KIN双子 125战73死、仪式兽 116战52死，合计吞掉 ~43% 的全部对局），
+                                    # 全局 block_safety 与药水交药线双双顶格后，「没挡住」的证据只剩
+                                    # 组合专属防御姿态这一正确战场可去——把斜率从固定 0.30 解放为
+                                    # 可演化键（BOUNDS 0.30~0.60），短时阵亡证据逐局 +0.05 加固
+                                    # 杀手组合的格挡姿态，胜利时回收。默认值=旧硬编码，行为零跳变
     "boss_eve_smith_min_samples": 3,  # Boss 前夜智能锻造所需的 Boss 分档最小样本数
     "boss_eve_smith_heal_mult": 1.0,  # Boss 前夜改锻造的战损线：场均Boss战损 ≥ 回血量×此倍数即视为"回血救不了"（79局复盘：旧条件 ≥满血 永远够不到，实测场均≈28）
     "boss_eve_smith_hp_pct": 0.65,  # Boss 前夜改锻造的入场血量线（第 214 批证据带修正：0.65~1.00 带内入场血量
@@ -637,9 +645,13 @@ class Knowledge:
                 # 连续死于它）旧系数只换来格挡 +7%、紧急线 +7%，响应过于温和——
                 # 紧急线 +0.20/格挡 +0.30；攻击压制维持 -0.15 不变（对磨血型组合
                 # 拖长战斗同样致命，防而不缩才是正确姿态）
+                # 第470局批复盘：格挡增益斜率 0.30 解放为可演化键
+                # danger_comp_blk_boost——block_safety 与药水交药线双双顶格后，
+                # 短时死亡证据改接组合专属防御姿态（战场归属正确的第三级接替）
+                _blk_boost = float(self.policy.get("danger_comp_blk_boost", 0.30))
                 base["urgent_hp_pct"] = round(0.45 + 0.20 * sev, 3)
                 base["atk_mult"] = round(1.0 - 0.15 * sev, 3)
-                base["blk_mult"] = round(1.0 + 0.30 * sev, 3)
+                base["blk_mult"] = round(1.0 + _blk_boost * sev, 3)
                 base["danger"] = f"高危组合（{n}战{deaths}死）"
         return base
 

@@ -76,6 +76,14 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 篝火端前夜更早转锻造（缩短战斗的两端杠杆同时前移）。下限 0.35 防
     # 先验归零使首回合竞速账永久全开；上限 0.55 即默认锚点，胜利回收
     "kill_race_prior_eff": (0.35, 0.55),
+    # 第470局批复盘接入：短时死亡证据链的第三级接替旋钮——block_safety（全局
+    # 防御权重）与 potion_block_hp_pct（药水交药线）双双顶格后，「没挡住」的
+    # 证据改接高危组合防御姿态的格挡增益斜率 danger_comp_blk_boost：
+    # 每次 +0.05 让 VANTOM/KIN双子/仪式兽这类生涯杀手组合（合计吞掉 ~43% 对局）
+    # 的 enemy_stance 格挡姿态更硬（blk_mult = 1+斜率×sev，sev=1 时 1.30→最高1.60）。
+    # 战场归属正确：证据来自具体组合战，回应也只作用于这些组合战，不再扰动全局。
+    # 下限 0.30 即旧硬编码锚点；上限 0.60 防极端防御姿态彻底放弃输出拖长战斗
+    "danger_comp_blk_boost": (0.30, 0.60),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -173,6 +181,25 @@ def _adj_potion_line(know: Knowledge, changes: list[str], evidence: str) -> bool
     _adj(know, "potion_block_hp_pct", 0.05, changes,
          f"{evidence}且 block_safety 顶格——证据改接药水提前交药线"
          "（更早喝下防御/回复药水，不再加码已顶格的格挡权重）")
+    return len(changes) > pre
+
+
+def _adj_danger_comp_blk(know: Knowledge, changes: list[str], evidence: str) -> bool:
+    """短时死亡证据链的第三级接替旋钮（第470局批复盘设计落地）：全局防御
+    权重与药水交药线双双顶格后，「没挡住」的证据改接高危组合防御姿态的
+    格挡增益斜率 danger_comp_blk_boost。
+
+    战场归属论证：生涯死亡榜前三全是普通怪房杀手组合（VANTOM/KIN双子/
+    仪式兽，合计 ~43% 对局死于此三者），短时阵亡几乎都发生在这些战局里
+    ——证据来自组合战，回应也必须只作用于组合战。enemy_stance 的
+    blk_mult = 1 + 斜率×sev，斜率每 +0.05 让 sev=1 的头号杀手格挡姿态从
+    1.30 抬向 1.60，而中性组合与 Boss 姿态零波及。
+    返回是否成功吸收（False = 三级链全部顶格，调用方负责封账留痕）。
+    """
+    pre = len(changes)
+    _adj(know, "danger_comp_blk_boost", 0.05, changes,
+         f"{evidence}且 block_safety/药水交药线均顶格——证据改接高危组合"
+         "防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及）")
     return len(changes) > pre
 
 
@@ -396,19 +423,22 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                         _adj(know, "block_safety", _bs_step, changes,
                              f"{_burst_evidence}——按「没挡住」证据上调防御权重")
                     elif not _adj_potion_line(know, changes, _burst_evidence):
-                        changes.append(
-                            f"{_burst_evidence}但 block_safety "
-                            f"{pol['block_safety']:.2f} 顶格——爆毙证据停止吸收并留痕，"
-                            "接替旋钮留待复盘设计")
+                        if not _adj_danger_comp_blk(know, changes, _burst_evidence):
+                            changes.append(
+                                f"{_burst_evidence}但 block_safety "
+                                f"{pol['block_safety']:.2f}/药水交药线/组合姿态斜率"
+                                "三级全顶格——爆毙证据停止吸收并留痕")
                 else:
                     if _bs_head >= _bs_step:
                         _adj(know, "block_safety", _bs_step, changes, "普通战斗阵亡，略微上调防御权重")
                     elif not _adj_potion_line(know, changes,
                                               f"普通战斗短时阵亡（{rounds}回合）"):
-                        changes.append(
-                            f"普通战斗短时阵亡（{rounds}回合）但 block_safety "
-                            f"{pol['block_safety']:.2f} 顶格——短时死亡证据停止吸收并留痕，"
-                            "接替旋钮留待复盘设计")
+                        if not _adj_danger_comp_blk(know, changes,
+                                                    f"普通战斗短时阵亡（{rounds}回合）"):
+                            changes.append(
+                                f"普通战斗短时阵亡（{rounds}回合）但 block_safety "
+                                f"{pol['block_safety']:.2f}/药水交药线/组合姿态斜率"
+                                "三级全顶格——短时死亡证据停止吸收并留痕")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
     else:
@@ -443,6 +473,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol.get("kill_race_prior_eff", 0.55) < 0.55:
             _adj(know, "kill_race_prior_eff", 0.03, changes,
                  "胜利证明当前竞速先验折算可行，小幅回收")
+        # 高危组合防御姿态斜率的胜利回收（第470局批复盘，接替链有降必有升）：
+        # 只回收被棘轮抬高的部分（>0.30 旧锚点），健康值不动
+        if pol.get("danger_comp_blk_boost", 0.30) > 0.30:
+            _adj(know, "danger_comp_blk_boost", -0.05, changes,
+                 "胜利证明当前组合防御姿态可行，小幅回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 

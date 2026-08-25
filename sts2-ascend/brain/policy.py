@@ -1573,7 +1573,8 @@ class Policy:
                                                    my_hp, my_max_hp, stance, forced_kill,
                                                    reserve_for_block and not race_allin and not kill_race,
                                                    min_blk_cost, energy, race_allin, kill_race,
-                                                   all_respawn=all_respawn)
+                                                   all_respawn=all_respawn,
+                                                   run_deck=(state.get("run") or {}).get("deck"))
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _exhausts_other_cards(c):
@@ -1669,7 +1670,8 @@ class Policy:
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
                     forced_kill: bool = False, reserve_for_block: bool = False,
                     min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
-                    kill_race: bool = False, all_respawn: bool = False):
+                    kill_race: bool = False, all_respawn: bool = False,
+                    run_deck: list[dict] | None = None):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -1899,6 +1901,13 @@ class Policy:
             return score, None, f"功能牌（抽牌{dr}/回能）"
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
+        # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足
+        # （撕裂族需要自残源）时，长战复利根本不存在——旧评分仍按
+        # base+长战加成给它 7~14 分，死亡战 T1 压过攻击上砧白吃一整轮能量。
+        # 按死牌计价压到出牌阈值之下，手牌里真没别的可打时宁可空过
+        if (is_power(card) and run_deck is not None
+                and not self._scaling_power_active(card, run_deck)):
+            return -2.0, None, "死牌（触发条件无自残源，永不生效，让位实伤）"
         # 长战加成（第 223 批复盘）：能力牌的价值随战斗预期长度复利——Boss/大血池
         # 战斗要打 6~10 回合，力量源（恶魔形态/点燃/撕裂）每早一回合上场就多一档
         # 全程增益。旧评分与战斗时长脱钩（固定 6.0/1.5），在 Boss 攻坚 ×1.8 下
@@ -1991,6 +2000,13 @@ class Policy:
                        or "dexterity" in desc_l or "能量" in desc or "energy" in desc_l
                        or "抽" in desc or "draw" in desc_l or "速度" in desc or "speed" in desc_l
                        or "能力" in desc or "power" in desc_l)
+            # 防御/回复类前置识别（第470局批复盘）：「格挡药水」在满血时过不了
+            # 交药线门槛，旧流程会一路落进「无法分类」兜底被 premium 硬仗开局
+            # 白喝——470 局 F7 以 91/91 满血、意图 14 的轻量战把格挡药水倒进
+            # 去了，五层后的死亡战手里再无防御资源。已识别类别的门槛必须
+            # 尊重：识别为防御/回复的药水不得再经兜底通道流失
+            is_defensive = bool("格挡" in desc or "生命" in desc or "回复" in desc
+                                or "block" in desc_l or "heal" in desc_l)
             # Boss 前夜进攻药水预留（第 380~385 批复盘）：BNSJ 局实证——F4 力量/
             # F14 易伤/F15 攻击三瓶进攻药水在 Boss 前全数前倾兑付（其中两瓶倒在
             # 净损 0/-5 的普通怪房），F17 一幕 Boss 斩杀竞速差 3~7 回合空手阵亡。
@@ -2012,17 +2028,30 @@ class Policy:
                 kind = "攻击" if is_damage else "增益"
                 return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
-            if ("格挡" in desc or "生命" in desc or "回复" in desc or "block" in desc.lower() or "heal" in desc.lower()):
+            if is_defensive:
                 # 交药线接 potion_block_hp_pct（第 236 局复盘）：默认 0.35 与旧
                 # 行为一致，爆毙/短时死亡证据在 block_safety 顶格后把它逐步提前
                 _pot_line = float(pol.get("potion_block_hp_pct", 0.35))
-                if (state.get("combat", {}).get("player", {}).get("current_hp", 1)
-                        < _pot_line * state.get("combat", {}).get("player", {}).get("max_hp", 1)):
+                cb_def = (state.get("combat", {}).get("player", {}) or {})
+                _hp_now = cb_def.get("current_hp", 1)
+                _max_now = max(1, cb_def.get("max_hp", 1))
+                # 应急解封（第470局批复盘）：交药线未到但服务端判定结束回合
+                # 必死、或本地缺口已吞血条时，防御药水立即兑现——门槛拦的是
+                # 满血糖掷，不是救命
+                _incoming_now = sum((it.get("total_damage") or 0)
+                                    for e in enemies for it in (e.get("intents") or []))
+                _gap_now = max(0, _incoming_now - (cb_def.get("block", 0) or 0))
+                _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
+                                  or _gap_now >= _hp_now)
+                if (_hp_now < _pot_line * _max_now) or _def_emergency:
                     self._potion_tried.add(p["index"])
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
                                     f"（交药线 {_pot_line:.0%}）",
                                     tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+                # 已识别的防御/回复类且未到交药线：显式保留，绝不落入下方
+                # 兜底通道被 premium 硬仗开局白喝（470 局 F7 实证）
+                continue
             # 兜底：硬仗（致死/精英/低血放血）里无法分类的药水也值得一试——
             # 用错药水的代价远小于带进坟墓（第 30~32 局三连教训）。
             # 默认反转（第 96 局复盘，兑现 94~95 批处方）：「能力/power」补词后
@@ -2286,6 +2315,7 @@ class Policy:
     # ------------------------------------------------------------------
 
     @staticmethod
+    @staticmethod
     def _is_scaling_power(card: dict) -> bool:
         """力量/伤害成长型能力牌判定（第429~434批复盘新增）。
 
@@ -2298,6 +2328,34 @@ class Policy:
         return bool(re.search(
             r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
             _text(card), re.I))
+
+    @staticmethod
+    def _deck_has_self_damage(deck: list[dict]) -> bool:
+        """卡组中是否存在自残源（「失去X点生命」型攻击/技能）。"""
+        for c in deck or []:
+            if re.search(r"失去\s*\d+\s*点?\s*生命|lose\s+\d+\s*(?:hp|health)",
+                         _text(c), re.I):
+                return True
+        return False
+
+    def _scaling_power_active(self, card: dict, deck: list[dict]) -> bool:
+        """条件型成长引擎在当前卡组下能否真实生效（第470局批复盘新增）。
+
+        撕裂（RUPTURE）族：文本形如「每当你失去生命时，获得1点力量」——
+        触发前提是卡组存在自残源。零自残卡组里它是永不在场生效的死牌，
+        却因文本含「力量」被 _is_scaling_power 认成成长引擎，三端同时吃分：
+        商店按引擎稀缺加分购入、篝火按 +16 引擎分连续升级、战斗端按长战
+        加成 T1 上砧——470 局实证全程零触发，其中一场是死亡战（T1 撕裂
+        压过攻击白吃一整轮能量）。除「失去生命」触发表以外的成长牌
+        （点燃/恶魔形态等无条件增益）一律视为生效，行为不变。
+        """
+        if not self._is_scaling_power(card):
+            return False
+        t = _text(card)
+        if re.search(r"(?:每当|每次|whenever|any\s*time)[^。；;.]{0,24}(?:失去|lose)",
+                     t, re.I):
+            return self._deck_has_self_damage(deck)
+        return True
 
     def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
@@ -2453,7 +2511,9 @@ class Policy:
             # 的 ±6 摆动与格挡牌基础分，106 局爆发 18~21(<30) 照旧拿了一堆
             # 防御/功能牌，Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速——
             # 缺口越深（burst 距门槛越远）纠偏力度越大，burst≈0 时达 base+extra
-            if dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0 and burst_starved:
+            # 第470局批复盘：条件型引擎（撕裂族）必须触发条件可满足才享受
+            # 饥饿加分——零自残卡组里它永不生效，饥饿纠偏不能喂死牌
+            if (dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0 and burst_starved):
                 deficit = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
                 value += (float(pol.get("burst_starve_bonus_base", 3.0))
                           + float(pol.get("burst_starve_bonus_extra_max", 4.0)) * deficit)
@@ -2475,7 +2535,9 @@ class Policy:
             # 复利加成（223 批已在战斗端给能力牌长战加成，拾取端此前仍按
             # 平面 5 分定价）。与高质攻击的饥饿加分同构：缺口越深纠偏越大；
             # 「拿了不打」惩罚与重复贬值照常生效，防止为饥饿囤死牌
-            if burst_starved and self._is_scaling_power(card):
+            # 第470局批复盘：饥饿增值与引擎稀缺加分均改走 _scaling_power_active
+            # ——撕裂族在零自残卡组里是死牌，不得再吃引擎分
+            if burst_starved and self._scaling_power_active(card, deck):
                 _p_deficit = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
                 value += (float(pol.get("power_starve_bonus_base", 2.0))
                           + float(pol.get("power_starve_bonus_extra_max", 4.0)) * _p_deficit)
@@ -2488,7 +2550,7 @@ class Policy:
                 # 已有引擎数线性衰减：零引擎全额、1 台减半、≥cap 归零——
                 # 防「为饥饿囤三张恶魔形态」的反向注水
                 if deck:
-                    _engines = sum(1 for c in deck if self._is_scaling_power(c))
+                    _engines = sum(1 for c in deck if self._scaling_power_active(c, deck))
                 else:
                     _engines = 0
                 _cap_e = max(1.0, float(pol.get("scaling_engine_deck_cap", 2.0)))
@@ -2710,7 +2772,10 @@ class Policy:
                 if c.get("upgraded"):
                     continue
                 v = self.eval_reward_card(c, []) + (_atk_bonus if is_attack(c) else 0.0)
-                if _scale_up_bonus > 0.0 and self._is_scaling_power(c):
+                # 第470局批复盘：引擎加分只给触发条件可满足的成长牌——470 局
+                # 零自残卡组里撕裂连续两次吃满 +16 引擎分上砧，两次锻造全废
+                if (_scale_up_bonus > 0.0 and self._is_scaling_power(c)
+                        and self._scaling_power_active(c, _up_deck)):
                     v += _scale_up_bonus
                 if v > best_v:
                     best, best_v = c, v
@@ -2719,7 +2784,8 @@ class Policy:
             pick = best
             tag = "card_upgrade"
             reason = f"升级卡牌：【{pick.get('name')}】"
-            if _scale_up_bonus > 0.0 and self._is_scaling_power(pick):
+            if (_scale_up_bonus > 0.0 and self._is_scaling_power(pick)
+                    and self._scaling_power_active(pick, _up_deck)):
                 reason += f"（{'前夜竞速必败' if _up_doomed else '输出饥饿'}，优先升级成长引擎 +{_scale_up_bonus:.0f}）"
         else:
             # 必须用真实卡组上下文评估：第 34 局经此路径连拿 7 张全攻牌、
