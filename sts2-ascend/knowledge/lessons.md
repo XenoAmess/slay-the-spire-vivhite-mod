@@ -5188,3 +5188,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/419 胜，当前目标进阶 0
+
+## 第 420 局复盘（2026-08-25 08:44）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：HEADBUTT, DISMANTLE, FIGHT_ME, RUPTURE, CONFLAGRATION, ARMAMENTS, SWORD_BOOMERANG, VICIOUS, CINDER, JUGGLING, INFLAME, WHIRLWIND, SWORD_BOOMERANG, EVIL_EYE, FEED, RUPTURE, TAUNT, CINDER, SHRUG_IT_OFF, DEMON_FORM, TAUNT, PILLAGE, EVIL_EYE, CINDER, FISTICUFFS, SWORD_BOOMERANG
+- 本局遗物：双截棍, 打击木偶, PETRIFIED_TOAD, 风箱, BAG_OF_PREPARATION
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血0; F23 Monster战 掉血36; F28 Monster战 掉血27; F30 Monster战 掉血51; F33 Boss战 掉血29（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(26分/10局)，EQUILIBRIUM(25分/9局)，FEED(25分/25局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/420 胜，当前目标进阶 0
