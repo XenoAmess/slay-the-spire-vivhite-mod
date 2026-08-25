@@ -699,10 +699,12 @@ class Policy:
         act_no = act_idx + 1
 
         # 输出饥饿判定（第 136~137 批复盘）：爆发吞吐量低于门槛的卡组处于
-        # 「跳过精英也必输 Boss」状态，灰区精英复核据此豁免部分生存线
+        # 「跳过精英也必输 Boss」状态，灰区精英复核据此豁免部分生存线。
+        # 饥饿线对账化（第423~428批复盘，_starve_line）：有 learned Boss 基准
+        # 时用竞速及格线——burst 高于静态带的卡组同样在输掉竞速（本批六局
+        # 全数阵亡于必败预演），入场线/精英豁免必须对真实缺口开放
         run_deck = run.get("deck", [])
-        burst_starved = bool(run_deck) and self.deck_burst(run_deck) < float(
-            pol.get("deck_burst_floor", 30.0))
+        burst_starved = bool(run_deck) and self.deck_burst(run_deck) < self._starve_line(max_hp)
 
         # Boss 前夜竞速必败预演（第 397~402 批复盘）：与 _rest 的竞速必败改锻造
         # 同口径，投影镜像不得与实际篝火行为脱钩（99~102/228/244 批教训）。
@@ -2076,6 +2078,22 @@ class Policy:
         req_dpt = float(pool) * float(fire) / max(1.0, float(max_hp))
         return clamp(req_dpt / eff, floor_b, floor_b * 3.0)
 
+    def _starve_line(self, max_hp: int | None = None) -> float:
+        """输出饥饿判定线：有 learned Boss 基准用竞速及格线，否则回落静态门槛。
+
+        第423~428批复盘（兑现第422局「凡达标/饥饿判定必须对账」教义的全消费端
+        收口）：required_deck_burst 此前只接了药水预留窗与商店端，拿牌端/地图端/
+        升级端仍按静态 deck_burst_floor 判饥饿——本批六局卡组爆发普遍高于静态带
+        却远低于杀 Boss 所需，高质攻击饥饿加分、升级攻击加成全程缺位，竞速缺口
+        无人在拾取端补（78% 血满状态进 Boss 照样整管打空）。max_hp 缺失或数据
+        未成熟时行为与旧版严格一致（冷启动安全）。
+        """
+        if max_hp:
+            _req = self.required_deck_burst(int(max_hp))
+            if _req is not None:
+                return _req
+        return float(self.know.policy.get("deck_burst_floor", 30.0))
+
     @staticmethod
     def _floors_to_boss(floor_no: int) -> int:
         """距下一个 Boss 的层数（幕长为常量：一幕 Boss F17、二幕 F33，三幕按 51 估算）。
@@ -2117,10 +2135,8 @@ class Policy:
         # 数据未成熟时回落静态门槛（行为与旧版一致）
         _deck_now = run.get("deck") or []
         if _deck_now:
-            _req_line = self.required_deck_burst(max(1, int(run.get("max_hp", 1) or 1)))
-            _starve_line = (_req_line if _req_line is not None
-                            else float(pol.get("deck_burst_floor", 30.0)))
-            if self.deck_burst(_deck_now) < _starve_line:
+            if self.deck_burst(_deck_now) < self._starve_line(
+                    max(1, int(run.get("max_hp", 1) or 1))):
                 reserve = max(reserve, int(pol.get("potion_starved_reserve_floors", 6)))
         try:
             f = int(run.get("floor", 0) or 0)
@@ -2218,7 +2234,8 @@ class Policy:
             thr -= (core - good) * float(pol.get("deck_thin_discount", 0.35))
         return max(0.0, thr)
 
-    def eval_reward_card(self, card: dict, deck: list[dict]) -> float:
+    def eval_reward_card(self, card: dict, deck: list[dict],
+                         max_hp: int | None = None) -> float:
         pol = self.know.policy
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
@@ -2247,9 +2264,14 @@ class Policy:
         # 输出饥饿——第 89 局卡组攻击占比达标，回合爆发却仍是几张 6 伤打击的
         # 水平，88% 血进一幕 Boss、11 回合仅打出 ~198 伤输掉斩杀竞速。
         # 生涯 0/89 胜、Boss 阵亡遍布 52%~99% 入场血量：卡组强度而非入场血量
-        # 才是当前瓶颈，拿牌端必须对绝对输出缺口敏感
+        # 才是当前瓶颈，拿牌端必须对绝对输出缺口敏感。
+        # 饥饿线对账化（第423~428批复盘，_starve_line）：有 learned Boss 基准
+        # 时用竞速及格线——静态带只回答「比打击流强多少」，burst≈45 的卡组
+        # 高于静态门槛却只有杀 Boss 所需的三分之一，旧口径判「非饥饿」后
+        # 拾取端对缺口彻底失明（缺口分母同步换成及格线，纠偏力度随真实差距缩放）
         burst = self.deck_burst(deck)
-        burst_starved = bool(deck) and burst < float(pol.get("deck_burst_floor", 30.0))
+        _line = self._starve_line(max_hp if deck else None)
+        burst_starved = bool(deck) and burst < _line
 
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
         # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠
@@ -2268,7 +2290,7 @@ class Policy:
             # 防御/功能牌，Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速——
             # 缺口越深（burst 距门槛越远）纠偏力度越大，burst≈0 时达 base+extra
             if dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0 and burst_starved:
-                deficit = clamp(1.0 - burst / max(1e-6, float(pol.get("deck_burst_floor", 30.0))), 0.0, 1.0)
+                deficit = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
                 value += (float(pol.get("burst_starve_bonus_base", 3.0))
                           + float(pol.get("burst_starve_bonus_extra_max", 4.0)) * deficit)
             # AoE 定价随存量递减（第 56~57 局复盘）：致死榜前列全是多体/召唤组合
@@ -2292,7 +2314,7 @@ class Policy:
             if burst_starved and re.search(
                     r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
                     _text(card), re.I):
-                _p_deficit = clamp(1.0 - burst / max(1e-6, float(pol.get("deck_burst_floor", 30.0))), 0.0, 1.0)
+                _p_deficit = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
                 value += (float(pol.get("power_starve_bonus_base", 2.0))
                           + float(pol.get("power_starve_bonus_extra_max", 4.0)) * _p_deficit)
         elif is_bad_card(card):
@@ -2364,10 +2386,11 @@ class Policy:
         # card choice pending?
         cards = r.get("card_options", [])
         if r.get("pending_card_choice") and cards:
+            _mh = max(1, int(run.get("max_hp", 1) or 1))
             best, best_v = None, -1e9
             vals = []
             for c in cards:
-                v = self.eval_reward_card(c, deck)
+                v = self.eval_reward_card(c, deck, max_hp=_mh)
                 vals.append(f"{c.get('name')}={v:.1f}")
                 if v > best_v:
                     best, best_v = c, v
@@ -2489,10 +2512,12 @@ class Policy:
         elif upgrading:
             # 锻造目标与卡组爆发缺口联动（第 106 局复盘）：爆发饥饿时升级
             # 攻击牌的优先级加倍——升级是免费的战力放大，缺输出的局面把砧
-            # 让给防御/功能牌等于浪费整个篝火
+            # 让给防御/功能牌等于浪费整个篝火。
+            # 饥饿线对账化（第423~428批复盘，_starve_line）：burst 高于静态带
+            # 却远低于杀 Boss 所需的卡组旧口径判「非饥饿」，升级端对缺口失明
             _up_deck = (state.get("run") or {}).get("deck", [])
-            _up_floor = float(self.know.policy.get("deck_burst_floor", 30.0))
-            _up_starved = bool(_up_deck) and self.deck_burst(_up_deck) < _up_floor
+            _up_mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            _up_starved = bool(_up_deck) and self.deck_burst(_up_deck) < self._starve_line(_up_mh)
             _atk_bonus = 4.0 if _up_starved else 2.0
             best, best_v = None, -1e9
             for c in candidates:
@@ -2511,7 +2536,8 @@ class Policy:
             # 第 33 局拿进基础【打击】——空卡组评估时攻击占比恒为中性 0.45，
             # 攻击乘法衰减与格挡稀缺增值双双失效
             deck = (state.get("run") or {}).get("deck", [])
-            scored = sorted(((self.eval_reward_card(c, deck), c) for c in candidates),
+            _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            scored = sorted(((self.eval_reward_card(c, deck, max_hp=_mh), c) for c in candidates),
                             key=lambda t: -t[0])
             best_v, pick = scored[0]
             pick_line = self._pick_threshold(deck)
@@ -2591,11 +2617,12 @@ class Policy:
         # 同一张牌在奖励端会因动态拾取门槛被拒。卡牌购买必须通过
         # max(动态拾取门槛, 商店基线)；遗物/药水不受卡组膨胀约束，维持原基线
         shop_pick_line = max(float(pol["shop_relic_threshold"]), self._pick_threshold(deck))
+        _shop_mh = max(1, int(run.get("max_hp", 1) or 1))
         best_action, best_score, best_reason, best_tags = None, -1e9, "", []
         for c in shop.get("cards", []):
             if not c.get("is_stocked") or not c.get("enough_gold"):
                 continue
-            v = self.eval_reward_card(c, deck) - c.get("price", 0) / 120.0
+            v = self.eval_reward_card(c, deck, max_hp=_shop_mh) - c.get("price", 0) / 120.0
             if v <= shop_pick_line:
                 continue
             if v > best_score:
@@ -2618,12 +2645,9 @@ class Policy:
         # 药按低血急需定价，攻击/增益药按爆发缺口定价，与遗物同池竞价、同门槛
         # 成交；enough_gold 已含空药水位校验（服务端口径），无需额外查栏位
         hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
-        # 输出饥饿判定接竞速及格线（第422局复盘，口径同 _hold_offensive_potion）；
+        # 输出饥饿判定接竞速及格线（第422局复盘，_starve_line 统一口径）；
         # 数据未成熟回落静态门槛
-        _req_line = self.required_deck_burst(max(1, int(run.get("max_hp", 1) or 1)))
-        potion_starved = bool(deck) and self.deck_burst(deck) < (
-            _req_line if _req_line is not None
-            else float(pol.get("deck_burst_floor", 30.0)))
+        potion_starved = bool(deck) and self.deck_burst(deck) < self._starve_line(_shop_mh)
         # Boss 预留窗内进攻药竞价加成（第422局复盘）：饥饿卡组的 Boss 竞速是
         # 唯一胜机（386~390 批教义），但同池竞价里功能牌 6~9 分稳定压过药水
         # 基分 2~3 分——422 局商店路由理由明写「金币80够买药水档位」，到店却
@@ -3050,9 +3074,10 @@ class Policy:
         actions = state.get("available_actions", [])
         deck = (state.get("run") or {}).get("deck", [])
         if bundles and "choose_bundle" in actions:
+            _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             best, best_v, detail = None, -1e9, []
             for b in bundles:
-                v = sum(self.eval_reward_card(c, deck) for c in b.get("cards", []))
+                v = sum(self.eval_reward_card(c, deck, max_hp=_mh) for c in b.get("cards", []))
                 names = "、".join(c.get("name", "?") for c in b.get("cards", []))
                 detail.append(f"包{b['index']}[{names}]={v:.1f}")
                 if v > best_v:

@@ -4307,6 +4307,29 @@ def main() -> int:
         f"预留窗外竞价加成必须关闭（防为囤药牺牲战力投资）: " \
         f"{d_bt_farshop.action}（{d_bt_farshop.reason}）"
 
+    # 3bu) 饥饿判定全消费端收口（第423~428批复盘）：required_deck_burst 竞速及格线
+    #      此前只接了药水预留窗与商店端，拿牌端/地图端/升级端仍按静态 deck_burst_floor
+    #      判饥饿——burst 高于静态门槛却远低于杀 Boss 所需的卡组（本批六局普遍如
+    #      此，78% 血满状态进 Boss 照样整管打空）在拾取端对缺口失明，高质攻击饥饿
+    #      加分全程缺位。修复后统一走 _starve_line：传 max_hp 且有 Boss 实证时用
+    #      对账线；不传或数据未成熟时行为与旧版严格一致（冷启动安全）
+    assert abs(br_pol._starve_line(80) - 160.0 * 10.0 / 80.0 / 0.55) < 1e-6, \
+        f"对账饥饿线读取失效: {br_pol._starve_line(80)}"
+    assert abs(br_pol._starve_line(None) - 30.0) < 1e-9, \
+        "缺 max_hp 时饥饿线必须回落静态门槛"
+    bu_atk = {"card_id": "BU_BIG", "name": "重砍", "card_type": "Attack", "energy_cost": 1,
+              "dynamic_values": [{"name": "Damage", "current_value": 14}]}   # 质量门：14≥12 且 14/1≥7
+    bu_deck = [{"card_id": f"BT_A{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 11}]} for i in range(3)]
+    v_bu_static = br_pol.eval_reward_card(dict(bu_atk), list(bu_deck))
+    v_bu_recon = br_pol.eval_reward_card(dict(bu_atk), list(bu_deck), max_hp=80)
+    assert v_bu_recon > v_bu_static, \
+        f"对账饥饿线下高质攻击未吃缺口加分: recon={v_bu_recon:.2f} static={v_bu_static:.2f}"
+    # 同一候选在无 Boss 实证的空库上不得因传 max_hp 而变化（回落口径一致性）
+    v_bu_nv = nv2_pol.eval_reward_card(dict(bu_atk), list(bu_deck), max_hp=80)
+    assert abs(v_bu_nv - v_bu_static) < 1e-6, \
+        f"空库回落口径漂移: nv={v_bu_nv:.2f} static={v_bu_static:.2f}"
+
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
