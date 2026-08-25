@@ -5527,3 +5527,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/447 胜，当前目标进阶 0
+
+## 第 448 局复盘（2026-08-25 12:00）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：STRATAGEM, BASH, BASH, DEFEND_IRONCLAD, DEFEND_IRONCLAD, DEFEND_IRONCLAD, STRIKE_IRONCLAD, FLAME_BARRIER, WHIRLWIND, SALVO, ANGER, SALVO, SWORD_BOOMERANG, SALVO, CINDER, UNMOVABLE, TAUNT, CINDER, TWIN_STRIKE, INFLAME, RAMPAGE, SHRUG_IT_OFF, SWORD_BOOMERANG, HAND_OF_GREED, SWORD_BOOMERANG
+- 本局遗物：PANTOGRAPH, 灯笼, BELLOWS, 赌博筹码, 意外光滑的石头, ORICHALCUM, NUNCHAKU, 蜥蜴尾巴
+- 战斗记录：F17 Boss战 掉血36; F19 Monster战 掉血12; F21 Monster战 掉血19; F23 Monster战 掉血3; F31 Elite战 掉血10; F33 Elite战 掉血70（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)，VOLLEY(24分/10局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/448 胜，当前目标进阶 0
