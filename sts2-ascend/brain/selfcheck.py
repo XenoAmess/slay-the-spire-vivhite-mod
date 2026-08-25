@@ -4031,11 +4031,21 @@ def main() -> int:
     d_bl_heal = bl_pol.decide(bl_rest, bl_ctx)
     assert d_bl_heal.tags and d_bl_heal.tags[0] == ("rest", "heal") and "竞速必败" not in d_bl_heal.reason, \
         f"防守线可行的磨垒卡组前夜被误判必败锻造: {d_bl_heal.action}（{d_bl_heal.reason}）"
-    # 对照：同一卡组换掉格挡（纯弱攻）→ 防守线失效 → 维持必败锻造口径
+    # 对照：同一卡组换掉格挡（纯弱攻）→ 防守线失效 → 维持必败锻造口径。
+    # 第441~446批复盘起翻转带回血优先于必败锻造，故血量须在处决带外
+    # （72-场均40×1.5=12 > 安全余量8）才能锁定「带外必败上砧」行为
     bl_all_atk_deck = [c for c in bl_grind_deck if c["card_type"] == "Attack"]
-    d_bl_smith = bl_pol.decide(dict(bl_rest, run=dict(bl_rest["run"], deck=bl_all_atk_deck)), bl_ctx)
+    d_bl_smith = bl_pol.decide(
+        dict(bl_rest, run=dict(bl_rest["run"], current_hp=72, deck=bl_all_atk_deck)), bl_ctx)
     assert d_bl_smith.tags and d_bl_smith.tags[0] == ("rest", "smith") and "竞速必败" in d_bl_smith.reason, \
         f"零格挡卡组的必败预演被防守线复核误放行: {d_bl_smith.action}（{d_bl_smith.reason}）"
+    # 新增对照（第441~446批复盘）：零格挡必败卡组但坐在处决带内（48/80）——
+    # 翻转带回血必须压过必败锻造，且留痕写明竞速预演结论以供复盘归因
+    d_bl_bandheal = bl_pol.decide(
+        dict(bl_rest, run=dict(bl_rest["run"], deck=bl_all_atk_deck)), bl_ctx)
+    assert d_bl_bandheal.tags and d_bl_bandheal.tags[0] == ("rest", "heal") \
+        and "翻转带回血" in d_bl_bandheal.reason and "竞速预演虽判必败" in d_bl_bandheal.reason, \
+        f"处决带内的必败卡组前夜未回血: {d_bl_bandheal.action}（{d_bl_bandheal.reason}）"
 
     # 3zw) 意图滚雪球确认解锁增益药水（第 255 批复盘）：低死亡率低战损的升级型
     #      组合从三条历史药水门槛的缝隙漏网（252 局 F5 劫掠者三连 8 战仅 1 死），
@@ -4226,7 +4236,9 @@ def main() -> int:
         f"Boss 血池火力均值读取失效: {_vp}/{_vf}"
     br_weak_deck = [{"card_id": f"BR_S{i}", "card_type": "Attack", "energy_cost": 1,
                      "dynamic_values": [{"name": "Damage", "current_value": 6}]} for i in range(5)]
-    # 弱卡组（burst≈18→先验9.9/回合）：击杀需 16 回合 > 满血可存活 8 回合 → 必败 → 前夜锻造
+    # 弱卡组（burst≈18→先验9.9/回合）：击杀需 16 回合 > 满血可存活 8 回合 → 必败。
+    # 第441~446批复盘：48/80 坐在处决带内，翻转带回血优先于必败锻造——
+    # 留痕必须写明竞速预演结论，供复盘区分「误判必败」与「无奈回血」
     br_rest_weak = {
         "screen": "REST", "available_actions": ["choose_rest_option"],
         "rest": {"options": [
@@ -4236,8 +4248,16 @@ def main() -> int:
     br_ctx = SimpleNamespace(rest_before_boss=True, rest_proj_hp_pct=1.0,
                              rest_next_fight_loss_frac=0.0)
     d_br_weak = br_pol.decide(br_rest_weak, br_ctx)
-    assert d_br_weak.tags and d_br_weak.tags[0] == ("rest", "smith") and "竞速必败" in d_br_weak.reason, \
-        f"竞速必败的前夜应改锻造: {d_br_weak.action}（{d_br_weak.reason}）"
+    assert d_br_weak.tags and d_br_weak.tags[0] == ("rest", "heal") \
+        and "翻转带回血" in d_br_weak.reason and "竞速预演虽判必败" in d_br_weak.reason, \
+        f"处决带内的必败前夜应回血而非上砧: {d_br_weak.action}（{d_br_weak.reason}）"
+    # 带外对照（72/80：余量12>安全余量8）：维持第397~402批「必败改锻造」口径
+    br_rest_weak_out = dict(br_rest_weak,
+                            run=dict(br_rest_weak["run"], current_hp=72))
+    d_br_weak_out = br_pol.decide(br_rest_weak_out, br_ctx)
+    assert d_br_weak_out.tags and d_br_weak_out.tags[0] == ("rest", "smith") \
+        and "竞速必败" in d_br_weak_out.reason, \
+        f"处决带外的竞速必败前夜应改锻造: {d_br_weak_out.action}（{d_br_weak_out.reason}）"
     # 强卡组对照（3×15伤攻击 burst=45→先验24.75）：击杀需 6.5 ≤ 8+1.5 → 可赢 → 旧裁决回血
     br_strong_deck = [{"card_id": f"BR_BIG{i}", "card_type": "Attack", "energy_cost": 1,
                        "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
@@ -4254,18 +4274,19 @@ def main() -> int:
                                           **{"deck": br_weak_deck})), br_ctx)
     assert d_br_nv.tags and d_br_nv.tags[0] == ("rest", "heal"), \
         f"无 Boss 实证时前夜应回落旧口径回血: {d_br_nv.reason}"
-    # 地图投影镜像一致性：必败对局下投影把前夜篝火记为锻造（不回血），预计进 Boss 血量更低
+    # 地图投影镜像一致性：必败对局下投影把前夜篝火记为锻造（不回血），预计进 Boss 血量更低。
+    # 第441~446批复盘起翻转带内必败也投影回血，故血量语境须在带外（72-60>8）才走必败锻造通道；
+    # 可选节点只留前夜篝火（Boss 权重×10 会抢走首选项，镜像就无从生效）
     def br_map_reason(pknow):
         pmap = policy.Policy(pknow, random.Random(13))
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": [
                   {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
-                   "children": [{"row": 17, "col": 0}]},
-                  {"index": 1, "row": 17, "col": 0, "node_type": "Boss"}],
+                   "children": [{"row": 17, "col": 0}]}],
                   "nodes": [
                       {"row": 16, "col": 0, "node_type": "RestSite"},
                       {"row": 17, "col": 0, "node_type": "Boss"}]},
-              "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 16, "deck": br_weak_deck}}
+              "run": {"current_hp": 72, "max_hp": 80, "gold": 0, "floor": 16, "deck": br_weak_deck}}
         return pmap.decide(st, br_ctx).reason
     _proj_doom = float(re.search(r"进 Boss 血量 ?(\d+)%", br_map_reason(br_know)).group(1))
     _proj_nv = float(re.search(r"进 Boss 血量 ?(\d+)%", br_map_reason(
