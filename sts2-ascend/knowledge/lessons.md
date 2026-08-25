@@ -5538,3 +5538,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/448 胜，当前目标进阶 0
+
+## 第 449 局复盘（2026-08-25 12:05）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：CINDER, STOMP, BLUDGEON, SHRUG_IT_OFF, SWORD_BOOMERANG
+- 本局遗物：古茶具套装, AMETHYST_AUBERGINE
+- 战斗记录：F3 Monster战 掉血2; F4 Monster战 掉血0; F7 Elite战 掉血39; F8 Monster战 掉血16; F11 Monster战 掉血10; F13 Elite战 掉血29（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)，VOLLEY(24分/10局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/449 胜，当前目标进阶 0
