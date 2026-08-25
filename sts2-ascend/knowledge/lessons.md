@@ -5420,3 +5420,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/438 胜，当前目标进阶 0
+
+## 第 439 局复盘（2026-08-25 11:01）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：IRON_WAVE, CINDER, INFLAME, JUGGLING, FLAME_BARRIER, STOMP, UPPERCUT, STONE_ARMOR, FIGHT_ME, HEMOKINESIS, ULTIMATE_STRIKE, BREAKTHROUGH, UNRELENTING, JUGGERNAUT, DISMANTLE, FLAME_BARRIER, BREAKTHROUGH, BLUDGEON, SHRUG_IT_OFF, UPPERCUT, HEMOKINESIS
+- 本局遗物：TUNING_FORK, 药水腰带, 历石, LETTER_OPENER
+- 战斗记录：F21 Monster战 掉血2; F23 Monster战 掉血34; F25 Elite战 掉血31; F28 Monster战 掉血34; F31 Monster战 掉血25; F33 Boss战 掉血9（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/439 胜，当前目标进阶 0
