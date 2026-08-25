@@ -269,15 +269,24 @@ def _llm_audit(brief: str, quip: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def _pid_alive(pid: int) -> bool:
+    """OpenProcess + 映像名校验。仅凭 OpenProcess 成功判活会被 pid 复用毒锁：
+    锁 pid 被无关进程复用时误判"活着"→ 单实例锁永久锁死（悬浮窗消失事故）。"""
     if pid <= 0:
         return False
     try:
         import ctypes
-        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-        if h:
-            ctypes.windll.kernel32.CloseHandle(h)
-            return True
-        return False
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False
+        try:
+            buf = ctypes.create_unicode_buffer(512)
+            size = ctypes.c_ulong(512)
+            if k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
+                return "python" in buf.value.lower()
+            return True   # 映像名拿不到（权限等）：保守视为活
+        finally:
+            k32.CloseHandle(h)
     except Exception:
         return False
 
