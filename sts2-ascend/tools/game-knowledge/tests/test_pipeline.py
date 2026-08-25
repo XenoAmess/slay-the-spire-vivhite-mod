@@ -178,7 +178,9 @@ class ExtractionPipelineTests(unittest.TestCase):
             self.assertEqual(output_dir.name, "v0.111.0")
             self.assertEqual(manifest["sources"]["pck"]["header"]["entry_count"], len(pck_files))
             self.assertTrue((output_dir / "catalog" / "pck-index.jsonl").is_file())
+            self.assertTrue((output_dir / "catalog" / "localization-bilingual.jsonl").is_file())
             self.assertTrue((output_dir / "localization" / "zhs" / "cards.json").is_file())
+            self.assertEqual(manifest["localization"]["bilingual_status_counts"], {"bilingual": 7})
 
             responses = root / "responses"
             responses.mkdir()

@@ -21,7 +21,11 @@ from typing import Any, Iterable
 
 MANIFEST_SCHEMA = "sts2.game-knowledge-manifest/v1"
 RUNTIME_SCHEMA = "sts2.game-knowledge-runtime-record/v1"
-MECHANICS_SCHEMA = "sts2.game-knowledge-mechanics-record/v1"
+MECHANICS_SCHEMA = "sts2.game-knowledge-mechanics-record/v2"
+SUPPORTED_MECHANICS_SCHEMAS = {
+    "sts2.game-knowledge-mechanics-record/v1",
+    MECHANICS_SCHEMA,
+}
 CORE_CATEGORIES = ("cards", "monsters", "relics", "potions", "events")
 
 
@@ -125,7 +129,8 @@ class NativeGameKnowledge:
             "validation": (self.validation.get("counts") or {}),
         }
 
-    def _load_jsonl(self, relative: Path, schema: str, category: str) -> dict[str, dict[str, Any]]:
+    def _load_jsonl(self, relative: Path, schema: str | set[str],
+                    category: str) -> dict[str, dict[str, Any]]:
         if self.snapshot_dir is None:
             return {}
         path = self.snapshot_dir / relative
@@ -136,12 +141,18 @@ class NativeGameKnowledge:
                     if not line.strip():
                         continue
                     value = json.loads(line)
-                    if not isinstance(value, dict) or value.get("schema") != schema:
+                    accepted = {schema} if isinstance(schema, str) else schema
+                    if not isinstance(value, dict) or value.get("schema") not in accepted:
                         raise ValueError(f"invalid schema at {path}:{line_number}")
                     if value.get("category") != category:
                         raise ValueError(f"category mismatch at {path}:{line_number}")
-                    record_id = (value.get("id") if schema == RUNTIME_SCHEMA
-                                 else value.get("entry_id"))
+                    runtime_file = accepted == {RUNTIME_SCHEMA}
+                    record_id = value.get("id") if runtime_file else value.get("entry_id")
+                    if not record_id and not runtime_file and value.get("type_name"):
+                        # v2 includes nested types as independent facts.  They have
+                        # no ModelDb ID but remain addressable by their unique CLR
+                        # type and are attached to their declaring model in digests.
+                        record_id = "@TYPE:" + str(value["type_name"])
                     if record_id:
                         key = _entity_id(record_id)
                         if key in rows:
@@ -163,7 +174,8 @@ class NativeGameKnowledge:
         category = str(category).lower()
         if category not in self._mechanics:
             self._mechanics[category] = self._load_jsonl(
-                Path("mechanics") / f"{category}.jsonl", MECHANICS_SCHEMA, category)
+                Path("mechanics") / f"{category}.jsonl", SUPPORTED_MECHANICS_SCHEMAS,
+                category)
         return self._mechanics[category]
 
     def lookup(self, category: str, record_id: Any) -> dict[str, Any] | None:
@@ -249,12 +261,23 @@ class NativeGameKnowledge:
     def _mechanics_highlights(category: str, data: dict[str, Any]) -> dict[str, Any]:
         properties = []
         for prop in data.get("properties") or []:
-            if not isinstance(prop, dict) or not prop.get("expressions"):
+            if not isinstance(prop, dict) or not (prop.get("expressions") or prop.get("accessors")):
                 continue
-            properties.append({
+            compact_property = {
                 "name": prop.get("name"),
                 "expressions": [_clip(value) for value in prop.get("expressions", [])[:3]],
-            })
+            }
+            accessors = []
+            for accessor in (prop.get("accessors") or [])[:2]:
+                compact_accessor = {"kind": accessor.get("kind")}
+                for field in ("calls", "creates", "assignments", "conditions", "returns"):
+                    values = accessor.get(field) or []
+                    if values:
+                        compact_accessor[field] = [_clip(value) for value in values[:3]]
+                accessors.append(compact_accessor)
+            if accessors:
+                compact_property["accessors"] = accessors
+            properties.append(compact_property)
         constants = [
             {"name": row.get("name"), "value": _clip(row.get("value"))}
             for row in (data.get("fields") or [])
@@ -286,9 +309,21 @@ class NativeGameKnowledge:
             methods.append(compact)
             if len(methods) >= 3:
                 break
+        constructors = []
+        for constructor in (data.get("constructors") or [])[:3]:
+            compact_constructor = {
+                "kind": constructor.get("kind"),
+                "initializer": _clip(constructor.get("initializer")),
+            }
+            for field in ("calls", "creates", "assignments", "conditions", "returns"):
+                values = constructor.get(field) or []
+                if values:
+                    compact_constructor[field] = [_clip(value) for value in values[:3]]
+            constructors.append(compact_constructor)
         return {
             "properties": properties[:10],
             "constants": constants[:6],
+            "constructors": constructors,
             "methods": methods,
         }
 
@@ -301,6 +336,21 @@ class NativeGameKnowledge:
             result["runtime"] = self._runtime_highlights(category, fact["runtime"])
         if fact.get("mechanics"):
             result["mechanics"] = self._mechanics_highlights(category, fact["mechanics"])
+            declaring = fact.get("type_name")
+            nested = []
+            if declaring:
+                for envelope in self.mechanics_records(category).values():
+                    data = envelope.get("data") or {}
+                    if data.get("declaring_type_name") != declaring:
+                        continue
+                    nested.append({
+                        "type_name": envelope.get("type_name"),
+                        "facts": self._mechanics_highlights(category, data),
+                    })
+                    if len(nested) >= 2:
+                        break
+            if nested:
+                result["nested_types"] = nested
         return result
 
     def review_digest(

@@ -306,6 +306,11 @@ def _set_busy(source: str | None) -> None:
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     _hide_own_console()
     if stop_requested():
         return 0

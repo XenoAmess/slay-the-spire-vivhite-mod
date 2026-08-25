@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sts2-ascend.local/schemas/localization-record.schema.json",
+  "title": "STS2 bilingual localization record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "file", "key", "model_id", "field", "eng", "zhs",
+    "status", "zhs_or_eng", "fallback_locale"
+  ],
+  "properties": {
+    "schema": {"const": "sts2.game-knowledge-localization-record/v1"},
+    "file": {"type": "string", "pattern": "^[^/\\\\]+\\.json$"},
+    "key": {"type": "string", "minLength": 1},
+    "model_id": {"type": "string", "minLength": 1},
+    "field": {"type": ["string", "null"]},
+    "eng": {},
+    "zhs": {},
+    "status": {"enum": ["bilingual", "missing_eng", "missing_zhs"]},
+    "zhs_or_eng": {},
+    "fallback_locale": {"enum": ["eng", "zhs"]}
+  }
+}

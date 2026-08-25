@@ -10,6 +10,8 @@
 - `mechanics/*.jsonl` 来自本机 `sts2.dll` 的静态事实抽取，提供字段/属性表达式、实例与静态构造器、getter/setter/init accessor、调用、对象创建、赋值、条件、返回值、递归嵌套类型，以及怪物移动状态机。它补上 runtime 怪物接口目前全部缺失的 move 数值和行为。
 - `localization/{eng,zhs}/*.json` 从官方 PCK 原样抽取，提供英文和简体中文文本。`catalog/pck-index.jsonl` 与 `catalog/model-source-types.jsonl` 则给出完整资源/原生类型基集。
 
+`catalog/localization-bilingual.jsonl` 将两种语言逐 key 对齐。若官方中文缺 key，记录会保留 `zhs: null`、标记 `missing_zhs`，并通过 `zhs_or_eng` + `fallback_locale: eng` 提供显式英文回退；不会静默冒充中文。
+
 `catalog/runtime-mechanics-joins.jsonl` 使用游戏自己的 ID 规则关联前两层：`StringHelper.Slugify(type.Name)` 会在每个非首位大写字母前插入下划线，再大写、折叠空白并删除非 `[A-Z0-9_]` 字符。关联是精确匹配，不使用模糊名称猜测。
 
 ## 一次性生成完整快照
@@ -71,6 +73,7 @@ knowledge/game/v0.111.0/
   catalog/
     pck-index.jsonl                15,890 个 PCK 条目的完整目录
     model-source-types.jsonl       PCK 内原生 Model 类型路径
+    localization-bilingual.jsonl  英中逐 key 并集与显式回退
     runtime-mechanics-joins.jsonl  runtime ID 到静态类型的精确关联
   localization/{eng,zhs}/*.json   官方双语文本
   runtime/*.jsonl                  实例化 ModelDb 数据

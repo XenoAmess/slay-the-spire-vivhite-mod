@@ -497,7 +497,12 @@ def main() -> int:
     start_volume_hotkeys()
     log(f"语音朗读器上线（模式 {mode}，音量控制：Ctrl+Shift+Alt+↑/↓ 调音量，Ctrl+Shift+Alt+M 静音）")
 
-    q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
+    # GPU narration is intentionally "latest wins": a 6GB Pascal card cannot
+    # read an LLM stream faster than it is produced.  Bound live backlog and,
+    # at LIVE-END, discard stale body sentences so the authored conclusion can
+    # take the next available GPU slot.
+    queue_limit = 8 if mode == "indextts" else MAX_QUEUE
+    q: queue.Queue = queue.Queue(maxsize=queue_limit)
     splitter = SentenceSplitter()
     fence = FenceStripper()
     state = {"offset": 0}
@@ -547,7 +552,7 @@ def main() -> int:
                 continue
             for sent in splitter.feed(ln):
                 if q.full():
-                    for _ in range(MAX_QUEUE // 2):      # 到顶立刻丢最老的一半
+                    for _ in range(queue_limit // 2):      # 到顶立刻丢最老的一半
                         try:
                             q.get_nowait()
                             q.task_done()
@@ -556,10 +561,18 @@ def main() -> int:
                 q.put(sent)
         if ended:
             for sent in splitter.flush():
-                if speakable(sent):
+                if speakable(sent) and mode != "indextts":
                     q.put(sent)
-            if time.time() - end_at > 3 and q.unfinished_tasks == 0:
-                break
+            if time.time() - end_at > 3:
+                if mode == "indextts":
+                    while True:
+                        try:
+                            q.get_nowait()
+                            q.task_done()
+                        except queue.Empty:
+                            break
+                if q.unfinished_tasks == 0:
+                    break
         if wait_for_stop(0.5):
             break
 

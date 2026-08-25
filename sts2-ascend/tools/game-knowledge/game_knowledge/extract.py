@@ -15,6 +15,7 @@ from .pck import PckEntry, PckReader, jsonl_inventory, sha256_file
 
 
 MANIFEST_SCHEMA = "sts2.game-knowledge-manifest/v1"
+LOCALIZATION_RECORD_SCHEMA = "sts2.game-knowledge-localization-record/v1"
 DEFAULT_LOCALES = ("eng", "zhs")
 
 
@@ -192,6 +193,7 @@ def extract_game_resources(
         assert reader.header is not None
         localization = _localization_entries(reader, locales)
         localization_key_sets: dict[tuple[str, str], set[str]] = {}
+        localization_values: dict[tuple[str, str], dict[str, Any]] = {}
         for locale, entries in localization.items():
             for entry in entries:
                 data = reader.read_bytes(entry)
@@ -200,6 +202,7 @@ def extract_game_resources(
                 destination = output_dir / "localization" / locale / name
                 atomic_write_bytes(destination, data)
                 localization_key_sets[(locale, name)] = set(value)
+                localization_values[(locale, name)] = value
                 item = {
                     "locale": locale,
                     "name": name,
@@ -244,6 +247,42 @@ def extract_game_resources(
                         "extra_in_zhs": sorted(zhs - eng),
                     }
                 )
+
+        bilingual_rows: list[dict[str, Any]] = []
+        bilingual_status_counts: Counter[str] = Counter()
+        if "eng" in localization and "zhs" in localization:
+            for name in sorted(set(locale_files["eng"]) | set(locale_files["zhs"])):
+                eng_values = localization_values.get(("eng", name), {})
+                zhs_values = localization_values.get(("zhs", name), {})
+                for key in sorted(set(eng_values) | set(zhs_values)):
+                    has_eng = key in eng_values
+                    has_zhs = key in zhs_values
+                    status = (
+                        "bilingual" if has_eng and has_zhs else "missing_zhs" if has_eng else "missing_eng"
+                    )
+                    fallback_locale = "zhs" if has_zhs else "eng"
+                    bilingual_status_counts[status] += 1
+                    key_parts = key.split(".", 1)
+                    bilingual_rows.append(
+                        {
+                            "schema": LOCALIZATION_RECORD_SCHEMA,
+                            "file": name,
+                            "key": key,
+                            "model_id": key_parts[0],
+                            "field": key_parts[1] if len(key_parts) == 2 else None,
+                            "eng": eng_values.get(key),
+                            "zhs": zhs_values.get(key),
+                            "status": status,
+                            "zhs_or_eng": zhs_values[key] if has_zhs else eng_values[key],
+                            "fallback_locale": fallback_locale,
+                        }
+                    )
+            bilingual_path = output_dir / "catalog" / "localization-bilingual.jsonl"
+            bilingual_count = atomic_write_jsonl(bilingual_path, bilingual_rows)
+            artifacts.append(_artifact(output_dir, bilingual_path, records=bilingual_count))
+        else:
+            bilingual_path = None
+            bilingual_count = 0
 
         pck_source: dict[str, Any] = {
             "path": pck_path.name,
@@ -298,6 +337,11 @@ def extract_game_resources(
             "files": sorted(localization_manifest, key=lambda item: (item["locale"], item["name"])),
             "file_sets": locale_files,
             "eng_zhs_key_coverage": locale_key_coverage,
+            "bilingual_artifact": (
+                bilingual_path.relative_to(output_dir).as_posix() if bilingual_path else None
+            ),
+            "bilingual_records": bilingual_count,
+            "bilingual_status_counts": dict(sorted(bilingual_status_counts.items())),
         },
         "runtime": {
             "status": "not_captured",

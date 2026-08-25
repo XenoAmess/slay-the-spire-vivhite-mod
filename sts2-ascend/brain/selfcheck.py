@@ -5255,6 +5255,27 @@ def main() -> int:
     offer_pol.decide(reward_direct, offer_ctx)
     assert offer_know.stats["cards"]["OFFER_DIRECT"]["offered"] == 1, \
         "REWARD pending_card_choice 轮询重复记 offered"
+    # REWARD 直出路径此前只把“单薄保底”用于禁止 skip，却漏发 choose 动作，
+    # 正价值边际牌会落入后续 proceed 分支。它必须与 CARD_SELECTION 同口径。
+    direct_thin_deck = (
+        [{"card_id": f"OFFER_WALL_{i}", "card_type": "Skill", "energy_cost": 1,
+          "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(6)]
+        + [{"card_id": f"BASIC_STRIKE_{i}", "card_type": "Attack", "energy_cost": 1}
+           for i in range(4)])
+    direct_pebble = {
+        "index": 0, "card_id": "OFFER_PEBBLE", "name": "小卵石",
+        "card_type": "Skill", "energy_cost": 1,
+        "dynamic_values": [{"name": "Block", "current_value": 1}]}
+    direct_thin_state = {
+        "screen": "REWARD", "run_id": "RUN_CARD_OFFER",
+        "available_actions": ["choose_reward_card", "skip_reward_cards"],
+        "reward": {"pending_card_choice": True,
+                   "card_options": [direct_pebble], "rewards": []},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 4,
+                "deck": direct_thin_deck}}
+    d_direct_thin = offer_pol.decide(direct_thin_state, offer_ctx)
+    assert d_direct_thin.action == "choose_reward_card" and "单薄卡组正价值保底" in d_direct_thin.reason, \
+        f"REWARD 单薄保底只阻止 skip 却未选择卡牌: {d_direct_thin.action}（{d_direct_thin.reason}）"
 
     # 新卡探索不是全局随机 epsilon：只在原始评分近优且跨过拿牌门槛时，UCB
     # 可用每局配额把一次选择从高样本贪心牌转给零样本新牌；因此不会永远饿死。
@@ -5310,6 +5331,12 @@ def main() -> int:
     d_blocked = explore_pol.decide(blocked_state, explore_ctx)
     assert d_blocked.params.get("option_index") == 0 and "受控探索" not in d_blocked.reason, \
         f"明显不可打出牌被误用新颖度绕过: {d_blocked.reason}"
+    assert not explore_pol._reward_exploration_safe(
+        {"card_id": "EXP_STATUS", "card_type": "Status"}, []), \
+        "Status 不得进入卡奖励探索候选"
+    assert not explore_pol._reward_exploration_safe(
+        {"card_id": "EXP_CURSE", "card_type": "Curse"}, []), \
+        "Curse 不得进入卡奖励探索候选"
     explore_know.stats["cards"]["EXP_DEAD"] = {
         "seen": 8, "offered": 0, "picked": 5, "plays": 0,
         "outcome_sum": 100.0, "bias": 0.0}

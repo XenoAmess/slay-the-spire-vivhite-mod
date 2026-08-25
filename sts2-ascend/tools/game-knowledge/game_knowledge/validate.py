@@ -341,14 +341,30 @@ def _check_runtime(output_dir: Path, manifest: dict[str, Any]) -> list[Check]:
     monsters = records.get("monsters", [])
     empty_moves = [record["id"] for record in monsters if not (record.get("data", {}).get("moves") or [])]
     if monsters and empty_moves:
-        checks.append(
-            Check(
-                "runtime.monsters.moves",
-                "warning",
-                f"{len(empty_moves)}/{len(monsters)} monsters have no runtime move metadata; static mechanics are required",
-                {"ids": empty_moves},
-            )
+        monster_join = manifest.get("mechanics", {}).get("joins", {}).get("monsters", {})
+        static_covers_runtime = (
+            len(empty_moves) == len(monsters)
+            and isinstance(monster_join, dict)
+            and monster_join.get("status") in {"complete", "complete_with_static_only"}
+            and not monster_join.get("runtime_without_mechanics")
         )
+        if static_covers_runtime:
+            checks.append(
+                Check(
+                    "runtime.monsters.moves",
+                    "pass",
+                    f"Runtime moves are empty, but static mechanics cover all {len(monsters)} monster IDs",
+                )
+            )
+        else:
+            checks.append(
+                Check(
+                    "runtime.monsters.moves",
+                    "warning",
+                    f"{len(empty_moves)}/{len(monsters)} monsters have no runtime move metadata; static mechanics are required",
+                    {"ids": empty_moves},
+                )
+            )
     return checks
 
 

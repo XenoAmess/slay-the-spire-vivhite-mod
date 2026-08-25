@@ -3194,11 +3194,15 @@ class Policy:
             best_v, best = scored[0]
             vals = [f"{c.get('name')}={v:.1f}" for v, c in scored]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
-            if best_v >= pick_line and "choose_reward_card" in actions:
+            thin_take = self._thin_deck_must_pick(deck, best_v)
+            if (best_v >= pick_line or thin_take) and "choose_reward_card" in actions:
                 best_v, best, explore_note = self._reward_card_choice(
-                    scored, deck, state, ctx, value_floor=pick_line)
+                    scored, deck, state, ctx,
+                    value_floor=0.0 if thin_take else pick_line)
+                gate_note = (f"≥ 门槛 {pick_line:.1f}" if best_v >= pick_line
+                             else f"低于门槛 {pick_line:.1f}，但单薄卡组正价值保底")
                 return Decision("choose_reward_card", {"option_index": best["index"]},
-                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）"
+                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
                                 f"{explore_note}；候选：{', '.join(vals)}",
                                 tags=[("card_pick", best.get("card_id"))], wait=0.8)
             if best_v < pick_line and "skip_reward_cards" in actions \
