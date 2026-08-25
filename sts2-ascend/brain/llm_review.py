@@ -140,12 +140,28 @@ def _stats_digest(know) -> dict:
         for comp, e in know.stats["enemies"].items()
     ]
     enemies.sort(key=lambda x: (-x["deaths"], -x["avg_hp_lost"]))
+    relics = [
+        {"id": rid, "picked": e.get("picked", 0),
+         "avg_outcome": round(e.get("outcome_sum", 0.0) / e["picked"], 1)
+         if e.get("picked") else None,
+         "bias": e.get("bias", 0.0)}
+        for rid, e in know.stats.get("relics", {}).items()
+        if isinstance(e, dict) and e.get("picked")
+    ]
     return {
+        "stats_version": know.stats.get("version"),
         "global": g,
         "progression": know.progression,
         "cards": cards,
+        "relics": relics,
         "enemies": enemies,
         "events": know.stats["events"],
+        "rooms": know.stats.get("rooms", {}),
+        "rooms_act": know.stats.get("rooms_act", {}),
+        "rooms_band": know.stats.get("rooms_band", {}),
+        "respawn_adds": know.stats.get("respawn_adds", {}),
+        "act_entries_total": len(know.stats.get("act_entries") or []),
+        "recent_act_entries": list(know.stats.get("act_entries") or [])[-12:],
         "policy": know.policy,
     }
 
@@ -216,9 +232,22 @@ def _recent_run_summaries(n: int) -> list[dict]:
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 10))
+    run_summaries = _recent_run_summaries(n)
+    evidence_text = []
+    for summary in run_summaries:
+        evidence_text.extend(summary.get("combat_notes") or [])
+        evidence_text.extend(summary.get("key_reasons") or [])
+    native = getattr(know, "game_knowledge", None)
     packet = {
-        "runs_summary": _recent_run_summaries(n),
+        "runs_summary": run_summaries,
         "stats_digest": _stats_digest(know),
+        # Never inline the full ~9 MB corpus.  The index chooses entities named in
+        # recent evidence plus the most consequential learned card/enemy records;
+        # corpus_paths lets the reviewer drill into exact JSONL facts on demand.
+        "native_game_knowledge": (native.review_digest(know.stats, evidence_text)
+                                  if native is not None else
+                                  {"snapshot": {"available": False,
+                                                "error": "native index not initialized"}}),
     }
     lessons_tail = ""
     lessons_path = KNOWLEDGE_DIR / "lessons.md"
@@ -241,7 +270,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
 智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
 
-# 数据摘要（紧凑 JSON 已内嵌；统计字段未裁剪，完整文件可按需深读）
+# 数据摘要（紧凑 JSON 已内嵌；原生事实按本批实体检索，完整文件可按路径深读）
 ```json
 {packet_json}
 ```
@@ -253,6 +282,9 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
 # 你的任务（严格按顺序）
 1. 归因分析：主要死因趋势、打法缺陷、卡组构建问题、地图路线问题、代码缺陷。
+   涉及卡牌/怪物/遗物/药水/事件机制时，必须优先查阅 packet 中的
+   `native_game_knowledge`；摘要不够就按 `corpus_paths` 精确检索相应 runtime 与
+   mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。
 2. 将复盘报告**追加写入** `sts2-ascend/knowledge/meta_review.md`（新建一节，标题含日期时间）：
    归因分析、你做出的每项调整及理由、新沉淀的经验知识（中文）。
 3. **你可以修改 `sts2-ascend/` 下的任何文件**（策略参数、统计数据结构、决策代码、配置……）：

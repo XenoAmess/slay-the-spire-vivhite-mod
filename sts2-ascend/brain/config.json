@@ -32,10 +32,18 @@
   ],
   "preferred_timeout_cooldown_min": 5,
   "preferred_timeout_min": 40,
-  "tts_mode": "edge",
+  "tts_mode": "indextts",
   "review_queue_max": 10
  },
  "tts": {
-  "clone_engine": "moss"
+  "clone_engine": "indextts",
+  "device": "cuda:0",
+  "precision": "fp16",
+  "require_cuda": true,
+  "worker_port": 17952,
+  "request_timeout_sec": 900,
+  "startup_timeout_sec": 240,
+  "duration_factor": 0.9,
+  "num_beams": 1
  }
 }

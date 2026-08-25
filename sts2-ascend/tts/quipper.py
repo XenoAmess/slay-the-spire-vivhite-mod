@@ -1,19 +1,18 @@
-"""白绮碎碎念（quipper v2）——克隆音色的战况即兴点评。
+"""白绮碎碎念 + 复盘朗读共用的 IndexTTS-2.5 GPU owner。
 
 设计（按用户要求）：
   - **每次都用 LLM 现写**：无固定池。投喂当前战况 + 人设 prompt 给一个免费模型
     （默认 minimax-cn-coding-plan/MiniMax-M3，cfg llm.quip_model 可改），
     生成 10 字内随性短评（高随机、像人）。
   - **节奏**：上一条**播完之后**才开始计时，随机 20~45 秒后看下一条。
-  - **互斥**：与 edge/SAPI 长篇朗读可同时；与克隆总结音（speak_once）互斥——
-    本进程说话时写 voice_quip_speaking.flag，speak_once 会等它播完再等 5 秒。
-    总结音占用（voice_clone_busy.flag）时本进程让位。
+  - **单模型**：本进程唯一持有 IndexTTS CUDA 模型；碎碎念、复盘直播和结论
+    通过本机队列串行合成，绝不再启动第二份模型。
+  - **优先级**：结论 > 复盘直播 > 碎碎念；合成和播放都在同一 worker 中完成。
   - LLM 失败的兜底：一句万能短评（"稳住"）——不读固定池。
   - 单实例锁 voice_quipper.lock；尊重全局音量/静音。
 
-运行（uv 旁路，由大脑启动时拉起）：
-  uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio \
-      python tts/quipper.py
+运行（IndexTTS 项目 venv，由大脑启动时拉起）：
+  uv run --project third_party/index-tts python tts/quipper.py
 """
 from __future__ import annotations
 
@@ -24,7 +23,6 @@ import re
 import shutil
 import subprocess
 import sys
-import threading
 import time
 import urllib.request
 import wave
@@ -34,14 +32,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
-MOSS_DIR = BASE_DIR / "third_party" / "MOSS-TTS-Nano"
 INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
 LOG_FILE = KNOWLEDGE_DIR / "tts_quipper.log"
 LOCK_FILE = KNOWLEDGE_DIR / "voice_quipper.lock"
-BUSY_FLAG = KNOWLEDGE_DIR / "voice_clone_busy.flag"          # 总结音占用（speak_once 写）
-SPEAKING_FLAG = KNOWLEDGE_DIR / "voice_quip_speaking.flag"   # 本进程正在说话（speak_once 读）
-TMP_WAV = TTS_DIR / "quip_tmp.wav"
-REF_48K = TTS_DIR / "reference_voice_48k.wav"
+BUSY_FLAG = KNOWLEDGE_DIR / "voice_clone_busy.flag"          # 本进程正在播复盘/结论
+SPEAKING_FLAG = KNOWLEDGE_DIR / "voice_quip_speaking.flag"   # 本进程正在播碎碎念
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 
 MIN_GAP, MAX_GAP = 20, 45        # 上一条播完后的随机间隔（秒）
@@ -52,6 +47,7 @@ FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败�
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import get_voice_state  # noqa: E402
+from indextts_gpu import IndexTTSGpuEngine, SpeechService, worker_port  # noqa: E402
 sys.path.insert(0, str(BASE_DIR / "brain"))
 from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
 
@@ -75,21 +71,6 @@ def _quip_model() -> str:
     return "minimax-cn-coding-plan/MiniMax-M3"
 
 
-# ---------------------------------------------------------------------------
-# 克隆音色引擎（可配置：indextts 默认 / moss）
-# ---------------------------------------------------------------------------
-
-def _clone_engine() -> str:
-    try:
-        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        eng = (cfg.get("tts") or {}).get("clone_engine")
-        if eng:
-            return str(eng)
-    except (OSError, json.JSONDecodeError):
-        pass
-    return "indextts"
-
-
 def _apply_gain_play(path: Path) -> None:
     """统一增益播放（0~400%，静音跳过）。"""
     import numpy as np
@@ -106,66 +87,6 @@ def _apply_gain_play(path: Path) -> None:
         w.setparams(params)
         w.writeframes(pcm16.tobytes())
     winsound.PlaySound(str(path), winsound.SND_FILENAME)
-
-
-class IndexQuip:
-    """IndexTTS-2.5 克隆音色（CPU，质量高但每句要数分钟——用户指定切回此引擎）。"""
-
-    def __init__(self) -> None:
-        sys.path.insert(0, str(INDEXTTS_DIR))
-        from indextts.infer_v2_5 import IndexTTS2
-        ckpt = INDEXTTS_DIR / "checkpoints"
-        t0 = time.time()
-        self.tts = IndexTTS2(cfg_path=str(ckpt / "config.yaml"), model_dir=str(ckpt),
-                             use_bf16=False, device="cpu")
-        self.ref = str(TTS_DIR / "reference_voice_15s.wav")
-        log(f"引擎就绪（index-tts，{time.time() - t0:.0f}s）")
-
-    def play(self, text: str) -> None:
-        out = TTS_DIR / "quip_tmp.wav"
-        self.tts.infer(spk_audio_prompt=self.ref, text=text, lang="ZH",
-                       output_path=str(out), duration_factor=0.9, verbose=False)
-        _apply_gain_play(out)
-
-
-class NanoQuip:
-    """MOSS-TTS-Nano 克隆音色（ONNX CPU，快，备选）。"""
-
-    def __init__(self) -> None:
-        sys.path.insert(0, str(MOSS_DIR))
-        from onnx_tts_runtime import OnnxTtsRuntime
-
-        def _load_wav_stdlib(self, path):
-            import numpy as np
-            with wave.open(str(path), "rb") as w:
-                data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
-                data = data.astype(np.float32) / 32768.0
-                ch = w.getnchannels()
-                data = data.reshape(-1, ch).T.copy()
-            return data[None, :, :].astype(np.float32)
-
-        OnnxTtsRuntime._load_reference_audio = _load_wav_stdlib
-        t0 = time.time()
-        self.rt = OnnxTtsRuntime(model_dir=MOSS_DIR / "models")
-        ref = REF_48K if REF_48K.exists() else TTS_DIR / "reference_voice.wav"
-        self.codes = self.rt.encode_reference_audio(str(ref))
-        log(f"引擎就绪（MOSS-Nano，{time.time() - t0:.0f}s）")
-
-    def play(self, text: str) -> None:
-        r = self.rt.synthesize_single_chunk(text=text, prompt_audio_codes=self.codes, streaming=False)
-        import numpy as np
-        wav = np.asarray(r["waveform"], dtype=np.float32)
-        sr = int(self.rt.codec_meta["codec_config"]["sample_rate"])
-        ch = int(self.rt.codec_meta["codec_config"]["channels"])
-        pcm = (wav.clip(-1, 1) * 32767).astype(np.int16)
-        if pcm.ndim == 1:
-            pcm = pcm[:, np.newaxis]
-        with wave.open(str(TMP_WAV), "wb") as w:
-            w.setnchannels(ch)
-            w.setsampwidth(2)
-            w.setframerate(sr)
-            w.writeframes(pcm.tobytes())
-        _apply_gain_play(TMP_WAV)
 
 
 # ---------------------------------------------------------------------------
@@ -359,10 +280,28 @@ def _release_own_lock() -> None:
             LOCK_FILE.unlink(missing_ok=True)
     except (OSError, ValueError, json.JSONDecodeError):
         pass
+    for flag in (SPEAKING_FLAG, BUSY_FLAG):
+        try:
+            if int(flag.read_text(encoding="utf-8").strip() or "0") == os.getpid():
+                flag.unlink(missing_ok=True)
+        except (OSError, ValueError):
+            pass
+
+
+def _set_busy(source: str | None) -> None:
+    """Publish compatibility flags while the one GPU worker owns the speaker."""
+    for flag in (SPEAKING_FLAG, BUSY_FLAG):
+        try:
+            if int(flag.read_text(encoding="utf-8").strip() or "0") == os.getpid():
+                flag.unlink(missing_ok=True)
+        except (OSError, ValueError):
+            pass
+    if source is None:
+        return
+    target = SPEAKING_FLAG if source == "quip" else BUSY_FLAG
     try:
-        if int(SPEAKING_FLAG.read_text(encoding="utf-8").strip() or "0") == os.getpid():
-            SPEAKING_FLAG.unlink(missing_ok=True)
-    except (OSError, ValueError):
+        target.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
         pass
 
 
@@ -392,72 +331,74 @@ def main() -> int:
     except OSError:
         pass
 
-    engine = _clone_engine()
-    if engine == "moss" and not (MOSS_DIR / "models").exists():
-        log("MOSS 模型未就绪，回退 indextts")
-        engine = "indextts"
-    if engine == "indextts" and not (INDEXTTS_DIR / "checkpoints" / "config.yaml").exists():
-        log("index-tts 模型未就绪，回退 moss")
-        engine = "moss"
-    eng = NanoQuip() if engine == "moss" else IndexQuip()
+    if not (INDEXTTS_DIR / "checkpoints" / "config.yaml").exists():
+        raise FileNotFoundError("IndexTTS 模型未就绪；GPU-only 模式不回退 CPU/MOSS")
+    gpu_engine = IndexTTSGpuEngine(log)
+    service = SpeechService(
+        gpu_engine, session_id=SESSION_ID, play=_apply_gain_play,
+        log=log, on_busy=_set_busy,
+    )
+    service.start_http(worker_port())
     rng = random.Random()
-    log(f"白绮碎碎念 v2 上线（LLM 现写：{_quip_model()}，克隆引擎：{engine}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）")
+    log(
+        f"白绮 IndexTTS GPU owner 上线（LLM 现写：{_quip_model()}，"
+        f"端口 {worker_port()}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）"
+    )
 
     last_play_end = 0.0
     next_gap = rng.uniform(MIN_GAP, MAX_GAP)
     last_sig = None
 
-    while not stop_requested():
-        if wait_for_stop(3):
-            break
-        try:
-            st = _get_state()
-            if not st:
-                continue
-            screen = st.get("screen", "")
-            run = st.get("run")
-            if not run or screen in ("MAIN_MENU", "CHARACTER_SELECT", "GAME_OVER", "UNKNOWN", "UNLOCK"):
-                continue
-            if BUSY_FLAG.exists():            # 总结音在播 → 让位
-                continue
-            sig = _sig(st)
-            if sig == last_sig:               # 局面没变化
-                continue
-            now = time.time()
-            if now - last_play_end < next_gap:   # 上条播完后还没攒够间隔
-                continue
-
-            brief = _state_brief(st)
-            # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
-            text = None
-            for attempt in range(6):
-                if stop_requested():
-                    break
-                cand = _llm_generate(brief)
-                if not cand:
-                    break                          # 生成失败 → 直接走保底
-                if _llm_audit(brief, cand):
-                    text = cand
-                    break
-                log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
-            if stop_requested():
+    try:
+        while not stop_requested():
+            if wait_for_stop(3):
                 break
-            if not text:
-                text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
-            last_sig = sig
-            log(f"[{screen}] {text}（战况：{brief}）")
-
-            SPEAKING_FLAG.write_text(str(os.getpid()), encoding="utf-8")
             try:
+                st = _get_state()
+                if not st:
+                    continue
+                screen = st.get("screen", "")
+                run = st.get("run")
+                if not run or screen in ("MAIN_MENU", "CHARACTER_SELECT", "GAME_OVER", "UNKNOWN", "UNLOCK"):
+                    continue
+                if BUSY_FLAG.exists():            # 复盘/结论在合成或播放 → 让位
+                    continue
+                sig = _sig(st)
+                if sig == last_sig:               # 局面没变化
+                    continue
+                now = time.time()
+                if now - last_play_end < next_gap:   # 上条播完后还没攒够间隔
+                    continue
+
+                brief = _state_brief(st)
+                # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
+                text = None
+                for attempt in range(6):
+                    if stop_requested():
+                        break
+                    cand = _llm_generate(brief)
+                    if not cand:
+                        break                          # 生成失败 → 直接走保底
+                    if _llm_audit(brief, cand):
+                        text = cand
+                        break
+                    log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
                 if stop_requested():
                     break
-                eng.play(text)
-            finally:
-                SPEAKING_FLAG.unlink(missing_ok=True)
-            last_play_end = time.time()
-            next_gap = rng.uniform(MIN_GAP, MAX_GAP)
-        except Exception as exc:
-            log(f"循环异常（继续）：{exc}")
+                if not text:
+                    text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
+                last_sig = sig
+                log(f"[{screen}] {text}（战况：{brief}）")
+
+                if stop_requested():
+                    break
+                service.submit(text, "quip", timeout=900.0)
+                last_play_end = time.time()
+                next_gap = rng.uniform(MIN_GAP, MAX_GAP)
+            except Exception as exc:
+                log(f"循环异常（继续）：{exc}")
+    finally:
+        service.close()
     log("收到全栈停止请求，碎碎念退出")
     return 0
 
@@ -467,7 +408,7 @@ if __name__ == "__main__":
         sys.exit(main())
     except Exception as exc:
         import traceback
-        log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-800:]}")
-        sys.exit(0)
+        log(f"致命异常（GPU-only owner 退出）：{exc}\n{traceback.format_exc()[-1600:]}")
+        sys.exit(1)
     finally:
         _release_own_lock()

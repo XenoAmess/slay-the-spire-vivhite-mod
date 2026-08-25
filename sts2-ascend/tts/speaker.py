@@ -2,8 +2,8 @@
 
 模式（argv[1] 或环境变量 TTS_MODE）：
   sapi     —— Windows 自带语音（Microsoft Huihui，中文女声）实时朗读直播流，零成本零延迟
-  indextts —— 全部用 index-tts 克隆音色（GTX 1060 上很慢，仅离线适用）
-  hybrid   —— 直播过程走 SAPI；复盘结束时的结论段用 index-tts 克隆音色朗读（默认）
+  indextts —— 全部提交给常驻 IndexTTS-2.5 CUDA owner（与碎碎念共用单模型）
+  hybrid   —— 直播过程走 SAPI；复盘结束结论提交给同一 CUDA owner
 
 手动：
   py -3 tts/speaker.py                 # 直播模式（tail review_live.stream）
@@ -29,13 +29,11 @@ TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 STREAM_FILE = KNOWLEDGE_DIR / "review_live.stream"
 LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
-SUMMARY_TEXT_FILE = TTS_DIR / "conclusion_text.txt"
-SPEAK_ONCE = TTS_DIR / "speak_once.py"
-
 sys.path.insert(0, str(BASE_DIR / "brain"))
 from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
+sys.path.insert(0, str(TTS_DIR))
+from indextts_client import IndexTTSServiceError, speak as index_speak, wait_ready as wait_index_ready  # noqa: E402
 
-DURATION_FACTOR = 0.9       # index-tts 语速（稍快）
 SAPI_RATE = 1               # SAPI 语速（-10~10）
 MAX_QUEUE = 256             # 朗读队列上限；到顶时立刻丢弃最老的一半
 MAX_SENTENCE = 90
@@ -421,36 +419,12 @@ class SapiSpeaker:
 
 
 def _speak_conclusion_indextts(text: str) -> None:
-    """用克隆音色读结论段：写文本到文件，spawn 旁路环境里的 speak_once.py（默认 MOSS-Nano 引擎）。"""
+    """Submit the conclusion to the same CUDA model used by quipper."""
     try:
-        SUMMARY_TEXT_FILE.write_text(text, encoding="utf-8")
-    except OSError:
-        return
-    uv = shutil_which_uv()
-    if not uv or not SPEAK_ONCE.exists():
-        return
-    if not (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists():
-        log("MOSS-Nano 模型未就绪，跳过克隆音色结论")
-        return
-    try:
-        subprocess.Popen([uv, "run", "--no-project",
-                          "--with", "onnxruntime", "--with", "sentencepiece",
-                          "--with", "torch", "--with", "torchaudio",
-                          "python", str(SPEAK_ONCE), str(SUMMARY_TEXT_FILE)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        log("结论段已交给 MOSS-Nano（克隆音色，后台合成）")
-    except Exception as exc:
-        log(f"克隆音色结论朗读启动失败：{exc}")
-
-
-def shutil_which_uv() -> str | None:
-    import shutil as _sh
-    found = _sh.which("uv")
-    if found:
-        return found
-    candidate = Path.home() / ".local" / "bin" / "uv.exe"
-    return str(candidate) if candidate.exists() else None
+        result = index_speak(text, source="conclusion")
+        log(f"结论段已由 IndexTTS GPU 播放（合成 {result.get('synthesis_seconds', '?')}s）")
+    except IndexTTSServiceError as exc:
+        log(f"IndexTTS GPU 结论朗读失败（不回退 CPU）：{exc}")
 
 
 def _tail_lines(state: dict) -> list[str]:
@@ -503,6 +477,18 @@ def main() -> int:
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
+    if mode in ("indextts", "hybrid"):
+        status = wait_index_ready(180.0, stop_requested=stop_requested)
+        if status is None:
+            if mode == "indextts":
+                log("IndexTTS GPU owner 180s 内未就绪；GPU-only 模式退出，不回退 CPU/SAPI")
+                return 0
+            log("IndexTTS GPU owner 未就绪；hybrid 模式仅保留本场 SAPI 直播")
+        else:
+            log(
+                f"已连接共享 IndexTTS owner：{status.get('gpu')} "
+                f"{status.get('device')}/{status.get('precision')}"
+            )
     if not acquire_voice_lock():
         log("已有朗读器在跑（单实例锁），本实例退出")
         return 0
@@ -519,21 +505,30 @@ def main() -> int:
     end_at = 0.0
     stream_started_at = time.time()
     recent_texts: list[str] = []
+    pump_stop = threading.Event()
 
     def pump() -> None:
         while not stop_requested():
             try:
                 sent = q.get(timeout=0.5)
             except queue.Empty:
-                if ended or stop_requested():
+                if pump_stop.is_set() or stop_requested():
                     return
                 continue
-            if sapi:
-                sapi.say(sent)
-            recent_texts.append(sent)
-            del recent_texts[:-8]
+            try:
+                if sapi:
+                    sapi.say(sent)
+                elif mode == "indextts":
+                    index_speak(sent, source="review")
+                recent_texts.append(sent)
+                del recent_texts[:-8]
+            except IndexTTSServiceError as exc:
+                log(f"IndexTTS GPU 复盘句朗读失败（不回退 CPU）：{exc}")
+            finally:
+                q.task_done()
 
-    threading.Thread(target=pump, daemon=True).start()
+    pump_thread = threading.Thread(target=pump, name="review-speech-pump", daemon=True)
+    pump_thread.start()
 
     while not stop_requested():
         for ln in _tail_lines(state):
@@ -555,6 +550,7 @@ def main() -> int:
                     for _ in range(MAX_QUEUE // 2):      # 到顶立刻丢最老的一半
                         try:
                             q.get_nowait()
+                            q.task_done()
                         except queue.Empty:
                             break
                 q.put(sent)
@@ -562,10 +558,13 @@ def main() -> int:
             for sent in splitter.flush():
                 if speakable(sent):
                     q.put(sent)
-            if time.time() - end_at > 3 and q.empty():
+            if time.time() - end_at > 3 and q.unfinished_tasks == 0:
                 break
         if wait_for_stop(0.5):
             break
+
+    pump_stop.set()
+    pump_thread.join(timeout=1.0)
 
     if not stop_requested() and mode in ("indextts", "hybrid"):
         # 优先朗读复盘 agent 专为语音写的短评（review_conclusion.txt，100 字内）；

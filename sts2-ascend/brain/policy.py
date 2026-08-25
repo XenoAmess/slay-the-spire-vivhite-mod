@@ -123,6 +123,10 @@ class Policy:
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
+        self._active_card_offer_key = None  # 当前可跳过卡牌 offer；跨 tick 去重 seen
+        self._active_card_offer_explore_id = None  # 同一 offer 重试时保持探索选择稳定
+        self._card_explore_run = None       # run identity for per-run novelty quota
+        self._card_explore_used = 0         # deliberate non-greedy reward picks this run
         self._sel_key = None        # card-selection screen identity
         self._sel_tried: set = set()  # card indices already clicked this screen
         self._cur_turn = None       # combat turn tracking
@@ -130,6 +134,8 @@ class Policy:
         self._failed_hand_len = -1  # 记录失败时的手牌数量：index 是位置序号，手牌一变即失效
         self._potion_combat = None  # combat instance identity for potion blacklist
         self._potion_tried: set = set()      # potion indices already attempted this combat
+        self._novel_trial_combat = None  # combat identity for controlled first-play trials
+        self._novel_trials: set[str] = set()  # card ids already trialled once this combat
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
         self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
         self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
@@ -208,6 +214,16 @@ class Policy:
 
     def decide(self, state: dict, ctx) -> Decision:
         screen = state.get("screen", "UNKNOWN")
+        run_key = (state.get("run_id") or (state.get("run") or {}).get("run_id")
+                   or getattr(ctx, "run_id", None))
+        if run_key and run_key != self._card_explore_run:
+            self._card_explore_run = run_key
+            self._card_explore_used = 0
+        # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
+        # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
+        if not self._state_has_explicit_card_offer(state):
+            self._active_card_offer_key = None
+            self._active_card_offer_explore_id = None
         if screen != "UNKNOWN":
             self._unknown_stall = 0
         if screen != "UNLOCK":
@@ -1238,6 +1254,9 @@ class Policy:
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
             self._potion_tried = set()
+        if self._novel_trial_combat is not ctx.combat:
+            self._novel_trial_combat = ctx.combat
+            self._novel_trials = set()
         if self._kills_combat is not ctx.combat:
             self._kills_combat = ctx.combat
             self._combat_kills = {}
@@ -1595,19 +1614,47 @@ class Policy:
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
 
-        best = None  # (score, card, target_index, why)
+        best = None  # (policy_score, card, target_index, why)
+        # If the policy threshold suppresses every option, a separately-accounted
+        # positive immediate margin may still spend otherwise-wasted energy.  The
+        # fifth tuple field records whether this is a normal fallback or a single
+        # controlled first-play trial.
+        marginal_best = None  # (immediate_score, card, target_index, why, mode)
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
         forced_kill = bool(combat.get("end_turn_will_kill_player"))
-        # 能量预留：缺口未补且手里还有可负担的格挡牌时，非击杀攻击不得吃掉
-        # 补防所需的最低能量——第 36 批 F17 Boss 战实证：先挥霍能量打输出，
-        # 下一轮 20 点意图来袭时手持两张防御却 0 能量，无甲硬吃。
+        # 能量预留采用一层联合机会判断，而不是“看见任意格挡就压攻击”：
+        # 先估算每张可负担格挡对当前缺口的即时边际，只有它本身值得出
+        # （超过出牌阈值）才保留相应能量。旧逻辑在 6 意图/5 甲时仍为第二张
+        # 防御预留能量：防御因只多挡 1 点被溢出规则压到 0.03，打击又被固定
+        # -8，二者互相压死后带着能量结束回合。现在低边际防御不再制造预留。
         gap_now = max(0, incoming - my_block)
-        affordable_blk_costs = [c.get("energy_cost", 0) for c in hand
-                                if c.get("playable") and c.get("index") not in self._failed_this_turn
-                                and card_numbers(c)[1] > 0 and c.get("energy_cost", 0) <= energy]
-        reserve_for_block = gap_now > 0 and bool(affordable_blk_costs)
-        min_blk_cost = min(affordable_blk_costs) if affordable_blk_costs else 99
+        reserve_lethal = (gap_now >= my_hp
+                          or (gap_now > 0 and (my_hp - gap_now) <= 0.12 * my_max_hp)
+                          or (forced_kill and gap_now > 0))
+        reserve_urgent = (gap_now > 0 and my_hp / max(1, my_max_hp)
+                          < float(stance.get("urgent_hp_pct", 0.45)))
+        reserve_blk_boost = 1.8 if reserve_lethal else (1.4 if reserve_urgent else 1.0)
+        reserve_blk_boost *= float(stance.get("blk_mult", 1.0))
+        reserve_blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
+        worthwhile_blk_costs = []
+        for c in hand:
+            cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
+            _dmg, block, _hits = card_numbers(c)
+            if (not c.get("playable") or c.get("index") in self._failed_this_turn
+                    or block <= 0 or cost > energy):
+                continue
+            useful = min(block, gap_now)
+            if useful < block * 0.5 and not reserve_lethal and not reserve_urgent:
+                marginal = useful * float(pol.get("block_excess_value", 0.03))
+            else:
+                marginal = (useful * 1.05 * pol["block_safety"]
+                            + (block - useful) * float(pol.get("block_excess_value", 0.03)))
+                marginal *= reserve_blk_boost
+            if marginal > float(pol["play_threshold"]):
+                worthwhile_blk_costs.append(cost)
+        reserve_for_block = gap_now > 0 and bool(worthwhile_blk_costs)
+        min_blk_cost = min(worthwhile_blk_costs) if worthwhile_blk_costs else 99
         # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
         # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4
@@ -1664,18 +1711,59 @@ class Policy:
                     clogged = sum(1 for h in hand if h is not c and not h.get("playable"))
                     if clogged:
                         score += min(clogged, 2) * exhaust_unclog_bonus
-            score += self.know.card_value(c.get("card_id", "")) * 0.3
+            immediate_score = score
+            # Final-floor draft attribution is useful when choosing a reward, but a
+            # negative draft value must not tell the executor to waste already-paid
+            # cards and energy.  Combat accepts only a small non-negative prior.
+            score += max(0.0, self.know.card_value(c.get("card_id", ""))) * 0.3
             # 零出牌死牌出牌否决（第529局批复盘）：生涯多拿零打的强制入组牌
             # 若在战斗端可出，learned value 加成与面板高伤会让它抢能量——
             # 与拾取端一票否决同一份证据接到出牌端口（负值有限，僵局强攻
             # 兜底通道不受影响）
-            if self._is_never_played_dead(c.get("card_id", "")):
+            cid = (c.get("card_id") or "").upper().rstrip("+")
+            never_played_dead = self._is_never_played_dead(cid)
+            if never_played_dead:
                 score -= float(pol.get("never_played_veto_penalty", 40.0))
-            if best is None or score > best[0]:
+            # A stale picked>=N/plays==0 veto must be recoverable if a later game/API
+            # version exposes a genuinely playable positive card.  It may bypass the
+            # threshold once per combat, but explicit status/curse/unplayable payloads
+            # never receive novelty promotion.
+            successful_plays = self._successful_card_plays(cid)
+            safe_trial = self._safe_controlled_trial(c)
+            trial_already = cid in self._novel_trials
+            eligible_for_best = not (never_played_dead and trial_already)
+            if eligible_for_best and (best is None or score > best[0]):
                 best = (score, c, target, why)
 
-        if best and best[0] > pol["play_threshold"]:
-            _, card, target, why = best
+            if immediate_score > 0.0 and safe_trial:
+                if successful_plays > 0:
+                    mode = "边际收益兜底"
+                elif not trial_already:
+                    mode = "受控试用"
+                else:
+                    mode = None
+                if mode is not None and (marginal_best is None
+                                         or immediate_score > marginal_best[0]):
+                    marginal_best = (immediate_score, c, target, why, mode)
+
+        choice_mode = ""
+        chosen = best if best and best[0] > pol["play_threshold"] else None
+        if chosen is None and marginal_best is not None:
+            immediate_score, card, target, why, choice_mode = marginal_best
+            chosen = (immediate_score, card, target, why)
+        if chosen is not None:
+            _, card, target, why = chosen
+            if (not choice_mode
+                    and self._is_never_played_dead(card.get("card_id", ""))
+                    and self._successful_card_plays(card.get("card_id", "")) == 0
+                    and self._safe_controlled_trial(card)):
+                choice_mode = "受控试用"
+            if choice_mode == "受控试用":
+                cid = (card.get("card_id") or "").upper().rstrip("+")
+                self._novel_trials.add(cid)
+                why += "｜受控试用：零成功出牌但当前可用且有正即时边际（本场限一次）"
+            elif choice_mode:
+                why += f"｜{choice_mode}：正即时边际不带能量空过"
             if _exhausts_other_cards(card):
                 self._exhaust_plays += 1
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
@@ -1868,16 +1956,40 @@ class Policy:
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
             total = dmg * hits
+
+            def _effective_pool(enemy: dict) -> float:
+                try:
+                    raw_hp = enemy.get("current_hp", 9999)
+                    hp = max(0.0, float(9999 if raw_hp is None else raw_hp))
+                    enemy_block = max(0.0, float(enemy.get("block", 0) or 0))
+                except (TypeError, ValueError):
+                    return 9999.0
+                return hp + enemy_block
+
+            def _effective_damage(_enemy: dict) -> float:
+                """Immediate attack output; block absorption is still real removal."""
+                # Keep the long-standing overkill/kill-bonus scale for ordinary
+                # targets, but unlike ``damage - block`` do not erase the portion
+                # that strips block.  Confirmed respawn adds are capped separately.
+                return float(total)
+
+            def _would_kill(enemy: dict) -> bool:
+                return float(total) >= _effective_pool(enemy)
+
             if aoe:
                 eff = 0
                 for e in enemies:
-                    e_eff = max(1, total - e.get("block", 0))
+                    # Damage absorbed by enemy block still removes a current combat
+                    # resource.  The old max(1, damage-block) valued a 6-damage Strike
+                    # into 8 block as only 1 point, which routinely fell below the
+                    # play threshold and ended turns with all energy unused.
+                    e_eff = _effective_damage(e)
                     if self._is_respawn_add(e) and not all_respawn:
                         # 确认重生体：过量伤害记到当前血量为止（第 58 局实证：
                         # 11 点伤害砸 5 血利齿之眼按 11 计分，虚高吸走输出）
-                        e_eff = min(e_eff, max(1, e.get("current_hp", 9999)))
+                        e_eff = min(e_eff, max(1.0, _effective_pool(e)))
                     eff += e_eff
-                killable = [e for e in enemies if max(1, total - e.get("block", 0)) >= e.get("current_hp", 9999)]
+                killable = [e for e in enemies if _would_kill(e)]
                 score = eff * atk_damp + sum(
                     self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
                                      incoming, pol, ignore_respawn=all_respawn)
@@ -1908,7 +2020,7 @@ class Policy:
             _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
-                eff = max(1, total - e.get("block", 0))
+                eff = _effective_damage(e)
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 is_support = (not resp and len(enemies) > 1 and threat <= 0 and sup_bonus > 0)
                 if resp:
@@ -1917,13 +2029,13 @@ class Policy:
                     #   ① 过量伤害只记到当前血量——打不死的部分是纯浪费；
                     #   ② 威胁分成清零——杀它一次只延迟一回合，消除不了长期威胁；
                     #   ③ 击杀奖励归零（_kill_bonus 内 ×0）
-                    eff = min(eff, max(1, e.get("current_hp", 9999)))
+                    eff = min(eff, max(1.0, _effective_pool(e)))
                     s = eff * atk_damp
                 else:
                     s = (eff + threat * 0.3) * atk_damp
                     if is_support:
                         s += sup_bonus
-                killed = eff >= e.get("current_hp", 9999)
+                killed = _would_kill(e)
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
                 if best_t is None or s > best_s:
@@ -2544,6 +2656,60 @@ class Policy:
         return (int(e.get("picked", 0) or 0) >= int(pol.get("unplayed_min_picked", 4))
                 and not int(e.get("plays", 0) or 0))
 
+    def _successful_card_plays(self, card_id: str) -> int:
+        """Return confirmed successful plays, never attempted-action counts."""
+        e = (self.know.stats.get("cards") or {}
+             ).get((card_id or "").upper().rstrip("+")) or {}
+        return int(e.get("plays", 0) or 0)
+
+    @staticmethod
+    def _safe_controlled_trial(card: dict) -> bool:
+        """Whether a positive, currently legal card may bypass a stale zero-play veto once.
+
+        Combat payloads normally omit ``card_type``, so the engine's ``playable`` flag is
+        necessary but not sufficient: known status/curse ids and explicit unplayable text
+        are rejected before the numeric/text effect check.  This is deliberately
+        conservative; an unknown card with no recognizable positive effect keeps the
+        normal policy score and is never promoted merely for novelty.
+        """
+        if not card.get("playable"):
+            return False
+        ctype = (card.get("card_type") or "").lower()
+        if ctype in ("status", "curse"):
+            return False
+        if card.get("requires_target") and not (card.get("valid_target_indices") or []):
+            return False
+
+        cid = (card.get("card_id") or "").upper().rstrip("+")
+        name = (card.get("name") or "").strip()
+        text = _text(card)
+        # Token boundaries avoid rejecting legitimate cards such as BURNING_PACT merely
+        # because their id contains the letters of the BURN status.
+        bad_id_token = re.search(
+            r"(?:^|_)(?:CURSE|STATUS|DAZED|WOUND|BURN|SLIMED|VOID|REGRET|PAIN|"
+            r"DOUBT|SHAME|NORMALITY|PARASITE|INJURY|DECAY|CLUMSY|PRIDE|"
+            r"ASCENDERS_BANE)(?:$|_)", cid)
+        forced_dead = any(cid.endswith(suffix) for suffix in (
+            "DISINTEGRATION", "MIND_ROT", "SLOTH", "WASTE_AWAY",
+            "INFECTION", "GREED", "GUILTY", "NOT_YET", "SPOILS_MAP"))
+        bad_names = {"晕眩", "伤口", "灼伤", "黏液", "虚无", "遗憾", "疼痛",
+                     "疑虑", "羞耻", "常态", "寄生", "腐朽", "笨拙", "傲慢",
+                     "进阶之灾", "瓦解", "心灵腐化", "懒惰"}
+        if bad_id_token or forced_dead or name in bad_names:
+            return False
+        if re.search(r"不可打出|不能打出|无法打出|cannot\s+be\s+played|unplayable|"
+                     r"诅咒|curse|状态牌|status\s+card", text, re.I):
+            return False
+
+        dmg, block, _hits = card_numbers(card)
+        if dmg > 0 or block > 0 or draw_amount(card) > 0:
+            return True
+        if ctype in ("attack", "skill", "power"):
+            return True
+        return bool(re.search(
+            r"获得.*(?:能量|力量|敏捷)|回复|治疗|heal|gain.*(?:energy|strength|dexterity)",
+            text, re.I))
+
     def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
 
@@ -2632,6 +2798,125 @@ class Policy:
                    if not ("STRIKE" in (c.get("card_id") or "").upper()
                            or "DEFEND" in (c.get("card_id") or "").upper()
                            or is_bad_card(c)))
+
+    @staticmethod
+    def _state_has_explicit_card_offer(state: dict) -> bool:
+        """Whether this state exposes a voluntary card reward offer.
+
+        Upgrade/removal/transform/combat selection screens also contain cards, but
+        they are not offers and must never affect reward ``seen`` statistics.
+        """
+        screen = state.get("screen")
+        if screen == "REWARD":
+            reward = state.get("reward") or {}
+            return bool(reward.get("pending_card_choice")
+                        and reward.get("card_options"))
+        if screen == "CARD_SELECTION":
+            selection = state.get("selection") or {}
+            return bool(selection.get("cards")
+                        and "skip_reward_cards" in (state.get("available_actions") or []))
+        return False
+
+    def _record_card_offer(self, source: str, state: dict,
+                           cards: list[dict]) -> tuple:
+        """Count each base card id once when a new offer first becomes observable."""
+        run = state.get("run") or {}
+        selection = state.get("selection") or {}
+        signature = tuple(sorted(
+            ((str(c.get("card_id") or "").upper().rstrip("+"),
+              bool(c.get("upgraded")), str(c.get("name") or ""))
+             for c in cards),
+            key=lambda x: x))
+        key = (source, state.get("run_id") or run.get("run_id"), run.get("floor"),
+               str(selection.get("kind") or ""), str(selection.get("prompt") or ""),
+               signature)
+        if key != self._active_card_offer_key:
+            self._active_card_offer_key = key
+            self._active_card_offer_explore_id = None
+            self.know.commit_card_offer(c.get("card_id") for c in cards)
+        return key
+
+    def _reward_exploration_safe(self, card: dict, deck: list[dict]) -> bool:
+        """Conservative safety gate for deliberate non-greedy reward trials."""
+        cid = str(card.get("card_id") or "").upper().rstrip("+")
+        if not cid or is_bad_card(card):
+            return False
+        if not card.get("upgraded") and ("STRIKE" in cid or "DEFEND" in cid):
+            return False
+        if self._is_never_played_dead(cid) or self.know.card_is_proven_bad(cid):
+            return False
+        text = _text(card).lower()
+        if re.search(r"无法打出|不能打出|不可打出|unplayable|cannot\s+be\s+played|can't\s+be\s+played",
+                     text, re.I):
+            return False
+        # 条件型成长牌在当前卡组无法触发时是已知死牌，不拿它做探索样本。
+        if self._is_scaling_power(card) and not self._scaling_power_active(card, deck):
+            return False
+        return True
+
+    def _reward_card_choice(self, scored: list[tuple[float, dict]], deck: list[dict],
+                            state: dict, ctx, value_floor: float) -> tuple[float, dict, str]:
+        """Choose a reward card with a bounded UCB novelty allowance.
+
+        The greedy heuristic remains the default.  A deliberate trial can replace it
+        only when the candidate is safe, under-sampled, above the actual take floor,
+        and within a configurable raw-score margin.  A per-run quota hard-caps the
+        cost of exploration.  No random epsilon is needed, so an eligible unseen card
+        cannot lose forever merely because every run rolled the same coin flip.
+        """
+        best_v, best = scored[0]
+        pol = self.know.policy
+        if (not bool(pol.get("card_exploration_enabled", True))
+                or int(pol.get("card_exploration_run_quota", 2)) <= self._card_explore_used):
+            return best_v, best, ""
+
+        cached = self._active_card_offer_explore_id
+        if cached:
+            for value, card in scored:
+                if str(card.get("card_id") or "").upper().rstrip("+") == cached:
+                    return value, card, "（同一 offer 保持受控探索选择）"
+
+        min_picks = max(1, int(pol.get("card_exploration_min_picks", 2)))
+        margin = max(0.0, float(pol.get("card_exploration_near_best_margin", 2.5)))
+        ucb_scale = max(0.0, float(pol.get("card_exploration_ucb_scale", 1.0)))
+        min_value = max(float(value_floor),
+                        float(pol.get("card_exploration_min_value", 1.0)))
+
+        def samples(card: dict) -> int:
+            cid = str(card.get("card_id") or "").upper().rstrip("+")
+            entry = (self.know.stats.get("cards") or {}).get(cid) or {}
+            return max(0, int(entry.get("picked", 0) or 0))
+
+        total_samples = sum(samples(c) for _v, c in scored)
+        log_mass = math.log(2.0 + total_samples + len(scored))
+        eligible = []
+        for value, card in scored:
+            picked = samples(card)
+            if (picked >= min_picks or value < min_value
+                    or best_v - value > margin
+                    or not self._reward_exploration_safe(card, deck)):
+                continue
+            ucb = value + ucb_scale * math.sqrt(log_mass / (1.0 + picked))
+            eligible.append((ucb, -picked, value, card))
+        if not eligible:
+            return best_v, best, ""
+        ucb, _neg_picked, value, card = max(
+            eligible,
+            key=lambda row: (row[0], row[1], row[2],
+                             str(row[3].get("card_id") or "")))
+        chosen_id = str(card.get("card_id") or "").upper().rstrip("+")
+        best_id = str(best.get("card_id") or "").upper().rstrip("+")
+        # If the unseen card is already greedy-best, it is naturally explored and
+        # should not spend the deliberate non-greedy quota.
+        if chosen_id == best_id or ucb <= best_v + 1e-9:
+            return best_v, best, ""
+        self._card_explore_used += 1
+        self._active_card_offer_explore_id = chosen_id
+        picked = samples(card)
+        note = (f"（受控探索：原值 {value:.1f}，UCB {ucb:.1f}，"
+                f"生涯拾取 {picked}/{min_picks}，本局配额 "
+                f"{self._card_explore_used}/{int(pol.get('card_exploration_run_quota', 2))}）")
+        return value, card, note
 
     def _thin_deck_must_pick(self, deck: list[dict], best_v: float) -> bool:
         """单薄卡组正价值保底（第 236 局复盘）：卡组单薄（非基础牌 < core）时，
@@ -2881,7 +3166,6 @@ class Policy:
             if _relief_gate >= float(pol.get("engine_bias_relief_deficit", 0.30)):
                 _learned = 0.0
         value += _learned
-        self.know.commit_card_seen(card.get("card_id", ""))
         return value
 
     def _reward(self, state: dict, ctx) -> Decision:
@@ -2900,19 +3184,22 @@ class Policy:
         # card choice pending?
         cards = r.get("card_options", [])
         if r.get("pending_card_choice") and cards:
+            self._record_card_offer("REWARD", state, cards)
             _mh = max(1, int(run.get("max_hp", 1) or 1))
             _act = self._floor_act(floor)
-            best, best_v = None, -1e9
-            vals = []
-            for c in cards:
-                v = self.eval_reward_card(c, deck, max_hp=_mh, act=_act)
-                vals.append(f"{c.get('name')}={v:.1f}")
-                if v > best_v:
-                    best, best_v = c, v
+            scored = sorted(
+                ((self.eval_reward_card(c, deck, max_hp=_mh, act=_act), c)
+                 for c in cards),
+                key=lambda row: (-row[0], str(row[1].get("card_id") or "")))
+            best_v, best = scored[0]
+            vals = [f"{c.get('name')}={v:.1f}" for v, c in scored]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
             if best_v >= pick_line and "choose_reward_card" in actions:
+                best_v, best, explore_note = self._reward_card_choice(
+                    scored, deck, state, ctx, value_floor=pick_line)
                 return Decision("choose_reward_card", {"option_index": best["index"]},
-                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）；候选：{', '.join(vals)}",
+                                f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f} ≥ 门槛 {pick_line:.1f}）"
+                                f"{explore_note}；候选：{', '.join(vals)}",
                                 tags=[("card_pick", best.get("card_id"))], wait=0.8)
             if best_v < pick_line and "skip_reward_cards" in actions \
                     and not self._thin_deck_must_pick(deck, best_v):
@@ -3088,16 +3375,28 @@ class Policy:
                             key=lambda t: -t[0])
             best_v, pick = scored[0]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_sel_act)
+            _has_skip = "skip_reward_cards" in actions
+            if _has_skip:
+                # 只有可跳过的通用选牌屏才是自愿奖励 offer。升级/删除/献祭/
+                # 置顶均在前面的语义分支，不会污染 offered/seen。
+                self._record_card_offer("CARD_SELECTION", state, cards)
             # 跳过守卫（第 56 局实证）：经"打开卡牌奖励"进入的本屏没有阈值判断，
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
             # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
             # （第 65~66 局复盘：门槛升级为随卡组膨胀动态抬升）
-            _has_skip = "skip_reward_cards" in actions
             if best_v < pick_line and _has_skip \
                     and not self._thin_deck_must_pick(deck, best_v):
                 return Decision("skip_reward_cards", {},
                                 f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)
+            explore_note = ""
+            if _has_skip:
+                # 到这里说明这份 offer 会被接受；探索候选也必须跨过真实拿牌线，
+                # 单薄卡组的正价值保底则仍受 card_exploration_min_value 保护。
+                _thin_take = self._thin_deck_must_pick(deck, best_v)
+                _floor = 0.0 if _thin_take else pick_line
+                best_v, pick, explore_note = self._reward_card_choice(
+                    scored, deck, state, ctx, value_floor=_floor)
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
@@ -3110,7 +3409,8 @@ class Policy:
                 tag = "card_pick"
             verb = "牌堆顶选择" if top_of_pile else "选择卡牌"
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
-            reason = f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"
+            reason = (f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）"
+                      f"{explore_note}；候选：{detail}")
 
         self._sel_tried.add(pick["index"])
         return Decision("select_deck_card", {"option_index": pick["index"]},

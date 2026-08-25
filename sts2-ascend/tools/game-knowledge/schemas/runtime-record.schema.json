@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sts2-ascend.local/schemas/runtime-record.schema.json",
+  "title": "STS2 runtime model record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "category", "id", "type_name", "source_assembly", "provenance", "data"],
+  "properties": {
+    "schema": {"const": "sts2.game-knowledge-runtime-record/v1"},
+    "category": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "id": {"type": "string", "minLength": 1},
+    "type_name": {"type": ["string", "null"]},
+    "source_assembly": {"type": ["string", "null"]},
+    "provenance": {
+      "type": "object",
+      "required": ["source", "base_game_filter"],
+      "properties": {
+        "source": {"type": "string"},
+        "base_game_filter": {
+          "enum": ["base", "mod", "unavailable", "pck_base_membership"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {"id": {"type": "string", "minLength": 1}},
+      "additionalProperties": true
+    }
+  }
+}

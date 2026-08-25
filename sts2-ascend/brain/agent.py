@@ -149,7 +149,7 @@ class Agent:
     # ---------------- quipper（白绮碎碎念） ----------------
 
     def _launch_quipper(self) -> None:
-        """启动白绮碎碎念进程（克隆音色低频短评）。它自己有活锁，重复拉起会自动退出。"""
+        """启动唯一的 IndexTTS GPU owner（兼管碎碎念与复盘语音）。"""
         try:
             quipper = BASE_DIR / "tts" / "quipper.py"
             if not quipper.exists():
@@ -158,23 +158,11 @@ class Agent:
             uv = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv.exe")
             if not Path(uv).exists():
                 return
-            # 克隆引擎决定运行环境（indextts 用其 venv；moss 用临时环境）
-            engine = "indextts"
-            try:
-                cfg = json.loads((BASE_DIR / "brain" / "config.json").read_text(encoding="utf-8"))
-                engine = str((cfg.get("tts") or {}).get("clone_engine") or "indextts")
-            except (OSError, json.JSONDecodeError):
-                pass
-            if engine == "indextts" and (BASE_DIR / "third_party" / "index-tts" / "checkpoints").exists():
-                cmd = [uv, "run", "--project", str(BASE_DIR / "third_party" / "index-tts"),
-                       "python", str(quipper)]
-            elif (BASE_DIR / "third_party" / "MOSS-TTS-Nano" / "models").exists():
-                cmd = [uv, "run", "--no-project",
-                       "--with", "onnxruntime", "--with", "sentencepiece",
-                       "--with", "torch", "--with", "torchaudio",
-                       "python", str(quipper)]
-            else:
+            index_root = BASE_DIR / "third_party" / "index-tts"
+            if not (index_root / "checkpoints" / "config.yaml").exists():
+                log("[agent] IndexTTS 模型未就绪；GPU-only owner 未启动")
                 return
+            cmd = [uv, "run", "--project", str(index_root), "python", str(quipper)]
             creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                              | getattr(subprocess, "DETACHED_PROCESS", 0)
                              | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
@@ -182,7 +170,7 @@ class Agent:
                              cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=creationflags, close_fds=True)
-            log(f"[agent] 白绮碎碎念已拉起（引擎 {engine}）")
+            log("[agent] IndexTTS GPU owner 进程已拉起（模型后台加载；碎碎念/复盘共用）")
         except Exception as exc:
             log(f"[agent] 碎碎念拉起失败（不影响游玩）：{exc}")
 
@@ -416,11 +404,6 @@ class Agent:
                     self.ctx.rests_healed_at_full += 1
             self.ctx.credit_tags.append(tag)
 
-        # card play counting (cheap online learning)
-        for tag in decision.tags:
-            if tag[0] == "play_card" and tag[1]:
-                self.know.commit_card_play(tag[1])
-
         self.ctx.last_hp, self.ctx.last_gold = hp, gold
         if decision.action:
             self.ctx.decisions.append({
@@ -429,6 +412,19 @@ class Agent:
                 "action": decision.action, "params": decision.params, "reason": decision.reason,
             })
             self._save_run_progress(run)
+
+    def _commit_successful_action(self, decision) -> None:
+        """Commit observations that require a confirmed action response.
+
+        ``_track`` runs before the HTTP action so it can settle state transitions and
+        persist an attempted decision.  Counting a card there made ``plays`` mean
+        *attempts*: a 409, signature error, or disconnect still taught the zero-play
+        veto that the card had worked.  Only an accepted action response may now add a
+        successful play sample.
+        """
+        for tag in decision.tags:
+            if tag[0] == "play_card" and tag[1]:
+                self.know.commit_card_play(tag[1])
 
     def _save_run_progress(self, run: dict, force: bool = False) -> None:
         """对局日志增量存档（第 218 批复盘）：旧实现只在终局落盘——大脑在局
@@ -944,6 +940,8 @@ class Agent:
                     if status not in ("ok", "success", "pending", "stable", "completed"):
                         log(f"  ↳ 动作 {decision.action} 返回 {status}: {resp.get('message', '')}")
                         self.policy.note_action_failed(decision.action, decision.tags)
+                    else:
+                        self._commit_successful_action(decision)
                 except ConnectionDown:
                     log("[agent] 动作执行时断线")
                     if wait_for_stop(3):

@@ -2692,7 +2692,8 @@ def main() -> int:
     # 3wz) 溢出型大格挡贬值（第 94~95 批复盘）：94 局 Boss 战开局 87 血对意图
     #      7/17 连打两张岿然不动+(40挡)，~56 点溢出甲 ≈ 4 能量没换成伤害，
     #      Boss 多活两轮升级意图。有用部分不足牌面一半且血量宽裕时，大挡按
-    #      纯溢出计价跌破出牌阈值；高意图回合与低血量（urgent/lethal）不受影响。
+    #      纯溢出计价跌破主出牌阈值、不得挤占攻击；若没有任何替代且能量本会
+    #      白白丢弃，正边际兜底仍可用它少掉血。高意图/低血量不受贬值影响。
     kdir_ov = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-overblock-"))
     know_ov = knowledge.Knowledge(kdir_ov)
     ovc = type("OVCtx", (), {"combat": None, "current_combat_is_hard": False,
@@ -2715,8 +2716,16 @@ def main() -> int:
 
     pol_ov = policy.Policy(know_ov, random.Random(5))
     d_ov1 = pol_ov.decide(ov_wall_state(76, 5), ovc)
-    assert d_ov1.action == "end_turn", \
-        f"血量宽裕时溢出大挡未被贬值仍被打出: {d_ov1.action}（{d_ov1.reason}）"
+    assert d_ov1.action == "play_card" and "受控试用" in d_ov1.reason, \
+        f"没有替代时正边际大挡仍带能量空过: {d_ov1.action}（{d_ov1.reason}）"
+    ov_with_attack = ov_wall_state(76, 5)
+    ov_with_attack["combat"]["hand"].append(
+        {"index": 1, "card_id": "OV_STRIKE", "name": "打击", "playable": True,
+         "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+         "dynamic_values": [{"name": "Damage", "current_value": 6}]})
+    d_ov_attack = pol_ov.decide(ov_with_attack, ovc)
+    assert d_ov_attack.action == "play_card" and d_ov_attack.params.get("card_index") == 1, \
+        f"溢出大挡仍挤占正经输出: {d_ov_attack.action}（{d_ov_attack.reason}）"
     d_ov2 = pol_ov.decide(ov_wall_state(30, 45), ovc)
     assert d_ov2.action == "play_card", \
         f"高意图回合右尺寸大挡被误贬值弃用: {d_ov2.action}（{d_ov2.reason}）"
@@ -5085,6 +5094,231 @@ def main() -> int:
     assert d_ul_fallback.action is None and ul_clicks == [(0.5, 0.89)] \
             and "鼠标兜底点击已发送" in d_ul_fallback.reason, \
         f"解锁无动作未触发鼠标兜底: clicks={ul_clicks}（{d_ul_fallback.reason}）"
+
+    # 3zy-combat-margin) 有能量且存在正即时边际时不得被阈值/预留互锁为空过：
+    # 真实第 554 局 F2 的 6 意图/5 甲/1 能量场景曾让第二张防御(0.03分)
+    # 与打击(-8预留)互相压死；敌方格挡也曾把 6 伤错误折成 1 分。
+    cm_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-combat-margin-")))
+    cm_pol = policy.Policy(cm_know)
+    cm_ctx = DummyCtx()
+    cm_ctx.combat = {"comp_id": "CM_ENEMY", "node_type": "Monster"}
+    # 模拟“拿牌局走不远”造成的强负 draft 归因；已在手里的执行不应被它压住。
+    cm_know.stats["cards"]["CM_STRIKE"] = {
+        "seen": 5, "picked": 1, "plays": 1, "outcome_sum": 0.0, "bias": -10.0}
+
+    def cm_card(index, card_id, name, damage=0, block=0, card_kind=None):
+        values = []
+        if damage:
+            values.append({"name": "Damage", "current_value": damage})
+        if block:
+            values.append({"name": "Block", "current_value": block})
+        card = {"index": index, "card_id": card_id, "name": name,
+                "playable": True, "energy_cost": 1,
+                "requires_target": bool(damage),
+                "valid_target_indices": [0] if damage else [],
+                "dynamic_values": values}
+        if card_kind:
+            card["card_type"] = card_kind
+        return card
+
+    def cm_state(hand, *, block_now=0, incoming=0, enemy_block=0, energy=1, turn=2):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn,
+            "combat": {
+                "player": {"current_hp": 73, "max_hp": 80,
+                           "block": block_now, "energy": energy},
+                "hand": hand,
+                "enemies": [{"index": 0, "enemy_id": "CM_ENEMY", "name": "测试怪",
+                             "current_hp": 30, "max_hp": 30, "block": enemy_block,
+                             "is_alive": True, "is_hittable": True,
+                             "intents": ([{"total_damage": incoming}] if incoming else [])}]},
+            "run": {"current_hp": 73, "max_hp": 80, "gold": 0,
+                    "floor": 2, "deck": []}}
+
+    cm_strike = cm_card(0, "CM_STRIKE", "打击", damage=6)
+    cm_defend = cm_card(1, "CM_DEFEND", "防御", block=5)
+    d_cm_gap = cm_pol.decide(
+        cm_state([dict(cm_strike), dict(cm_defend)], block_now=5,
+                 incoming=6, energy=1), cm_ctx)
+    assert d_cm_gap.action == "play_card" and d_cm_gap.params.get("card_index") == 0, \
+        f"残余缺口格挡预留仍与攻击互锁: {d_cm_gap.action}（{d_cm_gap.reason}）"
+
+    # 敌方 8 甲不能把打击价值算成 max(1, 6-8)=1；本次确实削掉 6 点有效池。
+    cm_ctx.combat = {"comp_id": "CM_BLOCK", "node_type": "Monster"}
+    d_cm_enemy_block = cm_pol.decide(
+        cm_state([dict(cm_strike), dict(cm_defend)], incoming=0,
+                 enemy_block=8, energy=3, turn=3), cm_ctx)
+    assert (d_cm_enemy_block.action == "play_card"
+            and d_cm_enemy_block.params.get("card_index") == 0), \
+        f"攻击削敌方格挡仍被错判为空过: {d_cm_enemy_block.action}（{d_cm_enemy_block.reason}）"
+
+    # 零成功出牌 veto 可受控自愈：当前明确可出且有正边际的普通牌每战试一次；
+    # 真正 Status/Curse 即使伪装了伤害数值也绝不能拿“探索”绕过。
+    cm_know.stats["cards"]["CM_NOVEL"] = {
+        "seen": 8, "picked": 5, "plays": 0, "outcome_sum": 0.0, "bias": 0.0}
+    cm_know.stats["cards"]["CM_CURSE_DISINTEGRATION"] = {
+        "seen": 8, "picked": 5, "plays": 0, "outcome_sum": 0.0, "bias": 0.0}
+    cm_novel = cm_card(0, "CM_NOVEL", "新招式", damage=2, card_kind="Attack")
+    cm_curse = cm_card(0, "CM_CURSE_DISINTEGRATION", "瓦解",
+                       damage=20, card_kind="Curse")
+    cm_ctx.combat = {"comp_id": "CM_TRIAL", "node_type": "Monster"}
+    d_cm_trial = cm_pol.decide(cm_state([cm_novel], turn=4), cm_ctx)
+    assert d_cm_trial.action == "play_card" and "受控试用" in d_cm_trial.reason, \
+        f"零出牌 veto 仍永久自锁: {d_cm_trial.action}（{d_cm_trial.reason}）"
+    d_cm_trial_twice = cm_pol.decide(cm_state([cm_novel], turn=5), cm_ctx)
+    assert d_cm_trial_twice.action == "end_turn", \
+        f"同战同卡受控试用超过一次: {d_cm_trial_twice.action}（{d_cm_trial_twice.reason}）"
+    cm_ctx.combat = {"comp_id": "CM_CURSE", "node_type": "Monster"}
+    d_cm_curse = cm_pol.decide(cm_state([cm_curse], turn=6), cm_ctx)
+    assert d_cm_curse.action == "end_turn" and "受控试用" not in d_cm_curse.reason, \
+        f"状态/诅咒被误作新卡探索: {d_cm_curse.action}（{d_cm_curse.reason}）"
+
+    # 动作统计必须两阶段提交：_track 只记录尝试；只有成功回执路径显式 commit。
+    tx_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-action-txn-"))
+    agent.KNOWLEDGE_DIR = tx_dir
+    agent._LOG_PATH = tx_dir / "brain.log"
+    tx_agent = agent.Agent(dict(agent.DEFAULT_CONFIG))
+    tx_decision = policy.Decision(
+        action="play_card", params={"card_index": 0}, reason="txn test",
+        tags=[("play_card", "TX_CARD"), ("play_card_index", 0)])
+    tx_state = {"screen": "MAIN_MENU", "run_id": "run_unknown", "run": {}}
+    tx_agent._track(tx_state, tx_decision)  # 相当于 action 返回失败前的预执行轨迹
+    assert tx_agent.know.stats["cards"].get("TX_CARD") is None, \
+        "失败/未确认动作仍被 _track 计为成功出牌"
+    tx_agent._commit_successful_action(tx_decision)
+    assert tx_agent.know.stats["cards"]["TX_CARD"]["plays"] == 1, \
+        "成功动作回执未提交 card play"
+
+    # 3zz-ab) 卡牌奖励 offer 统计 + 有界新牌探索：eval_reward_card 必须是纯函数；
+    # 同一真实 offer 被状态轮询多次时每个基础 id 只记一次，离开屏幕后再次出现的
+    # 同构 offer 才记第二次。升级/删牌/战斗选牌不是奖励，绝不能污染 seen。
+    offer_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-card-offer-")))
+    offer_pol = policy.Policy(offer_know, random.Random(41))
+    offer_ctx = DummyCtx()
+    offer_ctx.run_id = "RUN_CARD_OFFER"
+    offer_card = {
+        "index": 0, "card_id": "OFFER_NEW", "name": "新卡", "card_type": "Attack",
+        "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 9}]}
+    # 纯评分（以及使用它的升级/删除/商店路径）不再偷偷增加 seen。
+    _ = offer_pol.eval_reward_card(dict(offer_card), [])
+    assert "OFFER_NEW" not in offer_know.stats["cards"], \
+        "eval_reward_card 仍有 seen/offered 副作用"
+    upgrade_offer_shape = {
+        "screen": "CARD_SELECTION", "run_id": "RUN_CARD_OFFER",
+        "available_actions": ["select_deck_card", "confirm_selection"],
+        "selection": {"kind": "upgrade", "prompt": "升级", "min_select": 1,
+                      "selected_count": 0, "can_confirm": False,
+                      "cards": [dict(offer_card)]},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 2, "deck": []}}
+    offer_pol.decide(upgrade_offer_shape, offer_ctx)
+    assert "OFFER_NEW" not in offer_know.stats["cards"], \
+        "升级选牌被误计为奖励 offer"
+
+    # 用真实 CARD_SELECTION 奖励结构；同 id 的升级副本在一份 offer 内仍只 +1。
+    offer_state = {
+        "screen": "CARD_SELECTION", "run_id": "RUN_CARD_OFFER",
+        "available_actions": ["select_deck_card", "skip_reward_cards"],
+        "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                      "min_select": 1, "selected_count": 0, "can_confirm": False,
+                      "cards": [dict(offer_card),
+                                dict(offer_card, index=1, upgraded=True, name="新卡+")]},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 2, "deck": []}}
+    offer_pol.decide(offer_state, offer_ctx)
+    offer_pol.decide(offer_state, offer_ctx)  # 同屏轮询，不得重记
+    oe = offer_know.stats["cards"]["OFFER_NEW"]
+    assert oe["seen"] == 1 and oe["offered"] == 1, \
+        f"同一 offer 被重复/按卡槽记 seen: {oe}"
+    assert offer_know.stats["card_offer_tracking"] == {
+        "version": 2, "baseline_runs": 0, "offers": 1,
+        "candidate_observations": 1}, \
+        f"offer 汇总口径错误: {offer_know.stats['card_offer_tracking']}"
+    offer_pol.decide({"screen": "MAP", "run_id": "RUN_CARD_OFFER",
+                      "available_actions": [], "map": {"available_nodes": []},
+                      "run": {"floor": 2, "deck": []}}, offer_ctx)
+    offer_pol.decide(offer_state, offer_ctx)
+    assert offer_know.stats["cards"]["OFFER_NEW"]["seen"] == 2, \
+        "离开 offer 后再次出现的独立同构 offer 未计数"
+
+    # REWARD 原生直出结构也走相同一次性口径。
+    reward_direct = {
+        "screen": "REWARD", "run_id": "RUN_CARD_OFFER",
+        "available_actions": ["choose_reward_card", "skip_reward_cards"],
+        "reward": {"pending_card_choice": True,
+                   "card_options": [dict(offer_card, index=0, card_id="OFFER_DIRECT")],
+                   "rewards": []},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 3, "deck": []}}
+    offer_pol.decide(reward_direct, offer_ctx)
+    offer_pol.decide(reward_direct, offer_ctx)
+    assert offer_know.stats["cards"]["OFFER_DIRECT"]["offered"] == 1, \
+        "REWARD pending_card_choice 轮询重复记 offered"
+
+    # 新卡探索不是全局随机 epsilon：只在原始评分近优且跨过拿牌门槛时，UCB
+    # 可用每局配额把一次选择从高样本贪心牌转给零样本新牌；因此不会永远饿死。
+    explore_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-card-explore-")))
+    explore_know.policy.update({
+        "card_exploration_enabled": True,
+        "card_exploration_run_quota": 1,
+        "card_exploration_min_picks": 2,
+        "card_exploration_near_best_margin": 3.0,
+        "card_exploration_ucb_scale": 2.0,
+        "card_exploration_min_value": 1.0,
+    })
+    explore_know.stats["cards"]["EXP_KNOWN"] = {
+        "seen": 30, "offered": 0, "picked": 20, "plays": 60,
+        "outcome_sum": 200.0, "bias": 0.0}
+    explore_pol = policy.Policy(explore_know, random.Random(42))
+    explore_ctx = DummyCtx()
+    explore_ctx.run_id = "RUN_EXPLORE"
+
+    def reward_explore_state(floor_no, novel_id="EXP_NOVEL", novel_text=""):
+        return {
+            "screen": "CARD_SELECTION", "run_id": "RUN_EXPLORE",
+            "available_actions": ["select_deck_card", "skip_reward_cards"],
+            "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                          "min_select": 1, "selected_count": 0, "can_confirm": False,
+                          "cards": [
+                              {"index": 0, "card_id": "EXP_KNOWN", "name": "熟悉招式",
+                               "card_type": "Attack", "energy_cost": 1,
+                               "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+                              {"index": 1, "card_id": novel_id, "name": "未知招式",
+                               "card_type": "Attack", "energy_cost": 1,
+                               "rules_text": novel_text,
+                               "dynamic_values": [{"name": "Damage", "current_value": 9}]}]},
+            "run": {"current_hp": 70, "max_hp": 80, "floor": floor_no, "deck": []}}
+
+    d_explore = explore_pol.decide(reward_explore_state(4), explore_ctx)
+    assert (d_explore.action == "select_deck_card"
+            and d_explore.params.get("option_index") == 1
+            and "受控探索" in d_explore.reason), \
+        f"近优零样本新牌仍被永久贪心压制: {d_explore.action}（{d_explore.reason}）"
+    # 配额耗尽后立即回归贪心，不会为了新颖性连续注水。
+    d_quota = explore_pol.decide(reward_explore_state(5, "EXP_NOVEL_2"), explore_ctx)
+    assert d_quota.params.get("option_index") == 0 and "受控探索" not in d_quota.reason, \
+        f"卡牌探索越过每局配额: {d_quota.reason}"
+
+    # 安全门：即使提高配额/UCB，不可打出的伪高面板、Status/Curse、实锤零出牌
+    # 死牌均不能成为“探索”对象。用新的 run id 重置配额后验证真实奖励结构。
+    explore_know.policy["card_exploration_run_quota"] = 3
+    blocked_state = reward_explore_state(6, "EXP_UNPLAYABLE", "无法打出。")
+    blocked_state["run_id"] = "RUN_EXPLORE_SAFE"
+    explore_ctx.run_id = "RUN_EXPLORE_SAFE"
+    d_blocked = explore_pol.decide(blocked_state, explore_ctx)
+    assert d_blocked.params.get("option_index") == 0 and "受控探索" not in d_blocked.reason, \
+        f"明显不可打出牌被误用新颖度绕过: {d_blocked.reason}"
+    explore_know.stats["cards"]["EXP_DEAD"] = {
+        "seen": 8, "offered": 0, "picked": 5, "plays": 0,
+        "outcome_sum": 100.0, "bias": 0.0}
+    dead_state = reward_explore_state(7, "EXP_DEAD")
+    dead_state["run_id"] = "RUN_EXPLORE_SAFE_2"
+    explore_ctx.run_id = "RUN_EXPLORE_SAFE_2"
+    d_dead = explore_pol.decide(dead_state, explore_ctx)
+    assert d_dead.params.get("option_index") == 0 and "受控探索" not in d_dead.reason, \
+        f"零成功出牌死牌被奖励探索重新拿入: {d_dead.reason}"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

@@ -18,6 +18,8 @@ import math
 import time
 from pathlib import Path
 
+from native_knowledge import NativeGameKnowledge
+
 SHRINK_K = 6.0  # shrinkage strength toward prior mean
 
 _MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
@@ -49,6 +51,15 @@ DEFAULT_POLICY = {
     # --- rewards / shop ---
     "card_pick_threshold": 2.0,   # min value to take a reward card (skip otherwise)
     "rarity_bonus": {"Common": 0.0, "Uncommon": 0.8, "Rare": 1.6},
+    # 卡牌奖励探索（仅用于可跳过的奖励 offer，不影响升级/删牌/战斗选牌）：
+    # 在原始启发式近优、严格正价值且非诅咒/状态/不可打出的候选中，用 UCB
+    # 给欠采样牌有限试用机会。每局配额是硬上限，避免“探索”反向注水。
+    "card_exploration_enabled": True,
+    "card_exploration_run_quota": 2,
+    "card_exploration_min_picks": 2,
+    "card_exploration_near_best_margin": 2.5,
+    "card_exploration_ucb_scale": 1.0,
+    "card_exploration_min_value": 1.0,
     "shop_relic_threshold": 1.0,  # min learned/heuristic relic value to buy
     "removal_enabled": True,
     "removal_gold_reserve": 60,   # keep this much gold after paying removal
@@ -364,7 +375,12 @@ DEFAULT_STATS = {
                # 精英死亡进场血量分带（第495~498局批复盘新增）：low=低于软线进场，
                # healthy=软线以上进场。区分「被迫行军死」与「闸门/执行端漏放行死」
                "elite_death_entry_band": {"low": 0, "healthy": 0}},
-    "cards": {},    # id -> {seen, picked, plays, outcome_sum, bias}
+    # offered 是 v2 精确口径（迁移后、每个真实 offer 每个 card id 最多 +1）；
+    # seen 保留兼容并从 v2 起同步按该口径增加。旧 seen 曾被纯评分调用污染，
+    # card_offer_tracking.baseline_runs 明确可靠统计从哪一局之后开始。
+    "cards": {},    # id -> {seen, offered, picked, plays, outcome_sum, bias}
+    "card_offer_tracking": {"version": 2, "baseline_runs": 0,
+                            "offers": 0, "candidate_observations": 0},
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min, card/relic/potion_delta_sum}
@@ -431,6 +447,12 @@ class Knowledge:
         self.stats = _load_json(root / "stats.json", DEFAULT_STATS)
         self.policy = _load_json(root / "policy.json", DEFAULT_POLICY)
         self.progression = _load_json(root / "progression.json", DEFAULT_PROGRESSION)
+        # Immutable facts extracted from the installed base game are a separate,
+        # read-only layer.  They must never be merged into learned stats/policy:
+        # game updates replace a versioned snapshot, whereas online evidence keeps
+        # accumulating across runs.  Missing snapshots degrade explicitly through
+        # ``game_knowledge.error`` and do not prevent selfchecks with temporary KBs.
+        self.game_knowledge = NativeGameKnowledge.from_knowledge_root(root)
         # fill in any new default keys added in later versions
         for k, v in DEFAULT_POLICY.items():
             self.policy.setdefault(k, v)
@@ -438,6 +460,18 @@ class Knowledge:
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
+        # seen 的旧实现位于 eval_reward_card()：每次轮询/商店/升级/删除评分都会
+        # 增加，历史值无法从聚合账精确反推。保留它避免破坏现有知识，同时以
+        # offered=0 开启一条可审计的新口径，并记录迁移时已有局数。
+        if "card_offer_tracking" not in self.stats:
+            self.stats["card_offer_tracking"] = {
+                "version": 2,
+                "baseline_runs": int(self.stats["global"].get("runs", 0) or 0),
+                "offers": 0,
+                "candidate_observations": 0,
+            }
+        for e in self.stats.get("cards", {}).values():
+            e.setdefault("offered", 0)
         # 三方合并写盘的基准点（第 90~91 批复盘）：加载即快照，save 时逐键对比
         self._policy_sync = dict(self.policy)
         # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
@@ -1228,12 +1262,58 @@ class Knowledge:
         _prev_min = e.get("hp_min")
         e["hp_min"] = float(hp_delta) if _prev_min is None else min(float(_prev_min), float(hp_delta))
 
+    @staticmethod
+    def _empty_card_stats() -> dict:
+        return {"seen": 0, "offered": 0, "picked": 0, "plays": 0,
+                "outcome_sum": 0.0, "bias": 0.0}
+
     def commit_card_seen(self, card_id: str) -> None:
-        e = self.stats["cards"].setdefault(card_id, {"seen": 0, "picked": 0, "plays": 0, "outcome_sum": 0.0, "bias": 0.0})
-        e["seen"] += 1
+        """Record one card in one offer (legacy single-card API).
+
+        Callers that own the whole reward screen should use ``commit_card_offer``;
+        it deduplicates duplicate ids and also maintains offer-level audit totals.
+        """
+        card_id = str(card_id or "").upper().rstrip("+")
+        if not card_id:
+            return
+        e = self.stats["cards"].setdefault(card_id, self._empty_card_stats())
+        e.setdefault("offered", 0)
+        e["seen"] = int(e.get("seen", 0) or 0) + 1
+        e["offered"] += 1
+
+    def commit_card_offer(self, card_ids) -> int:
+        """Record a complete reward offer exactly once; return unique candidates.
+
+        Screen-instance deduplication belongs to Policy because only it sees screen
+        transitions.  This store-level boundary still deduplicates repeated copies of
+        one base id inside an offer, so ``seen`` means "offers containing this card",
+        not evaluator invocations or candidate slots.
+        """
+        unique = []
+        known = set()
+        for raw in card_ids or []:
+            card_id = str(raw or "").upper().rstrip("+")
+            if card_id and card_id not in known:
+                known.add(card_id)
+                unique.append(card_id)
+        if not unique:
+            return 0
+        tracking = self.stats.setdefault("card_offer_tracking", {
+            "version": 2,
+            "baseline_runs": int(self.stats["global"].get("runs", 0) or 0),
+            "offers": 0,
+            "candidate_observations": 0,
+        })
+        tracking["offers"] = int(tracking.get("offers", 0) or 0) + 1
+        tracking["candidate_observations"] = int(
+            tracking.get("candidate_observations", 0) or 0) + len(unique)
+        for card_id in unique:
+            self.commit_card_seen(card_id)
+        return len(unique)
 
     def commit_card_play(self, card_id: str) -> None:
-        e = self.stats["cards"].setdefault(card_id, {"seen": 0, "picked": 0, "plays": 0, "outcome_sum": 0.0, "bias": 0.0})
+        e = self.stats["cards"].setdefault(card_id, self._empty_card_stats())
+        e.setdefault("offered", 0)
         e["plays"] += 1
 
     # ---------- respawn-add roster / act-entry snapshots ----------
@@ -1295,7 +1375,8 @@ class Knowledge:
             d = g["deaths_by_event"]
             d[died_to_event] = d.get(died_to_event, 0) + 1
         for cid in picked_cards:
-            e = self.stats["cards"].setdefault(cid, {"seen": 0, "picked": 0, "plays": 0, "outcome_sum": 0.0, "bias": 0.0})
+            e = self.stats["cards"].setdefault(cid, self._empty_card_stats())
+            e.setdefault("offered", 0)
             e["picked"] += 1
             e["outcome_sum"] += outcome
         for rid in picked_relics:

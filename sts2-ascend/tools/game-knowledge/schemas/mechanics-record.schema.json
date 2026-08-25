@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sts2-ascend.local/schemas/mechanics-record.schema.json",
+  "title": "STS2 static mechanics fact record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "category", "type_name", "name", "entry_id", "provenance", "data"],
+  "properties": {
+    "schema": {"const": "sts2.game-knowledge-mechanics-record/v2"},
+    "category": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "type_name": {"type": "string", "minLength": 1},
+    "name": {"type": "string", "minLength": 1},
+    "entry_id": {"type": ["string", "null"], "pattern": "^[A-Z0-9_]+$"},
+    "provenance": {
+      "type": "object",
+      "required": ["source", "assembly_sha256", "extractor_schema_version"],
+      "properties": {
+        "source": {"type": "string"},
+        "assembly_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "extractor_schema_version": {"const": 2}
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "type_name", "name", "category", "entry_id", "type_kind",
+        "is_abstract", "is_nested", "declaring_type_name", "base_types",
+        "fields", "properties", "constructors", "methods"
+      ],
+      "properties": {
+        "base_types": {"type": "array", "items": {"type": "string"}},
+        "fields": {"type": "array", "items": {"type": "object"}},
+        "properties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "expressions", "accessors"],
+            "properties": {
+              "accessors": {"type": "array", "items": {"type": "object"}}
+            }
+          }
+        },
+        "constructors": {"type": "array", "items": {"type": "object"}},
+        "methods": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    }
+  }
+}

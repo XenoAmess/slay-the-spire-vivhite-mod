@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sts2-ascend.local/schemas/manifest.schema.json",
+  "title": "Versioned STS2 game knowledge manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "generator", "game", "sources", "localization", "runtime", "mechanics", "artifacts"],
+  "properties": {
+    "schema": {"const": "sts2.game-knowledge-manifest/v1"},
+    "generator": {
+      "type": "object",
+      "required": ["name", "version", "generated_at_utc"]
+    },
+    "game": {
+      "type": "object",
+      "required": ["version", "commit", "branch", "release_date", "main_assembly_hash"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+"},
+        "commit": {"type": ["string", "null"]}
+      }
+    },
+    "sources": {
+      "type": "object",
+      "required": ["release_info", "assembly", "pck"],
+      "properties": {
+        "assembly": {
+          "type": "object",
+          "required": ["path", "size", "sha256"],
+          "properties": {"sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+        },
+        "pck": {
+          "type": "object",
+          "required": ["path", "size", "directory_sha256", "header"],
+          "properties": {
+            "directory_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        }
+      }
+    },
+    "localization": {"type": "object"},
+    "runtime": {"type": "object"},
+    "mechanics": {"type": "object"},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "size": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "records": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}
