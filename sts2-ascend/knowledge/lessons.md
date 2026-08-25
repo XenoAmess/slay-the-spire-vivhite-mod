@@ -6758,3 +6758,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.45 → 0.48（行至 F40（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/551 胜，当前目标进阶 0
+
+## 第 552 局复盘（2026-08-26 02:07）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：BREAKTHROUGH, BREAKTHROUGH, SWORD_BOOMERANG, UNRELENTING, FLAME_BARRIER, INFLAME, TAUNT, MANGLE, SHRUG_IT_OFF, UPPERCUT, UNRELENTING, DISMANTLE, SWORD_BOOMERANG, WHIRLWIND, BOLAS
+- 本局遗物：LIZARD_TAIL, WAR_PAINT, RAINBOW_RING, GAME_PIECE
+- 战斗记录：F20 Monster战 掉血5; F21 Monster战 掉血14; F23 Unknown战 掉血35; F28 Unknown战 掉血14; F30 Monster战 掉血27; F33 Boss战 掉血40（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.48 → 0.51（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/552 胜，当前目标进阶 0
