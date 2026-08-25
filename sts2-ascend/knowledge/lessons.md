@@ -6769,3 +6769,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.48 → 0.51（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/552 胜，当前目标进阶 0
+
+## 第 553 局复盘（2026-08-26 02:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：THUNDERCLAP, UPPERCUT, JUGGLING, TRUE_GRIT, ANGER, THRASH, EVIL_EYE, INFLAME, MOLTEN_FIST, BREAKTHROUGH, ROLLING_BOULDER, TRUE_GRIT
+- 本局遗物：STRIKE_DUMMY
+- 战斗记录：F5 Monster战 掉血0; F7 Unknown战 掉血5; F8 Monster战 掉血15; F14 Monster战 掉血9; F15 Monster战 掉血34; F17 Boss战 掉血41（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/553 胜，当前目标进阶 0
