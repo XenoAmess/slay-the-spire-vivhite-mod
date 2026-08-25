@@ -6217,3 +6217,14 @@
 - 数据迁移纪律：无法可靠回填的历史账不伪造，新账从空累积，读取端留「样本不足回落旧口径」的兼容路径，让账本随对局自然成熟。
 - 观察点（下批复盘核对）：①一幕分幕账成熟进度；②饥饿线下降后高质攻击 vs 中游防御的拿牌构成变化；③前夜锻造比例是否上升；④一幕 Boss 生还率与必败预演误报率交叉核对。
 - 生涯战绩：0/506 胜，当前目标进阶 0
+
+## 第 507 局复盘（2026-08-25 19:13）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：INFLAME, ARMAMENTS, TRUE_GRIT, CINDER, INFLAME, AGGRESSION, PACTS_END, FIGHT_ME, UNRELENTING, INFLAME, STOMP, INFLAME, HEADBUTT, FEEL_NO_PAIN, MOLTEN_FIST, HEMOKINESIS, THE_GAMBIT
+- 本局遗物：PETRIFIED_TOAD, 锚, STONE_CALENDAR
+- 战斗记录：F21 Monster战 掉血14; F22 Monster战 掉血39; F25 Monster战 掉血27; F29 Monster战 掉血40; F30 Monster战 掉血19; F31 Monster战 掉血9（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，FEED(24分/32局)，VOLLEY(24分/11局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：danger_comp_blk_boost: 0.40 → 0.45（普通战斗短时阵亡（3回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））；kill_race_prior_eff: 0.39 → 0.42（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/507 胜，当前目标进阶 0
