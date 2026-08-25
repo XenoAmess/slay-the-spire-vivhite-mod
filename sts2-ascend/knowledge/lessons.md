@@ -5832,3 +5832,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/473 胜，当前目标进阶 0
+
+## 第 474 局复盘（2026-08-25 14:47）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：RAMPAGE, SECOND_WIND, UPPERCUT, WHIRLWIND, STONE_ARMOR, UNRELENTING, CRUELTY, JUGGLING, FORGOTTEN_RITUAL, UPPERCUT, INFLAME, UNRELENTING
+- 本局遗物：BAG_OF_MARBLES, 战纹涂料, PRAYER_WHEEL, 药水腰带
+- 战斗记录：F7 Elite战 掉血9; F8 Monster战 掉血18; F9 Monster战 掉血22; F13 Elite战 掉血15; F14 Monster战 掉血13; F15 Elite战 掉血24（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/27局)，VOLLEY(24分/10局)，FIEND_FIRE(24分/12局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/474 胜，当前目标进阶 0
