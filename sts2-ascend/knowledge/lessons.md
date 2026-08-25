@@ -5283,3 +5283,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/427 胜，当前目标进阶 0
+
+## 第 428 局复盘（2026-08-25 09:39）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：HEMOKINESIS, TRUE_GRIT, IMPERVIOUS, UPPERCUT, BATTLE_TRANCE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血4; F5 Monster战 掉血9; F7 Monster战 掉血19; F8 Monster战 掉血16; F9 Unknown战 掉血37（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/428 胜，当前目标进阶 0
