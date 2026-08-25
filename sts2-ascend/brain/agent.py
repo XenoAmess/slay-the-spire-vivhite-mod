@@ -598,19 +598,22 @@ class Agent:
         # 落库，pending_event 结算点读不到聚合账——掉血在此暂存交给事件结算
         if agg.get("from_event") and self.ctx.pending_event is not None:
             self.ctx.pending_event_fight_loss = float(agg.get("hp_lost_sum", 0.0) or 0.0)
+        # 幕号提前推算（第 506~515 局批复盘）：Boss 分幕子账本靠它分流——
+        # 竞速投影/前夜裁决消费分幕血池火力均值，不再被全幕混合口径带偏
+        _fl = int(agg.get("floor") or 1)
+        act_no = (_fl - 1) // 17 + 1
         self.know.commit_enemy_fight(agg["comp_id"], float(agg.get("hp_lost_sum", 0.0)),
                                      won=bool(agg.get("won")), died=bool(agg.get("died")),
                                      node_type=agg.get("node_type"),
                                      hp_pool=(float(agg.get("obs_hp_pool", 0.0)) or None),
                                      fire_sum=float(agg.get("obs_fire_sum", 0.0) or 0.0),
-                                     fire_rounds=int(agg.get("obs_fire_rounds", 0) or 0))
+                                     fire_rounds=int(agg.get("obs_fire_rounds", 0) or 0),
+                                     act=act_no)
         # 分幕掉血入账（第 84~85 批复盘接线）：act 参数按整场战斗的楼层归幕；
         # floor 同步入账分幕分层段键 rooms_band（第 266 局批次复盘新增）——
         # 同幕怪物池随楼层递增，全幕均值把后段杀手组合摊薄成便宜战。
-        # hp_start_pct 同步入账（第 396 局批次复盘新增）：Elite 的健康进场
+        # hp_start_pct 同步入账（第 396 局复盘新增）：Elite 的健康进场
         # 子账本靠它分流——健康状态主动打的精英与低血被迫打的精英是两个分布
-        _fl = int(agg.get("floor") or 1)
-        act_no = (_fl - 1) // 17 + 1
         # died 同步入账（第 479~482 局批复盘）：存活尾部子账本靠它分流——
         # 阵亡场掉血=入场血量，混进尾部记忆会把「单场最差」永久钉在满管血，
         # 尾部定价与生存复核从 F1 满血起全图空转（详见 knowledge 端 docstring）

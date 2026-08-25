@@ -816,7 +816,8 @@ class Knowledge:
                            node_type: str | None = None,
                            hp_pool: float | None = None,
                            fire_sum: float | None = None,
-                           fire_rounds: int | None = None) -> None:
+                           fire_rounds: int | None = None,
+                           act: int | None = None) -> None:
         e = self.stats["enemies"].setdefault(comp_id, {"encounters": 0, "hp_lost_sum": 0.0, "deaths": 0, "wins": 0})
         e["encounters"] += 1
         e["hp_lost_sum"] += max(0.0, hp_lost)
@@ -829,6 +830,23 @@ class Knowledge:
             e["boss_encounters"] = e.get("boss_encounters", 0) + 1
             e["boss_hp_lost_sum"] = e.get("boss_hp_lost_sum", 0.0) + max(0.0, hp_lost)
             e["boss_deaths"] = e.get("boss_deaths", 0) + (1 if died else 0)
+            # Boss 分幕子账本（第 506~515 局批复盘新增）：竞速投影与前夜裁决
+            # 此前消费全幕混合均值（血池 253/火力 14），而一幕 Boss 池实测
+            # 血池 173~307、二三幕 300~400+——一幕前夜被二三幕均值系统性判死，
+            # 翻转带回血压过锻造，卡组成型被慢性锁死。分幕账只认 node_type==
+            # "Boss" 的观测（比旧全量账混入普通战血池样本更纯），历史条目无此
+            # 键即从空累积，不捏造回填；读取端样本不足时回落全量均值（兼容）
+            if act:
+                sub = e.setdefault("boss_act", {}).setdefault(str(int(act)), {})
+                sub["encounters"] = int(sub.get("encounters", 0)) + 1
+                sub["hp_lost_sum"] = float(sub.get("hp_lost_sum", 0.0)) + max(0.0, hp_lost)
+                sub["deaths"] = int(sub.get("deaths", 0)) + (1 if died else 0)
+                if hp_pool is not None and hp_pool > 0:
+                    sub["hp_pool_sum"] = float(sub.get("hp_pool_sum", 0.0)) + float(hp_pool)
+                    sub["hp_pool_n"] = int(sub.get("hp_pool_n", 0)) + 1
+                if fire_rounds:
+                    sub["fire_sum"] = float(sub.get("fire_sum", 0.0)) + max(0.0, float(fire_sum or 0.0))
+                    sub["fire_rounds"] = int(sub.get("fire_rounds", 0)) + int(fire_rounds)
         # 血池/火力观测入账（第 138~141 批复盘新增）：供 Boss 攻坚投影与
         # Boss 前夜篝火决策使用。血池按「场」记均值样本（多阶段聚合已取最大段），
         # 火力按「轮」累加（逐轮意图采样，格挡前口径）
@@ -839,13 +857,27 @@ class Knowledge:
             e["fire_sum"] = float(e.get("fire_sum", 0.0)) + max(0.0, float(fire_sum or 0.0))
             e["fire_rounds"] = int(e.get("fire_rounds", 0)) + int(fire_rounds)
 
-    def boss_loss_stats(self) -> tuple[float, int]:
+    def boss_loss_stats(self, act: int | None = None) -> tuple[float, int]:
         """全部分档 Boss 战的（场均掉血绝对值, 样本数）。
 
         第 63 局复盘新增：满血进 Boss 仍被仪式兽 85 点战损处决——
         「Boss 前夜优先回血」隐含假设回血量能覆盖预期战损；当实测 Boss
         场均战损 ≥ 满血时该假设崩塌，回血是无效投资，锻造缩短战斗才是活路。
+
+        act 给定时优先消费分幕子账本（第 506~515 局批复盘新增）：前夜翻转带
+        的悲观战损此前用全幕均值（含二三幕死亡样本），一幕前夜被系统性高估；
+        分幕样本 <3 场时回落全量账（冷启动/旧库兼容）。
         """
+        if act:
+            tot_n_a = tot_loss_a = 0.0
+            for e in (self.stats.get("enemies") or {}).values():
+                sub = (e.get("boss_act") or {}).get(str(int(act))) or {}
+                n = int(sub.get("encounters", 0) or 0)
+                if n:
+                    tot_n_a += n
+                    tot_loss_a += float(sub.get("hp_lost_sum", 0.0) or 0.0)
+            if tot_n_a >= 3:
+                return (tot_loss_a / tot_n_a), int(tot_n_a)
         tot_n = tot_loss = 0.0
         for e in self.stats.get("enemies", {}).values():
             tot_n += float(e.get("boss_encounters", 0) or 0)
@@ -892,7 +924,7 @@ class Knowledge:
                 worst_fire = v if worst_fire is None else max(worst_fire, v)
         return worst_pool, worst_fire
 
-    def boss_race_vitals(self) -> tuple[float | None, float | None]:
+    def boss_race_vitals(self, act: int | None = None) -> tuple[float | None, float | None]:
         """已学习 Boss 组合的血池/火力均值估计（样本加权，第 397~402 批复盘新增）。
 
         兑现第 214 批遗留的「攻坚投影篝火端消费」：hp_pool/fire 自 138~141 批
@@ -902,7 +934,27 @@ class Knowledge:
         boss_vitals_worst 相同（boss_encounters≥2、血池≥2 场、火力≥4 轮），
         聚合总量不足（血池 <2 场或火力 <4 轮）时返回 (None, None) 让调用方
         退化为旧行为（冷启动安全）。
+
+        act 给定时优先聚合分幕子账本（第 506~515 局批复盘新增）：一幕 Boss 池
+        实测血池 173~307，全幕混合均值 253 把一幕前夜系统性判死；分幕聚合量
+        不足（血池 <2 场或火力 <4 轮）时回落全量口径（兼容旧库）。
         """
+        if act:
+            tot_pool = tot_pool_n = tot_fire = tot_fr = 0.0
+            for e in (self.stats.get("enemies") or {}).values():
+                sub = (e.get("boss_act") or {}).get(str(int(act))) or {}
+                pn = int(sub.get("hp_pool_n", 0) or 0)
+                if pn >= 1:
+                    tot_pool += float(sub.get("hp_pool_sum", 0.0) or 0.0)
+                    tot_pool_n += pn
+                fr = int(sub.get("fire_rounds", 0) or 0)
+                if fr >= 1:
+                    tot_fire += float(sub.get("fire_sum", 0.0) or 0.0)
+                    tot_fr += fr
+            pool_a = (tot_pool / tot_pool_n) if tot_pool_n >= 2 else None
+            fire_a = (tot_fire / tot_fr) if tot_fr >= 4 else None
+            if pool_a is not None and fire_a is not None:
+                return pool_a, fire_a
         tot_pool = tot_pool_n = 0.0
         tot_fire = tot_fr = 0.0
         for e in (self.stats.get("enemies") or {}).values():
