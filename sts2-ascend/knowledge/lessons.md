@@ -5981,3 +5981,13 @@
 - **修复**：实锤并修掉尾部统计污染——hp_lost_max 是含死亡样本的 running max，阵亡场掉血=入场血量，「单场最差」被永久钉在满管血（Monster 均值10.1/max88、一幕前段均值5.5/max80），尾部定价与生存复核从 F1 满血起全图空转、Monster 先验被抬到 8→17 幻影高位。改法：commit_room_damage 按 died 分流维护存活子账本 hp_lost_max_surv/damage_events_surv 三级双写，room_damage_worst 各层优先返回成熟存活尾部（≥3 样本）、未成熟回落旧口径，无需数据迁移；agent 结算传入 died；selfcheck 新增 4nd 钉死语义。SELFCHECK OK。
 - **经验**：①死亡样本是任何「最差战损」running max 的毒药——掉血恒等于入场血量，max 必然饱和满管血且永不衰减，尾部口径必须按「活着走出来」分流；②统计空转的识别特征是防御性罚分出现在不该出现的输入段（满血报「低血尾部复核」），此时该怀疑上游数据而不是加大惩罚；③「宁可缺账不可捏造」的缺键回落设计让这次修复零迁移成本——新语义靠 .get 缺省与样本门槛自然接管旧账。
 - **观察区（留待下批）**：NEOW 系遗物增量疑似在事件结算窗口外落地（NEW_LEAF n=15 仅记 relic_delta=1），需运行时插桩确认；高价值榜被即时爆发牌垄断、DEMON_FORM bias=-3 被统计惩罚——平面场均口径天然低估成长引擎，下批首选改造方向是把能力/力量牌价值改按长战折算口径评估。
+## 第 487 局复盘（2026-08-25 16:21）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：EVIL_EYE, RUPTURE, HEADBUTT, TRUE_GRIT, RUPTURE, CINDER, MOLTEN_FIST, RUPTURE, TRUE_GRIT
+- 本局遗物：RAINBOW_RING
+- 战斗记录：F2 Monster战 掉血4; F4 Monster战 掉血4; F5 Monster战 掉血2; F6 Monster战 掉血48; F7 Monster战 掉血13; F12 Elite战 掉血60（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，VOLLEY(24分/10局)，FEED(24分/28局)，HAND_OF_GREED(23分/16局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/487 胜，当前目标进阶 0
