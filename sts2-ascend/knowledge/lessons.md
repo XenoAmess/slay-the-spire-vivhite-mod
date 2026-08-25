@@ -5505,3 +5505,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/445 胜，当前目标进阶 0
+
+## 第 446 局复盘（2026-08-25 11:42）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：RUPTURE, RAMPAGE, WHIRLWIND, FLAME_BARRIER, RAMPAGE, ANGER, THE_GAMBIT
+- 本局遗物：VENERABLE_TEA_SET, 吃不完的糖
+- 战斗记录：F6 Monster战 掉血21; F7 Monster战 掉血9; F12 Elite战 掉血18; F13 Monster战 掉血24; F14 Monster战 掉血3; F17 Boss战 掉血54（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，EQUILIBRIUM(25分/9局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BASH(8分/8局)，BODY_SLAM(10分/2局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/446 胜，当前目标进阶 0
