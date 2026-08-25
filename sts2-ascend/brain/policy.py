@@ -1818,6 +1818,13 @@ class Policy:
         blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
         if desperate or race_allin:
             atk_damp *= float(pol.get("desperate_atk_mult", 1.3))
+        # 败局竞速执行经济学（第546局批复盘新增）：竞速判死后非致死回合，
+        # 纯格挡不得再按原价挤占输出能量——543 局 F5 实证：29 血对意图 34、
+        # 「全攻提速」留痕在场，整回合能量仍流向挑衅+双防御（block_safety 2.1
+        # 让任何格挡牌面值压过非击杀攻击），下一回合才轮到输出已无命花。
+        # 致死回合豁免：买命延长输出窗口在当场仍是合法战术，原价保留
+        if race_allin and not lethal:
+            blk_boost *= float(pol.get("race_allin_blk_damp", 0.45))
         # 斩杀竞速失败（第 90~91 批复盘）：与孤注一掷/败局竞速互斥放大——
         # 已在提速的局面不再叠加，只补「奢侈格挡贬值」这半边
         if kill_race and not desperate and not race_allin:
@@ -1987,9 +1994,16 @@ class Policy:
         # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足
         # （撕裂族需要自残源）时，长战复利根本不存在——旧评分仍按
         # base+长战加成给它 7~14 分，死亡战 T1 压过攻击上砧白吃一整轮能量。
-        # 按死牌计价压到出牌阈值之下，手牌里真没别的可打时宁可空过
-        if (is_power(card) and run_deck is not None
-                and not self._scaling_power_active(card, run_deck)):
+        # 按死牌计价压到出牌阈值之下，手牌里真没别的可打时宁可空过。
+        # 第546局批复盘修复：is_power 依赖 card_type 字段，而战斗手牌载荷
+        # 根本没有该字段（见本方法 docstring）——旧守卫在实战中永不生效，
+        # 只有 selfcheck 夹具（带 card_type）能通过。补第二条文本共现通道：
+        # 「力量+失去生命」同现即条件引擎，卡组无自残源一律按死牌治理
+        if run_deck is not None and (
+                (is_power(card)
+                 and not self._scaling_power_active(card, run_deck))
+                or (self._self_damage_conditioned(card)
+                    and not self._deck_has_self_damage(run_deck))):
             return -2.0, None, "死牌（触发条件无自残源，永不生效，让位实伤）"
         # 长战加成（第 223 批复盘）：能力牌的价值随战斗预期长度复利——Boss/大血池
         # 战斗要打 6~10 回合，力量源（恶魔形态/点燃/撕裂）每早一回合上场就多一档
@@ -2012,8 +2026,12 @@ class Policy:
         if round_no > 2:
             lf *= 0.5
         score = base + lf
-        if lethal:
-            score = min(score, floor_score)  # 致死回合上能力=放弃格挡能量
+        # 致死回合上能力=放弃格挡能量（旧规）；败局竞速局同治（第546局批复盘）：
+        # 判死局的能力复利视界（3+ 回合起步）超出剩余存活视界（~2 回合），
+        # 543 局 F5 在「全攻提速」留痕下打出乱战+恶魔形态零伤整回合直接致死——
+        # 战略层判死必须穿透到能力牌评分，否则全攻提速只是口号
+        if lethal or race_allin:
+            score = min(score, floor_score)
         if cost == 0:
             score += pol["free_card_bonus"]
         why = f"能力/增益牌（第{round_no}回合）"
@@ -2464,6 +2482,23 @@ class Policy:
                          _text(c), re.I):
                 return True
         return False
+
+    @staticmethod
+    def _self_damage_conditioned(card: dict) -> bool:
+        """文本同时含「获得力量」与「失去生命」→ 触发前提是卡组有自残源。
+
+        第546局批复盘新增：不依赖 is_power（战斗手牌载荷没有 card_type 字段，
+        470 局的死牌守卫在战斗端整体失活——LU9H 局零自残卡组 18/21 血两次
+        打出撕裂即铁证）。判定放宽为文本共现：撕裂族的变体措辞
+        （「失去生命时获得力量」「Whenever you lose HP, gain Strength」）
+        无论条件从句在前在后都能命中；无条件力量牌（点燃/恶魔形态）文本
+        不含「失去生命」，天然不受影响。
+        """
+        t = _text(card)
+        if not re.search(r"力量|strength", t, re.I):
+            return False
+        return bool(re.search(
+            r"失去\s*\d*\s*点?\s*生命|lose[s]?\s+(?:\d+\s+)?(?:hp|health|life)", t, re.I))
 
     def _scaling_power_active(self, card: dict, deck: list[dict]) -> bool:
         """条件型成长引擎在当前卡组下能否真实生效（第470局批复盘新增）。

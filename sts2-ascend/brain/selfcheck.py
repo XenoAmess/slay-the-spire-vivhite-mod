@@ -2860,6 +2860,73 @@ def main() -> int:
     assert "成长引擎" not in d_upr.reason, \
         f"死引擎锻造留痕残留: {d_upr.reason}"
 
+    # 3xa-quinque（第546局批复盘）：战斗手牌载荷没有 card_type 字段（_score_play
+    #           docstring 明示），旧死牌守卫的 is_power() 判定在实战中永不生效——
+    #           LU9H 局零自残卡组在 18/21 血两次打出撕裂即铁证。修复后守卫补
+    #           「力量+失去生命」文本共现通道，无 card_type 也拦得住。
+    def rupture_nc_state(deck):
+        st = rupture_state(deck)
+        st["combat"]["hand"][0].pop("card_type", None)
+        return st
+
+    pol_rup_nc = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ruptnc-"))), random.Random(5))
+    d_rup_nc = pol_rup_nc.decide(rupture_nc_state(plain_deck), rup_ctx)
+    assert d_rup_nc.action == "play_card" and d_rup_nc.params.get("card_index") == 1, \
+        f"无card_type手牌的死引擎守卫失活（撕裂压过攻击）: {d_rup_nc.action}（{d_rup_nc.reason}）"
+    d_rup_nc_live = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ruptnc2-"))), random.Random(5)
+    ).decide(rupture_nc_state(sd_deck), rup_ctx)
+    assert d_rup_nc_live.action == "play_card" and d_rup_nc_live.params.get("card_index") == 0, \
+        f"有自残源时无card_type引擎被误杀: {d_rup_nc_live.action}（{d_rup_nc_live.reason}）"
+
+    # 3ra（第546局批复盘）：败局竞速执行经济学——判死后非致死回合的能力牌
+    #           不再吃 base+长战加成、纯格挡按 race_allin_blk_damp 贬值，
+    #           致死回合格挡豁免贬值（买命延长输出窗口当场仍合法）。
+    ra_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-raecon-"))
+    ra_pol = policy.Policy(knowledge.Knowledge(ra_dir), random.Random(5))
+    ra_enemies = [{"index": 0, "enemy_id": "RA_BOSS", "name": "攻坚巨兽",
+                   "current_hp": 253, "max_hp": 300, "block": 0,
+                   "is_alive": True, "is_hittable": True,
+                   "intents": [{"total_damage": 14}]}]
+    ra_pow = {"index": 0, "card_id": "RA_POW", "name": "恶魔形态", "playable": True,
+              "energy_cost": 3, "requires_target": False,
+              "resolved_rules_text": "每回合开始时获得3点力量。"}
+    s_pow_off = ra_pol._score_play(ra_pow, ra_enemies, 14, 0, 2, ra_pol.know.policy,
+                                   my_hp=29, my_max_hp=80, cur_energy=3,
+                                   hopeless_race=False, run_deck=[])[0]
+    s_pow_on = ra_pol._score_play(ra_pow, ra_enemies, 14, 0, 2, ra_pol.know.policy,
+                                  my_hp=29, my_max_hp=80, cur_energy=3,
+                                  hopeless_race=True, run_deck=[])[0]
+    assert s_pow_off > 10, f"健康局长战能力加成被误伤: {s_pow_off}"
+    assert s_pow_on < ra_pol.know.policy["play_threshold"], \
+        f"判死局能力牌仍吃长战加成挤占输出能量: {s_pow_on}"
+    ra_blk = {"index": 0, "card_id": "RA_SHLD", "name": "壁垒", "playable": True,
+              "energy_cost": 1, "requires_target": False,
+              "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    ra_hit = {"index": 1, "card_id": "RA_HIT", "name": "打击", "playable": True,
+              "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+              "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    ra_pol.know.policy["block_safety"] = 2.1  # 对齐运行库口径，复现「格挡原价挤掉攻击」
+    s_blk_norm = ra_pol._score_play(ra_blk, ra_enemies, 14, 0, 5, ra_pol.know.policy,
+                                    my_hp=40, my_max_hp=80, cur_energy=3,
+                                    hopeless_race=False, run_deck=[])[0]
+    s_blk_allin = ra_pol._score_play(ra_blk, ra_enemies, 14, 0, 5, ra_pol.know.policy,
+                                     my_hp=40, my_max_hp=80, cur_energy=3,
+                                     hopeless_race=True, run_deck=[])[0]
+    s_atk_allin = ra_pol._score_play(ra_hit, ra_enemies, 14, 0, 5, ra_pol.know.policy,
+                                     my_hp=40, my_max_hp=80, cur_energy=3,
+                                     hopeless_race=True, run_deck=[])[0]
+    assert s_blk_norm > s_atk_allin, \
+        f"对照场景失真（原价格挡本应压过弱攻击）: norm={s_blk_norm} atk={s_atk_allin}"
+    assert s_blk_allin < s_atk_allin, \
+        f"判死局非致死回合格挡未让位攻击: blk={s_blk_allin} atk={s_atk_allin}"
+    s_blk_lethal = ra_pol._score_play(ra_blk, ra_enemies, 50, 0, 6, ra_pol.know.policy,
+                                      my_hp=20, my_max_hp=80, cur_energy=3,
+                                      hopeless_race=True, run_deck=[])[0]
+    assert s_blk_lethal > s_blk_allin, \
+        f"致死回合格挡被误贬值（买命窗口应保留原价）: lethal={s_blk_lethal} allin={s_blk_allin}"
+
     # 3xa-quater（第470局批复盘）：短时死亡证据的第三级接替旋钮——高危组合
     #           防御姿态斜率 danger_comp_blk_boost。block_safety 与药水交药线
     #           双顶格后，证据改接组合专属姿态（战场归属正确）；默认值=旧
