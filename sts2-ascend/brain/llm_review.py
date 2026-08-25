@@ -56,6 +56,13 @@ REVIEW_MUTABLE_PATHS = [
 ]
 _worker_stop = threading.Event()
 
+# Prompt working-set bounds.  Full traces remain available in runs/*.json (or
+# the compact archive catalog); the inline packet should carry evidence, not
+# repeat tens of kilobytes of near-identical route prose every review.
+RUN_SUMMARY_COMBAT_NOTES = 5
+RUN_SUMMARY_KEY_REASONS = 3
+RUN_SUMMARY_TEXT_CHARS = 200
+
 
 def _review_stop_requested() -> bool:
     """Combine the session sentinel with an in-process brain shutdown."""
@@ -143,6 +150,13 @@ def _stats_digest(know) -> dict:
     }
 
 
+def _clip_summary_text(value) -> str:
+    text = str(value or "")
+    if len(text) <= RUN_SUMMARY_TEXT_CHARS:
+        return text
+    return text[:RUN_SUMMARY_TEXT_CHARS - 1] + "…"
+
+
 def _recent_run_summaries(n: int) -> list[dict]:
     run_dir = KNOWLEDGE_DIR / "runs"
     if not run_dir.exists():
@@ -168,7 +182,7 @@ def _recent_run_summaries(n: int) -> list[dict]:
         files.append((p, d))
     out = []
     for f, d in files[-n:]:
-        decisions = d.get("decisions", [])
+        decisions = [x for x in (d.get("decisions") or []) if isinstance(x, dict)]
         # 脏戳字段的读端复原（第 369 局复盘）：被回写的文件顶层 floor=0/
         # victory=false 是脏值，决策轨迹才是真账——层数取轨迹最大值，
         # 胜负按 GAME_OVER 屏结算文案复原；干净文件两段逻辑零改动。
@@ -182,13 +196,19 @@ def _recent_run_summaries(n: int) -> list[dict]:
                                and "胜利" in str(x.get("reason") or "")
                                for x in decisions):
             victory = True
+        combat_notes = list(d.get("combat_notes") or [])
+        key_reasons = [x.get("reason", "") for x in decisions
+                       if x.get("action") in ("choose_map_node", "choose_event_option",
+                                              "choose_rest_option", "skip_reward_cards")]
         out.append({
             "run_id": d.get("run_id"), "victory": victory, "floor": floor,
             "ascension": d.get("ascension"), "decisions": len(decisions),
-            "combat_notes": d.get("combat_notes", []),
-            "key_reasons": [x.get("reason", "") for x in decisions
-                            if x.get("action") in ("choose_map_node", "choose_event_option",
-                                                   "choose_rest_option", "skip_reward_cards")][-10:],
+            "combat_notes_total": len(combat_notes),
+            "combat_notes": [_clip_summary_text(x)
+                             for x in combat_notes[-RUN_SUMMARY_COMBAT_NOTES:]],
+            "key_reasons_total": len(key_reasons),
+            "key_reasons": [_clip_summary_text(x)
+                            for x in key_reasons[-RUN_SUMMARY_KEY_REASONS:]],
         })
     return out
 
@@ -213,12 +233,17 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     else:
         scope = f"每 {cadence} 局你做一次大模型复盘"
 
+    # Whitespace-only compaction: _stats_digest's fields and values are left
+    # intact.  This saves prompt tokens without silently weakening statistical
+    # evidence; full stats.json remains available for on-demand inspection.
+    packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+
     return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
 智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
 
-# 数据摘要（已内嵌，完整文件可按需深读）
+# 数据摘要（紧凑 JSON 已内嵌；统计字段未裁剪，完整文件可按需深读）
 ```json
-{json.dumps(packet, ensure_ascii=False, indent=1)}
+{packet_json}
 ```
 
 最近的 lessons.md 尾部：

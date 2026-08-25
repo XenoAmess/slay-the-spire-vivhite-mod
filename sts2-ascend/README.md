@@ -70,6 +70,36 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
    事件致死→收敛探索率；胜利→放宽进攻性并提升目标进阶。全部钳制在安全区间内。
 4. **自我总结**：以上全部变化以中文写入 `lessons.md`，形成可读的"成长日记"。
 
+## 知识库压缩（compact）
+
+`runs/*.json` 是逐决策原始证据，局数增长后不应让全部历史永远占据活跃工作集。
+压缩工具默认只做只读预览：
+
+```powershell
+# 可在运行中执行：只统计，不写 knowledge
+py -3 sts2-ascend/brain/compact_knowledge.py
+
+# 必须先用 Stop-Agent.ps1 停止整套，再显式 apply
+py -3 sts2-ascend/brain/compact_knowledge.py --apply
+```
+
+默认保留最近 96 份原始日志、所有胜局/进行中局、F33+ 深层局，以及最长轨迹、
+最大文件、各终局层数和各进阶的代表样本。其他日志不会丢弃：工具先用
+`ZIP_DEFLATED` 写入 `knowledge/archive/batch-*.zip`，逐文件重读校验 SHA256，
+再原子发布 `knowledge/archive/manifest.json`，最后才移走 active 副本。
+`knowledge/archive/run_catalog.jsonl` 保留所有 active/archived 对局的可检索摘要；需要深读
+某一份归档原文时可运行 `py -3 sts2-ascend/brain/compact_knowledge.py --show-run <文件名>`，
+工具会先按 manifest 校验 SHA256 再输出。二次执行在没有新历史时
+是严格 no-op；损坏 JSON 会作为异常证据留在 active 目录。
+
+`lessons.md` 保留全部 `🧠` 长期经验与最近 96 节，`meta_review.md` 保留最近 32 节；
+被裁出的原文同批完整备份。`stats.json`、`policy.json`、`progression.json` 不裁剪，
+并随归档保存只读快照，因此在线学习所需的充分统计不受影响。runtime `*.log` 只在
+dry-run 报告体积，不写入二进制知识归档。
+
+compact 只减少当前 checkout、文件扫描和后续提示词成本；普通提交无法缩小 Git 历史中
+已经存在的对象。若将来确需重写历史，必须作为单独的破坏性维护操作评估和执行。
+
 ## 大模型复盘（异步追及队列：游玩零等待）
 
 **每局结束后**，大脑只做一件事：把复盘请求写入 `knowledge/review_queue.json`，然后**立即开下一局**。
