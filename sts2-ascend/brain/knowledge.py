@@ -343,6 +343,13 @@ DEFAULT_STATS = {
                        # （分幕分层段掉血，第 266 局批次复盘新增：band 1=幕内1~5层、
                        #   2=6~11层、3=12层起——VANTOM/KIN/CEREMONIAL 等场均 40+ 的
                        #   杀手组合集中在幕内后段，全幕均值账把它们摊薄到 ~10）
+    "respawn_adds": {},  # enemy_key -> {"confirmations": n}
+                         # （跨局重生召唤物名册，第 506~508 局批复盘新增：同种敌人
+                         #   在 ≥2 场独立战斗中被「预测击杀≥2 次仍存活」实证后，
+                         #   后续战斗第 1 回合即按重生体三重压制，不再先烧 2 次输出）
+    "act_entries": [],   # 进幕快照列表（第 506~508 局批复盘新增）：每幕首战入场时记
+                         # {act, floor, hp_pct, max_hp, gold, potions, deck_size, burst}
+                         # ——把「进二幕时的卡组就绪度」变成可复盘的硬数据
 }
 
 
@@ -430,6 +437,10 @@ class Knowledge:
         # 场均 41~43 且贡献生涯前三死因），全幕均值把后段杀手摊薄成「便宜战」。
         # 纯增量结构：旧库无此键即从空累积，历史聚合拆不出逐样本层段，不回填
         self.stats.setdefault("rooms_band", {})
+        # 迁移：跨局重生召唤物名册与进幕快照（第 506~508 局批复盘新增）。
+        # 纯增量结构：旧库无此键即从空累积，不回填、读取端 .get 兜底
+        self.stats.setdefault("respawn_adds", {})
+        self.stats.setdefault("act_entries", [])
         # 迁移：事件选项最坏情况记忆字段（第 255~257 批次复盘新增）。hp_min 记
         # 该选项历史单次最差生命增量（含事件链强制战的祖先归因样本）。历史聚合
         # 数据无法反推逐样本尾部（hp_delta_sum/n 拆不出单次极值），旧条目显式
@@ -1186,6 +1197,48 @@ class Knowledge:
     def commit_card_play(self, card_id: str) -> None:
         e = self.stats["cards"].setdefault(card_id, {"seen": 0, "picked": 0, "plays": 0, "outcome_sum": 0.0, "bias": 0.0})
         e["plays"] += 1
+
+    # ---------- respawn-add roster / act-entry snapshots ----------
+
+    def mark_respawn_add(self, enemy_key: str) -> None:
+        """登记一次重生体实证（第 506~508 局批复盘新增）。
+
+        调用时机：某敌人「同场被预测击杀 ≥2 次仍存活」当场坐实（policy 端
+        _is_respawn_add 的确认瞬间，每场战斗每敌至多记一次）。跨局名册的
+        生效门槛是 ≥2 场独立战斗的实证（is_known_respawn_add），单场误报
+        （如连续两次高估伤害被格挡救活）不会污染名册。
+        """
+        if not enemy_key:
+            return
+        d = self.stats.setdefault("respawn_adds", {})
+        e = d.setdefault(str(enemy_key), {"confirmations": 0})
+        e["confirmations"] = min(99, int(e.get("confirmations", 0) or 0) + 1)
+
+    def is_known_respawn_add(self, enemy_key: str) -> bool:
+        """该种敌人是否已被 ≥2 场独立战斗实证为重生召唤物。"""
+        if not enemy_key:
+            return False
+        d = self.stats.get("respawn_adds") or {}
+        e = d.get(str(enemy_key)) or {}
+        try:
+            return int(e.get("confirmations", 0) or 0) >= 2
+        except (TypeError, ValueError):
+            return False
+
+    def commit_act_entry(self, entry: dict) -> None:
+        """记录一次进幕快照（第 506~508 局批复盘新增）。
+
+        每幕首次开战时由 agent 端调用：把进幕时的血量/金币/药水/卡组规模/
+        爆发吞吐落账，让「二幕消耗战死因」能对照进幕就绪度做定量归因。
+        列表封顶 60 条（约 15~20 局的进幕样本），防 stats.json 无界膨胀。
+        """
+        d = self.stats.setdefault("act_entries", [])
+        d.append(dict(entry))
+        if len(d) > 60:
+            del d[:-60]
+
+    def act_entries(self) -> list:
+        return list(self.stats.get("act_entries") or [])
 
     # ---------- run-end commits ----------
 

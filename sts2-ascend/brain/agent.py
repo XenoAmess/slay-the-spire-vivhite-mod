@@ -519,6 +519,28 @@ class Agent:
         rate_gate = float(self.know.policy.get("danger_comp_hard_death_rate", 0.30))
         if e and e.get("encounters", 0) >= 3 and e.get("deaths", 0) / max(1, e["encounters"]) >= rate_gate:
             self.ctx.current_combat_is_hard = True
+        # 进幕快照（第 506~508 局批复盘新增）：每幕首次开战时把就绪度落账。
+        # 本批实证二幕消耗战已成主死因（F22/F31），而「进二幕时卡组多强、
+        # 带了多少资源」此前没有账——快照让下批复盘能把死亡楼层与进幕
+        # 爆发/血量/金币/药水做定量对照。纯观测，任何异常静默跳过
+        try:
+            _act = int(self.policy._floor_act(run.get("floor", 0)))
+            if _act != getattr(self, "_last_entry_act", 0):
+                self._last_entry_act = _act
+                _deck = run.get("deck", []) or []
+                self.know.commit_act_entry({
+                    "act": _act,
+                    "floor": int(run.get("floor", 0) or 0),
+                    "hp_pct": round(hp / max_hp, 3),
+                    "max_hp": int(max_hp),
+                    "gold": int(run.get("gold", 0) or 0),
+                    "potions": len([p for p in (run.get("potions") or [])
+                                    if p.get("occupied")]),
+                    "deck_size": len(_deck),
+                    "burst": round(float(self.policy.deck_burst(_deck)), 1),
+                })
+        except Exception:
+            pass
         danger = self.know.enemy_danger(comp)
         log(f"[agent] 进入战斗：敌方={comp}｜历史场均掉血 {danger:.1f}｜房间类型 {node_type}")
 

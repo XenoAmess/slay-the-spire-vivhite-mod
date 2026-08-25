@@ -134,6 +134,7 @@ class Policy:
         self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
         self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
         self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
+        self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 回合边界观测血量
@@ -1212,6 +1213,7 @@ class Policy:
         if self._kills_combat is not ctx.combat:
             self._kills_combat = ctx.combat
             self._combat_kills = {}
+            self._respawn_reported = set()
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -1985,9 +1987,31 @@ class Policy:
         return score, None, why
 
     def _is_respawn_add(self, enemy: dict) -> bool:
-        """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。"""
+        """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。
+
+        跨局名册（第 506~508 局批复盘新增）：506 局 F13 精英战对扭动虫
+        （重生召唤物）按「零伤害辅助体」优先转火，前两刀斩杀奖励全喂给
+        打不死的分身（该战 -46 掏空半管血），直到同场检测器坐实才解除——
+        这个学费每种重生体每局都在重交。现在当场坐实的瞬间把敌键登记进
+        跨局名册（每场至多一次），此后任何战斗第 1 回合即按重生体三重压制
+        （过量封顶/威胁清零/击杀奖励归零），不再重交学费。生效门槛为
+        ≥2 场独立战斗的实证：单场误报（预测伤害被格挡吃掉等）不会污染名册。
+        """
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
-        return self._combat_kills.get(kid, 0) >= 2
+        if self._combat_kills.get(kid, 0) >= 2:
+            if kid and kid not in self._respawn_reported:
+                self._respawn_reported.add(kid)
+                try:
+                    self.know.mark_respawn_add(kid)
+                except Exception:
+                    pass
+            return True
+        if kid and kid in self._respawn_reported:
+            return True
+        try:
+            return self.know.is_known_respawn_add(kid)
+        except Exception:
+            return False
 
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
                     ignore_respawn: bool = False) -> float:

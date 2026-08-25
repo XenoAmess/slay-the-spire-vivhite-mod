@@ -4751,6 +4751,71 @@ def main() -> int:
     assert abs(v_bu_nv - v_bu_static) < 1e-6, \
         f"空库回落口径漂移: nv={v_bu_nv:.2f} static={v_bu_static:.2f}"
 
+    # 3yr) 跨局重生召唤物名册（第 506~508 局批复盘新增）：506 局 F13 精英战
+    #      对扭动虫按零伤害辅助体优先转火，前两刀斩杀奖励喂给打不死的分身
+    #      （该战 -46），直到同场检测器坐实才解除——同种重生体每局都在重交
+    #      这笔学费。当场坐实的敌键登记进跨局名册，≥2 场独立实证后新战斗
+    #      第 1 回合即按重生体压制；单场误报不污染名册
+    ra_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-respawn-")))
+    assert not ra_know.is_known_respawn_add("WRIGGLER_ADD"), "空名册不应判定重生体"
+    ra_know.mark_respawn_add("WRIGGLER_ADD")
+    assert not ra_know.is_known_respawn_add("WRIGGLER_ADD"), \
+        "单场实证不得激活跨局名册（防单场误报污染）"
+    ra_know.mark_respawn_add("WRIGGLER_ADD")
+    assert ra_know.is_known_respawn_add("WRIGGLER_ADD"), "双场实证应激活跨局名册"
+    assert not ra_know.is_known_respawn_add(""), "空键必须安全返回 False"
+    assert not ra_know.is_known_respawn_add("FRESH_MOB"), "未登记敌键不受影响"
+    ra_pol = policy.Policy(ra_know)
+    # 名册生效：本场零预测击杀也应直接判重生体（第 1 回合即压制）
+    assert ra_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
+        "跨局名册未在第 1 回合生效"
+    # 当场坐实 → 登记名册（同场同敌只记一次）；第二次独立坐实后生效
+    ra_pol._combat_kills["SPRING_ADD"] = 2
+    assert ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD"}), "同场坐实判定丢失"
+    assert (ra_know.stats.get("respawn_adds", {}).get("SPRING_ADD") or {}).get("confirmations") == 1, \
+        "当场坐实应向名册登记一次"
+    ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD"})
+    assert (ra_know.stats.get("respawn_adds", {}).get("SPRING_ADD") or {}).get("confirmations") == 1, \
+        "同场重复确认不得重复计数（每场每敌至多一次）"
+    # 名册生效后的行为闭环：辅助体不再吸引转火，输出直奔高威胁本体
+    def roster_combat():
+        st = spike_combat()
+        st["combat"]["enemies"][0]["enemy_id"] = "WRIGGLER_ADD"
+        return st
+    d_roster = ra_pol.decide(roster_combat(), ctx)
+    assert d_roster.action == "play_card" and d_roster.params.get("target_index") == 1, \
+        f"名册重生体第1回合仍吸引输出（506局F13重演）: {d_roster.reason}"
+    # 全场皆名册重生体时压制解除照常工作（152 局教义不被名册破坏）
+    def all_roster_combat():
+        st = roster_combat()
+        st["combat"]["enemies"][1]["enemy_id"] = "WRIGGLER_SRC"
+        st["combat"]["enemies"][0]["intents"] = [{"total_damage": 0}]
+        st["combat"]["enemies"][1]["intents"] = [{"total_damage": 0}]
+        return st
+    ra_know.mark_respawn_add("WRIGGLER_SRC")
+    ra_know.mark_respawn_add("WRIGGLER_SRC")
+    d_allroster = ra_pol.decide(all_roster_combat(), ctx)
+    assert d_allroster.action == "play_card", \
+        f"全场名册重生体时压制解除失效（拒出牌复发）: {d_allroster.action}（{d_allroster.reason}）"
+
+    # 3ys) 进幕快照账本（第 506~508 局批复盘新增）：二幕消耗战已成主死因，
+    #      进幕就绪度（血量/金币/药水/卡组规模/爆发）必须有账可查。封顶 60 条、
+    #      旧库无键自动补齐
+    ae_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-actentry-")))
+    for i in range(65):
+        ae_know.commit_act_entry({"act": 2, "floor": 18 + i, "hp_pct": 0.5,
+                                  "max_hp": 80, "gold": 100, "potions": 1,
+                                  "deck_size": 20, "burst": 90.0 + i})
+    ents = ae_know.act_entries()
+    assert len(ents) == 60, f"进幕快照未按 60 条封顶: {len(ents)}"
+    assert ents[-1]["burst"] == 154.0 and ents[0]["burst"] == 95.0, \
+        "进幕快照封顶后应保留最新样本"
+    ae_know.mark_respawn_add("COMPAT_PROBE")
+    assert "respawn_adds" in ae_know.stats and "act_entries" in ae_know.stats, \
+        "旧库迁移缺键"
+
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
