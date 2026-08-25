@@ -710,7 +710,9 @@ class Policy:
         run_deck = run.get("deck", [])
         # 缺口深度随饥饿标志一并留档（第495~498局批复盘）：投影端战损上浮
         # 与锻造预演需要「差多远」的连续量，不能只有布尔饥饿标志
-        _burst_val = self.deck_burst(run_deck)
+        # 第547~552局批复盘：供给口径换 deck_effective_burst——力量引擎计入
+        # 爆发授信，拾取端的进步才能真实反馈到缺口深度
+        _burst_val = self.deck_effective_burst(run_deck)
         _line_val = self._starve_line(max_hp, act=act_no)
         burst_starved = bool(run_deck) and _burst_val < _line_val
         starve_deficit = clamp(1.0 - (_burst_val / _line_val if burst_starved else 1.0),
@@ -1527,7 +1529,9 @@ class Policy:
                 else:
                     _prior_eff = float(pol.get("kill_race_prior_eff", 0.55))
                     _deck_now = ((state.get("run") or {}).get("deck")) or []
-                    dpt = self.deck_burst(_deck_now) * _prior_eff
+                    # 第547~552局批复盘：头两回合开账 DPS 换引擎有效口径，
+                    # 带引擎卡组不再被面值账推向过早 all-in
+                    dpt = self.deck_effective_burst(_deck_now) * _prior_eff
                     dpt_src = f"先验{dpt:.0f}伤/回合" if dpt > 0 else ""
                 if dpt > 0:
                     loss_rate = self._race_loss_rate if (
@@ -2313,7 +2317,10 @@ class Policy:
             self._floor_act(floor) if floor else None)
         if not pool or not fire or not max_hp:
             return False, ""
-        burst = self.deck_burst(deck or [])
+        # 第547~552局批复盘：供给换 deck_effective_burst——力量引擎的复利
+        # 授信计入竞速账，带引擎卡组不再被面值口径系统性判死（本批十局
+        # 全线「缺口55%~83%直到前夜」的死锁主因之一）
+        burst = self.deck_effective_burst(deck or [])
         if burst <= 0:
             return False, ""
         eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
@@ -2433,7 +2440,7 @@ class Policy:
         # 数据未成熟时回落静态门槛（行为与旧版一致）
         _deck_now = run.get("deck") or []
         if _deck_now:
-            if self.deck_burst(_deck_now) < self._starve_line(
+            if self.deck_effective_burst(_deck_now) < self._starve_line(
                     max(1, int(run.get("max_hp", 1) or 1)),
                     act=self._floor_act(run.get("floor"))):
                 reserve = max(reserve, int(pol.get("potion_starved_reserve_floors", 6)))
@@ -2593,6 +2600,32 @@ class Policy:
             block_energy -= _cost
         return block
 
+    def deck_effective_burst(self, deck: list[dict], energy: float = 3.0) -> float:
+        """引擎有效爆发：deck_burst（攻击面值装箱）+ 力量成长牌的复利授信。
+
+        第547~552局批复盘新增。本批十局的死因高度同构：竞速预演从 F1 起全线
+        「缺口55%~83%」直到前夜判死——但 deck_burst 只装攻击牌面值，点燃/
+        恶魔形态等力量引擎贡献恒为零，后果是三重死锁：
+        ①拾取端拿了引擎，饥饿线/缺口分毫不动，评分系统看不见自己的进步；
+        ②前夜竞速预演对带引擎卡组系统性过度判死（先验输出=面值×eff，把
+          复利窗口整体抹零）；
+        ③战斗端头两回合的开账 DPS 同样失真，引擎卡组被提前推向 all-in。
+        授信口径：每张生效成长引擎 +engine_burst_credit（默认6≈+2力/回合
+        在7回合长战的复利折算，再除以 eff 还原理论口径），至多计
+        engine_credit_cap 张（防囤引擎注水）；条件型引擎走
+        _scaling_power_active 同一把尺（撕裂族零自残卡组不授信）。
+        仅替换「供给 vs 需求」类消费端（饥饿判定/竞速预演/药水预留/拿牌
+        门槛），required_deck_burst 需求线与格挡侧不受影响。
+        """
+        burst = self.deck_burst(deck, energy)
+        pol = self.know.policy
+        credit = float(pol.get("engine_burst_credit", 6.0))
+        cap_n = int(pol.get("engine_credit_cap", 2))
+        if credit <= 0.0 or cap_n <= 0 or not deck:
+            return burst
+        n_eng = sum(1 for c in deck if self._scaling_power_active(c, deck))
+        return burst + credit * min(n_eng, cap_n)
+
     def _deck_good_count(self, deck: list[dict]) -> int:
         """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
         return sum(1 for c in deck
@@ -2647,7 +2680,7 @@ class Policy:
             thr -= (core - good) * float(pol.get("deck_thin_discount", 0.35))
         relief = float(pol.get("pick_threshold_starve_relief", 0.0))
         if relief > 0.0 and max_hp:
-            _burst = self.deck_burst(deck)
+            _burst = self.deck_effective_burst(deck)
             _line = self._starve_line(max_hp, act=act)
             if _burst < _line:
                 _deficit = clamp(1.0 - _burst / max(1e-6, _line), 0.0, 1.0)
@@ -2696,7 +2729,7 @@ class Policy:
         # 时用竞速及格线——静态带只回答「比打击流强多少」，burst≈45 的卡组
         # 高于静态门槛却只有杀 Boss 所需的三分之一，旧口径判「非饥饿」后
         # 拾取端对缺口彻底失明（缺口分母同步换成及格线，纠偏力度随真实差距缩放）
-        burst = self.deck_burst(deck)
+        burst = self.deck_effective_burst(deck)
         _line = self._starve_line(max_hp if deck else None, act=act)
         burst_starved = bool(deck) and burst < _line
 
@@ -2834,8 +2867,20 @@ class Policy:
         # 自动积累高 outcome。RAMPAGE 靠 +6 学习分在 55 局里自我强化循环拾取
         # （106 局又拿 3 张），FIEND_FIRE n=4 收缩后仍摆动 +7.6。封顶保留
         # 学习信号的方向、砍掉幅度；战斗端本就 ×0.3 不受影响
+        # 引擎负分豁免（第547~552局批复盘新增）：learned value 的计量视界是
+        # 「拿它的局走到了几层」，而力量引擎的价值恰在长战复利——DEMON_FORM
+        # 被 -3.0 bias 全额压制（33拿25打，负账来自「在必败局拿了也没用」的
+        # 归因倒置），与引擎稀缺/饥饿加分正面抵消，形成「永远凑不出斩杀引擎」
+        # 死锁。深缺口（≥engine_bias_relief_deficit）时生效引擎的 learned
+        # 负分归零：保留正分激励、只豁免方向性误判；非饥饿局面行为不变
         _cv_cap = float(pol.get("card_value_pick_cap", 3.0))
-        value += clamp(self.know.card_value(cid), -_cv_cap, _cv_cap)
+        _learned = clamp(self.know.card_value(cid), -_cv_cap, _cv_cap)
+        if (_learned < 0.0 and burst_starved
+                and self._scaling_power_active(card, deck)):
+            _relief_gate = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
+            if _relief_gate >= float(pol.get("engine_bias_relief_deficit", 0.30)):
+                _learned = 0.0
+        value += _learned
         self.know.commit_card_seen(card.get("card_id", ""))
         return value
 
@@ -3002,7 +3047,7 @@ class Policy:
             _up_mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             _up_floor = (state.get("run") or {}).get("floor")
             _up_act = self._floor_act(_up_floor)
-            _up_starved = bool(_up_deck) and self.deck_burst(_up_deck) < self._starve_line(_up_mh, act=_up_act)
+            _up_starved = bool(_up_deck) and self.deck_effective_burst(_up_deck) < self._starve_line(_up_mh, act=_up_act)
             _up_doomed, _ = self._boss_race_doomed(_up_deck, _up_mh, floor=_up_floor)
             _atk_bonus = 4.0 if _up_starved else 2.0
             _scale_up_bonus = (float(self.know.policy.get("upgrade_scaling_power_bonus", 16.0))
@@ -3184,7 +3229,7 @@ class Policy:
         hp_pct = run.get("current_hp", 1) / max(1, run.get("max_hp", 1))
         # 输出饥饿判定接竞速及格线（第422局复盘，_starve_line 统一口径）；
         # 数据未成熟回落静态门槛
-        potion_starved = bool(deck) and self.deck_burst(deck) < self._starve_line(_shop_mh, act=_shop_act)
+        potion_starved = bool(deck) and self.deck_effective_burst(deck) < self._starve_line(_shop_mh, act=_shop_act)
         # Boss 预留窗内进攻药竞价加成（第422局复盘）：饥饿卡组的 Boss 竞速是
         # 唯一胜机（386~390 批教义），但同池竞价里功能牌 6~9 分稳定压过药水
         # 基分 2~3 分——422 局商店路由理由明写「金币80够买药水档位」，到店却

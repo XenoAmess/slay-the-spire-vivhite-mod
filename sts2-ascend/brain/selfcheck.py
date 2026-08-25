@@ -4458,6 +4458,9 @@ def main() -> int:
     #      平面 5 分定价；饥饿时力量文本的能力牌按缺口深度加分（base+extra）。
     #      第429~434批复盘扩展：加分之上叠加「成长引擎稀缺」结构分——卡组零引擎
     #      全额、1 台减半、≥cap 归零（首台点燃是刚需，第三张恶魔形态是注水）
+    #      第547~552批复盘再扩展：供给口径换 deck_effective_burst——每台生效
+    #      引擎 +engine_burst_credit 计入爆发，缺口随拾取引擎真实收窄，
+    #      饥饿加分按收窄后的缺口缩放（拿引擎必须看得见进步）
     ph_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powhun-"))
     ph_know = knowledge.Knowledge(ph_dir)
     ph_pol = policy.Policy(ph_know, random.Random(5))
@@ -4480,9 +4483,16 @@ def main() -> int:
     for _eng_deck in (starve_deck, eng1_deck, eng2_deck):
         d_eng.append(ph_pol.eval_reward_card(dict(pow_strong), list(_eng_deck))
                      - ph_pol.eval_reward_card(dict(pow_plain), list(_eng_deck)))
+    _ph_c = float(ph_know.policy.get("engine_burst_credit", 6.0))
+    _ph_floor = float(ph_know.policy["deck_burst_floor"])
+    _ph_dc = _ph_x * (_ph_c / _ph_floor)  # 每台引擎收窄的缺口对应的 extra 衰减量
     assert abs(d_eng[0] - (_ph_b + _ph_x + _ph_s)) < 1e-9, "零引擎稀缺加分缺失"
-    assert abs((d_eng[0] - d_eng[1]) - _ph_s / 2.0) < 1e-9, "1台引擎时稀缺未减半"
-    assert abs((d_eng[1] - d_eng[2]) - _ph_s / 2.0) < 1e-9, "引擎数达cap后稀缺未归零"
+    assert abs((d_eng[0] - d_eng[1]) - (_ph_dc + _ph_s / 2.0)) < 1e-9, \
+        "1台引擎时稀缺未减半或缺口未随授信收窄"
+    assert abs((d_eng[1] - d_eng[2]) - (_ph_dc + _ph_s / 2.0)) < 1e-9, \
+        "引擎数达cap后稀缺未归零或缺口未继续收窄"
+    assert abs(ph_pol.deck_effective_burst(list(eng1_deck)) - _ph_c) < 1e-9, \
+        "deck_effective_burst 未计入引擎授信"
     fed_deck = list(starve_deck) + [
         {"card_id": f"PH_BIG{i}", "card_type": "Attack", "energy_cost": 1,
          "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
