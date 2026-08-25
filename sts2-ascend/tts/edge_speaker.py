@@ -36,6 +36,8 @@ sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, FenceStripper, speakable, SapiSpeaker,  # noqa: E402
                      get_voice_state, start_volume_hotkeys,
                      acquire_voice_lock, release_voice_lock)
+sys.path.insert(0, str(BASE_DIR / "brain"))
+from lifecycle import stop_requested, wait_for_stop  # noqa: E402
 
 
 def log(msg: str) -> None:
@@ -147,6 +149,9 @@ def main() -> int:
             _play_wav_with_gain(w2)
         return 0
 
+    if stop_requested():
+        return 0
+
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
@@ -188,7 +193,7 @@ def main() -> int:
     synth_stats = {"ok": 0, "fail": 0, "consec_fail": 0, "sapi_until": 0.0, "next_beat": 20}
 
     def synth_worker(wid: int) -> None:
-        while True:
+        while not stop_requested():
             try:
                 try:
                     seq, sent = q.get(timeout=0.5)
@@ -197,7 +202,7 @@ def main() -> int:
                     # 复盘间隙队列恰好排空而播放器还在播存量 → 3 个 worker 集体
                     # 退出 → 下一场复盘开始后无人合成 → 僵尸朗读器静默数小时
                     # （520 句心跳戛然而止实证）。
-                    if ended and counters["played"] >= counters["put"]:
+                    if stop_requested() or (ended and counters["played"] >= counters["put"]):
                         return
                     continue
                 wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
@@ -254,14 +259,15 @@ def main() -> int:
         spawn_worker()
 
     def player() -> None:
-        while True:
+        while not stop_requested():
             try:
                 with done_cond:
                     waited = 0.0
                     while counters["played"] not in done:
                         done_cond.wait(timeout=0.5)
                         waited += 0.5
-                        if ended and counters["played"] >= counters["put"] and q.empty():
+                        if (stop_requested() or
+                                (ended and counters["played"] >= counters["put"] and q.empty())):
                             return
                         if waited > 90:
                             # 某句迟迟无结果。诚实区分两种情况：
@@ -299,7 +305,7 @@ def main() -> int:
 
     threading.Thread(target=player, daemon=True).start()
 
-    while True:
+    while not stop_requested():
         try:
             ensure_workers()     # 合成线程灭绝兜底：灭绝即补齐并大声记日志
             size = STREAM_FILE.stat().st_size
@@ -341,15 +347,17 @@ def main() -> int:
                         counters["put"] += 1
             if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
                 break
-            time.sleep(0.5)
+            if wait_for_stop(0.5):
+                break
         except Exception as exc:
             log(f"主循环异常（继续）：{exc}")
-            time.sleep(2)
+            if wait_for_stop(2):
+                break
 
     if eng._sapi is not None:
         eng._sapi.close()
     release_voice_lock()
-    log("edge 朗读器退出")
+    log("edge 朗读器退出" if not stop_requested() else "收到全栈停止请求，edge 朗读器退出")
     return 0
 
 

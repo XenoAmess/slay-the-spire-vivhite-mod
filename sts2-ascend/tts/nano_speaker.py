@@ -53,6 +53,8 @@ sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, FenceStripper, speakable, lang_of, SapiSpeaker,  # noqa: E402
                      get_voice_state, start_volume_hotkeys,
                      acquire_voice_lock, release_voice_lock)
+sys.path.insert(0, str(BASE_DIR / "brain"))
+from lifecycle import stop_requested, wait_for_stop  # noqa: E402
 
 
 class NanoEngine:
@@ -110,6 +112,9 @@ def main() -> int:
         winsound.PlaySound(str(out), winsound.SND_FILENAME)
         return 0
 
+    if stop_requested():
+        return 0
+
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
@@ -130,11 +135,11 @@ def main() -> int:
 
     def synth_worker() -> None:
         """严格按队列顺序：英文直接转播放队列（SAPI），中文先合成 wav 再入播放队列。"""
-        while True:
+        while not stop_requested():
             try:
                 sent = text_q.get(timeout=0.5)
             except queue.Empty:
-                if ended.is_set():
+                if ended.is_set() or stop_requested():
                     return
                 continue
             synth_idle.clear()
@@ -153,11 +158,11 @@ def main() -> int:
 
     def play_worker() -> None:
         """严格按序播放：SAPI 等回执、wav 等播完——两种嗓音不错乱。"""
-        while True:
+        while not stop_requested():
             try:
                 kind, payload = play_q.get(timeout=0.5)
             except queue.Empty:
-                if ended.is_set() and text_q.empty():
+                if stop_requested() or (ended.is_set() and text_q.empty()):
                     return
                 continue
             try:
@@ -176,7 +181,7 @@ def main() -> int:
     state = {"offset": 0}
     log("MOSS-Nano 朗读器上线（中文=白绮克隆音色，英文=SAPI，严格按序，允许滞后读完）")
 
-    while True:
+    while not stop_requested():
         try:
             size = STREAM_FILE.stat().st_size
             if size < state["offset"]:
@@ -213,14 +218,19 @@ def main() -> int:
                 # 全部读完才退出
                 if text_q.empty() and synth_idle.is_set() and play_q.empty():
                     break
-            time.sleep(0.5)
+            if wait_for_stop(0.5):
+                ended.set()
+                break
         except Exception as exc:
             log(f"主循环异常（继续）：{exc}")
-            time.sleep(2)
+            if wait_for_stop(2):
+                ended.set()
+                break
 
     sapi.close()
     release_voice_lock()
-    log("朗读器退出（全部读完）")
+    log("朗读器退出（全部读完）" if not stop_requested() else
+        "收到全栈停止请求，朗读器退出")
     return 0
 
 

@@ -52,6 +52,8 @@ FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败�
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import get_voice_state  # noqa: E402
+sys.path.insert(0, str(BASE_DIR / "brain"))
+from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
 
 
 def log(msg: str) -> None:
@@ -268,7 +270,7 @@ def _llm_audit(brief: str, quip: str) -> bool:
 # 主循环
 # ---------------------------------------------------------------------------
 
-def _pid_alive(pid: int) -> bool:
+def _pid_alive(pid: int, created_unix: float = 0.0) -> bool:
     """OpenProcess + 映像名校验。仅凭 OpenProcess 成功判活会被 pid 复用毒锁：
     锁 pid 被无关进程复用时误判"活着"→ 单实例锁永久锁死（悬浮窗消失事故）。"""
     if pid <= 0:
@@ -276,12 +278,28 @@ def _pid_alive(pid: int) -> bool:
     try:
         import ctypes
         k32 = ctypes.windll.kernel32
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
         h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
         if not h:
             return False
         try:
+            if created_unix > 0:
+                class FileTime(ctypes.Structure):
+                    _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+                k32.GetProcessTimes.argtypes = [ctypes.c_void_p] + [ctypes.POINTER(FileTime)] * 4
+                created, exited, kernel, user = FileTime(), FileTime(), FileTime(), FileTime()
+                if k32.GetProcessTimes(h, ctypes.byref(created), ctypes.byref(exited),
+                                       ctypes.byref(kernel), ctypes.byref(user)):
+                    ticks = (int(created.high) << 32) | int(created.low)
+                    actual_unix = ticks / 10_000_000 - 11_644_473_600
+                    if abs(actual_unix - created_unix) > 0.1:
+                        return False
             buf = ctypes.create_unicode_buffer(512)
             size = ctypes.c_ulong(512)
+            k32.QueryFullProcessImageNameW.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
+                                                       ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_ulong)]
             if k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
                 return "python" in buf.value.lower()
             return True   # 映像名拿不到（权限等）：保守视为活
@@ -303,16 +321,74 @@ def _hide_own_console() -> None:
         pass
 
 
+def _process_created_unix(pid: int) -> float:
+    try:
+        import ctypes
+
+        class FileTime(ctypes.Structure):
+            _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+
+        k32 = ctypes.windll.kernel32
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.GetProcessTimes.argtypes = [ctypes.c_void_p] + [ctypes.POINTER(FileTime)] * 4
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
+        h = k32.OpenProcess(0x1000, False, pid)
+        if not h:
+            return 0.0
+        try:
+            created, exited, kernel, user = FileTime(), FileTime(), FileTime(), FileTime()
+            if not k32.GetProcessTimes(h, ctypes.byref(created), ctypes.byref(exited),
+                                       ctypes.byref(kernel), ctypes.byref(user)):
+                return 0.0
+            ticks = (int(created.high) << 32) | int(created.low)
+            return ticks / 10_000_000 - 11_644_473_600
+        finally:
+            k32.CloseHandle(h)
+    except Exception:
+        return 0.0
+
+
+def _release_own_lock() -> None:
+    """Delete only the quipper lock still owned by this process."""
+    try:
+        raw = LOCK_FILE.read_text(encoding="utf-8").strip()
+        record = json.loads(raw) if raw.startswith("{") else {"pid": int(raw or "0")}
+        if (int(record.get("pid", 0)) == os.getpid() and
+                record.get("session_id", SESSION_ID) == SESSION_ID):
+            LOCK_FILE.unlink(missing_ok=True)
+    except (OSError, ValueError, json.JSONDecodeError):
+        pass
+    try:
+        if int(SPEAKING_FLAG.read_text(encoding="utf-8").strip() or "0") == os.getpid():
+            SPEAKING_FLAG.unlink(missing_ok=True)
+    except (OSError, ValueError):
+        pass
+
+
 def main() -> int:
     _hide_own_console()
+    if stop_requested():
+        return 0
     if LOCK_FILE.exists():
         try:
-            if _pid_alive(int(LOCK_FILE.read_text().strip() or "0")):
+            raw = LOCK_FILE.read_text(encoding="utf-8").strip()
+            structured = raw.startswith("{")
+            record = json.loads(raw) if structured else {
+                "pid": int(raw or "0"), "session_id": "legacy"
+            }
+            owner_session = str(record.get("session_id", "legacy"))
+            owner_created = float(record.get("created_unix", 0))
+            if ((structured or owner_session == SESSION_ID) and
+                    _pid_alive(int(record.get("pid", 0)), owner_created)):
                 return 0
-        except (OSError, ValueError):
+        except (OSError, ValueError, json.JSONDecodeError):
             pass
     try:
-        LOCK_FILE.write_text(str(os.getpid()))
+        LOCK_FILE.write_text(json.dumps({
+            "pid": os.getpid(), "session_id": SESSION_ID,
+            "created_unix": _process_created_unix(os.getpid()) or time.time(),
+        }), encoding="utf-8")
     except OSError:
         pass
 
@@ -331,8 +407,9 @@ def main() -> int:
     next_gap = rng.uniform(MIN_GAP, MAX_GAP)
     last_sig = None
 
-    while True:
-        time.sleep(3)
+    while not stop_requested():
+        if wait_for_stop(3):
+            break
         try:
             st = _get_state()
             if not st:
@@ -354,6 +431,8 @@ def main() -> int:
             # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
             text = None
             for attempt in range(6):
+                if stop_requested():
+                    break
                 cand = _llm_generate(brief)
                 if not cand:
                     break                          # 生成失败 → 直接走保底
@@ -361,6 +440,8 @@ def main() -> int:
                     text = cand
                     break
                 log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
+            if stop_requested():
+                break
             if not text:
                 text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
             last_sig = sig
@@ -368,6 +449,8 @@ def main() -> int:
 
             SPEAKING_FLAG.write_text(str(os.getpid()), encoding="utf-8")
             try:
+                if stop_requested():
+                    break
                 eng.play(text)
             finally:
                 SPEAKING_FLAG.unlink(missing_ok=True)
@@ -375,6 +458,8 @@ def main() -> int:
             next_gap = rng.uniform(MIN_GAP, MAX_GAP)
         except Exception as exc:
             log(f"循环异常（继续）：{exc}")
+    log("收到全栈停止请求，碎碎念退出")
+    return 0
 
 
 if __name__ == "__main__":
@@ -384,3 +469,5 @@ if __name__ == "__main__":
         import traceback
         log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-800:]}")
         sys.exit(0)
+    finally:
+        _release_own_lock()

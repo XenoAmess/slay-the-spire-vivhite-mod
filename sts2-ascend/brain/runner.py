@@ -6,7 +6,8 @@
   说明可能是复盘改坏了代码）时，才按标记回滚到复盘前备份点，然后继续重试
 - 任何非零退出都会尝试重启，保证无人值守韧性
 
-用法: py brain/runner.py   （替代直接 py -m brain）
+统一入口由 scripts/Start-Agent.ps1 调用。手动 legacy 调试若上次 Ctrl+C
+留下 stop.request，可显式使用: py brain/runner.py --clear-stop
 """
 from __future__ import annotations
 
@@ -16,6 +17,9 @@ import sys
 import time
 from pathlib import Path
 
+from lifecycle import (SESSION_ID, clear_stop_request, pid_file, request_stop,
+                       stop_requested, wait_for_stop)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BASE_DIR.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -24,6 +28,7 @@ RESTART_CODE = 42
 MAX_FAST_CRASHES = 5
 FAST_CRASH_SECONDS = 90
 RETRY_INTERVAL_SECONDS = 60
+CTRL_C_GRACE_SECONDS = 20
 
 
 def log(msg: str) -> None:
@@ -58,14 +63,54 @@ def rollback_from_marker() -> bool:
         return False
 
 
+def _run_brain() -> tuple[int, float]:
+    """Run one brain generation while remaining responsive to stack shutdown."""
+    started = time.monotonic()
+    proc = subprocess.Popen([sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR))
+    stop_logged = False
+    try:
+        while True:
+            try:
+                return proc.wait(timeout=0.5), time.monotonic() - started
+            except subprocess.TimeoutExpired:
+                if stop_requested() and not stop_logged:
+                    log("收到全栈停止请求，等待大脑保存知识库并退出…")
+                    stop_logged = True
+    except KeyboardInterrupt:
+        log("收到 Ctrl+C，转为全栈协作停止请求…")
+        request_stop("runner-ctrl-c")
+        deadline = time.monotonic() + CTRL_C_GRACE_SECONDS
+        while proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.2)
+        if proc.poll() is None:
+            log("大脑未在宽限期内退出，终止子进程")
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        return 0, time.monotonic() - started
+
+
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     fast_crashes = 0
     log("监督进程启动，拉起大脑…")
     while True:
-        started = time.monotonic()
-        proc = subprocess.run([sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR))
-        alive_s = time.monotonic() - started
-        rc = proc.returncode
+        if stop_requested():
+            log("停止请求已生效，监督进程结束")
+            return 0
+        rc, alive_s = _run_brain()
+
+        # 停机期间即使子进程被超时兜底终止，也绝不能重新拉起。
+        if stop_requested():
+            log("大脑已停止，监督进程结束")
+            return 0
 
         if rc == RESTART_CODE:
             log("大脑请求重启（LLM 复盘更新了代码/策略）")
@@ -84,8 +129,13 @@ def main() -> int:
             log(f"连续 {MAX_FAST_CRASHES} 次快速崩溃且存在复盘重启标记——疑似复盘改坏了代码，执行最后手段：回滚")
             rollback_from_marker()
             fast_crashes = 0
-        time.sleep(RETRY_INTERVAL_SECONDS)
+        if wait_for_stop(RETRY_INTERVAL_SECONDS):
+            log("重试等待期间收到停止请求，监督进程结束")
+            return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if "--clear-stop" in sys.argv and SESSION_ID == "legacy":
+        clear_stop_request()
+    with pid_file("runner"):
+        sys.exit(main())

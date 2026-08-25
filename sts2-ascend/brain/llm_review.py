@@ -37,6 +37,8 @@ import threading
 import time
 from pathlib import Path
 
+from lifecycle import stop_requested
+
 BASE_DIR = Path(__file__).resolve().parent.parent          # sts2-ascend/
 REPO_DIR = BASE_DIR.parent                                  # git 仓库根（opencode 在此获得完整上下文）
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -47,6 +49,28 @@ MARKER_FILE = KNOWLEDGE_DIR / "pending_restart.json"
 PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
+REVIEW_MUTABLE_PATHS = [
+    "sts2-ascend/brain", "sts2-ascend/scripts",
+    "sts2-ascend/knowledge/policy.json", "sts2-ascend/knowledge/stats.json",
+    "sts2-ascend/knowledge/lessons.md", "sts2-ascend/knowledge/meta_review.md",
+]
+_worker_stop = threading.Event()
+
+
+def _review_stop_requested() -> bool:
+    """Combine the session sentinel with an in-process brain shutdown."""
+    return stop_requested() or _worker_stop.is_set()
+
+
+def _wait_review_stop(seconds: float) -> bool:
+    deadline = time.monotonic() + max(0.0, seconds)
+    while True:
+        if _review_stop_requested():
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        _worker_stop.wait(min(0.2, remaining))
 
 
 def load_llm_config() -> dict:
@@ -343,7 +367,7 @@ def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, 
 
 def _launch_viewer(cfg: dict, log) -> None:
     """拉起直播悬浮窗（独立进程，它的死活绝不影响复盘）。"""
-    if not cfg.get("viewer_enabled", True) or not VIEWER_PATH.exists():
+    if _review_stop_requested() or not cfg.get("viewer_enabled", True) or not VIEWER_PATH.exists():
         return
     try:
         creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -366,7 +390,7 @@ def _launch_speaker(cfg: dict, log) -> None:
     """拉起语音朗读器。tts_mode: edge=edge-tts统一嗓音(默认,云端零算力) / nano=全克隆音色 /
     hybrid=SAPI直播+克隆结论 / sapi=纯系统语音 / off=关闭。独立进程，死活不影响复盘。"""
     mode = str(cfg.get("tts_mode", "edge"))
-    if mode == "off":
+    if _review_stop_requested() or mode == "off":
         return
     try:
         creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -469,11 +493,11 @@ class OpencodeJsonTranslator:
 
 
 def _stream_run(cmd: list[str], timeout_sec: int,
-                translate=None) -> tuple[int, str, bool]:
+                translate=None) -> tuple[int, str, bool, bool]:
     """流式执行命令：stdout/stderr 合并逐行实时写入 LIVE_STREAM，同时收集全文。
 
     translate（可选）：把每个原始输出行映射为 0~N 个展示行（如 OpencodeJsonTranslator.feed）。
-    返回 (returncode, 全文输出, 是否超时)。超时则 kill 进程。
+    返回 (returncode, 全文输出, 是否超时, 是否被全栈停机中断)。
     """
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
@@ -496,6 +520,7 @@ def _stream_run(cmd: list[str], timeout_sec: int,
     deadline = time.monotonic() + timeout_sec
     lines: list[str] = []
     timed_out = False
+    stopped = False
     with LIVE_STREAM.open("a", encoding="utf-8") as stream:
         while True:
             try:
@@ -515,6 +540,13 @@ def _stream_run(cmd: list[str], timeout_sec: int,
                         stream.flush()
                     except OSError:
                         pass
+            if _review_stop_requested():
+                stopped = True
+                try:
+                    proc.terminate()
+                except OSError:
+                    pass
+                break
             if time.monotonic() > deadline:
                 timed_out = True
                 try:
@@ -522,12 +554,20 @@ def _stream_run(cmd: list[str], timeout_sec: int,
                 except OSError:
                     pass
                 break
+    if _review_stop_requested():
+        stopped = True
     try:
         proc.wait(timeout=10)
-    except Exception:
+    except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+            proc.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    except OSError:
         pass
     rc = proc.returncode if proc.returncode is not None else -1
-    return rc, "".join(lines), timed_out
+    return rc, "".join(lines), timed_out, stopped
 
 
 # ---------------------------------------------------------------------------
@@ -557,7 +597,7 @@ def _run_selfcheck(log) -> bool:
 
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
                source: str = "fallback", batch_runs: list[int] | None = None,
-               async_mode: bool = False) -> bool:
+               async_mode: bool = False, _status: dict | None = None) -> bool:
     """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
 
     流程：改前 commit 备份 → opencode 广权限复盘 → 自检 → 通过则提交/请求重启，失败则 git 回滚。
@@ -566,6 +606,13 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
       - 复盘期间 autogit 对局存档只提交 knowledge/（不卷入半成品代码）
       - 自检失败的回滚是路径级的（restore_paths），不会抹掉复盘期间产生的对局存档
     """
+    if _status is not None:
+        _status["canceled"] = False
+    if _review_stop_requested():
+        if _status is not None:
+            _status["canceled"] = True
+        log("[llm] 已收到整套停止请求，不再启动新复盘")
+        return False
     cfg = load_llm_config()
     if not cfg.get("enabled"):
         log("[llm] 复盘已禁用（llm.enabled=false）")
@@ -615,19 +662,36 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         short_prompt,
     ]
 
+    if _review_stop_requested():
+        if _status is not None:
+            _status["canceled"] = True
+        log("[llm] 备份完成时收到停止请求，取消本次复盘")
+        return False
+
     # 直播流开启 + 拉起悬浮窗/语音朗读器（哨兵/meta 先行）
     _stream_begin({"model": entry, "source": source, "run": runs, "time": stamp})
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
 
     autogit.set_review_active(True)     # 此后对局存档只提交 knowledge/
-    rc, out, timed_out = -1, "", False
+    rc, out, timed_out, stopped = -1, "", False, False
     eff_timeout_min = float(cfg.get("preferred_timeout_min", 40)) if source == "preferred" \
         else float(cfg.get("timeout_min", 25))
     translator = OpencodeJsonTranslator()
     try:
-        rc, out, timed_out = _stream_run(cmd, int(eff_timeout_min * 60), translate=translator.feed)
+        rc, out, timed_out, stopped = _stream_run(
+            cmd, int(eff_timeout_min * 60), translate=translator.feed)
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
+        if stopped:
+            if _status is not None:
+                _status["canceled"] = True
+            # 停机路径不执行 git restore/commit/push：保留原子落盘的实时记忆，
+            # 也避免把并发用户改动卷入额外的版本控制副作用。
+            autogit.set_review_active(False)
+            retry_note = "批次下次启动重试" if async_mode else "手动复盘已取消"
+            log(f"[llm] 整套停止已取消复盘；不执行停机期代码回滚，"
+                f"实时记忆保留，{retry_note}（复盘前备份点 {pre_head[:8]}）")
+            return False
         if timed_out:
             log(f"[llm] 复盘超时（{eff_timeout_min:.0f} 分钟），本次作废")
             if source == "preferred":
@@ -650,8 +714,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
         return False
     finally:
-        _stream_end({"exit": rc, "timeout": timed_out})
-        if timed_out or rc != 0:
+        _stream_end({"exit": rc, "timeout": timed_out, "stopped": stopped})
+        if stopped or timed_out or rc != 0:
             # 失败/超时/异常路径在上方提前 return，走不到后处理段的
             # set_review_active(False)——flag 陈旧会永久卡住 autogit 宽窄判断
             # （一日内三次实证）。成功路径保持 True 到后处理结束。
@@ -676,11 +740,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             autogit.set_review_active(False)    # 回滚提交需要 brain/ 全量范围
             if async_mode:
                 # 路径级回滚：只还原复盘可触碰的路径，保留复盘期间的对局存档
-                autogit.restore_paths(pre_head, [
-                    "sts2-ascend/brain", "sts2-ascend/scripts",
-                    "sts2-ascend/knowledge/policy.json", "sts2-ascend/knowledge/stats.json",
-                    "sts2-ascend/knowledge/lessons.md", "sts2-ascend/knowledge/meta_review.md",
-                ], log=log)
+                autogit.restore_paths(pre_head, REVIEW_MUTABLE_PATHS, log=log)
                 autogit.commit_progress(
                     f"revert(sts2-ascend): {batch_txt}复盘未过自检，路径回滚到 {pre_head[:8]}", log=log)
             else:
@@ -729,20 +789,38 @@ def maybe_review(agent, log=print) -> None:
 QUEUE_FILE = KNOWLEDGE_DIR / "review_queue.json"
 _worker_started = False
 _worker_lock = threading.Lock()
+_worker_thread: threading.Thread | None = None
+_queue_lock = threading.RLock()
 
 
-def _load_queue() -> dict:
+def _load_queue_unlocked() -> dict:
     try:
         return json.loads(QUEUE_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {"pending": [], "reviewing": None}
 
 
-def _save_queue(q: dict) -> None:
+def _save_queue_unlocked(q: dict) -> None:
+    temp = QUEUE_FILE.with_name(
+        f".{QUEUE_FILE.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
-        QUEUE_FILE.write_text(json.dumps(q, ensure_ascii=False, indent=1), encoding="utf-8")
+        temp.write_text(json.dumps(q, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(temp, QUEUE_FILE)
     except OSError:
-        pass
+        try:
+            temp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _load_queue() -> dict:
+    with _queue_lock:
+        return _load_queue_unlocked()
+
+
+def _save_queue(q: dict) -> None:
+    with _queue_lock:
+        _save_queue_unlocked(q)
 
 
 def enqueue_review(agent, log=print) -> None:
@@ -783,25 +861,57 @@ def enqueue_review(agent, log=print) -> None:
         agent.know.progression["last_llm_review_run"] = runs
     agent.know.progression["last_review_attempt_source"] = source
     agent.know.save()
-    q = _load_queue()
-    q.setdefault("pending", []).append({"run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
-                                        "model": model, "every": every, "source": source})
-    q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 10))):]
-    _save_queue(q)
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        q.setdefault("pending", []).append({
+            "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
+            "model": model, "every": every, "source": source,
+        })
+        q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 10))):]
+        _save_queue_unlocked(q)
     starve_note = f"（距上次成功复盘 {runs - last_ok} 局，交替出牌）" if starved else ""
     log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
-    _ensure_worker(agent, log)
+    if not _review_stop_requested():
+        _ensure_worker(agent, log)
 
 
 def _ensure_worker(agent, log) -> None:
-    global _worker_started
+    global _worker_started, _worker_thread
+    if _review_stop_requested():
+        return
     with _worker_lock:
         if _worker_started:
             return
         _worker_started = True
-    threading.Thread(target=_worker_loop, args=(agent, log), daemon=True,
-                     name="llm-review-worker").start()
+    _worker_thread = threading.Thread(
+        target=_worker_loop, args=(agent, log), daemon=True,
+        name="llm-review-worker")
+    _worker_thread.start()
     log("[llm] 异步复盘工作线程已启动")
+
+
+def resume_review_queue(agent, log=print) -> None:
+    """Resume queued/interrupted reviews immediately after brain startup."""
+    if not load_llm_config().get("enabled") or _review_stop_requested():
+        return
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        has_work = bool(q.get("pending") or q.get("reviewing"))
+    if has_work:
+        _ensure_worker(agent, log)
+
+
+def shutdown_worker(log=print, timeout: float = 30.0) -> bool:
+    """Cancel and join the optional review worker before Knowledge is saved."""
+    _worker_stop.set()
+    thread = _worker_thread
+    if thread is None or thread is threading.current_thread():
+        return True
+    thread.join(max(0.0, timeout))
+    if thread.is_alive():
+        log(f"[llm] 复盘工作线程在 {timeout:.0f}s 内未退出；交由统一 Stop 的精确兜底处理")
+        return False
+    return True
 
 
 def _kill_orphan_review_processes(log) -> None:
@@ -816,9 +926,12 @@ def _kill_orphan_review_processes(log) -> None:
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         subprocess.run(
             ["powershell", "-NoProfile", "-Command",
-             "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'opencode' "
-             "-and $_.CommandLine -match 'sts2-ascend' -and $_.CommandLine -match '--auto' } "
-             "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"],
+             "& { param($repo) Get-CimInstance Win32_Process | Where-Object { "
+             "$_.Name -match '^opencode(\\.exe)?$' -and $_.CommandLine -match 'sts2-ascend' "
+             "-and $_.CommandLine -match '--auto' -and $_.CommandLine.IndexOf($repo, "
+             "[StringComparison]::OrdinalIgnoreCase) -ge 0 } | ForEach-Object { "
+             "Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } }",
+             str(REPO_DIR)],
             capture_output=True, timeout=30, creationflags=creationflags)
         log("[llm] 已清理遗留的孤儿复盘进程（如有）")
     except Exception as exc:
@@ -828,47 +941,71 @@ def _kill_orphan_review_processes(log) -> None:
 def _worker_loop(agent, log) -> None:
     # 进程重启后：先清孤儿（避免与重跑的复盘双写），再把 reviewing 的对局
     # 重新入队——此前直接丢弃标记，被中断复盘覆盖的对局永远丢失复盘。
+    if _review_stop_requested():
+        return
     _kill_orphan_review_processes(log)
-    q = _load_queue()
-    if q.get("reviewing"):
-        lost_runs = list((q["reviewing"] or {}).get("runs") or [])
-        if lost_runs:
-            log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
-            cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
-            requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
-                        for r in lost_runs]
-            q["pending"] = (requeued + q.get("pending", []))[-cap:]
-        q["reviewing"] = None
-        _save_queue(q)
-    while True:
+    if _review_stop_requested():
+        return
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        if q.get("reviewing"):
+            lost_runs = list((q["reviewing"] or {}).get("runs") or [])
+            if lost_runs:
+                log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
+                cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
+                requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
+                            for r in lost_runs]
+                # Interrupted runs are never discarded when the queue is full.
+                seen = {p.get("run") for p in requeued}
+                pending = [p for p in q.get("pending", []) if p.get("run") not in seen]
+                slots = max(0, cap - len(requeued))
+                q["pending"] = (requeued[:cap] + (pending[-slots:] if slots else []))
+            q["reviewing"] = None
+            _save_queue_unlocked(q)
+    while not _review_stop_requested():
         try:
             # request_restart 已置位 = 本进程已判定待重启（局间 sys.exit(42)）。
             # 此时严禁再开新复盘：开跑即随进程死亡被孤儿化，覆盖的对局丢失
             # （复盘 C 局中完成置位 → worker 又开跑 A → 局末退场掐断 A，实证路径）。
             if getattr(agent, "request_restart", False):
-                time.sleep(5)
-                continue
-            q = _load_queue()
-            pending = q.get("pending", [])
-            if pending and not q.get("reviewing"):
-                batch = list(pending)
-                q["pending"] = []
-                q["reviewing"] = {"runs": [p["run"] for p in batch],
-                                  "started": time.strftime("%Y-%m-%d %H:%M:%S")}
-                _save_queue(q)
+                return
+            with _queue_lock:
+                q = _load_queue_unlocked()
+                pending = q.get("pending", [])
+                if pending and not q.get("reviewing"):
+                    batch = list(pending)
+                    q["pending"] = []
+                    q["reviewing"] = {"runs": [p["run"] for p in batch],
+                                      "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+                    _save_queue_unlocked(q)
+                else:
+                    batch = []
+            if batch:
+                outcome = "running"
                 try:
-                    _run_batch_review(agent, batch, log)
+                    outcome = _run_batch_review(agent, batch, log)
                 finally:
-                    q = _load_queue()
-                    q["reviewing"] = None
-                    _save_queue(q)
-            time.sleep(5)
+                    # Only a genuinely canceled batch remains reviewing for recovery.
+                    canceled = outcome == "canceled" or (
+                        outcome == "running" and _review_stop_requested())
+                    if not canceled:
+                        with _queue_lock:
+                            q = _load_queue_unlocked()
+                            q["reviewing"] = None
+                            _save_queue_unlocked(q)
+                if outcome == "canceled":
+                    return
+            if _wait_review_stop(5):
+                return
         except Exception as exc:
             log(f"[llm] 复盘工作线程异常（已忽略，30s 后继续）：{exc}")
-            time.sleep(30)
+            if _wait_review_stop(30):
+                return
 
 
-def _run_batch_review(agent, batch: list[dict], log) -> None:
+def _run_batch_review(agent, batch: list[dict], log) -> str:
+    if _review_stop_requested():
+        return "canceled"
     cfg = load_llm_config()
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     # 尊重入队时的来源决策，且以**最新一条**为准：饥饿交替出牌时批次常混含
@@ -882,11 +1019,15 @@ def _run_batch_review(agent, batch: list[dict], log) -> None:
         model, every, source = resolve_review_plan(cfg, binary, log=log)
     runs_list = [p["run"] for p in batch]
     log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}）")
+    status: dict = {}
     executed = run_review(agent.know, log=log, model=model, every=every, source=source,
-                          batch_runs=runs_list, async_mode=True)
+                          batch_runs=runs_list, async_mode=True, _status=status)
+    if status.get("canceled"):
+        return "canceled"
     if executed:
         log("[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…")
         agent.request_restart = True
+    return "completed"
 
 
 def main() -> None:

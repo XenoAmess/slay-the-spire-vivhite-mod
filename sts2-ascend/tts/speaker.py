@@ -32,6 +32,9 @@ LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
 SUMMARY_TEXT_FILE = TTS_DIR / "conclusion_text.txt"
 SPEAK_ONCE = TTS_DIR / "speak_once.py"
 
+sys.path.insert(0, str(BASE_DIR / "brain"))
+from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
+
 DURATION_FACTOR = 0.9       # index-tts 语速（稍快）
 SAPI_RATE = 1               # SAPI 语速（-10~10）
 MAX_QUEUE = 256             # 朗读队列上限；到顶时立刻丢弃最老的一半
@@ -43,7 +46,35 @@ SOFT_BREAKS = "，、；;：:"
 VOICE_LOCK = KNOWLEDGE_DIR / "voice_speaker.lock"
 
 
-def _pid_alive(pid: int) -> bool:
+def _process_created_unix(pid: int) -> float:
+    try:
+        import ctypes
+
+        class FileTime(ctypes.Structure):
+            _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+
+        k32 = ctypes.windll.kernel32
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.GetProcessTimes.argtypes = [ctypes.c_void_p] + [ctypes.POINTER(FileTime)] * 4
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
+        h = k32.OpenProcess(0x1000, False, pid)
+        if not h:
+            return 0.0
+        try:
+            created, exited, kernel, user = FileTime(), FileTime(), FileTime(), FileTime()
+            if not k32.GetProcessTimes(h, ctypes.byref(created), ctypes.byref(exited),
+                                       ctypes.byref(kernel), ctypes.byref(user)):
+                return 0.0
+            ticks = (int(created.high) << 32) | int(created.low)
+            return ticks / 10_000_000 - 11_644_473_600
+        finally:
+            k32.CloseHandle(h)
+    except Exception:
+        return 0.0
+
+
+def _pid_alive(pid: int, created_unix: float = 0.0) -> bool:
     """OpenProcess + 映像名校验。仅凭 OpenProcess 成功判活会被 pid 复用毒锁：
     锁 pid 被无关进程复用时误判"活着"→ 单实例锁永久锁死（悬浮窗消失事故）。"""
     if pid <= 0:
@@ -51,12 +82,28 @@ def _pid_alive(pid: int) -> bool:
     try:
         import ctypes
         k32 = ctypes.windll.kernel32
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
         h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
         if not h:
             return False
         try:
+            if created_unix > 0:
+                class FileTime(ctypes.Structure):
+                    _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+                k32.GetProcessTimes.argtypes = [ctypes.c_void_p] + [ctypes.POINTER(FileTime)] * 4
+                created, exited, kernel, user = FileTime(), FileTime(), FileTime(), FileTime()
+                if k32.GetProcessTimes(h, ctypes.byref(created), ctypes.byref(exited),
+                                       ctypes.byref(kernel), ctypes.byref(user)):
+                    ticks = (int(created.high) << 32) | int(created.low)
+                    actual_unix = ticks / 10_000_000 - 11_644_473_600
+                    if abs(actual_unix - created_unix) > 0.1:
+                        return False
             buf = ctypes.create_unicode_buffer(512)
             size = ctypes.c_ulong(512)
+            k32.QueryFullProcessImageNameW.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
+                                                       ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_ulong)]
             if k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
                 return "python" in buf.value.lower()
             return True   # 映像名拿不到（权限等）：保守视为活
@@ -69,19 +116,43 @@ def _pid_alive(pid: int) -> bool:
 def acquire_voice_lock() -> bool:
     try:
         if VOICE_LOCK.exists():
-            old = int(VOICE_LOCK.read_text().strip() or "0")
-            if old and _pid_alive(old):
+            raw = VOICE_LOCK.read_text(encoding="utf-8").strip()
+            structured = raw.startswith("{")
+            if structured:
+                record = json.loads(raw)
+                old = int(record.get("pid", 0))
+                old_session = str(record.get("session_id", "legacy"))
+                old_created = float(record.get("created_unix", 0))
+            else:
+                old = int(raw or "0")
+                old_session = "legacy"
+                old_created = 0.0
+            # Structured locks are trusted across sessions (creation time defeats
+            # PID reuse); legacy plain-PID locks are only authoritative to legacy.
+            if old and (structured or old_session == SESSION_ID) and _pid_alive(old, old_created):
                 return False
-        VOICE_LOCK.write_text(str(os.getpid()))
+        VOICE_LOCK.write_text(json.dumps({
+            "pid": os.getpid(), "session_id": SESSION_ID,
+            "created_unix": _process_created_unix(os.getpid()) or time.time(),
+        }), encoding="utf-8")
         return True
-    except (OSError, ValueError):
+    except (OSError, ValueError, json.JSONDecodeError):
         return True
 
 
 def release_voice_lock() -> None:
     try:
-        VOICE_LOCK.unlink(missing_ok=True)
-    except OSError:
+        raw = VOICE_LOCK.read_text(encoding="utf-8").strip()
+        if raw.startswith("{"):
+            record = json.loads(raw)
+            owner = int(record.get("pid", 0))
+            owner_session = str(record.get("session_id", "legacy"))
+        else:
+            owner = int(raw or "0")
+            owner_session = "legacy"
+        if owner == os.getpid() and owner_session == SESSION_ID:
+            VOICE_LOCK.unlink(missing_ok=True)
+    except (OSError, ValueError, json.JSONDecodeError):
         pass
 
 
@@ -426,6 +497,9 @@ def main() -> int:
         spk.close()
         return 0
 
+    if stop_requested():
+        return 0
+
     if not STREAM_FILE.exists():
         log("直播流不存在，退出")
         return 0
@@ -447,11 +521,11 @@ def main() -> int:
     recent_texts: list[str] = []
 
     def pump() -> None:
-        while True:
+        while not stop_requested():
             try:
                 sent = q.get(timeout=0.5)
             except queue.Empty:
-                if ended:
+                if ended or stop_requested():
                     return
                 continue
             if sapi:
@@ -461,7 +535,7 @@ def main() -> int:
 
     threading.Thread(target=pump, daemon=True).start()
 
-    while True:
+    while not stop_requested():
         for ln in _tail_lines(state):
             if ln.startswith("[LIVE-END]"):
                 ended = True
@@ -490,9 +564,10 @@ def main() -> int:
                     q.put(sent)
             if time.time() - end_at > 3 and q.empty():
                 break
-        time.sleep(0.5)
+        if wait_for_stop(0.5):
+            break
 
-    if mode in ("indextts", "hybrid"):
+    if not stop_requested() and mode in ("indextts", "hybrid"):
         # 优先朗读复盘 agent 专为语音写的短评（review_conclusion.txt，100 字内）；
         # 只有它是本场复盘新写的（mtime 晚于本场开始）才用，否则回退流尾部
         conclusion = ""
@@ -509,7 +584,7 @@ def main() -> int:
     if sapi:
         sapi.close()
     release_voice_lock()
-    log("语音朗读器退出")
+    log("语音朗读器退出" if not stop_requested() else "收到全栈停止请求，语音朗读器退出")
     return 0
 
 

@@ -8,6 +8,7 @@ Usage:  py -m brain            (from sts2-ascend/ directory)
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
 import subprocess
@@ -19,6 +20,7 @@ from pathlib import Path
 
 from client import ConnectionDown, Sts2Client
 from knowledge import Knowledge
+from lifecycle import pid_file, request_stop, stop_requested, wait_for_stop
 from policy import Policy
 from reflect import finalize_run
 
@@ -149,18 +151,6 @@ class Agent:
     def _launch_quipper(self) -> None:
         """启动白绮碎碎念进程（克隆音色低频短评）。它自己有活锁，重复拉起会自动退出。"""
         try:
-            lock = KNOWLEDGE_DIR / "voice_quipper.lock"
-            if lock.exists():
-                try:
-                    pid = int(lock.read_text().strip() or "0")
-                    if pid > 0:
-                        import ctypes
-                        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-                        if h:
-                            ctypes.windll.kernel32.CloseHandle(h)
-                            return  # 已在跑
-                except (OSError, ValueError):
-                    pass
             quipper = BASE_DIR / "tts" / "quipper.py"
             if not quipper.exists():
                 return
@@ -206,21 +196,41 @@ class Agent:
         except Exception:
             return 0
 
-    def ensure_game(self) -> None:
+    def _wait_for_game_api(self, timeout_s: float = 300.0, poll_s: float = 4.0) -> bool:
+        """Wait for the mod API while remaining responsive to Stop-Agent.ps1."""
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if stop_requested():
+                return False
+            if self.client.discover():
+                return True
+            if wait_for_stop(min(poll_s, max(0.0, deadline - time.monotonic()))):
+                return False
+        raise ConnectionDown(
+            f"STS2-Agent API not reachable on ports {self.client.ports} within {timeout_s}s")
+
+    def ensure_game(self) -> bool:
+        if stop_requested():
+            return False
         if self.client.discover():
-            return
+            return True
         if self._game_process_count() > 0:
             # game process exists but API not up yet (still booting / mod loading) — wait, don't relaunch
             log("[agent] 游戏进程已存在但 API 未就绪，等待加载…")
-            self.client.wait_until_ready(timeout_s=300.0, poll_s=4.0)
+            if not self._wait_for_game_api(timeout_s=300.0, poll_s=4.0):
+                return False
             log(f"[agent] 游戏已就绪：{self.client.base_url}")
-            return
+            return True
         log("[agent] 游戏未运行，启动游戏…")
-        exe = self.cfg["game_exe"]
+        exe = os.environ.get("STS2_ASCEND_GAME_LAUNCHER") or self.cfg["game_exe"]
+        if stop_requested():
+            return False
         subprocess.Popen(["cmd", "/c", exe], cwd=str(Path(exe).parent), shell=False,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.client.wait_until_ready(timeout_s=300.0, poll_s=4.0)
+        if not self._wait_for_game_api(timeout_s=300.0, poll_s=4.0):
+            return False
         log(f"[agent] 游戏已就绪：{self.client.base_url}")
+        return True
 
     # ---------------- run context tracking ----------------
 
@@ -732,6 +742,8 @@ class Agent:
 
     def _stuck_analysis_run(self, state: dict) -> None:
         try:
+            if stop_requested():
+                return
             import shutil
             binary = shutil.which("opencode")
             if not binary:
@@ -769,10 +781,27 @@ class Agent:
                 "第一行严格输出：VERDICT: grind 或 VERDICT: offense 或 VERDICT: giveup\n"
                 "第二行用一句中文给出理由。"
             )
-            proc = subprocess.run([binary, "run", "--model", model, "--dir", str(REPO_DIR), prompt],
-                                  capture_output=True, text=True, encoding="utf-8",
-                                  errors="replace", timeout=300)
-            out = proc.stdout or ""
+            if stop_requested():
+                return
+            proc = subprocess.Popen(
+                [binary, "run", "--model", model, "--dir", str(REPO_DIR), prompt],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                encoding="utf-8", errors="replace")
+            deadline = time.monotonic() + 300
+            while True:
+                try:
+                    out, _ = proc.communicate(timeout=0.5)
+                    break
+                except subprocess.TimeoutExpired:
+                    if stop_requested() or time.monotonic() >= deadline:
+                        proc.terminate()
+                        try:
+                            proc.communicate(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                            proc.communicate(timeout=5)
+                        return
+            out = out or ""
             m = re.search(r"VERDICT:\s*(grind|offense|giveup)", out)
             verdict = m.group(1) if m else None
             reason = out.strip().splitlines()[1][:120] if verdict and len(out.strip().splitlines()) > 1 else ""
@@ -818,14 +847,21 @@ class Agent:
         log("[agent] sts2-ascend 自主学习智能体启动")
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
         self._launch_quipper()
-        self.ensure_game()
+        if not self.ensure_game():
+            log("[agent] 启动阶段收到停止请求")
+            return
         health = self.client.health()
         log(f"[agent] 已连接 mod v{health.get('mod_version')}（游戏 {health.get('game_version')}）")
         g = self.know.stats["global"]
         log(f"[agent] 生涯战绩：{g['wins']}/{g['runs']} 胜｜当前目标进阶 {self.know.progression['current_ascension']}")
         self._boot_ticks = 0  # 稳定运行 50 tick 后删除重启标记（向 runner 证明新代码可用）
+        if llm_review is not None:
+            llm_review.resume_review_queue(self, log=log)
 
         while True:
+            if stop_requested():
+                log("[agent] 收到全栈停止请求，停止决策循环")
+                return
             if self.cfg["max_runs"] and self.runs_played >= self.cfg["max_runs"]:
                 log(f"[agent] 达到 max_runs={self.cfg['max_runs']}，停止")
                 return
@@ -833,15 +869,18 @@ class Agent:
                 state = self.client.state()
             except ConnectionDown:
                 log("[agent] 与游戏失去连接，等待恢复…")
-                time.sleep(5)
+                if wait_for_stop(5):
+                    return
                 try:
-                    self.ensure_game()
+                    if not self.ensure_game():
+                        return
                 except Exception as exc:
                     log(f"[agent] 重连失败：{exc}")
                 continue
             except Exception as exc:
                 log(f"[agent] 状态读取异常：{exc}")
-                time.sleep(2)
+                if wait_for_stop(2):
+                    return
                 continue
 
             self._boot_ticks += 1
@@ -892,6 +931,8 @@ class Agent:
             self._track(state, decision)
 
             if decision.action:
+                if stop_requested():
+                    return
                 try:
                     resp = self.client.act(decision.action, **decision.params)
                     status = resp.get("status", "?")
@@ -905,15 +946,19 @@ class Agent:
                         self.policy.note_action_failed(decision.action, decision.tags)
                 except ConnectionDown:
                     log("[agent] 动作执行时断线")
-                    time.sleep(3)
+                    if wait_for_stop(3):
+                        return
                 except Exception as exc:
                     log(f"  ↳ 动作 {decision.action} 失败：{exc}")
                     self.policy.note_action_failed(decision.action, decision.tags)
                     self._note_signature_failure(decision.action, exc)
-                    time.sleep(self.cfg["action_settle"])
-                time.sleep(max(decision.wait, self.cfg["action_settle"]))
+                    if wait_for_stop(self.cfg["action_settle"]):
+                        return
+                if wait_for_stop(max(decision.wait, self.cfg["action_settle"])):
+                    return
             else:
-                time.sleep(self.cfg["poll_interval"])
+                if wait_for_stop(self.cfg["poll_interval"]):
+                    return
 
 
 def main() -> None:
@@ -923,13 +968,24 @@ def main() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
-    cfg = load_config()
-    agent = Agent(cfg)
-    try:
-        agent.run()
-    except KeyboardInterrupt:
-        log("\n[agent] 手动停止，保存知识库…")
-        agent.know.save()
+    with pid_file("brain"):
+        cfg = load_config()
+        agent = Agent(cfg)
+        completed = False
+        try:
+            agent.run()
+            completed = True
+        except KeyboardInterrupt:
+            log("\n[agent] 手动停止，保存知识库…")
+            completed = True
+        finally:
+            if completed and not stop_requested():
+                request_stop("brain-normal-exit")
+            if llm_review is not None:
+                llm_review.shutdown_worker(log=log, timeout=30)
+            if stop_requested():
+                log("[agent] 全栈停止：保存知识库并退出")
+            agent.know.save()
 
 
 if __name__ == "__main__":

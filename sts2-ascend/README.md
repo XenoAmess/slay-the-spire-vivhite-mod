@@ -32,16 +32,33 @@ MCP server（上游附带）对本项目不是必需的。
 ## 快速开始
 
 ```powershell
-# 一键：部署上游 mod（首次自动下载 release）→ 启动/检测游戏 → 启动大脑
-powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
+# 在仓库根目录：按 Source 部署 → Vulkan 启动游戏 → 后台启动 runner/brain
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1
+
+# 完整停止 brain/runner、播报/复盘链和游戏
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1
+
+# 只停智能体与播报链，保留游戏
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1 -KeepGame
 ```
 
 要求：
+
 - 杀戮尖塔2 v0.111.0（`scripts\Deploy-Mod.ps1 -GameDir` 可改路径）
 - `py -3`（Python 3.11+；本机 3.14 验证通过）
-- 游戏必须先以 Vulkan 启动（`launch_vulkan.bat`，脚本已处理）
+- 游戏根目录有 `launch_vulkan.bat`；冷启动由脚本自动调用
 
-停止：在运行大脑的终端按 `Ctrl+C`（或直接结束 python 进程）。知识库实时落盘，随时中断不丢进度。
+启动默认在后台运行，不占住当前终端。常用参数：
+
+- `-SkipDeploy`：复用当前已部署 DLL；附着到已经运行的游戏时必须使用
+- `-Source auto|fork|release`：默认 `auto`，本地 fork clone 存在时优先构建 fork，否则用官方 release
+- `-GameDir <目录>`：自定义游戏安装目录；fork 构建可另传 `-GodotExe`
+- `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
+- `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
+
+停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
+
+`Stack ready` 不表示播报员此刻一定存在：碎碎念由 brain 在语音环境可用时启动；opencode、悬浮窗与复盘 speaker 只在复盘时按需启动。
 
 ## 它如何"进化"
 
@@ -66,8 +83,8 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 3. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
 
 命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
-每个条目**独立失败冷却**：超时冷却 30 分钟（免费模型拥堵常见，从宽），
-硬失败（exit≠0/异常）冷却 60 分钟（`preferred_*_cooldown_min`）。
+每个条目**独立失败冷却**：当前超时与硬失败（exit≠0/异常）都冷却 5 分钟，
+由 `preferred_*_cooldown_min` 配置。
 
 并发安全设计：
 
@@ -102,15 +119,15 @@ powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1
 
 ## 语音朗读（ASCEND-VOICE）
 
-复盘启动时还会拉起语音朗读器，把模型的分析过程**读出声**。默认 **nano 模式**：
-全程用 **MOSS-TTS-Nano** 以白绮克隆音色朗读（0.1B ONNX CPU，本机 RTF≈2.6）：
+复盘启动时还会按配置拉起语音朗读器，把模型的分析过程**读出声**。当前默认是 **edge 模式**；
+白绮碎碎念的克隆引擎则是 MOSS-TTS-Nano。`nano` 模式可全程用克隆音色朗读（0.1B ONNX CPU，本机 RTF≈2.6）：
 
 - **允许滞后**：朗读队列上限 4096 句（超出丢最老防溢出），复盘结束后也会把积压内容读完才退出
 - 合成/播放流水线并行；参考音色 `tts/reference_voice_48k.wav`（48kHz 立体声，替换即换音色）
 - 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
 - 单实例锁：复盘连开时只有一个朗读器在跑，新流截断自动接续
-- 模式：`config.json` 的 `llm.tts_mode` = `hybrid`（默认：SAPI 实时直播 + 克隆音色读结论）/ `nano`（全克隆音色，滞后大）/ `sapi`（纯系统语音）/ `off`
-- **音量控制**：`Ctrl+Alt+↑` 调大 / `Ctrl+Alt+↓` 调小（±10%，最大 200%）/ `Ctrl+Alt+M` 静音切换；
+- 模式：`config.json` 的 `llm.tts_mode` = `edge`（默认）/ `hybrid`（SAPI 实时直播 + 克隆结论）/ `nano`（全克隆音色，滞后大）/ `sapi`（纯系统语音）/ `off`
+- **音量控制**：`Ctrl+Shift+Alt+↑` 调大 / `Ctrl+Shift+Alt+↓` 调小（±10%）/ `Ctrl+Shift+Alt+M` 静音切换；
   悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）
 - 手动试听：`uv run --no-project --with onnxruntime --with sentencepiece --with torch --with torchaudio python tts/nano_speaker.py --test`
 
@@ -119,11 +136,18 @@ TTS 环境在 `third_party/`（uv 旁路，gitignore）。选型实测见 `docs/
 ## 进程结构
 
 ```
-runner.py（监督进程：拉起大脑 / 退出码42重启 / 崩溃自动回滚）
-  └─ py -m brain（决策主循环，游玩不中断）
-        ├─ 每局结束 → 入队 review_queue.json
-        └─ 复盘工作线程（串行消化，可多局合并）→ opencode run（ox-alpha / k3）→ 直播悬浮窗
+Start-Agent.ps1（session + PID 身份记录，默认后台）
+  ├─ SlayTheSpire2.exe（Vulkan）
+  └─ runner.py（拉起大脑 / 退出码42重启 / 崩溃自动回滚）
+        └─ py -m brain（决策主循环）
+              ├─ quipper.py（白绮碎碎念，环境可用时）
+              ├─ 每局结束 → review_queue.json
+              └─ 复盘线程 → opencode → viewer / speaker（按需）
+
+Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏关窗
 ```
+
+进程协议在 `.runtime/`，共享实现为 `brain/lifecycle.py`。GUID stop 文件在停止后保留，用来阻止旧进程跨新 session 复活；不要手工清理。
 
 每局结束自动 `git commit+push` 存档（`brain/autogit.py`），进化历史全程可追溯。
 

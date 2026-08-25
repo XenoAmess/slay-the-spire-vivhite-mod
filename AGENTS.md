@@ -21,7 +21,7 @@ Slay the Spire 2（杀戮尖塔2）角色 Mod「白绮 Vivhite」。
 | --- | --- |
 | 游戏目录 | `G:\SteamLibrary\steamapps\common\Slay the Spire 2` |
 | 游戏 exe | `G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.exe` |
-| 启动方式 | `%command% --rendering-driver vulkan`（**必须 vulkan**；根目录 `launch_vulkan.bat` 已封装） |
+| 启动方式 | `%command% --rendering-driver vulkan`（**必须 vulkan**；游戏根目录 `launch_vulkan.bat` 已封装） |
 | mod 部署目录 | `<游戏目录>\mods\<ModId>\`（dll + json + pck 三件套） |
 | 游戏日志 | `%APPDATA%\SlayTheSpire2\logs\godot.log`（当前会话） |
 | .NET SDK | `C:\Users\xenoa\AppData\Local\Microsoft\dotnet`（9.0.317 + 8.0.30 运行时） |
@@ -67,11 +67,39 @@ Set-Clipboard "card VIVHITE_CARD_VIVHITE_STRIKE"
 （游戏内 HTTP API，`mods/` 根目录部署 `STS2AIAgent.dll/.pck/mod_id.json`，端口 8080+），
 外挂一个纯 Python 标准库的自主学习大脑（`sts2-ascend/brain/`）。
 
-- 启动：`powershell -ExecutionPolicy Bypass -File sts2-ascend\scripts\Start-Agent.ps1`
+- 启动：`powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1`（默认后台运行）
 - 大脑记忆在 `sts2-ascend/knowledge/`（stats/policy/progression/lessons/runs，已 gitignore，**不要手工改**）
 - 上游 release 包在 `sts2-ascend/third_party/dist/`（gitignore，由 `scripts/Deploy-Mod.ps1` 自动下载）
-- 上游修复流程：先在 fork（XenoAmess/STS2-Agent，本地克隆 `sts2-ascend/third_party/STS2-Agent`）main 验证，再拉分支提 PR。已提：#46（AoE药水）、#47（UNLOCK屏）、#48（CRYSTAL_SPHERE 占卜屏完整支持）。**注意**：Deploy-Mod.ps1 重新部署会覆盖回上游 release dll，PR 未合并前需重新拷贝 fork 构建的 dll
+- 上游修复流程：先在 fork（XenoAmess/STS2-Agent，本地克隆 `sts2-ascend/third_party/STS2-Agent`）main 验证，再拉分支提 PR。已提：#46（AoE药水）、#47（UNLOCK屏）、#48（CRYSTAL_SPHERE 占卜屏完整支持）。`Deploy-Mod.ps1 -Source auto` 在本地 fork clone 存在时优先构建 fork；只有显式 `-Source release` 才部署官方未补丁包。
 - 详细见 `sts2-ascend/README.md` 与 `docs/2026-08-22-sts2-ascend自动游玩智能体.md`
+
+### 自动游玩全栈启停（AI 必读）
+
+以下命令都从仓库根目录执行：
+
+```powershell
+# 默认：按 Source 部署、Vulkan 启动游戏、后台启动 runner/brain
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1
+
+# 完整停止：brain/runner、碎碎念、复盘 opencode/viewer/speaker，以及游戏
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1
+
+# 只停止智能体和播报/复盘链，保留游戏
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1 -KeepGame
+```
+
+- 用户说“启动/停止整套”“游戏 + brain + 播报员”时，AI **只使用上述统一入口**。不要分别拉起组件，不要泛杀 `python` / `uv` / `opencode`，也不要按 8080–8084 端口杀进程。
+- `Start-Agent.ps1` 默认后台运行且幂等。`-SkipDeploy` 复用已部署 DLL；游戏已经运行时必须使用它，否则脚本会拒绝部署以避免 DLL 锁。`-Foreground` 仅用于调试，完整停止仍使用 `Stop-Agent.ps1`。
+- `-Source auto`（默认）优先本地 fork、否则使用 release；`-Source fork` 强制 fork 构建；`-Source release` 强制官方包。自定义安装传 `-GameDir`，fork 构建可传 `-GodotExe`。
+- “Stack ready”只表示当前 session 的 brain 存活且 8080–8084 中某个 `/health` 已就绪。碎碎念由 brain 拉起；复盘的 opencode、悬浮窗和 speaker 按需出现，平时不存在不是启动失败。就绪等待超时只警告，runner 仍在后台自愈，此时不要再启动第二套。
+- `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
+- `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。
+
+生命周期维护规则：
+
+- 新增长驻 Python 组件必须继承 `STS2_ASCEND_SESSION_ID`、`STS2_ASCEND_RUNTIME_DIR`、`STS2_ASCEND_STOP_FILE`，用 `brain/lifecycle.py` 的 `stop_requested()` / `wait_for_stop()` 响应停止；核心角色用 `pid_file(role)` 发布带 session 和精确创建身份的 PID 记录。
+- 新增 detached 脚本或锁文件时，同步更新 `Start-Agent.ps1` 的残留拒绝清单，以及 `Stop-Agent.ps1` 的 scoped 进程、lock 和 marker 清单。身份校验不得退化为只看进程名、PID 或端口。
+- 修改生命周期协议时必须同步更新 Start、Stop、AGENTS、README，并至少验证：冷启动、重复 Start、启动中 Stop、正常 Stop、重复 Stop、`-KeepGame`、复盘/TTS 活跃时 Stop，以及无关 Python/OpenCode 不被命中。
 
 ## 工作流程规则
 

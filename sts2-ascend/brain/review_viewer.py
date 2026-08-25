@@ -27,6 +27,8 @@ import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
 
+from lifecycle import stop_requested
+
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")   # opencode 偶尔漏出的 ANSI 转义
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -67,12 +69,17 @@ def _pid_alive(pid: int) -> bool:
     try:
         import ctypes
         k32 = ctypes.windll.kernel32
+        k32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        k32.OpenProcess.restype = ctypes.c_void_p
+        k32.CloseHandle.argtypes = [ctypes.c_void_p]
         h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
         if not h:
             return False
         try:
             buf = ctypes.create_unicode_buffer(512)
             size = ctypes.c_ulong(512)
+            k32.QueryFullProcessImageNameW.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
+                                                       ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_ulong)]
             if k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
                 return "python" in buf.value.lower()
             return True   # 映像名拿不到（权限等）：保守视为活
@@ -112,8 +119,9 @@ def acquire_lock() -> bool:
 
 def release_lock() -> None:
     try:
-        LOCK_FILE.unlink(missing_ok=True)
-    except OSError:
+        if int(LOCK_FILE.read_text(encoding="utf-8").strip() or "0") == os.getpid():
+            LOCK_FILE.unlink(missing_ok=True)
+    except (OSError, ValueError):
         pass
 
 
@@ -447,17 +455,25 @@ class Viewer:
 
     # ----- 帧循环 -----
     def _frame(self) -> None:
+        if stop_requested():
+            self._quit()
+            return
         now = time.time()
         dt = 0.033
         if not getattr(self, "_boot_f1", False):
             self._boot_f1 = True
             self._boot("frame-first")
-        if now - getattr(self, "_last_beat", 0) > 5:
+        if self.mode != "demo" and now - getattr(self, "_last_beat", 0) > 5:
             self._last_beat = now
             try:
+                owner = int(LOCK_FILE.read_text(encoding="utf-8").strip() or "0")
+                if owner != os.getpid():
+                    self._quit()
+                    return
                 LOCK_FILE.touch()      # 心跳：mtime 即生命信号（心跳锁）
-            except OSError:
-                pass
+            except (OSError, ValueError):
+                self._quit()
+                return
         try:
             self._poll_source(now)
             self._update_rain(dt)
@@ -681,12 +697,15 @@ class Viewer:
             self._fade_start = now
 
     def _quit(self) -> None:
+        if getattr(self, "_quitting", False):
+            return
+        self._quitting = True
         release_lock()
         try:
+            self.root.quit()
             self.root.destroy()
         except Exception:
             pass
-        os._exit(0)
 
     def run(self) -> None:
         self._boot("run-entered")
