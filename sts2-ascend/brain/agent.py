@@ -611,10 +611,14 @@ class Agent:
         # 子账本靠它分流——健康状态主动打的精英与低血被迫打的精英是两个分布
         _fl = int(agg.get("floor") or 1)
         act_no = (_fl - 1) // 17 + 1
+        # died 同步入账（第 479~482 局批复盘）：存活尾部子账本靠它分流——
+        # 阵亡场掉血=入场血量，混进尾部记忆会把「单场最差」永久钉在满管血，
+        # 尾部定价与生存复核从 F1 满血起全图空转（详见 knowledge 端 docstring）
         self.know.commit_room_damage(agg.get("node_type") or "Unknown",
                                      float(agg.get("hp_lost_sum", 0.0)), act=act_no,
                                      floor=_fl,
-                                     hp_start_pct=agg.get("hp_start_pct"))
+                                     hp_start_pct=agg.get("hp_start_pct"),
+                                     died=bool(agg.get("died")))
         note = (f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
                 + ("（阵亡）" if agg.get("died") else ""))
         self.ctx.combat_notes.append(note)

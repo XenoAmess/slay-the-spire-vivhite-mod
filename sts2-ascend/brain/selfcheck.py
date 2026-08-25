@@ -951,8 +951,51 @@ def main() -> int:
         else:
             know.stats["rooms_band"]["Monster@1_b1"] = _d_rband_b1
 
+    # 4nd) 存活尾部记忆（第479~482局批复盘）：hp_lost_max 是含死亡样本的
+    #      running max——阵亡场掉血恒等于入场血量，max 被永久钉在满管血附近
+    #      （实测 Monster 均值10.1/max88、一幕前段均值5.5/max80），尾部定价与
+    #      生存复核从 F1 满血起全图空转。修复：commit 按 died 分流维护
+    #      hp_lost_max_surv/damage_events_surv 三级双写；room_damage_worst 各层
+    #      优先返回成熟存活尾部（≥3 样本），未成熟回落旧口径；死亡样本不得入
+    #      存活账但照旧入全量账
+    _nd = "SX_SURV"
+    know.stats.setdefault("rooms_act", {})[_nd + "@1"] = {
+        "hp_lost_sum": 800.0, "damage_events": 100, "hp_lost_max": 80.0}
+    try:
+        # 死亡样本：只入全量账，存活账不动，getter 未成熟回落旧口径
+        know.commit_room_damage(_nd, 79.0, act=1, floor=14, died=True)
+        ra_nd = know.stats["rooms_act"][_nd + "@1"]
+        assert int(ra_nd.get("damage_events_surv", 0) or 0) == 0, \
+            f"死亡样本漏进存活账: {ra_nd}"
+        assert abs(float(ra_nd["hp_lost_max"]) - 80.0) < 1e-9, \
+            f"死亡样本应照旧更新全量 max(79<80 不变): {ra_nd.get('hp_lost_max')}"
+        assert know.room_damage_worst(_nd, 1) == 80.0, \
+            f"存活账未成熟必须回落旧口径: {know.room_damage_worst(_nd, 1)}"
+        # 存活样本：<3 不出账；≥3 后优先于被死亡污染的旧 max
+        know.commit_room_damage(_nd, 30.0, act=1, floor=14, died=False)
+        assert know.room_damage_worst(_nd, 1) == 80.0, "存活样本<3 不应出账"
+        know.commit_room_damage(_nd, 25.0, act=1, floor=14, died=False)
+        know.commit_room_damage(_nd, 35.0, act=1, floor=14, died=False)
+        ra_nd = know.stats["rooms_act"][_nd + "@1"]
+        assert int(ra_nd["damage_events_surv"]) == 3 and abs(
+            float(ra_nd["hp_lost_max_surv"]) - 35.0) < 1e-9, \
+            f"存活尾部三级入账失败: {ra_nd}"
+        assert know.room_damage_worst(_nd, 1) == 35.0, \
+            f"成熟存活尾部应压过死亡污染旧账: {know.room_damage_worst(_nd, 1)}"
+        assert int(ra_nd["damage_events"]) == 104, \
+            f"全量账必须照常累积(100+4): {ra_nd.get('damage_events')}"
+        # 层段级同口径：带内存活尾部最优先（压过带内旧账与分幕旧账）
+        know.stats.setdefault("rooms_band", {})[_nd + "@1_b3"] = {
+            "hp_lost_sum": 500.0, "damage_events": 50, "hp_lost_max": 77.0,
+            "damage_events_surv": 3, "hp_lost_max_surv": 41.0}
+        assert know.room_damage_worst(_nd, 1, row_in_act=14) == 41.0, \
+            f"层段存活尾部应最优先: {know.room_damage_worst(_nd, 1, row_in_act=14)}"
+    finally:
+        know.stats["rooms_act"].pop(_nd + "@1", None)
+        know.stats.get("rooms_band", {}).pop(_nd + "@1_b3", None)
 
-    # 3o) 商店删牌语义：关键词缺失时由握手标志兜底，且必须删最无价值牌而非最高价值牌
+
+# 3o) 商店删牌语义：关键词缺失时由握手标志兜底，且必须删最无价值牌而非最高价值牌
     #     （第 43 局 F7 删掉余烬+、第 44 局 F9 删掉上勾拳——付费删掉自己最强的牌）
     def removal_state(prompt_txt, kind_txt=""):
         return {"screen": "CARD_SELECTION",

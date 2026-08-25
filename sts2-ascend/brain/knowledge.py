@@ -909,7 +909,8 @@ class Knowledge:
 
     def commit_room_damage(self, node_type: str, hp_lost: float, act: int | None = None,
                            floor: int | None = None,
-                           hp_start_pct: float | None = None) -> None:
+                           hp_start_pct: float | None = None,
+                           died: bool | None = None) -> None:
         """按房间类型累计战斗掉血（供路径先验动态校准）。
 
         act 传入时同步写入分幕键（第 79 局复盘新增）：跨幕混算的场均掉血
@@ -933,12 +934,29 @@ class Knowledge:
         ≥ elite_healthy_entry_pct 的 Elite 战斗额外计入 hp_lost_sum_hi/
         damage_events_hi 子账本（rooms 与 rooms_act 两级；band 样本太薄不写），
         供 elite_prior_healthy 消费。旧条目无此键即从空累积，历史数据不回填。
+
+        存活尾部子账本（第 479~482 局批复盘新增）：hp_lost_max 是含死亡样本
+        的 running max——阵亡场的掉血恒等于入场血量，量级只反映「进场多残」
+        而非「这一战多危险」，max 因此被永久钉在满管血附近且永不衰减（实测：
+        Monster 跨幕均值 10.1 / max 88，一幕前段均值 5.5 / max 80，Elite/Boss
+        同病）。尾部定价与生存复核消费这份被污染的账，从 F1 满血起就全图
+        触发（留痕「单场最差80打完仅剩0(≤8)」），先验被抬到 8→17~19 的幻影
+        高位，候选间的真实差异被近似常数罚分淹没。自本批起 died=False 的样本
+        额外计入 hp_lost_max_surv/damage_events_surv（三级同写；died=None 的
+        旧调用按存活处理保持兼容），查询端 room_damage_worst 各层级优先返回
+        成熟存活尾部；死亡样本照旧入全量账（场均/死亡率先验不受影响）。
         """
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
         e["damage_events"] = e.get("damage_events", 0) + 1
         e["hp_lost_max"] = max(float(e.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+        if died is None or not died:
+            # 存活尾部子账本（第 479~482 局批复盘）：只有活着走出来的战斗才
+            # 回答「坏一场掉多少」；阵亡场的掉血=入场血量，入账即污染（见 docstring）
+            e["damage_events_surv"] = int(e.get("damage_events_surv", 0) or 0) + 1
+            e["hp_lost_max_surv"] = max(float(e.get("hp_lost_max_surv") or 0.0),
+                                        max(0.0, float(hp_lost)))
         _is_healthy_elite = (node_type == "Elite" and hp_start_pct is not None
                              and float(hp_start_pct) >= float(
                                  self.policy.get("elite_healthy_entry_pct", 0.75)))
@@ -953,6 +971,10 @@ class Knowledge:
             ra["hp_lost_sum"] += max(0.0, hp_lost)
             ra["damage_events"] += 1
             ra["hp_lost_max"] = max(float(ra.get("hp_lost_max") or 0.0), max(0.0, float(hp_lost)))
+            if died is None or not died:
+                ra["damage_events_surv"] = int(ra.get("damage_events_surv", 0) or 0) + 1
+                ra["hp_lost_max_surv"] = max(float(ra.get("hp_lost_max_surv") or 0.0),
+                                             max(0.0, float(hp_lost)))
             if _is_healthy_elite:
                 ra["hp_lost_sum_hi"] = float(ra.get("hp_lost_sum_hi", 0.0)) + max(0.0, hp_lost)
                 ra["damage_events_hi"] = int(ra.get("damage_events_hi", 0)) + 1
@@ -967,6 +989,10 @@ class Knowledge:
                 rb["damage_events"] += 1
                 rb["hp_lost_max"] = max(float(rb.get("hp_lost_max") or 0.0),
                                         max(0.0, float(hp_lost)))
+                if died is None or not died:
+                    rb["damage_events_surv"] = int(rb.get("damage_events_surv", 0) or 0) + 1
+                    rb["hp_lost_max_surv"] = max(float(rb.get("hp_lost_max_surv") or 0.0),
+                                                 max(0.0, float(hp_lost)))
 
     def elite_prior_healthy(self, act: int, static_prior: float) -> tuple[float, bool]:
         """健康进场精英实证先验（第 396 局批次复盘新增）。
@@ -1012,6 +1038,20 @@ class Knowledge:
         worst = float(rb["hp_lost_max"]) if rb.get("hp_lost_max") is not None else None
         return avg, worst, n
 
+    @staticmethod
+    def _survived_tail(entry: dict | None, min_events: int) -> float | None:
+        """存活尾部读取（第 479~482 局批复盘）：≥min_events 个非死亡样本才出账。
+
+        旧条目缺 hp_lost_max_surv/damage_events_surv 键视为无存活尾部样本，
+        返回 None 由调用方回落旧口径——宁可缺账不可捏造，与 hp_min 同规。
+        """
+        if not entry:
+            return None
+        n_surv = int(entry.get("damage_events_surv", 0) or 0)
+        if n_surv < min_events or entry.get("hp_lost_max_surv") is None:
+            return None
+        return float(entry["hp_lost_max_surv"])
+
     def room_damage_worst(self, node_type: str, act: int | None = None,
                           row_in_act: int | None = None) -> float | None:
         """该房间类型历史单场最差掉血（重尾记忆，第 258~262 批次复盘新增）。
@@ -1021,20 +1061,38 @@ class Knowledge:
         （≥3 场），再回落跨幕条目（样本≥5）。旧库迁移条目无 hp_lost_max 键，
         返回 None（无尾部样本），调用方维持旧均值口径——尾部自新样本起累积，
         宁可缺账不可捏造。
+
+        存活尾部优先（第 479~482 局批复盘）：各层级先查存活子账本
+        （hp_lost_max_surv，≥3 个非死亡样本），命中即返回——它才是「坏一场
+        （还活着的那种）能掉多少」的无偏答案；未成熟时回落含死亡样本的
+        旧 hp_lost_max 口径，历史污染随新样本累积自然退役。层级顺序、样本
+        门槛与回落行为均与旧版严格一致。
         """
         if act is not None and row_in_act is not None:
             b = self.room_damage_band_stats(node_type, act, row_in_act)
-            if b is not None and b[1] is not None:
-                return b[1]
+            if b is not None:
+                rb = (self.stats.get("rooms_band") or {}).get(
+                    f"{node_type}@{int(act)}_b{act_floor_band(row_in_act)}")
+                _tail = self._survived_tail(rb, 3)
+                if _tail is not None:
+                    return _tail
+                if b[1] is not None:
+                    return b[1]
         if act is not None:
             ra = self.stats.get("rooms_act", {}).get(f"{node_type}@{int(act)}")
-            if (ra and ra.get("hp_lost_max") is not None
-                    and int(ra.get("damage_events", 0) or 0) >= 3):
-                return float(ra["hp_lost_max"])
+            if (ra and int(ra.get("damage_events", 0) or 0) >= 3):
+                _tail = self._survived_tail(ra, 3)
+                if _tail is not None:
+                    return _tail
+                if ra.get("hp_lost_max") is not None:
+                    return float(ra["hp_lost_max"])
         e = self.stats.get("rooms", {}).get(node_type)
-        if (e and e.get("hp_lost_max") is not None
-                and int(e.get("damage_events", 0) or 0) >= 5):
-            return float(e["hp_lost_max"])
+        if (e and int(e.get("damage_events", 0) or 0) >= 5):
+            _tail = self._survived_tail(e, 3)
+            if _tail is not None:
+                return _tail
+            if e.get("hp_lost_max") is not None:
+                return float(e["hp_lost_max"])
         return None
 
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
