@@ -74,15 +74,33 @@ def _pid_alive(pid: int) -> bool:
 
 
 def acquire_lock() -> bool:
-    try:
-        if LOCK_FILE.exists():
-            old = int(LOCK_FILE.read_text().strip() or "0")
-            if old and _pid_alive(old):
-                return False
-        LOCK_FILE.write_text(str(os.getpid()))
-        return True
-    except (OSError, ValueError):
-        return True
+    """原子抢锁：O_CREAT|O_EXCL 独占创建；已存在则查 pid 活性，死锁接管。
+
+    此前实现是"读改写"且任何异常默认放行（return True）——两个实例同时
+    启动撞出 OSError 就双双运行（双悬浮窗抢焦点事故）。失败必须拒绝。"""
+    for _ in range(3):
+        try:
+            fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            try:
+                os.write(fd, str(os.getpid()).encode())
+            finally:
+                os.close(fd)
+            return True
+        except FileExistsError:
+            try:
+                old = int(LOCK_FILE.read_text().strip() or "0")
+                if old and _pid_alive(old):
+                    return False
+                LOCK_FILE.unlink(missing_ok=True)       # 死锁接管
+            except (OSError, ValueError):
+                try:
+                    LOCK_FILE.unlink(missing_ok=True)
+                except OSError:
+                    return False
+        except OSError:
+            pass
+        time.sleep(0.2)
+    return False
 
 
 def release_lock() -> None:
@@ -274,6 +292,34 @@ class Viewer:
             self._make_focus_invisible()
             self._set_clickthrough()
             self.root.after(150, self._restore_previous_focus)
+
+    def _make_focus_invisible(self) -> None:
+        """悬浮窗纯覆盖、永不抢激活：WS_EX_NOACTIVATE。
+
+        Tk overrideredirect 窗口（WS_POPUP）映射时默认抢激活——全屏游戏被踢出
+        独占、任务栏盖到游戏上（右侧栏事故）。必须在映射（update）前打上样式。"""
+        try:
+            u32 = ctypes.windll.user32
+            self._hwnd_prev = u32.GetForegroundWindow()
+            hwnd = int(self.root.wm_frame(), 16)
+            gwl_exstyle = -20
+            ws_ex_noactivate = 0x08000000
+            style = u32.GetWindowLongPtrW(hwnd, gwl_exstyle)
+            u32.SetWindowLongPtrW(hwnd, gwl_exstyle, style | ws_ex_noactivate)
+        except Exception:
+            self._hwnd_prev = 0
+
+    def _restore_previous_focus(self) -> None:
+        """把焦点还给建窗前的前台窗口（ALT 技巧绕过 SetForegroundWindow 前台锁）。"""
+        try:
+            u32 = ctypes.windll.user32
+            hwnd_prev = getattr(self, "_hwnd_prev", 0)
+            if hwnd_prev and u32.IsWindow(hwnd_prev):
+                u32.keybd_event(0x12, 0, 0, 0)          # ALT down
+                u32.SetForegroundWindow(hwnd_prev)
+                u32.keybd_event(0x12, 0, 2, 0)          # ALT up
+        except Exception:
+            pass
 
     def _on_drag(self, e) -> None:
         if self._drag:
