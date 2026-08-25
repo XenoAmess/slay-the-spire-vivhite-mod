@@ -6282,3 +6282,14 @@
 - 记录在案：FUZZY_WURM+SHRINKER 生涯死亡率 20% 恰好漏出 0.25 高危线（意图升级型拖长战杀手），挂起观察单独建档方案；danger_comp_blk_boost 已推至 0.50 待验饱和。
 - 经验分层准绳：机制类证据（重生体、转场满血）跨局永久有效应持久化并设实证门槛；数值类证据随版本衰减走回落账本。
 - 生涯战绩：0/509 胜，当前目标进阶 0
+
+## 第 512 局复盘（2026-08-25 19:49）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：TAUNT, MOLTEN_FIST, HEMOKINESIS, UNRELENTING, DISMANTLE, CRUELTY, DRUM_OF_BATTLE, HOWL_FROM_BEYOND, CONFLAGRATION, BREAKTHROUGH, PACTS_END, TWIN_STRIKE, RUPTURE, BATTLE_TRANCE, MOLTEN_FIST, WHIRLWIND, JUGGERNAUT, MANGLE, JUGGLING, HOWL_FROM_BEYOND, DISINTEGRATION, MIND_ROT
+- 本局遗物：WHETSTONE, 餐券, LUCKY_FYSH, CENTENNIAL_PUZZLE
+- 战斗记录：F19 Monster战 掉血9; F22 Monster战 掉血25; F23 Monster战 掉血39; F25 Monster战 掉血14; F31 Monster战 掉血47; F33 Boss战 掉血42（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，VOLLEY(24分/11局)，CONFLAGRATION(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/512 胜，当前目标进阶 0

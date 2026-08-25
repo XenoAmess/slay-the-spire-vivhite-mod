@@ -271,7 +271,9 @@ class Viewer:
             r.bind("<Escape>", lambda _e: self._quit())
         r.update()
         if not self.interactive:
+            self._make_focus_invisible()
             self._set_clickthrough()
+            self.root.after(150, self._restore_previous_focus)
 
     def _on_drag(self, e) -> None:
         if self._drag:
