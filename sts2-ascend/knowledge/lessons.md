@@ -6395,3 +6395,14 @@
 - 商店删卡纳入冗余未升级 DEFEND（格挡密度>min_block_cards 守卫，献祭不受影响）：注水端与清理端必须成对设计，DEFEND 12848 次打出的臃肿此前永不可逆。
 - 锻造升级改传真实卡组上下文：空上下文评估的镜像缺陷会成对出现（拿牌端第33局/锻造端本批），修一处时 grep 同型调用。
 - 生涯战绩：0/517 胜（本批覆盖时点），当前目标进阶 0
+
+## 第 521 局复盘（2026-08-25 20:56）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TRUE_GRIT, CINDER, CINDER, EQUILIBRIUM, ARMAMENTS, MOLTEN_FIST, JUGGLING, MOLTEN_FIST, HOWL_FROM_BEYOND
+- 本局遗物：MERCURY_HOURGLASS, 百年积木
+- 战斗记录：F5 Monster战 掉血0; F8 Unknown战 掉血6; F12 Unknown战 掉血0; F14 Elite战 掉血0; F15 Monster战 掉血6; F17 Boss战 掉血81（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/13局)，CONFLAGRATION(24分/34局)，FEED(24分/33局)，MANGLE(24分/59局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（93%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/521 胜，当前目标进阶 0
