@@ -1658,6 +1658,12 @@ class Policy:
                     if clogged:
                         score += min(clogged, 2) * exhaust_unclog_bonus
             score += self.know.card_value(c.get("card_id", "")) * 0.3
+            # 零出牌死牌出牌否决（第529局批复盘）：生涯多拿零打的强制入组牌
+            # 若在战斗端可出，learned value 加成与面板高伤会让它抢能量——
+            # 与拾取端一票否决同一份证据接到出牌端口（负值有限，僵局强攻
+            # 兜底通道不受影响）
+            if self._is_never_played_dead(c.get("card_id", "")):
+                score -= float(pol.get("never_played_veto_penalty", 40.0))
             if best is None or score > best[0]:
                 best = (score, c, target, why)
 
@@ -2478,18 +2484,37 @@ class Policy:
             return self._deck_has_self_damage(deck)
         return True
 
+    def _is_never_played_dead(self, card_id: str) -> bool:
+        """零出牌死牌判定（第529局批复盘新增）。
+
+        知识恶魔战强制入组的瓦解/心灵腐化/懒惰类死牌：生涯多拿零打
+        （DISINTEGRATION 29拿0打），面板数字被 card_numbers 解析成高伤攻击，
+        幻影伤害会污染 deck_burst 爆发口径。判据与拾取端一票否决同一把尺：
+        picked ≥ unplayed_min_picked 且 plays == 0；引擎日后真实打出
+        （plays>0）自动解除（自愈）；冷启动无统计恒 False，行为不变。
+        """
+        pol = self.know.policy
+        e = (self.know.stats.get("cards") or {}
+             ).get((card_id or "").upper().rstrip("+")) or {}
+        return (int(e.get("picked", 0) or 0) >= int(pol.get("unplayed_min_picked", 4))
+                and not int(e.get("plays", 0) or 0))
+
     def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
 
         第 88~89 批复盘新增（原为 eval_reward_card 内联逻辑，第 90~91 批复盘
         提取为公共方法）：斩杀竞速投影在战斗头两回合（实测速率样本不足时）
         也需要卡组理论爆发做先验估计，两处必须共用同一套口径。
+        零出牌死牌不计入装箱（第529局批复盘）：强制入组牌的面板伤害从未被
+        战斗端兑现，计入等于给饥饿判定/竞速预演/药水预留发幻影额度。
         """
         burst_energy, burst = energy, 0.0
         _burst_cards = []
         for c in deck or []:
             d, _b, h = card_numbers(c)
             if d > 0 and is_attack(c):
+                if self._is_never_played_dead(c.get("card_id", "")):
+                    continue
                 _cost = max(1, c.get("energy_cost", 1) or 1)
                 _burst_cards.append((d * h / _cost, _cost, d * h))
         _burst_cards.sort(reverse=True)
@@ -2984,12 +3009,22 @@ class Policy:
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
             # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
             # （第 65~66 局复盘：门槛升级为随卡组膨胀动态抬升）
-            if best_v < pick_line and "skip_reward_cards" in actions \
+            _has_skip = "skip_reward_cards" in actions
+            if best_v < pick_line and _has_skip \
                     and not self._thin_deck_must_pick(deck, best_v):
                 return Decision("skip_reward_cards", {},
                                 f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)
-            tag = "card_top_pick" if top_of_pile else "card_pick"
+            # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
+            # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
+            # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
+            # outcome 账与「本局拿牌」榜此前被此类强制屏系统性灌水
+            if top_of_pile:
+                tag = "card_top_pick"
+            elif not _has_skip and best_v < pick_line:
+                tag = "card_forced_add"
+            else:
+                tag = "card_pick"
             verb = "牌堆顶选择" if top_of_pile else "选择卡牌"
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
             reason = f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）；候选：{detail}"

@@ -3526,11 +3526,11 @@ Boss 战前段联合能量复核判「可行」维持攻防节奏、第 5 回合
 
 | # | 文件 | 改动 | 理由 |
 | --- | --- | --- | --- |
-| 1 | brain/policy.py | 新增 \_is_never_played_dead\：picked≥unplayed_min_picked 且 plays==0 判死；升级变体按基础 id 同判；plays>0 自动自愈解除；冷启动恒 False | 三端共用的同一把尺，与拾取端一票否决同判据 |
-| 2 | brain/policy.py \deck_burst\ | 贪心装箱跳过死牌 | 幻影伤害不再给饥饿判定/竞速预演/药水预留发虚额度；卡组越注水警报越哑的悖论消除 |
+| 1 | brain/policy.py | 新增 `_is_never_played_dead`：picked≥unplayed_min_picked 且 plays==0 判死；升级变体按基础 id 同判；plays>0 自动自愈解除；冷启动恒 False | 三端共用的同一把尺，与拾取端一票否决同判据 |
+| 2 | brain/policy.py `deck_burst` | 贪心装箱跳过死牌 | 幻影伤害不再给饥饿判定/竞速预演/药水预留发虚额度；卡组越注水警报越哑的悖论消除 |
 | 3 | brain/policy.py 战斗出牌评分 | 死牌叠加 never_played_veto_penalty 罚分 | 同一份证据接到出牌端口；罚分有限，僵局强攻兜底通道不受影响 |
-| 4 | brain/policy.py \_card_selection\ | 无跳过动作且全候选低于自愿门槛 → 改记 \card_forced_add\（不进信用账本） | 强制入组不是拾取决策：picked/outcome 账、「本局拿牌」榜停止灌水 |
-| 5 | brain/selfcheck.py | 新增 3zw 块：判定器四象限+升级变体+自愈解除、burst 剔除与纯死牌归零、冷启动行为不变、致死局死牌抢能量反例、强制屏记性正反例（有跳过照旧整屏跳过） | 行为变更正反例成对钉死 |
+| 4 | brain/policy.py `_card_selection` | 无跳过动作且全候选低于自愿门槛 → 改记 `card_forced_add`（不进信用账本） | 强制入组不是拾取决策：picked/outcome 账、「本局拿牌」榜停止灌水 |
+| 5 | brain/selfcheck.py | 新增 3zw 块：判定器四象限+升级变体+自愈解除、burst 剔除与纯死牌归零、冷启动行为不变、致死局死牌抢能量反例、强制屏正反例（有跳过照旧整屏跳过） | 行为变更正反例成对钉死 |
 
 ### 四、记录在案、本次不动
 

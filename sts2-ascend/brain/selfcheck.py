@@ -4893,6 +4893,93 @@ def main() -> int:
         f"单薄卡组不应贬值: on={v_thin_on:.2f} off={v_thin_off:.2f}"
 
 
+    # 3zw) 零出牌死牌三端贯通（第529局批复盘）：知识恶魔战强制入组的瓦解/
+    #      懒惰类死牌（生涯多拿零打）面板数字被 card_numbers 解析成高伤攻击，
+    #      幻影伤害污染 deck_burst 口径（饥饿判定/竞速预演/药水预留全线偏乐观）；
+    #      战斗出牌评分此前还吃 learned value 加成；强制入组屏（无跳过动作+
+    #      全候选低于门槛）此前被记成正常拾取学分灌水 picked/outcome 账。
+    #      修复：burst 贪心装箱跳过死牌；出牌评分叠加否决罚分；强制屏改记
+    #      card_forced_add（不进信用账本）
+    npd_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-npdead-")))
+    npd_know.stats["cards"]["NPD_GHOST"] = {
+        "seen": 9, "picked": 9, "plays": 0, "outcome_sum": 297.0, "bias": 0.0}
+    npd_know.stats["cards"]["NPD_SLOTH"] = {
+        "seen": 6, "picked": 6, "plays": 0, "outcome_sum": 198.0, "bias": 0.0}
+    npd_know.stats["cards"]["NPD_LIVE"] = {
+        "seen": 5, "picked": 5, "plays": 40, "outcome_sum": 100.0, "bias": 0.0}
+    npd_pol = policy.Policy(npd_know)
+    # 判定器本身：零打+多拿才判死；升级变体同判；有打出记录即自愈解除
+    assert npd_pol._is_never_played_dead("NPD_GHOST"), "零出牌死牌判定失效"
+    assert npd_pol._is_never_played_dead("NPD_GHOST+"), "升级死牌应按基础id同判"
+    assert npd_pol._is_never_played_dead("NPD_SLOTH"), "第二张死牌判定丢失"
+    assert not npd_pol._is_never_played_dead("NPD_LIVE"), "有打出记录不得判死"
+    assert not npd_pol._is_never_played_dead(""), "空id必须安全返回 False"
+    npd_know.stats["cards"]["NPD_GHOST"]["plays"] = 1
+    assert not npd_pol._is_never_played_dead("NPD_GHOST"), "自愈解除失效"
+    npd_know.stats["cards"]["NPD_GHOST"]["plays"] = 0
+    # 幻影伤害剔除：装箱口径里死牌视同不存在
+    npd_live = {"card_id": "NPD_LIVE", "name": "重刀", "card_type": "Attack",
+                "energy_cost": 2,
+                "dynamic_values": [{"name": "Damage", "current_value": 14}]}
+    npd_ghost = {"card_id": "NPD_GHOST", "name": "瓦解", "card_type": "Attack",
+                 "energy_cost": 1,
+                 "dynamic_values": [{"name": "Damage", "current_value": 20}]}
+    assert abs(npd_pol.deck_burst([dict(npd_live), dict(npd_ghost)])
+               - npd_pol.deck_burst([dict(npd_live)])) < 1e-9, \
+        "死牌幻影伤害仍被计入爆发吞吐"
+    assert npd_pol.deck_burst([dict(npd_ghost)]) == 0.0, "纯死牌卡组爆发应为 0"
+    npd_cold = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-npdead-cold-"))))
+    assert npd_cold.deck_burst([dict(npd_ghost)]) > 0.0 \
+            and not npd_cold._is_never_played_dead("NPD_GHOST"), \
+        "冷启动无统计时行为必须与旧版一致"
+    # 出牌端否决：致死局面下死牌（面板伤更高）不得抢过真实攻击的能量
+    npd_combat = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+        "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                   "hand": [
+                       {"index": 0, "card_id": "NPD_LIVE", "name": "重刀", "playable": True,
+                        "energy_cost": 2, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 14}]},
+                       {"index": 1, "card_id": "NPD_GHOST", "name": "瓦解", "playable": True,
+                        "energy_cost": 2, "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 20}]}],
+                   "enemies": [{"index": 0, "enemy_id": "NPDEMO", "name": "小怪", "current_hp": 10,
+                                "max_hp": 30, "block": 0, "is_alive": True, "is_hittable": True,
+                                "intents": []}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 30,
+                "deck": [dict(npd_live), dict(npd_ghost)] * 3},
+    }
+    d_npd = npd_pol.decide(npd_combat, ctx)
+    assert d_npd.action == "play_card" and d_npd.params.get("card_index") == 0, \
+        f"死牌抢走出牌能量（第529局F33形态回归）: {d_npd.reason}"
+    # 强制入组屏：无跳过动作且全候选低于门槛 → 记 card_forced_add 不记学分；
+    # 同屏有跳过动作时照旧整屏跳过
+    npd_sel_cards = [
+        {"index": 0, "card_id": "NPD_GHOST", "name": "瓦解", "card_type": "Attack",
+         "energy_cost": 1,
+         "dynamic_values": [{"name": "Damage", "current_value": 20}]},
+        {"index": 1, "card_id": "NPD_SLOTH", "name": "懒惰", "card_type": "Skill",
+         "energy_cost": 1, "dynamic_values": []}]
+    npd_sel_base = {
+        "screen": "CARD_SELECTION",
+        "selection": {"kind": "", "prompt": "获得一张牌", "min_select": 1,
+                      "selected_count": 0, "can_confirm": False,
+                      "cards": npd_sel_cards},
+        "run": {"current_hp": 70, "max_hp": 90, "gold": 0, "floor": 33,
+                "deck": [dict(npd_live)] * 8}}
+    d_forced = npd_pol.decide(
+        {**npd_sel_base, "available_actions": ["select_deck_card"]}, ctx)
+    assert d_forced.action == "select_deck_card" and d_forced.tags \
+            and d_forced.tags[0][0] == "card_forced_add", \
+        f"强制入组屏仍被记为拾取学分: {d_forced.tags}（{d_forced.reason}）"
+    d_skip = npd_pol.decide(
+        {**npd_sel_base, "available_actions": ["select_deck_card", "skip_reward_cards"],
+         "run": {**npd_sel_base["run"], "floor": 34}}, ctx)
+    assert d_skip.action == "skip_reward_cards", \
+        f"有跳过动作的低价值屏未跳过: {d_skip.action}（{d_skip.reason}）"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
