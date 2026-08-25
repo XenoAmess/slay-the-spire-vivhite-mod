@@ -1469,40 +1469,28 @@ class Policy:
                     # 防守线复核（第435~440批复盘）：旧投影的可存活回合数=裸血÷意图
                     # 火力——把格挡整项忽略，而格挡吞吐恰是防守路线可行性的第一变量。
                     # 后果是自证死期的预言闭环：投影判死 → 全攻提速 blk×0.7 →
-                    # 不再买命 → 更早被打空 → 「验证」了投影（本批 S42CX 局 89% 血
-                    # 进一幕 Boss 照样 5~6 回合整管打空，实测战损≈全额火力×回合数，
-                    # 说明全程几乎没挡）。修复：进攻线判负后补算防守线——用卡组
-                    # 格挡吞吐×同一折算率估持续买命量，净火力下的可存活回合数若能
-                    # 追上击杀所需回合数，则防守路线可行，维持攻防节奏不全攻。
-                    # 意图滚雪球局的豁免取消（第454局批复盘）：旧版对 esc_gate 局
-                    # 跳过复核——理由是「对逐轮升级的敌人拖延正是死法」，但该论据
-                    # 只在竞速可赢时成立；竞速已判负时全攻提速=吃满升级意图的
-                    # 最大自伤（454批三连实证：97BKP/X299/WS5HUHJW 对毛绒伏地虫
-                    # 组合 R2~R3 即判「击杀需5>可存活3」转全攻，实际靠顺手格挡
-                    # 又活了 5~8 回合、差一刀斩杀——格挡恰是这类战斗的第一生存
-                    # 变量）。修复：滚雪球局同样复核，但按更严口径——折算率用
-                    # 独立的 kill_race_blk_eff（格挡实现率与输出折算率是两种物理
-                    # 量：prior_eff 被 Boss 竞速败北证据压到 0.37 后，防守线被
-                    # 连带压死成死代码），且不给 margin 余量（意图逐轮上涨吃余量）
+                    # 不再买命 → 更早被打空 → 「验证」了投影。修复：进攻线判负后
+                    # 补算防守路线的可行性。
+                    # 能量双算修正（第460局批复盘）：旧复核按「满能量全攻算击杀、
+                    # 满能量全挡算存活」两条线各自记账——同一回合的能量被花两次，
+                    # 只要格挡吞吐摸到火力封顶线就判磨垒可行，与实际执行脱节。
+                    # 改用 _race_joint_feasible：同一能量预算内遍历攻防分配与
+                    # 轮换混合，任一分配同时满足击杀与存活才维持攻防节奏。
+                    # 意图滚雪球局的豁免取消（第454局批复盘）保留：滚雪球局同样
+                    # 复核，但不给 margin 余量（意图逐轮上涨吃不得余量）
                     if race_lost:
                         _cr_deck = ((state.get("run") or {}).get("deck")) or []
-                        _cr_eff = max(0.05, float(pol.get(
-                            "kill_race_blk_eff",
-                            float(pol.get("kill_race_prior_eff", 0.55)))))
-                        _blk_rate = min(max(0.0, loss_rate - 1.0),
-                                        self.deck_block_burst(_cr_deck) * _cr_eff)
-                        if _blk_rate > 0:
-                            _net_fire = max(1.0, loss_rate - _blk_rate)
-                            _tsurv_def = my_hp / _net_fire
-                            # 滚雪球局零余量过线；普通局维持原 margin 口径
-                            _def_margin = 0.0 if esc_gate else _race_margin
-                            if ttk <= _tsurv_def + _def_margin:
-                                race_lost = False
-                                _esc_mark = "（滚雪球零余量）" if esc_gate else ""
-                                danger_note += (f"；防守线复核：格挡吞吐{_blk_rate:.0f}/回合，"
-                                                f"净火力{_net_fire:.0f}→可存活{_tsurv_def:.0f}"
-                                                f"回合≥击杀所需{ttk:.0f}，维持攻防节奏不全攻"
-                                                f"{_esc_mark}")
+                        # 滚雪球局零余量过线；普通局维持原 margin 口径
+                        _def_margin = 0.0 if esc_gate else _race_margin
+                        _feas, _mix = self._race_joint_feasible(
+                            _cr_deck, enemy_hp_total, loss_rate, my_hp,
+                            _def_margin)
+                        if _feas:
+                            race_lost = False
+                            _esc_mark = "（滚雪球零余量）" if esc_gate else ""
+                            danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
+                                            f"净火力下追平击杀所需{ttk:.0f}回合，"
+                                            f"维持攻防节奏不全攻{_esc_mark}")
                     if race_lost:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
@@ -2065,6 +2053,80 @@ class Policy:
                                 tags=[("use_potion", p.get("potion_id"))], wait=0.6)
         return None
 
+    def _race_joint_feasible(self, deck: list[dict], pool: float, fire: float,
+                             my_hp: float, margin: float,
+                             eff: float | None = None,
+                             blk_eff: float | None = None) -> tuple[bool, str]:
+        """联合能量口径的竞速可行性对账（第460局批复盘新增）。
+
+        旧防守线复核的能量双算缺陷：进攻线按「满能量全攻」算击杀回合数，
+        防守线按「满能量全挡」算存活回合数——同一回合的 3 点能量被两条线
+        各花一次。只要格挡吞吐×折算率能摸到「火力-1」封顶线，任何卡组都被
+        判成磨垒可行：460 批四场一幕 Boss 全部健康进场仍整管打空（U3D6 局
+        前夜账面磨垒可行→回血进场→实战每回合能量既要买命又要输出，两头
+        都够不着）；自检 ④ 的 guard_deck（唯一攻击牌 3 费+四张 1 费挡）是
+        同一缺陷的最小复现——账面可行，实际永远凑不齐「19 挡+26 伤」同回合。
+
+        修复：遍历「格挡能量 e_b + 进攻能量 E−e_b」的全部整数分配，再对
+        Pareto 前沿相邻点做连续混合采样（对应隔轮轮换战术：挡一轮打一轮），
+        任一点满足 击杀所需回合数 ≤ 净火力存活回合数 + 余量 即判可行。
+        纯进攻点（e_b=0）保留在集合内——本口径是旧两线并集的严格收紧，
+        只砍掉物理上做不到的「双算可行」，不会放行比旧纯进攻更差的路线。
+
+        返回 (是否可行, 可行点描述)；不可行时描述为空串。
+
+        口径说明：伤害轴一律用先验能力（deck_burst×eff），不用实测速率——
+        实测是随机过程的一次采样，可行性规划应对齐期望产能；实测速率只负责
+        上游「竞速是否已判负」的门。篝火端与战斗端因此共用同一把尺。
+        """
+        pol = self.know.policy
+        if eff is None:
+            eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
+        if blk_eff is None:
+            blk_eff = max(0.05, float(pol.get(
+                "kill_race_blk_eff",
+                float(pol.get("kill_race_prior_eff", 0.55)))))
+        energy = 3.0
+        steps = max(1, int(round(energy)))
+        pts = []
+        for eb in range(steps + 1):
+            ea = energy - float(eb)
+            b = min(max(0.0, float(fire) - 1.0),
+                    self.deck_block_burst(deck or [], float(eb)) * blk_eff)
+            d = (self.deck_burst(deck or [], ea) * eff) if ea > 1e-9 else 0.0
+            pts.append((b, d))
+        # Pareto 前沿：按格挡量升序（同格挡量伤害降序），保留「伤害随格挡
+        # 递减」的权衡曲线——高挡低伤与低挡高伤互不支配，都是合法战术点
+        frontier = []
+        best_d = float("inf")
+        for b, d in sorted(pts, key=lambda p: (p[0], -p[1])):
+            if d < best_d:
+                frontier.append((float(b), float(d)))
+                best_d = d
+
+        def _ok(b: float, d: float) -> bool:
+            if d <= 1e-9:
+                return False
+            ttk = float(pool) / d
+            net = max(1.0, float(fire) - b)
+            return ttk <= float(my_hp) / net + float(margin)
+
+        n = len(frontier)
+        # 单点与相邻点连线采样（0.05 步长近似连续混合）
+        for i in range(n):
+            if _ok(*frontier[i]):
+                b, d = frontier[i]
+                return True, f"格挡{b:.0f}+输出{d:.0f}/回合的分配"
+            if i + 1 < n:
+                b1, d1 = frontier[i]
+                b2, d2 = frontier[i + 1]
+                for k in range(1, 20):
+                    t = k / 20.0
+                    if _ok(b1 + (b2 - b1) * t, d1 + (d2 - d1) * t):
+                        return True, (f"格挡{b1 + (b2 - b1) * t:.0f}"
+                                      f"+输出{d1 + (d2 - d1) * t:.0f}/回合的混合分配")
+        return False, ""
+
     def _boss_race_doomed(self, deck: list[dict], max_hp: int) -> tuple[bool, str]:
         """Boss 竞速必败预演（第 397~402 批复盘新增；兑现第 214 批遗留的
         「攻坚投影·篝火端消费」接线）。
@@ -2077,13 +2139,12 @@ class Policy:
         判定与战斗端斩杀竞速投影同式对账：learned Boss 血池/火力均值
         （boss_race_vitals，138~141 批入库）× deck_burst×kill_race_prior_eff，
         满血可存活回合数仍追不上击杀所需回合数即判必败。
-        防守线复核（第435~440批复盘）：进攻线（裸血÷火力）判负后，补算
-        「持续买命」路线——deck_block_burst×同一折算率估每回合可持续的格挡量，
-        净火力下的存活回合数追得上击杀所需即不判必败（回血重新成为有效投资，
-        前夜裁决交还旧三区口径）。本批六场 F17 Boss 死亡的竞速账全部按裸血
-        开出「击杀需16~22回合>可存活6回合」，而实测战损≈全额火力×回合数——
-        全攻提速下根本没挡；把格挡计入后相当一部分一幕对局是可赢的磨垒局，
-        旧投影把它们集体误判成必败并驱动了错误的前夜锻造与全段路径绝望化。
+        防守线复核（第435~440批复盘引入，第460局批复盘改为联合能量口径）：
+        进攻线（裸血÷火力）判负后，补算「持续买命」路线的可行性——但攻防
+        两条线不得各自独占满能量（旧版能量双算：格挡吞吐摸到火力封顶线即判
+        磨垒可行，460 批四场健康进场 Boss 全部整管打空），改用
+        _race_joint_feasible 遍历攻防能量分配与轮换混合，任一分配能同时满足
+        击杀与存活才不判必败（回血重新成为有效投资，前夜裁决交还旧三区口径）。
         数据未成熟/零爆发/零格挡/竞速关闭时返回 False，行为与旧版严格一致。
         注意口径局限：均值含二三幕 Boss，对一幕前夜略偏悲观——方向与证据
         一致（当前卡组层级的前夜回血已被反复证伪），可接受。
@@ -2104,21 +2165,16 @@ class Policy:
         tsurv = float(max_hp) / max(1.0, fire)
         if ttk <= tsurv + margin:
             return False, ""
-        # 防守线复核：格挡吞吐>0 且净火力下能磨到击杀线 → 不判必败
-        # 折算率用独立的 kill_race_blk_eff（第454局批复盘）：格挡实现率与输出
-        # 折算率是两种物理量，prior_eff 被 Boss 竞速败北证据压到下限后防守线
-        # 被连带压死——与战斗端复核同源同修，防篝火端镜像脱钩（397~402 批教义）
-        _blk_eff = max(0.05, float(pol.get(
-            "kill_race_blk_eff", eff)))
-        blk_rate = min(max(0.0, float(fire) - 1.0),
-                       self.deck_block_burst(deck or []) * _blk_eff)
-        if blk_rate > 0:
-            tsurv_def = float(max_hp) / max(1.0, float(fire) - blk_rate)
-            if ttk <= tsurv_def + margin:
-                return False, ""
+        # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
+        # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
+        _feasible, _ = self._race_joint_feasible(
+            deck or [], pool, fire, float(max_hp), margin, eff=eff)
+        if _feasible:
+            return False, ""
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
-                f"先验输出{dpt:.0f}/回合），必败局的伤害会流到打死为止")
+                f"先验输出{dpt:.0f}/回合；联合能量复核：任一攻防能量分配"
+                f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止")
         return True, note
 
     def required_deck_burst(self, max_hp: int) -> float | None:
