@@ -5799,3 +5799,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
 - 生涯战绩：0/470 胜，当前目标进阶 0
+
+## 第 471 局复盘（2026-08-25 14:28）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 SLITHERING_STRANGLER+TWIG_SLIME_S
+- 本局拿牌：SHRUG_IT_OFF, TAUNT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血14; F3 Monster战 掉血4; F4 Monster战 掉血0; F5 Monster战 掉血62（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/27局)，VOLLEY(24分/10局)，FIEND_FIRE(24分/12局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/471 胜，当前目标进阶 0
