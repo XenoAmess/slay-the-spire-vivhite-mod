@@ -5549,3 +5549,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/449 胜，当前目标进阶 0
+
+## 第 450 局复盘（2026-08-25 12:09）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：BLUDGEON, TAUNT, RUPTURE, HEADBUTT, UPPERCUT, EVIL_EYE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血6; F3 Monster战 掉血0; F4 Monster战 掉血0; F6 Monster战 掉血33; F7 Monster战 掉血10; F8 Elite战 掉血42（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/26局)，THRUMMING_HATCHET(24分/9局)，VOLLEY(24分/10局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/450 胜，当前目标进阶 0
