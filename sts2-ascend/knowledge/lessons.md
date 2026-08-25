@@ -6304,3 +6304,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/513 胜，当前目标进阶 0
+
+## 第 514 局复盘（2026-08-25 20:03）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HOWL_FROM_BEYOND, TRUE_GRIT, BLUDGEON, SHRUG_IT_OFF, ARMAMENTS, UNRELENTING, DISMANTLE, DRUM_OF_BATTLE, UNRELENTING, UNRELENTING, MOLTEN_FIST
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F7 Monster战 掉血0; F8 Monster战 掉血30; F11 Monster战 掉血13; F13 Unknown战 掉血4; F14 Monster战 掉血0; F17 Boss战 掉血60（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，VOLLEY(24分/11局)，CONFLAGRATION(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/514 胜，当前目标进阶 0
