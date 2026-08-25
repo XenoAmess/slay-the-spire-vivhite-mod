@@ -349,10 +349,14 @@ def _launch_viewer(cfg: dict, log) -> None:
         creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                          | getattr(subprocess, "DETACHED_PROCESS", 0)
                          | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        # stderr 落盘：viewer 崩溃 traceback 必须可尸检（此前 DEVNULL 吞掉，
+        # 悬浮窗反复消失却无迹可寻）
+        err_f = open(KNOWLEDGE_DIR / "viewer_err.log", "ab")
+        out_f = open(KNOWLEDGE_DIR / "viewer_out.log", "ab")
         subprocess.Popen([sys.executable, "-u", str(VIEWER_PATH)],
                          cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         creationflags=creationflags, close_fds=True)
+                         stdout=out_f, stderr=err_f,
+                         creationflags=creationflags, close_fds=False)
         log("[llm] 直播悬浮窗已拉起")
     except Exception as exc:
         log(f"[llm] 直播悬浮窗拉起失败（不影响复盘）：{exc}")
