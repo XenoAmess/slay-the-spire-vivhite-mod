@@ -5788,3 +5788,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/469 胜，当前目标进阶 0
+
+## 第 470 局复盘（2026-08-25 14:24）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+BRUTE_RUBY_RAIDER
+- 本局拿牌：SHRUG_IT_OFF, SHRUG_IT_OFF, RUPTURE, FIGHT_ME, AGGRESSION
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F2 Monster战 掉血1; F5 Monster战 掉血1; F7 Monster战 掉血0; F9 Monster战 掉血42; F11 Unknown战 掉血25; F12 Monster战 掉血24（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，FEED(24分/27局)，VOLLEY(24分/10局)，FIEND_FIRE(24分/12局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10 顶格——短时死亡证据停止吸收并留痕，接替旋钮留待复盘设计
+- 生涯战绩：0/470 胜，当前目标进阶 0
