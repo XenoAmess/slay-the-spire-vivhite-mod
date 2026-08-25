@@ -492,6 +492,19 @@ class Agent:
         self._save_run_progress({"floor": last_floor}, force=True)
         sys.exit(42)
 
+    def _act_entry_due(self, run_id: str, act: int) -> bool:
+        """进幕快照去重判定：同局同幕只记一次，换局/换幕都要记。
+
+        第509~515局批复盘新增。旧实现按进程级 act 单值去重——同一进程内
+        后续对局的一幕首战（act 仍=1）被整体吞掉，六局只落一条快照。
+        方法只读写自身键状态，不触其他属性，便于 selfcheck 用哑对象直测。
+        """
+        key = (str(run_id or ""), int(act))
+        if key == getattr(self, "_last_entry_key", None):
+            return False
+        self._last_entry_key = key
+        return True
+
     def _start_combat(self, run: dict, comp: str, node_type: str, hp: int) -> None:
         # 同层多段战斗聚合（第 97~98 批复盘）：多阶段 Boss 的阶段切换会以
         # 「settle+重开账」形态把一场战斗拆成多条统计——97 局一场仪式兽
@@ -519,14 +532,17 @@ class Agent:
         rate_gate = float(self.know.policy.get("danger_comp_hard_death_rate", 0.30))
         if e and e.get("encounters", 0) >= 3 and e.get("deaths", 0) / max(1, e["encounters"]) >= rate_gate:
             self.ctx.current_combat_is_hard = True
-        # 进幕快照（第 506~508 局批复盘新增）：每幕首次开战时把就绪度落账。
-        # 本批实证二幕消耗战已成主死因（F22/F31），而「进二幕时卡组多强、
-        # 带了多少资源」此前没有账——快照让下批复盘能把死亡楼层与进幕
-        # 爆发/血量/金币/药水做定量对照。纯观测，任何异常静默跳过
+        # 进幕快照（第 506~508 局批复盘新增；第509~515局批复盘修粘滞）：
+        # 每局每幕首次开战时把就绪度落账。本批实证二幕消耗战已成主死因（F22/F31），
+        # 而「进二幕时卡组多强、带了多少资源」此前没有账——快照让下批复盘能把
+        # 死亡楼层与进幕爆发/血量/金币/药水做定量对照。
+        # 粘滞缺陷：旧实现按进程级 `_last_entry_act` 去重，同一进程内后续对局的
+        # 一幕首战（act 仍=1）全部被吞——本批六局只落了 513 局一条快照，
+        # 「进幕就绪度 vs 死亡楼层」的对账样本直接断供。改按 (run_id, act) 键去重：
+        # 同局同幕只记一次，换局/换幕都记（纯观测，任何异常静默跳过）
         try:
             _act = int(self.policy._floor_act(run.get("floor", 0)))
-            if _act != getattr(self, "_last_entry_act", 0):
-                self._last_entry_act = _act
+            if self._act_entry_due(getattr(self.ctx, "run_id", ""), _act):
                 _deck = run.get("deck", []) or []
                 self.know.commit_act_entry({
                     "act": _act,

@@ -4608,11 +4608,15 @@ def main() -> int:
     assert abs(bs_know.policy["kill_race_prior_eff"] - 0.55) < 1e-9, \
         f"胜利未回收竞速先验折算率: {bs_know.policy['kill_race_prior_eff']}"
 
-    # 3bs-2) 部分胜利释放（第 494 局批复盘新增）：非胜利局但已跨过幕界
-    #        （F18+ 即实战击败过一幕 Boss）且最终死于非 Boss 节点——折算率
-    #        按步长向锚点释放；正死于 Boss 战的同场不释放（其长战证据已另行
-    #        开账，防同局降/释对冲）；F17 内死亡（Boss 未被击败）不释放。
-    #        正例：压到 0.37 触底的折算率 + F31 精英阵亡 → 0.40
+    # 3bs-2) 部分胜利释放（第 494 局批复盘新增；第509~515局批复盘重开通道）：
+    #        非胜利局但已跨过幕界（F18+ 即实战击败过一幕 Boss）即释放——
+    #        旧排除条件「最终不死于 Boss 战」过宽：512 局型（打赢一幕 Boss 后
+    #        死于二幕 Boss 战）被整体挡死，本批六局六次下调对零次释放，eff 钉死
+    #        触底带。释放记的是一幕 Boss 战的反证（死于一幕 Boss 则 final_floor≤17），
+    #        与最终二幕 Boss 战的降账是两场独立战斗的证据。
+    #        正例一：压到 0.37 触底的折算率 + F31 精英阵亡 → 0.40；
+    #        正例二：F33 死于二幕 Boss 战 → 同样 0.40（旧版反例，现已翻案）；
+    #        反例：F17 内死亡（一幕 Boss 未被击败）→ 不释放
     bsp_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr3-")))
     bsp_know.policy["kill_race_prior_eff"] = 0.37
     bsp_ctx = SimpleNamespace(
@@ -4624,7 +4628,7 @@ def main() -> int:
     reflect.finalize_run(bsp_know, bsp_ctx, victory=False, final_floor=31)
     assert abs(bsp_know.policy["kill_race_prior_eff"] - 0.40) < 1e-9, \
         f"跨幕局未获部分胜利释放: {bsp_know.policy['kill_race_prior_eff']}"
-    # 反例一：同场正死于 Boss 战（node_type=Boss）→ 不释放
+    # 正例二：死于二幕 Boss 战的跨幕局也释放（512 局型，通道重开的核心形态）
     bsn_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr4-")))
     bsn_know.policy["kill_race_prior_eff"] = 0.37
     reflect.finalize_run(bsn_know, SimpleNamespace(
@@ -4634,18 +4638,20 @@ def main() -> int:
         death_was_elite=False, death_hp_pct_at_entry=0.9, credit_tags=[],
         rests_healed_at_full=0, ascension=0, combat_notes=[]),
         victory=False, final_floor=33)
-    assert abs(bsn_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
-        f"死于Boss战的跨幕局不应释放: {bsn_know.policy['kill_race_prior_eff']}"
-    # 反例二：未跨幕界（F17 死于一幕 Boss）→ 不释放
-    reflect.finalize_run(bsn_know, SimpleNamespace(
+    assert abs(bsn_know.policy["kill_race_prior_eff"] - 0.40) < 1e-9, \
+        f"打赢一幕后死于二幕Boss战未获释放（512局型死锁复发）: {bsn_know.policy['kill_race_prior_eff']}"
+    # 反例：未跨幕界（F17 死于一幕 Boss）→ 不释放（独立新库防前案残留）
+    bsz_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr5-")))
+    bsz_know.policy["kill_race_prior_eff"] = 0.37
+    reflect.finalize_run(bsz_know, SimpleNamespace(
         died_to_event=None,
         died_in_combat={"comp_id": "BR_BOSS_C", "node_type": "Boss", "rounds": 8,
                         "floor": 17, "hp_lost": 80.0, "stall": False},
         death_was_elite=False, death_hp_pct_at_entry=1.0, credit_tags=[],
         rests_healed_at_full=0, ascension=0, combat_notes=[]),
         victory=False, final_floor=17)
-    assert abs(bsn_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
-        f"未跨幕界不应释放: {bsn_know.policy['kill_race_prior_eff']}"
+    assert abs(bsz_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
+        f"未跨幕界不应释放: {bsz_know.policy['kill_race_prior_eff']}"
 
     # 3bt) 竞速及格线与预留解耦（第422局复盘）：burst≈33 的卡组高于静态
     #      deck_burst_floor=30、却远低于杀 learned Boss 所需（血池160/火力10/
@@ -4815,6 +4821,76 @@ def main() -> int:
     ae_know.mark_respawn_add("COMPAT_PROBE")
     assert "respawn_adds" in ae_know.stats and "act_entries" in ae_know.stats, \
         "旧库迁移缺键"
+
+    # 3yt) 进幕快照去重键（第509~515局批复盘）：(run_id, act) 变化判定——
+    #      同局同幕只记一次，换局/换幕都记。旧实现按进程级 act 单值去重，
+    #      同进程后续对局的一幕首战（act 仍=1）被整体吞掉——本批六局只落
+    #      513 局一条快照，「进幕就绪度 vs 死亡楼层」对账样本断供
+    _probe = SimpleNamespace()
+    _due = agent.Agent._act_entry_due
+    assert _due(_probe, "RUN_A", 1), "首局首幕应记快照"
+    assert not _due(_probe, "RUN_A", 1), "同局同幕重复开战不得重复记录"
+    assert _due(_probe, "RUN_A", 2), "同局跨幕应记快照"
+    assert not _due(_probe, "RUN_A", 2), "同局同幕（跨幕后回望）不得重复记录"
+    assert _due(_probe, "RUN_B", 1), "换局后同幕必须重新记快照（粘滞缺陷回归）"
+    assert _due(_probe, "RUN_C", 1), "连续换局都要记"
+    _p2 = SimpleNamespace()
+    assert _due(_p2, "", 1) and not _due(_p2, "", 1), \
+        "空 run_id 按同键确定性去重（降级不劣于旧行为）"
+
+    # 3yu) 纯防御饥饿贬值（第509~515局批复盘）：饥饿加分链顶格后所有高质
+    #      攻击/引擎同分满额，纯防御仍按原价竞争名额。缺口越深对无成长性的
+    #      纯格挡技按比例压价；三重门控：格挡来源不足/卡组单薄/带抽牌不贬
+    sd_know = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-stvdef-")))
+    sd_know.stats["enemies"]["SD_BOSS_A"] = {
+        "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+        "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+        "hp_pool_sum": 320.0, "hp_pool_n": 2, "fire_sum": 80.0, "fire_rounds": 8}
+    sd_pol = policy.Policy(sd_know)
+    sd_block_card = {"card_id": "SD_SHRUG", "name": "耸肩", "card_type": "Skill",
+                     "energy_cost": 1,
+                     "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    sd_draw_block = {"card_id": "SD_DRAWBLK", "name": "抽牌格挡", "card_type": "Skill",
+                     "energy_cost": 1, "rules_text": "获得8点格挡，抽1张牌。",
+                     "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    sd_rich_deck = ([{"card_id": f"SD_ATK{i}", "card_type": "Attack", "energy_cost": 1,
+                      "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+                     for i in range(4)]
+                    + [{"card_id": f"SD_BLK{i}", "card_type": "Skill", "energy_cost": 1,
+                        "dynamic_values": [{"name": "Block", "current_value": 8}]}
+                       for i in range(5)])
+    v_sup_on = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_rich_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.0
+    v_sup_off = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_rich_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.30
+    assert v_sup_on < v_sup_off - 0.3, \
+        f"深缺口下纯防御未贬值: on={v_sup_on:.2f} off={v_sup_off:.2f}"
+    v_draw_on = sd_pol.eval_reward_card(dict(sd_draw_block), list(sd_rich_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.0
+    v_draw_off = sd_pol.eval_reward_card(dict(sd_draw_block), list(sd_rich_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.30
+    assert abs(v_draw_on - v_draw_off) < 1e-6, \
+        f"带抽牌功能技不应贬值: on={v_draw_on:.2f} off={v_draw_off:.2f}"
+    # 门控一：格挡来源不足（n_block<min_block_cards）不贬值——
+    #         卡组形态达标（非基础牌 9≥core），仅格挡稀缺
+    sd_fewblk_deck = (sd_rich_deck[:4]
+                      + sd_rich_deck[4:6]
+                      + [{"card_id": f"SD_UTL{i}", "card_type": "Skill", "energy_cost": 1,
+                          "dynamic_values": []} for i in range(3)])
+    v_few_on = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_fewblk_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.0
+    v_few_off = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_fewblk_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.30
+    assert abs(v_few_on - v_few_off) < 1e-6, \
+        f"格挡稀缺时不应贬值: on={v_few_on:.2f} off={v_few_off:.2f}"
+    # 门控二：卡组单薄（非基础牌<deck_thin_core）不贬值——量不足不是结构失衡；
+    #         格挡来源达标（5 块 ≥min_block_cards）以隔离单薄门控
+    sd_thin_deck = (sd_rich_deck[4:9] + sd_rich_deck[:2])
+    v_thin_on = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_thin_deck), max_hp=80)
+    sd_pol.know.policy["starve_defense_suppress_max"] = 0.0
+    v_thin_off = sd_pol.eval_reward_card(dict(sd_block_card), list(sd_thin_deck), max_hp=80)
+    assert abs(v_thin_on - v_thin_off) < 1e-6, \
+        f"单薄卡组不应贬值: on={v_thin_on:.2f} off={v_thin_off:.2f}"
 
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。

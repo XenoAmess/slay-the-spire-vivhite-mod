@@ -2627,6 +2627,23 @@ class Policy:
             # 格挡来源绝对数稀缺（初始 4 张防牌很快被稀释，旧占比判定 <20% 几乎不触发）
             if block > 0 and deck and n_block < pol.get("min_block_cards", 5):
                 value += 1.5
+            # 纯防御饥饿贬值（第509~515局批复盘新增）：饥饿加分链顶格后所有
+            # 高质攻击/引擎同分满额，纯防御牌却仍按原价竞争名额——深缺口局面
+            # 「再一张耸肩」与「再一张高质攻击」的边际价值差被抹平，卡组构成
+            # 对输出缺口的响应只剩加法端。本批六局拿牌账：UNRELENTING×3、
+            # TRUE_GRIT/SHRUG_IT_OFF 照常入组，Boss 战先验输出仅 9~19/回合。
+            # 缺口越深对无成长性的纯格挡牌按比例压价（上限三成），把同分僵局
+            # 的裁决权还给伤害端；三重门控防误伤——格挡来源不足/卡组单薄时
+            # 不贬值（那两种局面的病是量不足不是结构失衡），带抽牌的功能技
+            # 不贬值（抽牌加速爆发组装，与饥饿方向一致）。空卡组上下文
+            # （升级/删除/献祭评估）burst_starved 恒 False，天然不受影响
+            if (deck and burst_starved and block > 0 and draw_amount(card) <= 0
+                    and n_block >= pol.get("min_block_cards", 5)
+                    and good_cards >= pol.get("deck_thin_core", 8)):
+                _sup = (clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
+                        * float(pol.get("starve_defense_suppress_max", 0.30)))
+                if _sup > 0:
+                    value *= (1.0 - _sup)
         elif is_power(card):
             value += 5.0
             # 输出饥饿时的成长牌增值（第 255 批复盘）：Boss 攻坚的死因形态是

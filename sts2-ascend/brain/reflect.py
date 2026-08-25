@@ -454,31 +454,32 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                                 "三级全顶格——短时死亡证据停止吸收并留痕")
         if died_to_event:
             _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
-        # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增）：该旋钮的回收
-        # 通道此前只挂整局胜利——0/494 生涯里被「Boss 高血进场长战死」证据
-        # 一路压到 0.37 触底后永不回升，形成死锁：折算率越低→竞速预演越悲观
-        # →战斗端越早全攻提速/前夜端回血价值被低估→多挨意图血贫进二幕→更难
-        # 整局获胜→回收通道永远关闭。本批六场一幕 Boss 全部被预判必败，其中
-        # 三场实际打赢（掉血 58~66 生还进二幕）——口径的系统性悲观已直接可见，
-        # 却无证据通道可吸收。跨过幕界即「实战击败过一幕 Boss」的直接反证
-        # （F18+ 一幕、F34+ 连二幕），与整局胜利同向逐步释放；同场若正死于
-        # Boss 战，其长战证据已在本局另行开账（可能同向下调），不重复释放，
-        # 防止同一局内降/释对冲留下矛盾账目。
+        # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增，第509~515局批复盘
+        # 重开通道）：该旋钮的回收通道此前只挂整局胜利——0/494 生涯里被「Boss
+        # 高血进场长战死」证据一路压到 0.37 触底后永不回升，形成死锁：折算率
+        # 越低→竞速预演越悲观→战斗端越早全攻提速/前夜端回血价值被低估→多挨
+        # 意图血贫进二幕→更难整局获胜→回收通道永远关闭。跨过幕界即「实战击败
+        # 过一幕 Boss」的直接反证（F18+ 一幕、F34+ 连二幕），与整局胜利同向
+        # 逐步释放。第509~515批实锤旧排除条件过宽：本批仅 512 局跨幕，且恰死在
+        # 二幕 Boss 战——`_last_node != "Boss"` 把它也挡在门外，六局六次下调
+        # 对零次释放，eff 钉死触底带。释放记的是一幕 Boss 战的反证（死于一幕
+        # Boss 则 final_floor≤17，能行至 F18+ 本身就是证明），与最终 Boss 战的
+        # 降账是两场独立战斗的证据：同局先释后降净额归零不是矛盾账目，
+        # 是「一幕预演悲观被证伪 + 二幕长战确证」的诚实对冲。
         if final_floor >= 18:
-            _last_node = (ctx.died_in_combat or {}).get("node_type")
-            if _last_node != "Boss":
-                _eff_step = 0.03
-                _eff_head = (BOUNDS["kill_race_prior_eff"][1]
-                             - pol["kill_race_prior_eff"])
-                if _eff_head >= _eff_step:
-                    _adj(know, "kill_race_prior_eff", _eff_step, changes,
-                         f"行至 F{final_floor}（{'二' if final_floor >= 34 else '一'}"
-                         "幕Boss已实战击败）——竞速先验折算率获部分胜利释放")
-                else:
-                    changes.append(
-                        f"kill_race_prior_eff {pol['kill_race_prior_eff']:.2f} "
-                        f"距锚点仅余 {_eff_head:.2f}(<步长{_eff_step:.2f})——"
-                        "部分胜利释放停止，视为已达健康锚点")
+            _eff_step = 0.03
+            _eff_head = (BOUNDS["kill_race_prior_eff"][1]
+                         - pol["kill_race_prior_eff"])
+            if _eff_head >= _eff_step:
+                _adj(know, "kill_race_prior_eff", _eff_step, changes,
+                     f"行至 F{final_floor}（"
+                     + ("一二幕" if final_floor >= 34 else "一幕")
+                     + "Boss已实战击败）——竞速先验折算率获部分胜利释放")
+            else:
+                changes.append(
+                    f"kill_race_prior_eff {pol['kill_race_prior_eff']:.2f} "
+                    f"距锚点仅余 {_eff_head:.2f}(<步长{_eff_step:.2f})——"
+                    "部分胜利释放停止，视为已达健康锚点")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")

@@ -115,6 +115,11 @@ DEFAULT_POLICY = {
     "unplayed_min_picked": 4,       # 「拿了不打」判定的最小生涯拾取局数
     "unplayed_play_rate": 0.5,      # plays/picked ≤ 此值视为「拿了不打」（71 局 FLAME_BARRIER 13拿6打）
     "unplayed_card_penalty": 4.0,   # 「拿了不打」的牌在拾取端的额外减分
+    "starve_defense_suppress_max": 0.30,  # 输出饥饿时纯格挡技能的拾取贬值上限（第509~515局批复盘新增）：
+                                          # 缺口深度 × 此值 = 压价比例——饥饿加分链顶格后高质攻击同分满额，
+                                          # 纯防御仍按原价竞争名额，深缺口局卡组构成对缺口失明。
+                                          # 门控：格挡来源≥min_block_cards 且非基础牌≥deck_thin_core 才生效；
+                                          # 带抽牌的功能技不贬。0 = 关闭
     # --- events ---
     "exploration_rate": 0.25,     # epsilon for trying unknown event options
     "exploration_decay": 0.97,    # per-run decay

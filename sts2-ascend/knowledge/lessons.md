@@ -6326,3 +6326,32 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/515 胜，当前目标进阶 0
+
+## 第 516 局复盘（2026-08-25 20:25）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：STOMP, TAUNT, BREAKTHROUGH, DISMANTLE, BATTLE_TRANCE, RUPTURE, UPPERCUT, COLOSSUS, UNRELENTING, INFLAME, EVIL_EYE, MANGLE, EVIL_EYE, STRATAGEM, TRUE_GRIT, CINDER, SWORD_BOOMERANG, CINDER, CINDER, THRASH, THRASH, HEMOKINESIS
+- 本局遗物：音叉, HAPPY_FLOWER, SPARKLING_ROUGE
+- 战斗记录：F22 Monster战 掉血19; F23 Monster战 掉血32; F25 Monster战 掉血8; F28 Monster战 掉血17; F30 Monster战 掉血36; F33 Boss战 掉血49（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，VOLLEY(24分/11局)，CONFLAGRATION(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：danger_comp_blk_boost: 0.50 → 0.55（普通战斗短时阵亡（3回合）且 block_safety/药水交药线均顶格——证据改接高危组合防御姿态斜率（杀手组合战的格挡姿态更硬，全局攻防平衡零波及））
+- 生涯战绩：0/516 胜，当前目标进阶 0
+
+🧠 第509~515批复盘经验（2026-08-25）
+- eff 释放通道二次死锁已解：排除条件从「死亡的屏幕类型」改为「证据的战斗实例」——final_floor≥18 即释放，赢一幕Boss后死于二幕Boss不再吞掉反证（512局型）。
+- 进幕快照粘滞修复：去重键改 (run_id, act)；进程级单值记忆在长寿命进程里会把每局该发生的事折叠成一次，凡每局都该记的账键里必须有 run_id；部署观测代码后首个进程周期可能仍跑旧码（509~512 键缺失）。
+- 拾取端新增乘法区分度：starve_defense_suppress_max=0.30，深缺口时纯格挡技按缺口比例压价（格挡稀缺/卡组单薄/带抽牌三门控豁免）；加法纠偏链顶格后，把不需要的变便宜优于把需要的变更贵。
+- 均值口径回答不了分布问题：一幕三王血池 173~307 方差巨大，分幕聚合(276)反而高于全量(253)——统计粒度必须匹配决策的真实自由度，终极形态是按当前地图实际 Boss 单王对账（待确认 API，挂起调研）。
+- 生涯战绩：0/515 胜，当前目标进阶 0
+
+## 第 517 局复盘（2026-08-25 20:31）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：CINDER, STOMP, SHRUG_IT_OFF, DRAMATIC_ENTRANCE, TWIN_STRIKE, CINDER, TRUE_GRIT, INFERNAL_BLADE
+- 本局遗物：HORN_CLEAT
+- 战斗记录：F2 Monster战 掉血9; F3 Monster战 掉血14; F4 Monster战 掉血6; F6 Monster战 掉血24; F11 Monster战 掉血30; F12 Unknown战 掉血21（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，OFFERING(24分/12局)，HAND_OF_GREED(24分/17局)，VOLLEY(24分/11局)，CONFLAGRATION(24分/34局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/517 胜，当前目标进阶 0
