@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 19:17:43",
  "victory": false,
  "in_progress": true,
- "floor": 10,
+ "floor": 12,
  "decisions": [
   {
    "t": "19:17:43",
@@ -1296,13 +1296,264 @@
     "option_index": 0
    },
    "reason": "宝箱：选择遗物【吃不完的糖】（价值 3.19）"
+  },
+  {
+   "t": "19:20:30",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 58,
+   "gold": 79,
+   "action": "proceed",
+   "params": {},
+   "reason": "宝箱：离开"
+  },
+  {
+   "t": "19:20:33",
+   "screen": "MAP",
+   "floor": 10,
+   "hp": 58,
+   "gold": 79,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(10,4)（路径分 -64.24，预计进 Boss 血量 0%；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：RestSite(10,4)=-64.24|路径中段含未达标精英，投影罚分；投影中途死亡 / Unknown(10,6)=-67.45|低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.25（缺口72%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "19:20:34",
+   "screen": "REST",
+   "floor": 11,
+   "hp": 58,
+   "gold": 79,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：绝境投影优先回血（路径投影进Boss仅0%<45%，前路战损预期压倒锻造收益；本次可回复22点）"
+  },
+  {
+   "t": "19:20:35",
+   "screen": "REST",
+   "floor": 11,
+   "hp": 80,
+   "gold": 79,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "19:20:38",
+   "screen": "MAP",
+   "floor": 11,
+   "hp": 80,
+   "gold": 79,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(11,4)（路径分 -48.16，预计进 Boss 血量 79%；输出饥饿战损上浮×1.25（缺口72%）；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计79%免于续航罚分））；候选：Monster(11,4)=-48.16|输出饥饿战损上浮×1.25（缺口72%）；路径中段含未达标精英，投影罚分；输出饥饿，Boss入场线放宽至75%（预计79%免于续航罚分）"
+  },
+  {
+   "t": "19:20:40",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【头槌】→缩小甲虫（辅助体优先转火：缩小甲虫（零伤害意图，放生=纵容其强化队友））；敌意图总伤4，我方80血/0甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:20:41",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（辅助体优先转火：缩小甲虫（零伤害意图，放生=纵容其强化队友））；敌意图总伤4，我方80血/0甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:20:42",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤4，我方80血/0甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:20:43",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:20:47",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【挑衅】→缩小甲虫（格挡6）；敌意图总伤7，我方80血/0甲；⚠高危组合（194战38死），转防守节奏；意图升级+3，防御前置"
+  },
+  {
+   "t": "19:20:48",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【痛击】→毛绒伏地虫（辅助体优先转火：毛绒伏地虫（零伤害意图，放生=纵容其强化队友））；敌意图总伤7，我方80血/6甲；⚠高危组合（194战38死），转防守节奏；意图升级+3，防御前置"
+  },
+  {
+   "t": "19:20:50",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 80,
+   "gold": 79,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:20:54",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 79,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【火焰屏障+】（格挡18）；敌意图总伤24，我方79血/0甲；⚠高危组合（194战38死），提速斩杀（竞速解除防御压制）；意图升级+17，防御前置；斩杀竞速投影：击杀还需8回合>可存活3回合（实测10伤/回合），全攻提速"
+  },
+  {
+   "t": "19:20:55",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 79,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【御血术】→毛绒伏地虫（自我强化体优先转火：毛绒伏地虫（力量+7，拖越久打越痛））；敌意图总伤24，我方79血/18甲；⚠高危组合（194战38死），提速斩杀（竞速解除防御压制）；意图升级+17，防御前置；斩杀竞速投影：击杀还需9回合>可存活3回合（实测9伤/回合），全攻提速"
+  },
+  {
+   "t": "19:20:56",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 77,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【万向斩】→毛绒伏地虫（自我强化体优先转火：毛绒伏地虫（力量+7，拖越久打越痛））；敌意图总伤24，我方77血/18甲；⚠高危组合（194战38死），提速斩杀（竞速解除防御压制）；意图升级+17，防御前置；斩杀竞速投影：击杀还需5回合>可存活3回合（实测12伤/回合），全攻提速"
+  },
+  {
+   "t": "19:20:57",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 77,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【旋风斩】（群体伤害≈6.0）；敌意图总伤24，我方77血/18甲；⚠高危组合（194战38死），转防守节奏；意图升级+17，防御前置"
+  },
+  {
+   "t": "19:20:58",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 77,
+   "gold": 79,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:21:03",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 71,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤18，我方71血/0甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:21:04",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 71,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【万向斩】→毛绒伏地虫（自我强化体优先转火：毛绒伏地虫（力量+7，拖越久打越痛））；敌意图总伤18，我方71血/5甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:21:05",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 71,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【挑衅】→毛绒伏地虫（格挡6）；敌意图总伤18，我方71血/5甲；⚠高危组合（194战38死），转防守节奏"
+  },
+  {
+   "t": "19:21:06",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 71,
+   "gold": 79,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤18，我方71血/11甲；⚠高危组合（194战38死），转防守节奏"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血0",
   "F3 Monster战 掉血2",
   "F4 Monster战 掉血0",
-  "F5 Monster战 掉血8"
+  "F5 Monster战 掉血8",
+  "F6 Monster战 掉血14"
  ],
  "attribution_tags": [
   [
@@ -1372,6 +1623,14 @@
   [
    "relic_pick",
    "LASTING_CANDY"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ]
 }
