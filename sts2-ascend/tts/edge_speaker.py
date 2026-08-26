@@ -1,4 +1,4 @@
-"""ASCEND-VOICE-EDGE —— edge-tts 直播朗读器（统一多语言嗓音，云端零本地算力）。
+"""ASCEND-VOICE-EDGE —— Edge 实时直播 + IndexTTS GPU 最终结论。
 
 在 uv 旁路环境运行（由 llm_review 复盘启动时拉起，或手动）：
   uv run --no-project --with edge-tts --with imageio-ffmpeg python tts/edge_speaker.py
@@ -9,11 +9,12 @@
   - 朗读队列 256 上限，到顶丢最老一半
   - 音量/静音共享 knowledge/voice_volume.json（波形增益，0~400%）
   - Ctrl+Shift+Alt+↑/↓ 音量、Ctrl+Shift+Alt+M 静音
-  - LIVE-END 后读完队列即退出
+  - LIVE-END 携带的本场结论立即提交给白绮 IndexTTS GPU owner；两种声音允许同时播放
+  - Edge 队列读完后退出；IndexTTS 不可用只跳过结论，不回退 CPU 或加载第二份模型
 """
 from __future__ import annotations
 
-import asyncio
+import json
 import os
 import queue
 import subprocess
@@ -27,6 +28,7 @@ TTS_DIR = BASE_DIR / "tts"
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 STREAM_FILE = KNOWLEDGE_DIR / "review_live.stream"
 LOG_FILE = KNOWLEDGE_DIR / "tts_speaker.log"
+CONCLUSION_FILE = KNOWLEDGE_DIR / "review_conclusion.txt"
 
 VOICE = "zh-CN-XiaoxiaoNeural"   # 统一嗓音（中英通读，不割裂）
 RATE = "+10%"
@@ -36,6 +38,8 @@ sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, FenceStripper, speakable, SapiSpeaker,  # noqa: E402
                      get_voice_state, start_volume_hotkeys,
                      acquire_voice_lock, release_voice_lock)
+from indextts_client import (IndexTTSServiceError, speak as index_speak,  # noqa: E402
+                             wait_ready as wait_index_ready)
 sys.path.insert(0, str(BASE_DIR / "brain"))
 from lifecycle import stop_requested, wait_for_stop  # noqa: E402
 
@@ -137,6 +141,66 @@ def _hide_own_console() -> None:
     except Exception:
         pass
 
+
+def _marker_payload(line: str) -> dict | None:
+    try:
+        _, payload_text = line.split("]", 1)
+        payload = json.loads(payload_text.strip())
+        return payload if isinstance(payload, dict) else None
+    except (AttributeError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _review_id_from_live_start(line: str) -> str:
+    payload = _marker_payload(line)
+    return str((payload or {}).get("review_id") or "").strip()[:160]
+
+
+def _conclusion_from_live_end(line: str) -> tuple[bool, str, str]:
+    """Return modern-payload flag, review id and validated conclusion."""
+    payload = _marker_payload(line)
+    if payload is None or "conclusion" not in payload:
+        return False, "", ""
+    review_id = str(payload.get("review_id") or "").strip()[:160]
+    conclusion = " ".join(str(payload.get("conclusion") or "").split())[:200]
+    return True, review_id, conclusion
+
+
+def _fresh_conclusion_file(stream_started_at: float, path: Path = CONCLUSION_FILE) -> str:
+    """Compatibility fallback that never reuses a previous review's conclusion."""
+    try:
+        if path.exists() and path.stat().st_mtime >= stream_started_at:
+            return " ".join(path.read_text(encoding="utf-8").split())[:200]
+    except OSError:
+        pass
+    return ""
+
+
+def _fallback_conclusion(recent_texts: list[str]) -> str:
+    return "。".join(text.strip() for text in recent_texts[-4:] if text.strip())[:300]
+
+
+def _speak_conclusion_indextts(text: str) -> bool:
+    """Submit one conclusion to the existing session's GPU owner, never a new model."""
+    text = str(text or "").strip()[:300]
+    if not text or stop_requested():
+        return False
+    status = wait_index_ready(240.0, stop_requested=stop_requested)
+    if status is None:
+        log("当前 session 的 IndexTTS GPU owner 未就绪；结论跳过，不回退 CPU/SAPI")
+        return False
+    try:
+        result = index_speak(text, source="conclusion")
+    except IndexTTSServiceError as exc:
+        log(f"IndexTTS GPU 结论朗读失败（不回退 CPU/SAPI）：{exc}")
+        return False
+    log(
+        f"IndexTTS GPU 结论播放完成（{status.get('device')}/{status.get('precision')}，"
+        f"合成 {result.get('synthesis_seconds', '?')}s）"
+    )
+    return True
+
+
 def main() -> int:
     _hide_own_console()
     if "--test" in sys.argv:
@@ -183,6 +247,46 @@ def main() -> int:
         state = {"offset": 0}
     ended = False
     end_at = 0.0
+    stream_started_at = time.time()
+    stream_conclusion = ""
+    conclusion_payload_seen = False
+    recent_texts: list[str] = []
+    conclusion_submitted = False
+    handled_review_ids: set[str] = set()
+    handled_review_order: list[str] = []
+
+    def mark_review_handled(review_id: str) -> None:
+        if not review_id or review_id in handled_review_ids:
+            return
+        handled_review_ids.add(review_id)
+        handled_review_order.append(review_id)
+        if len(handled_review_order) > 128:
+            handled_review_ids.discard(handled_review_order.pop(0))
+
+    # One FIFO worker preserves conclusion order if an old Edge process spans
+    # back-to-back reviews while the GPU owner is still starting.
+    conclusion_q: queue.Queue[str] = queue.Queue()
+    conclusion_pump_stop = threading.Event()
+
+    def conclusion_pump() -> None:
+        while not conclusion_pump_stop.is_set() and not stop_requested():
+            try:
+                text = conclusion_q.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            try:
+                _speak_conclusion_indextts(text)
+            except Exception as exc:
+                log(f"IndexTTS 结论队列异常（继续）：{exc!r}")
+            finally:
+                conclusion_q.task_done()
+
+    conclusion_thread = threading.Thread(
+        target=conclusion_pump,
+        name="edge-index-conclusion",
+        daemon=True,
+    )
+    conclusion_thread.start()
 
     # ---- 3 并发预取流水线：边播边预合成后 3 句，消除句间卡顿 ----
     done: dict[int, tuple] = {}          # seq -> (wav_path | None, text)
@@ -320,9 +424,29 @@ def main() -> int:
                     if ln.startswith("[LIVE-END]"):
                         ended = True
                         end_at = time.time()
+                        (conclusion_payload_seen, end_review_id,
+                         stream_conclusion) = _conclusion_from_live_end(ln)
+                        already_handled = (
+                            end_review_id in handled_review_ids
+                            if end_review_id else conclusion_submitted)
+                        conclusion_submitted = already_handled
+                        if stream_conclusion and not already_handled and not stop_requested():
+                            # Index work proceeds in its own FIFO while Edge keeps playing.
+                            # The cross-engine overlap is intentional.
+                            if end_review_id:
+                                mark_review_handled(end_review_id)
+                            conclusion_submitted = True
+                            conclusion_q.put(stream_conclusion)
                         continue
                     if ln.startswith("[LIVE-START]"):
                         ended = False
+                        stream_started_at = time.time()
+                        stream_conclusion = ""
+                        conclusion_payload_seen = False
+                        start_review_id = _review_id_from_live_start(ln)
+                        conclusion_submitted = bool(
+                            start_review_id and start_review_id in handled_review_ids)
+                        recent_texts.clear()
                         continue
                     ln = fence.feed(ln)      # 剥掉 ``` 围栏代码块（跨报文状态机）
                     if not ln.strip():
@@ -345,6 +469,8 @@ def main() -> int:
                                 done_cond.notify_all()
                         q.put((counters["put"], sent))
                         counters["put"] += 1
+                        recent_texts.append(sent)
+                        del recent_texts[:-8]
             if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
                 break
             if wait_for_stop(0.5):
@@ -354,9 +480,27 @@ def main() -> int:
             if wait_for_stop(2):
                 break
 
+    # This lock protects Edge/SAPI narrator instances only.  Release it before
+    # cleanup/waiting so a following review's Edge voice is never blocked by
+    # the independent white-voice conclusion.
+    release_voice_lock()
     if eng._sapi is not None:
         eng._sapi.close()
-    release_voice_lock()
+    if not stop_requested() and not conclusion_submitted and not conclusion_payload_seen:
+        conclusion = (_fresh_conclusion_file(stream_started_at)
+                      or _fallback_conclusion(recent_texts))
+        if conclusion:
+            conclusion_submitted = True
+            conclusion_q.put(conclusion)
+        else:
+            log("本场没有可用结论，跳过 IndexTTS；未读取上一场旧文本")
+    elif not stop_requested() and conclusion_payload_seen and not conclusion_submitted:
+        log("本场隔离复盘未产出已验证结论，跳过 IndexTTS；不拿流尾冒充结论")
+    while conclusion_q.unfinished_tasks and not stop_requested():
+        if wait_for_stop(0.5):
+            break
+    conclusion_pump_stop.set()
+    conclusion_thread.join(timeout=1.0)
     log("edge 朗读器退出" if not stop_requested() else "收到全栈停止请求，edge 朗读器退出")
     return 0
 

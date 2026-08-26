@@ -188,7 +188,7 @@ class Agent:
     # ---------------- quipper（白绮碎碎念） ----------------
 
     def _launch_quipper(self) -> None:
-        """启动唯一的 IndexTTS GPU owner（兼管碎碎念与复盘语音）。"""
+        """启动唯一的 IndexTTS GPU owner（兼管白绮碎碎念与复盘最终结论）。"""
         try:
             quipper = BASE_DIR / "tts" / "quipper.py"
             if not quipper.exists():
@@ -209,7 +209,7 @@ class Agent:
                              cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=creationflags, close_fds=True)
-            log("[agent] IndexTTS GPU owner 进程已拉起（模型后台加载；碎碎念/复盘共用）")
+            log("[agent] IndexTTS GPU owner 已拉起（模型后台加载；碎碎念/最终结论共用）")
         except Exception as exc:
             log(f"[agent] 碎碎念拉起失败（不影响游玩）：{exc}")
 

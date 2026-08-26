@@ -169,9 +169,10 @@ def load_llm_config() -> dict:
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
-        # 语音朗读器（tts/）：hybrid=SAPI实时直播+克隆音色读结论(默认) / nano=全克隆音色(滞后大) /
-        # sapi=纯系统语音 / off=关闭
-        "tts_mode": "hybrid",
+        # 语音朗读器（tts/）：edge=Edge 实时直播 + IndexTTS GPU 最终结论（默认） /
+        # indextts=兼容用全 IndexTTS / hybrid=SAPI 实时直播 + IndexTTS GPU 结论 /
+        # nano=全克隆音色（滞后大） / sapi=纯系统语音 / off=关闭
+        "tts_mode": "edge",
         # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
         "review_queue_max": 5,
     }
@@ -582,8 +583,11 @@ def _launch_viewer(cfg: dict, log) -> None:
 
 
 def _launch_speaker(cfg: dict, log) -> None:
-    """拉起语音朗读器。tts_mode: edge=edge-tts统一嗓音(默认,云端零算力) / nano=全克隆音色 /
-    hybrid=SAPI直播+克隆结论 / sapi=纯系统语音 / off=关闭。独立进程，死活不影响复盘。"""
+    """拉起语音朗读器。
+
+    ``edge`` 默认让 Edge TTS 读实时正文，并在结束后把本场短结论提交给共享
+    IndexTTS GPU owner；两个引擎允许同时出声。独立进程的死活不影响复盘。
+    """
     mode = str(cfg.get("tts_mode", "edge"))
     if _review_stop_requested() or mode == "off":
         return
@@ -876,8 +880,16 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         log("[llm] 备份完成时收到停止请求，取消本次复盘")
         return False
 
-    # 直播流开启 + 拉起悬浮窗/语音朗读器（哨兵/meta 先行）
-    _stream_begin({"model": entry, "source": source, "run": runs, "time": stamp})
+    # 直播流开启 + 拉起悬浮窗/语音朗读器（哨兵/meta 先行）。review_id 让旧 Edge
+    # 进程在连续复盘、同一路径 truncate/regrow 时仍能按场次去重结论。
+    review_id = f"{os.getpid()}-{time.time_ns()}"
+    _stream_begin({
+        "review_id": review_id,
+        "model": entry,
+        "source": source,
+        "run": runs,
+        "time": stamp,
+    })
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
 
@@ -942,7 +954,16 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
         return False
     finally:
-        _stream_end({"exit": rc, "timeout": timed_out, "stopped": stopped})
+        _stream_end({
+            "exit": rc,
+            "timeout": timed_out,
+            "stopped": stopped,
+            "review_id": review_id,
+            # 结论取自即将删除的隔离 clone，已过 allowlist/selfcheck/patch 导出；
+            # 直接随哨兵传递，避免真实工作树稍后才 apply 导致读到上一场旧文件。
+            "conclusion": sandbox.conclusion,
+            "conclusion_ready": bool(sandbox.conclusion),
+        })
         # 模型退出隔离 clone 后已不可能产生半成品文件；无论成功失败都立即清 flag。
         autogit.set_review_active(False)
 
@@ -1233,6 +1254,7 @@ class SandboxReviewResult:
     stopped: bool = False
     paths: tuple[str, ...] = ()
     patch: bytes = b""
+    conclusion: str = ""
     error: str = ""
     selfcheck_ok: bool = True
 
@@ -1354,7 +1376,26 @@ def _run_review_sandbox(
             result = SandboxReviewResult(
                 rc=rc, out=out, paths=tuple(paths), error="隔离复盘 patch 导出失败")
             return result
-        result = SandboxReviewResult(rc=rc, out=out, paths=tuple(paths), patch=patch.stdout)
+        conclusion = ""
+        conclusion_rel = "sts2-ascend/knowledge/review_conclusion.txt"
+        if conclusion_rel in paths:
+            try:
+                conclusion_path = sandbox_repo / conclusion_rel
+                resolved_conclusion = conclusion_path.resolve()
+                if (conclusion_path.is_symlink()
+                        or not resolved_conclusion.is_relative_to(sandbox_repo.resolve())):
+                    raise OSError("结论路径逃逸隔离 clone")
+                raw_conclusion = resolved_conclusion.read_text(encoding="utf-8")
+                conclusion = " ".join(raw_conclusion.split())[:200]
+            except OSError as exc:
+                log(f"[llm] 无法读取隔离复盘结论，语音结论将跳过：{exc}")
+        result = SandboxReviewResult(
+            rc=rc,
+            out=out,
+            paths=tuple(paths),
+            patch=patch.stdout,
+            conclusion=conclusion,
+        )
         return result
     except Exception as exc:
         result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")

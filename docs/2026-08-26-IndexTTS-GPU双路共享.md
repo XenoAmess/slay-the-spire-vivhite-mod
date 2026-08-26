@@ -1,14 +1,15 @@
-# IndexTTS-2.5 双路 GPU 共享改造
+# IndexTTS-2.5 白绮双路 GPU 共享与 Edge 并行播报
 
 日期：2026-08-26
 
 ## 目标与结论
 
-目标是让白绮碎碎念和复盘播报都使用 IndexTTS，并把分钟级 CPU 合成改为 GPU 合成。
+最终目标是让白绮的两类声音——碎碎念和复盘最终结论——共享 IndexTTS GPU，同时恢复 Edge TTS
+对复盘正文的实时播报。Edge 和白绮两种声音允许同时播放，这是产品行为，不是需要消除的串音。
 
 结论不是“IndexTTS 不能用 GTX 1060”，而是原生产链没有接到 CUDA，且官方整模布局无法在
 6GB 显存上与 Vulkan 游戏稳定共存。本次采用一个常驻 GPU owner、固定参考条件缓存、参考编码器
-卸载和 GPT-only FP16，最终让两个入口共享同一模型并串行合成。
+卸载和 GPT-only FP16，让两个白绮入口共享同一模型并串行合成；实时长正文留给云端 Edge TTS。
 
 ## 原链路的四个断点
 
@@ -56,20 +57,24 @@ FP16；GPT 输出到后半链的关键边界是整数 codes，因此 semantic co
 ## 实现结构
 
 ```text
-quipper.py（唯一长驻进程、唯一模型）
+review_live.stream
+  └─ edge_speaker.py → Edge TTS 实时正文（可与白绮同时播放）
+       └─ LIVE-END 内嵌本场已验证结论 → localhost HTTP
+
+quipper.py（唯一长驻 IndexTTS 进程、唯一模型）
   ├─ IndexTTSGpuEngine
   │    ├─ CPU 构造，避免官方构造期整模挤爆 6GB
   │    ├─ 首次：W2V-BERT + CAMPPlus 分阶段上 GPU，计算固定白绮参考条件
   │    ├─ 缓存 5 个参考张量到本地 `.pt`
   │    ├─ 删除约 2.2GB 的 W2V-BERT/CAMPPlus
   │    └─ GPT(FP16) + codec/S2Mel/BigVGAN(FP32) 上 cuda:0
-  └─ PriorityQueue（合成和播放均严格串行）
+  └─ PriorityQueue（白绮声音内部的合成和播放严格串行）
        ├─ priority 0：复盘结论
-       ├─ priority 20：复盘直播句
+       ├─ priority 20：兼容模式复盘直播句（默认生产路由不用）
        └─ priority 50：碎碎念
 
-speaker.py（轻量 Python，无 torch）
-  └─ localhost HTTP + session_id → 同一 PriorityQueue
+edge_speaker.py（Edge 旁白 + 轻量 Index 客户端，无 torch）
+  └─ conclusion + session_id → 同一 PriorityQueue
 ```
 
 服务只监听 `127.0.0.1`，并校验 `STS2_ASCEND_SESSION_ID`。`speak_once.py` 也只提交给现有
@@ -86,10 +91,17 @@ owner；服务不存在时明确失败，不会偷偷拉第二份模型或回退
 缓存 key 包含参考 WAV、配置、推理源码和关键 checkpoint 元信息。参考文件或模型变化会自动重算。
 原版同一参考会重复跑三次 W2V；这里 speaker/emotion 共用一次结果。
 
-## 复盘积压与生命周期
+## 结论交接、并行播放与生命周期
 
-- IndexTTS 无法实时追上大模型 token 流，复盘直播队列限制为 8 句，满时丢最旧一半。
-- 收到 `LIVE-END` 后清掉过时正文，等待当前句结束，立即提交人工生成的短结论。
+- IndexTTS 无法实时追上大模型 token 流，因此默认不再承担正文；Edge 的三路预合成队列继续实时追流。
+- `llm_review.py` 在隔离 clone 删除前，只从本次变更路径读取已通过 allowlist、自检和 patch 导出的
+  `review_conclusion.txt`，压成单行后随 `LIVE-END` JSON 交给 Edge。这样不依赖真实工作树稍后的
+  patch apply，也不会误读上一场文件。
+- `LIVE-START/END` 带唯一 `review_id`；旧 Edge 若跨越连续复盘，会按 id 去重并通过单一 FIFO
+  顺序提交结论，避免多个等待 owner 的线程把场次读反。
+- Edge 收到 `LIVE-END` 就在独立线程提交 `source=conclusion`，自身继续清空正文队列；结论、正文和
+  白绮碎碎念可以并行出声。Index owner 内部仍以结论优先，且不会加载第二份模型。
+- Edge 结束正文后先释放 narrator 锁，再等待结论请求完成，避免连续复盘时用白绮 GPU 请求挡住下一场 Edge。
 - quipper 使用既有 session/lock/stop 协议，没有增加第二个长驻进程。
 - `Stop-Agent.ps1` 的 `voice_clone_busy.flag` owner 已同步改为 `quipper.py`。
 - 每次 WAV 已回到 CPU 后执行 `empty_cache()`，把无主激活缓存还给 Vulkan；活模型仍常驻。
@@ -98,9 +110,10 @@ owner；服务不存在时明确失败，不会偷偷拉第二份模型或回退
 ## 验证
 
 - `py -3 -m py_compile`：新增/修改的 TTS 与 agent 文件全部通过。
-- `unittest`：覆盖 health、session 隔离、HTTP 提交、四并发调用严格串行；3 项通过。
-- 真实 CUDA：manual、quip、review 三种 source 均完成合成与播放。
-- 同卡实测：Vulkan 游戏运行中完成碎碎念与复盘长句，游戏进程保持 `Responding=True`。
+- `unittest`：覆盖 health、session 隔离、HTTP 提交、并发串行、默认 Edge 启动路由、LIVE-END
+  结论解析、旧文件拒绝和 `source=conclusion` GPU 提交。
+- 真实 CUDA：manual、quip、conclusion 均能由同一 owner 完成合成与播放；`review` 仅保留兼容入口。
+- 同卡实测：Vulkan 游戏运行中完成碎碎念与最终结论，游戏进程保持 `Responding=True`。
 - 统一启停：`Start-Agent.ps1 -SkipDeploy` 到 `Stack ready`，TTS health 返回
   `cuda:0/fp16`；`Stop-Agent.ps1` 能让 owner 协作退出并清理标志。
 

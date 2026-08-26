@@ -1,8 +1,9 @@
 """Standard-library client for the single local IndexTTS GPU owner.
 
-The owner lives inside ``quipper.py`` so quips and review narration never load
-two copies of the model.  This module intentionally has no torch dependency;
-``speaker.py`` runs in the brain's lightweight Python environment.
+The owner lives inside ``quipper.py`` so white-voice quips and final review
+conclusions never load two copies of the model.  This module intentionally has
+no torch dependency; the default ``edge_speaker.py`` uses it only for the final
+conclusion while Edge TTS keeps reading the live body independently.
 """
 from __future__ import annotations
 

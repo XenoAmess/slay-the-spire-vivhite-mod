@@ -509,6 +509,8 @@ def main() -> int:
     ended = False
     end_at = 0.0
     stream_started_at = time.time()
+    stream_conclusion = ""
+    conclusion_payload_seen = False
     recent_texts: list[str] = []
     pump_stop = threading.Event()
 
@@ -540,10 +542,22 @@ def main() -> int:
             if ln.startswith("[LIVE-END]"):
                 ended = True
                 end_at = time.time()
+                try:
+                    _, payload_text = ln.split("]", 1)
+                    payload = json.loads(payload_text.strip())
+                    conclusion_payload_seen = (
+                        isinstance(payload, dict) and "conclusion" in payload)
+                    stream_conclusion = " ".join(
+                        str(payload.get("conclusion") or "").split())[:200]
+                except (AttributeError, ValueError, TypeError, json.JSONDecodeError):
+                    conclusion_payload_seen = False
+                    stream_conclusion = ""
                 continue
             if ln.startswith("[LIVE-START]"):
                 ended = False
                 stream_started_at = time.time()
+                stream_conclusion = ""
+                conclusion_payload_seen = False
                 continue
             ln = fence.feed(ln)          # 剥掉 ``` 围栏代码块（跨报文状态机）
             if not ln.strip():
@@ -582,14 +596,15 @@ def main() -> int:
     if not stop_requested() and mode in ("indextts", "hybrid"):
         # 优先朗读复盘 agent 专为语音写的短评（review_conclusion.txt，100 字内）；
         # 只有它是本场复盘新写的（mtime 晚于本场开始）才用，否则回退流尾部
-        conclusion = ""
+        conclusion = stream_conclusion
         concl_file = KNOWLEDGE_DIR / "review_conclusion.txt"
         try:
-            if concl_file.exists() and concl_file.stat().st_mtime >= stream_started_at:
+            if (not conclusion_payload_seen and not conclusion and concl_file.exists()
+                    and concl_file.stat().st_mtime >= stream_started_at):
                 conclusion = concl_file.read_text(encoding="utf-8").strip()[:200]
         except OSError:
             pass
-        if not conclusion and recent_texts:
+        if not conclusion_payload_seen and not conclusion and recent_texts:
             conclusion = "。".join(recent_texts[-4:])[:300]
         if conclusion:
             _speak_conclusion_indextts(conclusion)

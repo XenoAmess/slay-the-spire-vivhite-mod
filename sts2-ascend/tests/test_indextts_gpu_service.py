@@ -63,7 +63,7 @@ class SpeechServiceTests(unittest.TestCase):
             status = client.health()
             self.assertTrue(status["ready"])
             self.assertEqual(status["device"], "cuda:0")
-            result = client.speak("白绮测试", source="review", timeout=10)
+            result = client.speak("白绮测试", source="conclusion", timeout=10)
         self.assertTrue(result["ok"])
         self.assertEqual(self.engine.calls, ["白绮测试"])
         self.assertEqual(self.played, [b"fake-wave"])

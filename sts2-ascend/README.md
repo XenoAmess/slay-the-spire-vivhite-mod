@@ -185,18 +185,26 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 ## 语音朗读（ASCEND-VOICE）
 
-白绮碎碎念和复盘朗读现在都走 **IndexTTS-2.5 GPU**。`quipper.py` 是唯一常驻模型 owner；
-`speaker.py` 通过仅监听 localhost、带 session 校验的队列提交复盘句子，两条链不会各占一份模型：
+默认是两种声音并行：**Edge TTS 读实时复盘正文**，白绮的 **IndexTTS-2.5 GPU** 继续读碎碎念和
+最终结论。两套引擎按用户要求允许同时出声；`quipper.py` 是唯一 IndexTTS 模型 owner，不会为结论
+再加载第二份模型：
 
-- 默认配置：`llm.tts_mode=indextts`、`tts.clone_engine=indextts`、`device=cuda:0`
+- 默认配置：`llm.tts_mode=edge`、`tts.clone_engine=indextts`、`device=cuda:0`
+- `edge_speaker.py` 用 `zh-CN-XiaoxiaoNeural` 三路预合成实时正文；Edge 网络失败只让该句回退 SAPI，
+  不会把实时正文塞给慢速 IndexTTS
+- 隔离复盘通过 allowlist、自检并导出 patch 后，把本场短结论直接放进 `LIVE-END` 哨兵；Edge 收到后
+  立即以 `source=conclusion` 提交给共享 GPU owner，因此不依赖稍后才合入的全局结论文件，也不会读到上一场
+- `LIVE-START/END` 带唯一 `review_id`；同一 Edge 跨连续复盘时按 id 去重，并由单一 FIFO 保证多场结论顺序
+- Edge 正文队列和白绮结论并行工作；白绮碎碎念也不因 Edge 直播暂停。Index 内部仍严格串行，结论优先于
+  等待中的碎碎念，但不会强行打断已经开始的那一句
 - GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；禁用 BF16、
   FlashAttention、CUDA 自定义 kernel 和 torch.compile
 - 固定参考音色 `tts/reference_voice_15s.wav` 首次生成条件缓存；只在参考阶段使用的 Wav2Vec/CAMPPlus
   随后从显卡卸载，不参与每句合成
-- 复盘直播最多保留 8 句最新内容；`LIVE-END` 会丢弃过时积压，让结论优先于直播正文，直播正文又优先于碎碎念
-- 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
-- GPU owner 和复盘朗读器各有 session-scoped 单实例锁；CUDA 不可用时明确失败，绝不静默回退 CPU 或加载第二份模型
-- 兼容模式仍可选：`llm.tts_mode` = `hybrid` / `sapi` / `edge` / `nano` / `off`
+- Edge 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
+- GPU owner 和 Edge 朗读器各有 session-scoped 单实例锁；CUDA 不可用时只跳过白绮结论/碎碎念，
+  绝不静默回退 CPU 或加载第二份模型
+- 兼容模式仍可选：`llm.tts_mode` = `indextts` / `hybrid` / `sapi` / `nano` / `off`
 - **音量控制**：`Ctrl+Shift+Alt+↑` 调大 / `Ctrl+Shift+Alt+↓` 调小（±10%）/ `Ctrl+Shift+Alt+M` 静音切换；
   悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）
 - 手动一次性朗读：先启动整套，再运行 `py -3 tts/speak_once.py <UTF-8文本文件>`；它只提交给现有 owner，不会另载模型
@@ -213,7 +221,7 @@ Start-Agent.ps1（session + PID 身份记录，默认后台）
         └─ py -m brain（决策主循环）
               ├─ quipper.py（唯一 IndexTTS GPU owner + 白绮碎碎念）
               ├─ 每局结束 → review_queue.json
-              └─ 复盘线程 → opencode → viewer / speaker（speaker 提交到同一 GPU owner）
+              └─ 复盘线程 → opencode → viewer / edge_speaker（Edge 正文 + 提交白绮 GPU 结论）
 
 Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏关窗
 ```
