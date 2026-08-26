@@ -2493,3 +2493,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/627 胜，当前目标进阶 0
+
+## 第 628 局复盘（2026-08-26 19:36）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：SWORD_BOOMERANG, TAUNT, THRUMMING_HATCHET, CRUELTY, SWORD_BOOMERANG, BREAKTHROUGH, MOLTEN_FIST, STOMP, CINDER, RAMPAGE, UPPERCUT, DEMON_FORM, HEMOKINESIS, HOWL_FROM_BEYOND
+- 本局遗物：WHETSTONE, STRIKE_DUMMY
+- 战斗记录：F13 Monster战 掉血0; F15 Monster战 掉血10; F17 Boss战 掉血71; F19 Monster战 掉血19; F21 Monster战 掉血43; F22 Unknown战 掉血23（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/628 胜，当前目标进阶 0
