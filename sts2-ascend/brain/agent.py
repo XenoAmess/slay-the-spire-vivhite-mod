@@ -190,6 +190,7 @@ class Agent:
         self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
         self._last_policy_refresh = 0.0  # 策略热同步节流（第 123~124 局复盘）
         self._boot_head = ""  # run() 启动时固定；测试构造 Agent 不访问 Git
+        self._boot_head_thread: threading.Thread | None = None
         self._ambiguous_action = None  # response-lost POST awaiting next-state reconciliation
         self._api_race_retry = None  # repeated refresh races, diagnostic only
         self.live_dashboard: LiveDashboardPublisher | None = None
@@ -212,19 +213,43 @@ class Agent:
                 log(f"[agent] ASCEND-VISION 监督器启动失败（不影响游玩）：{exc}")
 
     def _capture_boot_head(self) -> None:
-        """Read the optional rollback-health baseline without delaying startup."""
+        """Read the optional rollback-health baseline fully off the game loop."""
         self._boot_head = ""
         if autogit is None:
             return
-        try:
-            # A concurrent online checkpoint/review may legitimately hold the
-            # repository transaction lock.  The commit is only a later
-            # rollback-health hint, so do not inherit the normal eight-minute
-            # transaction wait in the gameplay startup path.
-            with autogit.repository_lock(timeout=5.0):
-                self._boot_head = autogit.head()
-        except Exception as exc:
-            log(f"[agent] 启动提交号暂不可读，跳过本轮健康标记（不影响游玩）：{exc}")
+
+        def worker() -> None:
+            try:
+                # HEAD is an atomic read; it does not need the repository write
+                # transaction lock.  Keeping this probe outside that shared lock
+                # is essential: policy hot-refresh also uses the lock and must
+                # never queue behind antivirus-delayed process inspection.
+                # This commit is only a later rollback-health hint, so the whole
+                # probe lives on a daemon thread and can never gate gameplay,
+                # telemetry, review rendering, or API connection.
+                result = subprocess.run(
+                    ["git", "-C", str(autogit.REPO_DIR), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=5,
+                )
+                if result.returncode != 0:
+                    raise RuntimeError((result.stderr or "git rev-parse failed").strip())
+                captured = result.stdout.strip()
+                if not captured:
+                    raise RuntimeError("git rev-parse returned an empty HEAD")
+                self._boot_head = captured
+            except Exception as exc:
+                log(f"[agent] 启动提交号暂不可读，跳过本轮健康标记（不影响游玩）：{exc}")
+
+        self._boot_head_thread = threading.Thread(
+            target=worker,
+            name="ascend-boot-head",
+            daemon=True,
+        )
+        self._boot_head_thread.start()
 
     def _dashboard_observe(self, state: dict) -> None:
         publisher = self.live_dashboard

@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import ast
-from contextlib import contextmanager
 import json
 from pathlib import Path
 import random
+import subprocess
 import sys
 import tempfile
+import threading
 import time
 from types import SimpleNamespace
 import unittest
@@ -228,24 +229,34 @@ class LiveDashboardPublisherTests(unittest.TestCase):
 class DashboardStartupTests(unittest.TestCase):
     def test_busy_git_lock_cannot_delay_gameplay_startup(self) -> None:
         calls = []
+        entered = threading.Event()
+        release = threading.Event()
 
-        @contextmanager
-        def busy_lock(*, timeout):
-            calls.append(timeout)
-            raise TimeoutError("fixture busy lock")
-            yield  # pragma: no cover - keeps this a context manager
+        def blocked_git(*args, **kwargs):
+            calls.append((args, kwargs))
+            entered.set()
+            release.wait(1.0)
+            raise subprocess.TimeoutExpired("git", kwargs.get("timeout"))
 
-        fake_autogit = SimpleNamespace(
-            repository_lock=busy_lock,
-            head=lambda: self.fail("head must not run without the lock"),
-        )
+        fake_autogit = SimpleNamespace(REPO_DIR=Path("fixture-repo"))
         instance = object.__new__(agent_module.Agent)
         instance._boot_head = "old"
         with mock.patch.object(agent_module, "autogit", fake_autogit), \
-                mock.patch.object(agent_module, "log"):
+                mock.patch.object(agent_module.subprocess, "run", side_effect=blocked_git), \
+                mock.patch.object(agent_module, "log") as mocked_log:
+            started = time.perf_counter()
             instance._capture_boot_head()
+            elapsed = time.perf_counter() - started
+            self.assertTrue(entered.wait(0.5))
+            self.assertLess(elapsed, 0.1)
+            self.assertEqual(instance._boot_head, "")
+            release.set()
+            instance._boot_head_thread.join(1.0)
+            self.assertFalse(instance._boot_head_thread.is_alive())
+            mocked_log.assert_called_once()
 
-        self.assertEqual(calls, [5.0])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][1]["timeout"], 5)
         self.assertEqual(instance._boot_head, "")
 
 
