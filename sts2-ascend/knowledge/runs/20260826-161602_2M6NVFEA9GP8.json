@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 16:16:02",
  "victory": false,
  "in_progress": true,
- "floor": 14,
+ "floor": 17,
  "decisions": [
   {
    "t": "16:16:02",
@@ -1689,13 +1689,316 @@
     "option_index": 4
    },
    "reason": "商店：购买卡牌【黑暗之拥】（74金，价值8.8≥门槛1.0）"
+  },
+  {
+   "t": "16:20:00",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 78,
+   "gold": 30,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "16:20:01",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 78,
+   "gold": 30,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "16:20:03",
+   "screen": "MAP",
+   "floor": 14,
+   "hp": 78,
+   "gold": 30,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(14,2)（路径分 0.86，预计进 Boss 血量 100%；低血尾部生存复核：单场最差72打完仅剩6(≤8)，尾部罚分；输出饥饿战损上浮×1.24（缺口68%））；候选：Unknown(14,2)=0.86|低血尾部生存复核：单场最差72打完仅剩6(≤8)，尾部罚分；输出饥饿战损上浮×1.24（缺口68%）"
+  },
+  {
+   "t": "16:20:04",
+   "screen": "CHEST",
+   "floor": 15,
+   "hp": 78,
+   "gold": 30,
+   "action": "open_chest",
+   "params": {},
+   "reason": "宝箱：开启"
+  },
+  {
+   "t": "16:20:05",
+   "screen": "CHEST",
+   "floor": 15,
+   "hp": 78,
+   "gold": 81,
+   "action": "choose_treasure_relic",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "宝箱：选择遗物【准备背包】（价值 3.50）"
+  },
+  {
+   "t": "16:20:07",
+   "screen": "CHEST",
+   "floor": 15,
+   "hp": 78,
+   "gold": 81,
+   "action": "proceed",
+   "params": {},
+   "reason": "宝箱：离开"
+  },
+  {
+   "t": "16:20:09",
+   "screen": "MAP",
+   "floor": 15,
+   "hp": 78,
+   "gold": 81,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(15,2)（路径分 13.31，预计进 Boss 血量 100%；Boss 前休整）；候选：RestSite(15,2)=13.31|Boss 前休整"
+  },
+  {
+   "t": "16:20:10",
+   "screen": "REST",
+   "floor": 16,
+   "hp": 78,
+   "gold": 81,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：Boss 前夜翻转带回血（当前 92%；不回血预期余量-10≤安全余量8（悲观战损88=场均59×1.5），回血7点直接兑换生还率）"
+  },
+  {
+   "t": "16:20:12",
+   "screen": "REST",
+   "floor": 16,
+   "hp": 90,
+   "gold": 81,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "16:20:14",
+   "screen": "MAP",
+   "floor": 16,
+   "hp": 90,
+   "gold": 81,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Boss(16,3)（路径分 10.92，预计进 Boss 血量 100%）；候选：Boss(16,3)=10.92"
+  },
+  {
+   "t": "16:20:20",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用攻击药水【药水形状的石头】"
+  },
+  {
+   "t": "16:20:21",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【重锤+】→仪式兽（单体伤害≈42.0）；敌意图总伤0，我方90血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "16:20:22",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸+】→仪式兽（单体伤害≈20.0）；敌意图总伤0，我方90血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "16:20:24",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "16:20:27",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【火焰屏障】（格挡12）；敌意图总伤18，我方90血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+18，防御前置；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "16:20:28",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤18，我方90血/12甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+18，防御前置；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "16:20:29",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 90,
+   "gold": 81,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "16:20:35",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 89,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【耸肩无视+】（格挡11/抽牌1）；敌意图总伤20，我方89血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80"
+  },
+  {
+   "t": "16:20:36",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 89,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→仪式兽（单体伤害≈6.0）；敌意图总伤20，我方89血/11甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活4回合（实测22伤/回合），全攻提速"
+  },
+  {
+   "t": "16:20:43",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 89,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→仪式兽（单体伤害≈6.0）；敌意图总伤20，我方89血/11甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活4回合（实测24伤/回合），全攻提速"
+  },
+  {
+   "t": "16:20:45",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 89,
+   "gold": 81,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "16:20:49",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 80,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→仪式兽（单体伤害≈8.0）；敌意图总伤22，我方80血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需6回合>可存活4回合（实测26伤/回合），全攻提速"
+  },
+  {
+   "t": "16:20:50",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 80,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤22，我方80血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活4回合（实测22伤/回合），全攻提速"
+  },
+  {
+   "t": "16:20:52",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 80,
+   "gold": 81,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "16:20:58",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 63,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸+】→仪式兽（单体伤害≈20.0）；敌意图总伤24，我方63血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活3回合（实测22伤/回合），全攻提速"
+  },
+  {
+   "t": "16:20:59",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 63,
+   "gold": 81,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→仪式兽（单体伤害≈6.0）；敌意图总伤0，我方63血/0甲；⚠高危Boss（146战65死），速战速决，提速斩杀；意图升级+2，防御前置；Boss攻坚提速×1.80；防守线复核：联合能量对账，格挡13+输出8/回合的混合分配即可在净火力下追平击杀所需6回合，维持攻防节奏不全攻（滚雪球零余量）"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血3",
   "F3 Monster战 掉血0",
   "F4 Monster战 掉血0",
-  "F6 Monster战 掉血7"
+  "F6 Monster战 掉血7",
+  "F9 Monster战 掉血0"
  ],
  "attribution_tags": [
   [
@@ -1785,6 +2088,22 @@
   [
    "card_pick",
    "DARK_EMBRACE"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "relic_pick",
+   "BAG_OF_PREPARATION"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Boss"
   ]
  ]
 }
