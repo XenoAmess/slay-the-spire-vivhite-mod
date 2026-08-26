@@ -1690,3 +1690,47 @@
 2. **学习信号的计量视界要匹配回报视界**：DEMON_FORM 被 -3.0 bias 全额压制（33拿25打），负账来自「必败局拿了也没用」的归因倒置——长复利资产用短视界 outcome 计价必然低估。深缺口（≥0.30）局面下生效引擎的 learned 负分归零，非饥饿恢复全额信号；这是结构性豁免，不是手改 bias 数值。
 3. **必败判定先查有没有资产没入账**：「击杀需 N 回合 > 满血存活 M 回合」若看不见力量复利，必败就成了自我实现预言（回血压过锻造、all-in 提早开火都是它的下游症状）。判死账本扩容后，前夜的回血/锻造裁决才真正可信。
 4. **积极信号记录**：kill_race_prior_eff 四批连升 0.45→0.54（实测输出率真实爬坡），551 局首次连过两幕 Boss 行至 F40 生涯最深——结构修复开始兑现在纵深上。下批复盘重点核对：带引擎卡组的竞速预演是否停止「满血亦判死」。
+
+## 第 555 局复盘（2026-08-26 10:22）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F21 Monster战 掉血6; F23 Monster战 掉血43; F28 Unknown战 掉血42; F30 Monster战 掉血16; F31 Unknown战 掉血17; F33 Unknown战 掉血54（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff 0.54 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/555 胜，当前目标进阶 0
+
+## 第 556 局复盘（2026-08-26 10:29）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：INFLAME, TAUNT, SHRUG_IT_OFF, UNMOVABLE, THRASH, BREAKTHROUGH, BREAKTHROUGH, CINDER
+- 本局遗物：ANCHOR
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血11; F13 Unknown战 掉血14; F14 Monster战 掉血0; F15 Monster战 掉血2; F17 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.54 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/556 胜，当前目标进阶 0
+
+## 第 557 局复盘（2026-08-26 10:33）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 LEAF_SLIME_M+SLITHERING_STRANGLER
+- 本局拿牌：TRUE_GRIT, FEEL_NO_PAIN, CINDER, SWORD_BOOMERANG
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血2; F4 Monster战 掉血0; F5 Monster战 掉血61; F6 Monster战 掉血18（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/557 胜，当前目标进阶 0
+
+## 第 558 局复盘（2026-08-26 10:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, BREAKTHROUGH, WHIRLWIND, BREAKTHROUGH, HEMOKINESIS, MOLTEN_FIST, SHRUG_IT_OFF, TWIN_STRIKE, ULTIMATE_STRIKE, UNRELENTING, HOWL_FROM_BEYOND
+- 本局遗物：STRAWBERRY, 紫水晶茄子
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血0; F8 Unknown战 掉血13; F12 Elite战 掉血29; F15 Monster战 掉血6; F17 Boss战 掉血84（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/558 胜，当前目标进阶 0
