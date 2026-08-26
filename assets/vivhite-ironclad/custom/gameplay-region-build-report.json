@@ -1,0 +1,3097 @@
+{
+	"format_version": 1,
+	"rule": "semantic AI crop RGB + template geometry/alpha; character_select/top arm uses isolated empty-hand AI alpha",
+	"source_files": {
+		"anchor": {
+			"file": "anchor/vivhite-master-front-final.png",
+			"sha256": "6258167239fb092c2c113ff688ec7979ab869c6f6bdd3cc0800e558930ec7252"
+		},
+		"base": {
+			"file": "gameplay/merchant-page1-registration-ai.png",
+			"sha256": "5ea40d37421cf7907eca399a69e21ff992e979c5b81171f64e65afca408ffd59"
+		},
+		"attack": {
+			"file": "gameplay/merchant-page2-ai.png",
+			"sha256": "4713a994b348a578773a62ed60843c1baa994d6141a993a593974490371ac0b0"
+		},
+		"death": {
+			"file": "gameplay/merchant-page3-ai.png",
+			"sha256": "6fa7a8bf72b8dd14f6802c58492f81ac63fb074e4b7c0e4f15cb145ac4fb8e22"
+		},
+		"rest": {
+			"file": "gameplay/rest-site-ai.png",
+			"sha256": "e45dcc908fcc6ee46de2852d79e617c425a7f1395628f5279aaf3d9dfd948d26"
+		},
+		"select": {
+			"file": "gameplay/character-select-ai.png",
+			"sha256": "b6d65e2f0f2812554c6af942b25124863cda7bac328c8c0978b2e5849248d263"
+		}
+	},
+	"region_count": 190,
+	"domains": [
+		{
+			"domain": "combat",
+			"region_count": 83,
+			"regions": [
+				{
+					"name": "back mask",
+					"master": "regions/back mask.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "5440485bb2523470e72160916e09145d0b02318615a98aeb6078e88c82317454",
+					"output_pixel_sha256": "ae9c86f79d77bfbca18c9af8389cedba5e8044e2277fa455cf1f7af380cfb4c8",
+					"output_png_sha256": "791c518e16619e83c3a8e146a5ca08c8d9b6c3ce21a61e87290c0fbde27e57aa",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						49
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt",
+					"master": "regions/belt.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "fb6a7bba46c91dae7bb56fca0020cb404af35a72615952f12e11173a42137731",
+					"output_pixel_sha256": "f246eca1f6e0aec418e9e306a69909fe1dec5ce70d29ae4a2a7ef4b0d2a1d07a",
+					"output_png_sha256": "88d76b1b0ce02fd49aec49191250ff26d73457eea13381cc0f0ae95c38aa8a54",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						83,
+						33
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt 2",
+					"master": "regions/belt 2.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "75ffb8be3dc5ba1ef46eb2d55dd5639861ad5078af379572b28edb7e5d4418e8",
+					"output_pixel_sha256": "062b78bfa1b3aa87cef2e22313a702a54d1c10d05f35eff1bbb74c6b06672d5a",
+					"output_png_sha256": "e05e6df0a31e306b8f153aeba5eaeefea37b8f42128716b3650d2ab052e48e87",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						26,
+						35
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt 3",
+					"master": "regions/belt 3.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "7cab8969a2e4125df7ab64e289c0748b4d667b09c8587fbd7eb976e1c0e4f511",
+					"output_pixel_sha256": "b3b536957412432e6e8beadcec333dad17ae3538a32c7dedb2d198b7bc646bb1",
+					"output_png_sha256": "1efb3085ab0881bc7435c6552de5c115ff7995a96be2f31504214f83c59d722f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						27,
+						45
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bod",
+					"master": "regions/bod.png",
+					"recipe": "base-body",
+					"template_pixel_sha256": "3d25de4955d88aacffbfbfb48580923fb62052b71d92c59699a988c8a893bf52",
+					"output_pixel_sha256": "ba0096d44170efb78771f7ecccada465e4c038a91adc3ed2f94c9be9aed3aee0",
+					"output_png_sha256": "e7a2b7c9509dee9a0eb9853550e77015548dfa8192761fe54e2d3dabcbdd1013",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						95,
+						112
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom lower arm",
+					"master": "regions/bottom lower arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "06c062c850e69a0e77684e31702f959d5142e8ca87ae376174afcdd05520e822",
+					"output_pixel_sha256": "9fbe2e683f51d9af470bbb7e4fe4b06b2489eeac05c96c77856618289a29217b",
+					"output_png_sha256": "903821beaaa587a0bf8e27237499d97bf100bef63740b8672632791a075b8832",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						48,
+						38
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom upper arm",
+					"master": "regions/bottom upper arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "58f4c50cec4ceaa2d4342c9c143c02f47c195eba42854934cb0f7d98dfcac759",
+					"output_pixel_sha256": "9a5b5275db491a879dbe710646a86f551ea32bbe6272d3b25edb63eca1d9c043",
+					"output_png_sha256": "fb57428311e4ac64804a37426292e0951c02cf745e2b9627d81636c24f3759f7",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						33,
+						74
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom_hand",
+					"master": "regions/bottom_hand.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "44715c1cfe52d55446a6c58df57a0d2829411cdd76fc15ff691d00d2e3760acc",
+					"output_pixel_sha256": "5593921589734891a1cdfbcf789afeb7353200834f37ee84247fe347fb6d8736",
+					"output_png_sha256": "0ad062ca5496641a340b8ff0b6324b5c6e00d9060009b4419ead297862c2cefb",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						34,
+						30
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom_hand_fingers",
+					"master": "regions/bottom_hand_fingers.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "7634231e3e7407cb9dce73cc07f4a52556a1702b840c1141b63ef676d207192f",
+					"output_pixel_sha256": "9a31c305aee994443a7351bcca87a53e63b2385c7c2376ac694cd5e6e6417212",
+					"output_png_sha256": "a9db964b77c1963d7b5999b2b9af292fab218bb0c90846ffb4ee9a6e229c8620",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						34,
+						30
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "collar_back",
+					"master": "regions/collar_back.png",
+					"recipe": "base-neck",
+					"template_pixel_sha256": "0401aa6cc0fd4de8bfbd00af3751dc56b688d7fb74301363ec87eb2aef2d85a2",
+					"output_pixel_sha256": "ad7a5024d7e30cf62fc62ebff70e409a2b271bb81a6805548e40c0f979ff4008",
+					"output_png_sha256": "4f334066f6c0f7adcd54d9cf98045841dec4819992bdd522eececfd64c4bcaa1",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						45,
+						18
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "eye glow",
+					"master": "regions/eye glow.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "445f402f6856c46ea6fb76551868fb049882db480032d4def4ede6fb91b54261",
+					"output_pixel_sha256": "8bce832fe78c2b16fd6aa0e941084a1f07af0511d0c9a4e546be023ff806fdc0",
+					"output_png_sha256": "b1b39dc190da749661665f218f67a12456e100c3912aa8926115ba97d059bdd3",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						28,
+						26
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair",
+					"master": "regions/hair.png",
+					"recipe": "base-hair",
+					"template_pixel_sha256": "4bd90608e5f8d88921d14e1713e226db0c2ad0443d731b2e7894e6616f7708cc",
+					"output_pixel_sha256": "2613586b2e0755fb68501d0923c1eb28d1b1677a641eb525e67ae582f8e60c52",
+					"output_png_sha256": "91f4280ed11af409ff2a6e6f7c3303adb793385a3b8df598550cafb76d3e5ea1",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						28,
+						45
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "head",
+					"master": "regions/head.png",
+					"recipe": "base-head",
+					"template_pixel_sha256": "4424bcc3309e1639ff4e16da397b16ddfab1723f2a6d4d2ae6fcbc816ae1f179",
+					"output_pixel_sha256": "2b5ac3293245125acbb609848a7e0cdb0216e7fe8fad1ca5461de37a466fafe8",
+					"output_png_sha256": "be5ebb11d9f631a1644472d605f1ad88577fc05f54c47fd2186848b646f0eb35",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						44,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip armor right back",
+					"master": "regions/hip armor right back.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "b62f10c1aed4e168096169b60c9e4e87d38246ba819b8957a71b471ff0658208",
+					"output_pixel_sha256": "5ef2e7538eec6a7eaa6ede5bf56d763e47425bd5262496438781f344ea6f58b7",
+					"output_png_sha256": "ab35ccdaa4376569edd5fd6b0fc048a8f7f51d500122dea4b73061c76cc18143",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						18,
+						22
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip bottom armor",
+					"master": "regions/hip bottom armor.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "2121259314510859c8e75b68ffe6d66411b4772ed804b166151901df810de358",
+					"output_pixel_sha256": "813e84f8a25a6fdfee301c128bf53b543053d58b51680b42935ab45b165b3635",
+					"output_png_sha256": "5ac8c2845bde23056ea9d3b806c6d49439dfc70502fe33cfc9400c2a8f1c5b28",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						22,
+						25
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip top bottom",
+					"master": "regions/hip top bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "82f1af04dacbc67ee84f557c15530f141c36d11a73e3cfeb11728345cd76a470",
+					"output_pixel_sha256": "f1412a968d1d5a466e20b083a3ccab112698d69ed818526bec98fcd988de9789",
+					"output_png_sha256": "6d84fe9db76690f94293a8b2dee4c1c0aa80625486cf3f90b79bbffa0929a0b0",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						10,
+						15
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hips",
+					"master": "regions/hips.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "789b242f2b991c1850193707a96daae5c565fb4998e27cd52e4cc3ae05f13216",
+					"output_pixel_sha256": "c4ead6256f6cce8ae385804c7d0e1c6d8e16f4596a2c0b984cbf89b7498633d8",
+					"output_png_sha256": "c6c6405c3bcccd0960fbae7fdc872f7974fe7699ea504c8df845c1ebbc27c026",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						89,
+						56
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l foot",
+					"master": "regions/l foot.png",
+					"recipe": "base-foot",
+					"template_pixel_sha256": "984fd1355bbed0f0a209590750bb7d05548b283f51a3d46e47cc79a5ad64f65e",
+					"output_pixel_sha256": "96e346b8b541143203193dc6fad73b4818bf3de29337068633ef5f3dc19a52ad",
+					"output_png_sha256": "2535e12ecb675f375d8d8a66c2fbcfbaf38bf82fa18d7d740ed1d22a881f85dc",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						43
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l hip armor bottom",
+					"master": "regions/l hip armor bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "f6318befbdd019c0a3e6c22b72a4da210547a904849aea0479e03a01c3adeb2d",
+					"output_pixel_sha256": "13a0132ee2d13b8ed79d81801e87385181fb00f7b70eb5a30f4e695f2cd1eec1",
+					"output_png_sha256": "a482fa4fa7f2d42eea2b4ca25c1a13de5d1e8a7381a94fb106d2e8c9f28cf741",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						67,
+						39
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l hip armor top",
+					"master": "regions/l hip armor top.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "ac2957768f14ddb9d8c1528053536c67be4e42cb9e31828618bc687fd1d52760",
+					"output_pixel_sha256": "2ea99398b6df08fb699c785989b0996c6b806e5299bcd27df231f0b7f4786151",
+					"output_png_sha256": "5d81092bd661bc5f4610ecc8bdef6394279c2fde92881a7f3c11dd9cd37a81aa",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						68,
+						40
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l knee",
+					"master": "regions/l knee.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "4460096805302dc788c35357acb5b064049aca5cdc542a9a4e4e37da63db0413",
+					"output_pixel_sha256": "e7857eda597c1cc06ee666d646237abcc41f03372433e3eae0dbaa7b624f46fa",
+					"output_png_sha256": "e9e6c4ded9edc7331c5b20045d23289a5072ecdb38308b6b11adb635def520d5",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						53,
+						52
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l lower leg",
+					"master": "regions/l lower leg.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "749bfa38b5f6bd589624e9252ec6b36817d6d5faa45f644936f79f40bdcedb6d",
+					"output_pixel_sha256": "d0ba242a3725adaabaeb40e001291b73d57e011988cf01650a2640dc8706f3a2",
+					"output_png_sha256": "bfcaa4cfd17c540ca16d9bc0aad8ee187f5a060a8669fd967fdd9e41419a30a7",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						51,
+						92
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l neck armor",
+					"master": "regions/l neck armor.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "8d20a4b780f1b67508f77c274d58901cd45cd613ab0f570b677da0865cc2960c",
+					"output_pixel_sha256": "6b35a3b7628842f2465f3c313a652a2cca103077c6f36c26ed6fe34b2fc7bf16",
+					"output_png_sha256": "c223030d8d2de9fd6caeba3c27cb37ea8ebc324a51b9d1f72aa08142effcb493",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						23,
+						28
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l shoulder armor bottom",
+					"master": "regions/l shoulder armor bottom.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "c5717e955522e2c542b203053a12879b2bef1a2c63fad822a524dd783983b896",
+					"output_pixel_sha256": "9dae88eceb02a1d439a9154f04e6c7123e11b5d29dd60657ec33db435affbbd3",
+					"output_png_sha256": "32d91544306c4cefd362698ebf7f2f73e40a6dc9cf1b425e7da10f5729409ca6",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						41,
+						34
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l shoulder armor top",
+					"master": "regions/l shoulder armor top.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "ae6498abc9e0138ba8ed1ccc89c9c72448462b842769674a968eb58e431c2e92",
+					"output_pixel_sha256": "151713d5059d40ea62b1beeeea0b8ba9bac9dd2e8fd5c7cb41762a908723705c",
+					"output_png_sha256": "305a7d53b211bcd2bb2fd3928263e303ca5970825bc5c3201e3666e6c140c95f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						40,
+						32
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l upper leg",
+					"master": "regions/l upper leg.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "38210f99a1ca071364438e8b27fe74d815c3acc2f066d292bcda89add6e2c155",
+					"output_pixel_sha256": "7fd52fe2f80b812a923f10736021c0eb648102b6d20de4c7425a20be0f8a6895",
+					"output_png_sha256": "5a99706439808678f812347c3b2900307e838aeb953263e1d00131f04b7168a9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						82,
+						83
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "neck",
+					"master": "regions/neck.png",
+					"recipe": "base-neck",
+					"template_pixel_sha256": "28d130531d7201eb3775efd518ea3351837a978f221a1bb660d7c592174b396e",
+					"output_pixel_sha256": "7b20cf0b1564581931f8f5d494d9ed59e297a78ffebed3b764297dc699f623f1",
+					"output_png_sha256": "ac69097f8836186fe38540121f9b51c1a4da02dec2b7395b64a7a4f07b8e18b9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						41,
+						53
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r foot",
+					"master": "regions/r foot.png",
+					"recipe": "base-foot",
+					"template_pixel_sha256": "80e461f8c739caa0506254a8cf99b29b1b71eded7ae9d0b2d4f8b2ef1fea6ab0",
+					"output_pixel_sha256": "35f4ca9f8cab12141b669db65c285fb64d99c8c628ccfe902493cf0487e1049a",
+					"output_png_sha256": "11d52b77361ddbaf372fa2e37caf19df3ee8519be41082b955bcb985900c2520",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						36,
+						39
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r hip armor bottom",
+					"master": "regions/r hip armor bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "794071c8424b08a88c7e35f35cf247585780d9d674d36c6f0f6303f947cdc54c",
+					"output_pixel_sha256": "3df707650352a063fec798244a82f2208b8d34a6bacd30f7f898f5e923026f48",
+					"output_png_sha256": "40fb457eb7ad731de9cd1b228963b8e8d67dc8b6a04f6b04517edfc37210aa4f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						80,
+						36
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r hip armor top",
+					"master": "regions/r hip armor top.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "176b0a799b500730d96854ae3c0be3d69df0328c4e3d9afe839f810a9c976323",
+					"output_pixel_sha256": "5eff5343ae5c0566c4ea19e3f74d1c40098792360284497af79a796e9c6e5623",
+					"output_png_sha256": "7254866faea754a269d7ed41f5b3bdbbf28e4696b8d926f24b5cecb8fbece782",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						82,
+						34
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r knee",
+					"master": "regions/r knee.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "94d23af0def087ae082f9b10450d68f0144521b4304cac8320ebeb18831b44f7",
+					"output_pixel_sha256": "6f8e51731f230e242b52f41ca12c21c4a4b306486bf1f915eb16834857b0c52f",
+					"output_png_sha256": "6a1e2ccff419787fdea3210972c74b243a581cacdac5a1ce4d8dfb5745bc3a0f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						52,
+						46
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r lower leg",
+					"master": "regions/r lower leg.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "7c56b5499dfe0ce8f676754a2a215a1017f751982a29051731662fc8bab7b671",
+					"output_pixel_sha256": "a6bdd937b2e2f48eb7150e2e1009f3f6ceeeff18578f1ec751e2e88285347033",
+					"output_png_sha256": "7b27b316741fdf7763701fe93ed3e17afc078b48f7e270dd6864dc7e03c15293",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						61,
+						73
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r neck armor",
+					"master": "regions/r neck armor.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "d1eb703ea51ad2a2397de2410d2cb435cc715c31e9c9c839e294be3bd7ad059a",
+					"output_pixel_sha256": "6c564d05cb692b5f082389acf764e1a89aa6ce72fd28d13ecb78e8560c822f9c",
+					"output_png_sha256": "4b491efdce26faca28baf2e9c7fdb0f8af2265ca8e38fbacf415aabf017c9200",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						35,
+						28
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r shoulder armor bottom",
+					"master": "regions/r shoulder armor bottom.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "a6594ba5264f1a359f8517e5c0317c63663e2440dff4f92b37686b5ee76f7cd8",
+					"output_pixel_sha256": "596a563d800d250e711deb725624cd99bcca5b336732c6ba9037cc7eb9668b85",
+					"output_png_sha256": "429ad364c9363d74cbbacdc5c8c2822ed99ee118348f2edb7ec7de1fc171349d",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						1,
+						52,
+						40
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r shoulder armor top",
+					"master": "regions/r shoulder armor top.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "1b8b80450b35cd29b2f3a339a0f6c269e6a40ace5e921c234632336f754f9d47",
+					"output_pixel_sha256": "234d310d3478d75bb6e45d08988d668277a6f228c098e5366892cb6bcd85797b",
+					"output_png_sha256": "4846ba09d116076b9b9bd05265b1d74734b4d4bc210d2bddfc16ae84d64af496",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						32
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r upper leg",
+					"master": "regions/r upper leg.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "454496ac45e026faf9fbb6174561e6196d1abb651732e8a615c710cd97a2ed27",
+					"output_pixel_sha256": "14337d5829bfe2faebaff986687915e8f850d754db11ed7aecf4eed06297f300",
+					"output_png_sha256": "ec9d7c140cf488d06d24e149fe61877a9891e1fd9759f6ff44c1498e34ba409d",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						76,
+						97
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shadow",
+					"master": "regions/shadow.png",
+					"recipe": "base-shadow",
+					"template_pixel_sha256": "094edcb71153968ce6621c8a6ee30744c2798f09e2b0fd9be7171eb7b925cf20",
+					"output_pixel_sha256": "90e50bef6c9f30fe8a1432217d7fb27647792f6fc58f928d931e14eb07608751",
+					"output_png_sha256": "7da1bc952b3dc8b09d56847d2755a28949a3db85eda67f6b1818260b2db9a2f2",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						263,
+						50
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shine",
+					"master": "regions/shine.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "6c424e7b0f2fa0f2a40199ebb216dd6ebe45d76aec5ad47a03477f865e8c45cc",
+					"output_pixel_sha256": "c8511f06090f2fec8b2ebbe0f27b4d21c4c82842a230a28a425c2f9a0b1ae5f7",
+					"output_png_sha256": "916b0129ef7a501415811b90632779e165f348f1712ca79e22d7cba0f9633a93",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						30,
+						17
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash",
+					"master": "regions/slash.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "13de815b036b2a2914ff450789b7c2ad9927509a83205be1e60c05736b305a12",
+					"output_pixel_sha256": "317134e189f14896eb41eeb5e29e28ce90601ae133477670571e4b2eca7cd5ef",
+					"output_png_sha256": "ce6f143d320113cf1c7883df2474e85e61e3cc66a8d3eb248098657ec5a3820e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						329,
+						211
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash2",
+					"master": "regions/slash2.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "cc1a01a358babc493954be6a54c225e46d8bac218c99787ecd190484fa97ea5b",
+					"output_pixel_sha256": "32392ecdd9f311cf9858c180b3a7e08ec719f5e248a7339ded382952a4f785c8",
+					"output_png_sha256": "5d0e624a428a7ac3e5c07cf29c1a3f7e64474ef3e8f0e510d57323ee7a6aa70e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						610,
+						120
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "sword blade",
+					"master": "regions/sword blade.png",
+					"recipe": "forced-empty-weapon",
+					"template_pixel_sha256": "4e984405602803e8452d24a9296402682e39df438406814000f60aa519d3eca7",
+					"output_pixel_sha256": "26768e3b180c3ff2376aa5eba434b396bea5aa805107ce98a265af34dc562987",
+					"output_png_sha256": "a02da8c590c8a66b861211865b651848e39054e9b6e43edc91af5cbae37c1607",
+					"alpha_preserved": false,
+					"alpha_bbox": [
+						0,
+						0,
+						0,
+						0
+					],
+					"transparent_weapon": true
+				},
+				{
+					"name": "sword_handle",
+					"master": "regions/sword_handle.png",
+					"recipe": "forced-empty-weapon",
+					"template_pixel_sha256": "31a31a35ac85e4b23f35948430325b3bfba1dd079c5d2b1738ae640de25da1c9",
+					"output_pixel_sha256": "95a391130839aebfa9d9a406c13124bf0eb79106e52600f711e7f2512f33ba56",
+					"output_png_sha256": "4af6a98b5f396c21975a3203fae3743307956f3b18276b4fa23046ccab72c42f",
+					"alpha_preserved": false,
+					"alpha_bbox": [
+						0,
+						0,
+						0,
+						0
+					],
+					"transparent_weapon": true
+				},
+				{
+					"name": "tired_puff",
+					"master": "regions/tired_puff.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "9d5dfb4e97ca5f9af8a50526d1eab0410870455d64d2a3b3cb304f7127df7549",
+					"output_pixel_sha256": "91319b7b266fb1daa0acd5ec023f0db4e132d5a644d2fbf432f3b0c54d5b69a6",
+					"output_png_sha256": "5c5ccab675c6255a7525aaabb7c7ee8724d409a0b91d06a7fd034cd231098dcf",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						23,
+						16
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top hand",
+					"master": "regions/top hand.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "14e73b8f0ebc6ec6cf6340368c7225df6e8b2a6447ad29aab1101206828e7803",
+					"output_pixel_sha256": "8cd4c8ba7c8064daa95499b353b25363d062f13964ba1618cef466bf05ba3c8d",
+					"output_png_sha256": "2ae1c3a227cf9df9986b993a333696ac2afd735bc06593bad0b0c9c690c8ac00",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						39,
+						34
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top lower arm",
+					"master": "regions/top lower arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "3746ca5c6dffc84574b6ed3bec50a459ae9797c5be5a23967bfb94d713f5ab02",
+					"output_pixel_sha256": "758a0266c0789fe34ae86dac8ffde33ed28f59b10ebbcef44166fd62ca7605b8",
+					"output_png_sha256": "e8bf2c85f61b83d04829c9d8607243c12339eab26f9adf2887fa6bf6d2eed551",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						67,
+						55
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top mask",
+					"master": "regions/top mask.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "a812f53248404f919e1bf8d01c745e5a1cb33cb12cbda45e5325fafe651be48f",
+					"output_pixel_sha256": "80068269ce24fb066ba5da86779110a1ae0e16a47412a56a984d8cfce8fd22e7",
+					"output_png_sha256": "b5762ad60b59abbcb513d8e5551fbf3f97097dc1994440263893f21a7879f4e8",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						48,
+						58
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top upper arm",
+					"master": "regions/top upper arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "b84c7c6b897aff5fba3611effbc7def64f01d0ccb1c17a9b1901b62acc377c25",
+					"output_pixel_sha256": "1cf31f764116876ee98c4ded834af33283f1e49cd1adf065f56936acaf421f99",
+					"output_png_sha256": "25275718187f8d9e6f17c7338dde2fac87b768b2d570a849e6bf6e5629b04500",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						79,
+						75
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "zaps1",
+					"master": "regions/zaps1.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "e7f4d20c01478d2d68efe5d653422e08ca161f7ce154b3ec68825a29f53625bd",
+					"output_pixel_sha256": "711f6185654d140fd1988170062e423e7ff6ad662a7fea608da87542998eb24b",
+					"output_png_sha256": "e1ac80a8a604e7d4bc4c312b247805ed762a4882ef11c416e9ce9039d4811275",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						157,
+						129
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "zaps_2",
+					"master": "regions/zaps_2.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "039897a25a6bb0a1f2523b83c26d8c303097a9b84af2cb5f91c61834ae6b62cd",
+					"output_pixel_sha256": "97be21eeda8766b6f620b154c8089e8abeafade87afc4f57ddb5ff0af002a8c8",
+					"output_png_sha256": "ac9e943722c345afa0e09f05b81f11fa263e6a1ddb83a97abf24288a89af5a7e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						143,
+						141
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bod attack",
+					"master": "regions/attack/bod attack.png",
+					"recipe": "attack-body",
+					"template_pixel_sha256": "aa2111ae72294a6abb45a04d33d8d388e5ad23f37eae50930ca4ad0944ebd1a4",
+					"output_pixel_sha256": "d8cf07081f1a3b500f5c928092d726481edfac2ae1ac43aa44fe12ee2e63e3e4",
+					"output_png_sha256": "e7eb06ee2fd74b56d9297e4cded75190811132070f71dcf657c1c35a87471f94",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						89,
+						98
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom hand attack",
+					"master": "regions/attack/bottom hand attack.png",
+					"recipe": "attack-hand",
+					"template_pixel_sha256": "139113c15f098d44667afdc6bdcf29d7f4b0b44d450ff7b7c20c828bce9ed6bf",
+					"output_pixel_sha256": "64ae30d074caf8b94488f95e21c0a4e71473baab90ea92c233849068ac242a84",
+					"output_png_sha256": "029cb03af7f8273036cf759f0029c94b2363f66e0bc12b05537bdfb193f5fbca",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						41,
+						37
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom lower arm attack",
+					"master": "regions/attack/bottom lower arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "4bf7431c5dbd3c118660d0ffb082153072498e534c69ea2af25efdbbb98268d2",
+					"output_pixel_sha256": "7564b8c74a971d4a3c5dec3c46b7f399411beb00f4c817632467a4d47a0a826d",
+					"output_png_sha256": "362e381c64f80ef41d5a98206d39ba68b81063bb198453c397e0816a58b4f7e1",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						72,
+						47
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom upper arm attack",
+					"master": "regions/attack/bottom upper arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "dc7b927d4a5612f4038f2d12e7c04a886d6910e0b76268c9da540ef8e957db5c",
+					"output_pixel_sha256": "ebd5fd806d8a0a2477bb0bf776b91078bc0d6604e11fe83a0664b041d77d2dc5",
+					"output_png_sha256": "d6a02f3113f5f518a14f4cd466288868943d91421cc16b06c123e1a69fca7375",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						75,
+						83
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front arm attack",
+					"master": "regions/attack/front arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "bf401129a0f70c13bca4b488345924d489091323522265fcf8510c296eae8623",
+					"output_pixel_sha256": "33f51fb24def25d5a4a83bdea87b4adc96b2de255839a4f32f2adcbfcb31fc42",
+					"output_png_sha256": "b7e83beb62afa616919966964271fa0f7df4e70593df08f5f125aa763a7357a5",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						79,
+						75
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front bracer attack",
+					"master": "regions/attack/front bracer attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "1a847d9578cc87a48e3b761cd85f332998a461527d168d456a30ebc34d2a0d83",
+					"output_pixel_sha256": "4068f80cfc6ae8db329f111b9a907da00c177b80b80821ddf00cbfe10a7be3ca",
+					"output_png_sha256": "175fed55992d312daf05612a04b4c8c3ececbff6cdb14e3e5b743d1cd3726241",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						48,
+						38
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front hand attack",
+					"master": "regions/attack/front hand attack.png",
+					"recipe": "attack-hand",
+					"template_pixel_sha256": "552f0cfc10ba3b4375e202241faf378c925e17c7c654aec46978f992b29344dc",
+					"output_pixel_sha256": "4e13e2bb305f6efe025c5fa1e38d30fdce2e99b117d8018c299af2779ea31035",
+					"output_png_sha256": "bd8fe372be16d7319dff4ff3d71d52bb682d0aba0a7be37eb8fb09bc1a618c16",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						34,
+						32
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l ankle attack",
+					"master": "regions/attack/l ankle attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "7f949fccd9010e053280b56ed849eba35bfafaa0369739a6a4d40875ea95399c",
+					"output_pixel_sha256": "04f49897b6f68e977843c1a1e0e1d94dd213ece18fbe126e05c4a57016706ab5",
+					"output_png_sha256": "b431c6307ff455e27c40b8e369db8f3b46b957a914e0e021f5681f21b69cd8c4",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						39,
+						29
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l foot attack",
+					"master": "regions/attack/l foot attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "119f1e1c0e15cacd5ae1c694a98d9fbee7c34decbfe5759b79ec88ad34e221fb",
+					"output_pixel_sha256": "61f760998c6753b8b851ecb33ab40c6bdc552f811952b09e3709ca3fef91acda",
+					"output_png_sha256": "7d319278bb88cfbd413e97955f080ff965e64b84dfd4b0be00199c7ec7fdbceb",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						38,
+						49
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l knee attack",
+					"master": "regions/attack/l knee attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "f51ce63f8a58013d865e5a5928851ff65d42de38b62b1dbdc6ca66645034092a",
+					"output_pixel_sha256": "3011cc22e0e6c055023a4814b0a0cd7400f96499a7b5469063cd5fb94fe3d77b",
+					"output_png_sha256": "65e5acad2cae88e8185867dbccc4ae3ce0b89fb6c58b6a20e3458b5ee7e5aff7",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						57,
+						52
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l leg attack",
+					"master": "regions/attack/l leg attack.png",
+					"recipe": "attack-body",
+					"template_pixel_sha256": "08a5d0ed78b204a946ca8664824cf8068c49f382e4e3d1b9ac11f5c972f783dd",
+					"output_pixel_sha256": "33c8de886d8da633958f62b01804fc611bedcfabe1f65820d0b16178e1b022dc",
+					"output_png_sha256": "d30dacbbda705561d3b23bfd19848f54b857d7017b658b6ea77e7ffe013f01a9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						49,
+						87
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l neck armor attack",
+					"master": "regions/attack/l neck armor attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "6a5a98f8861c08cb4a3c9bc7bf0db161209dd3d03cd68387e3ca4ac745109f1b",
+					"output_pixel_sha256": "a5ce0d774cbe49cfe34b2aab356c0c7cd77d74b03eb5e3f1a836672a0d70c59a",
+					"output_png_sha256": "45dd2dda9be881349fc4c7d37af3f000a68198533f966f4ad7ce7a1456d1b022",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						33,
+						33
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder bottom attack",
+					"master": "regions/attack/l shoulder bottom attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "646fd6a851ac4b6bf358b8945d9552f0c7b63e6c0e437c9103362badd192fc17",
+					"output_pixel_sha256": "f14ca6862a6b261daf72fdcc7f51964dab5764540b2a8af7288df996d593142e",
+					"output_png_sha256": "0998e728d4115050c78c43601ea9be59502742c6e096f343697d7bb9c057cce8",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						51,
+						40
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder bottom back attack",
+					"master": "regions/attack/l shoulder bottom back attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "d2f176be39d45f56dfd7125073c2fd4ccb68a74e37ea8257b00cc8930ba37a02",
+					"output_pixel_sha256": "f1941b1953ed4f27da68431ee6f8062aaafdc2ff2be6a769ac65f8a3d8bc334f",
+					"output_png_sha256": "1a76c55c517e4be61cdc8563d38fa923163e5ec19aeda44e9830e5242044e170",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						40,
+						45
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder top attack",
+					"master": "regions/attack/l shoulder top attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "cf62ab23298bb02e7f8981ade2f18935008fe8cda992548e2ac392ca115fc221",
+					"output_pixel_sha256": "c92c8bf8ea16cf3f82de5a706242412072e589482681557bd33efe7865c7b42f",
+					"output_png_sha256": "84d4eab630e75222cabcf9a7a9b5ae016c4d789c8d3476bc73c8b1e0aeaf05ee",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						57,
+						31
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r foot attack",
+					"master": "regions/attack/r foot attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "93ad21dd55d3be2c25b1759e787e5479a07bcdc14e11dabfae11232c352f5ada",
+					"output_pixel_sha256": "d34930d32c5542520892872fd36a6a43144e9d6d361f63921ae94a98832dc65a",
+					"output_png_sha256": "f8c589f10033c2075f113a6ca969034593d3f9bd0b395bda290efe0124759bf9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						45,
+						41
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r knee attack",
+					"master": "regions/attack/r knee attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "916059c47c742d1839070450ca30509e1746c5f19a4974ae0f59e934b48ee87b",
+					"output_pixel_sha256": "6adc99a50645fb384b2a643ad82896e20e2d5be582c9ddd17f3ab12c0e33eb5a",
+					"output_png_sha256": "fbf0e3fb45a7cbeb559f69d934ac6334fd09f5fbfad362487d65218163373c82",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						47
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r lower leg attack",
+					"master": "regions/attack/r lower leg attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "d9500bf26a9c8f9b86e60500977c4bb6e75bc8dc2629dacfc3afd707978419fe",
+					"output_pixel_sha256": "89fbe6ccc4c3c83306acb3cf39dce3b371bce7b91b0b7aa2377598fd86c4fdd1",
+					"output_png_sha256": "27209b643eccfdf6656bdb5de697462154800e2b688f9d1d0e78b6940e110fb3",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						68,
+						74
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r neck armor attack",
+					"master": "regions/attack/r neck armor attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "17dad29c9b289adf8645f05d931237281eb40b7dc3a15c76e66ae37df438f91e",
+					"output_pixel_sha256": "ca5a24dd81552d295f9530a5c9220f88dd03ba82263674adb11de7658d24fcf3",
+					"output_png_sha256": "60bf2c30f1880378f4e170d4a4e7fc849f43bdd1101aaee0682c2b818ed68586",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						16,
+						24
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r shoulder bottom attack",
+					"master": "regions/attack/r shoulder bottom attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "962ae08c58be1e604f92eb33fb6141fc1c4119227d1d88c6e6cecd9ddc95ebad",
+					"output_pixel_sha256": "473e808393e103026790d5e1ee841b05ccae10fc8c7d12d078e2ea6b3bf759ef",
+					"output_png_sha256": "491cfa70fee8341b2305072d3a60dd3c2e463f5c8b4e3f92271918dcaaed6ac5",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						39,
+						46
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r shoulder top attack",
+					"master": "regions/attack/r shoulder top attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "74a716ded5bbed6f58c443f28ca5f0dc03f32c188ca6e24999e3a5e5a8323fa1",
+					"output_pixel_sha256": "495f2ccb6544b949aaa2da57a87e22bc0648f847f3416030ad693e6ee8cc9567",
+					"output_png_sha256": "b7c75463a5fc4752d90263cef5c7d9667ec5d6377f5ef2ee6b1d8d9dbe632890",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						38,
+						42
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/body death",
+					"master": "regions/death/body death.png",
+					"recipe": "death-body",
+					"template_pixel_sha256": "12740a16e466dde85ff0e24e6bcf30f04677a8b11a257e633dd84d9aa77e3d0e",
+					"output_pixel_sha256": "38247b77dfa604b4290f74f51b7d5fc37934a73e8924786619b35f6342e30c87",
+					"output_png_sha256": "20c75c2e8cb7e68137af50572573130961b0319258340bfb359296db3ae714c4",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						126,
+						102
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/bottom shoulder death",
+					"master": "regions/death/bottom shoulder death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "ac3416252b96ff464c01aa71a27791ed85830a48eb19e3eaaeb0dc8f1e1ff93b",
+					"output_pixel_sha256": "baeaeb52c8e66d47180ceced162d17f2b6935fb8c4f71f59ecf9759aeef8fdf2",
+					"output_png_sha256": "a5143c252f5c9b5f845340ec3ef179ec1e1e2d44e315588c14a3fa104e36f157",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						50,
+						43
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/bracer_death",
+					"master": "regions/death/bracer_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "c81b4df94f50dae49857c8f0b7a546a5ac6dce5f2080ecdffbb51d102be2dccc",
+					"output_pixel_sha256": "cb4fa466d381d1f66c0a8a4d737836aed99d20f7756e806b57ca8368c9d05129",
+					"output_png_sha256": "ec79dfc88fad57c3852861290b89a4ccda9109ca1231b08b3174104f385cfc22",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						84,
+						45
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/hair death",
+					"master": "regions/death/hair death.png",
+					"recipe": "death-hair",
+					"template_pixel_sha256": "8695cee4919f7f3c26182618e86401abe74f94062d2c2f0dfc0d8650ce74dac0",
+					"output_pixel_sha256": "6e56496de7cebfd7a27690c5c6fdceed7a139162da15509c98de2f985c4744b9",
+					"output_png_sha256": "93a371d49b502bbb8cf053e8a19b9d1ac149a9f8948061ce0b1f44406511d142",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						42,
+						53
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/hand death",
+					"master": "regions/death/hand death.png",
+					"recipe": "death-hand",
+					"template_pixel_sha256": "81f47e2ac98fe8f13964ba3ca583355b864a0eb6106f10899d35992dc33544a8",
+					"output_pixel_sha256": "aa62948f23e4d26bb49e9cc4eb1298abc464e6a65cde35b1ff7cd25450db9dce",
+					"output_png_sha256": "9f603fe421d5f8736276fa1991f55dfc6a4c466370d8f93ab72a281e44563921",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						53,
+						32
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/head death",
+					"master": "regions/death/head death.png",
+					"recipe": "death-head",
+					"template_pixel_sha256": "dc9e176d948d6466e5734d635506974794c32b498794c2a11fb2931571a7d3ad",
+					"output_pixel_sha256": "940ff9a75964c625a14b5afb9fa21768244c6935811d272fae258b9260194ebc",
+					"output_png_sha256": "0b298a459181236ae8aa6e098be1bd296b1c76e1bdb8197d08251aeee58d9884",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						68,
+						55
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/knee_death",
+					"master": "regions/death/knee_death.png",
+					"recipe": "death-leg",
+					"template_pixel_sha256": "eb6de8fded6baa5fa7b80953cd7297fc3f9505c6d91bfb92965861b40d6b9b7e",
+					"output_pixel_sha256": "f3f8547f45b75dd2413f367a7648bc043ce5832932c5a55c79e355cff5ac2894",
+					"output_png_sha256": "25b183a664282021cdd3c6b532197294ddb39ad05d8864b5b8c8563f7426021d",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						43,
+						52
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/lower arm_death",
+					"master": "regions/death/lower arm_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "1ae97701526458cd564ed4c02f8a693bb6edd0e7c4ee81185e181a0d93d294ea",
+					"output_pixel_sha256": "58e2210acd6f00402cccd59293bad7dfb2a80a42f8d9267e4fceaade3a67d51e",
+					"output_png_sha256": "42dd5b6c67f79226b678fafa687a7d7f405f1cae791dd2da46e92c10a4fdb8d7",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						66,
+						56
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/lower leg_death",
+					"master": "regions/death/lower leg_death.png",
+					"recipe": "death-leg",
+					"template_pixel_sha256": "6b6bb6a7e6090a687713fbe968526fa25d38f89234b1d56bc0e4ee56e5a5d2fb",
+					"output_pixel_sha256": "695caf9126503a78df586930b9e8b2bb0bab7c40343b73ad018d6e265fbf3f52",
+					"output_png_sha256": "9c562959068342885316b562031bffceb6d1b6a3d22a0cf574c2ecc7d07051e1",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						44,
+						99
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/open hand_death",
+					"master": "regions/death/open hand_death.png",
+					"recipe": "death-hand",
+					"template_pixel_sha256": "493b637109955bac063cb531f4d75fe836a717fe04f24cbcadf158e5cad88a3e",
+					"output_pixel_sha256": "86bedc545e1a823fb54810b0c2faf896cc37ea4293b20d9120c746a1a029d919",
+					"output_png_sha256": "b94bda8af07bf55d7de4f155e6bcf31b7007f5228d12ea6f74e6be2919b506e9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						40,
+						42
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/top shoulder death",
+					"master": "regions/death/top shoulder death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "4f704a84604e66cd373daea236f0b57722f924bc4717cd791657a9e421b2fdcf",
+					"output_pixel_sha256": "324b9f17f733e3f5fcf448abcbfed3beaf71c1c656744a4b4f6fed0ab8a02776",
+					"output_png_sha256": "31263937a43876ea95e501b614e0bf75e12ba49b91ea7a5f50a0ad6379fd3516",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						44
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/upper arm_death",
+					"master": "regions/death/upper arm_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "53b52b6a0d34e9e3a092c133fd0aa210bc41cceef3d7dbd737363561f1124f28",
+					"output_pixel_sha256": "f36f6d162de622d02518ae29b788c3085828d35dd1a9a15d606677edba7ee63b",
+					"output_png_sha256": "228579c0f5fe8ce99380ddc02a6141412027f50a1616e26fd04e957d8b466271",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						71
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash/slash_placeholder",
+					"master": "regions/slash/slash_placeholder.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "bd576422bf5efc1a22fdc2e6303cfe1f36bd60cbeb856f5068453cf76e32382b",
+					"output_pixel_sha256": "46bf8712e7559d7ca481bd31c20979fe805474dbc81d05a1982465817538698a",
+					"output_png_sha256": "e449933b06fcb86fba92e241ea2f04e9e3c4518812024ba435b020ab7c6f878a",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						15,
+						45
+					],
+					"transparent_weapon": false
+				}
+			]
+		},
+		{
+			"domain": "merchant",
+			"region_count": 83,
+			"regions": [
+				{
+					"name": "back mask",
+					"master": "regions/back mask.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "35e9b6d87e4350eb6229a2a847c4b56dc7f9e5c04ae9cd2c7514423c14e547e8",
+					"output_pixel_sha256": "a7cf2cc17391728becb46c6b7b8fd560dbad44ef08c68d3a405dce0d3cd58525",
+					"output_png_sha256": "252d4b51ff850139c1688fd7bee5839e893490c20f95a2fa28b742d03ce8d511",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						98,
+						85
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt",
+					"master": "regions/belt.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "ad1353ebbedb7fbf325d56a0cf80a3624766811bba4b6cbb2fbcaebb979c522f",
+					"output_pixel_sha256": "fc48384c7d267993abeb6add7dd224d76f4901194ac747cfc1bc6f31ec192084",
+					"output_png_sha256": "98138ff89b5ff3453154fec21342f342233c133101ac59a07f66c9e3d2dd201e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						146,
+						58
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt 2",
+					"master": "regions/belt 2.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "6365d5128af6e905d5723c17c9a4605e6bca07769d688e4bd4f1ccc4c01a2cc1",
+					"output_pixel_sha256": "3d5f09d312e40776330e81d5f5b15912cad490807c9abc0dff02f90f4217a41c",
+					"output_png_sha256": "6e0678f2f5eba6793070a2edb749b27a24a7b35752e972d8d11e9032712d9189",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						46,
+						60
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt 3",
+					"master": "regions/belt 3.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "3bdb45b61bc4f1ad814fdb37069c708f36be7b4b6bc68fc61850c2246bb92727",
+					"output_pixel_sha256": "9f7f911dda5bdd39ba7416773af4356da05931e0fb8ae739dece6ca3403aada8",
+					"output_png_sha256": "9d52b145c673d3514417bfa87a36bf44e1f36d92e8f1d232a9d392c8b4db1fcb",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						46,
+						78
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bod",
+					"master": "regions/bod.png",
+					"recipe": "base-body",
+					"template_pixel_sha256": "02863f84b153a4a2581b1ee363cde26c4b899bd3468365cfde21bfef1faa6144",
+					"output_pixel_sha256": "3a8c4ea2839c1d5746d70eed19e33331fda1612c91ebab748f5ef1fb2af8a856",
+					"output_png_sha256": "107424b35f263e7ad04f873abccd13a6a911473ce600deaca7ba4af83c8525bc",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						0,
+						166,
+						194
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom lower arm",
+					"master": "regions/bottom lower arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "0e66b4cbbe8fd78586037e2d50e5b1d2cf0c27ae60374f4871854428b0991121",
+					"output_pixel_sha256": "26c5104e56033c766a62c63544414058bbab0e6212f7ee8b7d30a4dd50fc9091",
+					"output_png_sha256": "b87aedff1e11d07614be71e720271874b2a33a12c1fe159291e0858c47fa2ec3",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						97,
+						65
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom upper arm",
+					"master": "regions/bottom upper arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "c1eab13e0d070ae95e355122a2c1e3b0890dd92206a501cf1400e15a1d5057f8",
+					"output_pixel_sha256": "7ac6fcc323489512476d68c9ea41310329bd577b59b061a920b1df51d5747810",
+					"output_png_sha256": "0a2604315bca297d3be951fbd9841370c656f6492967ca6a5d1eff1e1752008e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						58,
+						129
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom_hand",
+					"master": "regions/bottom_hand.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "635d0076b2342f366ce5363da75b752c7de201d3d0154537b5e8dfa28b33cfe1",
+					"output_pixel_sha256": "483385356395c36e69cfcc3eabe6a2a09fae5de599035fb64d8a2ea92d51844c",
+					"output_png_sha256": "d509ec4e92ab12138c9f430b11e5f5f59f923803f8321c99845a3698cc1b7c2f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						59,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom_hand_fingers",
+					"master": "regions/bottom_hand_fingers.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "24737347e5f531a454bb88798bf4bd7fcf4cb9a716a990030dee46045e1a921b",
+					"output_pixel_sha256": "e469d48b7be2ad1afbc0e1218cf8142ab505906299568cfa07d8bf1ee1faedad",
+					"output_png_sha256": "3beaf198df2e7f804d38031f068451f4caf794019fdfb23d35cb648af7444dd2",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						59,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "collar_back",
+					"master": "regions/collar_back.png",
+					"recipe": "base-neck",
+					"template_pixel_sha256": "c9cc76de51d696e30c55bb4d02e09e4bfdb8f1a5339cf94f2e3b158af94d9eb4",
+					"output_pixel_sha256": "4e87bd9202bce185b75788f2482c0e508c394772b8b66444dc44210794ef16af",
+					"output_png_sha256": "566418c3f3c70ec3fb8401e2f072044f4d3e076fb87290d4999a298270415b32",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						79,
+						31
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "eye glow",
+					"master": "regions/eye glow.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "ee2f9c3ccc4965251299b4c9b29e652645c137f3bb24f016c7baea0e8652ac28",
+					"output_pixel_sha256": "bbec3eb55ef443908827401cfe50c1ebf0b742d3b555659bb19e444e703844ed",
+					"output_png_sha256": "1673cf84677fdd55c2dc235ebebf8233b5a6aad6daef58ba04b564de70b0ca35",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						1,
+						48,
+						45
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair",
+					"master": "regions/hair.png",
+					"recipe": "base-hair",
+					"template_pixel_sha256": "de167682b179c3baa8f5b3d4374413b40368c2761816bb50c2f1ceac93a19668",
+					"output_pixel_sha256": "476329748c960365f9fb360e67197601d8c6c137a79f266ad32d0b0ab35da8b9",
+					"output_png_sha256": "17b1a85ed4a72276ac1ecd07123be6520f63acee88a52e27e172bd2e165e8a9d",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						48,
+						79
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "head",
+					"master": "regions/head.png",
+					"recipe": "base-head",
+					"template_pixel_sha256": "c5694e324f1a2d5e7e1c54df19ce94b35c109f58df5c007dc830f24a8d88fd8a",
+					"output_pixel_sha256": "f5405327cc40b1a66f492d8952a08342a1ab796ab4f0a0ff353227831a63bf04",
+					"output_png_sha256": "609cca80cd4c83b6f54c1d47cd9ca429f624266ecfc9c8b9582b6890c6cd3cfb",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						77,
+						95
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip armor right back",
+					"master": "regions/hip armor right back.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "1310547d835dd5df6c679a51d7c3cfbd9dc2ff90330e19df2a6ebdbe210be652",
+					"output_pixel_sha256": "cda5e077178ff8b3bc196a578b1e2cc2b3328f3e24ee6074767fd22c8bef56b0",
+					"output_png_sha256": "da88a68b9f367cc0147de5eb9d034997d31199c9349c0970cc20313d706fb535",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						30,
+						37
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip bottom armor",
+					"master": "regions/hip bottom armor.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "53e54592ebf72b68f6c3f651ca10b6db391c9d2129775e83c07a6625973a2aed",
+					"output_pixel_sha256": "38d3f955f5b4ddf5a9780015fd95d10f98dde55c6e763e8472d97e3bdb3d023f",
+					"output_png_sha256": "746fdbb1b9510d559b2502b7f313926c4b16922afd0d63b8aa3c313943433064",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						37,
+						44
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hip top bottom",
+					"master": "regions/hip top bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "787176202251113e8c7b61429fce2705bb814c61cb9d2ac395a268ecb314fc4b",
+					"output_pixel_sha256": "9255a9f0d1d2466d1d196b7c8942758ddc7354e5b1d4e955e14d8438e858f5ba",
+					"output_png_sha256": "dd834ccd269fa308c46a34dce3ed0e69999dcf4876db87dea06afa7c0306ad71",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						18,
+						27
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hips",
+					"master": "regions/hips.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "79ff893283e143600c46f5df1f7bf298df06dce267a2d9e1554169c84c279db0",
+					"output_pixel_sha256": "fb64693b507c797a616ab269f62d7e0da59582ccb24970efd35453f208d65e2e",
+					"output_png_sha256": "23c72c9e0670fa11179ecde972936d359b6c013d9335841b3f163ed9b15fc3c8",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						154,
+						98
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l foot",
+					"master": "regions/l foot.png",
+					"recipe": "base-foot",
+					"template_pixel_sha256": "1a19f86093c6d3ab68d5542e6a203be651dc8b73aabfe2bc93f4c9494e36aa5e",
+					"output_pixel_sha256": "8acdd41d81c2a4ef281d672620757f0a6f7370262f1bf19b76d7a9977752f4c8",
+					"output_png_sha256": "2c34cf5d629e9d3b7921da5176bf254f01ee37e16611691b9bb815ff183acb49",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						0,
+						97,
+						75
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l hip armor bottom",
+					"master": "regions/l hip armor bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "b6c7654ba38b78973ef77302ef0fb935165a5fc5552cd679e9fdee59e620dc07",
+					"output_pixel_sha256": "bf94123d5fc22966b92af2a0749502ac6488df175ad265c9e8e34be86c17f7bc",
+					"output_png_sha256": "ba6b00a412192589ff06a599259d3f8fa90e999704bce64c520c0f7e64854a98",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						117,
+						68
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l hip armor top",
+					"master": "regions/l hip armor top.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "d8e4a98fa01bcaae276a46b51a2839b30fb2a2e219f4bec5eff1a1291170ed29",
+					"output_pixel_sha256": "d36111c1f88e453773e3d854251b154b8eaeae0497a4be057127a226743c125d",
+					"output_png_sha256": "90a1d393f2278dbc252a3065a548c6cf80bafe398181670a48e73de1704475b0",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						119,
+						69
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l knee",
+					"master": "regions/l knee.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "7cdee62c5d11484afda537b4382ac222a8154d197c2733e6f720ecbdc5336423",
+					"output_pixel_sha256": "00028df3dd09a8d6982dfca6f398023465b9f1c359cc8d431e67788193440be7",
+					"output_png_sha256": "2a052349c78e2ed5170e67b9803cf7b1a5bc3260e9ee7eef16820d7535ffdba9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						92,
+						92
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l lower leg",
+					"master": "regions/l lower leg.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "f09230866d57dc8c6847d3fcea1431079480f270fa17a30ed5b0e8a9e7efae62",
+					"output_pixel_sha256": "6f08a54b4afb15d2e5ced11aa0c7fada4d9d18c6571a03db8f5aa3ea49044994",
+					"output_png_sha256": "d0420d08a64287caceaa515fac1d35eaba5754e4ebb1a87cc91a30f7407d6bd5",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						87,
+						161
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l neck armor",
+					"master": "regions/l neck armor.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "116b954857ae4794f9507daed769c198a3ffd90120b700d7ff210e01bae1ff8a",
+					"output_pixel_sha256": "d1c17fd18d951801774ca5c3f5308f483337ba1ebc9fb6bffa195d03e5b79c6f",
+					"output_png_sha256": "80ed668ad05905e52db43cb0196c694550145845965f2c00401d8bf45e74e7fa",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						39,
+						49
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l shoulder armor bottom",
+					"master": "regions/l shoulder armor bottom.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "b0ad194d474ea1e533fd17edd2136867f658609287521b20c0e2104ccaaf0dbc",
+					"output_pixel_sha256": "ee9dbc3a0b3507ae6306bea07e11038483d39358b1709ab666698b7c28fd6340",
+					"output_png_sha256": "a2deeca92679131b12ff8461188b5e0a0d70bc5fe72c3bc2438db287c04159ee",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						72,
+						58
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l shoulder armor top",
+					"master": "regions/l shoulder armor top.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "00bc90f42ef039c966580e9ae636feb1b0f53d0e6d222f2f6b15eb3c8d16e82f",
+					"output_pixel_sha256": "0c21f92efd4948efb428d87b6d45e2d7866b65fe7d7d11dd277560b9d7f915bc",
+					"output_png_sha256": "631be7b26ae8f354e3d6002539933a37b26339f300016ad802f5dd82ac047721",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						69,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l upper leg",
+					"master": "regions/l upper leg.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "2976451424fc3c468b458f21c8181ccedad7c82ef667386633e0dc64f47c4877",
+					"output_pixel_sha256": "0323a277b62bee64c898ee1b1ec53f243050fee626b0c09465c9bb529bb6e29c",
+					"output_png_sha256": "cf306dcde46a314fe4c9934155adc8dba2a7ccdef03d53b7e3c6223d156934aa",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						143,
+						145
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "neck",
+					"master": "regions/neck.png",
+					"recipe": "base-neck",
+					"template_pixel_sha256": "71179e2fce3b6abf2453bc13f854d8b2085e14312131617ccf303a86516c5b4d",
+					"output_pixel_sha256": "e5fdbf64a13ab27c6bb850a46353e733c9bd07e3eff97ea5cabb41d9ff2f6fe8",
+					"output_png_sha256": "9f6504dbec3794c4317bbc6745f1a5e9908a74e58d7fa23e09d43b9c1b637481",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						72,
+						93
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r foot",
+					"master": "regions/r foot.png",
+					"recipe": "base-foot",
+					"template_pixel_sha256": "b3668d58076e48009f94318ac1499ef4a431c60f3394c937505ebec6609eb23b",
+					"output_pixel_sha256": "c5f0227a59d2bbf12cf1c58f6c463a6d35346df1c13d0088dc8cf3b593898bab",
+					"output_png_sha256": "a222d2dafc7d039875d3457cba91453374c663601999a2e9a8b836240727ad02",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						62,
+						69
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r hip armor bottom",
+					"master": "regions/r hip armor bottom.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "f7b246da146f5486a9ca466c9da363d23834e09cd79a896569b759a95ebafd3f",
+					"output_pixel_sha256": "d3664456f652808a02219e0030589976ade8181bcef5008a736e4b0d964927f3",
+					"output_png_sha256": "a0e347bbbbf3a7a673b7065fbada85edb852b71f95edbec0f892062f1b224c84",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						141,
+						64
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r hip armor top",
+					"master": "regions/r hip armor top.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "7d55b5a0b0ac7a85ac6304fbaea8b776fe81f55bd5b4b1e97a0b674b8f67691e",
+					"output_pixel_sha256": "c307029315b082ee6bb34b1ad519cecf3e6bae374e13d8784a51a983109e5142",
+					"output_png_sha256": "3abafba7361588593f97c3208e573424a6fb0a7b6a510f0382e3aa3fc5662918",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						142,
+						60
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r knee",
+					"master": "regions/r knee.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "a2562cb813618aefb5c25231e5ea8ae7daed983b946c444047172a466e50aa68",
+					"output_pixel_sha256": "794b8bf886e86e800a73ff82699582a868a2a68f9781cba84f98f6f4bab647a5",
+					"output_png_sha256": "3b264061ab3a164f5b35c8c96bfc2388d10cf95bf44b91b0fa13b8d005f5c8a2",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						91,
+						79
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r lower leg",
+					"master": "regions/r lower leg.png",
+					"recipe": "base-leg",
+					"template_pixel_sha256": "24272adce8820b922fabb2fd1fde5ae9aaa3dc6ab2a8bac0841f6e3aaefe4627",
+					"output_pixel_sha256": "b6eb37cff3ce5b9fc6f1a32d5d5c6dbc61617a1d2df4057b7ed19b3e4bb27cf2",
+					"output_png_sha256": "8eb203e157c8b6e0674e7d57f59c976b29e9e523761101f87a24f57ded942616",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						107,
+						128
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r neck armor",
+					"master": "regions/r neck armor.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "3e778fef3de436e3a871b6612926fc4b2095057d284d363442f0a561b264ee74",
+					"output_pixel_sha256": "573cfe1b78c21359c1b45c6b7acc682b9d139b7f0181a51a3216c834b10f87f7",
+					"output_png_sha256": "4359f7dd500bd30b8498d14fa6c5a8cde8bc573a966e6177a9ef26b9524e3062",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						62,
+						49
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r shoulder armor bottom",
+					"master": "regions/r shoulder armor bottom.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "2b19ae0e70d8ed7379dfb4f474ea1a8e281025ae3f0e5d24211243086012fa8c",
+					"output_pixel_sha256": "e2274d6c87e5d62088e466f9f13bca23c3188f06050e9e0d3f5f51cab03cb103",
+					"output_png_sha256": "15d473ece3e617a7ae4acbd44d58a9523e258271ffc79dc592c3a11491ca1477",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						89,
+						70
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r shoulder armor top",
+					"master": "regions/r shoulder armor top.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "fdcc0b7086299fce6fa787f49d5c37736ff024140a16c912d16552790aade543",
+					"output_pixel_sha256": "145131e4894a065398364cf2b3ef5d42d15d691259352766efcf3fb516f1ba12",
+					"output_png_sha256": "4901652848d7261e140160bc3c9b640467570f9717f618d383925378da79e848",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						98,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r upper leg",
+					"master": "regions/r upper leg.png",
+					"recipe": "base-hip",
+					"template_pixel_sha256": "674db430f8f57f74bfce19888b9784e6a422d691fe893aaf728fa7fd6443bd70",
+					"output_pixel_sha256": "ab1bb680c53557f15019bc06c37dc1d01e96a83c7cfc89b9dc941b6ef9b795b1",
+					"output_png_sha256": "b7d78cc805afb4e0d7d010e8c033b25ec4c4b1dc99db79f2033da236dc059603",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						131,
+						170
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shadow",
+					"master": "regions/shadow.png",
+					"recipe": "base-shadow",
+					"template_pixel_sha256": "4a7c52bad8c5b3d7d89cc703c2a49697a9741deaffca99e17c66e977ff15b49e",
+					"output_pixel_sha256": "935ab30d9fb6d9ca36c8f4975cbea4d936a717971e8d8154ccef3901e72daf43",
+					"output_png_sha256": "71d3b5d8c928e549f519080cfa77f94cef20ec8910cd6c2acef1acecb5ff10e0",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						460,
+						87
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shine",
+					"master": "regions/shine.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "7801160e9b5b07dea07f434457f91bcaa10bf994a698de1b28f8be73effbf3a8",
+					"output_pixel_sha256": "4c6d1e9ba760a0805189881d8b2a24671cd88bc9a3442669d1dca63901fecd81",
+					"output_png_sha256": "74ed061281e988c651a0e4de3d373a98cfc42ee0279d0517daf8ab5290ce890c",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						51,
+						31
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash",
+					"master": "regions/slash.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "30210739f9ba2c39ed01aacabee816903782590e5babd99b99cdf85c722b3310",
+					"output_pixel_sha256": "65bf6a05655c557e5d0830cded76271875e21c3baf4d05b486b2cea87a6ed8fa",
+					"output_png_sha256": "d7bac9b5a10212d60586f1d0ba58728116ad073555f4cc53d0b7159c1e05308f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						574,
+						370
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash2",
+					"master": "regions/slash2.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "758f6263653fc946afba92bba3a41cd360829fd5f2f34ad2ebee2c3af5fb9978",
+					"output_pixel_sha256": "cb37cecce47d60dfd51e931b1843d6886c916edda18cef791d1023cee95199a4",
+					"output_png_sha256": "657abeab6838b3d3b7ea10bc910e0dd698a02b46b42cf179ba559090dbe1e67c",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						1066,
+						210
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "sword blade",
+					"master": "regions/sword blade.png",
+					"recipe": "forced-empty-weapon",
+					"template_pixel_sha256": "5eb4dd606e97f553470dd6bdee6b76ec26abfc10c1327e0f8e5b2f39d9642c47",
+					"output_pixel_sha256": "c37fad23903e35cdbf4fb3803a8f0529a59b89b11f3172dc8b44891e085de119",
+					"output_png_sha256": "3255fecacb542f4ada3319635133c51055ab79bfeb38c72fe035f70afa13749b",
+					"alpha_preserved": false,
+					"alpha_bbox": [
+						0,
+						0,
+						0,
+						0
+					],
+					"transparent_weapon": true
+				},
+				{
+					"name": "sword_handle",
+					"master": "regions/sword_handle.png",
+					"recipe": "forced-empty-weapon",
+					"template_pixel_sha256": "23e114d1319b465be785738cf9fd3764ec36df03afd2bfcb9507f8c3691e2fd5",
+					"output_pixel_sha256": "a615f7e9c440cbf51b0486238f09dffc43ecb7f5fcdb12847dc0e57ae5d28fa6",
+					"output_png_sha256": "f04a88a07e2c52045cab708d081a98b6991aaf3003a7cf1cd3bbd0aef36b9dac",
+					"alpha_preserved": false,
+					"alpha_bbox": [
+						0,
+						0,
+						0,
+						0
+					],
+					"transparent_weapon": true
+				},
+				{
+					"name": "tired_puff",
+					"master": "regions/tired_puff.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "1ec05b45e42fa0913be0991ee6fda37c48dc4ffe2ae1a5c5ca0cca653710eb14",
+					"output_pixel_sha256": "f62a31144eb86acbbf26152cac69d66f81a202d4ea4626b3ef1d9815cff21a3d",
+					"output_png_sha256": "beef7e9fcbb8b5fb33d3dd7f26d30b07e85d12233a1b29d6807fe55dbbb00181",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						38,
+						28
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top hand",
+					"master": "regions/top hand.png",
+					"recipe": "base-hand",
+					"template_pixel_sha256": "6d6246b7c95327421d41b1aad466d4f1b07e9b67410286fd02b3bd0162104f53",
+					"output_pixel_sha256": "ccf8eb985c462f125b5e47d7a39af2bdcd4bbb945a6cd064a19b4ed5adc5121d",
+					"output_png_sha256": "c6fe0151eeaaf8eb04f5fed3542cdaeaf30b97b1f5ccf89e6cd6a0b8e4861125",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						68,
+						59
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top lower arm",
+					"master": "regions/top lower arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "126894186009300f35bc01bdbd61e61c17ae9f13fe42f786816abab6b52a7650",
+					"output_pixel_sha256": "b1b0e846a5a874b2db2bca83c058389b68b39887e781cb135545481055effb18",
+					"output_png_sha256": "ac17c74487d39ee6bd74a78e537f8c93a3594768c50b5283cfddf374d10c3085",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						117,
+						96
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top mask",
+					"master": "regions/top mask.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "6f68723d2ea5b4080288fcceae5bd30197f156676048e33ae08acb1b1a26d16f",
+					"output_pixel_sha256": "5b17e847e3a86c0dedb6d204fc5dfb97490952084082794807227b8a2c1fcd6f",
+					"output_png_sha256": "c9961db144afa95879b158f203441a51349bc51e9f343e8d67b541588ffc7bfe",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						84,
+						101
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top upper arm",
+					"master": "regions/top upper arm.png",
+					"recipe": "base-arm",
+					"template_pixel_sha256": "d10ae36c9a50cac0861bfcb95ed523d3b72ef5d9c0518837af6f2b9f407df4d7",
+					"output_pixel_sha256": "dd34c880fde280d0e81fe46e890dbe8135ad483233fed21ef1b749de03131ebf",
+					"output_png_sha256": "f5e6b34f71d3543a79fe907b3f38a9a0abe0d6e5104f7433cee36a2052d1021a",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						137,
+						132
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "zaps1",
+					"master": "regions/zaps1.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "e2f47876ea5b732eb9cbbbb23f45379bb839719c8310926df442fc930af33bb1",
+					"output_pixel_sha256": "a5aae23e77bce7f170ea303c9945748eb85e1c58f0f83fa184fbfed9d921cae1",
+					"output_png_sha256": "f14e083b31cd8922fe5160693b9027c667d7dc0c9efbc2f8a7f814fa1fb5c785",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						274,
+						227
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "zaps_2",
+					"master": "regions/zaps_2.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "052f8042d5120cf128fd19272ddf388932e04d4a782a072d18ca9813543dcbb3",
+					"output_pixel_sha256": "2de6a1d5821d9e528425a86fc1ea12800c37c8cfe2ff69a282c3a098029b858d",
+					"output_png_sha256": "e4f3c1642c5d75e1a46709982875a9a099d06a3a1ed9f5e30949188a57c35c9e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						248,
+						246
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bod attack",
+					"master": "regions/attack/bod attack.png",
+					"recipe": "attack-body",
+					"template_pixel_sha256": "5573d77beeab3e83a3b1dff324f59bdceb686d35e3a409ba7aa69bbce8ce9096",
+					"output_pixel_sha256": "b923c22cb43670c541a08dbeeb31990c87af7b1243c08f5e50f3e30ec85f7ec2",
+					"output_png_sha256": "81df4e831daa912b5a67ddadd1519d92ddfdf1831de5760c9a56432324c5d2ad",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						155,
+						172
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom hand attack",
+					"master": "regions/attack/bottom hand attack.png",
+					"recipe": "attack-hand",
+					"template_pixel_sha256": "8313a48c0ea8465c1d09b22bbae3586bf40497adfa1452e03f0649416b866773",
+					"output_pixel_sha256": "701c87c9f5d19d1eec805baf159d6a7142aae298549dc644e2208c837a5e5e76",
+					"output_png_sha256": "26c27e3c7a07336c9d7e4dc614600bf70c579c0f461b8b74e12cab0b8322ebb0",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						69,
+						63
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom lower arm attack",
+					"master": "regions/attack/bottom lower arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "9a929eccbf72d1f58a213c4c01ebada008296d75a63158bb30d25564677db40f",
+					"output_pixel_sha256": "5ed060931b2179998f5d7f3a097e3398037bd7f1511102adc5261579d5fd1b01",
+					"output_png_sha256": "e42ca7b996f3709f6cdfd077e714da0e0d581d2108732b6d61c0b44b4eb57a57",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						124,
+						82
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/bottom upper arm attack",
+					"master": "regions/attack/bottom upper arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "0e7d412a3bdc18595b4422c9ef5333fadb3d7e20503a2ac7d6f796b6712ffcac",
+					"output_pixel_sha256": "767759e8bb267432036a6e4ec7952b1bd1ad4f8bdbe3f51a673007758597c18e",
+					"output_png_sha256": "3e61008cc35e9f6539d4a66e06b06a2cf585916cc5b3d0a303686da6252b3b4e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						1,
+						130,
+						145
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front arm attack",
+					"master": "regions/attack/front arm attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "e9c8a0a1d6748333da1e6aff00284c5aa3afd1781dc9d0e976836be0274c7392",
+					"output_pixel_sha256": "f306eda022f70a9a42d090ced4aff232c98a01e0395dafba3709fd8f0809d020",
+					"output_png_sha256": "abf4cf4c824497514cc7405f572451a2b6369590804316a43c0f3d31089f63bc",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						138,
+						131
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front bracer attack",
+					"master": "regions/attack/front bracer attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "ebf629bfe2fb4426395bda7700e10f4048fa7bec432bf8d43071b7519bbb38d5",
+					"output_pixel_sha256": "3fe5bcf435e119f3a9a005145905d94390c2071723e9cf119752c0c24ac00e2b",
+					"output_png_sha256": "20f70b95a4162f838ffc95149a291aaf11f8d43d890925cc9e271627f7272169",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						84,
+						65
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/front hand attack",
+					"master": "regions/attack/front hand attack.png",
+					"recipe": "attack-hand",
+					"template_pixel_sha256": "15a1817bbe4c1889eb019b79401161d2f7e874edc955f4526b474c3f0f8125bf",
+					"output_pixel_sha256": "df601cf88eee94101e79066e175526be615d502b6546be92d10b0e8a704f18ea",
+					"output_png_sha256": "10ac96edc568661cba03754d9425e8f567886c19bdfb2690bcfe3d3bb60f9bf8",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						59,
+						57
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l ankle attack",
+					"master": "regions/attack/l ankle attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "e48c6f59ba672969076daf0399e7ecdefbb5e09117f77e96739865ac08d8c030",
+					"output_pixel_sha256": "ca83362b89930acc8565e639fb8f708cf30ea37b0ec7de3e9dcdf773ecbbad12",
+					"output_png_sha256": "2453e0bd2d2d0e06af044ad5b208292686f44d7509e348a44a07ab2defa2e8ea",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						69,
+						49
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l foot attack",
+					"master": "regions/attack/l foot attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "2e472cf8ea900e6b29f72c88b01533097c4176cc3131a6c24d793d87e67b20e4",
+					"output_pixel_sha256": "350394001410c23bdb908aad9d51b3cf02dc8a8d0c9441eb97a5d3774265fb30",
+					"output_png_sha256": "597f73af4ea33a59b76214057938c7058c9739c943c7b538a88c376fd961f056",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						66,
+						86
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l knee attack",
+					"master": "regions/attack/l knee attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "062c6e61e1bfea2daa8db2468c42c116a4208232d5731e75d6f7a4610d9da01e",
+					"output_pixel_sha256": "fadae6c81acf978fafb8611f0c44b81743abb5197239a6edb54a28adc5abd740",
+					"output_png_sha256": "9e4eb824ee5f990e6cbc990b3b3ac29fb651c77617fc5be9e4e3022927eb3343",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						98,
+						91
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l leg attack",
+					"master": "regions/attack/l leg attack.png",
+					"recipe": "attack-body",
+					"template_pixel_sha256": "506bab093f45ec42bd1e172423b312e074ae9c7ad44e4da1c4885676ff335437",
+					"output_pixel_sha256": "07c70b45cd079ef28e3002e2ea67ad73dbfacc9068f41cf410461997c97b6f65",
+					"output_png_sha256": "6854bf96cf41a7dbf8444dd2696360b9799dc86feab8b892f94d6a223dd1cb93",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						87,
+						152
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l neck armor attack",
+					"master": "regions/attack/l neck armor attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "56a2a7e8ef911575369b64168bb7f96066b7f98bdcc5843eac07614899d4a5cc",
+					"output_pixel_sha256": "f8b68b70d20b06f076d7d1ef36ed6a2cbaff500b46b70beb41d0ff5310b46ba1",
+					"output_png_sha256": "d3ffc158746c8f9659bad9486a04b61c938129771a596d5c0b9823b74058db9f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						57,
+						58
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder bottom attack",
+					"master": "regions/attack/l shoulder bottom attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "01271fa5fb45e320f59bed7a3c4aaf68a33f8921fb2a82db6ddf99b352f57029",
+					"output_pixel_sha256": "e0475019a476b338735f59d79b9db7f76209e23fcf5fcd4a79f81abe5733327d",
+					"output_png_sha256": "cf308700f5b439911c5b84c5ab3f21f1901f749aae1fe4899cddaa7b28325d8f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						90,
+						70
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder bottom back attack",
+					"master": "regions/attack/l shoulder bottom back attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "cd04e41124661ad1b147ced8e151087ba506f19e865990facf50cb7260769edd",
+					"output_pixel_sha256": "7579a05d81eecc8ace3093e7ef795cedbeaa2707d8545c5bb2cb69637226ff36",
+					"output_png_sha256": "b7bb2cc63a423c7621ae1abda0bb21cfb1cb726b89c0492b0d8f385bc04c3456",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						69,
+						78
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/l shoulder top attack",
+					"master": "regions/attack/l shoulder top attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "ee031fe258f92dba9be6be47c970542871f50712753c7592a60419f649bc9cc3",
+					"output_pixel_sha256": "556ce9de2956701dee1c06072f8d2963ec05c550b9f4821f7826da939ebefd0c",
+					"output_png_sha256": "b43da18614ca455341286ad821ac7e63422b0a1a3d189e06df387c6641584122",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						100,
+						54
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r foot attack",
+					"master": "regions/attack/r foot attack.png",
+					"recipe": "attack-foot",
+					"template_pixel_sha256": "2ecd6daddba4fc11dcb753cc1e157970eb260de683ad4c5afc5e98f000afbbad",
+					"output_pixel_sha256": "077bdb2b34494772ddeeab4aa13898e49d43184a0cfac28d343efd4aed949dea",
+					"output_png_sha256": "54872ef4a440986297212d82a614a5b60db6883c22d438df155b3c868b54eb5d",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						78,
+						72
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r knee attack",
+					"master": "regions/attack/r knee attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "0d1717aea245e98feb9bc6bd56d62cf854af0d7f3e630f3bf78b980682eebc85",
+					"output_pixel_sha256": "d36b813506bd1509feaebb569eda506c8570f494c02819455acb5a80baf1c119",
+					"output_png_sha256": "2c8e77734e3873aa608b15bf933d9edce55d2da148730519840b412bec991db6",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						97,
+						83
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r lower leg attack",
+					"master": "regions/attack/r lower leg attack.png",
+					"recipe": "attack-leg",
+					"template_pixel_sha256": "e0ab7a00ed0172707570e11bc19587dc3758dc9dbbd40007ddf8a0f6fd6caacb",
+					"output_pixel_sha256": "2a9b1e08bda699ad176d28a085293be4de46b91b70db23bf0216aefe85d9b2a5",
+					"output_png_sha256": "fdafa3fd5275bef8f0205f65383065ab2423fdd8b96b13f0f053ef0de4bd8b70",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						118,
+						130
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r neck armor attack",
+					"master": "regions/attack/r neck armor attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "1064ac1f7556883d3e369eee0a6c803e2d4359a90b6e01d1437afc0c494ff79a",
+					"output_pixel_sha256": "318e39d55d5fabaa990d7a0417fc44f08899c8bf163764ff504193e8025e6d52",
+					"output_png_sha256": "e5ec78f567e8f0a256d03454bea0fa5a635f6049a5509b9b7ba280174b1c7e06",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						28,
+						42
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r shoulder bottom attack",
+					"master": "regions/attack/r shoulder bottom attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "23ea576e81dd8f980863295cb0f2e6a1940148484b1f1b4b093d0b0ba7e14136",
+					"output_pixel_sha256": "3cee9e772700b99a782b8fde121719782af5dd9f252a5a52881a3fed7600e0f8",
+					"output_png_sha256": "2a67ad1978b1a3a58d444a0a9e82c37193fb077e3f4863ed28c53be090eb32f1",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						84,
+						81
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "attack/r shoulder top attack",
+					"master": "regions/attack/r shoulder top attack.png",
+					"recipe": "attack-arm",
+					"template_pixel_sha256": "6f7d237d5614944b72e2104265044fefae79ff0e28c1d100fdfe8af5212b5f1e",
+					"output_pixel_sha256": "f01e5d0d1e5130e7b14e39ce01667391c865168cf86c7538c4cc22798a5ab44e",
+					"output_png_sha256": "024d735130d7d5188325a1ef1e3466f2153ad3afd728e7172cf32af134b38b1b",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						65,
+						75
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/body death",
+					"master": "regions/death/body death.png",
+					"recipe": "death-body",
+					"template_pixel_sha256": "51ccaf931e1f1b357747c31ed06965953b3695a17042f04ff8e1823088c16be4",
+					"output_pixel_sha256": "cd7ffe9ec17ad455c6e4e3c380143d6f7369c26d1daa22086712309808873308",
+					"output_png_sha256": "1ad7078bc6f7e32d903d9b594448843597ba0a4c0179d1a24e7200413530e911",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						221,
+						180
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/bottom shoulder death",
+					"master": "regions/death/bottom shoulder death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "cfb62b0f654bab44ce3e255eae013c1c7e46f5ef79c5a767de684c57f274063f",
+					"output_pixel_sha256": "c6bf1f82c62e6c4fe310de7609fea24ddf1667d46fe2b50fbe67c7cbf00db62a",
+					"output_png_sha256": "6880e51d4dc950a8c8d306d09bc209c443217e2a3a1c4dd3368866d2dae6c3a4",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						89,
+						75
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/bracer_death",
+					"master": "regions/death/bracer_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "2d936d34343b8342f821eef3a53cd37178fcd46c3aba3656655aafc866d1e27d",
+					"output_pixel_sha256": "f35256fca40c420bd57027b08cf7c4b9aebff51ce29eb030f8ce436739a251b7",
+					"output_png_sha256": "05d57528c26d4388236c38ae3b324e29ed127ec62e6ae642679b1097697f2810",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						146,
+						77
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/hair death",
+					"master": "regions/death/hair death.png",
+					"recipe": "death-hair",
+					"template_pixel_sha256": "d64a8f2abebd6bbf0ddd2921bd562b3120a3824c0bfca19461d070c0fa7e542f",
+					"output_pixel_sha256": "5e04cd0c5eb9ad8854899db39731ae75a0c7868f99b1298b5a35f8502571d6d5",
+					"output_png_sha256": "4863115eb86323eac7b6b1fd45350d6ca1950d2b9ed3bf9af40c84454e65724f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						74,
+						93
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/hand death",
+					"master": "regions/death/hand death.png",
+					"recipe": "death-hand",
+					"template_pixel_sha256": "b52259aee6ff1b446143c24bd813b9ac91a16d55c0850af23a0fe545832494e5",
+					"output_pixel_sha256": "8963fc78bd163bf944fc660616a02a9f4bfcf72e07462843f3d2f3f2647f52c1",
+					"output_png_sha256": "8d15c274f0eba9bed448aab6a40a90ab5699e6c9678dcb1a1ccd76e00379c421",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						92,
+						56
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/head death",
+					"master": "regions/death/head death.png",
+					"recipe": "death-head",
+					"template_pixel_sha256": "268edcc437b5dc0a9dec7147463c611e0e0ff1002871869e6fc552392f4df4a2",
+					"output_pixel_sha256": "40f05b89b7c302f1528d98ab2074a28689e54ff960786acbff91af26ee5cf72d",
+					"output_png_sha256": "74d771a911e6e213b8261ea61e3d473a66962265d28e437e4719bd2638262a6b",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						119,
+						97
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/knee_death",
+					"master": "regions/death/knee_death.png",
+					"recipe": "death-leg",
+					"template_pixel_sha256": "3d2ec0dba051cb5776358399628a9c20a4a02e936adcae6add22706e12acb335",
+					"output_pixel_sha256": "d3ed2928db7cb97bc3c3f805e367e83527f4cc8a6e9499e884c1254decc38337",
+					"output_png_sha256": "7f06d68950800abd0b5d8a84013699ab30d1805d5f1046e66383f8ae7ca6bd5f",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						76,
+						90
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/lower arm_death",
+					"master": "regions/death/lower arm_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "1ba85895df2b525546836f16741dbcd95b47e9ddce182dbd787de31b3460c478",
+					"output_pixel_sha256": "9c1d799676a6c9b97c137020bb833547cd4310683e52b49a2596a204725e20dc",
+					"output_png_sha256": "5f8984f0cc76841725ee36f6df3e424ab293feed84a8f38644140b2f3a4705ca",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						115,
+						98
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/lower leg_death",
+					"master": "regions/death/lower leg_death.png",
+					"recipe": "death-leg",
+					"template_pixel_sha256": "761f34669e7b526e3731273be5d38591a77823e1805cdc10fe79972f621f551d",
+					"output_pixel_sha256": "78167e558e01c26209fca6276c4d70ad4ad5af86b030f31bb71f7945a8cd2739",
+					"output_png_sha256": "3bf972f956ded70f9702d8811b3c4a9b1912d2a50dd714c48e05b45bce635c71",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						76,
+						173
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/open hand_death",
+					"master": "regions/death/open hand_death.png",
+					"recipe": "death-hand",
+					"template_pixel_sha256": "193784d2e2fd7abf9228af2ac27699804c85121f27b31be123e3b73d97340151",
+					"output_pixel_sha256": "29a0b5c7ab0e032c75bdf4cd792287612acf16d1e3d3b2862bbe90aec6bce66c",
+					"output_png_sha256": "63e68db6cbc714bd0773b88972d658b97d17eee0a524b962b92433bd9fb7e438",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						70,
+						72
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/top shoulder death",
+					"master": "regions/death/top shoulder death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "2c3c0594ee6877772190ef6188240af8fb08ac72c3dbead1f74e4b9935cd78bb",
+					"output_pixel_sha256": "990d2040833f8e5508bb4055df3e096984184091e8c440f437c663bfac22f986",
+					"output_png_sha256": "79f985bc85f5d66e9459f993eb5eae870d7ccb1c658a336a154e4d713359f4e2",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						98,
+						77
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "death/upper arm_death",
+					"master": "regions/death/upper arm_death.png",
+					"recipe": "death-arm",
+					"template_pixel_sha256": "a2522445fd9d4ba886830030e5a47b94c6896b4f659e190ed17e18bc2b17d840",
+					"output_pixel_sha256": "0d2bbe9fd1a5d09a3a201d22e1c91ce86c51c214d2369ef68163ae4c0d0fbfdf",
+					"output_png_sha256": "291a1c7c4e1dab2a12a0507df3806c76461dfe5dfd204d29b61c71d600ba18b6",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						98,
+						123
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "slash/slash_placeholder",
+					"master": "regions/slash/slash_placeholder.png",
+					"recipe": "base-effect",
+					"template_pixel_sha256": "1a203bfb692999aad30e15f33580c4bccbd0c551b24e06e0e60c0a99a3e77ed1",
+					"output_pixel_sha256": "a74da602950f0ff7457e8a5bd6ab446949a91f2ec7cc34a1488162a5784028db",
+					"output_png_sha256": "d0cbcb4237e8d4a1fc63ab5f83f30e864b6e15d7103ee238c9321597f3b74c3b",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						26,
+						78
+					],
+					"transparent_weapon": false
+				}
+			]
+		},
+		{
+			"domain": "rest_site",
+			"region_count": 14,
+			"regions": [
+				{
+					"name": "arm top",
+					"master": "regions/arm top.png",
+					"recipe": "rest-arm",
+					"template_pixel_sha256": "5622b34ba8a6795ff4f837cfd72f049606e83529a3753a7e79c957eb3b40ba54",
+					"output_pixel_sha256": "b0a3e9eb88d18ba4bf0370f33c9f478b8138e78fee278d9b478c185a58ae6dcc",
+					"output_png_sha256": "323e6700a79ccc5100e16d9087ef1d116c145e3d21f28d9076f75b0cc183412e",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						127,
+						160
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "belt armor",
+					"master": "regions/belt armor.png",
+					"recipe": "rest-hip",
+					"template_pixel_sha256": "b52f1b95239e170614334cd733694e1d34995e6fd824aa00b87acb40972f0385",
+					"output_pixel_sha256": "c00f9a38700e9bb658a81b16c7e2fbed09c2598957dfece611baaeeeeb1b49c4",
+					"output_png_sha256": "49cd7f0061f8d4aedb86c155dbfd327111d5ac8ca6dc0636c5c4e6717effec4a",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						21,
+						50
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bottom arm",
+					"master": "regions/bottom arm.png",
+					"recipe": "rest-arm",
+					"template_pixel_sha256": "cd08cf2d26bd4219dec9fe1de7e31458eeec84ac2106bfecd43630dc366dc260",
+					"output_pixel_sha256": "7c876699dd1db125fc2a88a343682952e85f613c9d5aa0abfede7f8791a06fab",
+					"output_png_sha256": "753ff80c75a235964dc64e2ce87cd3a949404ff2848aa43510502f4da6e09d66",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						56,
+						170
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "cast chadow",
+					"master": "regions/cast chadow.png",
+					"recipe": "rest-base-shadow",
+					"template_pixel_sha256": "f6e8cba62fdc929a848e2bcf30379b27b21921047bda121b0662f0dc17854e1a",
+					"output_pixel_sha256": "f163f0c4b700a1f5cf16803df8af2f08129482945f264767e3348acab2928c00",
+					"output_png_sha256": "cc56da5b1690b52256d09e67cf1c9ee3b4bf0be9fa7118d66a7d206c5ffbed92",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						189,
+						306
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "chest",
+					"master": "regions/chest.png",
+					"recipe": "rest-body",
+					"template_pixel_sha256": "a803aff4c7647f66fd6fb38f2517d062ea3fab3885a3778cfd836cc780c930ad",
+					"output_pixel_sha256": "3d437fa97b39c5e9400c57037bb4a3458a13aad7b7ebfdd854d02fa25caa83e8",
+					"output_png_sha256": "cc8f3a0f7a91b1926a7aaf451d3711608d1dee9fd5bcf904ca8520937fe26df9",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						110,
+						101
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair",
+					"master": "regions/hair.png",
+					"recipe": "rest-anchor-hair",
+					"template_pixel_sha256": "c2dcb975b8a6d1c30de28a49f3f85a76ed9d48fc1df4bfd76f04d85eca54c532",
+					"output_pixel_sha256": "260f7bb4a52e167e944f8335ad8f8dc54f0129d34995924b02a17f9e4bdabe22",
+					"output_png_sha256": "06dcc807b7f0271e940a3808035724011785650b16dbb227a4a921c554916593",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						4,
+						37
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "head",
+					"master": "regions/head.png",
+					"recipe": "rest-anchor-head",
+					"template_pixel_sha256": "b34d900cc5242f45ed134ba18ea1329d3cde0708a69748e0bf2cd19d356b6531",
+					"output_pixel_sha256": "06087032dd1af91c49149ddbd4971a8f1b46e18af38524884392907e371bfc77",
+					"output_png_sha256": "1000c452b45250a635cc3f0e2fa6bf3ab9829ffcbef76f66f787cdae846fb42b",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						0,
+						63,
+						73
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "highlight",
+					"master": "regions/highlight.png",
+					"recipe": "rest-select-magic",
+					"template_pixel_sha256": "875ba2fa7266ac369313db748bbd7e2e2639a78a070a66f81bac59193cc72618",
+					"output_pixel_sha256": "8591ffac346879045989d2e1a94466f8d8581afb0f8f49a16e7c107bcf19c1cc",
+					"output_png_sha256": "8243d40675939af1d2fe7090c7f2916d7c0a472135a6e951cb79aa0978b245d4",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						1,
+						157,
+						284
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hips",
+					"master": "regions/hips.png",
+					"recipe": "rest-hip",
+					"template_pixel_sha256": "be90a2fcab23d7b8eeb3599b519729f861c46399708ccd5634aa629618095ec3",
+					"output_pixel_sha256": "1ae2d3e936113f09bb7afe164d4564e4caa7c5a2760059ca43e3f35d42b078e1",
+					"output_png_sha256": "b66b52917f817486b35d9dbdf657836fddf707382e0e60f6eea9e25a0fac9226",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						173,
+						94
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "l leg",
+					"master": "regions/l leg.png",
+					"recipe": "rest-body",
+					"template_pixel_sha256": "fd4e1586cc56ebb7427b2ab777c6cdea22b106cd44a4360cdae4169c21a5c39e",
+					"output_pixel_sha256": "18d51834e01a76a63a3629229a23e7b48fad6116068e8b51e1eb3301117a07c0",
+					"output_png_sha256": "69ab9ada4a196013686088def9e7435c6d0c3cbfa5f6b5aa6765553cc5b187d0",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						58,
+						149
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "neck",
+					"master": "regions/neck.png",
+					"recipe": "rest-neck",
+					"template_pixel_sha256": "43f68ad27d0a49a1cf48b511f4ecef8cf4cb82369bef11fe87941f90246ed34c",
+					"output_pixel_sha256": "f5aa8a15bebc087681ddbe8323f48b1ba0fce38b5a282563e2b9fa2b802c20ab",
+					"output_png_sha256": "3bf3770416032b89614e164d01199ceec575684db7e409a4816b3a2ecdd61804",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						36,
+						50
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "r leg",
+					"master": "regions/r leg.png",
+					"recipe": "rest-body",
+					"template_pixel_sha256": "2e4f10beb13ecd55596da4857af89c5ba5a6867e4c603feda2fcc920b9e9cc65",
+					"output_pixel_sha256": "844544833dd0a987723823db718e21f16b3568c1a4e3a850960407b391440655",
+					"output_png_sha256": "46202004785b711c17831c7c83d263e336bc07f763214a8c233efb6e78dad3ff",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						64,
+						133
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shadow 1",
+					"master": "regions/shadow 1.png",
+					"recipe": "rest-base-shadow",
+					"template_pixel_sha256": "ecf8637c7a6a0a55544b2722625b22fe79f108969ebaef75101ccd38a30603cb",
+					"output_pixel_sha256": "f7cbf5f5418160f3c8b7b575cbb47968431fd6a86967458df353a8cbee2bdc0f",
+					"output_png_sha256": "475da5ecee0e00279af25570ed87b1245494318315eca5d9c23504830142bf8c",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						135,
+						125
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "shadow 2",
+					"master": "regions/shadow 2.png",
+					"recipe": "rest-base-shadow",
+					"template_pixel_sha256": "88e8fb9a3b62f469f57866a6b9adb5a5b86b9488fe01810bcd9d948b9e0a7bd5",
+					"output_pixel_sha256": "a8a2d82eaabef4c78ffbede74fdd5d9729189e1f2d2447f2f449f51eec90c85f",
+					"output_png_sha256": "874333f0c4337a133adff8831dc091afe13da89abdd5b8972a5aa773bb3b32f2",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						193,
+						194
+					],
+					"transparent_weapon": false
+				}
+			]
+		},
+		{
+			"domain": "character_select",
+			"region_count": 10,
+			"regions": [
+				{
+					"name": "back arm",
+					"master": "regions/back arm.png",
+					"recipe": "select-back-arm",
+					"template_pixel_sha256": "467a54e7a84562353ba3c05dfe2046e8659b6417a86b0486ffa6f1e9fb680840",
+					"output_pixel_sha256": "368cf14690439af0ec34b8e5e2aa86bdc74aea6b16ba7c980617acce42dce621",
+					"output_png_sha256": "d56d44142e74aa8c8368da27fbff395fbae2b10c7a616eeffd835606f6e62bcb",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						368,
+						383
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bg",
+					"master": "regions/bg.png",
+					"recipe": "select-bg",
+					"template_pixel_sha256": "c087b53512607ae5d6ae978a427fefa113a719a7d9923ae2dad2522736e4c726",
+					"output_pixel_sha256": "7f4ea5ff1e5b4a9fe405aab3dbd4a39cc173f86adcab0e1155cf7dad7704af2e",
+					"output_png_sha256": "98b71af94aa51c7af6b0a3893c03fd295cc77b2ce837f0e9f348842fa83443bd",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						2561,
+						1201
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "bod",
+					"master": "regions/bod.png",
+					"recipe": "select-body-panel",
+					"template_pixel_sha256": "2e28bc29188d5f2b00fa11e16268c625a9067148786f0077397042a333730b7b",
+					"output_pixel_sha256": "78268d10099afe89ffd2bf4fd04d0853a52c301523cea9ed02292aca6d341c56",
+					"output_png_sha256": "39067f5ee35b9650ef52a405c72bb57f386c54330f9ad6207152c3ac65d37f46",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						1,
+						700,
+						1171
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "eye shine",
+					"master": "regions/eye shine.png",
+					"recipe": "select-eye-magic",
+					"template_pixel_sha256": "dd06efae66fd6f135fe343bf4d8c42e6bcde37fe96b70fc4e8257709a699fd57",
+					"output_pixel_sha256": "7cfbabc0420605910cfb2ccabfb7cb4ebcc8b2516df56221f2a5650092a8f98a",
+					"output_png_sha256": "a398dec6e96aa24a5ef4af68c2984c238100bcd1515fc11f999325f4ebbc9960",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						1,
+						269,
+						170
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "fire",
+					"master": "regions/fire.png",
+					"recipe": "select-fire",
+					"template_pixel_sha256": "44c9504602fc31d5c0ffd4897eab2b392773a5c2ae106302db4a705b6c8d36f7",
+					"output_pixel_sha256": "3b459e5cfc0c2d22ce3788fad46459b222c40ffdaa9891e330409a516c66777f",
+					"output_png_sha256": "eef354d6c7b541f1e93c30afc8cbd6792f5f79865dd398df778df82df9d1d633",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						2561,
+						1201
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair 1",
+					"master": "regions/hair 1.png",
+					"recipe": "select-hair",
+					"template_pixel_sha256": "d5f2a64598477ba8c8d592a3a80185041df24e7df6932f91b5805edd858503d1",
+					"output_pixel_sha256": "b84f98db82cc564f9881180a6c34b6f9b635e29d5ef8d224d395487ebda953ef",
+					"output_png_sha256": "6267f311f6f03d307cc5094ed3ae7889790ae4b7560d59b0f2ce219bbab25601",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						7,
+						411
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair 2",
+					"master": "regions/hair 2.png",
+					"recipe": "select-hair",
+					"template_pixel_sha256": "e6cbe740123240890929790f69a3d02d00a7e9c37de4a4e83a410301c1bae8b1",
+					"output_pixel_sha256": "8075e2a87b0ad9e7d71f5fbf9748543effe18ada91312a87228febc6fd72d3c1",
+					"output_png_sha256": "1397f36b9605aa3980df12749daadf12724c2293610206715de63486ce7d729a",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						1,
+						10,
+						377
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "hair 3",
+					"master": "regions/hair 3.png",
+					"recipe": "select-hair",
+					"template_pixel_sha256": "6efa766cef600a5b35a4c1522ee00947e4782f07041e7027afba882ca86d3990",
+					"output_pixel_sha256": "d1715d013320f6e976794935c1cb2ce745d90be681cae6a7c5c67694318d3ea8",
+					"output_png_sha256": "64eb0d16fab5515125fced6a5998ec118a788568fc18f18c94d5f904a9193d35",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						0,
+						0,
+						14,
+						360
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "lil hair",
+					"master": "regions/lil hair.png",
+					"recipe": "select-hair",
+					"template_pixel_sha256": "2db5634bc3368e4307e68acc7c30c3d9be60f554fbaf02fbaa44e03e9afc885e",
+					"output_pixel_sha256": "90fdef68ec51d37c11f8a075ff559ba080b86f14776c52cb4dea5b6aa34511f5",
+					"output_png_sha256": "f33de6ffb669ef0fc5c09c14e256a5b8cd57b25671a9f1c1cba8323626c1fd62",
+					"alpha_preserved": true,
+					"alpha_bbox": [
+						1,
+						1,
+						41,
+						80
+					],
+					"transparent_weapon": false
+				},
+				{
+					"name": "top arm",
+					"master": "regions/top arm.png",
+					"recipe": "select-empty-hand-arm",
+					"template_pixel_sha256": "3f87b8580f571bbb3ee316f556e494f9b6c17444d446a34b195bfd1679535e28",
+					"output_pixel_sha256": "a5d047b8f99161ac553cd721db71fc41b58507297ddbafa426bf5d5e8f6ea3a6",
+					"output_png_sha256": "5553c79349ddc4ffa5a00fdf02b69e9b109faee8fffac2f7547bf32786f90b13",
+					"alpha_preserved": false,
+					"alpha_bbox": [
+						168,
+						108,
+						803,
+						984
+					],
+					"transparent_weapon": false
+				}
+			]
+		}
+	]
+}

@@ -245,9 +245,7 @@ ASSETS = (*SPINE_ASSETS, *UI_ASSETS)
 ANIMATION_SETS = {
     "combat": {
         "authoring_skeleton": "combat/ironclad.skel",
-        "ready_runtime_skeleton": (
-            "res://Vivhite/skins/ironclad/spine/combat/ironclad.spskel"
-        ),
+        "runtime_skeleton_resource": "res://animations/characters/ironclad/ironclad.skel",
         "animations": [
             "attack",
             "attack_heavy",
@@ -268,24 +266,21 @@ ANIMATION_SETS = {
     },
     "character_select": {
         "authoring_skeleton": "character_select/characterselect_ironclad.skel",
-        "ready_runtime_skeleton": (
-            "res://Vivhite/skins/ironclad/spine/character_select/"
-            "characterselect_ironclad.spskel"
+        "runtime_skeleton_resource": (
+            "res://animations/character_select/ironclad/characterselect_ironclad.skel"
         ),
         "animations": ["animation"],
     },
     "merchant": {
         "authoring_skeleton": "combat/ironclad.skel",
-        "ready_runtime_skeleton": (
-            "res://Vivhite/skins/ironclad/spine/combat/ironclad.spskel"
-        ),
+        "runtime_skeleton_resource": "res://animations/characters/ironclad/ironclad.skel",
         "shared_with": "combat",
         "animations": ["relaxed_loop"],
     },
     "rest_site": {
         "authoring_skeleton": "rest_site/restsite_ironclad.skel",
-        "ready_runtime_skeleton": (
-            "res://Vivhite/skins/ironclad/spine/rest_site/restsite_ironclad.spskel"
+        "runtime_skeleton_resource": (
+            "res://animations/rest_site/ironclad/restsite_ironclad.skel"
         ),
         "animations": [
             "glory_loop",
@@ -867,7 +862,8 @@ def _write_manifest(
             ],
             "note": (
                 "These are local authoring sources. A separate publish step "
-                "must create private .spskel/.spatlas resources and scenes."
+                "must create private .spatlas resources and scenes that "
+                "reference the exact base-game skeleton resources."
             ),
         },
         "animation_sets": ANIMATION_SETS,

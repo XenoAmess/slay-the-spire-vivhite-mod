@@ -5,8 +5,12 @@
     ".gitkeep",
     "README.md"
   ],
-  "requiredSpineVersion": "4.2.43",
   "requiredSkin": "default",
+  "allowedVanillaSkeletonResources": [
+    "res://animations/characters/ironclad/ironclad.skel",
+    "res://animations/rest_site/ironclad/restsite_ironclad.skel",
+    "res://animations/character_select/ironclad/characterselect_ironclad.skel"
+  ],
   "requiredResources": [
     "spine/combat/combat_skeleton_data.tres",
     "spine/merchant/merchant_skeleton_data.tres",
@@ -24,6 +28,103 @@
     "multiplayer/rock.png",
     "multiplayer/paper.png",
     "multiplayer/scissors.png"
+  ],
+  "pngDimensions": [
+    {
+      "path": "spine/combat/ironclad.png",
+      "width": 1329,
+      "height": 269
+    },
+    {
+      "path": "spine/combat/ironclad_2.png",
+      "width": 142,
+      "height": 480
+    },
+    {
+      "path": "spine/combat/ironclad_3.png",
+      "width": 492,
+      "height": 107
+    },
+    {
+      "path": "spine/combat/ironclad_4.png",
+      "width": 19,
+      "height": 49
+    },
+    {
+      "path": "spine/merchant/ironclad_shop.png",
+      "width": 2017,
+      "height": 531
+    },
+    {
+      "path": "spine/merchant/ironclad_shop_2.png",
+      "width": 405,
+      "height": 509
+    },
+    {
+      "path": "spine/merchant/ironclad_shop_3.png",
+      "width": 552,
+      "height": 279
+    },
+    {
+      "path": "spine/merchant/ironclad_shop_4.png",
+      "width": 30,
+      "height": 82
+    },
+    {
+      "path": "spine/rest_site/restsite_ironclad.png",
+      "width": 489,
+      "height": 526
+    },
+    {
+      "path": "spine/character_select/characterselect_ironclad.png",
+      "width": 3713,
+      "height": 2427
+    },
+    {
+      "path": "ui/icon.png",
+      "width": 85,
+      "height": 85
+    },
+    {
+      "path": "ui/icon_outline.png",
+      "width": 85,
+      "height": 85
+    },
+    {
+      "path": "ui/select.png",
+      "width": 132,
+      "height": 195
+    },
+    {
+      "path": "ui/select_locked.png",
+      "width": 132,
+      "height": 195
+    },
+    {
+      "path": "ui/map_marker.png",
+      "width": 49,
+      "height": 64
+    },
+    {
+      "path": "multiplayer/point.png",
+      "width": 422,
+      "height": 1200
+    },
+    {
+      "path": "multiplayer/rock.png",
+      "width": 422,
+      "height": 1200
+    },
+    {
+      "path": "multiplayer/paper.png",
+      "width": 422,
+      "height": 1200
+    },
+    {
+      "path": "multiplayer/scissors.png",
+      "width": 422,
+      "height": 1200
+    }
   ],
   "sceneBindings": [
     {
@@ -43,10 +144,10 @@
     {
       "name": "combat",
       "skeletonData": "spine/combat/combat_skeleton_data.tres",
-      "skeleton": "spine/combat/ironclad.spskel",
+      "skeletonResource": "res://animations/characters/ironclad/ironclad.skel",
+      "expectedSpineVersion": "4.2.43",
       "atlas": "spine/combat/ironclad.spatlas",
       "atlasSourcePath": "spine/combat/ironclad.atlas",
-      "extractedTemplateSpineVersion": "4.2.43",
       "pages": [
         "spine/combat/ironclad.png",
         "spine/combat/ironclad_2.png",
@@ -77,10 +178,10 @@
     {
       "name": "merchant",
       "skeletonData": "spine/merchant/merchant_skeleton_data.tres",
-      "skeleton": "spine/combat/ironclad.spskel",
+      "skeletonResource": "res://animations/characters/ironclad/ironclad.skel",
+      "expectedSpineVersion": "4.2.43",
       "atlas": "spine/merchant/ironclad_shop.spatlas",
       "atlasSourcePath": "spine/merchant/ironclad_shop.atlas",
-      "extractedTemplateSpineVersion": "4.2.43",
       "pages": [
         "spine/merchant/ironclad_shop.png",
         "spine/merchant/ironclad_shop_2.png",
@@ -96,10 +197,10 @@
     {
       "name": "rest_site",
       "skeletonData": "spine/rest_site/rest_site_skeleton_data.tres",
-      "skeleton": "spine/rest_site/restsite_ironclad.spskel",
+      "skeletonResource": "res://animations/rest_site/ironclad/restsite_ironclad.skel",
+      "expectedSpineVersion": "4.2.37",
       "atlas": "spine/rest_site/restsite_ironclad.spatlas",
       "atlasSourcePath": "spine/rest_site/restsite_ironclad.atlas",
-      "extractedTemplateSpineVersion": "4.2.37",
       "pages": [
         "spine/rest_site/restsite_ironclad.png"
       ],
@@ -116,10 +217,10 @@
     {
       "name": "character_select",
       "skeletonData": "spine/character_select/character_select_skeleton_data.tres",
-      "skeleton": "spine/character_select/characterselect_ironclad.spskel",
+      "skeletonResource": "res://animations/character_select/ironclad/characterselect_ironclad.skel",
+      "expectedSpineVersion": "4.2.40",
       "atlas": "spine/character_select/characterselect_ironclad.spatlas",
       "atlasSourcePath": "spine/character_select/characterselect_ironclad.atlas",
-      "extractedTemplateSpineVersion": "4.2.40",
       "pages": [
         "spine/character_select/characterselect_ironclad.png"
       ],
@@ -135,6 +236,10 @@
     ".work",
     "vanilla",
     "tools"
+  ],
+  "forbiddenPrivateExtensions": [
+    ".skel",
+    ".spskel"
   ],
   "forbiddenVanillaPrefixes": [
     "animations/characters/ironclad/",

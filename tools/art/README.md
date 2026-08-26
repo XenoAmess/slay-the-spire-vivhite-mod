@@ -41,9 +41,13 @@ cropped back to `Texture2D`'s logical dimensions; this matters for the
 
 Inside the repository, the extractor is hard-limited to the exact
 `assets/ironclad-v0.111.0` root and never writes the `Vivhite/` runtime tree.
-After editing, `publish_ironclad_skin.py` turns the authoring files into private
-`.spskel` and `.spatlas` resources, rewrites skeleton-data/scene paths, and
-stages them for the mod.
+After editing, `publish_ironclad_skin.py` reads scenes, skeleton-data wrappers,
+and checksums from that immutable extraction, while taking finished atlases,
+pages, and UI from `assets/vivhite-ironclad/custom`. It turns the custom atlases into
+private `.spatlas` resources, keeps the skeleton-data resources pointed at the
+matching skeletons already mounted from the base game, rewrites scene paths,
+and stages the edited art for the Mod. It never copies a vanilla skeleton
+binary into the runtime tree.
 
 ## Run
 
@@ -77,22 +81,163 @@ directory fingerprint, and Godot decoder version. It deliberately omits local
 install paths and generation timestamps so a matching extraction is stable in
 version control across machines.
 
-## Publish edited assets
+## Atlas region masters and deterministic repacking
 
-After replacing/re-exporting all character art in the five authoring domains,
-run from the repository root:
+`atlas_region_tool.gd` manages the four Spine texture sets only; it does not
+generate or repack the standalone UI images. Run it with Godot 4.5.1 from the
+repository root. The first command creates missing logical masters below the
+approved custom-art tree while keeping any existing masters intact:
 
 ```powershell
-py -3 .\tools\art\publish_ironclad_skin.py `
-  --authoring-root .\assets\ironclad-v0.111.0
+$godot = 'C:\path\to\Godot_v4.5.1-stable_mono_win64_console.exe'
+& $godot --headless --path .\tools\art `
+  --script res://atlas_region_tool.gd -- init-all `
+  --source-root assets/ironclad-v0.111.0 `
+  --custom-root assets/vivhite-ironclad/custom
+```
+
+Each workspace has this shape:
+
+```text
+assets/vivhite-ironclad/custom/combat/
+  ironclad.atlas              # immutable copy of the original layout
+  atlas-layout.json           # dimensions, bounds, rotation, offsets, hashes
+  regions/                    # unrotated, trimmed logical region masters
+    attack/...
+    sword blade.png
+    sword_handle.png
+  spell_layers/               # optional; created by the artist when needed
+    sword blade.png
+  ironclad.png ...            # produced by pack
+  atlas-pack-report.json
+```
+
+The other workspaces are `merchant/`, `rest_site/`, and
+`character_select/`. A logical master normally has the unrotated width and
+height from its atlas `bounds`. A differently sized replacement is allowed:
+the packer resamples it to that region's exact logical bounds, applies the
+original `rotate:90`, and writes it to the original packed rectangle. This is
+why combat and merchant must be packed region by region rather than by scaling
+whole pages: their region names match, but many rotation and packing choices
+differ.
+
+Re-run `init-all` to add any missing masters. It never overwrites an existing
+master unless `--replace-masters` is explicitly supplied. Atlas text is
+protected by its initialization hash; `pack` fails if page names, dimensions,
+bounds, rotations, offsets, or any other atlas text changed. To intentionally
+accept a newly researched layout, initialize it with `--force-layout`.
+
+Pack one workspace with empty hands (the production default):
+
+```powershell
+& $godot --headless --path .\tools\art `
+  --script res://atlas_region_tool.gd -- pack `
+  --workspace assets/vivhite-ironclad/custom/combat `
+  --weapon-policy clear
+```
+
+`clear` forces both `sword blade` and `sword_handle` to alpha zero, regardless
+of their logical masters. `spell` also forces the handle to alpha zero, but
+may read `spell_layers/sword blade.png` as a magical projection and clamps its
+alpha to 191. A missing spell layer becomes transparent. The tool therefore
+cannot accidentally restore an opaque held weapon. Character-select's
+composite `top arm` region contains both arm and vanilla sword, so it cannot be
+cleared automatically without deleting the arm; custom art for that region
+must be reviewed manually to ensure the sword is absent.
+
+Verify the unpack/unrotate/rotate/repack implementation against every tracked
+template in an ignored work directory:
+
+```powershell
+& $godot --headless --path .\tools\art `
+  --script res://atlas_region_tool.gd -- verify-all `
+  --source-root assets/ironclad-v0.111.0 `
+  --work-root .work/atlas-region-roundtrip
+```
+
+The verifier's internal preserve mode is not available to production packing.
+It requires the copied `.atlas` bytes and every reconstructed page pixel to be
+identical; it also reports whether the PNG encoding itself is byte-identical.
+Choose an unused work directory, or pass `--force-work` to overwrite only the
+tool's known verification artifacts there.
+
+## Rebuild the checked-in White Qi art
+
+The approved ImageGen sources under `assets/vivhite-ironclad/generated` can be
+deterministically transferred into all 190 gameplay region masters and packed
+back into the ten fixed atlas pages:
+
+```powershell
+& $godot --headless --path .\tools\art `
+  --script res://build_vivhite_gameplay_regions.gd -- build
+
+foreach ($domain in 'combat','merchant','rest_site','character_select') {
+  & $godot --headless --path .\tools\art `
+    --script res://atlas_region_tool.gd -- pack `
+    --workspace "assets/vivhite-ironclad/custom/$domain" `
+    --weapon-policy clear
+}
+
+& $godot --headless --path .\tools\art `
+  --script res://build_vivhite_gameplay_regions.gd -- audit
+```
+
+`build` preserves template alpha/geometry for ordinary regions and uses a
+dedicated empty-hand cutout for character-select's composite `top arm`. The
+explicit pack loop applies the `clear` weapon policy to every domain. `audit`
+fails unless all 190 region pixel hashes and all ten page hashes differ from
+the extraction, every current region master exactly matches its packed atlas
+rectangle and recorded build hash, both combat/merchant weapon attachments are
+fully transparent in the masters and packed pages, and the character-select
+hand reports its approved recipe. A stale page therefore cannot pass after a
+master is rebuilt without a matching `pack`.
+The reports are stored as
+`assets/vivhite-ironclad/custom/gameplay-*-report.json`.
+
+Standalone UI uses its own deterministic postprocessor after ImageGen and
+chroma removal:
+
+```powershell
+& $godot --headless --path .\tools\art `
+  --script res://process_vivhite_ui.gd -- `
+  assets/vivhite-ironclad/generated/ui_alpha `
+  assets/vivhite-ironclad/custom/ui
+```
+
+The exact source mappings, prompts, output rectangles and audit expectations
+are tracked in `assets/vivhite-ironclad/generated/ui-generation-prompts.md`.
+`icon_outline` and `select_locked` are derived from their corresponding final
+images so their geometry cannot drift. All nine files are prepared in a
+sibling staging directory and then swapped as one set; a missing input or
+write failure leaves the prior output intact and returns a non-zero status.
+
+## Publish edited assets
+
+After packing all finished character art into the five custom-art domains, run
+from the repository root:
+
+```powershell
+py -3 .\tools\art\publish_ironclad_skin.py
 cd .\Vivhite
 dotnet build
 ```
 
-The publisher writes the 33 runtime resources below
-`Vivhite/Vivhite/skins/ironclad/`. It refuses to install any skeleton or image
-whose checksum still matches the extracted game asset. A local conversion
-preview is available without touching the mod tree:
+The publisher writes the 30 runtime resources below
+`Vivhite/Vivhite/skins/ironclad/`. It strictly decodes every RGBA8 PNG and
+refuses wrong dimensions or any image whose decoded pixels still match the
+extracted game asset, even after a lossless re-encode. Custom atlas text must
+remain byte-for-byte identical to its versioned template. The destination is
+mirrored to the exact 30-file allowlist, so stale debug/import files cannot
+silently enter the PCK. The tracked `.skel` files remain authoring references
+only and are not copied into the Mod.
+
+The two inputs are intentionally independent: `--template-root` (with the old
+`--authoring-root` spelling retained as an alias) defaults to the immutable
+`assets/ironclad-v0.111.0`, while `--art-root` defaults to
+`assets/vivhite-ironclad/custom`. Publishing never requires overwriting the
+tracked template.
+
+A local conversion preview is available without touching the mod tree:
 
 ```powershell
 py -3 .\tools\art\publish_ironclad_skin.py `
@@ -105,9 +250,13 @@ used to put unmodified game art in the distributable Mod.
 
 ## Editing notes
 
-- Use Spine Editor/export runtime 4.2.x for these `.skel` files.
-- For a texture-only reskin, keep atlas page names, dimensions, region layout,
-  and skeleton attachments unchanged.
+- A texture-only reskin does not require Spine Editor. Keep atlas page names,
+  dimensions, region layout, and the tracked vanilla `.skel` files unchanged.
+- The runtime reuses the base-game skeleton versions: combat/merchant 4.2.43,
+  rest-site 4.2.37, and character-select 4.2.40.
+- Godot export must keep the private `.tres`/`.tscn` files textual; otherwise
+  the standalone Mod export tries to resolve the base-game skeleton paths too
+  early. `Vivhite/project.godot` and the post-export validator enforce this.
 - A rebuilt skeleton should preserve the animation names listed in the
   manifest. Reusing Ironclad's combat scene also requires its Spine VFX slots
   and event names.

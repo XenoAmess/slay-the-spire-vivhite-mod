@@ -14,6 +14,26 @@ internal static class IroncladReplacementAssets
     private const string SkinRoot = $"{Entry.ResPath}/skins/ironclad";
 
     private const string CombatSkeletonDataPath = $"{SkinRoot}/spine/combat/combat_skeleton_data.tres";
+    private const string CombatAtlasPath = $"{SkinRoot}/spine/combat/ironclad.spatlas";
+    private const string CombatAtlasPage1Path = $"{SkinRoot}/spine/combat/ironclad.png";
+    private const string CombatAtlasPage2Path = $"{SkinRoot}/spine/combat/ironclad_2.png";
+    private const string CombatAtlasPage3Path = $"{SkinRoot}/spine/combat/ironclad_3.png";
+    private const string CombatAtlasPage4Path = $"{SkinRoot}/spine/combat/ironclad_4.png";
+
+    private const string MerchantSkeletonDataPath = $"{SkinRoot}/spine/merchant/merchant_skeleton_data.tres";
+    private const string MerchantAtlasPath = $"{SkinRoot}/spine/merchant/ironclad_shop.spatlas";
+    private const string MerchantAtlasPage1Path = $"{SkinRoot}/spine/merchant/ironclad_shop.png";
+    private const string MerchantAtlasPage2Path = $"{SkinRoot}/spine/merchant/ironclad_shop_2.png";
+    private const string MerchantAtlasPage3Path = $"{SkinRoot}/spine/merchant/ironclad_shop_3.png";
+    private const string MerchantAtlasPage4Path = $"{SkinRoot}/spine/merchant/ironclad_shop_4.png";
+
+    private const string RestSiteSkeletonDataPath = $"{SkinRoot}/spine/rest_site/rest_site_skeleton_data.tres";
+    private const string RestSiteAtlasPath = $"{SkinRoot}/spine/rest_site/restsite_ironclad.spatlas";
+    private const string RestSiteAtlasPagePath = $"{SkinRoot}/spine/rest_site/restsite_ironclad.png";
+
+    private const string CharacterSelectSkeletonDataPath = $"{SkinRoot}/spine/character_select/character_select_skeleton_data.tres";
+    private const string CharacterSelectAtlasPath = $"{SkinRoot}/spine/character_select/characterselect_ironclad.spatlas";
+    private const string CharacterSelectAtlasPagePath = $"{SkinRoot}/spine/character_select/characterselect_ironclad.png";
 
     private const string MerchantScenePath = $"{SkinRoot}/scenes/merchant.tscn";
     private const string RestSiteScenePath = $"{SkinRoot}/scenes/rest_site.tscn";
@@ -37,6 +57,35 @@ internal static class IroncladReplacementAssets
             CombatSkeletonDataPath,
             typeof(Resource),
             "SpineSkeletonDataResource"),
+        new("combat atlas", CombatAtlasPath, typeof(Resource), "SpineAtlasResource"),
+        new("combat atlas page 1", CombatAtlasPage1Path, typeof(Texture2D)),
+        new("combat atlas page 2", CombatAtlasPage2Path, typeof(Texture2D)),
+        new("combat atlas page 3", CombatAtlasPage3Path, typeof(Texture2D)),
+        new("combat atlas page 4", CombatAtlasPage4Path, typeof(Texture2D)),
+        new(
+            "merchant skeleton data",
+            MerchantSkeletonDataPath,
+            typeof(Resource),
+            "SpineSkeletonDataResource"),
+        new("merchant atlas", MerchantAtlasPath, typeof(Resource), "SpineAtlasResource"),
+        new("merchant atlas page 1", MerchantAtlasPage1Path, typeof(Texture2D)),
+        new("merchant atlas page 2", MerchantAtlasPage2Path, typeof(Texture2D)),
+        new("merchant atlas page 3", MerchantAtlasPage3Path, typeof(Texture2D)),
+        new("merchant atlas page 4", MerchantAtlasPage4Path, typeof(Texture2D)),
+        new(
+            "rest-site skeleton data",
+            RestSiteSkeletonDataPath,
+            typeof(Resource),
+            "SpineSkeletonDataResource"),
+        new("rest-site atlas", RestSiteAtlasPath, typeof(Resource), "SpineAtlasResource"),
+        new("rest-site atlas page", RestSiteAtlasPagePath, typeof(Texture2D)),
+        new(
+            "character-select skeleton data",
+            CharacterSelectSkeletonDataPath,
+            typeof(Resource),
+            "SpineSkeletonDataResource"),
+        new("character-select atlas", CharacterSelectAtlasPath, typeof(Resource), "SpineAtlasResource"),
+        new("character-select atlas page", CharacterSelectAtlasPagePath, typeof(Texture2D)),
         new("merchant scene", MerchantScenePath, typeof(PackedScene)),
         new("rest-site scene", RestSiteScenePath, typeof(PackedScene)),
         new("character-select scene", CharacterSelectScenePath, typeof(PackedScene)),

@@ -11,9 +11,7 @@ param(
 
     [string]$GodotExe = "",
 
-    [string]$Sts2Dir = "",
-
-    [switch]$AllowExtractedTemplateVersions
+    [string]$Sts2Dir = ""
 )
 
 Set-StrictMode -Version Latest
@@ -102,7 +100,6 @@ function Get-ExpectedLogicalAssets {
     }
     foreach ($spineSet in @($Contract.spineSets)) {
         Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.skeletonData)
-        Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.skeleton)
         Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.atlas)
         foreach ($page in @($spineSet.pages)) {
             Add-RequiredPath -Set $required -RelativePath ([string]$page)
@@ -161,24 +158,223 @@ function Get-SkinActivationState {
     }
 }
 
-function Test-PngSignature {
+function Get-BigEndianUInt32 {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$Bytes,
+        [Parameter(Mandatory = $true)][int]$Offset
+    )
+
+    if ($Offset -lt 0 -or ($Offset + 4) -gt $Bytes.Length) {
+        throw "Cannot read a big-endian UInt32 at offset $Offset from $($Bytes.Length) bytes."
+    }
+
+    return [uint32]((([uint32]$Bytes[$Offset]) -shl 24) -bor
+        (([uint32]$Bytes[$Offset + 1]) -shl 16) -bor
+        (([uint32]$Bytes[$Offset + 2]) -shl 8) -bor
+        ([uint32]$Bytes[$Offset + 3]))
+}
+
+function Get-PngDimensions {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $expected = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
     $stream = [IO.File]::OpenRead($Path)
     try {
-        if ($stream.Length -lt $expected.Length) {
-            return $false
+        # PNG signature + IHDR length/type/data/CRC. Dimensions are the first
+        # two big-endian UInt32 values in the mandatory 13-byte IHDR payload.
+        if ($stream.Length -lt 33) {
+            throw "PNG is too small to contain a complete IHDR chunk."
         }
+        $header = $null
+        $header = [byte[]]::new(33)
+        $totalRead = 0
+        while ($totalRead -lt $header.Length) {
+            $read = $stream.Read($header, $totalRead, $header.Length - $totalRead)
+            if ($read -eq 0) {
+                throw "Unexpected end of PNG while reading IHDR."
+            }
+            $totalRead += $read
+        }
+
         for ($i = 0; $i -lt $expected.Length; $i++) {
-            if ($stream.ReadByte() -ne $expected[$i]) {
-                return $false
+            if ($header[$i] -ne $expected[$i]) {
+                throw "PNG signature is invalid."
             }
         }
-        return $true
+        if ((Get-BigEndianUInt32 -Bytes $header -Offset 8) -ne 13) {
+            throw "The first PNG chunk is not a 13-byte IHDR chunk."
+        }
+        $chunkType = [Text.Encoding]::ASCII.GetString($header, 12, 4)
+        if (-not [string]::Equals($chunkType, "IHDR", [StringComparison]::Ordinal)) {
+            throw "The first PNG chunk is '$chunkType', expected 'IHDR'."
+        }
+
+        $width = Get-BigEndianUInt32 -Bytes $header -Offset 16
+        $height = Get-BigEndianUInt32 -Bytes $header -Offset 20
+        if ($width -eq 0 -or $height -eq 0 -or $width -gt [int]::MaxValue -or $height -gt [int]::MaxValue) {
+            throw "PNG IHDR dimensions are invalid: ${width}x${height}."
+        }
+
+        return [pscustomobject]@{
+            Width = [int]$width
+            Height = [int]$height
+        }
     }
     finally {
         $stream.Dispose()
+    }
+}
+
+function Get-ExpectedPngDimensions {
+    param(
+        [Parameter(Mandatory = $true)]$Contract,
+        [Parameter(Mandatory = $true)]$ExpectedAssets
+    )
+
+    $dimensions = New-Object "System.Collections.Generic.Dictionary[string,object]" ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($entry in @($Contract.pngDimensions)) {
+        $relativePath = ([string]$entry.path).Replace('\', '/').TrimStart('/')
+        $width = [int64]$entry.width
+        $height = [int64]$entry.height
+        if ([string]::IsNullOrWhiteSpace($relativePath)) {
+            Add-ValidationError "The PNG dimension contract contains an empty path."
+            continue
+        }
+        if (-not $relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
+            Add-ValidationError "PNG dimension contract path is not a PNG: $relativePath"
+            continue
+        }
+        if (-not $ExpectedAssets.Contains($relativePath)) {
+            Add-ValidationError "PNG dimension contract references a non-runtime asset: $relativePath"
+        }
+        if ($width -le 0 -or $height -le 0 -or $width -gt [int]::MaxValue -or $height -gt [int]::MaxValue) {
+            Add-ValidationError "PNG dimension contract has invalid dimensions for '$relativePath': ${width}x${height}."
+            continue
+        }
+        if ($dimensions.ContainsKey($relativePath)) {
+            Add-ValidationError "PNG dimension contract contains a duplicate path: $relativePath"
+            continue
+        }
+        $dimensions.Add($relativePath, [pscustomobject]@{
+                Width = [int]$width
+                Height = [int]$height
+            })
+    }
+
+    foreach ($relativePath in $ExpectedAssets) {
+        if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase) -and
+            -not $dimensions.ContainsKey($relativePath)) {
+            Add-ValidationError "PNG dimension contract is missing runtime asset: $relativePath"
+        }
+    }
+
+    return $dimensions
+}
+
+function Test-SpineAtlasLayout {
+    param(
+        [Parameter(Mandatory = $true)][string]$SetName,
+        [Parameter(Mandatory = $true)][string]$AtlasData,
+        [Parameter(Mandatory = $true)]$SpineSet,
+        [Parameter(Mandatory = $true)]$PngDimensions
+    )
+
+    $expectedPages = New-Object "System.Collections.Generic.Dictionary[string,string]" ([StringComparer]::Ordinal)
+    foreach ($page in @($SpineSet.pages)) {
+        $relativePath = ([string]$page).Replace('\', '/').TrimStart('/')
+        $pageName = [IO.Path]::GetFileName($relativePath)
+        if ($expectedPages.ContainsKey($pageName)) {
+            Add-ValidationError "Spine set '$SetName' declares duplicate atlas page name '$pageName'."
+            continue
+        }
+        $expectedPages.Add($pageName, $relativePath)
+    }
+
+    $declaredPages = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::Ordinal)
+    $lines = @($AtlasData.Replace("`r", "") -split "`n")
+    $currentPage = $null
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        $line = [string]$lines[$index]
+        $trimmed = $line.Trim()
+        $startsBlock = $index -eq 0 -or [string]::IsNullOrWhiteSpace([string]$lines[$index - 1])
+        if ($startsBlock -and -not [string]::IsNullOrWhiteSpace($trimmed) -and
+            ($index + 1) -lt $lines.Count -and
+            ([string]$lines[$index + 1]).Trim() -match '^size:\s*([0-9]+)\s*,\s*([0-9]+)\s*$') {
+            $pageName = $trimmed
+            $pageWidth = [int64]$Matches[1]
+            $pageHeight = [int64]$Matches[2]
+            if (-not $expectedPages.ContainsKey($pageName)) {
+                Add-ValidationError "Spine set '$SetName' atlas_data declares unexpected page '$pageName'."
+                $currentPage = [pscustomobject]@{ Name = $pageName; Width = $pageWidth; Height = $pageHeight }
+                continue
+            }
+            if (-not $declaredPages.Add($pageName)) {
+                Add-ValidationError "Spine set '$SetName' atlas_data declares page '$pageName' more than once."
+            }
+
+            $relativePath = $expectedPages[$pageName]
+            if (-not $PngDimensions.ContainsKey($relativePath)) {
+                Add-ValidationError "Spine set '$SetName' page '$pageName' has no PNG dimension contract."
+            }
+            else {
+                $expected = $PngDimensions[$relativePath]
+                if ($pageWidth -ne $expected.Width -or $pageHeight -ne $expected.Height) {
+                    Add-ValidationError (
+                        "Spine set '$SetName' atlas page '$pageName' declares ${pageWidth}x${pageHeight}, " +
+                        "expected $($expected.Width)x$($expected.Height).")
+                }
+            }
+            $currentPage = [pscustomobject]@{ Name = $pageName; Width = $pageWidth; Height = $pageHeight }
+            continue
+        }
+
+        if ($trimmed.StartsWith("bounds:", [StringComparison]::Ordinal)) {
+            if ($null -eq $currentPage) {
+                Add-ValidationError "Spine set '$SetName' atlas_data contains bounds before any page declaration."
+                continue
+            }
+            if ($trimmed -notmatch '^bounds:\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*$') {
+                Add-ValidationError "Spine set '$SetName' page '$($currentPage.Name)' has malformed bounds '$trimmed'."
+                continue
+            }
+            $x = [int64]$Matches[1]
+            $y = [int64]$Matches[2]
+            $width = [int64]$Matches[3]
+            $height = [int64]$Matches[4]
+            $packedWidth = $width
+            $packedHeight = $height
+            # Spine's atlas stores unrotated bounds and puts rotate:90 after the
+            # bounds/offset directives. The physical rectangle on the page has
+            # its width and height exchanged in that case.
+            for ($probe = $index + 1; $probe -lt $lines.Count; $probe++) {
+                $directive = ([string]$lines[$probe]).Trim()
+                if ([string]::IsNullOrWhiteSpace($directive)) {
+                    break
+                }
+                if ($directive -match '^rotate:\s*(90|270|true)\s*$') {
+                    $packedWidth = $height
+                    $packedHeight = $width
+                    continue
+                }
+                if ($directive -match '^(offsets|rotate|index|split|pad):') {
+                    continue
+                }
+                break
+            }
+            if ($packedWidth -le 0 -or $packedHeight -le 0 -or
+                ($x + $packedWidth) -gt $currentPage.Width -or ($y + $packedHeight) -gt $currentPage.Height) {
+                Add-ValidationError (
+                    "Spine set '$SetName' packed region ${x},${y},${packedWidth},${packedHeight} " +
+                    "(source bounds ${width}x${height}) exceeds " +
+                    "page '$($currentPage.Name)' ($($currentPage.Width)x$($currentPage.Height)).")
+            }
+        }
+    }
+
+    foreach ($pageName in $expectedPages.Keys) {
+        if (-not $declaredPages.Contains($pageName)) {
+            Add-ValidationError "Spine set '$SetName' atlas_data does not declare page '$pageName'."
+        }
     }
 }
 
@@ -278,14 +474,20 @@ function Initialize-SpineGodotExtension {
     if (-not [IO.File]::Exists($extensionPath)) {
         [IO.File]::Copy($template, $extensionPath, $false)
     }
-    elseif ((Get-Item -LiteralPath $extensionPath).Length -ne (Get-Item -LiteralPath $template).Length) {
-        throw "Content-addressed Spine GDExtension manifest has an unexpected size: $extensionPath"
+    elseif (-not [string]::Equals(
+            (Get-FileHash -LiteralPath $extensionPath -Algorithm SHA256).Hash,
+            $templateHash,
+            [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Content-addressed Spine GDExtension manifest has an unexpected SHA-256: $extensionPath"
     }
     if (-not [IO.File]::Exists($destinationDll)) {
         [IO.File]::Copy($sourceDll, $destinationDll, $false)
     }
-    elseif ((Get-Item -LiteralPath $destinationDll).Length -ne (Get-Item -LiteralPath $sourceDll).Length) {
-        throw "Content-addressed Spine GDExtension DLL has an unexpected size: $destinationDll"
+    elseif (-not [string]::Equals(
+            (Get-FileHash -LiteralPath $destinationDll -Algorithm SHA256).Hash,
+            $sourceHash,
+            [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Content-addressed Spine GDExtension DLL has an unexpected SHA-256: $destinationDll"
     }
 
     $godotMetadataDir = Get-SafeChildPath -BasePath $ProjectRoot -RelativePath ".godot"
@@ -327,8 +529,7 @@ function Invoke-GodotSpineContract {
     param(
         [Parameter(Mandatory = $true)][string]$ProjectRoot,
         [Parameter(Mandatory = $true)][string]$GodotPath,
-        [Parameter(Mandatory = $true)][string]$GameRoot,
-        [switch]$AllowExtractedTemplateVersions
+        [Parameter(Mandatory = $true)][string]$GameRoot
     )
 
     if ([string]::IsNullOrWhiteSpace($GodotPath)) {
@@ -337,6 +538,12 @@ function Invoke-GodotSpineContract {
     }
     if ([string]::IsNullOrWhiteSpace($GameRoot)) {
         Add-ValidationError "Sts2Dir is required when the Ironclad skin bundle is active."
+        return
+    }
+
+    $basePckPath = Join-Path ([IO.Path]::GetFullPath($GameRoot)) "SlayTheSpire2.pck"
+    if (-not [IO.File]::Exists($basePckPath)) {
+        Add-ValidationError "Base game PCK does not exist: $basePckPath"
         return
     }
 
@@ -384,7 +591,7 @@ function Invoke-GodotSpineContract {
         $previousDotnetRootX64 = $env:DOTNET_ROOT_X64
         $previousPath = $env:PATH
         $previousSkipExport = $env:STS2_SKIP_PCK_EXPORT
-        $previousTemplateVersions = $env:VIVHITE_ALLOW_EXTRACTED_TEMPLATE_VERSIONS
+        $previousBasePckPath = $env:VIVHITE_STS2_PCK_PATH
         try {
             $dotnetRoot = $env:DOTNET_ROOT
             if ([string]::IsNullOrWhiteSpace($dotnetRoot)) {
@@ -402,12 +609,7 @@ function Invoke-GodotSpineContract {
                 }
             }
             $env:STS2_SKIP_PCK_EXPORT = "1"
-            if ($AllowExtractedTemplateVersions) {
-                $env:VIVHITE_ALLOW_EXTRACTED_TEMPLATE_VERSIONS = "1"
-            }
-            else {
-                $env:VIVHITE_ALLOW_EXTRACTED_TEMPLATE_VERSIONS = $null
-            }
+            $env:VIVHITE_STS2_PCK_PATH = $basePckPath
             $ErrorActionPreference = "Continue"
             $importOutput = @()
             $importExitCode = -1
@@ -439,7 +641,7 @@ function Invoke-GodotSpineContract {
             $env:DOTNET_ROOT_X64 = $previousDotnetRootX64
             $env:PATH = $previousPath
             $env:STS2_SKIP_PCK_EXPORT = $previousSkipExport
-            $env:VIVHITE_ALLOW_EXTRACTED_TEMPLATE_VERSIONS = $previousTemplateVersions
+            $env:VIVHITE_STS2_PCK_PATH = $previousBasePckPath
         }
     }
     finally {
@@ -484,37 +686,73 @@ function Test-SourceAssets {
         }
     }
 
+    foreach ($file in Get-ChildItem -LiteralPath $Activation.AssetRoot -File -Recurse -Force) {
+        $relative = $file.FullName.Substring($Activation.AssetRoot.Length).TrimStart('\', '/').Replace('\', '/')
+        if ($required.Contains($relative)) {
+            continue
+        }
+
+        $generatedSource = $null
+        foreach ($generatedSuffix in @(".import", ".uid")) {
+            if ($relative.EndsWith($generatedSuffix, [StringComparison]::OrdinalIgnoreCase)) {
+                $generatedSource = $relative.Substring(0, $relative.Length - $generatedSuffix.Length)
+                break
+            }
+        }
+        if ($null -ne $generatedSource -and $required.Contains($generatedSource)) {
+            continue
+        }
+
+        Add-ValidationError "Unexpected private skin source file outside the 30-file contract: $resourceRoot/$relative"
+    }
+
     if ($script:ValidationErrors.Count -gt 0) {
         Write-Host "[ironclad-skin] Spine animation/slot/event checks skipped until the complete asset set exists."
         Stop-Validation "Source asset completeness check failed."
     }
 
     Write-Host "[ironclad-skin] Asset set is complete; checking bindings, PNGs, and Spine wrapper metadata..."
-    foreach ($relativePath in $required) {
-        if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
-            $fullPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $relativePath
-            if (-not (Test-PngSignature -Path $fullPath)) {
-                Add-ValidationError "Expected a real PNG file, but the PNG signature is invalid: $resourceRoot/$relativePath"
+    $pngDimensions = Get-ExpectedPngDimensions -Contract $Contract -ExpectedAssets $required
+    foreach ($relativePath in $pngDimensions.Keys) {
+        $fullPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $relativePath
+        try {
+            $actual = Get-PngDimensions -Path $fullPath
+            $expected = $pngDimensions[$relativePath]
+            if ($actual.Width -ne $expected.Width -or $actual.Height -ne $expected.Height) {
+                Add-ValidationError (
+                    "PNG dimensions do not match for '$resourceRoot/$relativePath': " +
+                    "got $($actual.Width)x$($actual.Height), expected $($expected.Width)x$($expected.Height).")
             }
         }
+        catch {
+            Add-ValidationError "Invalid PNG '$resourceRoot/$relativePath': $($_.Exception.Message)"
+        }
     }
+
+    $allowedVanillaSkeletons = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::Ordinal)
+    foreach ($resourcePath in @($Contract.allowedVanillaSkeletonResources)) {
+        [void]$allowedVanillaSkeletons.Add([string]$resourcePath)
+    }
+    $allowedReferencesByFile = New-Object "System.Collections.Generic.Dictionary[string,object]" ([StringComparer]::OrdinalIgnoreCase)
 
     foreach ($spineSet in @($Contract.spineSets)) {
         $setName = [string]$spineSet.name
         $skeletonDataRelative = [string]$spineSet.skeletonData
-        $skeletonRelative = [string]$spineSet.skeleton
+        $skeletonResource = [string]$spineSet.skeletonResource
         $atlasRelative = [string]$spineSet.atlas
         $atlasSourceRelative = [string]$spineSet.atlasSourcePath
         $skeletonDataPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $skeletonDataRelative
-        $skeletonPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $skeletonRelative
         $atlasPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $atlasRelative
         $skeletonDataText = [IO.File]::ReadAllText($skeletonDataPath)
-        $expectedSkeletonReference = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath $skeletonRelative
         $expectedAtlasReference = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath $atlasRelative
 
-        if ($skeletonDataText.IndexOf($expectedSkeletonReference, [StringComparison]::Ordinal) -lt 0) {
-            Add-ValidationError "Spine set '$setName' skeleton data must reference '$expectedSkeletonReference'."
+        if (-not $allowedVanillaSkeletons.Contains($skeletonResource)) {
+            Add-ValidationError "Spine set '$setName' declares an unapproved vanilla skeleton resource '$skeletonResource'."
         }
+        if ($skeletonDataText.IndexOf($skeletonResource, [StringComparison]::Ordinal) -lt 0) {
+            Add-ValidationError "Spine set '$setName' skeleton data must reference '$skeletonResource'."
+        }
+        $allowedReferencesByFile[$skeletonDataPath] = @($skeletonResource)
         if ($skeletonDataText.IndexOf($expectedAtlasReference, [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Spine set '$setName' skeleton data must reference '$expectedAtlasReference'."
         }
@@ -535,18 +773,8 @@ function Test-SourceAssets {
             if (-not [string]::Equals($sourcePath, $expectedSourcePath, [StringComparison]::Ordinal)) {
                 Add-ValidationError "Spine set '$setName' .spatlas source_path must be '$expectedSourcePath', got '$sourcePath'."
             }
-            foreach ($page in @($spineSet.pages)) {
-                $pageName = [IO.Path]::GetFileName([string]$page)
-                $pageFound = $false
-                foreach ($line in ($atlasData -split "`r?`n")) {
-                    if ([string]::Equals($line.Trim(), $pageName, [StringComparison]::Ordinal)) {
-                        $pageFound = $true
-                        break
-                    }
-                }
-                if (-not $pageFound) {
-                    Add-ValidationError "Spine set '$setName' .spatlas atlas_data does not declare page '$pageName'."
-                }
+            if (-not [string]::IsNullOrWhiteSpace($atlasData)) {
+                Test-SpineAtlasLayout -SetName $setName -AtlasData $atlasData -SpineSet $spineSet -PngDimensions $pngDimensions
             }
         }
         catch {
@@ -571,10 +799,20 @@ function Test-SourceAssets {
         [void]$textExtensions.Add($extension)
     }
     foreach ($file in Get-ChildItem -LiteralPath $Activation.AssetRoot -File -Recurse) {
+        foreach ($forbiddenExtension in @($Contract.forbiddenPrivateExtensions)) {
+            if ($file.Extension.Equals([string]$forbiddenExtension, [StringComparison]::OrdinalIgnoreCase)) {
+                Add-ValidationError "Private skin must not contain a copied skeleton binary: $($file.FullName)"
+            }
+        }
         if (-not $textExtensions.Contains($file.Extension)) {
             continue
         }
         $text = [IO.File]::ReadAllText($file.FullName)
+        if ($allowedReferencesByFile.ContainsKey($file.FullName)) {
+            foreach ($allowedReference in @($allowedReferencesByFile[$file.FullName])) {
+                $text = $text.Replace([string]$allowedReference, "")
+            }
+        }
         foreach ($prefix in @($Contract.forbiddenVanillaPrefixes)) {
             $forbiddenReference = "res://$([string]$prefix)"
             if ($text.IndexOf($forbiddenReference, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
@@ -588,7 +826,7 @@ function Test-SourceAssets {
         Stop-Validation "Source asset contract check failed."
     }
 
-    Invoke-GodotSpineContract -ProjectRoot $ProjectRoot -GodotPath $GodotExe -GameRoot $Sts2Dir -AllowExtractedTemplateVersions:$AllowExtractedTemplateVersions
+    Invoke-GodotSpineContract -ProjectRoot $ProjectRoot -GodotPath $GodotExe -GameRoot $Sts2Dir
     if ($script:ValidationErrors.Count -gt 0) {
         Stop-Validation "Godot Spine contract check failed."
     }
@@ -660,6 +898,8 @@ function Read-PckIndex {
             $entries.Add([pscustomobject]@{
                     Path = $entryPath
                     Flags = [uint32]$entryFlags
+                    AbsoluteOffset = [uint64]$absoluteOffset
+                    Size = [uint64]$size
                 })
         }
 
@@ -671,6 +911,42 @@ function Read-PckIndex {
     }
     finally {
         $reader.Dispose()
+        $stream.Dispose()
+    }
+}
+
+function Read-PckTextEntry {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]$Entry
+    )
+
+    if (($Entry.Flags -band 1) -ne 0) {
+        throw "PCK entry '$($Entry.Path)' is encrypted; its text contract cannot be inspected."
+    }
+    if (($Entry.Flags -band 2) -ne 0) {
+        throw "PCK entry '$($Entry.Path)' is a removal entry and has no readable payload."
+    }
+    if ($Entry.Size -gt 16777216) {
+        throw "PCK text entry '$($Entry.Path)' is implausibly large ($($Entry.Size) bytes)."
+    }
+
+    $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    try {
+        $stream.Position = [int64]$Entry.AbsoluteOffset
+        $bytes = [byte[]]::new([int]$Entry.Size)
+        $totalRead = 0
+        while ($totalRead -lt $bytes.Length) {
+            $read = $stream.Read($bytes, $totalRead, $bytes.Length - $totalRead)
+            if ($read -eq 0) {
+                throw "Unexpected end of PCK while reading '$($Entry.Path)'."
+            }
+            $totalRead += $read
+        }
+
+        return [Text.Encoding]::UTF8.GetString($bytes).TrimStart([char]0xFEFF)
+    }
+    finally {
         $stream.Dispose()
     }
 }
@@ -700,12 +976,29 @@ function Test-PckContents {
         if (-not $entryByPath.ContainsKey($entry.Path)) {
             $entryByPath.Add($entry.Path, $entry)
         }
+        else {
+            Add-ValidationError "Exported PCK contains duplicate entry path: $($entry.Path)"
+        }
     }
 
     $segmentAlternation = (@($Contract.forbiddenPckSegments) | ForEach-Object {
             [Text.RegularExpressions.Regex]::Escape([string]$_)
         }) -join "|"
     $segmentRegex = "(?i)(^|/)($segmentAlternation)(/|$)"
+    $resourceRoot = ([string]$Contract.resourceRoot).Replace('\', '/').Trim('/')
+    $privatePrefix = $resourceRoot + "/"
+    $allowedPrivateEntries = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
+    if ($Activation.Active) {
+        foreach ($relativePath in (Get-ExpectedLogicalAssets -Contract $Contract)) {
+            $logicalPath = "$resourceRoot/$relativePath"
+            if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
+                [void]$allowedPrivateEntries.Add("$logicalPath.import")
+            }
+            else {
+                [void]$allowedPrivateEntries.Add($logicalPath)
+            }
+        }
+    }
     foreach ($entry in $index.Entries) {
         $entryPath = [string]$entry.Path
         if ($entryPath -match $segmentRegex) {
@@ -716,27 +1009,87 @@ function Test-PckContents {
                 Add-ValidationError "Vanilla Ironclad replacement path leaked into PCK: $entryPath"
             }
         }
+        if ($entryPath.StartsWith($privatePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            if ($Activation.Active -and -not $allowedPrivateEntries.Contains($entryPath)) {
+                Add-ValidationError "Unexpected private skin entry outside the 30-file PCK contract: $entryPath"
+            }
+            foreach ($forbiddenExtension in @($Contract.forbiddenPrivateExtensions)) {
+                $extension = [string]$forbiddenExtension
+                if ($entryPath.EndsWith($extension, [StringComparison]::OrdinalIgnoreCase) -or
+                    $entryPath.EndsWith("$extension.import", [StringComparison]::OrdinalIgnoreCase) -or
+                    $entryPath.EndsWith("$extension.remap", [StringComparison]::OrdinalIgnoreCase)) {
+                    Add-ValidationError "Copied vanilla skeleton binary leaked into PCK: $entryPath"
+                }
+            }
+        }
     }
 
-    $resourceRoot = ([string]$Contract.resourceRoot).Replace('\', '/').Trim('/')
     if ($Activation.Active) {
         foreach ($relativePath in (Get-ExpectedLogicalAssets -Contract $Contract)) {
             $logicalPath = "$resourceRoot/$relativePath"
-            $candidates = @($logicalPath, "$logicalPath.import", "$logicalPath.remap")
-            $found = $false
-            foreach ($candidate in $candidates) {
-                if ($entryByPath.ContainsKey($candidate) -and (($entryByPath[$candidate].Flags -band 2) -eq 0)) {
-                    $found = $true
-                    break
+            if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
+                $expectedEntry = "$logicalPath.import"
+            }
+            else {
+                # Text Spine wrappers/scenes stay as source text because they
+                # deliberately reference skeleton resources from the base-game PCK.
+                $expectedEntry = $logicalPath
+            }
+            if (-not $entryByPath.ContainsKey($expectedEntry) -or
+                (($entryByPath[$expectedEntry].Flags -band 2) -ne 0)) {
+                Add-ValidationError "Exported PCK is missing exact private entry '$expectedEntry' for res://$logicalPath."
+            }
+        }
+
+        foreach ($spineSet in @($Contract.spineSets)) {
+            $setName = [string]$spineSet.name
+            $skeletonDataPath = "$resourceRoot/$([string]$spineSet.skeletonData)"
+            if (-not $entryByPath.ContainsKey($skeletonDataPath)) {
+                continue
+            }
+
+            try {
+                $text = Read-PckTextEntry -Path $Path -Entry $entryByPath[$skeletonDataPath]
+                $skeletonResource = [string]$spineSet.skeletonResource
+                $atlasResource = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath ([string]$spineSet.atlas)
+                if ($text.IndexOf('[gd_resource', [StringComparison]::Ordinal) -ne 0) {
+                    Add-ValidationError "Exported Spine set '$setName' skeleton data is not a text Godot resource: res://$skeletonDataPath"
+                }
+                if ($text.IndexOf($skeletonResource, [StringComparison]::Ordinal) -lt 0) {
+                    Add-ValidationError "Exported Spine set '$setName' lost its vanilla skeleton reference '$skeletonResource'."
+                }
+                if ($text.IndexOf($atlasResource, [StringComparison]::Ordinal) -lt 0) {
+                    Add-ValidationError "Exported Spine set '$setName' lost its private atlas reference '$atlasResource'."
                 }
             }
-            if (-not $found) {
-                Add-ValidationError "Exported PCK has no logical resource entry for: res://$logicalPath"
+            catch {
+                Add-ValidationError $_.Exception.Message
+            }
+        }
+
+        foreach ($binding in @($Contract.sceneBindings)) {
+            $sceneRelative = [string]$binding.scene
+            $scenePath = "$resourceRoot/$sceneRelative"
+            if (-not $entryByPath.ContainsKey($scenePath)) {
+                continue
+            }
+
+            try {
+                $text = Read-PckTextEntry -Path $Path -Entry $entryByPath[$scenePath]
+                $skeletonDataResource = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath ([string]$binding.skeletonData)
+                if ($text.IndexOf('[gd_scene', [StringComparison]::Ordinal) -ne 0) {
+                    Add-ValidationError "Exported scene is not a text Godot scene: res://$scenePath"
+                }
+                if ($text.IndexOf($skeletonDataResource, [StringComparison]::Ordinal) -lt 0) {
+                    Add-ValidationError "Exported scene '$sceneRelative' lost its private skeleton-data reference '$skeletonDataResource'."
+                }
+            }
+            catch {
+                Add-ValidationError $_.Exception.Message
             }
         }
     }
     else {
-        $privatePrefix = $resourceRoot + "/"
         foreach ($entry in $index.Entries) {
             if ([string]$entry.Path -like "$privatePrefix*") {
                 Add-ValidationError "Inactive skin unexpectedly leaked a private resource into PCK: $($entry.Path)"

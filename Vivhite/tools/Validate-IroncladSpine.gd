@@ -10,6 +10,9 @@ func _initialize() -> void:
 	if contract.is_empty():
 		_finish()
 		return
+	if not _mount_base_game_pack():
+		_finish()
+		return
 
 	var required_classes: Array[String] = [
 		"SpineSkeletonDataResource",
@@ -25,10 +28,6 @@ func _initialize() -> void:
 		return
 
 	var resource_root := str(contract.get("resourceRoot", "")).trim_prefix("/").trim_suffix("/")
-	var required_version := str(contract.get("requiredSpineVersion", ""))
-	var allow_extracted_template_versions := (
-		OS.get_environment("VIVHITE_ALLOW_EXTRACTED_TEMPLATE_VERSIONS") == "1"
-	)
 	for value in contract.get("spineSets", []):
 		if typeof(value) != TYPE_DICTIONARY:
 			_errors.append("spineSets contains a non-dictionary entry.")
@@ -36,8 +35,6 @@ func _initialize() -> void:
 		_validate_spine_set(
 			resource_root,
 			str(contract.get("requiredSkin", "default")),
-			required_version,
-			allow_extracted_template_versions,
 			value as Dictionary,
 		)
 
@@ -54,6 +51,21 @@ func _load_contract() -> Dictionary:
 		_errors.append("Contract is not valid JSON dictionary: %s" % CONTRACT_PATH)
 		return {}
 	return parsed as Dictionary
+
+
+func _mount_base_game_pack() -> bool:
+	var pck_path := OS.get_environment("VIVHITE_STS2_PCK_PATH")
+	if pck_path.is_empty():
+		_errors.append("VIVHITE_STS2_PCK_PATH is required for vanilla skeleton validation.")
+		return false
+	if not FileAccess.file_exists(pck_path):
+		_errors.append("Base game PCK does not exist: %s" % pck_path)
+		return false
+	if not ProjectSettings.load_resource_pack(pck_path, false):
+		_errors.append("Unable to mount the base game PCK: %s" % pck_path)
+		return false
+	print("[ironclad-spine] Mounted base game resources without overriding Mod files.")
+	return true
 
 
 func _resource_path(resource_root: String, relative_path: String) -> String:
@@ -73,13 +85,11 @@ func _names(items: Variant) -> Dictionary:
 func _validate_spine_set(
 	resource_root: String,
 	required_skin: String,
-	required_version: String,
-	allow_extracted_template_versions: bool,
 	set_data: Dictionary,
 ) -> void:
 	var set_name := str(set_data.get("name", "<unnamed>"))
 	var data_path := _resource_path(resource_root, str(set_data.get("skeletonData", "")))
-	var skeleton_path := _resource_path(resource_root, str(set_data.get("skeleton", "")))
+	var skeleton_path := str(set_data.get("skeletonResource", ""))
 	var atlas_path := _resource_path(resource_root, str(set_data.get("atlas", "")))
 
 	var skeleton: Resource = ResourceLoader.load(skeleton_path)
@@ -119,9 +129,7 @@ func _validate_spine_set(
 	var animation_names := _names(animations)
 	var skin_names := _names(skins)
 	var actual_version := str(skeleton_data.call("get_version"))
-	var expected_version := required_version
-	if allow_extracted_template_versions:
-		expected_version = str(set_data.get("extractedTemplateSpineVersion", required_version))
+	var expected_version := str(set_data.get("expectedSpineVersion", ""))
 	if actual_version != expected_version:
 		_errors.append(
 			"Spine set '%s' uses Spine %s; expected exactly %s." % [

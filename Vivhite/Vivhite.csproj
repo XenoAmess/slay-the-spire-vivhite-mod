@@ -22,6 +22,9 @@
         <!-- Local test builds use this directory when RitsuLib package/build logic deploys RitsuLib to game mods/STS2-RitsuLib. -->
         <RitsuLibDeployDir Condition="'$(RitsuLibDeployDir)' == ''">$(Sts2Dir)\mods\STS2-RitsuLib</RitsuLibDeployDir>
         <CopyModOnBuild Condition="'$(CopyModOnBuild)' == ''">true</CopyModOnBuild>
+        <!-- An offline/no-copy build must not let RitsuLib's transitive package target
+             update the live game independently of this Mod's CopyMod target. -->
+        <RitsuLibAutoCopy Condition="'$(CopyModOnBuild)' == 'false' and '$(RitsuLibAutoCopy)' == ''">false</RitsuLibAutoCopy>
         <RunPckExport Condition="'$(RunPckExport)' == '' and '$(DesignTimeBuild)' != 'true'">true</RunPckExport>
         <RunPckExport Condition="'$(RunPckExport)' == ''">false</RunPckExport>
         <IroncladSkinValidator>$(MSBuildProjectDirectory)\tools\Validate-IroncladSkin.ps1</IroncladSkinValidator>
