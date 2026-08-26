@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -17,6 +18,14 @@ import llm_review  # noqa: E402
 
 
 class CompactKnowledgeTests(unittest.TestCase):
+    def test_windows_pid_probe_never_calls_os_kill(self) -> None:
+        with (mock.patch.object(compact_knowledge.os, "name", "nt"),
+              mock.patch.object(compact_knowledge.os, "kill",
+                                side_effect=AssertionError("must not signal")),
+              mock.patch("ctypes.WinDLL", side_effect=OSError("probe unavailable"))):
+            # Probe failure is fail-closed: compaction treats the PID as live.
+            self.assertTrue(compact_knowledge._pid_alive(1234))
+
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="sts2-compact-test-")
         self.root = Path(self.temp.name)
@@ -36,7 +45,7 @@ class CompactKnowledgeTests(unittest.TestCase):
                 for j in range(decision_n)
             ]
             payload = {
-                "run_id": f"COMPACT_{i:02d}", "ascension": 0,
+                "run_id": f"COMPACT_{i:02d}", "run_number": i, "ascension": 0,
                 "started_at": f"2026-01-01 00:{i:02d}:00",
                 "victory": i == 4, "in_progress": i == 5, "floor": floor,
                 "decisions": decisions, "combat_notes": [f"F{floor} test"],
@@ -105,6 +114,14 @@ class CompactKnowledgeTests(unittest.TestCase):
         probe = sorted(archived_hashes)[0]
         self.assertEqual(compact_knowledge._sha256(
             compact_knowledge.read_run_evidence(self.root, probe)), archived_hashes[probe])
+        old_dir = llm_review.KNOWLEDGE_DIR
+        try:
+            llm_review.KNOWLEDGE_DIR = self.root
+            exact = llm_review._recent_run_summaries(10, batch_runs=[1, 12])
+            self.assertEqual({item["run_number"] for item in exact}, {1, 12})
+            self.assertTrue(all(item["evidence_match"] == "exact_batch" for item in exact))
+        finally:
+            llm_review.KNOWLEDGE_DIR = old_dir
         lessons = (self.root / "lessons.md").read_text(encoding="utf-8")
         self.assertIn("🧠 关键长期经验", lessons)
         self.assertIn("recent-5", lessons)

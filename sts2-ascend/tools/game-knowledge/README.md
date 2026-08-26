@@ -7,7 +7,7 @@
 任何单一来源都不完整：
 
 - `runtime/*.jsonl` 来自 STS2AIAgent 的 `/data/*`，提供 ModelDb 实例化后的卡牌数值、升级、池、角色初始配置等规范数据。
-- `mechanics/*.jsonl` 来自本机 `sts2.dll` 的静态事实抽取，提供字段/属性表达式、实例与静态构造器、getter/setter/init accessor、调用、对象创建、赋值、条件、返回值、递归嵌套类型，以及怪物移动状态机。它补上 runtime 怪物接口目前全部缺失的 move 数值和行为。
+- `mechanics/*.jsonl` 来自本机 `sts2.dll` 的静态事实抽取，提供字段/属性表达式、实例与静态构造器、getter/setter/init accessor、调用、对象创建、赋值、一元 `++`/`--` 变异、条件、switch、循环、throw/yield/await、返回值、递归嵌套类型，以及怪物移动状态机。每个构造器、accessor 和方法还包含规范化嵌套 `control_flow` 语句树，包括 lambda/匿名 delegate 回调中的语句，保留 if/else、switch case、循环和 try/catch 到具体效果的父子关系，而不保存可重编译的整段源码。除 PCK 中全部 Model 类型外，还覆盖 Commands、GameActions、Combat、卡牌引擎、Runs、Creatures、Players、ValueProps、Random、Core.Events 和决策关键 helper。ILSpy AST 会把 expression-bodied method 规范化进 `MethodDeclaration.Body`，同一路径会保留其顶层调用/返回事实。它补上 runtime 怪物接口目前全部缺失的 move 数值和行为。
 - `localization/{eng,zhs}/*.json` 从官方 PCK 原样抽取，提供英文和简体中文文本。`catalog/pck-index.jsonl` 与 `catalog/model-source-types.jsonl` 则给出完整资源/原生类型基集。
 
 `catalog/localization-bilingual.jsonl` 将两种语言逐 key 对齐。若官方中文缺 key，记录会保留 `zhs: null`、标记 `missing_zhs`，并通过 `zhs_or_eng` + `fallback_locale: eng` 提供显式英文回退；不会静默冒充中文。
@@ -80,7 +80,7 @@ knowledge/game/v0.111.0/
   mechanics/*.jsonl                静态属性和行为事实
 ```
 
-JSONL envelope 的 JSON Schema 位于 `schemas/`。静态事实 v2 要求 `constructors`、每个属性的 `accessors`、`is_nested` 与 `declaring_type_name`；嵌套类型使用标准的 `Outer+Inner` 唯一名且没有独立 runtime ID。`manifest.json` 中每个 artifact 都有长度、SHA256 和记录数；validator 会重新计算哈希、检查 schema/ID 唯一性、基础角色初始卡组引用闭包、runtime/static 程序集一致性以及关联覆盖率。
+JSONL envelope 的 JSON Schema 位于 `schemas/`。静态事实 v4 要求 `constructors`、每个属性的 `accessors`、`is_nested`、`declaring_type_name`、所有行为数组，以及递归校验的 `control_flow` 节点；嵌套类型使用标准的 `Outer+Inner` 唯一名且没有独立 runtime ID。validator 直接按该 schema 递归检查每条记录，核对 1,724 个 PCK Model 顶层类型闭包，并沿继承链确认每个 runtime 怪物确有实质移动状态机事实。双语目录从官方 eng/zhs 文件逐键重建后比较，不把生成目录自身当真值。`manifest.json` 中每个 artifact 都有长度、SHA256 和记录数；`validation.json` 绑定最终 manifest SHA256 和实际 artifact-set SHA256，读取层会拒绝旧报告或被改写的快照。validator 还会检查基础角色初始内容引用闭包、runtime/static 程序集一致性以及关联覆盖率。
 
 ## 原生模型过滤
 
@@ -92,7 +92,7 @@ JSONL envelope 的 JSON Schema 位于 `schemas/`。静态事实 v2 要求 `const
 
 - 快照只能用于 manifest 指明的游戏 commit/程序集 SHA。游戏更新后必须生成新的版本目录，不能覆盖旧版本后继续沿用旧结论。
 - PCK 中的 `.cs` 仅是一字节导出占位，不能当作源码；行为事实来自本机程序集的结构化静态分析。
-- 不提交反编译源码、贴图、音频或完整 PCK。仓库只保存运行时结构化数据、控制流无关的行为事实（包括构造器/accessor 的调用与状态变化摘要）、短本地化文本和来源哈希。
+- 不提交反编译源码、贴图、音频或完整 PCK。仓库只保存运行时结构化数据、选定控制流与状态变化的结构化事实摘要、短本地化文本和来源哈希；这些 facts 不是可重新编译的完整反编译源码。
 - `manifest.json` 是权威文件清单；未列入 `artifacts` 的残留生成文件不属于快照。
 - 原生数据会随 Early Access 版本改变，AI 推理时应始终同时引用 `game.version`、`game.commit` 和 assembly SHA256。
 

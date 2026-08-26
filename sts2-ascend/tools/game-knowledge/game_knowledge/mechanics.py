@@ -14,8 +14,8 @@ from .pck import sha256_file
 from .runtime import RUNTIME_RECORD_SCHEMA
 
 
-MECHANICS_RECORD_SCHEMA = "sts2.game-knowledge-mechanics-record/v2"
-MECHANICS_INPUT_SCHEMA_VERSION = 2
+MECHANICS_RECORD_SCHEMA = "sts2.game-knowledge-mechanics-record/v4"
+MECHANICS_INPUT_SCHEMA_VERSION = 4
 
 
 class MechanicsImportError(RuntimeError):
@@ -131,7 +131,7 @@ def _validate_fact_record(
             or not isinstance(property_fact.get("expressions"), list)
             or not isinstance(property_fact.get("accessors"), list)
         ):
-            raise MechanicsImportError(f"{source} property {index} has invalid v2 facts")
+            raise MechanicsImportError(f"{source} property {index} has invalid v4 facts")
         for accessor_index, accessor in enumerate(property_fact["accessors"]):
             _validate_behavior_fact(
                 accessor,
@@ -156,13 +156,33 @@ def _validate_fact_record(
     return type_name, name, computed_entry_id
 
 
+def _validate_control_flow(value: Any, *, source: str) -> None:
+    if not isinstance(value, list):
+        raise MechanicsImportError(f"{source} is not an array")
+    for index, node in enumerate(value):
+        node_source = f"{source}[{index}]"
+        if not isinstance(node, dict):
+            raise MechanicsImportError(f"{node_source} is not an object")
+        kind = node.get("kind")
+        expression = node.get("expression")
+        if not isinstance(kind, str) or not kind:
+            raise MechanicsImportError(f"{node_source} has no non-empty kind")
+        if expression is not None and not isinstance(expression, str):
+            raise MechanicsImportError(f"{node_source} expression is not string/null")
+        _validate_control_flow(node.get("children"), source=f"{node_source}.children")
+
+
 def _validate_behavior_fact(value: Any, *, source: str) -> None:
     if not isinstance(value, dict):
         raise MechanicsImportError(f"{source} is not an object")
-    for field_name in ("calls", "creates", "assignments", "conditions", "switches", "returns"):
+    for field_name in (
+        "calls", "creates", "assignments", "conditions", "switches", "returns",
+        "loops", "throws", "yields", "awaits", "mutations",
+    ):
         items = value.get(field_name)
         if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
             raise MechanicsImportError(f"{source} field {field_name!r} is not a string array")
+    _validate_control_flow(value.get("control_flow"), source=f"{source}.control_flow")
 
 
 def _join_summary(

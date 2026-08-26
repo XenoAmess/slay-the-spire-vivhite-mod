@@ -9,7 +9,7 @@ import unittest
 from game_knowledge.extract import extract_game_resources
 from game_knowledge.mechanics import import_mechanics, model_entry_id
 from game_knowledge.runtime import import_runtime_response_dir
-from game_knowledge.validate import validate_snapshot
+from game_knowledge.validate import _check_localization, validate_snapshot
 from tests.helpers import build_pck
 
 
@@ -231,6 +231,37 @@ class ExtractionPipelineTests(unittest.TestCase):
                 "constructors": [],
                 "methods": [],
             }
+            monster_record = {
+                "type_name": "MegaCrit.Sts2.Core.Models.Monsters.TestMonster",
+                "name": "TestMonster",
+                "category": "monsters",
+                "entry_id": "TEST_MONSTER",
+                "type_kind": "Class",
+                "is_abstract": False,
+                "is_nested": False,
+                "declaring_type_name": None,
+                "base_types": ["MegaCrit.Sts2.Core.Models.MonsterModel"],
+                "fields": [],
+                "properties": [],
+                "constructors": [],
+                "methods": [{
+                    "name": "GenerateMoveStateMachine",
+                    "return_type": "MonsterMoveStateMachine",
+                    "parameters": [],
+                    "calls": [],
+                    "creates": ["new MoveState (\"ATTACK\", AttackMove)"],
+                    "assignments": [],
+                    "conditions": [],
+                    "switches": [],
+                    "returns": ["new MonsterMoveStateMachine (states, attack)"],
+                    "loops": [], "throws": [], "yields": [], "awaits": [], "mutations": [],
+                    "control_flow": [{
+                        "kind": "return",
+                        "expression": "new MonsterMoveStateMachine (states, attack)",
+                        "children": [],
+                    }],
+                }],
+            }
             body = (
                 json.dumps(mechanics_record, separators=(",", ":"))
                 + "\n"
@@ -238,29 +269,64 @@ class ExtractionPipelineTests(unittest.TestCase):
                 + "\n"
             ).encode()
             (mechanics_input / "cards.jsonl").write_bytes(body)
+            monster_body = (json.dumps(monster_record, separators=(",", ":")) + "\n").encode()
+            (mechanics_input / "monsters.jsonl").write_bytes(monster_body)
+            power_records = []
+            for name, entry_id in (("TestPower", "TEST_POWER"),
+                                   ("InternalPower", "INTERNAL_POWER")):
+                power_records.append({
+                    "type_name": f"MegaCrit.Sts2.Core.Models.Powers.{name}",
+                    "name": name, "category": "powers", "entry_id": entry_id,
+                    "type_kind": "Class", "is_abstract": False, "is_nested": False,
+                    "declaring_type_name": None,
+                    "base_types": ["MegaCrit.Sts2.Core.Models.PowerModel"],
+                    "fields": [], "properties": [], "constructors": [], "methods": [],
+                })
+            powers_body = ("\n".join(
+                json.dumps(record, separators=(",", ":")) for record in power_records
+            ) + "\n").encode()
+            (mechanics_input / "powers.jsonl").write_bytes(powers_body)
             assembly_hash = manifest["sources"]["assembly"]["sha256"]
             (mechanics_input / "mechanics-manifest.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": 2,
+                        "schema_version": 4,
                         "source": {"assembly": "sts2.dll", "assembly_sha256": assembly_hash},
                         "generated_at_utc": "2026-08-26T00:00:00Z",
                         "extraction": "synthetic test facts",
-                        "counts": {"cards": 2},
-                        "output_sha256": {"cards.jsonl": hashlib.sha256(body).hexdigest()},
+                        "counts": {"cards": 2, "monsters": 1, "powers": 2},
+                        "output_sha256": {
+                            "cards.jsonl": hashlib.sha256(body).hexdigest(),
+                            "monsters.jsonl": hashlib.sha256(monster_body).hexdigest(),
+                            "powers.jsonl": hashlib.sha256(powers_body).hexdigest(),
+                        },
                         "failures": [],
                     }
                 ),
                 encoding="utf-8",
             )
             mechanics = import_mechanics(output_dir=output_dir, mechanics_dir=mechanics_input)
-            self.assertEqual(mechanics["record_count"], 2)
+            self.assertEqual(mechanics["record_count"], 5)
             self.assertEqual(mechanics["joins"]["cards"]["status"], "complete")
             self.assertEqual(mechanics["joins"]["cards"]["matched_count"], 1)
 
             report = validate_snapshot(output_dir=output_dir, game_dir=game)
             self.assertNotEqual(report["overall"], "fail", report)
             self.assertEqual(report["counts"]["fail"], 0)
+
+            bilingual_path = output_dir / "catalog" / "localization-bilingual.jsonl"
+            bilingual_rows = [json.loads(line) for line in bilingual_path.read_text(
+                encoding="utf-8").splitlines() if line]
+            bilingual_rows[0]["zhs_or_eng"] = "tampered-value"
+            bilingual_path.write_text(
+                "\n".join(json.dumps(row, ensure_ascii=False) for row in bilingual_rows) + "\n",
+                encoding="utf-8",
+            )
+            localization_checks = _check_localization(output_dir, manifest)
+            self.assertTrue(any(
+                check.name == "localization.bilingual_catalog" and check.status == "fail"
+                for check in localization_checks
+            ))
 
 
 if __name__ == "__main__":

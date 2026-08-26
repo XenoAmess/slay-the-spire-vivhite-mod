@@ -12,13 +12,13 @@
     并确保工作线程存活，主循环立即开下一局，**零等待**。
   - 工作线程 _worker_loop 串行消化队列：一局结束若上一场复盘未完，请求在队列累积，
     下一场复盘一次性分析多局（追及队列）。
-  - 并发安全：autogit 全局 git 锁；复盘激活期间对局存档只提交 knowledge/（不卷入半成品代码）；
-    自检失败用路径级回滚（restore_paths），不会抹掉复盘期间产生的对局存档。
+  - 并发安全：autogit 的 add/commit/push 持有跨进程事务锁并使用私有 index；
+    复盘激活期间对局存档只提交在线运行文件，自检失败仅反向应用 allowlist patch。
   - 复盘完成若产生变更：标记 request_restart，主循环在下一局间安全点以退出码 42 自重启加载。
 
 设计要点（继承）：
   - 不直接调模型裸 API；spawn `opencode run` 无头会话——带完整工具链的智能体，走本机 OpenCode 授权。
-  - 广权限 + git 安全网：可改 sts2-ascend/ 下任何文件；改前备份、改后自检、失败回滚。
+  - 受限写入 + Git 安全网：只可改策略代码和复盘报告 allowlist；在线统计只读。
   - 复盘过程经 review_live.stream 直播给 review_viewer.py 悬浮窗。
 
 手动触发 `py brain/llm_review.py --now`（同步执行，用于人工调试）。
@@ -33,8 +33,10 @@ import queue
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from lifecycle import stop_requested
@@ -50,9 +52,65 @@ PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
 REVIEW_MUTABLE_PATHS = [
-    "sts2-ascend/brain", "sts2-ascend/scripts",
-    "sts2-ascend/knowledge/policy.json", "sts2-ascend/knowledge/stats.json",
-    "sts2-ascend/knowledge/lessons.md", "sts2-ascend/knowledge/meta_review.md",
+    "sts2-ascend/brain/__main__.py",
+    "sts2-ascend/brain/agent.py",
+    "sts2-ascend/brain/client.py",
+    "sts2-ascend/brain/config.json",
+    "sts2-ascend/brain/knowledge.py",
+    "sts2-ascend/brain/native_knowledge.py",
+    "sts2-ascend/brain/policy.py",
+    "sts2-ascend/brain/reflect.py",
+    "sts2-ascend/knowledge/meta_review.md",
+    "sts2-ascend/knowledge/review_conclusion.txt",
+]
+# 这些文件可能在异步复盘期间被在线大脑推进；它们不是复盘 patch，失败回滚和
+# 复盘 commit 都不能覆盖。若同一文件来源无法区分，宁可保留现场供人工处理。
+REVIEW_CONCURRENT_PATHS = [
+    "sts2-ascend/knowledge/runs",
+    "sts2-ascend/knowledge/stats.json",
+    "sts2-ascend/knowledge/progression.json",
+    "sts2-ascend/knowledge/policy.json",
+    "sts2-ascend/knowledge/lessons.md",
+    "sts2-ascend/knowledge/review_queue.json",
+    "sts2-ascend/knowledge/preferred_model_state.json",
+]
+# 真实工作区前后指纹允许变化的纯运行产物。策略/代码/TTS 实现文件不在此列。
+REVIEW_WORKSPACE_VOLATILE_PATHS = REVIEW_CONCURRENT_PATHS + [
+    "sts2-ascend/knowledge/brain.log",
+    "sts2-ascend/knowledge/review_prompt_latest.md",
+    "sts2-ascend/knowledge/review_live.stream",
+    "sts2-ascend/knowledge/review_active.flag",
+    "sts2-ascend/knowledge/viewer.lock",
+    "sts2-ascend/knowledge/viewer_boot.log",
+    "sts2-ascend/knowledge/viewer_err.log",
+    "sts2-ascend/knowledge/viewer_exc.log",
+    "sts2-ascend/knowledge/viewer_out.log",
+    "sts2-ascend/knowledge/voice_speaker.lock",
+    "sts2-ascend/knowledge/voice_quipper.lock",
+    "sts2-ascend/knowledge/voice_clone_busy.flag",
+    "sts2-ascend/knowledge/voice_quip_speaking.flag",
+    "sts2-ascend/knowledge/tts_speaker.log",
+    "sts2-ascend/knowledge/tts_quipper.log",
+    "sts2-ascend/knowledge/runner_console.log",
+    "sts2-ascend/knowledge/runner_console.err.log",
+    "sts2-ascend/knowledge/edge_dbg.err.log",
+    "sts2-ascend/knowledge/edge_dbg.out.log",
+    "sts2-ascend/knowledge/nano_dbg.err.log",
+    "sts2-ascend/knowledge/speaker_dbg.err.log",
+    "sts2-ascend/knowledge/speaker_dbg.out.log",
+    "sts2-ascend/knowledge/tts_test.err.log",
+    "sts2-ascend/knowledge/tts_test.out.log",
+    "sts2-ascend/knowledge/viewer_err_test.log",
+    "sts2-ascend/knowledge/viewer_out_test.log",
+    "sts2-ascend/knowledge/voice_volume.json",
+]
+REVIEW_WORKSPACE_IGNORED_ROOTS = [
+    "sts2-ascend/.runtime",
+    "sts2-ascend/knowledge/pending_restart.json",
+    "sts2-ascend/knowledge/code_backups",
+    "sts2-ascend/third_party/dist",
+    "sts2-ascend/third_party/STS2-Agent",
+    "Vivhite/local.props",
 ]
 _worker_stop = threading.Event()
 
@@ -173,7 +231,80 @@ def _clip_summary_text(value) -> str:
     return text[:RUN_SUMMARY_TEXT_CHARS - 1] + "…"
 
 
-def _recent_run_summaries(n: int) -> list[dict]:
+def _run_is_complete(data: dict) -> bool:
+    """Exclude a genuine incremental checkpoint while tolerating old dirty stamps."""
+    if not data.get("in_progress"):
+        return True
+    trail = data.get("decisions") or []
+    return any(isinstance(item, dict) and item.get("screen") == "GAME_OVER"
+               for item in trail)
+
+
+def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> list[tuple[Path, dict]]:
+    """Load exact compacted evidence by run_number, with archive hash verification."""
+    catalog = KNOWLEDGE_DIR / "archive" / "run_catalog.jsonl"
+    if not run_numbers or not catalog.exists():
+        return []
+    try:
+        from compact_knowledge import read_run_evidence
+    except ImportError:
+        return []
+    rows = []
+    try:
+        lines = catalog.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(entry, dict) or entry.get("run_number") not in run_numbers:
+            continue
+        filename = str(entry.get("file") or "")
+        if not filename or filename in seen_files:
+            continue
+        try:
+            data = json.loads(read_run_evidence(KNOWLEDGE_DIR, filename).decode("utf-8"))
+        except (OSError, RuntimeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict) and _run_is_complete(data):
+            rows.append((Path(filename), data))
+            seen_files.add(filename)
+    return rows
+
+
+def _summarize_run(data: dict, evidence_match: str) -> dict:
+    decisions = [x for x in (data.get("decisions") or []) if isinstance(x, dict)]
+    # 脏戳字段的读端复原（第 369 局复盘）：被回写的文件顶层 floor=0/
+    # victory=false 是脏值，决策轨迹才是真账。
+    floor = int(data.get("floor") or 0)
+    trail_max = max((int(x.get("floor") or 0) for x in decisions), default=0)
+    if trail_max > floor:
+        floor = trail_max
+    victory = bool(data.get("victory"))
+    if not victory and any(x.get("screen") == "GAME_OVER"
+                           and "胜利" in str(x.get("reason") or "")
+                           for x in decisions):
+        victory = True
+    combat_notes = list(data.get("combat_notes") or [])
+    key_reasons = [x.get("reason", "") for x in decisions
+                   if x.get("action") in ("choose_map_node", "choose_event_option",
+                                          "choose_rest_option", "skip_reward_cards")]
+    return {
+        "run_id": data.get("run_id"), "run_number": data.get("run_number"),
+        "evidence_match": evidence_match,
+        "victory": victory, "floor": floor, "ascension": data.get("ascension"),
+        "decisions": len(decisions), "combat_notes_total": len(combat_notes),
+        "combat_notes": [_clip_summary_text(x)
+                         for x in combat_notes[-RUN_SUMMARY_COMBAT_NOTES:]],
+        "key_reasons_total": len(key_reasons),
+        "key_reasons": [_clip_summary_text(x)
+                        for x in key_reasons[-RUN_SUMMARY_KEY_REASONS:]],
+    }
+
+
+def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[dict]:
     run_dir = KNOWLEDGE_DIR / "runs"
     if not run_dir.exists():
         return []
@@ -184,55 +315,42 @@ def _recent_run_summaries(n: int) -> list[dict]:
     # 文件必为定稿后被盖脏戳的完整体，按完成局放行；真进行中的对局轨迹里
     # 不可能出现 GAME_OVER，照常排除。否则摘要把近百余局全部过滤，
     # 复盘数据包永远停留在旧局（第 263~369 局实证）。
-    files = []
+    files: list[tuple[Path, dict]] = []
     for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name):
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
-        if d.get("in_progress"):
-            trail = d.get("decisions") or []
-            if not any(isinstance(x, dict) and x.get("screen") == "GAME_OVER"
-                       for x in trail):
-                continue
-        files.append((p, d))
-    out = []
-    for f, d in files[-n:]:
-        decisions = [x for x in (d.get("decisions") or []) if isinstance(x, dict)]
-        # 脏戳字段的读端复原（第 369 局复盘）：被回写的文件顶层 floor=0/
-        # victory=false 是脏值，决策轨迹才是真账——层数取轨迹最大值，
-        # 胜负按 GAME_OVER 屏结算文案复原；干净文件两段逻辑零改动。
-        floor = int(d.get("floor") or 0)
-        trail_max = max((int(x.get("floor") or 0) for x in decisions
-                         if isinstance(x, dict)), default=0)
-        if trail_max > floor:
-            floor = trail_max
-        victory = bool(d.get("victory"))
-        if not victory and any(isinstance(x, dict) and x.get("screen") == "GAME_OVER"
-                               and "胜利" in str(x.get("reason") or "")
-                               for x in decisions):
-            victory = True
-        combat_notes = list(d.get("combat_notes") or [])
-        key_reasons = [x.get("reason", "") for x in decisions
-                       if x.get("action") in ("choose_map_node", "choose_event_option",
-                                              "choose_rest_option", "skip_reward_cards")]
-        out.append({
-            "run_id": d.get("run_id"), "victory": victory, "floor": floor,
-            "ascension": d.get("ascension"), "decisions": len(decisions),
-            "combat_notes_total": len(combat_notes),
-            "combat_notes": [_clip_summary_text(x)
-                             for x in combat_notes[-RUN_SUMMARY_COMBAT_NOTES:]],
-            "key_reasons_total": len(key_reasons),
-            "key_reasons": [_clip_summary_text(x)
-                            for x in key_reasons[-RUN_SUMMARY_KEY_REASONS:]],
-        })
+        if _run_is_complete(d):
+            files.append((p, d))
+
+    requested = {int(item) for item in (batch_runs or [])}
+    if not requested:
+        return [_summarize_run(data, "recent") for _, data in files[-n:]]
+
+    selected = [(path, data) for path, data in files
+                if int(data.get("run_number") or -1) in requested]
+    seen = {path.name for path, _ in selected}
+    selected.extend(_requested_archived_runs(requested, seen))
+    selected.sort(key=lambda row: (int(row[1].get("run_number") or 0), row[0].name))
+    matched = {int(data.get("run_number")) for _, data in selected
+               if data.get("run_number") is not None}
+    out = [_summarize_run(data, "exact_batch") for _, data in selected]
+    if matched != requested:
+        # Historical logs predate run_number.  Keep a bounded recent fallback for
+        # diagnostic context, but label it so the coach cannot mistake it for the
+        # requested queue batch.
+        fallback_n = max(0, n - len(out))
+        for path, data in files[-fallback_n:] if fallback_n else []:
+            if path.name not in seen:
+                out.append(_summarize_run(data, "recent_fallback_unmapped"))
     return out
 
 
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 10))
-    run_summaries = _recent_run_summaries(n)
+    run_summaries = _recent_run_summaries(n, batch_runs=batch_runs)
     evidence_text = []
     for summary in run_summaries:
         evidence_text.extend(summary.get("combat_notes") or [])
@@ -240,6 +358,17 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     native = getattr(know, "game_knowledge", None)
     packet = {
         "runs_summary": run_summaries,
+        "run_evidence_scope": {
+            "requested": list(batch_runs or []),
+            "exact": sorted(int(item["run_number"]) for item in run_summaries
+                            if item.get("evidence_match") == "exact_batch"),
+            "missing": sorted(set(int(x) for x in (batch_runs or []))
+                              - {int(item["run_number"]) for item in run_summaries
+                                 if item.get("evidence_match") == "exact_batch"}),
+            "fallback_is_not_batch_evidence": any(
+                item.get("evidence_match") == "recent_fallback_unmapped"
+                for item in run_summaries),
+        },
         "stats_digest": _stats_digest(know),
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
@@ -261,6 +390,10 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         scope = f"本次复盘覆盖第 {batch_runs[0]} 局"
     else:
         scope = f"每 {cadence} 局你做一次大模型复盘"
+    missing_batch = packet["run_evidence_scope"]["missing"]
+    if missing_batch:
+        scope += (f"；其中第 {missing_batch} 局缺少历史 run_number 映射，"
+                  "标为 recent_fallback_unmapped 的摘要仅供背景参考，不得冒充本批证据")
 
     # Whitespace-only compaction: _stats_digest's fields and values are left
     # intact.  This saves prompt tokens without silently weakening statistical
@@ -287,10 +420,15 @@ def build_prompt(know, cfg: dict, every: int | None = None,
    mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。
 2. 将复盘报告**追加写入** `sts2-ascend/knowledge/meta_review.md`（新建一节，标题含日期时间）：
    归因分析、你做出的每项调整及理由、新沉淀的经验知识（中文）。
-3. **你可以修改 `sts2-ascend/` 下的任何文件**（策略参数、统计数据结构、决策代码、配置……）：
-   - 改代码逻辑/数据结构比调参数更有价值——参数调不了的病就从代码治
-   - 若修改 `knowledge/*.json` 的结构，**必须同步修改 `brain/knowledge.py` 并迁移现有数据**（保持兼容）
-   - 新经验同时追加到 `sts2-ascend/knowledge/lessons.md`（一节，标题以 🧠 开头）
+3. **只可修改下列 allowlist**（越界 patch 会被宿主拒绝，安全基础设施不可自改）：
+   - `brain/__main__.py`、`agent.py`、`client.py`、`config.json`、`knowledge.py`、
+     `native_knowledge.py`、`policy.py`、`reflect.py`、`selfcheck.py`
+   - `knowledge/meta_review.md`、`knowledge/review_conclusion.txt`
+   - `knowledge/stats.json`、`progression.json`、`policy.json`、`lessons.md` 和 `runs/`
+     是在线大脑持续写入的数据，复盘期间**只读，绝对禁止修改**；新经验写入本次
+     `meta_review.md` 报告，待在线学习流程自行吸收
+   - 不得修改 `brain/autogit.py`、`runner.py`、`llm_review.py`、`lifecycle.py` 或
+     `scripts/` 生命周期入口
 4. 改完任何 `.py` 后**必须**运行 `py -3 sts2-ascend/brain/selfcheck.py` 并确认输出 SELFCHECK OK；
    若不通过，修好再试，实在修不好就把该文件改回原样。
 5. 不要提交：git 提交由宿主大脑在复盘前后自动完成（复盘前已备份，复盘后变更会被提交；
@@ -302,7 +440,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 # 禁止事项（最高优先级，覆盖仓库 AGENTS.md 的默认规则）
 - 禁止任何 git 操作（add/commit/push/reset 等，宿主大脑统一管理）
 - 禁止停止/启动任何进程（游戏和大脑正在运行）
-- 禁止修改 `sts2-ascend/` 之外的任何文件（Vivhite mod、游戏本体、系统文件……）
+- 禁止修改上述 allowlist 之外的任何文件（包括其他 `sts2-ascend/` 文件、Vivhite mod、游戏本体、系统文件）
 - 禁止删除 `knowledge/runs/` 下的历史对局日志、禁止安装依赖
 
 完成后，用 200 字以内输出本次复盘总结。"""
@@ -631,9 +769,10 @@ def _stream_run(cmd: list[str], timeout_sec: int,
 # review execution
 # ---------------------------------------------------------------------------
 
-def _run_selfcheck(log) -> bool:
+def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
     """py_compile 全文件 + 冒烟测试（含真实知识库加载）。"""
-    brain_dir = BASE_DIR / "brain"
+    root = Path(base_dir) if base_dir is not None else BASE_DIR
+    brain_dir = root / "brain"
     for f in brain_dir.glob("*.py"):
         try:
             py_compile.compile(str(f), doraise=True)
@@ -657,11 +796,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                async_mode: bool = False, _status: dict | None = None) -> bool:
     """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
 
-    流程：改前 commit 备份 → opencode 广权限复盘 → 自检 → 通过则提交/请求重启，失败则 git 回滚。
+    流程：保存在线进度 → opencode 受限复盘 → 路径 allowlist → 自检 → 精确提交；
+    失败时丢弃隔离 clone；若真实工作区无法安全归因则 fail closed 并保留诊断。
     source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
-    async_mode=True（异步队列工作线程调用）时：
-      - 复盘期间 autogit 对局存档只提交 knowledge/（不卷入半成品代码）
-      - 自检失败的回滚是路径级的（restore_paths），不会抹掉复盘期间产生的对局存档
+    async_mode=True（异步队列工作线程调用）时，在线存档只提交 runs/stats/
+    progression/review_queue；这些路径不属于复盘 patch。
     """
     if _status is not None:
         _status["canceled"] = False
@@ -683,13 +822,24 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     model_id, variant = _parse_entry(entry)
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
+    if tuple(REVIEW_MUTABLE_PATHS) != tuple(autogit.REVIEW_PATCH_ALLOWLIST):
+        log("[llm] 复盘 allowlist 与 Git 安全层不一致，拒绝启动")
+        return False
 
     runs = know.stats["global"]["runs"]
     batch_txt = f"第{batch_runs[0]}~{batch_runs[-1]}局" if batch_runs and len(batch_runs) > 1 \
         else f"第{batch_runs[0]}局" if batch_runs else f"第{runs}局"
-    # 1) 改前备份：把当前知识库+代码先提交推送（此时复盘未激活，全量提交）
-    autogit.commit_progress(f"chore(sts2-ascend): {batch_txt}后复盘前备份", log=log)
+    # 1) 只保存在线数据。代码必须已干净；自动流程绝不替用户提交开发中的代码。
+    autogit.commit_progress_result(
+        f"chore(sts2-ascend): {batch_txt}后复盘前在线存档",
+        log=log, paths=REVIEW_CONCURRENT_PATHS,
+    )
     pre_head = autogit.head()
+    before_review = autogit.changed_paths_since(pre_head, REVIEW_MUTABLE_PATHS)
+    if before_review:
+        log("[llm] 复盘启动前 allowlist 路径已有用户改动，拒绝让模型覆盖："
+            + ", ".join(before_review[:12]))
+        return False
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
     log(f"[llm] ===== 启动大模型复盘（{entry} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
@@ -701,8 +851,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     # 提示词包可达数万字，超过 Windows 命令行 32767 上限（WinError 206）——
     # 完整提示词落盘为 review_prompt_latest.md，命令行只传一句引导，让复盘 agent 自己读文件。
     rel_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
-    short_prompt = (f"请立即用读文件工具完整阅读 {rel_prompt}（本场复盘的完整任务书已写好），"
-                    f"并严格按其中全部指示执行。")
+    short_prompt = (f"你位于宿主创建的隔离 clone。请完整阅读 {rel_prompt}，只可在当前 "
+                    "--dir 根目录内使用相对路径；禁止绝对路径、.. 逃逸或访问其他工作区。"
+                    "严格按任务书执行。")
 
     cmd = [
         binary, "run",
@@ -730,24 +881,40 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
 
-    autogit.set_review_active(True)     # 此后对局存档只提交 knowledge/
+    autogit.set_review_active(True)     # 此后对局存档只提交纯在线运行路径
     rc, out, timed_out, stopped = -1, "", False, False
     eff_timeout_min = float(cfg.get("preferred_timeout_min", 40)) if source == "preferred" \
         else float(cfg.get("timeout_min", 25))
     translator = OpencodeJsonTranslator()
+    sandbox = SandboxReviewResult(error="复盘尚未运行")
     try:
-        rc, out, timed_out, stopped = _stream_run(
-            cmd, int(eff_timeout_min * 60), translate=translator.feed)
+        workspace_before = autogit.workspace_fingerprint(
+            exclude_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
+            ignored_roots=REVIEW_WORKSPACE_IGNORED_ROOTS,
+        )
+        sandbox = _run_review_sandbox(
+            cmd, prompt, pre_head, int(eff_timeout_min * 60), translator, log=log)
+        rc, out, timed_out, stopped = (
+            sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped)
+        workspace_after = autogit.workspace_fingerprint(
+            exclude_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
+            ignored_roots=REVIEW_WORKSPACE_IGNORED_ROOTS,
+        )
+        escaped = autogit.unsafe_workspace_changes(
+            workspace_before, workspace_after,
+            online_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
+        )
+        if escaped:
+            log("[llm] 真实工作区在隔离复盘期间发生非在线变化；拒绝合入且保留现场："
+                + ", ".join(escaped[:12]))
+            return False
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
         if stopped:
             if _status is not None:
                 _status["canceled"] = True
-            # 停机路径不执行 git restore/commit/push：保留原子落盘的实时记忆，
-            # 也避免把并发用户改动卷入额外的版本控制副作用。
-            autogit.set_review_active(False)
             retry_note = "批次下次启动重试" if async_mode else "手动复盘已取消"
-            log(f"[llm] 整套停止已取消复盘；不执行停机期代码回滚，"
-                f"实时记忆保留，{retry_note}（复盘前备份点 {pre_head[:8]}）")
+            log(f"[llm] 整套停止已取消隔离复盘；真实工作树未改，{retry_note}"
+                f"（复盘前基线 {pre_head[:8]}）")
             return False
         if timed_out:
             log(f"[llm] 复盘超时（{eff_timeout_min:.0f} 分钟），本次作废")
@@ -757,6 +924,10 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if rc != 0:
             if source == "preferred":
                 _mark_preferred_failure(cfg, log, entry, f"exit={rc}")
+            log(f"[llm] 隔离复盘失败：{sandbox.error or f'exit={rc}'}；真实工作树未改")
+            return False
+        if sandbox.error:
+            log(f"[llm] 隔离复盘被拒绝：{sandbox.error}；真实工作树未改")
             return False
         if source == "preferred":
             _mark_preferred_ok(entry)
@@ -772,48 +943,46 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         return False
     finally:
         _stream_end({"exit": rc, "timeout": timed_out, "stopped": stopped})
-        if stopped or timed_out or rc != 0:
-            # 失败/超时/异常路径在上方提前 return，走不到后处理段的
-            # set_review_active(False)——flag 陈旧会永久卡住 autogit 宽窄判断
-            # （一日内三次实证）。成功路径保持 True 到后处理结束。
-            autogit.set_review_active(False)
+        # 模型退出隔离 clone 后已不可能产生半成品文件；无论成功失败都立即清 flag。
+        autogit.set_review_active(False)
 
     try:
-        # 2) 无变更则无需提交/重启
-        if not autogit.has_changes():
+        # 2) 模型在独立 clone 中运行；这里只接收已全仓扫描、自检通过的精确 patch。
+        review_paths = list(sandbox.paths)
+        if not review_paths:
             log("[llm] 复盘未产生任何文件变更，跳过提交")
             return False
-
-        # 3) 自检：编译 + 冒烟（含真实知识库结构兼容校验）
-        if not _run_selfcheck(log):
-            log("[llm] 复盘变更未通过自检，执行 git 回滚")
-            try:
-                backup = KNOWLEDGE_DIR / "code_backups" / f"failed_review_{time.strftime('%Y%m%d-%H%M%S')}.md"
-                backup.parent.mkdir(parents=True, exist_ok=True)
-                if REVIEW_LOG.exists():
-                    shutil.copy2(REVIEW_LOG, backup)
-            except OSError:
-                pass
-            autogit.set_review_active(False)    # 回滚提交需要 brain/ 全量范围
-            if async_mode:
-                # 路径级回滚：只还原复盘可触碰的路径，保留复盘期间的对局存档
-                autogit.restore_paths(pre_head, REVIEW_MUTABLE_PATHS, log=log)
-                autogit.commit_progress(
-                    f"revert(sts2-ascend): {batch_txt}复盘未过自检，路径回滚到 {pre_head[:8]}", log=log)
-            else:
-                autogit.reset_hard(pre_head, log=log)
-            log(f"[llm] 已回滚到复盘前备份点 {pre_head[:8]}（本次变更废弃，报告副本在 code_backups）")
+        try:
+            review_paths = list(autogit.validate_review_paths(review_paths))
+        except ValueError as exc:
+            log(f"[llm] Git 安全层拒绝复盘 patch：{exc}")
+            return False
+        if not sandbox.patch:
+            log("[llm] 隔离复盘未导出有效 patch，拒绝合入")
             return False
 
-        # 4) 提交复盘变更（先解锁收窄标记，复盘自身的提交必须是全量范围）
-        autogit.set_review_active(False)
-        autogit.commit_progress(f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）", log=log)
+        # 3) marker 在 update-ref/push 前原子发布；patch commit 的私有 index 只包含
+        # 模型 hunk，同文件中并发用户 hunk 留在工作树且不会被提交。
+        def prepare_marker(provisional) -> bool:
+            return _write_restart_marker({
+                "pre_head": pre_head,
+                "review_parent": provisional.before_head,
+                "review_commit": provisional.commit,
+                "paths": review_paths,
+                "time": stamp,
+            }, log=log)
 
-        # 5) 写重启标记并请求重启（runner 若发现新代码起不来，会按 marker 回滚到 pre_head）
-        try:
-            MARKER_FILE.write_text(json.dumps({"pre_head": pre_head, "time": stamp}), encoding="utf-8")
-        except OSError:
-            pass
+        def abort_marker(provisional) -> None:
+            _remove_restart_marker(provisional.commit, log=log)
+
+        result = autogit.commit_patch_result(
+            sandbox.patch,
+            f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）",
+            review_paths, log=log, prepare=prepare_marker, abort_prepare=abort_marker,
+        )
+        if not result.created:
+            log(f"[llm] 复盘 patch 未能安全提交，保留现场供诊断：{result.reason}")
+            return False
         log("[llm] 复盘变更已提交，重启大脑以加载…")
         return True
     finally:
@@ -848,26 +1017,92 @@ _worker_started = False
 _worker_lock = threading.Lock()
 _worker_thread: threading.Thread | None = None
 _queue_lock = threading.RLock()
+_QUEUE_IO_RETRIES = 8
+_QUEUE_IO_RETRY_BASE_SECONDS = 0.01
+
+
+class ReviewQueueError(RuntimeError):
+    """The durable review queue cannot be safely read, validated, or replaced."""
+
+
+def _empty_queue() -> dict:
+    return {"pending": [], "reviewing": None}
+
+
+def _validate_queue(payload) -> dict:
+    """Validate the fields consumed by the worker without discarding unknown keys."""
+    if not isinstance(payload, dict):
+        raise ReviewQueueError("review queue root must be an object")
+    pending = payload.get("pending")
+    reviewing = payload.get("reviewing")
+    if not isinstance(pending, list):
+        raise ReviewQueueError("review queue pending must be a list")
+    for index, item in enumerate(pending):
+        if not isinstance(item, dict) or "run" not in item:
+            raise ReviewQueueError(f"review queue pending[{index}] is not a run object")
+    if reviewing is not None:
+        if not isinstance(reviewing, dict):
+            raise ReviewQueueError("review queue reviewing must be null or an object")
+        runs = reviewing.get("runs", [])
+        if not isinstance(runs, list):
+            raise ReviewQueueError("review queue reviewing.runs must be a list")
+    return payload
+
+
+def _read_queue_text() -> str:
+    last_error: OSError | None = None
+    for attempt in range(_QUEUE_IO_RETRIES):
+        try:
+            return QUEUE_FILE.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raise
+        except OSError as exc:
+            last_error = exc
+            if attempt + 1 < _QUEUE_IO_RETRIES:
+                time.sleep(_QUEUE_IO_RETRY_BASE_SECONDS * (attempt + 1))
+    assert last_error is not None
+    raise ReviewQueueError(f"cannot read review queue: {last_error}") from last_error
 
 
 def _load_queue_unlocked() -> dict:
     try:
-        return json.loads(QUEUE_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"pending": [], "reviewing": None}
+        raw = _read_queue_text()
+    except FileNotFoundError:
+        return _empty_queue()
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        # Keep the original file untouched for diagnosis/recovery.  Treating it as
+        # an empty queue lets the next save erase pending/reviewing evidence.
+        raise ReviewQueueError(f"review queue contains invalid JSON: {exc}") from exc
+    return _validate_queue(payload)
 
 
 def _save_queue_unlocked(q: dict) -> None:
-    temp = QUEUE_FILE.with_name(
-        f".{QUEUE_FILE.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    try:
-        temp.write_text(json.dumps(q, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(temp, QUEUE_FILE)
-    except OSError:
+    _validate_queue(q)
+    raw = (json.dumps(q, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
+    QUEUE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    last_error: OSError | None = None
+    for attempt in range(_QUEUE_IO_RETRIES):
+        temp = QUEUE_FILE.with_name(
+            f".{QUEUE_FILE.name}.{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
         try:
-            temp.unlink(missing_ok=True)
-        except OSError:
-            pass
+            with temp.open("xb") as handle:
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp, QUEUE_FILE)
+            return
+        except OSError as exc:
+            last_error = exc
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError:
+                pass
+            if attempt + 1 < _QUEUE_IO_RETRIES:
+                time.sleep(_QUEUE_IO_RETRY_BASE_SECONDS * (attempt + 1))
+    assert last_error is not None
+    raise ReviewQueueError(f"cannot save review queue: {last_error}") from last_error
 
 
 def _load_queue() -> dict:
@@ -910,22 +1145,37 @@ def enqueue_review(agent, log=print) -> None:
         last = agent.know.progression.get("last_fallback_review_run", 0)
         if not starved and runs - last < every:
             return
-        agent.know.progression["last_fallback_review_run"] = runs
+        progression_key = "last_fallback_review_run"
     else:
         last = agent.know.progression.get("last_llm_review_run", 0)
         if runs - last < every:
             return
-        agent.know.progression["last_llm_review_run"] = runs
+        progression_key = "last_llm_review_run"
+
+    # Queue durability is the commit point.  Advancing cadence markers before a
+    # failed queue read/write silently skips this run until the next interval.
+    # Existing pending/reviewing data must remain authoritative on every failure.
+    try:
+        with _queue_lock:
+            q = _load_queue_unlocked()
+            reviewing_runs = set((q.get("reviewing") or {}).get("runs") or [])
+            already_queued = runs in reviewing_runs or any(
+                item.get("run") == runs for item in q["pending"])
+            if not already_queued:
+                q["pending"].append({
+                    "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
+                    "model": model, "every": every, "source": source,
+                })
+                q["pending"] = q["pending"][
+                    -max(1, int(cfg.get("review_queue_max", 10))):]
+                _save_queue_unlocked(q)
+    except (ReviewQueueError, OSError) as exc:
+        log(f"[llm] 复盘队列持久化失败，保留原队列且不推进节奏标记：{exc}")
+        return
+
+    agent.know.progression[progression_key] = runs
     agent.know.progression["last_review_attempt_source"] = source
     agent.know.save()
-    with _queue_lock:
-        q = _load_queue_unlocked()
-        q.setdefault("pending", []).append({
-            "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
-            "model": model, "every": every, "source": source,
-        })
-        q["pending"] = q["pending"][-max(1, int(cfg.get("review_queue_max", 10))):]
-        _save_queue_unlocked(q)
     starve_note = f"（距上次成功复盘 {runs - last_ok} 局，交替出牌）" if starved else ""
     log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     if not _review_stop_requested():
@@ -951,9 +1201,13 @@ def resume_review_queue(agent, log=print) -> None:
     """Resume queued/interrupted reviews immediately after brain startup."""
     if not load_llm_config().get("enabled") or _review_stop_requested():
         return
-    with _queue_lock:
-        q = _load_queue_unlocked()
-        has_work = bool(q.get("pending") or q.get("reviewing"))
+    try:
+        with _queue_lock:
+            q = _load_queue_unlocked()
+            has_work = bool(q.get("pending") or q.get("reviewing"))
+    except (ReviewQueueError, OSError) as exc:
+        log(f"[llm] 复盘队列暂不可读；保留原文件，本次不启动 worker：{exc}")
+        return
     if has_work:
         _ensure_worker(agent, log)
 
@@ -969,6 +1223,235 @@ def shutdown_worker(log=print, timeout: float = 30.0) -> bool:
         log(f"[llm] 复盘工作线程在 {timeout:.0f}s 内未退出；交由统一 Stop 的精确兜底处理")
         return False
     return True
+
+
+@dataclass(frozen=True)
+class SandboxReviewResult:
+    rc: int = -1
+    out: str = ""
+    timed_out: bool = False
+    stopped: bool = False
+    paths: tuple[str, ...] = ()
+    patch: bytes = b""
+    error: str = ""
+    selfcheck_ok: bool = True
+
+
+def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
+                 timeout: int = 120) -> subprocess.CompletedProcess:
+    kwargs = {"capture_output": True, "timeout": timeout}
+    if not binary:
+        kwargs.update({"text": True, "encoding": "utf-8", "errors": "replace"})
+    return subprocess.run(["git", "-C", str(repo), *args], **kwargs)
+
+
+def _record_sandbox_diagnostic(repo: Path, pre_head: str, reason: str,
+                               paths: list[str], log=print) -> None:
+    try:
+        backup_dir = KNOWLEDGE_DIR / "code_backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        sandbox_report = repo / "sts2-ascend" / "knowledge" / "meta_review.md"
+        if sandbox_report.exists():
+            shutil.copy2(sandbox_report, backup_dir / f"failed_review_{stamp}.md")
+        (backup_dir / f"failed_review_{stamp}.json").write_text(json.dumps({
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "pre_head": pre_head,
+            "reason": reason,
+            "sandbox_paths": paths,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as exc:
+        log(f"[llm] 保存隔离复盘诊断异常：{exc}")
+
+
+def _run_review_sandbox(
+    cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
+    translator: "OpencodeJsonTranslator", log=print,
+) -> SandboxReviewResult:
+    """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
+    sandbox_root = Path(tempfile.mkdtemp(prefix="sts2-review-sandbox-"))
+    sandbox_repo = sandbox_root / "repo"
+    result = SandboxReviewResult(error="隔离复盘未完成")
+    paths: list[str] = []
+    try:
+        clone = subprocess.run([
+            "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
+            str(REPO_DIR), str(sandbox_repo),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+        if clone.returncode != 0:
+            result = SandboxReviewResult(error="创建隔离 clone 失败：" + clone.stderr.strip()[:400])
+            return result
+        checkout = _sandbox_git(sandbox_repo, ["checkout", "--quiet", "--detach", pre_head])
+        if checkout.returncode != 0:
+            result = SandboxReviewResult(error="隔离 clone checkout 失败：" + checkout.stderr.strip()[:400])
+            return result
+        _sandbox_git(sandbox_repo, ["remote", "remove", "origin"])
+
+        prompt_path = sandbox_repo / PROMPT_FILE.relative_to(REPO_DIR)
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(prompt, encoding="utf-8")
+        sandbox_cmd = list(cmd)
+        try:
+            sandbox_cmd[sandbox_cmd.index("--dir") + 1] = str(sandbox_repo)
+        except (ValueError, IndexError):
+            result = SandboxReviewResult(error="复盘命令缺少 --dir 安全边界")
+            return result
+
+        rc, out, timed_out, stopped = _stream_run(
+            sandbox_cmd, timeout_seconds, translate=translator.feed)
+        if stopped or timed_out or rc != 0:
+            result = SandboxReviewResult(
+                rc=rc, out=out, timed_out=timed_out, stopped=stopped,
+                error="复盘进程未成功完成",
+            )
+            return result
+
+        # 不信任模型留下的 HEAD/index/assume-unchanged 标记；先回到隔离基线，
+        # 只保留工作树内容，再做全仓变更枚举。
+        reset = _sandbox_git(sandbox_repo, ["reset", "--mixed", "--quiet", pre_head])
+        if reset.returncode != 0:
+            result = SandboxReviewResult(rc=rc, out=out, error="隔离仓库基线恢复失败")
+            return result
+        tracked = _sandbox_git(
+            sandbox_repo, ["diff", "--name-only", "-z", pre_head, "--"])
+        others = _sandbox_git(
+            sandbox_repo, ["ls-files", "--others", "--exclude-standard", "-z", "--"])
+        if tracked.returncode != 0 or others.returncode != 0:
+            result = SandboxReviewResult(rc=rc, out=out, error="无法枚举隔离复盘变更")
+            return result
+        paths = list(dict.fromkeys(
+            [item.replace("\\", "/") for item in (tracked.stdout + others.stdout).split("\0") if item]))
+        own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+        paths = [path for path in paths if path != own_prompt]
+        review_files = {item.replace("\\", "/").rstrip("/")
+                        for item in REVIEW_MUTABLE_PATHS}
+        unexpected = [path for path in paths
+                      if path.replace("\\", "/").rstrip("/") not in review_files]
+        if unexpected:
+            result = SandboxReviewResult(
+                rc=rc, out=out, paths=tuple(paths),
+                error="复盘 patch 越过 allowlist：" + ", ".join(unexpected[:12]),
+            )
+            return result
+        if not paths:
+            result = SandboxReviewResult(rc=rc, out=out)
+            return result
+
+        # 自检也在隔离 clone 内执行；失败代码从未进入真实工作树。
+        if not _run_selfcheck(log, sandbox_repo / "sts2-ascend"):
+            result = SandboxReviewResult(
+                rc=rc, out=out, paths=tuple(paths), error="复盘自检失败", selfcheck_ok=False)
+            return result
+
+        # 模型即使在隔离 clone 内自行 commit/stage，也先退回基线 index；仅把验证过
+        # 的 allowlist 路径重新 stage，再从基线导出二进制 patch。
+        stage = _sandbox_git(sandbox_repo, ["add", "--all", "--", *paths])
+        patch = _sandbox_git(
+            sandbox_repo,
+            ["diff", "--cached", "--binary", "--unified=0", pre_head, "--", *paths],
+            binary=True)
+        if stage.returncode != 0 or patch.returncode != 0 or not patch.stdout:
+            result = SandboxReviewResult(
+                rc=rc, out=out, paths=tuple(paths), error="隔离复盘 patch 导出失败")
+            return result
+        result = SandboxReviewResult(rc=rc, out=out, paths=tuple(paths), patch=patch.stdout)
+        return result
+    except Exception as exc:
+        result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")
+        return result
+    finally:
+        if result.error:
+            _record_sandbox_diagnostic(sandbox_repo, pre_head, result.error, paths, log=log)
+        # 只删除本函数刚由 mkdtemp 创建且仍位于系统临时目录下的精确目录。
+        try:
+            resolved = sandbox_root.resolve()
+            temp_root = Path(tempfile.gettempdir()).resolve()
+            if resolved.parent == temp_root and resolved.name.startswith("sts2-review-sandbox-"):
+                shutil.rmtree(resolved)
+            else:
+                log(f"[llm] 隔离目录校验失败，保留供人工清理：{resolved}")
+        except OSError as exc:
+            log(f"[llm] 隔离目录清理失败，已保留：{sandbox_root}（{exc}）")
+
+
+def _path_in_specs(path: str, specs: list[str]) -> bool:
+    value = path.replace("\\", "/").rstrip("/")
+    return any(value == spec or value.startswith(spec.rstrip("/") + "/") for spec in specs)
+
+
+def _partition_review_changes(paths: list[str] | tuple[str, ...]) -> tuple[list[str], list[str], list[str]]:
+    """把工作树变更分成复盘 patch、在线并发数据和越界路径。"""
+    review, concurrent, unexpected = [], [], []
+    review_files = {item.replace("\\", "/").rstrip("/")
+                    for item in REVIEW_MUTABLE_PATHS}
+    for path in dict.fromkeys(str(item).replace("\\", "/") for item in paths):
+        if path.rstrip("/") in review_files:
+            review.append(path)
+        elif _path_in_specs(path, REVIEW_CONCURRENT_PATHS):
+            concurrent.append(path)
+        else:
+            unexpected.append(path)
+    return review, concurrent, unexpected
+
+
+def _discard_failed_review(autogit, pre_head: str, reason: str, log=print,
+                           unexpected: list[str] | None = None) -> bool:
+    """保存诊断并仅撤销受控复盘路径；在线文件和越界现场均保留。"""
+    try:
+        backup_dir = KNOWLEDGE_DIR / "code_backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        if REVIEW_LOG.exists():
+            shutil.copy2(REVIEW_LOG, backup_dir / f"failed_review_{stamp}.md")
+        diagnostic = {
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "pre_head": pre_head,
+            "reason": reason,
+            "unexpected_paths": unexpected or [],
+        }
+        (backup_dir / f"failed_review_{stamp}.json").write_text(
+            json.dumps(diagnostic, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as exc:
+        log(f"[llm] 保存失败复盘诊断异常：{exc}")
+    restored = autogit.restore_paths(pre_head, REVIEW_MUTABLE_PATHS, log=log)
+    if restored:
+        log("[llm] 失败复盘的 allowlist patch 已撤销；在线 stats/progression 与越界现场均保留")
+    else:
+        log("[llm] 失败复盘无法无损撤销；拒绝强制覆盖，现场与诊断均已保留")
+    return restored
+
+
+def _write_restart_marker(payload: dict, log=print) -> bool:
+    """原子发布 runner marker；已有待验证 marker 时必须拒绝覆盖。"""
+    temp = KNOWLEDGE_DIR / "code_backups" / (
+        f".pending_restart.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        # 同目录 hardlink 是原子且 exclusive 的发布：目标已存在时失败，因而新复盘
+        # 不能覆盖仍在健康观察期的旧 marker。unlink 临时名不影响 marker 内容。
+        os.link(temp, MARKER_FILE)
+        return True
+    except OSError as exc:
+        log(f"[llm] 写重启 marker 失败：{exc}")
+        return False
+    finally:
+        try:
+            temp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _remove_restart_marker(expected_commit: str, log=print) -> None:
+    """只清理由本次 prepare 写入、且尚未成功更新 ref 的 marker。"""
+    try:
+        current = json.loads(MARKER_FILE.read_text(encoding="utf-8"))
+        if current.get("review_commit") == expected_commit:
+            MARKER_FILE.unlink(missing_ok=True)
+    except FileNotFoundError:
+        pass
+    except (OSError, json.JSONDecodeError) as exc:
+        log(f"[llm] prepare marker 清理失败，保留诊断：{exc}")
 
 
 def _kill_orphan_review_processes(log) -> None:
@@ -1003,22 +1486,34 @@ def _worker_loop(agent, log) -> None:
     _kill_orphan_review_processes(log)
     if _review_stop_requested():
         return
-    with _queue_lock:
-        q = _load_queue_unlocked()
-        if q.get("reviewing"):
-            lost_runs = list((q["reviewing"] or {}).get("runs") or [])
-            if lost_runs:
-                log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
-                cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
-                requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
-                            for r in lost_runs]
-                # Interrupted runs are never discarded when the queue is full.
-                seen = {p.get("run") for p in requeued}
-                pending = [p for p in q.get("pending", []) if p.get("run") not in seen]
-                slots = max(0, cap - len(requeued))
-                q["pending"] = (requeued[:cap] + (pending[-slots:] if slots else []))
-            q["reviewing"] = None
-            _save_queue_unlocked(q)
+    # Startup recovery is itself a durable queue transaction.  If the file is
+    # temporarily locked/unreadable, retry in place rather than letting the daemon
+    # thread die (or treating the interrupted batch as empty).
+    while not _review_stop_requested():
+        try:
+            with _queue_lock:
+                q = _load_queue_unlocked()
+                if q.get("reviewing"):
+                    lost_runs = list((q["reviewing"] or {}).get("runs") or [])
+                    if lost_runs:
+                        log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
+                        cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
+                        requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
+                                    for r in lost_runs]
+                        # Interrupted runs are never discarded when the queue is full.
+                        seen = {p.get("run") for p in requeued}
+                        pending = [p for p in q.get("pending", []) if p.get("run") not in seen]
+                        slots = max(0, cap - len(requeued))
+                        q["pending"] = (requeued[:cap] + (pending[-slots:] if slots else []))
+                    q["reviewing"] = None
+                    _save_queue_unlocked(q)
+            break
+        except (ReviewQueueError, OSError) as exc:
+            log(f"[llm] 复盘队列恢复失败，原文件保持不变，30s 后重试：{exc}")
+            if _wait_review_stop(30):
+                return
+
+    completed_runs: tuple = ()
     while not _review_stop_requested():
         try:
             # request_restart 已置位 = 本进程已判定待重启（局间 sys.exit(42)）。
@@ -1028,6 +1523,13 @@ def _worker_loop(agent, log) -> None:
                 return
             with _queue_lock:
                 q = _load_queue_unlocked()
+                if completed_runs:
+                    current_runs = tuple((q.get("reviewing") or {}).get("runs") or [])
+                    if current_runs == completed_runs:
+                        q["reviewing"] = None
+                        _save_queue_unlocked(q)
+                    # Never clear a different process/batch's marker.
+                    completed_runs = ()
                 pending = q.get("pending", [])
                 if pending and not q.get("reviewing"):
                     batch = list(pending)
@@ -1046,10 +1548,14 @@ def _worker_loop(agent, log) -> None:
                     canceled = outcome == "canceled" or (
                         outcome == "running" and _review_stop_requested())
                     if not canceled:
+                        completed_runs = tuple(p["run"] for p in batch)
                         with _queue_lock:
                             q = _load_queue_unlocked()
-                            q["reviewing"] = None
-                            _save_queue_unlocked(q)
+                            current_runs = tuple((q.get("reviewing") or {}).get("runs") or [])
+                            if current_runs == completed_runs:
+                                q["reviewing"] = None
+                                _save_queue_unlocked(q)
+                            completed_runs = ()
                 if outcome == "canceled":
                     return
             if _wait_review_stop(5):

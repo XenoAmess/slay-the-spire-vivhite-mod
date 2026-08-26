@@ -216,9 +216,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         elif ctx.died_in_combat is not None:
             died_to_enemy = ctx.died_in_combat["comp_id"]
 
-    picked_cards = [t[1] for t in ctx.credit_tags if t[0] == "card_pick"]
-    picked_relics = [t[1] for t in ctx.credit_tags if t[0] == "relic_pick" and t[1]]
-    visited_rooms = [t[1] for t in ctx.credit_tags if t[0] == "map_node"]
+    # Run-end attribution is durable across a mid-run brain restart.  Do not read the
+    # volatile credit_tags handshake stream here: replaying that stream would duplicate
+    # novelty/UI/combat side effects, while omitting it used to erase all pre-restart
+    # picks and route visits from the final learning update.
+    attribution = getattr(ctx, "attribution_tags", [])
+    picked_cards = [t[1] for t in attribution if t[0] == "card_pick"]
+    picked_relics = [t[1] for t in attribution if t[0] == "relic_pick" and t[1]]
+    visited_rooms = [t[1] for t in attribution if t[0] == "map_node"]
 
     know.commit_run_end(outcome, victory, picked_cards, picked_relics, visited_rooms,
                         died_to_enemy, died_to_event)

@@ -10,6 +10,7 @@ Wraps the local API exposed by the STS2AIAgent mod (CharTyr/STS2-Agent):
 from __future__ import annotations
 
 import json
+import http.client
 import time
 import urllib.error
 import urllib.request
@@ -99,14 +100,28 @@ class Sts2Client:
         try:
             return self._raw_request(method, url, payload, timeout=self.action_timeout if is_action else self.read_timeout)
         except ConnectionDown:
-            # maybe port changed / game restarted; rediscover once
+            # A POST may have reached the game even when its response was lost.
+            # Transparently replaying it after rediscovery can play a second card,
+            # toggle a selection back off, or submit an event choice twice.  Probe
+            # health so the next GET can recover quickly, but surface the ambiguous
+            # action to Agent for state-based reconciliation.
+            if is_action:
+                self.discover()
+                raise
+            # Read-only requests are safe to retry once after a port change/restart.
             if self.discover():
                 return self._raw_request(method, self.base_url + path, payload,
                                          timeout=self.action_timeout if is_action else self.read_timeout)
             raise
 
     def _raw_request(self, method: str, url: str, payload=None, timeout=10.0):
-        body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        try:
+            body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        except (TypeError, ValueError) as exc:
+            # Serialization happens before urllib can send a byte.  Unlike response
+            # decoding failures, this is a definitive local request error and must
+            # not enter the unknown-success reconciliation path.
+            raise ApiError("invalid_request", f"payload is not JSON serializable: {exc}") from exc
         req = urllib.request.Request(
             url=url, method=method, data=body,
             headers={"Accept": "application/json", "Content-Type": "application/json; charset=utf-8"},
@@ -115,21 +130,57 @@ class Sts2Client:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return self._decode(resp.read())
         except urllib.error.HTTPError as exc:
-            raw = exc.read()
             try:
-                err = json.loads(raw.decode("utf-8")).get("error", {})
+                raw = exc.read()
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError,
+                    http.client.HTTPException) as read_exc:
+                # The server may already have executed a POST before the HTTP error
+                # body was truncated.  This is an unknown receipt, not a definitive
+                # gameplay rejection.
+                raise ConnectionDown(
+                    f"truncated HTTP error response from {url}: {read_exc}") from read_exc
+            try:
+                envelope = json.loads(raw.decode("utf-8"))
+                if not isinstance(envelope, dict):
+                    raise ValueError("HTTP error envelope is not an object")
+                err = envelope.get("error")
+                if not isinstance(err, dict):
+                    raise ValueError("HTTP error envelope has no error object")
                 raise ApiError(err.get("code", "unknown"), err.get("message", "request failed"),
                                status=exc.code, retryable=bool(err.get("retryable", False)))
-            except json.JSONDecodeError:
-                raise ApiError("invalid_response", f"non-JSON error body (http={exc.code})", status=exc.code)
-        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+            except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as decode_exc:
+                # A malformed HTTP error body is not a trustworthy rejection.  For
+                # POST the game may already have acted; let Agent reconcile it from
+                # the next state rather than permanently suppressing the resource.
+                raise ConnectionDown(
+                    f"invalid/truncated HTTP error body (http={exc.code}): "
+                    f"{decode_exc}") from decode_exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError,
+                http.client.HTTPException) as exc:
             raise ConnectionDown(f"cannot reach {url}: {exc}")
 
     @staticmethod
     def _decode(raw: bytes):
-        payload = json.loads(raw.decode("utf-8"))
-        if not payload.get("ok", False):
-            err = payload.get("error", {})
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            # For POST this is an unknown-success receipt, not proof of failure.
+            # Raising ConnectionDown routes it through Agent's next-state semantic
+            # reconciliation; GET remains safe for the client's one read retry.
+            raise ConnectionDown(f"invalid/truncated JSON response: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise ConnectionDown("invalid API response envelope")
+        # Never use truthiness here: ``1``, ``"true"`` and a missing key are
+        # malformed protocol receipts.  A POST may already have been applied, so
+        # treating any of them as a definitive rejection can suppress a real card,
+        # reward, or UI action without reconciliation.
+        ok = payload.get("ok")
+        if type(ok) is not bool:
+            raise ConnectionDown("invalid API response envelope: ok must be boolean")
+        if not ok:
+            err = payload.get("error")
+            if not isinstance(err, dict):
+                raise ConnectionDown("invalid API error envelope: error must be an object")
             raise ApiError(err.get("code", "unknown"), err.get("message", "request failed"),
                            status=200, retryable=bool(err.get("retryable", False)))
         return payload.get("data")

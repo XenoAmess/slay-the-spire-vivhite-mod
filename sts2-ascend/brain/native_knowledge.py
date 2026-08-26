@@ -13,6 +13,7 @@ starting.
 from __future__ import annotations
 
 from collections import defaultdict
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -21,9 +22,13 @@ from typing import Any, Iterable
 
 MANIFEST_SCHEMA = "sts2.game-knowledge-manifest/v1"
 RUNTIME_SCHEMA = "sts2.game-knowledge-runtime-record/v1"
-MECHANICS_SCHEMA = "sts2.game-knowledge-mechanics-record/v2"
+MECHANICS_SCHEMA = "sts2.game-knowledge-mechanics-record/v4"
+VALIDATION_SCHEMA = "sts2.game-knowledge-validation/v2"
+VALIDATOR_VERSION = "game_knowledge.validate/v3"
 SUPPORTED_MECHANICS_SCHEMAS = {
     "sts2.game-knowledge-mechanics-record/v1",
+    "sts2.game-knowledge-mechanics-record/v2",
+    "sts2.game-knowledge-mechanics-record/v3",
     MECHANICS_SCHEMA,
 }
 CORE_CATEGORIES = ("cards", "monsters", "relics", "potions", "events")
@@ -41,6 +46,128 @@ def _entity_id(value: Any) -> str:
 def _clip(value: Any, limit: int = 160) -> str:
     text = " ".join(str(value or "").split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _bounded_behavior_values(field: str, values: Any, limit: int = 3) -> list[str]:
+    """Keep a bounded behavior sample without wasting slots on call-chain prefixes."""
+    normalized = list(dict.fromkeys(
+        " ".join(str(value or "").split())
+        for value in (values or [])
+        if str(value or "").strip()
+    ))
+    if field == "calls":
+        normalized = [
+            value for value in normalized
+            if not any(value != other and len(value) < len(other) and value in other
+                       for other in normalized)
+        ]
+    return [_clip(value) for value in normalized[:limit]]
+
+
+_CONTROL_FLOW_KINDS = {
+    "if", "then", "else", "switch", "case", "default", "for", "foreach",
+    "await_foreach", "while", "do_while", "try_catch", "try", "catch", "finally",
+}
+
+
+def _control_flow_has_structure(nodes: Any) -> bool:
+    for node in nodes or []:
+        if not isinstance(node, dict):
+            continue
+        if node.get("kind") in _CONTROL_FLOW_KINDS:
+            return True
+        if _control_flow_has_structure(node.get("children")):
+            return True
+    return False
+
+
+def _bounded_control_flow(
+    nodes: Any, *, max_nodes: int = 32, max_depth: int = 6, max_siblings: int = 16,
+) -> list[dict[str, Any]]:
+    """Bound a normalized statement tree while retaining structural branches."""
+    budget = [max_nodes]
+
+    def select_children(children: list[Any]) -> list[Any]:
+        if len(children) <= max_siblings:
+            return children
+        structural = [
+            (index, child) for index, child in enumerate(children)
+            if isinstance(child, dict) and child.get("kind") in _CONTROL_FLOW_KINDS
+        ]
+        selected = structural[:max_siblings]
+        selected_indexes = {index for index, _child in selected}
+        for index, child in enumerate(children):
+            if len(selected) >= max_siblings:
+                break
+            if index not in selected_indexes:
+                selected.append((index, child))
+        return [child for _index, child in sorted(selected)]
+
+    def visit(node: Any, depth: int) -> dict[str, Any] | None:
+        if budget[0] <= 0 or not isinstance(node, dict):
+            return None
+        budget[0] -= 1
+        children = node.get("children") if isinstance(node.get("children"), list) else []
+        result: dict[str, Any] = {
+            "kind": str(node.get("kind") or "unknown"),
+            "expression": None if node.get("expression") is None else _clip(node["expression"], 120),
+            "children": [],
+        }
+        if depth >= max_depth:
+            if children:
+                result["truncated_children"] = len(children)
+            return result
+        chosen = select_children(children)
+        for child in chosen:
+            rendered = visit(child, depth + 1)
+            if rendered is not None:
+                result["children"].append(rendered)
+        omitted = len(children) - len(chosen)
+        if omitted > 0:
+            result["truncated_children"] = omitted
+        return result
+
+    rendered = []
+    for node in select_children(list(nodes or [])):
+        value = visit(node, 0)
+        if value is not None:
+            rendered.append(value)
+    return rendered
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _artifact_set_sha256(snapshot: Path, manifest: dict[str, Any]) -> str:
+    digest = hashlib.sha256()
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise ValueError("manifest.artifacts is not an array")
+    rows: list[tuple[str, Path]] = []
+    for item in artifacts:
+        relative = item.get("path") if isinstance(item, dict) else None
+        if not isinstance(relative, str) or not relative or "\\" in relative:
+            raise ValueError(f"invalid artifact path: {relative!r}")
+        pure = Path(relative)
+        if pure.is_absolute() or ".." in pure.parts:
+            raise ValueError(f"unsafe artifact path: {relative!r}")
+        path = (snapshot / pure).resolve()
+        path.relative_to(snapshot.resolve())
+        if not path.is_file():
+            raise ValueError(f"missing artifact: {relative}")
+        rows.append((relative, path))
+    for relative, path in sorted(rows):
+        row = json.dumps({
+            "path": relative, "size": path.stat().st_size,
+            "sha256": _sha256_file(path),
+        }, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        digest.update(row.encode("utf-8") + b"\n")
+    return digest.hexdigest()
 
 
 class NativeGameKnowledge:
@@ -85,7 +212,9 @@ class NativeGameKnowledge:
             return
         selected = candidates[0]
         try:
-            manifest = json.loads((selected / "manifest.json").read_text(encoding="utf-8"))
+            manifest_path = selected / "manifest.json"
+            manifest_bytes = manifest_path.read_bytes()
+            manifest = json.loads(manifest_bytes.decode("utf-8"))
             validation_path = selected / "validation.json"
             validation = (json.loads(validation_path.read_text(encoding="utf-8"))
                           if validation_path.is_file() else {})
@@ -97,6 +226,24 @@ class NativeGameKnowledge:
             return
         if isinstance(validation, dict) and int((validation.get("counts") or {}).get("fail", 0)):
             self.error = f"native snapshot validation has failures: {selected}"
+            return
+        binding = validation.get("validated_snapshot") if isinstance(validation, dict) else None
+        if (not isinstance(validation, dict) or validation.get("schema") != VALIDATION_SCHEMA
+                or not isinstance(binding, dict)
+                or binding.get("validator") != VALIDATOR_VERSION):
+            self.error = f"native snapshot validation is missing a trusted binding: {selected}"
+            return
+        manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
+        if binding.get("manifest_sha256") != manifest_hash:
+            self.error = f"native snapshot validation is stale for manifest: {selected}"
+            return
+        try:
+            artifact_hash = _artifact_set_sha256(selected, manifest)
+        except (OSError, ValueError) as exc:
+            self.error = f"cannot verify native snapshot artifacts {selected}: {exc}"
+            return
+        if binding.get("artifact_set_sha256") != artifact_hash:
+            self.error = f"native snapshot validation is stale for artifacts: {selected}"
             return
         if selected.name != str((manifest.get("game") or {}).get("version") or ""):
             self.error = f"native snapshot version/directory mismatch: {selected}"
@@ -259,6 +406,10 @@ class NativeGameKnowledge:
 
     @staticmethod
     def _mechanics_highlights(category: str, data: dict[str, Any]) -> dict[str, Any]:
+        behavior_fields = (
+            "calls", "creates", "assignments", "conditions", "switches", "returns",
+            "loops", "throws", "yields", "awaits", "mutations",
+        )
         properties = []
         for prop in data.get("properties") or []:
             if not isinstance(prop, dict) or not (prop.get("expressions") or prop.get("accessors")):
@@ -270,10 +421,13 @@ class NativeGameKnowledge:
             accessors = []
             for accessor in (prop.get("accessors") or [])[:2]:
                 compact_accessor = {"kind": accessor.get("kind")}
-                for field in ("calls", "creates", "assignments", "conditions", "returns"):
-                    values = accessor.get(field) or []
+                for field in behavior_fields:
+                    values = _bounded_behavior_values(field, accessor.get(field))
                     if values:
-                        compact_accessor[field] = [_clip(value) for value in values[:3]]
+                        compact_accessor[field] = values
+                if _control_flow_has_structure(accessor.get("control_flow")):
+                    compact_accessor["control_flow"] = _bounded_control_flow(
+                        accessor.get("control_flow"))
                 accessors.append(compact_accessor)
             if accessors:
                 compact_property["accessors"] = accessors
@@ -290,22 +444,46 @@ class NativeGameKnowledge:
             "potions": r"use|can|damage|block|heal|card|power|energy|target",
             "events": r"option|choose|enter|room|reward|card|relic|gold|damage|heal|combat",
         }.get(category, r"play|use|apply|reward|damage|power")
-        methods = []
-        for method in data.get("methods") or []:
+        method_candidates = []
+        for ordinal, method in enumerate(data.get("methods") or []):
             if not isinstance(method, dict):
                 continue
             joined = " ".join(
                 [str(method.get("name") or "")]
-                + [str(value) for key in ("calls", "creates", "assignments", "conditions", "returns")
+                + [str(value) for key in behavior_fields
                    for value in (method.get(key) or [])]
             )
             if not re.search(method_pattern, joined, re.I):
                 continue
+            name = str(method.get("name") or "")
+            if category == "monsters":
+                if name.casefold() == "generatemovestatemachine":
+                    priority = (0, 0, ordinal)
+                elif re.search(r"move(?:async)?$", name, re.I):
+                    # Growth/phase moves carry state mutations and are more
+                    # informative than branched moves, which in turn are more
+                    # informative than otherwise equivalent attack moves.
+                    detail_rank = (
+                        0 if method.get("mutations")
+                        else 1 if _control_flow_has_structure(method.get("control_flow"))
+                        else 2
+                    )
+                    priority = (1, detail_rank, ordinal)
+                else:
+                    priority = (2, 0, ordinal)
+            else:
+                priority = (0, 0, ordinal)
+            method_candidates.append((priority, method))
+
+        methods = []
+        for _priority, method in sorted(method_candidates, key=lambda item: item[0]):
             compact = {"name": method.get("name")}
-            for field in ("calls", "creates", "assignments", "conditions", "switches", "returns"):
-                values = method.get(field) or []
+            for field in behavior_fields:
+                values = _bounded_behavior_values(field, method.get(field))
                 if values:
-                    compact[field] = [_clip(value) for value in values[:3]]
+                    compact[field] = values
+            if _control_flow_has_structure(method.get("control_flow")):
+                compact["control_flow"] = _bounded_control_flow(method.get("control_flow"))
             methods.append(compact)
             if len(methods) >= 3:
                 break
@@ -315,10 +493,13 @@ class NativeGameKnowledge:
                 "kind": constructor.get("kind"),
                 "initializer": _clip(constructor.get("initializer")),
             }
-            for field in ("calls", "creates", "assignments", "conditions", "returns"):
-                values = constructor.get(field) or []
+            for field in behavior_fields:
+                values = _bounded_behavior_values(field, constructor.get(field))
                 if values:
-                    compact_constructor[field] = [_clip(value) for value in values[:3]]
+                    compact_constructor[field] = values
+            if _control_flow_has_structure(constructor.get("control_flow")):
+                compact_constructor["control_flow"] = _bounded_control_flow(
+                    constructor.get("control_flow"))
             constructors.append(compact_constructor)
         return {
             "properties": properties[:10],

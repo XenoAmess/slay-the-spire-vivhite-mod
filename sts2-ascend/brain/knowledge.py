@@ -13,16 +13,29 @@ so the very next decision of the same session benefits.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
+import os
+import tempfile
+import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 from native_knowledge import NativeGameKnowledge
 
 SHRINK_K = 6.0  # shrinkage strength toward prior mean
 
 _MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
+_SAVE_LOCKS_GUARD = threading.Lock()
+_SAVE_LOCKS: dict[str, threading.Lock] = {}
+_POLICY_TX_LOCKS_GUARD = threading.Lock()
+_POLICY_TX_LOCKS: dict[str, threading.RLock] = {}
+
+_READ_RETRIES = 8
+_READ_RETRY_BASE_SECONDS = 0.01
 
 DEFAULT_POLICY = {
     # --- combat ---
@@ -60,6 +73,13 @@ DEFAULT_POLICY = {
     "card_exploration_near_best_margin": 2.5,
     "card_exploration_ucb_scale": 1.0,
     "card_exploration_min_value": 1.0,
+    # 遗物探索只在学习价值近优的候选之间轮转；明确负面描述、已证伪遗物和
+    # 显著机会成本都不会因“新”而越过。宝箱/商店合计每局至多一次。
+    "relic_exploration_enabled": True,
+    "relic_exploration_run_quota": 1,
+    "relic_exploration_sample_cap": 1,
+    "relic_exploration_near_best_margin": 0.75,
+    "relic_exploration_min_value": -0.5,
     "shop_relic_threshold": 1.0,  # min learned/heuristic relic value to buy
     "removal_enabled": True,
     "removal_gold_reserve": 60,   # keep this much gold after paying removal
@@ -143,9 +163,17 @@ DEFAULT_POLICY = {
                                           # 门控：格挡来源≥min_block_cards 且非基础牌≥deck_thin_core 才生效；
                                           # 带抽牌的功能技不贬。0 = 关闭
     # --- events ---
-    "exploration_rate": 0.25,     # epsilon for trying unknown event options
+    "exploration_rate": 0.25,     # legacy review knob; event selection no longer depends on RNG
     "exploration_decay": 0.97,    # per-run decay
     "exploration_min": 0.05,
+    # 事件改用确定性欠采样轮转：仅高血、近优、非显著负收益且未触发重尾 veto
+    # 的选项有资格；每局/每候选均有硬上限，避免 epsilon 实践上永远不命中。
+    "event_exploration_enabled": True,
+    "event_exploration_run_quota": 1,
+    "event_exploration_sample_cap": 2,
+    "event_exploration_near_best_margin": 2.0,
+    "event_exploration_min_hp_pct": 0.70,
+    "event_exploration_min_value": -1.0,
     "event_worst_margin_frac": 0.05,  # 最坏情况闸门的生存余量（占最大生命，第 255~257 批次复盘）：
                                       # 选项历史单次最差生命增量 hp_min 满足 当前血+hp_min ≤ 余量 时
                                       # 判定「吃下即死」——7RJ9 局 31% 血选均值 +10.5 的「休息」，
@@ -184,6 +212,15 @@ DEFAULT_POLICY = {
                                          # 却先花 39 金买了岩石铠甲，预算跌破药水档（60金）后
                                          # 空手离店。预留窗内进攻药一次性加价压过可选卡，
                                          # 保证「路由为买药进店」的预算不被截胡
+    # 无法分类的新药水仅在有空位、有余钱、与当前最优购买近似时试购；成功样本
+    # 达上限后退出探索通道，实际使用仍必须通过 _maybe_potion 的硬仗/致死闸门。
+    "potion_exploration_enabled": True,
+    "potion_exploration_run_quota": 1,
+    "potion_exploration_sample_cap": 1,
+    "potion_exploration_near_best_margin": 0.50,
+    "potion_exploration_max_price": 60,
+    "potion_exploration_gold_reserve": 60,
+    "potion_exploration_min_hp_pct": 0.55,
     # --- 战斗端补丁键（第 58~59 局复盘） ---
     "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
     "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）
@@ -381,6 +418,10 @@ DEFAULT_STATS = {
     "cards": {},    # id -> {seen, offered, picked, plays, outcome_sum, bias}
     "card_offer_tracking": {"version": 2, "baseline_runs": 0,
                             "offers": 0, "candidate_observations": 0},
+    # 受控探索动作的成功回执计数。它不是效果评价（效果仍归 cards/relics/events
+    # 等各自账本），只回答某个候选是否已经得到过有限试用，防止确定性策略在
+    # 同构 offer 上永久偏向第一个槽位。domain -> stable key -> successful trials。
+    "novelty_trials": {},
     "relics": {},   # id -> {picked, outcome_sum, bias}
     "enemies": {},  # comp_id -> {encounters, hp_lost_sum, deaths, wins}
     "events": {},   # id -> option_key -> {n, hp_delta_sum, gold_delta_sum, deaths, hp_min, card/relic/potion_delta_sum}
@@ -400,23 +441,174 @@ DEFAULT_STATS = {
 }
 
 
-def _load_json(path: Path, default):
-    if path.exists():
+def _read_text_retry(path: Path) -> str:
+    """Read one UTF-8 file without turning transient I/O failure into absence.
+
+    Returning a default after ``PermissionError`` is unsafe for long-term memory:
+    the next successful save would atomically replace the real file with defaults.
+    Only a genuine ``FileNotFoundError`` is interpreted by :func:`_load_json` as a
+    first-run/missing file; all other ``OSError`` values retry briefly and then
+    propagate so the caller fails closed.
+    """
+    last_error: OSError | None = None
+    for attempt in range(_READ_RETRIES):
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            backup = path.with_suffix(path.suffix + f".broken-{int(time.time())}")
-            try:
-                path.replace(backup)
-            except OSError:
-                pass
+            return path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raise
+        except OSError as exc:
+            last_error = exc
+            if attempt + 1 < _READ_RETRIES:
+                time.sleep(_READ_RETRY_BASE_SECONDS * (attempt + 1))
+    assert last_error is not None
+    raise last_error
+
+
+def _load_json(path: Path, default):
+    try:
+        raw = _read_text_retry(path)
+    except FileNotFoundError:
+        return copy.deepcopy(default)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # The read itself succeeded, so this is malformed persisted data rather
+        # than a transient lock/read failure.  Preserve the exact bad bytes under
+        # a collision-resistant name before allowing the historical default-based
+        # recovery path.  Never quarantine on OSError.
+        backup = path.with_suffix(
+            path.suffix + f".broken-{time.time_ns()}-{os.getpid()}-{threading.get_ident()}")
+        try:
+            path.replace(backup)
+        except OSError as exc:
+            # Recovery is safe only if the malformed bytes were actually preserved.
+            # Returning defaults while quarantine failed would let the next save
+            # overwrite the sole copy of the damaged (but potentially recoverable)
+            # long-term memory file.
+            raise OSError(f"cannot quarantine malformed JSON {path}: {exc}") from exc
     return json.loads(json.dumps(default))
 
 
+def _lock_file_handle(handle, timeout: float = 480.0) -> None:
+    """Acquire a one-byte advisory lock without signalling another process."""
+    deadline = time.monotonic() + timeout
+    handle.seek(0, os.SEEK_END)
+    if handle.tell() == 0:
+        handle.write(b"\0")
+        handle.flush()
+    while True:
+        try:
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except (OSError, BlockingIOError):
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"timed out acquiring policy transaction lock: {handle.name}")
+            time.sleep(0.05)
+
+
+def _unlock_file_handle(handle) -> None:
+    try:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        pass
+
+
+@contextmanager
+def _policy_transaction_lock(path: Path) -> Iterator[None]:
+    """Serialize policy read/merge/replace with review Git transactions.
+
+    In the real checkout, lazily importing ``autogit`` lets this transaction use
+    the exact repository lock already held by review patch application.  The lazy
+    import avoids a module cycle during startup.  Standalone/test knowledge roots
+    outside that repository use a persistent sibling advisory lock instead.
+    """
+    resolved = path.resolve()
+    try:
+        import autogit  # lazy: autogit does not import knowledge
+
+        repo = Path(autogit.REPO_DIR).resolve()
+        resolved.relative_to(repo)
+        if not (repo / ".git").exists():
+            raise ValueError("autogit repository metadata is unavailable")
+    except (ImportError, AttributeError, OSError, RuntimeError, ValueError):
+        autogit = None
+
+    if autogit is not None:
+        with autogit.repository_lock():
+            yield
+        return
+
+    key = str(resolved).casefold()
+    with _POLICY_TX_LOCKS_GUARD:
+        local_lock = _POLICY_TX_LOCKS.setdefault(key, threading.RLock())
+    with local_lock:
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:24]
+        lock_path = Path(tempfile.gettempdir()) / f"sts2-ascend-policy-{digest}.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = lock_path.open("a+b")
+        try:
+            _lock_file_handle(handle)
+            yield
+        finally:
+            _unlock_file_handle(handle)
+            handle.close()
+
+
 def _save_json(path: Path, data) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    tmp.replace(path)
+    """Durably replace JSON without sharing a temporary filename across writers.
+
+    The brain, watchdog, and review lifecycle may overlap briefly.  A fixed
+    ``<name>.tmp`` lets two writers truncate and interleave the same temporary
+    file before either replace, producing malformed long-term memory.  A unique
+    sibling plus ``os.replace`` makes every visible version complete; ownership
+    rules still prevent independent processes from intentionally editing the
+    same aggregate.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(data, ensure_ascii=False, indent=1)
+    key = str(path.resolve()).casefold()
+    with _SAVE_LOCKS_GUARD:
+        path_lock = _SAVE_LOCKS.setdefault(key, threading.Lock())
+    with path_lock:
+        tmp_name = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                    mode="w", encoding="utf-8", newline="\n", delete=False,
+                    dir=path.parent, prefix=f".{path.name}.", suffix=".tmp") as tmp:
+                tmp_name = tmp.name
+                tmp.write(payload)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+            # Windows can transiently deny replacement while another process has
+            # just closed the destination.  Retry that narrow condition; never
+            # fall back to an in-place truncate/write.
+            for attempt in range(8):
+                try:
+                    os.replace(tmp_name, path)
+                    tmp_name = None
+                    break
+                except PermissionError:
+                    if attempt == 7:
+                        raise
+                    time.sleep(0.01 * (attempt + 1))
+        finally:
+            if tmp_name is not None:
+                try:
+                    Path(tmp_name).unlink()
+                except OSError:
+                    pass
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -470,6 +662,7 @@ class Knowledge:
                 "offers": 0,
                 "candidate_observations": 0,
             }
+        self.stats.setdefault("novelty_trials", {})
         for e in self.stats.get("cards", {}).values():
             e.setdefault("offered", 0)
         # 三方合并写盘的基准点（第 90~91 批复盘）：加载即快照，save 时逐键对比
@@ -572,21 +765,21 @@ class Knowledge:
         以「上次同步点 _policy_sync」为基准逐键三方合并：
           内存值 == 基准值 → 该键本进程没动过 → 采纳磁盘值（外部修改实时生效）
           内存值 != 基准值 → 该键是本进程演化产物 → 保留内存值
-        合并结果回填内存并刷新基准；磁盘不可读时退化为整体回写（旧行为）。
+        合并结果回填内存并刷新基准。读取失败必须向上传播：把瞬时锁冲突
+        当成空磁盘再整体回写，会永久覆盖本来完好的策略文件。
         stats/progression 只有本进程写入，维持整体写盘不变。
         """
         path = self.root / "policy.json"
-        disk = {}
-        if path.exists():
-            try:
-                loaded = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(loaded, dict):
-                    disk = loaded
-            except (json.JSONDecodeError, OSError):
-                disk = {}
-        self._adopt_disk_policy(disk)
-        _save_json(path, self.policy)
-        self._policy_sync = dict(self.policy)
+        # The lock covers the *entire* read -> three-way merge -> atomic replace.
+        # Merely locking _save_json leaves a TOCTOU window in which a review patch
+        # or another brain can be read and then overwritten by our stale snapshot.
+        with _policy_transaction_lock(path):
+            loaded = _load_json(path, {})
+            if not isinstance(loaded, dict):
+                raise ValueError(f"policy.json root must be an object: {path}")
+            self._adopt_disk_policy(loaded)
+            _save_json(path, self.policy)
+            self._policy_sync = dict(self.policy)
 
     def _adopt_disk_policy(self, disk: dict) -> list[str]:
         """按三方合并语义把磁盘 policy 并入内存，返回被采纳的键名（供留痕）。
@@ -622,23 +815,22 @@ class Knowledge:
         避免与外部复盘会话的写入互相踩踏）。
         """
         path = self.root / "policy.json"
-        disk = {}
-        if path.exists():
-            try:
-                loaded = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(loaded, dict):
-                    disk = loaded
-            except (json.JSONDecodeError, OSError):
-                disk = {}
-        adopted = self._adopt_disk_policy(disk)
-        added: list[str] = []
-        for k, v in DEFAULT_POLICY.items():
-            if k not in self.policy:
-                self.policy[k] = copy.deepcopy(v)
-                added.append(k)
-        if adopted or added:
-            self._policy_sync = dict(self.policy)
-        return adopted + added
+        # The asynchronous reviewer can save the same Knowledge instance while the
+        # main loop hot-refreshes it.  Reuse the policy transaction lock so neither
+        # thread mutates ``self.policy`` during the other's JSON serialization.
+        with _policy_transaction_lock(path):
+            loaded = _load_json(path, {})
+            if not isinstance(loaded, dict):
+                raise ValueError(f"policy.json root must be an object: {path}")
+            adopted = self._adopt_disk_policy(loaded)
+            added: list[str] = []
+            for k, v in DEFAULT_POLICY.items():
+                if k not in self.policy:
+                    self.policy[k] = copy.deepcopy(v)
+                    added.append(k)
+            if adopted or added:
+                self._policy_sync = dict(self.policy)
+            return adopted + added
 
     # ---------- value estimates (shrunk toward prior) ----------
 
@@ -892,6 +1084,30 @@ class Knowledge:
             return None
         w = e.get("hp_min")
         return float(w) if w is not None else None
+
+    def novelty_trial_count(self, domain: str, key: str) -> int:
+        """Return successful controlled trials for one stable candidate key."""
+        domains = self.stats.get("novelty_trials") or {}
+        entries = domains.get(str(domain).lower()) or {}
+        try:
+            return max(0, int(entries.get(str(key), 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def commit_novelty_trial(self, domain: str, key: str) -> None:
+        """Record one *accepted* controlled-exploration action.
+
+        Policy calls this only after observing its ``novelty_trial`` tag in
+        ``ctx.credit_tags``.  Rejected HTTP attempts therefore cannot consume a
+        persistent sample or close the exploration gate.
+        """
+        domain = str(domain or "").strip().lower()
+        key = str(key or "").strip()
+        if not domain or not key:
+            return
+        domains = self.stats.setdefault("novelty_trials", {})
+        entries = domains.setdefault(domain, {})
+        entries[key] = min(999, self.novelty_trial_count(domain, key) + 1)
 
     # ---------- online commits ----------
 

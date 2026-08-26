@@ -7,18 +7,20 @@ Usage:  py -m brain            (from sts2-ascend/ directory)
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import random
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from client import ConnectionDown, Sts2Client
+from client import ApiError, ConnectionDown, Sts2Client
 from knowledge import Knowledge
 from lifecycle import pid_file, request_stop, stop_requested, wait_for_stop
 from policy import Policy
@@ -39,6 +41,7 @@ REPO_DIR = BASE_DIR.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 _LOG_PATH = KNOWLEDGE_DIR / "brain.log"
+REVIEW_HEALTHY_RUNS = 2
 
 
 def log(msg: str = "") -> None:
@@ -100,13 +103,33 @@ def _reward_delta(old_sig: tuple, new_sig: tuple) -> tuple:
             new_sig[1] - old_sig[1])
 
 
+# Only these run-level facts are consumed again at final reflection.  ``credit_tags``
+# is also an in-process handshake stream (novelty trials, selection clicks, combat
+# commits, reward attempts, ...); persisting that whole stream would replay volatile
+# side effects after a brain restart.
+_DURABLE_ATTRIBUTION_KINDS = frozenset({"card_pick", "relic_pick", "map_node"})
+
+
+def _durable_attribution_tags(raw_tags) -> list[tuple]:
+    """Validate the small, replay-safe subset stored in incremental run logs."""
+    result: list[tuple] = []
+    for raw in raw_tags or []:
+        if (not isinstance(raw, (tuple, list)) or len(raw) < 2
+                or raw[0] not in _DURABLE_ATTRIBUTION_KINDS):
+            continue
+        result.append(tuple(raw))
+    return result
+
+
 @dataclass
 class RunContext:
     """Per-run tracking for credit assignment and reflection."""
     run_id: str = "run_unknown"
     ascension: int = 0
     started_at: str = ""
+    run_number: int = 0                      # 生涯序号；异步复盘按批精确取证
     credit_tags: list = field(default_factory=list)   # ("card_pick", id) etc.
+    attribution_tags: list = field(default_factory=list)  # durable run-end facts only
     decisions: list = field(default_factory=list)     # full decision log
     combat: dict | None = None                        # active combat tracker
     combat_agg: dict | None = None                    # 同层多段战斗聚合账（第 97~98 批复盘）
@@ -127,9 +150,22 @@ class RunContext:
     run_finalized: bool = False
     finalize_requested: bool = False
     rest_before_boss: bool = False   # 本次地图选择指向 Boss 前夜的篝火（_rest 消费）
+    rest_proj_hp_pct: float | None = None
+    rest_next_fight_loss_frac: float = 0.0
+    check_timeline: bool = False
+    timeline_tried: set = field(default_factory=set)
+    # Stall-analysis state is combat-scoped.  These are declared fields instead of
+    # dynamic attributes so reset_for() reliably overwrites them at every new run.
+    stall_analysis_asked: bool = False
+    stall_analysis_needed: bool = False
+    stall_giveup: bool = False
+    force_giveup: bool = False
+    force_offense: bool = False
+    stall_grind_grace: bool = False
 
-    def reset_for(self, run_id: str, ascension: int):
-        self.__init__(run_id=run_id, ascension=ascension, started_at=time.strftime("%Y-%m-%d %H:%M:%S"))
+    def reset_for(self, run_id: str, ascension: int, run_number: int = 0):
+        self.__init__(run_id=run_id, ascension=ascension, run_number=run_number,
+                      started_at=time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 class Agent:
@@ -145,6 +181,9 @@ class Agent:
         self.runs_played = 0
         self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
         self._last_policy_refresh = 0.0  # 策略热同步节流（第 123~124 局复盘）
+        self._boot_head = ""  # run() 启动时固定；测试构造 Agent 不访问 Git
+        self._ambiguous_action = None  # response-lost POST awaiting next-state reconciliation
+        self._api_race_retry = None  # repeated refresh races, diagnostic only
 
     # ---------------- quipper（白绮碎碎念） ----------------
 
@@ -222,7 +261,15 @@ class Agent:
 
     # ---------------- run context tracking ----------------
 
-    def _track(self, state: dict, decision) -> None:
+    def _track(self, state: dict, decision=None) -> None:
+        """Apply observations from the state returned by the game.
+
+        This phase intentionally ignores the decision that will be sent next.  It
+        must run *before* policy evaluation so a new run/combat identity exists when
+        the policy consumes success tags from the previous HTTP response.  Keeping
+        the optional argument preserves the small direct-call test helpers and makes
+        the observation-only contract explicit.
+        """
         run = state.get("run") or {}
         run_id = state.get("run_id") or "run_unknown"
         screen = state.get("screen", "UNKNOWN")
@@ -239,7 +286,8 @@ class Agent:
                 # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
                 log("[agent] 检测到上一局异常结束，按失败归档")
                 self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
-            self.ctx.reset_for(run_id, asc)
+            next_run = int(self.know.stats.get("global", {}).get("runs", 0)) + 1
+            self.ctx.reset_for(run_id, asc, next_run)
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
             # 断线重连续接局史（第 218 批复盘）：大脑在局中途崩溃/签名故障自杀后，
             # 新进程遇同 run_id 旧账另起——218 局 F23 重启把 23 层深局记成
@@ -249,10 +297,19 @@ class Agent:
             if prior and (prior.get("decisions") or prior.get("combat_notes")):
                 self.ctx.decisions = list(prior.get("decisions") or [])
                 self.ctx.combat_notes = list(prior.get("combat_notes") or [])
+                # Resume only terminal attribution facts.  The general credit_tags
+                # ledger is deliberately left empty because Policy consumes it as a
+                # volatile success/handshake stream; replaying it would double-count
+                # novelty, card plays and UI attempts after every restart.
+                self.ctx.attribution_tags = _durable_attribution_tags(
+                    prior.get("attribution_tags"))
                 if prior.get("started_at"):
                     self.ctx.started_at = prior["started_at"]
+                if prior.get("run_number"):
+                    self.ctx.run_number = int(prior["run_number"])
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
-                    f"{len(self.ctx.combat_notes)} 条战斗记录）")
+                    f"{len(self.ctx.combat_notes)} 条战斗记录 / "
+                    f"{len(self.ctx.attribution_tags)} 条长期归因）")
 
         # combat enter/exit tracking
         # 战斗连续性：Boss/精英转阶段过场、结算弹层会让屏幕在 COMBAT↔MODAL 间闪断。
@@ -263,7 +320,8 @@ class Agent:
         if screen == "COMBAT":
             enemies_now = (state.get("combat") or {}).get("enemies", [])
             comp = "+".join(sorted({(e.get("enemy_id") or "?") for e in enemies_now if e.get("is_alive")}))
-            node_type = next((t[1] for t in reversed(self.ctx.credit_tags) if t[0] == "map_node"), "Unknown")
+            node_type = next((t[1] for t in reversed(self.ctx.attribution_tags)
+                              if t[0] == "map_node"), "Unknown")
             if self.ctx.combat is None:
                 self._start_combat(run, comp, node_type, hp)
             elif self.ctx.combat_bridge:
@@ -364,7 +422,26 @@ class Agent:
                 self.ctx.event_chain = []
                 self.ctx.pending_event_fight_loss = 0.0
 
-        # credit tags from the decision just made
+        # 观察态转换必须在动作请求前执行：即使本 tick 的新动作失败，上一动作已经
+        # 导致的离场、战斗结束、生命/金币变化仍是真实事实，不能丢失。决策本身的
+        # tags/ctx 副作用则统一留给 _commit_successful_action；否则 409/断线也会
+        # 伪造拿牌、路线、休息和事件选择样本。
+        self.ctx.last_hp, self.ctx.last_gold = hp, gold
+
+    def _commit_successful_action(self, state: dict, decision) -> None:
+        """Commit one accepted HTTP action and its credit/context effects.
+
+        ``_track`` is deliberately observation-only.  The API may reject a request
+        with 409, raise on a signature mismatch, or disconnect before confirming it;
+        none of those attempts may enter the learning ledger.  Once the response is
+        accepted, use the *pre-action* state to establish event/rest snapshots, append
+        all credit tags, count successful card plays, and persist the decision trail.
+        """
+        run = state.get("run") or {}
+        screen = state.get("screen", "UNKNOWN")
+        hp = run.get("current_hp", self.ctx.last_hp)
+        gold = run.get("gold", self.ctx.last_gold)
+
         for tag in decision.tags:
             if tag[0] == "event_choice":
                 # 事件内换项抉择先行结算（第 214 批复盘）：同一事件未离场就改选
@@ -403,28 +480,700 @@ class Agent:
                 if tag[1] == "heal" and hp >= run.get("max_hp", 1) - 2:
                     self.ctx.rests_healed_at_full += 1
             self.ctx.credit_tags.append(tag)
+            if tag and tag[0] in _DURABLE_ATTRIBUTION_KINDS:
+                self.ctx.attribution_tags.append(tuple(tag))
 
-        self.ctx.last_hp, self.ctx.last_gold = hp, gold
-        if decision.action:
-            self.ctx.decisions.append({
-                "t": time.strftime("%H:%M:%S"), "screen": screen,
-                "floor": run.get("floor", 0), "hp": hp, "gold": gold,
-                "action": decision.action, "params": decision.params, "reason": decision.reason,
-            })
-            self._save_run_progress(run)
-
-    def _commit_successful_action(self, decision) -> None:
-        """Commit observations that require a confirmed action response.
-
-        ``_track`` runs before the HTTP action so it can settle state transitions and
-        persist an attempted decision.  Counting a card there made ``plays`` mean
-        *attempts*: a 409, signature error, or disconnect still taught the zero-play
-        veto that the card had worked.  Only an accepted action response may now add a
-        successful play sample.
-        """
         for tag in decision.tags:
             if tag[0] == "play_card" and tag[1]:
                 self.know.commit_card_play(tag[1])
+
+        self.ctx.decisions.append({
+            "t": time.strftime("%H:%M:%S"), "screen": screen,
+            "floor": run.get("floor", 0), "hp": hp, "gold": gold,
+            "action": decision.action, "params": decision.params, "reason": decision.reason,
+        })
+        self._save_run_progress(run)
+
+    @staticmethod
+    def _stable_sig(value) -> str:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                          separators=(",", ":"), default=str)
+
+    @staticmethod
+    def _indexed_item(items, index):
+        """Find one payload item by API index without trusting list position."""
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            raw = item.get("index", item.get("i"))
+            try:
+                if int(raw) == int(index):
+                    return item
+            except (TypeError, ValueError):
+                if raw == index:
+                    return item
+        return None
+
+    @classmethod
+    def _run_material(cls, state: dict) -> dict:
+        """Run fields whose change proves a resource/deck/inventory effect."""
+        run = state.get("run") or {}
+
+        def card_sig(card):
+            return (card.get("index"), card.get("card_id"), card.get("instance_id"),
+                    card.get("uuid"), card.get("name"), bool(card.get("upgraded")))
+
+        return {
+            "character_id": run.get("character_id"),
+            "ascension": run.get("ascension"),
+            "floor": run.get("floor"),
+            "act_id": run.get("act_id"),
+            "current_hp": run.get("current_hp"),
+            "max_hp": run.get("max_hp"),
+            "gold": run.get("gold"),
+            "max_energy": run.get("max_energy"),
+            "deck": tuple(card_sig(c) for c in (run.get("deck") or [])
+                          if isinstance(c, dict)),
+            "relics": tuple((r.get("index"), r.get("relic_id"), r.get("name"),
+                              r.get("counter"))
+                             for r in (run.get("relics") or []) if isinstance(r, dict)),
+            # can_use/usage may flicker with screen readiness; identity/occupancy is
+            # the durable proof that a potion was consumed or obtained.
+            "potions": tuple((p.get("index"), bool(p.get("occupied")),
+                               p.get("potion_id"), p.get("name"))
+                              for p in (run.get("potions") or []) if isinstance(p, dict)),
+        }
+
+    @classmethod
+    def _combat_material(cls, state: dict) -> dict:
+        """Combat deltas caused by a card/potion, minus readiness-only fields."""
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+
+        def card_sig(card):
+            # playable/targets/why are endpoint readiness and can flicker while the
+            # same physical card remains in hand.
+            return (card.get("index"), card.get("card_id"), card.get("instance_id"),
+                    card.get("uuid"), card.get("name"), bool(card.get("upgraded")),
+                    card.get("energy_cost"), card.get("star_cost"),
+                    bool(card.get("costs_x")), bool(card.get("star_costs_x")))
+
+        def creature_sig(creature):
+            return {
+                "index": creature.get("index"),
+                "id": creature.get("enemy_id") or creature.get("player_id"),
+                "current_hp": creature.get("current_hp"),
+                "max_hp": creature.get("max_hp"),
+                "block": creature.get("block"),
+                "is_alive": creature.get("is_alive"),
+                "powers": creature.get("powers") or [],
+            }
+
+        return {
+            "turn": state.get("turn"),
+            "player": {
+                "current_hp": player.get("current_hp"),
+                "max_hp": player.get("max_hp"),
+                "block": player.get("block"),
+                "energy": player.get("energy"),
+                "stars": player.get("stars"),
+                "focus": player.get("focus"),
+                "powers": player.get("powers") or [],
+                "orbs": player.get("orbs") or [],
+                "cards_played_this_turn": player.get("cards_played_this_turn"),
+                "attacks_played_this_turn": player.get("attacks_played_this_turn"),
+                "skills_played_this_turn": player.get("skills_played_this_turn"),
+            },
+            "hand": tuple(card_sig(c) for c in (combat.get("hand") or [])
+                          if isinstance(c, dict)),
+            "enemies": tuple(creature_sig(e) for e in (combat.get("enemies") or [])
+                             if isinstance(e, dict)),
+            "players": tuple(creature_sig(p) for p in (combat.get("players") or [])
+                             if isinstance(p, dict)),
+        }
+
+    @staticmethod
+    def _potion_at(state: dict, index):
+        run = state.get("run") or {}
+        for potion in run.get("potions") or []:
+            if not isinstance(potion, dict):
+                continue
+            try:
+                same = int(potion.get("index")) == int(index)
+            except (TypeError, ValueError):
+                same = potion.get("index") == index
+            if same:
+                return (bool(potion.get("occupied")), potion.get("potion_id"),
+                        potion.get("name"))
+        return None
+
+    @classmethod
+    def _screen_material(cls, state: dict, key: str):
+        """Payload for a concrete screen, plus durable run resources."""
+        return {
+            key: state.get(key),
+            "run": cls._run_material(state),
+        }
+
+    @staticmethod
+    def _selection_reconcile_key(state: dict) -> tuple:
+        sel = state.get("selection") or {}
+        cards = tuple((c.get("index"), c.get("card_id"), c.get("instance_id"),
+                       c.get("uuid"), bool(c.get("upgraded")))
+                      for c in (sel.get("cards") or []))
+        return ((state.get("run") or {}).get("floor", 0),
+                (sel.get("kind") or "").lower(), sel.get("prompt") or "",
+                sel.get("min_select"), sel.get("max_select"), cards)
+
+    @staticmethod
+    def _run_identity(state: dict):
+        run = state.get("run") or {}
+        return state.get("run_id") or run.get("run_id")
+
+    @staticmethod
+    def _card_identity(card: dict | None) -> tuple | None:
+        if not isinstance(card, dict):
+            return None
+        physical = card.get("instance_id") or card.get("uuid")
+        if physical:
+            return ("physical", str(physical))
+        return ("logical", str(card.get("card_id") or card.get("name") or ""),
+                bool(card.get("upgraded")))
+
+    @classmethod
+    def _card_count(cls, cards, target: dict | None) -> int:
+        identity = cls._card_identity(target)
+        if identity is None:
+            return 0
+        return sum(1 for card in (cards or [])
+                   if cls._card_identity(card) == identity)
+
+    @staticmethod
+    def _relic_identity(relic: dict | None) -> tuple | None:
+        if not isinstance(relic, dict):
+            return None
+        relic_id = str(relic.get("relic_id") or "")
+        name = str(relic.get("name") or "")
+        if relic_id:
+            return ("id", relic_id)
+        if name:
+            return ("name", name)
+        return None
+
+    @classmethod
+    def _relic_count(cls, relics, target: dict | None) -> int:
+        identity = cls._relic_identity(target)
+        if identity is None:
+            return 0
+        return sum(1 for relic in (relics or [])
+                   if cls._relic_identity(relic) == identity)
+
+    @staticmethod
+    def _treasure_options(state: dict) -> list:
+        chest = state.get("chest") or {}
+        for key in ("relic_options", "relics", "options"):
+            value = chest.get(key)
+            if isinstance(value, list):
+                return value
+        return []
+
+    @classmethod
+    def _treasure_target_present(cls, state: dict, target: dict | None) -> bool:
+        identity = cls._relic_identity(target)
+        if identity is None:
+            return False
+        return any(cls._relic_identity(item) == identity
+                   for item in cls._treasure_options(state))
+
+    @staticmethod
+    def _reward_identity(item: dict | None) -> tuple | None:
+        if not isinstance(item, dict):
+            return None
+        return (item.get("index"), str(item.get("reward_type") or ""),
+                str(item.get("description") or ""))
+
+    @classmethod
+    def _reward_target_present(cls, state: dict, target: dict | None) -> bool:
+        identity = cls._reward_identity(target)
+        if identity is None:
+            return False
+        return any(cls._reward_identity(item) == identity
+                   for item in ((state.get("reward") or {}).get("rewards") or []))
+
+    @classmethod
+    def _event_resource_material(cls, state: dict) -> dict:
+        """Durable resources an event option can directly change.
+
+        Floor/act and readiness fields are intentionally excluded: they can change
+        while an event click is still queued and must not manufacture success.
+        """
+        run = cls._run_material(state)
+        return {key: run.get(key) for key in (
+            "current_hp", "max_hp", "gold", "max_energy", "deck", "relics",
+            "potions")}
+
+    @classmethod
+    def _event_page_material(cls, state: dict) -> tuple:
+        event = state.get("event") or {}
+        options = tuple((item.get("index"), item.get("text_key"),
+                         item.get("title"), item.get("description"),
+                         bool(item.get("is_proceed")))
+                        for item in (event.get("options") or [])
+                        if isinstance(item, dict))
+        return (event.get("event_id"), event.get("title"),
+                event.get("page"), event.get("step"),
+                bool(event.get("is_finished")), options)
+
+    def _remember_ambiguous_action(self, state: dict, decision,
+                                   *, accepted: bool = False) -> None:
+        """Retain an unacknowledged action until the next successful state GET."""
+        try:
+            before = copy.deepcopy(state)
+        except Exception:
+            before = state
+        self._ambiguous_action = {
+            "state": before,
+            "decision": decision,
+            "polls": 0,
+            "accepted": bool(accepted),
+        }
+        try:
+            self.policy.note_action_uncertain(decision.action, decision.tags,
+                                              before, decision.params)
+        except Exception as exc:
+            log(f"[agent] 模糊动作的 UI 语义暂存失败（仍保留 Agent 对账）：{exc}")
+
+    def _ambiguous_action_outcome(self, before: dict, after: dict, decision) -> str:
+        """Return ``applied`` only for an action-specific material postcondition.
+
+        ``unproven`` includes both an unchanged state and a superseding transition
+        whose cause cannot safely be attributed to the lost POST.  The caller waits
+        for a few fresh GETs before allowing Policy to retry, avoiding both an early
+        duplicate and false learning credit.
+        """
+        action = decision.action
+        params = decision.params or {}
+        before_screen = before.get("screen")
+        after_screen = after.get("screen")
+        before_run_id = self._run_identity(before)
+        after_run_id = self._run_identity(after)
+        if before_run_id is None and after_run_id is None:
+            same_run = True  # legacy/test payloads without run identity
+        else:
+            # If one side has already lost its run id, it may be a new run/menu.
+            # Never credit an in-run action from that boundary transition.
+            same_run = (before_run_id is not None and after_run_id is not None
+                        and before_run_id == after_run_id)
+
+        run_boundary_actions = {
+            "open_character_select", "embark", "continue_run",
+            "return_to_main_menu",
+        }
+        if action not in run_boundary_actions and not same_run:
+            return "unproven"
+
+        if action == "remove_card_at_shop":
+            # Opening card removal is proven only by its semantic follow-up screen.
+            return ("applied" if (after_screen == "CARD_SELECTION" and same_run
+                    and (after.get("run") or {}).get("floor", 0)
+                    == (before.get("run") or {}).get("floor", 0)) else "unproven")
+
+        if action == "select_deck_card":
+            if after_screen != "CARD_SELECTION":
+                return "applied"
+            if self._selection_reconcile_key(after) != self._selection_reconcile_key(before):
+                return "applied"
+            old_count = int(((before.get("selection") or {}).get("selected_count", 0)) or 0)
+            new_count = int(((after.get("selection") or {}).get("selected_count", 0)) or 0)
+            return "applied" if new_count > old_count else "unproven"
+
+        if action == "confirm_selection":
+            if after_screen != "CARD_SELECTION":
+                return "applied"
+            return ("applied" if self._selection_reconcile_key(after)
+                    != self._selection_reconcile_key(before) else "unproven")
+
+        if action == "play_card":
+            # A later turn cannot prove which card (if any) was played; committing
+            # the old hand index there can credit/blacklist a newly drawn card.
+            if before_screen != "COMBAT" or after_screen != "COMBAT":
+                return ("applied" if (before_screen == "COMBAT" and same_run
+                        and after_screen in ("CARD_SELECTION", "MODAL", "REWARD", "GAME_OVER"))
+                        else "unproven")
+            if not same_run or before.get("turn") != after.get("turn"):
+                return "unproven"
+            before_combat = before.get("combat") or {}
+            after_combat = after.get("combat") or {}
+            before_player = before_combat.get("player") or {}
+            after_player = after_combat.get("player") or {}
+            old_plays = before_player.get("cards_played_this_turn")
+            new_plays = after_player.get("cards_played_this_turn")
+            if (isinstance(old_plays, int) and isinstance(new_plays, int)
+                    and new_plays > old_plays):
+                return "applied"
+
+            # Energy/enemy/power animation changes alone are not proof.  Require
+            # the concrete card instance (or, on old payloads, one logical copy)
+            # to have left the same-turn hand.
+            old_card = self._indexed_item(before_combat.get("hand") or [],
+                                          params.get("card_index"))
+            if old_card is not None and self._card_count(
+                    after_combat.get("hand") or [], old_card) < self._card_count(
+                        before_combat.get("hand") or [], old_card):
+                return "applied"
+            return "unproven"
+
+        if action == "end_turn":
+            if before_screen == "COMBAT" and after_screen != "COMBAT":
+                return "applied"
+            old_turn, new_turn = before.get("turn"), after.get("turn")
+            return ("applied" if (same_run and isinstance(old_turn, int)
+                    and isinstance(new_turn, int) and new_turn > old_turn)
+                    else "unproven")
+
+        if action == "use_potion":
+            slot = params.get("option_index")
+            if self._potion_at(before, slot) != self._potion_at(after, slot):
+                return "applied"
+            if before_screen == "COMBAT" and after_screen in ("CARD_SELECTION", "REWARD", "GAME_OVER"):
+                return "applied"
+            return "unproven"
+
+        if action == "claim_reward":
+            if before_screen == "REWARD" and after_screen != "REWARD":
+                return "applied"
+            index = params.get("option_index")
+            old = self._indexed_item(((before.get("reward") or {}).get("rewards") or []), index)
+            new = self._indexed_item(((after.get("reward") or {}).get("rewards") or []), index)
+            if old is not None and (not self._reward_target_present(after, old)
+                                    or (new is not None
+                                        and not new.get("claimable", True))):
+                return "applied"
+            before_reward = before.get("reward") or {}
+            after_reward = after.get("reward") or {}
+            if (old is not None
+                    and str(old.get("reward_type") or "") in ("Card", "SpecialCard")
+                    and not before_reward.get("pending_card_choice")
+                    and (after_reward.get("pending_card_choice")
+                         or after_reward.get("card_options"))):
+                return "applied"
+            return "unproven"
+
+        if action == "choose_reward_card":
+            if before_screen in ("REWARD", "CARD_SELECTION") and after_screen not in ("REWARD", "CARD_SELECTION"):
+                return "applied"
+            before_reward = before.get("reward") or {}
+            after_reward = after.get("reward") or {}
+            before_cards = (before_reward.get("card_options")
+                            or (before.get("selection") or {}).get("cards") or [])
+            after_cards = (after_reward.get("card_options")
+                           or (after.get("selection") or {}).get("cards") or [])
+            selected = self._indexed_item(before_cards, params.get("option_index"))
+            before_deck = (before.get("run") or {}).get("deck") or []
+            after_deck = (after.get("run") or {}).get("deck") or []
+            if selected is not None and (
+                    self._card_count(after_deck, selected)
+                    > self._card_count(before_deck, selected)
+                    or self._card_count(after_cards, selected)
+                    < self._card_count(before_cards, selected)):
+                return "applied"
+            return "unproven"
+
+        if action == "skip_reward_cards":
+            if before_screen in ("REWARD", "CARD_SELECTION") and after_screen not in ("REWARD", "CARD_SELECTION"):
+                return "applied"
+            before_reward = before.get("reward") or {}
+            after_reward = after.get("reward") or {}
+            before_cards = (before_reward.get("card_options")
+                            or (before.get("selection") or {}).get("cards") or [])
+            after_cards = (after_reward.get("card_options")
+                           or (after.get("selection") or {}).get("cards") or [])
+            if before_cards and (not after_cards
+                    or (before_reward.get("pending_card_choice")
+                        and not after_reward.get("pending_card_choice"))):
+                return "applied"
+            return "unproven"
+
+        if action in ("collect_rewards_and_proceed", "resolve_rewards"):
+            if before_screen in ("REWARD", "CARD_SELECTION") and after_screen not in ("REWARD", "CARD_SELECTION"):
+                return "applied"
+            before_claimable = sum(1 for item in
+                                   ((before.get("reward") or {}).get("rewards") or [])
+                                   if item.get("claimable"))
+            after_claimable = sum(1 for item in
+                                  ((after.get("reward") or {}).get("rewards") or [])
+                                  if item.get("claimable"))
+            return "applied" if after_claimable < before_claimable else "unproven"
+
+        if action == "choose_event_option":
+            if before_screen == "EVENT" and after_screen != "EVENT":
+                return "applied"
+            if after_screen != "EVENT":
+                return "unproven"
+            if self._event_page_material(before) != self._event_page_material(after):
+                return "applied"
+            return ("applied" if self._event_resource_material(before)
+                    != self._event_resource_material(after) else "unproven")
+
+        if action == "choose_map_node":
+            if before_screen == "MAP" and after_screen != "MAP":
+                return "applied"
+            if after_screen != "MAP":
+                return "unproven"
+            old_run, new_run = self._run_material(before), self._run_material(after)
+            return ("applied" if (old_run.get("floor") != new_run.get("floor")
+                    or old_run.get("act_id") != new_run.get("act_id")) else "unproven")
+
+        if action == "choose_rest_option":
+            if before_screen == "REST" and after_screen != "REST":
+                return "applied"
+            if after_screen != "REST":
+                return "unproven"
+            old_run, new_run = self._run_material(before), self._run_material(after)
+            if (old_run.get("current_hp") != new_run.get("current_hp")
+                    or old_run.get("max_hp") != new_run.get("max_hp")
+                    or old_run.get("deck") != new_run.get("deck")):
+                return "applied"
+            return "unproven"
+
+        if action in ("buy_card", "buy_relic", "buy_potion"):
+            collection = {"buy_card": "cards", "buy_relic": "relics",
+                          "buy_potion": "potions"}[action]
+            index = params.get("option_index")
+            old = self._indexed_item(((before.get("shop") or {}).get(collection) or []), index)
+            new = self._indexed_item(((after.get("shop") or {}).get(collection) or []), index)
+            if old is not None and (new is None or not new.get("is_stocked", new.get("stocked", True))):
+                return "applied"
+            old_run, new_run = self._run_material(before), self._run_material(after)
+            inventory = {"buy_card": "deck", "buy_relic": "relics",
+                         "buy_potion": "potions"}[action]
+            if (old is not None and old_run.get("gold") is not None
+                    and new_run.get("gold") is not None
+                    and new_run.get("gold") < old_run.get("gold")
+                    and old_run.get(inventory) != new_run.get(inventory)):
+                return "applied"
+            return "unproven"
+
+        if action == "choose_treasure_relic":
+            old = self._indexed_item(self._treasure_options(before),
+                                     params.get("option_index"))
+            if old is None:
+                return "unproven"
+            before_run = before.get("run") or {}
+            after_run = after.get("run") or {}
+            if self._relic_count(after_run.get("relics") or [], old) \
+                    > self._relic_count(before_run.get("relics") or [], old):
+                return "applied"
+
+            # Some API versions keep the chest visible for one frame and either
+            # remove only the selected option or mark that exact row claimed.  A
+            # generic chest payload/screen change is deliberately insufficient:
+            # it can be an animation refresh or an unrelated proceed transition.
+            after_chest = after.get("chest")
+            if isinstance(after_chest, dict) and after_screen == "CHEST":
+                if not self._treasure_target_present(after, old):
+                    return "applied"
+                exact = next((item for item in self._treasure_options(after)
+                              if self._relic_identity(item) == self._relic_identity(old)),
+                             None)
+                if isinstance(exact, dict) and (
+                        exact.get("claimed") is True
+                        or exact.get("is_claimed") is True
+                        or exact.get("claimable") is False):
+                    return "applied"
+                claimed_id = (after_chest.get("claimed_relic_id")
+                              or after_chest.get("selected_relic_id"))
+                if claimed_id and str(claimed_id) == str(old.get("relic_id") or ""):
+                    return "applied"
+            return "unproven"
+
+        # Deterministic UI transitions.  Each action is tied to its own payload or
+        # expected destination; unrelated endpoint/readiness changes are ignored.
+        destination = {
+            "open_character_select": {"CHARACTER_SELECT"},
+            "embark": {"MAP", "COMBAT", "EVENT", "REST", "SHOP"},
+            "continue_run": {"MAP", "COMBAT", "EVENT", "REST", "SHOP", "REWARD"},
+            "return_to_main_menu": {"MAIN_MENU", "TIMELINE"},
+        }.get(action)
+        if destination is not None:
+            return "applied" if after_screen in destination and after_screen != before_screen else "unproven"
+
+        domain_by_action = {
+            "select_character": "character_select",
+            "increase_ascension": "character_select",
+            "decrease_ascension": "character_select",
+            "choose_timeline_epoch": "timeline",
+            "confirm_timeline_overlay": "timeline",
+            "open_timeline": "timeline",
+            "close_main_menu_submenu": "timeline",
+            "confirm_unlock": "unlock",
+            "open_chest": "chest",
+            "open_shop_inventory": "shop",
+            "close_shop_inventory": "shop",
+            "confirm_modal": "modal",
+            "dismiss_modal": "modal",
+            "crystal_clear_cell": "crystal_sphere",
+            "choose_bundle": "bundles",
+            "confirm_bundle": "bundles",
+            "choose_capstone_option": "capstone",
+        }
+        domain = domain_by_action.get(action)
+        if domain is not None:
+            if before_screen != after_screen:
+                return "applied"
+            return ("applied" if self._stable_sig(before.get(domain))
+                    != self._stable_sig(after.get(domain)) else "unproven")
+
+        if action == "proceed":
+            if before_screen != after_screen:
+                return "applied"
+            key = {
+                "REWARD": "reward", "SHOP": "shop", "CHEST": "chest",
+                "EVENT": "event", "REST": "rest", "GAME_OVER": "game_over",
+            }.get(before_screen)
+            if key and self._stable_sig(before.get(key)) != self._stable_sig(after.get(key)):
+                return "applied"
+            return "unproven"
+
+        # Unknown actions are never credited from a generic full-state difference.
+        # Waiting then re-evaluating the live state is safer than double-submitting
+        # or poisoning a learning ledger with an unrelated transition.
+        return "unproven"
+
+    def _ambiguous_action_applied(self, before: dict, after: dict, decision) -> bool:
+        """Compatibility helper used by focused self-checks."""
+        return self._ambiguous_action_outcome(before, after, decision) == "applied"
+
+    def _reconcile_ambiguous_action(self, state: dict) -> str | None:
+        """Commit inferred success before tracking its observed outcome, else retry."""
+        pending = self._ambiguous_action
+        if not isinstance(pending, dict):
+            return None
+        before = pending["state"]
+        decision = pending["decision"]
+        if self._ambiguous_action_outcome(before, state, decision) != "applied":
+            polls = int(pending.get("polls", 0)) + 1
+            max_polls = 12 if pending.get("accepted") else 3
+            if polls < max_polls:
+                pending["polls"] = polls
+                log(f"[agent] 动作 {decision.action} 丢失回执；尚无动作特定效果，"
+                    f"等待新状态确认（{polls}/{max_polls}）")
+                return "wait"
+            self._ambiguous_action = None
+            if pending.get("accepted"):
+                try:
+                    self.policy.note_action_deferred(
+                        decision.action, decision.tags, before, decision.params)
+                except Exception:
+                    pass
+            prefix = "服务端已受理但" if pending.get("accepted") else ""
+            log(f"[agent] 动作 {decision.action} {prefix}连续状态未见效果，"
+                "释放为精确目标冷却后的重新评估")
+            return "retry"
+        self._ambiguous_action = None
+        try:
+            self._commit_successful_action(before, decision)
+            log(f"[agent] 动作 {decision.action} 丢失回执；已由下一状态确认成功并补交事务账")
+            return "applied"
+        except Exception as exc:
+            # The game-side effect is already proven.  Never turn bookkeeping failure
+            # into a duplicate action; preserve the live state and continue.
+            log(f"[agent] 动作 {decision.action} 已由状态确认成功，但补交本地事务账失败：{exc}")
+            return "applied"
+
+    @staticmethod
+    def _api_error_is_transient(exc: ApiError) -> bool:
+        """Classify errors that deserve a fresh-state retry before local penalty."""
+        if bool(getattr(exc, "retryable", False)):
+            return True
+        code = str(getattr(exc, "code", "") or "").lower()
+        message = str(exc).lower()
+        if int(getattr(exc, "status", 0) or 0) == 409:
+            if (any(term in message for term in ("not supported", "disabled"))
+                    or (code == "invalid_target" and any(term in message for term in (
+                        "requires target_index", "requires option_index",
+                        "requires card_index")))):
+                return False
+            # invalid_action/invalid_target frequently mean that the state advanced
+            # between GET and POST (card no longer playable, target reindexed,
+            # potion readiness flicker).  Agent gives the exact target a bounded
+            # cooldown after repeated identical rejections; it is never promoted to
+            # a permanent gameplay blacklist solely because an animation lasted.
+            if code in ("invalid_action", "invalid_target", "invalid_parameter",
+                        "validation_error", "state_unavailable"):
+                return True
+        return False
+
+    def _api_retry_key(self, state: dict, decision, exc: ApiError) -> tuple:
+        action = decision.action
+        if action in ("play_card", "end_turn", "use_potion"):
+            material = {
+                "screen": state.get("screen"),
+                "run_id": state.get("run_id"),
+                "combat": self._combat_material(state),
+                "potions": self._run_material(state).get("potions"),
+            }
+        else:
+            domain = {
+                "choose_event_option": "event",
+                "choose_map_node": "map",
+                "choose_rest_option": "rest",
+                "choose_treasure_relic": "chest",
+                "claim_reward": "reward",
+                "choose_reward_card": "reward",
+                "skip_reward_cards": "reward",
+                "collect_rewards_and_proceed": "reward",
+                "select_deck_card": "selection",
+                "confirm_selection": "selection",
+                "buy_card": "shop", "buy_relic": "shop",
+                "buy_potion": "shop", "remove_card_at_shop": "shop",
+            }.get(action)
+            material = {
+                "screen": state.get("screen"),
+                "run_id": state.get("run_id"),
+                "domain": state.get(domain) if domain else None,
+                "run": self._run_material(state),
+            }
+        return (decision.action,
+                self._stable_sig(decision.params or {}),
+                self._stable_sig(material),
+                str(getattr(exc, "code", "") or "").lower())
+
+    def _defer_api_error_once(self, state: dict, decision, exc: ApiError) -> bool:
+        """Keep refresh-race 409s out of permanent gameplay blacklists.
+
+        The live payload is authoritative on the next tick.  Repeated 409s are
+        counted for diagnostics/watchdog progress but remain non-definitive: an
+        animation window can outlast one settle interval, and permanently skipping
+        a still-present reward, potion, or affordable card is worse than another
+        state-driven attempt.  Parameter/schema failures are classified definitive
+        by :meth:`_api_error_is_transient` and still take the failure path.
+        """
+        if not self._api_error_is_transient(exc):
+            self._api_race_retry = None
+            return False
+        if bool(getattr(exc, "retryable", False)):
+            # 503/state_unavailable is explicitly declared retryable by the server;
+            # do not turn infrastructure readiness into a gameplay blacklist.
+            self._api_race_retry = None
+            return True
+        key = self._api_retry_key(state, decision, exc)
+        if (isinstance(self._api_race_retry, tuple)
+                and len(self._api_race_retry) == 2
+                and self._api_race_retry[0] == key):
+            count = int(self._api_race_retry[1]) + 1
+        else:
+            count = 1
+        self._api_race_retry = (key, count)
+        if count % 3 == 0:
+            try:
+                self.policy.note_action_deferred(
+                    decision.action, decision.tags, state, decision.params)
+                log(f"  ↳ 动作 {decision.action} 连续刷新竞争×{count}；"
+                    "仅冷却该精确目标，让同屏其他候选先行")
+            except Exception as defer_exc:
+                log(f"  ↳ 临时轮转目标失败（保持无永久惩罚）：{defer_exc}")
+        return True
 
     def _save_run_progress(self, run: dict, force: bool = False) -> None:
         """对局日志增量存档（第 218 批复盘）：旧实现只在终局落盘——大脑在局
@@ -442,14 +1191,19 @@ class Agent:
         if self.ctx.run_finalized:
             return
         floor = run.get("floor", 0)
+        attribution_tags = _durable_attribution_tags(self.ctx.attribution_tags)
         if not force:
-            last_n, last_f = getattr(self, "_rlog_mark", (0, -1))
-            if len(self.ctx.decisions) - last_n < 15 and floor == last_f:
+            mark = getattr(self, "_rlog_mark", (0, -1, -1))
+            last_n, last_f = mark[:2]
+            last_a = mark[2] if len(mark) >= 3 else -1
+            if (len(self.ctx.decisions) - last_n < 15 and floor == last_f
+                    and len(attribution_tags) == last_a):
                 return
-        self._rlog_mark = (len(self.ctx.decisions), floor)
+        self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
         try:
             self.know.save_run_log(self.ctx.run_id, {
                 "run_id": self.ctx.run_id,
+                "run_number": self.ctx.run_number,
                 "ascension": self.ctx.ascension,
                 "started_at": self.ctx.started_at,
                 "victory": False,
@@ -457,9 +1211,63 @@ class Agent:
                 "floor": floor,
                 "decisions": self.ctx.decisions,
                 "combat_notes": self.ctx.combat_notes,
+                "attribution_tags": attribution_tags,
             })
         except OSError:
             pass
+
+    def _mark_review_run_healthy(self) -> None:
+        """Retire a review rollback marker only after reloaded code completes runs.
+
+        A fixed number of API ticks proves little: rare screens can crash minutes
+        later, and the old 50-tick deletion made runner rollback impossible.  The
+        process records its startup HEAD and counts only complete runs whose loaded
+        history contains the marker's review commit.  The repository lock prevents
+        racing a newly prepared marker from the asynchronous reviewer.
+        """
+        marker = KNOWLEDGE_DIR / "pending_restart.json"
+        if autogit is None or not self._boot_head or not marker.exists():
+            return
+        try:
+            with autogit.repository_lock(timeout=5.0):
+                info = json.loads(marker.read_text(encoding="utf-8"))
+                review_commit = str(info.get("review_commit") or "")
+                if not review_commit:
+                    return
+                loaded = subprocess.run(
+                    ["git", "merge-base", "--is-ancestor", review_commit,
+                     self._boot_head], cwd=str(REPO_DIR),
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    timeout=10, check=False)
+                if loaded.returncode != 0:
+                    return
+                healthy_runs = int(info.get("healthy_runs", 0) or 0) + 1
+                if healthy_runs >= REVIEW_HEALTHY_RUNS:
+                    marker.unlink(missing_ok=True)
+                    log(f"[agent] 复盘代码已完成 {healthy_runs} 局，撤销安全标记转为健康")
+                    return
+                info["healthy_runs"] = healthy_runs
+                info["last_healthy_run_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                tmp_name = None
+                try:
+                    with tempfile.NamedTemporaryFile(
+                            mode="w", encoding="utf-8", newline="\n", delete=False,
+                            dir=marker.parent, prefix=".pending_restart.",
+                            suffix=".tmp") as tmp:
+                        tmp_name = tmp.name
+                        json.dump(info, tmp, ensure_ascii=False, indent=1)
+                        tmp.flush()
+                        os.fsync(tmp.fileno())
+                    os.replace(tmp_name, marker)
+                    tmp_name = None
+                finally:
+                    if tmp_name is not None:
+                        try:
+                            Path(tmp_name).unlink()
+                        except OSError:
+                            pass
+        except (OSError, ValueError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
+            log(f"[agent] 复盘健康标记更新失败（保留 marker）：{exc}")
 
     def _note_signature_failure(self, action: str, exc: Exception) -> None:
         """签名级动作失败熔断（第 218 批复盘）：长驻进程不热重载代码——复盘
@@ -529,7 +1337,15 @@ class Agent:
                            # 不结算），掉血将在事件结算时归因到选项链
                            "from_event": self.ctx.pending_event is not None}
         self.ctx.current_combat_is_hard = node_type in ("Elite", "Boss")
-        self.ctx.stall_giveup = False  # 僵局摆烂标记按场清零（第 109 局复盘：归因隔离）
+        # Every stall verdict belongs to exactly this combat.  A previous giveup or
+        # offense verdict must never make the next encounter surrender/force attacks
+        # from turn one, and every long combat gets its own analysis opportunity.
+        self.ctx.stall_analysis_asked = False
+        self.ctx.stall_analysis_needed = False
+        self.ctx.stall_giveup = False
+        self.ctx.force_giveup = False
+        self.ctx.force_offense = False
+        self.ctx.stall_grind_grace = False
         # 高危组合自动升级硬仗（第 65~66 局复盘）：历史死亡率 ≥30% 的杀手组合
         # （FUZZY_WURM+SHRINKER_BEETLE 25战11死、KIN 双子 15战9死）大量出现在
         # 普通怪房，药水 premium 门此前对它们永不开启——两局均带药进坟。
@@ -696,18 +1512,24 @@ class Agent:
         # settle 挂账后没有下一场战斗来冲销，必须在此补记，否则最后一战丢失
         self._flush_combat_agg()
         lesson = finalize_run(self.know, self.ctx, victory, floor)
+        # finalize_run 是生涯 runs 计数的唯一提交点；以提交后的值校正序号，
+        # 让 review_queue 的第 N 局能精确关联这份原始证据。
+        self.ctx.run_number = int(self.know.stats.get("global", {}).get("runs", 0))
         log("\n" + lesson)
         path = self.know.save_run_log(self.ctx.run_id, {
             "run_id": self.ctx.run_id,
+            "run_number": self.ctx.run_number,
             "ascension": self.ctx.ascension,
             "started_at": self.ctx.started_at,
             "victory": victory,
             "floor": floor,
             "decisions": self.ctx.decisions,
             "combat_notes": self.ctx.combat_notes,
+            "attribution_tags": _durable_attribution_tags(self.ctx.attribution_tags),
         })
         log(f"[agent] 对局日志已保存：{path.name}")
         self.know.save()
+        self._mark_review_run_healthy()
         # 每局结束把复盘请求投入异步队列（工作线程消化，游玩不等待；多局积压会合并追及）
         if llm_review is not None:
             llm_review.enqueue_review(self, log=log)
@@ -727,16 +1549,34 @@ class Agent:
 
     def _launch_stuck_analysis(self, state: dict) -> None:
         """战斗超 100 回合：异步启动 AI 分析，判定 grind/offense/giveup。"""
+        combat_identity = self.ctx.combat
         th = getattr(self, "_stuck_thread", None)
-        if th is not None and th.is_alive():
+        if (th is not None and th.is_alive()
+                and getattr(self, "_stuck_thread_combat", None) is combat_identity):
             return
         self._stuck_thread = threading.Thread(target=self._stuck_analysis_run,
-                                              args=(state,), daemon=True,
+                                              args=(state, combat_identity), daemon=True,
                                               name="stall-analysis")
+        self._stuck_thread_combat = combat_identity
         self._stuck_thread.start()
         log("[stall] 战斗回合超限，已自主启动 AI 死循环分析…")
 
-    def _stuck_analysis_run(self, state: dict) -> None:
+    def _commit_stall_verdict(self, verdict: str | None, combat_identity) -> bool:
+        """Apply an asynchronous verdict only to the combat that requested it."""
+        if combat_identity is None or self.ctx.combat is not combat_identity:
+            log("[stall] 分析完成时战斗身份已变化，丢弃过期结论")
+            return False
+        if verdict == "giveup":
+            self.ctx.force_giveup = True
+        elif verdict == "offense":
+            self.ctx.force_offense = True
+        elif verdict == "grind":
+            self.ctx.stall_grind_grace = True
+        else:
+            return False
+        return True
+
+    def _stuck_analysis_run(self, state: dict, combat_identity=None) -> None:
         try:
             if stop_requested():
                 return
@@ -802,21 +1642,64 @@ class Agent:
             verdict = m.group(1) if m else None
             reason = out.strip().splitlines()[1][:120] if verdict and len(out.strip().splitlines()) > 1 else ""
             log(f"[stall] AI 死循环分析结论：{verdict or '未解析出'} {reason}")
-            if verdict == "giveup":
-                self.ctx.force_giveup = True
-            elif verdict == "offense":
-                self.ctx.force_offense = True
-            elif verdict == "grind":
-                self.ctx.stall_grind_grace = True
+            self._commit_stall_verdict(verdict, combat_identity)
         except Exception as exc:
             log(f"[stall] AI 死循环分析失败（确定性兜底仍生效）：{exc}")
 
     # ---------------- watchdog ----------------
 
     def _signature(self, state: dict):
-        return (state.get("screen"), state.get("turn"),
-                tuple(state.get("available_actions", [])),
-                (state.get("run") or {}).get("floor"))
+        """Return the semantically relevant state used by the stall watchdog.
+
+        The old four-field signature treated every tick in the same combat turn as
+        identical.  Successful card plays commonly leave ``screen``, ``turn``, floor,
+        and available action names unchanged, so HP/block/energy/hand/enemy progress
+        could still trip escalation or even abandonment.  Keep the signature bounded
+        to decision-relevant JSON fields and canonicalise mappings/action ordering so
+        harmless key/list ordering does not masquerade as progress.
+        """
+        def freeze(value):
+            if isinstance(value, dict):
+                return tuple(sorted((str(k), freeze(v)) for k, v in value.items()))
+            if isinstance(value, (list, tuple)):
+                return tuple(freeze(v) for v in value)
+            if isinstance(value, set):
+                return tuple(sorted(freeze(v) for v in value))
+            return value
+
+        run = state.get("run") or {}
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+
+        hand = []
+        for card in combat.get("hand") or []:
+            hand.append(tuple((key, freeze(card.get(key))) for key in (
+                "index", "card_id", "instance_id", "uuid", "upgraded", "playable",
+                "energy_cost", "costs_x", "requires_target", "valid_target_indices",
+                "dynamic_values") if key in card))
+
+        enemies = []
+        for enemy in combat.get("enemies") or []:
+            enemies.append(tuple((key, freeze(enemy.get(key))) for key in (
+                "index", "enemy_id", "instance_id", "name", "current_hp", "max_hp",
+                "block", "is_alive", "is_hittable", "powers", "intents")
+                                 if key in enemy))
+
+        # Non-combat screens can also update their choices without changing the set of
+        # endpoint names.  These payloads are small and directly drive Policy routing.
+        screen_payload = tuple((key, freeze(state.get(key))) for key in (
+            "event", "reward", "selection", "map", "shop", "rest", "chest",
+            "game_over", "modal", "unlock") if key in state)
+
+        return (
+            state.get("screen"), state.get("turn"),
+            tuple(sorted(str(a) for a in (state.get("available_actions") or []))),
+            tuple(run.get(key) for key in
+                  ("floor", "current_hp", "max_hp", "gold", "ascension")),
+            tuple(player.get(key) for key in
+                  ("current_hp", "max_hp", "block", "energy")),
+            tuple(hand), tuple(enemies), screen_payload,
+        )
 
     def _watchdog(self, state: dict):
         sig = self._signature(state)
@@ -842,6 +1725,10 @@ class Agent:
     def run(self) -> None:
         log("[agent] sts2-ascend 自主学习智能体启动")
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
+        try:
+            self._boot_head = autogit.head() if autogit is not None else ""
+        except Exception:
+            self._boot_head = ""
         self._launch_quipper()
         if not self.ensure_game():
             log("[agent] 启动阶段收到停止请求")
@@ -850,7 +1737,6 @@ class Agent:
         log(f"[agent] 已连接 mod v{health.get('mod_version')}（游戏 {health.get('game_version')}）")
         g = self.know.stats["global"]
         log(f"[agent] 生涯战绩：{g['wins']}/{g['runs']} 胜｜当前目标进阶 {self.know.progression['current_ascension']}")
-        self._boot_ticks = 0  # 稳定运行 50 tick 后删除重启标记（向 runner 证明新代码可用）
         if llm_review is not None:
             llm_review.resume_review_queue(self, log=log)
 
@@ -879,13 +1765,6 @@ class Agent:
                     return
                 continue
 
-            self._boot_ticks += 1
-            if self._boot_ticks == 50:
-                try:
-                    (KNOWLEDGE_DIR / "pending_restart.json").unlink(missing_ok=True)
-                except OSError:
-                    pass
-
             # 策略热同步（第 123~124 局复盘）：长驻进程此前只在启动时执行
             # setdefault——复盘会话给 DEFAULT_POLICY 新增的键（如 122 批的
             # elite_grey_survival_floor）要等重启才可见，运行库 JSON 的冷修改
@@ -902,11 +1781,33 @@ class Agent:
                 except Exception as exc:
                     log(f"[agent] 策略热同步失败（忽略，不影响游玩）：{exc}")
 
+            # A POST response may be lost after the game already applied the action.
+            # Reconcile that action from this fresh GET *before* observation tracking:
+            # event/map/rest snapshots and combat-end credit must exist before _track
+            # consumes the resulting transition.
+            ambiguous_result = self._reconcile_ambiguous_action(state)
+
+            # Observe the state transition before asking Policy for the next action.
+            # In particular, the first combat frame must create ctx.combat before
+            # Policy imports the previous action's transactional success tags.  The
+            # former decide→track order let the first successful card tag be imported
+            # and then immediately erased by Policy's new-combat resets on the next
+            # tick, reopening one-per-combat trials and corrupting race counters.
+            self._track(state)
+
             # run finalization hook (policy asked for it on GAME_OVER)
             if self.ctx.finalize_requested and not self.ctx.run_finalized:
                 go = state.get("game_over") or {}
                 floor = go.get("floor") or (self.ctx.decisions[-1]["floor"] if self.ctx.decisions else 0)
                 self._finalize(bool(go.get("is_victory")), int(floor or 0))
+                continue
+
+            # A response-lost POST can still be settling after the first fresh GET.
+            # Observe each frame, but send no new action until three consecutive
+            # polls fail to show its action-specific postcondition.
+            if ambiguous_result == "wait":
+                if wait_for_stop(self.cfg["poll_interval"]):
+                    return
                 continue
 
             forced = self._watchdog(state)
@@ -924,31 +1825,67 @@ class Agent:
                 floor = (state.get("run") or {}).get("floor", 0)
                 log(f"[{time.strftime('%H:%M:%S')}] [{state.get('screen')}/F{floor}] {decision.reason}")
 
-            self._track(state, decision)
-
             if decision.action:
                 if stop_requested():
                     return
                 try:
                     resp = self.client.act(decision.action, **decision.params)
-                    status = resp.get("status", "?")
+                    status = resp.get("status", "?") if isinstance(resp, dict) else "?"
                     # "completed" 是 mod 对成功动作的标准返回（第 65~66 局复盘实锤）：
                     # 旧白名单漏掉它，导致每张成功打出的牌都被 note_action_failed
                     # 拉黑；叠加手牌位置索引前移，等于每打出一张牌就误杀一张
                     # 未出牌——65 局致死回合手握打击被禁玩阵亡、66 局 F5 双打击
                     # 被禁玩后 1 能量弃权白吃 15 意图
                     if status not in ("ok", "success", "pending", "stable", "completed"):
-                        log(f"  ↳ 动作 {decision.action} 返回 {status}: {resp.get('message', '')}")
-                        self.policy.note_action_failed(decision.action, decision.tags)
+                        message = resp.get("message", "") if isinstance(resp, dict) else repr(resp)
+                        log(f"  ↳ 动作 {decision.action} 返回 {status}: {message}")
+                        # A syntactically valid HTTP response with an unknown status
+                        # still cannot prove non-execution.  Reconcile from /state
+                        # instead of poisoning retry/learning state.
+                        self._remember_ambiguous_action(state, decision)
+                    elif status == "pending" or resp.get("stable") is False:
+                        # The server clicked/enqueued the action but its own settle
+                        # wait expired.  This is accepted-but-unobserved: committing
+                        # reward/potion/selection/event suppression now can skip the
+                        # real resource on the next stale GET.  Hold the full
+                        # Decision and commit only after an action-specific state
+                        # postcondition appears.
+                        self._remember_ambiguous_action(
+                            state, decision, accepted=True)
+                        response_state = resp.get("state")
+                        if isinstance(response_state, dict):
+                            self._reconcile_ambiguous_action(response_state)
                     else:
-                        self._commit_successful_action(decision)
+                        # HTTP 回执确认后才提交 credit/ctx 和记账。把记账异常与动作
+                        # 失败分开：服务端已经执行成功时，不得反过来拉黑该动作。
+                        try:
+                            self._commit_successful_action(state, decision)
+                            self._api_race_retry = None
+                        except Exception as exc:
+                            log(f"  ↳ 动作 {decision.action} 已成功，但本地记账失败：{exc}")
                 except ConnectionDown:
                     log("[agent] 动作执行时断线")
+                    self._remember_ambiguous_action(state, decision)
                     if wait_for_stop(3):
+                        return
+                except ApiError as exc:
+                    log(f"  ↳ 动作 {decision.action} 被 API 拒绝：{exc}")
+                    if self._defer_api_error_once(state, decision, exc):
+                        log("  ↳ 判定为状态刷新竞争；刷新状态后重试一次，不拉黑动作/卡牌")
+                    else:
+                        self.policy.note_action_failed(decision.action, decision.tags)
+                        self._note_signature_failure(decision.action, exc)
+                    if wait_for_stop(self.cfg["action_settle"]):
                         return
                 except Exception as exc:
                     log(f"  ↳ 动作 {decision.action} 失败：{exc}")
-                    self.policy.note_action_failed(decision.action, decision.tags)
+                    # Client normalises every definitive local/request failure to
+                    # ApiError.  A remaining exception can therefore have happened
+                    # after a custom/test transport sent the POST; prefer semantic
+                    # reconciliation over poisoning permanent tried state.  Keep
+                    # the legacy TypeError signature fuse so stale hot code still
+                    # restarts/blacklists after three deterministic occurrences.
+                    self._remember_ambiguous_action(state, decision)
                     self._note_signature_failure(decision.action, exc)
                     if wait_for_stop(self.cfg["action_settle"]):
                         return

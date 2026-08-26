@@ -2,11 +2,87 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sts2-ascend.local/schemas/mechanics-record.schema.json",
   "title": "STS2 static mechanics fact record",
+  "$defs": {
+    "stringArray": {"type": "array", "items": {"type": "string"}},
+    "controlFlowNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "expression", "children"],
+      "properties": {
+        "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "expression": {"type": ["string", "null"]},
+        "children": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/controlFlowNode"}
+        }
+      }
+    },
+    "controlFlow": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/controlFlowNode"}
+    },
+    "behavior": {
+      "type": "object",
+      "required": [
+        "calls", "creates", "assignments", "conditions", "switches", "returns",
+        "loops", "throws", "yields", "awaits", "mutations", "control_flow"
+      ],
+      "properties": {
+        "calls": {"$ref": "#/$defs/stringArray"},
+        "creates": {"$ref": "#/$defs/stringArray"},
+        "assignments": {"$ref": "#/$defs/stringArray"},
+        "conditions": {"$ref": "#/$defs/stringArray"},
+        "switches": {"$ref": "#/$defs/stringArray"},
+        "returns": {"$ref": "#/$defs/stringArray"},
+        "loops": {"$ref": "#/$defs/stringArray"},
+        "throws": {"$ref": "#/$defs/stringArray"},
+        "yields": {"$ref": "#/$defs/stringArray"},
+        "awaits": {"$ref": "#/$defs/stringArray"},
+        "mutations": {"$ref": "#/$defs/stringArray"},
+        "control_flow": {"$ref": "#/$defs/controlFlow"}
+      }
+    },
+    "accessor": {
+      "allOf": [
+        {"$ref": "#/$defs/behavior"},
+        {
+          "required": ["kind"],
+          "properties": {"kind": {"enum": ["get", "set", "init"]}}
+        }
+      ]
+    },
+    "constructor": {
+      "allOf": [
+        {"$ref": "#/$defs/behavior"},
+        {
+          "required": ["kind", "parameters", "initializer"],
+          "properties": {
+            "kind": {"enum": ["instance", "static", "primary"]},
+            "parameters": {"$ref": "#/$defs/stringArray"},
+            "initializer": {"type": ["string", "null"]}
+          }
+        }
+      ]
+    },
+    "method": {
+      "allOf": [
+        {"$ref": "#/$defs/behavior"},
+        {
+          "required": ["name", "return_type", "parameters"],
+          "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "return_type": {"type": "string"},
+            "parameters": {"$ref": "#/$defs/stringArray"}
+          }
+        }
+      ]
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "category", "type_name", "name", "entry_id", "provenance", "data"],
   "properties": {
-    "schema": {"const": "sts2.game-knowledge-mechanics-record/v2"},
+    "schema": {"const": "sts2.game-knowledge-mechanics-record/v4"},
     "category": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
     "type_name": {"type": "string", "minLength": 1},
     "name": {"type": "string", "minLength": 1},
@@ -17,7 +93,7 @@
       "properties": {
         "source": {"type": "string"},
         "assembly_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "extractor_schema_version": {"const": 2}
+        "extractor_schema_version": {"const": 4}
       },
       "additionalProperties": false
     },
@@ -29,20 +105,43 @@
         "fields", "properties", "constructors", "methods"
       ],
       "properties": {
+        "type_name": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "category": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "entry_id": {"type": ["string", "null"]},
+        "type_kind": {"type": "string", "minLength": 1},
+        "is_abstract": {"type": "boolean"},
+        "is_nested": {"type": "boolean"},
+        "declaring_type_name": {"type": ["string", "null"]},
         "base_types": {"type": "array", "items": {"type": "string"}},
-        "fields": {"type": "array", "items": {"type": "object"}},
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "value", "is_const"],
+            "properties": {
+              "name": {"type": "string"},
+              "type": {"type": "string"},
+              "value": {"type": ["string", "null"]},
+              "is_const": {"type": "boolean"}
+            }
+          }
+        },
         "properties": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["name", "type", "expressions", "accessors"],
             "properties": {
-              "accessors": {"type": "array", "items": {"type": "object"}}
+              "name": {"type": "string"},
+              "type": {"type": "string"},
+              "expressions": {"$ref": "#/$defs/stringArray"},
+              "accessors": {"type": "array", "items": {"$ref": "#/$defs/accessor"}}
             }
           }
         },
-        "constructors": {"type": "array", "items": {"type": "object"}},
-        "methods": {"type": "array", "items": {"type": "object"}}
+        "constructors": {"type": "array", "items": {"$ref": "#/$defs/constructor"}},
+        "methods": {"type": "array", "items": {"$ref": "#/$defs/method"}}
       },
       "additionalProperties": true
     }

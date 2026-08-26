@@ -14,7 +14,7 @@
     },
     {
       "details": {},
-      "message": "Verified 137 artifacts",
+      "message": "Verified 147 artifacts",
       "name": "artifacts.integrity",
       "status": "pass"
     },
@@ -49,6 +49,17 @@
       "message": "11 localization files have asymmetric key sets",
       "name": "localization.key_symmetry",
       "status": "warning"
+    },
+    {
+      "details": {
+        "status_counts": {
+          "bilingual": 6937,
+          "missing_zhs": 91
+        }
+      },
+      "message": "Validated 7028 bilingual localization records",
+      "name": "localization.bilingual_catalog",
+      "status": "pass"
     },
     {
       "details": {},
@@ -112,26 +123,48 @@
     },
     {
       "details": {},
-      "message": "Runtime moves are empty, but static mechanics cover all 107 monster IDs",
-      "name": "runtime.monsters.moves",
-      "status": "pass"
-    },
-    {
-      "details": {},
       "message": "Mechanics assembly hash matches",
       "name": "mechanics.source",
       "status": "pass"
     },
     {
       "details": {},
-      "message": "Validated 1995 mechanics records",
+      "message": "Mechanics manifest and 44 artifact declarations are self-consistent",
+      "name": "mechanics.manifest",
+      "status": "pass"
+    },
+    {
+      "details": {},
+      "message": "Validated 2202 mechanics records",
       "name": "mechanics.schema",
+      "status": "pass"
+    },
+    {
+      "details": {},
+      "message": "Validated nested control flow for 9307 members (5897 branch/loop nodes)",
+      "name": "mechanics.control_flow",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "extra_assembly_types": [
+          "MegaCrit.Sts2.Core.Models.AbstractModelSubtypes"
+        ]
+      },
+      "message": "All 1724 PCK model source types have top-level mechanics facts",
+      "name": "mechanics.model_source_closure",
       "status": "pass"
     },
     {
       "details": {},
       "message": "All available runtime joins are complete",
       "name": "mechanics.runtime_join",
+      "status": "pass"
+    },
+    {
+      "details": {},
+      "message": "All 107 runtime monsters have substantive static move-state facts (direct or inherited)",
+      "name": "runtime.monsters.moves",
       "status": "pass"
     },
     {
@@ -143,9 +176,15 @@
   ],
   "counts": {
     "fail": 0,
-    "pass": 20,
+    "pass": 24,
     "warning": 1
   },
   "overall": "warning",
-  "schema": "sts2.game-knowledge-validation/v1"
+  "schema": "sts2.game-knowledge-validation/v2",
+  "validated_snapshot": {
+    "artifact_set_sha256": "bf7a148d7665b8c1c6b82634055c3b09181fb93d358df9b3005ed2b48e56a738",
+    "binding_version": 1,
+    "manifest_sha256": "7e53715d89ed646a761f33851b16f6ae1efc468ce65e2ba21e8e0eaef0c73492",
+    "validator": "game_knowledge.validate/v3"
+  }
 }

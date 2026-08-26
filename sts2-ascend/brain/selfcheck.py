@@ -8,6 +8,7 @@ import random
 import re
 import json
 import math
+import io
 import sys
 import tempfile
 from pathlib import Path
@@ -289,7 +290,7 @@ def main() -> int:
                                        {"index": 1, "title": "已知项", "text_key": "OPT_KNOWN",
                                         "is_locked": False, "is_proceed": False}]},
                  "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 5, "deck": []}}
-    pol_exploit = policy.Policy(know, random.Random(2))  # 首抽 0.956 > 探索率 → 走利用路径
+    pol_exploit = policy.Policy(know, random.Random(2))  # 事件决策已确定性，不依赖随机首抽
     d_tie = pol_exploit.decide(tie_state, ctx)
     assert d_tie.params.get("option_index") == 0 and "探索" not in d_tie.reason, \
         f"全零平值应选样本最少选项收集信息（不得锁死高样本项/不得走探索分支）: {d_tie.reason}"
@@ -308,13 +309,6 @@ def main() -> int:
     know.stats["events"]["NEG_EV"] = {
         "OPT_BAD": {"n": 2, "hp_delta_sum": -68.0, "gold_delta_sum": 0.0, "deaths": 0}}
 
-    class _AlwaysExploreFirstChoiceRng:
-        def random(self) -> float:
-            return 0.01
-
-        def choice(self, seq):
-            return seq[0]
-
     neg_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
                  "event": {"event_id": "NEG_EV", "title": "负收益测试", "is_finished": False,
                            "options": [{"index": 0, "title": "大亏项", "text_key": "OPT_BAD",
@@ -322,10 +316,11 @@ def main() -> int:
                                        {"index": 1, "title": "新项", "text_key": "OPT_NEW",
                                         "is_locked": False, "is_proceed": False}]},
                  "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
-    pol_neg = policy.Policy(know, _AlwaysExploreFirstChoiceRng())
+    pol_neg = policy.Policy(know, random.Random(0))
     d_neg = pol_neg.decide(neg_state, ctx)
-    assert d_neg.params.get("option_index") == 1 and "探索" in d_neg.reason, \
-        f"探索必须回避已知负收益选项: {d_neg.reason}"
+    assert d_neg.params.get("option_index") == 1 \
+        and "大亏项" in d_neg.reason and "经验价值 -34.0" not in d_neg.reason, \
+        f"确定性决策必须回避已知负收益选项: {d_neg.reason}"
 
     # 3k2) 最坏情况生存闸门（第 255~257 批次复盘）：均值账看不见的重尾由
     #      hp_min 补位——7RJ9 局 31% 血选均值 +10.5 的「休息」被链内强制战
@@ -404,6 +399,12 @@ def main() -> int:
     agent_mod._LOG_PATH = tmp_agent / "brain.log"
     ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
     tknow = ag.know
+
+    def track_accepted(target, st, decision):
+        """Drive one synthetic tick through the same observe -> accepted flow as run()."""
+        target._track(st, decision)
+        if decision.action:
+            target._commit_successful_action(st, decision)
 
     def trk(st):
         ag._track(st, policy.Decision(action=None))
@@ -1032,10 +1033,46 @@ def main() -> int:
     d_rm1 = pol.decide(removal_state("请选择一张卡"), ctx)
     assert d_rm1.tags and d_rm1.tags[0][0] == "card_remove" and d_rm1.params.get("option_index") == 1, \
         f"删牌握手失败（应删打击而非高价值防牌）: {d_rm1.reason}"
+    pol.note_action_failed(d_rm1.action, d_rm1.tags)
+    d_rm1_retry = pol.decide(removal_state("请选择一张卡"), ctx)
+    assert (d_rm1_retry.tags and d_rm1_retry.tags[0][0] == "card_remove"
+            and d_rm1_retry.params.get("option_index") == 1), \
+        f"无关键词删牌首次 409 后语义丢失/改删强牌: {d_rm1_retry.reason}"
     d_rm2 = pol.decide(removal_state("移除一张牌。"), ctx)  # 关键词路径（握手已消费）
     assert d_rm2.tags and d_rm2.tags[0][0] == "card_remove", f"删牌关键词识别失败: {d_rm2.reason}"
     d_rm3 = pol.decide(removal_state("选择一张牌加入你的牌组。"), ctx)  # 负例：普通拿牌屏
     assert d_rm3.tags and d_rm3.tags[0][0] == "card_pick", f"普通拿牌屏被误判为删牌: {d_rm3.reason}"
+
+    # remove_card_at_shop 本身也必须等成功回执才发布握手。失败时留在商店稳定
+    # 重试；成功 tag 到账后，无关键词 CARD_SELECTION 才绑定 remove 模式。
+    shop_remove_ctx = DummyCtx()
+    shop_remove_ctx.run_id = "RUN_SHOP_REMOVE_TX"
+    shop_remove_ctx.credit_tags = []
+    shop_remove_state = {
+        "screen": "SHOP", "run_id": "RUN_SHOP_REMOVE_TX",
+        "available_actions": ["remove_card_at_shop", "close_shop_inventory"],
+        "shop": {"is_open": True, "cards": [], "relics": [], "potions": [],
+                 "card_removal": {"available": True, "used": False,
+                                  "enough_gold": True, "price": 50}},
+        "run": {"current_hp": 60, "max_hp": 80, "gold": 200, "floor": 9,
+                "potions": [], "deck": removal_state("")["selection"]["cards"]}}
+    pol._removal_pending_floor = -1
+    d_shop_rm = pol.decide(shop_remove_state, shop_remove_ctx)
+    assert d_shop_rm.action == "remove_card_at_shop" \
+        and pol._removal_pending_floor == -1, \
+        "删牌请求在 HTTP 成功前提前发布握手"
+    pol.note_action_failed(d_shop_rm.action, d_shop_rm.tags)
+    d_shop_rm_retry = pol.decide(shop_remove_state, shop_remove_ctx)
+    assert d_shop_rm_retry.action == "remove_card_at_shop" \
+        and pol._removal_pending_floor == -1, \
+        "失败删牌请求没有稳定重试或污染握手"
+    shop_remove_ctx.credit_tags.extend(d_shop_rm_retry.tags)
+    generic_remove = removal_state("请选择一张卡")
+    generic_remove["run_id"] = "RUN_SHOP_REMOVE_TX"
+    d_shop_selection = pol.decide(generic_remove, shop_remove_ctx)
+    assert (d_shop_selection.tags and d_shop_selection.tags[0][0] == "card_remove"
+            and d_shop_selection.params.get("option_index") == 1), \
+        f"成功删牌握手未绑定无关键词选牌屏: {d_shop_selection.reason}"
 
     # 3p) 目标列表过期不得弃权整回合（第 44 局 F6 实证：斩杀后 4 张可出攻击被
     #     静默跳过，对 14 点意图结束回合）——应兜底打向存活敌人
@@ -1488,13 +1525,72 @@ def main() -> int:
     ag_crash = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
     st_ev = {"screen": "EVENT", "run_id": "RUN_CRASH",
              "run": {"current_hp": 70, "max_hp": 80, "gold": 10, "floor": 5}}
-    ag_crash._track(st_ev, policy.Decision(action="choose_event_option", reason="x"))
+    track_accepted(ag_crash, st_ev,
+                   policy.Decision(
+                       action="choose_event_option", reason="x",
+                       tags=[("card_pick", "OLD_CARD"),
+                             ("relic_pick", "OLD_RELIC"),
+                             ("map_node", "Elite"),
+                             ("novelty_trial", "event", "OLD_EVENT", 1),
+                             ("selection_click", 7, 2),
+                             ("reward_attempt", "Gold", "duplicate", 0),
+                             ("potion_attempt", 0, "OLD_POTION"),
+                             ("combat_play_commit", "OLD_CARD", False,
+                              False, 0.0, 1, "")]))
     ag_crash._save_run_progress({"floor": 5}, force=True)   # 崩溃前最后一次增量落盘
+    # A new durable pick must force an incremental write even though fewer than 15
+    # decisions elapsed and the floor did not change.
+    track_accepted(ag_crash, st_ev,
+                   policy.Decision(action="choose_event_option", reason="new pick",
+                                   tags=[("card_pick", "NEW_CARD")]))
+    crash_raw = ag_crash.know.load_run_log("RUN_CRASH")
+    assert crash_raw.get("attribution_tags") == [
+        ["card_pick", "OLD_CARD"], ["relic_pick", "OLD_RELIC"],
+        ["map_node", "Elite"], ["card_pick", "NEW_CARD"]], \
+        f"增量日志未隔离/及时保存长期归因: {crash_raw.get('attribution_tags')}"
     ag_rejoin = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))  # 模拟重启后的新进程
     ag_rejoin._track(st_ev, policy.Decision(action=None))
-    assert len(ag_rejoin.ctx.decisions) == 1, \
+    assert len(ag_rejoin.ctx.decisions) == 2, \
         f"断线重连未接回决策史: {len(ag_rejoin.ctx.decisions)} 条"
     assert ag_rejoin.ctx.started_at == ag_crash.ctx.started_at, "断线重连未保留开局时间"
+    assert ag_rejoin.ctx.attribution_tags == [
+        ("card_pick", "OLD_CARD"), ("relic_pick", "OLD_RELIC"),
+        ("map_node", "Elite"), ("card_pick", "NEW_CARD")], \
+        f"断线重连未精确恢复长期归因: {ag_rejoin.ctx.attribution_tags}"
+    assert ag_rejoin.ctx.credit_tags == [], \
+        f"断线重连错误重放瞬时握手流: {ag_rejoin.ctx.credit_tags}"
+    # Reflect must consume the durable ledger exactly once.  Stop immediately after
+    # commit_run_end so the broad policy-evolution portion stays out of this focused test.
+    import reflect as reflect_mod
+    captured_attribution = {}
+    original_commit_run_end = ag_rejoin.know.commit_run_end
+
+    class _AttributionCaptured(Exception):
+        pass
+
+    def _capture_run_end(outcome, victory, cards, relics, rooms, enemy, event):
+        captured_attribution.update(cards=list(cards), relics=list(relics), rooms=list(rooms))
+        raise _AttributionCaptured
+
+    ag_rejoin.know.commit_run_end = _capture_run_end
+    try:
+        reflect_mod.finalize_run(ag_rejoin.know, ag_rejoin.ctx, False, 5)
+    except _AttributionCaptured:
+        pass
+    finally:
+        ag_rejoin.know.commit_run_end = original_commit_run_end
+    assert captured_attribution == {
+        "cards": ["OLD_CARD", "NEW_CARD"],
+        "relics": ["OLD_RELIC"], "rooms": ["Elite"]}, \
+        f"终局未使用续接后的长期归因: {captured_attribution}"
+    # Old incremental logs remain compatible and restore no invented attribution.
+    ag_old_log = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    ag_old_log._track({"screen": "EVENT", "run_id": "RUN_REUSE",
+                       "run": {"current_hp": 70, "max_hp": 80,
+                               "gold": 10, "floor": 5}},
+                      policy.Decision(action=None))
+    assert ag_old_log.ctx.attribution_tags == [], \
+        f"旧日志缺字段时不应猜测归因: {ag_old_log.ctx.attribution_tags}"
 
     # 2d) 签名故障动作进程内拉黑（第 218 批复盘）：被拉黑动作不再发出——
     #     有安全替代改发安全动作，无替代时原地等待而非重试必败调用
@@ -1631,11 +1727,12 @@ def main() -> int:
 
     # 3ee) 事件结算管线：pending_event 元组新增卡组规模字段后读写两端必须一致
     ag.ctx.reset_for("RUN_EVT", 0)
-    ag._track({"screen": "EVENT", "run_id": "RUN_EVT",
-               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
-                       "deck": [{"card_id": "A"}]}},
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "PLUMB_EV", "TAKE")]))
+    _ev_start = {"screen": "EVENT", "run_id": "RUN_EVT",
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                         "deck": [{"card_id": "A"}]}}
+    track_accepted(ag, _ev_start,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "PLUMB_EV", "TAKE")]))
     ag._track({"screen": "MAP", "run_id": "RUN_EVT",
                "run": {"current_hp": 80, "max_hp": 80, "gold": 60, "floor": 3,
                        "deck": [{"card_id": "A"}, {"card_id": "EGG"}]}},
@@ -1654,17 +1751,20 @@ def main() -> int:
     ev2_state = {"screen": "EVENT", "run_id": "RUN_EVT2",
                  "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
                          "deck": [{"card_id": "A"}, {"card_id": "B"}]}}
-    ag._track(ev2_state, policy.Decision(action="choose_event_option",
-                                         tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
-    ag._track(ev2_state, policy.Decision(action="choose_event_option",
-                                         tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
+    track_accepted(ag, ev2_state,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
+    track_accepted(ag, ev2_state,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "BRIDGE_EV", "HOLD")]))
     hold0 = tknow.stats["events"].get("BRIDGE_EV", {}).get("HOLD")
     assert not hold0, f"同键 tick 重试产生了幻影样本: {hold0}"
     ev2_state2 = {"screen": "EVENT", "run_id": "RUN_EVT2",
                   "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
                           "deck": [{"card_id": "A"}]}}  # 第一次选择后掉了一张牌
-    ag._track(ev2_state2, policy.Decision(action="choose_event_option",
-                                          tags=[("event_choice", "BRIDGE_EV", "CROSS")]))
+    track_accepted(ag, ev2_state2,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "BRIDGE_EV", "CROSS")]))
     hold = tknow.stats["events"].get("BRIDGE_EV", {}).get("HOLD")
     assert hold and hold["n"] == 1 and hold.get("card_delta_sum") == -1.0, \
         f"事件内换项抉择未先行结算（上一次选择被吞）: {hold}"
@@ -1681,14 +1781,19 @@ def main() -> int:
                                            "is_locked": False, "is_proceed": False}]},
                     "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
     pol_bridge = policy.Policy(know, random.Random(2))
+    ctx.run_id = "RUN_BRIDGE"
+    ctx.credit_tags = []
     d_b1 = pol_bridge.decide(bridge_state, ctx)
     assert d_b1.params.get("option_index") == 0, f"首次应选 0 分未知项: {d_b1.reason}"
+    ctx.credit_tags.extend(d_b1.tags)  # 模拟服务端成功回执；下一 tick 才产生停滞计数
     d_b2 = pol_bridge.decide(bridge_state, ctx)
     assert d_b2.params.get("option_index") == 1, \
         f"同实例重选必须吃停滞罚分（旧版会无限重选原地踏步项）: {d_b2.reason}"
     #      c) 跨实例（换楼层/换 run）罚分自动清零，不影响正常事件选择
     bridge_state3 = dict(bridge_state, run_id="RUN_BRIDGE2")
     pol_bridge2 = policy.Policy(know, random.Random(2))
+    ctx.run_id = "RUN_BRIDGE2"
+    ctx.credit_tags = []
     d_b3 = pol_bridge2.decide(bridge_state3, ctx)
     assert d_b3.params.get("option_index") == 0, f"新实例不应继承停滞罚分: {d_b3.reason}"
 
@@ -1702,8 +1807,9 @@ def main() -> int:
                       "deck": [{"card_id": "A"}],
                       "relics": [{"relic_id": "BURNING_BLOOD"}],
                       "potions": [{"occupied": False}]}}
-    ag._track(_rel_a, policy.Decision(action="choose_event_option",
-                                      tags=[("event_choice", "PAEL_EV", "FLESH")]))
+    track_accepted(ag, _rel_a,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "PAEL_EV", "FLESH")]))
     ag._track({"screen": "MAP", "run_id": "RUN_EVT_R",
                "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 5,
                        "deck": [{"card_id": "A"}],
@@ -1718,12 +1824,13 @@ def main() -> int:
     assert v_relic >= 2.0 and n_relic == 1, f"遗物收益未计入事件价值: {v_relic}"
     #      药水栏位占用变化同样入账
     ag.ctx.reset_for("RUN_EVT_P", 0)
-    ag._track({"screen": "EVENT", "run_id": "RUN_EVT_P",
-               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 6,
-                       "deck": [{"card_id": "A"}], "relics": [],
-                       "potions": [{"occupied": False}]}},
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "COURIER_EV", "GRAB")]))
+    _pot_start = {"screen": "EVENT", "run_id": "RUN_EVT_P",
+                  "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 6,
+                          "deck": [{"card_id": "A"}], "relics": [],
+                          "potions": [{"occupied": False}]}}
+    track_accepted(ag, _pot_start,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "COURIER_EV", "GRAB")]))
     ag._track({"screen": "MAP", "run_id": "RUN_EVT_P",
                "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 7,
                        "deck": [{"card_id": "A"}], "relics": [],
@@ -1734,12 +1841,13 @@ def main() -> int:
         and pe_p.get("relic_delta_sum") == 0.0, f"事件药水增量管线断裂: {pe_p}"
     #      终局屏 run 载荷被清空时按「签名不变」处理——不得把死亡结算成丢光遗物
     ag.ctx.reset_for("RUN_EVT_D", 0)
-    ag._track({"screen": "EVENT", "run_id": "RUN_EVT_D",
-               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 8,
-                       "deck": [{"card_id": "A"}],
-                       "relics": [{"relic_id": "BURNING_BLOOD"}]}},
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "DEATH_EV", "RIP")]))
+    _death_start = {"screen": "EVENT", "run_id": "RUN_EVT_D",
+                    "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 8,
+                            "deck": [{"card_id": "A"}],
+                            "relics": [{"relic_id": "BURNING_BLOOD"}]}}
+    track_accepted(ag, _death_start,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "DEATH_EV", "RIP")]))
     ag._track({"screen": "GAME_OVER", "run_id": "RUN_EVT_D", "run": {}},
               policy.Decision(action=None))
     pe_d = tknow.stats["events"].get("DEATH_EV", {}).get("RIP")
@@ -1916,10 +2024,13 @@ def main() -> int:
                                    "min_select": 1, "selected_count": 0, "can_confirm": False,
                                    "cards": [dict(c) for c in tribute_cards]},
                      "run": {"current_hp": 32, "max_hp": 80, "gold": 37, "floor": 71, "deck": []}}
-    d_tb1 = pol.decide(dict(tribute_state), ctx)
+    tribute_ctx = DummyCtx()
+    tribute_ctx.credit_tags = []
+    d_tb1 = pol.decide(dict(tribute_state), tribute_ctx)
     assert d_tb1.params.get("option_index") == 1 and "献祭" in d_tb1.reason, \
         f"战斗献祭必须交出最不值钱的牌（应选伤口而非耸肩无视）: {d_tb1.reason}"
-    d_tb2 = pol.decide(dict(tribute_state), ctx)
+    tribute_ctx.credit_tags.extend(d_tb1.tags)  # 模拟服务端成功接受第一次献祭
+    d_tb2 = pol.decide(dict(tribute_state), tribute_ctx)
     assert d_tb2.params.get("option_index") == 2 and "献祭" in d_tb2.reason, \
         f"多次献祭应逐张交出次差者（伤口已交出后应交打击）: {d_tb2.reason}"
     gain_state = {"screen": "CARD_SELECTION",
@@ -1928,7 +2039,7 @@ def main() -> int:
                                 "min_select": 1, "selected_count": 0, "can_confirm": False,
                                 "cards": [dict(c) for c in tribute_cards]},
                   "run": {"current_hp": 60, "max_hp": 80, "gold": 37, "floor": 71, "deck": []}}
-    d_tg = pol.decide(gain_state, ctx)
+    d_tg = pol.decide(gain_state, tribute_ctx)
     assert d_tg.params.get("option_index") == 0 and "献祭" not in d_tg.reason, \
         f"普通拿牌屏被误判为献祭: {d_tg.reason}"
 
@@ -2052,9 +2163,21 @@ def main() -> int:
 
     r_fresh = streak_reason([])
     r_tired = streak_reason([("map_node", "Monster")] * 4)
+    resumed_ctx = type("ResumedStreakCtx", (), {
+        "credit_tags": [],
+        "attribution_tags": [("map_node", "Monster")] * 4,
+    })()
+    resumed_state = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                     "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0,
+                                                    "node_type": "Monster"}], "nodes": []},
+                     "run": {"current_hp": 70, "max_hp": 80, "gold": 0,
+                             "floor": 5, "deck": []}}
+    r_resumed = pol.decide(resumed_state, resumed_ctx).reason
     assert "前期需要战斗积累卡牌" in r_fresh and "疲劳压制" not in r_fresh, \
         f"对照失效（无连战史应保留积累加成）: {r_fresh}"
     assert "疲劳压制" in r_tired, f"连续作战疲劳未生效: {r_tired}"
+    assert "疲劳压制" in r_resumed, \
+        f"重启恢复的 attribution_tags 未参与连续作战疲劳: {r_resumed}"
 
     # 3oo) 姿态死亡率门槛与斜率校准（第 84~85 批复盘）：头号杀手
     #      FUZZY_WURM+SHRINKER_BEETLE 41战12死=29.3%，旧公式（门槛0.30）
@@ -2549,16 +2672,21 @@ def main() -> int:
             "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
 
     pol_kr = policy.Policy(know, random.Random(11))
-    pol_kr.decide(krace_state(1, 65), krc)          # T1：样本不足，不武装
-    pol_kr.decide(krace_state(2, 55), krc)          # T2：样本仍不足
+    d_kr_t1 = pol_kr.decide(krace_state(1, 65), krc)  # T1：样本不足，不武装
+    krc.credit_tags.extend(d_kr_t1.tags)              # 模拟服务端成功回执
+    d_kr_t2 = pol_kr.decide(krace_state(2, 55), krc)  # T2：样本仍不足
+    krc.credit_tags.extend(d_kr_t2.tags)
     d_kr = pol_kr.decide(krace_state(3, 45), krc)   # T3：实测 ~24伤/回合 vs 200 血、意图 22/回合 → 投影必败
     assert d_kr.action == "play_card" and d_kr.params.get("card_index") == 0, \
         f"斩杀竞速失败时奢侈格挡仍胜出: {d_kr.action}（{d_kr.reason}）"
     assert "斩杀竞速投影" in d_kr.reason, f"竞速投影未留痕: {d_kr.reason}"
     # 对照：意图轻微（5/回合，血量账宽裕）时同一战斗不得触发竞速——防守路线可行
+    krc.credit_tags = []
     pol_kr2 = policy.Policy(know, random.Random(11))
-    pol_kr2.decide(krace_state(1, 80, incoming=5), krc)
-    pol_kr2.decide(krace_state(2, 80, incoming=5), krc)
+    d_kr2_t1 = pol_kr2.decide(krace_state(1, 80, incoming=5), krc)
+    krc.credit_tags.extend(d_kr2_t1.tags)
+    d_kr2_t2 = pol_kr2.decide(krace_state(2, 80, incoming=5), krc)
+    krc.credit_tags.extend(d_kr2_t2.tags)
     d_kr2 = pol_kr2.decide(krace_state(3, 80, incoming=5), krc)
     assert "斩杀竞速投影" not in d_kr2.reason, f"防守可行时误触发竞速投影: {d_kr2.reason}"
     krc.combat = None
@@ -2596,8 +2724,10 @@ def main() -> int:
             "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
 
     pol_es = policy.Policy(know_es, random.Random(7))
-    pol_es.decide(esc_state(1, 65, 4, 60), krc_es)     # T1：意图 4 基准采样
-    pol_es.decide(esc_state(2, 55, 7, 48), krc_es)     # T2：趋势+3，升级计数 1
+    d_es_t1 = pol_es.decide(esc_state(1, 65, 4, 60), krc_es)  # T1：意图 4 基准采样
+    krc_es.credit_tags.extend(d_es_t1.tags)
+    d_es_t2 = pol_es.decide(esc_state(2, 55, 7, 48), krc_es)  # T2：趋势+3，升级计数 1
+    krc_es.credit_tags.extend(d_es_t2.tags)
     d_es = pol_es.decide(esc_state(3, 30, 24, 36), krc_es)  # T3：趋势+17 计数 2 → 开账
     assert d_es.action == "play_card" and d_es.params.get("card_index") == 0, \
         f"升级型低血池组合未走竞速路线: {d_es.action}（{d_es.reason}）"
@@ -2606,9 +2736,12 @@ def main() -> int:
         f"高危防御姿态未被竞速解除/文案未改写: {d_es.reason}"
     assert "转防守节奏" not in d_es.reason, f"矛盾留痕残留: {d_es.reason}"
     # 对照：同一低血池组合但意图平稳（无升级轨迹）→ 门不开，不得误触发
+    krc_es.credit_tags = []
     pol_es2 = policy.Policy(knowledge.Knowledge(kdir_es), random.Random(7))
-    pol_es2.decide(esc_state(1, 65, 4, 60), krc_es)
-    pol_es2.decide(esc_state(2, 55, 4, 48), krc_es)
+    d_es2_t1 = pol_es2.decide(esc_state(1, 65, 4, 60), krc_es)
+    krc_es.credit_tags.extend(d_es2_t1.tags)
+    d_es2_t2 = pol_es2.decide(esc_state(2, 55, 4, 48), krc_es)
+    krc_es.credit_tags.extend(d_es2_t2.tags)
     d_es2 = pol_es2.decide(esc_state(3, 30, 4, 36), krc_es)
     assert "斩杀竞速投影" not in d_es2.reason, f"无升级轨迹误开账: {d_es2.reason}"
     krc_es.combat = None
@@ -3413,9 +3546,9 @@ def main() -> int:
             st["combat"] = {"enemies": [{"enemy_id": "VEG_BUG", "is_alive": True}]}
         return st
 
-    ag._track(evt_flow_state("EVENT", 80, 50, 1),
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "VEG_EV", "FIGHT")]))
+    track_accepted(ag, evt_flow_state("EVENT", 80, 50, 1),
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "VEG_EV", "FIGHT")]))
     # 进战 tick：事件已发放 +20 金（即时效果），hp 未变——快照应冻结在此
     ag._track(evt_flow_state("COMBAT", 80, 70, 1), policy.Decision(action=None))
     assert tknow.stats["events"].get("VEG_EV", {}).get("FIGHT") is None, \
@@ -3449,12 +3582,12 @@ def main() -> int:
         return st
 
     # 页1 选「休息」→ 页2 选「战！」（换项先行结算 +7）→ 战斗 -14 → MAP
-    ag._track(evt_chain_state("EVENT", 80, 50, 1),
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "VEG3_EV", "REST")]))
-    ag._track(evt_chain_state("EVENT", 87, 50, 1),
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "VEG3_EV", "FIGHT")]))
+    track_accepted(ag, evt_chain_state("EVENT", 80, 50, 1),
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "VEG3_EV", "REST")]))
+    track_accepted(ag, evt_chain_state("EVENT", 87, 50, 1),
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "VEG3_EV", "FIGHT")]))
     ag._track(evt_chain_state("COMBAT", 87, 50, 1), policy.Decision(action=None))
     ag._track(evt_chain_state("MAP", 73, 50, 4), policy.Decision(action=None))
     ev_rest = tknow.stats["events"]["VEG3_EV"]["REST"]
@@ -3469,9 +3602,9 @@ def main() -> int:
         f"事件战聚合账未正确标记/累计（敌人组合账数据源被破坏）: {agg3}"
     # 死亡路径：战斗账先于事件账落库，掉血经暂存归因；事件死亡标志保持关闭
     ag.ctx.reset_for("RUN_EVT4", 0)
-    ag._track(evt_chain_state("EVENT", 80, 50, 1),
-              policy.Decision(action="choose_event_option",
-                              tags=[("event_choice", "VEG4_EV", "FIGHT")]))
+    track_accepted(ag, evt_chain_state("EVENT", 80, 50, 1),
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "VEG4_EV", "FIGHT")]))
     ag._track(evt_chain_state("COMBAT", 80, 50, 1, comp="VEG4_BUG"),
               policy.Decision(action=None))
     ag._track(evt_chain_state("GAME_OVER", 0, 50, 1, comp="VEG4_BUG"),
@@ -4305,6 +4438,11 @@ def main() -> int:
                                   "credit_tags": []})()
     esc_ctx.combat = {"comp_id": "ESC_RACE_COMP", "node_type": "Monster"}
 
+    def accepted_combat(p, st, c):
+        decision = p.decide(st, c)
+        c.credit_tags.extend(decision.tags)
+        return decision
+
     def esc_race_state(turn_no, hp_now, incoming, deck, t3_attack=False):
         if turn_no < 3:
             hand = [
@@ -4339,25 +4477,27 @@ def main() -> int:
     #    联合复核不可行（卡组没有任何伤害来源，磨垒=无限拖）→ 全攻提速
     pol_escr = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck-"))),
                              random.Random(11))
-    pol_escr.decide(esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
-    pol_escr.decide(esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr, esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr, esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
     d_e1 = pol_escr.decide(esc_race_state(3, 71, 24, esc_blk_deck), esc_ctx)
     assert ("斩杀竞速投影" in d_e1.reason and "防守线复核" not in d_e1.reason), \
         f"无输出引擎的纯挡墙未被联合复核识破: {d_e1.action}（{d_e1.reason}）"
     # ② 对照：零格挡卡组复核自然不触发——维持全攻提速（冷启动安全不回潮）
+    esc_ctx.credit_tags = []
     pol_escr2 = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck2-"))),
                               random.Random(11))
-    pol_escr2.decide(esc_race_state(1, 71, 4, []), esc_ctx)
-    pol_escr2.decide(esc_race_state(2, 71, 7, []), esc_ctx)
+    accepted_combat(pol_escr2, esc_race_state(1, 71, 4, []), esc_ctx)
+    accepted_combat(pol_escr2, esc_race_state(2, 71, 7, []), esc_ctx)
     d_e2 = pol_escr2.decide(esc_race_state(3, 71, 24, [], t3_attack=True), esc_ctx)
     assert "斩杀竞速投影" in d_e2.reason and "防守线复核" not in d_e2.reason, \
         f"零格挡卡组的滚雪球竞速被误放行: {d_e2.action}（{d_e2.reason}）"
     # ③ 对照：火力压倒格挡（40 意图 > 吞吐16.8 的净火力口径）——零余量下复核
     #    必须仍判负，防复核沦为无条件否决竞速
+    esc_ctx.credit_tags = []
     pol_escr3 = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escrecheck3-"))),
                               random.Random(11))
-    pol_escr3.decide(esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
-    pol_escr3.decide(esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr3, esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr3, esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
     d_e3 = pol_escr3.decide(esc_race_state(3, 71, 40, esc_blk_deck), esc_ctx)
     assert "斩杀竞速投影" in d_e3.reason and "防守线复核" not in d_e3.reason, \
         f"火力压倒性格挡时复核未判负: {d_e3.action}（{d_e3.reason}）"
@@ -4546,7 +4686,8 @@ def main() -> int:
     ag_fin = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
     st_map = {"screen": "MAP", "run_id": "RUN_FIN",
               "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 6}}
-    ag_fin._track(st_map, policy.Decision(action="choose_map_node", reason="x"))
+    track_accepted(ag_fin, st_map,
+                   policy.Decision(action="choose_map_node", reason="x"))
     assert ag_fin.ctx.run_finalized is False, "对局未结束不应处于定稿态"
     ag_fin._save_run_progress({"floor": 6}, force=True)
     log_path = next((tmp_agent / "runs").glob("*_RUN_FIN.json"))
@@ -4559,8 +4700,9 @@ def main() -> int:
         f"终稿语义缺失: in_progress={'in_progress' in raw}, floor={raw.get('floor')}"
     st_mm = {"screen": "MAIN_MENU", "run_id": "RUN_FIN",
              "run": {"current_hp": 0, "max_hp": 80, "gold": 0, "floor": 0}}
-    ag_fin._track(st_mm, policy.Decision(action="open_timeline",
-                                         reason="主菜单：检查时间线可解锁项（优先解锁新内容）"))
+    track_accepted(ag_fin, st_mm,
+                   policy.Decision(action="open_timeline",
+                                   reason="主菜单：检查时间线可解锁项（优先解锁新内容）"))
     raw = json.loads(log_path.read_text(encoding="utf-8"))
     assert "in_progress" not in raw, "定稿日志被结算后继决策回写成进行中（脏戳复发）"
     llm_review_mod.KNOWLEDGE_DIR = tmp_agent
@@ -5102,6 +5244,7 @@ def main() -> int:
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-combat-margin-")))
     cm_pol = policy.Policy(cm_know)
     cm_ctx = DummyCtx()
+    cm_ctx.credit_tags = []
     cm_ctx.combat = {"comp_id": "CM_ENEMY", "node_type": "Monster"}
     # 模拟“拿牌局走不远”造成的强负 draft 归因；已在手里的执行不应被它压住。
     cm_know.stats["cards"]["CM_STRIKE"] = {
@@ -5160,36 +5303,1190 @@ def main() -> int:
         "seen": 8, "picked": 5, "plays": 0, "outcome_sum": 0.0, "bias": 0.0}
     cm_know.stats["cards"]["CM_CURSE_DISINTEGRATION"] = {
         "seen": 8, "picked": 5, "plays": 0, "outcome_sum": 0.0, "bias": 0.0}
-    cm_novel = cm_card(0, "CM_NOVEL", "新招式", damage=2, card_kind="Attack")
+    cm_novel = cm_card(0, "CM_NOVEL", "新招式", damage=30, card_kind="Attack")
+    cm_novel["rules_text"] = "Deal 30 damage. Exhaust a random card."
     cm_curse = cm_card(0, "CM_CURSE_DISINTEGRATION", "瓦解",
                        damage=20, card_kind="Curse")
     cm_ctx.combat = {"comp_id": "CM_TRIAL", "node_type": "Monster"}
     d_cm_trial = cm_pol.decide(cm_state([cm_novel], turn=4), cm_ctx)
     assert d_cm_trial.action == "play_card" and "受控试用" in d_cm_trial.reason, \
         f"零出牌 veto 仍永久自锁: {d_cm_trial.action}（{d_cm_trial.reason}）"
-    d_cm_trial_twice = cm_pol.decide(cm_state([cm_novel], turn=5), cm_ctx)
-    assert d_cm_trial_twice.action == "end_turn", \
-        f"同战同卡受控试用超过一次: {d_cm_trial_twice.action}（{d_cm_trial_twice.reason}）"
+    def combat_policy_ledger(p):
+        return (frozenset(p._novel_trials), p._exhaust_plays,
+                p._krace_dmg, p._krace_turns, p._krace_round,
+                dict(p._combat_kills))
+
+    pristine_ledger = combat_policy_ledger(cm_pol)
+    assert pristine_ledger == (frozenset(), 0, 0.0, 0, None, {}), \
+        f"play_card Decision 在 HTTP 回执前污染策略状态: {pristine_ledger}"
+    cm_pol.note_action_failed(d_cm_trial.action, d_cm_trial.tags)
+    assert combat_policy_ledger(cm_pol) == pristine_ledger, \
+        "失败 play_card 改写了试用/消耗/竞速/预测击杀账"
+
+    # 下一回合仍可重试；只有把成功 Decision.tags 追加到 credit_tags 后，
+    # 下一 tick 才一次性同步所有策略账。
+    d_cm_trial_retry = cm_pol.decide(cm_state([cm_novel], turn=5), cm_ctx)
+    assert d_cm_trial_retry.action == "play_card" and "受控试用" in d_cm_trial_retry.reason, \
+        f"失败试用被误记成已成功，无法重试: {d_cm_trial_retry.action}（{d_cm_trial_retry.reason}）"
+    assert combat_policy_ledger(cm_pol) == pristine_ledger, \
+        "重试 Decision 在成功回执前污染策略状态"
+    cm_ctx.credit_tags.extend(d_cm_trial_retry.tags)
+    d_cm_after_success = cm_pol.decide(cm_state([cm_novel], turn=6), cm_ctx)
+    committed_ledger = combat_policy_ledger(cm_pol)
+    assert committed_ledger == (
+            frozenset({"CM_NOVEL"}), 1, 30.0, 1, 5, {"CM_ENEMY": 1}), \
+        f"成功 play_card 未完整同步试用/消耗/竞速/预测击杀账: {committed_ledger}"
+    assert d_cm_after_success.action == "end_turn", \
+        f"同战同卡成功受控试用后仍重复尝试: {d_cm_after_success.action}（{d_cm_after_success.reason}）"
+    cm_pol.decide(cm_state([cm_novel], turn=6), cm_ctx)
+    assert combat_policy_ledger(cm_pol) == committed_ledger, \
+        "同一批 credit_tags 被重复同步到战斗策略账"
     cm_ctx.combat = {"comp_id": "CM_CURSE", "node_type": "Monster"}
-    d_cm_curse = cm_pol.decide(cm_state([cm_curse], turn=6), cm_ctx)
+    d_cm_curse = cm_pol.decide(cm_state([cm_curse], turn=7), cm_ctx)
     assert d_cm_curse.action == "end_turn" and "受控试用" not in d_cm_curse.reason, \
         f"状态/诅咒被误作新卡探索: {d_cm_curse.action}（{d_cm_curse.reason}）"
 
-    # 动作统计必须两阶段提交：_track 只记录尝试；只有成功回执路径显式 commit。
+    # 回合号不是全局身份：两场战斗都从 T1 开始。上一战见过 play_card 后，
+    # 下一战开场只有 end_turn 的加载窗口必须重新走长等待，不能继承短确认并空过。
+    old_turn_combat = {"comp_id": "OLD_T1"}
+    new_turn_combat = {"comp_id": "NEW_T1"}
+    cm_pol._turn_combat = old_turn_combat
+    cm_pol._cur_turn = 1
+    cm_pol._saw_playable_this_turn = True
+    cm_pol._end_stall = 1
+    cm_pol._failed_this_turn = {0}
+    cm_ctx.combat = new_turn_combat
+    cm_loading = cm_state([dict(cm_strike)], turn=1)
+    cm_loading["available_actions"] = ["end_turn"]
+    d_cm_loading = cm_pol.decide(cm_loading, cm_ctx)
+    assert d_cm_loading.action is None and "仍有可负担牌" in d_cm_loading.reason, \
+        f"新战 T1 继承上一战短确认并提前结束: {d_cm_loading.action}（{d_cm_loading.reason}）"
+    assert cm_pol._turn_combat is new_turn_combat \
+        and not cm_pol._saw_playable_this_turn and cm_pol._failed_this_turn == set(), \
+        "战斗身份变化没有清空逐回合瞬态状态"
+
+    # 同一战同一回合也会有动作端点刷新窗：先见过 play_card 后，若随后载荷
+    # 仍明确有 3 能量和可负担打击，连续两帧缺 endpoint 也不得走短确认结束。
+    cm_pol._saw_playable_this_turn = True
+    cm_pol._end_stall = 0
+    cm_endpoint_gap = cm_state([dict(cm_strike)], turn=1, energy=3)
+    cm_endpoint_gap["available_actions"] = ["end_turn"]
+    d_gap_1 = cm_pol.decide(cm_endpoint_gap, cm_ctx)
+    d_gap_2 = cm_pol.decide(cm_endpoint_gap, cm_ctx)
+    assert d_gap_1.action is None and d_gap_2.action is None \
+        and "play_card 暂不可用" in d_gap_2.reason, \
+        f"同回合 endpoint 刷新窗仍带能量弃权: {d_gap_2.action}（{d_gap_2.reason}）"
+
+    # 楼层号会跨局重复；新 run 必须清理商店/奖励/删牌屏握手，不能把旧 F5
+    # 的“已处理”直接套到新局 F5。
+    cm_pol._card_explore_run = "RUN_OLD"
+    cm_pol._shop_done_floor = 5
+    cm_pol._reward_floor = 5
+    cm_pol._removal_pending_floor = 5
+    cm_ctx.run_id = "RUN_NEW_TRANSIENTS"
+    cm_ctx.credit_tags = []
+    cm_pol.decide({"screen": "MAIN_MENU", "run_id": "RUN_NEW_TRANSIENTS",
+                   "available_actions": []}, cm_ctx)
+    assert (cm_pol._shop_done_floor, cm_pol._reward_floor,
+            cm_pol._removal_pending_floor) == (-1, -1, -1), \
+        "新 run 仍继承上一局的商店/奖励/删牌楼层握手"
+
+    # 奖励/药水/事件的本地去重状态必须由成功回执驱动。Agent 的 ConnectionDown
+    # 分支不会调用 note_action_failed；这里以“同一状态再次 decide、期间没有追加
+    # credit_tags”精确模拟无回执，三类动作都必须稳定重试而不能幻影消费资源。
+    receipt_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-action-receipts-"))
+
+    reward_know = knowledge.Knowledge(receipt_dir / "reward")
+    reward_pol = policy.Policy(reward_know, random.Random(0))
+    reward_ctx = DummyCtx()
+    reward_ctx.run_id = "RUN_RECEIPT_REWARD"
+    reward_ctx.credit_tags = []
+    reward_state = {
+        "screen": "REWARD", "run_id": reward_ctx.run_id,
+        "available_actions": ["claim_reward", "proceed"],
+        "reward": {"rewards": [{"index": 0, "reward_type": "Gold",
+                                   "description": "42金币", "claimable": True}],
+                   "card_options": [], "can_proceed": True},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 2, "deck": [], "potions": []}}
+    reward_first = reward_pol.decide(reward_state, reward_ctx)
+    reward_retry = reward_pol.decide(reward_state, reward_ctx)
+    assert reward_first.action == reward_retry.action == "claim_reward" \
+        and reward_first.params == reward_retry.params \
+        and reward_pol._reward_tried == set(), \
+        "奖励请求无回执时被幻影标记为已尝试，下一 tick 未稳定重试"
+    reward_ctx.credit_tags.extend(reward_retry.tags)
+    reward_after = reward_pol.decide(reward_state, reward_ctx)
+    assert reward_after.action == "proceed" \
+        and (0, "Gold", "42金币") in reward_pol._reward_tried, \
+        "成功奖励回执未进入去重账，仍可能重复领取"
+
+    reward_reject_pol = policy.Policy(reward_know, random.Random(0))
+    reward_reject_ctx = DummyCtx()
+    reward_reject_ctx.run_id = "RUN_RECEIPT_REWARD_REJECT"
+    reward_reject_ctx.credit_tags = []
+    reward_reject_state = json.loads(json.dumps(reward_state))
+    reward_reject_state["run_id"] = reward_reject_ctx.run_id
+    rejected_reward = reward_reject_pol.decide(reward_reject_state,
+                                                reward_reject_ctx)
+    reward_reject_pol.note_action_failed(rejected_reward.action,
+                                         rejected_reward.tags)
+    assert reward_reject_pol.decide(reward_reject_state,
+                                    reward_reject_ctx).action == "proceed", \
+        "显式拒绝的奖励请求丢失原有防空转行为"
+
+    potion_know = knowledge.Knowledge(receipt_dir / "potion")
+    potion_pol = policy.Policy(potion_know, random.Random(0))
+    potion_ctx = DummyCtx()
+    potion_ctx.run_id = "RUN_RECEIPT_POTION"
+    potion_ctx.credit_tags = []
+    potion_ctx.combat = {"comp_id": "RECEIPT_ENEMY", "node_type": "Boss"}
+    potion_ctx.current_combat_is_hard = True
+    potion_state = {
+        "screen": "COMBAT", "run_id": potion_ctx.run_id, "turn": 1,
+        "available_actions": ["use_potion", "play_card", "end_turn"],
+        "combat": {
+            "player": {"current_hp": 40, "max_hp": 80, "block": 0, "energy": 0},
+            "hand": [],
+            "enemies": [{"index": 0, "enemy_id": "RECEIPT_ENEMY",
+                         "name": "回执测试怪", "current_hp": 30, "max_hp": 30,
+                         "block": 0, "is_alive": True, "is_hittable": True,
+                         "intents": [{"total_damage": 10}]}]},
+        "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 17,
+                "deck": [], "potions": [{"index": 0, "occupied": True,
+                    "can_use": True, "potion_id": "RECEIPT_FIRE",
+                    "name": "火焰药水", "description": "造成20点伤害。",
+                    "usage": "Combat", "requires_target": False}]}}
+    potion_first = potion_pol.decide(potion_state, potion_ctx)
+    potion_retry = potion_pol.decide(potion_state, potion_ctx)
+    assert potion_first.action == potion_retry.action == "use_potion" \
+        and potion_first.params == potion_retry.params \
+        and potion_pol._potion_tried == set(), \
+        (f"药水请求无回执时被幻影消费，本场不再重试救命药："
+         f"first={potion_first.action}/{potion_first.params}, "
+         f"retry={potion_retry.action}/{potion_retry.params}, "
+         f"tried={potion_pol._potion_tried}")
+    potion_ctx.credit_tags.extend(potion_retry.tags)
+    potion_after = potion_pol.decide(potion_state, potion_ctx)
+    assert potion_after.action != "use_potion" \
+        and potion_pol._potion_tried == {(0, "RECEIPT_FIRE")}, \
+        "成功药水回执未进入本场去重账"
+
+    potion_reject_pol = policy.Policy(potion_know, random.Random(0))
+    potion_reject_ctx = DummyCtx()
+    potion_reject_ctx.run_id = "RUN_RECEIPT_POTION_REJECT"
+    potion_reject_ctx.credit_tags = []
+    potion_reject_ctx.combat = {"comp_id": "RECEIPT_ENEMY", "node_type": "Boss"}
+    potion_reject_ctx.current_combat_is_hard = True
+    potion_reject_state = json.loads(json.dumps(potion_state))
+    potion_reject_state["run_id"] = potion_reject_ctx.run_id
+    rejected_potion = potion_reject_pol.decide(potion_reject_state,
+                                                potion_reject_ctx)
+    potion_reject_pol.note_action_failed(rejected_potion.action,
+                                         rejected_potion.tags)
+    assert potion_reject_pol.decide(potion_reject_state,
+                                    potion_reject_ctx).action != "use_potion", \
+        "显式拒绝的药水请求丢失原有防空转行为"
+
+    event_know = knowledge.Knowledge(receipt_dir / "event")
+    event_pol = policy.Policy(event_know, random.Random(0))
+    event_ctx = DummyCtx()
+    event_ctx.run_id = "RUN_RECEIPT_EVENT"
+    event_ctx.credit_tags = []
+    event_state = {
+        "screen": "EVENT", "run_id": event_ctx.run_id,
+        "available_actions": ["choose_event_option"],
+        "event": {"event_id": "RECEIPT_EVENT", "title": "回执测试",
+                  "is_finished": False,
+                  "options": [{"index": 0, "text_key": "WAIT",
+                               "title": "继续", "is_locked": False,
+                               "is_proceed": False, "will_kill_player": False}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 4, "deck": []}}
+    event_first = event_pol.decide(event_state, event_ctx)
+    event_retry = event_pol.decide(event_state, event_ctx)
+    assert event_first.action == event_retry.action == "choose_event_option" \
+        and event_first.params == event_retry.params \
+        and event_pol._event_picks.get("WAIT", 0) == 0, \
+        "事件请求无回执时产生幻影已选次数并改变下一次选择"
+    event_pol.note_action_failed(event_retry.action, event_retry.tags)
+    assert event_pol._event_picks.get("WAIT", 0) == 0, \
+        "显式拒绝的事件请求产生了虚假停滞计数"
+    event_success = event_pol.decide(event_state, event_ctx)
+    event_ctx.credit_tags.extend(event_success.tags)
+    event_pol.decide(event_state, event_ctx)
+    event_pol.decide(event_state, event_ctx)
+    assert event_pol._event_picks.get("WAIT") == 1, \
+        "成功事件回执未按恰好一次语义写入同实例选择次数"
+
+    # 关闭商店也是事务：请求前不能抢先写 done，否则失败后的下一帧会直接
+    # proceed 跳店；只有成功 tag（含丢回执后的状态确认）才能提交楼层握手。
+    close_know = knowledge.Knowledge(receipt_dir / "shop_close")
+    close_pol = policy.Policy(close_know, random.Random(0))
+    close_ctx = DummyCtx()
+    close_ctx.run_id = "RUN_SHOP_CLOSE"
+    close_ctx.credit_tags = []
+    close_state = {
+        "screen": "SHOP", "run_id": close_ctx.run_id,
+        "available_actions": ["close_shop_inventory", "proceed"],
+        "shop": {"is_open": True, "can_close": True, "cards": [],
+                 "relics": [], "potions": [], "card_removal": None},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 11, "deck": [], "relics": [], "potions": []}}
+    close_first = close_pol.decide(close_state, close_ctx)
+    assert close_first.action == "close_shop_inventory" \
+        and close_pol._shop_done_floor == -1, \
+        "close_shop_inventory 在成功回执前抢先标记 shop done"
+    close_pol.note_action_failed(close_first.action, close_first.tags)
+    close_retry = close_pol.decide(close_state, close_ctx)
+    assert close_retry.action == "close_shop_inventory" \
+        and close_pol._shop_done_floor == -1, \
+        "关闭商店失败后错误 proceed/标记完成"
+    close_ctx.credit_tags.extend(close_retry.tags)
+    closed_state = json.loads(json.dumps(close_state))
+    closed_state["shop"]["is_open"] = False
+    closed_state["available_actions"] = ["proceed"]
+    closed_decision = close_pol.decide(closed_state, close_ctx)
+    assert close_pol._shop_done_floor == 11 and closed_decision.action == "proceed", \
+        "关闭商店成功握手未提交 done 楼层并继续"
+
+    # 动作统计必须两阶段提交：_track 只消费已经观测到的状态转换；当前决策的
+    # credit tags、ctx_ops、成功出牌和决策轨迹只有 HTTP 成功回执后才能提交。
     tx_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-action-txn-"))
     agent.KNOWLEDGE_DIR = tx_dir
     agent._LOG_PATH = tx_dir / "brain.log"
     tx_agent = agent.Agent(dict(agent.DEFAULT_CONFIG))
+    tx_agent.ctx.reset_for("TX_RUN", 0)
     tx_decision = policy.Decision(
-        action="play_card", params={"card_index": 0}, reason="txn test",
-        tags=[("play_card", "TX_CARD"), ("play_card_index", 0)])
-    tx_state = {"screen": "MAIN_MENU", "run_id": "run_unknown", "run": {}}
+        action="choose_event_option", params={"option_index": 0}, reason="txn test",
+        tags=[("event_choice", "TX_EVENT", "take"),
+              ("play_card", "TX_CARD"), ("play_card_index", 0),
+              ("card_pick", "TX_PICK"), ("map_node", "Monster"),
+              ("rest", "heal")])
+    tx_state = {
+        "screen": "EVENT", "run_id": "TX_RUN",
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 12, "floor": 3,
+                "deck": [], "relics": [], "potions": []}}
     tx_agent._track(tx_state, tx_decision)  # 相当于 action 返回失败前的预执行轨迹
     assert tx_agent.know.stats["cards"].get("TX_CARD") is None, \
         "失败/未确认动作仍被 _track 计为成功出牌"
-    tx_agent._commit_successful_action(tx_decision)
+    assert tx_agent.ctx.credit_tags == [] and tx_agent.ctx.pending_event is None, \
+        "失败/未确认动作仍写入 credit tags 或 event ctx"
+    assert tx_agent.ctx.rests_healed_at_full == 0 and tx_agent.ctx.decisions == [], \
+        "失败/未确认动作仍写入休息统计或成功决策轨迹"
+    assert tx_agent.ctx.last_hp == 80 and tx_agent.ctx.last_gold == 12, \
+        "两阶段提交误伤了每 tick 必须保留的观察态更新"
+
+    tx_agent._commit_successful_action(tx_state, tx_decision)
     assert tx_agent.know.stats["cards"]["TX_CARD"]["plays"] == 1, \
         "成功动作回执未提交 card play"
+    assert tx_agent.ctx.credit_tags == tx_decision.tags, \
+        "成功动作回执未提交完整 credit/ctx tags"
+    assert tx_agent.ctx.pending_event[:2] == ("TX_EVENT", "take"), \
+        "成功事件动作未建立后续观察结算快照"
+    assert tx_agent.ctx.rests_healed_at_full == 1 and len(tx_agent.ctx.decisions) == 1, \
+        "成功动作未提交休息统计或决策轨迹"
+
+    # 下一 tick 的真实离场属于观察态，不依赖这一 tick 是否另有成功动作。
+    tx_next = {
+        "screen": "MAP", "run_id": "TX_RUN", "available_actions": [],
+        "run": {"current_hp": 75, "max_hp": 80, "gold": 12, "floor": 3,
+                "deck": [], "relics": [], "potions": []}}
+    tx_agent._track(tx_next, policy.Decision())
+    assert tx_agent.ctx.pending_event is None and tx_agent.ctx.last_hp == 75, \
+        "观察态离场结算被错误推迟到下一次成功动作"
+    assert tx_agent.know.stats["events"]["TX_EVENT"]["take"]["n"] == 1, \
+        "已成功事件选择的真实离场结果未结算"
+
+    # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
+    # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
+    class LostReceiptClient(client.Sts2Client):
+        def __init__(self):
+            super().__init__(ports=(8080,))
+            self.base_url = "http://127.0.0.1:8080"
+            self.calls = []
+
+        def _raw_request(self, method, url, payload=None, timeout=10.0):
+            self.calls.append((method, url, payload))
+            if method == "POST":
+                raise client.ConnectionDown("response lost")
+            return {"status": "ready"}
+
+    lost_client = LostReceiptClient()
+    try:
+        lost_client.act("claim_reward", option_index=0)
+        assert False, "丢失 POST 回执未向 Agent 暴露 ConnectionDown"
+    except client.ConnectionDown:
+        pass
+    assert sum(1 for method, _, _ in lost_client.calls if method == "POST") == 1 \
+        and any(method == "GET" and url.endswith("/health")
+                for method, url, _ in lost_client.calls), \
+        f"client 在丢回执后重放了 POST 或未健康探测: {lost_client.calls}"
+    try:
+        client.Sts2Client._decode(b'{"ok":true,"data":')
+        assert False, "截断 JSON 回执未按未知成功处理"
+    except client.ConnectionDown:
+        pass
+    for malformed in (
+            b'{}', b'{"data":{}}', b'{"ok":1,"data":{}}',
+            b'{"ok":"true","data":{}}', b'{"ok":false}',
+            b'{"ok":false,"error":null}', b'{"ok":false,"error":[]}'):
+        try:
+            client.Sts2Client._decode(malformed)
+            assert False, f"畸形 2xx envelope 未按未知成功处理: {malformed!r}"
+        except client.ConnectionDown:
+            pass
+    try:
+        client.Sts2Client._decode(
+            b'{"ok":false,"error":{"code":"invalid_action","message":"bad"}}')
+        assert False, "结构完整的明确失败 2xx envelope 未抛 ApiError"
+    except client.ApiError as exc:
+        assert exc.code == "invalid_action", f"明确错误 code 丢失: {exc}"
+    try:
+        client.Sts2Client()._raw_request(
+            "POST", "http://127.0.0.1/action", {"bad": object()})
+        assert False, "发送前 JSON 序列化错误未明确归类"
+    except client.ApiError as exc:
+        assert exc.code == "invalid_request", \
+            f"发送前序列化错误错误地进入未知成功路径: {exc}"
+    # HTTPError 的错误体本身也可能在读取/解码时断掉；它同样不能证明 POST
+    # 未执行，必须进入未知成功对账而不是 ApiError 永久失败路径。
+    original_urlopen = client.urllib.request.urlopen
+    try:
+        for fp in (io.BytesIO(b'{"error":'), io.BytesIO(b'[]')):
+            def raise_bad_http(_req, timeout=None, _fp=fp):
+                raise client.urllib.error.HTTPError(
+                    "http://127.0.0.1/action", 409, "Conflict", {}, _fp)
+            client.urllib.request.urlopen = raise_bad_http
+            try:
+                client.Sts2Client()._raw_request(
+                    "POST", "http://127.0.0.1/action", {"action": "claim_reward"})
+                assert False, "不可解码 HTTPError 回执未按未知成功处理"
+            except client.ConnectionDown:
+                pass
+    finally:
+        client.urllib.request.urlopen = original_urlopen
+
+    # Agent 的未知成功对账必须是 action-specific + 两阶段：接口列表抖动不是
+    # 成功证据；连续三次未见物质变化后才放行重试，期间不得另发动作或写信用账。
+    ambiguous_root = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ambiguous-action-"))
+
+    def fresh_amb_agent(name, run_id):
+        agent.KNOWLEDGE_DIR = ambiguous_root / name
+        agent._LOG_PATH = agent.KNOWLEDGE_DIR / "brain.log"
+        value = agent.Agent(dict(agent.DEFAULT_CONFIG))
+        value.ctx.reset_for(run_id, 0)
+        return value
+
+    amb_reward_agent = fresh_amb_agent("reward", "AMB_REWARD")
+    amb_reward_state = json.loads(json.dumps(reward_state))
+    amb_reward_state["run_id"] = "AMB_REWARD"
+    amb_reward_agent.ctx.run_id = "AMB_REWARD"
+    amb_reward_decision = amb_reward_agent.policy.decide(
+        amb_reward_state, amb_reward_agent.ctx)
+    amb_reward_agent._remember_ambiguous_action(
+        amb_reward_state, amb_reward_decision)
+    endpoint_only = json.loads(json.dumps(amb_reward_state))
+    endpoint_only["available_actions"] = ["proceed", "claim_reward"]
+    assert [amb_reward_agent._reconcile_ambiguous_action(endpoint_only)
+            for _ in range(3)] == ["wait", "wait", "retry"], \
+        "仅 available_actions 变化被误认作奖励已领取，或未做短轮询防重复"
+    assert amb_reward_agent.ctx.credit_tags == [] \
+        and amb_reward_agent.policy._reward_tried == set(), \
+        "未执行奖励在未知成功对账中获得了幻影信用/去重标记"
+    amb_reward_retry = amb_reward_agent.policy.decide(
+        endpoint_only, amb_reward_agent.ctx)
+    assert amb_reward_retry.action == "claim_reward" \
+        and amb_reward_retry.params == amb_reward_decision.params, \
+        "无物质变化的奖励丢回执没有稳定重试原目标"
+
+    # pending 仅表示服务端受理，不能提前写 reward_attempt；同一陈旧 payload
+    # 应持续等待，看到精确目标消失后才补交一次完整 Decision。
+    pending_agent = fresh_amb_agent("pending_reward", "AMB_PENDING")
+    pending_state = json.loads(json.dumps(amb_reward_state))
+    pending_state["run_id"] = "AMB_PENDING"
+    pending_agent.ctx.run_id = "AMB_PENDING"
+    pending_decision = pending_agent.policy.decide(
+        pending_state, pending_agent.ctx)
+    pending_agent._remember_ambiguous_action(
+        pending_state, pending_decision, accepted=True)
+    assert pending_agent._reconcile_ambiguous_action(pending_state) == "wait" \
+        and pending_agent.ctx.credit_tags == [], \
+        "pending 回执在动作效果落地前抢先提交了奖励事务"
+    pending_applied = json.loads(json.dumps(pending_state))
+    pending_applied["reward"]["rewards"] = []
+    pending_applied["run"]["gold"] = 42
+    assert pending_agent._reconcile_ambiguous_action(pending_applied) == "applied" \
+        and pending_agent.ctx.credit_tags == pending_decision.tags, \
+        "pending 回执未在精确效果落地后恰好一次补交事务"
+
+    # 旧局 pending 后连到新 run/menu 不能把离屏误当旧动作成功。
+    cross_agent = fresh_amb_agent("cross_run", "AMB_OLD")
+    cross_before = json.loads(json.dumps(event_state))
+    cross_before["run_id"] = "AMB_OLD"
+    cross_decision = policy.Decision(
+        "choose_event_option", {"option_index": 0}, "cross",
+        tags=[("event_choice", "RECEIPT_EVENT", "WAIT")])
+    cross_agent._remember_ambiguous_action(cross_before, cross_decision)
+    cross_after = {"screen": "MAP", "run_id": "AMB_NEW",
+                   "run": {"floor": 1, "deck": [], "relics": [], "potions": []}}
+    assert [cross_agent._reconcile_ambiguous_action(cross_after)
+            for _ in range(3)] == ["wait", "wait", "retry"] \
+        and cross_agent.ctx.credit_tags == [], \
+        "跨 run 离屏被误认作旧局事件动作成功并写入幻影信用"
+
+    # 跑一段真实 Agent.run 控制流：前两份 unchanged GET 只能观察+等待，既不
+    # 调 Policy 也不 POST；第三份才释放一次重试，防止 wiring 只返回 wait 却
+    # 在主循环里被忽略。
+    loop_agent = fresh_amb_agent("loop_gate", "AMB_LOOP")
+    loop_state = json.loads(json.dumps(amb_reward_state))
+    loop_state["run_id"] = "AMB_LOOP"
+    loop_agent.ctx.run_id = "AMB_LOOP"
+    loop_decision = loop_agent.policy.decide(loop_state, loop_agent.ctx)
+    loop_agent._remember_ambiguous_action(loop_state, loop_decision)
+    loop_decide_calls = []
+    original_loop_decide = loop_agent.policy.decide
+
+    def counted_loop_decide(state, ctx):
+        loop_decide_calls.append(state.get("screen"))
+        return original_loop_decide(state, ctx)
+
+    loop_agent.policy.decide = counted_loop_decide
+
+    class LoopGateClient:
+        def __init__(self):
+            self.state_reads = 0
+            self.actions = []
+
+        def health(self):
+            return {"mod_version": "test", "game_version": "test"}
+
+        def state(self):
+            self.state_reads += 1
+            if self.state_reads > 3:
+                raise AssertionError("未知成功等待未在第三帧释放")
+            return json.loads(json.dumps(loop_state))
+
+        def act(self, action, **params):
+            self.actions.append((action, params))
+            return {"status": "completed"}
+
+    loop_client = LoopGateClient()
+    loop_agent.client = loop_client
+    loop_agent._launch_quipper = lambda: None
+    loop_agent.ensure_game = lambda: True
+    loop_agent._last_policy_refresh = __import__("time").time()
+    old_stop_requested = agent.stop_requested
+    old_wait_for_stop = agent.wait_for_stop
+    old_review_module = agent.llm_review
+    old_autogit_module = agent.autogit
+    try:
+        agent.stop_requested = lambda: False
+        agent.wait_for_stop = lambda _seconds: bool(loop_client.actions)
+        agent.llm_review = None
+        agent.autogit = None
+        loop_agent.run()
+    finally:
+        agent.stop_requested = old_stop_requested
+        agent.wait_for_stop = old_wait_for_stop
+        agent.llm_review = old_review_module
+        agent.autogit = old_autogit_module
+    assert loop_client.state_reads == 3 \
+        and len(loop_decide_calls) == 1 \
+        and loop_client.actions == [("claim_reward", {"option_index": 0})], \
+        ("主循环未真正抑制未知成功等待期的决策/重复 POST: "
+         f"reads={loop_client.state_reads}, decide={loop_decide_calls}, "
+         f"actions={loop_client.actions}")
+
+    # Client 边界之外的普通异常也不能证明 POST 未发送：保留 Decision 做下一帧
+    # 对账，不得直接把奖励写进永久 tried。签名 TypeError 的旧熔断仍在 Agent 内。
+    generic_agent = fresh_amb_agent("generic_exception", "AMB_GENERIC")
+    generic_state = json.loads(json.dumps(amb_reward_state))
+    generic_state["run_id"] = "AMB_GENERIC"
+    generic_agent.ctx.run_id = "AMB_GENERIC"
+
+    class GenericLostClient:
+        def __init__(self):
+            self.actions = []
+
+        def health(self):
+            return {"mod_version": "test", "game_version": "test"}
+
+        def state(self):
+            return json.loads(json.dumps(generic_state))
+
+        def act(self, action, **params):
+            self.actions.append((action, params))
+            raise RuntimeError("transport wrapper failed after send")
+
+    generic_client = GenericLostClient()
+    generic_agent.client = generic_client
+    generic_agent._launch_quipper = lambda: None
+    generic_agent.ensure_game = lambda: True
+    generic_agent._last_policy_refresh = __import__("time").time()
+    old_stop_requested = agent.stop_requested
+    old_wait_for_stop = agent.wait_for_stop
+    old_review_module = agent.llm_review
+    old_autogit_module = agent.autogit
+    try:
+        agent.stop_requested = lambda: False
+        agent.wait_for_stop = lambda _seconds: bool(generic_client.actions)
+        agent.llm_review = None
+        agent.autogit = None
+        generic_agent.run()
+    finally:
+        agent.stop_requested = old_stop_requested
+        agent.wait_for_stop = old_wait_for_stop
+        agent.llm_review = old_review_module
+        agent.autogit = old_autogit_module
+    assert generic_client.actions == [("claim_reward", {"option_index": 0})] \
+        and isinstance(generic_agent._ambiguous_action, dict) \
+        and generic_agent.policy._reward_tried == set() \
+        and generic_agent.ctx.credit_tags == [], \
+        "Agent 普通动作异常被当成确定失败，未进入未知成功对账"
+
+    # 同一奖励目标消失且金币落袋是明确 postcondition：补交原 Decision 的全部
+    # tags/日志一次，随后 Policy 才把该奖励加入 tried。
+    amb_reward_agent._remember_ambiguous_action(
+        amb_reward_state, amb_reward_retry)
+    reward_applied = json.loads(json.dumps(amb_reward_state))
+    reward_applied["reward"]["rewards"] = []
+    reward_applied["run"]["gold"] = 42
+    assert amb_reward_agent._reconcile_ambiguous_action(reward_applied) == "applied", \
+        "已领取但丢回执的奖励未由目标消失/金币变化确认"
+    amb_reward_agent._track(reward_applied)
+    amb_reward_agent.policy.decide(reward_applied, amb_reward_agent.ctx)
+    assert amb_reward_retry.tags == amb_reward_agent.ctx.credit_tags \
+        and len(amb_reward_agent.ctx.decisions) == 1, \
+        "奖励未知成功未恰好一次补交完整事务账"
+
+    # 事件离场、地图进房、篝火进选牌、卡牌/遗物奖励都必须用各自的屏幕或
+    # 资源 postcondition 补交信用；这也是后续 HP/金币/战斗归因建立快照的前提。
+    credit_cases = [
+        ("map", "AMB_MAP", "MAP", "COMBAT",
+         policy.Decision("choose_map_node", {"option_index": 0}, "map",
+                         tags=[("map_node", "Monster")]),
+         {"map": {"available_nodes": [{"index": 0, "node_type": "Monster"}]}}),
+        ("rest", "AMB_REST", "REST", "CARD_SELECTION",
+         policy.Decision("choose_rest_option", {"option_index": 1}, "rest",
+                         tags=[("rest", "smith")]),
+         {"rest": {"options": [{"index": 1, "option_id": "smith"}]}}),
+        ("card_reward", "AMB_CARD_REWARD", "REWARD", "MAP",
+         policy.Decision("choose_reward_card", {"option_index": 0}, "card",
+                         tags=[("card_pick", "AMB_CARD")]),
+         {"reward": {"card_options": [{"index": 0, "card_id": "AMB_CARD"}]}}),
+        ("relic_reward", "AMB_RELIC_REWARD", "CHEST", "MAP",
+         policy.Decision("choose_treasure_relic", {"option_index": 0}, "relic",
+                         tags=[("relic_pick", "AMB_RELIC")]),
+         {"chest": {"is_opened": True, "has_relic_been_claimed": False,
+                    "relic_options": [{"index": 0, "relic_id": "AMB_RELIC"}]}}),
+    ]
+    for name, run_id, before_screen, after_screen, decision, extra in credit_cases:
+        value = fresh_amb_agent(name, run_id)
+        before = {"screen": before_screen, "run_id": run_id,
+                  "available_actions": [decision.action],
+                  "run": {"current_hp": 70, "max_hp": 80, "gold": 50,
+                          "floor": 6, "deck": [], "relics": [], "potions": []},
+                  **extra}
+        after = json.loads(json.dumps(before))
+        after["screen"] = after_screen
+        if decision.action == "choose_treasure_relic":
+            after["run"]["relics"].append(
+                {"index": 0, "relic_id": "AMB_RELIC", "name": "精确遗物"})
+        value._remember_ambiguous_action(before, decision)
+        assert value._reconcile_ambiguous_action(after) == "applied" \
+            and value.ctx.credit_tags == decision.tags \
+            and value.ctx.decisions[-1]["action"] == decision.action, \
+            f"{name} 丢回执后的成功转换未补交完整 Decision 事务"
+
+    # 宝箱域或离屏的泛化变化不是领取证据；必须看到目标遗物入库存、该精确
+    # option 消失，或该精确 option 被标 claimed，避免把 sibling/动画变化记账。
+    exact_chest_agent = fresh_amb_agent("exact_chest", "AMB_EXACT_CHEST")
+    exact_chest_before = {
+        "screen": "CHEST", "run_id": "AMB_EXACT_CHEST",
+        "available_actions": ["choose_treasure_relic"],
+        "chest": {"is_opened": True, "has_relic_been_claimed": False,
+                  "relic_options": [
+                      {"index": 0, "relic_id": "TARGET_RELIC", "name": "目标"},
+                      {"index": 1, "relic_id": "SIBLING_RELIC", "name": "兄弟"}]},
+        "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 6,
+                "deck": [], "relics": [], "potions": []}}
+    exact_chest_decision = policy.Decision(
+        "choose_treasure_relic", {"option_index": 0}, "target",
+        tags=[("relic_pick", "TARGET_RELIC")])
+    generic_chest_after = json.loads(json.dumps(exact_chest_before))
+    generic_chest_after["screen"] = "MAP"
+    generic_chest_after["chest"]["has_relic_been_claimed"] = True
+    exact_chest_agent._remember_ambiguous_action(
+        exact_chest_before, exact_chest_decision)
+    assert [exact_chest_agent._reconcile_ambiguous_action(generic_chest_after)
+            for _ in range(3)] == ["wait", "wait", "retry"] \
+        and exact_chest_agent.ctx.credit_tags == [], \
+        "宝箱离屏/泛 claimed 标志被误当作精确目标领取成功"
+    exact_option_after = json.loads(json.dumps(exact_chest_before))
+    exact_option_after["chest"]["relic_options"] = [
+        exact_option_after["chest"]["relic_options"][1]]
+    exact_chest_agent._remember_ambiguous_action(
+        exact_chest_before, exact_chest_decision)
+    assert exact_chest_agent._reconcile_ambiguous_action(exact_option_after) == "applied" \
+        and exact_chest_agent.ctx.credit_tags == exact_chest_decision.tags, \
+        "同屏精确遗物 option 消失未确认丢回执领取成功"
+
+    # 事件选择在进入下一屏前先补挂 pending_event，_track 才能把真实变化归因
+    # 给正确选项；若顺序反了，离场 tick 会直接漏样本。
+    amb_event_agent = fresh_amb_agent("event", "AMB_EVENT")
+    amb_event_before = json.loads(json.dumps(event_state))
+    amb_event_before["run_id"] = "AMB_EVENT"
+    amb_event_decision = policy.Decision(
+        "choose_event_option", {"option_index": 0}, "event",
+        tags=[("event_choice", "RECEIPT_EVENT", "WAIT")])
+    amb_event_after = json.loads(json.dumps(amb_event_before))
+    amb_event_after["screen"] = "MAP"
+    amb_event_after["run"]["current_hp"] = 73
+    amb_event_after["map"] = {"available_nodes": []}
+    amb_event_agent._remember_ambiguous_action(
+        amb_event_before, amb_event_decision)
+    assert amb_event_agent._reconcile_ambiguous_action(amb_event_after) == "applied" \
+        and amb_event_agent.ctx.pending_event is not None, \
+        "事件未知成功未在观察离场前建立归因快照"
+    amb_event_agent._track(amb_event_after)
+    assert amb_event_agent.ctx.pending_event is None \
+        and amb_event_agent.know.stats["events"]["RECEIPT_EVENT"]["WAIT"]["n"] == 1, \
+        "事件未知成功的真实离场结果未落库"
+
+    # 同回合同一张牌的手牌/能量/计数变化可确认出牌；endpoint-only 变化不能。
+    amb_play_agent = fresh_amb_agent("play", "AMB_PLAY")
+    play_before = {
+        "screen": "COMBAT", "run_id": "AMB_PLAY", "turn": 2,
+        "available_actions": ["play_card", "end_turn"],
+        "run": {"current_hp": 60, "max_hp": 80, "gold": 0, "floor": 8,
+                "deck": [], "relics": [], "potions": []},
+        "combat": {"player": {"current_hp": 60, "max_hp": 80, "block": 0,
+                                "energy": 3, "cards_played_this_turn": 0},
+                   "hand": [{"index": 0, "card_id": "AMB_STRIKE", "name": "打击",
+                              "energy_cost": 1, "playable": True}],
+                   "enemies": [{"index": 0, "enemy_id": "AMB_ENEMY",
+                                 "current_hp": 20, "max_hp": 20, "block": 0,
+                                 "is_alive": True, "powers": []}]}}
+    play_decision = policy.Decision(
+        "play_card", {"card_index": 0, "target_index": 0}, "play",
+        tags=[("play_card", "AMB_STRIKE"), ("play_card_index", 0)])
+    play_endpoint_only = json.loads(json.dumps(play_before))
+    play_endpoint_only["available_actions"] = ["end_turn"]
+    amb_play_agent._remember_ambiguous_action(play_before, play_decision)
+    assert [amb_play_agent._reconcile_ambiguous_action(play_endpoint_only)
+            for _ in range(3)] == ["wait", "wait", "retry"] \
+        and amb_play_agent.know.stats["cards"].get("AMB_STRIKE") is None \
+        and amb_play_agent.policy._failed_this_turn == set(), \
+        "出牌 endpoint 刷新窗被误记成功/失败并污染卡槽黑名单"
+    play_after = json.loads(json.dumps(play_before))
+    play_after["combat"]["player"]["energy"] = 2
+    play_after["combat"]["player"]["cards_played_this_turn"] = 1
+    play_after["combat"]["hand"] = []
+    play_after["combat"]["enemies"][0]["current_hp"] = 14
+    amb_play_agent._remember_ambiguous_action(play_before, play_decision)
+    assert amb_play_agent._reconcile_ambiguous_action(play_after) == "applied" \
+        and amb_play_agent.know.stats["cards"]["AMB_STRIKE"]["plays"] == 1 \
+        and amb_play_agent.ctx.credit_tags == play_decision.tags, \
+        "同回合物质变化未确认丢回执出牌，或未补交出牌账"
+
+    # 药水以槽位身份/占用变化为提交证据，不能因 use_potion endpoint 抖动消费。
+    amb_potion_agent = fresh_amb_agent("potion", "AMB_POTION")
+    potion_before = json.loads(json.dumps(potion_state))
+    potion_before["run_id"] = "AMB_POTION"
+    # 生产时序中该动作前的首帧已经 track→decide，Policy 因而绑定了本场
+    # combat identity；先走一遍，避免测试手工 Decision 绕过这一生命周期。
+    amb_potion_agent._track(potion_before)
+    amb_potion_agent.ctx.current_combat_is_hard = True
+    amb_potion_agent.policy.decide(potion_before, amb_potion_agent.ctx)
+    potion_decision = policy.Decision(
+        "use_potion", {"option_index": 0}, "potion",
+        tags=[("potion_used", "RECEIPT_FIRE"),
+              ("potion_attempt", 0, "RECEIPT_FIRE")])
+    potion_after_state = json.loads(json.dumps(potion_before))
+    potion_after_state["run"]["potions"][0].update(
+        {"occupied": False, "can_use": False, "potion_id": None, "name": None})
+    amb_potion_agent._remember_ambiguous_action(potion_before, potion_decision)
+    assert amb_potion_agent._reconcile_ambiguous_action(potion_after_state) == "applied", \
+        "已消耗药水的丢回执未由槽位变化确认"
+    amb_potion_agent._track(potion_after_state)
+    amb_potion_agent.policy.decide(potion_after_state, amb_potion_agent.ctx)
+    assert amb_potion_agent.ctx.credit_tags == potion_decision.tags, \
+        "药水未知成功未恰好一次进入消费/信用账"
+
+    # 商店删牌 opener 与后续选牌各有独立握手。未落地时重试 opener/同一垃圾；
+    # 落地后无关键词的选择屏也必须删打击，不能误删最高价值牌或反选。
+    amb_shop_agent = fresh_amb_agent("shop_remove", "AMB_SHOP")
+    amb_shop_state = {
+        "screen": "SHOP", "run_id": "AMB_SHOP",
+        "available_actions": ["remove_card_at_shop", "close_shop_inventory"],
+        "shop": {"is_open": True, "can_close": True, "cards": [], "relics": [],
+                 "potions": [], "card_removal": {"available": True, "used": False,
+                 "enough_gold": True, "price": 50}},
+        "run": {"current_hp": 70, "max_hp": 80, "gold": 150, "floor": 9,
+                "deck": [{"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                          "card_type": "Attack", "upgraded": False},
+                         {"index": 1, "card_id": "BASH", "name": "痛击+",
+                          "card_type": "Attack", "upgraded": True}],
+                "relics": [], "potions": []}}
+    remove_open = amb_shop_agent.policy.decide(
+        amb_shop_state, amb_shop_agent.ctx)
+    assert remove_open.action == "remove_card_at_shop", \
+        f"删牌事务测试未进入 opener: {remove_open.reason}"
+    amb_shop_agent._remember_ambiguous_action(amb_shop_state, remove_open)
+    assert [amb_shop_agent._reconcile_ambiguous_action(amb_shop_state)
+            for _ in range(3)] == ["wait", "wait", "retry"], \
+        "未落地的商店删牌 opener 没有短等待后重试"
+    assert amb_shop_agent.policy.decide(
+        amb_shop_state, amb_shop_agent.ctx).action == "remove_card_at_shop", \
+        "商店删牌无回执未执行后被幻影标记完成"
+    remove_select_state = {
+        "screen": "CARD_SELECTION", "run_id": "AMB_SHOP",
+        "available_actions": ["select_deck_card", "confirm_selection"],
+        "selection": {"kind": "mystery", "prompt": "选择一张牌", "min_select": 1,
+                      "max_select": 1, "selected_count": 0, "can_confirm": False,
+                      "cards": json.loads(json.dumps(amb_shop_state["run"]["deck"]))},
+        "run": json.loads(json.dumps(amb_shop_state["run"]))}
+    amb_shop_agent._remember_ambiguous_action(amb_shop_state, remove_open)
+    assert amb_shop_agent._reconcile_ambiguous_action(remove_select_state) == "applied", \
+        "商店删牌已打开选择屏却未补交 opener 握手"
+    amb_shop_agent._track(remove_select_state)
+    remove_pick = amb_shop_agent.policy.decide(
+        remove_select_state, amb_shop_agent.ctx)
+    assert remove_pick.action == "select_deck_card" \
+        and remove_pick.params.get("option_index") == 0, \
+        f"无关键词删牌屏误选高价值牌: {remove_pick.params}（{remove_pick.reason}）"
+    amb_shop_agent._remember_ambiguous_action(remove_select_state, remove_pick)
+    assert [amb_shop_agent._reconcile_ambiguous_action(remove_select_state)
+            for _ in range(3)] == ["wait", "wait", "retry"], \
+        "未执行的 deck selection 未按同一 screen/count 重试"
+    remove_pick_retry = amb_shop_agent.policy.decide(
+        remove_select_state, amb_shop_agent.ctx)
+    assert remove_pick_retry.action == "select_deck_card" \
+        and remove_pick_retry.params == remove_pick.params, \
+        "删牌选择丢回执未执行后换选/跳过了原垃圾牌"
+    remove_selected = json.loads(json.dumps(remove_select_state))
+    remove_selected["selection"]["selected_count"] = 1
+    remove_selected["selection"]["can_confirm"] = True
+    amb_shop_agent._remember_ambiguous_action(
+        remove_select_state, remove_pick_retry)
+    assert amb_shop_agent._reconcile_ambiguous_action(remove_selected) == "applied", \
+        "selected_count 增长未确认 deck selection 已执行"
+    amb_shop_agent._track(remove_selected)
+    assert amb_shop_agent.policy.decide(
+        remove_selected, amb_shop_agent.ctx).action == "confirm_selection", \
+        "已执行选牌丢回执后重复点击并可能反选"
+
+    # 时间线所有 pre-mutation 都必须由成功 tag/观察转换驱动；accepted 但长期
+    # 不落地不能在超时后把 obtained 槽误标 tried，应该重试同槽。
+    timeline_agent = fresh_amb_agent("timeline", "AMB_TIMELINE")
+    timeline_agent.ctx.check_timeline = True
+    timeline_menu = {
+        "screen": "MAIN_MENU", "available_actions": ["open_timeline"],
+        "timeline": None, "run": {}}
+    open_timeline = timeline_agent.policy.decide(
+        timeline_menu, timeline_agent.ctx)
+    assert open_timeline.action == "open_timeline" \
+        and timeline_agent.ctx.check_timeline, \
+        "open_timeline 请求前抢先清除了 check_timeline"
+    timeline_agent._commit_successful_action(timeline_menu, open_timeline)
+    timeline_state = {
+        "screen": "TIMELINE", "available_actions": ["choose_timeline_epoch",
+                                                       "close_main_menu_submenu"],
+        "timeline": {"can_choose_epoch": True, "can_confirm_overlay": False,
+                     "slots": [{"index": 3, "state": "obtained", "title": "新内容"}]},
+        "run": {}}
+    choose_epoch = timeline_agent.policy.decide(
+        timeline_state, timeline_agent.ctx)
+    assert choose_epoch.action == "choose_timeline_epoch" \
+        and 3 not in timeline_agent.ctx.timeline_tried, \
+        "时间线槽位在请求前被抢先标记 tried"
+    timeline_agent._commit_successful_action(timeline_state, choose_epoch)
+    timeline_waits = [timeline_agent.policy.decide(
+        timeline_state, timeline_agent.ctx) for _ in range(9)]
+    assert all(d.action is None for d in timeline_waits[:-1]) \
+        and timeline_waits[-1].action == "choose_timeline_epoch" \
+        and 3 not in timeline_agent.ctx.timeline_tried, \
+        "时间线 accepted/pending 未落地时超时跳过 obtained 槽或提前重复点击"
+    timeline_agent._commit_successful_action(
+        timeline_state, timeline_waits[-1])
+    timeline_overlay = json.loads(json.dumps(timeline_state))
+    timeline_overlay["timeline"]["can_confirm_overlay"] = True
+    timeline_overlay["available_actions"] = ["confirm_timeline_overlay"]
+    overlay_decision = timeline_agent.policy.decide(
+        timeline_overlay, timeline_agent.ctx)
+    assert overlay_decision.action == "confirm_timeline_overlay" \
+        and 3 in timeline_agent.ctx.timeline_tried, \
+        "时间线真实 overlay 转换未提交 tried/确认流程"
+
+    # 409 是明确“未执行”但常由 GET→POST 间的刷新竞争产生。即使相同状态连续
+    # 两次仍不得永久拉黑牌/奖励/药水；只有参数/能力错误走 definitive 路径。
+    race_agent = fresh_amb_agent("api_race", "AMB_API")
+    card_race = client.ApiError(
+        "invalid_action", "Card cannot be played in the current state.",
+        status=409)
+    assert race_agent._defer_api_error_once(
+        play_before, play_decision, card_race) \
+        and race_agent._defer_api_error_once(
+            play_before, play_decision, card_race), \
+        "持续动画窗中的第二个 409 仍会永久拉黑可用牌"
+    retryable_error = client.ApiError(
+        "state_unavailable", "busy", status=503, retryable=True)
+    assert race_agent._defer_api_error_once(
+        play_before, play_decision, retryable_error), \
+        "服务端显式 retryable 错误未保持无惩罚刷新"
+    definitive_error = client.ApiError(
+        "invalid_action", "This target type is not supported by the API.",
+        status=409)
+    assert not race_agent._defer_api_error_once(
+        play_before, play_decision, definitive_error), \
+        "永久不支持的动作签名错误被误当作刷新竞争"
+
+    # event/map/rest/shop/selection/treasure 的瞬时失败按精确 action+option
+    # 短冷却：先轮转 sibling；全部候选冷却时只能等待，不能跳过/离开屏幕；
+    # 冷却自动过期后原目标重新可用。
+    rotate_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ui-rotation-")))
+    rotate_know.policy["event_exploration_enabled"] = False
+    rotate_know.policy["relic_exploration_enabled"] = False
+    rotate_know.policy["potion_exploration_enabled"] = False
+
+    def assert_ui_rotation(label, state, expected_action):
+        rotate_pol = policy.Policy(rotate_know, random.Random(0))
+        rotate_ctx = DummyCtx()
+        rotate_ctx.run_id = state["run_id"]
+        rotate_ctx.credit_tags = []
+        first = rotate_pol.decide(state, rotate_ctx)
+        assert first.action == expected_action, \
+            f"{label} 轮转测试未产生首个候选: {first.action} / {first.reason}"
+        rotate_pol.note_action_deferred(
+            first.action, first.tags, state, first.params)
+        second = rotate_pol.decide(state, rotate_ctx)
+        assert second.action == expected_action \
+            and second.params.get("option_index") != first.params.get("option_index"), \
+            f"{label} 精确目标冷却后未轮转 sibling: {first.params} -> {second.params}"
+        rotate_pol.note_action_deferred(
+            second.action, second.tags, state, second.params)
+        all_cooling = rotate_pol.decide(state, rotate_ctx)
+        assert all_cooling.action is None and "短冷却" in all_cooling.reason, \
+            f"{label} 全候选冷却时错误离场/跳过: {all_cooling.action} / {all_cooling.reason}"
+        released = None
+        for _ in range(5):
+            released = rotate_pol.decide(state, rotate_ctx)
+            if released.action == expected_action:
+                break
+        assert released is not None and released.action == expected_action, \
+            f"{label} 精确目标短冷却没有自动过期: {released.reason if released else None}"
+        return rotate_pol, rotate_ctx, first
+
+    event_rotate_state = {
+        "screen": "EVENT", "run_id": "ROT_EVENT",
+        "available_actions": ["choose_event_option", "proceed"],
+        "event": {"event_id": "ROT_EVENT_ID", "title": "轮转事件",
+                  "is_finished": False, "page": 1,
+                  "options": [
+                      {"index": 0, "text_key": "A", "title": "A",
+                       "is_locked": False, "will_kill_player": False},
+                      {"index": 1, "text_key": "B", "title": "B",
+                       "is_locked": False, "will_kill_player": False}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 4, "deck": [], "relics": [], "potions": []}}
+    event_rotate_pol, event_rotate_ctx, event_first = assert_ui_rotation(
+        "事件", event_rotate_state, "choose_event_option")
+
+    map_rotate_state = {
+        "screen": "MAP", "run_id": "ROT_MAP",
+        "available_actions": ["choose_map_node", "proceed"],
+        "map": {"available_nodes": [
+                    {"index": 0, "row": 1, "col": 0, "node_type": "Monster"},
+                    {"index": 1, "row": 1, "col": 1, "node_type": "Monster"}],
+                "nodes": []},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 3, "deck": [], "relics": [], "potions": []}}
+    assert_ui_rotation("地图", map_rotate_state, "choose_map_node")
+
+    rest_rotate_state = {
+        "screen": "REST", "run_id": "ROT_REST",
+        "available_actions": ["choose_rest_option", "proceed"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 7,
+                "deck": [{"index": 0, "card_id": "ROT_STRIKE", "name": "打击",
+                          "card_type": "Attack", "upgraded": False}],
+                "relics": [], "potions": []}}
+    assert_ui_rotation("篝火", rest_rotate_state, "choose_rest_option")
+
+    shop_rotate_state = {
+        "screen": "SHOP", "run_id": "ROT_SHOP",
+        "available_actions": ["buy_relic", "close_shop_inventory", "proceed"],
+        "shop": {"is_open": True, "can_close": True, "cards": [], "potions": [],
+                 "card_removal": None,
+                 "relics": [
+                     {"index": 0, "relic_id": "ROT_RELIC_A", "name": "A",
+                      "price": 60, "is_stocked": True, "enough_gold": True},
+                     {"index": 1, "relic_id": "ROT_RELIC_B", "name": "B",
+                      "price": 60, "is_stocked": True, "enough_gold": True}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 200,
+                "floor": 8, "deck": [], "relics": [], "potions": []}}
+    assert_ui_rotation("商店", shop_rotate_state, "buy_relic")
+
+    selection_rotate_state = {
+        "screen": "CARD_SELECTION", "run_id": "ROT_SELECTION",
+        "available_actions": ["select_deck_card", "skip_reward_cards", "proceed"],
+        "selection": {"kind": "upgrade", "prompt": "升级", "min_select": 1,
+                      "max_select": 1, "selected_count": 0, "can_confirm": False,
+                      "cards": [
+                          {"index": 0, "card_id": "ROT_CARD_A", "name": "A",
+                           "card_type": "Attack", "upgraded": False},
+                          {"index": 1, "card_id": "ROT_CARD_B", "name": "B",
+                           "card_type": "Attack", "upgraded": False}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 9, "deck": [], "relics": [], "potions": []}}
+    assert_ui_rotation("选牌", selection_rotate_state, "select_deck_card")
+
+    chest_rotate_state = {
+        "screen": "CHEST", "run_id": "ROT_CHEST",
+        "available_actions": ["choose_treasure_relic", "proceed"],
+        "chest": {"is_opened": True, "has_relic_been_claimed": False,
+                  "relic_options": [
+                      {"index": 0, "relic_id": "ROT_CHEST_A", "name": "A"},
+                      {"index": 1, "relic_id": "ROT_CHEST_B", "name": "B"}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                "floor": 10, "deck": [], "relics": [], "potions": []}}
+    assert_ui_rotation("宝箱", chest_rotate_state, "choose_treasure_relic")
+
+    # accepted/pending 超时接入同一精确冷却；相同页面的 sibling 必须接替。
+    pending_rotate_agent = fresh_amb_agent("pending_rotate", "ROT_PENDING")
+    pending_rotate_state = json.loads(json.dumps(event_rotate_state))
+    pending_rotate_state["run_id"] = "ROT_PENDING"
+    pending_rotate_agent.ctx.run_id = "ROT_PENDING"
+    pending_rotate_decision = pending_rotate_agent.policy.decide(
+        pending_rotate_state, pending_rotate_agent.ctx)
+    pending_rotate_agent._remember_ambiguous_action(
+        pending_rotate_state, pending_rotate_decision, accepted=True)
+    pending_results = [pending_rotate_agent._reconcile_ambiguous_action(
+        pending_rotate_state) for _ in range(12)]
+    assert pending_results[-1] == "retry" \
+        and pending_rotate_agent.policy.decide(
+            pending_rotate_state, pending_rotate_agent.ctx).params.get("option_index") \
+        != pending_rotate_decision.params.get("option_index"), \
+        "accepted/pending 超时未冷却精确事件 option 并轮转 sibling"
+
+    # 连续第三次 transient 409 同样冷却精确宝箱目标，不得永久拉黑。
+    chest_race_agent = fresh_amb_agent("chest_race", "ROT_CHEST_RACE")
+    chest_race_state = json.loads(json.dumps(chest_rotate_state))
+    chest_race_state["run_id"] = "ROT_CHEST_RACE"
+    chest_race_agent.ctx.run_id = "ROT_CHEST_RACE"
+    chest_race_decision = chest_race_agent.policy.decide(
+        chest_race_state, chest_race_agent.ctx)
+    chest_race_error = client.ApiError(
+        "invalid_action", "state advanced", status=409)
+    assert all(chest_race_agent._defer_api_error_once(
+        chest_race_state, chest_race_decision, chest_race_error) for _ in range(3))
+    chest_race_next = chest_race_agent.policy.decide(
+        chest_race_state, chest_race_agent.ctx)
+    assert chest_race_next.action == "choose_treasure_relic" \
+        and chest_race_next.params.get("option_index") \
+        != chest_race_decision.params.get("option_index"), \
+        "连续 transient 409 未轮转精确宝箱 sibling"
+
+    # 同 run 的事件页面实例变化、以及 run identity 变化都必须立即清空旧冷却。
+    event_rotate_pol.note_action_deferred(
+        event_first.action, event_first.tags, event_rotate_state, event_first.params)
+    next_page = json.loads(json.dumps(event_rotate_state))
+    next_page["event"]["page"] = 2
+    page_decision = event_rotate_pol.decide(next_page, event_rotate_ctx)
+    assert page_decision.action == "choose_event_option" \
+        and page_decision.params == event_first.params, \
+        "事件 screen instance 变化后仍继承旧 option 冷却"
+    next_run = json.loads(json.dumps(event_rotate_state))
+    next_run["run_id"] = "ROT_EVENT_NEW_RUN"
+    event_rotate_ctx.run_id = "ROT_EVENT_NEW_RUN"
+    run_decision = event_rotate_pol.decide(next_run, event_rotate_ctx)
+    assert run_decision.action == "choose_event_option", \
+        "新 run 继承旧屏幕精确目标冷却"
+
+    # 原生 REST option 要求 target 时必须发送合法且确定性的 target_index。
+    rest_target_pol = policy.Policy(rotate_know, random.Random(0))
+    rest_target_ctx = DummyCtx()
+    rest_target_ctx.run_id = "REST_TARGET"
+    rest_target_ctx.credit_tags = []
+    rest_target_state = {
+        "screen": "REST", "run_id": "REST_TARGET",
+        "available_actions": ["choose_rest_option"],
+        "rest": {"options": [{"index": 4, "option_id": "SMITH",
+                               "title": "锻造", "is_enabled": True,
+                               "requires_target": True,
+                               "valid_target_indices": [2, 7]}]},
+        "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 7,
+                "deck": [
+                    {"index": 2, "card_id": "REST_WEAK", "name": "弱牌",
+                     "card_type": "Skill", "upgraded": False},
+                    {"index": 7, "card_id": "REST_STRONG", "name": "强攻",
+                     "card_type": "Attack", "upgraded": False,
+                     "dynamic_values": [{"name": "Damage", "current_value": 30}]}]}}
+    rest_target = rest_target_pol.decide(rest_target_state, rest_target_ctx)
+    assert rest_target.action == "choose_rest_option" \
+        and rest_target.params.get("option_index") == 4 \
+        and rest_target.params.get("target_index") in (2, 7) \
+        and "原生目标直选" in rest_target.reason, \
+        f"REST requires_target 未附合法目标: {rest_target.params} / {rest_target.reason}"
+    unknown_target = json.loads(json.dumps(rest_target_state))
+    unknown_target["run_id"] = "REST_UNKNOWN_TARGET"
+    unknown_target["rest"]["options"] = [{
+        "index": 5, "option_id": "MYSTERY", "title": "未知仪式",
+        "is_enabled": True, "requires_target": True,
+        "valid_target_indices": [9, 3]}]
+    rest_target_ctx.run_id = "REST_UNKNOWN_TARGET"
+    unknown_decision = rest_target_pol.decide(unknown_target, rest_target_ctx)
+    assert unknown_decision.params.get("target_index") == 3 \
+        and "目标语义未知" in unknown_decision.reason, \
+        f"未知 REST target 未稳定选择首个合法项并解释: {unknown_decision.params} / {unknown_decision.reason}"
+
+    # 要求目标但目标集为空的 enabled option 当前不可执行，必须在策略排序前
+    # 排除：有合法 sibling 就选 sibling；全部不可执行时原地等待，不能 proceed。
+    empty_target_sibling = json.loads(json.dumps(rest_target_state))
+    empty_target_sibling["run_id"] = "REST_EMPTY_TARGET_SIBLING"
+    empty_target_sibling["available_actions"] = ["choose_rest_option", "proceed"]
+    empty_target_sibling["rest"]["options"] = [
+        {"index": 0, "option_id": "SMITH", "title": "锻造",
+         "is_enabled": True, "requires_target": True,
+         "valid_target_indices": []},
+        {"index": 1, "option_id": "HEAL", "title": "休息",
+         "is_enabled": True, "requires_target": False},
+    ]
+    rest_target_ctx.run_id = "REST_EMPTY_TARGET_SIBLING"
+    sibling_decision = rest_target_pol.decide(
+        empty_target_sibling, rest_target_ctx)
+    assert sibling_decision.action == "choose_rest_option" \
+        and sibling_decision.params.get("option_index") == 1, \
+        ("空 target REST 项遮蔽了合法 sibling: "
+         f"{sibling_decision.action} / {sibling_decision.params} / {sibling_decision.reason}")
+
+    all_empty_targets = json.loads(json.dumps(empty_target_sibling))
+    all_empty_targets["run_id"] = "REST_ALL_EMPTY_TARGETS"
+    all_empty_targets["rest"]["options"] = [
+        {"index": 0, "option_id": "SMITH", "title": "锻造",
+         "is_enabled": True, "requires_target": True,
+         "valid_target_indices": []},
+        {"index": 2, "option_id": "MYSTERY", "title": "仪式",
+         "is_enabled": True, "requires_target": True,
+         "valid_target_indices": []},
+    ]
+    rest_target_ctx.run_id = "REST_ALL_EMPTY_TARGETS"
+    all_empty_decision = rest_target_pol.decide(
+        all_empty_targets, rest_target_ctx)
+    assert all_empty_decision.action is None \
+        and "没有合法目标" in all_empty_decision.reason, \
+        ("全部空 target REST 项错误 proceed/发动作: "
+         f"{all_empty_decision.action} / {all_empty_decision.reason}")
+
+    # 生产时序回归：Agent 必须先观察首个战斗帧、建立 ctx.combat，再让 Policy
+    # 决策。否则首张牌成功标签会在下一 tick 先入账、随后又被“新战斗”初始化
+    # 清空，导致受控试用和消耗上限可在同一场战斗重复透支。
+    flow_card = cm_card(0, "FLOW_NOVEL", "首帧新牌", damage=30,
+                        card_kind="Attack")
+    flow_card["rules_text"] = "Deal 30 damage. Exhaust a random card."
+    tx_agent.know.stats["cards"]["FLOW_NOVEL"] = {
+        "seen": 8, "picked": 5, "plays": 0,
+        "outcome_sum": 0.0, "bias": 0.0}
+    flow_first = cm_state([flow_card], turn=1)
+    flow_first["run_id"] = "TX_RUN"
+    tx_agent._track(flow_first)
+    flow_combat_identity = tx_agent.ctx.combat
+    assert isinstance(flow_combat_identity, dict), \
+        "首个战斗帧在 Policy 决策前没有建立 combat identity"
+    flow_decision = tx_agent.policy.decide(flow_first, tx_agent.ctx)
+    assert flow_decision.action == "play_card" and "受控试用" in flow_decision.reason, \
+        f"首帧受控试用没有产生出牌决策: {flow_decision.reason}"
+    tx_agent._commit_successful_action(flow_first, flow_decision)
+
+    flow_next = cm_state([flow_card], turn=2)
+    flow_next["run_id"] = "TX_RUN"
+    tx_agent._track(flow_next)
+    assert tx_agent.ctx.combat is flow_combat_identity, \
+        "同场第二帧错误更换了 combat identity"
+    tx_agent.policy.decide(flow_next, tx_agent.ctx)
+    flow_ledger = combat_policy_ledger(tx_agent.policy)
+    assert flow_ledger == (
+            frozenset({"FLOW_NOVEL"}), 1, 30.0, 1, 1, {"CM_ENEMY": 1}), \
+        f"首张成功出牌账被新战斗初始化清空或重复提交: {flow_ledger}"
+
+    # 卡死分析结论必须绑定请求它的战斗；新战斗统一清除 verdict/触发位，晚到的
+    # 旧线程结果不能让下一场从 T1 开始摆烂或强攻。新 run 也必须覆盖全部正式字段。
+    stall_old_combat = tx_agent.ctx.combat
+    assert tx_agent._commit_stall_verdict("giveup", stall_old_combat) \
+        and tx_agent.ctx.force_giveup, "当前战斗的有效 giveup 结论未生效"
+    tx_agent.ctx.stall_analysis_asked = True
+    tx_agent.ctx.stall_analysis_needed = True
+    tx_agent.ctx.force_offense = True
+    tx_agent.ctx.stall_grind_grace = True
+    tx_agent._start_combat({"max_hp": 80, "floor": 4, "deck": []},
+                           "STALL_NEW", "Monster", 73)
+    stall_new_combat = tx_agent.ctx.combat
+    assert not any((tx_agent.ctx.stall_analysis_asked,
+                    tx_agent.ctx.stall_analysis_needed,
+                    tx_agent.ctx.stall_giveup,
+                    tx_agent.ctx.force_giveup,
+                    tx_agent.ctx.force_offense,
+                    tx_agent.ctx.stall_grind_grace)), \
+        "新战斗继承了上一战的 stall verdict/触发状态"
+    assert not tx_agent._commit_stall_verdict("giveup", stall_old_combat) \
+        and not tx_agent.ctx.force_giveup, \
+        "异步旧战斗 giveup 结论污染了下一场战斗"
+    assert tx_agent._commit_stall_verdict("offense", stall_new_combat) \
+        and tx_agent.ctx.force_offense, "当前战斗 offense 结论未生效"
+    tx_agent.ctx.check_timeline = True
+    tx_agent.ctx.timeline_tried.add(3)
+    tx_agent.ctx.rest_proj_hp_pct = 0.2
+    tx_agent.ctx.reset_for("TX_RUN_NEXT", 0)
+    assert (not tx_agent.ctx.force_offense and not tx_agent.ctx.force_giveup
+            and not tx_agent.ctx.stall_grind_grace
+            and not tx_agent.ctx.stall_analysis_asked
+            and not tx_agent.ctx.check_timeline
+            and tx_agent.ctx.timeline_tried == set()
+            and tx_agent.ctx.rest_proj_hp_pct is None), \
+        "RunContext.reset_for 没有覆盖动态生命周期字段"
+
+    # Watchdog 必须感知同回合内的生命/格挡/能量/手牌/敌方状态进展；同时
+    # JSON 字典键顺序和 available_actions 顺序变化不能伪造进展。
+    wd_state = {
+        "screen": "COMBAT", "turn": 4,
+        "available_actions": ["play_card", "end_turn"],
+        "run": {"floor": 9, "current_hp": 42, "max_hp": 80,
+                "gold": 33, "ascension": 0},
+        "combat": {
+            "player": {"current_hp": 42, "max_hp": 80, "block": 3, "energy": 2},
+            "hand": [{"index": 0, "card_id": "TX_CARD", "playable": True,
+                      "energy_cost": 1,
+                      "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
+            "enemies": [{"index": 0, "enemy_id": "TX_ENEMY", "current_hp": 20,
+                         "max_hp": 30, "block": 2, "is_alive": True,
+                         "is_hittable": True,
+                         "intents": [{"intent_type": "Attack", "total_damage": 8}]}]}}
+    wd_sig = tx_agent._signature(wd_state)
+    wd_reordered = json.loads(json.dumps(wd_state))
+    wd_reordered["available_actions"].reverse()
+    wd_reordered["combat"]["enemies"][0]["intents"][0] = {
+        "total_damage": 8, "intent_type": "Attack"}
+    assert tx_agent._signature(wd_reordered) == wd_sig, \
+        "watchdog 签名受无语义的列表/字典顺序影响"
+    for path, value in [
+            (("run", "current_hp"), 41),
+            (("combat", "player", "block"), 9),
+            (("combat", "player", "energy"), 1),
+            (("combat", "hand", 0, "playable"), False),
+            (("combat", "enemies", 0, "current_hp"), 14),
+            (("combat", "enemies", 0, "block"), 0),
+            (("combat", "enemies", 0, "intents", 0, "total_damage"), 12)]:
+        changed = json.loads(json.dumps(wd_state))
+        cursor = changed
+        for part in path[:-1]:
+            cursor = cursor[part]
+        cursor[path[-1]] = value
+        assert tx_agent._signature(changed) != wd_sig, \
+            f"watchdog 未感知战斗状态变化: {path}"
 
     # 3zz-ab) 卡牌奖励 offer 统计 + 有界新牌探索：eval_reward_card 必须是纯函数；
     # 同一真实 offer 被状态轮询多次时每个基础 id 只记一次，离开屏幕后再次出现的
@@ -5295,6 +6592,7 @@ def main() -> int:
     explore_pol = policy.Policy(explore_know, random.Random(42))
     explore_ctx = DummyCtx()
     explore_ctx.run_id = "RUN_EXPLORE"
+    explore_ctx.credit_tags = []
 
     def reward_explore_state(floor_no, novel_id="EXP_NOVEL", novel_text=""):
         return {
@@ -5317,7 +6615,29 @@ def main() -> int:
             and d_explore.params.get("option_index") == 1
             and "受控探索" in d_explore.reason), \
         f"近优零样本新牌仍被永久贪心压制: {d_explore.action}（{d_explore.reason}）"
-    # 配额耗尽后立即回归贪心，不会为了新颖性连续注水。
+    assert explore_pol._card_explore_used == 0 \
+        and explore_know.novelty_trial_count("card", "EXP_NOVEL") == 0 \
+        and explore_pol._sel_tried == set(), \
+        "卡牌探索在 HTTP 成功前提前消耗配额/持久样本/已选索引"
+
+    # 409/断线没有成功标签：同一 offer 必须稳定重试原探索候选，不得改选贪心牌。
+    explore_pol.note_action_failed("select_deck_card", d_explore.tags)
+    d_explore_retry = explore_pol.decide(reward_explore_state(4), explore_ctx)
+    assert (d_explore_retry.params.get("option_index") == 1
+            and "同一 offer 保持受控探索选择" in d_explore_retry.reason
+            and explore_pol._card_explore_used == 0
+            and explore_know.novelty_trial_count("card", "EXP_NOVEL") == 0
+            and explore_pol._sel_tried == set()), \
+        f"失败回执改变了探索候选或提前记账: {d_explore_retry.reason}"
+
+    # 模拟 agent 收到成功回执后提交 tags；下一 tick 才结算配额、持久样本与
+    # selection index。随后第二份 offer 回归贪心，不会为了新颖性连续注水。
+    explore_ctx.credit_tags.extend(d_explore_retry.tags)
+    explore_pol.decide(reward_explore_state(4), explore_ctx)
+    assert explore_pol._card_explore_used == 1 \
+        and explore_know.novelty_trial_count("card", "EXP_NOVEL") == 1 \
+        and explore_pol._sel_tried == {1}, \
+        "成功卡牌探索未事务性提交配额/持久样本/已选索引"
     d_quota = explore_pol.decide(reward_explore_state(5, "EXP_NOVEL_2"), explore_ctx)
     assert d_quota.params.get("option_index") == 0 and "受控探索" not in d_quota.reason, \
         f"卡牌探索越过每局配额: {d_quota.reason}"
@@ -5346,6 +6666,230 @@ def main() -> int:
     d_dead = explore_pol.decide(dead_state, explore_ctx)
     assert d_dead.params.get("option_index") == 0 and "受控探索" not in d_dead.reason, \
         f"零成功出牌死牌被奖励探索重新拿入: {d_dead.reason}"
+
+    # 事件探索必须确定性命中近优欠采样项，且 HTTP 失败不占成功样本/配额。
+    novelty_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-domain-novelty-")))
+    novelty_know.policy.update({
+        "event_exploration_enabled": True,
+        "event_exploration_run_quota": 1,
+        "event_exploration_sample_cap": 2,
+        "event_exploration_near_best_margin": 2.0,
+        "event_exploration_min_hp_pct": 0.70,
+        "event_exploration_min_value": -1.0,
+        "relic_exploration_enabled": True,
+        "relic_exploration_run_quota": 1,
+        "relic_exploration_sample_cap": 1,
+        "relic_exploration_near_best_margin": 0.75,
+        "potion_exploration_enabled": True,
+        "potion_exploration_run_quota": 1,
+        "potion_exploration_sample_cap": 1,
+    })
+    novelty_know.stats["events"]["EVT_NOVEL"] = {
+        "KNOWN": {"n": 5, "hp_delta_sum": 5.0, "gold_delta_sum": 0.0,
+                  "deaths": 0, "hp_min": 0.0}}
+    novelty_pol = policy.Policy(novelty_know, random.Random(0))
+    novelty_ctx = DummyCtx()
+    novelty_ctx.run_id = "RUN_DOMAIN_NOVELTY"
+    novelty_ctx.credit_tags = []
+
+    # 新 run_id 的首个 tick 发生在 Agent._track 重置 ctx 之前：旧局成功标签
+    # 此时仍留在 ctx.credit_tags，绝不能被清空去重集后重复导入新局。
+    carry_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-novelty-run-boundary-")))
+    carry_pol = policy.Policy(carry_know, random.Random(0))
+    carry_ctx = DummyCtx()
+    carry_ctx.run_id = "RUN_CARRY_OLD"
+    carry_ctx.credit_tags = [("novelty_trial", "card", "OLD_TRIAL", 1)]
+    carry_state = {"screen": "MAIN_MENU", "run_id": "RUN_CARRY_NEW",
+                   "available_actions": [], "run": {}}
+    carry_pol.decide(carry_state, carry_ctx)
+    assert carry_know.novelty_trial_count("card", "OLD_TRIAL") == 0 \
+        and carry_pol._card_explore_used == 0, \
+        "新局首 tick 重放了上一局 credit_tags，污染持久样本或新局配额"
+    # 模拟随后的 Agent._track 已切换上下文；同局成功标签仍必须正常入账。
+    carry_ctx.run_id = "RUN_CARRY_NEW"
+    carry_ctx.credit_tags = [("novelty_trial", "card", "NEW_TRIAL", 1)]
+    carry_pol.decide(carry_state, carry_ctx)
+    assert carry_know.novelty_trial_count("card", "NEW_TRIAL") == 1 \
+        and carry_pol._card_explore_used == 1, \
+        "同局成功标签被跨局隔离闸门误伤"
+
+    def novelty_event(run_id="RUN_DOMAIN_NOVELTY", event_id="EVT_NOVEL",
+                      hp=80, known_key="KNOWN", novel_key="NOVEL",
+                      novel_kills=False):
+        return {
+            "screen": "EVENT", "run_id": run_id,
+            "available_actions": ["choose_event_option"],
+            "event": {"event_id": event_id, "title": "探索测试",
+                      "is_finished": False,
+                      "options": [
+                          {"index": 0, "text_key": known_key, "title": "稳妥",
+                           "is_locked": False, "is_proceed": False,
+                           "will_kill_player": False},
+                          {"index": 1, "text_key": novel_key, "title": "新路",
+                           "is_locked": False, "is_proceed": False,
+                           "will_kill_player": novel_kills}]},
+            "run": {"current_hp": hp, "max_hp": 80, "gold": 0,
+                    "floor": 4, "deck": []}}
+
+    d_event_novel = novelty_pol.decide(novelty_event(), novelty_ctx)
+    assert (d_event_novel.params.get("option_index") == 1
+            and "受控探索" in d_event_novel.reason
+            and "样本 0/2" in d_event_novel.reason
+            and "原值 0.00" in d_event_novel.reason
+            and "配额 1/1" in d_event_novel.reason), \
+        f"事件近优欠采样项未被确定性探索: {d_event_novel.reason}"
+    novelty_tag = next(t for t in d_event_novel.tags if t[0] == "novelty_trial")
+    assert novelty_tag[1:3] == ("event", "EVT_NOVEL:NOVEL"), \
+        f"事件探索 key 未隔离 event_id: {novelty_tag}"
+    novelty_pol.note_action_failed("choose_event_option", d_event_novel.tags)
+    assert novelty_know.novelty_trial_count("event", "EVT_NOVEL:NOVEL") == 0 \
+        and novelty_pol._event_explore_used == 0 \
+        and novelty_pol._event_picks.get("NOVEL", 0) == 0, \
+        "失败事件动作污染了成功探索样本或配额"
+    d_event_retry = novelty_pol.decide(novelty_event(), novelty_ctx)
+    assert d_event_retry.params.get("option_index") == 1 and "受控探索" in d_event_retry.reason, \
+        "失败回执后近优事件选项未获得重试机会"
+    novelty_ctx.credit_tags.extend(d_event_retry.tags)
+    d_event_after = novelty_pol.decide(novelty_event(), novelty_ctx)
+    assert novelty_know.novelty_trial_count("event", "EVT_NOVEL:NOVEL") == 1 \
+        and d_event_after.params.get("option_index") == 0 \
+        and "受控探索" not in d_event_after.reason, \
+        f"事件探索成功样本/每局配额未收敛: {d_event_after.reason}"
+
+    # 安全门优先于新颖度：低血、显著机会成本、will_kill 和 hp_min 重尾均 veto。
+    novelty_ctx.credit_tags = []
+    novelty_ctx.run_id = "RUN_EVENT_LOW"
+    d_event_low = novelty_pol.decide(
+        novelty_event("RUN_EVENT_LOW", "EVT_NOVEL", hp=40), novelty_ctx)
+    assert d_event_low.params.get("option_index") == 0 and "受控探索" not in d_event_low.reason, \
+        f"低血事件仍为新颖度冒险: {d_event_low.reason}"
+    novelty_know.stats["events"]["EVT_GAP"] = {
+        "KNOWN": {"n": 2, "hp_delta_sum": 10.0, "gold_delta_sum": 0.0,
+                  "deaths": 0, "hp_min": 0.0}}
+    novelty_ctx.run_id = "RUN_EVENT_GAP"
+    d_event_gap = novelty_pol.decide(
+        novelty_event("RUN_EVENT_GAP", "EVT_GAP"), novelty_ctx)
+    assert d_event_gap.params.get("option_index") == 0 and "受控探索" not in d_event_gap.reason, \
+        f"事件探索越过 near-best 机会成本: {d_event_gap.reason}"
+    novelty_ctx.run_id = "RUN_EVENT_KILL"
+    d_event_kill = novelty_pol.decide(
+        novelty_event("RUN_EVENT_KILL", "EVT_GAP", novel_kills=True), novelty_ctx)
+    assert d_event_kill.params.get("option_index") == 0 and "受控探索" not in d_event_kill.reason, \
+        "will_kill 事件选项被新颖度放行"
+    novelty_know.stats["events"]["EVT_TAIL"] = {
+        "KNOWN": {"n": 3, "hp_delta_sum": 3.0, "gold_delta_sum": 0.0,
+                  "deaths": 0, "hp_min": 0.0},
+        "NOVEL": {"n": 1, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0,
+                  "deaths": 0, "hp_min": -80.0}}
+    novelty_ctx.run_id = "RUN_EVENT_TAIL"
+    d_event_tail = novelty_pol.decide(
+        novelty_event("RUN_EVENT_TAIL", "EVT_TAIL", hp=72), novelty_ctx)
+    assert d_event_tail.params.get("option_index") == 0 \
+        and "最坏情况闸门" in d_event_tail.reason \
+        and "受控探索" not in d_event_tail.reason, \
+        f"事件历史重尾 veto 被新颖度绕过: {d_event_tail.reason}"
+
+    # 非探索的贪心事件选择同样必须等成功回执才增加 _event_picks；409 与
+    # ConnectionDown 都不能让未执行的选项吃到停滞罚分并在重试时无故换项。
+    novelty_know.policy["event_exploration_enabled"] = False
+    novelty_know.stats["events"]["EVT_GREEDY_FAIL"] = {
+        "KNOWN": {"n": 3, "hp_delta_sum": 9.0, "gold_delta_sum": 0.0,
+                  "deaths": 0, "hp_min": 0.0}}
+    novelty_ctx.run_id = "RUN_EVENT_GREEDY_FAIL"
+    novelty_ctx.credit_tags = []
+    greedy_state = novelty_event("RUN_EVENT_GREEDY_FAIL", "EVT_GREEDY_FAIL")
+    d_event_greedy = novelty_pol.decide(greedy_state, novelty_ctx)
+    assert d_event_greedy.params.get("option_index") == 0 \
+        and not any(t[0] == "novelty_trial" for t in d_event_greedy.tags) \
+        and novelty_pol._event_picks.get("KNOWN", 0) == 0, \
+        f"贪心事件失败回滚测试未建立正确前置状态: {d_event_greedy.reason}"
+    novelty_pol.note_action_failed("choose_event_option", d_event_greedy.tags)
+    assert novelty_pol._event_picks.get("KNOWN", 0) == 0, \
+        "非探索事件选择失败后仍保留虚假的停滞计数"
+    d_event_greedy_retry = novelty_pol.decide(greedy_state, novelty_ctx)
+    assert d_event_greedy_retry.params.get("option_index") == 0, \
+        f"非探索事件 409 后未稳定重试原选择: {d_event_greedy_retry.reason}"
+
+    # 同价值遗物不再永久取 API 首槽；只轮转一次，显式负面描述仍被挡住。
+    relic_ctx = DummyCtx()
+    relic_ctx.run_id = "RUN_RELIC_NOVEL"
+    relic_ctx.credit_tags = []
+    relic_state = {
+        "screen": "CHEST", "run_id": "RUN_RELIC_NOVEL",
+        "available_actions": ["choose_treasure_relic"],
+        "chest": {"is_opened": True, "has_relic_been_claimed": False,
+                  "relic_options": [
+                      {"index": 0, "relic_id": "A_KNOWN", "name": "熟悉遗物"},
+                      {"index": 1, "relic_id": "Z_NOVEL", "name": "新遗物"}]},
+        "run": {"current_hp": 80, "max_hp": 80, "floor": 5}}
+    d_relic = novelty_pol.decide(relic_state, relic_ctx)
+    assert d_relic.params.get("option_index") == 1 \
+        and "样本 0/1" in d_relic.reason and "配额 1/1" in d_relic.reason, \
+        f"同值遗物仍永久锁在首槽: {d_relic.reason}"
+    relic_ctx.credit_tags.extend(d_relic.tags)
+    d_relic_after = novelty_pol.decide(relic_state, relic_ctx)
+    assert d_relic_after.params.get("option_index") == 0 \
+        and novelty_know.novelty_trial_count("relic", "Z_NOVEL") == 1, \
+        "遗物探索样本上限/每局配额未生效"
+    relic_bad = json.loads(json.dumps(relic_state))
+    relic_bad["run_id"] = "RUN_RELIC_BAD"
+    relic_bad["chest"]["relic_options"][1].update(
+        {"relic_id": "Z_BAD", "description": "You can no longer heal."})
+    relic_ctx.run_id = "RUN_RELIC_BAD"
+    relic_ctx.credit_tags = []
+    d_relic_bad = novelty_pol.decide(relic_bad, relic_ctx)
+    assert d_relic_bad.params.get("option_index") == 0 \
+        and "受控遗物探索" not in d_relic_bad.reason, \
+        f"显式负面遗物被新颖度放行: {d_relic_bad.reason}"
+
+    # 商店未知药原本 0.8<1.0 永不购买；只有健康、有空位/余钱且近优时可试购一次。
+    potion_ctx = DummyCtx()
+    potion_ctx.run_id = "RUN_POTION_NOVEL"
+    potion_ctx.credit_tags = []
+    potion_state = {
+        "screen": "SHOP", "run_id": "RUN_POTION_NOVEL",
+        "available_actions": ["buy_potion", "close_shop_inventory"],
+        "shop": {"is_open": True, "can_close": True, "cards": [], "relics": [],
+                 "card_removal": None,
+                 "potions": [{"index": 0, "potion_id": "MYSTERY_X",
+                              "name": "陌生药剂", "price": 48,
+                              "is_stocked": True, "enough_gold": True}]},
+        "run": {"current_hp": 70, "max_hp": 80, "gold": 150,
+                "floor": 6, "deck": [], "potions": [{"occupied": False}]}}
+    d_potion = novelty_pol.decide(potion_state, potion_ctx)
+    assert d_potion.action == "buy_potion" and "受控新药试购" in d_potion.reason \
+        and "样本 0/1" in d_potion.reason and "配额 1/1" in d_potion.reason, \
+        f"安全未知药仍永久低于商店门槛: {d_potion.reason}"
+    potion_ctx.credit_tags.extend(d_potion.tags)
+    d_potion_after = novelty_pol.decide(potion_state, potion_ctx)
+    assert d_potion_after.action == "close_shop_inventory" \
+        and novelty_know.novelty_trial_count("potion", "MYSTERY_X") == 1, \
+        f"未知药探索未受成功样本上限约束: {d_potion_after.reason}"
+    potion_low = json.loads(json.dumps(potion_state))
+    potion_low["run_id"] = "RUN_POTION_LOW"
+    potion_low["run"]["current_hp"] = 35
+    potion_ctx.run_id = "RUN_POTION_LOW"
+    potion_ctx.credit_tags = []
+    d_potion_low = novelty_pol.decide(potion_low, potion_ctx)
+    assert d_potion_low.action == "close_shop_inventory" \
+        and "受控新药试购" not in d_potion_low.reason, \
+        f"低血局仍花钱试未知药: {d_potion_low.reason}"
+    potion_full = json.loads(json.dumps(potion_state))
+    potion_full["run_id"] = "RUN_POTION_FULL"
+    potion_full["shop"]["potions"][0]["potion_id"] = "MYSTERY_FULL"
+    potion_full["run"]["potions"] = [
+        {"occupied": True, "potion_id": "HEALING_POTION"},
+        {"occupied": True, "potion_id": "FIRE_POTION"},
+    ]
+    potion_ctx.run_id = "RUN_POTION_FULL"
+    potion_ctx.credit_tags = []
+    d_potion_full = novelty_pol.decide(potion_full, potion_ctx)
+    assert d_potion_full.action == "close_shop_inventory" \
+        and "受控新药试购" not in d_potion_full.reason \
+        and novelty_know.novelty_trial_count("potion", "MYSTERY_FULL") == 0, \
+        f"药水栏已满仍反复试购未知药: {d_potion_full.reason}"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，

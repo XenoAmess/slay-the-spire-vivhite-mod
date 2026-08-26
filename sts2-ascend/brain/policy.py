@@ -122,18 +122,43 @@ class Policy:
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
-        self._reward_tried: set = set()  # (reward_type, description) already attempted this screen
+        self._reward_instance_key = None  # exact live reward payload; repeated rewards may share text
+        self._reward_tried: set = set()  # (index, reward_type, description) accepted on this payload
+        self._reward_cooldowns: dict[tuple, int] = {}  # transient 409 rotation, never permanent
+        self._reward_card_cooldowns: dict[tuple, int] = {}
         self._active_card_offer_key = None  # 当前可跳过卡牌 offer；跨 tick 去重 seen
         self._active_card_offer_explore_id = None  # 同一 offer 重试时保持探索选择稳定
         self._card_explore_run = None       # run identity for per-run novelty quota
         self._card_explore_used = 0         # deliberate non-greedy reward picks this run
+        # 受控新颖度统一走“成功回执标签 → 下一 tick 入账”。决策尝试本身不占
+        # 配额，409/断线不会把从未执行的探索伪装成样本。
+        self._novelty_successes: set[tuple] = set()
+        self._event_explore_used = 0
+        self._relic_explore_used = 0
+        self._potion_explore_used = 0
         self._sel_key = None        # card-selection screen identity
         self._sel_tried: set = set()  # card indices already clicked this screen
+        self._sel_instance = None   # unique identity for accepted-click handshakes
+        self._sel_serial = 0
+        self._sel_mode = None       # semantic mode bound to the current selection instance
+        self._handshake_credit_source = None
+        self._handshake_credit_cursor = 0
+        self._uncertain_action = None  # POST response lost; reconcile from next observed state
+        self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
+        self._turn_combat = None    # combat identity paired with _cur_turn
         self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
+        self._card_cooldowns: dict[tuple, int] = {}  # exact card slot/identity refresh races
         self._failed_hand_len = -1  # 记录失败时的手牌数量：index 是位置序号，手牌一变即失效
         self._potion_combat = None  # combat instance identity for potion blacklist
-        self._potion_tried: set = set()      # potion indices already attempted this combat
+        self._potion_tried: set = set()      # (slot, potion identity) accepted this combat
+        self._potion_cooldowns: dict[tuple, int] = {}
+        self._potion_inventory_signature = None
+        # Exact UI option cooldowns are deliberately short-lived.  They rotate a
+        # sibling after repeated transient 409s / accepted-pending timeouts without
+        # converting an animation race into a permanent "tried" fact.
+        self._ui_action_cooldowns: dict[tuple, int] = {}
+        self._ui_cooldown_scope = None
         self._novel_trial_combat = None  # combat identity for controlled first-play trials
         self._novel_trials: set[str] = set()  # card ids already trialled once this combat
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
@@ -162,6 +187,10 @@ class Policy:
         self._krace_dmg = 0.0       # 本场已打出攻击卡的期望总伤累计
         self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
         self._krace_round = None    # 上次计回合的回合号
+        # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
+        # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
+        self._combat_credit_source = None
+        self._combat_credit_cursor = 0
         self._incoming_ema = 0.0    # 敌意图总伤 EMA（回合边界采样，竞速投影的可存活账）
         self._esc_rounds = 0        # 意图持续升级计数（第 92~93 批复盘）：趋势≥2 的回合边界数
         # 敌方血池/火力观测（第 138~141 批复盘）：本场学习样本，结算时经 agent 入库，
@@ -176,11 +205,493 @@ class Policy:
         # 规则于是每局反复选中它，单事件白掉 5 张牌。同实例内已选次数计入有效样本
         # 并附停滞罚分：选过却没离开事件的选项就是「没解决问题」的实证
         self._event_inst = None         # 当前事件实例身份 (run_id, event_id, floor)
-        self._event_picks: dict = {}    # 本实例内各选项已选次数
+        self._event_picks: dict = {}    # 本实例内各选项已成功选择次数
         # 进程级动作拉黑（第 218 批复盘）：签名级 TypeError（进程代码落后于
         # 磁盘）在本进程内永远失败，agent 熔断后把动作名记到这里，decide
         # 拦截被拉黑动作改发安全替代，不再每 tick 重试注定失败的调用
         self._broken_actions: set = set()
+
+    def _enrich_cards(self, cards: list[dict]) -> list[dict]:
+        """用版本化原生快照补齐 API 省略的静态字段，不覆盖实时状态。"""
+        native = getattr(self.know, "game_knowledge", None)
+        if native is None or not getattr(native, "available", False):
+            return list(cards or [])
+        return [native.enrich_card(card) for card in (cards or [])]
+
+    @staticmethod
+    def _reward_attempt_key(raw) -> tuple | None:
+        if not isinstance(raw, (tuple, list)) or not raw or raw[0] != "reward_attempt":
+            return None
+        if len(raw) >= 4:
+            try:
+                index = int(raw[1])
+            except (TypeError, ValueError):
+                index = raw[1]
+            return (index, str(raw[2] or ""), str(raw[3] or ""))
+        if len(raw) >= 3:  # old in-memory tag compatibility
+            return (None, str(raw[1] or ""), str(raw[2] or ""))
+        return None
+
+    @staticmethod
+    def _potion_key(potion_or_tag) -> tuple | None:
+        if isinstance(potion_or_tag, dict):
+            return (potion_or_tag.get("index"),
+                    str(potion_or_tag.get("potion_id") or potion_or_tag.get("name") or ""))
+        raw = potion_or_tag
+        if not isinstance(raw, (tuple, list)) or not raw or raw[0] != "potion_attempt":
+            return None
+        try:
+            index = int(raw[1])
+        except (TypeError, ValueError, IndexError):
+            return None
+        identity = str(raw[2] or "") if len(raw) >= 3 else ""
+        return (index, identity)
+
+    @staticmethod
+    def _card_key(card: dict) -> tuple:
+        identity = (card.get("instance_id") or card.get("uuid")
+                    or card.get("card_id") or card.get("name") or "")
+        return (card.get("index"), str(identity))
+
+    def _card_unavailable(self, card: dict) -> bool:
+        index = card.get("index")
+        key = self._card_key(card)
+        return (index in self._failed_this_turn or key in self._failed_this_turn
+                or self._card_cooldowns.get(key, 0) > 0)
+
+    @staticmethod
+    def _tick_cooldown_map(values: dict) -> None:
+        for key in list(values):
+            left = int(values.get(key, 0)) - 1
+            if left <= 0:
+                values.pop(key, None)
+            else:
+                values[key] = left
+
+    def _tick_action_cooldowns(self) -> None:
+        for values in (self._card_cooldowns, self._reward_cooldowns,
+                       self._reward_card_cooldowns, self._potion_cooldowns,
+                       self._ui_action_cooldowns):
+            self._tick_cooldown_map(values)
+
+    @staticmethod
+    def _freeze_ui(value):
+        """Return a small hashable signature without readiness-only noise."""
+        if isinstance(value, dict):
+            return tuple((str(key), Policy._freeze_ui(item))
+                         for key, item in sorted(value.items(), key=lambda row: str(row[0])))
+        if isinstance(value, (list, tuple)):
+            return tuple(Policy._freeze_ui(item) for item in value)
+        if isinstance(value, set):
+            return tuple(sorted((Policy._freeze_ui(item) for item in value), key=repr))
+        return value
+
+    @staticmethod
+    def _ui_item_identity(item: dict | None) -> tuple | None:
+        if not isinstance(item, dict):
+            return None
+        fields = (
+            "index", "i", "instance_id", "uuid", "card_id", "relic_id",
+            "potion_id", "option_id", "node_id", "node_type", "row", "col",
+            "x", "y", "text_key", "title", "name", "description", "price",
+        )
+        return tuple((key, Policy._freeze_ui(item.get(key)))
+                     for key in fields if key in item)
+
+    @staticmethod
+    def _ui_indexed_item(items, index):
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            raw = item.get("index", item.get("i"))
+            try:
+                same = int(raw) == int(index)
+            except (TypeError, ValueError):
+                same = raw == index
+            if same:
+                return item
+        return None
+
+    @classmethod
+    def _ui_screen_scope(cls, state: dict) -> tuple:
+        """Identity of the current run/screen instance owning option cooldowns."""
+        screen = str(state.get("screen") or "UNKNOWN")
+        run = state.get("run") or {}
+        run_id = state.get("run_id") or run.get("run_id")
+        floor = run.get("floor")
+
+        def item_set(items):
+            return tuple(sorted((cls._ui_item_identity(item) for item in (items or [])
+                                 if isinstance(item, dict)), key=repr))
+
+        if screen == "EVENT":
+            domain = state.get("event") or {}
+            instance = (domain.get("event_id"), domain.get("page"), domain.get("step"),
+                        item_set(domain.get("options")))
+        elif screen == "MAP":
+            domain = state.get("map") or {}
+            instance = item_set(domain.get("available_nodes"))
+        elif screen == "REST":
+            domain = state.get("rest") or {}
+            instance = item_set(domain.get("options"))
+        elif screen == "SHOP":
+            domain = state.get("shop") or {}
+            # Buying a sibling legitimately mutates inventory while remaining on
+            # the same shop screen; keep the old target cooling until expiry.
+            instance = (bool(domain.get("is_open")), domain.get("shop_id"),
+                        domain.get("title"))
+        elif screen == "CARD_SELECTION":
+            instance = cls._selection_identity(state)
+        elif screen == "CHEST":
+            domain = state.get("chest") or {}
+            options = (domain.get("relic_options") if "relic_options" in domain
+                       else domain.get("relics") if "relics" in domain
+                       else domain.get("options"))
+            instance = (bool(domain.get("is_opened")), item_set(options))
+        else:
+            instance = None
+        return (str(run_id or ""), screen, floor, cls._freeze_ui(instance))
+
+    def _sync_ui_cooldown_scope(self, state: dict) -> None:
+        scope = self._ui_screen_scope(state)
+        if self._ui_cooldown_scope is None:
+            self._ui_cooldown_scope = scope
+            return
+        if scope != self._ui_cooldown_scope:
+            self._ui_cooldown_scope = scope
+            self._ui_action_cooldowns = {}
+
+    @classmethod
+    def _ui_target_item(cls, state: dict, action: str, params: dict):
+        index = (params or {}).get("option_index")
+        domain, collection = {
+            "choose_event_option": ("event", "options"),
+            "choose_map_node": ("map", "available_nodes"),
+            "choose_rest_option": ("rest", "options"),
+            "select_deck_card": ("selection", "cards"),
+            "buy_card": ("shop", "cards"),
+            "buy_relic": ("shop", "relics"),
+            "buy_potion": ("shop", "potions"),
+        }.get(action, (None, None))
+        if domain is not None:
+            return cls._ui_indexed_item(((state.get(domain) or {}).get(collection) or []),
+                                        index)
+        if action == "choose_treasure_relic":
+            chest = state.get("chest") or {}
+            for key in ("relic_options", "relics", "options"):
+                if key in chest:
+                    return cls._ui_indexed_item(chest.get(key) or [], index)
+        if action == "remove_card_at_shop":
+            return (state.get("shop") or {}).get("card_removal")
+        if action == "confirm_selection":
+            sel = state.get("selection") or {}
+            return {"selected_count": sel.get("selected_count"),
+                    "min_select": sel.get("min_select"),
+                    "max_select": sel.get("max_select")}
+        return None
+
+    @classmethod
+    def _ui_target_key(cls, state: dict, action: str, params: dict | None) -> tuple | None:
+        rotating = {
+            "choose_event_option", "choose_map_node", "choose_rest_option",
+            "select_deck_card", "confirm_selection", "buy_card", "buy_relic",
+            "buy_potion", "remove_card_at_shop", "choose_treasure_relic",
+        }
+        if action not in rotating:
+            return None
+        params = params or {}
+        item = cls._ui_target_item(state, action, params)
+        return (action, params.get("option_index"), cls._ui_item_identity(item))
+
+    def _ui_action_cooled(self, state: dict, action: str,
+                          params: dict | None = None) -> bool:
+        key = self._ui_target_key(state, action, params)
+        return key is not None and self._ui_action_cooldowns.get(key, 0) > 0
+
+    def _ui_option_cooled(self, state: dict, action: str, option: dict) -> bool:
+        return self._ui_action_cooled(
+            state, action, {"option_index": option.get("index", option.get("i"))})
+
+    @staticmethod
+    def _cooldown_wait(label: str) -> Decision:
+        return Decision(None, {}, f"{label}：全部可行候选处于短冷却，等待精确目标重试",
+                        wait=0.6)
+
+    def _sync_potion_inventory_identity(self, state: dict) -> None:
+        """Release suppression when a slot is emptied/refilled with new contents."""
+        potions = (state.get("run") or {}).get("potions") or []
+        signature = tuple((p.get("index"), bool(p.get("occupied")),
+                           p.get("potion_id"), p.get("name"))
+                          for p in potions if isinstance(p, dict))
+        if self._potion_inventory_signature is None:
+            self._potion_inventory_signature = signature
+            return
+        if signature == self._potion_inventory_signature:
+            return
+        live = {self._potion_key(p) for p in potions
+                if isinstance(p, dict) and p.get("occupied")}
+        self._potion_tried.intersection_update(live)
+        for key in list(self._potion_cooldowns):
+            if key not in live:
+                self._potion_cooldowns.pop(key, None)
+        self._potion_inventory_signature = signature
+
+    def _sync_novelty_successes(self, ctx) -> None:
+        """Import accepted controlled trials from the agent's transactional tags."""
+        counters = {
+            "card": "_card_explore_used",
+            "event": "_event_explore_used",
+            "relic": "_relic_explore_used",
+            "potion": "_potion_explore_used",
+        }
+        for raw in getattr(ctx, "credit_tags", None) or []:
+            if not isinstance(raw, (tuple, list)) or len(raw) < 4 \
+                    or raw[0] != "novelty_trial":
+                continue
+            token = tuple(raw[:4])
+            if token in self._novelty_successes:
+                continue
+            self._novelty_successes.add(token)
+            domain, key = str(raw[1]), str(raw[2])
+            self.know.commit_novelty_trial(domain, key)
+            attr = counters.get(domain)
+            if attr:
+                setattr(self, attr, int(getattr(self, attr, 0)) + 1)
+
+    def _sync_combat_play_successes(self, ctx) -> None:
+        """Apply accepted play-card policy effects exactly once on the next tick."""
+        tags = getattr(ctx, "credit_tags", None)
+        if not isinstance(tags, list):
+            return
+        if tags is not self._combat_credit_source:
+            self._combat_credit_source = tags
+            self._combat_credit_cursor = 0
+        elif len(tags) < self._combat_credit_cursor:
+            # Defensive support for a context that truncates/replaces its ledger.
+            self._combat_credit_cursor = 0
+
+        pending = tags[self._combat_credit_cursor:]
+        self._combat_credit_cursor = len(tags)
+        for raw in pending:
+            if (not isinstance(raw, (tuple, list)) or len(raw) < 7
+                    or raw[0] != "combat_play_commit"):
+                continue
+            cid = str(raw[1] or "").upper().rstrip("+")
+            if bool(raw[2]) and cid:
+                self._novel_trials.add(cid)
+            if bool(raw[3]):
+                self._exhaust_plays += 1
+            try:
+                estimated_damage = float(raw[4] or 0.0)
+            except (TypeError, ValueError):
+                estimated_damage = 0.0
+            if estimated_damage > 0.0:
+                self._krace_dmg += estimated_damage
+            try:
+                round_no = int(raw[5])
+            except (TypeError, ValueError):
+                round_no = None
+            if round_no is not None and self._krace_round != round_no:
+                self._krace_round = round_no
+                self._krace_turns += 1
+            kill_id = str(raw[6] or "")
+            if kill_id:
+                self._combat_kills[kill_id] = self._combat_kills.get(kill_id, 0) + 1
+
+    def _sync_action_handshakes(self, ctx) -> None:
+        """Import accepted UI-opening actions exactly once.
+
+        UI actions which open a follow-up state, consume a one-shot resource, or
+        affect same-screen retry policy must mutate local state only after an
+        accepted HTTP response.  A disconnected/no-response request is ambiguous and
+        must remain retryable from the next observed state.
+        """
+        tags = getattr(ctx, "credit_tags", None)
+        if not isinstance(tags, list):
+            return
+        if tags is not self._handshake_credit_source:
+            self._handshake_credit_source = tags
+            self._handshake_credit_cursor = 0
+        elif len(tags) < self._handshake_credit_cursor:
+            self._handshake_credit_cursor = 0
+        pending = tags[self._handshake_credit_cursor:]
+        self._handshake_credit_cursor = len(tags)
+        for raw in pending:
+            if (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                    and raw[0] == "shop_remove_pending"):
+                try:
+                    self._removal_pending_floor = int(raw[1])
+                except (TypeError, ValueError):
+                    continue
+            elif (isinstance(raw, (tuple, list)) and raw
+                  and raw[0] == "reward_attempt"):
+                key = self._reward_attempt_key(raw)
+                if key is not None:
+                    self._reward_tried.add(key)
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "potion_attempt"):
+                key = self._potion_key(raw)
+                if key is not None:
+                    self._potion_tried.add(key)
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 3
+                  and raw[0] == "event_choice"):
+                key = str(raw[2] or "")
+                if key:
+                    self._event_picks[key] = self._event_picks.get(key, 0) + 1
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "timeline_check"):
+                ctx.check_timeline = bool(raw[1])
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "timeline_epoch"):
+                try:
+                    self._timeline_epoch_pending = (int(raw[1]), 0)
+                except (TypeError, ValueError):
+                    continue
+            elif (isinstance(raw, (tuple, list)) and raw
+                  and raw[0] == "timeline_clear"):
+                ctx.timeline_tried = set()
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "shop_close"):
+                try:
+                    self._shop_done_floor = int(raw[1])
+                except (TypeError, ValueError):
+                    continue
+
+    @staticmethod
+    def _selection_identity(state: dict) -> tuple:
+        sel = state.get("selection") or {}
+        floor_no = (state.get("run") or {}).get("floor", 0)
+        cards = tuple((c.get("index"), c.get("card_id"), c.get("instance_id"),
+                       c.get("uuid"), bool(c.get("upgraded")))
+                      for c in (sel.get("cards") or []))
+        return (floor_no, (sel.get("kind") or "").lower(),
+                sel.get("prompt") or "", sel.get("min_select"),
+                sel.get("max_select"), cards)
+
+    def note_action_uncertain(self, action: str, tags: list, state: dict,
+                              params: dict | None = None) -> None:
+        """Remember only UI intents whose lost POST response needs semantic repair.
+
+        Reward, potion, and event decisions do not pre-mutate local state, so their
+        next live payload is already sufficient.  Shop removal and card selection
+        carry semantics not reliably present in the follow-up payload; timeline
+        actions likewise need to preserve the post-run unlock workflow.
+        """
+        params = params or {}
+        if action == "remove_card_at_shop":
+            self._uncertain_action = {
+                "kind": "shop_remove",
+                "floor": (state.get("run") or {}).get("floor", 0),
+            }
+            return
+        if action == "select_deck_card":
+            sel = state.get("selection") or {}
+            index = next((t[2] for t in (tags or [])
+                          if isinstance(t, (tuple, list)) and len(t) >= 3
+                          and t[0] == "selection_click"),
+                         params.get("option_index"))
+            self._uncertain_action = {
+                "kind": "selection",
+                "identity": self._selection_identity(state),
+                "instance": self._sel_instance,
+                "index": index,
+                "selected_count": int(sel.get("selected_count", 0) or 0),
+            }
+            return
+        timeline_kinds = {
+            "return_to_main_menu": "timeline_return",
+            "open_timeline": "timeline_open",
+            "choose_timeline_epoch": "timeline_choose",
+            "close_main_menu_submenu": "timeline_close",
+        }
+        kind = timeline_kinds.get(action)
+        if kind:
+            self._uncertain_action = {
+                "kind": kind,
+                "index": params.get("option_index"),
+            }
+
+    def _reconcile_uncertain_action(self, state: dict, ctx) -> None:
+        """Resolve one response-lost UI action from the next fresh state payload."""
+        pending = self._uncertain_action
+        if not isinstance(pending, dict):
+            return
+        self._uncertain_action = None
+        kind = pending.get("kind")
+        screen = state.get("screen", "UNKNOWN")
+
+        if kind == "shop_remove":
+            # Same SHOP means the opener did not land and may be retried.  Only the
+            # actual follow-up selection screen inherits removal semantics.
+            if (screen == "CARD_SELECTION"
+                    and (state.get("run") or {}).get("floor", 0) == pending.get("floor")):
+                self._removal_pending_floor = int(pending.get("floor", 0))
+            return
+
+        if kind == "selection":
+            if screen != "CARD_SELECTION" or self._selection_identity(state) != pending.get("identity"):
+                return  # screen/card-list transition proves the click resolved
+            selected_count = int(((state.get("selection") or {}).get("selected_count", 0)) or 0)
+            if selected_count > int(pending.get("selected_count", 0)):
+                try:
+                    index = int(pending.get("index"))
+                except (TypeError, ValueError):
+                    return
+                if self._sel_instance == pending.get("instance"):
+                    self._sel_tried.add(index)
+            # Unchanged screen/count means no evidence of execution: clear the
+            # uncertainty and let the normal handler retry the same candidate.
+            return
+
+        timeline = state.get("timeline") or {}
+        if kind == "timeline_return":
+            if screen in ("MAIN_MENU", "TIMELINE"):
+                ctx.check_timeline = True
+        elif kind == "timeline_open":
+            if screen == "TIMELINE" or timeline.get("can_choose_epoch"):
+                ctx.check_timeline = False
+        elif kind == "timeline_choose":
+            index = pending.get("index")
+            slot = next((s for s in timeline.get("slots", [])
+                         if s.get("index") == index), None)
+            changed = (screen not in ("MAIN_MENU", "TIMELINE")
+                       or timeline.get("can_confirm_overlay")
+                       or slot is None or (slot.get("state") or "") != "obtained")
+            if changed and index is not None:
+                ctx.timeline_tried.add(index)
+        elif kind == "timeline_close":
+            if screen == "MAIN_MENU" and not timeline.get("can_choose_epoch"):
+                ctx.timeline_tried = set()
+
+    def _timeline_transition_wait(self, state: dict, ctx) -> Decision | None:
+        """Wait for an accepted epoch click to change the UI before closing it."""
+        pending = self._timeline_epoch_pending
+        if pending is None:
+            return None
+        index, waits = pending
+        timeline = state.get("timeline") or {}
+        slot = next((s for s in timeline.get("slots", []) if s.get("index") == index), None)
+        landed = (timeline.get("can_confirm_overlay") or slot is None
+                  or (slot.get("state") or "") != "obtained")
+        if landed:
+            ctx.timeline_tried.add(index)
+            self._timeline_epoch_pending = None
+            return None
+        if waits >= 8:
+            # An accepted/pending response is not the same as an observed unlock.
+            # Release the wait and let the normal handler retry this still-obtained
+            # slot; marking it tried here would silently skip fresh content forever.
+            self._timeline_epoch_pending = None
+            return None
+        self._timeline_epoch_pending = (index, waits + 1)
+        return Decision(None, {},
+                        f"时间线：已提交槽位 {index}，等待解锁状态落地（{waits + 1}/8）",
+                        wait=0.6)
+
+    @staticmethod
+    def _novelty_tag(domain: str, key: str, used: int) -> tuple:
+        """Build a per-run ordinal tag; the agent appends it only after success."""
+        return ("novelty_trial", domain, str(key), int(used) + 1)
 
     def mark_action_broken(self, action: str) -> None:
         """进程内永久拉黑一个动作名（签名不匹配等代码错位，重试必败）。"""
@@ -201,12 +712,82 @@ class Policy:
         失败后下一 tick 手牌未变，该实例仍被精确拉黑。
         """
         if action == "play_card":
+            card_id = next((str(t[1] or "") for t in (tags or [])
+                            if isinstance(t, (tuple, list)) and len(t) >= 2
+                            and t[0] == "play_card"), "")
             for t in tags or []:
                 if t[0] == "play_card_index":
                     try:
-                        self._failed_this_turn.add(int(t[1]))
+                        index = int(t[1])
+                        identity = str(t[2] or "") if len(t) >= 3 else card_id
+                        self._failed_this_turn.add((index, identity))
                     except (TypeError, ValueError):
                         pass
+        # Explicitly rejected reward/potion requests retain the historical
+        # anti-loop behavior.  Their decision phase no longer pre-mutates these
+        # sets, however, so ConnectionDown/no-response remains safely retryable.
+        if action == "claim_reward":
+            for t in tags or []:
+                key = self._reward_attempt_key(t)
+                if key is not None:
+                    self._reward_tried.add(key)
+        elif action == "use_potion":
+            for t in tags or []:
+                key = self._potion_key(t)
+                if key is not None:
+                    self._potion_tried.add(key)
+        elif action == "choose_reward_card":
+            # A definitive schema/parameter failure must not pin controlled
+            # exploration to the same invalid option forever.
+            for raw in tags or []:
+                if (isinstance(raw, (tuple, list)) and len(raw) >= 3
+                        and raw[0] == "reward_card_attempt"):
+                    self._reward_card_cooldowns[(raw[1], str(raw[2] or ""))] = 5
+            self._active_card_offer_explore_id = None
+
+    def note_action_deferred(self, action: str, tags: list,
+                             state: dict | None = None,
+                             params: dict | None = None) -> None:
+        """Temporarily rotate an exact target after repeated refresh-race 409s.
+
+        Unlike ``note_action_failed`` this never writes permanent tried/failed
+        state.  It gives sibling cards/rewards/potions a few decisions to proceed,
+        then automatically retries the same live target if it still exists.
+        """
+        if action == "play_card":
+            card_id = next((str(t[1] or "") for t in (tags or [])
+                            if isinstance(t, (tuple, list)) and len(t) >= 2
+                            and t[0] == "play_card"), "")
+            for raw in tags or []:
+                if (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                        and raw[0] == "play_card_index"):
+                    try:
+                        index = int(raw[1])
+                    except (TypeError, ValueError):
+                        continue
+                    identity = str(raw[2] or "") if len(raw) >= 3 else card_id
+                    self._card_cooldowns[(index, identity)] = 3
+        elif action == "claim_reward":
+            for raw in tags or []:
+                key = self._reward_attempt_key(raw)
+                if key is not None:
+                    self._reward_cooldowns[key] = 3
+        elif action == "use_potion":
+            for raw in tags or []:
+                key = self._potion_key(raw)
+                if key is not None:
+                    self._potion_cooldowns[key] = 3
+        elif action == "choose_reward_card":
+            for raw in tags or []:
+                if (isinstance(raw, (tuple, list)) and len(raw) >= 3
+                        and raw[0] == "reward_card_attempt"):
+                    self._reward_card_cooldowns[(raw[1], str(raw[2] or ""))] = 3
+            self._active_card_offer_explore_id = None
+        if isinstance(state, dict):
+            self._sync_ui_cooldown_scope(state)
+            key = self._ui_target_key(state, action, params or {})
+            if key is not None:
+                self._ui_action_cooldowns[key] = 4
 
     # ------------------------------------------------------------------
     # top-level router
@@ -219,15 +800,73 @@ class Policy:
         if run_key and run_key != self._card_explore_run:
             self._card_explore_run = run_key
             self._card_explore_used = 0
+            self._novelty_successes = set()
+            self._event_explore_used = 0
+            self._relic_explore_used = 0
+            self._potion_explore_used = 0
+            self._combat_credit_source = None
+            self._combat_credit_cursor = 0
+            # Floor numbers and screen payloads repeat in every run.  Leaving these
+            # process-local handshakes alive across a run boundary can skip a shop or
+            # reward merely because the previous run ended on the same floor.
+            self._shop_done_floor = -1
+            self._reward_floor = -1
+            self._reward_instance_key = None
+            self._reward_tried = set()
+            self._reward_cooldowns = {}
+            self._reward_card_cooldowns = {}
+            self._active_card_offer_key = None
+            self._active_card_offer_explore_id = None
+            self._sel_key = None
+            self._sel_tried = set()
+            self._sel_instance = None
+            self._sel_mode = None
+            self._handshake_credit_source = None
+            self._handshake_credit_cursor = 0
+            self._removal_pending_floor = -1
+            self._uncertain_action = None
+            self._timeline_epoch_pending = None
+            self._event_inst = None
+            self._event_picks = {}
+            self._unknown_stall = 0
+            self._unlock_stall = 0
+            self._phase_stall = 0
+            self._turn_combat = None
+            self._cur_turn = None
+            self._end_stall = 0
+            self._saw_playable_this_turn = False
+            self._failed_this_turn = set()
+            self._card_cooldowns = {}
+            self._failed_hand_len = -1
+            self._potion_cooldowns = {}
+            self._potion_inventory_signature = None
+            self._ui_action_cooldowns = {}
+            self._ui_cooldown_scope = None
+        # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
+        # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
+        ctx_run_key = getattr(ctx, "run_id", None)
+        if not (run_key and ctx_run_key and str(run_key) != str(ctx_run_key)):
+            self._sync_novelty_successes(ctx)
+            self._sync_combat_play_successes(ctx)
+            self._sync_action_handshakes(ctx)
+            self._reconcile_uncertain_action(state, ctx)
         # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
         # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
         if not self._state_has_explicit_card_offer(state):
             self._active_card_offer_key = None
             self._active_card_offer_explore_id = None
+        if screen != "CARD_SELECTION" and self._sel_instance is not None:
+            self._sel_key = None
+            self._sel_instance = None
+            self._sel_tried = set()
+            self._sel_mode = None
         if screen != "UNKNOWN":
             self._unknown_stall = 0
         if screen != "UNLOCK":
             self._unlock_stall = 0
+        self._sync_potion_inventory_identity(state)
+        self._sync_ui_cooldown_scope(state)
+        self._tick_action_cooldowns()
         handler = {
             "MAIN_MENU": self._main_menu,
             "CHARACTER_SELECT": self._character_select,
@@ -251,6 +890,8 @@ class Policy:
             return self._unknown(state, ctx)
         try:
             decision = handler(state, ctx)
+            if decision.action == "choose_rest_option":
+                decision = self._prepare_rest_decision(state, decision)
             self._decide_errors = 0
             if decision.action and decision.action in self._broken_actions:
                 actions = state.get("available_actions", [])
@@ -289,9 +930,12 @@ class Policy:
     def _main_menu(self, state: dict, ctx) -> Decision:
         actions = state.get("available_actions", [])
         timeline = state.get("timeline")
+        transition_wait = self._timeline_transition_wait(state, ctx)
+        if transition_wait is not None:
+            return transition_wait
         if timeline and timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
             return Decision("confirm_timeline_overlay", {}, "主菜单：确认时间线弹层", wait=0.8)
-        if timeline and timeline.get("can_choose_epoch") and "choose_timeline_epoch" in actions:
+        if timeline and timeline.get("can_choose_epoch"):
             # 只点 obtained（新获得待确认）的槽位；complete 的点开只是查看——
             # 曾因此把同一个已完成槽位无限重复点击（is_actionable 含 complete）。
             # 另用 timeline_tried 防"点了状态不变"的兜底循环。
@@ -302,20 +946,25 @@ class Policy:
                          if (s.get("state") or "") == "obtained" and s.get("index") not in tried]
             if new_slots:
                 s = new_slots[0]
-                tried.add(s.get("index"))
+                if "choose_timeline_epoch" not in actions:
+                    return Decision(None, {}, "主菜单：时间线解锁动作暂未就绪，等待", wait=0.7)
                 return Decision("choose_timeline_epoch", {"option_index": s["index"]},
-                                f"主菜单：解锁时间线新内容【{s.get('title')}】", wait=0.8)
+                                f"主菜单：解锁时间线新内容【{s.get('title')}】",
+                                tags=[("timeline_epoch", s["index"])], wait=0.8)
             # 没有新内容 → 关闭时间线弹层，继续主流程
             if "close_main_menu_submenu" in actions:
-                ctx.timeline_tried = set()
-                return Decision("close_main_menu_submenu", {}, "主菜单：时间线无新解锁，关闭弹层", wait=0.8)
+                return Decision("close_main_menu_submenu", {},
+                                "主菜单：时间线无新解锁，关闭弹层",
+                                tags=[("timeline_clear",)], wait=0.8)
         if "continue_run" in actions:
             return Decision("continue_run", {}, "主菜单：检测到进行中的存档，继续对局", wait=1.2)
         # 一局结束后：时间线有新解锁项（obtained 未 complete）时优先去解锁
         if getattr(ctx, "check_timeline", False):
-            ctx.check_timeline = False
             if "open_timeline" in actions:
-                return Decision("open_timeline", {}, "主菜单：检查时间线可解锁项（优先解锁新内容）", wait=1.0)
+                return Decision("open_timeline", {},
+                                "主菜单：检查时间线可解锁项（优先解锁新内容）",
+                                tags=[("timeline_check", False)], wait=1.0)
+            return Decision(None, {}, "主菜单：等待时间线入口就绪", wait=0.7)
         if "open_character_select" in actions:
             return Decision("open_character_select", {}, "主菜单：开启新的一局（标准模式）", wait=1.2)
         return Decision(None, {}, "主菜单：无可用动作，等待", wait=1.0)
@@ -323,6 +972,9 @@ class Policy:
     def _timeline(self, state: dict, ctx) -> Decision:
         actions = state.get("available_actions", [])
         timeline = state.get("timeline") or {}
+        transition_wait = self._timeline_transition_wait(state, ctx)
+        if transition_wait is not None:
+            return transition_wait
         # 1) 解锁页/查看页弹层优先确认
         if timeline.get("can_confirm_overlay") and "confirm_timeline_overlay" in actions:
             return Decision("confirm_timeline_overlay", {}, "时间线：确认解锁页", wait=0.8)
@@ -332,15 +984,18 @@ class Policy:
             tried = ctx.timeline_tried = set()
         unlockable = [s for s in timeline.get("slots", [])
                       if (s.get("state") or "") == "obtained" and s.get("index") not in tried]
-        if unlockable and "choose_timeline_epoch" in actions:
+        if unlockable:
             s = unlockable[0]
-            tried.add(s.get("index"))
+            if "choose_timeline_epoch" not in actions:
+                return Decision(None, {}, "时间线：解锁动作暂未就绪，等待", wait=0.7)
             return Decision("choose_timeline_epoch", {"option_index": s["index"]},
-                            f"时间线：优先解锁新内容【{s.get('title')}】", wait=1.0)
+                            f"时间线：优先解锁新内容【{s.get('title')}】",
+                            tags=[("timeline_epoch", s["index"])], wait=1.0)
         # 3) 没有可解锁项 → 关闭时间线回主菜单开新局
         if "close_main_menu_submenu" in actions:
-            ctx.timeline_tried = set()
-            return Decision("close_main_menu_submenu", {}, "时间线：无可解锁项，返回主菜单", wait=0.8)
+            return Decision("close_main_menu_submenu", {},
+                            "时间线：无可解锁项，返回主菜单",
+                            tags=[("timeline_clear",)], wait=0.8)
         return self._main_menu(state, ctx)
 
     def _character_select(self, state: dict, ctx) -> Decision:
@@ -550,19 +1205,29 @@ class Policy:
 
     def _map(self, state: dict, ctx) -> Decision:
         m = state.get("map") or {}
-        nodes = m.get("available_nodes", [])
-        if not nodes:
+        live_nodes = m.get("available_nodes", [])
+        nodes = [node for node in live_nodes
+                 if not self._ui_option_cooled(state, "choose_map_node", node)]
+        if live_nodes and not nodes:
+            return self._cooldown_wait("地图")
+        if not live_nodes:
             return Decision(None, {}, "地图：暂无可走节点", wait=0.8)
         run = state.get("run") or {}
 
         # 永久增益类 AnyTime 药水（如加最大生命）：拿到就用，不占战斗决策
         for p in run.get("potions", []):
             if p.get("occupied") and p.get("can_use") and (p.get("usage") or "").lower() == "anytime":
+                potion_key = self._potion_key(p)
+                if (potion_key in self._potion_tried
+                        or self._potion_cooldowns.get(potion_key, 0) > 0):
+                    continue
                 desc = p.get("description") or ""
                 if "最大生命" in desc or "MaxHp" in desc:
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"地图：使用永久增益药水【{p.get('name')}】",
-                                    tags=[("use_potion", p.get("potion_id"))], wait=0.7)
+                                    tags=[("use_potion", p.get("potion_id")),
+                                          ("potion_attempt", p["index"],
+                                           potion_key[1])], wait=0.7)
         hp = run.get("current_hp", 1)
         max_hp = max(1, run.get("max_hp", 1))
         hp_pct = hp / max_hp
@@ -615,7 +1280,12 @@ class Policy:
         # （中途仅一次篝火）、第 RJG 局 F2~F8 七连战，两局均在链尾力竭阵亡。
         # 地图投影按场均先验线性扣血，捕捉不到这种递增疲劳
         combat_streak = 0
-        for tag in reversed(getattr(ctx, "credit_tags", None) or []):
+        # attribution_tags 是可恢复的路线事实；credit_tags 只是进程内握手流。
+        # 新版本优先读前者，旧日志/测试上下文缺字段时再回落，避免双份标签重复计数。
+        route_tags = getattr(ctx, "attribution_tags", None)
+        if not route_tags:
+            route_tags = getattr(ctx, "credit_tags", None) or []
+        for tag in reversed(route_tags):
             if not tag or tag[0] != "map_node":
                 continue
             if tag[1] in ("Monster", "Elite", "Unknown"):
@@ -1232,7 +1902,7 @@ class Policy:
         combat = state.get("combat") or {}
         player = combat.get("player") or {}
         enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
-        hand = combat.get("hand", [])
+        hand = self._enrich_cards(combat.get("hand", []))
         energy = player.get("energy", 0)
         round_no = state.get("turn") or 1
         pol = self.know.policy
@@ -1240,20 +1910,27 @@ class Policy:
         can_play = "play_card" in actions
         can_end = "end_turn" in actions
 
-        if self._cur_turn != round_no:
+        # Round numbers restart at one for every combat.  Pair them with the Agent's
+        # stable combat object; otherwise a T1→T1 transition can inherit “already saw
+        # playable cards” and end the new combat's still-loading opening hand early.
+        if self._turn_combat is not ctx.combat or self._cur_turn != round_no:
+            self._turn_combat = ctx.combat
             self._cur_turn = round_no
             self._failed_this_turn = set()
             self._failed_hand_len = -1
             self._saw_playable_this_turn = False
+            self._end_stall = 0
         # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
         # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
         # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
         if len(hand) != self._failed_hand_len:
             self._failed_this_turn = set()
+            self._card_cooldowns = {}
         self._failed_hand_len = len(hand)
         if self._potion_combat is not ctx.combat:
             self._potion_combat = ctx.combat
             self._potion_tried = set()
+            self._potion_cooldowns = {}
         if self._novel_trial_combat is not ctx.combat:
             self._novel_trial_combat = ctx.combat
             self._novel_trials = set()
@@ -1416,6 +2093,30 @@ class Policy:
             if can_end:
                 self._end_stall += 1
                 hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
+                affordable_playable = False
+                for card in hand:
+                    if (not card.get("playable") or self._card_unavailable(card)):
+                        continue
+                    cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
+                    if cost <= energy:
+                        affordable_playable = True
+                        break
+                # play_card can disappear briefly after animations/refreshes even
+                # though the payload already exposes affordable cards.  This is not
+                # “played everything”: the old two-tick confirmation discarded
+                # full-energy Strike/Defend hands.  Give the endpoint a long recovery
+                # window, then end only as a final anti-hang fallback for stale data.
+                if affordable_playable:
+                    if self._end_stall < 30:
+                        return Decision(
+                            None, {},
+                            f"战斗：仍有可负担牌但 play_card 暂不可用，等待接口恢复"
+                            f"（{self._end_stall}/30，{hand_desc}，能量{energy}）",
+                            wait=0.6)
+                    self._end_stall = 0
+                    return Decision("end_turn", {},
+                                    "战斗：可出牌接口长时间未恢复，结束回合防止永久卡死",
+                                    wait=1.2)
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
@@ -1641,7 +2342,7 @@ class Policy:
         for c in hand:
             cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
             _dmg, block, _hits = card_numbers(c)
-            if (not c.get("playable") or c.get("index") in self._failed_this_turn
+            if (not c.get("playable") or self._card_unavailable(c)
                     or block <= 0 or cost > energy):
                 continue
             useful = min(block, gap_now)
@@ -1676,7 +2377,7 @@ class Policy:
         for c in hand:
             if not c.get("playable"):
                 continue
-            if c.get("index") in self._failed_this_turn:
+            if self._card_unavailable(c):
                 continue
             # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"
             #（第 107 局实证，上限随卡组规模折算见第 109 局复盘）
@@ -1753,37 +2454,34 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             _, card, target, why = chosen
+            commit_cid = (card.get("card_id") or "").upper().rstrip("+")
+            commit_trial = False
             if (not choice_mode
                     and self._is_never_played_dead(card.get("card_id", ""))
                     and self._successful_card_plays(card.get("card_id", "")) == 0
                     and self._safe_controlled_trial(card)):
                 choice_mode = "受控试用"
             if choice_mode == "受控试用":
-                cid = (card.get("card_id") or "").upper().rstrip("+")
-                self._novel_trials.add(cid)
+                commit_trial = True
                 why += "｜受控试用：零成功出牌但当前可用且有正即时边际（本场限一次）"
             elif choice_mode:
                 why += f"｜{choice_mode}：正即时边际不带能量空过"
-            if _exhausts_other_cards(card):
-                self._exhaust_plays += 1
+            commit_exhaust = _exhausts_other_cards(card)
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)
+            _est = 0.0
             if _kd > 0:
                 _est = float(_kd * _kh)
                 if "所有敌人" in _text(card) or "all enemies" in _text(card).lower() \
                         or (card.get("target_type") or "") == "AllEnemies":
                     _est *= max(1, len(enemies))
-                self._krace_dmg += _est
-            if self._krace_round != round_no:
-                self._krace_round = round_no
-                self._krace_turns += 1
             # 记录"预测击杀"：同一敌人本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
             # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）
+            commit_kill_id = ""
             if target is not None and isinstance(why, str) and why.startswith("可击杀"):
                 tgt = next((e for e in enemies if e.get("index") == target), None)
                 if tgt is not None:
-                    kid = tgt.get("enemy_id") or tgt.get("name") or ""
-                    self._combat_kills[kid] = self._combat_kills.get(kid, 0) + 1
+                    commit_kill_id = tgt.get("enemy_id") or tgt.get("name") or ""
             params = {"card_index": card["index"]}
             if card.get("requires_target"):
                 if target is None:
@@ -1806,11 +2504,14 @@ class Policy:
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
                             tags=[("play_card", card.get("card_id")),
-                                  ("play_card_index", card.get("index"))], wait=0.6)
+                                  ("play_card_index", card.get("index"),
+                                   self._card_key(card)[1]),
+                                  ("combat_play_commit", commit_cid, commit_trial,
+                                   commit_exhaust, _est, round_no, commit_kill_id)], wait=0.6)
         # 僵局强攻（turn≥120 或 AI 判 offense）：绕过评分阈值，任何伤害牌打最低血敌人
         if round_no >= 120 or getattr(ctx, "force_offense", False):
             for c in hand:
-                if not c.get("playable") or c.get("index") in self._failed_this_turn:
+                if not c.get("playable") or self._card_unavailable(c):
                     continue
                 cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
                 if cost > energy:
@@ -1825,12 +2526,25 @@ class Policy:
                 return Decision("play_card", params,
                                 f"战斗：僵局强攻（回合{round_no}）打出【{c.get('name')}】→{tgt.get('name')}",
                                 tags=[("play_card", c.get("card_id")),
-                                      ("play_card_index", c.get("index"))], wait=0.6)
+                                      ("play_card_index", c.get("index"),
+                                       self._card_key(c)[1])], wait=0.6)
+        cooling_affordable = [c for c in hand
+                              if c.get("playable")
+                              and self._card_cooldowns.get(self._card_key(c), 0) > 0
+                              and (energy if c.get("costs_x")
+                                   else (c.get("energy_cost") or 0)) <= energy]
+        if can_end and cooling_affordable:
+            # These exact instances were selected as worthwhile immediately before
+            # a refresh-race 409.  Do not convert their temporary rotation into an
+            # energy-wasting end turn when there is no non-cooling sibling to play.
+            return Decision(None, {},
+                            "战斗：可用牌刚遇到状态刷新竞争，等待短冷却后继续出牌",
+                            wait=0.5)
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             risk = "；警告：结束回合可能致死！" if combat.get("end_turn_will_kill_player") else ""
             skipped_by_energy = [c for c in hand if c.get("playable")
-                                 and c.get("index") not in self._failed_this_turn
+                                 and not self._card_unavailable(c)
                                  and c.get("energy_cost", 0) > energy]
             energy_note = f"；{len(skipped_by_energy)}张可出牌因能量不足弃用" if skipped_by_energy else ""
             return Decision("end_turn", {},
@@ -2215,7 +2929,9 @@ class Policy:
         for p in run.get("potions", []):
             if not p.get("occupied") or not p.get("can_use"):
                 continue
-            if p["index"] in self._potion_tried:
+            potion_key = self._potion_key(p)
+            if (potion_key in self._potion_tried
+                    or self._potion_cooldowns.get(potion_key, 0) > 0):
                 continue  # 尝试过但没生效（如时机不合法），本场战斗不再重复
             desc = (p.get("description") or "")
             name = p.get("name") or ""
@@ -2263,13 +2979,14 @@ class Policy:
             if is_buff and not premium:
                 continue
             if (is_damage or is_buff) and enemies:
-                self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
                 kind = "攻击" if is_damage else "增益"
                 return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
-                                tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+                                tags=[("use_potion", p.get("potion_id")),
+                                      ("potion_attempt", p["index"],
+                                       potion_key[1])], wait=0.6)
             if is_defensive:
                 # 交药线接 potion_block_hp_pct（第 236 局复盘）：默认 0.35 与旧
                 # 行为一致，爆毙/短时死亡证据在 block_safety 顶格后把它逐步提前
@@ -2286,11 +3003,12 @@ class Policy:
                 _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
                                   or _gap_now >= _hp_now)
                 if (_hp_now < _pot_line * _max_now) or _def_emergency:
-                    self._potion_tried.add(p["index"])
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
                                     f"（交药线 {_pot_line:.0%}）",
-                                    tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+                                    tags=[("use_potion", p.get("potion_id")),
+                                          ("potion_attempt", p["index"],
+                                           potion_key[1])], wait=0.6)
                 # 已识别的防御/回复类且未到交药线：显式保留，绝不落入下方
                 # 兜底通道被 premium 硬仗开局白喝（470 局 F7 实证）
                 continue
@@ -2314,14 +3032,26 @@ class Policy:
                              and not self._hold_offensive_potion(ctx, run, pol, combat))
             if early_premium or (premium and enemies and cb_incoming > cb_player.get("block", 0)
                                  and cb_hp <= 0.5 * cb_max):
-                self._potion_tried.add(p["index"])
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
                 when_txt = "硬仗开局" if early_premium else "低血兜底"
                 return Decision("use_potion", params,
                                 f"战斗：{when_txt}使用药水【{name}】（描述无法分类，宁滥勿囤）",
-                                tags=[("use_potion", p.get("potion_id"))], wait=0.6)
+                                tags=[("use_potion", p.get("potion_id")),
+                                      ("potion_attempt", p["index"],
+                                       potion_key[1])], wait=0.6)
+        # A potion reaches this map only after Policy selected it and the API then
+        # rejected the exact same live instance repeatedly.  If no sibling was
+        # usable, wait for the short cooldown instead of ending a potentially lethal
+        # turn while the rescue potion is still in the belt.
+        cooling = [p for p in run.get("potions", [])
+                   if p.get("occupied") and p.get("can_use")
+                   and self._potion_cooldowns.get(self._potion_key(p), 0) > 0]
+        if cooling:
+            return Decision(None, {},
+                            "战斗：救命药水刚遇到状态刷新竞争，等待短冷却后重试",
+                            wait=0.5)
         return None
 
     def _race_joint_feasible(self, deck: list[dict], pool: float, fire: float,
@@ -2855,7 +3585,8 @@ class Policy:
         return True
 
     def _reward_card_choice(self, scored: list[tuple[float, dict]], deck: list[dict],
-                            state: dict, ctx, value_floor: float) -> tuple[float, dict, str]:
+                            state: dict, ctx,
+                            value_floor: float) -> tuple[float, dict, str, tuple | None]:
         """Choose a reward card with a bounded UCB novelty allowance.
 
         The greedy heuristic remains the default.  A deliberate trial can replace it
@@ -2868,13 +3599,14 @@ class Policy:
         pol = self.know.policy
         if (not bool(pol.get("card_exploration_enabled", True))
                 or int(pol.get("card_exploration_run_quota", 2)) <= self._card_explore_used):
-            return best_v, best, ""
+            return best_v, best, "", None
 
         cached = self._active_card_offer_explore_id
         if cached:
             for value, card in scored:
                 if str(card.get("card_id") or "").upper().rstrip("+") == cached:
-                    return value, card, "（同一 offer 保持受控探索选择）"
+                    return (value, card, "（同一 offer 保持受控探索选择）",
+                            self._novelty_tag("card", cached, self._card_explore_used))
 
         min_picks = max(1, int(pol.get("card_exploration_min_picks", 2)))
         margin = max(0.0, float(pol.get("card_exploration_near_best_margin", 2.5)))
@@ -2885,7 +3617,8 @@ class Policy:
         def samples(card: dict) -> int:
             cid = str(card.get("card_id") or "").upper().rstrip("+")
             entry = (self.know.stats.get("cards") or {}).get(cid) or {}
-            return max(0, int(entry.get("picked", 0) or 0))
+            return max(0, int(entry.get("picked", 0) or 0),
+                       self.know.novelty_trial_count("card", cid))
 
         total_samples = sum(samples(c) for _v, c in scored)
         log_mass = math.log(2.0 + total_samples + len(scored))
@@ -2899,7 +3632,7 @@ class Policy:
             ucb = value + ucb_scale * math.sqrt(log_mass / (1.0 + picked))
             eligible.append((ucb, -picked, value, card))
         if not eligible:
-            return best_v, best, ""
+            return best_v, best, "", None
         ucb, _neg_picked, value, card = max(
             eligible,
             key=lambda row: (row[0], row[1], row[2],
@@ -2909,14 +3642,16 @@ class Policy:
         # If the unseen card is already greedy-best, it is naturally explored and
         # should not spend the deliberate non-greedy quota.
         if chosen_id == best_id or ucb <= best_v + 1e-9:
-            return best_v, best, ""
-        self._card_explore_used += 1
+            return best_v, best, "", None
+        # Cache the retry intent now, but commit quota/sample only after the agent
+        # appends the returned tag for an accepted HTTP response.
         self._active_card_offer_explore_id = chosen_id
         picked = samples(card)
         note = (f"（受控探索：原值 {value:.1f}，UCB {ucb:.1f}，"
                 f"生涯拾取 {picked}/{min_picks}，本局配额 "
-                f"{self._card_explore_used}/{int(pol.get('card_exploration_run_quota', 2))}）")
-        return value, card, note
+                f"{self._card_explore_used + 1}/{int(pol.get('card_exploration_run_quota', 2))}）")
+        return (value, card, note,
+                self._novelty_tag("card", chosen_id, self._card_explore_used))
 
     def _thin_deck_must_pick(self, deck: list[dict], best_v: float) -> bool:
         """单薄卡组正价值保底（第 236 局复盘）：卡组单薄（非基础牌 < core）时，
@@ -3172,39 +3907,73 @@ class Policy:
         r = state.get("reward") or {}
         actions = state.get("available_actions", [])
         run = state.get("run") or {}
-        deck = run.get("deck", [])
+        deck = self._enrich_cards(run.get("deck", []))
         pol = self.know.policy
         floor = run.get("floor", 0)
 
-        # 换层/换屏时重置"已尝试"记忆
-        if floor != self._reward_floor:
+        # 以完整奖励载荷区分同层连续奖励屏。领取后列表会变化/重排，此时清掉
+        # 旧 payload 的 suppression，避免两个同文案奖励因 index 重用发生碰撞。
+        reward_instance_key = (
+            state.get("run_id"), floor,
+            tuple((o.get("index"), o.get("reward_type"), o.get("description"),
+                   bool(o.get("claimable"))) for o in (r.get("rewards") or [])),
+            tuple((c.get("index"), c.get("card_id"), c.get("name"),
+                   bool(c.get("upgraded"))) for c in (r.get("card_options") or [])),
+            bool(r.get("pending_card_choice")),
+        )
+        if floor != self._reward_floor or reward_instance_key != self._reward_instance_key:
             self._reward_floor = floor
+            self._reward_instance_key = reward_instance_key
             self._reward_tried = set()
+            self._reward_cooldowns = {}
+            self._reward_card_cooldowns = {}
 
         # card choice pending?
-        cards = r.get("card_options", [])
+        cards = self._enrich_cards(r.get("card_options", []))
         if r.get("pending_card_choice") and cards:
             self._record_card_offer("REWARD", state, cards)
             _mh = max(1, int(run.get("max_hp", 1) or 1))
             _act = self._floor_act(floor)
-            scored = sorted(
+            all_scored = sorted(
                 ((self.eval_reward_card(c, deck, max_hp=_mh, act=_act), c)
                  for c in cards),
                 key=lambda row: (-row[0], str(row[1].get("card_id") or "")))
+            scored = [row for row in all_scored
+                      if self._reward_card_cooldowns.get(
+                          (row[1].get("index"), str(row[1].get("card_id") or "")), 0) <= 0]
+            if not scored:
+                return Decision(None, {}, "奖励选牌：候选刚被状态竞争拒绝，短暂冷却后重试", wait=0.7)
             best_v, best = scored[0]
-            vals = [f"{c.get('name')}={v:.1f}" for v, c in scored]
+            vals = [f"{c.get('name')}={v:.1f}" for v, c in all_scored]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
             thin_take = self._thin_deck_must_pick(deck, best_v)
             if (best_v >= pick_line or thin_take) and "choose_reward_card" in actions:
-                best_v, best, explore_note = self._reward_card_choice(
+                best_v, best, explore_note, explore_tag = self._reward_card_choice(
                     scored, deck, state, ctx,
                     value_floor=0.0 if thin_take else pick_line)
                 gate_note = (f"≥ 门槛 {pick_line:.1f}" if best_v >= pick_line
                              else f"低于门槛 {pick_line:.1f}，但单薄卡组正价值保底")
+                tags = [("card_pick", best.get("card_id")),
+                        ("reward_card_attempt", best.get("index"),
+                         str(best.get("card_id") or ""))]
+                if explore_tag is not None:
+                    tags.append(explore_tag)
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
                                 f"{explore_note}；候选：{', '.join(vals)}",
-                                tags=[("card_pick", best.get("card_id"))], wait=0.8)
+                                tags=tags, wait=0.8)
+            all_best_v = all_scored[0][0]
+            cooling_take = (all_best_v >= pick_line
+                            or self._thin_deck_must_pick(deck, all_best_v))
+            any_cooling = len(scored) < len(all_scored)
+            if (best_v < pick_line and any_cooling and cooling_take
+                    and not self._thin_deck_must_pick(deck, best_v)):
+                # The best take was only temporarily rotated after a refresh-race
+                # rejection.  Skipping the whole offer would turn a short cooldown
+                # into permanent reward loss.
+                return Decision(None, {},
+                                "奖励选牌：应拿候选正在短冷却，等待后重试而不跳过整组",
+                                wait=0.6)
             if best_v < pick_line and "skip_reward_cards" in actions \
                     and not self._thin_deck_must_pick(deck, best_v):
                 return Decision("skip_reward_cards", {},
@@ -3212,30 +3981,43 @@ class Policy:
                                 wait=0.8)
 
         # claim simple rewards (gold / relic / potion)；失败过的（如药水栏满）不再重试
+        cooling_rewards = []
         for opt in r.get("rewards", []):
             if not opt.get("claimable"):
                 continue
             rtype = opt.get("reward_type", "")
-            key = (rtype, opt.get("description", ""))
+            key = (opt.get("index"), rtype, opt.get("description", ""))
             if key in self._reward_tried:
+                continue
+            if self._reward_cooldowns.get(key, 0) > 0:
+                cooling_rewards.append(key)
                 continue
             if rtype in ("Gold", "Relic", "Potion") and "claim_reward" in actions:
                 if rtype == "Potion":
                     pots = run.get("potions", [])
                     if pots and all(p.get("occupied") for p in pots):
                         continue  # 药水栏已满：领取必失败，直接放弃避免重试空转
-                self._reward_tried.add(key)
-                tags = [("relic_pick", opt.get("description", ""))] if rtype == "Relic" else []
+                tags = [("reward_attempt", opt.get("index"), rtype,
+                         opt.get("description", ""))]
+                if rtype == "Relic":
+                    tags.insert(0, ("relic_pick", opt.get("description", "")))
                 return Decision("claim_reward", {"option_index": opt["index"]},
                                 f"领取奖励：{opt.get('description')}", tags=tags, wait=0.7)
             if rtype in ("Card", "SpecialCard") and "claim_reward" in actions:
-                self._reward_tried.add(key)
                 return Decision("claim_reward", {"option_index": opt["index"]},
-                                f"打开卡牌奖励：{opt.get('description')}", wait=0.7)
+                                f"打开卡牌奖励：{opt.get('description')}",
+                                tags=[("reward_attempt", opt.get("index"), rtype,
+                                       opt.get("description", ""))], wait=0.7)
+
+        if cooling_rewards:
+            return Decision(None, {},
+                            "奖励界面：被状态竞争拒绝的奖励短暂冷却，等待后重试",
+                            wait=0.7)
 
         # 仍有未尝试但领取失败的奖励（如药水栏满）→ 放弃它们直接前进
-        skipped = [k[1] for k in self._reward_tried
-                   if any(o.get("claimable") and o.get("reward_type") == k[0] and o.get("description") == k[1]
+        skipped = [k[2] for k in self._reward_tried
+                   if any(o.get("claimable") and o.get("index") == k[0]
+                          and o.get("reward_type") == k[1] and o.get("description") == k[2]
                           for o in r.get("rewards", []))]
         note = f"（放弃无法领取的：{'、'.join(skipped)}）" if skipped else ""
         if r.get("can_proceed") and "proceed" in actions:
@@ -3247,7 +4029,7 @@ class Policy:
     def _card_selection(self, state: dict, ctx) -> Decision:
         sel = state.get("selection") or {}
         actions = state.get("available_actions", [])
-        cards = sel.get("cards", [])
+        cards = self._enrich_cards(sel.get("cards", []))
         kind = (sel.get("kind") or "").lower()
         prompt = sel.get("prompt") or ""
         if not cards:
@@ -3255,25 +4037,47 @@ class Policy:
 
         # 屏幕身份 + 防重复点击记忆（重复点同一张卡可能反选/空转）
         floor_no = (state.get("run") or {}).get("floor", 0)
-        screen_key = (floor_no, kind, prompt, len(cards))
+        screen_key = self._selection_identity(state)
         if screen_key != self._sel_key:
             self._sel_key = screen_key
             self._sel_tried = set()
+            self._sel_serial += 1
+            self._sel_instance = self._sel_serial
+            self._sel_mode = None
+
+        # Only accepted selection clicks appear in credit_tags.  Failed requests
+        # therefore leave the candidate available for a stable retry.
+        for raw in getattr(ctx, "credit_tags", None) or []:
+            if (isinstance(raw, (tuple, list)) and len(raw) >= 3
+                    and raw[0] == "selection_click"
+                    and raw[1] == self._sel_instance):
+                try:
+                    self._sel_tried.add(int(raw[2]))
+                except (TypeError, ValueError):
+                    pass
 
         # 删牌语义判定：关键词（remove/移除/删除）+ 商店删牌动作握手双保险。
         # 第 43/44 局实证：界面 kind/prompt 不含已知关键词时，删牌屏被当成通用
         # 拿牌屏按"最高价值"点选，把余烬+/上勾拳当垃圾删了——发起方知道上下文，
         # 显式握手优先于文案猜测
         blob = f"{kind} {prompt}".lower()
-        removing = ("remove" in blob or "移除" in blob or "删除" in blob
-                    or self._removal_pending_floor == floor_no)
-        if self._removal_pending_floor == floor_no:
-            self._removal_pending_floor = -1  # 握手消费，防残留误触发
+        explicit_removing = "remove" in blob or "移除" in blob or "删除" in blob
+        if explicit_removing:
+            self._sel_mode = "remove"
+        elif self._removal_pending_floor == floor_no:
+            # Bind the successful shop handshake to this concrete screen.  The mode
+            # stays sticky across 409/disconnect retries, while the floor token can
+            # now be consumed without contaminating a later selection on this floor.
+            self._sel_mode = "remove"
+            self._removal_pending_floor = -1
+        removing = self._sel_mode == "remove"
 
         # 已达选择数量且可确认 → 先确认（升级/删除等分支也必须走这里，否则永远循环）
         min_sel = sel.get("min_select", 1)
         if (sel.get("can_confirm") and sel.get("selected_count", 0) >= min_sel
                 and "confirm_selection" in actions):
+            if self._ui_action_cooled(state, "confirm_selection", {}):
+                return self._cooldown_wait("选牌界面")
             return Decision("confirm_selection", {}, f"选牌界面（{kind}）：已选 {sel.get('selected_count')} 张，确认",
                             wait=0.9)
 
@@ -3292,7 +4096,12 @@ class Policy:
         # 敌方强制的交牌永远交最不值钱者：状态牌 > 未升级基础牌 > 低价值牌。
         tribute = ("combat_hand" in kind) and not upgrading
 
-        candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
+        live_candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
+        candidates = [card for card in live_candidates
+                      if not self._ui_option_cooled(
+                          state, "select_deck_card", card)]
+        if not candidates:
+            return self._cooldown_wait("选牌界面")
 
         def badness(c, for_removal=False):
             t = card_type(c).lower()
@@ -3312,6 +4121,7 @@ class Policy:
                 return 40
             return -self.eval_reward_card(c, [])
 
+        explore_tag = None
         if removing or transforming:
             pick = max(candidates, key=lambda c: badness(c, True))
             verb = "删除" if removing else "变化"
@@ -3372,7 +4182,7 @@ class Policy:
             # 必须用真实卡组上下文评估：第 34 局经此路径连拿 7 张全攻牌、
             # 第 33 局拿进基础【打击】——空卡组评估时攻击占比恒为中性 0.45，
             # 攻击乘法衰减与格挡稀缺增值双双失效
-            deck = (state.get("run") or {}).get("deck", [])
+            deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
             scored = sorted(((self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act), c) for c in candidates),
@@ -3399,7 +4209,7 @@ class Policy:
                 # 单薄卡组的正价值保底则仍受 card_exploration_min_value 保护。
                 _thin_take = self._thin_deck_must_pick(deck, best_v)
                 _floor = 0.0 if _thin_take else pick_line
-                best_v, pick, explore_note = self._reward_card_choice(
+                best_v, pick, explore_note, explore_tag = self._reward_card_choice(
                     scored, deck, state, ctx, value_floor=_floor)
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
@@ -3416,24 +4226,150 @@ class Policy:
             reason = (f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）"
                       f"{explore_note}；候选：{detail}")
 
-        self._sel_tried.add(pick["index"])
+        tags = [(tag, pick.get("card_id")),
+                ("selection_click", self._sel_instance, int(pick["index"]))]
+        if explore_tag is not None:
+            tags.append(explore_tag)
         return Decision("select_deck_card", {"option_index": pick["index"]},
-                        reason, tags=[(tag, pick.get("card_id"))], wait=0.8)
+                        reason, tags=tags, wait=0.8)
+
+    def _native_entity_text(self, category: str, item: dict, id_field: str) -> str:
+        """Join live and immutable descriptions for conservative novelty gates."""
+        chunks = [item.get("name"), item.get("description"), item.get(id_field)]
+        native = getattr(self.know, "game_knowledge", None)
+        if native is not None and getattr(native, "available", False):
+            fact = native.lookup(category, item.get(id_field)) or {}
+            runtime = fact.get("runtime") or {}
+            chunks.extend((runtime.get("name"), runtime.get("description")))
+        return " ".join(str(value or "") for value in chunks).lower()
+
+    def _relic_exploration_safe(self, relic: dict, score: float) -> bool:
+        """Reject explicit downside/trade-off relics from novelty selection."""
+        learned = self.know.relic_value(relic.get("relic_id", ""))
+        if learned < float(self.know.policy.get("relic_exploration_min_value", -0.5)):
+            return False
+        text = self._native_entity_text("relics", relic, "relic_id")
+        downside_terms = (
+            "cannot", "can't", "no longer", "lose ", "loses ", "curse",
+            "无法", "不能", "不再", "失去", "诅咒", "减少你的", "降低你的",
+        )
+        return not any(term in text for term in downside_terms)
+
+    def _relic_exploration_choice(self, scored: list[tuple[float, dict]],
+                                  overall_best: float | None = None):
+        """Return a deterministic near-best under-sampled relic, or ``None``.
+
+        Ordering is independent of API slot order.  Learned value remains the safety
+        boundary; novelty only breaks a near tie and can never promote an explicit
+        drawback or a historically poor item.
+        """
+        pol = self.know.policy
+        quota = max(0, int(pol.get("relic_exploration_run_quota", 1)))
+        if (not pol.get("relic_exploration_enabled", True)
+                or self._relic_explore_used >= quota or len(scored) < 2):
+            return None
+        cap = max(1, int(pol.get("relic_exploration_sample_cap", 1)))
+        margin = max(0.0, float(pol.get("relic_exploration_near_best_margin", 0.75)))
+        stable = sorted(scored, key=lambda row: (
+            -row[0], str(row[1].get("relic_id") or row[1].get("name") or "")))
+        greedy_score, greedy = stable[0]
+        ceiling = greedy_score if overall_best is None else max(greedy_score, overall_best)
+        greedy_id = str(greedy.get("relic_id") or greedy.get("name") or "")
+        fresh = []
+        for score, relic in scored:
+            rid = str(relic.get("relic_id") or relic.get("name") or "")
+            if not rid or rid == greedy_id or score < ceiling - margin:
+                continue
+            samples = max(
+                self.know.novelty_trial_count("relic", rid),
+                int((self.know.stats.get("relics", {}).get(rid) or {}).get("picked", 0) or 0),
+            )
+            if samples >= cap or not self._relic_exploration_safe(relic, score):
+                continue
+            fresh.append((samples, -score, rid, score, relic))
+        if not fresh:
+            return None
+        samples, _, rid, score, relic = min(fresh)
+        note = (f"；受控遗物探索：{rid} 样本 {samples}/{cap}，原值 {score:.2f}，"
+                f"配额 {self._relic_explore_used + 1}/{quota}")
+        return relic, score, note
 
     def _chest(self, state: dict, ctx) -> Decision:
         chest = state.get("chest") or {}
         actions = state.get("available_actions", [])
         if not chest.get("is_opened") and "open_chest" in actions:
             return Decision("open_chest", {}, "宝箱：开启", wait=1.0)
-        relics = chest.get("relic_options", [])
+        live_relics = chest.get("relic_options", [])
+        relics = [relic for relic in live_relics
+                  if not self._ui_option_cooled(
+                      state, "choose_treasure_relic", relic)]
+        if (live_relics and not relics and not chest.get("has_relic_been_claimed")
+                and "choose_treasure_relic" in actions):
+            return self._cooldown_wait("宝箱")
         if relics and not chest.get("has_relic_been_claimed") and "choose_treasure_relic" in actions:
-            best = max(relics, key=lambda r: self.know.relic_value(r.get("relic_id", "")))
+            scored = [(self.know.relic_value(r.get("relic_id", "")), r) for r in relics]
+            scored.sort(key=lambda row: (
+                -row[0], str(row[1].get("relic_id") or row[1].get("name") or "")))
+            best_v, best = scored[0]
+            explore = self._relic_exploration_choice(scored)
+            note, tags = "", [("relic_pick", best.get("relic_id"))]
+            if explore is not None:
+                best, best_v, note = explore
+                rid = str(best.get("relic_id") or best.get("name") or "")
+                tags = [("relic_pick", best.get("relic_id")),
+                        self._novelty_tag("relic", rid, self._relic_explore_used)]
             return Decision("choose_treasure_relic", {"option_index": best["index"]},
-                            f"宝箱：选择遗物【{best.get('name')}】",
-                            tags=[("relic_pick", best.get("relic_id"))], wait=0.9)
+                            f"宝箱：选择遗物【{best.get('name')}】（价值 {best_v:.2f}）{note}",
+                            tags=tags, wait=0.9)
         if "proceed" in actions:
             return Decision("proceed", {}, "宝箱：离开", wait=1.0)
         return Decision(None, {}, "宝箱：等待", wait=0.8)
+
+    def _potion_exploration_choice(self, scored: list[tuple[float, dict]],
+                                   run: dict, overall_best: float):
+        """Choose one affordable unclassified potion through a bounded safe gate."""
+        pol = self.know.policy
+        quota = max(0, int(pol.get("potion_exploration_run_quota", 1)))
+        if (not pol.get("potion_exploration_enabled", True)
+                or self._potion_explore_used >= quota):
+            return None
+        # enough_gold 只代表买得起，不代表药水栏有空位。满槽时服务端会拒绝
+        # buy_potion；若仍走探索，失败又不占样本/配额，就会在商店永久重试。
+        potion_slots = run.get("potions") or []
+        if potion_slots and all(slot.get("occupied") for slot in potion_slots):
+            return None
+        hp_pct = float(run.get("current_hp", 1) or 1) / max(
+            1.0, float(run.get("max_hp", 1) or 1))
+        if hp_pct < float(pol.get("potion_exploration_min_hp_pct", 0.55)):
+            return None
+        threshold = float(pol.get("shop_relic_threshold", 1.0))
+        margin = max(0.0, float(pol.get("potion_exploration_near_best_margin", 0.5)))
+        reference = max(threshold, overall_best if math.isfinite(overall_best) else threshold)
+        cap = max(1, int(pol.get("potion_exploration_sample_cap", 1)))
+        max_price = max(0, int(pol.get("potion_exploration_max_price", 60)))
+        reserve = max(0, int(pol.get("potion_exploration_gold_reserve", 60)))
+        gold = int(run.get("gold", 0) or 0)
+        fresh = []
+        for score, potion in scored:
+            pid = str(potion.get("potion_id") or potion.get("name") or "")
+            price = int(potion.get("price", 0) or 0)
+            if (not pid or self._potion_class(potion) != "unknown"
+                    or price > max_price or gold - price < reserve
+                    or score <= 0.0 or score < reference - margin):
+                continue
+            text = self._native_entity_text("potions", potion, "potion_id")
+            if any(term in text for term in (
+                    "damage yourself", "lose ", "curse", "失去", "损失", "诅咒")):
+                continue
+            samples = self.know.novelty_trial_count("potion", pid)
+            if samples < cap:
+                fresh.append((samples, -score, pid, score, potion))
+        if not fresh:
+            return None
+        samples, _, pid, score, potion = min(fresh)
+        note = (f"受控新药试购：{pid} 样本 {samples}/{cap}，原值 {score:.2f}，"
+                f"配额 {self._potion_explore_used + 1}/{quota}")
+        return potion, score, note
 
     # ------------------------------------------------------------------
     # shop / rest
@@ -3444,9 +4380,10 @@ class Policy:
         run = state.get("run") or {}
         actions = state.get("available_actions", [])
         gold = run.get("gold", 0)
-        deck = run.get("deck", [])
+        deck = self._enrich_cards(run.get("deck", []))
         pol = self.know.policy
         floor = run.get("floor", 0)
+        cooldown_blocked = False
 
         if not shop.get("is_open"):
             if self._shop_done_floor == floor:
@@ -3491,10 +4428,13 @@ class Policy:
                 # 握手：下一个 CARD_SELECTION 屏就是删牌选择——不能依赖界面文案猜语义
                 # （第 43/44 局实证：识别失败落入通用拿牌分支，付费删掉了余烬+/上勾拳
                 #  两张全队最强的牌）
-                self._removal_pending_floor = floor
-                return Decision("remove_card_at_shop", {},
-                                f"商店：付费删牌（预留 {pol['removal_gold_reserve']} 金后仍充足）",
-                                tags=[("shop_remove", None)], wait=0.9)
+                if self._ui_action_cooled(state, "remove_card_at_shop", {}):
+                    cooldown_blocked = True
+                else:
+                    return Decision("remove_card_at_shop", {},
+                                    f"商店：付费删牌（预留 {pol['removal_gold_reserve']} 金后仍充足）",
+                                    tags=[("shop_remove", None),
+                                          ("shop_remove_pending", floor)], wait=0.9)
 
         # 卡牌购买与奖励端同门槛（第 96 局复盘）：F30 卡组已在软上限边缘，
         # 商店仍按固定阈值 1.0 买进净价值仅 3.0 的巨像等注水牌（73 金）——
@@ -3505,21 +4445,29 @@ class Policy:
         shop_pick_line = max(float(pol["shop_relic_threshold"]),
                              self._pick_threshold(deck, max_hp=_shop_mh, act=_shop_act))
         best_action, best_score, best_reason, best_tags = None, -1e9, "", []
-        for c in shop.get("cards", []):
+        for c in self._enrich_cards(shop.get("cards", [])):
             if not c.get("is_stocked") or not c.get("enough_gold"):
                 continue
             v = self.eval_reward_card(c, deck, max_hp=_shop_mh, act=_shop_act) - c.get("price", 0) / 120.0
             if v <= shop_pick_line:
+                continue
+            if self._ui_option_cooled(state, "buy_card", c):
+                cooldown_blocked = True
                 continue
             if v > best_score:
                 best_action = ("buy_card", c["index"])
                 best_score = v
                 best_reason = f"购买卡牌【{c.get('name')}】（{c.get('price')}金，价值{v:.1f}≥门槛{shop_pick_line:.1f}）"
                 best_tags = [("card_pick", c.get("card_id")), ("shop_buy_card", c.get("card_id"))]
+        relic_scored = []
         for r in shop.get("relics", []):
             if not r.get("is_stocked") or not r.get("enough_gold"):
                 continue
             v = 3.0 + self.know.relic_value(r.get("relic_id", "")) - r.get("price", 0) / 120.0
+            if self._ui_option_cooled(state, "buy_relic", r):
+                cooldown_blocked = True
+                continue
+            relic_scored.append((v, r))
             if v > best_score:
                 best_action = ("buy_relic", r["index"])
                 best_score = v
@@ -3548,6 +4496,7 @@ class Policy:
             if (_sf > 0 and self._floors_to_boss(_sf)
                     <= int(pol.get("potion_starved_reserve_floors", 6))):
                 _reserve_bonus = float(pol.get("shop_potion_reserve_bonus", 6.0))
+        potion_scored = []
         for pt in shop.get("potions", []):
             if not pt.get("is_stocked") or not pt.get("enough_gold"):
                 continue
@@ -3555,19 +4504,63 @@ class Policy:
             if (_reserve_bonus > 0 and v > 0
                     and self._potion_class(pt) == "offensive"):
                 v += _reserve_bonus
+            if self._ui_option_cooled(state, "buy_potion", pt):
+                cooldown_blocked = True
+                continue
+            potion_scored.append((v, pt))
             if v > best_score:
                 best_action = ("buy_potion", pt["index"])
                 best_score = v
                 best_reason = f"购买药水【{pt.get('name')}】（{pt.get('price')}金，价值{v:.1f}）"
                 best_tags = [("shop_buy_potion", pt.get("potion_id"))]
+
+        market_best_score = best_score
+        novelty_override_score = -math.inf
+        # 遗物只在全货架最优值附近轮转；不会为了凑样本放弃显著更好的卡/药。
+        if "buy_relic" in actions and relic_scored:
+            explore_relic = self._relic_exploration_choice(
+                relic_scored, overall_best=market_best_score)
+            if explore_relic is not None:
+                r, v, note = explore_relic
+                if v > float(pol.get("shop_relic_threshold", 1.0)):
+                    rid = str(r.get("relic_id") or r.get("name") or "")
+                    best_action = ("buy_relic", r["index"])
+                    best_score = v
+                    novelty_override_score = v
+                    best_reason = (f"购买遗物【{r.get('name')}】（{r.get('price')}金，"
+                                   f"价值{v:.2f}）{note}")
+                    best_tags = [("relic_pick", r.get("relic_id")),
+                                 ("shop_buy_relic", r.get("relic_id")),
+                                 self._novelty_tag("relic", rid, self._relic_explore_used)]
+
+        # 新药试购可以在基线门槛下方至多让出 near-best_margin，但必须有空位
+        # （enough_gold 的服务端口径）、买后余钱、健康血线和成功样本上限。
+        if "buy_potion" in actions and potion_scored:
+            explore_potion = self._potion_exploration_choice(
+                potion_scored, run, overall_best=market_best_score)
+            if explore_potion is not None and explore_potion[1] > novelty_override_score:
+                pt, v, note = explore_potion
+                pid = str(pt.get("potion_id") or pt.get("name") or "")
+                best_action = ("buy_potion", pt["index"])
+                best_score = max(v, float(pol.get("shop_relic_threshold", 1.0)) + 1e-6)
+                best_reason = f"购买药水【{pt.get('name')}】（{pt.get('price')}金）；{note}"
+                best_tags = [("shop_buy_potion", pt.get("potion_id")),
+                             self._novelty_tag("potion", pid, self._potion_explore_used)]
         if best_action and best_score > pol["shop_relic_threshold"]:
             action, idx = best_action
             if action in actions:
                 return Decision(action, {"option_index": idx}, f"商店：{best_reason}", tags=best_tags, wait=0.9)
+            cooldown_blocked = True
+
+        # A cooled purchase/removal is still an unresolved candidate.  Closing or
+        # proceeding here would silently skip it before its short retry window
+        # expires; wait, then re-evaluate the same live inventory.
+        if cooldown_blocked:
+            return self._cooldown_wait("商店")
 
         if shop.get("can_close") and "close_shop_inventory" in actions:
-            self._shop_done_floor = floor  # 标记本店已评估，防止 开→关→开 死循环
-            return Decision("close_shop_inventory", {}, "商店：货架无值得购买，关闭", wait=0.8)
+            return Decision("close_shop_inventory", {}, "商店：货架无值得购买，关闭",
+                            tags=[("shop_close", floor)], wait=0.8)
         if "proceed" in actions:
             return Decision("proceed", {}, "商店：离开", wait=1.0)
         return Decision(None, {}, "商店：等待", wait=0.8)
@@ -3592,14 +4585,15 @@ class Policy:
             base = 1.2
         return base - price / 120.0
 
-    @staticmethod
-    def _potion_class(pt: dict) -> str:
+    def _potion_class(self, pt: dict) -> str:
         """货架药水分类（'defensive' | 'offensive' | 'unknown'）。
 
         第422局复盘从 _shop_potion_value 内联词表提取：预留窗竞价加成需要
         只对进攻/增益药生效，与使用端 _maybe_potion 的分类同一套词表。
         """
-        blob = f"{pt.get('name') or ''} {pt.get('potion_id') or ''}".lower()
+        # v0.111 API 的商店载荷常省略 description；优先从版本化原生快照补齐，
+        # 只有 mod/新版本真正未知的药水才进入受控试购通道。
+        blob = self._native_entity_text("potions", pt, "potion_id")
         if any(k in blob for k in ("格挡", "生命", "回复", "治疗", "屏障", "护甲",
                                    "block", "heal", "health", "regen", "barrier")):
             return "defensive"
@@ -3611,12 +4605,107 @@ class Policy:
             return "offensive"
         return "unknown"
 
+    def _prepare_rest_decision(self, state: dict, decision: Decision) -> Decision:
+        """Attach a legal target for native rest options that require one.
+
+        Older API payloads opened a follow-up CARD_SELECTION screen for smithing,
+        while native v0.111.0 rest options may expose their legal deck indices on
+        the option itself.  Sending only ``option_index`` in the latter case is a
+        deterministic 409, not an animation race.
+        """
+        option = self._ui_target_item(state, "choose_rest_option", decision.params)
+        if not isinstance(option, dict) or not option.get("requires_target"):
+            return decision
+        valid = list(option.get("valid_target_indices") or [])
+        if not valid:
+            return Decision(None, {},
+                            f"{decision.reason}；该项目要求目标但当前没有合法目标，等待刷新",
+                            wait=0.7)
+
+        def stable_target(value):
+            try:
+                return (0, int(value))
+            except (TypeError, ValueError):
+                return (1, str(value))
+
+        valid.sort(key=stable_target)
+        run = state.get("run") or {}
+        deck = self._enrich_cards(run.get("deck", []))
+
+        def same_index(card, raw) -> bool:
+            try:
+                return int(card.get("index")) == int(raw)
+            except (TypeError, ValueError):
+                return card.get("index") == raw
+
+        target_cards = [(raw, next((card for card in deck if same_index(card, raw)), None))
+                        for raw in valid]
+        semantic = " ".join(str(option.get(key) or "") for key in
+                            ("option_id", "title", "description")).lower()
+        note = ""
+        max_hp = max(1, int((run.get("max_hp", 1)) or 1))
+        act = self._floor_act(run.get("floor"))
+        if any(term in semantic for term in ("smith", "upgrade", "锻造", "升级")):
+            candidates = [(raw, card) for raw, card in target_cards
+                          if isinstance(card, dict) and not card.get("upgraded")]
+            if candidates:
+                target, card = max(
+                    candidates,
+                    key=lambda row: (
+                        self.eval_reward_card(row[1], deck, max_hp=max_hp, act=act),
+                        str(row[1].get("card_id") or row[1].get("name") or ""),
+                        stable_target(row[0]),
+                    ))
+                note = f"；原生目标直选【{card.get('name') or card.get('card_id')}】"
+            else:
+                target = valid[0]
+                note = "；升级语义未匹配到牌组条目，稳定选择首个合法目标"
+        elif any(term in semantic for term in
+                 ("remove", "purge", "transform", "删除", "移除", "变化")):
+            candidates = [(raw, card) for raw, card in target_cards if isinstance(card, dict)]
+            if candidates:
+                target, card = min(
+                    candidates,
+                    key=lambda row: (
+                        self.eval_reward_card(row[1], deck, max_hp=max_hp, act=act),
+                        str(row[1].get("card_id") or row[1].get("name") or ""),
+                        stable_target(row[0]),
+                    ))
+                note = f"；原生目标直选最低价值牌【{card.get('name') or card.get('card_id')}】"
+            else:
+                target = valid[0]
+                note = "；移除语义未匹配到牌组条目，稳定选择首个合法目标"
+        else:
+            target = valid[0]
+            note = "；目标语义未知，稳定选择服务端声明的首个合法目标"
+
+        params = dict(decision.params or {})
+        params["target_index"] = target
+        return Decision(decision.action, params, decision.reason + note,
+                        tags=list(decision.tags or []), wait=decision.wait)
+
     def _rest(self, state: dict, ctx) -> Decision:
         rest = state.get("rest") or {}
         run = state.get("run") or {}
         actions = state.get("available_actions", [])
-        options = [o for o in rest.get("options", []) if o.get("is_enabled")]
-        if not options:
+        enabled_options = [o for o in rest.get("options", []) if o.get("is_enabled")]
+        # Native rest options that require a target are not actionable until the
+        # server exposes at least one legal target.  Filter them before strategic
+        # ranking so a legal sibling can win instead of being masked by a preferred
+        # but impossible smith/ritual option.
+        live_options = [option for option in enabled_options
+                        if (not option.get("requires_target")
+                            or bool(option.get("valid_target_indices") or []))]
+        if enabled_options and not live_options:
+            return Decision(None, {},
+                            "篝火：已启用项目均要求目标但当前没有合法目标，等待刷新",
+                            wait=0.7)
+        options = [option for option in live_options
+                   if not self._ui_option_cooled(
+                       state, "choose_rest_option", option)]
+        if live_options and not options:
+            return self._cooldown_wait("篝火")
+        if not enabled_options:
             if "proceed" in actions:
                 return Decision("proceed", {}, "篝火：无可选项目，离开", wait=1.0)
             return Decision(None, {}, "篝火：等待选项", wait=0.8)
@@ -3625,7 +4714,7 @@ class Policy:
         max_hp = max(1, run.get("max_hp", 1))
         heal = next((o for o in options if o.get("option_id", "").upper() == "HEAL"), None)
         smith = next((o for o in options if "SMITH" in o.get("option_id", "").upper()), None)
-        deck = run.get("deck", [])
+        deck = self._enrich_cards(run.get("deck", []))
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
@@ -3775,14 +4864,22 @@ class Policy:
         if ev.get("is_finished"):
             proceed = next((o for o in options if o.get("is_proceed")), None)
             if proceed and "choose_event_option" in actions:
+                if self._ui_option_cooled(state, "choose_event_option", proceed):
+                    return self._cooldown_wait("事件")
                 return Decision("choose_event_option", {"option_index": proceed["index"]},
                                 "事件：已结束，继续", wait=1.0)
 
-        candidates = [o for o in options if not o.get("is_locked") and not o.get("will_kill_player")]
-        if not candidates:
-            candidates = [o for o in options if not o.get("is_locked")]
-        if not candidates:
+        live_candidates = [o for o in options
+                           if not o.get("is_locked") and not o.get("will_kill_player")]
+        if not live_candidates:
+            live_candidates = [o for o in options if not o.get("is_locked")]
+        if not live_candidates:
             return Decision(None, {}, "事件：全部锁定，等待", wait=0.8)
+        candidates = [o for o in live_candidates
+                      if not self._ui_option_cooled(
+                          state, "choose_event_option", o)]
+        if not candidates:
+            return self._cooldown_wait("事件")
 
         # 事件实例身份切换时重置重复选择记忆（同实例重选 = 上次选择没解决问题）
         inst = (state.get("run_id"), event_id, (state.get("run") or {}).get("floor", 0))
@@ -3862,31 +4959,61 @@ class Policy:
             else:
                 veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
                              f"当前{my_hp}血吃下即死，但无安全替代，强行择损")
-        # epsilon exploration among under-sampled options
-        # 已知负收益（价值 ≤ -5，如吃过大亏的选项）不再浪费探索次数；
-        # 探索只在真正欠采样的选项里挑
-        if self.rng.random() < pol["exploration_rate"]:
-            fresh = [s for s in scored if s[1] < 3 and s[0] > -5.0]
+        # 确定性欠采样探索：旧 epsilon 即使保留 5% 下限，也可能在稀有事件的
+        # 有限次出现里永远不命中。现在只在高血、近优且通过上方 will_kill/hp_min
+        # 重尾闸门的选项间按“样本最少→原值最高→稳定键”轮转；每局和每候选都
+        # 有硬上限。显著负收益或明确灾难文案不会因新颖度复活。
+        preview = sorted(scored, key=lambda s: (-s[0], -s[1], s[2]))
+        if preview[0][0] > 0.0:
+            greedy_preview = preview[0]
+        else:
+            tied = [s for s in preview if s[0] == preview[0][0]]
+            greedy_preview = min(tied, key=lambda s: (s[1], s[2]))
+        quota = max(0, int(pol.get("event_exploration_run_quota", 1)))
+        hp_pct = my_hp / max_hp
+        if (pol.get("event_exploration_enabled", True)
+                and self._event_explore_used < quota
+                and hp_pct >= float(pol.get("event_exploration_min_hp_pct", 0.70))
+                and not lethal_keys
+                and not any(s[3].get("will_kill_player") for s in scored)):
+            cap = max(1, int(pol.get("event_exploration_sample_cap", 2)))
+            margin = max(0.0, float(pol.get("event_exploration_near_best_margin", 2.0)))
+            min_value = float(pol.get("event_exploration_min_value", -1.0))
+            best_raw = max(s[0] for s in scored)
+            fresh = []
+            for v, n, key, o in scored:
+                if key == greedy_preview[2] or v < min_value or v < best_raw - margin:
+                    continue
+                text = f"{o.get('title') or ''} {o.get('description') or ''}".lower()
+                if any(term in text for term in (
+                        "lose all", "失去所有", "损失所有", "become cursed",
+                        "获得诅咒", "即死", "死亡")):
+                    continue
+                novelty_key = f"{event_id}:{key}"
+                samples = max(n, self.know.novelty_trial_count("event", novelty_key))
+                if samples < cap:
+                    fresh.append((samples, -v, novelty_key, key, v, o))
             if fresh:
-                v, n, key, o = self.rng.choice(fresh)
-                self._event_picks[key] = self._event_picks.get(key, 0) + 1
-                return Decision("choose_event_option", {"option_index": o["index"]},
-                                f"事件【{ev.get('title')}】：探索未知选项「{o.get('title')}」（探索率 {pol['exploration_rate']:.2f}）{veto_note}",
-                                tags=[("event_choice", event_id, key)], wait=1.0)
+                samples, _, novelty_key, key, v, o = min(fresh)
+                note = (f"样本 {samples}/{cap}，原值 {v:.2f}，最优 {best_raw:.2f}，"
+                        f"配额 {self._event_explore_used + 1}/{quota}")
+                return Decision(
+                    "choose_event_option", {"option_index": o["index"]},
+                    f"事件【{ev.get('title')}】：受控探索近优选项「{o.get('title')}」"
+                    f"（{note}）{veto_note}",
+                    tags=[("event_choice", event_id, key),
+                          self._novelty_tag("event", novelty_key,
+                                            self._event_explore_used)],
+                    wait=1.0)
         # 有实证收益（>0）时：价值优先，平值按样本数优先（石炉加湿器教训：
         # 经验多比原始顺序可信）。全零平值反转（第 56~57 局实证）：事件结算只记
         # 即时 hp/gold，祝福类选项长期记 0——按样本最大排序会把选择永久锁死在
         # 首个采样过的选项上，「涅奥的苦痛」n=8 连续重选，营养牡蛎(+11/次)式的
         # 正收益选项永远等不到被发现。并列 0 时改选样本最少者主动分散采样；
         # 任一选项显现非零收益后自动恢复"价值→样本"贪心。
-        scored.sort(key=lambda s: (s[0], s[1]), reverse=True)
-        if scored[0][0] > 0.0:
-            v, n, key, o = scored[0]
-        else:
-            pool = [s for s in scored if s[0] == scored[0][0]]
-            v, n, key, o = min(pool, key=lambda s: s[1])
+        v, n, key, o = greedy_preview
+        scored.sort(key=lambda s: (-s[0], -s[1], s[2]))
         lines = " / ".join(f"{s[3].get('title')}={s[0]:.1f}(n={s[1]})" for s in scored)
-        self._event_picks[key] = self._event_picks.get(key, 0) + 1
         return Decision("choose_event_option", {"option_index": o["index"]},
                         f"事件【{ev.get('title')}】：选择「{o.get('title')}」（经验价值 {v:.1f}）；{lines}{veto_note}",
                         tags=[("event_choice", event_id, key)], wait=1.0)
@@ -3966,12 +5093,13 @@ class Policy:
         """开局祝福/特殊界面的卡牌包选择（BUNDLE_SELECTION）。"""
         bundles = state.get("bundles") or []
         actions = state.get("available_actions", [])
-        deck = (state.get("run") or {}).get("deck", [])
+        deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
         if bundles and "choose_bundle" in actions:
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             best, best_v, detail = None, -1e9, []
             for b in bundles:
-                v = sum(self.eval_reward_card(c, deck, max_hp=_mh) for c in b.get("cards", []))
+                bundle_cards = self._enrich_cards(b.get("cards", []))
+                v = sum(self.eval_reward_card(c, deck, max_hp=_mh) for c in bundle_cards)
                 names = "、".join(c.get("name", "?") for c in b.get("cards", []))
                 detail.append(f"包{b['index']}[{names}]={v:.1f}")
                 if v > best_v:
@@ -4024,8 +5152,8 @@ class Policy:
         if go.get("can_continue") and "continue_run" in actions:
             return Decision("continue_run", {}, "结算：继续（进入下一阶段）", wait=1.5)
         if go.get("can_return_to_main_menu") and "return_to_main_menu" in actions:
-            ctx.check_timeline = True  # 回主菜单后优先检查时间线可解锁项
-            return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局", wait=1.5)
+            return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
+                            tags=[("timeline_check", True)], wait=1.5)
         if "proceed" in actions:
             return Decision("proceed", {}, "结算：继续", wait=1.2)
         return Decision(None, {}, "结算：等待", wait=0.8)

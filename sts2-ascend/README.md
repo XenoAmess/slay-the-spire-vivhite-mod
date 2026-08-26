@@ -63,12 +63,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 ## 它如何"进化"
 
 1. **在线统计**：每场战斗结束记录敌方组合与掉血量（敌人危险度模型）；每个事件选项结算
-   生命/金币变化；每次拿牌/拿遗物打上归因标签。
+   生命/金币变化；每次成功拿牌/拿遗物打上归因标签。动作必须收到最终成功回执，或由后续
+   同局状态满足动作特定后置条件后才入账；`pending`/断线本身不算成功。
 2. **赛后归因**：一局结束时按"到达层数+胜利率"给本局所有选择记账（incremental mean +
    shrinkage 收缩估计，样本少时不过拟合）。
 3. **策略突变**（有界）：被精英打死→提高精英回避血量线；被小怪打死→上调防御权重；
    事件致死→收敛探索率；胜利→放宽进攻性并提升目标进阶。全部钳制在安全区间内。
 4. **自我总结**：以上全部变化以中文写入 `lessons.md`，形成可读的"成长日记"。
+
+卡牌奖励的可靠曝光口径是 v2 `offered`：只统计真实 offer，同屏轮询和重复 ID 去重；旧
+`seen` 保留兼容但不再当曝光率。零/低样本新牌在安全近优集合中使用有界 UCB 探索，战斗中
+对当前可出且即时边际为正的新牌提供每场一次受控试用，不会因“从没试过”永久自锁。
+
+事件、遗物和药水也使用确定性、限额的受控探索：事件只在高血、近优且通过致死/历史重尾
+闸门时轮转欠采样选项；宝箱与商店只在近优、无明确负面的遗物间打破固定首槽偏置；商店
+未知药只在有空位、健康、低价且保留金币时试购。所有配额均以最终成功回执或动作特定状态
+效果确认为准，`pending`、失败或断线请求不伪造样本。`UNKNOWN` 屏不盲探任意动作，仍只使用
+已声明的确认/继续和延迟界面兜底。
 
 ## 知识库压缩（compact）
 
@@ -100,6 +111,22 @@ dry-run 报告体积，不写入二进制知识归档。
 compact 只减少当前 checkout、文件扫描和后续提示词成本；普通提交无法缩小 Git 历史中
 已经存在的对象。若将来确需重写历史，必须作为单独的破坏性维护操作评估和执行。
 
+## 原生游戏知识快照
+
+`knowledge/game/v0.111.0/` 保存与游戏版本绑定的只读事实层：runtime ModelDb、英中本地化、
+PCK 目录、`sts2.dll` 结构化 mechanics 和跨层 ID join。当前基础集合是 596 卡、299 遗物、
+107 怪物、66 药水，另含事件、Power、遭遇、池、地图、商店、奖励、篝火、升阶、怪物招式
+状态机以及战斗命令/行动、伤害与格挡属性、随机数、卡费和 run 流程等规则。manifest 记录游戏
+commit、程序集/PCK SHA256 和每个 artifact hash；validation 报告绑定 manifest 与实际 artifact set，
+报告过期、快照被改写或验证失败时都不会静默加载。
+
+mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到具体效果的映射；在线摘要
+只在分支相关时输出该字段，并设置节点、深度、同级数量和文本长度上限，避免复盘提示无限膨胀。
+
+在线 Policy 会用该快照补齐 API 省略的卡牌类型、费用、规则文本和动态值；复盘 prompt 只
+内嵌本批相关的有界事实，并提供完整 JSONL 路径供按需深读。复现、schema 和校验命令见
+`tools/game-knowledge/README.md`。
+
 ## 大模型复盘（异步追及队列：游玩零等待）
 
 **每局结束后**，大脑只做一件事：把复盘请求写入 `knowledge/review_queue.json`，然后**立即开下一局**。
@@ -118,14 +145,23 @@ compact 只减少当前 checkout、文件扫描和后续提示词成本；普通
 
 并发安全设计：
 
-- autogit 全局 git 锁，游玩线程与复盘线程不撞 index.lock
-- 复盘激活期间，每局自动存档**只提交 `knowledge/`**，不会把复盘 agent 改了一半的代码卷进去
-- 自检失败用**路径级回滚**（`git restore --source`），不会抹掉复盘期间产生的对局存档
-- 复盘产生变更 → 本局结束的安全点以退出码 42 自重启加载；起不来则 runner 按标记回滚
+- 复盘模型在无 remote、无 hardlink 的独立 clone 内工作；生产树只接收自检通过的 allowlist
+  精确 patch，真实仓库前后指纹覆盖工作树、index、HEAD/refs、Git 配置/hooks 与关键 ignored 路径
+- autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
+- 普通存档与复盘提交各有精确 allowlist；目标路径已有 staged 内容时整笔拒绝
+- 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD
+  重建，分支切换则拒绝事务
+- 自检失败直接丢弃隔离 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，
+  不使用 `reset --hard` 或全目录清理
+- 重启 marker 在真实工作树/ref 变化前 exclusive 原子发布；加载新 commit 并健康完成两局后才清除
+- 复盘产生变更 → 本局结束的安全点以退出码 42 自重启加载
 
 复盘以 **OpenCode 无头会话**（`opencode run`，走本机已有授权，无需 API key）执行，
-可修改 `sts2-ascend/` 下任何文件（改数据结构必须同步迁移 `knowledge.py` 与现有数据）。
-复盘报告：`knowledge/meta_review.md`；新经验同步进 `lessons.md`。
+只可修改提示词与宿主共同定义的策略代码/报告 allowlist；在线 `stats`、`policy`、`progression`、
+`lessons`、`runs` 在复盘期间只读。复盘报告追加到 `knowledge/meta_review.md`。
+
+每份新 run 携带稳定 `run_number`，追及队列按局号读取 active 或已 compact 的原证据。旧日志
+没有局号映射时会显式标记 `recent_fallback_unmapped`，不会把“最近 N 局”冒充目标批次。
 
 手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。
 配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。

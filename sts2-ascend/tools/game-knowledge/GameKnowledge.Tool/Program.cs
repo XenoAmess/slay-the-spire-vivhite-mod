@@ -56,7 +56,10 @@ if (command == "extract" && args.Length >= 3)
         var category = ModelCategory(type.FullName)!;
         try
         {
-            var syntax = decompiler.DecompileType(new FullTypeName(type.FullName));
+            // FullName omits generic arity (for example GrabBag<T>), while
+            // FullTypeName expects the metadata/reflection spelling for generic
+            // definitions. ReflectionName preserves that arity.
+            var syntax = decompiler.DecompileType(new FullTypeName(type.ReflectionName));
             var declaration = syntax.Descendants
                 .OfType<TypeDeclaration>()
                 .FirstOrDefault(node => node.Name == type.Name);
@@ -158,14 +161,14 @@ if (command == "extract" && args.Length >= 3)
     var assemblyHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assemblyPath))).ToLowerInvariant();
     var manifest = new
     {
-        schema_version = 2,
+        schema_version = 4,
         source = new
         {
             assembly = Path.GetFileName(assemblyPath),
             assembly_sha256 = assemblyHash
         },
         generated_at_utc = DateTimeOffset.UtcNow.ToString("O"),
-        extraction = "control-flow-free behavior facts, constructors, accessors, and nested types from locally installed managed assembly",
+        extraction = "structured behavior facts (including a normalized nested statement tree preserving branch-to-effect relationships, calls, creation, assignments, unary mutations, loops, throw/yield/await, and returns), constructors, accessors, and nested types from locally installed managed assembly",
         counts = records.GroupBy(record => record.Category, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal),
         output_sha256 = outputHashes,
@@ -231,12 +234,22 @@ static string? ModelCategory(string fullName)
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.Entities.RestSite.", StringComparison.Ordinal) => "rules_rest_site",
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.Rooms.", StringComparison.Ordinal) => "rules_rooms",
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.MonsterMoves.", StringComparison.Ordinal) => "rules_monster_moves",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Commands.", StringComparison.Ordinal) => "rules_commands",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.GameActions.", StringComparison.Ordinal) => "rules_game_actions",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Combat.", StringComparison.Ordinal) => "rules_combat",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Entities.Cards.", StringComparison.Ordinal) => "rules_card_engine",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Runs.", StringComparison.Ordinal) => "rules_run",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Entities.Creatures.", StringComparison.Ordinal) => "rules_creatures",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Entities.Players.", StringComparison.Ordinal) => "rules_players",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.ValueProps.", StringComparison.Ordinal) => "rules_value_props",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Random.", StringComparison.Ordinal) => "rules_random",
+        _ when fullName.StartsWith("MegaCrit.Sts2.Core.Events.", StringComparison.Ordinal) => "rules_events",
+        "MegaCrit.Sts2.Core.Helpers.Models.CardCostHelper" => "rules_helpers",
+        "MegaCrit.Sts2.Core.Helpers.Models.EggRelicHelper" => "rules_helpers",
+        "MegaCrit.Sts2.Core.Helpers.GrabBag" => "rules_helpers",
+        "MegaCrit.Sts2.Core.Helpers.SeedHelper" => "rules_helpers",
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.Unlocks.", StringComparison.Ordinal) => "rules_unlocks",
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.Timeline.", StringComparison.Ordinal) => "rules_unlocks",
-        "MegaCrit.Sts2.Core.Combat.CombatState" => "rules_combat",
-        "MegaCrit.Sts2.Core.Entities.Players.PlayerCombatState" => "rules_combat",
-        "MegaCrit.Sts2.Core.Entities.Cards.CardPile" => "rules_combat",
-        "MegaCrit.Sts2.Core.Runs.RunState" => "rules_run",
         _ when fullName.StartsWith("MegaCrit.Sts2.Core.Factories.", StringComparison.Ordinal) => "rules_factories",
         _ when fullName.StartsWith("MegaCrit.Sts2.GameInfo.Objects.", StringComparison.Ordinal) => "rules_game_info",
         _ => null
@@ -309,6 +322,12 @@ static TypeMechanics TypeFacts(
             [],
             [],
             [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
             []));
     }
     var methods = declaration.Members.OfType<MethodDeclaration>()
@@ -342,7 +361,7 @@ static IEnumerable<NestedTypeInfo> NestedTypeDeclarations(
 {
     foreach (var nested in declaration.Members.OfType<TypeDeclaration>())
     {
-        var fullName = declaringFullName + "+" + nested.Name;
+        var fullName = declaringFullName + "+" + MetadataTypeName(nested.Name, nested.TypeParameters.Count);
         yield return new NestedTypeInfo(nested, fullName, declaringFullName);
         foreach (var descendant in NestedTypeDeclarations(nested, fullName))
         {
@@ -359,18 +378,25 @@ static IEnumerable<NestedDelegateInfo> NestedDelegateDeclarations(
     {
         yield return new NestedDelegateInfo(
             nestedDelegate,
-            declaringFullName + "+" + nestedDelegate.Name,
+            declaringFullName + "+" + MetadataTypeName(
+                nestedDelegate.Name,
+                nestedDelegate.TypeParameters.Count),
             declaringFullName);
     }
     foreach (var nestedType in declaration.Members.OfType<TypeDeclaration>())
     {
-        var nestedFullName = declaringFullName + "+" + nestedType.Name;
+        var nestedFullName = declaringFullName + "+" + MetadataTypeName(
+            nestedType.Name,
+            nestedType.TypeParameters.Count);
         foreach (var descendant in NestedDelegateDeclarations(nestedType, nestedFullName))
         {
             yield return descendant;
         }
     }
 }
+
+static string MetadataTypeName(string name, int typeParameterCount) =>
+    typeParameterCount == 0 ? name : $"{name}`{typeParameterCount}";
 
 static TypeMechanics DelegateFacts(
     DelegateDeclaration declaration,
@@ -382,6 +408,12 @@ static TypeMechanics DelegateFacts(
         "Invoke",
         Normalize(declaration.ReturnType.ToString()),
         declaration.Parameters.Select(parameter => Normalize(parameter.ToString())).ToArray(),
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
         [],
         [],
         [],
@@ -467,7 +499,13 @@ static ConstructorFact ConstructorFacts(ConstructorDeclaration constructor)
         behavior.Assignments,
         behavior.Conditions,
         behavior.Switches,
-        behavior.Returns);
+        behavior.Returns,
+        behavior.Loops,
+        behavior.Throws,
+        behavior.Yields,
+        behavior.Awaits,
+        behavior.Mutations,
+        ControlFlowFacts(constructor.Body));
 }
 
 static AccessorFact AccessorFacts(Accessor accessor, string fallbackKind)
@@ -481,13 +519,23 @@ static AccessorFact AccessorFacts(Accessor accessor, string fallbackKind)
         behavior.Assignments,
         behavior.Conditions,
         behavior.Switches,
-        behavior.Returns);
+        behavior.Returns,
+        behavior.Loops,
+        behavior.Throws,
+        behavior.Yields,
+        behavior.Awaits,
+        behavior.Mutations,
+        ControlFlowFacts(accessor.Body));
 }
 
-static BehaviorFact BehaviorFacts(AstNode scope)
+static BehaviorFact BehaviorFacts(params AstNode[] scopes)
 {
+    var nodes = scopes
+        .Where(scope => scope is not null && !scope.IsNull)
+        .SelectMany(scope => new[] { scope }.Concat(scope.Descendants))
+        .ToArray();
     string[] Collect<T>(Func<T, string> render) where T : AstNode =>
-        scope.Descendants.OfType<T>()
+        nodes.OfType<T>()
             .Select(render)
             .Select(value => Normalize(value))
             .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -495,9 +543,7 @@ static BehaviorFact BehaviorFacts(AstNode scope)
             .ToArray();
 
     return new BehaviorFact(
-        scope.Descendants.OfType<InvocationExpression>()
-            .Where(node => !node.Ancestors.TakeWhile(ancestor => ancestor != scope)
-                .OfType<InvocationExpression>().Any())
+        nodes.OfType<InvocationExpression>()
             .Select(node => Normalize(node.ToString()))
             .Distinct(StringComparer.Ordinal)
             .ToArray(),
@@ -505,11 +551,253 @@ static BehaviorFact BehaviorFacts(AstNode scope)
         Collect<AssignmentExpression>(node => node.ToString()),
         Collect<IfElseStatement>(node => node.Condition.ToString()),
         Collect<SwitchStatement>(node => node.Expression.ToString()),
-        Collect<ReturnStatement>(node => node.Expression.IsNull ? string.Empty : node.Expression.ToString()));
+        Collect<ReturnStatement>(node => node.Expression.IsNull ? string.Empty : node.Expression.ToString()),
+        Collect<ForStatement>(node => "for: " + node.Condition.ToString())
+            .Concat(Collect<ForeachStatement>(node => "foreach: " + node.InExpression.ToString()))
+            .Concat(Collect<WhileStatement>(node => "while: " + node.Condition.ToString()))
+            .Concat(Collect<DoWhileStatement>(node => "do-while: " + node.Condition.ToString()))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray(),
+        Collect<ThrowStatement>(node => node.Expression.IsNull ? "throw" : node.Expression.ToString()),
+        Collect<YieldReturnStatement>(node => node.Expression.IsNull
+                ? "yield return" : "yield return " + node.Expression.ToString())
+            .Concat(Collect<YieldBreakStatement>(_ => "yield break"))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray(),
+        nodes.OfType<UnaryOperatorExpression>()
+            .Where(node => node.Operator == UnaryOperatorType.Await)
+            .Select(node => Normalize(node.Expression.ToString()))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray(),
+        nodes.OfType<UnaryOperatorExpression>()
+            .Where(node => node.Operator is UnaryOperatorType.Increment
+                or UnaryOperatorType.Decrement
+                or UnaryOperatorType.PostIncrement
+                or UnaryOperatorType.PostDecrement)
+            .Select(node => Normalize(node.ToString()))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray());
+}
+
+static ControlFlowFact[] ControlFlowFacts(BlockStatement body) =>
+    body.IsNull
+        ? []
+        : body.Statements.Select(ControlFlowFactFor).ToArray();
+
+static ControlFlowFact[] ControlFlowChildren(Statement statement) =>
+    statement.IsNull
+        ? []
+        : statement is BlockStatement block
+            ? ControlFlowFacts(block)
+            : [ControlFlowFactFor(statement)];
+
+static ControlFlowFact[] NestedFunctionFacts(AstNode scope)
+{
+    if (scope is null || scope.IsNull)
+    {
+        return [];
+    }
+    bool HasFunctionAncestor(AstNode node)
+    {
+        for (var parent = node.Parent; parent is not null && parent != scope; parent = parent.Parent)
+        {
+            if (parent is LambdaExpression or AnonymousMethodExpression)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    return scope.Descendants
+        .Where(node => node is LambdaExpression or AnonymousMethodExpression)
+        .Where(node => !HasFunctionAncestor(node))
+        .Select(node =>
+        {
+            if (node is LambdaExpression lambda)
+            {
+                var children = lambda.Body is BlockStatement block
+                    ? ControlFlowFacts(block)
+                    : [new ControlFlowFact(
+                        "expression",
+                        lambda.Body.IsNull ? null : Normalize(lambda.Body.ToString()),
+                        NestedFunctionFacts(lambda.Body))];
+                return new ControlFlowFact(
+                    lambda.IsAsync ? "async_lambda" : "lambda",
+                    string.Join(", ", lambda.Parameters.Select(parameter => Normalize(parameter.ToString()))),
+                    children);
+            }
+            var anonymous = (AnonymousMethodExpression)node;
+            return new ControlFlowFact(
+                anonymous.IsAsync ? "async_delegate" : "delegate",
+                string.Join(", ", anonymous.Parameters.Select(parameter => Normalize(parameter.ToString()))),
+                ControlFlowFacts(anonymous.Body));
+        })
+        .ToArray();
+}
+
+static ControlFlowFact ControlFlowFactFor(Statement statement)
+{
+    static string? Text(AstNode node)
+    {
+        if (node is null || node.IsNull)
+        {
+            return null;
+        }
+        var value = Normalize(node.ToString());
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    static ControlFlowFact Branch(string kind, Statement body) =>
+        new(kind, null, ControlFlowChildren(body));
+
+    switch (statement)
+    {
+        case BlockStatement block:
+            return new ControlFlowFact("block", null, ControlFlowFacts(block));
+        case IfElseStatement conditional:
+        {
+            var branches = new List<ControlFlowFact>();
+            var conditionFunctions = NestedFunctionFacts(conditional.Condition);
+            if (conditionFunctions.Length > 0)
+            {
+                branches.Add(new ControlFlowFact(
+                    "condition", Text(conditional.Condition), conditionFunctions));
+            }
+            branches.Add(Branch("then", conditional.TrueStatement));
+            if (!conditional.FalseStatement.IsNull)
+            {
+                branches.Add(Branch("else", conditional.FalseStatement));
+            }
+            return new ControlFlowFact("if", Text(conditional.Condition), branches.ToArray());
+        }
+        case SwitchStatement selection:
+        {
+            var sections = selection.SwitchSections.Select(section =>
+            {
+                var labels = section.CaseLabels
+                    .Where(label => !label.Expression.IsNull)
+                    .Select(label => Normalize(label.Expression.ToString()))
+                    .ToArray();
+                var isDefault = section.CaseLabels.Any(label => label.Expression.IsNull);
+                return new ControlFlowFact(
+                    isDefault && labels.Length == 0 ? "default" : "case",
+                    labels.Length == 0 ? null : string.Join(" | ", labels),
+                    section.Statements.Select(ControlFlowFactFor).ToArray());
+            }).ToArray();
+            return new ControlFlowFact("switch", Text(selection.Expression), sections);
+        }
+        case ForStatement loop:
+        {
+            var initializers = string.Join(", ", loop.Initializers.Select(item => Normalize(item.ToString()).TrimEnd(';')));
+            var iterators = string.Join(", ", loop.Iterators.Select(item => Normalize(item.ToString()).TrimEnd(';')));
+            var header = $"{initializers}; {Text(loop.Condition) ?? string.Empty}; {iterators}";
+            return new ControlFlowFact("for", Normalize(header), ControlFlowChildren(loop.EmbeddedStatement));
+        }
+        case ForeachStatement loop:
+            return new ControlFlowFact(
+                loop.IsAsync ? "await_foreach" : "foreach",
+                Normalize($"{loop.VariableType} {loop.VariableDesignation} in {loop.InExpression}"),
+                ControlFlowChildren(loop.EmbeddedStatement));
+        case WhileStatement loop:
+            return new ControlFlowFact("while", Text(loop.Condition), ControlFlowChildren(loop.EmbeddedStatement));
+        case DoWhileStatement loop:
+            return new ControlFlowFact("do_while", Text(loop.Condition), ControlFlowChildren(loop.EmbeddedStatement));
+        case TryCatchStatement guarded:
+        {
+            var branches = new List<ControlFlowFact>
+            {
+                new("try", null, ControlFlowFacts(guarded.TryBlock))
+            };
+            branches.AddRange(guarded.CatchClauses.Select(clause =>
+            {
+                var declaration = clause.Type.IsNull
+                    ? string.Empty
+                    : Normalize($"{clause.Type} {clause.VariableName}");
+                var filter = clause.Condition.IsNull ? string.Empty : $" when {Normalize(clause.Condition.ToString())}";
+                var expression = Normalize(declaration + filter);
+                return new ControlFlowFact(
+                    "catch",
+                    string.IsNullOrWhiteSpace(expression) ? null : expression,
+                    ControlFlowFacts(clause.Body));
+            }));
+            if (!guarded.FinallyBlock.IsNull)
+            {
+                branches.Add(new ControlFlowFact("finally", null, ControlFlowFacts(guarded.FinallyBlock)));
+            }
+            return new ControlFlowFact("try_catch", null, branches.ToArray());
+        }
+        case UsingStatement resource:
+            return new ControlFlowFact(
+                resource.IsAsync ? "await_using" : "using",
+                Text(resource.ResourceAcquisition),
+                ControlFlowChildren(resource.EmbeddedStatement));
+        case LockStatement locked:
+            return new ControlFlowFact("lock", Text(locked.Expression), ControlFlowChildren(locked.EmbeddedStatement));
+        case FixedStatement fixedStatement:
+            return new ControlFlowFact(
+                "fixed",
+                Normalize($"{fixedStatement.Type} {string.Join(", ", fixedStatement.Variables.Select(Text))}"),
+                ControlFlowChildren(fixedStatement.EmbeddedStatement));
+        case CheckedStatement checkedStatement:
+            return new ControlFlowFact("checked", null, ControlFlowFacts(checkedStatement.Body));
+        case UncheckedStatement uncheckedStatement:
+            return new ControlFlowFact("unchecked", null, ControlFlowFacts(uncheckedStatement.Body));
+        case UnsafeStatement unsafeStatement:
+            return new ControlFlowFact("unsafe", null, ControlFlowFacts(unsafeStatement.Body));
+        case LocalFunctionDeclarationStatement localFunction:
+        {
+            var declaration = localFunction.Declaration;
+            var signature = Normalize($"{declaration.ReturnType} {declaration.Name}({string.Join(", ", declaration.Parameters.Select(Text))})");
+            return new ControlFlowFact("local_function", signature, ControlFlowFacts(declaration.Body));
+        }
+        case VariableDeclarationStatement variable:
+            return new ControlFlowFact("variable", Text(variable), NestedFunctionFacts(variable));
+        case ExpressionStatement effect:
+            return new ControlFlowFact(
+                "expression", Text(effect.Expression), NestedFunctionFacts(effect.Expression));
+        case ReturnStatement returned:
+            return new ControlFlowFact(
+                "return", Text(returned.Expression), NestedFunctionFacts(returned.Expression));
+        case ThrowStatement thrown:
+            return new ControlFlowFact(
+                "throw", Text(thrown.Expression), NestedFunctionFacts(thrown.Expression));
+        case YieldReturnStatement yielded:
+            return new ControlFlowFact(
+                "yield_return", Text(yielded.Expression), NestedFunctionFacts(yielded.Expression));
+        case YieldBreakStatement:
+            return new ControlFlowFact("yield_break", null, []);
+        case BreakStatement:
+            return new ControlFlowFact("break", null, []);
+        case ContinueStatement:
+            return new ControlFlowFact("continue", null, []);
+        case GotoCaseStatement jump:
+            return new ControlFlowFact("goto_case", Text(jump.LabelExpression), []);
+        case GotoDefaultStatement:
+            return new ControlFlowFact("goto_default", null, []);
+        case GotoStatement jump:
+            return new ControlFlowFact("goto", jump.Label, []);
+        case LabelStatement label:
+            return new ControlFlowFact("label", label.Label, []);
+        case EmptyStatement:
+            return new ControlFlowFact("empty", null, []);
+        default:
+            // Keep an explicit marker for future statement kinds instead of
+            // serializing an opaque subtree or silently discarding behavior.
+            return new ControlFlowFact(
+                ToSnakeCase(statement.GetType().Name.Replace("Statement", string.Empty)),
+                null,
+                statement.Children.OfType<Statement>().Select(ControlFlowFactFor).ToArray());
+    }
 }
 
 static MethodFact MethodFacts(MethodDeclaration method)
 {
+    // ICSharpCode's decompiler AST normalizes expression-bodied methods into
+    // MethodDeclaration.Body (there is no ExpressionBody property on this AST
+    // type). BehaviorFacts includes the scope node plus every descendant, so the
+    // synthesized top-level return/invocation is retained instead of disappearing.
     var behavior = BehaviorFacts(method.Body);
     return new MethodFact(
         method.Name,
@@ -520,7 +808,13 @@ static MethodFact MethodFacts(MethodDeclaration method)
         behavior.Assignments,
         behavior.Conditions,
         behavior.Switches,
-        behavior.Returns);
+        behavior.Returns,
+        behavior.Loops,
+        behavior.Throws,
+        behavior.Yields,
+        behavior.Awaits,
+        behavior.Mutations,
+        ControlFlowFacts(method.Body));
 }
 
 internal sealed record TypeMechanics(
@@ -542,6 +836,7 @@ internal sealed record NestedTypeInfo(TypeDeclaration Declaration, string FullNa
 internal sealed record NestedDelegateInfo(DelegateDeclaration Declaration, string FullName, string DeclaringTypeName);
 internal sealed record FieldFact(string Name, string Type, string? Value, bool IsConst);
 internal sealed record PropertyFact(string Name, string Type, string[] Expressions, AccessorFact[] Accessors);
+internal sealed record ControlFlowFact(string Kind, string? Expression, ControlFlowFact[] Children);
 internal sealed record ConstructorFact(
     string Kind,
     string[] Parameters,
@@ -551,7 +846,13 @@ internal sealed record ConstructorFact(
     string[] Assignments,
     string[] Conditions,
     string[] Switches,
-    string[] Returns);
+    string[] Returns,
+    string[] Loops,
+    string[] Throws,
+    string[] Yields,
+    string[] Awaits,
+    string[] Mutations,
+    ControlFlowFact[] ControlFlow);
 internal sealed record AccessorFact(
     string Kind,
     string[] Calls,
@@ -559,14 +860,25 @@ internal sealed record AccessorFact(
     string[] Assignments,
     string[] Conditions,
     string[] Switches,
-    string[] Returns);
+    string[] Returns,
+    string[] Loops,
+    string[] Throws,
+    string[] Yields,
+    string[] Awaits,
+    string[] Mutations,
+    ControlFlowFact[] ControlFlow);
 internal sealed record BehaviorFact(
     string[] Calls,
     string[] Creates,
     string[] Assignments,
     string[] Conditions,
     string[] Switches,
-    string[] Returns);
+    string[] Returns,
+    string[] Loops,
+    string[] Throws,
+    string[] Yields,
+    string[] Awaits,
+    string[] Mutations);
 internal sealed record MethodFact(
     string Name,
     string ReturnType,
@@ -576,4 +888,10 @@ internal sealed record MethodFact(
     string[] Assignments,
     string[] Conditions,
     string[] Switches,
-    string[] Returns);
+    string[] Returns,
+    string[] Loops,
+    string[] Throws,
+    string[] Yields,
+    string[] Awaits,
+    string[] Mutations,
+    ControlFlowFact[] ControlFlow);

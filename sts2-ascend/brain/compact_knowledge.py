@@ -212,6 +212,7 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         "sha256": sha256,
         "bytes": size,
         "run_id": data.get("run_id"),
+        "run_number": data.get("run_number"),
         "started_at": data.get("started_at"),
         "ascension": data.get("ascension"),
         "victory": victory,
@@ -489,6 +490,36 @@ def plan_compaction(root: Path, options: CompactionOptions | None = None) -> Com
 def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
+    if os.name == "nt":
+        # ``os.kill(pid, 0)`` is not a side-effect-free existence probe on
+        # Windows: CPython maps unsupported signals to TerminateProcess.  The
+        # compactor must fail closed without ever signalling the live stack.
+        try:
+            import ctypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+            kernel32.OpenProcess.restype = ctypes.c_void_p
+            kernel32.GetExitCodeProcess.argtypes = [
+                ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+            kernel32.GetExitCodeProcess.restype = ctypes.c_int
+            kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+            kernel32.CloseHandle.restype = ctypes.c_int
+            handle = kernel32.OpenProcess(
+                0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not handle:
+                # Access denied means the process exists but is inaccessible;
+                # treating it as alive is the safe compaction decision.
+                return ctypes.get_last_error() == 5
+            try:
+                exit_code = ctypes.c_ulong()
+                queried = kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
+                return bool(queried) and exit_code.value == 259  # STILL_ACTIVE
+            finally:
+                kernel32.CloseHandle(handle)
+        except Exception:
+            # An unavailable probe must not make destructive compaction proceed.
+            return True
     try:
         os.kill(pid, 0)
         return True
