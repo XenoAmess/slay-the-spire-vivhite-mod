@@ -2119,3 +2119,69 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/593 胜，当前目标进阶 0
+
+## 第 594 局复盘（2026-08-26 15:42）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：BREAKTHROUGH, BREAKTHROUGH, CINDER, FIEND_FIRE, CINDER, DEMON_FORM, HAND_OF_GREED, CINDER, SHRUG_IT_OFF, JUGGLING
+- 本局遗物：PEN_NIB
+- 战斗记录：F15 Monster战 掉血23; F17 Boss战 掉血52; F19 Monster战 掉血10; F21 Monster战 掉血17; F23 Monster战 掉血32; F24 Monster战 掉血28（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/594 胜，当前目标进阶 0
+
+## 第 595 局复盘（2026-08-26 15:50）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：COLOSSUS, UPPERCUT, TAUNT, DISMANTLE, FIGHT_ME, INFLAME, PACTS_END, STONE_ARMOR, MOLTEN_FIST
+- 本局遗物：LANTERN, 小血瓶
+- 战斗记录：F8 Monster战 掉血3; F11 Monster战 掉血0; F13 Monster战 掉血11; F14 Monster战 掉血1; F15 Elite战 掉血0; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/595 胜，当前目标进阶 0
+
+## 第 596 局复盘（2026-08-26 15:55）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 INKLET
+- 本局拿牌：CINDER, RUPTURE, SHRUG_IT_OFF, RUPTURE, MOLTEN_FIST, EVIL_EYE
+- 本局遗物：PEN_NIB, JUZU_BRACELET
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血1; F6 Monster战 掉血7; F13 Monster战 掉血66; F14 Monster战 掉血14（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/596 胜，当前目标进阶 0
+
+## 第 597 局复盘（2026-08-26 16:04）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 MYTE
+- 本局拿牌：TRUE_GRIT, ARMAMENTS, INFLAME, MOLTEN_FIST, DISMANTLE, VICIOUS, FIGHT_ME, BLUDGEON, HOWL_FROM_BEYOND, FEEL_NO_PAIN, DRUM_OF_BATTLE, SHRUG_IT_OFF, NOT_YET, MOLTEN_FIST, UPPERCUT, DRUM_OF_BATTLE
+- 本局遗物：草莓, OLD_COIN
+- 战斗记录：F12 Monster战 掉血23; F14 Monster战 掉血13; F17 Boss战 掉血78; F19 Monster战 掉血47; F20 Monster战 掉血22; F21 Monster战 掉血25（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.39 → 0.42（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/597 胜，当前目标进阶 0
+
+## 第 598 局复盘（2026-08-26 16:07）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 SLITHERING_STRANGLER+TWIG_SLIME_M
+- 本局拿牌：STONE_ARMOR, EVIL_EYE, CINDER
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血4; F4 Monster战 掉血5; F5 Monster战 掉血51; F6 Monster战 掉血19（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/598 胜，当前目标进阶 0
+
+## 第 599 局复盘（2026-08-26 16:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：RUPTURE, CINDER, HEADBUTT, HEMOKINESIS, TAUNT, THUNDERCLAP, SHRUG_IT_OFF, HEADBUTT, MANGLE, MAYHEM
+- 本局遗物：战纹涂料, ORICHALCUM
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血24; F9 Elite战 掉血52; F12 Monster战 掉血15; F14 Monster战 掉血0; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/24局)，CONFLAGRATION(25分/42局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/599 胜，当前目标进阶 0
