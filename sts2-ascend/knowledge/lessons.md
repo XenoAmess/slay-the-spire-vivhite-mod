@@ -1976,3 +1976,47 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：精英战阵亡但满血线进场（90%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/580 胜，当前目标进阶 0
+
+## 第 581 局复盘（2026-08-26 14:03）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HEMOKINESIS, TAUNT, MASTER_OF_STRATEGY, CRUELTY, HEMOKINESIS, DARK_EMBRACE, CINDER, DRUM_OF_BATTLE, STOMP, THRUMMING_HATCHET, TAUNT, SHRUG_IT_OFF, PACTS_END
+- 本局遗物：RAINBOW_RING
+- 战斗记录：F6 Monster战 掉血4; F8 Monster战 掉血11; F11 Monster战 掉血7; F13 Monster战 掉血0; F15 Monster战 掉血7; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/20局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/581 胜，当前目标进阶 0
+
+## 第 582 局复盘（2026-08-26 14:10）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：FIEND_FIRE, SHRUG_IT_OFF, SWORD_BOOMERANG, PYRE, CINDER, TAUNT, BREAKTHROUGH, DISMANTLE, STOMP
+- 本局遗物：VENERABLE_TEA_SET, 圆顶礼帽
+- 战斗记录：F4 Monster战 掉血4; F7 Monster战 掉血18; F9 Monster战 掉血0; F12 Monster战 掉血4; F14 Elite战 掉血22; F17 Boss战 掉血64（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/21局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/582 胜，当前目标进阶 0
+
+## 第 583 局复盘（2026-08-26 14:14）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：CINDER, SHRUG_IT_OFF, DISMANTLE, VICIOUS, HEADBUTT, THUNDERCLAP, UNRELENTING
+- 本局遗物：PEAR
+- 战斗记录：F2 Monster战 掉血9; F3 Monster战 掉血2; F6 Monster战 掉血0; F8 Monster战 掉血48; F11 Elite战 掉血59（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/21局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/583 胜，当前目标进阶 0
+
+## 第 584 局复盘（2026-08-26 14:25）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：EVIL_EYE, RUPTURE, IRON_WAVE, CRUELTY, SWORD_BOOMERANG, THUNDERCLAP, THRASH, HEMOKINESIS, MANGLE, DISMANTLE, FLAME_BARRIER, DARK_EMBRACE, RAMPAGE, RUPTURE, MANGLE, RUPTURE
+- 本局遗物：开心小花, WAR_PAINT, JUZU_BRACELET
+- 战斗记录：F17 Boss战 掉血51; F19 Monster战 掉血17; F20 Monster战 掉血4; F21 Monster战 掉血28; F25 Monster战 掉血20; F28 Elite战 掉血59（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/21局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_race_prior_eff: 0.45 → 0.48（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/584 胜，当前目标进阶 0
