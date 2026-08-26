@@ -1778,3 +1778,36 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.48 → 0.51（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/562 胜，当前目标进阶 0
+
+## 第 563 局复盘（2026-08-26 11:52）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：FLAME_BARRIER, PANIC_BUTTON, CINDER, CINDER, CINDER, RAGE
+- 本局遗物：TOXIC_EGG
+- 战斗记录：F2 Monster战 掉血6; F4 Monster战 掉血5; F5 Monster战 掉血0; F12 Elite战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/16局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/563 胜，当前目标进阶 0
+
+## 第 564 局复盘（2026-08-26 11:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TRUE_GRIT, BREAKTHROUGH, HEADBUTT, RUPTURE, BREAKTHROUGH, HEMOKINESIS, HAND_OF_GREED, VOLLEY, INFLAME, HEMOKINESIS
+- 本局遗物：VAJRA
+- 战斗记录：F4 Monster战 掉血3; F7 Unknown战 掉血25; F9 Monster战 掉血0; F12 Monster战 掉血2; F14 Monster战 掉血3; F17 Boss战 掉血77（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/16局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/564 胜，当前目标进阶 0
+
+## 第 565 局复盘（2026-08-26 12:05）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：PANIC_BUTTON, ARMAMENTS, EVIL_EYE, HEMOKINESIS, STOMP, COLOSSUS, CINDER, JUGGLING, FLAME_BARRIER
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F4 Unknown战 掉血0; F5 Unknown战 掉血12; F6 Monster战 掉血23; F7 Monster战 掉血28; F13 Monster战 掉血7; F17 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/16局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/565 胜，当前目标进阶 0
