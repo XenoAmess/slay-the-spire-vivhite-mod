@@ -3054,3 +3054,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/678 胜，当前目标进阶 0
+
+## 第 679 局复盘（2026-08-27 05:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：DRUM_OF_BATTLE, CINDER, CINDER, BREAKTHROUGH, BLUDGEON, UNMOVABLE, BLUDGEON, RUPTURE, SHRUG_IT_OFF
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F4 Monster战 掉血6; F5 Monster战 掉血40; F8 Monster战 掉血6; F12 Monster战 掉血19; F15 Monster战 掉血25; F17 Boss战 掉血79（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/679 胜，当前目标进阶 0
