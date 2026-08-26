@@ -3412,6 +3412,11 @@ class Policy:
         _race_joint_feasible 遍历攻防能量分配与轮换混合，任一分配能同时满足
         击杀与存活才不判必败（回血重新成为有效投资，前夜裁决交还旧三区口径）。
         数据未成熟/零爆发/零格挡/竞速关闭时返回 False，行为与旧版严格一致。
+        第 681~686 批复盘：留痕追加 native 血池校准注（_native_boss_hp_calibration，
+        纯观测不改判定）——learned 均值口径（本批一幕账面 236）与原生单体血池
+        （VANTOM=173 / CEREMONIAL_BEAST=252，相差 ~46%）差距可观，均值必败标签
+        可能误伤轻池对局；校准注让每条 doom 记录自带精确对照，为后续 per-Boss
+        校准直接供数。
         """
         pol = self.know.policy
         if not pol.get("kill_race_enabled", True):
@@ -3450,7 +3455,58 @@ class Policy:
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
                 f"先验输出{dpt:.0f}/回合{_pot_tail}；联合能量复核：任一攻防能量分配"
                 f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止")
+        _cal = self._native_boss_hp_calibration()
+        if _cal:
+            note += _cal
         return True, note
+
+    def _native_boss_hp_calibration(self) -> str:
+        """doom 留痕的 native 血池校准注（第 681~686 批复盘新增，纯观测）。
+
+        learned boss_race_vitals 是跨 Boss 组合的均值口径（本批一幕账面均值 236），
+        而原生快照里单体血池 VANTOM=173 / CEREMONIAL_BEAST=252，相差 ~46%——
+        均值必败标签可能把轻池对局系统性推向弃疗侧。本注不做任何判定改动，
+        只在 doom 留痕尾部回填「账本已认识且样本 ≥2 场」的组合逐个 native
+        min~max 血池（最多三个、按样本量降序；组合键按 '+' 拆开对成员求和，
+        双子账与原生单体对齐），供复盘与后续 per-Boss 校准直接取数。
+        native 不可用/无样本/任何异常时返回空串——主文零改动（冷启动安全，
+        自检夹具无 game 快照时行为与旧版严格一致）。
+        """
+        try:
+            native = getattr(self.know, "game_knowledge", None)
+            if native is None or not getattr(native, "available", False):
+                return ""
+            rows = []
+            for eid, e in (self.know.stats.get("enemies") or {}).items():
+                if int(e.get("boss_encounters", 0) or 0) < 2:
+                    continue
+                pn = int(e.get("hp_pool_n", 0) or 0)
+                if pn < 2:
+                    continue
+                rows.append((pn, str(eid)))
+            if not rows:
+                return ""
+            rows.sort(reverse=True)
+            parts: list[str] = []
+            for _pn, combo in rows[:3]:
+                lo = hi = 0
+                known = True
+                for mid in [m for m in combo.split("+") if m]:
+                    rt = ((native.lookup("monsters", mid) or {}).get("runtime") or {})
+                    mhp = rt.get("min_hp")
+                    xhp = rt.get("max_hp")
+                    if not isinstance(mhp, (int, float)) or not isinstance(xhp, (int, float)):
+                        known = False
+                        break
+                    lo += int(mhp)
+                    hi += int(xhp)
+                if known and hi > 0:
+                    parts.append(f"{combo}{lo}~{hi}" if lo != hi else f"{combo}{hi}")
+            if not parts:
+                return ""
+            return "；native校准：" + "/".join(parts)
+        except Exception:
+            return ""
 
     def required_deck_burst(self, max_hp: int, act: int | None = None) -> float | None:
         """竞速及格线：追平 learned Boss（血池/火力）所需的卡组理论爆发。
