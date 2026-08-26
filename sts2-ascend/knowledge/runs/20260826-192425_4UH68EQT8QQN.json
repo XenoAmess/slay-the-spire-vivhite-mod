@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 19:24:25",
  "victory": false,
  "in_progress": true,
- "floor": 3,
+ "floor": 5,
  "decisions": [
   {
    "t": "19:24:25",
@@ -520,10 +520,227 @@
     "option_index": 1
    },
    "reason": "选择卡牌：【战栗】（价值 0.1）；候选：战栗=0.1 / 完美打击=-1.4 / 剑柄打击=-1.9"
+  },
+  {
+   "t": "19:25:37",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 79,
+   "gold": 128,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:25:39",
+   "screen": "MAP",
+   "floor": 3,
+   "hp": 79,
+   "gold": 128,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(3,4)（路径分 -55.03，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(3,3)=-55.89|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡 / Monster(3,4)=-55.03|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "19:25:42",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【战栗】→缩小甲虫（能力/增益牌（第1回合）｜长战加成+3.2（敌血池39））；敌意图总伤0，我方79血/0甲"
+  },
+  {
+   "t": "19:25:43",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方79血/0甲"
+  },
+  {
+   "t": "19:25:44",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方79血/0甲"
+  },
+  {
+   "t": "19:25:45",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:25:48",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤7，我方79血/0甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "19:25:49",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【熔融之拳】→缩小甲虫（单体伤害≈7.0）；敌意图总伤7，我方79血/5甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "19:25:50",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4.0）；敌意图总伤7，我方79血/5甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "19:25:51",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 79,
+   "gold": 128,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:25:55",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 128,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→缩小甲虫（可击杀缩小甲虫）；敌意图总伤13，我方77血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "19:25:55",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 80,
+   "gold": 128,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：17金币"
+  },
+  {
+   "t": "19:25:56",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 80,
+   "gold": 145,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：迅捷药水"
+  },
+  {
+   "t": "19:25:57",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 80,
+   "gold": 145,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:25:58",
+   "screen": "CARD_SELECTION",
+   "floor": 4,
+   "hp": 80,
+   "gold": 145,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【无情猛攻】（价值 28.3）；候选：无情猛攻=28.3 / 杂耍=8.8 / 燃烧契约=5.0"
+  },
+  {
+   "t": "19:25:58",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 80,
+   "gold": 145,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:26:01",
+   "screen": "MAP",
+   "floor": 4,
+   "hp": 80,
+   "gold": 145,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(4,5)（路径分 -46.46，预计进 Boss 血量 51%；前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；输出饥饿战损上浮×1.28（缺口79%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(4,3)=-60.96|输出饥饿战损上浮×1.28（缺口79%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(4,5)=-46.46|前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；输出饥饿战损上浮×1.28（缺口79%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "19:26:02",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 145,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【无情猛攻】→蛮兽（单体伤害≈14.0）；敌意图总伤8，我方80血/0甲"
   }
  ],
  "combat_notes": [
-  "F2 Monster战 掉血1"
+  "F2 Monster战 掉血1",
+  "F3 Monster战 掉血0",
+  "F4 Monster战 掉血0"
  ],
  "attribution_tags": [
   [
@@ -537,6 +754,18 @@
   [
    "card_pick",
    "TREMBLE"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "UNRELENTING"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ]
 }
