@@ -25,7 +25,7 @@ For an explicit request such as "B站开播" or "开始直播", run from the rep
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-BilibiliLive.ps1
 ```
 
-This command must finish the following sequence: call `Start-Agent.ps1 -SkipDeploy`, trigger the protected Livehime GUI task idempotently, then set the exact `SlayTheSpire2.exe` window to foreground and `TOPMOST`. If Bilibili start fails, report the error and leave the already-started stack running; do not roll it back.
+This command must finish the following sequence: call `Start-Agent.ps1 -SkipDeploy`, trigger the protected Livehime GUI task idempotently, then set the exact `SlayTheSpire2.exe` window to foreground and `TOPMOST`. If `ASCEND-VISION` is already running, the entrypoint also reorders it above the game with a non-activating Win32 call; the viewer itself continues this z-order repair every 500ms without taking focus. If Bilibili start fails, report the error and leave the already-started stack running; do not roll it back.
 
 ## Stop
 
@@ -35,7 +35,7 @@ For an explicit request such as "B站下播" or "结束直播", run:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-BilibiliLive.ps1
 ```
 
-Stopping is deliberately narrow. Never substitute `Stop-Agent.ps1`, close the game, stop a process, kill a port, or modify `sts2-ascend/.runtime`. Leave every service running and leave the game `TOPMOST`.
+Stopping is deliberately narrow. Never substitute `Stop-Agent.ps1`, close the game, stop a process, kill a port, or modify `sts2-ascend/.runtime`. Leave every service running and leave the game `TOPMOST`; if `ASCEND-VISION` is present, restore it above the game without activating it.
 
 ## Reporting
 

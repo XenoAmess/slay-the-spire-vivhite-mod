@@ -428,6 +428,7 @@ function Invoke-LivehimeStart {
     }
     finally {
         Set-WindowNotTopMost -WindowHandle $window.MainWindowHandle
+        [void](Set-AscendViewerTopMost)
     }
 }
 
@@ -463,6 +464,7 @@ function Invoke-LivehimeStop {
     }
     finally {
         Set-WindowNotTopMost -WindowHandle $window.MainWindowHandle
+        [void](Set-AscendViewerTopMost)
     }
 }
 
@@ -552,6 +554,9 @@ function Set-SlayTheSpireTopMost {
     if (($extendedStyle -band $script:WsExTopMost) -eq 0) {
         throw "Slay the Spire 2 foreground succeeded, but WS_EX_TOPMOST verification failed."
     }
+    # The game's foreground promotion moves it ahead of other TOPMOST windows.
+    # Restore ASCEND-VISION without activating it so the game remains usable.
+    [void](Set-AscendViewerTopMost)
     Write-Host "Slay the Spire 2 is foreground and TOPMOST (pid $($window.ProcessId))."
 }
 

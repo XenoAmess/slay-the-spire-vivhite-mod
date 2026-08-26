@@ -106,6 +106,30 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("SwpNoActivate", module)
         self.assertIn('"ASCEND-VISION"', module)
 
+    def test_every_game_topmost_entrypoint_reorders_viewer(self) -> None:
+        module = MODULE.read_text(encoding="utf-8")
+        smoke = SMOKE.read_text(encoding="utf-8")
+        self.assertIn(
+            "[void](Set-AscendViewerTopMost)\n    Write-Host \"Slay the Spire 2 is foreground",
+            module,
+        )
+        self.assertGreaterEqual(smoke.count("[void](Set-AscendViewerTopMost)"), 2)
+
+    def test_game_click_fallback_reorders_viewer_in_finally(self) -> None:
+        policy = (ROOT / "sts2-ascend" / "brain" / "policy.py").read_text(encoding="utf-8")
+        self.assertIn("from window_layers import reassert_viewer_topmost", policy)
+        self.assertIn("finally:\n            # This fallback must focus the game", policy)
+        self.assertIn("reassert_viewer_topmost()", policy)
+
+    def test_viewer_has_periodic_nonactivating_z_order_watchdog(self) -> None:
+        viewer = (ROOT / "sts2-ascend" / "brain" / "review_viewer.py").read_text(encoding="utf-8")
+        self.assertIn("VIEWER_Z_ORDER_INTERVAL_SEC = 0.5", viewer)
+        self.assertIn("self._reassert_viewer_topmost()", viewer)
+        self.assertIn("force=True", viewer)
+        self.assertIn("from window_layers import reassert_viewer_topmost", viewer)
+        self.assertIn("before Tk maps the", viewer)
+        self.assertIn('if not getattr(self, "_hwnd_prev", 0):', viewer)
+
     def test_bridge_is_fixed_protected_and_current_user_only(self) -> None:
         installer = INSTALL.read_text(encoding="utf-8")
         worker = WORKER.read_text(encoding="utf-8")
@@ -142,6 +166,8 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("TOPMOST", text)
         self.assertIn("Never substitute `Stop-Agent.ps1`", text)
         self.assertIn("Livehime GUI", text)
+        self.assertIn("reorders it above the game", text)
+        self.assertIn("every 500ms", text)
 
 
 if __name__ == "__main__":

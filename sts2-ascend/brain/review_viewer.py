@@ -28,6 +28,7 @@ import tkinter.font as tkfont
 from pathlib import Path
 
 from lifecycle import stop_requested
+from window_layers import reassert_viewer_topmost
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")   # opencode 偶尔漏出的 ANSI 转义
 
@@ -55,6 +56,7 @@ MAX_LINES = 500
 END_LINGER_SEC = 30       # 直播/演示：结束后停留秒数再淡出
 ATTACH_LINGER_SEC = 600   # 捞取回放：已结束的会话多留 10 分钟（人要看）
 FADE_SEC = 2.0
+VIEWER_Z_ORDER_INTERVAL_SEC = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +261,8 @@ class Viewer:
         self.flash_until = 0.0
         self.rain_pulse = 1.0
         self._drag = None
+        self._viewer_hwnd = 0
+        self._last_viewer_reassert = 0.0
 
         self.source = None
         if mode == "demo":
@@ -314,12 +318,21 @@ class Viewer:
             self.canvas.bind("<Button-1>", lambda e: setattr(self, "_drag", (e.x, e.y)))
             self.canvas.bind("<B1-Motion>", self._on_drag)
             r.bind("<Escape>", lambda _e: self._quit())
+        elif not hasattr(self, "_hwnd_prev"):
+            # Capture the game (or whatever was active) before Tk maps the
+            # popup.  Mapping an overrideredirect window can activate it, so
+            # taking the snapshot afterwards would only remember ourselves.
+            try:
+                self._hwnd_prev = ctypes.windll.user32.GetForegroundWindow()
+            except Exception:
+                self._hwnd_prev = 0
         r.update()
         self._boot("ui-mapped")
         if not self.interactive:
             self._make_focus_invisible()
             self._set_clickthrough()
             self.root.after(150, self._restore_previous_focus)
+        self._reassert_viewer_topmost(force=True)
 
     def _make_focus_invisible(self) -> None:
         """悬浮窗纯覆盖、永不抢激活：WS_EX_NOACTIVATE。
@@ -328,7 +341,8 @@ class Viewer:
         独占、任务栏盖到游戏上（右侧栏事故）。必须在映射（update）前打上样式。"""
         try:
             u32 = ctypes.windll.user32
-            self._hwnd_prev = u32.GetForegroundWindow()
+            if not getattr(self, "_hwnd_prev", 0):
+                self._hwnd_prev = u32.GetForegroundWindow()
             hwnd = int(self.root.wm_frame(), 16)
             gwl_exstyle = -20
             ws_ex_noactivate = 0x08000000
@@ -348,6 +362,11 @@ class Viewer:
                 u32.keybd_event(0x12, 0, 2, 0)          # ALT up
         except Exception:
             pass
+        finally:
+            # Restoring the game's focus can also move it ahead of the viewer
+            # in the TOPMOST band. Repair only the z-order; never reactivate
+            # ASCEND-VISION here.
+            self._reassert_viewer_topmost(force=True)
 
     def _on_drag(self, e) -> None:
         if self._drag:
@@ -460,6 +479,7 @@ class Viewer:
             return
         now = time.time()
         dt = 0.033
+        self._reassert_viewer_topmost()
         if not getattr(self, "_boot_f1", False):
             self._boot_f1 = True
             self._boot("frame-first")
@@ -482,6 +502,7 @@ class Viewer:
             self._check_end(now)
         except Exception as exc:
             self._debug_exc(exc)
+            self._reassert_viewer_topmost(force=True)
         if self._fading:
             t = (now - self._fade_start) / FADE_SEC
             if t >= 1.0:
@@ -706,6 +727,24 @@ class Viewer:
             self.root.destroy()
         except Exception:
             pass
+
+    def _reassert_viewer_topmost(self, force: bool = False) -> None:
+        """Keep ASCEND-VISION above other TOPMOST windows without activation."""
+        now = time.monotonic()
+        if not force and now - self._last_viewer_reassert < VIEWER_Z_ORDER_INTERVAL_SEC:
+            return
+        try:
+            hwnd = int(self.root.wm_frame(), 16)
+        except (AttributeError, tk.TclError, TypeError, ValueError):
+            return
+        if not hwnd:
+            return
+        self._viewer_hwnd = hwnd
+        self._last_viewer_reassert = now
+        # A failed call is intentionally retried on the next heartbeat. The
+        # viewer must never steal focus just to recover from a transient Win32
+        # z-order failure.
+        reassert_viewer_topmost(hwnd=hwnd)
 
     def run(self) -> None:
         self._boot("run-entered")

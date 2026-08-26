@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass, field
 
 from knowledge import Knowledge, clamp
+from window_layers import reassert_viewer_topmost
 
 # 精英闸门在负分区间的加性罚基数：乘法折扣对负分会"越乘越好"（第 43 局实证），
 # 必须换成加性重罚才能保证闸门在任何符号区间都只降分不升分
@@ -5276,6 +5277,14 @@ class Policy:
             return True
         except Exception:
             return False
+        finally:
+            # This fallback must focus the game to deliver the click, but that
+            # promotion can put the game ahead of ASCEND-VISION in the
+            # TOPMOST band. Repair only the viewer z-order afterwards.
+            try:
+                reassert_viewer_topmost()
+            except Exception:
+                pass
 
     def _unlock_screen(self, state: dict, ctx) -> Decision:
         """新内容解锁展示屏（新遗物/新卡等，mod UNLOCK 路由 + confirm_unlock 动作）。"""

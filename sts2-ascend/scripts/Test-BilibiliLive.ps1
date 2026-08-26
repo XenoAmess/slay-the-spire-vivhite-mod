@@ -30,6 +30,7 @@ try {
         throw "Livehime did not remain in Streaming state for smoke verification."
     }
     Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds $ReadyTimeoutSeconds
+    [void](Set-AscendViewerTopMost)
     Write-Host "Smoke checkpoint passed: Livehime is Streaming and the game is TOPMOST."
     if ($StreamingHoldSeconds -gt 0) { Start-Sleep -Seconds $StreamingHoldSeconds }
 }
@@ -43,6 +44,7 @@ finally {
     $gameWindow = Get-SlayTheSpireWindow -GameDir $GameDir
     if ($gameWindow) {
         Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds 10
+        [void](Set-AscendViewerTopMost)
     }
     if ($stopError) {
         throw "CRITICAL: smoke cleanup could not confirm Bilibili Idle: $($stopError.Exception.Message)"
