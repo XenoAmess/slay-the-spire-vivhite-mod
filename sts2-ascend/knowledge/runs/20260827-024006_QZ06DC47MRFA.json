@@ -1,0 +1,82 @@
+{
+ "run_id": "QZ06DC47MRFA",
+ "run_number": 660,
+ "ascension": 0,
+ "started_at": "2026-08-27 02:40:06",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "02:40:06",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「铅制镇纸」（经验价值 1.7）；铅制镇纸=1.7(n=40) / 奥术卷轴=-0.7(n=3) / 涅奥的牺牲=-0.8(n=3)"
+  },
+  {
+   "t": "02:40:07",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【连射】（价值 8.9）；候选：连射=8.9 / 急躁=-9.6"
+  },
+  {
+   "t": "02:40:08",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "02:40:12",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,1)（路径分 -41.45，预计进 Boss 血量 52%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(1,1)=-41.45|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(1,3)=-42.07|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(1,5)=-56.16|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "02:40:14",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【连射】→缩小甲虫（单体伤害≈10.0）；敌意图总伤0，我方80血/0甲"
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "card_pick",
+   "VOLLEY"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}
