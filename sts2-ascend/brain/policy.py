@@ -187,6 +187,7 @@ class Policy:
         self._krace_dmg = 0.0       # 本场已打出攻击卡的期望总伤累计
         self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
         self._krace_round = None    # 上次计回合的回合号
+        self._krace_latch = False   # 竞速迟滞锁（第632局批复盘）：实测口径判死后同场维持
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
         self._combat_credit_source = None
@@ -1982,6 +1983,7 @@ class Policy:
             self._krace_dmg = 0.0
             self._krace_turns = 0
             self._krace_round = None
+            self._krace_latch = False
             self._incoming_ema = 0.0
             self._esc_rounds = 0
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
@@ -2294,7 +2296,19 @@ class Policy:
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
                     _race_margin = float(pol.get("kill_race_margin", 1.5))
-                    race_lost = ttk > tsurv + _race_margin
+                    # 竞速迟滞锁（第632局批复盘新增）：投影逐 tick 重算时，
+                    # 实测口径切换、EMA 滞后、小怪阵亡缩池都会让判定在阈值
+                    # 附近反复翻案——632 局 F29（盛碗虫三连）七个回合内
+                    # 「提速斩杀」与「转防守节奏」交替出现 5 次，攻防分配两头
+                    # 摇摆，矛盾留痕还污染复盘。实测样本满两回合判死进入竞速
+                    # 后即上锁，同场不再凭先验口径自我平反；唯一合法出口仍是
+                    # 下方防守线联合复核判可行。
+                    _kr_latched = bool(getattr(self, "_krace_latch", False)) \
+                        and self._krace_turns >= 2
+                    if _kr_latched:
+                        race_lost = True
+                    else:
+                        race_lost = ttk > tsurv + _race_margin
                     # 防守线复核（第435~440批复盘）：旧投影的可存活回合数=裸血÷意图
                     # 火力——把格挡整项忽略，而格挡吞吐恰是防守路线可行性的第一变量。
                     # 后果是自证死期的预言闭环：投影判死 → 全攻提速 blk×0.7 →
@@ -2316,6 +2330,7 @@ class Policy:
                             _def_margin)
                         if _feas:
                             race_lost = False
+                            self._krace_latch = False
                             _esc_mark = "（滚雪球零余量）" if esc_gate else ""
                             danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
                                             f"净火力下追平击杀所需{ttk:.0f}回合，"
@@ -2324,6 +2339,10 @@ class Policy:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速")
+                        if self._krace_turns >= 2:
+                            # 实测口径武装入锁（先验口径 T1~T2 不锁：样本不足的
+                            # 误判可被下一 tick 自然纠正）
+                            self._krace_latch = True
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
             # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。

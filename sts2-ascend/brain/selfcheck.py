@@ -2750,6 +2750,75 @@ def main() -> int:
     assert "斩杀竞速投影" not in d_es2.reason, f"无升级轨迹误开账: {d_es2.reason}"
     krc_es.combat = None
 
+    # 3xd) 竞速迟滞锁（第632局批复盘）：632 局 F29 盛碗虫三连战七个回合内
+    #      「提速斩杀」与「转防守节奏」交替出现 5 次——实测口径判死进入竞速后，
+    #      小怪阵亡缩池、先验/实测口径切换、EMA 滞后都会让逐 tick 重算在阈值
+    #      附近反复翻案，攻防分配两头摇摆且矛盾留痕污染复盘。旧逻辑反例：
+    #      下方 T4 血池从 130 缩到 30 时（fresh 判定不再必败）整场翻回防守。
+    #      修复：实测样本满两回合判死后同场上锁，唯一合法出口仍是防守线
+    #      联合复核判可行；先验口径（T1~T2 样本不足）不锁，误判可被自然纠正。
+    kdir_flip = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-fliplock-"))
+    know_flip = knowledge.Knowledge(kdir_flip)
+    know_flip.stats["enemies"]["FLIP_COMP"] = {
+        "encounters": 6, "deaths": 4, "hp_lost_sum": 180.0, "wins": 2}
+    krc_fl = type("FLPCTX", (), {"combat": None, "current_combat_is_hard": True,
+                                 "credit_tags": []})()
+    krc_fl.combat = {"comp_id": "FLIP_COMP", "node_type": "Monster"}
+
+    def flip_state(turn_no, hp_now, incoming, e_hp):
+        if turn_no <= 3:
+            hand = [
+                {"index": 0, "card_id": "FP_HIT_A", "name": "磨刀砍", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 5}]},
+                {"index": 1, "card_id": "FP_HIT_B", "name": "磨刀砍二号", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 5}]}]
+        else:
+            hand = [
+                {"index": 0, "card_id": "FP_HIT_C", "name": "磨刀砍三号", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 5}]},
+                {"index": 1, "card_id": "FP_LUX", "name": "奢侈挡", "playable": True,
+                 "requires_target": False,
+                 "rules_text": "获得6点格挡",
+                 "dynamic_values": [{"name": "Block", "current_value": 6}]}]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "FLIP_COMP_E", "name": "翻案怪",
+                                    "current_hp": e_hp, "max_hp": 150, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 9, "deck": []}}
+
+    pol_fl = policy.Policy(know_flip, random.Random(11))
+    d_fl_t1 = pol_fl.decide(flip_state(1, 80, 4, 120), krc_fl)
+    krc_fl.credit_tags.extend(d_fl_t1.tags)
+    d_fl_t2 = pol_fl.decide(flip_state(2, 68, 12, 118), krc_fl)
+    krc_fl.credit_tags.extend(d_fl_t2.tags)
+    # T3：实测口径（两回合出牌，~5伤/回合）对 190 血池、火力 12/回合 → 投影判死入锁
+    d_fl_t3 = pol_fl.decide(flip_state(3, 56, 12, 190), krc_fl)
+    assert "斩杀竞速投影" in d_fl_t3.reason \
+        and "竞速解除防御压制" in d_fl_t3.reason, \
+        f"实测口径未上锁进入竞速: {d_fl_t3.action}（{d_fl_t3.reason}）"
+    krc_fl.credit_tags.extend(d_fl_t3.tags)
+    #      迟滞锁必须维持全攻（旧代码在此翻回「转防守节奏」并去打奢侈格挡；
+    #      同时注意血池保持 ≥80 开账门之上，避免掉入血池过小不竞速的旧豁免）
+    krc_fl.credit_tags.append(("combat_play_commit", "FP_BIG", True, False, 56.0, 3, ""))
+    d_fl_t4 = pol_fl.decide(flip_state(4, 44, 12, 100), krc_fl)
+    assert d_fl_t4.action == "play_card" and d_fl_t4.params.get("card_index") == 0, \
+        f"迟滞锁失效（血池缩小后攻防翻转打格挡）: {d_fl_t4.action}（{d_fl_t4.reason}）"
+    assert "斩杀竞速投影" in d_fl_t4.reason and "转防守节奏" not in d_fl_t4.reason, \
+        f"同场竞速判定被逐tick翻案: {d_fl_t4.action}（{d_fl_t4.reason}）"
+    krc_fl.credit_tags.extend(d_fl_t4.tags)
+    d_fl_t5 = pol_fl.decide(flip_state(5, 34, 12, 96), krc_fl)
+    assert "斩杀竞速投影" in d_fl_t5.reason and "转防守节奏" not in d_fl_t5.reason, \
+        f"迟滞锁未跨tick维持: {d_fl_t5.action}（{d_fl_t5.reason}）"
+    krc_fl.combat = None
+
     # 3wy) 演化纠偏（第 92~93 批复盘）：非 Boss 长战阵亡不得再释放 block_safety
     #      （93 局 FUZZY+SHRINKER 7 回合磨死被旧规则判成「龟防拖长」扣防，
     #      实际死因是有效格挡不足——方向完全相反）
