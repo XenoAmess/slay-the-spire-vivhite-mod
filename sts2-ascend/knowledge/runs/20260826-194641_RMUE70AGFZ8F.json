@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 19:46:41",
  "victory": false,
  "in_progress": true,
- "floor": 11,
+ "floor": 14,
  "decisions": [
   {
    "t": "19:46:41",
@@ -1240,13 +1240,179 @@
     "target_index": 0
    },
    "reason": "战斗：打出【与我一战！】→飞蝇菌子（可击杀飞蝇菌子）；敌意图总伤16，我方48血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "19:49:38",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 54,
+   "gold": 73,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：20金币"
+  },
+  {
+   "t": "19:49:38",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 54,
+   "gold": 93,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:49:39",
+   "screen": "CARD_SELECTION",
+   "floor": 11,
+   "hp": 54,
+   "gold": 93,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【御血术】（价值 27.8）；候选：御血术=27.8 / 上勾拳=11.6 / 凶恶=7.2"
+  },
+  {
+   "t": "19:49:40",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 54,
+   "gold": 93,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:49:42",
+   "screen": "MAP",
+   "floor": 11,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(11,5)（路径分 -52.92，预计进 Boss 血量 70%；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(11,5)=-52.92|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "19:49:44",
+   "screen": "REST",
+   "floor": 12,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "篝火：锻造升级（血量 68% ≥ 安全线 45%，升级降低后续战损）"
+  },
+  {
+   "t": "19:49:45",
+   "screen": "CARD_SELECTION",
+   "floor": 12,
+   "hp": 54,
+   "gold": 93,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 15
+   },
+   "reason": "升级卡牌：【燃烧】（前夜竞速必败，优先升级成长引擎 +16）"
+  },
+  {
+   "t": "19:49:46",
+   "screen": "REST",
+   "floor": 12,
+   "hp": 54,
+   "gold": 93,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "19:49:49",
+   "screen": "MAP",
+   "floor": 12,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(12,6)（路径分 -53.79，预计进 Boss 血量 70%；低血尾部生存复核：单场最差72打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.22（缺口64%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(12,6)=-53.79|低血尾部生存复核：单场最差72打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.22（缺口64%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "19:49:50",
+   "screen": "EVENT",
+   "floor": 13,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【混沌芳香】：选择「维持理智」（经验价值 0.0）；放任自流=0.0(n=31) / 维持理智=0.0(n=30)"
+  },
+  {
+   "t": "19:49:51",
+   "screen": "CARD_SELECTION",
+   "floor": 13,
+   "hp": 54,
+   "gold": 93,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 16
+   },
+   "reason": "升级卡牌：【御血术】"
+  },
+  {
+   "t": "19:49:52",
+   "screen": "EVENT",
+   "floor": 13,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "19:49:54",
+   "screen": "MAP",
+   "floor": 13,
+   "hp": 54,
+   "gold": 93,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(13,6)（路径分 -54.45，预计进 Boss 血量 81%；低血尾部生存复核：单场最差68打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口59%）；输出饥饿，Boss入场线放宽至75%（预计81%免于续航罚分））；候选：Monster(13,6)=-54.45|低血尾部生存复核：单场最差68打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口59%）；输出饥饿，Boss入场线放宽至75%（预计81%免于续航罚分）"
+  },
+  {
+   "t": "19:49:57",
+   "screen": "COMBAT",
+   "floor": 14,
+   "hp": 54,
+   "gold": 93,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【与我一战！】→缩小甲虫（辅助体优先转火：缩小甲虫（零伤害意图，放生=纵容其强化队友））；敌意图总伤4，我方54血/0甲；⚠高危组合（197战39死），转防守节奏"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血0",
   "F3 Monster战 掉血2",
   "F5 Monster战 掉血2",
-  "F8 Monster战 掉血12"
+  "F8 Monster战 掉血12",
+  "F11 Monster战 掉血14"
  ],
  "attribution_tags": [
   [
@@ -1312,6 +1478,22 @@
   [
    "relic_pick",
    "PANTOGRAPH"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "HEMOKINESIS"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Unknown"
   ],
   [
    "map_node",
