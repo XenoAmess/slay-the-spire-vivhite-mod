@@ -3087,3 +3087,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/681 胜，当前目标进阶 0
+
+## 第 682 局复盘（2026-08-27 05:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HOWL_FROM_BEYOND, CINDER, RAGE, TWIN_STRIKE, HEMOKINESIS, CINDER, TRUE_GRIT, STONE_ARMOR, FIGHT_ME, FIGHT_ME
+- 本局遗物：PERMAFROST, 皇家枕头
+- 战斗记录：F6 Monster战 掉血0; F9 Monster战 掉血11; F12 Elite战 掉血14; F14 Monster战 掉血14; F15 Monster战 掉血23; F17 Boss战 掉血29（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/682 胜，当前目标进阶 0
