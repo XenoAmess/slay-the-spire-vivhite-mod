@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 23:07:58",
  "victory": false,
  "in_progress": true,
- "floor": 5,
+ "floor": 6,
  "decisions": [
   {
    "t": "23:07:58",
@@ -907,12 +907,417 @@
     "card_index": 3
    },
    "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤6，我方80血/0甲"
+  },
+  {
+   "t": "23:10:04",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【拆卸】→小啃兽（辅助体优先转火：小啃兽（零伤害意图，放生=纵容其强化队友））；敌意图总伤6，我方80血/8甲"
+  },
+  {
+   "t": "23:10:05",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→小啃兽（辅助体优先转火：小啃兽（零伤害意图，放生=纵容其强化队友））；敌意图总伤6，我方80血/8甲"
+  },
+  {
+   "t": "23:10:06",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:10",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（辅助体优先转火：小啃兽（零伤害意图，放生=纵容其强化队友））；敌意图总伤14，我方80血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:11",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤14，我方80血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:13",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤14，我方80血/5甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:14",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:19",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【赌徒特酿】"
+  },
+  {
+   "t": "23:10:20",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "confirm_selection",
+   "params": {},
+   "reason": "选牌界面（combat_hand_select）：已选 0 张，确认"
+  },
+  {
+   "t": "23:10:21",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【易伤药水】"
+  },
+  {
+   "t": "23:10:22",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸】→小啃兽（自我强化体优先转火：小啃兽（力量+2，拖越久打越痛））；敌意图总伤22，我方71血/0甲；意图升级+8，防御前置；斩杀竞速投影：击杀还需5回合>可存活3回合（实测15伤/回合），全攻提速"
+  },
+  {
+   "t": "23:10:23",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤22，我方71血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:24",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤22，我方71血/8甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:25",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 71,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:30",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤8，我方62血/0甲"
+  },
+  {
+   "t": "23:10:32",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（自我强化体优先转火：小啃兽（力量+2，拖越久打越痛））；敌意图总伤8，我方62血/8甲"
+  },
+  {
+   "t": "23:10:33",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:38",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸】→小啃兽（可击杀小啃兽）；敌意图总伤16，我方62血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:39",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤16，我方62血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:40",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤16，我方62血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:41",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤16，我方62血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "23:10:43",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 62,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:47",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸】→小啃兽（单体伤害≈16.0）；敌意图总伤10，我方46血/0甲"
+  },
+  {
+   "t": "23:10:47",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤10，我方46血/0甲"
+  },
+  {
+   "t": "23:10:48",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤10，我方46血/5甲"
+  },
+  {
+   "t": "23:10:50",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "23:10:53",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（单体伤害≈8.0）；敌意图总伤0，我方46血/0甲"
+  },
+  {
+   "t": "23:10:54",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 46,
+   "gold": 139,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【拆卸】→小啃兽（可击杀小啃兽）；敌意图总伤0，我方46血/0甲"
+  },
+  {
+   "t": "23:10:54",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 52,
+   "gold": 139,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：14金币"
+  },
+  {
+   "t": "23:10:55",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 52,
+   "gold": 153,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "23:10:56",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 52,
+   "gold": 153,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【踩踏】（价值 11.6）；候选：踩踏=11.6 / 杂耍=8.8 / 预备打击=-14.2"
+  },
+  {
+   "t": "23:10:57",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 52,
+   "gold": 153,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "23:11:00",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 52,
+   "gold": 153,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(5,1)（路径分 -57.29，预计进 Boss 血量 0%；前期需要战斗积累卡牌；连续作战4场，疲劳压制×0.69；低血尾部生存复核：单场最差61打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.26（缺口74%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(5,1)=-57.29|前期需要战斗积累卡牌；连续作战4场，疲劳压制×0.69；低血尾部生存复核：单场最差61打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.26（缺口74%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "23:11:02",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 52,
+   "gold": 153,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤7，我方52血/0甲"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血2",
   "F3 Monster战 掉血1",
-  "F4 Monster战 掉血0"
+  "F4 Monster战 掉血0",
+  "F5 Unknown战 掉血28"
  ],
  "attribution_tags": [
   [
@@ -938,6 +1343,14 @@
   [
    "map_node",
    "Unknown"
+  ],
+  [
+   "card_pick",
+   "STOMP"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ]
 }
