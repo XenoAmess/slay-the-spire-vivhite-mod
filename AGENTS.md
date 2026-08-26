@@ -101,6 +101,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 新增 detached 脚本或锁文件时，同步更新 `Start-Agent.ps1` 的残留拒绝清单，以及 `Stop-Agent.ps1` 的 scoped 进程、lock 和 marker 清单。身份校验不得退化为只看进程名、PID 或端口。
 - 修改生命周期协议时必须同步更新 Start、Stop、AGENTS、README，并至少验证：冷启动、重复 Start、启动中 Stop、正常 Stop、重复 Stop、`-KeepGame`、复盘/TTS 活跃时 Stop，以及无关 Python/OpenCode 不被命中。
 
+复盘安全与成果保全规则：
+
+- **严禁重新引入“全仓指纹变化”、全仓脏状态或 refs 变化门禁。** 隔离复盘期间，真实仓的正常对局提交、推送、用户文件和运行日志变化均不得导致 ox-alpha 成果作废。
+- 复盘安全边界固定为：无 remote/无 hardlink 隔离 clone、复盘 patch 精确 allowlist、隔离自检、二进制 patch 验收，以及真实仓提交时的私有 index + compare-and-swap。不要用全仓扫描替代这些局部边界。
+- 复盘 active 时在线 checkpoint 仍须正常提交并推送；不得因为长复盘（统一超时 8 小时）让直播进度长期只留在本地。
+- `review_queue_max` 与 `max_runs_in_packet` 当前统一为 100；它们限制单批规模，不得截断持久队列。
+- 超时、进程失败、自检失败、allowlist 拒绝或提交冲突时，必须把隔离仓内**全部工作树改动**（含越界、被忽略和被规则拒绝的文件）保存到 `knowledge/code_backups/review_salvage/` 供人工分析；clone/快照原件必须从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停只准发布项目内指针并异步补齐；自动合入仍只准使用 allowlist patch，补合包永不自动应用。
+
 ## 工作流程规则
 
 ### 1. 完成后默认提交并推送

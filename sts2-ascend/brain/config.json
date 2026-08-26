@@ -20,8 +20,8 @@
   "opencode_bin": "opencode",
   "model": "kimi-for-coding/k3",
   "review_every_runs": 5,
-  "timeout_min": 25,
-  "max_runs_in_packet": 10,
+  "timeout_min": 480,
+  "max_runs_in_packet": 100,
   "preferred_every_runs": 1,
   "preferred_failure_cooldown_min": 5,
   "models_probe_timeout_sec": 60,
@@ -31,9 +31,9 @@
    "openrouter/stealth/ox-alpha@max"
   ],
   "preferred_timeout_cooldown_min": 5,
-  "preferred_timeout_min": 40,
+  "preferred_timeout_min": 480,
   "tts_mode": "edge",
-  "review_queue_max": 10
+  "review_queue_max": 100
  },
  "tts": {
   "clone_engine": "indextts",

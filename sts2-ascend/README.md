@@ -131,7 +131,8 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 **每局结束后**，大脑只做一件事：把复盘请求写入 `knowledge/review_queue.json`，然后**立即开下一局**。
 复盘由独立工作线程在后台串行消化——若一局结束时上一场复盘还没完，请求在队列里累积，
-下一场复盘**一次性分析多局**。`review_queue_max` 只限制单次提示词覆盖的局数，不截断持久队列；
+下一场复盘**一次性分析多局**。`review_queue_max` 与 `max_runs_in_packet` 当前都为 100，
+只限制单次取批/提示词覆盖的局数，不截断持久队列；
 复盘失败会把整批放回队尾，并以 60 秒起、15 分钟封顶的条目级持久化退避继续追及，
 退避中的旧批次不会拦住后来产生的新直播证据。
 
@@ -143,19 +144,27 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
 每个条目**独立失败冷却**：当前超时与硬失败（exit≠0/异常）都冷却 5 分钟，
-由 `preferred_*_cooldown_min` 配置。
+由 `preferred_*_cooldown_min` 配置。优先与兜底复盘超时统一为 8 小时（480 分钟）；
+复盘正常换行事件持续写直播流，病态超大单事件会有界截断；宿主内存只保留有界尾部。
 
 并发安全设计：
 
 - 复盘模型在无 remote、无 hardlink 的独立 clone 内工作；生产树只接收自检通过的 allowlist
-  精确 patch，真实仓库前后指纹覆盖工作树、index、HEAD/refs、Git 配置/hooks 与关键 ignored 路径
+  精确 patch
+- 不使用“全仓指纹变化”、全仓脏状态或 refs 变化作为复盘门禁；真实仓的正常提交、推送、
+  用户文件与运行日志变化不会让隔离成果作废
 - autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
 - 普通存档与复盘提交各有精确 allowlist；目标路径已有 staged 内容时整笔拒绝
-- 复盘 active 时在线存档先保留为本地线性提交；每次复盘结束（成功或失败）清除指纹窗口后
-  主动补推积压，不依赖 ox-alpha 必须产出有效 patch 才能上库
+- 复盘 active 时在线存档照常提交并立即推送；复盘结束也会补推此前网络失败的积压，
+  不依赖 ox-alpha 必须产出有效 patch 才能上库
 - 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD
   重建，分支切换则拒绝事务
-- 自检失败直接丢弃隔离 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，
+- 超时、进程失败、自检失败、allowlist 拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
+  ignored 和被规则拒绝的文件）原子保存到 `knowledge/code_backups/review_salvage/<批次>/`；
+  `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 仅供人工分析，永不自动应用；
+  clone/快照从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停时先发布项目内
+  指针再由新 Brain 异步补齐，不依赖可能被系统清理的外部 TEMP
+- 隔离失败现场保存后才删除 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，
   不使用 `reset --hard` 或全目录清理
 - 重启 marker 在真实工作树/ref 变化前 exclusive 原子发布；加载新 commit 并健康完成两局后才清除
 - 复盘产生变更 → 本局结束的安全点以退出码 42 自重启加载

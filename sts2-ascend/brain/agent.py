@@ -1461,7 +1461,7 @@ class Agent:
         # 幕号提前推算（第 506~515 局批复盘）：Boss 分幕子账本靠它分流——
         # 竞速投影/前夜裁决消费分幕血池火力均值，不再被全幕混合口径带偏
         _fl = int(agg.get("floor") or 1)
-        act_no = (_fl - 1) // 17 + 1
+        act_no = Policy._floor_act(_fl)
         self.know.commit_enemy_fight(agg["comp_id"], float(agg.get("hp_lost_sum", 0.0)),
                                      won=bool(agg.get("won")), died=bool(agg.get("died")),
                                      node_type=agg.get("node_type"),

@@ -10,7 +10,6 @@ compare-and-swap，外部并发提交只会令事务重试，不会被覆盖。
 from __future__ import annotations
 
 import os
-import hashlib
 import re
 import subprocess
 import tempfile
@@ -24,13 +23,11 @@ from typing import Callable, Iterator, Sequence
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BASE_DIR.parent
 
-REVIEW_ACTIVE_PROGRESS_PATHS = (
+DEFAULT_PROGRESS_PATHS = (
     "sts2-ascend/knowledge/runs",
     "sts2-ascend/knowledge/stats.json",
     "sts2-ascend/knowledge/progression.json",
     "sts2-ascend/knowledge/review_queue.json",
-)
-DEFAULT_PROGRESS_PATHS = REVIEW_ACTIVE_PROGRESS_PATHS + (
     "sts2-ascend/knowledge/policy.json",
     "sts2-ascend/knowledge/lessons.md",
     "sts2-ascend/knowledge/preferred_model_state.json",
@@ -313,143 +310,6 @@ def repo_changed_paths_since(base_commit: str) -> tuple[str, ...]:
         return tuple(dict.fromkeys(_nul_paths(tracked.stdout) + _nul_paths(others.stdout)))
 
 
-def _normalize_repo_path(path: str | os.PathLike[str]) -> str:
-    raw = os.fspath(path).replace("\\", "/").rstrip("/")
-    pure = PurePosixPath(raw)
-    if (not raw or pure.is_absolute() or ".." in pure.parts
-            or any(char in raw for char in ("\0", "\n", "\r", "*", "?", "["))
-            or raw.startswith(":")):
-        raise ValueError(f"不安全的仓库指纹路径：{raw!r}")
-    return pure.as_posix().lstrip("./")
-
-
-def workspace_fingerprint(
-    exclude_paths: Sequence[str] = (), ignored_roots: Sequence[str] = (),
-) -> dict[str, str]:
-    """哈希真实仓库的 index + tracked/untracked 内容，并可纳入关键 ignored 根。
-
-    用于隔离复盘前后检测绝对路径/``..`` 逃逸或并发用户改动。返回逐项映射而非
-    单一摘要，调用方可以在拒绝合入时报告具体变化；不跟随符号链接。
-    """
-    excludes = tuple(_normalize_repo_path(path) for path in exclude_paths)
-    ignored = tuple(_normalize_repo_path(path) for path in ignored_roots)
-
-    def excluded(path: str) -> bool:
-        return _path_in_specs(path, excludes) if excludes else False
-
-    def digest_path(path: Path) -> str:
-        try:
-            if path.is_symlink():
-                return "symlink:" + os.readlink(path)
-            if path.is_file():
-                sha = hashlib.sha256()
-                with path.open("rb") as handle:
-                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                        sha.update(chunk)
-                return "file:" + sha.hexdigest()
-            if path.exists():
-                return "dir"
-            return "missing"
-        except OSError as exc:
-            return f"error:{type(exc).__name__}:{exc}"
-
-    with repository_lock():
-        result: dict[str, str] = {}
-        index = _run_git(["ls-files", "--stage", "-z", "--"])
-        index_flags = _run_git(["ls-files", "-v", "-z", "--"])
-        files = _run_git(["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--"])
-        head_oid = _run_git(["rev-parse", "--verify", "HEAD"])
-        symbolic_head = _run_git(["symbolic-ref", "-q", "HEAD"])
-        refs = _run_git(["for-each-ref", "--format=%(refname) %(objectname)"])
-        common_dir_result = _run_git(["rev-parse", "--git-common-dir"])
-        required = (index, index_flags, files, head_oid, refs, common_dir_result)
-        if any(item.returncode != 0 for item in required):
-            raise RuntimeError("".join(item.stderr or "" for item in required).strip())
-        # Git 历史与控制面也属于真实工作区安全边界。logical refs 避免把 reflog/
-        # objects 的正常增长误判为逃逸，同时能发现 update-ref、空提交和分支切换。
-        result["git:head"] = head_oid.stdout.strip()
-        result["git:symbolic-head"] = symbolic_head.stdout.strip() if symbolic_head.returncode == 0 else ""
-        for row in refs.stdout.splitlines():
-            refname, separator, oid = row.partition(" ")
-            if separator and refname and oid:
-                result["git:ref:" + refname] = oid
-        common_dir = Path(common_dir_result.stdout.strip())
-        if not common_dir.is_absolute():
-            common_dir = (REPO_DIR / common_dir).resolve()
-        for name in ("config", "config.worktree", "info/exclude"):
-            result["git-meta:" + name] = digest_path(common_dir / Path(name))
-        hooks_dir = common_dir / "hooks"
-        if hooks_dir.is_dir():
-            for hook in sorted(hooks_dir.iterdir(), key=lambda item: item.name):
-                result["git-meta:hooks/" + hook.name] = digest_path(hook)
-        for record in index.stdout.split("\0"):
-            if not record or "\t" not in record:
-                continue
-            meta, path = record.split("\t", 1)
-            path = path.replace("\\", "/")
-            if not excluded(path):
-                result["index:" + path] = meta
-        for record in index_flags.stdout.split("\0"):
-            if len(record) >= 3 and record[1] == " ":
-                path = record[2:].replace("\\", "/")
-                if not excluded(path):
-                    result["index-flag:" + path] = record[0]
-        worktree_paths = set(_nul_paths(files.stdout))
-        for root in ignored:
-            absolute = REPO_DIR / Path(root)
-            if absolute.is_file() or absolute.is_symlink():
-                worktree_paths.add(root)
-            elif absolute.is_dir():
-                for dirpath, dirnames, filenames in os.walk(absolute, followlinks=False):
-                    dirnames[:] = [name for name in dirnames
-                                   if not (Path(dirpath) / name).is_symlink()]
-                    for name in filenames:
-                        relative = (Path(dirpath) / name).relative_to(REPO_DIR).as_posix()
-                        worktree_paths.add(relative)
-        for path in sorted(worktree_paths):
-            if not excluded(path):
-                result["worktree:" + path] = digest_path(REPO_DIR / Path(path))
-        return result
-
-
-def fingerprint_changes(before: dict[str, str], after: dict[str, str]) -> tuple[str, ...]:
-    """返回两个逐项仓库指纹之间新增、删除或内容变化的键。"""
-    return tuple(sorted(key for key in set(before) | set(after) if before.get(key) != after.get(key)))
-
-
-def unsafe_workspace_changes(
-    before: dict[str, str], after: dict[str, str],
-    online_paths: Sequence[str] = (),
-) -> tuple[str, ...]:
-    """允许仅由前向在线存档 commit 导致的当前分支移动，其余指纹变化均不安全。"""
-    changed = set(fingerprint_changes(before, after))
-    ref_changes = {key for key in changed if key == "git:head" or key.startswith("git:ref:")
-                   or key == "git:symbolic-head"}
-    if not ref_changes:
-        return tuple(sorted(changed))
-    old_symbolic = before.get("git:symbolic-head", "")
-    new_symbolic = after.get("git:symbolic-head", "")
-    old_head = before.get("git:head", "")
-    new_head = after.get("git:head", "")
-    allowed_ref_keys = {"git:head"}
-    if old_symbolic:
-        allowed_ref_keys.add("git:ref:" + old_symbolic)
-    if (old_symbolic != new_symbolic or not _HEX_COMMIT.fullmatch(old_head)
-            or not _HEX_COMMIT.fullmatch(new_head) or not ref_changes <= allowed_ref_keys):
-        return tuple(sorted(changed))
-    with repository_lock():
-        ancestor = _run_git(["merge-base", "--is-ancestor", old_head, new_head])
-        diff = _run_git(["diff", "--name-only", "-z", old_head, new_head, "--"])
-    paths = _nul_paths(diff.stdout) if diff.returncode == 0 else []
-    normalized_online = tuple(_normalize_repo_path(path) for path in online_paths)
-    # 空提交、回退/改写历史和非在线文件 commit 都不属于合法在线推进。
-    if (ancestor.returncode != 0 or not paths or not normalized_online
-            or any(not _path_in_specs(path, normalized_online) for path in paths)):
-        return tuple(sorted(changed))
-    changed.difference_update(ref_changes)
-    return tuple(sorted(changed))
-
-
 def restore_paths(from_commit: str, paths: list[str], log=print) -> bool:
     """拒绝从共享工作树的“当前总 diff”猜测模型 patch。
 
@@ -493,17 +353,17 @@ def _symbolic_head_unlocked() -> str:
     raise RuntimeError(result.stderr.strip() or "无法读取 HEAD symbolic ref")
 
 
-def _push_with_retry_unlocked(log=print, attempts: int = 3) -> bool:
+def _push_with_retry_unlocked(log=print, attempts: int = 1, timeout_sec: int = 30) -> bool:
     for attempt in range(attempts):
         try:
-            proc = _run_git(["push"], timeout=120)
+            proc = _run_git(["push"], timeout=timeout_sec)
             if proc.returncode == 0:
                 return True
             err = ((proc.stderr or "") + (proc.stdout or "")).strip()[:200]
         except subprocess.TimeoutExpired:
             # update-ref 已经成功时，push 超时不能把“本地 commit 已创建”误报成
             # 整个事务失败；按普通推送失败重试，最终由 CommitResult.pushed 表达。
-            err = "push timed out after 120s"
+            err = f"push timed out after {timeout_sec}s"
         if attempt + 1 < attempts:
             delay = 5 if attempt == 0 else 15
             log(f"[git] 推送失败（第 {attempt + 1}/{attempts} 次，{delay}s 后重试）：{err}")
@@ -514,21 +374,17 @@ def _push_with_retry_unlocked(log=print, attempts: int = 3) -> bool:
     return False
 
 
-def _push_with_retry(log=print, attempts: int = 3) -> bool:
+def _push_with_retry(log=print, attempts: int = 1, timeout_sec: int = 30) -> bool:
     """兼容入口；push 也受同一仓库事务锁保护。"""
     with repository_lock():
-        return _push_with_retry_unlocked(log=log, attempts=attempts)
+        return _push_with_retry_unlocked(
+            log=log, attempts=attempts, timeout_sec=timeout_sec)
 
 
 def push_pending(log=print, attempts: int = 1) -> bool:
-    """在复盘窗口关闭后补推本地线性提交；没有积压时为成功空操作。"""
+    """补推本地线性提交；没有积压时为成功空操作。"""
     try:
         with repository_lock():
-            # 与 set_review_active 共用同一跨进程锁：检查到 inactive 后，新的
-            # review 无法在 push 更新 origin/* 指纹期间插入。
-            if is_review_active():
-                log("[git] 复盘仍在进行，积压 push 继续延后")
-                return False
             upstream = _run_git([
                 "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
             if upstream.returncode == 0 and upstream.stdout.strip():
@@ -542,7 +398,7 @@ def push_pending(log=print, attempts: int = 1) -> bool:
                         pass
             pushed = _push_with_retry_unlocked(log=log, attempts=max(1, int(attempts)))
             if pushed:
-                log("[git] 复盘窗口关闭，已补推积压的本地提交")
+                log("[git] 已补推积压的本地提交")
             return pushed
     except Exception as exc:
         log(f"[git] 积压 push 异常，保留本地提交供下次复盘结束重试：{exc}")
@@ -555,9 +411,7 @@ def commit_progress_result(
     """用私有 index 原子提交指定路径，并可选在同一事务中 push。"""
     try:
         with repository_lock():
-            review_active = is_review_active()
-            default_paths = REVIEW_ACTIVE_PROGRESS_PATHS if review_active else DEFAULT_PROGRESS_PATHS
-            specs = normalize_paths(default_paths if paths is None else paths)
+            specs = normalize_paths(DEFAULT_PROGRESS_PATHS if paths is None else paths)
             # 可选的精确文件在旧安装中可能尚不存在；忽略既不存在也从未 tracked
             # 的 pathspec，但保留已删除的 tracked 路径以便提交 deletion。
             effective_specs = []
@@ -639,13 +493,9 @@ def commit_progress_result(
                     except Exception as exc:
                         log(f"[git] 提交已建立，真实 index 后处理异常；用户 index 未被覆盖：{exc}")
                     try:
-                        # Pushing updates refs/remotes/origin/* in this repository.
-                        # During an isolated review that legitimate ref movement would
-                        # trip the real-workspace fingerprint and discard the review.
-                        # Keep online checkpoints local until the review transaction
-                        # (or the next ordinary checkpoint) pushes the linear history.
-                        pushed = (_push_with_retry_unlocked(log=log)
-                                  if push and not review_active else False)
+                        # 复盘在无 remote 的隔离 clone 中运行；真实仓的正常提交和
+                        # push 不再参与复盘验收，也不能让直播存档滞留数小时。
+                        pushed = _push_with_retry_unlocked(log=log) if push else False
                     except Exception as exc:
                         log(f"[git] 本地提交已建立，push 异常，保留供下次重试：{exc}")
                         pushed = False

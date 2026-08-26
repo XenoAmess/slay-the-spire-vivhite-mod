@@ -107,7 +107,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertNotIn("sts2-ascend/knowledge/manual-export.json", names)
         self.assertTrue((self.repo / "sts2-ascend/knowledge/manual-export.json").exists())
 
-    def test_review_active_scope_excludes_policy_being_edited(self) -> None:
+    def test_review_active_checkpoint_uses_default_scope_and_pushes_immediately(self) -> None:
         self._write("sts2-ascend/knowledge/policy.json", '{"weight": 1}\n')
         self._git("add", "sts2-ascend/knowledge/policy.json")
         self._git("commit", "-qm", "add policy")
@@ -115,36 +115,26 @@ class AutoGitSafetyTests(unittest.TestCase):
         self._write("sts2-ascend/knowledge/policy.json", '{"weight": 99}\n')
         autogit.set_review_active(True)
         try:
-            result = autogit.commit_progress_result("online while review", push=False)
+            with mock.patch.object(
+                    autogit, "_push_with_retry_unlocked", return_value=True) as push:
+                result = autogit.commit_progress_result("online while review", push=True)
         finally:
             autogit.set_review_active(False)
 
         self.assertTrue(result.created, result.reason)
+        self.assertTrue(result.pushed)
+        push.assert_called_once_with(log=print)
         self.assertEqual(
             self._git("show", "HEAD:sts2-ascend/knowledge/policy.json").stdout,
-            '{"weight": 1}\n',
+            '{"weight": 99}\n',
         )
-        self.assertEqual(self._read("sts2-ascend/knowledge/policy.json"), '{"weight": 99}\n')
+        self.assertEqual(
+            self._git("show", "HEAD:sts2-ascend/knowledge/stats.json").stdout,
+            '{"runs": 2}\n',
+        )
 
-    def test_review_active_progress_commit_defers_push(self) -> None:
-        self._write("sts2-ascend/knowledge/stats.json", '{"runs": 3}\n')
-        with (mock.patch.object(autogit, "is_review_active", return_value=True),
-              mock.patch.object(autogit, "_push_with_retry_unlocked",
-                                return_value=True) as push):
-            result = autogit.commit_progress_result(
-                "online checkpoint during review",
-                paths=["sts2-ascend/knowledge/stats.json"], push=True)
-        self.assertTrue(result.created, result.reason)
-        self.assertFalse(result.pushed)
-        push.assert_not_called()
-
-    def test_push_pending_runs_only_after_review_window_and_only_when_ahead(self) -> None:
+    def test_push_pending_runs_during_review_and_only_when_ahead(self) -> None:
         messages: list[str] = []
-        with (mock.patch.object(autogit, "is_review_active", return_value=True),
-              mock.patch.object(autogit, "_push_with_retry_unlocked") as push):
-            self.assertFalse(autogit.push_pending(log=messages.append))
-        push.assert_not_called()
-
         def git_result(args, **_kwargs):
             if args[0] == "rev-parse":
                 return subprocess.CompletedProcess(args, 0, "origin/master\n", "")
@@ -152,11 +142,14 @@ class AutoGitSafetyTests(unittest.TestCase):
                 return subprocess.CompletedProcess(args, 0, "2\n", "")
             raise AssertionError(args)
 
-        with (mock.patch.object(autogit, "is_review_active", return_value=False),
-              mock.patch.object(autogit, "_run_git", side_effect=git_result),
-              mock.patch.object(autogit, "_push_with_retry_unlocked",
-                                return_value=True) as push):
-            self.assertTrue(autogit.push_pending(log=messages.append, attempts=1))
+        autogit.set_review_active(True)
+        try:
+            with (mock.patch.object(autogit, "_run_git", side_effect=git_result),
+                  mock.patch.object(autogit, "_push_with_retry_unlocked",
+                                    return_value=True) as push):
+                self.assertTrue(autogit.push_pending(log=messages.append, attempts=1))
+        finally:
+            autogit.set_review_active(False)
         push.assert_called_once_with(log=messages.append, attempts=1)
         self.assertTrue(any("已补推" in message for message in messages))
 
@@ -164,8 +157,7 @@ class AutoGitSafetyTests(unittest.TestCase):
             value = "origin/master\n" if args[0] == "rev-parse" else "0\n"
             return subprocess.CompletedProcess(args, 0, value, "")
 
-        with (mock.patch.object(autogit, "is_review_active", return_value=False),
-              mock.patch.object(autogit, "_run_git", side_effect=no_ahead),
+        with (mock.patch.object(autogit, "_run_git", side_effect=no_ahead),
               mock.patch.object(autogit, "_push_with_retry_unlocked") as push):
             self.assertTrue(autogit.push_pending(log=messages.append))
         push.assert_not_called()
@@ -464,6 +456,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
         llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
         sandbox_paths: list[Path] = []
+        messages: list[str] = []
         try:
             def write_forbidden(cmd, timeout, translate=None):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
@@ -476,11 +469,16 @@ class AutoGitSafetyTests(unittest.TestCase):
             with mock.patch.object(llm_review, "_stream_run", side_effect=write_forbidden):
                 denied = llm_review._run_review_sandbox(
                     ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
-                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
+                    mock.Mock(feed=lambda _line: None), log=messages.append)
             self.assertIn("越过 allowlist", denied.error)
+            self.assertIn("outside.txt", denied.wip_paths)
+            self.assertIn("outside.txt", denied.unexpected_paths)
+            self.assertIn(b"model outside", denied.wip_patch)
             self.assertEqual(self._read("outside.txt"), "outside-v1\n")
             self.assertEqual(self._read("sts2-ascend/brain/policy.py"), "VALUE = 1\n")
-            self.assertFalse(sandbox_paths[-1].exists())
+            self.assertTrue(sandbox_paths[-1].exists(), messages)
+            llm_review._discard_sandbox_snapshot(denied, log=lambda _msg: None)
+            llm_review._discard_retained_sandbox(denied, log=lambda _msg: None)
 
             def write_ignored(cmd, timeout, translate=None):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
@@ -493,58 +491,19 @@ class AutoGitSafetyTests(unittest.TestCase):
             with mock.patch.object(llm_review, "_stream_run", side_effect=write_ignored):
                 ignored = llm_review._run_review_sandbox(
                     ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
-                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
-            self.assertFalse(ignored.error)
+                    mock.Mock(feed=lambda _line: None), log=messages.append)
+            self.assertIn("越过 allowlist", ignored.error)
             self.assertFalse(ignored.paths)
+            self.assertIn(".runtime/evil.exe", ignored.wip_paths)
+            self.assertIn(b"contained", ignored.wip_patch)
             self.assertFalse((self.repo / ".runtime" / "evil.exe").exists())
-            self.assertFalse(sandbox_paths[-1].exists())
+            self.assertTrue(sandbox_paths[-1].exists(), messages)
+            llm_review._discard_sandbox_snapshot(ignored, log=lambda _msg: None)
+            llm_review._discard_retained_sandbox(ignored, log=lambda _msg: None)
         finally:
             llm_review.REPO_DIR = old_repo
             llm_review.KNOWLEDGE_DIR = old_knowledge
             llm_review.PROMPT_FILE = old_prompt
-
-    def test_workspace_fingerprint_detects_root_and_critical_ignored_escape(self) -> None:
-        self._write(".gitignore", "sts2-ascend/.runtime/\n")
-        self._git("add", ".gitignore")
-        self._git("commit", "-qm", "ignore runtime")
-        runner_log = next(path for path in llm_review.REVIEW_WORKSPACE_VOLATILE_PATHS
-                          if path.endswith(".out.log") and "/.runtime/runner" in path)
-        stop_file = next(path for path in llm_review.REVIEW_STOP_LIFECYCLE_PATHS
-                         if "/.runtime/stop" in path and path.endswith(".request"))
-        self._write(runner_log, "live-before\n")
-        before = autogit.workspace_fingerprint(
-            exclude_paths=["sts2-ascend/knowledge/stats.json", runner_log],
-            ignored_roots=["sts2-ascend/.runtime"],
-        )
-        self._write("outside.txt", "escaped root edit\n")
-        self._write("sts2-ascend/.runtime/injected.cmd", "danger\n")
-        self._write(runner_log, "live-after\n")
-        self._write(stop_file, "cooperative stop\n")
-        self._write("sts2-ascend/knowledge/stats.json", '{"runs": 999}\n')
-        after = autogit.workspace_fingerprint(
-            exclude_paths=["sts2-ascend/knowledge/stats.json", runner_log],
-            ignored_roots=["sts2-ascend/.runtime"],
-        )
-        changed = autogit.fingerprint_changes(before, after)
-        self.assertIn("worktree:outside.txt", changed)
-        self.assertIn("worktree:sts2-ascend/.runtime/injected.cmd", changed)
-        self.assertIn("worktree:" + stop_file, changed)
-        self.assertNotIn("worktree:" + runner_log, changed)
-        self.assertNotIn("worktree:sts2-ascend/knowledge/stats.json", changed)
-        stop_filtered = llm_review._unexpected_stop_workspace_changes(changed)
-        self.assertNotIn("worktree:" + stop_file, stop_filtered)
-        self.assertIn("worktree:sts2-ascend/.runtime/injected.cmd", stop_filtered)
-        synthetic = llm_review._unexpected_stop_workspace_changes((
-            "worktree:sts2-ascend/.runtime/stop.request",
-            "worktree:sts2-ascend/.runtime/unknown.escape",
-        ))
-        self.assertEqual(synthetic, ("worktree:sts2-ascend/.runtime/unknown.escape",))
-
-        # 工作树/index 不变的空提交也必须被 Git 控制面指纹发现。
-        before_ref = autogit.workspace_fingerprint()
-        self._git("commit", "--allow-empty", "-qm", "escaped empty commit")
-        after_ref = autogit.workspace_fingerprint()
-        self.assertIn("git:head", autogit.unsafe_workspace_changes(before_ref, after_ref))
 
     def test_runner_counts_slow_post_review_crashes(self) -> None:
         old_marker = runner.MARKER

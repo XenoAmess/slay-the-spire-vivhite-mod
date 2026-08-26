@@ -26,21 +26,24 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
 import py_compile
 import queue
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from collections import OrderedDict, deque
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from lifecycle import SESSION_ID, stop_requested
+from lifecycle import stop_requested
 
 BASE_DIR = Path(__file__).resolve().parent.parent          # sts2-ascend/
 REPO_DIR = BASE_DIR.parent                                  # git 仓库根（opencode 在此获得完整上下文）
@@ -52,6 +55,7 @@ MARKER_FILE = KNOWLEDGE_DIR / "pending_restart.json"
 PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
+SALVAGE_ROOT = KNOWLEDGE_DIR / "code_backups" / "review_salvage"
 REVIEW_MUTABLE_PATHS = [
     "sts2-ascend/brain/__main__.py",
     "sts2-ascend/brain/agent.py",
@@ -76,59 +80,29 @@ REVIEW_CONCURRENT_PATHS = [
     "sts2-ascend/knowledge/review_queue.json",
     "sts2-ascend/knowledge/preferred_model_state.json",
 ]
-# 真实工作区前后指纹允许变化的纯运行产物。策略/代码/TTS 实现文件不在此列。
-REVIEW_WORKSPACE_VOLATILE_PATHS = REVIEW_CONCURRENT_PATHS + [
-    "sts2-ascend/knowledge/brain.log",
-    "sts2-ascend/knowledge/review_prompt_latest.md",
-    "sts2-ascend/knowledge/review_live.stream",
-    "sts2-ascend/knowledge/review_active.flag",
-    "sts2-ascend/knowledge/viewer.lock",
-    "sts2-ascend/knowledge/viewer_boot.log",
-    "sts2-ascend/knowledge/viewer_err.log",
-    "sts2-ascend/knowledge/viewer_exc.log",
-    "sts2-ascend/knowledge/viewer_out.log",
-    "sts2-ascend/knowledge/voice_speaker.lock",
-    "sts2-ascend/knowledge/voice_quipper.lock",
-    "sts2-ascend/knowledge/voice_clone_busy.flag",
-    "sts2-ascend/knowledge/voice_quip_speaking.flag",
-    "sts2-ascend/knowledge/tts_speaker.log",
-    "sts2-ascend/knowledge/tts_quipper.log",
-    "sts2-ascend/knowledge/runner_console.log",
-    "sts2-ascend/knowledge/runner_console.err.log",
-    "sts2-ascend/knowledge/edge_dbg.err.log",
-    "sts2-ascend/knowledge/edge_dbg.out.log",
-    "sts2-ascend/knowledge/nano_dbg.err.log",
-    "sts2-ascend/knowledge/speaker_dbg.err.log",
-    "sts2-ascend/knowledge/speaker_dbg.out.log",
-    "sts2-ascend/knowledge/tts_test.err.log",
-    "sts2-ascend/knowledge/tts_test.out.log",
-    "sts2-ascend/knowledge/viewer_err_test.log",
-    "sts2-ascend/knowledge/viewer_out_test.log",
-    "sts2-ascend/knowledge/voice_volume.json",
-    # Start-Agent 将 runner 的 stdout/stderr 持续追加到当前 session 的日志；
-    # 这些是宿主自产运行流，不是隔离模型对真实工作树的逃逸写入。只豁免当前
-    # session 的精确文件名，.runtime 下未知文件仍由 ignored_roots 指纹捕获。
-    f"sts2-ascend/.runtime/runner{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.out.log",
-    f"sts2-ascend/.runtime/runner{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.err.log",
-]
-# 这些文件只在已经确认收到协作停止后从“停止期异常变化”报告中过滤；正常复盘
-# 仍会对它们做指纹，防止模型用绝对路径篡改生命周期控制面。
-REVIEW_STOP_LIFECYCLE_PATHS = [
-    "sts2-ascend/.runtime/session.json",
-    "sts2-ascend/.runtime/stop.request",
-    f"sts2-ascend/.runtime/stop{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.request",
-    f"sts2-ascend/.runtime/runner{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.pid",
-    f"sts2-ascend/.runtime/brain{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.pid",
-]
-REVIEW_WORKSPACE_IGNORED_ROOTS = [
-    "sts2-ascend/.runtime",
-    "sts2-ascend/knowledge/pending_restart.json",
-    "sts2-ascend/knowledge/code_backups",
-    "sts2-ascend/third_party/dist",
-    "sts2-ascend/third_party/STS2-Agent",
-    "Vivhite/local.props",
-]
 _worker_stop = threading.Event()
+
+
+def _review_work_root() -> Path:
+    """项目内 ignored 临时区；即使系统 TEMP 被清理，失败原件仍在项目范围。"""
+    return Path(REPO_DIR) / "sts2-ascend" / "knowledge" / "code_backups" / "review_work"
+
+
+def _new_review_temp(prefix: str) -> Path:
+    root = _review_work_root()
+    root.mkdir(parents=True, exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=prefix, dir=str(root)))
+
+
+def _is_owned_review_temp(path: Path, prefix: str) -> bool:
+    """接受当前项目受管临时区，也兼容升级前遗留的系统 TEMP 现场。"""
+    try:
+        resolved = path.resolve()
+        return (resolved.name.startswith(prefix) and (
+            resolved.parent == _review_work_root().resolve()
+            or resolved.parent == Path(tempfile.gettempdir()).resolve()))
+    except OSError:
+        return False
 
 # Prompt working-set bounds.  Full traces remain available in runs/*.json (or
 # the compact archive catalog); the inline packet should carry evidence, not
@@ -154,11 +128,6 @@ def _wait_review_stop(seconds: float) -> bool:
         _worker_stop.wait(min(0.2, remaining))
 
 
-def _unexpected_stop_workspace_changes(changes) -> tuple[str, ...]:
-    expected = {"worktree:" + path for path in REVIEW_STOP_LIFECYCLE_PATHS}
-    return tuple(change for change in changes if change not in expected)
-
-
 def load_llm_config() -> dict:
     cfg = {}
     if CONFIG_PATH.exists():
@@ -172,8 +141,8 @@ def load_llm_config() -> dict:
         "opencode_bin": "opencode",
         "model": "kimi-for-coding/k3",
         "review_every_runs": 5,
-        "timeout_min": 25,
-        "max_runs_in_packet": 10,
+        "timeout_min": 480,
+        "max_runs_in_packet": 100,
         # 优先模型链（按优先级；条目形如 provider/model[@variant]）：
         # 1) Ox Alpha Free (Unlimited) · OpenCode Zen · max —— 若在 opencode models 清单则用
         # 2) Ox Alpha · OpenRouter · max（stealth 马甲，当前可见条目）
@@ -186,7 +155,7 @@ def load_llm_config() -> dict:
         "preferred_timeout_cooldown_min": 5,
         "preferred_failure_cooldown_min": 5,
         # 异步复盘不阻塞游玩，优先模型的超时可放宽
-        "preferred_timeout_min": 40,
+        "preferred_timeout_min": 480,
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
@@ -194,8 +163,8 @@ def load_llm_config() -> dict:
         # indextts=兼容用全 IndexTTS / hybrid=SAPI 实时直播 + IndexTTS GPU 结论 /
         # nano=全克隆音色（滞后大） / sapi=纯系统语音 / off=关闭
         "tts_mode": "edge",
-        # 异步复盘队列：最多累积多少批待消化（超出丢弃最旧的）
-        "review_queue_max": 5,
+        # 异步复盘单批上限；持久队列本身不截断
+        "review_queue_max": 100,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
     return merged
@@ -337,21 +306,24 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
     # 文件必为定稿后被盖脏戳的完整体，按完成局放行；真进行中的对局轨迹里
     # 不可能出现 GAME_OVER，照常排除。否则摘要把近百余局全部过滤，
     # 复盘数据包永远停留在旧局（第 263~369 局实证）。
-    files: list[tuple[Path, dict]] = []
+    requested = {int(item) for item in (batch_runs or [])}
+    # 只保留提示词需要的最近 N 局与命中的批次，不把五百余局完整 JSON
+    # 同时常驻内存。精确批次仍会继续从归档中补找。
+    recent: deque[tuple[Path, dict]] = deque(maxlen=max(0, n))
+    selected: list[tuple[Path, dict]] = []
     for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name):
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
         if _run_is_complete(d):
-            files.append((p, d))
+            recent.append((p, d))
+            if requested and int(d.get("run_number") or -1) in requested:
+                selected.append((p, d))
 
-    requested = {int(item) for item in (batch_runs or [])}
     if not requested:
-        return [_summarize_run(data, "recent") for _, data in files[-n:]]
+        return [_summarize_run(data, "recent") for _, data in recent]
 
-    selected = [(path, data) for path, data in files
-                if int(data.get("run_number") or -1) in requested]
     seen = {path.name for path, _ in selected}
     selected.extend(_requested_archived_runs(requested, seen))
     selected.sort(key=lambda row: (int(row[1].get("run_number") or 0), row[0].name))
@@ -363,7 +335,7 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
         # diagnostic context, but label it so the coach cannot mistake it for the
         # requested queue batch.
         fallback_n = max(0, n - len(out))
-        for path, data in files[-fallback_n:] if fallback_n else []:
+        for path, data in list(recent)[-fallback_n:] if fallback_n else []:
             if path.name not in seen:
                 out.append(_summarize_run(data, "recent_fallback_unmapped"))
     return out
@@ -371,7 +343,7 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
 
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None) -> str:
-    n = int(cfg.get("max_runs_in_packet", 10))
+    n = int(cfg.get("max_runs_in_packet", 100))
     run_summaries = _recent_run_summaries(n, batch_runs=batch_runs)
     evidence_text = []
     for summary in run_summaries:
@@ -451,7 +423,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
      `meta_review.md` 报告，待在线学习流程自行吸收
    - 不得修改 `brain/autogit.py`、`runner.py`、`llm_review.py`、`lifecycle.py` 或
      `scripts/` 生命周期入口
-4. 改完任何 `.py` 后**必须**运行 `py -3 sts2-ascend/brain/selfcheck.py` 并确认输出 SELFCHECK OK；
+4. 改完任何 `.py` 后**必须**运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 并确认输出 SELFCHECK OK；
    若不通过，修好再试，实在修不好就把该文件改回原样。
 5. 不要提交：git 提交由宿主大脑在复盘前后自动完成（复盘前已备份，复盘后变更会被提交；
    若你的变更导致自检失败，会被整体回滚到备份点）。
@@ -675,7 +647,8 @@ class OpencodeJsonTranslator:
     """
 
     def __init__(self) -> None:
-        self._seen: dict[str, int] = {}
+        self._seen: OrderedDict[str, int] = OrderedDict()
+        self._seen_limit = 4096
 
     def feed(self, raw: str) -> list[str]:
         s = raw.strip()
@@ -689,13 +662,21 @@ class OpencodeJsonTranslator:
             return [s]
         part = evt.get("part") or {}
         ptype = part.get("type") or evt.get("type") or ""
-        pid = str(part.get("id") or "")
+        # Provider 输入不可信；固定长度 key 防止 4096 个超长 id 绕过 LRU 内存界。
+        raw_pid = str(part.get("id") or "")
+        pid = hashlib.blake2s(raw_pid.encode("utf-8", errors="replace"),
+                              digest_size=16).hexdigest()
         if ptype in ("text", "reasoning"):
             text = part.get("text") or ""
             prev = self._seen.get(pid, 0)
             if len(text) <= prev:
+                if pid in self._seen:
+                    self._seen.move_to_end(pid)
                 return []
             self._seen[pid] = len(text)
+            self._seen.move_to_end(pid)
+            while len(self._seen) > self._seen_limit:
+                self._seen.popitem(last=False)
             prefix = "💭 " if ptype == "reasoning" and prev == 0 else ""
             return [prefix + text[prev:]]
         if ptype in ("tool", "tool-call", "tool_call", "tool-use", "tool-result", "tool_result"):
@@ -712,82 +693,199 @@ class OpencodeJsonTranslator:
         return []   # step-start 等噪音不显示
 
 
+class _ReviewStopped(RuntimeError):
+    """协作停止已到达；调用方必须保留当前隔离现场。"""
+
+
+def _process_group_kwargs() -> dict:
+    """让复盘命令拥有可精确终止的进程树，不波及用户的其他工具。"""
+    if os.name == "nt":
+        return {"creationflags": (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))}
+    return {"start_new_session": True}
+
+
+def _terminate_process_tree(proc: subprocess.Popen) -> None:
+    """终止本次命令及其子进程，避免停止后继续改写隔离仓。"""
+    if proc.poll() is not None:
+        return
+    if os.name == "nt" and getattr(proc, "pid", None):
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                capture_output=True, timeout=10,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        if proc.poll() is None:
+            proc.kill()
+    except OSError:
+        pass
+
+
+def _run_captured_stop_aware(
+    args: list[str], *, cwd: Path | str | None = None, binary: bool = False,
+    timeout: int = 120, env: dict | None = None,
+) -> subprocess.CompletedProcess:
+    """可轮询停止的 capture_output；停止时精确杀掉本次进程树。"""
+    if _review_stop_requested():
+        raise _ReviewStopped()
+    kwargs = {
+        "cwd": str(cwd) if cwd is not None else None,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "env": env,
+        **_process_group_kwargs(),
+    }
+    if not binary:
+        kwargs.update({"text": True, "encoding": "utf-8", "errors": "replace"})
+    proc = subprocess.Popen(args, **kwargs)
+    deadline = time.monotonic() + timeout
+    while True:
+        if _review_stop_requested():
+            _terminate_process_tree(proc)
+            try:
+                proc.communicate(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            raise _ReviewStopped()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            _terminate_process_tree(proc)
+            try:
+                proc.communicate(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            raise subprocess.TimeoutExpired(args, timeout)
+        try:
+            stdout, stderr = proc.communicate(timeout=min(0.2, remaining))
+            return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
+        except subprocess.TimeoutExpired:
+            continue
+
+
 def _stream_run(cmd: list[str], timeout_sec: int,
                 translate=None) -> tuple[int, str, bool, bool]:
-    """流式执行命令：stdout/stderr 合并逐行实时写入 LIVE_STREAM，同时收集全文。
-
-    translate（可选）：把每个原始输出行映射为 0~N 个展示行（如 OpencodeJsonTranslator.feed）。
-    返回 (returncode, 全文输出, 是否超时, 是否被全栈停机中断)。
-    """
+    """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
     env["TERM"] = "dumb"
+    # 提示词要求模型自行跑 selfcheck；-B + 环境双保险，避免宿主要求本身
+    # 制造 ignored pyc，进而把合规复盘误判为越界。模型主动写入的 pyc 仍保留。
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     proc = subprocess.Popen(
         cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace", bufsize=1, env=env)
+        text=True, encoding="utf-8", errors="replace", bufsize=8192, env=env,
+        **_process_group_kwargs())
 
-    q: queue.Queue[str | None] = queue.Queue()
+    # 128 * 8192 约 1 MiB；即使模型连续八小时输出，reader 也不会无限吃内存。
+    q: queue.Queue[str] = queue.Queue(maxsize=128)
+    reader_cancel = threading.Event()
+    reader_done = threading.Event()
 
     def _reader() -> None:
         try:
-            for ln in proc.stdout or []:
-                q.put(ln)
+            while not reader_cancel.is_set():
+                chunk = (proc.stdout.read(8192) if proc.stdout is not None else "")
+                if not chunk:
+                    break
+                while not reader_cancel.is_set():
+                    try:
+                        q.put(chunk, timeout=0.2)
+                        break
+                    except queue.Full:
+                        continue
+        except (OSError, ValueError):
+            pass
         finally:
-            q.put(None)
+            reader_done.set()
 
-    threading.Thread(target=_reader, daemon=True).start()
+    reader_thread = threading.Thread(target=_reader, daemon=True)
+    reader_thread.start()
 
     deadline = time.monotonic() + timeout_sec
-    lines: list[str] = []
+    tail: deque[str] = deque()
+    tail_chars = 0
+    tail_limit = 256 * 1024
+    event_limit = 256 * 1024
+    pending = ""
     timed_out = False
     stopped = False
+
     with LIVE_STREAM.open("a", encoding="utf-8") as stream:
+        def emit_display(value: str) -> None:
+            nonlocal tail_chars
+            if not value.endswith("\n"):
+                value += "\n"
+            try:
+                stream.write(value)
+                stream.flush()
+            except OSError:
+                pass
+            if len(value) >= tail_limit:
+                tail.clear()
+                value = value[-tail_limit:]
+                tail_chars = 0
+            tail.append(value)
+            tail_chars += len(value)
+            while tail_chars > tail_limit and tail:
+                tail_chars -= len(tail.popleft())
+
+        def emit_raw_line(raw: str) -> None:
+            for output in (translate(raw) if translate else [raw]):
+                emit_display(output)
+
         while True:
             try:
-                ln = q.get(timeout=0.2)
+                chunk = q.get(timeout=0.2)
             except queue.Empty:
-                ln = ""
-            if ln is None:
-                break
-            if ln:
-                out_lines = translate(ln) if translate else [ln]
-                for ol in out_lines:
-                    if not ol.endswith("\n"):
-                        ol += "\n"
-                    lines.append(ol)
-                    try:
-                        stream.write(ol)
-                        stream.flush()
-                    except OSError:
-                        pass
+                chunk = ""
+            if chunk:
+                pending += chunk
+                while "\n" in pending:
+                    line, pending = pending.split("\n", 1)
+                    emit_raw_line(line + "\n")
+                if len(pending) > event_limit:
+                    dropped = len(pending) - event_limit
+                    pending = pending[-event_limit:]
+                    emit_display(
+                        f"[llm] 单条无换行输出过大，已截断前 {dropped} 个字符；"
+                        "这不影响隔离仓内失败文件的完整保全。")
             if _review_stop_requested():
                 stopped = True
-                try:
-                    proc.terminate()
-                except OSError:
-                    pass
+                _terminate_process_tree(proc)
                 break
             if time.monotonic() > deadline:
                 timed_out = True
-                try:
-                    proc.kill()
-                except OSError:
-                    pass
+                _terminate_process_tree(proc)
                 break
+            if reader_done.is_set() and q.empty():
+                if pending:
+                    emit_raw_line(pending)
+                    pending = ""
+                break
+
+    reader_cancel.set()
     if _review_stop_requested():
         stopped = True
     try:
-        proc.wait(timeout=10)
-    except subprocess.TimeoutExpired:
+        proc.wait(timeout=2)
+    except (OSError, subprocess.TimeoutExpired):
+        _terminate_process_tree(proc)
         try:
-            proc.kill()
-            proc.wait(timeout=5)
+            proc.wait(timeout=2)
         except (OSError, subprocess.TimeoutExpired):
             pass
+    try:
+        if proc.stdout is not None:
+            proc.stdout.close()
     except OSError:
         pass
+    reader_thread.join(timeout=1)
     rc = proc.returncode if proc.returncode is not None else -1
-    return rc, "".join(lines), timed_out, stopped
+    return rc, "".join(tail), timed_out, stopped
 
 
 # ---------------------------------------------------------------------------
@@ -798,18 +896,33 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
     """py_compile 全文件 + 冒烟测试（含真实知识库加载）。"""
     root = Path(base_dir) if base_dir is not None else BASE_DIR
     brain_dir = root / "brain"
-    for f in brain_dir.glob("*.py"):
-        try:
-            py_compile.compile(str(f), doraise=True)
-        except py_compile.PyCompileError as exc:
-            log(f"[llm] 自检失败（编译 {f.name}）：{exc}")
-            return False
     try:
-        proc = subprocess.run([sys.executable, str(brain_dir / "selfcheck.py")],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+        # 编译产物写到系统临时目录；这样失败现场里的任意 ignored/pyc 都必然
+        # 是模型留下的内容，不需要按路径猜来源，更不会误删分析证据。
+        with tempfile.TemporaryDirectory(prefix="sts2-review-pycompile-") as compiled:
+            for index, f in enumerate(brain_dir.glob("*.py")):
+                if _review_stop_requested():
+                    raise _ReviewStopped()
+                try:
+                    py_compile.compile(
+                        str(f), cfile=str(Path(compiled) / f"{index}-{f.name}.pyc"),
+                        doraise=True)
+                except py_compile.PyCompileError as exc:
+                    log(f"[llm] 自检失败（编译 {f.name}）：{exc}")
+                    return False
+    except _ReviewStopped:
+        raise
+    try:
+        env = dict(os.environ)
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        proc = _run_captured_stop_aware(
+            [sys.executable, str(brain_dir / "selfcheck.py")],
+            timeout=120, env=env)
         if proc.returncode != 0 or "SELFCHECK OK" not in (proc.stdout or ""):
             log(f"[llm] 自检失败（冒烟）：{(proc.stdout or '')[-400:]} {(proc.stderr or '')[-400:]}")
             return False
+    except _ReviewStopped:
+        raise
     except Exception as exc:
         log(f"[llm] 自检异常：{exc}")
         return False
@@ -821,11 +934,12 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                async_mode: bool = False, _status: dict | None = None) -> bool:
     """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
 
-    流程：保存在线进度 → opencode 受限复盘 → 路径 allowlist → 自检 → 精确提交；
-    失败时丢弃隔离 clone；若真实工作区无法安全归因则 fail closed 并保留诊断。
+    流程：保存在线进度 → opencode 隔离复盘 → 路径 allowlist → 自检 → 精确提交；
+    失败时从隔离 clone 导出包含全部改动（含 ignored/越界）的补合包；
+    allowlist 只约束自动合入，不约束失败成果留档。
     source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
-    async_mode=True（异步队列工作线程调用）时，在线存档只提交 runs/stats/
-    progression/review_queue；这些路径不属于复盘 patch。
+    async_mode=True（异步队列工作线程调用）时，在线存档和推送继续独立运行；
+    它们不会参与隔离复盘 patch 的验收。
     """
     if _status is not None:
         _status.clear()
@@ -915,55 +1029,33 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
 
-    autogit.set_review_active(True)     # 此后对局存档只提交纯在线运行路径
+    autogit.set_review_active(True)     # 生命周期标记；不阻塞在线存档与推送
     rc, out, timed_out, stopped = -1, "", False, False
-    eff_timeout_min = float(cfg.get("preferred_timeout_min", 40)) if source == "preferred" \
-        else float(cfg.get("timeout_min", 25))
+    eff_timeout_min = float(cfg.get("preferred_timeout_min", 480)) if source == "preferred" \
+        else float(cfg.get("timeout_min", 480))
     translator = OpencodeJsonTranslator()
     sandbox = SandboxReviewResult(error="复盘尚未运行")
     try:
-        workspace_before = autogit.workspace_fingerprint(
-            exclude_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
-            ignored_roots=REVIEW_WORKSPACE_IGNORED_ROOTS,
-        )
         sandbox = _run_review_sandbox(
             cmd, prompt, pre_head, int(eff_timeout_min * 60), translator, log=log)
         rc, out, timed_out, stopped = (
             sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped)
-        workspace_after = autogit.workspace_fingerprint(
-            exclude_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
-            ignored_roots=REVIEW_WORKSPACE_IGNORED_ROOTS,
-        )
-        escaped = autogit.unsafe_workspace_changes(
-            workspace_before, workspace_after,
-            online_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
-        )
-        # stop 可能恰好落在 opencode 自然退出与耗时的 after 指纹之间；不能只
-        # 信任 _stream_run 返回瞬间的 stopped 快照。
+        # stop 可能恰好落在 opencode 自然退出与宿主验收之间；不能只信任
+        # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
-        if sandbox.error and not stopped:
-            _record_sandbox_diagnostic(
-                pre_head, sandbox.error, list(sandbox.paths),
-                sandbox.diagnostic_report, log=log)
-        # 停止批次永不合入 patch，也永不消费队列；但仍完成上面的全仓指纹，
-        # 只豁免当前 session 的精确生命周期文件。即使发现其他变化也保持 canceled，
-        # 让新进程重做该批，同时把异常留痕给巡检。
+        sandbox.stopped = sandbox.stopped or stopped
+        if sandbox.error or stopped:
+            _save_review_salvage(
+                pre_head, sandbox.error or "协作停止留下的部分复盘现场", sandbox,
+                batch_runs=batch_runs,
+                model=entry, source=source, log=log)
+        # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
             if _status is not None:
                 _status.update({"outcome": "canceled", "reason": "整套停止", "canceled": True})
-            stop_escaped = _unexpected_stop_workspace_changes(escaped)
-            if stop_escaped:
-                log("[llm] 协作停止期间检测到非生命周期工作区变化；批次保留且绝不合入："
-                    + ", ".join(stop_escaped[:12]))
             retry_note = "批次下次启动重试" if async_mode else "手动复盘已取消"
             log(f"[llm] 整套停止已取消隔离复盘；真实工作树未改，{retry_note}"
                 f"（复盘前基线 {pre_head[:8]}）")
-            return False
-        if escaped:
-            if _status is not None:
-                _status["reason"] = "真实工作区发生非在线变化"
-            log("[llm] 真实工作区在隔离复盘期间发生非在线变化；拒绝合入且保留现场："
-                + ", ".join(escaped[:12]))
             return False
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
         if timed_out:
@@ -1004,16 +1096,17 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         })
         # 模型退出隔离 clone 后已不可能产生半成品文件；无论成功失败都立即清 flag。
         autogit.set_review_active(False)
-        # 在线对局提交在复盘 active 时只落本地，避免 origin/* ref 变化污染
-        # workspace 指纹。无论本次复盘成功、失败还是合法无改动，窗口关闭后都
-        # 主动补推一次；不再依赖下一次复盘必须成功才能把直播存档送上远端。
+        # 无论本次复盘成功、失败还是合法无改动，都补推一次网络失败时积压的
+        # 本地提交；正常直播 checkpoint 在复盘期间本就会照常 push。
         if not _review_stop_requested():
             autogit.push_pending(log=log, attempts=1)
 
+    discard_verified_snapshot = False
     try:
         # 2) 模型在独立 clone 中运行；这里只接收已全仓扫描、自检通过的精确 patch。
         review_paths = list(sandbox.paths)
         if not review_paths:
+            discard_verified_snapshot = True
             reviewed_through = max(batch_runs) if batch_runs else runs
             know.progression["last_successful_review_run"] = max(
                 int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
@@ -1028,9 +1121,15 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         try:
             review_paths = list(autogit.validate_review_paths(review_paths))
         except ValueError as exc:
+            _save_review_salvage(
+                pre_head, f"Git 安全层拒绝复盘 patch：{exc}", sandbox,
+                batch_runs=batch_runs, model=entry, source=source, log=log)
             log(f"[llm] Git 安全层拒绝复盘 patch：{exc}")
             return False
         if not sandbox.patch:
+            _save_review_salvage(
+                pre_head, "隔离复盘未导出有效 patch", sandbox,
+                batch_runs=batch_runs, model=entry, source=source, log=log)
             log("[llm] 隔离复盘未导出有效 patch，拒绝合入")
             return False
 
@@ -1060,6 +1159,10 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             if _status is not None:
                 _status.update({"outcome": "canceled", "reason": "整套停止", "canceled": True})
             log("[llm] 隔离验证后收到整套停止请求；不进入 patch 提交")
+            sandbox.stopped = True
+            _save_review_salvage(
+                pre_head, "隔离验证后整套停止", sandbox,
+                batch_runs=batch_runs, model=entry, source=source, log=log)
             return False
         result = autogit.commit_patch_result(
             sandbox.patch,
@@ -1067,10 +1170,18 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             review_paths, log=log, prepare=prepare_marker, abort_prepare=abort_marker,
         )
         if not result.created:
-            if (_status is not None and _status.get("outcome") != "canceled"):
+            canceled = bool(_status is not None and _status.get("outcome") == "canceled")
+            sandbox.stopped = sandbox.stopped or canceled or _review_stop_requested()
+            if not canceled and _status is not None:
                 _status["reason"] = result.reason or "复盘 patch 提交失败"
+            _save_review_salvage(
+                pre_head,
+                "patch 合入前整套停止" if canceled else (
+                    result.reason or "复盘 patch 提交失败"),
+                sandbox, batch_runs=batch_runs, model=entry, source=source, log=log)
             log(f"[llm] 复盘 patch 未能安全提交，保留现场供诊断：{result.reason}")
             return False
+        discard_verified_snapshot = True
         reviewed_through = max(batch_runs) if batch_runs else runs
         know.progression["last_successful_review_run"] = max(
             int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
@@ -1082,8 +1193,20 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             _status.update({"outcome": "changed", "reason": "复盘 patch 已提交"})
         log("[llm] 复盘变更已提交，重启大脑以加载…")
         return True
+    except Exception as exc:
+        reason = f"复盘宿主验收/提交异常：{exc}"
+        if _status is not None:
+            _status["reason"] = reason
+        sandbox.stopped = sandbox.stopped or _review_stop_requested()
+        _save_review_salvage(
+            pre_head, reason, sandbox, batch_runs=batch_runs,
+            model=entry, source=source, log=log)
+        log(f"[llm] {reason}；完整隔离现场已保留，真实工作树不做强制回滚")
+        return False
     finally:
         autogit.set_review_active(False)
+        if discard_verified_snapshot:
+            _discard_sandbox_snapshot(sandbox, log=log)
 
 
 def maybe_review(agent, log=print) -> None:
@@ -1391,34 +1514,432 @@ class SandboxReviewResult:
     error: str = ""
     selfcheck_ok: bool = True
     diagnostic_report: str = ""
+    # WIP 与已通过验收、可自动合入的 patch 严格分离。失败现场包含全部
+    # 工作树改动（含越界/ignored），只供人工分析，绝不会被自动应用。
+    wip_patch: bytes = b""
+    wip_paths: tuple[str, ...] = ()
+    allowed_paths: tuple[str, ...] = ()
+    unexpected_paths: tuple[str, ...] = ()
+    snapshot_dir: str = ""
+    snapshot_complete: bool = False
+    retained_sandbox_dir: str = ""
+    salvage_saved: str = ""
 
 
 def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
                  timeout: int = 120) -> subprocess.CompletedProcess:
-    kwargs = {"capture_output": True, "timeout": timeout}
-    if not binary:
-        kwargs.update({"text": True, "encoding": "utf-8", "errors": "replace"})
-    return subprocess.run(["git", "-C", str(repo), *args], **kwargs)
+    return _run_captured_stop_aware(
+        ["git", "-C", str(repo), *args], binary=binary, timeout=timeout)
 
 
-def _record_sandbox_diagnostic(pre_head: str, reason: str, paths: list[str],
-                               report_text: str = "", log=print) -> None:
-    """在真实工作区指纹核验完成后保存隔离复盘失败现场。"""
+def _read_sandbox_text(repo: Path, relative: str, limit: int = 2 * 1024 * 1024) -> str:
+    """读取隔离仓内的小型报告；拒绝 symlink/路径逃逸并限制内存。"""
+    root = repo.resolve()
+    path = repo / relative
+    if path.is_symlink():
+        raise OSError(f"拒绝读取符号链接：{relative}")
+    resolved = path.resolve()
+    if not resolved.is_relative_to(root) or not resolved.is_file():
+        return ""
+    with resolved.open("rb") as handle:
+        payload = handle.read(limit + 1)
+    truncated = len(payload) > limit
+    text = payload[:limit].decode("utf-8", errors="replace")
+    return text + ("\n\n[报告超过大小限制，已截断]\n" if truncated else "")
+
+
+def _copy_snapshot_file(source: Path, destination: Path) -> int:
+    """可停机的大文件复制；停止时原 clone 继续作为完整权威现场保留。"""
+    source = Path(source)
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    total = 0
+    with source.open("rb") as reader, destination.open("wb") as writer:
+        while True:
+            if _review_stop_requested():
+                raise _ReviewStopped()
+            chunk = reader.read(1024 * 1024)
+            if not chunk:
+                break
+            writer.write(chunk)
+            total += len(chunk)
+    shutil.copystat(source, destination, follow_symlinks=False)
+    return total
+
+
+def _capture_sandbox_wip(repo: Path, pre_head: str,
+                         result: SandboxReviewResult, log=print,
+                         prompt_text: str | None = None) -> None:
+    """在 clone 删除前全量快照工作树改动，含越界及 ignored 文件。"""
+    if not repo.is_dir():
+        return
     try:
-        backup_dir = KNOWLEDGE_DIR / "code_backups"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        if report_text:
-            (backup_dir / f"failed_review_{stamp}.md").write_text(
-                report_text, encoding="utf-8")
-        (backup_dir / f"failed_review_{stamp}.json").write_text(json.dumps({
-            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "pre_head": pre_head,
-            "reason": reason,
-            "sandbox_paths": paths,
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        # 不信任模型留下的 index/commit/assume-unchanged 标记。
+        reset = _sandbox_git(repo, ["reset", "--mixed", "--quiet", pre_head])
+        if reset.returncode != 0:
+            log("[llm] 失败复盘 WIP 基线恢复失败；仅保存诊断元数据")
+            return
+        # -f 明确纳入 ignored 文件；.git 元数据仍由 Git 自身排除。宿主写入的
+        # prompt 若未被模型修改则随后退回基线；被修改/删除时也作为越界成果保留。
+        stage_all = _sandbox_git(repo, ["add", "--all", "--force", "--", "."])
+        own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+        prompt_path = repo.joinpath(*PurePosixPath(own_prompt).parts)
+        prompt_deleted = False
+        try:
+            prompt_unchanged = (prompt_text is None or (
+                prompt_path.is_file()
+                and not prompt_path.is_symlink()
+                and prompt_path.read_text(encoding="utf-8") == prompt_text))
+            prompt_deleted = prompt_text is not None and not prompt_path.exists()
+        except OSError:
+            prompt_unchanged = False
+        unstage_prompt = (_sandbox_git(
+            repo, ["reset", "--quiet", pre_head, "--", own_prompt])
+            if prompt_unchanged else subprocess.CompletedProcess([], 0, "", ""))
+        if stage_all.returncode != 0 or unstage_prompt.returncode != 0:
+            log("[llm] 失败复盘全量 WIP 暂存失败；仅保存诊断元数据")
+            return
+        names = _sandbox_git(repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"])
+        if names.returncode != 0:
+            log("[llm] 失败复盘全量 WIP 路径枚举失败；仅保存诊断元数据")
+            return
+        changed = list(dict.fromkeys(
+            item.replace("\\", "/") for item in names.stdout.split("\0") if item))
+        if prompt_deleted and own_prompt not in changed:
+            changed.append(own_prompt)
+        allowed_set = {path.replace("\\", "/").rstrip("/")
+                       for path in REVIEW_MUTABLE_PATHS}
+        allowed = [path for path in changed if path.rstrip("/") in allowed_set]
+        unexpected = [path for path in changed if path.rstrip("/") not in allowed_set]
+        result.wip_paths = tuple(changed)
+        result.allowed_paths = tuple(allowed)
+        result.unexpected_paths = tuple(unexpected)
+        capture_complete = True
+
+        if changed:
+            snapshot = _new_review_temp("sts2-review-snapshot-")
+            result.snapshot_dir = str(snapshot)
+            (snapshot / "files").mkdir()
+            patch_path = snapshot / "wip.patch"
+            patch = _sandbox_git(
+                repo,
+                ["diff", "--cached", "--binary", "--full-index", "--unified=3",
+                 f"--output={patch_path}", pre_head, "--"],
+            )
+            if patch.returncode != 0 or not patch_path.is_file():
+                log("[llm] 失败复盘全量 WIP patch 导出失败；保留文件快照")
+                patch_path.write_bytes(b"")
+                capture_complete = False
+            elif patch_path.stat().st_size <= 4 * 1024 * 1024:
+                # 小补丁兼容调用方诊断/测试；大补丁只驻留磁盘，避免 8 小时
+                # 复盘把二进制成果再完整复制进 Brain 内存。
+                result.wip_patch = patch_path.read_bytes()
+            file_states: list[dict] = []
+            repo_root = repo.resolve()
+            for relative in changed:
+                if _review_stop_requested():
+                    raise _ReviewStopped()
+                pure = PurePosixPath(relative)
+                state = {"path": relative}
+                if (pure.is_absolute() or ".." in pure.parts
+                        or any(part in {"", "."} for part in pure.parts)):
+                    state["kind"] = "unsafe_path_not_copied"
+                    capture_complete = False
+                    file_states.append(state)
+                    continue
+                source = repo.joinpath(*pure.parts)
+                destination = snapshot / "files" / Path(*pure.parts)
+                try:
+                    if source.is_symlink():
+                        state.update({"kind": "symlink", "target": os.readlink(source)})
+                    elif not source.exists():
+                        state["kind"] = "deleted"
+                    elif source.is_file():
+                        resolved_source = source.resolve()
+                        if not resolved_source.is_relative_to(repo_root):
+                            state["kind"] = "external_target_not_followed"
+                            capture_complete = False
+                        else:
+                            copied = _copy_snapshot_file(source, destination)
+                            state.update({"kind": "file", "bytes": copied})
+                    else:
+                        state["kind"] = "special_not_copied"
+                        capture_complete = False
+                except OSError as exc:
+                    state.update({"kind": "copy_error", "error": str(exc)[:400]})
+                    capture_complete = False
+                file_states.append(state)
+            (snapshot / "file_states.json").write_text(
+                json.dumps(file_states, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+        report_rel = "sts2-ascend/knowledge/meta_review.md"
+        if report_rel in changed:
+            try:
+                result.diagnostic_report = _read_sandbox_text(repo, report_rel)
+            except OSError as exc:
+                log(f"[llm] 读取隔离复盘报告异常：{exc}")
+        conclusion_rel = "sts2-ascend/knowledge/review_conclusion.txt"
+        if not result.conclusion and conclusion_rel in changed:
+            try:
+                conclusion = _read_sandbox_text(repo, conclusion_rel, limit=16 * 1024)
+                result.conclusion = " ".join(conclusion.split())[:200]
+            except OSError:
+                pass
+        result.snapshot_complete = capture_complete
+    except _ReviewStopped:
+        result.stopped = True
+        result.snapshot_complete = False
+        raise
+    except Exception as exc:
+        log(f"[llm] 失败复盘 WIP 捕获异常；仍保留空补合包：{exc}")
+
+
+def _discard_sandbox_snapshot(result: SandboxReviewResult, log=print) -> bool:
+    """只清理由本进程 mkdtemp 创建的精确临时快照。"""
+    if not result.snapshot_dir:
+        return True
+    snapshot = Path(result.snapshot_dir)
+    try:
+        resolved = snapshot.resolve()
+        if _is_owned_review_temp(resolved, "sts2-review-snapshot-"):
+            def remove_readonly(function, path, _exc_info) -> None:
+                os.chmod(path, stat.S_IWRITE)
+                function(path)
+
+            shutil.rmtree(resolved, onerror=remove_readonly)
+            result.snapshot_dir = ""
+            return True
+        else:
+            log(f"[llm] 补合快照路径校验失败，保留供人工检查：{resolved}")
+            return False
     except OSError as exc:
-        log(f"[llm] 保存隔离复盘诊断异常：{exc}")
+        log(f"[llm] 补合快照清理失败，已保留：{snapshot}（{exc}）")
+        return False
+
+
+def _discard_retained_sandbox(result: SandboxReviewResult, log=print) -> bool:
+    """清理已成功转存的原始隔离仓；路径必须是本进程的系统临时目录。"""
+    if not result.retained_sandbox_dir:
+        return True
+    sandbox = Path(result.retained_sandbox_dir)
+    try:
+        resolved = sandbox.resolve()
+        if not _is_owned_review_temp(resolved, "sts2-review-sandbox-"):
+            log(f"[llm] 原始隔离仓路径校验失败，保留供人工检查：{resolved}")
+            return False
+
+        def remove_readonly(function, path, _exc_info) -> None:
+            os.chmod(path, stat.S_IWRITE)
+            function(path)
+
+        shutil.rmtree(resolved, onerror=remove_readonly)
+        result.retained_sandbox_dir = ""
+        return True
+    except OSError as exc:
+        log(f"[llm] 原始隔离仓清理失败，已保留：{sandbox}（{exc}）")
+        return False
+
+
+def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
+    if sandbox.timed_out:
+        return "timeout"
+    if sandbox.rc not in (-1, 0):
+        return "process_exit"
+    if sandbox.unexpected_paths or "allowlist" in reason:
+        return "allowlist"
+    if not sandbox.selfcheck_ok or "自检" in reason:
+        return "selfcheck"
+    if sandbox.patch and ("提交" in reason or "冲突" in reason):
+        return "commit_conflict"
+    return "review_failure"
+
+
+def _current_head_for_salvage() -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "rev-parse", "--verify", "HEAD"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _save_review_salvage(
+    pre_head: str, reason: str, sandbox: SandboxReviewResult, *,
+    batch_runs: list[int] | None = None, model: str = "", source: str = "", log=print,
+) -> Path | None:
+    """原子保存全部失败成果供人工补合；含越界文件，但永不自动应用。"""
+    if sandbox.salvage_saved:
+        return Path(sandbox.salvage_saved)
+
+    snapshot = Path(sandbox.snapshot_dir) if sandbox.snapshot_dir else None
+    retained = Path(sandbox.retained_sandbox_dir) if sandbox.retained_sandbox_dir else None
+    deferred_raw = bool(sandbox.stopped and retained is not None)
+    deferred_snapshot = bool(sandbox.stopped and snapshot is not None)
+    snapshot_patch = snapshot / "wip.patch" if snapshot is not None else None
+    patch = sandbox.wip_patch or sandbox.patch
+    if deferred_raw or deferred_snapshot:
+        # Stop 临界区不扫描、hash 或复制任何大文件；指针发布后由新 worker 补齐。
+        patch_bytes = -1
+        patch_sha256 = ""
+    elif snapshot_patch is not None and snapshot_patch.is_file():
+        try:
+            patch_bytes = snapshot_patch.stat().st_size
+            # 大补丁的 hash 由异步恢复/人工分析按需计算；失败保存主路径只做
+            # O(1) stat，避免 stop 恰落在多 GB hash 时卡住直播热切换。
+            patch_sha256 = ""
+        except OSError as exc:
+            log(f"[llm] 补合 patch 摘要计算失败，仍保存全量现场：{exc}")
+            patch_bytes = -1
+            patch_sha256 = ""
+    else:
+        patch_bytes = len(patch)
+        patch_sha256 = hashlib.sha256(patch).hexdigest()
+    all_paths = tuple(sandbox.wip_paths or sandbox.paths)
+    allowed_paths = tuple(sandbox.allowed_paths or (
+        sandbox.paths if sandbox.patch else ()))
+    now_ns = time.time_ns()
+    name = f"{time.strftime('%Y%m%d-%H%M%S')}-{now_ns}-{pre_head[:8] or 'nohead'}"
+    final = SALVAGE_ROOT / name
+    temp = SALVAGE_ROOT / f".{name}.tmp-{os.getpid()}-{threading.get_ident()}"
+    manifest = {
+        "schema": 1,
+        "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "failure_kind": _salvage_kind(reason, sandbox),
+        "reason": reason,
+        "pre_head": pre_head,
+        "current_head": _current_head_for_salvage(),
+        "batch_runs": list(batch_runs or []),
+        "model": model,
+        "source": source,
+        "return_code": sandbox.rc,
+        "timed_out": sandbox.timed_out,
+        "stopped": sandbox.stopped,
+        "selfcheck_ok": sandbox.selfcheck_ok,
+        "snapshot_complete": sandbox.snapshot_complete,
+        "snapshot_included": bool(snapshot is not None and not deferred_snapshot and not deferred_raw),
+        "snapshot_deferred": deferred_snapshot,
+        "raw_sandbox_included": bool(retained is not None and not deferred_raw),
+        "raw_sandbox_deferred": deferred_raw,
+        "all_paths": list(all_paths),
+        "allowed_paths": list(allowed_paths),
+        "rejected_or_unexpected_paths": list(sandbox.unexpected_paths),
+        "patch_bytes": patch_bytes,
+        "patch_sha256": patch_sha256,
+        "auto_apply": False,
+        "inspection_hint": "files/ 与 wip.patch 是全量失败现场；人工检查后再选择性补合，禁止自动应用。",
+    }
+    try:
+        SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
+        temp.mkdir()
+        if deferred_raw or deferred_snapshot:
+            # Stop 临界区不复制任何可能很大的文件；只发布很小的持久指针包。
+            # 新 Brain 启动后在后台把完整快照搬入本包。
+            (temp / "files").mkdir()
+            (temp / "file_states.json").write_text("[]\n", encoding="utf-8")
+        elif snapshot is not None and snapshot.is_dir():
+            shutil.copytree(
+                snapshot, temp, dirs_exist_ok=True,
+                copy_function=_copy_snapshot_file)
+        else:
+            (temp / "files").mkdir()
+            (temp / "file_states.json").write_text("[]\n", encoding="utf-8")
+        if deferred_raw:
+            (temp / "raw_sandbox_pointer.txt").write_text(
+                str(retained) + "\n", encoding="utf-8")
+        if deferred_snapshot:
+            (temp / "snapshot_pointer.txt").write_text(
+                str(snapshot) + "\n", encoding="utf-8")
+        if not deferred_raw and retained is not None and retained.is_dir():
+            # 捕获链自身失败时，宁可保存完整 clone（含 .git 与所有 ignored/越界
+            # 内容）供分析。symlinks=True 只复制链接本身，不跟随到隔离仓外。
+            raw_stage = temp / ".raw_sandbox.incomplete"
+            shutil.copytree(
+                retained, raw_stage, dirs_exist_ok=True,
+                symlinks=True, ignore_dangling_symlinks=True,
+                copy_function=_copy_snapshot_file)
+            raw_stage.replace(temp / "raw_sandbox")
+        # 固定三件套始终存在；snapshot 缺失时仍发布空/已有 patch 供诊断。
+        if not (temp / "wip.patch").is_file():
+            (temp / "wip.patch").write_bytes(patch)
+        (temp / "report.md").write_text(
+            sandbox.diagnostic_report or "", encoding="utf-8")
+        if sandbox.out:
+            (temp / "model_output_tail.txt").write_text(
+                sandbox.out[-256 * 1024:], encoding="utf-8")
+        (temp / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if _review_stop_requested() and not (deferred_raw or deferred_snapshot):
+            raise _ReviewStopped()
+        temp.replace(final)
+        sandbox.salvage_saved = str(final)
+        if not deferred_snapshot:
+            _discard_sandbox_snapshot(sandbox, log=log)
+        if not deferred_raw:
+            _discard_retained_sandbox(sandbox, log=log)
+        log(f"[llm] 失败复盘成果已保存供补合（不会自动应用）：{final}")
+        return final
+    except _ReviewStopped:
+        # stop 可能在普通失败包 copy 途中才到达。绝不删除半包或系统临时源；
+        # 原子发布“已有部分 + 全量源指针”，新 Brain 再异步补齐。
+        sandbox.stopped = True
+        try:
+            SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
+            temp.mkdir(exist_ok=True)
+            (temp / "files").mkdir(exist_ok=True)
+            if not (temp / "file_states.json").is_file():
+                (temp / "file_states.json").write_text("[]\n", encoding="utf-8")
+            if snapshot is not None and snapshot.is_dir():
+                (temp / "snapshot_pointer.txt").write_text(
+                    str(snapshot) + "\n", encoding="utf-8")
+            if retained is not None and retained.is_dir():
+                (temp / "raw_sandbox_pointer.txt").write_text(
+                    str(retained) + "\n", encoding="utf-8")
+            if not (temp / "wip.patch").is_file():
+                (temp / "wip.patch").write_bytes(
+                    patch if len(patch) <= 4 * 1024 * 1024 else b"")
+            manifest.update({
+                "stopped": True,
+                "snapshot_included": False,
+                "snapshot_deferred": bool(snapshot is not None),
+                "raw_sandbox_included": False,
+                "raw_sandbox_deferred": bool(retained is not None),
+                "patch_sha256": "",
+            })
+            (temp / "manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            temp.replace(final)
+            sandbox.salvage_saved = str(final)
+            log(f"[llm] 停止期间已快速发布失败现场指针包：{final}")
+            return final
+        except Exception as exc:
+            log(f"[llm] 停止期间发布失败现场指针包异常；原始现场继续保留：{exc}")
+            if sandbox.snapshot_dir:
+                log(f"[llm] 原始全量快照仍保留在：{sandbox.snapshot_dir}")
+            if sandbox.retained_sandbox_dir:
+                log(f"[llm] 原始隔离仓仍保留在：{sandbox.retained_sandbox_dir}")
+            return None
+    except Exception as exc:
+        log(f"[llm] 保存失败复盘补合包异常；不影响队列重试：{exc}")
+        try:
+            if temp.is_dir() and temp.parent == SALVAGE_ROOT:
+                shutil.rmtree(temp)
+        except OSError:
+            pass
+        if sandbox.snapshot_dir:
+            log(f"[llm] 原始全量快照仍保留在：{sandbox.snapshot_dir}")
+        if sandbox.retained_sandbox_dir:
+            log(f"[llm] 原始隔离仓仍保留在：{sandbox.retained_sandbox_dir}")
+        return None
 
 
 def _run_review_sandbox(
@@ -1426,15 +1947,15 @@ def _run_review_sandbox(
     translator: "OpencodeJsonTranslator", log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
-    sandbox_root = Path(tempfile.mkdtemp(prefix="sts2-review-sandbox-"))
+    sandbox_root = _new_review_temp("sts2-review-sandbox-")
     sandbox_repo = sandbox_root / "repo"
     result = SandboxReviewResult(error="隔离复盘未完成")
     paths: list[str] = []
     try:
-        clone = subprocess.run([
+        clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
             str(REPO_DIR), str(sandbox_repo),
-        ], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+        ], timeout=180)
         if clone.returncode != 0:
             result = SandboxReviewResult(error="创建隔离 clone 失败：" + clone.stderr.strip()[:400])
             return result
@@ -1532,26 +2053,67 @@ def _run_review_sandbox(
             conclusion=conclusion,
         )
         return result
+    except _ReviewStopped:
+        result.stopped = True
+        result.error = "整套停止；隔离复盘原始现场已快速保留"
+        return result
     except Exception as exc:
         result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")
         return result
     finally:
-        if result.error:
-            # 诊断内容先留在返回对象中。真实 code_backups 必须等宿主完成
-            # workspace_after 指纹后再写，否则宿主会把自己的诊断误判为模型逃逸。
+        # stop 可能落在 clone、checkout、自检、patch 导出或 capture 任一步；
+        # 每次离开 try 都重新取样，不能只依赖 _stream_run 的瞬时返回值。
+        result.stopped = result.stopped or _review_stop_requested()
+        if result.stopped and sandbox_root.is_dir():
+            # 直播热停走 O(1) 快速保留：不在 Stop 临界区 reset/add/hash/copy。
+            # 项目内先发布指针包，新 Brain 的 worker 再异步搬运完整 clone。
+            result.retained_sandbox_dir = str(sandbox_root)
+        else:
             try:
-                sandbox_report = sandbox_repo / "sts2-ascend" / "knowledge" / "meta_review.md"
-                if sandbox_report.exists():
-                    result.diagnostic_report = sandbox_report.read_text(
-                        encoding="utf-8", errors="replace")
-            except OSError as exc:
-                log(f"[llm] 读取隔离复盘诊断异常：{exc}")
-        # 只删除本函数刚由 mkdtemp 创建且仍位于系统临时目录下的精确目录。
+                _capture_sandbox_wip(
+                    sandbox_repo, pre_head, result, log=log, prompt_text=prompt)
+            except _ReviewStopped:
+                result.stopped = True
+                result.retained_sandbox_dir = str(sandbox_root)
+            if result.unexpected_paths and not result.error:
+                result.error = (
+                    "复盘 patch 越过 allowlist："
+                    + ", ".join(result.unexpected_paths[:12]))
+        if _review_stop_requested() and sandbox_root.is_dir():
+            result.stopped = True
+            result.retained_sandbox_dir = str(sandbox_root)
+        if (sandbox_repo.is_dir() and not result.snapshot_complete
+                and not result.retained_sandbox_dir):
+            # 全量捕获链自身出错时，绝不删除唯一现场。外层补合发布会把整个
+            # clone（含 .git/ignored/越界内容）复制到项目内 raw_sandbox/。
+            result.error = result.error or "隔离复盘全量现场捕获不完整"
+            result.retained_sandbox_dir = str(sandbox_root)
+        if result.error and sandbox_root.is_dir() and not result.retained_sandbox_dir:
+            # 失败/拒绝时连 sandbox_root/repo 同级的越界文件也必须保留；仅靠
+            # repo 内 Git 枚举无法覆盖模型违反 --dir 写出的 ../ 文件。
+            result.retained_sandbox_dir = str(sandbox_root)
+        # 只删除本函数刚创建、且仍位于项目受管/兼容旧版临时区的精确目录。
         try:
             resolved = sandbox_root.resolve()
-            temp_root = Path(tempfile.gettempdir()).resolve()
-            if resolved.parent == temp_root and resolved.name.startswith("sts2-review-sandbox-"):
-                shutil.rmtree(resolved)
+            if result.retained_sandbox_dir:
+                pass
+            elif _is_owned_review_temp(resolved, "sts2-review-sandbox-"):
+                def remove_readonly(function, path, _exc_info) -> None:
+                    os.chmod(path, stat.S_IWRITE)
+                    function(path)
+
+                cleanup_error: OSError | None = None
+                for attempt in range(5):
+                    try:
+                        shutil.rmtree(resolved, onerror=remove_readonly)
+                        cleanup_error = None
+                        break
+                    except OSError as exc:
+                        cleanup_error = exc
+                        if attempt < 4:
+                            time.sleep(0.05 * (attempt + 1))
+                if cleanup_error is not None:
+                    raise cleanup_error
             else:
                 log(f"[llm] 隔离目录校验失败，保留供人工清理：{resolved}")
         except OSError as exc:
@@ -1662,6 +2224,98 @@ def _kill_orphan_review_processes(log) -> None:
         log(f"[llm] 孤儿复盘进程清理失败（不影响运行）：{exc}")
 
 
+def _recover_deferred_salvages(log=print) -> None:
+    """新 worker 异步补齐 Stop 临界区保留的 raw clone 或完整快照。"""
+    if not SALVAGE_ROOT.is_dir():
+        return
+    for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
+        raw_pointer = package / "raw_sandbox_pointer.txt"
+        snapshot_pointer = package / "snapshot_pointer.txt"
+        if (not package.is_dir()
+                or not (raw_pointer.is_file() or snapshot_pointer.is_file())):
+            continue
+        stage: Path | None = None
+        try:
+            manifest_path = package / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            completed: list[tuple[Path, SandboxReviewResult | None]] = []
+
+            if raw_pointer.is_file():
+                raw = Path(raw_pointer.read_text(encoding="utf-8")[:4096].strip()).resolve()
+                if not _is_owned_review_temp(raw, "sts2-review-sandbox-"):
+                    raise OSError(f"不安全的 raw sandbox 指针：{raw}")
+                target = package / "raw_sandbox"
+                if not target.exists():
+                    if not raw.is_dir():
+                        raise OSError(f"raw sandbox 已不存在：{raw}")
+                    stage = package / ".raw_sandbox.tmp"
+                    shutil.copytree(
+                        raw, stage, dirs_exist_ok=True, symlinks=True,
+                        ignore_dangling_symlinks=True,
+                        copy_function=_copy_snapshot_file)
+                    stage.replace(target)
+                    stage = None
+                manifest.update({
+                    "raw_sandbox_included": True,
+                    "raw_sandbox_deferred": False,
+                    "raw_sandbox_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                })
+                cleanup = (SandboxReviewResult(retained_sandbox_dir=str(raw))
+                           if raw.is_dir() else None)
+                completed.append((raw_pointer, cleanup))
+
+            if snapshot_pointer.is_file():
+                snapshot = Path(
+                    snapshot_pointer.read_text(encoding="utf-8")[:4096].strip()).resolve()
+                if not _is_owned_review_temp(snapshot, "sts2-review-snapshot-"):
+                    raise OSError(f"不安全的 snapshot 指针：{snapshot}")
+                target = package / "captured_snapshot"
+                if not target.exists():
+                    if not snapshot.is_dir():
+                        raise OSError(f"snapshot 已不存在：{snapshot}")
+                    stage = package / ".captured_snapshot.tmp"
+                    shutil.copytree(
+                        snapshot, stage, dirs_exist_ok=True, symlinks=True,
+                        ignore_dangling_symlinks=True,
+                        copy_function=_copy_snapshot_file)
+                    stage.replace(target)
+                    stage = None
+                manifest.update({
+                    "snapshot_included": True,
+                    "snapshot_deferred": False,
+                    "snapshot_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                })
+                cleanup = (SandboxReviewResult(snapshot_dir=str(snapshot))
+                           if snapshot.is_dir() else None)
+                completed.append((snapshot_pointer, cleanup))
+
+            manifest_temp = package / (
+                f".manifest.json.tmp-{os.getpid()}-{threading.get_ident()}")
+            manifest_temp.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            os.replace(manifest_temp, manifest_path)
+            # 先让项目内完整副本与 manifest 落稳，再清系统临时现场；只有清理
+            # 成功才撤指针。若此处崩溃/权限失败，下次启动仍能精确重试而不泄漏。
+            for pointer, item in completed:
+                cleaned = True
+                if item is not None and item.snapshot_dir:
+                    cleaned = _discard_sandbox_snapshot(item, log=log)
+                if item is not None and item.retained_sandbox_dir:
+                    cleaned = _discard_retained_sandbox(item, log=log) and cleaned
+                if cleaned:
+                    pointer.unlink()
+            log(f"[llm] 已异步补全停止复盘的完整失败现场：{package}")
+        except Exception as exc:
+            log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
+            if (stage is not None and stage.is_dir()
+                    and not _review_stop_requested()):
+                try:
+                    shutil.rmtree(stage)
+                except OSError:
+                    pass
+
+
 def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
     """原子消费成功批次或把失败批次放回队尾；返回失败退避秒数。"""
     runs = tuple(item.get("run") for item in batch)
@@ -1711,6 +2365,9 @@ def _worker_loop(agent, log) -> None:
     _kill_orphan_review_processes(log)
     if _review_stop_requested():
         return
+    _recover_deferred_salvages(log=log)
+    if _review_stop_requested():
+        return
     # Startup recovery is itself a durable queue transaction.  If the file is
     # temporarily locked/unreadable, retry in place rather than letting the daemon
     # thread die (or treating the interrupted batch as empty).
@@ -1727,7 +2384,9 @@ def _worker_loop(agent, log) -> None:
                         seen = {p.get("run") for p in requeued}
                         pending = [p for p in q.get("pending", []) if p.get("run") not in seen]
                         # review_queue_max 现在只限制单次提示词批量，不再丢弃持久队列。
-                        q["pending"] = requeued + pending
+                        # 中断批次退到队尾，让停止期间/其后新完成的局先获得复盘，
+                        # 避免 100 局旧批在反复热更新时永久压住新鲜样本。
+                        q["pending"] = pending + requeued
                     q["reviewing"] = None
                     _save_queue_unlocked(q)
             break
@@ -1748,7 +2407,10 @@ def _worker_loop(agent, log) -> None:
                 q = _load_queue_unlocked()
                 pending = q.get("pending", [])
                 if pending and not q.get("reviewing"):
-                    cap = max(1, int(load_llm_config().get("review_queue_max", 10)))
+                    worker_cfg = load_llm_config()
+                    cap = max(1, min(
+                        int(worker_cfg.get("review_queue_max", 100)),
+                        int(worker_cfg.get("max_runs_in_packet", 100))))
                     now = time.time()
                     eligible_indexes = [index for index, item in enumerate(pending)
                                         if float(item.get("retry_after", 0) or 0) <= now][:cap]

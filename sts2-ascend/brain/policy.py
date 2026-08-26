@@ -1382,11 +1382,11 @@ class Policy:
         # 幕数缩放：先验来自一幕场均，二/三幕怪物伤害显著升级，必须放大
         # （第 18 局 F22 Unknown 连环遭遇战一场 -59，恒定先验完全低估）
         acts = pol.get("path_act_scale") or [1.0]
-        act_idx = min(len(acts) - 1, max(0, (floor - 1) // 17))
+        act_no = self._floor_act(floor)
+        act_idx = min(len(acts) - 1, max(0, act_no - 1))
         act_mul = float(acts[act_idx]) if isinstance(acts[act_idx], (int, float)) else 1.0
-        # 分幕序号（与 agent 结算侧 act_no=(floor-1)//17+1 同口径）：
-        # rooms_act 的键后缀，供分幕实证先验查询
-        act_no = act_idx + 1
+        # 分幕序号与 agent 结算侧共用 _floor_act 边界；
+        # rooms_act 的键后缀供分幕实证先验查询。
 
         # 输出饥饿判定（第 136~137 批复盘）：爆发吞吐量低于门槛的卡组处于
         # 「跳过精英也必输 Boss」状态，灰区精英复核据此豁免部分生存线。
@@ -3302,7 +3302,7 @@ class Policy:
 
     @staticmethod
     def _floor_act(floor_no: int | None) -> int:
-        """楼层 → 幕号（1~3）：与 agent 结算侧 act_no=(floor-1)//17+1 同口径。
+        """楼层 → 幕号（1~3），作为路线与结算的唯一边界口径。
 
         一幕 F1-17、二幕 F18-33、三幕 F34+；异常输入按一幕处理（冷启动安全）。
         """
@@ -3310,7 +3310,11 @@ class Policy:
             f = int(floor_no or 1)
         except (TypeError, ValueError):
             return 1
-        return min(3, max(1, (f - 1) // 17 + 1))
+        if f <= 17:
+            return 1
+        if f <= 33:
+            return 2
+        return 3
 
     @staticmethod
     def _floors_to_boss(floor_no: int) -> int:

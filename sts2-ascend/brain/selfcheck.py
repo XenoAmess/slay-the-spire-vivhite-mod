@@ -109,6 +109,10 @@ def main() -> int:
         f"生存权重失效: {d.params}（{d.reason}）"
 
     # 3c) 地图端：二幕（floor>17）掉血先验必须比一幕重（预计进 Boss 血量更低）
+    act_boundaries = [pol._floor_act(floor_no) for floor_no in (17, 18, 33, 34)]
+    assert act_boundaries == [1, 2, 2, 3], \
+        f"分幕边界失效: F17/F18/F33/F34 -> {act_boundaries}"
+
     def map_reason(floor_no):
         st = {"screen": "MAP", "available_actions": ["choose_map_node"],
               "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0, "node_type": "Monster"}], "nodes": []},
