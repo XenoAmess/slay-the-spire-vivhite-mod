@@ -214,8 +214,10 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   等待中的碎碎念，但不会强行打断已经开始的那一句
 - GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；禁用 BF16、
   FlashAttention、CUDA 自定义 kernel 和 torch.compile
-- 固定参考音色 `tts/reference_voice_15s.wav` 首次生成条件缓存；只在参考阶段使用的 Wav2Vec/CAMPPlus
-  随后从显卡卸载，不参与每句合成
+- 固定参考音色 `tts/reference_voice_15s.wav` 由 `scripts/prepare_reference_voice.py` 从原始 WAV 的前 15 秒生成：
+  只把超过 400ms 的低能量静段缩到 200ms，保留自然停顿并在替换前备份 WAV 和条件缓存；可先运行
+  `py -3 scripts/prepare_reference_voice.py --dry-run` 预览，再去掉 `--dry-run` 原子更新；首次生成条件缓存后，
+  只在参考阶段使用的 Wav2Vec/CAMPPlus 随后从显卡卸载，不参与每句合成
 - Edge 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
 - GPU owner 和 Edge 朗读器各有 session-scoped 单实例锁；CUDA 不可用时只跳过白绮结论/碎碎念，
   绝不静默回退 CPU 或加载第二份模型
