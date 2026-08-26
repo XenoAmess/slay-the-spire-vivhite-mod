@@ -2922,3 +2922,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：高速失血爆毙（4回合掉血76，每回合19≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕
 - 生涯战绩：0/666 胜，当前目标进阶 0
+
+## 第 667 局复盘（2026-08-27 04:08）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：TAUNT, RAGE, SWORD_BOOMERANG, THRASH, SWORD_BOOMERANG, HOWL_FROM_BEYOND
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血0; F4 Monster战 掉血0; F7 Monster战 掉血46; F8 Elite战 掉血34（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)，FIEND_FIRE(24分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/667 胜，当前目标进阶 0
