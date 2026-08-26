@@ -2460,3 +2460,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/624 胜，当前目标进阶 0
+
+## 第 625 局复盘（2026-08-26 19:17）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：RUPTURE, SHRUG_IT_OFF, SHRUG_IT_OFF, HOWL_FROM_BEYOND, BLUDGEON, FIGHT_ME, RUPTURE, STOMP, HEADBUTT, EVIL_EYE, SWORD_BOOMERANG, UPPERCUT
+- 本局遗物：CENTENNIAL_PUZZLE, 皇家枕头
+- 战斗记录：F7 Monster战 掉血9; F8 Monster战 掉血10; F13 Monster战 掉血4; F14 Monster战 掉血15; F15 Elite战 掉血20; F17 Boss战 掉血78（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（98%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/625 胜，当前目标进阶 0
