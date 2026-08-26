@@ -2611,6 +2611,42 @@
     "option_index": 0
    },
    "reason": "事件【特兹卡塔拉】：选择「美味饼干」（经验价值 1.6）；美味饼干=1.6(n=17) / 玩具盒=0.0(n=6) / 故事书=-2.0(n=1)"
+  },
+  {
+   "t": "19:43:22",
+   "screen": "CARD_SELECTION",
+   "floor": 18,
+   "hp": 91,
+   "gold": 173,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 13
+   },
+   "reason": "升级卡牌：【岿然不动】"
+  },
+  {
+   "t": "19:43:23",
+   "screen": "EVENT",
+   "floor": 18,
+   "hp": 91,
+   "gold": 173,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "19:43:25",
+   "screen": "MAP",
+   "floor": 18,
+   "hp": 91,
+   "gold": 173,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,1)（路径分 -54.20，预计进 Boss 血量 0%；输出饥饿战损上浮×1.18（缺口51%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(1,1)=-54.20|输出饥饿战损上浮×1.18（缺口51%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,3)=-55.63|输出饥饿战损上浮×1.18（缺口51%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,5)=-55.28|输出饥饿战损上浮×1.18（缺口51%）；路径中段含未达标精英，投影罚分；投影中途死亡"
   }
  ],
  "combat_notes": [
@@ -2746,6 +2782,10 @@
   [
    "map_node",
    "Ancient"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ]
 }
