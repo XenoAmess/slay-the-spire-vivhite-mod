@@ -1734,3 +1734,36 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/558 胜，当前目标进阶 0
+
+## 第 559 局复盘（2026-08-26 11:09）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：PANIC_BUTTON, MOLTEN_FIST, CINDER, RUPTURE, CINDER, JUGGLING, JUGGERNAUT, THUNDERCLAP, PANACHE, TAUNT, UNMOVABLE, CINDER, FLAME_BARRIER, UNMOVABLE
+- 本局遗物：ODDLY_SMOOTH_STONE
+- 战斗记录：F5 Monster战 掉血21; F7 Monster战 掉血9; F8 Monster战 掉血0; F13 Unknown战 掉血0; F14 Monster战 掉血6; F17 Boss战 掉血65（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，FIEND_FIRE(24分/14局)，FEED(24分/35局)，CONFLAGRATION(24分/38局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/559 胜，当前目标进阶 0
+
+## 第 560 局复盘（2026-08-26 11:22）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：DARK_SHACKLES, CINDER, BLUDGEON, CINDER, FINESSE, CRUELTY, CONFLAGRATION, BATTLE_TRANCE, PILLAGE, OFFERING, HEADBUTT, STONE_ARMOR, TWIN_STRIKE, BLUDGEON, HAND_OF_GREED, RUPTURE
+- 本局遗物：PLANISPHERE, 臂甲, VAJRA
+- 战斗记录：F20 Monster战 掉血0; F22 Monster战 掉血18; F23 Monster战 掉血7; F28 Monster战 掉血9; F30 Monster战 掉血30; F33 Boss战 掉血49（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，BOLAS(25分/3局)，OFFERING(25分/14局)，CONFLAGRATION(24分/39局)，FIEND_FIRE(24分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.45 → 0.48（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/560 胜，当前目标进阶 0
+
+## 第 561 局复盘（2026-08-26 11:36）
+- 结果：💀 失败｜进阶 0｜到达层数 39｜当局评分 39
+- 死因：敌人组合 FABRICATOR
+- 本局拿牌：CINDER, BREAKTHROUGH, TAUNT, THUNDERCLAP, BLUDGEON, TRUE_GRIT, CINDER, HEADBUTT, THRUMMING_HATCHET, VICIOUS, SWORD_BOOMERANG, DISMANTLE, TRUE_GRIT, FIEND_FIRE, MOLTEN_FIST, STONE_ARMOR, RUPTURE, DRUM_OF_BATTLE, SHRUG_IT_OFF, MANGLE, RAMPAGE, MASTER_OF_STRATEGY, PACTS_END, UNRELENTING
+- 本局遗物：ODDLY_SMOOTH_STONE, RAZOR_TOOTH, 皇家枕头
+- 战斗记录：F33 Boss战 掉血54; F35 Monster战 掉血1; F36 Monster战 掉血5; F37 Monster战 掉血15; F38 Monster战 掉血26; F39 Monster战 掉血33（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/15局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.48 → 0.51（行至 F39（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/561 胜，当前目标进阶 0
