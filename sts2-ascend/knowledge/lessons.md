@@ -1965,3 +1965,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.54 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/579 胜，当前目标进阶 0
+
+## 第 580 局复盘（2026-08-26 13:56）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：IRON_WAVE, HOWL_FROM_BEYOND, PANIC_BUTTON, SHRUG_IT_OFF, DISMANTLE, CINDER, RUPTURE
+- 本局遗物：PANTOGRAPH
+- 战斗记录：F5 Monster战 掉血2; F6 Monster战 掉血15; F11 Monster战 掉血10; F13 Monster战 掉血13; F14 Monster战 掉血0; F15 Elite战 掉血72（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/20局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：精英战阵亡但满血线进场（90%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/580 胜，当前目标进阶 0
