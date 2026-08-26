@@ -398,7 +398,7 @@ try {
         } else {
             Write-Warning "Runner is active but readiness timed out (brain=$brainReady, api=$apiPort). It will keep self-healing in the background."
         }
-        Write-Host "Quipper starts from brain when its voice model is available; review viewer/speaker start on demand."
+        Write-Host "ASCEND-VISION starts with brain and is supervised for self-healing; Quipper starts when its voice model is available; review OpenCode/speaker remain on demand."
         Write-Host "Stop the complete stack with: powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1"
     } finally {
         if ($null -eq $previousEnv.Session) { Remove-Item Env:STS2_ASCEND_SESSION_ID -ErrorAction SilentlyContinue }

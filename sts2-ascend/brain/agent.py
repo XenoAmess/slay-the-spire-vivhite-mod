@@ -21,10 +21,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from client import ApiError, ConnectionDown, Sts2Client
+from decision_trace import ensure_decision_trace
 from knowledge import Knowledge
 from lifecycle import pid_file, request_stop, stop_requested, wait_for_stop
-from policy import Policy
+from live_dashboard import LiveDashboardPublisher
+from policy import Decision, Policy
 from reflect import finalize_run
+
+try:
+    from dashboard_launcher import start_dashboard_supervisor
+except Exception:  # dashboard is optional and must never block gameplay startup
+    start_dashboard_supervisor = None
 
 try:
     import llm_review
@@ -68,6 +75,7 @@ DEFAULT_CONFIG = {
     "watchdog_abandon_after": 90,    # identical states before abandoning the run
     "max_runs": 0,                   # 0 = play forever
     "seed": None,                    # fixed rng seed for reproducible exploration
+    "viewer": {"enabled": True, "supervise_interval_sec": 2.0},
 }
 
 
@@ -184,6 +192,66 @@ class Agent:
         self._boot_head = ""  # run() 启动时固定；测试构造 Agent 不访问 Git
         self._ambiguous_action = None  # response-lost POST awaiting next-state reconciliation
         self._api_race_retry = None  # repeated refresh races, diagnostic only
+        self.live_dashboard: LiveDashboardPublisher | None = None
+        self.dashboard_supervisor = None
+
+    # ---------------- ASCEND-VISION live telemetry ----------------
+
+    def _start_live_dashboard(self) -> None:
+        """Start telemetry and the idempotent viewer supervisor, fail-open."""
+        try:
+            self.live_dashboard = LiveDashboardPublisher()
+            self.live_dashboard.connection("starting", "等待游戏 API")
+        except Exception as exc:
+            self.live_dashboard = None
+            log(f"[agent] 实时驾驶舱遥测启动失败（不影响游玩）：{exc}")
+        if start_dashboard_supervisor is not None:
+            try:
+                self.dashboard_supervisor = start_dashboard_supervisor(self.cfg, log)
+            except Exception as exc:
+                log(f"[agent] ASCEND-VISION 监督器启动失败（不影响游玩）：{exc}")
+
+    def _dashboard_observe(self, state: dict) -> None:
+        publisher = self.live_dashboard
+        if publisher is None:
+            return
+        try:
+            publisher.observe(state, run_number=self.ctx.run_number,
+                              connection="connected")
+        except Exception:
+            pass
+
+    def _dashboard_connection(self, status: str, message: str = "") -> None:
+        publisher = self.live_dashboard
+        if publisher is None:
+            return
+        try:
+            publisher.connection(status, message)
+        except Exception:
+            pass
+
+    def _dashboard_propose(self, state: dict, decision, *, watchdog: bool = False) -> None:
+        publisher = self.live_dashboard
+        if publisher is None:
+            return
+        try:
+            ensure_decision_trace(state, decision)
+            decision_id = publisher.propose(
+                state, decision, run_number=self.ctx.run_number, watchdog=watchdog)
+            setattr(decision, "_dashboard_decision_id", decision_id)
+        except Exception:
+            pass
+
+    def _dashboard_outcome(self, status: str, message: str = "", decision=None) -> None:
+        publisher = self.live_dashboard
+        if publisher is None:
+            return
+        try:
+            publisher.outcome(
+                status, message,
+                decision_id=getattr(decision, "_dashboard_decision_id", None))
+        except Exception:
+            pass
 
     # ---------------- quipper（白绮碎碎念） ----------------
 
@@ -725,7 +793,8 @@ class Agent:
                 bool(event.get("is_finished")), options)
 
     def _remember_ambiguous_action(self, state: dict, decision,
-                                   *, accepted: bool = False) -> None:
+                                   *, accepted: bool = False,
+                                   message: str | None = None) -> None:
         """Retain an unacknowledged action until the next successful state GET."""
         try:
             before = copy.deepcopy(state)
@@ -737,6 +806,11 @@ class Agent:
             "polls": 0,
             "accepted": bool(accepted),
         }
+        self._dashboard_outcome(
+            "pending" if accepted else "uncertain",
+            message or ("服务端已受理，等待状态确认" if accepted
+                        else "回执不确定，等待状态对账"),
+            decision)
         try:
             self.policy.note_action_uncertain(decision.action, decision.tags,
                                               before, decision.params)
@@ -1056,6 +1130,8 @@ class Agent:
             max_polls = 12 if pending.get("accepted") else 3
             if polls < max_polls:
                 pending["polls"] = polls
+                self._dashboard_outcome(
+                    "reconciling", f"等待动作特定效果（{polls}/{max_polls}）", decision)
                 log(f"[agent] 动作 {decision.action} 丢失回执；尚无动作特定效果，"
                     f"等待新状态确认（{polls}/{max_polls}）")
                 return "wait"
@@ -1069,16 +1145,21 @@ class Agent:
             prefix = "服务端已受理但" if pending.get("accepted") else ""
             log(f"[agent] 动作 {decision.action} {prefix}连续状态未见效果，"
                 "释放为精确目标冷却后的重新评估")
+            self._dashboard_outcome(
+                "retrying", f"{prefix}连续状态未见效果，释放后重新评估", decision)
             return "retry"
         self._ambiguous_action = None
         try:
             self._commit_successful_action(before, decision)
             log(f"[agent] 动作 {decision.action} 丢失回执；已由下一状态确认成功并补交事务账")
+            self._dashboard_outcome("applied", "下一状态已确认动作生效", decision)
             return "applied"
         except Exception as exc:
             # The game-side effect is already proven.  Never turn bookkeeping failure
             # into a duplicate action; preserve the live state and continue.
             log(f"[agent] 动作 {decision.action} 已由状态确认成功，但补交本地事务账失败：{exc}")
+            self._dashboard_outcome(
+                "applied", f"动作已生效；本地事务账失败：{exc}", decision)
             return "applied"
 
     @staticmethod
@@ -1725,15 +1806,18 @@ class Agent:
     def run(self) -> None:
         log("[agent] sts2-ascend 自主学习智能体启动")
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
+        self._start_live_dashboard()
         try:
             self._boot_head = autogit.head() if autogit is not None else ""
         except Exception:
             self._boot_head = ""
         self._launch_quipper()
         if not self.ensure_game():
+            self._dashboard_connection("stopped", "启动阶段收到停止请求")
             log("[agent] 启动阶段收到停止请求")
             return
         health = self.client.health()
+        self._dashboard_connection("connected", f"mod v{health.get('mod_version')}")
         log(f"[agent] 已连接 mod v{health.get('mod_version')}（游戏 {health.get('game_version')}）")
         g = self.know.stats["global"]
         log(f"[agent] 生涯战绩：{g['wins']}/{g['runs']} 胜｜当前目标进阶 {self.know.progression['current_ascension']}")
@@ -1750,6 +1834,7 @@ class Agent:
             try:
                 state = self.client.state()
             except ConnectionDown:
+                self._dashboard_connection("disconnected", "与游戏失去连接")
                 log("[agent] 与游戏失去连接，等待恢复…")
                 if wait_for_stop(5):
                     return
@@ -1757,13 +1842,17 @@ class Agent:
                     if not self.ensure_game():
                         return
                 except Exception as exc:
+                    self._dashboard_connection("disconnected", f"重连失败：{exc}")
                     log(f"[agent] 重连失败：{exc}")
                 continue
             except Exception as exc:
+                self._dashboard_connection("degraded", f"状态读取异常：{exc}")
                 log(f"[agent] 状态读取异常：{exc}")
                 if wait_for_stop(2):
                     return
                 continue
+
+            self._dashboard_observe(state)
 
             # 策略热同步（第 123~124 局复盘）：长驻进程此前只在启动时执行
             # setdefault——复盘会话给 DEFAULT_POLICY 新增的键（如 122 批的
@@ -1812,9 +1901,10 @@ class Agent:
 
             forced = self._watchdog(state)
             if forced:
-                decision = type("D", (), {"action": forced, "params": {}, "reason": "看门狗介入", "tags": [], "wait": 1.0})()
+                decision = Decision(forced, {}, "看门狗介入", wait=1.0)
             else:
                 decision = self.policy.decide(state, self.ctx)
+            self._dashboard_propose(state, decision, watchdog=bool(forced))
 
             # 战斗回合超限（≥100）→ 大脑自主启动 AI 死循环分析（异步，不阻塞游玩）
             if getattr(self.ctx, "stall_analysis_needed", False):
@@ -1861,9 +1951,13 @@ class Agent:
                         try:
                             self._commit_successful_action(state, decision)
                             self._api_race_retry = None
+                            self._dashboard_outcome("applied", f"服务端回执：{status}", decision)
                         except Exception as exc:
+                            self._dashboard_outcome(
+                                "applied", f"动作已生效；本地记账失败：{exc}", decision)
                             log(f"  ↳ 动作 {decision.action} 已成功，但本地记账失败：{exc}")
                 except ConnectionDown:
+                    self._dashboard_connection("disconnected", "动作执行时断线")
                     log("[agent] 动作执行时断线")
                     self._remember_ambiguous_action(state, decision)
                     if wait_for_stop(3):
@@ -1871,8 +1965,16 @@ class Agent:
                 except ApiError as exc:
                     log(f"  ↳ 动作 {decision.action} 被 API 拒绝：{exc}")
                     if self._defer_api_error_once(state, decision, exc):
+                        self._dashboard_outcome("retrying", f"状态刷新竞争：{exc}", decision)
                         log("  ↳ 判定为状态刷新竞争；刷新状态后重试一次，不拉黑动作/卡牌")
                     else:
+                        # status=0 is a definitive local request construction
+                        # failure (for example a non-serialisable payload), not a
+                        # rejection returned by the game API.  Keep the two terminal
+                        # states distinct for the live dashboard.
+                        terminal = "failed" if int(getattr(exc, "status", 0) or 0) == 0 \
+                            else "rejected"
+                        self._dashboard_outcome(terminal, str(exc), decision)
                         self.policy.note_action_failed(decision.action, decision.tags)
                         self._note_signature_failure(decision.action, exc)
                     if wait_for_stop(self.cfg["action_settle"]):
@@ -1885,7 +1987,9 @@ class Agent:
                     # reconciliation over poisoning permanent tried state.  Keep
                     # the legacy TypeError signature fuse so stale hot code still
                     # restarts/blacklists after three deterministic occurrences.
-                    self._remember_ambiguous_action(state, decision)
+                    self._remember_ambiguous_action(
+                        state, decision,
+                        message=f"执行异常，等待语义对账：{exc}")
                     self._note_signature_failure(decision.action, exc)
                     if wait_for_stop(self.cfg["action_settle"]):
                         return
@@ -1920,6 +2024,8 @@ def main() -> None:
                 llm_review.shutdown_worker(log=log, timeout=30)
             if stop_requested():
                 log("[agent] 全栈停止：保存知识库并退出")
+            if agent.live_dashboard is not None:
+                agent.live_dashboard.close(timeout=1.0)
             agent.know.save()
 
 

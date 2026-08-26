@@ -226,7 +226,7 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
     visited_rooms = [t[1] for t in attribution if t[0] == "map_node"]
 
     know.commit_run_end(outcome, victory, picked_cards, picked_relics, visited_rooms,
-                        died_to_enemy, died_to_event)
+                        died_to_enemy, died_to_event, raw_floor=final_floor)
 
     # ---------------- policy evolution ----------------
     changes: list[str] = []

@@ -58,7 +58,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
 
-`Stack ready` 不表示播报员此刻一定存在：碎碎念由 brain 在语音环境可用时启动；opencode、悬浮窗与复盘 speaker 只在复盘时按需启动。
+`Stack ready` 表示 brain 与游戏 API 已就绪。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
 
 ## 它如何"进化"
 
@@ -180,22 +180,49 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 把指定局追加到队尾；已在 pending/reviewing 的局会自动去重，不会抢占最新直播证据。
 配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。
 
-## 复盘直播悬浮窗（ASCEND-VISION）
+## ASCEND-VISION 直播驾驶舱
 
-每次复盘启动时，大脑会自动拉起一个**赛博青蓝主题的直播悬浮窗**（`brain/review_viewer.py`），
-把 opencode 复盘的推理过程实时投到屏幕上：
+赛博青蓝悬浮窗（`brain/review_viewer.py`）现在是常驻直播驾驶舱，而不再依赖复盘任务才出现。
+brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳并在异常退出后自动恢复；brain 热重启、
+复盘开始或结束都不会改变驾驶舱生命周期。窗口继续无边框半透明置顶、点击穿透且不抢游戏焦点。
 
-- 复盘 stdout 由大脑流式写入 `knowledge/review_live.stream`（`[LIVE-START]/[LIVE-END]` 哨兵），
-  viewer 进程 tail 该文件渲染——viewer 的死活绝不影响复盘本身
-- 无边框半透明置顶、**点击穿透**（不挡游戏操作），停靠屏幕右上角
-- 特效：青色数字雨背景（新消息脉冲加速）、打字机逐字输出、工具调用品红高亮、
-  `SELFCHECK OK` 金色闪光、结束定格 30 秒后淡出
-- 手动用法：
-  - `py brain/review_viewer.py --demo` 演示全部特效（不依赖游戏/复盘）
-  - `py brain/review_viewer.py --attach-current` 只读轮询 `opencode.db`，回放最近一场复盘
-    （含 💭 思维链，已结束的会话停留 10 分钟）
-  - `--interactive` 可拖拽/ESC 关闭（关闭点击穿透）
-- 开关：`config.json` 的 `llm.viewer_enabled`（默认 true）
+驾驶舱固定提供三类信息：
+
+- **楼层统计**：历史平均、近 20 局平均、历史最高、近 20 局最高，以及最近 40 个有效完结局的
+  原始楼层线和 5 局滚动均线。当前局独立显示，不混入历史均值；归档 catalog 与活动 run 按
+  `run_id` 去重，活动证据优先，进行中局、零决策幻影局和坏 JSON 不会被伪装成 0 楼。
+- **机械决策链**：以 `SCAN → GATE → RANK → LOCK → ACK` 展示当前观察、规则闸门、前三候选、
+  最终动作、说明文本及 `proposed/pending/reconciling/applied/retrying/rejected/failed` 等执行结果。
+  规则直达型动作只画真实经过的线性节点，不编造候选、概率或“思维链”。
+- **实时复盘流**：`knowledge/review_live.stream` 在同一窗口提供多行流式复盘正文；复盘 OpenCode 和
+  speaker 仍按需启动，复盘流中断不会影响实时统计、决策图或游戏控制，也不会进入决策遥测。
+
+窗口采用状态驱动的稳定布局，而不是按秒把整页切回另一种模式：
+
+- 对局中以决策链为主，同时保留多行实时复盘流；
+- `GAME_OVER` 时以楼层趋势为主，同时继续显示复盘流；
+- 主菜单、等待状态或没有新鲜决策时切换为完整 REVIEW 视图；
+- `--interactive` 下可手动固定 LIVE、TREND 或 REVIEW，自动模式不会覆盖手动选择。
+
+真实楼层与学习分严格隔离：`stats.json` 的 `floor_sum_raw` / `best_floor_raw` 用于驾驶舱；原有
+`floors_total` / `best_floor` 继续保留“真实楼层 + 胜利 50 分”的学习评分，既有策略估值语义不变。
+旧库会用胜场数、进阶最佳层及逐局/归档证据迁移，不会把胜利奖励显示成楼层。
+
+实时决策遥测是**纯本地、确定性的 Python 标准库代码**，只复用 Policy 本次已经算出的状态、闸门、
+候选分数与结果，不重新决策或再次随机探索。发布器通过有界队列异步原子替换
+`.runtime/live_dashboard.<SESSION_ID>.json`；这条路径不调用 LLM、OpenCode、Minimax、OpenRouter 或
+任何网络服务，token 消耗为 **0**。大模型只属于独立异步复盘链，复盘链本身仍可能消耗模型 token；
+“遥测零 token”不代表实时复盘免费。
+
+手动与配置用法：
+
+- `py brain/review_viewer.py --demo`：用模拟统计与决策演示驾驶舱。
+- `py brain/review_viewer.py --attach-current`：只读轮询 `opencode.db`，回放最近一场复盘。
+- `--interactive`：允许拖拽/ESC 关闭、手动选择 LIVE/TREND/REVIEW，并关闭点击穿透。
+- 首选开关为 `config.json` 的 `viewer.enabled`；旧 `llm.viewer_enabled` 继续兼容。
+
+该升级不改变直播控制边界：开播仍启动完整 sts2-ascend 栈、将杀戮尖塔2置顶后通过本地直播姬开播；
+下播仍只让哔哩哔哩直播姬下播，不停止驾驶舱、智能体、语音服务或游戏。
 
 ## 语音朗读（ASCEND-VOICE）
 
@@ -239,9 +266,11 @@ Start-Agent.ps1（session + PID 身份记录，默认后台）
   ├─ SlayTheSpire2.exe（Vulkan）
   └─ runner.py（拉起大脑 / 退出码42重启 / 崩溃自动回滚）
         └─ py -m brain（决策主循环）
+              ├─ 驾驶舱监督器 → review_viewer.py（常驻、自愈、点击穿透）
+              ├─ 本地决策遥测 → .runtime/live_dashboard.<SESSION_ID>.json（原子快照）
               ├─ quipper.py（唯一 IndexTTS GPU owner + 白绮碎碎念）
               ├─ 每局结束 → review_queue.json
-              └─ 复盘线程 → opencode → viewer / edge_speaker（Edge 正文 + 提交白绮 GPU 结论）
+              └─ 复盘线程 → opencode / edge_speaker（按需；多行复盘流进入同一驾驶舱）
 
 Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏关窗
 ```

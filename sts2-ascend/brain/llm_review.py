@@ -45,6 +45,11 @@ from pathlib import Path, PurePosixPath
 
 from lifecycle import stop_requested
 
+try:
+    from dashboard_launcher import ensure_dashboard_viewer
+except Exception:  # optional broadcast UI must never disable review
+    ensure_dashboard_viewer = None
+
 BASE_DIR = Path(__file__).resolve().parent.parent          # sts2-ascend/
 REPO_DIR = BASE_DIR.parent                                  # git 仓库根（opencode 在此获得完整上下文）
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -130,9 +135,12 @@ def _wait_review_stop(seconds: float) -> bool:
 
 def load_llm_config() -> dict:
     cfg = {}
+    viewer_cfg = {}
     if CONFIG_PATH.exists():
         try:
-            cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8")).get("llm", {})
+            root_cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            cfg = root_cfg.get("llm", {})
+            viewer_cfg = root_cfg.get("viewer", {})
         except json.JSONDecodeError:
             pass
     merged = {
@@ -165,6 +173,10 @@ def load_llm_config() -> dict:
         "review_queue_max": 100,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
+    # ``viewer.enabled`` is canonical; the legacy LLM-local switch remains a
+    # fallback for existing installations.
+    if isinstance(viewer_cfg, dict) and viewer_cfg.get("enabled") is not None:
+        merged["viewer_enabled"] = bool(viewer_cfg["enabled"])
     return merged
 
 
@@ -554,24 +566,14 @@ def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, 
 # ---------------------------------------------------------------------------
 
 def _launch_viewer(cfg: dict, log) -> None:
-    """拉起直播悬浮窗（独立进程，它的死活绝不影响复盘）。"""
-    if _review_stop_requested() or not cfg.get("viewer_enabled", True) or not VIEWER_PATH.exists():
+    """确认全栈常驻悬浮窗存在；不再为每次复盘重复创建进程。"""
+    if (_review_stop_requested() or not cfg.get("viewer_enabled", True)
+            or ensure_dashboard_viewer is None):
         return
     try:
-        creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                         | getattr(subprocess, "DETACHED_PROCESS", 0)
-                         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
-        # stderr 落盘：viewer 崩溃 traceback 必须可尸检（此前 DEVNULL 吞掉，
-        # 悬浮窗反复消失却无迹可寻）
-        err_f = open(KNOWLEDGE_DIR / "viewer_err.log", "ab")
-        out_f = open(KNOWLEDGE_DIR / "viewer_out.log", "ab")
-        subprocess.Popen([sys.executable, "-u", str(VIEWER_PATH)],
-                         cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
-                         stdout=out_f, stderr=err_f,
-                         creationflags=creationflags, close_fds=False)
-        log("[llm] 直播悬浮窗已拉起")
+        ensure_dashboard_viewer({"viewer_enabled": True}, log)
     except Exception as exc:
-        log(f"[llm] 直播悬浮窗拉起失败（不影响复盘）：{exc}")
+        log(f"[llm] 直播悬浮窗检查失败（不影响复盘）：{exc}")
 
 
 def _launch_speaker(cfg: dict, log) -> None:

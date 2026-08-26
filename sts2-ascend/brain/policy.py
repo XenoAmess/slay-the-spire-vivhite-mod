@@ -15,6 +15,7 @@ import re
 import time
 from dataclasses import dataclass, field
 
+from decision_trace import DecisionTraceBuilder, ensure_decision_trace
 from knowledge import Knowledge, clamp
 from window_layers import reassert_viewer_topmost
 
@@ -30,6 +31,7 @@ class Decision:
     reason: str = ""
     tags: list = field(default_factory=list)
     wait: float = 0.5                  # seconds to wait after executing
+    trace: dict | None = None          # display-only; never feeds policy or learning
 
 
 # ---------------------------------------------------------------------------
@@ -795,6 +797,32 @@ class Policy:
     # top-level router
     # ------------------------------------------------------------------
 
+    def _trace_gate(self, label, status: str, value="") -> None:
+        builder = getattr(self, "_active_trace_builder", None)
+        if builder is not None:
+            try:
+                builder.gate(label, status, value)
+            except Exception:
+                pass
+
+    def _trace_candidate(self, label, score, *, index=None, action="",
+                         status="eligible", why="", target=None) -> None:
+        builder = getattr(self, "_active_trace_builder", None)
+        if builder is not None:
+            try:
+                builder.candidate(label, score, index=index, action=action,
+                                  status=status, why=why, target=target)
+            except Exception:
+                pass
+
+    def _trace_note(self, value) -> None:
+        builder = getattr(self, "_active_trace_builder", None)
+        if builder is not None:
+            try:
+                builder.note(value)
+            except Exception:
+                pass
+
     def decide(self, state: dict, ctx) -> Decision:
         screen = state.get("screen", "UNKNOWN")
         run_key = (state.get("run_id") or (state.get("run") or {}).get("run_id")
@@ -889,11 +917,19 @@ class Policy:
             "CAPSTONE": self._capstone,
         }.get(screen)
         if handler is None:
-            return self._unknown(state, ctx)
+            return ensure_decision_trace(state, self._unknown(state, ctx))
+        trace_builder = DecisionTraceBuilder(state)
+        self._active_trace_builder = trace_builder
         try:
             decision = handler(state, ctx)
             if decision.action == "choose_rest_option":
                 decision = self._prepare_rest_decision(state, decision)
+                rest_tag = next((tag[1] for tag in (decision.tags or [])
+                                 if isinstance(tag, (tuple, list)) and len(tag) > 1
+                                 and tag[0] == "rest"), "unknown")
+                self._trace_gate(
+                    "LOCK 篝火规则命中", "pass",
+                    f"{rest_tag}｜{decision.reason}")
             self._decide_errors = 0
             if decision.action and decision.action in self._broken_actions:
                 actions = state.get("available_actions", [])
@@ -901,11 +937,18 @@ class Policy:
                              "skip_reward_cards", "confirm_selection", "confirm_bundle",
                              "dismiss_modal", "open_chest", "close_shop_inventory"):
                     if safe in actions:
-                        return Decision(safe, {},
-                                        f"动作 {decision.action} 本进程签名不匹配已拉黑，改用 {safe}", wait=1.0)
-                return Decision(None, {},
-                                f"动作 {decision.action} 本进程签名不匹配已拉黑，无安全替代，等待", wait=1.5)
-            return decision
+                        return ensure_decision_trace(
+                            state, Decision(safe, {},
+                                            f"动作 {decision.action} 本进程签名不匹配已拉黑，改用 {safe}", wait=1.0))
+                return ensure_decision_trace(
+                    state, Decision(None, {},
+                                    f"动作 {decision.action} 本进程签名不匹配已拉黑，无安全替代，等待", wait=1.5))
+            try:
+                decision.trace = trace_builder.finish(decision)
+            except Exception:
+                # Display-only instrumentation must never alter the chosen action.
+                decision.trace = None
+            return ensure_decision_trace(state, decision)
         except Exception as exc:  # never crash the loop on a policy bug
             self._decide_errors = getattr(self, "_decide_errors", 0) + 1
             # 连续异常（如代码/知识库版本错位的 AttributeError）会每 tick 空转僵死，
@@ -916,14 +959,19 @@ class Policy:
                              "skip_reward_cards", "confirm_selection", "confirm_bundle",
                              "dismiss_modal", "open_chest", "close_shop_inventory"):
                     if safe in actions:
-                        return Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0)
+                        return ensure_decision_trace(
+                            state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0))
                 for indexed in ("select_deck_card", "choose_reward_card", "choose_rest_option",
                                 "choose_event_option", "choose_treasure_relic", "choose_bundle",
                                 "claim_reward", "resolve_rewards", "choose_map_node"):
                     if indexed in actions:
-                        return Decision(indexed, {"option_index": 0},
-                                        f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}）", wait=1.0)
-            return Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0)
+                        return ensure_decision_trace(
+                            state, Decision(indexed, {"option_index": 0},
+                                            f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}）", wait=1.0))
+            return ensure_decision_trace(
+                state, Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0))
+        finally:
+            self._active_trace_builder = None
 
     # ------------------------------------------------------------------
     # menu / character select / timeline
@@ -1857,6 +1905,12 @@ class Policy:
         for c in cand:
             label = f"{c['nt']}({c['node']['row']},{c['node']['col']})"
             details.append(f"{label}={c['ps']:.2f}{'|' + '；'.join(c['notes']) if c['notes'] else ''}")
+            self._trace_candidate(
+                label, c["ps"], index=c["node"].get("index"),
+                action="choose_map_node", why="；".join(c["notes"]),
+                target={"row": c["node"].get("row"),
+                        "col": c["node"].get("col"),
+                        "projected_hp": c.get("proj")})
             if c["ps"] > best_score:
                 best_node, best_score = c["node"], c["ps"]
                 best_detail = label
@@ -1914,6 +1968,16 @@ class Policy:
                 else:
                     break
         ctx.rest_next_fight_loss_frac = next_fight_loss
+        self._trace_gate(
+            "GATE 精英生存闸门", "pass" if elite_gate_f >= 1.0 else "warn",
+            elite_gate_note or f"系数 {elite_gate_f:.2f}")
+        self._trace_gate(
+            "RANK 路径聚合评分", "pass",
+            f"{len(cand)} 条候选；最高 {best_score:.2f}")
+        self._trace_gate(
+            "GATE Boss 入场投影", "warn" if best_proj < 0.45 else "pass",
+            f"选中路径预计入场血量 {best_proj:.0%}")
+        self._trace_note("地图评分由房间价值、路径危险先验和生存投影一次聚合完成。")
         ctx_ops_tags = [("map_node", best_node.get("node_type", "Unknown"))]
         return Decision("choose_map_node", {"option_index": best_node["index"]},
                         f"路径规划：{best_detail}（路径分 {best_score:.2f}，预计进 Boss 血量 {best_proj:.0%}{note_txt}）；"
@@ -2425,6 +2489,18 @@ class Policy:
         lethal_now = (gap_pre >= my_hp
                       or (gap_pre > 0 and (my_hp - gap_pre) <= 0.12 * my_max_hp)
                       or (forced_kill and gap_pre > 0))
+        self._trace_gate(
+            "GATE 致死检查", "warn" if lethal_now else "pass",
+            f"伤害缺口 {gap_pre} / 当前生命 {my_hp}"
+            + ("；服务端判定结束回合致死" if forced_kill else ""))
+        self._trace_gate(
+            "GATE 防御能量预留", "active" if reserve_for_block else "pass",
+            f"预留={reserve_for_block}；最低有效格挡费用 {min_blk_cost if reserve_for_block else 0}")
+        self._trace_gate(
+            "GATE 斩杀竞速", "warn" if (race_allin or kill_race) else "pass",
+            f"败局竞速={race_allin}；斩杀竞速={kill_race}")
+        self._trace_gate(
+            "RANK 出牌阈值", "neutral", f"> {float(pol['play_threshold']):.2f}")
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -2485,6 +2561,16 @@ class Policy:
             safe_trial = self._safe_controlled_trial(c)
             trial_already = cid in self._novel_trials
             eligible_for_best = not (never_played_dead and trial_already)
+            target_enemy = next((enemy for enemy in enemies
+                                 if enemy.get("index") == target), None)
+            self._trace_candidate(
+                c.get("name") or c.get("card_id") or f"手牌 {c.get('index')}",
+                score, index=c.get("index"), action="play_card",
+                status="eligible" if eligible_for_best else "vetoed",
+                why=(why if eligible_for_best else
+                     f"{why}；零成功出牌否决且本场受控试用已用"),
+                target={"index": target,
+                        "name": (target_enemy or {}).get("name", "")} if target is not None else None)
             if eligible_for_best and (best is None or score > best[0]):
                 best = (score, c, target, why)
 
@@ -4075,12 +4161,26 @@ class Policy:
             scored = [row for row in all_scored
                       if self._reward_card_cooldowns.get(
                           (row[1].get("index"), str(row[1].get("card_id") or "")), 0) <= 0]
+            for value, card in all_scored:
+                cooled = self._reward_card_cooldowns.get(
+                    (card.get("index"), str(card.get("card_id") or "")), 0) > 0
+                self._trace_candidate(
+                    card.get("name") or card.get("card_id"), value,
+                    index=card.get("index"), action="choose_reward_card",
+                    status="cooldown" if cooled else "eligible",
+                    why="精确目标短冷却" if cooled else "奖励卡价值（含真实卡组上下文）")
             if not scored:
+                self._trace_gate("GATE 精确目标冷却", "wait", "全部候选处于短冷却")
                 return Decision(None, {}, "奖励选牌：候选刚被状态竞争拒绝，短暂冷却后重试", wait=0.7)
             best_v, best = scored[0]
             vals = [f"{c.get('name')}={v:.1f}" for v, c in all_scored]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
             thin_take = self._thin_deck_must_pick(deck, best_v)
+            self._trace_gate(
+                "GATE 动态拾取门槛", "pass" if (best_v >= pick_line or thin_take) else "reject",
+                f"最高 {best_v:.2f} / 门槛 {pick_line:.2f}；单薄保底={thin_take}")
+            self._trace_gate(
+                "RANK 奖励卡价值", "pass", f"{len(scored)} 个当前可选候选")
             if (best_v >= pick_line or thin_take) and "choose_reward_card" in actions:
                 best_v, best, explore_note, explore_tag = self._reward_card_choice(
                     scored, deck, state, ctx,
@@ -4121,6 +4221,13 @@ class Policy:
                 continue
             rtype = opt.get("reward_type", "")
             key = (opt.get("index"), rtype, opt.get("description", ""))
+            reward_status = ("tried" if key in self._reward_tried else
+                             "cooldown" if self._reward_cooldowns.get(key, 0) > 0
+                             else "eligible")
+            self._trace_candidate(
+                opt.get("description") or rtype or f"奖励 {opt.get('index')}", None,
+                index=opt.get("index"), action="claim_reward",
+                status=reward_status, why=f"奖励类型 {rtype}")
             if key in self._reward_tried:
                 continue
             if self._reward_cooldowns.get(key, 0) > 0:
@@ -4257,15 +4364,29 @@ class Policy:
 
         explore_tag = None
         if removing or transforming:
-            pick = max(candidates, key=lambda c: badness(c, True))
+            ranked_badness = [(badness(c, True), c) for c in candidates]
+            pick = max(ranked_badness, key=lambda row: row[0])[1]
             verb = "删除" if removing else "变化"
             tag = "card_remove" if removing else "card_transform"
             reason = f"{verb}卡牌：【{pick.get('name')}】（最无价值）"
+            self._trace_gate("GATE 选牌语义", "pass", f"{verb}：最大无价值度优先")
+            for value, card in ranked_badness:
+                self._trace_candidate(
+                    card.get("name") or card.get("card_id"), value,
+                    index=card.get("index"), action="select_deck_card",
+                    why=f"{verb}无价值度")
         elif tribute:
-            pick = max(candidates, key=badness)
+            ranked_badness = [(badness(c), c) for c in candidates]
+            pick = max(ranked_badness, key=lambda row: row[0])[1]
             tag = "card_sacrifice"
             reason = (f"战斗献祭：【{pick.get('name')}】（敌方强制交牌，交出最无价值者；"
                       f"候选：{' / '.join(c.get('name', '?') for c in candidates)}）")
+            self._trace_gate("GATE 选牌语义", "warn", "敌方强制献祭：最大无价值度优先")
+            for value, card in ranked_badness:
+                self._trace_candidate(
+                    card.get("name") or card.get("card_id"), value,
+                    index=card.get("index"), action="select_deck_card",
+                    why="战斗献祭无价值度")
         elif upgrading:
             # 锻造目标与卡组爆发缺口联动（第 106 局复盘）：爆发饥饿时升级
             # 攻击牌的优先级加倍——升级是免费的战力放大，缺输出的局面把砧
@@ -4302,12 +4423,19 @@ class Policy:
                 if (_scale_up_bonus > 0.0 and self._is_scaling_power(c)
                         and self._scaling_power_active(c, _up_deck)):
                     v += _scale_up_bonus
+                self._trace_candidate(
+                    c.get("name") or c.get("card_id"), v,
+                    index=c.get("index"), action="select_deck_card",
+                    why="升级目标价值（真实卡组上下文）")
                 if v > best_v:
                     best, best_v = c, v
             if best is None:
                 best = candidates[0]
             pick = best
             tag = "card_upgrade"
+            self._trace_gate(
+                "GATE 选牌语义", "pass",
+                f"升级；输出饥饿={_up_starved}；竞速必败={_up_doomed}")
             reason = f"升级卡牌：【{pick.get('name')}】"
             if (_scale_up_bonus > 0.0 and self._is_scaling_power(pick)
                     and self._scaling_power_active(pick, _up_deck)):
@@ -4321,9 +4449,20 @@ class Policy:
             _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
             scored = sorted(((self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act), c) for c in candidates),
                             key=lambda t: -t[0])
+            for value, card in scored:
+                self._trace_candidate(
+                    card.get("name") or card.get("card_id"), value,
+                    index=card.get("index"), action="select_deck_card",
+                    why="选牌价值（真实卡组上下文）")
             best_v, pick = scored[0]
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_sel_act)
             _has_skip = "skip_reward_cards" in actions
+            self._trace_gate(
+                "GATE 动态拾取门槛", "pass" if (best_v >= pick_line or not _has_skip) else "reject",
+                f"最高 {best_v:.2f} / 门槛 {pick_line:.2f}；可跳过={_has_skip}")
+            self._trace_gate(
+                "GATE 选牌语义", "pass",
+                "牌堆顶选择" if top_of_pile else "自愿奖励" if _has_skip else "强制入组")
             if _has_skip:
                 # 只有可跳过的通用选牌屏才是自愿奖励 offer。升级/删除/献祭/
                 # 置顶均在前面的语义分支，不会污染 offered/seen。
@@ -4364,6 +4503,7 @@ class Policy:
                 ("selection_click", self._sel_instance, int(pick["index"]))]
         if explore_tag is not None:
             tags.append(explore_tag)
+        self._trace_note("选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。")
         return Decision("select_deck_card", {"option_index": pick["index"]},
                         reason, tags=tags, wait=0.8)
 
@@ -4584,10 +4724,22 @@ class Policy:
                 continue
             v = self.eval_reward_card(c, deck, max_hp=_shop_mh, act=_shop_act) - c.get("price", 0) / 120.0
             if v <= shop_pick_line:
+                self._trace_candidate(
+                    c.get("name") or c.get("card_id"), v,
+                    index=c.get("index"), action="buy_card", status="below_threshold",
+                    why=f"净价值未越过卡牌门槛 {shop_pick_line:.2f}")
                 continue
             if self._ui_option_cooled(state, "buy_card", c):
                 cooldown_blocked = True
+                self._trace_candidate(
+                    c.get("name") or c.get("card_id"), v,
+                    index=c.get("index"), action="buy_card", status="cooldown",
+                    why="精确购买目标短冷却")
                 continue
+            self._trace_candidate(
+                c.get("name") or c.get("card_id"), v,
+                index=c.get("index"), action="buy_card",
+                why=f"卡牌净价值；门槛 {shop_pick_line:.2f}")
             if v > best_score:
                 best_action = ("buy_card", c["index"])
                 best_score = v
@@ -4600,8 +4752,16 @@ class Policy:
             v = 3.0 + self.know.relic_value(r.get("relic_id", "")) - r.get("price", 0) / 120.0
             if self._ui_option_cooled(state, "buy_relic", r):
                 cooldown_blocked = True
+                self._trace_candidate(
+                    r.get("name") or r.get("relic_id"), v,
+                    index=r.get("index"), action="buy_relic", status="cooldown",
+                    why="精确购买目标短冷却")
                 continue
             relic_scored.append((v, r))
+            self._trace_candidate(
+                r.get("name") or r.get("relic_id"), v,
+                index=r.get("index"), action="buy_relic",
+                why="遗物价值减价格成本")
             if v > best_score:
                 best_action = ("buy_relic", r["index"])
                 best_score = v
@@ -4640,8 +4800,16 @@ class Policy:
                 v += _reserve_bonus
             if self._ui_option_cooled(state, "buy_potion", pt):
                 cooldown_blocked = True
+                self._trace_candidate(
+                    pt.get("name") or pt.get("potion_id"), v,
+                    index=pt.get("index"), action="buy_potion", status="cooldown",
+                    why="精确购买目标短冷却")
                 continue
             potion_scored.append((v, pt))
+            self._trace_candidate(
+                pt.get("name") or pt.get("potion_id"), v,
+                index=pt.get("index"), action="buy_potion",
+                why="药水价值减价格成本与预留修正")
             if v > best_score:
                 best_action = ("buy_potion", pt["index"])
                 best_score = v
@@ -4680,6 +4848,16 @@ class Policy:
                 best_reason = f"购买药水【{pt.get('name')}】（{pt.get('price')}金）；{note}"
                 best_tags = [("shop_buy_potion", pt.get("potion_id")),
                              self._novelty_tag("potion", pid, self._potion_explore_used)]
+        self._trace_gate(
+            "GATE 商店成交门槛", "pass" if best_score > pol["shop_relic_threshold"] else "reject",
+            f"最高 {best_score:.2f} / 基线 {float(pol['shop_relic_threshold']):.2f} / 卡牌线 {shop_pick_line:.2f}")
+        self._trace_gate(
+            "GATE 购买资格", "pass" if best_action else "neutral",
+            f"金币 {gold}；冷却阻塞={cooldown_blocked}")
+        self._trace_gate(
+            "GATE 输出与药水预留", "warn" if potion_starved else "pass",
+            f"输出饥饿={potion_starved}；进攻药加价={_reserve_bonus:.1f}")
+        self._trace_note("商店候选均使用本次货架评估已经得到的净价值。")
         if best_action and best_score > pol["shop_relic_threshold"]:
             action, idx = best_action
             if action in actions:
@@ -4853,6 +5031,55 @@ class Policy:
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
         smith_ok = smith is not None and bool(upgradable)
+        for option in options:
+            self._trace_candidate(
+                option.get("title") or option.get("option_id") or f"篝火 {option.get('index')}",
+                None, index=option.get("index"), action="choose_rest_option",
+                why="规则型候选，不伪造概率或分数")
+        # Telemetry formatting is deliberately fail-open.  These values are only
+        # copied for display; malformed optional config/context must never turn a
+        # valid rest decision into a policy exception before the real rule chain
+        # gets a chance to run.
+        def _trace_float(value):
+            try:
+                parsed = float(value)
+                return parsed if math.isfinite(parsed) else None
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        _rest_smith_line = _trace_float(
+            pol.get("smith_min_hp_pct", pol.get("rest_heal_threshold", 0.5)))
+        _rest_projection = _trace_float(getattr(ctx, "rest_proj_hp_pct", None))
+        _rest_dire_line = _trace_float(pol.get("rest_dire_proj_pct", 0.45))
+        _rest_next_loss = _trace_float(
+            getattr(ctx, "rest_next_fight_loss_frac", 0.0))
+        _rest_smith_text = (f"当前 {hp_pct:.0%} / 锻造安全线 {_rest_smith_line:.0%}"
+                            if _rest_smith_line is not None
+                            else f"当前 {hp_pct:.0%} / 锻造安全线不可用")
+        _rest_projection_display = (f"{_rest_projection:.0%}"
+                                    if _rest_projection is not None else "—")
+        _rest_next_loss_display = (f"{_rest_next_loss:.0%}"
+                                   if _rest_next_loss is not None else "—")
+        _rest_projection_text = (
+            f"Boss入场投影={_rest_projection_display}；"
+            f"前方连续战损={_rest_next_loss_display}")
+        self._trace_gate(
+            "GATE 当前生命线",
+            ("neutral" if _rest_smith_line is None else
+             "warn" if hp_pct < _rest_smith_line else "pass"),
+            _rest_smith_text)
+        self._trace_gate(
+            "GATE 锻造资格", "pass" if smith_ok else "reject",
+            f"锻造选项={smith is not None}；可升级牌={len(upgradable)}")
+        self._trace_gate(
+            "GATE 路径生存投影",
+            ("neutral" if _rest_projection is None or _rest_dire_line is None else
+             "warn" if _rest_projection < _rest_dire_line else "pass"),
+            _rest_projection_text)
+        self._trace_gate(
+            "GATE Boss 前夜", "active" if getattr(ctx, "rest_before_boss", False) else "pass",
+            f"前夜={bool(getattr(ctx, 'rest_before_boss', False))}")
+        self._trace_note("篝火是规则直达决策：展示命中的稳定规则，不制造候选概率。")
 
         # Boss 前夜篝火：三区生存余量裁决（第 244 批复盘改版）。
         # 旧判据「场均战损 ≥ 回血量 且 血量 ≥ 锻造线 → 锻造」是方向性错误的边际
@@ -5065,6 +5292,7 @@ class Policy:
                 n += repeats
                 v -= 3.0 * repeats
             scored.append((v, n, key, o))
+        all_event_scored = list(scored)
         # 最坏情况生存闸门（第 255~257 批次复盘新增）：事件价值是全局均值账，
         # 而「均值正收益、尾部能致死」的选项在低血量时是另一道题——7RJ9 局
         # 31% 血在茂密的植被选「休息」（均值 +10.5，n=8），被链内强制战 -55
@@ -5079,6 +5307,7 @@ class Policy:
         veto_note = ""
         lethal_keys = set()
         lethal_descs = []
+        lethal_veto_active = False
         for s in scored:
             _w = worst_by_key.get(s[2])
             if _w is not None and my_hp + _w <= _worst_margin:
@@ -5087,12 +5316,30 @@ class Policy:
         if lethal_keys:
             _safe_scored = [s for s in scored if s[2] not in lethal_keys]
             if _safe_scored:
+                lethal_veto_active = True
                 scored = _safe_scored
                 veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
                              f"当前{my_hp}血吃下即死，改选安全项")
             else:
                 veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
                              f"当前{my_hp}血吃下即死，但无安全替代，强行择损")
+        for value, samples, key, option in all_event_scored:
+            if key in lethal_keys:
+                status = "vetoed" if lethal_veto_active else "forced_risk"
+                why = f"历史最坏生命变化 {worst_by_key.get(key)}；样本 {samples}"
+            else:
+                status = "eligible"
+                why = f"经验样本 {samples}"
+            self._trace_candidate(
+                option.get("title") or option.get("text_key") or key, value,
+                index=option.get("index"), action="choose_event_option",
+                status=status, why=why)
+        self._trace_gate(
+            "GATE 最坏情况生存", "warn" if lethal_keys else "pass",
+            veto_note.lstrip("；") if veto_note else "无历史致死尾部")
+        self._trace_gate(
+            "RANK 事件经验价值", "pass", f"{len(scored)} 个闸门后候选")
+        self._trace_note("事件候选分数与样本数直接来自本次经验账读取结果。")
         # 确定性欠采样探索：旧 epsilon 即使保留 5% 下限，也可能在稀有事件的
         # 有限次出现里永远不命中。现在只在高血、近优且通过上方 will_kill/hp_min
         # 重尾闸门的选项间按“样本最少→原值最高→稳定键”轮转；每局和每候选都
@@ -5105,11 +5352,15 @@ class Policy:
             greedy_preview = min(tied, key=lambda s: (s[1], s[2]))
         quota = max(0, int(pol.get("event_exploration_run_quota", 1)))
         hp_pct = my_hp / max_hp
-        if (pol.get("event_exploration_enabled", True)
-                and self._event_explore_used < quota
-                and hp_pct >= float(pol.get("event_exploration_min_hp_pct", 0.70))
-                and not lethal_keys
-                and not any(s[3].get("will_kill_player") for s in scored)):
+        exploration_gate = (pol.get("event_exploration_enabled", True)
+                            and self._event_explore_used < quota
+                            and hp_pct >= float(pol.get("event_exploration_min_hp_pct", 0.70))
+                            and not lethal_keys
+                            and not any(s[3].get("will_kill_player") for s in scored))
+        self._trace_gate(
+            "GATE 受控探索", "active" if exploration_gate else "pass",
+            f"生命 {hp_pct:.0%}；配额 {self._event_explore_used}/{quota}；致死尾部={bool(lethal_keys)}")
+        if exploration_gate:
             cap = max(1, int(pol.get("event_exploration_sample_cap", 2)))
             margin = max(0.0, float(pol.get("event_exploration_near_best_margin", 2.0)))
             min_value = float(pol.get("event_exploration_min_value", -1.0))

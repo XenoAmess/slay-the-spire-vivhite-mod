@@ -1572,8 +1572,10 @@ def main() -> int:
     class _AttributionCaptured(Exception):
         pass
 
-    def _capture_run_end(outcome, victory, cards, relics, rooms, enemy, event):
-        captured_attribution.update(cards=list(cards), relics=list(relics), rooms=list(rooms))
+    def _capture_run_end(outcome, victory, cards, relics, rooms, enemy, event,
+                         raw_floor=None):
+        captured_attribution.update(cards=list(cards), relics=list(relics), rooms=list(rooms),
+                                    raw_floor=raw_floor)
         raise _AttributionCaptured
 
     ag_rejoin.know.commit_run_end = _capture_run_end
@@ -1585,7 +1587,7 @@ def main() -> int:
         ag_rejoin.know.commit_run_end = original_commit_run_end
     assert captured_attribution == {
         "cards": ["OLD_CARD", "NEW_CARD"],
-        "relics": ["OLD_RELIC"], "rooms": ["Elite"]}, \
+        "relics": ["OLD_RELIC"], "rooms": ["Elite"], "raw_floor": 5}, \
         f"终局未使用续接后的长期归因: {captured_attribution}"
     # Old incremental logs remain compatible and restore no invented attribution.
     ag_old_log = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))

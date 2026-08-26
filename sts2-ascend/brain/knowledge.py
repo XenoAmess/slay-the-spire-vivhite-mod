@@ -417,6 +417,10 @@ DEFAULT_PROGRESSION = {
 DEFAULT_STATS = {
     "version": 1,
     "global": {"runs": 0, "wins": 0, "floors_total": 0, "best_floor": 0,
+               # Raw floors are presentation/accounting facts.  The historical
+               # floors_total/best_floor fields intentionally remain the learning
+               # outcome (floor + 50 on victory) for complete compatibility.
+               "floor_sum_raw": 0.0, "best_floor_raw": 0,
                "deaths_by_enemy": {}, "deaths_by_event": {},
                # 精英死亡进场血量分带（第495~498局批复盘新增）：low=低于软线进场，
                # healthy=软线以上进场。区分「被迫行军死」与「闸门/执行端漏放行死」
@@ -655,12 +659,39 @@ class Knowledge:
         # ``game_knowledge.error`` and do not prevent selfchecks with temporary KBs.
         self.game_knowledge = NativeGameKnowledge.from_knowledge_root(root)
         # fill in any new default keys added in later versions
+        #
+        # Raw-floor migration must observe key absence *before* setdefault.  The
+        # outcome total is losslessly reversible because the only bonus is the
+        # fixed +50 victory credit.  The maximum is not reversible from the score
+        # alone, so progression and per-run/catalog evidence are consulted first.
+        global_stats = self.stats.setdefault("global", {})
+        missing_floor_sum_raw = "floor_sum_raw" not in global_stats
+        missing_best_floor_raw = "best_floor_raw" not in global_stats
         for k, v in DEFAULT_POLICY.items():
             self.policy.setdefault(k, v)
         for k, v in DEFAULT_PROGRESSION.items():
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
+        if missing_floor_sum_raw:
+            global_stats["floor_sum_raw"] = max(
+                0.0,
+                float(global_stats.get("floors_total", 0.0) or 0.0)
+                - 50.0 * int(global_stats.get("wins", 0) or 0),
+            )
+        if missing_best_floor_raw:
+            progression_best = 0
+            for value in self.progression.get("best_floor_by_ascension", {}).values():
+                try:
+                    progression_best = max(progression_best, int(float(value)))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+            score_best = int(global_stats.get("best_floor", 0) or 0)
+            score_guess = max(0, score_best - 50) \
+                if int(global_stats.get("wins", 0) or 0) else score_best
+            history_best = self._best_raw_floor_from_history()
+            global_stats["best_floor_raw"] = max(
+                0, progression_best, score_guess, history_best)
         # seen 的旧实现位于 eval_reward_card()：每次轮询/商店/升级/删除评分都会
         # 增加，历史值无法从聚合账精确反推。保留它避免破坏现有知识，同时以
         # offered=0 开启一条可审计的新口径，并记录迁移时已有局数。
@@ -747,6 +778,13 @@ class Knowledge:
             g = self.stats["global"]
             g["runs"] = max(0, int(g.get("runs", 0)) - n_phantom)
             g["floors_total"] = max(0.0, float(g.get("floors_total", 0.0)) - lost_floors)
+            g["floor_sum_raw"] = max(
+                0.0, float(g.get("floor_sum_raw", 0.0)) - lost_floors)
+            # A phantom may also have polluted the raw maximum.  Recompute from
+            # non-phantom active/catalog evidence instead of trying to subtract a
+            # maximum.  If no evidence survived, retain zero rather than inventing
+            # a floor from the learning score.
+            g["best_floor_raw"] = self._best_raw_floor_from_history()
             rba = self.progression.setdefault("runs_by_ascension", {})
             for asc, cnt in by_asc.items():
                 rba[asc] = max(0, int(rba.get(asc, 0)) - cnt)
@@ -755,6 +793,69 @@ class Knowledge:
                 float(self.policy.get("exploration_rate", 0.25)) / (decay ** n_phantom), 0.0, 1.0)
             self.save()
         self.stats["phantom_repair_v1"] = True
+
+    def _best_raw_floor_from_history(self) -> int:
+        """Best trustworthy raw floor visible in active logs or archive catalog.
+
+        This is deliberately a small, read-only migration helper rather than a
+        dependency on the dashboard provider.  Invalid/concurrently replaced
+        files are skipped; the online aggregate remains the source of truth after
+        migration.
+        """
+        best = 0
+        paths = []
+        try:
+            paths = sorted((self.root / "runs").glob("*.json"))
+        except OSError:
+            pass
+        for path in paths:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            decisions = ([row for row in data.get("decisions", []) if isinstance(row, dict)]
+                         if isinstance(data.get("decisions"), list) else [])
+            if not decisions and not bool(data.get("victory")):
+                continue
+            game_over = any(row.get("screen") == "GAME_OVER" for row in decisions)
+            if bool(data.get("in_progress")) and not bool(data.get("victory")) and not game_over:
+                continue
+            values = [data.get("floor")]
+            values.extend(row.get("floor") for row in decisions)
+            for value in values:
+                try:
+                    floor = int(float(value))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if 0 <= floor <= 999:
+                    best = max(best, floor)
+
+        catalog = self.root / "archive" / "run_catalog.jsonl"
+        try:
+            lines = catalog.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            lines = []
+        for line in lines:
+            try:
+                row = json.loads(line)
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(row, dict) or not row.get("file"):
+                continue
+            if bool(row.get("phantom_candidate")):
+                continue
+            if (bool(row.get("in_progress")) and not bool(row.get("victory"))
+                    and row.get("last_screen") != "GAME_OVER"):
+                continue
+            try:
+                floor = int(float(row.get("floor")))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if 0 <= floor <= 999:
+                best = max(best, floor)
+        return best
 
     # ---------- persistence ----------
 
@@ -1587,12 +1688,18 @@ class Knowledge:
 
     def commit_run_end(self, outcome: float, victory: bool, picked_cards: list[str],
                        picked_relics: list[str], visited_rooms: list[str],
-                       died_to_enemy: str | None, died_to_event: str | None) -> None:
+                       died_to_enemy: str | None, died_to_event: str | None,
+                       raw_floor: float | None = None) -> None:
         g = self.stats["global"]
         g["runs"] += 1
         g["wins"] += 1 if victory else 0
         g["floors_total"] += outcome
         g["best_floor"] = max(g["best_floor"], int(outcome))
+        if raw_floor is None:
+            raw_floor = float(outcome) - (50.0 if victory else 0.0)
+        raw_floor = max(0.0, float(raw_floor))
+        g["floor_sum_raw"] = float(g.get("floor_sum_raw", 0.0)) + raw_floor
+        g["best_floor_raw"] = max(int(g.get("best_floor_raw", 0)), int(raw_floor))
         if died_to_enemy:
             d = g["deaths_by_enemy"]
             d[died_to_enemy] = d.get(died_to_enemy, 0) + 1
