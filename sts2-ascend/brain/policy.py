@@ -2955,6 +2955,31 @@ class Policy:
         why = f"能力/增益牌（第{round_no}回合）"
         if lf >= 1.5:
             why += f"｜长战加成+{lf:.1f}（敌血池{pool:.0f}）"
+        # 开局承诺加成（第555~653批复盘新增）：贵重力量引擎（恶魔形态等 3 费能力）
+        # 在 T1~T2 手握足额能量时必须能压过「先打零散小攻击、引擎改天再说」的贪心
+        # 顺位——本批实证：DEMON_FORM 整批 9 局拾取/升级共 12 次仅 4 局打出，
+        # 生涯 45 拿仅 29 打、BARRICADE 5 拿 1 打；真实手牌里的上勾拳/痛击带威胁
+        # 加分常与引擎基础分平起平坐，逐 tick 贪心把 3 能量先碎花掉，引擎到手
+        # 又趴回牌堆 → 实测 dpt 填不平竞速缺口 → 投影自我兑现判死。再叠一档
+        # power_round_bonus 保证有意义的领先幅度；双门槛防走样：
+        #   ① 敌血池合计 ≥ power_commit_pool_min（走廊小战不加成，节奏不扭曲）；
+        #   ② 当前能量足额（cur_energy >= cost，承诺的是整回合换复利）。
+        # 竞速判死/致死回合维持上方 floor 不变：判死局烧 3 费买复利、视界超出
+        # 剩余存活视界的旧教训不推翻。
+        # 类型判定不走 is_power——战斗手牌载荷没有 card_type 字段（第546局
+        # 批复盘教义），文本通道 + 注入 card_type 后复用 _scaling_power_active
+        # （保留撕裂族「零自残源死牌」的否决语义）。
+        _pool_floor = float(pol.get("power_commit_pool_min", 90.0))
+        _scaling_text = bool(re.search(
+            r"力量|strength|伤害\s*(提高|提升|增加)|(?:increase|gain[s]?)\s*.{0,16}(?:strength|damage)",
+            _text(card), re.I))
+        if (round_no <= 2 and cost > 0 and cur_energy >= cost and not (lethal or race_allin)
+                and _scaling_text
+                and self._scaling_power_active(dict(card, card_type="Power"), run_deck or [])
+                and pool >= _pool_floor):
+            _commit = float(pol.get("power_round_bonus", 6.0))
+            score += _commit
+            why += f"｜开局承诺+{_commit:.1f}（引擎整回合在场复利）"
         return score, None, why
 
     def _is_respawn_add(self, enemy: dict) -> bool:
