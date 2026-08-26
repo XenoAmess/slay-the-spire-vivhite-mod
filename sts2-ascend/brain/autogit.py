@@ -520,6 +520,35 @@ def _push_with_retry(log=print, attempts: int = 3) -> bool:
         return _push_with_retry_unlocked(log=log, attempts=attempts)
 
 
+def push_pending(log=print, attempts: int = 1) -> bool:
+    """在复盘窗口关闭后补推本地线性提交；没有积压时为成功空操作。"""
+    try:
+        with repository_lock():
+            # 与 set_review_active 共用同一跨进程锁：检查到 inactive 后，新的
+            # review 无法在 push 更新 origin/* 指纹期间插入。
+            if is_review_active():
+                log("[git] 复盘仍在进行，积压 push 继续延后")
+                return False
+            upstream = _run_git([
+                "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
+            if upstream.returncode == 0 and upstream.stdout.strip():
+                ahead = _run_git([
+                    "rev-list", "--count", f"{upstream.stdout.strip()}..HEAD"])
+                if ahead.returncode == 0:
+                    try:
+                        if int(ahead.stdout.strip() or "0") <= 0:
+                            return True
+                    except ValueError:
+                        pass
+            pushed = _push_with_retry_unlocked(log=log, attempts=max(1, int(attempts)))
+            if pushed:
+                log("[git] 复盘窗口关闭，已补推积压的本地提交")
+            return pushed
+    except Exception as exc:
+        log(f"[git] 积压 push 异常，保留本地提交供下次复盘结束重试：{exc}")
+        return False
+
+
 def commit_progress_result(
     message: str, log=print, paths: Sequence[str] | None = None, *, push: bool = True,
 ) -> CommitResult:

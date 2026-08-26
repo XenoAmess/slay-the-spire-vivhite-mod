@@ -151,6 +151,8 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   精确 patch，真实仓库前后指纹覆盖工作树、index、HEAD/refs、Git 配置/hooks 与关键 ignored 路径
 - autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
 - 普通存档与复盘提交各有精确 allowlist；目标路径已有 staged 内容时整笔拒绝
+- 复盘 active 时在线存档先保留为本地线性提交；每次复盘结束（成功或失败）清除指纹窗口后
+  主动补推积压，不依赖 ox-alpha 必须产出有效 patch 才能上库
 - 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD
   重建，分支切换则拒绝事务
 - 自检失败直接丢弃隔离 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，

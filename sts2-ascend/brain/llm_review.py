@@ -1004,6 +1004,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         })
         # 模型退出隔离 clone 后已不可能产生半成品文件；无论成功失败都立即清 flag。
         autogit.set_review_active(False)
+        # 在线对局提交在复盘 active 时只落本地，避免 origin/* ref 变化污染
+        # workspace 指纹。无论本次复盘成功、失败还是合法无改动，窗口关闭后都
+        # 主动补推一次；不再依赖下一次复盘必须成功才能把直播存档送上远端。
+        if not _review_stop_requested():
+            autogit.push_pending(log=log, attempts=1)
 
     try:
         # 2) 模型在独立 clone 中运行；这里只接收已全仓扫描、自检通过的精确 patch。

@@ -138,6 +138,38 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertFalse(result.pushed)
         push.assert_not_called()
 
+    def test_push_pending_runs_only_after_review_window_and_only_when_ahead(self) -> None:
+        messages: list[str] = []
+        with (mock.patch.object(autogit, "is_review_active", return_value=True),
+              mock.patch.object(autogit, "_push_with_retry_unlocked") as push):
+            self.assertFalse(autogit.push_pending(log=messages.append))
+        push.assert_not_called()
+
+        def git_result(args, **_kwargs):
+            if args[0] == "rev-parse":
+                return subprocess.CompletedProcess(args, 0, "origin/master\n", "")
+            if args[0] == "rev-list":
+                return subprocess.CompletedProcess(args, 0, "2\n", "")
+            raise AssertionError(args)
+
+        with (mock.patch.object(autogit, "is_review_active", return_value=False),
+              mock.patch.object(autogit, "_run_git", side_effect=git_result),
+              mock.patch.object(autogit, "_push_with_retry_unlocked",
+                                return_value=True) as push):
+            self.assertTrue(autogit.push_pending(log=messages.append, attempts=1))
+        push.assert_called_once_with(log=messages.append, attempts=1)
+        self.assertTrue(any("已补推" in message for message in messages))
+
+        def no_ahead(args, **_kwargs):
+            value = "origin/master\n" if args[0] == "rev-parse" else "0\n"
+            return subprocess.CompletedProcess(args, 0, value, "")
+
+        with (mock.patch.object(autogit, "is_review_active", return_value=False),
+              mock.patch.object(autogit, "_run_git", side_effect=no_ahead),
+              mock.patch.object(autogit, "_push_with_retry_unlocked") as push):
+            self.assertTrue(autogit.push_pending(log=messages.append))
+        push.assert_not_called()
+
     def test_compare_and_swap_failure_never_moves_head_or_real_index(self) -> None:
         before = self._git("rev-parse", "HEAD").stdout.strip()
         self._write("outside.txt", "user-staged\n")
