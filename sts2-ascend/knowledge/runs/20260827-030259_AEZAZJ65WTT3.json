@@ -5,7 +5,7 @@
  "started_at": "2026-08-27 03:02:59",
  "victory": false,
  "in_progress": true,
- "floor": 5,
+ "floor": 8,
  "decisions": [
   {
    "t": "03:02:59",
@@ -922,12 +922,400 @@
     "option_index": 0
    },
    "reason": "路径规划：Unknown(5,5)（路径分 -46.08，预计进 Boss 血量 61%；输出饥饿战损上浮×1.24（缺口69%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(5,5)=-46.08|输出饥饿战损上浮×1.24（缺口69%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "03:05:14",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 66,
+   "gold": 165,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【冷光合唱团】：选择「探入菌肉」（经验价值 0.0）；探入菌肉=0.0(n=19) / 供奉=-0.8(n=2)"
+  },
+  {
+   "t": "03:05:33",
+   "screen": "CARD_SELECTION",
+   "floor": 6,
+   "hp": 66,
+   "gold": 165,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "删除卡牌：【打击】（最无价值）"
+  },
+  {
+   "t": "03:05:34",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 66,
+   "gold": 165,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "03:05:36",
+   "screen": "MAP",
+   "floor": 6,
+   "hp": 66,
+   "gold": 165,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(6,4)（路径分 -47.54，预计进 Boss 血量 74%；前期需要战斗积累卡牌；连续作战5场，疲劳压制×0.63；输出饥饿战损上浮×1.24（缺口69%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(6,4)=-47.54|前期需要战斗积累卡牌；连续作战5场，疲劳压制×0.63；输出饥饿战损上浮×1.24（缺口69%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Elite(6,5)=-91.37|非基础牌仅6张(<7)，卡组强度不足规避精英；连战战损递增×1.18；输出饥饿战损上浮×1.24（缺口69%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；非基础牌仅6张(<7)，卡组强度不足规避精英"
+  },
+  {
+   "t": "03:05:38",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【火焰屏障】（格挡12）；敌意图总伤17，我方66血/0甲"
+  },
+  {
+   "t": "03:05:39",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤17，我方66血/12甲"
+  },
+  {
+   "t": "03:05:41",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:05:46",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【契约终结】（群体伤害≈54.0）；敌意图总伤18，我方66血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "03:05:47",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（辅助体优先转火：劫掠者暴徒（零伤害意图，放生=纵容其强化队友））；敌意图总伤18，我方66血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "03:05:48",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【孢子心灵】（能力/增益牌（第2回合）｜长战加成+5.2（敌血池63））；敌意图总伤18，我方66血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "03:05:49",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡3）；敌意图总伤18，我方66血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "03:05:50",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 66,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:05:57",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 51,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【余烬】→劫掠者刺客（可击杀劫掠者刺客）；敌意图总伤28，我方51血/0甲；意图升级+10，防御前置"
+  },
+  {
+   "t": "03:05:58",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 51,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡3）；敌意图总伤18，我方51血/0甲；意图升级+10，防御前置"
+  },
+  {
+   "t": "03:05:59",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 51,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:06:05",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤8，我方36血/0甲"
+  },
+  {
+   "t": "03:06:06",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（自我强化体优先转火：劫掠者暴徒（力量+3，拖越久打越痛））；敌意图总伤8，我方36血/5甲"
+  },
+  {
+   "t": "03:06:07",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤8，我方36血/5甲"
+  },
+  {
+   "t": "03:06:08",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:06:13",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【火焰屏障】（格挡12）；敌意图总伤21，我方36血/0甲；意图升级+13，防御前置"
+  },
+  {
+   "t": "03:06:14",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【契约终结】（群体伤害≈36.0）；敌意图总伤21，我方36血/12甲；意图升级+13，防御前置"
+  },
+  {
+   "t": "03:06:15",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤21，我方36血/12甲；意图升级+13，防御前置"
+  },
+  {
+   "t": "03:06:17",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 36,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:06:23",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 33,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（单体伤害≈6.0）；敌意图总伤0，我方33血/0甲"
+  },
+  {
+   "t": "03:06:24",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 33,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【震荡波】（能力/增益牌（第6回合））；敌意图总伤0，我方33血/0甲"
+  },
+  {
+   "t": "03:06:26",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 33,
+   "gold": 165,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "03:06:30",
+   "screen": "COMBAT",
+   "floor": 7,
+   "hp": 33,
+   "gold": 165,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→劫掠者暴徒（可击杀劫掠者暴徒）；敌意图总伤12，我方33血/0甲；意图升级+12，防御前置"
+  },
+  {
+   "t": "03:06:30",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 39,
+   "gold": 165,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：19金币"
+  },
+  {
+   "t": "03:06:31",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 39,
+   "gold": 184,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "03:06:32",
+   "screen": "CARD_SELECTION",
+   "floor": 7,
+   "hp": 39,
+   "gold": 184,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【耸肩无视】（价值 9.8）；候选：耸肩无视=9.8 / 坚毅=6.7 / 剑柄打击=0.9"
+  },
+  {
+   "t": "03:06:33",
+   "screen": "REWARD",
+   "floor": 7,
+   "hp": 39,
+   "gold": 184,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "03:06:35",
+   "screen": "MAP",
+   "floor": 7,
+   "hp": 39,
+   "gold": 184,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：RestSite(7,5)（路径分 -46.40，预计进 Boss 血量 40%；血量偏低（<62%），优先休整续航；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(7,3)=-63.20|低血尾部定价：Unknown先验3→10（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；输出饥饿战损上浮×1.24（缺口69%）；投影中途死亡 / RestSite(7,5)=-46.40|血量偏低（<62%），优先休整续航；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "03:06:37",
+   "screen": "REST",
+   "floor": 8,
+   "hp": 39,
+   "gold": 184,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：绝境投影优先回血（路径投影进Boss仅40%<45%，前路战损预期压倒锻造收益；本次可回复24点）"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血0",
   "F3 Monster战 掉血14",
-  "F4 Unknown战 掉血0"
+  "F4 Unknown战 掉血0",
+  "F5 Monster战 掉血4"
  ],
  "attribution_tags": [
   [
@@ -973,6 +1361,18 @@
   [
    "map_node",
    "Unknown"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "SHRUG_IT_OFF"
+  ],
+  [
+   "map_node",
+   "RestSite"
   ]
  ]
 }
