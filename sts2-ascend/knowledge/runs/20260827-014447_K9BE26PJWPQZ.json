@@ -1,0 +1,79 @@
+{
+ "run_id": "K9BE26PJWPQZ",
+ "run_number": 654,
+ "ascension": 0,
+ "started_at": "2026-08-27 01:44:46",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "01:44:47",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「新叶」（经验价值 0.6）；新叶=0.6(n=18) / 沉重石板=0.0(n=12) / 涅奥的苦痛=-0.2(n=10)"
+  },
+  {
+   "t": "01:44:48",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "变化卡牌：【打击】（最无价值）"
+  },
+  {
+   "t": "01:44:49",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "01:44:52",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(1,4)（路径分 -52.90，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(1,0)=-56.50|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,4)=-52.90|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "01:44:54",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方80血/0甲"
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}
