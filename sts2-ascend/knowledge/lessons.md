@@ -1822,3 +1822,47 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/566 胜，当前目标进阶 0
+
+## 第 567 局复盘（2026-08-26 12:20）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：BREAKTHROUGH, VICIOUS, BREAKTHROUGH, DISMANTLE, DISMANTLE, FIEND_FIRE, IRON_WAVE, PACTS_END, PACTS_END, RUPTURE, FIGHT_ME, SALVO, CINDER, SPITE, CINDER, EVIL_EYE, STONE_ARMOR, FIEND_FIRE, CINDER
+- 本局遗物：准备背包, STONE_CRACKER
+- 战斗记录：F17 Boss战 掉血74; F19 Monster战 掉血2; F21 Monster战 掉血28; F22 Unknown战 掉血9; F23 Monster战 掉血0; F28 Unknown战 掉血55（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/18局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.45 → 0.48（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/567 胜，当前目标进阶 0
+
+## 第 568 局复盘（2026-08-26 12:32）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：BREAKTHROUGH, BREAKTHROUGH, FLAME_BARRIER, UNRELENTING, FORGOTTEN_RITUAL, COLOSSUS, STOMP, UNMOVABLE, HEADBUTT, HOWL_FROM_BEYOND, SHRUG_IT_OFF, CRUELTY, FASTEN, ANGER, SHRUG_IT_OFF, DRAMATIC_ENTRANCE, CRUELTY
+- 本局遗物：LIZARD_TAIL, CENTENNIAL_PUZZLE, 摆动球, ETERNAL_FEATHER
+- 战斗记录：F19 Monster战 掉血15; F21 Monster战 掉血22; F22 Monster战 掉血4; F27 Monster战 掉血28; F30 Unknown战 掉血15; F33 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/18局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：高速失血爆毙（4回合掉血80，每回合20≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.48 → 0.51（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/568 胜，当前目标进阶 0
+
+## 第 569 局复盘（2026-08-26 12:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：TAUNT, MOLTEN_FIST, THUNDERCLAP, MOLTEN_FIST, TRUE_GRIT, ANGER, UNMOVABLE, THUNDERCLAP, TAUNT, UNRELENTING
+- 本局遗物：STONE_CRACKER
+- 战斗记录：F8 Monster战 掉血0; F9 Monster战 掉血5; F12 Monster战 掉血21; F14 Monster战 掉血8; F15 Monster战 掉血7; F17 Boss战 掉血72（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/18局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/569 胜，当前目标进阶 0
+
+## 第 570 局复盘（2026-08-26 12:48）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：SALVO, RUPTURE, SHRUG_IT_OFF, JUGGLING, CINDER, FLAME_BARRIER, THUNDERCLAP, STOMP, FEED, STONE_ARMOR, PACTS_END, MOLTEN_FIST, BATTLE_TRANCE, RUPTURE, CINDER, AGGRESSION
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F13 Monster战 掉血13; F17 Boss战 掉血64; F19 Monster战 掉血20; F21 Unknown战 掉血6; F22 Monster战 掉血15; F25 Elite战 掉血63（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/18局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)，OFFERING(25分/14局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_race_prior_eff: 0.48 → 0.51（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/570 胜，当前目标进阶 0
