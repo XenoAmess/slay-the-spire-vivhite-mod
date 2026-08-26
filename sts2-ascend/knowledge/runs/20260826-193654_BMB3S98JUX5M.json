@@ -4,8 +4,7 @@
  "ascension": 0,
  "started_at": "2026-08-26 19:36:54",
  "victory": false,
- "in_progress": true,
- "floor": 21,
+ "floor": 23,
  "decisions": [
   {
    "t": "19:36:54",
@@ -3625,6 +3624,212 @@
     "option_index": 1
    },
    "reason": "选择卡牌：【坚毅】（价值 5.7）；候选：坚毅=5.7 / 完美打击=-0.8 / 预备打击=-13.4"
+  },
+  {
+   "t": "19:45:45",
+   "screen": "REWARD",
+   "floor": 21,
+   "hp": 15,
+   "gold": 210,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:45:51",
+   "screen": "MAP",
+   "floor": 21,
+   "hp": 15,
+   "gold": 210,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(4,0)（路径分 -54.90，预计进 Boss 血量 0%；金币210足够；血量16%偏低，药水遗物可代偿休整；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12)）；候选：Shop(4,0)=-54.90|金币210足够；血量16%偏低，药水遗物可代偿休整；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12) / Monster(4,1)=-68.97|血量16%过低，避免无谓消耗战；连续作战3场，疲劳压制×0.75；低血尾部定价：Monster先验16→21（实测单场最差47）；低血尾部生存复核：单场最差47打完仅剩0(≤9)，尾部罚分；投影中途死亡"
+  },
+  {
+   "t": "19:45:53",
+   "screen": "SHOP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 210,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "19:45:54",
+   "screen": "SHOP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 210,
+   "action": "remove_card_at_shop",
+   "params": {},
+   "reason": "商店：付费删牌（预留 60 金后仍充足）"
+  },
+  {
+   "t": "19:45:55",
+   "screen": "CARD_SELECTION",
+   "floor": 22,
+   "hp": 15,
+   "gold": 210,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "删除卡牌：【打击】（最无价值）"
+  },
+  {
+   "t": "19:45:56",
+   "screen": "SHOP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 110,
+   "action": "buy_card",
+   "params": {
+    "option_index": 5
+   },
+   "reason": "商店：购买卡牌【无休手斧】（89金，价值12.3≥门槛1.0）"
+  },
+  {
+   "t": "19:45:57",
+   "screen": "SHOP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 21,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "19:45:58",
+   "screen": "SHOP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 21,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "19:46:00",
+   "screen": "MAP",
+   "floor": 22,
+   "hp": 15,
+   "gold": 21,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(5,0)（路径分 -68.83，预计进 Boss 血量 0%；血量16%过低，避免无谓消耗战；低血尾部定价：Monster先验16→21（实测单场最差47）；低血尾部生存复核：单场最差47打完仅剩0(≤9)，尾部罚分；投影中途死亡）；候选：Monster(5,0)=-68.83|血量16%过低，避免无谓消耗战；低血尾部定价：Monster先验16→21（实测单场最差47）；低血尾部生存复核：单场最差47打完仅剩0(≤9)，尾部罚分；投影中途死亡"
+  },
+  {
+   "t": "19:46:03",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 15,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【应急按钮】（格挡30）；敌意图总伤16，我方15血/0甲；防守线复核：联合能量对账，格挡14+输出16/回合的混合分配即可在净火力下追平击杀所需5回合，维持攻防节奏不全攻"
+  },
+  {
+   "t": "19:46:03",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 15,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【拆卸+】→啃咬机（辅助体优先转火：啃咬机（零伤害意图，放生=纵容其强化队友））；敌意图总伤16，我方15血/30甲；防守线复核：联合能量对账，格挡14+输出16/回合的混合分配即可在净火力下追平击杀所需5回合，维持攻防节奏不全攻"
+  },
+  {
+   "t": "19:46:04",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 15,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【突破+】（群体伤害≈26.0）；敌意图总伤16，我方15血/30甲；防守线复核：联合能量对账，格挡14+输出16/回合的混合分配即可在净火力下追平击杀所需5回合，维持攻防节奏不全攻"
+  },
+  {
+   "t": "19:46:05",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 14,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【地狱之刃】（能力/增益牌（第1回合）｜长战加成+7.5（敌血池90））；敌意图总伤16，我方14血/30甲；防守线复核：联合能量对账，格挡13+输出16/回合的混合分配即可在净火力下追平击杀所需4回合，维持攻防节奏不全攻"
+  },
+  {
+   "t": "19:46:06",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 14,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【御血术】→啃咬机（辅助体优先转火：啃咬机（零伤害意图，放生=纵容其强化队友））；敌意图总伤16，我方14血/30甲；防守线复核：联合能量对账，格挡13+输出16/回合的混合分配即可在净火力下追平击杀所需4回合，维持攻防节奏不全攻"
+  },
+  {
+   "t": "19:46:08",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 12,
+   "gold": 21,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:46:13",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 12,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【无休手斧】→啃咬机（辅助体优先转火：啃咬机（零伤害意图，放生=纵容其强化队友）｜无甲孤注抢斩杀）；敌意图总伤16，我方12血/0甲"
+  },
+  {
+   "t": "19:46:14",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 12,
+   "gold": 21,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→啃咬机（辅助体优先转火：啃咬机（零伤害意图，放生=纵容其强化队友）｜无甲孤注抢斩杀）；敌意图总伤16，我方12血/0甲"
+  },
+  {
+   "t": "19:46:14",
+   "screen": "COMBAT",
+   "floor": 23,
+   "hp": 12,
+   "gold": 21,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（岩石铠甲+✓,坚毅✓,撕裂+✓），结束回合（敌意图总伤16，我方12血/0甲）；警告：结束回合可能致死！"
   }
  ],
  "combat_notes": [
@@ -3637,7 +3842,9 @@
   "F15 Elite战 掉血15",
   "F17 Boss战 掉血50",
   "F19 Monster战 掉血9",
-  "F20 Monster战 掉血15"
+  "F20 Monster战 掉血15",
+  "F21 Monster战 掉血52",
+  "F23 Monster战 掉血15（阵亡）"
  ],
  "attribution_tags": [
   [
@@ -3787,6 +3994,18 @@
   [
    "card_pick",
    "TRUE_GRIT"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "card_pick",
+   "THRUMMING_HATCHET"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ]
 }
