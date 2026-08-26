@@ -1,0 +1,642 @@
+{
+ "run_id": "E03AAW2XDTEF",
+ "run_number": 625,
+ "ascension": 0,
+ "started_at": "2026-08-26 19:11:06",
+ "victory": false,
+ "in_progress": true,
+ "floor": 5,
+ "decisions": [
+  {
+   "t": "19:11:06",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「失物盒」（经验价值 0.3）；失物盒=0.3(n=16) / 精准剪刀=0.0(n=14) / 寻龙尺=-0.5(n=3)"
+  },
+  {
+   "t": "19:11:07",
+   "screen": "REWARD",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：瓶装潜能"
+  },
+  {
+   "t": "19:11:08",
+   "screen": "REWARD",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:11:09",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【撕裂】（价值 8.6）；候选：撕裂=8.6 / 劫掠=6.8 / 剑柄打击=-1.4"
+  },
+  {
+   "t": "19:11:10",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "19:11:12",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,1)（路径分 -53.66，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；投影中途死亡）；候选：Monster(1,1)=-53.66|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；投影中途死亡 / Monster(1,3)=-54.28|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,4)=-54.03|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "19:11:14",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方80血/0甲"
+  },
+  {
+   "t": "19:11:15",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方80血/0甲"
+  },
+  {
+   "t": "19:11:16",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方80血/0甲"
+  },
+  {
+   "t": "19:11:17",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:11:20",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤7，我方80血/0甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "19:11:21",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→缩小甲虫（单体伤害≈5.0）；敌意图总伤7，我方80血/5甲；意图升级+7，防御前置"
+  },
+  {
+   "t": "19:11:23",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:11:27",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【瓶装潜能】"
+  },
+  {
+   "t": "19:11:28",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤13，我方78血/0甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "19:11:29",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4.0）；敌意图总伤13，我方78血/5甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "19:11:30",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈4.0）；敌意图总伤13，我方78血/5甲；意图升级+6，防御前置"
+  },
+  {
+   "t": "19:11:31",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:11:34",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→缩小甲虫（可击杀缩小甲虫）；敌意图总伤7，我方70血/0甲"
+  },
+  {
+   "t": "19:11:35",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 76,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：16金币"
+  },
+  {
+   "t": "19:11:36",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 76,
+   "gold": 115,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：易伤药水"
+  },
+  {
+   "t": "19:11:37",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 76,
+   "gold": 115,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:11:37",
+   "screen": "CARD_SELECTION",
+   "floor": 2,
+   "hp": 76,
+   "gold": 115,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【耸肩无视】（价值 11.3）；候选：耸肩无视=11.3 / 狂怒=6.7 / 预备打击=-14.7"
+  },
+  {
+   "t": "19:11:38",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 76,
+   "gold": 115,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:11:40",
+   "screen": "MAP",
+   "floor": 2,
+   "hp": 76,
+   "gold": 115,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(2,0)（路径分 -54.26，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；投影中途死亡）；候选：Monster(2,0)=-54.26|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；投影中途死亡"
+  },
+  {
+   "t": "19:11:43",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 76,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（单体伤害≈8.0）；敌意图总伤12，我方76血/0甲"
+  },
+  {
+   "t": "19:11:44",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 76,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤12，我方76血/0甲"
+  },
+  {
+   "t": "19:11:45",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 76,
+   "gold": 115,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:11:49",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤6，我方69血/0甲"
+  },
+  {
+   "t": "19:11:49",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤6，我方69血/8甲"
+  },
+  {
+   "t": "19:11:50",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤6，我方69血/8甲"
+  },
+  {
+   "t": "19:11:52",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:11:56",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方69血/0甲"
+  },
+  {
+   "t": "19:11:56",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方69血/0甲"
+  },
+  {
+   "t": "19:11:57",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方69血/0甲"
+  },
+  {
+   "t": "19:11:59",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:12:02",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【耸肩无视】（格挡8/抽牌1）；敌意图总伤14，我方69血/0甲；意图升级+14，防御前置"
+  },
+  {
+   "t": "19:12:03",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 115,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（可击杀小啃兽）；敌意图总伤14，我方69血/8甲；意图升级+14，防御前置"
+  },
+  {
+   "t": "19:12:04",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 75,
+   "gold": 115,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：19金币"
+  },
+  {
+   "t": "19:12:05",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 75,
+   "gold": 134,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:12:06",
+   "screen": "CARD_SELECTION",
+   "floor": 3,
+   "hp": 75,
+   "gold": 134,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【耸肩无视】（价值 9.8）；候选：耸肩无视=9.8 / 坚毅=6.7 / 添柴=0.9"
+  },
+  {
+   "t": "19:12:07",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 75,
+   "gold": 134,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:12:09",
+   "screen": "MAP",
+   "floor": 3,
+   "hp": 75,
+   "gold": 134,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(3,0)（路径分 -32.84，预计进 Boss 血量 0%；金币134够买药水档位；路径中段含未达标精英，投影罚分；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12)；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)）；候选：Shop(3,0)=-32.84|金币134够买药水档位；路径中段含未达标精英，投影罚分；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12)；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)"
+  },
+  {
+   "t": "19:12:10",
+   "screen": "SHOP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 134,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "19:12:11",
+   "screen": "SHOP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 134,
+   "action": "buy_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "商店：购买卡牌【彼岸咆哮】（74金，价值17.0≥门槛1.0）"
+  },
+  {
+   "t": "19:12:12",
+   "screen": "SHOP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 60,
+   "action": "buy_potion",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "商店：购买药水【攻击药水】（49金，价值2.2）"
+  },
+  {
+   "t": "19:12:13",
+   "screen": "SHOP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 11,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "19:12:14",
+   "screen": "SHOP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 11,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "19:12:16",
+   "screen": "MAP",
+   "floor": 4,
+   "hp": 75,
+   "gold": 11,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(4,0)（路径分 -55.59，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(4,0)=-55.59|前期需要战斗积累卡牌；输出饥饿战损上浮×1.30（缺口84%）；路径中段含未达标精英，投影罚分；投影中途死亡"
+  },
+  {
+   "t": "19:12:18",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 75,
+   "gold": 11,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（中）（辅助体优先转火：树枝史莱姆（中）（零伤害意图，放生=纵容其强化队友））；敌意图总伤4，我方75血/0甲"
+  }
+ ],
+ "combat_notes": [
+  "F2 Monster战 掉血4",
+  "F3 Monster战 掉血1"
+ ],
+ "attribution_tags": [
+  [
+   "card_pick",
+   "RUPTURE"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "SHRUG_IT_OFF"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "SHRUG_IT_OFF"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "card_pick",
+   "HOWL_FROM_BEYOND"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}

@@ -2394,3 +2394,69 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/618 胜，当前目标进阶 0
+
+## 第 619 局复盘（2026-08-26 18:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, FLAME_BARRIER, DISMANTLE, BATTLE_TRANCE, RUPTURE, TAUNT, HEMOKINESIS, SALVO, DARK_EMBRACE, BREAKTHROUGH, BLUDGEON
+- 本局遗物：RED_MASK, 水银沙漏
+- 战斗记录：F7 Monster战 掉血15; F8 Monster战 掉血17; F13 Monster战 掉血17; F14 Monster战 掉血12; F15 Elite战 掉血0; F17 Boss战 掉血67（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/619 胜，当前目标进阶 0
+
+## 第 620 局复盘（2026-08-26 18:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：BLUDGEON, BLUDGEON, FORGOTTEN_RITUAL, SWORD_BOOMERANG, HEMOKINESIS, CINDER, TAUNT, COLOSSUS
+- 本局遗物：GORGET, WAR_PAINT
+- 战斗记录：F5 Monster战 掉血10; F8 Monster战 掉血0; F9 Monster战 掉血2; F13 Unknown战 掉血0; F15 Monster战 掉血0; F17 Boss战 掉血91（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/620 胜，当前目标进阶 0
+
+## 第 621 局复盘（2026-08-26 18:50）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：BLUDGEON, ARMAMENTS, HEMOKINESIS, RUPTURE, BREAKTHROUGH, RUPTURE, DISMANTLE, BREAKTHROUGH, THRASH, EVIL_EYE, INFLAME, EVIL_EYE, MOLTEN_FIST, HEMOKINESIS, MOLTEN_FIST, CRUELTY, DRUM_OF_BATTLE, MOLTEN_FIST, IMPERVIOUS
+- 本局遗物：ORICHALCUM, 佛珠手链, VAMBRACE, GREMLIN_HORN, REGAL_PILLOW
+- 战斗记录：F13 Monster战 掉血5; F15 Elite战 掉血11; F17 Boss战 掉血47; F19 Monster战 掉血24; F23 Monster战 掉血0; F33 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/621 胜，当前目标进阶 0
+
+## 第 622 局复盘（2026-08-26 18:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：DISMANTLE, RAMPAGE, HEADBUTT, VICIOUS, BLUDGEON, WHIRLWIND, CINDER, DISMANTLE, CINDER, CINDER, SWORD_BOOMERANG, FINESSE
+- 本局遗物：WAR_PAINT, 灯笼
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血16; F9 Monster战 掉血9; F12 Elite战 掉血42; F14 Monster战 掉血8; F17 Boss战 掉血84（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/622 胜，当前目标进阶 0
+
+## 第 623 局复盘（2026-08-26 19:03）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：MOLTEN_FIST, COLOSSUS, FIGHT_ME, TRUE_GRIT, SWORD_BOOMERANG, CINDER, VICIOUS, CINDER, DISMANTLE
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F7 Monster战 掉血12; F8 Monster战 掉血12; F9 Monster战 掉血40; F12 Monster战 掉血21; F14 Monster战 掉血9; F15 Elite战 掉血34（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/623 胜，当前目标进阶 0
+
+## 第 624 局复盘（2026-08-26 19:10）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：WHIRLWIND, EVIL_EYE, CINDER, FLAME_BARRIER, SHRUG_IT_OFF, HEMOKINESIS, TRUE_GRIT, DISMANTLE, BLUDGEON, THUNDERCLAP
+- 本局遗物：LETTER_OPENER
+- 战斗记录：F9 Monster战 掉血39; F11 Unknown战 掉血14; F12 Monster战 掉血0; F14 Monster战 掉血0; F15 Monster战 掉血30; F17 Boss战 掉血53（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/624 胜，当前目标进阶 0
