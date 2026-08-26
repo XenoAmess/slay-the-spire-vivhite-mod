@@ -2724,3 +2724,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/648 胜，当前目标进阶 0
+
+## 第 649 局复盘（2026-08-27 01:13）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：TAUNT, SWORD_BOOMERANG, STONE_ARMOR, DISMANTLE, SHRUG_IT_OFF, INFLAME, DISMANTLE, HEMOKINESIS
+- 本局遗物：无
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血39; F6 Monster战 掉血8; F8 Monster战 掉血18; F9 Monster战 掉血39（阵亡）
+- 当前高价值卡牌：BOLAS(25分/3局)，CONFLAGRATION(24分/47局)，PRODUCTION(24分/3局)，FIEND_FIRE(24分/28局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/649 胜，当前目标进阶 0
