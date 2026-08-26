@@ -502,6 +502,11 @@ class AutoGitSafetyTests(unittest.TestCase):
         stop_filtered = llm_review._unexpected_stop_workspace_changes(changed)
         self.assertNotIn("worktree:" + stop_file, stop_filtered)
         self.assertIn("worktree:sts2-ascend/.runtime/injected.cmd", stop_filtered)
+        synthetic = llm_review._unexpected_stop_workspace_changes((
+            "worktree:sts2-ascend/.runtime/stop.request",
+            "worktree:sts2-ascend/.runtime/unknown.escape",
+        ))
+        self.assertEqual(synthetic, ("worktree:sts2-ascend/.runtime/unknown.escape",))
 
         # 工作树/index 不变的空提交也必须被 Git 控制面指纹发现。
         before_ref = autogit.workspace_fingerprint()

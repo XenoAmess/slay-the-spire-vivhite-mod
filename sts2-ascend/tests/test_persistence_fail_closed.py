@@ -326,6 +326,23 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             with self.subTest(pending=pending), self.assertRaises(llm_review.ReviewQueueError):
                 llm_review._validate_queue({"pending": pending, "reviewing": None})
 
+    def test_requeue_cli_refuses_starting_or_foreground_stack(self) -> None:
+        for state in ("starting", "foreground"):
+            with self.subTest(state=state), tempfile.TemporaryDirectory(
+                    prefix="sts2-review-session-") as root:
+                base = Path(root)
+                runtime = base / ".runtime"
+                runtime.mkdir()
+                (runtime / "session.json").write_text(
+                    json.dumps({"state": state}), encoding="utf-8")
+                with (mock.patch.object(llm_review, "BASE_DIR", base),
+                      mock.patch.object(sys, "argv", ["llm_review.py", "--requeue", "8"]),
+                      mock.patch.object(llm_review, "requeue_review_runs") as requeue,
+                      self.assertRaises(SystemExit) as raised):
+                    llm_review.main()
+                self.assertEqual(raised.exception.code, 3)
+                requeue.assert_not_called()
+
     def test_recovered_runs_append_without_delaying_or_duplicating_live_work(self) -> None:
         payload = {
             "pending": [{"run": 11, "time": "new"}],

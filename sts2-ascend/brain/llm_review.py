@@ -115,6 +115,7 @@ REVIEW_WORKSPACE_VOLATILE_PATHS = REVIEW_CONCURRENT_PATHS + [
 # 仍会对它们做指纹，防止模型用绝对路径篡改生命周期控制面。
 REVIEW_STOP_LIFECYCLE_PATHS = [
     "sts2-ascend/.runtime/session.json",
+    "sts2-ascend/.runtime/stop.request",
     f"sts2-ascend/.runtime/stop{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.request",
     f"sts2-ascend/.runtime/runner{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.pid",
     f"sts2-ascend/.runtime/brain{'.' + SESSION_ID if SESSION_ID != 'legacy' else ''}.pid",
@@ -937,6 +938,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             workspace_before, workspace_after,
             online_paths=REVIEW_WORKSPACE_VOLATILE_PATHS,
         )
+        # stop 可能恰好落在 opencode 自然退出与耗时的 after 指纹之间；不能只
+        # 信任 _stream_run 返回瞬间的 stopped 快照。
+        stopped = stopped or _review_stop_requested()
         if sandbox.error and not stopped:
             _record_sandbox_diagnostic(
                 pre_head, sandbox.error, list(sandbox.paths),
@@ -1028,6 +1032,14 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         # 3) marker 在 update-ref/push 前原子发布；patch commit 的私有 index 只包含
         # 模型 hunk，同文件中并发用户 hunk 留在工作树且不会被提交。
         def prepare_marker(provisional) -> bool:
+            # prepare 在工作树 apply/update-ref 之前、同一 Git 事务锁内执行，是
+            # 合入前最后一道停止闸门。停止批次保留 reviewing 给新进程恢复。
+            if _review_stop_requested():
+                if _status is not None:
+                    _status.update({
+                        "outcome": "canceled", "reason": "整套停止", "canceled": True})
+                log("[llm] patch 合入前收到整套停止请求；取消提交并保留复盘批次")
+                return False
             return _write_restart_marker({
                 "pre_head": pre_head,
                 "review_parent": provisional.before_head,
@@ -1039,13 +1051,18 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         def abort_marker(provisional) -> None:
             _remove_restart_marker(provisional.commit, log=log)
 
+        if _review_stop_requested():
+            if _status is not None:
+                _status.update({"outcome": "canceled", "reason": "整套停止", "canceled": True})
+            log("[llm] 隔离验证后收到整套停止请求；不进入 patch 提交")
+            return False
         result = autogit.commit_patch_result(
             sandbox.patch,
             f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）",
             review_paths, log=log, prepare=prepare_marker, abort_prepare=abort_marker,
         )
         if not result.created:
-            if _status is not None:
+            if (_status is not None and _status.get("outcome") != "canceled"):
                 _status["reason"] = result.reason or "复盘 patch 提交失败"
             log(f"[llm] 复盘 patch 未能安全提交，保留现场供诊断：{result.reason}")
             return False
@@ -1816,7 +1833,7 @@ def main() -> None:
             session = json.loads(session_file.read_text(encoding="utf-8"))
         except (FileNotFoundError, OSError, json.JSONDecodeError):
             session = {}
-        if session.get("state") == "running":
+        if session.get("state") in {"starting", "running", "foreground"}:
             print("拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain")
             raise SystemExit(3)
         try:
