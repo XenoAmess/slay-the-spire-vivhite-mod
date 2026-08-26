@@ -2559,3 +2559,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/633 胜，当前目标进阶 0
+
+## 第 634 局复盘（2026-08-26 23:16）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：BATTLE_TRANCE, DISMANTLE, STOMP, UNRELENTING, SHRUG_IT_OFF, DISMANTLE, THE_GAMBIT, VOLLEY, THUNDERCLAP, CINDER
+- 本局遗物：铜质鳞片, MANGO
+- 战斗记录：F6 Monster战 掉血8; F7 Monster战 掉血7; F9 Elite战 掉血52; F13 Unknown战 掉血0; F14 Monster战 掉血0; F15 Elite战 掉血55（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/634 胜，当前目标进阶 0
