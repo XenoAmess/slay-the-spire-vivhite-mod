@@ -2768,3 +2768,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/652 胜，当前目标进阶 0
+
+## 第 653 局复盘（2026-08-27 01:43）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：PRODUCTION, ARMAMENTS, RUPTURE, THRASH, DEMON_FORM, IMPERVIOUS, SWORD_BOOMERANG, TRUE_GRIT
+- 本局遗物：TOXIC_EGG, 皇家枕头
+- 战斗记录：F6 Monster战 掉血10; F8 Monster战 掉血21; F11 Elite战 掉血39; F14 Monster战 掉血42; F15 Monster战 掉血14; F17 Boss战 掉血64（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，CONFLAGRATION(24分/47局)，FIEND_FIRE(24分/28局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/653 胜，当前目标进阶 0
