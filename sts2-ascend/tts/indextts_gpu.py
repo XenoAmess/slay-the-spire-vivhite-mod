@@ -25,6 +25,127 @@ REFERENCE_CACHE = TTS_DIR / "reference_voice_15s.indextts25.cache.pt"
 CACHE_FORMAT = 1
 MAX_TEXT_CHARS = 1200
 SOURCE_PRIORITY = {"conclusion": 0, "review": 20, "manual": 30, "quip": 50}
+CONCLUSION_TARGET_CHARS = 10
+CONCLUSION_MAX_CHARS = 20
+SHORT_TEXT_MAX_MEL_TOKENS = 320
+_CONCLUSION_BREAKS = frozenset("。！？!?；;，,、：:.…—")
+_CONCLUSION_CLOSERS = frozenset("”’」』】）》）)]}\"'")
+
+
+def _normalize_speech_text(text: str) -> str:
+    return " ".join(str(text or "").split())
+
+
+def _balanced_chunks(text: str, target_chars: int) -> list[str]:
+    """Hard-split one punctuation-free clause without leaving a tiny tail."""
+    count = max(1, (len(text) + target_chars - 1) // target_chars)
+    base, wider = divmod(len(text), count)
+    chunks = []
+    offset = 0
+    for index in range(count):
+        width = base + (1 if index < wider else 0)
+        chunk = text[offset:offset + width].strip()
+        offset += width
+        if chunk:
+            chunks.append(chunk)
+    return chunks
+
+
+def split_conclusion_text(
+    text: str,
+    *,
+    target_chars: int = CONCLUSION_TARGET_CHARS,
+    max_chars: int = CONCLUSION_MAX_CHARS,
+) -> list[str]:
+    """Split a conclusion into natural clauses with a strict model-input cap.
+
+    Punctuation is kept for prosody. Naturally terminated clauses up to the
+    hard limit stay intact; unterminated clauses above the preferred target
+    and every clause above the hard limit are balanced around that target.
+    Tiny adjacent clauses are packed when doing so remains safe.
+    """
+    if target_chars < 1 or max_chars < target_chars:
+        raise ValueError("结论分句要求 1 <= target_chars <= max_chars")
+    normalized = _normalize_speech_text(text)
+    if not normalized:
+        return []
+
+    clauses: list[tuple[str, bool]] = []
+    start = 0
+    index = 0
+    while index < len(normalized):
+        char = normalized[index]
+        # Keep decimal/version dots inside an ASCII token (for example 54.5
+        # or IndexTTS2.5); a sentence-ending dot remains a natural break.
+        decimal_dot = (
+            char == "."
+            and index > 0
+            and index + 1 < len(normalized)
+            and normalized[index - 1].isascii()
+            and normalized[index - 1].isalnum()
+            and normalized[index + 1].isascii()
+            and normalized[index + 1].isalnum()
+        )
+        if char in _CONCLUSION_BREAKS and not decimal_dot:
+            end = index + 1
+            # Keep repeated terminators and closing quotes/brackets with the
+            # phrase they close instead of creating punctuation-only jobs.
+            while (end < len(normalized)
+                   and (normalized[end] in _CONCLUSION_BREAKS
+                        or normalized[end] in _CONCLUSION_CLOSERS)):
+                end += 1
+            clause = normalized[start:end].strip()
+            if clause:
+                clauses.append((clause, True))
+            start = end
+            index = end
+            continue
+        index += 1
+    tail = normalized[start:].strip()
+    if tail:
+        clauses.append((tail, False))
+
+    chunks: list[str] = []
+    pending = ""
+
+    def append_piece(piece: str) -> None:
+        nonlocal pending
+        if not piece:
+            return
+        if pending and len(pending) + len(piece) <= target_chars:
+            pending += piece
+            return
+        if pending:
+            chunks.append(pending)
+        pending = piece
+
+    for clause, has_natural_end in clauses:
+        pieces = ([clause] if (len(clause) <= max_chars
+                               and (has_natural_end or len(clause) <= target_chars))
+                  else _balanced_chunks(clause, target_chars))
+        for piece in pieces:
+            append_piece(piece)
+    if pending:
+        chunks.append(pending)
+
+    # Do not synthesize a one-to-four-character orphan merely because a
+    # natural boundary happened to land exactly near the target. Merge it
+    # when possible; otherwise borrow a few trailing characters from the
+    # previous chunk while preserving order and the hard limit.
+    min_tail = max(2, target_chars // 2)
+    if len(chunks) > 1 and len(chunks[-1]) < min_tail:
+        previous, tail = chunks[-2], chunks[-1]
+        if len(previous) + len(tail) <= max_chars:
+            chunks[-2:] = [previous + tail]
+        elif (previous[-1] not in _CONCLUSION_BREAKS
+              and previous[-1] not in _CONCLUSION_CLOSERS):
+            needed = min_tail - len(tail)
+            if len(previous) > needed:
+                chunks[-2:] = [previous[:-needed], previous[-needed:] + tail]
+
+    if any(len(chunk) > max_chars for chunk in chunks):  # defensive invariant
+        raise AssertionError("结论分句超过硬上限")
+    return chunks
 
 
 def _config() -> dict:
@@ -267,6 +388,12 @@ class IndexTTSGpuEngine:
     def synthesize(self, text: str, output_path: Path) -> float:
         started = time.monotonic()
         self.torch.cuda.reset_peak_memory_stats(self.device)
+        generation_kwargs = {}
+        if len(_normalize_speech_text(text)) <= CONCLUSION_MAX_CHARS:
+            # 320 semantic tokens are about 11.5 seconds at the production
+            # codec/S2M settings. This leaves ample room for <=20 characters
+            # while bounding the random decoder's missing-EOS worst case.
+            generation_kwargs["max_mel_tokens"] = SHORT_TEXT_MAX_MEL_TOKENS
         try:
             with self.torch.inference_mode():
                 self.tts.infer(
@@ -277,6 +404,7 @@ class IndexTTSGpuEngine:
                     duration_factor=self.duration_factor,
                     verbose=False,
                     num_beams=self.num_beams,
+                    **generation_kwargs,
                 )
             self.torch.cuda.synchronize(self.device)
             self.last_peak_mib = self.torch.cuda.max_memory_allocated(self.device) / 1024 ** 2
@@ -290,6 +418,7 @@ class IndexTTSGpuEngine:
 @dataclass
 class _SpeechJob:
     text: str
+    segments: tuple[str, ...]
     source: str
     done: threading.Event = field(default_factory=threading.Event)
     result: dict | None = None
@@ -319,6 +448,9 @@ class SpeechService:
         self._stopping = threading.Event()
         self._busy_lock = threading.Lock()
         self._current_source: str | None = None
+        self._current_segment_index: int | None = None
+        self._current_segment_count = 0
+        self._current_segment_chars = 0
         self.completed = 0
         self.worker = threading.Thread(target=self._run, name="indextts-gpu-worker", daemon=True)
         self.worker.start()
@@ -338,6 +470,9 @@ class SpeechService:
     def status(self) -> dict:
         with self._busy_lock:
             source = self._current_source
+            segment_index = self._current_segment_index
+            segment_count = self._current_segment_count
+            segment_chars = self._current_segment_chars
         return {
             "ok": True,
             "ready": not self._stopping.is_set(),
@@ -348,6 +483,9 @@ class SpeechService:
             "queue_size": self.queue.qsize(),
             "busy": source is not None,
             "current_source": source,
+            "current_segment": segment_index,
+            "segment_count": segment_count,
+            "segment_chars": segment_chars,
             "completed": self.completed,
         }
 
@@ -361,7 +499,9 @@ class SpeechService:
             raise ValueError(f"单次文本超过 {MAX_TEXT_CHARS} 字符")
         if source not in SOURCE_PRIORITY:
             raise ValueError(f"未知语音来源：{source}")
-        job = _SpeechJob(text=text, source=source)
+        segments = (tuple(split_conclusion_text(text))
+                    if source == "conclusion" else (text,))
+        job = _SpeechJob(text=text, segments=segments, source=source)
         try:
             self.queue.put_nowait((SOURCE_PRIORITY[source], next(self._counter), job))
         except queue.Full as exc:
@@ -371,7 +511,9 @@ class SpeechService:
             raise TimeoutError(f"IndexTTS 请求等待超过 {timeout:.0f}s")
         if job.error:
             raise RuntimeError(job.error)
-        return job.result or {"ok": True}
+        if job.result is None:
+            raise RuntimeError("IndexTTS 任务未完成")
+        return job.result
 
     def close(self) -> None:
         self._stopping.set()
@@ -391,30 +533,64 @@ class SpeechService:
                     continue
                 with self._busy_lock:
                     self._current_source = job.source
+                    self._current_segment_index = None
+                    self._current_segment_count = len(job.segments)
+                    self._current_segment_chars = 0
                 self.on_busy(job.source)
-                fd, raw_path = tempfile.mkstemp(prefix="index_gpu_", suffix=".wav", dir=TTS_DIR)
-                os.close(fd)
-                output_path = Path(raw_path)
-                try:
-                    elapsed = self.engine.synthesize(job.text, output_path)
-                    if not job.cancelled:
-                        self.play(output_path)
+                if len(job.segments) > 1:
+                    self.log(
+                        f"GPU 细粒度分句 [{job.source}] {len(job.text)}字 -> "
+                        f"{len(job.segments)}段：{[len(part) for part in job.segments]}"
+                    )
+                total_elapsed = 0.0
+                peak_cuda_mib = 0.0
+                completed_segments = 0
+                for index, segment in enumerate(job.segments, start=1):
+                    if job.cancelled or self._stopping.is_set():
+                        break
+                    with self._busy_lock:
+                        self._current_segment_index = index
+                        self._current_segment_chars = len(segment)
+                    label = (job.source if len(job.segments) == 1
+                             else f"{job.source} {index}/{len(job.segments)}")
+                    self.log(f"GPU 开始合成 [{label}] {len(segment)}字：{segment}")
+                    fd, raw_path = tempfile.mkstemp(
+                        prefix="index_gpu_", suffix=".wav", dir=TTS_DIR,
+                    )
+                    os.close(fd)
+                    output_path = Path(raw_path)
+                    try:
+                        elapsed = self.engine.synthesize(segment, output_path)
+                        total_elapsed += elapsed
+                        peak_cuda_mib = max(
+                            peak_cuda_mib,
+                            float(getattr(self.engine, "last_peak_mib", 0.0)),
+                        )
+                        if not job.cancelled and not self._stopping.is_set():
+                            self.play(output_path)
+                            completed_segments += 1
+                        self.log(
+                            f"GPU 合成完成 [{label}] {len(segment)}字，"
+                            f"{elapsed:.1f}s，峰值 "
+                            f"{getattr(self.engine, 'last_peak_mib', 0.0):.0f}MiB：{segment}"
+                        )
+                    finally:
+                        try:
+                            output_path.unlink(missing_ok=True)
+                        except OSError:
+                            pass
+                if self._stopping.is_set() and not job.cancelled:
+                    job.error = "IndexTTS GPU 服务停止，语音任务未完成"
+                elif not job.cancelled:
                     self.completed += 1
                     job.result = {
-                        "ok": True, "source": job.source,
-                        "synthesis_seconds": round(elapsed, 3),
-                        "peak_cuda_mib": round(getattr(self.engine, "last_peak_mib", 0.0), 1),
+                        "ok": True,
+                        "source": job.source,
+                        "segments": completed_segments,
+                        "segment_lengths": [len(part) for part in job.segments],
+                        "synthesis_seconds": round(total_elapsed, 3),
+                        "peak_cuda_mib": round(peak_cuda_mib, 1),
                     }
-                    self.log(
-                        f"GPU 合成完成 [{job.source}] {len(job.text)}字，"
-                        f"{elapsed:.1f}s，峰值 {getattr(self.engine, 'last_peak_mib', 0.0):.0f}MiB："
-                        f"{job.text[:60]}"
-                    )
-                finally:
-                    try:
-                        output_path.unlink(missing_ok=True)
-                    except OSError:
-                        pass
             except Exception as exc:
                 import traceback
                 job.error = str(exc)
@@ -426,6 +602,9 @@ class SpeechService:
                 self.on_busy(None)
                 with self._busy_lock:
                     self._current_source = None
+                    self._current_segment_index = None
+                    self._current_segment_count = 0
+                    self._current_segment_chars = 0
                 job.done.set()
                 self.queue.task_done()
 

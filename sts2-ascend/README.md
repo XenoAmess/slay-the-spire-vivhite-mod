@@ -208,6 +208,9 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   不会把实时正文塞给慢速 IndexTTS
 - 隔离复盘通过 allowlist、自检并导出 patch 后，把本场短结论直接放进 `LIVE-END` 哨兵；Edge 收到后
   立即以 `source=conclusion` 提交给共享 GPU owner，因此不依赖稍后才合入的全局结论文件，也不会读到上一场
+- 共享 owner 会把整段结论保留为一个不可插队的逻辑任务，但每次真正调用模型前按自然停顿细分：目标约 10 字、
+  硬上限 20 字；所有空白规范化后不超过 20 个字符的输入同时限制为最多 320 个语义 token，缩小随机解码
+  未及时产生 EOS 时的单句阻塞上界
 - `LIVE-START/END` 带唯一 `review_id`；同一 Edge 跨连续复盘时按 id 去重，并由单一 FIFO 保证多场结论顺序
 - Edge 正文队列和白绮结论并行工作；白绮碎碎念也不因 Edge 直播暂停。Index 内部仍严格串行，结论优先于
   等待中的碎碎念，但不会强行打断已经开始的那一句
@@ -226,7 +229,8 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 - 手动一次性朗读：先启动整套，再运行 `py -3 tts/speak_once.py <UTF-8文本文件>`；它只提交给现有 owner，不会另载模型
 
 TTS 环境在 `third_party/index-tts/`（uv 旁路，gitignore）。GPU 改造与实测见
-`docs/2026-08-26-IndexTTS-GPU双路共享.md`。
+`docs/2026-08-26-IndexTTS-GPU双路共享.md`；最终结论的 10～20 字强制分段与短句生成上限见
+`docs/2026-08-27-IndexTTS复盘结论细粒度分句与生成上限.md`。
 
 ## 进程结构
 
