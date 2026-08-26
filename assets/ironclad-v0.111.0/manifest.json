@@ -1,0 +1,619 @@
+{
+  "schema_version": 2,
+  "tool": {
+    "name": "extract_ironclad_assets.py",
+    "version": "1.1.0"
+  },
+  "game": {
+    "expected_version": "0.111.0",
+    "pck_file": "SlayTheSpire2.pck",
+    "pck_size": 1990705700,
+    "pck_format": 3,
+    "pck_engine_version": "4.5.1",
+    "pck_directory_sha256": "045cd4459658c6b06a7548cc2b4f7cb3b5e9d092d9379ca51912a9cbac48e316",
+    "version_fingerprint": {
+      "expected_version": "0.111.0",
+      "matched": true,
+      "check_skipped": false,
+      "mismatches": []
+    }
+  },
+  "decoder": {
+    "executable_name": "Godot_v4.5.1-stable_mono_win64.exe",
+    "reported_version": "Godot Engine v4.5.1.stable.mono.official.f62fdbde1 - https://godotengine.org",
+    "method": "Godot ResourceLoader + Texture2D.get_image + Image.save_png"
+  },
+  "layout": {
+    "authoring_domains": [
+      "combat/",
+      "merchant/",
+      "rest_site/",
+      "character_select/",
+      "ui/"
+    ],
+    "note": "These are local authoring sources. A separate publish step must create private .spskel/.spatlas resources and scenes."
+  },
+  "animation_sets": {
+    "combat": {
+      "authoring_skeleton": "combat/ironclad.skel",
+      "ready_runtime_skeleton": "res://Vivhite/skins/ironclad/spine/combat/ironclad.spskel",
+      "animations": [
+        "attack",
+        "attack_heavy",
+        "cast",
+        "die",
+        "hurt",
+        "idle_loop",
+        "low_health_loop",
+        "relaxed_loop"
+      ],
+      "required_vfx_slots": [
+        "slash_mesh",
+        "eye_attach_slot"
+      ],
+      "vfx_events": [
+        "attack_slash_start",
+        "heavy_slash_start",
+        "cast_eyes_start",
+        "clear_vfx"
+      ]
+    },
+    "character_select": {
+      "authoring_skeleton": "character_select/characterselect_ironclad.skel",
+      "ready_runtime_skeleton": "res://Vivhite/skins/ironclad/spine/character_select/characterselect_ironclad.spskel",
+      "animations": [
+        "animation"
+      ]
+    },
+    "merchant": {
+      "authoring_skeleton": "combat/ironclad.skel",
+      "ready_runtime_skeleton": "res://Vivhite/skins/ironclad/spine/combat/ironclad.spskel",
+      "shared_with": "combat",
+      "animations": [
+        "relaxed_loop"
+      ]
+    },
+    "rest_site": {
+      "authoring_skeleton": "rest_site/restsite_ironclad.skel",
+      "ready_runtime_skeleton": "res://Vivhite/skins/ironclad/spine/rest_site/restsite_ironclad.spskel",
+      "animations": [
+        "glory_loop",
+        "hive_loop",
+        "overgrowth_loop",
+        "_tracks/light_off",
+        "_tracks/light_on"
+      ]
+    }
+  },
+  "assets": [
+    {
+      "category": "character_select",
+      "logical_source_path": "res://animations/character_select/ironclad/characterselect_ironclad_skel_data.tres",
+      "archive_payload_path": "res://animations/character_select/ironclad/characterselect_ironclad_skel_data.tres",
+      "output_path": "character_select/character_select_skeleton_data.tres",
+      "transform": "copy",
+      "source_size": 513,
+      "source_md5": "03c89a89dbb0e21d6066167600f4e978",
+      "output_size": 513,
+      "output_sha256": "cbc7d140ebbf00ffcc431a55279c796ce692e2adb3c03066ad105c1198614fc9"
+    },
+    {
+      "category": "character_select",
+      "logical_source_path": "res://animations/character_select/ironclad/characterselect_ironclad.atlas",
+      "archive_payload_path": "res://.godot/imported/characterselect_ironclad.atlas-b06f18b64456c1a191a18ae8efee7013.spatlas",
+      "output_path": "character_select/characterselect_ironclad.atlas",
+      "transform": "spatlas_to_atlas",
+      "source_size": 664,
+      "source_md5": "83bde4434487d2ba0cebacf27259ec39",
+      "output_size": 469,
+      "output_sha256": "26cdef2b793110efc7a071a1b80a64172cd6bff48ffd1aecbdb5a417feb05c3c",
+      "import_remap_path": "res://animations/character_select/ironclad/characterselect_ironclad.atlas.import",
+      "import_remap_md5": "e6cabda49f54693dcf6fa971a623e5e9"
+    },
+    {
+      "category": "character_select",
+      "logical_source_path": "res://animations/character_select/ironclad/characterselect_ironclad.png",
+      "archive_payload_path": "res://.godot/imported/characterselect_ironclad.png-1b865d1e0a90d3a7fe38379cdb48c8d3.s3tc.ctex",
+      "output_path": "character_select/characterselect_ironclad.png",
+      "transform": "ctex_to_png",
+      "source_size": 9022500,
+      "source_md5": "0335f25ab807f790e5150c713fd0fce2",
+      "output_size": 6017051,
+      "output_sha256": "b884cd722802e80ea3f3d92053ee81089494b96b48723a96558399f61935fd77",
+      "import_remap_path": "res://animations/character_select/ironclad/characterselect_ironclad.png.import",
+      "import_remap_md5": "b0654bd956be31d4cebf16fced4d6014",
+      "image": {
+        "width": 3713,
+        "height": 2427,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "character_select",
+      "logical_source_path": "res://animations/character_select/ironclad/characterselect_ironclad.skel",
+      "archive_payload_path": "res://.godot/imported/characterselect_ironclad.skel-bbd024cd73df408404d5fd3aff9881c9.spskel",
+      "output_path": "character_select/characterselect_ironclad.skel",
+      "transform": "spskel_to_skel",
+      "source_size": 50078,
+      "source_md5": "23614b951bbd4aa8c085ec1f52b74187",
+      "output_size": 50078,
+      "output_sha256": "e331424a96ff958fe6cd526bc949c45d188627ec2a6e10d3d095c12c8e38590a",
+      "import_remap_path": "res://animations/character_select/ironclad/characterselect_ironclad.skel.import",
+      "import_remap_md5": "814efc90186d03def651d072c63afc15"
+    },
+    {
+      "category": "character_select",
+      "logical_source_path": "res://scenes/screens/char_select/char_select_bg_ironclad.tscn",
+      "archive_payload_path": "res://scenes/screens/char_select/char_select_bg_ironclad.tscn",
+      "output_path": "character_select/scene.tscn",
+      "transform": "copy",
+      "source_size": 11100,
+      "source_md5": "8fce539648fabfc629d5a035629148a3",
+      "output_size": 11100,
+      "output_sha256": "be90291285612f9db34ffd7c2338da5d6c8ffabb145a3395d28f60e94a88099a"
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad_skel_data.tres",
+      "archive_payload_path": "res://animations/characters/ironclad/ironclad_skel_data.tres",
+      "output_path": "combat/combat_skeleton_data.tres",
+      "transform": "copy",
+      "source_size": 1979,
+      "source_md5": "f37ff6757884cc67209652582f4914ea",
+      "output_size": 1979,
+      "output_sha256": "4301dc976c50f2d659b138dea22a5a60653fd472f8de2b6b6e0002fd8420ae89"
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad.atlas",
+      "archive_payload_path": "res://.godot/imported/ironclad.atlas-4e261a5070e76bbca164014644e864f9.spatlas",
+      "output_path": "combat/ironclad.atlas",
+      "transform": "spatlas_to_atlas",
+      "source_size": 4790,
+      "source_md5": "16ee72c317c7e9e387ad28f03c0f0008",
+      "output_size": 4384,
+      "output_sha256": "80c02b8edd1cb9b6d7316ff08eeb020250302123544dc71c6457d54254bd3c54",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad.atlas.import",
+      "import_remap_md5": "01d185439be09b2b32f0207d4cd0b447"
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad.png",
+      "archive_payload_path": "res://.godot/imported/ironclad.png-6e6d5a4e090068602492d98e503b50b1.ctex",
+      "output_path": "combat/ironclad.png",
+      "transform": "ctex_to_png",
+      "source_size": 143234,
+      "source_md5": "df2a855e67dc91d91aaae1751609d468",
+      "output_size": 207774,
+      "output_sha256": "9f99f07bd67a904406163c31b6b99f146d4a2cff1a87b3cac68382cda809444d",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad.png.import",
+      "import_remap_md5": "c9e56dce3d36b79d5868b5775a1febec",
+      "image": {
+        "width": 1329,
+        "height": 269,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad.skel",
+      "archive_payload_path": "res://.godot/imported/ironclad.skel-8e96930de153cfcb09ff2bbedd54ed5d.spskel",
+      "output_path": "combat/ironclad.skel",
+      "transform": "spskel_to_skel",
+      "source_size": 173712,
+      "source_md5": "250850cfc9d33361bcf844abf91d8362",
+      "output_size": 173712,
+      "output_sha256": "74b3923522927e2056ab624df79e83e861697b1057ba5fd39582f033f903facf",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad.skel.import",
+      "import_remap_md5": "c468cb8734f67dd4e1d6b36bb8e6b165"
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad_2.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_2.png-79de101a05983f234742427e298cf5b2.ctex",
+      "output_path": "combat/ironclad_2.png",
+      "transform": "ctex_to_png",
+      "source_size": 54702,
+      "source_md5": "ba13a2e60c29555430eaacfb55dd9e90",
+      "output_size": 75173,
+      "output_sha256": "831037ddf3bd74d2d6207089f765256bc048a3ab131c5b5b18baf29be8115eab",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad_2.png.import",
+      "import_remap_md5": "98ab6fd2dfb43a69cada2b10f03cb8c8",
+      "image": {
+        "width": 142,
+        "height": 480,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad_3.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_3.png-c2c885ad3b97ff5e96cc8510b8663124.ctex",
+      "output_path": "combat/ironclad_3.png",
+      "transform": "ctex_to_png",
+      "source_size": 42308,
+      "source_md5": "871a32c0dae944e93251b426114854b5",
+      "output_size": 58685,
+      "output_sha256": "c90ecde9731ec008b3cf18918116b2c3b35597cae82b21cb98f7004eb2d05c26",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad_3.png.import",
+      "import_remap_md5": "e7731cccf3d1bc30f7d5662613a798c6",
+      "image": {
+        "width": 492,
+        "height": 107,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://animations/characters/ironclad/ironclad_4.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_4.png-42b73655db761cc54b748eca48350288.ctex",
+      "output_path": "combat/ironclad_4.png",
+      "transform": "ctex_to_png",
+      "source_size": 110,
+      "source_md5": "5c4d8849ed67a5135155896525353ddf",
+      "output_size": 133,
+      "output_sha256": "0df588e4228d7510db7343a615253ee4b5bb2f08097f3572f8dfdc078c5f9c58",
+      "import_remap_path": "res://animations/characters/ironclad/ironclad_4.png.import",
+      "import_remap_md5": "e4cc7e85985aa71ef6d01383704d9ca1",
+      "image": {
+        "width": 19,
+        "height": 49,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "combat",
+      "logical_source_path": "res://scenes/creature_visuals/ironclad.tscn",
+      "archive_payload_path": "res://scenes/creature_visuals/ironclad.tscn",
+      "output_path": "combat/scene.tscn",
+      "transform": "copy",
+      "source_size": 5684,
+      "source_md5": "b5681b373a7551e14bf78b0f252da1c9",
+      "output_size": 5684,
+      "output_sha256": "37c634e979a689f22e95e130ff27dbbe0a494291b82d4786b4839840c311d93e"
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_shop.atlas",
+      "archive_payload_path": "res://.godot/imported/ironclad_shop.atlas-b3dc4007ddce8a996201876afcfe9be6.spatlas",
+      "output_path": "merchant/ironclad_shop.atlas",
+      "transform": "spatlas_to_atlas",
+      "source_size": 5206,
+      "source_md5": "707872bbd018c91c176d167a71b61d7a",
+      "output_size": 4785,
+      "output_sha256": "aef6268e25e7ac1ce1975cae9a5342940e830dc75c9991ffd6d5d3bb5216bfd4",
+      "import_remap_path": "res://animations/merchant/ironclad/ironclad_shop.atlas.import",
+      "import_remap_md5": "00a595fecdf903c5d1c5d9a0536faa27"
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_shop.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_shop.png-b4a3dee535f7841da87ca6e6c6209bba.ctex",
+      "output_path": "merchant/ironclad_shop.png",
+      "transform": "ctex_to_png",
+      "source_size": 314900,
+      "source_md5": "cd486ef8975a314f8f36048e74130be3",
+      "output_size": 468868,
+      "output_sha256": "695eb3eaa6a380cd1f80bb730b9dced46690f96e25a716132689357232eaae77",
+      "import_remap_path": "res://animations/merchant/ironclad/ironclad_shop.png.import",
+      "import_remap_md5": "289f4ea33fe8d84094be7e461c52684d",
+      "image": {
+        "width": 2017,
+        "height": 531,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_shop_2.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_shop_2.png-bd4240df477767dc0bb4a95ebd596071.ctex",
+      "output_path": "merchant/ironclad_shop_2.png",
+      "transform": "ctex_to_png",
+      "source_size": 124332,
+      "source_md5": "07e8dc23e1a18b3e1c729d1ffca3e16e",
+      "output_size": 176755,
+      "output_sha256": "3069d1ee4ac33d7c365b0d5d23d1bf6af58808d85fcde97898560fd687a56ceb",
+      "import_remap_path": "res://animations/merchant/ironclad/ironclad_shop_2.png.import",
+      "import_remap_md5": "90bc054d19566ddd77503209da67d5bd",
+      "image": {
+        "width": 405,
+        "height": 509,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_shop_3.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_shop_3.png-5249e70ac392a6759290a3ec37e48409.ctex",
+      "output_path": "merchant/ironclad_shop_3.png",
+      "transform": "ctex_to_png",
+      "source_size": 96008,
+      "source_md5": "b819f9540e331bf35551e2869962a19c",
+      "output_size": 139115,
+      "output_sha256": "baa34ef2c87984fdb4012d84646d0483ec4d136836f018eff608358330a4f547",
+      "import_remap_path": "res://animations/merchant/ironclad/ironclad_shop_3.png.import",
+      "import_remap_md5": "67966afc91e46cf4f8add533bf19170f",
+      "image": {
+        "width": 552,
+        "height": 279,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_shop_4.png",
+      "archive_payload_path": "res://.godot/imported/ironclad_shop_4.png-e2097d8bb8f9d70a08325bf534c0bed8.ctex",
+      "output_path": "merchant/ironclad_shop_4.png",
+      "transform": "ctex_to_png",
+      "source_size": 110,
+      "source_md5": "0c74c9160431e4f5f63b637ad30101f9",
+      "output_size": 155,
+      "output_sha256": "1375bd32198684801a827bc8ee3c3feb131123f57c86b42e6833d15c1861cc89",
+      "import_remap_path": "res://animations/merchant/ironclad/ironclad_shop_4.png.import",
+      "import_remap_md5": "56d025fbe1a5f21d2061eb4b22423a45",
+      "image": {
+        "width": 30,
+        "height": 82,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://animations/merchant/ironclad/ironclad_merchant_skel_data.tres",
+      "archive_payload_path": "res://animations/merchant/ironclad/ironclad_merchant_skel_data.tres",
+      "output_path": "merchant/merchant_skeleton_data.tres",
+      "transform": "copy",
+      "source_size": 1378,
+      "source_md5": "8e1e60ca0556cf3930324e85221fc922",
+      "output_size": 1378,
+      "output_sha256": "9996a1d257ba885c991d161a2fd752d3216692670deaee23a34a11447d16ec55"
+    },
+    {
+      "category": "merchant",
+      "logical_source_path": "res://scenes/merchant/characters/ironclad_merchant.tscn",
+      "archive_payload_path": "res://scenes/merchant/characters/ironclad_merchant.tscn",
+      "output_path": "merchant/scene.tscn",
+      "transform": "copy",
+      "source_size": 661,
+      "source_md5": "0bbc6c58357e3adfe7d840dc420e4b73",
+      "output_size": 661,
+      "output_sha256": "a3fd09eb443b3228ed5b602cb75bb1802dae7c269d14bfb9ef798cf5840f9c4f"
+    },
+    {
+      "category": "rest_site",
+      "logical_source_path": "res://animations/rest_site/ironclad/rest_site_ironclad_skel_data.tres",
+      "archive_payload_path": "res://animations/rest_site/ironclad/rest_site_ironclad_skel_data.tres",
+      "output_path": "rest_site/rest_site_skeleton_data.tres",
+      "transform": "copy",
+      "source_size": 502,
+      "source_md5": "5aecf0e4021f73763ae580555e430a7e",
+      "output_size": 502,
+      "output_sha256": "f5c385771aa0996adb40d08f9b600fa85bf964fe465977b536ea458a302698ab"
+    },
+    {
+      "category": "rest_site",
+      "logical_source_path": "res://animations/rest_site/ironclad/restsite_ironclad.atlas",
+      "archive_payload_path": "res://.godot/imported/restsite_ironclad.atlas-580cac449bbeee1fb9331a28751523c4.spatlas",
+      "output_path": "rest_site/restsite_ironclad.atlas",
+      "transform": "spatlas_to_atlas",
+      "source_size": 919,
+      "source_md5": "62324856b437e39ebfef899c2c3c0e29",
+      "output_size": 721,
+      "output_sha256": "465b4035e490fb89f2c8ec2840348977329508e4bf7023626b9d9ff76f26835b",
+      "import_remap_path": "res://animations/rest_site/ironclad/restsite_ironclad.atlas.import",
+      "import_remap_md5": "8bcf90305a5868267bae8ced5547e575"
+    },
+    {
+      "category": "rest_site",
+      "logical_source_path": "res://animations/rest_site/ironclad/restsite_ironclad.png",
+      "archive_payload_path": "res://.godot/imported/restsite_ironclad.png-aa21ee5b241defacbd88637a48774c22.ctex",
+      "output_path": "rest_site/restsite_ironclad.png",
+      "transform": "ctex_to_png",
+      "source_size": 104284,
+      "source_md5": "0d5d529fa77a46f25909a77f3a3ea3f4",
+      "output_size": 154032,
+      "output_sha256": "a49621279b623e6279ee269aa20d1616f007d5aa1bc7e435f68c4c96b5621c45",
+      "import_remap_path": "res://animations/rest_site/ironclad/restsite_ironclad.png.import",
+      "import_remap_md5": "9aa6ea61a7c951dcef718c375a011ff4",
+      "image": {
+        "width": 489,
+        "height": 526,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "rest_site",
+      "logical_source_path": "res://animations/rest_site/ironclad/restsite_ironclad.skel",
+      "archive_payload_path": "res://.godot/imported/restsite_ironclad.skel-4f17591a686c02ca03c93d46476fefe2.spskel",
+      "output_path": "rest_site/restsite_ironclad.skel",
+      "transform": "spskel_to_skel",
+      "source_size": 74188,
+      "source_md5": "9602ddcd5315739c1cd427eb815f323c",
+      "output_size": 74188,
+      "output_sha256": "10887969c402fad0f8b7775105ea3bbbffeb4a51d273a75448a768322a64044f",
+      "import_remap_path": "res://animations/rest_site/ironclad/restsite_ironclad.skel.import",
+      "import_remap_md5": "013b07a2c812c8012a18c824b7f182d2"
+    },
+    {
+      "category": "rest_site",
+      "logical_source_path": "res://scenes/rest_site/characters/ironclad_rest_site.tscn",
+      "archive_payload_path": "res://scenes/rest_site/characters/ironclad_rest_site.tscn",
+      "output_path": "rest_site/scene.tscn",
+      "transform": "copy",
+      "source_size": 1751,
+      "source_md5": "7e6bf1c5bd279bcf34005eda3005afb7",
+      "output_size": 1751,
+      "output_sha256": "c41030018535c228d1aab547524b70105f6bb8696315e3550b704cf7b114512a"
+    },
+    {
+      "category": "ui",
+      "logical_source_path": "res://images/ui/top_panel/character_icon_ironclad.png",
+      "archive_payload_path": "res://.godot/imported/character_icon_ironclad.png-888c73542b4736a8c0e0e16fcbd6db6e.bptc.ctex",
+      "output_path": "ui/icon.png",
+      "transform": "ctex_to_png",
+      "source_size": 7796,
+      "source_md5": "02c1f5041bed3f076af652399e8510c2",
+      "output_size": 8380,
+      "output_sha256": "be12d9f3f7645f2372acb19782e3910223d564ed2aa1c2c9935b5c44baae7a78",
+      "import_remap_path": "res://images/ui/top_panel/character_icon_ironclad.png.import",
+      "import_remap_md5": "5e4fe25a558c5703da63cab2a64ce91b",
+      "image": {
+        "width": 85,
+        "height": 85,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui",
+      "logical_source_path": "res://images/ui/top_panel/character_icon_ironclad_outline.png",
+      "archive_payload_path": "res://.godot/imported/character_icon_ironclad_outline.png-e91e89addfb2735530b5afeefedbb30c.s3tc.ctex",
+      "output_path": "ui/icon_outline.png",
+      "transform": "ctex_to_png",
+      "source_size": 7796,
+      "source_md5": "c2857a030db95c0e6c2aab7653e010b8",
+      "output_size": 1123,
+      "output_sha256": "ccc3743b9f4d2048fb07338163cbb00a2a8ee1b73de30b6a51606f7b520574e3",
+      "import_remap_path": "res://images/ui/top_panel/character_icon_ironclad_outline.png.import",
+      "import_remap_md5": "1ff510e92e2944fa8b4920b926f46a14",
+      "image": {
+        "width": 85,
+        "height": 85,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui",
+      "logical_source_path": "res://images/packed/map/icons/map_marker_ironclad.png",
+      "archive_payload_path": "res://.godot/imported/map_marker_ironclad.png-b2cd48cc06f5e8cefc46c251e39df6b8.ctex",
+      "output_path": "ui/map_marker.png",
+      "transform": "ctex_to_png",
+      "source_size": 3108,
+      "source_md5": "57c32ffdeaebd116d0e4571e5453be7c",
+      "output_size": 3950,
+      "output_sha256": "1bacac6c6aa9304b645d068c4e3991c1fb0c929e055a6785f35c8dcd6522860f",
+      "import_remap_path": "res://images/packed/map/icons/map_marker_ironclad.png.import",
+      "import_remap_md5": "279b15a42d1e0d69ee90d10a2d7ab329",
+      "image": {
+        "width": 49,
+        "height": 64,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui/multiplayer",
+      "logical_source_path": "res://images/ui/hands/multiplayer_hand_ironclad_paper.png",
+      "archive_payload_path": "res://.godot/imported/multiplayer_hand_ironclad_paper.png-e69dddf0284fc6b1234bbc73860bb6f7.ctex",
+      "output_path": "ui/multiplayer/paper.png",
+      "transform": "ctex_to_png",
+      "source_size": 200892,
+      "source_md5": "bb5f6b12943e40427e5db4308deff8e8",
+      "output_size": 303631,
+      "output_sha256": "09b64e5e73ee3e3cb9578fe437de5447b849549b79041da0ec39c2bdee124d6c",
+      "import_remap_path": "res://images/ui/hands/multiplayer_hand_ironclad_paper.png.import",
+      "import_remap_md5": "aea8ba1e4b26b23f06751f3babd84ba1",
+      "image": {
+        "width": 422,
+        "height": 1200,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui/multiplayer",
+      "logical_source_path": "res://images/ui/hands/multiplayer_hand_ironclad_point.png",
+      "archive_payload_path": "res://.godot/imported/multiplayer_hand_ironclad_point.png-f7badf33ae8d36817215a3799ff3cbca.ctex",
+      "output_path": "ui/multiplayer/point.png",
+      "transform": "ctex_to_png",
+      "source_size": 187972,
+      "source_md5": "a8cae08e589dc5a131f336c86073022e",
+      "output_size": 284086,
+      "output_sha256": "0da594d916b7a3cd6f454cd05aaba9b1e436d5eace05c02dc07308dbc5f9bc76",
+      "import_remap_path": "res://images/ui/hands/multiplayer_hand_ironclad_point.png.import",
+      "import_remap_md5": "57e6a385d982c708b65c80ab5cac1924",
+      "image": {
+        "width": 422,
+        "height": 1200,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui/multiplayer",
+      "logical_source_path": "res://images/ui/hands/multiplayer_hand_ironclad_rock.png",
+      "archive_payload_path": "res://.godot/imported/multiplayer_hand_ironclad_rock.png-4ba235a0d2d39a3be43b3abf6f21398f.ctex",
+      "output_path": "ui/multiplayer/rock.png",
+      "transform": "ctex_to_png",
+      "source_size": 184110,
+      "source_md5": "b1433fc1c0bbbf4febbbbcf72c02e556",
+      "output_size": 276251,
+      "output_sha256": "805e628f08db140a3b88074f3ef39b51ebdba07e56ab3c32b48d30eef5d65df1",
+      "import_remap_path": "res://images/ui/hands/multiplayer_hand_ironclad_rock.png.import",
+      "import_remap_md5": "8fa1c5313ebf1abb6f1127a8d192044f",
+      "image": {
+        "width": 422,
+        "height": 1200,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui/multiplayer",
+      "logical_source_path": "res://images/ui/hands/multiplayer_hand_ironclad_scissors.png",
+      "archive_payload_path": "res://.godot/imported/multiplayer_hand_ironclad_scissors.png-20aa82b9c73c801bb60b5202518848da.ctex",
+      "output_path": "ui/multiplayer/scissors.png",
+      "transform": "ctex_to_png",
+      "source_size": 193448,
+      "source_md5": "821d7274aab064cf62bc126501151b00",
+      "output_size": 290416,
+      "output_sha256": "fca101b73098f1fed50de470cd66d2bc8f0706c55d5b93f3cf2db666b6e7ff35",
+      "import_remap_path": "res://images/ui/hands/multiplayer_hand_ironclad_scissors.png.import",
+      "import_remap_md5": "065e64740a69b0a6eb35fbb5fe730ce9",
+      "image": {
+        "width": 422,
+        "height": 1200,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui",
+      "logical_source_path": "res://images/packed/character_select/char_select_ironclad.png",
+      "archive_payload_path": "res://.godot/imported/char_select_ironclad.png-6a60464bc609de472b194c81a0841360.ctex",
+      "output_path": "ui/select.png",
+      "transform": "ctex_to_png",
+      "source_size": 21250,
+      "source_md5": "09c363d0170f1ba6e80fba01d9a05780",
+      "output_size": 29867,
+      "output_sha256": "27980341f7574e0cd8abdcf9f89bd88a9eb92650c0669ac060c44f40abe66d0b",
+      "import_remap_path": "res://images/packed/character_select/char_select_ironclad.png.import",
+      "import_remap_md5": "0f00b2bdd5728aacfedf7f84696ea8f1",
+      "image": {
+        "width": 132,
+        "height": 195,
+        "format": "RGBA8"
+      }
+    },
+    {
+      "category": "ui",
+      "logical_source_path": "res://images/packed/character_select/char_select_ironclad_locked.png",
+      "archive_payload_path": "res://.godot/imported/char_select_ironclad_locked.png-8cc6f30fceccb8627323a193eae0884c.ctex",
+      "output_path": "ui/select_locked.png",
+      "transform": "ctex_to_png",
+      "source_size": 1528,
+      "source_md5": "0e533fb0d346af28192bf8d87e9fa4b8",
+      "output_size": 3957,
+      "output_sha256": "eeffcc9984cc25075f4cc6025e31c3968a85f49d61a8a7a1575645a50f241b62",
+      "import_remap_path": "res://images/packed/character_select/char_select_ironclad_locked.png.import",
+      "import_remap_md5": "71f1741e697739f0137da94245729ba1",
+      "image": {
+        "width": 132,
+        "height": 195,
+        "format": "RGBA8"
+      }
+    }
+  ],
+  "not_included": [
+    "Generic game scripts, shaders, and shared scene dependencies",
+    "Original .import files and Godot cache UIDs",
+    "Card art, relic art, and timeline portraits",
+    "Energy orb, transition, victory, and combat-VFX art",
+    "Ready-to-publish mod resources (generated by a separate tool)"
+  ],
+  "notice": "Extracted Mega Crit assets are for local reference/editing. Do not redistribute original game art without permission."
+}

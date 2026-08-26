@@ -1,0 +1,154 @@
+{
+  "resourceRoot": "Vivhite/skins/ironclad",
+  "activationMarker": ".enabled",
+  "inactiveDocumentationFiles": [
+    ".gitkeep",
+    "README.md"
+  ],
+  "requiredSpineVersion": "4.2.43",
+  "requiredSkin": "default",
+  "requiredResources": [
+    "spine/combat/combat_skeleton_data.tres",
+    "spine/merchant/merchant_skeleton_data.tres",
+    "spine/rest_site/rest_site_skeleton_data.tres",
+    "spine/character_select/character_select_skeleton_data.tres",
+    "scenes/merchant.tscn",
+    "scenes/rest_site.tscn",
+    "scenes/character_select.tscn",
+    "ui/icon.png",
+    "ui/icon_outline.png",
+    "ui/select.png",
+    "ui/select_locked.png",
+    "ui/map_marker.png",
+    "multiplayer/point.png",
+    "multiplayer/rock.png",
+    "multiplayer/paper.png",
+    "multiplayer/scissors.png"
+  ],
+  "sceneBindings": [
+    {
+      "scene": "scenes/merchant.tscn",
+      "skeletonData": "spine/merchant/merchant_skeleton_data.tres"
+    },
+    {
+      "scene": "scenes/rest_site.tscn",
+      "skeletonData": "spine/rest_site/rest_site_skeleton_data.tres"
+    },
+    {
+      "scene": "scenes/character_select.tscn",
+      "skeletonData": "spine/character_select/character_select_skeleton_data.tres"
+    }
+  ],
+  "spineSets": [
+    {
+      "name": "combat",
+      "skeletonData": "spine/combat/combat_skeleton_data.tres",
+      "skeleton": "spine/combat/ironclad.spskel",
+      "atlas": "spine/combat/ironclad.spatlas",
+      "atlasSourcePath": "spine/combat/ironclad.atlas",
+      "extractedTemplateSpineVersion": "4.2.43",
+      "pages": [
+        "spine/combat/ironclad.png",
+        "spine/combat/ironclad_2.png",
+        "spine/combat/ironclad_3.png",
+        "spine/combat/ironclad_4.png"
+      ],
+      "animations": [
+        "attack",
+        "attack_heavy",
+        "cast",
+        "die",
+        "hurt",
+        "idle_loop",
+        "low_health_loop",
+        "relaxed_loop"
+      ],
+      "slots": [
+        "slash_mesh",
+        "eye_attach_slot"
+      ],
+      "events": [
+        "attack_slash_start",
+        "heavy_slash_start",
+        "cast_eyes_start",
+        "clear_vfx"
+      ]
+    },
+    {
+      "name": "merchant",
+      "skeletonData": "spine/merchant/merchant_skeleton_data.tres",
+      "skeleton": "spine/combat/ironclad.spskel",
+      "atlas": "spine/merchant/ironclad_shop.spatlas",
+      "atlasSourcePath": "spine/merchant/ironclad_shop.atlas",
+      "extractedTemplateSpineVersion": "4.2.43",
+      "pages": [
+        "spine/merchant/ironclad_shop.png",
+        "spine/merchant/ironclad_shop_2.png",
+        "spine/merchant/ironclad_shop_3.png",
+        "spine/merchant/ironclad_shop_4.png"
+      ],
+      "animations": [
+        "relaxed_loop"
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "name": "rest_site",
+      "skeletonData": "spine/rest_site/rest_site_skeleton_data.tres",
+      "skeleton": "spine/rest_site/restsite_ironclad.spskel",
+      "atlas": "spine/rest_site/restsite_ironclad.spatlas",
+      "atlasSourcePath": "spine/rest_site/restsite_ironclad.atlas",
+      "extractedTemplateSpineVersion": "4.2.37",
+      "pages": [
+        "spine/rest_site/restsite_ironclad.png"
+      ],
+      "animations": [
+        "glory_loop",
+        "hive_loop",
+        "overgrowth_loop",
+        "_tracks/light_off",
+        "_tracks/light_on"
+      ],
+      "slots": [],
+      "events": []
+    },
+    {
+      "name": "character_select",
+      "skeletonData": "spine/character_select/character_select_skeleton_data.tres",
+      "skeleton": "spine/character_select/characterselect_ironclad.spskel",
+      "atlas": "spine/character_select/characterselect_ironclad.spatlas",
+      "atlasSourcePath": "spine/character_select/characterselect_ironclad.atlas",
+      "extractedTemplateSpineVersion": "4.2.40",
+      "pages": [
+        "spine/character_select/characterselect_ironclad.png"
+      ],
+      "animations": [
+        "animation"
+      ],
+      "slots": [],
+      "events": []
+    }
+  ],
+  "forbiddenPckSegments": [
+    "bin",
+    ".work",
+    "vanilla",
+    "tools"
+  ],
+  "forbiddenVanillaPrefixes": [
+    "animations/characters/ironclad/",
+    "animations/merchant/ironclad/",
+    "animations/rest_site/ironclad/",
+    "animations/character_select/ironclad/",
+    "scenes/creature_visuals/ironclad.tscn",
+    "scenes/merchant/characters/ironclad_merchant.tscn",
+    "scenes/rest_site/characters/ironclad_rest_site.tscn",
+    "scenes/screens/char_select/char_select_bg_ironclad.tscn",
+    "scenes/ui/character_icons/ironclad_icon.tscn",
+    "images/ui/top_panel/character_icon_ironclad",
+    "images/packed/character_select/char_select_ironclad",
+    "images/packed/map/icons/map_marker_ironclad",
+    "images/ui/hands/multiplayer_hand_ironclad"
+  ]
+}

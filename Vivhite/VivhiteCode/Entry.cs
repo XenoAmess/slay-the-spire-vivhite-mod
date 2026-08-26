@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Modding;
 using STS2RitsuLib;
 using STS2RitsuLib.Interop;
+using Vivhite.Characters;
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace Vivhite;
@@ -32,6 +33,10 @@ public partial class Entry
         // 自动注册扫描会读取当前程序集里的 RegisterCard/RegisterRelic 等 attribute。
         // 新增内容类后，只要 attribute 写对，通常不需要在入口里手动逐个注册。
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, assembly);
+
+        // 战士皮肤是可选的完整资源包。资源未全部就绪时保持原版战士，
+        // 避免部分路径替换导致战斗、商店或休息场景在运行时加载失败。
+        IroncladReplacementAssets.TryRegister();
 
         Logger.Info("Vivhite initialized.");
     }

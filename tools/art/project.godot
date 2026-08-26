@@ -1,0 +1,14 @@
+; Minimal throwaway project used by extract_ironclad_assets.py to decode the
+; game's Godot 4.5 CompressedTexture2D payloads.  The extractor copies this
+; file into a system temporary directory; no import cache is written here.
+
+config_version=5
+
+[application]
+
+config/name="Vivhite Ironclad texture decoder"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -24,12 +24,16 @@
         <CopyModOnBuild Condition="'$(CopyModOnBuild)' == ''">true</CopyModOnBuild>
         <RunPckExport Condition="'$(RunPckExport)' == '' and '$(DesignTimeBuild)' != 'true'">true</RunPckExport>
         <RunPckExport Condition="'$(RunPckExport)' == ''">false</RunPckExport>
+        <IroncladSkinValidator>$(MSBuildProjectDirectory)\tools\Validate-IroncladSkin.ps1</IroncladSkinValidator>
+        <GodotPckExporter>$(MSBuildProjectDirectory)\tools\Export-ModPck.ps1</GodotPckExporter>
+        <PowerShellExe Condition="'$(PowerShellExe)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</PowerShellExe>
+        <PowerShellExe Condition="'$(PowerShellExe)' == ''">pwsh</PowerShellExe>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all"/>
-        <!-- 主线 RitsuLib（STS2 0.105.0+），跟踪 NuGet 最新版本。兼容分支和 manifest 版本对齐规则见 README。 -->
-        <PackageReference Include="STS2.RitsuLib" Version="*" GeneratePathProperty="true"/>
+        <!-- Pin the RitsuLib runtime API used by the Ironclad replacement registration. -->
+        <PackageReference Include="STS2.RitsuLib" Version="0.5.14" GeneratePathProperty="true"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -76,16 +80,29 @@
         <Error Condition="!Exists('$(Sts2DataDir)\sts2.dll')" Text="Could not find sts2.dll under '$(Sts2DataDir)'. Copy local.props.template to local.props and set Sts2Dir/Sts2DataDir for your local game install."/>
     </Target>
 
-    <Target Name="CopyMod" AfterTargets="Build" Condition="'$(CopyModOnBuild)' != 'false'">
+    <Target Name="ValidateIroncladSkinAssets" BeforeTargets="BeforeBuild"
+            Condition="'$(DesignTimeBuild)' != 'true' and '$(STS2_SKIP_PCK_EXPORT)' != '1'">
+        <Error Condition="!Exists('$(IroncladSkinValidator)')"
+               Text="Ironclad skin asset validator is missing: '$(IroncladSkinValidator)'."/>
+        <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(IroncladSkinValidator)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Phase Source -GodotExe &quot;$(GodotExe)&quot; -Sts2Dir &quot;$(Sts2Dir)&quot;"
+              EnvironmentVariables="CopyModOnBuild=false"/>
+    </Target>
+
+    <Target Name="ExportPCK" AfterTargets="Build" BeforeTargets="CopyMod"
+            Condition="'$(RunPckExport)' == 'true' and '$(STS2_SKIP_PCK_EXPORT)' != '1'">
+        <Error Condition="'$(GodotExe)' == '' or !Exists('$(GodotExe)')" Text="GodotExe is required for PCK export. Copy local.props.template to local.props and set GodotExe, or build with /p:RunPckExport=false."/>
+        <Error Condition="!Exists('$(GodotPckExporter)')" Text="Godot PCK export helper is missing: '$(GodotPckExporter)'."/>
+        <Error Condition="!Exists('$(IroncladSkinValidator)')" Text="Ironclad skin asset validator is missing: '$(IroncladSkinValidator)'."/>
+        <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(GodotPckExporter)&quot; -GodotExe &quot;$(GodotExe)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Preset &quot;$(GodotExportPreset)&quot; -OutputPath &quot;$(ModPckPath)&quot; -ValidatorPath &quot;$(IroncladSkinValidator)&quot; -PowerShellExe &quot;$(PowerShellExe)&quot; -DotnetRoot &quot;$(DOTNET_ROOT)&quot;"/>
+    </Target>
+
+    <Target Name="CopyMod" AfterTargets="Build" DependsOnTargets="ExportPCK;SyncManifestDependencies"
+            Condition="'$(CopyModOnBuild)' != 'false'">
         <MakeDir Directories="$(ModOutputDir)"/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModOutputDir)"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)\$(MSBuildProjectName).json" DestinationFolder="$(ModOutputDir)"/>
-    </Target>
-
-    <Target Name="ExportPCK" AfterTargets="Build" Condition="'$(RunPckExport)' == 'true' and '$(STS2_SKIP_PCK_EXPORT)' != '1'">
-        <Error Condition="'$(GodotExe)' == '' or !Exists('$(GodotExe)')" Text="GodotExe is required for PCK export. Copy local.props.template to local.props and set GodotExe, or build with /p:RunPckExport=false."/>
-        <MakeDir Directories="$(ModOutputDir)"/>
-        <Exec WorkingDirectory="$(MSBuildProjectDirectory)" Command="&quot;$(GodotExe)&quot; --headless --path &quot;$(MSBuildProjectDirectory)&quot; --export-pack &quot;$(GodotExportPreset)&quot; &quot;$(ModPckPath)&quot;" EnvironmentVariables="STS2_SKIP_PCK_EXPORT=1"/>
     </Target>
 
     <Target Name="SyncManifestDependencies" AfterTargets="Build" BeforeTargets="CopyMod"
