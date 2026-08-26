@@ -1,7 +1,7 @@
 """LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
-  - 优先模型 preferred_model（默认 openrouter/stealth/ox-alpha，即 Ox Alpha Free）：
+  - 优先模型 preferred_model（默认 opencode-go/glm-5.3-flash，即 GLM-5.3-Flash）：
     每局结束后探测 `opencode models`，在清单里且无失败冷却 → 每局复盘一次。
   - 回退模型 model（默认 kimi-for-coding/k3）：优先模型不可用 → 每 review_every_runs 局复盘。
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
@@ -144,11 +144,9 @@ def load_llm_config() -> dict:
         "timeout_min": 480,
         "max_runs_in_packet": 100,
         # 优先模型链（按优先级；条目形如 provider/model[@variant]）：
-        # 1) Ox Alpha Free (Unlimited) · OpenCode Zen · max —— 若在 opencode models 清单则用
-        # 2) Ox Alpha · OpenRouter · max（stealth 马甲，当前可见条目）
+        # GLM-5.3-Flash (2x usage) · OpenCode Go · max
         "preferred_models": [
-            "opencode/ox-alpha@max",
-            "openrouter/stealth/ox-alpha@max",
+            "opencode-go/glm-5.3-flash@max",
         ],
         "preferred_every_runs": 1,
         # 失败冷却：超时/硬失败统一 5 分钟（短冷却，别让模型长期缺席复盘）
@@ -468,7 +466,7 @@ def _preferred_entries(cfg: dict) -> list[str]:
 
 
 def _parse_entry(entry: str) -> tuple[str, str | None]:
-    """'openrouter/stealth/ox-alpha@max' → ('openrouter/stealth/ox-alpha', 'max')。"""
+    """'opencode-go/glm-5.3-flash@max' → ('opencode-go/glm-5.3-flash', 'max')。"""
     if "@" in entry:
         m, v = entry.rsplit("@", 1)
         return m, (v or None)
@@ -1357,7 +1355,7 @@ def _save_queue(q: dict) -> None:
 def requeue_review_runs(runs, log=print) -> list[int]:
     """Durably append explicitly recovered runs while the brain is stopped.
 
-    This is intentionally permissive: an older ox-alpha batch may be worth
+    This is intentionally permissive: an older preferred-model batch may be worth
     reviewing again even when newer runs are already queued.  Existing pending
     or reviewing entries are deduplicated, while newly recovered entries go to
     the tail so they cannot delay the live stream's freshest evidence.
@@ -1408,8 +1406,8 @@ def enqueue_review(agent, log=print) -> None:
     model, every, source = resolve_review_plan(cfg, binary, log=log)
     # 成功复盘守卫 v2：距上次成功复盘 >= 阈值即视为"饥饿"。饥饿时**交替出牌**
     # 而非锁死兜底——v1 的无条件强制 k3 在 k3 本身不可用时形成死锁：
-    # 守卫强制 k3 → k3 失败 → 永无成功 → 永远强制 k3，ox-alpha 复活也
-    # 没机会被探测（第 267~366 局实证：100 局零成功，last_llm_review_run 冻结在 266）。
+    # 守卫强制 k3 → k3 失败 → 永无成功 → 永远强制 k3，优先模型恢复也
+    # 没机会被探测（历史实证：100 局零成功，last_llm_review_run 冻结）。
     # 交替规则：上次尝试是 fallback 就放行优先链（恢复探测），否则强制兜底；
     # 任一路成功即刷新 last_successful_review_run、退出饥饿态。
     last_ok = agent.know.progression.get("last_successful_review_run", 0)

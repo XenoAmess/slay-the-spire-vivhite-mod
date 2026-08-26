@@ -103,7 +103,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 复盘安全与成果保全规则：
 
-- **严禁重新引入“全仓指纹变化”、全仓脏状态或 refs 变化门禁。** 隔离复盘期间，真实仓的正常对局提交、推送、用户文件和运行日志变化均不得导致 ox-alpha 成果作废。
+- **严禁重新引入“全仓指纹变化”、全仓脏状态或 refs 变化门禁。** 隔离复盘期间，真实仓的正常对局提交、推送、用户文件和运行日志变化均不得导致复盘成果作废。
 - 复盘安全边界固定为：无 remote/无 hardlink 隔离 clone、复盘 patch 精确 allowlist、隔离自检、二进制 patch 验收，以及真实仓提交时的私有 index + compare-and-swap。不要用全仓扫描替代这些局部边界。
 - 复盘 active 时在线 checkpoint 仍须正常提交并推送；不得因为长复盘（统一超时 8 小时）让直播进度长期只留在本地。
 - `review_queue_max` 与 `max_runs_in_packet` 当前统一为 100；它们限制单批规模，不得截断持久队列。

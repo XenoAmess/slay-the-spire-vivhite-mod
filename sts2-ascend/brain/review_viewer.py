@@ -223,7 +223,7 @@ class DbSource:
 
 
 DEMO_SCRIPT = [
-    (0.2, "meta", {"model": "openrouter/stealth/ox-alpha", "source": "preferred", "run": 18, "time": "2026-08-22 12:30"}),
+    (0.2, "meta", {"model": "opencode-go/glm-5.3-flash", "source": "preferred", "run": 18, "time": "2026-08-22 12:30"}),
     (0.6, "body", "读取 knowledge/stats.json … 17 局 0 胜，当前进阶 0"),
     (0.9, "reasoning", "💭 先定位主要死因：普通战 attrition 比精英更致命"),
     (0.8, "tool", "⚙ read sts2-ascend/knowledge/stats.json"),

@@ -31,6 +31,7 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg["preferred_timeout_min"], 480)
         self.assertEqual(cfg["max_runs_in_packet"], 100)
         self.assertEqual(cfg["review_queue_max"], 100)
+        self.assertEqual(cfg["preferred_models"], ["opencode-go/glm-5.3-flash@max"])
         self.assertEqual(int(cfg["timeout_min"] * 60), 28800)
 
     def test_stream_keeps_full_file_but_only_bounded_memory_tail(self) -> None:
@@ -96,7 +97,8 @@ class ReviewSalvageTests(unittest.TestCase):
                 llm_review._capture_sandbox_wip(repo, pre_head, result, log=lambda _msg: None)
                 saved = llm_review._save_review_salvage(
                     pre_head, result.error, result, batch_runs=[601, 602],
-                    model="ox-alpha", source="preferred", log=lambda _msg: None)
+                    model="opencode-go/glm-5.3-flash@max", source="preferred",
+                    log=lambda _msg: None)
                 saved_again = llm_review._save_review_salvage(
                     pre_head, "duplicate", result, log=lambda _msg: None)
 

@@ -138,8 +138,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 模型按**优先链**逐条检查（`opencode models` 清单为准，条目形如 `provider/model[@variant]`）：
 
-1. `opencode/ox-alpha@max` — Ox Alpha Free (Unlimited) · OpenCode Zen · max
-2. `openrouter/stealth/ox-alpha@max` — Ox Alpha · OpenRouter · max
+1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
 3. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
 
 命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
@@ -156,7 +155,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 - autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
 - 普通存档与复盘提交各有精确 allowlist；目标路径已有 staged 内容时整笔拒绝
 - 复盘 active 时在线存档照常提交并立即推送；复盘结束也会补推此前网络失败的积压，
-  不依赖 ox-alpha 必须产出有效 patch 才能上库
+  不依赖优先模型必须产出有效 patch 才能上库
 - 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD
   重建，分支切换则拒绝事务
 - 超时、进程失败、自检失败、allowlist 拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
