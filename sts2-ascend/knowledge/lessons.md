@@ -2735,3 +2735,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/649 胜，当前目标进阶 0
+
+## 第 650 局复盘（2026-08-27 01:16）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：THUNDERCLAP, BREAKTHROUGH, BLUDGEON, JUGGLING
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血11; F3 Monster战 掉血5; F4 Monster战 掉血4; F6 Monster战 掉血0; F8 Monster战 掉血51（阵亡）
+- 当前高价值卡牌：BOLAS(25分/3局)，CONFLAGRATION(24分/47局)，PRODUCTION(24分/3局)，FIEND_FIRE(24分/28局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/650 胜，当前目标进阶 0
