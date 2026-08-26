@@ -2977,3 +2977,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/671 胜，当前目标进阶 0
+
+## 第 672 局复盘（2026-08-27 04:52）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：JUGGLING, TWIN_STRIKE, TAUNT, UNRELENTING, TRUE_GRIT, HEMOKINESIS, HEMOKINESIS, EVIL_EYE, CINDER, ROLLING_BOULDER, UNMOVABLE, INFLAME, INFLAME, UPPERCUT, TWIN_STRIKE, UNRELENTING, CINDER, SHRUG_IT_OFF
+- 本局遗物：RAZOR_TOOTH
+- 战斗记录：F15 Monster战 掉血1; F17 Boss战 掉血39; F19 Monster战 掉血8; F22 Monster战 掉血24; F23 Unknown战 掉血0; F24 Unknown战 掉血49（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/672 胜，当前目标进阶 0
