@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 17:04:10",
  "victory": false,
  "in_progress": true,
- "floor": 8,
+ "floor": 14,
  "decisions": [
   {
    "t": "17:04:10",
@@ -969,12 +969,493 @@
     "option_index": 1
    },
    "reason": "选择卡牌：【余烬】（价值 26.6）；候选：余烬=26.6 / 熔融之拳=7.7 / 双重打击=3.2"
+  },
+  {
+   "t": "17:06:12",
+   "screen": "REWARD",
+   "floor": 8,
+   "hp": 72,
+   "gold": 152,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:06:14",
+   "screen": "MAP",
+   "floor": 8,
+   "hp": 72,
+   "gold": 152,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(8,2)（路径分 -13.04，预计进 Boss 血量 42%；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(8,2)=-13.04|路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:06:16",
+   "screen": "REST",
+   "floor": 9,
+   "hp": 72,
+   "gold": 152,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：绝境投影优先回血（路径投影进Boss仅42%<45%，前路战损预期压倒锻造收益；本次可回复8点）"
+  },
+  {
+   "t": "17:06:17",
+   "screen": "REST",
+   "floor": 9,
+   "hp": 80,
+   "gold": 152,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "17:06:19",
+   "screen": "MAP",
+   "floor": 9,
+   "hp": 80,
+   "gold": 152,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Treasure(9,1)（路径分 18.43，预计进 Boss 血量 54%；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)）；候选：Treasure(9,1)=18.43|路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)"
+  },
+  {
+   "t": "17:06:21",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 80,
+   "gold": 152,
+   "action": "open_chest",
+   "params": {},
+   "reason": "宝箱：开启"
+  },
+  {
+   "t": "17:06:22",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 80,
+   "gold": 204,
+   "action": "choose_treasure_relic",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "宝箱：选择遗物【芒果】（价值 -0.08）"
+  },
+  {
+   "t": "17:06:23",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 94,
+   "gold": 204,
+   "action": "proceed",
+   "params": {},
+   "reason": "宝箱：离开"
+  },
+  {
+   "t": "17:06:31",
+   "screen": "MAP",
+   "floor": 10,
+   "hp": 94,
+   "gold": 204,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(10,1)（路径分 4.59，预计进 Boss 血量 67%；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(10,1)=4.59|路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Unknown(10,2)=-20.93|输出饥饿战损上浮×1.21（缺口61%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:06:33",
+   "screen": "REST",
+   "floor": 11,
+   "hp": 94,
+   "gold": 204,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "篝火：锻造升级（血量 100% ≥ 安全线 45%，升级降低后续战损）"
+  },
+  {
+   "t": "17:06:34",
+   "screen": "CARD_SELECTION",
+   "floor": 11,
+   "hp": 94,
+   "gold": 204,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 10
+   },
+   "reason": "升级卡牌：【余烬】"
+  },
+  {
+   "t": "17:06:35",
+   "screen": "REST",
+   "floor": 11,
+   "hp": 94,
+   "gold": 204,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "17:06:37",
+   "screen": "MAP",
+   "floor": 11,
+   "hp": 94,
+   "gold": 204,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Elite(11,1)（路径分 1.43，预计进 Boss 血量 67%；血量与卡组达标，精英奖励价值高；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Elite(11,1)=1.43|血量与卡组达标，精英奖励价值高；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:06:40",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗开局使用药水【复制药水】（描述无法分类，宁滥勿囤）"
+  },
+  {
+   "t": "17:06:42",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【余烬+】→旧日雕像（单体伤害≈24.0）；敌意图总伤0，我方94血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:06:43",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:06:47",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤0，我方94血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:06:47",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤0，我方94血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:06:48",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤0，我方94血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:06:50",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:06:53",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 94,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【突破+】（群体伤害≈15.0）；敌意图总伤23，我方94血/0甲；⚠高危组合（90战19死），转防守节奏；意图升级+23，防御前置"
+  },
+  {
+   "t": "17:06:54",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 93,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤23，我方93血/0甲；⚠高危组合（90战19死），转防守节奏；意图升级+23，防御前置"
+  },
+  {
+   "t": "17:06:55",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 93,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤23，我方93血/5甲；⚠高危组合（90战19死），转防守节奏；意图升级+23，防御前置"
+  },
+  {
+   "t": "17:06:56",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 93,
+   "gold": 204,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:07:00",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 75,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击+】→旧日雕像（单体伤害≈10.0）；敌意图总伤23，我方75血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:07:01",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 75,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤23，我方75血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:07:02",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 75,
+   "gold": 204,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:07:06",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 52,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤23，我方52血/0甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:07:06",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 52,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤23，我方52血/5甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:07:07",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 52,
+   "gold": 204,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→旧日雕像（单体伤害≈6.0）；敌意图总伤23，我方52血/5甲；⚠高危组合（90战19死），转防守节奏"
+  },
+  {
+   "t": "17:07:08",
+   "screen": "REWARD",
+   "floor": 12,
+   "hp": 58,
+   "gold": 204,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：37金币"
+  },
+  {
+   "t": "17:07:09",
+   "screen": "REWARD",
+   "floor": 12,
+   "hp": 58,
+   "gold": 241,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：瓶装潜能"
+  },
+  {
+   "t": "17:07:09",
+   "screen": "REWARD",
+   "floor": 12,
+   "hp": 58,
+   "gold": 241,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：草莓"
+  },
+  {
+   "t": "17:07:10",
+   "screen": "REWARD",
+   "floor": 12,
+   "hp": 65,
+   "gold": 241,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:07:11",
+   "screen": "CARD_SELECTION",
+   "floor": 12,
+   "hp": 65,
+   "gold": 241,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【恶魔之焰】（价值 7.4）；候选：恶魔之焰=7.4 / 熔融之拳=7.3 / 飞剑回旋镖=7.0"
+  },
+  {
+   "t": "17:07:12",
+   "screen": "REWARD",
+   "floor": 12,
+   "hp": 65,
+   "gold": 241,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:07:14",
+   "screen": "MAP",
+   "floor": 12,
+   "hp": 65,
+   "gold": 241,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：RestSite(12,2)（路径分 -2.58，预计进 Boss 血量 71%；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(12,1)=-36.73|低血尾部生存复核：单场最差66打完仅剩0(≤10)，尾部罚分；输出饥饿战损上浮×1.20（缺口58%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / RestSite(12,2)=-2.58|路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:07:15",
+   "screen": "REST",
+   "floor": 13,
+   "hp": 65,
+   "gold": 241,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：锻造预演改回血（前方必经战斗期望战损合计24%，打完预计仅剩41%<紧急线45%；先回血30%垫安全区）"
+  },
+  {
+   "t": "17:07:17",
+   "screen": "REST",
+   "floor": 13,
+   "hp": 95,
+   "gold": 241,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "17:07:19",
+   "screen": "MAP",
+   "floor": 13,
+   "hp": 95,
+   "gold": 241,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Elite(13,1)（路径分 15.93，预计进 Boss 血量 100%；血量与卡组达标，精英奖励价值高；输出饥饿战损上浮×1.20（缺口58%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Elite(13,1)=15.93|血量与卡组达标，精英奖励价值高；输出饥饿战损上浮×1.20（缺口58%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(13,3)=14.98|输出饥饿战损上浮×1.20（缺口58%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:07:22",
+   "screen": "COMBAT",
+   "floor": 14,
+   "hp": 95,
+   "gold": 241,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【瓶装潜能】"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血0",
   "F3 Monster战 掉血0",
-  "F6 Monster战 掉血0"
+  "F6 Monster战 掉血0",
+  "F8 Monster战 掉血8",
+  "F12 Elite战 掉血36"
  ],
  "attribution_tags": [
   [
@@ -1024,6 +1505,42 @@
   [
    "card_pick",
    "CINDER"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Treasure"
+  ],
+  [
+   "relic_pick",
+   "MANGO"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Elite"
+  ],
+  [
+   "relic_pick",
+   "草莓"
+  ],
+  [
+   "card_pick",
+   "FIEND_FIRE"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Elite"
   ]
  ]
 }
