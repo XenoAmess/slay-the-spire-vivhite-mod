@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import random
@@ -10,6 +11,7 @@ import tempfile
 import time
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 
 BRAIN = Path(__file__).resolve().parents[1] / "brain"
@@ -18,6 +20,7 @@ sys.path.insert(0, str(BRAIN))
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace  # noqa: E402
 from live_dashboard import LiveDashboardPublisher, MAX_BYTES, SCHEMA  # noqa: E402
 from policy import Decision, Policy  # noqa: E402
+import agent as agent_module  # noqa: E402
 
 
 def reward_state() -> dict:
@@ -220,6 +223,30 @@ class LiveDashboardPublisherTests(unittest.TestCase):
             elapsed = time.perf_counter() - started
             self.assertLess(elapsed, 0.5)
             self.assertLessEqual(publisher._queue.qsize(), 2)
+
+
+class DashboardStartupTests(unittest.TestCase):
+    def test_busy_git_lock_cannot_delay_gameplay_startup(self) -> None:
+        calls = []
+
+        @contextmanager
+        def busy_lock(*, timeout):
+            calls.append(timeout)
+            raise TimeoutError("fixture busy lock")
+            yield  # pragma: no cover - keeps this a context manager
+
+        fake_autogit = SimpleNamespace(
+            repository_lock=busy_lock,
+            head=lambda: self.fail("head must not run without the lock"),
+        )
+        instance = object.__new__(agent_module.Agent)
+        instance._boot_head = "old"
+        with mock.patch.object(agent_module, "autogit", fake_autogit), \
+                mock.patch.object(agent_module, "log"):
+            instance._capture_boot_head()
+
+        self.assertEqual(calls, [5.0])
+        self.assertEqual(instance._boot_head, "")
 
 
 if __name__ == "__main__":

@@ -211,6 +211,21 @@ class Agent:
             except Exception as exc:
                 log(f"[agent] ASCEND-VISION 监督器启动失败（不影响游玩）：{exc}")
 
+    def _capture_boot_head(self) -> None:
+        """Read the optional rollback-health baseline without delaying startup."""
+        self._boot_head = ""
+        if autogit is None:
+            return
+        try:
+            # A concurrent online checkpoint/review may legitimately hold the
+            # repository transaction lock.  The commit is only a later
+            # rollback-health hint, so do not inherit the normal eight-minute
+            # transaction wait in the gameplay startup path.
+            with autogit.repository_lock(timeout=5.0):
+                self._boot_head = autogit.head()
+        except Exception as exc:
+            log(f"[agent] 启动提交号暂不可读，跳过本轮健康标记（不影响游玩）：{exc}")
+
     def _dashboard_observe(self, state: dict) -> None:
         publisher = self.live_dashboard
         if publisher is None:
@@ -1807,10 +1822,7 @@ class Agent:
         log("[agent] sts2-ascend 自主学习智能体启动")
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
         self._start_live_dashboard()
-        try:
-            self._boot_head = autogit.head() if autogit is not None else ""
-        except Exception:
-            self._boot_head = ""
+        self._capture_boot_head()
         self._launch_quipper()
         if not self.ensure_game():
             self._dashboard_connection("stopped", "启动阶段收到停止请求")
