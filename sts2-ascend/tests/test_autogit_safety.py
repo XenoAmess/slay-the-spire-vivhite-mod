@@ -475,21 +475,33 @@ class AutoGitSafetyTests(unittest.TestCase):
         self._write(".gitignore", "sts2-ascend/.runtime/\n")
         self._git("add", ".gitignore")
         self._git("commit", "-qm", "ignore runtime")
+        runner_log = next(path for path in llm_review.REVIEW_WORKSPACE_VOLATILE_PATHS
+                          if path.endswith(".out.log") and "/.runtime/runner" in path)
+        stop_file = next(path for path in llm_review.REVIEW_STOP_LIFECYCLE_PATHS
+                         if "/.runtime/stop" in path and path.endswith(".request"))
+        self._write(runner_log, "live-before\n")
         before = autogit.workspace_fingerprint(
-            exclude_paths=["sts2-ascend/knowledge/stats.json"],
+            exclude_paths=["sts2-ascend/knowledge/stats.json", runner_log],
             ignored_roots=["sts2-ascend/.runtime"],
         )
         self._write("outside.txt", "escaped root edit\n")
         self._write("sts2-ascend/.runtime/injected.cmd", "danger\n")
+        self._write(runner_log, "live-after\n")
+        self._write(stop_file, "cooperative stop\n")
         self._write("sts2-ascend/knowledge/stats.json", '{"runs": 999}\n')
         after = autogit.workspace_fingerprint(
-            exclude_paths=["sts2-ascend/knowledge/stats.json"],
+            exclude_paths=["sts2-ascend/knowledge/stats.json", runner_log],
             ignored_roots=["sts2-ascend/.runtime"],
         )
         changed = autogit.fingerprint_changes(before, after)
         self.assertIn("worktree:outside.txt", changed)
         self.assertIn("worktree:sts2-ascend/.runtime/injected.cmd", changed)
+        self.assertIn("worktree:" + stop_file, changed)
+        self.assertNotIn("worktree:" + runner_log, changed)
         self.assertNotIn("worktree:sts2-ascend/knowledge/stats.json", changed)
+        stop_filtered = llm_review._unexpected_stop_workspace_changes(changed)
+        self.assertNotIn("worktree:" + stop_file, stop_filtered)
+        self.assertIn("worktree:sts2-ascend/.runtime/injected.cmd", stop_filtered)
 
         # 工作树/index 不变的空提交也必须被 Git 控制面指纹发现。
         before_ref = autogit.workspace_fingerprint()
@@ -577,8 +589,10 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(unexpected, ["sts2-ascend/brain/autogit.py", "outside.txt"])
         with self.assertRaises(ValueError):
             autogit.validate_review_paths(["sts2-ascend/brain/autogit.py"])
-        with self.assertRaises(ValueError):
-            autogit.validate_review_paths(["sts2-ascend/brain/selfcheck.py"])
+        self.assertEqual(
+            autogit.validate_review_paths(["sts2-ascend/brain/selfcheck.py"]),
+            ("sts2-ascend/brain/selfcheck.py",),
+        )
         with self.assertRaises(ValueError):
             autogit.validate_review_paths([
                 "sts2-ascend/brain/config.json/evil.py"])

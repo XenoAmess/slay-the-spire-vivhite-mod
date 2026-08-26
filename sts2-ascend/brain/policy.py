@@ -1558,6 +1558,30 @@ class Policy:
                                 notes.append(
                                     f"低血尾部生存复核：单场最差{_vw:.0f}打完仅剩"
                                     f"{max(0.0, _tail_hp):.0f}(≤{_sf:.0f})，尾部罚分")
+                # 深度输出饥饿时，精英硬线以上也不能只看均值：第580局以90%血
+                # 压线进旧日雕像，均值先验约7，实际单场掉满72血。只在深缺口、
+                # 硬线以上且已有尾部证据时复用现有死亡/近死罚分，健康卡组不受影响。
+                if (nt == "Elite" and burst_starved
+                        and starve_deficit >= float(pol.get("elite_tail_veto_min_deficit", 0.50))
+                        and hpp >= float(pol["elite_min_hp_pct"])):
+                    _vw = self.know.room_damage_worst("Elite", act_no)
+                    if _vw is not None:
+                        _sf = max_hp * float(pol.get("path_graveyard_hp_pct", 0.10))
+                        _tail_hp = cur_hp - _vw
+                        if _tail_hp <= 0:
+                            raw_penalty += max(
+                                0.0, float(pol.get("path_death_penalty", 100.0))
+                                - 3.0 * min(depth, 15))
+                            if depth == 0:
+                                notes.append(f"硬线精英尾部复核：单场最差{_vw:.0f}"
+                                             f"≥当前血条{cur_hp:.0f}，按投影死亡计价")
+                        elif (_tail_hp <= _sf
+                              and float(pol.get("path_tail_veto_penalty", 45.0)) > 0.0):
+                            _gap = clamp((_sf - _tail_hp) / max(_sf, 1.0), 0.0, 2.0)
+                            raw_penalty += _gap * float(pol.get("path_tail_veto_penalty", 45.0))
+                            if depth == 0:
+                                notes.append(f"硬线精英尾部复核：单场最差{_vw:.0f}打完仅剩"
+                                             f"{max(0.0, _tail_hp):.0f}(≤{_sf:.0f})，尾部罚分")
                 # 输出饥饿战损上浮（第495~498局批复盘新增）：掉血先验是「历史
                 # 平均卡组」的场均账，而战损与战斗时长正相关——爆发缺口大的
                 # 卡组连最便宜的组合（496 局 F15 方柱构装体，生涯场均 6.6）
@@ -1901,6 +1925,13 @@ class Policy:
     def _combat(self, state: dict, ctx) -> Decision:
         combat = state.get("combat") or {}
         player = combat.get("player") or {}
+        # 应急按钮族施加 NO_BLOCK_POWER 后，卡牌格挡面在锁窗内无效。
+        block_locked = any(
+            "NO_BLOCK" in str(power.get("power_id") or power.get("id")
+                              or power.get("power") or "").upper()
+            or (power.get("name") or "") == "不可格挡"
+            for power in (player.get("powers") or [])
+            if isinstance(power, dict))
         enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
         hand = self._enrich_cards(combat.get("hand", []))
         energy = player.get("energy", 0)
@@ -2400,7 +2431,8 @@ class Policy:
                                                    reserve_for_block and not race_allin and not kill_race,
                                                    min_blk_cost, energy, race_allin, kill_race,
                                                    all_respawn=all_respawn,
-                                                   run_deck=(state.get("run") or {}).get("deck"))
+                                                   run_deck=(state.get("run") or {}).get("deck"),
+                                                   block_locked=block_locked)
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _exhausts_other_cards(c):
@@ -2557,7 +2589,7 @@ class Policy:
                     forced_kill: bool = False, reserve_for_block: bool = False,
                     min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
                     kill_race: bool = False, all_respawn: bool = False,
-                    run_deck: list[dict] | None = None):
+                    run_deck: list[dict] | None = None, block_locked: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -2584,6 +2616,9 @@ class Policy:
         解除能量预留并提速输出；与孤注一掷互斥触发提速，避免双重放大。
         """
         dmg, block, hits = card_numbers(card)
+        declared_block = block
+        if block_locked:
+            block = 0
         cost = card.get("energy_cost", 0)
         text = _text(card)
         aoe = ("所有敌人" in text or "all enemies" in text.lower()
@@ -2736,7 +2771,12 @@ class Policy:
                 resp = self._is_respawn_add(e) and not all_respawn
                 eff = _effective_damage(e)
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
-                is_support = (not resp and len(enemies) > 1 and threat <= 0 and sup_bonus > 0)
+                # 已持有力量层数的敌人是场上的战斗时钟。旧辅助体转火会把
+                # 零伤害减益体当头号目标，真正持续叠力量的敌人反而被晾着。
+                scaler_stack = (self._enemy_strength_stack(e)
+                                if (not resp and len(enemies) > 1) else 0.0)
+                is_support = (not resp and len(enemies) > 1 and threat <= 0
+                              and sup_bonus > 0 and scaler_stack <= 0)
                 if resp:
                     # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
                     # 输出、本体雾菇意图滚到 22 的教训）：
@@ -2747,7 +2787,9 @@ class Policy:
                     s = eff * atk_damp
                 else:
                     s = (eff + threat * 0.3) * atk_damp
-                    if is_support:
+                    if scaler_stack > 0:
+                        s += sup_bonus * min(1.0, scaler_stack / 7.0)
+                    elif is_support:
                         s += sup_bonus
                 killed = _would_kill(e)
                 if killed:
@@ -2755,8 +2797,10 @@ class Policy:
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
                     why = f"可击杀{e['name']}" if killed else (
-                        f"辅助体优先转火：{e['name']}（零伤害意图，放生=纵容其强化队友）"
-                        if is_support else f"单体伤害≈{eff}")
+                        f"自我强化体优先转火：{e['name']}（力量+{scaler_stack:.0f}，"
+                        f"拖越久打越痛）" if scaler_stack > 0 else (
+                            f"辅助体优先转火：{e['name']}（零伤害意图，放生=纵容其强化队友）"
+                            if is_support else f"单体伤害≈{eff}"))
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
@@ -2822,6 +2866,14 @@ class Policy:
             if cost == 0:
                 score += pol["free_card_bonus"]
             return score, None, f"功能牌（抽牌{dr}/回能）"
+
+        # 锁格挡期间纯防牌是零收益死牌；带伤害、抽牌或回能面的混合牌仍由
+        # 前面的对应分支正常计价。文本通道兼容服务端已把动态格挡报成 0 的载荷。
+        if (block <= 0 and dmg <= 0 and dr <= 0
+                and "能量" not in text and "energy" not in text.lower()
+                and ((block_locked and declared_block > 0)
+                     or re.search(r"获得\s*0\s*点?\s*格挡|gain\s+0\s+block", text, re.I))):
+            return -2.0, None, "锁格挡（不可格挡期间零收益，让位实伤）"
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
         # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足
@@ -2898,6 +2950,26 @@ class Policy:
             return self.know.is_known_respawn_add(kid)
         except Exception:
             return False
+
+    def _enemy_strength_stack(self, enemy: dict) -> float:
+        """读取敌人当前持有的力量类增益层数；无法识别时保持旧行为。"""
+        total = 0.0
+        for power in (enemy.get("powers") or []):
+            if not isinstance(power, dict):
+                continue
+            power_id = str(power.get("id") or power.get("power_id")
+                           or power.get("name") or "")
+            if "strength" not in power_id.lower() and "力量" not in power_id:
+                continue
+            amount = next((power.get(key) for key in ("amount", "stack", "value", "count")
+                           if power.get(key) is not None), None)
+            try:
+                amount_value = float(amount)
+            except (TypeError, ValueError):
+                continue
+            if amount_value > 0:
+                total += amount_value
+        return total
 
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
                     ignore_respawn: bool = False) -> float:

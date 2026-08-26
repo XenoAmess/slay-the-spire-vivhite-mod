@@ -131,7 +131,9 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 **每局结束后**，大脑只做一件事：把复盘请求写入 `knowledge/review_queue.json`，然后**立即开下一局**。
 复盘由独立工作线程在后台串行消化——若一局结束时上一场复盘还没完，请求在队列里累积，
-下一场复盘**一次性分析多局**（追及队列，积压上限 `review_queue_max` 批）。
+下一场复盘**一次性分析多局**。`review_queue_max` 只限制单次提示词覆盖的局数，不截断持久队列；
+复盘失败会把整批放回队尾，并以 60 秒起、15 分钟封顶的条目级持久化退避继续追及，
+退避中的旧批次不会拦住后来产生的新直播证据。
 
 模型按**优先链**逐条检查（`opencode models` 清单为准，条目形如 `provider/model[@variant]`）：
 
@@ -163,7 +165,9 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 每份新 run 携带稳定 `run_number`，追及队列按局号读取 active 或已 compact 的原证据。旧日志
 没有局号映射时会显式标记 `recent_fallback_unmapped`，不会把“最近 N 局”冒充目标批次。
 
-手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。
+手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。若故障报告证明旧批次曾完成但
+未成功合入，可在大脑停止后的切换窗口用 `py brain/llm_review.py --requeue 562,566,567`
+把指定局追加到队尾；已在 pending/reviewing 的局会自动去重，不会抢占最新直播证据。
 配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。
 
 ## 复盘直播悬浮窗（ASCEND-VISION）

@@ -269,7 +269,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         agent = SimpleNamespace(know=know)
         cfg = {"enabled": True, "preferred_model": "m",
                "model": "fallback", "review_every_runs": 1,
-               "review_queue_max": 10}
+               "review_queue_max": 1}
 
         with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
               mock.patch.object(llm_review, "resolve_review_plan",
@@ -283,6 +283,164 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(know.progression["last_llm_review_run"], 20)
         self.assertEqual(know.progression["last_review_attempt_source"], "preferred")
         know.save.assert_called_once_with()
+
+    def test_failed_batch_is_requeued_with_backoff_and_success_clears_it(self) -> None:
+        payload = {
+            "pending": [{"run": 11, "time": "new", "model": "next"}],
+            "reviewing": {"runs": [8, 9], "started": "earlier"},
+        }
+        self.queue.write_text(json.dumps(payload), encoding="utf-8")
+        batch = [
+            {"run": 8, "time": "old", "model": "old", "source": "preferred"},
+            {"run": 9, "time": "old", "model": "old", "source": "preferred"},
+        ]
+
+        with mock.patch.object(llm_review.time, "time", return_value=1000.0):
+            delay = llm_review._finalize_review_batch(batch, "failed", log=lambda _msg: None)
+        self.assertEqual(delay, 60.0)
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual([item["run"] for item in saved["pending"]], [11, 8, 9])
+        self.assertNotIn("model", saved["pending"][1])
+        self.assertEqual(saved["pending"][1]["retry_count"], 1)
+        self.assertEqual(saved["pending"][1]["retry_after"], 1060.0)
+        self.assertEqual(saved["pending"][2]["retry_count"], 1)
+        self.assertNotIn("retry_count", saved)
+        self.assertNotIn("retry_after", saved)
+
+        saved["pending"] = [saved["pending"][0]]
+        saved["reviewing"] = {"runs": [8, 9], "started": "retry"}
+        llm_review._save_queue_unlocked(saved)
+        llm_review._finalize_review_batch(batch, "completed", log=lambda _msg: None)
+        completed = llm_review._load_queue_unlocked()
+        self.assertIsNone(completed["reviewing"])
+        self.assertEqual([item["run"] for item in completed["pending"]], [11])
+
+    def test_queue_rejects_invalid_run_and_nonfinite_retry(self) -> None:
+        for pending in (
+            [{"run": 0}],
+            [{"run": True}],
+            [{"run": 8, "retry_after": float("inf")}],
+            [{"run": 8, "retry_after": float("nan")}],
+        ):
+            with self.subTest(pending=pending), self.assertRaises(llm_review.ReviewQueueError):
+                llm_review._validate_queue({"pending": pending, "reviewing": None})
+
+    def test_recovered_runs_append_without_delaying_or_duplicating_live_work(self) -> None:
+        payload = {
+            "pending": [{"run": 11, "time": "new"}],
+            "reviewing": {"runs": [12], "started": "live"},
+        }
+        self.queue.write_text(json.dumps(payload), encoding="utf-8")
+
+        added = llm_review.requeue_review_runs(
+            [8, 11, 12, 8, -1, 9], log=lambda _message: None)
+
+        self.assertEqual(added, [8, 9])
+        saved = llm_review._load_queue_unlocked()
+        self.assertEqual(saved["reviewing"], payload["reviewing"])
+        self.assertEqual([item["run"] for item in saved["pending"]], [11, 8, 9])
+
+    def test_worker_skips_cooled_old_batch_for_fresh_live_evidence(self) -> None:
+        payload = {
+            "pending": [
+                {"run": 8, "time": "old", "retry_count": 2, "retry_after": 2000.0},
+                {"run": 11, "time": "live"},
+            ],
+            "reviewing": None,
+        }
+        self.queue.write_text(json.dumps(payload), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        batches: list[list[int]] = []
+
+        def complete(_agent, batch, _log):
+            batches.append([item["run"] for item in batch])
+            agent.request_restart = True
+            return "completed"
+
+        with (mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
+              mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+              mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"review_queue_max": 1}),
+              mock.patch.object(llm_review.time, "time", return_value=1000.0),
+              mock.patch.object(llm_review, "_run_batch_review", side_effect=complete)):
+            llm_review._worker_loop(agent, log=lambda _message: None)
+
+        self.assertEqual(batches, [[11]])
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual([item["run"] for item in saved["pending"]], [8])
+
+    def test_worker_retries_finalize_in_place_instead_of_deadlocking_reviewing(self) -> None:
+        self.queue.write_text(json.dumps({
+            "pending": [{"run": 8, "time": "live"}], "reviewing": None,
+        }), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        original_finalize = llm_review._finalize_review_batch
+        attempts = 0
+
+        def complete(_agent, _batch, _log):
+            agent.request_restart = True
+            return "completed"
+
+        def flaky_finalize(batch, outcome, log):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise llm_review.ReviewQueueError("temporary replace lock")
+            return original_finalize(batch, outcome, log=log)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
+              mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+              mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"review_queue_max": 1}),
+              mock.patch.object(llm_review, "_run_batch_review", side_effect=complete),
+              mock.patch.object(llm_review, "_finalize_review_batch",
+                                side_effect=flaky_finalize)):
+            llm_review._worker_loop(agent, log=lambda _message: None)
+
+        self.assertEqual(attempts, 2)
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual(saved["pending"], [])
+
+    def test_canceled_worker_leaves_reviewing_for_startup_recovery(self) -> None:
+        self.queue.write_text(json.dumps({
+            "pending": [{"run": 8}, {"run": 9}], "reviewing": None,
+        }), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+              mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"review_queue_max": 1}),
+              mock.patch.object(llm_review, "_run_batch_review", return_value="canceled")):
+            llm_review._worker_loop(agent, log=lambda _message: None)
+
+        saved = llm_review._load_queue_unlocked()
+        self.assertEqual(saved["reviewing"]["runs"], [8])
+        self.assertEqual([item["run"] for item in saved["pending"]], [9])
+
+    def test_batch_outcome_distinguishes_failure_no_change_and_change(self) -> None:
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        batch = [{"run": 8, "model": "m", "every": 1, "source": "preferred"}]
+        cfg = {"opencode_bin": "opencode"}
+
+        def result(outcome: str, changed: bool):
+            def fake_run(*_args, **kwargs):
+                kwargs["_status"].update({"outcome": outcome, "reason": outcome})
+                return changed
+            with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                  mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
+                  mock.patch.object(llm_review, "run_review", side_effect=fake_run)):
+                return llm_review._run_batch_review(agent, batch, log=lambda _msg: None)
+
+        self.assertEqual(result("failed", False), "failed")
+        self.assertEqual(result("completed", False), "completed")
+        self.assertEqual(result("changed", True), "changed")
+        self.assertTrue(agent.request_restart)
 
 
 if __name__ == "__main__":

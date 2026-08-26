@@ -394,6 +394,8 @@ DEFAULT_POLICY = {
                                        # 规避→样本更坏→更规避自我强化。≥此血量的 Elite 战斗额外计入
                                        # hp_lost_sum_hi/damage_events_hi 子账本，闸门定价优先消费之；
                                        # 子账本 <3 样本时回落旧口径，行为零变化
+    "elite_tail_veto_min_deficit": 0.50,  # 深度输出饥饿时，硬线以上精英也做单场最差尾部复核；
+                                          # 第580局 90%血压线进旧日雕像，均值约7、实测整管-72
 }
 
 DEFAULT_PROGRESSION = {

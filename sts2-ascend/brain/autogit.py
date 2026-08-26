@@ -45,6 +45,7 @@ REVIEW_PATCH_ALLOWLIST = (
     "sts2-ascend/brain/native_knowledge.py",
     "sts2-ascend/brain/policy.py",
     "sts2-ascend/brain/reflect.py",
+    "sts2-ascend/brain/selfcheck.py",
     "sts2-ascend/knowledge/meta_review.md",
     "sts2-ascend/knowledge/review_conclusion.txt",
 )

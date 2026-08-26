@@ -3069,6 +3069,46 @@ def main() -> int:
     assert s_blk_lethal > s_blk_allin, \
         f"致死回合格挡被误贬值（买命窗口应保留原价）: lethal={s_blk_lethal} allin={s_blk_allin}"
 
+    # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
+    # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
+    nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))
+    nb_pol = policy.Policy(knowledge.Knowledge(nb_dir), random.Random(5))
+    nb_enemies = [{"index": 0, "enemy_id": "NB_EFFIGY", "name": "旧日雕像",
+                   "current_hp": 110, "max_hp": 127, "block": 0,
+                   "is_alive": True, "is_hittable": True,
+                   "intents": [{"total_damage": 0}]}]
+    nb_threshold = nb_pol.know.policy["play_threshold"]
+    nb_def_pure = {"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                   "playable": True, "energy_cost": 1, "requires_target": False,
+                   "dynamic_values": [{"name": "Block", "current_value": 5}],
+                   "resolved_rules_text": "获得5点格挡。"}
+    s_nb_flag = nb_pol._score_play(dict(nb_def_pure), nb_enemies, 23, 0, 1,
+                                   nb_pol.know.policy, my_hp=71, my_max_hp=80,
+                                   cur_energy=3, run_deck=[], block_locked=True)[0]
+    s_nb_norm = nb_pol._score_play(dict(nb_def_pure), nb_enemies, 23, 0, 1,
+                                   nb_pol.know.policy, my_hp=71, my_max_hp=80,
+                                   cur_energy=3, run_deck=[])[0]
+    assert s_nb_flag < nb_threshold <= s_nb_norm, \
+        f"NO_BLOCK 锁窗纯防牌未按死牌计价: locked={s_nb_flag} norm={s_nb_norm}"
+    nb_def_zero = {"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                   "playable": True, "energy_cost": 1, "requires_target": False,
+                   "dynamic_values": [{"name": "Block", "current_value": 0}],
+                   "resolved_rules_text": "获得0点格挡。"}
+    s_nb_text = nb_pol._score_play(nb_def_zero, nb_enemies, 23, 0, 1,
+                                   nb_pol.know.policy, my_hp=71, my_max_hp=80,
+                                   cur_energy=3, run_deck=[])[0]
+    assert s_nb_text < nb_threshold, \
+        f"「获得0点格挡」文本通道死牌守卫失活: {s_nb_text}"
+    nb_wave = {"index": 0, "card_id": "IRON_WAVE", "name": "铁斩波",
+               "playable": True, "energy_cost": 1, "requires_target": False,
+               "dynamic_values": [{"name": "Block", "current_value": 5},
+                                  {"name": "Damage", "current_value": 5}]}
+    d_wave = nb_pol._score_play(nb_wave, nb_enemies, 23, 0, 1, nb_pol.know.policy,
+                                my_hp=71, my_max_hp=80, cur_energy=3, run_deck=[],
+                                block_locked=True)
+    assert d_wave[0] > 0 and ("单体伤害" in d_wave[2] or "群体伤害" in d_wave[2]), \
+        f"锁窗混合牌伤害面被误杀: {d_wave}"
+
     # 3xa-quater（第470局批复盘）：短时死亡证据的第三级接替旋钮——高危组合
     #           防御姿态斜率 danger_comp_blk_boost。block_safety 与药水交药线
     #           双顶格后，证据改接组合专属姿态（战场归属正确）；默认值=旧
@@ -3379,6 +3419,52 @@ def main() -> int:
     for dd in (d_near, d_far):
         assert "路径中段含未达标精英" in dd.reason, \
             f"mid_gate 罚分留痕丢失: {dd.reason}"
+
+    # 第580局：深度输出饥饿时，硬线以上精英也要过单场最差尾部复核。
+    etv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-etv-"))
+    etv_know = knowledge.Knowledge(etv_dir)
+    etv_know.policy["elite_min_hp_pct"] = 0.90
+    etv_know.policy["elite_soft_hp_pct"] = 0.75
+    etv_know.stats.setdefault("rooms_act", {})["Elite@1"] = {
+        "hp_lost_sum": 300.0, "damage_events": 10, "hp_lost_max": 75.0}
+    etv_pol = policy.Policy(etv_know)
+
+    def etv_map(hp_now: int):
+        def chain(col):
+            nodes = [{"row": row, "col": col, "node_type": "Event"}
+                     for row in (2, 3, 4)]
+            for node in nodes[:-1]:
+                node["children"] = [{"row": node["row"] + 1, "col": col}]
+            return nodes
+        elite_head = [{"index": 0, "row": 1, "col": 0, "node_type": "Elite",
+                       "children": [{"row": 2, "col": 0}]}]
+        rest_head = [{"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+                      "children": [{"row": 2, "col": 1}]}]
+        state = {"screen": "MAP", "available_actions": ["choose_map_node"],
+                 "map": {"available_nodes": elite_head + rest_head,
+                         "nodes": elite_head + rest_head + chain(0) + chain(1)
+                         + [{"row": 5, "col": 0, "node_type": "Boss"},
+                            {"row": 5, "col": 1, "node_type": "Boss"}],
+                         "boss_node": {"row": 5}},
+                 "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 15,
+                         "deck": [{"card_id": f"GUARD_SKILL_{i}"} for i in range(6)]}}
+        return etv_pol.decide(state, type("C", (), {"credit_tags": []})())
+
+    d_etv_low = etv_map(72)
+    assert "硬线精英尾部复核" in d_etv_low.reason, \
+        f"硬线精英尾部复核未触发: {d_etv_low.reason}"
+    assert re.search(r"路径规划：RestSite\(1,1\)", d_etv_low.reason), \
+        f"尾部复核后仍选精英: {d_etv_low.reason}"
+    # 反例是“满血 + 温和尾部”，不能沿用上面的 75 点极端样本；否则
+    # 80/80 打完只剩 5 点，本来就应触发近死尾部复核。
+    etv_know.stats["rooms_act"]["Elite@1"]["hp_lost_max"] = 20.0
+    d_etv_full = etv_map(80)
+    assert "硬线精英尾部复核" not in d_etv_full.reason, \
+        f"满血健康进场被误伤: {d_etv_full.reason}"
+    etv_know.policy["elite_tail_veto_min_deficit"] = 2.0
+    d_etv_off = etv_map(72)
+    assert "硬线精英尾部复核" not in d_etv_off.reason, \
+        f"旋钮关闭后仍留痕: {d_etv_off.reason}"
 
     # 3xz) 绝境投影篝火回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，
     #      而地图端全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——
