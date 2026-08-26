@@ -2548,3 +2548,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_race_prior_eff: 0.36 → 0.39（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/632 胜，当前目标进阶 0
+
+## 第 633 局复盘（2026-08-26 23:07）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：PERFECTED_STRIKE, ARMAMENTS, JUGGLING, FIGHT_ME, MOLTEN_FIST, BLUDGEON, UPPERCUT, HOWL_FROM_BEYOND, UNMOVABLE, UNMOVABLE, BREAKTHROUGH, STONE_ARMOR, INFLAME, BREAKTHROUGH, EVIL_EYE
+- 本局遗物：百年积木, ORNAMENTAL_FAN, VAJRA, 碎石钻
+- 战斗记录：F6 Monster战 掉血3; F7 Elite战 掉血50; F13 Monster战 掉血2; F14 Elite战 掉血20; F15 Monster战 掉血7; F17 Boss战 掉血50（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/633 胜，当前目标进阶 0
