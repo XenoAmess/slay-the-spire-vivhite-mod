@@ -1932,3 +1932,36 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/576 胜，当前目标进阶 0
+
+## 第 577 局复盘（2026-08-26 13:30）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：BREAKTHROUGH, SWORD_BOOMERANG, TAUNT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1; F3 Monster战 掉血2; F4 Monster战 掉血5; F5 Monster战 掉血17; F6 Monster战 掉血55（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(25分/19局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/577 胜，当前目标进阶 0
+
+## 第 578 局复盘（2026-08-26 13:44）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：TAUNT, BLUDGEON, TAUNT, FLAME_BARRIER, RAMPAGE, BREAKTHROUGH, JUGGLING, MOLTEN_FIST, PYRE, FIEND_FIRE, SWORD_BOOMERANG, STONE_ARMOR, BLUDGEON, SHRUG_IT_OFF, MOLTEN_FIST, BREAKTHROUGH, ANGER, DEMON_FORM, FIGHT_ME, SWORD_BOOMERANG, WHIRLWIND, FIGHT_ME
+- 本局遗物：STRIKE_DUMMY, 彩虹戒指, 烛台, 白兽雕像, RED_MASK, LANTERN, WHETSTONE, MINIATURE_TENT
+- 战斗记录：F22 Monster战 掉血0; F23 Unknown战 掉血35; F24 Unknown战 掉血15; F29 Unknown战 掉血11; F31 Monster战 掉血0; F33 Boss战 掉血54（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/20局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.54 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.51 → 0.54（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/578 胜，当前目标进阶 0
+
+## 第 579 局复盘（2026-08-26 13:50）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：ANGER, TAUNT, HEMOKINESIS, TWIN_STRIKE, UNRELENTING, CINDER, TRUE_GRIT, TRUE_GRIT, SALVO
+- 本局遗物：AKABEKO
+- 战斗记录：F5 Monster战 掉血30; F11 Monster战 掉血0; F12 Monster战 掉血13; F14 Monster战 掉血0; F15 Monster战 掉血15; F17 Boss战 掉血87（阵亡）
+- 当前高价值卡牌：PRODUCTION(28分/2局)，FIEND_FIRE(26分/20局)，CONFLAGRATION(25分/41局)，BOLAS(25分/3局)，THRUMMING_HATCHET(25分/13局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.54 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/579 胜，当前目标进阶 0
