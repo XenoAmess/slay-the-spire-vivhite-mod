@@ -2769,7 +2769,20 @@ class Policy:
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
                     score = min(score, floor_score)
                 if self_cost and lethal and len(killable) < len(enemies):
-                    score = min(score, floor_score)
+                    # 判死竞速豁免（第 635~640 批复盘）：竞速/孤注一掷判定的
+                    # 致死回合里，群体自残攻击（突破族：小额掉血换全体伤害）
+                    # 旧例被无条件压到禁玩线——非群体自残在同一局面走
+                    # desperate「无甲孤注抢斩杀」照常上砧，唯独群体面被吞，
+                    # 640 局 F21「全攻提速」留痕下手握【突破】带能量空过。
+                    # 判死局的唯一翻盘路径是把每一分能量押进输出（第546局
+                    # 复盘教义），故对同一语境开放豁免；守卫两条：
+                    # ① 自残后血量归零的直死牌不豁免（终局教训保留）；
+                    # ② 豁免仍按减半复利口径计价，零自残攻击优先。
+                    _doomed = desperate or race_allin or bool(kill_race)
+                    if _doomed and my_hp - self_cost > 0:
+                        score -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * 0.5
+                    else:
+                        score = min(score, floor_score)
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 hb = _hybrid_defense()

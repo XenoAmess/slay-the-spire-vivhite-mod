@@ -3142,6 +3142,47 @@ def main() -> int:
     assert s_blk_lethal > s_blk_allin, \
         f"致死回合格挡被误贬值（买命窗口应保留原价）: lethal={s_blk_lethal} allin={s_blk_allin}"
 
+    # 3xf（第635~640批复盘）：判死竞速致死回合的群体自残攻击解禁——非群体
+    #           自残在同一局面走孤注一掷通道照常上砧，旧例唯独把突破族
+    #           （小额掉血换全体伤害）压到禁玩线：640 局 F21「全攻提速」
+    #           留痕下手握【突破】带能量空过（评估后无值得出的牌）。
+    ff_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-brkaoe-"))
+    ff_pol = policy.Policy(knowledge.Knowledge(ff_dir), random.Random(5))
+    ff_enemies = [dict(ra_enemies[0])]
+    ff_brk = {"index": 0, "card_id": "BREAKTHROUGH", "name": "突破", "playable": True,
+              "energy_cost": 1, "requires_target": False,
+              "resolved_rules_text": "失去1点生命，对所有敌人造成9点伤害。",
+              "dynamic_values": [{"name": "Damage", "current_value": 9}]}
+    ff_thr = ff_pol.know.policy["play_threshold"]
+    # 对照：健康局致死回合无格挡可补时的 reserve_for_block=True 口径——
+    # 群体自残照旧禁玩（回归保护）
+    s_brk_norm = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+                                    my_hp=20, my_max_hp=80, cur_energy=3,
+                                    reserve_for_block=True, min_blk_cost=1,
+                                    run_deck=[])[0]
+    assert s_brk_norm < ff_thr, \
+        f"对照场景失真（健康局致死回合群体自残仍应禁玩）: {s_brk_norm}"
+    # 正例①：斩杀竞速判死（kill_race）同局面解禁，减半计价后过阈值
+    s_brk_race = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+                                    my_hp=20, my_max_hp=80, cur_energy=3,
+                                    kill_race=True, run_deck=[])[0]
+    assert s_brk_race > ff_thr >= s_brk_norm, \
+        f"判死局群体自残攻击未被解禁: race={s_brk_race} norm={s_brk_norm} thr={ff_thr}"
+    # 正例②：败局竞速口径（hopeless_race + 有格挡保留 → race_allin 生效路径）
+    s_brk_allin = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+                                     my_hp=20, my_max_hp=80, cur_energy=3,
+                                     hopeless_race=True,
+                                     reserve_for_block=True, min_blk_cost=1,
+                                     run_deck=[])[0]
+    assert s_brk_allin > ff_thr, \
+        f"race_allin 路径的群体自残未解禁: {s_brk_allin}"
+    # 反例：自残后血量归零的直死牌不豁免（第29局终局教训守卫保留）
+    s_brk_suic = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+                                    my_hp=1, my_max_hp=80, cur_energy=3,
+                                    kill_race=True, run_deck=[])[0]
+    assert s_brk_suic < ff_thr <= s_brk_race, \
+        f"自残归零的直死牌不应解禁: suic={s_brk_suic}"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))
