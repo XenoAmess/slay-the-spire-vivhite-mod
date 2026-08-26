@@ -2757,3 +2757,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/651 胜，当前目标进阶 0
+
+## 第 652 局复盘（2026-08-27 01:33）
+- 结果：💀 失败｜进阶 0｜到达层数 11｜当局评分 11
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：MOLTEN_FIST, HAVOC, UPPERCUT, TAUNT, SWORD_BOOMERANG, SWORD_BOOMERANG, INFLAME, UNRELENTING, SHRUG_IT_OFF, THUNDERCLAP, SALVO
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血8; F5 Monster战 掉血3; F7 Monster战 掉血15; F9 Monster战 掉血19; F11 Elite战 掉血35（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，CONFLAGRATION(24分/47局)，PRODUCTION(24分/3局)，FIEND_FIRE(24分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/652 胜，当前目标进阶 0
