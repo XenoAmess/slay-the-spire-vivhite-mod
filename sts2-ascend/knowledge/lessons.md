@@ -2570,3 +2570,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/634 胜，当前目标进阶 0
+
+## 第 635 局复盘（2026-08-26 23:23）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, TRUE_GRIT, RUPTURE, INFERNAL_BLADE, INFLAME, EQUILIBRIUM, STOMP, TRUE_GRIT, BATTLE_TRANCE, SWORD_BOOMERANG, JUGGLING, TAUNT, THRASH
+- 本局遗物：BRONZE_SCALES, ODDLY_SMOOTH_STONE
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血4; F8 Monster战 掉血16; F12 Monster战 掉血30; F15 Monster战 掉血0; F17 Boss战 掉血69（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/44局)，FIEND_FIRE(25分/26局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/635 胜，当前目标进阶 0
