@@ -2746,3 +2746,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/650 胜，当前目标进阶 0
+
+## 第 651 局复盘（2026-08-27 01:28）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：HEMOKINESIS, UNMOVABLE, ARMAMENTS, SHRUG_IT_OFF, DISMANTLE, DEMON_FORM, INFLAME, INFLAME, FIGHT_ME, NOT_YET, MOLTEN_FIST, DRAMATIC_ENTRANCE, IRON_WAVE, PYRE, FLAME_BARRIER, MOLTEN_FIST, UNRELENTING, JUGGLING
+- 本局遗物：TUNING_FORK, 损毁头盔, 吃不完的糖, ANCHOR, 意外光滑的石头
+- 战斗记录：F19 Monster战 掉血25; F21 Monster战 掉血5; F24 Elite战 掉血38; F27 Unknown战 掉血6; F31 Elite战 掉血42; F33 Boss战 掉血36（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，CONFLAGRATION(24分/47局)，PRODUCTION(24分/3局)，FIEND_FIRE(24分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/651 胜，当前目标进阶 0
