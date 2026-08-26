@@ -98,6 +98,13 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("-SkipDeploy", text)
         self.assertLess(text.index("& $startAgent"), text.index("Invoke-LivehimeBridge"))
         self.assertLess(text.index("Invoke-LivehimeBridge"), text.index("Set-SlayTheSpireTopMost"))
+        self.assertLess(text.index("Set-SlayTheSpireTopMost"), text.index("Set-AscendViewerTopMost"))
+
+    def test_viewer_reorder_does_not_take_focus(self) -> None:
+        module = MODULE.read_text(encoding="utf-8")
+        self.assertIn("Set-AscendViewerTopMost", module)
+        self.assertIn("SwpNoActivate", module)
+        self.assertIn('"ASCEND-VISION"', module)
 
     def test_bridge_is_fixed_protected_and_current_user_only(self) -> None:
         installer = INSTALL.read_text(encoding="utf-8")

@@ -19,4 +19,5 @@ if (-not $PSCmdlet.ShouldProcess("sts2-ascend, Bilibili Livehime, and Slay the S
 & $startAgent -GameDir $GameDir -SkipDeploy -ReadyTimeoutSeconds $ReadyTimeoutSeconds
 Invoke-LivehimeBridge -Action Start -TimeoutSeconds $LiveTimeoutSeconds
 Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds $ReadyTimeoutSeconds
+Set-AscendViewerTopMost
 Write-Host "Bilibili streaming started through Livehime; Slay the Spire 2 is TOPMOST."

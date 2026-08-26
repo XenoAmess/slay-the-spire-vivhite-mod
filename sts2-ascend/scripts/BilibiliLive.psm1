@@ -85,6 +85,7 @@ $script:HwndNoTopMost = [IntPtr](-2)
 $script:SwRestore = 9
 $script:SwpNoMove = 0x0002
 $script:SwpNoSize = 0x0001
+$script:SwpNoActivate = 0x0010
 $script:SwpShowWindow = 0x0040
 $script:MouseLeftDown = 0x0002
 $script:MouseLeftUp = 0x0004
@@ -554,6 +555,35 @@ function Set-SlayTheSpireTopMost {
     Write-Host "Slay the Spire 2 is foreground and TOPMOST (pid $($window.ProcessId))."
 }
 
+function Set-AscendViewerTopMost {
+    param(
+        [string]$ProjectRoot = (Split-Path $PSScriptRoot -Parent)
+    )
+    $viewerPath = [IO.Path]::GetFullPath((Join-Path $ProjectRoot "brain\review_viewer.py"))
+    $viewerProcesses = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Name -in @("python.exe", "pythonw.exe") -and
+            $_.CommandLine -and
+            [string]$_.CommandLine -match [regex]::Escape($viewerPath)
+        })
+    foreach ($process in $viewerProcesses) {
+        $runtime = Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue
+        if (-not $runtime -or $runtime.MainWindowHandle -eq [IntPtr]::Zero) { continue }
+        if ($runtime.MainWindowTitle -ne "ASCEND-VISION") { continue }
+        $flags = $script:SwpNoMove -bor $script:SwpNoSize -bor
+            $script:SwpNoActivate -bor $script:SwpShowWindow
+        if (-not [BilibiliLiveNative]::SetWindowPos(
+                $runtime.MainWindowHandle, $script:HwndTopMost, 0, 0, 0, 0, $flags)) {
+            throw "Could not place ASCEND-VISION above the game."
+        }
+        Write-Host "ASCEND-VISION is visible above the game without taking focus."
+        return $true
+    }
+    Write-Verbose "ASCEND-VISION is not active; it will appear when a review starts."
+    return $false
+}
+
 Export-ModuleMember -Function Test-IsAdministrator, ConvertTo-LivehimeState,
     Get-LivehimeStreamingState, Invoke-LivehimeStart, Invoke-LivehimeStop,
-    Invoke-LivehimeBridge, Get-SlayTheSpireWindow, Set-SlayTheSpireTopMost
+    Invoke-LivehimeBridge, Get-SlayTheSpireWindow, Set-SlayTheSpireTopMost,
+    Set-AscendViewerTopMost

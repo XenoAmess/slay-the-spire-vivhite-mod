@@ -17,5 +17,6 @@ Invoke-LivehimeBridge -Action Stop -TimeoutSeconds $LiveTimeoutSeconds
 $gameWindow = Get-SlayTheSpireWindow -GameDir $GameDir
 if ($gameWindow) {
     Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds 10
+    Set-AscendViewerTopMost
 }
 Write-Host "Bilibili streaming stopped through Livehime. No service or game process was stopped."
