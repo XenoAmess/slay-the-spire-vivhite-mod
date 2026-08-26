@@ -2625,3 +2625,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/639 胜，当前目标进阶 0
+
+## 第 640 局复盘（2026-08-27 00:11）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：TAUNT, BREAKTHROUGH, UNRELENTING, HEMOKINESIS, CINDER, SHRUG_IT_OFF, TRUE_GRIT, FIEND_FIRE, UPPERCUT, PACTS_END, TAUNT, CINDER
+- 本局遗物：LIZARD_TAIL
+- 战斗记录：F12 Monster战 掉血0; F14 Monster战 掉血4; F17 Boss战 掉血43; F19 Monster战 掉血20; F20 Monster战 掉血26; F21 Monster战 掉血39（阵亡）
+- 当前高价值卡牌：CONFLAGRATION(25分/46局)，FIEND_FIRE(25分/27局)，BOLAS(25分/3局)，PRODUCTION(24分/3局)，OFFERING(24分/15局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/640 胜，当前目标进阶 0
