@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 17:44:54",
  "victory": false,
  "in_progress": true,
- "floor": 13,
+ "floor": 17,
  "decisions": [
   {
    "t": "17:44:54",
@@ -1555,6 +1555,305 @@
     "option_index": 0
    },
    "reason": "事件【滑脚木桥】：选择「跨越」（经验价值 -1.0）；跨越=-1.0(n=38) / 再撑一会=-3.0(n=1)"
+  },
+  {
+   "t": "17:48:32",
+   "screen": "EVENT",
+   "floor": 13,
+   "hp": 73,
+   "gold": 251,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "17:48:34",
+   "screen": "MAP",
+   "floor": 13,
+   "hp": 73,
+   "gold": 251,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(13,6)（路径分 -33.29，预计进 Boss 血量 98%；低血尾部生存复核：单场最差72打完仅剩1(≤9)，尾部罚分；输出饥饿战损上浮×1.20（缺口56%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(13,6)=-33.29|低血尾部生存复核：单场最差72打完仅剩1(≤9)，尾部罚分；输出饥饿战损上浮×1.20（缺口56%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:48:36",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 251,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "17:48:37",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 251,
+   "action": "remove_card_at_shop",
+   "params": {},
+   "reason": "商店：付费删牌（预留 60 金后仍充足）"
+  },
+  {
+   "t": "17:48:38",
+   "screen": "CARD_SELECTION",
+   "floor": 14,
+   "hp": 73,
+   "gold": 251,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "删除卡牌：【打击】（最无价值）"
+  },
+  {
+   "t": "17:48:39",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 176,
+   "action": "buy_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "商店：购买卡牌【无情猛攻】（72金，价值26.4≥门槛1.0）"
+  },
+  {
+   "t": "17:48:41",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 104,
+   "action": "buy_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "商店：购买卡牌【熔融之拳】（52金，价值8.5≥门槛1.0）"
+  },
+  {
+   "t": "17:48:42",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 52,
+   "action": "buy_potion",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "商店：购买药水【能量药水】（48金，价值8.2）"
+  },
+  {
+   "t": "17:48:53",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 4,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "17:48:54",
+   "screen": "SHOP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 4,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "17:48:57",
+   "screen": "MAP",
+   "floor": 14,
+   "hp": 73,
+   "gold": 4,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(14,5)（路径分 4.22，预计进 Boss 血量 100%；低血尾部生存复核：单场最差66打完仅剩7(≤9)，尾部罚分；输出饥饿战损上浮×1.20（缺口56%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(14,5)=4.22|低血尾部生存复核：单场最差66打完仅剩7(≤9)，尾部罚分；输出饥饿战损上浮×1.20（缺口56%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:48:58",
+   "screen": "COMBAT",
+   "floor": 15,
+   "hp": 73,
+   "gold": 4,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【重锤+】→闪光贾克斯果（可击杀闪光贾克斯果）；敌意图总伤14，我方73血/0甲"
+  },
+  {
+   "t": "17:49:00",
+   "screen": "COMBAT",
+   "floor": 15,
+   "hp": 73,
+   "gold": 4,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:49:03",
+   "screen": "COMBAT",
+   "floor": 15,
+   "hp": 62,
+   "gold": 4,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【重锤+】→飞蝇菌子（单体伤害≈42.0）；敌意图总伤8，我方62血/0甲"
+  },
+  {
+   "t": "17:49:04",
+   "screen": "COMBAT",
+   "floor": 15,
+   "hp": 62,
+   "gold": 4,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "17:49:08",
+   "screen": "COMBAT",
+   "floor": 15,
+   "hp": 54,
+   "gold": 4,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【熔融之拳】→飞蝇菌子（可击杀飞蝇菌子）；敌意图总伤0，我方54血/0甲"
+  },
+  {
+   "t": "17:49:08",
+   "screen": "REWARD",
+   "floor": 15,
+   "hp": 60,
+   "gold": 4,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：17金币"
+  },
+  {
+   "t": "17:49:09",
+   "screen": "REWARD",
+   "floor": 15,
+   "hp": 60,
+   "gold": 21,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：速度药水"
+  },
+  {
+   "t": "17:49:10",
+   "screen": "REWARD",
+   "floor": 15,
+   "hp": 60,
+   "gold": 21,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:49:10",
+   "screen": "CARD_SELECTION",
+   "floor": 15,
+   "hp": 60,
+   "gold": 21,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【御血术】（价值 24.3）；候选：御血术=24.3 / 双重打击=4.1 / 全身撞击=-0.9"
+  },
+  {
+   "t": "17:49:11",
+   "screen": "REWARD",
+   "floor": 15,
+   "hp": 60,
+   "gold": 21,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:49:13",
+   "screen": "MAP",
+   "floor": 15,
+   "hp": 60,
+   "gold": 21,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(15,4)（路径分 13.30，预计进 Boss 血量 97%；Boss 前休整；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(15,4)=13.30|Boss 前休整；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:49:15",
+   "screen": "REST",
+   "floor": 16,
+   "hp": 60,
+   "gold": 21,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "篝火：Boss 前夜翻转带回血（当前 67%；不回血预期余量-29≤安全余量9（悲观战损89=场均59×1.5）；竞速预演虽判必败（竞速预演：击杀需20回合＞满血可存活7回合（Boss血池均值247、火力14/回合，先验输出12/回合；联合能量复核：任一攻防能量分配均无法同时满足击杀与存活），必败局的伤害会流到打死为止），处决带内回血仍是唯一生存增量，回血27点直接兑换生还率）"
+  },
+  {
+   "t": "17:49:16",
+   "screen": "REST",
+   "floor": 16,
+   "hp": 87,
+   "gold": 21,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "17:49:18",
+   "screen": "MAP",
+   "floor": 16,
+   "hp": 87,
+   "gold": 21,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Boss(16,3)（路径分 10.91，预计进 Boss 血量 97%；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Boss(16,3)=10.91|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "17:49:21",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 87,
+   "gold": 21,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【能量药水】"
   }
  ],
  "combat_notes": [
@@ -1562,7 +1861,9 @@
   "F3 Monster战 掉血1",
   "F5 Unknown战 掉血0",
   "F6 Monster战 掉血9",
-  "F7 Monster战 掉血32"
+  "F7 Monster战 掉血32",
+  "F8 Monster战 掉血15",
+  "F15 Monster战 掉血13"
  ],
  "attribution_tags": [
   [
@@ -1644,6 +1945,34 @@
   [
    "map_node",
    "Unknown"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "card_pick",
+   "UNRELENTING"
+  ],
+  [
+   "card_pick",
+   "MOLTEN_FIST"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "HEMOKINESIS"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Boss"
   ]
  ]
 }
