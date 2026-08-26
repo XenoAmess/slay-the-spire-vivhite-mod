@@ -3131,3 +3131,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/685 胜，当前目标进阶 0
+
+## 第 686 局复盘（2026-08-27 06:27）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：MOLTEN_FIST, HEADBUTT, HAND_OF_GREED, MANGLE, SHRUG_IT_OFF, TRUE_GRIT, SHRUG_IT_OFF, CRUELTY, JUGGERNAUT, UPPERCUT, DEMON_FORM, WHIRLWIND, HOWL_FROM_BEYOND, JUGGLING, TWIN_STRIKE, CINDER, TAUNT, SHRUG_IT_OFF
+- 本局遗物：CANDELABRA, 永恒羽毛, REGAL_PILLOW
+- 战斗记录：F17 Boss战 掉血34; F19 Monster战 掉血42; F23 Monster战 掉血8; F25 Monster战 掉血27; F30 Unknown战 掉血11; F33 Boss战 掉血80（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：高速失血爆毙（5回合掉血80，每回合16≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/686 胜，当前目标进阶 0
