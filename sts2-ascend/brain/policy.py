@@ -1458,7 +1458,9 @@ class Policy:
         # Boss 前夜竞速必败预演（第 397~402 批复盘）：与 _rest 的竞速必败改锻造
         # 同口径，投影镜像不得与实际篝火行为脱钩（99~102/228/244 批教训）。
         # 判定不随路径变化，路径枚举前算一次
-        eve_doomed, eve_doom_note = self._boss_race_doomed(run_deck, max_hp, floor=floor)
+        eve_doomed, eve_doom_note = self._boss_race_doomed(
+            run_deck, max_hp, floor=floor,
+            potions=run.get("potions") or None)
 
         elite_gate_f, elite_gate_note = self._elite_path_gate(
             pol, priors, hp, max_hp, good_cards, act_mul, burst_starved,
@@ -3349,8 +3351,46 @@ class Policy:
                                       f"+输出{d1 + (d2 - d1) * t:.0f}/回合的混合分配")
         return False, ""
 
+    def _race_potion_credit(self, potions: list | None, pool: float,
+                            floor: int | None) -> float:
+        """竞速账的随身药水授信（第654~663/675~680批复盘新增）。
+
+        预留教义把进攻/增益药水整段封存给 Boss 竞速兑现，但旧竞速账只认
+        deck_burst——已入库的药水爆发被两边重复计提（预留端当弹药扣着、
+        可行性端又看不见），贴线的「药水助力即可行」对局被系统性判死，
+        连带前夜弃疗上砧/入场线豁免全部按必败口径走。授信规则：
+        - 只在 Boss 窗口内生效（距 Boss > race_potion_credit_floors_to_boss
+          层不授信——此时预留门未锁，药水可能中途兑付进普通房，提前放行
+          会造成假可行）；floor 缺失同样不授信（保守）。
+        - 每瓶进攻类药水折算 race_potion_flat_credit 点血池削减，
+          合计不超过 race_potion_pool_cap_frac × 血池。
+        - 防御/回复药水不给授信（账只修输出侧，不动存活侧）。
+
+        返回削减后的血池；输入为空或窗口外原样返回 pool（行为与旧版一致）。
+        """
+        pol = self.know.policy
+        flat = float(pol.get("race_potion_flat_credit", 0.0))
+        cap_frac = float(pol.get("race_potion_pool_cap_frac", 0.0))
+        win = int(pol.get("race_potion_credit_floors_to_boss", 0))
+        if not potions or flat <= 0.0 or pool <= 0.0 or win <= 0 or not floor:
+            return float(pool)
+        try:
+            if self._floors_to_boss(int(floor)) > win:
+                return float(pool)
+        except (TypeError, ValueError):
+            return float(pool)
+        n = 0
+        for p in potions:
+            if isinstance(p, dict) and self._potion_class(p) == "offensive":
+                n += 1
+        if n <= 0:
+            return float(pool)
+        credit = min(float(n) * flat, cap_frac * float(pool))
+        return max(1.0, float(pool) - credit)
+
     def _boss_race_doomed(self, deck: list[dict], max_hp: int,
-                          floor: int | None = None) -> tuple[bool, str]:
+                          floor: int | None = None,
+                          potions: list | None = None) -> tuple[bool, str]:
         """Boss 竞速必败预演（第 397~402 批复盘新增；兑现第 214 批遗留的
         「攻坚投影·篝火端消费」接线）。
 
@@ -3380,6 +3420,13 @@ class Policy:
             self._floor_act(floor) if floor else None)
         if not pool or not fire or not max_hp:
             return False, ""
+        # 第654~663/675~680批复盘：Boss 窗口内的随身进攻药水按保守折算冲抵
+        # 血池（预留教义封存的弹药本就是竞速计划的组成部分），贴线对局不再
+        # 因「药水已入库但账面看不见」被误判必败；窗口外/无药水时原账不动
+        pool_eff = self._race_potion_credit(potions, float(pool), floor)
+        _pot_tail = ""
+        if pool_eff < float(pool):
+            _pot_tail = f"，随身进攻药水授信-{float(pool) - pool_eff:.0f}血池"
         # 第547~552局批复盘：供给换 deck_effective_burst——力量引擎的复利
         # 授信计入竞速账，带引擎卡组不再被面值口径系统性判死（本批十局
         # 全线「缺口55%~83%直到前夜」的死锁主因之一）
@@ -3389,19 +3436,19 @@ class Policy:
         eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
         margin = float(pol.get("kill_race_margin", 1.5))
         dpt = burst * eff
-        ttk = pool / max(1.0, dpt)
+        ttk = pool_eff / max(1.0, dpt)
         tsurv = float(max_hp) / max(1.0, fire)
         if ttk <= tsurv + margin:
             return False, ""
         # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
         _feasible, _ = self._race_joint_feasible(
-            deck or [], pool, fire, float(max_hp), margin, eff=eff)
+            deck or [], pool_eff, fire, float(max_hp), margin, eff=eff)
         if _feasible:
             return False, ""
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
-                f"先验输出{dpt:.0f}/回合；联合能量复核：任一攻防能量分配"
+                f"先验输出{dpt:.0f}/回合{_pot_tail}；联合能量复核：任一攻防能量分配"
                 f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止")
         return True, note
 
@@ -4409,7 +4456,9 @@ class Policy:
             _up_floor = (state.get("run") or {}).get("floor")
             _up_act = self._floor_act(_up_floor)
             _up_starved = bool(_up_deck) and self.deck_effective_burst(_up_deck) < self._starve_line(_up_mh, act=_up_act)
-            _up_doomed, _ = self._boss_race_doomed(_up_deck, _up_mh, floor=_up_floor)
+            _up_doomed, _ = self._boss_race_doomed(
+                _up_deck, _up_mh, floor=_up_floor,
+                potions=((state.get("run") or {}).get("potions") or None))
             _atk_bonus = 4.0 if _up_starved else 2.0
             _scale_up_bonus = (float(self.know.policy.get("upgrade_scaling_power_bonus", 16.0))
                                if (_up_starved or _up_doomed) else 0.0)
@@ -5128,8 +5177,9 @@ class Policy:
                 # 「投影误判翻盘率」，锻造的复利价值以「还有未来」为前提——
                 # 必败判定本身否认了这个前提。两套教义各管一段：翻转带内回血至上，
                 # 翻转带外维持必败上砧（60% 带外上砧胜一幕 Boss 的实证保留）
-                _doomed, _doom_note = self._boss_race_doomed(deck, max_hp,
-                                                             floor=run.get("floor"))
+                _doomed, _doom_note = self._boss_race_doomed(
+                    deck, max_hp, floor=run.get("floor"),
+                    potions=run.get("potions") or None)
                 if cur_hp - pess <= margin:
                     # 第664~674批复盘修正：悲观战损超过最大生命时（一幕 max80 vs
                     # pess≈91），「cur_hp-pess≤margin」对整个血条恒真，翻转带吞掉
