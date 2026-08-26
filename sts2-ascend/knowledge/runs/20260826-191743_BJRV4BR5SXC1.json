@@ -5,7 +5,7 @@
  "started_at": "2026-08-26 19:17:43",
  "victory": false,
  "in_progress": true,
- "floor": 5,
+ "floor": 6,
  "decisions": [
   {
    "t": "19:17:43",
@@ -651,12 +651,253 @@
     "target_index": 1
    },
    "reason": "战斗：打出【挑衅】→墨宝（格挡6）；敌意图总伤12，我方80血/0甲；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:05",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤12，我方80血/6甲；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:06",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→墨宝（单体伤害≈6.0）；敌意图总伤12，我方80血/11甲；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:07",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 80,
+   "gold": 150,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:19:13",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【万向斩】→墨宝（单体伤害≈8.0）；敌意图总伤23，我方79血/0甲；意图升级+11，防御前置；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:14",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【头槌】→墨宝（单体伤害≈9.0）；敌意图总伤23，我方79血/0甲；意图升级+11，防御前置；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:15",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "牌堆顶选择：【挑衅】（价值 7.3）；候选：挑衅=7.3 / 万向斩=6.0 / 痛击=-11.8 / 防御=-12.7 / 防御=-12.7 / 打击=-32.2"
+  },
+  {
+   "t": "19:19:16",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→墨宝（单体伤害≈6.0）；敌意图总伤23，我方79血/0甲；意图升级+11，防御前置；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:17",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→墨宝（可击杀墨宝）；敌意图总伤23，我方79血/0甲；意图升级+11，防御前置；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:18",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 79,
+   "gold": 150,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:19:22",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 66,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【挑衅】→墨宝（格挡6）；敌意图总伤9，我方66血/0甲；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:23",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 66,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【旋风斩】（群体伤害≈10.0）；敌意图总伤9，我方66血/6甲；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:25",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 66,
+   "gold": 150,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "19:19:28",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 66,
+   "gold": 150,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【万向斩】→墨宝（可击杀墨宝）；敌意图总伤10，我方66血/0甲；意图升级+1，防御前置；全场均为已证实重生体，解除重生压制以终结战斗"
+  },
+  {
+   "t": "19:19:29",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 72,
+   "gold": 150,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：10金币"
+  },
+  {
+   "t": "19:19:30",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 72,
+   "gold": 160,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：异鱼之油"
+  },
+  {
+   "t": "19:19:31",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 72,
+   "gold": 160,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "19:19:31",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 72,
+   "gold": 160,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【突破】（价值 7.0）；候选：突破=7.0 / 飞剑回旋镖=6.9 / 破灭=-2.4"
+  },
+  {
+   "t": "19:19:32",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 72,
+   "gold": 160,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "19:19:34",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 72,
+   "gold": 160,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(5,1)（路径分 -45.79，预计进 Boss 血量 67%；前期需要战斗积累卡牌；连续作战4场，疲劳压制×0.69；输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(5,1)=-45.79|前期需要战斗积累卡牌；连续作战4场，疲劳压制×0.69；输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "19:19:37",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 72,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【万向斩】→树枝史莱姆（中）（辅助体优先转火：树枝史莱姆（中）（零伤害意图，放生=纵容其强化队友））；敌意图总伤11，我方72血/0甲"
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血0",
   "F3 Monster战 掉血2",
-  "F4 Monster战 掉血0"
+  "F4 Monster战 掉血0",
+  "F5 Monster战 掉血8"
  ],
  "attribution_tags": [
   [
@@ -682,6 +923,14 @@
   [
    "map_node",
    "Monster"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "BREAKTHROUGH"
   ],
   [
    "map_node",
