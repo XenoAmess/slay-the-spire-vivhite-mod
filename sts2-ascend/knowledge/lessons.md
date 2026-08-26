@@ -2878,3 +2878,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/662 胜，当前目标进阶 0
+
+## 第 663 局复盘（2026-08-27 03:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHOCKWAVE, CINDER, TAUNT, FLAME_BARRIER, CRIMSON_MANTLE, PACTS_END, SHRUG_IT_OFF, ANGER, THUNDERCLAP, TRUE_GRIT, MOLTEN_FIST, RUPTURE
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F5 Monster战 掉血4; F7 Monster战 掉血27; F9 Unknown战 掉血34; F12 Unknown战 掉血7; F14 Unknown战 掉血11; F17 Boss战 掉血59（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，FIEND_FIRE(24分/28局)，CONFLAGRATION(24分/48局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/663 胜，当前目标进阶 0
