@@ -1676,19 +1676,24 @@ class Policy:
                         _margin = float(pol.get("boss_eve_safe_margin_frac", 0.10)) * max_hp
                         _eff = min(_heal_amt, max_hp - max(0.0, cur_hp))
                         # 竞速必败镜像（第 397~402 批复盘；第441~446批同步翻转带
-                        # 优先）：处决带内一律投影回血——带内不回血在任何执行下
-                        # 都是处决，必败判定不改变裁决（与 _rest 翻转带前置同口径，
-                        # 旧版「必败无条件投影锻造」曾把带内前夜记成锻造、系统性
-                        # 低估进 Boss 血量）；带外必败仍投影锻造（样本门槛外的
-                        # 独立通道，保留旧镜像语义）
+                        # 优先；第664~674批复盘再加「弃疗锻造带」）：处决带内默认
+                        # 投影回血（带内不回血在任何执行下都是处决），但判死且回血
+                        # 后余量仍不过线时与 _rest 一致投影锻造——低血幕里悲观战损
+                        # 超过最大生命，旧口径曾把整条血条都判进回血带、系统性
+                        # 高估「囤血等死」路线的进 Boss 血量；带外必败仍投影锻造
                         _flip_heal = cur_hp - _pess <= _margin
+                        # 第664~674批复盘镜像同步：判死且回血后余量仍不过线的
+                        # 前夜篝火与 _rest「必败弃疗改锻造」同口径投影锻造，
+                        # 选路不再把死局前夜的回血记成有效生存增量
+                        _doom_smith_band = (eve_doomed and _flip_heal
+                                            and max(0.0, cur_hp) + _eff - _pess <= _margin)
                         _smith_proj = (
                             (_bn >= int(pol.get("boss_eve_smith_min_samples", 3))
                              and _bl >= _heal_amt
                              and (_eff < 0.08 * max_hp
                                   or (cur_hp - _pess > _margin
                                       and hpp_now >= eve_smith_line)))
-                            or (eve_doomed and not _flip_heal))
+                            or (eve_doomed and (not _flip_heal or _doom_smith_band)))
                         will_heal = not _smith_proj
                     else:
                         will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55))
@@ -5126,7 +5131,26 @@ class Policy:
                 _doomed, _doom_note = self._boss_race_doomed(deck, max_hp,
                                                              floor=run.get("floor"))
                 if cur_hp - pess <= margin:
-                    _doom_tail = f"；竞速预演虽判必败（{_doom_note}），处决带内回血仍是唯一生存增量" if _doomed else ""
+                    # 第664~674批复盘修正：悲观战损超过最大生命时（一幕 max80 vs
+                    # pess≈91），「cur_hp-pess≤margin」对整个血条恒真，翻转带吞掉
+                    # 「必败改锻造」教义使其沦为死代码。本批五局判死前夜全部照旧
+                    # 回血，其中 668/671 两局回血后以 98%/100% 进场、掉 78/80 整管
+                    # 打空——判死局的边际回血被实证为零。规则改为：判死且回血后
+                    # 余量仍摸不到安全线时，回血既翻不了盘也改不了结局，锻造缩短
+                    # 战斗是唯一杠杆；非判死或回血确有翻盘潜力的带内裁决不变
+                    # （441~446 批三局带内回血生还的实证保留）
+                    _post_margin = cur_hp + eff_heal - pess
+                    if _doomed and _post_margin <= margin:
+                        return Decision("choose_rest_option",
+                                        {"option_index": smith["index"]},
+                                        f"篝火：Boss 前夜必败弃疗改锻造（当前 {hp_pct:.0%}；"
+                                        f"回血后预期余量{_post_margin:.0f}仍≤安全余量"
+                                        f"{margin:.0f}（悲观战损{pess:.0f}=场均{boss_loss:.0f}"
+                                        f"×{float(pol.get('boss_eve_pess_mult', 1.5)):.1f}），"
+                                        f"回血买不到生还；{_doom_note}；本次可升级"
+                                        f"{len(upgradable)}张，缩短战斗是唯一杠杆）",
+                                        tags=[("rest", "smith")], wait=1.2)
+                    _doom_tail = f"；竞速预演虽判必败（{_doom_note}），回血后有望越过悲观安全线" if _doomed else ""
                     return Decision("choose_rest_option", {"option_index": heal["index"]},
                                     f"篝火：Boss 前夜翻转带回血（当前 {hp_pct:.0%}；不回血预期余量"
                                     f"{cur_hp - pess:.0f}≤安全余量{margin:.0f}（悲观战损{pess:.0f}="
