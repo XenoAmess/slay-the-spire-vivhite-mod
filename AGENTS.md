@@ -94,6 +94,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - “Stack ready”表示当前 session 的 brain 存活且 8080–8084 中某个 `/health` 已就绪。ASCEND-VISION 驾驶舱随 brain 启动，并由进程内监督器按心跳自愈；碎碎念在语音环境可用时由 brain 拉起，复盘 OpenCode 与复盘 speaker 仍按需出现。就绪等待超时只警告，runner 与驾驶舱监督器会继续在后台自愈，此时不要再启动第二套。
 - 驾驶舱实时决策遥测是纯本地、确定性的 Python 标准库路径：只复用 Policy 本次已经计算出的观察、闸门、候选分数和结果，不重新评分，不调用 LLM、OpenCode、Minimax、OpenRouter 或任何网络服务，token 消耗为 0。遥测只写当前 session 的 `.runtime/live_dashboard.<SESSION_ID>.json`，采用有界队列和原子替换；异步复盘模型链本身仍可能消耗 token，二者不得混淆。
 - ASCEND-VISION 必须在同一窗口使用状态驱动的稳定布局，不得按秒在整页 LIVE/REVIEW 间闪回：对局中显示决策主区和多行实时复盘流；`GAME_OVER` 显示趋势主区和复盘流；主菜单、等待或无新鲜决策时显示完整 REVIEW 视图；`--interactive` 可手动选择 LIVE/TREND/REVIEW。`knowledge/review_live.stream` 负责复盘文字展示，但不参与决策遥测、评分或动作选择。
+- ASCEND-VISION 的资源根目录和 `knowledge/viewer.lock` 必须通过 `lifecycle.STACK_ROOT` 解析；复盘 clone、自检目录或备份副本不得按自身 `__file__` 建立独立 viewer 锁。复盘子进程必须继承 `STS2_ASCEND_DISABLE_VIEWER=1`。
 - 楼层展示必须使用真实楼层口径 `floor_sum_raw` / `best_floor_raw`；历史 `floors_total` / `best_floor` 保留“真实楼层 + 胜利 50 分”的学习评分语义，不得拿来显示平均或最高楼层。
 - 直播控制语义不变：开播仍先启动完整 sts2-ascend 栈并将杀戮尖塔2置于顶部，再通过本地哔哩哔哩直播姬开播；下播只操作直播姬，不停止任何服务、智能体或游戏。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。

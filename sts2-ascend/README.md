@@ -220,6 +220,9 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - `py brain/review_viewer.py --attach-current`：只读轮询 `opencode.db`，回放最近一场复盘。
 - `--interactive`：允许拖拽/ESC 关闭、手动选择 LIVE/TREND/REVIEW，并关闭点击穿透。
 - 首选开关为 `config.json` 的 `viewer.enabled`；旧 `llm.viewer_enabled` 继续兼容。
+- viewer 的根目录和单实例锁以当前 stack session 的 `.runtime` 为准；复盘隔离 clone 继承
+  `STS2_ASCEND_DISABLE_VIEWER=1`，即使自检执行入口脚本也不能创建第二个直播悬浮窗。
+- 活动局日志持续写入只更新文件签名，不会在统计内容未变化时触发统计卡重绘。
 
 该升级不改变直播控制边界：开播仍启动完整 sts2-ascend 栈、将杀戮尖塔2置顶后通过本地直播姬开播；
 下播仍只让哔哩哔哩直播姬下播，不停止驾驶舱、智能体、语音服务或游戏。

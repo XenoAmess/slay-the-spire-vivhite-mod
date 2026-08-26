@@ -13,6 +13,7 @@ BRAIN = Path(__file__).resolve().parents[1] / "brain"
 sys.path.insert(0, str(BRAIN))
 
 import dashboard_launcher  # noqa: E402
+import lifecycle  # noqa: E402
 import review_viewer  # noqa: E402
 
 
@@ -172,6 +173,20 @@ class DashboardSourceTests(unittest.TestCase):
 
 
 class DashboardLauncherTests(unittest.TestCase):
+    def test_runtime_dir_canonicalizes_copied_stack_root(self) -> None:
+        copied = Path("D:/backup/repo/sts2-ascend")
+        runtime = Path("D:/workspace/live/sts2-ascend/.runtime")
+        resolved = lifecycle.resolve_stack_root(
+            copied, {"STS2_ASCEND_RUNTIME_DIR": str(runtime)})
+        self.assertEqual(resolved, runtime.resolve().parent)
+
+    def test_review_process_tree_cannot_spawn_viewer(self) -> None:
+        with mock.patch.dict(os.environ, {"STS2_ASCEND_DISABLE_VIEWER": "1"}), \
+                mock.patch.object(dashboard_launcher.subprocess, "Popen") as popen:
+            self.assertFalse(
+                dashboard_launcher.ensure_dashboard_viewer({}, lambda _msg: None))
+        popen.assert_not_called()
+
     def test_top_level_enabled_overrides_legacy_llm_switch(self) -> None:
         cfg = {"viewer": {"enabled": False}, "llm": {"viewer_enabled": True}}
         self.assertFalse(dashboard_launcher.resolve_viewer_config(cfg)["enabled"])

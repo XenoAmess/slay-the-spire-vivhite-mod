@@ -29,7 +29,8 @@ import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
 
-from lifecycle import RUNTIME_DIR, SESSION_ID, pid_file, stop_requested
+from lifecycle import (RUNTIME_DIR, SESSION_ID, STACK_ROOT, pid_file,
+                       stop_requested, viewer_launch_disabled)
 from window_layers import reassert_viewer_topmost
 
 try:
@@ -39,7 +40,7 @@ except Exception:  # stats are optional to the crash-isolated viewer
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")   # opencode 偶尔漏出的 ANSI 转义
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = STACK_ROOT
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 STREAM_FILE = KNOWLEDGE_DIR / "review_live.stream"
 LOCK_FILE = KNOWLEDGE_DIR / "viewer.lock"
@@ -1464,6 +1465,8 @@ def main() -> None:
         mode = "attach"
     else:
         mode = "live"
+    if viewer_launch_disabled():
+        return
     try:
         with (KNOWLEDGE_DIR / "viewer_boot.log").open("a", encoding="utf-8") as f:
             f.write(f"[{time.strftime('%H:%M:%S')}] pid={os.getpid()} main-entered mode={mode}\n")

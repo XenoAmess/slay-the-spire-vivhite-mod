@@ -16,7 +16,30 @@ from pathlib import Path
 from typing import Iterator
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-RUNTIME_DIR = Path(os.environ.get("STS2_ASCEND_RUNTIME_DIR") or (BASE_DIR / ".runtime"))
+
+
+def resolve_stack_root(source_root: Path | None = None,
+                       environ: dict[str, str] | None = None) -> Path:
+    """Resolve the authoritative stack root shared by detached copies.
+
+    Review sandboxes contain a full copy of ``sts2-ascend``.  Deriving runtime
+    ownership from ``__file__`` lets such a copy create a second viewer lock.
+    Started stack processes already inherit the canonical ``.runtime`` path,
+    so its parent is the stable identity even when the executing script lives
+    in a review clone.
+    """
+    env = os.environ if environ is None else environ
+    explicit_root = str(env.get("STS2_ASCEND_ROOT", "")).strip()
+    if explicit_root:
+        return Path(explicit_root).resolve()
+    explicit_runtime = str(env.get("STS2_ASCEND_RUNTIME_DIR", "")).strip()
+    if explicit_runtime:
+        return Path(explicit_runtime).resolve().parent
+    return Path(source_root or BASE_DIR).resolve()
+
+
+STACK_ROOT = resolve_stack_root()
+RUNTIME_DIR = Path(os.environ.get("STS2_ASCEND_RUNTIME_DIR") or (STACK_ROOT / ".runtime"))
 _RAW_SESSION_ID = os.environ.get("STS2_ASCEND_SESSION_ID", "legacy").strip()
 SESSION_ID = (_RAW_SESSION_ID.lower() if re.fullmatch(r"[0-9a-fA-F]{32}", _RAW_SESSION_ID)
               else "legacy")
@@ -25,6 +48,13 @@ STOP_REQUEST = (Path(_ENV_STOP_FILE) if _ENV_STOP_FILE else
                 RUNTIME_DIR / (f"stop.{SESSION_ID}.request" if SESSION_ID != "legacy"
                                else "stop.request"))
 _ROLE_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
+
+
+def viewer_launch_disabled(environ: dict[str, str] | None = None) -> bool:
+    """Return whether this process tree is forbidden from opening a viewer."""
+    env = os.environ if environ is None else environ
+    value = str(env.get("STS2_ASCEND_DISABLE_VIEWER", "")).strip().casefold()
+    return value in {"1", "true", "yes", "on"}
 
 
 def _process_creation_times(pid: int | None = None) -> tuple[int, float] | None:

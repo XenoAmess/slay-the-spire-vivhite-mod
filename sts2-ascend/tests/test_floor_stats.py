@@ -344,6 +344,23 @@ class FloorStatsProviderTests(unittest.TestCase):
         self.assertEqual(recovered["recent"]["best_floor"], 8)
         self.assertEqual(recovered["quality"]["invalid_records"], 0)
 
+    def test_in_progress_rewrite_does_not_publish_timestamp_only_change(self) -> None:
+        path = self.root / "runs" / "current.json"
+        current = _run("CURRENT", 1, 7, in_progress=True)
+        _write_json(path, current)
+        self._write_stats([])
+        provider = FloorStatsProvider(self.root, refresh_interval=0)
+        first = provider.snapshot()
+
+        current["decisions"].append(
+            {"screen": "COMBAT", "floor": 7, "action": "end_turn"})
+        _write_json(path, current)
+
+        self.assertFalse(provider.refresh(force=True))
+        second = provider.snapshot()
+        self.assertEqual(second["updated_at"], first["updated_at"])
+        self.assertEqual(second["recent"], first["recent"])
+
 
 if __name__ == "__main__":
     unittest.main()

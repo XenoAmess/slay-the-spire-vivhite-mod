@@ -17,9 +17,9 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from lifecycle import stop_requested, wait_for_stop
+from lifecycle import STACK_ROOT, stop_requested, viewer_launch_disabled, wait_for_stop
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = STACK_ROOT
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
@@ -112,7 +112,8 @@ def ensure_dashboard_viewer(
 ) -> bool:
     """Ensure one detached viewer exists; never raise into the game loop."""
     cfg = resolve_viewer_config(config)
-    if not cfg["enabled"] or stop_requested() or not VIEWER_PATH.exists():
+    if (not cfg["enabled"] or viewer_launch_disabled()
+            or stop_requested() or not VIEWER_PATH.exists()):
         return False
     if viewer_is_running():
         return True

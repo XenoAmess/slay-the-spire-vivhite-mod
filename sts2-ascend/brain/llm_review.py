@@ -776,6 +776,10 @@ def _stream_run(cmd: list[str], timeout_sec: int,
     # 提示词要求模型自行跑 selfcheck；-B + 环境双保险，避免宿主要求本身
     # 制造 ignored pyc，进而把合规复盘误判为越界。模型主动写入的 pyc 仍保留。
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # The review agent runs in a full repository clone and may execute project
+    # entrypoints while validating a patch.  It must never create a second
+    # broadcast overlay from that clone.
+    env["STS2_ASCEND_DISABLE_VIEWER"] = "1"
     proc = subprocess.Popen(
         cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding="utf-8", errors="replace", bufsize=8192, env=env,

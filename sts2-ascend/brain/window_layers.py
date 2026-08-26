@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 from ctypes import wintypes
+from lifecycle import STACK_ROOT
 
 
 VIEWER_TITLE = "ASCEND-VISION"
@@ -86,7 +87,7 @@ def set_topmost_no_activate(hwnd: int) -> bool:
 
 
 def _viewer_lock_path() -> Path:
-    return Path(__file__).resolve().parent.parent / "knowledge" / "viewer.lock"
+    return STACK_ROOT / "knowledge" / "viewer.lock"
 
 
 def _read_viewer_pid(lock_file: Path) -> int | None:

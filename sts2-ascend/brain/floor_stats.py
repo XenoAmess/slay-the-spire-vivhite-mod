@@ -539,8 +539,24 @@ class FloorStatsProvider:
             changed |= self._refresh_active(errors)
             error_tuple = tuple(errors)
             if self._base is None or changed or error_tuple != self._last_errors:
-                self._base = self._build(errors)
+                candidate = self._build(errors)
                 self._last_errors = error_tuple
+                if self._base is not None:
+                    previous_semantic = {
+                        key: value for key, value in self._base.items()
+                        if key != "updated_at"
+                    }
+                    candidate_semantic = {
+                        key: value for key, value in candidate.items()
+                        if key != "updated_at"
+                    }
+                    if candidate_semantic == previous_semantic:
+                        # An in-progress run is rewritten after every decision.
+                        # Its mtime is not a statistics change, and publishing a
+                        # fresh timestamp would make the viewer redraw stable
+                        # cards once per second.
+                        return False
+                self._base = candidate
                 return True
             return False
 

@@ -17,6 +17,13 @@ import window_layers  # noqa: E402
 
 
 class WindowLayerTests(unittest.TestCase):
+    def test_default_lock_uses_canonical_stack_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stack-root-") as root, \
+                mock.patch.object(window_layers, "STACK_ROOT", Path(root)):
+            self.assertEqual(
+                window_layers._viewer_lock_path(),
+                Path(root) / "knowledge" / "viewer.lock")
+
     def test_missing_or_invalid_viewer_lock_is_safe(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-viewer-lock-") as root:
             lock = Path(root) / "viewer.lock"
