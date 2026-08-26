@@ -2779,3 +2779,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/653 胜，当前目标进阶 0
+
+## 第 654 局复盘（2026-08-27 02:00）
+- 结果：💀 失败｜进阶 0｜到达层数 38｜当局评分 38
+- 死因：敌人组合 SLIMED_BERSERKER
+- 本局拿牌：MOLTEN_FIST, INFLAME, PACTS_END, TAUNT, MOLTEN_FIST, INFLAME, HEMOKINESIS, PACTS_END, HEADBUTT, DISMANTLE, UPPERCUT, SHRUG_IT_OFF, HEMOKINESIS, TAUNT, ROLLING_BOULDER, FEED, SHRUG_IT_OFF, STOMP, VICIOUS, OMNISLICE, UNRELENTING, CINDER, HOWL_FROM_BEYOND, HEMOKINESIS, SPITE
+- 本局遗物：HAPPY_FLOWER, 铜质鳞片, 孙子兵法, VAJRA, 活动星图
+- 战斗记录：F28 Elite战 掉血32; F33 Boss战 掉血78; F35 Monster战 掉血16; F36 Monster战 掉血12; F37 Monster战 掉血40; F38 Monster战 掉血34（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/47局)，FIEND_FIRE(24分/28局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BODY_SLAM(10分/2局)，BULLY(10分/5局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F38（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/654 胜，当前目标进阶 0
