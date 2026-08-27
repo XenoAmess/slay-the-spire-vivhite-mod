@@ -47,6 +47,36 @@ REVIEW_PATCH_ALLOWLIST = (
     "sts2-ascend/knowledge/review_conclusion.txt",
 )
 
+# Shared vocabulary for classifying paths produced by an isolated review.  The
+# current exact-file allowlist remains authoritative until callers explicitly
+# switch to ``classify_review_path``; keeping the classifier independent makes
+# that later integration reviewable and avoids a half-migrated acceptance path.
+REVIEW_PATH_ACCEPTED = "accepted"
+REVIEW_PATH_ONLINE_RUNTIME = "online-runtime"
+REVIEW_PATH_CACHE = "cache"
+REVIEW_PATH_GIT_METADATA = "git-metadata"
+REVIEW_PATH_OUTSIDE_UNSAFE = "outside/unsafe"
+
+_REVIEW_ONLINE_KNOWLEDGE_DIRS = frozenset({
+    "archive",
+    "code_backups",
+    "runs",
+})
+_REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES = frozenset({
+    "lessons",
+    "pending_restart",
+    "policy",
+    "preferred_model_state",
+    "progression",
+    "review_queue",
+    "review_rollback_tombstones",
+    "stale_code_restart",
+    "stats",
+    "voice_volume",
+})
+_REVIEW_ONLINE_KNOWLEDGE_SUFFIXES = (".flag", ".lock", ".log", ".stream")
+_REVIEW_ONLINE_KNOWLEDGE_PREFIXES = ("review_prompt", "screenshot")
+
 _GIT_LOCK = threading.RLock()
 _LOCK_STATE = threading.local()
 REVIEW_ACTIVE_FILE = BASE_DIR / "knowledge" / "review_active.flag"
@@ -258,6 +288,62 @@ def normalize_paths(paths: Sequence[str | os.PathLike[str]]) -> tuple[str, ...]:
     if not result:
         raise ValueError("Git 路径列表不能为空")
     return result
+
+
+def classify_review_path(path: str | os.PathLike[str]) -> str:
+    """Classify one candidate path from an isolated review.
+
+    This is deliberately a pure lexical classifier: it applies the exact same
+    absolute/parent/glob/NUL/repository-root boundary as :func:`normalize_paths`
+    without trusting whether a path happens to exist in the current checkout.
+    Invalid or out-of-repository input is represented as ``outside/unsafe`` so a
+    caller can partition a complete forensic inventory without dropping it.
+
+    ``cache`` is intentionally name based and case-insensitive. Any component
+    containing ``cache`` (not only ``__pycache__``), plus ``.pyc``/``.pyo`` files,
+    is an artifact. Git metadata takes precedence over cache and online-runtime;
+    cache takes precedence over online-runtime.
+    """
+    try:
+        normalized = _normalize_path(path)
+    except (TypeError, ValueError):
+        return REVIEW_PATH_OUTSIDE_UNSAFE
+
+    # ``normalize_paths`` intentionally accepts the project root as a Git path
+    # spec for progress commits. A review target must always be one exact file.
+    if normalized == "sts2-ascend":
+        return REVIEW_PATH_OUTSIDE_UNSAFE
+
+    parts = tuple(part.casefold() for part in PurePosixPath(normalized).parts)
+    if any(part == ".git" for part in parts) or ".gitmodules" in parts:
+        return REVIEW_PATH_GIT_METADATA
+    if any("cache" in part for part in parts) or parts[-1].endswith((".pyc", ".pyo")):
+        return REVIEW_PATH_CACHE
+
+    relative = parts[1:]
+    if relative and relative[0] == ".runtime":
+        return REVIEW_PATH_ONLINE_RUNTIME
+    if relative == ("review_rejections.md",):
+        return REVIEW_PATH_ONLINE_RUNTIME
+    if len(relative) >= 2 and relative[0] == "knowledge":
+        knowledge_relative = relative[1:]
+        if knowledge_relative[0] in _REVIEW_ONLINE_KNOWLEDGE_DIRS:
+            return REVIEW_PATH_ONLINE_RUNTIME
+        if len(knowledge_relative) == 1:
+            name = knowledge_relative[0]
+            # Atomic writers may temporarily prefix state files with a dot and
+            # append another suffix (for example .pending_restart.<id>.tmp).
+            state_name = name.lstrip(".")
+            if any(state_name == stem or state_name.startswith(stem + ".")
+                   for stem in _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES):
+                return REVIEW_PATH_ONLINE_RUNTIME
+            if name.endswith(_REVIEW_ONLINE_KNOWLEDGE_SUFFIXES):
+                return REVIEW_PATH_ONLINE_RUNTIME
+            if any(name == prefix or any(name.startswith(prefix + separator)
+                                         for separator in (".", "_", "-"))
+                   for prefix in _REVIEW_ONLINE_KNOWLEDGE_PREFIXES):
+                return REVIEW_PATH_ONLINE_RUNTIME
+    return REVIEW_PATH_ACCEPTED
 
 
 def _path_in_specs(path: str, specs: Sequence[str]) -> bool:
