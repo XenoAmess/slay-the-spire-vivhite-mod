@@ -89,4 +89,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-150533-1787814333393135800-5318be56 -->
 | 2026-08-27 15:05:33 | 第 736~740 局 | `5318be56` | process_exit | opencode-go/glm-5.3-flash@max | 已审计并删除 `960d6c6` | （已删除） | Stop 中断；正式 patch/report/files 均为空，raw clone 仅有中断的临时分析脚本，无可补合成果；远端确认审计提交后删除 |
 <!-- rejection:20260827-154717-1787816837897736800-a344792f -->
-| 2026-08-27 15:47:17 | 第 698~765 局范围内的 64 局 | `a344792f` | process_exit | kimi-for-coding/k3 | 待人工补合 | `knowledge/code_backups/review_salvage/20260827-154717-1787816837897736800-a344792f` | 复盘进程未成功完成 |
+| 2026-08-27 15:47:17 | 第 698~765 局范围内的 64 局 | `a344792f` | process_exit | kimi-for-coding/k3 | 已审计空包，待删除 | `knowledge/code_backups/review_salvage/20260827-154717-1787816837897736800-a344792f` | K3 exit=1；64 局输入批次未产生 patch/report/files/stash/untracked 成果，仅有 ignored 输入提示，无需补合 |
