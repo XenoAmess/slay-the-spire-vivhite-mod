@@ -3824,3 +3824,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/748 胜，当前目标进阶 0
+
+## 第 749 局复盘（2026-08-27 13:44）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：MIND_BLAST, DRUM_OF_BATTLE, TAUNT, SHRUG_IT_OFF, FIGHT_ME, INFLAME, SHRUG_IT_OFF, SHRUG_IT_OFF, WHIRLWIND, RAMPAGE, INFLAME, INFLAME, BLUDGEON, CINDER
+- 本局遗物：THE_COURIER, 双截棍
+- 战斗记录：F5 Monster战 掉血22; F6 Monster战 掉血0; F9 Monster战 掉血38; F14 Monster战 掉血0; F15 Elite战 掉血8; F17 Boss战 掉血58（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/53局)，PRIMAL_FORCE(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/749 胜，当前目标进阶 0
