@@ -4033,3 +4033,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff: 0.36 → 0.39（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/767 胜，当前目标进阶 0
+
+## 第 768 局复盘（2026-08-27 16:10）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：JUGGLING, INFLAME, HOWL_FROM_BEYOND, TAUNT, SWORD_BOOMERANG, STONE_ARMOR, MASTER_OF_STRATEGY, ANGER, THUNDERCLAP
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F2 Monster战 掉血5; F4 Monster战 掉血1; F5 Monster战 掉血7; F6 Monster战 掉血22; F9 Monster战 掉血30; F14 Elite战 掉血56（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，FIEND_FIRE(24分/30局)，CONFLAGRATION(24分/55局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/768 胜，当前目标进阶 0
