@@ -97,6 +97,14 @@ class ReviewClosureTests(unittest.TestCase):
         self.assertTrue(llm_review._patch_requires_brain_restart(
             brain_patch, [AUTOGIT]))
 
+    def test_restart_marker_records_the_whole_mixed_transaction(self) -> None:
+        payload = llm_review._restart_marker_payload(
+            "a" * 40, "b" * 40, "c" * 40,
+            [POLICY, SCRIPT, DOC, POLICY], "2026-08-27 18:00")
+        self.assertEqual(payload["paths"], [POLICY, SCRIPT, DOC])
+        self.assertEqual(payload["state"], "prepared")
+        self.assertEqual(payload["review_commit"], "c" * 40)
+
     def test_every_batch_gate_rejects_docs_and_accepts_runtime_observability(self) -> None:
         state = {
             "action_required": True,

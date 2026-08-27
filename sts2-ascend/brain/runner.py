@@ -3,7 +3,7 @@
 - 大脑以退出码 42 表示"LLM 复盘改了代码，请重启我"
 - 异常退出时**先重试**：每次间隔 10 秒，最多连续 5 次快速崩溃（存活 <90s 才算快速崩溃）
 - **回滚是最后手段**：仅当连续 5 次快速崩溃、且存在 committed 复盘重启标记（pending_restart.json，
-  说明可能是复盘改坏了代码）时，才反向应用该复盘 commit 的 allowlist patch；
+  说明可能是复盘改坏了代码）时，才反向应用经单父 commit diff 与 marker 精确互证的 patch；
   patch 冲突或越界就保留现场并拒绝覆盖；成功撤销另存纯文件 tombstone，避免 marker
   被 Windows 短暂锁住时跨 runner 重启重复撤销
 - 任何非零退出都会尝试重启，保证无人值守韧性
@@ -270,6 +270,70 @@ def _record_rollback_tombstone(commit: str) -> None:
         temp.unlink(missing_ok=True)
 
 
+def _verified_review_commit_diff_paths(
+    info: dict, deadline: float | None = None,
+) -> tuple[str, ...]:
+    """Read exact paths from a verified single-parent commit for forensics.
+
+    Callers hold the repository transaction lock. The provisional commit need
+    not yet be an ancestor of HEAD, so this proof deliberately checks its object,
+    direct parent and exact diff without imposing publication state.
+    """
+    parent = str(info.get("review_parent") or "").strip().lower()
+    commit = str(info.get("review_commit") or "").strip().lower()
+    if (not re.fullmatch(r"[0-9a-f]{40,64}", parent)
+            or not re.fullmatch(r"[0-9a-f]{40,64}", commit)):
+        raise ValueError("marker 缺少合法 review_parent/review_commit")
+    row = autogit._run_git(
+        ["rev-list", "--parents", "-n", "1", commit],
+        timeout=_time_left(deadline, 5.0))
+    parts = row.stdout.strip().split() if row.returncode == 0 else []
+    if (len(parts) != 2 or parts[0].lower() != commit
+            or parts[1].lower() != parent):
+        raise ValueError("marker commit 不是声明 parent 的单父提交")
+    changed = autogit._run_git([
+        "diff", "--name-only", "-z", "--no-renames", parent, commit, "--",
+    ], timeout=_time_left(deadline, 5.0))
+    if changed.returncode != 0:
+        raise ValueError(changed.stderr.strip() or "无法读取 marker commit 精确 diff")
+    raw_paths = tuple(
+        path.replace("\\", "/") for path in changed.stdout.split("\0") if path)
+    if not raw_paths:
+        raise ValueError("marker commit 没有可验证的复盘路径")
+    return raw_paths
+
+
+def _validated_review_commit_paths(
+    info: dict, deadline: float | None = None,
+) -> tuple[str, ...]:
+    """Derive the exact deny-only path set from a verified commit diff."""
+    return autogit.validate_review_paths(
+        _verified_review_commit_diff_paths(info, deadline))
+
+
+def _trusted_marker_paths(
+    info: dict, deadline: float | None = None,
+) -> tuple[str, ...]:
+    """Match marker claims to its commit diff, upgrading only truly old markers.
+
+    A marker with no ``paths`` key predates exact-path publication and may use the
+    verified commit diff. Once the key exists, empty, malformed or mismatched
+    claims are corruption and fail closed; they never fall back to a fixed list.
+    """
+    actual = _validated_review_commit_paths(info, deadline)
+    if "paths" not in info:
+        if info.get("state") is None:
+            return actual
+        raise ValueError("两阶段 marker 缺少 paths；仅无 state 的旧格式可从 commit 补全")
+    claimed_raw = info.get("paths")
+    if not isinstance(claimed_raw, list) or not claimed_raw:
+        raise ValueError("marker paths 已存在但为空或格式损坏")
+    claimed = autogit.validate_review_paths(claimed_raw)
+    if set(claimed) != set(actual):
+        raise ValueError("marker paths 与 review_commit 实际 diff 不一致")
+    return actual
+
+
 def _reconcile_prepared_marker(deadline: float | None = None) -> bool:
     """Finish or abort an interrupted two-phase review before importing Brain."""
     try:
@@ -291,6 +355,11 @@ def _reconcile_prepared_marker(deadline: float | None = None) -> bool:
             or not re.fullmatch(r"[0-9a-f]{40,64}", commit)):
         log("prepared marker 缺少合法 parent/commit；保留现场并拒绝混载")
         return False
+    try:
+        paths = _trusted_marker_paths(info, deadline)
+    except (TypeError, ValueError, subprocess.SubprocessError) as exc:
+        log(f"prepared marker 路径无法与 commit 精确互证；保留现场：{exc}")
+        return False
     head = read_git_head(autogit.REPO_DIR)
     if head == commit or (head not in (parent, "")
                           and autogit.commit_is_ancestor(
@@ -305,13 +374,15 @@ def _reconcile_prepared_marker(deadline: float | None = None) -> bool:
         if (current.get("state") != "prepared"
                 or str(current.get("review_commit") or "").lower() != commit):
             return False
-        paths = current.get("paths")
-        if not isinstance(paths, list) or not paths:
-            log("prepared marker 发布后缺少精确路径；保留现场")
+        try:
+            current_paths = _trusted_marker_paths(current, deadline)
+        except (TypeError, ValueError, subprocess.SubprocessError) as exc:
+            log(f"prepared marker 发布后路径互证失败；保留现场：{exc}")
             return False
         autogit.sync_prepared_index(
-            parent, commit, paths, log=log,
+            parent, commit, current_paths, log=log,
             operation_timeout=_time_left(deadline, 5.0))
+        current["paths"] = list(current_paths)
         current["state"] = "committed"
         current["committed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         current["reconciled_at_startup"] = True
@@ -325,10 +396,6 @@ def _reconcile_prepared_marker(deadline: float | None = None) -> bool:
     if head != parent:
         log(f"prepared marker {commit[:8]} 的 HEAD 既非 parent 也非 commit；"
             "保留现场并拒绝混载")
-        return False
-    paths = info.get("paths")
-    if not isinstance(paths, list) or not paths:
-        log("prepared marker 缺少精确路径；保留现场并拒绝猜测恢复")
         return False
     if not autogit.abort_unpublished_review_worktree(
             parent, commit, paths, log=log,
@@ -363,6 +430,12 @@ def _save_prepared_recovery_package(
         files_root.mkdir()
         states: list[dict] = []
         for relative in paths:
+            pure = Path(relative)
+            normalized_parts = Path(relative.replace("\\", "/")).parts
+            if (pure.is_absolute() or ".." in normalized_parts
+                    or re.match(r"^[A-Za-z]:", relative)):
+                states.append({"path": relative, "kind": "unsafe-path-not-copied"})
+                continue
             source = autogit.REPO_DIR / Path(relative)
             target = files_root / Path(relative)
             state = {"path": relative, "exists": source.exists(),
@@ -385,11 +458,12 @@ def _save_prepared_recovery_package(
 
         current_patch = autogit._run_git_bytes([
             "diff", "--binary", parent, "--", *paths,
-        ], timeout=5) if re.fullmatch(r"[0-9a-f]{40,64}", parent) else None
+        ], timeout=5) if (paths and re.fullmatch(
+            r"[0-9a-f]{40,64}", parent)) else None
         provisional = str(info.get("review_commit") or "").strip().lower()
         provisional_patch = autogit._run_git_bytes([
             "diff", "--binary", parent, provisional, "--", *paths,
-        ], timeout=5) if (re.fullmatch(r"[0-9a-f]{40,64}", parent)
+        ], timeout=5) if (paths and re.fullmatch(r"[0-9a-f]{40,64}", parent)
                           and re.fullmatch(r"[0-9a-f]{40,64}", provisional)) else None
         (temp / "wip.patch").write_bytes(
             current_patch.stdout if current_patch is not None
@@ -418,7 +492,7 @@ def _save_prepared_recovery_package(
             "all_paths": list(paths),
             "allowed_paths": list(paths),
             "auto_apply": False,
-            "inspection_hint": "files/ 是恢复前全部受影响文件；已恢复已知 Git 树，人工审计后选择性补合。",
+            "inspection_hint": "files/ 是已证明 commit 路径的保存现场；是否恢复工作树以调用方结果为准。",
         }
         (temp / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
@@ -448,11 +522,21 @@ def _recover_blocked_prepared_marker(
             if info.get("state") != "prepared":
                 return _reconcile_prepared_marker(deadline)
             try:
-                paths = autogit.validate_review_paths(info.get("paths") or [])
-            except (TypeError, ValueError):
-                # Marker corruption cannot widen the target set.  Current review
-                # publication can only ever touch this process-internal boundary.
-                paths = autogit.validate_review_paths(autogit.REVIEW_PATCH_ALLOWLIST)
+                paths = _trusted_marker_paths(info, deadline)
+            except (TypeError, ValueError, subprocess.SubprocessError) as exc:
+                # A mismatched claim is evidence of marker corruption. Derive
+                # commit paths only for read-only forensics; never use them to
+                # perform a destructive restore in this ambiguous transaction.
+                try:
+                    forensic_paths = _verified_review_commit_diff_paths(info, deadline)
+                except Exception:
+                    forensic_paths = ()
+                detail = f"{reason}；marker/commit 路径互证失败：{exc}"
+                package = _save_prepared_recovery_package(
+                    info, forensic_paths, detail)
+                if package is not None:
+                    log(f"prepared 损坏现场已保存至 {package}；拒绝猜测恢复范围")
+                return False
             package = _save_prepared_recovery_package(info, paths, reason)
             if package is None:
                 return False
@@ -503,7 +587,7 @@ def rollback_from_marker(deadline: float | None = None) -> bool:
             if _review_was_rolled_back(str(commit)):
                 log(f"复盘提交 {str(commit)[:8]} 已有安全撤销记录；拒绝重复回滚")
                 return False
-            paths = info.get("paths")
+            paths = _trusted_marker_paths(info, deadline)
             transaction_timeout = _time_left(deadline, 30.0)
             if transaction_timeout <= 0:
                 log("回滚事务预算已耗尽；保留 marker/现场")

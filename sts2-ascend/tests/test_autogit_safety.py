@@ -773,6 +773,55 @@ class AutoGitSafetyTests(unittest.TestCase):
             llm_review.KNOWLEDGE_DIR = old_knowledge
             llm_review.PROMPT_FILE = old_prompt
 
+    def test_review_sandbox_rejects_and_retains_repo_sibling_escape(self) -> None:
+        pre_head = self._git("rev-parse", "HEAD").stdout.strip()
+        old_repo = llm_review.REPO_DIR
+        old_knowledge = llm_review.KNOWLEDGE_DIR
+        old_prompt = llm_review.PROMPT_FILE
+        llm_review.REPO_DIR = self.repo
+        llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
+        llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
+        try:
+            def write_source_and_escape(cmd, timeout, translate=None):
+                sandbox = Path(cmd[cmd.index("--dir") + 1])
+                (sandbox / "sts2-ascend" / "brain" / "policy.py").write_text(
+                    "VALUE = 7\n", encoding="utf-8")
+                (sandbox.parent / "escaped-sibling.txt").write_text(
+                    "PRESERVE_ME\n", encoding="utf-8")
+                return 0, "done", False, False
+
+            with (mock.patch.object(
+                    llm_review, "_stream_run", side_effect=write_source_and_escape),
+                  mock.patch.object(llm_review, "_run_selfcheck", return_value=True)):
+                result = llm_review._run_review_sandbox(
+                    ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
+                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
+            self.assertIn("sandbox repo 边界", result.error)
+            self.assertEqual(result.sibling_paths, ("escaped-sibling.txt",))
+            self.assertIn("../escaped-sibling.txt", result.unexpected_paths)
+            retained = Path(result.retained_sandbox_dir)
+            self.assertTrue(retained.is_dir())
+            self.assertEqual(
+                (retained / "escaped-sibling.txt").read_text(encoding="utf-8"),
+                "PRESERVE_ME\n")
+            salvage_root = self.repo / "sts2-ascend" / "knowledge" / "test-salvage"
+            with (mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root),
+                  mock.patch.object(llm_review, "_record_review_rejection")):
+                saved = llm_review._save_review_salvage(
+                    pre_head, result.error, result, log=lambda _msg: None)
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            self.assertEqual(
+                (saved / "raw_sandbox" / "escaped-sibling.txt").read_text(
+                    encoding="utf-8"),
+                "PRESERVE_ME\n")
+            llm_review._discard_sandbox_snapshot(result, log=lambda _msg: None)
+            llm_review._discard_retained_sandbox(result, log=lambda _msg: None)
+        finally:
+            llm_review.REPO_DIR = old_repo
+            llm_review.KNOWLEDGE_DIR = old_knowledge
+            llm_review.PROMPT_FILE = old_prompt
+
     def test_runner_counts_slow_post_review_crashes(self) -> None:
         old_marker = runner.MARKER
         marker = self.repo / "sts2-ascend" / "knowledge" / "pending_restart.json"
@@ -923,6 +972,33 @@ class AutoGitSafetyTests(unittest.TestCase):
         finally:
             runner.MARKER = old_marker
 
+    def test_runner_rejects_two_phase_marker_with_missing_or_mismatched_paths(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        runner.MARKER = marker
+        try:
+            legacy = {
+                "review_parent": parent,
+                "review_commit": commit,
+                "state": "prepared",
+            }
+            marker.write_text(json.dumps(legacy), encoding="utf-8")
+            self.assertFalse(runner._reconcile_prepared_marker())
+            self.assertTrue(marker.exists())
+
+            corrupted = {
+                **legacy,
+                "paths": ["sts2-ascend/brain/agent.py"],
+            }
+            marker.write_text(json.dumps(corrupted), encoding="utf-8")
+            self.assertFalse(runner._reconcile_prepared_marker())
+            self.assertTrue(marker.exists())
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+        finally:
+            runner.MARKER = old_marker
+
     def test_blocked_prepared_recovery_preserves_all_files_before_known_tree_restore(self) -> None:
         path = "sts2-ascend/brain/policy.py"
         parent, commit = self._provisional_commit(path, "VALUE = 2\n")
@@ -955,6 +1031,66 @@ class AutoGitSafetyTests(unittest.TestCase):
                 json.loads((package / "manifest.json").read_text(encoding="utf-8"))[
                     "failure_kind"],
                 "prepared_recovery")
+        finally:
+            runner.MARKER = old_marker
+            runner.KNOWLEDGE_DIR = old_knowledge
+
+    def test_corrupt_prepared_marker_preserves_actual_commit_files_without_restore(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        self._write(path, "VALUE = 99\n")
+        old_marker = runner.MARKER
+        old_knowledge = runner.KNOWLEDGE_DIR
+        knowledge = self.repo / "sts2-ascend" / "knowledge"
+        marker = knowledge / "pending_restart.json"
+        marker.write_text(json.dumps({
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": ["sts2-ascend/brain/agent.py"],
+            "state": "prepared",
+        }), encoding="utf-8")
+        runner.MARKER = marker
+        runner.KNOWLEDGE_DIR = knowledge
+        try:
+            self.assertFalse(runner._recover_blocked_prepared_marker(
+                "marker mismatch fault"))
+            self.assertEqual(self._read(path), "VALUE = 99\n")
+            self.assertTrue(marker.exists())
+            packages = list((knowledge / "code_backups" / "review_salvage").iterdir())
+            self.assertEqual(len(packages), 1)
+            self.assertEqual(
+                (packages[0] / "files" / path).read_text(encoding="utf-8"),
+                "VALUE = 99\n")
+        finally:
+            runner.MARKER = old_marker
+            runner.KNOWLEDGE_DIR = old_knowledge
+
+    def test_prepared_commit_with_denied_runtime_path_is_forensic_only(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        parent, commit = self._provisional_commit(path, '{"runs": 2}\n')
+        self._write(path, '{"runs": 999}\n')
+        old_marker = runner.MARKER
+        old_knowledge = runner.KNOWLEDGE_DIR
+        knowledge = self.repo / "sts2-ascend" / "knowledge"
+        marker = knowledge / "pending_restart.json"
+        marker.write_text(json.dumps({
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": [path],
+            "state": "prepared",
+        }), encoding="utf-8")
+        runner.MARKER = marker
+        runner.KNOWLEDGE_DIR = knowledge
+        try:
+            self.assertFalse(runner._recover_blocked_prepared_marker(
+                "online runtime path fault"))
+            self.assertEqual(self._read(path), '{"runs": 999}\n')
+            packages = list((knowledge / "code_backups" / "review_salvage").iterdir())
+            self.assertEqual(len(packages), 1)
+            self.assertEqual(
+                (packages[0] / "files" / path).read_text(encoding="utf-8"),
+                '{"runs": 999}\n')
+            self.assertTrue(marker.exists())
         finally:
             runner.MARKER = old_marker
             runner.KNOWLEDGE_DIR = old_knowledge
@@ -1150,16 +1286,56 @@ class AutoGitSafetyTests(unittest.TestCase):
         runner.MARKER = marker
         try:
             with mock.patch.object(
-                    autogit, "rollback_review_commit", return_value=True) as rollback:
+                    autogit, "rollback_review_commit", return_value=True) as rollback, \
+                    mock.patch.object(
+                        runner, "_trusted_marker_paths",
+                        return_value=tuple(current["paths"])):
                 self.assertTrue(runner.rollback_from_marker())
             rollback.assert_called_once_with(
                 current["review_parent"], current["review_commit"],
-                marker_paths=current["paths"], log=runner.log,
+                marker_paths=tuple(current["paths"]), log=runner.log,
                 lock_timeout=5.0, transaction_timeout=30.0)
             self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), previous)
             tombstones = json.loads(
                 runner.ROLLBACK_TOMBSTONES.read_text(encoding="utf-8"))["commits"]
             self.assertIn(current["review_commit"], tombstones)
+        finally:
+            runner.MARKER = old_marker
+
+    def test_runner_rollback_derives_legacy_paths_and_rejects_claim_mismatch(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        self._write(path, "VALUE = 2\n")
+        review = autogit.commit_progress_result(
+            "legacy review", paths=[path], push=False)
+        self.assertTrue(review.created, review.reason)
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        runner.MARKER = marker
+        try:
+            legacy = {
+                "review_parent": review.before_head,
+                "review_commit": review.commit,
+            }
+            marker.write_text(json.dumps(legacy), encoding="utf-8")
+            self.assertTrue(runner.rollback_from_marker())
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+
+            self._write(path, "VALUE = 3\n")
+            second = autogit.commit_progress_result(
+                "next review", paths=[path], push=False)
+            self.assertTrue(second.created, second.reason)
+            corrupt = {
+                "review_parent": second.before_head,
+                "review_commit": second.commit,
+                "paths": ["sts2-ascend/brain/agent.py"],
+                "state": "committed",
+            }
+            marker.write_text(json.dumps(corrupt), encoding="utf-8")
+            head_before = self._git("rev-parse", "HEAD").stdout.strip()
+            self.assertFalse(runner.rollback_from_marker())
+            self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), head_before)
+            self.assertEqual(self._read(path), "VALUE = 3\n")
+            self.assertTrue(marker.exists())
         finally:
             runner.MARKER = old_marker
 
@@ -1177,6 +1353,9 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             with mock.patch.object(
                     autogit, "rollback_review_commit", return_value=True), \
+                    mock.patch.object(
+                        runner, "_trusted_marker_paths",
+                        return_value=tuple(current["paths"])), \
                     mock.patch.object(
                         runner, "_restore_superseded_marker",
                         side_effect=PermissionError("fault injected")), \

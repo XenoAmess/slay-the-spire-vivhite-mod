@@ -2048,6 +2048,7 @@ class SandboxReviewResult:
     artifact_paths: tuple[str, ...] = ()
     online_paths: tuple[str, ...] = ()
     unexpected_paths: tuple[str, ...] = ()
+    sibling_paths: tuple[str, ...] = ()
     snapshot_dir: str = ""
     snapshot_complete: bool = False
     retained_sandbox_dir: str = ""
@@ -2058,6 +2059,34 @@ def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
                  timeout: int = 120) -> subprocess.CompletedProcess:
     return _run_captured_stop_aware(
         ["git", "-C", str(repo), *args], binary=binary, timeout=timeout)
+
+
+def _bounded_sandbox_sibling_paths(
+    sandbox_root: Path, sandbox_repo: Path, limit: int = 256,
+) -> tuple[str, ...]:
+    """Enumerate bounded direct children written beside the managed clone.
+
+    The model is allowed to write only inside ``sandbox_root/repo``. A direct
+    sibling is enough to prove ``../`` escape; descendants need not be scanned or
+    hashed because retaining the whole owned sandbox root preserves their bytes.
+    """
+    if not sandbox_root.is_dir():
+        return ()
+    found: list[str] = []
+    try:
+        with os.scandir(sandbox_root) as entries:
+            for entry in entries:
+                if Path(entry.path) == sandbox_repo:
+                    continue
+                if len(found) >= max(1, limit):
+                    found.append("[additional-siblings-omitted]")
+                    break
+                suffix = "/" if entry.is_dir(follow_symlinks=False) else ""
+                found.append(entry.name.replace("\\", "/") + suffix)
+    except OSError as exc:
+        # Enumeration failure itself means the owned root cannot be proven clean.
+        return (f"[sibling-enumeration-failed:{type(exc).__name__}]",)
+    return tuple(found)
 
 
 def _is_review_transient_artifact(path: str) -> bool:
@@ -2480,6 +2509,7 @@ def _save_review_salvage(
         "transient_artifact_paths": list(sandbox.artifact_paths),
         "online_runtime_paths": list(sandbox.online_paths),
         "rejected_or_unexpected_paths": list(sandbox.unexpected_paths),
+        "sandbox_sibling_paths": list(sandbox.sibling_paths),
         "patch_bytes": patch_bytes,
         "patch_sha256": patch_sha256,
         "auto_apply": False,
@@ -2737,6 +2767,18 @@ def _run_review_sandbox(
             except _ReviewStopped:
                 result.stopped = True
                 result.retained_sandbox_dir = str(sandbox_root)
+            siblings = _bounded_sandbox_sibling_paths(sandbox_root, sandbox_repo)
+            if siblings:
+                escaped = tuple(f"../{path}" for path in siblings)
+                result.sibling_paths = siblings
+                result.wip_paths = tuple(dict.fromkeys(
+                    (*result.wip_paths, *escaped)))
+                result.unexpected_paths = tuple(dict.fromkeys(
+                    (*result.unexpected_paths, *escaped)))
+                if not result.error:
+                    result.error = (
+                        "隔离复盘写出 sandbox repo 边界："
+                        + ", ".join(escaped[:12]))
             if (result.online_paths or result.unexpected_paths) and not result.error:
                 denied = [
                     *(f"{path} (online-runtime)" for path in result.online_paths),
