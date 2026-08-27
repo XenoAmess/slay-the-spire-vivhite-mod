@@ -5,7 +5,7 @@
  "started_at": "2026-08-27 14:09:56",
  "victory": false,
  "in_progress": true,
- "floor": 16,
+ "floor": 17,
  "decisions": [
   {
    "t": "14:09:56",
@@ -8350,6 +8350,104 @@
      "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
     ]
    }
+  },
+  {
+   "t": "14:15:58",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 43,
+   "gold": 103,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【力量药水】",
+   "turn": 1,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 43/80",
+      "回合 1",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "飞剑回旋镖",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闪电霹雳",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "武装",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
   }
  ],
  "combat_notes": [
@@ -8358,7 +8456,8 @@
   "F6 Monster战 掉血0",
   "F7 Monster战 掉血31",
   "F8 Elite战 掉血12",
-  "F13 Monster战 掉血22"
+  "F13 Monster战 掉血22",
+  "F15 Elite战 掉血21"
  ],
  "attribution_tags": [
   [
