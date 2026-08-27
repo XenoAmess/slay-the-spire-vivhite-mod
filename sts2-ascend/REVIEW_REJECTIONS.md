@@ -100,3 +100,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-27 21:50:23 | 第 808~812 局 | `cd0aa644` | stall | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260827-215023-1787838623754163300-cd0aa644` | 复盘 CLI/工具调用无进展挂起 |
 <!-- rejection:20260827-230627-1787843187772777900-e7343a61 -->
 | 2026-08-27 23:06:27 | 第 698~770 局范围内的 69 局 | `e7343a61` | process_exit | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260827-230627-1787843187772777900-e7343a61` | 复盘进程未成功完成 |
+<!-- rejection:20260828-055001-1787867401022386900-6a07b1e4 -->
+| 2026-08-28 05:50:01 | 第 813~822 局 | `6a07b1e4` | process_exit | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-055001-1787867401022386900-6a07b1e4` | 复盘进程未成功完成 |
