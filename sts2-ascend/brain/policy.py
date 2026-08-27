@@ -4243,6 +4243,26 @@ class Policy:
                         and "skip_reward_cards" in (state.get("available_actions") or []))
         return False
 
+    def _leak_death_blocked(self, card: dict) -> bool:
+        """LEAK_DEATH_GUARD（第801局批复盘闭环）：致死负面负载牌名单判定。
+
+        名单语义：本牌的负面负载是「战斗全程常驻的一票死亡条款」，面值收益
+        （THE_GAMBIT +50 格挡）永远无法补偿其在任意后续回合泄 1 点攻击伤害
+        即整局猝死的尾部。名单只收 runtime 原文证实条目（v0.111.0 cards.jsonl
+        「受到未被格挡的攻击伤害，则立刻死亡」），不做模糊文本外推。
+        开关 leak_death_guard=False 或名单缺键即回滚旧版行为。
+        """
+        pol = self.know.policy
+        if not bool(pol.get("leak_death_guard", True)):
+            return False
+        listed = pol.get("leak_death_cards")
+        if not isinstance(listed, (list, tuple)) or not listed:
+            return False
+        cid = str(card.get("card_id") or "").upper().rstrip("+")
+        if not cid:
+            return False
+        return any(str(x).upper() == cid for x in listed)
+
     def _record_card_offer(self, source: str, state: dict,
                            cards: list[dict]) -> tuple:
         """Count each base card id once when a new offer first becomes observable."""
@@ -4260,6 +4280,11 @@ class Policy:
             self._active_card_offer_key = key
             self._active_card_offer_explore_id = None
             self.know.commit_card_offer(c.get("card_id") for c in cards)
+            # LEAK_DEATH_GUARD 留痕（第801局批复盘）：屏幕级去重保护下，
+            # 每个新 offer 至多记一次，计数绝不进评分路径（eval 保持纯函数）
+            for c in cards:
+                if self._leak_death_blocked(c):
+                    self.know.mark_leak_death_block(str(source), c.get("card_id"))
         return key
 
     def _reward_exploration_safe(self, card: dict, deck: list[dict]) -> bool:
@@ -4411,8 +4436,18 @@ class Policy:
         act 给定时饥饿线换用分幕 Boss 口径（第 506~515 局批复盘新增）：
         一幕及格线不再被二三幕血池均值抬高，高质攻击/引擎的饥饿纠偏
         力度随真实缺口缩放。
+        LEAK_DEATH_GUARD（第801局批复盘闭环）：致死负面负载牌在拾取/购买/
+        升级/删除四端统一计价。801 局 THE_GAMBIT 面值 50 格挡被估值 40.7、
+        167 金买进并升级（+为同文本），F14 T4 泄 1 点攻击伤害触发「立刻死亡」
+        整局猝死——掉血 61=入场整管。深负计价覆盖本函数全部消费端：
+        奖励/牌堆选牌与商店端被门槛自然拦下，锻造端永不入砧；删牌端
+        （badness=-eval）负值倒挂后成为最优先清除对象。战斗出牌端不设限
+        （已持有者危局高挡仍可能优于当场死亡）。eval 保持纯函数：无任何
+        seen/offered/计数副作用，留痕计数只发生在屏幕级动作位。
         """
         pol = self.know.policy
+        if self._leak_death_blocked(card):
+            return float(pol.get("leak_death_value", -30.0))
         dmg, block, hits = card_numbers(card)
         cost = card.get("energy_cost", 0)
         value = 0.0
@@ -5199,6 +5234,16 @@ class Policy:
         best_action, best_score, best_reason, best_tags = None, -1e9, "", []
         for c in self._enrich_cards(shop.get("cards", [])):
             if not c.get("is_stocked") or not c.get("enough_gold"):
+                continue
+            # LEAK_DEATH_GUARD 商店端（第801局批复盘）：孤注一掷正是在此以
+            # 「价值40.7≥门槛1.0」花 167 金成交。货架显式拦截先于一切竞价，
+            # 留痕计数与 trace 均不进评分路径
+            if self._leak_death_blocked(c):
+                self.know.mark_leak_death_block("SHOP", c.get("card_id"))
+                self._trace_candidate(
+                    c.get("name") or c.get("card_id"), 0.0,
+                    index=c.get("index"), action="buy_card", status="leak_death_block",
+                    why="致死负面负载牌按守卫屏蔽（LEAK_DEATH_GUARD）")
                 continue
             v = self.eval_reward_card(c, deck, max_hp=_shop_mh, act=_shop_act) - c.get("price", 0) / 120.0
             if v <= shop_pick_line:

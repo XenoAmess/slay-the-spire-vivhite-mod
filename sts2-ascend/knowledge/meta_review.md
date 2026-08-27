@@ -2945,3 +2945,82 @@ selfcheck：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含
 3. **熟睡甲虫（SLUMBERING_BEETLE）档案（v0.111.0 corpus 对照）**：盛碗虫（石）45~48 血 Headbutt 15(+1)/16、IsOffBalance 状态机；配丝体给零伤增益意图；甲虫睡醒后按轮自增力量。该组合 45 战 24 死（53%）居二幕前期首位，特征不是面板硬度而是每轮 +2 的斜率税。
 4. **观察能力分级定律（复盘侧）**：留痕文案里的 ✓/✗ 与能量数值之间仍有采样时刻差（[196] 型），凡引用 end_turn 手牌清单作证据须先核对 `_saw_playable_this_turn` 与恢复窗口；能进断言的只有带 turn/energy/trace 三元组的终局快照。
 
+
+
+# 2026-08-27 20:36 ｜第 799~801 局批复盘（异步追及队列 3 局 exact_batch 全败；核心产出 LEAK_DEATH_GUARD 拾取端致死被动守卫）
+
+## 一、样本与结果
+
+| 局 | run_id | 结果 | 死因 | 本局关键事实 |
+| --- | --- | --- | --- | --- |
+| 799 | 8VKYY23HN2XH | 失败 F28 | LOUSE_PROGENITOR | F17 Boss 战 -67 幸存但重伤，F27 -51 / F28 阵亡；路径端「竞速必败预演成立→入场血量线豁免」下整路负分霸榜 |
+| 800 | 0R4HC5NB4RUU | 失败 F17 | KIN_FOLLOWER+KIN_PRIEST | 前夜翻转带回血 26 后 74% 进场，Boss 竞速 -64 整管打空；在线自调 kill_race_prior_eff 0.48→0.45 |
+| 801 | PK3GFPG2FPRA | 失败 F14 | INKLET | **本批定性主死因局**：F12 商店 167 金买孤注一掷（估值 40.7）、F13 锻造升级、F14 T4 泄 1 点攻击伤害触发「立刻死亡」，掉血 61=入场整管 |
+
+- 数据面：run_evidence_scope exact=3/3，无 missing；full_failure_run=PK3GFPG2FPRA 共 171 条决策已逐条阅读；failed_review_replay packages 与 requested_packages 均为空，本批无失败包待补合。
+
+## 二、归因分析
+
+### 1. 主死因新定性：致死负面负载牌在拾取端零认知（issue_id=LEAK_DEATH_ACQUISITION_BLINDNESS → 本批实施为 LEAK_DEATH_GUARD）
+
+完整决策链证据（F12→F14）：
+- [145] 商店「购买卡牌【孤注一掷】（167金，价值40.7≥门槛1.0）」——0 费 50+ 挡被面值计价抬成 Rare 高分；
+- [152] 锻造「升级卡牌：【孤注一掷】」——升级后文本与原文完全一致（cards.jsonl upgrade.description 同串），纯浪费砧位；
+- [166] F14 T3 出【孤注一掷+】按「溢出大挡贬值」当普通大挡技能记账；
+- [168]-[170] T4 上勾拳(2费)+防御(1费)耗尽能量后 end_turn，51 血/5 甲迎 6 点意图——runtime cards.jsonl v0.111.0 原文「**如果你在本场战斗中受到未被格挡的攻击伤害，则立刻死亡**」是战斗全程常驻判决：6-5=1 点泄露即整局清零。
+
+该牌的价值口径错误不是出牌端独有，而是买入+升级+持有全程共享同一张缺失的负面负载模型。与既有「Eternal 类不可打出」「POOR_SLEEP/GREED 保留诅咒」负载体同族，但严重度高出一档： Eternal 们拖慢节奏，它把任意一回合的 1 点算术泄露放大成整局归零，且泄点概率随战斗回合数单调上升。
+
+### 2. 竞速链老病灶续命（数据缺口封存）
+
+- VANTOM 144 / KIN 双子 137 / CEREMONIAL_BEAST 99 合计占生涯死亡 47%；800 局前夜回血后仍竞速败北再次验证「入场血量在必败对局里不是生死变量」。在线演化已把折算率降到 0.45，方向正确。
+- **per-Boss 校准消费端实施评估（历史债务）深读结论**：corpus v0.111.0 runtime/monsters.jsonl 的怪档案只有 min_hp/max_hp/name/type，`moves=[]`、`damage_values=null`——池端已被第 731~740 批 BOSS_RACE_COMBO_GATE 吃尽，火力端没有可实施的数据源。按纪律不能标 resolved（无可指认的新生效行为），登记为「数据缺口封存」，待未来游戏快照提供招式伤害字段再立项。
+- 799 局提示战力倾斜(+10)在全员负分的死亡谷里只是相对最优，不改变中期卡组强度天花板，维持既有饥饿链顶格现状。
+
+### 3. 决策链例行核查（171 条全读）
+
+零意图空过零新增（各 end_turn 能量均为真实耗尽）；药水时机合规（[58] 技能药水/[115] 再生药水均硬仗开局）；目标选择含集火/转火/击杀预告语义一致；低血尾部复核与输出饥饿上浮照常入账但候选全体负分（开局死亡谷老地形问题）。INKLET T4 死亡存在意图外增量（疑似重生潮 spawn 补攻击），重生名册 INKLET confirmations=59 已供数，留观察点不另立档。
+
+## 三、本次调整（闭环实验 LEAK_DEATH_GUARD）
+
+单一主假设：致死负面负载必须在拾取/购买/升级端被显式计价屏蔽。
+
+生产代码动作：
+1. `brain/knowledge.py`
+   - DEFAULT_POLICY 新增三键：`leak_death_guard=True`（总开关）/ `leak_death_value=-30.0`（统一屏蔽计价）/ `leak_death_cards=["THE_GAMBIT"]`（仅收 runtime 原文证实条目）；
+   - DEFAULT_STATS + 加载迁移 setdefault 新增 `leak_death_blocks` 台账；
+   - 新方法 `mark_leak_death_block(source, card_id)`：来源维度的出现次数留痕（有界计数，纯增量不回填）。
+2. `brain/policy.py`
+   - `_leak_death_blocked()` 名单判定 helper；
+   - `eval_reward_card()` 早退深负计价——一次改动覆盖奖励选牌/牌堆选牌/商店竞价/锻造入砧/删除 badness（负值倒挂自动成为最优先清除对象）/捆绑评估六条消费端；
+   - eval 保持纯函数（零 seen/offered/计数副作用，满足 selfcheck 纯度断言）；
+   - `_record_card_offer()` 屏幕签名去重保护下的 REWARD/CARD_SELECTION 计数钩子；
+   - 商店货架显式拦截位先于一切竞价（SHOP 计数 + trace status=leak_death_block + continue）。
+
+效果与边界：名单牌不再可能被买进/拿取/升级；若历史局已在卡组中，付费删牌与变化端第一时间落在它头上。**战斗出牌端刻意不设限**（已持有者危局高挡仍优于当场死亡）。回滚＝单键 `leak_death_guard=False` 即恢复旧版全部行为。
+
+验证：
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+- 最小功能验证：gambit=-30.0、普通牌走正常计价路径、计数 total=3 seen={REWARD:1, SHOP:2}、开关关闭后恢复旧判全部通过。
+
+观测指标（未来 3~10 局）：① stats.leak_death_blocks 是否随货架/offer 出现递增且 THE_GAMBIT 不再出现在任何购买/拾取台账；② 若它在场卡组，删牌决策是否第一时间选中它；③ 名单外若再现身亡于「未格挡泄露即死」条款的案例，核对死因描述与名单覆盖差。
+继续调整条件：出现第二张 runtime 证实的一票死亡负面负载 → 入名单并启动文本泛化预研；leak_death_blocks 显形但屏蔽失效（成交/入砧复发）→ 升级为硬门。
+撤回条件：连续 ≥10 局名单牌零出现且生涯胜率无正向变化，则该守卫视为惰性无害挂账保留，不再迭代。
+
+retry_resolution：本批 failed_review_replay.requested_packages 为空，无逐包行需要登记。
+
+## 四、历史债务对账（historical_zero_code_debt）
+
+| # | 条目 | 裁决 |
+| --- | --- | --- |
+| 1 | per-Boss 校准消费端实施评估 | 池端已由 BOSS_RACE_COMBO_GATE 生效；火力端经 corpus 实证无数据源，**数据缺口封存**，不得标 resolved |
+| 2 | stance 成长型反向偏置（4 例证据） | 维持与「火力成长斜率建模」捆绑原判，单独改 danger_comp_blk_boost 会踩姿态学习，继续缓办 |
+| 3 | Eternal 类诅咒稀释计价升级 | 原条件不变；LEAK_DEATH_GUARD 的「名单+深负+多端早退」模式已为它的上码铺好模板 |
+
+## 五、新沉淀的经验知识
+
+1. **THE_GAMBIT 完整机制档（v0.111.0 corpus）**：色外 Rare 技能、0 费、「获得50点格挡。如果你在本场战斗中受到未被格挡的攻击伤害，则立刻死亡。」——50 挡是面值，**一票死亡是常驻条款**；升级版数值同文（+仍为 50），锻造它毫无收益。
+2. **一票死亡类负载定价律**：有效期望 = 面值收益 × P(全程零泄露)，后者随剩余回合数指数衰减；任何只看面值的估值器都会把它标成神牌。拾取端应视同深负价值直到拥有绝对控场证据，例证账：167 金买入+升级+终局触发即死。
+3. **NGK 怪物档案能力边界（v0.111.0 快照）**：runtime monsters 仅 min_hp/max_hp/name/type，moves 空、damage_values 空——凡需原生招式表/火力的方案在该版本下不可实施，后续不要再为此立项空转。
+4. **INKLET 战术备忘**：JabDamage asc0=3、三连击 TRIPLE_ATTACK(_whirlwindRepeat=3)、滑溜减伤、已证重生体（confirmations=59）；进场血量按「每回合至少一跳 fresh-spawn 攻击」的尾部口径留余量，残余意图 6 对 51 血也安全不了任何一回合。
+5. **商店高价 Rare 审计点**：净价 >150 金的单卡必须先查描述中的恒久性负面条款（立刻死亡/无法打出/消耗己方），本案 167 金是当前生涯最贵的一次单价失误。

@@ -427,7 +427,16 @@ DEFAULT_POLICY = {
                                        # hp_lost_sum_hi/damage_events_hi 子账本，闸门定价优先消费之；
                                        # 子账本 <3 样本时回落旧口径，行为零变化
     "elite_tail_veto_min_deficit": 0.50,  # 深度输出饥饿时，硬线以上精英也做单场最差尾部复核；
-                                          # 第580局 90%血压线进旧日雕像，均值约7、实测整管-72
+                                           # 第580局 90%血压线进旧日雕像，均值约7、实测整管-72
+    # --- 致死负面负载牌拾取屏蔽（LEAK_DEATH_GUARD，第801局批复盘闭环） ---
+    "leak_death_guard": True,    # 总开关：False 即整体回滚到旧版无屏蔽行为
+    "leak_death_value": -30.0,   # 被屏蔽牌在 eval_reward_card 的统一计价值（深负；
+                                 # 删牌端按负值倒挂后自动成为最优先清除对象）
+    "leak_death_cards": ["THE_GAMBIT"],  # 已被 runtime 原文证实的「受到未格挡攻击
+                                          # 伤害即立刻死亡」类负载名单；801 局孤注一掷
+                                          # 面值 50 挡被估 40.7 分、167 金买进+升级，
+                                          # F14 T4 泄 1 点攻击伤害整局猝死。语义泛化
+                                          # （文本识别死亡被动）待更多样本，先精确名单
 }
 
 DEFAULT_PROGRESSION = {
@@ -473,7 +482,12 @@ DEFAULT_STATS = {
                          # （跨局重生召唤物名册，第 506~508 局批复盘新增：同种敌人
                          #   在 ≥2 场独立战斗中被「预测击杀≥2 次仍存活」实证后，
                          #   后续战斗第 1 回合即按重生体三重压制，不再先烧 2 次输出）
-    "act_entries": [],   # 进幕快照列表（第 506~508 局批复盘新增）：每幕首战入场时记
+    "leak_death_blocks": {},  # card_id -> {"total": n, "seen_at": {source: n}}
+                              # （LEAK_DEATH_GUARD 留痕，第 801 局批复盘新增：致死负面
+                              #   负载牌在 offer 池/商店货架出现的次数与来源。屏蔽本身
+                              #   由拾取端深负计价完成且 eval_reward_card 保持纯函数，
+                              #   计数只发生在 _record_card_offer / 商店评估等动作位）
+    "act_entries": [],   # 进幕快照列表（第 506~508 批复盘新增）：每幕首战入场时记
                          # {act, floor, hp_pct, max_hp, gold, potions, deck_size, burst}
                          # ——把「进二幕时的卡组就绪度」变成可复盘的硬数据
 }
@@ -764,6 +778,9 @@ class Knowledge:
         # 纯增量结构：旧库无此键即从空累积，不回填、读取端 .get 兜底
         self.stats.setdefault("respawn_adds", {})
         self.stats.setdefault("act_entries", [])
+        # 迁移：LEAK_DEATH_GUARD 留痕（第 801 局批复盘新增）。纯增量结构：
+        # 旧库无此键即从空累积，读取端 .get 兜底，不回填
+        self.stats.setdefault("leak_death_blocks", {})
         # 迁移：事件选项最坏情况记忆字段（第 255~257 批次复盘新增）。hp_min 记
         # 该选项历史单次最差生命增量（含事件链强制战的祖先归因样本）。历史聚合
         # 数据无法反推逐样本尾部（hp_delta_sum/n 拆不出单次极值），旧条目显式
@@ -1693,6 +1710,24 @@ class Knowledge:
             return int(e.get("confirmations", 0) or 0) >= 2
         except (TypeError, ValueError):
             return False
+
+    def mark_leak_death_block(self, source: str, card_id: str) -> None:
+        """LEAK_DEATH_GUARD 留痕：致死负面负载牌出现在某来源候选池并被屏蔽。
+
+        第 801 局批复盘新增。调用位：_record_card_offer（奖励/CARD_SELECTION
+        屏幕去重签名变更时，每屏每牌至多 +1）与商店货架评估循环。它只回答
+        「守卫在生产端是否仍在正确显形」，效果评价归拾取端深负计价与对局结果。
+        eval_reward_card 保持纯函数，本计数绝不进评分路径。
+        """
+        cid = str(card_id or "").upper().rstrip("+")
+        if not cid:
+            return
+        d = self.stats.setdefault("leak_death_blocks", {})
+        e = d.setdefault(cid, {"total": 0, "seen_at": {}})
+        src = str(source or "?")
+        seen = e.setdefault("seen_at", {})
+        seen[src] = min(9999, int(seen.get(src, 0) or 0) + 1)
+        e["total"] = min(9999, int(e.get("total", 0) or 0) + 1)
 
     def commit_act_entry(self, entry: dict) -> None:
         """记录一次进幕快照（第 506~508 局批复盘新增）。
