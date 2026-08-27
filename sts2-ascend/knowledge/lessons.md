@@ -4198,3 +4198,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/782 胜，当前目标进阶 0
+
+## 第 783 局复盘（2026-08-27 17:54）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHRUG_IT_OFF, EVIL_EYE, UNRELENTING, BREAKTHROUGH, UNRELENTING, EQUILIBRIUM, CINDER, SHRUG_IT_OFF, FIGHT_ME, UPPERCUT
+- 本局遗物：PENDULUM, 百年积木, 地精之角
+- 战斗记录：F3 Monster战 掉血1; F6 Monster战 掉血0; F11 Monster战 掉血9; F12 Elite战 掉血17; F15 Elite战 掉血7; F17 Boss战 掉血58（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，FIEND_FIRE(24分/30局)，HAND_OF_GREED(24分/29局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/783 胜，当前目标进阶 0
