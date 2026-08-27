@@ -10,11 +10,14 @@
 - `generated/evolink-paid/`：每次付费调用的追加式原图、完整 Prompt 和去密请求参数；
 - `generated/anchor/`：从已验收付费原图复制出的当前身份锚点；
 - `generated/native-alpha-experiment/`：EvoLink 原生透明能力的早期实验副本；
+- `custom/ui/multiplayer/`：用户明确豁免并批准复用的四张历史多人手势；
 - `legacy-contaminated/`：棋盘格、绿幕、程序抠图及其全部衍生链，只作历史保留。
 
 `legacy-contaminated/` 中的内容禁止作为模型参考、绑定母版、atlas 输入或运行时
-素材。旧 `custom/` 190-region / 10-page 流程已经连同产物移入该目录，因为它既
-继承棋盘格血缘，也把新图塞回原战士 Alpha 和姿势。
+素材。唯一例外是用户于 2026-08-28 逐项批准的四张多人手势；它们从隔离区原样复制到
+`custom/ui/multiplayer/`，不得作为 AI 参考或推广到其他污染素材。旧 `custom/`
+190-region / 10-page 流程的其余部分继续留在隔离区，因为它既继承棋盘格血缘，也把
+新图塞回原战士 Alpha 和姿势。
 
 ## 唯一生成路径
 
@@ -43,8 +46,8 @@ background: transparent
 ## 当前安全状态
 
 旧 runtime PNG 已从 `Vivhite/Vivhite/skins/ironclad/` 移出，换皮保持 fail-closed。
-只有新的 combat/merchant、rest-site、character-select 私有 rig 与九张 UI 全部
-从干净 EvoLink 链重建、离线验收并完整发布后，才允许重新启用角色替换。
+只有新的 combat/merchant、rest-site、character-select 私有 rig、五张干净 EvoLink
+UI 以及四张用户特批多人手势全部离线验收并完整发布后，才允许重新启用角色替换。
 
 ## 发布边界
 
