@@ -187,6 +187,57 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("成长姿态第4例", prompt)
         self.assertIn("纯 `meta_review.md`", prompt)
 
+    def test_prompt_explains_inline_packet_and_rewrites_native_corpus_paths(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-packet-") as root:
+            repo = Path(root) / "repo"
+            knowledge = repo / "sts2-ascend" / "knowledge"
+            knowledge.mkdir(parents=True)
+            (knowledge / "lessons.md").write_text("lesson", encoding="utf-8")
+            manifest = (knowledge / "game" / "v0.111.0" / "manifest.json").as_posix()
+            mechanics = (knowledge / "game" / "v0.111.0" /
+                         "mechanics" / "<category>.jsonl").as_posix()
+            digest = {
+                "snapshot": {"available": True},
+                "corpus_paths": {
+                    "manifest": manifest,
+                    "groups": [{"mechanics": mechanics}],
+                    "external": "Z:/external/native.jsonl",
+                },
+            }
+            native = SimpleNamespace(review_digest=mock.Mock(return_value=digest))
+            know = SimpleNamespace(progression={}, stats={}, game_knowledge=native)
+            state = {
+                "action_required": True,
+                "require_action_every_batch": True,
+                "consecutive_report_only": 2,
+                "report_only_limit": 2,
+            }
+            with (mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "KNOWLEDGE_DIR", knowledge),
+                  mock.patch.object(llm_review, "REVIEW_LOG", knowledge / "meta_review.md"),
+                  mock.patch.object(llm_review, "_review_run_records", return_value=[]),
+                  mock.patch.object(llm_review, "_stats_digest", return_value={})):
+                prompt = llm_review.build_prompt(
+                    know, {"max_runs_in_packet": 100}, batch_runs=[724],
+                    closure_state=state)
+
+        packet_text = prompt.split("```json\n", 1)[1].split("\n```", 1)[0]
+        packet = json.loads(packet_text)
+        paths = packet["native_game_knowledge"]["corpus_paths"]
+        self.assertEqual(
+            paths["manifest"],
+            "sts2-ascend/knowledge/game/v0.111.0/manifest.json")
+        self.assertEqual(
+            paths["groups"][0]["mechanics"],
+            "sts2-ascend/knowledge/game/v0.111.0/mechanics/<category>.jsonl")
+        self.assertEqual(paths["external"], "Z:/external/native.jsonl")
+        self.assertEqual(digest["corpus_paths"]["manifest"], manifest)
+        self.assertIn("第一个 `json` 代码块就是完整 packet", prompt)
+        self.assertIn("不存在独立的 packet JSON 文件", prompt)
+        self.assertIn("`json.loads` 解析", prompt)
+        self.assertIn("# review_closure 快速摘要", prompt)
+        self.assertIn("action_required=true；require_action_every_batch=true", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -673,6 +673,30 @@ def _primary_failure_decision_chain(
     }
 
 
+def _sandbox_readable_corpus_paths(value):
+    """Rewrite real-repository corpus paths for the isolated review clone.
+
+    ``review_digest`` is also consumed by runtime callers, so keep its result
+    untouched and normalize only the prompt packet's ``corpus_paths`` branch.
+    The recursive handling keeps future grouped/list path shapes readable too.
+    """
+    repo_prefix = REPO_DIR.resolve().as_posix().rstrip("/")
+    if isinstance(value, dict):
+        return {key: _sandbox_readable_corpus_paths(item)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_sandbox_readable_corpus_paths(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sandbox_readable_corpus_paths(item) for item in value)
+    if not isinstance(value, str) or not repo_prefix:
+        return value
+    normalized = value.replace("\\", "/")
+    descendant_prefix = repo_prefix + "/"
+    if normalized.casefold().startswith(descendant_prefix.casefold()):
+        return normalized[len(descendant_prefix):]
+    return value
+
+
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None,
                  closure_state: dict | None = None) -> str:
@@ -691,6 +715,14 @@ def build_prompt(know, cfg: dict, every: int | None = None,
                          for row in (full_failure_run.get("decisions") or []))
     native = getattr(know, "game_knowledge", None)
     closure_state = closure_state or _review_closure_state(know, cfg)
+    native_digest = (native.review_digest(know.stats, evidence_text)
+                     if native is not None else
+                     {"snapshot": {"available": False,
+                                   "error": "native index not initialized"}})
+    if isinstance(native_digest, dict) and "corpus_paths" in native_digest:
+        native_digest = dict(native_digest)
+        native_digest["corpus_paths"] = _sandbox_readable_corpus_paths(
+            native_digest.get("corpus_paths"))
     packet = {
         "runs_summary": run_summaries,
         "run_evidence_scope": {
@@ -714,10 +746,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
         # corpus_paths lets the reviewer drill into exact JSONL facts on demand.
-        "native_game_knowledge": (native.review_digest(know.stats, evidence_text)
-                                  if native is not None else
-                                  {"snapshot": {"available": False,
-                                                "error": "native index not initialized"}}),
+        "native_game_knowledge": native_digest,
     }
     lessons_tail = ""
     lessons_path = KNOWLEDGE_DIR / "lessons.md"
@@ -740,9 +769,26 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     # intact.  This saves prompt tokens without silently weakening statistical
     # evidence; full stats.json remains available for on-demand inspection.
     packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    closure_summary_keys = (
+        "action_required", "require_action_every_batch",
+        "consecutive_report_only", "report_only_limit",
+        "evidence_run_threshold", "evidence_batch_threshold", "last_outcome",
+    )
+    closure_summary = "；".join(
+        f"{key}={json.dumps(closure_state.get(key), ensure_ascii=False)}"
+        for key in closure_summary_keys if key in closure_state)
 
     return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
 智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
+
+# 数据载体说明
+本提示文件的**第一个 `json` 代码块就是完整 packet**，不存在独立的 packet JSON 文件。
+若 Read 工具截断下面的超长单行，不要把截断误判成字段缺失；请在本地读取
+`sts2-ascend/knowledge/review_prompt_latest.md`，提取第一个 fenced `json` 代码块后用
+`json.loads` 解析。packet 内 `corpus_paths` 已是隔离 sandbox 仓库可读的相对路径。
+
+# review_closure 快速摘要
+{closure_summary}
 
 # 数据摘要（紧凑 JSON 已内嵌；原生事实按本批实体检索，完整文件可按路径深读）
 ```json
