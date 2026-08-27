@@ -172,6 +172,79 @@ class DashboardSourceTests(unittest.TestCase):
         self.assertTrue(tool_calls)
 
 
+class ViewerSingletonTests(unittest.TestCase):
+    @staticmethod
+    def _kernel(*, handle: int = 4242, last_error: int = 0):
+        kernel = mock.Mock()
+        kernel.CreateMutexW.return_value = handle
+        kernel.GetLastError.return_value = last_error
+        return kernel
+
+    def setUp(self) -> None:
+        review_viewer._viewer_mutex_handle = None
+
+    def tearDown(self) -> None:
+        # Every successful-owner test releases explicitly.  Resetting here also
+        # keeps a failed assertion from leaking fake state into later cases.
+        review_viewer._viewer_mutex_handle = None
+
+    def test_named_mutex_rejects_viewer_from_another_repository_copy(self) -> None:
+        kernel = self._kernel(last_error=review_viewer._ERROR_ALREADY_EXISTS)
+        with mock.patch.object(review_viewer.os, "name", "nt"), \
+                mock.patch.object(review_viewer.ctypes, "windll", create=True) as windll:
+            windll.kernel32 = kernel
+            self.assertFalse(review_viewer._acquire_viewer_mutex())
+        kernel.SetLastError.assert_called_once_with(0)
+        kernel.CreateMutexW.assert_called_once_with(
+            None, False, review_viewer._VIEWER_MUTEX_NAME)
+        kernel.CloseHandle.assert_called_once_with(4242)
+        self.assertIsNone(review_viewer._viewer_mutex_handle)
+
+    def test_named_mutex_handle_lives_until_viewer_lock_release(self) -> None:
+        kernel = self._kernel(handle=7331)
+        with mock.patch.object(review_viewer.os, "name", "nt"), \
+                mock.patch.object(review_viewer.ctypes, "windll", create=True) as windll:
+            windll.kernel32 = kernel
+            self.assertTrue(review_viewer._acquire_viewer_mutex())
+            self.assertEqual(review_viewer._viewer_mutex_handle, 7331)
+            review_viewer._release_viewer_mutex()
+        self.assertIsNone(review_viewer._viewer_mutex_handle)
+        closed = kernel.CloseHandle.call_args.args[0]
+        self.assertEqual(closed.value, 7331)
+
+    def test_fresh_local_heartbeat_releases_newly_claimed_mutex(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-viewer-lock-") as root:
+            lock = Path(root) / "viewer.lock"
+            lock.write_text("123", encoding="utf-8")
+            with mock.patch.object(review_viewer, "LOCK_FILE", lock), \
+                    mock.patch.object(review_viewer, "_acquire_viewer_mutex",
+                                      return_value=True), \
+                    mock.patch.object(review_viewer, "_release_viewer_mutex") as release:
+                self.assertFalse(review_viewer.acquire_lock())
+        release.assert_called_once_with()
+
+    def test_win32_mutex_error_falls_back_to_local_file_lock(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-viewer-fallback-") as root:
+            lock = Path(root) / "viewer.lock"
+            kernel = self._kernel()
+            kernel.CreateMutexW.side_effect = review_viewer.ctypes.ArgumentError(
+                "bad CreateMutexW fixture")
+            with mock.patch.object(review_viewer, "LOCK_FILE", lock), \
+                    mock.patch.object(review_viewer.os, "name", "nt"), \
+                    mock.patch.object(review_viewer.ctypes, "windll", create=True) as windll:
+                windll.kernel32 = kernel
+                self.assertTrue(review_viewer.acquire_lock())
+                self.assertEqual(lock.read_text(encoding="utf-8"), str(os.getpid()))
+                review_viewer.release_lock()
+        self.assertFalse(lock.exists())
+
+    def test_non_windows_keeps_file_lock_fallback(self) -> None:
+        with mock.patch.object(review_viewer.os, "name", "posix"), \
+                mock.patch.object(review_viewer.ctypes, "windll", create=True) as windll:
+            self.assertTrue(review_viewer._acquire_viewer_mutex())
+        self.assertFalse(windll.kernel32.called)
+
+
 class DashboardLauncherTests(unittest.TestCase):
     def test_runtime_dir_canonicalizes_copied_stack_root(self) -> None:
         copied = Path("D:/backup/repo/sts2-ascend")

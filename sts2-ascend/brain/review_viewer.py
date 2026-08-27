@@ -111,20 +111,83 @@ def _pid_alive(pid: int) -> bool:
 
 
 LOCK_STALE_SEC = 15
+_VIEWER_MUTEX_NAME = r"Local\STS2_ASCEND_ASCEND_VISION"
+_ERROR_ALREADY_EXISTS = 183
+_viewer_mutex_handle: int | None = None
+
+
+def _acquire_viewer_mutex() -> bool:
+    """Claim a Windows-session singleton shared by every repository copy.
+
+    The file heartbeat remains useful for lifecycle ownership and diagnostics,
+    but its path necessarily differs in a review/salvage clone.  A named kernel
+    object closes that gap: a validation copy cannot open a second dashboard
+    even when its caller forgot ``STS2_ASCEND_DISABLE_VIEWER``.  The kernel
+    removes the object automatically when the owning process exits.
+
+    Non-Windows hosts and unexpected Win32 failures fall back to the existing
+    file lock so the optional viewer never blocks gameplay startup.
+    """
+    global _viewer_mutex_handle
+    if _viewer_mutex_handle:
+        return True
+    if os.name != "nt":
+        return True
+    try:
+        kernel = ctypes.windll.kernel32
+        kernel.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_int,
+                                        ctypes.c_wchar_p]
+        kernel.CreateMutexW.restype = ctypes.c_void_p
+        kernel.SetLastError.argtypes = [ctypes.c_ulong]
+        kernel.SetLastError.restype = None
+        kernel.GetLastError.argtypes = []
+        kernel.GetLastError.restype = ctypes.c_ulong
+        kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+        kernel.CloseHandle.restype = ctypes.c_int
+        kernel.SetLastError(0)
+        handle = kernel.CreateMutexW(None, False, _VIEWER_MUTEX_NAME)
+        if not handle:
+            return True
+        if int(kernel.GetLastError()) == _ERROR_ALREADY_EXISTS:
+            kernel.CloseHandle(handle)
+            return False
+        _viewer_mutex_handle = int(handle)
+        return True
+    except Exception:
+        return True
+
+
+def _release_viewer_mutex() -> None:
+    global _viewer_mutex_handle
+    handle = _viewer_mutex_handle
+    _viewer_mutex_handle = None
+    if not handle or os.name != "nt":
+        return
+    try:
+        kernel = ctypes.windll.kernel32
+        kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+        kernel.CloseHandle.restype = ctypes.c_int
+        kernel.CloseHandle(ctypes.c_void_p(handle))
+    except Exception:
+        pass
 
 
 def acquire_lock() -> bool:
     """心跳锁：持有者每 5s 触摸锁文件（mtime 即生命信号），mtime 超过
     LOCK_STALE_SEC 视为死锁接管。pid/映像名判活在 python 进程生态里会被
     pid 复用反复毒锁（悬浮窗消失事故：锁 pid 被自家 python 复用 → 永久锁死）。"""
+    if not _acquire_viewer_mutex():
+        return False
     for _ in range(3):
         try:
             if LOCK_FILE.exists():
                 age = time.time() - LOCK_FILE.stat().st_mtime
                 if age < LOCK_STALE_SEC:
+                    _release_viewer_mutex()
                     return False
                 LOCK_FILE.unlink(missing_ok=True)
         except OSError:
+            _release_viewer_mutex()
             return False
         try:
             fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
@@ -135,6 +198,7 @@ def acquire_lock() -> bool:
             return True
         except OSError:
             time.sleep(0.2)
+    _release_viewer_mutex()
     return False
 
 
@@ -144,6 +208,7 @@ def release_lock() -> None:
             LOCK_FILE.unlink(missing_ok=True)
     except (OSError, ValueError):
         pass
+    _release_viewer_mutex()
 
 
 # ---------------------------------------------------------------------------
