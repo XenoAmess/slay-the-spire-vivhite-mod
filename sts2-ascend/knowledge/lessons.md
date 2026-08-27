@@ -3439,3 +3439,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/713 胜，当前目标进阶 0
+
+## 第 714 局复盘（2026-08-27 09:37）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：TAUNT, RAMPAGE, BREAKTHROUGH, IRON_WAVE, VICIOUS, UNMOVABLE, CINDER
+- 本局遗物：BOWLER_HAT, 皇家枕头
+- 战斗记录：F2 Monster战 掉血8; F5 Monster战 掉血0; F8 Unknown战 掉血1; F14 Monster战 掉血2; F15 Elite战 掉血43; F17 Boss战 掉血41（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/714 胜，当前目标进阶 0
