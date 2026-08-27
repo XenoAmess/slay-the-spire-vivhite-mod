@@ -1,0 +1,656 @@
+{
+ "run_id": "UU7R9TGY3QT9",
+ "run_number": 709,
+ "ascension": 0,
+ "started_at": "2026-08-27 08:58:59",
+ "victory": false,
+ "in_progress": true,
+ "floor": 8,
+ "decisions": [
+  {
+   "t": "08:59:00",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「轰鸣海螺」（经验价值 1.8）；轰鸣海螺=1.8(n=49) / 失物盒=0.6(n=18) / 树叶药膏=-12.0(n=1)"
+  },
+  {
+   "t": "08:59:01",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "08:59:04",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,1)（路径分 -51.99，预计进 Boss 血量 18%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(1,1)=-51.99|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(1,3)=-53.72|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；投影中途死亡 / Monster(1,5)=-58.32|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；投影中途死亡"
+  },
+  {
+   "t": "08:59:06",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【痛击】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤7，我方80血/0甲"
+  },
+  {
+   "t": "08:59:07",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤3，我方80血/0甲"
+  },
+  {
+   "t": "08:59:08",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "08:59:13",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（辅助体优先转火：树叶史莱姆（小）（零伤害意图，放生=纵容其强化队友））；敌意图总伤8，我方80血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "08:59:14",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（辅助体优先转火：树叶史莱姆（小）（零伤害意图，放生=纵容其强化队友））；敌意图总伤8，我方80血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "08:59:15",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（可击杀树叶史莱姆（小））；敌意图总伤8，我方80血/0甲；意图升级+1，防御前置"
+  },
+  {
+   "t": "08:59:16",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "08:59:20",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6.0）；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:21",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6.0）；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:22",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6.0）；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:23",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "08:59:27",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤8，我方72血/0甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "08:59:28",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6.0）；敌意图总伤8，我方72血/5甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "08:59:29",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤8，我方72血/5甲；意图升级+8，防御前置"
+  },
+  {
+   "t": "08:59:30",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+  },
+  {
+   "t": "08:59:34",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【黏液】（功能牌（抽牌1/回能））；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:35",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（单体伤害≈6.0）；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:35",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（可击杀树叶史莱姆（中））；敌意图总伤0，我方72血/0甲"
+  },
+  {
+   "t": "08:59:36",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 78,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：16金币"
+  },
+  {
+   "t": "08:59:37",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 78,
+   "gold": 115,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "08:59:38",
+   "screen": "CARD_SELECTION",
+   "floor": 2,
+   "hp": 78,
+   "gold": 115,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【突破】（价值 8.6）；候选：突破=8.6 / 头槌=7.0 / 剑柄打击=-1.4"
+  },
+  {
+   "t": "08:59:39",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 78,
+   "gold": 115,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "08:59:42",
+   "screen": "MAP",
+   "floor": 2,
+   "hp": 78,
+   "gold": 115,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(2,0)（路径分 -34.70，预计进 Boss 血量 0%；金币115够买药水档位；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12)；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)）；候选：Shop(2,0)=-34.70|金币115够买药水档位；投影中途死亡；绝境全候选死亡投影，优先Shop换战力(+12)；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)"
+  },
+  {
+   "t": "08:59:44",
+   "screen": "SHOP",
+   "floor": 3,
+   "hp": 78,
+   "gold": 115,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "08:59:45",
+   "screen": "SHOP",
+   "floor": 3,
+   "hp": 78,
+   "gold": 115,
+   "action": "buy_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "商店：购买卡牌【杂耍】（72金，价值8.2≥门槛1.0）"
+  },
+  {
+   "t": "08:59:46",
+   "screen": "SHOP",
+   "floor": 3,
+   "hp": 78,
+   "gold": 43,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "08:59:47",
+   "screen": "SHOP",
+   "floor": 3,
+   "hp": 78,
+   "gold": 43,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "08:59:49",
+   "screen": "MAP",
+   "floor": 3,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(3,0)（路径分 -58.38，预计进 Boss 血量 0%；输出饥饿战损上浮×1.28（缺口80%）；投影中途死亡）；候选：Unknown(3,0)=-58.38|输出饥饿战损上浮×1.28（缺口80%）；投影中途死亡"
+  },
+  {
+   "t": "08:59:51",
+   "screen": "EVENT",
+   "floor": 4,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【传说是真的】：选择「顺走地图」（经验价值 -1.9）；顺走地图=-1.9(n=67) / 耐心寻找出口=-8.0(n=1)"
+  },
+  {
+   "t": "08:59:53",
+   "screen": "EVENT",
+   "floor": 4,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "08:59:55",
+   "screen": "MAP",
+   "floor": 4,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(4,0)（路径分 -46.21，预计进 Boss 血量 19%；金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)）；候选：Shop(4,0)=-46.21|金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)"
+  },
+  {
+   "t": "08:59:57",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 43,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "08:59:58",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 43,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "08:59:59",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 43,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "09:00:01",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(5,0)（路径分 -56.31，预计进 Boss 血量 19%；输出饥饿战损上浮×1.28（缺口80%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(5,0)=-56.31|输出饥饿战损上浮×1.28（缺口80%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "09:00:03",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【自助指南】：选择「读下封底」（经验价值 0.0）；读完整本书=0.0(n=23) / 随便读个一段=0.0(n=23) / 读下封底=0.0(n=22)"
+  },
+  {
+   "t": "09:00:05",
+   "screen": "CARD_SELECTION",
+   "floor": 6,
+   "hp": 78,
+   "gold": 43,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 6
+   },
+   "reason": "选择卡牌：【突破】（价值 8.5）；候选：突破=8.5 / 痛击=-10.6 / 打击=-31.2 / 打击=-31.2 / 打击=-31.2 / 打击=-31.2 / 打击=-31.2"
+  },
+  {
+   "t": "09:00:06",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "09:00:08",
+   "screen": "MAP",
+   "floor": 6,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(6,0)（路径分 -53.75，预计进 Boss 血量 25%；输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(6,0)=-53.75|输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  },
+  {
+   "t": "09:00:09",
+   "screen": "EVENT",
+   "floor": 7,
+   "hp": 78,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【蓝宝石种子】：选择「吃下」（经验价值 6.2）；吃下=6.2(n=64) / 种植培育=0.0(n=1)"
+  },
+  {
+   "t": "09:00:11",
+   "screen": "CARD_SELECTION",
+   "floor": 7,
+   "hp": 80,
+   "gold": 43,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 10
+   },
+   "reason": "升级卡牌：【突破】"
+  },
+  {
+   "t": "09:00:12",
+   "screen": "EVENT",
+   "floor": 7,
+   "hp": 80,
+   "gold": 43,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续"
+  },
+  {
+   "t": "09:00:15",
+   "screen": "MAP",
+   "floor": 7,
+   "hp": 80,
+   "gold": 43,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(7,1)（路径分 -40.08，预计进 Boss 血量 44%；金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)）；候选：Shop(7,1)=-40.08|金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)"
+  },
+  {
+   "t": "09:00:17",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 43,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "09:00:18",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 43,
+   "action": "buy_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "商店：购买卡牌【燃烧】（38金，价值27.4≥门槛1.0）"
+  },
+  {
+   "t": "09:00:19",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 5,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "09:00:20",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 5,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "09:00:23",
+   "screen": "MAP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 5,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(8,2)（路径分 -50.74，预计进 Boss 血量 48%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.24（缺口69%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(8,0)=-62.39|路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(8,2)=-50.74|前期需要战斗积累卡牌；输出饥饿战损上浮×1.24（缺口69%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）"
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "BREAKTHROUGH"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "card_pick",
+   "JUGGLING"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "card_pick",
+   "BREAKTHROUGH"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "card_pick",
+   "INFLAME"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}
