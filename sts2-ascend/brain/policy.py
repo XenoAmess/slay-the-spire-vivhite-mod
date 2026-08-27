@@ -170,6 +170,8 @@ class Policy:
         self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
         self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
+        self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
+        self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 回合边界观测血量
         self._race_loss_rate = 0.0  # 近期每回合净损血 EMA
@@ -2062,6 +2064,11 @@ class Policy:
         if self._desp_combat is not ctx.combat:
             self._desp_combat = ctx.combat
             self._desp_streak = 0
+        # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
+        # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
+        if self._focus_combat is not ctx.combat:
+            self._focus_combat = ctx.combat
+            self._focus_index = None
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -2893,6 +2900,25 @@ class Policy:
             # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
             _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
+            # 集火连续性（第 695~697 批复盘）：多体精英（残杀千足虫等分段体）的
+            # 力量轮转让逐张重算的火线在节间横跳（697 局 F28 阵亡记录 0→1→2），
+            # 三条血同时剩半截无一减员——给延续上一目标的小幅粘性分，减员前置。
+            # 优先序让位：击杀预告/自我强化/辅助体三类定向教义在场时粘性整体
+            # 休眠（谁该挨打已有答案，不给模糊化空间）；单体战无火线可言；
+            # 重生体按三重压制口径本就不粘。有效域由 _combat 的战斗实例更替
+            # 重置托管，此处只读不写战斗身份
+            _sticky_t = self._focus_index if len(enemies) > 1 else None
+            _sticky_v = float(pol.get("target_sticky_bonus", 3.0))
+            _doctrine_present = False
+            for e in enemies:
+                if (not (self._is_respawn_add(e) and not all_respawn)
+                        and len(enemies) > 1
+                        and ((self._enemy_strength_stack(e) > 0)
+                             or (sup_bonus > 0
+                                 and sum((it.get("total_damage") or 0)
+                                         for it in e.get("intents", [])) <= 0))):
+                    _doctrine_present = True
+                    break
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
                 eff = _effective_damage(e)
@@ -2917,6 +2943,9 @@ class Policy:
                         s += sup_bonus * min(1.0, scaler_stack / 7.0)
                     elif is_support:
                         s += sup_bonus
+                    elif (_sticky_t is not None and not _doctrine_present
+                          and e.get("index") == _sticky_t):
+                        s += _sticky_v
                 killed = _would_kill(e)
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
@@ -2926,7 +2955,14 @@ class Policy:
                         f"自我强化体优先转火：{e['name']}（力量+{scaler_stack:.0f}，"
                         f"拖越久打越痛）" if scaler_stack > 0 else (
                             f"辅助体优先转火：{e['name']}（零伤害意图，放生=纵容其强化队友）"
-                            if is_support else f"单体伤害≈{eff}"))
+                            if is_support else (
+                                f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
+                                if (_sticky_t is not None and e.get("index") == _sticky_t)
+                                else f"单体伤害≈{eff}")))
+            # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
+            # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
+            if best_t is not None and not best_kill:
+                self._focus_index = best_t
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
