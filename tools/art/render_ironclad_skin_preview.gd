@@ -1,6 +1,6 @@
 extends SceneTree
 
-const DEFAULT_RESOURCE := "res://Vivhite/skins/ironclad/spine/combat/combat_skeleton_data.tres"
+const DEFAULT_RESOURCE := "res://Vivhite/skins/ironclad/spine/combat/vivhite_combat_skeleton_data.tres"
 const DEFAULT_ANIMATION := "idle_loop"
 const DEFAULT_SIZE := Vector2i(1024, 1024)
 const MARGIN := 0.08

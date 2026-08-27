@@ -73,6 +73,33 @@ function Get-ResourcePath {
     return "res://$($ResourceRoot.Trim('/'))/$($RelativePath.TrimStart('/'))"
 }
 
+function Get-PrivateResourceRelativePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$ResourceRoot,
+        [Parameter(Mandatory = $true)][string]$ResourcePath,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    $normalizedRoot = $ResourceRoot.Replace('\', '/').Trim('/')
+    $normalizedPath = $ResourcePath.Replace('\', '/')
+    $privatePrefix = "res://$normalizedRoot/"
+    if (-not $normalizedPath.StartsWith($privatePrefix, [StringComparison]::Ordinal)) {
+        throw "$Label must be private below '$privatePrefix', got '$ResourcePath'."
+    }
+
+    $relativePath = $normalizedPath.Substring($privatePrefix.Length)
+    if ([string]::IsNullOrWhiteSpace($relativePath) -or
+        $relativePath.StartsWith('/', [StringComparison]::Ordinal) -or
+        $relativePath.StartsWith('../', [StringComparison]::Ordinal) -or
+        [string]::Equals($relativePath, '..', [StringComparison]::Ordinal) -or
+        $relativePath.Contains("../") -or
+        $relativePath.Contains("/..")) {
+        throw "$Label has an invalid private resource path: '$ResourcePath'."
+    }
+
+    return $relativePath
+}
+
 function Add-RequiredPath {
     param(
         [Parameter(Mandatory = $true)]$Set,
@@ -98,9 +125,20 @@ function Get-ExpectedLogicalAssets {
         Add-RequiredPath -Set $required -RelativePath ([string]$binding.scene)
         Add-RequiredPath -Set $required -RelativePath ([string]$binding.skeletonData)
     }
+    $resourceRoot = ([string]$Contract.resourceRoot).Replace('\', '/').Trim('/')
     foreach ($spineSet in @($Contract.spineSets)) {
         Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.skeletonData)
         Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.atlas)
+        try {
+            $skeletonRelative = Get-PrivateResourceRelativePath `
+                -ResourceRoot $resourceRoot `
+                -ResourcePath ([string]$spineSet.skeletonResource) `
+                -Label "Spine set '$([string]$spineSet.name)' skeletonResource"
+            Add-RequiredPath -Set $required -RelativePath $skeletonRelative
+        }
+        catch {
+            Add-ValidationError $_.Exception.Message
+        }
         foreach ($page in @($spineSet.pages)) {
             Add-RequiredPath -Set $required -RelativePath ([string]$page)
         }
@@ -703,7 +741,7 @@ function Test-SourceAssets {
             continue
         }
 
-        Add-ValidationError "Unexpected private skin source file outside the 30-file contract: $resourceRoot/$relative"
+        Add-ValidationError "Unexpected private skin source file outside the declared contract: $resourceRoot/$relative"
     }
 
     if ($script:ValidationErrors.Count -gt 0) {
@@ -729,11 +767,12 @@ function Test-SourceAssets {
         }
     }
 
-    $allowedVanillaSkeletons = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::Ordinal)
-    foreach ($resourcePath in @($Contract.allowedVanillaSkeletonResources)) {
-        [void]$allowedVanillaSkeletons.Add([string]$resourcePath)
+    $requiredSkeletonExtension = [string]$Contract.requiredPrivateSkeletonExtension
+    if ([string]::IsNullOrWhiteSpace($requiredSkeletonExtension) -or
+        -not $requiredSkeletonExtension.StartsWith('.', [StringComparison]::Ordinal)) {
+        Add-ValidationError "requiredPrivateSkeletonExtension must be a dot-prefixed extension."
+        $requiredSkeletonExtension = ".spjson"
     }
-    $allowedReferencesByFile = New-Object "System.Collections.Generic.Dictionary[string,object]" ([StringComparer]::OrdinalIgnoreCase)
 
     foreach ($spineSet in @($Contract.spineSets)) {
         $setName = [string]$spineSet.name
@@ -746,13 +785,25 @@ function Test-SourceAssets {
         $skeletonDataText = [IO.File]::ReadAllText($skeletonDataPath)
         $expectedAtlasReference = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath $atlasRelative
 
-        if (-not $allowedVanillaSkeletons.Contains($skeletonResource)) {
-            Add-ValidationError "Spine set '$setName' declares an unapproved vanilla skeleton resource '$skeletonResource'."
+        try {
+            $skeletonRelative = Get-PrivateResourceRelativePath `
+                -ResourceRoot $resourceRoot `
+                -ResourcePath $skeletonResource `
+                -Label "Spine set '$setName' skeletonResource"
+            $skeletonFilePath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $skeletonRelative
+        }
+        catch {
+            Add-ValidationError $_.Exception.Message
+            continue
+        }
+        if (-not $skeletonResource.EndsWith($requiredSkeletonExtension, [StringComparison]::OrdinalIgnoreCase)) {
+            Add-ValidationError (
+                "Spine set '$setName' skeletonResource must use the private " +
+                "'$requiredSkeletonExtension' runtime format: $skeletonResource")
         }
         if ($skeletonDataText.IndexOf($skeletonResource, [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Spine set '$setName' skeleton data must reference '$skeletonResource'."
         }
-        $allowedReferencesByFile[$skeletonDataPath] = @($skeletonResource)
         if ($skeletonDataText.IndexOf($expectedAtlasReference, [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Spine set '$setName' skeleton data must reference '$expectedAtlasReference'."
         }
@@ -760,6 +811,24 @@ function Test-SourceAssets {
             $skeletonDataText.IndexOf('type="SpineSkeletonFileResource"', [StringComparison]::Ordinal) -lt 0 -or
             $skeletonDataText.IndexOf('type="SpineAtlasResource"', [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Spine set '$setName' skeleton data has the wrong Godot resource contract."
+        }
+
+        try {
+            $skeletonJson = [IO.File]::ReadAllText($skeletonFilePath) | ConvertFrom-Json
+            $skeletonHeader = Get-JsonPropertyValue -Object $skeletonJson -Name "skeleton"
+            if ($null -eq $skeletonHeader) {
+                throw "missing top-level skeleton metadata"
+            }
+            $actualVersion = [string](Get-JsonPropertyValue -Object $skeletonHeader -Name "spine")
+            $expectedVersion = [string]$spineSet.expectedSpineVersion
+            if (-not [string]::Equals($actualVersion, $expectedVersion, [StringComparison]::Ordinal)) {
+                Add-ValidationError (
+                    "Spine set '$setName' private JSON declares version '$actualVersion'; " +
+                    "expected '$expectedVersion'.")
+            }
+        }
+        catch {
+            Add-ValidationError "Spine set '$setName' private .spjson is invalid: $($_.Exception.Message)"
         }
 
         try {
@@ -792,27 +861,38 @@ function Test-SourceAssets {
         if ($sceneText.IndexOf($expectedReference, [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Scene '$sceneRelative' must reference '$expectedReference'."
         }
+        $requiredSceneTexts = Get-JsonPropertyValue -Object $binding -Name "requiredText"
+        foreach ($requiredText in @($requiredSceneTexts)) {
+            $requiredSceneText = [string]$requiredText
+            if (-not [string]::IsNullOrEmpty($requiredSceneText) -and
+                $sceneText.IndexOf($requiredSceneText, [StringComparison]::Ordinal) -lt 0) {
+                Add-ValidationError "Scene '$sceneRelative' is missing required contract text '$requiredSceneText'."
+            }
+        }
+        foreach ($nodeType in @($Contract.forbiddenSerializedSceneNodeTypes)) {
+            $forbiddenNodeType = "type=`"$([string]$nodeType)`""
+            if ($sceneText.IndexOf($forbiddenNodeType, [StringComparison]::Ordinal) -ge 0) {
+                Add-ValidationError (
+                    "Scene '$sceneRelative' contains serialized '$([string]$nodeType)' " +
+                    "preview geometry; meshes must come only from the private Spine JSON.")
+            }
+        }
     }
 
     $textExtensions = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
-    foreach ($extension in @(".tres", ".tscn", ".spatlas", ".import", ".remap")) {
+    foreach ($extension in @(".tres", ".tscn", ".spatlas", ".spjson", ".import", ".remap")) {
         [void]$textExtensions.Add($extension)
     }
     foreach ($file in Get-ChildItem -LiteralPath $Activation.AssetRoot -File -Recurse) {
         foreach ($forbiddenExtension in @($Contract.forbiddenPrivateExtensions)) {
             if ($file.Extension.Equals([string]$forbiddenExtension, [StringComparison]::OrdinalIgnoreCase)) {
-                Add-ValidationError "Private skin must not contain a copied skeleton binary: $($file.FullName)"
+                Add-ValidationError "Private skin contains a forbidden runtime extension: $($file.FullName)"
             }
         }
         if (-not $textExtensions.Contains($file.Extension)) {
             continue
         }
         $text = [IO.File]::ReadAllText($file.FullName)
-        if ($allowedReferencesByFile.ContainsKey($file.FullName)) {
-            foreach ($allowedReference in @($allowedReferencesByFile[$file.FullName])) {
-                $text = $text.Replace([string]$allowedReference, "")
-            }
-        }
         foreach ($prefix in @($Contract.forbiddenVanillaPrefixes)) {
             $forbiddenReference = "res://$([string]$prefix)"
             if ($text.IndexOf($forbiddenReference, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
@@ -1011,14 +1091,14 @@ function Test-PckContents {
         }
         if ($entryPath.StartsWith($privatePrefix, [StringComparison]::OrdinalIgnoreCase)) {
             if ($Activation.Active -and -not $allowedPrivateEntries.Contains($entryPath)) {
-                Add-ValidationError "Unexpected private skin entry outside the 30-file PCK contract: $entryPath"
+                Add-ValidationError "Unexpected private skin entry outside the declared PCK contract: $entryPath"
             }
             foreach ($forbiddenExtension in @($Contract.forbiddenPrivateExtensions)) {
                 $extension = [string]$forbiddenExtension
                 if ($entryPath.EndsWith($extension, [StringComparison]::OrdinalIgnoreCase) -or
                     $entryPath.EndsWith("$extension.import", [StringComparison]::OrdinalIgnoreCase) -or
                     $entryPath.EndsWith("$extension.remap", [StringComparison]::OrdinalIgnoreCase)) {
-                    Add-ValidationError "Copied vanilla skeleton binary leaked into PCK: $entryPath"
+                    Add-ValidationError "Forbidden private skeleton binary leaked into PCK: $entryPath"
                 }
             }
         }
@@ -1031,8 +1111,8 @@ function Test-PckContents {
                 $expectedEntry = "$logicalPath.import"
             }
             else {
-                # Text Spine wrappers/scenes stay as source text because they
-                # deliberately reference skeleton resources from the base-game PCK.
+                # Private Spine JSON, wrappers, and scenes remain readable source
+                # text so their runtime references can be inspected exactly.
                 $expectedEntry = $logicalPath
             }
             if (-not $entryByPath.ContainsKey($expectedEntry) -or
@@ -1041,25 +1121,95 @@ function Test-PckContents {
             }
         }
 
+        $requiredSkeletonExtension = [string]$Contract.requiredPrivateSkeletonExtension
+        if ([string]::IsNullOrWhiteSpace($requiredSkeletonExtension) -or
+            -not $requiredSkeletonExtension.StartsWith('.', [StringComparison]::Ordinal)) {
+            Add-ValidationError "requiredPrivateSkeletonExtension must be a dot-prefixed extension."
+            $requiredSkeletonExtension = ".spjson"
+        }
+        $validatedSkeletonEntries = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
         foreach ($spineSet in @($Contract.spineSets)) {
             $setName = [string]$spineSet.name
             $skeletonDataPath = "$resourceRoot/$([string]$spineSet.skeletonData)"
+            $skeletonResource = [string]$spineSet.skeletonResource
+            try {
+                $skeletonRelative = Get-PrivateResourceRelativePath `
+                    -ResourceRoot $resourceRoot `
+                    -ResourcePath $skeletonResource `
+                    -Label "Spine set '$setName' skeletonResource"
+                $skeletonEntryPath = "$resourceRoot/$skeletonRelative"
+            }
+            catch {
+                Add-ValidationError $_.Exception.Message
+                continue
+            }
+            if (-not $skeletonResource.EndsWith($requiredSkeletonExtension, [StringComparison]::OrdinalIgnoreCase)) {
+                Add-ValidationError (
+                    "Exported Spine set '$setName' skeletonResource must use " +
+                    "'$requiredSkeletonExtension': $skeletonResource")
+            }
+            if ($validatedSkeletonEntries.Add($skeletonEntryPath) -and
+                $entryByPath.ContainsKey($skeletonEntryPath)) {
+                try {
+                    $skeletonText = Read-PckTextEntry -Path $Path -Entry $entryByPath[$skeletonEntryPath]
+                    $skeletonJson = $skeletonText | ConvertFrom-Json
+                    $skeletonHeader = Get-JsonPropertyValue -Object $skeletonJson -Name "skeleton"
+                    if ($null -eq $skeletonHeader) {
+                        throw "missing top-level skeleton metadata"
+                    }
+                    $actualVersion = [string](Get-JsonPropertyValue -Object $skeletonHeader -Name "spine")
+                    $expectedVersion = [string]$spineSet.expectedSpineVersion
+                    if (-not [string]::Equals($actualVersion, $expectedVersion, [StringComparison]::Ordinal)) {
+                        Add-ValidationError (
+                            "Exported Spine set '$setName' private JSON declares version " +
+                            "'$actualVersion'; expected '$expectedVersion'.")
+                    }
+                }
+                catch {
+                    Add-ValidationError "Exported private Spine JSON is invalid at res://${skeletonEntryPath}: $($_.Exception.Message)"
+                }
+            }
             if (-not $entryByPath.ContainsKey($skeletonDataPath)) {
                 continue
             }
 
             try {
                 $text = Read-PckTextEntry -Path $Path -Entry $entryByPath[$skeletonDataPath]
-                $skeletonResource = [string]$spineSet.skeletonResource
                 $atlasResource = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath ([string]$spineSet.atlas)
                 if ($text.IndexOf('[gd_resource', [StringComparison]::Ordinal) -ne 0) {
                     Add-ValidationError "Exported Spine set '$setName' skeleton data is not a text Godot resource: res://$skeletonDataPath"
                 }
                 if ($text.IndexOf($skeletonResource, [StringComparison]::Ordinal) -lt 0) {
-                    Add-ValidationError "Exported Spine set '$setName' lost its vanilla skeleton reference '$skeletonResource'."
+                    Add-ValidationError "Exported Spine set '$setName' lost its private skeleton reference '$skeletonResource'."
                 }
                 if ($text.IndexOf($atlasResource, [StringComparison]::Ordinal) -lt 0) {
                     Add-ValidationError "Exported Spine set '$setName' lost its private atlas reference '$atlasResource'."
+                }
+            }
+            catch {
+                Add-ValidationError $_.Exception.Message
+            }
+        }
+
+        $inspectableExtensions = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
+        foreach ($extension in @(".tres", ".tscn", ".spatlas", ".spjson")) {
+            [void]$inspectableExtensions.Add($extension)
+        }
+        foreach ($entry in $index.Entries) {
+            $entryPath = [string]$entry.Path
+            if (-not $entryPath.StartsWith($privatePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+                -not $inspectableExtensions.Contains([IO.Path]::GetExtension($entryPath))) {
+                continue
+            }
+            try {
+                $text = Read-PckTextEntry -Path $Path -Entry $entry
+                foreach ($prefix in @($Contract.forbiddenVanillaPrefixes)) {
+                    $forbiddenReference = "res://$([string]$prefix)"
+                    if ($text.IndexOf($forbiddenReference, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                        Add-ValidationError (
+                            "Exported private resource 'res://$entryPath' still references " +
+                            "vanilla replacement path '$forbiddenReference'.")
+                    }
                 }
             }
             catch {
@@ -1082,6 +1232,22 @@ function Test-PckContents {
                 }
                 if ($text.IndexOf($skeletonDataResource, [StringComparison]::Ordinal) -lt 0) {
                     Add-ValidationError "Exported scene '$sceneRelative' lost its private skeleton-data reference '$skeletonDataResource'."
+                }
+                $requiredSceneTexts = Get-JsonPropertyValue -Object $binding -Name "requiredText"
+                foreach ($requiredText in @($requiredSceneTexts)) {
+                    $requiredSceneText = [string]$requiredText
+                    if (-not [string]::IsNullOrEmpty($requiredSceneText) -and
+                        $text.IndexOf($requiredSceneText, [StringComparison]::Ordinal) -lt 0) {
+                        Add-ValidationError "Exported scene '$sceneRelative' lost required contract text '$requiredSceneText'."
+                    }
+                }
+                foreach ($nodeType in @($Contract.forbiddenSerializedSceneNodeTypes)) {
+                    $forbiddenNodeType = "type=`"$([string]$nodeType)`""
+                    if ($text.IndexOf($forbiddenNodeType, [StringComparison]::Ordinal) -ge 0) {
+                        Add-ValidationError (
+                            "Exported scene '$sceneRelative' contains serialized " +
+                            "'$([string]$nodeType)' preview geometry.")
+                    }
                 }
             }
             catch {

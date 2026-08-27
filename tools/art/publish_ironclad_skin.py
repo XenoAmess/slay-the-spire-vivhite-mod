@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Publish White Qi art into Vivhite's private Ironclad resource tree.
 
-The versioned extraction under ``assets/ironclad-v0.111.0`` is a read-only
-template source for the manifest, scenes, and skeleton-data wrappers. Finished
-atlases, pages, and UI textures come from ``assets/vivhite-ironclad/custom``.
-The runtime skin deliberately reuses the matching vanilla ``.skel`` resources
-already mounted by the game and publishes only private ``.spatlas`` wrappers,
-edited PNGs, scenes, and UI textures. This keeps the original animation
-binaries out of the Mod PCK and preserves both template and finished art in the
-repository.
+The versioned extraction under ``assets/ironclad-v0.111.0`` remains a read-only
+checksum and consumer-contract reference. The custom White Qi rig builders
+write combat, rest-site and character-select Spine resources plus all four
+private scenes directly into the tracked runtime tree. Approved standalone UI
+comes from ``assets/vivhite-ironclad/approved`` and the explicitly exempt
+multiplayer gestures come from ``assets/vivhite-ironclad/custom``. This
+publisher preserves those files while mirroring the complete, exact runtime
+allowlist. No published file may retain an original Ironclad skeleton
+reference.
 
 Unmodified game art is rejected when publishing to the real mod directory.
 ``--allow-unchanged`` exists only for a preview destination below ``.work``.
@@ -51,132 +52,162 @@ class DecodedRgba8Png:
     filtered_scanlines: bytes
 
 
-@dataclass(frozen=True, slots=True)
-class SpineSet:
-    name: str
-    vanilla_skeleton_resource: str
-    atlas_source: str
-    atlas_output: str
-    atlas_logical_source: str
-    pages: tuple[str, ...]
-    skeleton_data_source: str
-    skeleton_data_output: str
-    path_replacements: tuple[tuple[str, str], ...]
+# These resources are produced or maintained independently of the original
+# Ironclad atlas layouts. They are read completely before destination cleanup,
+# so the tracked runtime tree can safely be both the input and output root.
+PRIVATE_RUNTIME_FILES = (
+    "spine/combat/vivhite_combat.spjson",
+    "spine/combat/vivhite_combat.spatlas",
+    "spine/combat/vivhite_combat.png",
+    "spine/combat/vivhite_combat_skeleton_data.tres",
+    "spine/merchant/merchant_skeleton_data.tres",
+    "spine/rest_site/vivhite_rest_site.spjson",
+    "spine/rest_site/restsite_ironclad.spatlas",
+    "spine/rest_site/restsite_ironclad.png",
+    "spine/rest_site/rest_site_skeleton_data.tres",
+    "spine/character_select/vivhite_character_select.spjson",
+    "spine/character_select/characterselect_ironclad.spatlas",
+    "spine/character_select/characterselect_ironclad.png",
+    "spine/character_select/character_select_skeleton_data.tres",
+    "scenes/combat.tscn",
+    "scenes/merchant.tscn",
+    "scenes/rest_site.tscn",
+    "scenes/character_select.tscn",
+)
 
+PRIVATE_SKELETON_FILES = {
+    "spine/combat/vivhite_combat.spjson",
+    "spine/rest_site/vivhite_rest_site.spjson",
+    "spine/character_select/vivhite_character_select.spjson",
+}
 
-SPINE_SETS = (
-    SpineSet(
-        name="combat",
-        vanilla_skeleton_resource="res://animations/characters/ironclad/ironclad.skel",
-        atlas_source="combat/ironclad.atlas",
-        atlas_output="spine/combat/ironclad.spatlas",
-        atlas_logical_source=f"{RUNTIME_RESOURCE_ROOT}/spine/combat/ironclad.atlas",
-        pages=(
-            "combat/ironclad.png",
-            "combat/ironclad_2.png",
-            "combat/ironclad_3.png",
-            "combat/ironclad_4.png",
+PRIVATE_SKELETON_REQUIREMENTS = {
+    "spine/combat/vivhite_combat.spjson": {
+        "animations": {
+            "attack",
+            "attack_heavy",
+            "cast",
+            "die",
+            "hurt",
+            "idle_loop",
+            "low_health_loop",
+            "relaxed_loop",
+        },
+        "slots": {"slash_mesh", "eye_attach_slot"},
+        "events": {
+            "attack_slash_start",
+            "heavy_slash_start",
+            "cast_eyes_start",
+            "clear_vfx",
+        },
+        "exact_animations": True,
+    },
+    "spine/rest_site/vivhite_rest_site.spjson": {
+        "animations": {
+            "glory_loop",
+            "hive_loop",
+            "overgrowth_loop",
+            "_tracks/light_off",
+            "_tracks/light_on",
+        },
+        "slots": set(),
+        "events": set(),
+        "exact_animations": True,
+    },
+    "spine/character_select/vivhite_character_select.spjson": {
+        "animations": {"animation"},
+        "exact_animations": True,
+        "slots": set(),
+        "events": set(),
+    },
+}
+
+PRIVATE_ATLAS_REQUIREMENTS = {
+    "spine/combat/vivhite_combat.spatlas": {
+        "source_path": f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.atlas",
+        "pages": {"vivhite_combat.png"},
+    },
+    "spine/rest_site/restsite_ironclad.spatlas": {
+        "source_path": (
+            f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/restsite_ironclad.atlas"
         ),
-        skeleton_data_source="combat/combat_skeleton_data.tres",
-        skeleton_data_output="spine/combat/combat_skeleton_data.tres",
-        path_replacements=(
-            (
-                "res://animations/characters/ironclad/ironclad.atlas",
-                f"{RUNTIME_RESOURCE_ROOT}/spine/combat/ironclad.spatlas",
-            ),
-        ),
-    ),
-    SpineSet(
-        name="merchant",
-        vanilla_skeleton_resource="res://animations/characters/ironclad/ironclad.skel",
-        atlas_source="merchant/ironclad_shop.atlas",
-        atlas_output="spine/merchant/ironclad_shop.spatlas",
-        atlas_logical_source=f"{RUNTIME_RESOURCE_ROOT}/spine/merchant/ironclad_shop.atlas",
-        pages=(
-            "merchant/ironclad_shop.png",
-            "merchant/ironclad_shop_2.png",
-            "merchant/ironclad_shop_3.png",
-            "merchant/ironclad_shop_4.png",
-        ),
-        skeleton_data_source="merchant/merchant_skeleton_data.tres",
-        skeleton_data_output="spine/merchant/merchant_skeleton_data.tres",
-        path_replacements=(
-            (
-                "res://animations/merchant/ironclad/ironclad_shop.atlas",
-                f"{RUNTIME_RESOURCE_ROOT}/spine/merchant/ironclad_shop.spatlas",
-            ),
-        ),
-    ),
-    SpineSet(
-        name="rest_site",
-        vanilla_skeleton_resource="res://animations/rest_site/ironclad/restsite_ironclad.skel",
-        atlas_source="rest_site/restsite_ironclad.atlas",
-        atlas_output="spine/rest_site/restsite_ironclad.spatlas",
-        atlas_logical_source=f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/restsite_ironclad.atlas",
-        pages=("rest_site/restsite_ironclad.png",),
-        skeleton_data_source="rest_site/rest_site_skeleton_data.tres",
-        skeleton_data_output="spine/rest_site/rest_site_skeleton_data.tres",
-        path_replacements=(
-            (
-                "res://animations/rest_site/ironclad/restsite_ironclad.atlas",
-                f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/restsite_ironclad.spatlas",
-            ),
-        ),
-    ),
-    SpineSet(
-        name="character_select",
-        vanilla_skeleton_resource=(
-            "res://animations/character_select/ironclad/characterselect_ironclad.skel"
-        ),
-        atlas_source="character_select/characterselect_ironclad.atlas",
-        atlas_output="spine/character_select/characterselect_ironclad.spatlas",
-        atlas_logical_source=(
+        "pages": {"restsite_ironclad.png"},
+    },
+    "spine/character_select/characterselect_ironclad.spatlas": {
+        "source_path": (
             f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
             "characterselect_ironclad.atlas"
         ),
-        pages=("character_select/characterselect_ironclad.png",),
-        skeleton_data_source="character_select/character_select_skeleton_data.tres",
-        skeleton_data_output="spine/character_select/character_select_skeleton_data.tres",
-        path_replacements=(
-            (
-                "res://animations/character_select/ironclad/"
-                "characterselect_ironclad.atlas",
-                f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
-                "characterselect_ironclad.spatlas",
-            ),
-        ),
-    ),
-)
+        "pages": {"characterselect_ironclad.png"},
+    },
+}
 
-SCENES = (
-    (
-        "merchant/scene.tscn",
-        "scenes/merchant.tscn",
-        "res://animations/merchant/ironclad/ironclad_merchant_skel_data.tres",
+PRIVATE_PNG_DIMENSIONS = {
+    "spine/combat/vivhite_combat.png": (3072, 2304),
+    "spine/rest_site/restsite_ironclad.png": (2048, 2048),
+    "spine/character_select/characterselect_ironclad.png": (3713, 2427),
+}
+
+PRIVATE_TEXT_REQUIREMENTS = {
+    "spine/combat/vivhite_combat_skeleton_data.tres": (
+        '[gd_resource type="SpineSkeletonDataResource"',
+        f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.spjson",
+        f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.spatlas",
+    ),
+    "spine/merchant/merchant_skeleton_data.tres": (
+        '[gd_resource type="SpineSkeletonDataResource"',
+        f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.spjson",
+        f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.spatlas",
+    ),
+    "spine/rest_site/rest_site_skeleton_data.tres": (
+        '[gd_resource type="SpineSkeletonDataResource"',
+        f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/vivhite_rest_site.spjson",
+        f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/restsite_ironclad.spatlas",
+    ),
+    "spine/character_select/character_select_skeleton_data.tres": (
+        '[gd_resource type="SpineSkeletonDataResource"',
+        f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
+        "vivhite_character_select.spjson",
+        f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
+        "characterselect_ironclad.spatlas",
+    ),
+    "scenes/combat.tscn": (
+        "[gd_scene",
+        f"{RUNTIME_RESOURCE_ROOT}/spine/combat/"
+        "vivhite_combat_skeleton_data.tres",
+    ),
+    "scenes/merchant.tscn": (
+        "[gd_scene",
         f"{RUNTIME_RESOURCE_ROOT}/spine/merchant/merchant_skeleton_data.tres",
     ),
-    (
-        "rest_site/scene.tscn",
-        "scenes/rest_site.tscn",
-        "res://animations/rest_site/ironclad/rest_site_ironclad_skel_data.tres",
+    "scenes/rest_site.tscn": (
+        "[gd_scene",
         f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/rest_site_skeleton_data.tres",
     ),
-    (
-        "character_select/scene.tscn",
-        "scenes/character_select.tscn",
-        "res://animations/character_select/ironclad/"
-        "characterselect_ironclad_skel_data.tres",
+    "scenes/character_select.tscn": (
+        "[gd_scene",
         f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
         "character_select_skeleton_data.tres",
     ),
+}
+
+FORBIDDEN_VANILLA_SKELETON_RESOURCES = (
+    "res://animations/characters/ironclad/ironclad.skel",
+    "res://animations/rest_site/ironclad/restsite_ironclad.skel",
+    "res://animations/character_select/ironclad/characterselect_ironclad.skel",
 )
 
-UI_COPIES = (
+EXPECTED_RUNTIME_FILE_COUNT = 26
+
+APPROVED_UI_COPIES = (
     ("ui/icon.png", "ui/icon.png"),
     ("ui/icon_outline.png", "ui/icon_outline.png"),
     ("ui/select.png", "ui/select.png"),
     ("ui/select_locked.png", "ui/select_locked.png"),
     ("ui/map_marker.png", "ui/map_marker.png"),
+)
+
+CUSTOM_UI_COPIES = (
     ("ui/multiplayer/point.png", "multiplayer/point.png"),
     ("ui/multiplayer/rock.png", "multiplayer/rock.png"),
     ("ui/multiplayer/paper.png", "multiplayer/paper.png"),
@@ -506,6 +537,25 @@ def _replace_exact_once(
     return result
 
 
+def _strip_serialized_spine_mesh_nodes(text: str, label: str) -> str:
+    """Remove editor-preview meshes; the private .spjson owns all real meshes."""
+
+    node_pattern = re.compile(
+        r'^\[node[^\r\n]*\btype="SpineMesh2D"[^\r\n]*\]\r?\n'
+        r'.*?(?=^\[node |\Z)',
+        re.MULTILINE | re.DOTALL,
+    )
+    result, removed = node_pattern.subn("", text)
+    if removed == 0:
+        raise PublishError(
+            f"{label} contains no serialized SpineMesh2D preview nodes to strip; "
+            "the protected character-select template contract changed."
+        )
+    if 'type="SpineMesh2D"' in result:
+        raise PublishError(f"{label} still contains serialized SpineMesh2D nodes.")
+    return result
+
+
 def _spatlas(atlas_text: str, logical_source_path: str) -> bytes:
     payload = {
         "atlas_data": atlas_text,
@@ -516,6 +566,146 @@ def _spatlas(atlas_text: str, logical_source_path: str) -> bytes:
     return (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
         "utf-8"
     )
+
+
+def _decode_private_text(data: bytes, relative: str) -> str:
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise PublishError(f"Private runtime resource must be UTF-8 text: {relative}") from exc
+
+
+def _validate_private_runtime_file(relative: str, data: bytes) -> None:
+    if relative.endswith(".png"):
+        decoded = _decode_rgba8_png(data, f"private-runtime/{relative}")
+        expected_dimensions = PRIVATE_PNG_DIMENSIONS.get(relative)
+        if expected_dimensions is None:
+            raise PublishError(
+                f"Private runtime PNG has no declared dimension contract: {relative}"
+            )
+        if (decoded.width, decoded.height) != expected_dimensions:
+            raise PublishError(
+                f"Private runtime PNG must be exactly "
+                f"{expected_dimensions[0]}x{expected_dimensions[1]}, got "
+                f"{decoded.width}x{decoded.height}: {relative}"
+            )
+        return
+
+    text = _decode_private_text(data, relative)
+    for forbidden in FORBIDDEN_VANILLA_SKELETON_RESOURCES:
+        if forbidden in text:
+            raise PublishError(
+                f"Private runtime resource still references an original Ironclad "
+                f"skeleton ({forbidden}): {relative}"
+            )
+
+    if relative in PRIVATE_SKELETON_FILES:
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise PublishError(f"Invalid private Spine JSON: {relative}") from exc
+        skeleton = payload.get("skeleton") if isinstance(payload, dict) else None
+        version = skeleton.get("spine") if isinstance(skeleton, dict) else None
+        if version != "4.2.43":
+            raise PublishError(
+                f"Private Spine JSON must declare version 4.2.43, got {version!r}: "
+                f"{relative}"
+            )
+        requirements = PRIVATE_SKELETON_REQUIREMENTS[relative]
+        animations = payload.get("animations") if isinstance(payload, dict) else None
+        events = payload.get("events") if isinstance(payload, dict) else None
+        slots = payload.get("slots") if isinstance(payload, dict) else None
+        skins = payload.get("skins") if isinstance(payload, dict) else None
+        animation_names = set(animations) if isinstance(animations, dict) else set()
+        event_names = set(events) if isinstance(events, dict) else set()
+        slot_names = {
+            value.get("name")
+            for value in slots
+            if isinstance(value, dict) and isinstance(value.get("name"), str)
+        } if isinstance(slots, list) else set()
+        skin_names = {
+            value.get("name")
+            for value in skins
+            if isinstance(value, dict) and isinstance(value.get("name"), str)
+        } if isinstance(skins, list) else set()
+        missing_animations = sorted(requirements["animations"] - animation_names)
+        unexpected_animations = (
+            sorted(animation_names - requirements["animations"])
+            if requirements.get("exact_animations", False)
+            else []
+        )
+        missing_slots = sorted(requirements["slots"] - slot_names)
+        missing_events = sorted(requirements["events"] - event_names)
+        if "default" not in skin_names:
+            raise PublishError(f"Private Spine JSON has no default skin: {relative}")
+        if (
+            missing_animations
+            or unexpected_animations
+            or missing_slots
+            or missing_events
+        ):
+            raise PublishError(
+                f"Private Spine JSON contract is incomplete: {relative}; "
+                f"missing_animations={missing_animations}, "
+                f"unexpected_animations={unexpected_animations}, slots={missing_slots}, "
+                f"events={missing_events}"
+            )
+        return
+
+    if relative.endswith(".spatlas"):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise PublishError(f"Invalid private Spine atlas wrapper: {relative}") from exc
+        atlas_data = payload.get("atlas_data") if isinstance(payload, dict) else None
+        source_path = payload.get("source_path") if isinstance(payload, dict) else None
+        requirements = PRIVATE_ATLAS_REQUIREMENTS.get(relative)
+        if requirements is None:
+            raise PublishError(
+                f"Private Spine atlas has no declared validation contract: {relative}"
+            )
+        expected_source = requirements["source_path"]
+        expected_pages = requirements["pages"]
+        if not isinstance(atlas_data, str) or not atlas_data.strip():
+            raise PublishError(f"Private Spine atlas has no atlas_data: {relative}")
+        if source_path != expected_source:
+            raise PublishError(
+                f"Private atlas source_path must be {expected_source!r}, "
+                f"got {source_path!r}: {relative}"
+            )
+        declared_lines = {
+            line.strip() for line in atlas_data.splitlines() if line.strip()
+        }
+        missing_pages = sorted(expected_pages - declared_lines)
+        if missing_pages:
+            raise PublishError(
+                f"Private atlas does not declare required page(s) "
+                f"{', '.join(missing_pages)}: {relative}"
+            )
+        return
+
+    for required_text in PRIVATE_TEXT_REQUIREMENTS.get(relative, ()):
+        if required_text not in text:
+            raise PublishError(
+                f"Private runtime resource is missing {required_text!r}: {relative}"
+            )
+
+
+def _load_private_runtime_outputs(private_runtime_root: Path) -> dict[str, bytes]:
+    outputs: dict[str, bytes] = {}
+    for relative in PRIVATE_RUNTIME_FILES:
+        try:
+            data = _read_required(private_runtime_root, relative)
+        except PublishError as exc:
+            raise PublishError(
+                f"Missing generated private rig resource {relative}. Build all private "
+                "White Qi rigs and scenes before publishing (Godot 4.5.1 builders: "
+                "build_vivhite_combat_rig.gd, build_vivhite_rest_site_rig.gd, and "
+                "build_vivhite_character_select_rig.gd)."
+            ) from exc
+        _validate_private_runtime_file(relative, data)
+        outputs[relative] = data
+    return outputs
 
 
 def _load_manifest(authoring_root: Path) -> tuple[dict[str, object], dict[str, str]]:
@@ -552,31 +742,34 @@ def _load_manifest(authoring_root: Path) -> tuple[dict[str, object], dict[str, s
     return manifest, hashes
 
 
-def _protected_art_inputs() -> tuple[str, ...]:
-    paths: list[str] = []
-    seen: set[str] = set()
-    for spine_set in SPINE_SETS:
-        for relative in spine_set.pages:
-            if relative not in seen:
-                seen.add(relative)
-                paths.append(relative)
-    for source, _ in UI_COPIES:
-        if source not in seen:
-            seen.add(source)
-            paths.append(source)
+def _protected_art_inputs() -> tuple[tuple[str, str], ...]:
+    paths: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for source, _ in APPROVED_UI_COPIES:
+        item = ("approved", source)
+        if item not in seen:
+            seen.add(item)
+            paths.append(item)
+    for source, _ in CUSTOM_UI_COPIES:
+        item = ("custom", source)
+        if item not in seen:
+            seen.add(item)
+            paths.append(item)
     return tuple(paths)
 
 
 def _check_original_art_guard(
     template_root: Path,
     art_root: Path,
+    approved_root: Path,
     original_hashes: dict[str, str],
     allow_unchanged: bool,
 ) -> None:
     unchanged: list[str] = []
-    for relative in _protected_art_inputs():
+    for source_group, relative in _protected_art_inputs():
+        source_root = approved_root if source_group == "approved" else art_root
         template_data = _read_required(template_root, relative)
-        art_data = _read_required(art_root, relative)
+        art_data = _read_required(source_root, relative)
         expected = original_hashes.get(relative)
         if expected is None:
             raise PublishError(f"Extraction manifest has no checksum for: {relative}")
@@ -591,7 +784,7 @@ def _check_original_art_guard(
             template_data, f"template/{relative}"
         )
         art_png = _decode_rgba8_png(
-            art_data, f"custom/{relative}"
+            art_data, f"{source_group}/{relative}"
         )
         if (art_png.width, art_png.height) != (
             template_png.width,
@@ -603,7 +796,7 @@ def _check_original_art_guard(
                 f"{art_png.width}x{art_png.height}"
             )
         if _rgba8_png_pixels_equal(template_png, art_png):
-            unchanged.append(relative)
+            unchanged.append(f"{source_group}/{relative}")
 
     if unchanged and not allow_unchanged:
         formatted = "\n  - ".join(unchanged)
@@ -624,80 +817,37 @@ def _validate_atlas_pages(atlas_text: str, page_sources: tuple[str, ...], set_na
         )
 
 
-def _build_outputs(template_root: Path, art_root: Path) -> dict[str, bytes]:
-    outputs: dict[str, bytes] = {}
+def _build_outputs(
+    template_root: Path,
+    art_root: Path,
+    approved_root: Path,
+    private_runtime_root: Path,
+) -> dict[str, bytes]:
+    outputs = _load_private_runtime_outputs(private_runtime_root)
 
-    for spine_set in SPINE_SETS:
-        template_atlas_data = _read_required(template_root, spine_set.atlas_source)
-        art_atlas_data = _read_required(art_root, spine_set.atlas_source)
-        if art_atlas_data != template_atlas_data:
-            raise PublishError(
-                f"Custom atlas layout must be byte-for-byte identical to the "
-                f"v{EXPECTED_GAME_VERSION} template: {spine_set.atlas_source}"
-            )
-        atlas_text = _read_text(art_root, spine_set.atlas_source)
-        _validate_atlas_pages(atlas_text, spine_set.pages, spine_set.name)
-        outputs[spine_set.atlas_output] = _spatlas(
-            atlas_text, spine_set.atlas_logical_source
-        )
+    for source, output in APPROVED_UI_COPIES:
+        data = _read_required(approved_root, source)
+        if not data.startswith(PNG_SIGNATURE):
+            raise PublishError(f"Expected a real PNG file: approved/{source}")
+        outputs[output] = data
 
-        skeleton_data = _read_text(template_root, spine_set.skeleton_data_source)
-        if spine_set.vanilla_skeleton_resource not in skeleton_data:
-            raise PublishError(
-                f"{spine_set.skeleton_data_source} must reference the exact vanilla "
-                f"skeleton resource: {spine_set.vanilla_skeleton_resource}"
-            )
-        skeleton_data = _replace_required(
-            skeleton_data,
-            spine_set.path_replacements,
-            spine_set.skeleton_data_source,
-        )
-        outputs[spine_set.skeleton_data_output] = (
-            _without_uids(skeleton_data).rstrip() + "\n"
-        ).encode("utf-8")
-
-        output_page_dir = Path(spine_set.atlas_output).parent
-        for page_source in spine_set.pages:
-            data = _read_required(art_root, page_source)
-            if not data.startswith(PNG_SIGNATURE):
-                raise PublishError(f"Expected a real PNG file: {page_source}")
-            outputs[(output_page_dir / Path(page_source).name).as_posix()] = data
-
-    for source, output, original_ref, private_ref in SCENES:
-        scene = _read_text(template_root, source)
-        scene = _replace_required(scene, ((original_ref, private_ref),), source)
-        if source == "character_select/scene.tscn":
-            scene = _replace_exact_once(
-                scene,
-                CHARACTER_SELECT_SCENE_REPLACEMENTS,
-                source,
-            )
-        outputs[output] = (_without_uids(scene).rstrip() + "\n").encode("utf-8")
-
-    for source, output in UI_COPIES:
+    for source, output in CUSTOM_UI_COPIES:
         data = _read_required(art_root, source)
         if not data.startswith(PNG_SIGNATURE):
-            raise PublishError(f"Expected a real PNG file: {source}")
+            raise PublishError(f"Expected a real PNG file: custom/{source}")
         outputs[output] = data
 
     return outputs
 
 
 def _expected_output_paths() -> set[str]:
-    expected: set[str] = set()
-    for spine_set in SPINE_SETS:
-        expected.add(spine_set.atlas_output)
-        expected.add(spine_set.skeleton_data_output)
-        output_page_dir = Path(spine_set.atlas_output).parent
-        expected.update(
-            (output_page_dir / Path(page).name).as_posix()
-            for page in spine_set.pages
-        )
-    expected.update(output for _, output, _, _ in SCENES)
-    expected.update(output for _, output in UI_COPIES)
-    if len(expected) != 30:
+    expected: set[str] = set(PRIVATE_RUNTIME_FILES)
+    expected.update(output for _, output in APPROVED_UI_COPIES)
+    expected.update(output for _, output in CUSTOM_UI_COPIES)
+    if len(expected) != EXPECTED_RUNTIME_FILE_COUNT:
         raise PublishError(
-            f"Publisher invariant failed: expected a 30-file allowlist, got {len(expected)}."
+            "Publisher invariant failed: expected a "
+            f"{EXPECTED_RUNTIME_FILE_COUNT}-file allowlist, got {len(expected)}."
         )
     return expected
 
@@ -785,7 +935,7 @@ def _write_outputs(destination: Path, outputs: dict[str, bytes], repo: Path) -> 
         missing = sorted(expected - actual)
         unexpected = sorted(actual - expected)
         raise PublishError(
-            "Publisher output set does not match the 30-file allowlist. "
+            "Publisher output set does not match the declared runtime allowlist. "
             f"Missing={missing}; unexpected={unexpected}"
         )
 
@@ -803,7 +953,7 @@ def _write_outputs(destination: Path, outputs: dict[str, bytes], repo: Path) -> 
     }
     if published != expected:
         raise PublishError(
-            "Destination is not an exact mirror of the 30-file allowlist after publish. "
+            "Destination is not an exact mirror of the declared runtime allowlist after publish. "
             f"Missing={sorted(expected - published)}; "
             f"unexpected={sorted(published - expected)}"
         )
@@ -826,8 +976,24 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--art-root",
         default=str(repo / "assets" / "vivhite-ironclad" / "custom"),
         help=(
-            "Finished White Qi atlases/PNGs/UI "
+            "Finished White Qi legacy non-combat pages and approved-exception multiplayer UI "
             "(defaults to assets/vivhite-ironclad/custom)"
+        ),
+    )
+    parser.add_argument(
+        "--approved-root",
+        default=str(repo / "assets" / "vivhite-ironclad" / "approved"),
+        help=(
+            "Approved standalone White Qi UI "
+            "(defaults to assets/vivhite-ironclad/approved)"
+        ),
+    )
+    parser.add_argument(
+        "--private-runtime-root",
+        default=str(repo / "Vivhite" / "Vivhite" / "skins" / "ironclad"),
+        help=(
+            "Tracked root containing generated private .spjson combat/rest/select "
+            "rig resources (defaults to the Vivhite runtime skin tree)"
         ),
     )
     parser.add_argument(
@@ -849,6 +1015,8 @@ def run(argv: list[str]) -> int:
     work_root = (repo / ".work").resolve()
     template_root = Path(args.template_root).resolve()
     art_root = Path(args.art_root).resolve()
+    approved_root = Path(args.approved_root).resolve()
+    private_runtime_root = Path(args.private_runtime_root).resolve()
     destination = Path(args.destination).resolve()
 
     _validate_destination(destination, repo)
@@ -868,10 +1036,16 @@ def run(argv: list[str]) -> int:
     _check_original_art_guard(
         template_root,
         art_root,
+        approved_root,
         original_hashes,
         args.allow_unchanged,
     )
-    outputs = _build_outputs(template_root, art_root)
+    outputs = _build_outputs(
+        template_root,
+        art_root,
+        approved_root,
+        private_runtime_root,
+    )
     _write_outputs(destination, outputs, repo)
 
     print(f"Published {len(outputs)} private Ironclad skin resources to: {destination}")

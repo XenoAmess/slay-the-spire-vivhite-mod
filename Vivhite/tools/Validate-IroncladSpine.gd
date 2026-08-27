@@ -35,6 +35,7 @@ func _initialize() -> void:
 		_validate_spine_set(
 			resource_root,
 			str(contract.get("requiredSkin", "default")),
+			str(contract.get("requiredPrivateSkeletonExtension", ".spjson")),
 			value as Dictionary,
 		)
 
@@ -56,7 +57,7 @@ func _load_contract() -> Dictionary:
 func _mount_base_game_pack() -> bool:
 	var pck_path := OS.get_environment("VIVHITE_STS2_PCK_PATH")
 	if pck_path.is_empty():
-		_errors.append("VIVHITE_STS2_PCK_PATH is required for vanilla skeleton validation.")
+		_errors.append("VIVHITE_STS2_PCK_PATH is required to load the game's Spine runtime.")
 		return false
 	if not FileAccess.file_exists(pck_path):
 		_errors.append("Base game PCK does not exist: %s" % pck_path)
@@ -82,15 +83,42 @@ func _names(items: Variant) -> Dictionary:
 	return result
 
 
+func _sorted_names(values: Dictionary) -> Array[String]:
+	var result: Array[String] = []
+	for value in values.keys():
+		result.append(str(value))
+	result.sort()
+	return result
+
+
 func _validate_spine_set(
 	resource_root: String,
 	required_skin: String,
+	required_skeleton_extension: String,
 	set_data: Dictionary,
 ) -> void:
 	var set_name := str(set_data.get("name", "<unnamed>"))
 	var data_path := _resource_path(resource_root, str(set_data.get("skeletonData", "")))
 	var skeleton_path := str(set_data.get("skeletonResource", ""))
 	var atlas_path := _resource_path(resource_root, str(set_data.get("atlas", "")))
+	var private_prefix := "res://%s/" % resource_root
+
+	if not skeleton_path.begins_with(private_prefix):
+		_errors.append(
+			"Spine set '%s' skeleton must be private below %s; got %s." % [
+				set_name,
+				private_prefix,
+				skeleton_path,
+			]
+		)
+	if not skeleton_path.to_lower().ends_with(required_skeleton_extension.to_lower()):
+		_errors.append(
+			"Spine set '%s' skeleton must use %s; got %s." % [
+				set_name,
+				required_skeleton_extension,
+				skeleton_path,
+			]
+		)
 
 	var skeleton: Resource = ResourceLoader.load(skeleton_path)
 	if skeleton == null or not skeleton.is_class("SpineSkeletonFileResource"):
@@ -126,8 +154,10 @@ func _validate_spine_set(
 	var skins: Variant = skeleton_data.call("get_skins")
 	var slots: Variant = skeleton_data.call("get_slots")
 	var events: Variant = skeleton_data.call("get_events")
+	var bones: Variant = skeleton_data.call("get_bones")
 	var animation_names := _names(animations)
 	var skin_names := _names(skins)
+	var expected_animation_names := {}
 	var actual_version := str(skeleton_data.call("get_version"))
 	var expected_version := str(set_data.get("expectedSpineVersion", ""))
 	if actual_version != expected_version:
@@ -138,14 +168,54 @@ func _validate_spine_set(
 				expected_version,
 			]
 		)
+	var minimum_bone_count := int(set_data.get("minimumBoneCount", 0))
+	if minimum_bone_count > 0 and bones.size() < minimum_bone_count:
+		_errors.append(
+			"Spine set '%s' has %d bones; expected at least %d." % [
+				set_name,
+				bones.size(),
+				minimum_bone_count,
+			]
+		)
 
 	if not skin_names.has(required_skin):
 		_errors.append("Spine set '%s' is missing skin '%s'." % [set_name, required_skin])
 
 	for required in set_data.get("animations", []):
 		var required_name := str(required)
+		expected_animation_names[required_name] = true
 		if not animation_names.has(required_name):
 			_errors.append("Spine set '%s' is missing animation '%s'." % [set_name, required_name])
+
+	var animation_durations: Dictionary = set_data.get("animationDurations", {})
+	for animation_name_value in animation_durations:
+		var animation_name := str(animation_name_value)
+		var animation: Object = skeleton_data.call("find_animation", animation_name)
+		if animation == null:
+			continue
+		var actual_duration := float(animation.call("get_duration"))
+		var expected_duration := float(animation_durations[animation_name_value])
+		if absf(actual_duration - expected_duration) > 0.00001:
+			_errors.append(
+				"Spine set '%s' animation '%s' lasts %.7f; expected %.7f." % [
+					set_name,
+					animation_name,
+					actual_duration,
+					expected_duration,
+				]
+			)
+
+	if bool(set_data.get("exactAnimations", false)):
+		var expected_names := _sorted_names(expected_animation_names)
+		var actual_names := _sorted_names(animation_names)
+		if actual_names != expected_names:
+			_errors.append(
+				"Spine set '%s' must contain exactly animations %s; got %s." % [
+					set_name,
+					str(expected_names),
+					str(actual_names),
+				]
+			)
 
 	for required in set_data.get("slots", []):
 		var required_name := str(required)

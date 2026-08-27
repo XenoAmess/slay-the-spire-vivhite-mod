@@ -19,8 +19,8 @@ project/assembly_name="Vivhite"
 
 [editor]
 
-; Keep private Spine wrappers/scenes as text in the PCK. Their external
-; vanilla .skel dependencies are available only after the game PCK is mounted.
+; Keep private Spine JSON/atlas wrappers/scenes inspectable in the PCK so the
+; post-export gate can verify that the private rig graph has no vanilla links.
 export/convert_text_resources_to_binary=false
 
 [rendering]

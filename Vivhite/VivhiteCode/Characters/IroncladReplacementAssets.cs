@@ -5,36 +5,32 @@ using STS2RitsuLib.Scaffolding.Characters;
 namespace Vivhite.Characters;
 
 /// <summary>
-/// Registers the optional, complete Ironclad skin bundle. Partial bundles are
-/// deliberately ignored so a missing PCK resource cannot leave the base-game
-/// character with a mixture of replacement and vanilla assets.
+/// Registers the optional, complete White Qi replacement for the Ironclad.
+/// Partial bundles are deliberately ignored so a missing PCK resource cannot
+/// leave the base-game character with a mixture of private and vanilla assets.
 /// </summary>
 internal static class IroncladReplacementAssets
 {
     private const string SkinRoot = $"{Entry.ResPath}/skins/ironclad";
 
-    private const string CombatSkeletonDataPath = $"{SkinRoot}/spine/combat/combat_skeleton_data.tres";
-    private const string CombatAtlasPath = $"{SkinRoot}/spine/combat/ironclad.spatlas";
-    private const string CombatAtlasPage1Path = $"{SkinRoot}/spine/combat/ironclad.png";
-    private const string CombatAtlasPage2Path = $"{SkinRoot}/spine/combat/ironclad_2.png";
-    private const string CombatAtlasPage3Path = $"{SkinRoot}/spine/combat/ironclad_3.png";
-    private const string CombatAtlasPage4Path = $"{SkinRoot}/spine/combat/ironclad_4.png";
+    private const string CombatSkeletonFilePath = $"{SkinRoot}/spine/combat/vivhite_combat.spjson";
+    private const string CombatSkeletonDataPath = $"{SkinRoot}/spine/combat/vivhite_combat_skeleton_data.tres";
+    private const string CombatAtlasPath = $"{SkinRoot}/spine/combat/vivhite_combat.spatlas";
+    private const string CombatAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat.png";
 
     private const string MerchantSkeletonDataPath = $"{SkinRoot}/spine/merchant/merchant_skeleton_data.tres";
-    private const string MerchantAtlasPath = $"{SkinRoot}/spine/merchant/ironclad_shop.spatlas";
-    private const string MerchantAtlasPage1Path = $"{SkinRoot}/spine/merchant/ironclad_shop.png";
-    private const string MerchantAtlasPage2Path = $"{SkinRoot}/spine/merchant/ironclad_shop_2.png";
-    private const string MerchantAtlasPage3Path = $"{SkinRoot}/spine/merchant/ironclad_shop_3.png";
-    private const string MerchantAtlasPage4Path = $"{SkinRoot}/spine/merchant/ironclad_shop_4.png";
 
     private const string RestSiteSkeletonDataPath = $"{SkinRoot}/spine/rest_site/rest_site_skeleton_data.tres";
+    private const string RestSiteSkeletonFilePath = $"{SkinRoot}/spine/rest_site/vivhite_rest_site.spjson";
     private const string RestSiteAtlasPath = $"{SkinRoot}/spine/rest_site/restsite_ironclad.spatlas";
     private const string RestSiteAtlasPagePath = $"{SkinRoot}/spine/rest_site/restsite_ironclad.png";
 
     private const string CharacterSelectSkeletonDataPath = $"{SkinRoot}/spine/character_select/character_select_skeleton_data.tres";
+    private const string CharacterSelectSkeletonFilePath = $"{SkinRoot}/spine/character_select/vivhite_character_select.spjson";
     private const string CharacterSelectAtlasPath = $"{SkinRoot}/spine/character_select/characterselect_ironclad.spatlas";
     private const string CharacterSelectAtlasPagePath = $"{SkinRoot}/spine/character_select/characterselect_ironclad.png";
 
+    private const string CombatScenePath = $"{SkinRoot}/scenes/combat.tscn";
     private const string MerchantScenePath = $"{SkinRoot}/scenes/merchant.tscn";
     private const string RestSiteScenePath = $"{SkinRoot}/scenes/rest_site.tscn";
     private const string CharacterSelectScenePath = $"{SkinRoot}/scenes/character_select.tscn";
@@ -53,30 +49,32 @@ internal static class IroncladReplacementAssets
     private static readonly RequiredAsset[] RequiredAssets =
     [
         new(
+            "combat skeleton file",
+            CombatSkeletonFilePath,
+            typeof(Resource),
+            "SpineSkeletonFileResource"),
+        new(
             "combat skeleton data",
             CombatSkeletonDataPath,
             typeof(Resource),
             "SpineSkeletonDataResource"),
         new("combat atlas", CombatAtlasPath, typeof(Resource), "SpineAtlasResource"),
-        new("combat atlas page 1", CombatAtlasPage1Path, typeof(Texture2D)),
-        new("combat atlas page 2", CombatAtlasPage2Path, typeof(Texture2D)),
-        new("combat atlas page 3", CombatAtlasPage3Path, typeof(Texture2D)),
-        new("combat atlas page 4", CombatAtlasPage4Path, typeof(Texture2D)),
+        new("combat atlas page", CombatAtlasPagePath, typeof(Texture2D)),
         new(
             "merchant skeleton data",
             MerchantSkeletonDataPath,
             typeof(Resource),
             "SpineSkeletonDataResource"),
-        new("merchant atlas", MerchantAtlasPath, typeof(Resource), "SpineAtlasResource"),
-        new("merchant atlas page 1", MerchantAtlasPage1Path, typeof(Texture2D)),
-        new("merchant atlas page 2", MerchantAtlasPage2Path, typeof(Texture2D)),
-        new("merchant atlas page 3", MerchantAtlasPage3Path, typeof(Texture2D)),
-        new("merchant atlas page 4", MerchantAtlasPage4Path, typeof(Texture2D)),
         new(
             "rest-site skeleton data",
             RestSiteSkeletonDataPath,
             typeof(Resource),
             "SpineSkeletonDataResource"),
+        new(
+            "rest-site skeleton file",
+            RestSiteSkeletonFilePath,
+            typeof(Resource),
+            "SpineSkeletonFileResource"),
         new("rest-site atlas", RestSiteAtlasPath, typeof(Resource), "SpineAtlasResource"),
         new("rest-site atlas page", RestSiteAtlasPagePath, typeof(Texture2D)),
         new(
@@ -84,8 +82,14 @@ internal static class IroncladReplacementAssets
             CharacterSelectSkeletonDataPath,
             typeof(Resource),
             "SpineSkeletonDataResource"),
+        new(
+            "character-select skeleton file",
+            CharacterSelectSkeletonFilePath,
+            typeof(Resource),
+            "SpineSkeletonFileResource"),
         new("character-select atlas", CharacterSelectAtlasPath, typeof(Resource), "SpineAtlasResource"),
         new("character-select atlas page", CharacterSelectAtlasPagePath, typeof(Texture2D)),
+        new("combat scene", CombatScenePath, typeof(PackedScene)),
         new("merchant scene", MerchantScenePath, typeof(PackedScene)),
         new("rest-site scene", RestSiteScenePath, typeof(PackedScene)),
         new("character-select scene", CharacterSelectScenePath, typeof(PackedScene)),
@@ -100,11 +104,47 @@ internal static class IroncladReplacementAssets
         new("multiplayer scissors hand", ScissorsHandTexturePath, typeof(Texture2D))
     ];
 
+    private static readonly RequiredTextBinding[] RequiredTextBindings =
+    [
+        new(
+            "combat skeleton data",
+            CombatSkeletonDataPath,
+            [CombatSkeletonFilePath, CombatAtlasPath]),
+        new(
+            "merchant skeleton data",
+            MerchantSkeletonDataPath,
+            [CombatSkeletonFilePath, CombatAtlasPath]),
+        new(
+            "rest-site skeleton data",
+            RestSiteSkeletonDataPath,
+            [RestSiteSkeletonFilePath, RestSiteAtlasPath]),
+        new(
+            "character-select skeleton data",
+            CharacterSelectSkeletonDataPath,
+            [CharacterSelectSkeletonFilePath, CharacterSelectAtlasPath]),
+        new("combat scene", CombatScenePath, [CombatSkeletonDataPath]),
+        new("merchant scene", MerchantScenePath, [MerchantSkeletonDataPath]),
+        new("rest-site scene", RestSiteScenePath, [RestSiteSkeletonDataPath]),
+        new(
+            "character-select scene",
+            CharacterSelectScenePath,
+            [CharacterSelectSkeletonDataPath])
+    ];
+
+    private static readonly string[] ForbiddenVanillaSkeletonReferences =
+    [
+        "res://animations/characters/ironclad/ironclad.skel",
+        "res://animations/rest_site/ironclad/restsite_ironclad.skel",
+        "res://animations/character_select/ironclad/characterselect_ironclad.skel"
+    ];
+
+    private const string ForbiddenSerializedSpineMeshNode = "type=\"SpineMesh2D\"";
+
     public static bool TryRegister()
     {
-        // Extracted authoring templates live outside the Godot project under the
-        // repository's assets directory. The combat resource appears here only after
-        // an author publishes a complete edited bundle, so templates alone stay inactive.
+        // Authoring sources live outside the Godot project under the repository's
+        // assets directory. The combat resource appears here only after a complete
+        // private rig is published, so templates alone stay inactive.
         try
         {
             if (!ResourceLoader.Exists(CombatSkeletonDataPath))
@@ -152,6 +192,7 @@ internal static class IroncladReplacementAssets
     {
         return new CharacterAssetProfile(
             Scenes: new CharacterSceneAssetSet(
+                VisualsPath: CombatScenePath,
                 MerchantAnimPath: MerchantScenePath,
                 RestSiteAnimPath: RestSiteScenePath),
             Ui: new CharacterUiAssetSet(
@@ -214,6 +255,53 @@ internal static class IroncladReplacementAssets
             }
         }
 
+        foreach (var binding in RequiredTextBindings)
+        {
+            try
+            {
+                var text = Godot.FileAccess.GetFileAsString(binding.Path);
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    issues.Add($"could not inspect {binding.Description} ({binding.Path}) as text");
+                    continue;
+                }
+
+                foreach (var requiredReference in binding.RequiredReferences)
+                {
+                    if (!text.Contains(requiredReference, StringComparison.Ordinal))
+                    {
+                        issues.Add(
+                            $"{binding.Description} ({binding.Path}) does not reference " +
+                            $"required private resource {requiredReference}");
+                    }
+                }
+
+                foreach (var forbiddenReference in ForbiddenVanillaSkeletonReferences)
+                {
+                    if (text.Contains(forbiddenReference, StringComparison.OrdinalIgnoreCase))
+                    {
+                        issues.Add(
+                            $"{binding.Description} ({binding.Path}) still references " +
+                            $"original Ironclad skeleton {forbiddenReference}");
+                    }
+                }
+
+                if (binding.Path.EndsWith(".tscn", StringComparison.OrdinalIgnoreCase) &&
+                    text.Contains(ForbiddenSerializedSpineMeshNode, StringComparison.Ordinal))
+                {
+                    issues.Add(
+                        $"{binding.Description} ({binding.Path}) contains serialized SpineMesh2D " +
+                        "preview geometry; the private Spine JSON must own every mesh");
+                }
+            }
+            catch (Exception exception)
+            {
+                issues.Add(
+                    $"error inspecting {binding.Description} ({binding.Path}): " +
+                    $"{exception.GetType().Name}: {exception.Message}");
+            }
+        }
+
         return issues;
     }
 
@@ -222,4 +310,9 @@ internal static class IroncladReplacementAssets
         string Path,
         Type ExpectedType,
         string? ExpectedGodotClass = null);
+
+    private sealed record RequiredTextBinding(
+        string Description,
+        string Path,
+        string[] RequiredReferences);
 }

@@ -287,6 +287,45 @@ known limitation and explicitly selects the scene's sole animation; actual
 `NSpineAutoPlayer._Ready` execution is verified in game. The first and last
 samples may match because they are the endpoints of a closed loop.
 
+## Build the private combat and merchant rig
+
+Combat uses `build_vivhite_combat_rig.gd`; it reads the accepted body and
+magic-arc masters from `assets/vivhite-ironclad/custom/combat/sources/` and
+reuses the accepted character-select sigil as a separate spell layer. All
+three inputs must already be native RGBA8 with zero-Alpha corners. A missing
+input fails closed; the builder never substitutes legacy art or repairs Alpha.
+
+```powershell
+& $GodotExe --headless --path .\tools\art `
+  --script res://build_vivhite_combat_rig.gd -- build-combat
+```
+
+The deterministic output is one private 3072x2304 atlas plus Spine 4.2.43
+JSON and wrapper under `Vivhite/Vivhite/skins/ironclad/spine/combat/`.
+Vivhite is one continuous 15x23 mesh (345 weighted vertices, 616 triangles)
+driven by 25 body controls in a 30-bone rig. It never imports Ironclad bones,
+weights, meshes, transforms, or a weapon pose. The atlas also contains rigid
+magic-arc and sigil attachments so glow never becomes a deforming joint seam.
+
+The rig contains exactly the eight game animations at the v0.111.0 durations:
+`idle_loop` 2.0s, `low_health_loop` 1.4666667s, `relaxed_loop` 12.000001s,
+`attack` 1.1666667s, `attack_heavy` 1.5333334s, `cast` 1.5666667s, `hurt`
+1.0s, and `die` 2.3333335s. Its attack/heavy/cast events occur at 0.15s,
+0.20s, and 0.25s respectively, matching the character-code animation delays.
+`relaxed_loop` is closed at its 12-second boundary so the merchant may enter
+at any phase without a visible pop.
+
+The combat scene retains the original `Visuals/NIroncladVfx`,
+`Visuals/SlashVfxSlot`, and `Visuals/EyeSlot/EyeFire` chain, shader step values,
+and layout anchors while binding only the private skeleton. The generated
+magic ribbon is attached directly to required slot `slash_mesh`, so the
+Spine slot consumer and the private arc share one hand anchor instead of
+drawing detached or doubled weapon-like geometry. Its consumer
+materials replace Ironclad red/orange with violet/indigo/cyan; the separate
+arc and sigil art supplies the restrained gold detail. The merchant's
+first child remains its `SpineSprite`, uses lowercase `default`, and points to
+a wrapper that deliberately shares this combat skeleton and atlas.
+
 ## Publish edited assets
 
 After building all private rigs and preparing the approved UI sources, run from

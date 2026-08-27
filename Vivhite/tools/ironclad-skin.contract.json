@@ -6,16 +6,16 @@
     "README.md"
   ],
   "requiredSkin": "default",
-  "allowedVanillaSkeletonResources": [
-    "res://animations/characters/ironclad/ironclad.skel",
-    "res://animations/rest_site/ironclad/restsite_ironclad.skel",
-    "res://animations/character_select/ironclad/characterselect_ironclad.skel"
-  ],
+  "requiredPrivateSkeletonExtension": ".spjson",
   "requiredResources": [
-    "spine/combat/combat_skeleton_data.tres",
+    "spine/combat/vivhite_combat.spjson",
+    "spine/combat/vivhite_combat_skeleton_data.tres",
+    "spine/rest_site/vivhite_rest_site.spjson",
+    "spine/character_select/vivhite_character_select.spjson",
     "spine/merchant/merchant_skeleton_data.tres",
     "spine/rest_site/rest_site_skeleton_data.tres",
     "spine/character_select/character_select_skeleton_data.tres",
+    "scenes/combat.tscn",
     "scenes/merchant.tscn",
     "scenes/rest_site.tscn",
     "scenes/character_select.tscn",
@@ -31,49 +31,14 @@
   ],
   "pngDimensions": [
     {
-      "path": "spine/combat/ironclad.png",
-      "width": 1329,
-      "height": 269
-    },
-    {
-      "path": "spine/combat/ironclad_2.png",
-      "width": 142,
-      "height": 480
-    },
-    {
-      "path": "spine/combat/ironclad_3.png",
-      "width": 492,
-      "height": 107
-    },
-    {
-      "path": "spine/combat/ironclad_4.png",
-      "width": 19,
-      "height": 49
-    },
-    {
-      "path": "spine/merchant/ironclad_shop.png",
-      "width": 2017,
-      "height": 531
-    },
-    {
-      "path": "spine/merchant/ironclad_shop_2.png",
-      "width": 405,
-      "height": 509
-    },
-    {
-      "path": "spine/merchant/ironclad_shop_3.png",
-      "width": 552,
-      "height": 279
-    },
-    {
-      "path": "spine/merchant/ironclad_shop_4.png",
-      "width": 30,
-      "height": 82
+      "path": "spine/combat/vivhite_combat.png",
+      "width": 3072,
+      "height": 2304
     },
     {
       "path": "spine/rest_site/restsite_ironclad.png",
-      "width": 489,
-      "height": 526
+      "width": 2048,
+      "height": 2048
     },
     {
       "path": "spine/character_select/characterselect_ironclad.png",
@@ -128,8 +93,30 @@
   ],
   "sceneBindings": [
     {
+      "scene": "scenes/combat.tscn",
+      "skeletonData": "spine/combat/vivhite_combat_skeleton_data.tres",
+      "requiredText": [
+        "[node name=\"NIroncladVfx\" type=\"Node\" parent=\"Visuals\"]",
+        "[node name=\"SlashVfxSlot\" type=\"SpineSlotNode\" parent=\"Visuals\"]",
+        "slot_name = \"slash_mesh\"",
+        "[node name=\"EyeSlot\" type=\"SpineSlotNode\" parent=\"Visuals\"]",
+        "slot_name = \"eye_attach_slot\"",
+        "[node name=\"EyeFire\" type=\"TextureRect\" parent=\"Visuals/EyeSlot\"]",
+        "shader_parameter/ColorParameter = Color(0.56, 0.24, 1, 1)",
+        "shader_parameter/OuterColor = Color(0.46, 0.1, 0.96, 1)",
+        "shader_parameter/InnerColor = Color(0.32, 0.94, 1, 1)",
+        "shader_parameter/step = Vector2(0, 0.02)",
+        "shader_parameter/master_step = 1.0"
+      ]
+    },
+    {
       "scene": "scenes/merchant.tscn",
-      "skeletonData": "spine/merchant/merchant_skeleton_data.tres"
+      "skeletonData": "spine/merchant/merchant_skeleton_data.tres",
+      "requiredText": [
+        "[node name=\"SpineSprite\" type=\"SpineSprite\" parent=\".\"]",
+        "preview_skin = \"default\"",
+        "preview_animation = \"relaxed_loop\""
+      ]
     },
     {
       "scene": "scenes/rest_site.tscn",
@@ -143,16 +130,13 @@
   "spineSets": [
     {
       "name": "combat",
-      "skeletonData": "spine/combat/combat_skeleton_data.tres",
-      "skeletonResource": "res://animations/characters/ironclad/ironclad.skel",
+      "skeletonData": "spine/combat/vivhite_combat_skeleton_data.tres",
+      "skeletonResource": "res://Vivhite/skins/ironclad/spine/combat/vivhite_combat.spjson",
       "expectedSpineVersion": "4.2.43",
-      "atlas": "spine/combat/ironclad.spatlas",
-      "atlasSourcePath": "spine/combat/ironclad.atlas",
+      "atlas": "spine/combat/vivhite_combat.spatlas",
+      "atlasSourcePath": "spine/combat/vivhite_combat.atlas",
       "pages": [
-        "spine/combat/ironclad.png",
-        "spine/combat/ironclad_2.png",
-        "spine/combat/ironclad_3.png",
-        "spine/combat/ironclad_4.png"
+        "spine/combat/vivhite_combat.png"
       ],
       "animations": [
         "attack",
@@ -164,6 +148,18 @@
         "low_health_loop",
         "relaxed_loop"
       ],
+      "exactAnimations": true,
+      "minimumBoneCount": 20,
+      "animationDurations": {
+        "attack": 1.1666667,
+        "attack_heavy": 1.5333334,
+        "cast": 1.5666667,
+        "die": 2.3333335,
+        "hurt": 1.0,
+        "idle_loop": 2.0,
+        "low_health_loop": 1.4666667,
+        "relaxed_loop": 12.000001
+      },
       "slots": [
         "slash_mesh",
         "eye_attach_slot"
@@ -178,15 +174,12 @@
     {
       "name": "merchant",
       "skeletonData": "spine/merchant/merchant_skeleton_data.tres",
-      "skeletonResource": "res://animations/characters/ironclad/ironclad.skel",
+      "skeletonResource": "res://Vivhite/skins/ironclad/spine/combat/vivhite_combat.spjson",
       "expectedSpineVersion": "4.2.43",
-      "atlas": "spine/merchant/ironclad_shop.spatlas",
-      "atlasSourcePath": "spine/merchant/ironclad_shop.atlas",
+      "atlas": "spine/combat/vivhite_combat.spatlas",
+      "atlasSourcePath": "spine/combat/vivhite_combat.atlas",
       "pages": [
-        "spine/merchant/ironclad_shop.png",
-        "spine/merchant/ironclad_shop_2.png",
-        "spine/merchant/ironclad_shop_3.png",
-        "spine/merchant/ironclad_shop_4.png"
+        "spine/combat/vivhite_combat.png"
       ],
       "animations": [
         "relaxed_loop"
@@ -197,8 +190,8 @@
     {
       "name": "rest_site",
       "skeletonData": "spine/rest_site/rest_site_skeleton_data.tres",
-      "skeletonResource": "res://animations/rest_site/ironclad/restsite_ironclad.skel",
-      "expectedSpineVersion": "4.2.37",
+      "skeletonResource": "res://Vivhite/skins/ironclad/spine/rest_site/vivhite_rest_site.spjson",
+      "expectedSpineVersion": "4.2.43",
       "atlas": "spine/rest_site/restsite_ironclad.spatlas",
       "atlasSourcePath": "spine/rest_site/restsite_ironclad.atlas",
       "pages": [
@@ -211,14 +204,15 @@
         "_tracks/light_off",
         "_tracks/light_on"
       ],
+      "exactAnimations": true,
       "slots": [],
       "events": []
     },
     {
       "name": "character_select",
       "skeletonData": "spine/character_select/character_select_skeleton_data.tres",
-      "skeletonResource": "res://animations/character_select/ironclad/characterselect_ironclad.skel",
-      "expectedSpineVersion": "4.2.40",
+      "skeletonResource": "res://Vivhite/skins/ironclad/spine/character_select/vivhite_character_select.spjson",
+      "expectedSpineVersion": "4.2.43",
       "atlas": "spine/character_select/characterselect_ironclad.spatlas",
       "atlasSourcePath": "spine/character_select/characterselect_ironclad.atlas",
       "pages": [
@@ -227,6 +221,7 @@
       "animations": [
         "animation"
       ],
+      "exactAnimations": true,
       "slots": [],
       "events": []
     }
@@ -240,6 +235,9 @@
   "forbiddenPrivateExtensions": [
     ".skel",
     ".spskel"
+  ],
+  "forbiddenSerializedSceneNodeTypes": [
+    "SpineMesh2D"
   ],
   "forbiddenVanillaPrefixes": [
     "animations/characters/ironclad/",

@@ -1,0 +1,122 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://src/Core/Nodes/Combat/NCreatureVisuals.cs" id="1_visuals"]
+[ext_resource type="SpineSkeletonDataResource" path="res://Vivhite/skins/ironclad/spine/combat/vivhite_combat_skeleton_data.tres" id="2_skeleton"]
+[ext_resource type="Shader" path="res://images/vfx/slash_shader_flat.tres" id="3_slash_shader"]
+[ext_resource type="Script" path="res://src/Core/Nodes/Vfx/NIroncladVfx.cs" id="4_vfx"]
+[ext_resource type="Texture2D" path="res://images/vfx/fire/basic_fire_noise.png" id="5_fire_noise"]
+[ext_resource type="Texture2D" path="res://images/vfx/characters/ironclad_slash_base.png" id="6_slash_base"]
+[ext_resource type="Texture2D" path="res://images/vfx/fire/zigzag_fire_distortion.png" id="7_zigzag"]
+[ext_resource type="Texture2D" path="res://images/vfx/tileable_noise_1.png" id="8_tile_noise"]
+[ext_resource type="Texture2D" path="res://images/vfx/environment/fire/basic_fire_gradient.png" id="9_fire_gradient"]
+[ext_resource type="Shader" path="res://shaders/vfx/vfx_stepped_shader_fire_flat.tres" id="10_fire_shader"]
+[ext_resource type="Texture2D" path="res://images/vfx/fire/fire_bottom_mask.png" id="11_fire_mask"]
+[ext_resource type="Texture2D" path="res://images/vfx/fire/triangle_noise_tile.png" id="12_triangle_noise"]
+[ext_resource type="Texture2D" path="res://images/vfx/characters/ironclad_eye_fire_base.png" id="13_eye_fire"]
+
+[sub_resource type="ShaderMaterial" id="SlashMaterial"]
+shader = ExtResource("3_slash_shader")
+shader_parameter/ColorParameter = Color(0.56, 0.24, 1, 1)
+shader_parameter/step = Vector2(0, 0.02)
+shader_parameter/master_step = 1.0
+shader_parameter/shape_mask_tex = ExtResource("6_slash_base")
+shader_parameter/noise_1_strength = 1.0
+shader_parameter/noise_1_scale = Vector2(1.5, 1.5)
+shader_parameter/noise_1_panning = Vector2(0.1, -1.5)
+shader_parameter/noise_1_tex = ExtResource("5_fire_noise")
+shader_parameter/noise_2_scale = Vector2(1.2, 1.2)
+shader_parameter/noise_2_panning = Vector2(-0.1, -2.2)
+shader_parameter/noise_2_tex = ExtResource("5_fire_noise")
+shader_parameter/noise_2_strength = 1.0
+shader_parameter/opacity = 0.8
+
+[sub_resource type="ShaderMaterial" id="EyeFireMaterial"]
+shader = ExtResource("10_fire_shader")
+shader_parameter/OuterColor = Color(0.46, 0.1, 0.96, 1)
+shader_parameter/InnerColorStep = Vector2(0.24, 0.49)
+shader_parameter/Noise2Strength = 1.085
+shader_parameter/Noise2Scaling = Vector2(1, 1)
+shader_parameter/Noise2Panning = Vector2(0.4, 0.8)
+shader_parameter/Noise2Texture = ExtResource("8_tile_noise")
+shader_parameter/Noise1Strength = 0.435
+shader_parameter/Noise1Scaling = Vector2(0.8, 0.8)
+shader_parameter/Noise1Panning = Vector2(0.2, 1)
+shader_parameter/Noise1Texture = ExtResource("12_triangle_noise")
+shader_parameter/InvertNoiseMask = false
+shader_parameter/NoiseMaskScale = Vector2(1, 1.305)
+shader_parameter/NoiseMaskOffset = Vector2(0, -0.77)
+shader_parameter/NoiseMask = ExtResource("9_fire_gradient")
+shader_parameter/Distortion2Scale = Vector2(1, 1)
+shader_parameter/Distortion2Panning = Vector2(0.4, 0.4)
+shader_parameter/Distortion2Texture = ExtResource("8_tile_noise")
+shader_parameter/Distortion2Strength = 0.17
+shader_parameter/Distortion1Scale = Vector2(1, 1)
+shader_parameter/Distortion1Panning = Vector2(0, 1.5)
+shader_parameter/Distortion1Texture = ExtResource("7_zigzag")
+shader_parameter/Distortion1Strength = -0.075
+shader_parameter/DistortionMaskScale = Vector2(1, 2)
+shader_parameter/DistortionMaskOffset = Vector2(0, -0.72)
+shader_parameter/DistortionMask = ExtResource("11_fire_mask")
+shader_parameter/InnerColor = Color(0.32, 0.94, 1, 1)
+shader_parameter/OuterStep = Vector2(0.07, 0.17)
+
+[node name="VivhiteIronclad" type="Node2D"]
+script = ExtResource("1_visuals")
+metadata/_edit_group_ = true
+
+[node name="FormVfx" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Visuals" type="SpineSprite" parent="."]
+skeleton_data_res = ExtResource("2_skeleton")
+preview_skin = "default"
+preview_animation = "idle_loop"
+unique_name_in_owner = true
+position = Vector2(5, -19)
+scale = Vector2(0.28, 0.28)
+metadata/_edit_lock_ = true
+
+[node name="NIroncladVfx" type="Node" parent="Visuals"]
+script = ExtResource("4_vfx")
+
+[node name="SlashVfxSlot" type="SpineSlotNode" parent="Visuals"]
+normal_material = SubResource("SlashMaterial")
+slot_name = "slash_mesh"
+show_behind_parent = true
+position = Vector2(863.2593, -1558.245)
+
+[node name="EyeSlot" type="SpineSlotNode" parent="Visuals"]
+slot_name = "eye_attach_slot"
+show_behind_parent = true
+position = Vector2(349.7109, -659.5685)
+rotation = -0.14384604
+scale = Vector2(1.0095462, 1.0182862)
+skew = 0.0025269985
+
+[node name="EyeFire" type="TextureRect" parent="Visuals/EyeSlot"]
+material = SubResource("EyeFireMaterial")
+offset_left = -205.07704
+offset_top = -450.1532
+offset_right = 294.92322
+offset_bottom = 49.846893
+scale = Vector2(0.83232564, 1.1308773)
+texture = ExtResource("13_eye_fire")
+
+[node name="Bounds" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 0
+offset_left = -121.0
+offset_top = -278.0
+offset_right = 121.0
+mouse_filter = 2
+
+[node name="CenterPos" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(4, -168)
+
+[node name="IntentPos" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(30, -310)
