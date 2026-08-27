@@ -799,7 +799,7 @@ def _validated_commit_pair_unlocked(
 
 def abort_unpublished_review_worktree(
     parent: str, commit: str, marker_paths: Sequence[str], *,
-    log=print, lock_timeout: float = 5.0, operation_timeout: int = 10,
+    log=print, lock_timeout: float = 5.0, operation_timeout: float = 10.0,
 ) -> bool:
     """Reconcile a ``prepared`` marker while HEAD still equals its parent.
 
@@ -809,28 +809,36 @@ def abort_unpublished_review_worktree(
     latter. Any overlap with an external edit fails closed and preserves evidence.
     """
     patch_name = ""
+    deadline = time.monotonic() + max(0.1, float(operation_timeout))
+
+    def remaining(cap: float | None = None) -> float:
+        value = deadline - time.monotonic()
+        if value <= 0:
+            raise TimeoutError("prepared marker 恢复总预算已耗尽")
+        return max(0.1, min(value, cap)) if cap is not None else max(0.1, value)
+
     try:
-        with repository_lock(timeout=lock_timeout):
+        with repository_lock(timeout=min(lock_timeout, remaining(lock_timeout))):
             if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
                 raise ValueError("prepared marker commit 格式非法")
             claimed = validate_review_paths(marker_paths)
             row = _run_git(
                 ["rev-list", "--parents", "-n", "1", commit],
-                timeout=operation_timeout)
+                timeout=remaining())
             parts = row.stdout.strip().split() if row.returncode == 0 else []
             if (len(parts) != 2 or parts[0].lower() != commit.lower()
                     or parts[1].lower() != parent.lower()):
                 raise ValueError("prepared marker 不是声明父节点的单父 commit")
             changed = _run_git(
                 ["diff", "--name-only", "-z", "--no-renames", parent, commit, "--"],
-                timeout=operation_timeout)
+                timeout=remaining())
             actual = validate_review_paths(_nul_paths(changed.stdout)) \
                 if changed.returncode == 0 else ()
             if set(actual) != set(claimed):
                 raise ValueError("prepared marker 路径与 provisional commit 不一致")
             patch = _run_git_bytes([
                 "diff", "--binary", "--unified=0", parent, commit, "--", *actual,
-            ], timeout=operation_timeout)
+            ], timeout=remaining())
             if patch.returncode != 0 or not patch.stdout:
                 raise RuntimeError("无法读取 prepared commit 精确 patch")
             fd, patch_name = tempfile.mkstemp(
@@ -841,11 +849,11 @@ def abort_unpublished_review_worktree(
             reverse_check = _run_git([
                 "apply", "--check", "--reverse", "--unidiff-zero", "--binary",
                 patch_name,
-            ], timeout=operation_timeout)
+            ], timeout=remaining())
             if reverse_check.returncode == 0:
                 undone = _run_git([
                     "apply", "--reverse", "--unidiff-zero", "--binary", patch_name,
-                ], timeout=operation_timeout)
+                ], timeout=remaining())
                 if undone.returncode != 0:
                     raise RuntimeError("prepared worktree patch 无法无损撤回："
                                        + undone.stderr.strip())
@@ -854,7 +862,7 @@ def abort_unpublished_review_worktree(
 
             forward_check = _run_git([
                 "apply", "--check", "--unidiff-zero", "--binary", patch_name,
-            ], timeout=operation_timeout)
+            ], timeout=remaining())
             if forward_check.returncode == 0:
                 log(f"[git] prepared commit {commit[:8]} 尚未进入工作树，无需撤回")
                 return True
@@ -877,6 +885,68 @@ def commit_is_ancestor(commit: str, *, timeout: float = 5.0) -> bool:
                 ["merge-base", "--is-ancestor", commit, "HEAD"],
                 timeout=timeout).returncode == 0
     except (OSError, TimeoutError, subprocess.SubprocessError):
+        return False
+
+
+def sync_prepared_index(
+    parent: str, commit: str, marker_paths: Sequence[str], *,
+    log=print, operation_timeout: float = 5.0,
+) -> bool:
+    """Repair only the review transaction's stale real index after update-ref.
+
+    ``commit_patch_result`` updates the worktree/ref before synchronising the real
+    index.  A crash in that tiny window leaves the whole review staged in reverse.
+    Synchronise only when the target index is provably still the parent tree;
+    otherwise preserve the user's index byte-for-byte and merely report it.
+    """
+    deadline = time.monotonic() + max(0.1, float(operation_timeout))
+
+    def remaining() -> float:
+        value = deadline - time.monotonic()
+        if value <= 0:
+            raise TimeoutError("prepared index 同步总预算已耗尽")
+        return max(0.1, value)
+
+    try:
+        with repository_lock(timeout=min(2.0, remaining())):
+            claimed = validate_review_paths(marker_paths)
+            row = _run_git(
+                ["rev-list", "--parents", "-n", "1", commit], timeout=remaining())
+            parts = row.stdout.strip().split() if row.returncode == 0 else []
+            if (len(parts) != 2 or parts[0].lower() != commit.lower()
+                    or parts[1].lower() != parent.lower()):
+                raise ValueError("prepared index 对应关系非法")
+            head = _run_git(["rev-parse", "HEAD"], timeout=remaining())
+            current_head = head.stdout.strip().lower() if head.returncode == 0 else ""
+            if not current_head:
+                raise RuntimeError("prepared index 无法读取 HEAD")
+            ancestor = _run_git(
+                ["merge-base", "--is-ancestor", commit, current_head],
+                timeout=remaining())
+            if ancestor.returncode != 0:
+                raise ValueError("prepared commit 不在当前 HEAD 历史中")
+            already = _run_git(
+                ["diff", "--cached", "--quiet", current_head, "--", *claimed],
+                timeout=remaining())
+            if already.returncode == 0:
+                return True
+            parent_index = _run_git(
+                ["diff", "--cached", "--quiet", parent, "--", *claimed],
+                timeout=remaining())
+            if parent_index.returncode == 1:
+                log("[git] prepared 发布后的真实 index 含用户内容；保留原 index，不自动覆盖")
+                return False
+            if parent_index.returncode != 0:
+                raise RuntimeError(parent_index.stderr.strip() or "无法比较 prepared index")
+            synced = _run_git([
+                "restore", "--staged", f"--source={current_head}", "--", *claimed,
+            ], timeout=remaining())
+            if synced.returncode != 0:
+                raise RuntimeError(synced.stderr.strip() or "prepared index 同步失败")
+            log(f"[git] 已补齐 prepared commit {commit[:8]} 的真实 index 同步")
+            return True
+    except Exception as exc:
+        log(f"[git] prepared index 保守保留：{exc}")
         return False
 
 
