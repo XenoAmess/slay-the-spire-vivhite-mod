@@ -51,6 +51,12 @@ _ROLLED_BACK_COMMITS: set[str] = set()
 _ROLLBACK_TOMBSTONE_LIMIT = 100
 
 
+def _time_left(deadline: float | None, cap: float) -> float:
+    if deadline is None:
+        return max(0.1, cap)
+    return max(0.0, min(cap, deadline - time.monotonic()))
+
+
 def log(msg: str) -> None:
     line = f"[runner {time.strftime('%H:%M:%S')}] {msg}"
     try:
@@ -264,7 +270,7 @@ def _record_rollback_tombstone(commit: str) -> None:
         temp.unlink(missing_ok=True)
 
 
-def _reconcile_prepared_marker() -> bool:
+def _reconcile_prepared_marker(deadline: float | None = None) -> bool:
     """Finish or abort an interrupted two-phase review before importing Brain."""
     try:
         info = json.loads(MARKER.read_text(encoding="utf-8"))
@@ -287,7 +293,8 @@ def _reconcile_prepared_marker() -> bool:
         return False
     head = read_git_head(autogit.REPO_DIR)
     if head == commit or (head not in (parent, "")
-                          and autogit.commit_is_ancestor(commit, timeout=5.0)):
+                          and autogit.commit_is_ancestor(
+                              commit, timeout=_time_left(deadline, 5.0))):
         # update-ref/worktree already published; only phase-two marker replace was
         # interrupted. Ownership is rechecked under the shared repository lock.
         try:
@@ -303,7 +310,8 @@ def _reconcile_prepared_marker() -> bool:
             log("prepared marker 发布后缺少精确路径；保留现场")
             return False
         autogit.sync_prepared_index(
-            parent, commit, paths, log=log, operation_timeout=5.0)
+            parent, commit, paths, log=log,
+            operation_timeout=_time_left(deadline, 5.0))
         current["state"] = "committed"
         current["committed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         current["reconciled_at_startup"] = True
@@ -323,8 +331,9 @@ def _reconcile_prepared_marker() -> bool:
         log("prepared marker 缺少精确路径；保留现场并拒绝猜测恢复")
         return False
     if not autogit.abort_unpublished_review_worktree(
-            parent, commit, paths, log=log, lock_timeout=3.0,
-            operation_timeout=8):
+            parent, commit, paths, log=log,
+            lock_timeout=_time_left(deadline, 3.0),
+            operation_timeout=_time_left(deadline, 8.0)):
         return False
     # HEAD never published the provisional commit; restoring/deleting the wrapper
     # completes the abort. Tombstoned predecessors are skipped automatically.
@@ -421,7 +430,9 @@ def _save_prepared_recovery_package(
         return None
 
 
-def _recover_blocked_prepared_marker(reason: str) -> bool:
+def _recover_blocked_prepared_marker(
+    reason: str, deadline: float | None = None,
+) -> bool:
     """Quarantine a blocked prepared transaction, then restore a known tree.
 
     This is the live-safety fallback after exact forward/reverse proof failed.
@@ -429,10 +440,13 @@ def _recover_blocked_prepared_marker(reason: str) -> bool:
     atomically published under review_salvage before the worktree is restored.
     """
     try:
-        with autogit.repository_lock(timeout=3.0):
+        lock_timeout = _time_left(deadline, 3.0)
+        if lock_timeout <= 0:
+            return False
+        with autogit.repository_lock(timeout=lock_timeout):
             info = json.loads(MARKER.read_text(encoding="utf-8"))
             if info.get("state") != "prepared":
-                return _reconcile_prepared_marker()
+                return _reconcile_prepared_marker(deadline)
             try:
                 paths = autogit.validate_review_paths(info.get("paths") or [])
             except (TypeError, ValueError):
@@ -448,7 +462,7 @@ def _recover_blocked_prepared_marker(reason: str) -> bool:
                 return False
             restored = autogit._run_git([
                 "restore", "--worktree", f"--source={head}", "--", *paths,
-            ], timeout=8)
+            ], timeout=_time_left(deadline, 8.0))
             if restored.returncode != 0:
                 log(f"prepared 现场已保存至 {package}，但已知树恢复失败："
                     f"{restored.stderr.strip()}")
@@ -470,12 +484,16 @@ def _recover_blocked_prepared_marker(reason: str) -> bool:
         return False
 
 
-def rollback_from_marker() -> bool:
+def rollback_from_marker(deadline: float | None = None) -> bool:
     """新代码启动失败：只反向应用 marker 指向的受控复盘 commit。"""
     try:
         # 读取、反向提交与 compare-and-delete 共用同一仓库锁；健康确认或下一轮
         # prepare 不能在中间替换 marker，旧回滚也不会删除后来者。
-        with autogit.repository_lock(timeout=5.0):
+        lock_timeout = _time_left(deadline, 5.0)
+        if lock_timeout <= 0:
+            log("回滚总预算已耗尽；保留 marker/现场")
+            return False
+        with autogit.repository_lock(timeout=lock_timeout):
             info = json.loads(MARKER.read_text(encoding="utf-8"))
             parent = info["review_parent"]
             commit = info["review_commit"]
@@ -486,9 +504,14 @@ def rollback_from_marker() -> bool:
                 log(f"复盘提交 {str(commit)[:8]} 已有安全撤销记录；拒绝重复回滚")
                 return False
             paths = info.get("paths")
+            transaction_timeout = _time_left(deadline, 30.0)
+            if transaction_timeout <= 0:
+                log("回滚事务预算已耗尽；保留 marker/现场")
+                return False
             ok = autogit.rollback_review_commit(
                 parent, commit, marker_paths=paths, log=log,
-                lock_timeout=5.0, transaction_timeout=30.0)
+                lock_timeout=min(lock_timeout, transaction_timeout),
+                transaction_timeout=transaction_timeout)
             if ok:
                 try:
                     _record_rollback_tombstone(str(commit))
@@ -522,18 +545,22 @@ def rollback_from_marker() -> bool:
         return False
 
 
-def _run_brain() -> tuple[int, float]:
+def _run_brain(deadline: float | None = None) -> tuple[int, float]:
     """Run one brain generation while remaining responsive to stack shutdown."""
     started = time.monotonic()
+    deadline = deadline or (started + OUTAGE_BUDGET_SECONDS)
     child_env = os.environ.copy()
     proc: subprocess.Popen | None = None
-    ready_deadline = time.monotonic() + STARTUP_READY_SECONDS
+    ready_deadline = min(deadline, time.monotonic() + STARTUP_READY_SECONDS)
     # Keep the repository transaction only until every module and config byte is
     # resident. Agent/Knowledge construction may itself acquire this same lock.
     try:
-        with autogit.repository_lock(timeout=3.0):
+        lock_timeout = _time_left(deadline, 3.0)
+        if lock_timeout <= 0:
+            return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+        with autogit.repository_lock(timeout=lock_timeout):
             _repair_tombstoned_marker_locked()
-            if not _reconcile_prepared_marker():
+            if not _reconcile_prepared_marker(deadline):
                 return RECONCILE_BLOCKED_CODE, time.monotonic() - started
             boot_head = read_git_head(autogit.REPO_DIR)
             loaded_review = _active_review_commit()
@@ -568,7 +595,7 @@ def _run_brain() -> tuple[int, float]:
                 _terminate_startup_child(proc)
                 return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     except TimeoutError:
-        log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，10 秒后重试")
+        log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，按全局断流预算重试")
         return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     assert proc is not None
     # Repository lock is now released.  Agent construction/migrations can safely
@@ -626,12 +653,20 @@ def main() -> int:
     review_restarts = 0
     review_startup_failures = 0
     prepared_startup_failures = 0
+    outage_deadline: float | None = None
     log("监督进程启动，拉起大脑…")
     while True:
         if stop_requested():
             log("停止请求已生效，监督进程结束")
             return 0
-        rc, alive_s = _run_brain()
+        if outage_deadline is None:
+            outage_deadline = time.monotonic() + OUTAGE_BUDGET_SECONDS
+        rc, alive_s = _run_brain(outage_deadline)
+        startup_failure = rc in (STARTUP_TIMEOUT_CODE, RECONCILE_BLOCKED_CODE)
+        if not startup_failure:
+            # Reaching ready ends this outage epoch.  A later child exit starts a
+            # fresh 115-second budget rather than inheriting hours of healthy play.
+            outage_deadline = None
 
         # 停机期间即使子进程被超时兜底终止，也绝不能重新拉起。
         if stop_requested():
@@ -666,30 +701,41 @@ def main() -> int:
             prepared_startup_failures += 1
             log(f"prepared 启动事务无法精确收口 {prepared_startup_failures}/3；"
                 "先完整保存全部目标文件，再恢复当前已知提交")
-            if _recover_blocked_prepared_marker("Runner 启动前无法证明 prepared 工作树的精确状态"):
+            if _recover_blocked_prepared_marker(
+                    "Runner 启动前无法证明 prepared 工作树的精确状态",
+                    outage_deadline):
                 prepared_startup_failures = 0
                 continue
-            if prepared_startup_failures >= 3:
+            remaining = _time_left(outage_deadline, OUTAGE_BUDGET_SECONDS)
+            if prepared_startup_failures >= 3 or remaining <= 0:
                 log("prepared 现场连续三次无法完整保存/恢复；在两分钟内停止并保留所有证据")
                 return 1
-            if wait_for_stop(STARTUP_RETRY_SECONDS):
+            if wait_for_stop(min(STARTUP_RETRY_SECONDS, remaining)):
                 return 0
             continue
         prepared_startup_failures = 0
 
         active_review = _has_active_review_marker()
-        if rc == STARTUP_TIMEOUT_CODE and active_review:
+        if rc == STARTUP_TIMEOUT_CODE:
             review_startup_failures += 1
-            log(f"复盘代码启动握手失败 {review_startup_failures}/"
-                f"{MAX_REVIEW_STARTUP_FAILURES}；保持短重试，避免直播长断流")
-            if review_startup_failures >= MAX_REVIEW_STARTUP_FAILURES:
+            remaining = _time_left(outage_deadline, OUTAGE_BUDGET_SECONDS)
+            label = "复盘代码" if active_review else "Brain"
+            log(f"{label}启动握手失败 {review_startup_failures} 次；"
+                f"本次断流预算剩余 {remaining:.0f}s")
+            should_rollback = (active_review and (
+                review_startup_failures >= MAX_REVIEW_STARTUP_FAILURES
+                or remaining <= ROLLBACK_RESERVE_SECONDS))
+            if should_rollback:
                 log("复盘代码连续无法完成初始化；在两分钟预算内执行安全 patch 回滚")
-                if not rollback_from_marker():
+                if not rollback_from_marker(outage_deadline):
                     log("启动失败回滚未能无损完成；保留现场并停止，拒绝混载未知代码")
                     return 1
                 review_startup_failures = 0
                 continue
-            if wait_for_stop(RETRY_INTERVAL_SECONDS):
+            if remaining <= 0:
+                log("Brain 连续无法完成启动且没有可安全撤销的复盘提交；115 秒断流预算耗尽，保留现场并停止")
+                return 1
+            if wait_for_stop(min(STARTUP_RETRY_SECONDS, remaining)):
                 return 0
             continue
         review_startup_failures = 0

@@ -915,6 +915,35 @@ class AutoGitSafetyTests(unittest.TestCase):
         finally:
             runner.MARKER = old_marker
 
+    def test_runner_promotion_repairs_parent_index_left_after_update_ref(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        self._write(path, "VALUE = 2\n")
+        self._git("update-ref", "refs/heads/master", commit, parent)
+        self.assertEqual(
+            self._git("diff", "--cached", "--quiet", "HEAD", "--", path,
+                      check=False).returncode,
+            1,
+            "fault setup must leave the real index at the parent tree")
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        marker.write_text(json.dumps({
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": [path],
+            "state": "prepared",
+        }), encoding="utf-8")
+        runner.MARKER = marker
+        try:
+            self.assertTrue(runner._reconcile_prepared_marker())
+            self.assertEqual(
+                self._git("diff", "--cached", "--quiet", "HEAD", "--", path,
+                          check=False).returncode,
+                0)
+            self.assertEqual(self._read(path), "VALUE = 2\n")
+        finally:
+            runner.MARKER = old_marker
+
     def test_brain_ready_handshake_rejects_stale_boot_token(self) -> None:
         record_path = self.repo / "brain.pid"
         record_path.write_text(json.dumps({
@@ -992,9 +1021,38 @@ class AutoGitSafetyTests(unittest.TestCase):
                 mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback, \
                 mock.patch.object(runner, "log"):
             self.assertEqual(runner.main(), 0)
-        rollback.assert_called_once_with()
+        rollback.assert_called_once()
+        self.assertIsInstance(rollback.call_args.args[0], float)
         self.assertEqual(wait.call_count, runner.MAX_REVIEW_STARTUP_FAILURES - 1,
                          "回滚成功后必须立即拉起旧代码，不再额外等待10秒")
+
+    def test_startup_without_review_marker_honors_one_115_second_deadline(self) -> None:
+        clock = [0.0]
+        launches: list[float] = []
+
+        def monotonic() -> float:
+            return clock[0]
+
+        def launch(deadline: float) -> tuple[int, float]:
+            launches.append(deadline)
+            elapsed = min(20.0, max(0.0, deadline - clock[0]))
+            clock[0] += elapsed
+            return runner.STARTUP_TIMEOUT_CODE, elapsed
+
+        def wait(seconds: float) -> bool:
+            clock[0] += seconds
+            return False
+
+        with mock.patch.object(runner.time, "monotonic", side_effect=monotonic), \
+                mock.patch.object(runner, "_run_brain", side_effect=launch), \
+                mock.patch.object(runner, "stop_requested", return_value=False), \
+                mock.patch.object(runner, "_has_active_review_marker", return_value=False), \
+                mock.patch.object(runner, "wait_for_stop", side_effect=wait), \
+                mock.patch.object(runner, "log"):
+            self.assertEqual(runner.main(), 1)
+        self.assertTrue(launches)
+        self.assertTrue(all(item == launches[0] for item in launches))
+        self.assertLessEqual(clock[0], runner.OUTAGE_BUDGET_SECONDS)
 
     def test_runner_rollback_restores_superseded_marker(self) -> None:
         old_marker = runner.MARKER
