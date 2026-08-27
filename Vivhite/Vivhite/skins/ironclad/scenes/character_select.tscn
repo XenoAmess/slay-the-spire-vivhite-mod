@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="SpineSkeletonDataResource" path="res://Vivhite/skins/ironclad/spine/character_select/character_select_skeleton_data.tres" id="1_hpvbb"]
 [ext_resource type="Script" path="res://src/Core/Nodes/Animation/NSpineAutoPlayer.cs" id="2_0xyo4"]
@@ -9,7 +9,11 @@
 [ext_resource type="Script" path="res://scenes/backgrounds/little_light_script.gd" id="7_66imf"]
 [ext_resource type="CanvasItemMaterial" path="res://themes/canvas_item_material_additive_shared.tres" id="shared_additive_mat"]
 
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ou856"]
+[sub_resource type="Shader" id="Shader_vivhite_backdrop"]
+code = "shader_type canvas_item;\n\nvoid fragment() {\n\tvec2 p = UV - vec2(0.5);\n\tfloat radial = exp(-dot(p - vec2(0.21, -0.02), p - vec2(0.21, -0.02)) * 7.0);\n\tfloat lower = exp(-dot(p - vec2(0.18, 0.48), p - vec2(0.18, 0.48)) * 5.0);\n\tfloat upper = exp(-dot(p - vec2(0.30, -0.48), p - vec2(0.30, -0.48)) * 8.0);\n\tfloat vignette = smoothstep(0.86, 0.18, length(p * vec2(0.82, 1.18)));\n\tvec3 color = vec3(0.006, 0.004, 0.030);\n\tcolor += vec3(0.030, 0.015, 0.105) * vignette;\n\tcolor += vec3(0.085, 0.025, 0.180) * radial;\n\tcolor += vec3(0.012, 0.085, 0.150) * lower;\n\tcolor += vec3(0.055, 0.025, 0.105) * upper;\n\tCOLOR = vec4(color, 1.0);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vivhite_backdrop"]
+shader = SubResource("Shader_vivhite_backdrop")
 
 [sub_resource type="Gradient" id="Gradient_iyr6g"]
 offsets = PackedFloat32Array(0, 0.340782, 0.929236)
@@ -46,6 +50,16 @@ grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(1280, 600)
 
+[node name="VivhiteBackdrop" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_vivhite_backdrop")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="SpineSprite" type="SpineSprite" parent="."]
 position = Vector2(-185, -20)
 scale = Vector2(0.46, 0.46)
@@ -54,150 +68,6 @@ preview_skin = "default"
 preview_animation = "animation"
 preview_frame = false
 preview_time = 0.0
-
-[node name="_SpineMesh2D_148096" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148097" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148098" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148099" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148100" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148101" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148102" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148103" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148104" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148105" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148106" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148107" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148108" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148109" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148110" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148111" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148112" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="_SpineMesh2D_148113" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230945" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230946" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230947" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230948" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230949" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230950" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230951" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230952" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230953" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230954" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230955" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230956" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230957" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230958" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230959" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230960" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230961" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
-
-[node name="@SpineMesh2D@230962" type="SpineMesh2D" parent="SpineSprite"]
-show_behind_parent = true
-material = SubResource("CanvasItemMaterial_ou856")
 
 [node name="NSpineAutoPlayer" type="Node" parent="SpineSprite"]
 script = ExtResource("2_0xyo4")

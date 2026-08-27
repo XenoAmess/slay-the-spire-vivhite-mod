@@ -73,15 +73,16 @@ cropped back to `Texture2D`'s logical dimensions; this matters for the
 
 Inside the repository, the extractor is hard-limited to the exact
 `assets/ironclad-v0.111.0` root and never writes the `Vivhite/` runtime tree.
-After editing, `publish_ironclad_skin.py` reads legacy non-combat scene and
-skeleton-data structure plus checksums from that immutable extraction, while
-taking finished non-combat atlases, pages, and UI from
-`assets/vivhite-ironclad/custom`. The custom rig builder owns the tracked
-combat `.spjson`/`.spatlas`/PNG/wrapper and combat scene; rest-site and
-character-select likewise supply private `.spjson` files. The publisher reads
-those private rig outputs before mirror-cleaning, rewrites the remaining
-wrappers to private skeleton paths, and never copies or references a vanilla
-skeleton in the runtime tree.
+After editing, `publish_ironclad_skin.py` reads legacy scene structure and
+checksums from that immutable extraction. The custom rig builder owns the
+tracked combat and character-select `.spjson`/`.spatlas`/PNG/wrapper resources;
+their atlas regions and packing are not constrained to the Ironclad layouts.
+The remaining rest-site authoring page plus the four explicitly exempted
+multiplayer gestures come from `assets/vivhite-ironclad/custom`. The five
+standalone approved UI textures come directly from
+`assets/vivhite-ironclad/approved`. The publisher reads all private rig outputs
+before mirror-cleaning, rewrites the remaining wrappers to private skeleton
+paths, and never copies or references a vanilla skeleton in the runtime tree.
 
 ## Run
 
@@ -146,8 +147,10 @@ assets/vivhite-ironclad/custom/combat/
   atlas-pack-report.json
 ```
 
-The other workspaces are `merchant/`, `rest_site/`, and
-`character_select/`. A logical master normally has the unrotated width and
+The legacy-layout workspaces also include `merchant/`, `rest_site/`, and
+`character_select/`, but character-select production no longer uses its
+Ironclad layout: its private rig builder emits a new atlas and regions directly.
+A logical master normally has the unrotated width and
 height from its atlas `bounds`. A differently sized replacement is allowed:
 the packer resamples it to that region's exact logical bounds, applies the
 original `rotate:90`, and writes it to the original packed rectangle. This is
@@ -174,10 +177,9 @@ Pack one workspace with empty hands (the production default):
 of their logical masters. `spell` also forces the handle to alpha zero, but
 may read `spell_layers/sword blade.png` as a magical projection and clamps its
 alpha to 191. A missing spell layer becomes transparent. The tool therefore
-cannot accidentally restore an opaque held weapon. Character-select's
-composite `top arm` region contains both arm and vanilla sword, so it cannot be
-cleared automatically without deleting the arm; custom art for that region
-must be reviewed manually to ensure the sword is absent.
+cannot accidentally restore an opaque held weapon. The extracted
+character-select `top arm` region is research evidence only; it must not be
+repacked into the private White Qi character-select atlas.
 
 Verify the unpack/unrotate/rotate/repack implementation against every tracked
 template in an ignored work directory:
@@ -211,10 +213,84 @@ The replacement pipeline starts with archived EvoLink native-transparent
 outputs and builds a private Vivhite skeleton, mesh, weights, poses, atlas, and
 UI without deriving Alpha or body geometry from Ironclad.
 
+## Build the private character-select rig
+
+The character-select hero uses a dedicated Vivhite Spine 4.2.43 JSON rig. It
+does not reuse the Ironclad skeleton, mesh, weights, animation transforms, or
+atlas regions. Its hero and independently generated magic-sigil masters remain
+read-only below `assets/vivhite-ironclad/custom/character_select/sources/`.
+
+Run the deterministic builder from the repository root with Godot 4.5.1:
+
+```powershell
+& $GodotExe --headless --path .\tools\art `
+  --script res://build_vivhite_character_select_rig.gd -- build-character-select
+```
+
+The builder crops transparent padding, uniformly downsizes when necessary,
+and places the unchanged RGBA content on the fixed 3713x2427 private atlas
+page. It performs no Alpha extraction or repair. The private runtime output is
+written to `Vivhite/Vivhite/skins/ironclad/spine/character_select/`: one atlas
+page, one `.spatlas`, one `.spjson`, and one skeleton-data `.tres`.
+
+After the builder rewrites the atlas PNG, run a Godot editor import before
+previewing so `.godot/imported` cannot retain a stale hero-only `.ctex`:
+
+```powershell
+$env:DOTNET_ROOT = "C:\Users\xenoa\AppData\Local\Microsoft\dotnet"
+& $GodotExe --headless --editor --path .\Vivhite --import
+```
+
+The JSON contains exactly one 5.3333335-second animation named `animation`, as
+required by `NSpineAutoPlayer`. Its 9x13 hero mesh has 117 weighted vertices,
+192 triangles, a 40-vertex hull, and separate Vivhite influences for torso,
+head, hair, butterfly, both arms, skirt, and both legs. The magic sigil is a
+separate rigid region attachment on its own rotating bone behind the hero; its
+glow is never baked into deforming body joints. With the existing scene's
+`SpineSprite` position `(-185, -20)` and scale `0.46`, the setup mesh stays in
+the researched right-side hero area at `x=2213..4385`, `y=-2401..-121`. This is
+five percent smaller than the original attachment union so hair and butterfly
+retain a visible top margin on the 2560x1200 canvas.
+
+### Preview only the private character-select rig
+
+The character-select rig can be rendered before the other skin sets exist. The
+preview mounts `SlayTheSpire2.pck` read-only for the game's Spine extension,
+loads and instantiates the real private `character_select.tscn` on a 2560x1200
+canvas, and writes only below `.work`. It never starts or modifies the game and
+never edits the source image, atlas, or Alpha channel. There is no synthetic
+bare-`SpineSprite` fallback.
+
+Run this with the real Vulkan display driver (not `--headless`):
+
+```powershell
+$previewScript = (Resolve-Path `
+  .\tools\art\render_vivhite_character_select_preview.gd).Path
+& $GodotExe --path (Resolve-Path .\Vivhite).Path `
+  --rendering-driver vulkan `
+  --script $previewScript -- `
+  --pck "G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.pck" `
+  --scene "res://Vivhite/skins/ironclad/scenes/character_select.tscn" `
+  --resource "res://Vivhite/skins/ironclad/spine/character_select/character_select_skeleton_data.tres" `
+  --output ".work/vivhite-character-select-preview"
+```
+
+The command captures five evenly spaced frames from `animation` over
+5.3333335 seconds and writes `frames/*.png` plus `report.json`. It fails if the
+resource is not a private Spine 4.2.43 `.spjson` rig with exactly the one
+required animation, if the real scene does not reference that exact resource,
+if `NSpineAutoPlayer` is not the direct scripted child of `SpineSprite`, if any
+frame is empty or touches the canvas boundary, or if all five rendered frames
+are pixel-identical. A standalone Mod project cannot register the game's C#
+class from `sts2.dll` as its own script class, so the preview records that
+known limitation and explicitly selects the scene's sole animation; actual
+`NSpineAutoPlayer._Ready` execution is verified in game. The first and last
+samples may match because they are the endpoints of a closed loop.
+
 ## Publish edited assets
 
-After packing all finished character art into the five custom-art domains, run
-from the repository root:
+After building all private rigs and preparing the approved UI sources, run from
+the repository root:
 
 ```powershell
 py -3 .\tools\art\publish_ironclad_skin.py
@@ -224,24 +300,28 @@ dotnet build
 
 The publisher writes the 26 runtime resources below
 `Vivhite/Vivhite/skins/ironclad/`. It strictly decodes every RGBA8 PNG and
-refuses wrong dimensions or any image whose decoded pixels still match the
-extracted game asset, even after a lossless re-encode. Legacy non-combat atlas
-text must remain byte-for-byte identical to its versioned template. Generated
-private rig inputs are selected with `--private-runtime-root` (the tracked
-runtime tree by default), validated, and read fully before the destination is
-cleaned. Combat and merchant deliberately share the same private JSON, atlas,
-and page so every `pose_*` attachment resolves. The destination is mirrored to
+refuses wrong dimensions or any protected image whose decoded pixels still
+match the extracted game asset, even after a lossless re-encode. The remaining
+legacy rest-site atlas text must remain byte-for-byte identical to its versioned
+template; character-select uses its own private atlas and arbitrary private
+region names. Generated private rig inputs are selected with
+`--private-runtime-root` (the tracked runtime tree by default), validated, and
+read fully before the destination is cleaned. Combat and merchant deliberately
+share the same private JSON, atlas, and page so every `pose_*` attachment
+resolves. Character-select must expose exactly one animation named `animation`,
+as required by the game's `NSpineAutoPlayer`. The destination is mirrored to
 the exact 26-file allowlist, so stale
 debug/import files cannot silently enter the PCK. Extracted `.skel` files remain
 read-only research references and are never copied or referenced by the Mod.
 The character-select scene is also scrubbed of serialized editor-preview
 `SpineMesh2D` children; its replacement mesh must come from the private JSON.
 
-The two inputs are intentionally independent: `--template-root` (with the old
+The source roots are intentionally independent: `--template-root` (with the old
 `--authoring-root` spelling retained as an alias) defaults to the immutable
 `assets/ironclad-v0.111.0`, while `--art-root` defaults to
-`assets/vivhite-ironclad/custom`. Publishing never requires overwriting the
-tracked template.
+`assets/vivhite-ironclad/custom` and `--approved-root` defaults to
+`assets/vivhite-ironclad/approved`. Publishing never requires overwriting the
+tracked template or duplicating approved UI into the custom tree.
 
 A local conversion preview is available without touching the mod tree:
 

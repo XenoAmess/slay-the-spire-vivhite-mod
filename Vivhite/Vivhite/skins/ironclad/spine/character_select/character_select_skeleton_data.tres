@@ -1,8 +1,9 @@
 [gd_resource type="SpineSkeletonDataResource" load_steps=3 format=3]
 
-[ext_resource type="SpineAtlasResource" path="res://Vivhite/skins/ironclad/spine/character_select/characterselect_ironclad.spatlas" id="1_ksmnb"]
-[ext_resource type="SpineSkeletonFileResource" path="res://animations/character_select/ironclad/characterselect_ironclad.skel" id="2_8v7lw"]
+[ext_resource type="SpineAtlasResource" path="res://Vivhite/skins/ironclad/spine/character_select/characterselect_ironclad.spatlas" id="1_atlas"]
+[ext_resource type="SpineSkeletonFileResource" path="res://Vivhite/skins/ironclad/spine/character_select/vivhite_character_select.spjson" id="2_skeleton"]
 
 [resource]
-atlas_res = ExtResource("1_ksmnb")
-skeleton_file_res = ExtResource("2_8v7lw")
+atlas_res = ExtResource("1_atlas")
+skeleton_file_res = ExtResource("2_skeleton")
+default_mix = 0.05
