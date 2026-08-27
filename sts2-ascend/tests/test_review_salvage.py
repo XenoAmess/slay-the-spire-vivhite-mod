@@ -31,6 +31,8 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg["preferred_timeout_min"], 480)
         self.assertEqual(cfg["max_runs_in_packet"], 100)
         self.assertEqual(cfg["review_queue_max"], 100)
+        self.assertEqual(cfg["stall_warn_min"], 15)
+        self.assertEqual(cfg["stall_timeout_min"], 30)
         self.assertEqual(cfg["preferred_models"], ["opencode-go/glm-5.3-flash@max"])
         self.assertEqual(int(cfg["timeout_min"] * 60), 28800)
 
@@ -48,6 +50,26 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertFalse(stalled)
         self.assertLessEqual(len(tail), 256 * 1024)
         self.assertGreater(stream_size, len(tail))
+
+    def test_stream_small_flushed_bytes_reset_stall_without_newline_or_8k_fill(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-buffer-") as root:
+            stream = Path(root) / "review.stream"
+            command = [
+                sys.executable, "-c",
+                "import sys,time\n"
+                "for _ in range(6):\n"
+                " sys.stdout.write('x');sys.stdout.flush();time.sleep(0.25)\n"
+                "sys.stdout.write('\\n');sys.stdout.flush()",
+            ]
+            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                rc, tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 5, stall_warn_sec=0.6, stall_timeout_sec=1.0)
+        self.assertEqual(rc, 0)
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertFalse(stalled)
+        self.assertIn("xxxxxx", tail)
 
     def test_translator_part_memory_is_bounded(self) -> None:
         translator = llm_review.OpencodeJsonTranslator()

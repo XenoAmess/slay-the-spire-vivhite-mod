@@ -174,10 +174,10 @@ def load_llm_config() -> dict:
         "preferred_failure_cooldown_min": 5,
         # 异步复盘不阻塞游玩，优先模型的超时可放宽
         "preferred_timeout_min": 480,
-        # 总复盘预算仍是 8 小时；这里只识别进程活着但长时间没有任何输出进展
-        # 的工具/CLI 挂起。实测正常 GLM 单步最长约 3 分钟，10 分钟才终止。
-        "stall_warn_min": 5,
-        "stall_timeout_min": 10,
+        # 总复盘预算仍是 8 小时；这里只识别进程活着但长时间没有任何 stdout
+        # 字节进展的工具/CLI 挂起。给模型推理、工具执行与输出缓冲留足余量。
+        "stall_warn_min": 15,
+        "stall_timeout_min": 30,
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
@@ -1647,8 +1647,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     rc, out, timed_out, stopped, stalled = -1, "", False, False, False
     eff_timeout_min = float(cfg.get("preferred_timeout_min", 480)) if source == "preferred" \
         else float(cfg.get("timeout_min", 480))
-    stall_timeout_min = _non_negative_float(cfg.get("stall_timeout_min"), 10.0)
-    stall_warn_min = _non_negative_float(cfg.get("stall_warn_min"), 5.0)
+    stall_timeout_min = _non_negative_float(cfg.get("stall_timeout_min"), 30.0)
+    stall_warn_min = _non_negative_float(cfg.get("stall_warn_min"), 15.0)
     if stall_timeout_min > 0:
         stall_warn_min = min(stall_warn_min, stall_timeout_min)
     else:
