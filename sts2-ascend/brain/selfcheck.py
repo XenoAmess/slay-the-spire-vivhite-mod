@@ -5060,6 +5060,75 @@ def main() -> int:
         f"投影镜像未与必败锻造口径同步: 必败{_proj_doom}% 应低于 无数据{_proj_nv}%"
     br_ctx.rest_before_boss = False
 
+    # 3br-2) per-Boss 血池全称门（第731~740批拒合成果补合）：均值判负后，
+    #        任一重复实证组合可赢即放行；全组合必败才保留死刑。native 缺失
+    #        或显式关闭旋钮均严格回落旧均值口径。
+    class _PerComboNative:
+        available = True
+        pools: dict = {}
+
+        def lookup(self, category, monster_id):
+            if category != "monsters" or monster_id not in self.pools:
+                return None
+            low, high = self.pools[monster_id]
+            return {"runtime": {"min_hp": low, "max_hp": high}}
+
+        def enrich_card(self, card):
+            return card
+
+    def _pc_enemy(pool_sum):
+        return {
+            "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+            "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+            "hp_pool_sum": float(pool_sum), "hp_pool_n": 2,
+            "fire_sum": 80.0, "fire_rounds": 8,
+            "boss_act": {"1": {"hp_pool_sum": float(pool_sum), "hp_pool_n": 2}},
+        }
+
+    pc_state = dict(br_rest_weak,
+                    run=dict(br_rest_weak["run"], current_hp=20))
+    pc_ctx = SimpleNamespace(rest_before_boss=True, rest_proj_hp_pct=1.0,
+                             rest_next_fight_loss_frac=0.0)
+    pc_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-percombo-"))
+    pc_know = knowledge.Knowledge(pc_dir)
+    pc_know.stats["enemies"]["PC_LIGHT"] = _pc_enemy(130.0)
+    pc_know.stats["enemies"]["PC_HEAVY"] = _pc_enemy(600.0)
+    pc_native = _PerComboNative()
+    pc_native.pools = {"PC_LIGHT": (60, 70), "PC_HEAVY": (290, 310)}
+    pc_know.game_knowledge = pc_native
+    d_pc_light = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_light.tags and d_pc_light.tags[0] == ("rest", "heal"), \
+        f"轻池可赢时应撤销均值死刑并保住低血回血: {d_pc_light.reason}"
+    assert "BOSS_RACE_COMBO_GATE" in json.dumps(d_pc_light.trace, ensure_ascii=False), \
+        f"组合门放行未进入持久决策轨迹: {d_pc_light.trace}"
+
+    pc_native.pools = {"PC_LIGHT": (290, 300), "PC_HEAVY": (300, 310)}
+    d_pc_heavy = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_heavy.tags and d_pc_heavy.tags[0] == ("rest", "smith") \
+        and "BOSS_RACE_COMBO_GATE 全称必败分账" in d_pc_heavy.reason, \
+        f"全组合必败时应维持死刑并写分账: {d_pc_heavy.reason}"
+
+    pc_no_native = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-percombo-none-")))
+    pc_no_native.stats["enemies"]["PC_LIGHT"] = _pc_enemy(130.0)
+    pc_no_native.stats["enemies"]["PC_HEAVY"] = _pc_enemy(600.0)
+    d_pc_no_native = policy.Policy(pc_no_native, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_no_native.tags and d_pc_no_native.tags[0] == ("rest", "smith") \
+        and "BOSS_RACE_COMBO_GATE" not in d_pc_no_native.reason, \
+        f"native 缺失时应回落均值判死: {d_pc_no_native.reason}"
+
+    pc_off = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-percombo-off-")))
+    pc_off.stats["enemies"]["PC_LIGHT"] = _pc_enemy(130.0)
+    pc_off.stats["enemies"]["PC_HEAVY"] = _pc_enemy(600.0)
+    pc_off.game_knowledge = _PerComboNative()
+    pc_off.game_knowledge.pools = {"PC_LIGHT": (60, 70), "PC_HEAVY": (290, 310)}
+    pc_off.policy["boss_race_per_combo_gate"] = False
+    d_pc_off = policy.Policy(pc_off, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_off.tags and d_pc_off.tags[0] == ("rest", "smith") \
+        and "BOSS_RACE_COMBO_GATE" not in d_pc_off.reason, \
+        f"组合门关闭时应回落均值判死: {d_pc_off.reason}"
+
     # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
     #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
     #      链未顶格时不接替；胜利按 +0.03 向锚点回收

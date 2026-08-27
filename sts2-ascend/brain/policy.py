@@ -3539,6 +3539,11 @@ class Policy:
         （VANTOM=173 / CEREMONIAL_BEAST=252，相差 ~46%）差距可观，均值必败标签
         可能误伤轻池对局；校准注让每条 doom 记录自带精确对照，为后续 per-Boss
         校准直接供数。
+        第 731~740 批复盘兑现消费端：_per_combo_boss_pools 提供组合级 native
+        血池表后改用全称门复核。任一已有重复实证的常见组合可赢，就撤销均值
+        必败标签；全部已知组合都追不上才维持判死。放行与判死均写入稳定的
+        BOSS_RACE_COMBO_GATE 留痕；policy 键 boss_race_per_combo_gate=False
+        可立即回滚到均值口径。
         """
         pol = self.know.policy
         if not pol.get("kill_race_enabled", True):
@@ -3573,14 +3578,82 @@ class Policy:
             deck or [], pool_eff, fire, float(max_hp), margin, eff=eff)
         if _feasible:
             return False, ""
+        # 均值口径已判负时，用合格的组合级 native 血池逐一复核。这里只
+        # 放宽均值误杀，不凭无样本组合造结论；native/分幕样本缺失时原账不动。
+        combo_tail = ""
+        if bool(pol.get("boss_race_per_combo_gate", True)):
+            try:
+                act_no = self._floor_act(floor) if floor else None
+                combos = self._per_combo_boss_pools(act_no)
+            except Exception:
+                combos = []
+            if combos:
+                verdicts: list[str] = []
+                universal_doomed = True
+                for combo_id, combo_pool in combos:
+                    credited_pool = self._race_potion_credit(potions, combo_pool, floor)
+                    combo_ttk = credited_pool / max(1.0, dpt)
+                    combo_feasible, _ = self._race_joint_feasible(
+                        deck or [], credited_pool, fire, float(max_hp), margin, eff=eff)
+                    combo_alive = combo_ttk <= tsurv + margin or combo_feasible
+                    verdicts.append(
+                        f"{combo_id}{credited_pool:.0f}池" + ("可赢" if combo_alive else "必败"))
+                    if combo_alive:
+                        universal_doomed = False
+                verdict_text = ",".join(verdicts)
+                if not universal_doomed:
+                    self._trace_note(
+                        "BOSS_RACE_COMBO_GATE：均值判死被组合全称门放行；" + verdict_text)
+                    return False, ""
+                combo_tail = "；BOSS_RACE_COMBO_GATE 全称必败分账：" + verdict_text
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
                 f"先验输出{dpt:.0f}/回合{_pot_tail}；联合能量复核：任一攻防能量分配"
-                f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止")
+                f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止"
+                + combo_tail)
         _cal = self._native_boss_hp_calibration()
         if _cal:
             note += _cal
         return True, note
+
+    def _per_combo_boss_pools(self, act: int | None = None) -> list[tuple[str, float]]:
+        """返回有重复实证的组合级 native Boss 血池中值。
+
+        资格与原校准注一致：learned 台账 boss_encounters>=2 且 hp_pool_n>=2；
+        组合键按 ``+`` 拆成员，原生 min/max 分别求和后取中值。指定幕时还要
+        有该幕 hp_pool 样本。任何缺失或异常都返回空表，让调用方回落旧均值。
+        """
+        try:
+            native = getattr(self.know, "game_knowledge", None)
+            if native is None or not getattr(native, "available", False):
+                return []
+            result: list[tuple[str, float]] = []
+            for enemy_id, stats in (self.know.stats.get("enemies") or {}).items():
+                if int(stats.get("boss_encounters", 0) or 0) < 2:
+                    continue
+                if int(stats.get("hp_pool_n", 0) or 0) < 2:
+                    continue
+                if act is not None:
+                    act_stats = (stats.get("boss_act") or {}).get(str(int(act))) or {}
+                    if int(act_stats.get("hp_pool_n", 0) or 0) < 1:
+                        continue
+                low = high = 0
+                known = True
+                for member_id in [part for part in str(enemy_id).split("+") if part]:
+                    runtime = ((native.lookup("monsters", member_id) or {}).get("runtime") or {})
+                    min_hp = runtime.get("min_hp")
+                    max_hp = runtime.get("max_hp")
+                    if (not isinstance(min_hp, (int, float))
+                            or not isinstance(max_hp, (int, float))):
+                        known = False
+                        break
+                    low += int(min_hp)
+                    high += int(max_hp)
+                if known and high > 0:
+                    result.append((str(enemy_id), (float(low) + float(high)) / 2.0))
+            return result
+        except Exception:
+            return []
 
     def _native_boss_hp_calibration(self) -> str:
         """doom 留痕的 native 血池校准注（第 681~686 批复盘新增，纯观测）。
