@@ -195,6 +195,39 @@ def main() -> int:
     assert stance_boss["atk_mult"] > 1.0 and stance_boss["blk_mult"] > 1.0 \
         and "高危Boss" in stance_boss.get("danger", ""), f"高危Boss姿态失效: {stance_boss}"
 
+    # 成长型普通怪姿态斜率反转：静态 FUZZY 首回合即解除攻击压制；
+    # 未知组合必须连续两次升级才确认。Elite/Boss、非高危和一次波动均不得误触发。
+    def ramp_stance(*, danger=True, atk=0.85, block=1.6):
+        return {"danger": "高危组合" if danger else "",
+                "atk_mult": atk, "blk_mult": block}
+
+    st_fuzzy = ramp_stance()
+    tag_fuzzy = pol._apply_growth_ramp_stance_relief(
+        st_fuzzy, "FUZZY_WURM_CRAWLER+SHRINKER_BEETLE", "Monster", 0)
+    assert tag_fuzzy == "斜率反转：成长型组合，解除攻击压制", tag_fuzzy
+    assert st_fuzzy["atk_mult"] == 1.0 and st_fuzzy["blk_mult"] == 1.3, st_fuzzy
+    st_substring = ramp_stance()
+    assert not pol._apply_growth_ramp_stance_relief(
+        st_substring, "NOT_FUZZY_WURM_CRAWLERISH", "Monster", 0), \
+        "静态成长怪必须按 comp_id 成员精确匹配"
+    st_once = ramp_stance()
+    assert not pol._apply_growth_ramp_stance_relief(
+        st_once, "RAMP_COMP", "Monster", 1), "一次意图波动不应确认为持续成长"
+    st_twice = ramp_stance()
+    assert pol._apply_growth_ramp_stance_relief(
+        st_twice, "RAMP_COMP", "Monster", 2), "两次升级应解除普通怪防御压制"
+    for room in ("Elite", "Boss"):
+        st_room = ramp_stance()
+        assert not pol._apply_growth_ramp_stance_relief(
+            st_room, "FUZZY_WURM_CRAWLER", room, 3), f"{room} 不应走普通怪反转"
+    st_safe = ramp_stance(danger=False)
+    assert not pol._apply_growth_ramp_stance_relief(
+        st_safe, "FUZZY_WURM_CRAWLER", "Monster", 3), "非高危组合不应反转"
+    st_neutral_block = ramp_stance(block=0.9)
+    assert pol._apply_growth_ramp_stance_relief(
+        st_neutral_block, "FUZZY_WURM_CRAWLER", "Monster", 0)
+    assert st_neutral_block["blk_mult"] == 0.9, "低于中性的格挡权重不得被抬高"
+
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
                    "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
                    "rules_text": "失去 2 点生命，造成 18 点伤害。",
@@ -2738,8 +2771,8 @@ def main() -> int:
     assert d_es.action == "play_card" and d_es.params.get("card_index") == 0, \
         f"升级型低血池组合未走竞速路线: {d_es.action}（{d_es.reason}）"
     assert "斩杀竞速投影" in d_es.reason, f"升级门未开账: {d_es.reason}"
-    assert "竞速解除防御压制" in d_es.reason, \
-        f"高危防御姿态未被竞速解除/文案未改写: {d_es.reason}"
+    assert "斜率反转：成长型组合，解除攻击压制" in d_es.reason, \
+        f"持续成长组合未在竞速前解除攻击压制/文案未改写: {d_es.reason}"
     assert "转防守节奏" not in d_es.reason, f"矛盾留痕残留: {d_es.reason}"
     # 对照：同一低血池组合但意图平稳（无升级轨迹）→ 门不开，不得误触发
     krc_es.credit_tags = []

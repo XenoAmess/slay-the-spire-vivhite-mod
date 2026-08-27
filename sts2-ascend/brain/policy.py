@@ -2056,6 +2056,39 @@ class Policy:
     # combat
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _apply_growth_ramp_stance_relief(
+        stance: dict, comp_id: str | None, node_type: str | None,
+        escalating_rounds: int,
+    ) -> str:
+        """Reverse defensive suppression for proven scaling normal encounters.
+
+        A dangerous normal group that grows every round cannot be solved by the
+        generic high-danger posture indefinitely: suppressing attacks lengthens
+        the fight and lets the enemy scale again.  FUZZY is known statically from
+        native data; other compositions need two observed escalation boundaries.
+        Elites/Bosses retain their dedicated posture and race logic.
+        """
+        if not stance.get("danger") or node_type != "Monster":
+            return ""
+        members = {
+            part.strip().upper() for part in str(comp_id or "").split("+")
+            if part.strip()
+        }
+        if ("FUZZY_WURM_CRAWLER" not in members
+                and int(escalating_rounds or 0) < 2):
+            return ""
+        changed = False
+        atk_mult = float(stance.get("atk_mult", 1.0) or 1.0)
+        if atk_mult < 1.0:
+            stance["atk_mult"] = 1.0
+            changed = True
+        blk_mult = float(stance.get("blk_mult", 1.0) or 1.0)
+        if blk_mult > 1.0:
+            stance["blk_mult"] = round(1.0 + (blk_mult - 1.0) * 0.5, 3)
+            changed = True
+        return "斜率反转：成长型组合，解除攻击压制" if changed else ""
+
     def _combat(self, state: dict, ctx) -> Decision:
         combat = state.get("combat") or {}
         player = combat.get("player") or {}
@@ -2333,6 +2366,9 @@ class Policy:
         comp_id = cctx.get("comp_id") or None
         stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
         comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
+        ramp_relief_note = self._apply_growth_ramp_stance_relief(
+            stance, comp_id, cctx.get("node_type"),
+            getattr(self, "_esc_rounds", 0))
         # 姿态方向决定文案（第 84~85 批复盘）：高危 Boss 姿态实为提速进攻，
         # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志。
         # tone 记入独立变量：若后续斩杀竞速投影解除防御压制（93 局实证），
@@ -2342,6 +2378,8 @@ class Policy:
             stance_defensive_tone = stance.get("atk_mult", 1.0) < 1.0
             tone = "提速斩杀" if not stance_defensive_tone else "转防守节奏"
             danger_note = f"；⚠{stance['danger']}，{tone}"
+            if ramp_relief_note:
+                danger_note += f"；{ramp_relief_note}"
         else:
             danger_note = ""
         # 意图升级防御前置（第 84~85 批复盘）：升级型敌人意图跳升回合，
