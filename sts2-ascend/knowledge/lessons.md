@@ -3681,3 +3681,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/735 胜，当前目标进阶 0
+
+## 第 736 局复盘（2026-08-27 12:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：DRAMATIC_ENTRANCE, IRON_WAVE, EVIL_EYE, TRUE_GRIT, SWORD_BOOMERANG, STOMP, JUGGERNAUT, BLUDGEON, WHIRLWIND
+- 本局遗物：精致折扇, PERMAFROST, BAG_OF_PREPARATION
+- 战斗记录：F4 Monster战 掉血1; F5 Monster战 掉血19; F7 Monster战 掉血10; F8 Elite战 掉血25; F12 Monster战 掉血2; F17 Boss战 掉血71（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/52局)，FIEND_FIRE(24分/29局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/736 胜，当前目标进阶 0
