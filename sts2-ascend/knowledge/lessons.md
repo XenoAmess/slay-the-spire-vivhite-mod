@@ -3362,3 +3362,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/706 胜，当前目标进阶 0
+
+## 第 707 局复盘（2026-08-27 08:46）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：THUNDERCLAP, CINDER, FLAME_BARRIER, STOMP, ANGER, FLAME_BARRIER, TRUE_GRIT, HOWL_FROM_BEYOND, SHRUG_IT_OFF, DARK_EMBRACE, HEMOKINESIS, SHRUG_IT_OFF, ARMAMENTS, SPITE
+- 本局遗物：MERCURY_HOURGLASS, 苦无
+- 战斗记录：F6 Monster战 掉血15; F7 Monster战 掉血15; F8 Unknown战 掉血1; F12 Monster战 掉血6; F15 Elite战 掉血42; F17 Boss战 掉血23（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/707 胜，当前目标进阶 0
