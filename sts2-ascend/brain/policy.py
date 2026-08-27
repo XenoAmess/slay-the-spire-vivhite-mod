@@ -193,6 +193,8 @@ class Policy:
         self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
         self._krace_round = None    # 上次计回合的回合号
         self._krace_latch = False   # 竞速迟滞锁（第632局批复盘）：实测口径判死后同场维持
+        self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
+        self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
         self._combat_credit_source = None
@@ -493,6 +495,16 @@ class Policy:
                 estimated_damage = 0.0
             if estimated_damage > 0.0:
                 self._krace_dmg += estimated_damage
+                # 药水回合剔除（第708局复盘）：爆发药水把 T1 输出抬到 44+/回合，
+                # 后续回合实测仅 ~25-30——一次性借支混进实测口径会系统性低估剩余
+                # 击杀回合数，竞速投影与防守线复核共用这份账，必须只记持续输出
+                try:
+                    _dmg_round = int(raw[5])
+                except (TypeError, ValueError):
+                    _dmg_round = None
+                if (_dmg_round is None
+                        or _dmg_round not in getattr(self, "_krace_potion_rounds", ())):
+                    self._krace_dmg_sustained += estimated_damage
             try:
                 round_no = int(raw[5])
             except (TypeError, ValueError):
@@ -924,6 +936,12 @@ class Policy:
         self._active_trace_builder = trace_builder
         try:
             decision = handler(state, ctx)
+            if screen == "COMBAT" and decision.action == "use_potion":
+                # 竞速输出账记下本回合号，随后 commit 的本回合伤害不计入持续 DPS
+                try:
+                    self._krace_potion_rounds.add(int(state.get("turn") or 1))
+                except (TypeError, ValueError):
+                    self._krace_potion_rounds.add(0)
             if decision.action == "choose_rest_option":
                 decision = self._prepare_rest_decision(state, decision)
                 rest_tag = next((tag[1] for tag in (decision.tags or [])
@@ -2058,6 +2076,8 @@ class Policy:
             self._krace_turns = 0
             self._krace_round = None
             self._krace_latch = False
+            self._krace_dmg_sustained = 0.0
+            self._krace_potion_rounds = set()
             self._incoming_ema = 0.0
             self._esc_rounds = 0
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
@@ -2356,7 +2376,11 @@ class Policy:
                 # VANTOM ~173，逐轮火力 ~13——防守线在数学上普遍不可行，早一回合
                 # 竞速就是早一回合止损
                 if self._krace_turns >= 2:
-                    dpt = self._krace_dmg / max(1, self._krace_turns)
+                    # 优先用剔除药水回合的持续口径；纯药水爆发（持续账为空）时
+                    # 才回退全量台账，避免投影在整场只剩药水伤害时静默失效
+                    _dpt_num = (self._krace_dmg_sustained
+                                if self._krace_dmg_sustained > 0.0 else self._krace_dmg)
+                    dpt = _dpt_num / max(1, self._krace_turns)
                     dpt_src = f"实测{dpt:.0f}伤/回合"
                 else:
                     _prior_eff = float(pol.get("kill_race_prior_eff", 0.55))
