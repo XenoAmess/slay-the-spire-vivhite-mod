@@ -186,11 +186,13 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   不启动可能被杀软卡住的 Git 子进程；只有从局间屏后开始并完整跑完的两局才清除观察链。健康记账
   拿不到仓库锁会在 0.1 秒内放弃本局而不阻塞直播；崩溃重试间隔为 10 秒
 - Runner 在仓库锁内创建每代 Brain，并要求 session PID 文件回显本代唯一 `boot_id`、冻结 HEAD、
-  marker epoch 和 `stage=ready` 后才放锁；10 秒未完成模块/config/Agent 初始化会终止本代。罕见
+  marker epoch 和 `stage=imported` 后放锁，再在锁外等待 `stage=ready`；模块/config 不会混载，
+  Agent/Knowledge 初始化又可以安全重入仓库锁。15 秒未 ready 会精确终止本代。罕见
   `prepared` 残留会在启动前按精确 provisional patch 判定：HEAD 已发布则补确认为 committed，
-  HEAD 仍在 parent 则证明工作树未应用或精确反向撤回，任何重叠现场都保留并拒绝混载
-- 新复盘导致启动失败时最多三次 10 秒握手与短间隔重试，随后在共享总预算内本地创建安全反向
-  commit，立即拉起旧代码；push 交给后续正常 checkpoint，恢复热路径不等待网络
+  HEAD 仍在 parent 则证明工作树未应用或精确反向撤回；重叠到无法证明时，先完整保存目标文件、
+  当前/provisional patch 和 marker 到 salvage，再恢复当前已知 Git 树，绝不无限断流
+- 一次连续启动断流共用单一 115 秒绝对 deadline；复盘代码两次握手失败即在剩余预算内本地创建
+  安全反向 commit 并立即拉起旧代码。push 交给后续正常 checkpoint，恢复热路径不等待网络
 - GLM 可用时，积压/长期未成功只扩大追及批次，不再强制交替到 K3；K3 仅在 preferred 模型被
   实际判定 unavailable/cooldown 时作为 fallback
 - 只有运行时行为/观测变更才在本局结束的安全点以退出码 42 自重启加载；纯报告不再被误判为
