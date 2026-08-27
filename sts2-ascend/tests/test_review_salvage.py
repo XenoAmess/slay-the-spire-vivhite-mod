@@ -60,6 +60,44 @@ class ReviewConfigurationTests(unittest.TestCase):
 
 
 class ReviewSalvageTests(unittest.TestCase):
+    def test_rejection_ledger_is_idempotent_and_requests_one_commit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-rejection-ledger-") as root:
+            repo = Path(root) / "repo"
+            base = repo / "sts2-ascend"
+            salvage_root = base / "knowledge" / "code_backups" / "review_salvage"
+            package = salvage_root / "20260827-130000-123456789-deadbeef"
+            package.mkdir(parents=True)
+            ledger = base / "REVIEW_REJECTIONS.md"
+            commits = []
+
+            def fake_commit(message, **kwargs):
+                commits.append((message, kwargs))
+                return SimpleNamespace(created=True, pushed=True, commit="a" * 40, reason="")
+
+            fake_autogit = SimpleNamespace(commit_progress_result=fake_commit)
+            manifest = {
+                "time": "2026-08-27 13:00:00", "batch_runs": [731, 732],
+                "pre_head": "deadbeef" * 5, "failure_kind": "allowlist",
+                "model": "opencode-go/glm-5.3-flash@max", "stopped": False,
+                "reason": "复盘 patch 越过 allowlist：tool-CACHE/result.bin",
+            }
+            with (mock.patch.object(llm_review, "BASE_DIR", base),
+                  mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "KNOWLEDGE_DIR", base / "knowledge"),
+                  mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root),
+                  mock.patch.object(llm_review, "REJECTION_LEDGER", ledger),
+                  mock.patch.dict(sys.modules, {"autogit": fake_autogit}),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                llm_review._record_review_rejection(package, manifest, log=lambda _msg: None)
+                llm_review._record_review_rejection(package, manifest, log=lambda _msg: None)
+
+            text = ledger.read_text(encoding="utf-8")
+            self.assertEqual(text.count(f"<!-- rejection:{package.name} -->"), 1)
+            self.assertIn("第 731~732 局", text)
+            self.assertIn("tool-CACHE/result.bin", text)
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0][1]["paths"], ["sts2-ascend/REVIEW_REJECTIONS.md"])
+
     def test_salvage_is_atomic_idempotent_and_preserves_every_changed_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-salvage-") as root:
             base = Path(root)

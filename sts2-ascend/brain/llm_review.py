@@ -61,6 +61,7 @@ PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
 SALVAGE_ROOT = KNOWLEDGE_DIR / "code_backups" / "review_salvage"
+REJECTION_LEDGER = BASE_DIR / "REVIEW_REJECTIONS.md"
 REVIEW_MUTABLE_PATHS = [
     "sts2-ascend/brain/__main__.py",
     "sts2-ascend/brain/agent.py",
@@ -2199,6 +2200,88 @@ def _current_head_for_salvage() -> str:
         return ""
 
 
+_REJECTION_LEDGER_HEADER = """# GLM 复盘拒合批次清单
+
+这是一份由复盘宿主维护、受 Git 跟踪的拒合账本。失败包仍完整保存在
+`knowledge/code_backups/review_salvage/`；本清单只记录索引和处理状态，不代替原始证据。
+
+每次新拒合在失败包原子发布后立即追加一行，并单独建立 Git commit；正常运行时同步推送，
+整套停止临界区为守住两分钟直播死线只建立本地 commit，由下次启动补推。
+
+| 时间 | 批次 | 基线 | 类型 | 模型 | 状态 | 失败包 | 原因 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+"""
+
+
+def _ledger_cell(value, limit: int = 240) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) > limit:
+        text = text[:max(0, limit - 1)] + "…"
+    return text.replace("|", "\\|")
+
+
+def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
+    """Append one durable rejection index row and commit that row independently.
+
+    The salvage package is the forensic source of truth; the tracked ledger is only
+    an auditable index.  Tests and alternate salvage roots intentionally do not
+    mutate the production ledger.
+    """
+    try:
+        production_root = (KNOWLEDGE_DIR / "code_backups" / "review_salvage").resolve()
+        if SALVAGE_ROOT.resolve() != production_root:
+            return
+        package = package.resolve()
+        if package.parent != production_root or not package.is_dir():
+            log(f"[llm] 拒合清单跳过不安全失败包路径：{package}")
+            return
+        marker = f"<!-- rejection:{package.name} -->"
+        try:
+            current = REJECTION_LEDGER.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            current = _REJECTION_LEDGER_HEADER
+        if marker in current:
+            return
+        if not current.strip():
+            current = _REJECTION_LEDGER_HEADER
+        elif not current.endswith("\n"):
+            current += "\n"
+        runs = manifest.get("batch_runs") or []
+        batch = _batch_description(runs) or "未记录"
+        pre_head = str(manifest.get("pre_head") or "")[:8] or "—"
+        model = manifest.get("model") or "—"
+        status = "待重试/补合" if manifest.get("stopped") else "待人工补合"
+        rel_package = package.relative_to(BASE_DIR).as_posix()
+        row = (
+            f"{marker}\n"
+            f"| {_ledger_cell(manifest.get('time'))} | {_ledger_cell(batch)} | `{pre_head}` | "
+            f"{_ledger_cell(manifest.get('failure_kind'))} | {_ledger_cell(model)} | "
+            f"{status} | `{_ledger_cell(rel_package, 500)}` | "
+            f"{_ledger_cell(manifest.get('reason'))} |\n"
+        )
+        temp = REJECTION_LEDGER.with_name(
+            f".{REJECTION_LEDGER.name}.tmp-{os.getpid()}-{threading.get_ident()}")
+        try:
+            temp.write_text(current + row, encoding="utf-8")
+            os.replace(temp, REJECTION_LEDGER)
+        finally:
+            temp.unlink(missing_ok=True)
+
+        import autogit  # delayed: keep standalone forensic helpers importable
+        rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+        result = autogit.commit_progress_result(
+            f"chore(sts2-ascend): 记录拒合批次 {package.name}",
+            paths=[rel_ledger], log=log, push=not _review_stop_requested())
+        if result.created:
+            suffix = "并推送" if result.pushed else "（停止临界区仅提交，待启动补推）"
+            log(f"[llm] 拒合批次清单已单独提交{suffix}：{result.commit[:8]}")
+        else:
+            log(f"[llm] 拒合批次清单提交失败，条目留在工作树待补交：{result.reason}")
+    except Exception as exc:
+        # Ledger failure must never delete or invalidate the already-published evidence.
+        log(f"[llm] 拒合批次清单更新异常；失败包仍完整保留：{exc}")
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -2213,7 +2296,13 @@ def _save_review_salvage(
 ) -> Path | None:
     """原子保存全部失败成果供人工补合；含越界文件，但永不自动应用。"""
     if sandbox.salvage_saved:
-        return Path(sandbox.salvage_saved)
+        saved = Path(sandbox.salvage_saved)
+        try:
+            manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
+            _record_review_rejection(saved, manifest, log=log)
+        except (OSError, ValueError, TypeError):
+            pass
+        return saved
 
     snapshot = Path(sandbox.snapshot_dir) if sandbox.snapshot_dir else None
     retained = Path(sandbox.retained_sandbox_dir) if sandbox.retained_sandbox_dir else None
@@ -2321,6 +2410,7 @@ def _save_review_salvage(
         if not deferred_raw:
             _discard_retained_sandbox(sandbox, log=log)
         log(f"[llm] 失败复盘成果已保存供补合（不会自动应用）：{final}")
+        _record_review_rejection(final, manifest, log=log)
         return final
     except _ReviewStopped:
         # stop 可能在普通失败包 copy 途中才到达。绝不删除半包或系统临时源；
@@ -2355,6 +2445,7 @@ def _save_review_salvage(
             _replace_with_retry(temp, final)
             sandbox.salvage_saved = str(final)
             log(f"[llm] 停止期间已快速发布失败现场指针包：{final}")
+            _record_review_rejection(final, manifest, log=log)
             return final
         except Exception as exc:
             log(f"[llm] 停止期间发布失败现场指针包异常；原始现场继续保留：{exc}")
