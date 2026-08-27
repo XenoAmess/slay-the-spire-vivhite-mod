@@ -4,7 +4,6 @@
  "ascension": 0,
  "started_at": "2026-08-27 14:33:22",
  "victory": false,
- "in_progress": true,
  "floor": 17,
  "decisions": [
   {
@@ -10821,6 +10820,530 @@
    "reason": "战斗：打出【打击】→墨影幻灵（单体伤害≈6.0）；敌意图总伤0，我方10血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需10回合>可存活1回合（实测16伤/回合），全攻提速",
    "turn": 4,
    "energy": 1
+  },
+  {
+   "t": "14:41:18",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 10/91",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "被遗忘的仪式",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "FORGOTTEN_RITUAL",
+      "name": "被遗忘的仪式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "14:41:23",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【头槌】→墨影幻灵（单体伤害≈9.0｜无甲孤注抢斩杀）；敌意图总伤9，我方10血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+9，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需9回合>可存活1回合（实测18伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "14:41:24",
+   "screen": "CARD_SELECTION",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "牌堆顶选择：【拆卸】（价值 28.0）；候选：拆卸=28.0 / 被遗忘的仪式=3.6 / 防御=-13.4 / 打击=-31.1 / 打击=-31.1",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F17",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F17",
+      "生命 10/91"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 28.01 / 门槛 0.51；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "牌堆顶选择"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "拆卸",
+      "score": 28.005,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "被遗忘的仪式",
+      "score": 3.572,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "防御",
+      "score": -13.4,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "打击",
+      "score": -31.058,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "打击",
+      "score": -31.058,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "拆卸",
+     "params": {
+      "option_index": 0
+     },
+     "score": 28.005
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "14:41:25",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→墨影幻灵（单体伤害≈6.0｜无甲孤注抢斩杀）；敌意图总伤9，我方10血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+9，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需9回合>可存活1回合（实测16伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "14:41:26",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→墨影幻灵（单体伤害≈6.0｜无甲孤注抢斩杀）；敌意图总伤9，我方10血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+9，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活1回合（实测17伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "14:41:27",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【战斗专注】（功能牌（抽牌3/回能））；敌意图总伤9，我方10血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+9，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活1回合（实测19伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 0
+  },
+  {
+   "t": "14:41:29",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 10,
+   "gold": 263,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 10/91",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 9"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "伤口",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "拆卸",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "伤口",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 9,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "WOUND",
+      "name": "伤口",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DISMANTLE",
+      "name": "拆卸",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 3,
+      "card_id": "WOUND",
+      "name": "伤口",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "14:41:33",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 1,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【挑衅】→墨影幻灵（格挡6）；敌意图总伤16，我方1血/0甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需7回合>可存活0回合（实测19伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "14:41:34",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 1,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤16，我方1血/6甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需9回合>可存活0回合（实测16伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "14:41:35",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 1,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→墨影幻灵（单体伤害≈6.0｜无甲孤注抢斩杀）；敌意图总伤16，我方1血/11甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需9回合>可存活0回合（实测16伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 1
+  },
+  {
+   "t": "14:41:36",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 1,
+   "gold": 263,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【狂怒】（格挡3）；敌意图总伤16，我方1血/11甲；⚠高危Boss（214战137死），速战速决，提速斩杀；意图升级+7，防御前置；Boss攻坚提速×1.80；斩杀竞速投影：击杀还需8回合>可存活0回合（实测16伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 0
+  },
+  {
+   "t": "14:41:37",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 1,
+   "gold": 263,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合",
+   "turn": 6,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 1/91",
+      "回合 6",
+      "能量 0",
+      "敌方意图伤害 16"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "痛击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 11,
+    "incoming_damage": 16,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "BASH",
+      "name": "痛击",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ]
+   }
   }
  ],
  "combat_notes": [
@@ -10832,7 +11355,8 @@
   "F8 Monster战 掉血28",
   "F12 Monster战 掉血41",
   "F14 Monster战 掉血0",
-  "F15 Monster战 掉血19"
+  "F15 Monster战 掉血19",
+  "F17 Boss战 掉血50（阵亡）"
  ],
  "attribution_tags": [
   [
