@@ -87,6 +87,6 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-150719-1787814439535649300-7a068289 -->
 | 2026-08-27 15:07:19 | 第 736~759 局范围内的 23 局 | `7a068289` | process_exit | kimi-for-coding/k3 | 待人工补合 | `knowledge/code_backups/review_salvage/20260827-150719-1787814439535649300-7a068289` | 复盘进程未成功完成 |
 <!-- rejection:20260827-150533-1787814333393135800-5318be56 -->
-| 2026-08-27 15:05:33 | 第 736~740 局 | `5318be56` | process_exit | opencode-go/glm-5.3-flash@max | 待重试/补合 | `knowledge/code_backups/review_salvage/20260827-150533-1787814333393135800-5318be56` | 复盘进程未成功完成 |
+| 2026-08-27 15:05:33 | 第 736~740 局 | `5318be56` | process_exit | opencode-go/glm-5.3-flash@max | 已审计空包，待删除 | `knowledge/code_backups/review_salvage/20260827-150533-1787814333393135800-5318be56` | Stop 中断；正式 patch/report/files 均为空，raw clone 仅有中断的临时分析脚本，无可补合成果 |
 <!-- rejection:20260827-154717-1787816837897736800-a344792f -->
 | 2026-08-27 15:47:17 | 第 698~765 局范围内的 64 局 | `a344792f` | process_exit | kimi-for-coding/k3 | 待人工补合 | `knowledge/code_backups/review_salvage/20260827-154717-1787816837897736800-a344792f` | 复盘进程未成功完成 |
