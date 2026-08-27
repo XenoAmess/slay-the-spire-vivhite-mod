@@ -845,6 +845,53 @@ class AutoGitSafetyTests(unittest.TestCase):
         finally:
             runner.MARKER = old_marker
 
+    def test_blocked_prepared_recovery_preserves_all_files_before_known_tree_restore(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        self._write(path, "VALUE = 99\n")
+        old_marker = runner.MARKER
+        old_knowledge = runner.KNOWLEDGE_DIR
+        knowledge = self.repo / "sts2-ascend" / "knowledge"
+        marker = knowledge / "pending_restart.json"
+        marker.write_text(json.dumps({
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": [path],
+            "state": "prepared",
+        }), encoding="utf-8")
+        runner.MARKER = marker
+        runner.KNOWLEDGE_DIR = knowledge
+        try:
+            self.assertTrue(runner._recover_blocked_prepared_marker("fault injected"))
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+            self.assertFalse(marker.exists())
+            packages = list((knowledge / "code_backups" / "review_salvage").iterdir())
+            self.assertEqual(len(packages), 1)
+            package = packages[0]
+            self.assertEqual(
+                (package / "files" / path).read_text(encoding="utf-8"),
+                "VALUE = 99\n")
+            self.assertTrue((package / "wip.patch").is_file())
+            self.assertTrue((package / "provisional.patch").is_file())
+            self.assertEqual(
+                json.loads((package / "manifest.json").read_text(encoding="utf-8"))[
+                    "failure_kind"],
+                "prepared_recovery")
+        finally:
+            runner.MARKER = old_marker
+            runner.KNOWLEDGE_DIR = old_knowledge
+
+    def test_blocked_prepared_recovery_is_never_an_infinite_retry(self) -> None:
+        failures = [(runner.RECONCILE_BLOCKED_CODE, 1.0)] * 3
+        with mock.patch.object(runner, "_run_brain", side_effect=failures) as launch, \
+                mock.patch.object(runner, "stop_requested", return_value=False), \
+                mock.patch.object(
+                    runner, "_recover_blocked_prepared_marker", return_value=False), \
+                mock.patch.object(runner, "wait_for_stop", return_value=False), \
+                mock.patch.object(runner, "log"):
+            self.assertEqual(runner.main(), 1)
+        self.assertEqual(launch.call_count, 3)
+
     def test_runner_promotes_prepared_marker_when_head_is_commit(self) -> None:
         path = "sts2-ascend/brain/policy.py"
         parent, commit = self._provisional_commit(path, "VALUE = 2\n")

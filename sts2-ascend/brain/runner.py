@@ -337,6 +337,139 @@ def _reconcile_prepared_marker() -> bool:
     return True
 
 
+def _save_prepared_recovery_package(
+    info: dict, paths: tuple[str, ...], reason: str,
+) -> Path | None:
+    """Preserve every affected file before live recovery restores a known tree."""
+    root = KNOWLEDGE_DIR / "code_backups" / "review_salvage"
+    parent = str(info.get("review_parent") or "").strip().lower()
+    name = (f"{time.strftime('%Y%m%d-%H%M%S')}-{time.time_ns()}-"
+            f"prepared-{parent[:8] or 'nohead'}")
+    final = root / name
+    temp = root / f".{name}.tmp-{os.getpid()}"
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        temp.mkdir()
+        files_root = temp / "files"
+        files_root.mkdir()
+        states: list[dict] = []
+        for relative in paths:
+            source = autogit.REPO_DIR / Path(relative)
+            target = files_root / Path(relative)
+            state = {"path": relative, "exists": source.exists(),
+                     "is_symlink": source.is_symlink()}
+            if source.is_symlink():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(os.readlink(source), encoding="utf-8")
+                state["kind"] = "symlink-target"
+            elif source.is_dir():
+                shutil.copytree(source, target, symlinks=True,
+                                ignore_dangling_symlinks=True)
+                state["kind"] = "directory"
+            elif source.is_file():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+                state.update({"kind": "file", "size": source.stat().st_size})
+            else:
+                state["kind"] = "missing"
+            states.append(state)
+
+        current_patch = autogit._run_git_bytes([
+            "diff", "--binary", parent, "--", *paths,
+        ], timeout=5) if re.fullmatch(r"[0-9a-f]{40,64}", parent) else None
+        provisional = str(info.get("review_commit") or "").strip().lower()
+        provisional_patch = autogit._run_git_bytes([
+            "diff", "--binary", parent, provisional, "--", *paths,
+        ], timeout=5) if (re.fullmatch(r"[0-9a-f]{40,64}", parent)
+                          and re.fullmatch(r"[0-9a-f]{40,64}", provisional)) else None
+        (temp / "wip.patch").write_bytes(
+            current_patch.stdout if current_patch is not None
+            and current_patch.returncode == 0 else b"")
+        (temp / "provisional.patch").write_bytes(
+            provisional_patch.stdout if provisional_patch is not None
+            and provisional_patch.returncode == 0 else b"")
+        (temp / "file_states.json").write_text(
+            json.dumps(states, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        (temp / "pending_restart.json").write_text(
+            json.dumps(info, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        (temp / "report.md").write_text(reason + "\n", encoding="utf-8")
+        manifest = {
+            "schema": 1,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "failure_kind": "prepared_recovery",
+            "reason": reason,
+            "pre_head": parent,
+            "current_head": read_git_head(autogit.REPO_DIR),
+            "batch_runs": [],
+            "model": "runner emergency recovery",
+            "source": "prepared marker",
+            "stopped": False,
+            "all_paths": list(paths),
+            "allowed_paths": list(paths),
+            "auto_apply": False,
+            "inspection_hint": "files/ 是恢复前全部受影响文件；已恢复已知 Git 树，人工审计后选择性补合。",
+        }
+        (temp / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        os.replace(temp, final)
+        return final
+    except Exception as exc:
+        log(f"prepared 现场完整保存失败；不覆盖工作树：{exc}")
+        return None
+
+
+def _recover_blocked_prepared_marker(reason: str) -> bool:
+    """Quarantine a blocked prepared transaction, then restore a known tree.
+
+    This is the live-safety fallback after exact forward/reverse proof failed.
+    Nothing is discarded: every target file, both patches and the marker are
+    atomically published under review_salvage before the worktree is restored.
+    """
+    try:
+        with autogit.repository_lock(timeout=3.0):
+            info = json.loads(MARKER.read_text(encoding="utf-8"))
+            if info.get("state") != "prepared":
+                return _reconcile_prepared_marker()
+            try:
+                paths = autogit.validate_review_paths(info.get("paths") or [])
+            except (TypeError, ValueError):
+                # Marker corruption cannot widen the target set.  Current review
+                # publication can only ever touch this process-internal boundary.
+                paths = autogit.validate_review_paths(autogit.REVIEW_PATCH_ALLOWLIST)
+            package = _save_prepared_recovery_package(info, paths, reason)
+            if package is None:
+                return False
+            head = read_git_head(autogit.REPO_DIR)
+            if not re.fullmatch(r"[0-9a-f]{40,64}", head):
+                log(f"prepared 现场已保存至 {package}，但 HEAD 不可读；保留工作树")
+                return False
+            restored = autogit._run_git([
+                "restore", "--worktree", f"--source={head}", "--", *paths,
+            ], timeout=8)
+            if restored.returncode != 0:
+                log(f"prepared 现场已保存至 {package}，但已知树恢复失败："
+                    f"{restored.stderr.strip()}")
+                return False
+            commit = str(info.get("review_commit") or "").strip().lower()
+            if re.fullmatch(r"[0-9a-f]{40,64}", commit):
+                try:
+                    _record_rollback_tombstone(commit)
+                except OSError as exc:
+                    log(f"prepared 恢复 tombstone 暂时写入失败；现场包仍保留：{exc}")
+            try:
+                _restore_superseded_marker(info)
+            except OSError as exc:
+                log(f"prepared 文件已恢复且现场已保存，但 marker 暂时锁定：{exc}")
+            log(f"prepared 混合现场已完整保存至 {package}；工作树恢复为 {head[:8]}，立即重启 Brain")
+            return True
+    except Exception as exc:
+        log(f"prepared 紧急恢复失败，现场保留：{exc}")
+        return False
+
+
 def rollback_from_marker() -> bool:
     """新代码启动失败：只反向应用 marker 指向的受控复盘 commit。"""
     try:
@@ -492,6 +625,7 @@ def main() -> int:
     review_crashes = 0
     review_restarts = 0
     review_startup_failures = 0
+    prepared_startup_failures = 0
     log("监督进程启动，拉起大脑…")
     while True:
         if stop_requested():
@@ -527,6 +661,21 @@ def main() -> int:
         if rc == 0:
             log("大脑正常退出，监督进程结束")
             return 0
+
+        if rc == RECONCILE_BLOCKED_CODE:
+            prepared_startup_failures += 1
+            log(f"prepared 启动事务无法精确收口 {prepared_startup_failures}/3；"
+                "先完整保存全部目标文件，再恢复当前已知提交")
+            if _recover_blocked_prepared_marker("Runner 启动前无法证明 prepared 工作树的精确状态"):
+                prepared_startup_failures = 0
+                continue
+            if prepared_startup_failures >= 3:
+                log("prepared 现场连续三次无法完整保存/恢复；在两分钟内停止并保留所有证据")
+                return 1
+            if wait_for_stop(STARTUP_RETRY_SECONDS):
+                return 0
+            continue
+        prepared_startup_failures = 0
 
         active_review = _has_active_review_marker()
         if rc == STARTUP_TIMEOUT_CODE and active_review:
