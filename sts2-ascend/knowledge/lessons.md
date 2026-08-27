@@ -4319,3 +4319,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/793 胜，当前目标进阶 0
+
+## 第 794 局复盘（2026-08-27 19:10）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：DISMANTLE, CINDER, SHRUG_IT_OFF, STOMP, DISMANTLE, INFLAME, INFLAME, INFLAME, CINDER, THRUMMING_HATCHET, PYRE, JUGGLING, TWIN_STRIKE
+- 本局遗物：PRAYER_WHEEL, 金刚杵
+- 战斗记录：F9 Monster战 掉血8; F12 Elite战 掉血30; F17 Boss战 掉血47; F19 Monster战 掉血17; F21 Monster战 掉血35; F22 Monster战 掉血28（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，FIEND_FIRE(24分/31局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，OFFERING(24分/18局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/794 胜，当前目标进阶 0
