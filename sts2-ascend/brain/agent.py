@@ -506,7 +506,7 @@ class Agent:
         # Freeze a clean boundary before accepting a run as evidence that newly
         # loaded review code is healthy. Attaching to an existing run proves only
         # its tail and used to retire rollback protection too early.
-        if (screen in ("MAIN_MENU", "CHARACTER_SELECT", "TIMELINE")
+        if (screen in ("MAIN_MENU", "CHARACTER_SELECT") and not run
                 and (self.ctx.run_id == "run_unknown" or self.ctx.run_finalized)):
             self._review_health_ready_for_new_run = True
 
