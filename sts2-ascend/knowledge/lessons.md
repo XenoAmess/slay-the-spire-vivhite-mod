@@ -4000,3 +4000,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/764 胜，当前目标进阶 0
+
+## 第 765 局复盘（2026-08-27 15:46）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：BREAKTHROUGH, TREMBLE, BLUDGEON, CINDER, IRON_WAVE, TRUE_GRIT, BLUDGEON, DISMANTLE, HEMOKINESIS, JUGGLING, RUPTURE
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F6 Monster战 掉血10; F7 Monster战 掉血16; F9 Monster战 掉血4; F11 Monster战 掉血0; F14 Monster战 掉血0; F17 Boss战 掉血72（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，FIEND_FIRE(24分/30局)，CONFLAGRATION(24分/55局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/765 胜，当前目标进阶 0
