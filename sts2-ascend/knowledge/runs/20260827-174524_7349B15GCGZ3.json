@@ -1,0 +1,4872 @@
+{
+ "run_id": "7349B15GCGZ3",
+ "run_number": 782,
+ "ascension": 0,
+ "started_at": "2026-08-27 17:45:24",
+ "victory": false,
+ "floor": 6,
+ "decisions": [
+  {
+   "t": "17:45:24",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「羽翼之靴」（经验价值 1.8）；羽翼之靴=1.8(n=48) / 新叶=0.8(n=20) / 涅奥骨骰=0.5(n=16)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "羽翼之靴",
+      "score": 1.771,
+      "status": "chosen",
+      "why": "经验样本 48",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "新叶",
+      "score": 0.75,
+      "status": "rejected",
+      "why": "经验样本 20",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "涅奥骨骰",
+      "score": 0.469,
+      "status": "rejected",
+      "why": "经验样本 16",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "羽翼之靴",
+     "params": {
+      "option_index": 0
+     },
+     "score": 1.771
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "17:45:25",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:45:28",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(1,3)（路径分 -52.23，预计进 Boss 血量 0%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(1,1)=-53.49|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,3)=-52.23|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,5)=-53.89|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡 / Monster(1,6)=-53.08|前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡",
+   "trace": {
+    "observation": {
+     "title": "MAP · F1",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅1张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -52.23"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 0%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(1,3)",
+      "score": -52.228,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "3",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(1,6)",
+      "score": -53.075,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "6",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(1,1)",
+      "score": -53.489,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "1",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(1,5)",
+      "score": -53.889,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "5",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(1,3)",
+     "params": {
+      "option_index": 1
+     },
+     "score": -52.228,
+     "target": {
+      "row": "1",
+      "col": "3",
+      "projected_hp": "0.0"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:45:30",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【痛击】→树叶史莱姆（中）（辅助体优先转火：树叶史莱姆（中）（零伤害意图，放生=纵容其强化队友））；敌意图总伤4，我方80血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:45:31",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤4，我方80血/0甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:45:32",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,防御(1费)✗,打击(1费)✗]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 80/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 4,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:45:39",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤15，我方80血/0甲；意图升级+11，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:45:40",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（延续集火：树叶史莱姆（中）（重复轮换火力=拖延减员））；敌意图总伤15，我方80血/5甲；意图升级+11，防御前置",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:45:40",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（中）（延续集火：树叶史莱姆（中）（重复轮换火力=拖延减员））；敌意图总伤15，我方80血/5甲；意图升级+11，防御前置",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:45:42",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 80/80",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 15"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 15,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:45:48",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【痛击】→树叶史莱姆（中）（可击杀树叶史莱姆（中））；敌意图总伤4，我方70血/0甲",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:45:49",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤4，我方70血/0甲",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "17:45:50",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗,黏液(1费)✗]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 70/80",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "黏液",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 4,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "SLIMED",
+      "name": "黏液",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:45:54",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤7，我方70血/0甲；意图升级+3，防御前置",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "17:45:55",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（延续集火：树叶史莱姆（小）（重复轮换火力=拖延减员））；敌意图总伤7，我方70血/5甲；意图升级+3，防御前置",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "17:45:56",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（延续集火：树叶史莱姆（小）（重复轮换火力=拖延减员））；敌意图总伤7，我方70血/5甲；意图升级+3，防御前置",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "17:45:57",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 70,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[黏液(1费)✗,黏液(1费)✗]",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 70/80",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 7"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黏液",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "黏液",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 7,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "SLIMED",
+      "name": "黏液",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "SLIMED",
+      "name": "黏液",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:01",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 68,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→树叶史莱姆（小）（可击杀树叶史莱姆（小））；敌意图总伤4，我方68血/0甲",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "17:46:02",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 68,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤4，我方68血/0甲",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "17:46:03",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 68,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→树枝史莱姆（小）（单体伤害≈6.0）；敌意图总伤4，我方68血/5甲",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "17:46:04",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 68,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,打击(1费)✗]",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 68/80",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 4,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:07",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 68,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→树枝史莱姆（小）（可击杀树枝史莱姆（小））；敌意图总伤4，我方68血/0甲",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "17:46:08",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 74,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：18金币"
+  },
+  {
+   "t": "17:46:09",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 74,
+   "gold": 117,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：无色药水"
+  },
+  {
+   "t": "17:46:09",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 74,
+   "gold": 117,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:46:10",
+   "screen": "CARD_SELECTION",
+   "floor": 2,
+   "hp": 74,
+   "gold": 117,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【铁斩波】（价值 4.8）；候选：铁斩波=4.8 / 战栗=-0.7 / 全身撞击=-0.8",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F2",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F2",
+      "生命 74/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 4.78 / 门槛 0.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "铁斩波",
+      "score": 4.782,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "战栗",
+      "score": -0.707,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "全身撞击",
+      "score": -0.82,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "铁斩波",
+     "params": {
+      "option_index": 2
+     },
+     "score": 4.782
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:46:11",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 74,
+   "gold": 117,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:46:13",
+   "screen": "MAP",
+   "floor": 2,
+   "hp": 74,
+   "gold": 117,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(2,2)（路径分 -53.28，预计进 Boss 血量 0%；前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Monster(2,1)=-54.01|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(2,2)=-53.28|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Unknown(2,5)=-55.08|输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(2,6)=-53.44|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F2",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F2",
+      "生命 74/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅2张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -53.28"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 0%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(2,2)",
+      "score": -53.283,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "2",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(2,6)",
+      "score": -53.436,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "6",
+       "projected_hp": "0.12127416943346056"
+      }
+     },
+     {
+      "label": "Monster(2,1)",
+      "score": -54.012,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "1",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Unknown(2,5)",
+      "score": -55.076,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "5",
+       "projected_hp": "0.11333447236254494"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(2,2)",
+     "params": {
+      "option_index": 1
+     },
+     "score": -53.283,
+     "target": {
+      "row": "2",
+      "col": "2",
+      "projected_hp": "0.0"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:46:16",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 74,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【铁斩波】→小啃兽（格挡5）；敌意图总伤12，我方74血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:46:16",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 74,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤12，我方74血/5甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:46:17",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 74,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤12，我方74血/10甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:46:19",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 74,
+   "gold": 117,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[痛击(2费)✗,打击(1费)✗]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 74/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "痛击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "BASH",
+      "name": "痛击",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:22",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 72,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤6，我方72血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:46:23",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 72,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤6，我方72血/5甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:46:24",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 72,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤6，我方72血/5甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:46:25",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 72,
+   "gold": 117,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,打击(1费)✗]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 72/80",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 6"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 6,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:29",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 71,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方71血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:46:29",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 71,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方71血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "17:46:30",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 71,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→小啃兽（单体伤害≈6.0）；敌意图总伤0，我方71血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "17:46:32",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 71,
+   "gold": 117,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,防御(1费)✗]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 71/80",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:35",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 71,
+   "gold": 117,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→小啃兽（可击杀小啃兽）；敌意图总伤14，我方71血/0甲；意图升级+14，防御前置；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "17:46:36",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 77,
+   "gold": 117,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：20金币"
+  },
+  {
+   "t": "17:46:36",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 77,
+   "gold": 137,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：虚弱药水"
+  },
+  {
+   "t": "17:46:37",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 77,
+   "gold": 137,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:46:38",
+   "screen": "CARD_SELECTION",
+   "floor": 3,
+   "hp": 77,
+   "gold": 137,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【残酷】（价值 8.1）；候选：残酷=8.1 / 全身撞击=-0.9 / 破灭=-14.8",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F3",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F3",
+      "生命 77/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 8.06 / 门槛 0.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "残酷",
+      "score": 8.062,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "全身撞击",
+      "score": -0.922,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "破灭",
+      "score": -14.822,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "残酷",
+     "params": {
+      "option_index": 1
+     },
+     "score": 8.062
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:46:39",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 77,
+   "gold": 137,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:46:41",
+   "screen": "MAP",
+   "floor": 3,
+   "hp": 77,
+   "gold": 137,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 3
+   },
+   "reason": "路径规划：Monster(3,6)（路径分 -46.30，预计进 Boss 血量 36%；前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(3,1)=-55.70|输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(3,2)=-55.18|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(3,3)=-55.30|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(3,6)=-46.30|前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F3",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F3",
+      "生命 77/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅3张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -46.30"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 36%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(3,6)",
+      "score": -46.297,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "3",
+       "col": "6",
+       "projected_hp": "0.36434542713122253"
+      }
+     },
+     {
+      "label": "Monster(3,2)",
+      "score": -55.184,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "3",
+       "col": "2",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(3,3)",
+      "score": -55.302,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；低血尾部生存复核：单场最差69打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "3",
+       "col": "3",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Unknown(3,1)",
+      "score": -55.696,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "3",
+       "col": "1",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(3,6)",
+     "params": {
+      "option_index": 3
+     },
+     "score": -46.297,
+     "target": {
+      "row": "3",
+      "col": "6",
+      "projected_hp": "0.36434542713122253"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:46:43",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【铁斩波】→毛绒伏地虫（格挡5）；敌意图总伤4，我方77血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:46:44",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（单体伤害≈6.0）；敌意图总伤4，我方77血/5甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:46:45",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（单体伤害≈6.0）；敌意图总伤4，我方77血/5甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:46:46",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,残酷(1费)✗]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 77/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 4,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "CRUELTY",
+      "name": "残酷",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:50",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8.0）；敌意图总伤0，我方77血/0甲",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:46:50",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（单体伤害≈6.0）；敌意图总伤0，我方77血/0甲",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:46:52",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,打击(1费)✗,防御(1费)✗]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 77/80",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:46:55",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤11，我方77血/0甲；意图升级+11，防御前置",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:46:56",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤11，我方77血/5甲；意图升级+11，防御前置",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "17:46:57",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5｜溢出大挡贬值｜边际收益兜底：正即时边际不带能量空过）；敌意图总伤11，我方77血/10甲；意图升级+11，防御前置",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "17:46:58",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[残酷(1费)✗,防御(1费)✗]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 77/80",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 15,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "CRUELTY",
+      "name": "残酷",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:01",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→毛绒伏地虫（单体伤害≈8.0）；敌意图总伤11，我方77血/0甲",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "17:47:02",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（单体伤害≈6.0）；敌意图总伤11，我方77血/0甲",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "17:47:04",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 77,
+   "gold": 137,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗,打击(1费)✗]",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 77/80",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:07",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 66,
+   "gold": 137,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（可击杀毛绒伏地虫）；敌意图总伤0，我方66血/0甲",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "17:47:08",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 72,
+   "gold": 137,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：10金币"
+  },
+  {
+   "t": "17:47:08",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 72,
+   "gold": 147,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:47:09",
+   "screen": "CARD_SELECTION",
+   "floor": 4,
+   "hp": 72,
+   "gold": 147,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【杂耍】（价值 8.8）；候选：杂耍=8.8 / 岩石铠甲=8.4 / 坚毅=8.2",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F4",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F4",
+      "生命 72/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 8.80 / 门槛 0.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "杂耍",
+      "score": 8.8,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "岩石铠甲",
+      "score": 8.391,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "坚毅",
+      "score": 8.215,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "杂耍",
+     "params": {
+      "option_index": 2
+     },
+     "score": 8.8
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:47:10",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 72,
+   "gold": 147,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:47:13",
+   "screen": "MAP",
+   "floor": 4,
+   "hp": 72,
+   "gold": 147,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(4,2)（路径分 -56.31，预计进 Boss 血量 0%；前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差69打完仅剩3(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡）；候选：Unknown(4,0)=-66.53|输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(4,2)=-56.31|前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差69打完仅剩3(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Unknown(4,3)=-56.45|输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(4,6)=-57.21|前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差69打完仅剩3(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡",
+   "trace": {
+    "observation": {
+     "title": "MAP · F4",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F4",
+      "生命 72/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅4张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -56.31"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 0%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(4,2)",
+      "score": -56.308,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差69打完仅剩3(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "2",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Unknown(4,3)",
+      "score": -56.451,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "3",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(4,6)",
+      "score": -57.211,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差69打完仅剩3(≤8)，尾部罚分；输出饥饿战损上浮×1.28（缺口81%）；投影中途死亡",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "6",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Unknown(4,0)",
+      "score": -66.534,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.28（缺口81%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "0",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(4,2)",
+     "params": {
+      "option_index": 1
+     },
+     "score": -56.308,
+     "target": {
+      "row": "4",
+      "col": "2",
+      "projected_hp": "0.0"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:47:15",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 72,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→劫掠者追踪手（辅助体优先转火：劫掠者追踪手（零伤害意图，放生=纵容其强化队友））；敌意图总伤17，我方72血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:47:16",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 72,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【铁斩波】→劫掠者刺客（格挡5）；敌意图总伤17，我方72血/0甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:47:18",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 72,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,防御(1费)✗,残酷(1费)✗]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 72/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 17,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "CRUELTY",
+      "name": "残酷",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:23",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 60,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（辅助体优先转火：劫掠者暴徒（零伤害意图，放生=纵容其强化队友））；敌意图总伤18，我方60血/0甲；意图升级+1，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:47:24",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 60,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（辅助体优先转火：劫掠者暴徒（零伤害意图，放生=纵容其强化队友））；敌意图总伤18，我方60血/0甲；意图升级+1，防御前置",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:47:25",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 60,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡3）；敌意图总伤18，我方60血/0甲；意图升级+1，防御前置",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:47:26",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 60,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 60/80",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 18"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 3,
+    "incoming_damage": 18,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:33",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 45,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（自我强化体优先转火：劫掠者暴徒（力量+3，拖越久打越痛））；敌意图总伤28，我方45血/0甲；意图升级+10，防御前置",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:47:34",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 45,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（自我强化体优先转火：劫掠者暴徒（力量+3，拖越久打越痛））；敌意图总伤28，我方45血/0甲；意图升级+10，防御前置",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "17:47:35",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 45,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡3）；敌意图总伤28，我方45血/0甲；意图升级+10，防御前置",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "17:47:37",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 45,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[杂耍(1费)✗,防御(1费)✗]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 45/80",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 28"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "杂耍",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 3,
+    "incoming_damage": 28,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "JUGGLING",
+      "name": "杂耍",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:43",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 20,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【铁斩波】→劫掠者刺客（格挡5）；敌意图总伤18，我方20血/0甲",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "17:47:43",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 20,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤18，我方20血/5甲",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "17:47:44",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 20,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（自我强化体优先转火：劫掠者暴徒（力量+3，拖越久打越痛））；敌意图总伤18，我方20血/10甲",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "17:47:46",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 20,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,痛击(2费)✗]",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 20/80",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 18"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "痛击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 18,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "BASH",
+      "name": "痛击",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:47:52",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：低血兜底使用药水【无色药水】（描述无法分类，宁滥勿囤）",
+   "turn": 5,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 12/80",
+      "回合 5",
+      "能量 3",
+      "敌方意图伤害 31"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:47:53",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【勒紧】（价值 7.9）；候选：勒紧=7.9 / 深谋远虑=3.7 / 净化=0.8",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F5",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F5",
+      "生命 12/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 7.93 / 门槛 0.00；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "勒紧",
+      "score": 7.928,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "深谋远虑",
+      "score": 3.661,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "净化",
+      "score": 0.8,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "勒紧",
+     "params": {
+      "option_index": 0
+     },
+     "score": 7.928
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:47:54",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【虚弱药水】",
+   "turn": 5,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 12/80",
+      "回合 5",
+      "能量 3",
+      "敌方意图伤害 31"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "6 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "勒紧",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 5,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 1,
+      "target_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:47:55",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【打击】→劫掠者暴徒（可击杀劫掠者暴徒）；敌意图总伤23，我方12血/0甲；意图升级+13，防御前置；斩杀竞速投影：击杀还需2回合>可存活1回合（实测12伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "17:47:56",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤10，我方12血/0甲；意图升级+13，防御前置；斩杀竞速投影：击杀还需2回合>可存活1回合（实测10伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "17:47:57",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【勒紧】（格挡4）；敌意图总伤10，我方12血/5甲；意图升级+13，防御前置；斩杀竞速投影：击杀还需2回合>可存活1回合（实测10伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "17:47:58",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→劫掠者追踪手（辅助体优先转火：劫掠者追踪手（零伤害意图，放生=纵容其强化队友）｜无甲孤注抢斩杀）；敌意图总伤10，我方12血/5甲；意图升级+13，防御前置；斩杀竞速投影：击杀还需2回合>可存活1回合（实测10伤/回合），全攻提速",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "17:47:59",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[残酷(1费)✗,打击(1费)✗]",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 12/80",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 10"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "残酷",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 10,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "CRUELTY",
+      "name": "残酷",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:48:04",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 7,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡9）；敌意图总伤10，我方7血/0甲；斩杀竞速投影：击杀还需2回合>可存活1回合（实测10伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "17:48:05",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 7,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→劫掠者追踪手（辅助体优先转火：劫掠者追踪手（零伤害意图，放生=纵容其强化队友）｜无甲孤注抢斩杀）；敌意图总伤10，我方7血/9甲；斩杀竞速投影：击杀还需2回合>可存活1回合（实测8伤/回合），全攻提速",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "17:48:07",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 7,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,防御(1费)✗,杂耍(1费)✗]",
+   "turn": 6,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 7/80",
+      "回合 6",
+      "能量 0",
+      "敌方意图伤害 10"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "杂耍",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 10,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "JUGGLING",
+      "name": "杂耍",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:48:12",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 6,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【铁斩波】→劫掠者刺客（格挡5）；敌意图总伤10，我方6血/0甲；斩杀竞速投影：击杀还需1回合>可存活1回合（实测9伤/回合），全攻提速",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "17:48:13",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 6,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【痛击】→劫掠者刺客（可击杀劫掠者刺客）；敌意图总伤10，我方6血/5甲；防守线复核：联合能量对账，格挡4+输出5/回合的混合分配即可在净火力下追平击杀所需1回合，维持攻防节奏不全攻（滚雪球零余量）",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "17:48:14",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 6,
+   "gold": 147,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗,杂耍(1费)✗]",
+   "turn": 7,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F5",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F5",
+      "生命 6/80",
+      "回合 7",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "杂耍",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "JUGGLING",
+      "name": "杂耍",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:48:19",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 6,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡9）；敌意图总伤8，我方6血/0甲",
+   "turn": 8,
+   "energy": 3
+  },
+  {
+   "t": "17:48:20",
+   "screen": "COMBAT",
+   "floor": 5,
+   "hp": 6,
+   "gold": 147,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→劫掠者追踪手（可击杀劫掠者追踪手）；敌意图总伤8，我方6血/9甲",
+   "turn": 8,
+   "energy": 2
+  },
+  {
+   "t": "17:48:21",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 12,
+   "gold": 147,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：13金币"
+  },
+  {
+   "t": "17:48:22",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 12,
+   "gold": 160,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:48:22",
+   "screen": "CARD_SELECTION",
+   "floor": 5,
+   "hp": 12,
+   "gold": 160,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【重锤】（价值 38.0）；候选：重锤=38.0 / 邪眼=11.1 / 预备打击=-14.6",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F5",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F5",
+      "生命 12/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 37.96 / 门槛 0.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "重锤",
+      "score": 37.965,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "邪眼",
+      "score": 11.135,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "预备打击",
+      "score": -14.631,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "重锤",
+     "params": {
+      "option_index": 0
+     },
+     "score": 37.965
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:48:23",
+   "screen": "REWARD",
+   "floor": 5,
+   "hp": 12,
+   "gold": 160,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:48:26",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 12,
+   "gold": 160,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(5,0)（路径分 -69.00，预计进 Boss 血量 0%；血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡）；候选：Monster(5,0)=-69.00|血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡 / Monster(5,1)=-69.00|血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡 / Monster(5,3)=-69.00|血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡 / Monster(5,6)=-69.00|血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡",
+   "trace": {
+    "observation": {
+     "title": "MAP · F5",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F5",
+      "生命 12/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅5张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -69.00"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 0%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(5,0)",
+      "score": -69.002,
+      "status": "chosen",
+      "why": "血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "0",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(5,1)",
+      "score": -69.002,
+      "status": "rejected",
+      "why": "血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "1",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(5,3)",
+      "score": -69.002,
+      "status": "rejected",
+      "why": "血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "3",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(5,6)",
+      "score": -69.002,
+      "status": "rejected",
+      "why": "血量15%过低，避免无谓消耗战；连续作战4场，疲劳压制×0.69；低血尾部定价：Monster先验5→27（实测单场最差69）；低血尾部生存复核：单场最差69打完仅剩0(≤8)，尾部罚分；投影中途死亡",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "6",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(5,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -69.002,
+     "target": {
+      "row": "5",
+      "col": "0",
+      "projected_hp": "0.0"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:48:29",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 12,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【重锤】→缩小甲虫（辅助体优先转火：缩小甲虫（零伤害意图，放生=纵容其强化队友）｜无甲孤注抢斩杀）；敌意图总伤4，我方12血/0甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；斩杀竞速投影：击杀还需7回合>可存活3回合（先验14伤/回合），全攻提速",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:48:30",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 12,
+   "gold": 160,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[打击(1费)✗,打击(1费)✗,打击(1费)✗,痛击(2费)✗]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 12/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "痛击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 4,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     },
+     {
+      "index": 3,
+      "card_id": "BASH",
+      "name": "痛击",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:48:35",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【铁斩波】→缩小甲虫（格挡5）；敌意图总伤7，我方8血/0甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+3，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:48:36",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤7，我方8血/5甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+3，防御前置",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:48:36",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（防御✓,防御✓,残酷✓），结束回合（敌意图总伤7，我方8血/10甲）；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+3，防御前置",
+   "turn": 2,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 8/80",
+      "回合 2",
+      "能量 1",
+      "敌方意图伤害 7"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 8"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": 0.091,
+      "status": "rejected",
+      "why": "格挡5｜溢出大挡贬值",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": 0.091,
+      "status": "rejected",
+      "why": "格挡5｜溢出大挡贬值",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "残酷",
+      "score": -1.321,
+      "status": "rejected",
+      "why": "死牌（触发条件无自残源，永不生效，让位实伤）",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 7,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "CRUELTY",
+      "name": "残酷",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:48:41",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【防御】（格挡5）；敌意图总伤24，我方8血/0甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+17，防御前置；斩杀竞速投影：击杀还需3回合>可存活0回合（实测18伤/回合），全攻提速",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:48:42",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（自我强化体优先转火：毛绒伏地虫（力量+7，拖越久打越痛）｜无甲孤注抢斩杀）；敌意图总伤24，我方8血/5甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+17，防御前置；斩杀竞速投影：击杀还需5回合>可存活0回合（实测12伤/回合），全攻提速",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "17:48:44",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【打击】→毛绒伏地虫（自我强化体优先转火：毛绒伏地虫（力量+7，拖越久打越痛）｜无甲孤注抢斩杀）；敌意图总伤24，我方8血/5甲；⚠高危组合（231战44死），提速斩杀；斜率反转：成长型组合，解除攻击压制；意图升级+17，防御前置；斩杀竞速投影：击杀还需4回合>可存活0回合（实测13伤/回合），全攻提速",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "17:48:45",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 160,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[杂耍(1费)✗,打击(1费)✗]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 8/80",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 24"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "杂耍",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 24,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "JUGGLING",
+      "name": "杂耍",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "combat_notes": [
+  "F2 Monster战 掉血6",
+  "F3 Monster战 掉血0",
+  "F4 Monster战 掉血5",
+  "F5 Monster战 掉血60",
+  "F6 Monster战 掉血12（阵亡）"
+ ],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "IRON_WAVE"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "CRUELTY"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "JUGGLING"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "FASTEN"
+  ],
+  [
+   "card_pick",
+   "BLUDGEON"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}
