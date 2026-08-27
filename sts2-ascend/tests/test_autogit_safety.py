@@ -611,7 +611,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                 denied = llm_review._run_review_sandbox(
                     ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
                     mock.Mock(feed=lambda _line: None), log=messages.append)
-            self.assertIn("越过 allowlist", denied.error)
+            self.assertIn("deny-only 路径边界", denied.error)
             self.assertIn("outside.txt", denied.wip_paths)
             self.assertIn("outside.txt", denied.unexpected_paths)
             self.assertIn(b"model outside", denied.wip_patch)
@@ -633,7 +633,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                 ignored = llm_review._run_review_sandbox(
                     ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
                     mock.Mock(feed=lambda _line: None), log=messages.append)
-            self.assertIn("越过 allowlist", ignored.error)
+            self.assertIn("deny-only 路径边界", ignored.error)
             self.assertFalse(ignored.paths)
             self.assertIn(".runtime/evil.exe", ignored.wip_paths)
             self.assertIn(b"contained", ignored.wip_patch)
@@ -691,6 +691,83 @@ class AutoGitSafetyTests(unittest.TestCase):
             })
             self.assertEqual(result.unexpected_paths, ())
             llm_review._discard_sandbox_snapshot(result, log=lambda _msg: None)
+        finally:
+            llm_review.REPO_DIR = old_repo
+            llm_review.KNOWLEDGE_DIR = old_knowledge
+            llm_review.PROMPT_FILE = old_prompt
+
+    def test_review_sandbox_force_stages_ignored_new_eligible_source(self) -> None:
+        self._write("sts2-ascend/.gitignore", "# baseline\n")
+        self._git("add", "sts2-ascend/.gitignore")
+        self._git("commit", "-qm", "project ignore baseline")
+        pre_head = self._git("rev-parse", "HEAD").stdout.strip()
+        old_repo = llm_review.REPO_DIR
+        old_knowledge = llm_review.KNOWLEDGE_DIR
+        old_prompt = llm_review.PROMPT_FILE
+        llm_review.REPO_DIR = self.repo
+        llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
+        llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
+        try:
+            def hide_then_write_source(cmd, timeout, translate=None):
+                sandbox = Path(cmd[cmd.index("--dir") + 1])
+                ignore = sandbox / "sts2-ascend" / ".gitignore"
+                ignore.write_text("# baseline\nbrain/hidden_runtime.py\n", encoding="utf-8")
+                hidden = sandbox / "sts2-ascend" / "brain" / "hidden_runtime.py"
+                hidden.write_text("ENABLED = True\n", encoding="utf-8")
+                return 0, "done", False, False
+
+            with (mock.patch.object(
+                    llm_review, "_stream_run", side_effect=hide_then_write_source),
+                  mock.patch.object(llm_review, "_run_selfcheck", return_value=True)):
+                result = llm_review._run_review_sandbox(
+                    ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
+                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
+            self.assertEqual(result.error, "")
+            self.assertEqual(set(result.paths), {
+                "sts2-ascend/.gitignore",
+                "sts2-ascend/brain/hidden_runtime.py",
+            })
+            self.assertIn(b"hidden_runtime.py", result.patch)
+            self.assertIn(b"ENABLED = True", result.patch)
+            self.assertIn(
+                "sts2-ascend/brain/hidden_runtime.py", result.allowed_paths)
+            llm_review._discard_sandbox_snapshot(result, log=lambda _msg: None)
+        finally:
+            llm_review.REPO_DIR = old_repo
+            llm_review.KNOWLEDGE_DIR = old_knowledge
+            llm_review.PROMPT_FILE = old_prompt
+
+    def test_review_sandbox_rejects_online_runtime_and_preserves_full_wip(self) -> None:
+        pre_head = self._git("rev-parse", "HEAD").stdout.strip()
+        old_repo = llm_review.REPO_DIR
+        old_knowledge = llm_review.KNOWLEDGE_DIR
+        old_prompt = llm_review.PROMPT_FILE
+        llm_review.REPO_DIR = self.repo
+        llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
+        llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
+        try:
+            def write_source_and_online_state(cmd, timeout, translate=None):
+                sandbox = Path(cmd[cmd.index("--dir") + 1])
+                (sandbox / "sts2-ascend" / "brain" / "policy.py").write_text(
+                    "VALUE = 8\n", encoding="utf-8")
+                (sandbox / "sts2-ascend" / "knowledge" / "stats.json").write_text(
+                    '{"runs": 999}\n', encoding="utf-8")
+                return 0, "done", False, False
+
+            with mock.patch.object(
+                    llm_review, "_stream_run", side_effect=write_source_and_online_state):
+                result = llm_review._run_review_sandbox(
+                    ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
+                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
+            self.assertIn("deny-only 路径边界", result.error)
+            self.assertEqual(result.paths, ("sts2-ascend/brain/policy.py",))
+            self.assertEqual(
+                result.online_paths, ("sts2-ascend/knowledge/stats.json",))
+            self.assertIn("sts2-ascend/brain/policy.py", result.wip_paths)
+            self.assertIn("sts2-ascend/knowledge/stats.json", result.wip_paths)
+            self.assertIn(b'"runs": 999', result.wip_patch)
+            llm_review._discard_sandbox_snapshot(result, log=lambda _msg: None)
+            llm_review._discard_retained_sandbox(result, log=lambda _msg: None)
         finally:
             llm_review.REPO_DIR = old_repo
             llm_review.KNOWLEDGE_DIR = old_knowledge
@@ -1111,38 +1188,43 @@ class AutoGitSafetyTests(unittest.TestCase):
         finally:
             runner.MARKER = old_marker
 
-    def test_llm_allowlist_matches_git_boundary_and_partitions_online_data(self) -> None:
-        self.assertEqual(tuple(llm_review.REVIEW_MUTABLE_PATHS), autogit.REVIEW_PATCH_ALLOWLIST)
-        review, online, unexpected = llm_review._partition_review_changes([
+    def test_llm_uses_shared_deny_only_classifier_for_all_four_partitions(self) -> None:
+        allowed, transient, online, rejected = llm_review._partition_review_changes([
             "sts2-ascend/brain/policy.py",
             "sts2-ascend/knowledge/stats.json",
             "sts2-ascend/brain/autogit.py",
+            "sts2-ascend/brain/__pycache__/policy.pyc",
+            "tool-CACHE/result.bin",
             "outside.txt",
         ])
-        self.assertEqual(review, ["sts2-ascend/brain/policy.py"])
+        self.assertEqual(allowed, [
+            "sts2-ascend/brain/policy.py",
+            "sts2-ascend/brain/autogit.py",
+        ])
+        self.assertEqual(transient, [
+            "sts2-ascend/brain/__pycache__/policy.pyc",
+            "tool-CACHE/result.bin",
+        ])
         self.assertEqual(online, ["sts2-ascend/knowledge/stats.json"])
-        self.assertEqual(unexpected, ["sts2-ascend/brain/autogit.py", "outside.txt"])
-        with self.assertRaises(ValueError):
-            autogit.validate_review_paths(
-                ["sts2-ascend/brain/autogit.py"],
-                allowlist=autogit.REVIEW_PATCH_ALLOWLIST)
+        self.assertEqual(rejected, ["outside.txt"])
         self.assertEqual(
-            autogit.validate_review_paths(
-                ["sts2-ascend/brain/selfcheck.py"],
-                allowlist=autogit.REVIEW_PATCH_ALLOWLIST),
-            ("sts2-ascend/brain/selfcheck.py",),
+            autogit.validate_review_paths([
+                "sts2-ascend/brain/autogit.py",
+                "sts2-ascend/scripts/Start-Agent.ps1",
+            ]),
+            ("sts2-ascend/brain/autogit.py", "sts2-ascend/scripts/Start-Agent.ps1"),
         )
         with self.assertRaises(ValueError):
-            autogit.validate_review_paths([
-                "sts2-ascend/brain/config.json/evil.py"],
-                allowlist=autogit.REVIEW_PATCH_ALLOWLIST)
-        review, concurrent, unexpected = llm_review._partition_review_changes([
+            autogit.validate_review_paths(["sts2-ascend/knowledge/stats.json"])
+        allowed, transient, online, rejected = llm_review._partition_review_changes([
             "sts2-ascend/brain/config.json/evil.py",
             "sts2-ascend/knowledge/runs/new.json",
+            "sts2-ascend/.git/config",
         ])
-        self.assertEqual(review, [])
-        self.assertEqual(concurrent, ["sts2-ascend/knowledge/runs/new.json"])
-        self.assertEqual(unexpected, ["sts2-ascend/brain/config.json/evil.py"])
+        self.assertEqual(allowed, ["sts2-ascend/brain/config.json/evil.py"])
+        self.assertEqual(transient, [])
+        self.assertEqual(online, ["sts2-ascend/knowledge/runs/new.json"])
+        self.assertEqual(rejected, ["sts2-ascend/.git/config"])
         with self.assertRaises(ValueError):
             autogit.normalize_paths(["../outside.txt"])
         with self.assertRaises(ValueError):

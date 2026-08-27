@@ -77,7 +77,7 @@ class ReviewSalvageTests(unittest.TestCase):
             fake_autogit = SimpleNamespace(commit_progress_result=fake_commit)
             manifest = {
                 "time": "2026-08-27 13:00:00", "batch_runs": [731, 732],
-                "pre_head": "deadbeef" * 5, "failure_kind": "allowlist",
+                "pre_head": "deadbeef" * 5, "failure_kind": "path_boundary",
                 "model": "opencode-go/glm-5.3-flash@max", "stopped": False,
                 "reason": "复盘 patch 越过 allowlist：tool-CACHE/result.bin",
             }
@@ -164,7 +164,7 @@ class ReviewSalvageTests(unittest.TestCase):
                  / "model.pyc").read_bytes(),
                 b"MODEL_WRITTEN_PYC")
             manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["failure_kind"], "allowlist")
+            self.assertEqual(manifest["failure_kind"], "path_boundary")
             self.assertEqual(manifest["allowed_paths"], ["sts2-ascend/brain/policy.py"])
             self.assertEqual(
                 set(manifest["rejected_or_unexpected_paths"]),
@@ -172,6 +172,7 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertEqual(
                 manifest["transient_artifact_paths"],
                 ["sts2-ascend/brain/__pycache__/model.pyc"])
+            self.assertEqual(manifest["online_runtime_paths"], [])
             self.assertEqual(
                 set(manifest["all_paths"]),
                 {".runtime/rejected.bin", "outside.txt", "sts2-ascend/brain/policy.py",

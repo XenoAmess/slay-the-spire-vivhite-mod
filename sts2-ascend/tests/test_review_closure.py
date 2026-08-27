@@ -21,6 +21,12 @@ CONCLUSION = "sts2-ascend/knowledge/review_conclusion.txt"
 SELFCHECK = "sts2-ascend/brain/selfcheck.py"
 POLICY = "sts2-ascend/brain/policy.py"
 AGENT = "sts2-ascend/brain/agent.py"
+AUTOGIT = "sts2-ascend/brain/autogit.py"
+CONFIG = "sts2-ascend/brain/config.json"
+SCRIPT = "sts2-ascend/scripts/Start-Agent.ps1"
+TEST = "sts2-ascend/tests/test_policy.py"
+DOC = "sts2-ascend/docs/review-design.md"
+STATIC_KNOWLEDGE = "sts2-ascend/knowledge/game/v0.111.0/mechanics/cards.jsonl"
 
 
 class ReviewClosureTests(unittest.TestCase):
@@ -55,8 +61,41 @@ class ReviewClosureTests(unittest.TestCase):
     def test_host_classification_cannot_be_satisfied_by_reports_or_tests(self) -> None:
         self.assertEqual(llm_review._review_action_paths([REPORT, CONCLUSION]), ())
         self.assertEqual(llm_review._review_action_paths([REPORT, SELFCHECK]), ())
+        self.assertEqual(llm_review._review_action_paths(
+            [REPORT, TEST, DOC, STATIC_KNOWLEDGE]), ())
         self.assertEqual(llm_review._review_action_paths([REPORT, AGENT]), (AGENT,))
         self.assertEqual(llm_review._review_action_paths([POLICY, SELFCHECK]), (POLICY,))
+        self.assertEqual(
+            llm_review._review_action_paths([AUTOGIT, CONFIG, SCRIPT]),
+            (AUTOGIT, CONFIG, SCRIPT),
+        )
+
+    def test_action_and_brain_hot_restart_boundaries_are_distinct(self) -> None:
+        self.assertEqual(
+            llm_review._review_hot_restart_paths(
+                [POLICY, AUTOGIT, CONFIG, SCRIPT, TEST, DOC, SELFCHECK]),
+            (POLICY, AUTOGIT, CONFIG),
+        )
+        script_patch = (
+            "diff --git a/sts2-ascend/scripts/Start-Agent.ps1 "
+            "b/sts2-ascend/scripts/Start-Agent.ps1\n"
+            "--- a/sts2-ascend/scripts/Start-Agent.ps1\n"
+            "+++ b/sts2-ascend/scripts/Start-Agent.ps1\n"
+            "@@ -1,0 +2 @@\n+$ready = $true\n"
+        ).encode()
+        brain_patch = (
+            "diff --git a/sts2-ascend/brain/autogit.py "
+            "b/sts2-ascend/brain/autogit.py\n"
+            "--- a/sts2-ascend/brain/autogit.py\n"
+            "+++ b/sts2-ascend/brain/autogit.py\n"
+            "@@ -1,0 +2 @@\n+READY = True\n"
+        ).encode()
+        self.assertTrue(llm_review._patch_has_substantive_action(
+            script_patch, [SCRIPT]))
+        self.assertFalse(llm_review._patch_requires_brain_restart(
+            script_patch, [SCRIPT]))
+        self.assertTrue(llm_review._patch_requires_brain_restart(
+            brain_patch, [AUTOGIT]))
 
     def test_every_batch_gate_rejects_docs_and_accepts_runtime_observability(self) -> None:
         state = {
@@ -186,6 +225,13 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("历史问题", prompt)
         self.assertIn("成长姿态第4例", prompt)
         self.assertIn("纯 `meta_review.md`", prompt)
+        self.assertIn("deny-only", prompt)
+        self.assertIn("`brain/config.json`", prompt)
+        self.assertIn("`scripts/`、`tests/`、`docs/`", prompt)
+        self.assertIn("静态原生游戏", prompt)
+        self.assertIn("禁止任何 git 操作", prompt)
+        self.assertNotIn("安全基础设施不可自改", prompt)
+        self.assertNotIn("不得修改 `brain/autogit.py`", prompt)
 
     def test_prompt_explains_inline_packet_and_rewrites_native_corpus_paths(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-review-packet-") as root:

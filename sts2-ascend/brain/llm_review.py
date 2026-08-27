@@ -13,12 +13,13 @@
   - 工作线程 _worker_loop 串行消化队列：一局结束若上一场复盘未完，请求在队列累积，
     下一场复盘一次性分析多局（追及队列）。
   - 并发安全：autogit 的 add/commit/push 持有跨进程事务锁并使用私有 index；
-    复盘激活期间对局存档只提交在线运行文件，自检失败仅反向应用 allowlist patch。
-  - 复盘完成若产生变更：标记 request_restart，主循环在下一局间安全点以退出码 42 自重启加载。
+    复盘激活期间对局存档只提交在线运行文件；失败 patch 始终停留在隔离取证包。
+  - 复盘完成若改到 Brain 实际加载的源码/config：标记 request_restart，主循环在下一局间
+    安全点以退出码 42 自重启；脚本/其他生产源码改动仍算闭环，但不误重启 Brain。
 
 设计要点（继承）：
   - 不直接调模型裸 API；spawn `opencode run` 无头会话——带完整工具链的智能体，走本机 OpenCode 授权。
-  - 受限写入 + Git 安全网：只可改策略代码和复盘报告 allowlist；在线统计只读。
+  - deny-only 路径边界 + Git 安全网：项目静态源码/配置/测试/文档可改；在线统计只读。
   - 复盘过程经 review_live.stream 直播给 review_viewer.py 悬浮窗。
 
 手动触发 `py brain/llm_review.py --now`（同步执行，用于人工调试）。
@@ -65,35 +66,24 @@ LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
 SALVAGE_ROOT = KNOWLEDGE_DIR / "code_backups" / "review_salvage"
 REJECTION_LEDGER = BASE_DIR / "REVIEW_REJECTIONS.md"
-REVIEW_MUTABLE_PATHS = [
-    "sts2-ascend/brain/__main__.py",
-    "sts2-ascend/brain/agent.py",
-    "sts2-ascend/brain/client.py",
-    "sts2-ascend/brain/config.json",
-    "sts2-ascend/brain/knowledge.py",
-    "sts2-ascend/brain/native_knowledge.py",
-    "sts2-ascend/brain/policy.py",
-    "sts2-ascend/brain/reflect.py",
-    "sts2-ascend/brain/selfcheck.py",
-    "sts2-ascend/knowledge/meta_review.md",
-    "sts2-ascend/knowledge/review_conclusion.txt",
-]
 REVIEW_REPORT_PATHS = frozenset({
     "sts2-ascend/knowledge/meta_review.md",
     "sts2-ascend/knowledge/review_conclusion.txt",
 })
-# A closure must change runtime behaviour or add runtime observability.  A report
-# and/or selfcheck-only patch is useful evidence, but it is not an implemented
-# response to repeated evidence and must not clear the anti-stagnation gate.
-REVIEW_ACTION_PATHS = frozenset({
-    "sts2-ascend/brain/__main__.py",
-    "sts2-ascend/brain/agent.py",
-    "sts2-ascend/brain/client.py",
-    "sts2-ascend/brain/config.json",
-    "sts2-ascend/brain/knowledge.py",
-    "sts2-ascend/brain/native_knowledge.py",
-    "sts2-ascend/brain/policy.py",
-    "sts2-ascend/brain/reflect.py",
+# A closure must change production behaviour/configuration or add production
+# observability. Tests, docs, reports and selfcheck-only patches are useful
+# evidence but cannot impersonate an operational response.
+_REVIEW_PRODUCTION_SUFFIXES = frozenset({
+    ".py", ".pyw", ".ps1", ".psm1", ".sh", ".bat", ".cmd",
+    ".cs", ".csproj", ".fs", ".fsproj", ".vb", ".vbproj",
+    ".gd", ".gdextension", ".ts", ".tsx", ".js", ".jsx",
+})
+_REVIEW_CONFIG_SUFFIXES = frozenset({
+    ".toml", ".yaml", ".yml", ".ini", ".cfg", ".props", ".targets",
+})
+_REVIEW_CONFIG_NAMES = frozenset({
+    "config.json", "pyproject.toml", "package.json", "requirements.txt",
+    "project.godot", "mod_id.json",
 })
 # 这些文件可能在异步复盘期间被在线大脑推进；它们不是复盘 patch，失败回滚和
 # 复盘 commit 都不能覆盖。若同一文件来源无法区分，宁可保留现场供人工处理。
@@ -217,6 +207,49 @@ def _positive_int(value, default: int) -> int:
     return max(1, parsed)
 
 
+def _normalized_review_path(path) -> str:
+    return str(path).replace("\\", "/").rstrip("/")
+
+
+def _is_review_config_path(path: str) -> bool:
+    pure = PurePosixPath(_normalized_review_path(path))
+    folded = tuple(part.casefold() for part in pure.parts)
+    relative = folded[1:] if folded[:1] == ("sts2-ascend",) else folded
+    return (pure.name.casefold() in _REVIEW_CONFIG_NAMES
+            or pure.suffix.casefold() in _REVIEW_CONFIG_SUFFIXES
+            or (pure.suffix.casefold() == ".json" and relative
+                and relative[0] in {"brain", "scripts", "tts"}))
+
+
+def _is_review_action_path(path: str) -> bool:
+    """Whether an accepted path can change production operation.
+
+    This is a closure predicate, not a submission allowlist. Tests, docs and
+    static knowledge may be accepted in the same patch; they simply cannot
+    satisfy the mandatory runtime-action requirement by themselves.
+    """
+    normalized = _normalized_review_path(path)
+    try:
+        import autogit
+        if autogit.classify_review_path(normalized) != autogit.REVIEW_PATH_ACCEPTED:
+            return False
+    except (ImportError, AttributeError):
+        return False
+    if normalized in REVIEW_REPORT_PATHS:
+        return False
+    pure = PurePosixPath(normalized)
+    folded = tuple(part.casefold() for part in pure.parts)
+    relative = folded[1:] if folded[:1] == ("sts2-ascend",) else folded
+    if (not relative or relative[0] in {"tests", "docs"}
+            or "tests" in relative or "test" in relative
+            or pure.name.casefold() == "selfcheck.py"
+            or pure.name.casefold().startswith("test_")):
+        return False
+    suffix = pure.suffix.casefold()
+    return (suffix in _REVIEW_PRODUCTION_SUFFIXES
+            or _is_review_config_path(normalized))
+
+
 def _review_action_paths(paths) -> tuple[str, ...]:
     """Return paths that constitute a behaviour/observability closure.
 
@@ -224,13 +257,33 @@ def _review_action_paths(paths) -> tuple[str, ...]:
     production change, but changing only the proof cannot improve live play.
     """
     normalized = tuple(dict.fromkeys(
-        str(path).replace("\\", "/").rstrip("/") for path in (paths or ())))
-    return tuple(path for path in normalized if path in REVIEW_ACTION_PATHS)
+        _normalized_review_path(path) for path in (paths or ())))
+    return tuple(path for path in normalized if _is_review_action_path(path))
 
 
-def _patch_has_substantive_action(patch: bytes | str, paths) -> bool:
-    """Reject comment/whitespace-only touches used to impersonate a closure."""
-    action_paths = set(_review_action_paths(paths))
+def _review_hot_restart_paths(paths) -> tuple[str, ...]:
+    """Return accepted files loaded by the long-running Brain process.
+
+    Runtime scripts and non-Brain sources still count as actions, but restarting
+    Brain cannot load them. Brain Python modules and its live config do require
+    the transactional marker. ``selfcheck.py`` remains proof-only.
+    """
+    normalized = tuple(dict.fromkeys(
+        _normalized_review_path(path) for path in (paths or ())))
+    prefix = "sts2-ascend/brain/"
+    return tuple(
+        path for path in normalized
+        if path.startswith(prefix)
+        and path != prefix + "selfcheck.py"
+        and _is_review_action_path(path)
+        and (path.casefold().endswith((".py", ".pyw"))
+             or _is_review_config_path(path))
+    )
+
+
+def _patch_has_substantive_changes(patch: bytes | str, selected_paths) -> bool:
+    """Reject comment/whitespace-only touches for a selected exact path set."""
+    action_paths = set(selected_paths or ())
     if not action_paths or not patch:
         return False
     text = (patch.decode("utf-8", errors="replace")
@@ -252,6 +305,31 @@ def _patch_has_substantive_action(patch: bytes | str, paths) -> bool:
             continue
         return True
     return False
+
+
+def _patch_has_substantive_action(patch: bytes | str, paths) -> bool:
+    """Return whether a patch contains a real production closure."""
+    return _patch_has_substantive_changes(patch, _review_action_paths(paths))
+
+
+def _patch_requires_brain_restart(patch: bytes | str, paths) -> bool:
+    """Return whether accepted changes must be loaded by a new Brain process."""
+    return _patch_has_substantive_changes(patch, _review_hot_restart_paths(paths))
+
+
+def _restart_marker_payload(
+    pre_head: str, review_parent: str, review_commit: str,
+    paths, stamp: str,
+) -> dict:
+    """Build a marker for the whole accepted transaction, not only hot files."""
+    return {
+        "pre_head": pre_head,
+        "review_parent": review_parent,
+        "review_commit": review_commit,
+        "paths": list(dict.fromkeys(_normalized_review_path(path) for path in paths)),
+        "time": stamp,
+        "state": "prepared",
+    }
 
 
 def _infer_recent_report_only_streak(limit: int = 20) -> int:
@@ -833,15 +911,19 @@ def build_prompt(know, cfg: dict, every: int | None = None,
    mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。
 2. 将复盘报告**追加写入** `sts2-ascend/knowledge/meta_review.md`（新建一节，标题含日期时间）：
    归因分析、你做出的每项调整及理由、新沉淀的经验知识（中文）。
-3. **只可修改下列 allowlist**（越界 patch 会被宿主拒绝，安全基础设施不可自改）：
-   - `brain/__main__.py`、`agent.py`、`client.py`、`config.json`、`knowledge.py`、
-     `native_knowledge.py`、`policy.py`、`reflect.py`、`selfcheck.py`
-   - `knowledge/meta_review.md`、`knowledge/review_conclusion.txt`
-   - `knowledge/stats.json`、`progression.json`、`policy.json`、`lessons.md` 和 `runs/`
-     是在线大脑持续写入的数据，复盘期间**只读，绝对禁止修改**；新经验写入本次
-     `meta_review.md` 报告，待在线学习流程自行吸收
-   - 不得修改 `brain/autogit.py`、`runner.py`、`llm_review.py`、`lifecycle.py` 或
-     `scripts/` 生命周期入口
+3. 你可以修改或新建 `sts2-ascend/` 下的静态项目文件，包括生产源码、
+   **`brain/config.json`** 及其他配置、`scripts/`、`tests/`、`docs/`、静态原生游戏
+   knowledge 和复盘报告。宿主使用 deny-only 分类器按最终精确路径验收，不设固定文件名单。
+   只有以下边界禁止写入：
+   - 在线运行状态：`.runtime/`，`knowledge/runs/`、`archive/`、`code_backups/`，以及
+     `stats/progression/policy/lessons/review_queue/preferred_model_state/pending_restart` 等
+     在线状态文件、锁/日志/stream/flag、宿主 prompt、截图和拒合清单；这些全部只读
+   - Git 元数据（任意 `.git` 路径及 `.gitmodules`）
+   - 任一路径段含 `cache`（大小写不敏感）及 `.pyc/.pyo` 字节码；它们是临时产物，
+     不进入 patch，但若工具意外生成会被宿主完整留存在取证快照中，不会误杀合规源码
+   - `sts2-ascend/` 之外的任何路径、绝对路径或 `..` 逃逸路径
+   新经验仍应追加到 `knowledge/meta_review.md`；短评写入
+   `knowledge/review_conclusion.txt`。不要用 tests/docs/selfcheck 代替要求的生产闭环。
 4. 改完任何 `.py` 后**必须**运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 并确认输出 SELFCHECK OK；
    若不通过，修好再试，实在修不好就把该文件改回原样。
 5. 不要提交：git 提交由宿主大脑在复盘前后自动完成（复盘前已备份，复盘后变更会被提交；
@@ -853,9 +935,8 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
 # 禁止事项（最高优先级，覆盖仓库 AGENTS.md 的默认规则）
 - 禁止任何 git 操作（add/commit/push/reset 等，宿主大脑统一管理）
-- 禁止停止/启动任何进程（游戏和大脑正在运行）
-- 禁止修改上述 allowlist 之外的任何文件（包括其他 `sts2-ascend/` 文件、Vivhite mod、游戏本体、系统文件）
-- 禁止删除 `knowledge/runs/` 下的历史对局日志、禁止安装依赖
+- 除上述自检命令外，禁止启动、停止、终止或管理任何进程（游戏和大脑正在运行）
+- 禁止删除在线知识、历史对局日志或失败取证包；禁止安装依赖
 
 完成后，用 200 字以内输出本次复盘总结。"""
 
@@ -1346,11 +1427,11 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
                source: str = "fallback", batch_runs: list[int] | None = None,
                async_mode: bool = False, _status: dict | None = None) -> bool:
-    """执行一次大模型复盘。返回 True 仅表示已提交运行时闭环（调用方应重启大脑）。
+    """执行一次大模型复盘。返回 True 仅表示 patch 触及 Brain 加载路径、应热重启。
 
-    流程：保存在线进度 → opencode 隔离复盘 → 路径 allowlist → 自检 → 精确提交；
+    流程：保存在线进度 → opencode 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
     失败时从隔离 clone 导出包含全部改动（含 ignored/越界）的补合包；
-    allowlist 只约束自动合入，不约束失败成果留档。
+    cache 只从自动 patch 排除、不阻断源码；其他拒绝项不约束失败成果留档。
     source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
     async_mode=True（异步队列工作线程调用）时，在线存档和推送继续独立运行；
     它们不会参与隔离复盘 patch 的验收。
@@ -1376,10 +1457,6 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     model_id, variant = _parse_entry(entry)
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
-    if tuple(REVIEW_MUTABLE_PATHS) != tuple(autogit.REVIEW_PATCH_ALLOWLIST):
-        log("[llm] 复盘 allowlist 与 Git 安全层不一致，拒绝启动")
-        return False
-
     runs = know.stats["global"]["runs"]
     batch_txt = (_batch_description(batch_runs).replace(" ", "")
                  if batch_runs else f"第{runs}局")
@@ -1389,11 +1466,6 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         log=log, paths=REVIEW_CONCURRENT_PATHS,
     )
     pre_head = autogit.head()
-    before_review = autogit.changed_paths_since(pre_head, REVIEW_MUTABLE_PATHS)
-    if before_review:
-        log("[llm] 复盘启动前 allowlist 路径已有用户改动，拒绝让模型覆盖："
-            + ", ".join(before_review[:12]))
-        return False
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
     log(f"[llm] ===== 启动大模型复盘（{entry} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
@@ -1518,7 +1590,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             "timeout": timed_out,
             "stopped": stopped,
             "review_id": review_id,
-            # 结论取自即将删除的隔离 clone，已过 allowlist/selfcheck/patch 导出；
+            # 结论取自即将删除的隔离 clone，已过路径分类/selfcheck/patch 导出；
             # 直接随哨兵传递，避免真实工作树稍后才 apply 导致读到上一场旧文件。
             "conclusion": sandbox.conclusion,
             "conclusion_ready": bool(sandbox.conclusion),
@@ -1566,8 +1638,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
 
         # 3) marker 在 update-ref/push 前原子发布；patch commit 的私有 index 只包含
         # 模型 hunk，同文件中并发用户 hunk 留在工作树且不会被提交。
-        action_paths = _review_action_paths(review_paths)
-        requires_restart = _patch_has_substantive_action(sandbox.patch, review_paths)
+        has_action = _patch_has_substantive_action(sandbox.patch, review_paths)
+        hot_restart = _patch_requires_brain_restart(sandbox.patch, review_paths)
 
         def prepare_marker(provisional) -> bool:
             # prepare 在工作树 apply/update-ref 之前、同一 Git 事务锁内执行，是
@@ -1578,23 +1650,18 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                         "outcome": "canceled", "reason": "整套停止", "canceled": True})
                 log("[llm] patch 合入前收到整套停止请求；取消提交并保留复盘批次")
                 return False
-            if not requires_restart:
+            if not hot_restart:
                 return True
-            return _write_restart_marker({
-                "pre_head": pre_head,
-                "review_parent": provisional.before_head,
-                "review_commit": provisional.commit,
-                "paths": review_paths,
-                "time": stamp,
-                "state": "prepared",
-            }, log=log)
+            return _write_restart_marker(_restart_marker_payload(
+                pre_head, provisional.before_head, provisional.commit,
+                review_paths, stamp), log=log)
 
         def abort_marker(provisional) -> None:
-            if requires_restart:
+            if hot_restart:
                 _remove_restart_marker(provisional.commit, log=log)
 
         def finalize_marker(provisional) -> None:
-            if requires_restart and not _commit_restart_marker(provisional.commit, log=log):
+            if hot_restart and not _commit_restart_marker(provisional.commit, log=log):
                 raise OSError("重启 marker 未能从 prepared 确认为 committed")
 
         if _review_stop_requested():
@@ -1630,17 +1697,26 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
         _record_review_closure(
             know, closure_state, review_paths, batch_runs, log=log,
-            action_accepted=requires_restart)
+            action_accepted=has_action)
         try:
             know.save()
         except OSError:
             pass
-        if requires_restart:
+        if hot_restart:
             if _status is not None:
                 _status.update({"outcome": "changed", "reason": "运行时闭环 patch 已提交",
                                 "changed_paths": review_paths})
             log("[llm] 运行时闭环变更已提交，重启大脑以加载…")
             return True
+        if has_action:
+            if _status is not None:
+                _status.update({
+                    "outcome": "completed",
+                    "reason": "生产闭环 patch 已提交，当前 Brain 无需重载",
+                    "changed_paths": review_paths,
+                })
+            log("[llm] 生产闭环变更已提交；不属于 Brain 加载路径，不触发热重启")
+            return False
         if _status is not None:
             _status.update({"outcome": "documented", "reason": "复盘报告已提交，无需重启",
                             "changed_paths": review_paths})
@@ -1970,6 +2046,7 @@ class SandboxReviewResult:
     # 自检/导入产生的缓存仍进入全量取证包，但既不是模型源码成果，也不能
     # 被当成越界提交误杀已验证的源码 patch。
     artifact_paths: tuple[str, ...] = ()
+    online_paths: tuple[str, ...] = ()
     unexpected_paths: tuple[str, ...] = ()
     snapshot_dir: str = ""
     snapshot_complete: bool = False
@@ -1989,14 +2066,8 @@ def _is_review_transient_artifact(path: str) -> bool:
     This classification affects acceptance only.  The full-forensics capture
     still preserves these bytes and records their paths for later analysis.
     """
-    pure = PurePosixPath(str(path).replace("\\", "/"))
-    # Cache producers use many spellings (.cache, __pycache__, npm-cache,
-    # Caches, custom_tool_cache, ...).  These files never enter the accepted
-    # patch, so treating every cache-named path as transient is broad without
-    # weakening the source allowlist.  Full WIP capture still retains them.
-    if any("cache" in part.casefold() for part in pure.parts):
-        return True
-    return pure.name.lower().endswith((".pyc", ".pyo"))
+    import autogit
+    return autogit.classify_review_path(path) == autogit.REVIEW_PATH_CACHE
 
 
 def _replace_with_retry(source: Path, target: Path, attempts: int = 8) -> None:
@@ -2089,16 +2160,14 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
             item.replace("\\", "/") for item in names.stdout.split("\0") if item))
         if prompt_deleted and own_prompt not in changed:
             changed.append(own_prompt)
-        allowed_set = {path.replace("\\", "/").rstrip("/")
-                       for path in REVIEW_MUTABLE_PATHS}
-        allowed = [path for path in changed if path.rstrip("/") in allowed_set]
-        artifacts = [path for path in changed if _is_review_transient_artifact(path)]
-        unexpected = [path for path in changed
-                      if path.rstrip("/") not in allowed_set
-                      and not _is_review_transient_artifact(path)]
+        # The host-created prompt is never a model submission target. Preserve a
+        # modified/deleted copy in WIP forensics without classifying it as patch.
+        classified = [path for path in changed if path != own_prompt]
+        allowed, artifacts, online, unexpected = _partition_review_changes(classified)
         result.wip_paths = tuple(changed)
         result.allowed_paths = tuple(allowed)
         result.artifact_paths = tuple(artifacts)
+        result.online_paths = tuple(online)
         result.unexpected_paths = tuple(unexpected)
         capture_complete = True
 
@@ -2231,8 +2300,11 @@ def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
         return "timeout"
     if sandbox.rc not in (-1, 0):
         return "process_exit"
-    if sandbox.unexpected_paths or "allowlist" in reason:
-        return "allowlist"
+    if sandbox.online_paths:
+        return "online_runtime"
+    if (sandbox.unexpected_paths or "deny-only" in reason
+            or "路径边界" in reason or "allowlist" in reason):
+        return "path_boundary"
     if not sandbox.selfcheck_ok or "自检" in reason:
         return "selfcheck"
     if sandbox.patch and ("提交" in reason or "冲突" in reason):
@@ -2406,6 +2478,7 @@ def _save_review_salvage(
         "all_paths": list(all_paths),
         "allowed_paths": list(allowed_paths),
         "transient_artifact_paths": list(sandbox.artifact_paths),
+        "online_runtime_paths": list(sandbox.online_paths),
         "rejected_or_unexpected_paths": list(sandbox.unexpected_paths),
         "patch_bytes": patch_bytes,
         "patch_sha256": patch_sha256,
@@ -2561,60 +2634,67 @@ def _run_review_sandbox(
             return result
 
         # 不信任模型留下的 HEAD/index/assume-unchanged 标记；先回到隔离基线，
-        # 只保留工作树内容，再做全仓变更枚举。
+        # 再 force-stage 整个隔离仓。这样即使模型先改 .gitignore，把新源码藏成
+        # ignored，最终 inventory 仍来自 cached diff，不会漏文件。
         reset = _sandbox_git(sandbox_repo, ["reset", "--mixed", "--quiet", pre_head])
         if reset.returncode != 0:
             result = SandboxReviewResult(rc=rc, out=out, error="隔离仓库基线恢复失败")
             return result
-        tracked = _sandbox_git(
-            sandbox_repo, ["diff", "--name-only", "-z", pre_head, "--"])
-        others = _sandbox_git(
-            sandbox_repo, ["ls-files", "--others", "--exclude-standard", "-z", "--"])
-        if tracked.returncode != 0 or others.returncode != 0:
+        stage_inventory = _sandbox_git(
+            sandbox_repo, ["add", "--all", "--force", "--", "."])
+        inventory = _sandbox_git(
+            sandbox_repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"])
+        clear_inventory = _sandbox_git(
+            sandbox_repo, ["reset", "--mixed", "--quiet", pre_head])
+        if (stage_inventory.returncode != 0 or inventory.returncode != 0
+                or clear_inventory.returncode != 0):
             result = SandboxReviewResult(rc=rc, out=out, error="无法枚举隔离复盘变更")
             return result
         paths = list(dict.fromkeys(
-            [item.replace("\\", "/") for item in (tracked.stdout + others.stdout).split("\0") if item]))
+            item.replace("\\", "/") for item in inventory.stdout.split("\0") if item))
         own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
         paths = [path for path in paths if path != own_prompt]
-        # Cache artifacts may be ignored or unignored depending on the tool and
-        # repository.  Neither form is model source, so remove both before the
-        # acceptance/patch path set; finally's full capture records the bytes.
-        paths = [path for path in paths if not _is_review_transient_artifact(path)]
-        review_files = {item.replace("\\", "/").rstrip("/")
-                        for item in REVIEW_MUTABLE_PATHS}
-        unexpected = [path for path in paths
-                      if path.replace("\\", "/").rstrip("/") not in review_files]
-        if unexpected:
+        accepted, transient, online, rejected = _partition_review_changes(paths)
+        if online or rejected:
+            denied = [*(f"{path} (online-runtime)" for path in online),
+                      *(f"{path} (Git/outside/unsafe)" for path in rejected)]
             result = SandboxReviewResult(
-                rc=rc, out=out, paths=tuple(paths),
-                error="复盘 patch 越过 allowlist：" + ", ".join(unexpected[:12]),
+                rc=rc, out=out, paths=tuple(accepted),
+                allowed_paths=tuple(accepted), artifact_paths=tuple(transient),
+                online_paths=tuple(online), unexpected_paths=tuple(rejected),
+                error="复盘 patch 触碰 deny-only 路径边界：" + ", ".join(denied[:12]),
             )
             return result
-        if not paths:
-            result = SandboxReviewResult(rc=rc, out=out)
+        if not accepted:
+            result = SandboxReviewResult(
+                rc=rc, out=out, artifact_paths=tuple(transient))
             return result
 
         # 自检也在隔离 clone 内执行；失败代码从未进入真实工作树。
         if not _run_selfcheck(log, sandbox_repo / "sts2-ascend"):
             result = SandboxReviewResult(
-                rc=rc, out=out, paths=tuple(paths), error="复盘自检失败", selfcheck_ok=False)
+                rc=rc, out=out, paths=tuple(accepted),
+                allowed_paths=tuple(accepted), artifact_paths=tuple(transient),
+                error="复盘自检失败", selfcheck_ok=False)
             return result
 
         # 模型即使在隔离 clone 内自行 commit/stage，也先退回基线 index；仅把验证过
-        # 的 allowlist 路径重新 stage，再从基线导出二进制 patch。
-        stage = _sandbox_git(sandbox_repo, ["add", "--all", "--", *paths])
+        # 的 accepted 精确路径 force-stage，再从基线导出二进制 patch。
+        stage = _sandbox_git(
+            sandbox_repo, ["add", "--all", "--force", "--", *accepted])
         patch = _sandbox_git(
             sandbox_repo,
-            ["diff", "--cached", "--binary", "--unified=0", pre_head, "--", *paths],
+            ["diff", "--cached", "--binary", "--unified=0", pre_head, "--", *accepted],
             binary=True)
         if stage.returncode != 0 or patch.returncode != 0 or not patch.stdout:
             result = SandboxReviewResult(
-                rc=rc, out=out, paths=tuple(paths), error="隔离复盘 patch 导出失败")
+                rc=rc, out=out, paths=tuple(accepted),
+                allowed_paths=tuple(accepted), artifact_paths=tuple(transient),
+                error="隔离复盘 patch 导出失败")
             return result
         conclusion = ""
         conclusion_rel = "sts2-ascend/knowledge/review_conclusion.txt"
-        if conclusion_rel in paths:
+        if conclusion_rel in accepted:
             try:
                 conclusion_path = sandbox_repo / conclusion_rel
                 resolved_conclusion = conclusion_path.resolve()
@@ -2628,9 +2708,11 @@ def _run_review_sandbox(
         result = SandboxReviewResult(
             rc=rc,
             out=out,
-            paths=tuple(paths),
+            paths=tuple(accepted),
             patch=patch.stdout,
             conclusion=conclusion,
+            allowed_paths=tuple(accepted),
+            artifact_paths=tuple(transient),
         )
         return result
     except _ReviewStopped:
@@ -2655,10 +2737,18 @@ def _run_review_sandbox(
             except _ReviewStopped:
                 result.stopped = True
                 result.retained_sandbox_dir = str(sandbox_root)
-            if result.unexpected_paths and not result.error:
+            if (result.online_paths or result.unexpected_paths) and not result.error:
+                denied = [
+                    *(f"{path} (online-runtime)" for path in result.online_paths),
+                    *(f"{path} (Git/outside/unsafe)"
+                      for path in result.unexpected_paths),
+                ]
                 result.error = (
-                    "复盘 patch 越过 allowlist："
-                    + ", ".join(result.unexpected_paths[:12]))
+                    "复盘 patch 触碰 deny-only 路径边界："
+                    + ", ".join(denied[:12]))
+            if (result.patch and set(result.allowed_paths) != set(result.paths)
+                    and not result.error):
+                result.error = "复盘自检后出现未进入已验证 patch 的 accepted 文件"
         if _review_stop_requested() and sandbox_root.is_dir():
             result.stopped = True
             result.retained_sandbox_dir = str(sandbox_root)
@@ -2700,51 +2790,27 @@ def _run_review_sandbox(
             log(f"[llm] 隔离目录清理失败，已保留：{sandbox_root}（{exc}）")
 
 
-def _path_in_specs(path: str, specs: list[str]) -> bool:
-    value = path.replace("\\", "/").rstrip("/")
-    return any(value == spec or value.startswith(spec.rstrip("/") + "/") for spec in specs)
+def _partition_review_changes(
+    paths: list[str] | tuple[str, ...],
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    """Partition the inventory as allowed, cache, online and rejected paths."""
+    import autogit
 
-
-def _partition_review_changes(paths: list[str] | tuple[str, ...]) -> tuple[list[str], list[str], list[str]]:
-    """把工作树变更分成复盘 patch、在线并发数据和越界路径。"""
-    review, concurrent, unexpected = [], [], []
-    review_files = {item.replace("\\", "/").rstrip("/")
-                    for item in REVIEW_MUTABLE_PATHS}
-    for path in dict.fromkeys(str(item).replace("\\", "/") for item in paths):
-        if path.rstrip("/") in review_files:
-            review.append(path)
-        elif _path_in_specs(path, REVIEW_CONCURRENT_PATHS):
-            concurrent.append(path)
+    allowed: list[str] = []
+    transient: list[str] = []
+    online: list[str] = []
+    rejected: list[str] = []
+    for raw in dict.fromkeys(_normalized_review_path(item) for item in paths):
+        category = autogit.classify_review_path(raw)
+        if category == autogit.REVIEW_PATH_ACCEPTED:
+            allowed.append(autogit.normalize_paths([raw])[0])
+        elif category == autogit.REVIEW_PATH_CACHE:
+            transient.append(raw)
+        elif category == autogit.REVIEW_PATH_ONLINE_RUNTIME:
+            online.append(raw)
         else:
-            unexpected.append(path)
-    return review, concurrent, unexpected
-
-
-def _discard_failed_review(autogit, pre_head: str, reason: str, log=print,
-                           unexpected: list[str] | None = None) -> bool:
-    """保存诊断并仅撤销受控复盘路径；在线文件和越界现场均保留。"""
-    try:
-        backup_dir = KNOWLEDGE_DIR / "code_backups"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
-        if REVIEW_LOG.exists():
-            shutil.copy2(REVIEW_LOG, backup_dir / f"failed_review_{stamp}.md")
-        diagnostic = {
-            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "pre_head": pre_head,
-            "reason": reason,
-            "unexpected_paths": unexpected or [],
-        }
-        (backup_dir / f"failed_review_{stamp}.json").write_text(
-            json.dumps(diagnostic, ensure_ascii=False, indent=2), encoding="utf-8")
-    except OSError as exc:
-        log(f"[llm] 保存失败复盘诊断异常：{exc}")
-    restored = autogit.restore_paths(pre_head, REVIEW_MUTABLE_PATHS, log=log)
-    if restored:
-        log("[llm] 失败复盘的 allowlist patch 已撤销；在线 stats/progression 与越界现场均保留")
-    else:
-        log("[llm] 失败复盘无法无损撤销；拒绝强制覆盖，现场与诊断均已保留")
-    return restored
+            rejected.append(raw)
+    return allowed, transient, online, rejected
 
 
 def _bounded_marker_snapshot(marker: dict, depth: int = 0) -> dict:
