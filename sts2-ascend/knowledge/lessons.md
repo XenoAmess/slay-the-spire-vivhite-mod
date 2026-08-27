@@ -4066,3 +4066,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/770 胜，当前目标进阶 0
+
+## 第 771 局复盘（2026-08-27 16:35）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：MOLTEN_FIST, RUPTURE, UNRELENTING, UNRELENTING, FLAME_BARRIER, WHIRLWIND, DARK_EMBRACE, CINDER, DEMON_FORM, DEMON_FORM, EVIL_EYE, SWORD_BOOMERANG, DARK_EMBRACE, HOWL_FROM_BEYOND
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F17 Boss战 掉血48; F19 Monster战 掉血0; F20 Monster战 掉血7; F21 Monster战 掉血18; F22 Monster战 掉血5; F24 Elite战 掉血38（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，FIEND_FIRE(24分/30局)，CONFLAGRATION(24分/55局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.39 → 0.42（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/771 胜，当前目标进阶 0
