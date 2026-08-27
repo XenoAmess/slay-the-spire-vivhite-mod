@@ -3527,3 +3527,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/721 胜，当前目标进阶 0
+
+## 第 722 局复盘（2026-08-27 10:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：CINDER, EQUILIBRIUM, SWORD_BOOMERANG, BREAKTHROUGH, FIGHT_ME, BREAKTHROUGH, PYRE, DARK_EMBRACE, HEADBUTT
+- 本局遗物：ANCHOR
+- 战斗记录：F7 Monster战 掉血12; F8 Monster战 掉血50; F11 Monster战 掉血11; F13 Monster战 掉血7; F14 Monster战 掉血5; F17 Boss战 掉血40（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/51局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/722 胜，当前目标进阶 0
