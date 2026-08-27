@@ -440,24 +440,26 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(saved["reviewing"]["runs"], [8])
         self.assertEqual([item["run"] for item in saved["pending"]], [9])
 
-    def test_batch_outcome_distinguishes_failure_no_change_and_change(self) -> None:
-        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+    def test_batch_outcome_distinguishes_failure_report_and_runtime_change(self) -> None:
         batch = [{"run": 8, "model": "m", "every": 1, "source": "preferred"}]
         cfg = {"opencode_bin": "opencode"}
 
         def result(outcome: str, changed: bool):
+            agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+
             def fake_run(*_args, **kwargs):
                 kwargs["_status"].update({"outcome": outcome, "reason": outcome})
                 return changed
             with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
                   mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
                   mock.patch.object(llm_review, "run_review", side_effect=fake_run)):
-                return llm_review._run_batch_review(agent, batch, log=lambda _msg: None)
+                answer = llm_review._run_batch_review(agent, batch, log=lambda _msg: None)
+            return answer, agent.request_restart
 
-        self.assertEqual(result("failed", False), "failed")
-        self.assertEqual(result("completed", False), "completed")
-        self.assertEqual(result("changed", True), "changed")
-        self.assertTrue(agent.request_restart)
+        self.assertEqual(result("failed", False), ("failed", False))
+        self.assertEqual(result("completed", False), ("completed", False))
+        self.assertEqual(result("documented", False), ("documented", False))
+        self.assertEqual(result("changed", True), ("changed", True))
 
 
 if __name__ == "__main__":

@@ -74,6 +74,23 @@ REVIEW_MUTABLE_PATHS = [
     "sts2-ascend/knowledge/meta_review.md",
     "sts2-ascend/knowledge/review_conclusion.txt",
 ]
+REVIEW_REPORT_PATHS = frozenset({
+    "sts2-ascend/knowledge/meta_review.md",
+    "sts2-ascend/knowledge/review_conclusion.txt",
+})
+# A closure must change runtime behaviour or add runtime observability.  A report
+# and/or selfcheck-only patch is useful evidence, but it is not an implemented
+# response to repeated evidence and must not clear the anti-stagnation gate.
+REVIEW_ACTION_PATHS = frozenset({
+    "sts2-ascend/brain/__main__.py",
+    "sts2-ascend/brain/agent.py",
+    "sts2-ascend/brain/client.py",
+    "sts2-ascend/brain/config.json",
+    "sts2-ascend/brain/knowledge.py",
+    "sts2-ascend/brain/native_knowledge.py",
+    "sts2-ascend/brain/policy.py",
+    "sts2-ascend/brain/reflect.py",
+})
 # 这些文件可能在异步复盘期间被在线大脑推进；它们不是复盘 patch，失败回滚和
 # 复盘 commit 都不能覆盖。若同一文件来源无法区分，宁可保留现场供人工处理。
 REVIEW_CONCURRENT_PATHS = [
@@ -171,6 +188,14 @@ def load_llm_config() -> dict:
         "tts_mode": "edge",
         # 异步复盘单批上限；持久队列本身不截断
         "review_queue_max": 100,
+        # 反摸鱼闭环：两次纯报告后，下一批必须落地行为改动或运行时观测。
+        "review_report_only_limit": 2,
+        # 直播项目当前处于 0 胜追赶期：每个成功批次都必须有运行时闭环。
+        # 没有足够把握改行为时也必须加生产观测，禁止用文档代替交付。
+        "review_require_action_every_batch": True,
+        # 同一问题达到任一证据阈值即应落地，不再等待“绝对安全”。
+        "review_evidence_run_threshold": 3,
+        "review_evidence_batch_threshold": 2,
     }
     merged.update({k: v for k, v in cfg.items() if v is not None})
     # ``viewer.enabled`` is canonical; the legacy LLM-local switch remains a
@@ -178,6 +203,226 @@ def load_llm_config() -> dict:
     if isinstance(viewer_cfg, dict) and viewer_cfg.get("enabled") is not None:
         merged["viewer_enabled"] = bool(viewer_cfg["enabled"])
     return merged
+
+
+def _positive_int(value, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, parsed)
+
+
+def _review_action_paths(paths) -> tuple[str, ...]:
+    """Return paths that constitute a behaviour/observability closure.
+
+    ``selfcheck.py`` alone deliberately does not count: tests can prove a real
+    production change, but changing only the proof cannot improve live play.
+    """
+    normalized = tuple(dict.fromkeys(
+        str(path).replace("\\", "/").rstrip("/") for path in (paths or ())))
+    return tuple(path for path in normalized if path in REVIEW_ACTION_PATHS)
+
+
+def _patch_has_substantive_action(patch: bytes | str, paths) -> bool:
+    """Reject comment/whitespace-only touches used to impersonate a closure."""
+    action_paths = set(_review_action_paths(paths))
+    if not action_paths or not patch:
+        return False
+    text = (patch.decode("utf-8", errors="replace")
+            if isinstance(patch, bytes) else str(patch))
+    current = ""
+    comment_prefixes = ("#", "//", "/*", "*", "*/", '"""', "'''")
+    for line in text.splitlines():
+        if line.startswith("diff --git "):
+            marker = " b/"
+            current = line.split(marker, 1)[1].strip() if marker in line else ""
+            continue
+        if current not in action_paths or not line.startswith(("+", "-")):
+            continue
+        if line.startswith(("+++", "---")):
+            continue
+        body = line[1:].strip()
+        if (not body or body.startswith(comment_prefixes)
+                or body in {"{", "}", "[", "]", ","}):
+            continue
+        return True
+    return False
+
+
+def _infer_recent_report_only_streak(limit: int = 20) -> int:
+    """Bootstrap the durable streak from recent accepted review commits.
+
+    This migration makes the first review after deploying the gate aware of the
+    already accepted report-only batches.  It reads commit paths only; no tree
+    fingerprint or repository-wide hash is created.
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "git", "-C", str(REPO_DIR), "log", "--no-renames",
+                f"-n{max(1, limit)}", "--fixed-strings", "--grep=LLM 复盘变更",
+                "--format=__STS2_REVIEW_COMMIT__%H", "--name-only",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return 0
+    if proc.returncode != 0:
+        return 0
+
+    commits: list[list[str]] = []
+    current: list[str] | None = None
+    for raw in proc.stdout.splitlines():
+        line = raw.strip().replace("\\", "/")
+        if line.startswith("__STS2_REVIEW_COMMIT__"):
+            if current is not None:
+                commits.append(current)
+            current = []
+        elif line and current is not None:
+            current.append(line)
+    if current is not None:
+        commits.append(current)
+
+    streak = 0
+    for paths in commits:
+        if _review_action_paths(paths):
+            break
+        if paths:
+            streak += 1
+    return streak
+
+
+def _review_closure_state(know, cfg: dict) -> dict:
+    """Build the host-owned anti-stagnation state embedded in the next prompt."""
+    limit = _positive_int(cfg.get("review_report_only_limit"), 2)
+    run_threshold = _positive_int(cfg.get("review_evidence_run_threshold"), 3)
+    batch_threshold = _positive_int(cfg.get("review_evidence_batch_threshold"), 2)
+    progression = getattr(know, "progression", {})
+    stored = progression.get("review_report_only_streak") if isinstance(progression, dict) else None
+    if isinstance(stored, int) and not isinstance(stored, bool) and stored >= 0:
+        streak = stored
+        source = "progression"
+    else:
+        streak = _infer_recent_report_only_streak()
+        source = "git_history_bootstrap"
+    require_every_batch = bool(cfg.get("review_require_action_every_batch", True))
+    required = require_every_batch or streak >= limit
+    return {
+        "version": 1,
+        "consecutive_report_only": streak,
+        "report_only_limit": limit,
+        "evidence_run_threshold": run_threshold,
+        "evidence_batch_threshold": batch_threshold,
+        "action_required": required,
+        "require_action_every_batch": require_every_batch,
+        "state_source": source,
+        "last_outcome": (progression.get("review_closure_last_outcome", "unknown")
+                         if isinstance(progression, dict) else "unknown"),
+        "rule": (
+            "当前每批都必须修改运行时代码/配置或增加生产观测；证据阈值用于决定优先级。"
+            "纯文档和仅自检永远不算闭环。"
+        ),
+    }
+
+
+def _recent_review_context(max_chars: int = 12000) -> str:
+    """Bounded recent reports let the model count repeated evidence explicitly."""
+    try:
+        text = REVIEW_LOG.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    return "[较早内容已截断]\n" + text[-max_chars:]
+
+
+def _historical_zero_code_context(max_sections: int = 10,
+                                  max_chars: int = 30000) -> str:
+    """Extract accepted zero-code reports as explicit implementation debt."""
+    try:
+        lines = REVIEW_LOG.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+    sections: list[str] = []
+    current: list[str] = []
+    for line in lines:
+        is_review_heading = (line.lstrip().startswith("#")
+                             and "局" in line and "复盘" in line)
+        if is_review_heading:
+            if current:
+                section = "\n".join(current).strip()
+                if ("零代码" in section or "未改任何 .py" in section
+                        or "未改任何 `.py`" in section):
+                    sections.append(section)
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        section = "\n".join(current).strip()
+        if ("零代码" in section or "未改任何 .py" in section
+                or "未改任何 `.py`" in section):
+            sections.append(section)
+    selected = "\n\n".join(sections[-max(1, max_sections):])
+    if len(selected) <= max_chars:
+        return selected
+    return "[更早零代码债务已截断]\n" + selected[-max_chars:]
+
+
+def _record_review_closure(know, base_state: dict, paths, batch_runs, log=print,
+                           action_accepted: bool | None = None) -> dict:
+    """Persist only accepted review outcomes; rejected/failed attempts never count."""
+    action_paths = _review_action_paths(paths)
+    is_action = bool(action_paths) if action_accepted is None else bool(action_accepted)
+    if is_action:
+        outcome = "implemented"
+        streak = 0
+    else:
+        outcome = "report_only" if paths else "no_change"
+        streak = int(base_state.get("consecutive_report_only", 0)) + 1
+    progression = getattr(know, "progression", None)
+    if isinstance(progression, dict):
+        progression["review_report_only_streak"] = streak
+        progression["review_closure_last_outcome"] = outcome
+        progression["review_closure_last_runs"] = [int(run) for run in (batch_runs or [])]
+        progression["review_closure_last_paths"] = [
+            str(path).replace("\\", "/") for path in (paths or ())
+        ]
+        progression["review_closure_updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    if is_action:
+        log("[llm] 闭环完成：运行时行为/观测已落地，纯报告连续计数归零（"
+            + ", ".join(action_paths) + "）")
+    else:
+        limit = int(base_state.get("report_only_limit", 2))
+        suffix = "；下一批已强制进入代码/观测闭环" if streak >= limit else ""
+        log(f"[llm] 本批仅沉淀报告，连续 {streak}/{limit} 批{suffix}")
+    return {**base_state, "consecutive_report_only": streak,
+            "action_required": (bool(base_state.get("require_action_every_batch", True))
+                                or streak >= int(base_state.get("report_only_limit", 2))),
+            "last_outcome": outcome}
+
+
+def _review_closure_gate_error(state: dict, paths,
+                               patch: bytes | str | None = None) -> str:
+    action_paths = _review_action_paths(paths)
+    substantive = bool(action_paths)
+    if patch is not None:
+        substantive = _patch_has_substantive_action(patch, paths)
+    if not state.get("action_required") or substantive:
+        return ""
+    streak = int(state.get("consecutive_report_only", 0))
+    limit = int(state.get("report_only_limit", 2))
+    return (
+        f"闭环闸门拒绝纯报告：当前要求每批落地；历史连续纯报告 {streak} 次（阈值 {limit}）。"
+        "本批必须对运行时行为或观测路径产生实质代码变化；meta_review、短评、仅 selfcheck，"
+        "以及只改注释/空白来碰瓷生产路径都不算闭环。无需证明绝对安全，可做相对安全、可观测、"
+        "可记录、可继续调整或撤回的改动。"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -413,7 +658,8 @@ def _primary_failure_decision_chain(
 
 
 def build_prompt(know, cfg: dict, every: int | None = None,
-                 batch_runs: list[int] | None = None) -> str:
+                 batch_runs: list[int] | None = None,
+                 closure_state: dict | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 100))
     run_records = _review_run_records(n, batch_runs=batch_runs)
     run_summaries = [_summarize_run(data, evidence_match)
@@ -428,6 +674,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     evidence_text.extend(str(row.get("reason") or "")
                          for row in (full_failure_run.get("decisions") or []))
     native = getattr(know, "game_knowledge", None)
+    closure_state = closure_state or _review_closure_state(know, cfg)
     packet = {
         "runs_summary": run_summaries,
         "run_evidence_scope": {
@@ -442,6 +689,11 @@ def build_prompt(know, cfg: dict, every: int | None = None,
                 for item in run_summaries),
         },
         "decision_chain_evidence": decision_chain_evidence,
+        "review_closure": closure_state,
+        # Recent accepted reports expose repeated issue mentions to the next
+        # reviewer without inlining the unbounded full meta-review history.
+        "recent_review_context": _recent_review_context(),
+        "historical_zero_code_debt": _historical_zero_code_context(),
         "stats_digest": _stats_digest(know),
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
@@ -485,6 +737,26 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 ```
 {lessons_tail}
 ```
+
+# 证据累计与闭环纪律（宿主会按真实变更路径验收）
+- 先读取 packet 的 `review_closure` 与 `recent_review_context`，为反复出现的问题复用稳定的
+  `issue_id`，并把本批独立 run 证据与此前批次证据合并判断。
+- `historical_zero_code_debt` 是此前被“零代码纪律”拖欠的实现债务。先逐项对账：只有能指出
+  **已经存在的生产代码路径和实际生效行为**才可标为 resolved；一次无关代码改动不能把整包债务
+  清零。每批优先补做一个最高价值 unresolved 历史问题，除非本批出现更高优先级的致命新缺陷。
+- 同一问题在至少 `evidence_run_threshold` 个独立对局出现，或连续
+  `evidence_batch_threshold` 个成功复盘批次出现，即达到证据阈值；不得再次只登记“待观察”。
+- 当前 `review_closure.require_action_every_batch=true`：**每个成功复盘批次**都必须完成一个
+  **有界闭环实验**：修改运行时行为/配置，或者先增加能直接验证该假设的运行时观测代码。
+  纯 `meta_review.md`、纯短评、仅改 `selfcheck.py`、只改生产文件注释/空白都不算闭环，
+  宿主会拒绝整批并保存现场重试。
+- 改动追求的是**相对安全、范围有界、可观测、可记录、可继续调整或撤回**，不是证明绝对安全。
+  “还不够安全”“耦合面较宽”“参数已经顶格”“还想再看几局”均不能作为阈值后的延期理由；
+  不敢直接改策略时就先加运行时观测，但观测必须落在生产代码中并能在后续 run 留下证据。
+- 每批只选一个最高价值主假设。报告必须写清 `issue_id`、证据 run、实际代码动作、未来 3~10 局
+  的观测指标、继续调整条件与撤回条件。Git 历史由宿主管理，后续可用反向提交恢复。
+- “顶格旋钮不再吸收证据”只禁止把同一数值无限推向边界；正确动作是转交同语义接替旋钮、
+  改结构或加观测，绝不等于“零代码纪律”。
 
 # 你的任务（严格按顺序）
 1. 归因分析：主要死因趋势、打法缺陷、卡组构建问题、地图路线问题、代码缺陷。
@@ -1012,7 +1284,7 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
                source: str = "fallback", batch_runs: list[int] | None = None,
                async_mode: bool = False, _status: dict | None = None) -> bool:
-    """执行一次大模型复盘。返回 True 表示复盘产生了已提交的变更（调用方应重启大脑）。
+    """执行一次大模型复盘。返回 True 仅表示已提交运行时闭环（调用方应重启大脑）。
 
     流程：保存在线进度 → opencode 隔离复盘 → 路径 allowlist → 自检 → 精确提交；
     失败时从隔离 clone 导出包含全部改动（含 ignored/越界）的补合包；
@@ -1063,7 +1335,13 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
     log(f"[llm] ===== 启动大模型复盘（{entry} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
-    prompt = build_prompt(know, cfg, every, batch_runs)
+    closure_state = _review_closure_state(know, cfg)
+    closure_note = "强制落地" if closure_state["action_required"] else "允许继续取证"
+    log("[llm] 闭环状态：纯报告连续 "
+        f"{closure_state['consecutive_report_only']}/{closure_state['report_only_limit']}，"
+        f"本批{closure_note}（{closure_state['state_source']}）")
+    prompt = build_prompt(
+        know, cfg, every, batch_runs, closure_state=closure_state)
     try:
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
     except OSError:
@@ -1124,6 +1402,15 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
         sandbox.stopped = sandbox.stopped or stopped
+        closure_error = ""
+        if rc == 0 and not timed_out and not stopped and not sandbox.error:
+            closure_error = _review_closure_gate_error(
+                closure_state, sandbox.paths, sandbox.patch)
+            if closure_error:
+                sandbox.error = closure_error
+                # Do not broadcast a rejected report as if it were an accepted
+                # review conclusion; make the retry reason visible instead.
+                sandbox.conclusion = "本次复盘只写文档，闭环闸门已拒绝，模型必须落地代码或观测后重做。"
         if sandbox.error or stopped:
             _save_review_salvage(
                 pre_head, sandbox.error or "协作停止留下的部分复盘现场", sandbox,
@@ -1190,12 +1477,14 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             reviewed_through = max(batch_runs) if batch_runs else runs
             know.progression["last_successful_review_run"] = max(
                 int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
+            _record_review_closure(
+                know, closure_state, review_paths, batch_runs, log=log)
             try:
                 know.save()
             except OSError:
                 pass
             if _status is not None:
-                _status.update({"outcome": "completed", "reason": "合法复盘无文件变更"})
+                _status.update({"outcome": "documented", "reason": "合法复盘无文件变更"})
             log("[llm] 复盘未产生任何文件变更，跳过提交")
             return False
         try:
@@ -1215,6 +1504,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
 
         # 3) marker 在 update-ref/push 前原子发布；patch commit 的私有 index 只包含
         # 模型 hunk，同文件中并发用户 hunk 留在工作树且不会被提交。
+        action_paths = _review_action_paths(review_paths)
+        requires_restart = _patch_has_substantive_action(sandbox.patch, review_paths)
+
         def prepare_marker(provisional) -> bool:
             # prepare 在工作树 apply/update-ref 之前、同一 Git 事务锁内执行，是
             # 合入前最后一道停止闸门。停止批次保留 reviewing 给新进程恢复。
@@ -1224,6 +1516,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                         "outcome": "canceled", "reason": "整套停止", "canceled": True})
                 log("[llm] patch 合入前收到整套停止请求；取消提交并保留复盘批次")
                 return False
+            if not requires_restart:
+                return True
             return _write_restart_marker({
                 "pre_head": pre_head,
                 "review_parent": provisional.before_head,
@@ -1233,7 +1527,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             }, log=log)
 
         def abort_marker(provisional) -> None:
-            _remove_restart_marker(provisional.commit, log=log)
+            if requires_restart:
+                _remove_restart_marker(provisional.commit, log=log)
 
         if _review_stop_requested():
             if _status is not None:
@@ -1265,14 +1560,24 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         reviewed_through = max(batch_runs) if batch_runs else runs
         know.progression["last_successful_review_run"] = max(
             int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
+        _record_review_closure(
+            know, closure_state, review_paths, batch_runs, log=log,
+            action_accepted=requires_restart)
         try:
             know.save()
         except OSError:
             pass
+        if requires_restart:
+            if _status is not None:
+                _status.update({"outcome": "changed", "reason": "运行时闭环 patch 已提交",
+                                "changed_paths": review_paths})
+            log("[llm] 运行时闭环变更已提交，重启大脑以加载…")
+            return True
         if _status is not None:
-            _status.update({"outcome": "changed", "reason": "复盘 patch 已提交"})
-        log("[llm] 复盘变更已提交，重启大脑以加载…")
-        return True
+            _status.update({"outcome": "documented", "reason": "复盘报告已提交，无需重启",
+                            "changed_paths": review_paths})
+        log("[llm] 复盘报告已提交；未改运行时代码，不触发 Brain 重启")
+        return False
     except Exception as exc:
         reason = f"复盘宿主验收/提交异常：{exc}"
         if _status is not None:
@@ -2405,7 +2710,7 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
         if current_runs != runs:
             log("[llm] 复盘队列批次身份已变化，保留现有队列而不覆盖")
             return 0.0
-        if outcome in {"completed", "changed"}:
+        if outcome in {"completed", "documented", "changed"}:
             q["reviewing"] = None
             _save_queue_unlocked(q)
             return 0.0
@@ -2567,6 +2872,9 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         log("[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…")
         agent.request_restart = True
         return "changed"
+    if outcome == "documented":
+        log("[llm] 异步复盘仅提交报告，已计入闭环状态且无需重启大脑")
+        return "documented"
     if outcome == "completed":
         return "completed"
     log(f"[llm] 异步复盘未成功，将自动重试：{status.get('reason', '未知原因')}")
