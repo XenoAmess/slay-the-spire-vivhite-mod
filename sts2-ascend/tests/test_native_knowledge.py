@@ -22,6 +22,8 @@ from native_knowledge import (  # noqa: E402
     VALIDATOR_VERSION,
     NativeGameKnowledge,
     _artifact_set_sha256,
+    sanitize_rich_text,
+    sanitize_rich_value,
 )
 from policy import Policy  # noqa: E402
 
@@ -89,6 +91,18 @@ class NativeKnowledgeTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def test_snapshot_rich_tokens_are_sanitized_without_inventing_numbers(self) -> None:
+        energy = "res://images/packed/sprite_fonts/energy_icon.png"
+        star = "res://images/packed/sprite_fonts/star_icon.png"
+        self.assertEqual(sanitize_rich_text(f"获得 {energy}{energy}。"), "获得 能量。")
+        self.assertEqual(sanitize_rich_text(f"选择 {star}。"), "选择 ◇。")
+        self.assertEqual(sanitize_rich_text("实时文本不变"), "实时文本不变")
+        value = {"description": f"获得 {energy}", "nested": [f"{star} 升级", 3]}
+        self.assertEqual(sanitize_rich_value(value), {
+            "description": "获得 能量",
+            "nested": ["◇ 升级", 3],
+        })
 
     def test_lookup_enrichment_and_bounded_review_digest(self) -> None:
         index = NativeGameKnowledge.from_knowledge_root(self.knowledge)

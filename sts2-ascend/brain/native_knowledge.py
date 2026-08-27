@@ -43,6 +43,40 @@ def _entity_id(value: Any) -> str:
     return str(value or "").strip().upper().rstrip("+")
 
 
+# v0.111.0 提取器缺陷（第658~663局批复盘）：卡牌描述里的富文本 token
+# （能量/星标等 sprite 字体图标）被 res://images/packed/sprite_fonts/*.png
+# 路径字面量替代，cards.jsonl 77/596 张卡的 description 失真（能量类 74 张、
+# 星标类若干；药水/遗物/事件/怪物全净）。本模块只在实时载荷缺字段时注入
+# 快照文本——一旦注入，这些残码会进入 policy._text() 的消费链：回能识别、
+# 「获得X点能量」解析、icon 数字缺失等全部失灵。净化规则保守且不含数字：
+#   连续同段路径若含 energy_icon → 折叠为「能量」（多图标只证明存在，
+#   不臆造数量）；其他 sprite 图标 → 「◇」占位（星标语义未考证，不猜词）。
+# 实时战斗载荷是干净文本，不受影响；mechanics 表达式代码不经此通道。
+_RICH_TOKEN_RE = re.compile(r"(?:res://images/packed/sprite_fonts/[A-Za-z0-9_]+\.png)+")
+
+
+def sanitize_rich_text(text: Any) -> Any:
+    """把快照描述里的 res:// 富文本残码折叠为语义占位词。"""
+    if not isinstance(text, str) or "res://" not in text:
+        return text
+
+    def _sub(match: re.Match) -> str:
+        return "能量" if "energy_icon" in match.group(0) else "◇"
+
+    return _RICH_TOKEN_RE.sub(_sub, text)
+
+
+def sanitize_rich_value(value: Any) -> Any:
+    """递归净化结构化快照数据里的字符串（描述、升级文本等）。"""
+    if isinstance(value, str):
+        return sanitize_rich_text(value)
+    if isinstance(value, list):
+        return [sanitize_rich_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: sanitize_rich_value(item) for key, item in value.items()}
+    return value
+
+
 def _clip(value: Any, limit: int = 160) -> str:
     text = " ".join(str(value or "").split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -361,8 +395,10 @@ class NativeGameKnowledge:
         }
         for destination, source in aliases.items():
             if enriched.get(destination) is None or enriched.get(destination) == "":
-                if runtime.get(source) is not None:
-                    enriched[destination] = runtime[source]
+                value = runtime.get(source)
+                if value is None:
+                    continue
+                enriched[destination] = sanitize_rich_value(value)
         return enriched
 
     def _build_name_index(self) -> dict[str, list[tuple[str, str]]]:
@@ -402,7 +438,10 @@ class NativeGameKnowledge:
             "potions": common + ("pool", "usage", "target_type"),
             "events": common + ("options",),
         }.get(category, common)
-        return {name: data.get(name) for name in fields if name in data}
+        return {
+            name: sanitize_rich_value(data.get(name))
+            for name in fields if name in data
+        }
 
     @staticmethod
     def _mechanics_highlights(category: str, data: dict[str, Any]) -> dict[str, Any]:

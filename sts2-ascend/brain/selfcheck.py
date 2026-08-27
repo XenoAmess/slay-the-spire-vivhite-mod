@@ -3144,6 +3144,40 @@ def main() -> int:
     assert s_blk_lethal > s_blk_allin, \
         f"致死回合格挡被误贬值（买命窗口应保留原价）: lethal={s_blk_lethal} allin={s_blk_allin}"
 
+    # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
+    #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
+    #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：
+    #           ① T1~T2 手握足额能量+大血池+无竞速判死 → 加分生效并留痕；
+    #           ② 同局面 hopeless_race → 开局承诺被禁，能力仍压在出牌线
+    #           之下（判死局烧 3 费买复利的旧教训不推翻）；
+    #           ③ 走廊小血池不加成，节奏不扭曲。
+    xc_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-commit-"))
+    xc_pol = policy.Policy(knowledge.Knowledge(xc_dir), random.Random(5))
+    xc_enemies = [dict(ra_enemies[0])]
+    xc_inflame = {"index": 0, "card_id": "INFLAME", "name": "燃烧", "playable": True,
+                  "energy_cost": 1, "requires_target": False,
+                  "resolved_rules_text": "获得2点力量。"}
+    _on_score, _, _why = xc_pol._score_play(dict(xc_inflame), xc_enemies, 14, 0, 1,
+                                             xc_pol.know.policy,
+                                             my_hp=77, my_max_hp=84, cur_energy=3,
+                                             hopeless_race=False, run_deck=[])
+    assert "开局承诺" in (_why or "") and _on_score > 15.0, \
+        f"开局承诺加成失效: score={_on_score} why={_why}"
+    _xc_off_score = xc_pol._score_play(dict(xc_inflame), xc_enemies, 14, 0, 1,
+                                       xc_pol.know.policy,
+                                       my_hp=77, my_max_hp=84, cur_energy=3,
+                                       hopeless_race=True, run_deck=[])[0]
+    assert _xc_off_score < xc_pol.know.policy["play_threshold"], \
+        f"判死局能力牌吃开局承诺加成挤占输出能量: {_xc_off_score}"
+    xc_hall = [dict(xc_enemies[0], current_hp=40)]
+    _xc_small = xc_pol._score_play(dict(xc_inflame), xc_hall, 14, 0, 1,
+                                   xc_pol.know.policy,
+                                   my_hp=77, my_max_hp=84, cur_energy=3,
+                                   hopeless_race=False, run_deck=[])[0]
+    assert _xc_small < _on_score - 4.0, \
+        f"走廊小血池误发开局承诺加成: small={_xc_small} boss={_on_score}"
+    del _on_score, _why, _xc_off_score, _xc_small
+
     # 3xf（第635~640批复盘）：判死竞速致死回合的群体自残攻击解禁——非群体
     #           自残在同一局面走孤注一掷通道照常上砧，旧例唯独把突破族
     #           （小额掉血换全体伤害）压到禁玩线：640 局 F21「全攻提速」

@@ -3717,7 +3717,6 @@ class Policy:
     # ------------------------------------------------------------------
 
     @staticmethod
-    @staticmethod
     def _is_scaling_power(card: dict) -> bool:
         """力量/伤害成长型能力牌判定（第429~434批复盘新增）。
 
