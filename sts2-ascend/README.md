@@ -411,7 +411,7 @@ Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏
 
 ## 与上游 mod 的关系
 
-- `third_party/dist/`：上游 release 包（默认 v0.9.0，由 Deploy-Mod.ps1 自动下载，不入库）
+- `third_party/dist/`：上游 release 包（默认 v0.9.1，由 Deploy-Mod.ps1 自动下载，不入库）
 - 上游 mod 文件（`STS2AIAgent.dll/.pck/mod_id.json`）被复制到游戏 `mods/` 根目录（上游官方布局）
 - 上游协议为 AGPL-3.0-only；本项目仅以网络客户端方式使用，未修改其代码
 

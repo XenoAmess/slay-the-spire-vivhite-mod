@@ -1,9 +1,9 @@
 # Deploy the STS2-Agent mod into the game mods folder.
-# -Source auto（默认）：我方 fork 克隆存在（third_party/STS2-Agent）时优先从 fork main 源码构建
-#   （带我们的修复，见 third_party/README.md）；否则回退到官方 release zip。
+# -Source auto（默认）：我方 fork 克隆存在（third_party/STS2-Agent）时优先从其当前 checkout 构建
+#   （正常应为与上游对齐的 main，见 third_party/README.md）；否则回退到官方 release zip。
 # 注意：游戏运行时 dll 被锁定，部署会失败——请先关游戏再部署。
 param(
-    [string]$Version = "0.9.0",
+    [string]$Version = "0.9.1",
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",
     [ValidateSet("auto", "fork", "release")][string]$Source = "auto",
     [string]$GodotExe = ""
@@ -35,7 +35,7 @@ $useFork = ($Source -eq "fork") -or ($Source -eq "auto" -and (Test-Path (Join-Pa
 if ($useFork) {
     $godot = Resolve-GodotExe
     if (-not $godot) { throw "从 fork 构建需要 Godot（4.5.1 mono）；请用 -GodotExe 指定或配置 brain/config.json 的 godot_exe" }
-    Write-Host "Building mod from our fork main ($forkDir)..."
+    Write-Host "Building mod from local fork checkout ($forkDir)..."
     $env:STS2_DATA_DIR = Join-Path $GameDir "data_sts2_windows_x86_64"
     & (Join-Path $forkDir "scripts\build-mod.ps1") -Configuration Release -GameRoot $GameDir -GodotExe $godot
     if ($LASTEXITCODE -ne 0) { throw "fork build-mod failed (exit $LASTEXITCODE)" }

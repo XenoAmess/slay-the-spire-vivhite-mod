@@ -4,28 +4,30 @@
 
 - **上游**：https://github.com/CharTyr/STS2-Agent
 - **我方 fork**：https://github.com/XenoAmess/STS2-Agent（本地克隆在 `third_party/STS2-Agent/`，已 gitignore）
-- **基线版本**：v0.9.0（`upstream/main` HEAD = `ca2a788`，已包含合并的 PR #46/#47）
+- **基线版本**：v0.9.1（`upstream/main` / `origin/main` HEAD = `9f99876`，已包含 PR #46～#49）
 
 ### 维护工作流（重要）
 
-以我 fork 的 `main` 为我们自己的长期维护分支：
+fork 的 `main` 保持与官方 `upstream/main` 精确一致：
 
-1. 发现问题 → 在 **fork 的 `main`** 上修改 → 真机验证 → 推送 `origin main`。
-2. 确认闭环后 → 从该修复**单独拉 `fix/*` 分支** → `gh pr create` 提给上游 `CharTyr/STS2-Agent`。
-3. 上游合并后，下次同步 `upstream/main` 时自然回落到官方实现。
+1. 先同步 `main`，再从最新官方基线拉独立 `fix/*` 或 `feat/*` 分支。
+2. 在独立分支修改、真机验证并推送，然后用 `gh pr create` 提给上游 `CharTyr/STS2-Agent`。
+3. PR 合并前仅在该分支部署验证，不把它提前合入 fork `main`。
+4. 上游合并后再次同步 `main`；如历史已因临时整合而分叉，先保存远端备份，再用带精确旧 SHA
+   的 `--force-with-lease` 对齐，禁止无条件 force push。
 
 本地克隆的 remote：`origin` = 我方 fork，`upstream` = 官方仓库。
 
-### 当前持有的修复
+### v0.9.1 已上游的修复
 
-**fix/potion-aoe-target-resolution**（commit `bf61078`，已在 fork `main`）：
+**fix/potion-aoe-target-resolution**（commit `bf61078`，已合入上游 v0.9.1）：
 
 - 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/46
 
-**fix/unlock-screen-action**（初始 commit `04e2e75`，确认按钮补丁 `985f8c3`，已在 fork `main`）：
+**fix/unlock-screen-action**（初始 commit `04e2e75`，确认按钮后续修复已合入上游 v0.9.1）：
 
 - 初始 UNLOCK 支持（已合并）：https://github.com/CharTyr/STS2-Agent/pull/47
-- private 基类确认按钮后续修复（新 PR，commit `71fa12f`）：
+- private 基类确认按钮后续修复（已合并，最终 PR head `925fb3a`）：
   https://github.com/CharTyr/STS2-Agent/pull/49
 - 问题：赛后/里程碑的整屏解锁展示（"解锁遗物！"等）不被路由——`/state` 返回 `UNKNOWN` 且
   `available_actions` 为空，自动游玩在该屏永久卡死。
@@ -36,7 +38,7 @@
   所以能读到派生类 `_relics`，却永远读不到确认按钮。现在沿 `BaseType` 逐层查找，另以
   `NUnlockConfirmButton` 节点树查询兜底，并节流记录声明类型、节点路径、visible/enabled。
 - 验证：现场 `/state`、游戏 `sts2.xml` 元数据和 HTTP 503 三方闭环；新增派生实例读取 private
-  基类字段/属性测试；Release 构建 0 警告 0 错误，38 项 C# 测试与 Python selfcheck 通过。
+  基类字段/属性测试；v0.9.1 Release 构建 0 警告 0 错误，48 项 C# 测试与 29 项 MCP Python 测试通过。
 - 大脑侧兜底（不依赖 mod 正常暴露动作）：UNKNOWN 或已识别 UNLOCK 屏滞留 12 tick 后，
   点击底部确认区；UNLOCK 日志同步输出类型、can_confirm 和 actions，避免再次静默空转。
 - 问题：`use_potion` 对 AoE/随机目标药水（如爆炸药瓶 EXPLOSIVE_AMPOULE）永远 pending——
@@ -46,6 +48,10 @@
 - 验证：真机 `use_potion` 对 AoE 药水返回 completed、敌方全体扣血；Release 构建 0 警告；全部单元测试通过。
 - 历史补丁文件：`STS2-Agent-v0.9.0-aoe-potion-fix.patch`（与 fork main 内容一致，留档；
   注意其中首个 hunk 有 BOM 乱码属已知瑕疵，正式实现以 fork 为准）。
+
+**feat/crystal-sphere-screen**（最终 PR head `78c56bf`，已合入上游 v0.9.1）：
+
+- 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/48
 
 ### 如何复现部署构建（从 fork main 构建并部署到游戏）
 
@@ -59,5 +65,5 @@ $env:STS2_DATA_DIR = "G:\SteamLibrary\steamapps\common\Slay the Spire 2\data_sts
 ```
 
 - 注意：`-GameRoot` 只管部署；csproj 的程序集引用路径由环境变量 `STS2_DATA_DIR` 提供
-- 官方 release zip 仍可由 `scripts/Deploy-Mod.ps1` 下载到 `dist/`（未打补丁的原版，仅作对照）
-- 若上游合并了 PR 并发布新 release，可切回官方 release
+- 官方 v0.9.1 release zip 可由 `scripts/Deploy-Mod.ps1 -Source release` 下载到 `dist/`；当前所有修复
+  已上游，它与 fork `main` 同属正式基线

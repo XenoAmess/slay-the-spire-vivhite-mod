@@ -3,7 +3,7 @@
 # Brain child; Start must not precompute or reuse those generation-local values.
 [CmdletBinding()]
 param(
-    [string]$Version = "0.9.0",
+    [string]$Version = "0.9.1",
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",
     [ValidateSet("auto", "fork", "release")][string]$Source = "auto",
     [string]$GodotExe = "",
