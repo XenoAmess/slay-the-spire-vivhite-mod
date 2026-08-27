@@ -2007,7 +2007,8 @@ class Agent:
         # Agent construction and boot handoff are complete.  This second stage is
         # intentionally outside Runner's repository lock: Knowledge migrations may
         # legitimately acquire that same cross-process lock while constructing us.
-        if not mark_pid_stage("brain", "ready"):
+        ready_published = mark_pid_stage("brain", "ready")
+        if os.environ.get("STS2_ASCEND_BOOT_ID") and not ready_published:
             raise RuntimeError("无法发布 Brain ready 启动握手")
         self._launch_quipper()
         if not self.ensure_game():
@@ -2209,7 +2210,8 @@ def main() -> None:
         cfg = load_config()
         # Every Brain module and the complete config snapshot are now resident.
         # Runner can release its repository lock before Knowledge/Agent migration.
-        if not mark_pid_stage("brain", "imported"):
+        imported_published = mark_pid_stage("brain", "imported")
+        if os.environ.get("STS2_ASCEND_BOOT_ID") and not imported_published:
             raise RuntimeError("无法发布 Brain imported 启动握手")
         agent = Agent(cfg)
         completed = False
