@@ -3758,3 +3758,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/742 胜，当前目标进阶 0
+
+## 第 743 局复盘（2026-08-27 13:01）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 INKLET
+- 本局拿牌：FASTEN, BREAKTHROUGH, TAUNT, DARK_EMBRACE, UNRELENTING, DRUM_OF_BATTLE, SHRUG_IT_OFF, PILLAGE
+- 本局遗物：ANCHOR
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血35; F7 Monster战 掉血0; F9 Monster战 掉血30; F14 Monster战 掉血31; F15 Monster战 掉血11（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/53局)，PRIMAL_FORCE(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/743 胜，当前目标进阶 0
