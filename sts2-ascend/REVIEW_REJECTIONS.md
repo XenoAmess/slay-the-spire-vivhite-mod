@@ -63,7 +63,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-113517-1787801717736088100-dceb41ec -->
 | 2026-08-27 11:35:17 | 第 727~729 局 | `dceb41ec` | process_exit | GLM-5.3-Flash max | 确认无成果，待清理 | `knowledge/code_backups/review_salvage/20260827-113517-1787801717736088100-dceb41ec` | 停止中断；全量审计为空 |
 <!-- rejection:20260827-120810-1787803690522717200-d951ca52 -->
-| 2026-08-27 12:08:10 | 第 698~730 局范围内的 30 局 | `d951ca52` | allowlist | GLM-5.3-Flash max | 补合中 | `knowledge/code_backups/review_salvage/20260827-120810-1787803690522717200-d951ca52` | 唯一误拒是 `__pycache__/policy.cpython-314.pyc`；源码为残能空漏生产观测位 |
+| 2026-08-27 12:08:10 | 第 698~730 局范围内的 30 局 | `d951ca52` | allowlist | GLM-5.3-Flash max | 已补合并删除 `22e34ca` | （已删除） | 唯一误拒是 `__pycache__/policy.cpython-314.pyc`；残能空漏观测位经测试、推送和远端确认后删除失败包 |
 <!-- rejection:20260827-132348-1787808228494079700-f3309590 -->
 | 2026-08-27 13:23:48 | 第 731~740 局 | `f3309590` | review_failure | GLM-5.3-Flash max | 待人工补合 | `knowledge/code_backups/review_salvage/20260827-132348-1787808228494079700-f3309590` | prepare 回调拒绝；含 `policy.py`、`selfcheck.py` 与报告，必须逐文件复核 |
 
