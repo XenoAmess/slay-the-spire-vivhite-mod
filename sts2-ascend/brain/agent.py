@@ -2004,11 +2004,11 @@ class Agent:
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
         self._start_live_dashboard()
         self._capture_boot_head()
-        # Existing brain PID file doubles as Runner's bounded startup handshake.
-        # At this point every Brain module, config and Agent object is loaded; the
-        # Runner may release its repository lock without risking mixed-version
-        # imports while an asynchronous review publishes multiple files.
-        mark_pid_stage("brain", "ready")
+        # Agent construction and boot handoff are complete.  This second stage is
+        # intentionally outside Runner's repository lock: Knowledge migrations may
+        # legitimately acquire that same cross-process lock while constructing us.
+        if not mark_pid_stage("brain", "ready"):
+            raise RuntimeError("无法发布 Brain ready 启动握手")
         self._launch_quipper()
         if not self.ensure_game():
             self._dashboard_connection("stopped", "启动阶段收到停止请求")
@@ -2207,6 +2207,10 @@ def main() -> None:
             pass
     with pid_file("brain"):
         cfg = load_config()
+        # Every Brain module and the complete config snapshot are now resident.
+        # Runner can release its repository lock before Knowledge/Agent migration.
+        if not mark_pid_stage("brain", "imported"):
+            raise RuntimeError("无法发布 Brain imported 启动握手")
         agent = Agent(cfg)
         completed = False
         try:

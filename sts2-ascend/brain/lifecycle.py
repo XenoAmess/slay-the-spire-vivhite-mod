@@ -227,6 +227,19 @@ def pid_path(role: str, runtime_dir: Path | None = None) -> Path:
     return _runtime_path(f"{role}{suffix}.pid", runtime_dir)
 
 
+def _replace_with_retry(temp: Path, target: Path, timeout: float = 2.0) -> None:
+    """Replace a tiny lifecycle record despite transient Windows readers."""
+    deadline = time.monotonic() + max(0.0, timeout)
+    while True:
+        try:
+            temp.replace(target)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.02)
+
+
 def mark_pid_stage(role: str, stage: str,
                    runtime_dir: Path | None = None) -> bool:
     """Atomically advance this process's PID record startup stage.
@@ -234,23 +247,35 @@ def mark_pid_stage(role: str, stage: str,
     Runner uses the existing session-scoped brain PID record as an import/Agent
     construction handshake, so no extra lifecycle marker can be orphaned.
     """
-    if stage not in {"starting", "ready"}:
+    order = {"starting": 0, "imported": 1, "ready": 2}
+    if stage not in order:
         raise ValueError(f"invalid lifecycle stage: {stage!r}")
     path = pid_path(role, runtime_dir)
     own_pid = os.getpid()
+    temp: Path | None = None
     try:
         current = json.loads(path.read_text(encoding="utf-8"))
         if (int(current.get("pid", 0)) != own_pid
                 or current.get("session_id") != SESSION_ID):
             return False
+        current_stage = str(current.get("stage") or "starting")
+        if current_stage not in order or order[stage] < order[current_stage]:
+            return False
         current["stage"] = stage
         current["stage_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-        temp = path.parent / f"{path.name}.{own_pid}.stage.tmp"
+        temp = path.parent / f"{path.name}.{own_pid}.{stage}.tmp"
         temp.write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
-        temp.replace(path)
+        _replace_with_retry(temp, path)
+        temp = None
         return True
     except (OSError, ValueError, json.JSONDecodeError):
         return False
+    finally:
+        if temp is not None:
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 @contextmanager
@@ -277,7 +302,10 @@ def pid_file(role: str, runtime_dir: Path | None = None) -> Iterator[Path]:
     }
     temp = path.parent / f"{path.name}.{own_pid}.tmp"
     temp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    temp.replace(path)
+    try:
+        _replace_with_retry(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
     try:
         yield path
     finally:
