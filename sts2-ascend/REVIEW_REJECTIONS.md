@@ -67,7 +67,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-132348-1787808228494079700-f3309590 -->
 | 2026-08-27 13:23:48 | 第 731~740 局 | `f3309590` | review_failure | GLM-5.3-Flash max | 已补合并删除 `10d3a78` | （已删除） | per-Boss 后继行为版经人工补强留痕、自检、推送和远端确认后删除失败包 |
 <!-- rejection:20260827-141228-1787811148492038200-85289c61 -->
-| 2026-08-27 14:12:28 | 第 698~746 局范围内的 36 局 | `85289c61` | review_failure | GLM-5.3-Flash max | 待人工补合 | `knowledge/code_backups/review_salvage/20260827-141228-1787811148492038200-85289c61` | 源码与自检均合法；旧 Brain 因 `pending_restart.json` 排他发布报 WinError 183，prepare 回调误拒 |
+| 2026-08-27 14:12:28 | 第 698~746 局范围内的 36 局 | `85289c61` | review_failure | GLM-5.3-Flash max | 已选择性补合，待删除 `fad4a8d` | `knowledge/code_backups/review_salvage/20260827-141228-1787811148492038200-85289c61` | 旧 Brain 因 marker WinError 183 误拒；成长怪斜率反转已按 Monster 精确房型、FUZZY 精确成员或连续两次升级重写补强，未覆盖后继残能观测和报告 |
 
 ## 未完成原子发布的临时失败记录
 
