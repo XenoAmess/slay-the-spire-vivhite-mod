@@ -3395,3 +3395,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/709 胜，当前目标进阶 0
+
+## 第 710 局复盘（2026-08-27 09:11）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：PILLAGE, SHRUG_IT_OFF, CINDER, ARMAMENTS, EVIL_EYE, DRUM_OF_BATTLE, UPPERCUT, HEMOKINESIS, FLAME_BARRIER
+- 本局遗物：MEAT_ON_THE_BONE
+- 战斗记录：F5 Monster战 掉血0; F7 Monster战 掉血5; F8 Monster战 掉血11; F12 Monster战 掉血21; F13 Monster战 掉血3; F14 Elite战 掉血55（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OFFERING(25分/16局)，CONFLAGRATION(24分/49局)，OMNISLICE(24分/5局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/710 胜，当前目标进阶 0
