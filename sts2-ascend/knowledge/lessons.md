@@ -3582,3 +3582,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/726 胜，当前目标进阶 0
+
+## 第 727 局复盘（2026-08-27 11:09）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：ANGER, TAUNT, BREAKTHROUGH, UPPERCUT, TAUNT, BLUDGEON, DEMON_FORM, CINDER, TRUE_GRIT, PACTS_END, MOLTEN_FIST, BATTLE_TRANCE
+- 本局遗物：STONE_CRACKER, 芒果
+- 战斗记录：F15 Elite战 掉血19; F17 Boss战 掉血19; F19 Monster战 掉血7; F20 Monster战 掉血9; F21 Monster战 掉血7; F22 Monster战 掉血71（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/51局)，FIEND_FIRE(24分/29局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（4回合掉血71，每回合18≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/727 胜，当前目标进阶 0
