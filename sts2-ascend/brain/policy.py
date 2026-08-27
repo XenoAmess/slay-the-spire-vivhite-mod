@@ -2767,6 +2767,12 @@ class Policy:
         text = _text(card)
         aoe = ("所有敌人" in text or "all enemies" in text.lower()
                or (card.get("target_type") or "") == "AllEnemies")
+        # 应急按钮族识别：「两回合内无法再从卡牌中获得格挡」的锁窗 drawback
+        # 是该牌真实成本的一部分（v0.111.0 runtime 原文），打出时机必须计价
+        _txt_l = text.lower()
+        panic_lock = ("从卡牌中获得格挡" in text
+                      or "cannot gain block" in _txt_l
+                      or "can't gain block" in _txt_l)
 
         st = stance or {}
         hp_pct = my_hp / max(1, my_max_hp)
@@ -3016,6 +3022,17 @@ class Policy:
         # --- 防御/技能牌（有格挡数值） ---
         if block > 0:
             useful = min(block, max(0, incoming - my_block))
+            # 锁窗大挡留闸（第726局批复盘）：应急按钮族在意图≈0 的回合仍会被
+            # 免费牌加成托过出牌线——726 局 F7-T2/F12-T3/F17-T1 三次全部打在
+            # 零意图回合，F17 开局白给 40 甲还自锁两回合卡牌格挡，T2 起
+            # 18→26 升级意图无甲硬吃直接阵亡。缺口不足面值时按死牌计价留闸，
+            # 除非当下就 lethal/urgent（买命兑现），或败局竞速/斩杀竞速把
+            # 未来防御贬值到「现在的免费甲说什么都赚」的程度
+            if (panic_lock and not lethal and not urgent and useful < block
+                    and not race_allin and not kill_race):
+                return -2.0, None, (
+                    f"锁窗大挡留闸（缺口{useful}不足面值{block}，"
+                    "提前打出将自锁两回合格挡，留待高意图/买命回合）")
             # 溢出型大格挡贬值（第 94~95 批复盘）：有用量只有缺口那么大，
             # 但 2 费 40 挡在 7 点意图面前花掉的是 2 点能量——94 局 Boss 战
             # 开局 87 血对意图 7/17 连打两张岿然不动+，~56 点溢出甲 ≈ 4 能量
