@@ -119,13 +119,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 复盘安全与成果保全规则：
 
 - **严禁重新引入“全仓指纹变化”、全仓脏状态或 refs 变化门禁。** 隔离复盘期间，真实仓的正常对局提交、推送、用户文件和运行日志变化均不得导致复盘成果作废。
-- 复盘安全边界固定为：无 remote/无 hardlink 隔离 clone、复盘 patch 精确 allowlist、隔离自检、二进制 patch 验收，以及真实仓提交时的私有 index + compare-and-swap。不要用全仓扫描替代这些局部边界。
+- 复盘安全边界固定为：无 remote/无 hardlink 隔离 clone、deny-only 路径分类、隔离自检、二进制 patch 验收，以及真实仓提交时的私有 index + compare-and-swap。`sts2-ascend/` 下安全的静态项目文件（含新建/ignored 的源码、配置、脚本、测试、文档和静态知识）均可进入 patch；只隔离在线运行状态、Git 元数据、cache 产物和越界/不安全路径。严禁恢复固定文件 allowlist，也不要用全仓扫描替代这些局部边界。
 - 复盘 active 时在线 checkpoint 仍须正常提交并推送；不得因为长复盘（统一超时 8 小时）让直播进度长期只留在本地。
 - `review_queue_max` 与 `max_runs_in_packet` 当前统一为 100；它们限制单批规模，不得截断持久队列。
-- 超时、进程失败、自检失败、allowlist 拒绝或提交冲突时，必须把隔离仓内**全部工作树改动**（含越界、被忽略和被规则拒绝的文件）保存到 `knowledge/code_backups/review_salvage/` 供人工分析；clone/快照原件必须从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停只准发布项目内指针并异步补齐；自动合入仍只准使用 allowlist patch，补合包永不自动应用。
+- 超时、进程失败、自检失败、deny-only 边界拒绝或提交冲突时，必须把隔离仓内**全部工作树改动**（含越界、被忽略和被规则拒绝的文件）保存到 `knowledge/code_backups/review_salvage/` 供人工分析；clone/快照原件必须从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停只准发布项目内指针并异步补齐；自动合入只准使用通过 deny-only 分类与自检的精确 patch，补合包永不自动应用。
 - 每个新失败包发布后必须立即更新受 Git 跟踪的 `sts2-ascend/REVIEW_REJECTIONS.md`，并为该条目单独建立 commit；正常运行时同步推送，整套停止临界区只准为守住两分钟死线延后 push，不得跳过 commit。补合/确认空包并从远端确认审计结论后，更新清单状态才可删除对应失败记录。
-- 复盘验收必须区分“允许源码 patch / cache 临时产物 / 全量取证现场”：任一层路径名含 `cache`（大小写不敏感）或为标准 Python 字节码缓存后缀时，不进入自动 patch、也不阻断已验证源码；但文件本身仍须完整写入取证包并列入 `transient_artifact_paths`。其他 ignored/越界文件仍拒绝。
-- **严禁 AI 自作主张收紧复盘模型可提交的文件范围。** 现有提交 allowlist 的任何删减或新增禁区都必须先取得用户明确授权；不能借“安全”“防摸鱼”或闭环门禁之名限制模型修改 `brain/config.json`。闭环机制可以验收结果、保存现场和回退，但不得暗中覆盖或忽略模型对允许文件的修改。
+- 复盘验收必须区分“允许静态项目 patch / cache 临时产物 / 在线或越界现场 / 全量取证现场”：任一层路径名含 `cache`（大小写不敏感）或为标准 Python 字节码缓存后缀时，不进入自动 patch、也不阻断已验证源码；但文件本身仍须完整写入取证包并列入 `transient_artifact_paths`。ignored 本身不是拒绝理由；其中安全的静态项目文件照常验收，在线运行状态、Git 元数据与越界/不安全路径才拒绝整批并保全现场。
+- **严禁 AI 自作主张收紧复盘模型可提交的文件范围。** 不得恢复固定文件 allowlist 或新增隐性禁区；不能借“安全”“防摸鱼”或闭环门禁之名限制模型修改 `brain/config.json`、新增源码/脚本/测试/文档或其他静态项目文件。闭环机制可以验收结果、保存现场和回退，但不得暗中覆盖或忽略模型对安全项目文件的修改。`REVIEW_PATCH_ALLOWLIST` 若仍存在，只能用于兼容缺少精确路径的历史重启 marker，绝不是模型提交边界。
 
 ## 工作流程规则
 
