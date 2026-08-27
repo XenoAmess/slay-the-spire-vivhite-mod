@@ -5,7 +5,7 @@
  "started_at": "2026-08-27 14:48:01",
  "victory": false,
  "in_progress": true,
- "floor": 7,
+ "floor": 13,
  "decisions": [
   {
    "t": "14:48:01",
@@ -2688,6 +2688,1358 @@
      "篝火是规则直达决策：展示命中的稳定规则，不制造候选概率。"
     ]
    }
+  },
+  {
+   "t": "14:49:41",
+   "screen": "CARD_SELECTION",
+   "floor": 7,
+   "hp": 80,
+   "gold": 9,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 16
+   },
+   "reason": "升级卡牌：【余烬】",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F7",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F7",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "升级；输出饥饿=True；竞速必败=True"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "余烬",
+      "score": 31.931,
+      "status": "chosen",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 16,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "彼岸咆哮",
+      "score": 15.876,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 11,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "熔融之拳",
+      "score": 12.226,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 14,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "突破",
+      "score": 10.265,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 15,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "火焰屏障",
+      "score": 10.205,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 12,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "耸肩无视",
+      "score": 9.795,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 13,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "心神不宁",
+      "score": 5.51,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 10,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "痛击",
+      "score": -7.188,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 9,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "余烬",
+     "params": {
+      "option_index": 16
+     },
+     "score": 31.931
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "14:49:42",
+   "screen": "REST",
+   "floor": 7,
+   "hp": 80,
+   "gold": 9,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "14:49:45",
+   "screen": "MAP",
+   "floor": 7,
+   "hp": 80,
+   "gold": 9,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(7,0)（路径分 -8.99，预计进 Boss 血量 63%；金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)）；候选：Shop(7,0)=-8.99|金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量) / Monster(7,1)=-49.50|前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F7",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F7",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 -8.99"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 63%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Shop(7,0)",
+      "score": -8.985,
+      "status": "chosen",
+      "why": "金币不足；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Shop换战力(+10，入场血量已非生死变量)",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "7",
+       "col": "0",
+       "projected_hp": "0.6260361618874293"
+      }
+     },
+     {
+      "label": "Monster(7,1)",
+      "score": -49.496,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；路径中段含未达标精英，投影罚分；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "7",
+       "col": "1",
+       "projected_hp": "0.44631226393764367"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Shop(7,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -8.985,
+     "target": {
+      "row": "7",
+      "col": "0",
+      "projected_hp": "0.6260361618874293"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:49:47",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 9,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "14:49:48",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 9,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "14:49:51",
+   "screen": "SHOP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 9,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "14:49:54",
+   "screen": "MAP",
+   "floor": 8,
+   "hp": 80,
+   "gold": 9,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(8,0)（路径分 -19.12，预计进 Boss 血量 63%；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(8,0)=-19.12|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F8",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F8",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 -19.12"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 63%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "RestSite(8,0)",
+      "score": -19.122,
+      "status": "chosen",
+      "why": "竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "8",
+       "col": "0",
+       "projected_hp": "0.6260361618874293"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "RestSite(8,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -19.122,
+     "target": {
+      "row": "8",
+      "col": "0",
+      "projected_hp": "0.6260361618874293"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:49:55",
+   "screen": "REST",
+   "floor": 9,
+   "hp": 80,
+   "gold": 9,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "篝火：锻造升级（血量 100% ≥ 安全线 45%，升级降低后续战损）",
+   "trace": {
+    "observation": {
+     "title": "REST · F9",
+     "facts": [
+      "屏幕 REST",
+      "楼层 F9",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REST"
+     },
+     {
+      "label": "GATE 当前生命线",
+      "status": "pass",
+      "value": "当前 100% / 锻造安全线 45%"
+     },
+     {
+      "label": "GATE 锻造资格",
+      "status": "pass",
+      "value": "锻造选项=True；可升级牌=16"
+     },
+     {
+      "label": "GATE 路径生存投影",
+      "status": "pass",
+      "value": "Boss入场投影=63%；前方连续战损=0%"
+     },
+     {
+      "label": "GATE Boss 前夜",
+      "status": "pass",
+      "value": "前夜=False"
+     },
+     {
+      "label": "LOCK 篝火规则命中",
+      "status": "pass",
+      "value": "smith｜篝火：锻造升级（血量 100% ≥ 安全线 45%，升级降低后续战损）"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_rest_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "锻造",
+      "score": null,
+      "status": "chosen",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 1,
+      "action": "choose_rest_option"
+     },
+     {
+      "label": "休息",
+      "score": null,
+      "status": "rejected",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 0,
+      "action": "choose_rest_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_rest_option",
+     "label": "锻造",
+     "params": {
+      "option_index": 1
+     },
+     "score": null
+    },
+    "explanation": [
+     "篝火是规则直达决策：展示命中的稳定规则，不制造候选概率。"
+    ]
+   }
+  },
+  {
+   "t": "14:49:57",
+   "screen": "CARD_SELECTION",
+   "floor": 9,
+   "hp": 80,
+   "gold": 9,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 11
+   },
+   "reason": "升级卡牌：【彼岸咆哮】",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F9",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F9",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "升级；输出饥饿=True；竞速必败=True"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "彼岸咆哮",
+      "score": 15.876,
+      "status": "chosen",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 11,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "熔融之拳",
+      "score": 12.226,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 14,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "火焰屏障",
+      "score": 10.355,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 12,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "突破",
+      "score": 10.265,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 15,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "耸肩无视",
+      "score": 9.795,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 13,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "心神不宁",
+      "score": 5.51,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 10,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "痛击",
+      "score": -7.188,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 9,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "防御",
+      "score": -13.53,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 5,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "彼岸咆哮",
+     "params": {
+      "option_index": 11
+     },
+     "score": 15.876
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "14:49:58",
+   "screen": "REST",
+   "floor": 9,
+   "hp": 80,
+   "gold": 9,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "14:50:00",
+   "screen": "MAP",
+   "floor": 9,
+   "hp": 80,
+   "gold": 9,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Treasure(9,0)（路径分 -9.93，预计进 Boss 血量 63%；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)）；候选：Treasure(9,0)=-9.93|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量) / Treasure(9,1)=-41.21|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)",
+   "trace": {
+    "observation": {
+     "title": "MAP · F9",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F9",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 -9.93"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 63%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Treasure(9,0)",
+      "score": -9.926,
+      "status": "chosen",
+      "why": "竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "9",
+       "col": "0",
+       "projected_hp": "0.6260361618874293"
+      }
+     },
+     {
+      "label": "Treasure(9,1)",
+      "score": -41.208,
+      "status": "rejected",
+      "why": "竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）；竞速必败预演：优先Treasure换战力(+10，入场血量已非生死变量)",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "9",
+       "col": "1",
+       "projected_hp": "0.429645855372388"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Treasure(9,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -9.926,
+     "target": {
+      "row": "9",
+      "col": "0",
+      "projected_hp": "0.6260361618874293"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:02",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 80,
+   "gold": 9,
+   "action": "open_chest",
+   "params": {},
+   "reason": "宝箱：开启"
+  },
+  {
+   "t": "14:50:03",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_treasure_relic",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "宝箱：选择遗物【闪亮口红】（价值 2.23）"
+  },
+  {
+   "t": "14:50:04",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 80,
+   "gold": 56,
+   "action": "proceed",
+   "params": {},
+   "reason": "宝箱：离开"
+  },
+  {
+   "t": "14:50:06",
+   "screen": "MAP",
+   "floor": 10,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(10,0)（路径分 -20.92，预计进 Boss 血量 63%；输出饥饿战损上浮×1.25（缺口71%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(10,0)=-20.92|输出饥饿战损上浮×1.25（缺口71%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F10",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F10",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 -20.92"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 63%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Unknown(10,0)",
+      "score": -20.916,
+      "status": "chosen",
+      "why": "输出饥饿战损上浮×1.25（缺口71%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "10",
+       "col": "0",
+       "projected_hp": "0.6260361618874293"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Unknown(10,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -20.916,
+     "target": {
+      "row": "10",
+      "col": "0",
+      "projected_hp": "0.6260361618874293"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:08",
+   "screen": "EVENT",
+   "floor": 11,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【滑脚木桥】：选择「跨越」（经验价值 -1.0）；跨越=-1.0(n=51) / 再撑一会=-3.0(n=1)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F11",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F11",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "2 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "跨越",
+      "score": -1.0,
+      "status": "chosen",
+      "why": "经验样本 51",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "再撑一会",
+      "score": -3.0,
+      "status": "rejected",
+      "why": "经验样本 1",
+      "index": 1,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "跨越",
+     "params": {
+      "option_index": 0
+     },
+     "score": -1.0
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:09",
+   "screen": "EVENT",
+   "floor": 11,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F11",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F11",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "14:50:11",
+   "screen": "MAP",
+   "floor": 11,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(11,0)（路径分 6.50，预计进 Boss 血量 64%；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：RestSite(11,0)=6.50|竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(11,1)=-53.41|输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F11",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F11",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 6.50"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 64%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "RestSite(11,0)",
+      "score": 6.504,
+      "status": "chosen",
+      "why": "竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "11",
+       "col": "0",
+       "projected_hp": "0.6402222115347299"
+      }
+     },
+     {
+      "label": "Monster(11,1)",
+      "score": -53.415,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.27（缺口78%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "11",
+       "col": "1",
+       "projected_hp": "0.35874441996756506"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "RestSite(11,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 6.504,
+     "target": {
+      "row": "11",
+      "col": "0",
+      "projected_hp": "0.6402222115347299"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:13",
+   "screen": "REST",
+   "floor": 12,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "篝火：锻造升级（血量 100% ≥ 安全线 45%，升级降低后续战损）",
+   "trace": {
+    "observation": {
+     "title": "REST · F12",
+     "facts": [
+      "屏幕 REST",
+      "楼层 F12",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REST"
+     },
+     {
+      "label": "GATE 当前生命线",
+      "status": "pass",
+      "value": "当前 100% / 锻造安全线 45%"
+     },
+     {
+      "label": "GATE 锻造资格",
+      "status": "pass",
+      "value": "锻造选项=True；可升级牌=15"
+     },
+     {
+      "label": "GATE 路径生存投影",
+      "status": "pass",
+      "value": "Boss入场投影=64%；前方连续战损=0%"
+     },
+     {
+      "label": "GATE Boss 前夜",
+      "status": "pass",
+      "value": "前夜=False"
+     },
+     {
+      "label": "LOCK 篝火规则命中",
+      "status": "pass",
+      "value": "smith｜篝火：锻造升级（血量 100% ≥ 安全线 45%，升级降低后续战损）"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_rest_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "锻造",
+      "score": null,
+      "status": "chosen",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 1,
+      "action": "choose_rest_option"
+     },
+     {
+      "label": "休息",
+      "score": null,
+      "status": "rejected",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 0,
+      "action": "choose_rest_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_rest_option",
+     "label": "锻造",
+     "params": {
+      "option_index": 1
+     },
+     "score": null
+    },
+    "explanation": [
+     "篝火是规则直达决策：展示命中的稳定规则，不制造候选概率。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:15",
+   "screen": "CARD_SELECTION",
+   "floor": 12,
+   "hp": 80,
+   "gold": 56,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 13
+   },
+   "reason": "升级卡牌：【熔融之拳】",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F12",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F12",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "升级；输出饥饿=True；竞速必败=True"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "熔融之拳",
+      "score": 12.623,
+      "status": "chosen",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 13,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "火焰屏障",
+      "score": 12.386,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 11,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "突破",
+      "score": 10.625,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 14,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "耸肩无视",
+      "score": 9.795,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 12,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "心神不宁",
+      "score": 5.51,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 10,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "痛击",
+      "score": -6.9,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 9,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "防御",
+      "score": -12.683,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "防御",
+      "score": -12.683,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 6,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "熔融之拳",
+     "params": {
+      "option_index": 13
+     },
+     "score": 12.623
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:15",
+   "screen": "REST",
+   "floor": 12,
+   "hp": 80,
+   "gold": 56,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "14:50:18",
+   "screen": "MAP",
+   "floor": 12,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(12,0)（路径分 5.72，预计进 Boss 血量 64%；低血尾部生存复核：单场最差72打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.26（缺口75%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Unknown(12,0)=5.72|低血尾部生存复核：单场最差72打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.26（缺口75%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F12",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F12",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 5.72"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 64%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Unknown(12,0)",
+      "score": 5.724,
+      "status": "chosen",
+      "why": "低血尾部生存复核：单场最差72打完仅剩8(≤8)，尾部罚分；输出饥饿战损上浮×1.26（缺口75%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "12",
+       "col": "0",
+       "projected_hp": "0.6436493105214237"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Unknown(12,0)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 5.724,
+     "target": {
+      "row": "12",
+      "col": "0",
+      "projected_hp": "0.6436493105214237"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "14:50:19",
+   "screen": "EVENT",
+   "floor": 13,
+   "hp": 80,
+   "gold": 56,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【满屋芝士】：选择「大快朵颐」（经验价值 0.0）；大快朵颐=0.0(n=59) / 仔细翻找=-14.0(n=1)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F13",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F13",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "2 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "大快朵颐",
+      "score": 0.0,
+      "status": "chosen",
+      "why": "经验样本 59",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "仔细翻找",
+      "score": -14.0,
+      "status": "rejected",
+      "why": "经验样本 1",
+      "index": 1,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "大快朵颐",
+     "params": {
+      "option_index": 0
+     },
+     "score": 0.0
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
   }
  ],
  "combat_notes": [
@@ -2746,6 +4098,34 @@
   [
    "map_node",
    "RestSite"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Treasure"
+  ],
+  [
+   "relic_pick",
+   "SPARKLING_ROUGE"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Unknown"
   ]
  ]
 }
