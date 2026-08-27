@@ -388,7 +388,9 @@ try {
             $brainRecordId = [int](Get-ObjectProperty $brainRecord "pid" 0)
             if ($brainRecordId -gt 0) {
                 $brainProcess = Get-ProcessCim $brainRecordId
-                $brainReady = Test-PidRecord $brainRecord $brainProcess $sessionId '(^|\s)-m\s+brain(\s|$)'
+                $brainStage = [string](Get-ObjectProperty $brainRecord "stage" "")
+                $brainReady = (Test-PidRecord $brainRecord $brainProcess $sessionId '(^|\s)-m\s+brain(\s|$)') -and
+                    ($brainStage -eq "ready")
             }
             $apiPort = Get-ReadyApiPort
             if ($brainReady -and $apiPort) { break }
