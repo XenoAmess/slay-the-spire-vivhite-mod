@@ -23,6 +23,37 @@ def _lock(**_kwargs):
 
 
 class ReviewHealthMarkerTests(unittest.TestCase):
+    def test_track_requires_empty_main_menu_before_complete_run_eligibility(self) -> None:
+        instance = object.__new__(agent_module.Agent)
+        instance.ctx = agent_module.RunContext()
+        instance._review_health_ready_for_new_run = False
+        instance.know = SimpleNamespace(
+            stats={"global": {"runs": 0}}, load_run_log=lambda _run_id: None)
+        instance._finalize = mock.Mock()
+
+        # TIMELINE can be exposed while a run payload is still active. It must not
+        # turn a reconnect tail into a complete boot-validation run.
+        active = {
+            "screen": "TIMELINE",
+            "run_id": "active-run",
+            "run": {"current_hp": 50, "max_hp": 80, "gold": 0,
+                    "ascension": 0, "floor": 3},
+        }
+        instance._track(active)
+        self.assertFalse(instance.ctx.review_health_eligible)
+
+        # A genuinely empty main menu arms exactly the next new run.
+        instance.ctx.run_finalized = True
+        instance._track({"screen": "MAIN_MENU", "run": {}})
+        fresh = {
+            "screen": "EVENT",
+            "run_id": "fresh-run",
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                    "ascension": 0, "floor": 0},
+        }
+        instance._track(fresh)
+        self.assertTrue(instance.ctx.review_health_eligible)
+
     def test_marker_survives_first_run_and_retires_after_threshold(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-review-health-") as root:
             knowledge = Path(root)

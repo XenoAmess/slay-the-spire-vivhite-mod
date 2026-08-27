@@ -104,6 +104,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   不是外部配置或 Stop 清理目标，不得由启动脚本复用旧值。旧 rollback marker 不得阻塞新复盘：
   新 marker 必须先以 `prepared` 事务接管并保存前任，工作树与 ref 均发布后才能改为 `committed`；
   CAS 中止/新代码回滚时恢复前任。只有从局间屏开始、完整跑完的新局才推进健康数。
+- Runner 必须持有同一仓库事务锁直到新 Brain 的 session PID 记录回显匹配
+  `boot_id + boot_head + boot_review_commit + stage=ready`；10 秒未 ready 就精确终止该子进程，
+  禁止多文件复盘发布期间混载。启动前若发现 `prepared` marker，必须先有界证明并完成/撤回事务。
+  复盘启动连续失败的回滚路径总预算控制在两分钟内：短锁、受限 Git、回滚提交不在恢复热路径 push。
 
 生命周期维护规则：
 

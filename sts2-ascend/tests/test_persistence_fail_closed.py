@@ -284,6 +284,32 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(know.progression["last_review_attempt_source"], "preferred")
         know.save.assert_called_once_with()
 
+    def test_starvation_never_overrides_available_glm_preferred_plan(self) -> None:
+        self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
+                              encoding="utf-8")
+        glm = "opencode-go/glm-5.3-flash@max"
+        know = SimpleNamespace(
+            stats={"global": {"runs": 20}},
+            progression={"last_successful_review_run": 0,
+                         "last_llm_review_run": 0,
+                         "last_review_attempt_source": "preferred"},
+            save=mock.Mock(),
+        )
+        agent = SimpleNamespace(know=know)
+        cfg = {"enabled": True, "preferred_model": glm,
+               "model": "kimi-for-coding/k3", "review_every_runs": 5,
+               "review_queue_max": 100}
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "resolve_review_plan",
+                                return_value=(glm, 1, "preferred")),
+              mock.patch.object(llm_review, "_ensure_worker")):
+            llm_review.enqueue_review(agent, log=lambda _message: None)
+
+        item = llm_review._load_queue_unlocked()["pending"][-1]
+        self.assertEqual((item["model"], item["source"]), (glm, "preferred"))
+        self.assertEqual(know.progression["last_review_attempt_source"], "preferred")
+
     def test_failed_batch_is_requeued_with_backoff_and_success_clears_it(self) -> None:
         payload = {
             "pending": [{"run": 11, "time": "new", "model": "next"}],

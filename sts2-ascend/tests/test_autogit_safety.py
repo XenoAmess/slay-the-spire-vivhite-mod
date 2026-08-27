@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 import subprocess
 import sys
 import tempfile
@@ -65,6 +66,17 @@ class AutoGitSafetyTests(unittest.TestCase):
 
     def _read(self, relative: str) -> str:
         return (self.repo / relative).read_text(encoding="utf-8")
+
+    def _provisional_commit(self, relative: str, contents: str) -> tuple[str, str]:
+        parent = self._git("rev-parse", "HEAD").stdout.strip()
+        self._write(relative, contents)
+        self._git("add", relative)
+        self._git("commit", "-qm", "provisional review")
+        commit = self._git("rev-parse", "HEAD").stdout.strip()
+        self._git("update-ref", "refs/heads/master", parent, commit)
+        self._git("restore", "--staged", f"--source={parent}", "--", relative)
+        self._git("restore", f"--source={parent}", "--", relative)
+        return parent, commit
 
     def test_private_index_excludes_and_preserves_pre_staged_user_file(self) -> None:
         self._write("outside.txt", "user-staged\n")
@@ -489,6 +501,26 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertFalse(autogit.rollback_review_commit(parent, commit))
         self.assertEqual(self._read("sts2-ascend/tts/unsafe.py"), "unsafe = True\n")
 
+    def test_review_rollback_is_local_and_uses_shared_total_budget(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent = "1" * 40
+        commit = "2" * 40
+        patch_result = autogit.CommitResult(True, commit="3" * 40)
+        patch_bytes = subprocess.CompletedProcess(
+            ["git", "diff"], 0, b"non-empty-patch", b"")
+        with mock.patch.object(
+                autogit, "_validated_commit_pair_unlocked", return_value=(path,)), \
+                mock.patch.object(autogit, "_run_git_bytes", return_value=patch_bytes), \
+                mock.patch.object(
+                    autogit, "commit_patch_result", return_value=patch_result) as commit_patch:
+            self.assertTrue(autogit.rollback_review_commit(
+                parent, commit, marker_paths=[path], lock_timeout=1.0,
+                transaction_timeout=4.0, log=lambda _message: None))
+
+        kwargs = commit_patch.call_args.kwargs
+        self.assertFalse(kwargs["push"], "恢复 Brain 前禁止同步 push 消耗直播预算")
+        self.assertLessEqual(kwargs["transaction_timeout"], 4.0)
+
     def test_cross_process_lock_blocks_other_process(self) -> None:
         marker = self.repo / "child-locked"
         code = (
@@ -738,10 +770,14 @@ class AutoGitSafetyTests(unittest.TestCase):
         frozen = "a" * 40
         process = mock.Mock()
         process.wait.return_value = 0
+        process.poll.return_value = None
+        process.pid = 4242
         loaded_review = "b" * 40
         with mock.patch.object(runner, "read_git_head", return_value=frozen), \
                 mock.patch.object(
                     runner, "_active_review_commit", return_value=loaded_review), \
+                mock.patch.object(runner, "_reconcile_prepared_marker", return_value=True), \
+                mock.patch.object(runner, "_brain_pid_is_ready", return_value=True), \
                 mock.patch.object(runner.subprocess, "Popen", return_value=process) as popen:
             result = runner._run_brain()
 
@@ -770,6 +806,141 @@ class AutoGitSafetyTests(unittest.TestCase):
         finally:
             runner.MARKER = old_marker
 
+    def test_runner_reconciles_prepared_marker_before_and_after_worktree_apply(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        runner.MARKER = marker
+        prepared = {
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": [path],
+            "state": "prepared",
+        }
+        try:
+            # Crash before worktree apply: forward patch is still applicable, so
+            # reconciliation only retires the unpublished marker.
+            marker.write_text(json.dumps(prepared), encoding="utf-8")
+            self.assertTrue(runner._reconcile_prepared_marker())
+            self.assertFalse(marker.exists())
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+
+            # Crash after atomic worktree apply but before update-ref: reverse the
+            # exact provisional patch, then retire/restore the wrapper.
+            self._write(path, "VALUE = 2\n")
+            marker.write_text(json.dumps(prepared), encoding="utf-8")
+            self.assertTrue(runner._reconcile_prepared_marker())
+            self.assertFalse(marker.exists())
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+
+            # An overlapping external edit is neither proven state; preserve it
+            # and refuse to start a mixed Brain.
+            self._write(path, "VALUE = 99\n")
+            marker.write_text(json.dumps(prepared), encoding="utf-8")
+            self.assertFalse(runner._reconcile_prepared_marker())
+            self.assertTrue(marker.exists())
+            self.assertEqual(self._read(path), "VALUE = 99\n")
+        finally:
+            runner.MARKER = old_marker
+
+    def test_runner_promotes_prepared_marker_when_head_is_commit(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        parent, commit = self._provisional_commit(path, "VALUE = 2\n")
+        self._git("update-ref", "refs/heads/master", commit, parent)
+        self._git("restore", "--staged", f"--source={commit}", "--", path)
+        self._git("restore", f"--source={commit}", "--", path)
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        marker.write_text(json.dumps({
+            "review_parent": parent,
+            "review_commit": commit,
+            "paths": [path],
+            "state": "prepared",
+        }), encoding="utf-8")
+        runner.MARKER = marker
+        try:
+            self.assertTrue(runner._reconcile_prepared_marker())
+            promoted = json.loads(marker.read_text(encoding="utf-8"))
+            self.assertEqual(promoted["state"], "committed")
+            self.assertTrue(promoted["reconciled_at_startup"])
+        finally:
+            runner.MARKER = old_marker
+
+    def test_brain_ready_handshake_rejects_stale_boot_token(self) -> None:
+        record_path = self.repo / "brain.pid"
+        record_path.write_text(json.dumps({
+            "pid": 42,
+            "session_id": runner.SESSION_ID,
+            "stage": "ready",
+            "boot_id": "fresh",
+            "boot_head": "a" * 40,
+            "boot_review_commit": "b" * 40,
+        }), encoding="utf-8")
+        with mock.patch.object(runner, "pid_path", return_value=record_path):
+            self.assertFalse(runner._brain_pid_is_ready(
+                42, "stale", "a" * 40, "b" * 40))
+            self.assertTrue(runner._brain_pid_is_ready(
+                42, "fresh", "a" * 40, "b" * 40))
+
+    def test_runner_kills_child_that_never_completes_ready_handshake(self) -> None:
+        process = mock.Mock(pid=4242)
+        process.poll.return_value = None
+        with mock.patch.object(runner, "STARTUP_READY_SECONDS", 0), \
+                mock.patch.object(runner, "read_git_head", return_value="a" * 40), \
+                mock.patch.object(runner, "_active_review_commit", return_value=""), \
+                mock.patch.object(runner, "_reconcile_prepared_marker", return_value=True), \
+                mock.patch.object(runner.subprocess, "Popen", return_value=process), \
+                mock.patch.object(runner, "_terminate_startup_child") as terminate:
+            rc, _alive = runner._run_brain()
+        self.assertEqual(rc, runner.STARTUP_TIMEOUT_CODE)
+        terminate.assert_called_once_with(process)
+
+    def test_runner_holds_repository_lock_through_ready_handshake(self) -> None:
+        events: list[str] = []
+
+        @contextmanager
+        def observed_lock(**_kwargs):
+            events.append("lock-enter")
+            try:
+                yield
+            finally:
+                events.append("lock-exit")
+
+        process = mock.Mock(pid=4242)
+        process.poll.return_value = None
+        process.wait.return_value = 0
+
+        def ready(*_args) -> bool:
+            self.assertNotIn("lock-exit", events)
+            events.append("child-ready")
+            return True
+
+        with mock.patch.object(autogit, "repository_lock", observed_lock), \
+                mock.patch.object(runner, "read_git_head", return_value="a" * 40), \
+                mock.patch.object(runner, "_active_review_commit", return_value=""), \
+                mock.patch.object(runner, "_reconcile_prepared_marker", return_value=True), \
+                mock.patch.object(runner, "_brain_pid_is_ready", side_effect=ready), \
+                mock.patch.object(runner.subprocess, "Popen", return_value=process):
+            rc, _alive = runner._run_brain()
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(events[:3], ["lock-enter", "child-ready", "lock-exit"])
+
+    def test_review_startup_failures_roll_back_within_short_retry_budget(self) -> None:
+        failures = [(runner.STARTUP_TIMEOUT_CODE, 10.0)] \
+            * runner.MAX_REVIEW_STARTUP_FAILURES + [(0, 1.0)]
+        with mock.patch.object(runner, "_run_brain", side_effect=failures), \
+                mock.patch.object(runner, "stop_requested", return_value=False), \
+                mock.patch.object(runner, "_has_active_review_marker", return_value=True), \
+                mock.patch.object(runner, "wait_for_stop", return_value=False) as wait, \
+                mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback, \
+                mock.patch.object(runner, "log"):
+            self.assertEqual(runner.main(), 0)
+        rollback.assert_called_once_with()
+        self.assertEqual(wait.call_count, runner.MAX_REVIEW_STARTUP_FAILURES - 1,
+                         "回滚成功后必须立即拉起旧代码，不再额外等待10秒")
+
     def test_runner_rollback_restores_superseded_marker(self) -> None:
         old_marker = runner.MARKER
         marker = self.repo / "pending_restart.json"
@@ -792,7 +963,8 @@ class AutoGitSafetyTests(unittest.TestCase):
                 self.assertTrue(runner.rollback_from_marker())
             rollback.assert_called_once_with(
                 current["review_parent"], current["review_commit"],
-                marker_paths=current["paths"], log=runner.log)
+                marker_paths=current["paths"], log=runner.log,
+                lock_timeout=5.0, transaction_timeout=30.0)
             self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), previous)
             tombstones = json.loads(
                 runner.ROLLBACK_TOMBSTONES.read_text(encoding="utf-8"))["commits"]
@@ -821,7 +993,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                 self.assertTrue(runner.rollback_from_marker())
             self.assertTrue(marker.exists(), "诊断 marker 应保留供后续恢复")
             runner._ROLLED_BACK_COMMITS.clear()  # persisted identity survives restart
-            self.assertEqual(runner._active_review_commit(), "")
+            self.assertEqual(runner._active_review_commit(), "8" * 40)
         finally:
             runner.MARKER = old_marker
 

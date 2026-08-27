@@ -24,7 +24,7 @@ from pathlib import Path
 
 import autogit
 from lifecycle import (SESSION_ID, clear_stop_request, pid_file, request_stop,
-                       read_git_head, stop_requested, wait_for_stop)
+                       pid_path, read_git_head, stop_requested, wait_for_stop)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -36,6 +36,9 @@ MAX_REVIEW_RESTARTS = 5
 FAST_CRASH_SECONDS = 90
 RETRY_INTERVAL_SECONDS = 10
 CTRL_C_GRACE_SECONDS = 20
+STARTUP_TIMEOUT_CODE = 70
+STARTUP_READY_SECONDS = 10
+MAX_REVIEW_STARTUP_FAILURES = 3
 _SUPERSEDED_MARKER_KEY = "_superseded_marker"
 _SUPERSEDED_MARKER_RAW_KEY = "_superseded_marker_raw"
 _ROLLED_BACK_COMMITS: set[str] = set()
@@ -56,15 +59,33 @@ def log(msg: str) -> None:
         pass
 
 
-def _restore_superseded_marker(info: dict) -> bool:
-    """After rolling back the newest review, reactivate its predecessor marker."""
-    previous = info.get(_SUPERSEDED_MARKER_KEY)
-    previous_raw = info.get(_SUPERSEDED_MARKER_RAW_KEY)
-    if not isinstance(previous, dict) and not isinstance(previous_raw, str):
-        MARKER.unlink(missing_ok=True)
+def _brain_pid_is_ready(pid: int, boot_id: str, boot_head: str,
+                        boot_review: str) -> bool:
+    try:
+        record = json.loads(pid_path("brain").read_text(encoding="utf-8"))
+        return (int(record.get("pid", 0)) == int(pid)
+                and record.get("session_id") == SESSION_ID
+                and record.get("boot_id") == boot_id
+                and record.get("boot_head") == boot_head
+                and record.get("boot_review_commit") == boot_review
+                and record.get("stage") == "ready")
+    except (OSError, ValueError, json.JSONDecodeError):
         return False
-    contents = (json.dumps(previous, ensure_ascii=False, indent=2) + "\n"
-                if isinstance(previous, dict) else previous_raw)
+
+
+def _terminate_startup_child(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=3)
+
+
+def _replace_marker_text(contents: str) -> None:
+    """Atomically replace the marker with bounded Windows sharing retries."""
     temp_name = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -79,12 +100,11 @@ def _restore_superseded_marker(info: dict) -> bool:
             try:
                 os.replace(temp_name, MARKER)
                 temp_name = None
-                break
+                return
             except PermissionError:
                 if time.monotonic() >= deadline:
                     raise
                 time.sleep(0.05)
-        return True
     finally:
         if temp_name is not None:
             try:
@@ -93,22 +113,52 @@ def _restore_superseded_marker(info: dict) -> bool:
                 pass
 
 
+def _live_predecessor(info: dict) -> tuple[dict | None, str | None]:
+    """Skip already reverted wrapper markers and expose the nearest live ancestor."""
+    previous = info.get(_SUPERSEDED_MARKER_KEY)
+    previous_raw = info.get(_SUPERSEDED_MARKER_RAW_KEY)
+    for _depth in range(10):
+        if not isinstance(previous, dict):
+            break
+        commit = str(previous.get("review_commit") or "").strip().lower()
+        if not commit or not _review_was_rolled_back(commit):
+            break
+        previous_raw = previous.get(_SUPERSEDED_MARKER_RAW_KEY)
+        previous = previous.get(_SUPERSEDED_MARKER_KEY)
+    return (previous if isinstance(previous, dict) else None,
+            previous_raw if isinstance(previous_raw, str) else None)
+
+
+def _restore_superseded_marker(info: dict) -> bool:
+    """After rollback/abort, reactivate the nearest non-reverted predecessor."""
+    previous, previous_raw = _live_predecessor(info)
+    if not isinstance(previous, dict) and not isinstance(previous_raw, str):
+        MARKER.unlink(missing_ok=True)
+        return False
+    contents = (json.dumps(previous, ensure_ascii=False, indent=2) + "\n"
+                if isinstance(previous, dict) else previous_raw)
+    _replace_marker_text(contents)
+    return True
+
+
 def _active_review_commit() -> str:
     """Return the marker epoch present immediately before a Brain is imported."""
-    try:
-        info = json.loads(MARKER.read_text(encoding="utf-8"))
-        # State-less markers are the backward-compatible committed format.
-        # A prepared marker is visible before ref/worktree publication finishes.
-        if info.get("state") not in (None, "committed"):
+    for _depth in range(10):
+        try:
+            info = json.loads(MARKER.read_text(encoding="utf-8"))
+            # State-less markers are the backward-compatible committed format.
+            if info.get("state") not in (None, "committed"):
+                return ""
+            value = str(info.get("review_commit") or "").strip().lower()
+            if not re.fullmatch(r"[0-9a-f]{40,64}", value):
+                return ""
+            if not _review_was_rolled_back(value):
+                return value
+            # A failed Windows marker restore must not hide an older live marker.
+            _restore_superseded_marker(info)
+        except (OSError, json.JSONDecodeError):
             return ""
-        value = str(info.get("review_commit") or "").strip().lower()
-        if not re.fullmatch(r"[0-9a-f]{40,64}", value):
-            return ""
-        if _review_was_rolled_back(value):
-            return ""
-        return value
-    except (OSError, json.JSONDecodeError):
-        return ""
+    return ""
 
 
 def _has_active_review_marker() -> bool:
@@ -166,12 +216,63 @@ def _record_rollback_tombstone(commit: str) -> None:
         temp.unlink(missing_ok=True)
 
 
+def _reconcile_prepared_marker() -> bool:
+    """Finish or abort an interrupted two-phase review before importing Brain."""
+    try:
+        info = json.loads(MARKER.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return True
+    except (OSError, json.JSONDecodeError) as exc:
+        log(f"读取重启 marker 失败；拒绝在未知版本上启动 Brain：{exc}")
+        return False
+    if info.get("state") != "prepared":
+        return True
+    parent = str(info.get("review_parent") or "").strip().lower()
+    commit = str(info.get("review_commit") or "").strip().lower()
+    if (not re.fullmatch(r"[0-9a-f]{40,64}", parent)
+            or not re.fullmatch(r"[0-9a-f]{40,64}", commit)):
+        log("prepared marker 缺少合法 parent/commit；保留现场并拒绝混载")
+        return False
+    head = read_git_head(autogit.REPO_DIR)
+    if head == commit or (head not in (parent, "")
+                          and autogit.commit_is_ancestor(commit, timeout=5.0)):
+        # update-ref/worktree already published; only phase-two marker replace was
+        # interrupted. Ownership is rechecked under the shared repository lock.
+        current = json.loads(MARKER.read_text(encoding="utf-8"))
+        if (current.get("state") != "prepared"
+                or str(current.get("review_commit") or "").lower() != commit):
+            return False
+        current["state"] = "committed"
+        current["committed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        current["reconciled_at_startup"] = True
+        _replace_marker_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n")
+        log(f"已把 HEAD 中断留存的 prepared marker {commit[:8]} 确认为 committed")
+        return True
+    if head != parent:
+        log(f"prepared marker {commit[:8]} 的 HEAD 既非 parent 也非 commit；"
+            "保留现场并拒绝混载")
+        return False
+    paths = info.get("paths")
+    if not isinstance(paths, list) or not paths:
+        log("prepared marker 缺少精确路径；保留现场并拒绝猜测恢复")
+        return False
+    if not autogit.abort_unpublished_review_worktree(
+            parent, commit, paths, log=log, lock_timeout=3.0,
+            operation_timeout=8):
+        return False
+    # HEAD never published the provisional commit; restoring/deleting the wrapper
+    # completes the abort. Tombstoned predecessors are skipped automatically.
+    _restore_superseded_marker(info)
+    log(f"已恢复未发布 prepared marker {commit[:8]} 的前任状态")
+    return True
+
+
 def rollback_from_marker() -> bool:
     """新代码启动失败：只反向应用 marker 指向的受控复盘 commit。"""
     try:
         # 读取、反向提交与 compare-and-delete 共用同一仓库锁；健康确认或下一轮
         # prepare 不能在中间替换 marker，旧回滚也不会删除后来者。
-        with autogit.repository_lock():
+        with autogit.repository_lock(timeout=5.0):
             info = json.loads(MARKER.read_text(encoding="utf-8"))
             parent = info["review_parent"]
             commit = info["review_commit"]
@@ -182,7 +283,9 @@ def rollback_from_marker() -> bool:
                 log(f"复盘提交 {str(commit)[:8]} 已有安全撤销记录；拒绝重复回滚")
                 return False
             paths = info.get("paths")
-            ok = autogit.rollback_review_commit(parent, commit, marker_paths=paths, log=log)
+            ok = autogit.rollback_review_commit(
+                parent, commit, marker_paths=paths, log=log,
+                lock_timeout=5.0, transaction_timeout=30.0)
             if ok:
                 try:
                     _record_rollback_tombstone(str(commit))
@@ -220,29 +323,47 @@ def _run_brain() -> tuple[int, float]:
     """Run one brain generation while remaining responsive to stack shutdown."""
     started = time.monotonic()
     child_env = os.environ.copy()
-    # One repository transaction freezes HEAD and the committed marker as a
-    # matching startup epoch. These are pure-file reads and never spawn Git.
+    proc: subprocess.Popen | None = None
+    # Keep the repository transaction until the child reports that all Brain
+    # modules/config/Agent construction completed. Internal review/progress writers
+    # use this same lock, so a child can never import half of a multi-file patch.
     try:
-        with autogit.repository_lock(timeout=1.0):
+        with autogit.repository_lock(timeout=3.0):
+            if not _reconcile_prepared_marker():
+                return STARTUP_TIMEOUT_CODE, time.monotonic() - started
             boot_head = read_git_head(autogit.REPO_DIR)
             loaded_review = _active_review_commit()
+            if boot_head:
+                child_env["STS2_ASCEND_BOOT_HEAD"] = boot_head
+            else:
+                child_env.pop("STS2_ASCEND_BOOT_HEAD", None)
+                log("无法冻结 Brain 启动提交号；本代健康 marker 将保留")
+            child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"] = loaded_review or ""
+            boot_id = os.urandom(12).hex()
+            child_env["STS2_ASCEND_BOOT_ID"] = boot_id
+            proc = subprocess.Popen(
+                [sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR),
+                env=child_env)
+            ready_deadline = time.monotonic() + STARTUP_READY_SECONDS
+            while time.monotonic() < ready_deadline:
+                rc = proc.poll()
+                if rc is not None:
+                    return rc, time.monotonic() - started
+                if _brain_pid_is_ready(
+                        proc.pid, boot_id, boot_head or "", loaded_review or ""):
+                    break
+                if stop_requested():
+                    _terminate_startup_child(proc)
+                    return 0, time.monotonic() - started
+                time.sleep(0.05)
+            else:
+                log(f"Brain 未在 {STARTUP_READY_SECONDS}s 内完成模块/Agent 初始化；终止本代并重试")
+                _terminate_startup_child(proc)
+                return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     except TimeoutError:
-        boot_head = read_git_head(autogit.REPO_DIR)
-        loaded_review = ""
-        log("冻结启动版本时仓库正忙；本代不认领健康 marker，游玩照常启动")
-    if boot_head:
-        child_env["STS2_ASCEND_BOOT_HEAD"] = boot_head
-    else:
-        child_env.pop("STS2_ASCEND_BOOT_HEAD", None)
-        log("无法冻结 Brain 启动提交号；本代健康 marker 将保留，游玩照常启动")
-    if loaded_review:
-        child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"] = loaded_review
-    else:
-        # An explicit empty handoff freezes "no marker at import time" and keeps a
-        # later asynchronous review from being misclassified as already loaded.
-        child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"] = ""
-    proc = subprocess.Popen(
-        [sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR), env=child_env)
+        log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，10 秒后重试")
+        return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+    assert proc is not None
     stop_logged = False
     try:
         while True:
@@ -278,6 +399,7 @@ def main() -> int:
     fast_crashes = 0
     review_crashes = 0
     review_restarts = 0
+    review_startup_failures = 0
     log("监督进程启动，拉起大脑…")
     while True:
         if stop_requested():
@@ -314,9 +436,25 @@ def main() -> int:
             log("大脑正常退出，监督进程结束")
             return 0
 
+        active_review = _has_active_review_marker()
+        if rc == STARTUP_TIMEOUT_CODE and active_review:
+            review_startup_failures += 1
+            log(f"复盘代码启动握手失败 {review_startup_failures}/"
+                f"{MAX_REVIEW_STARTUP_FAILURES}；保持短重试，避免直播长断流")
+            if review_startup_failures >= MAX_REVIEW_STARTUP_FAILURES:
+                log("复盘代码连续无法完成初始化；在两分钟预算内执行安全 patch 回滚")
+                if not rollback_from_marker():
+                    log("启动失败回滚未能无损完成；保留现场并停止，拒绝混载未知代码")
+                    return 1
+                review_startup_failures = 0
+                continue
+            if wait_for_stop(RETRY_INTERVAL_SECONDS):
+                return 0
+            continue
+        review_startup_failures = 0
+
         # 异常退出：先耐心重试，回滚只是最后手段
         fast_crashes = 0 if alive_s > FAST_CRASH_SECONDS else fast_crashes + 1
-        active_review = _has_active_review_marker()
         review_crashes = review_crashes + 1 if active_review else 0
         log(f"大脑异常退出（rc={rc}，存活 {alive_s:.0f}s，连续快速崩溃 "
             f"{fast_crashes}/{MAX_FAST_CRASHES}，复盘后崩溃 {review_crashes}/{MAX_FAST_CRASHES}）")
@@ -330,6 +468,7 @@ def main() -> int:
                 return 1
             fast_crashes = 0
             review_crashes = 0
+            continue
         if wait_for_stop(RETRY_INTERVAL_SECONDS):
             log("重试等待期间收到停止请求，监督进程结束")
             return 0

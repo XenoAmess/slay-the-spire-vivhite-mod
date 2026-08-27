@@ -23,8 +23,8 @@ from pathlib import Path
 from client import ApiError, ConnectionDown, Sts2Client
 from decision_trace import ensure_decision_trace
 from knowledge import Knowledge
-from lifecycle import (pid_file, read_git_head, request_stop, stop_requested,
-                       wait_for_stop)
+from lifecycle import (mark_pid_stage, pid_file, read_git_head, request_stop,
+                       stop_requested, wait_for_stop)
 from live_dashboard import LiveDashboardPublisher
 from policy import Decision, Policy
 from reflect import finalize_run
@@ -2004,6 +2004,11 @@ class Agent:
         log(f"[agent] 知识库：{KNOWLEDGE_DIR}")
         self._start_live_dashboard()
         self._capture_boot_head()
+        # Existing brain PID file doubles as Runner's bounded startup handshake.
+        # At this point every Brain module, config and Agent object is loaded; the
+        # Runner may release its repository lock without risking mixed-version
+        # imports while an asynchronous review publishes multiple files.
+        mark_pid_stage("brain", "ready")
         self._launch_quipper()
         if not self.ensure_game():
             self._dashboard_connection("stopped", "启动阶段收到停止请求")

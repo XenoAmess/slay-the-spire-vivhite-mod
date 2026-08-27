@@ -227,6 +227,32 @@ def pid_path(role: str, runtime_dir: Path | None = None) -> Path:
     return _runtime_path(f"{role}{suffix}.pid", runtime_dir)
 
 
+def mark_pid_stage(role: str, stage: str,
+                   runtime_dir: Path | None = None) -> bool:
+    """Atomically advance this process's PID record startup stage.
+
+    Runner uses the existing session-scoped brain PID record as an import/Agent
+    construction handshake, so no extra lifecycle marker can be orphaned.
+    """
+    if stage not in {"starting", "ready"}:
+        raise ValueError(f"invalid lifecycle stage: {stage!r}")
+    path = pid_path(role, runtime_dir)
+    own_pid = os.getpid()
+    try:
+        current = json.loads(path.read_text(encoding="utf-8"))
+        if (int(current.get("pid", 0)) != own_pid
+                or current.get("session_id") != SESSION_ID):
+            return False
+        current["stage"] = stage
+        current["stage_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        temp = path.parent / f"{path.name}.{own_pid}.stage.tmp"
+        temp.write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+        temp.replace(path)
+        return True
+    except (OSError, ValueError, json.JSONDecodeError):
+        return False
+
+
 @contextmanager
 def pid_file(role: str, runtime_dir: Path | None = None) -> Iterator[Path]:
     """Publish this process PID for *role* and remove only our own record."""
@@ -243,6 +269,11 @@ def pid_file(role: str, runtime_dir: Path | None = None) -> Iterator[Path]:
         "creation_filetime": creation[0] if creation else 0,
         "executable": sys.executable,
         "argv": list(sys.argv),
+        "stage": "starting",
+        "boot_id": os.environ.get("STS2_ASCEND_BOOT_ID", ""),
+        "boot_head": os.environ.get("STS2_ASCEND_BOOT_HEAD", ""),
+        "boot_review_commit": os.environ.get(
+            "STS2_ASCEND_BOOT_REVIEW_COMMIT", ""),
     }
     temp = path.parent / f"{path.name}.{own_pid}.tmp"
     temp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

@@ -1813,18 +1813,12 @@ def enqueue_review(agent, log=print) -> None:
     runs = agent.know.stats["global"]["runs"]
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     model, every, source = resolve_review_plan(cfg, binary, log=log)
-    # 成功复盘守卫 v2：距上次成功复盘 >= 阈值即视为"饥饿"。饥饿时**交替出牌**
-    # 而非锁死兜底——v1 的无条件强制 k3 在 k3 本身不可用时形成死锁：
-    # 守卫强制 k3 → k3 失败 → 永无成功 → 永远强制 k3，优先模型恢复也
-    # 没机会被探测（历史实证：100 局零成功，last_llm_review_run 冻结）。
-    # 交替规则：上次尝试是 fallback 就放行优先链（恢复探测），否则强制兜底；
-    # 任一路成功即刷新 last_successful_review_run、退出饥饿态。
+    # 成功复盘饥饿只放宽真实 fallback 的节奏，绝不覆盖已经解析成功的 preferred
+    # 模型。GLM 可用时强制交替到 K3 会让迁移后的主模型无故少一半机会；只有
+    # resolve_review_plan 因真实 unavailable/cooldown 选中 fallback 时才运行 K3。
     last_ok = agent.know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     starved = runs - last_ok >= starve_every
-    if starved and source == "preferred":
-        if agent.know.progression.get("last_review_attempt_source") != "fallback":
-            model, every, source = cfg["model"], starve_every, "fallback"
     if source == "fallback":
         # 兜底节奏独立记账（preferred 尝试不得刷新兜底计数）；
         # 饥饿态下豁免节奏门槛——交替本身就是节奏，再卡门槛会漏掉轮次。
@@ -1860,7 +1854,8 @@ def enqueue_review(agent, log=print) -> None:
     agent.know.progression[progression_key] = runs
     agent.know.progression["last_review_attempt_source"] = source
     agent.know.save()
-    starve_note = f"（距上次成功复盘 {runs - last_ok} 局，交替出牌）" if starved else ""
+    starve_note = (f"（距上次成功复盘 {runs - last_ok} 局，积压追及）"
+                   if starved else "")
     log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     if not _review_stop_requested():
         _ensure_worker(agent, log)
@@ -2919,9 +2914,29 @@ def _recover_deferred_salvages(log=print) -> None:
                     cleaned = _discard_retained_sandbox(item, log=log) and cleaned
                 if cleaned:
                     pointer.unlink()
+            # Stop may publish the forensic pointer package milliseconds before the
+            # daemon exits, leaving no time for the independent ledger commit. The
+            # new worker already revisits every deferred package here, so backfill
+            # the idempotent tracked index after the full manifest is durable.
+            _record_review_rejection(package, manifest, log=log)
             log(f"[llm] 已异步补全停止复盘的完整失败现场：{package}")
         except Exception as exc:
             log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
+
+
+def _backfill_rejection_ledger(log=print) -> None:
+    """Idempotently index every surviving package, including Stop-edge packages."""
+    if not SALVAGE_ROOT.is_dir():
+        return
+    for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
+        manifest_path = package / "manifest.json"
+        if not package.is_dir() or not manifest_path.is_file():
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            _record_review_rejection(package, manifest, log=log)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            log(f"[llm] 拒合清单启动补录跳过损坏失败包 {package.name}：{exc}")
 
 
 def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
@@ -2974,6 +2989,9 @@ def _worker_loop(agent, log) -> None:
     if _review_stop_requested():
         return
     _recover_deferred_salvages(log=log)
+    if _review_stop_requested():
+        return
+    _backfill_rejection_ledger(log=log)
     if _review_stop_requested():
         return
     # Startup recovery is itself a durable queue transaction.  If the file is

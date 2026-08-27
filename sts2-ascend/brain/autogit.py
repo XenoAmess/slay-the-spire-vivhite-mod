@@ -335,22 +335,25 @@ def restore_paths(from_commit: str, paths: list[str], log=print) -> bool:
         return False
 
 
-def _staged_paths_unlocked() -> tuple[str, ...]:
-    result = _run_git(["diff", "--cached", "--name-only", "-z", "--diff-filter=ACDMRTUXB", "--"])
+def _staged_paths_unlocked(timeout: float = 90) -> tuple[str, ...]:
+    result = _run_git(
+        ["diff", "--cached", "--name-only", "-z", "--diff-filter=ACDMRTUXB", "--"],
+        timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip())
     return tuple(_nul_paths(result.stdout))
 
 
-def _index_entries_unlocked(paths: Sequence[str]) -> bytes:
-    result = _run_git_bytes(["ls-files", "--stage", "-z", "--", *paths])
+def _index_entries_unlocked(paths: Sequence[str], timeout: float = 90) -> bytes:
+    result = _run_git_bytes(
+        ["ls-files", "--stage", "-z", "--", *paths], timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.decode("utf-8", "replace").strip())
     return result.stdout
 
 
-def _symbolic_head_unlocked() -> str:
-    result = _run_git(["symbolic-ref", "-q", "HEAD"])
+def _symbolic_head_unlocked(timeout: float = 90) -> str:
+    result = _run_git(["symbolic-ref", "-q", "HEAD"], timeout=timeout)
     if result.returncode == 0:
         return result.stdout.strip()
     # rc=1 是正常 detached HEAD；其他失败也 fail closed 为不可用身份。
@@ -532,6 +535,8 @@ def commit_patch_result(
     prepare: Callable[[CommitResult], bool] | None = None,
     abort_prepare: Callable[[CommitResult], None] | None = None,
     finalize_prepare: Callable[[CommitResult], None] | None = None,
+    lock_timeout: float = 480.0,
+    transaction_timeout: float | None = None,
 ) -> CommitResult:
     """把精确 patch 同时应用到私有 index 与工作树，再以 CAS 建立 commit。
 
@@ -544,6 +549,19 @@ def commit_patch_result(
     provisional: CommitResult | None = None
     prepared = False
     worktree_applied = False
+    deadline = (time.monotonic() + max(0.1, float(transaction_timeout))
+                if transaction_timeout is not None else None)
+
+    def remaining(default: float) -> float:
+        if deadline is None:
+            return default
+        value = deadline - time.monotonic()
+        if value <= 0:
+            raise TimeoutError("精确 patch 事务总预算已耗尽")
+        return max(0.1, min(default, value))
+
+    def tx_git(args, *, timeout: float = 90, **kwargs):
+        return _run_git(args, timeout=remaining(timeout), **kwargs)
     try:
         validated = validate_review_paths(paths)
         if not patch_bytes:
@@ -552,23 +570,24 @@ def commit_patch_result(
         with os.fdopen(fd, "wb") as handle:
             handle.write(patch_bytes)
         try:
-            with repository_lock(timeout=480.0):
-                staged = _staged_paths_unlocked()
+            with repository_lock(timeout=min(lock_timeout, remaining(lock_timeout))):
+                staged = _staged_paths_unlocked(timeout=remaining(90))
                 overlap = [path for path in staged if _path_in_specs(path, validated)]
                 if overlap:
                     reason = "patch 目标已有用户 staged 内容：" + ", ".join(overlap[:8])
                     log(f"[git] {reason}")
                     return CommitResult(False, reason=reason)
-                original_target_index = _index_entries_unlocked(validated)
-                transaction_ref = _symbolic_head_unlocked()
+                original_target_index = _index_entries_unlocked(
+                    validated, timeout=remaining(90))
+                transaction_ref = _symbolic_head_unlocked(timeout=remaining(90))
                 direction = ["--reverse"] if reverse else []
                 opposite = [] if reverse else ["--reverse"]
                 last_error = ""
 
                 for _attempt in range(3):
-                    if _symbolic_head_unlocked() != transaction_ref:
+                    if _symbolic_head_unlocked(timeout=remaining(90)) != transaction_ref:
                         return CommitResult(False, reason="patch 事务期间 HEAD 分支身份发生变化")
-                    before_result = _run_git(["rev-parse", "HEAD"])
+                    before_result = tx_git(["rev-parse", "HEAD"])
                     if before_result.returncode != 0:
                         last_error = before_result.stderr.strip()
                         break
@@ -582,8 +601,8 @@ def commit_patch_result(
                     prepared = False
                     worktree_applied = False
                     try:
-                        read = _run_git(["read-tree", before], env=env)
-                        cached = _run_git(
+                        read = tx_git(["read-tree", before], env=env)
+                        cached = tx_git(
                             ["apply", "--cached", "--unidiff-zero", *direction,
                              "--binary", patch_name],
                             timeout=120, env=env,
@@ -591,7 +610,7 @@ def commit_patch_result(
                         if read.returncode != 0 or cached.returncode != 0:
                             last_error = ((read.stderr or "") + (cached.stderr or "")).strip()
                             break
-                        actual_result = _run_git(
+                        actual_result = tx_git(
                             ["diff", "--cached", "--name-only", "-z", "--no-renames", "--"],
                             env=env,
                         )
@@ -606,11 +625,11 @@ def commit_patch_result(
                         if set(actual_paths) != set(validated):
                             last_error = "patch 实际路径与声明不一致"
                             break
-                        tree = _run_git(["write-tree"], env=env)
+                        tree = tx_git(["write-tree"], env=env)
                         if tree.returncode != 0:
                             last_error = tree.stderr.strip()
                             break
-                        made = _run_git(
+                        made = tx_git(
                             ["commit-tree", tree.stdout.strip(), "-p", before],
                             env=env, input_text=message.rstrip() + "\n",
                         )
@@ -620,7 +639,7 @@ def commit_patch_result(
                         provisional = CommitResult(
                             True, before_head=before, commit=made.stdout.strip(), pushed=False)
 
-                        check = _run_git(
+                        check = tx_git(
                             ["apply", "--check", "--unidiff-zero", *direction,
                              "--binary", patch_name], timeout=120)
                         if check.returncode != 0:
@@ -638,7 +657,7 @@ def commit_patch_result(
                                     abort_prepare(provisional)
                                 break
 
-                        if _symbolic_head_unlocked() != transaction_ref:
+                        if _symbolic_head_unlocked(timeout=remaining(90)) != transaction_ref:
                             if prepared and abort_prepare is not None:
                                 abort_prepare(provisional)
                             prepared = False
@@ -647,7 +666,7 @@ def commit_patch_result(
                                 reason="patch 应用前 HEAD 分支身份发生变化",
                             )
 
-                        applied = _run_git(
+                        applied = tx_git(
                             ["apply", "--unidiff-zero", *direction, "--binary", patch_name],
                             timeout=120)
                         if applied.returncode != 0:
@@ -658,15 +677,15 @@ def commit_patch_result(
                             break
                         worktree_applied = True
 
-                        if _symbolic_head_unlocked() != transaction_ref:
+                        if _symbolic_head_unlocked(timeout=remaining(90)) != transaction_ref:
                             # 分支切换发生在工作树 apply 后；精确撤销仍需通过 check，
                             # 不可逆时保留 marker/现场而不更新任何 ref。
-                            undo_check = _run_git([
+                            undo_check = tx_git([
                                 "apply", "--check", "--unidiff-zero", *opposite,
                                 "--binary", patch_name,
                             ], timeout=120)
                             if undo_check.returncode == 0:
-                                undone = _run_git([
+                                undone = tx_git([
                                     "apply", "--unidiff-zero", *opposite, "--binary", patch_name,
                                 ], timeout=120)
                                 if undone.returncode == 0:
@@ -679,20 +698,20 @@ def commit_patch_result(
                                 reason="patch 应用后 HEAD 分支身份发生变化",
                             )
                         update_target = transaction_ref or "HEAD"
-                        update = _run_git([
+                        update = tx_git([
                             "update-ref", "-m", message[:120], update_target,
                             provisional.commit, before,
                         ])
                         if update.returncode != 0:
                             last_error = update.stderr.strip()
-                            undo_check = _run_git(
+                            undo_check = tx_git(
                                 ["apply", "--check", "--unidiff-zero", *opposite,
                                  "--binary", patch_name], timeout=120)
                             if undo_check.returncode != 0:
                                 # 无法证明无损时不做强制恢复，marker 留作诊断。
                                 return CommitResult(False, before_head=before,
                                                     reason="CAS 失败且工作树 patch 无法无损撤销：" + last_error)
-                            undone = _run_git(
+                            undone = tx_git(
                                 ["apply", "--unidiff-zero", *opposite, "--binary", patch_name],
                                 timeout=120)
                             if undone.returncode != 0:
@@ -715,9 +734,10 @@ def commit_patch_result(
                                     f"保留 marker 供重试：{exc}")
 
                         try:
-                            current_target_index = _index_entries_unlocked(validated)
+                            current_target_index = _index_entries_unlocked(
+                                validated, timeout=remaining(90))
                             if current_target_index == original_target_index:
-                                sync = _run_git([
+                                sync = tx_git([
                                     "restore", "--staged", f"--source={provisional.commit}",
                                     "--", *validated,
                                 ])
@@ -754,44 +774,141 @@ def commit_patch_result(
         return CommitResult(False, reason=str(exc))
 
 
-def _validated_commit_pair_unlocked(parent: str, commit: str) -> tuple[str, ...]:
+def _validated_commit_pair_unlocked(
+    parent: str, commit: str, timeout: float = 90,
+) -> tuple[str, ...]:
     if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
         raise ValueError("回滚 marker 的 commit hash 格式非法")
-    row = _run_git(["rev-list", "--parents", "-n", "1", commit])
+    row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
     if row.returncode != 0:
         raise ValueError("回滚 commit 不存在")
     parts = row.stdout.strip().split()
     if len(parts) != 2 or parts[0].lower() != commit.lower() or parts[1].lower() != parent.lower():
         raise ValueError("回滚只接受已验证的单父提交及其直接父节点")
-    if _run_git(["merge-base", "--is-ancestor", commit, "HEAD"]).returncode != 0:
+    if _run_git(
+            ["merge-base", "--is-ancestor", commit, "HEAD"],
+            timeout=timeout).returncode != 0:
         raise ValueError("回滚 commit 不在当前 HEAD 历史中")
-    changed = _run_git(["diff", "--name-only", "-z", "--no-renames", parent, commit, "--"])
+    changed = _run_git(
+        ["diff", "--name-only", "-z", "--no-renames", parent, commit, "--"],
+        timeout=timeout)
     if changed.returncode != 0:
         raise ValueError(changed.stderr.strip())
     return tuple(_nul_paths(changed.stdout))
 
 
+def abort_unpublished_review_worktree(
+    parent: str, commit: str, marker_paths: Sequence[str], *,
+    log=print, lock_timeout: float = 5.0, operation_timeout: int = 10,
+) -> bool:
+    """Reconcile a ``prepared`` marker while HEAD still equals its parent.
+
+    ``git apply`` is atomic across the review patch, so an interrupted transaction
+    is either still at the parent worktree or contains the complete provisional
+    patch. Prove one of those two states with forward/reverse checks; undo only the
+    latter. Any overlap with an external edit fails closed and preserves evidence.
+    """
+    patch_name = ""
+    try:
+        with repository_lock(timeout=lock_timeout):
+            if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
+                raise ValueError("prepared marker commit 格式非法")
+            claimed = validate_review_paths(marker_paths)
+            row = _run_git(
+                ["rev-list", "--parents", "-n", "1", commit],
+                timeout=operation_timeout)
+            parts = row.stdout.strip().split() if row.returncode == 0 else []
+            if (len(parts) != 2 or parts[0].lower() != commit.lower()
+                    or parts[1].lower() != parent.lower()):
+                raise ValueError("prepared marker 不是声明父节点的单父 commit")
+            changed = _run_git(
+                ["diff", "--name-only", "-z", "--no-renames", parent, commit, "--"],
+                timeout=operation_timeout)
+            actual = validate_review_paths(_nul_paths(changed.stdout)) \
+                if changed.returncode == 0 else ()
+            if set(actual) != set(claimed):
+                raise ValueError("prepared marker 路径与 provisional commit 不一致")
+            patch = _run_git_bytes([
+                "diff", "--binary", "--unified=0", parent, commit, "--", *actual,
+            ], timeout=operation_timeout)
+            if patch.returncode != 0 or not patch.stdout:
+                raise RuntimeError("无法读取 prepared commit 精确 patch")
+            fd, patch_name = tempfile.mkstemp(
+                prefix="sts2-prepared-reconcile-", suffix=".patch")
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(patch.stdout)
+
+            reverse_check = _run_git([
+                "apply", "--check", "--reverse", "--unidiff-zero", "--binary",
+                patch_name,
+            ], timeout=operation_timeout)
+            if reverse_check.returncode == 0:
+                undone = _run_git([
+                    "apply", "--reverse", "--unidiff-zero", "--binary", patch_name,
+                ], timeout=operation_timeout)
+                if undone.returncode != 0:
+                    raise RuntimeError("prepared worktree patch 无法无损撤回："
+                                       + undone.stderr.strip())
+                log(f"[git] 已撤回未发布的 prepared 工作树 patch {commit[:8]}")
+                return True
+
+            forward_check = _run_git([
+                "apply", "--check", "--unidiff-zero", "--binary", patch_name,
+            ], timeout=operation_timeout)
+            if forward_check.returncode == 0:
+                log(f"[git] prepared commit {commit[:8]} 尚未进入工作树，无需撤回")
+                return True
+            raise RuntimeError("prepared 工作树既非父版本也非完整 provisional 版本；保留现场")
+    except Exception as exc:
+        log(f"[git] prepared marker 恢复被拒绝：{exc}")
+        return False
+    finally:
+        if patch_name:
+            Path(patch_name).unlink(missing_ok=True)
+
+
+def commit_is_ancestor(commit: str, *, timeout: float = 5.0) -> bool:
+    """Bounded precise history check used only for rare prepared reconciliation."""
+    if not _HEX_COMMIT.fullmatch(str(commit or "")):
+        return False
+    try:
+        with repository_lock(timeout=timeout):
+            return _run_git(
+                ["merge-base", "--is-ancestor", commit, "HEAD"],
+                timeout=timeout).returncode == 0
+    except (OSError, TimeoutError, subprocess.SubprocessError):
+        return False
+
+
 def rollback_review_commit(
     parent: str, commit: str, marker_paths: Sequence[str] | None = None, log=print,
+    *, lock_timeout: float = 5.0, transaction_timeout: float = 30.0,
 ) -> bool:
     """以私有 index + 精确反向 patch 撤销一个复盘 commit。"""
     try:
-        with repository_lock():
-            changed = _validated_commit_pair_unlocked(parent, commit)
+        started = time.monotonic()
+        with repository_lock(timeout=lock_timeout):
+            remaining = max(0.1, transaction_timeout - (time.monotonic() - started))
+            changed = _validated_commit_pair_unlocked(
+                parent, commit, timeout=min(3.0, remaining))
             validated = validate_review_paths(changed)
             if marker_paths is not None:
                 claimed = validate_review_paths(marker_paths)
                 if set(claimed) != set(validated):
                     raise ValueError("marker 路径与 commit 实际路径不一致")
+            remaining = max(0.1, transaction_timeout - (time.monotonic() - started))
             patch = _run_git_bytes([
                 "diff", "--binary", "--unified=0", parent, commit, "--", *validated,
-            ], timeout=120)
+            ], timeout=min(3.0, remaining))
             if patch.returncode != 0 or not patch.stdout:
                 raise RuntimeError(patch.stderr.decode("utf-8", "replace").strip() or "空回滚 patch")
             result = commit_patch_result(
                 patch.stdout,
                 f"revert(sts2-ascend): 安全撤销复盘 {commit[:8]}",
-                validated, reverse=True, log=log,
+                validated, reverse=True, log=log, push=False,
+                lock_timeout=max(0.1, min(lock_timeout, remaining)),
+                transaction_timeout=max(
+                    0.1, transaction_timeout - (time.monotonic() - started)),
             )
             if not result.created:
                 raise RuntimeError("精确反向 patch 提交失败：" + result.reason)
