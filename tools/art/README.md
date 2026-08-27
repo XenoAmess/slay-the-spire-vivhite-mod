@@ -1,5 +1,37 @@
 # Ironclad art extraction helper
 
+## EvoLink native-transparent image generation
+
+Every new transparent Vivhite asset must use EvoLink `gpt-image-2` with
+`background=transparent`. No green-screen, chroma-key, background-removal, or
+alternate image service is permitted. `evolink_transparent_image.py` keeps the
+API key out of arguments and files, submits the fixed transparent request, and
+verifies that the downloaded result is a PNG.
+
+Set `EVOLINK_API_KEY` only in the current environment, or omit it and enter the
+key at the hidden prompt:
+
+```powershell
+py -3 -B .\tools\art\evolink_transparent_image.py `
+  --prompt-file .\path\to\asset.prompt.txt `
+  --output .\path\to\asset.png `
+  --image-url https://example.invalid/reference-1.png `
+  --image-url https://example.invalid/reference-2.jpg
+```
+
+If generation finishes but download is interrupted, reuse its task without
+creating or billing another image:
+
+```powershell
+py -3 -B .\tools\art\evolink_transparent_image.py `
+  --task-id task-unified-example `
+  --output .\path\to\asset.png
+```
+
+Never paste an API key into either command. Preserve every raw model result,
+including rejected attempts. Validate the actual Alpha channel separately;
+the script deliberately does not repair or postprocess Alpha.
+
 `extract_ironclad_assets.py` opens the installed Slay the Spire 2 PCK
 read-only and reconstructs local authoring sources for Ironclad's four Spine
 presentations:
@@ -41,13 +73,15 @@ cropped back to `Texture2D`'s logical dimensions; this matters for the
 
 Inside the repository, the extractor is hard-limited to the exact
 `assets/ironclad-v0.111.0` root and never writes the `Vivhite/` runtime tree.
-After editing, `publish_ironclad_skin.py` reads scenes, skeleton-data wrappers,
-and checksums from that immutable extraction, while taking finished atlases,
-pages, and UI from `assets/vivhite-ironclad/custom`. It turns the custom atlases into
-private `.spatlas` resources, keeps the skeleton-data resources pointed at the
-matching skeletons already mounted from the base game, rewrites scene paths,
-and stages the edited art for the Mod. It never copies a vanilla skeleton
-binary into the runtime tree.
+After editing, `publish_ironclad_skin.py` reads legacy non-combat scene and
+skeleton-data structure plus checksums from that immutable extraction, while
+taking finished non-combat atlases, pages, and UI from
+`assets/vivhite-ironclad/custom`. The custom rig builder owns the tracked
+combat `.spjson`/`.spatlas`/PNG/wrapper and combat scene; rest-site and
+character-select likewise supply private `.spjson` files. The publisher reads
+those private rig outputs before mirror-cleaning, rewrites the remaining
+wrappers to private skeleton paths, and never copies or references a vanilla
+skeleton in the runtime tree.
 
 ## Run
 
@@ -161,55 +195,21 @@ identical; it also reports whether the PNG encoding itself is byte-identical.
 Choose an unused work directory, or pass `--force-work` to overwrite only the
 tool's known verification artifacts there.
 
-## Rebuild the checked-in White Qi art
+## Retired legacy art pipeline
 
-The approved ImageGen sources under `assets/vivhite-ironclad/generated` can be
-deterministically transferred into all 190 gameplay region masters and packed
-back into the ten fixed atlas pages:
+The former 190-region / ten-page workflow is permanently retired. It combined
+checkerboard-descended AI RGB with original Ironclad Alpha and pose geometry,
+then used chroma-key and Alpha-repair code for UI. That violates both the clean
+image lineage and custom-rig requirements.
 
-```powershell
-& $godot --headless --path .\tools\art `
-  --script res://build_vivhite_gameplay_regions.gd -- build
+The old sources, products, reports, and executable scripts are preserved only
+under `assets/vivhite-ironclad/legacy-contaminated/2026-08-27/`. Do not move
+`build_vivhite_gameplay_regions.gd`, `process_vivhite_ui.gd`, or
+`remove_chroma.gd` back into `tools/art`, and do not restore their old commands.
 
-foreach ($domain in 'combat','merchant','rest_site','character_select') {
-  & $godot --headless --path .\tools\art `
-    --script res://atlas_region_tool.gd -- pack `
-    --workspace "assets/vivhite-ironclad/custom/$domain" `
-    --weapon-policy clear
-}
-
-& $godot --headless --path .\tools\art `
-  --script res://build_vivhite_gameplay_regions.gd -- audit
-```
-
-`build` preserves template alpha/geometry for ordinary regions and uses a
-dedicated empty-hand cutout for character-select's composite `top arm`. The
-explicit pack loop applies the `clear` weapon policy to every domain. `audit`
-fails unless all 190 region pixel hashes and all ten page hashes differ from
-the extraction, every current region master exactly matches its packed atlas
-rectangle and recorded build hash, both combat/merchant weapon attachments are
-fully transparent in the masters and packed pages, and the character-select
-hand reports its approved recipe. A stale page therefore cannot pass after a
-master is rebuilt without a matching `pack`.
-The reports are stored as
-`assets/vivhite-ironclad/custom/gameplay-*-report.json`.
-
-Standalone UI uses its own deterministic postprocessor after ImageGen and
-chroma removal:
-
-```powershell
-& $godot --headless --path .\tools\art `
-  --script res://process_vivhite_ui.gd -- `
-  assets/vivhite-ironclad/generated/ui_alpha `
-  assets/vivhite-ironclad/custom/ui
-```
-
-The exact source mappings, prompts, output rectangles and audit expectations
-are tracked in `assets/vivhite-ironclad/generated/ui-generation-prompts.md`.
-`icon_outline` and `select_locked` are derived from their corresponding final
-images so their geometry cannot drift. All nine files are prepared in a
-sibling staging directory and then swapped as one set; a missing input or
-write failure leaves the prior output intact and returns a non-zero status.
+The replacement pipeline starts with archived EvoLink native-transparent
+outputs and builds a private Vivhite skeleton, mesh, weights, poses, atlas, and
+UI without deriving Alpha or body geometry from Ironclad.
 
 ## Publish edited assets
 
@@ -222,14 +222,20 @@ cd .\Vivhite
 dotnet build
 ```
 
-The publisher writes the 30 runtime resources below
+The publisher writes the 26 runtime resources below
 `Vivhite/Vivhite/skins/ironclad/`. It strictly decodes every RGBA8 PNG and
 refuses wrong dimensions or any image whose decoded pixels still match the
-extracted game asset, even after a lossless re-encode. Custom atlas text must
-remain byte-for-byte identical to its versioned template. The destination is
-mirrored to the exact 30-file allowlist, so stale debug/import files cannot
-silently enter the PCK. The tracked `.skel` files remain authoring references
-only and are not copied into the Mod.
+extracted game asset, even after a lossless re-encode. Legacy non-combat atlas
+text must remain byte-for-byte identical to its versioned template. Generated
+private rig inputs are selected with `--private-runtime-root` (the tracked
+runtime tree by default), validated, and read fully before the destination is
+cleaned. Combat and merchant deliberately share the same private JSON, atlas,
+and page so every `pose_*` attachment resolves. The destination is mirrored to
+the exact 26-file allowlist, so stale
+debug/import files cannot silently enter the PCK. Extracted `.skel` files remain
+read-only research references and are never copied or referenced by the Mod.
+The character-select scene is also scrubbed of serialized editor-preview
+`SpineMesh2D` children; its replacement mesh must come from the private JSON.
 
 The two inputs are intentionally independent: `--template-root` (with the old
 `--authoring-root` spelling retained as an alias) defaults to the immutable
@@ -250,13 +256,13 @@ used to put unmodified game art in the distributable Mod.
 
 ## Editing notes
 
-- A texture-only reskin does not require Spine Editor. Keep atlas page names,
-  dimensions, region layout, and the tracked vanilla `.skel` files unchanged.
-- The runtime reuses the base-game skeleton versions: combat/merchant 4.2.43,
-  rest-site 4.2.37, and character-select 4.2.40.
-- Godot export must keep the private `.tres`/`.tscn` files textual; otherwise
-  the standalone Mod export tries to resolve the base-game skeleton paths too
-  early. `Vivhite/project.godot` and the post-export validator enforce this.
+- The replacement is a private White Qi rig, not a texture-only reskin. Do not
+  fit new art to, reference, or publish an original Ironclad skeleton.
+- Every runtime skeleton is Spine JSON 4.2.43. Combat and merchant share
+  `vivhite_combat.spjson`; rest-site and character-select have separate JSON.
+- Godot export must keep private `.spjson`/`.spatlas`/`.tres`/`.tscn` files
+  readable so the post-export validator can verify the complete reference
+  graph. `Vivhite/project.godot` and the build gate enforce this.
 - A rebuilt skeleton should preserve the animation names listed in the
   manifest. Reusing Ironclad's combat scene also requires its Spine VFX slots
   and event names.
