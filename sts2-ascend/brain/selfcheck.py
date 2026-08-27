@@ -9,6 +9,7 @@ import re
 import json
 import math
 import io
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -18,6 +19,11 @@ sys.path.insert(0, str(BRAIN))
 
 
 def main() -> int:
+    # A selfcheck may be launched by the live Brain or from a saved review clone.
+    # It is not a runner-managed Brain boot and must never open/write the live UI.
+    os.environ["STS2_ASCEND_DISABLE_VIEWER"] = "1"
+    os.environ.pop("STS2_ASCEND_BOOT_ID", None)
+
     # 1) 全模块可导入
     import client, knowledge, policy, reflect, agent, autogit, llm_review  # noqa: F401
 
@@ -6288,6 +6294,7 @@ def main() -> int:
 
     loop_client = LoopGateClient()
     loop_agent.client = loop_client
+    loop_agent._start_live_dashboard = lambda: None
     loop_agent._launch_quipper = lambda: None
     loop_agent.ensure_game = lambda: True
     loop_agent._last_policy_refresh = __import__("time").time()
@@ -6336,6 +6343,7 @@ def main() -> int:
 
     generic_client = GenericLostClient()
     generic_agent.client = generic_client
+    generic_agent._start_live_dashboard = lambda: None
     generic_agent._launch_quipper = lambda: None
     generic_agent.ensure_game = lambda: True
     generic_agent._last_policy_refresh = __import__("time").time()

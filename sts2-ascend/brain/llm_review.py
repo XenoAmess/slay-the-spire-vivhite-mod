@@ -1270,6 +1270,10 @@ def _stream_run(cmd: list[str], timeout_sec: int,
     # entrypoints while validating a patch.  It must never create a second
     # broadcast overlay from that clone.
     env["STS2_ASCEND_DISABLE_VIEWER"] = "1"
+    # BOOT_ID belongs only to the real runner→Brain startup handshake.  Passing
+    # it into OpenCode makes sandbox selfchecks impersonate that startup and
+    # fail when their PID cannot advance the live Brain record.
+    env.pop("STS2_ASCEND_BOOT_ID", None)
     proc = subprocess.Popen(
         cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding="utf-8", errors="replace", bufsize=8192, env=env,
@@ -1410,6 +1414,8 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
     try:
         env = dict(os.environ)
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env["STS2_ASCEND_DISABLE_VIEWER"] = "1"
+        env.pop("STS2_ASCEND_BOOT_ID", None)
         proc = _run_captured_stop_aware(
             [sys.executable, str(brain_dir / "selfcheck.py")],
             timeout=120, env=env)
