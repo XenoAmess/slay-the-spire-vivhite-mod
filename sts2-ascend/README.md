@@ -167,9 +167,15 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   Git 元数据与越界/不安全路径会拒绝自动合入整批，并先保全完整现场
 - 不使用“全仓指纹变化”、全仓脏状态或 refs 变化作为复盘门禁；真实仓的正常提交、推送、
   用户文件与运行日志变化不会让隔离成果作废
-- autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
+- autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交；分支 CAS 成功后，
+  真实 index 只对本次精确 pathspec 同步到新提交，不改工作树，也不全量重置用户 index
+- 真实 index 同步遇到短暂的 `index.lock` 会有界重试，并在每次重试前复核提交关系和目标
+  index 身份；重试仍失败时写入耐久 pending-sync 回执。下次存档事务会先做 preflight 自愈：
+  只有目标 paths 仍精确等于已记录的机器父提交快照时，才把这些 paths 的 index 前移到机器
+  存档提交。HEAD 后来已有无关 commit 也不妨碍恢复；若检测到真正的用户 staged 内容，则保留
+  用户内容并拒绝覆盖
 - 普通存档使用既定的在线进度 pathspec；复盘提交使用 deny-only 验证后的实际改动路径，
-  不使用固定文件名单。目标路径已有 staged 内容时整笔拒绝
+  不使用固定文件名单。排除上述可证明的机器遗留 index 后，目标路径已有 staged 内容时整笔拒绝
 - 复盘 active 时在线存档照常提交并立即推送；复盘结束也会补推此前网络失败的积压，
   不依赖优先模型必须产出有效 patch 才能上库
 - 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD

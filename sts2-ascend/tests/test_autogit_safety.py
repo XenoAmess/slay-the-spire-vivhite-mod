@@ -201,6 +201,121 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(self._git("diff", "--cached", "--name-only").stdout.strip(), "outside.txt")
         self.assertEqual(self._read("sts2-ascend/knowledge/stats.json"), '{"runs": 3}\n')
 
+    def test_progress_index_sync_retries_transient_index_lock(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2}\n')
+        original_run = autogit._run_git
+        restore_calls = 0
+
+        def transient_lock(args, **kwargs):
+            nonlocal restore_calls
+            if args[:2] == ["restore", "--staged"]:
+                restore_calls += 1
+                if restore_calls <= 2:
+                    return subprocess.CompletedProcess(
+                        args, 128, "", "fatal: Unable to create '.git/index.lock': File exists")
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=transient_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            result = autogit.commit_progress_result(
+                "chore(sts2-ascend): 第2局存档（负 F1 进阶0，生涯 0胜/2局）",
+                paths=[path], push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(restore_calls, 3)
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+
+    def test_persistent_index_lock_is_recovered_by_next_progress_transaction(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2}\n')
+        original_run = autogit._run_git
+
+        def persistent_lock(args, **kwargs):
+            if args[:2] == ["restore", "--staged"]:
+                return subprocess.CompletedProcess(
+                    args, 128, "", "fatal: Unable to create '.git/index.lock': File exists")
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=persistent_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            first = autogit.commit_progress_result(
+                "chore(sts2-ascend): 第2局存档（负 F1 进阶0，生涯 0胜/2局）",
+                paths=[path], push=False)
+
+        self.assertTrue(first.created, first.reason)
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout.strip(), path)
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+
+        self._write(path, '{"runs": 3}\n')
+        second = autogit.commit_progress_result(
+            "chore(sts2-ascend): 第3局存档（负 F1 进阶0，生涯 0胜/3局）",
+            paths=[path], push=False)
+
+        self.assertTrue(second.created, second.reason)
+        self.assertEqual(self._git("show", f"HEAD:{path}").stdout, '{"runs": 3}\n')
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+
+    def test_progress_index_recovery_preserves_real_user_staging(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2}\n')
+        original_run = autogit._run_git
+
+        def persistent_lock(args, **kwargs):
+            if args[:2] == ["restore", "--staged"]:
+                return subprocess.CompletedProcess(
+                    args, 128, "", "fatal: Unable to create '.git/index.lock': File exists")
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=persistent_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            first = autogit.commit_progress_result(
+                "chore(sts2-ascend): 第2局存档（负 F1 进阶0，生涯 0胜/2局）",
+                paths=[path], push=False)
+        self.assertTrue(first.created, first.reason)
+
+        self._write(path, '{"runs": 999, "user": true}\n')
+        self._git("add", path)
+        cached_before = self._git("diff", "--cached", "--binary").stdout
+        refused = autogit.commit_progress_result(
+            "chore(sts2-ascend): 第3局存档（负 F1 进阶0，生涯 0胜/3局）",
+            paths=[path], push=False)
+
+        self.assertFalse(refused.created)
+        self.assertIn("staged", refused.reason)
+        self.assertEqual(self._git("diff", "--cached", "--binary").stdout, cached_before)
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+
+    def test_legacy_progress_index_recovery_finds_commit_behind_later_head(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2}\n')
+        machine = autogit.commit_progress_result(
+            "chore(sts2-ascend): 第2局存档（负 F1 进阶0，生涯 0胜/2局）",
+            paths=[path], push=False)
+        self.assertTrue(machine.created, machine.reason)
+
+        self._write("sts2-ascend/brain/policy.py", "VALUE = 2\n")
+        self._git("add", "sts2-ascend/brain/policy.py")
+        self._git("commit", "-qm", "later unrelated code commit")
+        later_head = self._git("rev-parse", "HEAD").stdout.strip()
+        self._git("restore", "--staged", f"--source={machine.before_head}", "--", path)
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout.strip(), path)
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+
+        self._write(path, '{"runs": 3}\n')
+        recovered = autogit.commit_progress_result(
+            "chore(sts2-ascend): 第3局存档（负 F1 进阶0，生涯 0胜/3局）",
+            paths=[path], push=False)
+
+        self.assertTrue(recovered.created, recovered.reason)
+        self.assertEqual(recovered.before_head, later_head)
+        self.assertEqual(self._git("show", "HEAD:sts2-ascend/brain/policy.py").stdout,
+                         "VALUE = 2\n")
+        self.assertEqual(self._git("show", f"HEAD:{path}").stdout, '{"runs": 3}\n')
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+
     def test_shared_worktree_restore_fails_closed_and_preserves_every_hunk(self) -> None:
         base = self._git("rev-parse", "HEAD").stdout.strip()
         self._write("sts2-ascend/brain/policy.py", "BROKEN = True\n")

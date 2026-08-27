@@ -10,6 +10,7 @@ reset/clean。
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -83,6 +84,10 @@ _GIT_LOCK = threading.RLock()
 _LOCK_STATE = threading.local()
 REVIEW_ACTIVE_FILE = BASE_DIR / "knowledge" / "review_active.flag"
 _HEX_COMMIT = re.compile(r"^[0-9a-fA-F]{40,64}$")
+_MACHINE_PROGRESS_SUBJECT = re.compile(
+    r"^chore\(sts2-ascend\): 第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
+_PROGRESS_INDEX_PENDING_NAME = "sts2-ascend-progress-index-pending.json"
+_INDEX_LOCK_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 
 @dataclass(frozen=True)
@@ -470,6 +475,253 @@ def _index_entries_unlocked(paths: Sequence[str], timeout: float = 90) -> bytes:
     return result.stdout
 
 
+def _progress_index_pending_path() -> Path:
+    """Return the per-repository journal path without caching test/live roots."""
+    return _git_dir() / _PROGRESS_INDEX_PENDING_NAME
+
+
+def _read_progress_index_pending_unlocked() -> list[dict] | None:
+    path = _progress_index_pending_path()
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    entries = payload.get("entries") if isinstance(payload, dict) else None
+    if not isinstance(entries, list) or not all(isinstance(item, dict) for item in entries):
+        return None
+    return entries
+
+
+def _write_progress_index_pending_unlocked(entries: Sequence[dict]) -> None:
+    path = _progress_index_pending_path()
+    if not entries:
+        path.unlink(missing_ok=True)
+        return
+    temp = path.with_name(
+        f".{path.name}.{os.getpid()}-{threading.get_ident()}-{time.time_ns()}.tmp")
+    try:
+        temp.write_text(
+            json.dumps({"version": 1, "entries": list(entries)}, ensure_ascii=False,
+                       indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _add_progress_index_pending_unlocked(
+    parent: str, commit: str, specs: Sequence[str], message: str,
+) -> None:
+    entries = _read_progress_index_pending_unlocked()
+    if entries is None:
+        raise RuntimeError("progress index pending marker 损坏，拒绝覆盖")
+    entry = {
+        "parent": parent,
+        "commit": commit,
+        "paths": list(specs),
+        "message": message[:240],
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    entries = [item for item in entries if str(item.get("commit") or "") != commit]
+    entries.append(entry)
+    _write_progress_index_pending_unlocked(entries)
+
+
+def _remove_progress_index_pending_unlocked(commit: str) -> bool:
+    entries = _read_progress_index_pending_unlocked()
+    if entries is None:
+        return False
+    remaining = [
+        item for item in entries if str(item.get("commit") or "") != commit
+    ]
+    if len(remaining) == len(entries):
+        return True
+    _write_progress_index_pending_unlocked(remaining)
+    return True
+
+
+def _index_matches_commit_unlocked(
+    commit: str, specs: Sequence[str], timeout: float = 90,
+) -> bool | None:
+    result = _run_git(
+        ["diff", "--cached", "--quiet", commit, "--", *specs], timeout=timeout)
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    return None
+
+
+def _index_lock_error(result: subprocess.CompletedProcess[str]) -> bool:
+    detail = ((result.stderr or "") + "\n" + (result.stdout or "")).casefold()
+    return ("index.lock" in detail or "could not lock index" in detail
+            or "unable to create" in detail and "index" in detail and "lock" in detail)
+
+
+def _sync_progress_index_unlocked(
+    parent: str, commit: str, specs: Sequence[str], expected_index: bytes, *, log=print,
+) -> bool:
+    """Synchronise machine-owned paths while preserving any external staging.
+
+    A failed ``git restore --staged`` may leave the real index at ``parent``
+    after the ref already moved to ``commit``.  Every retry re-reads the exact
+    target entries first.  A changed target aborts the repair; unrelated staged
+    files are never inspected or modified.
+    """
+    attempts = len(_INDEX_LOCK_RETRY_DELAYS) + 1
+    for attempt in range(attempts):
+        if not _validated_progress_pair_unlocked(
+                parent, commit, specs, timeout=10):
+            log("[git] progress index 重试前提交关系或目标路径已变化；保留当前 index")
+            return False
+        current_index = _index_entries_unlocked(specs, timeout=10)
+        if current_index != expected_index:
+            log("[git] progress index 重试前发现目标暂存内容已被外部修改；保留用户 index")
+            return False
+        synced = _run_git([
+            "restore", "--staged", f"--source={commit}", "--", *specs,
+        ], timeout=10)
+        if synced.returncode == 0:
+            verified = _index_matches_commit_unlocked(commit, specs, timeout=10)
+            if verified is True:
+                return True
+            log("[git] progress index 同步后校验不一致；保留当前 index 等待下次精确恢复")
+            return False
+        if not _index_lock_error(synced) or attempt + 1 >= attempts:
+            detail = ((synced.stderr or "") + (synced.stdout or "")).strip()[:200]
+            log(f"[git] progress index 同步失败，已保留耐久恢复记录：{detail}")
+            return False
+        delay = _INDEX_LOCK_RETRY_DELAYS[attempt]
+        log(f"[git] progress index 遇到瞬时锁，第{attempt + 1}次重试前等待 {delay:.2f}s")
+        time.sleep(delay)
+    return False
+
+
+def _validated_progress_pair_unlocked(
+    parent: str, commit: str, specs: Sequence[str], *, timeout: float = 10,
+) -> bool:
+    if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
+        return False
+    row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
+    parts = row.stdout.strip().split() if row.returncode == 0 else []
+    if len(parts) != 2 or parts[0].lower() != commit.lower() \
+            or parts[1].lower() != parent.lower():
+        return False
+    ancestor = _run_git(
+        ["merge-base", "--is-ancestor", commit, "HEAD"], timeout=timeout)
+    if ancestor.returncode != 0:
+        return False
+    unchanged = _run_git(
+        ["diff", "--quiet", commit, "HEAD", "--", *specs], timeout=timeout)
+    return unchanged.returncode == 0
+
+
+def _recover_pending_progress_indexes_unlocked(log=print) -> None:
+    entries = _read_progress_index_pending_unlocked()
+    if entries is None:
+        log("[git] progress index pending marker 无法解析；保留原件，拒绝猜测覆盖")
+        return
+    if not entries:
+        return
+    remaining: list[dict] = []
+    for entry in entries:
+        parent = str(entry.get("parent") or "")
+        commit = str(entry.get("commit") or "")
+        try:
+            specs = normalize_paths(entry.get("paths") or ())
+        except (TypeError, ValueError):
+            remaining.append(entry)
+            continue
+        if not _validated_progress_pair_unlocked(parent, commit, specs):
+            # A marker can outlive a failed update-ref.  It owns no index data
+            # unless its commit is a direct ancestor with unchanged target paths.
+            continue
+        matched_commit = _index_matches_commit_unlocked(commit, specs, timeout=10)
+        if matched_commit is True:
+            continue
+        matched_parent = _index_matches_commit_unlocked(parent, specs, timeout=10)
+        if matched_parent is not True:
+            log(f"[git] progress index {commit[:8]} 含非父树暂存内容；保留用户 index 与恢复记录")
+            remaining.append(entry)
+            continue
+        expected = _index_entries_unlocked(specs, timeout=10)
+        if (_index_matches_commit_unlocked(parent, specs, timeout=10) is not True
+                or _index_entries_unlocked(specs, timeout=10) != expected):
+            log(f"[git] progress index {commit[:8]} 取证期间发生变化；留待下次恢复")
+            remaining.append(entry)
+            continue
+        if _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
+            log(f"[git] 已从耐久记录补齐自动存档 {commit[:8]} 的真实 index")
+        else:
+            remaining.append(entry)
+    try:
+        _write_progress_index_pending_unlocked(remaining)
+    except OSError as exc:
+        log(f"[git] progress index 恢复记录清理失败，原记录留待下次核验：{exc}")
+
+
+def _latest_machine_progress_unlocked() -> tuple[str, str, str] | None:
+    history = _run_git([
+        "log", "--first-parent", "--format=%H%x00%P%x00%s", "HEAD",
+    ], timeout=30)
+    if history.returncode != 0:
+        return None
+    for line in history.stdout.splitlines():
+        parts = line.split("\0", 2)
+        if len(parts) != 3 or not _MACHINE_PROGRESS_SUBJECT.fullmatch(parts[2]):
+            continue
+        parents = parts[1].split()
+        if len(parents) == 1:
+            return parts[0], parents[0], parts[2]
+    return None
+
+
+def _recover_legacy_machine_progress_index_unlocked(log=print) -> bool:
+    """Repair pre-journal failures, even when later code/ledger commits are HEAD."""
+    latest = _latest_machine_progress_unlocked()
+    if latest is None:
+        return False
+    commit, parent, subject = latest
+    changed = _run_git([
+        "diff-tree", "--no-commit-id", "--name-only", "-r", "-z",
+        parent, commit, "--", *DEFAULT_PROGRESS_PATHS,
+    ], timeout=30)
+    if changed.returncode != 0:
+        return False
+    raw_paths = [
+        path for path in _nul_paths(changed.stdout)
+        if _path_in_specs(path, DEFAULT_PROGRESS_PATHS)
+    ]
+    if not raw_paths:
+        return False
+    try:
+        specs = normalize_paths(raw_paths)
+    except ValueError:
+        return False
+    if not _validated_progress_pair_unlocked(parent, commit, specs):
+        return False
+    if _index_matches_commit_unlocked(commit, specs, timeout=10) is True:
+        return False
+    if _index_matches_commit_unlocked(parent, specs, timeout=10) is not True:
+        return False
+    expected = _index_entries_unlocked(specs, timeout=10)
+    if (_index_matches_commit_unlocked(parent, specs, timeout=10) is not True
+            or _index_entries_unlocked(specs, timeout=10) != expected):
+        return False
+    try:
+        _add_progress_index_pending_unlocked(parent, commit, specs, subject)
+    except OSError as exc:
+        log(f"[git] legacy progress index 恢复记录写入失败，仍执行本次有界重试：{exc}")
+    if not _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
+        return False
+    _remove_progress_index_pending_unlocked(commit)
+    log(f"[git] 已识别并补齐历史自动存档 {commit[:8]} 的真实 index")
+    return True
+
+
 def _symbolic_head_unlocked(timeout: float = 90) -> str:
     result = _run_git(["symbolic-ref", "-q", "HEAD"], timeout=timeout)
     if result.returncode == 0:
@@ -538,6 +790,10 @@ def commit_progress_result(
     """用私有 index 原子提交指定路径，并可选在同一事务中 push。"""
     try:
         with repository_lock():
+            # Complete any ref-success/index-failure transaction before staged
+            # overlap is interpreted as user intent. New transactions have a
+            # durable journal; the legacy probe below repairs pre-journal runs.
+            _recover_pending_progress_indexes_unlocked(log=log)
             specs = normalize_paths(DEFAULT_PROGRESS_PATHS if paths is None else paths)
             # 可选的精确文件在旧安装中可能尚不存在；忽略既不存在也从未 tracked
             # 的 pathspec，但保留已删除的 tracked 路径以便提交 deletion。
@@ -551,6 +807,9 @@ def commit_progress_result(
             specs = tuple(effective_specs)
             staged = _staged_paths_unlocked()
             overlap = [path for path in staged if _path_in_specs(path, specs)]
+            if overlap and _recover_legacy_machine_progress_index_unlocked(log=log):
+                staged = _staged_paths_unlocked()
+                overlap = [path for path in staged if _path_in_specs(path, specs)]
             if overlap:
                 reason = "目标路径已有用户 staged 内容，拒绝自动提交：" + ", ".join(overlap[:8])
                 log(f"[git] {reason}")
@@ -599,22 +858,35 @@ def commit_progress_result(
                     if _symbolic_head_unlocked() != transaction_ref:
                         return CommitResult(False, before_head=before,
                                             reason="提交前 HEAD 分支身份发生变化")
+                    try:
+                        # Publish recovery intent before moving the ref. A
+                        # failed CAS leaves an inert entry that recovery can
+                        # discard precisely; a successful CAS survives a crash
+                        # before the real index is synchronised.
+                        _add_progress_index_pending_unlocked(
+                            before, commit, specs, message)
+                    except Exception as exc:
+                        last_error = f"progress index 恢复记录发布失败：{exc}"
+                        break
                     update_target = transaction_ref or "HEAD"
                     update = _run_git([
                         "update-ref", "-m", message[:120], update_target, commit, before])
                     if update.returncode != 0:
                         # 不遵守本锁的外部 Git 更新了 HEAD；从新 HEAD 重建树后再试。
                         last_error = update.stderr.strip()
+                        _remove_progress_index_pending_unlocked(commit)
                         continue
 
                     try:
                         current_target_index = _index_entries_unlocked(specs)
                         if current_target_index == original_target_index:
-                            sync = _run_git([
-                                "restore", "--staged", f"--source={commit}", "--", *specs])
-                            if sync.returncode != 0:
-                                log("[git] 提交已建立，但真实 index 同步失败；用户 index 未被强制覆盖："
-                                    + sync.stderr.strip()[:200])
+                            sync_ok = _sync_progress_index_unlocked(
+                                before, commit, specs, original_target_index, log=log)
+                            if sync_ok:
+                                _remove_progress_index_pending_unlocked(commit)
+                            else:
+                                log("[git] 提交已建立，但真实 index 同步失败；"
+                                    "用户 index 未被强制覆盖，耐久恢复记录已保留")
                         else:
                             log("[git] 提交期间目标 index 被外部进程修改；已保留其内容")
                     except Exception as exc:
