@@ -2910,30 +2910,71 @@ class Policy:
                     return 9999.0
                 return hp + enemy_block
 
-            def _effective_damage(_enemy: dict) -> float:
-                """Immediate attack output; block absorption is still real removal."""
-                # Keep the long-standing overkill/kill-bonus scale for ordinary
-                # targets, but unlike ``damage - block`` do not erase the portion
-                # that strips block.  Confirmed respawn adds are capped separately.
-                return float(total)
+            def _attack_outcome(enemy: dict) -> tuple[float, bool, int]:
+                """Return effective removal, lethal result and Slippery layers broken.
 
-            def _would_kill(enemy: dict) -> bool:
-                return float(total) >= _effective_pool(enemy)
+                Slippery clamps each hit that reaches HP to one damage, and loses
+                one layer only for such an unblocked hit.  Enemy block is consumed
+                before Slippery; ordinary targets retain the established scoring
+                and overkill semantics.
+                """
+                slippery = self._enemy_slippery_stack(enemy)
+                if slippery <= 0:
+                    return float(total), float(total) >= _effective_pool(enemy), 0
+                try:
+                    raw_hp = enemy.get("current_hp", 9999)
+                    hp = max(0.0, float(9999 if raw_hp is None else raw_hp))
+                    enemy_block = max(0.0, float(enemy.get("block", 0) or 0))
+                    layers = max(1, int(math.ceil(slippery)))
+                    segment_damage = max(0.0, float(dmg))
+                    segment_count = max(1, int(hits))
+                except (TypeError, ValueError, OverflowError):
+                    return float(total), float(total) >= _effective_pool(enemy), 0
+
+                removed = 0.0
+                broken = 0
+                for _ in range(segment_count):
+                    if hp <= 0:
+                        break
+                    unblocked = segment_damage
+                    absorbed = min(enemy_block, unblocked)
+                    enemy_block -= absorbed
+                    unblocked -= absorbed
+                    removed += absorbed
+                    if unblocked <= 0:
+                        continue
+                    if layers > 0 and unblocked >= 1.0:
+                        hp_lost = min(hp, 1.0)
+                        layers -= 1
+                        broken += 1
+                    else:
+                        hp_lost = min(hp, unblocked)
+                    hp -= hp_lost
+                    removed += hp_lost
+                return min(float(total), removed), hp <= 0, broken
 
             if aoe:
                 eff = 0
+                killable = []
+                slippery_notes = []
                 for e in enemies:
                     # Damage absorbed by enemy block still removes a current combat
                     # resource.  The old max(1, damage-block) valued a 6-damage Strike
                     # into 8 block as only 1 point, which routinely fell below the
                     # play threshold and ended turns with all energy unused.
-                    e_eff = _effective_damage(e)
+                    e_eff, e_killed, e_broken = _attack_outcome(e)
+                    slippery = self._enemy_slippery_stack(e)
+                    if slippery > 0:
+                        slippery_notes.append(
+                            f"{e.get('name') or e.get('enemy_id') or '敌人'}"
+                            f"{slippery:g}→破{e_broken}")
                     if self._is_respawn_add(e) and not all_respawn:
                         # 确认重生体：过量伤害记到当前血量为止（第 58 局实证：
                         # 11 点伤害砸 5 血利齿之眼按 11 计分，虚高吸走输出）
                         e_eff = min(e_eff, max(1.0, _effective_pool(e)))
                     eff += e_eff
-                killable = [e for e in enemies if _would_kill(e)]
+                    if e_killed:
+                        killable.append(e)
                 score = eff * atk_damp + sum(
                     self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
                                      incoming, pol, ignore_respawn=all_respawn)
@@ -2963,7 +3004,10 @@ class Policy:
                 hb = _hybrid_defense()
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
-                return score, None, f"群体伤害≈{eff}"
+                why = f"群体伤害≈{eff}"
+                if slippery_notes:
+                    why += "｜滑溜逐段折算：" + "、".join(slippery_notes)
+                return score, None, why
             best_t, best_s, why, best_kill = None, -1.0, "", False
             # 辅助体转火（第 136~137 批复盘）：多敌战斗中本回合零伤害意图的敌人
             # （治疗/增益/蓄力型）威胁分成恒为 0，旧评分永远把它排最后——头号杀手
@@ -2996,7 +3040,8 @@ class Policy:
                     break
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
-                eff = _effective_damage(e)
+                eff, killed, slippery_broken = _attack_outcome(e)
+                slippery = self._enemy_slippery_stack(e)
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 # 已持有力量层数的敌人是场上的战斗时钟。旧辅助体转火会把
                 # 零伤害减益体当头号目标，真正持续叠力量的敌人反而被晾着。
@@ -3021,7 +3066,6 @@ class Policy:
                     elif (_sticky_t is not None and not _doctrine_present
                           and e.get("index") == _sticky_t):
                         s += _sticky_v
-                killed = _would_kill(e)
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
                 if best_t is None or s > best_s:
@@ -3034,6 +3078,9 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    if slippery > 0:
+                        why += (f"｜滑溜{slippery:g}层，逐段折算≈{eff:.1f}，"
+                                f"预计破{slippery_broken}层")
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
@@ -3233,6 +3280,26 @@ class Policy:
             power_id = str(power.get("id") or power.get("power_id")
                            or power.get("name") or "")
             if "strength" not in power_id.lower() and "力量" not in power_id:
+                continue
+            amount = next((power.get(key) for key in ("amount", "stack", "value", "count")
+                           if power.get(key) is not None), None)
+            try:
+                amount_value = float(amount)
+            except (TypeError, ValueError):
+                continue
+            if amount_value > 0:
+                total += amount_value
+        return total
+
+    def _enemy_slippery_stack(self, enemy: dict) -> float:
+        """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
+        total = 0.0
+        for power in (enemy.get("powers") or []):
+            if not isinstance(power, dict):
+                continue
+            identity = " ".join(str(power.get(key) or "")
+                                for key in ("id", "power_id", "name"))
+            if "slipper" not in identity.lower() and "滑溜" not in identity:
                 continue
             amount = next((power.get(key) for key in ("amount", "stack", "value", "count")
                            if power.get(key) is not None), None)

@@ -3219,6 +3219,162 @@ def main() -> int:
     assert s_brk_suic < ff_thr <= s_brk_race, \
         f"自残归零的直死牌不应解禁: suic={s_brk_suic}"
 
+    # 3xg（01:43 滑溜批补合）：滑溜是逐 hit 的 HP 伤害上限，且只有穿甲
+    # 命中才掉层。评分、击杀判断和最终出牌必须共用同一条逐段结算路径。
+    sl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slippery-"))
+    sl_pol = policy.Policy(knowledge.Knowledge(sl_dir), random.Random(5))
+    sl_bludgeon = {
+        "index": 0, "card_id": "BLUDGEON", "name": "重锤", "playable": True,
+        "energy_cost": 3, "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 32}],
+    }
+    # 实际载荷没有虚构的 Hits 动态值；中文“两次”必须由规则文本解析。
+    sl_twin = {
+        "index": 1, "card_id": "TWIN_STRIKE", "name": "双重打击", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "resolved_rules_text": "造成5点伤害两次。",
+        "dynamic_values": [{"name": "Damage", "current_value": 5}],
+    }
+    sl_strike = {
+        "index": 2, "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 6}],
+    }
+    assert policy.card_numbers(sl_twin) == (5, 0, 2), \
+        f"中文多段伤害载荷解析失效: {policy.card_numbers(sl_twin)}"
+
+    def sl_enemy(hp=173, block=0, layers=None, *, index=0, intent=0, name="墨影幻灵"):
+        powers = [] if layers is None else [{
+            "power_id": "SLIPPERY_POWER", "name": "滑溜", "amount": layers,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": f"VANTOM_{index}", "name": name,
+            "current_hp": hp, "max_hp": 173, "block": block,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    def sl_score(card, enemy, incoming=0):
+        return sl_pol._score_play(
+            dict(card), [enemy], incoming, 0, 2, sl_pol.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+
+    # 三个身份字段必须合并识别，不能被一个无关 id 短路掉真实 power_id。
+    sl_identity = sl_enemy(layers=8)
+    sl_identity["powers"][0]["id"] = "RUNTIME_WRAPPER"
+    assert sl_pol._enemy_slippery_stack(sl_identity) == 8, \
+        f"真实 power_id 被无关 id 短路: {sl_identity['powers']}"
+
+    # 无滑溜/零层严格保留旧计分；高层时不发“破层信用”，每个穿甲 hit 只记 1。
+    s_plain, _, why_plain = sl_score(sl_bludgeon, sl_enemy(layers=None))
+    s_zero, _, why_zero = sl_score(sl_bludgeon, sl_enemy(layers=0))
+    s_sl_bludgeon, _, why_sl_bludgeon = sl_score(sl_bludgeon, sl_enemy(layers=8))
+    s_sl_twin, _, why_sl_twin = sl_score(sl_twin, sl_enemy(layers=8))
+    assert math.isclose(s_plain, 32.0) and math.isclose(s_zero, s_plain), \
+        f"普通敌人旧评分回归: plain={s_plain} zero={s_zero} why={why_plain}/{why_zero}"
+    assert math.isclose(s_sl_bludgeon, 1.0) and math.isclose(s_sl_twin, 2.0), \
+        f"滑溜逐 hit 计分或零信用失效: hammer={s_sl_bludgeon} twin={s_sl_twin}"
+    assert s_sl_twin > s_sl_bludgeon and "预计破1层" in why_sl_bludgeon \
+            and "预计破2层" in why_sl_twin, \
+        f"多段牌未正确优先: hammer={why_sl_bludgeon} twin={why_sl_twin}"
+
+    # block 必须先逐段吸收：全挡不掉层；部分穿甲只让该 hit 限伤并掉一层。
+    s_full_block, _, why_full_block = sl_score(sl_bludgeon, sl_enemy(block=40, layers=8))
+    s_full_plain, _, _ = sl_score(sl_bludgeon, sl_enemy(block=40, layers=None))
+    s_partial, _, why_partial = sl_score(sl_strike, sl_enemy(block=3, layers=8))
+    assert math.isclose(s_full_block, s_full_plain) and "预计破0层" in why_full_block, \
+        f"整段被格挡仍误掉滑溜层: slip={s_full_block} plain={s_full_plain} why={why_full_block}"
+    assert math.isclose(s_partial, 4.0) and "逐段折算≈4.0" in why_partial \
+            and "预计破1层" in why_partial, \
+        f"部分穿甲结算错误（3甲+1血应为4）: score={s_partial} why={why_partial}"
+    s_combo, _, why_combo = sl_score(sl_twin, sl_enemy(block=3, layers=1))
+    assert math.isclose(s_combo, 9.0) and "预计破1层" in why_combo, \
+        f"多段攻击穿甲并中途耗尽滑溜层错误（3甲+1血+5血应为9）: " \
+        f"score={s_combo} why={why_combo}"
+    _, _, why_exact_block = sl_score(sl_bludgeon, sl_enemy(hp=1, block=32, layers=8))
+    _, _, why_exact_pierce = sl_score(sl_bludgeon, sl_enemy(hp=1, block=31, layers=8))
+    assert not why_exact_block.startswith("可击杀") and "预计破0层" in why_exact_block, \
+        f"刚好全挡被误判击杀/掉层: {why_exact_block}"
+    assert why_exact_pierce.startswith("可击杀") and "预计破1层" in why_exact_pierce, \
+        f"刚好穿甲1点未判击杀/掉层: {why_exact_pierce}"
+
+    # 层数耗尽后，后续 hit 恢复原伤害；击杀边界必须与评分共用模拟结果。
+    s_one_layer, _, why_one_layer = sl_score(sl_twin, sl_enemy(layers=1))
+    assert math.isclose(s_one_layer, 6.0) and "预计破1层" in why_one_layer, \
+        f"滑溜耗尽后的后续 hit 未恢复伤害: score={s_one_layer} why={why_one_layer}"
+    _, _, why_hp1 = sl_score(sl_bludgeon, sl_enemy(hp=1, layers=8))
+    _, _, why_hp20 = sl_score(sl_bludgeon, sl_enemy(hp=20, layers=8))
+    _, _, why_hp2_twin = sl_score(sl_twin, sl_enemy(hp=2, layers=8))
+    assert why_hp1.startswith("可击杀") and not why_hp20.startswith("可击杀") \
+            and why_hp2_twin.startswith("可击杀"), \
+        f"滑溜击杀边界错误: hp1={why_hp1} hp20={why_hp20} twin/hp2={why_hp2_twin}"
+
+    # AOE 中普通敌人仍按旧口径，滑溜敌人按逐段口径；理由留下可观测明细。
+    sl_aoe = {
+        "index": 3, "card_id": "CLEAVE", "name": "顺劈斩", "playable": True,
+        "energy_cost": 1, "requires_target": False,
+        "resolved_rules_text": "对所有敌人造成6点伤害。",
+        "dynamic_values": [{"name": "Damage", "current_value": 6}],
+    }
+    sl_aoe_enemies = [
+        sl_enemy(hp=50, layers=None, index=0, name="普通敌人"),
+        sl_enemy(hp=50, layers=8, index=1, name="墨影幻灵"),
+    ]
+    s_aoe, t_aoe, why_aoe = sl_pol._score_play(
+        sl_aoe, sl_aoe_enemies, 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert math.isclose(s_aoe, 7.0) and t_aoe is None \
+            and "群体伤害≈7.0" in why_aoe and "墨影幻灵8→破1" in why_aoe, \
+        f"AOE 滑溜折算错误: score={s_aoe} target={t_aoe} why={why_aoe}"
+
+    # 现有集火粘性不因结算重构丢失。
+    sl_pol._focus_index = 1
+    sticky_enemies = [
+        sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+        sl_enemy(hp=80, layers=None, index=1, intent=5, name="乙"),
+    ]
+    sl_sticky_strike = dict(sl_strike, valid_target_indices=[0, 1])
+    _, sticky_target, sticky_why = sl_pol._score_play(
+        sl_sticky_strike, sticky_enemies, 10, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert sticky_target == 1 and sl_pol._focus_index == 1 and "延续集火" in sticky_why, \
+        f"滑溜结算重构破坏集火粘性: target={sticky_target} why={sticky_why}"
+
+    # 单体候选混有普通与滑溜敌人时，逐目标模拟不能把滑溜折算泄漏到普通目标。
+    sl_mixed_bludgeon = dict(sl_bludgeon, valid_target_indices=[0, 1])
+    _, mixed_target, mixed_why = sl_pol._score_play(
+        sl_mixed_bludgeon, [
+            sl_enemy(hp=80, layers=8, index=0, name="滑溜目标"),
+            sl_enemy(hp=80, layers=None, index=1, name="普通目标"),
+        ], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert mixed_target == 1 and "普通目标" in mixed_why, \
+        f"滑溜逐目标状态污染普通目标: target={mixed_target} why={mixed_why}"
+
+    # 端到端：同场重锤与双重打击应选多段牌；只有重锤时仍正常出牌而非禁玩。
+    def sl_combat_state(hand):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+            "combat": {
+                "player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                "hand": hand, "enemies": [sl_enemy(layers=8)],
+            },
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+        }
+
+    sl_live_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slippery-live-"))), random.Random(5))
+    d_sl_multi = sl_live_pol.decide(sl_combat_state([sl_bludgeon, sl_twin]), DummyCtx())
+    assert d_sl_multi.action == "play_card" and d_sl_multi.params.get("card_index") == 1 \
+            and "滑溜8层" in d_sl_multi.reason, \
+        f"端到端未选择多段攻击: {d_sl_multi.action} {d_sl_multi.params}（{d_sl_multi.reason}）"
+    sl_only_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slippery-only-"))), random.Random(5))
+    d_sl_only = sl_only_pol.decide(sl_combat_state([sl_bludgeon]), DummyCtx())
+    assert d_sl_only.action == "play_card" and d_sl_only.params.get("card_index") == 0, \
+        f"滑溜单段攻击被误禁导致空过: {d_sl_only.action} {d_sl_only.params}（{d_sl_only.reason}）"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))
