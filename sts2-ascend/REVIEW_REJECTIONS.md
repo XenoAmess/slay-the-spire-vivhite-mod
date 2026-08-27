@@ -85,7 +85,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-27 12:09:39 | `242ed73e` | 已审计并删除 `d5a2623` | （已删除） | staging 与 `sts2-review-sandbox-od6ummf0` 均为空 |
 | 2026-08-27 12:43:09 | `16dd132c` | 被后继闭环吸收并删除 `10d3a78` | （已删除） | 三份权威副本一致；观测阶段由 13:23 后继行为版取代，残缺 `.raw_sandbox.incomplete` 未采用 |
 <!-- rejection:20260827-150719-1787814439535649300-7a068289 -->
-| 2026-08-27 15:07:19 | 第 736~759 局范围内的 23 局 | `7a068289` | process_exit | kimi-for-coding/k3 | 已审计空包，待删除 | `knowledge/code_backups/review_salvage/20260827-150719-1787814439535649300-7a068289` | K3 静默 exit=1；patch/report/files/raw clone 均无正式或未跟踪成果，无需补合 |
+| 2026-08-27 15:07:19 | 第 736~759 局范围内的 23 局 | `7a068289` | process_exit | kimi-for-coding/k3 | 已审计并删除 `e7286f6` | （已删除） | K3 静默 exit=1；patch/report/files/raw clone 均无正式或未跟踪成果；远端确认审计提交后删除 |
 <!-- rejection:20260827-150533-1787814333393135800-5318be56 -->
 | 2026-08-27 15:05:33 | 第 736~740 局 | `5318be56` | process_exit | opencode-go/glm-5.3-flash@max | 已审计并删除 `960d6c6` | （已删除） | Stop 中断；正式 patch/report/files 均为空，raw clone 仅有中断的临时分析脚本，无可补合成果；远端确认审计提交后删除 |
 <!-- rejection:20260827-154717-1787816837897736800-a344792f -->
