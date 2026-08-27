@@ -3857,3 +3857,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/751 胜，当前目标进阶 0
+
+## 第 752 局复盘（2026-08-27 14:09）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：RAMPAGE, DISMANTLE, RUPTURE, TRUE_GRIT, CINDER, UNRELENTING, PILLAGE, SHRUG_IT_OFF, RAMPAGE
+- 本局遗物：VAJRA, 白兽雕像, MOLTEN_EGG
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血17; F8 Monster战 掉血7; F12 Monster战 掉血21; F14 Elite战 掉血36; F17 Boss战 掉血26（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，CONFLAGRATION(24分/53局)，PRIMAL_FORCE(24分/2局)，FEED(24分/42局)，FIEND_FIRE(24分/30局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/752 胜，当前目标进阶 0
