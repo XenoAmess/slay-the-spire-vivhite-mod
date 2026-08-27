@@ -1916,6 +1916,9 @@ class SandboxReviewResult:
     wip_patch: bytes = b""
     wip_paths: tuple[str, ...] = ()
     allowed_paths: tuple[str, ...] = ()
+    # 自检/导入产生的缓存仍进入全量取证包，但既不是模型源码成果，也不能
+    # 被当成越界提交误杀已验证的源码 patch。
+    artifact_paths: tuple[str, ...] = ()
     unexpected_paths: tuple[str, ...] = ()
     snapshot_dir: str = ""
     snapshot_complete: bool = False
@@ -1927,6 +1930,37 @@ def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
                  timeout: int = 120) -> subprocess.CompletedProcess:
     return _run_captured_stop_aware(
         ["git", "-C", str(repo), *args], binary=binary, timeout=timeout)
+
+
+def _is_review_transient_artifact(path: str) -> bool:
+    """Return whether *path* is a reproducible tool/test cache artifact.
+
+    This classification affects acceptance only.  The full-forensics capture
+    still preserves these bytes and records their paths for later analysis.
+    """
+    pure = PurePosixPath(str(path).replace("\\", "/"))
+    # Cache producers use many spellings (.cache, __pycache__, npm-cache,
+    # Caches, custom_tool_cache, ...).  These files never enter the accepted
+    # patch, so treating every cache-named path as transient is broad without
+    # weakening the source allowlist.  Full WIP capture still retains them.
+    if any("cache" in part.casefold() for part in pure.parts):
+        return True
+    return pure.name.lower().endswith((".pyc", ".pyo"))
+
+
+def _replace_with_retry(source: Path, target: Path, attempts: int = 8) -> None:
+    """Atomically publish a file/directory despite short Windows scan locks."""
+    last_error: OSError | None = None
+    for attempt in range(max(1, attempts)):
+        try:
+            source.replace(target)
+            return
+        except PermissionError as exc:
+            last_error = exc
+            if attempt + 1 < attempts:
+                time.sleep(0.05 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
 
 
 def _read_sandbox_text(repo: Path, relative: str, limit: int = 2 * 1024 * 1024) -> str:
@@ -2007,9 +2041,13 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
         allowed_set = {path.replace("\\", "/").rstrip("/")
                        for path in REVIEW_MUTABLE_PATHS}
         allowed = [path for path in changed if path.rstrip("/") in allowed_set]
-        unexpected = [path for path in changed if path.rstrip("/") not in allowed_set]
+        artifacts = [path for path in changed if _is_review_transient_artifact(path)]
+        unexpected = [path for path in changed
+                      if path.rstrip("/") not in allowed_set
+                      and not _is_review_transient_artifact(path)]
         result.wip_paths = tuple(changed)
         result.allowed_paths = tuple(allowed)
+        result.artifact_paths = tuple(artifacts)
         result.unexpected_paths = tuple(unexpected)
         capture_complete = True
 
@@ -2228,6 +2266,7 @@ def _save_review_salvage(
         "raw_sandbox_deferred": deferred_raw,
         "all_paths": list(all_paths),
         "allowed_paths": list(allowed_paths),
+        "transient_artifact_paths": list(sandbox.artifact_paths),
         "rejected_or_unexpected_paths": list(sandbox.unexpected_paths),
         "patch_bytes": patch_bytes,
         "patch_sha256": patch_sha256,
@@ -2258,12 +2297,11 @@ def _save_review_salvage(
         if not deferred_raw and retained is not None and retained.is_dir():
             # 捕获链自身失败时，宁可保存完整 clone（含 .git 与所有 ignored/越界
             # 内容）供分析。symlinks=True 只复制链接本身，不跟随到隔离仓外。
-            raw_stage = temp / ".raw_sandbox.incomplete"
+            raw_target = temp / "raw_sandbox"
             shutil.copytree(
-                retained, raw_stage, dirs_exist_ok=True,
+                retained, raw_target, dirs_exist_ok=True,
                 symlinks=True, ignore_dangling_symlinks=True,
                 copy_function=_copy_snapshot_file)
-            raw_stage.replace(temp / "raw_sandbox")
         # 固定三件套始终存在；snapshot 缺失时仍发布空/已有 patch 供诊断。
         if not (temp / "wip.patch").is_file():
             (temp / "wip.patch").write_bytes(patch)
@@ -2276,7 +2314,7 @@ def _save_review_salvage(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if _review_stop_requested() and not (deferred_raw or deferred_snapshot):
             raise _ReviewStopped()
-        temp.replace(final)
+        _replace_with_retry(temp, final)
         sandbox.salvage_saved = str(final)
         if not deferred_snapshot:
             _discard_sandbox_snapshot(sandbox, log=log)
@@ -2314,7 +2352,7 @@ def _save_review_salvage(
             (temp / "manifest.json").write_text(
                 json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")
-            temp.replace(final)
+            _replace_with_retry(temp, final)
             sandbox.salvage_saved = str(final)
             log(f"[llm] 停止期间已快速发布失败现场指针包：{final}")
             return final
@@ -2398,6 +2436,10 @@ def _run_review_sandbox(
             [item.replace("\\", "/") for item in (tracked.stdout + others.stdout).split("\0") if item]))
         own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
         paths = [path for path in paths if path != own_prompt]
+        # Cache artifacts may be ignored or unignored depending on the tool and
+        # repository.  Neither form is model source, so remove both before the
+        # acceptance/patch path set; finally's full capture records the bytes.
+        paths = [path for path in paths if not _is_review_transient_artifact(path)]
         review_files = {item.replace("\\", "/").rstrip("/")
                         for item in REVIEW_MUTABLE_PATHS}
         unexpected = [path for path in paths
@@ -2631,7 +2673,6 @@ def _recover_deferred_salvages(log=print) -> None:
         if (not package.is_dir()
                 or not (raw_pointer.is_file() or snapshot_pointer.is_file())):
             continue
-        stage: Path | None = None
         try:
             manifest_path = package / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -2642,16 +2683,15 @@ def _recover_deferred_salvages(log=print) -> None:
                 if not _is_owned_review_temp(raw, "sts2-review-sandbox-"):
                     raise OSError(f"不安全的 raw sandbox 指针：{raw}")
                 target = package / "raw_sandbox"
-                if not target.exists():
-                    if not raw.is_dir():
-                        raise OSError(f"raw sandbox 已不存在：{raw}")
-                    stage = package / ".raw_sandbox.tmp"
+                if not raw.is_dir() and not target.exists():
+                    raise OSError(f"raw sandbox 已不存在：{raw}")
+                if raw.is_dir():
+                    # manifest/pointer remains deferred until copytree returns;
+                    # a partial target is safely completed on the next retry.
                     shutil.copytree(
-                        raw, stage, dirs_exist_ok=True, symlinks=True,
+                        raw, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
-                    stage.replace(target)
-                    stage = None
                 manifest.update({
                     "raw_sandbox_included": True,
                     "raw_sandbox_deferred": False,
@@ -2667,16 +2707,13 @@ def _recover_deferred_salvages(log=print) -> None:
                 if not _is_owned_review_temp(snapshot, "sts2-review-snapshot-"):
                     raise OSError(f"不安全的 snapshot 指针：{snapshot}")
                 target = package / "captured_snapshot"
-                if not target.exists():
-                    if not snapshot.is_dir():
-                        raise OSError(f"snapshot 已不存在：{snapshot}")
-                    stage = package / ".captured_snapshot.tmp"
+                if not snapshot.is_dir() and not target.exists():
+                    raise OSError(f"snapshot 已不存在：{snapshot}")
+                if snapshot.is_dir():
                     shutil.copytree(
-                        snapshot, stage, dirs_exist_ok=True, symlinks=True,
+                        snapshot, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
-                    stage.replace(target)
-                    stage = None
                 manifest.update({
                     "snapshot_included": True,
                     "snapshot_deferred": False,
@@ -2691,7 +2728,7 @@ def _recover_deferred_salvages(log=print) -> None:
             manifest_temp.write_text(
                 json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")
-            os.replace(manifest_temp, manifest_path)
+            _replace_with_retry(manifest_temp, manifest_path)
             # 先让项目内完整副本与 manifest 落稳，再清系统临时现场；只有清理
             # 成功才撤指针。若此处崩溃/权限失败，下次启动仍能精确重试而不泄漏。
             for pointer, item in completed:
@@ -2705,12 +2742,6 @@ def _recover_deferred_salvages(log=print) -> None:
             log(f"[llm] 已异步补全停止复盘的完整失败现场：{package}")
         except Exception as exc:
             log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
-            if (stage is not None and stage.is_dir()
-                    and not _review_stop_requested()):
-                try:
-                    shutil.rmtree(stage)
-                except OSError:
-                    pass
 
 
 def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:

@@ -113,6 +113,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 复盘 active 时在线 checkpoint 仍须正常提交并推送；不得因为长复盘（统一超时 8 小时）让直播进度长期只留在本地。
 - `review_queue_max` 与 `max_runs_in_packet` 当前统一为 100；它们限制单批规模，不得截断持久队列。
 - 超时、进程失败、自检失败、allowlist 拒绝或提交冲突时，必须把隔离仓内**全部工作树改动**（含越界、被忽略和被规则拒绝的文件）保存到 `knowledge/code_backups/review_salvage/` 供人工分析；clone/快照原件必须从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停只准发布项目内指针并异步补齐；自动合入仍只准使用 allowlist patch，补合包永不自动应用。
+- 复盘验收必须区分“允许源码 patch / cache 临时产物 / 全量取证现场”：任一层路径名含 `cache`（大小写不敏感）或为标准 Python 字节码缓存后缀时，不进入自动 patch、也不阻断已验证源码；但文件本身仍须完整写入取证包并列入 `transient_artifact_paths`。其他 ignored/越界文件仍拒绝。
 - **严禁 AI 自作主张收紧复盘模型可提交的文件范围。** 现有提交 allowlist 的任何删减或新增禁区都必须先取得用户明确授权；不能借“安全”“防摸鱼”或闭环门禁之名限制模型修改 `brain/config.json`。闭环机制可以验收结果、保存现场和回退，但不得暗中覆盖或忽略模型对允许文件的修改。
 
 ## 工作流程规则

@@ -170,6 +170,8 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 - 超时、进程失败、自检失败、allowlist 拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
   ignored 和被规则拒绝的文件）原子保存到 `knowledge/code_backups/review_salvage/<批次>/`；
   `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 仅供人工分析，永不自动应用；
+- 路径任一层名称含 `cache`（大小写不敏感）或为 Python 字节码缓存后缀的再生成产物会完整留档并
+  记录到 `transient_artifact_paths`，但不会混入源码 patch，也不会误杀已经通过自检的源码改动；
   clone/快照从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停时先发布项目内
   指针再由新 Brain 异步补齐，不依赖可能被系统清理的外部 TEMP
 - 隔离失败现场保存后才删除 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，

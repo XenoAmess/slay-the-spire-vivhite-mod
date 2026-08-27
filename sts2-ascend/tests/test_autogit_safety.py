@@ -505,6 +505,56 @@ class AutoGitSafetyTests(unittest.TestCase):
             llm_review.KNOWLEDGE_DIR = old_knowledge
             llm_review.PROMPT_FILE = old_prompt
 
+    def test_review_sandbox_captures_pyc_without_rejecting_source_patch(self) -> None:
+        self._write(".gitignore", "**/__pycache__/\n*.py[cod]\n")
+        self._git("add", ".gitignore")
+        self._git("commit", "-qm", "ignore python caches")
+        pre_head = self._git("rev-parse", "HEAD").stdout.strip()
+        old_repo = llm_review.REPO_DIR
+        old_knowledge = llm_review.KNOWLEDGE_DIR
+        old_prompt = llm_review.PROMPT_FILE
+        llm_review.REPO_DIR = self.repo
+        llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
+        llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
+        try:
+            def write_source_and_cache(cmd, timeout, translate=None):
+                sandbox = Path(cmd[cmd.index("--dir") + 1])
+                policy = sandbox / "sts2-ascend" / "brain" / "policy.py"
+                policy.write_text("VALUE = 2\n", encoding="utf-8")
+                cache = policy.parent / "__pycache__" / "policy.cpython-314.pyc"
+                cache.parent.mkdir()
+                cache.write_bytes(b"REPRODUCIBLE_BYTECODE")
+                generic_cache = sandbox / "tool-CACHE" / "result.bin"
+                generic_cache.parent.mkdir()
+                generic_cache.write_bytes(b"GENERIC_CACHE")
+                return 0, "done", False, False
+
+            with (mock.patch.object(
+                    llm_review, "_stream_run", side_effect=write_source_and_cache),
+                  mock.patch.object(llm_review, "_run_selfcheck", return_value=True)):
+                result = llm_review._run_review_sandbox(
+                    ["fake", "--dir", str(self.repo)], "prompt", pre_head, 10,
+                    mock.Mock(feed=lambda _line: None), log=lambda _msg: None)
+            self.assertEqual(result.error, "")
+            self.assertEqual(result.paths, ("sts2-ascend/brain/policy.py",))
+            self.assertIn(b"VALUE = 2", result.patch)
+            self.assertNotIn(b"REPRODUCIBLE_BYTECODE", result.patch)
+            self.assertNotIn(b"GENERIC_CACHE", result.patch)
+            self.assertIn(
+                "sts2-ascend/brain/__pycache__/policy.cpython-314.pyc",
+                result.wip_paths)
+            self.assertIn("tool-CACHE/result.bin", result.wip_paths)
+            self.assertEqual(set(result.artifact_paths), {
+                "sts2-ascend/brain/__pycache__/policy.cpython-314.pyc",
+                "tool-CACHE/result.bin",
+            })
+            self.assertEqual(result.unexpected_paths, ())
+            llm_review._discard_sandbox_snapshot(result, log=lambda _msg: None)
+        finally:
+            llm_review.REPO_DIR = old_repo
+            llm_review.KNOWLEDGE_DIR = old_knowledge
+            llm_review.PROMPT_FILE = old_prompt
+
     def test_runner_counts_slow_post_review_crashes(self) -> None:
         old_marker = runner.MARKER
         marker = self.repo / "sts2-ascend" / "knowledge" / "pending_restart.json"

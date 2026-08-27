@@ -130,8 +130,10 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertEqual(manifest["allowed_paths"], ["sts2-ascend/brain/policy.py"])
             self.assertEqual(
                 set(manifest["rejected_or_unexpected_paths"]),
-                {".runtime/rejected.bin", "outside.txt",
-                 "sts2-ascend/brain/__pycache__/model.pyc"})
+                {".runtime/rejected.bin", "outside.txt"})
+            self.assertEqual(
+                manifest["transient_artifact_paths"],
+                ["sts2-ascend/brain/__pycache__/model.pyc"])
             self.assertEqual(
                 set(manifest["all_paths"]),
                 {".runtime/rejected.bin", "outside.txt", "sts2-ascend/brain/policy.py",
@@ -205,6 +207,59 @@ class ReviewSalvageTests(unittest.TestCase):
                         (saved / "manifest.json").read_text(encoding="utf-8"))
                     self.assertTrue(manifest["raw_sandbox_included"])
                     self.assertFalse(manifest["raw_sandbox_deferred"])
+        finally:
+            if raw.exists():
+                shutil.rmtree(raw, ignore_errors=True)
+            if snapshot.exists():
+                shutil.rmtree(snapshot, ignore_errors=True)
+
+    def test_deferred_recovery_completes_existing_partial_targets(self) -> None:
+        raw = Path(tempfile.mkdtemp(prefix="sts2-review-sandbox-"))
+        snapshot = Path(tempfile.mkdtemp(prefix="sts2-review-snapshot-"))
+        try:
+            (raw / "repo").mkdir()
+            (raw / "repo" / "complete.txt").write_text("raw complete\n", encoding="utf-8")
+            (snapshot / "files").mkdir()
+            (snapshot / "files" / "complete.txt").write_text(
+                "snapshot complete\n", encoding="utf-8")
+            with tempfile.TemporaryDirectory(prefix="sts2-salvage-partial-") as root:
+                salvage_root = Path(root) / "salvage"
+                package = salvage_root / "package"
+                (package / "raw_sandbox" / "repo").mkdir(parents=True)
+                (package / "captured_snapshot" / "files").mkdir(parents=True)
+                (package / "raw_sandbox" / "repo" / "partial.txt").write_text(
+                    "keep raw partial\n", encoding="utf-8")
+                (package / "captured_snapshot" / "files" / "partial.txt").write_text(
+                    "keep snapshot partial\n", encoding="utf-8")
+                (package / "raw_sandbox_pointer.txt").write_text(
+                    str(raw) + "\n", encoding="utf-8")
+                (package / "snapshot_pointer.txt").write_text(
+                    str(snapshot) + "\n", encoding="utf-8")
+                (package / "manifest.json").write_text(json.dumps({
+                    "raw_sandbox_included": False,
+                    "raw_sandbox_deferred": True,
+                    "snapshot_included": False,
+                    "snapshot_deferred": True,
+                }), encoding="utf-8")
+                with mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root):
+                    llm_review._recover_deferred_salvages(log=lambda _msg: None)
+
+                self.assertEqual(
+                    (package / "raw_sandbox" / "repo" / "complete.txt").read_text(
+                        encoding="utf-8"), "raw complete\n")
+                self.assertEqual(
+                    (package / "captured_snapshot" / "files" / "complete.txt").read_text(
+                        encoding="utf-8"), "snapshot complete\n")
+                self.assertTrue(
+                    (package / "raw_sandbox" / "repo" / "partial.txt").is_file())
+                self.assertTrue(
+                    (package / "captured_snapshot" / "files" / "partial.txt").is_file())
+                manifest = json.loads(
+                    (package / "manifest.json").read_text(encoding="utf-8"))
+                self.assertTrue(manifest["raw_sandbox_included"])
+                self.assertTrue(manifest["snapshot_included"])
+                self.assertFalse((package / "raw_sandbox_pointer.txt").exists())
+                self.assertFalse((package / "snapshot_pointer.txt").exists())
         finally:
             if raw.exists():
                 shutil.rmtree(raw, ignore_errors=True)
