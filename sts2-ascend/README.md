@@ -155,24 +155,29 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 由 `preferred_*_cooldown_min` 配置。优先与兜底复盘超时统一为 8 小时（480 分钟）；
 复盘正常换行事件持续写直播流，病态超大单事件会有界截断；宿主内存只保留有界尾部。
 
-并发安全设计：
+隔离、提交与成果保全设计：
 
-- 复盘模型在无 remote、无 hardlink 的独立 clone 内工作；生产树只接收自检通过的 allowlist
-  精确 patch
+- 复盘模型在无 remote、无 hardlink 的独立 clone 内工作；宿主盘点该 clone 的全部改动，
+  再用 deny-only 分类器导出自检通过的精确二进制 patch。`sts2-ascend/` 下安全的静态
+  项目文件均可接收，包括新建或 ignored 的源码、`brain/config.json`、其他配置、脚本、
+  测试、文档和静态知识。cache 产物从 patch 排除但不阻断已验证源码；在线运行状态、
+  Git 元数据与越界/不安全路径会拒绝自动合入整批，并先保全完整现场
 - 不使用“全仓指纹变化”、全仓脏状态或 refs 变化作为复盘门禁；真实仓的正常提交、推送、
   用户文件与运行日志变化不会让隔离成果作废
 - autogit 以进程内锁 + 跨进程锁包围完整事务，并在私有 index 构造提交，不读写用户 index
-- 普通存档与复盘提交各有精确 allowlist；目标路径已有 staged 内容时整笔拒绝
+- 普通存档使用既定的在线进度 pathspec；复盘提交使用 deny-only 验证后的实际改动路径，
+  不使用固定文件名单。目标路径已有 staged 内容时整笔拒绝
 - 复盘 active 时在线存档照常提交并立即推送；复盘结束也会补推此前网络失败的积压，
   不依赖优先模型必须产出有效 patch 才能上库
 - 分支固定 symbolic-ref 身份并通过 `update-ref` compare-and-swap 前进；并发提交发生时从新 HEAD
   重建，分支切换则拒绝事务
-- 超时、进程失败、自检失败、allowlist 拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
+- 超时、进程失败、自检失败、deny-only 边界拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
   ignored 和被规则拒绝的文件）原子保存到 `knowledge/code_backups/review_salvage/<批次>/`；
   `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 仅供人工分析，永不自动应用；
 - 每次新失败包发布后都会更新受 Git 跟踪的 [`REVIEW_REJECTIONS.md`](REVIEW_REJECTIONS.md)，并为
   该条拒合记录单独建立 commit；正常运行立即 push，停止临界区先本地 commit、下次启动补推，
-  以免远端清单失踪又不牺牲两分钟热停死线
+  以免远端清单失踪又不牺牲两分钟热停死线。补合或空包审计结论在远端确认后，
+  先更新清单状态，再只删除该条已闭环的失败包
 - 路径任一层名称含 `cache`（大小写不敏感）或为 Python 字节码缓存后缀的再生成产物会完整留档并
   记录到 `transient_artifact_paths`，但不会混入源码 patch，也不会误杀已经通过自检的源码改动；
   clone/快照从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停时先发布项目内
@@ -195,12 +200,15 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   安全反向 commit 并立即拉起旧代码。push 交给后续正常 checkpoint，恢复热路径不等待网络
 - GLM 可用时，积压/长期未成功只扩大追及批次，不再强制交替到 K3；K3 仅在 preferred 模型被
   实际判定 unavailable/cooldown 时作为 fallback
-- 只有运行时行为/观测变更才在本局结束的安全点以退出码 42 自重启加载；纯报告不再被误判为
-  代码变更，也不会制造无意义的 Brain 断流
+- 提交验收与 Brain 热重启分开判定：通过验收的源码、脚本、测试、文档和静态知识都按实际
+  patch 提交；只有 `brain/` 内 Brain 长驻进程会加载的 Python 源码或运行配置出现实质变更，
+  才发布事务 marker，并在局间以退出码 42 热重启。其他已验收文件不因此被丢弃，也不制造
+  无意义的 Brain 断流
 
 复盘以 **OpenCode 无头会话**（`opencode run`，走本机已有授权，无需 API key）执行，
-只可修改提示词与宿主共同定义的策略代码/报告 allowlist；在线 `stats`、`policy`、`progression`、
-`lessons`、`runs` 在复盘期间只读。复盘报告追加到 `knowledge/meta_review.md`。
+模型可修改 `sts2-ascend/` 下 deny-only 边界内的任意静态项目文件，不设固定提交名单；在线
+`stats`、`policy`、`progression`、`lessons`、`runs` 在复盘期间只读。复盘报告追加到
+`knowledge/meta_review.md`。
 
 每份新 run 携带稳定 `run_number`，追及队列按局号读取 active 或已 compact 的原证据。旧日志
 没有局号映射时会显式标记 `recent_fallback_unmapped`，不会把“最近 N 局”冒充目标批次。
@@ -271,7 +279,8 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - 默认配置：`llm.tts_mode=edge`、`tts.clone_engine=indextts`、`device=cuda:0`
 - `edge_speaker.py` 用 `zh-CN-XiaoxiaoNeural` 三路预合成实时正文；Edge 网络失败只让该句回退 SAPI，
   不会把实时正文塞给慢速 IndexTTS
-- 隔离复盘通过 allowlist、自检并导出 patch 后，把本场短结论直接放进 `LIVE-END` 哨兵；Edge 收到后
+- 隔离复盘通过 deny-only 路径分类、自检并导出精确 patch 后，把本场短结论直接放进
+  `LIVE-END` 哨兵；Edge 收到后
   立即以 `source=conclusion` 提交给共享 GPU owner，因此不依赖稍后才合入的全局结论文件，也不会读到上一场
 - 共享 owner 会把整段结论保留为一个不可插队的逻辑任务，但每次真正调用模型前按自然停顿细分：目标约 10 字、
   硬上限 20 字；所有空白规范化后不超过 20 个字符的输入同时限制为最多 320 个语义 token，缩小随机解码
