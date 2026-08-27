@@ -305,7 +305,15 @@ def _summarize_run(data: dict, evidence_match: str) -> dict:
     }
 
 
-def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[dict]:
+def _review_run_records(
+        n: int, batch_runs: list[int] | None = None) -> list[tuple[Path, dict, str]]:
+    """Resolve the bounded recent set or an exact queued batch once.
+
+    The returned evidence label keeps archived/legacy fallback rows explicit so
+    callers cannot accidentally present unrelated recent runs as the requested
+    batch.  Both summaries and full decision-chain evidence consume this same
+    resolver, preventing the two views from silently drifting apart.
+    """
     run_dir = KNOWLEDGE_DIR / "runs"
     if not run_dir.exists():
         return []
@@ -332,14 +340,14 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
                 selected.append((p, d))
 
     if not requested:
-        return [_summarize_run(data, "recent") for _, data in recent]
+        return [(path, data, "recent") for path, data in recent]
 
     seen = {path.name for path, _ in selected}
     selected.extend(_requested_archived_runs(requested, seen))
     selected.sort(key=lambda row: (int(row[1].get("run_number") or 0), row[0].name))
     matched = {int(data.get("run_number")) for _, data in selected
                if data.get("run_number") is not None}
-    out = [_summarize_run(data, "exact_batch") for _, data in selected]
+    out = [(path, data, "exact_batch") for path, data in selected]
     if matched != requested:
         # Historical logs predate run_number.  Keep a bounded recent fallback for
         # diagnostic context, but label it so the coach cannot mistake it for the
@@ -347,18 +355,78 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
         fallback_n = max(0, n - len(out))
         for path, data in list(recent)[-fallback_n:] if fallback_n else []:
             if path.name not in seen:
-                out.append(_summarize_run(data, "recent_fallback_unmapped"))
+                out.append((path, data, "recent_fallback_unmapped"))
     return out
+
+
+def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[dict]:
+    return [_summarize_run(data, evidence_match)
+            for _, data, evidence_match in _review_run_records(n, batch_runs)]
+
+
+def _primary_failure_decision_chain(
+        n: int, batch_runs: list[int] | None = None,
+        records: list[tuple[Path, dict, str]] | None = None) -> dict:
+    """Return every persisted decision from the newest exact failed run.
+
+    A 100-run queue currently contains roughly 6.6 MB of decision JSON and does
+    not fit safely alongside tools in the review model's context.  The newest
+    failed run is therefore the mandatory full-fidelity case; the other queued
+    runs keep their bounded summaries.  Nothing inside the selected decision list
+    is clipped or sampled, including legacy rows that predate rich trace fields.
+    """
+    records = records if records is not None else _review_run_records(n, batch_runs)
+    eligible = []
+    for path, data, evidence_match in records:
+        if batch_runs and evidence_match != "exact_batch":
+            continue
+        summary = _summarize_run(data, evidence_match)
+        if not summary["victory"]:
+            eligible.append((int(summary.get("run_number") or 0), path, data,
+                             evidence_match, summary))
+    if not eligible:
+        return {
+            "selection_policy": "newest_exact_failed_run_full",
+            "full_failure_run": None,
+        }
+
+    _, path, data, evidence_match, summary = max(
+        eligible, key=lambda item: (item[0], item[1].name))
+    decisions = [row for row in (data.get("decisions") or [])
+                 if isinstance(row, dict)]
+    serialized = json.dumps(decisions, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "selection_policy": "newest_exact_failed_run_full; other_runs_summarized",
+        "full_failure_run": {
+            "run_id": data.get("run_id"),
+            "run_number": summary.get("run_number"),
+            "evidence_match": evidence_match,
+            "evidence_file": path.name,
+            "victory": False,
+            "floor": summary.get("floor"),
+            "decision_count": len(decisions),
+            "serialized_chars": len(serialized),
+            "complete_persisted_chain": True,
+            "decisions": decisions,
+        },
+    }
 
 
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None) -> str:
     n = int(cfg.get("max_runs_in_packet", 100))
-    run_summaries = _recent_run_summaries(n, batch_runs=batch_runs)
+    run_records = _review_run_records(n, batch_runs=batch_runs)
+    run_summaries = [_summarize_run(data, evidence_match)
+                     for _, data, evidence_match in run_records]
+    decision_chain_evidence = _primary_failure_decision_chain(
+        n, batch_runs=batch_runs, records=run_records)
     evidence_text = []
     for summary in run_summaries:
         evidence_text.extend(summary.get("combat_notes") or [])
         evidence_text.extend(summary.get("key_reasons") or [])
+    full_failure_run = decision_chain_evidence.get("full_failure_run") or {}
+    evidence_text.extend(str(row.get("reason") or "")
+                         for row in (full_failure_run.get("decisions") or []))
     native = getattr(know, "game_knowledge", None)
     packet = {
         "runs_summary": run_summaries,
@@ -373,6 +441,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
                 item.get("evidence_match") == "recent_fallback_unmapped"
                 for item in run_summaries),
         },
+        "decision_chain_evidence": decision_chain_evidence,
         "stats_digest": _stats_digest(know),
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
@@ -419,6 +488,12 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
 # 你的任务（严格按顺序）
 1. 归因分析：主要死因趋势、打法缺陷、卡组构建问题、地图路线问题、代码缺陷。
+   若 `decision_chain_evidence.full_failure_run` 非 null，必须先逐条阅读其中的
+   `decisions`；这是本批最新死亡局未经截断的完整持久决策链。旧日志可能只有
+   action/params/reason；新日志的
+   关键选择还会带 turn/energy/trace，end_turn 会带 turn_end_state。重点核查有剩余
+   能量和可打手牌却结束回合、错误目标、药水时机、路线与休息选择，并引用具体楼层/
+   回合/动作作为证据。其余局可按 runs_summary 做趋势分析，不要求逐条展开。
    涉及卡牌/怪物/遗物/药水/事件机制时，必须优先查阅 packet 中的
    `native_game_knowledge`；摘要不够就按 `corpus_paths` 精确检索相应 runtime 与
    mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。

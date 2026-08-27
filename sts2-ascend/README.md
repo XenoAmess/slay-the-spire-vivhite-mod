@@ -139,7 +139,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 模型按**优先链**逐条检查（`opencode models` 清单为准，条目形如 `provider/model[@variant]`）：
 
 1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
-3. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
+2. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
 
 命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
 每个条目**独立失败冷却**：当前超时与硬失败（exit≠0/异常）都冷却 5 分钟，
@@ -174,6 +174,11 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 每份新 run 携带稳定 `run_number`，追及队列按局号读取 active 或已 compact 的原证据。旧日志
 没有局号映射时会显式标记 `recent_fallback_unmapped`，不会把“最近 N 局”冒充目标批次。
+每批复盘还会把**最新死亡局的全部持久决策记录**原样内嵌到
+`decision_chain_evidence.full_failure_run`，模型必须逐条检查；其余局继续使用有界摘要，避免
+100 局完整链超过模型上下文。新生成的战斗记录会为每个成功动作补记回合和能量；`end_turn`
+额外保存当时的手牌、可用动作、来伤和有界 `SCAN/GATE/RANK/LOCK` 轨迹，地图、休息、事件、
+选牌、商店和药水等高信息选择也保存有界轨迹。旧 run 没有这些新增字段时仍完全兼容。
 
 手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。若故障报告证明旧批次曾完成但
 未成功合入，可在大脑停止后的切换窗口用 `py brain/llm_review.py --requeue 562,566,567`

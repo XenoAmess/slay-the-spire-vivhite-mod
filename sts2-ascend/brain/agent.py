@@ -117,6 +117,24 @@ def _reward_delta(old_sig: tuple, new_sig: tuple) -> tuple:
 # side effects after a brain restart.
 _DURABLE_ATTRIBUTION_KINDS = frozenset({"card_pick", "relic_pick", "map_node"})
 
+# Rich traces are useful review evidence, but persisting one for every card click
+# multiplies a run log several times over.  Keep them at the decisions where the
+# policy commits a turn or a run-level strategic choice.  Every successful action
+# still keeps its compact action/params/reason row below.
+_DURABLE_DECISION_TRACE_ACTIONS = frozenset({
+    "end_turn",
+    "use_potion",
+    "choose_map_node",
+    "choose_event_option",
+    "choose_rest_option",
+    "choose_reward_card",
+    "skip_reward_cards",
+    "select_deck_card",
+    "buy_card",
+    "buy_relic",
+    "buy_potion",
+})
+
 
 def _durable_attribution_tags(raw_tags) -> list[tuple]:
     """Validate the small, replay-safe subset stored in incremental run logs."""
@@ -127,6 +145,103 @@ def _durable_attribution_tags(raw_tags) -> list[tuple]:
             continue
         result.append(tuple(raw))
     return result
+
+
+def _decision_log_entry(state: dict, decision, *, timestamp: str | None = None) -> dict:
+    """Build bounded, replay-safe evidence for one accepted action.
+
+    Old run logs only carried ``action/params/reason``.  That is enough to know
+    what happened, but not enough to diagnose the expensive failure mode where
+    the policy ends a turn while energy and playable cards remain.  Combat rows
+    now also keep turn/energy; an ``end_turn`` row keeps the bounded hand and
+    intent snapshot plus the already-computed display trace.  Strategic choices
+    keep that trace as well, while routine card clicks remain compact.
+    """
+    run = state.get("run") or {}
+    combat = state.get("combat") or {}
+    player = combat.get("player") or {}
+    screen = state.get("screen", "UNKNOWN")
+    hp = run.get("current_hp", player.get("current_hp"))
+    gold = run.get("gold")
+    entry = {
+        "t": timestamp or time.strftime("%H:%M:%S"),
+        "screen": screen,
+        "floor": run.get("floor", 0),
+        "hp": hp,
+        "gold": gold,
+        "action": decision.action,
+        "params": decision.params,
+        "reason": decision.reason,
+    }
+
+    if screen == "COMBAT":
+        turn = state.get("turn")
+        energy = player.get("energy")
+        if turn is not None:
+            entry["turn"] = turn
+        if energy is not None:
+            entry["energy"] = energy
+
+    if decision.action not in _DURABLE_DECISION_TRACE_ACTIONS:
+        return entry
+
+    ensure_decision_trace(state, decision)
+    trace = getattr(decision, "trace", None)
+    if isinstance(trace, dict):
+        selected = dict(trace.get("selected") or {})
+        # ``entry.reason`` is canonical; do not store the same long sentence in
+        # selected.reason and explanation again.  Preserve any genuinely distinct
+        # builder notes because they often explain a gate or ranking tie.
+        selected.pop("reason", None)
+        explanation = [value for value in (trace.get("explanation") or [])
+                       if value and value != decision.reason][:4]
+        entry["trace"] = {
+            "observation": copy.deepcopy(trace.get("observation") or {}),
+            "gates": copy.deepcopy(list(trace.get("gates") or [])[:32]),
+            "candidates": copy.deepcopy(list(trace.get("candidates") or [])[:8]),
+            "selected": selected,
+        }
+        if explanation:
+            entry["trace"]["explanation"] = copy.deepcopy(explanation)
+
+    if screen == "COMBAT" and decision.action == "end_turn":
+        incoming = 0
+        for enemy in combat.get("enemies") or []:
+            if not isinstance(enemy, dict) or not enemy.get("is_alive", True):
+                continue
+            for intent in enemy.get("intents") or []:
+                if not isinstance(intent, dict):
+                    continue
+                try:
+                    incoming += int(intent.get("total_damage") or 0)
+                except (TypeError, ValueError):
+                    pass
+        hand = []
+        for position, card in enumerate(combat.get("hand") or []):
+            if not isinstance(card, dict) or len(hand) >= 12:
+                continue
+            card_evidence = {
+                "index": card.get("index", position),
+                "card_id": card.get("card_id"),
+                "name": card.get("name"),
+                "card_type": card.get("card_type"),
+                "energy_cost": card.get("energy_cost"),
+                "playable": card.get("playable"),
+                "requires_target": card.get("requires_target"),
+                "valid_target_indices": list(card.get("valid_target_indices") or [])[:8],
+                "why_not_playable": card.get("why_not_playable")
+                    or card.get("disabled_reason"),
+            }
+            hand.append({key: value for key, value in card_evidence.items()
+                         if value is not None and value != []})
+        entry["turn_end_state"] = {
+            "block": player.get("block"),
+            "incoming_damage": incoming,
+            "available_actions": [str(value)
+                                  for value in (state.get("available_actions") or [])[:32]],
+            "hand": hand,
+        }
+    return entry
 
 
 @dataclass
@@ -595,11 +710,13 @@ class Agent:
             if tag[0] == "play_card" and tag[1]:
                 self.know.commit_card_play(tag[1])
 
-        self.ctx.decisions.append({
-            "t": time.strftime("%H:%M:%S"), "screen": screen,
-            "floor": run.get("floor", 0), "hp": hp, "gold": gold,
-            "action": decision.action, "params": decision.params, "reason": decision.reason,
-        })
+        # Persist the accepted pre-action decision evidence.  Rich snapshots are
+        # deliberately limited by _decision_log_entry; routine actions remain as
+        # compact as the historical schema.
+        decision_row = _decision_log_entry(state, decision)
+        decision_row["hp"] = hp
+        decision_row["gold"] = gold
+        self.ctx.decisions.append(decision_row)
         self._save_run_progress(run)
 
     @staticmethod
