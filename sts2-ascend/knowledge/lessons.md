@@ -3802,3 +3802,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/746 胜，当前目标进阶 0
+
+## 第 747 局复盘（2026-08-27 13:31）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：SECOND_WIND, UNMOVABLE, DARK_EMBRACE, RAMPAGE, IRON_WAVE, SHRUG_IT_OFF, IMPERVIOUS
+- 本局遗物：MEAL_TICKET
+- 战斗记录：F6 Monster战 掉血22; F9 Monster战 掉血32; F12 Unknown战 掉血19; F14 Monster战 掉血33; F15 Monster战 掉血17; F17 Boss战 掉血19（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/53局)，PRIMAL_FORCE(24分/2局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/747 胜，当前目标进阶 0
