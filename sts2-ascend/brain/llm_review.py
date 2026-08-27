@@ -342,6 +342,18 @@ def _recent_review_context(max_chars: int = 12000) -> str:
     return "[较早内容已截断]\n" + text[-max_chars:]
 
 
+def _batch_description(batch_runs) -> str:
+    """Describe reordered/recovered batches without producing `730~729`."""
+    runs = sorted({int(run) for run in (batch_runs or [])})
+    if not runs:
+        return ""
+    if len(runs) == 1:
+        return f"第 {runs[0]} 局"
+    if len(runs) == runs[-1] - runs[0] + 1:
+        return f"第 {runs[0]}~{runs[-1]} 局"
+    return f"第 {runs[0]}~{runs[-1]} 局范围内的 {len(runs)} 局"
+
+
 def _historical_zero_code_context(max_sections: int = 10,
                                   max_chars: int = 30000) -> str:
     """Extract accepted zero-code reports as explicit implementation debt."""
@@ -710,9 +722,9 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
     cadence = every or cfg.get('review_every_runs', 10)
     if batch_runs and len(batch_runs) > 1:
-        scope = f"本次复盘覆盖第 {batch_runs[0]}~{batch_runs[-1]} 局（共 {len(batch_runs)} 局，异步追及队列）"
+        scope = f"本次复盘覆盖{_batch_description(batch_runs)}（异步追及队列）"
     elif batch_runs:
-        scope = f"本次复盘覆盖第 {batch_runs[0]} 局"
+        scope = f"本次复盘覆盖{_batch_description(batch_runs)}"
     else:
         scope = f"每 {cadence} 局你做一次大模型复盘"
     missing_batch = packet["run_evidence_scope"]["missing"]
@@ -1319,8 +1331,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         return False
 
     runs = know.stats["global"]["runs"]
-    batch_txt = f"第{batch_runs[0]}~{batch_runs[-1]}局" if batch_runs and len(batch_runs) > 1 \
-        else f"第{batch_runs[0]}局" if batch_runs else f"第{runs}局"
+    batch_txt = (_batch_description(batch_runs).replace(" ", "")
+                 if batch_runs else f"第{runs}局")
     # 1) 只保存在线数据。代码必须已干净；自动流程绝不替用户提交开发中的代码。
     autogit.commit_progress_result(
         f"chore(sts2-ascend): {batch_txt}后复盘前在线存档",

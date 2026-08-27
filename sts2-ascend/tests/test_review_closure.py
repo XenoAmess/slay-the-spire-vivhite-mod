@@ -23,6 +23,11 @@ AGENT = "sts2-ascend/brain/agent.py"
 
 
 class ReviewClosureTests(unittest.TestCase):
+    def test_recovered_batch_description_is_ordered_and_honest(self) -> None:
+        self.assertEqual(llm_review._batch_description([730, 698, 699, 729]),
+                         "第 698~730 局范围内的 4 局")
+        self.assertEqual(llm_review._batch_description([3, 2, 1]), "第 1~3 局")
+
     def test_default_policy_requires_runtime_action_every_batch(self) -> None:
         cfg = llm_review.load_llm_config()
         self.assertTrue(cfg["review_require_action_every_batch"])
