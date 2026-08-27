@@ -4,8 +4,9 @@
 add、建 commit、原子更新分支及 push 全程持有同一个跨进程锁。分支更新使用
 compare-and-swap，外部并发提交只会令事务重试，不会被覆盖。
 
-复盘回滚只接受固定 allowlist 内、属于一个已验证 commit 的反向 patch，并先用
-``git apply --check`` 验证。这里刻意没有全仓 reset/clean。
+复盘回滚只接受 deny-only 路径分类器判定为静态项目文件、且属于一个已验证
+commit 的反向 patch，并先用 ``git apply --check`` 验证。这里刻意没有全仓
+reset/clean。
 """
 from __future__ import annotations
 
@@ -32,7 +33,9 @@ DEFAULT_PROGRESS_PATHS = (
     "sts2-ascend/knowledge/lessons.md",
     "sts2-ascend/knowledge/preferred_model_state.json",
 )
-# runner 只信这份进程内常量，不信 pending marker 自报的路径。
+# 旧 marker 缺少 paths 时 runner 仍需要一个进程内兜底集合。新复盘验收不再把
+# 这 11 个文件当作边界；``validate_review_paths(..., allowlist=...)`` 仅为旧 API/
+# 测试保留精确名单模式。
 REVIEW_PATCH_ALLOWLIST = (
     "sts2-ascend/brain/__main__.py",
     "sts2-ascend/brain/agent.py",
@@ -47,10 +50,9 @@ REVIEW_PATCH_ALLOWLIST = (
     "sts2-ascend/knowledge/review_conclusion.txt",
 )
 
-# Shared vocabulary for classifying paths produced by an isolated review.  The
-# current exact-file allowlist remains authoritative until callers explicitly
-# switch to ``classify_review_path``; keeping the classifier independent makes
-# that later integration reviewable and avoids a half-migrated acceptance path.
+# Shared vocabulary for classifying paths produced by an isolated review.  This
+# classifier is the single acceptance boundary used by both the sandbox and Git
+# transaction layers.
 REVIEW_PATH_ACCEPTED = "accepted"
 REVIEW_PATH_ONLINE_RUNTIME = "online-runtime"
 REVIEW_PATH_CACHE = "cache"
@@ -273,7 +275,8 @@ def _nul_paths(raw: str) -> list[str]:
 def _normalize_path(path: str | os.PathLike[str]) -> str:
     raw = os.fspath(path).replace("\\", "/").rstrip("/")
     pure = PurePosixPath(raw)
-    if (not raw or pure.is_absolute() or ".." in pure.parts
+    if (not raw or pure.is_absolute() or re.match(r"^[A-Za-z]:", raw)
+            or ".." in pure.parts
             or any(char in raw for char in ("\0", "\n", "\r", "*", "?", "["))
             or raw.startswith(":")):
         raise ValueError(f"不安全的 Git 路径：{raw!r}")
@@ -305,20 +308,36 @@ def classify_review_path(path: str | os.PathLike[str]) -> str:
     cache takes precedence over online-runtime.
     """
     try:
-        normalized = _normalize_path(path)
-    except (TypeError, ValueError):
+        raw = os.fspath(path).replace("\\", "/").rstrip("/")
+        pure = PurePosixPath(raw)
+    except TypeError:
         return REVIEW_PATH_OUTSIDE_UNSAFE
 
-    # ``normalize_paths`` intentionally accepts the project root as a Git path
-    # spec for progress commits. A review target must always be one exact file.
-    if normalized == "sts2-ascend":
+    # Unsafe path syntax always wins, even when a component happens to contain
+    # the word ``cache``.  For a safe repository-relative path, however, cache
+    # classification happens before the sts2-ascend root check: tool caches at
+    # the clone root are reproducible artifacts and must not kill an otherwise
+    # valid source patch.  They are still excluded from the accepted patch and
+    # retained in the full forensic snapshot.
+    if (not raw or pure.is_absolute() or re.match(r"^[A-Za-z]:", raw)
+            or ".." in pure.parts
+            or any(char in raw for char in ("\0", "\n", "\r", "*", "?", "["))
+            or raw.startswith(":")):
         return REVIEW_PATH_OUTSIDE_UNSAFE
+    normalized = pure.as_posix().lstrip("./")
 
     parts = tuple(part.casefold() for part in PurePosixPath(normalized).parts)
     if any(part == ".git" for part in parts) or ".gitmodules" in parts:
         return REVIEW_PATH_GIT_METADATA
     if any("cache" in part for part in parts) or parts[-1].endswith((".pyc", ".pyo")):
         return REVIEW_PATH_CACHE
+
+    # ``normalize_paths`` intentionally accepts the project root as a Git path
+    # spec for progress commits. A review target must always be one exact file,
+    # and no ordinary file outside sts2-ascend is review-eligible.
+    if (normalized == "sts2-ascend"
+            or not normalized.startswith("sts2-ascend/")):
+        return REVIEW_PATH_OUTSIDE_UNSAFE
 
     relative = parts[1:]
     if relative and relative[0] == ".runtime":
@@ -352,21 +371,34 @@ def _path_in_specs(path: str, specs: Sequence[str]) -> bool:
 
 
 def validate_review_paths(
-    paths: Sequence[str], allowlist: Sequence[str] = REVIEW_PATCH_ALLOWLIST,
+    paths: Sequence[str], allowlist: Sequence[str] | None = None,
 ) -> tuple[str, ...]:
-    """Normalize and validate the review patch's exact file allowlist.
+    """Normalize and validate exact files in a model-produced review patch.
 
-    Review specs are files, not directory roots.  Prefix semantics would accept a
-    path such as ``brain/config.json/evil.py`` after replacing the allowed file with
-    a directory.  Progress/archive scopes intentionally keep using
-    :func:`_path_in_specs`; untrusted review patches require exact equality.
+    By default the shared deny-only classifier accepts static files under
+    ``sts2-ascend`` and rejects online runtime state, caches, Git metadata and
+    unsafe/outside paths.  Passing ``allowlist`` retains the former exact-file
+    mode for legacy callers; prefix semantics are never used for review patches.
     """
-    normalized = normalize_paths(paths)
-    allowed = normalize_paths(allowlist)
-    allowed_set = set(allowed)
-    denied = [path for path in normalized if path not in allowed_set]
+    if allowlist is not None:
+        normalized = normalize_paths(paths)
+        allowed_set = set(normalize_paths(allowlist))
+        denied = [path for path in normalized if path not in allowed_set]
+        if denied:
+            raise ValueError("复盘 patch 含显式名单外路径：" + ", ".join(denied))
+        return normalized
+
+    raw_paths = tuple(paths)
+    if not raw_paths:
+        raise ValueError("Git 路径列表不能为空")
+    denied = [
+        f"{path!r}({classify_review_path(path)})"
+        for path in raw_paths
+        if classify_review_path(path) != REVIEW_PATH_ACCEPTED
+    ]
     if denied:
-        raise ValueError("复盘 patch 含越界路径：" + ", ".join(denied))
+        raise ValueError("复盘 patch 含 deny-only 边界路径：" + ", ".join(denied))
+    normalized = normalize_paths(raw_paths)
     return normalized
 
 

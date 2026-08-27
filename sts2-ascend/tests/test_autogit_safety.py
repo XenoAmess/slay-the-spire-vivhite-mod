@@ -491,15 +491,16 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
         self.assertEqual(self._read("sts2-ascend/brain/policy.py"), "USER = 99\n")
 
-        # 构造一个真实但越界的单父 commit；安全回滚层必须先拒绝路径。
+        # 构造一个触碰在线知识状态的单父 commit；deny-only 回滚层必须先拒绝。
         self._git("restore", "sts2-ascend/brain/policy.py")
         parent = self._git("rev-parse", "HEAD").stdout.strip()
-        self._write("sts2-ascend/tts/unsafe.py", "unsafe = True\n")
-        self._git("add", "sts2-ascend/tts/unsafe.py")
-        self._git("commit", "-qm", "out of allowlist")
+        self._write("sts2-ascend/knowledge/stats.json", '{"runs": 999}\n')
+        self._git("add", "sts2-ascend/knowledge/stats.json")
+        self._git("commit", "-qm", "online runtime must not be review rollback")
         commit = self._git("rev-parse", "HEAD").stdout.strip()
         self.assertFalse(autogit.rollback_review_commit(parent, commit))
-        self.assertEqual(self._read("sts2-ascend/tts/unsafe.py"), "unsafe = True\n")
+        self.assertEqual(
+            self._read("sts2-ascend/knowledge/stats.json"), '{"runs": 999}\n')
 
     def test_review_rollback_is_local_and_uses_shared_total_budget(self) -> None:
         path = "sts2-ascend/brain/policy.py"
@@ -1122,14 +1123,19 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(online, ["sts2-ascend/knowledge/stats.json"])
         self.assertEqual(unexpected, ["sts2-ascend/brain/autogit.py", "outside.txt"])
         with self.assertRaises(ValueError):
-            autogit.validate_review_paths(["sts2-ascend/brain/autogit.py"])
+            autogit.validate_review_paths(
+                ["sts2-ascend/brain/autogit.py"],
+                allowlist=autogit.REVIEW_PATCH_ALLOWLIST)
         self.assertEqual(
-            autogit.validate_review_paths(["sts2-ascend/brain/selfcheck.py"]),
+            autogit.validate_review_paths(
+                ["sts2-ascend/brain/selfcheck.py"],
+                allowlist=autogit.REVIEW_PATCH_ALLOWLIST),
             ("sts2-ascend/brain/selfcheck.py",),
         )
         with self.assertRaises(ValueError):
             autogit.validate_review_paths([
-                "sts2-ascend/brain/config.json/evil.py"])
+                "sts2-ascend/brain/config.json/evil.py"],
+                allowlist=autogit.REVIEW_PATCH_ALLOWLIST)
         review, concurrent, unexpected = llm_review._partition_review_changes([
             "sts2-ascend/brain/config.json/evil.py",
             "sts2-ascend/knowledge/runs/new.json",

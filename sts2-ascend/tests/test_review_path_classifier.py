@@ -84,6 +84,10 @@ class ReviewPathClassifierTests(unittest.TestCase):
             "sts2-ascend/brain/model.pyo",
             "sts2-ascend/knowledge/runs/__PYCACHE__/run.bin",
             "sts2-ascend/.runtime/model.pyc",
+            # A safe clone-relative tool cache outside sts2-ascend is still a
+            # transient artifact: it is excluded from the patch but retained
+            # in the full forensic snapshot.
+            "tool-CACHE/result.bin",
         ])
 
     def test_git_metadata_wins_over_cache_and_online_runtime(self) -> None:
@@ -107,6 +111,10 @@ class ReviewPathClassifierTests(unittest.TestCase):
             "sts2-ascend/bad\0name.py",
             "/tmp/sts2-ascend/brain/policy.py",
             r"C:\temp\sts2-ascend\brain\policy.py",
+            # Windows drive-absolute and drive-relative syntax must never be
+            # hidden by the cache exception.
+            "C:/tmp/cache/result.bin",
+            "C:cache/result.bin",
         ]
         self.assert_paths(autogit.REVIEW_PATH_OUTSIDE_UNSAFE, unsafe)
         for path in unsafe:
@@ -123,15 +131,43 @@ class ReviewPathClassifierTests(unittest.TestCase):
             autogit.REVIEW_PATH_OUTSIDE_UNSAFE,
         )
 
-    def test_existing_exact_allowlist_validation_semantics_are_unchanged(self) -> None:
+    def test_default_validation_is_deny_only_with_optional_exact_compatibility(self) -> None:
         self.assertEqual(
-            autogit.validate_review_paths(["sts2-ascend/brain/selfcheck.py"]),
+            autogit.validate_review_paths([
+                "sts2-ascend/brain/autogit.py",
+                "sts2-ascend/scripts/Start-Agent.ps1",
+                "sts2-ascend/docs/review-design.md",
+            ]),
+            (
+                "sts2-ascend/brain/autogit.py",
+                "sts2-ascend/scripts/Start-Agent.ps1",
+                "sts2-ascend/docs/review-design.md",
+            ),
+        )
+        for path in (
+            "sts2-ascend/knowledge/stats.json",
+            "sts2-ascend/brain/__pycache__/policy.pyc",
+            "sts2-ascend/.git/config",
+            "outside.txt",
+            "C:/tmp/cache/result.bin",
+        ):
+            with self.subTest(default_denied=path), self.assertRaises(ValueError):
+                autogit.validate_review_paths([path])
+
+        # Legacy callers can still request exact-file semantics. In particular,
+        # a formerly allowed filename can never turn into a directory prefix.
+        exact = autogit.REVIEW_PATCH_ALLOWLIST
+        self.assertEqual(
+            autogit.validate_review_paths(
+                ["sts2-ascend/brain/selfcheck.py"], allowlist=exact),
             ("sts2-ascend/brain/selfcheck.py",),
         )
         with self.assertRaises(ValueError):
-            autogit.validate_review_paths(["sts2-ascend/brain/autogit.py"])
+            autogit.validate_review_paths(
+                ["sts2-ascend/brain/autogit.py"], allowlist=exact)
         with self.assertRaises(ValueError):
-            autogit.validate_review_paths(["sts2-ascend/brain/config.json/evil.py"])
+            autogit.validate_review_paths(
+                ["sts2-ascend/brain/config.json/evil.py"], allowlist=exact)
 
 
 if __name__ == "__main__":
