@@ -134,6 +134,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - 提交信息应简洁明了，说明本次改动的内容。
 - 确保只提交与本次任务相关的文件。
+- 长任务必须按独立、可验证、可回退的增量及时拆分 commit 并推送；不得为了等待同一任务的所有后续问题一次修完而长期憋成一个大提交。
 
 ### 2. 完成后将经验总结进 docs
 
