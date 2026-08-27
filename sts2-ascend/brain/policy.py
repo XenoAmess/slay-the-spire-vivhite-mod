@@ -5322,7 +5322,29 @@ class Policy:
                     # 战斗是唯一杠杆；非判死或回血确有翻盘潜力的带内裁决不变
                     # （441~446 批三局带内回血生还的实证保留）
                     _post_margin = cur_hp + eff_heal - pess
-                    if _doomed and _post_margin <= margin:
+                    # 第709~713批复盘修正（绝境带弃疗须过乐观口径复核）：悲观账
+                    # （场均×1.5 战损 × eff=0.42 折算的血池均值）判「回血买不到
+                    # 生还」时，紧急线以下的阵营也被送上砧——709 局 29% 血前夜
+                    # 锻造，23 点进场整管打空；而同批 713 局在同款判死预演下
+                    # 73% 进场实战击杀一幕 Boss。doom 标签在贴线对局上系统性
+                    # 偏悲观（折算率与池均值双重压账），绝境带的错误弃疗代价是
+                    # 当场处决，错误回血的代价只是少升一张牌。规则：紧急线以下
+                    # 且有效回血 ≥8% 血条时，先做乐观口径复核（输出/格挡实现率
+                    # 均封顶 1.0 的联合能量对账）——若仍存在可行攻防分配，说明
+                    # 判死主要来自折算悲观而非物理极限，回血的翻盘前提成立，
+                    # 维持带内回血至上；只有乐观口径下也无路可走才必败上砧。
+                    _dopt_feasible = False
+                    if (_doomed and hp_pct < float(pol.get("rest_urgent_hp_pct", 0.45))
+                            and eff_heal >= 0.08 * max_hp):
+                        _dopt_pool, _dopt_fire = self.know.boss_race_vitals(
+                            self._floor_act(run.get("floor")))
+                        if _dopt_pool and _dopt_fire:
+                            _dopt_feasible, _ = self._race_joint_feasible(
+                                deck or [], float(_dopt_pool), float(_dopt_fire),
+                                float(max_hp),
+                                float(pol.get("kill_race_margin", 1.5)),
+                                eff=1.0, blk_eff=1.0)
+                    if _doomed and _post_margin <= margin and not _dopt_feasible:
                         return Decision("choose_rest_option",
                                         {"option_index": smith["index"]},
                                         f"篝火：Boss 前夜必败弃疗改锻造（当前 {hp_pct:.0%}；"
@@ -5332,7 +5354,13 @@ class Policy:
                                         f"回血买不到生还；{_doom_note}；本次可升级"
                                         f"{len(upgradable)}张，缩短战斗是唯一杠杆）",
                                         tags=[("rest", "smith")], wait=1.2)
-                    _doom_tail = f"；竞速预演虽判必败（{_doom_note}），回血后有望越过悲观安全线" if _doomed else ""
+                    if _doomed and _dopt_feasible:
+                        _doom_tail = ("；竞速预演虽判必败（乐观口径复核存在可行攻防分配，"
+                                      "判死主要来自折算悲观），紧急带内回血保住翻盘前提")
+                    elif _doomed:
+                        _doom_tail = f"；竞速预演虽判必败（{_doom_note}），回血后有望越过悲观安全线"
+                    else:
+                        _doom_tail = ""
                     return Decision("choose_rest_option", {"option_index": heal["index"]},
                                     f"篝火：Boss 前夜翻转带回血（当前 {hp_pct:.0%}；不回血预期余量"
                                     f"{cur_hp - pess:.0f}≤安全余量{margin:.0f}（悲观战损{pess:.0f}="

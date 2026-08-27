@@ -5012,6 +5012,25 @@ def main() -> int:
     d_br_strong = br_pol.decide(br_rest_strong, br_ctx)
     assert d_br_strong.tags and d_br_strong.tags[0] == ("rest", "heal"), \
         f"竞速可赢的强卡组前夜应维持旧回血裁决: {d_br_strong.reason}"
+    # 第709~713批补合：紧急低血且悲观账判死时，必须再过一次乐观联合能量复核。
+    # 用固定判定隔离测试分支路由，避免样本均值/卡池细节变化让回归夹具漂移。
+    _br_doomed = br_pol._boss_race_doomed
+    _br_joint = br_pol._race_joint_feasible
+    br_pol._boss_race_doomed = lambda *args, **kwargs: (True, "固定悲观判死")
+    br_rest_urgent = dict(br_rest_weak,
+                          run=dict(br_rest_weak["run"], current_hp=20))
+    br_pol._race_joint_feasible = lambda *args, **kwargs: (True, "固定乐观可行")
+    d_br_urgent_heal = br_pol.decide(br_rest_urgent, br_ctx)
+    assert d_br_urgent_heal.tags and d_br_urgent_heal.tags[0] == ("rest", "heal") \
+        and "乐观口径复核存在可行攻防分配" in d_br_urgent_heal.reason, \
+        f"紧急低血的乐观可行对局应回血: {d_br_urgent_heal.reason}"
+    br_pol._race_joint_feasible = lambda *args, **kwargs: (False, "固定乐观无解")
+    d_br_urgent_smith = br_pol.decide(br_rest_urgent, br_ctx)
+    assert d_br_urgent_smith.tags and d_br_urgent_smith.tags[0] == ("rest", "smith") \
+        and "必败弃疗改锻造" in d_br_urgent_smith.reason, \
+        f"乐观口径也无解时应维持必败锻造: {d_br_urgent_smith.reason}"
+    br_pol._boss_race_doomed = _br_doomed
+    br_pol._race_joint_feasible = _br_joint
     # 数据未成熟回落（无血池/火力学样的空库）：行为与旧版严格一致（翻转带回血）
     nv_pol = policy.Policy(knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bosrace2-"))),
                            random.Random(13))
@@ -5049,6 +5068,8 @@ def main() -> int:
     bs_know.policy.update({"burst_starve_bonus_base": 8.0, "burst_starve_bonus_extra_max": 12.0,
                            "deck_burst_floor": 45.0, "boss_eve_smith_hp_pct": 0.45,
                            "power_longfight_bonus_max": 12.0, "kill_race_prior_eff": 0.55})
+    assert reflect.BOUNDS["kill_race_prior_eff"] == (0.35, 0.72), \
+        f"竞速先验释放上限未恢复: {reflect.BOUNDS['kill_race_prior_eff']}"
     bs_ctx = SimpleNamespace(
         died_to_event=None,
         died_in_combat={"comp_id": "BR_BOSS_A", "node_type": "Boss", "rounds": 8,
