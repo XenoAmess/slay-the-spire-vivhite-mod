@@ -2336,6 +2336,38 @@ class Policy:
                         f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
                         f"｜能量{energy}｜[{_audit}]",
                         wait=1.2)
+                # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
+                # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
+                # policy 键 end_turn_settle_recovery_ticks<=0 可立即回滚旧两拍流）：
+                # 790 局 F17-T6/T9 实测——打出余烬+/火焰屏障后剩 1 能量收口时，
+                # payload 把余下打击/挑衅整体标 ✗ 且 available_actions 撤走了
+                # play_card，而这两张按费用与合法目标在规则层面仍可出；旧两拍
+                # (~1s) 确认跨不过出牌结算动画，把 Boss 决胜段的攻击窗口提前
+                # 扔掉（753 局同签名基线 ×2、本批遥测复证 ×2）。规则账面
+                # （能量≥费用＋目标可选，负费用状态牌不计）与 payload 宣告冲突、
+                # 且本回合确实出过牌时，先在从 _end_stall 借来的预算内推迟提交；
+                # 预算耗尽后落回下方原「确认无牌可出」提交流——文案/审计格式
+                # 完全不变，既有统计正则与断言不受影响。
+                _settle_budget = int(float(pol.get("end_turn_settle_recovery_ticks", 10) or 0))
+                if (_settle_budget > 0 and not affordable_playable
+                        and self._saw_playable_this_turn
+                        and self._end_stall < _settle_budget):
+                    _latent = []
+                    for card in hand:
+                        if self._card_unavailable(card):
+                            continue
+                        cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
+                        if cost < 0 or cost > energy:
+                            continue
+                        if card.get("requires_target") and not card.get("valid_target_indices"):
+                            continue
+                        _latent.append(f"{card.get('name')}({cost})")
+                    if _latent:
+                        return Decision(
+                            None, {},
+                            f"战斗：结算等待——账面仍有可负担目标牌（{','.join(_latent)}），"
+                            f"待接口重开（{self._end_stall}/{_settle_budget}）",
+                            wait=0.6)
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)

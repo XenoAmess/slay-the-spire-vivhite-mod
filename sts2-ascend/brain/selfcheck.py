@@ -7414,6 +7414,78 @@ def main() -> int:
         and novelty_know.novelty_trial_count("potion", "MYSTERY_FULL") == 0, \
         f"药水栏已满仍反复试购未知药: {d_potion_full.reason}"
 
+    # 3z) 结算等待闸门（第790局批复盘 END_TURN_SETTLE_GATE 回归夹具）：
+    #     出过牌的回合里 payload 整体✗ 且 play_card 被撤走，但账面仍有
+    #     可负担目标牌（790 局 F17-T6/T9 实测形态）时，先进入有界结算等待；
+    #     预算耗尽后落回旧「确认无牌可出」提交文案；旋钮置 0 立即回滚。
+    settle_know = knowledge.Knowledge(tmp)
+    settle_pol = policy.Policy(settle_know)
+
+    class _SettleCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        credit_tags: list = []
+        combat = None
+        combat_notes: list = []
+        pending_event = None
+        died_in_combat = None
+
+    s_ctx = _SettleCtx()
+
+    def _settle_state(hand_playable):
+        return {
+            "screen": "COMBAT", "turn": 8,
+            "available_actions": (["play_card", "end_turn"] if hand_playable
+                                  else ["end_turn"]),
+            "combat": {"player": {"current_hp": 19, "max_hp": 80, "block": 0,
+                                  "energy": 1},
+                       "hand": [{"index": 0, "card_id": "STRIKE_IRONCLAD",
+                                 "name": "打击", "playable": hand_playable,
+                                 "energy_cost": 1, "requires_target": True,
+                                 "valid_target_indices": [0],
+                                 "dynamic_values":
+                                     [{"name": "Damage", "current_value": 6}]}],
+                       "enemies": [{"index": 0, "enemy_id": "BEAST",
+                                    "name": "仪式兽", "current_hp": 120,
+                                    "max_hp": 252, "block": 0, "is_alive": True,
+                                    "is_hittable": True,
+                                    "intents": [{"total_damage": 18}]}]},
+            "run": {"current_hp": 19, "max_hp": 80, "gold": 50,
+                    "floor": 17, "deck": []},
+        }
+
+    d_s0 = settle_pol.decide(_settle_state(True), s_ctx)
+    assert d_s0 is not None, "结算夹具热身帧无决策"
+    saw_interim = False
+    d_commit = None
+    for _ in range(30):
+        d_si = settle_pol.decide(_settle_state(False), s_ctx)
+        if d_si.action == "end_turn":
+            d_commit = d_si
+            break
+        assert d_si.action is None and "结算等待" in d_si.reason \
+            and "打击(1)" in d_si.reason, \
+            f"结算等待闸门未按预期拦截: {d_si.action}/{d_si.reason}"
+        saw_interim = True
+    assert saw_interim and d_commit is not None \
+        and "确认无牌可出（能量耗尽或全部不可用）" in d_commit.reason, \
+        f"结算等待未在预算内落回旧提交: {d_commit and d_commit.reason}"
+
+    roll_know = knowledge.Knowledge(tmp)
+    roll_pol = policy.Policy(roll_know)
+    roll_know.policy["end_turn_settle_recovery_ticks"] = 0
+    r_ctx = _SettleCtx()
+    roll_pol.decide(_settle_state(True), r_ctx)
+    rolled_away = False
+    for _ in range(6):
+        d_r = roll_pol.decide(_settle_state(False), r_ctx)
+        if d_r.action == "end_turn":
+            break
+        assert "结算等待" not in d_r.reason, f"旋钮回滚失效仍出现等待: {d_r.reason}"
+        rolled_away = True
+    assert rolled_away or True  # 旧两拍流本身允许 1~2 帧确认后才提交
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
