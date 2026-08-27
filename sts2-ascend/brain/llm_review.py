@@ -27,6 +27,7 @@
 """
 from __future__ import annotations
 
+import codecs
 import hashlib
 import json
 import math
@@ -173,6 +174,10 @@ def load_llm_config() -> dict:
         "preferred_failure_cooldown_min": 5,
         # 异步复盘不阻塞游玩，优先模型的超时可放宽
         "preferred_timeout_min": 480,
+        # 总复盘预算仍是 8 小时；这里只识别进程活着但长时间没有任何输出进展
+        # 的工具/CLI 挂起。实测正常 GLM 单步最长约 3 分钟，10 分钟才终止。
+        "stall_warn_min": 5,
+        "stall_timeout_min": 10,
         "models_probe_timeout_sec": 60,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
@@ -205,6 +210,16 @@ def _positive_int(value, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return max(1, parsed)
+
+
+def _non_negative_float(value, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    if not math.isfinite(parsed):
+        return float(default)
+    return max(0.0, parsed)
 
 
 def _normalized_review_path(path) -> str:
@@ -1257,8 +1272,9 @@ def _run_captured_stop_aware(
             continue
 
 
-def _stream_run(cmd: list[str], timeout_sec: int,
-                translate=None) -> tuple[int, str, bool, bool]:
+def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
+                stall_warn_sec: float = 0,
+                stall_timeout_sec: float = 0) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
@@ -1283,13 +1299,23 @@ def _stream_run(cmd: list[str], timeout_sec: int,
     q: queue.Queue[str] = queue.Queue(maxsize=128)
     reader_cancel = threading.Event()
     reader_done = threading.Event()
+    progress = [time.monotonic(), 0]
 
     def _reader() -> None:
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         try:
+            source = getattr(proc.stdout, "buffer", proc.stdout)
+            read_chunk = getattr(source, "read1", source.read)
             while not reader_cancel.is_set():
-                chunk = (proc.stdout.read(8192) if proc.stdout is not None else "")
-                if not chunk:
+                raw = read_chunk(8192) if source is not None else b""
+                if not raw:
                     break
+                chunk = (raw if isinstance(raw, str)
+                         else decoder.decode(raw, final=False))
+                progress[0] = time.monotonic()
+                progress[1] += 1
+                if not chunk:
+                    continue
                 while not reader_cancel.is_set():
                     try:
                         q.put(chunk, timeout=0.2)
@@ -1299,6 +1325,12 @@ def _stream_run(cmd: list[str], timeout_sec: int,
         except (OSError, ValueError):
             pass
         finally:
+            try:
+                final = decoder.decode(b"", final=True)
+                if final:
+                    q.put(final, timeout=0.2)
+            except (UnicodeError, queue.Full):
+                pass
             reader_done.set()
 
     reader_thread = threading.Thread(target=_reader, daemon=True)
@@ -1312,6 +1344,9 @@ def _stream_run(cmd: list[str], timeout_sec: int,
     pending = ""
     timed_out = False
     stopped = False
+    stalled = False
+    warned = False
+    seen_progress = 0
 
     with LIVE_STREAM.open("a", encoding="utf-8") as stream:
         def emit_display(value: str) -> None:
@@ -1352,12 +1387,28 @@ def _stream_run(cmd: list[str], timeout_sec: int,
                     emit_display(
                         f"[llm] 单条无换行输出过大，已截断前 {dropped} 个字符；"
                         "这不影响隔离仓内失败文件的完整保全。")
+            if progress[1] != seen_progress:
+                seen_progress = progress[1]
+                warned = False
             if _review_stop_requested():
                 stopped = True
                 _terminate_process_tree(proc)
                 break
             if time.monotonic() > deadline:
                 timed_out = True
+                _terminate_process_tree(proc)
+                break
+            idle = time.monotonic() - progress[0]
+            if stall_warn_sec > 0 and idle >= stall_warn_sec and not warned:
+                warned = True
+                emit_display(
+                    f"[llm] 复盘已 {idle / 60:.1f} 分钟无输出进展；"
+                    "继续等待，达到无进展上限才会保全现场并重试。")
+            if stall_timeout_sec > 0 and idle >= stall_timeout_sec:
+                stalled = True
+                emit_display(
+                    f"[llm] 复盘连续 {idle / 60:.1f} 分钟无输出进展；"
+                    "判定 CLI/工具调用挂起，终止本次并保全现场重试。")
                 _terminate_process_tree(proc)
                 break
             if reader_done.is_set() and q.empty():
@@ -1384,7 +1435,7 @@ def _stream_run(cmd: list[str], timeout_sec: int,
         pass
     reader_thread.join(timeout=1)
     rc = proc.returncode if proc.returncode is not None else -1
-    return rc, "".join(tail), timed_out, stopped
+    return rc, "".join(tail), timed_out, stopped, stalled
 
 
 # ---------------------------------------------------------------------------
@@ -1528,16 +1579,25 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     _launch_speaker(cfg, log)
 
     autogit.set_review_active(True)     # 生命周期标记；不阻塞在线存档与推送
-    rc, out, timed_out, stopped = -1, "", False, False
+    rc, out, timed_out, stopped, stalled = -1, "", False, False, False
     eff_timeout_min = float(cfg.get("preferred_timeout_min", 480)) if source == "preferred" \
         else float(cfg.get("timeout_min", 480))
+    stall_timeout_min = _non_negative_float(cfg.get("stall_timeout_min"), 10.0)
+    stall_warn_min = _non_negative_float(cfg.get("stall_warn_min"), 5.0)
+    if stall_timeout_min > 0:
+        stall_warn_min = min(stall_warn_min, stall_timeout_min)
+    else:
+        stall_warn_min = 0.0
     translator = OpencodeJsonTranslator()
     sandbox = SandboxReviewResult(error="复盘尚未运行")
     try:
         sandbox = _run_review_sandbox(
-            cmd, prompt, pre_head, int(eff_timeout_min * 60), translator, log=log)
-        rc, out, timed_out, stopped = (
-            sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped)
+            cmd, prompt, pre_head, int(eff_timeout_min * 60), translator,
+            stall_warn_seconds=stall_warn_min * 60,
+            stall_timeout_seconds=stall_timeout_min * 60, log=log)
+        rc, out, timed_out, stopped, stalled = (
+            sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped,
+            sandbox.stalled)
         # stop 可能恰好落在 opencode 自然退出与宿主验收之间；不能只信任
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
@@ -1565,6 +1625,14 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 f"（复盘前基线 {pre_head[:8]}）")
             return False
         log(f"[llm] 复盘会话结束（exit={rc}）。输出尾部：\n{out[-2000:]}")
+        if stalled:
+            if _status is not None:
+                _status["reason"] = "复盘 CLI/工具调用无进展挂起"
+            # 这是本地工具链挂起，不是 provider 不可用；不冷却 GLM。队列会
+            # 保存同批并在退避后再次调用同一模型，失败包供它复审/解冲突。
+            log("[llm] 复盘无进展 watchdog 已终止挂起进程；完整现场已保存，"
+                "同批将重新交给 GLM")
+            return False
         if timed_out:
             if _status is not None:
                 _status["reason"] = "复盘超时"
@@ -1594,6 +1662,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         _stream_end({
             "exit": rc,
             "timeout": timed_out,
+            "stalled": stalled,
             "stopped": stopped,
             "review_id": review_id,
             # 结论取自即将删除的隔离 clone，已过路径分类/selfcheck/patch 导出；
@@ -2037,6 +2106,7 @@ class SandboxReviewResult:
     rc: int = -1
     out: str = ""
     timed_out: bool = False
+    stalled: bool = False
     stopped: bool = False
     paths: tuple[str, ...] = ()
     patch: bytes = b""
@@ -2331,6 +2401,8 @@ def _discard_retained_sandbox(result: SandboxReviewResult, log=print) -> bool:
 
 
 def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
+    if sandbox.stalled:
+        return "stall"
     if sandbox.timed_out:
         return "timeout"
     if sandbox.rc not in (-1, 0):
@@ -2503,6 +2575,7 @@ def _save_review_salvage(
         "source": source,
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
+        "stalled": sandbox.stalled,
         "stopped": sandbox.stopped,
         "selfcheck_ok": sandbox.selfcheck_ok,
         "snapshot_complete": sandbox.snapshot_complete,
@@ -2629,7 +2702,8 @@ def _save_review_salvage(
 
 def _run_review_sandbox(
     cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
-    translator: "OpencodeJsonTranslator", log=print,
+    translator: "OpencodeJsonTranslator", *, stall_warn_seconds: float = 0,
+    stall_timeout_seconds: float = 0, log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
     sandbox_root = _new_review_temp("sts2-review-sandbox-")
@@ -2660,12 +2734,16 @@ def _run_review_sandbox(
             result = SandboxReviewResult(error="复盘命令缺少 --dir 安全边界")
             return result
 
-        rc, out, timed_out, stopped = _stream_run(
-            sandbox_cmd, timeout_seconds, translate=translator.feed)
-        if stopped or timed_out or rc != 0:
+        rc, out, timed_out, stopped, stalled = _stream_run(
+            sandbox_cmd, timeout_seconds, translate=translator.feed,
+            stall_warn_sec=stall_warn_seconds,
+            stall_timeout_sec=stall_timeout_seconds)
+        if stopped or timed_out or stalled or rc != 0:
             result = SandboxReviewResult(
                 rc=rc, out=out, timed_out=timed_out, stopped=stopped,
-                error="复盘进程未成功完成",
+                stalled=stalled,
+                error=("复盘 CLI/工具调用无进展挂起" if stalled
+                       else "复盘进程未成功完成"),
             )
             return result
 

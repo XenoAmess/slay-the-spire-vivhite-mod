@@ -154,6 +154,9 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 每个条目**独立失败冷却**：当前超时与硬失败（exit≠0/异常）都冷却 5 分钟，
 由 `preferred_*_cooldown_min` 配置。优先与兜底复盘超时统一为 8 小时（480 分钟）；
 复盘正常换行事件持续写直播流，病态超大单事件会有界截断；宿主内存只保留有界尾部。
+总预算之外还有独立的无进展 watchdog：连续 5 分钟没有任何 stdout 字节时告警，10 分钟时
+只终止该场复盘并完整保全现场、原模型退避重试。stall 属于本地 CLI/工具链故障，不会错误冷却 GLM；
+正常观测到的 GLM 单步停顿约 2～3 分钟，因此不会触发 10 分钟上限。
 
 隔离、提交与成果保全设计：
 
@@ -265,6 +268,8 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - 首选开关为 `config.json` 的 `viewer.enabled`；旧 `llm.viewer_enabled` 继续兼容。
 - viewer 的根目录和单实例锁以当前 stack session 的 `.runtime` 为准；复盘隔离 clone 继承
   `STS2_ASCEND_DISABLE_VIEWER=1`，即使自检执行入口脚本也不能创建第二个直播悬浮窗。
+- detached viewer 使用关闭继承句柄的方式启动，不能再持有 OpenCode/selfcheck 的 stdout 捕获管道；
+  viewer 存活不会阻止工具调用收到 EOF。
 - 活动局日志持续写入只更新文件签名，不会在统计内容未变化时触发统计卡重绘。
 
 该升级不改变直播控制边界：开播仍启动完整 sts2-ascend 栈、将杀戮尖塔2置顶后通过本地直播姬开播；

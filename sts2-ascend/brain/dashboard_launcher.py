@@ -133,7 +133,11 @@ def ensure_dashboard_viewer(
                 stdout=out_f,
                 stderr=err_f,
                 creationflags=creationflags,
-                close_fds=False,
+                # A viewer launched from an OpenCode/selfcheck process must not
+                # inherit that tool's capture pipe.  The old False value let the
+                # detached viewer keep the pipe alive after selfcheck exited, so
+                # OpenCode waited forever for EOF with its tool stuck "running".
+                close_fds=True,
             )
         log("[viewer] ASCEND-VISION 已拉起")
         return True
