@@ -2279,6 +2279,17 @@ class Policy:
                 # “played everything”: the old two-tick confirmation discarded
                 # full-energy Strike/Defend hands.  Give the endpoint a long recovery
                 # window, then end only as a final anti-hang fallback for stale data.
+                # 强制结束回合审计（第753局批复盘闭环实验 END_TURN_LEFTOVER_ENERGY_AUDIT，
+                # 纯观测不改判定）：此前三条强制 end_turn 留痕只写「无牌可出」，
+                # 能量余量与逐张手牌的可玩性/费用不入账——698-F9、704-F8/F13
+                # 三例「非零意图空过」与 753 局 Boss 战 T6(剩2能量)/T9(剩1能量)
+                # 均无法区分「资源不济」「评分拒绝」「接口失真」。此后终端留痕
+                # 自带能量+逐张审计（名称(费用)✓规则可玩/✗不可玩），复盘可直接
+                # 对照运营端的断言链定位拒因；前缀保持不变，供既有统计正则兼容。
+                _audit = ",".join(
+                    f"{c.get('name')}({c.get('energy_cost', '?')}费)"
+                    f"{'✓' if (c.get('playable') and not self._card_unavailable(c)) else '✗'}"
+                    for c in hand) or "空手"
                 if affordable_playable:
                     if self._end_stall < 30:
                         return Decision(
@@ -2287,18 +2298,28 @@ class Policy:
                             f"（{self._end_stall}/30，{hand_desc}，能量{energy}）",
                             wait=0.6)
                     self._end_stall = 0
-                    return Decision("end_turn", {},
-                                    "战斗：可出牌接口长时间未恢复，结束回合防止永久卡死",
-                                    wait=1.2)
+                    return Decision(
+                        "end_turn", {},
+                        f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
+                        f"｜能量{energy}｜[{_audit}]",
+                        wait=1.2)
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
                     self._end_stall = 0
-                    return Decision("end_turn", {}, "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合", wait=1.2)
+                    return Decision(
+                        "end_turn", {},
+                        f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+                        f"｜能量{energy}｜[{_audit}]",
+                        wait=1.2)
                 if self._end_stall < 15:
                     return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
                 self._end_stall = 0
-                return Decision("end_turn", {}, "战斗：手牌长时间未就绪（疑似全部不可用），结束回合", wait=1.2)
+                return Decision(
+                    "end_turn", {},
+                    f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
+                    f"｜能量{energy}｜[{_audit}]",
+                    wait=1.2)
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
         self._saw_playable_this_turn = True
