@@ -3318,6 +3318,18 @@ def main() -> int:
             and "预计破2层" in why_sl_twin, \
         f"多段牌未正确优先: hammer={why_sl_bludgeon} twin={why_sl_twin}"
 
+    # 第760~765批复盘 SLIPPERY_BURN_AUDIT（失败包 5274ccbe 补合）：高价单发
+    # 烧层（重锤 1/3）与廉价多段烧层（双击 2/1）的留痕必须披露每费破层率与
+    # 零意图标记；纯文本观测注，一阶分账不得漂移（上方 isclose 断言即守卫）。
+    assert "滑溜烧墙审计：每费破层0.33" in why_sl_bludgeon \
+            and "滑溜烧墙审计：每费破层2.00" in why_sl_twin, \
+        f"滑溜烧墙审计注缺失或口径漂移: hammer={why_sl_bludgeon} twin={why_sl_twin}"
+    assert "｜零意图回合" in why_sl_bludgeon, \
+        f"零意图烧墙上下文未标记: {why_sl_bludgeon}"
+    _, _, why_zero_layers = sl_score(sl_strike, sl_enemy(layers=None))
+    assert "滑溜烧墙审计" not in why_zero_layers, \
+        f"无滑溜目标误挂烧墙审计注: {why_zero_layers}"
+
     # block 必须先逐段吸收：全挡不掉层；部分穿甲只让该 hit 限伤并掉一层。
     s_full_block, _, why_full_block = sl_score(sl_bludgeon, sl_enemy(block=40, layers=8))
     s_full_plain, _, _ = sl_score(sl_bludgeon, sl_enemy(block=40, layers=None))
@@ -3366,6 +3378,10 @@ def main() -> int:
     assert math.isclose(s_aoe, 7.0) and t_aoe is None \
             and "群体伤害≈7.0" in why_aoe and "墨影幻灵8→破1" in why_aoe, \
         f"AOE 滑溜折算错误: score={s_aoe} target={t_aoe} why={why_aoe}"
+    # 第760~765批复盘 AOE 侧同口径烧墙审计注（CLEAVE 1费破1层=每费1.00）
+    assert "滑溜烧墙审计：每费破层1.00" in why_aoe \
+            and "｜零意图回合" in why_aoe, \
+        f"AOE 烧墙审计注缺失或口径漂移: {why_aoe}"
 
     # 现有集火粘性不因结算重构丢失。
     sl_pol._focus_index = 1

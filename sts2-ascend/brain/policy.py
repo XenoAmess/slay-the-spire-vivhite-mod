@@ -3064,6 +3064,7 @@ class Policy:
                 eff = 0
                 killable = []
                 slippery_notes = []
+                _burn_broken_total = 0.0
                 for e in enemies:
                     # Damage absorbed by enemy block still removes a current combat
                     # resource.  The old max(1, damage-block) valued a 6-damage Strike
@@ -3075,6 +3076,7 @@ class Policy:
                         slippery_notes.append(
                             f"{e.get('name') or e.get('enemy_id') or '敌人'}"
                             f"{slippery:g}→破{e_broken}")
+                        _burn_broken_total += float(e_broken)
                     if self._is_respawn_add(e) and not all_respawn:
                         # 确认重生体：过量伤害记到当前血量为止（第 58 局实证：
                         # 11 点伤害砸 5 血利齿之眼按 11 计分，虚高吸走输出）
@@ -3114,6 +3116,23 @@ class Policy:
                 why = f"群体伤害≈{eff}"
                 if slippery_notes:
                     why += "｜滑溜逐段折算：" + "、".join(slippery_notes)
+                    # SLIPPERY_BURN_AUDIT 的 AOE 侧同口径披露（纯观测不改分）：
+                    # 765-F17-T4 彼岸咆哮(3费)群体烧墙只破 1 层——逐段折算把
+                    # 群体牌面值摊薄到每敌 1 点，本注让 AOE 烧墙与单体共用
+                    # 同一把「每费破层率」标尺，防止高价群体牌在烧墙期被
+                    # 面值误抬。
+                    try:
+                        _burn_per_cost = (
+                            _burn_broken_total / max(1.0, float(cost)))
+                        _burn_idle = (
+                            incoming <= 0
+                            and all(sum((it.get("total_damage") or 0)
+                                        for it in _e.get("intents", [])) <= 0
+                                    for _e in enemies))
+                        why += (f"｜滑溜烧墙审计：每费破层{_burn_per_cost:.2f}"
+                                + ("｜零意图回合" if _burn_idle else ""))
+                    except Exception:
+                        pass
                 return score, None, why
             best_t, best_s, why, best_kill = None, -1.0, "", False
             # 辅助体转火（第 136~137 批复盘）：多敌战斗中本回合零伤害意图的敌人
@@ -3188,6 +3207,23 @@ class Policy:
                     if slippery > 0:
                         why += (f"｜滑溜{slippery:g}层，逐段折算≈{eff:.1f}，"
                                 f"预计破{slippery_broken}层")
+                        # SLIPPERY_BURN_AUDIT（第760~765批复盘补合失败包
+                        # 5274ccbe 新增，纯观测不改分）：765-F17 全链实证——
+                        # T1~T5 烧墙期 13 费只换 7 点输出（每费 0.54），重锤
+                        # (3费)与打击(1费)的逐段折算产出完全相同，高价单发
+                        # 烧层在零意图蓄力回合白费 2~3 费能量；765 局把 Boss
+                        # 打到仅剩约 7 血阵亡，正是这段漏损的直接代价。本注
+                        # 披露「每费破层率」并标记零意图上下文，供后续批次
+                        # 统计烧墙能效浪费复发率，作为「同折算产出时偏向
+                        # 低费烧层」再排序的行为化前哨证据。
+                        try:
+                            _burn_per_cost = (
+                                float(slippery_broken) / max(1.0, float(cost)))
+                            _burn_idle = threat <= 0 and incoming <= 0
+                            why += (f"｜滑溜烧墙审计：每费破层{_burn_per_cost:.2f}"
+                                    + ("｜零意图回合" if _burn_idle else ""))
+                        except Exception:
+                            pass
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
