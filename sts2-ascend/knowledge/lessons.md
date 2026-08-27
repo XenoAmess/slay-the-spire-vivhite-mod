@@ -3593,3 +3593,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：高速失血爆毙（4回合掉血71，每回合18≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/727 胜，当前目标进阶 0
+
+## 第 728 局复盘（2026-08-27 11:17）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SECOND_WIND, STOMP, MOLTEN_FIST, AGGRESSION, INFLAME, DISMANTLE, FIGHT_ME, FIGHT_ME
+- 本局遗物：POTION_BELT
+- 战斗记录：F6 Unknown战 掉血26; F8 Monster战 掉血31; F12 Monster战 掉血36; F14 Monster战 掉血21; F15 Monster战 掉血19; F17 Boss战 掉血32（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，BOLAS(25分/3局)，OMNISLICE(24分/5局)，CONFLAGRATION(24分/51局)，FIEND_FIRE(24分/29局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/728 胜，当前目标进阶 0
