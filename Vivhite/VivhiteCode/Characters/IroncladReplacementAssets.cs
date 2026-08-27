@@ -198,6 +198,7 @@ internal static class IroncladReplacementAssets
             Ui: new CharacterUiAssetSet(
                 IconTexturePath: IconTexturePath,
                 IconOutlineTexturePath: IconOutlineTexturePath,
+                IconPath: IconTexturePath,
                 CharacterSelectBgPath: CharacterSelectScenePath,
                 CharacterSelectIconPath: CharacterSelectIconPath,
                 CharacterSelectLockedIconPath: CharacterSelectLockedIconPath,

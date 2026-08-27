@@ -95,8 +95,11 @@ const ANIMATION_DURATIONS := {
 	"relaxed_loop": 12.000001,
 }
 const EVENT_TIMES := {
-	"attack_slash_start": 0.15,
-	"heavy_slash_start": 0.20,
+	# The event, hand impulse, and private arc become active together. The
+	# runtime shader keeps the ordinary arc fully visible for its built-in
+	# 0.15 s hold and then fades it; heavy fades continuously for 0.35 s.
+	"attack_slash_start": 0.08,
+	"heavy_slash_start": 0.12,
 	"cast_eyes_start": 0.25,
 }
 const REQUIRED_EVENTS := [
@@ -507,9 +510,10 @@ func _low_health_animation() -> Dictionary:
 func _attack_animation(heavy: bool) -> Dictionary:
 	var name := "attack_heavy" if heavy else "attack"
 	var duration := float(ANIMATION_DURATIONS[name])
-	var strike_time := float(EVENT_TIMES["heavy_slash_start" if heavy else "attack_slash_start"])
+	var event_time := float(EVENT_TIMES["heavy_slash_start" if heavy else "attack_slash_start"])
+	var strike_time := event_time
 	var recover := duration * 0.72
-	var power := 1.45 if heavy else 1.0
+	var power := 1.75 if heavy else 1.0
 	return {
 		"slots": {
 			"slash_mesh": {"attachment": [
@@ -533,7 +537,7 @@ func _attack_animation(heavy: bool) -> Dictionary:
 			BONE_ARC: {"rotate": _action_rotate(duration, -22 * power, 34 * power, strike_time, recover)},
 		},
 		"events": [
-			{"time": strike_time, "name": "heavy_slash_start" if heavy else "attack_slash_start"},
+			{"time": event_time, "name": "heavy_slash_start" if heavy else "attack_slash_start"},
 			{"time": recover, "name": "clear_vfx"},
 		],
 	}

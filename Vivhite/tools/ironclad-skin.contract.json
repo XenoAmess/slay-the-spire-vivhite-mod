@@ -102,7 +102,13 @@
         "[node name=\"EyeSlot\" type=\"SpineSlotNode\" parent=\"Visuals\"]",
         "slot_name = \"eye_attach_slot\"",
         "[node name=\"EyeFire\" type=\"TextureRect\" parent=\"Visuals/EyeSlot\"]",
-        "shader_parameter/ColorParameter = Color(0.56, 0.24, 1, 1)",
+        "scale = Vector2(0.22, 0.28)",
+        "[sub_resource type=\"Shader\" id=\"VivhiteMagicArcShader\"]",
+        "uniform vec2 step = vec2(0.0, 0.02)",
+        "float runtime_fade = 1.0 - clamp(step.x, 0.0, 1.0)",
+        "base.a *= runtime_fade * clamp(master_step, 0.0, 1.0) * clamp(opacity, 0.0, 1.0)",
+        "shader = SubResource(\"VivhiteMagicArcShader\")",
+        "shader_parameter/ColorParameter = Color(1, 1, 1, 1)",
         "shader_parameter/OuterColor = Color(0.46, 0.1, 0.96, 1)",
         "shader_parameter/InnerColor = Color(0.32, 0.94, 1, 1)",
         "shader_parameter/step = Vector2(0, 0.02)",
@@ -115,7 +121,8 @@
       "requiredText": [
         "[node name=\"SpineSprite\" type=\"SpineSprite\" parent=\".\"]",
         "preview_skin = \"default\"",
-        "preview_animation = \"relaxed_loop\""
+        "preview_animation = \"relaxed_loop\"",
+        "scale = Vector2(0.28, 0.28)"
       ]
     },
     {

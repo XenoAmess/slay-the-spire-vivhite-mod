@@ -1,11 +1,8 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://src/Core/Nodes/Combat/NCreatureVisuals.cs" id="1_visuals"]
 [ext_resource type="SpineSkeletonDataResource" path="res://Vivhite/skins/ironclad/spine/combat/vivhite_combat_skeleton_data.tres" id="2_skeleton"]
-[ext_resource type="Shader" path="res://images/vfx/slash_shader_flat.tres" id="3_slash_shader"]
 [ext_resource type="Script" path="res://src/Core/Nodes/Vfx/NIroncladVfx.cs" id="4_vfx"]
-[ext_resource type="Texture2D" path="res://images/vfx/fire/basic_fire_noise.png" id="5_fire_noise"]
-[ext_resource type="Texture2D" path="res://images/vfx/characters/ironclad_slash_base.png" id="6_slash_base"]
 [ext_resource type="Texture2D" path="res://images/vfx/fire/zigzag_fire_distortion.png" id="7_zigzag"]
 [ext_resource type="Texture2D" path="res://images/vfx/tileable_noise_1.png" id="8_tile_noise"]
 [ext_resource type="Texture2D" path="res://images/vfx/environment/fire/basic_fire_gradient.png" id="9_fire_gradient"]
@@ -14,21 +11,15 @@
 [ext_resource type="Texture2D" path="res://images/vfx/fire/triangle_noise_tile.png" id="12_triangle_noise"]
 [ext_resource type="Texture2D" path="res://images/vfx/characters/ironclad_eye_fire_base.png" id="13_eye_fire"]
 
+[sub_resource type="Shader" id="VivhiteMagicArcShader"]
+code = "shader_type canvas_item;\nrender_mode blend_mix, unshaded;\n\nuniform vec4 ColorParameter : source_color = vec4(1.0);\nuniform vec2 step = vec2(0.0, 0.02);\nuniform float master_step : hint_range(0.0, 1.0) = 1.0;\nuniform float opacity : hint_range(0.0, 1.0) = 1.0;\n\nvoid fragment() {\n\tvec4 base = texture(TEXTURE, UV) * ColorParameter * COLOR;\n\tfloat runtime_fade = 1.0 - clamp(step.x, 0.0, 1.0);\n\tbase.a *= runtime_fade * clamp(master_step, 0.0, 1.0) * clamp(opacity, 0.0, 1.0);\n\tCOLOR = base;\n}\n"
+
 [sub_resource type="ShaderMaterial" id="SlashMaterial"]
-shader = ExtResource("3_slash_shader")
-shader_parameter/ColorParameter = Color(0.56, 0.24, 1, 1)
+shader = SubResource("VivhiteMagicArcShader")
+shader_parameter/ColorParameter = Color(1, 1, 1, 1)
 shader_parameter/step = Vector2(0, 0.02)
 shader_parameter/master_step = 1.0
-shader_parameter/shape_mask_tex = ExtResource("6_slash_base")
-shader_parameter/noise_1_strength = 1.0
-shader_parameter/noise_1_scale = Vector2(1.5, 1.5)
-shader_parameter/noise_1_panning = Vector2(0.1, -1.5)
-shader_parameter/noise_1_tex = ExtResource("5_fire_noise")
-shader_parameter/noise_2_scale = Vector2(1.2, 1.2)
-shader_parameter/noise_2_panning = Vector2(-0.1, -2.2)
-shader_parameter/noise_2_tex = ExtResource("5_fire_noise")
-shader_parameter/noise_2_strength = 1.0
-shader_parameter/opacity = 0.8
+shader_parameter/opacity = 1.0
 
 [sub_resource type="ShaderMaterial" id="EyeFireMaterial"]
 shader = ExtResource("10_fire_shader")
@@ -101,7 +92,7 @@ offset_left = -205.07704
 offset_top = -450.1532
 offset_right = 294.92322
 offset_bottom = 49.846893
-scale = Vector2(0.83232564, 1.1308773)
+scale = Vector2(0.22, 0.28)
 texture = ExtResource("13_eye_fire")
 
 [node name="Bounds" type="Control" parent="."]

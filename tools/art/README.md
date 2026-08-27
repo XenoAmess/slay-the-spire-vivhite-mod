@@ -310,19 +310,30 @@ magic-arc and sigil attachments so glow never becomes a deforming joint seam.
 The rig contains exactly the eight game animations at the v0.111.0 durations:
 `idle_loop` 2.0s, `low_health_loop` 1.4666667s, `relaxed_loop` 12.000001s,
 `attack` 1.1666667s, `attack_heavy` 1.5333334s, `cast` 1.5666667s, `hurt`
-1.0s, and `die` 2.3333335s. Its attack/heavy/cast events occur at 0.15s,
-0.20s, and 0.25s respectively, matching the character-code animation delays.
+1.0s, and `die` 2.3333335s. Its attack/heavy/cast events occur at 0.08s,
+0.12s, and 0.25s respectively. Each attack event now coincides with its hand
+impulse and arc attachment. `NIroncladVfx` holds the ordinary arc for 0.15s
+before a 0.20s fade and fades the heavy arc continuously over 0.35s; the
+heavier animation also uses a larger torso, arm, root, and arc impulse.
 `relaxed_loop` is closed at its 12-second boundary so the merchant may enter
 at any phase without a visible pop.
 
 The combat scene retains the original `Visuals/NIroncladVfx`,
-`Visuals/SlashVfxSlot`, and `Visuals/EyeSlot/EyeFire` chain, shader step values,
-and layout anchors while binding only the private skeleton. The generated
+`Visuals/SlashVfxSlot`, and `Visuals/EyeSlot/EyeFire` chain, runtime-facing
+shader step parameters, and layout anchors while binding only the private
+skeleton. `SlashVfxSlot` uses a pass-through canvas shader that exposes the
+parameters expected by `NIroncladVfx` but deliberately does not reuse the
+Ironclad slash shape mask: that mask clips the wide private ribbon into opaque
+purple blobs in the real game even though the bare Spine preview is correct.
+The runtime `step.x` tween is consumed as an overall Alpha fade, so interrupted
+animations cannot leave an opaque ribbon behind while the authored silhouette
+remains intact.
+The generated
 magic ribbon is attached directly to required slot `slash_mesh`, so the
 Spine slot consumer and the private arc share one hand anchor instead of
 drawing detached or doubled weapon-like geometry. Its consumer
-materials replace Ironclad red/orange with violet/indigo/cyan; the separate
-arc and sigil art supplies the restrained gold detail. The merchant's
+material preserves the ribbon's authored violet/indigo/cyan and gold pixels.
+The merchant's
 first child remains its `SpineSprite`, uses lowercase `default`, and points to
 a wrapper that deliberately shares this combat skeleton and atlas.
 
