@@ -16,6 +16,83 @@ from pathlib import Path
 from typing import Iterator
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+_GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
+
+
+def read_git_head(repo: Path) -> str:
+    """Read the immutable startup commit without spawning a potentially stuck Git.
+
+    Windows process inspection/antivirus can delay ``CreateProcess`` before
+    ``subprocess`` timeouts start.  Runner needs this identity before importing the
+    Brain, so resolve HEAD through Git's atomically replaced ref files instead.
+    Both ordinary repositories and linked worktrees (``.git`` file + commondir)
+    are supported.  Failure is a safe empty result; callers keep gameplay alive
+    and leave review rollback markers unretired.
+    """
+    try:
+        repo = Path(repo).resolve()
+        dot_git = repo / ".git"
+        if dot_git.is_dir():
+            git_dir = dot_git.resolve()
+        else:
+            pointer = dot_git.read_text(encoding="utf-8", errors="replace").strip()
+            if not pointer.casefold().startswith("gitdir:"):
+                return ""
+            raw_dir = pointer.split(":", 1)[1].strip()
+            git_dir = (dot_git.parent / raw_dir).resolve()
+
+        common_dir = git_dir
+        common_pointer = git_dir / "commondir"
+        if common_pointer.is_file():
+            raw_common = common_pointer.read_text(
+                encoding="utf-8", errors="replace").strip()
+            if raw_common:
+                common_dir = (git_dir / raw_common).resolve()
+
+        head_path = git_dir / "HEAD"
+        for _attempt in range(3):
+            head_text = head_path.read_text(
+                encoding="utf-8", errors="replace").strip()
+            if _GIT_OBJECT_ID_RE.fullmatch(head_text):
+                return head_text.lower()
+            if not head_text.startswith("ref: "):
+                return ""
+            ref_name = head_text[5:].strip().replace("\\", "/")
+            if (not ref_name.startswith("refs/") or ".." in ref_name.split("/")
+                    or ref_name.startswith("/")):
+                return ""
+
+            value = ""
+            for root in dict.fromkeys((git_dir, common_dir)):
+                loose = root / Path(ref_name)
+                if loose.is_file():
+                    value = loose.read_text(
+                        encoding="ascii", errors="replace").strip()
+                    break
+            if not value:
+                for root in dict.fromkeys((git_dir, common_dir)):
+                    packed = root / "packed-refs"
+                    if not packed.is_file():
+                        continue
+                    for line in packed.read_text(
+                            encoding="ascii", errors="replace").splitlines():
+                        if not line or line[0] in "#^":
+                            continue
+                        object_id, separator, name = line.partition(" ")
+                        if separator and name.strip() == ref_name:
+                            value = object_id.strip()
+                            break
+                    if value:
+                        break
+            # HEAD/ref are each atomically replaced.  Re-read HEAD so a concurrent
+            # branch switch can only make us retry, never pair the wrong ref/value.
+            if head_path.read_text(
+                    encoding="utf-8", errors="replace").strip() != head_text:
+                continue
+            return value.lower() if _GIT_OBJECT_ID_RE.fullmatch(value) else ""
+    except OSError:
+        return ""
+    return ""
 
 
 def resolve_stack_root(source_root: Path | None = None,

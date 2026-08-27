@@ -57,6 +57,9 @@ CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 PROMPT_FILE = KNOWLEDGE_DIR / "review_prompt_latest.md"
 REVIEW_LOG = KNOWLEDGE_DIR / "meta_review.md"
 MARKER_FILE = KNOWLEDGE_DIR / "pending_restart.json"
+_SUPERSEDED_MARKER_KEY = "_superseded_marker"
+_SUPERSEDED_MARKER_RAW_KEY = "_superseded_marker_raw"
+_MARKER_HISTORY_MAX_DEPTH = 8
 PREFERRED_STATE_FILE = KNOWLEDGE_DIR / "preferred_model_state.json"
 LIVE_STREAM = KNOWLEDGE_DIR / "review_live.stream"          # 复盘直播流（review_viewer.py 读取）
 VIEWER_PATH = BASE_DIR / "brain" / "review_viewer.py"
@@ -1537,11 +1540,16 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 "review_commit": provisional.commit,
                 "paths": review_paths,
                 "time": stamp,
+                "state": "prepared",
             }, log=log)
 
         def abort_marker(provisional) -> None:
             if requires_restart:
                 _remove_restart_marker(provisional.commit, log=log)
+
+        def finalize_marker(provisional) -> None:
+            if requires_restart and not _commit_restart_marker(provisional.commit, log=log):
+                raise OSError("重启 marker 未能从 prepared 确认为 committed")
 
         if _review_stop_requested():
             if _status is not None:
@@ -1556,6 +1564,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             sandbox.patch,
             f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）",
             review_paths, log=log, prepare=prepare_marker, abort_prepare=abort_marker,
+            finalize_prepare=finalize_marker,
         )
         if not result.created:
             canceled = bool(_status is not None and _status.get("outcome") == "canceled")
@@ -2697,20 +2706,32 @@ def _discard_failed_review(autogit, pre_head: str, reason: str, log=print,
     return restored
 
 
-def _write_restart_marker(payload: dict, log=print) -> bool:
-    """原子发布 runner marker；已有待验证 marker 时必须拒绝覆盖。"""
-    temp = KNOWLEDGE_DIR / "code_backups" / (
-        f".pending_restart.{os.getpid()}.{threading.get_ident()}.tmp")
+def _bounded_marker_snapshot(marker: dict, depth: int = 0) -> dict:
+    """Copy a rollback chain while bounding stale-marker growth."""
+    copied = dict(marker)
+    previous = copied.get(_SUPERSEDED_MARKER_KEY)
+    if not isinstance(previous, dict):
+        return copied
+    if depth + 1 >= _MARKER_HISTORY_MAX_DEPTH:
+        copied.pop(_SUPERSEDED_MARKER_KEY, None)
+        copied.pop(_SUPERSEDED_MARKER_RAW_KEY, None)
+        copied["_superseded_history_truncated"] = True
+        return copied
+    copied[_SUPERSEDED_MARKER_KEY] = _bounded_marker_snapshot(previous, depth + 1)
+    return copied
+
+
+def _publish_restart_marker_text(contents: str) -> None:
+    """Atomically replace the marker in its own directory, including on Windows."""
+    MARKER_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temp = MARKER_FILE.with_name(
+        f".{MARKER_FILE.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
-        temp.parent.mkdir(parents=True, exist_ok=True)
-        temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        # 同目录 hardlink 是原子且 exclusive 的发布：目标已存在时失败，因而新复盘
-        # 不能覆盖仍在健康观察期的旧 marker。unlink 临时名不影响 marker 内容。
-        os.link(temp, MARKER_FILE)
-        return True
-    except OSError as exc:
-        log(f"[llm] 写重启 marker 失败：{exc}")
-        return False
+        with temp.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(contents)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _replace_with_retry(temp, MARKER_FILE)
     finally:
         try:
             temp.unlink(missing_ok=True)
@@ -2718,12 +2739,80 @@ def _write_restart_marker(payload: dict, log=print) -> bool:
             pass
 
 
+def _write_restart_marker(payload: dict, log=print) -> bool:
+    """Atomically hand rollback ownership from an older review to this review.
+
+    The old exclusive-hardlink implementation turned a delayed health observation
+    into a global code-review lock.  Preserve the previous marker inside the new
+    marker so CAS abort can restore it, while a successfully committed newer review
+    becomes the active rollback candidate.
+    """
+    try:
+        next_marker = dict(payload)
+        next_marker.setdefault("state", "prepared")
+        previous_text = ""
+        try:
+            previous_text = MARKER_FILE.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            pass
+        if previous_text:
+            try:
+                previous = json.loads(previous_text)
+            except json.JSONDecodeError:
+                next_marker[_SUPERSEDED_MARKER_RAW_KEY] = previous_text
+                previous_commit = "invalid-json"
+            else:
+                previous_commit = str(previous.get("review_commit") or "unknown")
+                if previous_commit == str(next_marker.get("review_commit") or ""):
+                    return True
+                next_marker[_SUPERSEDED_MARKER_KEY] = _bounded_marker_snapshot(previous)
+            next_marker["_superseded_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            log(f"[llm] 新复盘接管旧重启 marker {previous_commit[:8]}；"
+                "旧 marker 已内嵌保留，提交失败会自动恢复")
+        _publish_restart_marker_text(
+            json.dumps(next_marker, ensure_ascii=False, indent=2) + "\n")
+        return True
+    except OSError as exc:
+        log(f"[llm] 写重启 marker 失败；原 marker 保持不变：{exc}")
+        return False
+
+
+def _commit_restart_marker(expected_commit: str, log=print) -> bool:
+    """Phase two: mark a provisional marker loadable only after ref+worktree agree."""
+    try:
+        current = json.loads(MARKER_FILE.read_text(encoding="utf-8"))
+        if current.get("review_commit") != expected_commit:
+            log("[llm] marker 最终确认时所有权已变化；保留后来 marker")
+            return False
+        if current.get("state") == "committed":
+            return True
+        current["state"] = "committed"
+        current["committed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        _publish_restart_marker_text(
+            json.dumps(current, ensure_ascii=False, indent=2) + "\n")
+        return True
+    except (OSError, json.JSONDecodeError) as exc:
+        log(f"[llm] 重启 marker 最终确认失败；保持 prepared，绝不计为健康：{exc}")
+        return False
+
+
 def _remove_restart_marker(expected_commit: str, log=print) -> None:
-    """只清理由本次 prepare 写入、且尚未成功更新 ref 的 marker。"""
+    """Abort one prepare; restore its exact predecessor instead of losing safety."""
     try:
         current = json.loads(MARKER_FILE.read_text(encoding="utf-8"))
         if current.get("review_commit") == expected_commit:
-            MARKER_FILE.unlink(missing_ok=True)
+            previous = current.get(_SUPERSEDED_MARKER_KEY)
+            previous_raw = current.get(_SUPERSEDED_MARKER_RAW_KEY)
+            if isinstance(previous, dict):
+                _publish_restart_marker_text(
+                    json.dumps(previous, ensure_ascii=False, indent=2) + "\n")
+                log(f"[llm] patch 提交中止，已恢复旧重启 marker "
+                    f"{str(previous.get('review_commit') or 'unknown')[:8]}")
+            elif isinstance(previous_raw, str):
+                _publish_restart_marker_text(previous_raw)
+                log("[llm] patch 提交中止，已原样恢复旧格式重启 marker")
+            else:
+                MARKER_FILE.unlink(missing_ok=True)
     except FileNotFoundError:
         pass
     except (OSError, json.JSONDecodeError) as exc:

@@ -227,37 +227,48 @@ class LiveDashboardPublisherTests(unittest.TestCase):
 
 
 class DashboardStartupTests(unittest.TestCase):
-    def test_busy_git_lock_cannot_delay_gameplay_startup(self) -> None:
-        calls = []
-        entered = threading.Event()
-        release = threading.Event()
-
-        def blocked_git(*args, **kwargs):
-            calls.append((args, kwargs))
-            entered.set()
-            release.wait(1.0)
-            raise subprocess.TimeoutExpired("git", kwargs.get("timeout"))
-
-        fake_autogit = SimpleNamespace(REPO_DIR=Path("fixture-repo"))
+    def test_runner_frozen_head_never_spawns_git_or_delays_gameplay(self) -> None:
         instance = object.__new__(agent_module.Agent)
         instance._boot_head = "old"
-        with mock.patch.object(agent_module, "autogit", fake_autogit), \
-                mock.patch.object(agent_module.subprocess, "run", side_effect=blocked_git), \
+        frozen = "a" * 40
+        with mock.patch.dict(
+                agent_module.os.environ, {"STS2_ASCEND_BOOT_HEAD": frozen}), \
+                mock.patch.object(
+                    agent_module.subprocess, "run",
+                    side_effect=AssertionError("boot capture must not spawn git")), \
                 mock.patch.object(agent_module, "log") as mocked_log:
             started = time.perf_counter()
             instance._capture_boot_head()
             elapsed = time.perf_counter() - started
-            self.assertTrue(entered.wait(0.5))
-            self.assertLess(elapsed, 0.1)
-            self.assertEqual(instance._boot_head, "")
-            release.set()
-            instance._boot_head_thread.join(1.0)
-            self.assertFalse(instance._boot_head_thread.is_alive())
-            mocked_log.assert_called_once()
 
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][1]["timeout"], 5)
-        self.assertEqual(instance._boot_head, "")
+        self.assertLess(elapsed, 0.1)
+        self.assertEqual(instance._boot_head, frozen)
+        self.assertIsNone(instance._boot_head_thread)
+        mocked_log.assert_called_once()
+
+    def test_direct_brain_reads_loose_ref_without_spawning_git(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-boot-head-") as root:
+            repo = Path(root)
+            ref = repo / ".git" / "refs" / "heads" / "master"
+            ref.parent.mkdir(parents=True)
+            (repo / ".git" / "HEAD").write_text(
+                "ref: refs/heads/master\n", encoding="ascii")
+            frozen = "b" * 40
+            ref.write_text(frozen + "\n", encoding="ascii")
+            instance = object.__new__(agent_module.Agent)
+            instance._boot_head = "old"
+            fake_autogit = SimpleNamespace(REPO_DIR=repo)
+            with mock.patch.dict(
+                    agent_module.os.environ, {"STS2_ASCEND_BOOT_HEAD": ""}), \
+                    mock.patch.object(agent_module, "autogit", fake_autogit), \
+                    mock.patch.object(
+                        agent_module.subprocess, "run",
+                        side_effect=AssertionError("boot capture must not spawn git")), \
+                    mock.patch.object(agent_module, "log"):
+                instance._capture_boot_head()
+
+            self.assertEqual(instance._boot_head, frozen)
+            self.assertIsNone(instance._boot_head_thread)
 
 
 if __name__ == "__main__":

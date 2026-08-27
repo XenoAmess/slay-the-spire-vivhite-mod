@@ -23,7 +23,8 @@ from pathlib import Path
 from client import ApiError, ConnectionDown, Sts2Client
 from decision_trace import ensure_decision_trace
 from knowledge import Knowledge
-from lifecycle import pid_file, request_stop, stop_requested, wait_for_stop
+from lifecycle import (pid_file, read_git_head, request_stop, stop_requested,
+                       wait_for_stop)
 from live_dashboard import LiveDashboardPublisher
 from policy import Decision, Policy
 from reflect import finalize_run
@@ -285,6 +286,10 @@ class RunContext:
     force_giveup: bool = False
     force_offense: bool = False
     stall_grind_grace: bool = False
+    # A review marker may advance only for a run that began after this Brain
+    # observed a genuine between-run screen. A mid-run reconnect validates only
+    # the tail of that run and must keep rollback protection intact.
+    review_health_eligible: bool = False
 
     def reset_for(self, run_id: str, ascension: int, run_number: int = 0):
         self.__init__(run_id=run_id, ascension=ascension, run_number=run_number,
@@ -304,8 +309,10 @@ class Agent:
         self.runs_played = 0
         self.request_restart = False  # llm_review 改了代码后置位，回到主菜单时自重启
         self._last_policy_refresh = 0.0  # 策略热同步节流（第 123~124 局复盘）
-        self._boot_head = ""  # run() 启动时固定；测试构造 Agent 不访问 Git
-        self._boot_head_thread: threading.Thread | None = None
+        self._boot_head = ""  # Runner 在模块加载前冻结；测试构造 Agent 不访问 Git
+        self._boot_review_commit = ""  # 与本进程代码同时冻结的 rollback marker
+        self._boot_head_thread: threading.Thread | None = None  # legacy test compatibility
+        self._review_health_ready_for_new_run = False
         self._ambiguous_action = None  # response-lost POST awaiting next-state reconciliation
         self._api_race_retry = None  # repeated refresh races, diagnostic only
         self.live_dashboard: LiveDashboardPublisher | None = None
@@ -328,43 +335,39 @@ class Agent:
                 log(f"[agent] ASCEND-VISION 监督器启动失败（不影响游玩）：{exc}")
 
     def _capture_boot_head(self) -> None:
-        """Read the optional rollback-health baseline fully off the game loop."""
+        """Freeze the exact commit this Brain process loaded without spawning Git."""
         self._boot_head = ""
-        if autogit is None:
-            return
-
-        def worker() -> None:
+        self._boot_review_commit = ""
+        self._boot_head_thread = None
+        inherited = os.environ.get("STS2_ASCEND_BOOT_HEAD", "").strip().lower()
+        if re.fullmatch(r"[0-9a-f]{40,64}", inherited):
+            self._boot_head = inherited
+            log(f"[agent] 启动代码基线：{inherited[:8]}（runner 冻结）")
+        elif autogit is not None:
+            # Direct ``py -m brain`` fallback.  Pure ref-file reads are bounded and
+            # cannot hang gameplay behind Windows CreateProcess/antivirus checks.
+            self._boot_head = read_git_head(autogit.REPO_DIR)
+            if self._boot_head:
+                log(f"[agent] 启动代码基线：{self._boot_head[:8]}（本地冻结）")
+        if not self._boot_head:
+            log("[agent] 启动提交号暂不可读；代码版本诊断留空，游玩照常启动")
+        review_handoff_present = "STS2_ASCEND_BOOT_REVIEW_COMMIT" in os.environ
+        inherited_review = os.environ.get(
+            "STS2_ASCEND_BOOT_REVIEW_COMMIT", "").strip().lower()
+        if re.fullmatch(r"[0-9a-f]{40,64}", inherited_review):
+            self._boot_review_commit = inherited_review
+        elif not review_handoff_present:
+            # Direct ``py -m brain`` fallback.  This read happens before the
+            # review worker resumes, so it still identifies the loaded epoch.
             try:
-                # HEAD is an atomic read; it does not need the repository write
-                # transaction lock.  Keeping this probe outside that shared lock
-                # is essential: policy hot-refresh also uses the lock and must
-                # never queue behind antivirus-delayed process inspection.
-                # This commit is only a later rollback-health hint, so the whole
-                # probe lives on a daemon thread and can never gate gameplay,
-                # telemetry, review rendering, or API connection.
-                result = subprocess.run(
-                    ["git", "-C", str(autogit.REPO_DIR), "rev-parse", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=5,
-                )
-                if result.returncode != 0:
-                    raise RuntimeError((result.stderr or "git rev-parse failed").strip())
-                captured = result.stdout.strip()
-                if not captured:
-                    raise RuntimeError("git rev-parse returned an empty HEAD")
-                self._boot_head = captured
-            except Exception as exc:
-                log(f"[agent] 启动提交号暂不可读，跳过本轮健康标记（不影响游玩）：{exc}")
-
-        self._boot_head_thread = threading.Thread(
-            target=worker,
-            name="ascend-boot-head",
-            daemon=True,
-        )
-        self._boot_head_thread.start()
+                marker = json.loads((KNOWLEDGE_DIR / "pending_restart.json").read_text(
+                    encoding="utf-8"))
+                candidate = str(marker.get("review_commit") or "").strip().lower()
+                if (marker.get("state") in (None, "committed")
+                        and re.fullmatch(r"[0-9a-f]{40,64}", candidate)):
+                    self._boot_review_commit = candidate
+            except (OSError, json.JSONDecodeError):
+                pass
 
     def _dashboard_observe(self, state: dict) -> None:
         publisher = self.live_dashboard
@@ -500,6 +503,13 @@ class Agent:
         gold = run.get("gold", self.ctx.last_gold)
         asc = run.get("ascension", self.ctx.ascension)
 
+        # Freeze a clean boundary before accepting a run as evidence that newly
+        # loaded review code is healthy. Attaching to an existing run proves only
+        # its tail and used to retire rollback protection too early.
+        if (screen in ("MAIN_MENU", "CHARACTER_SELECT", "TIMELINE")
+                and (self.ctx.run_id == "run_unknown" or self.ctx.run_finalized)):
+            self._review_health_ready_for_new_run = True
+
         # new run detection
         # GAME_OVER 屏必须排除（第 50~51 局复盘）：大脑重启落在上一局结算屏时，
         # 新进程会把旧 run_id 回声当成新对局，随后在 GAME_OVER 上二次结算出
@@ -510,7 +520,11 @@ class Agent:
                 log("[agent] 检测到上一局异常结束，按失败归档")
                 self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
             next_run = int(self.know.stats.get("global", {}).get("runs", 0)) + 1
+            review_health_eligible = bool(
+                getattr(self, "_review_health_ready_for_new_run", False))
             self.ctx.reset_for(run_id, asc, next_run)
+            self.ctx.review_health_eligible = review_health_eligible
+            self._review_health_ready_for_new_run = False
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
             # 断线重连续接局史（第 218 批复盘）：大脑在局中途崩溃/签名故障自杀后，
             # 新进程遇同 run_id 旧账另起——218 局 F23 重启把 23 层深局记成
@@ -518,6 +532,9 @@ class Agent:
             # 决策与战斗记录在此接回，重连不再丢局史。
             prior = self.know.load_run_log(run_id)
             if prior and (prior.get("decisions") or prior.get("combat_notes")):
+                # Resuming a persisted run is not a complete boot-validation run,
+                # even if a transient menu-like screen was observed first.
+                self.ctx.review_health_eligible = False
                 self.ctx.decisions = list(prior.get("decisions") or [])
                 self.ctx.combat_notes = list(prior.get("combat_notes") or [])
                 # Resume only terminal attribution facts.  The general credit_tags
@@ -1458,26 +1475,47 @@ class Agent:
         """Retire a review rollback marker only after reloaded code completes runs.
 
         A fixed number of API ticks proves little: rare screens can crash minutes
-        later, and the old 50-tick deletion made runner rollback impossible.  The
-        process records its startup HEAD and counts only complete runs whose loaded
-        history contains the marker's review commit.  The repository lock prevents
-        racing a newly prepared marker from the asynchronous reviewer.
+        later, and the old 50-tick deletion made runner rollback impossible.  Runner
+        freezes the exact marker present before importing this Brain; only complete
+        runs matching that loaded marker epoch count.  No Git subprocess runs on the
+        gameplay thread.  The repository lock prevents racing a newly prepared
+        marker from the asynchronous reviewer.
         """
         marker = KNOWLEDGE_DIR / "pending_restart.json"
-        if autogit is None or not self._boot_head or not marker.exists():
+        if autogit is None or not marker.exists():
+            return
+        if not bool(getattr(self.ctx, "review_health_eligible", False)):
+            diag = ("partial-run", getattr(self.ctx, "run_id", "unknown"))
+            if getattr(self, "_review_health_diag", None) != diag:
+                self._review_health_diag = diag
+                log("[agent] 复盘健康计数未推进：本进程在该局开始前未观察到局间边界；"
+                    "下一局完整验证")
+            return
+        if not getattr(self, "_boot_review_commit", ""):
+            diag = ("missing-boot-review", str(marker))
+            if getattr(self, "_review_health_diag", None) != diag:
+                self._review_health_diag = diag
+                log("[agent] 复盘健康计数未推进：该 marker 不是本进程启动时加载的；"
+                    "等待重启加载")
             return
         try:
-            with autogit.repository_lock(timeout=5.0):
+            # Optional health bookkeeping must never queue live gameplay behind a
+            # review/progress Git transaction. A later complete run can retry it.
+            with autogit.repository_lock(timeout=0.1):
                 info = json.loads(marker.read_text(encoding="utf-8"))
+                if info.get("state") not in (None, "committed"):
+                    return
                 review_commit = str(info.get("review_commit") or "")
                 if not review_commit:
                     return
-                loaded = subprocess.run(
-                    ["git", "merge-base", "--is-ancestor", review_commit,
-                     self._boot_head], cwd=str(REPO_DIR),
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    timeout=10, check=False)
-                if loaded.returncode != 0:
+                loaded_review = getattr(self, "_boot_review_commit", "")
+                if loaded_review != review_commit:
+                    diag = (review_commit, loaded_review)
+                    if getattr(self, "_review_health_diag", None) != diag:
+                        self._review_health_diag = diag
+                        log(f"[agent] 复盘健康计数未推进：marker {review_commit[:8]} "
+                            f"不是本进程加载的 marker {loaded_review[:8] or 'none'}；"
+                            "等待重启加载")
                     return
                 healthy_runs = int(info.get("healthy_runs", 0) or 0) + 1
                 if healthy_runs >= REVIEW_HEALTHY_RUNS:
@@ -1504,7 +1542,8 @@ class Agent:
                             Path(tmp_name).unlink()
                         except OSError:
                             pass
-        except (OSError, ValueError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
+        except (OSError, TimeoutError, ValueError, json.JSONDecodeError,
+                subprocess.SubprocessError) as exc:
             log(f"[agent] 复盘健康标记更新失败（保留 marker）：{exc}")
 
     def _note_signature_failure(self, action: str, exc: Exception) -> None:

@@ -99,6 +99,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 直播控制语义不变：开播仍先启动完整 sts2-ascend 栈并将杀戮尖塔2置于顶部，再通过本地哔哩哔哩直播姬开播；下播只操作直播姬，不停止任何服务、智能体或游戏。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
 - `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。
+- Runner 会在每次创建 Brain 前用纯 Git ref 文件冻结 `STS2_ASCEND_BOOT_HEAD` 与
+  `STS2_ASCEND_BOOT_REVIEW_COMMIT`；二者只描述该子进程实际加载的代码/复盘 marker epoch，
+  不是外部配置或 Stop 清理目标，不得由启动脚本复用旧值。旧 rollback marker 不得阻塞新复盘：
+  新 marker 必须先以 `prepared` 事务接管并保存前任，工作树与 ref 均发布后才能改为 `committed`；
+  CAS 中止/新代码回滚时恢复前任。只有从局间屏开始、完整跑完的新局才推进健康数。
 
 生命周期维护规则：
 

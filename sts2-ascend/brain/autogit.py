@@ -180,20 +180,24 @@ def _unlock_file_handle(handle) -> None:
 @contextmanager
 def repository_lock(timeout: float = 480.0) -> Iterator[None]:
     """同进程可重入、跨进程互斥的仓库事务锁。"""
-    with _GIT_LOCK:
-        depth = int(getattr(_LOCK_STATE, "depth", 0))
-        if depth:
-            _LOCK_STATE.depth = depth + 1
-            try:
-                yield
-            finally:
-                _LOCK_STATE.depth -= 1
-            return
+    depth = int(getattr(_LOCK_STATE, "depth", 0))
+    if depth:
+        _LOCK_STATE.depth = depth + 1
+        try:
+            yield
+        finally:
+            _LOCK_STATE.depth -= 1
+        return
 
+    started = time.monotonic()
+    if not _GIT_LOCK.acquire(timeout=max(0.0, float(timeout))):
+        raise TimeoutError("等待自动 Git 进程内锁超时")
+    try:
         lock_path = _git_dir() / "sts2-ascend-autogit.lock"
         handle = lock_path.open("a+b")
         try:
-            _lock_file_handle(handle, timeout)
+            remaining = max(0.0, float(timeout) - (time.monotonic() - started))
+            _lock_file_handle(handle, remaining)
             _LOCK_STATE.depth = 1
             _LOCK_STATE.handle = handle
             yield
@@ -202,6 +206,8 @@ def repository_lock(timeout: float = 480.0) -> Iterator[None]:
             _LOCK_STATE.handle = None
             _unlock_file_handle(handle)
             handle.close()
+    finally:
+        _GIT_LOCK.release()
 
 
 def _run_git(
@@ -525,12 +531,15 @@ def commit_patch_result(
     log=print, push: bool = True,
     prepare: Callable[[CommitResult], bool] | None = None,
     abort_prepare: Callable[[CommitResult], None] | None = None,
+    finalize_prepare: Callable[[CommitResult], None] | None = None,
 ) -> CommitResult:
     """把精确 patch 同时应用到私有 index 与工作树，再以 CAS 建立 commit。
 
     私有 index 只包含 patch 本身；同文件中不相交的用户工作树 hunk 会留在工作树，
     不会进入 commit。``prepare`` 在工作树/分支变化前拿到确定 commit id，可用于
     原子发布重启 marker；CAS 失败会调用 ``abort_prepare`` 后无损重试。
+    ``finalize_prepare`` 只在工作树 patch 与 update-ref 都成功后调用，可把
+    provisional marker 两阶段确认为 committed；其失败不会倒退已成立的提交。
     """
     provisional: CommitResult | None = None
     prepared = False
@@ -694,6 +703,16 @@ def commit_patch_result(
                                 abort_prepare(provisional)
                             prepared = False
                             continue
+
+                        if prepared and finalize_prepare is not None:
+                            try:
+                                finalize_prepare(provisional)
+                            except Exception as exc:
+                                # Ref and worktree already agree on the new commit.
+                                # Keep the marker in prepared state for diagnosis;
+                                # never misreport the established commit as failed.
+                                log(f"[git] patch 已提交，但 prepare 最终确认异常；"
+                                    f"保留 marker 供重试：{exc}")
 
                         try:
                             current_target_index = _index_entries_unlocked(validated)

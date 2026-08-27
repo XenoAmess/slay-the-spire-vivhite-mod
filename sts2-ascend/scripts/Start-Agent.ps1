@@ -1,4 +1,6 @@
 # Unified stack start: deploy (optional) -> game -> runner/brain -> on-demand announcers.
+# Runner, not this wrapper, freezes Git HEAD + active review-marker epoch into each
+# Brain child; Start must not precompute or reuse those generation-local values.
 [CmdletBinding()]
 param(
     [string]$Version = "0.9.0",

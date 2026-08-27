@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -25,9 +26,12 @@ class AutoGitSafetyTests(unittest.TestCase):
         self._old_repo = autogit.REPO_DIR
         self._old_base = autogit.BASE_DIR
         self._old_flag = autogit.REVIEW_ACTIVE_FILE
+        self._old_tombstones = runner.ROLLBACK_TOMBSTONES
         autogit.REPO_DIR = self.repo
         autogit.BASE_DIR = self.repo / "sts2-ascend"
         autogit.REVIEW_ACTIVE_FILE = autogit.BASE_DIR / "knowledge" / "review_active.flag"
+        runner.ROLLBACK_TOMBSTONES = self.repo / "review_rollback_tombstones.json"
+        runner._ROLLED_BACK_COMMITS.clear()
 
         self._git("init", "-q")
         self._git("config", "user.name", "Safety Test")
@@ -44,6 +48,8 @@ class AutoGitSafetyTests(unittest.TestCase):
         autogit.REPO_DIR = self._old_repo
         autogit.BASE_DIR = self._old_base
         autogit.REVIEW_ACTIVE_FILE = self._old_flag
+        runner.ROLLBACK_TOMBSTONES = self._old_tombstones
+        runner._ROLLED_BACK_COMMITS.clear()
         self.tmp.cleanup()
 
     def _git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -316,6 +322,86 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(self._read(path), "VALUE = 1\n")
         self.assertFalse(marker.exists())
 
+    def test_patch_finalizes_marker_only_after_ref_and_worktree_publish(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        before = self._git("rev-parse", "HEAD").stdout.strip()
+        self._write(path, "VALUE = 7\n")
+        patch = subprocess.run(
+            ["git", "-C", str(self.repo), "diff", "--binary", "--", path],
+            check=True, capture_output=True,
+        ).stdout
+        self._git("restore", path)
+        events: list[str] = []
+
+        def prepare(provisional: autogit.CommitResult) -> bool:
+            events.append("prepared")
+            self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
+            self.assertEqual(self._read(path), "VALUE = 1\n")
+            return True
+
+        def finalize(provisional: autogit.CommitResult) -> None:
+            events.append("committed")
+            self.assertEqual(
+                self._git("rev-parse", "HEAD").stdout.strip(), provisional.commit)
+            self.assertEqual(self._read(path), "VALUE = 7\n")
+
+        result = autogit.commit_patch_result(
+            patch, "two phase marker", [path], push=False,
+            prepare=prepare, finalize_prepare=finalize,
+        )
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(events, ["prepared", "committed"])
+
+    def test_patch_cas_retries_restore_superseded_review_marker(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        before = self._git("rev-parse", "HEAD").stdout.strip()
+        self._write(path, "VALUE = 7\n")
+        patch = subprocess.run(
+            ["git", "-C", str(self.repo), "diff", "--binary", "--", path],
+            check=True, capture_output=True,
+        ).stdout
+        self._git("restore", path)
+        marker = self.repo / "pending_restart.json"
+        previous = {
+            "review_parent": "1" * 40,
+            "review_commit": "2" * 40,
+            "healthy_runs": 1,
+        }
+        marker.write_text(json.dumps(previous), encoding="utf-8")
+        old_marker = llm_review.MARKER_FILE
+        original_run = autogit._run_git
+
+        def fail_update_ref(args, **kwargs):
+            if args and args[0] == "update-ref":
+                return subprocess.CompletedProcess(args, 1, "", "fault injected CAS")
+            return original_run(args, **kwargs)
+
+        def prepare(provisional: autogit.CommitResult) -> bool:
+            return llm_review._write_restart_marker({
+                "review_parent": provisional.before_head,
+                "review_commit": provisional.commit,
+                "paths": [path],
+            }, log=lambda _message: None)
+
+        llm_review.MARKER_FILE = marker
+        try:
+            with mock.patch.object(autogit, "_run_git", side_effect=fail_update_ref):
+                result = autogit.commit_patch_result(
+                    patch, "CAS must restore A", [path], push=False,
+                    prepare=prepare,
+                    abort_prepare=lambda provisional: llm_review._remove_restart_marker(
+                        provisional.commit, log=lambda _message: None),
+                )
+        finally:
+            llm_review.MARKER_FILE = old_marker
+
+        self.assertFalse(result.created)
+        self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
+        self.assertEqual(self._read(path), "VALUE = 1\n")
+        self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), previous)
+        self.assertFalse(list(marker.parent.glob(".pending_restart.*.tmp")))
+
     def test_patch_refuses_symbolic_head_switch_during_prepare(self) -> None:
         path = "sts2-ascend/brain/policy.py"
         original_ref = self._git("symbolic-ref", "HEAD").stdout.strip()
@@ -424,6 +510,28 @@ class AutoGitSafetyTests(unittest.TestCase):
             self.assertGreaterEqual(elapsed, 0.45)
         finally:
             child.wait(timeout=5)
+
+    def test_in_process_lock_honors_short_timeout(self) -> None:
+        entered = threading.Event()
+        release = threading.Event()
+
+        def holder() -> None:
+            with autogit.repository_lock():
+                entered.set()
+                release.wait(2.0)
+
+        thread = threading.Thread(target=holder, daemon=True)
+        thread.start()
+        self.assertTrue(entered.wait(1.0))
+        started = time.monotonic()
+        try:
+            with self.assertRaises(TimeoutError):
+                with autogit.repository_lock(timeout=0.05):
+                    self.fail("busy in-process lock must not be entered")
+            self.assertLess(time.monotonic() - started, 0.4)
+        finally:
+            release.set()
+            thread.join(1.0)
 
     def test_pid_probe_never_terminates_target_process(self) -> None:
         child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(10)"])
@@ -564,6 +672,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=crashes),
                   mock.patch.object(runner, "stop_requested", return_value=False),
+                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
                   mock.patch.object(runner, "wait_for_stop", return_value=False),
                   mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback,
                   mock.patch.object(runner, "log")):
@@ -581,6 +690,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=restarts),
                   mock.patch.object(runner, "stop_requested", return_value=False),
+                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
                   mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback,
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 0)
@@ -598,6 +708,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                     runner, "_run_brain",
                     side_effect=[(runner.RESTART_CODE, 1)] * runner.MAX_REVIEW_RESTARTS),
                   mock.patch.object(runner, "stop_requested", return_value=False),
+                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
                   mock.patch.object(runner, "rollback_from_marker", return_value=False),
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 1)
@@ -613,12 +724,104 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=crashes),
                   mock.patch.object(runner, "stop_requested", return_value=False),
+                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
                   mock.patch.object(runner, "wait_for_stop", return_value=False),
                   mock.patch.object(runner, "rollback_from_marker", return_value=False) as rollback,
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 1)
                 rollback.assert_called_once_with()
             self.assertTrue(marker.exists(), "失败回滚必须保留 marker 供人工诊断")
+        finally:
+            runner.MARKER = old_marker
+
+    def test_runner_passes_frozen_boot_head_to_brain(self) -> None:
+        frozen = "a" * 40
+        process = mock.Mock()
+        process.wait.return_value = 0
+        loaded_review = "b" * 40
+        with mock.patch.object(runner, "read_git_head", return_value=frozen), \
+                mock.patch.object(
+                    runner, "_active_review_commit", return_value=loaded_review), \
+                mock.patch.object(runner.subprocess, "Popen", return_value=process) as popen:
+            result = runner._run_brain()
+
+        self.assertEqual(result[0], 0)
+        child_env = popen.call_args.kwargs["env"]
+        self.assertEqual(child_env["STS2_ASCEND_BOOT_HEAD"], frozen)
+        self.assertEqual(child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"], loaded_review)
+
+    def test_runner_exposes_only_committed_or_legacy_marker_epochs(self) -> None:
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        commit = "e" * 40
+        runner.MARKER = marker
+        try:
+            marker.write_text(json.dumps({
+                "review_commit": commit, "state": "prepared"}), encoding="utf-8")
+            self.assertEqual(runner._active_review_commit(), "")
+            marker.write_text(json.dumps({
+                "review_commit": commit, "state": "committed"}), encoding="utf-8")
+            self.assertEqual(runner._active_review_commit(), commit)
+            marker.write_text(json.dumps({"review_commit": commit}), encoding="utf-8")
+            self.assertEqual(runner._active_review_commit(), commit)
+            runner._record_rollback_tombstone(commit)
+            runner._ROLLED_BACK_COMMITS.clear()  # simulate a fresh runner process
+            self.assertEqual(runner._active_review_commit(), "")
+        finally:
+            runner.MARKER = old_marker
+
+    def test_runner_rollback_restores_superseded_marker(self) -> None:
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        previous = {
+            "review_parent": "1" * 40,
+            "review_commit": "2" * 40,
+            "healthy_runs": 1,
+        }
+        current = {
+            "review_parent": "3" * 40,
+            "review_commit": "4" * 40,
+            "paths": ["sts2-ascend/brain/policy.py"],
+            "_superseded_marker": previous,
+        }
+        marker.write_text(json.dumps(current), encoding="utf-8")
+        runner.MARKER = marker
+        try:
+            with mock.patch.object(
+                    autogit, "rollback_review_commit", return_value=True) as rollback:
+                self.assertTrue(runner.rollback_from_marker())
+            rollback.assert_called_once_with(
+                current["review_parent"], current["review_commit"],
+                marker_paths=current["paths"], log=runner.log)
+            self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), previous)
+            tombstones = json.loads(
+                runner.ROLLBACK_TOMBSTONES.read_text(encoding="utf-8"))["commits"]
+            self.assertIn(current["review_commit"], tombstones)
+        finally:
+            runner.MARKER = old_marker
+
+    def test_successful_code_rollback_survives_marker_restore_failure(self) -> None:
+        old_marker = runner.MARKER
+        marker = self.repo / "pending_restart.json"
+        current = {
+            "review_parent": "6" * 40,
+            "review_commit": "7" * 40,
+            "paths": ["sts2-ascend/brain/policy.py"],
+            "_superseded_marker": {"review_commit": "8" * 40},
+        }
+        marker.write_text(json.dumps(current), encoding="utf-8")
+        runner.MARKER = marker
+        try:
+            with mock.patch.object(
+                    autogit, "rollback_review_commit", return_value=True), \
+                    mock.patch.object(
+                        runner, "_restore_superseded_marker",
+                        side_effect=PermissionError("fault injected")), \
+                    mock.patch.object(runner, "log"):
+                self.assertTrue(runner.rollback_from_marker())
+            self.assertTrue(marker.exists(), "诊断 marker 应保留供后续恢复")
+            runner._ROLLED_BACK_COMMITS.clear()  # persisted identity survives restart
+            self.assertEqual(runner._active_review_commit(), "")
         finally:
             runner.MARKER = old_marker
 
@@ -663,25 +866,58 @@ class AutoGitSafetyTests(unittest.TestCase):
             self.assertNotIn('"--hard"', source, name)
             self.assertNotIn("'--hard'", source, name)
 
-    def test_restart_marker_is_atomic_and_keeps_old_marker_on_replace_failure(self) -> None:
+    def test_restart_marker_supersedes_atomically_and_abort_restores_old_marker(self) -> None:
         old_knowledge = llm_review.KNOWLEDGE_DIR
         old_marker = llm_review.MARKER_FILE
         knowledge = self.repo / "sts2-ascend" / "knowledge"
         marker = knowledge / "pending_restart.json"
-        marker.write_text('{"old": true}\n', encoding="utf-8")
+        previous = {
+            "review_parent": "1" * 40,
+            "review_commit": "2" * 40,
+            "healthy_runs": 1,
+        }
+        marker.write_text(json.dumps(previous) + "\n", encoding="utf-8")
         llm_review.KNOWLEDGE_DIR = knowledge
         llm_review.MARKER_FILE = marker
         try:
-            # 已有待健康验证的 A marker 时，B 不得覆盖它。
-            self.assertFalse(llm_review._write_restart_marker({"new": True}))
-            self.assertEqual(marker.read_text(encoding="utf-8"), '{"old": true}\n')
+            next_marker = {
+                "review_parent": "3" * 40,
+                "review_commit": "4" * 40,
+            }
+            # Windows 发布故障必须让 A 原样留存，且不能遗留临时文件。
+            before = marker.read_text(encoding="utf-8")
+            with mock.patch.object(
+                    llm_review, "_replace_with_retry",
+                    side_effect=PermissionError("fault injected")):
+                self.assertFalse(llm_review._write_restart_marker(next_marker))
+            self.assertEqual(marker.read_text(encoding="utf-8"), before)
+            self.assertFalse(list(knowledge.glob(".pending_restart.*.tmp")))
+
+            # B 接管 A；若 B 的 Git CAS 随后失败，abort 精确恢复 A 的语义和健康数。
+            self.assertTrue(llm_review._write_restart_marker(next_marker))
+            active = json.loads(marker.read_text(encoding="utf-8"))
+            self.assertEqual(active["review_commit"], next_marker["review_commit"])
+            self.assertEqual(active["state"], "prepared")
+            self.assertEqual(active["_superseded_marker"], previous)
+            self.assertTrue(llm_review._commit_restart_marker(
+                next_marker["review_commit"]))
+            self.assertEqual(
+                json.loads(marker.read_text(encoding="utf-8"))["state"],
+                "committed")
+            llm_review._remove_restart_marker(next_marker["review_commit"])
+            self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), previous)
+
+            # 外部 C 已接管时，迟到的 B abort 不得覆盖 C。
+            current_c = {"review_commit": "5" * 40}
+            marker.write_text(json.dumps(current_c), encoding="utf-8")
+            llm_review._remove_restart_marker(next_marker["review_commit"])
+            self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), current_c)
+
+            # 无前任时，abort 只删除本次 B。
             marker.unlink()
-            with mock.patch.object(llm_review.os, "link", side_effect=OSError("fault injected")):
-                self.assertFalse(llm_review._write_restart_marker({"new": True}))
+            self.assertTrue(llm_review._write_restart_marker(next_marker))
+            llm_review._remove_restart_marker(next_marker["review_commit"])
             self.assertFalse(marker.exists())
-            self.assertFalse(list((knowledge / "code_backups").glob(".pending_restart.*.tmp")))
-            self.assertTrue(llm_review._write_restart_marker({"new": True}))
-            self.assertIn('"new": true', marker.read_text(encoding="utf-8"))
         finally:
             llm_review.KNOWLEDGE_DIR = old_knowledge
             llm_review.MARKER_FILE = old_marker

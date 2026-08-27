@@ -33,13 +33,15 @@ class ReviewHealthMarkerTests(unittest.TestCase):
                 "paths": ["sts2-ascend/brain/policy.py"],
             }), encoding="utf-8")
             instance = object.__new__(agent_module.Agent)
-            instance._boot_head = "c" * 40
+            # HEAD 诊断即使不可读，Runner 冻结的 marker epoch 仍能可靠计数。
+            instance._boot_head = ""
+            instance._boot_review_commit = "b" * 40
+            instance.ctx = SimpleNamespace(
+                review_health_eligible=True, run_id="complete-run")
             fake_autogit = SimpleNamespace(repository_lock=_lock)
-            accepted = SimpleNamespace(returncode=0)
 
             with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge), \
-                    mock.patch.object(agent_module, "autogit", fake_autogit), \
-                    mock.patch.object(agent_module.subprocess, "run", return_value=accepted):
+                    mock.patch.object(agent_module, "autogit", fake_autogit):
                 instance._mark_review_run_healthy()
                 first = json.loads(marker.read_text(encoding="utf-8"))
                 self.assertEqual(first["healthy_runs"], 1)
@@ -55,12 +57,56 @@ class ReviewHealthMarkerTests(unittest.TestCase):
             marker.write_text(json.dumps(original), encoding="utf-8")
             instance = object.__new__(agent_module.Agent)
             instance._boot_head = "c" * 40
+            instance._boot_review_commit = "d" * 40
+            instance.ctx = SimpleNamespace(
+                review_health_eligible=True, run_id="complete-run")
             fake_autogit = SimpleNamespace(repository_lock=_lock)
-            rejected = SimpleNamespace(returncode=1)
 
             with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge), \
-                    mock.patch.object(agent_module, "autogit", fake_autogit), \
-                    mock.patch.object(agent_module.subprocess, "run", return_value=rejected):
+                    mock.patch.object(agent_module, "autogit", fake_autogit):
+                instance._mark_review_run_healthy()
+
+            self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), original)
+
+    def test_mid_run_reconnect_never_advances_health(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-health-") as root:
+            knowledge = Path(root)
+            marker = knowledge / "pending_restart.json"
+            original = {
+                "review_commit": "b" * 40,
+                "state": "committed",
+                "healthy_runs": 1,
+            }
+            marker.write_text(json.dumps(original), encoding="utf-8")
+            instance = object.__new__(agent_module.Agent)
+            instance._boot_review_commit = "b" * 40
+            instance.ctx = SimpleNamespace(
+                review_health_eligible=False, run_id="resumed-run")
+            fake_autogit = SimpleNamespace(repository_lock=_lock)
+
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge), \
+                    mock.patch.object(agent_module, "autogit", fake_autogit):
+                instance._mark_review_run_healthy()
+
+            self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), original)
+
+    def test_prepared_marker_never_advances_health(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-health-") as root:
+            knowledge = Path(root)
+            marker = knowledge / "pending_restart.json"
+            original = {
+                "review_commit": "b" * 40,
+                "state": "prepared",
+            }
+            marker.write_text(json.dumps(original), encoding="utf-8")
+            instance = object.__new__(agent_module.Agent)
+            instance._boot_review_commit = "b" * 40
+            instance.ctx = SimpleNamespace(
+                review_health_eligible=True, run_id="complete-run")
+            fake_autogit = SimpleNamespace(repository_lock=_lock)
+
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge), \
+                    mock.patch.object(agent_module, "autogit", fake_autogit):
                 instance._mark_review_run_healthy()
 
             self.assertEqual(json.loads(marker.read_text(encoding="utf-8")), original)

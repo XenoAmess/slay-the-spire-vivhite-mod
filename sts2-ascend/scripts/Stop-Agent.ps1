@@ -1,4 +1,6 @@
 # Unified stack stop: cooperative sentinel -> exact process-tree fallback -> game window close.
+# STS2_ASCEND_BOOT_HEAD / STS2_ASCEND_BOOT_REVIEW_COMMIT are child-only snapshots,
+# not owner markers or cleanup targets; Stop continues to use session/PID identity only.
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",

@@ -179,7 +179,12 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   指针再由新 Brain 异步补齐，不依赖可能被系统清理的外部 TEMP
 - 隔离失败现场保存后才删除 clone；起不来时 runner 仅对校验过的复盘 commit 创建正向 revert commit，
   不使用 `reset --hard` 或全目录清理
-- 重启 marker 在真实工作树/ref 变化前 exclusive 原子发布；加载新 commit 并健康完成两局后才清除
+- 重启 marker 在真实工作树/ref 变化前以 `prepared` 原子发布；两者均成功后才确认为 `committed`。
+  若旧 marker 尚在观察，新复盘会把它内嵌后接管，Git CAS 中止则自动恢复旧 marker，绝不再把健康
+  观察延迟变成全局拒合锁；新代码回滚后 runner 也会恢复前任 marker，并写独立 tombstone 防止
+  Windows 文件锁导致重复回滚。Runner 创建每代 Brain 前只读 Git ref 与 marker 文件冻结启动 epoch，
+  不启动可能被杀软卡住的 Git 子进程；只有从局间屏后开始并完整跑完的两局才清除观察链。健康记账
+  拿不到仓库锁会在 0.1 秒内放弃本局而不阻塞直播；崩溃重试间隔为 10 秒
 - 只有运行时行为/观测变更才在本局结束的安全点以退出码 42 自重启加载；纯报告不再被误判为
   代码变更，也不会制造无意义的 Brain 断流
 
