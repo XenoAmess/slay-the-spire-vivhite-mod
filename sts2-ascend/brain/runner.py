@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,8 +38,13 @@ FAST_CRASH_SECONDS = 90
 RETRY_INTERVAL_SECONDS = 10
 CTRL_C_GRACE_SECONDS = 20
 STARTUP_TIMEOUT_CODE = 70
-STARTUP_READY_SECONDS = 10
-MAX_REVIEW_STARTUP_FAILURES = 3
+RECONCILE_BLOCKED_CODE = 71
+STARTUP_IMPORT_SECONDS = 5
+STARTUP_READY_SECONDS = 15
+STARTUP_RETRY_SECONDS = 5
+OUTAGE_BUDGET_SECONDS = 115
+ROLLBACK_RESERVE_SECONDS = 45
+MAX_REVIEW_STARTUP_FAILURES = 2
 _SUPERSEDED_MARKER_KEY = "_superseded_marker"
 _SUPERSEDED_MARKER_RAW_KEY = "_superseded_marker_raw"
 _ROLLED_BACK_COMMITS: set[str] = set()
@@ -59,29 +65,49 @@ def log(msg: str) -> None:
         pass
 
 
-def _brain_pid_is_ready(pid: int, boot_id: str, boot_head: str,
-                        boot_review: str) -> bool:
+def _brain_pid_has_stage(pid: int, boot_id: str, boot_head: str,
+                         boot_review: str, stage: str) -> bool:
     try:
         record = json.loads(pid_path("brain").read_text(encoding="utf-8"))
+        current_stage = str(record.get("stage") or "starting")
+        reached = ({"starting": 0, "imported": 1, "ready": 2}.get(current_stage, -1)
+                   >= {"starting": 0, "imported": 1, "ready": 2}.get(stage, 99))
         return (int(record.get("pid", 0)) == int(pid)
                 and record.get("session_id") == SESSION_ID
                 and record.get("boot_id") == boot_id
                 and record.get("boot_head") == boot_head
                 and record.get("boot_review_commit") == boot_review
-                and record.get("stage") == "ready")
+                and reached)
     except (OSError, ValueError, json.JSONDecodeError):
         return False
 
 
+def _brain_pid_is_ready(pid: int, boot_id: str, boot_head: str,
+                        boot_review: str) -> bool:
+    return _brain_pid_has_stage(
+        pid, boot_id, boot_head, boot_review, "ready")
+
+
 def _terminate_startup_child(proc: subprocess.Popen) -> None:
-    if proc.poll() is not None:
-        return
-    proc.terminate()
     try:
-        proc.wait(timeout=3)
-    except subprocess.TimeoutExpired:
+        if proc.poll() is not None:
+            return
+        proc.terminate()
+    except OSError:
+        pass
+    try:
+        proc.wait(timeout=2)
+        return
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    try:
         proc.kill()
-        proc.wait(timeout=3)
+    except OSError:
+        pass
+    try:
+        proc.wait(timeout=2)
+    except (OSError, subprocess.TimeoutExpired):
+        log(f"Brain 启动子进程 {getattr(proc, 'pid', '?')} 未及时退出；身份记录保留供 Stop 兜底")
 
 
 def _replace_marker_text(contents: str) -> None:
@@ -142,23 +168,45 @@ def _restore_superseded_marker(info: dict) -> bool:
 
 
 def _active_review_commit() -> str:
-    """Return the marker epoch present immediately before a Brain is imported."""
+    """Purely read the nearest live marker epoch; never mutate without the lock."""
+    try:
+        info = json.loads(MARKER.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
     for _depth in range(10):
-        try:
-            info = json.loads(MARKER.read_text(encoding="utf-8"))
-            # State-less markers are the backward-compatible committed format.
-            if info.get("state") not in (None, "committed"):
-                return ""
-            value = str(info.get("review_commit") or "").strip().lower()
-            if not re.fullmatch(r"[0-9a-f]{40,64}", value):
-                return ""
-            if not _review_was_rolled_back(value):
-                return value
-            # A failed Windows marker restore must not hide an older live marker.
-            _restore_superseded_marker(info)
-        except (OSError, json.JSONDecodeError):
+        # State-less markers are the backward-compatible committed format.
+        if info.get("state") not in (None, "committed"):
             return ""
+        value = str(info.get("review_commit") or "").strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{40,64}", value):
+            return ""
+        if not _review_was_rolled_back(value):
+            return value
+        previous, previous_raw = _live_predecessor(info)
+        if isinstance(previous, dict):
+            info = previous
+            continue
+        if isinstance(previous_raw, str):
+            try:
+                info = json.loads(previous_raw)
+                continue
+            except json.JSONDecodeError:
+                return ""
+        return ""
     return ""
+
+
+def _repair_tombstoned_marker_locked() -> None:
+    """Retry a prior Windows marker restore only while repository lock is held."""
+    try:
+        info = json.loads(MARKER.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    commit = str(info.get("review_commit") or "").strip().lower()
+    if (info.get("state") in (None, "committed")
+            and re.fullmatch(r"[0-9a-f]{40,64}", commit)
+            and _review_was_rolled_back(commit)):
+        _restore_superseded_marker(info)
 
 
 def _has_active_review_marker() -> bool:
@@ -225,8 +273,12 @@ def _reconcile_prepared_marker() -> bool:
     except (OSError, json.JSONDecodeError) as exc:
         log(f"读取重启 marker 失败；拒绝在未知版本上启动 Brain：{exc}")
         return False
-    if info.get("state") != "prepared":
+    state = info.get("state")
+    if state in (None, "committed"):
         return True
+    if state != "prepared":
+        log(f"重启 marker state={state!r} 非法；拒绝在未知事务上启动 Brain")
+        return False
     parent = str(info.get("review_parent") or "").strip().lower()
     commit = str(info.get("review_commit") or "").strip().lower()
     if (not re.fullmatch(r"[0-9a-f]{40,64}", parent)
@@ -238,14 +290,28 @@ def _reconcile_prepared_marker() -> bool:
                           and autogit.commit_is_ancestor(commit, timeout=5.0)):
         # update-ref/worktree already published; only phase-two marker replace was
         # interrupted. Ownership is rechecked under the shared repository lock.
-        current = json.loads(MARKER.read_text(encoding="utf-8"))
+        try:
+            current = json.loads(MARKER.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            log(f"prepared marker 发布后重读失败：{exc}")
+            return False
         if (current.get("state") != "prepared"
                 or str(current.get("review_commit") or "").lower() != commit):
             return False
+        paths = current.get("paths")
+        if not isinstance(paths, list) or not paths:
+            log("prepared marker 发布后缺少精确路径；保留现场")
+            return False
+        autogit.sync_prepared_index(
+            parent, commit, paths, log=log, operation_timeout=5.0)
         current["state"] = "committed"
         current["committed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         current["reconciled_at_startup"] = True
-        _replace_marker_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n")
+        try:
+            _replace_marker_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n")
+        except OSError as exc:
+            log(f"prepared marker 二阶段确认失败，保留现场重试：{exc}")
+            return False
         log(f"已把 HEAD 中断留存的 prepared marker {commit[:8]} 确认为 committed")
         return True
     if head != parent:
@@ -262,7 +328,11 @@ def _reconcile_prepared_marker() -> bool:
         return False
     # HEAD never published the provisional commit; restoring/deleting the wrapper
     # completes the abort. Tombstoned predecessors are skipped automatically.
-    _restore_superseded_marker(info)
+    try:
+        _restore_superseded_marker(info)
+    except OSError as exc:
+        log(f"prepared marker 前任恢复失败，保留现场重试：{exc}")
+        return False
     log(f"已恢复未发布 prepared marker {commit[:8]} 的前任状态")
     return True
 
@@ -324,13 +394,14 @@ def _run_brain() -> tuple[int, float]:
     started = time.monotonic()
     child_env = os.environ.copy()
     proc: subprocess.Popen | None = None
-    # Keep the repository transaction until the child reports that all Brain
-    # modules/config/Agent construction completed. Internal review/progress writers
-    # use this same lock, so a child can never import half of a multi-file patch.
+    ready_deadline = time.monotonic() + STARTUP_READY_SECONDS
+    # Keep the repository transaction only until every module and config byte is
+    # resident. Agent/Knowledge construction may itself acquire this same lock.
     try:
         with autogit.repository_lock(timeout=3.0):
+            _repair_tombstoned_marker_locked()
             if not _reconcile_prepared_marker():
-                return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+                return RECONCILE_BLOCKED_CODE, time.monotonic() - started
             boot_head = read_git_head(autogit.REPO_DIR)
             loaded_review = _active_review_commit()
             if boot_head:
@@ -344,26 +415,47 @@ def _run_brain() -> tuple[int, float]:
             proc = subprocess.Popen(
                 [sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR),
                 env=child_env)
-            ready_deadline = time.monotonic() + STARTUP_READY_SECONDS
-            while time.monotonic() < ready_deadline:
+            import_deadline = min(
+                ready_deadline, time.monotonic() + STARTUP_IMPORT_SECONDS)
+            while time.monotonic() < import_deadline:
                 rc = proc.poll()
                 if rc is not None:
-                    return rc, time.monotonic() - started
-                if _brain_pid_is_ready(
-                        proc.pid, boot_id, boot_head or "", loaded_review or ""):
+                    log(f"Brain 在 imported 握手前退出（rc={rc}）；按启动失败重试")
+                    return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+                if _brain_pid_has_stage(
+                        proc.pid, boot_id, boot_head or "", loaded_review or "",
+                        "imported"):
                     break
                 if stop_requested():
                     _terminate_startup_child(proc)
                     return 0, time.monotonic() - started
                 time.sleep(0.05)
             else:
-                log(f"Brain 未在 {STARTUP_READY_SECONDS}s 内完成模块/Agent 初始化；终止本代并重试")
+                log(f"Brain 未在 {STARTUP_IMPORT_SECONDS}s 内完成模块/config 导入；终止本代并重试")
                 _terminate_startup_child(proc)
                 return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     except TimeoutError:
         log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，10 秒后重试")
         return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     assert proc is not None
+    # Repository lock is now released.  Agent construction/migrations can safely
+    # take it; ready still has the same bounded startup deadline.
+    while time.monotonic() < ready_deadline:
+        rc = proc.poll()
+        if rc is not None:
+            log(f"Brain 在 ready 握手前退出（rc={rc}）；按启动失败重试")
+            return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+        if _brain_pid_is_ready(
+                proc.pid, boot_id, boot_head or "", loaded_review or ""):
+            break
+        if stop_requested():
+            _terminate_startup_child(proc)
+            return 0, time.monotonic() - started
+        time.sleep(0.05)
+    else:
+        log(f"Brain 未在 {STARTUP_READY_SECONDS}s 内完成 Agent 初始化；终止本代并重试")
+        _terminate_startup_child(proc)
+        return STARTUP_TIMEOUT_CODE, time.monotonic() - started
     stop_logged = False
     try:
         while True:

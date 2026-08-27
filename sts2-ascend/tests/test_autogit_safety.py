@@ -777,6 +777,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                 mock.patch.object(
                     runner, "_active_review_commit", return_value=loaded_review), \
                 mock.patch.object(runner, "_reconcile_prepared_marker", return_value=True), \
+                mock.patch.object(runner, "_brain_pid_has_stage", return_value=True), \
                 mock.patch.object(runner, "_brain_pid_is_ready", return_value=True), \
                 mock.patch.object(runner.subprocess, "Popen", return_value=process) as popen:
             result = runner._run_brain()
@@ -896,7 +897,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(rc, runner.STARTUP_TIMEOUT_CODE)
         terminate.assert_called_once_with(process)
 
-    def test_runner_holds_repository_lock_through_ready_handshake(self) -> None:
+    def test_runner_releases_repository_lock_after_imported_before_ready(self) -> None:
         events: list[str] = []
 
         @contextmanager
@@ -911,8 +912,13 @@ class AutoGitSafetyTests(unittest.TestCase):
         process.poll.return_value = None
         process.wait.return_value = 0
 
-        def ready(*_args) -> bool:
+        def imported(*_args) -> bool:
             self.assertNotIn("lock-exit", events)
+            events.append("child-imported")
+            return True
+
+        def ready(*_args) -> bool:
+            self.assertIn("lock-exit", events)
             events.append("child-ready")
             return True
 
@@ -920,12 +926,14 @@ class AutoGitSafetyTests(unittest.TestCase):
                 mock.patch.object(runner, "read_git_head", return_value="a" * 40), \
                 mock.patch.object(runner, "_active_review_commit", return_value=""), \
                 mock.patch.object(runner, "_reconcile_prepared_marker", return_value=True), \
+                mock.patch.object(runner, "_brain_pid_has_stage", side_effect=imported), \
                 mock.patch.object(runner, "_brain_pid_is_ready", side_effect=ready), \
                 mock.patch.object(runner.subprocess, "Popen", return_value=process):
             rc, _alive = runner._run_brain()
 
         self.assertEqual(rc, 0)
-        self.assertEqual(events[:3], ["lock-enter", "child-ready", "lock-exit"])
+        self.assertEqual(events[:4], [
+            "lock-enter", "child-imported", "lock-exit", "child-ready"])
 
     def test_review_startup_failures_roll_back_within_short_retry_budget(self) -> None:
         failures = [(runner.STARTUP_TIMEOUT_CODE, 10.0)] \
