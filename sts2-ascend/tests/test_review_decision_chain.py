@@ -16,7 +16,46 @@ sys.path.insert(0, str(BRAIN))
 
 import agent as agent_module  # noqa: E402
 import llm_review  # noqa: E402
-from policy import Decision  # noqa: E402
+from policy import Decision, idle_leak_audit_note  # noqa: E402
+
+
+class IdleLeakAuditTests(unittest.TestCase):
+    @staticmethod
+    def _block(name="坚毅", cost=1, block=8, **extra):
+        return {
+            "name": name, "playable": True, "energy_cost": cost,
+            "dynamic_values": [{"name": "Block", "current_value": block}],
+            **extra,
+        }
+
+    @staticmethod
+    def _attack(name="打击", cost=1, damage=6, hits=1, **extra):
+        values = [{"name": "Damage", "current_value": damage}]
+        if hits != 1:
+            values.append({"name": "Hits", "current_value": hits})
+        return {
+            "name": name, "playable": True, "energy_cost": cost,
+            "dynamic_values": values, **extra,
+        }
+
+    def test_idle_leak_marks_affordable_block_and_race_attack(self) -> None:
+        hand = [self._block(block=8), self._attack("双重打击", damage=5, hits=2)]
+        note = idle_leak_audit_note(
+            hand, energy=2, incoming=11, my_block=5, race_mode=True)
+        self.assertIn("IDLE_LEAK_BLK", note)
+        self.assertIn("可抵6", note)
+        self.assertIn("IDLE_LEAK_RACE", note)
+        self.assertIn("预估10", note)
+
+    def test_idle_leak_suppresses_non_candidates_and_dirty_payloads(self) -> None:
+        block = self._block()
+        self.assertEqual(idle_leak_audit_note([block], 0, 11, 5), "")
+        self.assertEqual(idle_leak_audit_note([block], 2, 5, 5), "")
+        self.assertEqual(
+            idle_leak_audit_note([block], 2, 11, 5, is_unavailable=lambda _c: True), "")
+        self.assertEqual(
+            idle_leak_audit_note([self._block(cost=2, costs_x=True)], 2, 11, 5), "")
+        self.assertEqual(idle_leak_audit_note([object()], "dirty", None, {}), "")
 
 
 class PersistedDecisionEvidenceTests(unittest.TestCase):

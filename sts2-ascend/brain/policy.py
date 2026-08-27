@@ -77,6 +77,47 @@ def card_numbers(card: dict) -> tuple[int, int, int]:
     return dmg, block, hits
 
 
+def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
+                         is_unavailable=None, race_mode: bool = False) -> str:
+    """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。"""
+    try:
+        gap = int(incoming) - int(my_block)
+        if energy is None or int(energy) <= 0 or gap <= 0:
+            return ""
+        unavailable = is_unavailable or (lambda _card: False)
+        best_block = None  # (effective block, negative cost, name)
+        best_attack = None  # (estimated damage, name)
+        for card in hand or []:
+            if (not isinstance(card, dict) or not card.get("playable")
+                    or unavailable(card) or card.get("costs_x")):
+                continue
+            cost = int(card.get("energy_cost") or 0)
+            if cost < 1 or cost > int(energy):
+                continue
+            damage, block, hits = card_numbers(card)
+            if block > 0:
+                candidate = (min(int(block), gap), -cost, card.get("name") or "")
+                if best_block is None or candidate[:2] > best_block[:2]:
+                    best_block = candidate
+            elif race_mode and damage > 0:
+                candidate = (int(damage) * max(1, int(hits or 1)), card.get("name") or "")
+                if best_attack is None or candidate[0] > best_attack[0]:
+                    best_attack = candidate
+        notes = []
+        if best_block is not None:
+            notes.append(
+                f"⚠残能空漏审计(IDLE_LEAK_BLK)：能量{int(energy)}空过，"
+                f"受击净缺口{gap}，可负担格挡【{best_block[2]}】可抵{best_block[0]}")
+        if race_mode and best_attack is not None:
+            notes.append(
+                f"⚠残能空漏审计(IDLE_LEAK_RACE)：竞速态残能{int(energy)}，"
+                f"未打可负担最高伤【{best_attack[1]}】(预估{best_attack[0]}，净缺口{gap})")
+        return ("；" + "；".join(notes)) if notes else ""
+    except Exception:
+        # 审计位不得因脏载荷改变 end_turn 保活语义。
+        return ""
+
+
 def card_type(card: dict) -> str:
     return card.get("card_type") or ""
 
@@ -2723,8 +2764,12 @@ class Policy:
                                  and not self._card_unavailable(c)
                                  and c.get("energy_cost", 0) > energy]
             energy_note = f"；{len(skipped_by_energy)}张可出牌因能量不足弃用" if skipped_by_energy else ""
+            audit_note = idle_leak_audit_note(
+                hand, energy, incoming, my_block,
+                is_unavailable=self._card_unavailable,
+                race_mode=bool(race_allin or kill_race))
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
