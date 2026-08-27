@@ -40,11 +40,12 @@ class ReviewConfigurationTests(unittest.TestCase):
             command = [sys.executable, "-c", "import sys;sys.stdout.write('x'*400000)"]
             with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
-                rc, tail, timed_out, stopped = llm_review._stream_run(command, 30)
+                rc, tail, timed_out, stopped, stalled = llm_review._stream_run(command, 30)
             stream_size = stream.stat().st_size
         self.assertEqual(rc, 0)
         self.assertFalse(timed_out)
         self.assertFalse(stopped)
+        self.assertFalse(stalled)
         self.assertLessEqual(len(tail), 256 * 1024)
         self.assertGreater(stream_size, len(tail))
 
@@ -74,7 +75,10 @@ class ReviewSalvageTests(unittest.TestCase):
                 commits.append((message, kwargs))
                 return SimpleNamespace(created=True, pushed=True, commit="a" * 40, reason="")
 
-            fake_autogit = SimpleNamespace(commit_progress_result=fake_commit)
+            fake_autogit = SimpleNamespace(
+                commit_progress_result=fake_commit,
+                push_pending=lambda **_kwargs: True,
+            )
             manifest = {
                 "time": "2026-08-27 13:00:00", "batch_runs": [731, 732],
                 "pre_head": "deadbeef" * 5, "failure_kind": "path_boundary",
@@ -87,6 +91,10 @@ class ReviewSalvageTests(unittest.TestCase):
                   mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root),
                   mock.patch.object(llm_review, "REJECTION_LEDGER", ledger),
                   mock.patch.dict(sys.modules, {"autogit": fake_autogit}),
+                  mock.patch.object(llm_review, "_flush_pending_rejection_ledger",
+                                    return_value=True),
+                  mock.patch.object(llm_review, "_upstream_ledger_contains",
+                                    return_value=True),
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 llm_review._record_review_rejection(package, manifest, log=lambda _msg: None)
                 llm_review._record_review_rejection(package, manifest, log=lambda _msg: None)

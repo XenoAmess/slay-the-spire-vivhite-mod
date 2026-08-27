@@ -792,13 +792,29 @@ def _sandbox_readable_corpus_paths(value):
 
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None,
-                 closure_state: dict | None = None) -> str:
+                 closure_state: dict | None = None,
+                 salvage_packages: list[str] | None = None,
+                 salvage_attempts: list[str] | None = None,
+                 evidence_only: bool = False,
+                 log=print) -> str:
     n = int(cfg.get("max_runs_in_packet", 100))
-    run_records = _review_run_records(n, batch_runs=batch_runs)
+    # A runless legacy salvage still needs a positive synthetic ``run`` value as
+    # durable queue identity.  It must never borrow a real run with that number
+    # from the current knowledge store and present it as evidence for the old
+    # package.
+    run_records = ([] if evidence_only else
+                   _review_run_records(n, batch_runs=batch_runs))
     run_summaries = [_summarize_run(data, evidence_match)
                      for _, data, evidence_match in run_records]
-    decision_chain_evidence = _primary_failure_decision_chain(
-        n, batch_runs=batch_runs, records=run_records)
+    decision_chain_evidence = (
+        {
+            "selection_policy": "evidence_only_replay_no_synthetic_run",
+            "full_failure_run": None,
+        }
+        if evidence_only else
+        _primary_failure_decision_chain(
+            n, batch_runs=batch_runs, records=run_records)
+    )
     evidence_text = []
     for summary in run_summaries:
         evidence_text.extend(summary.get("combat_notes") or [])
@@ -818,8 +834,17 @@ def build_prompt(know, cfg: dict, every: int | None = None,
             native_digest.get("corpus_paths"))
     packet = {
         "runs_summary": run_summaries,
-        "run_evidence_scope": {
+        "run_evidence_scope": ({
+            "requested": [],
+            "queue_identity_runs": list(batch_runs or []),
+            "evidence_only": True,
+            "exact": [],
+            "missing": [],
+            "fallback_is_not_batch_evidence": False,
+        } if evidence_only else {
             "requested": list(batch_runs or []),
+            "queue_identity_runs": list(batch_runs or []),
+            "evidence_only": False,
             "exact": sorted(int(item["run_number"]) for item in run_summaries
                             if item.get("evidence_match") == "exact_batch"),
             "missing": sorted(set(int(x) for x in (batch_runs or []))
@@ -828,13 +853,19 @@ def build_prompt(know, cfg: dict, every: int | None = None,
             "fallback_is_not_batch_evidence": any(
                 item.get("evidence_match") == "recent_fallback_unmapped"
                 for item in run_summaries),
-        },
+        }),
         "decision_chain_evidence": decision_chain_evidence,
         "review_closure": closure_state,
         # Recent accepted reports expose repeated issue mentions to the next
         # reviewer without inlining the unbounded full meta-review history.
         "recent_review_context": _recent_review_context(),
         "historical_zero_code_debt": _historical_zero_code_context(),
+        # A failed package is evidence for a fresh GLM audit, never an input to
+        # host-side patch application.  The bounded excerpts are copied into the
+        # prompt because ignored forensic packages are intentionally absent from
+        # the isolated review clone.
+        "failed_review_replay": _failed_review_replay_context(
+            salvage_packages or [], salvage_attempts or [], log=log),
         "stats_digest": _stats_digest(know),
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
@@ -847,7 +878,10 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         lessons_tail = lessons_path.read_text(encoding="utf-8")[-2500:]
 
     cadence = every or cfg.get('review_every_runs', 10)
-    if batch_runs and len(batch_runs) > 1:
+    if evidence_only:
+        scope = ("本次只重审失败包证据；队列中的 run 数字只是持久身份，"
+                 "不得把当前或近期同号 run 当作该失败包的证据")
+    elif batch_runs and len(batch_runs) > 1:
         scope = f"本次复盘覆盖{_batch_description(batch_runs)}（异步追及队列）"
     elif batch_runs:
         scope = f"本次复盘覆盖{_batch_description(batch_runs)}"
@@ -894,6 +928,13 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 ```
 
 # 证据累计与闭环纪律（宿主会按真实变更路径验收）
+- 若 packet 的 `failed_review_replay.packages` 非空，这是此前失败批次的只读取证证据，
+  **绝不代表宿主已经或将自动套用其中 patch**。你必须基于当前 HEAD 重新审核：逐项比较候选
+  patch/报告与当前源码，只重实现仍有效的部分，自行解决冲突，运行自检后走本批正常提交路径。
+  不得把失败 patch 当成已验证成果，也不得只写一份“建议人工补合”的文档。
+- `requested_packages` 是本批唯一需要给出结论的 target；`attempt_packages` 只是这个
+  target 此前重试失败留下的完整证据，不是新的并行任务。你必须同时审阅 lineage 中列出的
+  attempt，但只对 target 写一条最终回执，避免一次失败就把任务无限拆包或越审越大。
 - 先读取 packet 的 `review_closure` 与 `recent_review_context`，为反复出现的问题复用稳定的
   `issue_id`，并把本批独立 run 证据与此前批次证据合并判断。
 - `historical_zero_code_debt` 是此前被“零代码纪律”拖欠的实现债务。先逐项对账：只有能指出
@@ -926,6 +967,11 @@ def build_prompt(know, cfg: dict, every: int | None = None,
    mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。
 2. 将复盘报告**追加写入** `sts2-ascend/knowledge/meta_review.md`（新建一节，标题含日期时间）：
    归因分析、你做出的每项调整及理由、新沉淀的经验知识（中文）。
+   若本批带有失败包，对 `failed_review_replay.requested_packages` 中的每个包另写一行：
+   `retry_resolution: <package-id> integrated|no_valid_change|still_pending`。
+   `integrated` 表示你已在当前 HEAD 重新实现并验证有效成果，`no_valid_change` 表示复审后确认
+   没有仍应合入的改动，`still_pending` 表示本轮尚未解决。该行用于宿主追踪，不替代代码、自检
+   或本批复盘说明；遗漏不会让整批代码被拒绝，但失败包会继续保持 pending。
 3. 你可以修改或新建 `sts2-ascend/` 下的静态项目文件，包括生产源码、
    **`brain/config.json`** 及其他配置、`scripts/`、`tests/`、`docs/`、静态原生游戏
    knowledge 和复盘报告。宿主使用 deny-only 分类器按最终精确路径验收，不设固定文件名单。
@@ -1483,7 +1529,11 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
 
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
                source: str = "fallback", batch_runs: list[int] | None = None,
-               async_mode: bool = False, _status: dict | None = None) -> bool:
+               async_mode: bool = False, _status: dict | None = None,
+               salvage_packages: list[str] | None = None,
+               salvage_attempts: list[str] | None = None,
+               replay_queue_ids: list[str] | None = None,
+               evidence_only: bool = False) -> bool:
     """执行一次大模型复盘。返回 True 仅表示 patch 触及 Brain 加载路径、应热重启。
 
     流程：保存在线进度 → opencode 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
@@ -1493,9 +1543,22 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     async_mode=True（异步队列工作线程调用）时，在线存档和推送继续独立运行；
     它们不会参与隔离复盘 patch 的验收。
     """
+    replay_packages = _normalize_salvage_package_names(salvage_packages or [])
+    replay_attempts = _normalize_salvage_package_names(salvage_attempts or [])
+    replay_target = replay_packages[0] if replay_packages else ""
+    replay_queue_ids = [str(value) for value in (replay_queue_ids or []) if str(value)]
     if _status is not None:
         _status.clear()
-        _status.update({"outcome": "failed", "reason": "复盘未完成", "canceled": False})
+        _status.update({
+            "outcome": "failed",
+            "reason": "复盘未完成",
+            "canceled": False,
+            "commit": "",
+            "pushed": False,
+            "salvage_packages": list(replay_packages),
+            "salvage_attempts": list(replay_attempts),
+            "retry_resolutions": {},
+        })
     if _review_stop_requested():
         if _status is not None:
             _status.update({"outcome": "canceled", "reason": "整套停止", "canceled": True})
@@ -1532,7 +1595,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         f"{closure_state['consecutive_report_only']}/{closure_state['report_only_limit']}，"
         f"本批{closure_note}（{closure_state['state_source']}）")
     prompt = build_prompt(
-        know, cfg, every, batch_runs, closure_state=closure_state)
+        know, cfg, every, batch_runs, closure_state=closure_state,
+        salvage_packages=replay_packages, salvage_attempts=replay_attempts,
+        evidence_only=evidence_only, log=log)
     try:
         PROMPT_FILE.write_text(prompt, encoding="utf-8")
     except OSError:
@@ -1590,6 +1655,18 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         stall_warn_min = 0.0
     translator = OpencodeJsonTranslator()
     sandbox = SandboxReviewResult(error="复盘尚未运行")
+
+    def save_failure(reason: str) -> Path | None:
+        package = _save_review_salvage(
+            pre_head, reason, sandbox, batch_runs=(batch_runs or [runs]),
+            model=entry, source=source, every=every,
+            replay_target=replay_target, replay_attempts=replay_attempts,
+            replay_queue_ids=replay_queue_ids, log=log)
+        if package is not None and _status is not None:
+            _status["salvage_package"] = package.name
+            _status["new_salvage_package"] = package.name
+        return package
+
     try:
         sandbox = _run_review_sandbox(
             cmd, prompt, pre_head, int(eff_timeout_min * 60), translator,
@@ -1602,20 +1679,26 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
         sandbox.stopped = sandbox.stopped or stopped
+        resolutions = (_parse_retry_resolutions(
+            sandbox.diagnostic_report, replay_packages) if replay_packages else {})
+        confirmed_no_change = bool(replay_packages) and all(
+            resolutions.get(name) == "no_valid_change" for name in replay_packages)
         closure_error = ""
         if rc == 0 and not timed_out and not stopped and not sandbox.error:
             closure_error = _review_closure_gate_error(
                 closure_state, sandbox.paths, sandbox.patch)
-            if closure_error:
+            if closure_error and not confirmed_no_change:
                 sandbox.error = closure_error
                 # Do not broadcast a rejected report as if it were an accepted
                 # review conclusion; make the retry reason visible instead.
                 sandbox.conclusion = "本次复盘只写文档，闭环闸门已拒绝，模型必须落地代码或观测后重做。"
+        if replay_packages and _status is not None:
+            _status["retry_resolutions"] = resolutions
+            _status["unresolved_salvage_packages"] = [
+                name for name in replay_packages
+                if resolutions.get(name) not in {"integrated", "no_valid_change"}]
         if sandbox.error or stopped:
-            _save_review_salvage(
-                pre_head, sandbox.error or "协作停止留下的部分复盘现场", sandbox,
-                batch_runs=batch_runs,
-                model=entry, source=source, log=log)
+            save_failure(sandbox.error or "协作停止留下的部分复盘现场")
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
             if _status is not None:
@@ -1699,15 +1782,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         try:
             review_paths = list(autogit.validate_review_paths(review_paths))
         except ValueError as exc:
-            _save_review_salvage(
-                pre_head, f"Git 安全层拒绝复盘 patch：{exc}", sandbox,
-                batch_runs=batch_runs, model=entry, source=source, log=log)
+            save_failure(f"Git 安全层拒绝复盘 patch：{exc}")
             log(f"[llm] Git 安全层拒绝复盘 patch：{exc}")
             return False
         if not sandbox.patch:
-            _save_review_salvage(
-                pre_head, "隔离复盘未导出有效 patch", sandbox,
-                batch_runs=batch_runs, model=entry, source=source, log=log)
+            save_failure("隔离复盘未导出有效 patch")
             log("[llm] 隔离复盘未导出有效 patch，拒绝合入")
             return False
 
@@ -1744,9 +1823,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 _status.update({"outcome": "canceled", "reason": "整套停止", "canceled": True})
             log("[llm] 隔离验证后收到整套停止请求；不进入 patch 提交")
             sandbox.stopped = True
-            _save_review_salvage(
-                pre_head, "隔离验证后整套停止", sandbox,
-                batch_runs=batch_runs, model=entry, source=source, log=log)
+            save_failure("隔离验证后整套停止")
             return False
         result = autogit.commit_patch_result(
             sandbox.patch,
@@ -1759,14 +1836,17 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             sandbox.stopped = sandbox.stopped or canceled or _review_stop_requested()
             if not canceled and _status is not None:
                 _status["reason"] = result.reason or "复盘 patch 提交失败"
-            _save_review_salvage(
-                pre_head,
+            save_failure(
                 "patch 合入前整套停止" if canceled else (
-                    result.reason or "复盘 patch 提交失败"),
-                sandbox, batch_runs=batch_runs, model=entry, source=source, log=log)
+                    result.reason or "复盘 patch 提交失败"))
             log(f"[llm] 复盘 patch 未能安全提交，保留现场供诊断：{result.reason}")
             return False
         discard_verified_snapshot = True
+        review_pushed = bool(result.pushed)
+        if not review_pushed and not _review_stop_requested():
+            review_pushed = autogit.push_pending(log=log, attempts=3)
+        if _status is not None:
+            _status.update({"commit": result.commit, "pushed": review_pushed})
         reviewed_through = max(batch_runs) if batch_runs else runs
         know.progression["last_successful_review_run"] = max(
             int(know.progression.get("last_successful_review_run", 0)), reviewed_through)
@@ -1777,6 +1857,21 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             know.save()
         except OSError:
             pass
+        if replay_packages and _status is not None:
+            closure_resolutions = dict(_status.get("retry_resolutions") or {})
+            for name in replay_packages:
+                if closure_resolutions.get(name) == "integrated" and not has_action:
+                    closure_resolutions[name] = "still_pending"
+                    unresolved = _status.setdefault("unresolved_salvage_packages", [])
+                    if name not in unresolved:
+                        unresolved.append(name)
+                    log(f"[llm] {name} 声称 integrated 但本批没有生产动作；保留 target 重审")
+            closure_result = _close_replayed_salvages(
+                replay_packages, replay_attempts,
+                closure_resolutions,
+                commit=result.commit, pushed=review_pushed, log=log)
+            _status["closed_salvage_packages"] = closure_result["closed"]
+            _status["host_pending_salvage_packages"] = closure_result["host_pending"]
         if hot_restart:
             if _status is not None:
                 _status.update({"outcome": "changed", "reason": "运行时闭环 patch 已提交",
@@ -1802,9 +1897,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if _status is not None:
             _status["reason"] = reason
         sandbox.stopped = sandbox.stopped or _review_stop_requested()
-        _save_review_salvage(
-            pre_head, reason, sandbox, batch_runs=batch_runs,
-            model=entry, source=source, log=log)
+        save_failure(reason)
         log(f"[llm] {reason}；完整隔离现场已保留，真实工作树不做强制回滚")
         return False
     finally:
@@ -1855,6 +1948,78 @@ def _empty_queue() -> dict:
     return {"pending": [], "reviewing": None}
 
 
+def _validate_queue_item(item, label: str) -> None:
+    if not isinstance(item, dict) or "run" not in item:
+        raise ReviewQueueError(f"{label} is not a run object")
+    run = item.get("run")
+    retry_count = item.get("retry_count", 0)
+    retry_after = item.get("retry_after", 0)
+    if isinstance(run, bool) or not isinstance(run, int) or run <= 0:
+        raise ReviewQueueError(f"{label}.run must be a positive integer")
+    if (isinstance(retry_count, bool) or not isinstance(retry_count, int)
+            or retry_count < 0):
+        raise ReviewQueueError(f"{label}.retry_count must be a non-negative integer")
+    if (isinstance(retry_after, bool) or not isinstance(retry_after, (int, float))
+            or retry_after < 0 or not math.isfinite(float(retry_after))):
+        raise ReviewQueueError(
+            f"{label}.retry_after must be a finite non-negative number")
+    every = item.get("every")
+    if (every is not None and (isinstance(every, bool)
+                              or not isinstance(every, int) or every <= 0)):
+        raise ReviewQueueError(f"{label}.every must be a positive integer")
+    for key in ("model", "source", "retry_group", "queue_id", "replay_target"):
+        value = item.get(key)
+        if value is not None and not isinstance(value, str):
+            raise ReviewQueueError(f"{label}.{key} must be a string")
+    retry_same_model = item.get("retry_same_model")
+    if retry_same_model is not None and not isinstance(retry_same_model, bool):
+        raise ReviewQueueError(f"{label}.retry_same_model must be a boolean")
+    packages = item.get("salvage_packages")
+    if (packages is not None and (not isinstance(packages, list)
+                                  or any(not isinstance(value, str)
+                                         for value in packages))):
+        raise ReviewQueueError(f"{label}.salvage_packages must be a string list")
+    attempts = item.get("salvage_attempts")
+    if (attempts is not None and (not isinstance(attempts, list)
+                                  or any(not isinstance(value, str)
+                                         for value in attempts))):
+        raise ReviewQueueError(f"{label}.salvage_attempts must be a string list")
+
+
+def _queue_item_identity(item: dict) -> tuple:
+    """A replay group may intentionally review a run already in the live queue."""
+    queue_id = str(item.get("queue_id") or "")
+    if queue_id:
+        return ("queue_id", queue_id)
+    group = str(item.get("retry_group") or "")
+    if group:
+        return ("retry_group", group, item.get("run"))
+    return ("run", item.get("run"))
+
+
+def _reviewing_items(reviewing: dict | None) -> list[dict]:
+    """Read new full-item transactions while preserving legacy runs-only queues."""
+    if not isinstance(reviewing, dict):
+        return []
+    items = reviewing.get("items")
+    if isinstance(items, list):
+        return [dict(item) for item in items if isinstance(item, dict)]
+    stamp = reviewing.get("started", "")
+    return [{"run": run, "time": stamp} for run in (reviewing.get("runs") or [])]
+
+
+def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
+    """Use full identities for new transactions and runs only for legacy files."""
+    if not isinstance(reviewing, dict):
+        return False
+    current = _reviewing_items(reviewing)
+    if isinstance(reviewing.get("items"), list):
+        return (tuple(_queue_item_identity(item) for item in current)
+                == tuple(_queue_item_identity(item) for item in batch))
+    return ([item.get("run") for item in current]
+            == [item.get("run") for item in batch])
+
+
 def _validate_queue(payload) -> dict:
     """Validate the fields consumed by the worker without discarding unknown keys."""
     if not isinstance(payload, dict):
@@ -1864,21 +2029,7 @@ def _validate_queue(payload) -> dict:
     if not isinstance(pending, list):
         raise ReviewQueueError("review queue pending must be a list")
     for index, item in enumerate(pending):
-        if not isinstance(item, dict) or "run" not in item:
-            raise ReviewQueueError(f"review queue pending[{index}] is not a run object")
-        run = item.get("run")
-        retry_count = item.get("retry_count", 0)
-        retry_after = item.get("retry_after", 0)
-        if isinstance(run, bool) or not isinstance(run, int) or run <= 0:
-            raise ReviewQueueError(f"review queue pending[{index}].run must be a positive integer")
-        if (isinstance(retry_count, bool) or not isinstance(retry_count, int)
-                or retry_count < 0):
-            raise ReviewQueueError(
-                f"review queue pending[{index}].retry_count must be a non-negative integer")
-        if (isinstance(retry_after, bool) or not isinstance(retry_after, (int, float))
-                or retry_after < 0 or not math.isfinite(float(retry_after))):
-            raise ReviewQueueError(
-                f"review queue pending[{index}].retry_after must be a finite non-negative number")
+        _validate_queue_item(item, f"review queue pending[{index}]")
     if reviewing is not None:
         if not isinstance(reviewing, dict):
             raise ReviewQueueError("review queue reviewing must be null or an object")
@@ -1889,6 +2040,15 @@ def _validate_queue(payload) -> dict:
             if isinstance(run, bool) or not isinstance(run, int) or run <= 0:
                 raise ReviewQueueError(
                     f"review queue reviewing.runs[{index}] must be a positive integer")
+        items = reviewing.get("items")
+        if items is not None:
+            if not isinstance(items, list):
+                raise ReviewQueueError("review queue reviewing.items must be a list")
+            for index, item in enumerate(items):
+                _validate_queue_item(item, f"review queue reviewing.items[{index}]")
+            if [item.get("run") for item in items] != runs:
+                raise ReviewQueueError(
+                    "review queue reviewing.items runs must match reviewing.runs")
     return payload
 
 
@@ -1980,8 +2140,8 @@ def requeue_review_runs(runs, log=print) -> list[int]:
         q = _load_queue_unlocked()
         existing = {int(item.get("run")) for item in q.get("pending", [])
                     if item.get("run") is not None}
-        existing.update(int(value) for value in
-                        ((q.get("reviewing") or {}).get("runs") or []))
+        existing.update(int(item["run"]) for item in
+                        _reviewing_items(q.get("reviewing")) if item.get("run"))
         stamp = time.strftime("%Y-%m-%d %H:%M")
         for run in normalized:
             if run in existing:
@@ -1996,6 +2156,341 @@ def requeue_review_runs(runs, log=print) -> list[int]:
     else:
         log("[llm] 指定历史复盘均已在队列中，无需重复入队")
     return added
+
+
+def _brain_session_is_active() -> bool:
+    session_file = BASE_DIR / ".runtime" / "session.json"
+    try:
+        session = json.loads(session_file.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return False
+    return session.get("state") in {"starting", "running", "foreground"}
+
+
+def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
+    """Explicitly queue named failure packages for one-by-one GLM re-audit.
+
+    This entry point is deliberately offline-only: callers first stop Brain via
+    the unified lifecycle script, then name the packages to replay.  It never
+    scans or auto-requeues every surviving package.  Each package receives its
+    own stable ``retry_group`` so it cannot be mixed with live runs or another
+    failure package in one GLM call.
+    """
+    if _brain_session_is_active():
+        raise ReviewQueueError(
+            "拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain")
+    requested = _normalize_salvage_package_names(package_names)
+    queued: dict[str, list[int]] = {}
+    cfg = load_llm_config()
+    prepared: list[tuple[str, list[int], dict, bool]] = []
+    prepared_roots: set[str] = set()
+    for requested_name in requested:
+        name = requested_name
+        package = _salvage_package_path(requested_name)
+        if package is None:
+            log(f"[llm] 指定失败包不存在，跳过：{requested_name}")
+            continue
+        # Keep the controlled Stop window O(1): only publish queue/manifest
+        # intent here.  Raw-clone indexing and patch derivation run lazily after
+        # Start, inside the normal Brain worker.
+        manifest = json.loads(
+            (package / "manifest.json").read_text(encoding="utf-8"))
+        existing_target = _normalize_salvage_package_names([
+            manifest.get("replay_target")])
+        if (manifest.get("replay_role") == "attempt_evidence"
+                and existing_target and existing_target[0] != requested_name):
+            root_name = existing_target[0]
+            root_package = _salvage_package_path(root_name)
+            if root_package is None:
+                log(f"[llm] attempt {requested_name} 的 target {root_name} 不存在；"
+                    "保留现场且不擅自提升为第二 target")
+                continue
+            name = root_name
+            package = root_package
+            manifest = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+            log(f"[llm] 指定的是 attempt {requested_name}；按 lineage 唤醒 target {name}")
+        if name in prepared_roots:
+            continue
+        prepared_roots.add(name)
+        if manifest.get("retry_resolution_state") in {
+                "claimed_pending_code_push", "code_upstream_confirmed",
+                "quarantined_pending_ledger",
+                "ledger_final_upstream", "done"}:
+            log(f"[llm] 失败包已有 GLM 结论，交由宿主闭环恢复而不重复消耗模型：{name}")
+            continue
+        manifest = dict(manifest)
+        manifest.update({
+            "replay_enqueue_pending": True,
+            "replay_target": name,
+            "replay_role": "target",
+        })
+        manifest.setdefault("replay_attempt_packages", [])
+        _publish_manifest_update(package, manifest)
+        runs: list[int] = []
+        seen_runs: set[int] = set()
+        for value in manifest.get("batch_runs") or []:
+            try:
+                run = int(value)
+            except (TypeError, ValueError):
+                continue
+            if run > 0 and run not in seen_runs:
+                runs.append(run)
+                seen_runs.add(run)
+        evidence_only = not runs
+        if evidence_only:
+            for value in (manifest.get("current_run"), manifest.get("run")):
+                try:
+                    fallback_run = int(value)
+                except (TypeError, ValueError):
+                    continue
+                if fallback_run > 0:
+                    runs = [fallback_run]
+                    break
+        if not runs:
+            try:
+                stats = json.loads((KNOWLEDGE_DIR / "stats.json").read_text(encoding="utf-8"))
+                fallback_run = int(stats.get("global", {}).get("runs", 0))
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                fallback_run = 0
+            runs = [max(1, fallback_run)]
+        prepared.append((name, runs, manifest, evidence_only))
+
+    if not prepared:
+        return queued
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        existing_groups = {
+            str(item.get("retry_group") or "")
+            for item in [*q.get("pending", []), *_reviewing_items(q.get("reviewing"))]
+            if item.get("retry_group")
+        }
+        stamp = time.strftime("%Y-%m-%d %H:%M")
+        for name, runs, manifest, evidence_only in prepared:
+            if name in existing_groups:
+                log(f"[llm] 失败包已在重审队列中，无需重复入队：{name}")
+                continue
+            model = str(manifest.get("model") or "")
+            source = str(manifest.get("source") or "preferred")
+            try:
+                every = int(manifest.get("every") or (
+                    cfg.get("preferred_every_runs", 1) if source == "preferred"
+                    else cfg.get("review_every_runs", 5)))
+            except (TypeError, ValueError):
+                every = 1 if source == "preferred" else 5
+            for run in runs:
+                item = {
+                    "run": run,
+                    "time": str(manifest.get("time") or stamp),
+                    "retry_group": name,
+                    "replay_target": name,
+                    "retry_same_model": True,
+                    "salvage_packages": [name],
+                    "salvage_attempts": _normalize_salvage_package_names(
+                        manifest.get("replay_attempt_packages") or []),
+                    "evidence_only": evidence_only,
+                    "every": max(1, every),
+                    "source": source,
+                }
+                if model:
+                    item["model"] = model
+                q["pending"].append(item)
+            existing_groups.add(name)
+            queued[name] = list(runs)
+        if queued:
+            _save_queue_unlocked(q)
+    for name, runs in queued.items():
+        log(f"[llm] 已将失败包交回 GLM 重审队尾：{name}（第 {runs} 局，独立批次）")
+    return queued
+
+
+def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
+    """Return queue-compatible runs; old runless packages use evidence-only mode."""
+    runs: list[int] = []
+    for value in manifest.get("batch_runs") or []:
+        try:
+            run = int(value)
+        except (TypeError, ValueError):
+            continue
+        if run > 0 and run not in runs:
+            runs.append(run)
+    evidence_only = not runs
+    if not runs:
+        for value in (manifest.get("current_run"), manifest.get("run")):
+            try:
+                run = int(value)
+            except (TypeError, ValueError):
+                continue
+            if run > 0:
+                runs = [run]
+                break
+    if not runs:
+        try:
+            stats = json.loads((KNOWLEDGE_DIR / "stats.json").read_text(encoding="utf-8"))
+            run = int(stats.get("global", {}).get("runs", 0))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            run = 0
+        runs = [max(1, run)]
+    return runs, evidence_only
+
+
+def _recover_salvage_replay_queue(log=print) -> None:
+    """Reconcile atomically published packages with the durable target queue.
+
+    Package publication deliberately precedes queue/ledger network work.  The
+    manifest therefore carries the target and original queue ids; after any crash
+    this scan converts the interrupted transaction (or creates one missing group)
+    into exactly one target job and attaches every later failure as evidence.
+    """
+    if not SALVAGE_ROOT.is_dir():
+        return
+    targets: dict[str, tuple[Path, dict]] = {}
+    attempts: dict[str, list[str]] = {}
+    queue_ids: dict[str, set[str]] = {}
+    resolved_targets: dict[str, set[str]] = {}
+    for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
+        manifest_path = package / "manifest.json"
+        if (not package.is_dir() or package.name.startswith(_CLOSED_SALVAGE_PREFIX)
+                or not manifest_path.is_file()):
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+        if not manifest.get("replay_enqueue_pending"):
+            continue
+        normalized = _normalize_salvage_package_names([
+            manifest.get("replay_target") or package.name])
+        if not normalized:
+            continue
+        target = normalized[0]
+        manifest_queue_ids = {
+            str(value) for value in (manifest.get("replay_queue_ids") or [])
+            if str(value)}
+        if manifest.get("retry_resolution_state") in {
+                "claimed_pending_code_push", "code_upstream_confirmed",
+                "quarantined_pending_ledger", "ledger_final_upstream", "done"}:
+            resolved_targets.setdefault(target, set()).update(manifest_queue_ids)
+            continue
+        queue_ids.setdefault(target, set()).update(manifest_queue_ids)
+        if package.name == target or manifest.get("replay_role") == "target":
+            targets[target] = (package, manifest)
+        else:
+            attempts.setdefault(target, []).append(package.name)
+
+    if not targets and not resolved_targets:
+        return
+    target_attempts: dict[str, list[str]] = {}
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        reviewing = q.get("reviewing")
+        reviewing_items = _reviewing_items(reviewing)
+        changed = False
+        cfg = load_llm_config()
+        if resolved_targets:
+            def is_resolved_item(item: dict) -> bool:
+                item_target = str(item.get("replay_target") or "")
+                item_group = str(item.get("retry_group") or "")
+                item_queue_id = str(item.get("queue_id") or "")
+                return any(
+                    item_target == target or item_group == target
+                    or (item_queue_id in ids if ids else False)
+                    for target, ids in resolved_targets.items())
+
+            pending_before = len(q.get("pending", []))
+            q["pending"] = [item for item in q.get("pending", [])
+                            if not is_resolved_item(item)]
+            filtered_reviewing = [item for item in reviewing_items
+                                  if not is_resolved_item(item)]
+            if (len(q["pending"]) != pending_before
+                    or len(filtered_reviewing) != len(reviewing_items)):
+                reviewing_items = filtered_reviewing
+                changed = True
+                log("[llm] 已按耐久 GLM 回执消费遗留 replay 队列事务："
+                    f"{sorted(resolved_targets)}")
+        for target, (_package, manifest) in targets.items():
+            lineage = _normalize_salvage_package_names([
+                *(manifest.get("replay_attempt_packages") or []),
+                *attempts.get(target, []),
+            ])
+            lineage = [name for name in lineage if name != target]
+            target_attempts[target] = lineage
+            ids = queue_ids.get(target, set())
+
+            def belongs(item: dict) -> bool:
+                return (str(item.get("replay_target") or "") == target
+                        or str(item.get("retry_group") or "") == target
+                        or (str(item.get("queue_id") or "") in ids
+                            if ids else False))
+
+            matched = False
+            for collection in (q.get("pending", []), reviewing_items):
+                for item in collection:
+                    if not belongs(item):
+                        continue
+                    matched = True
+                    desired = {
+                        "retry_group": target,
+                        "replay_target": target,
+                        "retry_same_model": True,
+                        "salvage_packages": [target],
+                        "salvage_attempts": list(lineage),
+                    }
+                    if any(item.get(key) != value for key, value in desired.items()):
+                        item.update(desired)
+                        changed = True
+            if not matched:
+                runs, evidence_only = _manifest_replay_runs(manifest)
+                source = str(manifest.get("source") or "preferred")
+                try:
+                    every = int(manifest.get("every") or (
+                        cfg.get("preferred_every_runs", 1) if source == "preferred"
+                        else cfg.get("review_every_runs", 5)))
+                except (TypeError, ValueError):
+                    every = 1 if source == "preferred" else 5
+                stamp = str(manifest.get("time") or time.strftime("%Y-%m-%d %H:%M"))
+                for run in runs:
+                    item = {
+                        "run": run,
+                        "time": stamp,
+                        "retry_group": target,
+                        "replay_target": target,
+                        "retry_same_model": True,
+                        "salvage_packages": [target],
+                        "salvage_attempts": list(lineage),
+                        "evidence_only": evidence_only,
+                        "every": max(1, every),
+                        "source": source,
+                    }
+                    if manifest.get("model"):
+                        item["model"] = str(manifest["model"])
+                    q["pending"].append(item)
+                changed = True
+                log(f"[llm] 已从失败包原子意图恢复 GLM target：{target}（第 {runs} 局）")
+        if isinstance(reviewing, dict) and isinstance(reviewing.get("items"), list):
+            if not reviewing_items:
+                q["reviewing"] = None
+            else:
+                reviewing["items"] = reviewing_items
+                reviewing["runs"] = [item["run"] for item in reviewing_items]
+                groups = {str(item.get("retry_group") or "") for item in reviewing_items}
+                if len(groups) == 1:
+                    reviewing["retry_group"] = next(iter(groups))
+        if changed:
+            _save_queue_unlocked(q)
+
+    # Queue durability comes first.  This secondary index is helpful but can be
+    # reconstructed from attempt manifests after a crash at any instruction.
+    for target, lineage in target_attempts.items():
+        package, manifest = targets[target]
+        if manifest.get("replay_attempt_packages") == lineage:
+            continue
+        try:
+            updated = dict(manifest)
+            updated["replay_attempt_packages"] = lineage
+            _publish_manifest_update(package, updated)
+        except OSError as exc:
+            log(f"[llm] target attempt 索引暂未回写（队列已耐久）：{target}（{exc}）")
 
 
 def enqueue_review(agent, log=print) -> None:
@@ -2065,26 +2560,77 @@ def _ensure_worker(agent, log) -> None:
     with _worker_lock:
         if _worker_started:
             return
-        _worker_started = True
-    _worker_thread = threading.Thread(
-        target=_worker_loop, args=(agent, log), daemon=True,
-        name="llm-review-worker")
-    _worker_thread.start()
+        try:
+            thread = threading.Thread(
+                target=_worker_loop, args=(agent, log), daemon=True,
+                name="llm-review-worker")
+            _worker_thread = thread
+            _worker_started = True
+            thread.start()
+        except Exception as exc:
+            # Thread construction/start can fail under transient OS resource
+            # pressure.  Never leave the latch set without a live supervisor;
+            # the next enqueue/startup probe must be able to retry.
+            _worker_started = False
+            _worker_thread = None
+            log(f"[llm] 异步复盘工作线程启动失败；保留队列供下次自愈：{exc}")
+            return
     log("[llm] 异步复盘工作线程已启动")
+
+
+def _salvage_recovery_needed() -> bool:
+    """Cheap startup probe for host work that exists outside review_queue.json."""
+    if not SALVAGE_ROOT.is_dir():
+        return False
+    host_states = {
+        "claimed_pending_code_push", "code_upstream_confirmed",
+        "quarantined_pending_ledger", "ledger_final_upstream",
+    }
+    try:
+        for package in SALVAGE_ROOT.iterdir():
+            if not package.is_dir():
+                continue
+            if package.name.startswith(_CLOSED_SALVAGE_PREFIX):
+                return True
+            if ((package / "raw_sandbox_pointer.txt").is_file()
+                    or (package / "snapshot_pointer.txt").is_file()):
+                return True
+            manifest_path = package / "manifest.json"
+            if not manifest_path.is_file():
+                continue
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+            if (manifest.get("replay_enqueue_pending")
+                    or manifest.get("retry_resolution_state") in host_states):
+                return True
+    except OSError:
+        return False
+    return False
 
 
 def resume_review_queue(agent, log=print) -> None:
     """Resume queued/interrupted reviews immediately after brain startup."""
-    if not load_llm_config().get("enabled") or _review_stop_requested():
+    if _review_stop_requested():
         return
+    llm_enabled = bool(load_llm_config().get("enabled"))
+    host_recovery = _salvage_recovery_needed()
     try:
         with _queue_lock:
             q = _load_queue_unlocked()
             has_work = bool(q.get("pending") or q.get("reviewing"))
     except (ReviewQueueError, OSError) as exc:
-        log(f"[llm] 复盘队列暂不可读；保留原文件，本次不启动 worker：{exc}")
+        log(f"[llm] 复盘队列暂不可读；保留原文件并交给 worker 自愈：{exc}")
+        # The supervised worker owns the long-lived retry loop.  Start it when
+        # paid review is enabled, or when an ignored salvage manifest proves
+        # host-only receipt/ledger/quarantine work exists.  Otherwise a lock
+        # lasting beyond the short bootstrap retries would strand all recovery
+        # until another game happens to enqueue work.
+        if llm_enabled or host_recovery:
+            _ensure_worker(agent, log)
         return
-    if has_work:
+    if host_recovery or (llm_enabled and has_work):
         _ensure_worker(agent, log)
 
 
@@ -2132,9 +2678,57 @@ class SandboxReviewResult:
 
 
 def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
-                 timeout: int = 120) -> subprocess.CompletedProcess:
+                 timeout: int = 120, env: dict[str, str] | None = None,
+                 ) -> subprocess.CompletedProcess:
     return _run_captured_stop_aware(
-        ["git", "-C", str(repo), *args], binary=binary, timeout=timeout)
+        ["git", "-C", str(repo), *args], binary=binary, timeout=timeout, env=env)
+
+
+def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, str]]:
+    """Create a disposable index/object store that only reads the raw clone."""
+    # Tests and recovery tools may temporarily point REPO_DIR at the raw repo
+    # itself.  Never place the private object store beneath the worktree that the
+    # following `git add --all` enumerates, or capture will ingest its own objects.
+    managed_root = _review_work_root().resolve()
+    if managed_root.is_relative_to(repo.resolve()):
+        root = Path(tempfile.mkdtemp(prefix=prefix))
+    else:
+        root = _new_review_temp(prefix)
+    try:
+        index_path = root / "index"
+        object_dir = root / "objects"
+        object_dir.mkdir()
+        git_dir_result = _sandbox_git(repo, ["rev-parse", "--absolute-git-dir"])
+        if git_dir_result.returncode != 0:
+            raise OSError("raw clone Git directory lookup failed: "
+                          + git_dir_result.stderr[:400])
+        source_objects = Path(git_dir_result.stdout.strip()).resolve() / "objects"
+        if not source_objects.is_dir():
+            raise OSError(f"raw clone Git objects missing: {source_objects}")
+        env = dict(os.environ)
+        env["GIT_INDEX_FILE"] = str(index_path)
+        env["GIT_OBJECT_DIRECTORY"] = str(object_dir)
+        env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(source_objects)
+        env["GIT_OPTIONAL_LOCKS"] = "0"
+        return root, env
+    except Exception:
+        try:
+            if root.is_dir() and _is_owned_review_temp(root.resolve(), prefix):
+                shutil.rmtree(root)
+        except OSError:
+            pass
+        raise
+
+
+def _discard_private_sandbox_git(root: Path | None, prefix: str, log=print) -> None:
+    if root is None:
+        return
+    try:
+        resolved = root.resolve()
+        if _is_owned_review_temp(resolved, prefix):
+            shutil.rmtree(resolved)
+    except OSError as exc:
+        log(f"[llm] private Git capture cleanup failed; retained: {root} ({exc})")
 
 
 def _bounded_sandbox_sibling_paths(
@@ -2231,15 +2825,21 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
     """在 clone 删除前全量快照工作树改动，含越界及 ignored 文件。"""
     if not repo.is_dir():
         return
+    capture_git_root: Path | None = None
+    capture_prefix = "sts2-review-capture-index-"
     try:
-        # 不信任模型留下的 index/commit/assume-unchanged 标记。
-        reset = _sandbox_git(repo, ["reset", "--mixed", "--quiet", pre_head])
-        if reset.returncode != 0:
+        # 不信任模型留下的 index/commit/assume-unchanged 标记，但 raw
+        # clone 本身是取证原件。所有基线恢复和 force-stage 都只写入
+        # disposable index/object store，不移动 raw HEAD，不覆盖 raw index。
+        capture_git_root, capture_env = _new_private_sandbox_git(repo, capture_prefix)
+        read_tree = _sandbox_git(repo, ["read-tree", pre_head], env=capture_env)
+        if read_tree.returncode != 0:
             log("[llm] 失败复盘 WIP 基线恢复失败；仅保存诊断元数据")
             return
         # -f 明确纳入 ignored 文件；.git 元数据仍由 Git 自身排除。宿主写入的
         # prompt 若未被模型修改则随后退回基线；被修改/删除时也作为越界成果保留。
-        stage_all = _sandbox_git(repo, ["add", "--all", "--force", "--", "."])
+        stage_all = _sandbox_git(
+            repo, ["add", "--all", "--force", "--", "."], env=capture_env)
         own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
         prompt_path = repo.joinpath(*PurePosixPath(own_prompt).parts)
         prompt_deleted = False
@@ -2252,12 +2852,14 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
         except OSError:
             prompt_unchanged = False
         unstage_prompt = (_sandbox_git(
-            repo, ["reset", "--quiet", pre_head, "--", own_prompt])
+            repo, ["reset", "--quiet", pre_head, "--", own_prompt], env=capture_env)
             if prompt_unchanged else subprocess.CompletedProcess([], 0, "", ""))
         if stage_all.returncode != 0 or unstage_prompt.returncode != 0:
             log("[llm] 失败复盘全量 WIP 暂存失败；仅保存诊断元数据")
             return
-        names = _sandbox_git(repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"])
+        names = _sandbox_git(
+            repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"],
+            env=capture_env)
         if names.returncode != 0:
             log("[llm] 失败复盘全量 WIP 路径枚举失败；仅保存诊断元数据")
             return
@@ -2284,7 +2886,8 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
             patch = _sandbox_git(
                 repo,
                 ["diff", "--cached", "--binary", "--full-index", "--unified=3",
-                 f"--output={patch_path}", pre_head, "--"],
+                  f"--output={patch_path}", pre_head, "--"],
+                env=capture_env,
             )
             if patch.returncode != 0 or not patch_path.is_file():
                 log("[llm] 失败复盘全量 WIP patch 导出失败；保留文件快照")
@@ -2352,6 +2955,8 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
         raise
     except Exception as exc:
         log(f"[llm] 失败复盘 WIP 捕获异常；仍保留空补合包：{exc}")
+    finally:
+        _discard_private_sandbox_git(capture_git_root, capture_prefix, log=log)
 
 
 def _discard_sandbox_snapshot(result: SandboxReviewResult, log=print) -> bool:
@@ -2449,6 +3054,77 @@ def _ledger_cell(value, limit: int = 240) -> str:
     return text.replace("|", "\\|")
 
 
+def _rejection_ledger_block(
+    package_name: str, manifest: dict, *, status: str,
+    package_cell: str, reason: str,
+) -> str:
+    runs = manifest.get("batch_runs") or []
+    batch = _batch_description(runs) or "未记录"
+    pre_head = str(manifest.get("pre_head") or "")[:8] or "—"
+    model = manifest.get("model") or "—"
+    marker = f"<!-- rejection:{package_name} -->"
+    return (
+        f"{marker}\n"
+        f"| {_ledger_cell(manifest.get('time'))} | {_ledger_cell(batch)} | `{pre_head}` | "
+        f"{_ledger_cell(manifest.get('failure_kind'))} | {_ledger_cell(model)} | "
+        f"{_ledger_cell(status)} | {_ledger_cell(package_cell, 500)} | "
+        f"{_ledger_cell(reason)} |\n"
+    )
+
+
+def _ledger_text_at_head() -> str:
+    rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "show", f"HEAD:{rel_ledger}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        if proc.returncode == 0:
+            return proc.stdout
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        pass
+    return ""
+
+
+def _ledger_markers(text: str) -> list[str]:
+    prefix = "<!-- rejection:"
+    suffix = " -->"
+    return [line.strip()[len(prefix):-len(suffix)]
+            for line in str(text or "").splitlines()
+            if line.strip().startswith(prefix) and line.strip().endswith(suffix)]
+
+
+def _flush_pending_rejection_ledger(log=print) -> bool:
+    """Commit one leftover ledger edit before another rejection row is appended.
+
+    This preserves the user-visible invariant that every newly rejected package
+    has its own Git commit even when the previous commit hit a transient CAS/lock.
+    """
+    try:
+        current = REJECTION_LEDGER.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        current = _REJECTION_LEDGER_HEADER
+    head_text = _ledger_text_at_head()
+    if current == head_text or (not head_text and current == _REJECTION_LEDGER_HEADER):
+        return True
+    head_markers = set(_ledger_markers(head_text))
+    new_markers = [name for name in _ledger_markers(current) if name not in head_markers]
+    if len(new_markers) > 1:
+        log("[llm] 拒合清单存在多个旧版未拆分 marker；暂停追加新条目，避免合并提交："
+            f"{new_markers}")
+        return False
+    import autogit
+    rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+    message = (f"chore(sts2-ascend): 记录拒合批次 {new_markers[0]}"
+               if new_markers else
+               "chore(sts2-ascend): 恢复拒合清单待提交状态")
+    result = autogit.commit_progress_result(
+        message, paths=[rel_ledger], log=log, push=False)
+    if result.created:
+        return True
+    return REJECTION_LEDGER.read_text(encoding="utf-8") == _ledger_text_at_head()
+
+
 def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
     """Append one durable rejection index row and commit that row independently.
 
@@ -2464,30 +3140,33 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
         if package.parent != production_root or not package.is_dir():
             log(f"[llm] 拒合清单跳过不安全失败包路径：{package}")
             return
+        if not _flush_pending_rejection_ledger(log=log):
+            log(f"[llm] 上一个拒合清单提交尚未独立落地；暂缓追加 {package.name}")
+            return
         marker = f"<!-- rejection:{package.name} -->"
         try:
             current = REJECTION_LEDGER.read_text(encoding="utf-8")
         except FileNotFoundError:
             current = _REJECTION_LEDGER_HEADER
+        status = "待 GLM 重审/补合"
         if marker in current:
+            # _flush_pending_rejection_ledger above already proved this exact
+            # existing edit is committed (or identical to HEAD).  A repeated
+            # recovery pass may retry push, but must not request another commit.
+            import autogit
+            pushed = (autogit.push_pending(log=log, attempts=1)
+                      if not _review_stop_requested() else False)
+            if pushed and _upstream_ledger_contains(package.name, status):
+                log(f"[llm] 拒合批次清单条目已存在并确认推送：{package.name}")
             return
+        rel_package = package.relative_to(BASE_DIR).as_posix()
+        row = _rejection_ledger_block(
+            package.name, manifest, status=status,
+            package_cell=f"`{rel_package}`", reason=str(manifest.get("reason") or ""))
         if not current.strip():
             current = _REJECTION_LEDGER_HEADER
         elif not current.endswith("\n"):
             current += "\n"
-        runs = manifest.get("batch_runs") or []
-        batch = _batch_description(runs) or "未记录"
-        pre_head = str(manifest.get("pre_head") or "")[:8] or "—"
-        model = manifest.get("model") or "—"
-        status = "待重试/补合" if manifest.get("stopped") else "待人工补合"
-        rel_package = package.relative_to(BASE_DIR).as_posix()
-        row = (
-            f"{marker}\n"
-            f"| {_ledger_cell(manifest.get('time'))} | {_ledger_cell(batch)} | `{pre_head}` | "
-            f"{_ledger_cell(manifest.get('failure_kind'))} | {_ledger_cell(model)} | "
-            f"{status} | `{_ledger_cell(rel_package, 500)}` | "
-            f"{_ledger_cell(manifest.get('reason'))} |\n"
-        )
         temp = REJECTION_LEDGER.with_name(
             f".{REJECTION_LEDGER.name}.tmp-{os.getpid()}-{threading.get_ident()}")
         try:
@@ -2500,15 +3179,1102 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
         rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
         result = autogit.commit_progress_result(
             f"chore(sts2-ascend): 记录拒合批次 {package.name}",
-            paths=[rel_ledger], log=log, push=not _review_stop_requested())
+            paths=[rel_ledger], log=log, push=False)
+        pushed = False
+        if not _review_stop_requested():
+            pushed = autogit.push_pending(log=log, attempts=1)
         if result.created:
-            suffix = "并推送" if result.pushed else "（停止临界区仅提交，待启动补推）"
+            suffix = "并推送" if pushed else "（仅提交，待启动补推）"
             log(f"[llm] 拒合批次清单已单独提交{suffix}：{result.commit[:8]}")
         else:
-            log(f"[llm] 拒合批次清单提交失败，条目留在工作树待补交：{result.reason}")
+            if pushed and _upstream_ledger_contains(package.name, status):
+                log(f"[llm] 拒合批次清单条目已存在并确认推送：{package.name}")
+            else:
+                log(f"[llm] 拒合批次清单提交失败，条目留在工作树待补交：{result.reason}")
     except Exception as exc:
         # Ledger failure must never delete or invalidate the already-published evidence.
         log(f"[llm] 拒合批次清单更新异常；失败包仍完整保留：{exc}")
+
+
+def _upstream_ref() -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "rev-parse", "--abbrev-ref",
+             "--symbolic-full-name", "@{upstream}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _upstream_contains_commit(commit: str) -> bool:
+    upstream = _upstream_ref()
+    if not upstream or not commit:
+        return False
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "merge-base", "--is-ancestor",
+             commit, upstream], capture_output=True, timeout=30)
+        return proc.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def _upstream_ledger_contains(package_name: str, status: str) -> bool:
+    upstream = _upstream_ref()
+    if not upstream:
+        return False
+    rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "show", f"{upstream}:{rel_ledger}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        if proc.returncode != 0:
+            return False
+        marker = f"<!-- rejection:{package_name} -->"
+        lines = proc.stdout.splitlines()
+        for index, line in enumerate(lines[:-1]):
+            if line.strip() == marker:
+                return status in lines[index + 1]
+        return False
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+
+
+def _ensure_rejection_ledger_marker(
+    package_name: str, manifest: dict, package_cell: str, log=print,
+) -> bool:
+    """Durably restore a missing initial rejection row before package cleanup."""
+    if _upstream_ledger_contains(package_name, ""):
+        return True
+    if _review_stop_requested():
+        return False
+    try:
+        production_root = (KNOWLEDGE_DIR / "code_backups" / "review_salvage").resolve()
+        if SALVAGE_ROOT.resolve() != production_root:
+            return False
+        if not _flush_pending_rejection_ledger(log=log):
+            return False
+        try:
+            current = REJECTION_LEDGER.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            current = _REJECTION_LEDGER_HEADER
+        marker = f"<!-- rejection:{package_name} -->"
+        if marker not in current:
+            if current and not current.endswith("\n"):
+                current += "\n"
+            current += _rejection_ledger_block(
+                package_name, manifest, status="待 GLM 重审/补合",
+                package_cell=package_cell,
+                reason=str(manifest.get("reason") or "闭环前恢复缺失的拒合索引"))
+            temp = REJECTION_LEDGER.with_name(
+                f".{REJECTION_LEDGER.name}.restore-{os.getpid()}-"
+                f"{threading.get_ident()}-{time.time_ns()}.tmp")
+            try:
+                temp.write_text(current, encoding="utf-8")
+                os.replace(temp, REJECTION_LEDGER)
+            finally:
+                temp.unlink(missing_ok=True)
+        import autogit
+        rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+        result = autogit.commit_progress_result(
+            f"chore(sts2-ascend): 补录拒合批次 {package_name}",
+            paths=[rel_ledger], log=log, push=False)
+        if result.created:
+            log(f"[llm] 已恢复缺失拒合索引并单独提交：{result.commit[:8]}")
+        if _review_stop_requested():
+            return False
+        autogit.push_pending(log=log, attempts=1)
+        return _upstream_ledger_contains(package_name, "")
+    except Exception as exc:
+        log(f"[llm] 缺失拒合索引恢复失败，失败包继续保留：{exc}")
+        return False
+
+
+def _update_rejection_ledger(
+    package_name: str, manifest: dict, *, status: str,
+    package_cell: str, reason: str, message: str, log=print,
+) -> bool:
+    """Replace one exact ledger row, commit it separately, and confirm upstream."""
+    try:
+        if _review_stop_requested():
+            return False
+        production_root = (KNOWLEDGE_DIR / "code_backups" / "review_salvage").resolve()
+        if SALVAGE_ROOT.resolve() != production_root:
+            return False
+        current = REJECTION_LEDGER.read_text(encoding="utf-8")
+        marker = f"<!-- rejection:{package_name} -->"
+        lines = current.splitlines(keepends=True)
+        marker_index = next(
+            (index for index, line in enumerate(lines) if line.strip() == marker), -1)
+        if marker_index < 0 or marker_index + 1 >= len(lines):
+            log(f"[llm] 拒合清单找不到待更新条目：{package_name}")
+            return False
+        block = _rejection_ledger_block(
+            package_name, manifest, status=status,
+            package_cell=package_cell, reason=reason)
+        end = marker_index + 2 if lines[marker_index + 1].lstrip().startswith("|") \
+            else marker_index + 1
+        updated = "".join(lines[:marker_index]) + block + "".join(lines[end:])
+        if updated != current:
+            temp = REJECTION_LEDGER.with_name(
+                f".{REJECTION_LEDGER.name}.resolve-{os.getpid()}-"
+                f"{threading.get_ident()}-{time.time_ns()}.tmp")
+            try:
+                temp.write_text(updated, encoding="utf-8")
+                os.replace(temp, REJECTION_LEDGER)
+            finally:
+                temp.unlink(missing_ok=True)
+        import autogit
+        rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+        result = autogit.commit_progress_result(
+            message, paths=[rel_ledger], log=log, push=False)
+        if _review_stop_requested():
+            return False
+        # Handles a crash after the ledger commit/push but before ignored manifest
+        # state advanced, and retries a transient push without duplicating a row.
+        autogit.push_pending(log=log, attempts=1)
+        return _upstream_ledger_contains(package_name, status)
+    except Exception as exc:
+        log(f"[llm] 拒合清单闭环更新失败；失败包继续保留：{exc}")
+        return False
+
+
+_CLOSED_SALVAGE_PREFIX = ".glm-closed-"
+
+
+def _quarantine_closed_salvage(package: Path, log=print) -> Path | None:
+    """Atomically move one confirmed package aside before final ledger commit."""
+    try:
+        root = SALVAGE_ROOT.resolve()
+        resolved = package.resolve()
+        if resolved.parent != root or not resolved.is_dir():
+            return None
+        quarantine = root / f"{_CLOSED_SALVAGE_PREFIX}{resolved.name}"
+        if quarantine.exists():
+            return quarantine
+        resolved.replace(quarantine)
+        return quarantine
+    except OSError as exc:
+        log(f"[llm] 已确认补合但隔离待删除失败包失败，原包继续保留：{package}（{exc}）")
+        return None
+
+
+def _delete_closed_quarantine(quarantine: Path, log=print) -> bool:
+    """Delete one exact quarantined package after the final ledger is upstream."""
+    try:
+        root = SALVAGE_ROOT.resolve()
+        resolved = quarantine.resolve()
+        if (resolved.parent != root
+                or not resolved.name.startswith(_CLOSED_SALVAGE_PREFIX)
+                or not resolved.is_dir()):
+            return False
+        # The package has already left the active namespace and its final ledger
+        # state is upstream.  Delete incrementally so Stop can return promptly.
+        # Keep the root manifest as the recovery receipt until every potentially
+        # large payload and nested directory is gone.
+        manifest_path = resolved / "manifest.json"
+        for walk_root, directories, files in os.walk(resolved, topdown=False):
+            for name in files:
+                path = Path(walk_root) / name
+                if path == manifest_path:
+                    continue
+                if _review_stop_requested():
+                    return False
+                try:
+                    path.unlink()
+                except PermissionError:
+                    os.chmod(path, stat.S_IWRITE)
+                    path.unlink()
+            for name in directories:
+                if _review_stop_requested():
+                    return False
+                path = Path(walk_root) / name
+                try:
+                    path.unlink() if path.is_symlink() else path.rmdir()
+                except PermissionError:
+                    os.chmod(path, stat.S_IWRITE)
+                    path.unlink() if path.is_symlink() else path.rmdir()
+        if _review_stop_requested():
+            return False
+        # This tail is intentionally bounded and has no Stop checkpoint between
+        # its two operations.  A process crash can leave only an empty quarantine;
+        # boot recovery removes it solely after rechecking the exact upstream row.
+        if manifest_path.exists():
+            try:
+                manifest_path.unlink()
+            except PermissionError:
+                os.chmod(manifest_path, stat.S_IWRITE)
+                manifest_path.unlink()
+        resolved.rmdir()
+        return not resolved.exists()
+    except OSError as exc:
+        log(f"[llm] 最终清单已确认但删除隔离失败包失败，保留待下次重试：{quarantine}（{exc}）")
+        return False
+
+
+def _finish_quarantined_salvage(
+    quarantine: Path, original_name: str, manifest: dict, log=print,
+) -> bool:
+    resolution = str(manifest.get("retry_resolution") or "")
+    commit = str(manifest.get("retry_resolution_commit") or "")
+    if resolution not in {"integrated", "no_valid_change"} or not commit:
+        return False
+    if _review_stop_requested() or not _upstream_contains_commit(commit):
+        return False
+    production_root = (KNOWLEDGE_DIR / "code_backups" / "review_salvage").resolve()
+    if SALVAGE_ROOT.resolve() == production_root:
+        if not _ensure_rejection_ledger_marker(
+                original_name, manifest, "（隔离保留，待闭环）", log=log):
+            return False
+    action = "GLM 已补合" if resolution == "integrated" else "GLM 复审确认无有效成果"
+    final_status = f"{action}并闭环 `{commit[:8]}`"
+    final_reason = f"GLM 重审结论与提交 {commit[:8]} 已推送；远端确认后精确清理对应失败包"
+    final_ok = _update_rejection_ledger(
+        original_name, manifest, status=final_status, package_cell="（闭环清理）",
+        reason=final_reason,
+        message=f"chore(sts2-ascend): 关闭 GLM 重审批次 {original_name}", log=log)
+    if not final_ok:
+        return False
+    manifest = dict(manifest)
+    manifest["retry_resolution_state"] = "ledger_final_upstream"
+    manifest["retry_resolution_ledger_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        _publish_manifest_update(quarantine, manifest)
+    except OSError:
+        # The exact upstream ledger row is the authoritative delete permission;
+        # a crash here is recovered by rechecking it on the next boot.
+        pass
+    if not _delete_closed_quarantine(quarantine, log=log):
+        return False
+    log(f"[llm] GLM 失败包已完成重审、远端确认并删除：{original_name}")
+    return True
+
+
+def _finalize_salvage_resolution(package: Path, manifest: dict, log=print) -> bool:
+    """Close a GLM-audited package only after code and ledger are upstream."""
+    resolution = str(manifest.get("retry_resolution") or "")
+    commit = str(manifest.get("retry_resolution_commit") or "")
+    if resolution not in {"integrated", "no_valid_change"}:
+        return False
+    if not _upstream_contains_commit(commit):
+        return False
+    if _review_stop_requested():
+        return False
+    production_root = (KNOWLEDGE_DIR / "code_backups" / "review_salvage").resolve()
+    if SALVAGE_ROOT.resolve() == production_root:
+        try:
+            package_cell = f"`{package.relative_to(BASE_DIR).as_posix()}`"
+        except ValueError:
+            package_cell = f"`{package.as_posix()}`"
+        if not _ensure_rejection_ledger_marker(
+                package.name, manifest, package_cell, log=log):
+            return False
+    manifest = dict(manifest)
+    manifest["retry_resolution_state"] = "quarantined_pending_ledger"
+    manifest["retry_resolution_quarantine_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    _publish_manifest_update(package, manifest)
+    quarantine = _quarantine_closed_salvage(package, log=log)
+    if quarantine is None:
+        return False
+    return _finish_quarantined_salvage(
+        quarantine, package.name, manifest, log=log)
+
+
+def _close_replayed_salvages(
+    package_names, attempt_names, resolutions: dict, *,
+    commit: str, pushed: bool, log=print,
+) -> dict[str, list[str]]:
+    """Persist GLM receipts and let the host close only remotely accepted work."""
+    result = {"closed": [], "host_pending": []}
+    if not commit:
+        return result
+    targets = _normalize_salvage_package_names(package_names)
+    if not targets:
+        return result
+    target = targets[0]
+    resolution = str(resolutions.get(target) or "")
+    if resolution not in {"integrated", "no_valid_change"}:
+        return result
+    lineage = _normalize_salvage_package_names([target, *attempt_names])
+    code_upstream = bool(pushed or _upstream_contains_commit(commit))
+    # Persist the complete lineage on the target first.  If the host crashes at
+    # any later instruction, startup can propagate the same GLM receipt without
+    # spending another model call.
+    ordered = [target, *[name for name in lineage if name != target]]
+    prepared: list[tuple[str, Path, dict]] = []
+    for name in ordered:
+        package = _salvage_package_path(name)
+        if package is None:
+            continue
+        try:
+            manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+            manifest = dict(manifest)
+            manifest.update({
+                "retry_resolution": resolution,
+                "retry_resolution_target": target,
+                "retry_resolution_lineage": lineage,
+                "retry_resolution_commit": commit,
+                "retry_resolution_claimed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "retry_resolution_state": (
+                    "code_upstream_confirmed" if code_upstream
+                    else "claimed_pending_code_push"),
+            })
+            _publish_manifest_update(package, manifest)
+            prepared.append((name, package, manifest))
+        except Exception as exc:
+            log(f"[llm] 失败包 {name} 回执持久化异常；原包继续保留：{exc}")
+            result["host_pending"].append(name)
+    # Queue acknowledgement is the next transaction boundary.  Never quarantine
+    # or delete here: a crash before _finalize_review_batch would otherwise leave
+    # a stale reviewing item whose target evidence has already disappeared.
+    result["host_pending"].extend(
+        name for name, _package, _manifest in prepared
+        if name not in result["host_pending"])
+    return result
+
+
+def _resume_replay_lineage_resolution(target_package: Path,
+                                      target_manifest: dict, log=print) -> None:
+    """Propagate one durable target receipt and resume host-only closure."""
+    resolution = str(target_manifest.get("retry_resolution") or "")
+    commit = str(target_manifest.get("retry_resolution_commit") or "")
+    if resolution not in {"integrated", "no_valid_change"} or not commit:
+        return
+    if not _upstream_contains_commit(commit):
+        if _review_stop_requested():
+            return
+        try:
+            import autogit
+            autogit.push_pending(log=log, attempts=1)
+        except Exception as exc:
+            log(f"[llm] lineage 代码提交补推异常，保留宿主闭环状态：{exc}")
+            return
+        if not _upstream_contains_commit(commit):
+            return
+    target_name = str(target_manifest.get("retry_resolution_target")
+                      or target_manifest.get("replay_target")
+                      or target_package.name)
+    lineage = _normalize_salvage_package_names(
+        target_manifest.get("retry_resolution_lineage")
+        or [target_name, *(target_manifest.get("replay_attempt_packages") or [])])
+    prepared: list[tuple[Path, dict]] = []
+    preparation_failed = False
+    for name in lineage:
+        package = _salvage_package_path(name)
+        if package is None:
+            continue
+        try:
+            manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+            manifest = dict(manifest)
+            manifest.update({
+                "retry_resolution": resolution,
+                "retry_resolution_target": target_name,
+                "retry_resolution_lineage": lineage,
+                "retry_resolution_commit": commit,
+                "retry_resolution_claimed_at": target_manifest.get(
+                    "retry_resolution_claimed_at") or time.strftime("%Y-%m-%d %H:%M:%S"),
+                "retry_resolution_state": "code_upstream_confirmed",
+            })
+            _publish_manifest_update(package, manifest)
+            prepared.append((package, manifest))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            log(f"[llm] lineage 回执恢复暂未写入 {name}：{exc}")
+            preparation_failed = True
+    if _review_stop_requested():
+        return
+    prepared.sort(key=lambda item: item[0].name == target_name)
+    for package, manifest in prepared:
+        if _review_stop_requested():
+            return
+        if package.name == target_name and preparation_failed:
+            return
+        _finalize_salvage_resolution(package, manifest, log=log)
+
+
+_RETRY_REPLAY_TOTAL_BYTES = 256 * 1024
+_RETRY_EVIDENCE_SCHEMA = 3
+_RETRY_RESOLUTION_VALUES = frozenset({
+    "integrated", "no_valid_change", "still_pending",
+})
+
+
+def _normalize_salvage_package_names(values) -> list[str]:
+    """Return stable direct-child package ids without scanning the salvage root."""
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values or ():
+        name = str(value or "").strip()
+        if (not name or name in {".", ".."} or "/" in name or "\\" in name
+                or name.startswith(".") or name in seen):
+            continue
+        normalized.append(name)
+        seen.add(name)
+    return normalized
+
+
+def _salvage_package_path(name: str) -> Path | None:
+    names = _normalize_salvage_package_names([name])
+    if not names:
+        return None
+    package = SALVAGE_ROOT / names[0]
+    try:
+        if package.resolve().parent != SALVAGE_ROOT.resolve() or not package.is_dir():
+            return None
+    except OSError:
+        return None
+    return package
+
+
+def _link_replay_attempt(target_name: str, attempt_name: str,
+                         existing_attempts=(), log=print) -> list[str]:
+    """Durably attach one failed retry attempt without turning it into a target."""
+    target = _salvage_package_path(target_name)
+    attempt = _salvage_package_path(attempt_name)
+    attempts = _normalize_salvage_package_names([
+        *existing_attempts, attempt_name])
+    if target is None or attempt is None or target_name == attempt_name:
+        return [name for name in attempts if name != target_name]
+    try:
+        attempt_manifest = json.loads(
+            (attempt / "manifest.json").read_text(encoding="utf-8"))
+        attempt_manifest = dict(attempt_manifest)
+        attempt_manifest.update({
+            "replay_enqueue_pending": True,
+            "replay_target": target_name,
+            "replay_role": "attempt_evidence",
+            "replay_attempt_no": attempts.index(attempt_name) + 1,
+            "replay_parent_attempt": (
+                attempts[-2] if len(attempts) > 1 else target_name),
+        })
+        _publish_manifest_update(attempt, attempt_manifest)
+
+        target_manifest = json.loads(
+            (target / "manifest.json").read_text(encoding="utf-8"))
+        target_manifest = dict(target_manifest)
+        target_manifest.update({
+            "replay_enqueue_pending": True,
+            "replay_target": target_name,
+            "replay_role": "target",
+            "replay_attempt_packages": attempts,
+        })
+        _publish_manifest_update(target, target_manifest)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        # Both packages already contain enough linkage for startup reconciliation;
+        # this fast-path failure must not lose or retarget either package.
+        log(f"[llm] 重试 attempt 关联暂未完成，将由启动恢复重建：{exc}")
+    return [name for name in attempts if name != target_name]
+
+
+def _retry_raw_repo(package: Path) -> Path | None:
+    raw = package / "raw_sandbox"
+    for candidate in (raw / "repo", raw):
+        if candidate.is_dir() and (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def _publish_manifest_update(package: Path, manifest: dict) -> None:
+    manifest_path = package / "manifest.json"
+    temp = package / (
+        f".manifest.retry-{os.getpid()}-{threading.get_ident()}-{time.time_ns()}.tmp")
+    try:
+        temp.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(temp, manifest_path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _materialize_retry_evidence(package: Path, log=print) -> dict:
+    """Build a review-only candidate from a recovered raw clone.
+
+    The raw clone's HEAD, refs, stash, worktree, index and object database remain
+    untouched.  Separate source sections expose accepted-only worktree, index,
+    HEAD, local-branch and stash diffs; cache/online/rejected paths stay in
+    inventory and in the original package.  No host path ever applies the
+    candidate.
+    """
+    manifest_path = package / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    candidate_path = package / "retry_candidate.patch"
+    inventory_path = package / "retry_candidate_inventory.json"
+    if (manifest.get("retry_evidence_ready") is True
+            and manifest.get("retry_evidence_schema") == _RETRY_EVIDENCE_SCHEMA
+            and candidate_path.is_file() and inventory_path.is_file()):
+        return manifest
+
+    repo = _retry_raw_repo(package)
+    previous_schema = manifest.get("retry_evidence_schema")
+    previous_history = list(manifest.get("retry_evidence_history") or [])
+    if previous_schema and previous_schema != _RETRY_EVIDENCE_SCHEMA:
+        previous_history.append({
+            "schema": previous_schema,
+            "materialized_at": manifest.get("retry_evidence_materialized_at"),
+            "candidate_bytes": manifest.get("retry_candidate_bytes"),
+            "candidate_path_count": manifest.get("retry_candidate_path_count"),
+            "candidate_sha256": (
+                _file_sha256(candidate_path) if candidate_path.is_file() else ""),
+            "migration_note": (
+                "Early materializer may have written candidate blobs into the raw "
+                "clone object database. Objects are intentionally preserved as "
+                "forensic evidence; schema 3 never writes there."),
+        })
+    if repo is None:
+        # Commit/CAS conflict packages can intentionally retain only the verified
+        # snapshot.  Promote its accepted-only patch; never fall back to a noisy
+        # all-files WIP merely because the raw clone was already discarded.
+        validated = package / "validated_candidate.patch"
+        if not validated.is_file():
+            return manifest
+        candidate_temp = package / (
+            f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
+        inventory_temp = package / (
+            f".retry_candidate_inventory.{os.getpid()}.{threading.get_ident()}.tmp")
+        try:
+            candidate_temp.write_bytes(validated.read_bytes())
+            paths = [str(value).replace("\\", "/")
+                     for value in (manifest.get("validated_candidate_paths") or [])]
+            inventory = {
+                "schema": _RETRY_EVIDENCE_SCHEMA,
+                "package": package.name,
+                "pre_head": str(manifest.get("pre_head") or ""),
+                "source": "validated accepted-only snapshot (no raw clone)",
+                "auto_apply": False,
+                "path_count": len(paths),
+                "paths": paths,
+                "accepted_candidate_paths": paths,
+                "transient_artifact_paths": list(
+                    manifest.get("transient_artifact_paths") or []),
+                "online_runtime_paths": list(manifest.get("online_runtime_paths") or []),
+                "rejected_or_unexpected_paths": list(
+                    manifest.get("rejected_or_unexpected_paths") or []),
+                "sources": [{
+                    "kind": "validated_candidate",
+                    "label": "sandbox accepted patch",
+                    "accepted_candidate_paths": paths,
+                    "candidate_bytes": candidate_temp.stat().st_size,
+                }],
+            }
+            inventory_temp.write_text(
+                json.dumps(inventory, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            _replace_with_retry(candidate_temp, candidate_path)
+            _replace_with_retry(inventory_temp, inventory_path)
+            manifest = dict(manifest)
+            manifest.update({
+                "retry_evidence_ready": True,
+                "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+                "retry_evidence_history": previous_history,
+                "retry_evidence_materialized_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "retry_candidate_patch": candidate_path.name,
+                "retry_candidate_inventory": inventory_path.name,
+                "retry_candidate_bytes": candidate_path.stat().st_size,
+                "retry_candidate_path_count": len(paths),
+                "retry_inventory_path_count": len(paths),
+                "retry_candidate_auto_apply": False,
+            })
+            _publish_manifest_update(package, manifest)
+            return manifest
+        finally:
+            candidate_temp.unlink(missing_ok=True)
+            inventory_temp.unlink(missing_ok=True)
+    pre_head = str(manifest.get("pre_head") or "").strip()
+    if not pre_head:
+        raise OSError(f"失败包 {package.name} 缺少 pre_head，无法物化候选证据")
+
+    index_root = _new_review_temp("sts2-review-retry-index-")
+    index_path = index_root / "index"
+    object_dir = index_root / "objects"
+    object_dir.mkdir()
+    candidate_temp = package / (
+        f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
+    inventory_temp = package / (
+        f".retry_candidate_inventory.{os.getpid()}.{threading.get_ident()}.tmp")
+    env = dict(os.environ)
+    env["GIT_INDEX_FILE"] = str(index_path)
+    env["GIT_OBJECT_DIRECTORY"] = str(object_dir)
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    try:
+        git_dir_result = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "rev-parse", "--absolute-git-dir"],
+            timeout=60)
+        if git_dir_result.returncode != 0:
+            raise OSError("raw clone Git 目录解析失败：" + git_dir_result.stderr[:400])
+        git_dir = Path(git_dir_result.stdout.strip()).resolve()
+        source_objects = git_dir / "objects"
+        if not source_objects.is_dir():
+            raise OSError(f"raw clone Git objects 不存在：{source_objects}")
+        env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(source_objects)
+        raw_index_path = git_dir / "index"
+        raw_index_env = dict(env)
+        raw_index_env["GIT_INDEX_FILE"] = str(raw_index_path)
+        verify = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "rev-parse", "--verify", f"{pre_head}^{{commit}}"],
+            env=env, timeout=60)
+        raw_head_result = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "rev-parse", "--verify", "HEAD^{commit}"],
+            env=env, timeout=60)
+        refs_result = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "for-each-ref",
+             "--format=%(refname)%00%(objectname)%00%(objecttype)%00%(subject)"],
+            env=env, timeout=60)
+        stash_result = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "stash", "list",
+             "--format=%gd%x00%H%x00%gs"], env=env, timeout=60)
+        raw_index_names = (
+            _run_captured_stop_aware(
+                ["git", "-C", str(repo), "diff", "--cached", "--name-only", "-z",
+                 pre_head, "--"], env=raw_index_env, timeout=120)
+            if raw_index_path.is_file()
+            else subprocess.CompletedProcess([], 0, "", ""))
+        read_tree = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "read-tree", pre_head], env=env, timeout=60)
+        stage = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "add", "--all", "--force", "--", "."],
+            env=env, timeout=180)
+        names = _run_captured_stop_aware(
+            ["git", "-C", str(repo), "diff", "--cached", "--name-only", "-z",
+             pre_head, "--"], env=env, timeout=120)
+        commands = (verify, raw_head_result, refs_result, stash_result,
+                    raw_index_names, read_tree, stage, names)
+        if any(item.returncode != 0 for item in commands):
+            errors = " ".join((item.stderr or "").strip() for item in commands
+                              if item.returncode != 0)
+            raise OSError("raw clone 候选 patch 物化失败：" + errors[:800])
+        worktree_paths = list(dict.fromkeys(
+            value.replace("\\", "/") for value in names.stdout.split("\0") if value))
+        accepted, artifacts, online, rejected = _partition_review_changes(worktree_paths)
+        raw_index_paths = list(dict.fromkeys(
+            value.replace("\\", "/")
+            for value in raw_index_names.stdout.split("\0") if value))
+        (raw_index_accepted, raw_index_artifacts,
+         raw_index_online, raw_index_rejected) = _partition_review_changes(raw_index_paths)
+
+        def path_chunks(values: list[str], budget: int = 8000):
+            chunk: list[str] = []
+            size = 0
+            for value in values:
+                cost = len(value) + 3
+                if chunk and size + cost > budget:
+                    yield chunk
+                    chunk, size = [], 0
+                chunk.append(value)
+                size += cost
+            if chunk:
+                yield chunk
+
+        candidate_sections: list[bytes] = []
+        candidate_hashes: dict[str, str] = {}
+        source_inventory: list[dict] = []
+        all_paths = [*worktree_paths, *raw_index_paths]
+        all_accepted = [*accepted, *raw_index_accepted]
+        all_artifacts = [*artifacts, *raw_index_artifacts]
+        all_online = [*online, *raw_index_online]
+        all_rejected = [*rejected, *raw_index_rejected]
+
+        def export_private_index(kind: str, label: str, object_name: str,
+                                 source_paths: list[str], source_accepted: list[str],
+                                 source_artifacts: list[str], source_online: list[str],
+                                 source_rejected: list[str], *, worktree: bool = False) -> None:
+            source = {
+                "kind": kind,
+                "label": label,
+                "object": object_name,
+                "paths": source_paths,
+                "accepted_candidate_paths": source_accepted,
+                "transient_artifact_paths": source_artifacts,
+                "online_runtime_paths": source_online,
+                "rejected_or_unexpected_paths": source_rejected,
+                "candidate_bytes": 0,
+            }
+            if not source_accepted:
+                source_inventory.append(source)
+                return
+            reset_index = _run_captured_stop_aware(
+                ["git", "-C", str(repo), "read-tree", pre_head],
+                env=env, timeout=60)
+            updates = []
+            for chunk in path_chunks(source_accepted):
+                args = (["git", "-C", str(repo), "add", "--all", "--force", "--", *chunk]
+                        if worktree else
+                        ["git", "-C", str(repo), "reset", "--quiet", object_name,
+                         "--", *chunk])
+                updates.append(_run_captured_stop_aware(args, env=env, timeout=120))
+            if reset_index.returncode != 0 or any(item.returncode != 0 for item in updates):
+                errors = " ".join((item.stderr or "").strip()
+                                  for item in [reset_index, *updates]
+                                  if item.returncode != 0)
+                source["error"] = errors[:800]
+                source_inventory.append(source)
+                return
+            section_path = index_root / f"candidate-{len(source_inventory)}.patch"
+            patch = _run_captured_stop_aware(
+                ["git", "-C", str(repo), "diff", "--cached", "--no-ext-diff",
+                 "--binary", "--full-index", "--unified=3",
+                 f"--output={section_path.as_posix()}", pre_head, "--"],
+                env=env, timeout=300)
+            if patch.returncode != 0 or not section_path.is_file():
+                source["error"] = (patch.stderr or "candidate export failed")[:800]
+                source_inventory.append(source)
+                return
+            payload = section_path.read_bytes()
+            digest = hashlib.sha256(payload).hexdigest()
+            if digest in candidate_hashes:
+                source["duplicate_of"] = candidate_hashes[digest]
+            elif payload:
+                header = (f"\n# ===== replay evidence: {kind} {label} =====\n"
+                          .encode("utf-8", errors="replace"))
+                candidate_sections.append(header + payload)
+                candidate_hashes[digest] = label
+            source["candidate_bytes"] = len(payload)
+            source["candidate_sha256"] = digest
+            source_inventory.append(source)
+
+        export_private_index(
+            "worktree", "raw worktree/index vs pre_head", "WORKTREE",
+            worktree_paths, accepted, artifacts, online, rejected, worktree=True)
+
+        def export_raw_index() -> None:
+            source = {
+                "kind": "raw_index",
+                "label": "raw index vs pre_head",
+                "object": "INDEX",
+                "paths": raw_index_paths,
+                "accepted_candidate_paths": raw_index_accepted,
+                "transient_artifact_paths": raw_index_artifacts,
+                "online_runtime_paths": raw_index_online,
+                "rejected_or_unexpected_paths": raw_index_rejected,
+                "candidate_bytes": 0,
+            }
+            if not raw_index_accepted:
+                source_inventory.append(source)
+                return
+            payload_parts: list[bytes] = []
+            for chunk_no, chunk in enumerate(path_chunks(raw_index_accepted)):
+                section_path = index_root / (
+                    f"candidate-{len(source_inventory)}-raw-index-{chunk_no}.patch")
+                patch = _run_captured_stop_aware(
+                    ["git", "-C", str(repo), "diff", "--cached", "--no-ext-diff",
+                     "--binary", "--full-index", "--unified=3",
+                     f"--output={section_path.as_posix()}", pre_head, "--", *chunk],
+                    env=raw_index_env, timeout=300)
+                if patch.returncode != 0 or not section_path.is_file():
+                    source["error"] = (
+                        patch.stderr or "raw index candidate export failed")[:800]
+                    source_inventory.append(source)
+                    return
+                payload_parts.append(section_path.read_bytes())
+            payload = b"".join(payload_parts)
+            digest = hashlib.sha256(payload).hexdigest()
+            if digest in candidate_hashes:
+                source["duplicate_of"] = candidate_hashes[digest]
+            elif payload:
+                header = b"\n# ===== replay evidence: raw_index raw index vs pre_head =====\n"
+                candidate_sections.append(header + payload)
+                candidate_hashes[digest] = "raw index vs pre_head"
+            source["candidate_bytes"] = len(payload)
+            source["candidate_sha256"] = digest
+            source_inventory.append(source)
+
+        export_raw_index()
+
+        def parse_ref_lines(text: str, field_count: int) -> list[list[str]]:
+            records: list[list[str]] = []
+            for line in text.splitlines():
+                fields = line.split("\0")
+                if len(fields) >= field_count:
+                    records.append(fields[:field_count])
+            return records
+
+        refs = [{"ref": fields[0], "object": fields[1], "type": fields[2],
+                 "subject": fields[3]}
+                for fields in parse_ref_lines(refs_result.stdout, 4)]
+        stashes = [{"name": fields[0], "object": fields[1], "subject": fields[2]}
+                   for fields in parse_ref_lines(stash_result.stdout, 3)]
+        for stash in stashes:
+            for key, suffix in (("index_parent", "^2"),
+                                ("untracked_parent", "^3")):
+                parent = _run_captured_stop_aware(
+                    ["git", "-C", str(repo), "rev-parse", "--verify",
+                     f"{stash['object']}{suffix}^{{commit}}"],
+                    env=env, timeout=60)
+                if parent.returncode == 0 and parent.stdout.strip():
+                    stash[key] = parent.stdout.strip()
+        raw_head = raw_head_result.stdout.strip()
+        objects: list[tuple[str, str, str, bool]] = []
+        if raw_head and raw_head != pre_head:
+            objects.append(("head_commit", "HEAD", raw_head, False))
+        for item in refs:
+            if (item["ref"].startswith("refs/heads/")
+                    and item["type"] == "commit" and item["object"] != pre_head):
+                objects.append(("local_ref", item["ref"], item["object"], False))
+        for item in stashes:
+            objects.append(("stash", item["name"], item["object"], False))
+            if item.get("index_parent"):
+                objects.append(("stash_index", f"{item['name']}^2",
+                                item["index_parent"], False))
+            if item.get("untracked_parent"):
+                objects.append(("stash_untracked", f"{item['name']}^3",
+                                item["untracked_parent"], True))
+        seen_objects: dict[str, str] = {}
+        for kind, label, object_name, tree_paths_only in objects:
+            if not object_name:
+                continue
+            if object_name in seen_objects:
+                source_inventory.append({
+                    "kind": kind, "label": label, "object": object_name,
+                    "duplicate_object_of": seen_objects[object_name],
+                    "candidate_bytes": 0,
+                })
+                continue
+            seen_objects[object_name] = label
+            object_names = _run_captured_stop_aware(
+                (["git", "-C", str(repo), "ls-tree", "-r", "--name-only", "-z",
+                  object_name]
+                 if tree_paths_only else
+                 ["git", "-C", str(repo), "diff", "--name-only", "-z",
+                  pre_head, object_name, "--"]), env=env, timeout=120)
+            if object_names.returncode != 0:
+                source_inventory.append({
+                    "kind": kind, "label": label, "object": object_name,
+                    "error": (object_names.stderr or "object diff failed")[:800],
+                })
+                continue
+            object_paths = list(dict.fromkeys(
+                value.replace("\\", "/")
+                for value in object_names.stdout.split("\0") if value))
+            obj_accepted, obj_artifacts, obj_online, obj_rejected = \
+                _partition_review_changes(object_paths)
+            all_paths.extend(object_paths)
+            all_accepted.extend(obj_accepted)
+            all_artifacts.extend(obj_artifacts)
+            all_online.extend(obj_online)
+            all_rejected.extend(obj_rejected)
+            export_private_index(
+                kind, label, object_name, object_paths, obj_accepted,
+                obj_artifacts, obj_online, obj_rejected)
+
+        paths = list(dict.fromkeys(all_paths))
+        accepted = list(dict.fromkeys(all_accepted))
+        artifacts = list(dict.fromkeys(all_artifacts))
+        online = list(dict.fromkeys(all_online))
+        rejected = list(dict.fromkeys(all_rejected))
+        candidate_temp.write_bytes(b"".join(candidate_sections))
+        inventory = {
+            "schema": _RETRY_EVIDENCE_SCHEMA,
+            "package": package.name,
+            "pre_head": pre_head,
+            "source": "raw_sandbox source-separated private indexes and object directory",
+            "auto_apply": False,
+            "raw_head": raw_head,
+            "refs": refs,
+            "stashes": stashes,
+            "path_count": len(paths),
+            "paths": paths,
+            "accepted_candidate_paths": accepted,
+            "transient_artifact_paths": artifacts,
+            "online_runtime_paths": online,
+            "rejected_or_unexpected_paths": rejected,
+            "sources": source_inventory,
+        }
+        inventory_temp.write_text(
+            json.dumps(inventory, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(candidate_temp, candidate_path)
+        _replace_with_retry(inventory_temp, inventory_path)
+        manifest = dict(manifest)
+        manifest.update({
+            "retry_evidence_ready": True,
+            "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+            "retry_evidence_history": previous_history,
+            "raw_forensic_note": manifest.get("raw_forensic_note") or (
+                "Pre-schema-3 materialization may have added unreachable objects to the "
+                "preserved raw clone. They are intentionally retained; schema 3 uses an "
+                "isolated object directory and does not mutate raw Git state."),
+            "retry_evidence_materialized_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "retry_candidate_patch": candidate_path.name,
+            "retry_candidate_inventory": inventory_path.name,
+            "retry_candidate_bytes": candidate_path.stat().st_size,
+            "retry_candidate_path_count": len(accepted),
+            "retry_inventory_path_count": len(paths),
+            "retry_candidate_auto_apply": False,
+        })
+        _publish_manifest_update(package, manifest)
+        log(f"[llm] 已从 raw clone 物化 GLM 重审候选证据：{package.name} "
+            f"({len(paths)} paths, {candidate_path.stat().st_size} bytes；不会自动应用)")
+        return manifest
+    finally:
+        candidate_temp.unlink(missing_ok=True)
+        inventory_temp.unlink(missing_ok=True)
+        try:
+            if index_root.is_dir() and index_root.parent == _review_work_root().resolve():
+                shutil.rmtree(index_root)
+        except OSError:
+            pass
+
+
+def _bounded_retry_text(path: Path, limit: int) -> tuple[str, bool, int]:
+    """Read a bounded head+tail excerpt so appended reports remain visible."""
+    if limit <= 0 or not path.is_file():
+        return "", False, 0
+    size = path.stat().st_size
+    with path.open("rb") as handle:
+        if size <= limit:
+            payload = handle.read(limit)
+            truncated = False
+        else:
+            marker = b"\n\n[... bounded replay evidence omitted ...]\n\n"
+            content_limit = max(0, limit - len(marker))
+            head_size = content_limit // 2
+            tail_size = content_limit - head_size
+            head = handle.read(head_size)
+            handle.seek(max(0, size - tail_size))
+            tail = handle.read(tail_size)
+            payload = head + marker[:limit] + tail
+            payload = payload[:limit]
+            truncated = True
+    return payload.decode("utf-8", errors="replace"), truncated, size
+
+
+def _failed_review_replay_context(package_names, attempt_names=(), log=print) -> dict:
+    """Inline one target lineage with a fixed total budget and explicit roles."""
+    requested = _normalize_salvage_package_names(package_names)
+    attempts = [name for name in _normalize_salvage_package_names(attempt_names)
+                if name not in requested]
+    evidence_names = [*requested, *attempts]
+    packet = {
+        "requested_packages": requested,
+        "attempt_packages": attempts,
+        "packages": [],
+        "total_budget_bytes": _RETRY_REPLAY_TOTAL_BYTES,
+        "auto_apply": False,
+        "review_contract": (
+            "GLM must compare this evidence with current HEAD, selectively reimplement "
+            "still-valid changes, resolve conflicts, and run selfcheck; host never applies it."),
+    }
+    if not requested:
+        return packet
+    # A growing attempt history must never starve the original target patch.
+    # Reserve 60% for target evidence.  The newest three attempts share most of
+    # the remainder; older attempts contribute manifest/inventory summaries only.
+    target_pool = (_RETRY_REPLAY_TOTAL_BYTES if not attempts
+                   else _RETRY_REPLAY_TOTAL_BYTES * 3 // 5)
+    target_each = max(1, target_pool // max(1, len(requested)))
+    attempt_pool = max(0, _RETRY_REPLAY_TOTAL_BYTES - target_each * len(requested))
+    recent_attempts = set(attempts[-3:])
+    historical = [name for name in attempts if name not in recent_attempts]
+    historical_pool = min(attempt_pool // 4, len(historical) * 1024)
+    historical_each = (historical_pool // len(historical)) if historical else 0
+    recent_pool = max(0, attempt_pool - historical_each * len(historical))
+    recent_each = recent_pool // max(1, len(recent_attempts))
+    package_budgets = {
+        **{name: target_each for name in requested},
+        **{name: historical_each for name in historical},
+        **{name: recent_each for name in recent_attempts},
+    }
+    packet["budget_allocation"] = {
+        "target_bytes_each": target_each,
+        "recent_attempt_bytes_each": recent_each,
+        "historical_attempt_summary_bytes_each": historical_each,
+        "recent_attempt_count": len(recent_attempts),
+    }
+    for name in evidence_names:
+        role = "target" if name in requested else "attempt_evidence"
+        package_budget = max(0, package_budgets.get(name, 0))
+        if role == "target":
+            manifest_budget = min(8 * 1024, package_budget // 20)
+            inventory_budget = min(16 * 1024, package_budget // 10)
+            report_budget = min(24 * 1024, package_budget * 15 // 100)
+            patch_budget = max(
+                0, package_budget - manifest_budget - inventory_budget - report_budget)
+        elif name in recent_attempts:
+            manifest_budget = min(16 * 1024, package_budget * 20 // 100)
+            inventory_budget = min(16 * 1024, package_budget * 20 // 100)
+            report_budget = min(32 * 1024, package_budget * 25 // 100)
+            patch_budget = max(
+                0, package_budget - manifest_budget - inventory_budget - report_budget)
+        else:
+            manifest_budget = package_budget // 2
+            inventory_budget = package_budget - manifest_budget
+            report_budget = 0
+            patch_budget = 0
+        package = _salvage_package_path(name)
+        if package is None:
+            packet["packages"].append({
+                "package": name, "role": role, "available": False,
+                "error": "failure package is missing; keep pending",
+            })
+            continue
+        materialization_error = ""
+        try:
+            _materialize_retry_evidence(package, log=log)
+        except (_ReviewStopped, KeyboardInterrupt):
+            raise
+        except Exception as exc:
+            materialization_error = str(exc)[:800]
+            log(f"[llm] 失败包 {name} 候选证据暂未物化；仍回灌现有报告/WIP：{exc}")
+        candidate = package / "retry_candidate.patch"
+        candidate_source = "retry_candidate.patch"
+        if not candidate.is_file():
+            candidate = package / "validated_candidate.patch"
+            candidate_source = "validated_candidate.patch"
+        if not candidate.is_file():
+            candidate = package / "wip.patch"
+            candidate_source = "wip.patch (full forensic fallback)"
+        manifest_text, manifest_truncated, manifest_size = _bounded_retry_text(
+            package / "manifest.json", manifest_budget)
+        inventory_text, inventory_truncated, inventory_size = _bounded_retry_text(
+            package / "retry_candidate_inventory.json", inventory_budget)
+        report_text, report_truncated, report_size = _bounded_retry_text(
+            package / "report.md", report_budget)
+        patch_text, patch_truncated, patch_size = _bounded_retry_text(
+            candidate, patch_budget)
+        packet["packages"].append({
+            "package": name,
+            "role": role,
+            "inline_budget_bytes": package_budget,
+            "available": True,
+            "materialization_error": materialization_error,
+            "manifest": manifest_text,
+            "manifest_bytes": manifest_size,
+            "manifest_truncated": manifest_truncated,
+            "inventory": inventory_text,
+            "inventory_bytes": inventory_size,
+            "inventory_truncated": inventory_truncated,
+            "report": report_text,
+            "report_bytes": report_size,
+            "report_truncated": report_truncated,
+            "candidate_source": candidate_source,
+            "candidate_patch": patch_text,
+            "candidate_patch_bytes": patch_size,
+            "candidate_patch_truncated": patch_truncated,
+            "auto_apply": False,
+        })
+    return packet
+
+
+def _parse_retry_resolutions(report: str, package_names) -> dict[str, str]:
+    """Softly parse GLM's per-package resolution lines; absence is not a gate."""
+    requested = set(_normalize_salvage_package_names(package_names))
+    found: dict[str, str] = {}
+    marker = "retry_resolution:"
+    for raw_line in str(report or "").splitlines():
+        line = raw_line.strip().strip("`*")
+        position = line.find(marker)
+        if position < 0:
+            continue
+        parts = line[position + len(marker):].strip().split()
+        if len(parts) < 2:
+            continue
+        package = parts[0].strip("`<>,;:[]()")
+        resolution = parts[1].strip("`<>,;:[]().")
+        if package in requested and resolution in _RETRY_RESOLUTION_VALUES:
+            found[package] = resolution
+    return found
 
 
 def _file_sha256(path: Path) -> str:
@@ -2521,9 +4287,12 @@ def _file_sha256(path: Path) -> str:
 
 def _save_review_salvage(
     pre_head: str, reason: str, sandbox: SandboxReviewResult, *,
-    batch_runs: list[int] | None = None, model: str = "", source: str = "", log=print,
+    batch_runs: list[int] | None = None, model: str = "", source: str = "",
+    every: int | None = None, replay_target: str = "",
+    replay_attempts: list[str] | None = None,
+    replay_queue_ids: list[str] | None = None, log=print,
 ) -> Path | None:
-    """原子保存全部失败成果供人工补合；含越界文件，但永不自动应用。"""
+    """原子保存全部失败成果供 GLM 重审与后续分析；永不自动应用。"""
     if sandbox.salvage_saved:
         saved = Path(sandbox.salvage_saved)
         try:
@@ -2561,6 +4330,12 @@ def _save_review_salvage(
         sandbox.paths if sandbox.patch else ()))
     now_ns = time.time_ns()
     name = f"{time.strftime('%Y%m%d-%H%M%S')}-{now_ns}-{pre_head[:8] or 'nohead'}"
+    existing_attempts = _normalize_salvage_package_names(replay_attempts or [])
+    target_name = _normalize_salvage_package_names([replay_target])
+    target_name = target_name[0] if target_name else name
+    replay_role = "attempt_evidence" if target_name != name else "target"
+    queue_ids = list(dict.fromkeys(
+        str(value) for value in (replay_queue_ids or []) if str(value)))
     final = SALVAGE_ROOT / name
     temp = SALVAGE_ROOT / f".{name}.tmp-{os.getpid()}-{threading.get_ident()}"
     manifest = {
@@ -2573,6 +4348,7 @@ def _save_review_salvage(
         "batch_runs": list(batch_runs or []),
         "model": model,
         "source": source,
+        "every": every,
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
         "stalled": sandbox.stalled,
@@ -2592,7 +4368,21 @@ def _save_review_salvage(
         "patch_bytes": patch_bytes,
         "patch_sha256": patch_sha256,
         "auto_apply": False,
-        "inspection_hint": "files/ 与 wip.patch 是全量失败现场；人工检查后再选择性补合，禁止自动应用。",
+        # This linkage is published in the same atomic package rename as the
+        # forensic bytes.  A crash before the worker can update review_queue.json
+        # is therefore recoverable and idempotently becomes exactly one target job.
+        "replay_enqueue_pending": True,
+        "replay_target": target_name,
+        "replay_role": replay_role,
+        "replay_attempt_no": len(existing_attempts) + (1 if replay_role == "attempt_evidence" else 0),
+        "replay_parent_attempt": (
+            existing_attempts[-1] if existing_attempts else (
+                target_name if replay_role == "attempt_evidence" else "")),
+        "replay_attempt_packages": ([] if replay_role == "target" else None),
+        "replay_queue_ids": queue_ids,
+        "inspection_hint": (
+            "files/ 与 wip.patch 是全量失败现场；宿主只将其作为证据交回 GLM，"
+            "由 GLM 基于当前 HEAD 重审、解冲突，禁止自动应用。"),
     }
     try:
         SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
@@ -2626,6 +4416,18 @@ def _save_review_salvage(
         # 固定三件套始终存在；snapshot 缺失时仍发布空/已有 patch 供诊断。
         if not (temp / "wip.patch").is_file():
             (temp / "wip.patch").write_bytes(patch)
+        # The all-files WIP remains forensic truth.  Keep the already validated,
+        # accepted-only patch separately so commit/CAS failures without a raw clone
+        # never force the next GLM to consume cache/runtime noise as its candidate.
+        if sandbox.patch:
+            (temp / "validated_candidate.patch").write_bytes(sandbox.patch)
+            manifest.update({
+                "validated_candidate_patch": "validated_candidate.patch",
+                "validated_candidate_bytes": len(sandbox.patch),
+                "validated_candidate_sha256": hashlib.sha256(sandbox.patch).hexdigest(),
+                "validated_candidate_paths": list(allowed_paths),
+                "validated_candidate_auto_apply": False,
+            })
         (temp / "report.md").write_text(
             sandbox.diagnostic_report or "", encoding="utf-8")
         if sandbox.out:
@@ -2710,6 +4512,8 @@ def _run_review_sandbox(
     sandbox_repo = sandbox_root / "repo"
     result = SandboxReviewResult(error="隔离复盘未完成")
     paths: list[str] = []
+    validation_git_root: Path | None = None
+    validation_prefix = "sts2-review-validation-index-"
     try:
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
@@ -2747,21 +4551,23 @@ def _run_review_sandbox(
             )
             return result
 
-        # 不信任模型留下的 HEAD/index/assume-unchanged 标记；先回到隔离基线，
-        # 再 force-stage 整个隔离仓。这样即使模型先改 .gitignore，把新源码藏成
-        # ignored，最终 inventory 仍来自 cached diff，不会漏文件。
-        reset = _sandbox_git(sandbox_repo, ["reset", "--mixed", "--quiet", pre_head])
-        if reset.returncode != 0:
+        # 不信任模型留下的 HEAD/index/assume-unchanged 标记；在以
+        # pre_head 为基线的 private index/object store 里 force-stage 整个工作树。
+        # raw HEAD/index/objects 属于失败现场，验收过程绝不改写它们。
+        validation_git_root, validation_env = _new_private_sandbox_git(
+            sandbox_repo, validation_prefix)
+        read_inventory_base = _sandbox_git(
+            sandbox_repo, ["read-tree", pre_head], env=validation_env)
+        if read_inventory_base.returncode != 0:
             result = SandboxReviewResult(rc=rc, out=out, error="隔离仓库基线恢复失败")
             return result
         stage_inventory = _sandbox_git(
-            sandbox_repo, ["add", "--all", "--force", "--", "."])
+            sandbox_repo, ["add", "--all", "--force", "--", "."],
+            env=validation_env)
         inventory = _sandbox_git(
-            sandbox_repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"])
-        clear_inventory = _sandbox_git(
-            sandbox_repo, ["reset", "--mixed", "--quiet", pre_head])
-        if (stage_inventory.returncode != 0 or inventory.returncode != 0
-                or clear_inventory.returncode != 0):
+            sandbox_repo, ["diff", "--cached", "--name-only", "-z", pre_head, "--"],
+            env=validation_env)
+        if stage_inventory.returncode != 0 or inventory.returncode != 0:
             result = SandboxReviewResult(rc=rc, out=out, error="无法枚举隔离复盘变更")
             return result
         paths = list(dict.fromkeys(
@@ -2792,15 +4598,19 @@ def _run_review_sandbox(
                 error="复盘自检失败", selfcheck_ok=False)
             return result
 
-        # 模型即使在隔离 clone 内自行 commit/stage，也先退回基线 index；仅把验证过
-        # 的 accepted 精确路径 force-stage，再从基线导出二进制 patch。
+        # 自检可能生成新产物；再次把 private index 退回基线，仅导出
+        # 验证过的 accepted 精确路径。
+        read_patch_base = _sandbox_git(
+            sandbox_repo, ["read-tree", pre_head], env=validation_env)
         stage = _sandbox_git(
-            sandbox_repo, ["add", "--all", "--force", "--", *accepted])
+            sandbox_repo, ["add", "--all", "--force", "--", *accepted],
+            env=validation_env)
         patch = _sandbox_git(
             sandbox_repo,
             ["diff", "--cached", "--binary", "--unified=0", pre_head, "--", *accepted],
-            binary=True)
-        if stage.returncode != 0 or patch.returncode != 0 or not patch.stdout:
+            binary=True, env=validation_env)
+        if (read_patch_base.returncode != 0 or stage.returncode != 0
+                or patch.returncode != 0 or not patch.stdout):
             result = SandboxReviewResult(
                 rc=rc, out=out, paths=tuple(accepted),
                 allowed_paths=tuple(accepted), artifact_paths=tuple(transient),
@@ -2888,6 +4698,8 @@ def _run_review_sandbox(
             # 失败/拒绝时连 sandbox_root/repo 同级的越界文件也必须保留；仅靠
             # repo 内 Git 枚举无法覆盖模型违反 --dir 写出的 ../ 文件。
             result.retained_sandbox_dir = str(sandbox_root)
+        _discard_private_sandbox_git(
+            validation_git_root, validation_prefix, log=log)
         # 只删除本函数刚创建、且仍位于项目受管/兼容旧版临时区的精确目录。
         try:
             resolved = sandbox_root.resolve()
@@ -3142,6 +4954,15 @@ def _recover_deferred_salvages(log=print) -> None:
                 json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")
             _replace_with_retry(manifest_temp, manifest_path)
+            # Once the raw clone is safely inside the ignored failure package,
+            # derive a private-index candidate for the next GLM audit.  This is
+            # outside the Stop critical path and never applies the candidate.
+            try:
+                manifest = _materialize_retry_evidence(package, log=log)
+            except _ReviewStopped:
+                raise
+            except Exception as exc:
+                log(f"[llm] 延迟现场已补全，GLM 重审候选证据稍后懒物化：{exc}")
             # 先让项目内完整副本与 manifest 落稳，再清系统临时现场；只有清理
             # 成功才撤指针。若此处崩溃/权限失败，下次启动仍能精确重试而不泄漏。
             for pointer, item in completed:
@@ -3162,6 +4983,75 @@ def _recover_deferred_salvages(log=print) -> None:
             log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
 
 
+def _resume_host_salvage_closures(log=print) -> None:
+    """Resume receipt push/ledger/quarantine work without another GLM call."""
+    if not SALVAGE_ROOT.is_dir() or _review_stop_requested():
+        return
+    packages = sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name)
+    # Finish already quarantined packages first; their code receipt and delete
+    # authorization are independent from the model queue.
+    for package in packages:
+        if _review_stop_requested():
+            return
+        if not package.is_dir() or not package.name.startswith(_CLOSED_SALVAGE_PREFIX):
+            continue
+        try:
+            manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+            original = package.name[len(_CLOSED_SALVAGE_PREFIX):]
+            _finish_quarantined_salvage(package, original, manifest, log=log)
+        except FileNotFoundError:
+            # Only the crash window between the final manifest unlink and rmdir
+            # produces an empty quarantine.  Recheck the exact package's final
+            # upstream ledger row before removing that exact empty directory.
+            original = package.name[len(_CLOSED_SALVAGE_PREFIX):]
+            try:
+                empty = not any(package.iterdir())
+            except OSError:
+                empty = False
+            if empty and _upstream_ledger_contains(original, "并闭环"):
+                try:
+                    package.rmdir()
+                except OSError as exc:
+                    log(f"[llm] 空隔离目录闭环恢复暂缓：{package.name}（{exc}）")
+            else:
+                log(f"[llm] 隔离失败包缺少 manifest，未获精确删除授权：{package.name}")
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            log(f"[llm] 隔离失败包闭环恢复暂缓：{package.name}（{exc}）")
+
+    resolved_states = {
+        "claimed_pending_code_push", "code_upstream_confirmed",
+        "quarantined_pending_ledger", "ledger_final_upstream",
+    }
+    target_names: set[str] = set()
+    orphan_attempts: list[tuple[Path, dict]] = []
+    for package in packages:
+        if (_review_stop_requested() or not package.is_dir()
+                or package.name.startswith(_CLOSED_SALVAGE_PREFIX)):
+            if _review_stop_requested():
+                return
+            continue
+        try:
+            manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, FileNotFoundError):
+            continue
+        if manifest.get("retry_resolution_state") not in resolved_states:
+            continue
+        target = str(manifest.get("retry_resolution_target")
+                     or manifest.get("replay_target") or package.name)
+        if manifest.get("replay_role") == "target" or package.name == target:
+            target_names.add(target)
+            _resume_replay_lineage_resolution(package, manifest, log=log)
+        else:
+            orphan_attempts.append((package, manifest))
+    for package, manifest in orphan_attempts:
+        if _review_stop_requested():
+            return
+        target = str(manifest.get("retry_resolution_target")
+                     or manifest.get("replay_target") or "")
+        if target not in target_names and _salvage_package_path(target) is None:
+            _finalize_salvage_resolution(package, manifest, log=log)
+
+
 def _backfill_rejection_ledger(log=print) -> None:
     """Idempotently index every surviving package, including Stop-edge packages."""
     if not SALVAGE_ROOT.is_dir():
@@ -3172,45 +5062,63 @@ def _backfill_rejection_ledger(log=print) -> None:
             continue
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if package.name.startswith(_CLOSED_SALVAGE_PREFIX):
+                original_name = package.name[len(_CLOSED_SALVAGE_PREFIX):]
+                _finish_quarantined_salvage(
+                    package, original_name, manifest, log=log)
+                continue
+            # Do not rescan every historical raw clone on each Brain boot.  The
+            # explicit replay entry point materializes the named package before
+            # queuing it; deferred Stop recovery does so once after its copy lands.
             _record_review_rejection(package, manifest, log=log)
+            if manifest.get("retry_resolution_state") in {
+                    "claimed_pending_code_push", "code_upstream_confirmed",
+                    "quarantined_pending_ledger",
+                    "ledger_final_upstream"}:
+                if (manifest.get("replay_role") == "target"
+                        or package.name == manifest.get("retry_resolution_target")):
+                    _resume_replay_lineage_resolution(package, manifest, log=log)
+                else:
+                    _finalize_salvage_resolution(package, manifest, log=log)
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             log(f"[llm] 拒合清单启动补录跳过损坏失败包 {package.name}：{exc}")
 
 
 def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
     """原子消费成功批次或把失败批次放回队尾；返回失败退避秒数。"""
-    runs = tuple(item.get("run") for item in batch)
     with _queue_lock:
         q = _load_queue_unlocked()
-        current_runs = tuple((q.get("reviewing") or {}).get("runs") or [])
-        if current_runs != runs:
-            log("[llm] 复盘队列批次身份已变化，保留现有队列而不覆盖")
-            return 0.0
+        if not _reviewing_matches_batch(q.get("reviewing"), batch):
+            raise ReviewQueueError("复盘队列批次身份已变化，拒绝把收尾误报为成功")
         if outcome in {"completed", "documented", "changed"}:
             q["reviewing"] = None
             _save_queue_unlocked(q)
             return 0.0
-        if outcome != "failed":
+        if outcome not in {"failed", "replay_pending"}:
             return 0.0
 
-        # 新入队的局先处理，失败批次退到队尾；只保留稳定 run/time，下一次重新
-        # 解析模型计划，从而尊重 preferred 冷却与恢复探测。批次永不因队列上限丢弃。
+        # 新入队的局先处理，失败批次退到队尾。完整保留本次实际模型计划、
+        # retry_group 与失败包证据，使下一轮仍由同一个 GLM 对照当前 HEAD 重审。
         pending = list(q.get("pending", []))
-        seen = {item.get("run") for item in pending}
+        seen = {_queue_item_identity(item) for item in pending}
         delays: list[float] = []
         for item in batch:
-            if item.get("run") not in seen:
+            identity = _queue_item_identity(item)
+            if identity not in seen:
                 retry_count = int(item.get("retry_count", 0)) + 1
                 delay = min(_REVIEW_RETRY_MAX_SECONDS,
                             _REVIEW_RETRY_BASE_SECONDS
                             * (2 ** min(retry_count - 1, 20)))
-                pending.append({
-                    "run": item.get("run"),
-                    "time": item.get("time", ""),
+                retry_item = dict(item)
+                retry_item.update({
                     "retry_count": retry_count,
                     "retry_after": time.time() + delay,
+                    "retry_same_model": bool(item.get("model")),
+                    "salvage_packages": _normalize_salvage_package_names(
+                        item.get("salvage_packages") or []),
                 })
-                seen.add(item.get("run"))
+                pending.append(retry_item)
+                seen.add(identity)
                 delays.append(float(delay))
         q["pending"] = pending
         q["reviewing"] = None
@@ -3218,7 +5126,52 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
     return min(delays, default=0.0)
 
 
+def _persist_reviewing_batch_metadata(batch: list[dict], log=print) -> bool:
+    """Durably enrich an active transaction with its resolved plan/evidence."""
+    try:
+        with _queue_lock:
+            q = _load_queue_unlocked()
+            reviewing = q.get("reviewing") or {}
+            if not _reviewing_matches_batch(reviewing, batch):
+                return False
+            reviewing = dict(reviewing)
+            reviewing["items"] = [dict(item) for item in batch]
+            reviewing["runs"] = [item["run"] for item in batch]
+            q["reviewing"] = reviewing
+            _save_queue_unlocked(q)
+        return True
+    except (ReviewQueueError, OSError) as exc:
+        log(f"[llm] 复盘批次元数据暂未落盘，将由收尾事务重试：{exc}")
+        return False
+
+
 def _worker_loop(agent, log) -> None:
+    """Supervise the durable review daemon, including startup recovery.
+
+    Startup maintenance touches several independently durable stores.  A locked
+    or temporarily invalid queue must not kill the only daemon while leaving the
+    `_worker_started` latch set forever.  Retry the whole idempotent startup/body
+    transaction, and always release the latch if the thread really exits.
+    """
+    global _worker_started, _worker_thread
+    try:
+        while not _review_stop_requested():
+            try:
+                _worker_loop_body(agent, log)
+                return
+            except Exception as exc:
+                log(f"[llm] 复盘守护线程启动/运行异常，持久状态保持不变，30s 后自愈重试：{exc}")
+                if _wait_review_stop(30):
+                    return
+    finally:
+        with _worker_lock:
+            if (_worker_thread is None
+                    or _worker_thread is threading.current_thread()):
+                _worker_started = False
+                _worker_thread = None
+
+
+def _worker_loop_body(agent, log) -> None:
     # 进程重启后：先清孤儿（避免与重跑的复盘双写），再把 reviewing 的对局
     # 重新入队——此前直接丢弃标记，被中断复盘覆盖的对局永远丢失复盘。
     if _review_stop_requested():
@@ -3227,6 +5180,9 @@ def _worker_loop(agent, log) -> None:
     if _review_stop_requested():
         return
     _recover_deferred_salvages(log=log)
+    if _review_stop_requested():
+        return
+    _recover_salvage_replay_queue(log=log)
     if _review_stop_requested():
         return
     _backfill_rejection_ledger(log=log)
@@ -3240,13 +5196,14 @@ def _worker_loop(agent, log) -> None:
             with _queue_lock:
                 q = _load_queue_unlocked()
                 if q.get("reviewing"):
-                    lost_runs = list((q["reviewing"] or {}).get("runs") or [])
-                    if lost_runs:
+                    requeued = _reviewing_items(q.get("reviewing"))
+                    lost_runs = [item.get("run") for item in requeued]
+                    if requeued:
                         log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
-                        requeued = [{"run": r, "time": (q["reviewing"] or {}).get("started", "")}
-                                    for r in lost_runs]
-                        seen = {p.get("run") for p in requeued}
-                        pending = [p for p in q.get("pending", []) if p.get("run") not in seen]
+                        seen = {_queue_item_identity(item) for item in requeued}
+                        pending = [
+                            item for item in q.get("pending", [])
+                            if _queue_item_identity(item) not in seen]
                         # review_queue_max 现在只限制单次提示词批量，不再丢弃持久队列。
                         # 中断批次退到队尾，让停止期间/其后新完成的局先获得复盘，
                         # 避免 100 局旧批在反复热更新时永久压住新鲜样本。
@@ -3259,6 +5216,7 @@ def _worker_loop(agent, log) -> None:
             if _wait_review_stop(30):
                 return
 
+    next_salvage_maintenance = time.monotonic() + 60.0
     while not _review_stop_requested():
         try:
             # request_restart 已置位 = 本进程已判定待重启（局间 sys.exit(42)）。
@@ -3266,6 +5224,18 @@ def _worker_loop(agent, log) -> None:
             # （复盘 C 局中完成置位 → worker 又开跑 A → 局末退场掐断 A，实证路径）。
             if getattr(agent, "request_restart", False):
                 return
+            if time.monotonic() >= next_salvage_maintenance:
+                _resume_host_salvage_closures(log=log)
+                next_salvage_maintenance = time.monotonic() + 60.0
+                if _review_stop_requested():
+                    return
+            # Host-only receipt/push/ledger/quarantine recovery is independent
+            # from paid model execution.  When LLM review is disabled, keep the
+            # durable review queue untouched and run only maintenance.
+            if not load_llm_config().get("enabled", True):
+                if _wait_review_stop(30):
+                    return
+                continue
             retry_wait = 0.0
             with _queue_lock:
                 q = _load_queue_unlocked()
@@ -3277,14 +5247,34 @@ def _worker_loop(agent, log) -> None:
                         int(worker_cfg.get("max_runs_in_packet", 100))))
                     now = time.time()
                     eligible_indexes = [index for index, item in enumerate(pending)
-                                        if float(item.get("retry_after", 0) or 0) <= now][:cap]
+                                        if float(item.get("retry_after", 0) or 0) <= now]
                     if eligible_indexes:
+                        first = pending[eligible_indexes[0]]
+                        retry_group = str(first.get("retry_group") or "")
+                        # A failed package is always a standalone GLM job. Normal
+                        # online items may still batch up to cap, but never absorb
+                        # a retry group or another package lineage.
+                        eligible_indexes = [
+                            index for index in eligible_indexes
+                            if ((str(pending[index].get("retry_group") or "") == retry_group)
+                                if retry_group else
+                                not pending[index].get("retry_group"))
+                        ][:cap]
                         picked = set(eligible_indexes)
-                        batch = [pending[index] for index in eligible_indexes]
+                        transaction = f"{os.getpid()}-{time.time_ns()}"
+                        batch = []
+                        for offset, index in enumerate(eligible_indexes):
+                            item = dict(pending[index])
+                            item.setdefault("queue_id", f"{transaction}-{offset}")
+                            batch.append(item)
                         q["pending"] = [item for index, item in enumerate(pending)
                                         if index not in picked]
-                        q["reviewing"] = {"runs": [p["run"] for p in batch],
-                                          "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+                        q["reviewing"] = {
+                            "runs": [p["run"] for p in batch],
+                            "items": [dict(p) for p in batch],
+                            "retry_group": retry_group,
+                            "started": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        }
                         _save_queue_unlocked(q)
                     else:
                         batch = []
@@ -3314,8 +5304,12 @@ def _worker_loop(agent, log) -> None:
                             return
                 else:
                     return
-                if outcome == "failed":
-                    log(f"[llm] 复盘失败批次已放回队尾，{delay:.0f}s 后继续追及")
+                if (outcome in {"completed", "documented", "changed"}
+                        and not _review_stop_requested()):
+                    _resume_host_salvage_closures(log=log)
+                if outcome in {"failed", "replay_pending"}:
+                    label = "失败包尚未完成 GLM 闭环" if outcome == "replay_pending" else "复盘失败"
+                    log(f"[llm] {label}，批次已放回队尾，{delay:.0f}s 后继续追及")
                     retry_wait = min(30.0, max(1.0, delay))
             if _wait_review_stop(retry_wait or 5):
                 return
@@ -3339,14 +5333,96 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         model, every, source = picked["model"], int(picked.get("every", 5)), picked["source"]
     else:
         model, every, source = resolve_review_plan(cfg, binary, log=log)
+    replay_target = next((str(item.get("replay_target") or "") for item in batch
+                          if item.get("replay_target")), "")
+    legacy_packages = _normalize_salvage_package_names(
+        package for item in batch
+        for package in (item.get("salvage_packages") or []))
+    if not replay_target and legacy_packages:
+        replay_target = legacy_packages[0]
+    inherited_packages = [replay_target] if replay_target else []
+    inherited_attempts = _normalize_salvage_package_names(
+        package for item in batch
+        for package in (item.get("salvage_attempts") or []))
+    # Migrate an early draft queue which accumulated every package in one list:
+    # the first package remains the target; later packages become attempt evidence.
+    inherited_attempts = _normalize_salvage_package_names([
+        *inherited_attempts, *legacy_packages[1:]])
+    for item in batch:
+        item.update({
+            "model": model,
+            "every": max(1, int(every)),
+            "source": source,
+            "retry_same_model": True,
+            "salvage_packages": list(inherited_packages),
+            "salvage_attempts": list(inherited_attempts),
+        })
+        if replay_target:
+            item["replay_target"] = replay_target
+    _persist_reviewing_batch_metadata(batch, log=log)
     runs_list = [p["run"] for p in batch]
-    log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}）")
+    evidence_only = bool(batch) and all(bool(item.get("evidence_only"))
+                                        for item in batch)
+    replay_note = f"，重审失败包 {inherited_packages}" if inherited_packages else ""
+    log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}{replay_note}）")
     status: dict = {}
     executed = run_review(agent.know, log=log, model=model, every=every, source=source,
-                          batch_runs=runs_list, async_mode=True, _status=status)
+                          batch_runs=runs_list, async_mode=True, _status=status,
+                          salvage_packages=inherited_packages,
+                          salvage_attempts=inherited_attempts,
+                          replay_queue_ids=[str(item.get("queue_id") or "")
+                                            for item in batch],
+                          evidence_only=evidence_only)
+    new_package = str(status.get("new_salvage_package") or "")
+    if not new_package:
+        legacy_new = _normalize_salvage_package_names(
+            status.get("salvage_packages") or [])
+        new_package = next((name for name in reversed(legacy_new)
+                            if name != replay_target), "")
+    if not replay_target and new_package:
+        replay_target = new_package
+        inherited_packages = [replay_target]
+    elif replay_target and new_package and new_package != replay_target:
+        inherited_attempts = _link_replay_attempt(
+            replay_target, new_package, inherited_attempts, log=log)
+    retry_group = replay_target
+    for item in batch:
+        item.update({
+            "model": model,
+            "every": max(1, int(every)),
+            "source": source,
+            "retry_same_model": True,
+            "salvage_packages": list(inherited_packages),
+            "salvage_attempts": list(inherited_attempts),
+        })
+        if retry_group:
+            item["retry_group"] = retry_group
+            item["replay_target"] = retry_group
+    _persist_reviewing_batch_metadata(batch, log=log)
+    if replay_target:
+        resolutions = status.get("retry_resolutions") or {}
+        unresolved = status.get("unresolved_salvage_packages") or []
+        if not status.get("commit"):
+            unresolved = [replay_target]
+        log(f"[llm] GLM 失败包重审回执：{resolutions or '未写 retry_resolution'}"
+            f"；仍 pending={unresolved}")
+        if status.get("host_pending_salvage_packages"):
+            log("[llm] GLM 已完成逐包结论；清单/删除由宿主耐久恢复继续处理："
+                f"{status['host_pending_salvage_packages']}")
+    if status.get("commit"):
+        log(f"[llm] GLM 复盘提交回执：commit={status['commit'][:12]} "
+            f"pushed={bool(status.get('pushed'))}")
     outcome = status.get("outcome", "changed" if executed else "failed")
     if outcome == "canceled" or status.get("canceled"):
         return "canceled"
+    if inherited_packages and outcome in {"changed", "completed", "documented"} and unresolved:
+        # The accepted code/report commit remains valid.  Missing/still_pending
+        # receipts or an unconfirmed push only keep the forensic package lineage
+        # queued for another GLM pass; they never roll back the accepted commit.
+        if outcome == "changed" or executed:
+            agent.request_restart = True
+        log("[llm] 本轮提交已保留，但失败包尚未得到远端确认的逐包结论；继续交给 GLM")
+        return "replay_pending"
     if outcome == "changed" or executed:
         log("[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…")
         agent.request_restart = True
@@ -3361,13 +5437,22 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
 
 
 def main() -> None:
-    if "--requeue" in sys.argv:
-        session_file = BASE_DIR / ".runtime" / "session.json"
+    if "--replay-salvage" in sys.argv:
         try:
-            session = json.loads(session_file.read_text(encoding="utf-8"))
-        except (FileNotFoundError, OSError, json.JSONDecodeError):
-            session = {}
-        if session.get("state") in {"starting", "running", "foreground"}:
+            raw = sys.argv[sys.argv.index("--replay-salvage") + 1]
+            packages = [value.strip() for value in raw.split(",") if value.strip()]
+        except IndexError:
+            print("用法: py brain/llm_review.py --replay-salvage package-id[,package-id]")
+            raise SystemExit(2)
+        try:
+            queued = requeue_salvage_packages(packages)
+        except ReviewQueueError as exc:
+            print(exc)
+            raise SystemExit(3)
+        print(json.dumps(queued, ensure_ascii=False))
+        return
+    if "--requeue" in sys.argv:
+        if _brain_session_is_active():
             print("拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain")
             raise SystemExit(3)
         try:
@@ -3379,7 +5464,8 @@ def main() -> None:
         requeue_review_runs(runs)
         return
     if "--now" not in sys.argv:
-        print("用法: py brain/llm_review.py --now | --requeue 562,566,567")
+        print("用法: py brain/llm_review.py --now | --requeue 562,566,567 | "
+              "--replay-salvage package-id[,package-id]")
         return
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from knowledge import Knowledge

@@ -176,11 +176,15 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   重建，分支切换则拒绝事务
 - 超时、进程失败、自检失败、deny-only 边界拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
   ignored 和被规则拒绝的文件）原子保存到 `knowledge/code_backups/review_salvage/<批次>/`；
-  `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 仅供人工分析，永不自动应用；
+  `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 供人工分析和 GLM 逐包重审；
+  宿主永不自动套用其中的旧 patch
 - 每次新失败包发布后都会更新受 Git 跟踪的 [`REVIEW_REJECTIONS.md`](REVIEW_REJECTIONS.md)，并为
   该条拒合记录单独建立 commit；正常运行立即 push，停止临界区先本地 commit、下次启动补推，
-  以免远端清单失踪又不牺牲两分钟热停死线。补合或空包审计结论在远端确认后，
-  先更新清单状态，再只删除该条已闭环的失败包
+  以免远端清单失踪又不牺牲两分钟热停死线。GLM 补合或确认无有效改动后，
+  宿主只负责耐久闭环：确认代码 commit 已在远端，先将精确失败包原子移入
+  `.glm-closed-*`，再为该包一次性提交最终清单行并确认远端，最后才可中断地精确清理隔离目录。
+  重试产生的 evidence attempt 先闭环，唯一 target 作为 lineage 日志最后删除；任何一步失败或 Stop
+  都保留可恢复现场，新 Brain 续做清单/隔离清理，不会让 GLM 重做已推送的策略成果
 - 路径任一层名称含 `cache`（大小写不敏感）或为 Python 字节码缓存后缀的再生成产物会完整留档并
   记录到 `transient_artifact_paths`，但不会混入源码 patch，也不会误杀已经通过自检的源码改动；
   clone/快照从创建起位于项目 ignored 的 `knowledge/code_backups/review_work/`，热停时先发布项目内
@@ -226,6 +230,71 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 把指定局追加到队尾；已在 pending/reviewing 的局会自动去重，不会抢占最新直播证据。
 配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。
 
+### 失败包逐包交回 GLM
+
+失败包不是可由宿主盲套的补丁。机制修好后，每个指定包会以稳定、独立的
+`replay_target=<package-id>` / `retry_group=<package-id>` 进入持久队列。同一 target 的后续失败
+不会变成新目标，而是另存完整失败包并标记为 `replay_role=attempt_evidence`，追加到该 target 的
+`salvage_attempts` lineage。工作线程的一个取批只包含该 target，不与直播新局或另一 target
+混合；它的运行记录即使与正常队列局号重叠也保留独立身份。单批上限仍由
+`review_queue_max` / `max_runs_in_packet` 约束。失败时的 `model` / `source` / `every`
+会跟随每个队列条目持久化和重试，不会因退避或 Brain 重启被默默改成另一模型。
+
+失败包与 manifest 一起原子发布 `replay_enqueue_pending`、target/role 和当时的 `replay_queue_ids`。
+如果进程在“包已保存、队列尚未收尾”之间中断，新 Brain 会用 queue id、target 和 manifest intent
+对齐 pending/reviewing，缺失时创建且仅创建一个 target job，并把后续 attempt 全部挂回该 lineage。
+
+没有真实 run id 的历史失败包会标记为 `evidence_only`；为满足持久队列 schema 而分配的正整数
+synthetic run 只写入 `queue_identity_runs`，绝不是对局证据。该任务的 prompt 不加载当前或近期的
+同号 run，`requested` / `exact` / `missing` 与 `runs_summary` 均为空，
+`decision_chain_evidence.full_failure_run` 也为 `null`，因此不会把后来恰好同号的死亡局思维链错接到旧包。
+启动时的 replay intent、ledger、pending/reviewing 和 host-only closure 维护都在同一个 worker supervisor
+中执行；启动或运行阶段异常时保留持久状态，30 秒后重跑整套幂等恢复。线程真正退出时一定释放
+`_worker_started` latch，使监督器能够重新拉起，而不是留下“标记为已启动、实际没有 worker”的死状态。
+
+`evidence schema v3` 在 Brain 恢复后懒物化证据。沙箱验收、失败 WIP 捕获和重审物化都使用一次性
+私有 Git index 与私有 object directory，raw objects 只作为 alternate 读取；force-stage、`read-tree`
+和候选对象都不会写回 raw HEAD、index 或 object database。物化器还会用独立的只读 index 环境直接读取
+raw `.git/index`，将 raw worktree 与模型原 index 分成两个证据源，而不是让私有 index 覆盖后者。
+它从 manifest 的 `pre_head` 分源导出 raw worktree、raw index、raw HEAD commit、local refs 与 stash
+相对基线的改动；只有 `refs/heads/*` 中的 commit 能形成代码候选，`refs/notes/*` 等其他 refs 只进入
+inventory provenance，不被解释成待合入代码。每个来源分别记录路径分类和 accepted-only 候选片段。
+整个过程也不写原 clone 的 local refs、stash 或 worktree；早期 schema 的物化摘要保存在 history，不清除
+取证 clone 中已有的不可达 objects。没有 raw clone 时，如果失败链已保存验收过的
+`validated_candidate.patch`，v3 会将它提升为 accepted-only 候选，不会把含 cache/运行现场的全量
+`wip.patch` 冒充已验证补丁。`retry_candidate_inventory.json` 同时保留全量路径和分源记录；
+cache、在线现场与被拒文件的原始字节仍全部留在失败包。所有候选只是有界证据：GLM 必须
+对照当前 HEAD 重新审核，选择性重实现仍有效的改动、解决冲突并运行 selfcheck；宿主绝不自动应用它。
+
+GLM 在报告中为当前包写软回执：
+
+```text
+retry_resolution: <package-id> integrated|no_valid_change|still_pending
+```
+
+`integrated` 表示已在当前 HEAD 重新实现并验证，`no_valid_change` 表示复审确认无仍应合入的改动。
+该回执不是代码验收门禁：遗漏或 `still_pending` 不会撤回本轮已验收的独立改动，但失败包会
+保持 pending；新失败包只追加为 attempt evidence，target 与原模型计划一起退到队尾继续交给 GLM。
+只有 `integrated` / `no_valid_change` 对应 commit 已确认在远端后，宿主才会按 attempt-first/target-last
+顺序闭环 lineage。回执先落 manifest，持久 `reviewing` 事务成功消费后才允许隔离包；
+每个包只提交一次最终清单行并确认远端。删除逐文件检查 Stop，可由下次启动续做；隔离包的根
+`manifest.json` 始终最后删除，随后才删除目录。若进程恰在这个有界尾部崩溃而留下空的
+`.glm-closed-*`，恢复逻辑不会因“目录已经空”自行放行，只有精确确认 upstream 中该 package 的
+最终 `并闭环` 清单行后才删除这个空尾目录。
+
+显式重投是离线队列操作：先使用统一入口停 Brain（可保留游戏），指定包名，再恢复整套。
+该命令只发布小 manifest/queue intent，对失败包体积是 O(1)；不在停机窗口扫 raw clone、hash 大文件或物化 patch。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1 -KeepGame
+py -3 -B .\sts2-ascend\brain\llm_review.py --replay-salvage PACKAGE_A,PACKAGE_B
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1 -SkipDeploy
+```
+
+入口不会扫描并自动重投所有历史包；只为显式命名的直接子目录发布 intent 并入队。
+若指定的目录本身是 attempt，入口会回溯并唤醒它已有的 target，绝不擅自提升出第二 target。
+Brain 仍在活 session 时会拒绝改写队列，避免与在线 worker 竞争；恢复后 worker 才懒物化 v3 证据。
+
 ## ASCEND-VISION 直播驾驶舱
 
 赛博青蓝悬浮窗（`brain/review_viewer.py`）现在是常驻直播驾驶舱，而不再依赖复盘任务才出现。
@@ -268,6 +337,8 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - 首选开关为 `config.json` 的 `viewer.enabled`；旧 `llm.viewer_enabled` 继续兼容。
 - viewer 的根目录和单实例锁以当前 stack session 的 `.runtime` 为准；复盘隔离 clone 继承
   `STS2_ASCEND_DISABLE_VIEWER=1`，即使自检执行入口脚本也不能创建第二个直播悬浮窗。
+- Windows 另用 `Local\STS2_ASCEND_ASCEND_VISION` 命名互斥体建立跨目录单实例：主树、
+  `review_work` 和 `review_salvage/raw_sandbox` 即使有不同的文件锁，也不能同时打开两个窗口。
 - detached viewer 使用关闭继承句柄的方式启动，不能再持有 OpenCode/selfcheck 的 stdout 捕获管道；
   viewer 存活不会阻止工具调用收到 EOF。
 - 活动局日志持续写入只更新文件签名，不会在统计内容未变化时触发统计卡重绘。

@@ -599,13 +599,13 @@ class AutoGitSafetyTests(unittest.TestCase):
         sandbox_paths: list[Path] = []
         messages: list[str] = []
         try:
-            def write_forbidden(cmd, timeout, translate=None):
+            def write_forbidden(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 sandbox_paths.append(sandbox)
                 (sandbox / "outside.txt").write_text("model outside\n", encoding="utf-8")
                 policy = sandbox / "sts2-ascend" / "brain" / "policy.py"
                 policy.write_text("VALUE = 9\n", encoding="utf-8")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with mock.patch.object(llm_review, "_stream_run", side_effect=write_forbidden):
                 denied = llm_review._run_review_sandbox(
@@ -621,13 +621,13 @@ class AutoGitSafetyTests(unittest.TestCase):
             llm_review._discard_sandbox_snapshot(denied, log=lambda _msg: None)
             llm_review._discard_retained_sandbox(denied, log=lambda _msg: None)
 
-            def write_ignored(cmd, timeout, translate=None):
+            def write_ignored(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 sandbox_paths.append(sandbox)
                 ignored = sandbox / ".runtime" / "evil.exe"
                 ignored.parent.mkdir(parents=True, exist_ok=True)
                 ignored.write_bytes(b"contained")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with mock.patch.object(llm_review, "_stream_run", side_effect=write_ignored):
                 ignored = llm_review._run_review_sandbox(
@@ -658,7 +658,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
         llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
         try:
-            def write_source_and_cache(cmd, timeout, translate=None):
+            def write_source_and_cache(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 policy = sandbox / "sts2-ascend" / "brain" / "policy.py"
                 policy.write_text("VALUE = 2\n", encoding="utf-8")
@@ -668,7 +668,7 @@ class AutoGitSafetyTests(unittest.TestCase):
                 generic_cache = sandbox / "tool-CACHE" / "result.bin"
                 generic_cache.parent.mkdir()
                 generic_cache.write_bytes(b"GENERIC_CACHE")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with (mock.patch.object(
                     llm_review, "_stream_run", side_effect=write_source_and_cache),
@@ -708,13 +708,13 @@ class AutoGitSafetyTests(unittest.TestCase):
         llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
         llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
         try:
-            def hide_then_write_source(cmd, timeout, translate=None):
+            def hide_then_write_source(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 ignore = sandbox / "sts2-ascend" / ".gitignore"
                 ignore.write_text("# baseline\nbrain/hidden_runtime.py\n", encoding="utf-8")
                 hidden = sandbox / "sts2-ascend" / "brain" / "hidden_runtime.py"
                 hidden.write_text("ENABLED = True\n", encoding="utf-8")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with (mock.patch.object(
                     llm_review, "_stream_run", side_effect=hide_then_write_source),
@@ -746,13 +746,13 @@ class AutoGitSafetyTests(unittest.TestCase):
         llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
         llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
         try:
-            def write_source_and_online_state(cmd, timeout, translate=None):
+            def write_source_and_online_state(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 (sandbox / "sts2-ascend" / "brain" / "policy.py").write_text(
                     "VALUE = 8\n", encoding="utf-8")
                 (sandbox / "sts2-ascend" / "knowledge" / "stats.json").write_text(
                     '{"runs": 999}\n', encoding="utf-8")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with mock.patch.object(
                     llm_review, "_stream_run", side_effect=write_source_and_online_state):
@@ -782,13 +782,13 @@ class AutoGitSafetyTests(unittest.TestCase):
         llm_review.KNOWLEDGE_DIR = self.repo / "sts2-ascend" / "knowledge"
         llm_review.PROMPT_FILE = llm_review.KNOWLEDGE_DIR / "review_prompt_latest.md"
         try:
-            def write_source_and_escape(cmd, timeout, translate=None):
+            def write_source_and_escape(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
                 (sandbox / "sts2-ascend" / "brain" / "policy.py").write_text(
                     "VALUE = 7\n", encoding="utf-8")
                 (sandbox.parent / "escaped-sibling.txt").write_text(
                     "PRESERVE_ME\n", encoding="utf-8")
-                return 0, "done", False, False
+                return 0, "done", False, False, False
 
             with (mock.patch.object(
                     llm_review, "_stream_run", side_effect=write_source_and_escape),
