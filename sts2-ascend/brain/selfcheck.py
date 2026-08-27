@@ -234,6 +234,15 @@ def main() -> int:
         st_neutral_block, "FUZZY_WURM_CRAWLER", "Monster", 0)
     assert st_neutral_block["blk_mult"] == 0.9, "低于中性的格挡权重不得被抬高"
 
+    # 竞速投影错账审计（第802~807局批复盘闭环实验 RACE_PROJ_CALIB_AUDIT
+    # 回归夹具）：弹出式账本契约——无判死历史返回空账、有账弹快照、
+    # 弹出后清空防跨场残留；契约是 agent 收官拼接「判死→实战」对照的基础。
+    assert pol.pop_race_audit() == {}, "空战斗状态应返回空审计账"
+    pol._race_audit = {"latched": True, "latch_round": 3, "esc": True}
+    _ra_snap = pol.pop_race_audit()
+    assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
+    assert pol.pop_race_audit() == {}, "审计账弹出后应清空"
+
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
                    "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
                    "rules_text": "失去 2 点生命，造成 18 点伤害。",

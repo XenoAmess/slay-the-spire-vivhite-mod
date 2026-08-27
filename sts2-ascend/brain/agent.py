@@ -1759,8 +1759,17 @@ class Agent:
                                      floor=_fl,
                                      hp_start_pct=agg.get("hp_start_pct"),
                                      died=bool(agg.get("died")))
-        note = (f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
-                + ("（阵亡）" if agg.get("died") else ""))
+        # 竞速投影错账审计（RACE_PROJ_CALIB_AUDIT 观测位，第802~807局批复盘）：
+        # 本场若发生过实测口径竞速判死入锁，战斗记录追加「判死→实战」对照，
+        # 把 stance 成长型反向偏置的系统性悲观率变成每局可检索的硬留痕；
+        # 「（阵亡）」后缀保持全链断言兼容，审计段插在其前
+        _ra = self.policy.pop_race_audit()
+        note = f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
+        if _ra.get("latched"):
+            note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
+                     f"实战{agg.get('rounds', '?')}回合"
+                     + ("阵亡" if agg.get("died") else "获胜"))
+        note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
         self.ctx.combat_agg = None

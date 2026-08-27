@@ -2154,6 +2154,12 @@ class Policy:
             self._krace_potion_rounds = set()
             self._incoming_ema = 0.0
             self._esc_rounds = 0
+            # 竞速投影错账审计（第802~807局批复盘闭环实验 RACE_PROJ_CALIB_AUDIT，
+            # 观测位不改判定）：stance 成长型反向偏置积案已至 ≥4 例（719/723 局
+            # FUZZY 型竞速误报白损 25~30 血/次）——本账只在判死入锁时记账，
+            # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
+            # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
+            self._race_audit = {"latched": False, "latch_round": None, "esc": False}
         # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
         if self._desp_combat is not ctx.combat:
             self._desp_combat = ctx.combat
@@ -2594,6 +2600,12 @@ class Policy:
                             # 实测口径武装入锁（先验口径 T1~T2 不锁：样本不足的
                             # 误判可被下一 tick 自然纠正）
                             self._krace_latch = True
+                            _ra_audit = getattr(self, "_race_audit", None)
+                            if isinstance(_ra_audit, dict):
+                                _ra_audit["latched"] = True
+                                if _ra_audit.get("latch_round") is None:
+                                    _ra_audit["latch_round"] = int(round_no)
+                                _ra_audit["esc"] = bool(esc_gate)
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
             # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。
@@ -3719,6 +3731,19 @@ class Policy:
             return float(pool)
         credit = min(float(n) * flat, cap_frac * float(pool))
         return max(1.0, float(pool) - credit)
+
+    def pop_race_audit(self) -> dict:
+        """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。
+
+        agent 在战斗收官时调用一次：仅当实测口径判死入锁过才返回账本快照
+        （latched/latch_round/esc），否则返回空 dict；调用后无论有无账本一律
+        清空，防止跨场残留污染下一条战斗记录。
+        """
+        _a = getattr(self, "_race_audit", None)
+        self._race_audit = None
+        if isinstance(_a, dict) and _a.get("latched"):
+            return dict(_a)
+        return {}
 
     def _boss_race_doomed(self, deck: list[dict], max_hp: int,
                           floor: int | None = None,
