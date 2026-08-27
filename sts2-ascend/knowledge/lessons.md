@@ -4649,3 +4649,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.42 → 0.45（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/823 胜，当前目标进阶 0
+
+## 第 824 局复盘（2026-08-28 07:21）
+- 结果：💀 失败｜进阶 0｜到达层数 19｜当局评分 19
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：INFLAME, BLUDGEON, HEADBUTT, RAMPAGE, HEMOKINESIS, CINDER, BOLAS, UNRELENTING, DISMANTLE
+- 本局遗物：PERMAFROST, AMETHYST_AUBERGINE
+- 战斗记录：F9 Monster战 掉血7; F13 Monster战 掉血20; F14 Monster战 掉血14; F16 Monster战 掉血14; F17 Monster战 掉血11; F19 Boss战 掉血29（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，FIEND_FIRE(24分/31局)，PRIMAL_FORCE(24分/2局)，PACTS_END(24分/83局)，MANGLE(24分/85局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.45 → 0.48（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/824 胜，当前目标进阶 0
