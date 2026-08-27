@@ -2560,8 +2560,24 @@ class Policy:
                         _cr_deck = ((state.get("run") or {}).get("deck")) or []
                         # 滚雪球局零余量过线；普通局维持原 margin 口径
                         _def_margin = 0.0 if esc_gate else _race_margin
+                        # 升级账（第791~798批复盘）：复核用的火力是平铺常数，而
+                        # 持续升级组合每拖一轮净火力都在涨——798局F23熟睡甲虫
+                        # 力量+2/轮时意图15→31一轮回合翻倍、93局FUZZY意图4→31，
+                        # 平铺口径把「格挡12+输出7/回合追平击杀N回合」这类账判成
+                        # 可行，白送指数方2~3个免费回合（797局F7单场-65与
+                        # 798局F23 -60均亡于该段）。确认升级后按火力上浮系数给
+                        # 拖延计价，更早转入竞速；0 或缺键即整体关闭（回滚＝旧版）
+                        _feas_fire = float(loss_rate)
+                        if esc_gate:
+                            _fire_grow = float(pol.get(
+                                "escalation_race_fire_inflate", 0.0))
+                            if _fire_grow > 0:
+                                _feas_fire *= (1.0 + _fire_grow)
+                                danger_note += (
+                                    f"；升级账：持续升级确认，防守复核按火力"
+                                    f"×{1.0 + _fire_grow:.2f}计价拖延成本")
                         _feas, _mix = self._race_joint_feasible(
-                            _cr_deck, enemy_hp_total, loss_rate, my_hp,
+                            _cr_deck, enemy_hp_total, _feas_fire, my_hp,
                             _def_margin)
                         if _feas:
                             race_lost = False
