@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+import json
 import sys
 import tempfile
 import unittest
@@ -34,6 +35,22 @@ class ReviewClosureTests(unittest.TestCase):
         self.assertEqual(cfg["review_report_only_limit"], 2)
         self.assertEqual(cfg["review_evidence_run_threshold"], 3)
         self.assertEqual(cfg["review_evidence_batch_threshold"], 2)
+
+    def test_model_editable_config_can_adjust_closure_gate(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-config-") as root:
+            path = Path(root) / "config.json"
+            path.write_text(json.dumps({"llm": {
+                "review_require_action_every_batch": False,
+                "review_report_only_limit": 11,
+                "review_evidence_run_threshold": 12,
+                "review_evidence_batch_threshold": 13,
+            }}), encoding="utf-8")
+            with mock.patch.object(llm_review, "CONFIG_PATH", path):
+                cfg = llm_review.load_llm_config()
+        self.assertFalse(cfg["review_require_action_every_batch"])
+        self.assertEqual(cfg["review_report_only_limit"], 11)
+        self.assertEqual(cfg["review_evidence_run_threshold"], 12)
+        self.assertEqual(cfg["review_evidence_batch_threshold"], 13)
 
     def test_host_classification_cannot_be_satisfied_by_reports_or_tests(self) -> None:
         self.assertEqual(llm_review._review_action_paths([REPORT, CONCLUSION]), ())
