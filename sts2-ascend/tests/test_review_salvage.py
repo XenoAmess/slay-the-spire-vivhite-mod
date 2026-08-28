@@ -19,6 +19,7 @@ BRAIN = Path(__file__).resolve().parents[1] / "brain"
 sys.path.insert(0, str(BRAIN))
 
 import llm_review  # noqa: E402
+import autogit  # noqa: E402
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
@@ -392,7 +393,65 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertEqual((saved / "wip.patch").read_bytes(), b"partial patch")
             manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
             self.assertTrue(manifest["stopped"])
+            self.assertEqual(manifest["failure_kind"], "lifecycle_stop")
+            self.assertEqual(manifest["reason"], "统一停机中断并全量保全")
             self.assertFalse(manifest["auto_apply"])
+
+    def test_lifecycle_stop_outranks_exit_timeout_and_stall(self) -> None:
+        result = llm_review.SandboxReviewResult(
+            rc=1, stopped=True, timed_out=True, stalled=True,
+            error="复盘进程未成功完成")
+        self.assertEqual(
+            llm_review._salvage_kind(result.error, result),
+            "lifecycle_stop",
+        )
+
+    def test_lifecycle_stop_is_salvaged_without_model_cooldown(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-stop-kind-") as root:
+            repo = Path(root) / "repo"
+            prompt = repo / "sts2-ascend" / "knowledge" / "review_prompt_latest.md"
+            prompt.parent.mkdir(parents=True)
+            status: dict = {}
+            know = SimpleNamespace(
+                stats={"global": {"runs": 8}}, progression={}, save=mock.Mock())
+            sandbox = llm_review.SandboxReviewResult(
+                rc=1, stopped=True, error="复盘进程未成功完成")
+            cfg = {
+                "enabled": True, "runner": "opencode", "opencode_bin": "opencode",
+                "model": "fallback", "preferred_timeout_min": 480,
+                "stall_warn_min": 15, "stall_timeout_min": 30,
+            }
+            with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                  mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
+                  mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+                  mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+                  mock.patch.object(llm_review, "_run_review_sandbox",
+                                    return_value=sandbox),
+                  mock.patch.object(llm_review, "_save_review_salvage",
+                                    return_value=Path(root) / "pkg") as save,
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_stream_begin"),
+                  mock.patch.object(llm_review, "_stream_end"),
+                  mock.patch.object(llm_review, "_launch_viewer"),
+                  mock.patch.object(llm_review, "_launch_speaker"),
+                  mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+                  mock.patch.object(autogit, "commit_progress_result"),
+                  mock.patch.object(autogit, "head", return_value="a" * 40),
+                  mock.patch.object(autogit, "set_review_active"),
+                  mock.patch.object(autogit, "push_pending", return_value=True)):
+                changed = llm_review.run_review(
+                    know, log=lambda _message: None,
+                    model="glm@max", every=1, source="preferred",
+                    batch_runs=[8], async_mode=True, _status=status,
+                )
+
+            self.assertFalse(changed)
+            self.assertEqual(status["outcome"], "canceled")
+            self.assertTrue(status["canceled"])
+            mark.assert_not_called()
+            self.assertEqual(save.call_args.args[1], "统一停机中断并全量保全")
 
     def test_stopped_raw_clone_is_deferred_then_recovered_by_new_worker(self) -> None:
         raw = Path(tempfile.mkdtemp(prefix="sts2-review-sandbox-"))

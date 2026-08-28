@@ -349,6 +349,72 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertIsNone(completed["reviewing"])
         self.assertEqual([item["run"] for item in completed["pending"]], [11])
 
+    def test_interrupted_reviewing_returns_to_front_once_with_group_intact(self) -> None:
+        recovered = [
+            {"run": 8, "queue_id": "old-8", "retry_group": "pkg-a",
+             "runner": "opencode", "model": "glm", "source": "preferred",
+             "retry_same_model": True},
+            {"run": 9, "queue_id": "old-9", "retry_group": "pkg-a",
+             "runner": "opencode", "model": "glm", "source": "preferred",
+             "retry_same_model": True},
+        ]
+        queue = {
+            "pending": [
+                {"run": 11, "queue_id": "new-11"},
+                dict(recovered[0]),
+            ],
+            "reviewing": {
+                "runs": [8, 9], "items": recovered, "started": "before restart",
+            },
+        }
+
+        restored = llm_review._restore_interrupted_reviewing(queue)
+
+        self.assertEqual([item["queue_id"] for item in restored], ["old-8", "old-9"])
+        self.assertEqual(
+            [item["queue_id"] for item in queue["pending"]],
+            ["old-8", "old-9", "new-11"],
+        )
+        self.assertIsNone(queue["reviewing"])
+
+    def test_atomic_retry_group_waits_without_blocking_fresh_batch(self) -> None:
+        pending = [
+            {"run": 8, "retry_group": "pkg-a", "runner": "opencode",
+             "model": "glm", "source": "preferred", "retry_same_model": True},
+            {"run": 9, "retry_group": "pkg-a", "runner": "opencode",
+             "model": "glm", "source": "preferred", "retry_same_model": True,
+             "retry_after": 1100.0},
+            {"run": 11},
+        ]
+        with mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                               return_value=0.0):
+            indexes, wait = llm_review._select_review_batch(pending, 100, 1000.0)
+            group_indexes, group_wait = llm_review._select_review_batch(
+                pending[:2], 1, 1200.0)
+
+        self.assertEqual(indexes, [2])
+        self.assertEqual(wait, 0.0)
+        # A retry transaction is never split, even if a later config lowers cap.
+        self.assertEqual(group_indexes, [0, 1])
+        self.assertEqual(group_wait, 0.0)
+
+    def test_sticky_model_cooldown_skips_lineage_but_not_new_work(self) -> None:
+        pending = [
+            {"run": 8, "retry_group": "pkg-a", "runner": "opencode",
+             "model": "glm", "source": "preferred", "retry_same_model": True},
+            {"run": 11},
+        ]
+        with mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                               side_effect=lambda model: 300.0 if model == "glm" else 0.0):
+            indexes, wait = llm_review._select_review_batch(pending, 100, 1000.0)
+            blocked, blocked_wait = llm_review._select_review_batch(
+                pending[:1], 100, 1000.0)
+
+        self.assertEqual(indexes, [1])
+        self.assertEqual(wait, 0.0)
+        self.assertEqual(blocked, [])
+        self.assertEqual(blocked_wait, 30.0)
+
     def test_queue_rejects_invalid_run_and_nonfinite_retry(self) -> None:
         for pending in (
             [{"run": 0}],
@@ -544,7 +610,8 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual([item["run"] for item in saved["pending"]], [9])
 
     def test_batch_outcome_distinguishes_failure_report_and_runtime_change(self) -> None:
-        batch = [{"run": 8, "model": "m", "every": 1, "source": "preferred"}]
+        batch = [{"run": 8, "runner": "opencode", "model": "m", "every": 1,
+                  "source": "preferred", "retry_same_model": True}]
         cfg = {"opencode_bin": "opencode"}
 
         def result(outcome: str, changed: bool):
@@ -603,8 +670,11 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             return False
 
         with (mock.patch.object(llm_review, "load_llm_config",
-                               return_value={"opencode_bin": "opencode"}),
+                               return_value={"opencode_bin": "opencode",
+                                             "runner": "opencode"}),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
+              mock.patch.object(llm_review, "resolve_review_plan",
+                                return_value=("glm", 1, "preferred")),
               mock.patch.object(llm_review, "run_review", side_effect=fail)):
             outcome = llm_review._run_batch_review(
                 agent, batch, log=lambda _message: None)
@@ -617,12 +687,50 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(retry["retry_group"], "pkg-first-failure")
         self.assertEqual(retry["salvage_packages"], ["pkg-first-failure"])
         self.assertEqual(retry["model"], "glm")
+        self.assertEqual(retry["runner"], "opencode")
+        self.assertTrue(retry["retry_same_model"])
+
+    def test_retry_same_model_binds_original_plan_and_fresh_work_may_fallback(self) -> None:
+        sticky = [{
+            "run": 8, "runner": "opencode", "model": "glm", "every": 1,
+            "source": "preferred", "retry_same_model": True,
+        }]
+        fresh = [{"run": 11, "model": "glm", "source": "preferred"}]
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        calls: list[tuple[str, str]] = []
+
+        def complete(*_args, **kwargs):
+            calls.append((kwargs["model"], kwargs["source"]))
+            kwargs["_status"].update({"outcome": "completed", "reason": "ok"})
+            return False
+
+        cfg = {"opencode_bin": "opencode", "runner": "opencode",
+               "model": "kimi", "review_every_runs": 5}
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
+              mock.patch.object(llm_review, "resolve_review_plan",
+                                return_value=("kimi", 5, "fallback")) as resolve,
+              mock.patch.object(llm_review, "run_review", side_effect=complete)):
+            sticky_outcome = llm_review._run_batch_review(
+                agent, sticky, log=lambda _message: None)
+            resolve.assert_not_called()
+            fresh_outcome = llm_review._run_batch_review(
+                agent, fresh, log=lambda _message: None)
+
+        self.assertEqual(sticky_outcome, "completed")
+        self.assertEqual(fresh_outcome, "completed")
+        self.assertEqual(calls, [("glm", "preferred"), ("kimi", "fallback")])
+        self.assertEqual((sticky[0]["runner"], sticky[0]["model"]),
+                         ("opencode", "glm"))
+        self.assertEqual((fresh[0]["runner"], fresh[0]["model"]),
+                         ("opencode", "kimi"))
 
     def test_successful_code_commit_keeps_replay_pending_until_glm_receipt(self) -> None:
         batch = [{
             "run": 8, "model": "glm", "every": 1, "source": "preferred",
             "retry_group": "pkg-a", "salvage_packages": ["pkg-a"],
-            "queue_id": "txn-pkg-a",
+            "queue_id": "txn-pkg-a", "runner": "opencode",
+            "retry_same_model": True,
         }]
         self.queue.write_text(json.dumps({
             "pending": [],
@@ -1116,7 +1224,8 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             "run": 8, "model": "glm", "every": 1, "source": "preferred",
             "retry_group": "pkg-target", "replay_target": "pkg-target",
             "salvage_packages": ["pkg-target"], "salvage_attempts": ["pkg-old-attempt"],
-            "queue_id": "txn-target",
+            "queue_id": "txn-target", "runner": "opencode",
+            "retry_same_model": True,
         }]
         agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
 
@@ -1300,6 +1409,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             "run": 8, "model": "glm", "every": 1, "source": "preferred",
             "retry_group": "pkg-push", "replay_target": "pkg-push",
             "salvage_packages": ["pkg-push"], "queue_id": "txn-push",
+            "runner": "opencode", "retry_same_model": True,
         }]
         agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
 

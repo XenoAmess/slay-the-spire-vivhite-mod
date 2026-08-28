@@ -1658,6 +1658,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     if not cfg.get("enabled"):
         log("[llm] 复盘已禁用（llm.enabled=false）")
         return False
+    runner = str(cfg.get("runner") or "opencode")
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     if not binary:
         log(f"[llm] 未找到 opencode 可执行文件（{cfg.get('opencode_bin')}），跳过本次复盘")
@@ -1749,7 +1750,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     def save_failure(reason: str) -> Path | None:
         package = _save_review_salvage(
             pre_head, reason, sandbox, batch_runs=(batch_runs or [runs]),
-            model=entry, source=source, every=every,
+            runner=runner, model=entry, source=source, every=every,
             replay_target=replay_target, replay_attempts=replay_attempts,
             replay_queue_ids=replay_queue_ids, log=log)
         if package is not None and _status is not None:
@@ -1769,6 +1770,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
         sandbox.stopped = sandbox.stopped or stopped
+        if stopped:
+            sandbox.error = "统一停机中断并全量保全"
         resolutions = (_parse_retry_resolutions(
             sandbox.diagnostic_report, replay_packages) if replay_packages else {})
         confirmed_no_change = bool(replay_packages) and all(
@@ -2057,7 +2060,7 @@ def _validate_queue_item(item, label: str) -> None:
     if (every is not None and (isinstance(every, bool)
                               or not isinstance(every, int) or every <= 0)):
         raise ReviewQueueError(f"{label}.every must be a positive integer")
-    for key in ("model", "source", "retry_group", "queue_id", "replay_target"):
+    for key in ("runner", "model", "source", "retry_group", "queue_id", "replay_target"):
         value = item.get(key)
         if value is not None and not isinstance(value, str):
             raise ReviewQueueError(f"{label}.{key} must be a string")
@@ -2108,6 +2111,130 @@ def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
                 == tuple(_queue_item_identity(item) for item in batch))
     return ([item.get("run") for item in current]
             == [item.get("run") for item in batch])
+
+
+def _retry_affinity(item: dict) -> tuple[str, str, str] | None:
+    """Return the immutable runner/model binding for an attempted review item."""
+    if not item.get("retry_same_model"):
+        return None
+    model = str(item.get("model") or "")
+    if not model:
+        raise ReviewQueueError("retry_same_model item is missing its original model")
+    return (
+        str(item.get("runner") or "opencode"),
+        model,
+        str(item.get("source") or "preferred"),
+    )
+
+
+def _batch_retry_affinity(batch: list[dict]) -> tuple[str, str, str] | None:
+    """Prove that a sticky transaction has one runner/model, without silent fallback."""
+    affinities = [_retry_affinity(item) for item in batch]
+    sticky = [affinity for affinity in affinities if affinity is not None]
+    if not sticky:
+        return None
+    if len(sticky) != len(batch):
+        raise ReviewQueueError(
+            "retry_same_model items cannot be mixed with an unattempted batch")
+    if len(set(sticky)) != 1:
+        raise ReviewQueueError(
+            "retry_same_model batch contains conflicting runner/model bindings")
+    return sticky[0]
+
+
+def _queue_item_ready_at(item: dict, now: float) -> float:
+    """Combine per-attempt backoff with the bound preferred-model cooldown."""
+    ready_at = float(item.get("retry_after", 0) or 0)
+    affinity = _retry_affinity(item)
+    if affinity is not None and affinity[2] == "preferred":
+        ready_at = max(
+            ready_at,
+            now + _preferred_cooldown_remaining(affinity[1]),
+        )
+    return ready_at
+
+
+def _select_review_batch(
+    pending: list[dict], cap: int, now: float,
+) -> tuple[list[int], float]:
+    """Select the earliest runnable transaction without splitting retry groups.
+
+    A blocked group is skipped as a whole so a later fresh batch can run.  Sticky
+    ungrouped legacy items are only batched with the same runner/model affinity.
+    The returned indexes refer to ``pending``; the wait is the earliest future
+    time at which any currently blocked transaction becomes runnable.
+    """
+    cap = max(1, int(cap))
+    blocked_until: list[float] = []
+    seen_groups: set[str] = set()
+
+    for index, item in enumerate(pending):
+        group = str(item.get("retry_group") or "")
+        if group:
+            if group in seen_groups:
+                continue
+            seen_groups.add(group)
+            indexes = [offset for offset, candidate in enumerate(pending)
+                       if str(candidate.get("retry_group") or "") == group]
+            group_items = [pending[offset] for offset in indexes]
+            _batch_retry_affinity(group_items)
+            ready_at = max(_queue_item_ready_at(candidate, now)
+                           for candidate in group_items)
+            if ready_at <= now:
+                # Replay groups are durable transactions.  Queue construction caps
+                # them at packet size; never split one after recovery even if a
+                # legacy/corrupt config later lowers the live batching cap.
+                return indexes, 0.0
+            blocked_until.append(ready_at)
+            continue
+
+        ready_at = _queue_item_ready_at(item, now)
+        if ready_at > now:
+            blocked_until.append(ready_at)
+            continue
+
+        affinity = _retry_affinity(item)
+        indexes: list[int] = []
+        for offset, candidate in enumerate(pending):
+            if candidate.get("retry_group"):
+                continue
+            candidate_ready = _queue_item_ready_at(candidate, now)
+            if candidate_ready > now:
+                blocked_until.append(candidate_ready)
+                continue
+            candidate_affinity = _retry_affinity(candidate)
+            if ((affinity is None and candidate_affinity is None)
+                    or (affinity is not None and candidate_affinity == affinity)):
+                indexes.append(offset)
+                if len(indexes) >= cap:
+                    break
+        if indexes:
+            return indexes, 0.0
+
+    wait = min(blocked_until, default=now + 5.0) - now
+    return [], min(30.0, max(1.0, wait))
+
+
+def _restore_interrupted_reviewing(q: dict) -> list[dict]:
+    """Move the exact interrupted transaction ahead of newer pending work."""
+    if not q.get("reviewing"):
+        return []
+    recovered: list[dict] = []
+    recovered_ids: set[tuple] = set()
+    for item in _reviewing_items(q.get("reviewing")):
+        identity = _queue_item_identity(item)
+        if identity in recovered_ids:
+            continue
+        recovered.append(item)
+        recovered_ids.add(identity)
+    pending = [item for item in q.get("pending", [])
+               if _queue_item_identity(item) not in recovered_ids]
+    # The interrupted transaction was already selected before every pending item.
+    # Restore that proven order.  The scheduler can still bypass it temporarily
+    # when retry_after/model cooldown makes the whole transaction ineligible.
+    q["pending"] = recovered + pending
+    q["reviewing"] = None
+    return recovered
 
 
 def _validate_queue(payload) -> dict:
@@ -2362,6 +2489,7 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                 continue
             model = str(manifest.get("model") or "")
             source = str(manifest.get("source") or "preferred")
+            runner = str(manifest.get("runner") or cfg.get("runner") or "opencode")
             try:
                 every = int(manifest.get("every") or (
                     cfg.get("preferred_every_runs", 1) if source == "preferred"
@@ -2375,6 +2503,7 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                     "retry_group": name,
                     "replay_target": name,
                     "retry_same_model": True,
+                    "runner": runner,
                     "salvage_packages": [name],
                     "salvage_attempts": _normalize_salvage_package_names(
                         manifest.get("replay_attempt_packages") or []),
@@ -2390,7 +2519,7 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
         if queued:
             _save_queue_unlocked(q)
     for name, runs in queued.items():
-        log(f"[llm] 已将失败包交回 GLM 重审队尾：{name}（第 {runs} 局，独立批次）")
+        log(f"[llm] 已将失败包交回 GLM 独立重审队列：{name}（第 {runs} 局）")
     return queued
 
 
@@ -2506,6 +2635,8 @@ def _recover_salvage_replay_queue(log=print) -> None:
             lineage = [name for name in lineage if name != target]
             target_attempts[target] = lineage
             ids = queue_ids.get(target, set())
+            source = str(manifest.get("source") or "preferred")
+            runner = str(manifest.get("runner") or cfg.get("runner") or "opencode")
 
             def belongs(item: dict) -> bool:
                 return (str(item.get("replay_target") or "") == target
@@ -2523,15 +2654,18 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "retry_group": target,
                         "replay_target": target,
                         "retry_same_model": True,
+                        "runner": runner,
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
                     }
+                    if manifest.get("model"):
+                        desired["model"] = str(manifest["model"])
+                    desired["source"] = source
                     if any(item.get(key) != value for key, value in desired.items()):
                         item.update(desired)
                         changed = True
             if not matched:
                 runs, evidence_only = _manifest_replay_runs(manifest)
-                source = str(manifest.get("source") or "preferred")
                 try:
                     every = int(manifest.get("every") or (
                         cfg.get("preferred_every_runs", 1) if source == "preferred"
@@ -2546,6 +2680,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "retry_group": target,
                         "replay_target": target,
                         "retry_same_model": True,
+                        "runner": runner,
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
                         "evidence_only": evidence_only,
@@ -2626,6 +2761,7 @@ def enqueue_review(agent, log=print) -> None:
             if not already_queued:
                 q["pending"].append({
                     "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
+                    "runner": str(cfg.get("runner") or "opencode"),
                     "model": model, "every": every, "source": source,
                 })
                 _save_queue_unlocked(q)
@@ -3106,6 +3242,8 @@ def _discard_retained_sandbox(result: SandboxReviewResult, log=print) -> bool:
 
 
 def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
+    if sandbox.stopped:
+        return "lifecycle_stop"
     if sandbox.stalled:
         return "stall"
     if sandbox.timed_out:
@@ -4583,7 +4721,8 @@ def _file_sha256(path: Path) -> str:
 
 def _save_review_salvage(
     pre_head: str, reason: str, sandbox: SandboxReviewResult, *,
-    batch_runs: list[int] | None = None, model: str = "", source: str = "",
+    batch_runs: list[int] | None = None, runner: str = "opencode",
+    model: str = "", source: str = "",
     every: int | None = None, replay_target: str = "",
     replay_attempts: list[str] | None = None,
     replay_queue_ids: list[str] | None = None, log=print,
@@ -4598,6 +4737,8 @@ def _save_review_salvage(
             pass
         return saved
 
+    if sandbox.stopped:
+        reason = "统一停机中断并全量保全"
     snapshot = Path(sandbox.snapshot_dir) if sandbox.snapshot_dir else None
     retained = Path(sandbox.retained_sandbox_dir) if sandbox.retained_sandbox_dir else None
     deferred_raw = bool(sandbox.stopped and retained is not None)
@@ -4642,6 +4783,7 @@ def _save_review_salvage(
         "pre_head": pre_head,
         "current_head": _current_head_for_salvage(),
         "batch_runs": list(batch_runs or []),
+        "runner": runner,
         "model": model,
         "source": source,
         "every": every,
@@ -4842,7 +4984,8 @@ def _run_review_sandbox(
             result = SandboxReviewResult(
                 rc=rc, out=out, timed_out=timed_out, stopped=stopped,
                 stalled=stalled,
-                error=("复盘 CLI/工具调用无进展挂起" if stalled
+                error=("统一停机中断并全量保全" if stopped
+                       else "复盘 CLI/工具调用无进展挂起" if stalled
                        else "复盘进程未成功完成"),
             )
             return result
@@ -5502,19 +5645,10 @@ def _worker_loop_body(agent, log) -> None:
             with _queue_lock:
                 q = _load_queue_unlocked()
                 if q.get("reviewing"):
-                    requeued = _reviewing_items(q.get("reviewing"))
-                    lost_runs = [item.get("run") for item in requeued]
-                    if requeued:
-                        log(f"[llm] 上场复盘随进程中断，重新入队追及：第 {lost_runs} 局")
-                        seen = {_queue_item_identity(item) for item in requeued}
-                        pending = [
-                            item for item in q.get("pending", [])
-                            if _queue_item_identity(item) not in seen]
-                        # review_queue_max 现在只限制单次提示词批量，不再丢弃持久队列。
-                        # 中断批次退到队尾，让停止期间/其后新完成的局先获得复盘，
-                        # 避免 100 局旧批在反复热更新时永久压住新鲜样本。
-                        q["pending"] = pending + requeued
-                    q["reviewing"] = None
+                    requeued = _restore_interrupted_reviewing(q)
+                    recovered_runs = [item.get("run") for item in requeued]
+                    if recovered_runs:
+                        log(f"[llm] 上场复盘随进程中断，优先恢复追及：第 {recovered_runs} 局")
                     _save_queue_unlocked(q)
             break
         except (ReviewQueueError, OSError) as exc:
@@ -5561,20 +5695,11 @@ def _worker_loop_body(agent, log) -> None:
                         int(worker_cfg.get("review_queue_max", 100)),
                         int(worker_cfg.get("max_runs_in_packet", 100))))
                     now = time.time()
-                    eligible_indexes = [index for index, item in enumerate(pending)
-                                        if float(item.get("retry_after", 0) or 0) <= now]
+                    eligible_indexes, retry_wait = _select_review_batch(
+                        pending, cap, now)
                     if eligible_indexes:
                         first = pending[eligible_indexes[0]]
                         retry_group = str(first.get("retry_group") or "")
-                        # A failed package is always a standalone GLM job. Normal
-                        # online items may still batch up to cap, but never absorb
-                        # a retry group or another package lineage.
-                        eligible_indexes = [
-                            index for index in eligible_indexes
-                            if ((str(pending[index].get("retry_group") or "") == retry_group)
-                                if retry_group else
-                                not pending[index].get("retry_group"))
-                        ][:cap]
                         picked = set(eligible_indexes)
                         transaction = f"{os.getpid()}-{time.time_ns()}"
                         batch = []
@@ -5593,9 +5718,6 @@ def _worker_loop_body(agent, log) -> None:
                         _save_queue_unlocked(q)
                     else:
                         batch = []
-                        earliest = min(float(item.get("retry_after", 0) or 0)
-                                       for item in pending)
-                        retry_wait = min(30.0, max(1.0, earliest - now))
                 else:
                     batch = []
             if batch:
@@ -5639,15 +5761,21 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         return "canceled"
     cfg = load_llm_config()
     binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    # 尊重入队时的来源决策，且以**最新一条**为准：饥饿交替出牌时批次常混含
-    # 两种来源，若按"含 fallback 即整场 k3"则优先链的恢复探测永远轮不到。
-    # 最新入队项携带的是入队时刻最新的世界状态。
-    planned = [p for p in batch if p.get("source") and p.get("model")]
-    if planned:
-        picked = planned[-1]
-        model, every, source = picked["model"], int(picked.get("every", 5)), picked["source"]
+    affinity = _batch_retry_affinity(batch)
+    if affinity is not None:
+        # A process that already produced a failure package/partial output owns
+        # its retry lineage.  Never silently hand that evidence to another model.
+        runner, model, source = affinity
+        planned = [item for item in batch if item.get("model") == model]
+        every = int((planned[-1] if planned else batch[-1]).get("every", 5))
     else:
+        # Fresh, not-yet-attempted work may use the existing availability/fallback
+        # resolver immediately before launch.  This is the only cross-model handoff.
+        runner = str(cfg.get("runner") or "opencode")
         model, every, source = resolve_review_plan(cfg, binary, log=log)
+    if runner != "opencode":
+        log(f"[llm] 复盘批次绑定尚不支持的 runner={runner}；保留原模型亲和等待")
+        return "failed"
     replay_target = next((str(item.get("replay_target") or "") for item in batch
                           if item.get("replay_target")), "")
     legacy_packages = _normalize_salvage_package_names(
@@ -5665,6 +5793,7 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         *inherited_attempts, *legacy_packages[1:]])
     for item in batch:
         item.update({
+            "runner": runner,
             "model": model,
             "every": max(1, int(every)),
             "source": source,
@@ -5703,6 +5832,7 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     retry_group = replay_target
     for item in batch:
         item.update({
+            "runner": runner,
             "model": model,
             "every": max(1, int(every)),
             "source": source,
