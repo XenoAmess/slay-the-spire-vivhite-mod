@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "name": "semantic_back_hair",
+  "status": "offline_vulkan_passed_research_candidate",
+  "classification": "one complete single-frame rear-hair attachment; not a spritesheet or atlas",
+  "source": "assets/vivhite-ironclad/custom/combat/parts/normal/vivhite-back-hair-v1.png",
+  "source_sha256": "9fd66b599eb4128ba9c3b4c2bd815aadb0613e064aca2f697307997048c01782",
+  "archive": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0031-split-back-hair-attachment-attempt-01/output.png",
+  "archive_sha256": "9fd66b599eb4128ba9c3b4c2bd815aadb0613e064aca2f697307997048c01782",
+  "alpha_metrics": {
+    "edge_max_alpha": 0,
+    "bbox_a1": [
+      113,
+      3,
+      827,
+      965
+    ],
+    "pixels_a1": 433848,
+    "bbox_a16": [
+      127,
+      50,
+      761,
+      798
+    ],
+    "pixels_a16": 412767,
+    "bbox_a64": [
+      127,
+      51,
+      761,
+      797
+    ],
+    "pixels_a64": 410241,
+    "bbox_a128": [
+      127,
+      51,
+      761,
+      796
+    ],
+    "pixels_a128": 408141
+  },
+  "consumer_contract": {
+    "combat_scene_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "merchant_animation": "relaxed_loop",
+    "merchant_random_seek": true,
+    "merchant_duration": 12.000001,
+    "merchant_visibility_reasserted_at": [
+      0.0,
+      12.000001
+    ],
+    "draw_order": [
+      "semantic_back_hair",
+      "part_torso",
+      "semantic_head_face_neighbor",
+      "semantic_front_hair_neighbor",
+      "semantic_butterfly_neighbor"
+    ]
+  },
+  "mesh_contract": {
+    "type": "weighted_mesh",
+    "vertices": 49,
+    "triangles": 72,
+    "bones": [
+      "vivhite_hair_back",
+      "vivhite_hair_left",
+      "vivhite_hair_center",
+      "vivhite_hair_right"
+    ],
+    "crown_max_tail_weight": 0.0,
+    "lower_tip_max_tail_weight": 0.72
+  },
+  "neighbor_sources_are_validation_only": [
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0044-split-head-face-attachment-attempt-05/output.png",
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0033-split-front-hair-attachment-attempt-02/output.png",
+    "assets/vivhite-ironclad/custom/combat/parts/normal/vivhite-butterfly-v1.png"
+  ],
+  "files": [
+    "semantic_back_hair.spjson",
+    "semantic_back_hair.spatlas",
+    "semantic_back_hair_skeleton_data.tres",
+    "vivhite_combat_split_mesh.png",
+    "vivhite_combat_split_mesh_death.png",
+    "semantic_back_hair.png",
+    "semantic_head_face_neighbor.png",
+    "semantic_front_hair_neighbor.png",
+    "semantic_butterfly_neighbor.png",
+    "semantic_back_hair_alpha_contact.png",
+    "semantic_back_hair_setup_contact.png"
+  ],
+  "bone_count": 35,
+  "runtime_skin_modified": false,
+  "evolink_paid_calls": 0,
+  "alpha_modified": false,
+  "offline_vulkan_evidence": {
+    "report": ".work/combat-rig-compare-preview/semantic-back-hair-v1/summary.json",
+    "driver": "vulkan",
+    "candidates": 2,
+    "animations_per_candidate": 8,
+    "samples_per_animation": 21,
+    "semantic_frames": 168,
+    "errors": 0,
+    "empty_frames": 0,
+    "edge_touch_frames": 0,
+    "setup_bbox": [
+      220,
+      326,
+      220,
+      367
+    ],
+    "split_base_setup_bbox": [
+      220,
+      336,
+      220,
+      357
+    ],
+    "relaxed_loop_closed": true,
+    "relaxed_unique_frames": 11,
+    "relaxed_max_centroid_px": 4.191,
+    "manual_actual_size_review": "No visible crown detachment, head double-image, neck penetration, or triangular mesh fold in setup, relaxed, +20 degree heavy stress, and -19 degree hurt stress samples."
+  },
+  "known_limitations": [
+    "0044 head-face, 0033 front hair and 0030 butterfly are validation neighbors, not production approvals owned by this component.",
+    "The die animation intentionally switches to the existing death-preview head and does not validate this rear-hair mesh during collapse.",
+    "Final acceptance still requires the combined semantic head/torso candidate and user game-size review."
+  ],
+  "next_gate": "Cross-component semantic head/torso integration, then user game-size review; no additional rear-hair generation is justified by current evidence"
+}
