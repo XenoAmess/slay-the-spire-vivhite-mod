@@ -51,7 +51,42 @@ func _load_contract() -> Dictionary:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		_errors.append("Contract is not valid JSON dictionary: %s" % CONTRACT_PATH)
 		return {}
-	return parsed as Dictionary
+	return _resolve_runtime_layout(parsed as Dictionary)
+
+
+func _resolve_runtime_layout(contract: Dictionary) -> Dictionary:
+	var requested := OS.get_environment("VIVHITE_IRONCLAD_RUNTIME_LAYOUT")
+	if requested.is_empty():
+		requested = str(contract.get("runtimeLayout", ""))
+	var matched_profile: Dictionary = {}
+	for value in contract.get("combatRuntimeLayouts", []):
+		if typeof(value) == TYPE_DICTIONARY and str(value.get("name", "")) == requested:
+			if not matched_profile.is_empty():
+				_errors.append("Runtime layout '%s' is declared more than once." % requested)
+				return {}
+			matched_profile = value as Dictionary
+	if matched_profile.is_empty():
+		_errors.append("Unknown or missing runtime layout '%s'." % requested)
+		return {}
+
+	var page_paths: Array = []
+	for value in matched_profile.get("pages", []):
+		if typeof(value) != TYPE_DICTIONARY or str(value.get("path", "")).is_empty():
+			_errors.append("Runtime layout '%s' contains an invalid combat page." % requested)
+			return {}
+		page_paths.append(str(value.get("path", "")))
+	if page_paths.is_empty():
+		_errors.append("Runtime layout '%s' contains no combat pages." % requested)
+		return {}
+
+	contract["runtimeLayout"] = requested
+	for value in contract.get("spineSets", []):
+		if typeof(value) != TYPE_DICTIONARY:
+			continue
+		var set_data := value as Dictionary
+		if str(set_data.get("name", "")) in ["combat", "merchant"]:
+			set_data["pages"] = page_paths.duplicate()
+	return contract
 
 
 func _mount_base_game_pack() -> bool:

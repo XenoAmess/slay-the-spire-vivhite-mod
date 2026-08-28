@@ -15,6 +15,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ValidatorPath,
 
+    [string]$IroncladSkinRuntimeLayout = "legacy-single-page",
+
     [string]$PowerShellExe = "",
 
     [string]$DotnetRoot = ""
@@ -107,7 +109,7 @@ try {
     }
 
     Write-Host "[pck-export] Validating staging pack before deployment."
-    & $PowerShellExe -NoProfile -ExecutionPolicy Bypass -File $validatorFullPath -ProjectDir $projectPath -Phase Pck -PckPath $temporaryPckPath
+    & $PowerShellExe -NoProfile -ExecutionPolicy Bypass -File $validatorFullPath -ProjectDir $projectPath -Phase Pck -PckPath $temporaryPckPath -RuntimeLayout $IroncladSkinRuntimeLayout
     $validatorExitCode = $LASTEXITCODE
     if ($validatorExitCode -ne 0) {
         throw "PCK validation exited with code $validatorExitCode."

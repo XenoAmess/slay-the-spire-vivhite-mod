@@ -1,4 +1,5 @@
 using Godot;
+using System.Text.Json;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Scaffolding.Characters;
 
@@ -17,6 +18,10 @@ internal static class IroncladReplacementAssets
     private const string CombatSkeletonDataPath = $"{SkinRoot}/spine/combat/vivhite_combat_skeleton_data.tres";
     private const string CombatAtlasPath = $"{SkinRoot}/spine/combat/vivhite_combat.spatlas";
     private const string CombatAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat.png";
+    private const string CombatDeathAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat_death.png";
+    private const string CombatAttackAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat_attack.png";
+    private const string CombatHeavyAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat_attack_heavy.png";
+    private const string CombatCastAtlasPagePath = $"{SkinRoot}/spine/combat/vivhite_combat_cast.png";
 
     private const string MerchantSkeletonDataPath = $"{SkinRoot}/spine/merchant/merchant_skeleton_data.tres";
 
@@ -46,6 +51,44 @@ internal static class IroncladReplacementAssets
     private const string PaperHandTexturePath = $"{SkinRoot}/multiplayer/paper.png";
     private const string ScissorsHandTexturePath = $"{SkinRoot}/multiplayer/scissors.png";
 
+    private static readonly AtlasPageContract[] LegacyCombatAtlasPages =
+    [
+        new(
+            "vivhite_combat.png",
+            3072,
+            2304,
+            [
+                new("vivhite_combat_body", 16, 16, 1536, 2272),
+                new("vivhite_combat_magic_arc", 1568, 16, 1488, 1104),
+                new("vivhite_combat_magic_sigil", 1808, 1152, 1248, 1136)
+            ])
+    ];
+
+    private static readonly AtlasPageContract[] V3CombatAtlasPages =
+    [
+        .. LegacyCombatAtlasPages,
+        new(
+            "vivhite_combat_death.png",
+            2048,
+            1536,
+            [new("vivhite_combat_death_side", 16, 16, 2016, 1504)]),
+        new(
+            "vivhite_combat_attack.png",
+            2048,
+            2304,
+            [new("vivhite_combat_attack_peak", 16, 16, 1536, 2272)]),
+        new(
+            "vivhite_combat_attack_heavy.png",
+            2048,
+            2304,
+            [new("vivhite_combat_attack_heavy_peak", 16, 16, 1536, 2272)]),
+        new(
+            "vivhite_combat_cast.png",
+            2048,
+            2304,
+            [new("vivhite_combat_cast_peak", 16, 16, 1536, 2272)])
+    ];
+
     private static readonly RequiredAsset[] RequiredAssets =
     [
         new(
@@ -59,7 +102,35 @@ internal static class IroncladReplacementAssets
             typeof(Resource),
             "SpineSkeletonDataResource"),
         new("combat atlas", CombatAtlasPath, typeof(Resource), "SpineAtlasResource"),
-        new("combat atlas page", CombatAtlasPagePath, typeof(Texture2D)),
+        new("combat atlas page", CombatAtlasPagePath, typeof(Texture2D), ExpectedWidth: 3072, ExpectedHeight: 2304),
+        new(
+            "V3 combat death atlas page",
+            CombatDeathAtlasPagePath,
+            typeof(Texture2D),
+            RequiredLayout: CombatAtlasLayout.V3FivePage,
+            ExpectedWidth: 2048,
+            ExpectedHeight: 1536),
+        new(
+            "V3 combat attack atlas page",
+            CombatAttackAtlasPagePath,
+            typeof(Texture2D),
+            RequiredLayout: CombatAtlasLayout.V3FivePage,
+            ExpectedWidth: 2048,
+            ExpectedHeight: 2304),
+        new(
+            "V3 combat heavy-attack atlas page",
+            CombatHeavyAtlasPagePath,
+            typeof(Texture2D),
+            RequiredLayout: CombatAtlasLayout.V3FivePage,
+            ExpectedWidth: 2048,
+            ExpectedHeight: 2304),
+        new(
+            "V3 combat cast atlas page",
+            CombatCastAtlasPagePath,
+            typeof(Texture2D),
+            RequiredLayout: CombatAtlasLayout.V3FivePage,
+            ExpectedWidth: 2048,
+            ExpectedHeight: 2304),
         new(
             "merchant skeleton data",
             MerchantSkeletonDataPath,
@@ -215,9 +286,15 @@ internal static class IroncladReplacementAssets
     private static List<string> ValidateRequiredAssets()
     {
         var issues = new List<string>();
+        var combatAtlasLayout = ValidateCombatAtlasContract(issues);
 
         foreach (var asset in RequiredAssets)
         {
+            if (asset.RequiredLayout is not null && asset.RequiredLayout != combatAtlasLayout)
+            {
+                continue;
+            }
+
             try
             {
                 if (!ResourceLoader.Exists(asset.Path))
@@ -246,6 +323,17 @@ internal static class IroncladReplacementAssets
                     issues.Add(
                         $"wrong Godot class for {asset.Description} ({asset.Path}): " +
                         $"expected {asset.ExpectedGodotClass}, got {resource.GetClass()}");
+                }
+
+                if (resource is Texture2D texture &&
+                    asset.ExpectedWidth is not null &&
+                    asset.ExpectedHeight is not null &&
+                    (texture.GetWidth() != asset.ExpectedWidth || texture.GetHeight() != asset.ExpectedHeight))
+                {
+                    issues.Add(
+                        $"wrong dimensions for {asset.Description} ({asset.Path}): " +
+                        $"expected {asset.ExpectedWidth}x{asset.ExpectedHeight}, " +
+                        $"got {texture.GetWidth()}x{texture.GetHeight()}");
                 }
             }
             catch (Exception exception)
@@ -306,11 +394,191 @@ internal static class IroncladReplacementAssets
         return issues;
     }
 
+    private static CombatAtlasLayout? ValidateCombatAtlasContract(List<string> issues)
+    {
+        try
+        {
+            var wrapperText = Godot.FileAccess.GetFileAsString(CombatAtlasPath);
+            if (string.IsNullOrWhiteSpace(wrapperText))
+            {
+                issues.Add($"could not inspect combat atlas ({CombatAtlasPath}) as text");
+                return null;
+            }
+
+            using var wrapper = JsonDocument.Parse(wrapperText);
+            if (!wrapper.RootElement.TryGetProperty("atlas_data", out var atlasDataElement) ||
+                atlasDataElement.ValueKind != JsonValueKind.String)
+            {
+                issues.Add($"combat atlas ({CombatAtlasPath}) has no atlas_data string");
+                return null;
+            }
+
+            var pages = ParseAtlasPages(atlasDataElement.GetString() ?? string.Empty);
+            if (MatchesAtlasContract(pages, LegacyCombatAtlasPages))
+            {
+                return CombatAtlasLayout.LegacySinglePage;
+            }
+            if (MatchesAtlasContract(pages, V3CombatAtlasPages))
+            {
+                return CombatAtlasLayout.V3FivePage;
+            }
+
+            issues.Add(
+                $"combat atlas ({CombatAtlasPath}) must match either the exact legacy page or " +
+                "the exact V3 five-page order neutral/death/attack/attack_heavy/cast; got " +
+                $"[{string.Join(", ", pages.Select(page => page.Name))}]");
+            return null;
+        }
+        catch (Exception exception)
+        {
+            issues.Add(
+                $"error inspecting combat atlas layout ({CombatAtlasPath}): " +
+                $"{exception.GetType().Name}: {exception.Message}");
+            return null;
+        }
+    }
+
+    private static List<ParsedAtlasPage> ParseAtlasPages(string atlasData)
+    {
+        var blocks = new List<List<string>>();
+        var currentBlock = new List<string>();
+        foreach (var rawLine in atlasData.Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+            {
+                if (currentBlock.Count > 0)
+                {
+                    blocks.Add(currentBlock);
+                    currentBlock = [];
+                }
+                continue;
+            }
+            currentBlock.Add(line);
+        }
+        if (currentBlock.Count > 0)
+        {
+            blocks.Add(currentBlock);
+        }
+
+        var pages = new List<ParsedAtlasPage>();
+        foreach (var block in blocks)
+        {
+            if (block.Count < 2 || !block[1].StartsWith("size:", StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("atlas page has no leading size directive");
+            }
+            var size = ParseAtlasIntegers(block[1], "size", 2);
+            var regions = new List<AtlasRegionContract>();
+            string? currentRegion = null;
+            foreach (var line in block.Skip(2))
+            {
+                if (!line.Contains(':'))
+                {
+                    currentRegion = line;
+                    continue;
+                }
+                if (!line.StartsWith("bounds:", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (currentRegion is null)
+                {
+                    throw new InvalidDataException($"atlas page {block[0]} has bounds before a region");
+                }
+                var bounds = ParseAtlasIntegers(line, "bounds", 4);
+                regions.Add(new AtlasRegionContract(
+                    currentRegion,
+                    bounds[0],
+                    bounds[1],
+                    bounds[2],
+                    bounds[3]));
+                currentRegion = null;
+            }
+            if (currentRegion is not null)
+            {
+                throw new InvalidDataException(
+                    $"atlas page {block[0]} region {currentRegion} has no bounds");
+            }
+            pages.Add(new ParsedAtlasPage(block[0], size[0], size[1], regions));
+        }
+        return pages;
+    }
+
+    private static int[] ParseAtlasIntegers(string line, string directive, int count)
+    {
+        var parts = line[(directive.Length + 1)..]
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != count || parts.Any(value => !int.TryParse(value, out _)))
+        {
+            throw new InvalidDataException($"invalid atlas {directive} directive: {line}");
+        }
+        return parts.Select(value => int.Parse(value)).ToArray();
+    }
+
+    private static bool MatchesAtlasContract(
+        IReadOnlyList<ParsedAtlasPage> actual,
+        IReadOnlyList<AtlasPageContract> expected)
+    {
+        if (actual.Count != expected.Count)
+        {
+            return false;
+        }
+        for (var pageIndex = 0; pageIndex < expected.Count; pageIndex++)
+        {
+            var actualPage = actual[pageIndex];
+            var expectedPage = expected[pageIndex];
+            if (!string.Equals(actualPage.Name, expectedPage.Name, StringComparison.Ordinal) ||
+                actualPage.Width != expectedPage.Width ||
+                actualPage.Height != expectedPage.Height ||
+                actualPage.Regions.Count != expectedPage.Regions.Length)
+            {
+                return false;
+            }
+            for (var regionIndex = 0; regionIndex < expectedPage.Regions.Length; regionIndex++)
+            {
+                if (actualPage.Regions[regionIndex] != expectedPage.Regions[regionIndex])
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private enum CombatAtlasLayout
+    {
+        LegacySinglePage,
+        V3FivePage
+    }
+
+    private sealed record AtlasRegionContract(
+        string Name,
+        int X,
+        int Y,
+        int Width,
+        int Height);
+
+    private sealed record AtlasPageContract(
+        string Name,
+        int Width,
+        int Height,
+        AtlasRegionContract[] Regions);
+
+    private sealed record ParsedAtlasPage(
+        string Name,
+        int Width,
+        int Height,
+        List<AtlasRegionContract> Regions);
+
     private sealed record RequiredAsset(
         string Description,
         string Path,
         Type ExpectedType,
-        string? ExpectedGodotClass = null);
+        string? ExpectedGodotClass = null,
+        CombatAtlasLayout? RequiredLayout = null,
+        int? ExpectedWidth = null,
+        int? ExpectedHeight = null);
 
     private sealed record RequiredTextBinding(
         string Description,

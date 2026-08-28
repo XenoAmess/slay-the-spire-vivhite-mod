@@ -52,13 +52,37 @@ class DecodedRgba8Png:
     filtered_scanlines: bytes
 
 
+@dataclass(frozen=True, slots=True)
+class AtlasRegionContract:
+    name: str
+    bounds: tuple[int, int, int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class AtlasPageContract:
+    path: str
+    width: int
+    height: int
+    regions: tuple[AtlasRegionContract, ...]
+
+    @property
+    def name(self) -> str:
+        return Path(self.path).name
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeLayoutContract:
+    name: str
+    combat_pages: tuple[AtlasPageContract, ...]
+    expected_runtime_file_count: int
+
+
 # These resources are produced or maintained independently of the original
 # Ironclad atlas layouts. They are read completely before destination cleanup,
 # so the tracked runtime tree can safely be both the input and output root.
-PRIVATE_RUNTIME_FILES = (
+PRIVATE_RUNTIME_FILES_WITHOUT_COMBAT_PAGES = (
     "spine/combat/vivhite_combat.spjson",
     "spine/combat/vivhite_combat.spatlas",
-    "spine/combat/vivhite_combat.png",
     "spine/combat/vivhite_combat_skeleton_data.tres",
     "spine/merchant/merchant_skeleton_data.tres",
     "spine/rest_site/vivhite_rest_site.spjson",
@@ -74,6 +98,59 @@ PRIVATE_RUNTIME_FILES = (
     "scenes/rest_site.tscn",
     "scenes/character_select.tscn",
 )
+
+LEGACY_COMBAT_PAGES = (
+    AtlasPageContract(
+        "spine/combat/vivhite_combat.png",
+        3072,
+        2304,
+        (
+            AtlasRegionContract("vivhite_combat_body", (16, 16, 1536, 2272)),
+            AtlasRegionContract("vivhite_combat_magic_arc", (1568, 16, 1488, 1104)),
+            AtlasRegionContract("vivhite_combat_magic_sigil", (1808, 1152, 1248, 1136)),
+        ),
+    ),
+)
+
+V3_FIVE_PAGE_COMBAT_PAGES = LEGACY_COMBAT_PAGES + (
+    AtlasPageContract(
+        "spine/combat/vivhite_combat_death.png",
+        2048,
+        1536,
+        (AtlasRegionContract("vivhite_combat_death_side", (16, 16, 2016, 1504)),),
+    ),
+    AtlasPageContract(
+        "spine/combat/vivhite_combat_attack.png",
+        2048,
+        2304,
+        (AtlasRegionContract("vivhite_combat_attack_peak", (16, 16, 1536, 2272)),),
+    ),
+    AtlasPageContract(
+        "spine/combat/vivhite_combat_attack_heavy.png",
+        2048,
+        2304,
+        (
+            AtlasRegionContract(
+                "vivhite_combat_attack_heavy_peak", (16, 16, 1536, 2272)
+            ),
+        ),
+    ),
+    AtlasPageContract(
+        "spine/combat/vivhite_combat_cast.png",
+        2048,
+        2304,
+        (AtlasRegionContract("vivhite_combat_cast_peak", (16, 16, 1536, 2272)),),
+    ),
+)
+
+RUNTIME_LAYOUTS = {
+    "legacy-single-page": RuntimeLayoutContract(
+        "legacy-single-page", LEGACY_COMBAT_PAGES, 26
+    ),
+    "v3-five-page": RuntimeLayoutContract(
+        "v3-five-page", V3_FIVE_PAGE_COMBAT_PAGES, 30
+    ),
+}
 
 PRIVATE_SKELETON_FILES = {
     "spine/combat/vivhite_combat.spjson",
@@ -123,27 +200,22 @@ PRIVATE_SKELETON_REQUIREMENTS = {
 }
 
 PRIVATE_ATLAS_REQUIREMENTS = {
-    "spine/combat/vivhite_combat.spatlas": {
-        "source_path": f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.atlas",
-        "pages": {"vivhite_combat.png"},
-    },
     "spine/rest_site/restsite_ironclad.spatlas": {
         "source_path": (
             f"{RUNTIME_RESOURCE_ROOT}/spine/rest_site/restsite_ironclad.atlas"
         ),
-        "pages": {"restsite_ironclad.png"},
+        "pages": ("restsite_ironclad.png",),
     },
     "spine/character_select/characterselect_ironclad.spatlas": {
         "source_path": (
             f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
             "characterselect_ironclad.atlas"
         ),
-        "pages": {"characterselect_ironclad.png"},
+        "pages": ("characterselect_ironclad.png",),
     },
 }
 
-PRIVATE_PNG_DIMENSIONS = {
-    "spine/combat/vivhite_combat.png": (3072, 2304),
+PRIVATE_NON_COMBAT_PNG_DIMENSIONS = {
     "spine/rest_site/restsite_ironclad.png": (2048, 2048),
     "spine/character_select/characterselect_ironclad.png": (3713, 2427),
 }
@@ -196,8 +268,6 @@ FORBIDDEN_VANILLA_SKELETON_RESOURCES = (
     "res://animations/rest_site/ironclad/restsite_ironclad.skel",
     "res://animations/character_select/ironclad/characterselect_ironclad.skel",
 )
-
-EXPECTED_RUNTIME_FILE_COUNT = 26
 
 APPROVED_UI_COPIES = (
     ("ui/icon.png", "ui/icon.png"),
@@ -575,10 +645,130 @@ def _decode_private_text(data: bytes, relative: str) -> str:
         raise PublishError(f"Private runtime resource must be UTF-8 text: {relative}") from exc
 
 
-def _validate_private_runtime_file(relative: str, data: bytes) -> None:
+def _private_runtime_files(layout: RuntimeLayoutContract) -> tuple[str, ...]:
+    return (
+        PRIVATE_RUNTIME_FILES_WITHOUT_COMBAT_PAGES[:2]
+        + tuple(page.path for page in layout.combat_pages)
+        + PRIVATE_RUNTIME_FILES_WITHOUT_COMBAT_PAGES[2:]
+    )
+
+
+def _private_png_dimensions(
+    layout: RuntimeLayoutContract,
+) -> dict[str, tuple[int, int]]:
+    dimensions = dict(PRIVATE_NON_COMBAT_PNG_DIMENSIONS)
+    dimensions.update(
+        {page.path: (page.width, page.height) for page in layout.combat_pages}
+    )
+    return dimensions
+
+
+def _parse_atlas_layout(
+    atlas_text: str,
+    label: str,
+) -> tuple[tuple[str, tuple[int, int], tuple[AtlasRegionContract, ...]], ...]:
+    normalized = atlas_text.replace("\r", "").strip()
+    if not normalized:
+        raise PublishError(f"Private Spine atlas has empty atlas_data: {label}")
+
+    blocks = [
+        tuple(line.strip() for line in block.split("\n") if line.strip())
+        for block in re.split(r"\n\s*\n", normalized)
+        if block.strip()
+    ]
+    pages: list[tuple[str, tuple[int, int], tuple[AtlasRegionContract, ...]]] = []
+    for block in blocks:
+        page_name = block[0]
+        if len(block) < 2 or not block[1].startswith("size:"):
+            raise PublishError(
+                f"Private atlas page {page_name!r} has no leading size directive: {label}"
+            )
+        try:
+            page_size = tuple(
+                int(value.strip()) for value in block[1].split(":", 1)[1].split(",")
+            )
+        except ValueError as exc:
+            raise PublishError(
+                f"Private atlas page {page_name!r} has an invalid size: {label}"
+            ) from exc
+        if len(page_size) != 2:
+            raise PublishError(
+                f"Private atlas page {page_name!r} has an invalid size: {label}"
+            )
+
+        regions: list[AtlasRegionContract] = []
+        current_region: str | None = None
+        for line in block[2:]:
+            if ":" not in line:
+                current_region = line
+                continue
+            if not line.startswith("bounds:"):
+                continue
+            if current_region is None:
+                raise PublishError(
+                    f"Private atlas page {page_name!r} has bounds before a region: {label}"
+                )
+            try:
+                bounds = tuple(
+                    int(value.strip()) for value in line.split(":", 1)[1].split(",")
+                )
+            except ValueError as exc:
+                raise PublishError(
+                    f"Private atlas region {current_region!r} has invalid bounds: {label}"
+                ) from exc
+            if len(bounds) != 4:
+                raise PublishError(
+                    f"Private atlas region {current_region!r} has invalid bounds: {label}"
+                )
+            regions.append(AtlasRegionContract(current_region, bounds))
+            current_region = None
+        if current_region is not None:
+            raise PublishError(
+                f"Private atlas region {current_region!r} has no bounds: {label}"
+            )
+        pages.append((page_name, (page_size[0], page_size[1]), tuple(regions)))
+    return tuple(pages)
+
+
+def _validate_combat_atlas_layout(
+    atlas_text: str,
+    layout: RuntimeLayoutContract,
+    label: str,
+) -> None:
+    actual_pages = _parse_atlas_layout(atlas_text, label)
+    expected_pages = layout.combat_pages
+    actual_names = tuple(page[0] for page in actual_pages)
+    expected_names = tuple(page.name for page in expected_pages)
+    if actual_names != expected_names:
+        raise PublishError(
+            f"Combat atlas page order/count must be exactly {expected_names!r} for "
+            f"runtime layout {layout.name!r}, got {actual_names!r}: {label}"
+        )
+
+    for actual, expected in zip(actual_pages, expected_pages, strict=True):
+        _, actual_size, actual_regions = actual
+        expected_size = (expected.width, expected.height)
+        if actual_size != expected_size:
+            raise PublishError(
+                f"Combat atlas page {expected.name!r} must declare "
+                f"{expected.width}x{expected.height}, got "
+                f"{actual_size[0]}x{actual_size[1]}: {label}"
+            )
+        if actual_regions != expected.regions:
+            raise PublishError(
+                f"Combat atlas page {expected.name!r} region order/bounds must be "
+                f"exactly {expected.regions!r}, got {actual_regions!r}: {label}"
+            )
+
+
+def _validate_private_runtime_file(
+    relative: str,
+    data: bytes,
+    layout: RuntimeLayoutContract,
+) -> None:
     if relative.endswith(".png"):
         decoded = _decode_rgba8_png(data, f"private-runtime/{relative}")
-        expected_dimensions = PRIVATE_PNG_DIMENSIONS.get(relative)
+        expected_dimensions = _private_png_dimensions(layout).get(relative)
         if expected_dimensions is None:
             raise PublishError(
                 f"Private runtime PNG has no declared dimension contract: {relative}"
@@ -659,13 +849,17 @@ def _validate_private_runtime_file(relative: str, data: bytes) -> None:
             raise PublishError(f"Invalid private Spine atlas wrapper: {relative}") from exc
         atlas_data = payload.get("atlas_data") if isinstance(payload, dict) else None
         source_path = payload.get("source_path") if isinstance(payload, dict) else None
-        requirements = PRIVATE_ATLAS_REQUIREMENTS.get(relative)
-        if requirements is None:
-            raise PublishError(
-                f"Private Spine atlas has no declared validation contract: {relative}"
+        if relative == "spine/combat/vivhite_combat.spatlas":
+            expected_source = (
+                f"{RUNTIME_RESOURCE_ROOT}/spine/combat/vivhite_combat.atlas"
             )
-        expected_source = requirements["source_path"]
-        expected_pages = requirements["pages"]
+        else:
+            requirements = PRIVATE_ATLAS_REQUIREMENTS.get(relative)
+            if requirements is None:
+                raise PublishError(
+                    f"Private Spine atlas has no declared validation contract: {relative}"
+                )
+            expected_source = requirements["source_path"]
         if not isinstance(atlas_data, str) or not atlas_data.strip():
             raise PublishError(f"Private Spine atlas has no atlas_data: {relative}")
         if source_path != expected_source:
@@ -673,15 +867,17 @@ def _validate_private_runtime_file(relative: str, data: bytes) -> None:
                 f"Private atlas source_path must be {expected_source!r}, "
                 f"got {source_path!r}: {relative}"
             )
-        declared_lines = {
-            line.strip() for line in atlas_data.splitlines() if line.strip()
-        }
-        missing_pages = sorted(expected_pages - declared_lines)
-        if missing_pages:
-            raise PublishError(
-                f"Private atlas does not declare required page(s) "
-                f"{', '.join(missing_pages)}: {relative}"
-            )
+        if relative == "spine/combat/vivhite_combat.spatlas":
+            _validate_combat_atlas_layout(atlas_data, layout, relative)
+        else:
+            actual_pages = _parse_atlas_layout(atlas_data, relative)
+            actual_page_names = tuple(page[0] for page in actual_pages)
+            expected_page_names = tuple(requirements["pages"])
+            if actual_page_names != expected_page_names:
+                raise PublishError(
+                    f"Private atlas page order/count must be exactly "
+                    f"{expected_page_names!r}, got {actual_page_names!r}: {relative}"
+                )
         return
 
     for required_text in PRIVATE_TEXT_REQUIREMENTS.get(relative, ()):
@@ -691,9 +887,12 @@ def _validate_private_runtime_file(relative: str, data: bytes) -> None:
             )
 
 
-def _load_private_runtime_outputs(private_runtime_root: Path) -> dict[str, bytes]:
+def _load_private_runtime_outputs(
+    private_runtime_root: Path,
+    layout: RuntimeLayoutContract,
+) -> dict[str, bytes]:
     outputs: dict[str, bytes] = {}
-    for relative in PRIVATE_RUNTIME_FILES:
+    for relative in _private_runtime_files(layout):
         try:
             data = _read_required(private_runtime_root, relative)
         except PublishError as exc:
@@ -703,7 +902,7 @@ def _load_private_runtime_outputs(private_runtime_root: Path) -> dict[str, bytes
                 "build_vivhite_combat_rig.gd, build_vivhite_rest_site_rig.gd, and "
                 "build_vivhite_character_select_rig.gd)."
             ) from exc
-        _validate_private_runtime_file(relative, data)
+        _validate_private_runtime_file(relative, data, layout)
         outputs[relative] = data
     return outputs
 
@@ -822,8 +1021,9 @@ def _build_outputs(
     art_root: Path,
     approved_root: Path,
     private_runtime_root: Path,
+    layout: RuntimeLayoutContract,
 ) -> dict[str, bytes]:
-    outputs = _load_private_runtime_outputs(private_runtime_root)
+    outputs = _load_private_runtime_outputs(private_runtime_root, layout)
 
     for source, output in APPROVED_UI_COPIES:
         data = _read_required(approved_root, source)
@@ -840,14 +1040,15 @@ def _build_outputs(
     return outputs
 
 
-def _expected_output_paths() -> set[str]:
-    expected: set[str] = set(PRIVATE_RUNTIME_FILES)
+def _expected_output_paths(layout: RuntimeLayoutContract) -> set[str]:
+    expected: set[str] = set(_private_runtime_files(layout))
     expected.update(output for _, output in APPROVED_UI_COPIES)
     expected.update(output for _, output in CUSTOM_UI_COPIES)
-    if len(expected) != EXPECTED_RUNTIME_FILE_COUNT:
+    if len(expected) != layout.expected_runtime_file_count:
         raise PublishError(
             "Publisher invariant failed: expected a "
-            f"{EXPECTED_RUNTIME_FILE_COUNT}-file allowlist, got {len(expected)}."
+            f"{layout.expected_runtime_file_count}-file allowlist for runtime layout "
+            f"{layout.name!r}, got {len(expected)}."
         )
     return expected
 
@@ -927,9 +1128,14 @@ def _mirror_clean_destination(destination: Path, expected: set[str]) -> None:
                     pass
 
 
-def _write_outputs(destination: Path, outputs: dict[str, bytes], repo: Path) -> None:
+def _write_outputs(
+    destination: Path,
+    outputs: dict[str, bytes],
+    repo: Path,
+    layout: RuntimeLayoutContract,
+) -> None:
     _validate_destination(destination, repo)
-    expected = _expected_output_paths()
+    expected = _expected_output_paths(layout)
     actual = set(outputs)
     if actual != expected:
         missing = sorted(expected - actual)
@@ -997,6 +1203,16 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--runtime-layout",
+        choices=tuple(RUNTIME_LAYOUTS),
+        default="legacy-single-page",
+        help=(
+            "Exact combat atlas/runtime allowlist to publish. The default keeps the "
+            "currently deployed single-page rig valid; use v3-five-page only with a "
+            "complete staged V3 candidate."
+        ),
+    )
+    parser.add_argument(
         "--destination",
         default=str(repo / "Vivhite" / "Vivhite" / "skins" / "ironclad"),
         help="Runtime skin root (defaults to the Vivhite project resource tree)",
@@ -1018,6 +1234,7 @@ def run(argv: list[str]) -> int:
     approved_root = Path(args.approved_root).resolve()
     private_runtime_root = Path(args.private_runtime_root).resolve()
     destination = Path(args.destination).resolve()
+    layout = RUNTIME_LAYOUTS[args.runtime_layout]
 
     _validate_destination(destination, repo)
     if args.allow_unchanged:
@@ -1045,10 +1262,14 @@ def run(argv: list[str]) -> int:
         art_root,
         approved_root,
         private_runtime_root,
+        layout,
     )
-    _write_outputs(destination, outputs, repo)
+    _write_outputs(destination, outputs, repo, layout)
 
-    print(f"Published {len(outputs)} private Ironclad skin resources to: {destination}")
+    print(
+        f"Published {len(outputs)} private Ironclad skin resources "
+        f"({layout.name}) to: {destination}"
+    )
     if destination == (repo / "Vivhite" / "Vivhite" / "skins" / "ironclad").resolve():
         print("Next: cd Vivhite; dotnet build")
     else:

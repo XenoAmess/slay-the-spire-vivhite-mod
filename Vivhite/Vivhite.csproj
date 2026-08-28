@@ -28,6 +28,7 @@
         <RunPckExport Condition="'$(RunPckExport)' == '' and '$(DesignTimeBuild)' != 'true'">true</RunPckExport>
         <RunPckExport Condition="'$(RunPckExport)' == ''">false</RunPckExport>
         <IroncladSkinValidator>$(MSBuildProjectDirectory)\tools\Validate-IroncladSkin.ps1</IroncladSkinValidator>
+        <IroncladSkinRuntimeLayout Condition="'$(IroncladSkinRuntimeLayout)' == ''">legacy-single-page</IroncladSkinRuntimeLayout>
         <GodotPckExporter>$(MSBuildProjectDirectory)\tools\Export-ModPck.ps1</GodotPckExporter>
         <PowerShellExe Condition="'$(PowerShellExe)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</PowerShellExe>
         <PowerShellExe Condition="'$(PowerShellExe)' == ''">pwsh</PowerShellExe>
@@ -88,7 +89,7 @@
         <Error Condition="!Exists('$(IroncladSkinValidator)')"
                Text="Ironclad skin asset validator is missing: '$(IroncladSkinValidator)'."/>
         <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(IroncladSkinValidator)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Phase Source -GodotExe &quot;$(GodotExe)&quot; -Sts2Dir &quot;$(Sts2Dir)&quot;"
+              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(IroncladSkinValidator)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Phase Source -GodotExe &quot;$(GodotExe)&quot; -Sts2Dir &quot;$(Sts2Dir)&quot; -RuntimeLayout &quot;$(IroncladSkinRuntimeLayout)&quot;"
               EnvironmentVariables="CopyModOnBuild=false"/>
     </Target>
 
@@ -98,7 +99,7 @@
         <Error Condition="!Exists('$(GodotPckExporter)')" Text="Godot PCK export helper is missing: '$(GodotPckExporter)'."/>
         <Error Condition="!Exists('$(IroncladSkinValidator)')" Text="Ironclad skin asset validator is missing: '$(IroncladSkinValidator)'."/>
         <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(GodotPckExporter)&quot; -GodotExe &quot;$(GodotExe)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Preset &quot;$(GodotExportPreset)&quot; -OutputPath &quot;$(ModPckPath)&quot; -ValidatorPath &quot;$(IroncladSkinValidator)&quot; -PowerShellExe &quot;$(PowerShellExe)&quot; -DotnetRoot &quot;$(DOTNET_ROOT)&quot;"/>
+              Command="&quot;$(PowerShellExe)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(GodotPckExporter)&quot; -GodotExe &quot;$(GodotExe)&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot; -Preset &quot;$(GodotExportPreset)&quot; -OutputPath &quot;$(ModPckPath)&quot; -ValidatorPath &quot;$(IroncladSkinValidator)&quot; -IroncladSkinRuntimeLayout &quot;$(IroncladSkinRuntimeLayout)&quot; -PowerShellExe &quot;$(PowerShellExe)&quot; -DotnetRoot &quot;$(DOTNET_ROOT)&quot;"/>
     </Target>
 
     <Target Name="CopyMod" AfterTargets="Build" DependsOnTargets="ExportPCK;SyncManifestDependencies"

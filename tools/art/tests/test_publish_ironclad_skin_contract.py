@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import unittest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PUBLISHER_PATH = REPO_ROOT / "tools" / "art" / "publish_ironclad_skin.py"
+CONTRACT_PATH = REPO_ROOT / "Vivhite" / "tools" / "ironclad-skin.contract.json"
+
+SPEC = importlib.util.spec_from_file_location("publish_ironclad_skin", PUBLISHER_PATH)
+assert SPEC is not None and SPEC.loader is not None
+publisher = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = publisher
+SPEC.loader.exec_module(publisher)
+
+
+def _atlas_text(pages: tuple[object, ...]) -> str:
+    blocks: list[str] = []
+    for page in pages:
+        lines = [
+            page.name,
+            f"size:{page.width},{page.height}",
+            "filter:Linear,Linear",
+            "pma:false",
+            "repeat:none",
+        ]
+        for region in page.regions:
+            lines.extend(
+                [
+                    region.name,
+                    "bounds:" + ",".join(str(value) for value in region.bounds),
+                ]
+            )
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks) + "\n"
+
+
+class PublishIroncladSkinContractTests(unittest.TestCase):
+    def test_python_and_json_runtime_layouts_are_identical(self) -> None:
+        contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        json_layouts = {
+            layout["name"]: layout for layout in contract["combatRuntimeLayouts"]
+        }
+        self.assertEqual(set(json_layouts), set(publisher.RUNTIME_LAYOUTS))
+
+        for name, layout in publisher.RUNTIME_LAYOUTS.items():
+            json_layout = json_layouts[name]
+            self.assertEqual(
+                json_layout["expectedRuntimeFileCount"],
+                layout.expected_runtime_file_count,
+            )
+            actual_pages = [
+                {
+                    "path": page.path,
+                    "width": page.width,
+                    "height": page.height,
+                    "regions": [
+                        {"name": region.name, "bounds": list(region.bounds)}
+                        for region in page.regions
+                    ],
+                }
+                for page in layout.combat_pages
+            ]
+            self.assertEqual(json_layout["pages"], actual_pages)
+            self.assertEqual(
+                len(publisher._expected_output_paths(layout)),
+                layout.expected_runtime_file_count,
+            )
+
+    def test_default_layout_remains_the_single_page_runtime(self) -> None:
+        args = publisher._parse_args([])
+        self.assertEqual(args.runtime_layout, "legacy-single-page")
+
+        contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(contract["runtimeLayout"], "legacy-single-page")
+        self.assertEqual(contract["expectedRuntimeFileCount"], 26)
+        for spine_set in contract["spineSets"]:
+            if spine_set["name"] in {"combat", "merchant"}:
+                self.assertTrue(spine_set["exactPages"])
+                self.assertEqual(
+                    spine_set["pages"], ["spine/combat/vivhite_combat.png"]
+                )
+
+    def test_v3_atlas_requires_exact_five_page_order_and_regions(self) -> None:
+        layout = publisher.RUNTIME_LAYOUTS["v3-five-page"]
+        atlas_text = _atlas_text(layout.combat_pages)
+        publisher._validate_combat_atlas_layout(atlas_text, layout, "fixture")
+
+        reordered = (
+            layout.combat_pages[0],
+            layout.combat_pages[2],
+            layout.combat_pages[1],
+            *layout.combat_pages[3:],
+        )
+        with self.assertRaisesRegex(publisher.PublishError, "page order/count"):
+            publisher._validate_combat_atlas_layout(
+                _atlas_text(reordered), layout, "reordered fixture"
+            )
+
+        missing_region_page = publisher.AtlasPageContract(
+            layout.combat_pages[0].path,
+            layout.combat_pages[0].width,
+            layout.combat_pages[0].height,
+            layout.combat_pages[0].regions[:-1],
+        )
+        with self.assertRaisesRegex(publisher.PublishError, "region order/bounds"):
+            publisher._validate_combat_atlas_layout(
+                _atlas_text((missing_region_page, *layout.combat_pages[1:])),
+                layout,
+                "missing-region fixture",
+            )
+
+        wrong_size_page = publisher.AtlasPageContract(
+            layout.combat_pages[0].path,
+            layout.combat_pages[0].width - 1,
+            layout.combat_pages[0].height,
+            layout.combat_pages[0].regions,
+        )
+        with self.assertRaisesRegex(publisher.PublishError, "must declare"):
+            publisher._validate_combat_atlas_layout(
+                _atlas_text((wrong_size_page, *layout.combat_pages[1:])),
+                layout,
+                "wrong-size fixture",
+            )
+
+    def test_forbidden_pck_and_private_extension_contract_is_retained(self) -> None:
+        contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            set(contract["forbiddenPckSegments"]),
+            {"bin", ".work", "vanilla", "tools"},
+        )
+        self.assertEqual(
+            set(contract["forbiddenPrivateExtensions"]), {".skel", ".spskel"}
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -7,6 +7,8 @@ param(
 
     [string]$ContractPath = "",
 
+    [string]$RuntimeLayout = "",
+
     [string]$PckPath = "",
 
     [string]$GodotExe = "",
@@ -142,6 +144,16 @@ function Get-ExpectedLogicalAssets {
         foreach ($page in @($spineSet.pages)) {
             Add-RequiredPath -Set $required -RelativePath ([string]$page)
         }
+    }
+
+    $expectedCountValue = Get-JsonPropertyValue -Object $Contract -Name "expectedRuntimeFileCount"
+    if ($null -eq $expectedCountValue -or [int]$expectedCountValue -le 0) {
+        Add-ValidationError "The contract must declare a positive expectedRuntimeFileCount."
+    }
+    elseif ($required.Count -ne [int]$expectedCountValue) {
+        Add-ValidationError (
+            "Runtime layout '$([string]$Contract.runtimeLayout)' resolves to $($required.Count) files; " +
+            "expected exactly $([int]$expectedCountValue).")
     }
 
     return $required
@@ -318,6 +330,7 @@ function Test-SpineAtlasLayout {
     )
 
     $expectedPages = New-Object "System.Collections.Generic.Dictionary[string,string]" ([StringComparer]::Ordinal)
+    $expectedPageOrder = New-Object "System.Collections.Generic.List[string]"
     foreach ($page in @($SpineSet.pages)) {
         $relativePath = ([string]$page).Replace('\', '/').TrimStart('/')
         $pageName = [IO.Path]::GetFileName($relativePath)
@@ -326,11 +339,41 @@ function Test-SpineAtlasLayout {
             continue
         }
         $expectedPages.Add($pageName, $relativePath)
+        $expectedPageOrder.Add($pageName)
+    }
+
+    $pageLayoutsValue = Get-JsonPropertyValue -Object $SpineSet -Name "pageLayouts"
+    $pageLayouts = @()
+    if ($null -ne $pageLayoutsValue) {
+        $pageLayouts = @($pageLayoutsValue)
+    }
+    $expectedLayouts = New-Object "System.Collections.Generic.Dictionary[string,object]" ([StringComparer]::Ordinal)
+    foreach ($layout in $pageLayouts) {
+        $layoutPath = ([string]$layout.path).Replace('\', '/').TrimStart('/')
+        $layoutPageName = [IO.Path]::GetFileName($layoutPath)
+        if (-not $expectedPages.ContainsKey($layoutPageName) -or
+            -not [string]::Equals($expectedPages[$layoutPageName], $layoutPath, [StringComparison]::Ordinal)) {
+            Add-ValidationError "Spine set '$SetName' pageLayouts contains non-page '$layoutPath'."
+            continue
+        }
+        if ($expectedLayouts.ContainsKey($layoutPageName)) {
+            Add-ValidationError "Spine set '$SetName' pageLayouts duplicates '$layoutPageName'."
+            continue
+        }
+        $expectedLayouts.Add($layoutPageName, $layout)
+    }
+    if ($pageLayouts.Count -gt 0 -and $expectedLayouts.Count -ne $expectedPages.Count) {
+        Add-ValidationError (
+            "Spine set '$SetName' pageLayouts must cover every page exactly once; " +
+            "layouts=$($expectedLayouts.Count), pages=$($expectedPages.Count).")
     }
 
     $declaredPages = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::Ordinal)
+    $declaredPageOrder = New-Object "System.Collections.Generic.List[string]"
+    $declaredRegions = New-Object "System.Collections.Generic.Dictionary[string,object]" ([StringComparer]::Ordinal)
     $lines = @($AtlasData.Replace("`r", "") -split "`n")
     $currentPage = $null
+    $currentRegion = $null
     for ($index = 0; $index -lt $lines.Count; $index++) {
         $line = [string]$lines[$index]
         $trimmed = $line.Trim()
@@ -344,10 +387,17 @@ function Test-SpineAtlasLayout {
             if (-not $expectedPages.ContainsKey($pageName)) {
                 Add-ValidationError "Spine set '$SetName' atlas_data declares unexpected page '$pageName'."
                 $currentPage = [pscustomobject]@{ Name = $pageName; Width = $pageWidth; Height = $pageHeight }
+                $currentRegion = $null
                 continue
             }
             if (-not $declaredPages.Add($pageName)) {
                 Add-ValidationError "Spine set '$SetName' atlas_data declares page '$pageName' more than once."
+            }
+            else {
+                $declaredPageOrder.Add($pageName)
+                $declaredRegions.Add(
+                    $pageName,
+                    (New-Object "System.Collections.Generic.List[object]"))
             }
 
             $relativePath = $expectedPages[$pageName]
@@ -363,6 +413,13 @@ function Test-SpineAtlasLayout {
                 }
             }
             $currentPage = [pscustomobject]@{ Name = $pageName; Width = $pageWidth; Height = $pageHeight }
+            $currentRegion = $null
+            continue
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($trimmed) -and
+            $trimmed.IndexOf(':') -lt 0 -and $null -ne $currentPage) {
+            $currentRegion = $trimmed
             continue
         }
 
@@ -379,6 +436,16 @@ function Test-SpineAtlasLayout {
             $y = [int64]$Matches[2]
             $width = [int64]$Matches[3]
             $height = [int64]$Matches[4]
+            if ([string]::IsNullOrWhiteSpace([string]$currentRegion)) {
+                Add-ValidationError "Spine set '$SetName' page '$($currentPage.Name)' has bounds without a region name."
+            }
+            elseif ($declaredRegions.ContainsKey([string]$currentPage.Name)) {
+                $declaredRegions[[string]$currentPage.Name].Add([pscustomobject]@{
+                    Name = [string]$currentRegion
+                    Bounds = @($x, $y, $width, $height)
+                })
+            }
+            $currentRegion = $null
             $packedWidth = $width
             $packedHeight = $height
             # Spine's atlas stores unrotated bounds and puts rotate:90 after the
@@ -414,6 +481,63 @@ function Test-SpineAtlasLayout {
             Add-ValidationError "Spine set '$SetName' atlas_data does not declare page '$pageName'."
         }
     }
+
+    $exactPagesValue = Get-JsonPropertyValue -Object $SpineSet -Name "exactPages"
+    if ($exactPagesValue -eq $true) {
+        $actualOrder = @($declaredPageOrder)
+        if ($actualOrder.Count -ne $expectedPageOrder.Count) {
+            Add-ValidationError (
+                "Spine set '$SetName' atlas page count is $($actualOrder.Count); " +
+                "expected exactly $($expectedPageOrder.Count).")
+        }
+        else {
+            for ($pageIndex = 0; $pageIndex -lt $expectedPageOrder.Count; $pageIndex++) {
+                if (-not [string]::Equals(
+                    $actualOrder[$pageIndex],
+                    $expectedPageOrder[$pageIndex],
+                    [StringComparison]::Ordinal)) {
+                    Add-ValidationError (
+                        "Spine set '$SetName' atlas page $pageIndex is '$($actualOrder[$pageIndex])'; " +
+                        "expected '$($expectedPageOrder[$pageIndex])'.")
+                }
+            }
+        }
+    }
+
+    foreach ($pageName in $expectedLayouts.Keys) {
+        if (-not $declaredRegions.ContainsKey($pageName)) {
+            continue
+        }
+        $expectedRegions = @($expectedLayouts[$pageName].regions)
+        $actualRegions = @($declaredRegions[$pageName])
+        if ($actualRegions.Count -ne $expectedRegions.Count) {
+            Add-ValidationError (
+                "Spine set '$SetName' page '$pageName' declares $($actualRegions.Count) regions; " +
+                "expected exactly $($expectedRegions.Count).")
+            continue
+        }
+        for ($regionIndex = 0; $regionIndex -lt $expectedRegions.Count; $regionIndex++) {
+            $expectedRegion = $expectedRegions[$regionIndex]
+            $actualRegion = $actualRegions[$regionIndex]
+            if (-not [string]::Equals(
+                [string]$actualRegion.Name,
+                [string]$expectedRegion.name,
+                [StringComparison]::Ordinal)) {
+                Add-ValidationError (
+                    "Spine set '$SetName' page '$pageName' region $regionIndex is " +
+                    "'$([string]$actualRegion.Name)'; expected '$([string]$expectedRegion.name)'.")
+                continue
+            }
+            $expectedBounds = @($expectedRegion.bounds | ForEach-Object { [int64]$_ })
+            $actualBounds = @($actualRegion.Bounds | ForEach-Object { [int64]$_ })
+            if ($expectedBounds.Count -ne 4 -or $actualBounds.Count -ne 4 -or
+                ($actualBounds -join ',') -ne ($expectedBounds -join ',')) {
+                Add-ValidationError (
+                    "Spine set '$SetName' page '$pageName' region '$([string]$actualRegion.Name)' " +
+                    "bounds are $($actualBounds -join ','); expected $($expectedBounds -join ',').")
+            }
+        }
+    }
 }
 
 function Get-JsonPropertyValue {
@@ -429,6 +553,73 @@ function Get-JsonPropertyValue {
     }
 
     return $null
+}
+
+function Resolve-RuntimeLayoutContract {
+    param(
+        [Parameter(Mandatory = $true)]$Contract,
+        [string]$RequestedLayout = ""
+    )
+
+    $layoutName = $RequestedLayout
+    if ([string]::IsNullOrWhiteSpace($layoutName)) {
+        $layoutName = [string](Get-JsonPropertyValue -Object $Contract -Name "runtimeLayout")
+    }
+    if ([string]::IsNullOrWhiteSpace($layoutName)) {
+        throw "The contract does not select a runtimeLayout and no -RuntimeLayout override was supplied."
+    }
+
+    $profiles = @(Get-JsonPropertyValue -Object $Contract -Name "combatRuntimeLayouts")
+    $matches = @($profiles | Where-Object {
+        [string]::Equals([string]$_.name, $layoutName, [StringComparison]::Ordinal)
+    })
+    if ($matches.Count -ne 1) {
+        $available = @($profiles | ForEach-Object { [string]$_.name }) -join ", "
+        throw "Runtime layout '$layoutName' must resolve to exactly one combat profile; available: $available"
+    }
+    $profile = $matches[0]
+    $profilePages = @($profile.pages)
+    if ($profilePages.Count -lt 1) {
+        throw "Runtime layout '$layoutName' declares no combat atlas pages."
+    }
+
+    $pagePaths = @($profilePages | ForEach-Object { [string]$_.path })
+    $profileDimensions = @($profilePages | ForEach-Object {
+        [pscustomobject]@{
+            path = [string]$_.path
+            width = [int64]$_.width
+            height = [int64]$_.height
+        }
+    })
+    $nonCombatDimensions = @($Contract.pngDimensions | Where-Object {
+        -not ([string]$_.path).StartsWith("spine/combat/", [StringComparison]::Ordinal)
+    })
+
+    $Contract.runtimeLayout = $layoutName
+    $Contract.expectedRuntimeFileCount = [int]$profile.expectedRuntimeFileCount
+    $Contract.pngDimensions = @($profileDimensions + $nonCombatDimensions)
+
+    foreach ($spineSet in @($Contract.spineSets)) {
+        $setName = [string]$spineSet.name
+        if ($setName -notin @("combat", "merchant")) {
+            continue
+        }
+        $spineSet.pages = @($pagePaths)
+        if ($null -eq (Get-JsonPropertyValue -Object $spineSet -Name "exactPages")) {
+            $spineSet | Add-Member -NotePropertyName exactPages -NotePropertyValue $true
+        }
+        else {
+            $spineSet.exactPages = $true
+        }
+        if ($null -eq (Get-JsonPropertyValue -Object $spineSet -Name "pageLayouts")) {
+            $spineSet | Add-Member -NotePropertyName pageLayouts -NotePropertyValue @($profilePages)
+        }
+        else {
+            $spineSet.pageLayouts = @($profilePages)
+        }
+    }
+
+    return $Contract
 }
 
 function Resolve-GodotConsolePath {
@@ -567,7 +758,8 @@ function Invoke-GodotSpineContract {
     param(
         [Parameter(Mandatory = $true)][string]$ProjectRoot,
         [Parameter(Mandatory = $true)][string]$GodotPath,
-        [Parameter(Mandatory = $true)][string]$GameRoot
+        [Parameter(Mandatory = $true)][string]$GameRoot,
+        [Parameter(Mandatory = $true)][string]$RuntimeLayout
     )
 
     if ([string]::IsNullOrWhiteSpace($GodotPath)) {
@@ -630,6 +822,7 @@ function Invoke-GodotSpineContract {
         $previousPath = $env:PATH
         $previousSkipExport = $env:STS2_SKIP_PCK_EXPORT
         $previousBasePckPath = $env:VIVHITE_STS2_PCK_PATH
+        $previousRuntimeLayout = $env:VIVHITE_IRONCLAD_RUNTIME_LAYOUT
         try {
             $dotnetRoot = $env:DOTNET_ROOT
             if ([string]::IsNullOrWhiteSpace($dotnetRoot)) {
@@ -648,6 +841,7 @@ function Invoke-GodotSpineContract {
             }
             $env:STS2_SKIP_PCK_EXPORT = "1"
             $env:VIVHITE_STS2_PCK_PATH = $basePckPath
+            $env:VIVHITE_IRONCLAD_RUNTIME_LAYOUT = $RuntimeLayout
             $ErrorActionPreference = "Continue"
             $importOutput = @()
             $importExitCode = -1
@@ -680,6 +874,7 @@ function Invoke-GodotSpineContract {
             $env:PATH = $previousPath
             $env:STS2_SKIP_PCK_EXPORT = $previousSkipExport
             $env:VIVHITE_STS2_PCK_PATH = $previousBasePckPath
+            $env:VIVHITE_IRONCLAD_RUNTIME_LAYOUT = $previousRuntimeLayout
         }
     }
     finally {
@@ -906,7 +1101,11 @@ function Test-SourceAssets {
         Stop-Validation "Source asset contract check failed."
     }
 
-    Invoke-GodotSpineContract -ProjectRoot $ProjectRoot -GodotPath $GodotExe -GameRoot $Sts2Dir
+    Invoke-GodotSpineContract `
+        -ProjectRoot $ProjectRoot `
+        -GodotPath $GodotExe `
+        -GameRoot $Sts2Dir `
+        -RuntimeLayout ([string]$Contract.runtimeLayout)
     if ($script:ValidationErrors.Count -gt 0) {
         Stop-Validation "Godot Spine contract check failed."
     }
@@ -1128,10 +1327,16 @@ function Test-PckContents {
             $requiredSkeletonExtension = ".spjson"
         }
         $validatedSkeletonEntries = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
+        $validatedAtlasEntries = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
+        $pckPngDimensions = Get-ExpectedPngDimensions `
+            -Contract $Contract `
+            -ExpectedAssets (Get-ExpectedLogicalAssets -Contract $Contract)
         foreach ($spineSet in @($Contract.spineSets)) {
             $setName = [string]$spineSet.name
             $skeletonDataPath = "$resourceRoot/$([string]$spineSet.skeletonData)"
             $skeletonResource = [string]$spineSet.skeletonResource
+            $atlasRelative = [string]$spineSet.atlas
+            $atlasEntryPath = "$resourceRoot/$atlasRelative"
             try {
                 $skeletonRelative = Get-PrivateResourceRelativePath `
                     -ResourceRoot $resourceRoot `
@@ -1167,6 +1372,36 @@ function Test-PckContents {
                 }
                 catch {
                     Add-ValidationError "Exported private Spine JSON is invalid at res://${skeletonEntryPath}: $($_.Exception.Message)"
+                }
+            }
+            if ($validatedAtlasEntries.Add($atlasEntryPath) -and
+                $entryByPath.ContainsKey($atlasEntryPath)) {
+                try {
+                    $atlasText = Read-PckTextEntry -Path $Path -Entry $entryByPath[$atlasEntryPath]
+                    $atlasWrapper = $atlasText | ConvertFrom-Json
+                    $atlasData = [string](Get-JsonPropertyValue -Object $atlasWrapper -Name "atlas_data")
+                    $sourcePath = [string](Get-JsonPropertyValue -Object $atlasWrapper -Name "source_path")
+                    $expectedSourcePath = Get-ResourcePath `
+                        -ResourceRoot $resourceRoot `
+                        -RelativePath ([string]$spineSet.atlasSourcePath)
+                    if ([string]::IsNullOrWhiteSpace($atlasData)) {
+                        Add-ValidationError "Exported Spine set '$setName' .spatlas has no atlas_data."
+                    }
+                    if (-not [string]::Equals($sourcePath, $expectedSourcePath, [StringComparison]::Ordinal)) {
+                        Add-ValidationError (
+                            "Exported Spine set '$setName' .spatlas source_path must be " +
+                            "'$expectedSourcePath', got '$sourcePath'.")
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($atlasData)) {
+                        Test-SpineAtlasLayout `
+                            -SetName "exported $setName" `
+                            -AtlasData $atlasData `
+                            -SpineSet $spineSet `
+                            -PngDimensions $pckPngDimensions
+                    }
+                }
+                catch {
+                    Add-ValidationError "Exported Spine atlas is invalid at res://${atlasEntryPath}: $($_.Exception.Message)"
                 }
             }
             if (-not $entryByPath.ContainsKey($skeletonDataPath)) {
@@ -1276,6 +1511,7 @@ try {
         throw "Contract file does not exist: $contractFullPath"
     }
     $contract = [IO.File]::ReadAllText($contractFullPath) | ConvertFrom-Json
+    $contract = Resolve-RuntimeLayoutContract -Contract $contract -RequestedLayout $RuntimeLayout
     $activation = Get-SkinActivationState -ProjectRoot $projectRoot -Contract $contract
 }
 catch {

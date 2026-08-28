@@ -1,5 +1,103 @@
 {
   "resourceRoot": "Vivhite/skins/ironclad",
+  "runtimeLayout": "legacy-single-page",
+  "expectedRuntimeFileCount": 26,
+  "combatRuntimeLayouts": [
+    {
+      "name": "legacy-single-page",
+      "expectedRuntimeFileCount": 26,
+      "pages": [
+        {
+          "path": "spine/combat/vivhite_combat.png",
+          "width": 3072,
+          "height": 2304,
+          "regions": [
+            {
+              "name": "vivhite_combat_body",
+              "bounds": [16, 16, 1536, 2272]
+            },
+            {
+              "name": "vivhite_combat_magic_arc",
+              "bounds": [1568, 16, 1488, 1104]
+            },
+            {
+              "name": "vivhite_combat_magic_sigil",
+              "bounds": [1808, 1152, 1248, 1136]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "v3-five-page",
+      "expectedRuntimeFileCount": 30,
+      "pages": [
+        {
+          "path": "spine/combat/vivhite_combat.png",
+          "width": 3072,
+          "height": 2304,
+          "regions": [
+            {
+              "name": "vivhite_combat_body",
+              "bounds": [16, 16, 1536, 2272]
+            },
+            {
+              "name": "vivhite_combat_magic_arc",
+              "bounds": [1568, 16, 1488, 1104]
+            },
+            {
+              "name": "vivhite_combat_magic_sigil",
+              "bounds": [1808, 1152, 1248, 1136]
+            }
+          ]
+        },
+        {
+          "path": "spine/combat/vivhite_combat_death.png",
+          "width": 2048,
+          "height": 1536,
+          "regions": [
+            {
+              "name": "vivhite_combat_death_side",
+              "bounds": [16, 16, 2016, 1504]
+            }
+          ]
+        },
+        {
+          "path": "spine/combat/vivhite_combat_attack.png",
+          "width": 2048,
+          "height": 2304,
+          "regions": [
+            {
+              "name": "vivhite_combat_attack_peak",
+              "bounds": [16, 16, 1536, 2272]
+            }
+          ]
+        },
+        {
+          "path": "spine/combat/vivhite_combat_attack_heavy.png",
+          "width": 2048,
+          "height": 2304,
+          "regions": [
+            {
+              "name": "vivhite_combat_attack_heavy_peak",
+              "bounds": [16, 16, 1536, 2272]
+            }
+          ]
+        },
+        {
+          "path": "spine/combat/vivhite_combat_cast.png",
+          "width": 2048,
+          "height": 2304,
+          "regions": [
+            {
+              "name": "vivhite_combat_cast_peak",
+              "bounds": [16, 16, 1536, 2272]
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "activationMarker": ".enabled",
   "inactiveDocumentationFiles": [
     ".gitkeep",
@@ -145,6 +243,26 @@
       "pages": [
         "spine/combat/vivhite_combat.png"
       ],
+      "exactPages": true,
+      "pageLayouts": [
+        {
+          "path": "spine/combat/vivhite_combat.png",
+          "regions": [
+            {
+              "name": "vivhite_combat_body",
+              "bounds": [16, 16, 1536, 2272]
+            },
+            {
+              "name": "vivhite_combat_magic_arc",
+              "bounds": [1568, 16, 1488, 1104]
+            },
+            {
+              "name": "vivhite_combat_magic_sigil",
+              "bounds": [1808, 1152, 1248, 1136]
+            }
+          ]
+        }
+      ],
       "animations": [
         "attack",
         "attack_heavy",
@@ -187,6 +305,26 @@
       "atlasSourcePath": "spine/combat/vivhite_combat.atlas",
       "pages": [
         "spine/combat/vivhite_combat.png"
+      ],
+      "exactPages": true,
+      "pageLayouts": [
+        {
+          "path": "spine/combat/vivhite_combat.png",
+          "regions": [
+            {
+              "name": "vivhite_combat_body",
+              "bounds": [16, 16, 1536, 2272]
+            },
+            {
+              "name": "vivhite_combat_magic_arc",
+              "bounds": [1568, 16, 1488, 1104]
+            },
+            {
+              "name": "vivhite_combat_magic_sigil",
+              "bounds": [1808, 1152, 1248, 1136]
+            }
+          ]
+        }
       ],
       "animations": [
         "relaxed_loop"
