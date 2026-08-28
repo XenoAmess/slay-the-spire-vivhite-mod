@@ -5452,3 +5452,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/896 胜，当前目标进阶 0
+
+## 第 897 局复盘（2026-08-28 17:40）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：DISMANTLE, SHRUG_IT_OFF, FEED, MOLTEN_FIST, TRUE_GRIT, SHRUG_IT_OFF, TRUE_GRIT, FISTICUFFS, BLUDGEON, JUGGERNAUT, CONFLAGRATION, BREAKTHROUGH, COLOSSUS, BREAKTHROUGH
+- 本局遗物：STRIKE_DUMMY, 灯笼
+- 战斗记录：F15 Elite战 掉血56; F17 Boss战 掉血34｜竞速审计：T3判死→实战10回合获胜; F19 Monster战 掉血5; F20 Monster战 掉血6; F21 Monster战 掉血34; F22 Monster战 掉血38｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/91局)，FEED(24分/51局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/897 胜，当前目标进阶 0
