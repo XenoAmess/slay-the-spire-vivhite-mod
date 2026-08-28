@@ -3276,6 +3276,36 @@ def main() -> int:
         f"走廊小血池误发开局承诺加成: small={_xc_small} boss={_on_score}"
     del _on_score, _why, _xc_off_score, _xc_small
 
+    # 3xcl（第913局批复盘）：低血承诺观测位——913-F21-T1 实证 30血(37.5%) 对
+    #           意图9 承诺恶魔形态整回合 0 输出白吃 9（urgent 乘区只作用出牌/
+    #           格挡分支，能力分支零感知）。本批只落观测不改分：
+    #           ① 低血+非零意图+承诺发放 → why 带「低血承诺观测」留痕；
+    #           ② 健康血量同局面 → 无观测留痕；
+    #           ③ 阈值置 0 → 低血局面也不留痕，且分值与①严格相等（纯观测
+    #           零评分影响 = 配置回滚锚）。
+    xcl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-commit-lowhp-"))
+    xcl_pol = policy.Policy(knowledge.Knowledge(xcl_dir), random.Random(5))
+    xcl_pow = dict(xc_inflame)
+    xcl_low_score, _, xcl_low_why = xcl_pol._score_play(
+        dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
+        my_hp=30, my_max_hp=80, cur_energy=3, hopeless_race=False, run_deck=[])
+    assert "低血承诺观测" in (xcl_low_why or ""), \
+        f"低血承诺观测留痕缺失: why={xcl_low_why}"
+    xcl_hi_score, _, xcl_hi_why = xcl_pol._score_play(
+        dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
+        my_hp=77, my_max_hp=84, cur_energy=3, hopeless_race=False, run_deck=[])
+    assert "低血承诺观测" not in (xcl_hi_why or ""), \
+        f"健康血量误发观测: why={xcl_hi_why}"
+    xcl_pol.know.policy["power_commit_lowhp_obs_hp_pct"] = 0.0
+    xcl_off_score, _, xcl_off_why = xcl_pol._score_play(
+        dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
+        my_hp=30, my_max_hp=80, cur_energy=3, hopeless_race=False, run_deck=[])
+    assert "低血承诺观测" not in (xcl_off_why or ""), \
+        f"阈值置0观测未关闭: why={xcl_off_why}"
+    assert abs(xcl_off_score - xcl_low_score) < 1e-9, \
+        f"观测位改变了评分（必须纯观测）: on={xcl_low_score} off={xcl_off_score}"
+    del xcl_low_score, xcl_low_why, xcl_hi_score, xcl_hi_why, xcl_off_score, xcl_off_why
+
     # 3xf（第635~640批复盘）：判死竞速致死回合的群体自残攻击解禁——非群体
     #           自残在同一局面走孤注一掷通道照常上砧，旧例唯独把突破族
     #           （小额掉血换全体伤害）压到禁玩线：640 局 F21「全攻提速」

@@ -3627,6 +3627,16 @@ class Policy:
             _commit = float(pol.get("power_round_bonus", 6.0))
             score += _commit
             why += f"｜开局承诺+{_commit:.1f}（引擎整回合在场复利）"
+            # 低血承诺观测位（第913局批复盘）：urgent 态（gap>0 且 hp<45%）下整回合
+            # 承诺的存活视界付不回复利——913-F21-T1 实证 30血(37.5%)对意图 9 整回合
+            # 0 输出白吃 9，与攻击 ×0.75/格挡 ×1.4 的 urgent 乘区只作用出牌/格挡
+            # 分支、能力分支零感知同源。本观测只留痕不改分：留痕跨局计数达
+            # evidence_run_threshold（≥3 独立对局或 1 例改写生死）后，再决定是否
+            # 把承诺/长战加成纳入 urgent 折减；置 0 即关闭观测。
+            _obs_line = float(pol.get("power_commit_lowhp_obs_hp_pct", 0.45))
+            if hp_pct < _obs_line and incoming > 0:
+                why += (f"｜低血承诺观测 hp={hp_pct:.0%}/意图{incoming}"
+                        f"/池{pool:.0f}/承诺+{_commit:.1f}")
         return score, None, why
 
     def _is_respawn_add(self, enemy: dict) -> bool:
