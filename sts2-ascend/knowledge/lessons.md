@@ -5507,3 +5507,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/901 胜，当前目标进阶 0
+
+## 第 902 局复盘（2026-08-28 18:20）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：THUNDERCLAP, INFLAME, HEMOKINESIS, ANGER, DISMANTLE, FLAME_BARRIER, BATTLE_TRANCE, FLAME_BARRIER, THRASH, DEMON_FORM, MOLTEN_FIST, JUGGLING, WHIRLWIND
+- 本局遗物：LANTERN
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血37; F19 Monster战 掉血0; F22 Monster战 掉血13; F23 Monster战 掉血32; F25 Monster战 掉血40｜竞速审计：T4判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/91局)，FEED(24分/51局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/902 胜，当前目标进阶 0
