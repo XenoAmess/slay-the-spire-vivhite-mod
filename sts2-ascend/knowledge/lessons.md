@@ -6057,3 +6057,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.66 → 0.69（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/951 胜，当前目标进阶 0
+
+## 第 952 局复盘（2026-08-29 03:12）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：RAMPAGE, TAUNT, BREAKTHROUGH, ARMAMENTS, WHIRLWIND, IRON_WAVE, RAMPAGE, JUGGLING, INFLAME, WHIRLWIND, INFERNAL_BLADE, HEADBUTT
+- 本局遗物：TUNING_FORK, 水银沙漏, 活动星图
+- 战斗记录：F2 Monster战 掉血3; F6 Monster战 掉血4; F7 Unknown战 掉血0; F12 Elite战 掉血23; F15 Elite战 掉血10｜竞速审计：T4判死→实战6回合获胜; F17 Boss战 掉血36｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/96局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/952 胜，当前目标进阶 0
