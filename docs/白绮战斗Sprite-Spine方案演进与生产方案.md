@@ -2,12 +2,13 @@
 
 > 文档性质：长期维护的架构决策、生产规范与复盘。
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
-> 最后更新：2026-08-28。
+> 最后更新：2026-08-29。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
 > 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
 > death 已总装为隔离的 `hybrid_v3_final`。总装器字段边界、严格五页布局、Spine runtime
-> 专项 validator 与八动画 84 个精确 Windows Vulkan 时刻已通过；连续动作/VFX consumer、
-> 30 文件临时发布、完整不部署 PCK 和本轮真机测试仍是后续门禁。正式 runtime 尚未替换。
+> 专项 validator、八动画 84 个精确 Windows Vulkan 时刻、25 组连续中断（104/104 checkpoint、
+> 50/50 t0 / mix+ε）、真实 `NIroncladVfx` 8 场景、merchant 十相位，以及严格 30 文件
+> Source/Godot/Spine 与完整不部署 PCK 已通过；本轮真机测试仍是后续门禁。正式 runtime 尚未替换。
 > 本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把“本次没启动”误写成项目从未真机测试。
 
 ## 1. 当前结论
@@ -389,8 +390,10 @@ eye、sigil 三槽同时设为 null 与 Alpha 0，每帧恰好一个人物，无
 接入契约冻结为：sigil 在 `.10` 挂载，`.25` 同帧触发 `cast_eyes_start` 并把 neutral 原子切换
 为 `vivhite_combat_cast_peak`，人物可见窗口 `[.25,.60)`，`.60` 切回 neutral，
 `1.222000026` 同帧触发 `clear_vfx` 并卸载 sigil，动画结束于 `1.5666667`。cast 在 `t=0`
-显式清空 slash；EyeFire 不会替骨架清理任何 attachment，因此 action、sigil 和眼部 pose
-anchor 必须由各自时间线同帧切换与复位。`relaxed_loop` 两端仍须重申 neutral 唯一可见，
+触发 `clear_vfx` 清理外部 EyeFire，Spine slot 时间线另行清理 slash；最终事件序列为
+`clear_vfx@0 → cast_eyes_start@.25 → clear_vfx@1.222000026`。EyeFire 不会替骨架清理任何
+attachment，因此 action、sigil 和眼部 pose anchor 必须由各自时间线同帧切换与复位。
+`relaxed_loop` 两端仍须重申 neutral 唯一可见，
 隐藏 action/death/slash/sigil，防止商店随机 seek 进入残留状态。
 
 旧状态只完成静态门禁，随后精确 Windows Vulkan 暴露并纠正了真正的问题：初版 EyeFire
@@ -400,8 +403,9 @@ offset `(40,40)` 的亮核 bbox 为 `(295,257,7,22)`，而同帧双眼约在 `(3
 character-only 正确隔离人物，composite 同时验证 sigil 和眼火的出现、切换与复位。
 
 因此 `0107` 已升级为“隔离候选离线集成通过”，证据在
-`assets/vivhite-ironclad/evaluation/v3-cast-0107-exact/`。仍未完成统一五页总装、从其他动作
-中断进入/离开施法以及用户真机审美门禁；该状态不等于正式 runtime 通过。
+`assets/vivhite-ironclad/evaluation/v3-cast-0107-exact/`。它已进入五页 `hybrid_v3_final`，总装
+cast exact 14/14、连续状态机、真实 consumer 与完整隔离 PCK 均通过；剩余门禁是正式 runtime
+与用户真机审美，该状态仍不等于已部署通过。
 
 ### 5.9 V3 独立死亡连续性闭环
 
@@ -422,9 +426,9 @@ sigil 在 character-only 中同时为 null 与 Alpha 0。实体左边界切换�
 
 这推翻的是“已有死亡图必须再次生成才能修观感”的隐含假设，以及“当前仍是 61px 横跳”的
 旧动态状态；没有推翻“独立侧卧整身 attachment 是正确素材类型”。当前状态为“隔离候选离线
-集成通过”，证据在 `assets/vivhite-ironclad/evaluation/v3-death/`。它尚未进入正式多页 atlas，
-也尚未完成从所有动作中断进入死亡的最终整合与用户真机审美门禁；失败时回退到当前已部署
-runtime，不在坏包上继续测试。
+集成通过”，证据在 `assets/vivhite-ironclad/evaluation/v3-death/`。`0029` 已作为逐字节供体进入
+隔离五页 atlas，attack/heavy/cast/hurt 热源进入 die 的连续序列也已通过；它仍未进入正式
+runtime，用户真机接地与观感仍待验。失败时回退到当前已部署 runtime，不在坏包上继续测试。
 
 ### 5.10 `hurt` 由 neutral 网格承担
 
@@ -435,8 +439,9 @@ mesh 通过保护性收缩、后撤和回弹完成 `hurt`：冲击 `.10`、恢�
 
 受伤轮廓宽度从约 `210 px` 收缩为 `193 px`（约 `-8.1%`），最大质心位移约 `18.478 px`。
 transition mix 冻结为 idle→hurt `.03s`、hurt→hurt `0s`、hurt→idle `.10s`、hurt→die `0s`。
-当前剩余风险是连续受击时上游 `hurt→hurt=0` 会立即重触发；这需要统一候选中的中断测试，
-不是重新生图理由。证据在 `assets/vivhite-ironclad/evaluation/v3-hurt-neutral/`。
+统一候选已覆盖 `hurt` 热源到 hurt/die/idle 等目标并通过 t0 / mix+ε 门禁；连续受击在真实
+游戏速度下的观感仍是用户真机门禁，而不是未完成的状态机测试或重新生图理由。证据在
+`assets/vivhite-ironclad/evaluation/v3-hurt-neutral/`。
 
 ### 5.11 neutral / 商店共同基线
 
@@ -465,21 +470,36 @@ slash / sigil 的真实回归。
 fail closed。发布工具使用 `--runtime-layout v3-five-page`，构建使用
 `/p:IroncladSkinRuntimeLayout=v3-five-page`；默认值没有改变。契约测试 4/4、C# build 0 warning /
 0 error、legacy 26 文件 fixture、V3 30 文件 fixture、Godot/Spine 与最小 PCK 均已离线通过。
+这里的“最小 PCK”仅指早期布局 fixture，不代表 `hybrid_v3_final` 的完整隔离 DLL/PCK 门禁。
 
 `hybrid_v3_final` 已按最小、可反向证明的字段差量创建：以 `hybrid_cast_set` 为结构基线，
 只移植 neutral 三循环的完整 slot 子树、`hurt.bones`，以及 death 的 `vivhite_rig` /
-`vivhite_death_pose` 两个 bone 子树。五张页图分别从 neutral、death、attack、heavy、cast
+`vivhite_death_pose` 两个 bone 子树。真实 consumer 随后复现 `cast→cast` 时旧 EyeFire 残留，
+因此新增了唯一一项有运行证据的差量：`cast.events` 首项 `clear_vfx@0`。五张页图分别从
+neutral、death、attack、heavy、cast
 已验收供体逐字节复制，不重新编码 PNG。总装器连续两次输出哈希一致；反向归一化后与 cast
-基线语义完全相等，未发现越界字段变化。
+基线语义完全相等，未发现越界字段变化。最终 Spine JSON SHA-256 为
+`608DE3B142BB24A5D2BD402C24B6B1BAD4E643C0896D5931C854BAFE5353AAA1`。
 
 候选专项 validator 已通过 8 authored / 5 pages / 35 bones / 6 slots / 8 animations / 4 events，
 并完成 73 次 runtime 语义检查。总装版八动画又以真实游戏 Spine GDExtension 和 Windows Vulkan
 完成 84 个精确时刻：neutral `5+5+9`、attack/heavy/cast 各 14、hurt 7、die 16；全部保持
-单人物、非空、无触边，四个原子窗口也按既定附件契约切换。该证据仍是 fresh exact sampler，
-不能替代连续 AnimationState、真实 `NIroncladVfx`、merchant consumer 或真机验收。
+单人物、非空、无触边，四个原子窗口也按既定附件契约切换。单独看 fresh exact sampler 不能
+替代连续 AnimationState、真实 `NIroncladVfx`、merchant consumer 或真机验收；前三项已由下段
+专项证据补齐，真机仍未执行。
 
-正式 `Vivhite/Vivhite/skins/ironclad/**` 仍保持 legacy，没有部署或重启游戏。下一步必须先完成
-连续中断与隔离 30 文件/PCK 门禁；不能把当前隔离候选冒充正式 runtime。
+后续连续门禁已补齐到 25 条同实例 AnimationState 序列，104/104 个 Vulkan checkpoint 与
+50/50 个 target t0 / mix+ε 六槽检查通过；没有复现 slash、sigil、action 或 death attachment
+残留，因此没有批量增加 t0 reset。acceptance-only C# bridge 直接实例化当前游戏程序集的真实
+`NIroncladVfx`：修复前 8 场景中唯一失败是 `cast@.30→cast@0`，旧 EyeFire 在 `.06s` 后仍可见；
+隔离 A/B 证明零时 `clear_vfx` 的真实信号顺序位于 `animation_started` 之后、首个 epsilon 之前，
+并保留 `.25` 再开启、`1.222000026` 再关闭。正式修复候选复跑为 8/8。merchant 正式 PackedScene
+布局与 candidate override 的十个 dirty seek 相位也全部 body-only；standalone 中
+`NMerchantCharacter` C# 未绑定，报告明确只把该段称为真实布局 + 已验证 seek 合约代理。
+
+正式 `Vivhite/Vivhite/skins/ironclad/**` 仍保持 legacy，没有部署或重启游戏。连续状态机、真实
+VFX、merchant、严格 30 文件 Source/Godot/Spine 与完整隔离 PCK 已完成；下一步只保留明确
+授权后的正式发布和真机，不能把当前隔离候选冒充正式 runtime。
 
 ## 6. 并行研究线：约 8 个生成语义组
 
@@ -643,16 +663,15 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 
 ## 10. 目前的实施优先级
 
-1. 保持已完成的唯一 `hybrid_v3_final` 最小字段总装与八动画 84 帧精确 Vulkan 基线；不得用任一
-   分项整包覆盖，也不得修改默认 legacy runtime；
-2. 在统一候选中继续复测连续 AnimationState 的所有 mix、中断/恢复、EyeFire / slash / sigil 生命周期，
-   并对 `relaxed_loop` 做商店随机 seek；
-3. 量化 neutral 当前约为原战士高度 `1.389×` 的布局影响；同时检查 attack recovery、heavy
-   `17.27 px` 切入质心、hurt 连续重触发和所有动作进入 death；
-4. 完成 combat layout、普通/伪商店、角色选择、篝火、UI 与多人离线回归；没有第二客户端时
+1. 冻结当前 JSON/页图哈希和 84/25/8/10 基线；不得用任一分项整包覆盖，也不得修改默认
+   legacy runtime；
+2. 固化已经通过的严格 30 文件 Source/Godot/Spine 成功摘要；
+3. 固化 rest-site、character-select、UI 与 multiplayer 的后置离线回归；没有第二客户端时
    多人只能标记资源通过；
-5. 只有离线总装全部通过，才显式选择 `v3-five-page` 做不部署的完整 build/PCK；随后备份旧三件套，
-   进入真实游戏做用户验收。不得启动 Bilibili 直播；
+4. 固化已经通过的完整隔离、不部署 PCK 门禁，以及正式 runtime、Vivhite mods 与 RitsuLib mods
+   前后不变的哈希证据；
+5. 获得明确部署授权后再备份、部署，并检查 `1.389×` 尺寸、attack recovery、heavy `17.27 px`
+   位移、连续受击及死亡接地观感。不得启动 Bilibili 直播；
 6. 拆件研究线保留证据但不阻塞 Hybrid 主线。躯干组没有用户追加额度前禁止第 9 次生成。
 
 这样从最小端到端闭环开始，避免先花完所有图的额度，最后才发现 slot、方向或切换架构不对。
@@ -709,3 +728,13 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
   death 两 bone”的最小语义合并和五个逐字节页供体。总装器双跑确定性、专项 validator 的 73 次
   runtime 检查及八动画 84 个精确 Windows Vulkan 时刻通过；正式 legacy runtime 未修改，连续
   `AnimationState` / `NIroncladVfx`、临时 30 文件、完整不部署 PCK 与真机仍保留为下一道门禁。
+- 2026-08-28：连续 25 序列首次证明 Spine slot 无需批量 t0 reset；真实 `NIroncladVfx` 8 场景
+  则精确复现唯一 `cast→cast` 残眼。以 `cast clear_vfx@0` 做隔离 A/B 并修复，最终候选重跑
+  25/25 序列、104/104 checkpoint、50/50 t0/mix+ε、真实 consumer 8/8 与 merchant 10/10；
+  记录旧结论、纠正证据及 C# consumer/standalone merchant 的不同保真边界。
+- 2026-08-29：统一 wrapper 在全新隔离目录复跑总装、严格 30 文件与四套 Spine、84/84 exact、
+  25/25 连续序列（104/104 checkpoint、50/50 t0/mix+ε）、真实 `NIroncladVfx` 8/8 和 merchant
+  10/10；rest-site、character-select、UI 与多人资源也完成后置离线回归。完整 no-deploy PCK
+  复跑为 0 warning / 0 error、101 entries，正式 runtime 与两套游戏 mods 哈希树均未变化；同时
+  用 `UseSharedCompilation=false` 修复 `Start-Process -Wait` 被 Roslyn server 拖延的问题。只剩明确
+  授权后的正式发布和真机，legacy runtime 未修改。

@@ -1,7 +1,7 @@
 # 白绮 AI 生成图 Prompt 工程手册
 
 > 状态：长期维护文档
-> 最近更新：2026-08-28
+> 最近更新：2026-08-29
 > 适用范围：原版战士视觉替换、独立白绮角色及其 UI、Spine、Sprite、场景美术
 > 唯一透明生成链：EvoLink `gpt-image-2` + `background: "transparent"`
 
@@ -662,8 +662,12 @@ offset：cast 窗口 `(194,-292)`，`.60` 切回 neutral 后使用 `(72,-282)`�
 清除；眼火、sigil 与人物层在 character-only / composite 分层证据中均按契约出现和复位。
 证据在 `assets/vivhite-ironclad/evaluation/v3-cast-0107-exact/`。随后它与 neutral、attack、heavy、
 hurt、death 一起进入隔离 `hybrid_v3_final`；总装版 cast 再次通过 14 个精确 Vulkan 时刻，五张
-atlas 页均是已验收供体的逐字节副本，没有发生新的付费生成、Alpha 修改或 PNG 重编码。仍未
-完成的是真实连续中断、正式 runtime 与用户审美门禁；不得写成已部署或真机通过。
+atlas 页均是已验收供体的逐字节副本，没有发生新的付费生成、Alpha 修改或 PNG 重编码。总装
+整体已完成 84/84 exact、25/25 连续序列、104/104 checkpoint 与 50/50 t0 / mix+ε。真实
+`NIroncladVfx` 修复前唯一失败为 `cast→cast` 外部 EyeFire 残留，加入动画事件 `clear_vfx@0`
+后正式复跑 8/8；merchant dirty seek 10/10。该消费者修复不改变 0107 图片、Alpha、atlas 像素、
+Prompt 结论或生成次数。完整隔离 PCK 已通过；正式 runtime 与用户审美门禁仍未完成，不得
+写成已部署或真机通过。
 
 ### 10.4 拆件批次收口后的 Prompt 结论
 
@@ -684,8 +688,8 @@ atlas 页均是已验收供体的逐字节副本，没有发生新的付费生�
   远/近前臂手、远/近小腿靴一体。这里的“缺 13 个”不代表其他研究件已经生产通过。
 
 右小腿 `0096–0103` 八轮原图、Prompt 与脱敏参数已完整归档；不合格结果继续保留，但不会被
-程序拼接、Alpha 修补或冒充最终素材。后续接手者应先完成统一 Hybrid 五页总装与真机门禁，
-再决定是否值得申请新的拆件生成额度。
+程序拼接、Alpha 修补或冒充最终素材。五页 Hybrid 总装与完整隔离 PCK 已经完成并应冻结；
+后续先完成明确授权后的真机门禁，再决定是否值得申请新的拆件生成额度。
 
 ## 11. 每次调用前后的最小清单
 
@@ -784,3 +788,10 @@ atlas 页均是已验收供体的逐字节副本，没有发生新的付费生�
 - 2026-08-28：`0104/0106/0107` 与冻结 neutral/hurt/death 进入隔离 `hybrid_v3_final`；五个
   atlas 页均从已验收供体逐字节复制，没有新付费调用、Alpha 修补或 PNG 重编码。总装版八动画
   84 个精确 Vulkan 时刻通过；状态仍限定为隔离候选，连续中断、正式 runtime 和用户真机待验。
+- 2026-08-28：总装连续 25 序列与真实 `NIroncladVfx` 复验；唯一 `cast→cast` 残眼由
+  `clear_vfx@0` 修复并实跑 8/8。该消费者修复没有触碰 0107 原图或 atlas 页，故不新增生成尝试，
+  也不改变 `0104/0106/0107` 各 1/8 次的消费记录。
+- 2026-08-29：最终隔离候选复跑 84/84 exact、25/25 连续序列、104/104 checkpoint、50/50
+  t0 / mix+ε、真实 `NIroncladVfx` 8/8 与 merchant 10/10；严格 30 文件 Source/Godot/Spine
+  同步通过。完整 no-deploy PCK 随后以 0 warning / 0 error 和三棵保护树不变通过；没有新付费
+  调用、图片、Prompt、Alpha 或 atlas 像素变化。正式 runtime 和用户真机仍待验。
