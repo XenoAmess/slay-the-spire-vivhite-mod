@@ -20,6 +20,7 @@
 | 左靴（画面左/后腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 04 的造型、留白和约 5274 个低 Alpha 外围像素最平衡，仅作为评审候选。 |
 | 右靴（画面右/前腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 08 最小且朝向正确，但插片多出金饰，仅作为评审候选。 |
 | 左大腿（画面左/后腿） | 8/8 | 待用户统一评审 | attempt 08 得到直轴、实心两端、小尺寸单件且低 Alpha 外围最少，但仍有明显白色柔光。 |
+| 右大腿（画面右/前腿） | 8/8 | 待用户统一评审 | attempt 04 的方向、实心搭接端、服装分区和比例最协调；八次均未消除外围柔光，仅作为评审候选。 |
 
 ## 前刘海逐次记录
 
@@ -98,5 +99,18 @@
 8. `0079-split-leg-left-thigh-attachment-attempt-08`：方形画布和小尺寸平面面片；直轴、实心两端、单物件和服装分区均可用，非零 Alpha 34508，其中约 3499 低于 128，为本组最低；白色主体周围仍有清晰柔光。
 
 左大腿已达到 8 次硬上限，现按规则跳过。当前最佳评审候选为 `0079-split-leg-left-thigh-attachment-attempt-08`；除非用户明确追加该语义素材额度，否则不得调用第 9 次或放入生产 atlas。
+
+## 右大腿逐次记录
+
+1. `0080-split-leg-right-thigh-attachment-attempt-01`：按人体上腿语义提交的请求被 EvoLink 以 `content_policy_violation` 拒绝；没有返回 PNG，但 Prompt、脱敏请求与 task 记录均已归档。
+2. `0081-split-leg-right-thigh-attachment-attempt-02`：改为通用对角 rig component 后成功返回，方向和色块顺序正确；上端扩成蘑菇状宽帽、下端近似鞋尖，且 77259 个非零 Alpha 中约 5077 个低于 128。
+3. `0082-split-leg-right-thigh-attachment-attempt-03`：缩小并收紧两端后得到直轴、实心端和正确金色标记；主体略像细长笔杆，32279 个非零 Alpha 中约 3593 个低于 128。
+4. `0083-split-leg-right-thigh-attachment-attempt-04`：使用明确分色的浅薰衣草灰面片；方向、比例、两端搭接、深蓝袜带和金色标记最协调，四边不触碰。40556 个非零 Alpha 中约 3149 个低于 128，登记为当前最佳评审候选。
+5. `0084-split-leg-right-thigh-attachment-attempt-05`：进一步缩小并加深灰色；几何仍可用，但 33525 个非零 Alpha 中约 3270 个低于 128，未优于 attempt 04。
+6. `0085-split-leg-right-thigh-attachment-attempt-06`：改用竖向画布和更小构图；返回主体过细过长、近似针杆，服装比例失真，19581 个非零 Alpha 中约 2898 个低于 128，周围仍有清晰光场。
+7. `0086-split-leg-right-thigh-attachment-attempt-07`：把无灯光、无投影、仅一像素抗锯齿提升为主渲染规格；模型仍生成大面积展示光场，且主体再次过细过长，39723 个非零 Alpha 中约 3908 个低于 128。
+8. `0087-split-leg-right-thigh-attachment-attempt-08`：最后改为短而宽的正交矢量切层和精确分区；几何更结实，但仍像独立胶囊贴片，外围柔光未消失，65721 个非零 Alpha 中约 3908 个低于 128。
+
+右大腿已达到 8 次硬上限，现按规则跳过。当前最佳评审候选为 `0083-split-leg-right-thigh-attachment-attempt-04`；除非用户明确追加该语义素材额度，否则不得调用第 9 次或放入生产 atlas。
 
 所有检查仅做离线素材与 Vulkan 预览，不部署、不启动或重启游戏，也不触发直播。
