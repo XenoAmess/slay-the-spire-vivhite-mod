@@ -2707,14 +2707,22 @@ class Policy:
                 # 换挡上浮校准（RACE_LATCH_DPT_UPSHIFT，第823~832局批复盘）：
                 # 实测均值取自防守姿态的开局回合，而判死判决本身的行为后果
                 # 就是全攻换挡——审计首窗实测入锁后输出 10→15~17伤/回合
-                # （832局F17），8场入锁3场实战获胜触发预注册收紧。非升级桶
-                # 的实测 dpt 按 race_latch_dpt_uplift 上浮后再对账；升级桶
-                # （esc_gate）与先验分支维持原口径。0 或缺键即整体关闭。
-                if self._krace_turns >= 2 and not esc_gate and dpt > 0:
-                    _up = max(0.0, float(pol.get("race_latch_dpt_uplift", 0.0)))
+                # （832局F17），8场入锁3场实战获胜触发预注册收紧。实测 dpt
+                # 按桶上浮后再对账：普通桶走 race_latch_dpt_uplift；升级桶
+                # （esc_gate）自第917~918局批复盘起接替同一语义（台账 esc 桶
+                # 88/184=47.8% 判死局实战获胜，超 30% 预注册线，且该桶预注册
+                # 杠杆 margin/fire inflate 均已用尽）——独立键
+                # race_latch_dpt_uplift_eff（默认 0.20 保守档），只改判决侧
+                # ttk，防守复核火力与 fire inflate 不动。先验分支（回合数
+                # 不足）维持原口径。0 或缺键即整体关闭。
+                if self._krace_turns >= 2 and dpt > 0:
+                    _up = max(0.0, float(pol.get(
+                        "race_latch_dpt_uplift_eff" if esc_gate
+                        else "race_latch_dpt_uplift", 0.0)))
                     if _up > 0.0:
                         dpt = dpt * (1.0 + _up)
-                        dpt_src = (f"{dpt_src}×(1+换挡上浮{_up:.2f})"
+                        _up_tag = "升级桶×(1+换挡上浮" if esc_gate else "×(1+换挡上浮"
+                        dpt_src = (f"{dpt_src}{_up_tag}{_up:.2f})"
                                    f"→{dpt:.0f}伤/回合校准")
                 if dpt > 0:
                     loss_rate = self._race_loss_rate if (

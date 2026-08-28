@@ -2832,7 +2832,10 @@ def main() -> int:
     krc_es.credit_tags.extend(d_es_t1.tags)
     d_es_t2 = pol_es.decide(esc_state(2, 55, 7, 48), krc_es)  # T2：趋势+3，升级计数 1
     krc_es.credit_tags.extend(d_es_t2.tags)
-    d_es = pol_es.decide(esc_state(3, 30, 24, 36), krc_es)  # T3：趋势+17 计数 2 → 开账
+    d_es = pol_es.decide(esc_state(3, 30, 24, 48), krc_es)  # T3：趋势+17 计数 2 → 开账
+    # （池 48：3zsu 起 esc 桶实测对账按 race_latch_dpt_uplift_eff=0.20 上浮，
+    #   池 36 的旧边际落进上浮后的容差带——开账语义与池大小无关，抬池保持
+    #   「升级门开账→竞速路线」的原测试锚不漂移）
     assert d_es.action == "play_card" and d_es.params.get("card_index") == 0, \
         f"升级型低血池组合未走竞速路线: {d_es.action}（{d_es.reason}）"
     assert "斩杀竞速投影" in d_es.reason, f"升级门未开账: {d_es.reason}"
@@ -5167,6 +5170,72 @@ def main() -> int:
     d_e5 = pol_escr5.decide(esc_race_state(3, 71, 24, esc_blk_deck), esc_ctx)
     assert "升级账" not in d_e5.reason and "斩杀竞速投影" in d_e5.reason, \
         f"eff=0 未按整体关闭回滚: {d_e5.reason}"
+
+    # 3zsu-a) esc 桶换挡上浮留痕（RACE_ESC_DPT_UPSHIFT_EFF，第917~918局批复盘）：
+    #      判决侧实测对账按桶取上浮键——esc 桶默认 race_latch_dpt_uplift_eff=0.20，
+    #      d_e1 实测分支 + esc 桶 → 留痕带「升级桶×(1+换挡上浮0.20)」前缀
+    assert "升级桶×(1+换挡上浮0.20)" in d_e1.reason, \
+        f"esc 桶实测判死对账未按 race_latch_dpt_uplift_eff 上浮留痕: {d_e1.reason}"
+    assert "×(1+换挡上浮0.35)" in d_lag.reason, \
+        f"非 esc 桶换挡上浮留痕缺失: {d_lag.reason}"
+
+    # 3zsu-b) esc 桶换挡上浮的边际矫正与回滚对照（RACE_ESC_DPT_UPSHIFT_EFF）：
+    #      换挡的物理成因是判决自身触发的全攻提速，与敌人是否升级无关——
+    #      台账 esc 桶 88/184=47.8% 判死局实战获胜（>30% 预注册线）且该桶
+    #      预注册杠杆（margin 零余量 / fire inflate 校准）已用尽。边际对局：
+    #      池 55、实测 20 伤/回合、意图 24、血 24——判决阈值=可存活1.0+margin
+    #      1.5=2.50，裸口径 ttk 2.75＞2.50 判死（误差带内误判），上浮 0.20 后
+    #      ttk≈2.29≤2.50 不再误判；eff=0 回滚＝裸实测口径恢复判死且无
+    #      「升级桶」留痕。
+    zsu_ctx = type("ZSUCTX", (), {"combat": {"comp_id": "ZSU_RACE_COMP",
+                                             "node_type": "Monster"},
+                                  "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+
+    def zsu_state(turn_no, hp_now):
+        hand = [
+            {"index": 0, "card_id": "ZS_HIT", "name": "速攻", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+            {"index": 1, "card_id": "ZS_HIT2", "name": "速攻二号", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0,
+                                  "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "ZSU_RACE_COMP",
+                                    "name": "滚雪球虫", "current_hp": 55,
+                                    "max_hp": 60, "block": 0, "is_alive": True,
+                                    "is_hittable": True,
+                                    "intents": [{"total_damage": (4, 7, 24)[turn_no - 1]}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5,
+                    "deck": [{"card_id": f"ZS_WK_{i}", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+                             for i in range(4)]}}
+
+    pol_zsu = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-zsuup-"))), random.Random(11))
+    pol_zsu.decide(zsu_state(1, 71), zsu_ctx)
+    pol_zsu.decide(zsu_state(2, 66), zsu_ctx)
+    pol_zsu._krace_turns = 2
+    pol_zsu._krace_dmg = pol_zsu._krace_dmg_sustained = 40.0
+    d_zsu_on = pol_zsu.decide(zsu_state(3, 24), zsu_ctx)
+    assert "斩杀竞速投影" not in d_zsu_on.reason, \
+        f"esc 桶换挡上浮未矫正边际误判: {d_zsu_on.action}（{d_zsu_on.reason}）"
+    pol_zsu2 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-zsuup2-"))), random.Random(11))
+    pol_zsu2.know.policy["race_latch_dpt_uplift_eff"] = 0
+    pol_zsu2.decide(zsu_state(1, 71), zsu_ctx)
+    pol_zsu2.decide(zsu_state(2, 66), zsu_ctx)
+    pol_zsu2._krace_turns = 2
+    pol_zsu2._krace_dmg = pol_zsu2._krace_dmg_sustained = 40.0
+    d_zsu_off = pol_zsu2.decide(zsu_state(3, 24), zsu_ctx)
+    assert "斩杀竞速投影" in d_zsu_off.reason and "升级桶" not in d_zsu_off.reason, \
+        f"eff=0 未按裸实测口径回滚: {d_zsu_off.action}（{d_zsu_off.reason}）"
 
     accepted_combat(pol_lag2, lag_race_state(1, 4, lag_deck), lag_ctx)
     pol_lag2._krace_turns = 2
