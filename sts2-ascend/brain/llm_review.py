@@ -110,6 +110,11 @@ def _review_work_root() -> Path:
     return Path(REPO_DIR) / "sts2-ascend" / "knowledge" / "code_backups" / "review_work"
 
 
+def _review_hold_root() -> Path:
+    """Operator-preserved packages that outlive an older host's bad closure."""
+    return SALVAGE_ROOT.parent / "review_hold"
+
+
 def _new_review_temp(prefix: str) -> Path:
     root = _review_work_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -1988,7 +1993,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             closure_result = _close_replayed_salvages(
                 replay_packages, replay_attempts,
                 closure_resolutions,
-                commit=result.commit, pushed=review_pushed, log=log)
+                commit=result.commit, pushed=review_pushed,
+                evidence_schema=(
+                    _RETRY_SANDBOX_EVIDENCE_SCHEMA
+                    if sandbox.replay_evidence_complete else 0),
+                log=log)
             _status["closed_salvage_packages"] = closure_result["closed"]
             _status["host_pending_salvage_packages"] = closure_result["host_pending"]
         if hot_restart:
@@ -2579,6 +2588,242 @@ def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
     return runs, evidence_only
 
 
+def _review_hold_packages() -> list[tuple[Path, Path, dict]]:
+    """Return (container, package, manifest) from the ignored hold root only."""
+    root = _review_hold_root()
+    if not root.is_dir():
+        return []
+    found: list[tuple[Path, Path, dict]] = []
+    try:
+        containers = sorted(
+            (path for path in root.iterdir()
+             if path.is_dir() and not path.name.startswith(".")),
+            key=lambda path: path.name)
+    except OSError:
+        return []
+    for container in containers:
+        direct_manifest = container / "manifest.json"
+        candidates = [container] if direct_manifest.is_file() else []
+        if not candidates:
+            try:
+                candidates = sorted(
+                    (path for path in container.iterdir()
+                     if path.is_dir() and not path.name.startswith(".")),
+                    key=lambda path: path.name)
+            except OSError:
+                continue
+        for package in candidates:
+            manifest_path = package / "manifest.json"
+            if not manifest_path.is_file():
+                continue
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(manifest, dict):
+                    continue
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+            found.append((container, package, manifest))
+    return found
+
+
+def _review_hold_contains_package(package_name: str) -> bool:
+    names = _normalize_salvage_package_names([package_name])
+    return bool(names) and any(
+        package.name == names[0] for _container, package, _manifest
+        in _review_hold_packages())
+
+
+def _hold_tree_inventory(root: Path) -> dict[str, tuple[str, int | str]]:
+    """Inventory one exact held package; this is not a repository fingerprint."""
+    inventory: dict[str, tuple[str, int | str]] = {}
+    for walk_root, directories, files in os.walk(root, topdown=True, followlinks=False):
+        base = Path(walk_root)
+        kept_directories: list[str] = []
+        for name in sorted(directories):
+            path = base / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                inventory[relative] = ("symlink", os.readlink(path))
+            else:
+                inventory[relative] = ("dir", 0)
+                kept_directories.append(name)
+        directories[:] = kept_directories
+        for name in sorted(files):
+            path = base / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                inventory[relative] = ("symlink", os.readlink(path))
+            else:
+                inventory[relative] = ("file", path.stat().st_size)
+    return inventory
+
+
+def _restore_review_hold_package(source: Path, log=print) -> Path | None:
+    """Resume-copy one whole held package, then atomically publish its exact name."""
+    name = source.name
+    final = SALVAGE_ROOT / name
+    if final.is_dir():
+        return final
+    temp = SALVAGE_ROOT / f".hold-restore-{name}"
+    try:
+        SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(
+            source, temp, dirs_exist_ok=True, symlinks=True,
+            ignore_dangling_symlinks=True, copy_function=_copy_snapshot_file)
+        if _hold_tree_inventory(source) != _hold_tree_inventory(temp):
+            raise OSError("hold 恢复后的逐文件类型/大小清单不一致")
+        if final.exists():
+            # Another recovery pass won the exact publish race.  Keep its package;
+            # the partial temp remains resumable and will be ignored by scanners.
+            return final if final.is_dir() else None
+        _replace_with_retry(temp, final)
+        log(f"[llm] 已从 review_hold 原子恢复完整失败包：{name}")
+        return final
+    except _ReviewStopped:
+        log(f"[llm] 停止期间暂停恢复 hold；部分副本留待下次续传：{name}")
+        return None
+    except Exception as exc:
+        log(f"[llm] review_hold 恢复失败；hold 与部分副本均保留：{name}（{exc}）")
+        return None
+
+
+def _manifest_has_full_replay_receipt(manifest: dict) -> bool:
+    try:
+        schema = int(manifest.get("retry_resolution_evidence_schema") or 0)
+    except (TypeError, ValueError):
+        schema = 0
+    return bool(
+        manifest.get("retry_resolution_evidence_complete") is True
+        and schema >= _RETRY_SANDBOX_EVIDENCE_SCHEMA
+        and manifest.get("retry_resolution") in {"integrated", "no_valid_change"}
+        and manifest.get("retry_resolution_commit"))
+
+
+def _reset_hold_manifest_for_full_replay(
+    package: Path,
+    held_manifest: dict,
+    *,
+    target: str,
+    role: str,
+    attempts: list[str],
+    hold_container: Path,
+) -> bool:
+    """Invalidate only pre-full-evidence receipts and restore durable lineage."""
+    try:
+        active = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+        if not isinstance(active, dict):
+            return False
+        if _manifest_has_full_replay_receipt(active):
+            return False
+        before = dict(active)
+        for key in list(active):
+            if key.startswith("retry_resolution"):
+                active.pop(key, None)
+        active.update({
+            "replay_enqueue_pending": True,
+            "replay_target": target,
+            "replay_role": role,
+            "review_hold_requires_evidence_schema": _RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "review_hold_recovered_at": (
+                active.get("review_hold_recovered_at")
+                or time.strftime("%Y-%m-%d %H:%M:%S")),
+            "review_hold_source": (
+                f"{hold_container.name}/{package.name}"),
+        })
+        if role == "target":
+            active["replay_attempt_packages"] = list(attempts)
+        else:
+            active.pop("replay_attempt_packages", None)
+        # A held manifest predates some later materialization fields.  Keep the
+        # active package's complete evidence metadata, while filling any original
+        # queue identity that an older closure may have removed.
+        for key in (
+            "batch_runs", "current_run", "run", "time", "pre_head", "model",
+            "runner", "source", "every", "reason", "failure_kind",
+            "replay_queue_ids",
+        ):
+            if key not in active and key in held_manifest:
+                active[key] = held_manifest[key]
+        if active != before:
+            _publish_manifest_update(package, active)
+            return True
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+    return False
+
+
+def _recover_review_holds(log=print) -> list[str]:
+    """Restore operator-held lineages deleted/closed by a pre-fix review host."""
+    records = _review_hold_packages()
+    if not records or _review_stop_requested():
+        return []
+    groups: dict[str, list[tuple[Path, Path, dict]]] = {}
+    for container, package, manifest in records:
+        normalized = _normalize_salvage_package_names([
+            manifest.get("replay_target") or package.name])
+        if not normalized:
+            continue
+        groups.setdefault(normalized[0], []).append((container, package, manifest))
+
+    recovered: list[str] = []
+    for target, lineage_records in groups.items():
+        if _review_stop_requested():
+            break
+        # A full-evidence receipt already in quarantine is a valid in-flight host
+        # closure.  Do not resurrect it while ledger cleanup is proceeding.
+        quarantine = SALVAGE_ROOT / f"{_CLOSED_SALVAGE_PREFIX}{target}"
+        try:
+            quarantine_manifest = json.loads((
+                quarantine / "manifest.json").read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, ValueError, TypeError, json.JSONDecodeError):
+            quarantine_manifest = {}
+        if _manifest_has_full_replay_receipt(quarantine_manifest):
+            continue
+
+        by_name = {package.name: (container, package, manifest)
+                   for container, package, manifest in lineage_records}
+        target_record = by_name.get(target)
+        if target_record is None:
+            log(f"[llm] review_hold lineage 缺少 target 原件，保持 hold：{target}")
+            continue
+        target_manifest = target_record[2]
+        declared_attempts = _normalize_salvage_package_names(
+            target_manifest.get("replay_attempt_packages") or [])
+        discovered_attempts = _normalize_salvage_package_names([
+            name for name, (_container, _package, manifest) in by_name.items()
+            if name != target and manifest.get("replay_role") == "attempt_evidence"
+        ])
+        attempts = _normalize_salvage_package_names([
+            *declared_attempts, *discovered_attempts])
+        missing = [name for name in attempts if name not in by_name]
+        if missing:
+            log("[llm] review_hold lineage 缺少声明的 attempt 原件，整组保持 hold："
+                f"target={target}, missing={missing}")
+            continue
+        ordered = [target, *attempts]
+        for name in ordered:
+            if _review_stop_requested():
+                break
+            container, source, held_manifest = by_name[name]
+            active = SALVAGE_ROOT / name
+            was_missing = not active.is_dir()
+            if not active.is_dir():
+                active = _restore_review_hold_package(source, log=log) or active
+            if not active.is_dir():
+                continue
+            role = "target" if name == target else "attempt_evidence"
+            changed = _reset_hold_manifest_for_full_replay(
+                active, held_manifest, target=target, role=role,
+                attempts=attempts, hold_container=container)
+            if was_missing or changed:
+                recovered.append(name)
+        if (any(name in recovered for name in ordered)
+                and all((SALVAGE_ROOT / name).is_dir() for name in ordered)):
+            log(f"[llm] review_hold lineage 已恢复并等待完整证据 GLM 重审："
+                f"target={target}, attempts={attempts}")
+    return recovered
+
+
 def _recover_salvage_replay_queue(log=print) -> None:
     """Reconcile atomically published packages with the durable target queue.
 
@@ -2832,6 +3077,8 @@ def _ensure_worker(agent, log) -> None:
 
 def _salvage_recovery_needed() -> bool:
     """Cheap startup probe for host work that exists outside review_queue.json."""
+    if _review_hold_packages():
+        return True
     if not SALVAGE_ROOT.is_dir():
         return False
     host_states = {
@@ -3758,7 +4005,7 @@ def _finalize_salvage_resolution(package: Path, manifest: dict, log=print) -> bo
 
 def _close_replayed_salvages(
     package_names, attempt_names, resolutions: dict, *,
-    commit: str, pushed: bool, log=print,
+    commit: str, pushed: bool, evidence_schema: int = 0, log=print,
 ) -> dict[str, list[str]]:
     """Persist GLM receipts and let the host close only remotely accepted work."""
     result = {"closed": [], "host_pending": []}
@@ -3772,6 +4019,12 @@ def _close_replayed_salvages(
     if resolution not in {"integrated", "no_valid_change"}:
         return result
     lineage = _normalize_salvage_package_names([target, *attempt_names])
+    if (any(_review_hold_contains_package(name) for name in lineage)
+            and int(evidence_schema or 0) < _RETRY_SANDBOX_EVIDENCE_SCHEMA):
+        result["host_pending"].append(target)
+        log("[llm] held lineage 缺少完整证据 schema 回执；忽略旧结论并保留 GLM 重审："
+            f"{target}")
+        return result
     code_upstream = bool(pushed or _upstream_contains_commit(commit))
     # Persist the complete lineage on the target first.  If the host crashes at
     # any later instruction, startup can propagate the same GLM receipt without
@@ -3794,6 +4047,8 @@ def _close_replayed_salvages(
                 "retry_resolution_state": (
                     "code_upstream_confirmed" if code_upstream
                     else "claimed_pending_code_push"),
+                "retry_resolution_evidence_complete": True,
+                "retry_resolution_evidence_schema": int(evidence_schema or 0),
             })
             _publish_manifest_update(package, manifest)
             prepared.append((name, package, manifest))
@@ -6067,6 +6322,13 @@ def _worker_loop_body(agent, log) -> None:
     _recover_deferred_salvages(log=log)
     if _review_stop_requested():
         return
+    # Operator-preserved packages may be the only surviving copy after an older
+    # host accepted a prompt-truncated conclusion.  Restore that full lineage
+    # before parsing historical receipts, so an old no_valid_change cannot close
+    # it again without the mounted-evidence schema proof.
+    _recover_review_holds(log=log)
+    if _review_stop_requested():
+        return
     # A previous GLM run may have pushed a valid receipt that an older parser
     # failed to recognize.  Recover that durable upstream fact before rebuilding
     # the replay queue, otherwise the already-closed target would be paid for and
@@ -6111,6 +6373,9 @@ def _worker_loop_body(agent, log) -> None:
                 # Keep the three host transactions in this order even when the
                 # first call finds nothing new.  A crash may have persisted the
                 # receipt state but not yet acknowledged its queue items.
+                _recover_review_holds(log=log)
+                if _review_stop_requested():
+                    return
                 _recover_committed_retry_resolutions(log=log)
                 if _review_stop_requested():
                     return
