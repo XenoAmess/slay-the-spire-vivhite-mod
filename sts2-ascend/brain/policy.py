@@ -2688,8 +2688,14 @@ class Policy:
                             danger_note += (f"；对账火力取意图{float(incoming):.0f}"
                                             f"（EMA滞后修正）")
                         if esc_gate:
+                            # 审计校准（RACE_ESC_FIRE_INFLATE_CALIB，第808~812局
+                            # 批复盘）：竞速审计台账 esc 桶 23/52=44.2% 判死局实战
+                            # 获胜（>30% 预注册线），0.40 上浮定价过悲——改走 eff 键
+                            # 0.20 档；缺键回落旧键原口径，0 即整体关闭
                             _fire_grow = float(pol.get(
-                                "escalation_race_fire_inflate", 0.0))
+                                "escalation_race_fire_inflate_eff",
+                                float(pol.get("escalation_race_fire_inflate",
+                                              0.0))))
                             if _fire_grow > 0:
                                 _feas_fire *= (1.0 + _fire_grow)
                                 danger_note += (

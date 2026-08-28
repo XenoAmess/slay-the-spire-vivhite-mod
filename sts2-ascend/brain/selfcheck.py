@@ -5013,6 +5013,32 @@ def main() -> int:
     pol_lag2 = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-lagfire2-"))), random.Random(11))
     pol_lag2.know.policy["joint_feas_fire_honest"] = False
+    # 3kx) esc 桶防火力上浮的审计校准（RACE_ESC_FIRE_INFLATE_CALIB，第808~812局
+    #      批复盘）：竞速审计台账 esc 桶 23/52=44.2% 判死局实战获胜（>30% 预注册
+    #      线），触发前批预注册的「按桶收紧 fire inflate」——esc 桶复核火力上浮
+    #      改走 escalation_race_fire_inflate_eff=0.20（留痕 ×1.20）；回退对照：
+    #      eff 拉回 0.40 复现旧口径 ×1.40，eff=0 复现「整体关闭」无升级账留痕。
+    assert "升级账" in d_e1.reason and "×1.20计价拖延成本" in d_e1.reason, \
+        f"esc 桶复核火力未按审计校准 0.20 计价: {d_e1.reason}"
+    esc_ctx.credit_tags = []
+    pol_escr4 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escfire2-"))), random.Random(11))
+    pol_escr4.know.policy["escalation_race_fire_inflate_eff"] = 0.40
+    accepted_combat(pol_escr4, esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr4, esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    d_e4 = pol_escr4.decide(esc_race_state(3, 71, 24, esc_blk_deck), esc_ctx)
+    assert "升级账" in d_e4.reason and "×1.40计价拖延成本" in d_e4.reason, \
+        f"eff 键回退 0.40 未复现旧口径: {d_e4.reason}"
+    esc_ctx.credit_tags = []
+    pol_escr5 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-escfire3-"))), random.Random(11))
+    pol_escr5.know.policy["escalation_race_fire_inflate_eff"] = 0
+    accepted_combat(pol_escr5, esc_race_state(1, 71, 4, esc_blk_deck), esc_ctx)
+    accepted_combat(pol_escr5, esc_race_state(2, 71, 7, esc_blk_deck), esc_ctx)
+    d_e5 = pol_escr5.decide(esc_race_state(3, 71, 24, esc_blk_deck), esc_ctx)
+    assert "升级账" not in d_e5.reason and "斩杀竞速投影" in d_e5.reason, \
+        f"eff=0 未按整体关闭回滚: {d_e5.reason}"
+
     accepted_combat(pol_lag2, lag_race_state(1, 4, lag_deck), lag_ctx)
     pol_lag2._krace_turns = 2
     pol_lag2._krace_dmg = pol_lag2._krace_dmg_sustained = 11.0
