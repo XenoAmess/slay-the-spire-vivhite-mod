@@ -7674,6 +7674,52 @@ def main() -> int:
         rolled_away = True
     assert rolled_away or True  # 旧两拍流本身允许 1~2 帧确认后才提交
 
+    # 3z-2) 结算等待深预算（第833~842局批复盘 END_TURN_SETTLE_DEEP_BUDGET 回归夹具）：
+    #       闲置能量≥2 且账面仍有可负担目标牌时，等待上限放宽到深预算旋钮
+    #       （840 局 F17[212] 实测形态：2 能量+防御✗ 被基预算收口，意图 17
+    #       无格挡入体直接 -17 血）；深旋钮置 0 回滚基预算口径；能量<2 不受
+    #       影响（3z 夹具 energy=1 已覆盖该侧）。
+    deep_know = knowledge.Knowledge(tmp)
+    deep_pol = policy.Policy(deep_know)
+    deep_know.policy["end_turn_settle_recovery_ticks"] = 10
+
+    def _deep_state():
+        s = _settle_state(False)
+        s["combat"]["player"]["energy"] = 2
+        return s
+
+    _deep_base = int(float(deep_know.policy.get("end_turn_settle_recovery_ticks", 10) or 0))
+    _deep_ticks = int(float(deep_know.policy.get("end_turn_settle_recovery_ticks_deep", 22) or 0))
+    assert _deep_ticks > _deep_base > 0, "深预算旋钮默认配置异常"
+    deep_ctx = _SettleCtx()
+    assert deep_pol.decide(_settle_state(True), deep_ctx) is not None, "深预算夹具热身帧无决策"
+    d_deep_commit = None
+    for _ in range(60):
+        d_deep = deep_pol.decide(_deep_state(), deep_ctx)
+        if d_deep.action == "end_turn":
+            d_deep_commit = d_deep
+            break
+        assert d_deep.action is None and "结算等待" in d_deep.reason \
+            and "打击(1)" in d_deep.reason, \
+            f"深预算窗口内未按预期等待: {d_deep.action}/{d_deep.reason}"
+    assert d_deep_commit is not None \
+        and "确认无牌可出（能量耗尽或全部不可用）" in d_deep_commit.reason, \
+        "深预算未在预算内落回旧提交"
+    deep_know.policy["end_turn_settle_recovery_ticks_deep"] = 0
+    base_ctx = _SettleCtx()
+    assert deep_pol.decide(_settle_state(True), base_ctx) is not None, "回滚夹具热身帧无决策"
+    _base_waits = 0
+    d_base_commit = None
+    for _ in range(30):
+        d_base = deep_pol.decide(_deep_state(), base_ctx)
+        if d_base.action == "end_turn":
+            d_base_commit = d_base
+            break
+        assert "结算等待" in d_base.reason, f"深旋钮回滚后出现异常等待: {d_base.reason}"
+        _base_waits += 1
+    assert d_base_commit is not None and _base_waits <= _deep_base + 2, \
+        f"深旋钮回滚后未按基预算收口: waits={_base_waits}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

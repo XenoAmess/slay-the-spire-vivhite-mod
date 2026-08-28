@@ -2428,10 +2428,9 @@ class Policy:
                 # 预算耗尽后落回下方原「确认无牌可出」提交流——文案/审计格式
                 # 完全不变，既有统计正则与断言不受影响。
                 _settle_budget = int(float(pol.get("end_turn_settle_recovery_ticks", 10) or 0))
+                _latent = []
                 if (_settle_budget > 0 and not affordable_playable
-                        and self._saw_playable_this_turn
-                        and self._end_stall < _settle_budget):
-                    _latent = []
+                        and self._saw_playable_this_turn):
                     for card in hand:
                         if self._card_unavailable(card):
                             continue
@@ -2441,6 +2440,22 @@ class Policy:
                         if card.get("requires_target") and not card.get("valid_target_indices"):
                             continue
                         _latent.append(f"{card.get('name')}({cost})")
+                    # 深预算（第833~842局批复盘闭环实验 END_TURN_SETTLE_DEEP_BUDGET）：
+                    # 839局F17[201]/840局F17[212][222] 三例真窗口——仪式兽 Boss 决胜段
+                    # 打出牌/牌堆顶选择后 payload 整体✗ 超过基预算 6 秒，随后以
+                    # 2 闲置能量强行收口，意图 15~20 无格挡入体（840[212] 手牌防御
+                    # 本可挡 12，直接 -17 血；839[201] 手牌快照还残留刚打出的暴走）。
+                    # 闲置能量≥2 且账面仍有可负担目标牌时把等待上限放宽到深预算：
+                    # 空转只发生在「规则账面可出而接口未开」的真窗口，良性不可打出
+                    # （晕眩/藏宝图/费用不足，834[200]/841[333][403]）不进 latent、
+                    # 零影响；深旋钮置 0 或基旋钮置 0 即回滚旧口径。
+                    if _latent and energy >= 2:
+                        _settle_budget = max(
+                            _settle_budget,
+                            int(float(pol.get("end_turn_settle_recovery_ticks_deep", 22) or 0)))
+                if (_settle_budget > 0 and not affordable_playable
+                        and self._saw_playable_this_turn
+                        and self._end_stall < _settle_budget):
                     if _latent:
                         return Decision(
                             None, {},
