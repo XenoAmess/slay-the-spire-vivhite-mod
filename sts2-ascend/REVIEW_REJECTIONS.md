@@ -120,3 +120,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-28 20:04:03 | 第 914 局 | `f4fc99a5` | process_exit | gpt-5.6-luna | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-200403-1787918643174524500-f4fc99a5` | 复盘进程未成功完成 |
 <!-- rejection:20260828-201736-1787919456996074800-37174385 -->
 | 2026-08-28 20:17:36 | 第 915~916 局 | `37174385` | process_exit | gpt-5.6-luna | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-201736-1787919456996074800-37174385` | 复盘进程未成功完成 |
+<!-- rejection:20260828-203154-1787920314038469500-c483e0dc -->
+| 2026-08-28 20:31:54 | 第 917~918 局 | `c483e0dc` | process_exit | gpt-5.6-luna | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-203154-1787920314038469500-c483e0dc` | 复盘进程未成功完成 |
