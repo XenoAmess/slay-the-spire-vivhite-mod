@@ -1,0 +1,1573 @@
+{
+  "base_pck": "G:/SteamLibrary/steamapps/common/Slay the Spire 2/SlayTheSpire2.pck",
+  "base_pck_sha256": "c60f672ee7804e6aefa1e19a582fa1c80b126a7b0eef4d084d3abf110df2eab7",
+  "boundary_contract": {
+    "after_solid_bbox": [
+      194,
+      604,
+      297,
+      81
+    ],
+    "alpha_left_jump_px": 33,
+    "before_solid_bbox": [
+      210,
+      468,
+      296,
+      216
+    ],
+    "grounded_bottom_sequence_px": [
+      684,
+      686,
+      680,
+      684,
+      684
+    ],
+    "grounded_contract_passed": true,
+    "passed": true,
+    "solid_bottom_jump_px": 1,
+    "solid_left_jump_px": 16
+  },
+  "candidate": "res://tools/candidates/hybrid_death_v3/vivhite_combat_skeleton_data.tres",
+  "candidate_sha256": "121ead61910b2d5aa2cc745d136c1a4f36da5718720f45a41bdff402e3d09e56",
+  "canvas": [
+    1280,
+    900
+  ],
+  "contact_sheets": {
+    "character_only": "contact-sheets/die-exact-character-only.png",
+    "composite": "contact-sheets/die-exact-composite.png"
+  },
+  "die_duration": 2.33333349227905,
+  "display_server": "Windows",
+  "errors": [],
+  "expected_hurt_die_mix": 0.0,
+  "frame_count_passed": true,
+  "frames": [
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          223,
+          339,
+          211,
+          353
+        ],
+        "alpha_centroid": [
+          328.308432769023,
+          482.59422549983
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-00-t0.0000000.png",
+        "sha256": "a655b392442b563d0716e4c6cf3d8bc1578fb83d2653e66155f47905f88db812",
+        "solid_bbox": [
+          224,
+          340,
+          209,
+          351
+        ],
+        "solid_bottom_y": 690,
+        "solid_left_x": 224,
+        "solid_pixel_count": 17937,
+        "solid_right_x": 432,
+        "solid_top_y": 340,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          223,
+          339,
+          211,
+          353
+        ],
+        "alpha_centroid": [
+          328.308432769023,
+          482.59422549983
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-00-t0.0000000.png",
+        "sha256": "a655b392442b563d0716e4c6cf3d8bc1578fb83d2653e66155f47905f88db812",
+        "solid_bbox": [
+          224,
+          340,
+          209,
+          351
+        ],
+        "solid_bottom_y": 690,
+        "solid_left_x": 224,
+        "solid_pixel_count": 17937,
+        "solid_right_x": 432,
+        "solid_top_y": 340,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 0.0,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          220,
+          336,
+          252,
+          355
+        ],
+        "alpha_centroid": [
+          337.197202624502,
+          482.270139812645
+        ],
+        "alpha_pixel_count_sampled": 743,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-01-t0.1800000.png",
+        "sha256": "f5c553f1352056c9e7d61c3c196f443a5c0800bf18c7c43c3072c7a03ded3077",
+        "solid_bbox": [
+          235,
+          342,
+          224,
+          349
+        ],
+        "solid_bottom_y": 690,
+        "solid_left_x": 235,
+        "solid_pixel_count": 17650,
+        "solid_right_x": 458,
+        "solid_top_y": 342,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          220,
+          336,
+          252,
+          355
+        ],
+        "alpha_centroid": [
+          337.197202624502,
+          482.270139812645
+        ],
+        "alpha_pixel_count_sampled": 743,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-01-t0.1800000.png",
+        "sha256": "f5c553f1352056c9e7d61c3c196f443a5c0800bf18c7c43c3072c7a03ded3077",
+        "solid_bbox": [
+          235,
+          342,
+          224,
+          349
+        ],
+        "solid_bottom_y": 690,
+        "solid_left_x": 235,
+        "solid_pixel_count": 17650,
+        "solid_right_x": 458,
+        "solid_top_y": 342,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 0.18,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          245,
+          360,
+          237,
+          345
+        ],
+        "alpha_centroid": [
+          360.274476487874,
+          498.660314107271
+        ],
+        "alpha_pixel_count_sampled": 725,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-02-t0.4600000.png",
+        "sha256": "f7809e5930f73000bc7fc7feab360482604f57270006dbfba94209e66c23f790",
+        "solid_bbox": [
+          245,
+          375,
+          215,
+          329
+        ],
+        "solid_bottom_y": 703,
+        "solid_left_x": 245,
+        "solid_pixel_count": 17220,
+        "solid_right_x": 459,
+        "solid_top_y": 375,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          245,
+          360,
+          237,
+          345
+        ],
+        "alpha_centroid": [
+          360.274476487874,
+          498.660314107271
+        ],
+        "alpha_pixel_count_sampled": 725,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-02-t0.4600000.png",
+        "sha256": "f7809e5930f73000bc7fc7feab360482604f57270006dbfba94209e66c23f790",
+        "solid_bbox": [
+          245,
+          375,
+          215,
+          329
+        ],
+        "solid_bottom_y": 703,
+        "solid_left_x": 245,
+        "solid_pixel_count": 17220,
+        "solid_right_x": 459,
+        "solid_top_y": 375,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 0.46,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          207,
+          409,
+          295,
+          313
+        ],
+        "alpha_centroid": [
+          390.123393851423,
+          528.781575691236
+        ],
+        "alpha_pixel_count_sampled": 693,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-03-t0.8200000.png",
+        "sha256": "49daf4fd2b48433361d8e363ca2e9c20581a06380ad90528d43e207a5676b171",
+        "solid_bbox": [
+          247,
+          428,
+          247,
+          293
+        ],
+        "solid_bottom_y": 720,
+        "solid_left_x": 247,
+        "solid_pixel_count": 16774,
+        "solid_right_x": 493,
+        "solid_top_y": 428,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          207,
+          409,
+          295,
+          313
+        ],
+        "alpha_centroid": [
+          390.123393851423,
+          528.781575691236
+        ],
+        "alpha_pixel_count_sampled": 693,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-03-t0.8200000.png",
+        "sha256": "49daf4fd2b48433361d8e363ca2e9c20581a06380ad90528d43e207a5676b171",
+        "solid_bbox": [
+          247,
+          428,
+          247,
+          293
+        ],
+        "solid_bottom_y": 720,
+        "solid_left_x": 247,
+        "solid_pixel_count": 16774,
+        "solid_right_x": 493,
+        "solid_top_y": 428,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 0.82,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          178,
+          425,
+          336,
+          279
+        ],
+        "alpha_centroid": [
+          390.257883693043,
+          528.358123501196
+        ],
+        "alpha_pixel_count_sampled": 683,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-04-t0.9400000.png",
+        "sha256": "1586a99f588da58c6527a4e8b9523bb9a0d50cc141cc1c685a5bbc05216bc33c",
+        "solid_bbox": [
+          222,
+          444,
+          291,
+          255
+        ],
+        "solid_bottom_y": 698,
+        "solid_left_x": 222,
+        "solid_pixel_count": 16586,
+        "solid_right_x": 512,
+        "solid_top_y": 444,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          178,
+          425,
+          336,
+          279
+        ],
+        "alpha_centroid": [
+          390.257883693043,
+          528.358123501196
+        ],
+        "alpha_pixel_count_sampled": 683,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-04-t0.9400000.png",
+        "sha256": "1586a99f588da58c6527a4e8b9523bb9a0d50cc141cc1c685a5bbc05216bc33c",
+        "solid_bbox": [
+          222,
+          444,
+          291,
+          255
+        ],
+        "solid_bottom_y": 698,
+        "solid_left_x": 222,
+        "solid_pixel_count": 16586,
+        "solid_right_x": 512,
+        "solid_top_y": 444,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 0.94,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          200,
+          456,
+          314,
+          240
+        ],
+        "alpha_centroid": [
+          386.209405205584,
+          540.681725903703
+        ],
+        "alpha_pixel_count_sampled": 684,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-05-t1.0000000.png",
+        "sha256": "31f6b5aba915ba00d67162142e6c31553aad60f5473c1a91b3acb8045e6f024e",
+        "solid_bbox": [
+          214,
+          457,
+          299,
+          233
+        ],
+        "solid_bottom_y": 689,
+        "solid_left_x": 214,
+        "solid_pixel_count": 16388,
+        "solid_right_x": 512,
+        "solid_top_y": 457,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          200,
+          456,
+          314,
+          240
+        ],
+        "alpha_centroid": [
+          386.209405205584,
+          540.681725903703
+        ],
+        "alpha_pixel_count_sampled": 684,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-05-t1.0000000.png",
+        "sha256": "31f6b5aba915ba00d67162142e6c31553aad60f5473c1a91b3acb8045e6f024e",
+        "solid_bbox": [
+          214,
+          457,
+          299,
+          233
+        ],
+        "solid_bottom_y": 689,
+        "solid_left_x": 214,
+        "solid_pixel_count": 16388,
+        "solid_right_x": 512,
+        "solid_top_y": 457,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.0,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          194,
+          468,
+          313,
+          231
+        ],
+        "alpha_centroid": [
+          378.832929990822,
+          550.650619176932
+        ],
+        "alpha_pixel_count_sampled": 681,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-06-t1.0499000.png",
+        "sha256": "3c8930ca63be87fd4777187e98f38eeea08c32e25b2f6347293f978a327d6fa5",
+        "solid_bbox": [
+          210,
+          468,
+          296,
+          216
+        ],
+        "solid_bottom_y": 683,
+        "solid_left_x": 210,
+        "solid_pixel_count": 16289,
+        "solid_right_x": 505,
+        "solid_top_y": 468,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          194,
+          468,
+          313,
+          231
+        ],
+        "alpha_centroid": [
+          378.832929990822,
+          550.650619176932
+        ],
+        "alpha_pixel_count_sampled": 681,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-06-t1.0499000.png",
+        "sha256": "3c8930ca63be87fd4777187e98f38eeea08c32e25b2f6347293f978a327d6fa5",
+        "solid_bbox": [
+          210,
+          468,
+          296,
+          216
+        ],
+        "solid_bottom_y": 683,
+        "solid_left_x": 210,
+        "solid_pixel_count": 16289,
+        "solid_right_x": 505,
+        "solid_top_y": 468,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_slot": "vivhite_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.0499,
+      "slot_attachments": {
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-07-t1.0500000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-07-t1.0500000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.05,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-08-t1.0501000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-08-t1.0501000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.0501,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          184,
+          582,
+          329,
+          174
+        ],
+        "alpha_centroid": [
+          361.896012048471,
+          645.06514094074
+        ],
+        "alpha_pixel_count_sampled": 532,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-09-t1.1000000.png",
+        "sha256": "f4da7eace4b7388f6ba1fa739f4d18a23d9fa5cbddeff7d5ef2d412c580d0024",
+        "solid_bbox": [
+          194,
+          605,
+          296,
+          81
+        ],
+        "solid_bottom_y": 685,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12794,
+        "solid_right_x": 489,
+        "solid_top_y": 605,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          184,
+          582,
+          329,
+          174
+        ],
+        "alpha_centroid": [
+          361.896012048471,
+          645.06514094074
+        ],
+        "alpha_pixel_count_sampled": 532,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-09-t1.1000000.png",
+        "sha256": "f4da7eace4b7388f6ba1fa739f4d18a23d9fa5cbddeff7d5ef2d412c580d0024",
+        "solid_bbox": [
+          194,
+          605,
+          296,
+          81
+        ],
+        "solid_bottom_y": 685,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12794,
+        "solid_right_x": 489,
+        "solid_top_y": 605,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.1,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          166,
+          574,
+          345,
+          186
+        ],
+        "alpha_centroid": [
+          360.406926880323,
+          645.951399357924
+        ],
+        "alpha_pixel_count_sampled": 526,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-10-t1.1666667.png",
+        "sha256": "8e30d95cddb90d7068b19dc260a2f445939a9a26a1c84a3e08978683eecce7b4",
+        "solid_bbox": [
+          193,
+          606,
+          297,
+          81
+        ],
+        "solid_bottom_y": 686,
+        "solid_left_x": 193,
+        "solid_pixel_count": 12819,
+        "solid_right_x": 489,
+        "solid_top_y": 606,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          166,
+          574,
+          345,
+          186
+        ],
+        "alpha_centroid": [
+          360.406926880323,
+          645.951399357924
+        ],
+        "alpha_pixel_count_sampled": 526,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-10-t1.1666667.png",
+        "sha256": "8e30d95cddb90d7068b19dc260a2f445939a9a26a1c84a3e08978683eecce7b4",
+        "solid_bbox": [
+          193,
+          606,
+          297,
+          81
+        ],
+        "solid_bottom_y": 686,
+        "solid_left_x": 193,
+        "solid_pixel_count": 12819,
+        "solid_right_x": 489,
+        "solid_top_y": 606,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.1666667,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          182,
+          532,
+          328,
+          194
+        ],
+        "alpha_centroid": [
+          363.678786700367,
+          640.518024499317
+        ],
+        "alpha_pixel_count_sampled": 538,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-11-t1.3000000.png",
+        "sha256": "f80d4be2644c8b368ec1cf1d0aff6e2273518ff09c473677d85dc554c2ee7a98",
+        "solid_bbox": [
+          196,
+          600,
+          296,
+          81
+        ],
+        "solid_bottom_y": 680,
+        "solid_left_x": 196,
+        "solid_pixel_count": 12799,
+        "solid_right_x": 491,
+        "solid_top_y": 600,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          182,
+          532,
+          328,
+          194
+        ],
+        "alpha_centroid": [
+          363.678786700367,
+          640.518024499317
+        ],
+        "alpha_pixel_count_sampled": 538,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-11-t1.3000000.png",
+        "sha256": "f80d4be2644c8b368ec1cf1d0aff6e2273518ff09c473677d85dc554c2ee7a98",
+        "solid_bbox": [
+          196,
+          600,
+          296,
+          81
+        ],
+        "solid_bottom_y": 680,
+        "solid_left_x": 196,
+        "solid_pixel_count": 12799,
+        "solid_right_x": 491,
+        "solid_top_y": 600,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.3,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          184,
+          580,
+          330,
+          168
+        ],
+        "alpha_centroid": [
+          362.086561925067,
+          643.31928995358
+        ],
+        "alpha_pixel_count_sampled": 538,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-12-t1.5500000.png",
+        "sha256": "9f4f72b85610ddadef87a6a3f7ecb71d86a3e347f8769fcfb0aa17ab0de43949",
+        "solid_bbox": [
+          195,
+          603,
+          296,
+          81
+        ],
+        "solid_bottom_y": 683,
+        "solid_left_x": 195,
+        "solid_pixel_count": 12804,
+        "solid_right_x": 490,
+        "solid_top_y": 603,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          184,
+          580,
+          330,
+          168
+        ],
+        "alpha_centroid": [
+          362.086561925067,
+          643.31928995358
+        ],
+        "alpha_pixel_count_sampled": 538,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-12-t1.5500000.png",
+        "sha256": "9f4f72b85610ddadef87a6a3f7ecb71d86a3e347f8769fcfb0aa17ab0de43949",
+        "solid_bbox": [
+          195,
+          603,
+          296,
+          81
+        ],
+        "solid_bottom_y": 683,
+        "solid_left_x": 195,
+        "solid_pixel_count": 12804,
+        "solid_right_x": 490,
+        "solid_top_y": 603,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.55,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-13-t1.8000000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-13-t1.8000000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.8,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-14-t1.9000000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-14-t1.9000000.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 1.9,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/die/frame-15-t2.3333335.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          161,
+          531,
+          356,
+          208
+        ],
+        "alpha_centroid": [
+          360.955008763027,
+          644.215047812314
+        ],
+        "alpha_pixel_count_sampled": 537,
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/die/frame-15-t2.3333335.png",
+        "sha256": "7e4f03ceb00188295708fb46db8df460460596aee81d7e1dc016e6e9f6248f1c",
+        "solid_bbox": [
+          194,
+          604,
+          297,
+          81
+        ],
+        "solid_bottom_y": 684,
+        "solid_left_x": 194,
+        "solid_pixel_count": 12807,
+        "solid_right_x": 490,
+        "solid_top_y": 604,
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_death_side",
+      "expected_slot": "vivhite_death_body",
+      "hurt_die_mix_duration": 0.0,
+      "passed": true,
+      "requested_time": 2.3333335,
+      "slot_attachments": {
+        "vivhite_body": null,
+        "vivhite_death_body": "vivhite_combat_death_side"
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null
+        },
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_death_side",
+          "slot": "vivhite_death_body"
+        }
+      ]
+    }
+  ],
+  "generated_utc": "2026-08-28T13:04:20",
+  "hurt_pre_roll": 0.5,
+  "mix_contract_passed": true,
+  "observed_hurt_die_mix_durations": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "origin": [
+    320.0,
+    700.0
+  ],
+  "render_contract_passed": true,
+  "rendering_driver": "vulkan",
+  "requested_times": [
+    0.0,
+    0.18,
+    0.46,
+    0.82,
+    0.94,
+    1.0,
+    1.0499,
+    1.05,
+    1.0501,
+    1.1,
+    1.1666667,
+    1.3,
+    1.55,
+    1.8,
+    1.9,
+    2.3333335
+  ],
+  "scene_offset": [
+    5.0,
+    -19.0
+  ],
+  "scene_scale": 0.28,
+  "schema_version": 1,
+  "solid_alpha_threshold": 128,
+  "success": true,
+  "swap_time": 1.05
+}
