@@ -4,8 +4,9 @@
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
 > 最后更新：2026-08-28。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
-> 当前实现状态：V3 尚未构建、部署或真机测试；本次文档复盘没有操作游戏。V0.5 运行时
-> 既有真机记录仍然有效，不能把“本次没启动”误写成项目从未真机测试。
+> 当前实现状态：V3 的首个 `attack_peak` 已在隔离候选中构建并通过静态与 Windows Vulkan
+> 验收，但尚未替换正式运行时、部署或真机测试。本轮没有操作游戏；V0.5 既有真机记录仍然
+> 有效，不能把“本次没启动”误写成项目从未真机测试。
 
 ## 1. 当前结论
 
@@ -316,6 +317,41 @@ left_hand / right_hand / eye_center / visual_alpha_bbox
 一处轮廓跳变无法靠锚点或网格过渡解决时，才增加下一张，避免把 Hybrid 退化成昂贵且身份
 漂移的逐帧动画。
 
+### 5.6 `attack_peak` V3 首个实现记录
+
+首个闭环使用 `0104-combat-attack-peak-attempt-01`，并把其原图逐字节复制为
+`custom/combat/sources/vivhite-combat-attack-peak-v1.png`。`0105` 已完整归档但因构图更直、
+轮廓力度较弱而不采用；两轮均保留，不删除失败或未选结果。
+
+隔离候选契约如下：
+
+- 新骨 `vivhite_action_pose_root`、新 slot `vivhite_action_pose`、刚性 region
+  `vivhite_combat_attack_peak` 和独立 atlas 页 `vivhite_combat_attack.png`；
+- neutral 与 action 共同保留原始 `1680×2512` 整画布，统一打进 `1536×2272` region，
+  authored world 均为 `868×1302`，场景继续保持 `.28`；禁止 action 自己按 Alpha bbox 归一化；
+- `attack` 在 `.08` 同帧隐藏 neutral、显示 action，并触发 `attack_slash_start`；`.20` 同帧
+  切回 neutral；人物 slot 不做 RGBA 交叉淡化；其余七动画都在 `t=0` 显式清空 action slot；
+- 商店会随机 seek 共用的 `relaxed_loop`，因此该循环在 `0` 与 `12.000001` 两端都重新声明
+  neutral 可见、action/death 不可见；
+- 刀光不能自动识别完整姿势里的掌心。以隐藏 Vulkan composite 实测后，action 窗口对
+  `vivhite_magic_arc` 使用 authored offset `(210,30)`，约等于最终画面向右 `59 px`、向上
+  `8 px`，并与人物 attachment 同帧切换；attack 不发 EyeFire，眼部锚点保持 neutral；
+- `SlashVfxSlot` 位于人物后方，只是视觉强调，不能被当作人物切换的遮罩。
+
+静态验收覆盖 6 个 authored 文件、Spine `4.2.43`、8 个动画、108 个可见性分段和 28 个
+runtime 样本。精确 Vulkan 验收使用真实 `0.1s` mix，共采 14 个时刻；人物层和 composite
+均非空、无裁切，人物 attachment 数始终为 1，`.0799 → .08` 脚底变化为 `+4 px`，峰值末端
+脚底相对切换前为 `-1 px`。`.20` 切回后的 neutral recovery 脚底再上移约 `12 px`，这是当前
+仍需在游戏实际速度下观察的连续性风险；若用户真机能看见明显跳变，优先调整前后轮廓或
+增加独立 recovery pose，不用双人物淡化掩盖。
+
+同一构建又按每动画 21 帧复验全部八动画，168 帧均通过；`attack` 的最大逐帧质心位移约
+`92.89 px`，没有空帧、触边或失败动画。该数值包含魔法 VFX，只用于同条件回归，不把它
+冒充“动作自然”的审美分数。
+
+当前结论仅为“隔离候选离线集成通过”。它证明了完整姿势、固定画布、原子 slot 与
+pose-specific VFX 锚点这条链可行，但不等于正式运行时或用户审美门禁已经通过。
+
 ## 6. 并行研究线：约 8 个生成语义组
 
 若继续拆件路线，推荐把 21 个独立微件收敛为约八个彼此协调的生成语义组：
@@ -418,8 +454,8 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 ## 10. 目前的实施优先级
 
 1. 把已有完整 neutral、战斗母版和死亡图重新按真实 Alpha、身份、比例和锚点验收；
-2. 生成并接入 `attack_peak`，先跑通一个完整关键姿势的原子切换和 VFX 时序；
-3. 用户真机认可普攻后，再按相同链路完成 heavy、cast、hurt；
+2. `attack_peak` 已完成隔离接入和离线 Vulkan；下一门禁是正式候选完成后统一做用户真机；
+3. 按相同链路完成 heavy、cast；`hurt` 仅在 neutral 网格真不能自然承担时增加；
 4. 修死亡切换前姿势和锚点，使跳变显著小于现有 61 px，并保持实体落地；
 5. 同时把已通过的独立附件接入隔离语义组研究候选，形成同条件 A/B 接触表；
 6. 主线完成八动画、商店和真机回归后，才替换正式运行时并完整构建部署。
@@ -445,3 +481,6 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 - 2026-08-28：建立长期方案文档；复盘原版 atlas 换皮、私有整身网格、层级 whole mesh、
   临时 UV split mesh 与 21 微件生成；确立完整关键姿势 Hybrid 主线和约 8 语义组并行研究线；
   纳入 `.28`、70%、八动画、slot/event、死亡 61 px 跳变和三候选 Vulkan 对照证据。
+- 2026-08-28：完成 V3 `attack_peak` 隔离候选；记录 `0104` 采用、`0105` 归档不采用、整画布
+  固定变换、`.08–.20` 原子切换、商店边界重置、掌心 VFX `(210,30)` 以及 14 帧分层 Vulkan
+  证据；保留 `.20` recovery 跳变作为真机门禁，不冒充已部署通过。
