@@ -5,8 +5,9 @@
 > 最后更新：2026-08-28。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
 > 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
-> death 已分别通过隔离 Windows Vulkan；严格五页/30 文件契约也已完成。统一
-> `hybrid_v3_final` 尚未创建，所有分项都尚未替换正式运行时、部署或完成本轮真机测试。
+> death 已总装为隔离的 `hybrid_v3_final`。总装器字段边界、严格五页布局、Spine runtime
+> 专项 validator 与八动画 84 个精确 Windows Vulkan 时刻已通过；连续动作/VFX consumer、
+> 30 文件临时发布、完整不部署 PCK 和本轮真机测试仍是后续门禁。正式 runtime 尚未替换。
 > 本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把“本次没启动”误写成项目从未真机测试。
 
 ## 1. 当前结论
@@ -449,7 +450,7 @@ slash / sigil 的真实回归。
 `1.389×`。这是用户指定“当前骨架内部 70%”后的已知视觉差异，不得把“相比上一版不再过大”
 写成“与原战士同尺寸”。统一真机必须继续检查 Bounds、血条、意图、VFX 与商店构图。
 
-### 5.12 五页运行时契约已具备，但总装尚未生成
+### 5.12 五页运行时契约与隔离总装
 
 构建和校验现在同时支持两套严格布局：默认 `legacy-single-page` 仍要求原 26 个私有运行时
 文件；显式 `v3-five-page` 要求 30 个文件，并按以下固定顺序同时供 combat 与 merchant 使用：
@@ -465,9 +466,20 @@ fail closed。发布工具使用 `--runtime-layout v3-five-page`，构建使用
 `/p:IroncladSkinRuntimeLayout=v3-five-page`；默认值没有改变。契约测试 4/4、C# build 0 warning /
 0 error、legacy 26 文件 fixture、V3 30 文件 fixture、Godot/Spine 与最小 PCK 均已离线通过。
 
-交接时 `hybrid_v3_final` 目录尚未创建，正式 `Vivhite/Vivhite/skins/ironclad/**` 未被这些研究
-候选覆盖，也没有部署或重启游戏。下一位维护者必须先总装，再走完整门禁；不能直接把任一
-分项候选复制成正式 runtime。
+`hybrid_v3_final` 已按最小、可反向证明的字段差量创建：以 `hybrid_cast_set` 为结构基线，
+只移植 neutral 三循环的完整 slot 子树、`hurt.bones`，以及 death 的 `vivhite_rig` /
+`vivhite_death_pose` 两个 bone 子树。五张页图分别从 neutral、death、attack、heavy、cast
+已验收供体逐字节复制，不重新编码 PNG。总装器连续两次输出哈希一致；反向归一化后与 cast
+基线语义完全相等，未发现越界字段变化。
+
+候选专项 validator 已通过 8 authored / 5 pages / 35 bones / 6 slots / 8 animations / 4 events，
+并完成 73 次 runtime 语义检查。总装版八动画又以真实游戏 Spine GDExtension 和 Windows Vulkan
+完成 84 个精确时刻：neutral `5+5+9`、attack/heavy/cast 各 14、hurt 7、die 16；全部保持
+单人物、非空、无触边，四个原子窗口也按既定附件契约切换。该证据仍是 fresh exact sampler，
+不能替代连续 AnimationState、真实 `NIroncladVfx`、merchant consumer 或真机验收。
+
+正式 `Vivhite/Vivhite/skins/ironclad/**` 仍保持 legacy，没有部署或重启游戏。下一步必须先完成
+连续中断与隔离 30 文件/PCK 门禁；不能把当前隔离候选冒充正式 runtime。
 
 ## 6. 并行研究线：约 8 个生成语义组
 
@@ -631,9 +643,9 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 
 ## 10. 目前的实施优先级
 
-1. 以已冻结的 neutral、attack、heavy、cast、hurt 和 death 分项消费者创建唯一
-   `hybrid_v3_final`；严格使用五页/30 文件契约，不修改默认 legacy runtime；
-2. 在统一候选中复测八动画的原子窗口、所有 mix、中断/恢复、EyeFire / slash / sigil 生命周期，
+1. 保持已完成的唯一 `hybrid_v3_final` 最小字段总装与八动画 84 帧精确 Vulkan 基线；不得用任一
+   分项整包覆盖，也不得修改默认 legacy runtime；
+2. 在统一候选中继续复测连续 AnimationState 的所有 mix、中断/恢复、EyeFire / slash / sigil 生命周期，
    并对 `relaxed_loop` 做商店随机 seek；
 3. 量化 neutral 当前约为原战士高度 `1.389×` 的布局影响；同时检查 attack recovery、heavy
    `17.27 px` 切入质心、hurt 连续重触发和所有动作进入 death；
@@ -693,3 +705,7 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 - 2026-08-28：加入严格五页/30 文件运行时契约，默认 legacy 不变；固化头脸、近臂、双腿、
   躯干裙摆和 336/336 总装灰盒结论，列出 13 个完全缺失的生产附件。交接时最终统一候选尚未
   创建、正式 runtime 未修改、游戏未部署。
+- 2026-08-28：创建隔离 `hybrid_v3_final`；冻结“cast 结构基线 + neutral slots + hurt bones +
+  death 两 bone”的最小语义合并和五个逐字节页供体。总装器双跑确定性、专项 validator 的 73 次
+  runtime 检查及八动画 84 个精确 Windows Vulkan 时刻通过；正式 legacy runtime 未修改，连续
+  `AnimationState` / `NIroncladVfx`、临时 30 文件、完整不部署 PCK 与真机仍保留为下一道门禁。
