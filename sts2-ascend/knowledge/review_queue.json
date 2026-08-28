@@ -146,20 +146,6 @@
    "retry_after": 1787919243.3343725
   },
   {
-   "run": 915,
-   "time": "2026-08-28 20:08",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "queued"
-  },
-  {
    "run": 892,
    "time": "2026-08-28 16:54",
    "runner": "codex",
@@ -686,39 +672,76 @@
    "replay_target": "20260828-195554-1787918154829419700-0d591358",
    "retry_count": 4,
    "retry_after": 1787919647.5773852
+  },
+  {
+   "run": 914,
+   "time": "2026-08-28 20:01",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": true,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "24240-1787918586738838100-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260828-200403-1787918643174524500-f4fc99a5"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260828-200403-1787918643174524500-f4fc99a5",
+   "replay_target": "20260828-200403-1787918643174524500-f4fc99a5",
+   "retry_count": 3,
+   "retry_after": 1787919526.23419
   }
  ],
  "reviewing": {
   "runs": [
-   914
+   915,
+   916
   ],
   "items": [
    {
-    "run": 914,
-    "time": "2026-08-28 20:01",
-    "backend_key": "kimi-k3",
-    "priority": 3,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
+    "run": 915,
+    "time": "2026-08-28 20:08",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
     "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
+    "reasoning_effort": "max",
+    "approve_for_me": true,
     "sandbox": "workspace-write",
-    "every": 5,
-    "source": "fallback",
-    "queue_id": "24240-1787918586738838100-0",
+    "every": 1,
+    "source": "preferred",
+    "queue_id": "24240-1787919382531286400-0",
     "retry_same_model": true,
-    "salvage_packages": [
-     "20260828-200403-1787918643174524500-f4fc99a5"
-    ],
-    "salvage_attempts": [],
-    "retry_group": "20260828-200403-1787918643174524500-f4fc99a5",
-    "replay_target": "20260828-200403-1787918643174524500-f4fc99a5",
-    "retry_count": 2,
-    "retry_after": 1787919191.4338875
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 916,
+    "time": "2026-08-28 20:16",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": true,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "preferred",
+    "queue_id": "24240-1787919382531286400-1",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
    }
   ],
-  "retry_group": "20260828-200403-1787918643174524500-f4fc99a5",
-  "started": "2026-08-28 20:13:33"
+  "retry_group": "",
+  "started": "2026-08-28 20:16:22"
  }
 }
