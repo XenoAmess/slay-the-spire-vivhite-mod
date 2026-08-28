@@ -315,6 +315,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-
 若指定的目录本身是 attempt，入口会回溯并唤醒它已有的 target，绝不擅自提升出第二 target。
 Brain 仍在活 session 时会拒绝改写队列，避免与在线 worker 竞争；恢复后 worker 才懒物化 v3 证据。
 
+### 复盘代码的局间重载
+
+异步复盘提交 `brain/*.py` 等运行时代码后，会同时留下 committed `pending_restart.json`。
+Brain 只在无 active run 的 `MAIN_MENU` / `CHARACTER_SELECT` 以退出码 42 交给 runner 重载；
+`GAME_OVER` 仍由旧进程完成归档和返回菜单，避免新进程重复结算同一个终局帧。若用户中途放弃，
+旧 run 会先按既有规则归档，再在新 run 的任何动作发生前完成进程交接。判定只比较 runner 冻结的
+`boot_review_commit` 与耐久 marker，不根据全仓 HEAD 或普通存档提交触发。
+
 ## ASCEND-VISION 直播驾驶舱
 
 赛博青蓝悬浮窗（`brain/review_viewer.py`）现在是常驻直播驾驶舱，而不再依赖复盘任务才出现。
