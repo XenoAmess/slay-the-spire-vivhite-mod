@@ -5353,3 +5353,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/887 胜，当前目标进阶 0
+
+## 第 888 局复盘（2026-08-28 16:23）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：HOWL_FROM_BEYOND, EVIL_EYE, TRUE_GRIT, TRUE_GRIT, STONE_ARMOR, BREAKTHROUGH
+- 本局遗物：古茶具套装, GORGET
+- 战斗记录：F4 Monster战 掉血0; F5 Unknown战 掉血7; F6 Monster战 掉血26; F8 Elite战 掉血25; F9 Monster战 掉血16; F12 Elite战 掉血54｜竞速审计：T5判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/90局)，MANGLE(24分/88局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/888 胜，当前目标进阶 0
