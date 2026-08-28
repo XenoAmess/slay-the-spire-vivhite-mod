@@ -91,6 +91,13 @@ const REQUIRED_PARENT_LINKS := {
 	FOOT_RIGHT: SHIN_RIGHT,
 }
 
+# Spine 4.2 stores Bezier handles in absolute timeline coordinates. These
+# normalized profiles are converted per keyframe segment before serialization.
+# Both profiles leave each authored pose exactly where it is while removing the
+# constant-speed, hard-corner motion produced by the default linear timeline.
+const LOOP_EASING := Vector4(0.25, 0.0, 0.75, 1.0)
+const ACTION_EASING := Vector4(0.20, 0.0, 0.68, 1.0)
+
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -152,7 +159,7 @@ func _build_skeleton_json() -> Dictionary:
 		events[event_name] = {}
 	return {
 		"skeleton": {
-			"hash": "vivhite-whole-mesh-hierarchical-candidate-v1",
+			"hash": "vivhite-whole-mesh-hierarchical-candidate-v2-motion-eased",
 			"spine": SPINE_VERSION,
 			"x": SKELETON_BOUNDS.position.x,
 			"y": SKELETON_BOUNDS.position.y,
@@ -285,7 +292,7 @@ func _nearest_influences(point: Vector2) -> Array:
 
 
 func _build_animations() -> Dictionary:
-	return {
+	var animations := {
 		"idle_loop": _whole_mesh_loop(1.0, 2.0),
 		"low_health_loop": _whole_mesh_low_health(),
 		"relaxed_loop": _whole_mesh_loop(0.72, 12.000001),
@@ -295,6 +302,56 @@ func _build_animations() -> Dictionary:
 		"hurt": _whole_mesh_hurt(),
 		"die": _whole_mesh_die(),
 	}
+	_apply_natural_easing(animations)
+	return animations
+
+
+func _apply_natural_easing(animations: Dictionary) -> void:
+	for animation_name: String in animations:
+		var animation: Dictionary = animations[animation_name]
+		var profile := LOOP_EASING if animation_name.ends_with("_loop") else ACTION_EASING
+		var bones: Dictionary = animation.get("bones", {})
+		for bone_name: String in bones:
+			var timelines: Dictionary = bones[bone_name]
+			for timeline_name: String in ["rotate", "translate"]:
+				if timelines.has(timeline_name):
+					_add_timeline_easing(timelines[timeline_name], timeline_name, profile)
+
+
+func _add_timeline_easing(keys: Array, timeline_name: String, profile: Vector4) -> void:
+	for index in range(keys.size() - 1):
+		var start: Dictionary = keys[index]
+		var finish: Dictionary = keys[index + 1]
+		if start.has("curve"):
+			continue
+		var start_time := float(start.get("time", 0.0))
+		var finish_time := float(finish.get("time", 0.0))
+		var control_time_1 := lerpf(start_time, finish_time, profile.x)
+		var control_time_2 := lerpf(start_time, finish_time, profile.z)
+		if timeline_name == "rotate":
+			var start_value := float(start.get("value", 0.0))
+			var finish_value := float(finish.get("value", 0.0))
+			start["curve"] = [
+				control_time_1,
+				lerpf(start_value, finish_value, profile.y),
+				control_time_2,
+				lerpf(start_value, finish_value, profile.w),
+			]
+		else:
+			var start_x := float(start.get("x", 0.0))
+			var finish_x := float(finish.get("x", 0.0))
+			var start_y := float(start.get("y", 0.0))
+			var finish_y := float(finish.get("y", 0.0))
+			start["curve"] = [
+				control_time_1,
+				lerpf(start_x, finish_x, profile.y),
+				control_time_2,
+				lerpf(start_x, finish_x, profile.w),
+				control_time_1,
+				lerpf(start_y, finish_y, profile.y),
+				control_time_2,
+				lerpf(start_y, finish_y, profile.w),
+			]
 
 
 func _whole_mesh_loop(strength: float, duration: float) -> Dictionary:
@@ -338,9 +395,13 @@ func _whole_mesh_attack(heavy: bool) -> Dictionary:
 	var anticipation := strike * 0.45
 	var recoil := duration * (0.43 if heavy else 0.38)
 	var recover := duration * 0.76
-	# At the unchanged 0.28 combat-scene scale this yields about 42.5 px of
-	# heavy root travel, versus about 27.4 px for the ordinary attack.
 	var power := 1.55 if heavy else 1.0
+	# Directional forward peaks are authored directly instead of inferred from
+	# anticipation-to-strike range: 100/158 units become 28.0/44.24 px at the
+	# unchanged 0.28 combat-scene scale.
+	var root_anticipation_x := -34.0 if heavy else -22.0
+	var root_strike_x := 158.0 if heavy else 100.0
+	var root_recoil_x := 88.0 if heavy else 55.0
 	return {
 		"slots": {"slash_mesh": {"attachment": [
 			{"time": 0.0, "name": null},
@@ -350,9 +411,9 @@ func _whole_mesh_attack(heavy: bool) -> Dictionary:
 		"bones": {
 			BONE_RIG: {"translate": [
 				{"time": 0.0, "x": 0.0, "y": 0.0},
-				{"time": anticipation, "x": -22.0 * power, "y": -9.0 * power},
-				{"time": strike, "x": 76.0 * power, "y": 27.0 * power},
-				{"time": recoil, "x": 43.0 * power, "y": 10.0 * power},
+				{"time": anticipation, "x": root_anticipation_x, "y": -9.0 * power},
+				{"time": strike, "x": root_strike_x, "y": 27.0 * power},
+				{"time": recoil, "x": root_recoil_x, "y": 10.0 * power},
 				{"time": recover, "x": 12.0, "y": 2.0},
 				{"time": duration, "x": 0.0, "y": 0.0},
 			]},
@@ -440,8 +501,8 @@ func _whole_mesh_hurt() -> Dictionary:
 	return {"bones": {
 		BONE_RIG: {"translate": [
 			{"time": 0.0, "x": 0.0, "y": 0.0},
-			{"time": 0.10, "x": -86.0, "y": -28.0},
-			{"time": 0.24, "x": -54.0, "y": -15.0},
+			{"time": 0.10, "x": -100.0, "y": -28.0},
+			{"time": 0.24, "x": -63.0, "y": -15.0},
 			{"time": 0.48, "x": 24.0, "y": 8.0},
 			{"time": 0.72, "x": 8.0, "y": 2.0},
 			{"time": duration, "x": 0.0, "y": 0.0},
@@ -656,14 +717,16 @@ func _validate_rig(skeleton: Dictionary, atlas_data: String) -> bool:
 			return _set_error("Whole-mesh candidate may not switch body attachments in %s" % animation_name)
 	if _translation_axis_range(skeleton["animations"]["idle_loop"], BONE_RIG, "y") < 18.0:
 		return _set_error("Whole-mesh idle amplitude regressed below 18 authored units")
-	if _translation_axis_range(skeleton["animations"]["attack"], BONE_RIG, "x") < 95.0:
-		return _set_error("Whole-mesh attack amplitude regressed below 95 authored units")
-	if _translation_axis_range(skeleton["animations"]["attack_heavy"], BONE_RIG, "x") < 130.0:
-		return _set_error("Whole-mesh heavy amplitude regressed below 130 authored units")
+	var attack_forward := _translation_axis_directional_peak(skeleton["animations"]["attack"], BONE_RIG, "x", true)
+	if attack_forward < 95.0 or attack_forward > 105.0:
+		return _set_error("Whole-mesh attack forward peak must remain within 95-105 authored units")
+	var heavy_forward := _translation_axis_directional_peak(skeleton["animations"]["attack_heavy"], BONE_RIG, "x", true)
+	if heavy_forward < 150.0 or heavy_forward > 165.0:
+		return _set_error("Whole-mesh heavy forward peak must remain within 150-165 authored units")
 	if _translation_axis_range(skeleton["animations"]["cast"], BONE_RIG, "y") < 60.0:
 		return _set_error("Whole-mesh cast amplitude regressed below 60 authored units")
-	if _translation_axis_range(skeleton["animations"]["hurt"], BONE_RIG, "x") < 108.0:
-		return _set_error("Whole-mesh hurt amplitude regressed below 108 authored units")
+	if _translation_axis_directional_peak(skeleton["animations"]["hurt"], BONE_RIG, "x", false) < 95.0:
+		return _set_error("Whole-mesh hurt backward peak regressed below 95 authored units")
 	if skeleton["animations"]["die"]["bones"][BONE_RIG]["translate"].size() < 7:
 		return _set_error("Whole-mesh die must retain at least seven staged root poses")
 	return true
@@ -677,6 +740,19 @@ func _translation_axis_range(animation: Dictionary, bone_name: String, axis: Str
 		minimum = minf(minimum, value)
 		maximum = maxf(maximum, value)
 	return maximum - minimum
+
+
+func _translation_axis_directional_peak(
+	animation: Dictionary,
+	bone_name: String,
+	axis: String,
+	positive: bool,
+) -> float:
+	var peak := 0.0
+	for key: Dictionary in animation["bones"][bone_name]["translate"]:
+		var value := float(key.get(axis, 0.0))
+		peak = maxf(peak, value if positive else -value)
+	return peak
 
 
 func _validate_written(output_root: String) -> bool:

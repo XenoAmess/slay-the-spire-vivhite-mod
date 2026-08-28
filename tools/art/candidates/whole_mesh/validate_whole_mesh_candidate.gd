@@ -37,6 +37,11 @@ const REQUIRED_PARENTS := {
 const REQUIRED_SLOTS := ["slash_mesh", "eye_attach_slot"]
 const REQUIRED_EVENTS := ["attack_slash_start", "heavy_slash_start", "cast_eyes_start", "clear_vfx"]
 const SCENE_SCALE := 0.28
+const ATTACK_FORWARD_MIN := 95.0
+const ATTACK_FORWARD_MAX := 105.0
+const HEAVY_FORWARD_MIN := 150.0
+const HEAVY_FORWARD_MAX := 165.0
+const HURT_BACKWARD_MIN := 95.0
 
 var _errors: Array[String] = []
 
@@ -118,6 +123,45 @@ func _validate_raw_contract(skeleton: Dictionary) -> void:
 	if not clear_at_zero:
 		_errors.append("die must emit clear_vfx at t=0")
 
+	var attack_forward := _axis_directional_peak(skeleton["animations"]["attack"], "vivhite_rig", "x", true)
+	if attack_forward < ATTACK_FORWARD_MIN or attack_forward > ATTACK_FORWARD_MAX:
+		_errors.append("attack forward root peak %.3f is outside 95-105 Spine units" % attack_forward)
+	var heavy_forward := _axis_directional_peak(skeleton["animations"]["attack_heavy"], "vivhite_rig", "x", true)
+	if heavy_forward < HEAVY_FORWARD_MIN or heavy_forward > HEAVY_FORWARD_MAX:
+		_errors.append("attack_heavy forward root peak %.3f is outside 150-165 Spine units" % heavy_forward)
+	var hurt_backward := _axis_directional_peak(skeleton["animations"]["hurt"], "vivhite_rig", "x", false)
+	if hurt_backward < HURT_BACKWARD_MIN:
+		_errors.append("hurt backward root peak %.3f is below 95 Spine units" % hurt_backward)
+	_validate_easing_contract(skeleton)
+
+
+func _validate_easing_contract(skeleton: Dictionary) -> void:
+	for animation_name: String in EXPECTED_ANIMATIONS:
+		var bones: Dictionary = skeleton["animations"][animation_name].get("bones", {})
+		for bone_name: String in bones:
+			var timelines: Dictionary = bones[bone_name]
+			for timeline_name: String in ["rotate", "translate"]:
+				if not timelines.has(timeline_name):
+					continue
+				var frames: Array = timelines[timeline_name]
+				for index in range(frames.size() - 1):
+					var frame: Dictionary = frames[index]
+					var finish: Dictionary = frames[index + 1]
+					if not frame.has("curve") or not frame["curve"] is Array:
+						_errors.append("%s/%s/%s frame %d is missing Bezier easing" % [animation_name, bone_name, timeline_name, index])
+						continue
+					var curve: Array = frame["curve"]
+					var expected_size := 4 if timeline_name == "rotate" else 8
+					if curve.size() != expected_size:
+						_errors.append("%s/%s/%s frame %d curve has %d values, expected %d" % [animation_name, bone_name, timeline_name, index, curve.size(), expected_size])
+						continue
+					var start_time := float(frame.get("time", 0.0))
+					var finish_time := float(finish.get("time", 0.0))
+					for time_index: int in ([0, 2] if timeline_name == "rotate" else [0, 2, 4, 6]):
+						var control_time := float(curve[time_index])
+						if control_time < start_time or control_time > finish_time:
+							_errors.append("%s/%s/%s frame %d has an out-of-segment Bezier handle" % [animation_name, bone_name, timeline_name, index])
+
 
 func _sample_animation(data: Resource, animation_name: String, duration: float) -> bool:
 	var sprite: Node2D = ClassDB.instantiate("SpineSprite") as Node2D
@@ -148,11 +192,15 @@ func _motion_metrics(skeleton: Dictionary) -> Dictionary:
 	var animations: Dictionary = skeleton["animations"]
 	return {
 		"scene_scale": SCENE_SCALE,
-		"attack_root_x_range_px": _axis_range(animations["attack"], "vivhite_rig", "x") * SCENE_SCALE,
-		"attack_heavy_root_x_range_px": _axis_range(animations["attack_heavy"], "vivhite_rig", "x") * SCENE_SCALE,
-		"hurt_root_x_range_px": _axis_range(animations["hurt"], "vivhite_rig", "x") * SCENE_SCALE,
+		"attack_root_forward_peak_units": _axis_directional_peak(animations["attack"], "vivhite_rig", "x", true),
+		"attack_root_forward_peak_px": _axis_directional_peak(animations["attack"], "vivhite_rig", "x", true) * SCENE_SCALE,
+		"attack_heavy_root_forward_peak_units": _axis_directional_peak(animations["attack_heavy"], "vivhite_rig", "x", true),
+		"attack_heavy_root_forward_peak_px": _axis_directional_peak(animations["attack_heavy"], "vivhite_rig", "x", true) * SCENE_SCALE,
+		"hurt_root_backward_peak_units": _axis_directional_peak(animations["hurt"], "vivhite_rig", "x", false),
+		"hurt_root_backward_peak_px": _axis_directional_peak(animations["hurt"], "vivhite_rig", "x", false) * SCENE_SCALE,
 		"cast_root_y_range_px": _axis_range(animations["cast"], "vivhite_rig", "y") * SCENE_SCALE,
 		"idle_root_y_range_px": _axis_range(animations["idle_loop"], "vivhite_rig", "y") * SCENE_SCALE,
+		"bezier_segment_count": _count_bezier_segments(skeleton),
 		"die_root_key_count": animations["die"]["bones"]["vivhite_rig"]["translate"].size(),
 		"direct_parent_contract_count": REQUIRED_PARENTS.size(),
 	}
@@ -166,6 +214,34 @@ func _axis_range(animation: Dictionary, bone_name: String, axis: String) -> floa
 		minimum = minf(minimum, value)
 		maximum = maxf(maximum, value)
 	return maximum - minimum
+
+
+func _axis_directional_peak(
+	animation: Dictionary,
+	bone_name: String,
+	axis: String,
+	positive: bool,
+) -> float:
+	var peak := 0.0
+	for key: Dictionary in animation["bones"][bone_name]["translate"]:
+		var value := float(key.get(axis, 0.0))
+		peak = maxf(peak, value if positive else -value)
+	return peak
+
+
+func _count_bezier_segments(skeleton: Dictionary) -> int:
+	var count := 0
+	for animation_name: String in EXPECTED_ANIMATIONS:
+		var bones: Dictionary = skeleton["animations"][animation_name].get("bones", {})
+		for bone_name: String in bones:
+			var timelines: Dictionary = bones[bone_name]
+			for timeline_name: String in ["rotate", "translate"]:
+				if not timelines.has(timeline_name):
+					continue
+				for frame: Dictionary in timelines[timeline_name]:
+					if frame.has("curve") and frame["curve"] is Array:
+						count += 1
+	return count
 
 
 func _finish(metrics: Dictionary) -> void:
