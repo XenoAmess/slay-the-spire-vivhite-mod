@@ -398,6 +398,22 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(group_indexes, [0, 1])
         self.assertEqual(group_wait, 0.0)
 
+    def test_runnable_retry_group_preempts_earlier_fresh_batch(self) -> None:
+        pending = [
+            {"run": 11},
+            {"run": 8, "retry_group": "pkg-a", "runner": "opencode",
+             "model": "glm", "source": "preferred", "retry_same_model": True},
+            {"run": 9, "retry_group": "pkg-a", "runner": "opencode",
+             "model": "glm", "source": "preferred", "retry_same_model": True},
+            {"run": 12},
+        ]
+        with mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                               return_value=0.0):
+            indexes, wait = llm_review._select_review_batch(pending, 100, 1000.0)
+
+        self.assertEqual(indexes, [1, 2])
+        self.assertEqual(wait, 0.0)
+
     def test_sticky_model_cooldown_skips_lineage_but_not_new_work(self) -> None:
         pending = [
             {"run": 8, "retry_group": "pkg-a", "runner": "opencode",
@@ -791,7 +807,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             llm_review._worker_loop(agent, log=lambda _message: None)
 
         self.assertEqual(batches, [
-            ("live", [11, 12]), ("pkg-a", [8, 9]), ("pkg-b", [8, 10]),
+            ("pkg-a", [8, 9]), ("pkg-b", [8, 10]), ("live", [11, 12]),
         ])
 
     def test_explicit_salvage_replay_keeps_each_package_as_an_independent_group(self) -> None:

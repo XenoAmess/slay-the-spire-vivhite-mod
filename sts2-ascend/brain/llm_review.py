@@ -2192,37 +2192,44 @@ def _queue_item_ready_at(item: dict, now: float) -> float:
 def _select_review_batch(
     pending: list[dict], cap: int, now: float,
 ) -> tuple[list[int], float]:
-    """Select the earliest runnable transaction without splitting retry groups.
+    """Prefer a runnable retry transaction without splitting retry groups.
 
-    A blocked group is skipped as a whole so a later fresh batch can run.  Sticky
-    ungrouped legacy items are only batched with the same runner/model affinity.
-    The returned indexes refer to ``pending``; the wait is the earliest future
-    time at which any currently blocked transaction becomes runnable.
+    Failed-package lineages are closure debt, so a runnable group wins even when
+    recovery appended it behind newer live runs.  A blocked group is still skipped
+    as a whole so fresh work can run.  Sticky ungrouped legacy items are only
+    batched with the same runner/model affinity.  The returned indexes refer to
+    ``pending``; the wait is the earliest future time at which any currently
+    blocked transaction becomes runnable.
     """
     cap = max(1, int(cap))
     blocked_until: list[float] = []
     seen_groups: set[str] = set()
 
+    # First pass: runnable failed-package transactions always close before newer
+    # ordinary batches, regardless of where crash/hold recovery appended them.
     for index, item in enumerate(pending):
         group = str(item.get("retry_group") or "")
-        if group:
-            if group in seen_groups:
-                continue
-            seen_groups.add(group)
-            indexes = [offset for offset, candidate in enumerate(pending)
-                       if str(candidate.get("retry_group") or "") == group]
-            group_items = [pending[offset] for offset in indexes]
-            _batch_retry_affinity(group_items)
-            ready_at = max(_queue_item_ready_at(candidate, now)
-                           for candidate in group_items)
-            if ready_at <= now:
-                # Replay groups are durable transactions.  Queue construction caps
-                # them at packet size; never split one after recovery even if a
-                # legacy/corrupt config later lowers the live batching cap.
-                return indexes, 0.0
-            blocked_until.append(ready_at)
+        if not group or group in seen_groups:
             continue
+        seen_groups.add(group)
+        indexes = [offset for offset, candidate in enumerate(pending)
+                   if str(candidate.get("retry_group") or "") == group]
+        group_items = [pending[offset] for offset in indexes]
+        _batch_retry_affinity(group_items)
+        ready_at = max(_queue_item_ready_at(candidate, now)
+                       for candidate in group_items)
+        if ready_at <= now:
+            # Replay groups are durable transactions.  Queue construction caps
+            # them at packet size; never split one after recovery even if a
+            # legacy/corrupt config later lowers the live batching cap.
+            return indexes, 0.0
+        blocked_until.append(ready_at)
 
+    # Second pass: collect the earliest compatible ordinary batch.  Group items
+    # were handled atomically above and cannot leak into this batch.
+    for index, item in enumerate(pending):
+        if item.get("retry_group"):
+            continue
         ready_at = _queue_item_ready_at(item, now)
         if ready_at > now:
             blocked_until.append(ready_at)
