@@ -65,8 +65,11 @@ Alpha 为 0，身份特征和原始设定一致，边缘只出现极少量微弱
 `tools/art/evolink_transparent_image.py` 基于用户提供的异步请求脚本整理而来：
 
 - 只使用 Python 标准库，不增加运行依赖；
-- Key 来自 `EVOLINK_API_KEY` 或交互式隐藏输入；
+- Key 优先来自当前进程的 `EVOLINK_API_KEY`；Windows 下当前进程尚未继承新设置时，
+  工具会直接读取用户级环境变量，再不具备时才使用交互式隐藏输入；
 - 支持用 `--task-id` 恢复已完成任务，避免重复生成和重复计费；
+- 创建成功后立即把非秘密 task id 写入同名 `.task.json`；恢复时强制要求原尝试的
+  `.prompt.txt` 与脱敏 `.request.json` 同时存在，不能借恢复模式绕过归档；
 - 下载后拒收非 PNG 内容；
 - 不记录完整 API 响应、授权头或临时签名 URL。
 

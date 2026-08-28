@@ -8,13 +8,14 @@ alternate image service is permitted. `evolink_transparent_image.py` keeps the
 API key out of arguments and files, submits the fixed transparent request, and
 verifies that the downloaded result is a PNG.
 
-Set `EVOLINK_API_KEY` only in the current environment, or omit it and enter the
-key at the hidden prompt:
+Set `EVOLINK_API_KEY` in the current process environment or in the Windows user
+environment. The tool checks both without printing the value; on other systems,
+or when neither is configured, it falls back to an interactive hidden prompt:
 
 ```powershell
 py -3 -B .\tools\art\evolink_transparent_image.py `
-  --prompt-file .\path\to\asset.prompt.txt `
-  --output .\path\to\asset.png `
+  --prompt-file .\.work\evolink-prompts\next-asset.txt `
+  --output .\assets\vivhite-ironclad\generated\evolink-paid\2026-08-28\next-asset-attempt-01\output.png `
   --image-url https://example.invalid/reference-1.png `
   --image-url https://example.invalid/reference-2.jpg
 ```
@@ -25,8 +26,14 @@ creating or billing another image:
 ```powershell
 py -3 -B .\tools\art\evolink_transparent_image.py `
   --task-id task-unified-example `
-  --output .\path\to\asset.png
+  --output .\assets\vivhite-ironclad\generated\evolink-paid\2026-08-28\next-asset-attempt-01\output.png
 ```
+
+Resume must use the same output path as the original attempt. The tool refuses
+to resume when the matching `.prompt.txt` or sanitized `.request.json` is
+missing, and records the non-secret task id in a `.task.json` sidecar as soon as
+EvoLink accepts a request. This keeps a timed-out paid task recoverable without
+allowing resume mode to bypass the append-only archive contract.
 
 Never paste an API key into either command. Preserve every raw model result,
 including rejected attempts. Validate the actual Alpha channel separately;

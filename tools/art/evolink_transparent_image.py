@@ -57,8 +57,25 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def read_windows_user_environment(name: str) -> str:
+    """Read a user-scoped Windows environment value without printing it."""
+
+    if os.name != "nt":
+        return ""
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as key:
+            value, _value_type = winreg.QueryValueEx(key, name)
+    except (ImportError, OSError):
+        return ""
+    return value.strip() if isinstance(value, str) else ""
+
+
 def require_api_key() -> str:
     api_key = os.environ.get("EVOLINK_API_KEY", "").strip()
+    if not api_key:
+        api_key = read_windows_user_environment("EVOLINK_API_KEY")
     if not api_key:
         api_key = getpass.getpass("EvoLink API key (hidden): ").strip()
     if not api_key:
@@ -91,25 +108,97 @@ def validate_public_reference_urls(urls: list[str]) -> None:
             )
 
 
+def generation_record_paths(output: Path) -> tuple[Path, Path, Path]:
+    return (
+        output.with_name(f"{output.stem}.prompt.txt"),
+        output.with_name(f"{output.stem}.request.json"),
+        output.with_name(f"{output.stem}.task.json"),
+    )
+
+
 def write_generation_record(
     output: Path,
     prompt: str,
     payload: dict[str, Any],
 ) -> None:
-    prompt_path = output.with_name(f"{output.stem}.prompt.txt")
-    request_path = output.with_name(f"{output.stem}.request.json")
-    conflicts = [path for path in (output, prompt_path, request_path) if path.exists()]
+    prompt_path, request_path, task_path = generation_record_paths(output)
+    conflicts = [
+        path for path in (output, prompt_path, request_path, task_path) if path.exists()
+    ]
     if conflicts:
         joined = ", ".join(str(path) for path in conflicts)
         raise RuntimeError(f"Refusing to overwrite paid generation record: {joined}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_text(prompt + "\n", encoding="utf-8")
+    # The sidecar must be byte-for-byte equivalent to the string sent in the
+    # JSON payload. Do not add a newline that was not part of the actual prompt.
+    prompt_path.write_text(prompt, encoding="utf-8")
     request_record = {"endpoint": GENERATIONS_URL, **payload}
     request_path.write_text(
         json.dumps(request_record, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def write_or_validate_task_record(output: Path, task_id: str) -> None:
+    _prompt_path, _request_path, task_path = generation_record_paths(output)
+    # The opaque task id is enough to resume with the fixed TASK_URL template.
+    # Do not persist result/download URLs, which may be temporary or signed.
+    record = {"task_id": task_id}
+    if task_path.exists():
+        try:
+            existing = json.loads(task_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"Unreadable EvoLink task record: {task_path}") from exc
+        if existing != record:
+            raise RuntimeError(
+                f"Task id does not match archived generation record: {task_path}"
+            )
+        return
+    task_path.write_text(
+        json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def require_resume_record(output: Path, task_id: str) -> None:
+    prompt_path, request_path, _task_path = generation_record_paths(output)
+    missing = [path for path in (prompt_path, request_path) if not path.is_file()]
+    if missing:
+        joined = ", ".join(str(path) for path in missing)
+        raise RuntimeError(
+            "Refusing to resume a paid task without its archived prompt and "
+            f"sanitized request record: {joined}"
+        )
+    if not prompt_path.read_text(encoding="utf-8").strip():
+        raise RuntimeError(f"Archived prompt is empty: {prompt_path}")
+    try:
+        request_record = json.loads(request_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Unreadable archived request record: {request_path}") from exc
+    if not isinstance(request_record, dict):
+        raise RuntimeError(f"Archived request record is not an object: {request_path}")
+    expected = {
+        "endpoint": GENERATIONS_URL,
+        "model": "gpt-image-2",
+        "background": "transparent",
+        "n": 1,
+    }
+    for field, value in expected.items():
+        if request_record.get(field) != value:
+            raise RuntimeError(
+                f"Archived request record has invalid {field!r}: {request_path}"
+            )
+    for field in ("size", "resolution", "quality", "image_urls"):
+        if field not in request_record:
+            raise RuntimeError(
+                f"Archived request record is missing {field!r}: {request_path}"
+            )
+    if "output_format" in request_record or "response_format" in request_record:
+        raise RuntimeError(
+            f"Archived request uses an unsupported output-format field: {request_path}"
+        )
+    write_or_validate_task_record(output, task_id)
 
 
 def http_json(
@@ -181,6 +270,7 @@ def main() -> int:
     }
     if args.task_id:
         task_id = args.task_id
+        require_resume_record(args.output, task_id)
         task = {}
         print(f"Resuming task {task_id}", flush=True)
     else:
@@ -209,6 +299,7 @@ def main() -> int:
         )
         task = http_json(create_request, "generation request")
         task_id = find_task_id(task)
+        write_or_validate_task_record(args.output, task_id)
         print(f"Created task {task_id}", flush=True)
 
     deadline = time.monotonic() + args.timeout_seconds
