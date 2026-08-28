@@ -1,0 +1,150 @@
+{
+  "schema": "vivhite-semantic-head-face-candidate/v1",
+  "status": "research_only_not_publishable",
+  "variant": "head0045_rigid",
+  "head_id": "0045",
+  "weighted_hair": false,
+  "source_evidence": {
+    "back": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0031-split-back-hair-attachment-attempt-01/output.png",
+      "sha256": "9fd66b599eb4128ba9c3b4c2bd815aadb0613e064aca2f697307997048c01782",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bbox": [
+        113,
+        3,
+        827,
+        965
+      ]
+    },
+    "front": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0033-split-front-hair-attachment-attempt-02/output.png",
+      "sha256": "340a2f03f145910218857dd38a77ad66db5d6acaa2d8e79a9c8491f8a8c2070a",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bbox": [
+        69,
+        119,
+        891,
+        745
+      ]
+    },
+    "butterfly": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0030-split-butterfly-attachment-attempt-01/output.png",
+      "sha256": "a8fedb56c6d4a4388fa60cdb3cb66435f3cc6720a47754f53cc9f1f9a449458c",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bbox": [
+        27,
+        19,
+        985,
+        965
+      ]
+    },
+    "head0044": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0044-split-head-face-attachment-attempt-05/output.png",
+      "sha256": "780005fd36e8f039406cfa5dc5191ff2c05be4c598b9d1b2cdaade4aa50b5287",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bbox": [
+        201,
+        69,
+        601,
+        755
+      ]
+    },
+    "head0045": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0045-split-head-face-attachment-attempt-06/output.png",
+      "sha256": "0ece9923f8ccd7e6ff1f5b3abb935015a9163fc21a133dae5f5f640d3c8b5669",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bbox": [
+        169,
+        69,
+        743,
+        811
+      ]
+    }
+  },
+  "consumer_contract": {
+    "layer_order": [
+      "semantic_back_hair",
+      "part_torso",
+      "semantic_head_face",
+      "semantic_front_hair",
+      "semantic_butterfly",
+      "part_arm_right_upper"
+    ],
+    "eye_slot": "eye_attach_slot",
+    "eye_bone": "vivhite_eye_anchor",
+    "eye_center_common_px": [
+      592.0,
+      474.0
+    ],
+    "eye_center_head_local": [
+      28.125,
+      13.359375
+    ],
+    "butterfly_mount_common_px": [
+      722.0,
+      165.0
+    ],
+    "butterfly_source_pivot": [
+      0.435000002384186,
+      0.550000011920929
+    ],
+    "relaxed_loop_duration": 12.000001,
+    "death_detach_time": 1.05
+  },
+  "placements": {
+    "back_rect": [
+      0.0,
+      0.0,
+      1024.0,
+      1024.0
+    ],
+    "head_rect": [
+      0.0,
+      0.0,
+      1024.0,
+      1024.0
+    ],
+    "front_rect": [
+      0.0,
+      -80.0,
+      1024.0,
+      1024.0
+    ],
+    "butterfly_rect": [
+      590.0,
+      0.0,
+      300.0,
+      300.0
+    ],
+    "common_canvas": [
+      1024,
+      1024
+    ],
+    "head_world_size": 360.0
+  },
+  "evidence_limits": [
+    "The earlier three-layer visual claim used 0044; it is not evidence for 0045.",
+    "This build evaluates 0044 and 0045 under separately recorded transforms.",
+    "The base body remains temporary split UV art, so this candidate cannot be published."
+  ],
+  "safety": {
+    "evolink_paid_calls": 0,
+    "source_alpha_modified": false,
+    "game_or_runtime_modified": false
+  }
+}

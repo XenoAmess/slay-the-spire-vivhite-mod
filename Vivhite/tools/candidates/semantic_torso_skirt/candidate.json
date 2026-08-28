@@ -1,0 +1,386 @@
+{
+  "schema": 1,
+  "name": "semantic_torso_skirt",
+  "label": "躯干 + 裙摆语义组消费灰盒",
+  "status": "contract_frozen_existing_art_rejected_not_publishable",
+  "mount_path": "res://tools/candidates/semantic_torso_skirt",
+  "resource": "vivhite_semantic_torso_skirt_skeleton_data.tres",
+  "classification": {
+    "0054": "one_single_torso_like_object_not_a_sprite_sheet_or_atlas",
+    "0018": "one_single_full_body_frame_not_a_sprite_sheet_or_atlas",
+    "0022": "one_single_full_body_frame_not_a_sprite_sheet_or_atlas"
+  },
+  "source_contract": {
+    "0054_torso": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0054-split-torso-attachment-attempt-07/output.png",
+      "sha256": "70a293dd908af44aee0d9921cd5e4ac4d542105ba6717d8233705ec1a4a7cc35",
+      "canvas_px": [
+        832,
+        1248
+      ],
+      "alpha": {
+        "A_gt_0": {
+          "bbox": [
+            47,
+            53,
+            695,
+            963
+          ],
+          "count": 275737
+        },
+        "A_gt_15": {
+          "bbox": [
+            85,
+            196,
+            655,
+            765
+          ],
+          "count": 268911
+        },
+        "A_gt_63": {
+          "bbox": [
+            86,
+            197,
+            654,
+            764
+          ],
+          "count": 267974
+        },
+        "A_gt_127": {
+          "bbox": [
+            86,
+            197,
+            654,
+            764
+          ],
+          "count": 267145
+        }
+      }
+    },
+    "0018_actual_split_consumer": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0018-combat-body-master-attempt-01/output.png",
+      "sha256": "86ffd64a637d170e213879e72d986b707ee181d4812c8e3fb1eda4abfab98bd1",
+      "canvas_px": [
+        1680,
+        2512
+      ],
+      "alpha": {
+        "A_gt_0": {
+          "bbox": [
+            0,
+            9,
+            1666,
+            2486
+          ],
+          "count": 954462
+        },
+        "A_gt_15": {
+          "bbox": [
+            118,
+            24,
+            1487,
+            2453
+          ],
+          "count": 896548
+        },
+        "A_gt_63": {
+          "bbox": [
+            119,
+            24,
+            1485,
+            2453
+          ],
+          "count": 890721
+        },
+        "A_gt_127": {
+          "bbox": [
+            119,
+            25,
+            1485,
+            2451
+          ],
+          "count": 885794
+        }
+      }
+    },
+    "0022_visual_direction_reference_only": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0022-combat-body-master-attempt-05/output.png",
+      "sha256": "488e74758164dab0702ec6f943e02d23d9561caef29320275f698cb0000e232e",
+      "canvas_px": [
+        1680,
+        2512
+      ],
+      "alpha": {
+        "A_gt_0": {
+          "bbox": [
+            0,
+            12,
+            1660,
+            2500
+          ],
+          "count": 1036522
+        },
+        "A_gt_15": {
+          "bbox": [
+            153,
+            17,
+            1434,
+            2446
+          ],
+          "count": 975766
+        },
+        "A_gt_63": {
+          "bbox": [
+            154,
+            17,
+            1433,
+            2446
+          ],
+          "count": 967638
+        },
+        "A_gt_127": {
+          "bbox": [
+            154,
+            18,
+            1433,
+            2445
+          ],
+          "count": 961468
+        }
+      }
+    },
+    "0054_prompt": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0054-split-torso-attachment-attempt-07/output.prompt.txt",
+    "0054_request": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0054-split-torso-attachment-attempt-07/output.request.json",
+    "0048_lineage_prompt": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0048-split-torso-attachment-attempt-01/output.prompt.txt"
+  },
+  "consumer_evidence": {
+    "registry": "Vivhite/VivhiteCode/Characters/IroncladReplacementAssets.cs",
+    "scene": "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "scene_scale": 0.28,
+    "split_slot_audit": {
+      "passed": true,
+      "slot_indices": {
+        "far_arm": 13,
+        "torso": 19,
+        "skirt": 21,
+        "near_arm": 25
+      },
+      "back_to_front_relation": "far_arm < torso < skirt < near_arm",
+      "draw_order_animation_names": [],
+      "all_slot_names": [
+        "vivhite_magic_sigil",
+        "part_leg_left_thigh",
+        "death_leg_left_thigh",
+        "part_leg_left_lower",
+        "death_leg_left_lower",
+        "part_leg_left_foot",
+        "death_leg_left_foot",
+        "part_leg_right_thigh",
+        "death_leg_right_thigh",
+        "part_leg_right_lower",
+        "death_leg_right_lower",
+        "part_leg_right_foot",
+        "death_leg_right_foot",
+        "part_arm_left_upper",
+        "death_arm_left_upper",
+        "part_arm_left_forearm",
+        "death_arm_left_forearm",
+        "part_arm_left_hand",
+        "death_arm_left_hand",
+        "part_torso",
+        "death_torso",
+        "part_skirt",
+        "death_skirt",
+        "part_head_front_hair_butterfly",
+        "death_head_front_hair_butterfly",
+        "part_arm_right_upper",
+        "death_arm_right_upper",
+        "part_arm_right_forearm",
+        "death_arm_right_forearm",
+        "part_arm_right_hand",
+        "death_arm_right_hand",
+        "vivhite_death_body",
+        "slash_mesh",
+        "eye_attach_slot"
+      ]
+    },
+    "vanilla_atlas_audit": {
+      "passed": true,
+      "required_separate_regions": [
+        "bod",
+        "hips",
+        "belt",
+        "bottom upper arm",
+        "top upper arm",
+        "l shoulder armor top",
+        "l shoulder armor bottom",
+        "r shoulder armor top",
+        "r shoulder armor bottom"
+      ],
+      "missing": [],
+      "finding": "Vanilla separates body/hips/belt/upper arms/shoulder armor; one baked torso is not required by the game consumer."
+    },
+    "source_code_finding": "C# replaces the complete combat Spine resource; internal part layering is owned exclusively by Spine slot order."
+  },
+  "graybox": {
+    "animations": [
+      "setup",
+      "max_twist_clockwise",
+      "max_twist_counter_clockwise"
+    ],
+    "relative_torso_to_skirt_twist_degrees": 46.0,
+    "slot_order_reproduced": [
+      "context_far_upper_arm",
+      "context_left_thigh",
+      "context_right_thigh",
+      "semantic_torso",
+      "context_skirt",
+      "context_near_upper_arm"
+    ],
+    "0054_A_gt_127_bbox_px": [
+      86,
+      197,
+      654,
+      764
+    ],
+    "0018_target_rect_px": [
+      505.0,
+      430.0,
+      485.0,
+      490.0
+    ],
+    "0018_target_world_rect": [
+      -173.08332824707,
+      764.152893066406,
+      250.58332824707,
+      253.972930908203
+    ],
+    "fitted_0054_solid_world_size": [
+      217.406143188477,
+      253.972915649414
+    ],
+    "torso_region_world_size": [
+      276.577850341797,
+      414.866760253906
+    ],
+    "torso_attachment_offset": [
+      25.538948059082,
+      -59.0156555175781
+    ],
+    "chest_to_waist_width_audit": {
+      "method": "A>127 horizontal span at fixed normalized chest/waist rows; 0018/0022 are restricted to the frozen torso target rect",
+      "0054": {
+        "chest_y": 541,
+        "waist_y": 793,
+        "chest_span": [
+          211,
+          554,
+          344
+        ],
+        "waist_span": [
+          243,
+          631,
+          389
+        ],
+        "chest_to_waist_ratio": 0.884318766066838
+      },
+      "0018": {
+        "chest_y": 636,
+        "waist_y": 812,
+        "chest_span": [
+          558,
+          989,
+          432
+        ],
+        "waist_span": [
+          505,
+          938,
+          434
+        ],
+        "chest_to_waist_ratio": 0.995391705069124
+      },
+      "0022": {
+        "chest_y": 636,
+        "waist_y": 812,
+        "chest_span": [
+          532,
+          989,
+          458
+        ],
+        "waist_span": [
+          505,
+          952,
+          448
+        ],
+        "chest_to_waist_ratio": 1.02232142857143
+      },
+      "limitation": "This is a reproducible silhouette diagnostic, not a substitute for landmarked chest/shoulder art direction."
+    }
+  },
+  "audit_verdict": {
+    "0054_production_eligible": false,
+    "0054_alpha_status": "static_alpha_previously_passed; not the blocking issue",
+    "blocking_findings": [
+      "0054 lineage intentionally bakes both white shoulder caps/sleeves into the connected torso.",
+      "0054 lineage also bakes the screen-left blue/gold shoulder ornament into the torso, preventing an independent far-arm crossing order.",
+      "At equal solid height, 0054 fits to 217.41 world width versus the frozen 0018 target 250.58; its chest/waist span ratio is 0.884 versus 0018 0.995 and 0022 1.022. This is a proportion mismatch, not one uniform-scale error.",
+      "0054 includes a white lower waist/skirt-like layer despite the requested short insert, so it duplicates a separate skirt consumer.",
+      "Current split slot order places skirt after torso and therefore above the navy bodice hem; no drawOrder animation repairs this during the +/-46 degree relative twist."
+    ],
+    "graybox_visual_findings": [
+      "At setup, the 0054 shoulder caps overlap the independent 0018 arm samples instead of forming one clean sleeve-to-arm joint.",
+      "At the clockwise 46-degree torso-to-skirt extreme, the near arm and baked near sleeve visibly separate while the torso waist rotates away from the skirt root.",
+      "At the counter-clockwise extreme, the fixed torso/then/skirt order produces bodice/skirt intersections and exposes the lack of hidden waist overlap.",
+      "The same defects remain legible at the real 0.28 scene scale, so they are not inspection-zoom-only artifacts."
+    ]
+  },
+  "next_generation_consumer_contract": {
+    "paid_call_performed_by_this_task": false,
+    "semantic_group_outputs": [
+      "torso_core",
+      "skirt_back",
+      "skirt_center_front",
+      "skirt_side_near",
+      "skirt_side_far",
+      "screen_left_shoulder_ornament_back",
+      "screen_left_shoulder_ornament_front"
+    ],
+    "torso_core": {
+      "includes": "collar, chest cutout/crystal, white bodice, navy corset and visible navy pointed hem",
+      "excludes": "both white upper-arm sleeves/caps, both arms, blue/gold shoulder ornament and every white skirt layer",
+      "pivot": "waist center inherited from frozen neutral setup pose",
+      "layer": "above all skirt panels; far arm behind; near arm in front"
+    },
+    "skirt": {
+      "attachments": "one back/under panel plus three front/side panels; all generated as one coordinated costume group but stored as separate attachments",
+      "hidden_overlap": "each panel extends upward behind torso and laterally behind its neighbour; no glow is baked into joint cuts",
+      "layer": "both thighs behind all skirt panels; all skirt panels behind the torso's visible navy pointed hem",
+      "bones": "pelvis root plus center/near/far inertial child bones"
+    },
+    "shoulder_and_sleeve": {
+      "white_sleeves": "belong to the left/right arm semantic groups and rotate with their upper-arm chains",
+      "blue_gold_ornament": "separate back/front attachments around the far shoulder so the far arm can cross between them without duplicating the torso"
+    },
+    "required_gate": "setup plus both +/-46 degree torso-to-skirt extremes, near/far upper-arm extremes, SourceOver adjacency, and fixed slot order must pass before any asset is promoted"
+  },
+  "recommended_draw_order_back_to_front": [
+    "far_shoulder_ornament_back",
+    "far_upper_arm_and_sleeve",
+    "left_and_right_thighs",
+    "skirt_back",
+    "skirt_side_far",
+    "skirt_center_front",
+    "skirt_side_near",
+    "torso_core_with_visible_navy_front_hem",
+    "far_shoulder_ornament_front",
+    "near_upper_arm_and_sleeve"
+  ],
+  "safety": {
+    "evolink_paid_calls": 0,
+    "source_images_modified": false,
+    "alpha_threshold_mask_or_cleanup": false,
+    "runtime_skin_modified": false,
+    "game_or_stream_touched": false,
+    "deployable": false
+  }
+}

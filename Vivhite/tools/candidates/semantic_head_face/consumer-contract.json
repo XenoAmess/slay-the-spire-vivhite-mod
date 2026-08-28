@@ -1,0 +1,177 @@
+{
+  "schema": "vivhite-semantic-head-face-consumer-contract/v1",
+  "status": "research_only_blocked_from_runtime",
+  "preferred_next_gate": "head0045_weighted",
+  "conservative_fallback": "head0045_rigid",
+  "historical_reference_only": "head0044_rigid",
+  "evidence_distinction": {
+    "historical_actual_combination": [
+      "0031-split-back-hair-attachment-attempt-01",
+      "0044-split-head-face-attachment-attempt-05",
+      "0033-split-front-hair-attachment-attempt-02"
+    ],
+    "historical_0045_combination_proven": false,
+    "new_offline_combinations": [
+      "0031 + 0044 + 0033 + 0030",
+      "0031 + 0045 + 0033 + 0030"
+    ],
+    "note": "The earlier three-layer contact image proves only the 0044 combination. The 0045 branches are supported separately by the isolated source-over probe, static contract gate, and the 2026-08-28 hidden Vulkan comparison."
+  },
+  "source_evidence": {
+    "back_hair_0031": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0031-split-back-hair-attachment-attempt-01/output.png",
+      "sha256": "9fd66b599eb4128ba9c3b4c2bd815aadb0613e064aca2f697307997048c01782"
+    },
+    "front_hair_0033": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0033-split-front-hair-attachment-attempt-02/output.png",
+      "sha256": "340a2f03f145910218857dd38a77ad66db5d6acaa2d8e79a9c8491f8a8c2070a"
+    },
+    "head_face_0044": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0044-split-head-face-attachment-attempt-05/output.png",
+      "sha256": "780005fd36e8f039406cfa5dc5191ff2c05be4c598b9d1b2cdaade4aa50b5287"
+    },
+    "head_face_0045": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0045-split-head-face-attachment-attempt-06/output.png",
+      "sha256": "0ece9923f8ccd7e6ff1f5b3abb935015a9163fc21a133dae5f5f640d3c8b5669"
+    },
+    "butterfly_0030": {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0030-split-butterfly-attachment-attempt-01/output.png",
+      "sha256": "a8fedb56c6d4a4388fa60cdb3cb66435f3cc6720a47754f53cc9f1f9a449458c"
+    }
+  },
+  "consumer_sources": [
+    "Vivhite/VivhiteCode/Characters/IroncladReplacementAssets.cs",
+    "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "Vivhite/Vivhite/skins/ironclad/scenes/merchant.tscn",
+    "Vivhite/Vivhite/skins/ironclad/spine/merchant/merchant_skeleton_data.tres",
+    "tools/art/build_vivhite_combat_split_mesh_candidate.gd"
+  ],
+  "consumer_contract": {
+    "combat_scene_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "candidate_rendered_layer_order": [
+      "semantic_back_hair",
+      "part_torso",
+      "semantic_head_face",
+      "semantic_front_hair",
+      "semantic_butterfly",
+      "part_arm_right_upper"
+    ],
+    "integration_layer_order": [
+      "semantic_back_hair",
+      "part_torso",
+      "semantic_head_face",
+      "semantic_butterfly",
+      "semantic_front_hair",
+      "part_arm_right_upper"
+    ],
+    "integration_layer_order_correction": "The dedicated semantic-butterfly 16/16 Vulkan A/B showed that the butterfly must render below front hair so the fringe hides its dark-blue/gold connector. The semantic-head-face contact sheets predate that cross-component correction and must not be treated as evidence for the final butterfly/front-hair order.",
+    "head_face_mode": "rigid region in every branch",
+    "weighted_branch": {
+      "back_hair": "5x5 weighted mesh; crown remains head-weighted; outer/lower tips use at most 0.72 side-hair influence",
+      "front_hair": "5x5 weighted mesh; central fringe remains head-weighted; outer/lower tips use at most 0.24 side-hair influence"
+    },
+    "merchant": {
+      "scene": "Vivhite/Vivhite/skins/ironclad/scenes/merchant.tscn",
+      "shared_skeleton_contract": "merchant_skeleton_data.tres references the combat atlas and combat skeleton",
+      "animation": "relaxed_loop",
+      "duration": 12.000001,
+      "head_layer_resets": [
+        0.0,
+        12.000001
+      ]
+    },
+    "death": {
+      "atomic_head_layer_detach": 1.05,
+      "detached_slots": [
+        "semantic_back_hair",
+        "semantic_head_face",
+        "semantic_front_hair",
+        "semantic_butterfly"
+      ]
+    }
+  },
+  "eye_vfx_contract": {
+    "scene_node": "Visuals/EyeSlot/EyeFire",
+    "scene_slot_name": "eye_attach_slot",
+    "scene_show_behind_parent": true,
+    "slot_bone": "vivhite_eye_anchor",
+    "anchor_parent": "vivhite_head",
+    "cast_event": "cast_eyes_start",
+    "cast_event_time": 0.25,
+    "head0044": {
+      "source_eye_center_px": [
+        565.0,
+        475.0
+      ],
+      "head_local_anchor": [
+        18.6328125,
+        13.0078125
+      ]
+    },
+    "head0045": {
+      "source_eye_center_px": [
+        592.0,
+        474.0
+      ],
+      "head_local_anchor": [
+        28.125,
+        13.359375
+      ]
+    },
+    "structural_gate_passed": true,
+    "full_scene_eye_fire_composite_tested": false
+  },
+  "offline_vulkan_evidence": {
+    "report_path": ".work/combat-rig-compare-preview/semantic-head-face-v1/summary.json",
+    "report_sha256": "22e24a49a6596506c2eb5a446e99ee78bd45f973ca9507cc14b71e0073b351af",
+    "rendering_driver": "vulkan",
+    "display_server": "Windows",
+    "canvas": [
+      1280,
+      900
+    ],
+    "sample_fractions": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "candidate_count": 3,
+    "animations_per_candidate": 8,
+    "frames_per_candidate": 40,
+    "empty_frames": 0,
+    "edge_touch_frames": 0,
+    "failed_frames": 0,
+    "candidate_passes": {
+      "head0044_rigid": true,
+      "head0045_rigid": true,
+      "head0045_weighted": true
+    },
+    "relaxed_loop_boundary_hashes": {
+      "head0044_rigid": "631a9c390b743a708c790bcdca7be479bb9c40659d592b7f56b5dd97dd3f817b",
+      "head0045_rigid": "b5626f8552e3da017cbf4457d0dbb14fef81bf42e4b0c54b48b62e8a70be4e69",
+      "head0045_weighted": "2eb71b8f206c5d0398ce7017ca1fd367d49107f7c232afa53fdb95da47ac0cdc"
+    },
+    "visual_review": [
+      "0045 retains the strongest silver-hair, purple-eye, gold-glasses identity at the approved 70 percent authored scale.",
+      "No scalp gap, front-hair/face tear, glasses-layer inversion, butterfly orbit, old combined head fragment, or canvas clipping was observed in the 120 standard samples.",
+      "The weighted 0045 branch changes rendered pixels while remaining visually subtle at gameplay scale; it showed no visible seam in idle, relaxed, low-health, attack, heavy, cast, hurt, or pre-swap death samples.",
+      "0044 is more compact but materially weakens face and glasses readability at gameplay scale."
+    ]
+  },
+  "promotion_blockers": [
+    "The surrounding split-body atlas still uses temporary UV-derived body parts and is not publishable.",
+    "The integration rig must move semantic_butterfly below semantic_front_hair and rerun Vulkan comparison; the current isolated candidate contact sheets use the superseded front-hair-then-butterfly order.",
+    "The bare-skeleton Vulkan comparison does not instantiate the actual combat scene EyeSlot/EyeFire subtree; scene-level eye-fire alignment must pass after cross-component integration.",
+    "The preferred weighted branch still needs one combined full-rig extreme-pose review after every neighboring semantic component is integrated; this isolated branch may not overwrite runtime assets by itself."
+  ],
+  "safety": {
+    "evolink_paid_calls": 0,
+    "source_alpha_modified": false,
+    "runtime_skin_modified": false,
+    "game_started_or_restarted": false,
+    "deployable": false
+  }
+}

@@ -1,0 +1,503 @@
+{
+  "skeleton": {
+    "hash": "vivhite-semantic-torso-skirt-graybox-v1",
+    "spine": "4.2.43",
+    "x": -620.0,
+    "y": -120.0,
+    "width": 1240.0,
+    "height": 1480.0,
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    },
+    {
+      "name": "vivhite_pelvis",
+      "parent": "root",
+      "x": -72.3333358764648,
+      "y": 665.673583984375
+    },
+    {
+      "name": "vivhite_torso_lower",
+      "parent": "vivhite_pelvis",
+      "x": 0.0,
+      "y": 150.310485839844
+    },
+    {
+      "name": "vivhite_torso_upper",
+      "parent": "vivhite_torso_lower",
+      "x": 0.0,
+      "y": 119.211791992188
+    },
+    {
+      "name": "vivhite_skirt_center",
+      "parent": "vivhite_pelvis",
+      "x": 0.0,
+      "y": 119.211791992188
+    },
+    {
+      "name": "vivhite_thigh_left",
+      "parent": "vivhite_pelvis",
+      "x": -64.5833358764648,
+      "y": -41.4649658203125
+    },
+    {
+      "name": "vivhite_thigh_right",
+      "parent": "vivhite_pelvis",
+      "x": 46.5,
+      "y": -41.4649658203125
+    },
+    {
+      "name": "vivhite_shoulder_left",
+      "parent": "vivhite_torso_upper",
+      "x": -77.4999923706055,
+      "y": 12.9578247070313
+    },
+    {
+      "name": "vivhite_upper_arm_left",
+      "parent": "vivhite_shoulder_left",
+      "x": 18.0833282470703,
+      "y": -10.3662719726563
+    },
+    {
+      "name": "vivhite_shoulder_right",
+      "parent": "vivhite_torso_upper",
+      "x": 38.7500038146973,
+      "y": 33.6903076171875
+    },
+    {
+      "name": "vivhite_upper_arm_right",
+      "parent": "vivhite_shoulder_right",
+      "x": 18.0833320617676,
+      "y": -10.3662719726563
+    }
+  ],
+  "slots": [
+    {
+      "name": "context_far_upper_arm",
+      "bone": "vivhite_upper_arm_left",
+      "attachment": "context_far_upper_arm"
+    },
+    {
+      "name": "context_left_thigh",
+      "bone": "vivhite_thigh_left",
+      "attachment": "context_left_thigh"
+    },
+    {
+      "name": "context_right_thigh",
+      "bone": "vivhite_thigh_right",
+      "attachment": "context_right_thigh"
+    },
+    {
+      "name": "semantic_torso",
+      "bone": "vivhite_torso_upper",
+      "attachment": "vivhite_semantic_torso_0054"
+    },
+    {
+      "name": "context_skirt",
+      "bone": "vivhite_skirt_center",
+      "attachment": "context_skirt"
+    },
+    {
+      "name": "context_near_upper_arm",
+      "bone": "vivhite_upper_arm_right",
+      "attachment": "context_near_upper_arm"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "context_far_upper_arm": {
+          "context_far_upper_arm": {
+            "type": "mesh",
+            "path": "vivhite_semantic_context_0018",
+            "uvs": [
+              0.238095238095238,
+              0.234872611464968,
+              0.386904761904762,
+              0.234872611464968,
+              0.386904761904762,
+              0.35828025477707,
+              0.238095238095238,
+              0.35828025477707
+            ],
+            "triangles": [
+              0,
+              3,
+              1,
+              1,
+              3,
+              2
+            ],
+            "vertices": [
+              -95.5833282470703,
+              -2.591552734375,
+              33.5833358764648,
+              -2.591552734375,
+              33.5833358764648,
+              -163.268310546875,
+              -95.5833282470703,
+              -163.268310546875
+            ],
+            "hull": 4,
+            "width": 129.166666666667,
+            "height": 160.676751592357
+          }
+        },
+        "context_left_thigh": {
+          "context_left_thigh": {
+            "type": "mesh",
+            "path": "vivhite_semantic_context_0018",
+            "uvs": [
+              0.264880952380952,
+              0.453821656050955,
+              0.425595238095238,
+              0.453821656050955,
+              0.425595238095238,
+              0.585191082802548,
+              0.264880952380952,
+              0.585191082802548
+            ],
+            "triangles": [
+              0,
+              3,
+              1,
+              1,
+              3,
+              2
+            ],
+            "vertices": [
+              -67.1666564941406,
+              25.9155883789063,
+              72.3333358764648,
+              25.9155883789063,
+              72.3333358764648,
+              -145.127410888672,
+              -67.1666564941406,
+              -145.127410888672
+            ],
+            "hull": 4,
+            "width": 139.5,
+            "height": 171.042993630573
+          }
+        },
+        "context_right_thigh": {
+          "context_right_thigh": {
+            "type": "mesh",
+            "path": "vivhite_semantic_context_0018",
+            "uvs": [
+              0.401785714285714,
+              0.445859872611465,
+              0.580357142857143,
+              0.445859872611465,
+              0.580357142857143,
+              0.601114649681529,
+              0.401785714285714,
+              0.601114649681529
+            ],
+            "triangles": [
+              0,
+              3,
+              1,
+              1,
+              3,
+              2
+            ],
+            "vertices": [
+              -59.4166641235352,
+              36.2817993164063,
+              95.5833358764648,
+              36.2817993164063,
+              95.5833358764648,
+              -165.859893798828,
+              -59.4166641235352,
+              -165.859893798828
+            ],
+            "hull": 4,
+            "width": 155.0,
+            "height": 202.141719745223
+          }
+        },
+        "semantic_torso": {
+          "vivhite_semantic_torso_0054": {
+            "path": "vivhite_semantic_torso_0054",
+            "x": 25.538948059082,
+            "y": -59.0156555175781,
+            "width": 276.577850341797,
+            "height": 414.866760253906
+          }
+        },
+        "context_skirt": {
+          "context_skirt": {
+            "type": "mesh",
+            "path": "vivhite_semantic_context_0018",
+            "uvs": [
+              0.264880952380952,
+              0.328423566878981,
+              0.744047619047619,
+              0.328423566878981,
+              0.744047619047619,
+              0.515525477707006,
+              0.264880952380952,
+              0.515525477707006
+            ],
+            "triangles": [
+              0,
+              3,
+              1,
+              1,
+              3,
+              2
+            ],
+            "vertices": [
+              -131.75,
+              28.5071411132813,
+              284.166656494141,
+              28.5071411132813,
+              284.166656494141,
+              -215.099548339844,
+              -131.75,
+              -215.099548339844
+            ],
+            "hull": 4,
+            "width": 415.916666666667,
+            "height": 243.606687898089
+          }
+        },
+        "context_near_upper_arm": {
+          "context_near_upper_arm": {
+            "type": "mesh",
+            "path": "vivhite_semantic_context_0018",
+            "uvs": [
+              0.443452380952381,
+              0.189092356687898,
+              0.645833333333333,
+              0.189092356687898,
+              0.645833333333333,
+              0.292595541401274,
+              0.443452380952381,
+              0.292595541401274
+            ],
+            "triangles": [
+              0,
+              3,
+              1,
+              1,
+              3,
+              2
+            ],
+            "vertices": [
+              -33.5833320617676,
+              36.2818603515625,
+              142.083343505859,
+              36.2818603515625,
+              142.083343505859,
+              -98.4793090820313,
+              -33.5833320617676,
+              -98.4793090820313
+            ],
+            "hull": 4,
+            "width": 175.666666666667,
+            "height": 134.761146496815
+          }
+        }
+      }
+    }
+  ],
+  "animations": {
+    "setup": {
+      "bones": {
+        "vivhite_torso_lower": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_torso_upper": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_skirt_center": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_left": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_right": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "max_twist_clockwise": {
+      "bones": {
+        "vivhite_torso_lower": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 23.0
+            }
+          ]
+        },
+        "vivhite_torso_upper": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 23.0
+            }
+          ]
+        },
+        "vivhite_skirt_center": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -8.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_left": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -18.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_right": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 46.0
+            }
+          ]
+        }
+      }
+    },
+    "max_twist_counter_clockwise": {
+      "bones": {
+        "vivhite_torso_lower": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -23.0
+            }
+          ]
+        },
+        "vivhite_torso_upper": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -23.0
+            }
+          ]
+        },
+        "vivhite_skirt_center": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 8.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_left": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 18.0
+            }
+          ]
+        },
+        "vivhite_upper_arm_right": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -46.0
+            }
+          ]
+        }
+      }
+    }
+  }
+}

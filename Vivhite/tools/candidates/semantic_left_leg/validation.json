@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "candidate": "semantic_left_leg",
+  "research_gate_passed": true,
+  "production_gate_passed": false,
+  "production_blockers": [
+    "0078/0088/0063 are three independently drawn research parts, not the selected two-attachment production topology.",
+    "The current fixed thigh->lower->foot order exposes the 0088 knee cap instead of hiding it under the thigh.",
+    "The old UV-normalized foot origin and physical 0063 cuff pivot are not interchangeable.",
+    "The separate 0088/0063 ankle seam adds visible risk for only +21 degrees of historical ankle motion."
+  ],
+  "selected_topology": "keep knee; far thigh + far lower-leg-with-boot; no separate ankle attachment",
+  "errors": [],
+  "evidence": {
+    "candidate_manifest_sha256": "a823a31b3eaeff4f93ffcd1bd1056c77d988c6bf6d812a7cf011196a663558b5",
+    "pose_rgba_sha256": {
+      "legacy_uv_setup": "70a2f8926ecebc7a463574c81ff7e982093ce3e5808ac952dcf9cb34af2cb432",
+      "setup": "6600e198a2da9abf538ad3fe79b1c5924a5546dfacfc8259c8d0d8a8bb640b09",
+      "max_knee_flex": "8c75783718f8749ea7141522e539e03628d07197d4be00061762449877a2955f",
+      "max_ankle_flex": "ed03d535de00cac2cc49df0777768abbe2b458008ab489ace637d80dc4b53b0a",
+      "combined_death_extreme": "da144a297f96fff6a7a0bc913bf07fa968654e17ed19daefc119f6bc33ee04fe"
+    },
+    "verified_pose_count": 5
+  }
+}

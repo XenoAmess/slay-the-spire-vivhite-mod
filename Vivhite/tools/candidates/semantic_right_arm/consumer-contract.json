@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "status": "executable-graybox-consumer-no-art",
+  "asset_classification": {
+    "requested_group": "semantic body-part group",
+    "production_delivery": "two independent single-frame attachments: upper_arm and continuous forearm_hand",
+    "not_a_sprite_sheet": true,
+    "not_an_atlas_page": true,
+    "packed_atlas_redraw_forbidden": true
+  },
+  "side_identity": {
+    "screen_side": "right",
+    "camera_depth": "near",
+    "anatomical_side": "left",
+    "legacy_builder_suffix": "right",
+    "legacy_suffix_semantics": "screen side only; never use it as an anatomical label",
+    "canonical_id": "near_screen_right_anatomical_left_arm",
+    "evidence": [
+      "0018 prompt calls the screen-right raised casting arm the near arm",
+      "the front-facing identity reference places the character-left butterfly on screen-right",
+      "the current split builder names x-positive pivots *_right, proving its suffix is screen-space"
+    ]
+  },
+  "consumer": {
+    "combat_scene": "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "spine_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "world_rect": [
+      -434.0,
+      -61.0,
+      868.0,
+      1302.0
+    ],
+    "source_size_px": [
+      1680.0,
+      2512.0
+    ],
+    "current_split_builder": "tools/art/build_vivhite_combat_split_mesh_candidate.gd",
+    "runtime_vfx_type": "MegaCrit.Sts2.Core.Nodes.Vfx.NIroncladVfx",
+    "runtime_vfx_contract": {
+      "slash_slot": "slash_mesh",
+      "attack_event": "attack_slash_start",
+      "heavy_event": "heavy_slash_start",
+      "arc_follows": "magic_arc_anchor is screen-right and above palm_deform_pivot",
+      "slash_draws_behind_character": true
+    }
+  },
+  "evidence_sources": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0018-combat-body-master-attempt-01/output.png",
+      "sha256": "86ffd64a637d170e213879e72d986b707ee181d4812c8e3fb1eda4abfab98bd1",
+      "role": "actual current split/runtime body source; full-body single frame; pivot authority only"
+    },
+    {
+      "path": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-body-master-v1.png",
+      "sha256": "86ffd64a637d170e213879e72d986b707ee181d4812c8e3fb1eda4abfab98bd1",
+      "role": "byte-identical registered runtime master"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0022-combat-body-master-attempt-05/output.png",
+      "sha256": "488e74758164dab0702ec6f943e02d23d9561caef29320275f698cb0000e232e",
+      "role": "visual direction/silhouette comparison only; not pivot authority"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0054-split-torso-attachment-attempt-07/output.png",
+      "sha256": "70a293dd908af44aee0d9921cd5e4ac4d542105ba6717d8233705ec1a4a7cc35",
+      "role": "adjacent shoulder-sleeve/armhole candidate only; not an arm source"
+    }
+  ],
+  "landmarks": {
+    "clavicle_bind": {
+      "source_px": [
+        775.0,
+        525.0
+      ],
+      "world_units": [
+        -33.5833320617676,
+        968.886169433594
+      ]
+    },
+    "shoulder_pivot": {
+      "source_px": [
+        810.0,
+        545.0
+      ],
+      "world_units": [
+        -15.5,
+        958.519897460938
+      ]
+    },
+    "elbow_pivot": {
+      "source_px": [
+        1040.0,
+        650.0
+      ],
+      "world_units": [
+        103.333335876465,
+        904.097106933594
+      ]
+    },
+    "palm_deform_pivot": {
+      "source_px": [
+        1430.0,
+        555.0
+      ],
+      "world_units": [
+        304.833343505859,
+        953.336791992188
+      ]
+    },
+    "magic_arc_anchor": {
+      "source_px": [
+        1500.0,
+        530.0
+      ],
+      "world_units": [
+        341.0,
+        966.294555664063
+      ]
+    }
+  },
+  "attachments": {
+    "upper_arm": {
+      "bone": "near_upper_arm",
+      "slot": "near_upper_arm_back",
+      "pivot": "shoulder_pivot",
+      "axis": "shoulder_pivot -> elbow_pivot; screen-right and down in source pixels",
+      "source_axis_length_px": 252.833938598633,
+      "hidden_shoulder_root_overlap_px": 48.0,
+      "hidden_elbow_extension_px": 32.0,
+      "joint_cap_radius_px": 44.0,
+      "layer": "behind torso shoulder sleeve/occluder; behind forearm_hand"
+    },
+    "forearm_hand": {
+      "bone": "near_forearm_hand",
+      "slot": "near_forearm_hand_front",
+      "pivot": "elbow_pivot",
+      "axis": "elbow_pivot -> palm_deform_pivot; screen-right and up in source pixels",
+      "source_axis_length_px": 401.403778076172,
+      "hidden_elbow_root_overlap_px": 64.0,
+      "joint_cap_radius_px": 44.0,
+      "wrist_seam": "none; hand is continuous with forearm",
+      "palm_internal_bone": "near_palm_deform",
+      "layer": "in front of upper arm, torso/head, and behind slash VFX consumer"
+    },
+    "shoulder_occluder_requirement": {
+      "owner": "torso semantic group",
+      "graybox_slot": "near_shoulder_occluder_reference",
+      "center": "shoulder_pivot",
+      "minimum_coverage_radius_px": 96.0,
+      "fallback": "if the torso does not supply the sleeve/armhole foreground, add a separate shoulder-front attachment; never move upper_arm in front merely to hide a gap"
+    }
+  },
+  "required_slot_order": [
+    "near_upper_arm_back",
+    "near_shoulder_occluder_reference",
+    "near_forearm_hand_front",
+    "slash_mesh"
+  ],
+  "extreme_pose_gates": [
+    {
+      "name": "setup",
+      "upper_arm_rotation_deg": 0.0,
+      "forearm_hand_rotation_deg": 0.0,
+      "palm_internal_rotation_deg": 0.0
+    },
+    {
+      "name": "low_health_extreme",
+      "upper_arm_rotation_deg": -10.0,
+      "forearm_hand_rotation_deg": 0.0,
+      "palm_internal_rotation_deg": 0.0
+    },
+    {
+      "name": "attack_anticipation",
+      "upper_arm_rotation_deg": -28.0,
+      "forearm_hand_rotation_deg": -35.0,
+      "palm_internal_rotation_deg": -18.0
+    },
+    {
+      "name": "attack_peak",
+      "upper_arm_rotation_deg": 32.0,
+      "forearm_hand_rotation_deg": 43.0,
+      "palm_internal_rotation_deg": 20.0
+    },
+    {
+      "name": "heavy_peak",
+      "upper_arm_rotation_deg": 46.0,
+      "forearm_hand_rotation_deg": 62.0,
+      "palm_internal_rotation_deg": 28.0
+    },
+    {
+      "name": "cast_anticipation",
+      "upper_arm_rotation_deg": -12.0,
+      "forearm_hand_rotation_deg": -15.0,
+      "palm_internal_rotation_deg": -8.0
+    },
+    {
+      "name": "cast_peak",
+      "upper_arm_rotation_deg": 32.0,
+      "forearm_hand_rotation_deg": 44.0,
+      "palm_internal_rotation_deg": 22.0
+    },
+    {
+      "name": "hurt_peak",
+      "upper_arm_rotation_deg": 0.0,
+      "forearm_hand_rotation_deg": -22.0,
+      "palm_internal_rotation_deg": 0.0
+    },
+    {
+      "name": "death_terminal",
+      "upper_arm_rotation_deg": -77.0,
+      "forearm_hand_rotation_deg": -54.0,
+      "palm_internal_rotation_deg": -21.0
+    }
+  ],
+  "rotation_envelope_deg": {
+    "upper_arm": [
+      -77.0,
+      46.0
+    ],
+    "forearm_hand": [
+      -54.0,
+      62.0
+    ],
+    "palm_internal": [
+      -21.0,
+      28.0
+    ]
+  },
+  "source_availability": {
+    "dedicated_production_upper_arm": null,
+    "dedicated_production_forearm_hand": null,
+    "usable_existing_arm_sources": [],
+    "reason": "0018/0022 are flattened whole figures with no hidden shoulder/elbow pixels; 0054 is only the adjacent torso sleeve candidate"
+  },
+  "safety": {
+    "paid_generation_calls": 0,
+    "candidate_raster_files": 0,
+    "alpha_created_or_modified": false,
+    "runtime_modified": false,
+    "deployable": false
+  }
+}

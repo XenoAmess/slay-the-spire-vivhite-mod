@@ -1,0 +1,282 @@
+{
+  "schema": "vivhite-semantic-split-v3/v1",
+  "name": "semantic_split_v3",
+  "status": "fail_closed_cross_component_graybox_not_deployable",
+  "deployable": false,
+  "runtime_skin_modified": false,
+  "paid_generation_calls": 0,
+  "ab_contract": {
+    "A": "legacy split_mesh motion consumer; temporary flattened-UV art",
+    "B": "semantic_split_v3 real eligible attachments plus explicit missing-art grayboxes",
+    "scene_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "animations": [
+      "idle_loop",
+      "low_health_loop",
+      "relaxed_loop",
+      "attack",
+      "attack_heavy",
+      "cast",
+      "hurt",
+      "die"
+    ],
+    "dense_samples_per_animation": 21
+  },
+  "component_slots": [
+    {
+      "group": "back_hair",
+      "slot": "semantic_back_hair",
+      "state": "real_research_art_dynamic_component_passed_pending_total_rig",
+      "source": "0031"
+    },
+    {
+      "group": "head_face",
+      "slot": "semantic_head_face",
+      "state": "real_research_art_pending_total_rig",
+      "source": "0045"
+    },
+    {
+      "group": "head_face",
+      "slot": "semantic_front_hair",
+      "state": "real_research_art_pending_total_rig",
+      "source": "0033"
+    },
+    {
+      "group": "butterfly",
+      "slot": "semantic_butterfly",
+      "state": "real_art_component_vulkan_passed_pending_total_rig",
+      "source": "0030"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "part_torso",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_torso_core"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "part_skirt",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_coordinated_skirt_group"
+    },
+    {
+      "group": "left_arm",
+      "slot": "part_arm_left_upper",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_far_upper_arm"
+    },
+    {
+      "group": "left_arm",
+      "slot": "part_arm_left_forearm",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_far_forearm_hand"
+    },
+    {
+      "group": "right_arm",
+      "slot": "part_arm_right_upper",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_near_upper_arm"
+    },
+    {
+      "group": "right_arm",
+      "slot": "part_arm_right_forearm",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_near_forearm_hand"
+    },
+    {
+      "group": "left_leg",
+      "slot": "part_leg_left_thigh",
+      "state": "real_static_research_only",
+      "source": "0078"
+    },
+    {
+      "group": "left_leg",
+      "slot": "part_leg_left_lower",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_far_lower_leg_with_boot"
+    },
+    {
+      "group": "right_leg",
+      "slot": "part_leg_right_thigh",
+      "state": "real_static_research_only",
+      "source": "0083"
+    },
+    {
+      "group": "right_leg",
+      "slot": "part_leg_right_lower",
+      "state": "requires_new_evolink_semantic_generation",
+      "graybox": "gray_near_lower_leg_with_boot"
+    }
+  ],
+  "production_slot_contract": [
+    {
+      "group": "back_hair",
+      "slot": "semantic_back_hair",
+      "state": "real_research_art_dynamic_component_passed_pending_total_rig",
+      "source": "0031"
+    },
+    {
+      "group": "head_face",
+      "slot": "semantic_head_face",
+      "state": "real_research_art_pending_total_rig",
+      "source": "0045"
+    },
+    {
+      "group": "head_face",
+      "slot": "semantic_front_hair",
+      "state": "real_research_art_pending_total_rig",
+      "source": "0033"
+    },
+    {
+      "group": "butterfly",
+      "slot": "semantic_butterfly",
+      "state": "real_art_component_vulkan_passed_pending_total_rig",
+      "source": "0030"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "torso_core",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_torso"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "skirt_back",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_skirt"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "skirt_side_far",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_skirt"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "skirt_center_front",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_skirt"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "skirt_side_near",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_skirt"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "far_shoulder_ornament_back",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "explicitly_absent_no_fake_attachment"
+    },
+    {
+      "group": "torso_skirt",
+      "slot": "far_shoulder_ornament_front",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "explicitly_absent_no_fake_attachment"
+    },
+    {
+      "group": "left_arm",
+      "slot": "far_upper_arm_and_sleeve",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_arm_left_upper"
+    },
+    {
+      "group": "left_arm",
+      "slot": "far_forearm_hand",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_arm_left_forearm"
+    },
+    {
+      "group": "right_arm",
+      "slot": "near_upper_arm_and_sleeve",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_arm_right_upper"
+    },
+    {
+      "group": "right_arm",
+      "slot": "near_forearm_hand",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_arm_right_forearm"
+    },
+    {
+      "group": "left_leg",
+      "slot": "far_thigh",
+      "state": "real_static_research_only",
+      "source": "0078",
+      "rendered_proxy": "part_leg_left_thigh"
+    },
+    {
+      "group": "left_leg",
+      "slot": "far_lower_leg_with_boot",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_leg_left_lower"
+    },
+    {
+      "group": "right_leg",
+      "slot": "near_thigh",
+      "state": "real_static_research_only",
+      "source": "0083",
+      "rendered_proxy": "part_leg_right_thigh"
+    },
+    {
+      "group": "right_leg",
+      "slot": "near_lower_leg_with_boot",
+      "state": "requires_new_evolink_semantic_generation",
+      "rendered_proxy": "part_leg_right_lower"
+    }
+  ],
+  "production_runtime_ready_slots": [],
+  "art_or_component_candidates_ready_for_total_gate": [
+    "semantic_back_hair",
+    "semantic_butterfly"
+  ],
+  "research_only_slots": [
+    "semantic_head_face",
+    "semantic_front_hair",
+    "part_leg_left_thigh",
+    "part_leg_right_thigh"
+  ],
+  "new_evolink_semantic_generation_required": [
+    "torso_core",
+    "skirt_back",
+    "skirt_side_far",
+    "skirt_center_front",
+    "skirt_side_near",
+    "far_shoulder_ornament_back",
+    "far_shoulder_ornament_front",
+    "far_upper_arm_and_sleeve",
+    "far_forearm_hand",
+    "near_upper_arm_and_sleeve",
+    "near_forearm_hand",
+    "far_lower_leg_with_boot",
+    "near_lower_leg_with_boot"
+  ],
+  "topology_contract": {
+    "far_arm": "far_upper_arm_and_sleeve + far_forearm_hand; wrist is measurement-only; no slash_mesh ownership",
+    "near_arm": "near_upper_arm_and_sleeve + near_forearm_hand; wrist is measurement-only; slash_mesh remains a separate VFX consumer",
+    "far_leg": "far_thigh + far_lower_leg_with_boot; preserve knee, remove separate ankle attachment",
+    "near_leg": "near_thigh + near_lower_leg_with_boot; preserve knee, remove separate ankle attachment",
+    "skirt": "skirt_back + skirt_side_far + skirt_center_front + skirt_side_near, generated as one coordinated costume group but stored as separate attachments",
+    "far_shoulder": "far_shoulder_ornament_back < far_upper_arm_and_sleeve < far_shoulder_ornament_front"
+  },
+  "layer_order_correction": {
+    "old_head_face_candidate": "back -> torso -> head -> front_hair -> butterfly",
+    "integrated_order": "far limbs -> back_hair -> skirt -> torso -> head_face -> butterfly -> front_hair -> near arm",
+    "evidence": "Dedicated butterfly 16/16 Vulkan A/B showed the connector must sit behind front hair; head-face component accepted this correction."
+  },
+  "source_hashes": {
+    "head_page": "49c4aff9c17b2b2779b2fb030f850b65c4065341f71622148e22ff4191be51a8",
+    "head_spjson": "55e1e98b8edf6cc89d426e2c4380168761a61ac0ba38e04e2609c58e2b2a19e0",
+    "far_thigh_0078": "da48818eb18918236144a2dd0a186218a9fa1d7c6494ac36075532fadd7b72db",
+    "near_thigh_0083": "f74ec591dbc2718426af1e3e04562cf6ddcae639367c14e5df23e3cbe78714f7"
+  },
+  "known_limits": [
+    "Diagnostic grayboxes are not Bai Qi art and are intentionally conspicuous.",
+    "The one rendered skirt proxy only proves gross cross-component motion; it does not claim that the required four skirt attachments exist or passed their independent +/-46 degree gate.",
+    "Far-shoulder ornament back/front are deliberately absent from the render and explicitly blocked, rather than faked with the arm or torso proxy.",
+    "0078 and 0083 are static research thighs, not production-approved runtime attachments.",
+    "The existing dedicated death body remains an external transition reference; this assembly does not claim to fix its landing jump.",
+    "No result from this candidate may be copied into Vivhite/Vivhite/skins/ironclad."
+  ]
+}

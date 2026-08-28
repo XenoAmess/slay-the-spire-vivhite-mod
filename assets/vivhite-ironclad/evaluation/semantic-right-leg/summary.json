@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "component": "semantic_right_leg",
+  "screen_side": "screen-right / camera-near",
+  "classification": "offline research evidence; contact sheets are not runtime sprites, spritesheets, or atlas pages",
+  "status": "topology_recommended_art_missing_not_publishable",
+  "recheck": {
+    "date": "2026-08-28",
+    "godot": "4.5.1.stable.mono.official.f62fdbde1",
+    "renderer": "Windows display + Vulkan",
+    "gpu": "NVIDIA GeForce GTX 1060",
+    "builder_exit_code": 0,
+    "validator_exit_code": 0,
+    "immutable_source_count": 12,
+    "sourceover_sheet_count": 5,
+    "bit_exact_with_isolated_candidate": true,
+    "paid_generation_calls": 0,
+    "runtime_skin_modified": false,
+    "game_or_broadcast_touched": false
+  },
+  "consumer_contract": {
+    "registration": "Vivhite/VivhiteCode/Characters/IroncladReplacementAssets.cs",
+    "combat_scene": "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "scene_scale": 0.28,
+    "split_spine_json": "assets/vivhite-ironclad/candidates/split_mesh/combat/vivhite_combat_split_mesh.spjson",
+    "fixed_normal_slot_indices": {
+      "part_leg_right_thigh": 7,
+      "part_leg_right_lower": 9,
+      "part_leg_right_foot": 11
+    },
+    "draw_order_animation_count": 0,
+    "historical_builder_setup_points_px": {
+      "right_knee": [880, 1580],
+      "right_ankle": [1190, 2070]
+    },
+    "stress_pose_degrees": {
+      "right_knee_max": 82.0,
+      "right_ankle_min": -18.0
+    }
+  },
+  "axis_conflict_degrees": {
+    "historical_builder_hard_coded": 57.681201,
+    "builder_source_0018_visible_estimate": 68.2,
+    "selected_new_rig_target_0022": 74.2,
+    "research_lower_leg_0100_pca": 61.4817976576912,
+    "decision": "Freeze the final neutral/new-rig pivots before producing art; the historical builder axis is diagnostic evidence, not production truth."
+  },
+  "art_availability": {
+    "0083_right_thigh": "research reference only; static RGBA/Alpha gate passed, no production integration approval",
+    "0100_right_lower_leg": "research reference only; static RGBA/Alpha gate passed, but its closed upper outline creates a knee seam under the fixed order",
+    "0064_to_0071_right_boots": "research/audit only; all point toe screen-left and heel screen-right, opposite the selected screen-right-toe target",
+    "right_lower_leg_and_boot_union": "missing; must be newly produced as one native-transparent attachment if this route proceeds"
+  },
+  "three_piece_route": {
+    "topology": [
+      "right_thigh",
+      "right_lower_leg",
+      "right_boot"
+    ],
+    "result": "blocked",
+    "reasons": [
+      "The immutable 7 -> 9 -> 11 order draws the lower leg over the thigh and exposes a closed knee cross-seam, especially at +82 degrees.",
+      "All eight existing boot attempts point in the direction opposite the selected new-rig target.",
+      "A separate boot introduces an avoidable ankle seam and requires hidden pixels at the -18 degree ankle extreme."
+    ]
+  },
+  "recommended_route": {
+    "topology": [
+      "right_thigh",
+      "right_lower_leg_and_boot_union"
+    ],
+    "degrees_of_freedom": [
+      "hip",
+      "knee"
+    ],
+    "ankle": "locked inside the continuous lower-leg/boot art attachment",
+    "production_rule": "Do not merge 0100 and 0064 into runtime art. Produce one new native-transparent lower-leg+boot union only after final neutral pivots and screen direction are frozen.",
+    "next_gate": "Repeat setup and +82 degree knee SourceOver adjacency tests, then exact Windows Vulkan/Spine tests with the newly produced union."
+  },
+  "source_sha256": {
+    "0018": "86ffd64a637d170e213879e72d986b707ee181d4812c8e3fb1eda4abfab98bd1",
+    "0022": "488e74758164dab0702ec6f943e02d23d9561caef29320275f698cb0000e232e",
+    "0064": "6e106b1fe7718bab68af2967de5e0ae757d6f58caf0ff60d97959f80a3dd290d",
+    "0065": "eeecd4df3054b6dc89db1b0f41b1e0596374b4c2b1f6e5fe64a2f0f4d496c94f",
+    "0066": "a14d0caf909f362a852842ab8db3e26d10148b8885d14cd9b583b1aa6e509a9e",
+    "0067": "6a4d84c61bb0bbf24486f2c4d1211caa3b89f0b9ce2f7bbf60de2254c28e5277",
+    "0068": "2c9c346dad4331fe9a266d901ee2c568505284a80b4d5a8718f7329d9f4de32f",
+    "0069": "e45ec010d7231b080b71f9c82053cf54b12af0d5fc7d1a21e419a7e0639f253b",
+    "0070": "1605b0590d02b612453128afba2bbeed1b290d2d0e0742ba09e7cf363391cf57",
+    "0071": "70ae428b8798704147062e03db5fa5284fddce04d925835f31a53d1889096f60",
+    "0083": "f74ec591dbc2718426af1e3e04562cf6ddcae639367c14e5df23e3cbe78714f7",
+    "0100": "9035dcf28f251935467db70edeebae481ac8c71fa7531f7fabedc337b6e8a5d2"
+  },
+  "tool_sha256": {
+    "tools/art/candidates/semantic_right_leg/build_semantic_right_leg_candidate.gd": "78a2bb6a693ec899b916a47a88f37506c1208428404c1b9ceb8f61c5936b35da",
+    "tools/art/candidates/semantic_right_leg/validate_semantic_right_leg_candidate.gd": "51f7e35d3d1160cac39bebc70ac07f8e456524fa7e759835d92e0b47683e74df",
+    "tools/art/candidates/semantic_right_leg/README.md": "21b7e529391aa88b0e71f989464f5cde6db689556820768b90f8df05a75958f8",
+    "Vivhite/tools/candidates/semantic_right_leg/candidate.json": "93c167d15b5bec309c41914abdf2487c3a31d608be0a9205339c19475eed1782"
+  },
+  "evidence_sha256": {
+    "right-leg-contact-black.png": "4259971ba8f132ff58e7a899e4ea9b3c8f02c10b4d57eda03f2c57320b4ef188",
+    "right-leg-contact-white.png": "282e49a8043185c020ea6ba81efd49562cdbe43fb7987df3f44f51f608124578",
+    "right-leg-contact-game.png": "d4ed87ec039ac41097d13025193cf55e7ef4fc1b1786bfa9f555129a0d020fe1",
+    "right-boot-0064-0071-contact-game.png": "f94b5121db3aa51d4874ce6de9d310e6dfd46b49880a0e3b22d337e14216f154",
+    "right-leg-axis-conflict.png": "bb884198d3dcb531ea38ac923bf7b5eae3769916a3761d32bdd5d9a12ab4fa6a"
+  }
+}

@@ -1,0 +1,437 @@
+{
+  "skeleton": {
+    "hash": "vivhite-semantic-near-arm-graybox-v1",
+    "spine": "4.2.43",
+    "x": -900.0,
+    "y": -260.0,
+    "width": 3260.0,
+    "height": 2220.0,
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    },
+    {
+      "name": "near_clavicle_bind",
+      "parent": "root",
+      "x": -33.5833320617676,
+      "y": 968.886169433594
+    },
+    {
+      "name": "near_upper_arm",
+      "parent": "near_clavicle_bind",
+      "x": 18.0833320617676,
+      "y": -10.3662719726563,
+      "length": 130.702713012695
+    },
+    {
+      "name": "near_forearm_hand",
+      "parent": "near_upper_arm",
+      "x": 118.833335876465,
+      "y": -54.4227905273438,
+      "length": 207.429016113281
+    },
+    {
+      "name": "near_palm_deform",
+      "parent": "near_forearm_hand",
+      "x": 201.500007629395,
+      "y": 49.2396850585938,
+      "length": 38.4178428649902
+    },
+    {
+      "name": "near_magic_arc_anchor",
+      "parent": "near_palm_deform",
+      "x": 36.1666564941406,
+      "y": 12.957763671875
+    }
+  ],
+  "slots": [
+    {
+      "name": "near_upper_arm_back",
+      "bone": "near_upper_arm"
+    },
+    {
+      "name": "near_shoulder_occluder_reference",
+      "bone": "near_clavicle_bind"
+    },
+    {
+      "name": "near_forearm_hand_front",
+      "bone": "near_forearm_hand"
+    },
+    {
+      "name": "slash_mesh",
+      "bone": "near_magic_arc_anchor"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+
+      }
+    }
+  ],
+  "animations": {
+    "setup": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "low_health_extreme": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -10.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "attack_anticipation": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -28.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -35.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -18.0
+            }
+          ]
+        }
+      }
+    },
+    "attack_peak": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 32.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 43.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 20.0
+            }
+          ]
+        }
+      }
+    },
+    "heavy_peak": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 46.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 62.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 28.0
+            }
+          ]
+        }
+      }
+    },
+    "cast_anticipation": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -12.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -15.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -8.0
+            }
+          ]
+        }
+      }
+    },
+    "cast_peak": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 32.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 44.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 22.0
+            }
+          ]
+        }
+      }
+    },
+    "hurt_peak": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -22.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "death_terminal": {
+      "bones": {
+        "near_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -77.0
+            }
+          ]
+        },
+        "near_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -54.0
+            }
+          ]
+        },
+        "near_palm_deform": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": -21.0
+            }
+          ]
+        }
+      }
+    }
+  }
+}

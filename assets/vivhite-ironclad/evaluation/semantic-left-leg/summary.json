@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "component": "semantic_left_leg",
+  "screen_side": "screen-left / far leg",
+  "artifact_kind": "offline five-pose research contact sheets; not a runtime atlas or spritesheet",
+  "result": {
+    "research_gate_passed": true,
+    "production_gate_passed": false,
+    "selected_topology": {
+      "attachments": [
+        "far_thigh",
+        "far_lower_leg_with_boot"
+      ],
+      "bones": [
+        "far_thigh",
+        "far_knee"
+      ],
+      "preserve_knee_joint": true,
+      "remove_separate_ankle_attachment": true,
+      "draw_order_back_to_front": [
+        "far_lower_leg_with_boot",
+        "far_thigh",
+        "near_leg",
+        "skirt"
+      ]
+    },
+    "research_only_sources": [
+      "0078-split-leg-left-thigh-attachment-attempt-07",
+      "0088-split-leg-left-lower-attachment-attempt-01",
+      "0063-split-leg-left-boot-attachment-attempt-08"
+    ],
+    "runtime_admission": "forbidden until newly approved two-attachment production art and whole-rig Vulkan motion gates pass"
+  },
+  "consumer_evidence": {
+    "current_split_slot_order_back_to_front": [
+      "part_leg_left_thigh",
+      "part_leg_left_lower",
+      "part_leg_left_foot"
+    ],
+    "has_draw_order_animation": false,
+    "rotation_extrema_degrees": {
+      "far_thigh": [-8.0, 58.0],
+      "far_knee": [-88.0, 0.0],
+      "far_ankle": [0.0, 21.0]
+    },
+    "conclusion": "The -88 degree knee motion is material and must remain. The +21 degree ankle motion does not justify a separately painted boot seam and ambiguous foot-slot pivot.",
+    "fail_closed_integrator_state": {
+      "part_leg_left_thigh": "real_static_research_only (0078)",
+      "part_leg_left_lower": "graybox requiring new semantic production art",
+      "part_leg_left_foot": "empty",
+      "production_runtime_ready_slots": []
+    }
+  },
+  "offline_recheck": {
+    "date": "2026-08-28",
+    "godot": "4.5.1 stable mono",
+    "renderer": "Vulkan 1.4.312 Forward+ / NVIDIA GeForce GTX 1060",
+    "builder_exit_code": 0,
+    "validator_exit_code": 0,
+    "verified_pose_count": 5,
+    "research_gate_passed": true,
+    "production_gate_passed": false
+  },
+  "reproduction_commands": [
+    "Godot_v4.5.1-stable_mono_win64_console.exe --path tools/art --display-driver windows --rendering-driver vulkan --resolution 64x64 --position -32000,-32000 --script res://candidates/semantic_left_leg/build_semantic_left_leg_candidate.gd",
+    "Godot_v4.5.1-stable_mono_win64_console.exe --headless --path tools/art --script res://candidates/semantic_left_leg/validate_semantic_left_leg_candidate.gd"
+  ],
+  "files": {
+    "contact-sheet-sourceover-bluegray.png": {
+      "sha256": "0e669e7d195524118fc50c3d44d51cadc558457d0b2b7681de300bd3ca461972",
+      "bytes": 467128
+    },
+    "contact-sheet-pivots-overlay.png": {
+      "sha256": "997c91fec6391832dc8f61d70cbb30163049fe79500379056682ca42f6dfcd44",
+      "bytes": 510786
+    }
+  },
+  "source_hashes": {
+    "0078_output_png": "da48818eb18918236144a2dd0a186218a9fa1d7c6494ac36075532fadd7b72db",
+    "0088_output_png": "70b1d86a47279484e23f82f701dceb9a1ae88a1e8f66fbafd60a60f3091ee0ca",
+    "0063_output_png": "fd8dd7c3fc9380f540a690421b81ca6a76363407214a80586af63de58a75bf54",
+    "candidate_json": "a823a31b3eaeff4f93ffcd1bd1056c77d988c6bf6d812a7cf011196a663558b5",
+    "validation_json": "f70af2b5ca99f5fc39567e35c94db863b1afa34bb25c907534f69aebda7ad7ba",
+    "builder_gd": "ec49518cbfaa7dc9190461983c54567292fcc97dabd22e81b0e279e96f6df620",
+    "validator_gd": "8f8202d0e14badd5e2c17fca1a20716dc4cec4b7639d37e5359a100114df57c3",
+    "split_consumer_gd": "db7deebd7f81a0e5a35479ed66718317cafd091ddcef8369c2336ad4f8238895",
+    "fail_closed_integrator_gd": "b859a887e46a7d42f6a83361670da03a3937a5eace268cd1bf317be6a94a2e0e"
+  },
+  "production_gates": [
+    "Do not pack 0078, 0088, or 0063 into a runtime atlas; all three remain research evidence only.",
+    "Produce and approve coordinated far_thigh plus far_lower_leg_with_boot art with hidden knee overlap; no independent boot/ankle attachment.",
+    "Bind the merged lower piece to the knee chain and place it behind the far thigh so the thigh hides the knee tab.",
+    "Re-run transparent-Alpha review and real adjacent-part SourceOver checks for setup and maximum knee flex.",
+    "Pass real Spine/Godot Vulkan sampling for all combat animations and the whole-rig draw order before runtime admission."
+  ]
+}
