@@ -6156,3 +6156,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff: 0.66 → 0.69（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/960 胜，当前目标进阶 0
+
+## 第 961 局复盘（2026-08-29 04:52）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：OMNISLICE, SHRUG_IT_OFF, BREAKTHROUGH, RUPTURE, CRUELTY, SHRUG_IT_OFF, FIGHT_ME, INFLAME, THUNDERCLAP, BLUDGEON, FIEND_FIRE, RUPTURE, PACTS_END, FLAME_BARRIER, MOLTEN_FIST, DISMANTLE, SHRUG_IT_OFF, TRUE_GRIT, ARMAMENTS
+- 本局遗物：ANCHOR
+- 战斗记录：F15 Monster战 掉血8; F17 Boss战 掉血47｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血16; F23 Unknown战 掉血13; F24 Monster战 掉血48｜竞速审计：T5判死→实战10回合获胜; F25 Monster战 掉血8｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/24局)，FIEND_FIRE(25分/36局)，PACTS_END(24分/98局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/961 胜，当前目标进阶 0
