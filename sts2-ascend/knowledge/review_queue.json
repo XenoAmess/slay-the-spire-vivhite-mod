@@ -698,8 +698,8 @@
    "retry_after": 1787920513.2151294
   },
   {
-   "run": 915,
-   "time": "2026-08-28 20:08",
+   "run": 917,
+   "time": "2026-08-28 20:21",
    "backend_key": "luna-max",
    "priority": 2,
    "runner": "codex",
@@ -710,20 +710,20 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "preferred",
-   "queue_id": "24240-1787919382531286400-0",
+   "queue_id": "24240-1787920231508584400-0",
    "retry_same_model": false,
    "salvage_packages": [
-    "20260828-201736-1787919456996074800-37174385"
+    "20260828-203154-1787920314038469500-c483e0dc"
    ],
    "salvage_attempts": [],
-   "retry_group": "20260828-201736-1787919456996074800-37174385",
-   "replay_target": "20260828-201736-1787919456996074800-37174385",
-   "retry_count": 2,
-   "retry_after": 1787920274.9566872
+   "retry_group": "20260828-203154-1787920314038469500-c483e0dc",
+   "replay_target": "20260828-203154-1787920314038469500-c483e0dc",
+   "retry_count": 1,
+   "retry_after": 1787920426.8341503
   },
   {
-   "run": 916,
-   "time": "2026-08-28 20:16",
+   "run": 918,
+   "time": "2026-08-28 20:28",
    "backend_key": "luna-max",
    "priority": 2,
    "runner": "codex",
@@ -734,62 +734,74 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "preferred",
-   "queue_id": "24240-1787919382531286400-1",
+   "queue_id": "24240-1787920231508584400-1",
    "retry_same_model": false,
    "salvage_packages": [
-    "20260828-201736-1787919456996074800-37174385"
+    "20260828-203154-1787920314038469500-c483e0dc"
    ],
    "salvage_attempts": [],
-   "retry_group": "20260828-201736-1787919456996074800-37174385",
-   "replay_target": "20260828-201736-1787919456996074800-37174385",
-   "retry_count": 2,
-   "retry_after": 1787920274.9567006
+   "retry_group": "20260828-203154-1787920314038469500-c483e0dc",
+   "replay_target": "20260828-203154-1787920314038469500-c483e0dc",
+   "retry_count": 1,
+   "retry_after": 1787920426.8342035
   }
  ],
  "reviewing": {
   "runs": [
-   917,
-   918
+   915,
+   916
   ],
   "items": [
    {
-    "run": 917,
-    "time": "2026-08-28 20:21",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": true,
+    "run": 915,
+    "time": "2026-08-28 20:08",
+    "backend_key": "glm-flash",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "opencode-go/glm-5.3-flash",
+    "variant": "max",
+    "reasoning_effort": "",
+    "approve_for_me": false,
     "sandbox": "workspace-write",
     "every": 1,
     "source": "preferred",
-    "queue_id": "24240-1787920231508584400-0",
+    "queue_id": "24240-1787919382531286400-0",
     "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
+    "salvage_packages": [
+     "20260828-201736-1787919456996074800-37174385"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260828-201736-1787919456996074800-37174385",
+    "replay_target": "20260828-201736-1787919456996074800-37174385",
+    "retry_count": 2,
+    "retry_after": 1787920274.9566872
    },
    {
-    "run": 918,
-    "time": "2026-08-28 20:28",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": true,
+    "run": 916,
+    "time": "2026-08-28 20:16",
+    "backend_key": "glm-flash",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "opencode-go/glm-5.3-flash",
+    "variant": "max",
+    "reasoning_effort": "",
+    "approve_for_me": false,
     "sandbox": "workspace-write",
     "every": 1,
     "source": "preferred",
-    "queue_id": "24240-1787920231508584400-1",
+    "queue_id": "24240-1787919382531286400-1",
     "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
+    "salvage_packages": [
+     "20260828-201736-1787919456996074800-37174385"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260828-201736-1787919456996074800-37174385",
+    "replay_target": "20260828-201736-1787919456996074800-37174385",
+    "retry_count": 2,
+    "retry_after": 1787920274.9567006
    }
   ],
-  "retry_group": "",
-  "started": "2026-08-28 20:30:31"
+  "retry_group": "20260828-201736-1787919456996074800-37174385",
+  "started": "2026-08-28 20:33:47"
  }
 }
