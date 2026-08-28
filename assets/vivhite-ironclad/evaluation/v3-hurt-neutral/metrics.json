@@ -1,0 +1,93 @@
+{
+  "schema": "vivhite.v3-hurt-neutral-evaluation/v1",
+  "generated_utc": "2026-08-28T13:15:39Z",
+  "source_summary": ".work/combat-rig-compare-preview/hurt-neutral-final/summary.json",
+  "result": "pass",
+  "decision": {
+    "neutral_whole_mesh_is_sufficient": true,
+    "new_hurt_png_count": 0,
+    "new_atlas_page_count": 0,
+    "new_attachment_count": 0,
+    "dedicated_hurt_peak_required": false
+  },
+  "render": {
+    "display_server": "Windows",
+    "rendering_driver": "vulkan",
+    "canvas": [1280, 900],
+    "scene_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "origin": [320.0, 700.0],
+    "scene_offset": [5.0, -19.0],
+    "samples_per_animation": 11,
+    "base_pck_sha256": "c60f672ee7804e6aefa1e19a582fa1c80b126a7b0eef4d084d3abf110df2eab7"
+  },
+  "candidate": {
+    "spine_version": "4.2.43",
+    "skeleton_sha256": "cd806668ec87784fc37c7264a4d28475f7b51b1440c4e3866f5cdc45ad8921f5",
+    "atlas_wrapper_sha256": "ef29059f015417d6148b3b7b0b1ce87707458de5c11a0ee32229a21872da73b3",
+    "atlas_page_sha256": {
+      "vivhite_combat.png": "fabdb49900d01af55ef8ff193824149a504019630e1f39afe692481ae52f6f5b",
+      "vivhite_combat_death.png": "7c89552c69bb50eb94a3d5a10d4ca408a0546156ed72aa7a289f1cf25a9af33d",
+      "vivhite_combat_attack.png": "17bfee690fbc7401487cba0d4e14ba311cdee8b9a03f1ada9144fbf4c7114dfb",
+      "vivhite_combat_attack_heavy.png": "e245f4a17d506e97cd34abd19f55b6c8b884832d01396ecaa837beaf0a07720e"
+    }
+  },
+  "hurt": {
+    "duration_seconds": 1.0,
+    "sample_count": 11,
+    "unique_frame_hashes": 10,
+    "closed_first_last_frame": true,
+    "all_frames_non_empty": true,
+    "canvas_edge_contacts": 0,
+    "maximum_centroid_displacement_from_first_px": 18.4776554107666,
+    "maximum_pairwise_centroid_displacement_px": 19.6212005615234,
+    "maximum_changed_pixel_ratio": 0.0234166666666667,
+    "setup_alpha_bbox": [223, 339, 210, 352],
+    "impact_time_seconds": 0.1,
+    "impact_alpha_bbox": [215, 345, 193, 349],
+    "impact_width_change_percent": -8.1,
+    "setup_alpha_centroid": [327.45736621756, 483.353173533438],
+    "impact_alpha_centroid": [309.168766043816, 485.989612560441],
+    "root_x_timeline_spine_units": [0.0, -118.0, -110.0, -55.0, 24.0, 7.0, 0.0],
+    "timeline_seconds": [0.0, 0.1, 0.16, 0.28, 0.46, 0.7, 1.0],
+    "sole_event": {
+      "name": "clear_vfx",
+      "time_seconds": 0.72
+    }
+  },
+  "bypass_animation_hash_check": {
+    "sampled_frame_count": 77,
+    "all_identical_to_hybrid_action_set_upstream": true,
+    "animations": [
+      {"name": "idle_loop", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "low_health_loop", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "relaxed_loop", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "attack", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "attack_heavy", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "cast", "sample_count": 11, "all_frame_sha256_identical": true},
+      {"name": "die", "sample_count": 11, "all_frame_sha256_identical": true}
+    ]
+  },
+  "runtime_transition_mix_check": {
+    "spine_track_entry_samples": 4,
+    "all_passed": true,
+    "transitions": [
+      {"from": "idle_loop", "to": "hurt", "mix_seconds": 0.03},
+      {"from": "hurt", "to": "hurt", "mix_seconds": 0.0},
+      {"from": "hurt", "to": "idle_loop", "mix_seconds": 0.1},
+      {"from": "hurt", "to": "die", "mix_seconds": 0.0}
+    ]
+  },
+  "contact_sheets": {
+    "character_only": "hurt-character-only-contact-sheet.png",
+    "composite": "hurt-composite-contact-sheet.png",
+    "byte_identical": true,
+    "reason": "hurt leaves action, death, slash_mesh, eye_attach_slot, and magic-sigil attachments empty, so the all-slot Spine composite contains only the neutral character body"
+  },
+  "residual_risk": {
+    "id": "hurt-retrigger-zero-mix",
+    "description": "hurt -> hurt retains the upstream zero-second mix. A second positive-damage Hit while hurt is still active can restart at frame zero without blending.",
+    "introduced_by_candidate": false,
+    "requires_gameplay_observation": true
+  }
+}

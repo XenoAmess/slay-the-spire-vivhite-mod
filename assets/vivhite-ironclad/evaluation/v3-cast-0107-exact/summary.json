@@ -1,0 +1,1790 @@
+{
+  "animation": "cast",
+  "base_pck": "G:/SteamLibrary/steamapps/common/Slay the Spire 2/SlayTheSpire2.pck",
+  "base_pck_sha256": "c60f672ee7804e6aefa1e19a582fa1c80b126a7b0eef4d084d3abf110df2eab7",
+  "boundary_contract_passed": true,
+  "candidate": "res://tools/candidates/hybrid_cast_set/vivhite_combat_skeleton_data.tres",
+  "candidate_sha256": "fe503468225442498ab1644353023dad41ce7c0525eb0d00115b70a3c0c25507",
+  "canvas": [
+    1280,
+    900
+  ],
+  "cast_duration": 1.56666672229767,
+  "cast_window": [
+    0.25,
+    0.6
+  ],
+  "character_boundary_comparisons": [
+    {
+      "after_alpha_bbox": [
+        214,
+        328,
+        231,
+        357
+      ],
+      "after_alpha_bottom_y": 684,
+      "after_time": 0.25,
+      "alpha_bbox_delta": [
+        71,
+        -4,
+        -61,
+        14
+      ],
+      "alpha_bottom_y_delta": 10,
+      "before_alpha_bbox": [
+        143,
+        332,
+        292,
+        343
+      ],
+      "before_alpha_bottom_y": 674,
+      "before_time": 0.2499,
+      "sha256_changed": true
+    },
+    {
+      "after_alpha_bbox": [
+        201,
+        326,
+        244,
+        348
+      ],
+      "after_alpha_bottom_y": 673,
+      "after_time": 0.6,
+      "alpha_bbox_delta": [
+        -8,
+        1,
+        11,
+        -3
+      ],
+      "alpha_bottom_y_delta": -2,
+      "before_alpha_bbox": [
+        209,
+        325,
+        233,
+        351
+      ],
+      "before_alpha_bottom_y": 675,
+      "before_time": 0.5999,
+      "sha256_changed": true
+    },
+    {
+      "after_alpha_bbox": [
+        201,
+        326,
+        244,
+        348
+      ],
+      "after_alpha_bottom_y": 673,
+      "after_time": 0.6001,
+      "alpha_bbox_delta": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "alpha_bottom_y_delta": 0,
+      "before_alpha_bbox": [
+        201,
+        326,
+        244,
+        348
+      ],
+      "before_alpha_bottom_y": 673,
+      "before_time": 0.6,
+      "sha256_changed": true
+    }
+  ],
+  "character_only_contract_passed": true,
+  "clear_time": 1.222000026,
+  "contact_sheets": {
+    "character_only": "contact-sheets/cast-exact-character-only.png",
+    "composite": "contact-sheets/cast-exact-composite.png",
+    "eye_alignment": "contact-sheets/cast-exact-eye-alignment.png",
+    "eye_only": "contact-sheets/cast-exact-eye-only.png"
+  },
+  "display_server": "Windows",
+  "errors": [],
+  "expected_idle_cast_mix": 0.05,
+  "eye_fire_active_sample_count": 7,
+  "eye_only_contract_passed": true,
+  "frame_count_passed": true,
+  "frames": [
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          214,
+          335,
+          221,
+          353
+        ],
+        "alpha_bottom_y": 687,
+        "alpha_centroid": [
+          327.055149893167,
+          480.735627436725
+        ],
+        "alpha_pixel_count_sampled": 745,
+        "alpha_weight_sampled": 712.141176470592,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-00-t0.0000000.png",
+        "sha256": "524f2bcd088e1a8574d469eafc00af850517a3684e3f65ba1a71c4123424d20a",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          214,
+          335,
+          221,
+          353
+        ],
+        "alpha_bottom_y": 687,
+        "alpha_centroid": [
+          327.055149893167,
+          480.735627436725
+        ],
+        "alpha_pixel_count_sampled": 745,
+        "alpha_weight_sampled": 712.141176470592,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-00-t0.0000000.png",
+        "sha256": "524f2bcd088e1a8574d469eafc00af850517a3684e3f65ba1a71c4123424d20a",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": null,
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        328.079986572266,
+        389.940002441406
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": false,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": null,
+      "passed": true,
+      "requested_time": 0.0,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          228,
+          340,
+          232,
+          358
+        ],
+        "alpha_bottom_y": 697,
+        "alpha_centroid": [
+          333.593584387177,
+          485.98354036396
+        ],
+        "alpha_pixel_count_sampled": 736,
+        "alpha_weight_sampled": 699.274509803925,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-01-t0.0999000.png",
+        "sha256": "ab06c6ddffd8adeb2d13c8026533818e9bd8f1f907334ec05d29083c3786fd6a",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          228,
+          340,
+          232,
+          358
+        ],
+        "alpha_bottom_y": 697,
+        "alpha_centroid": [
+          333.593584387177,
+          485.98354036396
+        ],
+        "alpha_pixel_count_sampled": 736,
+        "alpha_weight_sampled": 699.274509803925,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-01-t0.0999000.png",
+        "sha256": "ab06c6ddffd8adeb2d13c8026533818e9bd8f1f907334ec05d29083c3786fd6a",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": null,
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        349.262145996094,
+        428.4267578125
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": false,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": null,
+      "passed": true,
+      "requested_time": 0.0999,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          228,
+          340,
+          232,
+          358
+        ],
+        "alpha_bottom_y": 697,
+        "alpha_centroid": [
+          333.590549635443,
+          485.982501402128
+        ],
+        "alpha_pixel_count_sampled": 736,
+        "alpha_weight_sampled": 699.215686274513,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-02-t0.1000000.png",
+        "sha256": "aa1780df0eb805e70cbfbc978c71a573c9b8f9733832dec6d8feee7db9426e63",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          166,
+          321,
+          357,
+          382
+        ],
+        "alpha_bottom_y": 702,
+        "alpha_centroid": [
+          338.603604844461,
+          505.549472874707
+        ],
+        "alpha_pixel_count_sampled": 2502,
+        "alpha_weight_sampled": 2049.96470588237,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-02-t0.1000000.png",
+        "sha256": "7fbeb5d40840b320cb382be7b88da600c9e73890da7d288ff64994355e60ff0a",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        349.283508300781,
+        428.460083007813
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.1,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          143,
+          332,
+          292,
+          343
+        ],
+        "alpha_bottom_y": 674,
+        "alpha_centroid": [
+          319.59962955233,
+          475.608864656159
+        ],
+        "alpha_pixel_count_sampled": 785,
+        "alpha_weight_sampled": 751.607843137259,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-03-t0.2499000.png",
+        "sha256": "f905a89cd60ba68bef7eb7e7029637f4b53326c4e8374198e9f1b127aa4f8b11",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          143,
+          321,
+          382,
+          383
+        ],
+        "alpha_bottom_y": 703,
+        "alpha_centroid": [
+          336.460701774576,
+          500.799472026105
+        ],
+        "alpha_pixel_count_sampled": 2549,
+        "alpha_weight_sampled": 2112.40392156864,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-03-t0.2499000.png",
+        "sha256": "61edd3dae7413871874bf390b1a2ee038d4c54b56d80c14e3cc98eb076902e4e",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        384.897644042969,
+        464.389892578125
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.2499,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          214,
+          328,
+          231,
+          357
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          338.884101254844,
+          471.19058744189
+        ],
+        "alpha_pixel_count_sampled": 857,
+        "alpha_weight_sampled": 814.098039215692,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-04-t0.2500000.png",
+        "sha256": "4ce9e98ca94f55fa1289322a3ae42d935b9b2ba5433b9fe136ce686f1acb3be6",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          152,
+          321,
+          373,
+          383
+        ],
+        "alpha_bottom_y": 703,
+        "alpha_centroid": [
+          340.692751048014,
+          502.012290630001
+        ],
+        "alpha_pixel_count_sampled": 2543,
+        "alpha_weight_sampled": 2101.07450980394,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-04-t0.2500000.png",
+        "sha256": "a4d3f721135c31941fa627c64c1558ae2cf5faab5366584228ef10b881676711",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_cast_peak",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_action_pose",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          337,
+          352,
+          9,
+          20
+        ],
+        "alpha_bottom_y": 371,
+        "alpha_centroid": [
+          341.643423137876,
+          363.022187004754
+        ],
+        "alpha_pixel_count_sampled": 5,
+        "alpha_weight_sampled": 2.47450980392157,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-04-t0.2500000.png",
+        "sha256": "dcc3547f6452efaf2d33a2dbf882ee3c62974f0885e0391bcd3879e38787b30a",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        384.920013427734,
+        464.419982910156
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.25,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": "vivhite_combat_cast_peak",
+        "vivhite_body": null,
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_cast_peak",
+          "slot": "vivhite_action_pose"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          208,
+          328,
+          237,
+          351
+        ],
+        "alpha_bottom_y": 678,
+        "alpha_centroid": [
+          338.717285547434,
+          471.293177672027
+        ],
+        "alpha_pixel_count_sampled": 851,
+        "alpha_weight_sampled": 812.556862745103,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-05-t0.2667000.png",
+        "sha256": "ce33c1911621287d51bb62c36505bcc069d85b8a86bd607fdbdb922c0f6aaac8",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          149,
+          317,
+          374,
+          403
+        ],
+        "alpha_bottom_y": 719,
+        "alpha_centroid": [
+          340.80871071839,
+          502.135315201973
+        ],
+        "alpha_pixel_count_sampled": 2542,
+        "alpha_weight_sampled": 2107.20784313727,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-05-t0.2667000.png",
+        "sha256": "33c980deeddb4f92d122f2d271b21682bf6ed9e45cbb15f179505b7806479f13",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_cast_peak",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_action_pose",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          339,
+          347,
+          7,
+          25
+        ],
+        "alpha_bottom_y": 371,
+        "alpha_centroid": [
+          342.0,
+          363.332781456954
+        ],
+        "alpha_pixel_count_sampled": 3,
+        "alpha_weight_sampled": 2.36862745098039,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-05-t0.2667000.png",
+        "sha256": "03ce418a8410cec08098e5dcac7b47a34f363094d5ab4a656e47482f2cfa793a",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        384.956207275391,
+        464.284301757813
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.2667,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": "vivhite_combat_cast_peak",
+        "vivhite_body": null,
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_cast_peak",
+          "slot": "vivhite_action_pose"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          215,
+          323,
+          234,
+          359
+        ],
+        "alpha_bottom_y": 681,
+        "alpha_centroid": [
+          339.885073960874,
+          467.399983686861
+        ],
+        "alpha_pixel_count_sampled": 860,
+        "alpha_weight_sampled": 817.337254901966,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-06-t0.4800000.png",
+        "sha256": "4c78ced8b72f06e045c81c710c01d194a8ac2f69728caa26d630ffd6fe167dde",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          139,
+          315,
+          404,
+          442
+        ],
+        "alpha_bottom_y": 756,
+        "alpha_centroid": [
+          340.30744479168,
+          497.889655568224
+        ],
+        "alpha_pixel_count_sampled": 2591,
+        "alpha_weight_sampled": 2118.18039215688,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-06-t0.4800000.png",
+        "sha256": "91b65b7434b2ebbd276333d20eaf877a669d1696444b7bb3d2dc16a9fec75781",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_cast_peak",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_action_pose",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          340,
+          346,
+          7,
+          22
+        ],
+        "alpha_bottom_y": 367,
+        "alpha_centroid": [
+          342.0,
+          357.013106159895
+        ],
+        "alpha_pixel_count_sampled": 3,
+        "alpha_weight_sampled": 2.9921568627451,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-06-t0.4800000.png",
+        "sha256": "61d3c18874d64ccb7ed116fe17d396633fd6996c23b12dabe7bafdffb5d1e84e",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        386.040008544922,
+        460.220001220703
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.48,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": "vivhite_combat_cast_peak",
+        "vivhite_body": null,
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_cast_peak",
+          "slot": "vivhite_action_pose"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          209,
+          325,
+          233,
+          351
+        ],
+        "alpha_bottom_y": 675,
+        "alpha_centroid": [
+          340.954999104143,
+          470.076287970864
+        ],
+        "alpha_pixel_count_sampled": 858,
+        "alpha_weight_sampled": 809.831372549025,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-07-t0.5999000.png",
+        "sha256": "cbb80f31e57f3dda1524e3f498ed3994436cf8cdd49a452aa9311d3037e77e11",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          150,
+          318,
+          394,
+          441
+        ],
+        "alpha_bottom_y": 758,
+        "alpha_centroid": [
+          340.453188764492,
+          498.239170658475
+        ],
+        "alpha_pixel_count_sampled": 2604,
+        "alpha_weight_sampled": 2134.27058823531,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-07-t0.5999000.png",
+        "sha256": "b6fa770898f0df54d3e98b4dc93757402f5a419c0f3479643448150d9eedcd87",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_cast_peak",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_action_pose",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          340,
+          343,
+          7,
+          26
+        ],
+        "alpha_bottom_y": 368,
+        "alpha_centroid": [
+          342.0,
+          357.1
+        ],
+        "alpha_pixel_count_sampled": 3,
+        "alpha_weight_sampled": 2.94117647058824,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-07-t0.5999000.png",
+        "sha256": "b9a65caea1755d2740581c4e2dd9706987e100991ad1f2a969f38d305f102a23",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        385.809143066406,
+        461.407104492188
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.5999,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": "vivhite_combat_cast_peak",
+        "vivhite_body": null,
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_cast_peak",
+          "slot": "vivhite_action_pose"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          201,
+          326,
+          244,
+          348
+        ],
+        "alpha_bottom_y": 673,
+        "alpha_centroid": [
+          324.299800580799,
+          470.761696702969
+        ],
+        "alpha_pixel_count_sampled": 783,
+        "alpha_weight_sampled": 741.368627450984,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-08-t0.6000000.png",
+        "sha256": "ceed3d01842e93b23eaa7015ad4ae330bd1a290709020d6ad9dc00a18fcc29fd",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          105,
+          311,
+          439,
+          448
+        ],
+        "alpha_bottom_y": 758,
+        "alpha_centroid": [
+          336.658986192306,
+          498.774807024347
+        ],
+        "alpha_pixel_count_sampled": 2573,
+        "alpha_weight_sampled": 2102.26666666668,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-08-t0.6000000.png",
+        "sha256": "62d9415d8137e286c8fa53bcfe62b4c0925227985ec3e46537db87db11feacea",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          306,
+          347,
+          6,
+          19
+        ],
+        "alpha_bottom_y": 365,
+        "alpha_centroid": [
+          307.0,
+          354.60736196319
+        ],
+        "alpha_pixel_count_sampled": 2,
+        "alpha_weight_sampled": 1.91764705882353,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-08-t0.6000000.png",
+        "sha256": "82f648ce9e04a127a3257b2b723f2064050e783994e65757fe2bc7c6d278324b",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        351.648834228516,
+        458.608703613281
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.6,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          201,
+          326,
+          244,
+          348
+        ],
+        "alpha_bottom_y": 673,
+        "alpha_centroid": [
+          324.303741086351,
+          470.761003195156
+        ],
+        "alpha_pixel_count_sampled": 783,
+        "alpha_weight_sampled": 741.317647058828,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-09-t0.6001000.png",
+        "sha256": "9660ac03fd0f362459714981e11fa79e752bd6c55aea0a020f820f5ff2a5690b",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          105,
+          311,
+          439,
+          448
+        ],
+        "alpha_bottom_y": 758,
+        "alpha_centroid": [
+          336.662781241021,
+          498.774574431171
+        ],
+        "alpha_pixel_count_sampled": 2572,
+        "alpha_weight_sampled": 2102.37647058825,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-09-t0.6001000.png",
+        "sha256": "a7c42437c8f32d6e9cb0a4c556563688fac4434c1707081138657fb8dc3e1258",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          304,
+          342,
+          9,
+          24
+        ],
+        "alpha_bottom_y": 365,
+        "alpha_centroid": [
+          307.3125,
+          357.0
+        ],
+        "alpha_pixel_count_sampled": 2,
+        "alpha_weight_sampled": 1.06666666666667,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-09-t0.6001000.png",
+        "sha256": "0b13f7f035eb91e7a6b88bf296b027ec501a51115d4abeee0d7a3a4379257a67",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        351.648529052734,
+        458.6103515625
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 0.6001,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          216,
+          334,
+          212,
+          351
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          326.628791009005,
+          478.472082197061
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "alpha_weight_sampled": 711.823529411769,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-10-t1.2219000.png",
+        "sha256": "4bf4f982119caf26a67d5bb9265e883dffa38407c1b1ac72041bb69593fc8592",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          117,
+          322,
+          411,
+          433
+        ],
+        "alpha_bottom_y": 754,
+        "alpha_centroid": [
+          336.590383764914,
+          501.5063005472
+        ],
+        "alpha_pixel_count_sampled": 2548,
+        "alpha_weight_sampled": 2066.11372549021,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-10-t1.2219000.png",
+        "sha256": "9dac244eb4b8f3b34f49b04071f1944e61763fbccc9db9a766c2ebe4de2fdd48",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": true,
+      "expected_sigil_attachment": "vivhite_combat_magic_sigil",
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": true,
+      "eye_only": {
+        "alpha_bbox": [
+          303,
+          353,
+          8,
+          22
+        ],
+        "alpha_bottom_y": 374,
+        "alpha_centroid": [
+          307.0,
+          364.5
+        ],
+        "alpha_pixel_count_sampled": 4,
+        "alpha_weight_sampled": 4.0,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/eye-only/cast/frame-10-t1.2219000.png",
+        "sha256": "66b89d2b8da9144a975c8e1f739e01549c55a3077fe7b9f5cebf279ee3b851a7",
+        "touches_canvas_edge": false
+      },
+      "eye_slot_global_position": [
+        349.920074462891,
+        467.499633789063
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": true,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": "vivhite_combat_magic_sigil",
+      "passed": true,
+      "requested_time": 1.2219,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": "vivhite_combat_magic_sigil"
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          216,
+          334,
+          212,
+          351
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          326.62935926395,
+          478.471268800615
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "alpha_weight_sampled": 711.803921568631,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-11-t1.2220000.png",
+        "sha256": "bc1b24b4a2947fb9dbfb1b978622ff4048b8eefae35098d270cb1019ef9f11b3",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          216,
+          334,
+          212,
+          351
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          326.62935926395,
+          478.471268800615
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "alpha_weight_sampled": 711.803921568631,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-11-t1.2220000.png",
+        "sha256": "bc1b24b4a2947fb9dbfb1b978622ff4048b8eefae35098d270cb1019ef9f11b3",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": null,
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        329.760009765625,
+        388.540008544922
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": false,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": null,
+      "passed": true,
+      "requested_time": 1.222,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          216,
+          334,
+          212,
+          351
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          326.625572990125,
+          478.47451295839
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "alpha_weight_sampled": 711.780392156866,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-12-t1.2221000.png",
+        "sha256": "87e8c92da00eca41c85d39c94b000c44c44b31340b6f04acc658a7308ea76b29",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          216,
+          334,
+          212,
+          351
+        ],
+        "alpha_bottom_y": 684,
+        "alpha_centroid": [
+          326.625572990125,
+          478.47451295839
+        ],
+        "alpha_pixel_count_sampled": 752,
+        "alpha_weight_sampled": 711.780392156866,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-12-t1.2221000.png",
+        "sha256": "87e8c92da00eca41c85d39c94b000c44c44b31340b6f04acc658a7308ea76b29",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": null,
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        329.759887695313,
+        388.540588378906
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": false,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": null,
+      "passed": true,
+      "requested_time": 1.2221,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    },
+    {
+      "attachment_contract_passed": true,
+      "character_only": {
+        "alpha_bbox": [
+          223,
+          339,
+          210,
+          352
+        ],
+        "alpha_bottom_y": 690,
+        "alpha_centroid": [
+          327.45736621756,
+          483.353173533438
+        ],
+        "alpha_pixel_count_sampled": 747,
+        "alpha_weight_sampled": 712.819607843141,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/character-only/cast/frame-13-t1.5666667.png",
+        "sha256": "75ae114912543e69aea30f038c3d49dbcd8b1f8e4af9f7fc8853e1b0211cee47",
+        "touches_canvas_edge": false
+      },
+      "composite": {
+        "alpha_bbox": [
+          223,
+          339,
+          210,
+          352
+        ],
+        "alpha_bottom_y": 690,
+        "alpha_centroid": [
+          327.45736621756,
+          483.353173533438
+        ],
+        "alpha_pixel_count_sampled": 747,
+        "alpha_weight_sampled": 712.819607843141,
+        "edge_alpha_pixels": {
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "top": 0
+        },
+        "non_empty": true,
+        "passed": true,
+        "path": "frames/composite/cast/frame-13-t1.5666667.png",
+        "sha256": "75ae114912543e69aea30f038c3d49dbcd8b1f8e4af9f7fc8853e1b0211cee47",
+        "touches_canvas_edge": false
+      },
+      "expected_attachment": "vivhite_combat_body",
+      "expected_eye_fire_visible": false,
+      "expected_sigil_attachment": null,
+      "expected_slot": "vivhite_body",
+      "eye_fire_visible_in_composite": false,
+      "eye_slot_global_position": [
+        328.920013427734,
+        393.299987792969
+      ],
+      "idle_cast_mix_duration": 0.0500000007450581,
+      "isolation_visual_change_expected": false,
+      "isolation_visual_contract_passed": true,
+      "observed_sigil_attachment": null,
+      "passed": true,
+      "requested_time": 1.5666667,
+      "sigil_contract_passed": true,
+      "slash_contract_passed": true,
+      "slot_attachments": {
+        "vivhite_action_pose": null,
+        "vivhite_body": "vivhite_combat_body",
+        "vivhite_death_body": null
+      },
+      "suppressed_runtime_vfx": {
+        "after": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "before": {
+          "eye_attach_slot": null,
+          "slash_mesh": null,
+          "vivhite_magic_sigil": null
+        },
+        "external_eye_fire_hidden": true,
+        "passed": true,
+        "slots": [
+          "slash_mesh",
+          "eye_attach_slot",
+          "vivhite_magic_sigil"
+        ]
+      },
+      "visible_character_attachment_count": 1,
+      "visible_character_attachments": [
+        {
+          "attachment": "vivhite_combat_body",
+          "slot": "vivhite_body"
+        }
+      ]
+    }
+  ],
+  "generated_utc": "2026-08-28T13:29:39",
+  "idle_pre_roll": 0.5,
+  "mix_contract_passed": true,
+  "observed_idle_cast_mix_durations": [
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581,
+    0.0500000007450581
+  ],
+  "origin": [
+    320.0,
+    700.0
+  ],
+  "rendering_driver": "vulkan",
+  "requested_times": [
+    0.0,
+    0.0999,
+    0.1,
+    0.2499,
+    0.25,
+    0.2667,
+    0.48,
+    0.5999,
+    0.6,
+    0.6001,
+    1.2219,
+    1.222,
+    1.2221,
+    1.5666667
+  ],
+  "scene_offset": [
+    5.0,
+    -19.0
+  ],
+  "scene_scale": 0.28,
+  "schema_version": 1,
+  "success": true,
+  "suppressed_vfx_slots": [
+    "slash_mesh",
+    "eye_attach_slot",
+    "vivhite_magic_sigil"
+  ],
+  "uses_production_eye_fire": true
+}
