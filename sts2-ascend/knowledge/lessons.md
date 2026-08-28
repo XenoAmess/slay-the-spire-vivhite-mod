@@ -5782,3 +5782,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：高速失血爆毙（4回合掉血59，每回合15≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.60 → 0.63（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/926 胜，当前目标进阶 0
+
+## 第 927 局复盘（2026-08-28 22:14）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：FISTICUFFS, THUNDERCLAP, SHRUG_IT_OFF, SHRUG_IT_OFF, FIGHT_ME, FLAME_BARRIER, TAUNT, CINDER, MOLTEN_FIST, TAUNT, DARK_EMBRACE, BREAKTHROUGH, SHRUG_IT_OFF, JUGGLING, SWORD_BOOMERANG, PACTS_END, HEMOKINESIS
+- 本局遗物：NUNCHAKU, 梨子
+- 战斗记录：F15 Elite战 掉血9; F17 Boss战 掉血40｜竞速审计：T3判死→实战8回合获胜; F19 Monster战 掉血5; F20 Unknown战 掉血0; F22 Monster战 掉血77｜竞速审计：T2判死→实战8回合获胜; F24 Elite战 掉血22（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，PRIMAL_FORCE(26分/4局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/94局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.63 → 0.66（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/927 胜，当前目标进阶 0
