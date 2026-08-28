@@ -266,6 +266,9 @@ raw `.git/index`，将 raw worktree 与模型原 index 分成两个证据源，�
 它从 manifest 的 `pre_head` 分源导出 raw worktree、raw index、raw HEAD commit、local refs 与 stash
 相对基线的改动；只有 `refs/heads/*` 中的 commit 能形成代码候选，`refs/notes/*` 等其他 refs 只进入
 inventory provenance，不被解释成待合入代码。每个来源分别记录路径分类和 accepted-only 候选片段。
+Windows 下 Git loose objects 带只读属性；private-index 清理会先解除只读并短重试。worker 启动时只按
+`capture-index` / `validation-index` / `retry-index` 三个固定前缀回收超过 5 分钟的直属临时目录，
+不会扫描或删除 `sandbox`、`snapshot` 与 `review_salvage` 取证现场。
 整个过程也不写原 clone 的 local refs、stash 或 worktree；早期 schema 的物化摘要保存在 history，不清除
 取证 clone 中已有的不可达 objects。没有 raw clone 时，如果失败链已保存验收过的
 `validated_candidate.patch`，v3 会将它提升为 accepted-only 候选，不会把含 cache/运行现场的全量

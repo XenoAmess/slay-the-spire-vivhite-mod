@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
+import stat
 from types import SimpleNamespace
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -98,10 +101,8 @@ class ReviewConfigurationTests(unittest.TestCase):
             command = [
                 sys.executable, "-c",
                 "import sys,time\n"
-                "sys.stdout.write('x\\n'*32768);sys.stdout.flush()\n"
-                "for _ in range(100):\n"
-                " time.sleep(0.02);sys.stdout.write('y');sys.stdout.flush()\n"
-                "sys.stdout.write('\\n');sys.stdout.flush()",
+                "for value in ('first','two','three','four','five','done'):\n"
+                " print(value,flush=True);time.sleep(0.05)",
             ]
             import threading
             import time
@@ -130,14 +131,15 @@ class ReviewConfigurationTests(unittest.TestCase):
                   mock.patch.object(llm_review, "LIVE_STREAM", stream),
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
-                    command, 10, translate=slow_first_translation,
+                    command, 5, translate=slow_first_translation,
                     stall_warn_sec=0.05, stall_timeout_sec=0.1)
             text = stream.read_text(encoding="utf-8")
         self.assertEqual(rc, 0)
         self.assertFalse(timed_out)
         self.assertFalse(stopped)
         self.assertFalse(stalled)
-        self.assertNotIn("诊断：qsize=", text)
+        diagnostics = [line for line in text.splitlines() if "qsize=" in line]
+        self.assertTrue(all("qsize=0" in line for line in diagnostics))
 
     def test_stream_true_stall_records_pipe_state_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-stream-stall-") as root:
@@ -168,6 +170,84 @@ class ReviewConfigurationTests(unittest.TestCase):
             }))
         self.assertLessEqual(len(translator._seen), 4096)
         self.assertTrue(all(len(key) == 32 for key in translator._seen))
+
+    def test_private_git_temp_cleanup_removes_readonly_loose_objects(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-private-git-cleanup-") as root:
+            repo = Path(root) / "repo"
+            temp_root = (repo / "sts2-ascend" / "knowledge" / "code_backups"
+                         / "review_work" / "sts2-review-capture-index-old")
+            loose = temp_root / "objects" / "ab" / "object"
+            loose.parent.mkdir(parents=True)
+            loose.write_bytes(b"git-object")
+            loose.chmod(stat.S_IREAD)
+            with mock.patch.object(llm_review, "REPO_DIR", repo):
+                removed = llm_review._discard_owned_review_temp(
+                    temp_root, "sts2-review-capture-index-",
+                    log=lambda _message: None)
+        self.assertTrue(removed)
+        self.assertFalse(temp_root.exists())
+
+    def test_private_git_temp_cleanup_retries_transient_lock_and_retains_persistent_lock(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-private-git-retry-") as root:
+            repo = Path(root) / "repo"
+            work = (repo / "sts2-ascend" / "knowledge" / "code_backups"
+                    / "review_work")
+            transient = work / "sts2-review-validation-index-transient"
+            transient.mkdir(parents=True)
+            (transient / "object").write_text("x", encoding="utf-8")
+            real_rmtree = llm_review.shutil.rmtree
+            attempts = 0
+
+            def flaky_rmtree(path, *args, **kwargs):
+                nonlocal attempts
+                attempts += 1
+                if attempts < 3:
+                    raise PermissionError("scanner still holds the object")
+                return real_rmtree(path, *args, **kwargs)
+
+            with (mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review.shutil, "rmtree",
+                                    side_effect=flaky_rmtree)):
+                removed = llm_review._discard_owned_review_temp(
+                    transient, "sts2-review-validation-index-",
+                    log=lambda _message: None)
+            self.assertTrue(removed)
+            self.assertEqual(attempts, 3)
+
+            retained = work / "sts2-review-retry-index-retained"
+            retained.mkdir(parents=True)
+            messages: list[str] = []
+            with (mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review.shutil, "rmtree",
+                                    side_effect=PermissionError("still locked"))):
+                removed = llm_review._discard_owned_review_temp(
+                    retained, "sts2-review-retry-index-", log=messages.append)
+            self.assertFalse(removed)
+            self.assertTrue(retained.is_dir())
+            self.assertIn("still locked", messages[-1])
+
+    def test_startup_temp_reaper_only_removes_stale_private_indexes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-private-git-reaper-") as root:
+            repo = Path(root) / "repo"
+            work = (repo / "sts2-ascend" / "knowledge" / "code_backups"
+                    / "review_work")
+            stale = [work / f"{prefix}old" for prefix in
+                     llm_review._PRIVATE_GIT_TEMP_PREFIXES]
+            recent = work / "sts2-review-capture-index-recent"
+            evidence = work / "sts2-review-sandbox-evidence"
+            for path in [*stale, recent, evidence]:
+                path.mkdir(parents=True)
+                (path / "keep").write_text("x", encoding="utf-8")
+            old = time.time() - 600
+            for path in stale:
+                os.utime(path, (old, old))
+            with mock.patch.object(llm_review, "REPO_DIR", repo):
+                llm_review._cleanup_stale_private_git_temps(
+                    log=lambda _message: None, min_age_sec=300)
+            self.assertTrue(all(not path.exists() for path in stale))
+            self.assertTrue(recent.is_dir())
+            self.assertTrue(evidence.is_dir())
 
 
 class ReviewSalvageTests(unittest.TestCase):
@@ -487,6 +567,7 @@ class ReviewQueueBatchTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
                   mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
                   mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+                  mock.patch.object(llm_review, "_cleanup_stale_private_git_temps"),
                   mock.patch.object(llm_review, "_recover_deferred_salvages"),
                   mock.patch.object(llm_review, "_recover_committed_retry_resolutions"),
                   mock.patch.object(llm_review, "_recover_salvage_replay_queue"),

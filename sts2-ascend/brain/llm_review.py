@@ -121,6 +121,74 @@ def _is_owned_review_temp(path: Path, prefix: str) -> bool:
     except OSError:
         return False
 
+
+_PRIVATE_GIT_TEMP_PREFIXES = (
+    "sts2-review-capture-index-",
+    "sts2-review-validation-index-",
+    "sts2-review-retry-index-",
+)
+
+
+def _remove_readonly_for_rmtree(function, path, _exc_info) -> None:
+    """Let shutil remove Windows Git loose objects, which are read-only."""
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+    function(path)
+
+
+def _discard_owned_review_temp(root: Path | None, prefix: str, log=print) -> bool:
+    """Remove one exact disposable temp tree, retrying transient Windows locks."""
+    if root is None:
+        return True
+    try:
+        resolved = root.resolve()
+    except OSError as exc:
+        log(f"[llm] private Git temp path lookup failed; retained: {root} ({exc})")
+        return False
+    if not _is_owned_review_temp(resolved, prefix):
+        log(f"[llm] private Git temp ownership check failed; retained: {resolved}")
+        return False
+    last_error: OSError | None = None
+    for delay in (0.0, 0.1, 0.25, 0.5):
+        if delay:
+            time.sleep(delay)
+        try:
+            if not resolved.exists():
+                return True
+            shutil.rmtree(resolved, onerror=_remove_readonly_for_rmtree)
+            return True
+        except OSError as exc:
+            last_error = exc
+    log(f"[llm] private Git temp cleanup failed; retained: {resolved} ({last_error})")
+    return False
+
+
+def _cleanup_stale_private_git_temps(log=print, *, min_age_sec: float = 300.0) -> None:
+    """Reap only stale disposable indexes after the previous worker is gone."""
+    root = _review_work_root()
+    if not root.is_dir():
+        return
+    now = time.time()
+    try:
+        children = list(root.iterdir())
+    except OSError as exc:
+        log(f"[llm] private Git temp startup scan failed: {exc}")
+        return
+    for child in children:
+        if not child.is_dir():
+            continue
+        prefix = next(
+            (value for value in _PRIVATE_GIT_TEMP_PREFIXES
+             if child.name.startswith(value)), "")
+        if not prefix:
+            continue
+        try:
+            age = max(0.0, now - child.stat().st_mtime)
+        except OSError:
+            continue
+        if age < max(0.0, min_age_sec):
+            continue
+        _discard_owned_review_temp(child, prefix, log=log)
+
 # Prompt working-set bounds.  Full traces remain available in runs/*.json (or
 # the compact archive catalog); the inline packet should carry evidence, not
 # repeat tens of kilobytes of near-identical route prose every review.
@@ -2734,23 +2802,12 @@ def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, s
         env["GIT_OPTIONAL_LOCKS"] = "0"
         return root, env
     except Exception:
-        try:
-            if root.is_dir() and _is_owned_review_temp(root.resolve(), prefix):
-                shutil.rmtree(root)
-        except OSError:
-            pass
+        _discard_owned_review_temp(root, prefix, log=lambda _message: None)
         raise
 
 
 def _discard_private_sandbox_git(root: Path | None, prefix: str, log=print) -> None:
-    if root is None:
-        return
-    try:
-        resolved = root.resolve()
-        if _is_owned_review_temp(resolved, prefix):
-            shutil.rmtree(resolved)
-    except OSError as exc:
-        log(f"[llm] private Git capture cleanup failed; retained: {root} ({exc})")
+    _discard_owned_review_temp(root, prefix, log=log)
 
 
 def _bounded_sandbox_sibling_paths(
@@ -4132,11 +4189,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
     finally:
         candidate_temp.unlink(missing_ok=True)
         inventory_temp.unlink(missing_ok=True)
-        try:
-            if index_root.is_dir() and index_root.parent == _review_work_root().resolve():
-                shutil.rmtree(index_root)
-        except OSError:
-            pass
+        _discard_owned_review_temp(
+            index_root, "sts2-review-retry-index-", log=log)
 
 
 def _bounded_retry_text(path: Path, limit: int) -> tuple[str, bool, int]:
@@ -5388,6 +5442,9 @@ def _worker_loop_body(agent, log) -> None:
     if _review_stop_requested():
         return
     _kill_orphan_review_processes(log)
+    if _review_stop_requested():
+        return
+    _cleanup_stale_private_git_temps(log=log)
     if _review_stop_requested():
         return
     _recover_deferred_salvages(log=log)
