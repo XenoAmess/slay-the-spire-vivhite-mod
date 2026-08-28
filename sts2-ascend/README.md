@@ -145,19 +145,24 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 要求是相对安全、有界、可观测、可记录、可继续调整或撤回，不要求证明绝对安全；拿不准行为
 改法时先落地运行时观测，也不能用“参数顶格/耦合较宽/再看几局”代替交付。
 
-模型按**优先链**逐条检查（`opencode models` 清单为准，条目形如 `provider/model[@variant]`）：
+模型按 runner-aware **三级优先链**逐条检查；OpenCode 使用 `opencode models`，Codex 使用
+本机登录状态与 bundled model catalog 做不产生付费轮次的可用性探测：
 
 1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
-2. 兜底 `kimi-for-coding/k3`，每 5 局一次（`review_every_runs`，同样走异步队列）
+2. `gpt-5.6-luna@max` — Codex CLI · `workspace-write` · auto-review
+3. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
 
-命中优先链任一条目 → 每局复盘（`preferred_every_runs`，默认 1）。
+前两级均按每局优先复盘；Kimi 的 5 局门槛只控制常规新任务，已有失败包的逐包重审不会因此
+永久等不到第 5 局。模型已经开始产生语义输出/工具事件后，失败事务固定原 runner、模型、推理强度
+和审批模式重试；若 CLI 在模型工作开始前就不可用，才允许按优先链顺位交给下一层。
 每个条目**独立失败冷却**：当前超时与硬失败（exit≠0/异常）都冷却 5 分钟，
 由 `preferred_*_cooldown_min` 配置。优先与兜底复盘超时统一为 8 小时（480 分钟）；
 复盘正常换行事件持续写直播流，病态超大单事件会有界截断；宿主内存只保留有界尾部。
 总预算之外还有独立的无进展 watchdog：连续 15 分钟没有任何 stdout 字节时告警，30 分钟时
 只终止该场复盘并完整保全现场、原模型退避重试。stall 属于本地 CLI/工具链故障，不会错误冷却 GLM；
-这里按同一 OpenCode 子进程 stdout 两次原始字节读取之间的间隔计时，有新字节即清零；整场 8 小时
-总预算不变。15/30 分钟为推理、工具执行及可能的子进程输出缓冲预留余量。
+这里以同一 provider 子进程 stdout 的原始字节进展为主计时，有新字节即清零；队列仍有 backlog 或
+宿主正在翻译刚读到的事件时不算模型静默。整场 8 小时总预算不变，15/30 分钟为推理、工具执行及
+可能的子进程输出缓冲预留余量。
 
 隔离、提交与成果保全设计：
 
@@ -183,7 +188,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   重建，分支切换则拒绝事务
 - 超时、进程失败、自检失败、deny-only 边界拒绝和提交冲突都会先把**全部工作树改动**（包括越界、
   ignored 和被规则拒绝的文件）原子保存到 `knowledge/code_backups/review_salvage/<批次>/`；
-  `files/`、`wip.patch`、完整 `raw_sandbox/`、报告与 manifest 供人工分析和 GLM 逐包重审；
+  `files/`、`wip.patch`、完整 `raw_sandbox/`、provider 原始 JSONL、报告与 manifest 供人工分析和模型逐包重审；
   宿主永不自动套用其中的旧 patch
 - 每次新失败包发布后都会更新受 Git 跟踪的 [`REVIEW_REJECTIONS.md`](REVIEW_REJECTIONS.md)，并为
   该条拒合记录单独建立 commit；正常运行立即 push，停止临界区先本地 commit、下次启动补推，
@@ -219,7 +224,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
   才发布事务 marker，并在局间以退出码 42 热重启。其他已验收文件不因此被丢弃，也不制造
   无意义的 Brain 断流
 
-复盘以 **OpenCode 无头会话**（`opencode run`，走本机已有授权，无需 API key）执行，
+复盘以 **OpenCode 或 Codex 无头会话**执行，复用本机已有授权且无需项目 API key；
 模型可修改 `sts2-ascend/` 下 deny-only 边界内的任意静态项目文件，不设固定提交名单；在线
 `stats`、`policy`、`progression`、`lessons`、`runs` 在复盘期间只读。复盘报告追加到
 `knowledge/meta_review.md`。
@@ -433,7 +438,7 @@ Start-Agent.ps1（session + PID 身份记录，默认后台）
               ├─ 本地决策遥测 → .runtime/live_dashboard.<SESSION_ID>.json（原子快照）
               ├─ quipper.py（唯一 IndexTTS GPU owner + 白绮碎碎念）
               ├─ 每局结束 → review_queue.json
-              └─ 复盘线程 → opencode / edge_speaker（按需；多行复盘流进入同一驾驶舱）
+              └─ 复盘线程 → opencode/codex / edge_speaker（按需；多行复盘流进入同一驾驶舱）
 
 Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏关窗
 ```
