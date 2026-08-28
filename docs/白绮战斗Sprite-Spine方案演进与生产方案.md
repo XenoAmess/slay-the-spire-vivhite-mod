@@ -4,10 +4,10 @@
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
 > 最后更新：2026-08-28。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
-> 当前实现状态：V3 的 `attack_peak` 与 `attack_heavy_peak` 已在隔离候选中通过静态与
-> Windows Vulkan 验收，`cast_peak` 已通过静态门禁并正在接入独立消费者；三者都尚未替换
-> 正式运行时、部署或真机测试。本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把
-> “本次没启动”误写成项目从未真机测试。
+> 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
+> death 已分别通过隔离 Windows Vulkan；严格五页/30 文件契约也已完成。统一
+> `hybrid_v3_final` 尚未创建，所有分项都尚未替换正式运行时、部署或完成本轮真机测试。
+> 本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把“本次没启动”误写成项目从未真机测试。
 
 ## 1. 当前结论
 
@@ -16,8 +16,8 @@
 attachment + Spine 骨链过渡 + 独立 VFX 的 Hybrid**：
 
 - 待机、低血、商店 relaxed 和轻微呼吸使用一张身份稳定的中立整身加权网格；
-- 普攻、重击、施法和死亡的关键受力姿势使用独立完整人物 attachment；`hurt` 只有在
-  neutral 网格无法自然完成时才增加独立姿势；
+- 普攻、重击、施法和死亡的关键受力姿势使用独立完整人物 attachment；`hurt` 已验证可由
+  neutral 网格完成保护性收缩、后撤与回弹，无需新增姿势图；
 - Spine 负责前摇、根位移、躯干和四肢的小到中幅联动、关键姿势切换、回弹、落地和
   VFX 时序，不要求单张网格完成不擅长的大角度形变；
 - 魔法弧、眼部施法、法阵和光晕始终是独立特效层，人物 attachment 保持空手；
@@ -377,7 +377,7 @@ eye、sigil 三槽同时设为 null 与 Alpha 0，每帧恰好一个人物，无
 尚未推翻的风险是 `.12` 切入质心变化在用户真实游戏速度下是否可见；若真机突兀，先调前摇
 轮廓、pose root 或切换时刻，再考虑单独 anticipation pose，不做双人物交叉淡化。
 
-### 5.8 `cast_peak` 静态门禁与冻结接入契约
+### 5.8 `cast_peak` 精确消费者闭环
 
 施法首轮 `0107-combat-cast-peak-attempt-01` 已逐字节固化为
 `custom/combat/sources/vivhite-combat-cast-peak-v1.png`。固定消费者下 cast 实体约
@@ -392,9 +392,15 @@ eye、sigil 三槽同时设为 null 与 Alpha 0，每帧恰好一个人物，无
 anchor 必须由各自时间线同帧切换与复位。`relaxed_loop` 两端仍须重申 neutral 唯一可见，
 隐藏 action/death/slash/sigil，防止商店随机 seek 进入残留状态。
 
-`0107` 当前仅为“静态候选通过”，不是离线集成通过。下一道门禁是重新测量实际双眼中心，
-校正 pose-specific `eye_attach_slot`，并在精确 Windows Vulkan 中同时检查人物原子切换、
-sigil 生命周期、EyeFire 对齐、character-only VFX 清空和中断复位；只有该门禁通过才升级状态。
+旧状态只完成静态门禁，随后精确 Windows Vulkan 暴露并纠正了真正的问题：初版 EyeFire
+offset `(40,40)` 的亮核 bbox 为 `(295,257,7,22)`，而同帧双眼约在 `(342,371)`，视觉上明显
+悬空。最终消费者在 cast 人物窗口使用 `(194,-292)`，`.60` 切回 neutral 后改用
+`(72,-282)`，直到 `clear_vfx` 清理。14/14 个精确时刻均为单人物、非空、无裁切；
+character-only 正确隔离人物，composite 同时验证 sigil 和眼火的出现、切换与复位。
+
+因此 `0107` 已升级为“隔离候选离线集成通过”，证据在
+`assets/vivhite-ironclad/evaluation/v3-cast-0107-exact/`。仍未完成统一五页总装、从其他动作
+中断进入/离开施法以及用户真机审美门禁；该状态不等于正式 runtime 通过。
 
 ### 5.9 V3 独立死亡连续性闭环
 
@@ -418,6 +424,50 @@ sigil 在 character-only 中同时为 null 与 Alpha 0。实体左边界切换�
 集成通过”，证据在 `assets/vivhite-ironclad/evaluation/v3-death/`。它尚未进入正式多页 atlas，
 也尚未完成从所有动作中断进入死亡的最终整合与用户真机审美门禁；失败时回退到当前已部署
 runtime，不在坏包上继续测试。
+
+### 5.10 `hurt` 由 neutral 网格承担
+
+`hybrid_hurt_neutral` 验证了受伤不需要新增 PNG、atlas 页或独立完整姿势。现有 neutral whole
+mesh 通过保护性收缩、后撤和回弹完成 `hurt`：冲击 `.10`、恢复 `.28`、过冲 `.46`、阻尼
+`.70`、`1.0` 回正。两候选 × 八动画 × 11 帧全部通过；`hurt` 有 10/11 个唯一帧，其余七动画
+共 77/77 帧的 hash 与上游一致，证明改动没有污染其他动画。
+
+受伤轮廓宽度从约 `210 px` 收缩为 `193 px`（约 `-8.1%`），最大质心位移约 `18.478 px`。
+transition mix 冻结为 idle→hurt `.03s`、hurt→hurt `0s`、hurt→idle `.10s`、hurt→die `0s`。
+当前剩余风险是连续受击时上游 `hurt→hurt=0` 会立即重触发；这需要统一候选中的中断测试，
+不是重新生图理由。证据在 `assets/vivhite-ironclad/evaluation/v3-hurt-neutral/`。
+
+### 5.11 neutral / 商店共同基线
+
+`hybrid_neutral_v3` 只修改 `idle_loop`、`low_health_loop`、`relaxed_loop`，保留 345 顶点、
+616 三角、35 根骨；每个顶点四权重，共使用 28 根骨。19/19 个精确离线时刻通过。商店随机
+seek 专项覆盖 `0, 1.37, 3, 5.4, 6, 9, 9.9, 11.9999, 12.000001`，所有相位都只保留 body，
+并显式清理 action、death、slash、sigil 和 eye。它还修复了旧 neutral 循环没有始终复位
+slash / sigil 的真实回归。
+
+实际 `A>=128` 高度约为 `345–353 px`；原版战士对照高度约 `252 px`，即白绮仍约为原版的
+`1.389×`。这是用户指定“当前骨架内部 70%”后的已知视觉差异，不得把“相比上一版不再过大”
+写成“与原战士同尺寸”。统一真机必须继续检查 Bounds、血条、意图、VFX 与商店构图。
+
+### 5.12 五页运行时契约已具备，但总装尚未生成
+
+构建和校验现在同时支持两套严格布局：默认 `legacy-single-page` 仍要求原 26 个私有运行时
+文件；显式 `v3-five-page` 要求 30 个文件，并按以下固定顺序同时供 combat 与 merchant 使用：
+
+1. `vivhite_combat.png`，`3072×2304`，neutral + magic arc + sigil；
+2. `vivhite_combat_death.png`，`2048×1536`；
+3. `vivhite_combat_attack.png`，`2048×2304`；
+4. `vivhite_combat_attack_heavy.png`，`2048×2304`；
+5. `vivhite_combat_cast.png`，`2048×2304`。
+
+`IroncladReplacementAssets` 只接受完整 legacy 或完整 V3 集合，部分页、错页名和混合布局均
+fail closed。发布工具使用 `--runtime-layout v3-five-page`，构建使用
+`/p:IroncladSkinRuntimeLayout=v3-five-page`；默认值没有改变。契约测试 4/4、C# build 0 warning /
+0 error、legacy 26 文件 fixture、V3 30 文件 fixture、Godot/Spine 与最小 PCK 均已离线通过。
+
+交接时 `hybrid_v3_final` 目录尚未创建，正式 `Vivhite/Vivhite/skins/ironclad/**` 未被这些研究
+候选覆盖，也没有部署或重启游戏。下一位维护者必须先总装，再走完整门禁；不能直接把任一
+分项候选复制成正式 runtime。
 
 ## 6. 并行研究线：约 8 个生成语义组
 
@@ -478,6 +528,25 @@ weighted 后发 attachment，不拆成多根发束，也不再付费生成。
 生产骨架必须采用蓝蝶专项纠正后的 `后发 → 头脸 → 蓝蝶 → 前发`。此外该候选在 `die@0` 就
 卸载正常头部，因此倒地阶段发丝仍由完整跨组件/独立死亡消费者验证。证据在
 `assets/vivhite-ironclad/evaluation/semantic-back-hair/`；回退仍是 Hybrid 整身头部。
+
+### 6.3 头脸、近臂、双腿与躯干裙摆的冻结结论
+
+- 头脸：`0045` weighted consumer 为当前首选、`0045` rigid 为回退、`0044` 为历史对照；
+  三候选 × 八动画 × 五帧共 120/120 通过。专项接触表沿用过旧层序，总装必须使用
+  `后发 → 头脸 → 蓝蝶 → 前发`。当前仍是 research-only；真实 EyeFire 总场景待总装复验；
+- 近臂（屏幕右/解剖左）：同样采用“上臂袖 + 前臂手”，不拆腕；`near_palm_deform` 只作内部
+  变形，`slash_mesh` 仍是独立 VFX 消费者。9/9 灰盒通过，真实可发布美术为 0；
+- 远腿：`far_thigh + far_lower_leg_with_boot`，保留膝、不拆踝；近腿：
+  `right_thigh + right_lower_leg_and_boot_union`，保留髋/膝、锁定踝。`0078/0083/0100` 只作
+  研究参考，旧 `0064–0071` 鞋尖方向错误；
+- 躯干裙摆：必须拆成 `torso_core`、四个独立裙片和远肩饰前/后片。`0054` 的 Alpha 通过，
+  但烘入袖、肩饰、腰裙与比例使其生产失败；`0048–0055` 已用满同一语义的 8/8 次额度。
+
+统一语义 A/B 灰盒按两候选 × 八动画 × 21 帧共 336/336 通过，无空帧、裁切或触边；但明确
+`deployable=false`、`production_runtime_ready_slots=[]`。仍完全缺少 13 个 EvoLink 生产附件：
+`torso_core`、四裙片、远肩饰前/后、远/近上臂袖、远/近前臂手、远/近小腿靴一体。头脸、
+前发和双大腿仍是研究件，因此“缺 13 个”不是“其余已可发布”。拆件线应在用户追加躯干额度
+并取得整套真实附件后再继续；在此之前，Hybrid 完整关键姿势仍是可交付主线。
 
 拆分原则不是“骨越多越高级”，而是只有在一个关节确实需要相对旋转、切换前后层序或产生
 惯性时才拆。完整头脸与中央前发合并可避免最敏感的脸—刘海—眼镜叠缝；小腿与靴合并可
@@ -562,15 +631,17 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 
 ## 10. 目前的实施优先级
 
-1. 把已有完整 neutral、战斗母版和死亡图重新按真实 Alpha、身份、比例和锚点验收；
-2. `attack_peak` 与 `attack_heavy_peak` 已完成隔离接入和离线 Vulkan；下一门禁是正式候选
-   完成后统一做用户真机；
-3. `cast_peak` 已静态通过，当前按 `.25–.60` 人物窗口与 EyeFire / sigil 契约做精确 Vulkan；
-   `hurt` 仅在 neutral 网格真不能自然承担时增加；
-4. 死亡专项已把实体横跳由 61 px 降至 16 px 并保持接地；下一步合入正式多页候选，复测所有
-   动作中断进入死亡和用户真机观感；
-5. 同时把已通过的独立附件接入隔离语义组研究候选，形成同条件 A/B 接触表；
-6. 主线完成八动画、商店和真机回归后，才替换正式运行时并完整构建部署。
+1. 以已冻结的 neutral、attack、heavy、cast、hurt 和 death 分项消费者创建唯一
+   `hybrid_v3_final`；严格使用五页/30 文件契约，不修改默认 legacy runtime；
+2. 在统一候选中复测八动画的原子窗口、所有 mix、中断/恢复、EyeFire / slash / sigil 生命周期，
+   并对 `relaxed_loop` 做商店随机 seek；
+3. 量化 neutral 当前约为原战士高度 `1.389×` 的布局影响；同时检查 attack recovery、heavy
+   `17.27 px` 切入质心、hurt 连续重触发和所有动作进入 death；
+4. 完成 combat layout、普通/伪商店、角色选择、篝火、UI 与多人离线回归；没有第二客户端时
+   多人只能标记资源通过；
+5. 只有离线总装全部通过，才显式选择 `v3-five-page` 做不部署的完整 build/PCK；随后备份旧三件套，
+   进入真实游戏做用户验收。不得启动 Bilibili 直播；
+6. 拆件研究线保留证据但不阻塞 Hybrid 主线。躯干组没有用户追加额度前禁止第 9 次生成。
 
 这样从最小端到端闭环开始，避免先花完所有图的额度，最后才发现 slot、方向或切换架构不对。
 
@@ -601,7 +672,8 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
   `17.27 px` 与掌心 VFX `(210,30)`；升级为离线集成通过但保留真机审美门禁。
 - 2026-08-28：新增 `cast_peak` 0107 静态候选；记录三底 SourceOver 对直显光场误判的纠正、
   与 neutral 一致的固定尺度，以及 `.10` sigil、`.25` 眼火/人物切换、`.60` 人物复位、
-  `1.222000026` 清理契约；在精确 Vulkan 之前不冒充集成通过。
+  `1.222000026` 清理契约；随后以 14/14 精确 Vulkan 升级为离线集成通过，记录旧 `(40,40)`
+  眼火悬空与 cast `(194,-292)` / neutral `(72,-282)` 双锚点修正。
 - 2026-08-28：完成 V3 独立死亡消费者；冻结 `0029` 美术源，通过预切换低位收缩、`1.05s`
   原子 slot 切换、`0s` hurt→die mix 与接地回弹，把旧 `61px` 实体横跳降至 `16px`、底边跳变
   降至 `1px`，16/16 精确 Windows Vulkan 帧通过；状态仍限定为隔离离线集成，等待多页整合
@@ -615,3 +687,9 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 - 2026-08-28：完成 `0031` 单张 weighted 后发消费者；冻结 49 顶点/72 三角与末梢权重上限，
   八动画 168/168 Vulkan 帧及商店随机相位通过；不再付费拆发束，并明确旧接触表的蝶饰层序
   已被专项 A/B 纠正、死亡倒地阶段仍待总装验收。
+- 2026-08-28：完成 neutral 网格 `hurt` 与 neutral/merchant 基线专项；记录受伤轮廓收缩、
+  transition mix、连续重触发风险、19/19 neutral 时刻和商店九相位清理；明确 70% 当前高度仍约
+  为原战士 `1.389×`，保留真机布局门禁。
+- 2026-08-28：加入严格五页/30 文件运行时契约，默认 legacy 不变；固化头脸、近臂、双腿、
+  躯干裙摆和 336/336 总装灰盒结论，列出 13 个完全缺失的生产附件。交接时最终统一候选尚未
+  创建、正式 runtime 未修改、游戏未部署。
