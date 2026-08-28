@@ -5837,3 +5837,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/931 胜，当前目标进阶 0
+
+## 第 932 局复盘（2026-08-28 23:00）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：TRUE_GRIT, EQUILIBRIUM, THUNDERCLAP, CINDER, VICIOUS, ANGER, FIGHT_ME, ROLLING_BOULDER
+- 本局遗物：无
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血2; F6 Monster战 掉血3; F7 Monster战 掉血29; F8 Monster战 掉血38; F9 Monster战 掉血7（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/95局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/932 胜，当前目标进阶 0
