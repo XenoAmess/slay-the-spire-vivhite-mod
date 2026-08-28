@@ -4781,3 +4781,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.54（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/835 胜，当前目标进阶 0
+
+## 第 836 局复盘（2026-08-28 09:09）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：ULTIMATE_STRIKE, COLOSSUS, BLUDGEON, DISMANTLE, HEADBUTT, HOWL_FROM_BEYOND, UNRELENTING, FLAME_BARRIER, BLUDGEON, RAGE
+- 本局遗物：POTION_BELT
+- 战斗记录：F8 Monster战 掉血0; F9 Monster战 掉血35｜竞速审计：T3判死→实战6回合获胜; F13 Monster战 掉血0; F14 Monster战 掉血0; F15 Monster战 掉血6; F17 Boss战 掉血41｜竞速审计：T3判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，FIEND_FIRE(24分/33局)，OFFERING(24分/20局)，PACTS_END(24分/87局)，MANGLE(24分/86局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/836 胜，当前目标进阶 0
