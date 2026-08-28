@@ -37,7 +37,7 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         llm_review.SALVAGE_ROOT = self.old_salvage
         self.temp.cleanup()
 
-    def _package(self, name: str, marker: bytes) -> Path:
+    def _package(self, name: str, marker: bytes, attempts=()) -> Path:
         package = self.salvage / name
         raw_repo = package / "raw_sandbox" / "repo"
         (raw_repo / ".git").mkdir(parents=True)
@@ -55,6 +55,12 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
             "raw_sandbox_deferred": False,
             "retry_evidence_ready": True,
             "retry_evidence_schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_patch": "retry_candidate.patch",
+            "retry_candidate_inventory": "retry_candidate_inventory.json",
+            "retry_candidate_bytes": len(marker * 180_000),
+            "replay_target": "pkg-target",
+            "replay_role": "target" if name == "pkg-target" else "attempt_evidence",
+            "replay_attempt_packages": list(attempts) if name == "pkg-target" else None,
         }
         (package / "manifest.json").write_text(
             json.dumps(manifest), encoding="utf-8")
@@ -66,6 +72,7 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         inventory = {
             "schema": llm_review._RETRY_EVIDENCE_SCHEMA,
             "package": name,
+            "pre_head": "a" * 40,
             "paths": [
                 "sts2-ascend/brain/policy.py",
                 "sts2-ascend/scratch.bin",
@@ -88,7 +95,7 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         return package
 
     def test_mount_contains_target_and_all_attempt_files_with_integrity(self) -> None:
-        target = self._package("pkg-target", b"T")
+        target = self._package("pkg-target", b"T", attempts=["pkg-attempt"])
         attempt = self._package("pkg-attempt", b"A")
         sandbox = self.root / "sandbox"
         sandbox.mkdir()
@@ -164,6 +171,56 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         self.assertTrue(llm_review._remove_failed_review_evidence(
             sandbox, log=lambda _message: None))
 
+    def test_wip_only_or_incomplete_lineage_cannot_claim_complete_evidence(self) -> None:
+        package = self._package("pkg-target", b"W", attempts=["pkg-attempt"])
+        (package / "retry_candidate.patch").unlink()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.update({
+            "retry_evidence_ready": False,
+            "retry_candidate_patch": "wip.patch",
+        })
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        sandbox = self.root / "sandbox-wip-only"
+        sandbox.mkdir()
+        with (mock.patch.object(llm_review, "_materialize_retry_evidence",
+                               return_value=manifest),
+              mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              self.assertRaises(llm_review._RetryEvidenceUnavailable)):
+            llm_review._mount_failed_review_evidence(
+                sandbox, ["pkg-target"], [], log=lambda _message: None)
+        self.assertTrue(package.is_dir())
+
+    def test_manifest_lineage_and_inventory_identity_must_match_exactly(self) -> None:
+        target = self._package("pkg-target", b"L", attempts=["pkg-attempt"])
+        attempt = self._package("pkg-attempt", b"I")
+        manifests = {
+            path.name: json.loads((path / "manifest.json").read_text(encoding="utf-8"))
+            for path in (target, attempt)
+        }
+        sandbox = self.root / "sandbox-lineage"
+        sandbox.mkdir()
+        with (mock.patch.object(
+                llm_review, "_materialize_retry_evidence",
+                side_effect=lambda package, log=print: manifests[package.name]),
+              mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              self.assertRaises(llm_review._RetryEvidenceUnavailable)):
+            llm_review._mount_failed_review_evidence(
+                sandbox, ["pkg-target"], [], log=lambda _message: None)
+
+        inventory_path = attempt / "retry_candidate_inventory.json"
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+        inventory["package"] = "wrong-attempt"
+        inventory_path.write_text(json.dumps(inventory), encoding="utf-8")
+        with (mock.patch.object(
+                llm_review, "_materialize_retry_evidence",
+                side_effect=lambda package, log=print: manifests[package.name]),
+              mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              self.assertRaises(llm_review._RetryEvidenceUnavailable)):
+            llm_review._mount_failed_review_evidence(
+                sandbox, ["pkg-target"], ["pkg-attempt"],
+                log=lambda _message: None)
+
     def test_missing_required_evidence_never_starts_model_or_consumes_target(self) -> None:
         package = self._package("pkg-target", b"M")
         (package / "report.md").unlink()
@@ -209,6 +266,9 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         self.assertEqual(llm_review._validated_retry_resolutions(
             result, ["pkg-target"], log=lambda _message: None), {})
         self.assertTrue(package.is_dir())
+        work_root = repo / "sts2-ascend" / "knowledge" / "code_backups" / "review_work"
+        self.assertEqual(list(work_root.glob("sts2-review-snapshot-*")), [])
+        self.assertEqual(list(work_root.glob("sts2-review-sandbox-*")), [])
 
 
 if __name__ == "__main__":

@@ -4496,6 +4496,26 @@ def _mount_failed_review_evidence(
             if (manifest.get("snapshot_deferred")
                     or manifest.get("raw_sandbox_deferred")):
                 raise _RetryEvidenceUnavailable(f"失败包仍在异步补全：{name}")
+            if (manifest.get("retry_evidence_ready") is not True
+                    or manifest.get("retry_evidence_schema") != _RETRY_EVIDENCE_SCHEMA
+                    or manifest.get("retry_candidate_patch") != "retry_candidate.patch"
+                    or manifest.get("retry_candidate_inventory")
+                    != "retry_candidate_inventory.json"):
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} 未声明 schema {_RETRY_EVIDENCE_SCHEMA} "
+                    "完整 retry candidate；wip.patch 不能替代")
+            declared_attempts = _normalize_salvage_package_names(
+                manifest.get("replay_attempt_packages") or [])
+            if role == "target" and set(declared_attempts) != set(attempts):
+                raise _RetryEvidenceUnavailable(
+                    f"target {name} lineage 与调用参数不一致："
+                    f"manifest={declared_attempts}, call={attempts}")
+            if role == "attempt_evidence":
+                declared_targets = _normalize_salvage_package_names([
+                    manifest.get("replay_target")])
+                if not declared_targets or declared_targets[0] not in requested:
+                    raise _RetryEvidenceUnavailable(
+                        f"attempt {name} 未指向本次 target：{requested}")
 
             missing = [relative for relative in _RETRY_SANDBOX_REQUIRED_FILES
                        if not (package / relative).is_file()]
@@ -4515,6 +4535,15 @@ def _mount_failed_review_evidence(
                 inventory_paths = inventory.get("paths")
                 if not isinstance(inventory_paths, list):
                     raise TypeError("paths 不是列表")
+                pre_head = str(manifest.get("pre_head") or "")
+                candidate_path = package / "retry_candidate.patch"
+                if (not pre_head or inventory.get("package") != name
+                        or str(inventory.get("pre_head") or "") != pre_head
+                        or inventory.get("schema") != _RETRY_EVIDENCE_SCHEMA
+                        or not candidate_path.is_file()
+                        or candidate_path.stat().st_size
+                        != int(manifest.get("retry_candidate_bytes") or -1)):
+                    raise ValueError("candidate/inventory 与 manifest 身份或大小不一致")
                 file_states = json.loads((package / "file_states.json").read_text(
                     encoding="utf-8"))
                 if not isinstance(file_states, list):
@@ -5496,12 +5525,22 @@ def _run_review_sandbox(
             # 项目内先发布指针包，新 Brain 的 worker 再异步搬运完整 clone。
             result.retained_sandbox_dir = str(sandbox_root)
         else:
-            try:
-                _capture_sandbox_wip(
-                    sandbox_repo, pre_head, result, log=log, prompt_text=prompt)
-            except _ReviewStopped:
-                result.stopped = True
-                result.retained_sandbox_dir = str(sandbox_root)
+            evidence_preflight_failed = bool(
+                replay_requested and replay_evidence_error
+                and not replay_model_started)
+            if evidence_preflight_failed:
+                # No model process existed, so there is no model WIP to preserve.
+                # A partial mount belongs only to this disposable clone; remove it
+                # and mark capture complete so no orphan snapshot is published.
+                _remove_failed_review_evidence(sandbox_repo, log=log)
+                result.snapshot_complete = True
+            else:
+                try:
+                    _capture_sandbox_wip(
+                        sandbox_repo, pre_head, result, log=log, prompt_text=prompt)
+                except _ReviewStopped:
+                    result.stopped = True
+                    result.retained_sandbox_dir = str(sandbox_root)
             siblings = _bounded_sandbox_sibling_paths(sandbox_root, sandbox_repo)
             if siblings:
                 escaped = tuple(f"../{path}" for path in siblings)
