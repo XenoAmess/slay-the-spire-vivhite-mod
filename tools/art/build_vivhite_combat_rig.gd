@@ -43,7 +43,18 @@ const REGION_MARGIN := 18
 # is a real weighted Spine mesh, not a four-corner image card or a vanilla mesh.
 const GRID_COLUMNS := 15
 const GRID_ROWS := 23
-const BODY_WORLD_RECT := Rect2(-620.0, 0.0, 1240.0, 1860.0)
+# The private combat scene intentionally retains the vanilla 0.28 SpineSprite
+# scale. Normalize only Vivhite's authored character space so the shared scene
+# Bounds/UI/VFX coordinate system remains unchanged. The floor offset aligns
+# her feet with the vanilla gameplay capture independently of character scale.
+const CHARACTER_WORLD_SCALE := 0.70
+const CHARACTER_FLOOR_OFFSET := -61.0
+const BODY_WORLD_RECT := Rect2(
+	-620.0 * CHARACTER_WORLD_SCALE,
+	CHARACTER_FLOOR_OFFSET,
+	1240.0 * CHARACTER_WORLD_SCALE,
+	1860.0 * CHARACTER_WORLD_SCALE
+)
 # The wide right side includes the hand-origin magic arc and the horizontal
 # death pose. Gameplay placement still uses the unchanged scene anchors.
 const SKELETON_BOUNDS := Rect2(-900.0, -220.0, 3260.0, 2220.0)
@@ -352,9 +363,12 @@ func _build_skeleton_json() -> Dictionary:
 
 
 func _build_bones() -> Array:
+	var sigil_anchor := _scaled_character_anchor(Vector2(80.0, 960.0))
+	var arc_anchor := _scaled_character_anchor(Vector2(840.0, 1750.0))
+	var eye_anchor := _scaled_character_anchor(Vector2(20.0, 1555.0))
 	var result := [
 		{"name": BONE_ROOT},
-		{"name": BONE_SIGIL, "parent": BONE_ROOT, "x": 80.0, "y": 960.0},
+		{"name": BONE_SIGIL, "parent": BONE_ROOT, "x": sigil_anchor.x, "y": sigil_anchor.y},
 		{"name": BONE_RIG, "parent": BONE_ROOT},
 	]
 	for spec: Dictionary in DEFORM_BONES:
@@ -362,9 +376,16 @@ func _build_bones() -> Array:
 		result.append({"name": spec["name"], "parent": BONE_RIG, "x": world.x, "y": world.y})
 	# The model's arc blooms at its left end. These anchors put that bloom at
 	# Vivhite's outstretched right hand and send the magic to the enemy side.
-	result.append({"name": BONE_ARC, "parent": BONE_ROOT, "x": 840.0, "y": 1750.0, "rotation": -5.0})
-	result.append({"name": BONE_EYES, "parent": BONE_ROOT, "x": 20.0, "y": 1555.0})
+	result.append({"name": BONE_ARC, "parent": BONE_ROOT, "x": arc_anchor.x, "y": arc_anchor.y, "rotation": -5.0})
+	result.append({"name": BONE_EYES, "parent": BONE_ROOT, "x": eye_anchor.x, "y": eye_anchor.y})
 	return result
+
+
+func _scaled_character_anchor(original: Vector2) -> Vector2:
+	return Vector2(
+		original.x * CHARACTER_WORLD_SCALE,
+		original.y * CHARACTER_WORLD_SCALE + CHARACTER_FLOOR_OFFSET
+	)
 
 
 func _region_attachment(path: String, width: float, height: float) -> Dictionary:
