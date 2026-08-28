@@ -1,0 +1,706 @@
+{
+  "skeleton": {
+    "hash": "vivhite-semantic-butterfly-probe-v1",
+    "spine": "4.2.43",
+    "x": -320.0,
+    "y": -320.0,
+    "width": 640.0,
+    "height": 640.0,
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "semantic_root"
+    },
+    {
+      "name": "vivhite_head",
+      "parent": "semantic_root"
+    },
+    {
+      "name": "vivhite_butterfly",
+      "parent": "vivhite_head",
+      "x": 100.0,
+      "y": 110.0
+    }
+  ],
+  "slots": [
+    {
+      "name": "semantic_back_hair",
+      "bone": "vivhite_head",
+      "attachment": "semantic_back_hair"
+    },
+    {
+      "name": "semantic_head_face",
+      "bone": "vivhite_head",
+      "attachment": "semantic_head_face"
+    },
+    {
+      "name": "semantic_butterfly_under_front_hair_probe",
+      "bone": "vivhite_butterfly",
+      "attachment": "semantic_butterfly"
+    },
+    {
+      "name": "semantic_front_hair",
+      "bone": "vivhite_head",
+      "attachment": "semantic_front_hair"
+    },
+    {
+      "name": "semantic_butterfly_front",
+      "bone": "vivhite_butterfly"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "semantic_back_hair": {
+          "semantic_back_hair": {
+            "path": "semantic_back_hair",
+            "width": 500.0,
+            "height": 500.0
+          }
+        },
+        "semantic_head_face": {
+          "semantic_head_face": {
+            "path": "semantic_head_face",
+            "width": 500.0,
+            "height": 500.0
+          }
+        },
+        "semantic_butterfly_under_front_hair_probe": {
+          "semantic_butterfly": {
+            "path": "semantic_butterfly",
+            "width": 190.0,
+            "height": 190.0,
+            "x": 62.34375,
+            "y": 25.60546875
+          }
+        },
+        "semantic_front_hair": {
+          "semantic_front_hair": {
+            "path": "semantic_front_hair",
+            "width": 500.0,
+            "height": 500.0
+          }
+        },
+        "semantic_butterfly_front": {
+          "semantic_butterfly": {
+            "path": "semantic_butterfly",
+            "width": 190.0,
+            "height": 190.0,
+            "x": 62.34375,
+            "y": 25.60546875
+          }
+        }
+      }
+    }
+  ],
+  "animations": {
+    "idle_loop": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.5,
+              "value": -1.4
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": 1.0
+            },
+            {
+              "time": 2.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.5,
+              "value": -4.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": 2.8
+            },
+            {
+              "time": 2.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "low_health_loop": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 5.0
+            },
+            {
+              "time": 0.366666675,
+              "value": 7.5
+            },
+            {
+              "time": 0.73333335,
+              "value": 5.0
+            },
+            {
+              "time": 1.100000025,
+              "value": 6.4
+            },
+            {
+              "time": 1.4666667,
+              "value": 5.0
+            }
+          ]
+        }
+      }
+    },
+    "relaxed_loop": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 12.000001,
+              "name": "semantic_butterfly"
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 12.000001,
+              "name": null
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 3.00000025,
+              "value": -1.008
+            },
+            {
+              "time": 6.0000005,
+              "value": 0.0
+            },
+            {
+              "time": 9.00000075,
+              "value": 0.72
+            },
+            {
+              "time": 12.000001,
+              "value": 0.0
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 3.00000025,
+              "value": -2.88
+            },
+            {
+              "time": 6.0000005,
+              "value": 0.0
+            },
+            {
+              "time": 9.00000075,
+              "value": 2.016
+            },
+            {
+              "time": 12.000001,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.036,
+              "value": 7.0
+            },
+            {
+              "time": 0.08,
+              "value": -13.0
+            },
+            {
+              "time": 0.443333346,
+              "value": -4.0
+            },
+            {
+              "time": 0.886666692,
+              "value": -1.56
+            },
+            {
+              "time": 1.1666667,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "attack_heavy": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.054,
+              "value": 10.85
+            },
+            {
+              "time": 0.12,
+              "value": -20.15
+            },
+            {
+              "time": 0.659333362,
+              "value": -6.2
+            },
+            {
+              "time": 1.165333384,
+              "value": -2.418
+            },
+            {
+              "time": 1.5333334,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "cast": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.11,
+              "value": 5.0
+            },
+            {
+              "time": 0.25,
+              "value": -9.0
+            },
+            {
+              "time": 0.48,
+              "value": -6.0
+            },
+            {
+              "time": 1.222000026,
+              "value": -1.44
+            },
+            {
+              "time": 1.5666667,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "hurt": {
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.1,
+              "value": 17.0
+            },
+            {
+              "time": 0.24,
+              "value": 12.24
+            },
+            {
+              "time": 0.48,
+              "value": -7.0
+            },
+            {
+              "time": 0.72,
+              "value": -2.1
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "die": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 1.05,
+              "name": null
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.18,
+              "value": 6.0
+            },
+            {
+              "time": 0.46,
+              "value": 15.0
+            },
+            {
+              "time": 0.82,
+              "value": 25.0
+            },
+            {
+              "time": 0.94,
+              "value": 27.25
+            },
+            {
+              "time": 1.0499,
+              "value": 29.5
+            },
+            {
+              "time": 1.24,
+              "value": 34.0
+            },
+            {
+              "time": 1.78,
+              "value": 39.0
+            },
+            {
+              "time": 2.08,
+              "value": 43.05
+            },
+            {
+              "time": 2.3333335,
+              "value": 42.0
+            }
+          ]
+        }
+      }
+    },
+    "layer_probe_front": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.1,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "max_negative": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 0.1,
+              "name": "semantic_butterfly"
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 0.1,
+              "name": null
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": -20.15
+            },
+            {
+              "time": 0.1,
+              "value": -20.15
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": -4.0
+            },
+            {
+              "time": 0.1,
+              "value": -4.0
+            }
+          ]
+        }
+      }
+    },
+    "max_positive": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 0.1,
+              "name": "semantic_butterfly"
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 0.1,
+              "name": null
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 29.5
+            },
+            {
+              "time": 0.1,
+              "value": 29.5
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 2.8
+            },
+            {
+              "time": 0.1,
+              "value": 2.8
+            }
+          ]
+        }
+      }
+    },
+    "max_negative_front": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 0.1,
+              "name": null
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 0.1,
+              "name": "semantic_butterfly"
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": -20.15
+            },
+            {
+              "time": 0.1,
+              "value": -20.15
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": -4.0
+            },
+            {
+              "time": 0.1,
+              "value": -4.0
+            }
+          ]
+        }
+      }
+    },
+    "max_positive_front": {
+      "slots": {
+        "semantic_butterfly_under_front_hair_probe": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 0.1,
+              "name": null
+            }
+          ]
+        },
+        "semantic_butterfly_front": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": "semantic_butterfly"
+            },
+            {
+              "time": 0.1,
+              "name": "semantic_butterfly"
+            }
+          ]
+        }
+      },
+      "bones": {
+        "vivhite_head": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 29.5
+            },
+            {
+              "time": 0.1,
+              "value": 29.5
+            }
+          ]
+        },
+        "vivhite_butterfly": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 2.8
+            },
+            {
+              "time": 0.1,
+              "value": 2.8
+            }
+          ]
+        }
+      }
+    }
+  }
+}

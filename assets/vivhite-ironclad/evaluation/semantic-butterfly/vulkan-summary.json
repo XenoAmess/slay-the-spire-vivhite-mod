@@ -1,0 +1,384 @@
+{
+  "candidate": "res://tools/candidates/semantic_butterfly/semantic_butterfly_skeleton_data.tres",
+  "canvas": [
+    640,
+    520
+  ],
+  "contact_sheet": "contact-sheets/semantic-butterfly-head-layers.png",
+  "display_server": "Windows",
+  "errors": [],
+  "rendering_driver": "vulkan",
+  "samples": [
+    {
+      "alpha_bbox": [
+        259,
+        207,
+        125,
+        119
+      ],
+      "alpha_centroid": [
+        323.730714694868,
+        255.906487644932
+      ],
+      "animation": "idle_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "setup-under",
+      "passed": true,
+      "path": "frames/00-setup-under.png",
+      "sha256": "e4e391c2836f711f1845482e9380da0dd1f3dde0afe8c724ed543e87608536c2",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        207,
+        125,
+        119
+      ],
+      "alpha_centroid": [
+        323.730714694868,
+        255.906487644932
+      ],
+      "animation": "layer_probe_front",
+      "expected_butterfly_layer": "front",
+      "front_attachment": "semantic_butterfly",
+      "label": "setup-front-ab",
+      "passed": true,
+      "path": "frames/01-setup-front-ab.png",
+      "sha256": "6a387e51e98fde5430570cd737b09a3a4bb7c013941025f03e669de1f1fc645e",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": null,
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        260,
+        207,
+        127,
+        119
+      ],
+      "alpha_centroid": [
+        324.111323115685,
+        256.092529404453
+      ],
+      "animation": "idle_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "idle-local-negative",
+      "passed": true,
+      "path": "frames/02-idle-local-negative.png",
+      "sha256": "d1dc8f8890b567acdea824c3ebffda55dbfd4f833c0b42c5a30493b6a5b176c5",
+      "time": 0.5,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        205,
+        123,
+        118
+      ],
+      "alpha_centroid": [
+        323.588643937523,
+        255.851630349408
+      ],
+      "animation": "idle_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "idle-local-positive",
+      "passed": true,
+      "path": "frames/03-idle-local-positive.png",
+      "sha256": "7ed5b5f181282ebfd8ecf21caf021385cdedc37b394534b5349ac6832d7f75a3",
+      "time": 1.5,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        266,
+        208,
+        135,
+        113
+      ],
+      "alpha_centroid": [
+        328.168411560503,
+        258.226421689503
+      ],
+      "animation": "attack_heavy",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "heavy-head-negative",
+      "passed": true,
+      "path": "frames/04-heavy-head-negative.png",
+      "sha256": "00c9f9139610171332b25471b5219ab1d40f4fe7ba0bb354f32547ff3b9a4dba",
+      "time": 0.12,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        266,
+        208,
+        136,
+        113
+      ],
+      "alpha_centroid": [
+        328.10780270771,
+        258.333961690268
+      ],
+      "animation": "max_negative",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "conservative-max-negative",
+      "passed": true,
+      "path": "frames/05-conservative-max-negative.png",
+      "sha256": "463fe8e356d9c8b13d0347fc41944f82ea5094436ff00dc40b8a73f75232c09f",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        266,
+        208,
+        136,
+        113
+      ],
+      "alpha_centroid": [
+        328.10780270771,
+        258.333961690268
+      ],
+      "animation": "max_negative_front",
+      "expected_butterfly_layer": "front",
+      "front_attachment": "semantic_butterfly",
+      "label": "conservative-max-negative-front-ab",
+      "passed": true,
+      "path": "frames/06-conservative-max-negative-front-ab.png",
+      "sha256": "535a50c76b4801a2f82b3626d94242bc6103d8682625b159c6f8a936a4cd196f",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": null,
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        192,
+        126,
+        138
+      ],
+      "alpha_centroid": [
+        319.790554780201,
+        255.263614478764
+      ],
+      "animation": "hurt",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "hurt-head-positive",
+      "passed": true,
+      "path": "frames/07-hurt-head-positive.png",
+      "sha256": "59504bd4d16d15f0d9e4aa284af98bbc77a6dcef1251551ebd9840069a59cf69",
+      "time": 0.1,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        262,
+        184,
+        111,
+        142
+      ],
+      "alpha_centroid": [
+        316.396345457265,
+        255.452416410928
+      ],
+      "animation": "die",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "death-visible-positive",
+      "passed": true,
+      "path": "frames/08-death-visible-positive.png",
+      "sha256": "617ed8778e807712752bb8b8cd8fb16b021d1b6bfe9fd7ecbae1c546280e8229",
+      "time": 1.0499,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        262,
+        184,
+        111,
+        142
+      ],
+      "alpha_centroid": [
+        316.359628474151,
+        255.389538688503
+      ],
+      "animation": "max_positive",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "conservative-max-positive",
+      "passed": true,
+      "path": "frames/09-conservative-max-positive.png",
+      "sha256": "e95acd4fa0c10e1535cb201e860d453a951798d71ca82c1a7a57ad845781108d",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        262,
+        184,
+        111,
+        142
+      ],
+      "alpha_centroid": [
+        316.359628474151,
+        255.389538688503
+      ],
+      "animation": "max_positive_front",
+      "expected_butterfly_layer": "front",
+      "front_attachment": "semantic_butterfly",
+      "label": "conservative-max-positive-front-ab",
+      "passed": true,
+      "path": "frames/10-conservative-max-positive-front-ab.png",
+      "sha256": "debab83cfbfb9e7f1b06e94e6b805a24da17bf7b20198c48b675bd16507bd120",
+      "time": 0.0,
+      "touches_canvas_edge": false,
+      "under_attachment": null,
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        262,
+        209,
+        111,
+        117
+      ],
+      "alpha_centroid": [
+        314.494029693429,
+        258.787312533879
+      ],
+      "animation": "die",
+      "expected_butterfly_layer": "none",
+      "front_attachment": null,
+      "label": "death-detached",
+      "passed": true,
+      "path": "frames/11-death-detached.png",
+      "sha256": "438db4293d7f777e7ab3d441a47b568fbf87cb0a32d452f4163982200da0c4e6",
+      "time": 1.05,
+      "touches_canvas_edge": false,
+      "under_attachment": null,
+      "visible_butterfly_count": 0
+    },
+    {
+      "alpha_bbox": [
+        260,
+        200,
+        125,
+        122
+      ],
+      "alpha_centroid": [
+        323.846180746894,
+        255.910032780862
+      ],
+      "animation": "relaxed_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "shop-random-1p37",
+      "passed": true,
+      "path": "frames/12-shop-random-1p37.png",
+      "sha256": "27cff6a4ba269d877eee76712eaa79c431869be8d4f78ba08c9e5e7f51567416",
+      "time": 1.37,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        207,
+        125,
+        115
+      ],
+      "alpha_centroid": [
+        323.802455876586,
+        255.915316472834
+      ],
+      "animation": "relaxed_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "shop-random-5p4",
+      "passed": true,
+      "path": "frames/13-shop-random-5p4.png",
+      "sha256": "7517dac0e304cc825676937f9308cdd7ca76454042dc80ad3afc7c0285bd58fa",
+      "time": 5.4,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        206,
+        124,
+        117
+      ],
+      "alpha_centroid": [
+        323.72903110199,
+        255.762873666605
+      ],
+      "animation": "relaxed_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "shop-random-9p9",
+      "passed": true,
+      "path": "frames/14-shop-random-9p9.png",
+      "sha256": "7588ae7012f36c1a0888e968d6c90f9ac8e0a141cccebffee11873aafc49467a",
+      "time": 9.9,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    },
+    {
+      "alpha_bbox": [
+        259,
+        207,
+        125,
+        119
+      ],
+      "alpha_centroid": [
+        323.730714694868,
+        255.906487644932
+      ],
+      "animation": "relaxed_loop",
+      "expected_butterfly_layer": "under",
+      "front_attachment": null,
+      "label": "shop-loop-end",
+      "passed": true,
+      "path": "frames/15-shop-loop-end.png",
+      "sha256": "e4e391c2836f711f1845482e9380da0dd1f3dde0afe8c724ed543e87608536c2",
+      "time": 12.000001,
+      "touches_canvas_edge": false,
+      "under_attachment": "semantic_butterfly",
+      "visible_butterfly_count": 1
+    }
+  ],
+  "scene_scale": 0.28,
+  "schema": 1,
+  "success": true
+}

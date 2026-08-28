@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "status": "isolated_graybox_not_runtime",
+  "source_0030_sha256": "a8fedb56c6d4a4388fa60cdb3cb66435f3cc6720a47754f53cc9f1f9a449458c",
+  "runtime_copy_sha256": "a8fedb56c6d4a4388fa60cdb3cb66435f3cc6720a47754f53cc9f1f9a449458c",
+  "source_pages": {
+    "semantic_back_hair.png": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0031-split-back-hair-attachment-attempt-01/output.png",
+    "semantic_head_face.png": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0044-split-head-face-attachment-attempt-05/output.png",
+    "semantic_front_hair.png": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0033-split-front-hair-attachment-attempt-02/output.png",
+    "semantic_butterfly.png": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0030-split-butterfly-attachment-attempt-01/output.png"
+  },
+  "alpha": {
+    "size": [
+      1024,
+      1024
+    ],
+    "format": "RGBA8",
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "edge_nonzero_count": 0,
+    "edge_max_alpha": 0,
+    "pivot_alpha": 253,
+    "connected_components_a_ge_16": 1,
+    "thresholds": {
+      "a_ge_1": {
+        "count": 279495,
+        "bbox": [
+          27,
+          19,
+          985,
+          965
+        ]
+      },
+      "a_ge_16": {
+        "count": 273482,
+        "bbox": [
+          169,
+          36,
+          693,
+          862
+        ]
+      },
+      "a_ge_64": {
+        "count": 272550,
+        "bbox": [
+          170,
+          37,
+          692,
+          861
+        ]
+      },
+      "a_ge_128": {
+        "count": 271753,
+        "bbox": [
+          170,
+          37,
+          692,
+          861
+        ]
+      }
+    }
+  },
+  "consumer_contract": {
+    "evidence": [
+      "Vivhite/VivhiteCode/Characters/IroncladReplacementAssets.cs",
+      "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+      "Vivhite/Vivhite/skins/ironclad/scenes/merchant.tscn",
+      "sts2.dll::MegaCrit.Sts2.Core.Nodes.Screens.Shops.NMerchantCharacter._Ready/PlayAnimation",
+      "Vivhite/tools/candidates/whole_mesh/vivhite_combat.spjson"
+    ],
+    "combat_scene_scale": 0.28,
+    "merchant_scene_scale": 0.28,
+    "required_animation_names": [
+      "idle_loop",
+      "low_health_loop",
+      "relaxed_loop",
+      "attack",
+      "attack_heavy",
+      "cast",
+      "hurt",
+      "die"
+    ],
+    "merchant_animation": "relaxed_loop",
+    "merchant_random_seek": true,
+    "merchant_decompile_finding": "NMerchantCharacter._Ready calls PlayAnimation(relaxed_loop, true); PlayAnimation sets the track and seeks to animation_end * Rng.Chaotic.NextFloat(), so the attachment contract must hold at arbitrary loop time.",
+    "head_parent": "vivhite_head",
+    "butterfly_parent": "vivhite_head",
+    "head_extreme_source": "whole_mesh vivhite_head/vivhite_butterfly timelines before the die body swap",
+    "foreground_order_probe": [
+      "semantic_back_hair",
+      "semantic_head_face",
+      "semantic_butterfly_under_front_hair_probe",
+      "semantic_front_hair",
+      "semantic_butterfly_front"
+    ],
+    "default_visible_butterfly_slot": "semantic_butterfly_under_front_hair_probe",
+    "death_detach_time": 1.05
+  },
+  "layer_order_assessment": {
+    "setup_probe_result": "The front-most order exposes the long navy/gold connector over the hair; placing the unchanged one-piece attachment behind the front-hair layer hides the connector while preserving both wing lobes.",
+    "preferred_production_order": [
+      "semantic_back_hair",
+      "semantic_head_face",
+      "vivhite_butterfly",
+      "semantic_front_hair"
+    ],
+    "probe_default_matches_preferred_order": true,
+    "direct_runtime_drop_in": false,
+    "remaining_gate": "Integrate one real butterfly slot behind the chosen front-hair slot in the shared production head rig, then repeat full-body combat and merchant visual acceptance."
+  },
+  "placement": {
+    "source_pivot_px": [
+      176.0,
+      650.0
+    ],
+    "head_mount_world": [
+      100.0,
+      110.0
+    ],
+    "head_canvas_world": 500.0,
+    "butterfly_canvas_world": 190.0,
+    "butterfly_attachment_center_world": [
+      62.34375,
+      25.60546875
+    ]
+  },
+  "visible_extremes_degrees": {
+    "head_negative": -20.15,
+    "head_positive_before_death_swap": 29.5,
+    "butterfly_local_negative": -4.0,
+    "butterfly_local_positive": 2.8
+  },
+  "evolink_paid_calls": 0,
+  "alpha_modified": false,
+  "runtime_skin_modified": false,
+  "deployable": false
+}
