@@ -672,39 +672,45 @@
    "queue_id": "24240-1787917484396104500-4",
    "retry_count": 4,
    "retry_after": 1787919243.3343725
+  },
+  {
+   "run": 913,
+   "time": "2026-08-28 19:53",
+   "backend_key": "kimi-k3",
+   "priority": 3,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
+   "source": "fallback",
+   "queue_id": "24240-1787918094705454700-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260828-195554-1787918154829419700-0d591358"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260828-195554-1787918154829419700-0d591358",
+   "replay_target": "20260828-195554-1787918154829419700-0d591358",
+   "retry_count": 3,
+   "retry_after": 1787919098.5782685
+  },
+  {
+   "run": 915,
+   "time": "2026-08-28 20:08",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "queued"
   }
  ],
- "reviewing": {
-  "runs": [
-   913
-  ],
-  "items": [
-   {
-    "run": 913,
-    "time": "2026-08-28 19:53",
-    "backend_key": "kimi-k3",
-    "priority": 3,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "fallback",
-    "queue_id": "24240-1787918094705454700-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260828-195554-1787918154829419700-0d591358"
-    ],
-    "salvage_attempts": [],
-    "retry_group": "20260828-195554-1787918154829419700-0d591358",
-    "replay_target": "20260828-195554-1787918154829419700-0d591358",
-    "retry_count": 2,
-    "retry_after": 1787918652.3530798
-   }
-  ],
-  "retry_group": "20260828-195554-1787918154829419700-0d591358",
-  "started": "2026-08-28 20:06:56"
- }
+ "reviewing": null
 }
