@@ -5,11 +5,12 @@
 > 最后更新：2026-08-29。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
 > 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
-> death 已总装为隔离的 `hybrid_v3_final`。总装器字段边界、严格五页布局、Spine runtime
+> death 已总装为 `hybrid_v3_final` 并发布为正式五页 runtime。总装器字段边界、严格五页布局、Spine runtime
 > 专项 validator、八动画 84 个精确 Windows Vulkan 时刻、25 组连续中断（104/104 checkpoint、
 > 50/50 t0 / mix+ε）、真实 `NIroncladVfx` 8 场景、merchant 十相位，以及严格 30 文件
-> Source/Godot/Spine 与完整不部署 PCK 已通过；本轮真机测试仍是后续门禁。正式 runtime 尚未替换。
-> 本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把“本次没启动”误写成项目从未真机测试。
+> Source/Godot/Spine 与完整不部署 PCK 已通过。2026-08-29 又完成正式部署、Vulkan 日志和有范围
+> 真机验收；选人、主要战斗动作/VFX、低血、死亡、商店与三幕篝火已覆盖。自然地图 marker、
+> 多人端到端和 `light_off` 仍保留为消费路径缺口。本轮没有付费生成或操作 Bilibili 直播。
 
 ## 1. 当前结论
 
@@ -486,7 +487,7 @@ neutral、death、attack、heavy、cast
 完成 84 个精确时刻：neutral `5+5+9`、attack/heavy/cast 各 14、hurt 7、die 16；全部保持
 单人物、非空、无触边，四个原子窗口也按既定附件契约切换。单独看 fresh exact sampler 不能
 替代连续 AnimationState、真实 `NIroncladVfx`、merchant consumer 或真机验收；前三项已由下段
-专项证据补齐，真机仍未执行。
+专项证据补齐。本句最初记录的“真机仍未执行”已由 5.13 的 2026-08-29 结果更新。
 
 后续连续门禁已补齐到 25 条同实例 AnimationState 序列，104/104 个 Vulkan checkpoint 与
 50/50 个 target t0 / mix+ε 六槽检查通过；没有复现 slash、sigil、action 或 death attachment
@@ -497,9 +498,33 @@ neutral、death、attack、heavy、cast
 布局与 candidate override 的十个 dirty seek 相位也全部 body-only；standalone 中
 `NMerchantCharacter` C# 未绑定，报告明确只把该段称为真实布局 + 已验证 seek 合约代理。
 
-正式 `Vivhite/Vivhite/skins/ironclad/**` 仍保持 legacy，没有部署或重启游戏。连续状态机、真实
-VFX、merchant、严格 30 文件 Source/Godot/Spine 与完整隔离 PCK 已完成；下一步只保留明确
-授权后的正式发布和真机，不能把当前隔离候选冒充正式 runtime。
+截至本段最初写成时，正式 `Vivhite/Vivhite/skins/ironclad/**` 仍保持 legacy；该历史结论已由
+下一节的 2026-08-29 正式发布更新。连续状态机、真实 VFX、merchant、严格 30 文件
+Source/Godot/Spine 与完整隔离 PCK 的离线证据继续作为发布输入事实，不因部署而被改写。
+
+### 5.13 正式发布与真机消费结果
+
+2026-08-29 使用显式 `v3-five-page` 把 `hybrid_v3_final` 发布为正式 30 逻辑文件 runtime；与隔离
+runtime 的规范化清单 SHA-256 均为
+`03D8818137931A429810BBCB6F4700CFB8E356205B5F45621E9A4E9C2BE5E931`。部署 PCK 为
+101 entries、14,598,276 bytes，SHA-256
+`F674613294E7BA69FF823A83AB1E465A8F730D6E5DB59791F343EE68608A84D0`；旧 26 文件 runtime 与旧
+游戏三件套已保存在 `.work/hybrid-v3-deploy/backup-20260829-005041-7733080/`。
+
+Vulkan 真机已覆盖 `IRONCLAD` 选人循环、idle、low-health、attack、attack-heavy、cast、非致死
+hurt、die 到 `GAME_OVER`、普通 merchant、伪 merchant 视觉路径与三幕 rest-site 循环。普通
+攻击、重击与施法均由实际卡牌消费并产生对应游戏结果；普通商店跨过 12 秒 relaxed 边界并开关
+库存；三幕坐姿都跨过各自循环边界。
+
+死亡序列的旧离线结论没有被推翻。真机 40 帧只出现一个人物：前两帧为同一 weighted body
+倒下，随后是单一 `vivhite_combat_death_side`。全屏缩略图一度把两条腿与多层裙甲看成第二个人；
+放大后只有一个头、一个躯干、两臂两腿，且 atlas 只有一个 death region、场景只有一个
+SpineSprite、`die@1.05` 的 body/death slot 互斥。该纠正不需要修素材或新增 validator。
+
+保留三项准确缺口：第一幕休息成功后未看到 `light_off`，现有反编译证据指向基础 consumer 在
+清空选项前调用回调；调试跳房没有形成有效自然地图 marker；没有第二客户端做多人手势端到端。
+这些都不能反向证明五页人物或 Alpha 失败。完整真机矩阵见
+`2026-08-29-白绮Hybrid-V3部署与真机验收.md`。
 
 ## 6. 并行研究线：约 8 个生成语义组
 
@@ -663,16 +688,13 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 
 ## 10. 目前的实施优先级
 
-1. 冻结当前 JSON/页图哈希和 84/25/8/10 基线；不得用任一分项整包覆盖，也不得修改默认
-   legacy runtime；
-2. 固化已经通过的严格 30 文件 Source/Godot/Spine 成功摘要；
-3. 固化 rest-site、character-select、UI 与 multiplayer 的后置离线回归；没有第二客户端时
-   多人只能标记资源通过；
-4. 固化已经通过的完整隔离、不部署 PCK 门禁，以及正式 runtime、Vivhite mods 与 RitsuLib mods
-   前后不变的哈希证据；
-5. 获得明确部署授权后再备份、部署，并检查 `1.389×` 尺寸、attack recovery、heavy `17.27 px`
-   位移、连续受击及死亡接地观感。不得启动 Bilibili 直播；
-6. 拆件研究线保留证据但不阻塞 Hybrid 主线。躯干组没有用户追加额度前禁止第 9 次生成。
+1. 冻结已经部署的 JSON、五页 PNG、30 文件清单和三件套哈希；不得用任一分项整包覆盖正式 V3；
+2. 保留 legacy 精确回退包，并继续把 `.import/.uid` 当 Godot cache 而非逻辑运行时；
+3. 用自然地图有效位置补验 `map_marker`，不要用调试跳房的无效当前位置得出图片结论；
+4. 用双客户端补验多人手势；在此之前仍只能标记资源/离线消费者通过；
+5. 只有基础 rest-site consumer 顺序修复或游戏版本改变后再复验 `light_off`；没有证据支持重生
+   篝火人物或修改 Alpha；
+6. 拆件研究线保留证据但不阻塞已部署 Hybrid 主线。躯干组没有用户追加额度前禁止第 9 次生成。
 
 这样从最小端到端闭环开始，避免先花完所有图的额度，最后才发现 slot、方向或切换架构不对。
 
@@ -738,3 +760,8 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
   复跑为 0 warning / 0 error、101 entries，正式 runtime 与两套游戏 mods 哈希树均未变化；同时
   用 `UseSharedCompilation=false` 修复 `Start-Process -Wait` 被 Roslyn server 拖延的问题。只剩明确
   授权后的正式发布和真机，legacy runtime 未修改。
+- 2026-08-29：在完整回退备份后把同一 `hybrid_v3_final` 发布为正式五页/30 文件 runtime，部署
+  DLL/json/PCK 并通过 PCK 与 Vulkan 初始化日志。真机覆盖选人、idle/low-health、attack/heavy/
+  cast/hurt/die、普通/伪商人视觉及三幕篝火；死亡缩略图的“双人”判断被用户与放大/slot/scene
+  证据纠正为单人两腿。保留自然地图 marker、多人端到端和 `light_off` consumer 顺序三项缺口；
+  没有新付费生成、Alpha 或 atlas 像素变化。
