@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "status": "diagnostic_graybox_only_not_publishable",
+  "paid_generation_calls": 0,
+  "side_contract": {
+    "screen_side": "screen-left",
+    "depth_side": "far arm behind torso",
+    "anatomical_side": "character-right",
+    "legacy_alias": "split_mesh arm_left_* means screen-left, not anatomical-left",
+    "identity_evidence": "The asymmetric blue/gold shoulder ornament is on viewer-left in the frontal character design, hence anatomical-right; the same ornament identifies this limb in 0018 and 0022."
+  },
+  "source_audit": {
+    "runtime_consumer_scene": "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "runtime_consumer_scene_evidence": "The SpineSprite consumes one skeleton at scale 0.28; source code names only slash_mesh and eye_attach_slot. No C#/scene consumer names an arm region.",
+    "current_runtime_rig_builder": "tools/art/build_vivhite_combat_rig.gd",
+    "current_runtime_topology": "one vivhite_body weighted-mesh attachment; arm-named deform bones are sibling controls under vivhite_rig, not independent drawable arm parts",
+    "target_split_builder": "tools/art/build_vivhite_combat_split_mesh_candidate.gd",
+    "target_split_topology": "hierarchical shoulder -> upper arm -> forearm -> hand chain with arm slots behind torso; this is the consumer contract researched here",
+    "runtime_builder_source": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-body-master-v1.png",
+    "runtime_builder_source_sha256": "86ffd64a637d170e213879e72d986b707ee181d4812c8e3fb1eda4abfab98bd1",
+    "runtime_builder_source_equals": "0018-combat-body-master-attempt-01/output.png",
+    "visual_direction_cross_check": "0022-combat-body-master-attempt-05/output.png",
+    "visual_direction_cross_check_sha256": "488e74758164dab0702ec6f943e02d23d9561caef29320275f698cb0000e232e",
+    "classification": "Each master is one full-body single-frame RGBA image, not a sprite sheet or independent arm attachment.",
+    "publishable_independent_far_arm_source_found": false,
+    "usable_existing_sources": [],
+    "research_only_sources": [
+      "0018 full-body master: authoritative current pivot/scale evidence but flattened joints and whole-body lighting",
+      "0022 full-body master: direction/silhouette cross-check only; low-detail identity",
+      "legacy-contaminated arm regions: prohibited bloodline and not reusable"
+    ]
+  },
+  "consumer_contract": {
+    "scene_scale": 0.28,
+    "source_canvas_px": [
+      1680.0,
+      2512.0
+    ],
+    "authored_world_rect": [
+      -434.0,
+      -61.0,
+      868.0,
+      1302.0
+    ],
+    "fixed_draw_order_back_to_front": [
+      "far_upper_arm",
+      "far_forearm_hand",
+      "torso_shoulder_cover"
+    ],
+    "shoulder_cover_owner": "torso/shoulder-cover group owns the asymmetric blue/gold pauldron; far upper-arm art supplies solid skin underlap and must not duplicate the pauldron",
+    "vfx_owner": "Far arm owns no Ironclad slash VFX anchor. Current split consumer parents slash_mesh to the screen-right/near hand; cast eye VFX belongs to head.",
+    "two_piece_default": true,
+    "third_hand_split_gate": "Split a separate hand only if real art fails the cast/death extreme contact sheet because the audited wrist rotation envelope (-20 to +31 degrees) cannot be represented by the combined forearm-hand silhouette."
+  },
+  "diagnostic_output_layout": {
+    "classification": "one packed atlas page containing six independent regions; not a single illustration",
+    "page": "semantic_left_arm_graybox.png",
+    "regions": [
+      "gray_far_upper_arm",
+      "gray_far_forearm_hand",
+      "gray_torso_shoulder_cover",
+      "gray_marker_shoulder",
+      "gray_marker_elbow",
+      "gray_marker_wrist"
+    ],
+    "production_use": false
+  },
+  "pivots": {
+    "torso_upper": {
+      "source_px": [
+        700.0,
+        590.0
+      ],
+      "world": [
+        -72.3333358764648,
+        935.195861816406
+      ]
+    },
+    "clavicle_cover": {
+      "source_px": [
+        550.0,
+        565.0
+      ],
+      "world": [
+        -149.83332824707,
+        948.153686523438
+      ]
+    },
+    "shoulder_upper_arm": {
+      "source_px": [
+        585.0,
+        585.0
+      ],
+      "world": [
+        -131.75,
+        937.787414550781
+      ]
+    },
+    "elbow_forearm_hand": {
+      "source_px": [
+        465.0,
+        820.0
+      ],
+      "world": [
+        -193.75,
+        815.984069824219
+      ]
+    },
+    "wrist_measurement_anchor": {
+      "source_px": [
+        275.0,
+        1010.0
+      ],
+      "world": [
+        -291.916656494141,
+        717.504760742188
+      ]
+    }
+  },
+  "bones": {
+    "clavicle_to_shoulder_world": [
+      18.0833282470703,
+      -10.3662719726563
+    ],
+    "shoulder_to_elbow_world": [
+      -62.0,
+      -121.803344726563
+    ],
+    "elbow_to_wrist_world": [
+      -98.1666564941406,
+      -98.4793090820313
+    ],
+    "upper_length_world": 136.675003051758,
+    "forearm_length_world": 139.049865722656
+  },
+  "hidden_overlap": {
+    "shoulder_upper_proximal_world_min": 39.71875,
+    "upper_beyond_elbow_world_min": 28.325,
+    "forearm_before_elbow_world_min": 41.6666667,
+    "shared_elbow_solid_radius_world_min": 27.0,
+    "scene_pixel_equivalents_at_0_28": {
+      "shoulder_upper_proximal": 11.12125,
+      "upper_beyond_elbow": 7.931,
+      "forearm_before_elbow": 11.666666676,
+      "shared_elbow_radius": 7.56
+    }
+  },
+  "audited_rotation_envelope_degrees": {
+    "far_upper_arm": [
+      -35.0,
+      71.0
+    ],
+    "far_forearm_hand_relative_to_upper": [
+      -48.0,
+      55.0
+    ],
+    "legacy_wrist_measurement_only": [
+      -20.0,
+      31.0
+    ],
+    "source": "tools/art/build_vivhite_combat_split_mesh_candidate.gd and generated split_mesh Spine timelines"
+  },
+  "acceptance": {
+    "required_animations": [
+      "attack",
+      "attack_heavy",
+      "cast",
+      "die",
+      "hurt",
+      "idle_loop",
+      "low_health_loop",
+      "relaxed_loop"
+    ],
+    "static": [
+      "default skin; exact parent chain and pivots",
+      "far arm slots precede torso slot; no drawOrder animation",
+      "two connected pieces and three visible pivot markers",
+      "all eight animation durations and audited rotation extrema"
+    ],
+    "vulkan": [
+      "actual Spine GDExtension and Vulkan",
+      "eight animations at five samples; non-empty, no canvas edge contact, no static animation",
+      "manual review of cast and death extreme elbow/shoulder coverage"
+    ]
+  }
+}

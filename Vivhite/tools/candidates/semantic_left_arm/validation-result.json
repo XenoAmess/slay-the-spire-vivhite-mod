@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "candidate_status": "diagnostic_graybox_only_not_publishable",
+  "validated_utc": "2026-08-28T12:58:25Z",
+  "static_gate": {
+    "passed": true,
+    "validator": "tools/art/candidates/semantic_left_arm/validate_semantic_left_arm_candidate.gd",
+    "result": "two pieces, frozen pivots/layers, eight animations, audited extremes"
+  },
+  "vulkan_gate": {
+    "passed": true,
+    "harness": "tools/art/compare/preview/Invoke-CombatRigComparePreview.ps1",
+    "ignored_evidence_root": ".work/semantic-left-arm-vulkan-v2",
+    "summary_sha256": "988eb03fa359c06a209ab7c6a9b03553af0d1420d1db384b7952df5f5db9bea5",
+    "display_server": "Windows",
+    "rendering_driver": "vulkan",
+    "device": "NVIDIA GeForce GTX 1060",
+    "scene_scale": 0.28,
+    "samples_per_animation": 5,
+    "animation_count": 8,
+    "failed_animations": [],
+    "empty_frames": 0,
+    "canvas_edge_frames": 0,
+    "manual_extreme_review": {
+      "cast_minus_35_minus_48": "pass: shoulder remains hidden by torso cover; elbow remains a connected foreground overlap; empty hand stays connected",
+      "die_plus_71_plus_55": "pass as an occlusion gate: the far arm folds behind the torso without a gap and only its empty hand emerges; final death composition remains owned by the dedicated death-pose workstream"
+    }
+  },
+  "authored_file_hashes": {
+    "semantic_left_arm.spjson": "e396afd02c746ad50acd90060cc42d1452435743088413f412a7bb8726341542",
+    "semantic_left_arm.spatlas": "c402cb3c23b789c5cd4ed52450cb61bf85e117198574739738802f141615c628",
+    "semantic_left_arm_graybox.png": "06a194ff0606354568dc21ce56d15761c580e940da79a8e72b525d9cbbacf14c",
+    "semantic_left_arm_skeleton_data.tres": "c34d0eeb69897fb350cdcfb49926687b446c66d8bc5ad5690a8d32f7591f4735",
+    "contract.json": "a3ed7b654bdafb9ae4592d1ec717c380fd4d4777c5bc58c3bac18480da34af7b"
+  },
+  "scope_assertions": {
+    "paid_generation_calls": 0,
+    "game_process_touched": false,
+    "runtime_skin_modified": false,
+    "publishable_character_art_approved": false
+  }
+}

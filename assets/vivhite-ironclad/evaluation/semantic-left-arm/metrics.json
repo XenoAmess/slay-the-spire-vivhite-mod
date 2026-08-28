@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "component": "semantic-left-arm",
+  "component_side": {
+    "screen": "left",
+    "depth": "far-behind-torso",
+    "anatomical": "character-right"
+  },
+  "candidate_status": "diagnostic_graybox_only_not_publishable",
+  "generated_utc": "2026-08-28T12:58:25Z",
+  "environment": {
+    "display_server": "Windows",
+    "rendering_driver": "vulkan",
+    "rendering_method": "Forward+",
+    "device": "NVIDIA GeForce GTX 1060",
+    "base_pck_sha256": "c60f672ee7804e6aefa1e19a582fa1c80b126a7b0eef4d084d3abf110df2eab7"
+  },
+  "render_contract": {
+    "canvas": [1280, 900],
+    "scene_scale": 0.28,
+    "authored_character_scale": 0.7,
+    "origin": [320.0, 700.0],
+    "scene_offset": [5.0, -19.0],
+    "samples_per_animation": 5,
+    "sample_fractions": [0.0, 0.25, 0.5, 0.75, 1.0],
+    "spine_version": "4.2.43",
+    "skin": "default",
+    "skeleton_bounds": [-520.0, 540.0, 720.0, 560.0],
+    "required_slots": ["slash_mesh", "eye_attach_slot"],
+    "required_events": ["attack_slash_start", "heavy_slash_start", "cast_eyes_start", "clear_vfx"]
+  },
+  "result": {
+    "passed": true,
+    "animation_count": 8,
+    "sampled_frame_count": 40,
+    "failed_animations": [],
+    "empty_frames": 0,
+    "canvas_edge_frames": 0,
+    "maximum_pairwise_centroid_displacement_px": 12.0976037979126,
+    "maximum_changed_pixel_ratio": 0.00170833333333333
+  },
+  "animations": [
+    {
+      "name": "idle_loop",
+      "duration": 2.0,
+      "passed": true,
+      "unique_frame_hashes": 3,
+      "maximum_pairwise_centroid_displacement_px": 0.684561014175415,
+      "maximum_changed_pixel_ratio": 0.000319444444444444,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "low_health_loop",
+      "duration": 1.46666669845581,
+      "passed": true,
+      "unique_frame_hashes": 2,
+      "maximum_pairwise_centroid_displacement_px": 0.389448136091232,
+      "maximum_changed_pixel_ratio": 0.000541666666666667,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "relaxed_loop",
+      "duration": 12.0000009536743,
+      "passed": true,
+      "unique_frame_hashes": 3,
+      "maximum_pairwise_centroid_displacement_px": 0.411722630262375,
+      "maximum_changed_pixel_ratio": 0.000236111111111111,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "attack",
+      "duration": 1.16666674613953,
+      "passed": true,
+      "unique_frame_hashes": 5,
+      "maximum_pairwise_centroid_displacement_px": 4.52269983291626,
+      "maximum_changed_pixel_ratio": 0.001625,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "attack_heavy",
+      "duration": 1.53333342075348,
+      "passed": true,
+      "unique_frame_hashes": 5,
+      "maximum_pairwise_centroid_displacement_px": 5.91033411026001,
+      "maximum_changed_pixel_ratio": 0.00168055555555556,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "cast",
+      "duration": 1.56666672229767,
+      "passed": true,
+      "unique_frame_hashes": 4,
+      "maximum_pairwise_centroid_displacement_px": 10.6125793457031,
+      "maximum_changed_pixel_ratio": 0.00170833333333333,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "hurt",
+      "duration": 1.0,
+      "passed": true,
+      "unique_frame_hashes": 3,
+      "maximum_pairwise_centroid_displacement_px": 3.50494909286499,
+      "maximum_changed_pixel_ratio": 0.00140277777777778,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    },
+    {
+      "name": "die",
+      "duration": 2.33333349227905,
+      "passed": true,
+      "unique_frame_hashes": 4,
+      "maximum_pairwise_centroid_displacement_px": 12.0976037979126,
+      "maximum_changed_pixel_ratio": 0.00138888888888889,
+      "empty_frames": 0,
+      "canvas_edge_frames": 0
+    }
+  ],
+  "manual_extreme_review": {
+    "cast": {
+      "upper_rotation_degrees": -35.0,
+      "forearm_hand_relative_rotation_degrees": -48.0,
+      "result": "pass",
+      "observation": "shoulder stays behind the torso cover; elbow and empty hand remain connected"
+    },
+    "die": {
+      "upper_rotation_degrees": 71.0,
+      "forearm_hand_relative_rotation_degrees": 55.0,
+      "result": "pass_as_occlusion_gate",
+      "observation": "far arm folds behind the torso without a gap; only the empty hand emerges; final death composition belongs to the dedicated death-pose workstream"
+    }
+  },
+  "source_evidence": {
+    "candidate_skeleton_sha256": "e396afd02c746ad50acd90060cc42d1452435743088413f412a7bb8726341542",
+    "candidate_atlas_sha256": "c402cb3c23b789c5cd4ed52450cb61bf85e117198574739738802f141615c628",
+    "candidate_page_sha256": "06a194ff0606354568dc21ce56d15761c580e940da79a8e72b525d9cbbacf14c",
+    "vulkan_summary_sha256": "988eb03fa359c06a209ab7c6a9b03553af0d1420d1db384b7952df5f5db9bea5"
+  },
+  "scope_assertions": {
+    "paid_generation_calls": 0,
+    "game_process_touched": false,
+    "runtime_skin_modified": false
+  }
+}

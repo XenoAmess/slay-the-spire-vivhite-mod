@@ -1,0 +1,686 @@
+{
+  "skeleton": {
+    "hash": "vivhite-semantic-left-arm-graybox-v1",
+    "spine": "4.2.43",
+    "x": -520.0,
+    "y": 540.0,
+    "width": 720.0,
+    "height": 560.0,
+    "images": "./"
+  },
+  "bones": [
+    {
+      "name": "root"
+    },
+    {
+      "name": "semantic_far_torso_upper",
+      "parent": "root",
+      "x": -72.3333358764648,
+      "y": 935.195861816406
+    },
+    {
+      "name": "semantic_far_shoulder_cover",
+      "parent": "semantic_far_torso_upper",
+      "x": -77.4999923706055,
+      "y": 12.9578247070313,
+      "length": 20.8438568115234
+    },
+    {
+      "name": "semantic_far_upper_arm",
+      "parent": "semantic_far_shoulder_cover",
+      "x": 18.0833282470703,
+      "y": -10.3662719726563,
+      "length": 136.675003051758
+    },
+    {
+      "name": "semantic_far_forearm_hand",
+      "parent": "semantic_far_upper_arm",
+      "x": -62.0,
+      "y": -121.803344726563,
+      "length": 139.049865722656
+    },
+    {
+      "name": "semantic_far_wrist_anchor",
+      "parent": "semantic_far_forearm_hand",
+      "x": -98.1666564941406,
+      "y": -98.4793090820313
+    }
+  ],
+  "slots": [
+    {
+      "name": "far_upper_arm",
+      "bone": "semantic_far_upper_arm",
+      "attachment": "gray_far_upper_arm"
+    },
+    {
+      "name": "far_forearm_hand",
+      "bone": "semantic_far_forearm_hand",
+      "attachment": "gray_far_forearm_hand"
+    },
+    {
+      "name": "torso_shoulder_cover",
+      "bone": "semantic_far_torso_upper",
+      "attachment": "gray_torso_shoulder_cover"
+    },
+    {
+      "name": "marker_shoulder",
+      "bone": "semantic_far_upper_arm",
+      "attachment": "gray_marker_shoulder"
+    },
+    {
+      "name": "marker_elbow",
+      "bone": "semantic_far_forearm_hand",
+      "attachment": "gray_marker_elbow"
+    },
+    {
+      "name": "marker_wrist",
+      "bone": "semantic_far_wrist_anchor",
+      "attachment": "gray_marker_wrist"
+    },
+    {
+      "name": "slash_mesh",
+      "bone": "root"
+    },
+    {
+      "name": "eye_attach_slot",
+      "bone": "root"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "far_upper_arm": {
+          "gray_far_upper_arm": {
+            "path": "gray_far_upper_arm",
+            "x": -28.4795169830322,
+            "y": -55.9500007629395,
+            "rotation": -116.976879650387,
+            "width": 205.0,
+            "height": 58.0
+          }
+        },
+        "far_forearm_hand": {
+          "gray_far_forearm_hand": {
+            "path": "gray_far_forearm_hand",
+            "x": -58.8318023681641,
+            "y": -59.0191841125488,
+            "rotation": -134.908899278473,
+            "width": 250.0,
+            "height": 104.0
+          }
+        },
+        "torso_shoulder_cover": {
+          "gray_torso_shoulder_cover": {
+            "path": "gray_torso_shoulder_cover",
+            "x": 24.5416679382324,
+            "y": -44.0565185546875,
+            "rotation": 0.0,
+            "width": 251.0,
+            "height": 254.0
+          }
+        },
+        "marker_shoulder": {
+          "gray_marker_shoulder": {
+            "path": "gray_marker_shoulder",
+            "x": 0.0,
+            "y": 0.0,
+            "rotation": 0.0,
+            "width": 18.0,
+            "height": 18.0
+          }
+        },
+        "marker_elbow": {
+          "gray_marker_elbow": {
+            "path": "gray_marker_elbow",
+            "x": 0.0,
+            "y": 0.0,
+            "rotation": 0.0,
+            "width": 18.0,
+            "height": 18.0
+          }
+        },
+        "marker_wrist": {
+          "gray_marker_wrist": {
+            "path": "gray_marker_wrist",
+            "x": 0.0,
+            "y": 0.0,
+            "rotation": 0.0,
+            "width": 18.0,
+            "height": 18.0
+          }
+        }
+      }
+    }
+  ],
+  "events": {
+    "attack_slash_start": {
+
+    },
+    "heavy_slash_start": {
+
+    },
+    "cast_eyes_start": {
+
+    },
+    "clear_vfx": {
+
+    }
+  },
+  "animations": {
+    "idle_loop": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 2.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.5,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": 0.0
+            },
+            {
+              "time": 2.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.5,
+              "value": 1.1
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5,
+              "value": -0.7
+            },
+            {
+              "time": 2.0,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "low_health_loop": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.4666667,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 8.0
+            },
+            {
+              "time": 0.3666667,
+              "value": 10.0
+            },
+            {
+              "time": 0.7333334,
+              "value": 8.0
+            },
+            {
+              "time": 1.4666667,
+              "value": 8.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.3666667,
+              "value": 0.0
+            },
+            {
+              "time": 0.7333334,
+              "value": 0.0
+            },
+            {
+              "time": 1.4666667,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "relaxed_loop": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 12.000001,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 3.0,
+              "value": 0.0
+            },
+            {
+              "time": 6.0,
+              "value": 0.0
+            },
+            {
+              "time": 9.0,
+              "value": 0.0
+            },
+            {
+              "time": 12.000001,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 3.0,
+              "value": 0.83
+            },
+            {
+              "time": 6.0,
+              "value": 0.0
+            },
+            {
+              "time": 9.0,
+              "value": -0.53
+            },
+            {
+              "time": 12.000001,
+              "value": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "attack": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.1666667,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 12.0
+            },
+            {
+              "time": 0.08,
+              "value": -12.0
+            },
+            {
+              "time": 0.45,
+              "value": -12.0
+            },
+            {
+              "time": 1.1666667,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.08,
+              "value": 0.0
+            },
+            {
+              "time": 0.45,
+              "value": 0.0
+            },
+            {
+              "time": 1.1666667,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.08,
+          "name": "attack_slash_start"
+        },
+        {
+          "time": 0.45,
+          "name": "clear_vfx"
+        }
+      ]
+    },
+    "attack_heavy": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5333334,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 12.0
+            },
+            {
+              "time": 0.12,
+              "value": -18.0
+            },
+            {
+              "time": 0.72,
+              "value": -18.0
+            },
+            {
+              "time": 1.5333334,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.12,
+              "value": 0.0
+            },
+            {
+              "time": 0.72,
+              "value": 0.0
+            },
+            {
+              "time": 1.5333334,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.12,
+          "name": "heavy_slash_start"
+        },
+        {
+          "time": 0.72,
+          "name": "clear_vfx"
+        }
+      ]
+    },
+    "cast": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.5666667,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 12.0
+            },
+            {
+              "time": 0.25,
+              "value": -35.0
+            },
+            {
+              "time": 1.0,
+              "value": -35.0
+            },
+            {
+              "time": 1.5666667,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 14.0
+            },
+            {
+              "time": 0.25,
+              "value": -48.0
+            },
+            {
+              "time": 1.0,
+              "value": -48.0
+            },
+            {
+              "time": 1.5666667,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.25,
+          "name": "cast_eyes_start"
+        },
+        {
+          "time": 1.0,
+          "name": "clear_vfx"
+        }
+      ]
+    },
+    "hurt": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.14,
+              "value": 18.0
+            },
+            {
+              "time": 0.52,
+              "value": 18.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.14,
+              "value": 0.0
+            },
+            {
+              "time": 0.52,
+              "value": 0.0
+            },
+            {
+              "time": 1.0,
+              "value": 0.0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.72,
+          "name": "clear_vfx"
+        }
+      ]
+    },
+    "die": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 2.3333335,
+              "value": 0.0
+            }
+          ]
+        },
+        "semantic_far_upper_arm": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.48,
+              "value": 14.0
+            },
+            {
+              "time": 1.18,
+              "value": 71.0
+            },
+            {
+              "time": 1.75,
+              "value": 71.0
+            },
+            {
+              "time": 2.3333335,
+              "value": 71.0
+            }
+          ]
+        },
+        "semantic_far_forearm_hand": {
+          "rotate": [
+            {
+              "time": 0.0,
+              "value": 0.0
+            },
+            {
+              "time": 0.48,
+              "value": -9.0
+            },
+            {
+              "time": 1.18,
+              "value": 55.0
+            },
+            {
+              "time": 1.75,
+              "value": 55.0
+            },
+            {
+              "time": 2.3333335,
+              "value": 55.0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.0,
+          "name": "clear_vfx"
+        }
+      ]
+    }
+  }
+}
