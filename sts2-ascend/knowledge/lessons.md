@@ -5925,3 +5925,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.63 → 0.66（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/939 胜，当前目标进阶 0
+
+## 第 940 局复盘（2026-08-29 00:16）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：MOLTEN_FIST, BLUDGEON, DARK_EMBRACE, STOMP, BLUDGEON, INFLAME, PILLAGE, ARMAMENTS, CINDER, CINDER
+- 本局遗物：BAG_OF_MARBLES, 护喉甲
+- 战斗记录：F5 Monster战 掉血0; F7 Monster战 掉血11; F9 Monster战 掉血2; F11 Elite战 掉血27｜竞速审计：T4判死→实战8回合获胜; F12 Monster战 掉血18; F13 Elite战 掉血14（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/96局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/940 胜，当前目标进阶 0
