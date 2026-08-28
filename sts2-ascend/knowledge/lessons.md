@@ -6068,3 +6068,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/952 胜，当前目标进阶 0
+
+## 第 953 局复盘（2026-08-29 03:25）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：ARMAMENTS, ANGER, BREAKTHROUGH, UNRELENTING, BATTLE_TRANCE, DRAMATIC_ENTRANCE, JUGGLING, MOLTEN_FIST, HEMOKINESIS, MANGLE, INFLAME, SWORD_BOOMERANG, ROLLING_BOULDER, UPPERCUT, MOLTEN_FIST, UNRELENTING, DISMANTLE, FLAME_BARRIER, HEMOKINESIS, MOLTEN_FIST, JUGGLING, ANGER
+- 本局遗物：MERCURY_HOURGLASS, 吃不完的糖, LIZARD_TAIL, 古茶具套装, BAG_OF_MARBLES, 历石
+- 战斗记录：F21 Monster战 掉血0; F23 Monster战 掉血33; F24 Monster战 掉血18｜竞速审计：T2判死→实战6回合获胜; F28 Elite战 掉血10; F30 Monster战 掉血41; F33 Boss战 掉血37｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/96局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/953 胜，当前目标进阶 0
