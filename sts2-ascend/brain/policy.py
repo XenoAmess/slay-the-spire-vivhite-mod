@@ -2659,6 +2659,19 @@ class Policy:
                         # 798局F23 -60均亡于该段）。确认升级后按火力上浮系数给
                         # 拖延计价，更早转入竞速；0 或缺键即整体关闭（回滚＝旧版）
                         _feas_fire = float(loss_rate)
+                        # 火力滞后修正（JOINT_FEAS_FIRE_LAG，第843~855局批复盘）：
+                        # 复核火力若取滞后 EMA，意图跳升回合会出现幻影低价——
+                        # 855局F22 以 ~7伤/回合的滞后口径判「格挡0+输出28 追平
+                        # 击杀12回合」可行，而当轮真实意图 22，已判死的竞速被
+                        # 翻案成攻防节奏磨死（同型：843-F17 / 848-F29 / 849-F22）。
+                        # 对账火力一律至少取当前意图（与 esc 桶 93 局「存活分母
+                        # 至少取当前意图」同一不变式）；判决侧 tsurv 口径不动，
+                        # 只修复核侧。joint_feas_fire_honest=false 即回滚旧版。
+                        if bool(pol.get("joint_feas_fire_honest", True)) \
+                                and float(incoming) > _feas_fire:
+                            _feas_fire = float(incoming)
+                            danger_note += (f"；对账火力取意图{float(incoming):.0f}"
+                                            f"（EMA滞后修正）")
                         if esc_gate:
                             _fire_grow = float(pol.get(
                                 "escalation_race_fire_inflate", 0.0))

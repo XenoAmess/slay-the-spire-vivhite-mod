@@ -4958,6 +4958,61 @@ def main() -> int:
     assert "斩杀竞速投影" in d_e3.reason and "防守线复核" not in d_e3.reason, \
         f"火力压倒性格挡时复核未判负: {d_e3.action}（{d_e3.reason}）"
 
+    # 3kw) 防守复核火力滞后修正（JOINT_FEAS_FIRE_LAG，第843~855局批复盘）：
+    #      非 esc 桶意图跳升回合（T1 意图 4 → T2 意图 26，_esc_rounds=1 未达
+    #      开门槛），滞后 EMA≈10.6 远低于当轮意图——旧口径按幻影火力把已判死
+    #      的竞速翻案成「格挡0+输出11 追平击杀5回合」的攻防节奏（855局F22
+    #      同型死亡）。修正后对账火力取 max(EMA, 意图)=26 → 复核判负、doom
+    #      判决维持并留痕；开关置 false 回落旧复核口径（对照②）。
+    lag_ctx = type("LAGCTX", (), {"combat": None, "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+    lag_ctx.combat = {"comp_id": "LAG_RACE_COMP", "node_type": "Monster"}
+
+    def lag_race_state(turn_no, incoming, deck):
+        hand = [
+            {"index": 0, "card_id": "LG_HIT", "name": "速攻", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+            {"index": 1, "card_id": "LG_HIT2", "name": "速攻二号", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": 71, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "LAG_RACE_COMP", "name": "跳升怪",
+                                    "current_hp": 88, "max_hp": 90, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": 71, "max_hp": 80, "gold": 0, "floor": 5, "deck": deck}}
+
+    lag_deck = [{"card_id": f"LG_D_{i}", "card_type": "Attack", "energy_cost": 1,
+                 "dynamic_values": [{"name": "Damage", "current_value": 10}]} for i in range(2)]
+    pol_lag = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-lagfire-"))), random.Random(11))
+    accepted_combat(pol_lag, lag_race_state(1, 4, lag_deck), lag_ctx)
+    # 实测口径就位：两回合持续输出 11 → 实测 dpt 5.5/回合（防守回合稀释均值），
+    # 换挡上浮 ×1.35 后 ttk≈88/7.4≈12 > 可存活 71/10.6+1.5≈8.2 → 竞速判死
+    pol_lag._krace_turns = 2
+    pol_lag._krace_dmg = pol_lag._krace_dmg_sustained = 11.0
+    d_lag = pol_lag.decide(lag_race_state(2, 26, lag_deck), lag_ctx)
+    assert ("斩杀竞速投影" in d_lag.reason and "防守线复核" not in d_lag.reason
+            and "对账火力取意图26" in d_lag.reason), \
+        f"意图跳升回合幻影火力翻案竞速判决未被修正: {d_lag.action}（{d_lag.reason}）"
+    # ② 开关回退对照：joint_feas_fire_honest=false 恢复旧口径——滞后 EMA 10.6
+    #    下联合复核判「格挡0+输出11 追平击杀5回合」可行（幻影火力翻案复现）
+    lag_ctx.credit_tags = []
+    pol_lag2 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-lagfire2-"))), random.Random(11))
+    pol_lag2.know.policy["joint_feas_fire_honest"] = False
+    accepted_combat(pol_lag2, lag_race_state(1, 4, lag_deck), lag_ctx)
+    pol_lag2._krace_turns = 2
+    pol_lag2._krace_dmg = pol_lag2._krace_dmg_sustained = 11.0
+    d_lag2 = pol_lag2.decide(lag_race_state(2, 26, lag_deck), lag_ctx)
+    assert "防守线复核" in d_lag2.reason and "联合能量对账" in d_lag2.reason, \
+        f"开关回退后未恢复旧复核口径: {d_lag2.action}（{d_lag2.reason}）"
+
     # 3bx) 前夜必败预演的防守线复核·联合能量口径（第435~440批复盘引入，
     #      第460局批复盘改版）：裸血账判负后，攻防能量分配存在可行解（磨垒
     #      卡组「2能挡+1能攻」的持续分配能同时满足击杀与存活）则不判必败，
