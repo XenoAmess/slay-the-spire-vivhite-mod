@@ -6144,6 +6144,45 @@ def main() -> int:
     assert tx_agent.know.stats["events"]["TX_EVENT"]["take"]["n"] == 1, \
         "已成功事件选择的真实离场结果未结算"
 
+    # 3y) 竞速审计账本并表（第813~822局批复盘 RACE_AUDIT_STATS_AGGREGATION
+    #     回归夹具）：_flush_combat_agg 弹出 latched 审计账时必须把
+    #     「判死→实战结局」按 esc 分桶累计进 stats.race_audit；未入锁的
+    #     战斗零改动，重复落库逐次累加。
+    ra_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-race-audit-"))
+    agent.KNOWLEDGE_DIR = ra_dir
+    agent._LOG_PATH = ra_dir / "brain.log"
+    ra_agent = agent.Agent(dict(agent.DEFAULT_CONFIG))
+    ra_agent.ctx.reset_for("RA_RUN", 0)
+
+    def _ra_agg(won, died):
+        return {"comp_id": "RA_COMP", "floor": 17, "node_type": "Boss",
+                "hp_lost_sum": 40.0, "rounds": 8, "won": won, "died": died,
+                "hp_start_pct": 0.8, "open": False, "from_event": False,
+                "obs_hp_pool": 250.0, "obs_fire_sum": 40.0, "obs_fire_rounds": 3}
+
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 3, "esc": True}
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats == {"latched": 1, "won": 1, "esc_won": 1}, \
+        f"判死→获胜未按 esc 分桶落库: {_ra_stats}"
+
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
+                         "died": 1}, f"判死→阵亡未按 esc 分桶落库: {_ra_stats}"
+
+    ra_agent.policy._race_audit = {"latched": False, "latch_round": None, "esc": False}
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
+                         "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
+    assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
+        "审计夹具结算后聚合账未清空"
+
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
     class LostReceiptClient(client.Sts2Client):

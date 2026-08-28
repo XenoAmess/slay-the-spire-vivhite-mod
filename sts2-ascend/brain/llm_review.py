@@ -573,6 +573,10 @@ def _stats_digest(know) -> dict:
         "rooms_act": know.stats.get("rooms_act", {}),
         "rooms_band": know.stats.get("rooms_band", {}),
         "respawn_adds": know.stats.get("respawn_adds", {}),
+        # 竞速审计账本（RACE_AUDIT_STATS_AGGREGATION，第813~822局批复盘）：
+        # 把 RACE_PROJ_CALIB_AUDIT 的「判死→实战结局」计数直接带进 packet，
+        # 复盘批不再依赖 grep 单局日志，预注册分桶规则可从 digest 消费
+        "race_audit": know.stats.get("race_audit", {}),
         "act_entries_total": len(know.stats.get("act_entries") or []),
         "recent_act_entries": list(know.stats.get("act_entries") or [])[-12:],
         "policy": know.policy,

@@ -1769,6 +1769,25 @@ class Agent:
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
+            # 审计账本并表落库（RACE_AUDIT_STATS_AGGREGATION，第813~822局批复盘
+            # 闭环实验）：战斗记录字符串只活在单局日志里，每批复盘都要重新
+            # grep 原始日志才能数出「判死→获胜」占比，且 813~827 全窗口落在
+            # 部署间隙内、审计位零显形后连基线都无从留存。这里把同一观测
+            # （定义不变：实测口径判死入锁的战斗）按上批预注册的分桶口径
+            # （esc 升级局单独计数）累计进 stats，供后续批次从 stats digest
+            # 直接消费预注册规则（判死→获胜 ≥3 例或 >30% → 行为化收紧）。
+            # 纯计数累计：不参与任何评分/阈值分支，race_audit 键缺失即零起账。
+            _ra_won = not agg.get("died")
+            _ra_stats = self.know.stats.get("race_audit")
+            if not isinstance(_ra_stats, dict):
+                _ra_stats = {}
+                self.know.stats["race_audit"] = _ra_stats
+            _ra_out_key = "won" if _ra_won else "died"
+            _ra_stats["latched"] = int(_ra_stats.get("latched", 0) or 0) + 1
+            _ra_stats[_ra_out_key] = int(_ra_stats.get(_ra_out_key, 0) or 0) + 1
+            if _ra.get("esc"):
+                _ra_esc_key = "esc_won" if _ra_won else "esc_died"
+                _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
