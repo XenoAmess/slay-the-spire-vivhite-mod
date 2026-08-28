@@ -2767,11 +2767,32 @@ class SandboxReviewResult:
     salvage_saved: str = ""
 
 
+def _git_env_with_long_paths(source: dict[str, str] | None = None) -> dict[str, str]:
+    """Enable Git for deep preserved sandboxes without changing repo config."""
+    env = dict(os.environ if source is None else source)
+    try:
+        count = max(0, int(env.get("GIT_CONFIG_COUNT", "0")))
+    except (TypeError, ValueError):
+        count = 0
+    for index in range(count):
+        if env.get(f"GIT_CONFIG_KEY_{index}", "").lower() == "core.longpaths":
+            env[f"GIT_CONFIG_VALUE_{index}"] = "true"
+            return env
+    while (f"GIT_CONFIG_KEY_{count}" in env
+           or f"GIT_CONFIG_VALUE_{count}" in env):
+        count += 1
+    env[f"GIT_CONFIG_KEY_{count}"] = "core.longpaths"
+    env[f"GIT_CONFIG_VALUE_{count}"] = "true"
+    env["GIT_CONFIG_COUNT"] = str(count + 1)
+    return env
+
+
 def _sandbox_git(repo: Path, args: list[str], *, binary: bool = False,
                  timeout: int = 120, env: dict[str, str] | None = None,
                  ) -> subprocess.CompletedProcess:
     return _run_captured_stop_aware(
-        ["git", "-C", str(repo), *args], binary=binary, timeout=timeout, env=env)
+        ["git", "-C", str(repo), *args], binary=binary, timeout=timeout,
+        env=_git_env_with_long_paths(env))
 
 
 def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, str]]:
@@ -2795,7 +2816,7 @@ def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, s
         source_objects = Path(git_dir_result.stdout.strip()).resolve() / "objects"
         if not source_objects.is_dir():
             raise OSError(f"raw clone Git objects missing: {source_objects}")
-        env = dict(os.environ)
+        env = _git_env_with_long_paths()
         env["GIT_INDEX_FILE"] = str(index_path)
         env["GIT_OBJECT_DIRECTORY"] = str(object_dir)
         env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(source_objects)
@@ -3873,7 +3894,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
     inventory_temp = package / (
         f".retry_candidate_inventory.{os.getpid()}.{threading.get_ident()}.tmp")
-    env = dict(os.environ)
+    env = _git_env_with_long_paths()
     env["GIT_INDEX_FILE"] = str(index_path)
     env["GIT_OBJECT_DIRECTORY"] = str(object_dir)
     env["GIT_OPTIONAL_LOCKS"] = "0"

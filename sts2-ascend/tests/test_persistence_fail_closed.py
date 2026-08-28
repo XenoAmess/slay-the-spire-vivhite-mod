@@ -742,6 +742,12 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         runtime = repo / "sts2-ascend" / ".runtime" / "viewer.pid"
         runtime.parent.mkdir()
         runtime.write_text("123", encoding="utf-8")
+        long_relative = (Path("assets") / ("generated-" + "x" * 90)
+                         / ("rejected-" + "y" * 90) / "output.request.json")
+        long_file = repo / long_relative
+        long_file.parent.mkdir(parents=True)
+        long_file.write_text('{"keep": true}\n', encoding="utf-8")
+        self.assertGreater(len(str(long_file)), 260)
         (package / "manifest.json").write_text(json.dumps({
             "pre_head": pre_head, "batch_runs": [8], "model": "glm",
         }), encoding="utf-8")
@@ -776,6 +782,8 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                       inventory["transient_artifact_paths"])
         self.assertIn("sts2-ascend/.runtime/viewer.pid",
                       inventory["online_runtime_paths"])
+        self.assertIn(long_relative.as_posix(),
+                      inventory["rejected_or_unexpected_paths"])
 
     def test_retry_evidence_reads_clean_local_ref_and_stash_without_mutating_raw_git(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-ref-stash"

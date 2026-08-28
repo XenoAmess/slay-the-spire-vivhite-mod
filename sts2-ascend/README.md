@@ -269,6 +269,9 @@ inventory provenance，不被解释成待合入代码。每个来源分别记录
 Windows 下 Git loose objects 带只读属性；private-index 清理会先解除只读并短重试。worker 启动时只按
 `capture-index` / `validation-index` / `retry-index` 三个固定前缀回收超过 5 分钟的直属临时目录，
 不会扫描或删除 `sandbox`、`snapshot` 与 `review_salvage` 取证现场。
+所有隔离/取证 Git 子进程仅通过进程环境启用 `core.longpaths=true`，因此深层 generated/cache/rejected
+文件即使完整 Windows 路径超过 260 字符仍会被 force-stage 到全量 inventory；不会通过跳过长路径来
+伪造“现场完整”，也不会改写原仓库或用户的 Git 配置。
 整个过程也不写原 clone 的 local refs、stash 或 worktree；早期 schema 的物化摘要保存在 history，不清除
 取证 clone 中已有的不可达 objects。没有 raw clone 时，如果失败链已保存验收过的
 `validated_candidate.patch`，v3 会将它提升为 accepted-only 候选，不会把含 cache/运行现场的全量
