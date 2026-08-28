@@ -519,6 +519,14 @@ class Agent:
                 # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
                 log("[agent] 检测到上一局异常结束，按失败归档")
                 self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
+                # A pending review could not restart at the menu because the old
+                # context still needed this loss finalization. The replacement run
+                # has not been accepted or acted on yet, so hand it to the reloaded
+                # Brain before reset_for erases that last safe boundary.
+                restart_reason = self._pending_review_restart_reason()
+                if restart_reason:
+                    log(f"[agent] {restart_reason}；异常旧局已归档，新局动作前请求 runner 重启大脑…")
+                    sys.exit(42)
             next_run = int(self.know.stats.get("global", {}).get("runs", 0)) + 1
             review_health_eligible = bool(
                 getattr(self, "_review_health_ready_for_new_run", False))
@@ -1845,10 +1853,11 @@ class Agent:
             autogit.commit_progress(
                 f"chore(sts2-ascend): 第{g['runs']}局存档（{result} F{floor} 进阶{self.ctx.ascension}，生涯 {g['wins']}胜/{g['runs']}局）",
                 log=log)
-        # LLM 复盘提交了变更：立即以退出码 42 请求 runner 重启（此时处于局间，重启无损）
+        # LLM 复盘提交了变更：终局证据已归档，但不能直接停在 GAME_OVER
+        # 重启。新进程若仍看到同一终局帧，胜利局会被重复结算；先由旧进程
+        # 完成返回菜单动作，再由主循环的空菜单安全边界以退出码 42 重启。
         if self.request_restart:
-            log("[agent] 复盘变更已落盘，请求 runner 重启大脑…")
-            sys.exit(42)
+            log("[agent] 复盘变更已落盘，等待返回主菜单后重启大脑…")
 
     # ---------------- stuck-combat AI analysis ----------------
 
@@ -2025,6 +2034,52 @@ class Agent:
             self.same_count = 0
         return None
 
+    def _pending_review_restart_reason(self) -> str:
+        """Return an in-memory or durable review epoch this Brain has not loaded."""
+        if bool(getattr(self, "request_restart", False)):
+            return "复盘线程已完成运行时代码闭环"
+
+        try:
+            marker = json.loads((KNOWLEDGE_DIR / "pending_restart.json").read_text(
+                encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return ""
+        # State-less markers are the backward-compatible committed format used by
+        # Runner as well. A prepared transaction is never loadable.
+        if marker.get("state") not in (None, "committed"):
+            return ""
+        review_commit = str(marker.get("review_commit") or "").strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{40,64}", review_commit):
+            return ""
+        loaded_review = str(
+            getattr(self, "_boot_review_commit", "") or "").strip().lower()
+        if review_commit == loaded_review:
+            return ""
+        return (f"耐久复盘 marker {review_commit[:8]} 尚未由本进程加载"
+                f"（当前 {loaded_review[:8] or 'none'}）")
+
+    def _pending_review_restart_at_safe_boundary(self, state: dict) -> str:
+        """Return the exact reload reason only at a truly empty menu boundary.
+
+        The asynchronous reviewer can finish after run finalization and miss the
+        next menu poll. Recheck immediately before every UI action so stale modules
+        cannot embark another run. GAME_OVER is deliberately excluded: a new Brain
+        may observe the same terminal frame and finalize a victory twice. The durable
+        marker is compared only with Runner's import-time review epoch, never HEAD.
+        """
+        screen = str(state.get("screen") or "")
+        if screen not in ("MAIN_MENU", "CHARACTER_SELECT"):
+            return ""
+        run = state.get("run") or {}
+        run_finalized = bool(getattr(self.ctx, "run_finalized", False))
+        # Menu screens are safe only when they really carry no active run and this
+        # process has no unarchived context. A user-abandoned run is finalized by
+        # _track's new-run detector, which performs its own pre-reset restart check.
+        if (run or (getattr(self.ctx, "run_id", "run_unknown") != "run_unknown"
+                    and not run_finalized)):
+            return ""
+        return self._pending_review_restart_reason()
+
     # ---------------- main loop ----------------
 
     def run(self) -> None:
@@ -2143,6 +2198,13 @@ class Agent:
                 log(f"[{time.strftime('%H:%M:%S')}] [{state.get('screen')}/F{floor}] {decision.reason}")
 
             if decision.action:
+                # The reviewer may finish after finalization but before a menu
+                # action starts the next run. Recheck as late as possible, directly
+                # before client.act; live-run screens remain uninterrupted.
+                restart_reason = self._pending_review_restart_at_safe_boundary(state)
+                if restart_reason:
+                    log(f"[agent] {restart_reason}；局间安全边界请求 runner 重启大脑…")
+                    sys.exit(42)
                 if stop_requested():
                     return
                 try:

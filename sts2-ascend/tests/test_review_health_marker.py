@@ -23,6 +23,139 @@ def _lock(**_kwargs):
 
 
 class ReviewHealthMarkerTests(unittest.TestCase):
+    @staticmethod
+    def _restart_probe(*, request_restart: bool = False,
+                       loaded_review: str = "") -> agent_module.Agent:
+        instance = object.__new__(agent_module.Agent)
+        instance.ctx = SimpleNamespace(run_finalized=True, run_id="run_unknown")
+        instance.request_restart = request_restart
+        instance._boot_review_commit = loaded_review
+        return instance
+
+    def test_in_memory_restart_is_rechecked_only_at_safe_boundary(self) -> None:
+        instance = self._restart_probe(request_restart=True)
+
+        self.assertEqual(
+            instance._pending_review_restart_at_safe_boundary({"screen": "COMBAT"}),
+            "")
+        self.assertTrue(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "MAIN_MENU"}))
+        self.assertTrue(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "CHARACTER_SELECT"}))
+
+        # A terminal frame is not a cross-process boundary: a new Brain can still
+        # observe it and would otherwise finalize a victory twice.
+        instance.ctx.run_finalized = False
+        self.assertEqual(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "GAME_OVER"}), "")
+        instance.ctx.run_finalized = True
+        self.assertEqual(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "GAME_OVER"}), "")
+
+        # A menu-like screen must not discard an unarchived run context. The
+        # existing new-run detector will finalize that abandoned run first.
+        instance.ctx.run_id = "unfinished-run"
+        instance.ctx.run_finalized = False
+        self.assertEqual(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "MAIN_MENU", "run": {}}), "")
+        instance.ctx.run_finalized = True
+        self.assertTrue(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "MAIN_MENU", "run": {}}))
+        self.assertEqual(instance._pending_review_restart_at_safe_boundary(
+            {"screen": "CHARACTER_SELECT", "run": {"floor": 1}}), "")
+
+    def test_committed_marker_restarts_only_an_older_brain_epoch(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-restart-") as root:
+            knowledge = Path(root)
+            marker = knowledge / "pending_restart.json"
+            review_commit = "b" * 40
+            marker.write_text(json.dumps({
+                "review_commit": review_commit,
+                "state": "committed",
+            }), encoding="utf-8")
+
+            stale = self._restart_probe()
+            loaded = self._restart_probe(loaded_review=review_commit)
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge):
+                self.assertTrue(stale._pending_review_restart_at_safe_boundary(
+                    {"screen": "MAIN_MENU"}))
+                self.assertEqual(loaded._pending_review_restart_at_safe_boundary(
+                    {"screen": "MAIN_MENU"}), "")
+                self.assertEqual(stale._pending_review_restart_at_safe_boundary(
+                    {"screen": "COMBAT"}), "")
+                stale.ctx.run_finalized = True
+                self.assertEqual(stale._pending_review_restart_at_safe_boundary(
+                    {"screen": "GAME_OVER", "game_over": {"is_victory": True}}),
+                    "")
+
+                marker.write_text(json.dumps({
+                    "review_commit": "c" * 40,
+                    "state": "prepared",
+                }), encoding="utf-8")
+                self.assertEqual(stale._pending_review_restart_at_safe_boundary(
+                    {"screen": "MAIN_MENU"}), "")
+
+    def test_finalize_defers_restart_until_empty_menu(self) -> None:
+        instance = object.__new__(agent_module.Agent)
+        instance.ctx = SimpleNamespace(
+            run_finalized=False,
+            decisions=[{"floor": 1}],
+            combat_notes=[],
+            attribution_tags=[],
+            run_id="finished-run",
+            run_number=0,
+            ascension=0,
+            started_at="now",
+        )
+        instance.runs_played = 0
+        instance.request_restart = True
+        instance._flush_combat_agg = mock.Mock()
+        instance._mark_review_run_healthy = mock.Mock()
+        instance.know = SimpleNamespace(
+            stats={"global": {"runs": 1, "wins": 0}},
+            save_run_log=mock.Mock(return_value=Path("finished-run.json")),
+            save=mock.Mock(),
+        )
+
+        with mock.patch.object(agent_module, "finalize_run", return_value="lesson"), \
+                mock.patch.object(agent_module, "llm_review", None), \
+                mock.patch.object(agent_module, "autogit", None), \
+                mock.patch.object(agent_module, "log") as logged:
+            # Regression: this used to raise SystemExit(42) directly on GAME_OVER.
+            instance._finalize(victory=False, floor=1)
+
+        self.assertTrue(instance.ctx.run_finalized)
+        self.assertTrue(logged.called)
+
+    def test_abandoned_run_finalizes_before_new_run_restart_handoff(self) -> None:
+        instance = object.__new__(agent_module.Agent)
+        instance.ctx = agent_module.RunContext()
+        instance.ctx.reset_for("old-run", 0, 7)
+        instance.ctx.decisions.append({"floor": 5})
+        instance.request_restart = True
+        instance._boot_review_commit = ""
+        instance._review_health_ready_for_new_run = False
+        instance.know = SimpleNamespace(
+            stats={"global": {"runs": 7}}, load_run_log=lambda _run_id: None)
+
+        def finalize_old(**_kwargs) -> None:
+            instance.ctx.run_finalized = True
+
+        instance._finalize = mock.Mock(side_effect=finalize_old)
+        fresh = {
+            "screen": "EVENT",
+            "run_id": "new-run",
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                    "ascension": 0, "floor": 0},
+        }
+        with mock.patch.object(agent_module, "log"), \
+                self.assertRaises(SystemExit) as raised:
+            instance._track(fresh)
+
+        self.assertEqual(raised.exception.code, 42)
+        instance._finalize.assert_called_once()
+        self.assertEqual(instance.ctx.run_id, "old-run")
+
     def test_track_requires_empty_main_menu_before_complete_run_eligibility(self) -> None:
         instance = object.__new__(agent_module.Agent)
         instance.ctx = agent_module.RunContext()
