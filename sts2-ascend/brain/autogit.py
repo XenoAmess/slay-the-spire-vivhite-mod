@@ -1,6 +1,7 @@
 """对局存档与 LLM 复盘使用的受限 Git 事务。
 
-自动提交使用独立 ``GIT_INDEX_FILE``，不会夹带调用前已经 staged 的用户文件；
+自动提交使用独立 ``GIT_INDEX_FILE``，不会夹带调用前已经 staged 的用户文件；Brain 独占的
+在线状态若被宽范围 ``git add`` 暂存，则通过耐久快照接管并只同步这些精确路径；
 add、建 commit、原子更新分支及 push 全程持有同一个跨进程锁。分支更新使用
 compare-and-swap，外部并发提交只会令事务重试，不会被覆盖。
 
@@ -10,6 +11,7 @@ reset/clean。
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -87,6 +89,7 @@ _HEX_COMMIT = re.compile(r"^[0-9a-fA-F]{40,64}$")
 _MACHINE_PROGRESS_SUBJECT = re.compile(
     r"^chore\(sts2-ascend\): 第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
 _PROGRESS_INDEX_PENDING_NAME = "sts2-ascend-progress-index-pending.json"
+_MACHINE_INDEX_TAKEOVER_POLICY = "machine-owned-takeover-v1"
 _INDEX_LOCK_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 
@@ -475,6 +478,17 @@ def _index_entries_unlocked(paths: Sequence[str], timeout: float = 90) -> bytes:
     return result.stdout
 
 
+def _index_snapshot_digest(entries: bytes) -> str:
+    return hashlib.sha256(entries).hexdigest()
+
+
+def _machine_owned_progress_specs(specs: Sequence[str]) -> bool:
+    """Whether every pathspec is wholly inside Brain-owned online state."""
+    return bool(specs) and all(
+        _path_in_specs(spec, DEFAULT_PROGRESS_PATHS) for spec in specs
+    )
+
+
 def _progress_index_pending_path() -> Path:
     """Return the per-repository journal path without caching test/live roots."""
     return _git_dir() / _PROGRESS_INDEX_PENDING_NAME
@@ -513,7 +527,9 @@ def _write_progress_index_pending_unlocked(entries: Sequence[dict]) -> None:
 
 
 def _add_progress_index_pending_unlocked(
-    parent: str, commit: str, specs: Sequence[str], message: str,
+    parent: str, commit: str, specs: Sequence[str], message: str, *,
+    expected_index: bytes | None = None,
+    consume_machine_staging: bool = False,
 ) -> None:
     entries = _read_progress_index_pending_unlocked()
     if entries is None:
@@ -525,6 +541,11 @@ def _add_progress_index_pending_unlocked(
         "message": message[:240],
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
+    if consume_machine_staging:
+        if expected_index is None or not _machine_owned_progress_specs(specs):
+            raise ValueError("machine-owned staged 接管缺少受控路径或 index 快照")
+        entry["index_policy"] = _MACHINE_INDEX_TAKEOVER_POLICY
+        entry["expected_index_sha256"] = _index_snapshot_digest(expected_index)
     entries = [item for item in entries if str(item.get("commit") or "") != commit]
     entries.append(entry)
     _write_progress_index_pending_unlocked(entries)
@@ -641,6 +662,30 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
             continue
         matched_commit = _index_matches_commit_unlocked(commit, specs, timeout=10)
         if matched_commit is True:
+            continue
+        index_policy = str(entry.get("index_policy") or "")
+        if index_policy == _MACHINE_INDEX_TAKEOVER_POLICY:
+            expected_digest = str(entry.get("expected_index_sha256") or "")
+            if (not _machine_owned_progress_specs(specs)
+                    or re.fullmatch(r"[0-9a-f]{64}", expected_digest) is None):
+                log(f"[git] progress index {commit[:8]} 的机器接管记录无效；保留记录与当前 index")
+                remaining.append(entry)
+                continue
+            expected = _index_entries_unlocked(specs, timeout=10)
+            if (_index_snapshot_digest(expected) != expected_digest
+                    or _index_entries_unlocked(specs, timeout=10) != expected):
+                log(f"[git] progress index {commit[:8]} 的机器路径 staged 快照已变化；"
+                    "保留当前 index，交给本轮在线存档接管最新状态")
+                remaining.append(entry)
+                continue
+            if _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
+                log(f"[git] 已从耐久记录完成机器路径 staged 接管 {commit[:8]}")
+            else:
+                remaining.append(entry)
+            continue
+        if index_policy:
+            log(f"[git] progress index {commit[:8]} 含未知同步策略；保留记录与当前 index")
+            remaining.append(entry)
             continue
         matched_parent = _index_matches_commit_unlocked(parent, specs, timeout=10)
         if matched_parent is not True:
@@ -810,10 +855,17 @@ def commit_progress_result(
             if overlap and _recover_legacy_machine_progress_index_unlocked(log=log):
                 staged = _staged_paths_unlocked()
                 overlap = [path for path in staged if _path_in_specs(path, specs)]
-            if overlap:
+            consume_machine_staging = bool(
+                overlap and _machine_owned_progress_specs(specs)
+            )
+            if overlap and not consume_machine_staging:
                 reason = "目标路径已有用户 staged 内容，拒绝自动提交：" + ", ".join(overlap[:8])
                 log(f"[git] {reason}")
                 return CommitResult(False, reason=reason)
+            if consume_machine_staging:
+                log("[git] 检测到 Brain 在线状态被放入真实 staged；"
+                    "本次由私有 index 接管并仅同步这些机器路径："
+                    + ", ".join(overlap[:8]))
 
             original_target_index = _index_entries_unlocked(specs)
             transaction_ref = _symbolic_head_unlocked()
@@ -864,7 +916,10 @@ def commit_progress_result(
                         # discard precisely; a successful CAS survives a crash
                         # before the real index is synchronised.
                         _add_progress_index_pending_unlocked(
-                            before, commit, specs, message)
+                            before, commit, specs, message,
+                            expected_index=original_target_index,
+                            consume_machine_staging=consume_machine_staging,
+                        )
                     except Exception as exc:
                         last_error = f"progress index 恢复记录发布失败：{exc}"
                         break

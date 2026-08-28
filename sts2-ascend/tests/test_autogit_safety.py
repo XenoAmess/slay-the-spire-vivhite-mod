@@ -99,19 +99,103 @@ class AutoGitSafetyTests(unittest.TestCase):
         status = self._git("status", "--porcelain").stdout.splitlines()
         self.assertEqual(status, ["M  outside.txt"])
 
-    def test_staged_target_causes_transaction_refusal_without_mutation(self) -> None:
+    def test_staged_non_machine_target_causes_transaction_refusal_without_mutation(self) -> None:
         before = self._git("rev-parse", "HEAD").stdout.strip()
-        self._write("sts2-ascend/knowledge/stats.json", '{"runs": 9}\n')
-        self._git("add", "sts2-ascend/knowledge/stats.json")
+        path = "sts2-ascend/brain/policy.py"
+        self._write(path, "VALUE = 9\n")
+        self._git("add", path)
         cached_before = self._git("diff", "--cached").stdout
 
         result = autogit.commit_progress_result(
-            "must refuse", paths=["sts2-ascend/knowledge/stats.json"], push=False)
+            "must refuse", paths=[path], push=False)
 
         self.assertFalse(result.created)
         self.assertIn("staged", result.reason)
         self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
         self.assertEqual(self._git("diff", "--cached").stdout, cached_before)
+
+    def test_staged_machine_state_is_absorbed_without_touching_other_staging(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write("outside.txt", "user-staged\n")
+        self._git("add", "outside.txt")
+        self._write(path, '{"runs": 8, "snapshot": true}\n')
+        self._git("add", path)
+        self._write(path, '{"runs": 9, "final": true}\n')
+        outside_index_before = self._git("show", ":outside.txt").stdout
+        messages: list[str] = []
+
+        result = autogit.commit_progress_result(
+            "automatic machine takeover", log=messages.append,
+            paths=[path], push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(
+            self._git("show", f"HEAD:{path}").stdout,
+            '{"runs": 9, "final": true}\n',
+        )
+        self.assertEqual(self._git("show", ":outside.txt").stdout, outside_index_before)
+        self.assertEqual(
+            self._git("diff", "--cached", "--name-only").stdout.strip(),
+            "outside.txt",
+        )
+        self.assertEqual(self._git("diff", "--name-only", "--", path).stdout, "")
+        self.assertTrue(any("Brain 在线状态" in message for message in messages))
+
+    def test_staged_new_run_is_committed_and_unstaged_automatically(self) -> None:
+        path = "sts2-ascend/knowledge/runs/new-run.json"
+        self._write(path, '{"floor": 17}\n')
+        self._git("add", path)
+
+        result = autogit.commit_progress_result(
+            "automatic new run takeover", paths=[path], push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(self._git("show", f"HEAD:{path}").stdout, '{"floor": 17}\n')
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+        self.assertEqual(self._git("status", "--porcelain", "--", path).stdout, "")
+
+    def test_default_scope_recovers_from_broad_git_add_all(self) -> None:
+        stats = "sts2-ascend/knowledge/stats.json"
+        run = "sts2-ascend/knowledge/runs/run-2.json"
+        viewer_log = "sts2-ascend/knowledge/viewer_boot.log"
+        screenshot = ".tmp/live-window.png"
+        self._write(stats, '{"runs": 2}\n')
+        self._write(run, '{"floor": 3}\n')
+        self._write(viewer_log, "viewer evidence\n")
+        self._write(screenshot, "png evidence\n")
+        self._git("add", "--all")
+
+        result = autogit.commit_progress_result(
+            "automatic progress after broad add", push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(self._git("show", f"HEAD:{stats}").stdout, '{"runs": 2}\n')
+        self.assertEqual(self._git("show", f"HEAD:{run}").stdout, '{"floor": 3}\n')
+        committed = set(
+            self._git("show", "--format=", "--name-only", "HEAD").stdout.splitlines())
+        self.assertNotIn(viewer_log, committed)
+        self.assertNotIn(screenshot, committed)
+        self.assertEqual(
+            set(self._git("diff", "--cached", "--name-only").stdout.splitlines()),
+            {viewer_log, screenshot},
+        )
+
+    def test_mixed_machine_and_code_specs_keep_strict_staged_refusal(self) -> None:
+        stats = "sts2-ascend/knowledge/stats.json"
+        code = "sts2-ascend/brain/policy.py"
+        before = self._git("rev-parse", "HEAD").stdout.strip()
+        self._write(stats, '{"runs": 2}\n')
+        self._write(code, "VALUE = 2\n")
+        self._git("add", stats, code)
+        cached_before = self._git("diff", "--cached", "--binary").stdout
+
+        result = autogit.commit_progress_result(
+            "mixed scope must refuse", paths=[stats, code], push=False)
+
+        self.assertFalse(result.created)
+        self.assertIn("staged", result.reason)
+        self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
+        self.assertEqual(self._git("diff", "--cached", "--binary").stdout, cached_before)
 
     def test_default_progress_scope_does_not_sweep_unrelated_knowledge_files(self) -> None:
         self._write("sts2-ascend/knowledge/stats.json", '{"runs": 2}\n')
@@ -201,6 +285,32 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(self._git("diff", "--cached", "--name-only").stdout.strip(), "outside.txt")
         self.assertEqual(self._read("sts2-ascend/knowledge/stats.json"), '{"runs": 3}\n')
 
+    def test_machine_takeover_cas_failure_preserves_entire_real_index(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        before = self._git("rev-parse", "HEAD").stdout.strip()
+        self._write("outside.txt", "user-staged\n")
+        self._git("add", "outside.txt")
+        self._write(path, '{"runs": 2, "staged": true}\n')
+        self._git("add", path)
+        self._write(path, '{"runs": 3, "working": true}\n')
+        cached_before = self._git("diff", "--cached", "--binary").stdout
+        original_run = autogit._run_git
+
+        def fail_update_ref(args, **kwargs):
+            if args and args[0] == "update-ref":
+                return subprocess.CompletedProcess(args, 1, "", "fault injected")
+            return original_run(args, **kwargs)
+
+        with mock.patch.object(autogit, "_run_git", side_effect=fail_update_ref):
+            result = autogit.commit_progress_result(
+                "machine takeover CAS failure", paths=[path], push=False)
+
+        self.assertFalse(result.created)
+        self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), before)
+        self.assertEqual(self._git("diff", "--cached", "--binary").stdout, cached_before)
+        self.assertEqual(self._read(path), '{"runs": 3, "working": true}\n')
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+
     def test_progress_index_sync_retries_transient_index_lock(self) -> None:
         path = "sts2-ascend/knowledge/stats.json"
         self._write(path, '{"runs": 2}\n')
@@ -226,6 +336,83 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(restore_calls, 3)
         self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
         self.assertFalse(autogit._progress_index_pending_path().exists())
+
+    def test_machine_takeover_recovers_after_post_commit_index_failure(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write("outside.txt", "user-staged\n")
+        self._git("add", "outside.txt")
+        self._write(path, '{"runs": 2, "staged": true}\n')
+        self._git("add", path)
+        self._write(path, '{"runs": 3, "final": true}\n')
+        original_run = autogit._run_git
+
+        def persistent_lock(args, **kwargs):
+            if args[:2] == ["restore", "--staged"]:
+                return subprocess.CompletedProcess(
+                    args, 128, "", "fatal: Unable to create '.git/index.lock': File exists")
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=persistent_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            first = autogit.commit_progress_result(
+                "machine takeover before crash", paths=[path], push=False)
+
+        self.assertTrue(first.created, first.reason)
+        marker = json.loads(
+            autogit._progress_index_pending_path().read_text(encoding="utf-8"))
+        self.assertEqual(
+            marker["entries"][0]["index_policy"],
+            autogit._MACHINE_INDEX_TAKEOVER_POLICY,
+        )
+        self.assertEqual(
+            set(self._git("diff", "--cached", "--name-only").stdout.splitlines()),
+            {"outside.txt", path},
+        )
+
+        recovered = autogit.commit_progress_result(
+            "recovery should be an empty transaction", paths=[path], push=False)
+
+        self.assertFalse(recovered.created)
+        self.assertEqual(recovered.reason, "nothing to commit")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+        self.assertEqual(
+            self._git("diff", "--cached", "--name-only").stdout.strip(),
+            "outside.txt",
+        )
+        self.assertEqual(
+            self._git("show", f"HEAD:{path}").stdout,
+            '{"runs": 3, "final": true}\n',
+        )
+
+    def test_machine_takeover_recovery_preserves_changed_target_index(self) -> None:
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2, "staged": true}\n')
+        self._git("add", path)
+        self._write(path, '{"runs": 3, "committed": true}\n')
+        original_run = autogit._run_git
+
+        def persistent_lock(args, **kwargs):
+            if args[:2] == ["restore", "--staged"]:
+                return subprocess.CompletedProcess(
+                    args, 128, "", "fatal: Unable to create '.git/index.lock': File exists")
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=persistent_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            first = autogit.commit_progress_result(
+                "machine takeover pending", paths=[path], push=False)
+        self.assertTrue(first.created, first.reason)
+
+        self._write(path, '{"runs": 4, "new_index": true}\n')
+        self._git("add", path)
+        cached_before = self._git("diff", "--cached", "--binary").stdout
+        messages: list[str] = []
+        with autogit.repository_lock():
+            autogit._recover_pending_progress_indexes_unlocked(log=messages.append)
+
+        self.assertEqual(self._git("diff", "--cached", "--binary").stdout, cached_before)
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+        self.assertTrue(any("staged 快照已变化" in message for message in messages))
 
     def test_persistent_index_lock_is_recovered_by_next_progress_transaction(self) -> None:
         path = "sts2-ascend/knowledge/stats.json"
@@ -258,7 +445,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
         self.assertFalse(autogit._progress_index_pending_path().exists())
 
-    def test_progress_index_recovery_preserves_real_user_staging(self) -> None:
+    def test_new_machine_staging_supersedes_stale_pending_sync(self) -> None:
         path = "sts2-ascend/knowledge/stats.json"
         self._write(path, '{"runs": 2}\n')
         original_run = autogit._run_git
@@ -278,15 +465,25 @@ class AutoGitSafetyTests(unittest.TestCase):
 
         self._write(path, '{"runs": 999, "user": true}\n')
         self._git("add", path)
-        cached_before = self._git("diff", "--cached", "--binary").stdout
-        refused = autogit.commit_progress_result(
+        second = autogit.commit_progress_result(
             "chore(sts2-ascend): 第3局存档（负 F1 进阶0，生涯 0胜/3局）",
             paths=[path], push=False)
 
-        self.assertFalse(refused.created)
-        self.assertIn("staged", refused.reason)
-        self.assertEqual(self._git("diff", "--cached", "--binary").stdout, cached_before)
+        self.assertTrue(second.created, second.reason)
+        self.assertEqual(
+            self._git("show", f"HEAD:{path}").stdout,
+            '{"runs": 999, "user": true}\n',
+        )
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+        # The obsolete marker remains until the next preflight proves that a
+        # newer progress commit superseded its target paths.
         self.assertTrue(autogit._progress_index_pending_path().exists())
+
+        third = autogit.commit_progress_result(
+            "cleanup obsolete marker", paths=[path], push=False)
+        self.assertFalse(third.created)
+        self.assertEqual(third.reason, "nothing to commit")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
 
     def test_legacy_progress_index_recovery_finds_commit_behind_later_head(self) -> None:
         path = "sts2-ascend/knowledge/stats.json"
