@@ -4360,14 +4360,24 @@ def _parse_retry_resolutions(report: str, package_names) -> dict[str, str]:
         return text
 
     def parse_pair(value: str) -> tuple[str, str] | None:
-        parts = unformat(value).split()
+        text = str(value or "").strip()
+        parts = text.split(maxsplit=1)
         if len(parts) != 2:
             return None
         package = unformat(parts[0]).strip("`*<>,;:[]()")
-        resolution = unformat(parts[1]).strip("`*<>,;:[]().")
-        if package not in requested or resolution not in _RETRY_RESOLUTION_VALUES:
+        if package not in requested:
             return None
-        return package, resolution
+        remainder = parts[1].lstrip("`*_")
+        for resolution in _RETRY_RESOLUTION_VALUES:
+            if not remainder.startswith(resolution):
+                continue
+            tail = remainder[len(resolution):].lstrip("`*_ ")
+            # GLM often appends a short parenthetical/table note immediately
+            # after the formal status.  Accept punctuation-delimited notes while
+            # still rejecting free prose such as "integrated because ...".
+            if not tail or tail[0] in "(（[【:：-—,，;；.。/":
+                return package, resolution
+        return None
 
     for raw_line in str(report or "").splitlines():
         line = raw_line.strip()

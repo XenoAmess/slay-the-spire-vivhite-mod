@@ -31,18 +31,21 @@ STATIC_KNOWLEDGE = "sts2-ascend/knowledge/game/v0.111.0/mechanics/cards.jsonl"
 
 class ReviewClosureTests(unittest.TestCase):
     def test_retry_receipts_accept_colon_and_two_or_three_column_tables(self) -> None:
-        packages = ["pkg-colon", "pkg-two", "pkg-three", "pkg-note"]
+        packages = ["pkg-colon", "pkg-two", "pkg-three", "pkg-note", "pkg-inline"]
         report = """
 retry_resolution: pkg-colon integrated
 | retry_resolution | **pkg-two no_valid_change** |
 | retry_resolution | `pkg-three` | `integrated` |
 | retry_resolution | **pkg-note integrated** | current HEAD implementation verified |
+retry_resolution: pkg-inline integrated（明细见本节）
+| retry_resolution | **pkg-inline integrated**（补合即本批闭环实验本体） |
 """
         self.assertEqual(llm_review._parse_retry_resolutions(report, packages), {
             "pkg-colon": "integrated",
             "pkg-two": "no_valid_change",
             "pkg-three": "integrated",
             "pkg-note": "integrated",
+            "pkg-inline": "integrated",
         })
 
     def test_retry_receipts_reject_prose_substrings_and_ambiguous_tables(self) -> None:
