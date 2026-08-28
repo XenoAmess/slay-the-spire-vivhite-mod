@@ -1,0 +1,29 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>VivhiteVfxBridge</RootNamespace>
+    <AssemblyName>VivhiteVfxBridge</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath Condition="'$(BridgeOutputPath)' != ''">$(BridgeOutputPath)</OutputPath>
+    <BaseIntermediateOutputPath Condition="'$(BridgeIntermediateOutputPath)' != ''">$(BridgeIntermediateOutputPath)</BaseIntermediateOutputPath>
+    <IntermediateOutputPath Condition="'$(BridgeIntermediateOutputPath)' != ''">$(BridgeIntermediateOutputPath)</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="true" />
+  </ItemGroup>
+
+  <Target Name="ValidateAcceptanceInputs" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(Sts2DataDir)' == '' or !Exists('$(Sts2DataDir)\sts2.dll')"
+           Text="Sts2DataDir must point at the v0.111.0 game data directory containing sts2.dll." />
+    <Error Condition="'$(BridgeOutputPath)' == ''"
+           Text="BridgeOutputPath is required; acceptance binaries must be built below .work." />
+    <Error Condition="'$(BridgeIntermediateOutputPath)' == ''"
+           Text="BridgeIntermediateOutputPath is required; acceptance intermediates must be built below .work." />
+  </Target>
+</Project>

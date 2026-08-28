@@ -1,0 +1,18 @@
+; Acceptance-only Mono project. Invoke-RuntimeVfxAcceptance.ps1 stages this
+; project below .work before Godot imports or runs it.
+
+config_version=5
+
+[application]
+
+config/name="Vivhite Hybrid V3 Final Runtime VFX Acceptance"
+config/features=PackedStringArray("4.5", "C#", "Forward Plus")
+
+[dotnet]
+
+project/assembly_name="VivhiteVfxBridge"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

@@ -2,8 +2,9 @@ extends SceneTree
 
 ## Read-only static + Spine-runtime gate for the assembled Hybrid V3 final
 ## candidate. It proves the five frozen semantic pages, exact atlas layout,
-## reviewed four-donor JSON merge, animation windows and mix table without
-## rebuilding, publishing, deploying, or controlling the game.
+## reviewed four-donor JSON merge, the isolated cast-restart VFX clear,
+## animation windows and mix table without rebuilding, publishing, deploying,
+## or controlling the game.
 
 const ROOT := "res://tools/candidates/hybrid_v3_final"
 const CAST_ROOT := "res://tools/candidates/hybrid_cast_set"
@@ -264,13 +265,23 @@ func _validate_donor_provenance(
 			death_animations.get("die", {}).get("bones", {}).get(bone_name, null)
 		):
 			_errors.append("Final die/%s differs from the accepted grounded-death donor" % bone_name)
-	for animation_name: String in ["attack", "attack_heavy", "cast"]:
+	for animation_name: String in ["attack", "attack_heavy"]:
 		if not _same_variant(final_animations.get(animation_name, null), cast_animations.get(animation_name, null)):
 			_errors.append("Final %s animation differs from the accepted cast-set base" % animation_name)
+	for section_name: String in ["bones", "deform", "drawOrder", "slots"]:
+		if not _same_variant(
+			final_animations.get("cast", {}).get(section_name, null),
+			cast_animations.get("cast", {}).get(section_name, null)
+		):
+			_errors.append("Final cast/%s differs from the accepted cast-set base" % section_name)
+	var expected_cast_events: Array = cast_animations.get("cast", {}).get("events", []).duplicate(true)
+	expected_cast_events.push_front({"time": 0.0, "name": "clear_vfx"})
+	if not _same_variant(final_animations.get("cast", {}).get("events", []), expected_cast_events):
+		_errors.append("Final cast/events must add only clear_vfx@0 before the accepted cast-set events")
 
-	# Revert only the four reviewed merge deltas. The result must be the cast
-	# donor byte-for-byte at the decoded JSON level, which catches any hidden
-	# edit outside neutral slots, hurt bones, and the two death bone tracks.
+	# Revert only the reviewed donor merge plus the isolated cast-restart clear.
+	# The result must be the cast donor byte-for-byte at the decoded JSON level,
+	# which catches any hidden edit outside those explicitly accepted fields.
 	var normalized: Dictionary = skeleton.duplicate(true)
 	normalized["skeleton"]["hash"] = cast.get("skeleton", {}).get("hash", "")
 	for animation_name: String in LOOP_DURATIONS:
@@ -284,8 +295,11 @@ func _validate_donor_provenance(
 		normalized["animations"]["die"]["bones"][bone_name] = (
 			cast_animations.get("die", {}).get("bones", {}).get(bone_name, {}).duplicate(true)
 		)
+	normalized["animations"]["cast"]["events"] = (
+		cast_animations.get("cast", {}).get("events", []).duplicate(true)
+	)
 	if not _same_variant(normalized, cast):
-		_errors.append("Final Spine JSON contains a change outside the four reviewed merge deltas")
+		_errors.append("Final Spine JSON contains a change outside the reviewed donor fields and cast restart clear")
 
 
 func _validate_skeleton_contract(skeleton: Dictionary) -> void:
@@ -449,6 +463,7 @@ func _validate_attack_action(
 func _validate_cast_action(animation: Dictionary) -> void:
 	_validate_atomic_person_swap(animation, "cast", CAST_REGION, CAST_ENTER, CAST_EXIT)
 	_validate_exact_events(animation, "cast", [
+		{"name": "clear_vfx", "time": 0.0},
 		{"name": "cast_eyes_start", "time": CAST_ENTER},
 		{"name": "clear_vfx", "time": CAST_CLEAR},
 	])

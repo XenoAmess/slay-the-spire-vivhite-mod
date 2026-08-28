@@ -2,8 +2,9 @@ extends SceneTree
 
 ## Assemble the already accepted V3 milestones into one isolated five-page
 ## candidate. No source pixels are changed: each accepted semantic page is
-## copied byte-for-byte, while only the three reviewed animation deltas are
-## merged into the cast-set Spine JSON.
+## copied byte-for-byte. The reviewed donor deltas are merged into the
+## cast-set Spine JSON, followed by the one proven NIroncladVfx bridge delta:
+## clear stale external EyeFire when cast is restarted from its active window.
 
 const COMMAND := "assemble-hybrid-v3-final"
 const OUTPUT_ROOT := "Vivhite/tools/candidates/hybrid_v3_final"
@@ -186,6 +187,9 @@ func _build(output_root: String) -> bool:
 		animations["die"]["bones"][bone_name] = (
 			(sources.death as Dictionary)["animations"]["die"]["bones"][bone_name].duplicate(true)
 		)
+	var cast_events: Array = animations["cast"].get("events", []).duplicate(true)
+	cast_events.push_front({"time": 0.0, "name": "clear_vfx"})
+	animations["cast"]["events"] = cast_events
 	if not _validate_merged_skeleton(skeleton, sources):
 		return false
 	if not _write_text(
@@ -321,12 +325,23 @@ func _validate_merged_skeleton(skeleton: Dictionary, sources: Dictionary) -> boo
 	for bone_name: String in ["vivhite_rig", "vivhite_death_pose"]:
 		if animations.die["bones"].get(bone_name, null) != (sources.death as Dictionary)["animations"]["die"]["bones"].get(bone_name, null):
 			return _set_error("Final die/%s differs from the accepted grounded death" % bone_name)
-	for animation_name: String in ["attack", "attack_heavy", "cast"]:
+	for animation_name: String in ["attack", "attack_heavy"]:
 		for section: String in ["bones", "deform", "drawOrder", "events"]:
 			if animations[animation_name].get(section, null) != (
 				(sources.cast as Dictionary)["animations"][animation_name].get(section, null)
 			):
 				return _set_error("Final %s/%s differs from the accepted cast-set base" % [animation_name, section])
+	for section: String in ["bones", "deform", "drawOrder"]:
+		if animations.cast.get(section, null) != (
+			(sources.cast as Dictionary)["animations"]["cast"].get(section, null)
+		):
+			return _set_error("Final cast/%s differs from the accepted cast-set base" % section)
+	var expected_cast_events: Array = (
+		(sources.cast as Dictionary)["animations"]["cast"].get("events", []).duplicate(true)
+	)
+	expected_cast_events.push_front({"time": 0.0, "name": "clear_vfx"})
+	if animations.cast.get("events", []) != expected_cast_events:
+		return _set_error("Final cast/events must add only clear_vfx@0 before the accepted cast-set events")
 	# Prove that the assembler changed no field outside the reviewed deltas.
 	var normalized: Dictionary = skeleton.duplicate(true)
 	normalized["skeleton"]["hash"] = (sources.cast as Dictionary)["skeleton"]["hash"]
@@ -341,8 +356,11 @@ func _validate_merged_skeleton(skeleton: Dictionary, sources: Dictionary) -> boo
 		normalized["animations"]["die"]["bones"][bone_name] = (
 			(sources.cast as Dictionary)["animations"]["die"]["bones"][bone_name].duplicate(true)
 		)
+	normalized["animations"]["cast"]["events"] = (
+		(sources.cast as Dictionary)["animations"]["cast"]["events"].duplicate(true)
+	)
 	if normalized != (sources.cast as Dictionary):
-		return _set_error("Final skeleton contains a change outside the reviewed merge fields")
+		return _set_error("Final skeleton contains a change outside the reviewed donor fields and cast restart clear")
 	return true
 
 
