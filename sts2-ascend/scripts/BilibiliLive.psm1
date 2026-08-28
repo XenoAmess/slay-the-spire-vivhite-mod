@@ -211,6 +211,33 @@ function Get-WindowSnapshot {
     }
 }
 
+function Invoke-WindowProcessActivation {
+    param([Parameter(Mandatory = $true)][IntPtr]$WindowHandle)
+
+    [uint32]$targetPid = 0
+    [void][BilibiliLiveNative]::GetWindowThreadProcessId($WindowHandle, [ref]$targetPid)
+    if ($targetPid -le 0) { return $false }
+
+    $automationShell = $null
+    try {
+        # SetForegroundWindow is routinely denied when the public entrypoint is
+        # launched from Codex/Task Scheduler instead of the foreground process.
+        # WScript.AppActivate asks Windows to activate the exact owning process;
+        # the caller still verifies the exact HWND before accepting success.
+        $automationShell = New-Object -ComObject WScript.Shell
+        return [bool]$automationShell.AppActivate([int]$targetPid)
+    }
+    catch {
+        Write-Verbose "WScript.AppActivate failed for window $WindowHandle (pid $targetPid): $($_.Exception.Message)"
+        return $false
+    }
+    finally {
+        if ($null -ne $automationShell) {
+            [void][Runtime.InteropServices.Marshal]::ReleaseComObject($automationShell)
+        }
+    }
+}
+
 function Set-WindowAutomationForeground {
     param(
         [Parameter(Mandatory = $true)][IntPtr]$WindowHandle,
@@ -241,7 +268,20 @@ function Set-WindowAutomationForeground {
         Start-Sleep -Milliseconds 200
     }
     if ([BilibiliLiveNative]::GetForegroundWindow() -ne $WindowHandle) {
+        [void](Invoke-WindowProcessActivation -WindowHandle $WindowHandle)
+        Start-Sleep -Milliseconds 250
+    }
+    if ([BilibiliLiveNative]::GetForegroundWindow() -ne $WindowHandle) {
         throw "Could not make window $WindowHandle the foreground window. Run from an interactive desktop session."
+    }
+    if ($TopMost) {
+        # Activation can reorder or clear the TOPMOST band (the game does this
+        # during its own focus transition), so make TOPMOST the final mutation.
+        $flags = $script:SwpNoMove -bor $script:SwpNoSize -bor $script:SwpShowWindow
+        if (-not [BilibiliLiveNative]::SetWindowPos(
+                $WindowHandle, $script:HwndTopMost, 0, 0, 0, 0, $flags)) {
+            throw "SetWindowPos(HWND_TOPMOST) failed after activating window $WindowHandle."
+        }
     }
 }
 

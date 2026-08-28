@@ -106,6 +106,31 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("SwpNoActivate", module)
         self.assertIn('"ASCEND-VISION"', module)
 
+    def test_game_foreground_has_exact_process_activation_fallback(self) -> None:
+        module = MODULE.read_text(encoding="utf-8")
+        self.assertIn("function Invoke-WindowProcessActivation", module)
+        self.assertIn("GetWindowThreadProcessId($WindowHandle, [ref]$targetPid)", module)
+        self.assertIn("New-Object -ComObject WScript.Shell", module)
+        self.assertIn("AppActivate([int]$targetPid)", module)
+        self.assertIn(
+            "[void](Invoke-WindowProcessActivation -WindowHandle $WindowHandle)",
+            module,
+        )
+        self.assertLess(
+            module.index("[void](Invoke-WindowProcessActivation -WindowHandle $WindowHandle)"),
+            module.index('throw "Could not make window $WindowHandle the foreground window.'),
+        )
+
+    def test_topmost_is_reasserted_after_foreground_activation(self) -> None:
+        module = MODULE.read_text(encoding="utf-8")
+        function_start = module.index("function Set-WindowAutomationForeground")
+        function_end = module.index("function Set-WindowNotTopMost", function_start)
+        function_body = module[function_start:function_end]
+        activation = function_body.index("Invoke-WindowProcessActivation")
+        final_topmost = function_body.rindex("SetWindowPos(")
+        self.assertLess(activation, final_topmost)
+        self.assertIn("make TOPMOST the final mutation", function_body)
+
     def test_every_game_topmost_entrypoint_reorders_viewer(self) -> None:
         module = MODULE.read_text(encoding="utf-8")
         smoke = SMOKE.read_text(encoding="utf-8")
