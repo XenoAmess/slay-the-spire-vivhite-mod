@@ -91,7 +91,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-154717-1787816837897736800-a344792f -->
 | 2026-08-27 15:47:17 | 第 698~765 局范围内的 64 局 | `a344792f` | process_exit | kimi-for-coding/k3 | 已审计并删除 `c1f63f4` | （已删除） | K3 exit=1；64 局输入批次未产生 patch/report/files/stash/untracked 成果，仅有 ignored 输入提示；远端确认审计提交后删除 |
 <!-- rejection:20260827-163228-1787819548309386500-5274ccbe -->
-| 2026-08-27 16:32:28 | 第 760~765 局 | `5274ccbe` | process_exit | opencode-go/glm-5.3-flash@max | 待重试/补合 | `knowledge/code_backups/review_salvage/20260827-163228-1787819548309386500-5274ccbe` | 复盘进程未成功完成 |
+| 2026-08-27 16:32:28 | 第 760~765 局 | `5274ccbe` | process_exit | opencode-go/glm-5.3-flash@max | GLM 已补合并闭环 `ea82b4db` | （闭环清理） | GLM 重审结论与提交 ea82b4db 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260827-184302-1787827382348088900-513622f2 -->
 | 2026-08-27 18:43:02 | 第 698~770 局范围内的 69 局 | `513622f2` | process_exit | opencode-go/glm-5.3-flash@max | 待重试/补合 | `knowledge/code_backups/review_salvage/20260827-184302-1787827382348088900-513622f2` | 复盘进程未成功完成 |
 <!-- rejection:20260827-213808-1787837888987005700-bf2c4f98 -->
