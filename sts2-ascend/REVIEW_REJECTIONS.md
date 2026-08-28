@@ -93,7 +93,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260827-163228-1787819548309386500-5274ccbe -->
 | 2026-08-27 16:32:28 | 第 760~765 局 | `5274ccbe` | process_exit | opencode-go/glm-5.3-flash@max | GLM 已补合并闭环 `ea82b4db` | （闭环清理） | GLM 重审结论与提交 ea82b4db 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260827-184302-1787827382348088900-513622f2 -->
-| 2026-08-27 18:43:02 | 第 698~770 局范围内的 69 局 | `513622f2` | process_exit | opencode-go/glm-5.3-flash@max | 待重试/补合 | `knowledge/code_backups/review_salvage/20260827-184302-1787827382348088900-513622f2` | 复盘进程未成功完成 |
+| 2026-08-27 18:43:02 | 第 698~770 局范围内的 69 局 | `513622f2` | process_exit | opencode-go/glm-5.3-flash@max | GLM 已补合并闭环 `e281db8f` | （闭环清理） | GLM 重审结论与提交 e281db8f 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260827-213808-1787837888987005700-bf2c4f98 -->
 | 2026-08-27 21:38:08 | 第 802~807 局 | `bf2c4f98` | process_exit | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260827-213808-1787837888987005700-bf2c4f98` | 复盘进程未成功完成 |
 <!-- rejection:20260827-215023-1787838623754163300-cd0aa644 -->
