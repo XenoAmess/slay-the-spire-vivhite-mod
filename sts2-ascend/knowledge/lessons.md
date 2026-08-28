@@ -5694,3 +5694,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.63 → 0.60（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/918 胜，当前目标进阶 0
+
+## 第 919 局复盘（2026-08-28 20:41）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：HEADBUTT, TAUNT, RAMPAGE, TRUE_GRIT, FIGHT_ME, TWIN_STRIKE, INFLAME, SECOND_WIND, FIGHT_ME, IRON_WAVE, DEMON_FORM, FIGHT_ME, TWIN_STRIKE, WHIRLWIND, BREAKTHROUGH, BLUDGEON, BREAKTHROUGH, JUGGLING, TAUNT, PILLAGE, ARMAMENTS, UNMOVABLE
+- 本局遗物：卡戎之灰, VAJRA, 护喉甲, 碎石钻, ART_OF_WAR, 水银沙漏, 古钱币, STRAWBERRY, THE_ABACUS
+- 战斗记录：F22 Monster战 掉血0; F23 Monster战 掉血11; F25 Unknown战 掉血3; F28 Elite战 掉血29; F30 Elite战 掉血26; F33 Boss战 掉血79｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/91局)，FEED(24分/51局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（4回合掉血79，每回合20≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.60 → 0.63（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/919 胜，当前目标进阶 0
