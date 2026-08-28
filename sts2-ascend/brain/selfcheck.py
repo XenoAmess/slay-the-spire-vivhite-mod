@@ -2658,6 +2658,49 @@ def main() -> int:
     assert abs(v_weak_on - v_weak_off) < 1e-6, \
         f"打击级弱攻击被饥饿加成虚高: on={v_weak_on:.2f} off={v_weak_off:.2f}"
 
+    # 3kz) 引擎复制件密度放行（第856~876局批复盘 ENGINE_DUP_DENSITY_RELEASE）：
+    #      输出饥饿最终解在拿牌端引擎密度（833~842批定案），但复制件惩罚让高质
+    #      攻击/活跃引擎的第3+张永远让位——876局引擎线成型后缺口仍66%，生涯0胜。
+    #      深缺口下高质攻击（总伤≥12 且 ≥7伤/能耗）与活跃成长引擎的复制件罚分
+    #      按 dup_density_release_frac 折减；弱攻击/防御功能牌不放行（71局
+    #      「耸肩×5」注水病不复发）；浅缺口（deficit<门槛）与缺键行为同旧口径。
+    #      复用 3tt 的 starved_deck/big_atk/weak_atk 夹具：加 2 张 CINDER 后
+    #      burst=24，线 40 → deficit 0.40 ≥ 门槛 0.30（放行生效区）
+    _saved_floor_kz = know.policy.get("deck_burst_floor", 45.0)
+    know.policy["deck_burst_floor"] = 40.0
+    dup_pair = [dict(big_atk), dict(big_atk)] + [dict(c) for c in starved_deck]
+    v_dup_on = pol.eval_reward_card(dict(big_atk), [dict(c) for c in dup_pair])
+    _saved_frac = know.policy.get("dup_density_release_frac", 0.5)
+    know.policy["dup_density_release_frac"] = 0.0    # 整体关闭 → 旧口径罚分全额
+    v_dup_off = pol.eval_reward_card(dict(big_atk), [dict(c) for c in dup_pair])
+    know.policy["dup_density_release_frac"] = _saved_frac
+    assert v_dup_on - v_dup_off >= 1.4, \
+        f"深缺口未放行高质攻击复制件（deficit 应≈0.40）: on={v_dup_on:.2f} off={v_dup_off:.2f}"
+    _det_on: list[str] = []
+    pol.eval_reward_card(dict(big_atk), [dict(c) for c in dup_pair], detail=_det_on)
+    assert _det_on and "密度放行" in _det_on[0], \
+        f"放行路径未留观测标记: {_det_on}"
+    _det_off: list[str] = []
+    know.policy["dup_density_release_frac"] = 0.0
+    pol.eval_reward_card(dict(big_atk), [dict(c) for c in dup_pair], detail=_det_off)
+    know.policy["dup_density_release_frac"] = _saved_frac
+    assert not _det_off, f"关闭开关后仍留放行标记: {_det_off}"
+    weak_pair = [dict(weak_atk), dict(weak_atk)] + [dict(c) for c in starved_deck]
+    v_weak_dup = pol.eval_reward_card(dict(weak_atk), [dict(c) for c in weak_pair])
+    know.policy["dup_density_release_frac"] = 0.0
+    v_weak_dup_off = pol.eval_reward_card(dict(weak_atk), [dict(c) for c in weak_pair])
+    know.policy["dup_density_release_frac"] = _saved_frac
+    assert abs(v_weak_dup - v_weak_dup_off) < 1e-6, \
+        f"打击级弱攻击被误放行: on={v_weak_dup:.2f} off={v_weak_dup_off:.2f}"
+    _saved_gate = know.policy.get("dup_density_release_deficit", 0.30)
+    know.policy["dup_density_release_deficit"] = 0.9    # 门槛拉高 → 视同浅缺口不放行
+    v_dup_shallow = pol.eval_reward_card(dict(big_atk), [dict(c) for c in dup_pair])
+    know.policy["dup_density_release_deficit"] = _saved_gate
+    assert abs(v_dup_shallow - v_dup_off) < 1e-6, \
+        f"浅缺口被误放行: shallow={v_dup_shallow:.2f} off={v_dup_off:.2f}"
+    know.policy["deck_burst_floor"] = _saved_floor_kz
+
+
     # 3uu) 长战演化顶格治理（第 88~89 批复盘）：kill_bonus 13→14→15 单向漂移
     #      ——0 胜生涯里「长战磨死」每局触发，信号只会把旋钮推向边界。余量不足
     #      一步时停止加码并显式留痕；行程充足时行为与旧版一致（3pp 已覆盖）。

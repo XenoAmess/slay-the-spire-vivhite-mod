@@ -4672,7 +4672,8 @@ class Policy:
 
     def eval_reward_card(self, card: dict, deck: list[dict],
                          max_hp: int | None = None,
-                         act: int | None = None) -> float:
+                         act: int | None = None,
+                         detail: list[str] | None = None) -> float:
         """卡牌拾取/购买价值评估。
 
         act 给定时饥饿线换用分幕 Boss 口径（第 506~515 局批复盘新增）：
@@ -4834,7 +4835,28 @@ class Policy:
         _copies = sum(1 for c in deck
                       if ((c.get("card_id") or "").upper().rstrip("+") == _base_id)) if deck else 0
         if _copies >= 2:
-            value -= (_copies - 1) * float(pol.get("duplicate_pick_penalty", 3.0))
+            _dup_pen = float(pol.get("duplicate_pick_penalty", 3.0))
+            # 引擎复制件密度放行（ENGINE_DUP_DENSITY_RELEASE，第856~876局批复盘）：
+            # 输出饥饿的最终解在拿牌端引擎密度（833~842批定案、执行端漏洞闭合后
+            # 0/876 未翻转），但复制件惩罚让高质攻击/活跃引擎的第3+张永远让位——
+            # 876 局引擎线（燃烧+/熔融之拳×2/契约终结+）成型后 burst 缺口仍 66%，
+            # 生涯 0 胜。深缺口（≥dup_density_release_deficit）时对通过高质门槛
+            # （与 burst_starve 加分同门：总伤≥12 且 ≥7伤/能耗）的攻击牌或活跃
+            # 成长引擎，复制件惩罚按 dup_density_release_frac 折减，允许已实证
+            # 引擎堆叠成原型；防御/功能牌不受放行（71局「耸肩×5」注水病不复发），
+            # 缺键/浅缺口行为与旧口径严格一致
+            if (_dup_pen > 0 and deck and burst_starved
+                    and (self._scaling_power_active(card, deck)
+                         or (dmg * hits >= 12 and dmg * hits / max(1, cost) >= 7.0))):
+                _rel = clamp(1.0 - burst / max(1e-6, _line), 0.0, 1.0)
+                if _rel >= float(pol.get("dup_density_release_deficit", 0.30)):
+                    _frac = clamp(float(pol.get("dup_density_release_frac", 0.5)), 0.0, 1.0)
+                    if _frac > 0.0:
+                        _dup_pen *= (1.0 - _frac)
+                        if detail is not None:
+                            detail.append(
+                                f"复制件密度放行（第{_copies + 1}张同引擎，罚分×{1.0 - _frac:.2f}）")
+            value -= (_copies - 1) * _dup_pen
         # 「拿了不打」贬值（第 71 局实证）：FLAME_BARRIER 生涯 13 拿 6 打——
         # 长期占据手牌打不出去的牌等于卡组注水。生涯 picked≥unplayed_min_picked
         # 且 plays ≤ unplayed_play_rate × picked 时，拾取端额外惩罚
@@ -4907,14 +4929,17 @@ class Policy:
             self._record_card_offer("REWARD", state, cards)
             _mh = max(1, int(run.get("max_hp", 1) or 1))
             _act = self._floor_act(floor)
-            all_scored = sorted(
-                ((self.eval_reward_card(c, deck, max_hp=_mh, act=_act), c)
-                 for c in cards),
-                key=lambda row: (-row[0], str(row[1].get("card_id") or "")))
-            scored = [row for row in all_scored
+            def _score_card(c):
+                _det: list[str] = []
+                return (self.eval_reward_card(c, deck, max_hp=_mh, act=_act, detail=_det),
+                        c, _det)
+
+            all_scored = sorted((_score_card(c) for c in cards),
+                                key=lambda row: (-row[0], str(row[1].get("card_id") or "")))
+            scored = [row[:2] for row in all_scored
                       if self._reward_card_cooldowns.get(
                           (row[1].get("index"), str(row[1].get("card_id") or "")), 0) <= 0]
-            for value, card in all_scored:
+            for value, card, _c_det in all_scored:
                 cooled = self._reward_card_cooldowns.get(
                     (card.get("index"), str(card.get("card_id") or "")), 0) > 0
                 self._trace_candidate(
@@ -4926,7 +4951,10 @@ class Policy:
                 self._trace_gate("GATE 精确目标冷却", "wait", "全部候选处于短冷却")
                 return Decision(None, {}, "奖励选牌：候选刚被状态竞争拒绝，短暂冷却后重试", wait=0.7)
             best_v, best = scored[0]
-            vals = [f"{c.get('name')}={v:.1f}" for v, c in all_scored]
+            vals = [f"{c.get('name')}={v:.1f}" for v, c, _d in all_scored]
+            _det_map = {(c.get("index"), str(c.get("card_id") or "")): d
+                        for _v, c, d in all_scored}
+            _best_det = _det_map.get((best.get("index"), str(best.get("card_id") or "")))
             pick_line = self._pick_threshold(deck, max_hp=_mh, act=_act)
             thin_take = self._thin_deck_must_pick(deck, best_v)
             self._trace_gate(
@@ -4945,9 +4973,10 @@ class Policy:
                          str(best.get("card_id") or ""))]
                 if explore_tag is not None:
                     tags.append(explore_tag)
+                _det_note = f"；{'；'.join(_best_det)}" if _best_det else ""
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
-                                f"{explore_note}；候选：{', '.join(vals)}",
+                                f"{_det_note}{explore_note}；候选：{', '.join(vals)}",
                                 tags=tags, wait=0.8)
             all_best_v = all_scored[0][0]
             cooling_take = (all_best_v >= pick_line
