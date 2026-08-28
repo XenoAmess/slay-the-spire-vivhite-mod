@@ -1,6 +1,6 @@
 {
   "skeleton": {
-    "hash": "vivhite-split-mesh-preview-v2-bind-mix-easing",
+    "hash": "vivhite-split-mesh-preview-v3-hybrid-death-v2",
     "spine": "4.2.43",
     "x": -900.0,
     "y": -260.0,
@@ -23,6 +23,12 @@
       "parent": "root",
       "x": 0.0,
       "y": 0.0
+    },
+    {
+      "name": "vivhite_death_pose",
+      "parent": "root",
+      "x": 55.0,
+      "y": 188.0
     },
     {
       "name": "vivhite_pelvis",
@@ -360,6 +366,10 @@
     {
       "name": "death_arm_right_hand",
       "bone": "vivhite_hand_right"
+    },
+    {
+      "name": "vivhite_death_body",
+      "bone": "vivhite_death_pose"
     },
     {
       "name": "slash_mesh",
@@ -1489,6 +1499,13 @@
             "hull": 4,
             "width": 155.0,
             "height": 155.493630573248
+          }
+        },
+        "vivhite_death_body": {
+          "vivhite_combat_death_side": {
+            "path": "vivhite_combat_death_side",
+            "width": 1302.0,
+            "height": 970.8571428571
           }
         },
         "slash_mesh": {
@@ -4788,6 +4805,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_left_thigh"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4804,6 +4825,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_left_lower"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4820,6 +4845,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_left_foot"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4836,6 +4865,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_right_thigh"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4852,6 +4885,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_right_lower"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4868,6 +4905,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_leg_right_foot"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4884,6 +4925,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_left_upper"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4900,6 +4945,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_left_forearm"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4916,6 +4965,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_left_hand"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4932,6 +4985,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_torso"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4948,6 +5005,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_skirt"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4964,6 +5025,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_head_front_hair_butterfly"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4980,6 +5045,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_right_upper"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -4996,6 +5065,10 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_right_forearm"
+            },
+            {
+              "time": 1.05,
+              "name": null
             }
           ]
         },
@@ -5012,6 +5085,22 @@
             {
               "time": 0.0,
               "name": "vivhite_death_arm_right_hand"
+            },
+            {
+              "time": 1.05,
+              "name": null
+            }
+          ]
+        },
+        "vivhite_death_body": {
+          "attachment": [
+            {
+              "time": 0.0,
+              "name": null
+            },
+            {
+              "time": 1.05,
+              "name": "vivhite_combat_death_side"
             }
           ]
         }
@@ -6036,6 +6125,120 @@
             {
               "time": 2.3333335,
               "value": 18.0
+            }
+          ]
+        },
+        "vivhite_death_pose": {
+          "translate": [
+            {
+              "time": 0.0,
+              "x": -32.0,
+              "y": 356.8,
+              "curve": [
+                0.16400000244379,
+                -32.0,
+                0.557600005865097,
+                -32.0,
+                0.16400000244379,
+                356.8,
+                0.557600005865097,
+                356.8
+              ]
+            },
+            {
+              "time": 0.82,
+              "x": -32.0,
+              "y": 356.8,
+              "curve": [
+                0.866000000685453,
+                -32.0,
+                0.976400001645088,
+                -18.0,
+                0.866000000685453,
+                356.8,
+                0.976400001645088,
+                298.8
+              ]
+            },
+            {
+              "time": 1.05,
+              "x": -18.0,
+              "y": 298.8,
+              "curve": [
+                1.07400000035763,
+                -18.0,
+                1.13160000085831,
+                0.0,
+                1.07400000035763,
+                298.8,
+                1.13160000085831,
+                0.0
+              ]
+            },
+            {
+              "time": 1.17,
+              "x": 0.0,
+              "y": 0.0,
+              "curve": [
+                1.19800000041723,
+                0.0,
+                1.26520000100136,
+                7.0,
+                1.19800000041723,
+                0.0,
+                1.26520000100136,
+                11.0
+              ]
+            },
+            {
+              "time": 1.31,
+              "x": 7.0,
+              "y": 11.0,
+              "curve": [
+                1.35400000065565,
+                7.0,
+                1.45960000157356,
+                1.5,
+                1.35400000065565,
+                11.0,
+                1.45960000157356,
+                2.5
+              ]
+            },
+            {
+              "time": 1.53,
+              "x": 1.5,
+              "y": 2.5,
+              "curve": [
+                1.58400000080466,
+                1.5,
+                1.71360000193119,
+                0.0,
+                1.58400000080466,
+                2.5,
+                1.71360000193119,
+                0.0
+              ]
+            },
+            {
+              "time": 1.8,
+              "x": 0.0,
+              "y": 0.0,
+              "curve": [
+                1.90666670158946,
+                0.0,
+                2.1626667838147,
+                0.0,
+                1.90666670158946,
+                0.0,
+                2.1626667838147,
+                0.0
+              ]
+            },
+            {
+              "time": 2.3333335,
+              "x": 0.0,
+              "y": 0.0
             }
           ]
         }

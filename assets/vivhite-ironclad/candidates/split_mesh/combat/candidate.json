@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "split_mesh",
-  "label": "拆件 + 层级骨链（离线对照候选）",
+  "label": "拆件 + 层级骨链 + 整图落地（离线 Hybrid 候选）",
   "status": "preview_only_not_publishable",
   "mount_path": "res://candidates/split_mesh/combat",
   "resource": "vivhite_combat_split_mesh_skeleton_data.tres",
@@ -10,10 +10,11 @@
     "vivhite_combat_split_mesh.spjson",
     "vivhite_combat_split_mesh.spatlas",
     "vivhite_combat_split_mesh.png",
+    "vivhite_combat_split_mesh_death.png",
     "vivhite_combat_split_mesh_skeleton_data.tres"
   ],
   "source_contract": {
-    "classification": "single_full_body_single_frame_rgba_not_a_sprite_sheet",
+    "body_classification": "single_full_body_single_frame_rgba_not_a_sprite_sheet",
     "body": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-body-master-v1.png",
     "body_canvas_px": [
       1680,
@@ -24,6 +25,18 @@
       9,
       1666,
       2486
+    ],
+    "death_classification": "single_full_body_side_collapse_single_frame_rgba_not_a_sprite_sheet",
+    "death": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-death-side-collapse-v2.png",
+    "death_canvas_px": [
+      2512,
+      1680
+    ],
+    "death_alpha_bounds_px": [
+      0,
+      19,
+      2478,
+      1661
     ],
     "arc": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-magic-arc-v1.png",
     "sigil": "assets/vivhite-ironclad/custom/character_select/sources/vivhite-character-select-magic-sigil-v1.png"
@@ -356,26 +369,31 @@
       "id": "limbs",
       "reason": "Every shoulder/elbow/wrist/hip/knee/ankle is continuous in the source and the global halo crosses each cut.",
       "delivery": "Left/right upper arm, forearm, hand, thigh, lower leg and foot as individually generated native-transparent parts."
-    },
-    {
-      "id": "death_set",
-      "reason": "A standing source cannot reveal compressed torso, side hair, bent-knee undersides or occluded limbs after collapse.",
-      "delivery": "Dedicated side-collapse head/hair, torso/skirt and limb attachment set matching the death slot names in this candidate."
     }
   ],
   "death_contract": {
     "dedicated_slot_prefix": "death_",
     "dedicated_attachment_prefix": "vivhite_death_",
-    "preview_uses_same_unmodified_master_uvs": true,
-    "publishable_version_requires_independent_death_art": true,
+    "preview_parts_use_same_unmodified_standing_master_uvs": true,
+    "landing_slot": "vivhite_death_body",
+    "landing_bone": "vivhite_death_pose",
+    "landing_attachment": "vivhite_combat_death_side",
+    "landing_source": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-death-side-collapse-v2.png",
+    "landing_mode": "one rigid full-body side-collapse attachment on isolated atlas page",
+    "publishable_version_requires_independent_death_art": false,
     "clear_vfx_time": 0.0,
-    "collapse_method": "staggered pelvis/torso/head/arm/hip/knee/ankle chains; root rotation capped at 7 degrees"
+    "atomic_swap_time": 1.05,
+    "impact_time": 1.17,
+    "settle_end": 1.8,
+    "animation_end": 2.3333335,
+    "collapse_method": "staggered pelvis/torso/head/arm/hip/knee/ankle chains before landing; root rotation capped at 7 degrees; atomic rigid side-collapse swap, 120 ms fall, one rebound, then still"
   },
   "known_preview_artifacts": [
     "The source has a whole-body semi-transparent halo crossing every joint cut.",
     "Flattened joints have no hidden pixels; large rotations expose seams or duplicated overlap bands.",
     "Head, front hair, rear hair and butterfly remain one temporary attachment.",
-    "Death slots prove switching and chained collapse only; they are not publishable death drawings."
+    "The death-preview parts atomically disappear at landing so no split/whole double-image ghost remains; the accepted v2 side-collapse source owns the final silhouette.",
+    "Preview candidate defect: die@1.04 remains a near-vertical curled silhouette (alpha bbox 237,445,242,250), while die@1.05 is the horizontal landing art (176,464,332,174). The atomic frame therefore jumps 61 px left, expands 90 px in width and loses 76 px in height. It fixes empty/double-image frames but not pose continuity, so this candidate must not be treated as final animation quality, published, or connected to the runtime skin."
   ],
   "safety": {
     "evolink_paid_calls": 0,

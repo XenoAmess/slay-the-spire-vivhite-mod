@@ -6,6 +6,21 @@ extends SceneTree
 
 const DATA_PATH := "res://tools/candidates/whole_mesh/vivhite_combat_skeleton_data.tres"
 const JSON_PATH := "res://tools/candidates/whole_mesh/vivhite_combat.spjson"
+const ATLAS_PATH := "res://tools/candidates/whole_mesh/vivhite_combat.spatlas"
+const DEATH_PAGE_PATH := "res://tools/candidates/whole_mesh/vivhite_combat_death.png"
+const DEATH_SLOT := "vivhite_death_body"
+const DEATH_BONE := "vivhite_death_pose"
+const DEATH_REGION := "vivhite_combat_death_side"
+const DEATH_PREP_TIME := 0.94
+const DEATH_PRE_SWAP_TIME := 1.0499
+const DEATH_SWAP_TIME := 1.05
+const DEATH_CONTACT_TIME := 1.1666667
+const DEATH_REBOUND_TIME := 1.30
+const DEATH_SETTLE_TIME := 1.80
+const DEATH_SETUP_Y := 188.0
+const DEATH_SOLID_CONTACT_SHIFT := 224.8
+const DEATH_SWAP_OFFSET_Y := 298.8
+const DEATH_SWAP_WORLD_Y := 486.8
 const EXPECTED_ANIMATIONS := {
 	"attack": 1.1666667,
 	"attack_heavy": 1.5333334,
@@ -34,7 +49,7 @@ const REQUIRED_PARENTS := {
 	"vivhite_shin_right": "vivhite_thigh_right",
 	"vivhite_foot_right": "vivhite_shin_right",
 }
-const REQUIRED_SLOTS := ["slash_mesh", "eye_attach_slot"]
+const REQUIRED_SLOTS := ["slash_mesh", "eye_attach_slot", DEATH_SLOT]
 const REQUIRED_EVENTS := ["attack_slash_start", "heavy_slash_start", "cast_eyes_start", "clear_vfx"]
 const SCENE_SCALE := 0.28
 const ATTACK_FORWARD_MIN := 95.0
@@ -64,6 +79,7 @@ func _run() -> void:
 		_finish({})
 		return
 	_validate_raw_contract(parsed)
+	_validate_atlas_contract()
 
 	var data: Resource = ResourceLoader.load(DATA_PATH)
 	if data == null or not data.is_class("SpineSkeletonDataResource"):
@@ -104,17 +120,39 @@ func _run() -> void:
 
 func _validate_raw_contract(skeleton: Dictionary) -> void:
 	var parents := {}
+	var bones_by_name := {}
+	var slot_bones := {}
 	for bone: Dictionary in skeleton.get("bones", []):
 		parents[str(bone.get("name", ""))] = str(bone.get("parent", ""))
+		bones_by_name[str(bone.get("name", ""))] = bone
+	for slot: Dictionary in skeleton.get("slots", []):
+		slot_bones[str(slot.get("name", ""))] = str(slot.get("bone", ""))
 	for child: String in REQUIRED_PARENTS:
 		if str(parents.get(child, "<missing>")) != str(REQUIRED_PARENTS[child]):
 			_errors.append("Hierarchy mismatch: %s must directly parent %s" % [REQUIRED_PARENTS[child], child])
 	var body_attachments: Dictionary = skeleton["skins"][0]["attachments"]["vivhite_body"]
 	if body_attachments.size() != 1 or not body_attachments.has("vivhite_combat_body"):
-		_errors.append("Candidate is not exactly one full-body mesh attachment")
+		_errors.append("Candidate does not retain exactly one standing full-body mesh attachment")
+	var death_attachments: Dictionary = skeleton["skins"][0]["attachments"].get(DEATH_SLOT, {})
+	if death_attachments.size() != 1 or not death_attachments.has(DEATH_REGION):
+		_errors.append("Candidate does not contain exactly one isolated side-collapse attachment")
+	elif str(death_attachments[DEATH_REGION].get("type", "region")) != "region":
+		_errors.append("Side-collapse attachment is not a rigid region")
+	if str(slot_bones.get(DEATH_SLOT, "<missing>")) != DEATH_BONE:
+		_errors.append("Side-collapse slot is not bound to its isolated death-pose bone")
+	if not bones_by_name.has(DEATH_BONE):
+		_errors.append("Side-collapse death-pose bone is missing")
+	elif absf(float(bones_by_name[DEATH_BONE].get("y", 0.0)) - DEATH_SETUP_Y) > 0.00001:
+		_errors.append("Death-pose setup y no longer includes the -224.8-unit solid-contact shift")
 	for animation_name: String in EXPECTED_ANIMATIONS:
-		if skeleton["animations"][animation_name].get("slots", {}).has("vivhite_body"):
-			_errors.append("Animation %s switches the full-body attachment" % animation_name)
+		if animation_name == "die":
+			continue
+		var slots: Dictionary = skeleton["animations"][animation_name].get("slots", {})
+		if slots.has("vivhite_body") or slots.has(DEATH_SLOT):
+			_errors.append("Only die may drive the standing/death attachment swap; found %s" % animation_name)
+	_validate_death_swap(skeleton["animations"]["die"])
+	_validate_death_preswap_pose(skeleton["animations"]["die"])
+	_validate_death_landing_alignment(skeleton["animations"]["die"])
 	var die_events: Array = skeleton["animations"]["die"].get("events", [])
 	var clear_at_zero := false
 	for event: Dictionary in die_events:
@@ -133,6 +171,118 @@ func _validate_raw_contract(skeleton: Dictionary) -> void:
 	if hurt_backward < HURT_BACKWARD_MIN:
 		_errors.append("hurt backward root peak %.3f is below 95 Spine units" % hurt_backward)
 	_validate_easing_contract(skeleton)
+
+
+func _validate_death_swap(animation: Dictionary) -> void:
+	var slots: Dictionary = animation.get("slots", {})
+	if not slots.has("vivhite_body") or not slots.has(DEATH_SLOT):
+		_errors.append("die does not drive both standing and side-collapse slots")
+		return
+	var standing: Dictionary = slots["vivhite_body"]
+	var collapse: Dictionary = slots[DEATH_SLOT]
+	var standing_attachments: Array = standing.get("attachment", [])
+	var collapse_attachments: Array = collapse.get("attachment", [])
+	if standing_attachments.size() != 2 or collapse_attachments.size() != 2:
+		_errors.append("die attachment swap does not have exactly two keys per slot")
+		return
+	if absf(float(standing_attachments[0].get("time", 0.0))) > 0.00001:
+		_errors.append("Standing mesh setup key is not at t=0")
+	if str(standing_attachments[0].get("name", "")) != "vivhite_combat_body":
+		_errors.append("Standing mesh setup key uses the wrong attachment")
+	if absf(float(standing_attachments[1].get("time", -1.0)) - DEATH_SWAP_TIME) > 0.00001:
+		_errors.append("Standing mesh does not detach atomically at %.2f" % DEATH_SWAP_TIME)
+	if standing_attachments[1].get("name", "sentinel") != null:
+		_errors.append("Standing mesh detach key is not null")
+	if absf(float(collapse_attachments[0].get("time", 0.0))) > 0.00001:
+		_errors.append("Side-collapse empty setup key is not at t=0")
+	if collapse_attachments[0].get("name", "sentinel") != null:
+		_errors.append("Side-collapse setup key must be null")
+	if absf(float(collapse_attachments[1].get("time", -1.0)) - DEATH_SWAP_TIME) > 0.00001:
+		_errors.append("Side-collapse art does not attach atomically at %.2f" % DEATH_SWAP_TIME)
+	if str(collapse_attachments[1].get("name", "")) != DEATH_REGION:
+		_errors.append("Side-collapse attachment key uses the wrong region")
+	if standing.has("rgba") or collapse.has("rgba"):
+		_errors.append("Atomic death swap must not contain RGBA crossfade timelines")
+
+
+func _validate_death_preswap_pose(animation: Dictionary) -> void:
+	var bones: Dictionary = animation.get("bones", {})
+	if not bones.has("vivhite_rig"):
+		_errors.append("die is missing the weighted-mesh root timeline")
+		return
+	var root_translate: Array = bones["vivhite_rig"].get("translate", [])
+	var root_rotate: Array = bones["vivhite_rig"].get("rotate", [])
+	var prep_x = _axis_value_at_time(root_translate, DEATH_PREP_TIME, "x")
+	var prep_y = _axis_value_at_time(root_translate, DEATH_PREP_TIME, "y")
+	var pre_swap_x = _axis_value_at_time(root_translate, DEATH_PRE_SWAP_TIME, "x")
+	var pre_swap_y = _axis_value_at_time(root_translate, DEATH_PRE_SWAP_TIME, "y")
+	var pre_swap_rotation = _value_at_time(root_rotate, DEATH_PRE_SWAP_TIME)
+	if prep_x == null or prep_y == null:
+		_errors.append("die is missing the 0.94-second articulated side-fall preparation key")
+	if pre_swap_x == null or float(pre_swap_x) > -350.0:
+		_errors.append("die pre-swap pose does not shift at least 350 units left")
+	if pre_swap_y == null or absf(float(pre_swap_y) - 150.0) > 0.00001:
+		_errors.append("die pre-swap pose lost its 150-unit floor-preserving offset")
+	if pre_swap_rotation == null or float(pre_swap_rotation) > -45.0:
+		_errors.append("die pre-swap pose does not reach at least -45 degrees of side tilt")
+	for limb_bone: String in [
+		"vivhite_upper_arm_left",
+		"vivhite_forearm_left",
+		"vivhite_upper_arm_right",
+		"vivhite_forearm_right",
+		"vivhite_thigh_left",
+		"vivhite_shin_left",
+		"vivhite_thigh_right",
+		"vivhite_shin_right",
+	]:
+		if not bones.has(limb_bone):
+			_errors.append("die is missing articulated limb timeline %s" % limb_bone)
+			continue
+		if _value_at_time(bones[limb_bone].get("rotate", []), DEATH_PRE_SWAP_TIME) == null:
+			_errors.append("die limb %s is missing its 1.0499-second gather key" % limb_bone)
+
+
+func _validate_death_landing_alignment(animation: Dictionary) -> void:
+	var death_bones: Dictionary = animation.get("bones", {})
+	if not death_bones.has(DEATH_BONE):
+		_errors.append("die does not animate the isolated death-pose bone")
+		return
+	var translate: Array = death_bones[DEATH_BONE].get("translate", [])
+	var swap_y = _axis_value_at_time(translate, DEATH_SWAP_TIME, "y")
+	var contact_y = _axis_value_at_time(translate, DEATH_CONTACT_TIME, "y")
+	var rebound_y = _axis_value_at_time(translate, DEATH_REBOUND_TIME, "y")
+	var settle_y = _axis_value_at_time(translate, DEATH_SETTLE_TIME, "y")
+	if swap_y == null or contact_y == null or rebound_y == null or settle_y == null:
+		_errors.append("die landing timeline is missing an atomic-swap/contact/rebound/settle key")
+		return
+	if absf(float(swap_y) - DEATH_SWAP_OFFSET_Y) > 0.00001:
+		_errors.append("die swap y no longer includes the +224.8-unit compensation")
+	if absf(DEATH_SETUP_Y + float(swap_y) - DEATH_SWAP_WORLD_Y) > 0.00001:
+		_errors.append("die swap world position changed during floor calibration")
+	if absf(float(contact_y)) > 0.00001:
+		_errors.append("die contact key does not land on the calibrated setup position")
+	if absf(float(rebound_y) - 11.0) > 0.00001:
+		_errors.append("die rebound peak is no longer 11 authored units")
+	if absf(float(settle_y)) > 0.00001:
+		_errors.append("die does not settle completely by 1.80 seconds")
+
+
+func _validate_atlas_contract() -> void:
+	var wrapper = JSON.parse_string(FileAccess.get_file_as_string(ATLAS_PATH))
+	if not wrapper is Dictionary:
+		_errors.append("Candidate atlas wrapper is unreadable: %s" % ATLAS_PATH)
+		return
+	var atlas_data := str(wrapper.get("atlas_data", ""))
+	if atlas_data.count("vivhite_combat_death.png\n") != 1:
+		_errors.append("Candidate atlas does not declare exactly one death page")
+	if atlas_data.count("%s\n" % DEATH_REGION) != 1:
+		_errors.append("Candidate atlas does not declare exactly one death region")
+	var death_texture := ResourceLoader.load(DEATH_PAGE_PATH, "Texture2D") as Texture2D
+	var death_page := death_texture.get_image() if death_texture != null else null
+	if death_page == null or death_page.is_empty():
+		_errors.append("Candidate death page could not be decoded")
+	elif death_page.get_size() != Vector2i(2048, 1536) or death_page.get_format() != Image.FORMAT_RGBA8:
+		_errors.append("Candidate death page is not 2048x1536 RGBA8")
 
 
 func _validate_easing_contract(skeleton: Dictionary) -> void:
@@ -177,9 +327,18 @@ func _sample_animation(data: Resource, animation_name: String, duration: float) 
 		sprite.queue_free()
 		return false
 	state.call("set_animation", animation_name, false, 0)
+	var sample_times: Array[float] = [0.0, duration * 0.25, duration * 0.50, duration * 0.75, duration]
+	if animation_name == "die":
+		sample_times.append_array([
+			DEATH_SWAP_TIME - 0.0001,
+			DEATH_SWAP_TIME,
+			DEATH_CONTACT_TIME,
+			DEATH_REBOUND_TIME,
+			DEATH_SETTLE_TIME,
+		])
+		sample_times.sort()
 	var previous := 0.0
-	for fraction: float in [0.0, 0.25, 0.50, 0.75, 1.0]:
-		var sample_time := duration * fraction
+	for sample_time: float in sample_times:
 		state.call("update", sample_time - previous)
 		state.call("apply", skeleton)
 		sprite.call("update_skeleton", 0.0)
@@ -190,6 +349,11 @@ func _sample_animation(data: Resource, animation_name: String, duration: float) 
 
 func _motion_metrics(skeleton: Dictionary) -> Dictionary:
 	var animations: Dictionary = skeleton["animations"]
+	var death_translate: Array = animations["die"]["bones"][DEATH_BONE]["translate"]
+	var landing_drop_units := (
+		float(_axis_value_at_time(death_translate, DEATH_SWAP_TIME, "y"))
+		- float(_axis_value_at_time(death_translate, DEATH_CONTACT_TIME, "y"))
+	)
 	return {
 		"scene_scale": SCENE_SCALE,
 		"attack_root_forward_peak_units": _axis_directional_peak(animations["attack"], "vivhite_rig", "x", true),
@@ -202,6 +366,20 @@ func _motion_metrics(skeleton: Dictionary) -> Dictionary:
 		"idle_root_y_range_px": _axis_range(animations["idle_loop"], "vivhite_rig", "y") * SCENE_SCALE,
 		"bezier_segment_count": _count_bezier_segments(skeleton),
 		"die_root_key_count": animations["die"]["bones"]["vivhite_rig"]["translate"].size(),
+		"die_preparation_time": DEATH_PREP_TIME,
+		"die_pre_swap_time": DEATH_PRE_SWAP_TIME,
+		"die_pre_swap_root_x_units": _axis_value_at_time(animations["die"]["bones"]["vivhite_rig"]["translate"], DEATH_PRE_SWAP_TIME, "x"),
+		"die_pre_swap_root_y_units": _axis_value_at_time(animations["die"]["bones"]["vivhite_rig"]["translate"], DEATH_PRE_SWAP_TIME, "y"),
+		"die_pre_swap_root_rotation_degrees": _value_at_time(animations["die"]["bones"]["vivhite_rig"]["rotate"], DEATH_PRE_SWAP_TIME),
+		"die_attachment_atomic_swap_time": DEATH_SWAP_TIME,
+		"die_contact_time": DEATH_CONTACT_TIME,
+		"die_rebound_time": DEATH_REBOUND_TIME,
+		"die_settle_time": DEATH_SETTLE_TIME,
+		"die_has_rgba_crossfade": false,
+		"die_solid_contact_shift_units": DEATH_SOLID_CONTACT_SHIFT,
+		"die_solid_contact_shift_px": DEATH_SOLID_CONTACT_SHIFT * SCENE_SCALE,
+		"die_visible_landing_drop_units": landing_drop_units,
+		"die_visible_landing_drop_px": landing_drop_units * SCENE_SCALE,
 		"direct_parent_contract_count": REQUIRED_PARENTS.size(),
 	}
 
@@ -227,6 +405,20 @@ func _axis_directional_peak(
 		var value := float(key.get(axis, 0.0))
 		peak = maxf(peak, value if positive else -value)
 	return peak
+
+
+func _axis_value_at_time(frames: Array, time: float, axis: String) -> Variant:
+	for frame: Dictionary in frames:
+		if absf(float(frame.get("time", 0.0)) - time) <= 0.00001:
+			return float(frame.get(axis, 0.0))
+	return null
+
+
+func _value_at_time(frames: Array, time: float) -> Variant:
+	for frame: Dictionary in frames:
+		if absf(float(frame.get("time", 0.0)) - time) <= 0.00001:
+			return float(frame.get("value", 0.0))
+	return null
 
 
 func _count_bezier_segments(skeleton: Dictionary) -> int:

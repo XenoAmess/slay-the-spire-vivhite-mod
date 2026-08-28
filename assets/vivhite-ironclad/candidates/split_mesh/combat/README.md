@@ -1,20 +1,24 @@
 # split_mesh 战斗候选
 
-这是“拆件 + 层级骨链”的**离线对照候选**，不是可发布素材，也不会被复制到
+这是“拆件 + 层级骨链 + 整图落地”的 **Hybrid 离线对照候选**，不是可发布素材，也不会被复制到
 `Vivhite/Vivhite/skins/ironclad/`。
 
 ## 当前能验证什么
 
-- 15 个可见部件分别挂在 33 根层级骨骼上；手臂是
+- 15 个可见部件分别挂在 33 根层级骨骼上，另有 1 根完全隔离的侧卧落地骨；手臂是
   `upper_arm -> forearm -> hand`，腿是 `thigh -> knee -> ankle -> foot`。
 - 保留战斗消费方要求的 8 个动画、`slash_mesh` / `eye_attach_slot`，以及
   `attack_slash_start`、`heavy_slash_start`、`cast_eyes_start`、`clear_vfx`。
 - 普通攻击、重击、受伤在场景 `.28` 下的根位移分别是 29.12、45.92、
   33.6 像素；肢体链会把末端手掌位移继续放大。
-- `die` 在 0 秒清理 VFX，然后按髋、膝、踝、躯干、头和双臂错峰坍塌。
-  根骨最大只旋转 7 度，不再把整张站姿卡片直接旋倒。
-- 每个普通部件都有独立的 `death_*` slot 和 `vivhite_death_*` attachment
-  名称，最终死亡专用图可以原位替换。
+- `die` 在 0 秒清理 VFX，先用 `death_*` 预览拆件按髋、膝、踝、躯干、头和
+  双臂错峰失衡下坠；根骨最大只旋转 7 度，不再把整张站姿卡片直接旋倒。
+- `1.05 s` 原子卸载全部 15 个拆件预览，并在同一帧挂上独立
+  `vivhite_death_body/vivhite_combat_death_side` 侧卧整图，避免两个不相似轮廓
+  交叉淡化时产生双影。整图继续下落至 `1.17 s` 接触地面，`1.31 s` 轻微回弹，
+  `1.80 s` 后保持静止直到 `2.3333335 s`。
+- 最终源 `vivhite-combat-death-side-collapse-v2.png` 单独打入第二张
+  `2048×1536` atlas 页，不改变站姿拆件、魔法弧或法阵的 UV。
 
 ## 动画衔接与绑定修订
 
@@ -37,16 +41,33 @@
 未改 Alpha 的 atlas region，通过 15 个 mesh 的 UV 子域和关节重叠来显示。
 一旦大幅旋转，就会暴露接缝、重复光晕和缺少遮挡后像素的问题。
 
-`candidate.json` 完整列出每个临时 UV 裁片、已核对的消费契约、风险，以及最终
-必须通过 EvoLink `gpt-image-2` 原生透明模式独立重绘的输入集合。只有这些独立
-部件与死亡套件到位并重新绑定后，才允许进入运行时 atlas。
+`candidate.json` 完整列出每个临时 UV 裁片、已核对的消费契约、Hybrid 死亡
+切换窗口、风险，以及最终必须通过 EvoLink `gpt-image-2` 原生透明模式独立重绘
+的站姿输入集合。死亡侧卧整图已接入候选；仍需补齐的是无光晕、带隐藏关节像素的
+独立站姿部件。
+
+## 离线验收结果
+
+- 游戏实际 Spine 4.2.43 GDExtension + Vulkan 的 8 动画 × 5 帧检查通过，错误、
+  空帧和触边均为 0。
+- `die@1.04` 仍为拆件，`die@1.05` 已原子切换为侧卧整图；专项采样没有空帧或
+  两套轮廓同时显示。
+- 原子切换解决的只是空帧和双影，不等于姿势自然。精确 Vulkan 帧中，`1.04 s`
+  的近竖直蜷缩轮廓 bbox 为 `237,445,242,250`，`1.05 s` 的横躺轮廓为
+  `176,464,332,174`：左边界单帧向左跳 `61 px`、宽度增加 `90 px`、高度减少
+  `76 px`。这是明确的 **preview candidate defect**；不得将它当作最终动画自然度，
+  不可发布，也不可接入运行时。
+- 站姿 setup bbox 为 `220×357`，死亡末帧为 `356×208`，侧卧宽度与站姿高度
+  等量；末帧没有裁切。
+- `die@1.80` 与 `die@2.3333335` 的渲染哈希相同，证明回弹结束后完全静止。
 
 ## 重新生成
 
 ```powershell
 & '<Godot 4.5.1 mono exe>' --headless --path tools/art `
   --script res://build_vivhite_combat_split_mesh_candidate.gd -- `
-  build-split-mesh-candidate
+  build-split-mesh-candidate `
+  --death-source assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-death-side-collapse-v2.png
 ```
 
 脚本拒绝把输出目录指向 `Vivhite/Vivhite/skins/ironclad`，不会部署、重启或操作
