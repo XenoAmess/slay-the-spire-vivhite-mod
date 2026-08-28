@@ -5496,3 +5496,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/900 胜，当前目标进阶 0
+
+## 第 901 局复盘（2026-08-28 18:10）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：TAUNT, HEADBUTT, SWORD_BOOMERANG, SHRUG_IT_OFF
+- 本局遗物：招架盾
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Unknown战 掉血40; F6 Monster战 掉血45｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/91局)，FEED(24分/51局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/901 胜，当前目标进阶 0
