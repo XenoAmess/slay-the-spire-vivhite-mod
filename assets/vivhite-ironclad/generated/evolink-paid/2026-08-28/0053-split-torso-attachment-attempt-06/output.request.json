@@ -1,0 +1,13 @@
+{
+  "endpoint": "https://api.evolink.ai/v1/images/generations",
+  "model": "gpt-image-2",
+  "prompt": "Use case: stylized-concept\nAsset type: boundary cleanup edit of one existing 2D torso rigging part\nInput image: Image 1 is the current best torso candidate. Preserve its exact dimensions, placement, three-quarter garment silhouette, collar, crystal, chest panels, corset, gold lines, fixed shoulder ornament, empty arm sockets and short waist insert.\nPrimary request: Use the dark physical outline around the garment and fixed ornament as a closed cut boundary. Keep every pixel inside that boundary and remove every diffuse light or partially painted pixel outside it. Do not resize, extend, restyle or add any garment section.\nEdge requirement: the white, navy, indigo, violet, pale-skin and gold artwork terminates at the physical contour with one normal antialiasing pixel. Immediately beyond that edge there is no artwork. Preserve all internal cel shading and detail.\nComposition/framing: exactly one unchanged connected torso centered on the same vertical 2:3 canvas with the same margins.\nConstraints: no head, hair, limb, skirt, second object, light source, aura, outer glow, bloom, rim light, backlight, luminous outline, diffuse fringe, feathering, haze, fog, smoke, particles, cast shadow, drop shadow, floor, scenery, text, logo, signature or watermark. No sprite sheet, atlas page, alternate view or panel.",
+  "size": "2:3",
+  "resolution": "1K",
+  "quality": "medium",
+  "background": "transparent",
+  "n": 1,
+  "image_urls": [
+    "https://raw.githubusercontent.com/XenoAmess/slay-the-spire-vivhite-mod/master/assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0052-split-torso-attachment-attempt-05/output.png"
+  ]
+}

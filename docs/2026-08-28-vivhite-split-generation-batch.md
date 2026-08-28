@@ -16,7 +16,7 @@
 | 后层发壳 | 1/8 | 通过 | 单一后发附件；上层前额区域作为被脸和前刘海覆盖的隐藏搭接区。 |
 | 前刘海 | 8/8 | 待用户统一评审 | 八次均未消除外围低 Alpha 柔光；当前最佳为 attempt 07，仅作为评审候选，不进入生产 atlas。 |
 | 头脸 | 8/8 | 待用户统一评审 | 八次均未消除外围低 Alpha 柔光；attempt 05 的身份和几何最佳且低 Alpha 外围像素最少，仅作为评审候选。 |
-| 躯干 | 5/8 | 进行中 | attempt 05 当前设计最佳且不触边；仍有约 9998 个低 Alpha 外围像素。 |
+| 躯干 | 8/8 | 待用户统一评审 | attempt 08 被内容过滤拒绝；attempt 07 是当前最佳设计且不触边，但仍有 8592 个低 Alpha 外围像素。 |
 
 ## 前刘海逐次记录
 
@@ -51,5 +51,10 @@
 3. `0050-split-torso-attachment-attempt-03`：无参考低复杂度测试；不触边但服装漂移成大蝴蝶结和不同腰身，且仍有约 1.37 万个低 Alpha 外围像素。
 4. `0051-split-torso-attachment-attempt-04`：只参考原始人物设定；服装身份回升且不触边，但姿态退回正面、下摆被误画成裙片，仍有约 9883 个低 Alpha 外围像素。
 5. `0052-split-torso-attachment-attempt-05`：以 attempt 01 为唯一参考、低复杂度缩小复刻；三分之四结构、服装身份、双肩接口和腰口均可用，四边不触边，暂列当前设计最佳。仍有约 9998 个低 Alpha 外围像素，不能进入生产 atlas。
+6. `0053-split-torso-attachment-attempt-06`：对 attempt 05 做闭合边界清理，模型再次放大主体，低 Alpha 外围像素增至约 1.30 万，退化。
+7. `0054-split-torso-attachment-attempt-07`：低复杂度精确复刻 attempt 05；服装结构、三分之四方向、肩口和短腰口均保留，四边不触边，低 Alpha 外围像素降至 8592，更新为当前最佳评审候选。
+8. `0055-split-torso-attachment-attempt-08`：无参考小尺寸平涂对照被 EvoLink 以 `content_policy_violation` 拒绝，没有返回 PNG；Prompt、脱敏请求与 task 记录仍按追加式归档保留。
+
+躯干已达到 8 次硬上限，现按规则跳过。当前最佳评审候选为 `0054-split-torso-attachment-attempt-07`；除非用户明确追加该语义素材额度，否则不得调用第 9 次或放入生产 atlas。
 
 所有检查仅做离线素材与 Vulkan 预览，不部署、不启动或重启游戏，也不触发直播。
