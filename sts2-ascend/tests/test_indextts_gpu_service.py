@@ -57,6 +57,34 @@ class _BlockingEngine(_FakeEngine):
         return 0.03
 
 
+class _TracingEngine(_FakeEngine):
+    def __init__(self, events: list[str]) -> None:
+        super().__init__()
+        self.events = events
+
+    def synthesize(self, text: str, output_path: Path) -> float:
+        self.calls.append(text)
+        self.events.append(f"synth:{text}")
+        output_path.write_text(text, encoding="utf-8")
+        return 0.03
+
+
+class _FailingEngine(_TracingEngine):
+    def __init__(self, events: list[str], fail_on: str) -> None:
+        super().__init__(events)
+        self.fail_on = fail_on
+        self.paths: list[Path] = []
+
+    def synthesize(self, text: str, output_path: Path) -> float:
+        self.paths.append(output_path)
+        self.calls.append(text)
+        self.events.append(f"synth:{text}")
+        if text == self.fail_on:
+            raise RuntimeError("synthetic render failure")
+        output_path.write_text(text, encoding="utf-8")
+        return 0.03
+
+
 class SpeechServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.engine = _FakeEngine()
@@ -128,6 +156,44 @@ class SpeechServiceTests(unittest.TestCase):
         self.assertEqual(result["segment_lengths"], [len(chunk) for chunk in self.engine.calls])
         self.assertEqual(self.service.completed, 1)
         self.assertEqual(self.busy_events, ["conclusion", None])
+
+    def test_conclusion_prepares_every_segment_before_first_playback(self) -> None:
+        text = "第一句需要先合成，第二句也要先合成，第三句最后合成。"
+        segments = gpu.split_conclusion_text(text)
+        self.assertGreater(len(segments), 1)
+        events: list[str] = []
+        self.service.engine = _TracingEngine(events)
+        self.service.play = lambda path: events.append(
+            f"play:{path.read_text(encoding='utf-8')}"
+        )
+
+        result = self.service.submit(text, "conclusion", timeout=10)
+
+        self.assertEqual(
+            events,
+            [f"synth:{segment}" for segment in segments]
+            + [f"play:{segment}" for segment in segments],
+        )
+        self.assertEqual(result["segments"], len(segments))
+
+    def test_one_render_failure_aborts_batch_before_any_playback(self) -> None:
+        text = "第一句先准备，第二句故意失败，第三句不应再合成。"
+        segments = gpu.split_conclusion_text(text)
+        self.assertGreaterEqual(len(segments), 3)
+        events: list[str] = []
+        engine = _FailingEngine(events, segments[1])
+        self.service.engine = engine
+        self.service.play = lambda path: events.append(
+            f"play:{path.read_text(encoding='utf-8')}"
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "批次预合成失败.*未开始播放"):
+            self.service.submit(text, "conclusion", timeout=10)
+
+        self.assertEqual(engine.calls, list(segments[:2]))
+        self.assertFalse(any(event.startswith("play:") for event in events))
+        self.assertTrue(all(not path.exists() for path in engine.paths))
+        self.assertEqual(self.service.completed, 0)
 
     def test_unpunctuated_conclusion_balances_around_ten_without_losing_text(self) -> None:
         text = "一" * 41

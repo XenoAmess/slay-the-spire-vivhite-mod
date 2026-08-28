@@ -427,7 +427,13 @@ class _SpeechJob:
 
 
 class SpeechService:
-    """A single priority queue around model inference and blocking playback."""
+    """A single priority queue around batched inference and blocking playback.
+
+    One logical speech job has two strict phases: prepare every WAV first, then
+    play the prepared files in order.  In particular, a multi-sentence review
+    conclusion must never pause between sentences while the GPU renders the
+    next one.
+    """
 
     def __init__(
         self,
@@ -448,6 +454,7 @@ class SpeechService:
         self._stopping = threading.Event()
         self._busy_lock = threading.Lock()
         self._current_source: str | None = None
+        self._current_phase: str | None = None
         self._current_segment_index: int | None = None
         self._current_segment_count = 0
         self._current_segment_chars = 0
@@ -470,6 +477,7 @@ class SpeechService:
     def status(self) -> dict:
         with self._busy_lock:
             source = self._current_source
+            phase = self._current_phase
             segment_index = self._current_segment_index
             segment_count = self._current_segment_count
             segment_chars = self._current_segment_chars
@@ -483,6 +491,7 @@ class SpeechService:
             "queue_size": self.queue.qsize(),
             "busy": source is not None,
             "current_source": source,
+            "current_phase": phase,
             "current_segment": segment_index,
             "segment_count": segment_count,
             "segment_chars": segment_chars,
@@ -528,11 +537,13 @@ class SpeechService:
                 _, _, job = self.queue.get(timeout=0.5)
             except queue.Empty:
                 continue
+            prepared_paths: list[Path] = []
             try:
                 if job.cancelled:
                     continue
                 with self._busy_lock:
                     self._current_source = job.source
+                    self._current_phase = "synthesizing"
                     self._current_segment_index = None
                     self._current_segment_count = len(job.segments)
                     self._current_segment_chars = 0
@@ -559,6 +570,7 @@ class SpeechService:
                     )
                     os.close(fd)
                     output_path = Path(raw_path)
+                    prepared_paths.append(output_path)
                     try:
                         elapsed = self.engine.synthesize(segment, output_path)
                         total_elapsed += elapsed
@@ -566,19 +578,42 @@ class SpeechService:
                             peak_cuda_mib,
                             float(getattr(self.engine, "last_peak_mib", 0.0)),
                         )
-                        if not job.cancelled and not self._stopping.is_set():
-                            self.play(output_path)
-                            completed_segments += 1
                         self.log(
                             f"GPU 合成完成 [{label}] {len(segment)}字，"
                             f"{elapsed:.1f}s，峰值 "
                             f"{getattr(self.engine, 'last_peak_mib', 0.0):.0f}MiB：{segment}"
                         )
-                    finally:
-                        try:
-                            output_path.unlink(missing_ok=True)
-                        except OSError:
-                            pass
+                    except Exception as exc:
+                        prepared_count = max(0, len(prepared_paths) - 1)
+                        raise RuntimeError(
+                            f"IndexTTS 批次预合成失败（{index}/{len(job.segments)}，"
+                            f"已准备 {prepared_count} 段，未开始播放）：{exc}"
+                        ) from exc
+
+                if not job.cancelled and not self._stopping.is_set():
+                    if len(job.segments) > 1:
+                        self.log(
+                            f"GPU 批次预合成完成 [{job.source}] "
+                            f"{len(prepared_paths)}/{len(job.segments)} 段，开始连续播放"
+                        )
+                    with self._busy_lock:
+                        self._current_phase = "playing"
+                        self._current_segment_index = None
+                        self._current_segment_chars = 0
+                    for index, (segment, output_path) in enumerate(
+                        zip(job.segments, prepared_paths), start=1,
+                    ):
+                        if job.cancelled or self._stopping.is_set():
+                            break
+                        with self._busy_lock:
+                            self._current_segment_index = index
+                            self._current_segment_chars = len(segment)
+                        label = (job.source if len(job.segments) == 1
+                                 else f"{job.source} {index}/{len(job.segments)}")
+                        self.log(f"GPU 开始播放 [{label}]：{segment}")
+                        self.play(output_path)
+                        completed_segments += 1
+                        self.log(f"GPU 播放完成 [{label}]：{segment}")
                 if self._stopping.is_set() and not job.cancelled:
                     job.error = "IndexTTS GPU 服务停止，语音任务未完成"
                 elif not job.cancelled:
@@ -599,9 +634,15 @@ class SpeechService:
                     f"{traceback.format_exc()[-2400:]}"
                 )
             finally:
+                for output_path in prepared_paths:
+                    try:
+                        output_path.unlink(missing_ok=True)
+                    except OSError:
+                        pass
                 self.on_busy(None)
                 with self._busy_lock:
                     self._current_source = None
+                    self._current_phase = None
                     self._current_segment_index = None
                     self._current_segment_count = 0
                     self._current_segment_chars = 0
