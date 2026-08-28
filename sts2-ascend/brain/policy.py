@@ -2516,6 +2516,25 @@ class Policy:
                             f"战斗：结算等待——账面仍有可负担目标牌（{','.join(_latent)}），"
                             f"待接口重开（{self._end_stall}/{_settle_budget}）",
                             wait=0.6)
+                # 结算超时收口观测位（第892~912局批复盘闭环实验
+                # SETTLE_TIMEOUT_CONCEDE_OBS，纯观测不改判定）：
+                # 912-F17-T6 实证——打出御血术+后 payload 整体✗，深预算 22 tick
+                # （≈13s）耗尽仍未重开，闲置能量 3、手牌突破+/头槌+/防御/痛击
+                # 账面全部可出，按「确认无牌可出」强行收口、零格挡吃意图 15
+                # （18→3 血），决胜段能量白扔。该签名已是 753-T6/T9、790-F17-T6/T9、
+                # 839/840、912-T6 第五代，但旧留痕与真·无牌可出逐字同文、跨局
+                # 无法机械计数，接口实际锁定时长也从未入账。此后「结算闸门武装
+                # 且 latent 非空」的预算耗尽收口在 reason 追加独立标记（能量/
+                # 实际预算/latent 名单），随持久决策链可 grep 计数并与时间戳
+                # 对账锁定时长，为是否再加预算档位供数。观测键
+                # end_turn_settle_concede_obs=false 或基旋钮置 0 即整体关闭，
+                # 文案前缀与审计格式不变，既有统计正则不受影响。
+                _settle_note = ""
+                if (_settle_budget > 0 and _latent
+                        and bool(pol.get("end_turn_settle_concede_obs", True))):
+                    _settle_note = (
+                        f"｜结算超时收口观测 energy={energy}"
+                        f"/预算{_settle_budget}/latent={','.join(_latent)}")
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
@@ -2526,7 +2545,7 @@ class Policy:
                     return Decision(
                         "end_turn", {},
                         f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                        f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                        f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
                         wait=1.2)
                 if self._end_stall < 15:
                     return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)

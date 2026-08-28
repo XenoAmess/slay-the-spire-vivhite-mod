@@ -8004,6 +8004,44 @@ def main() -> int:
     assert d_base_commit is not None and _base_waits <= _deep_base + 2, \
         f"深旋钮回滚后未按基预算收口: waits={_base_waits}"
 
+    # 3z-3) 结算超时收口观测位（第892~912局批复盘 SETTLE_TIMEOUT_CONCEDE_OBS
+    #       回归夹具）：912-F17-T6 形态——深预算耗尽后的收口（能量2+打击✗ 且
+    #       账面可出）必须在 reason 追加「结算超时收口观测」标记（能量/预算/
+    #       latent 名单入账，供跨局 grep 计数与锁定时长对账）；观测键置 False
+    #       即整体关闭、文案回到旧口径；latent 为空（真·资源耗尽）不进标记。
+    conc_know = knowledge.Knowledge(tmp)
+    conc_pol = policy.Policy(conc_know)
+    conc_know.policy["end_turn_settle_recovery_ticks"] = 10
+    conc_ctx = _SettleCtx()
+    assert conc_pol.decide(_settle_state(True), conc_ctx) is not None, "收口观测夹具热身帧无决策"
+    d_conc = None
+    for _ in range(60):
+        d_c = conc_pol.decide(_deep_state(), conc_ctx)
+        if d_c.action == "end_turn":
+            d_conc = d_c
+            break
+        assert d_c.action is None and "结算等待" in d_c.reason, \
+            f"收口观测夹具窗口内异常动作: {d_c.action}/{d_c.reason}"
+    assert d_conc is not None \
+        and "确认无牌可出（能量耗尽或全部不可用）" in d_conc.reason \
+        and "结算超时收口观测" in d_conc.reason \
+        and "energy=2" in d_conc.reason \
+        and "打击(1)" in d_conc.reason, \
+        f"结算超时收口观测标记缺失: {d_conc and d_conc.reason}"
+    conc_know.policy["end_turn_settle_concede_obs"] = False
+    off_ctx = _SettleCtx()
+    assert conc_pol.decide(_settle_state(True), off_ctx) is not None, "收口观测关闭夹具热身帧无决策"
+    d_conc_off = None
+    for _ in range(60):
+        d_co = conc_pol.decide(_deep_state(), off_ctx)
+        if d_co.action == "end_turn":
+            d_conc_off = d_co
+            break
+    assert d_conc_off is not None \
+        and "确认无牌可出（能量耗尽或全部不可用）" in d_conc_off.reason \
+        and "结算超时收口观测" not in d_conc_off.reason, \
+        f"观测键关闭后标记仍出现: {d_conc_off and d_conc_off.reason}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
