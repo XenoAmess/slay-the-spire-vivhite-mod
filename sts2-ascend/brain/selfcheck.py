@@ -5635,6 +5635,62 @@ def main() -> int:
     assert _hem_c is None and _hem_kind == "", \
         f"自残成本型攻击不应作为救场弹药: {(_hem_kind, _hem_c)}"
 
+    # 3br-4) 手牌滞留税止损（HAND_END_TAX / HAND_END_TAX_STOPLOSS，第808~812局
+    #        批复盘补合）：v0.111.0 corpus 实证 TOXIC（可打出，5伤/回合，打出
+    #        即消耗）与 INFECTION（不可打出，3伤/回合）两类回合结束手牌伤害
+    #        不进格挡结算——807 局毒素两回合 20 点直接改写生死，812 局 F9 感染
+    #        税 18/43（42%）。MYTE_TOXIC_HAND_LIABILITY 复发触发线达成后落地：
+    #        ①税额识别 ②确定性税收>最佳格挡净效益时优先打出止损 ③平手/关闭
+    #        回落原通道 ④end_turn 收口披露税额。
+    _toxic_card = {"index": 0, "card_id": "TOXIC", "name": "毒素",
+                   "playable": True, "energy_cost": 1, "requires_target": False,
+                   "rules_text": "在你的回合结束时，如果这张牌在你的手牌中，"
+                                 "你受到5点伤害。消耗。"}
+    _infect_cards = [{"index": i, "card_id": "INFECTION", "name": "感染",
+                      "playable": False, "energy_cost": -1,
+                      "requires_target": False,
+                      "rules_text": "不能被打出。在你的回合结束时，如果这张牌"
+                                    "在你的手牌中，你受到3点伤害。"}
+                     for i in range(3)]
+    _tax_t, _tax_d = policy.hand_end_turn_tax([_toxic_card])
+    assert _tax_t == 5 and _tax_d == "TOXIC×1", \
+        f"毒素回合结束手牌税未识别: {(_tax_t, _tax_d)}"
+    _tax_t, _tax_d = policy.hand_end_turn_tax(_infect_cards + [None, "junk"])
+    assert _tax_t == 9 and _tax_d == "INFECTION×3", \
+        f"感染（不可打出）回合结束手牌税未累计: {(_tax_t, _tax_d)}"
+    _tax_t, _tax_d = policy.hand_end_turn_tax(
+        [resc_defend[0], resc_armor[0], None])
+    assert _tax_t == 0 and _tax_d == "", \
+        f"无毒/感染手牌误报滞留税: {(_tax_t, _tax_d)}"
+    assert policy.hand_end_turn_tax(None) == (0, ""), "空手滞留税应为0"
+
+    _defend3 = [dict(resc_defend[0], index=1,
+                     dynamic_values=[{"name": "Block", "current_value": 3}])]
+    _tax_c, _tax_kind = policy.idle_energy_rescue_pick(
+        [_toxic_card] + _defend3, 1, 20, 0)
+    assert _tax_kind == "taxstop" and _tax_c is not None \
+        and _tax_c.get("card_id") == "TOXIC", \
+        f"确定性税收>最佳格挡净效益时未优先止损: {(_tax_kind, _tax_c)}"
+    _tie_c, _tie_kind = policy.idle_energy_rescue_pick(
+        [_toxic_card] + resc_defend, 1, 20, 0)
+    assert _tie_kind == "block", \
+        f"税收与格挡净效益平手时应维持原通道次序: {(_tie_kind, _tie_c)}"
+    _off_c, _off_kind = policy.idle_energy_rescue_pick(
+        [_toxic_card] + _defend3, 1, 20, 0, allow_taxstop=False)
+    assert _off_kind == "block" and _off_c.get("card_id") == "DEFEND_IRONCLAD", \
+        f"hand_tax_stoploss=0（allow_taxstop=False）未回落格挡通道: {(_off_kind, _off_c)}"
+    _lock_c, _lock_kind = policy.idle_energy_rescue_pick(
+        [_toxic_card] + resc_defend, 2, 20, 5, block_locked=True)
+    assert _lock_kind == "taxstop" and _lock_c.get("card_id") == "TOXIC", \
+        f"锁格挡窗口内止损通道不应被连坐关闭: {(_lock_kind, _lock_c)}"
+
+    _infect_one = dict(_infect_cards[0], index=9)
+    resc_tax = resc_pol.decide(
+        _resc_state(resc_defend + [_infect_one], 1, 0, 0), ctx)
+    assert resc_tax.action == "end_turn" \
+        and "手牌滞留税HAND_END_TAX=每回合3（INFECTION×1）" in resc_tax.reason, \
+        f"end_turn 收口未披露手牌滞留税: {resc_tax.reason}"
+
     # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
     #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
     #      链未顶格时不接替；胜利按 +0.03 向锚点回收

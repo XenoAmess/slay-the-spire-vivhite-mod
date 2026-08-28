@@ -121,10 +121,48 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
 _PLATING_RE = re.compile(r"覆甲|plating", re.I)
 _SELF_COST_RE = re.compile(
     r"失去\s*\d+\s*点?\s*生命|lose[s]?\s+\d+\s*(?:hp|health)", re.I)
+_HAND_TAX_ZHS_RE = re.compile(
+    r"在你的回合结束时[^。]*?手牌[^。]*?受到\s*(\d+)\s*点伤害")
+_HAND_TAX_EN_RE = re.compile(
+    r"end of your turn[^.]*?hand[^.]*?lose\s+(\d+)\s+(?:hp|health)", re.I)
+
+
+def hand_end_turn_tax(hand: list | None) -> tuple[int, str]:
+    """手牌滞留型回合结束伤害合计（HAND_END_TAX，第808~812局批复盘）。
+
+    v0.111.0 corpus 实证两型：TOXIC 毒素「在你的回合结束时，如果这张牌在
+    你的手牌中，你受到5点伤害。消耗。」（可打出）与 PHROG_PARASITE 塞手的
+    INFECTION 感染「不能被打出。在你的回合结束时，……你受到3点伤害。」。
+    807 局毒素两回合 20 点直接改写生死；812 局 F9 感染税 18/43（42%）。
+    该类伤害不进格挡结算管线、格挡无法抵挡，此前在出牌/收口两侧完全
+    不可见。返回 (每回合总伤害, 留痕摘要)，脏载荷一律返回 (0, "")。
+    """
+    try:
+        total = 0
+        counts: dict[str, int] = {}
+        for c in hand or []:
+            if not isinstance(c, dict):
+                continue
+            t = _text(c)
+            if not t:
+                continue
+            m = _HAND_TAX_ZHS_RE.search(t) or _HAND_TAX_EN_RE.search(t)
+            if not m:
+                continue
+            total += int(m.group(1))
+            key = str(c.get("card_id") or c.get("name") or "状态牌")
+            counts[key] = counts.get(key, 0) + 1
+        if total <= 0:
+            return 0, ""
+        detail = "、".join(f"{k}×{n}" for k, n in sorted(counts.items()))
+        return total, detail
+    except Exception:
+        return 0, ""
 
 
 def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
-                            is_unavailable=None, block_locked: bool = False):
+                            is_unavailable=None, block_locked: bool = False,
+                            allow_taxstop: bool = True):
     """残能救场候选（第698~770批复盘闭环实验）。
 
     「评估后无值得出的牌」分支在剩有能量且意图缺口>0 时空过结束回合，
@@ -138,8 +176,14 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
          CardType.Power 即时 OnPlay 施加 PlatingPower——为死牌守卫误杀
          类建立文本旁路）；
       ③ 无格挡/覆甲候选时选预估伤害最高的可负担攻击（排除「失去生命」
-         自残型成本，避免救场变送命）。
-    block_locked（应急按钮锁窗）期间格挡与覆甲收益为零，仅保留攻击通道。
+         自残型成本，避免救场变送命）；
+      ④ 手牌滞留税止损（HAND_END_TAX_STOPLOSS，第808~812局批复盘）：
+         可打出的回合结束手牌伤害牌（毒素型）——打出即离手、税负清零，
+         是不依赖格挡的确定性止血；确定性税收严格大于最佳格挡净效益时
+         优先回收（格挡挡不掉该类伤害），平手维持原通道次序少改行为。
+         allow_taxstop=False（运行时键 hand_tax_stoploss=0）即关闭。
+    block_locked（应急按钮锁窗）期间格挡与覆甲收益为零，仅保留攻击与
+    止损通道（止损不依赖格挡，不受 NoBlockPower 影响）。
     全部候选失败返回 (None, "")，调用方回落旧版 end_turn——语义完全可回滚：
     运行时配置键 idle_energy_rescue=False 即整体关闭。
     """
@@ -152,6 +196,7 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
         blk_best = None   # (useful, -cost, card)
         plat_best = None  # (grants, -cost, card)
         atk_best = None   # (est_dmg, -cost, card)
+        tax_best = None   # (tax_dmg, -cost, card)
         for c in hand or []:
             if (not isinstance(c, dict) or not c.get("playable")
                     or unavailable(c) or c.get("costs_x")
@@ -164,6 +209,12 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
             t = _text(c)
             if _SELF_COST_RE.search(t):
                 continue
+            if allow_taxstop:
+                _m = _HAND_TAX_ZHS_RE.search(t) or _HAND_TAX_EN_RE.search(t)
+                if _m:
+                    cand = (int(_m.group(1)), -cost, c)
+                    if tax_best is None or cand[:2] > tax_best[:2]:
+                        tax_best = cand
             if block > 0 and not block_locked:
                 useful = min(int(block), gap)
                 cand = (useful, -cost, c)
@@ -181,6 +232,9 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                 cand = (est, -cost, c)
                 if atk_best is None or cand[:2] > atk_best[:2]:
                     atk_best = cand
+        if (tax_best is not None
+                and (blk_best is None or tax_best[0] > blk_best[0])):
+            return tax_best[2], "taxstop"
         for kind, pick in (("block", blk_best), ("plating", plat_best),
                            ("attack", atk_best)):
             if pick is not None and pick[2] is not None:
@@ -2466,18 +2520,24 @@ class Policy:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
                     self._end_stall = 0
+                    _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+                    _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                                    f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
                     return Decision(
                         "end_turn", {},
                         f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                        f"｜能量{energy}｜[{_audit}]",
+                        f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
                         wait=1.2)
                 if self._end_stall < 15:
                     return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
                 self._end_stall = 0
+                _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+                _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                                f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
                 return Decision(
                     "end_turn", {},
                     f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]",
+                    f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
                     wait=1.2)
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
@@ -3041,6 +3101,11 @@ class Policy:
                 hand, energy, incoming, my_block,
                 is_unavailable=self._card_unavailable,
                 race_mode=bool(race_allin or kill_race))
+            # 手牌滞留税披露（HAND_END_TAX，第808~812局批复盘）：毒素/感染型
+            # 回合结束手牌伤害不进格挡结算，评估收口与强制收口两侧都需显形。
+            _tax_total, _tax_detail = hand_end_turn_tax(hand)
+            _tax_note = (f"；手牌滞留税HAND_END_TAX=每回合{_tax_total}（{_tax_detail}）"
+                         if _tax_total > 0 else "")
             # ── 残能救场（第698~770批复盘闭环）：评分全线拒绝后的最后边界。
             #    意图缺口>0 且剩有能量时，用 primitive 规则取回本就付过的能量；
             #    knowledge/policy.json 写入 idle_energy_rescue=false 即整体回滚。──
@@ -3051,10 +3116,15 @@ class Policy:
             _resc_kind = ""
             _resc_card = None
             if _resc_enabled:
+                try:
+                    _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
+                except Exception:
+                    _taxstop_on = True
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
                     hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
-                    block_locked=block_locked)
+                    block_locked=block_locked,
+                    allow_taxstop=_taxstop_on)
             if _resc_card is not None:
                 _rcid = (_resc_card.get("card_id") or "").upper().rstrip("+")
                 _rest_dmg, _, _rhits = card_numbers(_resc_card)
@@ -3087,12 +3157,14 @@ class Policy:
                     "RESCUE 残能救场", "warn",
                     f"{_resc_kind}:【{_resc_card.get('name')}】"
                     f"能量{energy}缺口{max(0, incoming - my_block)}")
-                _kind_cn = {"block": "格挡", "plating": "覆甲", "attack": "输出"}.get(
-                    _resc_kind, _resc_kind)
+                _kind_cn = {"block": "格挡", "plating": "覆甲", "attack": "输出",
+                            "taxstop": "手牌税止损"}.get(_resc_kind, _resc_kind)
+                _taxstop_note = (f"，清零手牌滞留税{_tax_total}/回合（{_tax_detail}）"
+                                 if _resc_kind == "taxstop" else "")
                 return Decision("play_card", _rparams,
                                 f"战斗：残能救场[{_kind_cn}]：剩余能量{int(energy)}"
                                 f"打出【{_resc_card.get('name')}】"
-                                f"{('→' + _rtname) if _rtname else ''}，"
+                                f"{('→' + _rtname) if _rtname else ''}{_taxstop_note}，"
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
                                 f"{danger_note}",
@@ -3104,7 +3176,7 @@ class Policy:
                                        round(_rest_est, 2), round_no, "")],
                                 wait=0.6)
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
