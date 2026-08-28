@@ -6211,3 +6211,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.63 → 0.60（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/965 胜，当前目标进阶 0
+
+## 第 966 局复盘（2026-08-29 05:33）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：TRUE_GRIT, RAMPAGE, CINDER, THUNDERCLAP, INFLAME, SPITE, MANGLE, INFLAME, WHIRLWIND, PANIC_BUTTON, CINDER, MOLTEN_FIST, PACTS_END, PANIC_BUTTON, ANGER
+- 本局遗物：STRIKE_DUMMY, 红面具
+- 战斗记录：F13 Unknown战 掉血7; F15 Elite战 掉血35; F17 Boss战 掉血49｜竞速审计：T3判死→实战10回合获胜; F19 Monster战 掉血27; F23 Monster战 掉血16; F24 Elite战 掉血37（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/24局)，FIEND_FIRE(25分/37局)，PACTS_END(24分/99局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.60 → 0.63（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/966 胜，当前目标进阶 0
