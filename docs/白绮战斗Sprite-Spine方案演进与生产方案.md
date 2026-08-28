@@ -4,9 +4,10 @@
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
 > 最后更新：2026-08-28。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
-> 当前实现状态：V3 的首个 `attack_peak` 已在隔离候选中构建并通过静态与 Windows Vulkan
-> 验收，但尚未替换正式运行时、部署或真机测试。本轮没有操作游戏；V0.5 既有真机记录仍然
-> 有效，不能把“本次没启动”误写成项目从未真机测试。
+> 当前实现状态：V3 的 `attack_peak` 与 `attack_heavy_peak` 已在隔离候选中通过静态与
+> Windows Vulkan 验收，`cast_peak` 已通过静态门禁并正在接入独立消费者；三者都尚未替换
+> 正式运行时、部署或真机测试。本轮没有操作游戏；V0.5 既有真机记录仍然有效，不能把
+> “本次没启动”误写成项目从未真机测试。
 
 ## 1. 当前结论
 
@@ -352,6 +353,49 @@ runtime 样本。精确 Vulkan 验收使用真实 `0.1s` mix，共采 14 个时�
 当前结论仅为“隔离候选离线集成通过”。它证明了完整姿势、固定画布、原子 slot 与
 pose-specific VFX 锚点这条链可行，但不等于正式运行时或用户审美门禁已经通过。
 
+### 5.7 `attack_heavy_peak` 的独立消费者闭环
+
+重击使用 `0106-combat-attack-heavy-peak-attempt-01`，并逐字节固化为
+`custom/combat/sources/vivhite-combat-attack-heavy-peak-v1.png`；两者 SHA-256 均为
+`648AD676050A6D8A1826567D48288105FBF12FCD0AD87D75E43D24029301B1F1`。它与普攻共用
+`vivhite_action_pose` slot，但使用独立 atlas 页 `vivhite_combat_attack_heavy.png` 和 region
+`vivhite_combat_attack_heavy_peak`；同样冻结完整 `1680×2512 → 1536×2272 → 868×1302`
+画布变换，不按动作自身 Alpha bbox 归一化。
+
+`attack_heavy` 在 `.12` 同帧触发 `heavy_slash_start`、隐藏 neutral 并挂载 heavy；`.32`
+原子切回 neutral，可见区间为 `[.12,.32)`。`idle_loop → attack_heavy` 的运行时 mix 实测为
+`.01999999955s`。掌心魔法弧首轮沿用普攻在真实场景测得的 authored offset `(210,30)`；
+在重击 composite 中亮核从双掌前方起弧，保留少量空气间隔且不覆盖手指。
+
+静态门禁覆盖 7 个 authored 文件、8 动画、Spine `4.2.43`、34 个全时段人物可见性样本和
+32 个 runtime 样本。14 个精确 Windows Vulkan 时刻全部通过；character-only 会把 slash、
+eye、sigil 三槽同时设为 null 与 Alpha 0，每帧恰好一个人物，无空帧、触边或双影。`.1199 →
+.12` 脚底变化 `-4 px`、质心右移约 `17.27 px` 并上移 `8.19 px`；`.3199 → .32` 脚底
+变化 `-2 px`。低重心、宽站姿和双空掌在无 VFX 时也能与普攻区分，因此停止在 1/8 次。
+
+这推翻的是“0106 只有复用普攻窗口的阶段预览”旧状态；当前升级为“隔离候选离线集成通过”。
+尚未推翻的风险是 `.12` 切入质心变化在用户真实游戏速度下是否可见；若真机突兀，先调前摇
+轮廓、pose root 或切换时刻，再考虑单独 anticipation pose，不做双人物交叉淡化。
+
+### 5.8 `cast_peak` 静态门禁与冻结接入契约
+
+施法首轮 `0107-combat-cast-peak-attempt-01` 已逐字节固化为
+`custom/combat/sources/vivhite-combat-cast-peak-v1.png`。固定消费者下 cast 实体约
+`206×349 px`，neutral 约 `209×351 px`；其高右掌、低左掌、打开胸腔和双腿支撑形成独立
+施法剪影，空手且人物层没有法阵或能量。普通直显看到的宽蓝紫光场已被真实三底 SourceOver
+推翻：实体核外扩折算到游戏尺寸不足 `0.6 px`，所以没有为错误显示浪费第 2 次生成。
+
+接入契约冻结为：sigil 在 `.10` 挂载，`.25` 同帧触发 `cast_eyes_start` 并把 neutral 原子切换
+为 `vivhite_combat_cast_peak`，人物可见窗口 `[.25,.60)`，`.60` 切回 neutral，
+`1.222000026` 同帧触发 `clear_vfx` 并卸载 sigil，动画结束于 `1.5666667`。cast 在 `t=0`
+显式清空 slash；EyeFire 不会替骨架清理任何 attachment，因此 action、sigil 和眼部 pose
+anchor 必须由各自时间线同帧切换与复位。`relaxed_loop` 两端仍须重申 neutral 唯一可见，
+隐藏 action/death/slash/sigil，防止商店随机 seek 进入残留状态。
+
+`0107` 当前仅为“静态候选通过”，不是离线集成通过。下一道门禁是重新测量实际双眼中心，
+校正 pose-specific `eye_attach_slot`，并在精确 Windows Vulkan 中同时检查人物原子切换、
+sigil 生命周期、EyeFire 对齐、character-only VFX 清空和中断复位；只有该门禁通过才升级状态。
+
 ## 6. 并行研究线：约 8 个生成语义组
 
 若继续拆件路线，推荐把 21 个独立微件收敛为约八个彼此协调的生成语义组：
@@ -454,8 +498,10 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 ## 10. 目前的实施优先级
 
 1. 把已有完整 neutral、战斗母版和死亡图重新按真实 Alpha、身份、比例和锚点验收；
-2. `attack_peak` 已完成隔离接入和离线 Vulkan；下一门禁是正式候选完成后统一做用户真机；
-3. 按相同链路完成 heavy、cast；`hurt` 仅在 neutral 网格真不能自然承担时增加；
+2. `attack_peak` 与 `attack_heavy_peak` 已完成隔离接入和离线 Vulkan；下一门禁是正式候选
+   完成后统一做用户真机；
+3. `cast_peak` 已静态通过，当前按 `.25–.60` 人物窗口与 EyeFire / sigil 契约做精确 Vulkan；
+   `hurt` 仅在 neutral 网格真不能自然承担时增加；
 4. 修死亡切换前姿势和锚点，使跳变显著小于现有 61 px，并保持实体落地；
 5. 同时把已通过的独立附件接入隔离语义组研究候选，形成同条件 A/B 接触表；
 6. 主线完成八动画、商店和真机回归后，才替换正式运行时并完整构建部署。
@@ -484,3 +530,9 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 - 2026-08-28：完成 V3 `attack_peak` 隔离候选；记录 `0104` 采用、`0105` 归档不采用、整画布
   固定变换、`.08–.20` 原子切换、商店边界重置、掌心 VFX `(210,30)` 以及 14 帧分层 Vulkan
   证据；保留 `.20` recovery 跳变作为真机门禁，不冒充已部署通过。
+- 2026-08-28：完成 `attack_heavy_peak` 独立消费者；记录 0106 byte-identical source、
+  `.12–.32` 原子窗口、`.02s` mix、14/14 分层 Vulkan、脚底 `-4/-2 px`、切入质心约
+  `17.27 px` 与掌心 VFX `(210,30)`；升级为离线集成通过但保留真机审美门禁。
+- 2026-08-28：新增 `cast_peak` 0107 静态候选；记录三底 SourceOver 对直显光场误判的纠正、
+  与 neutral 一致的固定尺度，以及 `.10` sigil、`.25` 眼火/人物切换、`.60` 人物复位、
+  `1.222000026` 清理契约；在精确 Vulkan 之前不冒充集成通过。
