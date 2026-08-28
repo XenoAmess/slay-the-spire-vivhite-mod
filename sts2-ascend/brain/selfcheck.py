@@ -5838,6 +5838,72 @@ def main() -> int:
     assert abs(bsz_know.policy["kill_race_prior_eff"] - 0.37) < 1e-9, \
         f"未跨幕界不应释放: {bsz_know.policy['kill_race_prior_eff']}"
 
+    # 3bs-3) 换向阻尼（KILL_RACE_OSC_DAMP，第915~916局批复盘新增）：
+    #        lessons 950~968 实测折算率在下调/释放两通道间 ±0.03 逐局换向
+    #        （数十次翻向零收敛）。反向步长降为 |last|/2 几何收敛，同向连击
+    #        恢复全步长；同局先降后释按开局口径各判换向、局末落净额；
+    #        kill_race_osc_damp=false 整体关闭（旧版全步长行为）。
+    def _kr_damp_knowledge(eff: float, last: float, damp: bool = True):
+        k = knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-relaykr6-")))
+        k.policy.update({"burst_starve_bonus_base": 8.0, "burst_starve_bonus_extra_max": 12.0,
+                         "deck_burst_floor": 45.0, "boss_eve_smith_hp_pct": 0.45,
+                         "power_longfight_bonus_max": 12.0, "kill_race_prior_eff": eff,
+                         "kill_race_prior_eff_last_step": last,
+                         "kill_race_osc_damp": damp})
+        return k
+
+    _kr_down_ctx = SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_BOSS_D", "node_type": "Boss", "rounds": 8,
+                        "floor": 17, "hp_lost": 78.0, "stall": False},
+        death_was_elite=False, death_hp_pct_at_entry=0.98, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[])
+    # a) 换向下调减半：上一步 +0.03（上局释放），本局竞速败北 → −0.015 并留痕
+    bsd1 = _kr_damp_knowledge(0.63, 0.03)
+    _bsd1_lesson = reflect.finalize_run(bsd1, _kr_down_ctx, victory=False, final_floor=17)
+    assert abs(bsd1.policy["kill_race_prior_eff"] - 0.615) < 1e-9, \
+        f"换向下调未减半: {bsd1.policy['kill_race_prior_eff']}"
+    assert abs(bsd1.policy["kill_race_prior_eff_last_step"] + 0.015) < 1e-9, \
+        f"换向下调净步长未落盘: {bsd1.policy['kill_race_prior_eff_last_step']}"
+    assert "换向阻尼" in _bsd1_lesson, f"换向阻尼未留痕: {_bsd1_lesson}"
+    # b) 连续换向几何收敛：last=−0.015 → 反向释放步长 |last|/2=0.0075
+    bsd2 = _kr_damp_knowledge(0.60, -0.015)
+    reflect.finalize_run(bsd2, SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_ELITE_E", "node_type": "Elite", "rounds": 6,
+                        "floor": 31, "hp_lost": 52.0, "stall": False},
+        death_was_elite=True, death_hp_pct_at_entry=0.4, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[]),
+        victory=False, final_floor=31)
+    assert abs(bsd2.policy["kill_race_prior_eff"] - 0.6075) < 1e-9, \
+        f"连续换向未几何收敛: {bsd2.policy['kill_race_prior_eff']}"
+    assert abs(bsd2.policy["kill_race_prior_eff_last_step"] - 0.0075) < 1e-9, \
+        f"收敛步长未落盘: {bsd2.policy['kill_race_prior_eff_last_step']}"
+    # c) 同向连击恢复全步长：last=−0.03，本局再次竞速败北 → 全速 −0.03
+    bsd3 = _kr_damp_knowledge(0.63, -0.03)
+    reflect.finalize_run(bsd3, _kr_down_ctx, victory=False, final_floor=17)
+    assert abs(bsd3.policy["kill_race_prior_eff"] - 0.60) < 1e-9, \
+        f"同向连击未恢复全步长: {bsd3.policy['kill_race_prior_eff']}"
+    # d) 阻尼关闭：kill_race_osc_damp=false 时换向仍全步长（旧版行为）
+    bsd4 = _kr_damp_knowledge(0.63, 0.03, damp=False)
+    reflect.finalize_run(bsd4, _kr_down_ctx, victory=False, final_floor=17)
+    assert abs(bsd4.policy["kill_race_prior_eff"] - 0.60) < 1e-9, \
+        f"阻尼关闭后换向仍被减半: {bsd4.policy['kill_race_prior_eff']}"
+    # e) 同局先降后释：开局口径各判换向（降 −0.015 减半、释 +0.03 全速），
+    #    局末按净步长 +0.015 落盘，不互相触发双重折减
+    bsd5 = _kr_damp_knowledge(0.63, 0.03)
+    reflect.finalize_run(bsd5, SimpleNamespace(
+        died_to_event=None,
+        died_in_combat={"comp_id": "BR_BOSS_F", "node_type": "Boss", "rounds": 8,
+                        "floor": 33, "hp_lost": 86.0, "stall": False},
+        death_was_elite=False, death_hp_pct_at_entry=0.9, credit_tags=[],
+        rests_healed_at_full=0, ascension=0, combat_notes=[]),
+        victory=False, final_floor=33)
+    assert abs(bsd5.policy["kill_race_prior_eff"] - 0.645) < 1e-9, \
+        f"同局先降后释净账不符: {bsd5.policy['kill_race_prior_eff']}"
+    assert abs(bsd5.policy["kill_race_prior_eff_last_step"] - 0.015) < 1e-9, \
+        f"同局净步长未落盘: {bsd5.policy['kill_race_prior_eff_last_step']}"
+
     # 3bt) 竞速及格线与预留解耦（第422局复盘）：burst≈33 的卡组高于静态
     #      deck_burst_floor=30、却远低于杀 learned Boss 所需（血池160/火力10/
     #      满血存活8回合 → 及格线36.4）——旧口径把它当「非饥饿」卡组：力量

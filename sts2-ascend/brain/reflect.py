@@ -97,6 +97,36 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
 # 「输出不足」，证据归 block_safety（短时爆毙通道）而非长战通道
 BURST_DEATH_DPR = 14.0
 
+# 竞速先验折算率的基准步长（第 397~402 批复盘起两通道共用；
+# 换向阻尼 KILL_RACE_OSC_DAMP 以此为全速步长）
+KILL_RACE_STEP = 0.03
+
+
+def _kr_flip_damped_step(pol: dict, direction: int) -> tuple[float, str]:
+    """竞速先验折算率的换向阻尼（KILL_RACE_OSC_DAMP，第 915~916 局批复盘新增）。
+
+    lessons 950~968 台账：kill_race_prior_eff 在「Boss 竞速败北下调」与
+    「F18+ 部分胜利释放」两通道间 ±0.03 逐局换向（0.57↔0.60↔0.63↔0.66↔0.69
+    往复，数十次翻向零收敛）——两通道吸收的是同一物理量（一幕 Boss 击杀
+    速率）的真实两面，逐局互相抵消形成极限环。阻尼规则：与上一次实际施加
+    步长（kill_race_prior_eff_last_step，带符号净额）反向时，步长降为
+    |last|/2（连续换向几何收敛）；同向连击或无历史保持全步长，真实证据
+    不减速。返回 (步长, 追加到变更理由的阻尼留痕尾串)；
+    knowledge/policy.json 写 kill_race_osc_damp: false 即整体关闭（回滚＝
+    旧版全步长行为，零差异；last_step 记账照常保留供重启阻尼后对账）。
+    """
+    if not pol.get("kill_race_osc_damp", True):
+        return KILL_RACE_STEP, ""
+    try:
+        last = float(pol.get("kill_race_prior_eff_last_step", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        last = 0.0
+    if last != 0.0 and (last > 0.0) != (direction > 0.0):
+        step = min(KILL_RACE_STEP, abs(last) / 2.0)
+        return step, (f"；换向阻尼：上一步 {last:+.2f}，"
+                      f"步长 {KILL_RACE_STEP:.2f}→{step:.3f}")
+    return KILL_RACE_STEP, ""
+
 
 def _adj_burst_starve(know: Knowledge, changes: list[str], why_base: str, why_extra: str,
                       node_kind: str = "normal") -> bool:
@@ -235,6 +265,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
 
     # ---------------- policy evolution ----------------
     changes: list[str] = []
+    # 换向阻尼的运行内对账（_kr_flip_damped_step）：折算率的两个移动位点
+    # （Boss 竞速败北下调 / F18+ 部分胜利释放）共用开局时的 last_step 做
+    # 换向判定（last_step 只在局末按净步长落盘，同局两步互不触发阻尼），
+    # _kr_net 累计本局对该旋钮的净施加步长
+    _kr_net = 0.0
     # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动停止防御送死，血量
     # 损失全部发生在「摆烂」之后——把它当成「格挡不足/击杀太慢」的证据是
     # 归因错位：109 局正是这样把 block_safety 1.05→1.10 推高的。摆烂死对
@@ -390,12 +425,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                             # 败北证据改接竞速先验折算率下调——deck_burst×eff 的 DPS
                             # 开账更悲观 → 战斗端更早全攻提速、篝火端前夜更早转锻造
                             # （本批五场前夜回血后的整管打空证明回血已零生存价值）
-                            _kr_step = 0.03
+                            # 第 915~916 批复盘起步长过换向阻尼（_kr_flip_damped_step）
+                            _kr_step, _kr_damp = _kr_flip_damped_step(pol, -1)
                             _kr_head = pol["kill_race_prior_eff"] - BOUNDS["kill_race_prior_eff"][0]
                             if _kr_head >= _kr_step:
                                 _adj(know, "kill_race_prior_eff", -_kr_step, changes,
                                      "饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调"
-                                     "（更早全攻提速+前夜更早转锻造）")
+                                     "（更早全攻提速+前夜更早转锻造）" + _kr_damp)
+                                _kr_net += -_kr_step
                             else:
                                 changes.append("kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收")
                 elif kb_head >= kb_step:
@@ -477,19 +514,26 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         # 降账是两场独立战斗的证据：同局先释后降净额归零不是矛盾账目，
         # 是「一幕预演悲观被证伪 + 二幕长战确证」的诚实对冲。
         if final_floor >= 18:
-            _eff_step = 0.03
+            # 第 915~916 批复盘起步长过换向阻尼（_kr_flip_damped_step）
+            _eff_step, _eff_damp = _kr_flip_damped_step(pol, 1)
             _eff_head = (BOUNDS["kill_race_prior_eff"][1]
                          - pol["kill_race_prior_eff"])
             if _eff_head >= _eff_step:
                 _adj(know, "kill_race_prior_eff", _eff_step, changes,
                      f"行至 F{final_floor}（"
                      + ("一二幕" if final_floor >= 34 else "一幕")
-                     + "Boss已实战击败）——竞速先验折算率获部分胜利释放")
+                     + "Boss已实战击败）——竞速先验折算率获部分胜利释放" + _eff_damp)
+                _kr_net += _eff_step
             else:
                 changes.append(
                     f"kill_race_prior_eff {pol['kill_race_prior_eff']:.2f} "
                     f"距锚点仅余 {_eff_head:.2f}(<步长{_eff_step:.2f})——"
                     "部分胜利释放停止，视为已达健康锚点")
+        # 换向阻尼的局末落盘：本局对该旋钮的净步长（同局先降后释按
+        # 开局口径各判换向，落盘记净额）供下一局的换向判定；零净额
+        # （触底/触顶空转或纯胜利局）不覆盖历史方向
+        if _kr_net:
+            pol["kill_race_prior_eff_last_step"] = _kr_net
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
