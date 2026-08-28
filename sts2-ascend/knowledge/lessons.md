@@ -4836,3 +4836,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.54 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/840 胜，当前目标进阶 0
+
+## 第 841 局复盘（2026-08-28 09:50）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：HOWL_FROM_BEYOND, TAUNT, HOWL_FROM_BEYOND, UPPERCUT, HEMOKINESIS, CINDER, ARMAMENTS, UNRELENTING, IMPERVIOUS, INFLAME, INFLAME, THUNDERCLAP, VICIOUS, SHRUG_IT_OFF, JUGGERNAUT, SWORD_BOOMERANG, EVIL_EYE, BATTLE_TRANCE
+- 本局遗物：HORN_CLEAT, 意外光滑的石头, LANTERN, 准备背包
+- 战斗记录：F21 Monster战 掉血25; F23 Monster战 掉血20; F27 Monster战 掉血30; F29 Elite战 掉血32; F31 Monster战 掉血8｜竞速审计：T3判死→实战4回合获胜; F33 Boss战 掉血49｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，FIEND_FIRE(24分/33局)，OFFERING(24分/20局)，PACTS_END(24分/87局)，MANGLE(24分/86局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.51 → 0.54（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/841 胜，当前目标进阶 0
