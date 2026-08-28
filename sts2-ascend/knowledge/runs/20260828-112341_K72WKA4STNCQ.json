@@ -1,0 +1,99 @@
+{
+ "run_id": "K72WKA4STNCQ",
+ "run_number": 853,
+ "ascension": 0,
+ "started_at": "2026-08-28 11:23:41",
+ "victory": false,
+ "in_progress": true,
+ "floor": 1,
+ "decisions": [
+  {
+   "t": "11:23:41",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「羽翼之靴」（经验价值 1.9）；羽翼之靴=1.9(n=56) / 熔岩石=0.6(n=17) / 华美发束=-2.0(n=3)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "羽翼之靴",
+      "score": 1.875,
+      "status": "chosen",
+      "why": "经验样本 56",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "熔岩石",
+      "score": 0.588,
+      "status": "rejected",
+      "why": "经验样本 17",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "华美发束",
+      "score": -1.98,
+      "status": "rejected",
+      "why": "经验样本 3",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "羽翼之靴",
+     "params": {
+      "option_index": 0
+     },
+     "score": 1.875
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": []
+}
