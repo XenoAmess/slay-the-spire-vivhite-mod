@@ -50,3 +50,15 @@ SHA-256 摘要，并与 parent、候选 commit、精确 paths、接管策略一�
 - 判断是否接管看本次全部 pathspec 的所有权，不按文件名猜测，也不使用全仓指纹或全仓洁净门禁。
 - 日志出现“检测到 Brain 在线状态被放入真实 staged”代表自愈分支生效，不是需要人工立刻处理的
   故障；只有 journal 长期保留且目标 index 持续变化时才需要进一步调查并行写入者。
+
+## 生产上线验收
+
+- 使用统一 `Stop-Agent.ps1 -KeepGame` / `Start-Agent.ps1 -SkipDeploy` 热切换，游戏 PID 全程保留；
+  Brain 断流约 52 秒。新进程 `boot_head=f4470755`，已验证包含机制提交 `d76cde0`，8080 health ready，
+  并从第 847 局 F21 的原战斗继续游玩。
+- 在真实 index 已有 9 张 `.tmp` 截图和 3 个 TTS/viewer 日志 staged 的现场，精确 stage 第 847 局
+  run 的中途快照。结算时新 Brain 明确记录机器路径接管，并建立、推送存档提交 `304ca906`。
+- `304ca906` 只包含 lessons、policy、progression、review queue、目标 run 和 stats 六个在线状态文件；
+  目标 run 自动退出 staged。验收前后记录的上述 12 个非机器 staged blob id 逐项相同。
+- 热停期间正在静默的 GLM 复盘按协议完整保存为失败包 `20260828-103400-...-9a9d4d44`，拒合清单
+  单独提交并在启动后补推；新 worker 随后从 raw clone 补全现场并继续逐包重审，没有因上线丢批。
