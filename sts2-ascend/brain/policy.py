@@ -2576,11 +2576,21 @@ class Policy:
         # 奢侈格挡贬值、攻击提速，把每一分能量押进唯一的活路——提前终结战斗。
         # 头两回合不武装（输出速率样本不足，避免误判）；与 desperate/race_allin
         # 不重复放大（同一局面只提速一次）。
+        # 全场重生体判定（RACE_POOL_ALL_RESPAWN_CREDIT，第914局批复盘）：
+        # 目标端三重压制自 152 局起对「全场无本体」放开（拒绝出牌永远比打
+        # 重生体更差），但斩杀竞速的血池口径没有同步——914 局 F2/F5 两场
+        # 同名册重生体整场在场的磨斗里 ttk 恒为 0、竞速永不判死，F5 被意图
+        # 6→26 的滚雪球磨了 10 回合白损 53 血。全场皆为重生体时它们就是唯一
+        # 的血池与唯一的终点，必须计入竞速账；race_all_respawn_pool_credit
+        # =False 一键回滚旧版（重生体一律不计入血池）。
+        all_respawn = all(self._is_respawn_add(e) for e in enemies)
+        _respawn_credit = all_respawn and bool(
+            pol.get("race_all_respawn_pool_credit", True))
         kill_race = False
         if pol.get("kill_race_enabled", True):
             enemy_hp_total = 0
             for e in enemies:
-                if self._is_respawn_add(e):
+                if self._is_respawn_add(e) and not _respawn_credit:
                     continue
                 try:
                     enemy_hp_total += max(0, int(e.get("current_hp") or 0))
@@ -2715,6 +2725,8 @@ class Policy:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速")
+                        if _respawn_credit:
+                            danger_note += "；重生体计入血池（全场无本体）"
                         if self._krace_turns >= 2:
                             # 实测口径武装入锁（先验口径 T1~T2 不锁：样本不足的
                             # 误判可被下一 tick 自然纠正）
@@ -2743,7 +2755,7 @@ class Policy:
         # 重生压制的初衷（52~53/58 局利齿之眼）是「杀召唤物无意义、应转火本体」，
         # 前提是场上还有本体可打；当存活敌人全是重生体时，压制让「不打」成为
         # 唯一选择——拒绝出牌永远是比「打重生体」更差的答案，必须放开。
-        all_respawn = all(self._is_respawn_add(e) for e in enemies)
+        # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
 

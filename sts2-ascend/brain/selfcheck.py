@@ -5835,6 +5835,72 @@ def main() -> int:
     assert d_allroster.action == "play_card", \
         f"全场名册重生体时压制解除失效（拒出牌复发）: {d_allroster.action}（{d_allroster.reason}）"
 
+    # 3rs) 全场重生体的竞速血池信贷（第914局批复盘闭环实验 RACE_POOL_ALL_RESPAWN_CREDIT）：
+    #      914-F2/F5 实证——同名册重生体整场在场时，斩杀竞速血池把全场剔除
+    #      （ttk 恒 0、竞速永不判死），F5 被意图 6→26 滚雪球磨 10 回合白损 53。
+    #      目标端自 152 局起对 all_respawn 放开，血池口径必须同步：全场无本体时
+    #      重生体计入竞速账；race_all_respawn_pool_credit=False 一键回滚旧版。
+    rc_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-racepooled-")))
+    for _key in ("RC_ADD_A", "RC_ADD_B"):
+        rc_know.mark_respawn_add(_key)
+        rc_know.mark_respawn_add(_key)
+    rc_ctx = type("RCCtx", (), {"combat": None, "current_combat_is_hard": False,
+                                "credit_tags": []})()
+
+    def rc_state(hp_now, incoming, deck, e0="RC_ADD_A", e1="RC_ADD_B",
+                 hp0=45, hp1=45):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {"comp_id": "RC_COMP", "node_type": "Monster",
+                       "player": {"current_hp": hp_now, "max_hp": 80, "block": 0,
+                                  "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "RC_HIT", "name": "斩", "playable": True,
+                            "energy_cost": 1, "requires_target": True,
+                            "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 8}]},
+                           {"index": 1, "card_id": "RC_HIT2", "name": "斩2", "playable": True,
+                            "energy_cost": 1, "requires_target": True,
+                            "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                       "enemies": [
+                           {"index": 0, "enemy_id": e0, "name": e0, "current_hp": hp0,
+                            "max_hp": hp0, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": incoming}]},
+                           {"index": 1, "enemy_id": e1, "name": e1, "current_hp": hp1,
+                            "max_hp": hp1, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 5,
+                    "deck": deck}}
+
+    weak_rc_deck = [{"card_id": f"RC_WK_{i}", "card_type": "Attack", "energy_cost": 1,
+                     "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+                    for i in range(4)]
+    # ① 全场重生体（双 45 血池=90≥80）+ 弱爆发：竞速开账判死并附信贷留痕
+    pol_rc1 = policy.Policy(rc_know, random.Random(11))
+    d_rc1 = pol_rc1.decide(rc_state(52, 24, weak_rc_deck), rc_ctx)
+    assert "斩杀竞速投影" in d_rc1.reason and "重生体计入血池" in d_rc1.reason, \
+        f"全场重生体血池未计入竞速账: {d_rc1.reason}"
+    # ② 回滚键关闭：血池归零 → 竞速不开账（旧版行为锚）
+    rc_know.policy["race_all_respawn_pool_credit"] = False
+    pol_rc2 = policy.Policy(rc_know, random.Random(11))
+    d_rc2 = pol_rc2.decide(rc_state(52, 24, weak_rc_deck), rc_ctx)
+    assert "斩杀竞速投影" not in d_rc2.reason, \
+        f"回滚键关闭后仍计入重生体血池: {d_rc2.reason}"
+    rc_know.policy["race_all_respawn_pool_credit"] = True
+    # ③ 有本体在场：重生体仍按旧口径剔除（506 局教义不动）——本体 10 血 <80 且
+    #    无升级轨迹，竞速不开账
+    pol_rc3 = policy.Policy(rc_know, random.Random(11))
+    d_rc3 = pol_rc3.decide(rc_state(52, 24, weak_rc_deck,
+                                    e0="RC_BODY", e1="RC_ADD_B", hp0=10, hp1=90), rc_ctx)
+    assert "斩杀竞速投影" not in d_rc3.reason, \
+        f"有本体时重生体不应计入竞速血池: {d_rc3.reason}"
+
+
     # 3ys) 进幕快照账本（第 506~508 局批复盘新增）：二幕消耗战已成主死因，
     #      进幕就绪度（血量/金币/药水/卡组规模/爆发）必须有账可查。封顶 60 条、
     #      旧库无键自动补齐
