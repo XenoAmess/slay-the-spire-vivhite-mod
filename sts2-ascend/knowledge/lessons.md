@@ -5331,3 +5331,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/885 胜，当前目标进阶 0
+
+## 第 886 局复盘（2026-08-28 16:13）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：FIGHT_ME, SHRUG_IT_OFF, MOLTEN_FIST, UPPERCUT, INFERNAL_BLADE, UNRELENTING, WHIRLWIND, EVIL_EYE, MOLTEN_FIST, VICIOUS, ARMAMENTS, TWIN_STRIKE, CINDER, INFLAME, HEMOKINESIS, JUGGLING, ARMAMENTS, THUNDERCLAP, BLUDGEON, BLUDGEON, SHRUG_IT_OFF
+- 本局遗物：MERCURY_HOURGLASS, 梨子, 餐券, GORGET, 吊灯
+- 战斗记录：F19 Monster战 掉血0; F22 Monster战 掉血7; F23 Monster战 掉血43; F25 Monster战 掉血20; F27 Elite战 掉血38; F31 Elite战 掉血51｜竞速审计：T5判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/90局)，MANGLE(24分/88局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.66 → 0.69（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/886 胜，当前目标进阶 0
