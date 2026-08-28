@@ -78,6 +78,43 @@ class AutoGitSafetyTests(unittest.TestCase):
         self._git("restore", f"--source={parent}", "--", relative)
         return parent, commit
 
+    def test_brain_auto_commit_subject_is_tagged_once_and_legacy_subjects_still_match(self) -> None:
+        legacy = "chore(sts2-ascend): 第900局存档"
+        tagged = "[brain:auto] chore(sts2-ascend): 第900局存档"
+
+        self.assertEqual(autogit.brain_auto_commit_message(legacy), tagged)
+        self.assertEqual(autogit.brain_auto_commit_message(tagged), tagged)
+        self.assertIsNotNone(autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(legacy))
+        self.assertIsNotNone(autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(tagged))
+
+        path = "sts2-ascend/knowledge/stats.json"
+        self._write(path, '{"runs": 2}\n')
+        result = autogit.commit_progress_result(legacy, paths=[path], push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(
+            self._git("log", "-1", "--format=%s").stdout.strip(),
+            tagged,
+        )
+
+    def test_brain_review_patch_commit_subject_is_tagged(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        self._write(path, "VALUE = 2\n")
+        patch = subprocess.run(
+            ["git", "-C", str(self.repo), "diff", "--binary", "--", path],
+            check=True, capture_output=True,
+        ).stdout
+        self._git("restore", path)
+
+        result = autogit.commit_patch_result(
+            patch, "fix(sts2-ascend): 复盘修正策略", [path], push=False)
+
+        self.assertTrue(result.created, result.reason)
+        self.assertEqual(
+            self._git("log", "-1", "--format=%s").stdout.strip(),
+            "[brain:auto] fix(sts2-ascend): 复盘修正策略",
+        )
+
     def test_private_index_excludes_and_preserves_pre_staged_user_file(self) -> None:
         self._write("outside.txt", "user-staged\n")
         self._git("add", "outside.txt")

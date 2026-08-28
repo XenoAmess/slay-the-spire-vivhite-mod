@@ -86,8 +86,10 @@ _GIT_LOCK = threading.RLock()
 _LOCK_STATE = threading.local()
 REVIEW_ACTIVE_FILE = BASE_DIR / "knowledge" / "review_active.flag"
 _HEX_COMMIT = re.compile(r"^[0-9a-fA-F]{40,64}$")
+_BRAIN_AUTO_COMMIT_PREFIX = "[brain:auto]"
 _MACHINE_PROGRESS_SUBJECT = re.compile(
-    r"^chore\(sts2-ascend\): 第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
+    r"^(?:\[brain:auto\]\s+)?chore\(sts2-ascend\): "
+    r"第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
 _PROGRESS_INDEX_PENDING_NAME = "sts2-ascend-progress-index-pending.json"
 _MACHINE_INDEX_TAKEOVER_POLICY = "machine-owned-takeover-v1"
 _INDEX_LOCK_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
@@ -103,6 +105,14 @@ class CommitResult:
 
     def __bool__(self) -> bool:
         return self.created
+
+
+def brain_auto_commit_message(message: str) -> str:
+    """Tag every commit created by the running Brain without double-prefixing."""
+    normalized = str(message or "").strip()
+    if normalized.startswith(_BRAIN_AUTO_COMMIT_PREFIX):
+        return normalized
+    return f"{_BRAIN_AUTO_COMMIT_PREFIX} {normalized}"
 
 
 def set_review_active(active: bool) -> None:
@@ -833,6 +843,7 @@ def commit_progress_result(
     message: str, log=print, paths: Sequence[str] | None = None, *, push: bool = True,
 ) -> CommitResult:
     """用私有 index 原子提交指定路径，并可选在同一事务中 push。"""
+    message = brain_auto_commit_message(message)
     try:
         with repository_lock():
             # Complete any ref-success/index-failure transaction before staged
@@ -991,6 +1002,7 @@ def commit_patch_result(
     ``finalize_prepare`` 只在工作树 patch 与 update-ref 都成功后调用，可把
     provisional marker 两阶段确认为 committed；其失败不会倒退已成立的提交。
     """
+    message = brain_auto_commit_message(message)
     provisional: CommitResult | None = None
     prepared = False
     worktree_applied = False
