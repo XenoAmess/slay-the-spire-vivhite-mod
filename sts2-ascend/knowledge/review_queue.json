@@ -505,30 +505,6 @@
    "retry_after": 1787919860.6931608
   },
   {
-   "run": 913,
-   "time": "2026-08-28 19:53",
-   "backend_key": "luna-max",
-   "priority": 2,
-   "runner": "codex",
-   "model": "gpt-5.6-luna",
-   "variant": "",
-   "reasoning_effort": "max",
-   "approve_for_me": true,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "queue_id": "24240-1787918094705454700-0",
-   "retry_same_model": false,
-   "salvage_packages": [
-    "20260828-195554-1787918154829419700-0d591358"
-   ],
-   "salvage_attempts": [],
-   "retry_group": "20260828-195554-1787918154829419700-0d591358",
-   "replay_target": "20260828-195554-1787918154829419700-0d591358",
-   "retry_count": 4,
-   "retry_after": 1787919647.5773852
-  },
-  {
    "run": 914,
    "time": "2026-08-28 20:01",
    "backend_key": "luna-max",
@@ -605,7 +581,7 @@
    "time": "2026-08-27 21:50:23",
    "retry_group": "20260827-215023-1787838623754163300-cd0aa644",
    "replay_target": "20260827-215023-1787838623754163300-cd0aa644",
-   "retry_same_model": false,
+   "retry_same_model": true,
    "runner": "opencode",
    "salvage_packages": [
     "20260827-215023-1787838623754163300-cd0aa644"
@@ -634,7 +610,7 @@
    "time": "2026-08-27 21:50:23",
    "retry_group": "20260827-215023-1787838623754163300-cd0aa644",
    "replay_target": "20260827-215023-1787838623754163300-cd0aa644",
-   "retry_same_model": false,
+   "retry_same_model": true,
    "runner": "opencode",
    "salvage_packages": [
     "20260827-215023-1787838623754163300-cd0aa644"
@@ -663,7 +639,7 @@
    "time": "2026-08-27 21:50:23",
    "retry_group": "20260827-215023-1787838623754163300-cd0aa644",
    "replay_target": "20260827-215023-1787838623754163300-cd0aa644",
-   "retry_same_model": false,
+   "retry_same_model": true,
    "runner": "opencode",
    "salvage_packages": [
     "20260827-215023-1787838623754163300-cd0aa644"
@@ -692,7 +668,7 @@
    "time": "2026-08-27 21:50:23",
    "retry_group": "20260827-215023-1787838623754163300-cd0aa644",
    "replay_target": "20260827-215023-1787838623754163300-cd0aa644",
-   "retry_same_model": false,
+   "retry_same_model": true,
    "runner": "opencode",
    "salvage_packages": [
     "20260827-215023-1787838623754163300-cd0aa644"
@@ -721,7 +697,7 @@
    "time": "2026-08-27 21:50:23",
    "retry_group": "20260827-215023-1787838623754163300-cd0aa644",
    "replay_target": "20260827-215023-1787838623754163300-cd0aa644",
-   "retry_same_model": false,
+   "retry_same_model": true,
    "runner": "opencode",
    "salvage_packages": [
     "20260827-215023-1787838623754163300-cd0aa644"
@@ -760,5 +736,37 @@
    "source": "queued"
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   913
+  ],
+  "items": [
+   {
+    "run": 913,
+    "time": "2026-08-28 19:53",
+    "backend_key": "kimi-k3",
+    "priority": 3,
+    "runner": "opencode",
+    "model": "kimi-for-coding/k3",
+    "variant": "",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 5,
+    "source": "fallback",
+    "queue_id": "24240-1787918094705454700-0",
+    "retry_same_model": true,
+    "salvage_packages": [
+     "20260828-195554-1787918154829419700-0d591358"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260828-195554-1787918154829419700-0d591358",
+    "replay_target": "20260828-195554-1787918154829419700-0d591358",
+    "retry_count": 4,
+    "retry_after": 1787919647.5773852
+   }
+  ],
+  "retry_group": "20260828-195554-1787918154829419700-0d591358",
+  "started": "2026-08-28 20:22:15"
+ }
 }
