@@ -4814,3 +4814,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/838 胜，当前目标进阶 0
+
+## 第 839 局复盘（2026-08-28 09:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：TAUNT, RAMPAGE, CINDER, RAMPAGE, HEMOKINESIS, RUPTURE, TRUE_GRIT, SHRUG_IT_OFF, BLUDGEON
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F3 Monster战 掉血0; F5 Monster战 掉血0; F8 Monster战 掉血13; F11 Monster战 掉血12; F14 Monster战 掉血31; F17 Boss战 掉血48｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，FIEND_FIRE(24分/33局)，OFFERING(24分/20局)，PACTS_END(24分/87局)，MANGLE(24分/86局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/839 胜，当前目标进阶 0
