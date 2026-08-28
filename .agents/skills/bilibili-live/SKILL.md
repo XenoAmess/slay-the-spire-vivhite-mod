@@ -1,6 +1,6 @@
 ---
 name: bilibili-live
-description: Control this workspace's Bilibili broadcast through the local Bilibili Livehime app. Use when the user explicitly asks to start or stop the Bilibili stream; starting also launches the complete sts2-ascend stack and makes Slay the Spire 2 TOPMOST, while stopping affects only Bilibili streaming.
+description: Control this workspace's Bilibili broadcast through the local Bilibili Livehime app. Use when the user explicitly asks to start or stop the Bilibili stream; starting also launches the complete sts2-ascend stack, makes Slay the Spire 2 TOPMOST, and enables its streaming-only minute patrol, while stopping affects only Bilibili streaming.
 ---
 
 # Bilibili Live
@@ -26,6 +26,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-
 ```
 
 This command must finish the following sequence: call `Start-Agent.ps1 -SkipDeploy`, trigger the protected Livehime GUI task idempotently, then set the exact `SlayTheSpire2.exe` window to foreground and `TOPMOST`. If `ASCEND-VISION` is already running, the entrypoint also reorders it above the game with a non-activating Win32 call; the viewer itself continues this z-order repair every 500ms without taking focus. If Bilibili start fails, report the error and leave the already-started stack running; do not roll it back.
+
+## Broadcast window patrol
+
+`ASCEND-VISION` always keeps its own overlay TOPMOST with the existing approximately 500ms non-activating watchdog, regardless of broadcast state. Separately, its local broadcast patrol checks once every 60 seconds. That patrol may touch the game only when the exact local Livehime process and debug log both report actual `Streaming`; `Idle`, `Starting`, `Stopping`, `NotRunning`, `Unknown`, or any read error must perform no game-window mutation.
+
+During an active patrol, resolve `game_exe` from the current stack session, match the visible game window by that full executable path, reassert the game with `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE, ...)`, then reassert `ASCEND-VISION` second so it remains above the game. This patrol is deterministic local Win32/file logic: it must not call an LLM, consume tokens, use a browser/private Bilibili API, or steal foreground input.
 
 ## Stop
 

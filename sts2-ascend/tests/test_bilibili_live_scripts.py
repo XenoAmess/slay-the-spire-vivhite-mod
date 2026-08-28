@@ -14,6 +14,7 @@ START = SCRIPTS / "Start-BilibiliLive.ps1"
 STOP = SCRIPTS / "Stop-BilibiliLive.ps1"
 SMOKE = SCRIPTS / "Test-BilibiliLive.ps1"
 SKILL = ROOT / ".agents" / "skills" / "bilibili-live" / "SKILL.md"
+PATROL = ROOT / "sts2-ascend" / "brain" / "broadcast_window_patrol.py"
 
 
 def run_powershell(command: str) -> subprocess.CompletedProcess[str]:
@@ -155,6 +156,22 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("before Tk maps the", viewer)
         self.assertIn('if not getattr(self, "_hwnd_prev", 0):', viewer)
 
+    def test_broadcast_game_patrol_is_local_token_free_and_streaming_gated(self) -> None:
+        patrol = PATROL.read_text(encoding="utf-8")
+        viewer = (ROOT / "sts2-ascend" / "brain" / "review_viewer.py").read_text(
+            encoding="utf-8")
+        self.assertIn("BROADCAST_WINDOW_PATROL_INTERVAL_SEC = 60.0", patrol)
+        self.assertIn('if state != "Streaming":', patrol)
+        self.assertIn("process_name_running", patrol)
+        self.assertIn("current_session_game_executable", patrol)
+        self.assertIn("set_topmost_no_activate", patrol)
+        self.assertIn("BroadcastWindowPatrol", viewer)
+        self.assertIn("self._reassert_viewer_topmost()", viewer)
+        for forbidden in (
+            "openai", "minimax", "openrouter", "subprocess", "http://", "https://"
+        ):
+            self.assertNotIn(forbidden, patrol.lower())
+
     def test_bridge_is_fixed_protected_and_current_user_only(self) -> None:
         installer = INSTALL.read_text(encoding="utf-8")
         worker = WORKER.read_text(encoding="utf-8")
@@ -193,6 +210,9 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("Livehime GUI", text)
         self.assertIn("reorders it above the game", text)
         self.assertIn("every 500ms", text)
+        self.assertIn("once every 60 seconds", text)
+        self.assertIn('actual `Streaming`', text)
+        self.assertIn("regardless of broadcast state", text)
 
 
 if __name__ == "__main__":

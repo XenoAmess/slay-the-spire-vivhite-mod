@@ -114,6 +114,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - ASCEND-VISION 的资源根目录和 `knowledge/viewer.lock` 必须通过 `lifecycle.STACK_ROOT` 解析；复盘 clone、自检目录或备份副本不得按自身 `__file__` 建立独立 viewer 锁。复盘子进程必须继承 `STS2_ASCEND_DISABLE_VIEWER=1`。
 - 楼层展示必须使用真实楼层口径 `floor_sum_raw` / `best_floor_raw`；历史 `floors_total` / `best_floor` 保留“真实楼层 + 胜利 50 分”的学习评分语义，不得拿来显示平均或最高楼层。
 - 直播控制语义不变：开播仍先启动完整 sts2-ascend 栈并将杀戮尖塔2置于顶部，再通过本地哔哩哔哩直播姬开播；下播只操作直播姬，不停止任何服务、智能体或游戏。
+- 窗口层巡检必须区分两条不变量：ASCEND-VISION 自身约 500ms 的无激活置顶永远运行；游戏窗口巡检仅在本地直播姬实际为 `Streaming` 时每 60 秒运行，按当前 session 的完整 `game_exe` 精确定位，先无激活恢复游戏 TOPMOST、再恢复 viewer。非 Streaming 或任何状态/窗口读取失败都不得触碰游戏；该路径只允许本地标准库/Win32，不调用 LLM 或网络，token 消耗为 0。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
 - `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。
 - Runner 会在每次创建 Brain 前用纯 Git ref 文件冻结 `STS2_ASCEND_BOOT_HEAD` 与

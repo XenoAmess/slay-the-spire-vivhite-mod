@@ -34,6 +34,11 @@ from lifecycle import (RUNTIME_DIR, SESSION_ID, STACK_ROOT, pid_file,
 from window_layers import reassert_viewer_topmost
 
 try:
+    from broadcast_window_patrol import BroadcastWindowPatrol
+except Exception:  # the overlay must remain fail-open if patrol setup breaks
+    BroadcastWindowPatrol = None
+
+try:
     from floor_stats import FloorStatsProvider
 except Exception:  # stats are optional to the crash-isolated viewer
     FloorStatsProvider = None
@@ -469,6 +474,10 @@ class Viewer:
         self._drag = None
         self._viewer_hwnd = 0
         self._last_viewer_reassert = 0.0
+        self._broadcast_window_patrol = (
+            BroadcastWindowPatrol()
+            if mode == "live" and BroadcastWindowPatrol is not None else None
+        )
         self.dashboard_source = DashboardSource()
         self.stats_source = StatsSource()
         self.dashboard: dict = self._demo_dashboard() if mode == "demo" else {}
@@ -769,6 +778,7 @@ class Viewer:
         now = time.time()
         dt = 0.033
         self._reassert_viewer_topmost()
+        self._poll_broadcast_window_patrol()
         if not getattr(self, "_boot_f1", False):
             self._boot_f1 = True
             self._boot("frame-first")
@@ -1510,6 +1520,23 @@ class Viewer:
         # viewer must never steal focus just to recover from a transient Win32
         # z-order failure.
         reassert_viewer_topmost(hwnd=hwnd)
+
+    def _poll_broadcast_window_patrol(self) -> None:
+        """Keep the game/viewer order healthy only while Livehime is streaming."""
+        patrol = getattr(self, "_broadcast_window_patrol", None)
+        if patrol is None:
+            return
+        try:
+            result = patrol.poll(viewer_hwnd=self._viewer_hwnd or None)
+            if result is not None and result.repaired:
+                self._boot(
+                    f"broadcast-patrol repaired game={result.game_hwnd} "
+                    f"viewer={result.viewer_topmost}"
+                )
+        except Exception:
+            # Window patrol is broadcast decoration, never a reason to kill the
+            # viewer or interrupt the autonomous game loop.
+            return
 
     def run(self) -> None:
         self._boot("run-entered")

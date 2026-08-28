@@ -59,6 +59,20 @@ class WindowLayerTests(unittest.TestCase):
         self.assertEqual(reassert.call_count, 2)
         reassert.assert_any_call(hwnd=0x1234)
 
+    def test_viewer_calls_broadcast_patrol_without_weakening_its_own_watchdog(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer._viewer_hwnd = 0x1234
+        viewer._broadcast_window_patrol = mock.Mock()
+        viewer._broadcast_window_patrol.poll.return_value = SimpleNamespace(
+            repaired=True, game_hwnd=0x5678, viewer_topmost=True)
+        viewer._boot = mock.Mock()
+
+        viewer._poll_broadcast_window_patrol()
+
+        viewer._broadcast_window_patrol.poll.assert_called_once_with(
+            viewer_hwnd=0x1234)
+        viewer._boot.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
