@@ -1,0 +1,306 @@
+{
+  "schema": 1,
+  "name": "split_mesh",
+  "label": "拆件 + 层级骨链（离线对照候选）",
+  "status": "preview_only_not_publishable",
+  "mount_path": "res://candidates/split_mesh/combat",
+  "resource": "vivhite_combat_split_mesh_skeleton_data.tres",
+  "scene_scale_contract": 0.28,
+  "files": [
+    "vivhite_combat_split_mesh.spjson",
+    "vivhite_combat_split_mesh.spatlas",
+    "vivhite_combat_split_mesh.png",
+    "vivhite_combat_split_mesh_skeleton_data.tres"
+  ],
+  "source_contract": {
+    "classification": "single_full_body_single_frame_rgba_not_a_sprite_sheet",
+    "body": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-body-master-v1.png",
+    "body_canvas_px": [
+      1680,
+      2512
+    ],
+    "body_alpha_bounds_px": [
+      0,
+      9,
+      1666,
+      2486
+    ],
+    "arc": "assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-magic-arc-v1.png",
+    "sigil": "assets/vivhite-ironclad/custom/character_select/sources/vivhite-character-select-magic-sigil-v1.png"
+  },
+  "consumer_contract_evidence": [
+    "Vivhite/VivhiteCode/Characters/IroncladReplacementAssets.cs",
+    "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    ".work/ironclad-v0.111.0/combat/scene.tscn"
+  ],
+  "required_animations": [
+    "attack",
+    "attack_heavy",
+    "cast",
+    "die",
+    "hurt",
+    "idle_loop",
+    "low_health_loop",
+    "relaxed_loop"
+  ],
+  "required_slots": [
+    "slash_mesh",
+    "eye_attach_slot"
+  ],
+  "required_events": [
+    "attack_slash_start",
+    "heavy_slash_start",
+    "cast_eyes_start",
+    "clear_vfx"
+  ],
+  "motion_at_scene_scale_px": {
+    "attack_root_lunge": 29.12,
+    "attack_heavy_root_lunge": 45.92,
+    "hurt_root_recoil": 33.6
+  },
+  "part_contract": [
+    {
+      "id": "leg_left_thigh",
+      "bone": "vivhite_thigh_left",
+      "normal_slot": "part_leg_left_thigh",
+      "death_slot": "death_leg_left_thigh",
+      "preview_source_rect_px": [
+        445.0,
+        1140.0,
+        270.0,
+        330.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "leg_left_lower",
+      "bone": "vivhite_knee_left",
+      "normal_slot": "part_leg_left_lower",
+      "death_slot": "death_leg_left_lower",
+      "preview_source_rect_px": [
+        380.0,
+        1240.0,
+        310.0,
+        690.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "leg_left_foot",
+      "bone": "vivhite_foot_left",
+      "normal_slot": "part_leg_left_foot",
+      "death_slot": "death_leg_left_foot",
+      "preview_source_rect_px": [
+        340.0,
+        1810.0,
+        340.0,
+        390.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "leg_right_thigh",
+      "bone": "vivhite_thigh_right",
+      "normal_slot": "part_leg_right_thigh",
+      "death_slot": "death_leg_right_thigh",
+      "preview_source_rect_px": [
+        675.0,
+        1120.0,
+        300.0,
+        390.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "leg_right_lower",
+      "bone": "vivhite_knee_right",
+      "normal_slot": "part_leg_right_lower",
+      "death_slot": "death_leg_right_lower",
+      "preview_source_rect_px": [
+        735.0,
+        1240.0,
+        600.0,
+        900.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "leg_right_foot",
+      "bone": "vivhite_foot_right",
+      "normal_slot": "part_leg_right_foot",
+      "death_slot": "death_leg_right_foot",
+      "preview_source_rect_px": [
+        1100.0,
+        2000.0,
+        280.0,
+        480.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_left_upper",
+      "bone": "vivhite_upper_arm_left",
+      "normal_slot": "part_arm_left_upper",
+      "death_slot": "death_arm_left_upper",
+      "preview_source_rect_px": [
+        400.0,
+        590.0,
+        250.0,
+        310.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_left_forearm",
+      "bone": "vivhite_forearm_left",
+      "normal_slot": "part_arm_left_forearm",
+      "death_slot": "death_arm_left_forearm",
+      "preview_source_rect_px": [
+        245.0,
+        780.0,
+        280.0,
+        290.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_left_hand",
+      "bone": "vivhite_hand_left",
+      "normal_slot": "part_arm_left_hand",
+      "death_slot": "death_arm_left_hand",
+      "preview_source_rect_px": [
+        95.0,
+        1000.0,
+        220.0,
+        190.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "torso",
+      "bone": "vivhite_torso_upper",
+      "normal_slot": "part_torso",
+      "death_slot": "death_torso",
+      "preview_source_rect_px": [
+        505.0,
+        430.0,
+        485.0,
+        490.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "skirt",
+      "bone": "vivhite_skirt_center",
+      "normal_slot": "part_skirt",
+      "death_slot": "death_skirt",
+      "preview_source_rect_px": [
+        445.0,
+        825.0,
+        805.0,
+        470.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "head_front_hair_butterfly",
+      "bone": "vivhite_head",
+      "normal_slot": "part_head_front_hair_butterfly",
+      "death_slot": "death_head_front_hair_butterfly",
+      "preview_source_rect_px": [
+        500.0,
+        5.0,
+        590.0,
+        510.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_right_upper",
+      "bone": "vivhite_upper_arm_right",
+      "normal_slot": "part_arm_right_upper",
+      "death_slot": "death_arm_right_upper",
+      "preview_source_rect_px": [
+        745.0,
+        475.0,
+        340.0,
+        260.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_right_forearm",
+      "bone": "vivhite_forearm_right",
+      "normal_slot": "part_arm_right_forearm",
+      "death_slot": "death_arm_right_forearm",
+      "preview_source_rect_px": [
+        980.0,
+        500.0,
+        400.0,
+        270.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    },
+    {
+      "id": "arm_right_hand",
+      "bone": "vivhite_hand_right",
+      "normal_slot": "part_arm_right_hand",
+      "death_slot": "death_arm_right_hand",
+      "preview_source_rect_px": [
+        1360.0,
+        350.0,
+        300.0,
+        300.0
+      ],
+      "publishable_art_status": "requires_independent_evolink_redraw"
+    }
+  ],
+  "required_evolink_redraws": [
+    {
+      "id": "back_hair",
+      "reason": "Back hair is flattened into the head silhouette and has no hidden neck/shoulder pixels.",
+      "delivery": "Independent native-transparent back-hair attachment with clean joint overlap and no baked halo."
+    },
+    {
+      "id": "head_front_hair_butterfly",
+      "reason": "Face, front hair, rear hair and butterfly overlap in one flattened drawing.",
+      "delivery": "Separate head/face, front-hair locks, rear-hair locks and butterfly attachments."
+    },
+    {
+      "id": "torso_skirt",
+      "reason": "Shoulders, bodice, skirt and upper thighs are flattened and lack pixels behind overlaps.",
+      "delivery": "Torso, pelvis and 3-5 skirt-panel attachments with concealed overlap padding."
+    },
+    {
+      "id": "limbs",
+      "reason": "Every shoulder/elbow/wrist/hip/knee/ankle is continuous in the source and the global halo crosses each cut.",
+      "delivery": "Left/right upper arm, forearm, hand, thigh, lower leg and foot as individually generated native-transparent parts."
+    },
+    {
+      "id": "death_set",
+      "reason": "A standing source cannot reveal compressed torso, side hair, bent-knee undersides or occluded limbs after collapse.",
+      "delivery": "Dedicated side-collapse head/hair, torso/skirt and limb attachment set matching the death slot names in this candidate."
+    }
+  ],
+  "death_contract": {
+    "dedicated_slot_prefix": "death_",
+    "dedicated_attachment_prefix": "vivhite_death_",
+    "preview_uses_same_unmodified_master_uvs": true,
+    "publishable_version_requires_independent_death_art": true,
+    "clear_vfx_time": 0.0,
+    "collapse_method": "staggered pelvis/torso/head/arm/hip/knee/ankle chains; root rotation capped at 7 degrees"
+  },
+  "known_preview_artifacts": [
+    "The source has a whole-body semi-transparent halo crossing every joint cut.",
+    "Flattened joints have no hidden pixels; large rotations expose seams or duplicated overlap bands.",
+    "Head, front hair, rear hair and butterfly remain one temporary attachment.",
+    "Death slots prove switching and chained collapse only; they are not publishable death drawings."
+  ],
+  "safety": {
+    "evolink_paid_calls": 0,
+    "alpha_creation_threshold_mask_or_cleanup": false,
+    "allowed_full_image_resize_resampled_pixels": true,
+    "runtime_skin_modified": false,
+    "deployable": false
+  }
+}
