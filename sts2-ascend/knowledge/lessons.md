@@ -6321,3 +6321,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.63 → 0.65（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
 - 生涯战绩：0/975 胜，当前目标进阶 0
+
+## 第 976 局复盘（2026-08-29 07:08）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：FINESSE, SHRUG_IT_OFF, FIGHT_ME, UNRELENTING, BLUDGEON, BREAKTHROUGH, UNMOVABLE, FLAME_BARRIER, RAMPAGE, UNMOVABLE, SWORD_BOOMERANG, INFLAME, ANGER, TAUNT, CRUELTY, VICIOUS, VICIOUS, DISMANTLE
+- 本局遗物：ODDLY_SMOOTH_STONE, 古茶具套装, STRIKE_DUMMY, 钢笔尖, VAJRA
+- 战斗记录：F17 Boss战 掉血47｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血11; F22 Monster战 掉血0; F24 Monster战 掉血35; F30 Monster战 掉血18; F33 Boss战 掉血84｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/26局)，FIEND_FIRE(25分/37局)，PACTS_END(24分/102局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（6回合掉血84，每回合14≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.65 → 0.68（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/976 胜，当前目标进阶 0
