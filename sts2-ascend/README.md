@@ -409,6 +409,10 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - Edge 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
 - GPU owner 和 Edge 朗读器各有 session-scoped 单实例锁；CUDA 不可用时只跳过白绮结论/碎碎念，
   绝不静默回退 CPU 或加载第二份模型
+- Brain 热重载后不会把一次 `Popen` 当作 owner 已上线：`/health` 必须回显同 session、定向 TTS 代码
+  epoch、协议/feature 与精确 PID 创建身份才算成功。owner 代码变化时，旧代先停止接单并完整播完已接语音，
+  队列空闲后协作退出；候选确认旧 PID 已消失才加载 CUDA 模型。首次从旧协议升级需要统一 Stop/Start 一次，
+  不会为迁移强杀旧语音进程
 - 兼容模式仍可选：`llm.tts_mode` = `indextts` / `hybrid` / `sapi` / `nano` / `off`
 - **音量控制**：`Ctrl+Shift+Alt+↑` 调大 / `Ctrl+Shift+Alt+↓` 调小（±10%）/ `Ctrl+Shift+Alt+M` 静音切换；
   悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）

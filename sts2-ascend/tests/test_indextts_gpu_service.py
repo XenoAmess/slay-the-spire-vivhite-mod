@@ -96,6 +96,11 @@ class SpeechServiceTests(unittest.TestCase):
             play=lambda path: self.played.append(path.read_bytes()),
             log=lambda _message: None,
             on_busy=self.busy_events.append,
+            owner_identity={
+                "pid": 12345,
+                "created_unix": 1700000000.25,
+                "creation_filetime": 133444736002500000,
+            },
         )
         self.service.start_http(0)
         self.port = int(self.service.server.server_address[1])
@@ -109,6 +114,9 @@ class SpeechServiceTests(unittest.TestCase):
             status = client.health()
             self.assertTrue(status["ready"])
             self.assertEqual(status["device"], "cuda:0")
+            self.assertEqual(status["owner_pid"], 12345)
+            self.assertEqual(status["owner_code_epoch"], self.service.owner_code_epoch)
+            self.assertGreaterEqual(status["owner_protocol_version"], 2)
             result = client.speak("白绮测试", source="conclusion", timeout=10)
         self.assertTrue(result["ok"])
         self.assertEqual(self.engine.calls, ["白绮测试"])
@@ -120,6 +128,63 @@ class SpeechServiceTests(unittest.TestCase):
             with self.assertRaises(client.IndexTTSServiceError):
                 client.speak("不会播放", source="quip", timeout=10)
         self.assertEqual(self.engine.calls, [])
+
+    def _handoff_payload(self, **changes) -> dict:
+        payload = {
+            "session_id": "test-session",
+            "owner_pid": 12345,
+            "owner_created_unix": 1700000000.25,
+            "owner_creation_filetime": 133444736002500000,
+            "owner_code_epoch": self.service.owner_code_epoch,
+            "requested_code_epoch": "b" * 64,
+        }
+        payload.update(changes)
+        return payload
+
+    def test_handoff_stops_admission_and_reports_exact_successor(self) -> None:
+        result = self.service.request_handoff(self._handoff_payload())
+
+        self.assertTrue(result["accepted"])
+        self.assertTrue(self.service.wait_handoff_idle(0.1))
+        status = self.service.status()
+        self.assertFalse(status["ready"])
+        self.assertTrue(status["draining"])
+        self.assertEqual(status["handoff_requested_epoch"], "b" * 64)
+        with self.assertRaisesRegex(RuntimeError, "交接"):
+            self.service.submit("不能进入旧代", "conclusion", timeout=1)
+
+    def test_handoff_drains_current_job_without_cutting_playback(self) -> None:
+        blocking = _BlockingEngine()
+        self.service.engine = blocking
+        errors: list[Exception] = []
+
+        def submit() -> None:
+            try:
+                self.service.submit("已经接收的句子要完整播完", "conclusion", timeout=10)
+            except Exception as exc:  # pragma: no cover - assertion reports it
+                errors.append(exc)
+
+        thread = threading.Thread(target=submit)
+        thread.start()
+        self.assertTrue(blocking.started.wait(2.0))
+        result = self.service.request_handoff(self._handoff_payload())
+        self.assertTrue(result["draining"])
+        self.assertFalse(self.service.wait_handoff_idle(0.05))
+        blocking.release.set()
+        thread.join(2.0)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            self.played,
+            [b"fake-wave"] * len(gpu.split_conclusion_text("已经接收的句子要完整播完")),
+        )
+        self.assertTrue(self.service.wait_handoff_idle(1.0))
+
+    def test_handoff_rejects_stale_process_identity(self) -> None:
+        with self.assertRaisesRegex(ValueError, "creation identity"):
+            self.service.request_handoff(
+                self._handoff_payload(owner_creation_filetime=1))
+        self.assertTrue(self.service.status()["ready"])
 
     def test_concurrent_callers_are_serialized(self) -> None:
         errors: list[Exception] = []

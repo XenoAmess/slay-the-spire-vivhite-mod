@@ -414,7 +414,7 @@ class Agent:
     # ---------------- quipper（白绮碎碎念） ----------------
 
     def _launch_quipper(self) -> None:
-        """启动唯一的 IndexTTS GPU owner（兼管白绮碎碎念与复盘最终结论）。"""
+        """Start or generation-handoff the single session IndexTTS owner."""
         try:
             quipper = BASE_DIR / "tts" / "quipper.py"
             if not quipper.exists():
@@ -427,6 +427,33 @@ class Agent:
             if not (index_root / "checkpoints" / "config.yaml").exists():
                 log("[agent] IndexTTS 模型未就绪；GPU-only owner 未启动")
                 return
+            tts_dir = str(BASE_DIR / "tts")
+            if tts_dir not in sys.path:
+                sys.path.insert(0, tts_dir)
+            from indextts_client import health as index_owner_health
+            from owner_epoch import (OWNER_PROTOCOL_VERSION, code_epoch,
+                                     status_matches)
+
+            expected_epoch = code_epoch(BASE_DIR)
+            session_id = os.environ.get("STS2_ASCEND_SESSION_ID", "legacy")
+            current = index_owner_health(timeout=0.5)
+            if status_matches(
+                    current, session_id=session_id,
+                    expected_epoch=expected_epoch, require_ready=True):
+                log(
+                    f"[agent] IndexTTS GPU owner 健康确认：pid "
+                    f"{current.get('owner_pid')}，epoch {expected_epoch[:12]}"
+                )
+                return
+            if (isinstance(current, dict)
+                    and str(current.get("session_id", "legacy")) == session_id
+                    and int(current.get("owner_protocol_version", 0) or 0)
+                    < OWNER_PROTOCOL_VERSION):
+                log(
+                    "[agent] 当前 IndexTTS owner 是旧交接协议；本代不强杀、不假报成功，"
+                    "下一次统一 Stop/Start 将完成一次迁移"
+                )
+                return
             cmd = [uv, "run", "--project", str(index_root), "python", str(quipper)]
             creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                              | getattr(subprocess, "DETACHED_PROCESS", 0)
@@ -435,7 +462,35 @@ class Agent:
                              cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                              creationflags=creationflags, close_fds=True)
-            log("[agent] IndexTTS GPU owner 已拉起（模型后台加载；碎碎念/最终结论共用）")
+            log(
+                f"[agent] IndexTTS owner 候选已启动，等待 health 确认 "
+                f"epoch {expected_epoch[:12]}；尚未宣称接管成功"
+            )
+
+            def confirm_owner() -> None:
+                deadline = time.monotonic() + 240.0
+                while time.monotonic() < deadline and not stop_requested():
+                    status = index_owner_health(timeout=0.8)
+                    if status_matches(
+                            status, session_id=session_id,
+                            expected_epoch=expected_epoch, require_ready=True):
+                        log(
+                            f"[agent] IndexTTS GPU owner 接管并健康确认：pid "
+                            f"{status.get('owner_pid')}，epoch {expected_epoch[:12]}"
+                        )
+                        return
+                    if wait_for_stop(0.5):
+                        return
+                if not stop_requested():
+                    log(
+                        f"[agent] IndexTTS owner 在 240 秒内未回显目标 epoch "
+                        f"{expected_epoch[:12]}；未假报成功，稍后安全边界重试"
+                    )
+
+            monitor = threading.Thread(
+                target=confirm_owner, name="indextts-owner-health", daemon=True)
+            self._quipper_confirm_thread = monitor
+            monitor.start()
         except Exception as exc:
             log(f"[agent] 碎碎念拉起失败（不影响游玩）：{exc}")
 

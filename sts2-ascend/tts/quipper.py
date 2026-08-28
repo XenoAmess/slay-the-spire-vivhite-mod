@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 import wave
 import winsound
@@ -45,12 +46,18 @@ LLM_TIMEOUT = 45                 # 免费路由拥堵时快速失败转保底（
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)   # 隐藏进程里调 console 程序必须加，否则弹黑窗
 API = "http://127.0.0.1:8080"
 FALLBACK_QUIPS = ["稳住", "继续", "看着打", "别慌"]   # 仅 LLM 失败时的兜底一句
+HANDOFF_WAIT_SECONDS = 180.0
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import get_voice_state  # noqa: E402
 from indextts_gpu import IndexTTSGpuEngine, SpeechService, worker_port  # noqa: E402
+from indextts_client import health as owner_health  # noqa: E402
+from owner_epoch import (OWNER_FEATURE_VERSION, OWNER_PROTOCOL_VERSION,  # noqa: E402
+                         code_epoch, valid_code_epoch)
 sys.path.insert(0, str(BASE_DIR / "brain"))
 from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
+
+OWNER_CODE_EPOCH = code_epoch(BASE_DIR)
 
 
 def log(msg: str) -> None:
@@ -243,7 +250,7 @@ def _hide_own_console() -> None:
         pass
 
 
-def _process_created_unix(pid: int) -> float:
+def _process_creation_identity(pid: int) -> tuple[int, float]:
     try:
         import ctypes
 
@@ -257,18 +264,18 @@ def _process_created_unix(pid: int) -> float:
         k32.CloseHandle.argtypes = [ctypes.c_void_p]
         h = k32.OpenProcess(0x1000, False, pid)
         if not h:
-            return 0.0
+            return 0, 0.0
         try:
             created, exited, kernel, user = FileTime(), FileTime(), FileTime(), FileTime()
             if not k32.GetProcessTimes(h, ctypes.byref(created), ctypes.byref(exited),
                                        ctypes.byref(kernel), ctypes.byref(user)):
-                return 0.0
+                return 0, 0.0
             ticks = (int(created.high) << 32) | int(created.low)
-            return ticks / 10_000_000 - 11_644_473_600
+            return ticks, ticks / 10_000_000 - 11_644_473_600
         finally:
             k32.CloseHandle(h)
     except Exception:
-        return 0.0
+        return 0, 0.0
 
 
 def _release_own_lock() -> None:
@@ -277,7 +284,8 @@ def _release_own_lock() -> None:
         raw = LOCK_FILE.read_text(encoding="utf-8").strip()
         record = json.loads(raw) if raw.startswith("{") else {"pid": int(raw or "0")}
         if (int(record.get("pid", 0)) == os.getpid() and
-                record.get("session_id", SESSION_ID) == SESSION_ID):
+                record.get("session_id", SESSION_ID) == SESSION_ID and
+                record.get("owner_code_epoch", OWNER_CODE_EPOCH) == OWNER_CODE_EPOCH):
             LOCK_FILE.unlink(missing_ok=True)
     except (OSError, ValueError, json.JSONDecodeError):
         pass
@@ -287,6 +295,159 @@ def _release_own_lock() -> None:
                 flag.unlink(missing_ok=True)
         except (OSError, ValueError):
             pass
+
+
+def _own_owner_record() -> dict:
+    creation_filetime, created_unix = _process_creation_identity(os.getpid())
+    return {
+        "pid": os.getpid(),
+        "session_id": SESSION_ID,
+        "created_unix": created_unix or time.time(),
+        "creation_filetime": creation_filetime,
+        "owner_protocol_version": OWNER_PROTOCOL_VERSION,
+        "owner_feature_version": OWNER_FEATURE_VERSION,
+        "owner_code_epoch": OWNER_CODE_EPOCH,
+        "executable": sys.executable,
+        "script": str(Path(__file__).resolve()),
+    }
+
+
+def _read_owner_lock() -> tuple[str, dict] | None:
+    try:
+        raw = LOCK_FILE.read_text(encoding="utf-8").strip()
+        if not raw:
+            return None
+        record = json.loads(raw) if raw.startswith("{") else {
+            "pid": int(raw), "session_id": "legacy",
+        }
+        return raw, record
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+def _claim_owner_lock(record: dict) -> bool:
+    """Create the owner lock atomically; contenders can never both claim it."""
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(str(LOCK_FILE), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    except FileExistsError:
+        return False
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(record, handle, ensure_ascii=False)
+    except Exception:
+        try:
+            LOCK_FILE.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+    return True
+
+
+def _remove_stale_lock(raw: str) -> None:
+    """Remove only the exact stale snapshot we inspected."""
+    try:
+        if LOCK_FILE.read_text(encoding="utf-8").strip() == raw:
+            LOCK_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def _health_matches_lock(status: object, record: dict) -> bool:
+    if not isinstance(status, dict):
+        return False
+    try:
+        if (str(status.get("session_id", "legacy")) != str(record.get("session_id", "legacy"))
+                or int(status.get("owner_pid", 0)) != int(record.get("pid", 0))
+                or str(status.get("owner_code_epoch", "")).lower()
+                != str(record.get("owner_code_epoch", "")).lower()
+                or int(status.get("owner_protocol_version", 0)) < OWNER_PROTOCOL_VERSION):
+            return False
+        expected_filetime = int(record.get("creation_filetime", 0))
+        if expected_filetime:
+            return int(status.get("owner_creation_filetime", 0)) == expected_filetime
+        expected_unix = float(record.get("created_unix", 0.0))
+        actual_unix = float(status.get("owner_created_unix", 0.0))
+        return expected_unix > 0 and actual_unix > 0 and abs(expected_unix - actual_unix) <= 0.1
+    except (TypeError, ValueError):
+        return False
+
+
+def _request_handoff(record: dict) -> bool:
+    status = owner_health(timeout=1.0)
+    if not _health_matches_lock(status, record):
+        log("旧 owner 的 health 与锁身份不一致；不发送交接请求，也不触碰该进程")
+        return False
+    payload = json.dumps({
+        "session_id": SESSION_ID,
+        "owner_pid": int(record.get("pid", 0)),
+        "owner_created_unix": float(record.get("created_unix", 0.0)),
+        "owner_creation_filetime": int(record.get("creation_filetime", 0)),
+        "owner_code_epoch": str(record.get("owner_code_epoch", "")),
+        "requested_code_epoch": OWNER_CODE_EPOCH,
+    }, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{worker_port()}/handoff", data=payload, method="POST",
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=3.0) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        return bool(result.get("accepted"))
+    except (OSError, ValueError, urllib.error.URLError, urllib.error.HTTPError,
+            json.JSONDecodeError) as exc:
+        log(f"旧 owner 拒绝或未响应协作交接：{exc}")
+        return False
+
+
+def _acquire_owner_lock(record: dict) -> bool:
+    """Acquire ownership, draining a compatible older code generation first."""
+    while not stop_requested():
+        snapshot = _read_owner_lock()
+        if snapshot is None:
+            if _claim_owner_lock(record):
+                return True
+            continue
+        raw, owner = snapshot
+        owner_pid = int(owner.get("pid", 0))
+        owner_created = float(owner.get("created_unix", 0.0))
+        if not _pid_alive(owner_pid, owner_created):
+            _remove_stale_lock(raw)
+            continue
+        owner_session = str(owner.get("session_id", "legacy"))
+        if owner_session != SESSION_ID:
+            log(f"发现其他 session 的活 owner {owner_pid}；不接管、不触碰")
+            return False
+        owner_epoch = str(owner.get("owner_code_epoch", "")).lower()
+        try:
+            owner_protocol = int(owner.get("owner_protocol_version", 0))
+        except (TypeError, ValueError):
+            owner_protocol = 0
+        if owner_protocol >= OWNER_PROTOCOL_VERSION and owner_epoch == OWNER_CODE_EPOCH:
+            log(f"当前代码代次 owner 已存在（pid {owner_pid}，epoch {OWNER_CODE_EPOCH[:12]}）")
+            return False
+        if owner_protocol < OWNER_PROTOCOL_VERSION or not valid_code_epoch(owner_epoch):
+            log(
+                f"当前 owner pid {owner_pid} 不支持在线代次交接；"
+                "保留旧进程，需下一次统一 Stop/Start 完成一次迁移"
+            )
+            return False
+        if not _request_handoff(owner):
+            return False
+        log(
+            f"已请求旧 owner pid {owner_pid} 在当前语音排水后交接 "
+            f"{owner_epoch[:12]} -> {OWNER_CODE_EPOCH[:12]}"
+        )
+        deadline = time.monotonic() + HANDOFF_WAIT_SECONDS
+        while _pid_alive(owner_pid, owner_created):
+            if stop_requested():
+                return False
+            if time.monotonic() >= deadline:
+                log("旧 owner 未在 180 秒内完成空闲交接；不强杀，候选退出")
+                return False
+            time.sleep(0.2)
+        _remove_stale_lock(raw)
+    return False
 
 
 def _set_busy(source: str | None) -> None:
@@ -315,40 +476,24 @@ def main() -> int:
     _hide_own_console()
     if stop_requested():
         return 0
-    if LOCK_FILE.exists():
-        try:
-            raw = LOCK_FILE.read_text(encoding="utf-8").strip()
-            structured = raw.startswith("{")
-            record = json.loads(raw) if structured else {
-                "pid": int(raw or "0"), "session_id": "legacy"
-            }
-            owner_session = str(record.get("session_id", "legacy"))
-            owner_created = float(record.get("created_unix", 0))
-            if ((structured or owner_session == SESSION_ID) and
-                    _pid_alive(int(record.get("pid", 0)), owner_created)):
-                return 0
-        except (OSError, ValueError, json.JSONDecodeError):
-            pass
-    try:
-        LOCK_FILE.write_text(json.dumps({
-            "pid": os.getpid(), "session_id": SESSION_ID,
-            "created_unix": _process_created_unix(os.getpid()) or time.time(),
-        }), encoding="utf-8")
-    except OSError:
-        pass
+    owner_record = _own_owner_record()
+    if not _acquire_owner_lock(owner_record):
+        return 0
 
     if not (INDEXTTS_DIR / "checkpoints" / "config.yaml").exists():
         raise FileNotFoundError("IndexTTS 模型未就绪；GPU-only 模式不回退 CPU/MOSS")
     gpu_engine = IndexTTSGpuEngine(log)
     service = SpeechService(
         gpu_engine, session_id=SESSION_ID, play=_apply_gain_play,
-        log=log, on_busy=_set_busy,
+        log=log, on_busy=_set_busy, owner_identity=owner_record,
+        owner_code_epoch=OWNER_CODE_EPOCH,
     )
     service.start_http(worker_port())
     rng = random.Random()
     log(
         f"白绮 IndexTTS GPU owner 上线（LLM 现写：{_quip_model()}，"
-        f"端口 {worker_port()}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）"
+        f"端口 {worker_port()}，epoch {OWNER_CODE_EPOCH[:12]}，"
+        f"feature {OWNER_FEATURE_VERSION}，播完后随机 {MIN_GAP}~{MAX_GAP}s 间隔）"
     )
 
     last_play_end = 0.0
@@ -357,6 +502,11 @@ def main() -> int:
 
     try:
         while not stop_requested():
+            if service.handoff_requested():
+                if service.wait_handoff_idle(0.2):
+                    log("已拒绝新请求并完整排空当前语音；旧代码代次协作退出")
+                    break
+                continue
             if wait_for_stop(3):
                 break
             try:
@@ -380,23 +530,25 @@ def main() -> int:
                 # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
                 text = None
                 for attempt in range(6):
-                    if stop_requested():
+                    if stop_requested() or service.handoff_requested():
                         break
                     cand = _llm_generate(brief)
+                    if service.handoff_requested():
+                        break
                     if not cand:
                         break                          # 生成失败 → 直接走保底
                     if _llm_audit(brief, cand):
                         text = cand
                         break
                     log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
-                if stop_requested():
+                if stop_requested() or service.handoff_requested():
                     break
                 if not text:
                     text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
                 last_sig = sig
                 log(f"[{screen}] {text}（战况：{brief}）")
 
-                if stop_requested():
+                if stop_requested() or service.handoff_requested():
                     break
                 service.submit(text, "quip", timeout=900.0)
                 last_play_end = time.time()

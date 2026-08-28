@@ -15,6 +15,8 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
+from owner_epoch import code_epoch, status_matches
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 DEFAULT_PORT = 17952
@@ -73,12 +75,14 @@ def wait_ready(
     """Wait for the current session's CUDA owner without starting another model."""
     deadline = time.monotonic() + max(0.0, timeout)
     expected_session = os.environ.get("STS2_ASCEND_SESSION_ID", "legacy")
+    expected_epoch = code_epoch()
     while time.monotonic() < deadline:
         if stop_requested is not None and stop_requested():
             return None
         status = health(timeout=min(1.0, max(0.1, deadline - time.monotonic())))
-        if (status and status.get("ready") is True
-                and str(status.get("session_id", "legacy")) == expected_session):
+        if status_matches(
+                status, session_id=expected_session,
+                expected_epoch=expected_epoch, require_ready=True):
             return status
         time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
     return None
@@ -98,6 +102,7 @@ def speak(
     request_timeout = configured_timeout if timeout is None else max(10.0, float(timeout))
     payload = json.dumps({
         "session_id": os.environ.get("STS2_ASCEND_SESSION_ID", "legacy"),
+        "owner_code_epoch": code_epoch(),
         "source": source,
         "text": text,
         "timeout_sec": request_timeout,

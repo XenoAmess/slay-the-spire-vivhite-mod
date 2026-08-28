@@ -16,6 +16,7 @@ from pathlib import Path
 
 BRAIN = Path(__file__).resolve().parent
 sys.path.insert(0, str(BRAIN))
+sys.path.insert(0, str(BRAIN.parent / "tts"))
 
 
 def main() -> int:
@@ -26,6 +27,12 @@ def main() -> int:
 
     # 1) 全模块可导入
     import client, knowledge, policy, reflect, agent, autogit, llm_review  # noqa: F401
+    import owner_epoch
+    tts_epoch = owner_epoch.code_epoch(BRAIN.parent)
+    assert re.fullmatch(r"[0-9a-f]{64}", tts_epoch), "TTS owner code epoch invalid"
+    assert set(owner_epoch.OWNER_EPOCH_PATHS) == {
+        "tts/owner_epoch.py", "tts/indextts_gpu.py", "tts/quipper.py",
+    }, "TTS owner epoch must remain path-local; never expand it to a repository fingerprint"
 
     # 2) Policy 在空知识库上能对各屏幕给出决策（不抛异常即可）
     tmp = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-"))

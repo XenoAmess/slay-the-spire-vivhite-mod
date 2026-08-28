@@ -16,6 +16,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
 
+from owner_epoch import OWNER_FEATURE_VERSION, OWNER_PROTOCOL_VERSION, code_epoch
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
 INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
@@ -443,15 +445,28 @@ class SpeechService:
         play: Callable[[Path], None],
         log: Callable[[str], None],
         on_busy: Callable[[str | None], None] | None = None,
+        owner_identity: dict | None = None,
+        owner_code_epoch: str | None = None,
     ) -> None:
         self.engine = engine
         self.session_id = session_id
         self.play = play
         self.log = log
         self.on_busy = on_busy or (lambda _source: None)
+        identity = dict(owner_identity or {})
+        self.owner_pid = int(identity.get("pid", os.getpid()))
+        self.owner_created_unix = float(identity.get("created_unix", 0.0))
+        self.owner_creation_filetime = int(identity.get("creation_filetime", 0))
+        self.owner_code_epoch = str(owner_code_epoch or code_epoch())
         self.queue: queue.PriorityQueue = queue.PriorityQueue(maxsize=64)
         self._counter = itertools.count()
         self._stopping = threading.Event()
+        self._admission_lock = threading.Lock()
+        self._accepting = True
+        self._handoff_requested = threading.Event()
+        self._handoff_epoch = ""
+        self._idle = threading.Event()
+        self._idle.set()
         self._busy_lock = threading.Lock()
         self._current_source: str | None = None
         self._current_phase: str | None = None
@@ -475,6 +490,9 @@ class SpeechService:
         self.server_thread.start()
 
     def status(self) -> dict:
+        with self._admission_lock:
+            accepting = self._accepting
+            handoff_epoch = self._handoff_epoch
         with self._busy_lock:
             source = self._current_source
             phase = self._current_phase
@@ -483,8 +501,17 @@ class SpeechService:
             segment_chars = self._current_segment_chars
         return {
             "ok": True,
-            "ready": not self._stopping.is_set(),
+            "ready": accepting and not self._stopping.is_set(),
             "session_id": self.session_id,
+            "owner_protocol_version": OWNER_PROTOCOL_VERSION,
+            "owner_feature_version": OWNER_FEATURE_VERSION,
+            "owner_code_epoch": self.owner_code_epoch,
+            "owner_pid": self.owner_pid,
+            "owner_created_unix": self.owner_created_unix,
+            "owner_creation_filetime": self.owner_creation_filetime,
+            "accepting": accepting,
+            "draining": self._handoff_requested.is_set(),
+            "handoff_requested_epoch": handoff_epoch,
             "device": self.engine.device,
             "precision": self.engine.precision,
             "gpu": self.engine.gpu_name,
@@ -499,8 +526,6 @@ class SpeechService:
         }
 
     def submit(self, text: str, source: str, timeout: float) -> dict:
-        if self._stopping.is_set():
-            raise RuntimeError("IndexTTS GPU 服务正在停止")
         text = str(text or "").strip()
         if not text:
             return {"ok": True, "skipped": "empty"}
@@ -511,10 +536,16 @@ class SpeechService:
         segments = (tuple(split_conclusion_text(text))
                     if source == "conclusion" else (text,))
         job = _SpeechJob(text=text, segments=segments, source=source)
-        try:
-            self.queue.put_nowait((SOURCE_PRIORITY[source], next(self._counter), job))
-        except queue.Full as exc:
-            raise RuntimeError("IndexTTS GPU 队列已满") from exc
+        with self._admission_lock:
+            if self._stopping.is_set() or not self._accepting:
+                raise RuntimeError("IndexTTS GPU 服务正在停止或交接")
+            self._idle.clear()
+            try:
+                self.queue.put_nowait((SOURCE_PRIORITY[source], next(self._counter), job))
+            except queue.Full as exc:
+                if self.queue.empty():
+                    self._idle.set()
+                raise RuntimeError("IndexTTS GPU 队列已满") from exc
         if not job.done.wait(max(1.0, timeout)):
             job.cancelled = True
             raise TimeoutError(f"IndexTTS 请求等待超过 {timeout:.0f}s")
@@ -524,8 +555,51 @@ class SpeechService:
             raise RuntimeError("IndexTTS 任务未完成")
         return job.result
 
+    def request_handoff(self, payload: dict) -> dict:
+        """Stop admission for an exactly identified successor generation."""
+        if str(payload.get("session_id", "legacy")) != self.session_id:
+            raise ValueError("session mismatch")
+        if int(payload.get("owner_pid", 0)) != self.owner_pid:
+            raise ValueError("owner pid mismatch")
+        requested_epoch = str(payload.get("requested_code_epoch", "")).strip().lower()
+        if not requested_epoch or requested_epoch == self.owner_code_epoch.lower():
+            raise ValueError("successor code epoch must differ")
+        if str(payload.get("owner_code_epoch", "")).strip().lower() != self.owner_code_epoch.lower():
+            raise ValueError("owner code epoch mismatch")
+        supplied_filetime = int(payload.get("owner_creation_filetime", 0))
+        if self.owner_creation_filetime:
+            if supplied_filetime != self.owner_creation_filetime:
+                raise ValueError("owner creation identity mismatch")
+        else:
+            supplied_unix = float(payload.get("owner_created_unix", 0.0))
+            if (self.owner_created_unix <= 0 or supplied_unix <= 0
+                    or abs(supplied_unix - self.owner_created_unix) > 0.1):
+                raise ValueError("owner creation identity mismatch")
+        with self._admission_lock:
+            if self._handoff_epoch and self._handoff_epoch != requested_epoch:
+                raise RuntimeError(
+                    f"owner 已在交接给另一代 {self._handoff_epoch[:12]}")
+            self._accepting = False
+            self._handoff_epoch = requested_epoch
+            self._handoff_requested.set()
+        return {
+            "ok": True,
+            "accepted": True,
+            "owner_code_epoch": self.owner_code_epoch,
+            "requested_code_epoch": requested_epoch,
+            "draining": not self._idle.is_set(),
+        }
+
+    def handoff_requested(self) -> bool:
+        return self._handoff_requested.is_set()
+
+    def wait_handoff_idle(self, timeout: float) -> bool:
+        return self._handoff_requested.is_set() and self._idle.wait(max(0.0, timeout))
+
     def close(self) -> None:
-        self._stopping.set()
+        with self._admission_lock:
+            self._accepting = False
+            self._stopping.set()
         if self.server is not None:
             self.server.shutdown()
             self.server.server_close()
@@ -646,12 +720,15 @@ class SpeechService:
                     self._current_segment_index = None
                     self._current_segment_count = 0
                     self._current_segment_chars = 0
+                with self._admission_lock:
+                    if self.queue.empty():
+                        self._idle.set()
                 job.done.set()
                 self.queue.task_done()
 
 
 class _RequestHandler(BaseHTTPRequestHandler):
-    server_version = "VivhiteIndexTTS/1"
+    server_version = "VivhiteIndexTTS/2"
 
     @property
     def service(self) -> SpeechService:
@@ -675,7 +752,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.OK, self.service.status())
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
-        if self.path != "/speak":
+        if self.path not in ("/speak", "/handoff"):
             self._send(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
             return
         try:
@@ -683,8 +760,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
             if not 0 < length <= 16 * 1024:
                 raise ValueError("请求体大小非法")
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if self.path == "/handoff":
+                result = self.service.request_handoff(payload)
+                self._send(HTTPStatus.ACCEPTED, result)
+                return
             if str(payload.get("session_id", "legacy")) != self.service.session_id:
                 self._send(HTTPStatus.CONFLICT, {"ok": False, "error": "session mismatch"})
+                return
+            if str(payload.get("owner_code_epoch", "")) != self.service.owner_code_epoch:
+                self._send(HTTPStatus.CONFLICT, {"ok": False, "error": "owner code epoch mismatch"})
                 return
             timeout = min(1800.0, max(1.0, float(payload.get("timeout_sec", 900))))
             result = self.service.submit(
