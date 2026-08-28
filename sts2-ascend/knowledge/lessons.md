@@ -6343,3 +6343,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（12回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/977 胜，当前目标进阶 0
+
+## 第 978 局复盘（2026-08-29 07:27）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：FLAME_BARRIER, BREAKTHROUGH, TAUNT, UNRELENTING, FLAME_BARRIER, DISMANTLE, HEMOKINESIS, EVIL_EYE, PACTS_END, UNRELENTING, PILLAGE, STONE_ARMOR, ARMAMENTS
+- 本局遗物：GORGET, 开心小花
+- 战斗记录：F14 Elite战 掉血10; F15 Monster战 掉血8; F17 Boss战 掉血57｜竞速审计：T3判死→实战14回合获胜; F19 Monster战 掉血9; F20 Monster战 掉血19; F21 Monster战 掉血52（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/26局)，FIEND_FIRE(25分/37局)，PACTS_END(24分/103局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.68 → 0.71（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/978 胜，当前目标进阶 0
