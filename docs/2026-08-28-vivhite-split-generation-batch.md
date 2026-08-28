@@ -19,7 +19,7 @@
 | 躯干 | 8/8 | 待用户统一评审 | attempt 08 被内容过滤拒绝；attempt 07 是当前最佳设计且不触边，但仍有 8592 个低 Alpha 外围像素。 |
 | 左靴（画面左/后腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 04 的造型、留白和约 5274 个低 Alpha 外围像素最平衡，仅作为评审候选。 |
 | 右靴（画面右/前腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 08 最小且朝向正确，但插片多出金饰，仅作为评审候选。 |
-| 左大腿（画面左/后腿） | 2/8 | 生成中 | attempt 02 已得到正确直轴髋—膝单段和服装分区，但膝端误画成空心袜口，需同形修正。 |
+| 左大腿（画面左/后腿） | 8/8 | 待用户统一评审 | attempt 08 得到直轴、实心两端、小尺寸单件且低 Alpha 外围最少，但仍有明显白色柔光。 |
 
 ## 前刘海逐次记录
 
@@ -90,5 +90,13 @@
 
 1. `0072-split-leg-left-thigh-attachment-attempt-01`：服装分区、后腿对角方向和金色徽记基本正确，但模型把膝端扩展成明显弯曲的小腿残段，无法作为单一 thigh bone attachment；外围白色展示光场也很强。
 2. `0073-split-leg-left-thigh-attachment-attempt-02`：改成严格直轴后，得到从右上髋端到左下膝端的一段连续上腿，皮肤、深蓝袜口、金色小徽记和白色丝袜区正确；非零 Alpha 89958，其中约 5113 低于 128，四边不触碰。主要缺陷是膝端被画成空心圆筒袜口，而不是供 lower-leg 覆盖的实心搭接片。
+3. `0074-split-leg-left-thigh-attachment-attempt-03`：以 attempt 02 为唯一参考修正膝端，实心形状完成，但模型把非零 Alpha 写满整个 `832×1248` 画布，四角 Alpha 为 21/10/6/20、边缘非零像素 4156，明确淘汰。
+4. `0075-split-leg-left-thigh-attachment-attempt-04`：无参考、只描述实心胶囊端的请求被 EvoLink 以 `content_policy_violation` 拒绝；无 PNG，Prompt、脱敏请求和 task 记录仍完整保留。
+5. `0076-split-leg-left-thigh-attachment-attempt-05`：改为泛化服装管段后通过过滤，但上端产生布料褶皱、金色包边和近似护臂的质感；末端虽实心，设计与白绮腿部退化，外围低 Alpha 约 5989。
+6. `0077-split-leg-left-thigh-attachment-attempt-06`：再次以 attempt 02 做低质量局部编辑；膝端实心，但整画布 Alpha 污染复现，四角 Alpha 为 9/11/6/9、边缘非零像素 4156，证明该参考编辑路径不可用。
+7. `0078-split-leg-left-thigh-attachment-attempt-07`：改为纯平面渐缩面片语义；直轴、皮肤/袜带/白袜分区和两端实心均正确，四边不触碰，非零 Alpha 83338，其中约 5144 低于 128；外围柔光仍明显。
+8. `0079-split-leg-left-thigh-attachment-attempt-08`：方形画布和小尺寸平面面片；直轴、实心两端、单物件和服装分区均可用，非零 Alpha 34508，其中约 3499 低于 128，为本组最低；白色主体周围仍有清晰柔光。
+
+左大腿已达到 8 次硬上限，现按规则跳过。当前最佳评审候选为 `0079-split-leg-left-thigh-attachment-attempt-08`；除非用户明确追加该语义素材额度，否则不得调用第 9 次或放入生产 atlas。
 
 所有检查仅做离线素材与 Vulkan 预览，不部署、不启动或重启游戏，也不触发直播。
