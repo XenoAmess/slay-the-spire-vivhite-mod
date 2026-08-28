@@ -279,6 +279,12 @@ GLM 在报告中为当前包写软回执：
 retry_resolution: <package-id> integrated|no_valid_change|still_pending
 ```
 
+也接受语义完全相同的 Markdown 表格行（`retry_resolution` 必须独占首列，包 id 必须精确匹配）；
+解释性正文、包名子串和带额外状态词的模糊文本不会被当作回执。若旧版解析器漏认了已经推送的回执，
+唯一复盘 worker 会在启动及周期维护中只检查上游提交新增的报告行：`integrated` 还必须与同一提交里的
+生产实质改动相互印证。确认后仍沿用 manifest → queue → ledger → quarantine 的宿主耐久事务恢复，
+不会直接套用失败补丁或越过取证清单删除目录。
+
 `integrated` 表示已在当前 HEAD 重新实现并验证，`no_valid_change` 表示复审确认无仍应合入的改动。
 该回执不是代码验收门禁：遗漏或 `still_pending` 不会撤回本轮已验收的独立改动，但失败包会
 保持 pending；新失败包只追加为 attempt evidence，target 与原模型计划一起退到队尾继续交给 GLM。

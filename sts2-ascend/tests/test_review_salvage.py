@@ -71,6 +71,94 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertFalse(stalled)
         self.assertIn("xxxxxx", tail)
 
+    def test_stream_clean_eof_wins_over_stall_after_slow_final_translation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-eof-") as root:
+            stream = Path(root) / "review.stream"
+            command = [sys.executable, "-c", "print('done', flush=True)"]
+
+            def slow_translate(raw: str) -> list[str]:
+                import time
+                time.sleep(0.3)
+                return [raw]
+
+            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                rc, tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 5, translate=slow_translate,
+                    stall_warn_sec=0.05, stall_timeout_sec=0.1)
+        self.assertEqual(rc, 0)
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertFalse(stalled)
+        self.assertIn("done", tail)
+
+    def test_stream_backlog_is_not_misclassified_as_raw_output_stall(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-backlog-") as root:
+            stream = Path(root) / "review.stream"
+            command = [
+                sys.executable, "-c",
+                "import sys,time\n"
+                "sys.stdout.write('x\\n'*32768);sys.stdout.flush()\n"
+                "for _ in range(100):\n"
+                " time.sleep(0.02);sys.stdout.write('y');sys.stdout.flush()\n"
+                "sys.stdout.write('\\n');sys.stdout.flush()",
+            ]
+            import threading
+            import time
+            real_queue = llm_review.queue.Queue
+            backlog_ready = threading.Event()
+
+            class ObservedQueue(real_queue):
+                def put(self, item, *args, **kwargs):
+                    result = super().put(item, *args, **kwargs)
+                    if self.qsize() >= 2:
+                        backlog_ready.set()
+                    return result
+
+            first_line = True
+
+            def slow_first_translation(raw: str) -> list[str]:
+                nonlocal first_line
+                if first_line:
+                    first_line = False
+                    if not backlog_ready.wait(timeout=5):
+                        raise AssertionError("reader did not establish a test backlog")
+                    time.sleep(0.15)
+                return [raw]
+
+            with (mock.patch.object(llm_review.queue, "Queue", ObservedQueue),
+                  mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 10, translate=slow_first_translation,
+                    stall_warn_sec=0.05, stall_timeout_sec=0.1)
+            text = stream.read_text(encoding="utf-8")
+        self.assertEqual(rc, 0)
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertFalse(stalled)
+        self.assertNotIn("诊断：qsize=", text)
+
+    def test_stream_true_stall_records_pipe_state_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-stall-") as root:
+            stream = Path(root) / "review.stream"
+            command = [
+                sys.executable, "-c",
+                "import sys,time;print('started',flush=True);time.sleep(5)",
+            ]
+            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                _rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 10, stall_warn_sec=0.05, stall_timeout_sec=0.1)
+            text = stream.read_text(encoding="utf-8")
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertTrue(stalled)
+        self.assertIn("qsize=0", text)
+        self.assertIn("reader_done=False", text)
+        self.assertIn("proc_poll=None", text)
+        self.assertIn("last_raw_idle=", text)
+
     def test_translator_part_memory_is_bounded(self) -> None:
         translator = llm_review.OpencodeJsonTranslator()
         for index in range(5000):
@@ -399,6 +487,11 @@ class ReviewQueueBatchTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
                   mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
                   mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+                  mock.patch.object(llm_review, "_recover_deferred_salvages"),
+                  mock.patch.object(llm_review, "_recover_committed_retry_resolutions"),
+                  mock.patch.object(llm_review, "_recover_salvage_replay_queue"),
+                  mock.patch.object(llm_review, "_backfill_rejection_ledger"),
+                  mock.patch.object(llm_review, "_resume_host_salvage_closures"),
                   mock.patch.object(llm_review, "load_llm_config", return_value={}),
                   mock.patch.object(llm_review, "_run_batch_review", side_effect=complete)):
                 llm_review._worker_loop(agent, log=lambda _message: None)

@@ -428,6 +428,39 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             llm_review._worker_started = old_started
             llm_review._worker_thread = old_thread
 
+    def test_worker_receipt_recovery_precedes_queue_reconcile_at_startup_and_maintenance(
+            self) -> None:
+        self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
+                              encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        calls: list[str] = []
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                               return_value=False),
+              mock.patch.object(llm_review, "_wait_review_stop", return_value=True),
+              mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+              mock.patch.object(llm_review, "_recover_deferred_salvages",
+                                side_effect=lambda log: calls.append("deferred")),
+              mock.patch.object(
+                  llm_review, "_recover_committed_retry_resolutions",
+                  side_effect=lambda log: calls.append("receipt") or []),
+              mock.patch.object(llm_review, "_recover_salvage_replay_queue",
+                                side_effect=lambda log: calls.append("queue")),
+              mock.patch.object(llm_review, "_backfill_rejection_ledger",
+                                side_effect=lambda log: calls.append("ledger")),
+              mock.patch.object(llm_review, "_resume_host_salvage_closures",
+                                side_effect=lambda log: calls.append("closure")),
+              mock.patch.object(llm_review.time, "monotonic",
+                                side_effect=[100.0, 161.0, 162.0]),
+              mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"enabled": False})):
+            llm_review._worker_loop_body(agent, log=lambda _message: None)
+
+        self.assertEqual(calls, [
+            "deferred", "receipt", "queue", "ledger",
+            "receipt", "queue", "closure",
+        ])
+
     def test_worker_skips_cooled_old_batch_for_fresh_live_evidence(self) -> None:
         payload = {
             "pending": [
@@ -1034,6 +1067,41 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(saved["pending"], [])
         self.assertIsNone(saved["reviewing"])
         self.assertTrue(package.is_dir())
+
+    def test_missed_committed_receipt_reuses_durable_host_closure_state(self) -> None:
+        target = llm_review.SALVAGE_ROOT / "pkg-missed-target"
+        attempt = llm_review.SALVAGE_ROOT / "pkg-missed-attempt"
+        for package, role in ((target, "target"), (attempt, "attempt_evidence")):
+            package.mkdir()
+            (package / "manifest.json").write_text(json.dumps({
+                "replay_enqueue_pending": True,
+                "replay_target": "pkg-missed-target",
+                "replay_role": role,
+                "replay_attempt_packages": ["pkg-missed-attempt"],
+            }), encoding="utf-8")
+        commit = "e" * 40
+        with (mock.patch.object(
+                  llm_review, "_committed_retry_resolutions",
+                  return_value={"pkg-missed-target": ("integrated", commit)}),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False)):
+            recovered = llm_review._recover_committed_retry_resolutions(
+                log=lambda _message: None)
+
+        self.assertEqual(recovered, ["pkg-missed-target"])
+        for package in (target, attempt):
+            manifest = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["retry_resolution"], "integrated")
+            self.assertEqual(manifest["retry_resolution_commit"], commit)
+            self.assertEqual(manifest["retry_resolution_state"],
+                             "code_upstream_confirmed")
+        # Recovery only publishes the existing durable receipt transaction.  It
+        # does not bypass queue acknowledgement or directly delete evidence.
+        self.assertTrue(target.is_dir())
+        self.assertTrue(attempt.is_dir())
 
     def test_failed_replay_keeps_one_target_and_attaches_new_attempt(self) -> None:
         batch = [{

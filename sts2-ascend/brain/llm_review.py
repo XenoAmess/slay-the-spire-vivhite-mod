@@ -1444,27 +1444,45 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 stopped = True
                 _terminate_process_tree(proc)
                 break
+
+            # A clean EOF wins over silence heuristics.  In particular, the
+            # translator above may legitimately spend longer than the stall
+            # threshold on the final chunk after the reader has already
+            # observed EOF.  Do not turn that completed process into a stall.
+            backlog = q.qsize()
+            reader_finished = reader_done.is_set()
+            if reader_finished and backlog == 0:
+                if pending:
+                    emit_raw_line(pending)
+                    pending = ""
+                break
             if time.monotonic() > deadline:
                 timed_out = True
                 _terminate_process_tree(proc)
                 break
             idle = time.monotonic() - progress[0]
-            if stall_warn_sec > 0 and idle >= stall_warn_sec and not warned:
+            proc_state = proc.poll()
+            diagnostics = (
+                f"qsize={backlog}, reader_done={reader_finished}, "
+                f"proc_poll={proc_state}, last_raw_idle={idle:.1f}s")
+
+            # A full/busy queue means raw output is waiting for translation;
+            # lack of a newer pipe read is then backpressure, not model silence.
+            if (backlog == 0 and stall_warn_sec > 0
+                    and idle >= stall_warn_sec and not warned):
                 warned = True
                 emit_display(
                     f"[llm] 复盘已 {idle / 60:.1f} 分钟无输出进展；"
-                    "继续等待，达到无进展上限才会保全现场并重试。")
-            if stall_timeout_sec > 0 and idle >= stall_timeout_sec:
+                    "继续等待，达到无进展上限才会保全现场并重试；"
+                    f"诊断：{diagnostics}。")
+            if (backlog == 0 and stall_timeout_sec > 0
+                    and idle >= stall_timeout_sec):
                 stalled = True
                 emit_display(
                     f"[llm] 复盘连续 {idle / 60:.1f} 分钟无输出进展；"
-                    "判定 CLI/工具调用挂起，终止本次并保全现场重试。")
+                    "判定 CLI/工具调用挂起，终止本次并保全现场重试；"
+                    f"诊断：{diagnostics}。")
                 _terminate_process_tree(proc)
-                break
-            if reader_done.is_set() and q.empty():
-                if pending:
-                    emit_raw_line(pending)
-                    pending = ""
                 break
 
     reader_cancel.set()
@@ -4262,23 +4280,212 @@ def _failed_review_replay_context(package_names, attempt_names=(), log=print) ->
 
 
 def _parse_retry_resolutions(report: str, package_names) -> dict[str, str]:
-    """Softly parse GLM's per-package resolution lines; absence is not a gate."""
+    """Parse only explicit per-package receipts; absence remains non-fatal.
+
+    GLM normally emits the documented colon form, but Markdown-oriented models
+    sometimes put the same receipt in a two- or three-column table.  Keep this
+    deliberately strict: the marker must own the line/cell, the package must be
+    one of the exact requested ids, and the payload must contain exactly one
+    package/status pair.  This prevents explanatory prose from closing evidence.
+    """
     requested = set(_normalize_salvage_package_names(package_names))
     found: dict[str, str] = {}
-    marker = "retry_resolution:"
+
+    def unformat(value: str) -> str:
+        text = str(value or "").strip()
+        wrappers = (("**", "**"), ("__", "__"), ("`", "`"))
+        changed = True
+        while changed and text:
+            changed = False
+            for opening, closing in wrappers:
+                if (text.startswith(opening) and text.endswith(closing)
+                        and len(text) >= len(opening) + len(closing)):
+                    text = text[len(opening):-len(closing)].strip()
+                    changed = True
+                    break
+        return text
+
+    def parse_pair(value: str) -> tuple[str, str] | None:
+        parts = unformat(value).split()
+        if len(parts) != 2:
+            return None
+        package = unformat(parts[0]).strip("`*<>,;:[]()")
+        resolution = unformat(parts[1]).strip("`*<>,;:[]().")
+        if package not in requested or resolution not in _RETRY_RESOLUTION_VALUES:
+            return None
+        return package, resolution
+
     for raw_line in str(report or "").splitlines():
-        line = raw_line.strip().strip("`*")
-        position = line.find(marker)
-        if position < 0:
-            continue
-        parts = line[position + len(marker):].strip().split()
-        if len(parts) < 2:
-            continue
-        package = parts[0].strip("`<>,;:[]()")
-        resolution = parts[1].strip("`<>,;:[]().")
-        if package in requested and resolution in _RETRY_RESOLUTION_VALUES:
+        line = raw_line.strip()
+        parsed: tuple[str, str] | None = None
+        if line.startswith("|") and line.endswith("|"):
+            cells = [unformat(cell) for cell in line[1:-1].split("|")]
+            if len(cells) in {2, 3} and cells[0] == "retry_resolution":
+                parsed = parse_pair(cells[1])
+                if parsed is None and len(cells) == 3:
+                    parsed = parse_pair(f"{cells[1]} {cells[2]}")
+        else:
+            if line.startswith(("- ", "* ", "+ ")):
+                line = line[2:].lstrip()
+            line = unformat(line)
+            marker = "retry_resolution:"
+            if line.startswith(marker):
+                parsed = parse_pair(line[len(marker):].strip())
+        if parsed is not None:
+            package, resolution = parsed
             found[package] = resolution
     return found
+
+
+_RETRY_RECEIPT_HISTORY_LIMIT = 256
+
+
+def _committed_retry_resolutions(package_names, log=print) -> dict[str, tuple[str, str]]:
+    """Find exact receipts added by upstream commits, with their commit ids.
+
+    Reading the current report alone is unsafe because every later commit also
+    contains historical text.  Inspect only added lines in each report-changing
+    upstream commit.  An ``integrated`` receipt additionally requires a
+    substantive production action in that same commit; ``no_valid_change`` is
+    intentionally allowed to be report-only by the replay contract.
+    """
+    requested = set(_normalize_salvage_package_names(package_names))
+    upstream = _upstream_ref()
+    if not requested or not upstream or _review_stop_requested():
+        return {}
+    try:
+        report_path = REVIEW_LOG.relative_to(REPO_DIR).as_posix()
+    except ValueError:
+        return {}
+
+    def git_text(arguments: list[str]) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", str(REPO_DIR), *arguments], capture_output=True,
+            text=True, encoding="utf-8", errors="replace", timeout=30)
+
+    try:
+        history = git_text([
+            "log", "--format=%H", f"--max-count={_RETRY_RECEIPT_HISTORY_LIMIT}",
+            upstream, "--", report_path,
+        ])
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    if history.returncode != 0:
+        return {}
+
+    found: dict[str, tuple[str, str]] = {}
+    remaining = set(requested)
+    for commit in history.stdout.splitlines():
+        commit = commit.strip()
+        if not commit or not remaining or _review_stop_requested():
+            break
+        try:
+            report_diff = git_text([
+                "show", "--format=", "--no-ext-diff", "--no-renames",
+                "--unified=0", commit, "--", report_path,
+            ])
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if report_diff.returncode != 0:
+            continue
+        added_report = "\n".join(
+            line[1:] for line in report_diff.stdout.splitlines()
+            if line.startswith("+") and not line.startswith("+++"))
+        resolutions = _parse_retry_resolutions(added_report, remaining)
+        if not resolutions:
+            continue
+
+        integrated = {
+            name for name, resolution in resolutions.items()
+            if resolution == "integrated"
+        }
+        has_action = False
+        if integrated:
+            try:
+                changed = git_text([
+                    "diff-tree", "--root", "--no-commit-id", "--name-only",
+                    "-r", commit, "--",
+                ])
+                paths = (changed.stdout.splitlines()
+                         if changed.returncode == 0 else [])
+                action_paths = _review_action_paths(paths)
+                if action_paths:
+                    action_diff = git_text([
+                        "show", "--format=", "--no-ext-diff", "--no-renames",
+                        "--unified=1", commit, "--", *action_paths,
+                    ])
+                    has_action = (action_diff.returncode == 0
+                                  and _patch_has_substantive_action(
+                                      action_diff.stdout, action_paths))
+            except (OSError, subprocess.TimeoutExpired):
+                has_action = False
+
+        for name, resolution in resolutions.items():
+            if resolution == "integrated" and not has_action:
+                log(f"[llm] 上游回执 {commit[:8]} 声称 {name} integrated，"
+                    "但同一提交没有生产实质变更；继续保留失败包")
+                continue
+            if resolution not in {"integrated", "no_valid_change"}:
+                continue
+            found[name] = (resolution, commit)
+            remaining.discard(name)
+    return found
+
+
+def _recover_committed_retry_resolutions(log=print) -> list[str]:
+    """Persist missed upstream receipts so normal host closure can resume.
+
+    This is a parser/crash recovery bridge, not an alternate delete path.  It
+    writes the same durable manifest receipt as a live successful replay; queue
+    acknowledgement, ledger finalization and exact package cleanup remain owned
+    by the existing host transaction.
+    """
+    if not SALVAGE_ROOT.is_dir() or _review_stop_requested():
+        return []
+    targets: dict[str, list[str]] = {}
+    for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
+        manifest_path = package / "manifest.json"
+        if (not package.is_dir() or package.name.startswith(_CLOSED_SALVAGE_PREFIX)
+                or not manifest_path.is_file()):
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+        if (manifest.get("replay_enqueue_pending") is not True
+                or manifest.get("retry_resolution_state") in {
+                    "claimed_pending_code_push", "code_upstream_confirmed",
+                    "quarantined_pending_ledger", "ledger_final_upstream", "done",
+                }):
+            continue
+        normalized = _normalize_salvage_package_names([
+            manifest.get("replay_target") or package.name])
+        if not normalized:
+            continue
+        target = normalized[0]
+        if package.name != target and manifest.get("replay_role") != "target":
+            continue
+        targets[target] = _normalize_salvage_package_names(
+            manifest.get("replay_attempt_packages") or [])
+    receipts = _committed_retry_resolutions(targets, log=log)
+    recovered: list[str] = []
+    for target, attempts in targets.items():
+        receipt = receipts.get(target)
+        if receipt is None or _review_stop_requested():
+            continue
+        resolution, commit = receipt
+        # Recheck immediately before the durable write in case the tracked
+        # upstream moved while history was inspected.
+        if not _upstream_contains_commit(commit):
+            continue
+        result = _close_replayed_salvages(
+            [target], attempts, {target: resolution}, commit=commit,
+            pushed=True, log=log)
+        if target in result["host_pending"] or target in result["closed"]:
+            recovered.append(target)
+            log(f"[llm] 已从上游提交 {commit[:8]} 恢复失败包回执："
+                f"{target} {resolution}")
+    return recovered
 
 
 def _file_sha256(path: Path) -> str:
@@ -5186,6 +5393,13 @@ def _worker_loop_body(agent, log) -> None:
     _recover_deferred_salvages(log=log)
     if _review_stop_requested():
         return
+    # A previous GLM run may have pushed a valid receipt that an older parser
+    # failed to recognize.  Recover that durable upstream fact before rebuilding
+    # the replay queue, otherwise the already-closed target would be paid for and
+    # executed again.
+    _recover_committed_retry_resolutions(log=log)
+    if _review_stop_requested():
+        return
     _recover_salvage_replay_queue(log=log)
     if _review_stop_requested():
         return
@@ -5229,6 +5443,15 @@ def _worker_loop_body(agent, log) -> None:
             if getattr(agent, "request_restart", False):
                 return
             if time.monotonic() >= next_salvage_maintenance:
+                # Keep the three host transactions in this order even when the
+                # first call finds nothing new.  A crash may have persisted the
+                # receipt state but not yet acknowledged its queue items.
+                _recover_committed_retry_resolutions(log=log)
+                if _review_stop_requested():
+                    return
+                _recover_salvage_replay_queue(log=log)
+                if _review_stop_requested():
+                    return
                 _resume_host_salvage_closures(log=log)
                 next_salvage_maintenance = time.monotonic() + 60.0
                 if _review_stop_requested():

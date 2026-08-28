@@ -30,6 +30,87 @@ STATIC_KNOWLEDGE = "sts2-ascend/knowledge/game/v0.111.0/mechanics/cards.jsonl"
 
 
 class ReviewClosureTests(unittest.TestCase):
+    def test_retry_receipts_accept_colon_and_two_or_three_column_tables(self) -> None:
+        packages = ["pkg-colon", "pkg-two", "pkg-three", "pkg-note"]
+        report = """
+retry_resolution: pkg-colon integrated
+| retry_resolution | **pkg-two no_valid_change** |
+| retry_resolution | `pkg-three` | `integrated` |
+| retry_resolution | **pkg-note integrated** | current HEAD implementation verified |
+"""
+        self.assertEqual(llm_review._parse_retry_resolutions(report, packages), {
+            "pkg-colon": "integrated",
+            "pkg-two": "no_valid_change",
+            "pkg-three": "integrated",
+            "pkg-note": "integrated",
+        })
+
+    def test_retry_receipts_reject_prose_substrings_and_ambiguous_tables(self) -> None:
+        report = """
+Prose mentions retry_resolution: pkg-a integrated but is not a receipt.
+retry_resolution: pkg-a integrated because it looks correct
+retry_resolution_extra: pkg-a integrated
+| notes | retry_resolution | pkg-a integrated |
+| retry_resolution | pkg-a integrated extra words |
+| retry_resolution | pkg-a | integrated | unexpected fourth cell |
+| retry_resolution | pkg-a-prefix integrated |
+| retry_resolution | package | status |
+"""
+        self.assertEqual(
+            llm_review._parse_retry_resolutions(report, ["pkg-a"]), {})
+
+    def test_committed_retry_receipts_require_added_lines_and_action_for_integrated(
+            self) -> None:
+        repo = Path("X:/test-repo")
+        report_path = "sts2-ascend/knowledge/meta_review.md"
+        action_commit = "a" * 40
+        report_only_commit = "b" * 40
+
+        def completed(stdout: str = "", returncode: int = 0):
+            return SimpleNamespace(stdout=stdout, returncode=returncode)
+
+        def fake_git(args, **_kwargs):
+            operation = args[3]
+            if operation == "log":
+                return completed(f"{report_only_commit}\n{action_commit}\n")
+            commit = next((value for value in args if value in {
+                action_commit, report_only_commit}), "")
+            if operation == "diff-tree":
+                if commit == action_commit:
+                    return completed(
+                        "sts2-ascend/brain/policy.py\n" + report_path + "\n")
+                return completed(report_path + "\n")
+            if operation == "show" and args[-1] == report_path:
+                if commit == report_only_commit:
+                    return completed(
+                        "+| retry_resolution | pkg-no-action integrated |\n"
+                        "+| retry_resolution | pkg-empty no_valid_change |\n")
+                return completed(
+                    "+| retry_resolution | **pkg-action integrated** | verified |\n")
+            if operation == "show" and commit == action_commit:
+                return completed(
+                    "diff --git a/sts2-ascend/brain/policy.py "
+                    "b/sts2-ascend/brain/policy.py\n"
+                    "--- a/sts2-ascend/brain/policy.py\n"
+                    "+++ b/sts2-ascend/brain/policy.py\n"
+                    "@@ -1 +1 @@\n-VALUE = 1\n+VALUE = 2\n")
+            return completed(returncode=1)
+
+        packages = ["pkg-action", "pkg-no-action", "pkg-empty"]
+        with (mock.patch.object(llm_review, "REPO_DIR", repo),
+              mock.patch.object(llm_review, "REVIEW_LOG", repo / report_path),
+              mock.patch.object(llm_review, "_upstream_ref", return_value="origin/main"),
+              mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review.subprocess, "run", side_effect=fake_git)):
+            found = llm_review._committed_retry_resolutions(
+                packages, log=lambda _message: None)
+
+        self.assertEqual(found, {
+            "pkg-action": ("integrated", action_commit),
+            "pkg-empty": ("no_valid_change", report_only_commit),
+        })
+
     def test_recovered_batch_description_is_ordered_and_honest(self) -> None:
         self.assertEqual(llm_review._batch_description([730, 698, 699, 729]),
                          "第 698~730 局范围内的 4 局")
