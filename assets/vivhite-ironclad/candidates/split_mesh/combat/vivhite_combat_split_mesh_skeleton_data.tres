@@ -1,9 +1,54 @@
-[gd_resource type="SpineSkeletonDataResource" load_steps=3 format=3]
+[gd_resource type="SpineSkeletonDataResource" load_steps=13 format=3]
 
 [ext_resource type="SpineAtlasResource" path="res://candidates/split_mesh/combat/vivhite_combat_split_mesh.spatlas" id="1_atlas"]
 [ext_resource type="SpineSkeletonFileResource" path="res://candidates/split_mesh/combat/vivhite_combat_split_mesh.spjson" id="2_skeleton"]
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_idle_attack"]
+from = "idle_loop"
+to = "attack"
+mix = 0.1
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_attack_attack"]
+from = "attack"
+to = "attack"
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_hurt_hurt"]
+from = "hurt"
+to = "hurt"
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_hurt_die"]
+from = "hurt"
+to = "die"
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_idle_hurt"]
+from = "idle_loop"
+to = "hurt"
+mix = 0.03
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_hurt_idle"]
+from = "hurt"
+to = "idle_loop"
+mix = 0.1
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_idle_heavy"]
+from = "idle_loop"
+to = "attack_heavy"
+mix = 0.02
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_heavy_heavy"]
+from = "attack_heavy"
+to = "attack_heavy"
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_attack_heavy"]
+from = "attack"
+to = "attack_heavy"
+
+[sub_resource type="SpineAnimationMix" id="SpineAnimationMix_heavy_attack"]
+from = "attack_heavy"
+to = "attack"
 
 [resource]
 atlas_res = ExtResource("1_atlas")
 skeleton_file_res = ExtResource("2_skeleton")
 default_mix = 0.05
+animation_mixes = [SubResource("SpineAnimationMix_idle_attack"), SubResource("SpineAnimationMix_attack_attack"), SubResource("SpineAnimationMix_hurt_hurt"), SubResource("SpineAnimationMix_hurt_die"), SubResource("SpineAnimationMix_idle_hurt"), SubResource("SpineAnimationMix_hurt_idle"), SubResource("SpineAnimationMix_idle_heavy"), SubResource("SpineAnimationMix_heavy_heavy"), SubResource("SpineAnimationMix_attack_heavy"), SubResource("SpineAnimationMix_heavy_attack")]

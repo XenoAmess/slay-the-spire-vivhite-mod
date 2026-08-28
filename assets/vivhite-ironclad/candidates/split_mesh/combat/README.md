@@ -16,6 +16,19 @@
 - 每个普通部件都有独立的 `death_*` slot 和 `vivhite_death_*` attachment
   名称，最终死亡专用图可以原位替换。
 
+## 动画衔接与绑定修订
+
+- `_skeleton_data.tres` 逐条恢复原版战士提取资源的 10 条 transition mix：
+  `idle_loop -> attack` 0.1、`idle_loop -> hurt` 0.03、
+  `hurt -> idle_loop` 0.1、`idle_loop -> attack_heavy` 0.02；attack、heavy、
+  hurt 的自切换和交叉切换，以及 `hurt -> die` 均为 0。未列出的切换仍使用
+  `default_mix = 0.05`。
+- 左右肩节点已从上臂节点向锁骨内侧分离，`shoulder -> upper_arm` 不再是零长度
+  bind；setup pose 和上臂 attachment 的世界坐标保持不变。
+- 所有骨骼 rotate/translate 关键帧段都写入 Spine 4.2 的绝对坐标 Bezier。
+  循环动作使用平滑往返曲线，攻击、重击、受伤、施法和死亡使用更快进入的动作
+  曲线；关键姿势、事件时刻、动画总时长和根位移不变。
+
 ## 为什么不能发布
 
 当前 1680×2512 母图是单帧完整人物，而不是 spritesheet 或已拆分部件图。

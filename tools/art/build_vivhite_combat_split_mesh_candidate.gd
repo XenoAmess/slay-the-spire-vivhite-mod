@@ -46,6 +46,28 @@ const SPLIT_BONE_TORSO_UPPER := "vivhite_torso_upper"
 const SPLIT_BONE_NECK := "vivhite_neck"
 const SPLIT_BONE_HEAD := "vivhite_head"
 
+# Spine 4.2 serializes Bezier handles in absolute timeline coordinates. These
+# normalized profiles are converted for every rotate/translate segment while
+# preserving all authored key poses and durations.
+const SPLIT_LOOP_EASING := Vector4(0.25, 0.0, 0.75, 1.0)
+const SPLIT_ACTION_EASING := Vector4(0.20, 0.0, 0.68, 1.0)
+
+# This is the exact per-transition mix contract from the extracted Ironclad
+# SpineSkeletonDataResource. A zero mix is intentionally serialized by omitting
+# the property, matching the vanilla resource's default value for the mix type.
+const SPLIT_ANIMATION_MIXES := [
+	{"id": "SpineAnimationMix_idle_attack", "from": "idle_loop", "to": "attack", "mix": 0.10},
+	{"id": "SpineAnimationMix_attack_attack", "from": "attack", "to": "attack", "mix": 0.0},
+	{"id": "SpineAnimationMix_hurt_hurt", "from": "hurt", "to": "hurt", "mix": 0.0},
+	{"id": "SpineAnimationMix_hurt_die", "from": "hurt", "to": "die", "mix": 0.0},
+	{"id": "SpineAnimationMix_idle_hurt", "from": "idle_loop", "to": "hurt", "mix": 0.03},
+	{"id": "SpineAnimationMix_hurt_idle", "from": "hurt", "to": "idle_loop", "mix": 0.10},
+	{"id": "SpineAnimationMix_idle_heavy", "from": "idle_loop", "to": "attack_heavy", "mix": 0.02},
+	{"id": "SpineAnimationMix_heavy_heavy", "from": "attack_heavy", "to": "attack_heavy", "mix": 0.0},
+	{"id": "SpineAnimationMix_attack_heavy", "from": "attack", "to": "attack_heavy", "mix": 0.0},
+	{"id": "SpineAnimationMix_heavy_attack", "from": "attack_heavy", "to": "attack", "mix": 0.0},
+]
+
 # These are preview UV subdomains, not publishable independent drawings. Each
 # rectangle is copied by the GPU from the one unmodified whole-body region.
 # Overlap bands hide hard joint cuts in setup pose and intentionally make the
@@ -245,7 +267,7 @@ func _build_split_skeleton() -> Dictionary:
 		events[event_name] = {}
 	return {
 		"skeleton": {
-			"hash": "vivhite-split-mesh-preview-v1",
+			"hash": "vivhite-split-mesh-preview-v2-bind-mix-easing",
 			"spine": SPINE_VERSION,
 			"x": -900.0,
 			"y": -260.0,
@@ -298,6 +320,24 @@ func _build_split_bones() -> Array:
 		BONE_ARC: "vivhite_hand_right",
 		BONE_EYES: SPLIT_BONE_HEAD,
 	}
+	var primary_children := {
+		SPLIT_BONE_PELVIS: SPLIT_BONE_TORSO_LOWER,
+		SPLIT_BONE_TORSO_LOWER: SPLIT_BONE_TORSO_UPPER,
+		SPLIT_BONE_TORSO_UPPER: SPLIT_BONE_NECK,
+		SPLIT_BONE_NECK: SPLIT_BONE_HEAD,
+		"vivhite_shoulder_left": "vivhite_upper_arm_left",
+		"vivhite_upper_arm_left": "vivhite_forearm_left",
+		"vivhite_forearm_left": "vivhite_hand_left",
+		"vivhite_shoulder_right": "vivhite_upper_arm_right",
+		"vivhite_upper_arm_right": "vivhite_forearm_right",
+		"vivhite_forearm_right": "vivhite_hand_right",
+		"vivhite_thigh_left": "vivhite_knee_left",
+		"vivhite_knee_left": "vivhite_ankle_left",
+		"vivhite_ankle_left": "vivhite_foot_left",
+		"vivhite_thigh_right": "vivhite_knee_right",
+		"vivhite_knee_right": "vivhite_ankle_right",
+		"vivhite_ankle_right": "vivhite_foot_right",
+	}
 	var order := [
 		BONE_ROOT, BONE_SIGIL, BONE_RIG, SPLIT_BONE_PELVIS,
 		SPLIT_BONE_TORSO_LOWER, SPLIT_BONE_TORSO_UPPER, SPLIT_BONE_NECK,
@@ -319,6 +359,8 @@ func _build_split_bones() -> Array:
 			var local: Vector2 = world[bone_name] - world[parent_name]
 			bone["x"] = local.x
 			bone["y"] = local.y
+		if primary_children.has(bone_name):
+			bone["length"] = (world[str(primary_children[bone_name])] as Vector2).distance_to(world[bone_name])
 		result.append(bone)
 	return result
 
@@ -337,11 +379,14 @@ func _bone_world_positions() -> Dictionary:
 		"vivhite_hair_left": _source_point_world(Vector2(570, 300)),
 		"vivhite_hair_right": _source_point_world(Vector2(900, 300)),
 		"vivhite_butterfly": _source_point_world(Vector2(1010, 180)),
-		"vivhite_shoulder_left": _source_point_world(Vector2(585, 585)),
+		# The shoulder and upper-arm origins must be distinct. Keeping the upper
+		# arm at the visual joint preserves attachment placement, while moving the
+		# shoulder inward creates a real clavicle-to-arm bind segment.
+		"vivhite_shoulder_left": _source_point_world(Vector2(550, 565)),
 		"vivhite_upper_arm_left": _source_point_world(Vector2(585, 585)),
 		"vivhite_forearm_left": _source_point_world(Vector2(465, 820)),
 		"vivhite_hand_left": _source_point_world(Vector2(275, 1010)),
-		"vivhite_shoulder_right": _source_point_world(Vector2(810, 545)),
+		"vivhite_shoulder_right": _source_point_world(Vector2(775, 525)),
 		"vivhite_upper_arm_right": _source_point_world(Vector2(810, 545)),
 		"vivhite_forearm_right": _source_point_world(Vector2(1040, 650)),
 		"vivhite_hand_right": _source_point_world(Vector2(1430, 555)),
@@ -395,7 +440,7 @@ func _build_uv_mesh(source_rect: Rect2, bone_name: String, bone_world: Dictionar
 
 
 func _build_split_animations() -> Dictionary:
-	return {
+	var animations := {
 		"idle_loop": _split_loop_animation(2.0, 1.0),
 		"low_health_loop": _split_low_health_animation(),
 		"relaxed_loop": _split_loop_animation(12.000001, 0.75),
@@ -405,6 +450,56 @@ func _build_split_animations() -> Dictionary:
 		"hurt": _split_hurt_animation(),
 		"die": _split_die_animation(),
 	}
+	_apply_split_easing(animations)
+	return animations
+
+
+func _apply_split_easing(animations: Dictionary) -> void:
+	for animation_name: String in animations:
+		var animation: Dictionary = animations[animation_name]
+		var profile := SPLIT_LOOP_EASING if animation_name.ends_with("_loop") else SPLIT_ACTION_EASING
+		var bones: Dictionary = animation.get("bones", {})
+		for bone_name: String in bones:
+			var timelines: Dictionary = bones[bone_name]
+			for timeline_name: String in ["rotate", "translate"]:
+				if timelines.has(timeline_name):
+					_add_split_timeline_easing(timelines[timeline_name], timeline_name, profile)
+
+
+func _add_split_timeline_easing(keys: Array, timeline_name: String, profile: Vector4) -> void:
+	for index in range(keys.size() - 1):
+		var start: Dictionary = keys[index]
+		var finish: Dictionary = keys[index + 1]
+		if start.has("curve"):
+			continue
+		var start_time := float(start.get("time", 0.0))
+		var finish_time := float(finish.get("time", 0.0))
+		var control_time_1 := lerpf(start_time, finish_time, profile.x)
+		var control_time_2 := lerpf(start_time, finish_time, profile.z)
+		if timeline_name == "rotate":
+			var start_value := float(start.get("value", 0.0))
+			var finish_value := float(finish.get("value", 0.0))
+			start["curve"] = [
+				control_time_1,
+				lerpf(start_value, finish_value, profile.y),
+				control_time_2,
+				lerpf(start_value, finish_value, profile.w),
+			]
+		else:
+			var start_x := float(start.get("x", 0.0))
+			var finish_x := float(finish.get("x", 0.0))
+			var start_y := float(start.get("y", 0.0))
+			var finish_y := float(finish.get("y", 0.0))
+			start["curve"] = [
+				control_time_1,
+				lerpf(start_x, finish_x, profile.y),
+				control_time_2,
+				lerpf(start_x, finish_x, profile.w),
+				control_time_1,
+				lerpf(start_y, finish_y, profile.y),
+				control_time_2,
+				lerpf(start_y, finish_y, profile.w),
+			]
 
 
 func _split_loop_animation(duration: float, strength: float) -> Dictionary:
@@ -611,16 +706,30 @@ func _build_split_atlas_data() -> String:
 
 
 func _build_split_tres() -> String:
-	return """[gd_resource type="SpineSkeletonDataResource" load_steps=3 format=3]
-
-[ext_resource type="SpineAtlasResource" path="%s/%s" id="1_atlas"]
-[ext_resource type="SpineSkeletonFileResource" path="%s/%s" id="2_skeleton"]
-
-[resource]
-atlas_res = ExtResource("1_atlas")
-skeleton_file_res = ExtResource("2_skeleton")
-default_mix = 0.05
-""" % [SPLIT_MOUNT_ROOT, SPLIT_ATLAS, SPLIT_MOUNT_ROOT, SPLIT_JSON]
+	var lines := PackedStringArray([
+		"[gd_resource type=\"SpineSkeletonDataResource\" load_steps=13 format=3]",
+		"",
+		"[ext_resource type=\"SpineAtlasResource\" path=\"%s/%s\" id=\"1_atlas\"]" % [SPLIT_MOUNT_ROOT, SPLIT_ATLAS],
+		"[ext_resource type=\"SpineSkeletonFileResource\" path=\"%s/%s\" id=\"2_skeleton\"]" % [SPLIT_MOUNT_ROOT, SPLIT_JSON],
+	])
+	var mix_ids := PackedStringArray()
+	for contract: Dictionary in SPLIT_ANIMATION_MIXES:
+		var mix_id := str(contract["id"])
+		mix_ids.append("SubResource(\"%s\")" % mix_id)
+		lines.append("")
+		lines.append("[sub_resource type=\"SpineAnimationMix\" id=\"%s\"]" % mix_id)
+		lines.append("from = \"%s\"" % contract["from"])
+		lines.append("to = \"%s\"" % contract["to"])
+		var mix := float(contract["mix"])
+		if not is_zero_approx(mix):
+			lines.append("mix = %s" % str(mix))
+	lines.append("")
+	lines.append("[resource]")
+	lines.append("atlas_res = ExtResource(\"1_atlas\")")
+	lines.append("skeleton_file_res = ExtResource(\"2_skeleton\")")
+	lines.append("default_mix = 0.05")
+	lines.append("animation_mixes = [%s]" % ", ".join(mix_ids))
+	return "\n".join(lines) + "\n"
 
 
 func _build_candidate_manifest(body_path: String, arc_path: String, sigil_path: String, body: Image) -> Dictionary:
@@ -661,6 +770,16 @@ func _build_candidate_manifest(body_path: String, arc_path: String, sigil_path: 
 		"required_animations": ANIMATION_DURATIONS.keys(),
 		"required_slots": REQUIRED_SLOTS,
 		"required_events": REQUIRED_EVENTS,
+		"transition_mix_contract": {
+			"source": ".work/ironclad-v0.111.0/combat/combat_skeleton_data.tres",
+			"default_mix": 0.05,
+			"overrides": SPLIT_ANIMATION_MIXES,
+		},
+		"animation_curve_contract": {
+			"format": "Spine 4.2 absolute Bezier handles; rotate=4 values, translate=8 values",
+			"loop_profile_normalized": [SPLIT_LOOP_EASING.x, SPLIT_LOOP_EASING.y, SPLIT_LOOP_EASING.z, SPLIT_LOOP_EASING.w],
+			"action_profile_normalized": [SPLIT_ACTION_EASING.x, SPLIT_ACTION_EASING.y, SPLIT_ACTION_EASING.z, SPLIT_ACTION_EASING.w],
+		},
 		"motion_at_scene_scale_px": {
 			"attack_root_lunge": 104.0 * SPLIT_SCENE_SCALE,
 			"attack_heavy_root_lunge": 164.0 * SPLIT_SCENE_SCALE,
@@ -709,8 +828,12 @@ func _validate_split_candidate(skeleton: Dictionary, atlas_data: String) -> bool
 	for bone: Dictionary in skeleton["bones"]:
 		bones[str(bone["name"])] = bone
 	var expected_parents := {
+		"vivhite_shoulder_left": SPLIT_BONE_TORSO_UPPER,
+		"vivhite_upper_arm_left": "vivhite_shoulder_left",
 		"vivhite_forearm_left": "vivhite_upper_arm_left",
 		"vivhite_hand_left": "vivhite_forearm_left",
+		"vivhite_shoulder_right": SPLIT_BONE_TORSO_UPPER,
+		"vivhite_upper_arm_right": "vivhite_shoulder_right",
 		"vivhite_forearm_right": "vivhite_upper_arm_right",
 		"vivhite_hand_right": "vivhite_forearm_right",
 		"vivhite_knee_left": "vivhite_thigh_left",
@@ -723,6 +846,15 @@ func _validate_split_candidate(skeleton: Dictionary, atlas_data: String) -> bool
 	for bone_name: String in expected_parents:
 		if not bones.has(bone_name) or str(bones[bone_name].get("parent", "")) != expected_parents[bone_name]:
 			return _set_error("Hierarchical chain mismatch for %s" % bone_name)
+	for side: String in ["left", "right"]:
+		var shoulder_name := "vivhite_shoulder_%s" % side
+		var upper_arm_name := "vivhite_upper_arm_%s" % side
+		var upper_arm: Dictionary = bones[upper_arm_name]
+		var bind_offset := Vector2(float(upper_arm.get("x", 0.0)), float(upper_arm.get("y", 0.0)))
+		if bind_offset.length() < 1.0:
+			return _set_error("%s -> %s bind segment must be non-zero" % [shoulder_name, upper_arm_name])
+		if float(bones[shoulder_name].get("length", 0.0)) < 1.0:
+			return _set_error("%s must declare a visible non-zero bind length" % shoulder_name)
 	var slots := {}
 	for slot: Dictionary in skeleton["slots"]:
 		slots[str(slot["name"])] = true
@@ -744,6 +876,8 @@ func _validate_split_candidate(skeleton: Dictionary, atlas_data: String) -> bool
 		var actual := _max_timeline_time(skeleton["animations"][animation_name])
 		if absf(actual - float(ANIMATION_DURATIONS[animation_name])) > 0.00001:
 			return _set_error("Animation %s duration is %.7f, expected %.7f" % [animation_name, actual, ANIMATION_DURATIONS[animation_name]])
+	if not _validate_split_easing(skeleton):
+		return false
 	if not _validate_event_time(skeleton["animations"]["attack"], "attack_slash_start", EVENT_TIMES["attack_slash_start"]):
 		return false
 	if not _validate_event_time(skeleton["animations"]["attack_heavy"], "heavy_slash_start", EVENT_TIMES["heavy_slash_start"]):
@@ -762,6 +896,69 @@ func _validate_split_candidate(skeleton: Dictionary, atlas_data: String) -> bool
 	return true
 
 
+func _validate_split_easing(skeleton: Dictionary) -> bool:
+	var eased_segments := 0
+	for animation_name: String in ANIMATION_DURATIONS:
+		var bones: Dictionary = skeleton["animations"][animation_name].get("bones", {})
+		for bone_name: String in bones:
+			var timelines: Dictionary = bones[bone_name]
+			for timeline_name: String in ["rotate", "translate"]:
+				if not timelines.has(timeline_name):
+					continue
+				var frames: Array = timelines[timeline_name]
+				for index in range(frames.size() - 1):
+					var frame: Dictionary = frames[index]
+					var finish: Dictionary = frames[index + 1]
+					if not frame.has("curve") or not frame["curve"] is Array:
+						return _set_error("%s/%s/%s frame %d is missing easing" % [animation_name, bone_name, timeline_name, index])
+					var curve: Array = frame["curve"]
+					var expected_size := 4 if timeline_name == "rotate" else 8
+					if curve.size() != expected_size:
+						return _set_error("%s/%s/%s frame %d curve has %d values, expected %d" % [animation_name, bone_name, timeline_name, index, curve.size(), expected_size])
+					var start_time := float(frame.get("time", 0.0))
+					var finish_time := float(finish.get("time", 0.0))
+					var time_indices: Array = [0, 2] if timeline_name == "rotate" else [0, 2, 4, 6]
+					for time_index: int in time_indices:
+						var control_time := float(curve[time_index])
+						if control_time < start_time or control_time > finish_time:
+							return _set_error("%s/%s/%s frame %d has an out-of-segment Bezier handle" % [animation_name, bone_name, timeline_name, index])
+					eased_segments += 1
+	if eased_segments == 0:
+		return _set_error("Split candidate must contain eased bone timeline segments")
+	return true
+
+
+func _validate_split_tres(tres_text: String) -> bool:
+	if not tres_text.begins_with("[gd_resource type=\"SpineSkeletonDataResource\" load_steps=13 format=3]"):
+		return _set_error("Split skeleton-data resource must declare 13 load steps")
+	if tres_text.count("[sub_resource type=\"SpineAnimationMix\"") != SPLIT_ANIMATION_MIXES.size():
+		return _set_error("Split skeleton-data resource must contain the ten vanilla transition mixes")
+	var expected_refs := PackedStringArray()
+	for contract: Dictionary in SPLIT_ANIMATION_MIXES:
+		var mix_id := str(contract["id"])
+		expected_refs.append("SubResource(\"%s\")" % mix_id)
+		var header := "[sub_resource type=\"SpineAnimationMix\" id=\"%s\"]" % mix_id
+		var block_start := tres_text.find(header)
+		if block_start < 0:
+			return _set_error("Split skeleton-data resource is missing mix resource %s" % mix_id)
+		var block_end := tres_text.find("\n[sub_resource", block_start + header.length())
+		if block_end < 0:
+			block_end = tres_text.find("\n[resource]", block_start + header.length())
+		var actual_block := tres_text.substr(block_start, block_end - block_start)
+		var block := "%s\nfrom = \"%s\"\nto = \"%s\"" % [header, contract["from"], contract["to"]]
+		var mix := float(contract["mix"])
+		if not is_zero_approx(mix):
+			block += "\nmix = %s" % str(mix)
+		elif actual_block.contains("\nmix ="):
+			return _set_error("Split transition %s -> %s must retain vanilla's implicit zero mix" % [contract["from"], contract["to"]])
+		if not actual_block.contains(block):
+			return _set_error("Split skeleton-data resource is missing exact transition %s -> %s" % [contract["from"], contract["to"]])
+	var refs_line := "animation_mixes = [%s]" % ", ".join(expected_refs)
+	if not tres_text.contains("default_mix = 0.05") or not tres_text.contains(refs_line):
+		return _set_error("Split skeleton-data resource mix list/default mix is incomplete")
+	return true
+
+
 func _validate_split_written(output_root: String) -> bool:
 	var page := Image.load_from_file(output_root.path_join(SPLIT_PAGE))
 	if page == null or page.is_empty() or page.get_size() != SPLIT_ATLAS_SIZE or page.get_format() != Image.FORMAT_RGBA8:
@@ -775,4 +972,6 @@ func _validate_split_written(output_root: String) -> bool:
 		return _set_error("Split candidate must remain explicitly non-publishable")
 	if bool(manifest["safety"].get("runtime_skin_modified", true)):
 		return _set_error("Split candidate safety manifest incorrectly claims a runtime modification")
+	if not _validate_split_tres(FileAccess.get_file_as_string(output_root.path_join(SPLIT_DATA))):
+		return false
 	return _validate_split_candidate(skeleton, str(atlas.get("atlas_data", "")))

@@ -53,6 +53,87 @@
     "cast_eyes_start",
     "clear_vfx"
   ],
+  "transition_mix_contract": {
+    "source": ".work/ironclad-v0.111.0/combat/combat_skeleton_data.tres",
+    "default_mix": 0.05,
+    "overrides": [
+      {
+        "id": "SpineAnimationMix_idle_attack",
+        "from": "idle_loop",
+        "to": "attack",
+        "mix": 0.1
+      },
+      {
+        "id": "SpineAnimationMix_attack_attack",
+        "from": "attack",
+        "to": "attack",
+        "mix": 0.0
+      },
+      {
+        "id": "SpineAnimationMix_hurt_hurt",
+        "from": "hurt",
+        "to": "hurt",
+        "mix": 0.0
+      },
+      {
+        "id": "SpineAnimationMix_hurt_die",
+        "from": "hurt",
+        "to": "die",
+        "mix": 0.0
+      },
+      {
+        "id": "SpineAnimationMix_idle_hurt",
+        "from": "idle_loop",
+        "to": "hurt",
+        "mix": 0.03
+      },
+      {
+        "id": "SpineAnimationMix_hurt_idle",
+        "from": "hurt",
+        "to": "idle_loop",
+        "mix": 0.1
+      },
+      {
+        "id": "SpineAnimationMix_idle_heavy",
+        "from": "idle_loop",
+        "to": "attack_heavy",
+        "mix": 0.02
+      },
+      {
+        "id": "SpineAnimationMix_heavy_heavy",
+        "from": "attack_heavy",
+        "to": "attack_heavy",
+        "mix": 0.0
+      },
+      {
+        "id": "SpineAnimationMix_attack_heavy",
+        "from": "attack",
+        "to": "attack_heavy",
+        "mix": 0.0
+      },
+      {
+        "id": "SpineAnimationMix_heavy_attack",
+        "from": "attack_heavy",
+        "to": "attack",
+        "mix": 0.0
+      }
+    ]
+  },
+  "animation_curve_contract": {
+    "format": "Spine 4.2 absolute Bezier handles; rotate=4 values, translate=8 values",
+    "loop_profile_normalized": [
+      0.25,
+      0.0,
+      0.75,
+      1.0
+    ],
+    "action_profile_normalized": [
+      0.200000002980232,
+      0.0,
+      0.680000007152557,
+      1.0
+    ]
+  },
   "motion_at_scene_scale_px": {
     "attack_root_lunge": 29.12,
     "attack_heavy_root_lunge": 45.92,
