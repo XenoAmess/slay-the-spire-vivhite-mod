@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -327,6 +328,40 @@ class ReviewResolverTests(unittest.TestCase):
                 "completed",
             )
             run.assert_called_once()
+
+    def test_kimi_fallback_receives_all_twelve_backlogged_runs(self) -> None:
+        plan = ReviewPlan(
+            key="kimi", priority=3, runner="opencode", model="kimi",
+            every_runs=5, source="fallback")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        batch = [{"run": run} for run in range(1, 13)]
+
+        def complete(*_args, **kwargs):
+            kwargs["_status"].update({"outcome": "completed", "reason": "ok"})
+            return False
+
+        with (mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"opencode_bin": "opencode"}),
+              mock.patch.object(llm_review, "resolve_review_plan", return_value=plan),
+              mock.patch.object(llm_review, "runner_binary", return_value="opencode"),
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata"),
+              mock.patch.object(llm_review, "run_review", side_effect=complete) as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "completed")
+        run.assert_called_once()
+        self.assertEqual(run.call_args.kwargs["every"], 5)
+        self.assertEqual(run.call_args.kwargs["batch_runs"], list(range(1, 13)))
+
+    def test_scheduler_selects_all_one_hundred_runs_at_packet_cap(self) -> None:
+        pending = [{"run": run} for run in range(1, 101)]
+
+        selected, wait = llm_review._select_review_batch(
+            pending, cap=100, now=time.time())
+
+        self.assertEqual(wait, 0.0)
+        self.assertEqual(selected, list(range(100)))
 
     def test_kimi_can_retry_one_forensic_target_without_waiting_for_new_runs(self) -> None:
         plan = ReviewPlan(
