@@ -863,64 +863,21 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "queued"
+  },
+  {
+   "run": 968,
+   "time": "2026-08-29 05:49",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "queued"
   }
  ],
- "reviewing": {
-  "runs": [
-   917,
-   918
-  ],
-  "items": [
-   {
-    "run": 917,
-    "time": "2026-08-28 20:21",
-    "backend_key": "glm-flash",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "opencode-go/glm-5.3-flash",
-    "variant": "max",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "24240-1787920231508584400-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260828-203154-1787920314038469500-c483e0dc"
-    ],
-    "salvage_attempts": [],
-    "retry_group": "20260828-203154-1787920314038469500-c483e0dc",
-    "replay_target": "20260828-203154-1787920314038469500-c483e0dc",
-    "retry_count": 2,
-    "retry_after": 1787921665.8487465
-   },
-   {
-    "run": 918,
-    "time": "2026-08-28 20:28",
-    "backend_key": "glm-flash",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "opencode-go/glm-5.3-flash",
-    "variant": "max",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "24240-1787920231508584400-1",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260828-203154-1787920314038469500-c483e0dc"
-    ],
-    "salvage_attempts": [],
-    "retry_group": "20260828-203154-1787920314038469500-c483e0dc",
-    "replay_target": "20260828-203154-1787920314038469500-c483e0dc",
-    "retry_count": 2,
-    "retry_after": 1787921665.8487594
-   }
-  ],
-  "retry_group": "20260828-203154-1787920314038469500-c483e0dc",
-  "started": "2026-08-29 04:53:40"
- }
+ "reviewing": null
 }
