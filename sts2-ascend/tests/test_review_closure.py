@@ -24,6 +24,9 @@ AGENT = "sts2-ascend/brain/agent.py"
 AUTOGIT = "sts2-ascend/brain/autogit.py"
 CONFIG = "sts2-ascend/brain/config.json"
 SCRIPT = "sts2-ascend/scripts/Start-Agent.ps1"
+TTS_OWNER = "sts2-ascend/tts/quipper.py"
+TTS_GPU = "sts2-ascend/tts/indextts_gpu.py"
+TTS_EPOCH = "sts2-ascend/tts/owner_epoch.py"
 TEST = "sts2-ascend/tests/test_policy.py"
 DOC = "sts2-ascend/docs/review-design.md"
 STATIC_KNOWLEDGE = "sts2-ascend/knowledge/game/v0.111.0/mechanics/cards.jsonl"
@@ -159,6 +162,11 @@ retry_resolution_extra: pkg-a integrated
             llm_review._review_hot_restart_paths(
                 [POLICY, AUTOGIT, CONFIG, SCRIPT, TEST, DOC, SELFCHECK]),
             (POLICY, AUTOGIT, CONFIG),
+        )
+        self.assertEqual(
+            llm_review._review_hot_restart_paths(
+                [TTS_OWNER, TTS_GPU, TTS_EPOCH, SCRIPT]),
+            (TTS_OWNER, TTS_GPU, TTS_EPOCH),
         )
         script_patch = (
             "diff --git a/sts2-ascend/scripts/Start-Agent.ps1 "

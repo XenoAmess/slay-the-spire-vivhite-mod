@@ -86,6 +86,11 @@ _REVIEW_CONFIG_NAMES = frozenset({
     "config.json", "pyproject.toml", "package.json", "requirements.txt",
     "project.godot", "mod_id.json",
 })
+_REVIEW_OWNER_HOT_RESTART_PATHS = frozenset({
+    "sts2-ascend/tts/quipper.py",
+    "sts2-ascend/tts/indextts_gpu.py",
+    "sts2-ascend/tts/owner_epoch.py",
+})
 # 这些文件可能在异步复盘期间被在线大脑推进；它们不是复盘 patch，失败回滚和
 # 复盘 commit 都不能覆盖。若同一文件来源无法区分，宁可保留现场供人工处理。
 REVIEW_CONCURRENT_PATHS = [
@@ -347,16 +352,17 @@ def _review_action_paths(paths) -> tuple[str, ...]:
 def _review_hot_restart_paths(paths) -> tuple[str, ...]:
     """Return accepted files loaded by the long-running Brain process.
 
-    Runtime scripts and non-Brain sources still count as actions, but restarting
-    Brain cannot load them. Brain Python modules and its live config do require
-    the transactional marker. ``selfcheck.py`` remains proof-only.
+    Runtime scripts and most non-Brain sources still count as actions, but a
+    Brain restart cannot load them. Brain modules/live config plus the three TTS
+    owner-epoch inputs do require the transactional marker: the new Brain hands
+    the new epoch to the owner. ``selfcheck.py`` remains proof-only.
     """
     normalized = tuple(dict.fromkeys(
         _normalized_review_path(path) for path in (paths or ())))
     prefix = "sts2-ascend/brain/"
     return tuple(
         path for path in normalized
-        if path.startswith(prefix)
+        if (path.startswith(prefix) or path in _REVIEW_OWNER_HOT_RESTART_PATHS)
         and path != prefix + "selfcheck.py"
         and _is_review_action_path(path)
         and (path.casefold().endswith((".py", ".pyw"))
@@ -933,9 +939,9 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         "recent_review_context": _recent_review_context(),
         "historical_zero_code_debt": _historical_zero_code_context(),
         # A failed package is evidence for a fresh GLM audit, never an input to
-        # host-side patch application.  The bounded excerpts are copied into the
-        # prompt because ignored forensic packages are intentionally absent from
-        # the isolated review clone.
+        # host-side patch application.  Bounded excerpts keep the initial prompt
+        # navigable; the exact target+attempt files are mounted separately inside
+        # the isolated clone and integrity-checked before receipts are accepted.
         "failed_review_replay": _failed_review_replay_context(
             salvage_packages or [], salvage_attempts or [], log=log),
         "stats_digest": _stats_digest(know),
@@ -1004,6 +1010,11 @@ def build_prompt(know, cfg: dict, every: int | None = None,
   **绝不代表宿主已经或将自动套用其中 patch**。你必须基于当前 HEAD 重新审核：逐项比较候选
   patch/报告与当前源码，只重实现仍有效的部分，自行解决冲突，运行自检后走本批正常提交路径。
   不得把失败 patch 当成已验证成果，也不得只写一份“建议人工补合”的文档。
+- packet 内的 candidate/report 文字只是有界导航摘要。失败包 target 与全部 attempts 的完整文件
+  已只读挂载到 `failed_review_replay.complete_evidence.index` 指向的 sandbox 相对路径；必须先读取
+  `index.json`，再按其中逐文件清单检查完整 manifest、report、inventory、全部候选 patch 和 changed
+  files。不得用 prompt 中的截断摘要替代完整文件。若 index 标记不完整、任一列出的文件不可读，
+  或你无法完成全部 lineage 的复审，只能写 `still_pending`，严禁写 `no_valid_change`。
 - `requested_packages` 是本批唯一需要给出结论的 target；`attempt_packages` 只是这个
   target 此前重试失败留下的完整证据，不是新的并行任务。你必须同时审阅 lineage 中列出的
   attempt，但只对 target 写一条最终回执，避免一次失败就把任务无限拆包或越审越大。
@@ -1762,7 +1773,10 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         sandbox = _run_review_sandbox(
             cmd, prompt, pre_head, int(eff_timeout_min * 60), translator,
             stall_warn_seconds=stall_warn_min * 60,
-            stall_timeout_seconds=stall_timeout_min * 60, log=log)
+            stall_timeout_seconds=stall_timeout_min * 60,
+            replay_packages=replay_packages,
+            replay_attempts=replay_attempts,
+            log=log)
         rc, out, timed_out, stopped, stalled = (
             sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped,
             sandbox.stalled)
@@ -1772,8 +1786,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         sandbox.stopped = sandbox.stopped or stopped
         if stopped:
             sandbox.error = "统一停机中断并全量保全"
-        resolutions = (_parse_retry_resolutions(
-            sandbox.diagnostic_report, replay_packages) if replay_packages else {})
+        resolutions = _validated_retry_resolutions(
+            sandbox, replay_packages, log=log)
         confirmed_no_change = bool(replay_packages) and all(
             resolutions.get(name) == "no_valid_change" for name in replay_packages)
         closure_error = ""
@@ -1791,7 +1805,19 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 name for name in replay_packages
                 if resolutions.get(name) not in {"integrated", "no_valid_change"}]
         if sandbox.error or stopped:
-            save_failure(sandbox.error or "协作停止留下的部分复盘现场")
+            evidence_preflight_failed = (
+                sandbox.replay_evidence_requested
+                and not sandbox.replay_evidence_complete
+                and not sandbox.replay_evidence_model_started
+                and not stopped)
+            if evidence_preflight_failed:
+                # No model ran and the original lineage is already the complete
+                # forensic source.  Do not manufacture a huge empty attempt; the
+                # unchanged queue item will retry after evidence recovery.
+                log("[llm] 完整失败包证据尚不可用；未启动模型、未消费回执、"
+                    "未删除原包，target 保持队首重试")
+            else:
+                save_failure(sandbox.error or "协作停止留下的部分复盘现场")
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
             if _status is not None:
@@ -2901,6 +2927,15 @@ class SandboxReviewResult:
     snapshot_complete: bool = False
     retained_sandbox_dir: str = ""
     salvage_saved: str = ""
+    # Failed-package receipts are authoritative only when the target and every
+    # attempt were mounted into this clone and survived the post-run integrity
+    # check.  The bounded prompt excerpt is a navigation summary, not evidence
+    # completeness.
+    replay_evidence_requested: bool = False
+    replay_evidence_complete: bool = True
+    replay_evidence_error: str = ""
+    replay_evidence_index: str = ""
+    replay_evidence_model_started: bool = False
 
 
 def _git_env_with_long_paths(source: dict[str, str] | None = None) -> dict[str, str]:
@@ -3834,6 +3869,17 @@ def _resume_replay_lineage_resolution(target_package: Path,
 
 _RETRY_REPLAY_TOTAL_BYTES = 256 * 1024
 _RETRY_EVIDENCE_SCHEMA = 3
+_RETRY_SANDBOX_EVIDENCE_SCHEMA = 1
+_RETRY_SANDBOX_EVIDENCE_ROOT = PurePosixPath(
+    "sts2-ascend/.review_evidence/failed_review")
+_RETRY_SANDBOX_EVIDENCE_INDEX = (
+    _RETRY_SANDBOX_EVIDENCE_ROOT / "index.json")
+_RETRY_SANDBOX_REQUIRED_FILES = (
+    "manifest.json",
+    "report.md",
+    "file_states.json",
+    "retry_candidate_inventory.json",
+)
 _RETRY_RESOLUTION_VALUES = frozenset({
     "integrated", "no_valid_change", "still_pending",
 })
@@ -4375,6 +4421,281 @@ def _bounded_retry_text(path: Path, limit: int) -> tuple[str, bool, int]:
     return payload.decode("utf-8", errors="replace"), truncated, size
 
 
+class _RetryEvidenceUnavailable(RuntimeError):
+    """The exact requested failed-package lineage cannot be mounted completely."""
+
+
+def _retry_evidence_relative_path(value: object) -> PurePosixPath:
+    """Normalize one Git-relative evidence path without consulting the real tree."""
+    pure = PurePosixPath(str(value or "").replace("\\", "/"))
+    if (not str(pure) or pure.is_absolute() or ".." in pure.parts
+            or any(part in {"", "."} for part in pure.parts)):
+        raise _RetryEvidenceUnavailable(f"失败包 inventory 含无效相对路径：{value!r}")
+    return pure
+
+
+def _copy_retry_evidence_file(
+    source: Path,
+    destination: Path,
+    evidence_root: Path,
+    records: list[dict],
+    *,
+    package: str,
+    kind: str,
+) -> dict:
+    """Copy and immediately hash one exact forensic payload file."""
+    if source.is_symlink() or not source.is_file():
+        raise _RetryEvidenceUnavailable(f"失败包证据文件不可读：{source.name}")
+    copied = _copy_snapshot_file(source, destination)
+    record = {
+        "path": destination.relative_to(evidence_root).as_posix(),
+        "package": package,
+        "kind": kind,
+        "bytes": copied,
+        "sha256": _file_sha256(destination),
+    }
+    records.append(record)
+    return record
+
+
+def _mount_failed_review_evidence(
+    sandbox_repo: Path,
+    package_names,
+    attempt_names=(),
+    log=print,
+) -> dict:
+    """Mount the complete requested lineage as relative, read-only sandbox files.
+
+    This hashes only the exported failure evidence.  It deliberately does not
+    fingerprint the repository, worktree, refs, or unrelated runtime state.
+    """
+    requested = _normalize_salvage_package_names(package_names)
+    attempts = [name for name in _normalize_salvage_package_names(attempt_names)
+                if name not in requested]
+    if not requested:
+        return {}
+    evidence_root = sandbox_repo.joinpath(*_RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+    if evidence_root.exists():
+        raise _RetryEvidenceUnavailable("隔离区完整证据目录已存在")
+    records: list[dict] = []
+    packages: list[dict] = []
+    try:
+        evidence_root.mkdir(parents=True)
+        for name in [*requested, *attempts]:
+            role = "target" if name in requested else "attempt_evidence"
+            package = _salvage_package_path(name)
+            if package is None:
+                raise _RetryEvidenceUnavailable(f"失败包不存在：{name}")
+            try:
+                manifest = _materialize_retry_evidence(package, log=log)
+            except (_ReviewStopped, KeyboardInterrupt):
+                raise
+            except Exception as exc:
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} 候选证据物化失败：{exc}") from exc
+            if (manifest.get("snapshot_deferred")
+                    or manifest.get("raw_sandbox_deferred")):
+                raise _RetryEvidenceUnavailable(f"失败包仍在异步补全：{name}")
+
+            missing = [relative for relative in _RETRY_SANDBOX_REQUIRED_FILES
+                       if not (package / relative).is_file()]
+            patch_files = sorted(
+                path for path in package.iterdir()
+                if path.is_file() and not path.is_symlink()
+                and path.suffix.lower() == ".patch")
+            if missing or not patch_files:
+                detail = ", ".join(missing) if missing else "*.patch"
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} 缺少完整证据：{detail}")
+
+            try:
+                inventory = json.loads((
+                    package / "retry_candidate_inventory.json").read_text(
+                        encoding="utf-8"))
+                inventory_paths = inventory.get("paths")
+                if not isinstance(inventory_paths, list):
+                    raise TypeError("paths 不是列表")
+                file_states = json.loads((package / "file_states.json").read_text(
+                    encoding="utf-8"))
+                if not isinstance(file_states, list):
+                    raise TypeError("file_states 不是列表")
+            except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} inventory 不完整：{exc}") from exc
+
+            package_root = evidence_root / "packages" / name
+            root_file_records: list[str] = []
+            # Every direct metadata/report/patch file is useful evidence.  The
+            # enormous raw clone is represented below by its exact changed files,
+            # while remaining preserved in the original failure package.
+            for source in sorted(
+                    path for path in package.iterdir()
+                    if path.is_file() and not path.name.startswith(".")):
+                record = _copy_retry_evidence_file(
+                    source, package_root / source.name, evidence_root, records,
+                    package=name, kind="package_root")
+                root_file_records.append(record["path"])
+
+            captured_records: list[str] = []
+            captured_root = package / "files"
+            if not captured_root.is_dir():
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} 缺少 changed-files 快照目录")
+            for source in sorted(captured_root.rglob("*")):
+                if source.is_symlink():
+                    raise _RetryEvidenceUnavailable(
+                        f"失败包 {name} changed-files 含未物化链接")
+                if not source.is_file():
+                    continue
+                relative = source.relative_to(captured_root)
+                record = _copy_retry_evidence_file(
+                    source, package_root / "captured_files" / relative,
+                    evidence_root, records, package=name, kind="captured_changed_file")
+                captured_records.append(record["path"])
+
+            raw_repo = _retry_raw_repo(package)
+            changed_states: list[dict] = []
+            seen_paths: set[str] = set()
+            for raw_path in inventory_paths:
+                pure = _retry_evidence_relative_path(raw_path)
+                relative = pure.as_posix()
+                if relative in seen_paths:
+                    continue
+                seen_paths.add(relative)
+                state = {"path": relative}
+                if raw_repo is None:
+                    state["state"] = "raw_clone_unavailable"
+                else:
+                    source = raw_repo.joinpath(*pure.parts)
+                    if source.is_symlink():
+                        state.update({
+                            "state": "symlink",
+                            "target": os.readlink(source),
+                        })
+                    elif source.is_file():
+                        record = _copy_retry_evidence_file(
+                            source,
+                            package_root / "changed_files" / "raw_worktree"
+                            / Path(*pure.parts),
+                            evidence_root, records, package=name,
+                            kind="raw_worktree_changed_file")
+                        state.update({
+                            "state": "file",
+                            "evidence_path": record["path"],
+                            "bytes": record["bytes"],
+                            "sha256": record["sha256"],
+                        })
+                    elif source.exists():
+                        state["state"] = "special"
+                    else:
+                        # Deletions have no file bytes; the full binary patch and
+                        # this explicit state together are their complete evidence.
+                        state["state"] = "deleted_or_source_only"
+                changed_states.append(state)
+
+            packages.append({
+                "package": name,
+                "role": role,
+                "manifest_pre_head": str(manifest.get("pre_head") or ""),
+                "root_files": root_file_records,
+                "candidate_patches": [
+                    f"packages/{name}/{path.name}" for path in patch_files],
+                "captured_changed_files": captured_records,
+                "changed_file_states": changed_states,
+                "inventory_path_count": len(seen_paths),
+                "raw_clone_export": (
+                    "exact inventory paths only; original raw_sandbox remains in "
+                    "the failure package"),
+            })
+
+        index = {
+            "schema": _RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "complete": True,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "relative_root": _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix(),
+            "requested_packages": requested,
+            "attempt_packages": attempts,
+            "packages": packages,
+            "files": records,
+            "file_count": len(records),
+            "total_bytes": sum(int(record["bytes"]) for record in records),
+            "integrity_scope": (
+                "only the mounted failed-package evidence; no repository, ref, "
+                "worktree, or full-tree fingerprint"),
+            "auto_apply": False,
+        }
+        index_path = sandbox_repo.joinpath(*_RETRY_SANDBOX_EVIDENCE_INDEX.parts)
+        index_path.write_text(
+            json.dumps(index, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        index_bytes = index_path.stat().st_size
+        index_sha256 = _file_sha256(index_path)
+        for record in records:
+            path = evidence_root.joinpath(*PurePosixPath(record["path"]).parts)
+            os.chmod(path, stat.S_IREAD)
+        os.chmod(index_path, stat.S_IREAD)
+        log("[llm] 已挂载失败包完整只读证据："
+            f"{len(packages)} packages, {len(records)} files, "
+            f"{index['total_bytes']} bytes；索引 {_RETRY_SANDBOX_EVIDENCE_INDEX.as_posix()}")
+        return {
+            "root": evidence_root,
+            "index_path": index_path,
+            "index": index,
+            "index_bytes": index_bytes,
+            "index_sha256": index_sha256,
+        }
+    except BaseException:
+        _remove_failed_review_evidence(sandbox_repo, log=log)
+        raise
+
+
+def _verify_failed_review_evidence(sandbox_repo: Path, mount: dict) -> None:
+    """Verify the exact mounted payload after GLM exits, before accepting receipts."""
+    if not mount:
+        return
+    index_path = Path(mount["index_path"])
+    if (not index_path.is_file()
+            or index_path.stat().st_size != int(mount["index_bytes"])
+            or _file_sha256(index_path) != mount["index_sha256"]):
+        raise _RetryEvidenceUnavailable("完整证据 index.json 在复盘期间被修改或删除")
+    evidence_root = Path(mount["root"])
+    for record in mount["index"]["files"]:
+        pure = _retry_evidence_relative_path(record["path"])
+        path = evidence_root.joinpath(*pure.parts)
+        if (not path.is_file() or path.stat().st_size != int(record["bytes"])
+                or _file_sha256(path) != record["sha256"]):
+            raise _RetryEvidenceUnavailable(
+                f"完整证据在复盘期间不完整：{record['path']}")
+
+
+def _remove_failed_review_evidence(sandbox_repo: Path, log=print) -> bool:
+    """Remove only this clone's deterministic evidence mount before Git inventory."""
+    root = sandbox_repo.joinpath(*_RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+    if not root.exists():
+        return True
+    try:
+        resolved_repo = sandbox_repo.resolve()
+        resolved = root.resolve()
+        expected = resolved_repo.joinpath(*_RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+        if resolved != expected or not resolved.is_relative_to(resolved_repo):
+            log(f"[llm] 完整证据目录归属校验失败，保留：{root}")
+            return False
+    except OSError as exc:
+        log(f"[llm] 完整证据目录读取失败，保留：{root}（{exc}）")
+        return False
+    last_error: OSError | None = None
+    for delay in (0.0, 0.05, 0.15, 0.3):
+        if delay:
+            time.sleep(delay)
+        try:
+            shutil.rmtree(resolved, onerror=_remove_readonly_for_rmtree)
+            return True
+        except OSError as exc:
+            last_error = exc
+    log(f"[llm] 完整证据目录清理失败，保留隔离现场：{root}（{last_error}）")
+    return False
+
+
 def _failed_review_replay_context(package_names, attempt_names=(), log=print) -> dict:
     """Inline one target lineage with a fixed total budget and explicit roles."""
     requested = _normalize_salvage_package_names(package_names)
@@ -4386,6 +4707,16 @@ def _failed_review_replay_context(package_names, attempt_names=(), log=print) ->
         "attempt_packages": attempts,
         "packages": [],
         "total_budget_bytes": _RETRY_REPLAY_TOTAL_BYTES,
+        "inline_content_role": (
+            "navigation summary only; truncation never implies complete evidence"),
+        "complete_evidence": {
+            "required": bool(requested),
+            "relative_root": _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix(),
+            "index": _RETRY_SANDBOX_EVIDENCE_INDEX.as_posix(),
+            "integrity": "per-file byte size and SHA-256",
+            "missing_or_incomplete_action": "write still_pending; host keeps target queued",
+            "auto_apply": False,
+        },
         "auto_apply": False,
         "review_contract": (
             "GLM must compare this evidence with current HEAD, selectively reimplement "
@@ -4558,6 +4889,23 @@ def _parse_retry_resolutions(report: str, package_names) -> dict[str, str]:
             package, resolution = parsed
             found[package] = resolution
     return found
+
+
+def _validated_retry_resolutions(
+    sandbox: SandboxReviewResult,
+    package_names,
+    log=print,
+) -> dict[str, str]:
+    """Accept GLM receipts only after complete mounted evidence was verified."""
+    requested = _normalize_salvage_package_names(package_names)
+    if not requested:
+        return {}
+    if (not sandbox.replay_evidence_requested
+            or not sandbox.replay_evidence_complete):
+        log("[llm] 失败包完整证据未通过校验；忽略本轮全部 retry_resolution，"
+            "target 保持 pending")
+        return {}
+    return _parse_retry_resolutions(sandbox.diagnostic_report, requested)
 
 
 _RETRY_RECEIPT_HISTORY_LIMIT = 256
@@ -4943,7 +5291,8 @@ def _save_review_salvage(
 def _run_review_sandbox(
     cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
     translator: "OpencodeJsonTranslator", *, stall_warn_seconds: float = 0,
-    stall_timeout_seconds: float = 0, log=print,
+    stall_timeout_seconds: float = 0, replay_packages=(), replay_attempts=(),
+    log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
     sandbox_root = _new_review_temp("sts2-review-sandbox-")
@@ -4952,6 +5301,14 @@ def _run_review_sandbox(
     paths: list[str] = []
     validation_git_root: Path | None = None
     validation_prefix = "sts2-review-validation-index-"
+    replay_requested = _normalize_salvage_package_names(replay_packages)
+    replay_attempt_names = [
+        name for name in _normalize_salvage_package_names(replay_attempts)
+        if name not in replay_requested]
+    replay_mount: dict = {}
+    replay_evidence_complete = not bool(replay_requested)
+    replay_evidence_error = ""
+    replay_model_started = False
     try:
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
@@ -4969,6 +5326,19 @@ def _run_review_sandbox(
         prompt_path = sandbox_repo / PROMPT_FILE.relative_to(REPO_DIR)
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(prompt, encoding="utf-8")
+        if replay_requested:
+            try:
+                replay_mount = _mount_failed_review_evidence(
+                    sandbox_repo, replay_requested, replay_attempt_names, log=log)
+                replay_evidence_complete = True
+            except (_ReviewStopped, KeyboardInterrupt):
+                raise
+            except Exception as exc:
+                replay_evidence_error = str(exc)[:1200]
+                result = SandboxReviewResult(
+                    error=("失败包完整证据不可用；保留 target 并重新排队："
+                           + replay_evidence_error))
+                return result
         sandbox_cmd = list(cmd)
         try:
             sandbox_cmd[sandbox_cmd.index("--dir") + 1] = str(sandbox_repo)
@@ -4976,10 +5346,35 @@ def _run_review_sandbox(
             result = SandboxReviewResult(error="复盘命令缺少 --dir 安全边界")
             return result
 
+        replay_model_started = True
         rc, out, timed_out, stopped, stalled = _stream_run(
             sandbox_cmd, timeout_seconds, translate=translator.feed,
             stall_warn_sec=stall_warn_seconds,
             stall_timeout_sec=stall_timeout_seconds)
+        if stopped:
+            # Stop keeps the exact clone as an O(1) deferred forensic source; do
+            # not spend the shutdown budget hashing or deleting a large mount.
+            replay_evidence_complete = False if replay_requested else True
+            if replay_requested:
+                replay_evidence_error = "整套停止前未完成完整证据退出后校验"
+        elif replay_mount:
+            try:
+                _verify_failed_review_evidence(sandbox_repo, replay_mount)
+            except Exception as exc:
+                replay_evidence_complete = False
+                replay_evidence_error = str(exc)[:1200]
+            if not _remove_failed_review_evidence(sandbox_repo, log=log):
+                replay_evidence_complete = False
+                replay_evidence_error = (
+                    replay_evidence_error or "完整证据目录未能在 patch 验收前移除")
+            if not replay_evidence_complete:
+                result = SandboxReviewResult(
+                    rc=rc, out=out, timed_out=timed_out, stopped=stopped,
+                    stalled=stalled,
+                    error=("失败包完整证据退出校验失败；保留 target 并重新排队："
+                           + replay_evidence_error),
+                )
+                return result
         if stopped or timed_out or stalled or rc != 0:
             result = SandboxReviewResult(
                 rc=rc, out=out, timed_out=timed_out, stopped=stopped,
@@ -5086,6 +5481,13 @@ def _run_review_sandbox(
         result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")
         return result
     finally:
+        result.replay_evidence_requested = bool(replay_requested)
+        result.replay_evidence_complete = replay_evidence_complete
+        result.replay_evidence_error = replay_evidence_error
+        result.replay_evidence_index = (
+            _RETRY_SANDBOX_EVIDENCE_INDEX.as_posix()
+            if replay_requested else "")
+        result.replay_evidence_model_started = replay_model_started
         # stop 可能落在 clone、checkout、自检、patch 导出或 capture 任一步；
         # 每次离开 try 都重新取样，不能只依赖 _stream_run 的瞬时返回值。
         result.stopped = result.stopped or _review_stop_requested()
@@ -5133,7 +5535,9 @@ def _run_review_sandbox(
             # clone（含 .git/ignored/越界内容）复制到项目内 raw_sandbox/。
             result.error = result.error or "隔离复盘全量现场捕获不完整"
             result.retained_sandbox_dir = str(sandbox_root)
-        if result.error and sandbox_root.is_dir() and not result.retained_sandbox_dir:
+        if (result.error and sandbox_root.is_dir() and not result.retained_sandbox_dir
+                and not (replay_requested and replay_evidence_error
+                         and not replay_model_started)):
             # 失败/拒绝时连 sandbox_root/repo 同级的越界文件也必须保留；仅靠
             # repo 内 Git 枚举无法覆盖模型违反 --dir 写出的 ../ 文件。
             result.retained_sandbox_dir = str(sandbox_root)
