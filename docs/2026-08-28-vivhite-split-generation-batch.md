@@ -18,7 +18,7 @@
 | 头脸 | 8/8 | 待用户统一评审 | 八次均未消除外围低 Alpha 柔光；attempt 05 的身份和几何最佳且低 Alpha 外围像素最少，仅作为评审候选。 |
 | 躯干 | 8/8 | 待用户统一评审 | attempt 08 被内容过滤拒绝；attempt 07 是当前最佳设计且不触边，但仍有 8592 个低 Alpha 外围像素。 |
 | 左靴（画面左/后腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 04 的造型、留白和约 5274 个低 Alpha 外围像素最平衡，仅作为评审候选。 |
-| 右靴（画面右/前腿） | 3/8 | 生成中 | attempt 01 的前腿透视和简洁设计最佳，但三次均存在外围低 Alpha 展示光场。 |
+| 右靴（画面右/前腿） | 8/8 | 待用户统一评审 | 八次均有外围低 Alpha 光场；attempt 08 最小且朝向正确，但插片多出金饰，仅作为评审候选。 |
 
 ## 前刘海逐次记录
 
@@ -77,5 +77,12 @@
 1. `0064-split-leg-right-boot-attachment-attempt-01`：得到一只正确的前腿靴，插片朝左上、鞋尖朝左下、鞋跟在画面右侧，单物件且四边不触碰；简洁平涂设计可用，但外围仍有约 7084 个低于 Alpha 128 的像素。
 2. `0065-split-leg-right-boot-attachment-attempt-02`：验证“完全不在 Prompt 中提及 glow/halo”并不能消除展示光场；模型还把领口误强化为金边，低于 Alpha 128 的外围像素约 5988，身份设计较 attempt 01 退化。
 3. `0066-split-leg-right-boot-attachment-attempt-03`：只参考用户原始人物设定并提高质量；鞋靴细节精致、单物件且不触边，但透视过于正面、饰物变复杂，Alpha bounds 扩张到 `[65,37,689,981]`，外围光场仍明显。
+4. `0067-split-leg-right-boot-attachment-attempt-04`：以 attempt 01 为唯一参考做同形去外部照明；主体几乎精确保留，但 Alpha bounds 扩张到 `[27,19,759,1205]`，极低 Alpha 光场接近四边，未通过。
+5. `0068-split-leg-right-boot-attachment-attempt-05`：尝试传统动画赛璐璐层语义；单靴和方向正确，但插片不够明确、上部饰件变大，仍有约 6871 个低 Alpha 外围像素。
+6. `0069-split-leg-right-boot-attachment-attempt-06`：尝试丝网印刷分色层语义；模型放大主体并产生额外金色饰件，非零 Alpha 达 285595，外围柔光和设计漂移均退化。
+7. `0070-split-leg-right-boot-attachment-attempt-07`：改用方形画布和正向固色约束；造型清晰，但主体和光场共同触及画布底边，出现 30 个边缘非零像素，淘汰。
+8. `0071-split-leg-right-boot-attachment-attempt-08`：把物件目标缩至画布约四分之一；朝向、单物件和留白正确，非零 Alpha 74168，其中约 4320 低于 128，为本组最低；仍有可见外围光场，且上方插片误多一枚金饰。
+
+右靴已达到 8 次硬上限，现按规则跳过。当前最佳评审候选为 `0071-split-leg-right-boot-attachment-attempt-08`；除非用户明确追加该语义素材额度，否则不得调用第 9 次或放入生产 atlas。
 
 所有检查仅做离线素材与 Vulkan 预览，不部署、不启动或重启游戏，也不触发直播。
