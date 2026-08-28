@@ -118,6 +118,79 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
         return ""
 
 
+_PLATING_RE = re.compile(r"覆甲|plating", re.I)
+_SELF_COST_RE = re.compile(
+    r"失去\s*\d+\s*点?\s*生命|lose[s]?\s+\d+\s*(?:hp|health)", re.I)
+
+
+def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
+                            is_unavailable=None, block_locked: bool = False):
+    """残能救场候选（第698~770批复盘闭环实验）。
+
+    「评估后无值得出的牌」分支在剩有能量且意图缺口>0 时空过结束回合，
+    等于把已经付过的能量整笔蒸发：本批实证 89 例残能空过横跨 40 局，
+    其中 16 例缺口>0，多次出现在死亡局最后一回合（742 局 F17-T2 意图19/
+    5血/3甲手握【岩石铠甲】仍空过——死牌守卫把无条件的即时能力牌
+    STONE_ARMOR 误判成「触发条件无自残源」的死牌）。本兜底只在既定
+    评分全线拒绝后的 end_turn 边界生效，不重排全手评分、不触碰姿态学习：
+      ① 可负担格挡（净效益=min(block,gap) 最大者，同值取低费）；
+      ② 「获得N层覆甲」类立即生效的防性能力（runtime 实证 StoneArmor 为
+         CardType.Power 即时 OnPlay 施加 PlatingPower——为死牌守卫误杀
+         类建立文本旁路）；
+      ③ 无格挡/覆甲候选时选预估伤害最高的可负担攻击（排除「失去生命」
+         自残型成本，避免救场变送命）。
+    block_locked（应急按钮锁窗）期间格挡与覆甲收益为零，仅保留攻击通道。
+    全部候选失败返回 (None, "")，调用方回落旧版 end_turn——语义完全可回滚：
+    运行时配置键 idle_energy_rescue=False 即整体关闭。
+    """
+    try:
+        en = int(energy)
+        gap = int(incoming) - int(my_block)
+        if en <= 0 or gap <= 0:
+            return None, ""
+        unavailable = is_unavailable or (lambda _card: False)
+        blk_best = None   # (useful, -cost, card)
+        plat_best = None  # (grants, -cost, card)
+        atk_best = None   # (est_dmg, -cost, card)
+        for c in hand or []:
+            if (not isinstance(c, dict) or not c.get("playable")
+                    or unavailable(c) or c.get("costs_x")
+                    or _exhausts_other_cards(c)):
+                continue
+            cost = int(c.get("energy_cost") or 0)
+            if cost < 1 or cost > en:
+                continue
+            dmg, block, hits = card_numbers(c)
+            t = _text(c)
+            if _SELF_COST_RE.search(t):
+                continue
+            if block > 0 and not block_locked:
+                useful = min(int(block), gap)
+                cand = (useful, -cost, c)
+                if blk_best is None or cand[:2] > blk_best[:2]:
+                    blk_best = cand
+            elif (not block_locked and block <= 0 and dmg <= 0
+                    and _PLATING_RE.search(t)):
+                m = re.search(r"获得\s*(\d+)\s*层|(\d+)\s*层", t)
+                grants = int(max(m.groups(), key=lambda g: int(g or 0))) if m else 4
+                cand = (grants, -cost, c)
+                if plat_best is None or cand[:2] > plat_best[:2]:
+                    plat_best = cand
+            elif dmg > 0:
+                est = int(dmg) * max(1, int(hits or 1))
+                cand = (est, -cost, c)
+                if atk_best is None or cand[:2] > atk_best[:2]:
+                    atk_best = cand
+        for kind, pick in (("block", blk_best), ("plating", plat_best),
+                           ("attack", atk_best)):
+            if pick is not None and pick[2] is not None:
+                return pick[2], kind
+        return None, ""
+    except Exception:
+        # 救场兜底不得因脏载荷改变 end_turn 保活语义（与审计位同约定）。
+        return None, ""
+
+
 def card_type(card: dict) -> str:
     return card.get("card_type") or ""
 
@@ -2887,6 +2960,68 @@ class Policy:
                 hand, energy, incoming, my_block,
                 is_unavailable=self._card_unavailable,
                 race_mode=bool(race_allin or kill_race))
+            # ── 残能救场（第698~770批复盘闭环）：评分全线拒绝后的最后边界。
+            #    意图缺口>0 且剩有能量时，用 primitive 规则取回本就付过的能量；
+            #    knowledge/policy.json 写入 idle_energy_rescue=false 即整体回滚。──
+            try:
+                _resc_enabled = bool(int(pol.get("idle_energy_rescue", 1)))
+            except Exception:
+                _resc_enabled = True
+            _resc_kind = ""
+            _resc_card = None
+            if _resc_enabled:
+                _resc_card, _resc_kind = idle_energy_rescue_pick(
+                    hand, energy, incoming, my_block,
+                    is_unavailable=self._card_unavailable,
+                    block_locked=block_locked)
+            if _resc_card is not None:
+                _rcid = (_resc_card.get("card_id") or "").upper().rstrip("+")
+                _rest_dmg, _, _rhits = card_numbers(_resc_card)
+                _rest_est = float(max(1, int(_rest_dmg) * int(_rhits))) \
+                    if _rest_dmg > 0 else 0.0
+                if _text(_resc_card).find("所有敌人") >= 0 \
+                        or "all enemies" in _text(_resc_card).lower() \
+                        or (_resc_card.get("target_type") or "") == "AllEnemies":
+                    _rest_est *= max(1, len(enemies))
+                _rparams = {"card_index": _resc_card["index"]}
+                _rtname = ""
+                if _resc_card.get("requires_target"):
+                    _valid_now = _resc_card.get("valid_target_indices") or []
+                    pool = [_i for _i in _valid_now
+                            if any(e.get("index") == _i for e in enemies)]
+                    if not pool:
+                        pool = [e["index"] for e in enemies]
+
+                    def _thr(idx):
+                        e = next((x for x in enemies if x.get("index") == idx), None)
+                        return sum((it.get("total_damage") or 0)
+                                   for it in (e or {}).get("intents", [])) if e else 0
+
+                    rtarget = max(pool, key=_thr) if pool else None
+                    if rtarget is not None:
+                        _rparams["target_index"] = rtarget
+                    _rtname = next((e["name"] for e in (combat.get("enemies") or [])
+                                    if e.get("index") == rtarget), "")
+                self._trace_gate(
+                    "RESCUE 残能救场", "warn",
+                    f"{_resc_kind}:【{_resc_card.get('name')}】"
+                    f"能量{energy}缺口{max(0, incoming - my_block)}")
+                _kind_cn = {"block": "格挡", "plating": "覆甲", "attack": "输出"}.get(
+                    _resc_kind, _resc_kind)
+                return Decision("play_card", _rparams,
+                                f"战斗：残能救场[{_kind_cn}]：剩余能量{int(energy)}"
+                                f"打出【{_resc_card.get('name')}】"
+                                f"{('→' + _rtname) if _rtname else ''}，"
+                                f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
+                                f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
+                                f"{danger_note}",
+                                tags=[("play_card", _rcid),
+                                      ("play_card_index", _resc_card.get("index"),
+                                       self._card_key(_resc_card)[1]),
+                                      ("combat_play_commit", _rcid, False,
+                                       _exhausts_other_cards(_resc_card),
+                                       round(_rest_est, 2), round_no, "")],
+                                wait=0.6)
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}",
                             wait=1.2)

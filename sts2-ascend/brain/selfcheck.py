@@ -5349,6 +5349,75 @@ def main() -> int:
         and "BOSS_RACE_COMBO_GATE" not in d_pc_off.reason, \
         f"组合门关闭时应回落均值判死: {d_pc_off.reason}"
 
+    # 3br-3) 残能救场守卫（第698~770批复盘闭环）：本批 89 例带能量空过横跨
+    #        40 局（16 例缺口>0，742 局 F17-T2 死亡战手握岩石铠甲仍空过）。
+    #        意图缺口>0 且剩能量时 end_turn 边界必须先尝试 primitive 救场：
+    #        覆甲类即时能力牌旁路死牌误杀、可负担格挡优先、自残攻击排除；
+    #        缺口≤0 或关闭 idle_energy_rescue 时严格回落旧版空过语义。
+    def _resc_state(hand_cards, energy_val, incoming_val, blk_val):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {"player": {"current_hp": 5, "max_hp": 80,
+                                  "block": blk_val, "energy": energy_val},
+                       "hand": hand_cards,
+                       "enemies": [{"index": 0, "enemy_id": "EXOSKEL",
+                                    "name": "外骨骼", "current_hp": 90, "max_hp": 120,
+                                    "block": 0, "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming_val}]}]},
+            "run": {"current_hp": 5, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+        }
+
+    resc_armor = [{"index": 0, "card_id": "STONE_ARMOR", "name": "岩石铠甲",
+                   "playable": True, "energy_cost": 1, "requires_target": False,
+                   "rules_text": "获得4层覆甲。"}]
+    resc_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-idleresc-"))), random.Random(5))
+    d_resc_plat = resc_pol.decide(_resc_state(resc_armor, 2, 19, 3), ctx)
+    assert d_resc_plat.action == "play_card" \
+        and d_resc_plat.params.get("card_index") == 0 \
+        and "残能救场[覆甲]" in d_resc_plat.reason, \
+        f"死亡层覆甲牌未被残能救场回收: {d_resc_plat.reason}"
+    assert "RESCUE 残能救场" in json.dumps(d_resc_plat.trace, ensure_ascii=False), \
+        f"残能救场未进入持久决策轨迹: {d_resc_plat.trace}"
+    d_rollback = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-idleresc-rb-")))
+    d_rollback.policy["idle_energy_rescue"] = False
+    d_rb = policy.Policy(d_rollback, random.Random(5)).decide(
+        _resc_state(resc_armor, 2, 19, 3), ctx)
+    assert d_rb.action == "end_turn" and "评估后无值得出的牌" in d_rb.reason, \
+        f"回滚键失效，旧空过语义被改变: {d_rb.reason}"
+
+    resc_defend = [{"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                    "playable": True, "energy_cost": 1, "requires_target": False,
+                    "rules_text": "获得5点格挡",
+                    "dynamic_values": [{"name": "Block", "current_value": 5}]}]
+    # 主评分线在健康状态下本就会直接选择该防御（回归保护：救场不与主路径抢戏）
+    d_resc_blk = resc_pol.decide(_resc_state(resc_defend, 1, 10, 0), ctx)
+    assert d_resc_blk.action == "play_card" \
+        and d_resc_blk.params.get("card_index") == 0, \
+        f"缺口>0 的正常格挡评分不应被打断: {d_resc_blk.reason}"
+    _blk_c, _blk_kind = policy.idle_energy_rescue_pick(
+        resc_defend, 1, 10, 0)
+    assert _blk_kind == "block" and _blk_c is not None \
+        and _blk_c.get("card_id") == "DEFEND_IRONCLAD", \
+        f"救场池未把可负担格挡列为第一优先: {_blk_kind}"
+    _none_c, _none_kind = policy.idle_energy_rescue_pick(
+        resc_defend, 1, 10, 10)
+    assert _none_c is None and _none_kind == "", \
+        f"缺口≤0 时救场池应返回空: {(_none_kind, _none_c)}"
+    _lock_c, _lock_kind = policy.idle_energy_rescue_pick(
+        resc_armor + resc_defend, 3, 30, 5, block_locked=True)
+    assert _lock_c is None and _lock_kind == "", \
+        f"锁格挡窗口内格挡/覆甲不得成为救场弹药: {(_lock_kind, _lock_c)}"
+    resc_hem = [{"index": 0, "card_id": "HEMOKINESIS", "name": "御血术",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "rules_text": "失去2点生命，造成15点伤害。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 15}]}]
+    _hem_c, _hem_kind = policy.idle_energy_rescue_pick(resc_hem, 1, 20, 0)
+    assert _hem_c is None and _hem_kind == "", \
+        f"自残成本型攻击不应作为救场弹药: {(_hem_kind, _hem_c)}"
+
     # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
     #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
     #      链未顶格时不接替；胜利按 +0.03 向锚点回收
