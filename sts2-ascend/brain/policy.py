@@ -2788,6 +2788,23 @@ class Policy:
                 worthwhile_blk_costs.append(cost)
         reserve_for_block = gap_now > 0 and bool(worthwhile_blk_costs)
         min_blk_cost = min(worthwhile_blk_costs) if worthwhile_blk_costs else 99
+        # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
+        # 斩杀竞速局的非致死回合，末点能量保留给最便宜的合格挡牌——
+        # 891 局 F28-T2 实证：斩杀竞速「全攻提速」留痕下 6 费全部流向攻击、
+        # 手握防御+（1费8甲）零甲硬吃 16（30→14），下一回合 14 血 0 甲阵亡；
+        # 与 876-F30-T3、891-F20-T3 同型累计 3 例（≥3 线）且 891 直接改写
+        # 生死链（F20 -33 → F23 进场 17 血 → F28 进场 40 血）。
+        # 范围取 kill_race（斩杀竞速投影）而非 race_allin：三例白损全部发生
+        # 在斩杀竞速投影下，而 race_allin 的 0.45 奢侈格挡贬值是 546 局批复盘
+        # 对「整回合零输出温水局」的定案（3z 回归锚），无新白损证据不推翻。
+        # 大件攻击评分远超预留罚分不受影响，只有「最后一刀」让位 1 费格挡；
+        # 致死回合（买命/抢斩杀当场兑现）与零缺口回合豁免，维持全攻语义。
+        race_floor_cap = float(pol.get("race_block_floor_cost", 1.0))
+        race_floor_costs = [cst for cst in worthwhile_blk_costs if cst <= race_floor_cap]
+        race_blk_floor = (bool(race_floor_costs) and gap_now > 0
+                          and bool(kill_race) and not reserve_lethal)
+        if race_blk_floor:
+            min_blk_cost = min(min_blk_cost, min(race_floor_costs))
         # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
         # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4
@@ -2817,6 +2834,10 @@ class Policy:
             "GATE 斩杀竞速", "warn" if (race_allin or kill_race) else "pass",
             f"败局竞速={race_allin}；斩杀竞速={kill_race}")
         self._trace_gate(
+            "GATE 竞速格挡下限", "active" if race_blk_floor else "pass",
+            f"末点1费格挡预留={race_blk_floor}；合格挡费用≤{race_floor_cap:g}"
+            + (f"；最低合格挡费用{min_blk_cost}" if race_blk_floor else ""))
+        self._trace_gate(
             "RANK 出牌阈值", "neutral", f"> {float(pol['play_threshold']):.2f}")
         for c in hand:
             if not c.get("playable"):
@@ -2841,8 +2862,10 @@ class Policy:
                 continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
                                                    my_hp, my_max_hp, stance, forced_kill,
-                                                   reserve_for_block and not race_allin and not kill_race,
+                                                   (reserve_for_block and not race_allin
+                                                    and not kill_race) or race_blk_floor,
                                                    min_blk_cost, energy, race_allin, kill_race,
+                                                   race_blk_floor=race_blk_floor,
                                                    all_respawn=all_respawn,
                                                    run_deck=(state.get("run") or {}).get("deck"),
                                                    block_locked=block_locked)
@@ -3077,7 +3100,8 @@ class Policy:
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,
                     forced_kill: bool = False, reserve_for_block: bool = False,
                     min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
-                    kill_race: bool = False, all_respawn: bool = False,
+                    kill_race: bool = False, race_blk_floor: bool = False,
+                    all_respawn: bool = False,
                     run_deck: list[dict] | None = None, block_locked: bool = False):
         """战斗中手牌评分。
 
@@ -3094,6 +3118,10 @@ class Policy:
 
         能量预留：缺口未补、手里有格挡牌且「这张攻击 + 最便宜格挡 > 现有能量」
         时，非击杀攻击让路——先补防再输出，避免下一轮无甲吃整套意图。
+        竞速格挡下限（第891局批复盘）：该预留原本在斩杀竞速局整体关闭，
+        891-F28-T2（6 费全攻 0 甲吃 16 阵亡）等 3 例预注册阈值兑现后，非致死
+        kill_race 回合以 race_block_floor_cost 门槛重新启用并加重罚分——只保
+        末点 1 费格挡，致死回合仍全攻；race_allin 维持 546 局全攻定案不变。
 
         孤注一掷（第 59 局复盘新增）：致死缺口在手却无任何可负担格挡牌时，
         防御路线已不存在，解除非击杀攻击的禁玩压制并提速（desperate_atk_mult），
@@ -3428,7 +3456,16 @@ class Policy:
             if lethal and not best_kill and not (desperate or race_allin):
                 best_s = min(best_s, floor_score)
             elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
-                best_s -= 8.0  # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）
+                # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）；
+                # 竞速格挡下限（第891局批复盘）启用时罚分按专属键加重——
+                # kill_race 下攻击吃 ×1.25×1.15 双乘区、格挡被 ×0.70 贬值，
+                # -8 档压不过乘区差，末点能量必须真的换到格挡手里
+                best_s -= (float(pol.get("race_floor_reserve_penalty", 12.0))
+                           if race_blk_floor else 8.0)
+                if race_blk_floor:
+                    why += "｜竞速格挡下限预留"
+                if race_allin and not best_kill:
+                    why += "｜败局竞速全攻"
             elif desperate and not best_kill:
                 why += "｜无甲孤注抢斩杀"
             elif race_allin and not best_kill:

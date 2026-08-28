@@ -4931,6 +4931,62 @@ def main() -> int:
         f"联合分配可行的卡组被误判全攻提速: {d_kr7.reason}"
     prc1.combat = None
 
+    # 3rf) 竞速格挡下限（第891局批复盘；856~876批 §四.3 预注册到期兑现）：
+    #      891-F28-T2 实证——斩杀竞速「全攻提速」留痕下 6 费全部流向攻击、
+    #      手握防御+（1费8甲）零甲硬吃 16（30→14），与 876-F30-T3 /
+    #      891-F20-T3 同型累计 3 例且改写生死链。非致死 kill_race 回合的
+    #      末点能量必须为最便宜合格挡牌保留（罚分 12 压过 ×1.25×1.15 攻击
+    #      乘区差）；race_allin 路径维持 546 局全攻定案（3z 原样）；
+    #      致死回合（买命/抢斩杀）维持全攻豁免。
+    rf_pol = policy.Policy(know, random.Random(11))
+    rf_enemies = [dict(ra_enemies[0])]
+    rf_hit = {"index": 0, "card_id": "RF_HIT", "name": "竞速斩", "playable": True,
+              "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+              "dynamic_values": [{"name": "Damage", "current_value": 12}]}
+    rf_shld = {"index": 1, "card_id": "RF_SHLD", "name": "下限挡", "playable": True,
+               "energy_cost": 1, "requires_target": False,
+               "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    _rf_base = dict(reserve_for_block=True, min_blk_cost=1, my_hp=30, my_max_hp=87,
+                    hopeless_race=False, kill_race=True, run_deck=[])
+    s_floor_on, _, why_on = rf_pol._score_play(rf_hit, rf_enemies, 16, 0, 5,
+                                               rf_pol.know.policy, cur_energy=1,
+                                               race_blk_floor=True, **_rf_base)
+    s_floor_off, _, why_off = rf_pol._score_play(rf_hit, rf_enemies, 16, 0, 5,
+                                                 rf_pol.know.policy, cur_energy=1,
+                                                 race_blk_floor=False, **_rf_base)
+    assert s_floor_on < s_floor_off and "竞速格挡下限预留" in why_on \
+        and "竞速格挡下限预留" not in why_off, \
+        f"竞速格挡下限罚分/留痕未生效: on={s_floor_on}({why_on}) off={s_floor_off}({why_off})"
+    s_floor_mid, _, why_mid = rf_pol._score_play(rf_hit, rf_enemies, 16, 0, 5,
+                                                 rf_pol.know.policy, cur_energy=2,
+                                                 race_blk_floor=True, **_rf_base)
+    assert s_floor_mid > s_floor_on and "竞速格挡下限预留" not in why_mid, \
+        f"能量充裕时误罚（cost+下限≤当前能量不应预留）: {s_floor_mid}({why_mid})"
+    # decide 级正例：末点 1 能量在「攻击 vs 1费格挡」之间应让位给格挡
+    def rfloor_state(energy_now, hp_now, incoming):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 87,
+                                  "block": 0, "energy": energy_now},
+                       "hand": [dict(rf_hit, index=0), dict(rf_shld, index=1)],
+                       "enemies": [dict(rf_enemies[0],
+                                        intents=[{"total_damage": incoming}])]},
+            "run": {"current_hp": hp_now, "max_hp": 87, "gold": 0, "floor": 28,
+                    "deck": weak_deck}}
+    rf_ctx = type("RFCTX", (), {"combat": {"comp_id": "RF_RACE_COMP",
+                                           "node_type": "Boss"},
+                                "current_combat_is_hard": False,
+                                "credit_tags": []})()
+    d_floor = rf_pol.decide(rfloor_state(1, 30, 16), rf_ctx)
+    assert d_floor.action == "play_card" \
+        and d_floor.params.get("card_index") == 1, \
+        f"非致死竞速回合末点能量未让位1费格挡: {d_floor.action}（{d_floor.reason}）"
+    # 致死回合豁免：22 意图对 20 血当场必死 → 买命窗口原价保留（不再受下限影响）
+    d_lethal = rf_pol.decide(rfloor_state(1, 20, 22), rf_ctx)
+    assert d_lethal.action == "play_card", \
+        f"致死回合弃权: {d_lethal.action}（{d_lethal.reason}）"
+
     # 3kv) 滚雪球局的防守线复核·联合能量口径（第454局批复盘引入，第460局
     #      批复盘改版）：454 批的教训是「格挡恰是升级型战斗的第一生存变量」，
     #      但其成立前提是卡组有输出引擎——旧复核按能量双算把「纯挡墙」也判
