@@ -5320,3 +5320,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/884 胜，当前目标进阶 0
+
+## 第 885 局复盘（2026-08-28 15:59）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：IRON_WAVE, ANGER, RUPTURE, TRUE_GRIT, SHRUG_IT_OFF, THUNDERCLAP, UNRELENTING, UNMOVABLE, BATTLE_TRANCE, CINDER
+- 本局遗物：药水腰带, GREMLIN_HORN
+- 战斗记录：F5 Monster战 掉血16｜竞速审计：T4判死→实战6回合获胜; F6 Monster战 掉血1｜竞速审计：T5判死→实战7回合获胜; F8 Elite战 掉血42｜竞速审计：T5判死→实战7回合获胜; F13 Unknown战 掉血56｜竞速审计：T3判死→实战9回合获胜; F15 Monster战 掉血5; F17 Boss战 掉血43｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/23局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/90局)，MANGLE(24分/88局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/885 胜，当前目标进阶 0
