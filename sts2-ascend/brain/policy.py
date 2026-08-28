@@ -2600,6 +2600,18 @@ class Policy:
                     # 带引擎卡组不再被面值账推向过早 all-in
                     dpt = self.deck_effective_burst(_deck_now) * _prior_eff
                     dpt_src = f"先验{dpt:.0f}伤/回合" if dpt > 0 else ""
+                # 换挡上浮校准（RACE_LATCH_DPT_UPSHIFT，第823~832局批复盘）：
+                # 实测均值取自防守姿态的开局回合，而判死判决本身的行为后果
+                # 就是全攻换挡——审计首窗实测入锁后输出 10→15~17伤/回合
+                # （832局F17），8场入锁3场实战获胜触发预注册收紧。非升级桶
+                # 的实测 dpt 按 race_latch_dpt_uplift 上浮后再对账；升级桶
+                # （esc_gate）与先验分支维持原口径。0 或缺键即整体关闭。
+                if self._krace_turns >= 2 and not esc_gate and dpt > 0:
+                    _up = max(0.0, float(pol.get("race_latch_dpt_uplift", 0.0)))
+                    if _up > 0.0:
+                        dpt = dpt * (1.0 + _up)
+                        dpt_src = (f"{dpt_src}×(1+换挡上浮{_up:.2f})"
+                                   f"→{dpt:.0f}伤/回合校准")
                 if dpt > 0:
                     loss_rate = self._race_loss_rate if (
                         self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
