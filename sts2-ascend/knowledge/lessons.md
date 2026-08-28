@@ -6255,3 +6255,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/969 胜，当前目标进阶 0
+
+## 第 970 局复盘（2026-08-29 06:04）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VICIOUS, HOWL_FROM_BEYOND, RUPTURE, IRON_WAVE, UPPERCUT, INFERNAL_BLADE, RUPTURE, INFLAME, HOWL_FROM_BEYOND, UPPERCUT
+- 本局遗物：PEAR
+- 战斗记录：F9 Monster战 掉血19; F11 Monster战 掉血16; F12 Unknown战 掉血18; F14 Monster战 掉血10; F15 Monster战 掉血22｜竞速审计：T5判死→实战7回合获胜; F17 Boss战 掉血51｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/24局)，FIEND_FIRE(25分/37局)，PACTS_END(24分/100局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/970 胜，当前目标进阶 0
