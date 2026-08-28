@@ -277,16 +277,16 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                "review_queue_max": 1}
 
         with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
-              mock.patch.object(llm_review, "resolve_review_plan",
-                                return_value=("m", 1, "preferred")),
+              mock.patch.object(llm_review, "resolve_review_plan") as resolve,
               mock.patch.object(llm_review, "_ensure_worker")):
             llm_review.enqueue_review(agent, log=lambda _message: None)
 
         saved = llm_review._load_queue_unlocked()
+        resolve.assert_not_called()
         self.assertEqual(saved["reviewing"], payload["reviewing"])
         self.assertEqual([item["run"] for item in saved["pending"]], [10, 20])
         self.assertEqual(know.progression["last_llm_review_run"], 20)
-        self.assertEqual(know.progression["last_review_attempt_source"], "preferred")
+        self.assertEqual(know.progression["last_review_attempt_source"], "queued")
         know.save.assert_called_once_with()
 
     def test_starvation_never_overrides_available_glm_preferred_plan(self) -> None:
@@ -306,14 +306,17 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                "review_queue_max": 100}
 
         with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
-              mock.patch.object(llm_review, "resolve_review_plan",
-                                return_value=(glm, 1, "preferred")),
+              mock.patch.object(llm_review, "resolve_review_plan") as resolve,
               mock.patch.object(llm_review, "_ensure_worker")):
             llm_review.enqueue_review(agent, log=lambda _message: None)
 
         item = llm_review._load_queue_unlocked()["pending"][-1]
-        self.assertEqual((item["model"], item["source"]), (glm, "preferred"))
-        self.assertEqual(know.progression["last_review_attempt_source"], "preferred")
+        resolve.assert_not_called()
+        self.assertEqual(
+            (item["runner"], item["model"], item["variant"], item["source"]),
+            ("opencode", "opencode-go/glm-5.3-flash", "max", "queued"),
+        )
+        self.assertEqual(know.progression["last_review_attempt_source"], "queued")
 
     def test_failed_batch_is_requeued_with_backoff_and_success_clears_it(self) -> None:
         payload = {
@@ -322,8 +325,10 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         }
         self.queue.write_text(json.dumps(payload), encoding="utf-8")
         batch = [
-            {"run": 8, "time": "old", "model": "old", "source": "preferred"},
-            {"run": 9, "time": "old", "model": "old", "source": "preferred"},
+            {"run": 8, "time": "old", "model": "old", "source": "preferred",
+             "retry_same_model": True},
+            {"run": 9, "time": "old", "model": "old", "source": "preferred",
+             "retry_same_model": True},
         ]
 
         with mock.patch.object(llm_review.time, "time", return_value=1000.0):
@@ -348,6 +353,18 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         completed = llm_review._load_queue_unlocked()
         self.assertIsNone(completed["reviewing"])
         self.assertEqual([item["run"] for item in completed["pending"]], [11])
+
+    def test_unattempted_model_hint_never_invents_sticky_affinity(self) -> None:
+        batch = [{"run": 8, "model": "glm", "source": "queued"}]
+        self.queue.write_text(json.dumps({
+            "pending": [], "reviewing": {"runs": [8], "items": batch},
+        }), encoding="utf-8")
+
+        llm_review._finalize_review_batch(
+            batch, "failed", log=lambda _message: None)
+
+        retry = llm_review._load_queue_unlocked()["pending"][0]
+        self.assertFalse(retry["retry_same_model"])
 
     def test_interrupted_reviewing_returns_to_front_once_with_group_intact(self) -> None:
         recovered = [
@@ -706,6 +723,27 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(retry["runner"], "opencode")
         self.assertTrue(retry["retry_same_model"])
 
+    def test_provider_never_launches_until_resolved_affinity_is_durable(self) -> None:
+        batch = [{"run": 8, "model": "glm", "source": "queued"}]
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        plan = llm_review.ReviewPlan(
+            key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
+            reasoning_effort="max", approve_for_me=True,
+            every_runs=1, source="preferred")
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value={}),
+              mock.patch.object(llm_review, "resolve_review_plan", return_value=plan),
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata",
+                                return_value=False),
+              mock.patch.object(llm_review, "run_review") as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "deferred")
+        self.assertFalse(batch[0]["retry_same_model"])
+        run.assert_not_called()
+
     def test_retry_same_model_binds_original_plan_and_fresh_work_may_fallback(self) -> None:
         sticky = [{
             "run": 8, "runner": "opencode", "model": "glm", "every": 1,
@@ -725,7 +763,9 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
               mock.patch.object(llm_review, "resolve_review_plan",
-                                return_value=("kimi", 5, "fallback")) as resolve,
+                                return_value=("kimi", 1, "fallback")) as resolve,
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata",
+                                return_value=True),
               mock.patch.object(llm_review, "run_review", side_effect=complete)):
             sticky_outcome = llm_review._run_batch_review(
                 agent, sticky, log=lambda _message: None)
@@ -843,6 +883,121 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             ("pkg-a", 8), ("pkg-a", 9), ("pkg-b", 8), ("pkg-b", 10),
         ])
 
+    def test_replay_recovery_keeps_latest_luna_attempt_affinity(self) -> None:
+        target = llm_review.SALVAGE_ROOT / "pkg-root"
+        attempt = llm_review.SALVAGE_ROOT / "pkg-luna-attempt"
+        target.mkdir()
+        attempt.mkdir()
+        (target / "manifest.json").write_text(json.dumps({
+            "replay_enqueue_pending": True,
+            "replay_target": "pkg-root", "replay_role": "target",
+            "replay_attempt_packages": ["pkg-luna-attempt"],
+            "batch_runs": [8], "runner": "opencode", "model": "glm",
+            "backend_key": "glm-flash", "provider_work_started": False,
+            "retry_same_model": False,
+        }), encoding="utf-8")
+        (attempt / "manifest.json").write_text(json.dumps({
+            "replay_enqueue_pending": True,
+            "replay_target": "pkg-root", "replay_role": "attempt_evidence",
+            "batch_runs": [8], "runner": "codex", "model": "gpt-5.6-luna",
+            "backend_key": "luna-max", "priority": 2,
+            "reasoning_effort": "max", "approve_for_me": True,
+            "sandbox": "workspace-write", "provider_work_started": True,
+            "retry_same_model": True, "source": "preferred", "every": 1,
+        }), encoding="utf-8")
+        self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
+                              encoding="utf-8")
+
+        llm_review._recover_salvage_replay_queue(log=lambda _message: None)
+
+        item = llm_review._load_queue_unlocked()["pending"][0]
+        self.assertEqual(
+            (item["runner"], item["model"], item["backend_key"],
+             item["reasoning_effort"], item["priority"]),
+            ("codex", "gpt-5.6-luna", "luna-max", "max", 2),
+        )
+        self.assertTrue(item["approve_for_me"])
+        self.assertTrue(item["retry_same_model"])
+
+    def test_startup_failure_package_remains_nonsticky_and_falls_through_to_luna(self) -> None:
+        target = llm_review.SALVAGE_ROOT / "pkg-glm-startup"
+        target.mkdir()
+        (target / "manifest.json").write_text(json.dumps({
+            "replay_enqueue_pending": True,
+            "replay_target": "pkg-glm-startup", "replay_role": "target",
+            "batch_runs": [8], "runner": "opencode", "model": "glm",
+            "backend_key": "glm-flash", "provider_work_started": False,
+            "retry_same_model": False,
+        }), encoding="utf-8")
+        self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
+                              encoding="utf-8")
+        llm_review._recover_salvage_replay_queue(log=lambda _message: None)
+        batch = [dict(llm_review._load_queue_unlocked()["pending"][0])]
+        self.assertFalse(batch[0]["retry_same_model"])
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        luna = llm_review.ReviewPlan(
+            key="luna-max", priority=2, runner="codex", model="gpt-5.6-luna",
+            reasoning_effort="max", approve_for_me=True,
+            every_runs=1, source="preferred")
+
+        def complete(*_args, **kwargs):
+            kwargs["_status"].update({"outcome": "completed", "reason": "ok"})
+            return False
+
+        with (mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"codex_bin": "codex"}),
+              mock.patch.object(llm_review.shutil, "which", return_value=None),
+              mock.patch.object(llm_review, "resolve_review_plan", return_value=luna),
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata"),
+              mock.patch.object(llm_review, "run_review", side_effect=complete) as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "replay_pending")
+        self.assertEqual(run.call_args.kwargs["runner"], "codex")
+        self.assertEqual(run.call_args.kwargs["model"], "gpt-5.6-luna")
+        self.assertEqual(run.call_args.kwargs["reasoning_effort"], "max")
+        self.assertTrue(run.call_args.kwargs["approve_for_me"])
+
+    def test_empty_retry_candidate_mounts_as_valid_zero_byte_evidence(self) -> None:
+        name = "pkg-empty-candidate"
+        package = llm_review.SALVAGE_ROOT / name
+        package.mkdir()
+        (package / "files").mkdir()
+        pre_head = "a" * 40
+        manifest = {
+            "pre_head": pre_head,
+            "replay_attempt_packages": [],
+            "retry_evidence_ready": True,
+            "retry_evidence_schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_patch": "retry_candidate.patch",
+            "retry_candidate_inventory": "retry_candidate_inventory.json",
+            "retry_candidate_bytes": 0,
+        }
+        (package / "manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8")
+        (package / "report.md").write_text("", encoding="utf-8")
+        (package / "file_states.json").write_text("[]", encoding="utf-8")
+        (package / "retry_candidate.patch").write_bytes(b"")
+        (package / "retry_candidate_inventory.json").write_text(json.dumps({
+            "schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "package": name,
+            "pre_head": pre_head,
+            "paths": [],
+        }), encoding="utf-8")
+        sandbox_repo = Path(self.temp.name) / "sandbox" / "repo"
+        sandbox_repo.mkdir(parents=True)
+
+        with mock.patch.object(
+                llm_review, "_materialize_retry_evidence", return_value=manifest):
+            mounted = llm_review._mount_failed_review_evidence(
+                sandbox_repo, [name], log=lambda _message: None)
+
+        self.assertTrue(mounted["index"]["complete"])
+        copied = mounted["root"] / "packages" / name / "retry_candidate.patch"
+        self.assertTrue(copied.is_file())
+        self.assertEqual(copied.stat().st_size, 0)
     def test_retry_evidence_uses_private_objects_and_excludes_runtime_cache_from_patch(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-materialize"
         repo = package / "raw_sandbox" / "repo"
@@ -1122,6 +1277,39 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             encoding="utf-8", errors="replace")
         self.assertIn("POLICY = 'committed'", candidate)
         self.assertIn("STRATEGY = 'staged-only'", candidate)
+
+    def test_provider_transcript_survives_snapshot_salvage_with_valid_manifest_path(self) -> None:
+        with (tempfile.TemporaryDirectory(prefix="sts2-transcript-source-") as source_root,
+              tempfile.TemporaryDirectory(prefix="sts2-review-snapshot-") as snapshot_root):
+            repo = Path(source_root) / "repo"
+            transcript = repo / ".git" / "sts2-review-provider-events.jsonl"
+            transcript.parent.mkdir(parents=True)
+            transcript.write_text('{"type":"turn.completed"}\n', encoding="utf-8")
+            snapshot = Path(snapshot_root)
+            (snapshot / "files").mkdir()
+            (snapshot / "file_states.json").write_text("[]\n", encoding="utf-8")
+            (snapshot / "wip.patch").write_bytes(b"")
+            sandbox = llm_review.SandboxReviewResult(
+                rc=0, snapshot_dir=str(snapshot), snapshot_complete=True)
+
+            with (mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+                  mock.patch.object(llm_review, "_current_head_for_salvage",
+                                    return_value="b" * 40),
+                  mock.patch.object(llm_review, "_record_review_rejection")):
+                llm_review._preserve_provider_transcript(
+                    repo, sandbox, ".git/sts2-review-provider-events.jsonl",
+                    log=lambda _message: None)
+                saved = llm_review._save_review_salvage(
+                    "a" * 40, "host commit failed", sandbox,
+                    batch_runs=[9], runner="codex", model="gpt-5.6-luna",
+                    log=lambda _message: None)
+
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
+            relative = manifest["provider_transcript_rel"]
+            self.assertEqual(relative, "provider_events.jsonl")
+            self.assertEqual((saved / relative).read_bytes(), transcript.read_bytes())
 
     def test_no_raw_package_promotes_validated_candidate_not_noisy_wip(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-no-raw"
@@ -1686,6 +1874,47 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         finally:
             llm_review._worker_started = old_started
             llm_review._worker_thread = old_thread
+
+
+    def test_provider_transcript_copy_lock_retains_raw_clone_for_host_failure(self) -> None:
+        with (tempfile.TemporaryDirectory(prefix="sts2-review-sandbox-") as source_root,
+              tempfile.TemporaryDirectory(prefix="sts2-review-snapshot-") as snapshot_root):
+            repo = Path(source_root) / "repo"
+            transcript = repo / ".git" / "sts2-review-provider-events.jsonl"
+            transcript.parent.mkdir(parents=True)
+            transcript.write_text('{"type":"turn.completed"}\n', encoding="utf-8")
+            expected = transcript.read_bytes()
+            snapshot = Path(snapshot_root)
+            (snapshot / "files").mkdir()
+            (snapshot / "file_states.json").write_text("[]\n", encoding="utf-8")
+            (snapshot / "wip.patch").write_bytes(b"")
+            sandbox = llm_review.SandboxReviewResult(
+                rc=0, snapshot_dir=str(snapshot), snapshot_complete=True)
+
+            with (mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+                  mock.patch.object(llm_review, "_current_head_for_salvage",
+                                    return_value="b" * 40),
+                  mock.patch.object(llm_review, "_record_review_rejection")):
+                with mock.patch.object(
+                        llm_review, "_copy_snapshot_file",
+                        side_effect=PermissionError("scanner lock")):
+                    llm_review._preserve_provider_transcript(
+                        repo, sandbox, ".git/sts2-review-provider-events.jsonl",
+                        log=lambda _message: None)
+                self.assertEqual(sandbox.retained_sandbox_dir, source_root)
+                saved = llm_review._save_review_salvage(
+                    "a" * 40, "host commit failed", sandbox,
+                    batch_runs=[9], runner="codex", model="gpt-5.6-luna",
+                    log=lambda _message: None)
+
+            self.assertIsNotNone(saved)
+            assert saved is not None
+            manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
+            relative = manifest["provider_transcript_rel"]
+            self.assertEqual(
+                relative, "raw_sandbox/repo/.git/sts2-review-provider-events.jsonl")
+            self.assertEqual((saved / relative).read_bytes(), expected)
+
 
 
 if __name__ == "__main__":

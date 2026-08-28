@@ -1,9 +1,9 @@
 """LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
-  - 优先模型 preferred_model（默认 opencode-go/glm-5.3-flash，即 GLM-5.3-Flash）：
-    每局结束后探测 `opencode models`，在清单里且无失败冷却 → 每局复盘一次。
-  - 回退模型 model（默认 kimi-for-coding/k3）：优先模型不可用 → 每 review_every_runs 局复盘。
+  - runner-aware 优先链依次尝试 OpenCode/GLM、Codex/Luna、OpenCode/Kimi；
+  - 每局结束只耐久入队，外部 CLI/模型探测全部由后台 worker 完成；
+  - 已经启动过模型的失败事务固定原 runner/model/effort 重审，不静默换模型。
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
     分钟，期间直接回退，避免每局白等一个超时。
 
@@ -18,7 +18,7 @@
     安全点以退出码 42 自重启；脚本/其他生产源码改动仍算闭环，但不误重启 Brain。
 
 设计要点（继承）：
-  - 不直接调模型裸 API；spawn `opencode run` 无头会话——带完整工具链的智能体，走本机 OpenCode 授权。
+  - 不直接调模型裸 API；spawn OpenCode/Codex 无头会话，复用本机已有授权和工具链。
   - deny-only 路径边界 + Git 安全网：项目静态源码/配置/测试/文档可改；在线统计只读。
   - 复盘过程经 review_live.stream 直播给 review_viewer.py 悬浮窗。
 
@@ -41,11 +41,21 @@ import sys
 import tempfile
 import threading
 import time
-from collections import OrderedDict, deque
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
 from lifecycle import stop_requested
+from review_runners import (
+    CodexJsonTranslator,
+    OpencodeJsonTranslator,
+    ReviewPlan,
+    bind_review_workdir,
+    build_review_command,
+    review_plans_from_config,
+    runner_binary,
+    translator_for_runner,
+)
 
 try:
     from dashboard_launcher import ensure_dashboard_viewer
@@ -237,6 +247,8 @@ def load_llm_config() -> dict:
         "enabled": True,
         "runner": "opencode",
         "opencode_bin": "opencode",
+        "codex_bin": "codex",
+        "runner_bins": {"opencode": "opencode", "codex": "codex"},
         "model": "kimi-for-coding/k3",
         "review_every_runs": 5,
         "timeout_min": 480,
@@ -246,6 +258,8 @@ def load_llm_config() -> dict:
         "preferred_models": [
             "opencode-go/glm-5.3-flash@max",
         ],
+        # 新版优先读取 runner-aware 链；缺省/空值继续兼容上面的旧两级配置。
+        "review_model_chain": None,
         "preferred_every_runs": 1,
         # 失败冷却：超时/硬失败统一 5 分钟（短冷却，别让模型长期缺席复盘）
         "preferred_timeout_cooldown_min": 5,
@@ -257,6 +271,7 @@ def load_llm_config() -> dict:
         "stall_warn_min": 15,
         "stall_timeout_min": 30,
         "models_probe_timeout_sec": 60,
+        "models_probe_cache_sec": 300,
         # 复盘直播悬浮窗（review_viewer.py）
         "viewer_enabled": True,
         # 语音朗读器（tts/）：edge=Edge 实时直播 + IndexTTS GPU 最终结论（默认） /
@@ -1091,30 +1106,66 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
 
 # ---------------------------------------------------------------------------
-# 优先模型可用性探测（每局一次，带失败冷却）
+# runner-aware 优先链可用性探测（只在后台 worker，带短缓存与失败冷却）
 # ---------------------------------------------------------------------------
 
+_preferred_state_memory: dict | None = None
+_preferred_state_memory_path = ""
+_preferred_state_lock = threading.RLock()
+
+
+def _preferred_state_copy(state: dict) -> dict:
+    return json.loads(json.dumps(state, ensure_ascii=False))
+
+
 def _load_preferred_state() -> dict:
-    try:
-        return json.loads(PREFERRED_STATE_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    """Load once per path; transient read failure remains retryable."""
+    global _preferred_state_memory, _preferred_state_memory_path
+    state_path = str(PREFERRED_STATE_FILE.resolve())
+    with _preferred_state_lock:
+        if _preferred_state_memory_path != state_path:
+            _preferred_state_memory_path = state_path
+            _preferred_state_memory = None
+        if _preferred_state_memory is not None:
+            return _preferred_state_copy(_preferred_state_memory)
+        for attempt in range(4):
+            try:
+                state = json.loads(PREFERRED_STATE_FILE.read_text(encoding="utf-8"))
+                if not isinstance(state, dict):
+                    raise ValueError("preferred state root is not an object")
+                _preferred_state_memory = state
+                return _preferred_state_copy(state)
+            except FileNotFoundError:
+                _preferred_state_memory = {}
+                return {}
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                if attempt < 3:
+                    time.sleep(0.05 * (attempt + 1))
+        # Do not cache an unreadable disk as empty: a later resolver pass retries.
         return {}
 
 
-def _save_preferred_state(state: dict) -> None:
-    try:
-        PREFERRED_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
-    except OSError:
-        pass
-
-
-def _preferred_entries(cfg: dict) -> list[str]:
-    """优先模型链（按优先级排序）。每项形如 'provider/model' 或 'provider/model@variant'。"""
-    entries = cfg.get("preferred_models")
-    if isinstance(entries, list) and entries:
-        return [str(e) for e in entries if e]
-    single = cfg.get("preferred_model")
-    return [single] if single else []
+def _save_preferred_state(state: dict) -> bool:
+    """Atomically persist cooldown state while retaining an in-process fallback."""
+    global _preferred_state_memory, _preferred_state_memory_path
+    payload = json.dumps(state, ensure_ascii=False, indent=1) + "\n"
+    state_path = str(PREFERRED_STATE_FILE.resolve())
+    with _preferred_state_lock:
+        _preferred_state_memory_path = state_path
+        _preferred_state_memory = _preferred_state_copy(state)
+        temp = PREFERRED_STATE_FILE.with_name(
+            f".{PREFERRED_STATE_FILE.name}.tmp-{os.getpid()}-{threading.get_ident()}")
+        try:
+            temp.write_text(payload, encoding="utf-8")
+            _replace_with_retry(temp, PREFERRED_STATE_FILE, attempts=4)
+            return True
+        except OSError:
+            return False
+        finally:
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def _parse_entry(entry: str) -> tuple[str, str | None]:
@@ -1126,13 +1177,21 @@ def _parse_entry(entry: str) -> tuple[str, str | None]:
 
 
 def _entry_state(entry: str) -> dict:
-    return _load_preferred_state().get("entries", {}).get(entry, {})
+    entries = _load_preferred_state().get("entries", {})
+    if not isinstance(entries, dict):
+        return {}
+    value = entries.get(entry, {})
+    return value if isinstance(value, dict) else {}
 
 
-def _write_entry_state(entry: str, data: dict) -> None:
+def _write_entry_state(entry: str, data: dict) -> bool:
     state = _load_preferred_state()
-    state.setdefault("entries", {})[entry] = data
-    _save_preferred_state(state)
+    entries = state.get("entries")
+    if not isinstance(entries, dict):
+        entries = {}
+        state["entries"] = entries
+    entries[entry] = data
+    return _save_preferred_state(state)
 
 
 def _preferred_cooldown_remaining(entry: str) -> float:
@@ -1142,15 +1201,17 @@ def _preferred_cooldown_remaining(entry: str) -> float:
 
 
 def _mark_preferred_failure(cfg: dict, log, entry: str, reason: str, kind: str = "failure") -> None:
-    """优先模型失败冷却（按条目独立计时）。kind="timeout" 从宽，硬失败从严。"""
+    """优先后端失败冷却（按稳定 backend key 独立计时）。"""
     key = "preferred_timeout_cooldown_min" if kind == "timeout" else "preferred_failure_cooldown_min"
     cooldown_min = float(cfg.get(key, 30 if kind == "timeout" else 60))
-    _write_entry_state(entry, {
+    durable = _write_entry_state(entry, {
         "unavailable_until": time.time() + cooldown_min * 60,
         "last_failure": reason,
         "last_failure_time": time.strftime("%Y-%m-%d %H:%M:%S"),
     })
-    log(f"[llm] 优先模型 {entry} 复盘失败（{reason}），{cooldown_min:.0f} 分钟内跳过该条目")
+    persistence = "" if durable else "；磁盘暂时写失败，本进程内冷却仍已生效"
+    log(f"[llm] 优先后端 {entry} 复盘失败（{reason}），"
+        f"{cooldown_min:.0f} 分钟内跳过该条目{persistence}")
 
 
 def _mark_preferred_ok(entry: str) -> None:
@@ -1158,46 +1219,133 @@ def _mark_preferred_ok(entry: str) -> None:
         _write_entry_state(entry, {"unavailable_until": 0})
 
 
+_review_probe_cache: dict[str, tuple[float, object]] = {}
+
+
+def _probe_cache_get(key: str, ttl: float):
+    cached = _review_probe_cache.get(key)
+    if cached and time.monotonic() - cached[0] <= max(0.0, ttl):
+        return cached[1]
+    return None
+
+
+def _probe_cache_put(key: str, value):
+    _review_probe_cache[key] = (time.monotonic(), value)
+    return value
+
+
 def _query_available_models(binary: str, cfg: dict, log) -> set[str] | None:
     """运行 `opencode models` 返回可用模型 id 集合；探测失败返回 None。"""
+    ttl = float(cfg.get("models_probe_cache_sec", 300) or 0)
+    cache_key = f"opencode:{binary}"
+    cached = _probe_cache_get(cache_key, ttl)
+    if isinstance(cached, set):
+        return set(cached)
     timeout = int(cfg.get("models_probe_timeout_sec", 60))
     try:
-        proc = subprocess.run([binary, "models"], capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", timeout=timeout)
+        proc = _run_captured_stop_aware(
+            [binary, "models"], timeout=timeout)
+    except _ReviewStopped:
+        raise
     except Exception as exc:
         log(f"[llm] 模型清单探测异常：{exc}")
         return None
     if proc.returncode != 0:
         log(f"[llm] 模型清单探测失败（exit={proc.returncode}）：{(proc.stderr or '')[-200:]}")
         return None
-    return {ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()}
+    models = {ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()}
+    return _probe_cache_put(cache_key, models)
 
 
-def resolve_review_plan(cfg: dict, binary: str | None, log=print) -> tuple[str, int, str]:
-    """决定本轮复盘的 (模型条目, 复盘间隔局数, 来源)。
+def _query_codex_models(binary: str, cfg: dict, log) -> dict[str, set[str]] | None:
+    """Cheap local catalog + saved-auth probe; no paid model turn is created."""
+    ttl = float(cfg.get("models_probe_cache_sec", 300) or 0)
+    cache_key = f"codex:{binary}"
+    cached = _probe_cache_get(cache_key, ttl)
+    if isinstance(cached, dict):
+        return {str(key): set(value) for key, value in cached.items()}
+    timeout = int(cfg.get("models_probe_timeout_sec", 60))
+    try:
+        auth = _run_captured_stop_aware(
+            [binary, "login", "status"], timeout=min(timeout, 30))
+        if auth.returncode != 0:
+            log(f"[llm] Codex 登录探测失败（exit={auth.returncode}）")
+            return None
+        catalog = _run_captured_stop_aware(
+            [binary, "debug", "models", "--bundled"], timeout=timeout)
+        if catalog.returncode != 0:
+            log(f"[llm] Codex 模型目录探测失败（exit={catalog.returncode}）")
+            return None
+        payload = json.loads(catalog.stdout or "{}")
+        models: dict[str, set[str]] = {}
+        for item in payload.get("models") or []:
+            if not isinstance(item, dict) or not item.get("slug"):
+                continue
+            efforts = {
+                str(level.get("effort")) for level in
+                (item.get("supported_reasoning_levels") or [])
+                if isinstance(level, dict) and level.get("effort")
+            }
+            models[str(item["slug"])] = efforts
+        return _probe_cache_put(cache_key, models)
+    except _ReviewStopped:
+        raise
+    except Exception as exc:
+        log(f"[llm] Codex 可用性探测异常：{exc}")
+        return None
 
-    按优先链逐条检查（在 `opencode models` 清单里且不在失败冷却期），命中即用、每局复盘；
-    全部不可用则回退 cfg["model"] 按 review_every_runs 间隔复盘。
-    条目形如 'provider/model' 或 'provider/model@variant'。
+
+def resolve_review_plan(
+    cfg: dict, binary: str | None = None, log=print,
+) -> ReviewPlan:
+    """Resolve the first available runner/model entry in worker context.
+
+    ``binary`` remains as a legacy OpenCode override for tests and old callers.
+    ``ReviewPlan.__iter__`` preserves three-value tuple unpacking.
     """
-    fallback = (cfg["model"], max(1, int(cfg.get("review_every_runs", 5))), "fallback")
-    entries = _preferred_entries(cfg)
-    if not entries or not binary:
-        return fallback
-    models: set[str] | None = None
-    for entry in entries:
-        model_id, _variant = _parse_entry(entry)
-        cooldown = _preferred_cooldown_remaining(entry)
+    plans = review_plans_from_config(cfg)
+    if not plans:
+        raise ValueError("review model chain is empty")
+    opencode_models: set[str] | None = None
+    codex_models: dict[str, set[str]] | None = None
+    reasons: list[str] = []
+    for plan in plans:
+        cooldown = _preferred_cooldown_remaining(plan.state_key)
         if cooldown > 0:
-            log(f"[llm] 优先模型 {entry} 冷却中（剩余 {cooldown / 60:.0f} 分钟），看下一优先")
+            log(f"[llm] 后端 {plan.key} 冷却中（剩余 {cooldown / 60:.0f} 分钟），看下一优先")
+            reasons.append(f"{plan.key}:cooldown")
             continue
-        if models is None:
-            models = _query_available_models(binary, cfg, log) or set()
-        if model_id in models:
-            return entry, max(1, int(cfg.get("preferred_every_runs", 1))), "preferred"
-        log(f"[llm] 优先模型 {model_id} 不在可用清单，看下一优先")
-    log(f"[llm] 优先模型全部不可用，回退 {fallback[0]}（每 {fallback[1]} 局）")
-    return fallback
+        selected_binary = binary if plan.runner == "opencode" and binary else runner_binary(cfg, plan.runner)
+        if not selected_binary:
+            log(f"[llm] 后端 {plan.key} 缺少 {plan.runner} 可执行文件，看下一优先")
+            reasons.append(f"{plan.key}:binary-missing")
+            continue
+        if plan.runner == "opencode":
+            if opencode_models is None:
+                opencode_models = _query_available_models(selected_binary, cfg, log) or set()
+            if plan.model not in opencode_models:
+                log(f"[llm] 后端 {plan.key} 的模型不在 OpenCode 可用清单，看下一优先")
+                reasons.append(f"{plan.key}:model-unavailable")
+                continue
+            return plan
+        if plan.runner == "codex":
+            if codex_models is None:
+                codex_models = _query_codex_models(selected_binary, cfg, log) or {}
+            efforts = codex_models.get(plan.model)
+            if efforts is None:
+                log(f"[llm] 后端 {plan.key} 的模型不在 Codex 目录，看下一优先")
+                reasons.append(f"{plan.key}:model-unavailable")
+                continue
+            if plan.reasoning_effort and efforts and plan.reasoning_effort not in efforts:
+                log(f"[llm] 后端 {plan.key} 不支持 reasoning={plan.reasoning_effort}，看下一优先")
+                reasons.append(f"{plan.key}:effort-unavailable")
+                continue
+            return plan
+        log(f"[llm] 不支持的复盘 runner={plan.runner}，看下一优先")
+        reasons.append(f"{plan.key}:runner-unsupported")
+    reason = ",".join(reasons) or "no-available-backend"
+    log(f"[llm] 三级复盘后端当前均不可用；队列保留等待（{reason}）")
+    return replace(plans[-1], available=False, unavailable_reason=reason)
 
 
 # ---------------------------------------------------------------------------
@@ -1279,60 +1427,6 @@ def _stream_end(payload: dict) -> None:
         pass
 
 
-class OpencodeJsonTranslator:
-    """把 opencode `--format json` 的事件流逐行翻译成可读直播文本。
-
-    事件形如 {"type": "text", "part": {"id": ..., "type": "text", "text": ...}}。
-    text/reasoning 事件是同一 part 的增量快照（全量重复推送），按 part id 去重只输出增量。
-    """
-
-    def __init__(self) -> None:
-        self._seen: OrderedDict[str, int] = OrderedDict()
-        self._seen_limit = 4096
-
-    def feed(self, raw: str) -> list[str]:
-        s = raw.strip()
-        if not s:
-            return []
-        if not s.startswith("{"):
-            return [s]
-        try:
-            evt = json.loads(s)
-        except json.JSONDecodeError:
-            return [s]
-        part = evt.get("part") or {}
-        ptype = part.get("type") or evt.get("type") or ""
-        # Provider 输入不可信；固定长度 key 防止 4096 个超长 id 绕过 LRU 内存界。
-        raw_pid = str(part.get("id") or "")
-        pid = hashlib.blake2s(raw_pid.encode("utf-8", errors="replace"),
-                              digest_size=16).hexdigest()
-        if ptype in ("text", "reasoning"):
-            text = part.get("text") or ""
-            prev = self._seen.get(pid, 0)
-            if len(text) <= prev:
-                if pid in self._seen:
-                    self._seen.move_to_end(pid)
-                return []
-            self._seen[pid] = len(text)
-            self._seen.move_to_end(pid)
-            while len(self._seen) > self._seen_limit:
-                self._seen.popitem(last=False)
-            prefix = "💭 " if ptype == "reasoning" and prev == 0 else ""
-            return [prefix + text[prev:]]
-        if ptype in ("tool", "tool-call", "tool_call", "tool-use", "tool-result", "tool_result"):
-            name = part.get("tool") or part.get("name") or "tool"
-            brief = json.dumps(part.get("input") or part.get("args") or {},
-                               ensure_ascii=False)[:160]
-            return [f"⚙ {name} {brief}"]
-        if ptype == "patch":
-            files = part.get("files") or []
-            return ["📦 修改 " + ", ".join(str(f).split("/")[-1] for f in files)]
-        if ptype == "step-finish":
-            tok = (part.get("tokens") or {}).get("total")
-            return [f"· tokens {tok} ·"] if tok else []
-        return []   # step-start 等噪音不显示
-
-
 class _ReviewStopped(RuntimeError):
     """协作停止已到达；调用方必须保留当前隔离现场。"""
 
@@ -1383,32 +1477,32 @@ def _run_captured_stop_aware(
         kwargs.update({"text": True, "encoding": "utf-8", "errors": "replace"})
     proc = subprocess.Popen(args, **kwargs)
     deadline = time.monotonic() + timeout
-    while True:
-        if _review_stop_requested():
-            _terminate_process_tree(proc)
+    try:
+        while True:
+            if _review_stop_requested():
+                raise _ReviewStopped()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(args, timeout)
             try:
-                proc.communicate(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-            raise _ReviewStopped()
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            _terminate_process_tree(proc)
-            try:
-                proc.communicate(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-            raise subprocess.TimeoutExpired(args, timeout)
+                stdout, stderr = proc.communicate(timeout=min(0.2, remaining))
+                return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
+            except subprocess.TimeoutExpired:
+                continue
+    except BaseException:
+        _terminate_process_tree(proc)
         try:
-            stdout, stderr = proc.communicate(timeout=min(0.2, remaining))
-            return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
-        except subprocess.TimeoutExpired:
-            continue
+            proc.communicate(timeout=2)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        raise
 
 
 def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 stall_warn_sec: float = 0,
-                stall_timeout_sec: float = 0) -> tuple[int, str, bool, bool, bool]:
+                stall_timeout_sec: float = 0,
+                raw_transcript: Path | None = None,
+                metrics_sink: dict | None = None) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
@@ -1424,8 +1518,14 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     # it into OpenCode makes sandbox selfchecks impersonate that startup and
     # fail when their PID cannot advance the live Brain record.
     env.pop("STS2_ASCEND_BOOT_ID", None)
+    stream_started = time.monotonic()
+    translator = getattr(translate, "__self__", None)
+    reset_clock = getattr(translator, "reset_clock", None)
+    if callable(reset_clock):
+        reset_clock()
     proc = subprocess.Popen(
         cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
         text=True, encoding="utf-8", errors="replace", bufsize=8192, env=env,
         **_process_group_kwargs())
 
@@ -1433,7 +1533,8 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     q: queue.Queue[str] = queue.Queue(maxsize=128)
     reader_cancel = threading.Event()
     reader_done = threading.Event()
-    progress = [time.monotonic(), 0]
+    # last raw byte time, chunk count, first-byte latency, maximum inter-chunk gap
+    progress = [stream_started, 0, None, 0.0]
 
     def _reader() -> None:
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
@@ -1446,8 +1547,12 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                     break
                 chunk = (raw if isinstance(raw, str)
                          else decoder.decode(raw, final=False))
-                progress[0] = time.monotonic()
+                observed = time.monotonic()
+                progress[3] = max(progress[3], observed - progress[0])
+                progress[0] = observed
                 progress[1] += 1
+                if progress[2] is None:
+                    progress[2] = observed - stream_started
                 if not chunk:
                     continue
                 while not reader_cancel.is_set():
@@ -1481,8 +1586,17 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     stalled = False
     warned = False
     seen_progress = 0
+    silence_floor = stream_started
 
-    with LIVE_STREAM.open("a", encoding="utf-8") as stream:
+    transcript = None
+    if raw_transcript is not None:
+        try:
+            raw_transcript.parent.mkdir(parents=True, exist_ok=True)
+            transcript = raw_transcript.open("w", encoding="utf-8", newline="")
+        except OSError:
+            transcript = None
+    try:
+      with LIVE_STREAM.open("a", encoding="utf-8") as stream:
         def emit_display(value: str) -> None:
             nonlocal tail_chars
             if not value.endswith("\n"):
@@ -1511,6 +1625,16 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
             except queue.Empty:
                 chunk = ""
             if chunk:
+                if transcript is not None:
+                    try:
+                        transcript.write(chunk)
+                        transcript.flush()
+                    except OSError:
+                        try:
+                            transcript.close()
+                        except OSError:
+                            pass
+                        transcript = None
                 pending += chunk
                 while "\n" in pending:
                     line, pending = pending.split("\n", 1)
@@ -1521,6 +1645,10 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                     emit_display(
                         f"[llm] 单条无换行输出过大，已截断前 {dropped} 个字符；"
                         "这不影响隔离仓内失败文件的完整保全。")
+                # Host-side translation/backpressure is observable progress, not
+                # provider silence.  Start a new watchdog interval only after the
+                # consumed raw chunk has finished translation.
+                silence_floor = time.monotonic()
             if progress[1] != seen_progress:
                 seen_progress = progress[1]
                 warned = False
@@ -1544,11 +1672,20 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 timed_out = True
                 _terminate_process_tree(proc)
                 break
-            idle = time.monotonic() - progress[0]
+            observed_now = time.monotonic()
+            raw_idle = observed_now - progress[0]
+            idle = observed_now - max(progress[0], silence_floor)
             proc_state = proc.poll()
             diagnostics = (
                 f"qsize={backlog}, reader_done={reader_finished}, "
-                f"proc_poll={proc_state}, last_raw_idle={idle:.1f}s")
+                f"proc_poll={proc_state}, last_raw_idle={raw_idle:.1f}s, "
+                f"effective_idle={idle:.1f}s")
+
+            # The child has already exited, so silence is not a hung model.  Let
+            # the pipe reader publish its final EOF/chunks even if a slow final
+            # translation temporarily starved that thread under host CPU load.
+            if proc_state is not None and backlog == 0:
+                continue
 
             # A full/busy queue means raw output is waiting for translation;
             # lack of a newer pipe read is then backpressure, not model silence.
@@ -1568,25 +1705,44 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                     f"诊断：{diagnostics}。")
                 _terminate_process_tree(proc)
                 break
-
-    reader_cancel.set()
-    if _review_stop_requested():
-        stopped = True
-    try:
-        proc.wait(timeout=2)
-    except (OSError, subprocess.TimeoutExpired):
-        _terminate_process_tree(proc)
+    finally:
+        if transcript is not None:
+            try:
+                transcript.close()
+            except OSError:
+                pass
+        # This cleanup deliberately covers stream-open and translator failures too.
+        # Otherwise a malformed provider event could strand a child that keeps
+        # writing its disposable review clone after Brain has abandoned it.
+        exceptional = sys.exc_info()[0] is not None
+        if exceptional:
+            _terminate_process_tree(proc)
+        reader_cancel.set()
+        if _review_stop_requested():
+            stopped = True
         try:
             proc.wait(timeout=2)
         except (OSError, subprocess.TimeoutExpired):
+            _terminate_process_tree(proc)
+            try:
+                proc.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        try:
+            if proc.stdout is not None:
+                proc.stdout.close()
+        except OSError:
             pass
-    try:
-        if proc.stdout is not None:
-            proc.stdout.close()
-    except OSError:
-        pass
-    reader_thread.join(timeout=1)
+        reader_thread.join(timeout=1)
+        progress[3] = max(progress[3], time.monotonic() - progress[0])
     rc = proc.returncode if proc.returncode is not None else -1
+    if metrics_sink is not None:
+        metrics_sink.update({
+            "duration_sec": max(0.0, time.monotonic() - stream_started),
+            "first_raw_byte_after_sec": progress[2],
+            "max_raw_output_gap_sec": progress[3],
+            "raw_chunk_count": progress[1],
+        })
     return rc, "".join(tail), timed_out, stopped, stalled
 
 
@@ -1634,7 +1790,11 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
 
 
 def run_review(know, log=print, model: str | None = None, every: int | None = None,
-               source: str = "fallback", batch_runs: list[int] | None = None,
+               source: str = "fallback", runner: str | None = None,
+               backend_key: str | None = None, priority: int = 1,
+               variant: str | None = None, reasoning_effort: str | None = None,
+               approve_for_me: bool = False, sandbox_mode: str = "workspace-write",
+               batch_runs: list[int] | None = None,
                async_mode: bool = False, _status: dict | None = None,
                salvage_packages: list[str] | None = None,
                salvage_attempts: list[str] | None = None,
@@ -1642,7 +1802,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                evidence_only: bool = False) -> bool:
     """执行一次大模型复盘。返回 True 仅表示 patch 触及 Brain 加载路径、应热重启。
 
-    流程：保存在线进度 → opencode 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
+    流程：保存在线进度 → provider 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
     失败时从隔离 clone 导出包含全部改动（含 ignored/越界）的补合包；
     cache 只从自动 patch 排除、不阻断源码；其他拒绝项不约束失败成果留档。
     source="preferred" 时若执行失败（非零退出/超时/异常）会对优先模型记失败冷却。
@@ -1674,14 +1834,34 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     if not cfg.get("enabled"):
         log("[llm] 复盘已禁用（llm.enabled=false）")
         return False
-    runner = str(cfg.get("runner") or "opencode")
-    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
+    runner = str(runner or cfg.get("runner") or "opencode").strip().lower()
+    model = str(model or cfg["model"])
+    if runner == "opencode":
+        parsed_model, parsed_variant = _parse_entry(model)
+        model = parsed_model
+        variant = variant or parsed_variant
+    plan = ReviewPlan(
+        key=str(backend_key or (model + (f"@{variant}" if variant else ""))),
+        priority=max(1, int(priority)),
+        runner=runner,
+        model=model,
+        variant=variant,
+        reasoning_effort=reasoning_effort,
+        approve_for_me=bool(approve_for_me),
+        sandbox=str(sandbox_mode or "workspace-write"),
+        every_runs=max(1, int(every or cfg.get("review_every_runs", 5))),
+        source=source,
+    )
+    binary = runner_binary(cfg, runner)
     if not binary:
-        log(f"[llm] 未找到 opencode 可执行文件（{cfg.get('opencode_bin')}），跳过本次复盘")
+        if _status is not None:
+            _status["reason"] = f"未找到 {runner} 可执行文件"
+            _status["startup_unavailable"] = True
+        log(f"[llm] 未找到 {runner} 可执行文件，保留本次复盘")
         return False
-    model = model or cfg["model"]
-    entry = model                       # 条目原文（含 @variant），用于冷却记账与展示
-    model_id, variant = _parse_entry(entry)
+    entry = plan.display_model
+    state_key = plan.state_key
+    every = plan.every_runs
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
     runs = know.stats["global"]["runs"]
@@ -1695,7 +1875,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     pre_head = autogit.head()
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
-    log(f"[llm] ===== 启动大模型复盘（{entry} via opencode [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
+    log(f"[llm] ===== 启动大模型复盘（{entry} via {runner} [{source}]，{batch_txt}，备份点 {pre_head[:8]}）=====")
     closure_state = _review_closure_state(know, cfg)
     closure_note = "强制落地" if closure_state["action_required"] else "允许继续取证"
     log("[llm] 闭环状态：纯报告连续 "
@@ -1713,23 +1893,17 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     # 完整提示词落盘为 review_prompt_latest.md，命令行只传一句引导，让复盘 agent 自己读文件。
     rel_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
     short_prompt = (f"你位于宿主创建的隔离 clone。请完整阅读 {rel_prompt}，只可在当前 "
-                    "--dir 根目录内使用相对路径；禁止绝对路径、.. 逃逸或访问其他工作区。"
+                    "工作目录内使用相对路径；禁止绝对路径、.. 逃逸或访问其他工作区。"
                     "严格按任务书执行。")
-
-    cmd = [
-        binary, "run",
-        "--model", model_id,
-        "--format", "json",      # JSON 事件流（含 text/reasoning/tool），直播翻译成人话
-        "--thinking",            # 显示思维链
-    ]
-    if variant:
-        cmd += ["--variant", variant]
-    cmd += [
-        "--title", f"sts2-ascend 复盘 {stamp}",
-        "--dir", str(REPO_DIR),
-        "--auto",
-        short_prompt,
-    ]
+    try:
+        cmd = build_review_command(
+            plan, binary, REPO_DIR, short_prompt,
+            title=f"sts2-ascend 复盘 {stamp}")
+    except ValueError as exc:
+        if _status is not None:
+            _status.update({"reason": str(exc), "startup_unavailable": True})
+        log(f"[llm] 无法构造复盘 runner：{exc}")
+        return False
 
     if _review_stop_requested():
         if _status is not None:
@@ -1742,6 +1916,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     review_id = f"{os.getpid()}-{time.time_ns()}"
     _stream_begin({
         "review_id": review_id,
+        "runner": runner,
+        "backend_key": state_key,
         "model": entry,
         "source": source,
         "run": runs,
@@ -1760,13 +1936,17 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         stall_warn_min = min(stall_warn_min, stall_timeout_min)
     else:
         stall_warn_min = 0.0
-    translator = OpencodeJsonTranslator()
+    translator = translator_for_runner(runner)
     sandbox = SandboxReviewResult(error="复盘尚未运行")
 
     def save_failure(reason: str) -> Path | None:
         package = _save_review_salvage(
             pre_head, reason, sandbox, batch_runs=(batch_runs or [runs]),
-            runner=runner, model=entry, source=source, every=every,
+            runner=runner, model=model, backend_key=state_key,
+            variant=variant or "", reasoning_effort=reasoning_effort or "",
+            priority=plan.priority, approve_for_me=plan.approve_for_me,
+            sandbox_mode=plan.sandbox,
+            source=source, every=every,
             replay_target=replay_target, replay_attempts=replay_attempts,
             replay_queue_ids=replay_queue_ids, log=log)
         if package is not None and _status is not None:
@@ -1777,6 +1957,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     try:
         sandbox = _run_review_sandbox(
             cmd, prompt, pre_head, int(eff_timeout_min * 60), translator,
+            runner=runner,
             stall_warn_seconds=stall_warn_min * 60,
             stall_timeout_seconds=stall_timeout_min * 60,
             replay_packages=replay_packages,
@@ -1785,6 +1966,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         rc, out, timed_out, stopped, stalled = (
             sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped,
             sandbox.stalled)
+        if _status is not None:
+            _status["provider_metrics"] = dict(sandbox.provider_metrics)
+            _status["provider_work_started"] = sandbox.provider_work_started
         # stop 可能恰好落在 opencode 自然退出与宿主验收之间；不能只信任
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
@@ -1835,6 +2019,14 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if stalled:
             if _status is not None:
                 _status["reason"] = "复盘 CLI/工具调用无进展挂起"
+                _status["startup_unavailable"] = not sandbox.provider_work_started
+            if not sandbox.provider_work_started:
+                if source == "preferred":
+                    _mark_preferred_failure(
+                        cfg, log, state_key, "pre-work stall", kind="timeout")
+                log("[llm] pre-work stall: next retry may advance to the next tier")
+                return False
+
             # 这是本地工具链挂起，不是 provider 不可用；不冷却 GLM。队列会
             # 保存同批并在退避后再次调用同一模型，失败包供它复审/解冲突。
             log("[llm] 复盘无进展 watchdog 已终止挂起进程；完整现场已保存，"
@@ -1843,15 +2035,17 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if timed_out:
             if _status is not None:
                 _status["reason"] = "复盘超时"
+                _status["startup_unavailable"] = not sandbox.provider_work_started
             log(f"[llm] 复盘超时（{eff_timeout_min:.0f} 分钟），本次作废")
             if source == "preferred":
-                _mark_preferred_failure(cfg, log, entry, "timeout", kind="timeout")
+                _mark_preferred_failure(cfg, log, state_key, "timeout", kind="timeout")
             return False
         if rc != 0:
             if _status is not None:
                 _status["reason"] = f"复盘进程 exit={rc}"
+                _status["startup_unavailable"] = not sandbox.provider_work_started
             if source == "preferred":
-                _mark_preferred_failure(cfg, log, entry, f"exit={rc}")
+                _mark_preferred_failure(cfg, log, state_key, f"exit={rc}")
             log(f"[llm] 隔离复盘失败：{sandbox.error or f'exit={rc}'}；真实工作树未改")
             return False
         if sandbox.error:
@@ -1860,7 +2054,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             log(f"[llm] 隔离复盘被拒绝：{sandbox.error}；真实工作树未改")
             return False
         if source == "preferred":
-            _mark_preferred_ok(entry)
+            _mark_preferred_ok(state_key)
     except Exception as exc:
         # 启动期异常（如 WinError 206 命令行过长）属本地环境问题，非模型故障，不记冷却
         log(f"[llm] 复盘调用失败（已忽略，不影响游玩）：{exc}")
@@ -2032,6 +2226,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         autogit.set_review_active(False)
         if discard_verified_snapshot:
             _discard_sandbox_snapshot(sandbox, log=log)
+            _discard_retained_sandbox(sandbox, log=log)
 
 
 def maybe_review(agent, log=print) -> None:
@@ -2039,13 +2234,19 @@ def maybe_review(agent, log=print) -> None:
     cfg = load_llm_config()
     if not cfg.get("enabled"):
         return
-    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    model, every, source = resolve_review_plan(cfg, binary, log=log)
+    plan = _coerce_review_plan(resolve_review_plan(cfg, log=log), cfg)
+    if not plan.available:
+        return
+    model, every, source = plan.model, plan.every_runs, plan.source
     runs = agent.know.stats["global"]["runs"]
     last = agent.know.progression.get("last_llm_review_run", 0)
     if runs - last < every:
         return
-    executed = run_review(agent.know, log=log, model=model, every=every, source=source)
+    executed = run_review(
+        agent.know, log=log, model=model, every=every, source=source,
+        runner=plan.runner, backend_key=plan.key, priority=plan.priority,
+        variant=plan.variant, reasoning_effort=plan.reasoning_effort,
+        approve_for_me=plan.approve_for_me, sandbox_mode=plan.sandbox)
     agent.know.progression["last_llm_review_run"] = runs
     agent.know.save()
     if executed:
@@ -2095,13 +2296,21 @@ def _validate_queue_item(item, label: str) -> None:
     if (every is not None and (isinstance(every, bool)
                               or not isinstance(every, int) or every <= 0)):
         raise ReviewQueueError(f"{label}.every must be a positive integer")
-    for key in ("runner", "model", "source", "retry_group", "queue_id", "replay_target"):
+    for key in (
+        "backend_key", "runner", "model", "variant", "reasoning_effort",
+        "sandbox", "source", "retry_group", "queue_id", "replay_target",
+    ):
         value = item.get(key)
         if value is not None and not isinstance(value, str):
             raise ReviewQueueError(f"{label}.{key} must be a string")
-    retry_same_model = item.get("retry_same_model")
-    if retry_same_model is not None and not isinstance(retry_same_model, bool):
-        raise ReviewQueueError(f"{label}.retry_same_model must be a boolean")
+    priority = item.get("priority")
+    if (priority is not None and (isinstance(priority, bool)
+                                  or not isinstance(priority, int) or priority <= 0)):
+        raise ReviewQueueError(f"{label}.priority must be a positive integer")
+    for key in ("retry_same_model", "approve_for_me"):
+        value = item.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise ReviewQueueError(f"{label}.{key} must be a boolean")
     packages = item.get("salvage_packages")
     if (packages is not None and (not isinstance(packages, list)
                                   or any(not isinstance(value, str)
@@ -2148,8 +2357,8 @@ def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
             == [item.get("run") for item in batch])
 
 
-def _retry_affinity(item: dict) -> tuple[str, str, str] | None:
-    """Return the immutable runner/model binding for an attempted review item."""
+def _retry_affinity(item: dict) -> tuple | None:
+    """Return the complete immutable runner/model binding for an attempted item."""
     if not item.get("retry_same_model"):
         return None
     model = str(item.get("model") or "")
@@ -2159,10 +2368,16 @@ def _retry_affinity(item: dict) -> tuple[str, str, str] | None:
         str(item.get("runner") or "opencode"),
         model,
         str(item.get("source") or "preferred"),
+        str(item.get("backend_key") or model),
+        str(item.get("variant") or ""),
+        str(item.get("reasoning_effort") or ""),
+        bool(item.get("approve_for_me", False)),
+        str(item.get("sandbox") or "workspace-write"),
+        max(1, int(item.get("priority") or 1)),
     )
 
 
-def _batch_retry_affinity(batch: list[dict]) -> tuple[str, str, str] | None:
+def _batch_retry_affinity(batch: list[dict]) -> tuple | None:
     """Prove that a sticky transaction has one runner/model, without silent fallback."""
     affinities = [_retry_affinity(item) for item in batch]
     sticky = [affinity for affinity in affinities if affinity is not None]
@@ -2184,7 +2399,7 @@ def _queue_item_ready_at(item: dict, now: float) -> float:
     if affinity is not None and affinity[2] == "preferred":
         ready_at = max(
             ready_at,
-            now + _preferred_cooldown_remaining(affinity[1]),
+            now + _preferred_cooldown_remaining(affinity[3]),
         )
     return ready_at
 
@@ -2426,6 +2641,106 @@ def _brain_session_is_active() -> bool:
     return session.get("state") in {"starting", "running", "foreground"}
 
 
+def _manifest_review_queue_fields(manifest: dict, cfg: dict) -> dict:
+    """Restore one failed package's complete runner affinity without probing CLIs."""
+    backend_key = str(manifest.get("backend_key") or "").strip()
+    raw_model = str(manifest.get("model") or "").strip()
+    configured = None
+    for plan in review_plans_from_config(cfg):
+        if backend_key and plan.key == backend_key:
+            configured = plan
+            break
+        if raw_model and raw_model in {plan.model, plan.display_model}:
+            configured = plan
+            break
+
+    runner = str(
+        manifest.get("runner")
+        or (configured.runner if configured else cfg.get("runner"))
+        or "opencode").strip().lower()
+    model = raw_model or (configured.model if configured else "")
+    backend_key = backend_key or (configured.key if configured else model)
+    variant = str(
+        manifest.get("variant")
+        or (configured.variant if configured else "")
+        or "")
+    reasoning = str(
+        manifest.get("reasoning_effort")
+        or (configured.reasoning_effort if configured else "")
+        or "")
+    source = str(
+        manifest.get("source")
+        or (configured.source if configured else "preferred"))
+    try:
+        priority = max(1, int(
+            manifest.get("priority")
+            or (configured.priority if configured else 1)))
+    except (TypeError, ValueError):
+        priority = configured.priority if configured else 1
+    raw_approve = manifest.get("approve_for_me")
+    approve_for_me = (
+        raw_approve if isinstance(raw_approve, bool)
+        else bool(configured.approve_for_me) if configured else False)
+    sandbox_mode = str(
+        manifest.get("sandbox")
+        or (configured.sandbox if configured else "workspace-write"))
+    try:
+        every = max(1, int(
+            manifest.get("every")
+            or (configured.every_runs if configured else (
+                cfg.get("preferred_every_runs", 1) if source == "preferred"
+                else cfg.get("review_every_runs", 5)))))
+    except (TypeError, ValueError):
+        every = configured.every_runs if configured else (
+            1 if source == "preferred" else 5)
+    raw_sticky = manifest.get("retry_same_model")
+    if not isinstance(raw_sticky, bool):
+        model_started = manifest.get("provider_work_started")
+        # Historical packages predate this field and were intentionally sticky.
+        raw_sticky = model_started if isinstance(model_started, bool) else True
+
+    return {
+        "backend_key": backend_key,
+        "priority": priority,
+        "runner": runner,
+        "model": model,
+        "variant": variant,
+        "reasoning_effort": reasoning,
+        "approve_for_me": bool(approve_for_me),
+        "sandbox": sandbox_mode,
+        "every": every,
+        "source": source,
+        "retry_same_model": bool(raw_sticky and model),
+    }
+
+
+def _latest_replay_binding_manifest(
+    target: str, target_manifest: dict, attempt_names,
+) -> dict:
+    """Use the latest valid attempt as executor affinity; keep target as evidence identity."""
+    active = target_manifest
+    for attempt_name in reversed(_normalize_salvage_package_names(attempt_names)):
+        package = _salvage_package_path(attempt_name)
+        if package is None:
+            continue
+        try:
+            candidate = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(candidate, dict):
+            continue
+        candidate_target = str(candidate.get("replay_target") or target)
+        if candidate_target != target:
+            continue
+        if any(key in candidate for key in (
+                "model", "backend_key", "provider_work_started",
+                "retry_same_model")):
+            active = candidate
+            break
+    return active
+
+
 def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
     """Explicitly queue named failure packages for one-by-one GLM re-audit.
 
@@ -2529,32 +2844,23 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
             if name in existing_groups:
                 log(f"[llm] 失败包已在重审队列中，无需重复入队：{name}")
                 continue
-            model = str(manifest.get("model") or "")
-            source = str(manifest.get("source") or "preferred")
-            runner = str(manifest.get("runner") or cfg.get("runner") or "opencode")
-            try:
-                every = int(manifest.get("every") or (
-                    cfg.get("preferred_every_runs", 1) if source == "preferred"
-                    else cfg.get("review_every_runs", 5)))
-            except (TypeError, ValueError):
-                every = 1 if source == "preferred" else 5
+            lineage = _normalize_salvage_package_names(
+                manifest.get("replay_attempt_packages") or [])
+            active_manifest = _latest_replay_binding_manifest(
+                name, manifest, lineage)
+            affinity = _manifest_review_queue_fields(active_manifest, cfg)
             for run in runs:
                 item = {
                     "run": run,
                     "time": str(manifest.get("time") or stamp),
                     "retry_group": name,
                     "replay_target": name,
-                    "retry_same_model": True,
-                    "runner": runner,
                     "salvage_packages": [name],
                     "salvage_attempts": _normalize_salvage_package_names(
                         manifest.get("replay_attempt_packages") or []),
                     "evidence_only": evidence_only,
-                    "every": max(1, every),
-                    "source": source,
+                    **affinity,
                 }
-                if model:
-                    item["model"] = model
                 q["pending"].append(item)
             existing_groups.add(name)
             queued[name] = list(runs)
@@ -2746,7 +3052,9 @@ def _reset_hold_manifest_for_full_replay(
         # queue identity that an older closure may have removed.
         for key in (
             "batch_runs", "current_run", "run", "time", "pre_head", "model",
-            "runner", "source", "every", "reason", "failure_kind",
+            "runner", "backend_key", "priority", "variant", "reasoning_effort",
+            "approve_for_me", "sandbox", "retry_same_model",
+            "provider_work_started", "source", "every", "reason", "failure_kind",
             "replay_queue_ids",
         ):
             if key not in active and key in held_manifest:
@@ -2913,8 +3221,9 @@ def _recover_salvage_replay_queue(log=print) -> None:
             lineage = [name for name in lineage if name != target]
             target_attempts[target] = lineage
             ids = queue_ids.get(target, set())
-            source = str(manifest.get("source") or "preferred")
-            runner = str(manifest.get("runner") or cfg.get("runner") or "opencode")
+            active_manifest = _latest_replay_binding_manifest(
+                target, manifest, lineage)
+            affinity = _manifest_review_queue_fields(active_manifest, cfg)
 
             def belongs(item: dict) -> bool:
                 return (str(item.get("replay_target") or "") == target
@@ -2931,25 +3240,15 @@ def _recover_salvage_replay_queue(log=print) -> None:
                     desired = {
                         "retry_group": target,
                         "replay_target": target,
-                        "retry_same_model": True,
-                        "runner": runner,
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
+                        **affinity,
                     }
-                    if manifest.get("model"):
-                        desired["model"] = str(manifest["model"])
-                    desired["source"] = source
                     if any(item.get(key) != value for key, value in desired.items()):
                         item.update(desired)
                         changed = True
             if not matched:
                 runs, evidence_only = _manifest_replay_runs(manifest)
-                try:
-                    every = int(manifest.get("every") or (
-                        cfg.get("preferred_every_runs", 1) if source == "preferred"
-                        else cfg.get("review_every_runs", 5)))
-                except (TypeError, ValueError):
-                    every = 1 if source == "preferred" else 5
                 stamp = str(manifest.get("time") or time.strftime("%Y-%m-%d %H:%M"))
                 for run in runs:
                     item = {
@@ -2957,16 +3256,11 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "time": stamp,
                         "retry_group": target,
                         "replay_target": target,
-                        "retry_same_model": True,
-                        "runner": runner,
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
                         "evidence_only": evidence_only,
-                        "every": max(1, every),
-                        "source": source,
+                        **affinity,
                     }
-                    if manifest.get("model"):
-                        item["model"] = str(manifest["model"])
                     q["pending"].append(item)
                 changed = True
                 log(f"[llm] 已从失败包原子意图恢复 GLM target：{target}（第 {runs} 局）")
@@ -3006,26 +3300,22 @@ def enqueue_review(agent, log=print) -> None:
     if not cfg.get("enabled"):
         return
     runs = agent.know.stats["global"]["runs"]
-    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    model, every, source = resolve_review_plan(cfg, binary, log=log)
-    # 成功复盘饥饿只放宽真实 fallback 的节奏，绝不覆盖已经解析成功的 preferred
-    # 模型。GLM 可用时强制交替到 K3 会让迁移后的主模型无故少一半机会；只有
-    # resolve_review_plan 因真实 unavailable/cooldown 选中 fallback 时才运行 K3。
+    # 游戏线程只读取配置并耐久入队；绝不在这里 spawn `opencode models`、
+    # `codex login status` 或任何其他外部探测。真正的后端计划由 worker 在
+    # 认领 fresh 事务后解析并原子写回 reviewing。
+    plans = review_plans_from_config(cfg)
+    if not plans:
+        return
+    queued_plan = plans[0]
+    every = queued_plan.every_runs
+    source = "queued"
     last_ok = agent.know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     starved = runs - last_ok >= starve_every
-    if source == "fallback":
-        # 兜底节奏独立记账（preferred 尝试不得刷新兜底计数）；
-        # 饥饿态下豁免节奏门槛——交替本身就是节奏，再卡门槛会漏掉轮次。
-        last = agent.know.progression.get("last_fallback_review_run", 0)
-        if not starved and runs - last < every:
-            return
-        progression_key = "last_fallback_review_run"
-    else:
-        last = agent.know.progression.get("last_llm_review_run", 0)
-        if runs - last < every:
-            return
-        progression_key = "last_llm_review_run"
+    last = agent.know.progression.get("last_llm_review_run", 0)
+    if runs - last < every:
+        return
+    progression_key = "last_llm_review_run"
 
     # Queue durability is the commit point.  Advancing cadence markers before a
     # failed queue read/write silently skips this run until the next interval.
@@ -3039,8 +3329,8 @@ def enqueue_review(agent, log=print) -> None:
             if not already_queued:
                 q["pending"].append({
                     "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
-                    "runner": str(cfg.get("runner") or "opencode"),
-                    "model": model, "every": every, "source": source,
+                    **queued_plan.as_queue_fields(),
+                    "source": source,
                 })
                 _save_queue_unlocked(q)
     except (ReviewQueueError, OSError) as exc:
@@ -3052,7 +3342,8 @@ def enqueue_review(agent, log=print) -> None:
     agent.know.save()
     starve_note = (f"（距上次成功复盘 {runs - last_ok} 局，积压追及）"
                    if starved else "")
-    log(f"[llm] 复盘请求已入队（第{runs}局，{source}/{model}，待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
+    log(f"[llm] 复盘请求已入队（第{runs}局，worker待选后端，"
+        f"待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     if not _review_stop_requested():
         _ensure_worker(agent, log)
 
@@ -3181,6 +3472,9 @@ class SandboxReviewResult:
     snapshot_complete: bool = False
     retained_sandbox_dir: str = ""
     salvage_saved: str = ""
+    provider_metrics: dict = field(default_factory=dict)
+    provider_work_started: bool = False
+    provider_transcript_rel: str = ""
     # Failed-package receipts are authoritative only when the target and every
     # attempt were mounted into this clone and survived the post-run integrity
     # check.  The bounded prompt excerpt is a navigation summary, not evidence
@@ -3621,6 +3915,20 @@ def _ledger_markers(text: str) -> list[str]:
             if line.strip().startswith(prefix) and line.strip().endswith(suffix)]
 
 
+def _ledger_marker_has_status(text: str, package_name: str, status: str) -> bool:
+    """Match one package's row instead of accepting the status from another row."""
+    marker = f"<!-- rejection:{package_name} -->"
+    lines = str(text or "").splitlines()
+    for index, line in enumerate(lines[:-1]):
+        if line.strip() == marker:
+            # Ledger cells are escaped before rendering, so the delimiter itself
+            # cannot occur inside a cell. Match the status column exactly; a
+            # historical reason mentioning a pending state must not mask closure.
+            cells = lines[index + 1].split(" | ")
+            return len(cells) > 5 and cells[5].strip() == status
+    return False
+
+
 def _flush_pending_rejection_ledger(log=print) -> bool:
     """Commit one leftover ledger edit before another rejection row is appended.
 
@@ -3677,6 +3985,30 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
             current = _REJECTION_LEDGER_HEADER
         status = "待 GLM 重审/补合"
         if marker in current:
+            # Operator-preserved hold packages can outlive an invalid historical
+            # prompt-only closure. Hold recovery explicitly clears that receipt
+            # and publishes a fresh replay intent; restore the tracked index too.
+            # A complete mounted-evidence receipt must never be reopened here.
+            reopen_from_hold = bool(
+                manifest.get("review_hold_recovered_at")
+                and manifest.get("replay_enqueue_pending")
+                and not _manifest_has_full_replay_receipt(manifest))
+            if (reopen_from_hold
+                    and not _ledger_marker_has_status(
+                        current, package.name, status)):
+                rel_package = package.relative_to(BASE_DIR).as_posix()
+                original_reason = str(manifest.get("reason") or "").strip()
+                reason = "restored from review_hold; awaiting full-evidence review"
+                if original_reason:
+                    reason += f"; original failure: {original_reason}"
+                reopened = _update_rejection_ledger(
+                    package.name, manifest, status=status,
+                    package_cell=f"`{rel_package}`", reason=reason,
+                    message=("chore(sts2-ascend): reopen GLM review batch "
+                             f"{package.name}"), log=log)
+                if reopened:
+                    log(f"[llm] hold-restored ledger row reopened: {package.name}")
+                return
             # _flush_pending_rejection_ledger above already proved this exact
             # existing edit is committed (or identical to HEAD).  A repeated
             # recovery pass may retry push, but must not request another commit.
@@ -4804,7 +5136,8 @@ def _mount_failed_review_evidence(
                         or inventory.get("schema") != _RETRY_EVIDENCE_SCHEMA
                         or not candidate_path.is_file()
                         or candidate_path.stat().st_size
-                        != int(manifest.get("retry_candidate_bytes") or -1)):
+                        != (int(manifest["retry_candidate_bytes"])
+                            if manifest.get("retry_candidate_bytes") is not None else -1)):
                     raise ValueError("candidate/inventory 与 manifest 身份或大小不一致")
                 file_states = json.loads((package / "file_states.json").read_text(
                     encoding="utf-8"))
@@ -4985,6 +5318,40 @@ def _remove_failed_review_evidence(sandbox_repo: Path, log=print) -> bool:
             last_error = exc
     log(f"[llm] 完整证据目录清理失败，保留隔离现场：{root}（{last_error}）")
     return False
+
+
+def _preserve_provider_transcript(
+    sandbox_repo: Path, result: SandboxReviewResult, transcript_rel: str, log=print,
+) -> None:
+    """Bind the raw provider JSONL to a real path in any future failure package."""
+    result.provider_transcript_rel = ""
+    source = sandbox_repo / transcript_rel
+    if not source.is_file():
+        return
+    if result.retained_sandbox_dir:
+        result.provider_transcript_rel = (
+            "raw_sandbox/repo/.git/sts2-review-provider-events.jsonl")
+        return
+    if not result.snapshot_dir:
+        return
+    try:
+        if _review_stop_requested():
+            raise _ReviewStopped()
+        destination = Path(result.snapshot_dir) / "provider_events.jsonl"
+        _copy_snapshot_file(source, destination)
+        # Non-deferred snapshots are copied directly into the package root.
+        result.provider_transcript_rel = "provider_events.jsonl"
+    except _ReviewStopped:
+        result.stopped = True
+        result.retained_sandbox_dir = str(sandbox_repo.parent)
+        result.provider_transcript_rel = (
+            "raw_sandbox/repo/.git/sts2-review-provider-events.jsonl")
+    except OSError as exc:
+        result.retained_sandbox_dir = str(sandbox_repo.parent)
+        result.provider_transcript_rel = (
+            "raw_sandbox/repo/.git/sts2-review-provider-events.jsonl")
+
+        log(f"[llm] provider 原始事件流快照失败；保留其他失败证据：{exc}")
 
 
 def _failed_review_replay_context(package_names, attempt_names=(), log=print) -> dict:
@@ -5361,7 +5728,10 @@ def _file_sha256(path: Path) -> str:
 def _save_review_salvage(
     pre_head: str, reason: str, sandbox: SandboxReviewResult, *,
     batch_runs: list[int] | None = None, runner: str = "opencode",
-    model: str = "", source: str = "",
+    model: str = "", source: str = "", backend_key: str = "",
+    variant: str = "", reasoning_effort: str = "",
+    priority: int = 1, approve_for_me: bool = False,
+    sandbox_mode: str = "workspace-write",
     every: int | None = None, replay_target: str = "",
     replay_attempts: list[str] | None = None,
     replay_queue_ids: list[str] | None = None, log=print,
@@ -5424,13 +5794,31 @@ def _save_review_salvage(
         "batch_runs": list(batch_runs or []),
         "runner": runner,
         "model": model,
+        "backend_key": backend_key,
+        "priority": max(1, int(priority)),
+        "variant": variant,
+        "reasoning_effort": reasoning_effort,
+        "approve_for_me": bool(approve_for_me),
+        "sandbox": str(sandbox_mode or "workspace-write"),
         "source": source,
         "every": every,
+        "retry_same_model": bool(
+            getattr(sandbox, "provider_work_started", False)),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
         "stalled": sandbox.stalled,
         "stopped": sandbox.stopped,
         "selfcheck_ok": sandbox.selfcheck_ok,
+        "provider_metrics": (
+            dict(sandbox.provider_metrics)
+            if isinstance(getattr(sandbox, "provider_metrics", None), dict)
+            else {}),
+        "provider_work_started": bool(
+            getattr(sandbox, "provider_work_started", False)),
+        "provider_transcript_rel": (
+            sandbox.provider_transcript_rel
+            if isinstance(getattr(sandbox, "provider_transcript_rel", None), str)
+            else ""),
         "snapshot_complete": sandbox.snapshot_complete,
         "snapshot_included": bool(snapshot is not None and not deferred_snapshot and not deferred_raw),
         "snapshot_deferred": deferred_snapshot,
@@ -5581,7 +5969,7 @@ def _save_review_salvage(
 
 def _run_review_sandbox(
     cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
-    translator: "OpencodeJsonTranslator", *, stall_warn_seconds: float = 0,
+    translator, *, runner: str = "opencode", stall_warn_seconds: float = 0,
     stall_timeout_seconds: float = 0, replay_packages=(), replay_attempts=(),
     log=print,
 ) -> SandboxReviewResult:
@@ -5600,6 +5988,8 @@ def _run_review_sandbox(
     replay_evidence_complete = not bool(replay_requested)
     replay_evidence_error = ""
     replay_model_started = False
+    stream_metrics: dict = {}
+    transcript_rel = ".git/sts2-review-provider-events.jsonl"
     try:
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
@@ -5630,18 +6020,19 @@ def _run_review_sandbox(
                     error=("失败包完整证据不可用；保留 target 并重新排队："
                            + replay_evidence_error))
                 return result
-        sandbox_cmd = list(cmd)
         try:
-            sandbox_cmd[sandbox_cmd.index("--dir") + 1] = str(sandbox_repo)
-        except (ValueError, IndexError):
-            result = SandboxReviewResult(error="复盘命令缺少 --dir 安全边界")
+            sandbox_cmd = bind_review_workdir(cmd, runner, sandbox_repo)
+        except ValueError as exc:
+            result = SandboxReviewResult(error=f"复盘命令缺少工作目录安全边界：{exc}")
             return result
 
         replay_model_started = True
         rc, out, timed_out, stopped, stalled = _stream_run(
             sandbox_cmd, timeout_seconds, translate=translator.feed,
             stall_warn_sec=stall_warn_seconds,
-            stall_timeout_sec=stall_timeout_seconds)
+            stall_timeout_sec=stall_timeout_seconds,
+            raw_transcript=sandbox_repo / transcript_rel,
+            metrics_sink=stream_metrics)
         if stopped:
             # Stop keeps the exact clone as an O(1) deferred forensic source; do
             # not spend the shutdown budget hashing or deleting a large mount.
@@ -5772,6 +6163,17 @@ def _run_review_sandbox(
         result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")
         return result
     finally:
+        try:
+            provider_metrics = translator.metrics()
+        except (AttributeError, TypeError, ValueError):
+            provider_metrics = {}
+        provider_metrics.update(stream_metrics)
+        result.provider_metrics = provider_metrics
+        result.provider_work_started = bool(
+            getattr(translator, "model_work_started", False))
+        # Final failure-package location is chosen after we know whether the
+        # disposable clone itself must be retained or only its host-side snapshot.
+        result.provider_transcript_rel = ""
         result.replay_evidence_requested = bool(replay_requested)
         result.replay_evidence_complete = replay_evidence_complete
         result.replay_evidence_error = replay_evidence_error
@@ -5830,6 +6232,8 @@ def _run_review_sandbox(
         if _review_stop_requested() and sandbox_root.is_dir():
             result.stopped = True
             result.retained_sandbox_dir = str(sandbox_root)
+        _preserve_provider_transcript(
+            sandbox_repo, result, transcript_rel, log=log)
         if (sandbox_repo.is_dir() and not result.snapshot_complete
                 and not result.retained_sandbox_dir):
             # 全量捕获链自身出错时，绝不删除唯一现场。外层补合发布会把整个
@@ -6009,25 +6413,36 @@ def _remove_restart_marker(expected_commit: str, log=print) -> None:
 
 
 def _kill_orphan_review_processes(log) -> None:
-    """清理上一个大脑进程死亡后遗留的孤儿复盘 opencode。
+    """清理上一个大脑进程死亡后遗留的孤儿复盘 provider。
 
     大脑被杀/崩溃时，正在执行的复盘子进程会被系统收养继续跑——它改的文件
     没人收集、reviewing 标记没人清。worker 启动时（自身尚无在跑复盘，安全）
-    按命令行特征精确击杀：标题 ASCII 前缀 sts2-ascend + --auto（用户自己的
-    opencode 会话不带这两个组合，绝不误伤）。
+    OpenCode 以 title/--auto/project 路径识别；Codex 只认项目受管 review_work
+    clone + exec/json/ephemeral 的生产调用形状。模型、审批模式以后可调，维护 AI
+    与评测 canary 不在 review_work 下，不会被命中。
     """
     try:
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        subprocess.run(
+        _run_captured_stop_aware(
             ["powershell", "-NoProfile", "-Command",
-             "& { param($repo) Get-CimInstance Win32_Process | Where-Object { "
-             "$_.Name -match '^opencode(\\.exe)?$' -and $_.CommandLine -match 'sts2-ascend' "
-             "-and $_.CommandLine -match '--auto' -and $_.CommandLine.IndexOf($repo, "
-             "[StringComparison]::OrdinalIgnoreCase) -ge 0 } | ForEach-Object { "
-             "Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } }",
-             str(REPO_DIR)],
-            capture_output=True, timeout=30, creationflags=creationflags)
+             "& { param($repo,$reviewRoot) Get-CimInstance Win32_Process | Where-Object { "
+             "$cmd=[string]$_.CommandLine; "
+             "$reviewRepoPattern='(?i)(?:^|\\s)(?:-C|--cd)\\s+\"?'+[regex]::Escape($reviewRoot)+'[\\\\/]+sts2-review-sandbox-[^\\\\/\"\\s]+[\\\\/]+repo\"?(?=$|\\s)'; "
+             "$openReviewRepoPattern='(?i)(?:^|\\s)--dir\\s+\"?'+[regex]::Escape($reviewRoot)+'[\\\\/]+sts2-review-sandbox-[^\\\\/\"\\s]+[\\\\/]+repo\"?(?=$|\\s)'; "
+             "$open=$_.Name -match '^opencode(\\.exe)?$' -and $cmd -match 'sts2-ascend' "
+             "-and $cmd -match '--auto' -and $cmd.IndexOf($repo, "
+             "[StringComparison]::OrdinalIgnoreCase) -ge 0; "
+             "$open=$_.Name -match '^opencode(\\.exe)?$' -and $cmd -match $openReviewRepoPattern "
+             "-and $cmd -match '(?i)(^|\\s)run(?=\\s)' -and $cmd -match '(?i)--format\\s+json(?=$|\\s)' "
+             "-and $cmd -match '(?i)--auto(?=$|\\s)'; "
+             "$codex=$_.Name -match '^(codex|node|cmd)\\.exe$' "
+             "-and $cmd -match $reviewRepoPattern "
+             "-and $cmd -match '(?i)(^|\\s)exec(?=\\s)' -and $cmd -match '--json' "
+             "-and $cmd -match '--ephemeral'; $open -or $codex } | ForEach-Object { "
+             "& taskkill.exe /PID ([string]$_.ProcessId) /T /F 2>$null | Out-Null } }",
+             str(REPO_DIR), str(_review_work_root())], timeout=30)
         log("[llm] 已清理遗留的孤儿复盘进程（如有）")
+    except _ReviewStopped:
+        return
     except Exception as exc:
         log(f"[llm] 孤儿复盘进程清理失败（不影响运行）：{exc}")
 
@@ -6238,6 +6653,23 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
             q["reviewing"] = None
             _save_queue_unlocked(q)
             return 0.0
+        if outcome == "deferred":
+            pending = list(q.get("pending", []))
+            seen = {_queue_item_identity(item) for item in pending}
+            ready_at = time.time() + 60.0
+            for item in batch:
+                identity = _queue_item_identity(item)
+                if identity in seen:
+                    continue
+                deferred = dict(item)
+                deferred["retry_after"] = max(
+                    float(deferred.get("retry_after", 0) or 0), ready_at)
+                pending.append(deferred)
+                seen.add(identity)
+            q["pending"] = pending
+            q["reviewing"] = None
+            _save_queue_unlocked(q)
+            return 60.0
         if outcome not in {"failed", "replay_pending"}:
             return 0.0
 
@@ -6257,7 +6689,10 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
                 retry_item.update({
                     "retry_count": retry_count,
                     "retry_after": time.time() + delay,
-                    "retry_same_model": bool(item.get("model")),
+                    # A model field is only a preference hint on fresh queued work.
+                    # Sticky affinity must be explicitly published before launch
+                    # or recovered from a provider-started failure manifest.
+                    "retry_same_model": bool(item.get("retry_same_model", False)),
                     "salvage_packages": _normalize_salvage_package_names(
                         item.get("salvage_packages") or []),
                 })
@@ -6459,7 +6894,11 @@ def _worker_loop_body(agent, log) -> None:
                 if (outcome in {"completed", "documented", "changed"}
                         and not _review_stop_requested()):
                     _resume_host_salvage_closures(log=log)
-                if outcome in {"failed", "replay_pending"}:
+                if outcome in {"failed", "replay_pending", "deferred"}:
+                    if outcome == "deferred":
+                        log(f"[llm] 当前绑定后端暂不可启动，批次原样保留，{delay:.0f}s 后重试")
+                        retry_wait = min(30.0, max(1.0, delay))
+                        continue
                     label = "失败包尚未完成 GLM 闭环" if outcome == "replay_pending" else "复盘失败"
                     log(f"[llm] {label}，批次已放回队尾，{delay:.0f}s 后继续追及")
                     retry_wait = min(30.0, max(1.0, delay))
@@ -6471,26 +6910,64 @@ def _worker_loop_body(agent, log) -> None:
                 return
 
 
+def _coerce_review_plan(value, cfg: dict) -> ReviewPlan:
+    """Accept new ReviewPlan values and tuple-returning test/legacy resolvers."""
+    if isinstance(value, ReviewPlan):
+        return value
+    model_entry, every, source = value
+    runner = str(cfg.get("runner") or "opencode")
+    model = str(model_entry)
+    variant = None
+    if runner == "opencode":
+        model, variant = _parse_entry(model)
+    return ReviewPlan(
+        key=str(model_entry), priority=1, runner=runner, model=model,
+        variant=variant, every_runs=max(1, int(every)), source=str(source))
+
+
 def _run_batch_review(agent, batch: list[dict], log) -> str:
     if _review_stop_requested():
         return "canceled"
     cfg = load_llm_config()
-    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
     affinity = _batch_retry_affinity(batch)
     if affinity is not None:
         # A process that already produced a failure package/partial output owns
         # its retry lineage.  Never silently hand that evidence to another model.
-        runner, model, source = affinity
+        (runner, model, source, backend_key, variant, reasoning_effort,
+         approve_for_me, sandbox_mode, priority) = affinity
         planned = [item for item in batch if item.get("model") == model]
         every = int((planned[-1] if planned else batch[-1]).get("every", 5))
+        plan = ReviewPlan(
+            key=backend_key, priority=priority, runner=runner, model=model,
+            variant=variant or None, reasoning_effort=reasoning_effort or None,
+            approve_for_me=approve_for_me, sandbox=sandbox_mode,
+            every_runs=max(1, every), source=source)
+        if source == "preferred" and _preferred_cooldown_remaining(plan.state_key) > 0:
+            return "deferred"
+        if not runner_binary(cfg, runner):
+            log(f"[llm] sticky 后端 {plan.key} 的 {runner} 暂不可执行；保留原事务等待")
+            return "deferred"
     else:
         # Fresh, not-yet-attempted work may use the existing availability/fallback
         # resolver immediately before launch.  This is the only cross-model handoff.
-        runner = str(cfg.get("runner") or "opencode")
-        model, every, source = resolve_review_plan(cfg, binary, log=log)
-    if runner != "opencode":
-        log(f"[llm] 复盘批次绑定尚不支持的 runner={runner}；保留原模型亲和等待")
-        return "failed"
+        plan = _coerce_review_plan(resolve_review_plan(cfg, log=log), cfg)
+        if not plan.available:
+            return "deferred"
+    runner, model, source, every = (
+        plan.runner, plan.model, plan.source, plan.every_runs)
+    if runner not in {"opencode", "codex"}:
+        log(f"[llm] 复盘批次绑定不支持的 runner={runner}；保留原事务等待")
+        return "deferred"
+    replay_batch = any(
+        item.get("replay_target") or item.get("salvage_packages")
+        for item in batch)
+    if affinity is None and plan.every_runs > 1 and not replay_batch:
+        distinct_runs = len({int(item["run"]) for item in batch})
+        if distinct_runs < plan.every_runs:
+            log(
+                f"[llm] {plan.display_model} 需要至少 {plan.every_runs} 局合批；"
+                f"当前只有 {distinct_runs} 局，保留队列等待积累")
+            return "deferred"
     replay_target = next((str(item.get("replay_target") or "") for item in batch
                           if item.get("replay_target")), "")
     legacy_packages = _normalize_salvage_package_names(
@@ -6508,24 +6985,38 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         *inherited_attempts, *legacy_packages[1:]])
     for item in batch:
         item.update({
-            "runner": runner,
-            "model": model,
-            "every": max(1, int(every)),
-            "source": source,
+            **plan.as_queue_fields(),
             "retry_same_model": True,
             "salvage_packages": list(inherited_packages),
             "salvage_attempts": list(inherited_attempts),
         })
         if replay_target:
             item["replay_target"] = replay_target
-    _persist_reviewing_batch_metadata(batch, log=log)
+    binding_persisted = _persist_reviewing_batch_metadata(batch, log=log)
+    if not binding_persisted and affinity is None:
+        # Provider launch is the point where model affinity becomes billable and
+        # semantically binding.  Never cross it until the resolved plan is durable;
+        # otherwise a Brain crash can replay the same evidence on another model.
+        if affinity is None:
+            for item in batch:
+                item["retry_same_model"] = False
+        log("[llm] resolved runner 绑定尚未耐久落盘；本次不启动 provider，稍后重试")
+        return "deferred"
+    if not binding_persisted:
+        log("[llm] sticky runner 绑定已来自耐久队列；本轮元数据刷新失败但不改变既有亲和性")
     runs_list = [p["run"] for p in batch]
     evidence_only = bool(batch) and all(bool(item.get("evidence_only"))
                                         for item in batch)
     replay_note = f"，重审失败包 {inherited_packages}" if inherited_packages else ""
-    log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局（模型 {model}{replay_note}）")
+    log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局"
+        f"（{runner}/{plan.display_model}{replay_note}）")
     status: dict = {}
-    executed = run_review(agent.know, log=log, model=model, every=every, source=source,
+    executed = run_review(
+                          agent.know, log=log, model=model, every=every, source=source,
+                          runner=runner, backend_key=plan.key, priority=plan.priority,
+                          variant=plan.variant, reasoning_effort=plan.reasoning_effort,
+                          approve_for_me=plan.approve_for_me,
+                          sandbox_mode=plan.sandbox,
                           batch_runs=runs_list, async_mode=True, _status=status,
                           salvage_packages=inherited_packages,
                           salvage_attempts=inherited_attempts,
@@ -6545,13 +7036,11 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         inherited_attempts = _link_replay_attempt(
             replay_target, new_package, inherited_attempts, log=log)
     retry_group = replay_target
+    keep_sticky = not bool(status.get("startup_unavailable"))
     for item in batch:
         item.update({
-            "runner": runner,
-            "model": model,
-            "every": max(1, int(every)),
-            "source": source,
-            "retry_same_model": True,
+            **plan.as_queue_fields(),
+            "retry_same_model": keep_sticky,
             "salvage_packages": list(inherited_packages),
             "salvage_attempts": list(inherited_attempts),
         })
@@ -6564,13 +7053,14 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         unresolved = status.get("unresolved_salvage_packages") or []
         if not status.get("commit"):
             unresolved = [replay_target]
-        log(f"[llm] GLM 失败包重审回执：{resolutions or '未写 retry_resolution'}"
+        log(f"[llm] {plan.display_model} 失败包重审回执："
+            f"{resolutions or '未写 retry_resolution'}"
             f"；仍 pending={unresolved}")
         if status.get("host_pending_salvage_packages"):
-            log("[llm] GLM 已完成逐包结论；清单/删除由宿主耐久恢复继续处理："
+            log("[llm] 复盘模型已完成逐包结论；清单/删除由宿主耐久恢复继续处理："
                 f"{status['host_pending_salvage_packages']}")
     if status.get("commit"):
-        log(f"[llm] GLM 复盘提交回执：commit={status['commit'][:12]} "
+        log(f"[llm] {plan.display_model} 复盘提交回执：commit={status['commit'][:12]} "
             f"pushed={bool(status.get('pushed'))}")
     outcome = status.get("outcome", "changed" if executed else "failed")
     if outcome == "canceled" or status.get("canceled"):
@@ -6581,7 +7071,8 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         # queued for another GLM pass; they never roll back the accepted commit.
         if outcome == "changed" or executed:
             agent.request_restart = True
-        log("[llm] 本轮提交已保留，但失败包尚未得到远端确认的逐包结论；继续交给 GLM")
+        log("[llm] 本轮提交已保留，但失败包尚未得到远端确认的逐包结论；"
+            "继续交给原复盘模型")
         return "replay_pending"
     if outcome == "changed" or executed:
         log("[llm] 异步复盘产生变更，本局结束后自动重启大脑加载…")
@@ -6631,10 +7122,17 @@ def main() -> None:
     from knowledge import Knowledge
     know = Knowledge(KNOWLEDGE_DIR)
     cfg = load_llm_config()
-    binary = shutil.which(cfg.get("opencode_bin", "opencode"))
-    model, every, source = resolve_review_plan(cfg, binary)
-    print(f"plan: model={model} every={every} source={source}")
-    executed = run_review(know, model=model, every=every, source=source, async_mode=True)
+    plan = _coerce_review_plan(resolve_review_plan(cfg), cfg)
+    print(f"plan: runner={plan.runner} model={plan.display_model} "
+          f"every={plan.every_runs} source={plan.source} available={plan.available}")
+    if not plan.available:
+        return
+    executed = run_review(
+        know, model=plan.model, every=plan.every_runs, source=plan.source,
+        runner=plan.runner, backend_key=plan.key, priority=plan.priority,
+        variant=plan.variant, reasoning_effort=plan.reasoning_effort,
+        approve_for_me=plan.approve_for_me, sandbox_mode=plan.sandbox,
+        async_mode=True)
     print(f"done, executed={executed}")
 
 

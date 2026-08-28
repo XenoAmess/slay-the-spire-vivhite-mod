@@ -95,6 +95,37 @@ function Test-CommandHasScriptArgument {
                             [Text.RegularExpressions.RegexOptions]::IgnoreCase)
 }
 
+function Test-IsOpenCodeReviewProcess {
+    param([object]$Process, [string]$WorkspaceRoot)
+    if (-not $Process -or [string]::IsNullOrWhiteSpace([string]$Process.CommandLine)) { return $false }
+    if ($Process.Name -notmatch '^opencode(\.exe)?$') { return $false }
+    $cmd = [string]$Process.CommandLine
+    $reviewRoot = Join-Path $WorkspaceRoot "knowledge\code_backups\review_work"
+    $reviewRepoPattern = '(?i)(?:^|\s)--dir\s+"?' +
+        [regex]::Escape($reviewRoot) +
+        '[\\/]+sts2-review-sandbox-[^\\/"\s]+[\\/]+repo"?(?=$|\s)'
+    return [regex]::IsMatch($cmd, $reviewRepoPattern,
+                            [Text.RegularExpressions.RegexOptions]::IgnoreCase) -and
+           $cmd -match '(?i)(^|\s)run(?=\s)' -and
+           $cmd -match '(?i)--format\s+json(?=$|\s)' -and
+           $cmd -match '(?i)--auto(?=$|\s)'
+}
+
+function Test-IsCodexReviewProcess {
+    param([object]$Process, [string]$WorkspaceRoot)
+    if (-not $Process -or [string]::IsNullOrWhiteSpace([string]$Process.CommandLine)) { return $false }
+    if ($Process.Name -notmatch '^(codex|node|cmd)\.exe$') { return $false }
+    $cmd = [string]$Process.CommandLine
+    $reviewRoot = Join-Path $WorkspaceRoot "knowledge\code_backups\review_work"
+    $reviewRepoPattern = '(?i)(?:^|\s)(?:-C|--cd)\s+"?' +
+        [regex]::Escape($reviewRoot) +
+        '[\\/]+sts2-review-sandbox-[^\\/"\s]+[\\/]+repo"?(?=$|\s)'
+    return [regex]::IsMatch($cmd, $reviewRepoPattern,
+                            [Text.RegularExpressions.RegexOptions]::IgnoreCase) -and
+           $cmd -match '(?i)(^|\s)exec(?=\s)' -and
+           $cmd -match '(?i)--json' -and $cmd -match '(?i)--ephemeral'
+}
+
 function Test-SameProcess {
     param([object]$Identity)
     $current = Get-ProcessCim ([int]$Identity.ProcessId)
@@ -227,10 +258,14 @@ function Add-ScopedProcessIdentities {
             $role = if ([string]::Equals($matchedPath, (Join-Path $WorkspaceRoot "brain\runner.py"),
                                         [StringComparison]::OrdinalIgnoreCase)) { "runner" } else { "detached-component" }
             Add-Identity $Map $process $role 0
+        } elseif (Test-IsOpenCodeReviewProcess $process $WorkspaceRoot) {
+            Add-Identity $Map $process "review-opencode" 0
         } elseif ($process.Name -match '^opencode(\.exe)?$' -and
                   (Test-CommandHasScriptArgument $process (Split-Path $WorkspaceRoot -Parent)) -and
                   $cmd -match 'sts2-ascend' -and $cmd -match '--auto') {
             Add-Identity $Map $process "review-opencode" 0
+        } elseif (Test-IsCodexReviewProcess $process $WorkspaceRoot) {
+            Add-Identity $Map $process "review-codex" 0
         }
     }
 }

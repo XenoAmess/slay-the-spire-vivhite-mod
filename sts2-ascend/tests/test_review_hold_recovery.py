@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -121,6 +122,69 @@ class ReviewHoldRecoveryTests(unittest.TestCase):
         self.assertEqual(recovered, [])
         self.assertFalse(self.salvage.exists())
         self.assertTrue((self.hold / target / "manifest.json").is_file())
+
+    def test_recovered_hold_reopens_existing_closed_ledger_rows(self) -> None:
+        target = "pkg-target"
+        attempt = "pkg-attempt-1"
+        held = [
+            self._package(target, target=target, role="target", attempts=[attempt]),
+            self._package(attempt, target=target, role="attempt_evidence"),
+        ]
+        ledger = self.root / "REVIEW_REJECTIONS.md"
+        ledger_text = llm_review._REJECTION_LEDGER_HEADER
+        for package in held:
+            manifest = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+            ledger_text += llm_review._rejection_ledger_block(
+                package.name, manifest, status="historically closed",
+                package_cell="closed cleanup", reason="invalid old closure")
+        ledger.write_text(ledger_text, encoding="utf-8")
+        commits: list[tuple[str, dict]] = []
+
+        def fake_commit(message, **kwargs):
+            commits.append((message, kwargs))
+            return SimpleNamespace(
+                created=True, pushed=False, commit="c" * 40, reason="")
+
+        fake_autogit = SimpleNamespace(
+            commit_progress_result=fake_commit,
+            push_pending=lambda **_kwargs: True,
+        )
+        pending_status = "\u5f85 GLM \u91cd\u5ba1/\u8865\u5408"
+        with (mock.patch.object(llm_review, "BASE_DIR", self.root),
+              mock.patch.object(llm_review, "REPO_DIR", self.root),
+              mock.patch.object(llm_review, "KNOWLEDGE_DIR", self.root / "knowledge"),
+              mock.patch.object(llm_review, "REJECTION_LEDGER", ledger),
+              mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              mock.patch.object(llm_review, "_flush_pending_rejection_ledger",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_contains",
+                                side_effect=lambda _name, status: status == pending_status),
+              mock.patch.dict(sys.modules, {"autogit": fake_autogit})):
+            llm_review._recover_review_holds(log=lambda _message: None)
+            llm_review._backfill_rejection_ledger(log=lambda _message: None)
+            # A later maintenance scan retries push without duplicating either
+            # the marker or the ledger update commit.
+            llm_review._backfill_rejection_ledger(log=lambda _message: None)
+
+        updated = ledger.read_text(encoding="utf-8")
+        updated_lines = updated.splitlines()
+        for name in (target, attempt):
+            marker = f"<!-- rejection:{name} -->"
+            self.assertEqual(updated.count(marker), 1)
+            self.assertTrue(
+                llm_review._ledger_marker_has_status(updated, name, pending_status))
+            row = updated_lines[updated_lines.index(marker) + 1]
+            self.assertIn(f"review_salvage/{name}", row)
+            self.assertIn("restored from review_hold", row)
+            self.assertNotIn("invalid old closure", row)
+        self.assertEqual(len(commits), 2)
+        self.assertTrue(all(
+            message.startswith("chore(sts2-ascend): reopen GLM review batch ")
+            for message, _kwargs in commits))
+        self.assertTrue(all(
+            kwargs["paths"] == ["REVIEW_REJECTIONS.md"]
+            for _message, kwargs in commits))
 
     def test_hold_alone_starts_host_recovery_worker(self) -> None:
         self._package("pkg-target", target="pkg-target", role="target", attempts=[])

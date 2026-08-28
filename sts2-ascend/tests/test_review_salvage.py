@@ -75,26 +75,95 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertFalse(stalled)
         self.assertIn("xxxxxx", tail)
 
-    def test_stream_clean_eof_wins_over_stall_after_slow_final_translation(self) -> None:
+    def _legacy_stream_clean_eof_os_process_probe(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-stream-eof-") as root:
             stream = Path(root) / "review.stream"
-            command = [sys.executable, "-c", "print('done', flush=True)"]
+            command = [os.environ.get("COMSPEC", "cmd.exe"),
+                       "/d", "/s", "/c", "echo done"]
 
             def slow_translate(raw: str) -> list[str]:
                 import time
-                time.sleep(0.3)
+                time.sleep(0.75)
                 return [raw]
 
             with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 rc, tail, timed_out, stopped, stalled = llm_review._stream_run(
                     command, 5, translate=slow_translate,
-                    stall_warn_sec=0.05, stall_timeout_sec=0.1)
+                    stall_warn_sec=0.25, stall_timeout_sec=0.5)
         self.assertEqual(rc, 0)
         self.assertFalse(timed_out)
         self.assertFalse(stopped)
         self.assertFalse(stalled)
         self.assertIn("done", tail)
+
+    def test_stream_clean_eof_wins_over_stall_after_slow_final_translation(self) -> None:
+        import threading
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-eof-") as root:
+            stream = Path(root) / "review.stream"
+            translation_started = threading.Event()
+            eof_seen = threading.Event()
+
+            class FakeStdout:
+                def __init__(self, owner) -> None:
+                    self.owner = owner
+                    self.buffer = self
+                    self.reads = 0
+
+                def read1(self, _size):
+                    self.reads += 1
+                    if self.reads == 1:
+                        return b"done\n"
+                    if not translation_started.wait(timeout=2):
+                        raise AssertionError("translator never consumed final line")
+                    self.owner.returncode = 0
+                    eof_seen.set()
+                    return b""
+
+
+                def read(self, size):
+                    return self.read1(size)
+                def close(self) -> None:
+                    pass
+
+            class FakeProc:
+                def __init__(self) -> None:
+                    self.returncode = None
+                    self.killed = False
+                    self.stdout = FakeStdout(self)
+
+                def poll(self):
+                    return self.returncode
+
+                def wait(self, timeout=None):
+                    if not eof_seen.wait(timeout=timeout or 2):
+                        raise subprocess.TimeoutExpired("fake", timeout)
+                    return self.returncode
+
+                def kill(self) -> None:
+                    self.killed = True
+                    self.returncode = -9
+
+            fake = FakeProc()
+
+            def slow_translate(raw: str) -> list[str]:
+                translation_started.set()
+                if not eof_seen.wait(timeout=2):
+                    raise AssertionError("reader did not observe EOF during translation")
+                time.sleep(0.75)
+                return [raw]
+
+            with (mock.patch.object(llm_review.subprocess, "Popen", return_value=fake),
+                  mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                result = llm_review._stream_run(
+                    ["fake-provider"], 5, translate=slow_translate,
+                    stall_warn_sec=0.25, stall_timeout_sec=0.5)
+        self.assertTrue(eof_seen.is_set())
+        self.assertFalse(fake.killed)
+        self.assertEqual(result, (0, "done\n", False, False, False))
+
+
 
     def test_stream_backlog_is_not_misclassified_as_raw_output_stall(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-stream-backlog-") as root:
@@ -102,7 +171,7 @@ class ReviewConfigurationTests(unittest.TestCase):
             command = [
                 sys.executable, "-c",
                 "import sys,time\n"
-                "for value in ('first','two','three','four','five','done'):\n"
+                "for value in range(30):\n"
                 " print(value,flush=True);time.sleep(0.05)",
             ]
             import threading
@@ -125,7 +194,9 @@ class ReviewConfigurationTests(unittest.TestCase):
                     first_line = False
                     if not backlog_ready.wait(timeout=5):
                         raise AssertionError("reader did not establish a test backlog")
-                    time.sleep(0.15)
+                    # Longer than the watchdog, while the child continues to
+                    # produce raw chunks behind this host-side translation.
+                    time.sleep(0.75)
                 return [raw]
 
             with (mock.patch.object(llm_review.queue, "Queue", ObservedQueue),
@@ -133,7 +204,7 @@ class ReviewConfigurationTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
                     command, 5, translate=slow_first_translation,
-                    stall_warn_sec=0.05, stall_timeout_sec=0.1)
+                    stall_warn_sec=0.25, stall_timeout_sec=0.5)
             text = stream.read_text(encoding="utf-8")
         self.assertEqual(rc, 0)
         self.assertFalse(timed_out)
@@ -640,6 +711,59 @@ class ReviewQueueBatchTests(unittest.TestCase):
             self.assertEqual(batches, [list(range(1, 101))])
             self.assertIsNone(saved["reviewing"])
             self.assertEqual([item["run"] for item in saved["pending"]], list(range(101, 106)))
+
+
+    def test_prework_stall_falls_through_but_postwork_stall_stays_sticky(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-stall-kind-") as root:
+            repo = Path(root) / "repo"
+            prompt = repo / "sts2-ascend" / "knowledge" / "review_prompt_latest.md"
+            prompt.parent.mkdir(parents=True)
+            know = SimpleNamespace(
+                stats={"global": {"runs": 8}}, progression={}, save=mock.Mock())
+            cfg = {
+                "enabled": True, "runner": "opencode", "opencode_bin": "opencode",
+                "model": "fallback", "preferred_timeout_min": 480,
+                "stall_warn_min": 15, "stall_timeout_min": 30,
+            }
+
+            def execute(model_work_started: bool) -> tuple[dict, int]:
+                status: dict = {}
+                sandbox = llm_review.SandboxReviewResult(
+                    rc=1, stalled=True, error="stalled",
+                    provider_work_started=model_work_started)
+                with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                      mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
+                      mock.patch.object(llm_review, "REPO_DIR", repo),
+                      mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+                      mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+                      mock.patch.object(llm_review, "_run_review_sandbox", return_value=sandbox),
+                      mock.patch.object(llm_review, "_save_review_salvage",
+                                        return_value=Path(root) / "pkg"),
+                      mock.patch.object(llm_review, "_review_stop_requested",
+                                        return_value=False),
+                      mock.patch.object(llm_review, "_stream_begin"),
+                      mock.patch.object(llm_review, "_stream_end"),
+                      mock.patch.object(llm_review, "_launch_viewer"),
+                      mock.patch.object(llm_review, "_launch_speaker"),
+                      mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+                      mock.patch.object(autogit, "commit_progress_result"),
+                      mock.patch.object(autogit, "head", return_value="a" * 40),
+                      mock.patch.object(autogit, "set_review_active"),
+                      mock.patch.object(autogit, "push_pending", return_value=True)):
+                    changed = llm_review.run_review(
+                        know, log=lambda _message: None,
+                        model="glm", every=1, source="preferred",
+                        batch_runs=[8], async_mode=True, _status=status)
+                self.assertFalse(changed)
+                return status, mark.call_count
+
+            prework, prework_cooldowns = execute(False)
+            postwork, postwork_cooldowns = execute(True)
+
+        self.assertTrue(prework["startup_unavailable"])
+        self.assertEqual(prework_cooldowns, 1)
+        self.assertFalse(postwork["startup_unavailable"])
+        self.assertEqual(postwork_cooldowns, 0)
 
 
 if __name__ == "__main__":

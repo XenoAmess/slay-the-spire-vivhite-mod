@@ -75,6 +75,37 @@ function Test-CommandHasScriptArgument {
                             [Text.RegularExpressions.RegexOptions]::IgnoreCase)
 }
 
+function Test-IsOpenCodeReviewProcess {
+    param([object]$Process, [string]$WorkspaceRoot)
+    if (-not $Process -or [string]::IsNullOrWhiteSpace([string]$Process.CommandLine)) { return $false }
+    if ($Process.Name -notmatch '^opencode(\.exe)?$') { return $false }
+    $cmd = [string]$Process.CommandLine
+    $reviewRoot = Join-Path $WorkspaceRoot "knowledge\code_backups\review_work"
+    $reviewRepoPattern = '(?i)(?:^|\s)--dir\s+"?' +
+        [regex]::Escape($reviewRoot) +
+        '[\\/]+sts2-review-sandbox-[^\\/"\s]+[\\/]+repo"?(?=$|\s)'
+    return [regex]::IsMatch($cmd, $reviewRepoPattern,
+                            [Text.RegularExpressions.RegexOptions]::IgnoreCase) -and
+           $cmd -match '(?i)(^|\s)run(?=\s)' -and
+           $cmd -match '(?i)--format\s+json(?=$|\s)' -and
+           $cmd -match '(?i)--auto(?=$|\s)'
+}
+
+function Test-IsCodexReviewProcess {
+    param([object]$Process, [string]$WorkspaceRoot)
+    if (-not $Process -or [string]::IsNullOrWhiteSpace([string]$Process.CommandLine)) { return $false }
+    if ($Process.Name -notmatch '^(codex|node|cmd)\.exe$') { return $false }
+    $cmd = [string]$Process.CommandLine
+    $reviewRoot = Join-Path $WorkspaceRoot "knowledge\code_backups\review_work"
+    $reviewRepoPattern = '(?i)(?:^|\s)(?:-C|--cd)\s+"?' +
+        [regex]::Escape($reviewRoot) +
+        '[\\/]+sts2-review-sandbox-[^\\/"\s]+[\\/]+repo"?(?=$|\s)'
+    return [regex]::IsMatch($cmd, $reviewRepoPattern,
+                            [Text.RegularExpressions.RegexOptions]::IgnoreCase) -and
+           $cmd -match '(?i)(^|\s)exec(?=\s)' -and
+           $cmd -match '(?i)--json' -and $cmd -match '(?i)--ephemeral'
+}
+
 function Get-CreationKey {
     param([object]$Process)
     if (-not $Process -or -not $Process.CreationDate) { return 0L }
@@ -257,9 +288,12 @@ try {
                 if (Test-CommandHasScriptArgument $process $path) { $scriptMatch = $true; break }
             }
         }
-        $reviewMatch = $process.Name -match '^opencode(\.exe)?$' -and $cmd -and
+        $reviewMatch = (($process.Name -match '^opencode(\.exe)?$' -and $cmd -and
             (Test-CommandHasScriptArgument $process (Split-Path $root -Parent)) -and
-            $cmd -match '--auto' -and $cmd -match 'sts2-ascend'
+            $cmd -match '--auto' -and $cmd -match 'sts2-ascend') -or
+            (Test-IsCodexReviewProcess $process $root))
+        $reviewMatch = ((Test-IsOpenCodeReviewProcess $process $root) -or
+                        (Test-IsCodexReviewProcess $process $root))
         $legacyRunnerMatch = $process.Name -match '^(python(?:w|\d+(?:\.\d+)*)?|py)\.exe$' -and
             $cmd -match '(?i)(^|[\s"''])brain[\\/]runner\.py(?=$|[\s"''])' -and
             $cmd -notmatch '(^|\s)-m\s+py_compile(\s|$)'
