@@ -5100,3 +5100,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/864 胜，当前目标进阶 0
+
+## 第 865 局复盘（2026-08-28 13:15）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：STONE_ARMOR, BLUDGEON, STOMP, EVIL_EYE, TWIN_STRIKE, UNMOVABLE, BREAKTHROUGH, CINDER, PYRE, TAUNT, EVIL_EYE, HEADBUTT, DEMON_FORM, PYRE, IRON_WAVE, STRATAGEM, HEADBUTT, BLUDGEON, UNRELENTING, ARMAMENTS, BLUDGEON, HEMOKINESIS
+- 本局遗物：BRONZE_SCALES, 红面具, MEAT_ON_THE_BONE, 永恒羽毛
+- 战斗记录：F14 Elite战 掉血11; F17 Boss战 掉血27｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血13; F24 Unknown战 掉血6; F28 Elite战 掉血17; F33 Boss战 掉血80｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：NOT_YET(27分/2局)，OFFERING(25分/22局)，FIEND_FIRE(24分/34局)，PACTS_END(24分/88局)，PRIMAL_FORCE(24分/3局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.63 → 0.60（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.60 → 0.63（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/865 胜，当前目标进阶 0
