@@ -6145,3 +6145,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/959 胜，当前目标进阶 0
+
+## 第 960 局复盘（2026-08-29 04:42）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：SWORD_BOOMERANG, ULTIMATE_STRIKE, CINDER, TRUE_GRIT, BLUDGEON, EVIL_EYE, STOMP, OFFERING, SALVO, CINDER, MOLTEN_FIST, AGGRESSION, SWORD_BOOMERANG, HEMOKINESIS, FISTICUFFS, BLUDGEON, THUNDERCLAP, BLUDGEON, HOWL_FROM_BEYOND
+- 本局遗物：BRONZE_SCALES, MERCURY_HOURGLASS, 佛珠手链, VAMBRACE
+- 战斗记录：F17 Boss战 掉血76; F19 Monster战 掉血6; F23 Monster战 掉血7; F24 Monster战 掉血24; F29 Monster战 掉血44; F30 Elite战 掉血51｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/24局)，FIEND_FIRE(25分/35局)，PACTS_END(24分/97局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.66 → 0.69（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/960 胜，当前目标进阶 0
