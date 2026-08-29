@@ -10,6 +10,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, replace
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import time
@@ -165,7 +166,10 @@ def runner_binary(cfg: dict, runner: str) -> str | None:
         configured = (cfg.get("opencode_bin", "opencode") if runner == "opencode"
                       else cfg.get("codex_bin", "codex") if runner == "codex"
                       else cfg.get(f"{runner}_bin", runner))
-    return shutil.which(str(configured))
+    # Runner paths may point at a pinned, non-global user cache.  Expanding the
+    # placeholder keeps config independent of the Windows account name while
+    # still resolving one exact executable.
+    return shutil.which(os.path.expandvars(str(configured)))
 
 
 def build_review_command(
@@ -339,6 +343,7 @@ class CodexJsonTranslator(_TranslatorBase):
         self.tool_count = 0
         self.blocked_tool_count = 0
         self.tool_access_error = ""
+        self.tool_access_failure_code = ""
         self.final_message = ""
 
     @staticmethod
@@ -356,6 +361,7 @@ class CodexJsonTranslator(_TranslatorBase):
             "tool_count": self.tool_count,
             "blocked_tool_count": self.blocked_tool_count,
             "tool_access_error": self.tool_access_error,
+            "tool_access_failure_code": self.tool_access_failure_code,
             "final_message_chars": len(self.final_message),
         })
         return payload
@@ -369,14 +375,33 @@ class CodexJsonTranslator(_TranslatorBase):
         summary = self._brief(value, 500)
         lowered = searchable.lower()
         denied = "access is denied" in lowered or "access denied" in lowered
+        policy_blocked = "blocked by policy" in lowered
+        reparse = "path contains a reparse point" in lowered
         contextual = tool_context or any(marker in lowered for marker in (
             "codex_core::tools", "tools::router", "createprocess", "exec_command",
             "apply_patch", "apply patch", "patch verifier",
         ))
-        if "blocked by policy" not in lowered and not (denied and contextual):
+        # The reparse wording may also occur in an ordinary subprocess
+        # traceback (including a filename such as apply_patch_worker.py).  Only
+        # Codex's native router signature or Luna's explicit blocked-tool final
+        # is sufficient to attribute it to the host filesystem helper.
+        reparse_contextual = (
+            "codex_core::tools::router:" in lowered
+            or (tool_context and "blocked_tool_capability" in lowered)
+        )
+        policy_contextual = (
+            "codex_core::tools::router:" in lowered
+            or (tool_context and "blocked_tool_capability" in lowered)
+        )
+        if (not (policy_blocked and policy_contextual)
+                and not (denied and contextual)
+                and not (reparse and reparse_contextual)):
             return False
         self.blocked_tool_count += 1
         self.tool_access_error = summary
+        self.tool_access_failure_code = (
+            "runner_tool_path_capability" if reparse
+            else "runner_tool_access_denied")
         if not error_already_counted:
             self.error_count += 1
         return True
@@ -440,6 +465,10 @@ class CodexJsonTranslator(_TranslatorBase):
         if item_type == "agent_message":
             value = str(item.get("text") or "")
             self.final_message = value
+            # Luna's explicit blocked-tool contract is one of the two accepted
+            # reparse signatures; the other is Codex's native router error.
+            if "BLOCKED_TOOL_CAPABILITY" in value:
+                self._record_tool_access_error(value, tool_context=True)
             return [value] if value else []
         if item_type == "reasoning":
             value = item.get("text") or item.get("summary") or ""

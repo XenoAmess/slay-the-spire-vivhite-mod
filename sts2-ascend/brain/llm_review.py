@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import codecs
+import base64
 import hashlib
 import json
 import math
@@ -767,6 +768,155 @@ def _codex_cli_argument_preflight_error(
         "Codex CLI 在模型/工具工作开始前拒绝宿主启动参数："
         + lines[0].removeprefix("error: ")
     )
+
+
+def _codex_windows_filesystem_preflight(
+    binary: str, probe_path: Path, expected_bytes: bytes, *,
+    expected_version: str = "", expected_sha256: str = "",
+    timeout_sec: float = 30,
+) -> str:
+    """Verify the pinned Codex build and ordinary drive reads without a model."""
+    if os.name != "nt":
+        return ""
+    if expected_sha256:
+        try:
+            actual_sha256 = _file_sha256(Path(binary))
+        except OSError as exc:
+            return f"Codex compatibility SHA256 probe failed: {exc}"
+        if actual_sha256.lower() != expected_sha256.strip().lower():
+            return (
+                "Codex compatibility SHA256 mismatch: "
+                f"expected {expected_sha256.strip().upper()}, "
+                f"got {actual_sha256.upper()}")
+    if expected_version:
+        try:
+            version = _run_captured_stop_aware(
+                [binary, "--version"], timeout=min(15, int(timeout_sec)))
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return f"Codex compatibility version probe failed: {exc}"
+        actual = " ".join((version.stdout or version.stderr or "").split())
+        if version.returncode != 0 or actual != f"codex-cli {expected_version}":
+            return (
+                "Codex compatibility version mismatch: "
+                f"expected codex-cli {expected_version}, got {actual or 'no output'}")
+
+    proc: subprocess.Popen | None = None
+    reader: threading.Thread | None = None
+    lines: queue.Queue[str] = queue.Queue(maxsize=64)
+    deadline = time.monotonic() + max(1.0, float(timeout_sec))
+    probe_home = probe_path.parent / ".codex-filesystem-preflight-home"
+    try:
+        probe_home.mkdir(exist_ok=False)
+        env = dict(os.environ)
+        env["CODEX_HOME"] = str(probe_home)
+        for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN"):
+            env.pop(key, None)
+        proc = subprocess.Popen(
+            [binary, "exec-server", "--listen", "stdio"],
+            cwd=str(probe_path.parent), stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace", bufsize=1,
+            env=env, **_process_group_kwargs())
+
+        def read_lines() -> None:
+            try:
+                assert proc is not None and proc.stdout is not None
+                for line in proc.stdout:
+                    try:
+                        lines.put(line, timeout=0.2)
+                    except queue.Full:
+                        break
+            except (OSError, ValueError):
+                pass
+
+        reader = threading.Thread(target=read_lines, daemon=True)
+        reader.start()
+
+        def send(payload: dict) -> None:
+            if _review_stop_requested():
+                raise _ReviewStopped()
+            if proc is None or proc.stdin is None:
+                raise OSError("Codex exec-server stdin is unavailable")
+            proc.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+            proc.stdin.flush()
+
+        def response(request_id: int) -> dict:
+            observed = 0
+            while time.monotonic() < deadline and observed < 64:
+                if _review_stop_requested():
+                    raise _ReviewStopped()
+                try:
+                    line = lines.get(timeout=min(0.2, max(0.01, deadline - time.monotonic())))
+                except queue.Empty:
+                    if proc is not None and proc.poll() is not None:
+                        break
+                    continue
+                observed += 1
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(payload, dict) and payload.get("id") == request_id:
+                    return payload
+            raise TimeoutError(
+                f"Codex exec-server returned no response for request {request_id}")
+
+        send({"id": 1, "method": "initialize",
+              "params": {"clientName": "sts2-ascend-codex-preflight"}})
+        initialized = response(1)
+        if "error" in initialized:
+            return "Codex exec-server initialize failed: " + str(initialized["error"])
+        send({"method": "initialized", "params": {}})
+        send({
+            "id": 2,
+            "method": "fs/readFile",
+            "params": {
+                "path": probe_path.resolve().as_uri(),
+                "sandbox": None,
+                "followSymlinks": False,
+            },
+        })
+        read_result = response(2)
+        if "error" in read_result:
+            error = read_result.get("error")
+            message = error.get("message") if isinstance(error, dict) else error
+            return "Codex Windows filesystem capability failed: " + str(message)
+        result = read_result.get("result")
+        encoded = result.get("dataBase64") if isinstance(result, dict) else None
+        try:
+            actual_bytes = base64.b64decode(encoded, validate=True)
+        except (TypeError, ValueError):
+            return "Codex Windows filesystem capability returned invalid dataBase64"
+        if actual_bytes != expected_bytes:
+            return "Codex Windows filesystem capability returned mismatched bytes"
+        return ""
+    except _ReviewStopped:
+        raise
+    except (OSError, TimeoutError, subprocess.SubprocessError) as exc:
+        return f"Codex Windows filesystem capability probe failed: {exc}"
+    finally:
+        if proc is not None:
+            try:
+                if proc.stdin is not None and not proc.stdin.closed:
+                    proc.stdin.close()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                _terminate_process_tree(proc)
+            try:
+                if proc.stdout is not None:
+                    proc.stdout.close()
+            except OSError:
+                pass
+        if reader is not None:
+            reader.join(timeout=0.5)
+        try:
+            if probe_home.is_dir():
+                shutil.rmtree(probe_home)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -1644,7 +1794,8 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 stall_timeout_sec: float = 0,
                 pre_work_timeout_sec: float = 0,
                 raw_transcript: Path | None = None,
-                metrics_sink: dict | None = None) -> tuple[int, str, bool, bool, bool]:
+                metrics_sink: dict | None = None,
+                cwd: Path | str | None = None) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
@@ -1666,7 +1817,8 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     if callable(reset_clock):
         reset_clock()
     proc = subprocess.Popen(
-        cmd, cwd=str(REPO_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        cmd, cwd=str(cwd if cwd is not None else REPO_DIR),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL,
         text=True, encoding="utf-8", errors="replace", bufsize=8192, env=env,
         **_process_group_kwargs())
@@ -2162,6 +2314,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             replay_packages=replay_packages,
             replay_attempts=replay_attempts,
             attempt_receipt=attempt_receipt,
+            codex_expected_version=str(cfg.get("codex_compat_version") or ""),
+            codex_expected_sha256=str(cfg.get("codex_compat_sha256") or ""),
             log=log)
         rc, out, timed_out, stopped, stalled = (
             sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped,
@@ -2177,7 +2331,12 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             sandbox.error = "统一停机中断并全量保全"
         capability_error = _provider_tool_capability_error(runner, sandbox)
         if capability_error:
-            sandbox.failure_code = "runner_tool_access_denied"
+            reported_code = str(
+                (sandbox.provider_metrics or {}).get("tool_access_failure_code") or "")
+            sandbox.failure_code = (
+                reported_code if reported_code in {
+                    "runner_tool_access_denied", "runner_tool_path_capability",
+                } else "runner_tool_access_denied")
             sandbox.error = capability_error
             sandbox.conclusion = (
                 "本次未读取到任务，runner 工具权限已被宿主识别为基础设施故障；"
@@ -2202,6 +2361,23 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             _status["unresolved_salvage_packages"] = [
                 name for name in replay_packages
                 if resolutions.get(name) not in {"integrated", "no_valid_change"}]
+        codex_fs_preflight_failed = bool(
+            sandbox.failure_code == "runner_codex_filesystem_preflight"
+            and not sandbox.provider_work_started and not stopped)
+        if codex_fs_preflight_failed:
+            save_failure(sandbox.error)
+            if _status is not None:
+                _status.update({
+                    "outcome": "deferred",
+                    "deferred_kind": "runner_codex_filesystem_preflight",
+                    "reason": sandbox.error,
+                    "failure_code": sandbox.failure_code,
+                    "startup_unavailable": False,
+                    "provider_launch_attempted": False,
+                })
+            log("[llm] Codex Windows 文件能力预检失败；provider 未启动、"
+                "未消费模型额度，维持 Luna 原批次亲和性稍后重试")
+            return False
         evidence_preflight_failed = (
             sandbox.replay_evidence_requested
             and not sandbox.replay_evidence_complete
@@ -2309,7 +2485,10 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             if _status is not None:
                 _status["reason"] = f"复盘进程 exit={rc}"
                 _status["startup_unavailable"] = not sandbox.provider_work_started
-            if source == "preferred":
+            if (source == "preferred"
+                    and sandbox.failure_code not in {
+                        "runner_tool_access_denied", "runner_tool_path_capability",
+                    }):
                 _mark_preferred_failure(cfg, log, state_key, f"exit={rc}")
             log(f"[llm] 隔离复盘失败：{sandbox.error or f'exit={rc}'}；真实工作树未改")
             return False
@@ -6943,6 +7122,7 @@ def _save_review_salvage(
             getattr(sandbox, "provider_work_started", False)
             or sandbox.failure_code in {
                 "runner_cli_preflight", "review_sandbox_acl_preflight",
+                "runner_codex_filesystem_preflight",
             }),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
@@ -7133,6 +7313,8 @@ def _run_review_sandbox(
     stall_timeout_seconds: float = 0, pre_work_timeout_seconds: float = 0,
     replay_packages=(), replay_attempts=(),
     attempt_receipt: dict | None = None,
+    codex_expected_version: str = "",
+    codex_expected_sha256: str = "",
     log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
@@ -7156,6 +7338,25 @@ def _run_review_sandbox(
     published_receipt: dict = {}
     try:
         _normalize_windows_review_sandbox_acl(sandbox_root)
+        if runner == "codex":
+            probe_bytes = b"sts2-ascend codex windows filesystem preflight v1\n"
+            probe_path = sandbox_root / ".codex-filesystem-preflight.txt"
+            try:
+                probe_path.write_bytes(probe_bytes)
+                preflight_error = _codex_windows_filesystem_preflight(
+                    str(cmd[0]), probe_path, probe_bytes,
+                    expected_version=codex_expected_version,
+                    expected_sha256=codex_expected_sha256)
+            finally:
+                try:
+                    probe_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            if preflight_error:
+                result = SandboxReviewResult(
+                    error=preflight_error,
+                    failure_code="runner_codex_filesystem_preflight")
+                return result
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
             str(REPO_DIR), str(sandbox_repo),
@@ -7206,7 +7407,12 @@ def _run_review_sandbox(
             stall_timeout_sec=stall_timeout_seconds,
             pre_work_timeout_sec=pre_work_timeout_seconds,
             raw_transcript=sandbox_repo / transcript_rel,
-            metrics_sink=stream_metrics)
+            metrics_sink=stream_metrics,
+            # Codex 0.148's native Apply Patch resolves relative paths from the
+            # provider process cwd, while ``-C`` reliably rebinds shell tools.
+            # Bind both layers to the isolated clone so native edits can never
+            # land in the live repository.
+            cwd=sandbox_repo)
         if stopped:
             # Stop keeps the exact clone as an O(1) deferred forensic source; do
             # not spend the shutdown budget hashing or deleting a large mount.
@@ -8732,6 +8938,7 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     if outcome == "deferred":
         if status.get("deferred_kind") in {
             "runner_cli_preflight", "review_sandbox_acl_preflight",
+            "runner_codex_filesystem_preflight",
         }:
             log("[llm] 复盘宿主启动预检失败；模型未工作、未冷却，"
                 f"保留 {plan.display_model} 原批次亲和性后延迟重试："

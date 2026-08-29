@@ -304,6 +304,21 @@ try {
         throw "Residual sts2-ascend processes exist (pid $ids). Run Stop-Agent.ps1 before starting a new session."
     }
 
+    # Luna is pinned to a non-global Codex CLI whose Windows filesystem helper
+    # can read ordinary drive paths.  Cold starts repair/validate the
+    # user cache before Brain loads config.  Failure does not block game/live
+    # recovery: the exact configured binary remains absent, so Luna is reported
+    # unavailable and no incompatible Codex process can consume model tokens.
+    $codexCompatInstaller = Join-Path $PSScriptRoot "Install-CodexCompat.ps1"
+    try {
+        $codexCompatBinary = & $codexCompatInstaller | Select-Object -Last 1
+        Write-Host "Pinned Codex compatibility CLI ready: $codexCompatBinary"
+    }
+    catch {
+        Write-Warning ("Pinned Codex compatibility CLI unavailable; Luna will remain unavailable " +
+                       "without starting a provider: " + $_.Exception.Message)
+    }
+
     $game = @(Get-GameProcesses)
     if (-not $SkipDeploy) {
         if ($game.Count -gt 0) {

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -38,6 +39,19 @@ class ReviewPlanTests(unittest.TestCase):
 
         self.assertTrue(luna.approve_for_me)
         self.assertEqual(luna.sandbox, "workspace-write")
+
+    def test_production_codex_resolves_the_pinned_user_cache_binary(self) -> None:
+        cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))["llm"]
+
+        binary = review_runners.runner_binary(cfg, "codex")
+
+        self.assertEqual(cfg["codex_compat_version"], "0.148.0")
+        self.assertEqual(
+            cfg["codex_compat_sha256"],
+            "2AD2CF8A732DA68B8F141634F92DB1A03016C5FAF533A7225FBC0FB740130410")
+        self.assertEqual(
+            os.path.normcase(str(binary)),
+            os.path.normcase(os.path.expandvars(cfg["runner_bins"]["codex"])))
 
     def test_explicit_three_level_chain_preserves_runner_specific_options(self) -> None:
         cfg = {
@@ -243,6 +257,42 @@ class CodexTranslatorTests(unittest.TestCase):
         self.assertLessEqual(len(metrics["tool_access_error"]), 500)
         self.assertIn("blocked by policy", metrics["tool_access_error"])
 
+    def test_failed_command_output_mentioning_policy_block_is_not_host_denial(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "status": "failed",
+                "aggregated_output": (
+                    '{"fixture":"blocked by policy","result":"assertion failed"}'
+                ),
+            },
+        }))
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["blocked_tool_count"], 0)
+        self.assertEqual(metrics["tool_access_failure_code"], "")
+        self.assertEqual(metrics["tool_access_error"], "")
+
+    def test_explicit_policy_block_contract_is_host_denial(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "agent_message",
+                "text": (
+                    "BLOCKED_TOOL_CAPABILITY\n"
+                    "Original error: exec_command blocked by policy"
+                ),
+            },
+        }))
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["blocked_tool_count"], 1)
+        self.assertEqual(
+            metrics["tool_access_failure_code"], "runner_tool_access_denied")
+
     def test_codex_tool_access_denials_are_counted_once_per_event(self) -> None:
         translator = CodexJsonTranslator()
         translator.feed(json.dumps({
@@ -264,6 +314,58 @@ class CodexTranslatorTests(unittest.TestCase):
         self.assertEqual(metrics["error_count"], 2)
         self.assertEqual(metrics["non_json_lines"], 1)
         self.assertEqual(metrics["tool_access_error"], "Access denied")
+
+    def test_reparse_apply_patch_failure_is_host_tool_capability(self) -> None:
+        translator = CodexJsonTranslator()
+        original = (
+            "Failed to read file to update D:\\review\\repo\\brain\\policy.py: "
+            "path contains a reparse point")
+        translator.feed(
+            "ERROR codex_core::tools::router: error=Exit code: 1 Output: " + original)
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": (
+                "BLOCKED_TOOL_CAPABILITY\n\n原始错误：`" + original + "`")},
+        }))
+
+        metrics = translator.metrics()
+        self.assertTrue(metrics["model_work_started"])
+        self.assertGreaterEqual(metrics["blocked_tool_count"], 1)
+        self.assertEqual(
+            metrics["tool_access_failure_code"], "runner_tool_path_capability")
+        self.assertIn("BLOCKED_TOOL_CAPABILITY", metrics["tool_access_error"])
+
+    def test_reparse_words_without_tool_context_or_final_contract_are_ignored(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed("ordinary traceback: path contains a reparse point")
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": (
+                "analysis only: path contains a reparse point")},
+        }))
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["blocked_tool_count"], 0)
+        self.assertEqual(metrics["tool_access_failure_code"], "")
+
+    def test_reparse_traceback_with_apply_patch_filename_is_not_host_tool_failure(self) -> None:
+        translator = CodexJsonTranslator()
+        traceback = (
+            "Traceback: C:/app/apply_patch_worker.py line 8; "
+            "OSError: path contains a reparse point")
+        translator.feed(traceback)
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "status": "failed",
+                "aggregated_output": traceback,
+            },
+        }))
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["blocked_tool_count"], 0)
+        self.assertEqual(metrics["tool_access_failure_code"], "")
 
 
 class OpencodeTranslatorTests(unittest.TestCase):
@@ -513,6 +615,23 @@ class StreamAndProbeSafetyTests(unittest.TestCase):
         self.assertGreaterEqual(metrics["raw_chunk_count"], 1)
         self.assertGreaterEqual(metrics["max_raw_output_gap_sec"], 0.04)
 
+    def test_provider_process_uses_explicit_isolated_working_directory(self) -> None:
+        command = [
+            sys.executable, "-u", "-c",
+            "import os; print(os.getcwd(), flush=True)",
+        ]
+        with tempfile.TemporaryDirectory(prefix="sts2-provider-cwd-test-") as root:
+            provider_cwd = Path(root) / "isolated-repo"
+            provider_cwd.mkdir()
+            with mock.patch.object(
+                    llm_review, "LIVE_STREAM", self._stream_path(root)):
+                rc, tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 10, cwd=provider_cwd)
+
+        self.assertEqual(rc, 0)
+        self.assertFalse(timed_out or stopped or stalled)
+        self.assertIn(str(provider_cwd.resolve()), tail)
+
     def test_probe_timeout_terminates_spawned_process_tree(self) -> None:
         command = [sys.executable, "-c", "import time; time.sleep(60)"]
         terminate = llm_review._terminate_process_tree
@@ -527,6 +646,17 @@ class StreamAndProbeSafetyTests(unittest.TestCase):
 
 
 class LifecycleScriptTests(unittest.TestCase):
+    def test_cold_start_prepares_pinned_codex_before_deploy_or_runner(self) -> None:
+        text = (ASCEND / "scripts" / "Start-Agent.ps1").read_text(encoding="utf-8")
+
+        install = text.index('Join-Path $PSScriptRoot "Install-CodexCompat.ps1"')
+        deploy = text.index('Join-Path $PSScriptRoot "Deploy-Mod.ps1"')
+        runner = text.index("Start-Process -FilePath $pythonExe")
+        self.assertLess(install, deploy)
+        self.assertLess(install, runner)
+        self.assertIn("Luna will remain unavailable", text)
+        self.assertIn("without starting a provider", text)
+
     def test_start_and_stop_match_only_production_codex_review_shape(self) -> None:
         for name in ("Start-Agent.ps1", "Stop-Agent.ps1"):
             text = (ASCEND / "scripts" / name).read_text(encoding="utf-8")

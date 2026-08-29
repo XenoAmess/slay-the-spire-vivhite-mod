@@ -126,6 +126,10 @@ class ReviewSandboxAclTests(unittest.TestCase):
                 side_effect=normalize,
             ),
             mock.patch.object(
+                llm_review, "_codex_windows_filesystem_preflight",
+                return_value="",
+            ),
+            mock.patch.object(
                 llm_review, "_run_captured_stop_aware", side_effect=fail_clone,
             ),
             mock.patch.object(llm_review, "_stream_run") as provider,

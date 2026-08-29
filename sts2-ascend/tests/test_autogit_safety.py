@@ -950,6 +950,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             def write_forbidden(cmd, timeout, translate=None, **_kwargs):
                 sandbox = Path(cmd[cmd.index("--dir") + 1])
+                self.assertEqual(Path(_kwargs["cwd"]), sandbox)
                 sandbox_paths.append(sandbox)
                 (sandbox / "outside.txt").write_text("model outside\n", encoding="utf-8")
                 policy = sandbox / "sts2-ascend" / "brain" / "policy.py"
