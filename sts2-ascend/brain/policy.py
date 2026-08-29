@@ -4786,6 +4786,26 @@ class Policy:
         n_eng = sum(1 for c in deck if self._scaling_power_active(c, deck))
         return burst + credit * min(n_eng, cap_n)
 
+    def _card_pick_burst_audit(self, deck: list[dict], card: dict,
+                               max_hp: int | None = None,
+                               act: int | None = None) -> str:
+        """Return a side-effect-free burst delta for a picked reward card."""
+        if not bool(self.know.policy.get("card_pick_burst_audit", True)):
+            return ""
+        try:
+            base_deck = list(deck or [])
+            before = float(self.deck_effective_burst(base_deck))
+            after = float(self.deck_effective_burst(base_deck + [card]))
+            line = float(self._starve_line(max_hp, act=act))
+            card_id = str(card.get("card_id") or "").upper().rstrip("+") or "?"
+        except (AttributeError, TypeError, ValueError):
+            return ""
+        return (
+            f"；CARD_BURST_PICK_AUDIT:card={card_id},before={before:.1f},"
+            f"after={after:.1f},delta={after - before:+.1f},line={line:.1f},"
+            f"starved_before={int(before < line)},starved_after={int(after < line)}"
+        )
+
     def _deck_good_count(self, deck: list[dict]) -> int:
         """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
         return sum(1 for c in deck
@@ -5300,6 +5320,8 @@ class Policy:
                 if explore_tag is not None:
                     tags.append(explore_tag)
                 _det_note = f"；{'；'.join(_best_det)}" if _best_det else ""
+                explore_note += self._card_pick_burst_audit(
+                    deck, best, max_hp=_mh, act=_act)
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
                                 f"{_det_note}{explore_note}；候选：{', '.join(vals)}",

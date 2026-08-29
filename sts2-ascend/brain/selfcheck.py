@@ -8064,6 +8064,11 @@ def main() -> int:
         "run": {"current_hp": 70, "max_hp": 80, "floor": 4,
                 "deck": direct_thin_deck}}
     d_direct_thin = offer_pol.decide(direct_thin_state, offer_ctx)
+    assert ("CARD_BURST_PICK_AUDIT:" in d_direct_thin.reason
+            and "before=" in d_direct_thin.reason
+            and "after=" in d_direct_thin.reason
+            and "delta=" in d_direct_thin.reason), \
+        f"奖励选牌理由缺少有效爆发前后审计: {d_direct_thin.reason}"
     assert d_direct_thin.action == "choose_reward_card" and "单薄卡组正价值保底" in d_direct_thin.reason, \
         f"REWARD 单薄保底只阻止 skip 却未选择卡牌: {d_direct_thin.action}（{d_direct_thin.reason}）"
 

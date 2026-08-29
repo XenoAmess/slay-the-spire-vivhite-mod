@@ -5682,3 +5682,47 @@ complete_persisted_chain=True）。生涯 0/1118，本批 8 局全败，7 局一
 3. 观察点（下批复盘核对）：① EVENT_FORCED_RISK_WORST_FIRST 留痕首发与 hp_min
    差值方向；② 低血事件后 3 层存活率；③ JOINT_FLIP_TTK_CAP 首验窗口；
    ④ HAND_TAX 税负战的战损放大计量（9 税/回合量级）。
+
+# 2026-08-30 ｜奖励选牌有效爆发审计（CARD_BURST_PICK_AUDIT）
+
+## 一、失败包与样本对账
+
+- 本批继续沿用已完整验收的 failed_review evidence；失败包只作证据，不自动合入。
+- 主样本为 review prompt 中的第 808~812 局 exact 链，并交叉核对 lessons 尾部第
+  1121~1136 局：连续失败，输出饥饿相关旋钮已饱和。
+- 已复核当前 HEAD：逐 Boss 血池的 `BOSS_RACE_COMBO_GATE` 已有生产消费者和 selfcheck，
+  因此本批不重复实现该旧候选。
+
+## 二、样本与主假设
+
+**HYPOTHESIS**：输出饥饿的剩余不确定性之一，是奖励选牌的最终选择是否增加
+`deck_effective_burst` 没有进入生产理由；因此无法区分“选牌确实补了有效爆发”与“只提高
+静态牌值但没有补供给”。
+
+**EVIDENCE**：808~812 链中 Boss 竞速失败与 812-F8 单节点强制进场、F9 感染税累积并存；
+1121~1136 lessons 尾部仍报告输出饥饿链和相关旋钮饱和。现有 `_reward` 理由只记录价值、
+门槛、探索备注和候选值；`deck_effective_burst` 与 `_starve_line` 已是现成生产口径，
+但未记录最终（含 UCB 探索后的）被选牌前后差值。
+
+**EXPECTED_SIGNAL**：未来 3~10 局的主动奖励选牌理由出现
+`CARD_BURST_PICK_AUDIT`，包含最终卡牌、before/after/delta、饥饿线及前后饥饿标志；
+至少 3 个饥饿态主动选牌后，可按 delta 方向检验选牌是否真正补供给。若 delta 普遍为零或
+仍为负，假设被证伪，不据此继续加分或加门。
+
+## 三、落地改动
+
+| 项 | 内容 |
+| --- | --- |
+| 代码动作 | `brain/policy.py` 新增 `_card_pick_burst_audit`，在 REWARD 最终 `choose_reward_card` 理由追加同一 `deck_effective_burst` / `_starve_line` 口径的前后审计；`brain/knowledge.py` 增加默认开启的 `card_pick_burst_audit` 开关 |
+| 性质边界 | 纯观测；不改 `eval_reward_card`、排序、UCB、门槛、tags 或实际动作；审计对象是 UCB 之后的最终 `best` |
+| 测试 | `brain/selfcheck.py` 的 REWARD 单薄卡组夹具断言理由包含审计 marker、before、after、delta；`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK** |
+| 运行期复核 | 下批统计 marker 首发局、主动选牌数、delta 分布、starved_before→starved_after 转移，并与后续战斗输出/战损对照 |
+| 撤回条件 | 若观测证明审计没有增量信息或造成理由不可读，关闭 `card_pick_burst_audit`；删除 helper 与 selfcheck 断言即可回到原选牌行为 |
+
+## 四、经验沉淀
+
+1. 已有生产消费者的候选（逐 Boss 血池）不能因旧复盘文字再次重复立项；先对账 HEAD 和
+   selfcheck，再寻找尚未进入消费链的观测缺口。
+2. 供给审计必须测最终落牌，而不是贪心排序首项；否则会把受控探索误报成另一种选牌行为。
+3. 复用既有 `deck_effective_burst` 和饥饿线，只增加理由观测，能在不改变策略的前提下
+   直接证伪“选牌补供给”假设。
