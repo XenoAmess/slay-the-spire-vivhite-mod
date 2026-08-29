@@ -759,6 +759,129 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(result("documented", False), ("documented", False))
         self.assertEqual(result("changed", True), ("changed", True))
 
+    def test_evidence_preflight_deferred_keeps_luna_lineage_without_retry_count(self) -> None:
+        batch = [{
+            "run": 1085,
+            "time": "legacy-replay",
+            "queue_id": "luna-preflight-1085",
+            "runner": "codex",
+            "model": "gpt-5.6-luna",
+            "backend_key": "luna-max",
+            "variant": "",
+            "reasoning_effort": "max",
+            "priority": 2,
+            "approve_for_me": True,
+            "sandbox": "workspace-write",
+            "every": 1,
+            "source": "preferred",
+            "retry_same_model": True,
+            "retry_count": 4,
+            "retry_group": "pkg-target",
+            "replay_target": "pkg-target",
+            "salvage_packages": ["pkg-target"],
+            "salvage_attempts": ["pkg-old-attempt"],
+        }]
+        self.queue.write_text(json.dumps({
+            "pending": [],
+            "reviewing": {
+                "runs": [1085], "items": batch, "started": "now",
+            },
+        }), encoding="utf-8")
+        prompt = (self.repo_dir / "sts2-ascend" / "knowledge"
+                  / "review_prompt_latest.md")
+        prompt.parent.mkdir(parents=True)
+        know = SimpleNamespace(
+            stats={"global": {"runs": 1085}},
+            progression={"review_report_only_streak": 0},
+            save=mock.Mock(),
+        )
+        agent = SimpleNamespace(know=know, request_restart=False)
+        cfg = {
+            "enabled": True,
+            "runner": "codex",
+            "codex_bin": "codex.CMD",
+            "model": "gpt-5.6-luna",
+            "preferred_timeout_min": 480,
+            "stall_warn_min": 15,
+            "stall_timeout_min": 30,
+            "pre_work_timeout_min": 5,
+            "review_model_chain": [{
+                "key": "luna-max", "priority": 2, "runner": "codex",
+                "model": "gpt-5.6-luna", "reasoning_effort": "max",
+                "approve_for_me": True, "sandbox": "workspace-write",
+                "every_runs": 1,
+            }],
+        }
+        sandbox = llm_review.SandboxReviewResult(
+            rc=-1,
+            error="failed-package evidence unavailable",
+            replay_evidence_requested=True,
+            replay_evidence_complete=False,
+            replay_evidence_error="retry evidence unavailable",
+            replay_evidence_model_started=False,
+            provider_work_started=False,
+        )
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "runner_binary",
+                                return_value="codex.CMD"),
+              mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+              mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+              mock.patch.object(llm_review, "build_review_command",
+                                return_value=["codex.CMD", "exec"]),
+              mock.patch.object(llm_review, "_run_review_sandbox",
+                                return_value=sandbox) as run_sandbox,
+              mock.patch.object(llm_review, "_save_review_salvage") as save,
+              mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_stream_begin"),
+              mock.patch.object(llm_review, "_stream_end"),
+              mock.patch.object(llm_review, "_launch_viewer"),
+              mock.patch.object(llm_review, "_launch_speaker"),
+              mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+              mock.patch.object(autogit, "commit_progress_result"),
+              mock.patch.object(autogit, "head", return_value="a" * 40),
+              mock.patch.object(autogit, "set_review_active"),
+              mock.patch.object(autogit, "push_pending", return_value=True)):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "deferred")
+        run_sandbox.assert_called_once()
+        self.assertEqual(
+            run_sandbox.call_args.kwargs["replay_packages"], ["pkg-target"])
+        self.assertEqual(
+            run_sandbox.call_args.kwargs["replay_attempts"], ["pkg-old-attempt"])
+        save.assert_not_called()
+        mark.assert_not_called()
+        self.assertTrue(batch[0]["retry_same_model"])
+        self.assertEqual(
+            (batch[0]["runner"], batch[0]["model"],
+             batch[0]["backend_key"], batch[0]["reasoning_effort"],
+             batch[0]["approve_for_me"], batch[0]["sandbox"]),
+            ("codex", "gpt-5.6-luna", "luna-max", "max", True,
+             "workspace-write"),
+        )
+
+        with mock.patch.object(llm_review.time, "time", return_value=1000.0):
+            delay = llm_review._finalize_review_batch(
+                batch, outcome, log=lambda _message: None)
+
+        self.assertEqual(delay, 60.0)
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual(len(saved["pending"]), 1)
+        retry = saved["pending"][0]
+        self.assertEqual(retry["retry_count"], 4)
+        self.assertEqual(retry["retry_after"], 1060.0)
+        self.assertTrue(retry["retry_same_model"])
+        self.assertEqual(retry["retry_group"], "pkg-target")
+        self.assertEqual(retry["replay_target"], "pkg-target")
+        self.assertEqual(retry["salvage_packages"], ["pkg-target"])
+        self.assertEqual(retry["salvage_attempts"], ["pkg-old-attempt"])
+
     def test_full_reviewing_items_must_match_runs_and_preserve_group_identity(self) -> None:
         valid = {
             "pending": [],

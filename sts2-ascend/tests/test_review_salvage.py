@@ -708,6 +708,133 @@ class ReviewSalvageTests(unittest.TestCase):
             mark.assert_not_called()
             self.assertEqual(save.call_args.args[1], "统一停机中断并全量保全")
 
+    def test_replay_evidence_preflight_is_deferred_without_model_failure(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-preflight-") as root:
+            repo = Path(root) / "repo"
+            prompt = repo / "sts2-ascend" / "knowledge" / "review_prompt_latest.md"
+            prompt.parent.mkdir(parents=True)
+            status: dict = {}
+            know = SimpleNamespace(
+                stats={"global": {"runs": 1085}}, progression={}, save=mock.Mock())
+            evidence_error = "retry evidence schema 3 candidate is unavailable"
+            sandbox = llm_review.SandboxReviewResult(
+                rc=-1,
+                error="failed-package evidence unavailable: " + evidence_error,
+                replay_evidence_requested=True,
+                replay_evidence_complete=False,
+                replay_evidence_error=evidence_error,
+                replay_evidence_model_started=False,
+                provider_work_started=False,
+            )
+            cfg = {
+                "enabled": True, "runner": "codex", "codex_bin": "codex.CMD",
+                "model": "gpt-5.6-luna", "preferred_timeout_min": 480,
+                "stall_warn_min": 15, "stall_timeout_min": 30,
+                "pre_work_timeout_min": 5,
+            }
+            with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                  mock.patch.object(llm_review, "runner_binary",
+                                    return_value="codex.CMD"),
+                  mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+                  mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+                  mock.patch.object(llm_review, "build_review_command",
+                                    return_value=["codex.CMD", "exec"]),
+                  mock.patch.object(llm_review, "_run_review_sandbox",
+                                    return_value=sandbox),
+                  mock.patch.object(llm_review, "_save_review_salvage") as save,
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_stream_begin"),
+                  mock.patch.object(llm_review, "_stream_end"),
+                  mock.patch.object(llm_review, "_launch_viewer"),
+                  mock.patch.object(llm_review, "_launch_speaker"),
+                  mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+                  mock.patch.object(autogit, "commit_progress_result"),
+                  mock.patch.object(autogit, "head", return_value="a" * 40),
+                  mock.patch.object(autogit, "set_review_active"),
+                  mock.patch.object(autogit, "push_pending", return_value=True)):
+                changed = llm_review.run_review(
+                    know, log=lambda _message: None,
+                    runner="codex", model="gpt-5.6-luna",
+                    backend_key="luna-max", reasoning_effort="max",
+                    approve_for_me=True, every=1, source="preferred",
+                    batch_runs=[1085], async_mode=True, _status=status,
+                    salvage_packages=["pkg-target"])
+
+            self.assertFalse(changed)
+            self.assertEqual(status["outcome"], "deferred")
+            self.assertEqual(
+                status["deferred_kind"], "replay_evidence_preflight")
+            self.assertEqual(status["reason"], evidence_error)
+            self.assertFalse(status["startup_unavailable"])
+            self.assertFalse(status["provider_launch_attempted"])
+            self.assertFalse(status["provider_work_started"])
+            save.assert_not_called()
+            mark.assert_not_called()
+
+    def test_started_provider_rc_failure_remains_a_model_failure(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-provider-failure-") as root:
+            repo = Path(root) / "repo"
+            prompt = repo / "sts2-ascend" / "knowledge" / "review_prompt_latest.md"
+            prompt.parent.mkdir(parents=True)
+            status: dict = {}
+            know = SimpleNamespace(
+                stats={"global": {"runs": 1085}}, progression={}, save=mock.Mock())
+            sandbox = llm_review.SandboxReviewResult(
+                rc=17,
+                error="provider process failed",
+                replay_evidence_requested=True,
+                replay_evidence_complete=False,
+                replay_evidence_model_started=True,
+                provider_work_started=True,
+            )
+            cfg = {
+                "enabled": True, "runner": "codex", "codex_bin": "codex.CMD",
+                "model": "gpt-5.6-luna", "preferred_timeout_min": 480,
+                "stall_warn_min": 15, "stall_timeout_min": 30,
+                "pre_work_timeout_min": 5,
+            }
+            saved_package = Path(root) / "pkg-new-attempt"
+            with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                  mock.patch.object(llm_review, "runner_binary",
+                                    return_value="codex.CMD"),
+                  mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+                  mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+                  mock.patch.object(llm_review, "build_review_command",
+                                    return_value=["codex.CMD", "exec"]),
+                  mock.patch.object(llm_review, "_run_review_sandbox",
+                                    return_value=sandbox),
+                  mock.patch.object(llm_review, "_save_review_salvage",
+                                    return_value=saved_package) as save,
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_stream_begin"),
+                  mock.patch.object(llm_review, "_stream_end"),
+                  mock.patch.object(llm_review, "_launch_viewer"),
+                  mock.patch.object(llm_review, "_launch_speaker"),
+                  mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+                  mock.patch.object(autogit, "commit_progress_result"),
+                  mock.patch.object(autogit, "head", return_value="a" * 40),
+                  mock.patch.object(autogit, "set_review_active"),
+                  mock.patch.object(autogit, "push_pending", return_value=True)):
+                changed = llm_review.run_review(
+                    know, log=lambda _message: None,
+                    runner="codex", model="gpt-5.6-luna",
+                    backend_key="luna-max", reasoning_effort="max",
+                    approve_for_me=True, every=1, source="preferred",
+                    batch_runs=[1085], async_mode=True, _status=status,
+                    salvage_packages=["pkg-target"])
+
+            self.assertFalse(changed)
+            self.assertEqual(status["outcome"], "failed")
+            self.assertNotIn("deferred_kind", status)
+            self.assertFalse(status["startup_unavailable"])
+            self.assertTrue(status["provider_work_started"])
+            save.assert_called_once()
+            mark.assert_called_once()
+
     def test_stopped_raw_clone_is_deferred_then_recovered_by_new_worker(self) -> None:
         raw = Path(tempfile.mkdtemp(prefix="sts2-review-sandbox-"))
         snapshot = Path(tempfile.mkdtemp(prefix="sts2-review-snapshot-"))

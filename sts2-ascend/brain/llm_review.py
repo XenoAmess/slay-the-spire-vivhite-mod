@@ -2080,20 +2080,30 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             _status["unresolved_salvage_packages"] = [
                 name for name in replay_packages
                 if resolutions.get(name) not in {"integrated", "no_valid_change"}]
+        evidence_preflight_failed = (
+            sandbox.replay_evidence_requested
+            and not sandbox.replay_evidence_complete
+            and not sandbox.replay_evidence_model_started
+            and not stopped)
+        if evidence_preflight_failed:
+            # No model ran and the original lineage is already the complete
+            # forensic source.  Do not manufacture a huge empty attempt; the
+            # unchanged queue item will retry after evidence recovery.
+            if _status is not None:
+                _status.update({
+                    "outcome": "deferred",
+                    "deferred_kind": "replay_evidence_preflight",
+                    "reason": (sandbox.replay_evidence_error
+                               or sandbox.error
+                               or "failed-package evidence unavailable"),
+                    "startup_unavailable": False,
+                    "provider_launch_attempted": False,
+                })
+            log("[llm] 完整失败包证据尚不可用；未启动模型、未消费回执、"
+                "未删除原包，target 保持队首重试")
+            return False
         if sandbox.error or stopped:
-            evidence_preflight_failed = (
-                sandbox.replay_evidence_requested
-                and not sandbox.replay_evidence_complete
-                and not sandbox.replay_evidence_model_started
-                and not stopped)
-            if evidence_preflight_failed:
-                # No model ran and the original lineage is already the complete
-                # forensic source.  Do not manufacture a huge empty attempt; the
-                # unchanged queue item will retry after evidence recovery.
-                log("[llm] 完整失败包证据尚不可用；未启动模型、未消费回执、"
-                    "未删除原包，target 保持队首重试")
-            else:
-                save_failure(sandbox.error or "协作停止留下的部分复盘现场")
+            save_failure(sandbox.error or "协作停止留下的部分复盘现场")
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
             if _status is not None:
@@ -5132,6 +5142,15 @@ def _resume_replay_lineage_resolution(target_package: Path,
 
 _RETRY_REPLAY_TOTAL_BYTES = 256 * 1024
 _RETRY_EVIDENCE_SCHEMA = 3
+_LEGACY_EMPTY_RETRY_PATH_FIELDS = (
+    "all_paths",
+    "allowed_paths",
+    "transient_artifact_paths",
+    "online_runtime_paths",
+    "rejected_or_unexpected_paths",
+    "sandbox_sibling_paths",
+)
+_EMPTY_PATCH_SHA256 = hashlib.sha256(b"").hexdigest()
 _RETRY_SANDBOX_EVIDENCE_SCHEMA = 1
 _RETRY_SANDBOX_EVIDENCE_ROOT = PurePosixPath(
     "sts2-ascend/.review_evidence/failed_review")
@@ -5236,6 +5255,169 @@ def _publish_manifest_update(package: Path, manifest: dict) -> None:
         temp.unlink(missing_ok=True)
 
 
+def _legacy_empty_retry_evidence_is_complete(
+    package: Path,
+    manifest: dict,
+) -> bool:
+    """Accept only a fully captured legacy package that proves zero changes."""
+    pre_head = manifest.get("pre_head")
+    if (not isinstance(pre_head, str) or len(pre_head) != 40
+            or any(char not in "0123456789abcdefABCDEF" for char in pre_head)):
+        return False
+    previous_schema = manifest.get("retry_evidence_schema")
+    if (manifest.get("retry_evidence_ready") is True
+            or (previous_schema is not None
+                and (type(previous_schema) is not int
+                     or previous_schema >= _RETRY_EVIDENCE_SCHEMA))):
+        return False
+    if (manifest.get("snapshot_complete") is not True
+            or manifest.get("snapshot_deferred") is not False
+            or manifest.get("raw_sandbox_deferred") is not False
+            or manifest.get("snapshot_included") is not False
+            or manifest.get("raw_sandbox_included") is not False):
+        return False
+    if (type(manifest.get("patch_bytes")) is not int
+            or manifest.get("patch_bytes") != 0
+            or manifest.get("patch_sha256") != _EMPTY_PATCH_SHA256):
+        return False
+    for field in _LEGACY_EMPTY_RETRY_PATH_FIELDS:
+        value = manifest.get(field)
+        if not isinstance(value, list) or value:
+            return False
+
+    validated = package / "validated_candidate.patch"
+    if validated.exists() or validated.is_symlink():
+        return False
+    for pointer_name in ("snapshot_pointer.txt", "raw_sandbox_pointer.txt"):
+        pointer = package / pointer_name
+        if pointer.exists() or pointer.is_symlink():
+            return False
+
+    try:
+        wip = package / "wip.patch"
+        report = package / "report.md"
+        file_states_path = package / "file_states.json"
+        files_root = package / "files"
+        if (wip.is_symlink() or not wip.is_file() or wip.stat().st_size != 0
+                or report.is_symlink() or not report.is_file()
+                or file_states_path.is_symlink() or not file_states_path.is_file()
+                or files_root.is_symlink() or not files_root.is_dir()):
+            return False
+        for forbidden_name in ("captured_snapshot", "raw_sandbox"):
+            forbidden = package / forbidden_name
+            is_junction = getattr(forbidden, "is_junction", lambda: False)
+            if forbidden.exists() or forbidden.is_symlink() or is_junction():
+                return False
+        file_states = json.loads(file_states_path.read_text(encoding="utf-8"))
+        if not isinstance(file_states, list) or file_states:
+            return False
+        for path in files_root.rglob("*"):
+            is_junction = getattr(path, "is_junction", lambda: False)
+            if path.is_symlink() or is_junction() or not path.is_dir():
+                return False
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return True
+
+
+def _materialize_legacy_empty_retry_evidence(
+    package: Path,
+    manifest: dict,
+    previous_history: list[dict],
+    candidate_path: Path,
+    inventory_path: Path,
+    log=print,
+) -> dict | None:
+    """Upgrade a strongly proven zero-change legacy package to schema 3."""
+    if not _legacy_empty_retry_evidence_is_complete(package, manifest):
+        return None
+
+    candidate_temp = package / (
+        f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
+    inventory_temp = package / (
+        f".retry_candidate_inventory.{os.getpid()}.{threading.get_ident()}.tmp")
+    materialized_at = time.strftime("%Y-%m-%d %H:%M:%S")
+    prompt_status = (
+        "package_root_preserved"
+        if any((package / name).is_file()
+               for name in ("review_prompt.md", "invocation_prompt.txt"))
+        else "unavailable_not_fabricated")
+    try:
+        candidate_temp.write_bytes(b"")
+        inventory = {
+            "schema": _RETRY_EVIDENCE_SCHEMA,
+            "package": package.name,
+            "pre_head": str(manifest.get("pre_head") or ""),
+            "origin": "legacy_certified_empty",
+            "source": "legacy_certified_empty",
+            "source_detail": "strongly proven legacy zero-change snapshot",
+            "original_prompt_evidence": prompt_status,
+            "raw_sandbox_evidence": "unavailable_not_fabricated",
+            "auto_apply": False,
+            "path_count": 0,
+            "paths": [],
+            "accepted_candidate_paths": [],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "sources": [{
+                "kind": "legacy_zero_change_snapshot",
+                "label": "complete empty snapshot and empty binary patch",
+                "paths": [],
+                "accepted_candidate_paths": [],
+                "candidate_bytes": 0,
+                "candidate_sha256": _EMPTY_PATCH_SHA256,
+            }],
+        }
+        inventory_temp.write_text(
+            json.dumps(inventory, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(candidate_temp, candidate_path)
+        _replace_with_retry(inventory_temp, inventory_path)
+
+        history = list(previous_history)
+        history.append({
+            "schema": manifest.get("retry_evidence_schema"),
+            "source_manifest_schema": manifest.get("schema"),
+            "materialized_at": materialized_at,
+            "candidate_bytes": 0,
+            "candidate_path_count": 0,
+            "candidate_sha256": _EMPTY_PATCH_SHA256,
+            "origin": "legacy_certified_empty",
+            "original_prompt_evidence": prompt_status,
+            "raw_sandbox_evidence": "unavailable_not_fabricated",
+            "migration_note": (
+                "Legacy zero-change snapshot upgraded only after its manifest, "
+                "empty patch, empty file inventory and captured files all agreed."),
+        })
+        upgraded = dict(manifest)
+        upgraded.update({
+            "retry_evidence_ready": True,
+            "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+            "retry_evidence_history": history,
+            "retry_evidence_materialized_at": materialized_at,
+            "retry_evidence_origin": "legacy_certified_empty",
+            "retry_evidence_source": "legacy_certified_empty",
+            "retry_original_prompt_evidence": prompt_status,
+            "retry_raw_sandbox_evidence": "unavailable_not_fabricated",
+            "retry_candidate_patch": candidate_path.name,
+            "retry_candidate_inventory": inventory_path.name,
+            "retry_candidate_bytes": 0,
+            "retry_candidate_sha256": _EMPTY_PATCH_SHA256,
+            "retry_candidate_path_count": 0,
+            "retry_inventory_path_count": 0,
+            "retry_candidate_auto_apply": False,
+        })
+        _publish_manifest_update(package, upgraded)
+        log("[llm] upgraded strongly-proven legacy zero-change retry evidence: "
+            f"{package.name}")
+        return upgraded
+    finally:
+        candidate_temp.unlink(missing_ok=True)
+        inventory_temp.unlink(missing_ok=True)
+
+
 def _materialize_retry_evidence(package: Path, log=print) -> dict:
     """Build a review-only candidate from a recovered raw clone.
 
@@ -5276,6 +5458,11 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         # all-files WIP merely because the raw clone was already discarded.
         validated = package / "validated_candidate.patch"
         if not validated.is_file():
+            upgraded = _materialize_legacy_empty_retry_evidence(
+                package, manifest, previous_history, candidate_path,
+                inventory_path, log=log)
+            if upgraded is not None:
+                return upgraded
             return manifest
         candidate_temp = package / (
             f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
@@ -8354,6 +8541,11 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     outcome = status.get("outcome", "changed" if executed else "failed")
     if outcome == "canceled" or status.get("canceled"):
         return "canceled"
+    if outcome == "deferred":
+        log("[llm] 失败包证据预检尚未就绪；provider 未启动，"
+            f"保留 {plan.display_model} 原批次亲和性后延迟重试："
+            f"{status.get('reason', '证据不可用')}")
+        return "deferred"
     if inherited_packages and outcome in {"changed", "completed", "documented"} and unresolved:
         # The accepted code/report commit remains valid.  Missing/still_pending
         # receipts or an unconfirmed push only keep the forensic package lineage

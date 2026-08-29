@@ -94,6 +94,162 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
             "model tail", encoding="utf-8")
         return package
 
+    def _legacy_empty_package(self, name: str) -> Path:
+        package = self.salvage / name
+        (package / "files").mkdir(parents=True)
+        manifest = {
+            "schema": 1,
+            "pre_head": "b" * 40,
+            "snapshot_complete": True,
+            "snapshot_deferred": False,
+            "raw_sandbox_deferred": False,
+            "snapshot_included": False,
+            "raw_sandbox_included": False,
+            "all_paths": [],
+            "allowed_paths": [],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "patch_bytes": 0,
+            "patch_sha256": llm_review._EMPTY_PATCH_SHA256,
+        }
+        (package / "manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8")
+        (package / "file_states.json").write_text("[]\n", encoding="utf-8")
+        (package / "wip.patch").write_bytes(b"")
+        (package / "report.md").write_text("", encoding="utf-8")
+        return package
+
+    def test_strongly_proven_legacy_empty_package_upgrades_to_schema_3(self) -> None:
+        package = self._legacy_empty_package("pkg-legacy-empty")
+        messages: list[str] = []
+
+        upgraded = llm_review._materialize_retry_evidence(
+            package, log=messages.append)
+
+        self.assertTrue(upgraded["retry_evidence_ready"])
+        self.assertEqual(
+            upgraded["retry_evidence_schema"], llm_review._RETRY_EVIDENCE_SCHEMA)
+        self.assertEqual(upgraded["retry_candidate_bytes"], 0)
+        self.assertEqual(upgraded["retry_candidate_path_count"], 0)
+        self.assertEqual(upgraded["retry_inventory_path_count"], 0)
+        self.assertEqual(
+            upgraded["retry_candidate_sha256"], llm_review._EMPTY_PATCH_SHA256)
+        self.assertEqual(
+            upgraded["retry_evidence_origin"], "legacy_certified_empty")
+        self.assertEqual(
+            upgraded["retry_original_prompt_evidence"],
+            "unavailable_not_fabricated")
+        self.assertEqual(
+            upgraded["retry_raw_sandbox_evidence"],
+            "unavailable_not_fabricated")
+        self.assertFalse(upgraded["retry_candidate_auto_apply"])
+        self.assertEqual((package / "retry_candidate.patch").read_bytes(), b"")
+        inventory = json.loads((
+            package / "retry_candidate_inventory.json").read_text(
+                encoding="utf-8"))
+        self.assertEqual(inventory["schema"], llm_review._RETRY_EVIDENCE_SCHEMA)
+        self.assertEqual(inventory["package"], package.name)
+        self.assertEqual(inventory["paths"], [])
+        self.assertEqual(inventory["accepted_candidate_paths"], [])
+        self.assertEqual(inventory["path_count"], 0)
+        self.assertEqual(inventory["origin"], "legacy_certified_empty")
+        self.assertEqual(
+            inventory["original_prompt_evidence"],
+            "unavailable_not_fabricated")
+        self.assertEqual(
+            inventory["raw_sandbox_evidence"],
+            "unavailable_not_fabricated")
+        self.assertFalse(inventory["auto_apply"])
+        self.assertIn("Legacy zero-change snapshot upgraded",
+                      upgraded["retry_evidence_history"][-1]["migration_note"])
+        self.assertTrue(any("legacy zero-change" in message for message in messages))
+        on_disk = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(on_disk, upgraded)
+
+        # Once published, materialization is idempotent and does not append a
+        # second migration record.
+        again = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        self.assertEqual(len(again["retry_evidence_history"]), 1)
+
+        sandbox = self.root / "legacy-empty-sandbox"
+        sandbox.mkdir()
+        mount = llm_review._mount_failed_review_evidence(
+            sandbox, [package.name], log=lambda _message: None)
+        self.assertTrue(mount["index"]["complete"])
+        self.assertEqual(
+            mount["index"]["packages"][0]["inventory_path_count"], 0)
+        llm_review._verify_failed_review_evidence(sandbox, mount)
+        self.assertTrue(llm_review._remove_failed_review_evidence(
+            sandbox, log=lambda _message: None))
+
+    def test_legacy_empty_upgrade_rejects_every_inconsistent_near_miss(self) -> None:
+        cases = (
+            "captured-file",
+            "classified-path",
+            "hash-mismatch",
+            "nonempty-file-states",
+            "nonempty-wip",
+            "deferred-snapshot",
+            "missing-path-field",
+            "missing-pre-head",
+            "missing-report",
+            "included-captured-snapshot",
+            "included-non-git-raw-sandbox",
+        )
+        for case in cases:
+            with self.subTest(case=case):
+                package = self._legacy_empty_package(f"pkg-{case}")
+                manifest_path = package / "manifest.json"
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if case == "captured-file":
+                    (package / "files" / "unexpected.txt").write_text(
+                        "not empty", encoding="utf-8")
+                elif case == "classified-path":
+                    manifest["all_paths"] = ["sts2-ascend/brain/policy.py"]
+                elif case == "hash-mismatch":
+                    manifest["patch_sha256"] = "0" * 64
+                elif case == "nonempty-file-states":
+                    (package / "file_states.json").write_text(
+                        json.dumps([{"path": "sts2-ascend/brain/policy.py"}]),
+                        encoding="utf-8")
+                elif case == "nonempty-wip":
+                    (package / "wip.patch").write_bytes(b"not empty")
+                elif case == "deferred-snapshot":
+                    manifest["snapshot_deferred"] = True
+                elif case == "missing-path-field":
+                    manifest.pop("sandbox_sibling_paths")
+                elif case == "missing-pre-head":
+                    manifest.pop("pre_head")
+                elif case == "missing-report":
+                    (package / "report.md").unlink()
+                elif case == "included-captured-snapshot":
+                    manifest["snapshot_included"] = True
+                    captured = package / "captured_snapshot" / "files"
+                    captured.mkdir(parents=True)
+                    (captured / "model-change.py").write_text(
+                        "CHANGED = True\n", encoding="utf-8")
+                elif case == "included-non-git-raw-sandbox":
+                    manifest["raw_sandbox_included"] = True
+                    raw = package / "raw_sandbox"
+                    raw.mkdir()
+                    (raw / "orphan-change.py").write_text(
+                        "CHANGED = True\n", encoding="utf-8")
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+                original = json.loads(manifest_path.read_text(encoding="utf-8"))
+                result = llm_review._materialize_retry_evidence(
+                    package, log=lambda _message: None)
+
+                self.assertEqual(result, original)
+                self.assertEqual(
+                    json.loads(manifest_path.read_text(encoding="utf-8")), original)
+                self.assertFalse((package / "retry_candidate.patch").exists())
+                self.assertFalse(
+                    (package / "retry_candidate_inventory.json").exists())
+
     def test_mount_contains_target_and_all_attempt_files_with_integrity(self) -> None:
         target = self._package("pkg-target", b"T", attempts=["pkg-attempt"])
         attempt = self._package("pkg-attempt", b"A")
@@ -251,6 +407,8 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_review_stop_requested",
                                     return_value=False),
                   mock.patch.object(
+                      llm_review, "_publish_review_attempt_receipt") as publish_receipt,
+                  mock.patch.object(
                       llm_review, "_stream_run",
                       side_effect=AssertionError("model must not start"))):
                 result = llm_review._run_review_sandbox(
@@ -263,6 +421,7 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         self.assertIn("完整证据不可用", result.error)
         self.assertFalse(result.replay_evidence_complete)
         self.assertFalse(result.replay_evidence_model_started)
+        publish_receipt.assert_not_called()
         self.assertEqual(llm_review._validated_retry_resolutions(
             result, ["pkg-target"], log=lambda _message: None), {})
         self.assertTrue(package.is_dir())
