@@ -6882,3 +6882,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：高速失血爆毙（4回合掉血66，每回合16≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/1026 胜，当前目标进阶 0
+
+## 第 1027 局复盘（2026-08-29 14:36）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：TAUNT, PRODUCTION, SWORD_BOOMERANG, SHRUG_IT_OFF, BREAKTHROUGH, UNRELENTING, STOMP, SHRUG_IT_OFF, INFLAME, ANGER, HEMOKINESIS, UNMOVABLE, TWIN_STRIKE, PACTS_END, FIGHT_ME
+- 本局遗物：PENDULUM
+- 战斗记录：F17 Boss战 掉血41｜竞速审计：T3判死→实战7回合获胜; F19 Monster战 掉血1; F20 Monster战 掉血4; F21 Monster战 掉血19; F23 Monster战 掉血27; F24 Monster战 掉血34（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PACTS_END(24分/107局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/1027 胜，当前目标进阶 0
