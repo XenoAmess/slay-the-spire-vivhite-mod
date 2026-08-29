@@ -7520,3 +7520,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（66%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1084 胜，当前目标进阶 0
+
+## 第 1085 局复盘（2026-08-29 22:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：THUNDERCLAP, SHRUG_IT_OFF, UNRELENTING, SHRUG_IT_OFF, CINDER, JUGGLING, WHIRLWIND, SWORD_BOOMERANG, SPITE
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F9 Unknown战 掉血18; F11 Monster战 掉血2; F12 Monster战 掉血15; F14 Monster战 掉血12; F15 Monster战 掉血16; F17 Boss战 掉血61｜竞速审计：T4判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/31局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PRIMAL_FORCE(24分/7局)，PERFECTED_STRIKE(24分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1085 胜，当前目标进阶 0
