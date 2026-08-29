@@ -7729,3 +7729,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/1103 胜，当前目标进阶 0
+
+## 第 1104 局复盘（2026-08-30 01:22）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：EVIL_EYE, UNRELENTING, HOWL_FROM_BEYOND, DISMANTLE, JUGGLING, SHRUG_IT_OFF, SWORD_BOOMERANG, UPPERCUT, SWORD_BOOMERANG, EVIL_EYE, RUPTURE, HOWL_FROM_BEYOND, PILLAGE, STONE_ARMOR
+- 本局遗物：LASTING_CANDY
+- 战斗记录：F7 Monster战 掉血0; F9 Monster战 掉血4; F12 Monster战 掉血17; F13 Monster战 掉血35; F14 Monster战 掉血0; F17 Boss战 掉血51｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，OFFERING(25分/32局)，PRIMAL_FORCE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1104 胜，当前目标进阶 0
