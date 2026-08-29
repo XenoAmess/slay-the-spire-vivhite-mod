@@ -125,6 +125,10 @@ def _review_hold_root() -> Path:
     return SALVAGE_ROOT.parent / "review_hold"
 
 
+_REVIEW_HOLD_CLOSURE_DIR = ".closed"
+_REVIEW_HOLD_CLOSURE_SCHEMA = 1
+
+
 def _new_review_temp(prefix: str) -> Path:
     root = _review_work_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -3039,6 +3043,209 @@ def _manifest_has_full_replay_receipt(manifest: dict) -> bool:
         and manifest.get("retry_resolution_commit"))
 
 
+def _review_hold_closure_path(target: str) -> Path | None:
+    names = _normalize_salvage_package_names([target])
+    if not names:
+        return None
+    return _review_hold_root() / _REVIEW_HOLD_CLOSURE_DIR / f"{names[0]}.json"
+
+
+def _read_review_hold_closure(target: str) -> dict:
+    path = _review_hold_closure_path(target)
+    if path is None:
+        return {}
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        return receipt if isinstance(receipt, dict) else {}
+    except (FileNotFoundError, OSError, ValueError, TypeError, json.JSONDecodeError):
+        return {}
+
+
+def _active_replay_lineage_names(target: str) -> set[str]:
+    """Return active, readable salvage packages currently bound to one target."""
+    names: set[str] = set()
+    if not SALVAGE_ROOT.is_dir():
+        return names
+    try:
+        packages = list(SALVAGE_ROOT.iterdir())
+    except OSError:
+        return names
+    for package in packages:
+        if (not package.is_dir() or package.name.startswith(".")
+                or package.name.startswith(_CLOSED_SALVAGE_PREFIX)):
+            continue
+        if package.name == target:
+            names.add(package.name)
+            continue
+        try:
+            manifest = json.loads((
+                package / "manifest.json").read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, ValueError, TypeError,
+                json.JSONDecodeError):
+            continue
+        normalized = _normalize_salvage_package_names([
+            manifest.get("replay_target") or package.name])
+        if normalized == [target]:
+            names.add(package.name)
+    return names
+
+
+def _review_hold_closure_is_confirmed(target: str, receipt: dict | None = None) -> bool:
+    """Accept only a full-evidence hold tombstone whose exact ledger row is upstream."""
+    receipt = receipt if isinstance(receipt, dict) else _read_review_hold_closure(target)
+    names = _normalize_salvage_package_names([target])
+    if not names or receipt.get("target") != names[0]:
+        return False
+    try:
+        schema = int(receipt.get("schema") or 0)
+        evidence_schema = int(receipt.get("evidence_schema") or 0)
+    except (TypeError, ValueError):
+        return False
+    resolution = str(receipt.get("resolution") or "")
+    commit = str(receipt.get("commit") or "")
+    ledger_status = str(receipt.get("ledger_status") or "")
+    lineage = _normalize_salvage_package_names(receipt.get("lineage") or [])
+    held_lineage = {
+        package.name
+        for _container, package, manifest in _review_hold_packages()
+        if _normalize_salvage_package_names([
+            manifest.get("replay_target") or package.name]) == names
+    }
+    active_lineage = _active_replay_lineage_names(names[0])
+    if (schema != _REVIEW_HOLD_CLOSURE_SCHEMA
+            or receipt.get("evidence_complete") is not True
+            or evidence_schema < _RETRY_SANDBOX_EVIDENCE_SCHEMA
+            or resolution not in {"integrated", "no_valid_change"}
+            or len(commit) < 8 or names[0] not in lineage
+            or not held_lineage.issubset(lineage)
+            or not active_lineage.issubset(lineage)
+            or "并闭环" not in ledger_status
+            or f"`{commit[:8]}`" not in ledger_status):
+        return False
+    return bool(
+        _upstream_contains_commit(commit)
+        and _upstream_ledger_has_exact_status(names[0], ledger_status))
+
+
+def _confirmed_review_hold_closures() -> dict[str, dict]:
+    """Return remotely confirmed hold targets and their durable receipts."""
+    targets = _normalize_salvage_package_names([
+        manifest.get("replay_target") or package.name
+        for _container, package, manifest in _review_hold_packages()
+    ])
+    confirmed: dict[str, dict] = {}
+    for target in targets:
+        receipt = _read_review_hold_closure(target)
+        if not _review_hold_closure_is_confirmed(target, receipt):
+            continue
+        confirmed[target] = receipt
+    return confirmed
+
+
+def _review_hold_lineage_closure_is_confirmed(package_name: str) -> bool:
+    """Resolve an empty target/attempt quarantine through its target tombstone."""
+    normalized = _normalize_salvage_package_names([package_name])
+    if not normalized:
+        return False
+    name = normalized[0]
+    root = _review_hold_root() / _REVIEW_HOLD_CLOSURE_DIR
+    try:
+        paths = sorted(root.glob("*.json")) if root.is_dir() else []
+    except OSError:
+        return False
+    direct = _review_hold_closure_path(name)
+    if direct is not None and direct.is_file():
+        paths = [direct, *(path for path in paths if path != direct)]
+    for path in paths:
+        try:
+            receipt = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, ValueError, TypeError,
+                json.JSONDecodeError):
+            continue
+        if not isinstance(receipt, dict):
+            continue
+        lineage = _normalize_salvage_package_names(receipt.get("lineage") or [])
+        target = str(receipt.get("target") or "")
+        if name in lineage and _review_hold_closure_is_confirmed(target, receipt):
+            return True
+    return False
+
+
+def _publish_review_hold_closure(
+    original_name: str, manifest: dict, ledger_status: str, log=print,
+) -> bool:
+    """Publish the hold tombstone after code and the exact final ledger are upstream."""
+    normalized = _normalize_salvage_package_names([
+        manifest.get("retry_resolution_target")
+        or manifest.get("replay_target") or original_name])
+    if not normalized:
+        return False
+    target = normalized[0]
+    # Attempts close first.  The target is the lineage commit point and alone
+    # publishes the receipt which suppresses restoration of the whole hold group.
+    if original_name != target:
+        return True
+    records = [
+        (container, package, held_manifest)
+        for container, package, held_manifest in _review_hold_packages()
+        if _normalize_salvage_package_names([
+            held_manifest.get("replay_target") or package.name]) == [target]
+    ]
+    if not records:
+        return True
+    if not _upstream_ledger_has_exact_status(target, ledger_status):
+        log(f"[llm] review_hold 闭环清单尚未精确确认远端；保留 target quarantine：{target}")
+        return False
+    if not _manifest_has_full_replay_receipt(manifest):
+        log(f"[llm] review_hold 闭环缺少完整证据 schema；保留 target quarantine：{target}")
+        return False
+    held_target = next(
+        (held_manifest for _container, package, held_manifest in records
+         if package.name == target), {})
+    lineage = _normalize_salvage_package_names([
+        target,
+        *(manifest.get("retry_resolution_lineage") or []),
+        *(manifest.get("replay_attempt_packages") or []),
+        *(held_target.get("replay_attempt_packages") or []),
+        *(package.name for _container, package, _held_manifest in records),
+    ])
+    queue_ids = list(dict.fromkeys(
+        str(value) for value in [
+            *(manifest.get("replay_queue_ids") or []),
+            *(held_target.get("replay_queue_ids") or []),
+        ] if str(value)))
+    receipt = {
+        "schema": _REVIEW_HOLD_CLOSURE_SCHEMA,
+        "target": target,
+        "lineage": lineage,
+        "resolution": str(manifest.get("retry_resolution") or ""),
+        "commit": str(manifest.get("retry_resolution_commit") or ""),
+        "evidence_complete": True,
+        "evidence_schema": int(
+            manifest.get("retry_resolution_evidence_schema") or 0),
+        "ledger_status": ledger_status,
+        "ledger_confirmed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "queue_ids": queue_ids,
+    }
+    path = _review_hold_closure_path(target)
+    if path is None:
+        return False
+    temp = path.with_name(
+        f".{path.name}.{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(temp, path)
+        return True
+    except OSError as exc:
+        log(f"[llm] review_hold 闭环回执发布失败；保留 target quarantine：{target}（{exc}）")
+        return False
+    finally:
+        temp.unlink(missing_ok=True)
+
+
 def _reset_hold_manifest_for_full_replay(
     package: Path,
     held_manifest: dict,
@@ -3111,6 +3318,8 @@ def _recover_review_holds(log=print) -> list[str]:
     for target, lineage_records in groups.items():
         if _review_stop_requested():
             break
+        if _review_hold_closure_is_confirmed(target):
+            continue
         # A full-evidence receipt already in quarantine is a valid in-flight host
         # closure.  Do not resurrect it while ledger cleanup is proceeding.
         quarantine = SALVAGE_ROOT / f"{_CLOSED_SALVAGE_PREFIX}{target}"
@@ -3174,13 +3383,25 @@ def _recover_salvage_replay_queue(log=print) -> None:
     this scan converts the interrupted transaction (or creates one missing group)
     into exactly one target job and attaches every later failure as evidence.
     """
-    if not SALVAGE_ROOT.is_dir():
+    confirmed_closures = _confirmed_review_hold_closures()
+    resolved_targets = {
+        target: {
+            str(value) for value in (receipt.get("queue_ids") or []) if str(value)
+        }
+        for target, receipt in confirmed_closures.items()
+    }
+    resolved_lineages = {
+        target: set(_normalize_salvage_package_names(receipt.get("lineage") or []))
+        for target, receipt in confirmed_closures.items()
+    }
+    if not SALVAGE_ROOT.is_dir() and not resolved_targets:
         return
     targets: dict[str, tuple[Path, dict]] = {}
     attempts: dict[str, list[str]] = {}
     queue_ids: dict[str, set[str]] = {}
-    resolved_targets: dict[str, set[str]] = {}
-    for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
+    packages = (sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name)
+                if SALVAGE_ROOT.is_dir() else [])
+    for package in packages:
         manifest_path = package / "manifest.json"
         if (not package.is_dir() or package.name.startswith(_CLOSED_SALVAGE_PREFIX)
                 or not manifest_path.is_file()):
@@ -3199,10 +3420,20 @@ def _recover_salvage_replay_queue(log=print) -> None:
         manifest_queue_ids = {
             str(value) for value in (manifest.get("replay_queue_ids") or [])
             if str(value)}
+        if target in resolved_targets:
+            resolved_targets[target].update(manifest_queue_ids)
+            continue
         if manifest.get("retry_resolution_state") in {
                 "claimed_pending_code_push", "code_upstream_confirmed",
                 "quarantined_pending_ledger", "ledger_final_upstream", "done"}:
             resolved_targets.setdefault(target, set()).update(manifest_queue_ids)
+            resolved_lineages.setdefault(target, set()).update(
+                _normalize_salvage_package_names([
+                    target,
+                    package.name,
+                    *(manifest.get("retry_resolution_lineage") or []),
+                    *(manifest.get("replay_attempt_packages") or []),
+                ]))
             continue
         queue_ids.setdefault(target, set()).update(manifest_queue_ids)
         if package.name == target or manifest.get("replay_role") == "target":
@@ -3224,9 +3455,14 @@ def _recover_salvage_replay_queue(log=print) -> None:
                 item_target = str(item.get("replay_target") or "")
                 item_group = str(item.get("retry_group") or "")
                 item_queue_id = str(item.get("queue_id") or "")
+                item_lineage = set(_normalize_salvage_package_names([
+                    *(item.get("salvage_packages") or []),
+                    *(item.get("salvage_attempts") or []),
+                ]))
                 return any(
-                    item_target == target or item_group == target
-                    or (item_queue_id in ids if ids else False)
+                    (item_target == target or item_group == target
+                     or (item_queue_id in ids if ids else False))
+                    and item_lineage.issubset(resolved_lineages.get(target, set()))
                     for target, ids in resolved_targets.items())
 
             pending_before = len(q.get("pending", []))
@@ -3944,6 +4180,11 @@ def _ledger_markers(text: str) -> list[str]:
 
 def _ledger_marker_has_status(text: str, package_name: str, status: str) -> bool:
     """Match one package's row instead of accepting the status from another row."""
+    return _ledger_marker_status(text, package_name) == status
+
+
+def _ledger_marker_status(text: str, package_name: str) -> str:
+    """Read the exact status cell for one named ledger row."""
     marker = f"<!-- rejection:{package_name} -->"
     lines = str(text or "").splitlines()
     for index, line in enumerate(lines[:-1]):
@@ -3952,8 +4193,8 @@ def _ledger_marker_has_status(text: str, package_name: str, status: str) -> bool
             # cannot occur inside a cell. Match the status column exactly; a
             # historical reason mentioning a pending state must not mask closure.
             cells = lines[index + 1].split(" | ")
-            return len(cells) > 5 and cells[5].strip() == status
-    return False
+            return cells[5].strip() if len(cells) > 5 else ""
+    return ""
 
 
 def _flush_pending_rejection_ledger(log=print) -> bool:
@@ -4016,10 +4257,16 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
             # prompt-only closure. Hold recovery explicitly clears that receipt
             # and publishes a fresh replay intent; restore the tracked index too.
             # A complete mounted-evidence receipt must never be reopened here.
+            target_names = _normalize_salvage_package_names([
+                manifest.get("replay_target") or package.name])
+            hold_closure_confirmed = bool(
+                target_names
+                and _review_hold_closure_is_confirmed(target_names[0]))
             reopen_from_hold = bool(
                 manifest.get("review_hold_recovered_at")
                 and manifest.get("replay_enqueue_pending")
-                and not _manifest_has_full_replay_receipt(manifest))
+                and not _manifest_has_full_replay_receipt(manifest)
+                and not hold_closure_confirmed)
             if (reopen_from_hold
                     and not _ledger_marker_has_status(
                         current, package.name, status)):
@@ -4124,6 +4371,55 @@ def _upstream_ledger_contains(package_name: str, status: str) -> bool:
         for index, line in enumerate(lines[:-1]):
             if line.strip() == marker:
                 return status in lines[index + 1]
+        return False
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+
+
+def _upstream_ledger_has_exact_status(package_name: str, status: str) -> bool:
+    """Require the named upstream row's status cell, not a reason substring."""
+    upstream = _upstream_ref()
+    if not upstream or not status:
+        return False
+    try:
+        rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "show", f"{upstream}:{rel_ledger}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        return bool(
+            proc.returncode == 0
+            and _ledger_marker_has_status(proc.stdout, package_name, status))
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return False
+
+
+def _upstream_ledger_has_terminal_closure(package_name: str) -> bool:
+    """Accept only an exact final status cell for a legacy empty quarantine."""
+    upstream = _upstream_ref()
+    if not upstream:
+        return False
+    try:
+        rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+        proc = subprocess.run(
+            ["git", "-C", str(REPO_DIR), "show", f"{upstream}:{rel_ledger}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=30)
+        if proc.returncode != 0:
+            return False
+        status = _ledger_marker_status(proc.stdout, package_name)
+        prefixes = (
+            "GLM 已补合并闭环 `",
+            "GLM 复审确认无有效成果并闭环 `",
+        )
+        for prefix in prefixes:
+            if not status.startswith(prefix) or not status.endswith("`"):
+                continue
+            commit_prefix = status[len(prefix):-1]
+            if (len(commit_prefix) == 8
+                    and all(char in "0123456789abcdefABCDEF"
+                            for char in commit_prefix)):
+                return True
         return False
     except (OSError, subprocess.TimeoutExpired, ValueError):
         return False
@@ -4333,6 +4629,9 @@ def _finish_quarantined_salvage(
         # The exact upstream ledger row is the authoritative delete permission;
         # a crash here is recovered by rechecking it on the next boot.
         pass
+    if not _publish_review_hold_closure(
+            original_name, manifest, final_status, log=log):
+        return False
     if not _delete_closed_quarantine(quarantine, log=log):
         return False
     log(f"[llm] GLM 失败包已完成重审、远端确认并删除：{original_name}")
@@ -5734,10 +6033,24 @@ def _recover_committed_retry_resolutions(log=print) -> list[str]:
         # upstream moved while history was inspected.
         if not _upstream_contains_commit(commit):
             continue
-        result = _close_replayed_salvages(
+        _close_replayed_salvages(
             [target], attempts, {target: resolution}, commit=commit,
             pushed=True, log=log)
-        if target in result["host_pending"] or target in result["closed"]:
+        package = _salvage_package_path(target)
+        try:
+            persisted = json.loads((
+                package / "manifest.json").read_text(encoding="utf-8"))
+        except (AttributeError, FileNotFoundError, OSError, ValueError,
+                TypeError, json.JSONDecodeError):
+            persisted = {}
+        receipt_persisted = bool(
+            persisted.get("retry_resolution") == resolution
+            and persisted.get("retry_resolution_commit") == commit
+            and persisted.get("retry_resolution_state") in {
+                "claimed_pending_code_push", "code_upstream_confirmed",
+                "quarantined_pending_ledger", "ledger_final_upstream", "done",
+            })
+        if receipt_persisted:
             recovered.append(target)
             log(f"[llm] 已从上游提交 {commit[:8]} 恢复失败包回执："
                 f"{target} {resolution}")
@@ -6596,7 +6909,9 @@ def _resume_host_salvage_closures(log=print) -> None:
                 empty = not any(package.iterdir())
             except OSError:
                 empty = False
-            if empty and _upstream_ledger_contains(original, "并闭环"):
+            if (empty and (
+                    _review_hold_lineage_closure_is_confirmed(original)
+                    or _upstream_ledger_has_terminal_closure(original))):
                 try:
                     package.rmdir()
                 except OSError as exc:

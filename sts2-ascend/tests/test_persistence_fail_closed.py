@@ -1373,12 +1373,14 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.queue.write_text(json.dumps({
             "pending": [{
                 "run": 8, "queue_id": "txn-pending", "retry_group": "pkg-resolved",
+                "salvage_packages": ["pkg-resolved"],
             }],
             "reviewing": {
                 "runs": [9],
                 "items": [{
                     "run": 9, "queue_id": "txn-reviewing",
                     "replay_target": "pkg-resolved",
+                    "salvage_packages": ["pkg-resolved"],
                 }],
             },
         }), encoding="utf-8")
@@ -1563,11 +1565,48 @@ class ReviewQueueSafetyTests(unittest.TestCase):
 
         with (mock.patch.object(llm_review, "_review_stop_requested",
                                return_value=False),
-              mock.patch.object(llm_review, "_upstream_ledger_contains",
-                               return_value=True) as upstream):
+              mock.patch.object(llm_review, "_upstream_ledger_has_terminal_closure",
+                               return_value=True) as confirmed):
             llm_review._resume_host_salvage_closures(log=lambda _message: None)
-        upstream.assert_called_with("pkg-tail-retry", "并闭环")
+        confirmed.assert_called_with("pkg-tail-retry")
         self.assertFalse(quarantine.exists())
+
+    def test_legacy_empty_quarantine_exact_terminal_status_allows_delete(self) -> None:
+        quarantine = (llm_review.SALVAGE_ROOT
+                      / f"{llm_review._CLOSED_SALVAGE_PREFIX}pkg-tail")
+        quarantine.mkdir()
+        marker = "<!-- rejection:pkg-tail -->\n"
+        closed = (
+            marker
+            + "| now | run | `aaaaaaaa` | stall | glm | "
+              "GLM 已补合并闭环 `aaaaaaaa` | `pkg` | done |\n")
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_ref",
+                                return_value="origin/main"),
+              mock.patch.object(llm_review.subprocess, "run",
+                                return_value=SimpleNamespace(
+                                    returncode=0, stdout=closed))):
+            llm_review._resume_host_salvage_closures(log=lambda _message: None)
+        self.assertFalse(quarantine.exists())
+
+    def test_legacy_empty_quarantine_reason_only_closure_does_not_delete(self) -> None:
+        quarantine = (llm_review.SALVAGE_ROOT
+                      / f"{llm_review._CLOSED_SALVAGE_PREFIX}pkg-tail")
+        quarantine.mkdir()
+        pending = (
+            "<!-- rejection:pkg-tail -->\n"
+            "| now | run | `aaaaaaaa` | stall | glm | 待闭环 | `pkg` | "
+            "reason mentions GLM 已补合并闭环 `aaaaaaaa` |\n")
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_ref",
+                                return_value="origin/main"),
+              mock.patch.object(llm_review.subprocess, "run",
+                                return_value=SimpleNamespace(
+                                    returncode=0, stdout=pending))):
+            llm_review._resume_host_salvage_closures(log=lambda _message: None)
+        self.assertTrue(quarantine.is_dir())
 
     def test_replay_receipt_is_durable_and_host_only_when_stop_arrives(self) -> None:
         for name, role in (("pkg-target", "target"), ("pkg-attempt", "attempt_evidence")):

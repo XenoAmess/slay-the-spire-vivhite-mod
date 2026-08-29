@@ -74,6 +74,51 @@ class ReviewHoldRecoveryTests(unittest.TestCase):
             }), encoding="utf-8")
         return package
 
+    def _closed_quarantine(self, target: str, attempts: list[str],
+                           queue_ids: list[str]) -> tuple[Path, dict]:
+        quarantine = self.salvage / f"{llm_review._CLOSED_SALVAGE_PREFIX}{target}"
+        quarantine.mkdir(parents=True)
+        manifest = {
+            "time": "2026-08-29 11:41:20",
+            "batch_runs": [808, 809, 810, 811, 812],
+            "pre_head": "a" * 40,
+            "model": "opencode-go/glm-5.3-flash@max",
+            "failure_kind": "stall",
+            "replay_enqueue_pending": True,
+            "replay_target": target,
+            "replay_role": "target",
+            "replay_attempt_packages": attempts,
+            "replay_queue_ids": queue_ids,
+            "retry_resolution": "no_valid_change",
+            "retry_resolution_target": target,
+            "retry_resolution_lineage": [target, *attempts],
+            "retry_resolution_commit": "c" * 40,
+            "retry_resolution_state": "quarantined_pending_ledger",
+            "retry_resolution_evidence_complete": True,
+            "retry_resolution_evidence_schema": (
+                llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA),
+        }
+        (quarantine / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        return quarantine, manifest
+
+    def _pending_replay_queue(self, target: str, queue_ids: list[str]) -> None:
+        payload = {
+            "pending": [{
+                "run": run,
+                "time": "2026-08-29 11:47:00",
+                "queue_id": queue_id,
+                "retry_group": target,
+                "replay_target": target,
+                "salvage_packages": [target],
+            } for run, queue_id in zip(
+                [808, 809, 810, 811, 812], queue_ids)],
+            "reviewing": None,
+        }
+        self.queue.parent.mkdir(parents=True, exist_ok=True)
+        self.queue.write_text(
+            json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
     def test_restores_whole_lineage_and_requeues_same_model_without_deleting_hold(self) -> None:
         target = "pkg-target"
         attempts = ["pkg-attempt-1", "pkg-attempt-2", "pkg-attempt-3"]
@@ -122,6 +167,367 @@ class ReviewHoldRecoveryTests(unittest.TestCase):
         self.assertEqual(recovered, [])
         self.assertFalse(self.salvage.exists())
         self.assertTrue((self.hold / target / "manifest.json").is_file())
+
+    def test_nested_rmdir_failure_then_startup_does_not_revive_closed_hold(self) -> None:
+        target = "pkg-target"
+        attempts = ["pkg-attempt-1", "pkg-attempt-2"]
+        queue_ids = [f"closed-{run}" for run in range(808, 813)]
+        self._package(target, target=target, role="target", attempts=attempts)
+        for name in attempts:
+            self._package(name, target=target, role="attempt_evidence")
+        quarantine, manifest = self._closed_quarantine(target, attempts, queue_ids)
+        skins = quarantine / "raw_sandbox" / "repo" / "Vivhite" / "skins"
+        skins.mkdir(parents=True)
+        (skins / "atlas.png").write_bytes(b"evidence")
+        self._pending_replay_queue(target, queue_ids)
+        original_rmdir = Path.rmdir
+        failed_once = False
+
+        def fail_nested_once(path: Path):
+            nonlocal failed_once
+            if path == skins and not failed_once:
+                failed_once = True
+                raise OSError(145, "The directory is not empty")
+            return original_rmdir(path)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_contains",
+                                return_value=True),
+              mock.patch.object(llm_review, "_update_rejection_ledger",
+                                return_value=True),
+              mock.patch.object(Path, "rmdir", fail_nested_once)):
+            self.assertFalse(llm_review._finish_quarantined_salvage(
+                quarantine, target, manifest, log=lambda _message: None))
+
+        receipt = llm_review._read_review_hold_closure(target)
+        self.assertEqual(receipt["commit"], "c" * 40)
+        self.assertEqual(receipt["evidence_schema"],
+                         llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA)
+        self.assertTrue(quarantine.is_dir())
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_contains",
+                                return_value=True),
+              mock.patch.object(llm_review, "_update_rejection_ledger",
+                                return_value=True)):
+            recovered = llm_review._recover_review_holds(
+                log=lambda _message: None)
+            llm_review._recover_salvage_replay_queue(
+                log=lambda _message: None)
+            llm_review._resume_host_salvage_closures(
+                log=lambda _message: None)
+
+        self.assertEqual(recovered, [])
+        self.assertFalse((self.salvage / target).exists())
+        self.assertFalse(quarantine.exists())
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(queue["pending"], [])
+        self.assertTrue((self.hold / target / "manifest.json").is_file())
+
+    def test_empty_quarantine_tail_does_not_revive_closed_hold(self) -> None:
+        target = "pkg-target"
+        queue_ids = [f"empty-{run}" for run in range(808, 813)]
+        self._package(target, target=target, role="target", attempts=[])
+        quarantine, manifest = self._closed_quarantine(target, [], queue_ids)
+        self._pending_replay_queue(target, queue_ids)
+        original_rmdir = Path.rmdir
+        failed_once = False
+
+        def fail_root_once(path: Path):
+            nonlocal failed_once
+            if path == quarantine and not failed_once:
+                failed_once = True
+                raise OSError(145, "The directory is not empty")
+            return original_rmdir(path)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True),
+              mock.patch.object(llm_review, "_update_rejection_ledger",
+                                return_value=True),
+              mock.patch.object(Path, "rmdir", fail_root_once)):
+            self.assertFalse(llm_review._finish_quarantined_salvage(
+                quarantine, target, manifest, log=lambda _message: None))
+
+        self.assertTrue(quarantine.is_dir())
+        self.assertEqual(list(quarantine.iterdir()), [])
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_contains",
+                                return_value=True)):
+            recovered = llm_review._recover_review_holds(
+                log=lambda _message: None)
+            llm_review._recover_salvage_replay_queue(
+                log=lambda _message: None)
+            llm_review._resume_host_salvage_closures(
+                log=lambda _message: None)
+
+        self.assertEqual(recovered, [])
+        self.assertFalse((self.salvage / target).exists())
+        self.assertFalse(quarantine.exists())
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(queue["pending"], [])
+
+    def test_confirmed_receipt_consumes_stale_active_target_without_requeue(self) -> None:
+        target = "pkg-target"
+        queue_ids = ["stale-active"]
+        active = self._package(target, target=target, role="target", attempts=[])
+        manifest = json.loads((active / "manifest.json").read_text(
+            encoding="utf-8"))
+        manifest["replay_queue_ids"] = queue_ids
+        (active / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        restored = llm_review._restore_review_hold_package(
+            active, log=lambda _message: None)
+        self.assertEqual(restored, self.salvage / target)
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+            "queue_ids": queue_ids,
+        }), encoding="utf-8")
+        self._pending_replay_queue(target, queue_ids)
+
+        with (mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True)):
+            llm_review._recover_review_holds(log=lambda _message: None)
+            llm_review._recover_salvage_replay_queue(
+                log=lambda _message: None)
+
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(queue["pending"], [])
+
+    def test_old_receipt_does_not_consume_active_new_attempt(self) -> None:
+        target = "pkg-target"
+        queue_ids = ["active-new-attempt"]
+        held = self._package(target, target=target, role="target", attempts=[])
+        restored = llm_review._restore_review_hold_package(
+            held, log=lambda _message: None)
+        self.assertEqual(restored, self.salvage / target)
+        new_attempt = "pkg-active-new-attempt"
+        attempt = self.salvage / new_attempt
+        attempt.mkdir()
+        (attempt / "manifest.json").write_text(json.dumps({
+            "replay_enqueue_pending": True,
+            "replay_target": target,
+            "replay_role": "attempt_evidence",
+        }), encoding="utf-8")
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+            "queue_ids": queue_ids,
+        }), encoding="utf-8")
+        self._pending_replay_queue(target, queue_ids)
+
+        with (mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True)):
+            self.assertTrue((self.salvage / new_attempt).is_dir())
+            llm_review._recover_review_holds(log=lambda _message: None)
+            llm_review._recover_salvage_replay_queue(
+                log=lambda _message: None)
+
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(len(queue["pending"]), 1)
+        self.assertTrue(all(
+            item["salvage_attempts"] == [new_attempt]
+            for item in queue["pending"]))
+
+    def test_old_receipt_does_not_consume_queue_with_new_attempt_reference(self) -> None:
+        target = "pkg-target"
+        queue_ids = ["queue-new-attempt"]
+        held = self._package(target, target=target, role="target", attempts=[])
+        llm_review._restore_review_hold_package(held, log=lambda _message: None)
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+            "queue_ids": queue_ids,
+        }), encoding="utf-8")
+        self._pending_replay_queue(target, queue_ids)
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        for item in queue["pending"]:
+            item["salvage_attempts"] = ["pkg-queue-new-attempt"]
+        self.queue.write_text(
+            json.dumps(queue, ensure_ascii=False), encoding="utf-8")
+
+        with (mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True)):
+            llm_review._recover_salvage_replay_queue(
+                log=lambda _message: None)
+
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(len(queue["pending"]), 1)
+        self.assertTrue(all(
+            item["salvage_attempts"] == ["pkg-queue-new-attempt"]
+            for item in queue["pending"]))
+
+    def test_empty_attempt_quarantine_uses_target_lineage_receipt(self) -> None:
+        target = "pkg-target"
+        attempt = "pkg-attempt"
+        self._package(target, target=target, role="target", attempts=[attempt])
+        self._package(attempt, target=target, role="attempt_evidence")
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target, attempt],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+        }), encoding="utf-8")
+        quarantine = self.salvage / f"{llm_review._CLOSED_SALVAGE_PREFIX}{attempt}"
+        quarantine.mkdir(parents=True)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_terminal_closure",
+                                return_value=False)):
+            llm_review._resume_host_salvage_closures(
+                log=lambda _message: None)
+
+        self.assertFalse(quarantine.exists())
+
+    def test_old_receipt_does_not_hide_new_attempt_in_same_hold_lineage(self) -> None:
+        target = "pkg-target"
+        self._package(target, target=target, role="target", attempts=[])
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": llm_review._RETRY_SANDBOX_EVIDENCE_SCHEMA,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+        }), encoding="utf-8")
+        new_attempt = "pkg-new-attempt"
+        self._package(new_attempt, target=target, role="attempt_evidence")
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True)):
+            recovered = llm_review._recover_review_holds(
+                log=lambda _message: None)
+
+        self.assertEqual(set(recovered), {target, new_attempt})
+        self.assertTrue((self.salvage / target).is_dir())
+        self.assertTrue((self.salvage / new_attempt).is_dir())
+
+    def test_closure_receipt_without_full_evidence_schema_does_not_hide_old_hold(self) -> None:
+        target = "pkg-target"
+        self._package(target, target=target, role="target", attempts=[])
+        receipt_path = llm_review._review_hold_closure_path(target)
+        assert receipt_path is not None
+        receipt_path.parent.mkdir(parents=True)
+        receipt_path.write_text(json.dumps({
+            "schema": llm_review._REVIEW_HOLD_CLOSURE_SCHEMA,
+            "target": target,
+            "lineage": [target],
+            "resolution": "no_valid_change",
+            "commit": "c" * 40,
+            "evidence_complete": True,
+            "evidence_schema": 0,
+            "ledger_status": "GLM 复审确认无有效成果并闭环 `cccccccc`",
+        }), encoding="utf-8")
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_upstream_ledger_has_exact_status",
+                                return_value=True)):
+            recovered = llm_review._recover_review_holds(
+                log=lambda _message: None)
+
+        self.assertEqual(recovered, [target])
+        active = json.loads((self.salvage / target / "manifest.json").read_text(
+            encoding="utf-8"))
+        self.assertTrue(active["replay_enqueue_pending"])
+        self.assertNotIn("retry_resolution", active)
+
+    def test_blocked_committed_receipt_does_not_log_false_recovery(self) -> None:
+        target = "pkg-target"
+        self._package(target, target=target, role="target", attempts=[])
+        with mock.patch.object(llm_review, "_review_stop_requested", return_value=False):
+            llm_review._recover_review_holds(log=lambda _message: None)
+        messages: list[str] = []
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_committed_retry_resolutions",
+                                return_value={
+                                    target: ("no_valid_change", "c" * 40),
+                                })):
+            recovered = llm_review._recover_committed_retry_resolutions(
+                log=messages.append)
+
+        self.assertEqual(recovered, [])
+        self.assertTrue(any("缺少完整证据 schema" in message
+                            for message in messages))
+        self.assertFalse(any("已从上游提交" in message for message in messages))
 
     def test_recovered_hold_reopens_existing_closed_ledger_rows(self) -> None:
         target = "pkg-target"
