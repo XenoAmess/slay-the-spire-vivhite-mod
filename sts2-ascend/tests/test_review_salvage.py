@@ -1,6 +1,7 @@
 """Regressions for long reviews, 100-run batches, and failed-review salvage."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -463,6 +464,7 @@ class ReviewSalvageTests(unittest.TestCase):
                 saved = llm_review._save_review_salvage(
                     pre_head, result.error, result, batch_runs=[601, 602],
                     model="opencode-go/glm-5.3-flash@max", source="preferred",
+                    prompt_text="full task\n", invocation_prompt="short contract",
                     log=lambda _msg: None)
                 saved_again = llm_review._save_review_salvage(
                     pre_head, "duplicate", result, log=lambda _msg: None)
@@ -474,6 +476,12 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertTrue((saved / "wip.patch").is_file())
             self.assertTrue((saved / "manifest.json").is_file())
             self.assertTrue((saved / "report.md").is_file())
+            self.assertEqual(
+                (saved / "review_prompt.md").read_text(encoding="utf-8"),
+                "full task\n")
+            self.assertEqual(
+                (saved / "invocation_prompt.txt").read_text(encoding="utf-8"),
+                "short contract")
             self.assertTrue((saved / "file_states.json").is_file())
             patch = (saved / "wip.patch").read_bytes()
             self.assertIn(b"sts2-ascend/brain/policy.py", patch)
@@ -505,6 +513,13 @@ class ReviewSalvageTests(unittest.TestCase):
                 {".runtime/rejected.bin", "outside.txt", "sts2-ascend/brain/policy.py",
                  "sts2-ascend/brain/__pycache__/model.pyc"})
             self.assertFalse(manifest["auto_apply"])
+            self.assertEqual(manifest["selfcheck_state"], "not_run")
+            self.assertIsNone(manifest["selfcheck_ok"])
+            self.assertEqual(manifest["prompt_snapshot"], "review_prompt.md")
+            self.assertEqual(manifest["prompt_bytes"], len("full task\n".encode("utf-8")))
+            self.assertEqual(
+                manifest["prompt_sha256"],
+                hashlib.sha256(b"full task\n").hexdigest())
 
     def test_stopped_review_publishes_partial_salvage(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-salvage-stop-") as root:

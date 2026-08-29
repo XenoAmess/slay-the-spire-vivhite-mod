@@ -639,6 +639,27 @@ def _review_closure_gate_error(state: dict, paths,
     )
 
 
+def _provider_tool_capability_error(
+    runner: str, sandbox: "SandboxReviewResult",
+) -> str:
+    """Return a host/tool failure before the closure gate can blame the model."""
+    metrics = (sandbox.provider_metrics
+               if isinstance(sandbox.provider_metrics, dict) else {})
+    try:
+        blocked = int(metrics.get("blocked_tool_count") or 0)
+    except (TypeError, ValueError):
+        blocked = 0
+    if (runner != "codex" or blocked <= 0 or sandbox.paths or sandbox.patch
+            or sandbox.stopped or sandbox.timed_out or sandbox.stalled):
+        return ""
+    detail = " ".join(str(metrics.get("tool_access_error") or "").split())[:500]
+    suffix = f"：{detail}" if detail else ""
+    return (
+        f"复盘 runner 工具能力被阻断（{blocked} 次），模型未获得读取/执行/写入任务的能力"
+        f"{suffix}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # packet / prompt
 # ---------------------------------------------------------------------------
@@ -933,6 +954,10 @@ def build_prompt(know, cfg: dict, every: int | None = None,
                          for row in (full_failure_run.get("decisions") or []))
     native = getattr(know, "game_knowledge", None)
     closure_state = closure_state or _review_closure_state(know, cfg)
+    replay_context = _failed_review_replay_context(
+        salvage_packages or [], salvage_attempts or [], log=log)
+    retry_feedback = _review_retry_feedback(
+        salvage_packages or [], salvage_attempts or [])
     native_digest = (native.review_digest(know.stats, evidence_text)
                      if native is not None else
                      {"snapshot": {"available": False,
@@ -969,12 +994,11 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         # reviewer without inlining the unbounded full meta-review history.
         "recent_review_context": _recent_review_context(),
         "historical_zero_code_debt": _historical_zero_code_context(),
-        # A failed package is evidence for a fresh GLM audit, never an input to
+        # A failed package is evidence for a fresh same-model audit, never an input to
         # host-side patch application.  Bounded excerpts keep the initial prompt
         # navigable; the exact target+attempt files are mounted separately inside
         # the isolated clone and integrity-checked before receipts are accepted.
-        "failed_review_replay": _failed_review_replay_context(
-            salvage_packages or [], salvage_attempts or [], log=log),
+        "failed_review_replay": replay_context,
         "stats_digest": _stats_digest(know),
         # Never inline the full ~9 MB corpus.  The index chooses entities named in
         # recent evidence plus the most consequential learned card/enemy records;
@@ -1005,6 +1029,8 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     # intact.  This saves prompt tokens without silently weakening statistical
     # evidence; full stats.json remains available for on-demand inspection.
     packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
+    retry_feedback_json = json.dumps(
+        retry_feedback, ensure_ascii=False, separators=(",", ":"))
     closure_summary_keys = (
         "action_required", "require_action_every_batch",
         "consecutive_report_only", "report_only_limit",
@@ -1015,18 +1041,23 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         for key in closure_summary_keys if key in closure_state)
 
     return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
-智能体本体：启发式决策引擎（brain/policy.py，参数在 knowledge/policy.json）+ 统计学习（knowledge/stats.json），反复游玩战士 Ironclad。
+你的交付不是分析报告，而是一次由你亲自完成、可验证、可撤回的生产闭环。
 
-# 数据载体说明
-本提示文件的**第一个 `json` 代码块就是完整 packet**，不存在独立的 packet JSON 文件。
-若 Read 工具截断下面的超长单行，不要把截断误判成字段缺失；请在本地读取
-`sts2-ascend/knowledge/review_prompt_latest.md`，提取第一个 fenced `json` 代码块后用
-`json.loads` 解析。packet 内 `corpus_paths` 已是隔离 sandbox 仓库可读的相对路径。
+# 上次失败反馈（先读这一小段，再开始工作）
+<retry_feedback>{retry_feedback_json}</retry_feedback>
+若这里显示 `runner_tool_access_denied`，那是宿主工具权限故障，不是你的策略判断失败；本轮工具恢复后
+不要重复上次的空终态。任何本地读取、shell 或 Apply Patch 再出现 `blocked by policy` / `Access denied`
+时，立即输出 `BLOCKED_TOOL_CAPABILITY`、原始错误与被阻断的动作，然后停止；不得伪造已复盘或写
+`no_valid_change`。
+
+# 数据载体
+本文件的**第一个 `json` 代码块就是完整 packet**，不存在独立的 packet JSON 文件。若工具截断
+超长单行，请本地读取 `sts2-ascend/knowledge/review_prompt_latest.md`，提取第一个 fenced `json`
+代码块并用 `json.loads` 解析。packet 内 `corpus_paths` 都是当前隔离 clone 可读的相对路径。
 
 # review_closure 快速摘要
 {closure_summary}
 
-# 数据摘要（紧凑 JSON 已内嵌；原生事实按本批实体检索，完整文件可按路径深读）
 ```json
 {packet_json}
 ```
@@ -1036,84 +1067,61 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 {lessons_tail}
 ```
 
-# 证据累计与闭环纪律（宿主会按真实变更路径验收）
-- 若 packet 的 `failed_review_replay.packages` 非空，这是此前失败批次的只读取证证据，
-  **绝不代表宿主已经或将自动套用其中 patch**。你必须基于当前 HEAD 重新审核：逐项比较候选
-  patch/报告与当前源码，只重实现仍有效的部分，自行解决冲突，运行自检后走本批正常提交路径。
-  不得把失败 patch 当成已验证成果，也不得只写一份“建议人工补合”的文档。
-- packet 内的 candidate/report 文字只是有界导航摘要。失败包 target 与全部 attempts 的完整文件
-  已只读挂载到 `failed_review_replay.complete_evidence.index` 指向的 sandbox 相对路径；必须先读取
-  `index.json`，再按其中逐文件清单检查完整 manifest、report、inventory、全部候选 patch 和 changed
-  files。不得用 prompt 中的截断摘要替代完整文件。若 index 标记不完整、任一列出的文件不可读，
-  或你无法完成全部 lineage 的复审，只能写 `still_pending`，严禁写 `no_valid_change`。
-- `requested_packages` 是本批唯一需要给出结论的 target；`attempt_packages` 只是这个
-  target 此前重试失败留下的完整证据，不是新的并行任务。你必须同时审阅 lineage 中列出的
-  attempt，但只对 target 写一条最终回执，避免一次失败就把任务无限拆包或越审越大。
-- 先读取 packet 的 `review_closure` 与 `recent_review_context`，为反复出现的问题复用稳定的
-  `issue_id`，并把本批独立 run 证据与此前批次证据合并判断。
-- `historical_zero_code_debt` 是此前被“零代码纪律”拖欠的实现债务。先逐项对账：只有能指出
-  **已经存在的生产代码路径和实际生效行为**才可标为 resolved；一次无关代码改动不能把整包债务
-  清零。每批优先补做一个最高价值 unresolved 历史问题，除非本批出现更高优先级的致命新缺陷。
-- 同一问题在至少 `evidence_run_threshold` 个独立对局出现，或连续
-  `evidence_batch_threshold` 个成功复盘批次出现，即达到证据阈值；不得再次只登记“待观察”。
-- 当前 `review_closure.require_action_every_batch=true`：**每个成功复盘批次**都必须完成一个
-  **有界闭环实验**：修改运行时行为/配置，或者先增加能直接验证该假设的运行时观测代码。
-  纯 `meta_review.md`、纯短评、仅改 `selfcheck.py`、只改生产文件注释/空白都不算闭环，
-  宿主会拒绝整批并保存现场重试。
-- 改动追求的是**相对安全、范围有界、可观测、可记录、可继续调整或撤回**，不是证明绝对安全。
-  “还不够安全”“耦合面较宽”“参数已经顶格”“还想再看几局”均不能作为阈值后的延期理由；
-  不敢直接改策略时就先加运行时观测，但观测必须落在生产代码中并能在后续 run 留下证据。
-- 每批只选一个最高价值主假设。报告必须写清 `issue_id`、证据 run、实际代码动作、未来 3~10 局
-  的观测指标、继续调整条件与撤回条件。Git 历史由宿主管理，后续可用反向提交恢复。
-- “顶格旋钮不再吸收证据”只禁止把同一数值无限推向边界；正确动作是转交同语义接替旋钮、
-  改结构或加观测，绝不等于“零代码纪律”。
+# 证据与合法终态
+- 若 `failed_review_replay.requested_packages` 非空，先读其 `complete_evidence.index`，再按索引核对
+  target 和全部 attempts 的完整 manifest、report、inventory、候选 patch 与 changed files。失败 patch
+  只是证据；你必须基于当前 HEAD 自行重实现仍有效部分、解决冲突并自检，宿主不会替你套用。
+- replay 只有三种回执：`integrated` 表示你已重实现并验证；`no_valid_change` 只允许在完整 lineage
+  全部可读、且你能给出当前 HEAD 路径与证据条件证明无需改动时使用；证据不全写 `still_pending`。
+  工具阻断只写 `BLOCKED_TOOL_CAPABILITY`，不能冒充以上任一结论。
+- `historical_zero_code_debt` 是历史问题债务。只有指出已经存在的生产路径和实际生效行为才能标为
+  resolved；每批优先完成一个最高价值 unresolved 问题，除非本批有更高优先级致命缺陷。
+- 同一问题达到 `evidence_run_threshold` 个独立对局或连续 `evidence_batch_threshold` 个成功复盘批次
+  后，不得再次只登记“待观察”。每个成功复盘批次必须落地一个有界运行时行为/配置改动，或增加
+  后续 run 可直接验证假设的生产观测。纯 `meta_review.md`、纯短评、仅 selfcheck/tests/docs、注释或
+  空白都不是闭环。
+- 改动追求**相对安全、范围有界、可观测、可记录、可继续调整或撤回**；每批只选一个主假设。
 
-# 你的任务（严格按顺序）
-1. 归因分析：主要死因趋势、打法缺陷、卡组构建问题、地图路线问题、代码缺陷。
-   若 `decision_chain_evidence.full_failure_run` 非 null，必须先逐条阅读其中的
-   `decisions`；这是本批最新死亡局未经截断的完整持久决策链。旧日志可能只有
-   action/params/reason；新日志的
-   关键选择还会带 turn/energy/trace，end_turn 会带 turn_end_state。重点核查有剩余
-   能量和可打手牌却结束回合、错误目标、药水时机、路线与休息选择，并引用具体楼层/
-   回合/动作作为证据。其余局可按 runs_summary 做趋势分析，不要求逐条展开。
-   涉及卡牌/怪物/遗物/药水/事件机制时，必须优先查阅 packet 中的
-   `native_game_knowledge`；摘要不够就按 `corpus_paths` 精确检索相应 runtime 与
-   mechanics JSONL。不得用记忆中的旧版 STS2/STS1 数值覆盖 manifest 所指版本。
-2. 将复盘报告**追加写入** `sts2-ascend/knowledge/meta_review.md`（新建一节，标题含日期时间）：
-   归因分析、你做出的每项调整及理由、新沉淀的经验知识（中文）。
-   若本批带有失败包，对 `failed_review_replay.requested_packages` 中的每个包另写一行：
-   `retry_resolution: <package-id> integrated|no_valid_change|still_pending`。
-   `integrated` 表示你已在当前 HEAD 重新实现并验证有效成果，`no_valid_change` 表示复审后确认
-   没有仍应合入的改动，`still_pending` 表示本轮尚未解决。该行用于宿主追踪，不替代代码、自检
-   或本批复盘说明；遗漏不会让整批代码被拒绝，但失败包会继续保持 pending。
-3. 你可以修改或新建 `sts2-ascend/` 下的静态项目文件，包括生产源码、
-   **`brain/config.json`** 及其他配置、`scripts/`、`tests/`、`docs/`、静态原生游戏
-   knowledge 和复盘报告。宿主使用 deny-only 分类器按最终精确路径验收，不设固定文件名单。
-   只有以下边界禁止写入：
-   - 在线运行状态：`.runtime/`，`knowledge/runs/`、`archive/`、`code_backups/`，以及
-     `stats/progression/policy/lessons/review_queue/preferred_model_state/pending_restart` 等
-     在线状态文件、锁/日志/stream/flag、宿主 prompt、截图和拒合清单；这些全部只读
-   - Git 元数据（任意 `.git` 路径及 `.gitmodules`）
-   - 任一路径段含 `cache`（大小写不敏感）及 `.pyc/.pyo` 字节码；它们是临时产物，
-     不进入 patch，但若工具意外生成会被宿主完整留存在取证快照中，不会误杀合规源码
-   - `sts2-ascend/` 之外的任何路径、绝对路径或 `..` 逃逸路径
-   新经验仍应追加到 `knowledge/meta_review.md`；短评写入
-   `knowledge/review_conclusion.txt`。不要用 tests/docs/selfcheck 代替要求的生产闭环。
-4. 改完任何 `.py` 后**必须**运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 并确认输出 SELFCHECK OK；
-   若不通过，修好再试，实在修不好就把该文件改回原样。
-5. 不要提交：git 提交由宿主大脑在复盘前后自动完成（复盘前已备份，复盘后变更会被提交；
-   若你的变更导致自检失败，会被整体回滚到备份点）。
-6. **额外产出一段点评短评**：把它**写入** `sts2-ascend/knowledge/review_conclusion.txt`
-   （纯文本、单行、一两句话点评这几局的表现+一个最关键的改进点，**100 字以内**）。
-   这段文字会被克隆音色朗读出来，所以要口语化、适合听；请主动用逗号或句号切成
-   **约 10 字一个停顿、任一连续分句不超过 20 字**。运行时还会再次强制细分兜底。
+# 交付顺序（严格执行）
+1. 工具与证据：读取本任务书、`git status --short` 和完成一个最高价值问题所需的最小证据。若最新
+   死亡局有 `decision_chain_evidence.full_failure_run`，必须先逐条阅读并检查 decisions；涉及卡牌、怪物、遗物、
+   药水或事件时，优先查 `native_game_knowledge` 与对应 runtime/mechanics JSONL，不能用旧版记忆代替。
+2. 假设：先写一句 `HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL`，引用具体局、楼层、回合或动作。
+3. 落地：立即用 Apply Patch 对生产行为、配置或运行时观测做一个最小可逆改动。你被明确授权修改或
+   新建 `sts2-ascend/` 下的静态项目文件，包括生产源码、`brain/config.json`、其他配置、
+   `scripts/`、`tests/`、`docs/`、静态原生游戏 knowledge 与复盘报告；宿主以 deny-only 精确路径
+   分类，不设 allowlist。
+4. 自检修复：改过任何 `.py` 后运行 `py -3 -B sts2-ascend/brain/selfcheck.py`；失败就读取具体错误、
+   继续修补并重跑，直到 `SELFCHECK OK`。回读完整 diff，核对行为、证据、撤回条件和意外文件。
+5. 最后才写报告：把归因、假设、实际代码动作、未来 3~10 局指标、继续调整/撤回条件追加到
+   `sts2-ascend/knowledge/meta_review.md`。replay target 各写一行
+   `retry_resolution: <package-id> integrated|no_valid_change|still_pending`。再把 100 字以内、适合口播、
+   约 10 字一停顿的短评写入 `sts2-ascend/knowledge/review_conclusion.txt`。
+6. 自己收口：再次回读 diff、解决冲突、确认自检，然后在当前隔离 clone 内自行 `git add` 和本地
+   `git commit`，返回 commit SHA。若缺少身份，用命令级 `-c user.name=sts2-review-luna`
+   `-c user.email=local@sts2-ascend.invalid`；宿主只机械验收该最终内容并用 CAS 发布，不替你审计或改写。
 
-# 禁止事项（最高优先级，覆盖仓库 AGENTS.md 的默认规则）
-- 禁止任何 git 操作（add/commit/push/reset 等，宿主大脑统一管理）
-- 除上述自检命令外，禁止启动、停止、终止或管理任何进程（游戏和大脑正在运行）
-- 禁止删除在线知识、历史对局日志或失败取证包；禁止安装依赖
+# 写入边界
+- 禁止写在线状态：`.runtime/`，`knowledge/runs/`、`archive/`、`code_backups/`，以及 stats、progression、
+  policy、lessons、review_queue、preferred_model_state、pending_restart、lock/log/stream/flag、宿主 prompt、
+  截图和拒合清单；它们只读。任一路径段含 cache 或 `.pyc/.pyo` 也不进入成果。
+- 禁止写 `sts2-ascend/` 外路径、绝对路径、`..` 逃逸或 `.gitmodules`。允许当前隔离 clone 内为本批
+  使用 git status/diff/add/commit；禁止 remote、push、reset、删除历史或改宿主/其他工作区。
+- 除自检与本批必要的只读/测试命令外，禁止启动、停止、终止或管理进程；禁止安装依赖。
 
-完成后，用 200 字以内输出本次复盘总结。"""
+完成后用 200 字以内总结：假设、落地文件、自检结果、本地 commit SHA。"""
+
+
+def _review_invocation_prompt(rel_prompt: str) -> str:
+    """Keep the executable contract available even if the task-file read fails."""
+    return (
+        f"你位于宿主创建的隔离 clone。先完整阅读 {rel_prompt}。你已获授权在当前 clone "
+        "内读取证据、修改 sts2-ascend 静态项目文件、运行 selfcheck，并自行回读 diff、"
+        "解决冲突和本地 commit；禁止 push、访问其他工作区或管理在线进程。成功标准："
+        "一个可证伪假设，一个最小生产行为/观测改动，SELFCHECK OK，最终 diff 复核和 commit SHA，"
+        "最后才写报告。若读取、shell 或 Apply Patch 被 blocked/access denied，立即输出 "
+        "BLOCKED_TOOL_CAPABILITY 与原始错误并停止，不能声称完成或写 no_valid_change。"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1922,11 +1930,9 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     except OSError:
         pass
     # 提示词包可达数万字，超过 Windows 命令行 32767 上限（WinError 206）——
-    # 完整提示词落盘为 review_prompt_latest.md，命令行只传一句引导，让复盘 agent 自己读文件。
+    # 完整提示词落盘；命令行保留目标、授权和停止条件，避免读文件失败时退化成空报告。
     rel_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
-    short_prompt = (f"你位于宿主创建的隔离 clone。请完整阅读 {rel_prompt}，只可在当前 "
-                    "工作目录内使用相对路径；禁止绝对路径、.. 逃逸或访问其他工作区。"
-                    "严格按任务书执行。")
+    short_prompt = _review_invocation_prompt(rel_prompt)
     try:
         cmd = build_review_command(
             plan, binary, REPO_DIR, short_prompt,
@@ -2016,6 +2022,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             review_sandbox_name=sandbox.review_sandbox_name,
             review_attempt_receipt_schema=(
                 sandbox.review_attempt_receipt_schema),
+            prompt_text=prompt,
+            invocation_prompt=short_prompt,
             log=log)
         if package is not None and _status is not None:
             _status["salvage_package"] = package.name
@@ -2045,6 +2053,15 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         sandbox.stopped = sandbox.stopped or stopped
         if stopped:
             sandbox.error = "统一停机中断并全量保全"
+        capability_error = _provider_tool_capability_error(runner, sandbox)
+        if capability_error:
+            sandbox.failure_code = "runner_tool_access_denied"
+            sandbox.error = capability_error
+            sandbox.conclusion = (
+                "本次未读取到任务，runner 工具权限已被宿主识别为基础设施故障；"
+                "不能算作模型的纯报告。")
+            if _status is not None:
+                _status["failure_code"] = sandbox.failure_code
         resolutions = _validated_retry_resolutions(
             sandbox, replay_packages, log=log)
         confirmed_no_change = bool(replay_packages) and all(
@@ -3757,7 +3774,10 @@ class SandboxReviewResult:
     patch: bytes = b""
     conclusion: str = ""
     error: str = ""
-    selfcheck_ok: bool = True
+    # ``None`` means the host never ran selfcheck (for example, the model made
+    # no accepted change).  Do not turn "not run" into a successful receipt.
+    selfcheck_ok: bool | None = None
+    failure_code: str = ""
     diagnostic_report: str = ""
     # WIP 与已通过验收、可自动合入的 patch 严格分离。失败现场包含全部
     # 工作树改动（含越界/ignored），只供人工分析，绝不会被自动应用。
@@ -4170,6 +4190,8 @@ def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
         return "stall"
     if sandbox.timed_out:
         return "timeout"
+    if sandbox.failure_code:
+        return sandbox.failure_code
     if sandbox.rc not in (-1, 0):
         return "process_exit"
     if sandbox.online_paths:
@@ -4177,7 +4199,7 @@ def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
     if (sandbox.unexpected_paths or "deny-only" in reason
             or "路径边界" in reason or "allowlist" in reason):
         return "path_boundary"
-    if not sandbox.selfcheck_ok or "自检" in reason:
+    if sandbox.selfcheck_ok is False or "自检" in reason:
         return "selfcheck"
     if sandbox.patch and ("提交" in reason or "冲突" in reason):
         return "commit_conflict"
@@ -5779,7 +5801,7 @@ def _failed_review_replay_context(package_names, attempt_names=(), log=print) ->
         },
         "auto_apply": False,
         "review_contract": (
-            "GLM must compare this evidence with current HEAD, selectively reimplement "
+            "The review model must compare this evidence with current HEAD, selectively reimplement "
             "still-valid changes, resolve conflicts, and run selfcheck; host never applies it."),
     }
     if not requested:
@@ -5881,6 +5903,79 @@ def _failed_review_replay_context(package_names, attempt_names=(), log=print) ->
             "auto_apply": False,
         })
     return packet
+
+
+def _review_retry_feedback(package_names, attempt_names=()) -> dict:
+    """Build a small, actionable retry card from the exact preserved attempts."""
+    requested = _normalize_salvage_package_names(package_names)
+    attempts = [name for name in _normalize_salvage_package_names(attempt_names)
+                if name not in requested]
+    rows: list[dict] = []
+    access_markers = (
+        "blocked by policy", "access is denied", "permission denied",
+        "拒绝启动任何本地 shell",
+    )
+    for name in [*requested, *attempts]:
+        package = _salvage_package_path(name)
+        if package is None:
+            rows.append({"package": name, "available": False})
+            continue
+        try:
+            manifest = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            manifest = {}
+        try:
+            output_tail = (package / "model_output_tail.txt").read_text(
+                encoding="utf-8", errors="replace")[-32 * 1024:]
+        except OSError:
+            output_tail = ""
+        access_line = next((
+            " ".join(line.split())[:600]
+            for line in output_tail.splitlines()
+            if any(marker in line.casefold() for marker in access_markers)
+        ), "")
+        metrics = (manifest.get("provider_metrics")
+                   if isinstance(manifest.get("provider_metrics"), dict) else {})
+        failure_code = str(manifest.get("failure_code") or "")
+        if not failure_code and access_line:
+            failure_code = "runner_tool_access_denied"
+        selfcheck_state = str(manifest.get("selfcheck_state") or "")
+        if not selfcheck_state:
+            legacy = manifest.get("selfcheck_ok")
+            try:
+                legacy_patch_bytes = int(manifest.get("patch_bytes") or 0)
+            except (TypeError, ValueError):
+                legacy_patch_bytes = 0
+            selfcheck_state = (
+                "passed" if legacy is True and legacy_patch_bytes > 0 else
+                "failed" if legacy is False else "not_run")
+        rows.append({
+            "package": name,
+            "role": "target" if name in requested else "attempt_evidence",
+            "available": True,
+            "failure_code": failure_code or str(manifest.get("failure_kind") or ""),
+            "host_reason": str(manifest.get("reason") or "")[:800],
+            "return_code": manifest.get("return_code"),
+            "selfcheck_state": selfcheck_state,
+            "command_count": metrics.get("command_count", 0),
+            "file_change_count": metrics.get("file_change_count", 0),
+            "blocked_tool_count": metrics.get("blocked_tool_count", 0),
+            "patch_bytes": manifest.get("patch_bytes", 0),
+            "tool_access_error": (
+                str(metrics.get("tool_access_error") or "")[:600] or access_line),
+            "attempt_no": manifest.get("replay_attempt_no", 0),
+        })
+    return {
+        "active": bool(requested),
+        "lineage_attempt_count": len(attempts),
+        "previous_attempts": rows,
+        "correction_contract": (
+            "Do not repeat the previous terminal state. If tools are blocked, emit "
+            "BLOCKED_TOOL_CAPABILITY with the original error. Otherwise finish one "
+            "implemented production loop, or use no_valid_change only after reading "
+            "the complete replay evidence and giving a verifiable receipt."),
+    }
 
 
 def _parse_retry_resolutions(report: str, package_names) -> dict[str, str]:
@@ -6153,9 +6248,10 @@ def _save_review_salvage(
     replay_queue_ids: list[str] | None = None,
     review_attempt_id: str = "", review_sandbox_name: str = "",
     review_attempt_receipt_schema: int = 0,
-    startup_orphan_recovery: bool = False, log=print,
+    startup_orphan_recovery: bool = False,
+    prompt_text: str = "", invocation_prompt: str = "", log=print,
 ) -> Path | None:
-    """原子保存全部失败成果供 GLM 重审与后续分析；永不自动应用。"""
+    """原子保存全部失败成果供同一复盘模型重审；永不自动应用。"""
     if sandbox.salvage_saved:
         saved = Path(sandbox.salvage_saved)
         try:
@@ -6207,6 +6303,7 @@ def _save_review_salvage(
         "schema": 1,
         "time": time.strftime("%Y-%m-%d %H:%M:%S"),
         "failure_kind": _salvage_kind(reason, sandbox),
+        "failure_code": str(sandbox.failure_code or ""),
         "reason": reason,
         "pre_head": pre_head,
         "current_head": _current_head_for_salvage(),
@@ -6228,6 +6325,9 @@ def _save_review_salvage(
         "stalled": sandbox.stalled,
         "stopped": sandbox.stopped,
         "selfcheck_ok": sandbox.selfcheck_ok,
+        "selfcheck_state": (
+            "passed" if sandbox.selfcheck_ok is True else
+            "failed" if sandbox.selfcheck_ok is False else "not_run"),
         "provider_metrics": (
             dict(sandbox.provider_metrics)
             if isinstance(getattr(sandbox, "provider_metrics", None), dict)
@@ -6269,9 +6369,16 @@ def _save_review_salvage(
         "review_sandbox_name": str(review_sandbox_name or ""),
         "review_attempt_receipt_schema": max(
             0, int(review_attempt_receipt_schema or 0)),
+        "prompt_snapshot": "review_prompt.md" if prompt_text and not sandbox.stopped else "",
+        "prompt_bytes": len(prompt_text.encode("utf-8")) if prompt_text else 0,
+        "prompt_sha256": (
+            hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+            if prompt_text else ""),
+        "invocation_prompt_snapshot": (
+            "invocation_prompt.txt" if invocation_prompt and not sandbox.stopped else ""),
         "inspection_hint": (
-            "files/ 与 wip.patch 是全量失败现场；宿主只将其作为证据交回 GLM，"
-            "由 GLM 基于当前 HEAD 重审、解冲突，禁止自动应用。"),
+            "files/ 与 wip.patch 是全量失败现场；宿主只将其作为证据交回同一复盘模型，"
+            "由模型基于当前 HEAD 重审、解冲突、自检，禁止宿主自动应用。"),
     }
     try:
         SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
@@ -6322,6 +6429,11 @@ def _save_review_salvage(
         if sandbox.out:
             (temp / "model_output_tail.txt").write_text(
                 sandbox.out[-256 * 1024:], encoding="utf-8")
+        if prompt_text and not sandbox.stopped:
+            (temp / "review_prompt.md").write_text(prompt_text, encoding="utf-8")
+        if invocation_prompt and not sandbox.stopped:
+            (temp / "invocation_prompt.txt").write_text(
+                invocation_prompt, encoding="utf-8")
         (temp / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if _review_stop_requested() and not (deferred_raw or deferred_snapshot):
@@ -6588,6 +6700,7 @@ def _run_review_sandbox(
             paths=tuple(accepted),
             patch=patch.stdout,
             conclusion=conclusion,
+            selfcheck_ok=True,
             allowed_paths=tuple(accepted),
             artifact_paths=tuple(transient),
         )

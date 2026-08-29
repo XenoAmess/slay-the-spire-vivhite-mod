@@ -29,14 +29,14 @@ from review_runners import (  # noqa: E402
 
 
 class ReviewPlanTests(unittest.TestCase):
-    def test_production_luna_uses_explicit_non_auto_approval(self) -> None:
+    def test_production_luna_uses_auto_review_with_workspace_sandbox(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
 
         luna = next(
             plan for plan in review_plans_from_config(cfg["llm"])
             if plan.key == "luna-max")
 
-        self.assertFalse(luna.approve_for_me)
+        self.assertTrue(luna.approve_for_me)
         self.assertEqual(luna.sandbox, "workspace-write")
 
     def test_explicit_three_level_chain_preserves_runner_specific_options(self) -> None:
@@ -105,7 +105,9 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertIn('model_reasoning_effort="max"', command)
         for option in ("--approve-for-me", "--json", "--ephemeral"):
             self.assertIn(option, command)
-        self.assertNotIn("--sandbox", command)
+        self.assertNotIn("-a", command)
+        self.assertEqual(
+            command[command.index("--sandbox") + 1], "workspace-write")
         self.assertEqual(command[command.index("-C") + 1], "C:\\review\\repo")
         self.assertEqual(command[-1], "read prompt")
 
@@ -121,7 +123,8 @@ class ReviewPlanTests(unittest.TestCase):
         command = build_review_command(
             plan, "codex.CMD", Path("C:/review/repo"), "read prompt", title="ignored")
 
-        self.assertEqual(command[:4], ["codex.CMD", "-a", "never", "exec"])
+        self.assertEqual(command[:4], ["codex.CMD", "exec", "--model", "gpt-5.6-luna"])
+        self.assertNotIn("-a", command)
         self.assertNotIn("--approve-for-me", command)
         self.assertEqual(
             command[command.index("--sandbox") + 1], "workspace-write")
@@ -212,6 +215,44 @@ class CodexTranslatorTests(unittest.TestCase):
         metrics = translator.metrics()
         self.assertEqual(metrics["error_count"], 5)
         self.assertFalse(metrics["model_work_started"])
+
+    def test_non_json_tool_policy_failure_is_counted_and_preserved(self) -> None:
+        translator = CodexJsonTranslator()
+        raw = (
+            "ERROR codex_core::tools::router: exec_command failed: "
+            "CreateProcess rejected: blocked by policy " + ("x" * 800)
+        )
+
+        self.assertEqual(translator.feed(raw), [raw])
+        metrics = translator.metrics()
+
+        self.assertEqual(metrics["non_json_lines"], 1)
+        self.assertEqual(metrics["error_count"], 1)
+        self.assertEqual(metrics["blocked_tool_count"], 1)
+        self.assertLessEqual(len(metrics["tool_access_error"]), 500)
+        self.assertIn("blocked by policy", metrics["tool_access_error"])
+
+    def test_codex_tool_access_denials_are_counted_once_per_event(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed(json.dumps({
+            "type": "error",
+            "message": "apply_patch failed: Access is denied (os error 5)",
+        }))
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "status": "failed",
+                "aggregated_output": "Access denied",
+            },
+        }))
+        translator.feed("ordinary diagnostic: access denied")
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["blocked_tool_count"], 2)
+        self.assertEqual(metrics["error_count"], 2)
+        self.assertEqual(metrics["non_json_lines"], 1)
+        self.assertEqual(metrics["tool_access_error"], "Access denied")
 
 
 class OpencodeTranslatorTests(unittest.TestCase):

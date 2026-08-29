@@ -329,9 +329,64 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("`brain/config.json`", prompt)
         self.assertIn("`scripts/`、`tests/`、`docs/`", prompt)
         self.assertIn("静态原生游戏", prompt)
-        self.assertIn("禁止任何 git 操作", prompt)
+        self.assertIn("允许当前隔离 clone 内", prompt)
+        self.assertIn("禁止 remote、push、reset", prompt)
+        self.assertLess(prompt.index("3. 落地："), prompt.index("5. 最后才写报告："))
+        self.assertIn("BLOCKED_TOOL_CAPABILITY", prompt)
         self.assertNotIn("安全基础设施不可自改", prompt)
         self.assertNotIn("不得修改 `brain/autogit.py`", prompt)
+
+    def test_short_invocation_teaches_action_and_capability_stop(self) -> None:
+        prompt = llm_review._review_invocation_prompt(
+            "sts2-ascend/knowledge/review_prompt_latest.md")
+
+        self.assertIn("修改 sts2-ascend 静态项目文件", prompt)
+        self.assertIn("SELFCHECK OK", prompt)
+        self.assertIn("commit SHA", prompt)
+        self.assertIn("BLOCKED_TOOL_CAPABILITY", prompt)
+        self.assertLess(prompt.index("最小生产行为/观测改动"), prompt.index("最后才写报告"))
+
+    def test_tool_access_failure_outranks_report_only_closure(self) -> None:
+        sandbox = llm_review.SandboxReviewResult(
+            rc=0,
+            provider_metrics={
+                "blocked_tool_count": 3,
+                "tool_access_error": "CreateProcess rejected: blocked by policy",
+            },
+        )
+
+        error = llm_review._provider_tool_capability_error("codex", sandbox)
+
+        self.assertIn("runner 工具能力被阻断", error)
+        sandbox.failure_code = "runner_tool_access_denied"
+        self.assertEqual(
+            llm_review._salvage_kind(error, sandbox),
+            "runner_tool_access_denied",
+        )
+        self.assertIsNone(sandbox.selfcheck_ok)
+
+    def test_retry_feedback_recovers_legacy_tool_block_and_not_run_selfcheck(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-feedback-") as root:
+            salvage_root = Path(root)
+            package = salvage_root / "pkg-target"
+            package.mkdir()
+            (package / "manifest.json").write_text(json.dumps({
+                "failure_kind": "review_failure",
+                "reason": "闭环闸门拒绝纯报告",
+                "return_code": 0,
+                "selfcheck_ok": True,
+                "patch_bytes": 0,
+                "provider_metrics": {"command_count": 0, "file_change_count": 0},
+            }), encoding="utf-8")
+            (package / "model_output_tail.txt").write_text(
+                "CreateProcess rejected: blocked by policy\n", encoding="utf-8")
+            with mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root):
+                feedback = llm_review._review_retry_feedback(["pkg-target"])
+
+        row = feedback["previous_attempts"][0]
+        self.assertEqual(row["failure_code"], "runner_tool_access_denied")
+        self.assertEqual(row["selfcheck_state"], "not_run")
+        self.assertIn("blocked by policy", row["tool_access_error"])
 
     def test_prompt_explains_inline_packet_and_rewrites_native_corpus_paths(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-review-packet-") as root:

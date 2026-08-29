@@ -182,22 +182,12 @@ def build_review_command(
         command += ["--title", title, "--dir", root, "--auto", prompt]
         return command
     if plan.runner == "codex":
-        command = [binary]
-        if not plan.approve_for_me:
-            # Approval policy is a global Codex option, so it must precede the
-            # ``exec`` subcommand.  Keep the workspace sandbox explicit while
-            # avoiding the native automatic-review patch verifier.
-            command += ["-a", "never"]
-        command += ["exec", "--model", plan.model]
+        command = [binary, "exec", "--model", plan.model]
         if plan.reasoning_effort:
             command += ["-c", f'model_reasoning_effort="{plan.reasoning_effort}"']
         if plan.approve_for_me:
-            # Codex defines --approve-for-me as automatic review *with* the
-            # workspace-write sandbox, and rejects an explicit --sandbox flag
-            # in the same invocation.
             command.append("--approve-for-me")
-        else:
-            command += ["--sandbox", plan.sandbox]
+        command += ["--sandbox", plan.sandbox]
         command += ["--json", "--ephemeral", "--color", "never", "-C", root, prompt]
         return command
     raise ValueError(f"unsupported review runner: {plan.runner}")
@@ -340,6 +330,8 @@ class CodexJsonTranslator(_TranslatorBase):
         self.command_count = 0
         self.file_change_count = 0
         self.tool_count = 0
+        self.blocked_tool_count = 0
+        self.tool_access_error = ""
         self.final_message = ""
 
     @staticmethod
@@ -355,25 +347,50 @@ class CodexJsonTranslator(_TranslatorBase):
             "command_count": self.command_count,
             "file_change_count": self.file_change_count,
             "tool_count": self.tool_count,
+            "blocked_tool_count": self.blocked_tool_count,
+            "tool_access_error": self.tool_access_error,
             "final_message_chars": len(self.final_message),
         })
         return payload
+
+    def _record_tool_access_error(
+        self, value, *, error_already_counted: bool = False,
+        tool_context: bool = False,
+    ) -> bool:
+        searchable = (value if isinstance(value, str)
+                      else json.dumps(value, ensure_ascii=False))
+        summary = self._brief(value, 500)
+        lowered = searchable.lower()
+        denied = "access is denied" in lowered or "access denied" in lowered
+        contextual = tool_context or any(marker in lowered for marker in (
+            "codex_core::tools", "tools::router", "createprocess", "exec_command",
+            "apply_patch", "apply patch", "patch verifier",
+        ))
+        if "blocked by policy" not in lowered and not (denied and contextual):
+            return False
+        self.blocked_tool_count += 1
+        self.tool_access_error = summary
+        if not error_already_counted:
+            self.error_count += 1
+        return True
+
+    def _non_json(self, text: str) -> list[str]:
+        self.non_json_lines += 1
+        self._record_tool_access_error(text)
+        return [text]
 
     def feed(self, raw: str) -> list[str]:
         text = raw.strip()
         if not text:
             return []
         if not text.startswith("{"):
-            self.non_json_lines += 1
-            return [text]
+            return self._non_json(text)
         try:
             event = json.loads(text)
         except json.JSONDecodeError:
-            self.non_json_lines += 1
-            return [text]
+            return self._non_json(text)
         if not isinstance(event, dict):
-            self.non_json_lines += 1
-            return [text]
+            return self._non_json(text)
         self._event()
         event_type = str(event.get("type") or "")
         if event_type == "thread.started":
@@ -394,13 +411,13 @@ class CodexJsonTranslator(_TranslatorBase):
             error_message = (raw_error.get("message")
                              if isinstance(raw_error, dict) else raw_error)
             message = event.get("message") or error_message or event
+            self._record_tool_access_error(message, error_already_counted=True)
             return ["⚠ Codex " + self._brief(message)]
         if not event_type.startswith("item."):
             return []
         raw_item = event.get("item")
         if not isinstance(raw_item, dict):
-            self.non_json_lines += 1
-            return [text]
+            return self._non_json(text)
         item = raw_item
         item_type = str(item.get("type") or "")
         if item_type in {
@@ -422,7 +439,10 @@ class CodexJsonTranslator(_TranslatorBase):
             return ["💭 " + self._brief(value, 1000)] if value else []
         if item_type == "command_execution":
             status = str(item.get("status") or "completed")
-            output = self._brief(item.get("aggregated_output") or item.get("output") or "", 300)
+            raw_output = item.get("aggregated_output") or item.get("output") or ""
+            if status.lower() in {"failed", "error", "rejected"}:
+                self._record_tool_access_error(raw_output, tool_context=True)
+            output = self._brief(raw_output, 300)
             return [f"⚙ shell {status}" + (f" · {output}" if output else "")]
         if item_type == "file_change":
             self.file_change_count += 1
