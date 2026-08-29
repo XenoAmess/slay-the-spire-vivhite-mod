@@ -6893,3 +6893,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/1027 胜，当前目标进阶 0
+
+## 第 1028 局复盘（2026-08-29 14:47）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：BATTLE_TRANCE, DRAMATIC_ENTRANCE, EVIL_EYE, BREAKTHROUGH, MOLTEN_FIST, WHIRLWIND, TRUE_GRIT, CRIMSON_MANTLE, INFLAME, ARMAMENTS, CONFLAGRATION, MOLTEN_FIST, STOMP, BLUDGEON, DISMANTLE, RAMPAGE
+- 本局遗物：BAG_OF_MARBLES, PANTOGRAPH
+- 战斗记录：F17 Boss战 掉血54｜竞速审计：T3判死→实战10回合获胜; F19 Monster战 掉血5; F21 Monster战 掉血0; F25 Unknown战 掉血26; F29 Monster战 掉血15; F31 Elite战 掉血64｜竞速审计：T5判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PACTS_END(24分/107局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/1028 胜，当前目标进阶 0
