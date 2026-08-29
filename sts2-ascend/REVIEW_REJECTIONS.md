@@ -168,7 +168,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260830-044429-1788036269565492900-e9bfc839 -->
 | 2026-08-30 04:44:29 | 第 988~1013 局 | `e9bfc839` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-044429-1788036269565492900-e9bfc839` | 复盘进程未成功完成 |
 <!-- rejection:20260830-050041-1788037241638502400-5143a7fc -->
-| 2026-08-30 05:00:41 | 第 808~812 局 | `5143a7fc` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-050041-1788037241638502400-5143a7fc` | 闭环闸门拒绝纯报告：当前要求每批落地；历史连续纯报告 0 次（阈值 2）。本批必须对运行时行为或观测路径产生实质代码变化；meta_review、短评、仅 selfcheck，以及只改注释/空白来碰瓷生产路径都不算闭环。无需证明绝对安全，可做相对安全、可观测、可记录、可继续调整或撤回的改动。 |
+| 2026-08-30 05:00:41 | 第 808~812 局 | `5143a7fc` | review_failure | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `79b8b720` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 79b8b720 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-043411-1788035651214457700-0ee874db -->
 | 2026-08-30 04:34:11 | 第 808~812 局 | `0ee874db` | review_failure | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `79b8b720` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 79b8b720 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-052932-1788038972712769500-9be95113 -->
