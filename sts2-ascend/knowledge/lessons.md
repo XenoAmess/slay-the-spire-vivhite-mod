@@ -7102,3 +7102,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.59 → 0.58（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1046 胜，当前目标进阶 0
+
+## 第 1047 局复盘（2026-08-29 17:35）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：EVIL_EYE, IRON_WAVE, MOLTEN_FIST, EVIL_EYE, DISMANTLE, MOLTEN_FIST, STOMP, THUNDERCLAP, UNMOVABLE, ANGER, SECOND_WIND, JUGGLING, CONFLAGRATION, TAUNT, WHIRLWIND, STONE_ARMOR, FEEL_NO_PAIN
+- 本局遗物：RAZOR_TOOTH, LETTER_OPENER
+- 战斗记录：F19 Monster战 掉血6; F20 Monster战 掉血12; F22 Monster战 掉血37; F25 Monster战 掉血10; F28 Unknown战 掉血31; F31 Monster战 掉血32｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，MANGLE(24分/106局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.58 → 0.59（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）
+- 生涯战绩：0/1047 胜，当前目标进阶 0
