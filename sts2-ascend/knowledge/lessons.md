@@ -7652,3 +7652,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1096 胜，当前目标进阶 0
+
+## 第 1097 局复盘（2026-08-30 00:31）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：HEMOKINESIS, ANGER, RAGE, IRON_WAVE, DISMANTLE, HEMOKINESIS, STONE_ARMOR, ARMAMENTS, INFLAME, PACTS_END, DEMON_FORM, MANGLE, WHIRLWIND, CINDER, SECOND_WIND, MOLTEN_FIST, TWIN_STRIKE, CINDER, ANGER, FLAME_BARRIER
+- 本局遗物：音叉, PETRIFIED_TOAD, CLOAK_CLASP
+- 战斗记录：F20 Monster战 掉血9; F21 Monster战 掉血7; F23 Monster战 掉血31｜竞速审计：T2判死→实战6回合获胜; F27 Monster战 掉血27｜竞速审计：T3判死→实战5回合获胜; F29 Monster战 掉血24｜竞速审计：T2判死→实战6回合获胜; F30 Monster战 掉血10｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，OFFERING(25分/32局)，PRIMAL_FORCE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.41（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/1097 胜，当前目标进阶 0

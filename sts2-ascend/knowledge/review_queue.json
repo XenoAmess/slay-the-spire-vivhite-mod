@@ -2595,42 +2595,21 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "queued"
+  },
+  {
+   "run": 1097,
+   "time": "2026-08-30 00:31",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "queued"
   }
  ],
- "reviewing": {
-  "runs": [
-   1086
-  ],
-  "items": [
-   {
-    "run": 1086,
-    "time": "2026-08-29 22:59",
-    "backend_key": "kimi-k3",
-    "priority": 3,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "fallback",
-    "queue_id": "20596-1788015606145563700-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260829-230100-1788015660311343600-c1cd8e66"
-    ],
-    "salvage_attempts": [
-     "20260829-231422-1788016462681869400-65abad11",
-     "20260829-232854-1788017334150277900-c5457914"
-    ],
-    "retry_group": "20260829-230100-1788015660311343600-c1cd8e66",
-    "replay_target": "20260829-230100-1788015660311343600-c1cd8e66",
-    "retry_count": 1,
-    "retry_after": 1788015743.2534692
-   }
-  ],
-  "retry_group": "20260829-230100-1788015660311343600-c1cd8e66",
-  "started": "2026-08-29 23:29:53"
- }
+ "reviewing": null
 }
