@@ -315,6 +315,11 @@ class Policy:
         self._handshake_credit_source = None
         self._handshake_credit_cursor = 0
         self._uncertain_action = None  # POST response lost; reconcile from next observed state
+        # 竞速预演可行侧账面暂存（BOSS_RACE_PROJ_AUDIT，第919~987局批复盘）：
+        # _boss_race_doomed 每次调用时重写；仅当血池/火力/爆发数据齐全且预演
+        # 判「可行」时携带账面文本，供前夜翻转留痕对账。判死侧已有 doom 全文、
+        # 数据缺失侧为空串，消费端据此区分三种现实
+        self._race_proj_audit = ""
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
@@ -4146,6 +4151,8 @@ class Policy:
         可立即回滚到均值口径。
         """
         pol = self.know.policy
+        # 可行侧对账账面每次调用重置（BOSS_RACE_PROJ_AUDIT 观测位，不改判定）
+        self._race_proj_audit = ""
         if not pol.get("kill_race_enabled", True):
             return False, ""
         pool, fire = self.know.boss_race_vitals(
@@ -4171,12 +4178,26 @@ class Policy:
         ttk = pool_eff / max(1.0, dpt)
         tsurv = float(max_hp) / max(1.0, fire)
         if ttk <= tsurv + margin:
+            # BOSS_RACE_PROJ_AUDIT（第919~987局批复盘）：预演判「可赢」的账面
+            # 此前完全不可见——F33 二幕 Boss 0/12 全灭的前夜翻转留痕全部无预演
+            # 结论，幕级乐观偏差（折算率按一幕战绩标定）无法跨局对账。此处
+            # 仅记录已算出的账面，不改变任何判定与返回值
+            self._race_proj_audit = (
+                f"击杀需{ttk:.0f}回合≤满血可存活{tsurv:.0f}回合"
+                f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合、"
+                f"先验输出{dpt:.0f}/回合{_pot_tail}）")
             return False, ""
         # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
         _feasible, _ = self._race_joint_feasible(
             deck or [], pool_eff, fire, float(max_hp), margin, eff=eff)
         if _feasible:
+            # 同上：进攻线判负但联合能量复核可行时，账面同样自报（第709~713批
+            # 「乐观口径复核」通道的消费端对账面）
+            self._race_proj_audit = (
+                f"击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合，但联合能量复核"
+                f"存在可行攻防分配（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合、"
+                f"先验输出{dpt:.0f}/回合{_pot_tail}）")
             return False, ""
         # 均值口径已判负时，用合格的组合级 native 血池逐一复核。这里只
         # 放宽均值误杀，不凭无样本组合造结论；native/分幕样本缺失时原账不动。
@@ -4202,6 +4223,10 @@ class Policy:
                         universal_doomed = False
                 verdict_text = ",".join(verdicts)
                 if not universal_doomed:
+                    # 组合全称门放行侧的对账账面（分账全文走 BOSS_RACE_COMBO_GATE
+                    # 留痕，此处只挂总标签供翻转留痕引用）
+                    self._race_proj_audit = (
+                        "均值口径判负但组合全称门放行（BOSS_RACE_COMBO_GATE分账）")
                     self._trace_note(
                         "BOSS_RACE_COMBO_GATE：均值判死被组合全称门放行；" + verdict_text)
                     return False, ""
@@ -6152,7 +6177,13 @@ class Policy:
                     elif _doomed:
                         _doom_tail = f"；竞速预演虽判必败（{_doom_note}），回血后有望越过悲观安全线"
                     else:
-                        _doom_tail = ""
+                        # BOSS_RACE_PROJ_AUDIT（第919~987局批复盘）：预演判可行的翻转
+                        # 带回血必须自报账面，否则 F33 型「前夜判可赢→实战整管打空」
+                        # 的幕级乐观偏差在持久链里零留痕。纯观测：账面文本只描述
+                        # 已发生的预演结果，不参与任何评分/分支
+                        _proj_audit = getattr(self, "_race_proj_audit", "") or ""
+                        _doom_tail = (f"；前夜预演对账BOSS_RACE_PROJ_AUDIT：竞速预演判可行"
+                                      f"——{_proj_audit}" if _proj_audit else "")
                     return Decision("choose_rest_option", {"option_index": heal["index"]},
                                     f"篝火：Boss 前夜翻转带回血（当前 {hp_pct:.0%}；不回血预期余量"
                                     f"{cur_hp - pess:.0f}≤安全余量{margin:.0f}（悲观战损{pess:.0f}="

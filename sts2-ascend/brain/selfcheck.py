@@ -5648,6 +5648,18 @@ def main() -> int:
         knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bosrace3-"))))).group(1))
     assert _proj_doom < _proj_nv, \
         f"投影镜像未与必败锻造口径同步: 必败{_proj_doom}% 应低于 无数据{_proj_nv}%"
+
+    # 3br-audit（BOSS_RACE_PROJ_AUDIT，第919~987局批复盘）：F33 二幕 Boss 0/12 全灭
+    #     的前夜翻转带回血留痕全部无预演结论——预演判「可赢」时竞速账面完全不可见，
+    #     幕级乐观偏差无法跨局对账。可行侧翻转留痕必须自报账面；判死侧已有 doom
+    #     全文、数据缺失侧回落旧口径，两侧均不得追加对账文本
+    assert "BOSS_RACE_PROJ_AUDIT" in d_br_strong.reason \
+        and "击杀需" in d_br_strong.reason and "可存活" in d_br_strong.reason, \
+        f"预演可行的前夜回血缺对账留痕: {d_br_strong.reason}"
+    assert "BOSS_RACE_PROJ_AUDIT" not in d_br_weak.reason, \
+        f"判死侧已带 doom 全文，不得重复对账: {d_br_weak.reason}"
+    assert "BOSS_RACE_PROJ_AUDIT" not in d_br_nv.reason, \
+        f"数据缺失回落旧口径不得伪造对账: {d_br_nv.reason}"
     br_ctx.rest_before_boss = False
 
     # 3br-2) per-Boss 血池全称门（第731~740批拒合成果补合）：均值判负后，
