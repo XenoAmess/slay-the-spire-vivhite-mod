@@ -1,0 +1,363 @@
+{
+ "run_id": "16EVV8WXDGQU",
+ "run_number": 1098,
+ "ascension": 0,
+ "started_at": "2026-08-30 00:31:57",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "00:31:57",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「铅制镇纸」（经验价值 2.1）；铅制镇纸=2.1(n=86) / 钓鱼竿=1.8(n=50) / 沉重石板=0.0(n=12)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "铅制镇纸",
+      "score": 2.122,
+      "status": "chosen",
+      "why": "经验样本 86",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "钓鱼竿",
+      "score": 1.8,
+      "status": "rejected",
+      "why": "经验样本 50",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "沉重石板",
+      "score": 0.0,
+      "status": "rejected",
+      "why": "经验样本 12",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "铅制镇纸",
+     "params": {
+      "option_index": 0
+     },
+     "score": 2.122
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "00:31:58",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【究极防御】（价值 9.3）；候选：究极防御=9.3 / 炸弹=0.8",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F1",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 9.26 / 门槛 0.00；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "究极防御",
+      "score": 9.259,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "炸弹",
+      "score": 0.8,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "究极防御",
+     "params": {
+      "option_index": 0
+     },
+     "score": 9.259
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "00:31:59",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "00:32:02",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(1,2)（路径分 -50.33，预计进 Boss 血量 18%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计））；候选：Monster(1,2)=-50.33|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计） / Monster(1,4)=-57.46|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,6)=-54.98|前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+   "trace": {
+    "observation": {
+     "title": "MAP · F1",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅1张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "3 条候选；最高 -50.33"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "warn",
+      "value": "选中路径预计入场血量 18%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(1,2)",
+      "score": -50.333,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "2",
+       "projected_hp": "0.17734492704505275"
+      }
+     },
+     {
+      "label": "Monster(1,6)",
+      "score": -54.978,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "6",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(1,4)",
+      "score": -57.46,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.29（缺口83%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "4",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(1,2)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -50.333,
+     "target": {
+      "row": "1",
+      "col": "2",
+      "projected_hp": "0.17734492704505275"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "00:32:04",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【打击】→缩小甲虫（单体伤害≈6.0）；敌意图总伤0，我方80血/0甲",
+   "turn": 1,
+   "energy": 3
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "card_pick",
+   "ULTIMATE_DEFEND"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ]
+}
