@@ -7740,3 +7740,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1104 胜，当前目标进阶 0
+
+## 第 1105 局复盘（2026-08-30 01:27）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：THUNDERCLAP, FIGHT_ME, DEMON_FORM, SWORD_BOOMERANG, SALVO, EVIL_EYE, IRON_WAVE, JUGGERNAUT, INFLAME
+- 本局遗物：SHOVEL, STRAWBERRY
+- 战斗记录：F6 Unknown战 掉血0; F8 Monster战 掉血22; F9 Monster战 掉血22｜竞速审计：T3判死→实战5回合获胜; F14 Monster战 掉血0; F15 Monster战 掉血14; F17 Boss战 掉血53｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，OFFERING(25分/32局)，PRIMAL_FORCE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1105 胜，当前目标进阶 0
