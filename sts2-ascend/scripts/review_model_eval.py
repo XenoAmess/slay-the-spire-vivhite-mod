@@ -608,18 +608,27 @@ def build_provider_command(
         '\u4e25\u683c\u6309\u4efb\u52a1\u4e66\u6267\u884c\u3002'
     )
     if spec.runner == 'codex':
-        command = [binary, 'exec', '--model', spec.model]
+        # ``-a`` is a global option and must precede ``exec``.  The evaluator
+        # creates its clone below the real repository, so keep the approval
+        # policy and permission profile explicit instead of inheriting a
+        # trusted parent-project configuration from the user's Codex home.
+        command = [binary, '-a', 'never', 'exec', '--model', spec.model]
         if spec.reasoning_effort:
             command += [
                 '-c',
                 'model_reasoning_effort=' + json.dumps(spec.reasoning_effort),
             ]
-        if spec.approve_for_me:
-            command.append('--approve-for-me')
-        else:
-            command += ['--sandbox', spec.sandbox]
+        if spec.sandbox != 'workspace-write':
+            raise ValueError(
+                'codex evaluation requires workspace-write configuration semantics; '
+                f'configured sandbox={spec.sandbox!r}')
         command += [
-            '--json', '--ephemeral', '--color', 'never',
+            '-c', (
+                'permissions.luna_commit={extends=":workspace",'
+                'filesystem={":workspace_roots"={".git"="write"}},'
+                'network={enabled=false}}'),
+            '-c', 'default_permissions="luna_commit"',
+            '--json', '--ephemeral', '--ignore-user-config', '--color', 'never',
             '-C', str(workdir), short_prompt,
         ]
         return command, None

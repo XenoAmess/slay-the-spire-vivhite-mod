@@ -133,3 +133,28 @@ index、deny-only 分类、自检与 CAS，最终提交并推送 `dce57b1d`。�
 直播中断为 0 秒。
 
 本轮仍不分析或修复 GLM；它因余额不足产生的失败按用户要求保留原行为。
+
+## 2026-08-30 第二次生产证据纠正
+
+本节以随后出现的生产证据纠正本文前面的阶段性结论，但保留原始记录，避免静默改写排障历史。此前
+“恢复 `approve_for_me=true`，只传 `--approve-for-me`”的结论，已被第二次生产现场推翻，不再是
+当前契约。新的决定性证据来自 Codex JSONL 的 `item36`：一次原生 `file_change` 同时报告了隔离 clone
+内的 `sts2-ascend/brain/knowledge.py`，以及真实仓中的 `sts2-ascend/brain/policy.py` 和
+`sts2-ascend/brain/selfcheck.py`。三项写入发生在同一工具调用中，证明自动审批可以批准绝对路径写出
+隔离 clone；仅靠进程 `cwd` 和 `-C <clone>` 只能约束相对路径，不能充当硬写边界。
+
+这份现场也纠正了“Luna 不愿产生有效落地”的判断。Luna 起初在 clone 内只看到 `knowledge.py`，因此
+第一次自检建立在不完整改动上；随后它自己发现 clone 缺少 `policy.py` 和 `selfcheck.py`，并主动在
+clone 内重做这两处修改。也就是说，Luna 正在尝试复核并闭环，真正失效的是宿主授权边界，而不是
+Luna 拒绝操作、拒绝自检或只肯输出报告。
+
+当前生产配置已经改为 `approve_for_me=false`。Luna 命令构造器强制使用 `-a never`、
+`--ignore-user-config` 和内联 `luna_commit` 权限配置；该配置继承 `:workspace`，仅为当前隔离 clone 的
+`.git` 开放写权限，并显式设置 `network=false`，使 Luna 仍能在 clone 内自行 `git add/commit`，同时
+不继承用户级信任配置，也不能写入 clone 外的真实仓。`cwd=<clone>` 与唯一的 `-C <clone>` 双绑定仍
+保留，作为工作目录契约；Codex JSONL 报告路径的越界熔断也继续保留，用于尽早终止、保存现场和提供
+取证信号，但它不是硬写边界，硬边界由操作系统权限配置承担。
+
+上述宿主修复已经通过无模型的本地权限探针与回归测试；生产重试尚待完整栈重新启动后验证。现阶段
+不能把失败包写成“Luna 已补合”或宣称生产闭环已经恢复，最终结论必须等待 Luna 自己重新读取现场、
+修改 clone、运行自检、完成 clone 内提交，并由宿主验收与发布后再记录。

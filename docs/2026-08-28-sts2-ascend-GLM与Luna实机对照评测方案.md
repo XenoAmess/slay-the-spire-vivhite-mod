@@ -29,7 +29,7 @@
 - Windows checkout 在取文件前固定 core.autocrlf=false、core.eol=lf，避免原生知识 manifest 因 CRLF 漂移而失效。
 - 两个候选必须复用同一 prompt bundle；同时校验 baseline、batch_runs、run_evidence_scope、Prompt 内首个 JSON packet 和 SHA-256。
 - 六次任务显式传同一个 validator commit。验收器从该 commit 冻结 brain 快照，避免 Brain 中途提交让 A/B 使用不同门禁。
-- Codex auto-review 只传 approve-for-me；非 auto-review 才显式传 workspace-write sandbox，避免 CLI 互斥参数导致模型启动前失败。
+- 历史执行契约（已于 2026-08-30 被下述契约取代）：Codex auto-review 只传 approve-for-me；非 auto-review 才显式传 workspace-write sandbox，以避免当时 CLI 互斥参数导致模型启动前失败。
 - provider 输出使用二进制 read1(8192)；每个原始 chunk 先记心跳，再写盘并 flush，之后用独立增量 UTF-8 decoder 解析 JSONL。首 raw byte、首完整事件、首模型工作和最大 raw 静默分别统计。
 - 总超时 8 小时；连续 30 分钟无原始输出触发 watchdog。15–30 分钟静默在报告中记警告。
 - selfcheck 后用 force-stage 捕获全部工作树，包括 ignored/cache/pyc/在线路径；all_changes.patch 保存完整现场。
@@ -37,6 +37,16 @@
 - 当前生产 deny-only 分类把模型文件分成 accepted、transient、online、rejected；只有 accepted 精确导出 changes.patch。无 accepted 或空 patch 不得标记可合入。
 - execution_success、production_acceptance、blind_review 三层独立，禁止再用一个 success 字段混淆“CLI 跑完”“可合入”和“能力更好”。
 - 初始化、provider、自检、patch 或 validator 失败都写正式 manifest；原始事件、stderr、时间戳 transcript、完整 sandbox、全量 patch、精确 patch和证据哈希全部保留。
+
+### 2026-08-30 Luna 宿主执行契约纠正
+
+生产环境已捕获 Codex 原生工具在一次变更中同时报告“隔离 clone 路径”与“真实仓绝对路径”的外写证据。这证明工作目录和 `-C` 只能约束相对路径，`auto-review` / `--approve-for-me` 不是隔离边界；因此上述历史契约已终止使用。独立 evaluator 的 Luna 宿主现固定遵守：
+
+- 评测规格仍必须声明 `spec.sandbox=workspace-write`；这是 provider 适配与任务亲和性的语义契约，不再直接映射为 CLI `--sandbox` 参数。
+- 实际 builder 固定为 `codex -a never exec`，并传入 `--ignore-user-config`，防止用户级信任配置扩大评测权限。
+- builder 内联 `luna_commit` 权限 profile：继承 `:workspace`，只将 workspace root 内的 `.git` 重开为可写，同时固定 `network=false`；该 profile 作为 `default_permissions`。
+- 命令只允许一个 `-C`，且必须指向本次 isolated repository。命令中不得出现 `--sandbox`、`--approve-for-me`、`--add-dir` 或任何 bypass / yolo 类选项。
+- 这是同时满足“只写隔离 clone”与“Luna 在 clone 内自行 Git 提交”的兼容方案；不改变评测顺序、Prompt、任务策略、产物分类或接收口径。
 
 ## 已完成验证
 

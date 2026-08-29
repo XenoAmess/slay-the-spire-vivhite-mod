@@ -71,12 +71,35 @@ class BackendKeyTests(unittest.TestCase):
         self.assertIsNone(stdin_text)
         self.assertIn(
             'sts2-ascend/knowledge/review_prompt_latest.md', command[-1])
-        self.assertIn('--ephemeral', command)
-        self.assertIn('--approve-for-me', command)
-        self.assertNotIn('--sandbox', command)
+        self.assertEqual(
+            command[:6],
+            ['codex.CMD', '-a', 'never', 'exec', '--model', 'gpt-5.6-luna'],
+        )
         self.assertIn('model_reasoning_effort=' + json.dumps('max'), command)
+        self.assertIn(
+            ('permissions.luna_commit={extends=":workspace",'
+             'filesystem={":workspace_roots"={".git"="write"}},'
+             'network={enabled=false}}'),
+            command,
+        )
+        self.assertIn('default_permissions="luna_commit"', command)
+        for option in ('--json', '--ephemeral', '--ignore-user-config'):
+            self.assertIn(option, command)
+        self.assertLess(command.index('-a'), command.index('exec'))
+        self.assertGreater(
+            command.index('--ignore-user-config'), command.index('exec'))
+        self.assertEqual(sum(
+            option in {'-C', '--cd'} for option in command), 1)
+        self.assertEqual(
+            command[command.index('-C') + 1], str(Path(root) / 'repo'))
+        for forbidden in (
+            '--approve-for-me', '--sandbox', '--add-dir', '--yolo',
+            '--dangerously-bypass-approvals-and-sandbox',
+            'danger-full-access',
+        ):
+            self.assertNotIn(forbidden, command)
 
-    def test_codex_non_auto_review_keeps_explicit_sandbox(self) -> None:
+    def test_codex_non_auto_review_uses_the_same_hard_boundary(self) -> None:
         spec = review_model_eval.parse_backend_key(
             'codex:gpt-5.6-luna@max')
         with tempfile.TemporaryDirectory() as root:
@@ -85,8 +108,27 @@ class BackendKeyTests(unittest.TestCase):
             command, _ = review_model_eval.build_provider_command(
                 spec, 'codex.CMD', Path(root) / 'repo', prompt, 'eval-case')
         self.assertNotIn('--approve-for-me', command)
-        self.assertEqual(
-            command[command.index('--sandbox') + 1], 'workspace-write')
+        self.assertNotIn('--sandbox', command)
+        self.assertIn('default_permissions="luna_commit"', command)
+
+    def test_codex_rejects_a_non_workspace_sandbox(self) -> None:
+        spec = review_model_eval.BackendSpec(
+            key='codex:gpt-5.6-luna@max:auto-review',
+            runner='codex',
+            model='gpt-5.6-luna',
+            reasoning_effort='max',
+            approve_for_me=True,
+            sandbox='read-only',
+        )
+        with tempfile.TemporaryDirectory() as root:
+            prompt = Path(root) / 'prompt.md'
+            prompt.write_text('frozen prompt', encoding='utf-8')
+            with self.assertRaisesRegex(
+                    ValueError,
+                    'requires workspace-write configuration semantics'):
+                review_model_eval.build_provider_command(
+                    spec, 'codex.CMD', Path(root) / 'repo', prompt,
+                    'eval-case')
 
     def test_unknown_runner_is_rejected_without_fallback(self) -> None:
         with self.assertRaisesRegex(ValueError, 'unsupported backend key'):

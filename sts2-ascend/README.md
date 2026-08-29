@@ -149,7 +149,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 本机登录状态与 bundled model catalog 做不产生付费轮次的可用性探测：
 
 1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
-2. `gpt-5.6-luna@max` — Codex CLI · `workspace-write` · auto-review
+2. `gpt-5.6-luna@max` — Codex CLI · 隔离 clone custom profile · `approval=never`
 3. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
 
 Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Agent.ps1` 冷启动时通过

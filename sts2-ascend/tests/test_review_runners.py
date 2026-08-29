@@ -20,9 +20,11 @@ sys.path.insert(0, str(BRAIN))
 
 import llm_review  # noqa: E402
 import review_runners  # noqa: E402
+import autogit  # noqa: E402
 from review_runners import (  # noqa: E402
     CodexJsonTranslator,
     ReviewPlan,
+    RunnerToolPathEscape,
     bind_review_workdir,
     build_review_command,
     review_plans_from_config,
@@ -30,14 +32,14 @@ from review_runners import (  # noqa: E402
 
 
 class ReviewPlanTests(unittest.TestCase):
-    def test_production_luna_uses_auto_review_with_workspace_sandbox(self) -> None:
+    def test_production_luna_denies_approval_with_workspace_sandbox(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
 
         luna = next(
             plan for plan in review_plans_from_config(cfg["llm"])
             if plan.key == "luna-max")
 
-        self.assertTrue(luna.approve_for_me)
+        self.assertFalse(luna.approve_for_me)
         self.assertEqual(luna.sandbox, "workspace-write")
 
     def test_production_codex_resolves_the_pinned_user_cache_binary(self) -> None:
@@ -106,7 +108,7 @@ class ReviewPlanTests(unittest.TestCase):
 
 
 
-    def test_codex_command_is_noninteractive_ephemeral_and_bound_to_clone(self) -> None:
+    def test_codex_command_hardens_legacy_auto_review_plan(self) -> None:
         plan = ReviewPlan(
             key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
             reasoning_effort="max", approve_for_me=True,
@@ -115,19 +117,34 @@ class ReviewPlanTests(unittest.TestCase):
         command = build_review_command(
             plan, "codex.CMD", Path("C:/review/repo"), "read prompt", title="ignored")
 
-        self.assertEqual(command[:4], ["codex.CMD", "exec", "--model", "gpt-5.6-luna"])
+        self.assertEqual(
+            command[:6],
+            ["codex.CMD", "-a", "never", "exec", "--model", "gpt-5.6-luna"])
         self.assertIn('model_reasoning_effort="max"', command)
-        for option in ("--approve-for-me", "--json", "--ephemeral"):
+        self.assertIn(
+            ('permissions.luna_commit={extends=":workspace",'
+             'filesystem={":workspace_roots"={".git"="write"}},'
+             'network={enabled=false}}'),
+            command)
+        self.assertIn('default_permissions="luna_commit"', command)
+        for option in ("--json", "--ephemeral", "--ignore-user-config"):
             self.assertIn(option, command)
-        self.assertNotIn("-a", command)
-        self.assertNotIn("--sandbox", command)
+        self.assertNotIn("--approve-for-me", command)
+        self.assertEqual(sum(option in {"-C", "--cd"} for option in command), 1)
+        for forbidden in (
+            "--sandbox", "--add-dir", "--yolo",
+            "--dangerously-bypass-approvals-and-sandbox", "danger-full-access",
+        ):
+            self.assertNotIn(forbidden, command)
+        self.assertLess(command.index("-a"), command.index("exec"))
+        self.assertGreater(command.index("--ignore-user-config"), command.index("exec"))
         self.assertEqual(command[command.index("-C") + 1], "C:\\review\\repo")
         self.assertEqual(command[-1], "read prompt")
 
         rebound = bind_review_workdir(command, "codex", Path("D:/isolated/repo"))
         self.assertEqual(rebound[rebound.index("-C") + 1], "D:\\isolated\\repo")
 
-    def test_codex_command_uses_explicit_sandbox_without_auto_review(self) -> None:
+    def test_codex_command_uses_custom_profile_without_auto_review(self) -> None:
         plan = ReviewPlan(
             key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
             sandbox="workspace-write", approve_for_me=False,
@@ -136,20 +153,21 @@ class ReviewPlanTests(unittest.TestCase):
         command = build_review_command(
             plan, "codex.CMD", Path("C:/review/repo"), "read prompt", title="ignored")
 
-        self.assertEqual(command[:4], ["codex.CMD", "exec", "--model", "gpt-5.6-luna"])
-        self.assertNotIn("-a", command)
-        self.assertNotIn("--approve-for-me", command)
         self.assertEqual(
-            command[command.index("--sandbox") + 1], "workspace-write")
+            command[:6],
+            ["codex.CMD", "-a", "never", "exec", "--model", "gpt-5.6-luna"])
+        self.assertNotIn("--approve-for-me", command)
+        self.assertNotIn("--sandbox", command)
+        self.assertIn('default_permissions="luna_commit"', command)
 
-    def test_codex_auto_review_rejects_a_non_workspace_sandbox(self) -> None:
+    def test_codex_rejects_a_non_workspace_sandbox(self) -> None:
         plan = ReviewPlan(
             key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
             sandbox="read-only", approve_for_me=True,
             every_runs=1, source="preferred")
 
         with self.assertRaisesRegex(
-                ValueError, "requires the workspace-write sandbox"):
+                ValueError, "requires workspace-write configuration semantics"):
             build_review_command(
                 plan, "codex.CMD", Path("C:/review/repo"), "read prompt",
                 title="ignored")
@@ -173,7 +191,7 @@ class ReviewPlanTests(unittest.TestCase):
 
 class CodexTranslatorTests(unittest.TestCase):
     def test_jsonl_translation_records_work_usage_and_tool_metrics(self) -> None:
-        translator = CodexJsonTranslator()
+        translator = CodexJsonTranslator(ASCEND)
         events = [
             {"type": "thread.started", "thread_id": "thread-123"},
             {"type": "item.started", "item": {
@@ -200,6 +218,80 @@ class CodexTranslatorTests(unittest.TestCase):
         self.assertEqual(metrics["tool_count"], 1)
         self.assertEqual(metrics["usage"]["output_tokens"], 20)
         self.assertIn("done", rendered)
+
+    def test_file_change_paths_inside_bound_clone_are_accepted(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-codex-path-inside-") as root:
+            clone = Path(root) / "repo"
+            clone.mkdir()
+            translator = CodexJsonTranslator(clone)
+            event = {
+                "type": "item.completed",
+                "item": {
+                    "type": "file_change",
+                    "status": "completed",
+                    "changes": [
+                        {"path": "sts2-ascend/brain/policy.py"},
+                        {"path": str(clone / "sts2-ascend" / "brain" / "selfcheck.py")},
+                        {"path": "docs/review.md"},
+                    ],
+                },
+            }
+
+            rendered = translator.feed(json.dumps(event))
+
+        self.assertTrue(rendered)
+        metrics = translator.metrics()
+        self.assertEqual(metrics["file_change_count"], 1)
+        self.assertEqual(metrics["tool_path_escape_count"], 0)
+        self.assertEqual(metrics["tool_access_failure_code"], "")
+
+    def test_mixed_file_change_paths_fail_closed_on_escape(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-codex-path-escape-") as root:
+            clone = Path(root) / "repo"
+            clone.mkdir()
+            outside = Path(root) / "live-repo" / "sts2-ascend" / "brain" / "policy.py"
+            translator = CodexJsonTranslator(clone)
+            event = {
+                "type": "item.started",
+                "item": {
+                    "type": "file_change",
+                    "status": "in_progress",
+                    "changes": [
+                        {"path": "sts2-ascend/brain/policy.py"},
+                        {"path": str(clone / "docs" / "review.md")},
+                        {"path": str(outside)},
+                    ],
+                },
+            }
+
+            with self.assertRaisesRegex(
+                    RunnerToolPathEscape, "escaped expected clone root"):
+                translator.feed(json.dumps(event))
+
+        metrics = translator.metrics()
+        self.assertEqual(metrics["tool_path_escape_count"], 1)
+        self.assertEqual(metrics["tool_access_failure_code"],
+                         "runner_tool_path_escape")
+        self.assertEqual(metrics["file_change_count"], 0)
+
+    def test_malformed_file_change_paths_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-codex-path-malformed-") as root:
+            clone = Path(root) / "repo"
+            clone.mkdir()
+            for changes in (
+                None, [], [{"kind": "update"}], [{"path": "   "}], ["policy.py"],
+            ):
+                with self.subTest(changes=changes):
+                    translator = CodexJsonTranslator(clone)
+                    event = {
+                        "type": "item.started",
+                        "item": {"type": "file_change", "changes": changes},
+                    }
+                    with self.assertRaises(RunnerToolPathEscape):
+                        translator.feed(json.dumps(event))
+                    self.assertEqual(
+                        translator.metrics()["tool_access_failure_code"],
+                        "runner_tool_path_escape")
 
     def test_reset_clock_separates_first_event_from_first_model_work(self) -> None:
         with mock.patch.object(
@@ -386,6 +478,88 @@ class OpencodeTranslatorTests(unittest.TestCase):
 
 
 class ReviewResolverTests(unittest.TestCase):
+    def test_path_escape_status_is_durable_and_does_not_cool_luna(self) -> None:
+        know = SimpleNamespace(
+            stats={"global": {"runs": 7}},
+            progression={"review_report_only_streak": 0},
+            save=mock.Mock(),
+        )
+        cfg = {
+            "enabled": True,
+            "runner": "codex",
+            "model": "gpt-5.6-luna",
+            "review_every_runs": 1,
+            "preferred_timeout_min": 480,
+            "stall_warn_min": 15,
+            "stall_timeout_min": 30,
+            "pre_work_timeout_min": 5,
+        }
+        sandbox = llm_review.SandboxReviewResult(
+            rc=-1,
+            error="Codex file_change 越出隔离 clone；整批拒合并保全",
+            failure_code="runner_tool_path_escape",
+            snapshot_complete=True,
+            provider_work_started=True,
+            provider_metrics={
+                "model_work_started": True,
+                "tool_access_failure_code": "runner_tool_path_escape",
+                "tool_path_escape_count": 1,
+            },
+            replay_evidence_requested=True,
+            replay_evidence_complete=False,
+            replay_evidence_error="reported-path熔断后未完成退出校验",
+            replay_evidence_model_started=True,
+        )
+        status: dict = {}
+        closure_state = {
+            "action_required": False,
+            "consecutive_report_only": 0,
+            "report_only_limit": 3,
+            "state_source": "test",
+        }
+        with tempfile.TemporaryDirectory(prefix="sts2-path-status-") as root:
+            repo_dir = Path(root)
+            prompt_file = (
+                repo_dir / "sts2-ascend" / "knowledge" / "review_prompt_latest.md")
+            prompt_file.parent.mkdir(parents=True)
+            with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+                  mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+                  mock.patch.object(llm_review, "REPO_DIR", repo_dir),
+                  mock.patch.object(llm_review, "PROMPT_FILE", prompt_file),
+                  mock.patch.object(llm_review, "_review_closure_state",
+                                    return_value=closure_state),
+                  mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+                  mock.patch.object(llm_review, "build_review_command",
+                                    return_value=["codex.CMD", "exec"]),
+                  mock.patch.object(llm_review, "_run_review_sandbox",
+                                    return_value=sandbox),
+                  mock.patch.object(llm_review, "_save_review_salvage",
+                                    return_value=None),
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_stream_begin"),
+                  mock.patch.object(llm_review, "_stream_end"),
+                  mock.patch.object(llm_review, "_launch_viewer"),
+                  mock.patch.object(llm_review, "_launch_speaker"),
+                  mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+                  mock.patch.object(autogit, "commit_progress_result"),
+                  mock.patch.object(autogit, "head", return_value="a" * 40),
+                  mock.patch.object(autogit, "set_review_active"),
+                  mock.patch.object(autogit, "push_pending", return_value=True)):
+                restart = llm_review.run_review(
+                    know, log=lambda _message: None, runner="codex",
+                    model="gpt-5.6-luna", backend_key="luna-max",
+                    reasoning_effort="max", approve_for_me=False,
+                    sandbox_mode="workspace-write", every=1,
+                    source="preferred", batch_runs=[7], async_mode=True,
+                    salvage_packages=["pkg-path-escape"],
+                    _status=status)
+
+        self.assertFalse(restart)
+        self.assertEqual(status["failure_code"], "runner_tool_path_escape")
+        self.assertEqual(status["retry_resolutions"], {})
+        mark.assert_not_called()
+
     def test_glm_cooldown_selects_luna_before_kimi(self) -> None:
         cfg = {
             "review_model_chain": [
@@ -583,6 +757,125 @@ class StreamAndProbeSafetyTests(unittest.TestCase):
         self.assertTrue(kill.called)
         process = kill.call_args_list[0].args[0]
         self.assertIsNotNone(process.poll())
+
+    def test_stream_binds_clone_root_and_terminates_on_file_change_escape(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-path-escape-") as root:
+            clone = Path(root) / "repo"
+            clone.mkdir()
+            outside_policy = Path(root) / "live-repo" / "policy.py"
+            outside_selfcheck = Path(root) / "live-repo" / "selfcheck.py"
+            event = json.dumps({
+                "type": "item.started",
+                "item": {
+                    "type": "file_change",
+                    "status": "in_progress",
+                    "changes": [
+                        {"path": str(outside_policy)},
+                        {"path": str(clone / "knowledge" / "review_conclusion.txt")},
+                        {"path": str(outside_selfcheck)},
+                    ],
+                },
+            })
+            false_success = json.dumps({
+                "type": "item.completed",
+                "item": {"type": "agent_message", "text": "SELFCHECK OK"},
+            })
+            command = [
+                sys.executable, "-u", "-c",
+                (f"import time; print({event!r}, flush=True); "
+                 f"print({false_success!r}, flush=True); time.sleep(60)"),
+            ]
+            translator = CodexJsonTranslator()
+            terminate = llm_review._terminate_process_tree
+            with (mock.patch.object(llm_review, "LIVE_STREAM", self._stream_path(root)),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+                  mock.patch.object(llm_review, "_terminate_process_tree",
+                                    wraps=terminate) as kill,
+                  self.assertRaisesRegex(
+                      RunnerToolPathEscape, "escaped expected clone root")):
+                llm_review._stream_run(
+                    command, 10, translate=translator.feed, cwd=clone,
+                    expected_clone_root=clone)
+
+        self.assertTrue(kill.called)
+        self.assertIsNotNone(kill.call_args_list[0].args[0].poll())
+        self.assertEqual(
+            translator.metrics()["tool_access_failure_code"],
+            "runner_tool_path_escape")
+        self.assertEqual(translator.final_message, "")
+
+    def test_sandbox_path_escape_is_rejected_before_host_selfcheck(self) -> None:
+        pre_head = subprocess.run(
+            ["git", "-C", str(ASCEND.parent), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True).stdout.strip()
+        translator = CodexJsonTranslator()
+
+        def emit_escape(_cmd, _timeout, translate=None, **kwargs):
+            clone = Path(kwargs["expected_clone_root"])
+            translator.bind_expected_clone_root(clone)
+            event = {
+                "type": "item.started",
+                "item": {
+                    "type": "file_change",
+                    "status": "in_progress",
+                    "changes": [
+                        {"path": str(ASCEND / "brain" / "policy.py")},
+                        {"path": str(clone / "knowledge" / "review_conclusion.txt")},
+                        {"path": str(ASCEND / "brain" / "selfcheck.py")},
+                    ],
+                },
+            }
+            translate(json.dumps(event))
+            self.fail("path escape must terminate before the stream returns")
+
+        command = [
+            "codex.CMD", "-a", "never", "exec",
+            "-c", (
+                'permissions.luna_commit={extends=":workspace",'
+                'filesystem={":workspace_roots"={".git"="write"}},'
+                'network={enabled=false}}'),
+            "-c", 'default_permissions="luna_commit"',
+            "--ignore-user-config", "-C", str(ASCEND.parent), "prompt",
+        ]
+        with (mock.patch.object(
+                  llm_review, "_normalize_windows_review_sandbox_acl"),
+              mock.patch.object(
+                  llm_review, "_codex_windows_filesystem_preflight",
+                  return_value=""),
+              mock.patch.object(
+                  llm_review, "_mount_failed_review_evidence",
+                  return_value={"packages": ["pkg-path-escape"]}) as mount,
+              mock.patch.object(
+                  llm_review, "_verify_failed_review_evidence") as verify,
+              mock.patch.object(
+                  llm_review, "_remove_failed_review_evidence") as remove,
+              mock.patch.object(llm_review, "_stream_run", side_effect=emit_escape),
+              mock.patch.object(llm_review, "_run_selfcheck") as selfcheck):
+            result = llm_review._run_review_sandbox(
+                command, "prompt", pre_head, 60, translator, runner="codex",
+                replay_packages=["pkg-path-escape"],
+                log=lambda _message: None)
+
+        try:
+            selfcheck.assert_not_called()
+            self.assertEqual(result.failure_code, "runner_tool_path_escape")
+            self.assertIn("整批拒合并保全", result.error)
+            self.assertTrue(result.provider_work_started)
+            self.assertEqual(
+                result.provider_metrics["tool_access_failure_code"],
+                "runner_tool_path_escape")
+            self.assertTrue(result.replay_evidence_requested)
+            self.assertFalse(result.replay_evidence_complete)
+            self.assertEqual(
+                result.replay_evidence_error,
+                "reported-path熔断后未完成退出校验")
+            mount.assert_called_once()
+            verify.assert_not_called()
+            remove.assert_not_called()
+            self.assertTrue(result.retained_sandbox_dir)
+        finally:
+            llm_review._discard_sandbox_snapshot(result, log=lambda _message: None)
+            llm_review._discard_retained_sandbox(result, log=lambda _message: None)
 
     def test_live_stream_open_failure_terminates_provider_process_tree(self) -> None:
         command = [sys.executable, "-c", "import time; time.sleep(60)"]

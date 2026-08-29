@@ -51,6 +51,7 @@ from review_runners import (
     CodexJsonTranslator,
     OpencodeJsonTranslator,
     ReviewPlan,
+    RunnerToolPathEscape,
     bind_review_workdir,
     build_review_command,
     review_plans_from_config,
@@ -1795,7 +1796,9 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 pre_work_timeout_sec: float = 0,
                 raw_transcript: Path | None = None,
                 metrics_sink: dict | None = None,
-                cwd: Path | str | None = None) -> tuple[int, str, bool, bool, bool]:
+                cwd: Path | str | None = None,
+                expected_clone_root: Path | str | None = None,
+                ) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
     env["NO_COLOR"] = "1"      # 关掉 ANSI 颜色，viewer 自己上色
@@ -1813,6 +1816,12 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     env.pop("STS2_ASCEND_BOOT_ID", None)
     stream_started = time.monotonic()
     translator = getattr(translate, "__self__", None)
+    if expected_clone_root is not None:
+        bind_clone_root = getattr(translator, "bind_expected_clone_root", None)
+        if not callable(bind_clone_root):
+            raise ValueError(
+                "expected_clone_root requires a clone-aware provider translator")
+        bind_clone_root(expected_clone_root)
     reset_clock = getattr(translator, "reset_clock", None)
     if callable(reset_clock):
         reset_clock()
@@ -2323,6 +2332,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         if _status is not None:
             _status["provider_metrics"] = dict(sandbox.provider_metrics)
             _status["provider_work_started"] = sandbox.provider_work_started
+            if sandbox.failure_code == "runner_tool_path_escape":
+                _status["failure_code"] = sandbox.failure_code
         # stop 可能恰好落在 opencode 自然退出与宿主验收之间；不能只信任
         # _stream_run 返回瞬间的 stopped 快照。
         stopped = stopped or _review_stop_requested()
@@ -2488,6 +2499,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             if (source == "preferred"
                     and sandbox.failure_code not in {
                         "runner_tool_access_denied", "runner_tool_path_capability",
+                        "runner_tool_path_escape",
                     }):
                 _mark_preferred_failure(cfg, log, state_key, f"exit={rc}")
             log(f"[llm] 隔离复盘失败：{sandbox.error or f'exit={rc}'}；真实工作树未改")
@@ -7613,9 +7625,11 @@ def _run_review_sandbox(
             metrics_sink=stream_metrics,
             # Codex 0.148's native Apply Patch resolves relative paths from the
             # provider process cwd, while ``-C`` reliably rebinds shell tools.
-            # Bind both layers to the isolated clone so native edits can never
-            # land in the live repository.
-            cwd=sandbox_repo)
+            # Bind both path anchors; the OS custom permissions profile is the
+            # write barrier, while reported file_change paths are a fatal
+            # runtime tripwire and forensic signal.
+            cwd=sandbox_repo,
+            expected_clone_root=(sandbox_repo if runner == "codex" else None))
         if stopped:
             # Stop keeps the exact clone as an O(1) deferred forensic source; do
             # not spend the shutdown budget hashing or deleting a large mount.
@@ -7737,6 +7751,16 @@ def _run_review_sandbox(
             selfcheck_ok=True,
             allowed_paths=tuple(accepted),
             artifact_paths=tuple(transient),
+        )
+        return result
+    except RunnerToolPathEscape as exc:
+        if replay_requested:
+            replay_evidence_complete = False
+            replay_evidence_error = "reported-path熔断后未完成退出校验"
+        result = SandboxReviewResult(
+            error=("Codex file_change 越出隔离 clone；provider 已立即终止，"
+                   f"整批拒合并保全：{exc}"),
+            failure_code="runner_tool_path_escape",
         )
         return result
     except _ReviewStopped:

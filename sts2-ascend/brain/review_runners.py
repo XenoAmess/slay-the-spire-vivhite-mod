@@ -11,7 +11,7 @@ from dataclasses import dataclass, replace
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import shutil
 import time
 from typing import Iterable
@@ -186,20 +186,25 @@ def build_review_command(
         command += ["--title", title, "--dir", root, "--auto", prompt]
         return command
     if plan.runner == "codex":
-        command = [binary, "exec", "--model", plan.model]
+        # ``-a`` is a global option and must precede ``exec``.  Keep both the
+        # approval policy and custom permission profile explicit so a trusted
+        # parent repository in the user's config cannot widen this invocation.
+        command = [binary, "-a", "never", "exec", "--model", plan.model]
         if plan.reasoning_effort:
             command += ["-c", f'model_reasoning_effort="{plan.reasoning_effort}"']
-        if plan.approve_for_me:
-            # Codex CLI owns workspace-write in this mode and rejects a second
-            # explicit --sandbox argument as mutually exclusive.
-            if plan.sandbox != "workspace-write":
-                raise ValueError(
-                    "codex --approve-for-me requires the workspace-write sandbox; "
-                    f"configured sandbox={plan.sandbox!r}")
-            command.append("--approve-for-me")
-        else:
-            command += ["--sandbox", plan.sandbox]
-        command += ["--json", "--ephemeral", "--color", "never", "-C", root, prompt]
+        if plan.sandbox != "workspace-write":
+            raise ValueError(
+                "codex review requires workspace-write configuration semantics; "
+                f"configured sandbox={plan.sandbox!r}")
+        command += [
+            "-c", (
+                'permissions.luna_commit={extends=":workspace",'
+                'filesystem={":workspace_roots"={".git"="write"}},'
+                'network={enabled=false}}'),
+            "-c", 'default_permissions="luna_commit"',
+            "--json", "--ephemeral", "--ignore-user-config",
+            "--color", "never", "-C", root, prompt,
+        ]
         return command
     raise ValueError(f"unsupported review runner: {plan.runner}")
 
@@ -332,10 +337,18 @@ class OpencodeJsonTranslator(_TranslatorBase):
         return []
 
 
+class RunnerToolPathEscape(RuntimeError):
+    """Fatal tripwire for reported ``file_change`` paths outside the clone.
+
+    This JSONL guard terminates and preserves a suspicious run.  It is not the
+    write barrier; the explicit OS custom permissions profile owns that role.
+    """
+
+
 class CodexJsonTranslator(_TranslatorBase):
     """Translate ``codex exec --json`` JSONL and retain evaluation metrics."""
 
-    def __init__(self) -> None:
+    def __init__(self, expected_clone_root: Path | str | None = None) -> None:
         super().__init__()
         self.thread_id = ""
         self.command_count = 0
@@ -345,6 +358,81 @@ class CodexJsonTranslator(_TranslatorBase):
         self.tool_access_error = ""
         self.tool_access_failure_code = ""
         self.final_message = ""
+        self.tool_path_escape_count = 0
+        self.tool_path_escape = ""
+        self._expected_clone_root_absolute: Path | None = None
+        self._expected_clone_root_resolved: Path | None = None
+        if expected_clone_root is not None:
+            self.bind_expected_clone_root(expected_clone_root)
+
+    def bind_expected_clone_root(self, root: Path | str) -> None:
+        """Bind file-change telemetry to the exact disposable clone root."""
+        absolute = Path(root).absolute()
+        resolved = absolute.resolve(strict=True)
+        if not resolved.is_dir():
+            raise ValueError(f"expected Codex clone root is not a directory: {root}")
+        self._expected_clone_root_absolute = absolute
+        self._expected_clone_root_resolved = resolved
+
+    def _reported_file_change_paths(self, item: dict) -> list[str]:
+        changes = item.get("changes")
+        if not isinstance(changes, list) or not changes:
+            self._raise_tool_path_escape(
+                self._brief(changes), "malformed Codex file_change changes")
+        paths: list[str] = []
+        for entry in changes:
+            value = entry.get("path") if isinstance(entry, dict) else None
+            if not isinstance(value, str) or not value.strip():
+                self._raise_tool_path_escape(
+                    self._brief(entry), "malformed Codex file_change path")
+            paths.append(value)
+        return paths
+
+    def _raise_tool_path_escape(self, raw_path: str, detail: str) -> None:
+        summary = self._brief(raw_path, 500)
+        self.tool_path_escape_count += 1
+        self.tool_path_escape = summary
+        self.tool_access_error = f"{detail}: {summary}"
+        self.tool_access_failure_code = "runner_tool_path_escape"
+        self.error_count += 1
+        raise RunnerToolPathEscape(self.tool_access_error)
+
+    def _guard_reported_file_change_paths(self, item: dict) -> None:
+        for raw_path in self._reported_file_change_paths(item):
+            if (self._expected_clone_root_absolute is None
+                    or self._expected_clone_root_resolved is None):
+                self._raise_tool_path_escape(
+                    raw_path, "Codex file_change received without expected clone root")
+            if "\x00" in raw_path:
+                self._raise_tool_path_escape(raw_path, "invalid Codex file_change path")
+
+            # A Windows drive-qualified path is absolute only with a root.  A
+            # drive-relative form such as C:foo is ambiguous and cannot be
+            # proven to belong to the clone, so fail closed.
+            windows_path = PureWindowsPath(raw_path)
+            if windows_path.drive and not windows_path.is_absolute():
+                self._raise_tool_path_escape(
+                    raw_path, "ambiguous drive-relative Codex file_change path")
+            if os.name != "nt" and windows_path.is_absolute():
+                self._raise_tool_path_escape(
+                    raw_path, "foreign absolute Codex file_change path")
+
+            try:
+                candidate = Path(raw_path)
+                if not candidate.is_absolute():
+                    candidate = self._expected_clone_root_absolute / candidate
+                lexical = candidate.absolute()
+                resolved = candidate.resolve(strict=False)
+                lexical_inside = lexical.is_relative_to(
+                    self._expected_clone_root_absolute)
+                resolved_inside = resolved.is_relative_to(
+                    self._expected_clone_root_resolved)
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._raise_tool_path_escape(
+                    raw_path, f"unresolvable Codex file_change path ({exc})")
+            if not lexical_inside or not resolved_inside:
+                self._raise_tool_path_escape(
+                    raw_path, "Codex file_change escaped expected clone root")
 
     @staticmethod
     def _brief(value, limit: int = 200) -> str:
@@ -362,6 +450,8 @@ class CodexJsonTranslator(_TranslatorBase):
             "blocked_tool_count": self.blocked_tool_count,
             "tool_access_error": self.tool_access_error,
             "tool_access_failure_code": self.tool_access_failure_code,
+            "tool_path_escape_count": self.tool_path_escape_count,
+            "tool_path_escape": self.tool_path_escape,
             "final_message_chars": len(self.final_message),
         })
         return payload
@@ -457,6 +547,8 @@ class CodexJsonTranslator(_TranslatorBase):
             "mcp_tool_call", "web_search", "plan_update",
         }:
             self._mark_model_work()
+        if item_type == "file_change":
+            self._guard_reported_file_change_paths(item)
         if event_type != "item.completed":
             if item_type == "command_execution" and event_type == "item.started":
                 self.command_count += 1

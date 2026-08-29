@@ -88,3 +88,28 @@ Brain 热加载执行许可修复后，98 个旧 Luna 项都已自动刷新为 `
   `SALVAGE_ROOT`，不能只覆盖一个无效的别名。
 - 最终仍以热加载后 Luna 自己完成 provider 启动、工具调用、代码落地、自检、本地提交、宿主 CAS
   与推送作为验收终点。
+
+## 第三轮纠正：自动批准契约终止
+
+上文记录的 `approve_for_me=true` 是当时针对无人值守工具阻断的历史结论，现已被第二次生产事故的
+直接证据推翻：Luna 在隔离 clone 内运行时，一次原生文件修改事件同时写入了 clone 文件和真实仓的
+绝对路径文件。`cwd` 与 `-C` 只能约束相对路径解析，`--approve-for-me` 还会自动批准越出 clone 的
+写入，因此该执行契约已终止，不得再作为旧重试恢复目标。
+
+sticky execution-approval refresh 现在明确是**双向迁移**，而不是只把 `false` 提升为 `true`：只有
+`backend key + runner + model + variant + reasoning effort + sandbox` 精确匹配当前 backend identity
+时，才把旧计划中的值刷新为当前配置；Luna 当前会执行 `true -> false`。worker 与直接恢复路径都必须
+先将刷新结果耐久保存，保存失败则延期且不得启动 provider，避免重启后从旧 marker 重新带回自动批准。
+
+命令构造器还提供独立于旧快照的最终约束：即使历史 marker 或配置仍携带
+`approve_for_me=true`，实际 Luna 命令仍强制使用 `-a never`、`--ignore-user-config` 和内联
+`luna_commit` custom permission profile，不再生成 `--approve-for-me`。因此旧重试不能通过陈旧布尔值
+恢复自动批准，也不能继承用户级 trusted-workspace 配置。
+
+计划中的 `sandbox=workspace-write` 仍保留，作为 backend 路由、亲和性比较和旧计划兼容所需的语义
+配置；它不再直接映射为命令行 `--sandbox`。实际命令不得混入 `--sandbox`，因为写边界由内联 custom
+profile 负责：沿用 workspace 读写边界，并仅为隔离 clone 自身的 `.git` 开放写权限，使 Luna 可以
+自行提交，同时不把真实仓纳入可写范围。
+
+当前代码、命令解析和无模型边界 canary 已验证；生产重放仍须按既有终点观察 Luna 自己完成证据读取、
+修改、自检、clone 提交、宿主 CAS 与推送。在该整条链路完成前，本轮状态记为“生产重放闭环待验证”。

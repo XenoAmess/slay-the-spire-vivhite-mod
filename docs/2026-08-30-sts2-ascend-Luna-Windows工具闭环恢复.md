@@ -249,3 +249,121 @@ salvage、closure、runner 与 autogit 回归结果记录在本次最终运行�
 - `commit_conflict` 不等于 CAS 已执行；必须按 private index、worktree check/apply、prepare、update-ref 的真实阶段记录失败，避免把宿主泄漏错算成模型提交失败。
 - provider 前失败必须保留原任务的 Luna 亲和性并做到零 token，不能用自动换模型掩盖 Luna 路由故障。
 - 完整闭环的成功口径仍是 Luna 自己完成修改、diff 复核、自检和隔离仓提交，宿主再完成局部边界验收与 CAS 发布；单次 Apply Patch 成功只是必要条件，不是最终完成条件。
+
+## 第二次绝对路径泄漏与宿主硬边界修复
+
+> 状态纠正：本章记录上述闭环之后出现的第二份生产证据。前文关于 Luna 曾独立完成
+> `CARD_BURST_PICK_AUDIT` 并由宿主发布的历史事实仍然成立；被新证据推翻的是“同时绑定
+> provider cwd 与 `-C` 即足以构成写入硬边界”这一结论。cwd 与 `-C` 只能约束相对路径，不能
+> 阻止原生文件工具按绝对路径写到 clone 外。
+
+### 第二次事故证据与 Luna 行为判断
+
+第二次事故的完整取证包为：
+
+```text
+20260830-065308-1788043988509458300-774f9f44
+```
+
+其中 Codex 0.148 原生事件 `item36` 在同一次 `file_change` 中混合报告了三个目标：真实仓的
+`sts2-ascend/brain/policy.py`、真实仓的 `sts2-ascend/brain/selfcheck.py`，以及隔离 clone 的
+`sts2-ascend/brain/knowledge.py`。三个写入几乎同时发生，且该事件之前的可见输出没有暴露这两个
+真实仓绝对路径，说明仅靠事后阅读模型文字无法提前阻止这次外写。
+
+Luna 首次在 clone 中运行 selfcheck 时，clone 实际只包含 `knowledge.py` 的修改，真实仓中的
+`policy.py` 与 `selfcheck.py` 并未进入该次自检，因此形成了假阳性。随后 Luna 自己检查 diff，发现
+clone 缺少后两处改动，并在 clone 中重新完成 `policy.py` 与 `selfcheck.py` 的修改。这一轨迹说明
+Luna 的执行意图和自我纠正能力正常；失效的是宿主未把原生文件工具限制在隔离仓内，而不是 Luna
+拒绝落地或把任务交给了别的模型。
+
+事故发生后，先通过统一生命周期入口执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1 -KeepGame
+```
+
+该操作停止 Brain、runner、复盘和播报链，但保留游戏。宿主随后只对已由原生事件和逐 hunk 对照
+证明为本次泄漏的两处真实仓改动使用精确 `apply_patch` 回退，没有执行宽泛的 Git restore、reset
+或全仓清理。回退后分别比较工作树、HEAD 与 index blob，`policy.py`、`selfcheck.py` 的内容均重新
+等同于 HEAD；完整事故包仍保留给 Luna 重试。该拒绝现场已通过独立审计提交记录：
+
+```text
+1682c3f3d045ec1be619967377de3242203eca56
+```
+
+### 根因：自动批准外写与继承用户信任配置
+
+第二次证据表明，双工作目录绑定没有失效：provider 的 OS cwd 和命令行唯一 `-C` 都确实指向
+clone。真正的缺口是命令仍使用 `--approve-for-me`；当原生工具提出 clone 外绝对路径写入时，
+自动审查替 Luna 批准了这次操作。同时 Codex 继承用户级配置，而真实仓在该配置中属于 trusted
+项目；clone 又位于真实项目目录下，用户配置参与了权限判断。两者共同使外写穿过了原本只用于
+定位工作区的 cwd/`-C` 约束。
+
+因此后发结论是：
+
+- cwd 与 `-C` 仍须都绑定 clone，但二者只解决相对路径和 shell/Git 的工作目录；
+- `--approve-for-me` 不能作为无人值守复盘的安全边界；
+- provider 必须忽略用户级信任与权限配置，并由宿主为本次进程显式给出最小写入能力。
+
+### 终态命令与 `luna_commit` 权限 profile
+
+Luna provider 的终态命令契约为：
+
+```text
+codex -a never exec --model <model> \
+  -c permissions.luna_commit={extends=":workspace",filesystem={":workspace_roots"={".git"="write"}},network={enabled=false}} \
+  -c default_permissions="luna_commit" \
+  --json --ephemeral --ignore-user-config --color never \
+  -C <clone> <prompt>
+```
+
+命令中必须恰好有一个 `-C`，目标为本轮隔离 clone；不得再出现 `--sandbox`、
+`--approve-for-me`、`--add-dir`、`--yolo` 或任何 bypass/danger 选项。`-a never` 禁止交互批准，
+`--ignore-user-config` 排除用户 trusted 配置，`network=false` 关闭 sandbox 工具的网络能力（不影响
+Codex 与模型服务的控制面通信）；内联
+`luna_commit` profile 继承 Codex 的 `:workspace` 边界，只额外把当前 workspace 根下的 `.git`
+开放为可写，使 Luna 能按照职责自行 `git add` 和 `git commit`。
+
+这里不能直接使用普通 `workspace-write + -a never`：实测它会保护 clone 的 `.git`，创建
+`.git/index.lock` 失败，`git add`/`git commit` 以退出码 128 结束，违背“Luna 自行提交”的闭环
+要求。当前 Windows sandbox 后端上，内联 `luna_commit` 是既保留 workspace 写边界、又仅补回
+clone-local Git 元数据写入的已验证方案；它没有收紧 Luna 对 clone 内安全静态项目文件的修改范围。
+
+### 零模型硬边界 canary
+
+固定 SHA 的 Codex CLI 0.148 在不调用模型、不访问网络的临时 clone 上完成了权限 canary：
+
+- clone 内普通文件写入和移动均成功；
+- clone 内 `git add` 与 `git commit` 成功，HEAD 推进到
+  `ae73cf79dc86b70b1540073dbcd5d70e50e1f7b3`；
+- 对 clone 外 sentinel 的直接写入被拒绝，文件字节和 mtime 均未变化；
+- 把 clone 内文件移动到 clone 外也被拒绝，源文件和外部目标的字节、mtime 均保持不变。
+
+该 canary 同时验证了两条必要能力：Luna 在 clone 内仍能修改并自行建立 commit，绝对路径写入和
+跨边界移动则由 OS 权限 profile 阻断。它不发送 prompt，不启动 provider 模型，也不消耗模型额度。
+
+### reported-path 熔断的准确职责
+
+运行器另在 Codex JSONL 的 `item.started` 与 `item.completed` 阶段校验所有可见
+`changes[].path`。一旦报告路径位于预期 clone 外或格式非法，运行器立即终止进程树，记录
+`runner_tool_path_escape`，跳过 selfcheck、候选验收与提交，并完整保全 WIP。该检查是快速停机和
+取证熔断，不是硬写入边界：Codex 0.148 的 JSONL 会丢失 `Update.move_path` 的目标路径，而且事件
+可能在写入完成后才上报；真正阻止外写的是上述 OS `luna_commit` profile。
+
+重放失败证据时，如果已挂载证据后触发该 reported-path 熔断，退出校验没有完整完成，则必须令
+`replay_evidence_complete=false`，错误明确记录“reported-path 熔断后未完成退出校验”；
+`retry_resolutions` 保持为空，不得把未完成验证的旧失败包误标成已合入、已跳过或空包。自检、证据
+移除和解析发布在该分支均不可达。
+
+### 直播恢复与当前生产门禁
+
+维护期间本地直播姬在 `07:12:49` 从 `Streaming` 变为 `Idle`。按照开播后最多中断两分钟的硬性
+规则，立即使用 Bilibili 统一开播入口恢复整套，直播在 `07:14:09` 回到 `Streaming`，中断约
+80 秒，低于两分钟。统一入口完成了栈和直播恢复；脚本最后仅在把游戏窗口置顶时因当前桌面会话
+不可用而失败，该错误发生在直播恢复之后，不影响已经恢复的 `Streaming` 状态。
+
+为避免用未提交、未验证的宿主代码继续驱动生产 Luna，Brain 随后经统一生命周期入口暂停，游戏与
+直播保留。第二次事故包必须在硬边界代码提交并重启后重新交给 Luna，由 Luna 自己复核证据、修改、
+自检和建立 clone commit，再由宿主完成验收、CAS 与推送。截至本章记录时，这一轮生产闭环仍待
+重启验证；不得把零模型 canary、reported-path 熔断测试或前一批次的成功回执冒充为该事故包已经
+成功闭环。
