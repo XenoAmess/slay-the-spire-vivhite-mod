@@ -2995,6 +2995,32 @@ class Policy:
             + (f"；最低合格挡费用{min_blk_cost}" if race_blk_floor else ""))
         self._trace_gate(
             "RANK 出牌阈值", "neutral", f"> {float(pol['play_threshold']):.2f}")
+        # 落选税牌旁观留痕（HAND_TAX_PLAY_AUDIT，第1087~1097局批复盘，纯观测）：
+        # HAND_TAX_PLAY_PRICING 只在「中标税牌」的 why 落「手牌税止损计价」——
+        # 1097-F27 毒素×2 滞留缴税 20/掉血 27，全链留痕 0 次（部署时序 pre-fix
+        # 之外，落选侧评分永不入链），无法区分「已附加但落选」「未附加」与
+        # 「未参选（接口标不可出/超费）」。先为手牌里的税牌各立一条旁观账，
+        # 参选后在循环内回填评分与附加状态；中标牌自身已有止损留痕，不重复记。
+        # hand_tax_play_audit=False 即整体关闭（selfcheck 3htpa 对照锚）。
+        _tax_watch: dict = {}
+        if bool(pol.get("hand_tax_play_audit", True)):
+            for _tc in hand:
+                try:
+                    _tm = (_HAND_TAX_ZHS_RE.search(_text(_tc))
+                           or _HAND_TAX_EN_RE.search(_text(_tc)))
+                except Exception:
+                    _tm = None
+                if not _tm:
+                    continue
+                if not _tc.get("playable"):
+                    _tst = "未参选（接口标不可出）"
+                elif self._card_unavailable(_tc):
+                    _tst = "未参选（实例不可用）"
+                else:
+                    _tcst = energy if _tc.get("costs_x") else (_tc.get("energy_cost") or 0)
+                    _tst = "未参选（超费）" if _tcst > energy else "未参选"
+                _tax_watch[_tc.get("index")] = [
+                    _tc.get("name") or _tc.get("card_id") or "税牌", _tst]
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -3067,6 +3093,10 @@ class Policy:
                      f"{why}；零成功出牌否决且本场受控试用已用"),
                 target={"index": target,
                         "name": (target_enemy or {}).get("name", "")} if target is not None else None)
+            if _tax_watch and c.get("index") in _tax_watch:
+                _tax_watch[c.get("index")][1] = (
+                    f"参选{score:.1f}"
+                    + ("含止损" if "手牌税止损计价" in why else "无附加"))
             if eligible_for_best and (best is None or score > best[0]):
                 best = (score, c, target, why)
 
@@ -3100,6 +3130,13 @@ class Policy:
                 why += "｜受控试用：零成功出牌但当前可用且有正即时边际（本场限一次）"
             elif choice_mode:
                 why += f"｜{choice_mode}：正即时边际不带能量空过"
+            # 旁观账收口：中标牌不是税牌且手牌仍有税牌旁观条目时，把落选税牌的
+            # 评分/附加/未参选状态随中标 why 入链——落选侧从此可 grep 复核
+            # 「杠杆是否生效、落选差值多少、是否挤出高伤攻击」（指标③）。
+            if _tax_watch and card.get("index") not in _tax_watch:
+                why += ("｜税牌旁观HAND_TAX_PLAY_AUDIT："
+                        + "、".join(f"{_v[0]}={_v[1]}"
+                                   for _v in _tax_watch.values()))
             commit_exhaust = _exhausts_other_cards(card)
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)

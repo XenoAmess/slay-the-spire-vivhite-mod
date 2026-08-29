@@ -5986,6 +5986,84 @@ def main() -> int:
     assert "手牌税止损计价" not in why_tox_off and s_tox_off < s_dfd, \
         f"hand_tax_play_pricing=0 未回滚旧口径: {s_tox_off}（{why_tox_off}）"
 
+    # 3htpa) 落选税牌旁观留痕（HAND_TAX_PLAY_AUDIT，第1087~1097局批复盘）：
+    #       止损计价只在「中标税牌」why 落痕——1097-F27 毒素×2 滞留缴税 20/
+    #       掉血 27，全链留痕 0 次（pre-fix 时序之外落选侧永不入链），无法
+    #       区分「已附加但落选」「未附加」「未参选」。① 主路径出牌且落选
+    #       税牌在手 → why 带旁观段（评分+含止损）；② 观测键置 False →
+    #       旁观段消失（回滚锚）；③ 税牌中标 → 无旁观段（自身止损留痕在）；
+    #       ④ 接口标不可出的税牌 → 旁观段标「未参选（接口标不可出）」。
+    def _htpa_state(hand_cards, enemy_hp=12, incoming_val=0):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {"player": {"current_hp": 67, "max_hp": 80,
+                                  "block": 0, "energy": 3},
+                       "hand": hand_cards,
+                       "enemies": [{"index": 0, "enemy_id": "HTPA_MYTE",
+                                    "name": "异螨", "current_hp": enemy_hp,
+                                    "max_hp": 60, "block": 0, "is_alive": True,
+                                    "is_hittable": True,
+                                    "intents": [{"total_damage": incoming_val}]}]},
+            "run": {"current_hp": 67, "max_hp": 80, "gold": 0, "floor": 27,
+                    "deck": []}}
+
+    def _htpa_pol(tag):
+        return policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix=f"sts2-selfcheck-htpa{tag}-"))),
+            random.Random(5))
+
+    _htpa_atk = {"index": 0, "card_id": "HTPA_HIT", "name": "重击",
+                 "playable": True, "energy_cost": 1, "requires_target": True,
+                 "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+    _htpa_tox = {"index": 1, "card_id": "TOXIC", "name": "毒素",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "rules_text": "造成5点伤害。在你的回合结束时，如果这张牌在"
+                               "你的手牌中，你受到5点伤害。消耗。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 5}]}
+    _htpa_inf = {"index": 2, "card_id": "INFECTION", "name": "感染",
+                 "playable": False, "energy_cost": -1,
+                 "requires_target": False,
+                 "rules_text": "不能被打出。在你的回合结束时，如果这张牌"
+                               "在你的手牌中，你受到3点伤害。"}
+    # ① 击杀级攻击中标、可出税牌落选 → 旁观段带评分与「含止损」
+    _p1 = _htpa_pol("a")
+    d_htpa1 = _p1.decide(_htpa_state([_htpa_atk, _htpa_tox]), ctx)
+    assert d_htpa1.action == "play_card" \
+        and d_htpa1.params.get("card_index") == 0, \
+        f"夹具①击杀级攻击未中标: {d_htpa1.action}（{d_htpa1.reason}）"
+    assert "税牌旁观HAND_TAX_PLAY_AUDIT" in d_htpa1.reason \
+        and "毒素=参选" in d_htpa1.reason and "含止损" in d_htpa1.reason, \
+        f"落选税牌旁观留痕缺失或缺止损附加状态: {d_htpa1.reason}"
+    # ② 观测键置 False → 旁观段消失，选择不变（纯观测锚）
+    _p2 = _htpa_pol("b")
+    _p2.know.policy["hand_tax_play_audit"] = False
+    d_htpa2 = _p2.decide(_htpa_state([_htpa_atk, _htpa_tox]), ctx)
+    assert d_htpa2.action == "play_card" \
+        and d_htpa2.params.get("card_index") == 0 \
+        and "税牌旁观HAND_TAX_PLAY_AUDIT" not in d_htpa2.reason, \
+        f"观测键关闭后旁观留痕未消失或行为被改: {d_htpa2.reason}"
+    # ③ 税牌自身中标 → 无旁观段（中标 why 已有「手牌税止损计价」）
+    _htpa_def = {"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "dynamic_values": [{"name": "Block", "current_value": 5}]}
+    _p3 = _htpa_pol("c")
+    d_htpa3 = _p3.decide(_htpa_state([_htpa_def, dict(_htpa_tox, index=1)],
+                                     enemy_hp=60, incoming_val=19), ctx)
+    assert d_htpa3.action == "play_card" \
+        and d_htpa3.params.get("card_index") == 1 \
+        and "手牌税止损计价" in d_htpa3.reason \
+        and "税牌旁观HAND_TAX_PLAY_AUDIT" not in d_htpa3.reason, \
+        f"税牌中标时不应出现旁观段: {d_htpa3.action}（{d_htpa3.reason}）"
+    # ④ 接口标不可出的税牌 → 旁观段标「未参选（接口标不可出）」
+    _p4 = _htpa_pol("d")
+    d_htpa4 = _p4.decide(_htpa_state([_htpa_atk, _htpa_inf]), ctx)
+    assert d_htpa4.action == "play_card" \
+        and "税牌旁观HAND_TAX_PLAY_AUDIT" in d_htpa4.reason \
+        and "感染=未参选（接口标不可出）" in d_htpa4.reason, \
+        f"不可出税牌的旁观状态缺失: {d_htpa4.reason}"
+
     # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
     #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
     #      链未顶格时不接替；胜利按 +0.03 向锚点回收
