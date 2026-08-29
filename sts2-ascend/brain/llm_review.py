@@ -5497,6 +5497,7 @@ def _resume_replay_lineage_resolution(target_package: Path,
 
 _RETRY_REPLAY_TOTAL_BYTES = 256 * 1024
 _RETRY_EVIDENCE_SCHEMA = 3
+_RETRY_CANDIDATE_FILTER_SCHEMA = 1
 _LEGACY_EMPTY_RETRY_PATH_FIELDS = (
     "all_paths",
     "allowed_paths",
@@ -5516,6 +5517,10 @@ _RETRY_SANDBOX_REQUIRED_FILES = (
     "report.md",
     "file_states.json",
     "retry_candidate_inventory.json",
+)
+_RETRY_HOST_EVIDENCE_EXCLUDE_PATHSPECS = (
+    f":(exclude){_RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()}",
+    f":(exclude){_RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()}/**",
 )
 _RETRY_RESOLUTION_VALUES = frozenset({
     "integrated", "no_valid_change", "still_pending",
@@ -5595,6 +5600,125 @@ def _retry_raw_repo(package: Path) -> Path | None:
         if candidate.is_dir() and (candidate / ".git").exists():
             return candidate
     return None
+
+
+def _split_retry_host_evidence_paths(paths) -> tuple[list[str], list[str]]:
+    """Keep host-mounted replay evidence out of a derived retry candidate."""
+    root = _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()
+    prefix = root + "/"
+    candidate: list[str] = []
+    host_evidence: list[str] = []
+    for value in paths or ():
+        normalized = str(value or "").replace("\\", "/")
+        if normalized == root or normalized.startswith(prefix):
+            host_evidence.append(normalized)
+        else:
+            candidate.append(normalized)
+    return (list(dict.fromkeys(candidate)),
+            list(dict.fromkeys(host_evidence)))
+
+
+def _retry_host_evidence_index_reference(
+    evidence_root: Path,
+    *,
+    reference_root: str,
+    original_preserved_at: str,
+    disposition: str,
+    source_paths=(),
+) -> dict:
+    """Describe an injected evidence mount without copying it into itself.
+
+    The original bytes remain at ``original_preserved_at``.  A compact index
+    digest, package lineage and size/count summary locate that forensic source
+    without traversing or recursively serializing its payload tree.
+    """
+    relative_root = _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()
+    paths = list(dict.fromkeys(str(value).replace("\\", "/")
+                               for value in source_paths or () if value))
+    package_refs: list[str] = []
+    index_path = evidence_root / "index.json"
+    index_relative = f"{reference_root}/index.json"
+    index_reference: dict = {
+        "path": index_relative,
+        "state": "unavailable",
+    }
+    total_bytes = 0
+    try:
+        if index_path.is_file() and not index_path.is_symlink():
+            index_payload = index_path.read_bytes()
+            index_reference.update({
+                "state": "preserved",
+                "bytes": len(index_payload),
+                "sha256": hashlib.sha256(index_payload).hexdigest(),
+            })
+            paths.append(index_relative)
+            total_bytes += len(index_payload)
+            mounted_index = json.loads(index_payload.decode("utf-8"))
+            if isinstance(mounted_index, dict):
+                for field in ("requested_packages", "attempt_packages"):
+                    values = mounted_index.get(field)
+                    if isinstance(values, list):
+                        package_refs.extend(_normalize_salvage_package_names(values))
+                records = mounted_index.get("files")
+                if isinstance(records, list):
+                    for record in records:
+                        if not isinstance(record, dict):
+                            continue
+                        value = str(record.get("path") or "").replace("\\", "/")
+                        pure = PurePosixPath(value)
+                        if (not value or pure.is_absolute() or ".." in pure.parts
+                                or any(part in {"", "."} for part in pure.parts)):
+                            continue
+                        paths.append(f"{reference_root}/{pure.as_posix()}")
+                declared_bytes = mounted_index.get("total_bytes")
+                if type(declared_bytes) is int and declared_bytes >= 0:
+                    total_bytes += declared_bytes
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        index_reference["metadata_state"] = "unreadable_but_original_preserved"
+        index_reference["metadata_error"] = str(exc)[:240]
+
+    paths = list(dict.fromkeys(paths))
+    package_prefixes = (
+        relative_root + "/packages/",
+        reference_root + "/packages/",
+    )
+    for path in paths:
+        for package_prefix in package_prefixes:
+            if path.startswith(package_prefix):
+                name = path[len(package_prefix):].split("/", 1)[0]
+                package_refs.extend(_normalize_salvage_package_names([name]))
+                break
+    reference = {
+        "schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
+        "root": reference_root,
+        "disposition": disposition,
+        "original_preserved_at": original_preserved_at,
+        "present": bool(paths or evidence_root.exists() or evidence_root.is_symlink()),
+        "path_count": len(paths),
+        "file_count": len(paths),
+        "total_bytes": total_bytes,
+        "package_refs": list(dict.fromkeys(package_refs)),
+        "index": index_reference,
+    }
+    return reference
+
+
+def _retry_host_evidence_reference(
+    package: Path,
+    repo: Path,
+    source_paths,
+) -> dict:
+    relative_root = _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()
+    try:
+        raw_location = repo.relative_to(package).as_posix()
+    except ValueError:
+        raw_location = "raw_sandbox/repo"
+    return _retry_host_evidence_index_reference(
+        repo.joinpath(*_RETRY_SANDBOX_EVIDENCE_ROOT.parts),
+        reference_root=relative_root,
+        original_preserved_at=f"{raw_location}/{relative_root}",
+        disposition="reference_only_excluded_from_retry_candidate",
+        source_paths=source_paths)
 
 
 def _publish_manifest_update(package: Path, manifest: dict) -> None:
@@ -5701,6 +5825,7 @@ def _materialize_legacy_empty_retry_evidence(
         candidate_temp.write_bytes(b"")
         inventory = {
             "schema": _RETRY_EVIDENCE_SCHEMA,
+            "candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "package": package.name,
             "pre_head": str(manifest.get("pre_head") or ""),
             "origin": "legacy_certified_empty",
@@ -5750,6 +5875,7 @@ def _materialize_legacy_empty_retry_evidence(
         upgraded.update({
             "retry_evidence_ready": True,
             "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "retry_evidence_history": history,
             "retry_evidence_materialized_at": materialized_at,
             "retry_evidence_origin": "legacy_certified_empty",
@@ -5786,15 +5912,24 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     candidate_path = package / "retry_candidate.patch"
     inventory_path = package / "retry_candidate_inventory.json"
+    repo = _retry_raw_repo(package)
     if (manifest.get("retry_evidence_ready") is True
             and manifest.get("retry_evidence_schema") == _RETRY_EVIDENCE_SCHEMA
-            and candidate_path.is_file() and inventory_path.is_file()):
+            and candidate_path.is_file() and inventory_path.is_file()
+            and (repo is None or manifest.get("retry_candidate_filter_schema")
+                 == _RETRY_CANDIDATE_FILTER_SCHEMA)):
         return manifest
 
-    repo = _retry_raw_repo(package)
     previous_schema = manifest.get("retry_evidence_schema")
     previous_history = list(manifest.get("retry_evidence_history") or [])
-    if previous_schema and previous_schema != _RETRY_EVIDENCE_SCHEMA:
+    needs_filter_upgrade = bool(
+        repo is not None
+        and manifest.get("retry_evidence_ready") is True
+        and previous_schema == _RETRY_EVIDENCE_SCHEMA
+        and manifest.get("retry_candidate_filter_schema")
+        != _RETRY_CANDIDATE_FILTER_SCHEMA)
+    if previous_schema and (
+            previous_schema != _RETRY_EVIDENCE_SCHEMA or needs_filter_upgrade):
         previous_history.append({
             "schema": previous_schema,
             "materialized_at": manifest.get("retry_evidence_materialized_at"),
@@ -5803,6 +5938,10 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             "candidate_sha256": (
                 _file_sha256(candidate_path) if candidate_path.is_file() else ""),
             "migration_note": (
+                "Previous retry candidate may contain a recursively materialized "
+                "host evidence mount; its digest remains here and the complete "
+                "source remains in raw_sandbox."
+                if needs_filter_upgrade else
                 "Early materializer may have written candidate blobs into the raw "
                 "clone object database. Objects are intentionally preserved as "
                 "forensic evidence; schema 3 never writes there."),
@@ -5829,6 +5968,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                      for value in (manifest.get("validated_candidate_paths") or [])]
             inventory = {
                 "schema": _RETRY_EVIDENCE_SCHEMA,
+                "candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
                 "package": package.name,
                 "pre_head": str(manifest.get("pre_head") or ""),
                 "source": "validated accepted-only snapshot (no raw clone)",
@@ -5857,6 +5997,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             manifest.update({
                 "retry_evidence_ready": True,
                 "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+                "retry_candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
                 "retry_evidence_history": previous_history,
                 "retry_evidence_materialized_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "retry_candidate_patch": candidate_path.name,
@@ -5923,7 +6064,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         read_tree = _run_captured_stop_aware(
             ["git", "-C", str(repo), "read-tree", pre_head], env=env, timeout=60)
         stage = _run_captured_stop_aware(
-            ["git", "-C", str(repo), "add", "--all", "--force", "--", "."],
+            ["git", "-C", str(repo), "add", "--all", "--force", "--", ".",
+             *_RETRY_HOST_EVIDENCE_EXCLUDE_PATHSPECS],
             env=env, timeout=180)
         names = _run_captured_stop_aware(
             ["git", "-C", str(repo), "diff", "--cached", "--name-only", "-z",
@@ -5934,12 +6076,11 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             errors = " ".join((item.stderr or "").strip() for item in commands
                               if item.returncode != 0)
             raise OSError("raw clone 候选 patch 物化失败：" + errors[:800])
-        worktree_paths = list(dict.fromkeys(
-            value.replace("\\", "/") for value in names.stdout.split("\0") if value))
+        worktree_paths, worktree_host_evidence = _split_retry_host_evidence_paths(
+            value for value in names.stdout.split("\0") if value)
         accepted, artifacts, online, rejected = _partition_review_changes(worktree_paths)
-        raw_index_paths = list(dict.fromkeys(
-            value.replace("\\", "/")
-            for value in raw_index_names.stdout.split("\0") if value))
+        raw_index_paths, raw_index_host_evidence = _split_retry_host_evidence_paths(
+            value for value in raw_index_names.stdout.split("\0") if value)
         (raw_index_accepted, raw_index_artifacts,
          raw_index_online, raw_index_rejected) = _partition_review_changes(raw_index_paths)
 
@@ -5964,11 +6105,15 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         all_artifacts = [*artifacts, *raw_index_artifacts]
         all_online = [*online, *raw_index_online]
         all_rejected = [*rejected, *raw_index_rejected]
+        all_host_evidence = [
+            *worktree_host_evidence, *raw_index_host_evidence]
 
         def export_private_index(kind: str, label: str, object_name: str,
                                  source_paths: list[str], source_accepted: list[str],
                                  source_artifacts: list[str], source_online: list[str],
-                                 source_rejected: list[str], *, worktree: bool = False) -> None:
+                                 source_rejected: list[str],
+                                 source_host_evidence: list[str], *,
+                                 worktree: bool = False) -> None:
             source = {
                 "kind": kind,
                 "label": label,
@@ -5980,6 +6125,9 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                 "rejected_or_unexpected_paths": source_rejected,
                 "candidate_bytes": 0,
             }
+            if source_host_evidence:
+                source["host_evidence_reference_path_count"] = len(
+                    source_host_evidence)
             if not source_accepted:
                 source_inventory.append(source)
                 return
@@ -6025,7 +6173,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
 
         export_private_index(
             "worktree", "raw worktree/index vs pre_head", "WORKTREE",
-            worktree_paths, accepted, artifacts, online, rejected, worktree=True)
+            worktree_paths, accepted, artifacts, online, rejected,
+            worktree_host_evidence, worktree=True)
 
         def export_raw_index() -> None:
             source = {
@@ -6039,6 +6188,9 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                 "rejected_or_unexpected_paths": raw_index_rejected,
                 "candidate_bytes": 0,
             }
+            if raw_index_host_evidence:
+                source["host_evidence_reference_path_count"] = len(
+                    raw_index_host_evidence)
             if not raw_index_accepted:
                 source_inventory.append(source)
                 return
@@ -6133,9 +6285,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                     "error": (object_names.stderr or "object diff failed")[:800],
                 })
                 continue
-            object_paths = list(dict.fromkeys(
-                value.replace("\\", "/")
-                for value in object_names.stdout.split("\0") if value))
+            object_paths, object_host_evidence = _split_retry_host_evidence_paths(
+                value for value in object_names.stdout.split("\0") if value)
             obj_accepted, obj_artifacts, obj_online, obj_rejected = \
                 _partition_review_changes(object_paths)
             all_paths.extend(object_paths)
@@ -6143,18 +6294,23 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             all_artifacts.extend(obj_artifacts)
             all_online.extend(obj_online)
             all_rejected.extend(obj_rejected)
+            all_host_evidence.extend(object_host_evidence)
             export_private_index(
                 kind, label, object_name, object_paths, obj_accepted,
-                obj_artifacts, obj_online, obj_rejected)
+                obj_artifacts, obj_online, obj_rejected,
+                object_host_evidence)
 
         paths = list(dict.fromkeys(all_paths))
         accepted = list(dict.fromkeys(all_accepted))
         artifacts = list(dict.fromkeys(all_artifacts))
         online = list(dict.fromkeys(all_online))
         rejected = list(dict.fromkeys(all_rejected))
+        host_evidence_reference = _retry_host_evidence_reference(
+            package, repo, all_host_evidence)
         candidate_temp.write_bytes(b"".join(candidate_sections))
         inventory = {
             "schema": _RETRY_EVIDENCE_SCHEMA,
+            "candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "package": package.name,
             "pre_head": pre_head,
             "source": "raw_sandbox source-separated private indexes and object directory",
@@ -6168,6 +6324,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             "transient_artifact_paths": artifacts,
             "online_runtime_paths": online,
             "rejected_or_unexpected_paths": rejected,
+            "host_evidence_reference": host_evidence_reference,
             "sources": source_inventory,
         }
         inventory_temp.write_text(
@@ -6179,6 +6336,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         manifest.update({
             "retry_evidence_ready": True,
             "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "retry_evidence_history": previous_history,
             "raw_forensic_note": manifest.get("raw_forensic_note") or (
                 "Pre-schema-3 materialization may have added unreachable objects to the "
@@ -6373,21 +6531,64 @@ def _mount_failed_review_evidence(
                 root_file_records.append(record["path"])
 
             captured_records: list[str] = []
+            captured_host_evidence_reference: dict | None = None
             captured_root = package / "files"
             if not captured_root.is_dir():
                 raise _RetryEvidenceUnavailable(
                     f"失败包 {name} 缺少 changed-files 快照目录")
-            for source in sorted(captured_root.rglob("*")):
-                if source.is_symlink():
-                    raise _RetryEvidenceUnavailable(
-                        f"失败包 {name} changed-files 含未物化链接")
-                if not source.is_file():
-                    continue
-                relative = source.relative_to(captured_root)
-                record = _copy_retry_evidence_file(
-                    source, package_root / "captured_files" / relative,
-                    evidence_root, records, package=name, kind="captured_changed_file")
-                captured_records.append(record["path"])
+            captured_host_relative = _RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()
+            captured_reference_root = f"files/{captured_host_relative}"
+
+            def capture_host_reference(source: Path) -> None:
+                nonlocal captured_host_evidence_reference
+                captured_host_evidence_reference = \
+                    _retry_host_evidence_index_reference(
+                        source,
+                        reference_root=captured_reference_root,
+                        original_preserved_at=captured_reference_root,
+                        disposition="reference_only_original_package_preserved")
+
+            def captured_walk_error(exc: OSError) -> None:
+                raise _RetryEvidenceUnavailable(
+                    f"失败包 {name} changed-files 枚举失败：{exc}") from exc
+
+            for current, directories, filenames in os.walk(
+                    captured_root, topdown=True, followlinks=False,
+                    onerror=captured_walk_error):
+                current_path = Path(current)
+                directories.sort()
+                filenames.sort()
+                retained_directories: list[str] = []
+                for dirname in directories:
+                    source = current_path / dirname
+                    relative = source.relative_to(captured_root)
+                    if relative.as_posix() == captured_host_relative:
+                        # The original package already preserves this entire host
+                        # mount.  Read only its index and never descend into payloads.
+                        capture_host_reference(source)
+                        continue
+                    is_junction = getattr(source, "is_junction", lambda: False)
+                    if source.is_symlink() or is_junction():
+                        raise _RetryEvidenceUnavailable(
+                            f"失败包 {name} changed-files 含未物化链接")
+                    retained_directories.append(dirname)
+                directories[:] = retained_directories
+                for filename in filenames:
+                    source = current_path / filename
+                    relative = source.relative_to(captured_root)
+                    if relative.as_posix() == captured_host_relative:
+                        capture_host_reference(source)
+                        continue
+                    if source.is_symlink():
+                        raise _RetryEvidenceUnavailable(
+                            f"失败包 {name} changed-files 含未物化链接")
+                    if not source.is_file():
+                        continue
+                    record = _copy_retry_evidence_file(
+                        source, package_root / "captured_files" / relative,
+                        evidence_root, records, package=name,
+                        kind="captured_changed_file")
+                    captured_records.append(record["path"])
 
             raw_repo = _retry_raw_repo(package)
             changed_states: list[dict] = []
@@ -6437,6 +6638,8 @@ def _mount_failed_review_evidence(
                 "candidate_patches": [
                     f"packages/{name}/{path.name}" for path in patch_files],
                 "captured_changed_files": captured_records,
+                "captured_host_evidence_reference": (
+                    captured_host_evidence_reference),
                 "changed_file_states": changed_states,
                 "inventory_path_count": len(seen_paths),
                 "raw_clone_export": (

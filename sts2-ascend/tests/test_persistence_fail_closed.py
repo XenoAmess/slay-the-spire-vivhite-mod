@@ -1644,6 +1644,173 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertIn(long_relative.as_posix(),
                       inventory["rejected_or_unexpected_paths"])
 
+    def test_retry_candidate_references_host_mount_without_recursive_materialization(self) -> None:
+        name = "pkg-stopped-retry"
+        package = llm_review.SALVAGE_ROOT / name
+        repo = package / "raw_sandbox" / "repo"
+        policy = repo / "sts2-ascend" / "brain" / "policy.py"
+        policy.parent.mkdir(parents=True)
+        subprocess.run(["git", "init", "--quiet", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "test"],
+                       check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email",
+                        "test@example.invalid"], check=True)
+        policy.write_text("VALUE = 'base'\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "--quiet", "-m", "base"],
+                       check=True)
+        pre_head = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"], check=True,
+            capture_output=True, text=True).stdout.strip()
+        policy.write_text("VALUE = 'model-change'\n", encoding="utf-8")
+
+        evidence_root = repo.joinpath(
+            *llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+        nested_payload = evidence_root / "packages" / "pkg-origin" / "large.patch"
+        nested_payload.parent.mkdir(parents=True)
+        payload = b"nested-host-evidence" * 64_000
+        nested_payload.write_bytes(payload)
+        evidence_index = evidence_root / "index.json"
+        evidence_index.write_text(json.dumps({
+            "requested_packages": ["pkg-origin"],
+            "attempt_packages": ["pkg-origin-attempt"],
+            "files": [{
+                "path": "packages/pkg-origin/large.patch",
+                "bytes": len(payload),
+            }],
+            "file_count": 1,
+            "total_bytes": len(payload),
+        }), encoding="utf-8")
+
+        captured_evidence_root = (package / "files").joinpath(
+            *llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+        captured_host = (captured_evidence_root / "packages" / "pkg-origin"
+                         / "captured.patch")
+        captured_host.parent.mkdir(parents=True)
+        captured_host.write_bytes(payload)
+        captured_index = captured_evidence_root / "index.json"
+        captured_index.write_text(json.dumps({
+            "requested_packages": ["pkg-origin"],
+            "attempt_packages": ["pkg-captured-attempt"],
+            "files": [{
+                "path": "packages/pkg-origin/captured.patch",
+                "bytes": len(payload),
+            }],
+            "file_count": 1,
+            "total_bytes": len(payload),
+        }), encoding="utf-8")
+        captured_note = package / "files" / "sts2-ascend" / "notes.txt"
+        captured_note.parent.mkdir(parents=True, exist_ok=True)
+        captured_note.write_text("keep this evidence", encoding="utf-8")
+        (package / "report.md").write_text("stopped", encoding="utf-8")
+        (package / "file_states.json").write_text("[]\n", encoding="utf-8")
+        (package / "wip.patch").write_bytes(b"")
+        old_candidate = b"old recursively materialized candidate"
+        (package / "retry_candidate.patch").write_bytes(old_candidate)
+        (package / "retry_candidate_inventory.json").write_text(json.dumps({
+            "schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "package": name,
+            "pre_head": pre_head,
+            "paths": [nested_payload.relative_to(repo).as_posix()],
+        }), encoding="utf-8")
+        (package / "manifest.json").write_text(json.dumps({
+            "pre_head": pre_head,
+            "retry_evidence_ready": True,
+            "retry_evidence_schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_patch": "retry_candidate.patch",
+            "retry_candidate_inventory": "retry_candidate_inventory.json",
+            "retry_candidate_bytes": len(old_candidate),
+            "replay_attempt_packages": [],
+        }), encoding="utf-8")
+
+        commands: list[list[str]] = []
+        original_run = llm_review._run_captured_stop_aware
+
+        def record_run(command, *args, **kwargs):
+            commands.append(list(command))
+            return original_run(command, *args, **kwargs)
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_run_captured_stop_aware",
+                                side_effect=record_run)):
+            manifest = llm_review._materialize_retry_evidence(
+                package, log=lambda _message: None)
+
+        candidate = (package / "retry_candidate.patch").read_text(
+            encoding="utf-8", errors="replace")
+        inventory = json.loads((package / "retry_candidate_inventory.json").read_text(
+            encoding="utf-8"))
+        host_reference = inventory["host_evidence_reference"]
+        self.assertIn("VALUE = 'model-change'", candidate)
+        self.assertNotIn(".review_evidence", candidate)
+        self.assertEqual(inventory["paths"], ["sts2-ascend/brain/policy.py"])
+        self.assertEqual(
+            inventory["candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
+        self.assertEqual(host_reference["path_count"], 2)
+        self.assertEqual(host_reference["file_count"], 2)
+        self.assertEqual(host_reference["total_bytes"],
+                         len(payload) + evidence_index.stat().st_size)
+        self.assertEqual(host_reference["package_refs"],
+                         ["pkg-origin", "pkg-origin-attempt"])
+        self.assertEqual(host_reference["index"]["sha256"],
+                         llm_review._file_sha256(evidence_index))
+        self.assertEqual(
+            manifest["retry_candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
+        self.assertIn("recursively materialized host evidence mount",
+                      manifest["retry_evidence_history"][-1]["migration_note"])
+        initial_stage = next(command for command in commands
+                             if "add" in command and "." in command)
+        for pathspec in llm_review._RETRY_HOST_EVIDENCE_EXCLUDE_PATHSPECS:
+            self.assertIn(pathspec, initial_stage)
+
+        history_count = len(manifest["retry_evidence_history"])
+        again = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        self.assertEqual(len(again["retry_evidence_history"]), history_count)
+
+        sandbox = Path(self.temp.name) / "retry-mount"
+        sandbox.mkdir()
+        original_copy = llm_review._copy_retry_evidence_file
+
+        def reject_nested_copy(source, *args, **kwargs):
+            self.assertFalse(source.is_relative_to(captured_evidence_root))
+            return original_copy(source, *args, **kwargs)
+
+        with mock.patch.object(
+                llm_review, "_copy_retry_evidence_file",
+                side_effect=reject_nested_copy):
+            mount = llm_review._mount_failed_review_evidence(
+                sandbox, [name], log=lambda _message: None)
+        mounted_package = Path(mount["root"]) / "packages" / name
+        self.assertFalse((mounted_package / "changed_files" / "raw_worktree"
+                          / nested_payload.relative_to(repo)).exists())
+        self.assertFalse((mounted_package / "captured_files"
+                          / captured_host.relative_to(package / "files")).exists())
+        self.assertEqual((mounted_package / "captured_files" / "sts2-ascend"
+                          / "notes.txt").read_text(encoding="utf-8"),
+                         "keep this evidence")
+        mounted_package_index = mount["index"]["packages"][0]
+        captured_reference = mounted_package_index[
+            "captured_host_evidence_reference"]
+        self.assertEqual(captured_reference["path_count"], 2)
+        self.assertEqual(captured_reference["file_count"], 2)
+        self.assertEqual(captured_reference["total_bytes"],
+                         len(payload) + captured_index.stat().st_size)
+        self.assertEqual(captured_reference["package_refs"],
+                         ["pkg-origin", "pkg-captured-attempt"])
+        self.assertEqual(captured_reference["index"]["bytes"],
+                         captured_index.stat().st_size)
+        self.assertEqual(captured_reference["index"]["sha256"],
+                         llm_review._file_sha256(captured_index))
+        self.assertLess(mount["index"]["total_bytes"], len(payload))
+        self.assertEqual(nested_payload.read_bytes(), payload)
+        self.assertEqual(captured_host.read_bytes(), payload)
+        self.assertTrue(llm_review._remove_failed_review_evidence(
+            sandbox, log=lambda _message: None))
+
     def test_retry_evidence_reads_clean_local_ref_and_stash_without_mutating_raw_git(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-ref-stash"
         repo = package / "raw_sandbox" / "repo"
@@ -1666,7 +1833,14 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "switch", "-c", "model-work", "--quiet"],
                        check=True)
         policy.write_text("VALUE = 2\n", encoding="utf-8")
+        local_ref_host = (repo.joinpath(
+            *llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+            / "packages" / "pkg-ref" / "local-ref.patch")
+        local_ref_host.parent.mkdir(parents=True)
+        local_ref_host.write_text("LOCAL_REF_HOST_EVIDENCE\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(repo), "add", str(policy)], check=True)
+        subprocess.run(["git", "-C", str(repo), "add", "--force", "--",
+                        local_ref_host.relative_to(repo).as_posix()], check=True)
         subprocess.run(["git", "-C", str(repo), "commit", "--quiet", "-m", "model commit"],
                        check=True)
         subprocess.run(["git", "-C", str(repo), "checkout", "--detach", "--quiet", pre_head],
@@ -1674,6 +1848,19 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         strategy.write_text("STRATEGY = 3\n", encoding="utf-8")
         new_strategy = brain / "new_strategy.py"
         new_strategy.write_text("NEW_STRATEGY = 4\n", encoding="utf-8")
+        staged_stash_host = (repo.joinpath(
+            *llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+            / "packages" / "pkg-stash" / "staged.patch")
+        staged_stash_host.parent.mkdir(parents=True)
+        staged_stash_host.write_text("STASH_HOST_EVIDENCE\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "--force", "--",
+                        staged_stash_host.relative_to(repo).as_posix()], check=True)
+        untracked_stash_host = (repo.joinpath(
+            *llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+            / "packages" / "pkg-stash-untracked" / "untracked.patch")
+        untracked_stash_host.parent.mkdir(parents=True)
+        untracked_stash_host.write_text(
+            "STASH_UNTRACKED_HOST_EVIDENCE\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(repo), "stash", "push", "-u", "--quiet", "-m",
                         "model stash"], check=True)
         (package / "manifest.json").write_text(json.dumps({
@@ -1698,11 +1885,24 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertIn("VALUE = 2", candidate)
         self.assertIn("STRATEGY = 3", candidate)
         self.assertIn("NEW_STRATEGY = 4", candidate)
+        self.assertNotIn("LOCAL_REF_HOST_EVIDENCE", candidate)
+        self.assertNotIn("STASH_HOST_EVIDENCE", candidate)
+        self.assertNotIn("STASH_UNTRACKED_HOST_EVIDENCE", candidate)
         self.assertIn("sts2-ascend/brain/new_strategy.py", inventory["paths"])
+        for host_path in (local_ref_host, staged_stash_host, untracked_stash_host):
+            self.assertNotIn(host_path.relative_to(repo).as_posix(),
+                             inventory["paths"])
         kinds = {item.get("kind") for item in inventory["sources"]}
         self.assertIn("local_ref", kinds)
         self.assertIn("stash", kinds)
         self.assertIn("stash_untracked", kinds)
+        sources = {item.get("kind"): item for item in inventory["sources"]}
+        self.assertGreaterEqual(
+            sources["local_ref"]["host_evidence_reference_path_count"], 1)
+        self.assertGreaterEqual(
+            sources["stash"]["host_evidence_reference_path_count"], 1)
+        self.assertGreaterEqual(
+            sources["stash_untracked"]["host_evidence_reference_path_count"], 1)
 
     def test_retry_evidence_preserves_staged_only_raw_index_content(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-raw-index"
@@ -1724,6 +1924,13 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "add", "--",
                         "sts2-ascend/brain/policy.py"], check=True)
         policy.write_text("VALUE = 'base'\n", encoding="utf-8")
+        staged_host = (repo.joinpath(*llm_review._RETRY_SANDBOX_EVIDENCE_ROOT.parts)
+                       / "packages" / "pkg-staged" / "raw-index.patch")
+        staged_host.parent.mkdir(parents=True)
+        staged_host.write_text("RAW_INDEX_HOST_EVIDENCE\n", encoding="utf-8")
+        staged_host_relative = staged_host.relative_to(repo).as_posix()
+        subprocess.run(["git", "-C", str(repo), "add", "--force", "--",
+                        staged_host_relative], check=True)
         (package / "manifest.json").write_text(
             json.dumps({"pre_head": pre_head}), encoding="utf-8")
         index_before = (repo / ".git" / "index").read_bytes()
@@ -1737,11 +1944,21 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         inventory = json.loads((package / "retry_candidate_inventory.json").read_text(
             encoding="utf-8"))
         self.assertIn("VALUE = 'staged-only'", candidate)
+        self.assertNotIn("RAW_INDEX_HOST_EVIDENCE", candidate)
+        self.assertNotIn(staged_host_relative, inventory["paths"])
         index_sources = [item for item in inventory["sources"]
                          if item.get("kind") == "raw_index"]
         self.assertEqual(len(index_sources), 1)
         self.assertIn("sts2-ascend/brain/policy.py",
                       index_sources[0]["accepted_candidate_paths"])
+        self.assertEqual(
+            index_sources[0]["host_evidence_reference_path_count"], 1)
+        self.assertNotIn(staged_host_relative, index_sources[0]["paths"])
+        self.assertEqual(
+            inventory["host_evidence_reference"]["package_refs"],
+            ["pkg-staged"])
+        self.assertEqual(staged_host.read_text(encoding="utf-8"),
+                         "RAW_INDEX_HOST_EVIDENCE\n")
 
     def test_retry_evidence_does_not_treat_git_notes_ref_as_code_commit(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-notes-ref"
@@ -1906,13 +2123,54 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         manifest = llm_review._materialize_retry_evidence(
             package, log=lambda _message: None)
         self.assertEqual(manifest["retry_evidence_schema"], 3)
+        self.assertEqual(
+            manifest["retry_candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
         self.assertEqual((package / "retry_candidate.patch").read_bytes(), accepted)
         inventory = json.loads((package / "retry_candidate_inventory.json").read_text(
             encoding="utf-8"))
         self.assertEqual(inventory["accepted_candidate_paths"],
                          ["sts2-ascend/brain/policy.py"])
+        self.assertEqual(
+            inventory["candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
         self.assertIn("sts2-ascend/brain/__pycache__/policy.pyc",
                       inventory["transient_artifact_paths"])
+
+    def test_legacy_certified_empty_publishes_candidate_filter_schema(self) -> None:
+        package = llm_review.SALVAGE_ROOT / "pkg-legacy-empty-filter"
+        (package / "files").mkdir(parents=True)
+        (package / "wip.patch").write_bytes(b"")
+        (package / "report.md").write_text("", encoding="utf-8")
+        (package / "file_states.json").write_text("[]\n", encoding="utf-8")
+        (package / "manifest.json").write_text(json.dumps({
+            "schema": 1,
+            "pre_head": "b" * 40,
+            "snapshot_complete": True,
+            "snapshot_deferred": False,
+            "raw_sandbox_deferred": False,
+            "snapshot_included": False,
+            "raw_sandbox_included": False,
+            "all_paths": [],
+            "allowed_paths": [],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "patch_bytes": 0,
+            "patch_sha256": llm_review._EMPTY_PATCH_SHA256,
+        }), encoding="utf-8")
+
+        manifest = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        inventory = json.loads((package / "retry_candidate_inventory.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(
+            manifest["retry_candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
+        self.assertEqual(
+            inventory["candidate_filter_schema"],
+            llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
 
     def test_crash_after_package_publish_recovers_one_target_from_queue_id(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-crash-window"
