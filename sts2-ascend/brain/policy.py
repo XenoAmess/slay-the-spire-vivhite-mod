@@ -4200,10 +4200,16 @@ class Policy:
             return False, ""
         eff = max(0.05, float(pol.get("kill_race_prior_eff", 0.55)))
         margin = float(pol.get("kill_race_margin", 1.5))
+        feas_buf = min(0.6, max(0.0, float(
+            pol.get("boss_race_feasible_hp_buffer", 0.0))))
+        hp_feas = float(max_hp) * (1.0 - feas_buf)
+        _buf_tail = f"，可行侧生存余量扣减{feas_buf:.0%}" if feas_buf > 1e-9 else ""
+        _pot_tail += _buf_tail
         dpt = burst * eff
         ttk = pool_eff / max(1.0, dpt)
         tsurv = float(max_hp) / max(1.0, fire)
-        if ttk <= tsurv + margin:
+        tsurv_feas = hp_feas / max(1.0, fire)
+        if ttk <= tsurv_feas + margin:
             # BOSS_RACE_PROJ_AUDIT（第919~987局批复盘）：预演判「可赢」的账面
             # 此前完全不可见——F33 二幕 Boss 0/12 全灭的前夜翻转留痕全部无预演
             # 结论，幕级乐观偏差（折算率按一幕战绩标定）无法跨局对账。此处
@@ -4216,7 +4222,7 @@ class Policy:
         # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
         _feasible, _ = self._race_joint_feasible(
-            deck or [], pool_eff, fire, float(max_hp), margin, eff=eff)
+            deck or [], pool_eff, fire, hp_feas, margin, eff=eff)
         if _feasible:
             # 同上：进攻线判负但联合能量复核可行时，账面同样自报（第709~713批
             # 「乐观口径复核」通道的消费端对账面）
@@ -4241,8 +4247,8 @@ class Policy:
                     credited_pool = self._race_potion_credit(potions, combo_pool, floor)
                     combo_ttk = credited_pool / max(1.0, dpt)
                     combo_feasible, _ = self._race_joint_feasible(
-                        deck or [], credited_pool, fire, float(max_hp), margin, eff=eff)
-                    combo_alive = combo_ttk <= tsurv + margin or combo_feasible
+                        deck or [], credited_pool, fire, hp_feas, margin, eff=eff)
+                    combo_alive = combo_ttk <= tsurv_feas + margin or combo_feasible
                     verdicts.append(
                         f"{combo_id}{credited_pool:.0f}池" + ("可赢" if combo_alive else "必败"))
                     if combo_alive:

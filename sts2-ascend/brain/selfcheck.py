@@ -5725,6 +5725,29 @@ def main() -> int:
         f"判死侧已带 doom 全文，不得重复对账: {d_br_weak.reason}"
     assert "BOSS_RACE_PROJ_AUDIT" not in d_br_nv.reason, \
         f"数据缺失回落旧口径不得伪造对账: {d_br_nv.reason}"
+    # 3br-buf: a marginally feasible race must retain survival headroom;
+    # zero is a strict rollback anchor and a strong deck remains feasible.
+    br_marginal_deck = [{"card_id": f"BR_M{i}", "card_type": "Attack", "energy_cost": 1,
+                         "dynamic_values": [{"name": "Damage", "current_value": 12}]} for i in range(3)]
+    br_rest_marginal = dict(br_rest_weak)
+    br_rest_marginal["run"] = dict(br_rest_weak["run"], deck=br_marginal_deck)
+    d_br_marg_buf = br_pol.decide(br_rest_marginal, br_ctx)
+    assert d_br_marg_buf.tags and d_br_marg_buf.tags[0] == ("rest", "heal") \
+        and "竞速预演虽判必败" in d_br_marg_buf.reason \
+        and "生存余量扣减" in d_br_marg_buf.reason \
+        and "BOSS_RACE_PROJ_AUDIT" not in d_br_marg_buf.reason, \
+        f"贴线可行应按生存余量口径落回必败: {d_br_marg_buf.action}（{d_br_marg_buf.reason}）"
+    br_pol.know.policy["boss_race_feasible_hp_buffer"] = 0.0
+    d_br_marg_raw = br_pol.decide(br_rest_marginal, br_ctx)
+    assert d_br_marg_raw.tags and d_br_marg_raw.tags[0] == ("rest", "heal") \
+        and "BOSS_RACE_PROJ_AUDIT" in d_br_marg_raw.reason \
+        and "生存余量扣减" not in d_br_marg_raw.reason, \
+        f"buffer=0 应严格回落旧可行口径: {d_br_marg_raw.reason}"
+    br_pol.know.policy["boss_race_feasible_hp_buffer"] = 0.30
+    d_br_strong_buf = br_pol.decide(br_rest_strong, br_ctx)
+    assert d_br_strong_buf.tags and d_br_strong_buf.tags[0] == ("rest", "heal") \
+        and "BOSS_RACE_PROJ_AUDIT" in d_br_strong_buf.reason, \
+        f"余量充足的强卡组不得被贴线罚误伤: {d_br_strong_buf.reason}"
     br_ctx.rest_before_boss = False
 
     # 3br-2) per-Boss 血池全称门（第731~740批拒合成果补合）：均值判负后，

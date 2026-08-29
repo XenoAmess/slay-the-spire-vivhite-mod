@@ -38,6 +38,7 @@ _READ_RETRIES = 8
 _READ_RETRY_BASE_SECONDS = 0.01
 
 DEFAULT_POLICY = {
+    "boss_race_feasible_hp_buffer": 0.30,  # 前夜竞速预演可行侧生存余量；0 回落旧口径
     # --- combat ---
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
