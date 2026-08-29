@@ -43,3 +43,7 @@ Luna 的 Codex 路由已改为 `--approve-for-me --sandbox workspace-write`，�
 下一次 Brain 加载该版本后，旧 Luna 任务首次出队时应先出现 execution approval refreshed 日志，
 随后 Codex 命令应包含 `--approve-for-me` 且不包含 `-a never`。验收必须继续观察 Luna 自己完成读取、
 修改、自检、本地提交、宿主 CAS 和推送，不能只以进程成功启动作为闭环完成。
+
+交叉监控 Kimi 时还发现 generic prompt 把隔离仓缺省提交身份硬编码为 `sts2-review-luna`，因此 Kimi
+也会按 Luna 名义创建本地提交。宿主最终 CAS 提交不继承该作者，故它不是提交失败原因，但会继续制造
+归因噪声；已改为中性 `sts2-review-agent`，并用 prompt 回归断言禁止重新出现模型专属硬编码。
