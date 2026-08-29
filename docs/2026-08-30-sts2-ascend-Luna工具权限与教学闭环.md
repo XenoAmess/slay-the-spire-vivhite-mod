@@ -1,0 +1,68 @@
+# sts2-ascend Luna 工具权限与教学闭环
+
+日期：2026-08-30
+
+## 问题与结论
+
+Luna 在 2026-08-29 22:53、22:57 的两次失败不是“读完任务后只肯写报告”。两个失败包的
+`model_output_tail.txt` 都显示，它先后尝试 PowerShell、cmd、bash、`rg` 和直接读取任务文件，
+但所有 shell 都在 `CreateProcess` 阶段被 `blocked by policy` 拒绝，直接读取也返回
+`Access is denied`。两次均没有成功命令、文件变化或 patch，模型还明确说明自己尚未读到任务书。
+
+根因是生产 Luna 被改成了：
+
+```text
+codex -a never exec ... --sandbox workspace-write
+```
+
+在当前非交互 Codex CLI 中，`-a never` 没有人工审批者可接管请求，因此连只读 shell 都被拒绝。
+宿主又没有识别 Codex 工具路由层的非 JSON 错误，最终让“纯报告闭环闸门”覆盖了真正原因。
+
+## 受控能力探针
+
+在独立临时目录中用同一 `gpt-5.6-luna` 做了三个最小探针，不触碰策略或在线知识：
+
+| 路由 | 只读 shell | 原生 Apply Patch | 结论 |
+| --- | --- | --- | --- |
+| `-a never --sandbox workspace-write` | `blocked by policy` | 未形成有效写入 | 不可用于无人值守复盘 |
+| `-a on-request --sandbox workspace-write` | `blocked by policy` | 未继续 | 非交互进程没有人工审批者 |
+| `--approve-for-me --sandbox workspace-write` | 成功 | 成功，且 shell 回读为新值 | 当前可用生产路由 |
+
+因此恢复 Luna 的 `approve_for_me=true`，并继续显式使用 `workspace-write`。这次不是猜测回退；
+读、写和回读能力均已由真实 Luna 探针验证。
+
+## 机制修复
+
+1. `review_runners.py`
+   - Luna 使用 `--approve-for-me --sandbox workspace-write`，不再注入 `-a never`。
+   - Codex 翻译器单独统计 `blocked_tool_count`，保留有界 `tool_access_error`，并把工具路由层
+     的 `blocked by policy` / 工具语境 `Access denied` 计入错误。
+2. `llm_review.py`
+   - 工具被阻断且没有成果时写入 `runner_tool_access_denied`，在纯报告闭环闸门之前终止归因。
+   - `selfcheck_ok` 改为三态：`passed`、`failed`、`not_run`；零改动不再伪装成自检通过。
+   - 每个普通失败包保存完整 `review_prompt.md`、命令行短契约、字节数与 SHA-256，便于精确复盘。
+   - replay 首屏加入结构化失败反馈，旧失败包也会从原始输出推断工具阻断，不再让 Luna 猜上次
+     为什么被拒。
+3. 教学契约
+   - 命令行短提示直接给出目标、操作授权、成功标准和 `BLOCKED_TOOL_CAPABILITY` 停止条件；即使
+     完整任务书读取失败，也不会退化为“空报告”。
+   - 完整任务改为：工具与最小证据 → 可证伪假设 → 最小生产改动 → selfcheck 失败即继续修 →
+     回读 diff → 最后写报告 → Luna 在隔离 clone 内自行提交并返回 SHA。
+   - replay 的 `no_valid_change` 只允许在完整 lineage 已读且有当前 HEAD 可核验证据时使用；
+     `still_pending` 只表示证据未完成，不能代替工具故障或行动。
+   - Luna 可以在无 remote 的隔离 clone 内使用 `git status/diff/add/commit`、自行解决冲突；禁止
+     push。宿主只做 deny-only 验收和私有 index/CAS 发布，不代写、改写或盲套策略成果。
+
+## 验证与注意事项
+
+- runner、闭环、失败包、失败证据挂载、孤儿 clone 恢复、持久化 fail-closed 与 autogit 安全测试通过。
+- `py -3 -B sts2-ascend/brain/selfcheck.py` 输出 `SELFCHECK OK`。
+- 测试曾发现一次辅助函数被补丁插入到孤儿恢复函数中段；孤儿恢复测试立即暴露该问题。函数已移回
+  闭环分类区并重跑测试通过。这说明涉及长文件时不能只依赖语法检查，必须覆盖邻接生命周期测试。
+- 本次没有分析或修改 GLM；余额耗尽仍按用户要求允许它自然失败。
+- 完整 packet 是证据载体，不能为“提示更短”随意截断；精简重点放在不重复的行动规则、置顶反馈和
+  按需读取，而不是丢掉 100 局队列或失败 lineage 的证据。
+
+官方 GPT-5.6 指导强调提示应清晰给出本地行动授权、证据、成功标准与停止条件，并避免重复规则；
+Codex sandbox 文档则说明 `workspace-write` 负责工作区写权限，审批策略负责命令能否获准。此次修复按
+这两条职责重新对齐生产配置。
