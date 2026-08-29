@@ -277,7 +277,11 @@ class ReviewConfigurationTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 _rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
                     command, 5, translate=translator.feed,
-                    stall_timeout_sec=0.8, pre_work_timeout_sec=0.3)
+                    # This test exercises the *post-work* raw-output watchdog.
+                    # Leave enough headroom for a contended Windows test runner
+                    # to spawn the helper and dispatch its first JSON event, so
+                    # the startup watchdog cannot win the race by accident.
+                    stall_timeout_sec=0.8, pre_work_timeout_sec=2.0)
             elapsed = time.monotonic() - started
 
         self.assertFalse(timed_out)
@@ -752,6 +756,7 @@ class ReviewQueueBatchTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_kill_orphan_review_processes"),
                   mock.patch.object(llm_review, "_cleanup_stale_private_git_temps"),
                   mock.patch.object(llm_review, "_recover_deferred_salvages"),
+                  mock.patch.object(llm_review, "_recover_unpointed_review_sandboxes"),
                   mock.patch.object(llm_review, "_recover_committed_retry_resolutions"),
                   mock.patch.object(llm_review, "_recover_salvage_replay_queue"),
                   mock.patch.object(llm_review, "_backfill_rejection_ledger"),
@@ -784,7 +789,10 @@ class ReviewQueueBatchTests(unittest.TestCase):
                 status: dict = {}
                 sandbox = llm_review.SandboxReviewResult(
                     rc=1, stalled=True, error="stalled",
-                    provider_work_started=model_work_started)
+                    provider_work_started=model_work_started,
+                    review_attempt_id="receipt-8",
+                    review_sandbox_name="sts2-review-sandbox-receipt8",
+                    review_attempt_receipt_schema=1)
                 with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
                       mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
                       mock.patch.object(llm_review, "REPO_DIR", repo),
@@ -793,7 +801,7 @@ class ReviewQueueBatchTests(unittest.TestCase):
                       mock.patch.object(llm_review, "_run_review_sandbox",
                                         return_value=sandbox) as run_sandbox,
                       mock.patch.object(llm_review, "_save_review_salvage",
-                                        return_value=Path(root) / "pkg"),
+                                        return_value=Path(root) / "pkg") as save_salvage,
                       mock.patch.object(llm_review, "_review_stop_requested",
                                         return_value=False),
                       mock.patch.object(llm_review, "_stream_begin"),
@@ -812,6 +820,13 @@ class ReviewQueueBatchTests(unittest.TestCase):
                 self.assertFalse(changed)
                 self.assertEqual(
                     run_sandbox.call_args.kwargs["pre_work_timeout_seconds"], 150)
+                self.assertEqual(
+                    save_salvage.call_args.kwargs["review_attempt_id"], "receipt-8")
+                self.assertEqual(
+                    save_salvage.call_args.kwargs["review_sandbox_name"],
+                    "sts2-review-sandbox-receipt8")
+                self.assertEqual(
+                    save_salvage.call_args.kwargs["review_attempt_receipt_schema"], 1)
                 return status, mark.call_count
 
             prework, prework_cooldowns = execute(False)

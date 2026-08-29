@@ -127,6 +127,9 @@ def _review_hold_root() -> Path:
 
 _REVIEW_HOLD_CLOSURE_DIR = ".closed"
 _REVIEW_HOLD_CLOSURE_SCHEMA = 1
+_REVIEW_ATTEMPT_RECEIPT_NAME = "review_attempt.json"
+_REVIEW_ATTEMPT_RECEIPT_SCHEMA = 1
+_LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC = 120.0
 
 
 def _new_review_temp(prefix: str) -> Path:
@@ -1827,7 +1830,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                salvage_packages: list[str] | None = None,
                salvage_attempts: list[str] | None = None,
                replay_queue_ids: list[str] | None = None,
-               evidence_only: bool = False) -> bool:
+               evidence_only: bool = False,
+               review_queue_items: list[dict] | None = None) -> bool:
     """执行一次大模型复盘。返回 True 仅表示 patch 触及 Brain 加载路径、应热重启。
 
     流程：保存在线进度 → provider 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
@@ -1942,6 +1946,35 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     # 直播流开启 + 拉起悬浮窗/语音朗读器（哨兵/meta 先行）。review_id 让旧 Edge
     # 进程在连续复盘、同一路径 truncate/regrow 时仍能按场次去重结论。
     review_id = f"{os.getpid()}-{time.time_ns()}"
+    attempt_items = [dict(item) for item in (review_queue_items or [])
+                     if isinstance(item, dict)]
+    attempt_runs = list(batch_runs or [runs])
+    if (not attempt_items and replay_queue_ids
+            and len(replay_queue_ids) == len(attempt_runs)):
+        for run, queue_id in zip(attempt_runs, replay_queue_ids):
+            attempt_items.append({
+                "run": int(run),
+                "queue_id": queue_id,
+                **plan.as_queue_fields(),
+                "retry_same_model": True,
+                "salvage_packages": list(replay_packages),
+                "salvage_attempts": list(replay_attempts),
+                **({"replay_target": replay_target} if replay_target else {}),
+            })
+    attempt_receipt = {
+        "attempt_id": review_id,
+        "pre_head": pre_head,
+        "batch_runs": attempt_runs,
+        "queue_items": attempt_items,
+        "replay_queue_ids": list(replay_queue_ids),
+        "replay_target": replay_target,
+        "replay_packages": list(replay_packages),
+        "replay_attempts": list(replay_attempts),
+        "plan": plan.as_queue_fields(),
+        # Queue affinity is durable before run_review.  Once this receipt is
+        # published, a host crash must not silently hand the attempt elsewhere.
+        "provider_launch_affinity_committed": bool(attempt_items),
+    }
     _stream_begin({
         "review_id": review_id,
         "runner": runner,
@@ -1978,7 +2011,12 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             sandbox_mode=plan.sandbox,
             source=source, every=every,
             replay_target=replay_target, replay_attempts=replay_attempts,
-            replay_queue_ids=replay_queue_ids, log=log)
+            replay_queue_ids=replay_queue_ids,
+            review_attempt_id=sandbox.review_attempt_id,
+            review_sandbox_name=sandbox.review_sandbox_name,
+            review_attempt_receipt_schema=(
+                sandbox.review_attempt_receipt_schema),
+            log=log)
         if package is not None and _status is not None:
             _status["salvage_package"] = package.name
             _status["new_salvage_package"] = package.name
@@ -1993,6 +2031,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             pre_work_timeout_seconds=pre_work_timeout_min * 60,
             replay_packages=replay_packages,
             replay_attempts=replay_attempts,
+            attempt_receipt=attempt_receipt,
             log=log)
         rc, out, timed_out, stopped, stalled = (
             sandbox.rc, sandbox.out, sandbox.timed_out, sandbox.stopped,
@@ -3738,6 +3777,9 @@ class SandboxReviewResult:
     provider_metrics: dict = field(default_factory=dict)
     provider_work_started: bool = False
     provider_transcript_rel: str = ""
+    review_attempt_id: str = ""
+    review_sandbox_name: str = ""
+    review_attempt_receipt_schema: int = 0
     # Failed-package receipts are authoritative only when the target and every
     # attempt were mounted into this clone and survived the post-run integrity
     # check.  The bounded prompt excerpt is a navigation summary, not evidence
@@ -3830,6 +3872,11 @@ def _bounded_sandbox_sibling_paths(
             for entry in entries:
                 if Path(entry.path) == sandbox_repo:
                     continue
+                # The host publishes this durable attempt binding before the
+                # provider starts.  Its bytes are checked separately after the
+                # provider exits, so it is not a model-written sibling escape.
+                if entry.name == _REVIEW_ATTEMPT_RECEIPT_NAME:
+                    continue
                 if len(found) >= max(1, limit):
                     found.append("[additional-siblings-omitted]")
                     break
@@ -3864,6 +3911,35 @@ def _replace_with_retry(source: Path, target: Path, attempts: int = 8) -> None:
                 time.sleep(0.05 * (attempt + 1))
     assert last_error is not None
     raise last_error
+
+
+def _publish_review_attempt_receipt(
+    sandbox_root: Path, payload: dict,
+) -> tuple[dict, bytes]:
+    """Durably bind one managed clone to its exact queue/model transaction."""
+    receipt = dict(payload)
+    receipt.update({
+        "schema": _REVIEW_ATTEMPT_RECEIPT_SCHEMA,
+        "sandbox_name": sandbox_root.name,
+    })
+    receipt.setdefault(
+        "attempt_id", f"{sandbox_root.name}-{os.getpid()}-{time.time_ns()}")
+    receipt.setdefault("created_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+    receipt.setdefault("created_at_ns", time.time_ns())
+    raw = (json.dumps(receipt, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    path = sandbox_root / _REVIEW_ATTEMPT_RECEIPT_NAME
+    temp = sandbox_root / (
+        f".{_REVIEW_ATTEMPT_RECEIPT_NAME}.{os.getpid()}."
+        f"{threading.get_ident()}.{time.time_ns()}.tmp")
+    try:
+        with temp.open("xb") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _replace_with_retry(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+    return receipt, raw
 
 
 def _read_sandbox_text(repo: Path, relative: str, limit: int = 2 * 1024 * 1024) -> str:
@@ -6074,7 +6150,10 @@ def _save_review_salvage(
     sandbox_mode: str = "workspace-write",
     every: int | None = None, replay_target: str = "",
     replay_attempts: list[str] | None = None,
-    replay_queue_ids: list[str] | None = None, log=print,
+    replay_queue_ids: list[str] | None = None,
+    review_attempt_id: str = "", review_sandbox_name: str = "",
+    review_attempt_receipt_schema: int = 0,
+    startup_orphan_recovery: bool = False, log=print,
 ) -> Path | None:
     """原子保存全部失败成果供 GLM 重审与后续分析；永不自动应用。"""
     if sandbox.salvage_saved:
@@ -6185,6 +6264,11 @@ def _save_review_salvage(
                 target_name if replay_role == "attempt_evidence" else "")),
         "replay_attempt_packages": ([] if replay_role == "target" else None),
         "replay_queue_ids": queue_ids,
+        "startup_orphan_recovery": bool(startup_orphan_recovery),
+        "review_attempt_id": str(review_attempt_id or ""),
+        "review_sandbox_name": str(review_sandbox_name or ""),
+        "review_attempt_receipt_schema": max(
+            0, int(review_attempt_receipt_schema or 0)),
         "inspection_hint": (
             "files/ 与 wip.patch 是全量失败现场；宿主只将其作为证据交回 GLM，"
             "由 GLM 基于当前 HEAD 重审、解冲突，禁止自动应用。"),
@@ -6312,6 +6396,7 @@ def _run_review_sandbox(
     translator, *, runner: str = "opencode", stall_warn_seconds: float = 0,
     stall_timeout_seconds: float = 0, pre_work_timeout_seconds: float = 0,
     replay_packages=(), replay_attempts=(),
+    attempt_receipt: dict | None = None,
     log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
@@ -6331,6 +6416,8 @@ def _run_review_sandbox(
     replay_model_started = False
     stream_metrics: dict = {}
     transcript_rel = ".git/sts2-review-provider-events.jsonl"
+    receipt_bytes = b""
+    published_receipt: dict = {}
     try:
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
@@ -6367,6 +6454,14 @@ def _run_review_sandbox(
             result = SandboxReviewResult(error=f"复盘命令缺少工作目录安全边界：{exc}")
             return result
 
+        receipt_payload = dict(attempt_receipt or {})
+        receipt_payload.setdefault("pre_head", pre_head)
+        receipt_payload.setdefault("runner", runner)
+        receipt_payload.setdefault("batch_runs", [])
+        receipt_payload.setdefault("queue_items", [])
+        receipt_payload.setdefault("replay_queue_ids", [])
+        published_receipt, receipt_bytes = _publish_review_attempt_receipt(
+            sandbox_root, receipt_payload)
         replay_model_started = True
         rc, out, timed_out, stopped, stalled = _stream_run(
             sandbox_cmd, timeout_seconds, translate=translator.feed,
@@ -6513,6 +6608,11 @@ def _run_review_sandbox(
         result.provider_metrics = provider_metrics
         result.provider_work_started = bool(
             getattr(translator, "model_work_started", False))
+        result.review_attempt_id = str(published_receipt.get("attempt_id") or "")
+        result.review_sandbox_name = str(
+            published_receipt.get("sandbox_name") or sandbox_root.name)
+        result.review_attempt_receipt_schema = int(
+            published_receipt.get("schema") or 0)
         # Final failure-package location is chosen after we know whether the
         # disposable clone itself must be retained or only its host-side snapshot.
         result.provider_transcript_rel = ""
@@ -6547,6 +6647,23 @@ def _run_review_sandbox(
                 except _ReviewStopped:
                     result.stopped = True
                     result.retained_sandbox_dir = str(sandbox_root)
+            if receipt_bytes:
+                receipt_path = sandbox_root / _REVIEW_ATTEMPT_RECEIPT_NAME
+                try:
+                    receipt_changed = bool(
+                        receipt_path.is_symlink()
+                        or not receipt_path.is_file()
+                        or receipt_path.read_bytes() != receipt_bytes)
+                except OSError:
+                    receipt_changed = True
+                if receipt_changed:
+                    result.retained_sandbox_dir = str(sandbox_root)
+                    result.unexpected_paths = tuple(dict.fromkeys((
+                        *result.unexpected_paths,
+                        f"../{_REVIEW_ATTEMPT_RECEIPT_NAME} [host-receipt-changed]",
+                    )))
+                    if not result.error:
+                        result.error = "provider changed the durable host attempt receipt"
             siblings = _bounded_sandbox_sibling_paths(sandbox_root, sandbox_repo)
             if siblings:
                 escaped = tuple(f"../{path}" for path in siblings)
@@ -6884,6 +7001,442 @@ def _recover_deferred_salvages(log=print) -> None:
             log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
 
 
+def _review_path_is_link_like(path: Path) -> bool:
+    try:
+        if path.is_symlink():
+            return True
+        is_junction = getattr(path, "is_junction", None)
+        return bool(is_junction and is_junction())
+    except OSError:
+        return True
+
+
+def _owned_review_sandbox_repo(root: Path) -> Path | None:
+    """Accept only a direct, real managed review clone under review_work."""
+    try:
+        managed = _review_work_root().resolve()
+        if (_review_path_is_link_like(root)
+                or root.parent.resolve() != managed
+                or not root.name.startswith("sts2-review-sandbox-")
+                or not _is_owned_review_temp(root, "sts2-review-sandbox-")):
+            return None
+        repo = root / "repo"
+        git_dir = repo / ".git"
+        if (_review_path_is_link_like(repo) or _review_path_is_link_like(git_dir)
+                or not repo.is_dir() or not git_dir.is_dir()
+                or repo.resolve().parent != root.resolve()):
+            return None
+        return repo
+    except OSError:
+        return None
+
+
+def _read_review_attempt_receipt(root: Path) -> tuple[dict | None, bytes]:
+    path = root / _REVIEW_ATTEMPT_RECEIPT_NAME
+    if path.is_symlink():
+        raise ValueError("attempt receipt is a symbolic link")
+    if not path.exists():
+        return None, b""
+    if not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+        raise ValueError("attempt receipt is not a bounded regular file")
+    raw = path.read_bytes()
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("attempt receipt is not an object")
+    return payload, raw
+
+
+def _sandbox_created_epoch(root: Path) -> float:
+    return float(root.stat().st_ctime)
+
+
+def _queue_items_by_id(q: dict) -> dict[str, list[dict]]:
+    indexed: dict[str, list[dict]] = {}
+    collections = [q.get("pending", []), _reviewing_items(q.get("reviewing"))]
+    for collection in collections:
+        for item in collection:
+            queue_id = str(item.get("queue_id") or "")
+            if queue_id:
+                indexed.setdefault(queue_id, []).append(dict(item))
+    return indexed
+
+
+def _replay_binding_from_items(items: list[dict]) -> tuple[str, list[str], list[str]]:
+    targets = {
+        str(item.get("replay_target") or item.get("retry_group") or "")
+        for item in items
+        if item.get("replay_target") or item.get("retry_group")
+    }
+    if len(targets) > 1:
+        raise ReviewQueueError("attempt items contain conflicting replay targets")
+    target = next(iter(targets), "")
+    packages = _normalize_salvage_package_names(
+        value for item in items for value in (item.get("salvage_packages") or []))
+    attempts = _normalize_salvage_package_names(
+        value for item in items for value in (item.get("salvage_attempts") or []))
+    if target:
+        packages = [target]
+    return target, packages, [value for value in attempts if value != target]
+
+
+def _receipt_orphan_binding(
+    root: Path, repo: Path, receipt: dict, q: dict,
+) -> dict:
+    if receipt.get("schema") != _REVIEW_ATTEMPT_RECEIPT_SCHEMA:
+        raise ReviewQueueError("unsupported attempt receipt schema")
+    if receipt.get("sandbox_name") != root.name:
+        raise ReviewQueueError("attempt receipt sandbox name mismatch")
+    attempt_id = str(receipt.get("attempt_id") or "")
+    if not attempt_id or len(attempt_id) > 240 or "\x00" in attempt_id:
+        raise ReviewQueueError("attempt receipt id is invalid")
+    if receipt.get("provider_launch_affinity_committed") is not True:
+        raise ReviewQueueError("attempt receipt predates a durable provider binding")
+
+    raw_items = receipt.get("queue_items")
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ReviewQueueError("attempt receipt has no full queue items")
+    items = [dict(item) for item in raw_items if isinstance(item, dict)]
+    if len(items) != len(raw_items):
+        raise ReviewQueueError("attempt receipt contains a non-object queue item")
+    for index, item in enumerate(items):
+        _validate_queue_item(item, f"attempt.queue_items[{index}]")
+    queue_ids = [str(item.get("queue_id") or "") for item in items]
+    if not all(queue_ids) or len(set(queue_ids)) != len(queue_ids):
+        raise ReviewQueueError("attempt receipt queue ids are missing or duplicated")
+    if receipt.get("replay_queue_ids") != queue_ids:
+        raise ReviewQueueError("attempt receipt queue id summary mismatch")
+    runs = [int(item["run"]) for item in items]
+    if receipt.get("batch_runs") != runs:
+        raise ReviewQueueError("attempt receipt run summary mismatch")
+
+    plan = receipt.get("plan")
+    required_plan_fields = {
+        "backend_key", "priority", "runner", "model", "variant",
+        "reasoning_effort", "approve_for_me", "sandbox", "every", "source",
+    }
+    if not isinstance(plan, dict) or not required_plan_fields.issubset(plan):
+        raise ReviewQueueError("attempt receipt is missing complete plan affinity")
+    plan_item = {"run": 1, **plan, "retry_same_model": True}
+    _validate_queue_item(plan_item, "attempt.plan")
+    plan_affinity = _retry_affinity(plan_item)
+    affinity = _batch_retry_affinity(items)
+    if affinity is None or affinity != plan_affinity:
+        raise ReviewQueueError("attempt receipt plan and queue affinity differ")
+
+    current = _queue_items_by_id(q)
+    for item, queue_id in zip(items, queue_ids):
+        matches = current.get(queue_id, [])
+        if len(matches) != 1:
+            raise ReviewQueueError(
+                f"attempt queue id is absent or ambiguous: {queue_id}")
+        live = matches[0]
+        if live.get("run") != item.get("run") or _retry_affinity(live) != affinity:
+            raise ReviewQueueError(
+                f"attempt queue identity/affinity changed: {queue_id}")
+        for key in ("retry_group", "replay_target"):
+            if str(live.get(key) or "") != str(item.get(key) or ""):
+                raise ReviewQueueError(
+                    f"attempt queue lineage changed: {queue_id}.{key}")
+        if bool(live.get("evidence_only")) != bool(item.get("evidence_only")):
+            raise ReviewQueueError(
+                f"attempt queue evidence role changed: {queue_id}")
+        for key in ("salvage_packages", "salvage_attempts"):
+            if _normalize_salvage_package_names(live.get(key) or []) != (
+                    _normalize_salvage_package_names(item.get(key) or [])):
+                raise ReviewQueueError(
+                    f"attempt queue evidence lineage changed: {queue_id}.{key}")
+
+    head = _sandbox_git(repo, ["rev-parse", "--verify", "HEAD"], timeout=30)
+    pre_head = str(receipt.get("pre_head") or "")
+    if head.returncode != 0 or not pre_head or head.stdout.strip() != pre_head:
+        raise ReviewQueueError("attempt receipt baseline does not match clone HEAD")
+    target, packages, attempts = _replay_binding_from_items(items)
+    if str(receipt.get("replay_target") or "") != target:
+        raise ReviewQueueError("attempt receipt replay target summary mismatch")
+    if _normalize_salvage_package_names(receipt.get("replay_packages") or []) != packages:
+        raise ReviewQueueError("attempt receipt replay package summary mismatch")
+    if _normalize_salvage_package_names(receipt.get("replay_attempts") or []) != attempts:
+        raise ReviewQueueError("attempt receipt replay attempt summary mismatch")
+    return {
+        "attempt_id": attempt_id,
+        "receipt_schema": _REVIEW_ATTEMPT_RECEIPT_SCHEMA,
+        "pre_head": pre_head,
+        "items": items,
+        "plan": dict(plan),
+        "replay_target": target,
+        "replay_packages": packages,
+        "replay_attempts": attempts,
+    }
+
+
+def _legacy_orphan_binding(
+    candidates: list[tuple[Path, Path]], q: dict, log=print,
+) -> list[tuple[Path, Path, dict]]:
+    """Bind one pre-receipt clone only when current reviewing proves uniqueness."""
+    reviewing = q.get("reviewing")
+    if not isinstance(reviewing, dict) or not isinstance(reviewing.get("items"), list):
+        return []
+    items = _reviewing_items(reviewing)
+    if not items or any(not item.get("queue_id") for item in items):
+        return []
+    try:
+        affinity = _batch_retry_affinity(items)
+        started = time.mktime(time.strptime(
+            str(reviewing.get("started") or ""), "%Y-%m-%d %H:%M:%S"))
+    except (ReviewQueueError, OverflowError, TypeError, ValueError):
+        return []
+    if affinity is None:
+        return []
+    now = time.time()
+    eligible: list[tuple[Path, Path]] = []
+    for root, repo in candidates:
+        # Pre-receipt compatibility is only for attempts which crossed the old
+        # provider boundary.  A clean clone left before spawn has no transcript.
+        if not (repo / ".git" / "sts2-review-provider-events.jsonl").is_file():
+            continue
+        try:
+            created = _sandbox_created_epoch(root)
+        except OSError:
+            continue
+        if (created >= started - _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC
+                and created <= started + _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC
+                and created <= now + _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC):
+            eligible.append((root, repo))
+    if len(eligible) != 1:
+        if eligible:
+            log("[llm] legacy review sandboxes are ambiguous; retaining all: "
+                + ", ".join(root.name for root, _repo in eligible))
+        return []
+    root, repo = eligible[0]
+    head = _sandbox_git(repo, ["rev-parse", "--verify", "HEAD"], timeout=30)
+    if head.returncode != 0 or not head.stdout.strip():
+        return []
+    (runner, model, source, backend_key, variant, reasoning_effort,
+     approve_for_me, sandbox_mode, priority) = affinity
+    plan = {
+        "backend_key": backend_key,
+        "priority": priority,
+        "runner": runner,
+        "model": model,
+        "variant": variant,
+        "reasoning_effort": reasoning_effort,
+        "approve_for_me": approve_for_me,
+        "sandbox": sandbox_mode,
+        "every": max(1, int(items[0].get("every") or 1)),
+        "source": source,
+    }
+    target, packages, attempts = _replay_binding_from_items(items)
+    binding = {
+        "attempt_id": f"legacy:{root.name}:{head.stdout.strip()[:16]}",
+        "receipt_schema": 0,
+        "pre_head": head.stdout.strip(),
+        "items": items,
+        "plan": plan,
+        "replay_target": target,
+        "replay_packages": packages,
+        "replay_attempts": attempts,
+    }
+    return [(root, repo, binding)]
+
+
+def _pointed_review_sandbox_roots() -> set[Path]:
+    pointed: set[Path] = set()
+    if not SALVAGE_ROOT.is_dir():
+        return pointed
+    for package in SALVAGE_ROOT.iterdir():
+        pointer = package / "raw_sandbox_pointer.txt"
+        if not package.is_dir() or not pointer.is_file():
+            continue
+        try:
+            raw = Path(pointer.read_text(encoding="utf-8")[:4096].strip()).resolve()
+            if _is_owned_review_temp(raw, "sts2-review-sandbox-"):
+                pointed.add(raw)
+        except OSError:
+            continue
+    return pointed
+
+
+def _orphan_salvage_records(attempt_id: str) -> list[tuple[Path, dict]]:
+    records: list[tuple[Path, dict]] = []
+    if not SALVAGE_ROOT.is_dir():
+        return records
+    for package in SALVAGE_ROOT.iterdir():
+        manifest_path = package / "manifest.json"
+        if not package.is_dir() or not manifest_path.is_file():
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+        if manifest.get("review_attempt_id") == attempt_id:
+            records.append((package, manifest))
+    return records
+
+
+def _orphan_salvage_is_complete(
+    package: Path, manifest: dict, root: Path,
+) -> bool:
+    raw = package / "raw_sandbox"
+    if (manifest.get("raw_sandbox_included") is not True
+            or manifest.get("raw_sandbox_deferred") is True
+            or manifest.get("review_sandbox_name") != root.name
+            or not (raw / "repo" / ".git").is_dir()):
+        return False
+    source_receipt = root / _REVIEW_ATTEMPT_RECEIPT_NAME
+    copied_receipt = raw / _REVIEW_ATTEMPT_RECEIPT_NAME
+    try:
+        if source_receipt.exists():
+            return (not source_receipt.is_symlink()
+                    and not copied_receipt.is_symlink()
+                    and source_receipt.read_bytes() == copied_receipt.read_bytes())
+    except OSError:
+        return False
+    return True
+
+
+def _recover_bound_review_sandbox(
+    root: Path, repo: Path, binding: dict, log=print,
+) -> Path | None:
+    existing = _orphan_salvage_records(binding["attempt_id"])
+    if existing:
+        if (len(existing) == 1
+                and _orphan_salvage_is_complete(existing[0][0], existing[0][1], root)):
+            cleanup = SandboxReviewResult(retained_sandbox_dir=str(root))
+            if _discard_retained_sandbox(cleanup, log=log):
+                log(f"[llm] orphan review sandbox already fully preserved: {root.name}")
+                return existing[0][0]
+        log(f"[llm] orphan review salvage state is incomplete/ambiguous; retaining clone: {root}")
+        return None
+    if _review_stop_requested():
+        return None
+
+    result = SandboxReviewResult(
+        rc=-1,
+        error="previous review host exited before publishing its sandbox",
+        retained_sandbox_dir=str(root),
+        provider_work_started=True,
+        provider_metrics={"startup_orphan_recovery": True},
+    )
+    try:
+        _capture_sandbox_wip(repo, binding["pre_head"], result, log=log)
+    except _ReviewStopped:
+        result.stopped = True
+        result.retained_sandbox_dir = str(root)
+    siblings = _bounded_sandbox_sibling_paths(root, repo)
+    if siblings:
+        escaped = tuple(f"../{path}" for path in siblings)
+        result.sibling_paths = siblings
+        result.wip_paths = tuple(dict.fromkeys((*result.wip_paths, *escaped)))
+        result.unexpected_paths = tuple(dict.fromkeys(
+            (*result.unexpected_paths, *escaped)))
+    _preserve_provider_transcript(
+        repo, result, ".git/sts2-review-provider-events.jsonl", log=log)
+    plan = binding["plan"]
+    items = binding["items"]
+    saved = _save_review_salvage(
+        binding["pre_head"], result.error, result,
+        batch_runs=[int(item["run"]) for item in items],
+        runner=str(plan["runner"]), model=str(plan["model"]),
+        source=str(plan["source"]), backend_key=str(plan["backend_key"]),
+        variant=str(plan["variant"]),
+        reasoning_effort=str(plan["reasoning_effort"]),
+        priority=max(1, int(plan["priority"])),
+        approve_for_me=bool(plan["approve_for_me"]),
+        sandbox_mode=str(plan["sandbox"]), every=max(1, int(plan["every"])),
+        replay_target=str(binding["replay_target"]),
+        replay_attempts=list(binding["replay_attempts"]),
+        replay_queue_ids=[str(item["queue_id"]) for item in items],
+        review_attempt_id=str(binding["attempt_id"]),
+        review_sandbox_name=root.name,
+        review_attempt_receipt_schema=int(binding["receipt_schema"]),
+        startup_orphan_recovery=True,
+        log=log,
+    )
+    if saved is None:
+        log(f"[llm] orphan review sandbox preservation failed; clone retained: {root}")
+    return saved
+
+
+def _recover_unpointed_review_sandboxes(log=print) -> list[str]:
+    """Turn exactly bound, unpointed managed clones into durable failure packages."""
+    work_root = _review_work_root()
+    if not work_root.is_dir() or _review_stop_requested():
+        return []
+    pointed = _pointed_review_sandbox_roots()
+    candidates: list[tuple[Path, Path]] = []
+    try:
+        children = list(work_root.iterdir())
+    except OSError as exc:
+        log(f"[llm] cannot enumerate managed review_work; retaining it unchanged: {exc}")
+        return []
+    for root in children:
+        repo = _owned_review_sandbox_repo(root)
+        if repo is None:
+            continue
+        try:
+            resolved = root.resolve()
+        except OSError:
+            continue
+        if resolved in pointed:
+            continue
+        candidates.append((root, repo))
+    if not candidates:
+        return []
+
+    try:
+        with _queue_lock:
+            q = _load_queue_unlocked()
+    except (ReviewQueueError, OSError) as exc:
+        log(f"[llm] review queue cannot bind orphan sandboxes; retaining all: {exc}")
+        return []
+
+    bound: list[tuple[Path, Path, dict]] = []
+    legacy: list[tuple[Path, Path]] = []
+    for root, repo in candidates:
+        try:
+            receipt, _raw = _read_review_attempt_receipt(root)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            log(f"[llm] invalid orphan attempt receipt; retaining clone {root.name}: {exc}")
+            continue
+        if receipt is None:
+            legacy.append((root, repo))
+            continue
+        try:
+            binding = _receipt_orphan_binding(root, repo, receipt, q)
+        except (OSError, ReviewQueueError, ValueError, TypeError) as exc:
+            log(f"[llm] orphan attempt binding is not exact; retaining clone {root.name}: {exc}")
+            continue
+        bound.append((root, repo, binding))
+
+    claims: dict[str, list[tuple[Path, Path, dict]]] = {}
+    for record in bound:
+        for item in record[2]["items"]:
+            claims.setdefault(str(item["queue_id"]), []).append(record)
+    conflicting_roots = {
+        root.resolve()
+        for records in claims.values() if len(records) > 1
+        for root, _repo, _binding in records
+    }
+    exact: list[tuple[Path, Path, dict]] = []
+    for record in bound:
+        if record[0].resolve() not in conflicting_roots:
+            exact.append(record)
+    if conflicting_roots:
+        log("[llm] receipt sandboxes have overlapping queue ids; retaining all conflicts: "
+            + ", ".join(sorted(path.name for path in conflicting_roots)))
+    exact.extend(_legacy_orphan_binding(legacy, q, log=log))
+
+    recovered: list[str] = []
+    for root, repo, binding in exact:
+        if _review_stop_requested():
+            break
+        saved = _recover_bound_review_sandbox(root, repo, binding, log=log)
+        if saved is not None:
+            recovered.append(saved.name)
+            log(f"[llm] recovered unpointed review sandbox into full salvage: {saved}")
+    return recovered
+
+
 def _resume_host_salvage_closures(log=print) -> None:
     """Resume receipt push/ledger/quarantine work without another GLM call."""
     if not SALVAGE_ROOT.is_dir() or _review_stop_requested():
@@ -7106,6 +7659,12 @@ def _worker_loop_body(agent, log) -> None:
     if _review_stop_requested():
         return
     _recover_deferred_salvages(log=log)
+    if _review_stop_requested():
+        return
+    # A pre-receipt host can die after the provider edited its managed clone but
+    # before `_save_review_salvage` published a pointer/package.  Preserve only
+    # clones with an exact durable queue binding; ambiguous legacy roots remain.
+    _recover_unpointed_review_sandboxes(log=log)
     if _review_stop_requested():
         return
     # Operator-preserved packages may be the only surviving copy after an older
@@ -7366,7 +7925,8 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
                           salvage_attempts=inherited_attempts,
                           replay_queue_ids=[str(item.get("queue_id") or "")
                                             for item in batch],
-                          evidence_only=evidence_only)
+                          evidence_only=evidence_only,
+                          review_queue_items=batch)
     new_package = str(status.get("new_salvage_package") or "")
     if not new_package:
         legacy_new = _normalize_salvage_package_names(

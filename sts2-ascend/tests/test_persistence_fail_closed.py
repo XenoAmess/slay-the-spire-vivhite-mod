@@ -161,8 +161,12 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         llm_review.QUEUE_FILE = self.queue
         llm_review.SALVAGE_ROOT = Path(self.temp.name) / "review_salvage"
         llm_review.SALVAGE_ROOT.mkdir()
+        self.orphan_recovery = mock.patch.object(
+            llm_review, "_recover_unpointed_review_sandboxes")
+        self.orphan_recovery.start()
 
     def tearDown(self) -> None:
+        self.orphan_recovery.stop()
         llm_review.QUEUE_FILE = self.old_queue
         llm_review.SALVAGE_ROOT = self.old_salvage_root
         self.temp.cleanup()
@@ -541,6 +545,9 @@ class ReviewQueueSafetyTests(unittest.TestCase):
               mock.patch.object(llm_review, "_recover_deferred_salvages",
                                 side_effect=lambda log: calls.append("deferred")),
               mock.patch.object(
+                  llm_review, "_recover_unpointed_review_sandboxes",
+                  side_effect=lambda log: calls.append("orphan") or []),
+              mock.patch.object(
                   llm_review, "_recover_committed_retry_resolutions",
                   side_effect=lambda log: calls.append("receipt") or []),
               mock.patch.object(llm_review, "_recover_salvage_replay_queue",
@@ -556,7 +563,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             llm_review._worker_loop_body(agent, log=lambda _message: None)
 
         self.assertEqual(calls, [
-            "deferred", "receipt", "queue", "ledger",
+            "deferred", "orphan", "receipt", "queue", "ledger",
             "receipt", "queue", "closure",
         ])
 
