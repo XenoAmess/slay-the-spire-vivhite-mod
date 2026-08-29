@@ -335,10 +335,22 @@ sts2-ascend/knowledge/meta_review.md
         self.assertNotIn("sts2-review-luna", prompt)
         self.assertLess(prompt.index("3. 落地："), prompt.index("5. 最后才写报告："))
         self.assertIn("BLOCKED_TOOL_CAPABILITY", prompt)
+        self.assertIn("初始读取或 shell 本身被", prompt)
+        self.assertIn("`Access is denied (os error 5)` 或 `WinError 5`", prompt)
+        self.assertIn("sandbox DACL 的稳定权限拒绝", prompt)
+        self.assertIn("交宿主修复 ACL", prompt)
+        self.assertIn("generic `Failed to write file`", prompt)
+        self.assertIn("明确的 `Sharing violation`", prompt)
+        self.assertIn("在首次失败之后至少再重试 3 次", prompt)
+        self.assertIn("不得管理或终止进程", prompt)
+        self.assertIn("不得改用 shell、脚本、重定向等旁路写法", prompt)
+        self.assertIn("全部失败才输出", prompt)
+        self.assertNotIn("Windows `Access is denied`，把它视为", prompt)
+        self.assertNotIn("任何本地读取、shell 或 Apply Patch 再出现", prompt)
         self.assertNotIn("安全基础设施不可自改", prompt)
         self.assertNotIn("不得修改 `brain/autogit.py`", prompt)
 
-    def test_short_invocation_teaches_action_and_capability_stop(self) -> None:
+    def test_short_invocation_teaches_bounded_apply_patch_retry(self) -> None:
         prompt = llm_review._review_invocation_prompt(
             "sts2-ascend/knowledge/review_prompt_latest.md")
 
@@ -346,6 +358,18 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("SELFCHECK OK", prompt)
         self.assertIn("commit SHA", prompt)
         self.assertIn("BLOCKED_TOOL_CAPABILITY", prompt)
+        self.assertIn("初始读取或 shell 本身被 blocked/access denied", prompt)
+        self.assertIn("Access is denied (os error 5) 或 WinError 5", prompt)
+        self.assertIn("稳定 DACL 拒绝", prompt)
+        self.assertIn("立即输出 BLOCKED_TOOL_CAPABILITY 并交宿主修复 ACL", prompt)
+        self.assertIn("generic Failed to write file", prompt)
+        self.assertIn("明确 Sharing violation", prompt)
+        self.assertIn("首次失败后至少再重试 3 次", prompt)
+        self.assertIn("不得管理或终止进程", prompt)
+        self.assertIn("不得换用 shell/脚本/重定向等旁路写法", prompt)
+        self.assertIn("全部失败才 BLOCKED", prompt)
+        self.assertNotIn("Access is denied，须将其视为瞬态共享冲突", prompt)
+        self.assertNotIn("Apply Patch 被 blocked/access denied，立即输出", prompt)
         self.assertLess(prompt.index("最小生产行为/观测改动"), prompt.index("最后才写报告"))
 
     def test_tool_access_failure_outranks_report_only_closure(self) -> None:

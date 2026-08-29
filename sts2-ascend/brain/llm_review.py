@@ -130,12 +130,68 @@ _REVIEW_HOLD_CLOSURE_SCHEMA = 1
 _REVIEW_ATTEMPT_RECEIPT_NAME = "review_attempt.json"
 _REVIEW_ATTEMPT_RECEIPT_SCHEMA = 1
 _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC = 120.0
+_WINDOWS_REVIEW_ACL_REQUIRED = os.name == "nt"
+
+
+class _ReviewSandboxAclError(RuntimeError):
+    """The host could not make a new review sandbox inherit its parent DACL."""
 
 
 def _new_review_temp(prefix: str) -> Path:
     root = _review_work_root()
     root.mkdir(parents=True, exist_ok=True)
     return Path(tempfile.mkdtemp(prefix=prefix, dir=str(root)))
+
+
+def _normalize_windows_review_sandbox_acl(sandbox_root: Path) -> None:
+    """Restore the parent ACL that Python 3.14 ``mkdtemp`` masks on Windows.
+
+    Python 3.14 creates a protected owner-only DACL for temporary directories.
+    That is useful for secrets, but a Codex native patch helper runs with the
+    workspace's restricted identity and therefore cannot read files cloned
+    below that directory. Reset only this newly-created, empty managed root to
+    its parent's inherited DACL before Git or a provider can enter it.
+    """
+    if not _WINDOWS_REVIEW_ACL_REQUIRED:
+        return
+    try:
+        managed_root = _review_work_root().resolve(strict=True)
+        candidate = Path(sandbox_root).resolve(strict=True)
+    except OSError as exc:
+        raise _ReviewSandboxAclError(
+            f"review sandbox ACL path lookup failed: {exc}") from exc
+    if (candidate.parent != managed_root
+            or not candidate.name.startswith("sts2-review-sandbox-")
+            or not candidate.is_dir()
+            or _review_path_is_link_like(Path(sandbox_root))):
+        raise _ReviewSandboxAclError(
+            f"refusing ACL reset outside a fresh managed review sandbox: {candidate}")
+    try:
+        # `/reset` replaces the protected tempfile DACL with the default ACL
+        # inherited from review_work. Deliberately omit `/T`, `/grant`, and
+        # named principals: this operation can touch only the empty root and
+        # never widens access to Everyone.
+        reset = _run_captured_stop_aware(
+            ["icacls.exe", str(candidate), "/reset"], timeout=30)
+        if reset.returncode != 0:
+            detail = (reset.stderr or reset.stdout or "").strip()[:400]
+            raise _ReviewSandboxAclError(
+                f"icacls /reset failed ({reset.returncode}): {detail}")
+        inspected = _run_captured_stop_aware(
+            ["icacls.exe", str(candidate)], timeout=30)
+        acl_text = (inspected.stdout or "") + "\n" + (inspected.stderr or "")
+        if inspected.returncode != 0 or "(I)" not in acl_text:
+            detail = acl_text.strip()[:400]
+            raise _ReviewSandboxAclError(
+                "review sandbox did not inherit the review_work DACL after reset: "
+                + detail)
+    except _ReviewStopped:
+        raise
+    except _ReviewSandboxAclError:
+        raise
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise _ReviewSandboxAclError(
+            f"review sandbox ACL normalization failed: {exc}") from exc
 
 
 def _is_owned_review_temp(path: Path, prefix: str) -> bool:
@@ -1099,9 +1155,17 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 # 上次失败反馈（先读这一小段，再开始工作）
 <retry_feedback>{retry_feedback_json}</retry_feedback>
 若这里显示 `runner_tool_access_denied`，那是宿主工具权限故障，不是你的策略判断失败；本轮工具恢复后
-不要重复上次的空终态。任何本地读取、shell 或 Apply Patch 再出现 `blocked by policy` / `Access denied`
-时，立即输出 `BLOCKED_TOOL_CAPABILITY`、原始错误与被阻断的动作，然后停止；不得伪造已复盘或写
-`no_valid_change`。
+不要重复上次的空终态。只有开始工作所需的初始读取或 shell 本身被 `blocked by policy` / `Access denied`、
+尚未证明本地工具可用时，才立即输出 `BLOCKED_TOOL_CAPABILITY`、原始错误与被阻断的动作并停止。
+若此前读取或 shell/测试已经成功，原生 Apply Patch 报错时必须先按原始错误分类：
+- 包含 `Access is denied (os error 5)` 或 `WinError 5` 是 sandbox DACL 的稳定权限拒绝；不要重试，立即
+  输出 `BLOCKED_TOOL_CAPABILITY`、原始错误和目标文件，交宿主修复 ACL。
+- 只有不伴随 `Access denied` / `Permission denied` 或永久权限码的 generic `Failed to write file`，或
+  明确的 `Sharing violation`，才视为瞬态共享冲突。保持同一 patch 内容和目标，短暂、有界退避；若
+  持续失败，在首次失败之后至少再重试 3 次，任一次成功就继续，全部失败才输出
+  `BLOCKED_TOOL_CAPABILITY`。
+两种分支都不得管理或终止进程，也不得改用 shell、脚本、重定向等旁路写法；不得把写入错误冒充
+复盘结论或写 `no_valid_change`。
 
 # 数据载体
 本文件的**第一个 `json` 代码块就是完整 packet**，不存在独立的 packet JSON 文件。若工具截断
@@ -1172,8 +1236,13 @@ def _review_invocation_prompt(rel_prompt: str) -> str:
         "内读取证据、修改 sts2-ascend 静态项目文件、运行 selfcheck，并自行回读 diff、"
         "解决冲突和本地 commit；禁止 push、访问其他工作区或管理在线进程。成功标准："
         "一个可证伪假设，一个最小生产行为/观测改动，SELFCHECK OK，最终 diff 复核和 commit SHA，"
-        "最后才写报告。若读取、shell 或 Apply Patch 被 blocked/access denied，立即输出 "
-        "BLOCKED_TOOL_CAPABILITY 与原始错误并停止，不能声称完成或写 no_valid_change。"
+        "最后才写报告。只有初始读取或 shell 本身被 blocked/access denied、尚未证明本地工具可用时，"
+        "才立即输出 BLOCKED_TOOL_CAPABILITY。已有成功读取/执行后，Apply Patch 若含 Access is denied "
+        "(os error 5) 或 WinError 5，表示稳定 DACL 拒绝，立即输出 BLOCKED_TOOL_CAPABILITY 并交宿主"
+        "修复 ACL，不要重试。仅对不含 Access/Permission denied 或永久权限码的 generic Failed to write "
+        "file，或明确 Sharing violation，对同一 patch 短暂有界退避；持续失败时在首次失败后至少再重试 "
+        "3 次，全部失败才 BLOCKED。不得管理或终止进程，不得换用 shell/脚本/重定向等旁路写法，"
+        "不能声称完成或写 no_valid_change。"
     )
 
 
@@ -2174,6 +2243,27 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 })
             log("[llm] Codex 本地参数预检拒绝了宿主命令；Luna 未开始工作，"
                 "保留精确现场且维持原模型亲和性，稍后重试")
+            return False
+        acl_preflight_failed = bool(
+            sandbox.failure_code == "review_sandbox_acl_preflight"
+            and not sandbox.provider_work_started and not stopped)
+        if acl_preflight_failed:
+            # Python 3.14 may protect a tempfile DACL before Git/provider launch.
+            # This is a host sandbox bootstrap failure, not work attempted by the
+            # bound model. Preserve the exact empty/pre-clone root and keep the
+            # original affinity without charging cooldown or retry budget.
+            save_failure(sandbox.error)
+            if _status is not None:
+                _status.update({
+                    "outcome": "deferred",
+                    "deferred_kind": "review_sandbox_acl_preflight",
+                    "reason": sandbox.error,
+                    "failure_code": sandbox.failure_code,
+                    "startup_unavailable": False,
+                    "provider_launch_attempted": False,
+                })
+            log("[llm] Windows 隔离仓 ACL 预检失败；provider 未启动，"
+                "完整保全宿主现场并维持原模型亲和性，稍后重试")
             return False
         if sandbox.error or stopped:
             save_failure(sandbox.error or "协作停止留下的部分复盘现场")
@@ -6847,11 +6937,13 @@ def _save_review_salvage(
         "sandbox": str(sandbox_mode or "workspace-write"),
         "source": source,
         "every": every,
-        # A host CLI argument-contract rejection happens before provider work,
-        # but it must not revoke the already durable runner/model binding.
+        # Host preflight failures happen before provider work, but must not
+        # revoke the already durable runner/model binding.
         "retry_same_model": bool(
             getattr(sandbox, "provider_work_started", False)
-            or sandbox.failure_code == "runner_cli_preflight"),
+            or sandbox.failure_code in {
+                "runner_cli_preflight", "review_sandbox_acl_preflight",
+            }),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
         "stalled": sandbox.stalled,
@@ -7063,6 +7155,7 @@ def _run_review_sandbox(
     receipt_bytes = b""
     published_receipt: dict = {}
     try:
+        _normalize_windows_review_sandbox_acl(sandbox_root)
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
             str(REPO_DIR), str(sandbox_repo),
@@ -7240,6 +7333,12 @@ def _run_review_sandbox(
     except _ReviewStopped:
         result.stopped = True
         result.error = "整套停止；隔离复盘原始现场已快速保留"
+        return result
+    except _ReviewSandboxAclError as exc:
+        result = SandboxReviewResult(
+            error=f"隔离复盘 Windows ACL 预检失败：{exc}",
+            failure_code="review_sandbox_acl_preflight",
+        )
         return result
     except Exception as exc:
         result = SandboxReviewResult(error=f"隔离复盘异常：{exc}")
@@ -8631,8 +8730,10 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     if outcome == "canceled" or status.get("canceled"):
         return "canceled"
     if outcome == "deferred":
-        if status.get("deferred_kind") == "runner_cli_preflight":
-            log("[llm] Codex 宿主启动参数预检失败；模型未工作、未冷却，"
+        if status.get("deferred_kind") in {
+            "runner_cli_preflight", "review_sandbox_acl_preflight",
+        }:
+            log("[llm] 复盘宿主启动预检失败；模型未工作、未冷却，"
                 f"保留 {plan.display_model} 原批次亲和性后延迟重试："
                 f"{status.get('reason', '本地 CLI 参数错误')}")
         else:
