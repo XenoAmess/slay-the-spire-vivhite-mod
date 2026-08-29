@@ -180,4 +180,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260830-054303-1788039783861923900-1ba82cab -->
 | 2026-08-30 05:43:03 | 第 808~812 局 | `1ba82cab` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `79b8b720` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 79b8b720 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-060240-1788040960309071100-890c9510 -->
-| 2026-08-30 06:02:40 | 第 808~812 局 | `890c9510` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260830-060240-1788040960309071100-890c9510` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
+| 2026-08-30 06:02:40 | 第 808~812 局 | `890c9510` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `79b8b720` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 79b8b720 已推送；远端确认后精确清理对应失败包 |
