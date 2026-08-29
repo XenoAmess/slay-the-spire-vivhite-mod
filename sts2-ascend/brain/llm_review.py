@@ -2489,6 +2489,48 @@ def _batch_retry_affinity(batch: list[dict]) -> tuple | None:
     return sticky[0]
 
 
+def _refresh_sticky_approval(batch: list[dict], cfg: dict) -> bool:
+    """Refresh execution approval only for an exact configured backend identity.
+
+    This runs before affinity comparison so one replay group can normalize old
+    and new approval snapshots.  Runner/model/variant/reasoning, backend key and
+    sandbox must all match; sandbox is deliberately not migrated.
+    """
+    configured: dict[tuple[str, str, str, str, str, str], list[ReviewPlan]] = {}
+    for candidate in review_plans_from_config(cfg):
+        identity = (
+            candidate.key,
+            candidate.runner,
+            candidate.model,
+            candidate.variant or "",
+            candidate.reasoning_effort or "",
+            candidate.sandbox,
+        )
+        configured.setdefault(identity, []).append(candidate)
+
+    refreshed = False
+    for item in batch:
+        if not item.get("retry_same_model"):
+            continue
+        model = str(item.get("model") or "")
+        identity = (
+            str(item.get("backend_key") or model),
+            str(item.get("runner") or "opencode"),
+            model,
+            str(item.get("variant") or ""),
+            str(item.get("reasoning_effort") or ""),
+            str(item.get("sandbox") or "workspace-write"),
+        )
+        matches = configured.get(identity, [])
+        if len(matches) != 1:
+            continue
+        approve_for_me = bool(matches[0].approve_for_me)
+        if bool(item.get("approve_for_me", False)) != approve_for_me:
+            item["approve_for_me"] = approve_for_me
+            refreshed = True
+    return refreshed
+
+
 def _queue_item_ready_at(item: dict, now: float) -> float:
     """Combine per-attempt backoff with the bound preferred-model cooldown."""
     ready_at = float(item.get("retry_after", 0) or 0)
@@ -8063,7 +8105,8 @@ def _worker_loop_body(agent, log) -> None:
             # Host-only receipt/push/ledger/quarantine recovery is independent
             # from paid model execution.  When LLM review is disabled, keep the
             # durable review queue untouched and run only maintenance.
-            if not load_llm_config().get("enabled", True):
+            worker_cfg = load_llm_config()
+            if not worker_cfg.get("enabled", True):
                 if _wait_review_stop(30):
                     return
                 continue
@@ -8072,7 +8115,15 @@ def _worker_loop_body(agent, log) -> None:
                 q = _load_queue_unlocked()
                 pending = q.get("pending", [])
                 if pending and not q.get("reviewing"):
-                    worker_cfg = load_llm_config()
+                    approval_refreshed = _refresh_sticky_approval(
+                        pending, worker_cfg)
+                    if approval_refreshed:
+                        # Selection itself compares the complete sticky tuple, so
+                        # normalize and durably publish old approval snapshots
+                        # before the scheduler can inspect a mixed replay group.
+                        _save_queue_unlocked(q)
+                        log("[llm] pending sticky review execution approval "
+                            "refreshed from exact current backend config")
                     cap = max(1, min(
                         int(worker_cfg.get("review_queue_max", 100)),
                         int(worker_cfg.get("max_runs_in_packet", 100))))
@@ -8162,6 +8213,10 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     if _review_stop_requested():
         return "canceled"
     cfg = load_llm_config()
+    approval_refreshed = _refresh_sticky_approval(batch, cfg)
+    if approval_refreshed:
+        log("[llm] sticky review execution approval refreshed from exact current "
+            "backend config")
     affinity = _batch_retry_affinity(batch)
     if affinity is not None:
         # A process that already produced a failure package/partial output owns
@@ -8226,10 +8281,10 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         if replay_target:
             item["replay_target"] = replay_target
     binding_persisted = _persist_reviewing_batch_metadata(batch, log=log)
-    if not binding_persisted and affinity is None:
+    if not binding_persisted and (affinity is None or approval_refreshed):
         # Provider launch is the point where model affinity becomes billable and
-        # semantically binding.  Never cross it until the resolved plan is durable;
-        # otherwise a Brain crash can replay the same evidence on another model.
+        # semantically binding.  A repaired execution contract must likewise be
+        # durable before launch, or a Brain crash can restore the denied mode.
         if affinity is None:
             for item in batch:
                 item["retry_same_model"] = False

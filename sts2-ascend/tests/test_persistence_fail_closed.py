@@ -628,6 +628,64 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertIsNone(saved["reviewing"])
         self.assertEqual([item["run"] for item in saved["pending"]], [8])
 
+    def test_worker_persists_mixed_sticky_approval_before_batch_selection(self) -> None:
+        pending = [
+            {
+                "run": run, "queue_id": f"sticky-luna-{run}",
+                "retry_group": "pkg-luna", "runner": "codex",
+                "model": "gpt-5.6-luna", "backend_key": "luna-max",
+                "variant": "", "reasoning_effort": "max", "priority": 2,
+                "approve_for_me": approve, "sandbox": "workspace-write",
+                "every": 1, "source": "preferred", "retry_same_model": True,
+            }
+            for run, approve in ((8, False), (9, True))
+        ]
+        self.queue.write_text(json.dumps({
+            "pending": pending, "reviewing": None,
+        }), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        cfg = {
+            "enabled": True, "review_queue_max": 100, "max_runs_in_packet": 100,
+            "review_model_chain": [{
+                "key": "luna-max", "runner": "codex", "model": "gpt-5.6-luna",
+                "reasoning_effort": "max", "approve_for_me": True,
+                "sandbox": "workspace-write",
+            }],
+        }
+        original_select = llm_review._select_review_batch
+        selected_snapshots: list[list[bool]] = []
+        launched: list[list[bool]] = []
+
+        def inspect_select(items, cap, now):
+            selected_snapshots.append([item["approve_for_me"] for item in items])
+            durable = llm_review._load_queue_unlocked()["pending"]
+            self.assertEqual([item["approve_for_me"] for item in durable], [True, True])
+            return original_select(items, cap, now)
+
+        def complete(_agent, batch, _log):
+            launched.append([item["approve_for_me"] for item in batch])
+            agent.request_restart = True
+            return "completed"
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
+              mock.patch.object(llm_review, "_kill_orphan_review_processes"),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "_select_review_batch",
+                                side_effect=inspect_select),
+              mock.patch.object(llm_review, "_run_batch_review",
+                                side_effect=complete)):
+            llm_review._worker_loop(agent, log=lambda _message: None)
+
+        self.assertEqual(selected_snapshots, [[True, True]])
+        self.assertEqual(launched, [[True, True]])
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual(saved["pending"], [])
+
     def test_worker_retries_finalize_in_place_instead_of_deadlocking_reviewing(self) -> None:
         self.queue.write_text(json.dumps({
             "pending": [{"run": 8, "time": "live"}], "reviewing": None,
@@ -817,6 +875,144 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                          ("opencode", "glm"))
         self.assertEqual((fresh[0]["runner"], fresh[0]["model"]),
                          ("opencode", "kimi"))
+
+    def test_sticky_luna_refreshes_exact_backend_approval_before_launch(self) -> None:
+        batch = [
+            {
+                "run": run, "queue_id": f"sticky-luna-{run}", "runner": "codex",
+                "model": "gpt-5.6-luna", "backend_key": "luna-max",
+                "variant": "", "reasoning_effort": "max", "priority": 2,
+                "approve_for_me": approve, "sandbox": "workspace-write",
+                "every": 1, "source": "preferred", "retry_same_model": True,
+            }
+            for run, approve in ((8, False), (9, True))
+        ]
+        self.queue.write_text(json.dumps({
+            "pending": [],
+            "reviewing": {"runs": [8, 9], "items": batch, "started": "now"},
+        }), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        cfg = {"review_model_chain": [{
+            "key": "luna-max", "priority": 2, "runner": "codex",
+            "model": "gpt-5.6-luna", "reasoning_effort": "max",
+            "approve_for_me": True, "sandbox": "workspace-write", "every_runs": 9,
+        }]}
+
+        def complete(*_args, **kwargs):
+            kwargs["_status"].update({"outcome": "completed", "reason": "ok"})
+            return False
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "run_review", side_effect=complete) as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "completed")
+        self.assertTrue(run.call_args.kwargs["approve_for_me"])
+        self.assertEqual(run.call_args.kwargs["sandbox_mode"], "workspace-write")
+        self.assertEqual(
+            (run.call_args.kwargs["backend_key"], run.call_args.kwargs["runner"],
+             run.call_args.kwargs["model"], run.call_args.kwargs["variant"],
+             run.call_args.kwargs["reasoning_effort"]),
+            ("luna-max", "codex", "gpt-5.6-luna", None, "max"),
+        )
+        persisted = llm_review._load_queue_unlocked()["reviewing"]["items"]
+        self.assertEqual([item["approve_for_me"] for item in persisted], [True, True])
+        self.assertEqual({item["sandbox"] for item in persisted}, {"workspace-write"})
+        self.assertEqual({item["every"] for item in persisted}, {1})
+
+    def test_sticky_approval_rejects_different_backend_or_model_donors(self) -> None:
+        batch = [{
+            "run": 8, "queue_id": "sticky-luna-8", "runner": "codex",
+            "model": "gpt-5.6-luna", "backend_key": "luna-max",
+            "variant": "", "reasoning_effort": "max", "priority": 2,
+            "approve_for_me": False, "sandbox": "workspace-write",
+            "every": 1, "source": "preferred", "retry_same_model": True,
+        }]
+        self.queue.write_text(json.dumps({
+            "pending": [],
+            "reviewing": {"runs": [8], "items": batch, "started": "now"},
+        }), encoding="utf-8")
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        cfg = {"review_model_chain": [
+            {"key": "luna-max", "runner": "codex", "model": "gpt-5.6-terra",
+             "reasoning_effort": "max", "approve_for_me": True},
+            {"key": "luna-other", "runner": "codex", "model": "gpt-5.6-luna",
+             "reasoning_effort": "max", "approve_for_me": True},
+        ]}
+
+        def complete(*_args, **kwargs):
+            kwargs["_status"].update({"outcome": "completed", "reason": "ok"})
+            return False
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "run_review", side_effect=complete) as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "completed")
+        self.assertFalse(run.call_args.kwargs["approve_for_me"])
+        self.assertEqual(
+            (run.call_args.kwargs["backend_key"], run.call_args.kwargs["model"]),
+            ("luna-max", "gpt-5.6-luna"),
+        )
+        persisted = llm_review._load_queue_unlocked()["reviewing"]["items"][0]
+        self.assertFalse(persisted["approve_for_me"])
+        self.assertEqual((persisted["backend_key"], persisted["model"]),
+                         ("luna-max", "gpt-5.6-luna"))
+
+    def test_sticky_approval_rejects_mismatched_sandbox_donor(self) -> None:
+        item = {
+            "run": 8, "runner": "codex", "model": "gpt-5.6-luna",
+            "backend_key": "luna-max", "variant": "", "reasoning_effort": "max",
+            "approve_for_me": False, "sandbox": "workspace-write",
+            "retry_same_model": True,
+        }
+        cfg = {"review_model_chain": [{
+            "key": "luna-max", "runner": "codex", "model": "gpt-5.6-luna",
+            "reasoning_effort": "max", "approve_for_me": True,
+            "sandbox": "read-only",
+        }]}
+
+        refreshed = llm_review._refresh_sticky_approval([item], cfg)
+
+        self.assertFalse(refreshed)
+        self.assertFalse(item["approve_for_me"])
+        self.assertEqual(item["sandbox"], "workspace-write")
+
+    def test_refreshed_sticky_approval_defers_until_metadata_is_durable(self) -> None:
+        batch = [{
+            "run": 8, "queue_id": "sticky-luna-8", "runner": "codex",
+            "model": "gpt-5.6-luna", "backend_key": "luna-max",
+            "variant": "", "reasoning_effort": "max", "priority": 2,
+            "approve_for_me": False, "sandbox": "workspace-write",
+            "every": 1, "source": "preferred", "retry_same_model": True,
+        }]
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        cfg = {"review_model_chain": [{
+            "key": "luna-max", "runner": "codex", "model": "gpt-5.6-luna",
+            "reasoning_effort": "max", "approve_for_me": True,
+        }]}
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata",
+                                return_value=False),
+              mock.patch.object(llm_review, "run_review") as run):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "deferred")
+        self.assertTrue(batch[0]["approve_for_me"])
+        run.assert_not_called()
 
     def test_successful_code_commit_keeps_replay_pending_until_glm_receipt(self) -> None:
         batch = [{
