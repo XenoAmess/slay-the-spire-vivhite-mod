@@ -37,6 +37,7 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg["review_queue_max"], 100)
         self.assertEqual(cfg["stall_warn_min"], 15)
         self.assertEqual(cfg["stall_timeout_min"], 30)
+        self.assertEqual(cfg["pre_work_timeout_min"], 5)
         self.assertEqual(cfg["preferred_models"], ["opencode-go/glm-5.3-flash@max"])
         self.assertEqual(int(cfg["timeout_min"] * 60), 28800)
 
@@ -232,6 +233,58 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertIn("reader_done=False", text)
         self.assertIn("proc_poll=None", text)
         self.assertIn("last_raw_idle=", text)
+
+    def test_codex_error_heartbeats_cannot_extend_prework_forever(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-prework-") as root:
+            stream = Path(root) / "review.stream"
+            command = [
+                sys.executable, "-u", "-c",
+                "import json,time\n"
+                "for index in range(30):\n"
+                " print(json.dumps({'type':'error','message':f'reconnect {index}'}),"
+                "flush=True);time.sleep(0.1)\n",
+            ]
+            translator = llm_review.CodexJsonTranslator()
+            started = time.monotonic()
+            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                _rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 5, translate=translator.feed,
+                    stall_timeout_sec=0.5, pre_work_timeout_sec=0.7)
+            elapsed = time.monotonic() - started
+
+        metrics = translator.metrics()
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertTrue(stalled)
+        self.assertLess(elapsed, 2.0)
+        self.assertGreaterEqual(metrics["error_count"], 3)
+        self.assertFalse(metrics["model_work_started"])
+
+    def test_model_work_switches_back_to_raw_output_stall_semantics(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-stream-postwork-") as root:
+            stream = Path(root) / "review.stream"
+            command = [
+                sys.executable, "-u", "-c",
+                "import json,time;"
+                "print(json.dumps({'type':'item.started','item':"
+                "{'type':'reasoning','text':'thinking'}}),flush=True);"
+                "time.sleep(3)",
+            ]
+            translator = llm_review.CodexJsonTranslator()
+            started = time.monotonic()
+            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+                  mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
+                _rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
+                    command, 5, translate=translator.feed,
+                    stall_timeout_sec=0.8, pre_work_timeout_sec=0.3)
+            elapsed = time.monotonic() - started
+
+        self.assertFalse(timed_out)
+        self.assertFalse(stopped)
+        self.assertTrue(stalled)
+        self.assertTrue(translator.metrics()["model_work_started"])
+        self.assertGreaterEqual(elapsed, 0.65)
 
     def test_translator_part_memory_is_bounded(self) -> None:
         translator = llm_review.OpencodeJsonTranslator()
@@ -724,6 +777,7 @@ class ReviewQueueBatchTests(unittest.TestCase):
                 "enabled": True, "runner": "opencode", "opencode_bin": "opencode",
                 "model": "fallback", "preferred_timeout_min": 480,
                 "stall_warn_min": 15, "stall_timeout_min": 30,
+                "pre_work_timeout_min": 2.5,
             }
 
             def execute(model_work_started: bool) -> tuple[dict, int]:
@@ -736,7 +790,8 @@ class ReviewQueueBatchTests(unittest.TestCase):
                       mock.patch.object(llm_review, "REPO_DIR", repo),
                       mock.patch.object(llm_review, "PROMPT_FILE", prompt),
                       mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
-                      mock.patch.object(llm_review, "_run_review_sandbox", return_value=sandbox),
+                      mock.patch.object(llm_review, "_run_review_sandbox",
+                                        return_value=sandbox) as run_sandbox,
                       mock.patch.object(llm_review, "_save_review_salvage",
                                         return_value=Path(root) / "pkg"),
                       mock.patch.object(llm_review, "_review_stop_requested",
@@ -755,6 +810,8 @@ class ReviewQueueBatchTests(unittest.TestCase):
                         model="glm", every=1, source="preferred",
                         batch_runs=[8], async_mode=True, _status=status)
                 self.assertFalse(changed)
+                self.assertEqual(
+                    run_sandbox.call_args.kwargs["pre_work_timeout_seconds"], 150)
                 return status, mark.call_count
 
             prework, prework_cooldowns = execute(False)

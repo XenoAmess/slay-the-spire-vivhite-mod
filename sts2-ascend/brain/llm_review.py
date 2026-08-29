@@ -270,6 +270,10 @@ def load_llm_config() -> dict:
         # 字节进展的工具/CLI 挂起。给模型推理、工具执行与输出缓冲留足余量。
         "stall_warn_min": 15,
         "stall_timeout_min": 30,
+        # Transport/reconnect/error events are not model work.  Bound the time
+        # before the translator observes the first reasoning/tool/message item
+        # so a provider that only emits error heartbeats can fall through.
+        "pre_work_timeout_min": 5,
         "models_probe_timeout_sec": 60,
         "models_probe_cache_sec": 300,
         # 复盘直播悬浮窗（review_viewer.py）
@@ -1501,6 +1505,7 @@ def _run_captured_stop_aware(
 def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 stall_warn_sec: float = 0,
                 stall_timeout_sec: float = 0,
+                pre_work_timeout_sec: float = 0,
                 raw_transcript: Path | None = None,
                 metrics_sink: dict | None = None) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
@@ -1686,6 +1691,25 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
             # translation temporarily starved that thread under host CPU load.
             if proc_state is not None and backlog == 0:
                 continue
+
+            # Codex can keep emitting transport/reconnect/error JSON for hours.
+            # Those bytes remain useful diagnostics, but they are not evidence
+            # that the model has begun reasoning or using tools and therefore
+            # must not extend the provider-start window.  Once real model work
+            # is observed, the existing raw-output stall watchdog is unchanged.
+            model_work_started = bool(
+                translator is not None
+                and getattr(translator, "model_work_started", False))
+            if (translator is not None and not model_work_started
+                    and pre_work_timeout_sec > 0
+                    and observed_now - stream_started >= pre_work_timeout_sec):
+                stalled = True
+                emit_display(
+                    f"[llm] provider produced no model work for "
+                    f"{observed_now - stream_started:.1f}s; startup unavailable; "
+                    f"diagnostics: {diagnostics}.")
+                _terminate_process_tree(proc)
+                break
 
             # A full/busy queue means raw output is waiting for translation;
             # lack of a newer pipe read is then backpressure, not model silence.
@@ -1932,6 +1956,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         else float(cfg.get("timeout_min", 480))
     stall_timeout_min = _non_negative_float(cfg.get("stall_timeout_min"), 30.0)
     stall_warn_min = _non_negative_float(cfg.get("stall_warn_min"), 15.0)
+    pre_work_timeout_min = _non_negative_float(
+        cfg.get("pre_work_timeout_min"), 5.0)
     if stall_timeout_min > 0:
         stall_warn_min = min(stall_warn_min, stall_timeout_min)
     else:
@@ -1960,6 +1986,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             runner=runner,
             stall_warn_seconds=stall_warn_min * 60,
             stall_timeout_seconds=stall_timeout_min * 60,
+            pre_work_timeout_seconds=pre_work_timeout_min * 60,
             replay_packages=replay_packages,
             replay_attempts=replay_attempts,
             log=log)
@@ -5970,7 +5997,8 @@ def _save_review_salvage(
 def _run_review_sandbox(
     cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
     translator, *, runner: str = "opencode", stall_warn_seconds: float = 0,
-    stall_timeout_seconds: float = 0, replay_packages=(), replay_attempts=(),
+    stall_timeout_seconds: float = 0, pre_work_timeout_seconds: float = 0,
+    replay_packages=(), replay_attempts=(),
     log=print,
 ) -> SandboxReviewResult:
     """在无 remote、无共享 Git 元数据的临时 clone 中运行模型并导出精确 patch。"""
@@ -6031,6 +6059,7 @@ def _run_review_sandbox(
             sandbox_cmd, timeout_seconds, translate=translator.feed,
             stall_warn_sec=stall_warn_seconds,
             stall_timeout_sec=stall_timeout_seconds,
+            pre_work_timeout_sec=pre_work_timeout_seconds,
             raw_transcript=sandbox_repo / transcript_rel,
             metrics_sink=stream_metrics)
         if stopped:
