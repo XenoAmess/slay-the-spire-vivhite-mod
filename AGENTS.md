@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 ## 项目简介
 
@@ -116,6 +116,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - ASCEND-VISION 的资源根目录和 `knowledge/viewer.lock` 必须通过 `lifecycle.STACK_ROOT` 解析；复盘 clone、自检目录或备份副本不得按自身 `__file__` 建立独立 viewer 锁。复盘子进程必须继承 `STS2_ASCEND_DISABLE_VIEWER=1`。
 - 楼层展示必须使用真实楼层口径 `floor_sum_raw` / `best_floor_raw`；历史 `floors_total` / `best_floor` 保留“真实楼层 + 胜利 50 分”的学习评分语义，不得拿来显示平均或最高楼层。
 - 直播控制语义不变：开播仍先启动完整 sts2-ascend 栈并将杀戮尖塔2置于顶部，再通过本地哔哩哔哩直播姬开播；下播只操作直播姬，不停止任何服务、智能体或游戏。
+- Bilibili 开播及开播后的恢复、修复或重载过程中，直播最多允许中断两分钟；所有操作必须围绕该硬性死线安排，一旦直播中断，恢复 `Streaming` 立即成为最高优先级。
 - 窗口层巡检必须区分两条不变量：ASCEND-VISION 自身约 500ms 的无激活置顶永远运行；游戏窗口巡检仅在本地直播姬实际为 `Streaming` 时每 60 秒运行，按当前 session 的完整 `game_exe` 精确定位，先无激活恢复游戏 TOPMOST、再恢复 viewer。非 Streaming 或任何状态/窗口读取失败都不得触碰游戏；该路径只允许本地标准库/Win32，不调用 LLM 或网络，token 消耗为 0。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
 - `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。
@@ -147,6 +148,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 复盘验收必须区分“允许静态项目 patch / cache 临时产物 / 在线或越界现场 / 全量取证现场”：任一层路径名含 `cache`（大小写不敏感）或为标准 Python 字节码缓存后缀时，不进入自动 patch、也不阻断已验证源码；但文件本身仍须完整写入取证包并列入 `transient_artifact_paths`。ignored 本身不是拒绝理由；其中安全的静态项目文件照常验收，在线运行状态、Git 元数据与越界/不安全路径才拒绝整批并保全现场。
 - **严禁 AI 自作主张收紧复盘模型可提交的文件范围。** 不得恢复固定文件 allowlist 或新增隐性禁区；不能借“安全”“防摸鱼”或闭环门禁之名限制模型修改 `brain/config.json`、新增源码/脚本/测试/文档或其他静态项目文件。闭环机制可以验收结果、保存现场和回退，但不得暗中覆盖或忽略模型对安全项目文件的修改。`REVIEW_PATCH_ALLOWLIST` 若仍存在，只能用于兼容缺少精确路径的历史重启 marker，绝不是模型提交边界。
 - **维护 AI 是本项目的架构师，GLM 是应由机制驱动、自行完成复盘的执行者。** GLM 做错、卡住或未闭环时，优先定位并修复提示、证据、反馈、自检、观测、队列、提交或自愈机制，让下一次复盘能自己做对；不得长期由维护 AI 代写 GLM 本应完成的具体策略成果来掩盖机制缺陷。维护 AI 可以审计、保全、回退和提供最小可复现用例，但最终目标始终是 GLM 可独立工作。
+- **同一职责边界明确适用于 Luna。** 维护 AI 不得逐行审计、手工修补、代写或代为合并 Luna 的策略/复盘代码；Luna 必须自行操作隔离仓、自行复核 diff、解决冲突、运行自检、修复失败并完成合并。Luna 产物失败时，维护 AI 只修运行器、提示、证据、反馈、自检、队列、提交与自愈机制，并把完整失败证据重新交给 Luna 闭环。
 - 失败合入在机制问题修复后，必须由维护 AI 重新调用 GLM，让 GLM 自己重新审核失败批次、补合有效成果、解决与当前主树的冲突、运行自检并完成提交；维护 AI 负责提供完整失败现场、可读任务和验收/重试通道，不得默认亲自代做该批具体补合。只有 GLM 重试机制本身仍有已证明故障时，维护 AI 才修该机制并再次调用 GLM。
 
 ## 工作流程规则
