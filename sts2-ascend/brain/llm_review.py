@@ -2114,10 +2114,15 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 log("[llm] pre-work stall: next retry may advance to the next tier")
                 return False
 
-            # 这是本地工具链挂起，不是 provider 不可用；不冷却 GLM。队列会
+            # 这是本地工具链挂起，不是 provider 不可用；不冷却当前后端。队列会
             # 保存同批并在退避后再次调用同一模型，失败包供它复审/解冲突。
+            backend = _review_backend_label({
+                "backend_key": state_key, "runner": runner, "model": model,
+                "variant": variant or "",
+                "reasoning_effort": reasoning_effort or "",
+            })
             log("[llm] 复盘无进展 watchdog 已终止挂起进程；完整现场已保存，"
-                "同批将重新交给 GLM")
+                f"同批将重新交给 {backend}")
             return False
         if timed_out:
             if _status is not None:
@@ -2275,6 +2280,11 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
                 replay_packages, replay_attempts,
                 closure_resolutions,
                 commit=result.commit, pushed=review_pushed,
+                review_backend={
+                    "runner": runner, "model": model,
+                    "backend_key": state_key, "variant": variant or "",
+                    "reasoning_effort": reasoning_effort or "",
+                },
                 evidence_schema=(
                     _RETRY_SANDBOX_EVIDENCE_SCHEMA
                     if sandbox.replay_evidence_complete else 0),
@@ -2829,19 +2839,20 @@ def _latest_replay_binding_manifest(
 
 
 def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
-    """Explicitly queue named failure packages for one-by-one GLM re-audit.
+    """Explicitly queue named failure packages for one-by-one model re-audit.
 
     This entry point is deliberately offline-only: callers first stop Brain via
     the unified lifecycle script, then name the packages to replay.  It never
     scans or auto-requeues every surviving package.  Each package receives its
     own stable ``retry_group`` so it cannot be mixed with live runs or another
-    failure package in one GLM call.
+    failure package in one model call.
     """
     if _brain_session_is_active():
         raise ReviewQueueError(
             "拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain")
     requested = _normalize_salvage_package_names(package_names)
     queued: dict[str, list[int]] = {}
+    queued_labels: dict[str, str] = {}
     cfg = load_llm_config()
     prepared: list[tuple[str, list[int], dict, bool]] = []
     prepared_roots: set[str] = set()
@@ -2878,7 +2889,8 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                 "claimed_pending_code_push", "code_upstream_confirmed",
                 "quarantined_pending_ledger",
                 "ledger_final_upstream", "done"}:
-            log(f"[llm] 失败包已有 GLM 结论，交由宿主闭环恢复而不重复消耗模型：{name}")
+            log(f"[llm] 失败包已有 {_resolution_backend_label(manifest)} 结论，"
+                f"交由宿主闭环恢复而不重复消耗模型：{name}")
             continue
         manifest = dict(manifest)
         manifest.update({
@@ -2951,10 +2963,12 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                 q["pending"].append(item)
             existing_groups.add(name)
             queued[name] = list(runs)
+            queued_labels[name] = _review_backend_label(affinity)
         if queued:
             _save_queue_unlocked(q)
     for name, runs in queued.items():
-        log(f"[llm] 已将失败包交回 GLM 独立重审队列：{name}（第 {runs} 局）")
+        log(f"[llm] 已将失败包交回 {queued_labels.get(name, '原绑定复盘后端')} "
+            f"独立重审队列：{name}（第 {runs} 局）")
     return queued
 
 
@@ -3426,7 +3440,8 @@ def _recover_review_holds(log=print) -> list[str]:
                 recovered.append(name)
         if (any(name in recovered for name in ordered)
                 and all((SALVAGE_ROOT / name).is_dir() for name in ordered)):
-            log(f"[llm] review_hold lineage 已恢复并等待完整证据 GLM 重审："
+            log(f"[llm] review_hold lineage 已恢复并等待完整证据 "
+                f"{_review_backend_label(target_manifest)} 重审："
                 f"target={target}, attempts={attempts}")
     return recovered
 
@@ -3530,7 +3545,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
                     or len(filtered_reviewing) != len(reviewing_items)):
                 reviewing_items = filtered_reviewing
                 changed = True
-                log("[llm] 已按耐久 GLM 回执消费遗留 replay 队列事务："
+                log("[llm] 已按耐久复盘模型回执消费遗留 replay 队列事务："
                     f"{sorted(resolved_targets)}")
         for target, (_package, manifest) in targets.items():
             lineage = _normalize_salvage_package_names([
@@ -3582,7 +3597,8 @@ def _recover_salvage_replay_queue(log=print) -> None:
                     }
                     q["pending"].append(item)
                 changed = True
-                log(f"[llm] 已从失败包原子意图恢复 GLM target：{target}（第 {runs} 局）")
+                log(f"[llm] 已从失败包原子意图恢复 "
+                    f"{_review_backend_label(affinity)} target：{target}（第 {runs} 局）")
         if isinstance(reviewing, dict) and isinstance(reviewing.get("items"), list):
             if not reviewing_items:
                 q["reviewing"] = None
@@ -4206,6 +4222,55 @@ def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
     return "review_failure"
 
 
+def _review_backend_label(manifest: dict) -> str:
+    """Return one unambiguous configured-backend/executor/model label."""
+    backend_key = str(manifest.get("backend_key") or "").strip()
+    runner = str(manifest.get("runner") or "").strip()
+    model = str(manifest.get("model") or "").strip()
+    suffix = str(
+        manifest.get("reasoning_effort") if runner == "codex"
+        else manifest.get("variant") or "").strip()
+    display_model = model
+    if display_model and suffix and not display_model.endswith(f"@{suffix}"):
+        display_model = f"{display_model}@{suffix}"
+    executor = "/".join(value for value in (runner, display_model) if value)
+    if backend_key and backend_key not in {model, display_model, executor}:
+        return f"{backend_key} ({executor})" if executor else backend_key
+    return executor or backend_key or "未记录复盘后端"
+
+
+def _resolution_backend_label(manifest: dict) -> str:
+    label = str(manifest.get("retry_backend_label") or "").strip()
+    if label:
+        return label
+    retry_fields = {
+        "backend_key": manifest.get("retry_backend_key"),
+        "runner": manifest.get("retry_runner"),
+        "model": manifest.get("retry_model"),
+        "variant": manifest.get("retry_variant"),
+        "reasoning_effort": manifest.get("retry_reasoning_effort"),
+    }
+    if any(value for value in retry_fields.values()):
+        return _review_backend_label(retry_fields)
+    if manifest.get("retry_resolution"):
+        return "执行后端未记录"
+    return _review_backend_label(manifest)
+
+
+def _rejection_pending_status(manifest: dict) -> str:
+    backend = _review_backend_label(manifest)
+    if manifest.get("failure_kind") == "lifecycle_stop" or manifest.get("stopped"):
+        return f"维护中断/取消（非 {backend} 提交失败；待原后端恢复）"
+    return f"待 {backend} 重审/补合"
+
+
+def _failure_kind_label(manifest: dict) -> str:
+    kind = str(manifest.get("failure_kind") or "")
+    if kind == "lifecycle_stop":
+        return "维护中断/取消（lifecycle_stop）"
+    return kind
+
+
 def _current_head_for_salvage() -> str:
     try:
         proc = subprocess.run(
@@ -4216,12 +4281,12 @@ def _current_head_for_salvage() -> str:
         return ""
 
 
-_REJECTION_LEDGER_HEADER = """# GLM 复盘拒合批次清单
+_REJECTION_LEDGER_HEADER = """# 复盘拒合与维护中断批次清单
 
 这是一份由复盘宿主维护、受 Git 跟踪的拒合账本。失败包仍完整保存在
 `knowledge/code_backups/review_salvage/`；本清单只记录索引和处理状态，不代替原始证据。
 
-每次新拒合在失败包原子发布后立即追加一行，并单独建立 Git commit；正常运行时同步推送，
+每次新拒合或维护中断在现场包原子发布后立即追加一行，并单独建立 Git commit；正常运行时同步推送，
 整套停止临界区为守住两分钟直播死线只建立本地 commit，由下次启动补推。
 
 | 时间 | 批次 | 基线 | 类型 | 模型 | 状态 | 失败包 | 原因 |
@@ -4243,12 +4308,12 @@ def _rejection_ledger_block(
     runs = manifest.get("batch_runs") or []
     batch = _batch_description(runs) or "未记录"
     pre_head = str(manifest.get("pre_head") or "")[:8] or "—"
-    model = manifest.get("model") or "—"
+    model = _review_backend_label(manifest)
     marker = f"<!-- rejection:{package_name} -->"
     return (
         f"{marker}\n"
         f"| {_ledger_cell(manifest.get('time'))} | {_ledger_cell(batch)} | `{pre_head}` | "
-        f"{_ledger_cell(manifest.get('failure_kind'))} | {_ledger_cell(model)} | "
+        f"{_ledger_cell(_failure_kind_label(manifest))} | {_ledger_cell(model)} | "
         f"{_ledger_cell(status)} | {_ledger_cell(package_cell, 500)} | "
         f"{_ledger_cell(reason)} |\n"
     )
@@ -4293,6 +4358,105 @@ def _ledger_marker_status(text: str, package_name: str) -> str:
             cells = lines[index + 1].split(" | ")
             return cells[5].strip() if len(cells) > 5 else ""
     return ""
+
+
+def _migrate_rejection_ledger_labels(log=print) -> bool:
+    """Neutralize legacy GLM attribution without guessing the closing executor."""
+    try:
+        current = REJECTION_LEDGER.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return True
+    except OSError as exc:
+        log(f"[llm] 拒合清单模型标签迁移读取失败：{exc}")
+        return False
+    lines = current.splitlines(keepends=True)
+    header_changed = False
+    if lines and lines[0].rstrip("\r\n") == "# GLM 复盘拒合批次清单":
+        newline = "\r\n" if lines[0].endswith("\r\n") else "\n" if lines[0].endswith("\n") else ""
+        lines[0] = "# 复盘拒合与维护中断批次清单" + newline
+        header_changed = True
+    changed_packages: list[str] = []
+    for index, line in enumerate(lines[:-1]):
+        marker = line.strip()
+        if not (marker.startswith("<!-- rejection:") and marker.endswith(" -->")):
+            continue
+        row = lines[index + 1]
+        newline = "\r\n" if row.endswith("\r\n") else "\n" if row.endswith("\n") else ""
+        cells = row.rstrip("\r\n").split(" | ")
+        if len(cells) <= 7:
+            continue
+        kind = cells[3].strip()
+        model = cells[4].strip() or "未记录复盘后端"
+        status = cells[5].strip()
+        lifecycle_stop = kind in {"lifecycle_stop", "维护中断/取消（lifecycle_stop）"}
+        next_status = status
+        if status == "待 GLM 重审/补合":
+            next_status = (f"维护中断/取消（非 {model} 提交失败；待原后端恢复）"
+                           if lifecycle_stop else f"待 {model} 重审/补合")
+        elif status.startswith("GLM 已补合并闭环 "):
+            next_status = f"复盘已补合并闭环 {status[len('GLM 已补合并闭环 '):]}"
+            if lifecycle_stop:
+                next_status = f"维护中断/取消；{next_status}"
+        elif status.startswith("GLM 复审确认无有效成果并闭环 "):
+            next_status = ("复盘已确认无有效成果并闭环 "
+                           f"{status[len('GLM 复审确认无有效成果并闭环 '):]}")
+            if lifecycle_stop:
+                next_status = f"维护中断/取消；{next_status}"
+        row_changed = False
+        if lifecycle_stop and kind != "维护中断/取消（lifecycle_stop）":
+            cells[3] = "维护中断/取消（lifecycle_stop）"
+            row_changed = True
+        if next_status != status:
+            cells[5] = next_status
+            row_changed = True
+        reason_suffix = " |" if cells[7].endswith(" |") else ""
+        reason_text = cells[7][:-2] if reason_suffix else cells[7]
+        next_reason = reason_text.replace("GLM 重审结论", "复盘重审结论")
+        if lifecycle_stop and "非模型提交失败" not in next_reason:
+            next_reason = f"{next_reason}；非模型提交失败"
+        if next_reason != reason_text:
+            cells[7] = f"{next_reason}{reason_suffix}"
+            row_changed = True
+        if not row_changed:
+            continue
+        lines[index + 1] = " | ".join(cells) + newline
+        changed_packages.append(marker[len("<!-- rejection:"):-len(" -->")])
+    head_before = _ledger_text_at_head()
+    head_needs_migration = bool(head_before and any(token in head_before for token in (
+        "# GLM 复盘拒合批次清单", "待 GLM 重审/补合",
+        "GLM 已补合并闭环", "GLM 复审确认无有效成果并闭环",
+        "GLM 重审结论", "| lifecycle_stop |",
+    )))
+    if not changed_packages and not header_changed and not head_needs_migration:
+        return True
+    if _review_stop_requested() or not _flush_pending_rejection_ledger(log=log):
+        return False
+    updated = "".join(lines)
+    temp = REJECTION_LEDGER.with_name(
+        f".{REJECTION_LEDGER.name}.labels-{os.getpid()}-"
+        f"{threading.get_ident()}-{time.time_ns()}.tmp")
+    try:
+        temp.write_text(updated, encoding="utf-8")
+        os.replace(temp, REJECTION_LEDGER)
+    finally:
+        temp.unlink(missing_ok=True)
+    import autogit
+    rel_ledger = REJECTION_LEDGER.relative_to(REPO_DIR).as_posix()
+    result = autogit.commit_progress_result(
+        "chore(sts2-ascend): 修正复盘后端归因",
+        paths=[rel_ledger], log=log, push=False)
+    if _review_stop_requested():
+        return False
+    autogit.push_pending(log=log, attempts=1)
+    if result.created:
+        log("[llm] 已中性化历史闭环归因并修正拒合清单模型标签："
+            f"{changed_packages} ({result.commit[:8]})")
+    head_after = _ledger_text_at_head().replace("\r\n", "\n")
+    committed = bool(
+        result.created or head_after == updated.replace("\r\n", "\n"))
+    if not committed:
+        log("[llm] 拒合清单归因迁移尚未进入 HEAD；保留工作树改动待补交")
+    return committed
 
 
 def _flush_pending_rejection_ledger(log=print) -> bool:
@@ -4349,7 +4513,7 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
             current = REJECTION_LEDGER.read_text(encoding="utf-8")
         except FileNotFoundError:
             current = _REJECTION_LEDGER_HEADER
-        status = "待 GLM 重审/补合"
+        status = _rejection_pending_status(manifest)
         if marker in current:
             # Operator-preserved hold packages can outlive an invalid historical
             # prompt-only closure. Hold recovery explicitly clears that receipt
@@ -4376,8 +4540,9 @@ def _record_review_rejection(package: Path, manifest: dict, log=print) -> None:
                 reopened = _update_rejection_ledger(
                     package.name, manifest, status=status,
                     package_cell=f"`{rel_package}`", reason=reason,
-                    message=("chore(sts2-ascend): reopen GLM review batch "
-                             f"{package.name}"), log=log)
+                    message=("chore(sts2-ascend): reopen review batch "
+                             f"{package.name} ({_review_backend_label(manifest)})"),
+                    log=log)
                 if reopened:
                     log(f"[llm] hold-restored ledger row reopened: {package.name}")
                 return
@@ -4506,14 +4671,16 @@ def _upstream_ledger_has_terminal_closure(package_name: str) -> bool:
         if proc.returncode != 0:
             return False
         status = _ledger_marker_status(proc.stdout, package_name)
-        prefixes = (
-            "GLM 已补合并闭环 `",
-            "GLM 复审确认无有效成果并闭环 `",
+        actions = (
+            "已补合并闭环 `",
+            "复审确认无有效成果并闭环 `",
+            "已确认无有效成果并闭环 `",
         )
-        for prefix in prefixes:
-            if not status.startswith(prefix) or not status.endswith("`"):
+        for action in actions:
+            backend, separator, remainder = status.partition(action)
+            if not backend.strip() or not separator or not remainder.endswith("`"):
                 continue
-            commit_prefix = status[len(prefix):-1]
+            commit_prefix = remainder[:-1]
             if (len(commit_prefix) == 8
                     and all(char in "0123456789abcdefABCDEF"
                             for char in commit_prefix)):
@@ -4546,7 +4713,7 @@ def _ensure_rejection_ledger_marker(
             if current and not current.endswith("\n"):
                 current += "\n"
             current += _rejection_ledger_block(
-                package_name, manifest, status="待 GLM 重审/补合",
+                package_name, manifest, status=_rejection_pending_status(manifest),
                 package_cell=package_cell,
                 reason=str(manifest.get("reason") or "闭环前恢复缺失的拒合索引"))
             temp = REJECTION_LEDGER.with_name(
@@ -4709,13 +4876,17 @@ def _finish_quarantined_salvage(
         if not _ensure_rejection_ledger_marker(
                 original_name, manifest, "（隔离保留，待闭环）", log=log):
             return False
-    action = "GLM 已补合" if resolution == "integrated" else "GLM 复审确认无有效成果"
+    backend = _resolution_backend_label(manifest)
+    action = (f"{backend} 已补合" if resolution == "integrated"
+              else f"{backend} 复审确认无有效成果")
     final_status = f"{action}并闭环 `{commit[:8]}`"
-    final_reason = f"GLM 重审结论与提交 {commit[:8]} 已推送；远端确认后精确清理对应失败包"
+    final_reason = (f"{backend} 重审结论与提交 {commit[:8]} 已推送；"
+                    "远端确认后精确清理对应失败包")
     final_ok = _update_rejection_ledger(
         original_name, manifest, status=final_status, package_cell="（闭环清理）",
         reason=final_reason,
-        message=f"chore(sts2-ascend): 关闭 GLM 重审批次 {original_name}", log=log)
+        message=f"chore(sts2-ascend): 关闭复盘批次 {original_name} ({backend})",
+        log=log)
     if not final_ok:
         return False
     manifest = dict(manifest)
@@ -4732,7 +4903,7 @@ def _finish_quarantined_salvage(
         return False
     if not _delete_closed_quarantine(quarantine, log=log):
         return False
-    log(f"[llm] GLM 失败包已完成重审、远端确认并删除：{original_name}")
+    log(f"[llm] {backend} 失败包已完成重审、远端确认并删除：{original_name}")
     return True
 
 
@@ -4768,9 +4939,10 @@ def _finalize_salvage_resolution(package: Path, manifest: dict, log=print) -> bo
 
 def _close_replayed_salvages(
     package_names, attempt_names, resolutions: dict, *,
-    commit: str, pushed: bool, evidence_schema: int = 0, log=print,
+    commit: str, pushed: bool, evidence_schema: int = 0,
+    review_backend: dict | None = None, log=print,
 ) -> dict[str, list[str]]:
-    """Persist GLM receipts and let the host close only remotely accepted work."""
+    """Persist model receipts and let the host close only remotely accepted work."""
     result = {"closed": [], "host_pending": []}
     if not commit:
         return result
@@ -4785,7 +4957,8 @@ def _close_replayed_salvages(
     if (any(_review_hold_contains_package(name) for name in lineage)
             and int(evidence_schema or 0) < _RETRY_SANDBOX_EVIDENCE_SCHEMA):
         result["host_pending"].append(target)
-        log("[llm] held lineage 缺少完整证据 schema 回执；忽略旧结论并保留 GLM 重审："
+        log("[llm] held lineage 缺少完整证据 schema 回执；"
+            "忽略旧结论并保留原绑定模型重审："
             f"{target}")
         return result
     code_upstream = bool(pushed or _upstream_contains_commit(commit))
@@ -4793,6 +4966,10 @@ def _close_replayed_salvages(
     # any later instruction, startup can propagate the same GLM receipt without
     # spending another model call.
     ordered = [target, *[name for name in lineage if name != target]]
+    receipt_backend = dict(review_backend or {})
+    receipt_backend_label = (
+        _review_backend_label(receipt_backend)
+        if any(receipt_backend.values()) else "执行后端未记录")
     prepared: list[tuple[str, Path, dict]] = []
     for name in ordered:
         package = _salvage_package_path(name)
@@ -4812,6 +4989,13 @@ def _close_replayed_salvages(
                     else "claimed_pending_code_push"),
                 "retry_resolution_evidence_complete": True,
                 "retry_resolution_evidence_schema": int(evidence_schema or 0),
+                "retry_backend_label": receipt_backend_label,
+                "retry_backend_key": str(receipt_backend.get("backend_key") or ""),
+                "retry_runner": str(receipt_backend.get("runner") or ""),
+                "retry_model": str(receipt_backend.get("model") or ""),
+                "retry_variant": str(receipt_backend.get("variant") or ""),
+                "retry_reasoning_effort": str(
+                    receipt_backend.get("reasoning_effort") or ""),
             })
             _publish_manifest_update(package, manifest)
             prepared.append((name, package, manifest))
@@ -5406,7 +5590,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             "retry_candidate_auto_apply": False,
         })
         _publish_manifest_update(package, manifest)
-        log(f"[llm] 已从 raw clone 物化 GLM 重审候选证据：{package.name} "
+        log(f"[llm] 已从 raw clone 物化 {_review_backend_label(manifest)} "
+            f"重审候选证据：{package.name} "
             f"({len(paths)} paths, {candidate_path.stat().st_size} bytes；不会自动应用)")
         return manifest
     finally:
@@ -6261,8 +6446,17 @@ def _save_review_salvage(
             pass
         return saved
 
+    backend_fields = {
+        "runner": runner,
+        "model": model,
+        "backend_key": backend_key,
+        "variant": variant,
+        "reasoning_effort": reasoning_effort,
+    }
+    backend_label = _review_backend_label(backend_fields)
     if sandbox.stopped:
-        reason = "统一停机中断并全量保全"
+        reason = (f"维护停机取消 {backend_label} 复盘并全量保全；"
+                  "非模型提交失败")
     snapshot = Path(sandbox.snapshot_dir) if sandbox.snapshot_dir else None
     retained = Path(sandbox.retained_sandbox_dir) if sandbox.retained_sandbox_dir else None
     deferred_raw = bool(sandbox.stopped and retained is not None)
@@ -6311,6 +6505,7 @@ def _save_review_salvage(
         "runner": runner,
         "model": model,
         "backend_key": backend_key,
+        "backend_label": backend_label,
         "priority": max(1, int(priority)),
         "variant": variant,
         "reasoning_effort": reasoning_effort,
@@ -6377,7 +6572,7 @@ def _save_review_salvage(
         "invocation_prompt_snapshot": (
             "invocation_prompt.txt" if invocation_prompt and not sandbox.stopped else ""),
         "inspection_hint": (
-            "files/ 与 wip.patch 是全量失败现场；宿主只将其作为证据交回同一复盘模型，"
+            f"files/ 与 wip.patch 是全量现场；宿主只将其作为证据交回 {backend_label}，"
             "由模型基于当前 HEAD 重审、解冲突、自检，禁止宿主自动应用。"),
     }
     try:
@@ -7093,7 +7288,8 @@ def _recover_deferred_salvages(log=print) -> None:
             except _ReviewStopped:
                 raise
             except Exception as exc:
-                log(f"[llm] 延迟现场已补全，GLM 重审候选证据稍后懒物化：{exc}")
+                log(f"[llm] 延迟现场已补全，{_review_backend_label(manifest)} "
+                    f"重审候选证据稍后懒物化：{exc}")
             # 先让项目内完整副本与 manifest 落稳，再清系统临时现场；只有清理
             # 成功才撤指针。若此处崩溃/权限失败，下次启动仍能精确重试而不泄漏。
             for pointer, item in completed:
@@ -7623,6 +7819,7 @@ def _resume_host_salvage_closures(log=print) -> None:
 
 def _backfill_rejection_ledger(log=print) -> None:
     """Idempotently index every surviving package, including Stop-edge packages."""
+    _migrate_rejection_ledger_labels(log=log)
     if not SALVAGE_ROOT.is_dir():
         return
     for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
@@ -7915,7 +8112,8 @@ def _worker_loop_body(agent, log) -> None:
                         log(f"[llm] 当前绑定后端暂不可启动，批次原样保留，{delay:.0f}s 后重试")
                         retry_wait = min(30.0, max(1.0, delay))
                         continue
-                    label = "失败包尚未完成 GLM 闭环" if outcome == "replay_pending" else "复盘失败"
+                    label = (f"失败包尚未完成 {_review_backend_label(batch[0])} 闭环"
+                             if outcome == "replay_pending" else "复盘失败")
                     log(f"[llm] {label}，批次已放回队尾，{delay:.0f}s 后继续追及")
                     retry_wait = min(30.0, max(1.0, delay))
             if _wait_review_stop(retry_wait or 5):

@@ -365,6 +365,89 @@ sts2-ascend/knowledge/meta_review.md
         )
         self.assertIsNone(sandbox.selfcheck_ok)
 
+    def test_retry_closure_uses_actual_luna_backend_label(self) -> None:
+        manifest = {
+            "retry_resolution": "integrated",
+            "retry_resolution_commit": "a" * 40,
+            "retry_backend_key": "luna-max",
+            "retry_runner": "codex",
+            "retry_model": "gpt-5.6-luna",
+            "retry_reasoning_effort": "max",
+        }
+        captured = {}
+
+        def update(_name, _manifest, **kwargs):
+            captured.update(kwargs)
+            return True
+
+        with (mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_upstream_contains_commit",
+                                return_value=True),
+              mock.patch.object(llm_review, "_ensure_rejection_ledger_marker",
+                                return_value=True),
+              mock.patch.object(llm_review, "_update_rejection_ledger",
+                                side_effect=update),
+              mock.patch.object(llm_review, "_publish_manifest_update"),
+              mock.patch.object(llm_review, "_publish_review_hold_closure",
+                                return_value=True),
+              mock.patch.object(llm_review, "_delete_closed_quarantine",
+                                return_value=True)):
+            self.assertTrue(llm_review._finish_quarantined_salvage(
+                Path("X:/salvage/.glm-closed-pkg"), "pkg", manifest,
+                log=lambda _message: None))
+
+        self.assertEqual(
+            captured["status"],
+            "luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `aaaaaaaa`")
+        self.assertIn("luna-max (codex/gpt-5.6-luna@max) 重审结论",
+                      captured["reason"])
+        self.assertNotIn("GLM", captured["status"])
+
+    def test_crash_recovery_does_not_guess_resolver_from_failed_model(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-neutral-resolver-") as root:
+            salvage = Path(root)
+            target = "pkg-target"
+            package = salvage / target
+            package.mkdir()
+            (package / "manifest.json").write_text(json.dumps({
+                "model": "kimi-for-coding/k3",
+                "runner": "opencode",
+                "backend_key": "kimi-k3",
+                "replay_target": target,
+                "replay_role": "target",
+            }), encoding="utf-8")
+            with (mock.patch.object(llm_review, "SALVAGE_ROOT", salvage),
+                  mock.patch.object(llm_review, "_review_hold_contains_package",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_upstream_contains_commit",
+                                    return_value=True)):
+                result = llm_review._close_replayed_salvages(
+                    [target], [], {target: "integrated"},
+                    commit="b" * 40, pushed=True, review_backend=None,
+                    log=lambda _message: None)
+
+            persisted = json.loads(
+                (package / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["host_pending"], [target])
+            self.assertEqual(persisted["retry_backend_label"], "执行后端未记录")
+            self.assertEqual(persisted["retry_model"], "")
+            self.assertNotIn("kimi", persisted["retry_backend_label"].lower())
+
+    def test_neutral_lifecycle_closure_is_terminal(self) -> None:
+        package = "pkg-neutral-closure"
+        ledger = (
+            f"<!-- rejection:{package} -->\n"
+            "| now | run | `aaaaaaaa` | 维护中断/取消（lifecycle_stop） | kimi | "
+            "维护中断/取消；复盘已补合并闭环 `abcdef12` | cleanup | reason |\n")
+        completed = SimpleNamespace(returncode=0, stdout=ledger)
+        with (mock.patch.object(llm_review, "_upstream_ref",
+                                return_value="origin/main"),
+              mock.patch.object(llm_review.subprocess, "run",
+                                return_value=completed)):
+            self.assertTrue(
+                llm_review._upstream_ledger_has_terminal_closure(package))
+
     def test_retry_feedback_recovers_legacy_tool_block_and_not_run_selfcheck(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-review-feedback-") as root:
             salvage_root = Path(root)

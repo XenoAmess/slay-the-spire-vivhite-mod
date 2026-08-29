@@ -402,7 +402,8 @@ class ReviewSalvageTests(unittest.TestCase):
             manifest = {
                 "time": "2026-08-27 13:00:00", "batch_runs": [731, 732],
                 "pre_head": "deadbeef" * 5, "failure_kind": "path_boundary",
-                "model": "opencode-go/glm-5.3-flash@max", "stopped": False,
+                "backend_key": "kimi-k3", "runner": "opencode",
+                "model": "kimi-for-coding/k3", "stopped": False,
                 "reason": "复盘 patch 越过 allowlist：tool-CACHE/result.bin",
             }
             with (mock.patch.object(llm_review, "BASE_DIR", base),
@@ -423,6 +424,9 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertEqual(text.count(f"<!-- rejection:{package.name} -->"), 1)
             self.assertIn("第 731~732 局", text)
             self.assertIn("tool-CACHE/result.bin", text)
+            self.assertIn("kimi-k3 (opencode/kimi-for-coding/k3)", text)
+            self.assertIn("待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合", text)
+            self.assertNotIn("待 GLM", text)
             self.assertEqual(len(commits), 1)
             self.assertEqual(commits[0][1]["paths"], ["sts2-ascend/REVIEW_REJECTIONS.md"])
 
@@ -530,15 +534,106 @@ class ReviewSalvageTests(unittest.TestCase):
                 allowed_paths=("sts2-ascend/brain/policy.py",))
             with mock.patch.object(llm_review, "SALVAGE_ROOT", salvage_root):
                 saved = llm_review._save_review_salvage(
-                    "a" * 40, "整套停止", result, log=lambda _msg: None)
+                    "a" * 40, "整套停止", result,
+                    runner="opencode", model="kimi-for-coding/k3",
+                    backend_key="kimi-k3", log=lambda _msg: None)
             self.assertIsNotNone(saved)
             assert saved is not None
             self.assertEqual((saved / "wip.patch").read_bytes(), b"partial patch")
             manifest = json.loads((saved / "manifest.json").read_text(encoding="utf-8"))
             self.assertTrue(manifest["stopped"])
             self.assertEqual(manifest["failure_kind"], "lifecycle_stop")
-            self.assertEqual(manifest["reason"], "统一停机中断并全量保全")
+            self.assertEqual(
+                manifest["backend_label"],
+                "kimi-k3 (opencode/kimi-for-coding/k3)")
+            self.assertIn("维护停机取消 kimi-k3", manifest["reason"])
+            self.assertIn("非模型提交失败", manifest["reason"])
+            self.assertIn("kimi-k3 (opencode/kimi-for-coding/k3)",
+                          manifest["inspection_hint"])
             self.assertFalse(manifest["auto_apply"])
+
+    def test_historical_kimi_lifecycle_row_is_migrated_without_failure_package(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-ledger-label-migration-") as root:
+            repo = Path(root) / "repo"
+            ledger = repo / "sts2-ascend" / "REVIEW_REJECTIONS.md"
+            ledger.parent.mkdir(parents=True)
+            package = "20260829-230230-123456789-65abad11"
+            ledger.write_text(
+                llm_review._REJECTION_LEDGER_HEADER.replace(
+                    "# 复盘拒合与维护中断批次清单",
+                    "# GLM 复盘拒合批次清单")
+                + f"<!-- rejection:{package} -->\n"
+                + "| 2026-08-29 23:14:22 | 第 1081~1085 局 | `65abad11` | "
+                  "lifecycle_stop | kimi-for-coding/k3 | "
+                  "GLM 已补合并闭环 `ac26841f` | （闭环清理） | "
+                  "GLM 重审结论与提交 ac26841f 已推送 |\n",
+                encoding="utf-8")
+            commits = []
+
+            def fake_commit(message, **kwargs):
+                commits.append((message, kwargs))
+                return SimpleNamespace(
+                    created=True, pushed=False, commit="b" * 40, reason="")
+
+            fake_autogit = SimpleNamespace(
+                commit_progress_result=fake_commit,
+                push_pending=lambda **_kwargs: True,
+            )
+            with (mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "REJECTION_LEDGER", ledger),
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_flush_pending_rejection_ledger",
+                                    return_value=True),
+                  mock.patch.dict(sys.modules, {"autogit": fake_autogit})):
+                self.assertTrue(llm_review._migrate_rejection_ledger_labels(
+                    log=lambda _message: None))
+                self.assertTrue(llm_review._migrate_rejection_ledger_labels(
+                    log=lambda _message: None))
+
+            text = ledger.read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("# 复盘拒合与维护中断批次清单\n"))
+            self.assertIn("维护中断/取消（lifecycle_stop）", text)
+            self.assertIn(
+                "维护中断/取消；复盘已补合并闭环 `ac26841f`",
+                text)
+            self.assertNotIn("kimi-for-coding/k3 已补合", text)
+            self.assertIn("复盘重审结论与提交 ac26841f 已推送", text)
+            self.assertIn("非模型提交失败", text)
+            self.assertNotIn("GLM 已补合", text)
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(
+                commits[0][1]["paths"],
+                ["sts2-ascend/REVIEW_REJECTIONS.md"])
+
+    def test_rejection_label_migration_reports_failed_commit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-ledger-migration-commit-") as root:
+            repo = Path(root) / "repo"
+            ledger = repo / "sts2-ascend" / "REVIEW_REJECTIONS.md"
+            ledger.parent.mkdir(parents=True)
+            old_text = "# GLM 复盘拒合批次清单\n"
+            ledger.write_text(old_text, encoding="utf-8")
+            fake_autogit = SimpleNamespace(
+                commit_progress_result=lambda *_args, **_kwargs: SimpleNamespace(
+                    created=False, pushed=False, commit="", reason="commit failed"),
+                push_pending=lambda **_kwargs: False,
+            )
+            with (mock.patch.object(llm_review, "REPO_DIR", repo),
+                  mock.patch.object(llm_review, "REJECTION_LEDGER", ledger),
+                  mock.patch.object(llm_review, "_review_stop_requested",
+                                    return_value=False),
+                  mock.patch.object(llm_review, "_flush_pending_rejection_ledger",
+                                    return_value=True),
+                  mock.patch.object(llm_review, "_ledger_text_at_head",
+                                    return_value=old_text),
+                  mock.patch.dict(sys.modules, {"autogit": fake_autogit})):
+                migrated = llm_review._migrate_rejection_ledger_labels(
+                    log=lambda _message: None)
+
+            self.assertFalse(migrated)
+            self.assertTrue(ledger.read_text(encoding="utf-8").startswith(
+                "# 复盘拒合与维护中断批次清单\n"))
 
     def test_lifecycle_stop_outranks_exit_timeout_and_stall(self) -> None:
         result = llm_review.SandboxReviewResult(

@@ -556,7 +556,7 @@ class ReviewHoldRecoveryTests(unittest.TestCase):
             commit_progress_result=fake_commit,
             push_pending=lambda **_kwargs: True,
         )
-        pending_status = "\u5f85 GLM \u91cd\u5ba1/\u8865\u5408"
+        pending_status = "待 opencode/opencode-go/glm-5.3-flash@max 重审/补合"
         with (mock.patch.object(llm_review, "BASE_DIR", self.root),
               mock.patch.object(llm_review, "REPO_DIR", self.root),
               mock.patch.object(llm_review, "KNOWLEDGE_DIR", self.root / "knowledge"),
@@ -586,7 +586,7 @@ class ReviewHoldRecoveryTests(unittest.TestCase):
             self.assertNotIn("invalid old closure", row)
         self.assertEqual(len(commits), 2)
         self.assertTrue(all(
-            message.startswith("chore(sts2-ascend): reopen GLM review batch ")
+            message.startswith("chore(sts2-ascend): reopen review batch ")
             for message, _kwargs in commits))
         self.assertTrue(all(
             kwargs["paths"] == ["REVIEW_REJECTIONS.md"]
