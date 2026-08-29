@@ -109,6 +109,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - 用户说“启动/停止整套”“游戏 + brain + 播报员”时，AI **只使用上述统一入口**。不要分别拉起组件，不要泛杀 `python` / `uv` / `opencode`，也不要按 8080–8084 端口杀进程。
 - `Start-Agent.ps1` 默认后台运行且幂等。`-SkipDeploy` 复用已部署 DLL；游戏已经运行时必须使用它，否则脚本会拒绝部署以避免 DLL 锁。`-Foreground` 仅用于调试，完整停止仍使用 `Stop-Agent.ps1`。
+- Windows 上 Luna 只使用 `scripts/Install-CodexCompat.ps1` 安装到用户缓存并经固定版本/SHA256 校验的兼容 Codex CLI；`Start-Agent.ps1` 冷启动会自动就绪该缓存。每次 Luna provider 启动前必须再次核对固定 SHA256，并通过本地无模型 `exec-server fs/readFile` 普通盘符读取兼容能力预检；失败时不得启动 provider 或消耗 token，必须保持 Luna 原批次亲和性且不新增冷却。
 - `-Source auto`（默认）优先本地 fork、否则使用 release；`-Source fork` 强制 fork 构建；`-Source release` 强制官方包。自定义安装传 `-GameDir`，fork 构建可传 `-GodotExe`。
 - “Stack ready”表示当前 session 的 brain 存活且 8080–8084 中某个 `/health` 已就绪。ASCEND-VISION 驾驶舱随 brain 启动，并由进程内监督器按心跳自愈；碎碎念在语音环境可用时由 brain 拉起，复盘 OpenCode 与复盘 speaker 仍按需出现。就绪等待超时只警告，runner 与驾驶舱监督器会继续在后台自愈，此时不要再启动第二套。
 - 驾驶舱实时决策遥测是纯本地、确定性的 Python 标准库路径：只复用 Policy 本次已经计算出的观察、闸门、候选分数和结果，不重新评分，不调用 LLM、OpenCode、Minimax、OpenRouter 或任何网络服务，token 消耗为 0。遥测只写当前 session 的 `.runtime/live_dashboard.<SESSION_ID>.json`，采用有界队列和原子替换；异步复盘模型链本身仍可能消耗 token，二者不得混淆。

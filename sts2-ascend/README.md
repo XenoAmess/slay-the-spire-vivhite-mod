@@ -152,6 +152,11 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 2. `gpt-5.6-luna@max` — Codex CLI · `workspace-write` · auto-review
 3. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
 
+Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Agent.ps1` 冷启动时通过
+`scripts/Install-CodexCompat.ps1` 非全局安装并校验固定 SHA256。每次启动 Luna provider 前还会
+用本地 `exec-server fs/readFile` 对普通盘符文件执行无模型、零 token 的读取兼容能力预检；
+预检失败时不启动 provider、不冷却 Luna，并保留原批次亲和性重试。
+
 前两级均按每局优先复盘；Kimi 的 5 局门槛只控制常规新任务，已有失败包的逐包重审不会因此
 永久等不到第 5 局。模型已经开始产生语义输出/工具事件后，失败事务固定原 runner、模型、推理强度
 和审批模式重试；若 CLI 在模型工作开始前就不可用，才允许按优先链顺位交给下一层。
