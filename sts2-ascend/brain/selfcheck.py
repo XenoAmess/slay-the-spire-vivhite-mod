@@ -5944,6 +5944,48 @@ def main() -> int:
         and "手牌滞留税HAND_END_TAX=每回合3（INFECTION×1）" in resc_tax.reason, \
         f"end_turn 收口未披露手牌滞留税: {resc_tax.reason}"
 
+    # 3htp) 手牌税止损计价（HAND_TAX_PLAY_PRICING，第1086局批复盘）：
+    #      808~812 批的止损只装在 end_turn 残能救场与收口披露，主评分仍按
+    #      牌面值计价；1086-F22-T3/T6 实证毒素（5伤+免5税/回合）评不过同费
+    #      防御，三回合滞留缴税 5+10+15=30 点。① 带伤害的毒素型可打税牌
+    #      攻击分 = 面值 + 等效格挡口径止损加分，同费严格压过等值格挡
+    #      （1086-F22-T3 反事实）；② why 带「手牌税止损计价」留痕；
+    #      ③ 无税牌评分与留痕不变；④ hand_tax_play_pricing=0 回滚旧口径
+    #      （毒素回落牌面值、输给同费防御）。
+    htp_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htp-"))
+    htp_pol = policy.Policy(knowledge.Knowledge(htp_dir), random.Random(5))
+    htp_pol.know.policy["block_safety"] = 2.1  # 对齐运行库 learned 口径
+    htp_enemies = [{"index": 0, "enemy_id": "HTP_MYTE", "name": "异螨",
+                    "current_hp": 60, "max_hp": 60, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 19}]}]
+    htp_toxic = {"index": 0, "card_id": "TOXIC", "name": "毒素",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "rules_text": "造成5点伤害。在你的回合结束时，如果这张牌在"
+                               "你的手牌中，你受到5点伤害。消耗。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 5}]}
+    htp_def = {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+               "playable": True, "energy_cost": 1, "requires_target": False,
+               "dynamic_values": [{"name": "Block", "current_value": 5}]}
+    s_tox, _, why_tox = htp_pol._score_play(
+        htp_toxic, htp_enemies, 19, 0, 3, htp_pol.know.policy,
+        my_hp=67, my_max_hp=80, cur_energy=1, run_deck=[])
+    s_dfd, _, why_dfd = htp_pol._score_play(
+        htp_def, htp_enemies, 19, 0, 3, htp_pol.know.policy,
+        my_hp=67, my_max_hp=80, cur_energy=1, run_deck=[])
+    assert s_tox > s_dfd, \
+        f"毒素（5伤+免5税）同费应压过等值格挡: tox={s_tox} dfd={s_dfd}"
+    assert "手牌税止损计价" in why_tox, \
+        f"税牌主评分未带止损计价留痕: {why_tox}"
+    assert "手牌税止损计价" not in why_dfd, \
+        f"无税牌被误加止损计价留痕: {why_dfd}"
+    htp_pol.know.policy["hand_tax_play_pricing"] = 0
+    s_tox_off, _, why_tox_off = htp_pol._score_play(
+        htp_toxic, htp_enemies, 19, 0, 3, htp_pol.know.policy,
+        my_hp=67, my_max_hp=80, cur_energy=1, run_deck=[])
+    assert "手牌税止损计价" not in why_tox_off and s_tox_off < s_dfd, \
+        f"hand_tax_play_pricing=0 未回滚旧口径: {s_tox_off}（{why_tox_off}）"
+
     # 3bs) 输出饥饿链第五级接替（第 397~402 批复盘）：四级链全顶格后 Boss 竞速
     #      败北证据改接 kill_race_prior_eff 下调（更早全攻提速+前夜更早转锻造）；
     #      链未顶格时不接替；胜利按 +0.03 向锚点回收

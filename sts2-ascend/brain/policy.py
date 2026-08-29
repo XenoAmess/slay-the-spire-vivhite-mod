@@ -3366,6 +3366,24 @@ class Policy:
             atk_damp *= float(pol.get("kill_race_atk_mult", 1.25))
             blk_boost *= float(pol.get("kill_race_blk_mult", 0.70))
 
+        # 手牌税止损计价（HAND_TAX_PLAY_PRICING，第1086局批复盘）：可打出的
+        # 回合结束手牌伤害牌（毒素族）打出即离手、税负清零。808~812 批只把
+        # 止损装进了 end_turn 残能救场通道与收口披露，主评分仍按牌面值计价——
+        # 1086-F22 实证：T2/T3/T6 能量花在等值防御/铁斩波上，毒素滞留手牌共
+        # 缴税 5+10+15=30 点（格挡挡不掉）；毒素打出=5 伤+免 5 税，严格优于
+        # 同费 5 点格挡却评不过。滞留税不进格挡结算管线，其规避额按等效格挡
+        # 口径（1.05×block_safety×blk_boost）加进攻击分，与格挡用同一把尺子
+        # 竞争能量；lethal/race_allin 的既有钳制仍在加分之后生效，不推翻
+        # 致死回合教义。运行时旋钮 hand_tax_play_pricing=0 即整体关闭回旧口径。
+        _m_hand_tax = (_HAND_TAX_ZHS_RE.search(text)
+                       or _HAND_TAX_EN_RE.search(text))
+        _tax_save = int(_m_hand_tax.group(1)) if _m_hand_tax else 0
+        _tax_value = (_tax_save * 1.05 * float(pol.get("block_safety", 1.0))
+                      * blk_boost
+                      if (_tax_save
+                          and float(pol.get("hand_tax_play_pricing", 1)) > 0)
+                      else 0.0)
+
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
         floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
@@ -3477,6 +3495,8 @@ class Policy:
                     self._kill_bonus(e, sum((it.get("total_damage") or 0) for it in e.get("intents", [])),
                                      incoming, pol, ignore_respawn=all_respawn)
                     for e in killable)
+                if _tax_value:
+                    score += _tax_value
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
                 if lethal and not killable and not (desperate or race_allin):
@@ -3503,6 +3523,9 @@ class Policy:
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
                 why = f"群体伤害≈{eff}"
+                if _tax_value:
+                    why += (f"｜手牌税止损计价+{_tax_value:.1f}"
+                            f"（打出即清零{_tax_save}/回合滞留税）")
                 if slippery_notes:
                     why += "｜滑溜逐段折算：" + "、".join(slippery_notes)
                     # SLIPPERY_BURN_AUDIT 的 AOE 侧同口径披露（纯观测不改分）：
@@ -3617,6 +3640,10 @@ class Policy:
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
                 self._focus_index = best_t
+            if _tax_value and best_t is not None:
+                best_s += _tax_value
+                why += (f"｜手牌税止损计价+{_tax_value:.1f}"
+                        f"（打出即清零{_tax_save}/回合滞留税）")
             # 致死回合里"打不死人的大伤害"是自杀牌：
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
