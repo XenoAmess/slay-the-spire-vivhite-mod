@@ -107,7 +107,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260828-091019-1787879419248153100-1cfc6b65 -->
 | 2026-08-28 09:10:19 | 第 823~832 局 | `1cfc6b65` | process_exit | opencode-go/glm-5.3-flash@max | GLM 已补合并闭环 `8c000da8` | （闭环清理） | GLM 重审结论与提交 8c000da8 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260828-091813-1787879893103686900-ea40a2c5 -->
-| 2026-08-28 09:18:13 | 第 808~812 局 | `ea40a2c5` | process_exit | opencode-go/glm-5.3-flash@max | GLM 复审确认无有效成果并闭环 `5843ffb5` | （闭环清理） | GLM 重审结论与提交 5843ffb5 已推送；远端确认后精确清理对应失败包 |
+| 2026-08-28 09:18:13 | 第 808~812 局 | `ea40a2c5` | process_exit | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-091813-1787879893103686900-ea40a2c5` | restored from review_hold; awaiting full-evidence review; original failure: 复盘进程未成功完成 |
 <!-- rejection:20260828-103400-1787884440127985200-9a9d4d44 -->
 | 2026-08-28 10:34:00 | 第 833~842 局 | `9a9d4d44` | process_exit | opencode-go/glm-5.3-flash@max | GLM 复审确认无有效成果并闭环 `4e4bf4e4` | （闭环清理） | GLM 重审结论与提交 4e4bf4e4 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260828-115454-1787889294662432400-9bad2f70 -->
