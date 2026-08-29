@@ -186,8 +186,15 @@ def build_review_command(
         if plan.reasoning_effort:
             command += ["-c", f'model_reasoning_effort="{plan.reasoning_effort}"']
         if plan.approve_for_me:
+            # Codex CLI owns workspace-write in this mode and rejects a second
+            # explicit --sandbox argument as mutually exclusive.
+            if plan.sandbox != "workspace-write":
+                raise ValueError(
+                    "codex --approve-for-me requires the workspace-write sandbox; "
+                    f"configured sandbox={plan.sandbox!r}")
             command.append("--approve-for-me")
-        command += ["--sandbox", plan.sandbox]
+        else:
+            command += ["--sandbox", plan.sandbox]
         command += ["--json", "--ephemeral", "--color", "never", "-C", root, prompt]
         return command
     raise ValueError(f"unsupported review runner: {plan.runner}")

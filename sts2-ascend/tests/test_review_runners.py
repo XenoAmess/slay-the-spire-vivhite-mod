@@ -106,8 +106,7 @@ class ReviewPlanTests(unittest.TestCase):
         for option in ("--approve-for-me", "--json", "--ephemeral"):
             self.assertIn(option, command)
         self.assertNotIn("-a", command)
-        self.assertEqual(
-            command[command.index("--sandbox") + 1], "workspace-write")
+        self.assertNotIn("--sandbox", command)
         self.assertEqual(command[command.index("-C") + 1], "C:\\review\\repo")
         self.assertEqual(command[-1], "read prompt")
 
@@ -128,6 +127,18 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertNotIn("--approve-for-me", command)
         self.assertEqual(
             command[command.index("--sandbox") + 1], "workspace-write")
+
+    def test_codex_auto_review_rejects_a_non_workspace_sandbox(self) -> None:
+        plan = ReviewPlan(
+            key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
+            sandbox="read-only", approve_for_me=True,
+            every_runs=1, source="preferred")
+
+        with self.assertRaisesRegex(
+                ValueError, "requires the workspace-write sandbox"):
+            build_review_command(
+                plan, "codex.CMD", Path("C:/review/repo"), "read prompt",
+                title="ignored")
 
 
     def test_opencode_command_keeps_variant_and_json_stream(self) -> None:
