@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import secrets
 import subprocess
 import sys
 import threading
@@ -33,6 +34,10 @@ CONCLUSION_FILE = KNOWLEDGE_DIR / "review_conclusion.txt"
 VOICE = "zh-CN-XiaoxiaoNeural"   # 统一嗓音（中英通读，不割裂）
 RATE = "+10%"
 MAX_QUEUE = 256
+PLAYER_RESULT_TIMEOUT_SECONDS = 90.0
+PLAYER_WAIT_POLL_SECONDS = 0.5
+PLAYER_SHUTDOWN_JOIN_SECONDS = 5.0
+WORKER_SHUTDOWN_JOIN_SECONDS = 3.0
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, FenceStripper, speakable, SapiSpeaker,  # noqa: E402
@@ -98,6 +103,10 @@ class EdgeEngine:
         except Exception as exc:
             log(f"edge-tts 合成失败：{exc}")
             return False
+        finally:
+            # Every sequence has an instance-private MP3 staging file.  It is
+            # never a playback artifact and must not accumulate on any outcome.
+            _discard_wav(mp3)
 
     def say_fallback(self, text: str) -> None:
         with self._sapi_lock:
@@ -201,7 +210,272 @@ def _speak_conclusion_indextts(text: str) -> bool:
     return True
 
 
+def _discard_wav(wav: Path | None) -> None:
+    if wav is None:
+        return
+    try:
+        wav.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+class _PlaybackBuffer:
+    """Keep queue admission, synthesis results and playback order in one state.
+
+    ``put`` is the next sequence that has actually been admitted.  A player at
+    ``played == put`` is waiting for a future sentence, not for a timed-out one;
+    only an admitted sentence owns a result deadline.  ``pending_texts`` starts
+    at admission rather than worker pickup, so a genuinely stuck worker can
+    always fall back to SAPI with the original sentence.
+    """
+
+    def __init__(
+        self, *, max_queue: int = MAX_QUEUE,
+        result_timeout: float = PLAYER_RESULT_TIMEOUT_SECONDS,
+        wait_poll: float = PLAYER_WAIT_POLL_SECONDS,
+        clock=None,
+        instance_nonce: str | None = None,
+    ) -> None:
+        self.max_queue = max(2, int(max_queue))
+        self.result_timeout = max(0.0, float(result_timeout))
+        self.wait_poll = max(0.0, float(wait_poll))
+        self.clock = clock or time.monotonic
+        nonce = str(instance_nonce or secrets.token_hex(8))
+        safe_nonce = "".join(
+            char if char.isalnum() or char in "-_" else "_" for char in nonce)
+        self.wav_prefix = f"edge_pf_{os.getpid()}_{safe_nonce}"
+        self.work: queue.Queue[tuple[int, str]] = queue.Queue(maxsize=self.max_queue)
+        self.done: dict[int, tuple[Path | None, str | None]] = {}
+        self.pending_texts: dict[int, str] = {}
+        self.claimed: set[int] = set()
+        self.cond = threading.Condition()
+        self.counters = {"put": 0, "played": 0}
+        self.closed = False
+
+    def wav_path(self, root: Path, seq: int) -> Path:
+        """Return this speaker instance's private sequence filename."""
+        return root / f"{self.wav_prefix}_{seq:05d}.wav"
+
+    def enqueue(self, sent: str) -> int:
+        """Admit one sentence, dropping the oldest queued half at capacity."""
+        with self.cond:
+            if self.closed:
+                raise RuntimeError("edge playback buffer is closed")
+            if self.work.full():
+                for _ in range(self.max_queue // 2):
+                    try:
+                        dropped_seq, _ = self.work.get_nowait()
+                    except queue.Empty:
+                        break
+                    self.pending_texts.pop(dropped_seq, None)
+                    # A timeout may already have claimed this still-queued item.
+                    # Never recreate an orphan done entry behind the player.
+                    if (dropped_seq >= self.counters["played"]
+                            and dropped_seq not in self.claimed):
+                        self.done[dropped_seq] = (None, None)
+                    else:
+                        self.done.pop(dropped_seq, None)
+            seq = self.counters["put"]
+            self.pending_texts[seq] = sent
+            try:
+                self.work.put_nowait((seq, sent))
+            except queue.Full:
+                self.pending_texts.pop(seq, None)
+                raise
+            self.counters["put"] += 1
+            self.cond.notify_all()
+            return seq
+
+    def should_synthesize(self, seq: int, sent: str) -> bool:
+        """Reject queued work that timed out or was dropped before pickup."""
+        with self.cond:
+            return bool(
+                not self.closed
+                and seq >= self.counters["played"]
+                and seq not in self.claimed
+                and self.pending_texts.get(seq) == sent
+            )
+
+    def publish_result(self, seq: int, wav: Path | None, sent: str) -> bool:
+        """Publish one result, deleting a late WAV instead of orphaning it."""
+        with self.cond:
+            accepted = bool(
+                not self.closed
+                and seq >= self.counters["played"]
+                and seq not in self.claimed
+                and seq not in self.done
+                and self.pending_texts.get(seq) == sent
+            )
+            if accepted:
+                self.done[seq] = (wav, sent)
+                self.cond.notify_all()
+        if not accepted:
+            _discard_wav(wav)
+        return accepted
+
+    def is_drained(self) -> bool:
+        return (self.counters["played"] >= self.counters["put"]
+                and self.work.empty())
+
+    def close(self) -> None:
+        """Abort all unplayed work and reject every later worker result."""
+        wavs: list[Path] = []
+        with self.cond:
+            self.closed = True
+            wavs.extend(
+                wav for wav, _ in self.done.values() if wav is not None)
+            self.done.clear()
+            self.pending_texts.clear()
+            self.claimed.clear()
+            while True:
+                try:
+                    self.work.get_nowait()
+                except queue.Empty:
+                    break
+            self.cond.notify_all()
+        for wav in wavs:
+            _discard_wav(wav)
+
+    def wait_next(self, *, stop, drained) -> tuple[int, Path | None, str | None, bool] | None:
+        """Wait for the current admitted sequence; return ``timed_out`` last.
+
+        No deadline exists while the player is caught up with ``put``.  This is
+        the crucial distinction between an idle stream and a stuck synthesis.
+        """
+        deadline: float | None = None
+        with self.cond:
+            while True:
+                if self.closed or stop():
+                    return None
+                seq = self.counters["played"]
+                if seq in self.done:
+                    wav, sent = self.done.pop(seq)
+                    self.pending_texts.pop(seq, None)
+                    self.claimed.add(seq)
+                    return seq, wav, sent, False
+                if drained():
+                    return None
+                if (seq >= self.counters["put"]
+                        or seq not in self.pending_texts):
+                    # There is no admitted sentence at this sequence.  Wake
+                    # periodically for stop/end checks, but never age a timeout.
+                    deadline = None
+                    self.cond.wait(timeout=self.wait_poll)
+                    continue
+                if deadline is None:
+                    deadline = self.clock() + self.result_timeout
+                remaining = deadline - self.clock()
+                if remaining <= 0:
+                    sent = self.pending_texts.pop(seq)
+                    self.claimed.add(seq)
+                    return seq, None, sent, True
+                self.cond.wait(timeout=min(self.wait_poll, remaining))
+
+    def mark_played(self, seq: int) -> None:
+        with self.cond:
+            if seq != self.counters["played"]:
+                raise RuntimeError(
+                    f"edge playback sequence mismatch: expected "
+                    f"{self.counters['played']}, got {seq}")
+            self.done.pop(seq, None)
+            self.pending_texts.pop(seq, None)
+            self.claimed.discard(seq)
+            self.counters["played"] += 1
+            self.cond.notify_all()
+
+
+_active_playback: _PlaybackBuffer | None = None
+_active_player_thread: threading.Thread | None = None
+_active_worker_threads: list[threading.Thread] = []
+
+
+def _close_playback_before_unlock(
+    playback: _PlaybackBuffer | None = None,
+    player_thread: threading.Thread | None = None,
+    worker_threads: list[threading.Thread] | None = None,
+    *, join_timeout: float = PLAYER_SHUTDOWN_JOIN_SECONDS,
+    worker_join_timeout: float = WORKER_SHUTDOWN_JOIN_SECONDS,
+) -> None:
+    """Close playback and give all non-daemon audio threads bounded joins.
+
+    The player and worker budgets are totals, not per-thread waits, so shutdown
+    waits at most ``join_timeout + worker_join_timeout`` before releasing the
+    narrator lock.  A thread that outlives that budget remains non-daemon and
+    therefore still reaches its WAV/MP3 cleanup ``finally`` before interpreter
+    teardown.
+    """
+    global _active_playback, _active_player_thread, _active_worker_threads
+    target = playback if playback is not None else _active_playback
+    thread = player_thread if player_thread is not None else _active_player_thread
+    workers = list(
+        _active_worker_threads if worker_threads is None else worker_threads)
+    if target is not None:
+        target.close()
+    if (thread is not None and thread is not threading.current_thread()
+            and thread.is_alive()):
+        thread.join(timeout=max(0.0, float(join_timeout)))
+        if thread.is_alive():
+            # The thread is intentionally non-daemon: release the narrator lock
+            # after this bounded wait, while Python still guarantees its playback
+            # finally runs and removes the claimed WAV before process teardown.
+            log("播放器仍在完成当前句；已结束接单，当前 WAV 将由播放 finally 清理")
+    worker_deadline = time.monotonic() + max(
+        0.0, float(worker_join_timeout))
+    for worker in workers:
+        if worker is threading.current_thread() or not worker.is_alive():
+            continue
+        worker.join(timeout=max(0.0, worker_deadline - time.monotonic()))
+    live_workers = [worker for worker in workers if worker.is_alive()]
+    if live_workers:
+        log(
+            f"仍有 {len(live_workers)} 个合成线程在完成当前句；已结束接单，"
+            "临时 MP3/WAV 将由合成 finally 清理"
+        )
+    if target is _active_playback:
+        _active_playback = None
+    if thread is _active_player_thread:
+        _active_player_thread = None
+    if worker_threads is None or worker_threads is _active_worker_threads:
+        # Retain any thread that exceeded the bounded join so the fatal path can
+        # observe it again; non-daemon status guarantees its cleanup can finish.
+        _active_worker_threads = live_workers
+
+
+def _player_loop(playback: _PlaybackBuffer, eng, *, is_ended, stop=None) -> None:
+    stop = stop or stop_requested
+    while not stop():
+        try:
+            item = playback.wait_next(
+                stop=stop,
+                drained=lambda: bool(is_ended()) and playback.is_drained(),
+            )
+            if item is None:
+                return
+            seq, wav, sent, timed_out = item
+            if timed_out:
+                log(f"第 {seq} 句合成超时未归，SAPI 兜底")
+            try:
+                if wav is not None:
+                    try:
+                        _play_wav_with_gain(wav)
+                    finally:
+                        _discard_wav(wav)
+                elif sent:
+                    eng.say_fallback(sent)
+            except Exception as exc:
+                import traceback
+                log(f"播放失败：{exc!r}\n{traceback.format_exc()[-500:]}")
+            finally:
+                playback.mark_played(seq)
+        except Exception as exc:
+            # 播放器线程死亡 = 永久静默且无人知晓
+            import traceback
+            log(f"播放线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
+            time.sleep(1)
+
+
 def main() -> int:
+    global _active_playback, _active_player_thread, _active_worker_threads
     _hide_own_console()
     if "--test" in sys.argv:
         eng = EdgeEngine()
@@ -227,7 +501,9 @@ def main() -> int:
     eng = EdgeEngine()
     log(f"edge-tts 朗读器上线（统一嗓音 {VOICE}）")
 
-    q: queue.Queue = queue.Queue(maxsize=MAX_QUEUE)
+    playback = _PlaybackBuffer()
+    _active_playback = playback
+    q = playback.work
     splitter = SentenceSplitter()
     fence = FenceStripper()
     # 中途启动只追直播前沿，不重放历史：整段重放会让队列瞬间打满、
@@ -289,15 +565,12 @@ def main() -> int:
     conclusion_thread.start()
 
     # ---- 3 并发预取流水线：边播边预合成后 3 句，消除句间卡顿 ----
-    done: dict[int, tuple] = {}          # seq -> (wav_path | None, text)
-    inflight: dict[int, str] = {}        # seq -> text（合成中登记，供超时路径兜底取回原文）
-    done_cond = threading.Condition()
-    counters = {"put": 0, "played": 0}
+    counters = playback.counters
     # 合成健康度：连续失败熔断 + 心跳可观测（静默必须可诊断）
     synth_stats = {"ok": 0, "fail": 0, "consec_fail": 0, "sapi_until": 0.0, "next_beat": 20}
 
     def synth_worker(wid: int) -> None:
-        while not stop_requested():
+        while not stop_requested() and not playback.closed:
             try:
                 try:
                     seq, sent = q.get(timeout=0.5)
@@ -306,23 +579,25 @@ def main() -> int:
                     # 复盘间隙队列恰好排空而播放器还在播存量 → 3 个 worker 集体
                     # 退出 → 下一场复盘开始后无人合成 → 僵尸朗读器静默数小时
                     # （520 句心跳戛然而止实证）。
-                    if stop_requested() or (ended and counters["played"] >= counters["put"]):
+                    if (playback.closed or stop_requested()
+                            or (ended and counters["played"] >= counters["put"])):
                         return
                     continue
-                wav = TTS_DIR / f"edge_pf_{seq:05d}.wav"   # 每句独立文件：避免"播放器在读、合成器复写同名"的竞态
+                if not playback.should_synthesize(seq, sent):
+                    continue
+                # 旧 speaker 释放 voice lock 后 worker 仍可能迟到；PID +
+                # nonce 隔离可防它的 cleanup 误删新 speaker 的同序号 WAV/MP3。
+                wav = playback.wav_path(TTS_DIR, seq)
                 if time.time() < synth_stats["sapi_until"]:
                     # 熔断期：不再尝试 edge（网络性死亡防全哑），直接交 SAPI 兜底
-                    with done_cond:
-                        done[seq] = (None, sent)
-                        done_cond.notify_all()
+                    playback.publish_result(seq, None, sent)
                     continue
-                inflight[seq] = sent
                 ok = eng.synth_to_wav(sent, wav)
-                inflight.pop(seq, None)
                 if ok:
                     synth_stats["ok"] += 1
                     synth_stats["consec_fail"] = 0
                 else:
+                    _discard_wav(wav)
                     synth_stats["fail"] += 1
                     synth_stats["consec_fail"] += 1
                     if synth_stats["consec_fail"] >= 5:
@@ -333,19 +608,24 @@ def main() -> int:
                 if total >= synth_stats["next_beat"]:
                     synth_stats["next_beat"] = total + 20
                     log(f"合成心跳：成功 {synth_stats['ok']} / 失败 {synth_stats['fail']}")
-                with done_cond:
-                    done[seq] = (wav if ok else None, sent)
-                    done_cond.notify_all()
+                playback.publish_result(seq, wav if ok else None, sent)
             except Exception as exc:
                 # worker 线程静默死亡 = 该句永不完成且无人知晓（stderr 进隐藏控制台不可见）
                 import traceback
                 log(f"合成线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
                 time.sleep(1)
 
-    worker_threads: list = []
+    worker_threads: list[threading.Thread] = []
+    _active_worker_threads = worker_threads
 
     def spawn_worker() -> None:
-        t = threading.Thread(target=synth_worker, args=(len(worker_threads),), daemon=True)
+        worker_id = len(worker_threads)
+        t = threading.Thread(
+            target=synth_worker,
+            args=(worker_id,),
+            name=f"edge-synth-{worker_id}",
+            daemon=False,
+        )
         worker_threads.append(t)
         t.start()
 
@@ -362,52 +642,15 @@ def main() -> int:
     for _wid in range(3):
         spawn_worker()
 
-    def player() -> None:
-        while not stop_requested():
-            try:
-                with done_cond:
-                    waited = 0.0
-                    while counters["played"] not in done:
-                        done_cond.wait(timeout=0.5)
-                        waited += 0.5
-                        if (stop_requested() or
-                                (ended and counters["played"] >= counters["put"] and q.empty())):
-                            return
-                        if waited > 90:
-                            # 某句迟迟无结果。诚实区分两种情况：
-                            # 有原文（合成真挂了）→ SAPI 兜底读出来；
-                            # 无原文（该句被队列丢弃，worker 从未见过）→ 直接跳过，
-                            # 此前这里谎报"SAPI 兜底"实则什么都没读（丢队沙漠事故）。
-                            seq_to = counters["played"]
-                            sent_to = inflight.pop(seq_to, None)
-                            if sent_to:
-                                log(f"第 {seq_to} 句合成超时未归，SAPI 兜底")
-                            else:
-                                log(f"第 {seq_to} 句无合成结果且无原文，静默跳过")
-                            done[seq_to] = (None, sent_to)
-                            break
-                seq = counters["played"]
-                wav, sent = done.pop(seq)
-                try:
-                    if wav is not None:
-                        _play_wav_with_gain(wav)
-                        try:
-                            wav.unlink(missing_ok=True)     # 播完即删，控制磁盘占用
-                        except OSError:
-                            pass
-                    elif sent:
-                        eng.say_fallback(sent)
-                except Exception as exc:
-                    import traceback
-                    log(f"播放失败：{exc!r}\n{traceback.format_exc()[-500:]}")
-                counters["played"] += 1
-            except Exception as exc:
-                # 播放器线程死亡 = 永久静默且无人知晓
-                import traceback
-                log(f"播放线程异常（继续）：{exc!r}\n{traceback.format_exc()[-400:]}")
-                time.sleep(1)
-
-    threading.Thread(target=player, daemon=True).start()
+    player_thread = threading.Thread(
+        target=_player_loop,
+        args=(playback, eng),
+        kwargs={"is_ended": lambda: ended},
+        name="edge-playback",
+        daemon=False,
+    )
+    _active_player_thread = player_thread
+    player_thread.start()
 
     while not stop_requested():
         try:
@@ -454,21 +697,9 @@ def main() -> int:
                     if not speakable(ln):
                         continue
                     for sent in splitter.feed(ln):
-                        if q.full():
-                            # 队列打满丢最老一半。丢弃必须同步标记 done 并唤醒播放器：
-                            # 否则被丢句永远无结果，播放器在丢弃区间每句空等 90 个
-                            # waited-秒（约 40~76 真实秒）才静默跳过——上百句的丢弃区
-                            # 就是 1.5~3 小时静默沙漠（2026-08-24 占卜日事故实证）
-                            with done_cond:
-                                for _ in range(MAX_QUEUE // 2):
-                                    try:
-                                        dropped_seq, _ = q.get_nowait()
-                                    except queue.Empty:
-                                        break
-                                    done[dropped_seq] = (None, None)
-                                done_cond.notify_all()
-                        q.put((counters["put"], sent))
-                        counters["put"] += 1
+                        # 入队即登记原文；满队列仍保持“丢最老一半”，被丢序号
+                        # 立即发布 skip marker，不制造 90 秒空等区间。
+                        playback.enqueue(sent)
                         recent_texts.append(sent)
                         del recent_texts[:-8]
             if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
@@ -483,6 +714,10 @@ def main() -> int:
     # This lock protects Edge/SAPI narrator instances only.  Release it before
     # cleanup/waiting so a following review's Edge voice is never blocked by
     # the independent white-voice conclusion.
+    # Close the producer/player contract before another speaker can acquire the
+    # voice lock.  Non-daemon workers get one shared bounded join budget; any
+    # late result is rejected by the closed buffer and its private WAV is deleted.
+    _close_playback_before_unlock(playback, player_thread, worker_threads)
     release_voice_lock()
     if eng._sapi is not None:
         eng._sapi.close()
@@ -511,5 +746,6 @@ if __name__ == "__main__":
     except Exception as exc:
         import traceback
         log(f"致命异常（静默退出）：{exc}\n{traceback.format_exc()[-1000:]}")
+        _close_playback_before_unlock()
         release_voice_lock()
         sys.exit(0)
