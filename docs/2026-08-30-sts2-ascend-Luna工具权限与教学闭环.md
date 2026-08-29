@@ -84,3 +84,9 @@ push 因本机 GitHub 代理短暂断连失败，约六秒后自动补推成功�
 - `lifecycle_stop` 明确标为维护中断/取消，不称为模型提交失败；
 - `selfcheck` 未执行时保持 `not_run`，不得显示为通过；
 - 是否成功以宿主验收、CAS、commit 和远端确认分别记录，短暂 push 重试不得冒充永久提交失败。
+
+账本使用 `review-rejection-ledger-schema:2` 做一次性历史迁移：marker 缺失时，中性化旧 `GLM`
+闭环文案以及曾被旧迁移误写成“原失败模型已补合”的状态；marker 写入后不再改写未来带可靠 resolver
+回执的精确状态。迁移回归测试必须把 `REJECTION_LEDGER`、`REPO_DIR` 和 autogit 全部隔离到临时
+现场。此次曾因 `ReviewQueueSafetyTests` 只隔离 queue/salvage 而漏掉真实 ledger，测试意外生成提交
+`ec692ae8`；现已加入临时账本与 autogit fail-fast，防止测试再次提交或推送真实仓。
