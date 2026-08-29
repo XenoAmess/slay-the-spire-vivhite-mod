@@ -5328,6 +5328,71 @@ def main() -> int:
         and "其余候选评分更差" not in d_map.reason, \
         f"单候选精英留痕未按强制进场语义书写: {d_map.reason}"
 
+    # 3hts) 税负战斗防守姿态成本观测位（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
+    #      812-F9 全链实证——高危组合「转防守节奏」把感染税战斗拖长，每多拖一轮
+    #      多付 3~12 点不可格挡的手牌税；姿态 blk_mult 只挡意图挡不住税，防守
+    #      节奏在税负战斗里反向放大成本。「高危防守姿态 × 手牌税>0」交集的战斗
+    #      留痕必须带「HAND_TAX_STANCE_OBS」+税额明细；① 无税同局面 → 留痕缺席
+    #      （纯观测锚）；② 观测键置 False → 留痕消失（回滚锚）。
+    hts_ctx = type("HTSCTX", (), {"combat": None, "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+    hts_ctx.combat = {"comp_id": "HTX_TAX_ST_COMP", "node_type": "Monster"}
+
+    def hts_state(with_tax):
+        hand = [{"index": 0, "card_id": "HTS_HIT", "name": "速攻", "playable": True,
+                 "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        if with_tax:
+            hand.append({"index": 1, "card_id": "INFECTION", "name": "感染",
+                         "playable": False, "energy_cost": -1,
+                         "rules_text": "不能被打出。 在你的回合结束时，"
+                                       "如果这张牌在你的手牌中，你受到3点伤害。"})
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {"player": {"current_hp": 43, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "HTX_TAX_ST_COMP",
+                                    "name": "寄生税怪", "current_hp": 61, "max_hp": 64,
+                                    "block": 0, "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 0}]}]},
+            "run": {"current_hp": 43, "max_hp": 80, "gold": 0, "floor": 9,
+                    "deck": [{"card_id": f"HTS_D_{i}", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [{"name": "Damage", "current_value": 10}]}
+                             for i in range(4)]}}
+
+    def hts_seeded_know(tag):
+        know_hts = knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix=f"sts2-selfcheck-htxstance{tag}-")))
+        know_hts.stats["enemies"]["HTX_TAX_ST_COMP"] = {
+            "encounters": 6, "hp_lost_sum": 240.0, "deaths": 4, "wins": 2}
+        return know_hts
+
+    hts_pol = policy.Policy(hts_seeded_know("-"), random.Random(11))
+    d_hts = hts_pol.decide(hts_state(True), hts_ctx)
+    assert d_hts.action == "play_card" and "高危组合" in d_hts.reason, \
+        f"税负战斗姿态夹具未按预期出牌: {d_hts.action}（{d_hts.reason}）"
+    assert "HAND_TAX_STANCE_OBS" in d_hts.reason \
+        and "税负战斗防守观测" in d_hts.reason and "手牌税3/回合" in d_hts.reason, \
+        f"税负战斗防守姿态观测留痕缺失: {d_hts.action}（{d_hts.reason}）"
+    # ① 无税对照：同局面无税 → 观测留痕缺席
+    hts_pol0 = policy.Policy(hts_seeded_know("0"), random.Random(11))
+    d_hts0 = hts_pol0.decide(hts_state(False), hts_ctx)
+    assert d_hts0.action == "play_card", \
+        f"无税对照夹具未按预期出牌: {d_hts0.action}（{d_hts0.reason}）"
+    assert "HAND_TAX_STANCE_OBS" not in d_hts0.reason, \
+        f"无税局面不得出现税负战斗姿态观测留痕: {d_hts0.reason}"
+    # ② 回滚对照：观测键置 False → 留痕消失，出牌判决与开启态一致
+    hts_know_off = hts_seeded_know("off")
+    hts_know_off.policy["hand_tax_stance_obs"] = False
+    hts_pol_off = policy.Policy(hts_know_off, random.Random(11))
+    d_hts_off = hts_pol_off.decide(hts_state(True), hts_ctx)
+    assert d_hts_off.action == "play_card", \
+        f"回滚对照夹具未按预期出牌: {d_hts_off.action}（{d_hts_off.reason}）"
+    assert "HAND_TAX_STANCE_OBS" not in d_hts_off.reason, \
+        f"观测键关闭后留痕未消失: {d_hts_off.reason}"
+
     # 3bx) 前夜必败预演的防守线复核·联合能量口径（第435~440批复盘引入，
     #      第460局批复盘改版）：裸血账判负后，攻防能量分配存在可行解（磨垒
     #      卡组「2能挡+1能攻」的持续分配能同时满足击杀与存活）则不判必败，

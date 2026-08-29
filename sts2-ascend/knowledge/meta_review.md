@@ -5166,3 +5166,112 @@ retry_resolution: 20260827-215023-1787838623754163300-cd0aa644 integrated
 5. 观察点（下批复盘核对）：① BOSS_RACE_PROJ_AUDIT 留痕首发与分幕计数；②
    SETTLE_TIMEOUT_CONCEDE_OBS 第 2/3 局样本与锁时长分布；③ 二幕 Boss 越墙率是否
    随折算率释放（0.69→0.70）出现非零值；④ F17 越墙率（49%）能否稳住前批 29% 的提升。
+
+
+
+# 2026-08-29 10:52 ｜第 808~812 局复盘·hold 解除后重审批（异步追及队列重复入队；失败包 cd0aa644 lineage 二次对账复核收口；有界闭环实验 ×1：HAND_TAX_STANCE_OBS 税负战斗防守姿态成本观测位）
+
+## 〇、失败包 lineage 二次对账（固定首步骤）
+
+- 本批为同一 target（20260827-215023-1787838623754163300-cd0aa644）在
+  review_hold 证据链修复并解除（manifest review_hold_recovered_at=2026-08-29 10:17~10:18，
+  complete_evidence.index created_at=2026-08-29T10:19:40，schema 1 complete=true）后的
+  **第二次合规重审**。08:30 批（本文件上一节）已在 hold 撤销后于当前 HEAD 重实现其
+  生产改动并写 `integrated`；本轮宿主解除 hold 后重新入队，要求给出最终收口结论。
+- 本轮独立复核动作（非转抄 08:30 结论，全部现场重做）：
+  1. 逐字节重读 index.json 与四包全部 root_files（manifest/report/retry_candidate.patch/
+     wip.patch/inventory/file_states/model_output_tail），与 index 的 bytes/sha 清单一致，
+     无缺项、无 materialization_error。
+  2. **target cd0aa644（stall）**：report.md、retry_candidate.patch、wip.patch 均 0 字节，
+     唯一 changed file 为宿主 prompt（review_prompt_latest.md，在线路径不可合入）——
+     零产出。
+  3. **attempt 14b0a13e**：candidate/report 0 字节，唯一 changed file 仍为宿主 prompt——
+     零产出。
+  4. **attempt ea40a2c5**：candidate 465,672 字节，12 个文件全部为一次性解析/取证草稿
+     （_extract_packet.py、_inspect_packet1~7.py、_native_lookup.py、_packet_parsed.json、
+     _run812_decisions.txt、宿主 prompt）——无生产路径。
+  5. **attempt 9bad2f70**：以其 changed_files 原始工作树导出的 brain/policy.py 全文对当前
+     HEAD policy.py 重新做 unified diff（623 行）逐块裁定——其已完成的编辑仅三处：
+     hand_end_turn_tax 文档串微调、escalation_fire_grow 静态下限函数 + esc 桶挂接、
+     结算等待双 if 结构改写；其规划中的 taxstop 止损通道草稿未及落盘。对照当前 HEAD：
+     ①手牌税族（HAND_END_TAX 披露 / idle_energy_rescue_pick 的 taxstop 通道 +
+     `hand_tax_stoploss` 运行时开关 / HAND_TAX_FIRE_OBS 对账观测）**已在 HEAD 且为
+     扩展态**（policy.py:130、2555/2566 收口、3178 止损开关、2773~2778 对账观测，
+     selfcheck 3htx 与 3br-4 断言在案）；②escalation_fire_grow 下限语义已被
+     `escalation_race_fire_inflate_eff` 键校准取代（policy.py:2822，且 git -S 证实该函数
+     从未进入任何真实提交）；③结算等待结构 HEAD 为带深预算（END_TURN_SETTLE_DEEP
+     _BUDGET）与收口观测（SETTLE_TIMEOUT_CONCEDE_OBS）的更完整版本；④
+     _review_tmp_packet.pkl/.py 为临时物。**无任何仍应补合的残留。**
+
+retry_resolution: 20260827-215023-1787838623754163300-cd0aa644 no_valid_change
+
+（判据：仍有效的成果已在当前 HEAD 全部就位并由本轮 diff 逐块核实；attempt3 独有的
+下限方案属被取代语义，回迁反而覆盖 eff 键校准；其余为零产出或临时物。）
+
+## 一、样本与独立核验（第 812 局全链 171 条逐条重读）
+
+- requested=[808..812]，exact 5/5、missing=0；5 局全败。主样本 M342J5XAJGJE（第 812 局）
+  171 条持久决策链本轮独立重读，结论与 08:30 批一致并补充两处精确化：
+  1. **执行层零缺陷再确认**：33 次 end_turn 中剩余能量收口共 4 处——[27] 剩 1 能持三防御
+     对意图 0（合理持防）、[151] 剩 1 能（杂耍为无自残源死牌、痛击 2 费✗）、[164] 剩 1 能
+     （痛击 2 费✗ + 感染×3 不可打出）、[170] 剩 2 能（感染×4 全 Unplayable）——全部为真
+     资源约束，非空过。目标全程合规（[145]~[155] 集火寄生体本体、[156]/[167]/[169] 二段
+     扭动虫转火），药水 [95]/[144] 节奏健康，商店三购与删牌正常。
+  2. **死亡链数值复核（独立重算）**：F8 全场重生体（小啃兽×3）战 9 回合 72→43（-29），
+     力量 0→+6、意图 6→30 滚雪球；F9 精英 T4 击杀寄生体本体后死亡转段召 4 扭动虫，
+     感染手牌税逐轮 T4 末=3、T5 末=6、T6 末=9、T7 末=0（当轮手牌无感染，坚毅[165]
+     格挡 14 挡满意图 16 故 -2）、T8 末=12，全程累计 30；终局 T8：15 血对 意图 20 +
+     税 12 = 32 点致死。T6→T7 的 29→17 恰为意图 16−甲 13 + 税 9 = −12，链内账自洽。
+  3. **姿态×税负共现（本轮新观测靶点）**：F9 全程「⚠高危组合（121战23死），转防守节奏」
+     ——感染税不进格挡结算管线，姿态 blk_mult 只挡意图挡不住税；防守节奏每多拖一轮
+     多付 3~12 点不可格挡税（807-F23 毒素侧为可打出止损的姊妹案例）。「高危防守姿态 ×
+     手牌税>0」交集此前在竞速判决侧已有 HAND_TAX_FIRE_OBS 观测，**姿态侧零覆盖**。
+- 其余四局（808/810/811 三局 Boss 竞速真判死、809 输出饥饿绝境）趋势结论沿用 08:30 批，
+  本轮无新反证。
+
+## 二、本次调整（有界闭环实验 ×1：HAND_TAX_STANCE_OBS 姿态侧税负成本观测位）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **HAND_TAX_STANCE_OBS**（HAND_END_TAX 族的姿态端延伸；证据 run：812-F9 全链 [145]~[170] 姿态×税负共现独立核算 + 807-F23 毒素姊妹例，2 独立对局 < 阈值 3） |
+| 假设 | 高危组合「转防守节奏」姿态在税负战斗（hand_end_turn_tax>0）里反向放大成本：税不进格挡结算管线，blk_mult 只挡意图；防守拖延每轮多付「意图+税」，812-F9 的死亡线因此提前约两回合 |
+| 证据阈值裁决 | 2 < evidence_run_threshold(3)，按 ENGINE_COMMIT_LOWHP_OBS / HAND_TAX_FIRE_OBS 先例落**观测位**而非行为化；不触碰 08:30 批预注册的竞速判决侧行为化条件（其 ≥3 反事实翻转计数继续独立累计） |
+| 代码动作 | ① brain/policy.py 战斗姿态块（stance_defensive_tone 判定后）在「高危防守姿态 × 税>0」交集时向 danger_note 追加「税负战斗防守观测：手牌税{N}/回合随拖延复利（HAND_TAX_STANCE_OBS:{构成明细}）」；② brain/knowledge.py DEFAULT_POLICY 新增静态键 `hand_tax_stance_obs: True` |
+| 性质边界 | 纯观测锚：分值、判决、姿态、学习面零改动；`danger_note.replace("转防守节奏",…)` 竞速改写不波及新文案（无该子串）；与 HAND_TAX_FIRE_OBS（竞速判决侧）位点不同、键独立 |
+| 测试 | brain/selfcheck.py 新增 3hts 断言组：① 播种高危组合统计（6战4死）+ 感染在手 → 出牌留痕带 HAND_TAX_STANCE_OBS 与「手牌税3/回合」；② 无税同局面 → 留痕缺席；③ 观测键置 False → 留痕消失（回滚锚）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（10:41，本机实测） |
+| 未来 3~10 局观测指标 | ①「HAND_TAX_STANCE_OBS」留痕的独立对局数（税负战斗 × 防守姿态共现率）；② 共现局的「战斗回合数 × 税额」乘积与战损对照（拖延成本量化）；③ PHROG_PARASITE / 毒素类局复发监测 |
+| 继续调整条件 | 共现 ≥3 独立对局且共现局平均回合数显著高于同组合非税局 → 下一批实施姿态端最小行为闭环（税>0 时 danger_comp blk_boost 按税额折减，或防守姿态改提速），复用本留痕对账；若共现局无拖延放大证据 → 观测位降级为知识留档 |
+| 撤回条件 | knowledge/policy.json 写 `hand_tax_stance_obs: false` 即整体关闭（selfcheck 3hts ③ 为对照锚）；或删除 policy.py 观测块 / knowledge.py 键 / selfcheck 3hts 三处零残留回滚 |
+
+## 三、历史积案对账
+
+1. **MYTE_TOXIC_HAND_LIABILITY（historical_zero_code_debt 唯一在册项）**：本轮逐项核实
+   当前 HEAD 生产路径全部实际生效——hand_end_turn_tax（policy.py:130）、END_TURN 收口
+   披露（2555/2566）、评估收口披露（3164）、taxstop 止损通道 + `hand_tax_stoploss` 开关
+   （3178）、HAND_TAX_FIRE_OBS 判账观测（2773）、本轮新增 HAND_TAX_STANCE_OBS 姿态
+   观测——**标为 resolved**（生产代码 + 自检断言双重在案，非以无关改动清零）。
+2. **竞速判决侧「对账火力=max(火力, 意图+手牌税)」行为化**：反事实翻转计数仍为
+   2 独立对局（807/812）< 3，维持 08:30 批预注册，不提前。
+3. **触发依赖死牌拾取**（杂耍 812 / 撕裂 913）：2 例 < 3，维持登记。
+4. **escalation_fire_grow 静态下限（attempt3 内）**：本轮 diff 再次确认属被 eff 键取代语义，
+   维持不回迁。
+5. 其余积案（PANIC_BUTTON 计价、PANTOGRAPH 采样、无色药水词表、per-Boss 血池精度、
+   二幕分幕折算率）：无新现场，续挂。
+
+## 四、新沉淀的经验知识
+
+1. **税负战斗的姿态不变式**：凡「持有成本随回合复利」的伤害源（感染/毒素族），战斗姿态
+   做防守决策时的真实代价 = 意图 + 手牌税 + 敌方成长斜率；姿态层若不读税，就会系统性
+   高估拖延的可行性。判账端（竞速/tsurv）与姿态端（blk_mult/紧急线）是两个独立消费位，
+   观测与行为化须分别立项。
+2. **失败包 lineage 的「中途实现」证据价值**：0 字节 patch ≠ 无证据——changed_files 原始
+   工作树导出保留了被中断会话的半成品实现；与 HEAD 逐块 diff 可精确回答「该路线是否已被
+   更优解取代」。attempt3 的 escalation_fire_grow（下限方案）vs HEAD 的
+   escalation_race_fire_inflate_eff（eff 键方案）即同题双解的对账样本。
+3. **重复入队批的收口纪律**：同一 target 二次重审时，本轮结论只对「剩余未合入集」负责
+   ——已合入部分写明验证方式（diff + 断言在案），判 `no_valid_change` 而非复写 `integrated`，
+   让宿主按剩余集精确出队，避免 lineage 无限重投。
+4. 观察点（下批复盘核对）：① HAND_TAX_STANCE_OBS 首发与独立对局计数；②
+   HAND_TAX_FIRE_OBS 竞速侧反事实翻转计数（≥3 触发行为化）；③ 08:30/09:43 两批观测位
+   （3htx/3br-audit）的真机留痕是否开始出现。
+

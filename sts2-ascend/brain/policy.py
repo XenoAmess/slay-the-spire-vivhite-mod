@@ -2600,6 +2600,21 @@ class Policy:
                 danger_note += f"；{ramp_relief_note}"
         else:
             danger_note = ""
+        # 税负战斗防守姿态成本观测（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
+        # 812-F9 全链实证——PHROG 塞手的 INFECTION「不能被打出，回合结束时每张
+        # 3伤」不进格挡结算管线，高危组合姿态「转防守节奏」把战斗拖长，每多拖
+        # 一轮多付 3~12 点不可格挡税；姿态的 blk_mult 只挡意图挡不住税，
+        # 防守节奏在税负战斗里反向放大成本（807-F23 毒素两回合 20 点同族）。
+        # 本观测位只在「高危防守姿态 × 手牌税>0」交集出现时把税额与构成追加进
+        # 战斗留痕，供复盘按独立对局计数「防守节奏 × 税负复利」共现率，为姿态端
+        # 折减/提速行为化预注册供数；分值、判决、姿态零改动（纯观测锚）。
+        # hand_tax_stance_obs=false 即整体关闭。
+        if stance_defensive_tone and bool(pol.get("hand_tax_stance_obs", True)):
+            _stance_tax, _stance_tax_detail = hand_end_turn_tax(hand)
+            if _stance_tax > 0:
+                danger_note += (
+                    f"；税负战斗防守观测：手牌税{_stance_tax:.0f}/回合随拖延复利"
+                    f"（HAND_TAX_STANCE_OBS:{_stance_tax_detail}）")
         # 意图升级防御前置（第 84~85 批复盘）：升级型敌人意图跳升回合，
         # 格挡价值与紧急线同步上调——现在多挡一点，是为升级后的更难回合买血
         esc = int(getattr(self, "_intent_trend", 0) or 0)
