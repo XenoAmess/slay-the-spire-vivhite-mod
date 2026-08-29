@@ -4888,3 +4888,163 @@ retry_resolution: 20260828-201736-1787919456996074800-37174385 no_valid_change
    912-T6 ?????????????????????????
 4. **?? runner codex ?????????????**?37174385?08-28 20:17???
    ea151270/c483e0dc???????????????????? no_valid_change ???
+
+# 2026-08-29 08:30 ｜第 808~812 局批复盘·证据就绪后重试批（异步追及队列 5 局 exact_batch 全败；失败包 cd0aa644 四包 lineage 复审；前次已回退复盘 5c0ef496 的生产改动在当前 HEAD 重实现并全套自检通过）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260827-215023-1787838623754163300-cd0aa644]
+  （role=target，attempt_no=0），attempt_packages=[14b0a13e、ea40a2c5、9bad2f70]。
+  已读取 complete_evidence.index.json（schema 1，complete=true，created 2026-08-29T07:50:27），
+  逐包核对 manifest / report.md / retry_candidate.patch / wip.patch /
+  retry_candidate_inventory.json / file_states.json / model_output_tail.txt 与
+  changed_file_states 清单，全部可读、无缺项，index 标记与包内文件尺寸一致。
+- **target cd0aa644**：failure_kind=stall（复盘 CLI 5/10 分钟两档无进展后终止，
+  return_code=1，selfcheck_ok=true）；report.md / retry_candidate.patch / wip.patch 全部
+  0 字节（e3b0c44 空串哈希），唯一 changed file 为宿主自身 review_prompt_latest.md
+  （online_runtime_paths）——**target 本体零产出**。
+- **attempt 1（14b0a13e）**：process_exit（stopped）；candidate 0 字节，唯一 changed file
+  仍为宿主 prompt——零产出。
+- **attempt 2（ea40a2c5）**：process_exit；candidate 465,672 字节，12 个文件全部为
+  一次性解析/取证草稿（_extract_packet.py、_inspect_packet1~7.py、_native_lookup.py、
+  _packet_parsed.json、_run812_decisions.txt、宿主 prompt）——无生产路径，无可合入项。
+- **attempt 3（9bad2f70）**：process_exit（model_output_tail 显示完成 policy.py 编辑后、
+  selfcheck 收尾前退出）；candidate 含 brain/policy.py 草稿 + _review_tmp_packet.pkl/.py
+  临时物。逐段比对当前 HEAD 裁定：①其 hand_end_turn_tax + HAND_END_TAX_STOPLOSS
+  止损通道**已由 8f1f26d5（本 lineage 前次成功复盘，HEAD 祖先）落地且为扩展态**
+  （policy.py:130 定义、2542/2553 收口披露、3131~3147 评估收口 + `hand_tax_stoploss`
+  运行时开关，selfcheck 5707 起有防回归断言——本次已逐一打开核对）；②其
+  escalation_fire_grow 静态下限方案已被 escalation_race_fire_inflate_eff 键校准取代
+  （policy.py:2793，meta_review §四.3 有案），且经 git -S 核实该函数**从未进入过任何
+  真实提交**，仅存在于该失败草稿——不回迁；③_review_tmp_* 为临时物，不合入。
+- **lineage 特殊项**：本批在 08-29 07:40 曾有一份完整复盘成功提交（5c0ef496，含
+  HAND_TAX_FIRE_OBS 观测位、单候选精英留痕诚实化、DEFAULT_POLICY 键、selfcheck 3htx
+  断言组与复盘报告），但被宿主于 07:48 安全撤销（ac327a4e）——撤销原因是
+  review_hold（该批在完整失败证据 materialize 前即提交，manifest
+  review_hold_requires_evidence_schema=1，evidence schema 3 于 07:50:27 才就绪），
+  **非内容质量否决**。本次按契约把其生产改动在当前 HEAD 逐处重新核对上下文后重实现
+  （policy.py 三处 + knowledge.py 一键 + selfcheck 3htx 四断言），报告为本次独立重审
+  重写，非转抄。
+
+retry_resolution: 20260827-215023-1787838623754163300-cd0aa644 integrated
+
+## 一、样本与部署时序审读（固定首步骤）
+
+- 队列 requested=[808,809,810,811,812]，exact 命中 5/5、missing=0、evidence_only=false；
+  主样本为最新死亡局 **M342J5XAJGJE（第 812 局，2026-08-27 21:30:17 启程）** 的完整持久
+  决策链（171 条，complete_persisted_chain=True），已逐条阅读；其余四局按 runs_summary +
+  key_reasons 趋势核对。5 局全败（生涯 0/981）。
+- **部署时序**：本批 5 局全部启程于 08-27 晚；当前 HEAD 的竞速/收口杠杆
+  （RACE_BLK_FLOOR_RESERVE 08-28 19:14、RACE_POOL_ALL_RESPAWN_CREDIT 08-28 22:05、
+  HAND_END_TAX 披露+止损 08-29 03:18、SETTLE_TIMEOUT_CONCEDE_OBS 08-29 04:33、
+  RACE_ESC_DPT_UPSHIFT_EFF 08-29 05:29、KILL_RACE_OSC_DAMP 08-29 06:09）全部晚于
+  本批终局——**5 局均为其 pre-fix 证据**。已程序化验证：812 全链 171 条 JSON 内
+  「手牌滞留税」「HAND_TAX_FIRE_OBS」出现次数均为 0，属预期静默，不构成失效指控；
+  各杠杆首验窗口继续顺延。
+
+| 局 | run_id | 终点 | 本局关键事实 |
+| --- | --- | --- | --- |
+| 808 | N4S1AX28YYMA | F17 Boss战 -66 阵亡 | 前夜 51% 竞速必败弃疗改锻造；击杀需16回合>满血可存活6回合（真判死） |
+| 809 | FR8JGRW1AC3J | F31 Monster战 -17 阵亡 | F29 单场 -47 放血；21% 血绝境全候选死亡投影，Shop 换战力路线仍未翻盘 |
+| 810 | PNJJVDZZF1SG | F17 Boss战 -68 阵亡 | 85% 血进场整管打空；击杀需14回合>满血可存活6回合（真判死）——入场血量与 Boss 生死解耦再添高档位 |
+| 811 | 514LVVKBNPGU | F33 Boss战 -46 阵亡 | 9% 血前夜翻转回血→57% 进场实战击败一幕 Boss（教义正面样本），行至二幕 Boss 池打空 |
+| 812 | M342J5XAJGJE | F9 Elite战 -43 阵亡 | 主样本；F8 地图唯一前向节点即 Elite（强制进场）+ F8 重生体战 -29 + F9 感染手牌税累计 30（终局 12/回合） |
+
+## 二、归因分析
+
+**1. 主死因趋势：三局 Boss 竞速均为「真判死」，输出速率缺口继续坐实；812 新增感染税出血点。**
+808/810/811 三局 boss-eve 竞速必败预演全部被实战验证（入场 51%/85%/57% 三档血量口径全部
+整管打空）——「入场血量与 Boss 生死解耦」定案再添三例，本批不存在判死误报，故不加码任何
+竞速校准杠杆（eff 0.20 / dpt 上浮 0.20 / osc damp 落盘均不足 10 局，窗口未满）。race_audit
+当前累计：latched 227 / died 122 / won 105（判死→获胜 46.3%），esc 桶 97 胜 / 111 亡
+（误判率 46.6%）——台账继续按批累计，等待 RACE_ESC_DPT_UPSHIFT_EFF 的 post-fix 窗口成型。
+
+**2. 第 812 局全链逐条核查（171 条）——执行层零新缺陷，死因是「结构税 + 强制进场 + 输出饥饿」。**
+- 33 次 end_turn 全部诚实：能量 0 真耗尽 28 次；[27]/[151]/[164]/[170] 剩能量收口均为
+  手牌不可负担或不可打出（[151] 剩 1 能、手牌杂耍为死牌；[164] 剩 1 能、手牌
+  痛击(2费)✗+感染×3；[170] 剩 2 能、手牌感染×4 全 Unplayable）——真资源约束，非空过。
+  目标选择全程合规（T1~T4 集火寄生体本体、扭动虫自强化体优先转火、可击杀收头、无横跳）；
+  药水 2 次节奏健康（[95] F7 硬仗肌肉药水、[144] F9-T1 硬仗虚弱药水）；商店三购
+  （耸肩无视/暴走/旋风斩）+ 删打击价值排序正常。
+- **死亡链解剖（全部按链内数值复核）**：F8 地图 trace 单候选（dec[143] 候选数=1，
+  Elite(8,0)，规避门自知 54%<62% 仍强制进场——旧留痕「其余候选评分更差」属无中生有，
+  见 §三修复）；F8 小啃兽×3 重生体战 8 回合 -29（72→43）；F9 精英战 T4 击杀寄生体本体
+  （61~64 血）后 InfestedPower 死亡转段召出 4 只扭动虫（17~21 血/只，corpus 实证），
+  感染状态牌逐轮累积：T4 末 1 张→T5 末 2 张→T6 末 3 张→T8 末 4 张，每张回合结束
+  3 伤、不可打出、不可被格挡（INFECTION mechanics：OnTurnEndInHand 直伤，不走格挡
+  结算管线）。税账：T4=3、T5=6、T6=9、T8=12，全程 30；终局口径 15 血对 意图20+税12
+  =32 点致死——**剔除终局税该回合 15<20 仍死，但剔除全程税则 T8 末余 33 血，税把
+  死亡线提前约两回合**；且全程「⚠高危组合，转防守节奏」姿态在税负战斗里反向放大
+  成本（每多拖一轮多付 3~12 点不可格挡税，扭动虫 WRIGGLE_MOVE 另有 +2 力量/次滚雪球）。
+- **maps 端全负分域饱和**：本局自 F1 起每个路径决策都带「输出饥饿战损上浮
+  ×1.24~1.28（缺口 69%~81%）+投影中途死亡」，候选分差 0.2~3 分属噪声级；排序结果
+  抽查（[2] 避开精英中段、[55] Shop 换战力、[81] 未知房凑卡）均无失当——饱和域目前
+  是披露问题而非选择错误。
+
+**3. 卡组构建：触发依赖死牌第二例。**
+[141] F8 拾取杂耍（价值 8.6）→ 实战 [151] 判「死牌（触发条件无自残源，永不生效）」
+实战 -1.15。与 913 局撕裂（拾取 7.9 / 实战 -1.4）同族：卡牌经验价值不带触发前提上下文，
+自残引擎类触发牌在无 RUPTURE/自伤源的卡组里被系统性高估。累计 2 独立对局 < 阈值 3，
+维持登记观察（再有 1 例即立项「触发前提不在场则折价」的最小拾取闸门）。
+
+## 三、本次调整（有界闭环实验 ×1：HAND_TAX_FIRE_OBS 对账火力观测位 + 单候选精英留痕诚实化）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **HAND_TAX_FIRE_OBS**（MYTE_TOXIC_HAND_LIABILITY→HAND_END_TAX 族的判账端延伸；证据 run：812-F9 全链 [145]~[170] 逐动作核算 + 807-F23 毒素两回合 20 点，2 独立对局均直接改写生死） |
+| 假设 | 竞速投影（tsurv 分母）与防守线复核（_feas_fire）的火力账对手牌滞留税零感知——税负不进格挡结算管线，防守姿态「每轮拖延」的真实成本=意图+税，「防守可行」判决可能被税负翻成死亡 |
+| 证据阈值裁决 | 2 < evidence_run_threshold(3)，按 ENGINE_COMMIT_LOWHP_OBS 先例落**观测位**而非行为化；行为化预注册见「继续调整条件」 |
+| 代码动作 | ① brain/policy.py 竞速块（race_lost 判定后）在税>0 时向「斩杀竞速投影」与「防守线复核：联合能量对账」两条判决留痕追加「手牌税{N}/回合未计入对账火力（HAND_TAX_FIRE_OBS:{构成明细}）」，明细含卡牌×张数；② brain/knowledge.py DEFAULT_POLICY 新增静态键 `hand_tax_fire_obs: True`；③ **附带归因诚实化修复**：路径端单候选精英（len(cand)≤1）旧留痕「但其余候选评分更差，取损失最小项」改写为「；无其他候选，规避门否决后强制进场」（812-F8 dec[143] trace 实证单候选仍写「其余候选」，会让复盘把「地图死路强制进场」误判成「排序失误」；918-F13 复盘曾被迫人工核对替代候选存在性） |
+| 性质边界 | 纯观测 + 留痕诚实化：判决、分值、姿态、学习面零改动；不触碰 esc/fire inflate/dpt uplift/margin/osc damp 任一刚落盘的竞速杠杆；观测键独立可关（置 False 留痕消失、判决不变） |
+| 测试 | brain/selfcheck.py 新增 3htx 断言组：① 感染在手+竞速判死局面 → 留痕带 HAND_TAX_FIRE_OBS 与「手牌税3/回合未计入对账火力」；② 无税同局面 → 留痕缺席；③ 观测键置 False → 留痕消失（回滚锚）；④ 单候选精英 MAP 夹具 → 「无其他候选，规避门否决后强制进场」在场且「其余候选评分更差」缺席。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（08:14，本机实测非转抄） |
+| 未来 3~10 局观测指标 | ①「HAND_TAX_FIRE_OBS」留痕出现率与独立对局数（税负战斗占比）；② 税后火力反事实与「防守可行/维持攻防节奏」判决的冲突数——复盘用「意图+税」重算 tsurv/联合复核，统计被税翻转的对局；③ HAND_END_TAX 止损（taxstop）与收口披露的首验窗口（顺延中）在感染型税局的命中率；④ PHROG_PARASITE 段复发监测（生涯 152 战 28 死，avg 掉血 24.0） |
+| 继续调整条件 | 税后火力反事实翻转判决 ≥3 独立对局（或 1 例直接改写生死且反事实可归因）→ 下一批实施「对账火力=max(火力, 意图+手牌税)」的最小行为闭环（只在竞速判决侧，复用同留痕）；若留痕普遍与实战结果无冲突 → 观测位降级为知识留档 |
+| 撤回条件 | knowledge/policy.json 写 `hand_tax_fire_obs: false` 即整体关闭（selfcheck 3htx ③ 为对照锚）；或删除 policy.py 观测块 / knowledge.py 键 / selfcheck 3htx 三处零残留；留痕诚实化随 len(cand)>1 分支自动恢复旧文案 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批兑现 HAND_END_TAX 族的判账端盲区第一片（观测位
+   行为化落地 + 失败包 lineage 四包对账闭环），按预注册「先观测后行为化」纪律销账，
+   非以无关改动清零整包债务。
+2. **HAND_END_TAX 止损 / RACE_BLK_FLOOR_RESERVE / RACE_POOL_ALL_RESPAWN_CREDIT /
+   低血承诺观测 / SETTLE_TIMEOUT_CONCEDE_OBS / RACE_ESC_DPT_UPSHIFT_EFF /
+   KILL_RACE_OSC_DAMP**：本批 5 局全部 pre-fix（部署时序 §一，812 链内税披露零出现已
+   程序化验证），首验窗口顺延。
+3. **escalation_fire_grow 静态下限（失败包 9bad2f70 内）**：经 git -S 核实从未进入真实
+   提交历史；其语义已被 escalation_race_fire_inflate_eff 键校准取代（policy.py:2793），
+   不回迁——回迁会覆盖更新的 eff 键语义。
+4. **触发依赖死牌拾取**（杂耍 812 / 撕裂 913）：累计 2 例 < 3，维持登记（§二.3）。
+5. **死亡谷 least-bad 强制进场**：812-F8 为真实单候选死路（非排序失误），进场端披露
+   缺陷本次已修复；家族（917-F7/918-F13/812-F8 及 891/901 型）续挂观察，根因仍在
+   上游输出饥饿。
+6. 其余积案（PANIC_BUTTON 计价、PANTOGRAPH 采样、无色药水词表、PINY_TOAD/
+   CEREMONIAL_BEAST corpus 立档、per-Boss 血池精度）：本批无新现场，续挂。
+
+## 五、新沉淀的经验知识
+
+1. **INFECTION 感染完整机制档（v0.111.0 corpus 原文核实）**：Status/费用 -1/Unplayable，
+   「不能被打出。在你的回合结束时，如果这张牌在你的手牌中，你受到3点伤害。」
+   （OnTurnEndInHand 直伤，不走格挡结算管线）。与 TOXIC 的关键差异在「不可打出」：
+   毒素是可打出的止损牌（1 费换免 5/回合，HAND_END_TAX_STOPLOSS 止损通道可救），
+   感染是**不可止损的纯税**，唯一对策是抢在寄生体下一次 INFECT_MOVE（每轮塞 3 张进
+   弃牌堆）滚成雪球前终结战斗。
+2. **PHROG_PARASITE（异蛙寄生虫，Elite 61~64 血）是两段式战斗**：AfterAddedToRoom 自挂
+   InfestedPower(4)；死亡时 AfterDeath 召出 4 只扭动虫（各 17~21 血，StartStunned 一轮，
+   ShouldStopCombatFromEnding=true）——「重生体」语义实为二段转场。扭动虫 WRIGGLE_MOVE
+   每次力量+2 且另塞 1 张感染，四虫总池 ~76 血 + 力量滚雪球；对它用「拖」字诀的真实
+   敌方 DPS=意图+3×感染张数+力量成长，812-F9 终局口径 20+12=32 对 15 血。速杀优先。
+3. **不进格挡结算管线的伤害必须用「火力视角」而非「战损视角」入账**：格挡、姿态乘区、
+   防御复核对它全部无效——凡「持有成本随回合复利」的伤害源（手牌税/毒/灼伤类），
+   防守拖延的每一轮都在付息；对账火力、tsurv、联合复核三类判账都应把它当附加火力
+   （当前未入账，已由 HAND_TAX_FIRE_OBS 留痕供数）。
+4. **归因字段必须自证候选数**：「其余候选评分更差，取损失最小项」在单候选时是无中生有
+   ——复盘消费者依赖该字段区分「地图死路强制进场」与「排序失误」，两类的治理动作
+   完全不同（前者治上游血量/强度，后者治评分）。留痕是给下一批复盘看的证据，不是给
+   本局看的解释。
+5. **真判死批不追校准**：本批 3 局 Boss 竞速判死全部实战应验，而校准三件套刚落盘不满
+   10 局——race_audit「判死→获胜」46.3% 是历史混合口径，须等 post-fix 窗口成型再裁决，
+   防把「输出不足」误修成「再乐观一点」。
+6. 观察点（下批复盘核对）：①~④ 见 §三观测指标表；⑤ 本批为 review_hold 证据链修复后
+   该 lineage 的首次合规重试（stall→3 次 process_exit→07:40 提交被 hold 撤销→本次
+   证据就绪后闭环），四包 lineage 全部对账完毕，无未读项。
+

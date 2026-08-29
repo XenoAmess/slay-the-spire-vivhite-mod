@@ -5244,6 +5244,90 @@ def main() -> int:
     assert "防守线复核" in d_lag2.reason and "联合能量对账" in d_lag2.reason, \
         f"开关回退后未恢复旧复核口径: {d_lag2.action}（{d_lag2.reason}）"
 
+    # 3htx) 手牌滞留税对账火力观测位（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
+    #      812-F9 实证——PHROG 塞手的 INFECTION（不能被打出，回合结束每张3伤）
+    #      终局 4 张=12/回合，与意图 20 合计致死；竞速投影/防守复核火力账对此
+    #      零感知。税>0 的竞速判决必须带「HAND_TAX_FIRE_OBS」+税额明细留痕；
+    #      ① 无税同局面 → 留痕缺席且判决文本与有税局面一致（纯观测锚：税
+    #      观测不改变任何判决）；② 观测键置 False → 留痕消失（回滚锚）。
+    htx_ctx = type("HTXCTX", (), {"combat": None, "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+    htx_ctx.combat = {"comp_id": "HTX_RACE_COMP", "node_type": "Monster"}
+
+    def htx_state(incoming, with_tax):
+        hand = [
+            {"index": 0, "card_id": "HTX_HIT", "name": "速攻", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+            {"index": 1, "card_id": "HTX_HIT2", "name": "速攻二号", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        if with_tax:
+            hand.append({"index": 2, "card_id": "INFECTION", "name": "感染",
+                         "playable": False, "energy_cost": -1,
+                         "rules_text": "不能被打出。 在你的回合结束时，"
+                                       "如果这张牌在你的手牌中，你受到3点伤害。"})
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {"player": {"current_hp": 29, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "HTX_RACE_COMP", "name": "寄生税怪",
+                                    "current_hp": 88, "max_hp": 90, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": 29, "max_hp": 80, "gold": 0, "floor": 9,
+                    "deck": [{"card_id": f"HTX_D_{i}", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [{"name": "Damage", "current_value": 10}]}
+                             for i in range(2)]}}
+
+    pol_htx = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxfire-"))), random.Random(11))
+    accepted_combat(pol_htx, htx_state(4, True), htx_ctx)
+    pol_htx._krace_turns = 2
+    pol_htx._krace_dmg = pol_htx._krace_dmg_sustained = 11.0
+    d_htx = pol_htx.decide(htx_state(26, True), htx_ctx)
+    assert "HAND_TAX_FIRE_OBS" in d_htx.reason and "手牌税3/回合未计入对账火力" in d_htx.reason, \
+        f"手牌滞留税对账火力观测留痕缺失: {d_htx.action}（{d_htx.reason}）"
+    # ① 无税对照：判决口径一致（同判死路径），观测留痕必须缺席
+    pol_htx0 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxfire0-"))), random.Random(11))
+    accepted_combat(pol_htx0, htx_state(4, False), htx_ctx)
+    pol_htx0._krace_turns = 2
+    pol_htx0._krace_dmg = pol_htx0._krace_dmg_sustained = 11.0
+    d_htx0 = pol_htx0.decide(htx_state(26, False), htx_ctx)
+    assert "HAND_TAX_FIRE_OBS" not in d_htx0.reason, \
+        f"无税局面不得出现手牌税观测留痕: {d_htx0.reason}"
+    # ② 回滚对照：观测键置 False → 留痕消失，判决与开启态一致
+    pol_htx_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxfireoff-"))), random.Random(11))
+    pol_htx_off.know.policy["hand_tax_fire_obs"] = False
+    accepted_combat(pol_htx_off, htx_state(4, True), htx_ctx)
+    pol_htx_off._krace_turns = 2
+    pol_htx_off._krace_dmg = pol_htx_off._krace_dmg_sustained = 11.0
+    d_htx_off = pol_htx_off.decide(htx_state(26, True), htx_ctx)
+    assert "HAND_TAX_FIRE_OBS" not in d_htx_off.reason, \
+        f"观测键关闭后留痕未消失: {d_htx_off.reason}"
+    # ③ 单候选精英留痕诚实化（第808~812局批复盘）：812-F8 唯一候选时旧留痕
+    #    写「其余候选评分更差，取损失最小项」属无中生有——必须写明强制进场
+    htx_map_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxmap-"))
+    htx_map_know = knowledge.Knowledge(htx_map_dir)
+    htx_map_know.policy["elite_min_hp_pct"] = 0.62
+    htx_map_know.policy["elite_soft_hp_pct"] = 0.62
+    htx_map_pol = policy.Policy(htx_map_know, random.Random(11))
+    htx_map_st = {
+        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [{"index": 0, "row": 8, "col": 0,
+                                     "node_type": "Elite"}], "nodes": []},
+        "run": {"current_hp": 40, "max_hp": 80, "gold": 69, "floor": 8,
+                "deck": [{"card_id": f"HTX_M_{i}"} for i in range(6)]}}
+    d_map = htx_map_pol.decide(htx_map_st, ctx)
+    assert "规避精英" in d_map.reason, f"单候选精英夹具未触发规避门: {d_map.reason}"
+    assert "无其他候选，规避门否决后强制进场" in d_map.reason \
+        and "其余候选评分更差" not in d_map.reason, \
+        f"单候选精英留痕未按强制进场语义书写: {d_map.reason}"
+
     # 3bx) 前夜必败预演的防守线复核·联合能量口径（第435~440批复盘引入，
     #      第460局批复盘改版）：裸血账判负后，攻防能量分配存在可行解（磨垒
     #      卡组「2能挡+1能攻」的持续分配能同时满足击杀与存活）则不判必败，

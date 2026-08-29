@@ -2120,7 +2120,15 @@ class Policy:
         if (best_node is not None and best_node.get("node_type") == "Elite"
                 and elite_gate_f < 1.0 and elite_gate_note):
             best_notes = [x for x in best_notes if x != elite_gate_note]
-            best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
+            # 归因诚实化（第808~812局批复盘）：812-F8 仅一个候选 Elite(8,0)
+            # 时留痕仍写「其余候选评分更差，取损失最小项」——无中生有的
+            # 「其余候选」会让复盘把「地图死路强制进场」误判成「排序失误」。
+            # 唯一候选时必须写明强制进场语义（918-F13 复盘曾被迫人工核对
+            # 替代候选存在性，该字段必须自证）。
+            if len(cand) <= 1:
+                best_notes.append(elite_gate_note + "；无其他候选，规避门否决后强制进场")
+            else:
+                best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
             note_txt = f"；{'；'.join(best_notes)}"
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
@@ -2747,6 +2755,22 @@ class Policy:
                         race_lost = True
                     else:
                         race_lost = ttk > tsurv + _race_margin
+                    # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
+                    # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
+                    # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
+                    # 与意图 20 合计 32 对 15 血致死；807-F23 毒素两回合 20 点同族
+                    # 改写生死。竞速投影（tsurv 分母）与防守线复核（_feas_fire）
+                    # 的火力账均未计入该税，「防守可行」判决可能被税负翻成死亡。
+                    # 本观测位只在税>0时把税额与构成追加进两条竞速判决留痕，
+                    # 供复盘把「税后火力」对账反事实与判决结果对照；分值、判决、
+                    # 姿态零改动（纯观测锚）。hand_tax_fire_obs=false 即整体关闭。
+                    _tax_fire_note = ""
+                    if bool(pol.get("hand_tax_fire_obs", True)):
+                        _tax_fire, _tax_fire_detail = hand_end_turn_tax(hand)
+                        if _tax_fire > 0:
+                            _tax_fire_note = (
+                                f"；手牌税{_tax_fire:.0f}/回合未计入对账火力"
+                                f"（HAND_TAX_FIRE_OBS:{_tax_fire_detail}）")
                     # 防守线复核（第435~440批复盘）：旧投影的可存活回合数=裸血÷意图
                     # 火力——把格挡整项忽略，而格挡吞吐恰是防守路线可行性的第一变量。
                     # 后果是自证死期的预言闭环：投影判死 → 全攻提速 blk×0.7 →
@@ -2807,11 +2831,13 @@ class Policy:
                             _esc_mark = "（滚雪球零余量）" if esc_gate else ""
                             danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
                                             f"净火力下追平击杀所需{ttk:.0f}回合，"
-                                            f"维持攻防节奏不全攻{_esc_mark}")
+                                            f"维持攻防节奏不全攻{_esc_mark}"
+                                            f"{_tax_fire_note}")
                     if race_lost:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
-                                        f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速")
+                                        f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速"
+                                        f"{_tax_fire_note}")
                         if _respawn_credit:
                             danger_note += "；重生体计入血池（全场无本体）"
                         if self._krace_turns >= 2:
