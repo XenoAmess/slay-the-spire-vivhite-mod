@@ -182,7 +182,13 @@ def build_review_command(
         command += ["--title", title, "--dir", root, "--auto", prompt]
         return command
     if plan.runner == "codex":
-        command = [binary, "exec", "--model", plan.model]
+        command = [binary]
+        if not plan.approve_for_me:
+            # Approval policy is a global Codex option, so it must precede the
+            # ``exec`` subcommand.  Keep the workspace sandbox explicit while
+            # avoiding the native automatic-review patch verifier.
+            command += ["-a", "never"]
+        command += ["exec", "--model", plan.model]
         if plan.reasoning_effort:
             command += ["-c", f'model_reasoning_effort="{plan.reasoning_effort}"']
         if plan.approve_for_me:

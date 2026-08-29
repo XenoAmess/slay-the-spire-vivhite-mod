@@ -29,6 +29,16 @@ from review_runners import (  # noqa: E402
 
 
 class ReviewPlanTests(unittest.TestCase):
+    def test_production_luna_uses_explicit_non_auto_approval(self) -> None:
+        cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
+
+        luna = next(
+            plan for plan in review_plans_from_config(cfg["llm"])
+            if plan.key == "luna-max")
+
+        self.assertFalse(luna.approve_for_me)
+        self.assertEqual(luna.sandbox, "workspace-write")
+
     def test_explicit_three_level_chain_preserves_runner_specific_options(self) -> None:
         cfg = {
             "review_model_chain": [
@@ -105,14 +115,16 @@ class ReviewPlanTests(unittest.TestCase):
     def test_codex_command_uses_explicit_sandbox_without_auto_review(self) -> None:
         plan = ReviewPlan(
             key="luna", priority=2, runner="codex", model="gpt-5.6-luna",
-            sandbox="read-only", approve_for_me=False,
+            sandbox="workspace-write", approve_for_me=False,
             every_runs=1, source="preferred")
 
         command = build_review_command(
             plan, "codex.CMD", Path("C:/review/repo"), "read prompt", title="ignored")
 
+        self.assertEqual(command[:4], ["codex.CMD", "-a", "never", "exec"])
         self.assertNotIn("--approve-for-me", command)
-        self.assertEqual(command[command.index("--sandbox") + 1], "read-only")
+        self.assertEqual(
+            command[command.index("--sandbox") + 1], "workspace-write")
 
 
     def test_opencode_command_keeps_variant_and_json_stream(self) -> None:
