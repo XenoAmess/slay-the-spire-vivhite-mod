@@ -6453,3 +6453,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff: 0.69 → 0.70（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）
 - 生涯战绩：0/987 胜，当前目标进阶 0
+
+## 第 988 局复盘（2026-08-29 09:09）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：FEEL_NO_PAIN, PILLAGE, UNRELENTING, ANGER, SALVO, DISMANTLE, SECOND_WIND, TREMBLE, INFLAME, FEED, SHRUG_IT_OFF, INFLAME, CINDER, PILLAGE, INFLAME
+- 本局遗物：LETTER_OPENER, 餐券
+- 战斗记录：F11 Monster战 掉血15; F14 Elite战 掉血19; F17 Boss战 掉血83; F19 Monster战 掉血3; F21 Monster战 掉血17; F23 Unknown战 掉血74｜竞速审计：T4判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，NOT_YET(26分/3局)，OFFERING(25分/26局)，FIEND_FIRE(25分/38局)，PACTS_END(24分/103局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（5回合掉血74，每回合15≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/988 胜，当前目标进阶 0
