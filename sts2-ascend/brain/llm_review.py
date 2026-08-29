@@ -660,6 +660,59 @@ def _provider_tool_capability_error(
     )
 
 
+_CODEX_CLI_ARGUMENT_CONFLICTS = frozenset({
+    "error: the argument '--approve-for-me' cannot be used with "
+    "'--sandbox <SANDBOX_MODE>'",
+    "error: the argument '--sandbox <SANDBOX_MODE>' cannot be used with "
+    "'--approve-for-me'",
+})
+
+
+def _codex_cli_argument_preflight_error(
+    runner: str, sandbox: "SandboxReviewResult",
+) -> str:
+    """Recognize one proven host-side Codex argument-contract rejection.
+
+    Exit code 2 alone is deliberately insufficient: a real provider/tool failure
+    must retain its ordinary failure semantics.  The exact clap diagnostic, Codex
+    usage banner, and zero model/tool/file activity together prove that the local
+    CLI rejected the host command before Luna could receive the task.
+    """
+    if (runner != "codex" or sandbox.rc != 2 or sandbox.provider_work_started
+            or sandbox.stopped or sandbox.timed_out or sandbox.stalled
+            or sandbox.paths or sandbox.patch or sandbox.wip_paths
+            or sandbox.wip_patch or sandbox.allowed_paths or sandbox.artifact_paths
+            or sandbox.online_paths or sandbox.unexpected_paths
+            or sandbox.sibling_paths or sandbox.selfcheck_ok is not None):
+        return ""
+    lines = [line.strip() for line in str(sandbox.out or "").splitlines()
+             if line.strip()]
+    if (len(lines) != 4
+            or lines[0] not in _CODEX_CLI_ARGUMENT_CONFLICTS
+            or lines[1] != "Usage: codex exec [OPTIONS] [PROMPT]"
+            or lines[2] != "codex exec [OPTIONS] <COMMAND> [ARGS]"
+            or lines[3] != "For more information, try '--help'."):
+        return ""
+    metrics = (sandbox.provider_metrics
+               if isinstance(sandbox.provider_metrics, dict) else {})
+    if metrics.get("model_work_started") is not False:
+        return ""
+    for key in (
+        "event_count", "error_count", "command_count", "file_change_count",
+        "tool_count", "blocked_tool_count", "final_message_chars",
+    ):
+        value = metrics.get(key)
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(float(value)) or float(value) != 0.0):
+            return ""
+    if metrics.get("usage") not in ({}, None) or metrics.get("thread_id") not in ("", None):
+        return ""
+    return (
+        "Codex CLI 在模型/工具工作开始前拒绝宿主启动参数："
+        + lines[0].removeprefix("error: ")
+    )
+
+
 # ---------------------------------------------------------------------------
 # packet / prompt
 # ---------------------------------------------------------------------------
@@ -2102,6 +2155,26 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             log("[llm] 完整失败包证据尚不可用；未启动模型、未消费回执、"
                 "未删除原包，target 保持队首重试")
             return False
+        cli_preflight_error = _codex_cli_argument_preflight_error(runner, sandbox)
+        if cli_preflight_error:
+            # The process was only the local Codex argument parser.  Preserve one
+            # correctly attributed forensic package, but do not charge this host
+            # command bug to Luna, cool the backend, or consume retry budget.
+            sandbox.failure_code = "runner_cli_preflight"
+            sandbox.error = cli_preflight_error
+            save_failure(cli_preflight_error)
+            if _status is not None:
+                _status.update({
+                    "outcome": "deferred",
+                    "deferred_kind": "runner_cli_preflight",
+                    "reason": cli_preflight_error,
+                    "failure_code": sandbox.failure_code,
+                    "startup_unavailable": False,
+                    "provider_launch_attempted": False,
+                })
+            log("[llm] Codex 本地参数预检拒绝了宿主命令；Luna 未开始工作，"
+                "保留精确现场且维持原模型亲和性，稍后重试")
+            return False
         if sandbox.error or stopped:
             save_failure(sandbox.error or "协作停止留下的部分复盘现场")
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
@@ -2168,6 +2241,19 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             "stalled": stalled,
             "stopped": stopped,
             "review_id": review_id,
+            # Attribute launch/preflight failures in the durable live stream.  In
+            # particular, exit=2 alone must not look like Luna began and failed.
+            # ``failed`` is the pre-CAS default and is not yet authoritative for
+            # a clean exit=0.  Publish it here only for an already-classified
+            # deferred preflight; ordinary success/failure keeps the historical
+            # exit fields until host validation finishes.
+            "outcome": (
+                str((_status or {}).get("outcome") or "")
+                if (_status or {}).get("deferred_kind") else ""),
+            "deferred_kind": str((_status or {}).get("deferred_kind") or ""),
+            "failure_code": str(
+                (_status or {}).get("failure_code") or sandbox.failure_code or ""),
+            "provider_work_started": bool(sandbox.provider_work_started),
             # 结论取自即将删除的隔离 clone，已过路径分类/selfcheck/patch 导出；
             # 直接随哨兵传递，避免真实工作树稍后才 apply 导致读到上一场旧文件。
             "conclusion": sandbox.conclusion,
@@ -6761,8 +6847,11 @@ def _save_review_salvage(
         "sandbox": str(sandbox_mode or "workspace-write"),
         "source": source,
         "every": every,
+        # A host CLI argument-contract rejection happens before provider work,
+        # but it must not revoke the already durable runner/model binding.
         "retry_same_model": bool(
-            getattr(sandbox, "provider_work_started", False)),
+            getattr(sandbox, "provider_work_started", False)
+            or sandbox.failure_code == "runner_cli_preflight"),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
         "stalled": sandbox.stalled,
@@ -8542,9 +8631,14 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     if outcome == "canceled" or status.get("canceled"):
         return "canceled"
     if outcome == "deferred":
-        log("[llm] 失败包证据预检尚未就绪；provider 未启动，"
-            f"保留 {plan.display_model} 原批次亲和性后延迟重试："
-            f"{status.get('reason', '证据不可用')}")
+        if status.get("deferred_kind") == "runner_cli_preflight":
+            log("[llm] Codex 宿主启动参数预检失败；模型未工作、未冷却，"
+                f"保留 {plan.display_model} 原批次亲和性后延迟重试："
+                f"{status.get('reason', '本地 CLI 参数错误')}")
+        else:
+            log("[llm] 失败包证据预检尚未就绪；provider 未启动，"
+                f"保留 {plan.display_model} 原批次亲和性后延迟重试："
+                f"{status.get('reason', '证据不可用')}")
         return "deferred"
     if inherited_packages and outcome in {"changed", "completed", "documented"} and unresolved:
         # The accepted code/report commit remains valid.  Missing/still_pending

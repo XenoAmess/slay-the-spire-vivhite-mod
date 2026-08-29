@@ -882,6 +882,230 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(retry["salvage_packages"], ["pkg-target"])
         self.assertEqual(retry["salvage_attempts"], ["pkg-old-attempt"])
 
+    def test_codex_cli_preflight_rebinds_fresh_26_run_lineage_without_retry_cost(self) -> None:
+        runs = list(range(988, 1014))
+        target_name = "pkg-target"
+        target = llm_review.SALVAGE_ROOT / target_name
+        target.mkdir()
+        (target / "manifest.json").write_text(json.dumps({
+            "replay_enqueue_pending": True,
+            "replay_target": target_name,
+            "replay_role": "target",
+            "replay_attempt_packages": ["pkg-old-attempt"],
+        }), encoding="utf-8")
+        batch = [{
+            "run": run,
+            "time": "legacy-host-cli-failure",
+            "queue_id": f"luna-cli-preflight-{index}",
+            # This is the exact post-bug shape: the Luna fields survived, but the
+            # old host cleared sticky affinity and therefore made the group fresh.
+            "runner": "codex",
+            "model": "gpt-5.6-luna",
+            "backend_key": "luna-max",
+            "variant": "",
+            "reasoning_effort": "max",
+            "priority": 2,
+            "approve_for_me": True,
+            "sandbox": "workspace-write",
+            "every": 1,
+            "source": "preferred",
+            "retry_same_model": False,
+            "retry_count": 6,
+            "retry_after": 0.0,
+            "retry_group": target_name,
+            "replay_target": target_name,
+            "salvage_packages": [target_name],
+            "salvage_attempts": ["pkg-old-attempt"],
+        } for index, run in enumerate(runs)]
+        self.queue.write_text(json.dumps({
+            "pending": [],
+            "reviewing": {"runs": runs, "items": batch, "started": "now"},
+        }), encoding="utf-8")
+        prompt = (self.repo_dir / "sts2-ascend" / "knowledge"
+                  / "review_prompt_latest.md")
+        prompt.parent.mkdir(parents=True)
+        know = SimpleNamespace(
+            stats={"global": {"runs": runs[-1]}},
+            progression={"review_report_only_streak": 0},
+            save=mock.Mock(),
+        )
+        agent = SimpleNamespace(know=know, request_restart=False)
+        luna = llm_review.ReviewPlan(
+            key="luna-max", priority=2, runner="codex",
+            model="gpt-5.6-luna", reasoning_effort="max",
+            approve_for_me=True, sandbox="workspace-write",
+            every_runs=1, source="preferred")
+        cfg = {
+            "enabled": True,
+            "runner": "codex",
+            "codex_bin": "codex.CMD",
+            "model": "gpt-5.6-luna",
+            "preferred_timeout_min": 480,
+            "stall_warn_min": 15,
+            "stall_timeout_min": 30,
+            "pre_work_timeout_min": 5,
+            "review_model_chain": [{
+                "key": "luna-max", "priority": 2, "runner": "codex",
+                "model": "gpt-5.6-luna", "reasoning_effort": "max",
+                "approve_for_me": True, "sandbox": "workspace-write",
+                "every_runs": 1,
+            }],
+        }
+        output = (
+            "error: the argument '--approve-for-me' cannot be used with "
+            "'--sandbox <SANDBOX_MODE>'\n\n"
+            "Usage: codex exec [OPTIONS] [PROMPT]\n\n"
+            "codex exec [OPTIONS] <COMMAND> [ARGS]\n\n"
+            "For more information, try '--help'.\n"
+        )
+        sandbox = llm_review.SandboxReviewResult(
+            rc=2,
+            out=output,
+            error="复盘进程未成功完成",
+            snapshot_complete=True,
+            provider_work_started=False,
+            provider_metrics={
+                "event_count": 0,
+                "error_count": 0,
+                "model_work_started": False,
+                "command_count": 0,
+                "file_change_count": 0,
+                "tool_count": 0,
+                "blocked_tool_count": 0,
+                "final_message_chars": 0,
+                "usage": {},
+                "thread_id": "",
+            },
+            review_attempt_id="attempt-cli-preflight",
+            review_sandbox_name="sts2-review-sandbox-cli-preflight",
+            review_attempt_receipt_schema=1,
+        )
+        captured_status: dict = {}
+        original_run_review = llm_review.run_review
+
+        def capture_run_review(*args, **kwargs):
+            caller_status = kwargs["_status"]
+            result = original_run_review(*args, **{**kwargs, "_status": captured_status})
+            caller_status.update(captured_status)
+            return result
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "resolve_review_plan", return_value=luna) as resolve,
+              mock.patch.object(llm_review, "runner_binary", return_value="codex.CMD"),
+              mock.patch.object(llm_review, "PROMPT_FILE", prompt),
+              mock.patch.object(llm_review, "build_prompt", return_value="prompt"),
+              mock.patch.object(llm_review, "build_review_command",
+                                return_value=["codex.CMD", "exec"]),
+              mock.patch.object(llm_review, "_run_review_sandbox",
+                                return_value=sandbox) as run_sandbox,
+              mock.patch.object(llm_review, "_review_stop_requested",
+                                return_value=False),
+              mock.patch.object(llm_review, "_stream_begin"),
+              mock.patch.object(llm_review, "_stream_end") as stream_end,
+              mock.patch.object(llm_review, "_launch_viewer"),
+              mock.patch.object(llm_review, "_launch_speaker"),
+              mock.patch.object(llm_review, "_mark_preferred_failure") as mark,
+              mock.patch.object(llm_review, "_current_head_for_salvage",
+                                return_value="b" * 40),
+              mock.patch.object(autogit, "commit_progress_result"),
+              mock.patch.object(autogit, "head", return_value="a" * 40),
+              mock.patch.object(autogit, "set_review_active"),
+              mock.patch.object(autogit, "push_pending", return_value=True),
+              mock.patch.object(llm_review, "run_review", side_effect=capture_run_review)):
+            outcome = llm_review._run_batch_review(
+                agent, batch, log=lambda _message: None)
+
+        self.assertEqual(outcome, "deferred")
+        resolve.assert_called_once()
+        run_sandbox.assert_called_once()
+        mark.assert_not_called()
+        self.assertEqual(captured_status["deferred_kind"], "runner_cli_preflight")
+        self.assertFalse(captured_status["startup_unavailable"])
+        self.assertFalse(captured_status["provider_launch_attempted"])
+        self.assertEqual(captured_status["failure_code"], "runner_cli_preflight")
+        live_end = stream_end.call_args.args[0]
+        self.assertEqual(live_end["outcome"], "deferred")
+        self.assertEqual(live_end["deferred_kind"], "runner_cli_preflight")
+        self.assertEqual(live_end["failure_code"], "runner_cli_preflight")
+        self.assertFalse(live_end["provider_work_started"])
+        self.assertTrue(all(item["retry_same_model"] for item in batch))
+        self.assertEqual({(
+            item["runner"], item["model"], item["backend_key"],
+            item["reasoning_effort"], item["approve_for_me"], item["sandbox"],
+        ) for item in batch}, {
+            ("codex", "gpt-5.6-luna", "luna-max", "max", True,
+             "workspace-write"),
+        })
+
+        packages = [path for path in llm_review.SALVAGE_ROOT.iterdir()
+                    if path.name != target_name]
+        self.assertEqual(len(packages), 1)
+        manifest = json.loads((packages[0] / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["failure_kind"], "runner_cli_preflight")
+        self.assertEqual(manifest["failure_code"], "runner_cli_preflight")
+        self.assertFalse(manifest["provider_work_started"])
+        self.assertTrue(manifest["retry_same_model"])
+        self.assertEqual(manifest["return_code"], 2)
+        self.assertEqual(manifest["batch_runs"], runs)
+        self.assertEqual(manifest["replay_queue_ids"], [
+            f"luna-cli-preflight-{index}" for index in range(26)])
+
+        with mock.patch.object(llm_review.time, "time", return_value=1000.0):
+            delay = llm_review._finalize_review_batch(
+                batch, outcome, log=lambda _message: None)
+
+        self.assertEqual(delay, 60.0)
+        saved = llm_review._load_queue_unlocked()
+        self.assertIsNone(saved["reviewing"])
+        self.assertEqual(len(saved["pending"]), 26)
+        self.assertTrue(all(item["retry_count"] == 6 for item in saved["pending"]))
+        self.assertTrue(all(item["retry_after"] == 1060.0 for item in saved["pending"]))
+        self.assertTrue(all(item["retry_same_model"] for item in saved["pending"]))
+        self.assertTrue(all(packages[0].name in item["salvage_attempts"]
+                            for item in saved["pending"]))
+
+    def test_codex_cli_preflight_requires_exact_usage_and_zero_work(self) -> None:
+        output = (
+            "error: the argument '--sandbox <SANDBOX_MODE>' cannot be used with "
+            "'--approve-for-me'\n"
+            "Usage: codex exec [OPTIONS] [PROMPT]\n"
+            "codex exec [OPTIONS] <COMMAND> [ARGS]\n"
+            "For more information, try '--help'.\n"
+        )
+        metrics = {
+            "event_count": 0,
+            "error_count": 0,
+            "model_work_started": False,
+            "command_count": 0,
+            "file_change_count": 0,
+            "tool_count": 0,
+            "blocked_tool_count": 0,
+            "final_message_chars": 0,
+            "usage": {},
+            "thread_id": "",
+        }
+
+        def result(**changes):
+            values = {"rc": 2, "out": output, "provider_metrics": dict(metrics)}
+            values.update(changes)
+            return llm_review.SandboxReviewResult(**values)
+
+        self.assertTrue(llm_review._codex_cli_argument_preflight_error(
+            "codex", result()))
+        negatives = [
+            ("opencode", result()),
+            ("codex", result(rc=1)),
+            ("codex", result(out="Usage: codex exec [OPTIONS] [PROMPT]\n")),
+            ("codex", result(out=output + "unexpected provider output\n")),
+            ("codex", result(provider_work_started=True)),
+            ("codex", result(provider_metrics={**metrics, "command_count": 1})),
+            ("codex", result(paths=("sts2-ascend/brain/policy.py",))),
+        ]
+        for runner, sandbox in negatives:
+            with self.subTest(runner=runner, rc=sandbox.rc, out=sandbox.out):
+                self.assertEqual(
+                    llm_review._codex_cli_argument_preflight_error(runner, sandbox), "")
+
     def test_full_reviewing_items_must_match_runs_and_preserve_group_identity(self) -> None:
         valid = {
             "pending": [],
