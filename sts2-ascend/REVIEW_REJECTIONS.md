@@ -111,7 +111,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260828-103400-1787884440127985200-9a9d4d44 -->
 | 2026-08-28 10:34:00 | 第 833~842 局 | `9a9d4d44` | process_exit | opencode-go/glm-5.3-flash@max | GLM 复审确认无有效成果并闭环 `4e4bf4e4` | （闭环清理） | GLM 重审结论与提交 4e4bf4e4 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260828-115454-1787889294662432400-9bad2f70 -->
-| 2026-08-28 11:54:54 | 第 808~812 局 | `9bad2f70` | process_exit | opencode-go/glm-5.3-flash@max | GLM 已补合并闭环 `8dd7dccc` | （闭环清理） | GLM 重审结论与提交 8dd7dccc 已推送；远端确认后精确清理对应失败包 |
+| 2026-08-28 11:54:54 | 第 808~812 局 | `9bad2f70` | process_exit | opencode-go/glm-5.3-flash@max | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260828-115454-1787889294662432400-9bad2f70` | restored from review_hold; awaiting full-evidence review; original failure: 复盘进程未成功完成 |
 <!-- rejection:20260828-194710-1787917630822120200-ea151270 -->
 | 2026-08-28 19:47:10 | 第 892~912 局 | `ea151270` | process_exit | gpt-5.6-luna | GLM 复审确认无有效成果并闭环 `be8c905f` | （闭环清理） | GLM 重审结论与提交 be8c905f 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260828-195554-1787918154829419700-0d591358 -->
