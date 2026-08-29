@@ -7190,3 +7190,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
 - 生涯战绩：0/1054 胜，当前目标进阶 0
+
+## 第 1055 局复盘（2026-08-29 18:20）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：HEMOKINESIS, DISMANTLE, EVIL_EYE, OFFERING, CINDER, UNRELENTING, MAYHEM, DISMANTLE, CINDER, THRUMMING_HATCHET, TREMBLE, INFLAME, CRUELTY, THUNDERCLAP
+- 本局遗物：MUMMIFIED_HAND, AKABEKO, 历石
+- 战斗记录：F14 Elite战 掉血2; F17 Boss战 掉血53｜竞速审计：T3判死→实战7回合获胜; F19 Monster战 掉血26; F20 Monster战 掉血13; F22 Monster战 掉血24; F25 Elite战 掉血41（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/29局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PERFECTED_STRIKE(24分/4局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.55 → 0.57（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1055 胜，当前目标进阶 0
