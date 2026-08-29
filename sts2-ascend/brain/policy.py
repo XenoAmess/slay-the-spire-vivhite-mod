@@ -2520,6 +2520,17 @@ class Policy:
                         _settle_budget = max(
                             _settle_budget,
                             int(float(pol.get("end_turn_settle_recovery_ticks_deep", 22) or 0)))
+                    # BOSS_SETTLE_TIER3: historical settle observations found 17/21
+                    # Boss-layer locks surviving the deep budget, including four
+                    # latent-card windows with only one energy. Extend only the
+                    # rule-playable/interface-closed window; zero or non-Boss paths
+                    # retain the existing base/deep semantics.
+                    if (_latent and self._floors_to_boss(
+                            int((state.get("run") or {}).get("floor") or 0)) == 0):
+                        _boss_budget = int(float(
+                            pol.get("end_turn_settle_recovery_ticks_boss", 40) or 0))
+                        if _boss_budget > 0:
+                            _settle_budget = max(_settle_budget, _boss_budget)
                 if (_settle_budget > 0 and not affordable_playable
                         and self._saw_playable_this_turn
                         and self._end_stall < _settle_budget):
