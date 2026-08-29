@@ -6926,3 +6926,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：精英战阵亡但满血线进场（98%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/1030 胜，当前目标进阶 0
+
+## 第 1031 局复盘（2026-08-29 15:19）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：SHRUG_IT_OFF, STONE_ARMOR, STONE_ARMOR, THUNDERCLAP, MAYHEM, RUPTURE, PRODUCTION, MOLTEN_FIST
+- 本局遗物：HORN_CLEAT
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血3; F4 Monster战 掉血0; F7 Monster战 掉血24｜竞速审计：T3判死→实战8回合获胜; F8 Monster战 掉血41; F12 Monster战 掉血72｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PACTS_END(24分/108局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1031 胜，当前目标进阶 0
