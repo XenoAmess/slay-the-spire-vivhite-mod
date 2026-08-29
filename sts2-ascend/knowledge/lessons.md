@@ -8070,3 +8070,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.48 → 0.49（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）
 - 生涯战绩：0/1134 胜，当前目标进阶 0
+
+## 第 1135 局复盘（2026-08-30 05:53）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEADBUTT, CINDER, UNMOVABLE, TAUNT, PACTS_END, SALVO, BLUDGEON, ARMAMENTS, IRON_WAVE, HEMOKINESIS, THUNDERCLAP
+- 本局遗物：PARRYING_SHIELD
+- 战斗记录：F8 Monster战 掉血13; F9 Unknown战 掉血24; F12 Monster战 掉血15; F14 Monster战 掉血9; F15 Monster战 掉血11; F17 Boss战 掉血45｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/42局)，BRAND(25分/3局)，OFFERING(25分/32局)，PACTS_END(24分/123局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1135 胜，当前目标进阶 0
