@@ -8365,10 +8365,13 @@ def main() -> int:
         if d_tier.action == "end_turn":
             d_tier_commit = d_tier
             break
-        assert d_tier.action is None and "40" in d_tier.reason, +            f"tier3 wait window invalid: {d_tier.action}/{d_tier.reason}"
+        assert d_tier.action is None and "40" in d_tier.reason, \
+            f"tier3 wait window invalid: {d_tier.action}/{d_tier.reason}"
         _tier_waits += 1
-    assert d_tier_commit is not None and _tier_waits >= _tier3_ticks - 2, +        f"tier3 budget not used: waits={_tier_waits}"
-    assert "40" in d_tier_commit.reason, +        f"tier3 settle reason missing budget: {d_tier_commit.reason}"
+    assert d_tier_commit is not None and _tier_waits >= _tier3_ticks - 2, \
+        f"tier3 budget not used: waits={_tier_waits}"
+    assert "40" in d_tier_commit.reason, \
+        f"tier3 settle reason missing budget: {d_tier_commit.reason}"
 
     # Runtime zero disables the third budget and returns to the base budget.
     tier_know.policy["end_turn_settle_recovery_ticks_boss"] = 0
@@ -8381,10 +8384,13 @@ def main() -> int:
         if d_off.action == "end_turn":
             d_tier_off = d_off
             break
-        assert d_off.action is None and "40" not in d_off.reason, +            f"tier3 rollback invalid: {d_off.reason}"
+        assert d_off.action is None and "40" not in d_off.reason, \
+            f"tier3 rollback invalid: {d_off.reason}"
         _tier_off_waits += 1
-    assert d_tier_off is not None and _tier_off_waits <= _deep_base + 2, +        f"tier3 rollback did not use base budget: waits={_tier_off_waits}"
-    assert "40" not in d_tier_off.reason, +        f"tier3 budget leaked after rollback: {d_tier_off.reason}"
+    assert d_tier_off is not None and _tier_off_waits <= _deep_base + 2, \
+        f"tier3 rollback did not use base budget: waits={_tier_off_waits}"
+    assert "40" not in d_tier_off.reason, \
+        f"tier3 budget leaked after rollback: {d_tier_off.reason}"
 
     # Non-Boss floors keep the base budget even when the tier is enabled.
     tier_know.policy["end_turn_settle_recovery_ticks_boss"] = _tier3_ticks
@@ -8401,9 +8407,11 @@ def main() -> int:
         if d_nb.action == "end_turn":
             d_nonboss = d_nb
             break
-        assert d_nb.action is None and "40" not in d_nb.reason, +            f"non-Boss used tier3 budget: {d_nb.reason}"
+        assert d_nb.action is None and "40" not in d_nb.reason, \
+            f"non-Boss used tier3 budget: {d_nb.reason}"
         _nonboss_waits += 1
-    assert d_nonboss is not None and _nonboss_waits <= _deep_base + 2, +        f"non-Boss did not use base budget: waits={_nonboss_waits}"
+    assert d_nonboss is not None and _nonboss_waits <= _deep_base + 2, \
+        f"non-Boss did not use base budget: waits={_nonboss_waits}"
 
     print("SELFCHECK OK")
     return 0
