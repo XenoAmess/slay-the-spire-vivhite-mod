@@ -6849,3 +6849,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff: 0.67 → 0.68（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
 - 生涯战绩：0/1023 胜，当前目标进阶 0
+
+## 第 1024 局复盘（2026-08-29 14:06）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEMOKINESIS, CINDER, MOLTEN_FIST, CINDER, SECOND_WIND, UNRELENTING, TAUNT, SHRUG_IT_OFF
+- 本局遗物：CENTENNIAL_PUZZLE, 铜质鳞片
+- 战斗记录：F5 Monster战 掉血13; F6 Monster战 掉血15; F7 Monster战 掉血15; F8 Monster战 掉血0; F14 Elite战 掉血35; F17 Boss战 掉血51｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(25分/27局)，FIEND_FIRE(25分/40局)，BRAND(25分/3局)，PACTS_END(24分/105局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1024 胜，当前目标进阶 0
