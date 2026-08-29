@@ -6915,3 +6915,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：高速失血爆毙（5回合掉血75，每回合15≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/1029 胜，当前目标进阶 0
+
+## 第 1030 局复盘（2026-08-29 15:12）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：SHRUG_IT_OFF, SETUP_STRIKE, HEMOKINESIS, SPITE, BLUDGEON, UPPERCUT, TAUNT, CINDER, STOMP, UNRELENTING, BLUDGEON, JUGGLING, SPITE, INFLAME, CINDER, PACTS_END, EVIL_EYE, SHRUG_IT_OFF, SWORD_BOOMERANG, TWIN_STRIKE, UNRELENTING, THUNDERCLAP
+- 本局遗物：奥利哈钢, ORNAMENTAL_FAN, PEAR, 磨刀石
+- 战斗记录：F15 Elite战 掉血0; F17 Boss战 掉血68; F19 Monster战 掉血25; F21 Monster战 掉血0; F22 Unknown战 掉血11; F25 Elite战 掉血93｜竞速审计：T5判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PACTS_END(24分/108局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：精英战阵亡但满血线进场（98%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/1030 胜，当前目标进阶 0
