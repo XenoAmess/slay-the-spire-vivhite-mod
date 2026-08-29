@@ -155,3 +155,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-30 00:34:24 | 第 1087~1097 局 | `c3b56171` | process_exit | opencode-go/glm-5.3-flash | 复盘已确认无有效成果并闭环 `bff565de` | （闭环清理） | 复盘重审结论与提交 bff565de 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-020639-1788026799762315800-0ab6ea57 -->
 | 2026-08-30 02:06:39 | 第 808~812 局 | `0ab6ea57` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-020639-1788026799762315800-0ab6ea57` | 复盘进程未成功完成 |
+<!-- rejection:20260830-030303-1788030183851803000-1ae47437 -->
+| 2026-08-30 03:03:03 | 第 988~1013 局 | `1ae47437` | process_exit | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-030303-1788030183851803000-1ae47437` | 复盘进程未成功完成 |
