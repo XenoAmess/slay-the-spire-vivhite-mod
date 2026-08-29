@@ -2465,23 +2465,29 @@
    {
     "run": 1086,
     "time": "2026-08-29 22:59",
-    "backend_key": "glm-flash",
-    "priority": 1,
+    "backend_key": "kimi-k3",
+    "priority": 3,
     "runner": "opencode",
-    "model": "opencode-go/glm-5.3-flash",
-    "variant": "max",
+    "model": "kimi-for-coding/k3",
+    "variant": "",
     "reasoning_effort": "",
     "approve_for_me": false,
     "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
+    "every": 5,
+    "source": "fallback",
     "queue_id": "20596-1788015606145563700-0",
     "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
+    "salvage_packages": [
+     "20260829-230100-1788015660311343600-c1cd8e66"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260829-230100-1788015660311343600-c1cd8e66",
+    "replay_target": "20260829-230100-1788015660311343600-c1cd8e66",
+    "retry_count": 1,
+    "retry_after": 1788015743.2534692
    }
   ],
-  "retry_group": "",
-  "started": "2026-08-29 23:00:06"
+  "retry_group": "20260829-230100-1788015660311343600-c1cd8e66",
+  "started": "2026-08-29 23:02:23"
  }
 }
