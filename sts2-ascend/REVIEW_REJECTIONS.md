@@ -138,3 +138,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-29 21:59:36 | 第 988~1013 局 | `28e31995` | process_exit | opencode-go/glm-5.3-flash | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260829-215936-1788011976765799700-28e31995` | 复盘进程未成功完成 |
 <!-- rejection:20260829-220210-1788012130525270800-dbe1d6f6 -->
 | 2026-08-29 22:02:10 | 第 808~812 局 | `dbe1d6f6` | lifecycle_stop | gpt-5.6-luna | GLM 已补合并闭环 `718c75f0` | （闭环清理） | GLM 重审结论与提交 718c75f0 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260829-224950-1788014990149636800-ba20386d -->
+| 2026-08-29 22:49:50 | 第 988~1013 局 | `ba20386d` | process_exit | opencode-go/glm-5.3-flash | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260829-224950-1788014990149636800-ba20386d` | 复盘进程未成功完成 |
