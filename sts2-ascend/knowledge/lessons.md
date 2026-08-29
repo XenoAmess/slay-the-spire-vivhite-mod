@@ -7586,3 +7586,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（73%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1090 胜，当前目标进阶 0
+
+## 第 1091 局复盘（2026-08-29 23:45）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：FIGHT_ME, BLUDGEON, TAUNT, CINDER, FIGHT_ME, PYRE, SHRUG_IT_OFF, BLUDGEON, SHRUG_IT_OFF, IRON_WAVE, STOMP, FEED, TWIN_STRIKE, FEED, BREAKTHROUGH
+- 本局遗物：赤牛
+- 战斗记录：F17 Boss战 掉血71｜竞速审计：T3判死→实战9回合获胜; F19 Monster战 掉血9; F20 Monster战 掉血11; F21 Unknown战 掉血21; F22 Monster战 掉血29｜竞速审计：T5判死→实战7回合获胜; F24 Monster战 掉血25（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，OFFERING(25分/32局)，PRIMAL_FORCE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.39（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1091 胜，当前目标进阶 0
