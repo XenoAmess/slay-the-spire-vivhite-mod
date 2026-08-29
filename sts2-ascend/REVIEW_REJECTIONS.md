@@ -132,3 +132,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-29 12:39:43 | 第 808~812 局 | `0e6512c4` | process_exit | opencode-go/glm-5.3-flash | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260829-123943-1787978383993252800-0e6512c4` | 复盘进程未成功完成 |
 <!-- rejection:20260829-204128-1788007288163902300-aa13bc8b -->
 | 2026-08-29 20:41:28 | 第 988~1013 局 | `aa13bc8b` | timeout | gpt-5.6-luna | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260829-204128-1788007288163902300-aa13bc8b` | 复盘进程未成功完成 |
+<!-- rejection:20260829-204333-1788007413257222200-34871713 -->
+| 2026-08-29 20:43:33 | 第 808~812 局 | `34871713` | process_exit | opencode-go/glm-5.3-flash | 待 GLM 重审/补合 | `knowledge/code_backups/review_salvage/20260829-204333-1788007413257222200-34871713` | 复盘进程未成功完成 |
