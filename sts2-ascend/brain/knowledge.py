@@ -39,6 +39,9 @@ _READ_RETRY_BASE_SECONDS = 0.01
 
 DEFAULT_POLICY = {
     "boss_race_feasible_hp_buffer": 0.30,  # 前夜竞速预演可行侧生存余量；0 回落旧口径
+    "boss_race_joint_flip_max_ttk_ratio": 1.5,  # 联合能量复核翻盘比上限（第1098~1110局批复盘）：
+    # 击杀所需回合数超过 满血可存活回合数×此比值 时，复核的「存在可行攻防分配」不予放行
+    # （静态火力+期望格挡产能对滚雪球 Boss 系统性乐观）；<=0 严格回落旧口径（复核可直接翻盘）
     # --- combat ---
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds

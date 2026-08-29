@@ -5748,6 +5748,45 @@ def main() -> int:
     assert d_br_strong_buf.tags and d_br_strong_buf.tags[0] == ("rest", "heal") \
         and "BOSS_RACE_PROJ_AUDIT" in d_br_strong_buf.reason, \
         f"余量充足的强卡组不得被贴线罚误伤: {d_br_strong_buf.reason}"
+    # 3br-cap（JOINT_FLIP_TTK_CAP，第1098~1110局批复盘）：联合能量复核的火力是
+    #     静态均值、格挡按期望产能授信——1098 前夜「击杀需15回合＞满血可存活
+    #     6回合（2.5×）仍判可行→回血 98% 进场→实战 -83 整管打空」；同族可行侧
+    #     放行（1090 组合门 -66、1104/1106 乐观复核 -51/-60）四例全灭零兑现。
+    #     击杀/存活比超上限的复核翻盘必须否决并留 JOINT_FLIP_TTK_CAP 可 grep
+    #     标记；<=0 严格回落旧口径；贴线翻盘（≤1.5×）不得误伤
+    br_cap_deck = [
+        *[{"card_id": f"BR_CA{i}", "card_type": "Attack", "energy_cost": 1,
+           "dynamic_values": [{"name": "Damage", "current_value": 7}]} for i in range(3)],
+        *[{"card_id": f"BR_CB{i}", "card_type": "Skill", "energy_cost": 1,
+           "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(3)]]
+    # burst=21→先验11.55：击杀需13.9回合＞满血可存活8×1.5=12；联合复核 eb=2
+    # （格挡9封顶+输出3.85/回合）账面可行 → 旧口径翻案，新口径翻盘比超限否决
+    _cap_doomed, _cap_note = br_pol._boss_race_doomed(br_cap_deck, 80, floor=16)
+    assert _cap_doomed and "JOINT_FLIP_TTK_CAP" in _cap_note \
+        and "翻盘比超限不予放行" in _cap_note, \
+        f"超限翻盘未被否决或缺留痕: {_cap_doomed}（{_cap_note}）"
+    br_rest_cap = dict(br_rest_weak,
+                       run=dict(br_rest_weak["run"], current_hp=72, deck=br_cap_deck))
+    d_br_cap = br_pol.decide(br_rest_cap, br_ctx)
+    assert d_br_cap.tags and d_br_cap.tags[0] == ("rest", "smith") \
+        and "JOINT_FLIP_TTK_CAP" in d_br_cap.reason, \
+        f"超限翻盘的前夜应回归必败改锻造并带否决留痕: {d_br_cap.action}（{d_br_cap.reason}）"
+    br_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = 0.0
+    _cap_rb_doomed, _cap_rb_note = br_pol._boss_race_doomed(br_cap_deck, 80, floor=16)
+    assert not _cap_rb_doomed and "联合能量复核存在可行攻防分配" in \
+        getattr(br_pol, "_race_proj_audit", ""), \
+        f"翻盘比上限=0 应严格回落旧翻盘口径: {_cap_rb_doomed}（{_cap_rb_note}）"
+    br_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = 1.5
+    br_near_deck = [
+        *[{"card_id": f"BR_NA{i}", "card_type": "Attack", "energy_cost": 1,
+           "dynamic_values": [{"name": "Damage", "current_value": 9}]} for i in range(3)],
+        *[{"card_id": f"BR_NB{i}", "card_type": "Skill", "energy_cost": 1,
+           "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(3)]]
+    # burst=27→先验14.85：击杀需10.8回合 ≤ 8×1.5=12，贴线翻盘必须保留
+    _near_doomed, _near_note = br_pol._boss_race_doomed(br_near_deck, 80, floor=16)
+    assert not _near_doomed and "联合能量复核存在可行攻防分配" in \
+        getattr(br_pol, "_race_proj_audit", ""), \
+        f"贴线翻盘被翻盘比上限误伤: {_near_doomed}（{_near_note}）"
     br_ctx.rest_before_boss = False
 
     # 3br-2) per-Boss 血池全称门（第731~740批拒合成果补合）：均值判负后，

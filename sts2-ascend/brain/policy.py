@@ -4287,6 +4287,19 @@ class Policy:
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
         _feasible, _ = self._race_joint_feasible(
             deck or [], pool_eff, fire, hp_feas, margin, eff=eff)
+        # 翻盘比上限（JOINT_FLIP_TTK_CAP，第1098~1110局批复盘）：复核的火力是
+        # 静态均值、格挡按期望产能授信，而 Boss 意图逐轮滚雪球——1098 前夜
+        # 「击杀需15回合＞满血可存活6回合（2.5×）仍判可行→回血 98% 进场→实战
+        # -83 整管打空」，同族可行侧放行（1090 组合门 -66、1104/1106 乐观复核
+        # -51/-60）四例全灭零兑现。击杀/存活比超过上限的翻盘不予放行（超长
+        # 击杀计划对静态火力账没有可信度）；<=0 严格回落旧口径
+        _flip_cap = float(pol.get("boss_race_joint_flip_max_ttk_ratio", 1.5))
+        _flip_veto = ""
+        if _feasible and _flip_cap > 0 and ttk > float(tsurv) * _flip_cap:
+            _feasible = False
+            _flip_veto = (
+                f"；联合复核报可行但击杀需{ttk:.0f}回合＞{_flip_cap:.1f}×满血可存活"
+                f"{tsurv:.0f}回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）")
         if _feasible:
             # 同上：进攻线判负但联合能量复核可行时，账面同样自报（第709~713批
             # 「乐观口径复核」通道的消费端对账面）
@@ -4312,6 +4325,11 @@ class Policy:
                     combo_ttk = credited_pool / max(1.0, dpt)
                     combo_feasible, _ = self._race_joint_feasible(
                         deck or [], credited_pool, fire, hp_feas, margin, eff=eff)
+                    # 组合级复核同样受翻盘比上限约束（JOINT_FLIP_TTK_CAP）：
+                    # 1090 组合门放行→实战 -66 与 1098 均值复核翻案同族
+                    if combo_feasible and _flip_cap > 0 \
+                            and combo_ttk > float(tsurv) * _flip_cap:
+                        combo_feasible = False
                     combo_alive = combo_ttk <= tsurv_feas + margin or combo_feasible
                     verdicts.append(
                         f"{combo_id}{credited_pool:.0f}池" + ("可赢" if combo_alive else "必败"))
@@ -4327,11 +4345,14 @@ class Policy:
                         "BOSS_RACE_COMBO_GATE：均值判死被组合全称门放行；" + verdict_text)
                     return False, ""
                 combo_tail = "；BOSS_RACE_COMBO_GATE 全称必败分账：" + verdict_text
+        _joint_clause = ("联合能量复核：任一攻防能量分配均无法同时满足击杀与存活"
+                         if not _flip_veto else
+                         "联合能量复核虽报可行但被翻盘比上限否决")
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
-                f"先验输出{dpt:.0f}/回合{_pot_tail}；联合能量复核：任一攻防能量分配"
-                f"均无法同时满足击杀与存活），必败局的伤害会流到打死为止"
-                + combo_tail)
+                f"先验输出{dpt:.0f}/回合{_pot_tail}；{_joint_clause}），"
+                f"必败局的伤害会流到打死为止"
+                + _flip_veto + combo_tail)
         _cal = self._native_boss_hp_calibration()
         if _cal:
             note += _cal
