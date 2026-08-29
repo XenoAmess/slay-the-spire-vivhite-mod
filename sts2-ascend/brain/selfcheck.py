@@ -421,6 +421,26 @@ def main() -> int:
     d_worst3 = pol_worst3.decide(worst_state, ctx)
     assert d_worst3.params.get("option_index") == 0 and "强行择损" in d_worst3.reason, \
         f"无安全替代时必须保留原池强行择损: {d_worst3.reason}"
+    # 全员致死回退按最坏情况剩余血量择损（第 1118 批复盘，KDCS29HKS5MX F6）：
+    # 10 血「休息」均值-2.6/最差-80 被均值账选中→链内强制战阵亡；同页
+    # 「坚持跋涉」均值-6.4/最差-8 本可 2 血生还。全员致死时贪心必须让位
+    # hp_min，挑死得最慢的选项。
+    know.stats["events"]["WORST_EV3"] = {
+        "REST": {"n": 2, "hp_delta_sum": -5.2, "gold_delta_sum": 0.0,
+                 "deaths": 0, "hp_min": -80.0},
+        "TRUDGE_ON": {"n": 2, "hp_delta_sum": -12.8, "gold_delta_sum": 0.0,
+                      "deaths": 0, "hp_min": -8.0}}
+    worst3_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                    "event": {"event_id": "WORST_EV3", "title": "茂密的植被", "is_finished": False,
+                              "options": [{"index": 0, "title": "休息", "text_key": "REST",
+                                           "is_locked": False, "is_proceed": False},
+                                          {"index": 1, "title": "坚持跋涉", "text_key": "TRUDGE_ON",
+                                           "is_locked": False, "is_proceed": False}]},
+                    "run": {"current_hp": 10, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
+    pol_worst4 = policy.Policy(know, random.Random(2))
+    d_worst4 = pol_worst4.decide(worst3_state, ctx)
+    assert d_worst4.params.get("option_index") == 1 and "强行择损" in d_worst4.reason, \
+        f"全员致死时必须按最坏情况剩余血量择损（最差-8 优于最差-80）: {d_worst4.reason}"
 
     # 3l) 能量预留：缺口未补且能量不足以「攻击后再补防」时，格挡先行
     #     （第 36 批 F17 Boss 战：先挥霍输出，下轮 20 意图手持防御却 0 能量）

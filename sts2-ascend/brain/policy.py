@@ -6482,6 +6482,7 @@ class Policy:
         lethal_keys = set()
         lethal_descs = []
         lethal_veto_active = False
+        forced_risk_pick = None
         for s in scored:
             _w = worst_by_key.get(s[2])
             if _w is not None and my_hp + _w <= _worst_margin:
@@ -6495,8 +6496,18 @@ class Policy:
                 veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
                              f"当前{my_hp}血吃下即死，改选安全项")
             else:
+                # 全员致死回退不能再按经验均值择损（第 1118 批复盘，
+                # KDCS29HKS5MX F6）：10 血「休息」均值-2.6/最差-80 被均值账
+                # 选中→链内强制战阵亡，同页「坚持跋涉」均值-6.4/最差-8 本可
+                # 2 血生还。均值账看不见重尾，强行择损必须挑「最坏情况剩余
+                # 血量」最高（死得最慢）的选项，平值再按均值/样本兜底。
+                forced_risk_pick = max(
+                    scored,
+                    key=lambda s: (my_hp + (worst_by_key.get(s[2]) or 0.0),
+                                   s[0], s[1], s[2]))
                 veto_note = (f"；最坏情况闸门：{'、'.join(lethal_descs)}，"
-                             f"当前{my_hp}血吃下即死，但无安全替代，强行择损")
+                             f"当前{my_hp}血吃下即死，但无安全替代，"
+                             f"按最坏情况剩余血量强行择损")
         for value, samples, key, option in all_event_scored:
             if key in lethal_keys:
                 status = "vetoed" if lethal_veto_active else "forced_risk"
@@ -6519,7 +6530,10 @@ class Policy:
         # 重尾闸门的选项间按“样本最少→原值最高→稳定键”轮转；每局和每候选都
         # 有硬上限。显著负收益或明确灾难文案不会因新颖度复活。
         preview = sorted(scored, key=lambda s: (-s[0], -s[1], s[2]))
-        if preview[0][0] > 0.0:
+        if forced_risk_pick is not None:
+            # 全员致死：最坏情况剩余血量优先，绕过均值贪心与全零平值分散
+            greedy_preview = forced_risk_pick
+        elif preview[0][0] > 0.0:
             greedy_preview = preview[0]
         else:
             tied = [s for s in preview if s[0] == preview[0][0]]
