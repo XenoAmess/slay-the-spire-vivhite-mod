@@ -1098,7 +1098,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
    `retry_resolution: <package-id> integrated|no_valid_change|still_pending`。再把 100 字以内、适合口播、
    约 10 字一停顿的短评写入 `sts2-ascend/knowledge/review_conclusion.txt`。
 6. 自己收口：再次回读 diff、解决冲突、确认自检，然后在当前隔离 clone 内自行 `git add` 和本地
-   `git commit`，返回 commit SHA。若缺少身份，用命令级 `-c user.name=sts2-review-luna`
+   `git commit`，返回 commit SHA。若缺少身份，用命令级 `-c user.name=sts2-review-agent`
    `-c user.email=local@sts2-ascend.invalid`；宿主只机械验收该最终内容并用 CAS 发布，不替你审计或改写。
 
 # 写入边界

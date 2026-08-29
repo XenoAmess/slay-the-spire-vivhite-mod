@@ -331,6 +331,8 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("静态原生游戏", prompt)
         self.assertIn("允许当前隔离 clone 内", prompt)
         self.assertIn("禁止 remote、push、reset", prompt)
+        self.assertIn("user.name=sts2-review-agent", prompt)
+        self.assertNotIn("sts2-review-luna", prompt)
         self.assertLess(prompt.index("3. 落地："), prompt.index("5. 最后才写报告："))
         self.assertIn("BLOCKED_TOOL_CAPABILITY", prompt)
         self.assertNotIn("安全基础设施不可自改", prompt)
