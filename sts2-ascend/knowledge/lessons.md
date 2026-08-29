@@ -7069,3 +7069,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/1043 胜，当前目标进阶 0
+
+## 第 1044 局复盘（2026-08-29 17:08）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：BREAKTHROUGH, ARMAMENTS, SHRUG_IT_OFF, MOLTEN_FIST, CINDER, BATTLE_TRANCE, CINDER, SHRUG_IT_OFF, RAGE, RUPTURE, UNMOVABLE, DARK_EMBRACE, TAUNT, CINDER, MOLTEN_FIST, SWORD_BOOMERANG, HEADBUTT, TRUE_GRIT
+- 本局遗物：红头骨, MEAL_TICKET
+- 战斗记录：F20 Monster战 掉血0; F21 Unknown战 掉血22; F23 Monster战 掉血20｜竞速审计：T6判死→实战6回合获胜; F25 Monster战 掉血14; F28 Monster战 掉血24｜竞速审计：T2判死→实战5回合获胜; F30 Monster战 掉血39｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，MANGLE(24分/106局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.57 → 0.59（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1044 胜，当前目标进阶 0
