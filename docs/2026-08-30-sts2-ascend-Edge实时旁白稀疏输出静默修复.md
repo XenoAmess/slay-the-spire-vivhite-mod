@@ -59,6 +59,20 @@ player 和 worker 线程都使用 non-daemon 语义，避免解释器在清理�
 - 该时段没有再出现 idle 期间提前消费未来 seq 的 90 秒假超时。
 - Windows CoreAudio 与直播姬 Desktop Audio 仍指向同一 endpoint，两者均未静音，直播姬状态为 `Streaming`。
 
+### 2026-08-30 06:20～06:37 Luna 实际复盘复验
+
+- 新 session 起初只有 shell/JSON 事件，没有可播报自然语言，因此没有生成序号；这属于无可播内容，
+  不是 speaker 静默故障。
+- Luna 开始输出正文后，seq 0～33 均完成 MP3→有效 WAV→FIFO 播放→删除；其中 seq 7～19
+  的密集批次和后续 seq 20～33 尾段都保持顺序推进，没有孤儿 MP3/WAV、乱序或合成失败。
+- 合成心跳明确记录成功 20、失败 0；播放队列排空后 artifact 目录为空、voice lock 释放，
+  speaker 按需正常退出。
+- 同一时段 Luna 完成原生补丁、自检和隔离提交，旁白内容与这些真实阶段同步；直播姬始终为
+  `Streaming`，Brain health 始终为 `ready`。
+
+这次复验直接回答“Edge-TTS 是否对 Luna 生效”：Luna 的实际分析、修改、自检与提交旁白已经
+通过 Edge 链路持续播放，稀疏输出和密集输出两种节奏都没有复现旧的未来序号误消费。
+
 ## 踩坑与避免方法
 
 - 不要用“上一条已播序号 + 1”表示“下一条已入队任务”。序号连续性不能替代 admission 事实。

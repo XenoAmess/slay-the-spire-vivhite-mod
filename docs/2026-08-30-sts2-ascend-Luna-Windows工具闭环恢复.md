@@ -192,9 +192,53 @@ commit `cc2a4a58`。这证明 DACL 与 0.149.1 no-follow 两类前置阻断已�
 精确恢复泄漏并加载 cwd 双绑定修复后，智能体已热重启到新 session `f268e9d1…`。
 本次维护期间本地直播姬持续保持 `Streaming`，直播中断为 0 秒，满足开播后最多中断两分钟的硬性规则。
 
-截至本文记录时，新 session 中 Luna 对该失败批次的重新审核、最终隔离仓 commit、宿主
-deny-only 验收、private-index/CAS 合入与远端确认仍为**待最终验证**。在完整回执出现前，
-不得宣称端到端重试已经完成，也不由维护 AI 接手代做 Luna 的策略改动。
+### 端到端重试最终回执
+
+新 session 中，Luna 没有沿用维护 AI 的策略判断，而是重新阅读第 808～812 局证据，先否决了
+与当前 HEAD 重复的 Boss 血池方案，再提出“奖励选牌后的有效爆发增量缺少生产观测”这一可证伪
+假设。它自行完成了以下闭环：
+
+1. 原生 Apply Patch 第一次因上下文不匹配失败后，重新读取精确上下文并成功修改隔离仓；
+2. 修改 `knowledge.py`、`policy.py`、`selfcheck.py` 及本批复盘记录，只增加
+   `CARD_BURST_PICK_AUDIT` 观测，不改变评分、阈值、探索或动作选择；
+3. 自行运行完整 `selfcheck.py`，结果为 `SELFCHECK OK`；
+4. 自行执行 diff 复核、`git diff --check` 和精确 `git add --`，没有把宿主挂载的
+   `.review_evidence/` 纳入提交；
+5. 在隔离仓建立本地 commit
+   `ddae78e1098b32ce0c0cb477b5dbc7818aacc26b`（6 files，92 additions，1 deletion）。
+
+provider 随后以 `exit=0`、`timeout=false`、`stalled=false`、`stopped=false`、
+`conclusion_ready=true` 自然结束。宿主完成 deny-only 验收与 private-index/CAS 后，发布为真实仓
+commit `79b8b720aa643f010aaabf809af3ab4e684e569b`，回执 `pushed=True`；远端
+`master` 后续提交仍以该 commit 为祖先。原重试目标
+`20260827-215023-1787838623754163300-cd0aa644` 被 Luna 自己重新审核并解析为
+`integrated`，待处理列表归零。
+
+这次结果证明故障修复后的 Luna 已能独立完成“证据分析—证伪—修改—复核—自检—隔离提交”，
+宿主也能完成验收、CAS 与推送。维护 AI 只修复和监控宿主机制，没有代写或代合并本批策略成果。
+
+## 失败证据递归膨胀及宿主修复
+
+一次为遵守直播维护死线而停止复盘时，生命周期失败包正确保留了隔离仓内完整现场，其中也包含
+宿主只读挂载的 `sts2-ascend/.review_evidence/failed_review/`。旧的重试物化器随后用私有 index
+执行全量 `git add --all --force -- .`，把这份宿主证据再次当作模型改动写入候选；下一轮挂载又
+复制该候选，造成路径数和字节数递归增长，现场从约 51 MB 放大到约 155 MB。
+
+修复只作用于宿主提供的精确证据根，不改变通用静态项目路径分类，也不限制 Luna 修改任何安全的
+源码、配置、脚本、测试或文档：
+
+- 私有 index 在首次哈希前用 Git exclude pathspec 排除精确宿主证据根；
+- raw staged index、HEAD/local ref、stash 与 stash-untracked 的路径都在进入候选分类前执行同一
+  精确过滤；
+- 旧 schema 3 候选会重物化一次，保留旧候选摘要和历史，原失败包及 raw sandbox 始终不删除；
+- captured-files 挂载改为 top-down 目录遍历，在精确证据根进入下降队列前剪枝，不枚举、排序或
+  复制其 payload；只读取该根 `index.json`，记录 bytes、SHA-256、总字节、文件/路径数、
+  package lineage 和原始保全位置；
+- 该证据仍可被 Luna 阅读和引用，但不会再被当成 Luna 自己的候选成果递归回灌。
+
+定向回归覆盖 raw staged index、local ref、stash、stash-untracked、captured 根剪枝、index
+摘要、legacy certified-empty 与 no-raw 分支；相关最小集合 80/80 通过。更广的复盘、持久化、
+salvage、closure、runner 与 autogit 回归结果记录在本次最终运行回执中。
 
 ## 经验与注意事项
 
