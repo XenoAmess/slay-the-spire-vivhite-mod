@@ -6904,3 +6904,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
 - 生涯战绩：0/1028 胜，当前目标进阶 0
+
+## 第 1029 局复盘（2026-08-29 15:01）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：ANGER, RUPTURE, MOLTEN_FIST, MOLTEN_FIST, TAUNT, BREAKTHROUGH, MAYHEM, TAUNT, RAMPAGE, AGGRESSION, SPITE, CINDER, PERFECTED_STRIKE, BREAKTHROUGH, MANGLE, CINDER, ROLLING_BOULDER, SHRUG_IT_OFF, HEMOKINESIS, FLAME_BARRIER
+- 本局遗物：FROZEN_EGG, 打击木偶, NUNCHAKU
+- 战斗记录：F19 Monster战 掉血31; F20 Monster战 掉血26; F21 Monster战 掉血16; F28 Monster战 掉血24; F31 Monster战 掉血37｜竞速审计：T3判死→实战5回合获胜; F33 Boss战 掉血75｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PRIMAL_FORCE(26分/4局)，OFFERING(26分/28局)，FIEND_FIRE(25分/41局)，BRAND(25分/3局)，PACTS_END(24分/107局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（5回合掉血75，每回合15≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff 0.71 距锚点仅余 0.01(<步长0.03)——部分胜利释放停止，视为已达健康锚点
+- 生涯战绩：0/1029 胜，当前目标进阶 0
