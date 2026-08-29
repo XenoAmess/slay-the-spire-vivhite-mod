@@ -26,15 +26,16 @@ codex -a never exec ... --sandbox workspace-write
 | --- | --- | --- | --- |
 | `-a never --sandbox workspace-write` | `blocked by policy` | 未形成有效写入 | 不可用于无人值守复盘 |
 | `-a on-request --sandbox workspace-write` | `blocked by policy` | 未继续 | 非交互进程没有人工审批者 |
-| `--approve-for-me --sandbox workspace-write` | 成功 | 成功，且 shell 回读为新值 | 当前可用生产路由 |
+| `--approve-for-me`（自身启用 `workspace-write`） | 成功 | 成功，且 shell 回读为新值 | 当前可用生产路由 |
 
-因此恢复 Luna 的 `approve_for_me=true`，并继续显式使用 `workspace-write`。这次不是猜测回退；
+因此恢复 Luna 的 `approve_for_me=true`；该参数自身启用 `workspace-write`，不得再同时传显式
+`--sandbox`。这次不是猜测回退；
 读、写和回读能力均已由真实 Luna 探针验证。
 
 ## 机制修复
 
 1. `review_runners.py`
-   - Luna 使用 `--approve-for-me --sandbox workspace-write`，不再注入 `-a never`。
+   - Luna 使用 `--approve-for-me`（其自身提供 `workspace-write`），不再注入 `-a never`，也不再追加与它互斥的显式 `--sandbox`。
    - Codex 翻译器单独统计 `blocked_tool_count`，保留有界 `tool_access_error`，并把工具路由层
      的 `blocked by policy` / 工具语境 `Access denied` 计入错误。
 2. `llm_review.py`
@@ -90,3 +91,45 @@ push 因本机 GitHub 代理短暂断连失败，约六秒后自动补推成功�
 回执的精确状态。迁移回归测试必须把 `REJECTION_LEDGER`、`REPO_DIR` 和 autogit 全部隔离到临时
 现场。此次曾因 `ReviewQueueSafetyTests` 只隔离 queue/salvage 而漏掉真实 ledger，测试意外生成提交
 `ec692ae8`；现已加入临时账本与 autogit fail-fast，防止测试再次提交或推送真实仓。
+
+## 03:02 生产回归：正确 probe 被错误转录
+
+新 Brain 于 03:02 首次真正选中 Luna 后，Codex 0.149.1 在模型启动前直接以 `exit=2` 拒绝命令：
+
+```text
+error: the argument '--approve-for-me' cannot be used with '--sandbox <SANDBOX_MODE>'
+```
+
+现场的 event、tool、command、file change 均为 0，`model_work_started=false`。这不是 Luna 不执行，
+而是宿主同时传入了互斥参数。回查原始能力 probe 后确认：成功的只读和写入 probe 实际都只传了
+`--approve-for-me`；该参数自身启用 `workspace-write`。随后维护文档把它错误转录成
+`--approve-for-me --sandbox workspace-write`，提交 `b1e2656b` 又依据错误文字，把此前正确的互斥
+分支改成了两者同传。
+
+第二次修正分成两个独立提交：
+
+- `3d59370c`：`approve_for_me=true` 时只传 `--approve-for-me`，并校验配置中的语义沙箱仍为
+  `workspace-write`；非自动审批路径才显式传 `--sandbox`。生产 runner 与模型评估器现在遵循同一
+  参数契约，回归必须断言命令中不存在第二个 `--sandbox`。
+- `07750744`：精确识别 Codex 的四行本地参数冲突、`rc=2`、零模型/工具/文件活动组合，记为
+  `runner_cli_preflight`。仍按进程失败规则保全完整隔离现场并更新拒合审计，但状态为 `deferred`：
+  不冷却 Luna、不增加 `retry_count`、不解除原模型亲和性，只延迟 60 秒。`LIVE-END` 同时发布
+  `deferred_kind`、`failure_code` 和 `provider_work_started=false`；普通 `exit=0` 在宿主 CAS 前不会
+  被默认的 `failed` 状态误报。
+
+精确测试直接使用生产失败包的四行原始输出；普通 `rc=2`、provider 已开始工作、有路径或工具活动、
+非 Codex runner、或任何不完全匹配的输出仍走原失败链。相关组合回归 104 项通过，runner/评估命令
+回归 49 项通过，`selfcheck` 为 `SELFCHECK OK`。受旧 bug 影响而变成 non-sticky 的 26 条任务无需
+手工修改在线队列：冷却清空后，现有 fresh-plan 事务会在 provider 启动前按当前唯一首选身份重新绑定
+Luna，并先耐久写回 `retry_same_model=true`；贯通测试覆盖了完整 26 条 lineage。
+
+## Kimi 当前闭环复核
+
+第 1098～1110 局这轮 Kimi 并未提交失败。它在隔离仓完成 `SELFCHECK OK` 和本地提交
+`b79ca28a`，随后 Codex/OpenCode CLI 用约六分钟生成最终答复；宿主在 stdout EOF 后才执行私有
+index、deny-only 分类、自检与 CAS，最终提交并推送 `dce57b1d`。六分钟低于现有 15 分钟告警、
+30 分钟 stall 自愈阈值，因此属于大上下文收尾延迟，不是 Git 卡住。03:02 的自然热重启把该成果和
+此前 Luna 修复一起加载：Brain 不就绪约 4.98 秒，8080 health 与 Bilibili `Streaming` 全程保持，
+直播中断为 0 秒。
+
+本轮仍不分析或修复 GLM；它因余额不足产生的失败按用户要求保留原行为。

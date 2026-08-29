@@ -4,7 +4,8 @@
 
 ## 现场与根因
 
-Luna 的 Codex 路由已改为 `--approve-for-me --sandbox workspace-write`，但在线队列中仍有
+Luna 的 Codex 路由应使用 `--approve-for-me`（该参数自身启用 `workspace-write`，不得同时传显式
+`--sandbox`），但在线队列中仍有
 98 个早期失败后形成的 sticky 重试项。这些任务把 `approve_for_me=false` 与模型身份一起固化；
 原实现遇到 sticky 批次会直接从队列恢复完整 `ReviewPlan`，不会采用当前配置。因此仅修改
 `brain/config.json` 仍不足以恢复旧任务，它们下一次启动时不会携带 `--approve-for-me`，可能重复
