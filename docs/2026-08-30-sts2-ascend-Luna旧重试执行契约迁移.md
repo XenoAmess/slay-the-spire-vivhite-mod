@@ -47,3 +47,43 @@ Luna 的 Codex 路由已改为 `--approve-for-me --sandbox workspace-write`，�
 交叉监控 Kimi 时还发现 generic prompt 把隔离仓缺省提交身份硬编码为 `sts2-review-luna`，因此 Kimi
 也会按 Luna 名义创建本地提交。宿主最终 CAS 提交不继承该作者，故它不是提交失败原因，但会继续制造
 归因噪声；已改为中性 `sts2-review-agent`，并用 prompt 回归断言禁止重新出现模型专属硬编码。
+
+## 旧失败包证据预检的第二处阻断
+
+Brain 热加载执行许可修复后，98 个旧 Luna 项都已自动刷新为 `approve_for_me=true`，但 runs
+1014–1085 的首个重试仍没有启动 Codex。根因是目标失败包
+`20260829-225316-1788015196791448300-ab40e708` 只保存了旧 schema 1 现场：`wip.patch`、
+`report.md` 和 `files/` 全空，`file_states.json=[]`，却没有后来新增的 schema 3
+`retry_candidate.patch` 与 inventory。宿主在 provider 启动前正确拒绝了不完整证据，却又把内部
+`rc=-1` 继续当作 Luna provider 失败，错误地执行了五分钟冷却、解除 sticky affinity，并增加
+`retry_count`。调度器随后选中 Kimi，因此界面看起来像“Luna 又失败、Kimi 接手”，实际上 Luna
+进程从未创建。
+
+修复分成两个最小闭环：
+
+- 仅当旧包的完整快照、空 patch 大小与 SHA-256、全部空路径分类、空 `file_states.json`、空
+  `files/` 目录和非 deferred 状态同时一致时，认证为 `legacy_certified_empty`，生成真实的 0 字节
+  schema 3 candidate 和 inventory。独立反例复核还要求规范 `pre_head`、正常 `report.md`、
+  `snapshot_included/raw_sandbox_included=false`，并拒绝任何遗留 `captured_snapshot/raw_sandbox`；缺字段、
+  非空旁证或任一标志不一致都保持拒绝。不会把任意 `wip.patch` 当作候选。
+- 认证结果只表示“旧模型没有代码候选”。原始 prompt 与 raw clone 均明确记录为
+  `unavailable_not_fabricated`，下一轮由当前队列与 corpus 生成新任务，绝不伪造旧现场。
+- 失败包证据预检未通过且 provider 尚未启动时，外层状态改为
+  `outcome=deferred` / `deferred_kind=replay_evidence_preflight`，立即返回；不保存新失败包、不冷却
+  backend、不解绑 Luna、不增加 retry 次数。真实 provider 已启动后的非零退出仍按模型失败处理。
+
+## 第二轮验证
+
+- 精准新增回归覆盖 certified-empty 成功迁移、七类 near-miss 拒绝、迁移后 mount/verify、预检延期、
+  已启动 provider 失败负控，以及 deferred 后 Luna 计划、retry count 和 attempt lineage 不变。
+- 组合相关测试 102 项曾在正常负载下全部通过；维护会话与在线 Kimi 并行高负载复跑时，唯一一次失败
+  是既有 wall-clock 测试耗时 `2.049s > 2.0s`，该单测立即复跑为 `1.133s` 并通过，新增五项精准
+  回归为 5/5。不得为这次无关的负载抖动放宽超时门槛。
+- 真实失败包的副本已完成 `legacy_certified_empty -> schema 3`。首次 mount smoke test 虽把模块的
+  临时物化路径指向副本，却漏改 `_salvage_package_path()` 实际使用的 `SALVAGE_ROOT`；mount 阶段因而
+  又按包名解析到了生产失败包，并在 02:25 将它物化为同样的 0 字节、0 路径 schema 3 证据。原始
+  `wip.patch`、报告、文件快照和模型输出均未覆盖或删除，新增 candidate/inventory 与 manifest 迁移
+  字段已保留；该包逐项满足补强后的 certified-empty 条件。后续临时验收必须同时隔离
+  `SALVAGE_ROOT`，不能只覆盖一个无效的别名。
+- 最终仍以热加载后 Luna 自己完成 provider 启动、工具调用、代码落地、自检、本地提交、宿主 CAS
+  与推送作为验收终点。
