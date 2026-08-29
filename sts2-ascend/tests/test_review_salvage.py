@@ -552,7 +552,7 @@ class ReviewSalvageTests(unittest.TestCase):
                           manifest["inspection_hint"])
             self.assertFalse(manifest["auto_apply"])
 
-    def test_historical_kimi_lifecycle_row_is_migrated_without_failure_package(
+    def test_old_model_spliced_kimi_lifecycle_row_is_neutralized_once(
             self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-ledger-label-migration-") as root:
             repo = Path(root) / "repo"
@@ -562,11 +562,13 @@ class ReviewSalvageTests(unittest.TestCase):
             ledger.write_text(
                 llm_review._REJECTION_LEDGER_HEADER.replace(
                     "# 复盘拒合与维护中断批次清单",
-                    "# GLM 复盘拒合批次清单")
+                    "# GLM 复盘拒合批次清单").replace(
+                        llm_review._REJECTION_LEDGER_SCHEMA_MARKER + "\n", "")
                 + f"<!-- rejection:{package} -->\n"
                 + "| 2026-08-29 23:14:22 | 第 1081~1085 局 | `65abad11` | "
                   "lifecycle_stop | kimi-for-coding/k3 | "
-                  "GLM 已补合并闭环 `ac26841f` | （闭环清理） | "
+                  "维护中断/取消；kimi-for-coding/k3 已补合并闭环 `ac26841f` | "
+                  "（闭环清理） | "
                   "GLM 重审结论与提交 ac26841f 已推送 |\n",
                 encoding="utf-8")
             commits = []
@@ -589,11 +591,22 @@ class ReviewSalvageTests(unittest.TestCase):
                   mock.patch.dict(sys.modules, {"autogit": fake_autogit})):
                 self.assertTrue(llm_review._migrate_rejection_ledger_labels(
                     log=lambda _message: None))
+                future_status = (
+                    "luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `deadbeef`")
+                with ledger.open("a", encoding="utf-8") as handle:
+                    handle.write(llm_review._rejection_ledger_block(
+                        "future-precise", {
+                            "time": "2026-08-30 01:00:00", "batch_runs": [1090],
+                            "pre_head": "d" * 40, "failure_kind": "process_exit",
+                            "backend_key": "kimi-k3", "runner": "opencode",
+                            "model": "kimi-for-coding/k3",
+                        }, status=future_status, package_cell="closed", reason="done"))
                 self.assertTrue(llm_review._migrate_rejection_ledger_labels(
                     log=lambda _message: None))
 
             text = ledger.read_text(encoding="utf-8")
             self.assertTrue(text.startswith("# 复盘拒合与维护中断批次清单\n"))
+            self.assertEqual(text.count(llm_review._REJECTION_LEDGER_SCHEMA_MARKER), 1)
             self.assertIn("维护中断/取消（lifecycle_stop）", text)
             self.assertIn(
                 "维护中断/取消；复盘已补合并闭环 `ac26841f`",
@@ -602,6 +615,7 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertIn("复盘重审结论与提交 ac26841f 已推送", text)
             self.assertIn("非模型提交失败", text)
             self.assertNotIn("GLM 已补合", text)
+            self.assertIn(future_status, text)
             self.assertEqual(len(commits), 1)
             self.assertEqual(
                 commits[0][1]["paths"],
@@ -632,8 +646,11 @@ class ReviewSalvageTests(unittest.TestCase):
                     log=lambda _message: None)
 
             self.assertFalse(migrated)
-            self.assertTrue(ledger.read_text(encoding="utf-8").startswith(
+            migrated_text = ledger.read_text(encoding="utf-8")
+            self.assertTrue(migrated_text.startswith(
                 "# 复盘拒合与维护中断批次清单\n"))
+            self.assertIn(llm_review._REJECTION_LEDGER_SCHEMA_MARKER,
+                          migrated_text)
 
     def test_lifecycle_stop_outranks_exit_timeout_and_stall(self) -> None:
         result = llm_review.SandboxReviewResult(

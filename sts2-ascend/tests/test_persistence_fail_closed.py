@@ -156,19 +156,49 @@ class ReviewQueueSafetyTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="sts2-review-queue-")
         self.queue = Path(self.temp.name) / "review_queue.json"
+        self.repo_dir = Path(self.temp.name) / "repo"
+        self.rejection_ledger = (
+            self.repo_dir / "sts2-ascend" / "REVIEW_REJECTIONS.md")
+        self.rejection_ledger.parent.mkdir(parents=True)
+        self.rejection_ledger.write_text(
+            llm_review._REJECTION_LEDGER_HEADER, encoding="utf-8")
         self.old_queue = llm_review.QUEUE_FILE
         self.old_salvage_root = llm_review.SALVAGE_ROOT
+        self.old_repo_dir = llm_review.REPO_DIR
+        self.old_rejection_ledger = llm_review.REJECTION_LEDGER
         llm_review.QUEUE_FILE = self.queue
         llm_review.SALVAGE_ROOT = Path(self.temp.name) / "review_salvage"
+        llm_review.REPO_DIR = self.repo_dir
+        llm_review.REJECTION_LEDGER = self.rejection_ledger
         llm_review.SALVAGE_ROOT.mkdir()
+        self.ledger_head = mock.patch.object(
+            llm_review, "_ledger_text_at_head",
+            return_value=llm_review._REJECTION_LEDGER_HEADER)
+        self.ledger_head.start()
+
+        def reject_real_autogit(*_args, **_kwargs):
+            raise AssertionError(
+                "ReviewQueueSafetyTests must mock autogit mutations explicitly")
+
+        self.autogit_commit = mock.patch.object(
+            autogit, "commit_progress_result", side_effect=reject_real_autogit)
+        self.autogit_push = mock.patch.object(
+            autogit, "push_pending", side_effect=reject_real_autogit)
+        self.autogit_commit.start()
+        self.autogit_push.start()
         self.orphan_recovery = mock.patch.object(
             llm_review, "_recover_unpointed_review_sandboxes")
         self.orphan_recovery.start()
 
     def tearDown(self) -> None:
         self.orphan_recovery.stop()
+        self.autogit_push.stop()
+        self.autogit_commit.stop()
+        self.ledger_head.stop()
         llm_review.QUEUE_FILE = self.old_queue
         llm_review.SALVAGE_ROOT = self.old_salvage_root
+        llm_review.REPO_DIR = self.old_repo_dir
+        llm_review.REJECTION_LEDGER = self.old_rejection_ledger
         self.temp.cleanup()
 
     @staticmethod

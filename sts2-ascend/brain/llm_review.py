@@ -4281,7 +4281,11 @@ def _current_head_for_salvage() -> str:
         return ""
 
 
+_REJECTION_LEDGER_SCHEMA_MARKER = "<!-- review-rejection-ledger-schema:2 -->"
+
+
 _REJECTION_LEDGER_HEADER = """# 复盘拒合与维护中断批次清单
+<!-- review-rejection-ledger-schema:2 -->
 
 这是一份由复盘宿主维护、受 Git 跟踪的拒合账本。失败包仍完整保存在
 `knowledge/code_backups/review_salvage/`；本清单只记录索引和处理状态，不代替原始证据。
@@ -4375,6 +4379,13 @@ def _migrate_rejection_ledger_labels(log=print) -> bool:
         newline = "\r\n" if lines[0].endswith("\r\n") else "\n" if lines[0].endswith("\n") else ""
         lines[0] = "# 复盘拒合与维护中断批次清单" + newline
         header_changed = True
+    schema_missing = _REJECTION_LEDGER_SCHEMA_MARKER not in current
+    schema_changed = False
+    if schema_missing:
+        newline = ("\r\n" if lines and lines[0].endswith("\r\n")
+                   else "\n")
+        lines.insert(1 if lines else 0, _REJECTION_LEDGER_SCHEMA_MARKER + newline)
+        schema_changed = True
     changed_packages: list[str] = []
     for index, line in enumerate(lines[:-1]):
         marker = line.strip()
@@ -4385,23 +4396,33 @@ def _migrate_rejection_ledger_labels(log=print) -> bool:
         cells = row.rstrip("\r\n").split(" | ")
         if len(cells) <= 7:
             continue
+        if not schema_missing:
+            continue
         kind = cells[3].strip()
         model = cells[4].strip() or "未记录复盘后端"
         status = cells[5].strip()
         lifecycle_stop = kind in {"lifecycle_stop", "维护中断/取消（lifecycle_stop）"}
+        lifecycle_prefix = "维护中断/取消；"
+        status_body = (status[len(lifecycle_prefix):]
+                       if status.startswith(lifecycle_prefix) else status)
+        neutral_prefix = lifecycle_prefix if (
+            lifecycle_stop or status.startswith(lifecycle_prefix)) else ""
         next_status = status
         if status == "待 GLM 重审/补合":
             next_status = (f"维护中断/取消（非 {model} 提交失败；待原后端恢复）"
                            if lifecycle_stop else f"待 {model} 重审/补合")
-        elif status.startswith("GLM 已补合并闭环 "):
-            next_status = f"复盘已补合并闭环 {status[len('GLM 已补合并闭环 '):]}"
-            if lifecycle_stop:
-                next_status = f"维护中断/取消；{next_status}"
-        elif status.startswith("GLM 复审确认无有效成果并闭环 "):
-            next_status = ("复盘已确认无有效成果并闭环 "
-                           f"{status[len('GLM 复审确认无有效成果并闭环 '):]}")
-            if lifecycle_stop:
-                next_status = f"维护中断/取消；{next_status}"
+        elif status_body.startswith("GLM 已补合并闭环 "):
+            tail = status_body[len("GLM 已补合并闭环 "):]
+            next_status = f"{neutral_prefix}复盘已补合并闭环 {tail}"
+        elif status_body.startswith("GLM 复审确认无有效成果并闭环 "):
+            tail = status_body[len("GLM 复审确认无有效成果并闭环 "):]
+            next_status = f"{neutral_prefix}复盘已确认无有效成果并闭环 {tail}"
+        elif status_body.startswith(f"{model} 已补合并闭环 "):
+            tail = status_body[len(f"{model} 已补合并闭环 "):]
+            next_status = f"{neutral_prefix}复盘已补合并闭环 {tail}"
+        elif status_body.startswith(f"{model} 复审确认无有效成果并闭环 "):
+            tail = status_body[len(f"{model} 复审确认无有效成果并闭环 "):]
+            next_status = f"{neutral_prefix}复盘已确认无有效成果并闭环 {tail}"
         row_changed = False
         if lifecycle_stop and kind != "维护中断/取消（lifecycle_stop）":
             cells[3] = "维护中断/取消（lifecycle_stop）"
@@ -4422,12 +4443,10 @@ def _migrate_rejection_ledger_labels(log=print) -> bool:
         lines[index + 1] = " | ".join(cells) + newline
         changed_packages.append(marker[len("<!-- rejection:"):-len(" -->")])
     head_before = _ledger_text_at_head()
-    head_needs_migration = bool(head_before and any(token in head_before for token in (
-        "# GLM 复盘拒合批次清单", "待 GLM 重审/补合",
-        "GLM 已补合并闭环", "GLM 复审确认无有效成果并闭环",
-        "GLM 重审结论", "| lifecycle_stop |",
-    )))
-    if not changed_packages and not header_changed and not head_needs_migration:
+    head_needs_migration = bool(
+        head_before and _REJECTION_LEDGER_SCHEMA_MARKER not in head_before)
+    if (not changed_packages and not header_changed and not schema_changed
+            and not head_needs_migration):
         return True
     if _review_stop_requested() or not _flush_pending_rejection_ledger(log=log):
         return False
