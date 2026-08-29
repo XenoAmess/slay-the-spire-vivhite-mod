@@ -175,3 +175,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-30 05:29:32 | 第 1014~1085 局 | `9be95113` | commit_conflict | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-052932-1788038972712769500-9be95113` | patch 与当前工作树冲突：error: patch failed: sts2-ascend/brain/policy.py:2561 error: sts2-ascend/brain/policy.py: patch does not apply |
 <!-- rejection:20260830-053127-1788039087411907400-aa52d855 -->
 | 2026-08-30 05:31:27 | 第 988~1013 局 | `aa52d855` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-053127-1788039087411907400-aa52d855` | 复盘进程未成功完成 |
+<!-- rejection:20260830-053449-1788039289381617800-3c397fe4 -->
+| 2026-08-30 05:34:49 | 第 808~812 局 | `3c397fe4` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260830-053449-1788039289381617800-3c397fe4` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
