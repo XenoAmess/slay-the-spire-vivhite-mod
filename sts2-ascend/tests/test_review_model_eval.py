@@ -76,6 +76,9 @@ class BackendKeyTests(unittest.TestCase):
             ['codex.CMD', '-a', 'never', 'exec', '--model', 'gpt-5.6-luna'],
         )
         self.assertIn('model_reasoning_effort=' + json.dumps('max'), command)
+        windows_sandbox = 'windows.sandbox="unelevated"'
+        self.assertEqual(command.count(windows_sandbox), 1)
+        self.assertEqual(command[command.index(windows_sandbox) - 1], '-c')
         self.assertIn(
             ('permissions.luna_commit={extends=":workspace",'
              'filesystem={":workspace_roots"={".git"="write"}},'
@@ -109,6 +112,7 @@ class BackendKeyTests(unittest.TestCase):
                 spec, 'codex.CMD', Path(root) / 'repo', prompt, 'eval-case')
         self.assertNotIn('--approve-for-me', command)
         self.assertNotIn('--sandbox', command)
+        self.assertEqual(command.count('windows.sandbox="unelevated"'), 1)
         self.assertIn('default_permissions="luna_commit"', command)
 
     def test_codex_rejects_a_non_workspace_sandbox(self) -> None:

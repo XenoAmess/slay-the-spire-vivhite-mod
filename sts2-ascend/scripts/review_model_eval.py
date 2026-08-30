@@ -623,6 +623,7 @@ def build_provider_command(
                 'codex evaluation requires workspace-write configuration semantics; '
                 f'configured sandbox={spec.sandbox!r}')
         command += [
+            '-c', 'windows.sandbox="unelevated"',
             '-c', (
                 'permissions.luna_commit={extends=":workspace",'
                 'filesystem={":workspace_roots"={".git"="write"}},'

@@ -305,12 +305,13 @@ clone。真正的缺口是命令仍使用 `--approve-for-me`；当原生工具�
 - `--approve-for-me` 不能作为无人值守复盘的安全边界；
 - provider 必须忽略用户级信任与权限配置，并由宿主为本次进程显式给出最小写入能力。
 
-### 终态命令与 `luna_commit` 权限 profile
+### 目标终态命令与 `luna_commit` 权限 profile
 
-Luna provider 的终态命令契约为：
+补齐 Windows platform sandbox 后，Luna provider 的目标终态命令契约为：
 
 ```text
 codex -a never exec --model <model> \
+  -c windows.sandbox="unelevated" \
   -c permissions.luna_commit={extends=":workspace",filesystem={":workspace_roots"={".git"="write"}},network={enabled=false}} \
   -c default_permissions="luna_commit" \
   --json --ephemeral --ignore-user-config --color never \
@@ -329,7 +330,12 @@ Codex 与模型服务的控制面通信）；内联
 要求。当前 Windows sandbox 后端上，内联 `luna_commit` 是既保留 workspace 写边界、又仅补回
 clone-local Git 元数据写入的已验证方案；它没有收紧 Luna 对 clone 内安全静态项目文件的修改范围。
 
-### 零模型硬边界 canary
+`windows.sandbox="unelevated"` 不改变 `luna_commit` 的文件系统许可，也不把 clone 外路径加入
+workspace roots；它只显式要求 Windows platform sandbox 使用 Codex 的 `RestrictedToken` 路径，
+避免原生 Apply Patch 在安全评估时仍看到 `Disabled`。文件可写范围仍由 `:workspace` 加 clone-local
+`.git` 这一 managed profile 决定。
+
+### 零模型 shell 边界 canary（非 Apply Patch 证明）
 
 固定 SHA 的 Codex CLI 0.148 在不调用模型、不访问网络的临时 clone 上完成了权限 canary：
 
@@ -339,8 +345,12 @@ clone-local Git 元数据写入的已验证方案；它没有收紧 Luna 对 clo
 - 对 clone 外 sentinel 的直接写入被拒绝，文件字节和 mtime 均未变化；
 - 把 clone 内文件移动到 clone 外也被拒绝，源文件和外部目标的字节、mtime 均保持不变。
 
-该 canary 同时验证了两条必要能力：Luna 在 clone 内仍能修改并自行建立 commit，绝对路径写入和
-跨边界移动则由 OS 权限 profile 阻断。它不发送 prompt，不启动 provider 模型，也不消耗模型额度。
+该 canary 验证了 shell 命令执行路径上的两条必要能力：Luna 在 clone 内仍能修改并自行建立 commit，
+绝对路径写入和跨边界移动则由 OS 权限 profile 阻断。它不发送 prompt，不启动 provider 模型，也不
+消耗模型额度；但它不能证明原生 Apply Patch 已通过 `assess_patch_safety`。Codex 0.148 的命令执行器
+会在执行 shell canary 时自动把 Windows 隔离提升为 `RestrictedToken`，而原生 Apply Patch 的安全评估
+发生在该执行器之前；若配置层的 Windows platform sandbox 仍为 `Disabled`，shell canary 会漏掉这一
+差异。因此上述结果不能冒充原生 Apply Patch canary，更不能冒充生产闭环。
 
 ### reported-path 熔断的准确职责
 
@@ -373,14 +383,15 @@ clone-local Git 元数据写入的已验证方案；它没有收紧 Luna 对 clo
 硬边界提交并重启后，生产 Luna attempt `10760-1788047339964675900` 使用了终态命令契约：
 provider 的命令行与 PEB cwd 都精确绑定隔离 clone，真实仓 `policy.py`、`selfcheck.py`、
 `knowledge.py` 在启动前、运行中和退出后的 clean-filter、原始 SHA256、mtime 与长度均未变化。
-这证明 OS 写边界在生产环境真实生效；但该 attempt 没有完成业务闭环。
+这证明该 attempt 没有再次污染真实仓；但它不能证明 clone 内的正确原生 Apply Patch 已获准执行，
+也不能替代一次成功 `file_change` 回执。该 attempt 没有完成业务闭环。
 
 Luna 已读取目标失败包、当前代码和证据，也形成了可证伪假设，但连续把原生 Apply Patch 的目标
 构造成盘符绝对路径、重复 clone 根、`brain/knowledge.py` 缩写或其他错误锚点。结果是十余次
 `writing outside of the project; rejected by user approval settings`，以及 `clone\clone\...`、
 `clone\brain\...` 等不存在路径。相对 shell 读取 `sts2-ascend/...` 始终成功，`file_change_count=0`，
-说明新证据不是权限 profile 阻止 Python/Git/普通 clone 内写入，而是宿主提示只说了“禁止绝对路径”，
-没有教清原生 Apply Patch 的仓库根相对语法，也没有把 outside-project 与 generic 写入失败分开反馈。
+当时可以确认 shell、Python 与 Git 的普通 clone 内操作没有被文件 profile 阻断，也能确认 Luna 的路径
+构造确有错误；但后续固定版本源码复核推翻了“只要路径改对，原生 Apply Patch 就一定能落地”的推断。
 
 为避免继续消耗额度，使用 `Stop-Agent.ps1 -KeepGame` 协作停止该 attempt。终态包
 `20260830-080907-1788048547255004400-feaa36b2` 准确定性为 `lifecycle_stop`，不是 Luna 提交失败；
@@ -388,7 +399,8 @@ Luna 已读取目标失败包、当前代码和证据，也形成了可证伪假
 宿主 CAS 或策略成果。拒合审计本地 commit 为 `9c15ff1d`，由下一次正常启动补推。停止期间本地直播姬
 始终保持 `Streaming`，游戏保留，没有发生直播中断。
 
-宿主随后只修教学机制，不代写 Luna 的策略成果：长任务书与实际启动短提示现在复用同一个
+宿主随后只修教学机制，不代写 Luna 的策略成果；对应提交为
+`4f3986bbcb86ccb33ae27ec6c0f0dbaca1ed827a`。长任务书与实际启动短提示现在复用同一个
 Apply Patch 路径契约。契约明确每个目标必须从 `git rev-parse --show-toplevel` 所指的仓库根起算；
 当前 cwd 与 `-C` 已在该根，不必用被命令策略拒绝的绝对路径探测。目标只使用以 `sts2-ascend/` 开头
 的正斜杠相对路径，例如 `sts2-ascend/brain/knowledge.py`；禁止盘符、UNC、
@@ -398,6 +410,50 @@ Apply Patch 路径契约。契约明确每个目标必须从 `git rev-parse --sh
 读证据、改代码、自检和提交的职责，同时把宿主已观察到的工具反馈教给下一轮。
 
 静态验收包括 `test_review_closure.py` 22/22 通过，以及完整 `brain/selfcheck.py` 输出
-`SELFCHECK OK`。下一道生产门禁仍是重启统一栈，让 Luna 对保留的失败 lineage 自己重新审核并产生
-成功 Apply Patch、selfcheck、clone commit、宿主 CAS 和远端 push；在这些回执出现前，本章仍不把
-该失败批次记为已闭环。
+`SELFCHECK OK`。这些结果证明路径教学进入了长、短两份提示，但提交 `4f3986bb` 只是必要修复，
+并不足以证明原生 Apply Patch 能执行。下一道生产门禁仍包括成功 Apply Patch、selfcheck、clone
+commit、宿主 CAS 和远端 push；在这些回执出现前，本章仍不把该失败批次记为已闭环。
+
+### 路径教学必要但不充分：`assess_patch_safety` 还依赖 platform sandbox
+
+Codex CLI 0.148 的固定版本源码与生产现场对照表明，managed permissions profile 下的原生 Apply Patch 会先经过
+`assess_patch_safety`。该检查不仅读取 `luna_commit` 对 workspace 文件的许可，还要求 Windows
+platform sandbox 不是 `Disabled`。如果命令只给出 `default_permissions="luna_commit"` 而没有显式
+选择 Windows platform sandbox，那么即使补丁使用完全正确的
+`sts2-ascend/brain/knowledge.py` 仓库相对路径、目标也确实位于当前 workspace 内，`-a never` 仍会
+拒绝该补丁，并返回误导性的：
+
+```text
+writing outside of the project; rejected by user approval settings
+```
+
+因此第一轮 attempt 中确实存在的绝对路径、重复 clone 根和 `brain/...` 缩写错误，并不是全部根因。
+路径教学提交 `4f3986bb` 能避免 Luna 继续构造错误目标，却无法单独改变 Apply Patch 安全评估看到的
+platform sandbox 状态。
+
+先前 shell canary 没有发现这一缺口，是因为 Codex 命令执行器在真正执行 shell 时会自动把 Windows
+隔离提升为 `RestrictedToken`；而原生 Apply Patch 的 `assess_patch_safety` 在进入该执行器之前完成，
+它仍看到配置状态为 `Disabled`。所以 shell 内的 `Set-Content`、Python、Git 写入成功，只能证明
+executor 路径可用，不能证明 native Apply Patch 路径可用。
+
+宿主修复必须同时覆盖 production runner 与离线 evaluator，在 Codex 命令中显式加入：
+
+```text
+-c windows.sandbox="unelevated"
+```
+
+这里的 `unelevated` 显式对齐 Codex Windows 的 `RestrictedToken` 执行方式，不放宽
+`luna_commit` 文件 profile：workspace roots 没有扩大，clone 外绝对路径仍不获许可，网络仍为关闭，
+额外写权限仍只有当前 clone 根下的 `.git`。production 与 evaluator 必须采用同一命令契约，避免
+离线评测通过了不同边界的命令而给出假阳性。
+
+### 第二次维护停止的准确状态
+
+路径教学提交后的第二次维护重试，为加载上述 platform sandbox 修复而再次通过统一生命周期入口
+协作停止。该 attempt 在第一次原生 Apply Patch 发生之前结束，没有 `file_change`、selfcheck、
+clone commit、宿主 CAS、远端 push 或 retry resolution；因此它既不是 Luna 提交失败，也不能记为
+新修复已经闭环。停止期间本地直播姬持续保持 `Streaming`，没有发生直播中断。
+
+本节只记录已确认的机制缺口和目标命令差异。加入 `windows.sandbox="unelevated"` 后的原生 Apply
+Patch canary、生产 Luna 自修、自检、clone commit、宿主 CAS 与远端 push 回执仍待后续追加；在真实
+回执出现前，不把 shell canary、静态测试或第二次维护 attempt 冒充为成功闭环。

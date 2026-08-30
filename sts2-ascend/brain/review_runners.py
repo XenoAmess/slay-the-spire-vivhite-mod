@@ -197,6 +197,7 @@ def build_review_command(
                 "codex review requires workspace-write configuration semantics; "
                 f"configured sandbox={plan.sandbox!r}")
         command += [
+            "-c", 'windows.sandbox="unelevated"',
             "-c", (
                 'permissions.luna_commit={extends=":workspace",'
                 'filesystem={":workspace_roots"={".git"="write"}},'

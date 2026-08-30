@@ -120,13 +120,25 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertEqual(
             command[:6],
             ["codex.CMD", "-a", "never", "exec", "--model", "gpt-5.6-luna"])
-        self.assertIn('model_reasoning_effort="max"', command)
-        self.assertIn(
-            ('permissions.luna_commit={extends=":workspace",'
-             'filesystem={":workspace_roots"={".git"="write"}},'
-             'network={enabled=false}}'),
-            command)
-        self.assertIn('default_permissions="luna_commit"', command)
+        reasoning_config = 'model_reasoning_effort="max"'
+        windows_config = 'windows.sandbox="unelevated"'
+        permission_config = (
+            'permissions.luna_commit={extends=":workspace",'
+            'filesystem={":workspace_roots"={".git"="write"}},'
+            'network={enabled=false}}')
+        default_config = 'default_permissions="luna_commit"'
+        self.assertIn(reasoning_config, command)
+        self.assertEqual(
+            [value for value in command if value.startswith("windows.sandbox=")],
+            [windows_config])
+        self.assertIn(permission_config, command)
+        self.assertIn(default_config, command)
+        windows_index = command.index(windows_config)
+        self.assertEqual(command[windows_index - 1], "-c")
+        self.assertLess(command.index(reasoning_config), windows_index)
+        self.assertLess(windows_index, command.index(permission_config))
+        self.assertLess(command.index(permission_config), command.index(default_config))
+        self.assertLess(command.index(default_config), command.index("--json"))
         for option in ("--json", "--ephemeral", "--ignore-user-config"):
             self.assertIn(option, command)
         self.assertNotIn("--approve-for-me", command)
@@ -158,6 +170,7 @@ class ReviewPlanTests(unittest.TestCase):
             ["codex.CMD", "-a", "never", "exec", "--model", "gpt-5.6-luna"])
         self.assertNotIn("--approve-for-me", command)
         self.assertNotIn("--sandbox", command)
+        self.assertEqual(command.count('windows.sandbox="unelevated"'), 1)
         self.assertIn('default_permissions="luna_commit"', command)
 
     def test_codex_rejects_a_non_workspace_sandbox(self) -> None:
