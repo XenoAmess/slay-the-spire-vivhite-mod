@@ -43,8 +43,7 @@ public sealed class ClosedManifold : ConservationCard
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class AxiomOfLife : ConservationCard
 {
-    private const string MaxHpVar = "MaxHp";
-    private const string EnglishDimensionUpAliasVar = "DimensionUp";
+    private const string DimensionUpVar = "DimensionUp";
 
     public AxiomOfLife()
         : base(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy, 5)
@@ -54,8 +53,7 @@ public sealed class AxiomOfLife : ConservationCard
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
         new DamageVar(24, ValueProp.Move),
-        new IntVar(MaxHpVar, 4),
-        new IntVar(EnglishDimensionUpAliasVar, 4)
+        new IntVar(DimensionUpVar, 4)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -73,7 +71,7 @@ public sealed class AxiomOfLife : ConservationCard
             await DimensionUp.ApplyAsync(
                 choiceContext,
                 Owner.Creature,
-                DynamicVars[MaxHpVar].IntValue,
+                DynamicVars[DimensionUpVar].IntValue,
                 Owner.Creature,
                 this);
         }
@@ -82,8 +80,7 @@ public sealed class AxiomOfLife : ConservationCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(8);
-        DynamicVars[MaxHpVar].UpgradeValueBy(1);
-        DynamicVars[EnglishDimensionUpAliasVar].UpgradeValueBy(1);
+        DynamicVars[DimensionUpVar].UpgradeValueBy(1);
     }
 }
 
@@ -119,8 +116,7 @@ public sealed class InfiniteExtension : ConservationCard
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class ConservationFirmament : ConservationCard
 {
-    private const string BlockMultiplierVar = "BlockMultiplier";
-    private const string EnglishMultiplierAliasVar = "Multiplier";
+    private const string MultiplierVar = "Multiplier";
 
     public ConservationFirmament()
         : base(2, CardType.Skill, CardRarity.Rare, TargetType.Self, 5)
@@ -131,8 +127,7 @@ public sealed class ConservationFirmament : ConservationCard
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
-        new IntVar(BlockMultiplierVar, 2),
-        new IntVar(EnglishMultiplierAliasVar, 2)
+        new IntVar(MultiplierVar, 2)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -150,7 +145,7 @@ public sealed class ConservationFirmament : ConservationCard
         }
 
         var doubledMargin = InfiniteMargin.GetAmount(Owner.Creature);
-        var block = (decimal)doubledMargin * DynamicVars[BlockMultiplierVar].BaseValue;
+        var block = (decimal)doubledMargin * DynamicVars[MultiplierVar].BaseValue;
         if (block > 0)
         {
             await GainBlockAsync(block, cardPlay);
@@ -159,7 +154,6 @@ public sealed class ConservationFirmament : ConservationCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars[BlockMultiplierVar].UpgradeValueBy(1);
-        DynamicVars[EnglishMultiplierAliasVar].UpgradeValueBy(1);
+        DynamicVars[MultiplierVar].UpgradeValueBy(1);
     }
 }

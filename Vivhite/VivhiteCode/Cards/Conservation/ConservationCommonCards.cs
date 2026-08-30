@@ -194,8 +194,7 @@ public sealed class LocalHomeomorphism : ConservationCard
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class ScaleTransformation : ConservationCard
 {
-    private const string MaxHpVar = "MaxHp";
-    private const string EnglishDimensionUpAliasVar = "DimensionUp";
+    private const string DimensionUpVar = "DimensionUp";
 
     public ScaleTransformation()
         : base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 3)
@@ -205,9 +204,7 @@ public sealed class ScaleTransformation : ConservationCard
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
         new DamageVar(20, ValueProp.Move),
-        new IntVar(MaxHpVar, 1),
-        // The current English localization still uses {DimensionUp}; Chinese uses {MaxHp}.
-        new IntVar(EnglishDimensionUpAliasVar, 1)
+        new IntVar(DimensionUpVar, 1)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -225,7 +222,7 @@ public sealed class ScaleTransformation : ConservationCard
             await DimensionUp.ApplyAsync(
                 choiceContext,
                 Owner.Creature,
-                DynamicVars[MaxHpVar].IntValue,
+                DynamicVars[DimensionUpVar].IntValue,
                 Owner.Creature,
                 this);
         }
@@ -234,7 +231,6 @@ public sealed class ScaleTransformation : ConservationCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(6);
-        DynamicVars[MaxHpVar].UpgradeValueBy(1);
-        DynamicVars[EnglishDimensionUpAliasVar].UpgradeValueBy(1);
+        DynamicVars[DimensionUpVar].UpgradeValueBy(1);
     }
 }

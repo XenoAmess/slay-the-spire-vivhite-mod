@@ -14,10 +14,8 @@ namespace Vivhite.Cards.Conservation;
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class IsoperimetricWard : ConservationCard
 {
-    private const string BaseBlockVar = "BaseBlock";
-    private const string BlockPerMarginVar = "BlockPerMargin";
-    private const string EnglishBlockAliasVar = "Block";
-    private const string EnglishMultiplierAliasVar = "Multiplier";
+    private const string BlockVar = "Block";
+    private const string MultiplierVar = "Multiplier";
 
     public IsoperimetricWard()
         : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
@@ -28,12 +26,8 @@ public sealed class IsoperimetricWard : ConservationCard
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
-        new BlockVar(BaseBlockVar, 12, ValueProp.Move),
-        new IntVar(BlockPerMarginVar, 2),
-        // Compatibility aliases for the current English localization. Gameplay uses the
-        // semantic BaseBlock and BlockPerMargin variables above.
-        new BlockVar(EnglishBlockAliasVar, 12, ValueProp.Move),
-        new IntVar(EnglishMultiplierAliasVar, 2)
+        new BlockVar(BlockVar, 12, ValueProp.Move),
+        new IntVar(MultiplierVar, 2)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -44,26 +38,23 @@ public sealed class IsoperimetricWard : ConservationCard
         CardPlay cardPlay,
         LifePaymentResult payment)
     {
-        var block = DynamicVars[BaseBlockVar].BaseValue +
+        var block = DynamicVars[BlockVar].BaseValue +
                     InfiniteMargin.GetAmount(Owner.Creature) *
-                    DynamicVars[BlockPerMarginVar].BaseValue;
+                    DynamicVars[MultiplierVar].BaseValue;
         return GainBlockAsync(block, cardPlay);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars[BaseBlockVar].UpgradeValueBy(4);
-        DynamicVars[BlockPerMarginVar].UpgradeValueBy(1);
-        DynamicVars[EnglishBlockAliasVar].UpgradeValueBy(4);
-        DynamicVars[EnglishMultiplierAliasVar].UpgradeValueBy(1);
+        DynamicVars[BlockVar].UpgradeValueBy(4);
+        DynamicVars[MultiplierVar].UpgradeValueBy(1);
     }
 }
 
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class TopologicalGrowth : ConservationCard
 {
-    private const string MaxHpVar = "MaxHp";
-    private const string EnglishDimensionUpAliasVar = "DimensionUp";
+    private const string DimensionUpVar = "DimensionUp";
     private const string MarginVar = "Margin";
 
     public TopologicalGrowth()
@@ -73,8 +64,7 @@ public sealed class TopologicalGrowth : ConservationCard
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
-        new IntVar(MaxHpVar, 1),
-        new IntVar(EnglishDimensionUpAliasVar, 1),
+        new IntVar(DimensionUpVar, 1),
         new IntVar(MarginVar, 3)
     ];
 
@@ -89,7 +79,7 @@ public sealed class TopologicalGrowth : ConservationCard
         await DimensionUp.ApplyAsync(
             choiceContext,
             Owner.Creature,
-            DynamicVars[MaxHpVar].IntValue,
+            DynamicVars[DimensionUpVar].IntValue,
             Owner.Creature,
             this);
         await GainMarginAsync(choiceContext, DynamicVars[MarginVar].IntValue);
@@ -97,8 +87,7 @@ public sealed class TopologicalGrowth : ConservationCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars[MaxHpVar].UpgradeValueBy(1);
-        DynamicVars[EnglishDimensionUpAliasVar].UpgradeValueBy(1);
+        DynamicVars[DimensionUpVar].UpgradeValueBy(1);
         DynamicVars[MarginVar].UpgradeValueBy(1);
     }
 }
@@ -106,8 +95,7 @@ public sealed class TopologicalGrowth : ConservationCard
 [RegisterCard(typeof(VivhiteCardPool))]
 public sealed class LawOfConservation : ConservationCard
 {
-    private const string BlockPerMarginVar = "BlockPerMargin";
-    private const string EnglishPowerAliasVar = "Power";
+    private const string PowerVar = "Power";
 
     public LawOfConservation()
         : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 3)
@@ -116,8 +104,7 @@ public sealed class LawOfConservation : ConservationCard
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
-        new IntVar(BlockPerMarginVar, 1),
-        new IntVar(EnglishPowerAliasVar, 1)
+        new IntVar(PowerVar, 1)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -131,15 +118,14 @@ public sealed class LawOfConservation : ConservationCard
         await PowerCmd.Apply<LawOfConservationPower>(
             choiceContext,
             Owner.Creature,
-            DynamicVars[BlockPerMarginVar].BaseValue,
+            DynamicVars[PowerVar].BaseValue,
             Owner.Creature,
             this);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars[BlockPerMarginVar].UpgradeValueBy(1);
-        DynamicVars[EnglishPowerAliasVar].UpgradeValueBy(1);
+        DynamicVars[PowerVar].UpgradeValueBy(1);
     }
 }
 
