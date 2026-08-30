@@ -15,6 +15,9 @@ namespace Vivhite.Cards.Basics;
 [RegisterCharacterStarterCard(typeof(VivhiteCharacter), 4)]
 public sealed class LuminousProjection : VivhiteLifeCalculationCard
 {
+    public override string CustomPortraitPath =>
+        $"{Entry.ResPath}/images/cards/LuminousProjection.png";
+
     public LuminousProjection()
         : base(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy)
     {

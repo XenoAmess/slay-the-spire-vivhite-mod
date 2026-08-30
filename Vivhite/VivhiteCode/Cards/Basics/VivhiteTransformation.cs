@@ -15,6 +15,9 @@ namespace Vivhite.Cards.Basics;
 [RegisterCharacterStarterCard(typeof(VivhiteCharacter), 1)]
 public sealed class VivhiteTransformation : VivhiteLifeCalculationCard
 {
+    public override string CustomPortraitPath =>
+        $"{Entry.ResPath}/images/cards/VivhiteTransformation.png";
+
     public VivhiteTransformation()
         : base(1, CardType.Power, CardRarity.Basic, TargetType.Self)
     {
