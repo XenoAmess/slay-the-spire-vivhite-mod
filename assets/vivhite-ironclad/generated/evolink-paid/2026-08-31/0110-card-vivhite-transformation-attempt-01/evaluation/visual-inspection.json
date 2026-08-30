@@ -1,0 +1,24 @@
+{
+  "status": "requires_second_generation",
+  "review_basis": [
+    "center-crop-1000x760.png",
+    "sourceover-black-1000x760.png",
+    "sourceover-white-1000x760.png",
+    "sourceover-deep-blue-gray-1000x760.png"
+  ],
+  "checks": {
+    "vivhite_identity": "pass: silver-white hair, violet eyes, round golden glasses, white/deep-navy/gold magical-girl costume and cool expression are recognizable",
+    "single_solid_character": "pass: exactly one solid human figure; the pale screen-left contour is a non-solid transformation afterimage",
+    "both_hands": "partial: both empty open hands are present and readable, but the screen-right fingertips intersect the final crop edge",
+    "golden_glasses": "pass",
+    "blue_butterfly": "pass: the primary hair ornament is clear; additional butterflies read as magic effects",
+    "weapon_or_prop": "pass: none present",
+    "readable_text_or_formula": "pass: none present; the mathematical theme uses abstract geometry only",
+    "transformation_readability": "pass: concentric rings, star geometry, facets and the dissolving afterimage clearly communicate transformation",
+    "sourceover": "pass with dependency noted: no rectangular halo, key-color contamination or hard composite seam on black, white or deep blue-gray; the translucent full-canvas atmosphere changes brightness with the consumer background",
+    "coughing_cost_detail": "pass: one restrained crimson mouth-corner droplet, no gore"
+  },
+  "blocking_reason": "After the deterministic centered 25:19 crop, the screen-right hand reaches the 1000x760 image boundary and its fingertips are clipped. This violates the consumer contract that the face, both hands and primary spell geometry stay within the central approximately 82 percent width, and a card frame would occlude the hand further.",
+  "next_attempt_change": "Keep the same identity and scene, but reduce the character-and-hands composition scale and move both open palms inward so every fingertip remains comfortably inside the centered 25:19 safe area. Do not change providers, references or the no-weapon/no-text constraints.",
+  "generation_performed_during_inspection": false
+}

@@ -1,0 +1,63 @@
+{
+  "asset": "Vivhite Transformation / 白绮的变身式",
+  "attempt": 2,
+  "review_date": "2026-08-31",
+  "status": "rejected_do_not_integrate",
+  "paid_generations_started_for_this_attempt": 1,
+  "automatic_attempt_3_started": false,
+  "source_preservation": {
+    "output_png_unchanged": true,
+    "verbatim_prompt_archived": true,
+    "sanitized_request_archived": true,
+    "task_record_archived": true
+  },
+  "deterministic_crop": {
+    "source_rect": [156, 4, 2200, 1672],
+    "target_size": [1000, 760],
+    "interpolation": "Lanczos",
+    "safe_area_interpretation": "centered two-dimensional 78% inset box",
+    "safe_area_on_target": {
+      "left": 110,
+      "top": 84,
+      "right": 889,
+      "bottom": 675
+    },
+    "result": "fail",
+    "evidence": "Both hands, arms, shoulders, and the central skirt hem are inside the box, but the hair crown and head butterfly extend above its top boundary; the required wide magic-field margin is therefore not preserved on all four sides."
+  },
+  "visual_checks": {
+    "silver_white_short_hair": "pass",
+    "violet_eyes": "pass",
+    "gold_round_glasses": "pass",
+    "blue_butterfly_identity": "pass",
+    "white_navy_gold_costume": "pass",
+    "single_solid_human_entity": "pass",
+    "screen_left_residue_is_abstract_geometry_only": "pass",
+    "both_hands_and_fingertips_present": "pass",
+    "empty_handed_no_weapon_or_held_prop": "pass",
+    "no_readable_text_letters_digits_or_formula_glyphs": "pass",
+    "new_mouth_and_face_red_element_ban": "fail"
+  },
+  "hard_ban_failure": {
+    "rule": "No red strip, line, ribbon, droplet, liquid, blood trace, or mouth-emitted magic may appear at or near the mouth, lips, oral cavity, or face; no mouth element may visualize the coughing/life-cost mechanic.",
+    "observed": "A small crimson droplet/glint is visibly attached immediately below the lower lip.",
+    "effect": "Mandatory rejection regardless of all other visual qualities."
+  },
+  "alpha_checks": {
+    "png_signature": "pass",
+    "dimensions": [2512, 1680],
+    "format": "RGBA8",
+    "corner_alpha_8bit": {
+      "top_left": 20,
+      "top_right": 84,
+      "bottom_left": 23,
+      "bottom_right": 30
+    },
+    "all_four_corners_zero_alpha": "fail",
+    "zero_alpha_pixel_count": 0,
+    "dense_opaque_edges_without_fade_or_translucent_veil": "fail",
+    "sourceover_result": "Black, white, and deep-blue-gray composites reveal material edge brightness/color changes, especially along the left and bottom borders."
+  },
+  "final_reason": "The newly declared mouth/face red-element hard ban is violated. The candidate also misses the two-dimensional 78% top safety margin and the requested opaque-edge behavior.",
+  "next_action": "Do not integrate. Preserve this attempt unchanged and wait for explicit user authorization before any further paid generation."
+}
