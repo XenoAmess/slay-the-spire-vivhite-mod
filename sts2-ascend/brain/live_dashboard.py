@@ -17,7 +17,7 @@ SCHEMA = "sts2.ascend-live/v1"
 MAX_BYTES = 128 * 1024
 MAX_STRING = 1000
 TERMINAL_STATUSES = frozenset({"applied", "retrying", "rejected", "failed"})
-PROFILE_LABELS = {"IRONCLAD": "Ironclad", "VIVHITE": "Vivhite"}
+PROFILE_LABELS = {"ironclad": "Ironclad", "vivhite": "Vivhite"}
 
 
 def _now() -> str:
@@ -48,11 +48,11 @@ def _safe(value: Any, *, depth: int = 0) -> Any:
 def _profile_id(value: Any) -> str | None:
     if value in (None, ""):
         return None
-    text = str(value).strip().upper()
-    if "VIVHITE" in text:
-        return "VIVHITE"
-    if "IRONCLAD" in text:
-        return "IRONCLAD"
+    text = str(value).strip().casefold()
+    if "vivhite" in text:
+        return "vivhite"
+    if "ironclad" in text:
+        return "ironclad"
     return text or None
 
 
@@ -61,7 +61,7 @@ def _run_view(state: dict, run_number: int = 0) -> dict:
     combat = state.get("combat") or {}
     player = combat.get("player") or {}
     character_id = run.get("character_id")
-    profile_id = _profile_id(character_id)
+    profile_id = _profile_id(run.get("character_profile") or character_id)
     return {
         "run_id": state.get("run_id") or run.get("run_id"),
         "run_number": int(run_number or 0),

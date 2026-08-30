@@ -56,63 +56,87 @@ class ProfileFloorStatsTests(unittest.TestCase):
 
             snapshot = FloorStatsProvider(root, refresh_interval=0).snapshot()
 
-            ironclad = snapshot["profiles"]["IRONCLAD"]
-            vivhite = snapshot["profiles"]["VIVHITE"]
+            ironclad = snapshot["profiles"]["ironclad"]
+            vivhite = snapshot["profiles"]["vivhite"]
+            self.assertEqual(ironclad["profile_id"], "ironclad")
+            self.assertEqual(ironclad["character_id"], "IRONCLAD")
+            self.assertEqual(vivhite["profile_id"], "vivhite")
+            self.assertEqual(
+                vivhite["character_id"], "VIVHITE_CHARACTER_VIVHITE_CHARACTER")
             self.assertEqual(ironclad["lifetime"]["mean_floor"], 15.0)
             self.assertEqual(ironclad["lifetime"]["best_floor"], 20)
             self.assertEqual(ironclad["quality"]["source"], "aggregate_raw")
             self.assertIsNone(vivhite["lifetime"]["runs"])
             self.assertIsNone(snapshot["profile_comparison"]["rolling_mean_ratio"])
 
-    def test_profiles_are_independent_and_publish_vivhite_ironclad_ratio(self) -> None:
+    def test_profile_roots_are_independent_and_publish_rolling_ratio(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-profile-split-") as temp:
             root = Path(temp)
             _write_json(root / "stats.json", {
                 "global": {
-                    "runs": 4, "wins": 1,
-                    "floors_total": 125.0, "best_floor": 80,
-                    "floor_sum_raw": 75.0, "best_floor_raw": 30,
-                },
-                "profiles": {
-                    "IRONCLAD": {
-                        "runs": 2, "wins": 0,
-                        "floors_total": 900.0, "best_floor": 900,
-                        "floor_sum_raw": 30.0, "best_floor_raw": 20,
-                    },
-                    "VIVHITE": {
-                        "runs": 2, "wins": 1,
-                        "floors_total": 950.0, "best_floor": 950,
-                        "floor_sum_raw": 45.0, "best_floor_raw": 30,
-                    },
+                    "runs": 2, "wins": 0,
+                    "floors_total": 900.0, "best_floor": 900,
+                    "floor_sum_raw": 30.0, "best_floor_raw": 20,
                 },
             })
-            for data in (
-                _run("I-OLD", 1, 10, None),
-                _run("I-NEW", 2, 20, "IRONCLAD"),
-                _run("V-ONE", 3, 15, "VIVHITE_CHARACTER_VIVHITE"),
-                _run("V-TWO", 4, 30, "VIVHITE"),
-            ):
+            vivhite_root = root / "profiles" / "vivhite"
+            _write_json(vivhite_root / "stats.json", {
+                "global": {
+                    "runs": 2, "wins": 1,
+                    "floors_total": 950.0, "best_floor": 950,
+                    "floor_sum_raw": 45.0, "best_floor_raw": 30,
+                },
+            })
+            for data in (_run("I-OLD", 1, 10, None),
+                         _run("I-NEW", 2, 20, "IRONCLAD")):
                 _write_json(root / "runs" / f"{data['run_id']}.json", data)
+            for data in (
+                _run("V-OLD", 3, 15, None),
+                _run("V-NEW", 4, 30, "VIVHITE_CHARACTER_VIVHITE_CHARACTER"),
+            ):
+                _write_json(vivhite_root / "runs" / f"{data['run_id']}.json", data)
 
             snapshot = FloorStatsProvider(
                 root, refresh_interval=0, rolling_window=2).snapshot({
                     "run_id": "LIVE-V", "run_number": 5, "floor": 4,
-                    "character_id": "VIVHITE_CHARACTER_VIVHITE",
+                    "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
                 })
 
-            ironclad = snapshot["profiles"]["IRONCLAD"]
-            vivhite = snapshot["profiles"]["VIVHITE"]
+            ironclad = snapshot["profiles"]["ironclad"]
+            vivhite = snapshot["profiles"]["vivhite"]
             self.assertEqual(ironclad["lifetime"]["mean_floor"], 15.0)
             self.assertEqual(ironclad["lifetime"]["best_floor"], 20)
             self.assertEqual(vivhite["lifetime"]["mean_floor"], 22.5)
             self.assertEqual(vivhite["lifetime"]["best_floor"], 30)
+            self.assertEqual(ironclad["quality"]["source"], "aggregate_raw")
+            self.assertEqual(vivhite["quality"]["source"], "aggregate_raw")
             self.assertEqual(ironclad["rolling_mean"], 15.0)
             self.assertEqual(vivhite["rolling_mean"], 22.5)
             comparison = snapshot["profile_comparison"]
             self.assertEqual(comparison["rolling_mean_ratio"], 1.5)
             self.assertEqual(comparison["vivhite_to_ironclad_ratio"], 1.5)
-            self.assertEqual(snapshot["active_profile"], "VIVHITE")
-            self.assertEqual(snapshot["current"]["profile_id"], "VIVHITE")
+            self.assertEqual(snapshot["active_profile"], "vivhite")
+            self.assertEqual(snapshot["current"]["profile_id"], "vivhite")
+
+    def test_vivhite_never_falls_back_to_learning_score_fields(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-profile-raw-only-") as temp:
+            root = Path(temp)
+            vivhite_root = root / "profiles" / "vivhite"
+            _write_json(vivhite_root / "stats.json", {
+                "global": {
+                    "runs": 1, "wins": 1,
+                    "floors_total": 999.0, "best_floor": 999,
+                },
+            })
+            data = _run("V-EVIDENCE", 1, 12, None)
+            _write_json(vivhite_root / "runs" / "v-evidence.json", data)
+
+            snapshot = FloorStatsProvider(root, refresh_interval=0).snapshot()
+            vivhite = snapshot["profiles"]["vivhite"]
+
+            self.assertEqual(vivhite["lifetime"]["mean_floor"], 12.0)
+            self.assertEqual(vivhite["lifetime"]["best_floor"], 12)
+            self.assertEqual(vivhite["quality"]["source"], "records")
 
     def test_live_dashboard_exports_raw_character_and_canonical_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-profile-dashboard-") as temp:
@@ -121,7 +145,7 @@ class ProfileFloorStatsTests(unittest.TestCase):
                 "screen": "COMBAT",
                 "run_id": "live-vivhite",
                 "run": {
-                    "character_id": "VIVHITE_CHARACTER_VIVHITE",
+                    "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
                     "floor": 7,
                     "ascension": 1,
                 },
@@ -130,8 +154,9 @@ class ProfileFloorStatsTests(unittest.TestCase):
 
             payload = json.loads(publisher.path.read_text(encoding="utf-8"))
             run = payload["run"]
-            self.assertEqual(run["character_id"], "VIVHITE_CHARACTER_VIVHITE")
-            self.assertEqual(run["profile_id"], "VIVHITE")
+            self.assertEqual(
+                run["character_id"], "VIVHITE_CHARACTER_VIVHITE_CHARACTER")
+            self.assertEqual(run["profile_id"], "vivhite")
             self.assertEqual(run["profile_label"], "Vivhite")
 
 
