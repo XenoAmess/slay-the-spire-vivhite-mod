@@ -1,0 +1,99 @@
+{
+  "asset": "InfiniteDrainThisTurnPower",
+  "semantic_name_zh": "仅本回合汲取加成",
+  "generation_id": "0144",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_accepted_main_agent_reviewed",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/InfiniteDrainThisTurnPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, or animation frame",
+    "gameplay_semantics": "visible non-negative counter for Drain percentage points that expire when the owner's combat side turn ends",
+    "source_evidence": [
+      "Vivhite/VivhiteCode/Powers/InfiniteDrainThisTurnPower.cs",
+      "Vivhite/VivhiteCode/Powers/VivhiteCounterPower.cs",
+      "Vivhite/VivhiteCode/Core/InfiniteDrain.cs"
+    ],
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "B477D07ACCDEDF07236F03993B62CFC392CDB52E18B872BB416C22DFD013DA2D",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [182, 58, 676, 894],
+    "nonzero_alpha_pixels": 327521,
+    "opaque_pixels_alpha_at_least_250": 303541,
+    "visible_alpha_touches_edge": false
+  },
+  "prepared_outputs": {
+    "256": {
+      "path": "inspection/256/prepared-256.png",
+      "alpha_bbox": [45, 19, 166, 204],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 12
+    },
+    "64": {
+      "path": "inspection/64/prepared-64.png",
+      "alpha_bbox": [9, 3, 45, 55],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 3
+    },
+    "32": {
+      "path": "inspection/32/prepared-32.png",
+      "alpha_bbox": [5, 2, 22, 28],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 2
+    }
+  },
+  "visual_review": {
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "semantic_result": "A faceted cyan-blue life crystal is enclosed by one terminating purple-gold return arrow. A large hourglass and three-tick crescent timing arc make the one-turn duration explicit.",
+    "persistent_icon_distinction": "The persistent InfiniteDrainPower asset uses a broad horizontal infinity silhouette with symmetric twin loops. This icon is vertically compact, uses one circular pass with a visible arrow endpoint, and replaces the infinity silhouette with an hourglass and timing scale.",
+    "small_size_result": "At 64px the crystal, hourglass, timing arc, and one-pass arrow remain separate. At 32px the hourglass above the crystal and circular terminal arrow remain readable without text.",
+    "forbidden_content": {
+      "infinity_or_figure_eight_symbol": false,
+      "person_face_mouth_teeth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "blood_liquid_droplet_vein_or_wound": false,
+      "text_letter_number_or_glyph": false,
+      "external_halo_fog_loose_particles_or_shadow": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/InfiniteDrainThisTurnPower.png",
+    "sha256": "56964EBD2EBCD5D05C735ADDDA2CB705AF388D680D69DD14F967F75491260397",
+    "byte_identical_to_prepared_256": true
+  },
+  "main_agent_review": {
+    "status": "passed",
+    "checked_sourceover_sizes": [256, 64, 32],
+    "checked_background": "game-indigo",
+    "result": "The one-turn hourglass, timing ticks, cyan life crystal, and single terminating return ring remain clear at all three sizes and are visibly distinct from the persistent infinity-loop icon.",
+    "remaining_gate": "actual in-game Vulkan power-icon consumption"
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, creative repaint, or generated-content change.",
+  "retry_decision": "Accepted on attempt 1 of 8. Stop generation because the consumer, Alpha, SourceOver, temporary-duration distinction, safety-margin, forbidden-content, and actual-size gates all pass."
+}
