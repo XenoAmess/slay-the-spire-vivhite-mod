@@ -8279,3 +8279,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_race_prior_eff: 0.44 → 0.47（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/1153 胜，当前目标进阶 0
+
+## 第 1154 局复盘（2026-08-30 09:49）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：DRUM_OF_BATTLE, WHIRLWIND, EQUILIBRIUM, DISMANTLE, SHRUG_IT_OFF, TREMBLE, UNRELENTING, SHRUG_IT_OFF, PACTS_END, RAMPAGE, HEMOKINESIS, HOWL_FROM_BEYOND, SHRUG_IT_OFF
+- 本局遗物：AKABEKO, BRONZE_SCALES
+- 战斗记录：F12 Monster战 掉血6; F15 Monster战 掉血8; F17 Boss战 掉血54｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血4; F22 Monster战 掉血30; F24 Elite战 掉血64｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/32局)，PACTS_END(24分/125局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.47 → 0.50（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/1154 胜，当前目标进阶 0
