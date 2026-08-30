@@ -207,6 +207,38 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                 events, ["terminal_log", "character_stats", "rotation"])
             rotation.record_terminal.assert_called_once()
 
+    def test_reconnected_terminal_echo_cannot_repeat_stats_or_rotation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-agent-reconnect-") as root:
+            events: list[str] = []
+            real_rotation = CharacterRotation.from_knowledge_root(root)
+            real_rotation.observe_active_run("run-v", VIVHITE_CHARACTER_ID)
+            rotation = mock.Mock(wraps=real_rotation)
+            rotation.snapshot.side_effect = real_rotation.snapshot
+
+            def record_terminal(*args, **kwargs):
+                events.append("rotation")
+                return real_rotation.record_terminal(*args, **kwargs)
+
+            rotation.record_terminal.side_effect = record_terminal
+            know = _FinalKnowledge(events)
+            first_process = _finalizing_agent(rotation, know)
+            reconnected_process = _finalizing_agent(rotation, know)
+
+            with mock.patch.object(
+                    agent_module, "finalize_run", return_value="lesson") as reflected, \
+                    mock.patch.object(agent_module, "llm_review", None), \
+                    mock.patch.object(agent_module, "autogit", None), \
+                    mock.patch.object(agent_module, "log"):
+                first_process._finalize(victory=False, floor=12)
+                reconnected_process._finalize(victory=False, floor=12)
+
+            self.assertEqual(
+                events, ["terminal_log", "character_stats", "rotation"])
+            reflected.assert_called_once()
+            rotation.record_terminal.assert_called_once()
+            self.assertTrue(reconnected_process.ctx.run_finalized)
+            self.assertEqual(real_rotation.target_character, IRONCLAD)
+
     def test_failed_character_stats_save_does_not_flip_rotation(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-agent-finalize-fail-") as root:
             events: list[str] = []
