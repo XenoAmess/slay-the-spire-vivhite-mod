@@ -1,0 +1,91 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_PROOF_OF_TERMINATION",
+  "card_type": "ProofOfTermination",
+  "card_name_zh": "终止证明",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_without_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Attack",
+    "rarity": "Rare",
+    "cough": 10,
+    "base_damage_all_enemies": 20,
+    "upgrade_damage_all_enemies": 27,
+    "draw_per_enemy_killed": 4,
+    "energy_per_enemy_killed": 1,
+    "exhaust": true
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "50C7EFA4BF945290E5DEDA9CECC9639074FD31352774C26311633BC23CD03D9E",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054e5-b2b6-7951-9b2f-3eb11ece8aac/exec-94aeeafb-e631-4711-8c2d-517542054259.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/proof-of-termination-attempt-01/original.png",
+  "original_sha256": "06133782168CE8BB28860A48A7B79E998355CB39A35447A7FA55F7CC1054ADFC",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ProofOfTermination.png",
+  "runtime_sha256": "A03C9E1267B14505983B826DE91B042C357954203FF8472D307CDBC4731D1B55",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect-stdout.log",
+    "inspection/inspect-stderr.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_red_liquid_or_mouth_emitted_magic": true,
+    "no_text_weapon_second_character_or_split_panel": true,
+    "open_asymmetric_multi_target_attack": true,
+    "multiple_distinct_violet_gold_conclusion_rays": true,
+    "multiple_distant_star_targets_pierced": true,
+    "separate_star_page_and_cyan_energy_return_paths": true,
+    "no_closed_defensive_shell_or_static_power_read": true,
+    "100x76_color_and_grayscale_group_finisher_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Vivhite unfolds a monumental mathematical proof array whose open branches launch multiple violet-gold conclusion rays into several distant star targets. Separate cyan return circuits carry star-map pages and energy crystals back from extinguished targets, preserving the kill-to-draw-and-energy second beat without weakening the dominant group-finisher silhouette. The attack remains readable in 100x76 color and grayscale, with no weapon, blood, text, second character, defensive shell, mouth-adjacent strand, or mouth-emitted magic."
+}
