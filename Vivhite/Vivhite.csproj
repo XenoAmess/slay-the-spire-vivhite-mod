@@ -28,7 +28,7 @@
         <RunPckExport Condition="'$(RunPckExport)' == '' and '$(DesignTimeBuild)' != 'true'">true</RunPckExport>
         <RunPckExport Condition="'$(RunPckExport)' == ''">false</RunPckExport>
         <IroncladSkinValidator>$(MSBuildProjectDirectory)\tools\Validate-IroncladSkin.ps1</IroncladSkinValidator>
-        <IroncladSkinRuntimeLayout Condition="'$(IroncladSkinRuntimeLayout)' == ''">legacy-single-page</IroncladSkinRuntimeLayout>
+        <IroncladSkinRuntimeLayout Condition="'$(IroncladSkinRuntimeLayout)' == ''">v3-five-page</IroncladSkinRuntimeLayout>
         <GodotPckExporter>$(MSBuildProjectDirectory)\tools\Export-ModPck.ps1</GodotPckExporter>
         <PowerShellExe Condition="'$(PowerShellExe)' == '' and '$(OS)' == 'Windows_NT'">powershell.exe</PowerShellExe>
         <PowerShellExe Condition="'$(PowerShellExe)' == ''">pwsh</PowerShellExe>
