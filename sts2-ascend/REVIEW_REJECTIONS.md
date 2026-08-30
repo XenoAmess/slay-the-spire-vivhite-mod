@@ -160,7 +160,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260830-030551-1788030351054254700-aad07cb1 -->
 | 2026-08-30 03:05:51 | 第 808~812 局 | `aad07cb1` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `79b8b720` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 79b8b720 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-041502-1788034502535562100-7e145596 -->
-| 2026-08-30 04:15:02 | 第 1014~1085 局 | `7e145596` | runner_tool_access_denied | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-041502-1788034502535562100-7e145596` | 复盘 runner 工具能力被阻断（1 次），模型未获得读取/执行/写入任务的能力：2026-08-29T20:14:29.284122Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\knowledge\code_… |
+| 2026-08-30 04:15:02 | 第 1014~1085 局 | `7e145596` | runner_tool_access_denied | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8f0189ca` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8f0189ca 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-041822-1788034702369068200-99497d84 -->
 | 2026-08-30 04:18:22 | 第 988~1013 局 | `99497d84` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-041822-1788034702369068200-99497d84` | 复盘进程未成功完成 |
 <!-- rejection:20260830-044227-1788036147884429300-00a33ee1 -->
