@@ -1,0 +1,42 @@
+{
+  "status": "rejected_native_alpha_gate",
+  "runtime_eligible": false,
+  "attempt": 1,
+  "max_attempts": 8,
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 1, 0],
+    "alpha_bbox": [0, 15, 1012, 1009],
+    "alpha_touches_edge": true,
+    "nonzero_alpha_pixels": 245291,
+    "opaque_pixels_alpha_ge_250": 210750,
+    "alpha_ge_128_bbox": [96, 64, 834, 781]
+  },
+  "semantic_review": {
+    "blue_butterfly_present": true,
+    "exactly_two_star_pages_present": true,
+    "open_upward_pursuit_trajectory_present": true,
+    "purple_margin_sphere_absent": true,
+    "closed_ring_absent": true,
+    "forbidden_subjects_or_marks": false
+  },
+  "rejection_reasons": [
+    "The lower-right source corner has Alpha=1; all four native source corners must be Alpha=0.",
+    "The Alpha>0 bounding box reaches the source left and bottom edges, so the required wide empty safety area is not natively present.",
+    "prepare_vivhite_ui_icon.gd exited with code 3 before producing any prepared or runtime image."
+  ],
+  "inspection_state": {
+    "prepare_256": "failed_before_output",
+    "sourceover_black": "not_produced_after_native_alpha_rejection",
+    "sourceover_white": "not_produced_after_native_alpha_rejection",
+    "sourceover_game_indigo": "not_produced_after_native_alpha_rejection",
+    "size_64": "not_produced_after_native_alpha_rejection",
+    "size_32": "not_produced_after_native_alpha_rejection"
+  },
+  "source_sha256": "CA58BF201288AF6EC81B08ED6987A92138C5A334CE78E3E91AA52C39EA55A647",
+  "runtime_path": "Vivhite/Vivhite/images/powers/AstralPursuitPower.png",
+  "runtime_created": false,
+  "alpha_repair_performed": false,
+  "next_action": "Request a new archive number from the main agent, then retry serially with a tighter no-external-light composition prompt."
+}
