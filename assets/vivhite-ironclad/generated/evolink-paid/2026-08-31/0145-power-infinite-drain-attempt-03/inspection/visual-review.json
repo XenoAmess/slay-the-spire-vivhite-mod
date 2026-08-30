@@ -1,0 +1,54 @@
+{
+  "asset": "InfiniteDrainPower",
+  "request_number": "0145",
+  "semantic_attempt": 3,
+  "lineage": [
+    "0143-power-infinite-drain-attempt-01: rejected native Alpha",
+    "0144-power-infinite-drain-attempt-02: rejected native Alpha",
+    "0145-power-infinite-drain-attempt-03: accepted static candidate"
+  ],
+  "status": "static_accepted_pending_game_validation",
+  "consumer_contract": {
+    "power_type": "Buff",
+    "stack_type": "Counter",
+    "lifetime": "entire combat",
+    "meaning": "unbounded global drain-percentage bonus",
+    "runtime_path": "res://Vivhite/images/powers/InfiniteDrainPower.png",
+    "normal_and_big_icon_share_art": true
+  },
+  "source": {
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [48, 19, 944, 923],
+    "nonzero_alpha_pixels": 341460,
+    "opaque_pixels": 317150,
+    "touches_edge": false,
+    "alpha_modification": "none"
+  },
+  "adaptation": "uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair",
+  "runtime": {
+    "size": [256, 256],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [21, 50, 215, 168],
+    "sha256": "0F79C31BED486AA292A6D3B4FE00321D805F62B453BE9B42F76486F21A9D568F"
+  },
+  "sourceover_review": {
+    "sizes": [256, 64, 32],
+    "backgrounds": ["black", "white", "game-indigo-182139"],
+    "cells_reviewed": 9,
+    "cells_passed": 9,
+    "external_halo_visible": false,
+    "rectangular_pollution_visible": false,
+    "edge_touch_visible": false,
+    "small_size_readability": "At 32px the purple-gold infinity silhouette and central cyan life crystal remain distinct; the four attached attack-star gems and inward arrow circuit remain legible as secondary detail."
+  },
+  "semantic_review": {
+    "persistent_infinite_stacking": "purple-gold infinity ring",
+    "drain_recovery": "four attack-star gems and inward arrows return toward one cyan life crystal",
+    "forbidden_elements_found": []
+  },
+  "main_agent_visual_review": "passed",
+  "remaining_gate": "real game runtime screenshot validation"
+}

@@ -1,0 +1,22 @@
+{
+  "asset": "InfiniteDrainPower",
+  "attempt": 2,
+  "request_number": "0144",
+  "status": "rejected_native_alpha",
+  "source_size": [1024, 1024],
+  "source_format": "RGBA8",
+  "source_corner_alpha": [0, 0, 1, 0],
+  "source_alpha_bbox": [0, 9, 1006, 1015],
+  "source_nonzero_alpha_pixels": 296558,
+  "source_opaque_pixels": 270830,
+  "semantic_review": "The infinity ring, central life crystal, four attack-star gems, and inward arrows are correct and more compact than attempt 1.",
+  "hard_gate_failures": [
+    "the lower-left source corner has Alpha=1",
+    "the nonzero-Alpha bounding box touches the left and lower source edges",
+    "a warm presentation-light field still extends outside the physical emblem"
+  ],
+  "alpha_modification": "none",
+  "runtime_adoption": false,
+  "sourceover_status": "not_run_after_native_alpha_hard_gate",
+  "next_attempt_hypothesis": "Use flat cel-shaded enamel and gemstone color blocks with no luminous or presentation-light language, so all visible pixels remain inside the hard physical contour."
+}

@@ -1,0 +1,21 @@
+{
+  "asset": "InfiniteDrainPower",
+  "attempt": 1,
+  "request_number": "0143",
+  "status": "rejected_native_alpha",
+  "source_size": [1024, 1024],
+  "source_format": "RGBA8",
+  "source_corner_alpha": [1, 0, 2, 1],
+  "source_alpha_bbox": [0, 0, 1024, 1024],
+  "source_nonzero_alpha_pixels": 530170,
+  "source_opaque_pixels": 303421,
+  "hard_gate_failures": [
+    "three source corners have nonzero Alpha",
+    "the nonzero-Alpha bounding box touches all four source edges",
+    "the generated outer light field is too broad for a compact power icon"
+  ],
+  "alpha_modification": "none",
+  "runtime_adoption": false,
+  "sourceover_status": "not_run_after_native_alpha_hard_gate",
+  "next_attempt_hypothesis": "Keep all color and luminance inside a compact hard-edged enamel-and-gem emblem with no emitted light outside the physical silhouette."
+}
