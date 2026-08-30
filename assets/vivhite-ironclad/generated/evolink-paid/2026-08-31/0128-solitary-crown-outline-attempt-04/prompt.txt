@@ -1,0 +1,17 @@
+Use case: stylized-concept
+Asset type: one flat solid UI outline glyph / crisp opaque line-art emblem
+
+Primary request:
+Draw exactly one compact, flat, solid line-art emblem of the Solitary Crown. This is a purpose-built UI outline glyph made from opaque white ink and a small amount of opaque pale ice-blue ink. It is not a jewel painting, rendered object, lighting effect, or atmospheric illustration.
+
+Glyph geometry:
+Use one connected, closed, symmetrical crown mark in a front-facing orthographic view. The crown has one tallest central tapered peak, two medium inner peaks, two shorter outer peaks, one clearly closed lower circlet, one central diamond-shaped setting, and one small butterfly symbol physically joined above the center. Use bold white strokes for the main crown structure and sparse pale ice-blue solid strokes for the outer boundary, diamond setting, circlet division, and butterfly wing divisions. Keep the five-peak hierarchy and butterfly readable at 256 by 256 pixels.
+
+Composition:
+Center the complete glyph exactly. The entire mark occupies approximately 50 percent of the canvas width and 48 percent of the canvas height. Keep every white stroke, pale-blue stroke, corner, tip, butterfly wing, and tight antialiasing pixel inside that central area. Leave an extremely wide completely empty safety area on all four sides. The outermost 22 percent of the canvas on the top, bottom, left, and right contains absolutely no mark or effect of any kind. Nothing may touch or approach an edge.
+
+Rendering contract:
+Flat 2D UI glyph only. Use crisp opaque white line shapes plus restrained opaque pale ice-blue line shapes. Use uniform hard stroke edges and only narrow normal edge antialiasing. No opacity fade, feathering, transparency within a stroke, gradient, shading, reflection, material rendering, or soft edge. Brightness comes only from the solid white and pale-blue ink colors themselves; the strokes do not emit light. Every pixel belonging to the glyph ends at the hard physical stroke boundary. Make the pale ice-blue outer boundary dark and saturated enough to remain distinct next to pure white UI surfaces, while the solid white crown strokes remain clear on dark UI surfaces.
+
+Hard exclusions:
+Absolutely no outer glow, inner glow spilling beyond strokes, halo, aura, bloom, mist, haze, fog, smoke, shadow, cast shadow, ambient light, light spill, gradient cloud, blue cloud, gray cloud, rays, particles, sparks, dust, detached color, detached pixel, soft field, or soft vignette. No wearer, person, head, face, eyes, glasses, mouth, lips, teeth, body, hand, clothing, or portrait. No red, crimson, orange, flame, blood drop, liquid, blood, strand, ribbon, or mouth-emitted magic. No text, letter, number, equation, formula, mathematical notation, pseudo-glyph, rune-like writing, logo, signature, or watermark. No sword, blade, dagger, staff, wand, rod, spear, shield, helmet, weapon, held prop, pedestal, backing plate, decorative frame, scenery, second object, duplicate, panel, or sprite sheet. Do not crop the crown glyph.
