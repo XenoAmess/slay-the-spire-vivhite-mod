@@ -36,6 +36,28 @@ DEFAULT_PROGRESS_PATHS = (
     "sts2-ascend/knowledge/lessons.md",
     "sts2-ascend/knowledge/preferred_model_state.json",
 )
+_KNOWLEDGE_PROGRESS_NAMES = (
+    "runs",
+    "stats.json",
+    "progression.json",
+    "review_queue.json",
+    "policy.json",
+    "lessons.md",
+    "preferred_model_state.json",
+)
+_KNOWLEDGE_STORE_MARKERS = frozenset({
+    "stats.json",
+    "progression.json",
+    "policy.json",
+    "lessons.md",
+})
+_KNOWLEDGE_STORE_SCAN_PRUNE = frozenset({
+    ".runtime",
+    "archive",
+    "code_backups",
+    "game",
+    "runs",
+})
 # 旧 marker 缺少 paths 时 runner 仍需要一个进程内兜底集合。新复盘验收不再把
 # 这 11 个文件当作边界；``validate_review_paths(..., allowlist=...)`` 仅为旧 API/
 # 测试保留精确名单模式。
@@ -81,6 +103,12 @@ _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES = frozenset({
 })
 _REVIEW_ONLINE_KNOWLEDGE_SUFFIXES = (".flag", ".lock", ".log", ".stream")
 _REVIEW_ONLINE_KNOWLEDGE_PREFIXES = ("review_prompt", "screenshot")
+_REVIEW_CHARACTER_PROFILE_CONTAINERS = frozenset({
+    "characters",
+    "character_profiles",
+    "profiles",
+})
+_REVIEW_PROFILE_EXACT_RUNTIME_NAMES = frozenset({".compact.lock"})
 
 _GIT_LOCK = threading.RLock()
 _LOCK_STATE = threading.local()
@@ -311,6 +339,82 @@ def normalize_paths(paths: Sequence[str | os.PathLike[str]]) -> tuple[str, ...]:
     return result
 
 
+def _nested_knowledge_store_roots() -> tuple[Path, ...]:
+    """Discover exact nested Knowledge stores without traversing runtime evidence.
+
+    A character profile is identified by the same on-disk shape produced by
+    ``Knowledge``: a ``runs`` directory beside at least one persistent state
+    file.  The legacy store at ``knowledge/`` is represented by
+    :data:`DEFAULT_PROGRESS_PATHS` and is intentionally not returned here.
+    """
+    knowledge_root = BASE_DIR / "knowledge"
+    if not knowledge_root.is_dir():
+        return ()
+    stores: list[Path] = []
+    for current, directory_names, file_names in os.walk(knowledge_root):
+        directories = {name.casefold() for name in directory_names}
+        files = {name.casefold() for name in file_names}
+        directory_names[:] = sorted(
+            name for name in directory_names
+            if name.casefold() not in _KNOWLEDGE_STORE_SCAN_PRUNE
+            and "cache" not in name.casefold()
+        )
+        current_path = Path(current)
+        if current_path == knowledge_root:
+            continue
+        if "runs" in directories and files.intersection(_KNOWLEDGE_STORE_MARKERS):
+            stores.append(current_path)
+    return tuple(sorted(stores, key=lambda path: path.as_posix().casefold()))
+
+
+def default_progress_paths() -> tuple[str, ...]:
+    """Return legacy root state plus exact paths for every character profile."""
+    paths = list(DEFAULT_PROGRESS_PATHS)
+    for store in _nested_knowledge_store_roots():
+        try:
+            prefix = store.relative_to(REPO_DIR).as_posix()
+        except ValueError:
+            continue
+        paths.extend(f"{prefix}/{name}" for name in _KNOWLEDGE_PROGRESS_NAMES)
+    return tuple(dict.fromkeys(paths))
+
+
+def _character_profile_relative(
+    knowledge_relative: tuple[str, ...],
+) -> tuple[str, ...] | None:
+    """Return the store-relative tail for a lexical character profile path."""
+    for index in range(len(knowledge_relative) - 2, -1, -1):
+        part = knowledge_relative[index]
+        if part in _REVIEW_CHARACTER_PROFILE_CONTAINERS:
+            # A container alone is not a profile.  Require an identity segment
+            # before applying the existing online-state vocabulary.
+            tail = knowledge_relative[index + 2:]
+            if tail:
+                return tail
+    return None
+
+
+def _is_online_knowledge_tail(relative: tuple[str, ...], *, profile: bool) -> bool:
+    if not relative:
+        return False
+    if relative[0] in _REVIEW_ONLINE_KNOWLEDGE_DIRS:
+        return True
+    if len(relative) != 1:
+        return False
+    name = relative[0]
+    state_name = name.lstrip(".")
+    if any(state_name == stem or state_name.startswith(stem + ".")
+           for stem in _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES):
+        return True
+    if profile:
+        return name in _REVIEW_PROFILE_EXACT_RUNTIME_NAMES
+    if name.endswith(_REVIEW_ONLINE_KNOWLEDGE_SUFFIXES):
+        return True
+    return any(name == prefix or any(name.startswith(prefix + separator)
+                                     for separator in (".", "_", "-"))
+               for prefix in _REVIEW_ONLINE_KNOWLEDGE_PREFIXES)
+
+
 def classify_review_path(path: str | os.PathLike[str]) -> str:
     """Classify one candidate path from an isolated review.
 
@@ -364,22 +468,12 @@ def classify_review_path(path: str | os.PathLike[str]) -> str:
         return REVIEW_PATH_ONLINE_RUNTIME
     if len(relative) >= 2 and relative[0] == "knowledge":
         knowledge_relative = relative[1:]
-        if knowledge_relative[0] in _REVIEW_ONLINE_KNOWLEDGE_DIRS:
+        if _is_online_knowledge_tail(knowledge_relative, profile=False):
             return REVIEW_PATH_ONLINE_RUNTIME
-        if len(knowledge_relative) == 1:
-            name = knowledge_relative[0]
-            # Atomic writers may temporarily prefix state files with a dot and
-            # append another suffix (for example .pending_restart.<id>.tmp).
-            state_name = name.lstrip(".")
-            if any(state_name == stem or state_name.startswith(stem + ".")
-                   for stem in _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES):
-                return REVIEW_PATH_ONLINE_RUNTIME
-            if name.endswith(_REVIEW_ONLINE_KNOWLEDGE_SUFFIXES):
-                return REVIEW_PATH_ONLINE_RUNTIME
-            if any(name == prefix or any(name.startswith(prefix + separator)
-                                         for separator in (".", "_", "-"))
-                   for prefix in _REVIEW_ONLINE_KNOWLEDGE_PREFIXES):
-                return REVIEW_PATH_ONLINE_RUNTIME
+        profile_relative = _character_profile_relative(knowledge_relative)
+        if (profile_relative is not None
+                and _is_online_knowledge_tail(profile_relative, profile=True)):
+            return REVIEW_PATH_ONLINE_RUNTIME
     return REVIEW_PATH_ACCEPTED
 
 
@@ -494,8 +588,9 @@ def _index_snapshot_digest(entries: bytes) -> str:
 
 def _machine_owned_progress_specs(specs: Sequence[str]) -> bool:
     """Whether every pathspec is wholly inside Brain-owned online state."""
+    progress_paths = default_progress_paths()
     return bool(specs) and all(
-        _path_in_specs(spec, DEFAULT_PROGRESS_PATHS) for spec in specs
+        _path_in_specs(spec, progress_paths) for spec in specs
     )
 
 
@@ -740,15 +835,16 @@ def _recover_legacy_machine_progress_index_unlocked(log=print) -> bool:
     if latest is None:
         return False
     commit, parent, subject = latest
+    progress_paths = default_progress_paths()
     changed = _run_git([
         "diff-tree", "--no-commit-id", "--name-only", "-r", "-z",
-        parent, commit, "--", *DEFAULT_PROGRESS_PATHS,
+        parent, commit, "--", *progress_paths,
     ], timeout=30)
     if changed.returncode != 0:
         return False
     raw_paths = [
         path for path in _nul_paths(changed.stdout)
-        if _path_in_specs(path, DEFAULT_PROGRESS_PATHS)
+        if _path_in_specs(path, progress_paths)
     ]
     if not raw_paths:
         return False
@@ -850,7 +946,7 @@ def commit_progress_result(
             # overlap is interpreted as user intent. New transactions have a
             # durable journal; the legacy probe below repairs pre-journal runs.
             _recover_pending_progress_indexes_unlocked(log=log)
-            specs = normalize_paths(DEFAULT_PROGRESS_PATHS if paths is None else paths)
+            specs = normalize_paths(default_progress_paths() if paths is None else paths)
             # 可选的精确文件在旧安装中可能尚不存在；忽略既不存在也从未 tracked
             # 的 pathspec，但保留已删除的 tracked 路径以便提交 deletion。
             effective_specs = []

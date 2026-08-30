@@ -51,6 +51,19 @@ DEFAULT_KEEP_META_REVIEWS = 32
 MANIFEST_REL = Path("archive") / "manifest.json"
 CATALOG_REL = Path("archive") / "run_catalog.jsonl"
 LOCK_NAME = ".compact.lock"
+_KNOWLEDGE_STORE_MARKERS = frozenset({
+    "stats.json",
+    "progression.json",
+    "policy.json",
+    "lessons.md",
+})
+_KNOWLEDGE_STORE_SCAN_PRUNE = frozenset({
+    ".runtime",
+    "archive",
+    "code_backups",
+    "game",
+    "runs",
+})
 
 
 @dataclass(frozen=True)
@@ -122,6 +135,7 @@ class CompactionPlan:
     archived_by_name: dict[str, dict]
     stats_sha256: str | None
     runtime_logs: list[dict]
+    profile_plans: list["CompactionPlan"] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -130,9 +144,14 @@ class CompactionPlan:
         return [r for r in self.runs if r.name in names]
 
     @property
-    def changes_history(self) -> bool:
+    def local_changes_history(self) -> bool:
         return bool(self.archive_new or self.archive_duplicates or
                     any(m.changed for m in self.markdown))
+
+    @property
+    def changes_history(self) -> bool:
+        return self.local_changes_history or any(
+            plan.changes_history for plan in self.profile_plans)
 
 
 def _sha256(raw: bytes) -> str:
@@ -438,7 +457,9 @@ def _runtime_log_report(root: Path) -> list[dict]:
     return out
 
 
-def plan_compaction(root: Path, options: CompactionOptions | None = None) -> CompactionPlan:
+def _plan_single_compaction(
+    root: Path, options: CompactionOptions | None = None,
+) -> CompactionPlan:
     root = Path(root).resolve()
     options = options or CompactionOptions()
     manifest = _load_manifest(root)
@@ -487,6 +508,40 @@ def plan_compaction(root: Path, options: CompactionOptions | None = None) -> Com
     )
 
 
+def discover_character_profile_roots(root: Path) -> tuple[Path, ...]:
+    """Find nested Knowledge stores while pruning archives and forensic copies."""
+    root = Path(root).resolve()
+    if not root.is_dir():
+        return ()
+    stores: list[Path] = []
+    for current, directory_names, file_names in os.walk(root):
+        directories = {name.casefold() for name in directory_names}
+        files = {name.casefold() for name in file_names}
+        directory_names[:] = sorted(
+            name for name in directory_names
+            if name.casefold() not in _KNOWLEDGE_STORE_SCAN_PRUNE
+            and "cache" not in name.casefold()
+        )
+        current_path = Path(current)
+        if current_path == root:
+            continue
+        if "runs" in directories and files.intersection(_KNOWLEDGE_STORE_MARKERS):
+            stores.append(current_path.resolve())
+    return tuple(sorted(set(stores), key=lambda path: path.as_posix().casefold()))
+
+
+def plan_compaction(root: Path, options: CompactionOptions | None = None) -> CompactionPlan:
+    """Plan the root store and every nested character-profile store."""
+    root = Path(root).resolve()
+    options = options or CompactionOptions()
+    plan = _plan_single_compaction(root, options)
+    plan.profile_plans = [
+        _plan_single_compaction(profile_root, options)
+        for profile_root in discover_character_profile_roots(root)
+    ]
+    return plan
+
+
 def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -530,19 +585,40 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _knowledge_tree_root(root: Path) -> Path:
+    """Return the outer knowledge/ anchor for a nested profile when available."""
+    root = Path(root).resolve()
+    for candidate in (root, *root.parents):
+        if candidate.name.casefold() == "knowledge":
+            return candidate
+    return root
+
+
 def _active_reasons(root: Path) -> list[str]:
+    root = Path(root).resolve()
+    tree_root = _knowledge_tree_root(root)
     reasons: list[str] = []
-    if (root / "review_active.flag").exists():
-        reasons.append("knowledge/review_active.flag exists")
-    queue_path = root / "review_queue.json"
-    if queue_path.exists():
-        try:
-            queue = json.loads(queue_path.read_text(encoding="utf-8"))
-            if isinstance(queue, dict) and queue.get("reviewing"):
-                reasons.append("review_queue.json has an active reviewing batch")
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-            reasons.append("review_queue.json is unreadable")
-    runtime = root.parent / ".runtime"
+    checked_roots = tuple(dict.fromkeys((root, tree_root)))
+    for state_root in checked_roots:
+        flag_path = state_root / "review_active.flag"
+        if flag_path.exists():
+            reasons.append(
+                "knowledge/review_active.flag exists"
+                if state_root == tree_root else f"{flag_path} exists")
+        queue_path = state_root / "review_queue.json"
+        if queue_path.exists():
+            try:
+                queue = json.loads(queue_path.read_text(encoding="utf-8"))
+                if isinstance(queue, dict) and queue.get("reviewing"):
+                    reasons.append(
+                        "review_queue.json has an active reviewing batch"
+                        if state_root == tree_root else
+                        f"{queue_path} has an active reviewing batch")
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                reasons.append(
+                    "review_queue.json is unreadable"
+                    if state_root == tree_root else f"{queue_path} is unreadable")
+    runtime = tree_root.parent / ".runtime"
     if runtime.exists():
         for pid_path in sorted(runtime.glob("*.pid")):
             try:
@@ -799,7 +875,7 @@ def _verify_archived_duplicates(plan: CompactionPlan) -> None:
                     raise RuntimeError(f"archived duplicate verification failed: {record.name}")
 
 
-def apply_compaction(root: Path, options: CompactionOptions | None = None) -> dict:
+def _apply_single_compaction(root: Path, options: CompactionOptions | None = None) -> dict:
     """Apply one safe compaction pass and return a machine-readable result."""
     root = Path(root).resolve()
     active = _active_reasons(root)
@@ -807,7 +883,7 @@ def apply_compaction(root: Path, options: CompactionOptions | None = None) -> di
         raise RuntimeError("refusing to compact an active knowledge store: " + "; ".join(active))
     with _compaction_lock(root):
         # Re-plan under the lock so a prior dry-run can never authorize stale paths.
-        plan = plan_compaction(root, options)
+        plan = _plan_single_compaction(root, options)
         active = _active_reasons(root)
         if active:
             raise RuntimeError("stack became active while planning compaction: " + "; ".join(active))
@@ -871,6 +947,40 @@ def apply_compaction(root: Path, options: CompactionOptions | None = None) -> di
         }
 
 
+def apply_compaction(root: Path, options: CompactionOptions | None = None) -> dict:
+    """Compact the legacy root store and each discovered character profile."""
+    root = Path(root).resolve()
+    options = options or CompactionOptions()
+    profile_roots = discover_character_profile_roots(root)
+    root_result = _apply_single_compaction(root, options)
+    if not profile_roots:
+        return root_result
+
+    profile_results = [
+        {
+            "knowledge_dir": str(profile_root),
+            **_apply_single_compaction(profile_root, options),
+        }
+        for profile_root in profile_roots
+    ]
+    all_results = [root_result, *profile_results]
+    result = dict(root_result)
+    result.update({
+        "changed": any(item["changed"] for item in all_results),
+        "archive_created": any(item["archive_created"] for item in all_results),
+        "archived_runs": sum(int(item["archived_runs"]) for item in all_results),
+        "removed_duplicate_runs": sum(
+            int(item["removed_duplicate_runs"]) for item in all_results),
+        "markdown_compacted": sum(
+            int(item["markdown_compacted"]) for item in all_results),
+        "catalog_changed": any(item["catalog_changed"] for item in all_results),
+        "idempotent_noop": all(item["idempotent_noop"] for item in all_results),
+        "root_store": {"knowledge_dir": str(root), **root_result},
+        "character_profiles": profile_results,
+    })
+    return result
+
+
 def plan_report(plan: CompactionPlan) -> dict:
     active_bytes = sum(record.size for record in plan.runs)
     archive_bytes = sum(record.size for record in plan.archive_new)
@@ -886,7 +996,7 @@ def plan_report(plan: CompactionPlan) -> dict:
             "bytes_before": len(item.original),
             "bytes_after": len(item.compacted),
         })
-    return {
+    report = {
         "mode": "dry-run",
         "knowledge_dir": str(plan.root),
         "selection_rules": plan.options.selection_rules(),
@@ -909,6 +1019,11 @@ def plan_report(plan: CompactionPlan) -> dict:
         "warnings": plan.warnings,
         "git_history_note": "Current checkout shrinks; existing Git objects do not.",
     }
+    if plan.profile_plans:
+        report["character_profiles"] = [
+            plan_report(profile_plan) for profile_plan in plan.profile_plans
+        ]
+    return report
 
 
 def _parser() -> argparse.ArgumentParser:
