@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
 using Vivhite.Core;
 
 namespace Vivhite.Cards.Common;
@@ -33,6 +34,19 @@ public abstract class VivhiteLifeCalculationCard : VivhiteCard
         base.IsPlayable &&
         AdditionalLifeCalculationPlayability &&
         LifeCalculation.CanPay(this, LifeCalculationCost);
+
+    public sealed override bool ShouldPlay(CardModel card, AutoPlayType autoPlayType)
+    {
+        var baseAllowsPlay = base.ShouldPlay(card, autoPlayType);
+        if (!baseAllowsPlay || !ReferenceEquals(card, this))
+        {
+            return baseAllowsPlay;
+        }
+
+        var lifeCost = LifeCalculationCost;
+        return AdditionalLifeCalculationPlayability &&
+               (lifeCost <= 0 || LifeCalculation.CanPay(this, lifeCost));
+    }
 
     protected sealed override async Task OnPlay(
         PlayerChoiceContext choiceContext,
