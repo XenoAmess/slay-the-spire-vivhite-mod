@@ -33,7 +33,7 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     public override int MaxEnergy => 3;
     public override int StartingGold => 99;
 
-    // 独立角色直接派生自已注册的 Ironclad V3 replacement profile，避免维护第二份路径清单；
+    // 独立角色直接派生自已验证的 Ironclad V3 replacement profile，避免维护第二份路径清单；
     // 唯一覆盖项是白绮自己的能量计数器。
     public override CharacterAssetProfile AssetProfile => _assetProfile ??= CreateSharedAssetProfile();
 
@@ -52,7 +52,8 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
         var visualsPath = AssetProfile.Scenes?.VisualsPath;
         if (string.IsNullOrWhiteSpace(visualsPath))
         {
-            return null;
+            throw new InvalidOperationException(
+                "The validated Ironclad V3 profile has no combat visuals path.");
         }
 
         return RitsuGodotNodeFactories.CreateFromScenePath<NCreatureVisuals>(
@@ -61,11 +62,11 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
 
     private static CharacterAssetProfile CreateSharedAssetProfile()
     {
-        var ironcladProfile = IroncladReplacementAssets.CreateProfile();
-
-        var scenes = ironcladProfile.Scenes is null
-            ? new CharacterSceneAssetSet(EnergyCounterPath: EnergyCounterScenePath)
-            : ironcladProfile.Scenes with { EnergyCounterPath = EnergyCounterScenePath };
+        var ironcladProfile = IroncladReplacementAssets.GetValidatedV3Profile();
+        var scenes = ironcladProfile.Scenes
+            ?? throw new InvalidOperationException(
+                "The validated Ironclad V3 profile has no scene asset set.");
+        scenes = scenes with { EnergyCounterPath = EnergyCounterScenePath };
 
         return CharacterAssetProfiles.WithScenes(ironcladProfile, scenes);
     }

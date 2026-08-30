@@ -51,7 +51,7 @@ internal static class IroncladReplacementAssets
     private const string PaperHandTexturePath = $"{SkinRoot}/multiplayer/paper.png";
     private const string ScissorsHandTexturePath = $"{SkinRoot}/multiplayer/scissors.png";
 
-    private static readonly AtlasPageContract[] LegacyCombatAtlasPages =
+    private static readonly AtlasPageContract[] V3CombatAtlasPages =
     [
         new(
             "vivhite_combat.png",
@@ -61,12 +61,7 @@ internal static class IroncladReplacementAssets
                 new("vivhite_combat_body", 16, 16, 1536, 2272),
                 new("vivhite_combat_magic_arc", 1568, 16, 1488, 1104),
                 new("vivhite_combat_magic_sigil", 1808, 1152, 1248, 1136)
-            ])
-    ];
-
-    private static readonly AtlasPageContract[] V3CombatAtlasPages =
-    [
-        .. LegacyCombatAtlasPages,
+            ]),
         new(
             "vivhite_combat_death.png",
             2048,
@@ -107,28 +102,24 @@ internal static class IroncladReplacementAssets
             "V3 combat death atlas page",
             CombatDeathAtlasPagePath,
             typeof(Texture2D),
-            RequiredLayout: CombatAtlasLayout.V3FivePage,
             ExpectedWidth: 2048,
             ExpectedHeight: 1536),
         new(
             "V3 combat attack atlas page",
             CombatAttackAtlasPagePath,
             typeof(Texture2D),
-            RequiredLayout: CombatAtlasLayout.V3FivePage,
             ExpectedWidth: 2048,
             ExpectedHeight: 2304),
         new(
             "V3 combat heavy-attack atlas page",
             CombatHeavyAtlasPagePath,
             typeof(Texture2D),
-            RequiredLayout: CombatAtlasLayout.V3FivePage,
             ExpectedWidth: 2048,
             ExpectedHeight: 2304),
         new(
             "V3 combat cast atlas page",
             CombatCastAtlasPagePath,
             typeof(Texture2D),
-            RequiredLayout: CombatAtlasLayout.V3FivePage,
             ExpectedWidth: 2048,
             ExpectedHeight: 2304),
         new(
@@ -211,54 +202,50 @@ internal static class IroncladReplacementAssets
 
     private const string ForbiddenSerializedSpineMeshNode = "type=\"SpineMesh2D\"";
 
+    private static readonly Lazy<CharacterAssetProfile> ValidatedV3Profile =
+        new(CreateValidatedV3Profile);
+
     public static bool TryRegister()
     {
-        // Authoring sources live outside the Godot project under the repository's
-        // assets directory. The combat resource appears here only after a complete
-        // private rig is published, so templates alone stay inactive.
         try
         {
-            if (!ResourceLoader.Exists(CombatSkeletonDataPath))
-            {
-                Entry.Logger.Info($"Ironclad skin is not published at {SkinRoot}; keeping vanilla visuals.");
-                return false;
-            }
-        }
-        catch (Exception exception)
-        {
-            Entry.Logger.Warn(
-                "Ironclad skin disabled: the replacement root could not be inspected; " +
-                $"the base-game Ironclad assets remain active. {exception.GetType().Name}: {exception.Message}");
-            return false;
-        }
-
-        var issues = ValidateRequiredAssets();
-        if (issues.Count > 0)
-        {
-            Entry.Logger.Warn(
-                "Ironclad skin disabled: the complete resource bundle is not ready, so no Ironclad " +
-                $"asset replacement was registered. Required root: {SkinRoot}. Issues: {string.Join("; ", issues)}");
-            return false;
-        }
-
-        try
-        {
+            var profile = GetValidatedV3Profile();
             ModContentRegistry.For(Entry.ModId).RegisterCharacterAssetReplacement(
                 ModContentRegistry.VanillaCharacterIds.Ironclad,
-                CreateProfile());
+                profile);
 
-            Entry.Logger.Info($"Ironclad skin enabled from {SkinRoot}.");
+            Entry.Logger.Info($"Ironclad V3 five-page skin enabled from {SkinRoot}.");
             return true;
         }
         catch (Exception exception)
         {
             Entry.Logger.Error(
-                "Ironclad skin disabled: RitsuLib rejected the complete replacement profile; " +
-                $"the base-game Ironclad assets remain active. {exception.GetType().Name}: {exception.Message}");
+                "Ironclad V3 skin failed closed; no replacement profile was registered. " +
+                exception);
             return false;
         }
     }
 
+    internal static CharacterAssetProfile GetValidatedV3Profile()
+    {
+        return ValidatedV3Profile.Value;
+    }
+
+    private static CharacterAssetProfile CreateValidatedV3Profile()
+    {
+        var issues = ValidateRequiredAssets();
+        if (issues.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "The Ironclad replacement requires the complete exact V3 five-page skin and " +
+                $"failed closed at {SkinRoot}. Issues: {string.Join("; ", issues)}");
+        }
+
+        return CreateProfile();
+    }
+
+    // Structural factory retained for acceptance inspection. Runtime consumers must use
+    // GetValidatedV3Profile so this profile cannot be activated before the V3 contract passes.
     internal static CharacterAssetProfile CreateProfile()
     {
         return new CharacterAssetProfile(
@@ -286,15 +273,10 @@ internal static class IroncladReplacementAssets
     private static List<string> ValidateRequiredAssets()
     {
         var issues = new List<string>();
-        var combatAtlasLayout = ValidateCombatAtlasContract(issues);
+        ValidateCombatAtlasContract(issues);
 
         foreach (var asset in RequiredAssets)
         {
-            if (asset.RequiredLayout is not null && asset.RequiredLayout != combatAtlasLayout)
-            {
-                continue;
-            }
-
             try
             {
                 if (!ResourceLoader.Exists(asset.Path))
@@ -394,7 +376,7 @@ internal static class IroncladReplacementAssets
         return issues;
     }
 
-    private static CombatAtlasLayout? ValidateCombatAtlasContract(List<string> issues)
+    private static void ValidateCombatAtlasContract(List<string> issues)
     {
         try
         {
@@ -402,7 +384,7 @@ internal static class IroncladReplacementAssets
             if (string.IsNullOrWhiteSpace(wrapperText))
             {
                 issues.Add($"could not inspect combat atlas ({CombatAtlasPath}) as text");
-                return null;
+                return;
             }
 
             using var wrapper = JsonDocument.Parse(wrapperText);
@@ -410,31 +392,25 @@ internal static class IroncladReplacementAssets
                 atlasDataElement.ValueKind != JsonValueKind.String)
             {
                 issues.Add($"combat atlas ({CombatAtlasPath}) has no atlas_data string");
-                return null;
+                return;
             }
 
             var pages = ParseAtlasPages(atlasDataElement.GetString() ?? string.Empty);
-            if (MatchesAtlasContract(pages, LegacyCombatAtlasPages))
-            {
-                return CombatAtlasLayout.LegacySinglePage;
-            }
             if (MatchesAtlasContract(pages, V3CombatAtlasPages))
             {
-                return CombatAtlasLayout.V3FivePage;
+                return;
             }
 
             issues.Add(
-                $"combat atlas ({CombatAtlasPath}) must match either the exact legacy page or " +
-                "the exact V3 five-page order neutral/death/attack/attack_heavy/cast; got " +
+                $"combat atlas ({CombatAtlasPath}) must match the exact V3 five-page order " +
+                "neutral/death/attack/attack_heavy/cast; got " +
                 $"[{string.Join(", ", pages.Select(page => page.Name))}]");
-            return null;
         }
         catch (Exception exception)
         {
             issues.Add(
                 $"error inspecting combat atlas layout ({CombatAtlasPath}): " +
                 $"{exception.GetType().Name}: {exception.Message}");
-            return null;
         }
     }
 
@@ -546,12 +522,6 @@ internal static class IroncladReplacementAssets
         return true;
     }
 
-    private enum CombatAtlasLayout
-    {
-        LegacySinglePage,
-        V3FivePage
-    }
-
     private sealed record AtlasRegionContract(
         string Name,
         int X,
@@ -576,7 +546,6 @@ internal static class IroncladReplacementAssets
         string Path,
         Type ExpectedType,
         string? ExpectedGodotClass = null,
-        CombatAtlasLayout? RequiredLayout = null,
         int? ExpectedWidth = null,
         int? ExpectedHeight = null);
 
