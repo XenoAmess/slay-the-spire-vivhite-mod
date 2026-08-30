@@ -1,0 +1,68 @@
+{
+  "status": "rejected_remote_low_alpha_extension_and_tiny_scale",
+  "runtime_eligible": false,
+  "attempt": 2,
+  "max_attempts": 8,
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [146, 32, 816, 952],
+    "alpha_touches_edge": false,
+    "nonzero_alpha_pixels": 149873,
+    "opaque_pixels_alpha_ge_250": 128140,
+    "alpha_threshold_bboxes": {
+      "alpha_ge_1": [146, 32, 816, 952],
+      "alpha_ge_2": [147, 272, 721, 434],
+      "alpha_ge_16": [149, 274, 717, 431],
+      "alpha_ge_128": [150, 275, 715, 429],
+      "alpha_ge_250": [150, 276, 714, 427]
+    },
+    "alpha_ge_1_pixels": 149873,
+    "alpha_ge_2_pixels": 145141,
+    "alpha_ge_128_pixels": 136349
+  },
+  "semantic_review": {
+    "blue_butterfly_present": true,
+    "exactly_two_star_pages_present": true,
+    "open_upward_pursuit_trajectory_present": true,
+    "purple_margin_sphere_absent": true,
+    "closed_ring_absent": true,
+    "forbidden_subjects_or_marks": false
+  },
+  "visual_checks": {
+    "sourceover_256_black": "passed; no visible external halo or rectangular field",
+    "sourceover_256_white": "passed; no visible external halo or rectangular field",
+    "sourceover_256_game_indigo": "passed; silhouette and semantics are clear",
+    "size_64": "rejected; the physical emblem is undersized because remote Alpha=1 pixels dominate the native crop",
+    "size_32": "rejected; the butterfly and two separate pages are no longer reliably countable",
+    "external_visible_halo": false,
+    "remote_low_alpha_extension": true
+  },
+  "prepared_contract": {
+    "size_256_alpha_bbox": [33, 72, 168, 102],
+    "size_64_alpha_bbox": [7, 16, 44, 29],
+    "size_32_alpha_bbox": [4, 7, 23, 17],
+    "operation": "uniform RGBA Lanczos resize and centered transparent padding by prepare_vivhite_ui_icon.gd; no Alpha repair"
+  },
+  "rejection_reasons": [
+    "Although all source corners are Alpha=0 and no Alpha touches an edge, 4732 Alpha=1 pixels extend the native A>0 box from the solid core near y=272..705 to y=32..983.",
+    "This remote low-Alpha extension violates the requested no-low-Alpha-extension contract and forces the deterministic crop to retain nearly the full source height.",
+    "After the permitted uniform adaptation, the meaningful emblem is too small at 64px and the butterfly plus exactly two pages are not reliably countable at 32px."
+  ],
+  "archive_contract": {
+    "raw_output_present": true,
+    "verbatim_prompt_present": true,
+    "sanitized_request_present": true,
+    "task_record_present": true,
+    "normalized_prompt_matches_request_input": true
+  },
+  "source_sha256": "77E0F76BA24375AE1CAAE7BC311E393D61B98299BFBB698550B0959436710D35",
+  "prepared_256_sha256": "AD0BEFA4E41891BF1531B55FAB38F341AC8DC211A81FCD20EFDCBEEC1EC3B5EC",
+  "prepared_64_sha256": "47DF67CAD73D6ADFD52722435AA74113BCAFB8C78AF9DC51E8F5EB62D267E1B2",
+  "prepared_32_sha256": "496815FCA4841BAE99E54F104E81FC554878F2D82A3BDCB6B45FB1033BE880A0",
+  "runtime_path": "Vivhite/Vivhite/images/powers/AstralPursuitPower.png",
+  "runtime_created": false,
+  "alpha_repair_performed": false,
+  "next_action": "Report this failed attempt only; do not allocate or invoke another paid number."
+}
