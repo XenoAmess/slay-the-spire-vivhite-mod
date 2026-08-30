@@ -1,0 +1,78 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CONVERGENCE_VERDICT",
+  "card_type": "ConvergenceVerdict",
+  "card_name_zh": "收敛判决",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_reference",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Attack",
+    "rarity": "Uncommon",
+    "cough": 8,
+    "base_damage": 27,
+    "lethal_draw": 6,
+    "lethal_energy": 1,
+    "upgrade_damage": 35
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "Vivhite/Vivhite/images/cards/TerminationCondition.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque card scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "Vivhite/Vivhite/images/cards/TerminationCondition.png",
+      "role": "Vivhite identity, costume family, face, short silver hair, violet eyes, gold glasses, blue butterfly, overall rendering, and magical-world language only; its single-line attack and return loop were explicitly excluded"
+    }
+  ],
+  "reference_sha256": {
+    "Vivhite/Vivhite/images/cards/TerminationCondition.png": "64A766E254824516105BE9D3D2659E2245E6B46978F188C18625FA3F388771AC"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "AFE6991B0ADA10B8E14DE779E585681C4DB00927F7159FD6FFA7AE3340DBF766",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054d1-2950-7571-9959-99ec974b4745/exec-9ae51058-9108-4e95-ac53-c26feb599b39.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/convergence-verdict-attempt-01/original.png",
+  "original_sha256": "8786CEAA5F5CC9FE4EF7D592346C1A28278938F785C7607022884ADDEF5EC4FC",
+  "original_png": {
+    "width": 1611,
+    "height": 976,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 168,
+    "y": 3,
+    "width": 1275,
+    "height": 969,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "prepared_candidate_sha256": "0FC355B3FCA68D8F08C8C3F4DA1A428EF3BA0AD99129B5F97F1A64B3FA303937",
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_red_liquid_weapon_or_mouth_emitted_magic": true,
+    "multiple_trajectories_converge_on_one_heavy_impact": true,
+    "distinct_from_termination_condition": true,
+    "lethal_reward_pages_inside_runtime_safe_area": false
+  },
+  "status": "rejected_runtime_crop",
+  "rejection_reason": "The generated 1611x976 scene is semantically strong, but the deterministic centered 25:19 crop cuts away most of the star-chart reward pages behind the right-side impact. The next serial attempt changes only the safe-area placement of the impact and reward cluster."
+}
