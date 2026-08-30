@@ -3,7 +3,7 @@
 基于 [CharTyr/STS2-Agent](https://github.com/CharTyr/STS2-Agent)（游戏内 HTTP API mod，AGPL-3.0）构建的
 **会自动玩、会思考、会进化的杀戮尖塔2智能体**。
 
-- 反复游玩最左侧的战士角色（Ironclad / 铁甲战士）
+- 严格轮换游玩白绮（Vivhite）与战士（Ironclad），全新状态第一局选择白绮
 - 每个决策都产出中文局势分析与理由（见 `knowledge/brain.log`）
 - **每局结束后自动复盘**：把结果归因到卡牌/遗物/敌人/事件选项，突变策略参数，写进 `knowledge/lessons.md`
 - 以通关为目标，胜利后自动提升进阶（Ascension）继续挑战更高难度
@@ -28,6 +28,39 @@
 
 大脑**不依赖任何第三方包**（纯 Python 标准库），也**不修改上游 mod**——只是它的 HTTP 客户端。
 MCP server（上游附带）对本项目不是必需的。
+
+## 双角色 Profile 与严格轮换
+
+双角色共用同一套 `Policy` 决策算法；`Agent` 为每个角色创建相互独立的 `Knowledge` / `Policy`
+运行实例，角色差异通过 `CharacterProfile`、角色目录和参数实例表达：
+
+| `profile_id` | 实际 `character_id` | 学习数据根目录 |
+| --- | --- | --- |
+| `ironclad` | `IRONCLAD` | 历史 `knowledge/` 根目录，原位保留且不迁移 |
+| `vivhite` | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` | `knowledge/profiles/vivhite/` |
+
+没有角色字段的历史日志继续归为 Ironclad。新运行日志写入 `profile_id`、API 返回的
+`character_id` 和角色内递增的 `profile_run_number`；两套 `stats.json`、`policy.json`、
+`progression.json`、`lessons.md` 与 `runs/` 不交叉读写。
+
+`CharacterRotation` 的持久状态位于 `knowledge/character_rotation.json`。没有活动对局和轮换历史时，
+目标固定为 Vivhite；之后严格执行 Vivhite → Ironclad → Vivhite。活动对局始终以 API 的实际
+`run.character_id` 绑定 Profile，只有终局日志与角色统计成功保存后才翻转目标；重复终局按 `run_id`
+幂等去重。目标角色缺失、锁定或载荷不完整时停在选角界面并记录原因，不回退到其他可用角色。
+
+Vivhite 的初始评分参数已独立定义：实际生命演算每点 `-1.25`，当前生命严格低于 35% 时风险
+权重变为两倍；余量每点 `+1.25`；汲取按实际回复量的 `85%` 计分；永久最大生命每点 `+3.0`；
+击杀回复按实际回复量计分。评分工具不裁剪余量、永久成长、击杀回复、汲取百分比或汲取回复量。
+60 张白绮卡牌目录和这些无裁剪评分工具已有定向回归；它们接入在线 `Policy` 的完整消费路径仍需
+全栈验证，不能仅凭静态目录测试视为生产生效。
+
+分角色楼层统计只使用 `floor_sum_raw` / `best_floor_raw`，驾驶舱分别展示两名角色，并计算同窗口
+Vivhite÷Ironclad 滚动平均楼层比。LLM 复盘的目标契约是队列项携带 `profile_id`、单批只含一个
+Profile，且 prompt、runs、stats、lessons、policy、报告和队列均按角色隔离；该链路仍处于最终
+集成验证阶段，在相关提交与回归完成前不得视为已生产验证。
+
+平衡结论尚未产生：必须重新采集 Vivhite 与 Ironclad 各至少 20 局，以真实楼层同窗口计算比值；
+目标仍为 `1.35～1.65`（中心 `1.50`）。当前没有足够的 `20+20` 真机样本，因此不声称已经达标。
 
 ## 快速开始
 
