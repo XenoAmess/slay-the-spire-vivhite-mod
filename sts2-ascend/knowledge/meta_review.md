@@ -5970,3 +5970,23 @@ retry_resolution: 20260830-134703-1788068823172152800-fa6604bd integrated
   同样立即关闭并保留决策链，之后再拆分 Boss 专属审计账。本次没有失败合入包，
   `failed_review_replay.requested_packages=[]`，无 replay target，故不追加
   `retry_resolution` 行。
+
+# 2026-08-30｜1183~1185 复盘：致死斩杀竞速的部分格挡分配
+
+## HYPOTHESIS
+
+当 `kill_race=true` 且本回合已致死时，`reserve_for_block=true` 仍会沿用攻击×0.55、格挡×1.8，并压低 0 费抽牌；部分格挡因此可能挤掉攻击或抽牌，错过唯一的输出窗口。
+
+## EVIDENCE
+
+1185-F17-T6 在 17 血、16 点来袭时连续打出两张 5 格挡；T7 在 11 血、28 点来袭时打出 Cinder+、Shrug、Battle Trance 后阵亡。原生 Vantom 血量为 173，Battle Trance 为 0 费抽 3，Slippery 又使慢速输出更难追回斩杀曲线。旧评分 fixture 也复现了攻击/抽牌低于部分格挡的排序。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+`brain/policy.py::_score_play` 仅在“致死斩杀竞速”解除普通致死的攻防反向倍率；完整覆盖缺口的格挡保留，部分格挡乘既有 `race_allin_blk_damp`，抽牌标记为“致死竞速抽牌续攻”。普通致死及非致死竞速不变。预期 3 场独立实战中可支付攻击或抽牌不再被部分格挡压过；若仍发生，或完整格挡被压低，则关闭该条件分支并保留决策链。
+
+## VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` 输出 **SELFCHECK OK**；fixture 中竞速致死的 Strike、Battle Trance 均高于部分格挡，普通致死 Strike 仍低于原闸门。`git diff --check` 通过。
+
+retry_resolution: none (no target package; local production fix)

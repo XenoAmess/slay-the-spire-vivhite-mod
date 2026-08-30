@@ -3404,6 +3404,43 @@ def main() -> int:
     assert "致死竞速抢斩杀" in s_strike_race[2], \
         f"致死竞速单体攻击放行缺少观测标记: {s_strike_race[2]}"
 
+    # 3xf-race-lethal（1185-F17-T6/T7）：致死斩杀竞速里 reserve_for_block
+    # 只代表手里有部分格挡，不能让“攻击×0.55/格挡×1.8”继续覆盖唯一的
+    # 输出/抽牌窗口。能完全抹平缺口的格挡仍保留救命价值，普通致死保持旧闸门。
+    ff_lethal_enemy = [dict(ff_enemies[0])]
+    ff_lethal_enemy[0].update(current_hp=150, block=0,
+                               intents=[{"total_damage": 16}])
+    ff_partial = {"index": 2, "card_id": "FF_PARTIAL", "name": "部分格挡",
+                  "playable": True, "energy_cost": 1, "requires_target": False,
+                  "dynamic_values": [{"name": "Block", "current_value": 5}]}
+    ff_draw = {"index": 3, "card_id": "BATTLE_TRANCE", "name": "战斗专注",
+               "playable": True, "energy_cost": 0, "requires_target": False,
+               "resolved_rules_text": "抽3张牌。", "dynamic_values": []}
+    s_kr_lethal_hit = ff_pol._score_play(
+        ff_strike, ff_lethal_enemy, 16, 0, 6, ff_pol.know.policy,
+        my_hp=17, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    s_kr_partial = ff_pol._score_play(
+        ff_partial, ff_lethal_enemy, 16, 0, 6, ff_pol.know.policy,
+        my_hp=17, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    s_kr_draw = ff_pol._score_play(
+        ff_draw, ff_lethal_enemy, 16, 0, 6, ff_pol.know.policy,
+        my_hp=17, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    s_plain_lethal_hit = ff_pol._score_play(
+        ff_strike, ff_lethal_enemy, 16, 0, 6, ff_pol.know.policy,
+        my_hp=17, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=False, run_deck=[])
+    assert s_kr_lethal_hit[0] > s_kr_partial[0] \
+        and s_kr_draw[0] > s_kr_partial[0], \
+        f"致死竞速仍让部分格挡压过攻/抽: hit={s_kr_lethal_hit} block={s_kr_partial} draw={s_kr_draw}"
+    assert "致死竞速部分格挡贬值" in s_kr_partial[2] \
+        and "致死竞速抽牌续攻" in s_kr_draw[2], \
+        f"致死竞速执行留痕缺失: block={s_kr_partial[2]} draw={s_kr_draw[2]}"
+    assert s_plain_lethal_hit[0] < ff_thr < s_kr_lethal_hit[0], \
+        f"普通致死攻击闸被误放开: plain={s_plain_lethal_hit} race={s_kr_lethal_hit}"
+
     # 3xg（01:43 滑溜批补合）：滑溜是逐 hit 的 HP 伤害上限，且只有穿甲
     # 命中才掉层。评分、击杀判断和最终出牌必须共用同一条逐段结算路径。
     sl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slippery-"))

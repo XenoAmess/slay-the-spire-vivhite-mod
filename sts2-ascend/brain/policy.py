@@ -3429,12 +3429,16 @@ class Policy:
         # 败局竞速：整场被判负但单回合尚不致死——desperate 只救"当场必死"，
         # 这里救的是"两回合内必死"；二者互斥计提速，保证任何局面只放大一次
         race_allin = hopeless_race and not desperate
+        # 致死斩杀竞速是另一种 all-in：reserve_for_block 只说明存在格挡牌，
+        # 不说明部分格挡能把本回合救回来。否则 lethal 仍会套用攻击×0.55 /
+        # 格挡×1.8，并把 0 费抽牌压成死牌，正是 1185-F17-T6/T7 的执行缝隙。
+        kill_race_lethal = bool(kill_race and lethal)
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         # 败局竞速豁免（第514~517批复盘）：判死局的致死回合不再压攻击抬格挡——
         # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留
-        if lethal and not race_allin:
+        if lethal and not race_allin and not kill_race_lethal:
             atk_damp, blk_boost = 0.55, 1.8
-        elif urgent:
+        elif urgent and not kill_race_lethal:
             atk_damp, blk_boost = 0.75, 1.4
         else:
             atk_damp, blk_boost = 1.0, 1.0
@@ -3810,6 +3814,11 @@ class Policy:
                 score = (useful * 1.05 * pol["block_safety"]
                          + (block - useful) * float(pol.get("block_excess_value", 0.03))) * blk_boost
                 why = f"格挡{block}"
+            # 斩杀竞速已经否证长期防守；只保留能完全抹平本回合缺口的格挡。
+            # 部分格挡仍可抽牌/附带其他效果，因此仅压低防御面，不抹掉抽牌价值。
+            if kill_race_lethal and useful < gap:
+                score *= float(pol.get("race_allin_blk_damp", 0.45))
+                why += "｜致死竞速部分格挡贬值"
             dr = draw_amount(card)
             if dr:
                 score += dr * 1.5
@@ -3823,11 +3832,14 @@ class Policy:
         if dr > 0 or "能量" in text or "energy" in text.lower():
             score = 2.0 + dr * 1.5
             # 孤注一掷/败局竞速回合例外：多抽一张攻击牌就是多一分抢斩杀的弹药
-            if lethal and not (desperate or race_allin):
+            if lethal and not (desperate or race_allin or kill_race_lethal):
                 score = min(score, floor_score)  # 致死回合抽牌/回能救不了命
             if cost == 0:
                 score += pol["free_card_bonus"]
-            return score, None, f"功能牌（抽牌{dr}/回能）"
+            why = f"功能牌（抽牌{dr}/回能）"
+            if kill_race_lethal:
+                why += "｜致死竞速抽牌续攻"
+            return score, None, why
 
         # 锁格挡期间纯防牌是零收益死牌；带伤害、抽牌或回能面的混合牌仍由
         # 前面的对应分支正常计价。文本通道兼容服务端已把动态格挡报成 0 的载荷。
