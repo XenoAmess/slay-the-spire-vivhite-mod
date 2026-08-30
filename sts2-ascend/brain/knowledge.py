@@ -24,6 +24,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from character_profiles import CharacterProfile
 from native_knowledge import NativeGameKnowledge
 
 SHRINK_K = 6.0  # shrinkage strength toward prior mean
@@ -821,19 +822,25 @@ def act_floor_band(row_in_act: int) -> int:
 
 
 class Knowledge:
-    def __init__(self, root: Path, repair_phantoms: bool = True):
-        self.root = root
+    def __init__(self, root: Path | CharacterProfile, repair_phantoms: bool = True):
+        self.profile = root if isinstance(root, CharacterProfile) else None
+        knowledge_root = self.profile.knowledge_root if self.profile else Path(root)
+        self.root = self.profile.root if self.profile else knowledge_root
+        root = self.root
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / "runs").mkdir(exist_ok=True)
         self.stats = _load_json(root / "stats.json", DEFAULT_STATS)
         self.policy = _load_json(root / "policy.json", DEFAULT_POLICY)
-        self.progression = _load_json(root / "progression.json", DEFAULT_PROGRESSION)
+        progression_defaults = copy.deepcopy(DEFAULT_PROGRESSION)
+        if self.profile is not None:
+            progression_defaults["character"] = self.profile.character_id
+        self.progression = _load_json(root / "progression.json", progression_defaults)
         # Immutable facts extracted from the installed base game are a separate,
         # read-only layer.  They must never be merged into learned stats/policy:
         # game updates replace a versioned snapshot, whereas online evidence keeps
         # accumulating across runs.  Missing snapshots degrade explicitly through
         # ``game_knowledge.error`` and do not prevent selfchecks with temporary KBs.
-        self.game_knowledge = NativeGameKnowledge.from_knowledge_root(root)
+        self.game_knowledge = NativeGameKnowledge.from_knowledge_root(knowledge_root)
         # fill in any new default keys added in later versions
         #
         # Raw-floor migration must observe key absence *before* setdefault.  The
@@ -845,7 +852,7 @@ class Knowledge:
         missing_best_floor_raw = "best_floor_raw" not in global_stats
         for k, v in DEFAULT_POLICY.items():
             self.policy.setdefault(k, v)
-        for k, v in DEFAULT_PROGRESSION.items():
+        for k, v in progression_defaults.items():
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
             self.stats["global"].setdefault(k, v)
