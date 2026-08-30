@@ -1,0 +1,26 @@
+{
+  "asset": "VivhitesCrimsonTransformationRitualPower",
+  "generation_id": "0151",
+  "attempt": 1,
+  "status": "rejected_native_alpha_gate",
+  "raw_sha256": "BF37E59B1FA06BBE09B2B41C4DEE5D01024FEC1591E84317ECE0FC17E174BEDB",
+  "raw_size_bytes": 1385365,
+  "semantic_review": {
+    "result": "passed",
+    "notes": "The hard-edged three-stage crystal and attack-star progression rises into a top infinity loop and contains no person, mouth, blood, liquid, strand, text, number, or weapon."
+  },
+  "native_alpha_review": {
+    "result": "failed",
+    "decoded_format": "RGBA8",
+    "corner_alpha": [1, 0, 3, 1],
+    "tool_exit_code": 3,
+    "tool_error": "All four source corners must have Alpha=0: [1, 0, 3, 1]",
+    "alpha_repair_performed": false
+  },
+  "adaptation_and_sourceover": {
+    "result": "not_run_after_hard_gate_failure",
+    "runtime_written": false,
+    "reason": "The native source failed before any permitted deterministic adaptation."
+  },
+  "retry_decision": "Reject attempt 1 of 8, preserve all paid records, and retry serially from a clean prompt with one changed hypothesis: bound every antialiased or illuminated pixel well inside all four canvas edges."
+}

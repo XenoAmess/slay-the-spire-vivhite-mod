@@ -1,0 +1,51 @@
+{
+  "asset": "VivhitesCrimsonTransformationRitualPower",
+  "generation_id": "0154",
+  "attempt_label": 3,
+  "status": "rejected_semantic_and_composition_gate",
+  "raw_sha256": "A7C95E690C40553BD4ED04DA79AA0B879EED45D2837268283E64FCD75A01C057",
+  "raw_size_bytes": 1046540,
+  "semantic_review": {
+    "result": "failed",
+    "passed": [
+      "single connected hard-edged enamel and gem emblem",
+      "all visible major crystals and attack stars are physically attached",
+      "top infinity loop is clear",
+      "no person, mouth, blood, liquid, strand, text, number, weapon, or loose ornament"
+    ],
+    "failed": [
+      "only two crystal-plus-attack-star stage pairs are clearly present; the required third pair is missing",
+      "the tall narrow silhouette loses stage readability at 32 pixels"
+    ]
+  },
+  "native_alpha_review": {
+    "result": "passed",
+    "decoded_format": "RGBA8",
+    "source_size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [273, 71, 737, 912],
+    "bbox_touches_edge": false,
+    "alpha_repair_performed": false
+  },
+  "composition_review": {
+    "result": "failed",
+    "requested_central_fraction": 0.55,
+    "nonzero_alpha_width_fraction": 0.7197,
+    "nonzero_alpha_height_fraction": 0.8906,
+    "notes": "The native nonzero-Alpha bounds do not satisfy the requested central 55-percent zone, and the resulting silhouette is too vertically elongated for the 32-pixel consumer."
+  },
+  "adaptation_and_sourceover": {
+    "result": "technical_pass",
+    "operation": "uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair",
+    "sizes": {
+      "256": {"alpha_bbox": [43, 33, 114, 183], "corner_alpha": [0, 0, 0, 0]},
+      "64": {"alpha_bbox": [9, 6, 32, 50], "corner_alpha": [0, 0, 0, 0]},
+      "32": {"alpha_bbox": [5, 2, 17, 27], "corner_alpha": [0, 0, 0, 0]}
+    },
+    "sourceover_backgrounds_checked_at_each_size": ["black", "white", "game-indigo"],
+    "sourceover_result": "9 of 9 passed with no visible glow, emitted light, soft field, rectangular pollution, or edge contamination",
+    "runtime_written": false
+  },
+  "sequence_note": "The directory label follows the user's explicit 0154 attempt-03 instruction. A separate paid 0153 request had already completed before that instruction arrived and remains truthfully preserved in its own directory.",
+  "retry_decision": "Do not install. A future authorized retry should preserve the hard-edge and Alpha success, use a compact near-square connected topology, and require exactly three unmistakable attached crystal-plus-star pairs before the infinity loop."
+}

@@ -1,0 +1,26 @@
+{
+  "asset": "VivhitesCrimsonTransformationRitualPower",
+  "generation_id": "0152",
+  "attempt": 2,
+  "status": "rejected_native_alpha_gate",
+  "raw_sha256": "6F12B732263A19E048C80C2460C365E425D77F63E9531BED675255DFEBE8976F",
+  "raw_size_bytes": 1322763,
+  "semantic_review": {
+    "result": "mostly_passed_with_minor_extraneous_elements",
+    "notes": "The three increasing stages and top infinity loop are clear, with no forbidden person, mouth, blood, liquid, strand, text, number, or weapon. Several detached side crystals weaken the requested compact connected silhouette."
+  },
+  "native_alpha_review": {
+    "result": "failed",
+    "decoded_format": "RGBA8",
+    "alpha_bbox": [0, 22, 1010, 1002],
+    "tool_exit_code": 3,
+    "tool_error": "Visible Alpha touches a source edge; reject before runtime packing: [P: (0, 22), S: (1010, 1002)]",
+    "alpha_repair_performed": false
+  },
+  "adaptation_and_sourceover": {
+    "result": "not_run_after_hard_gate_failure",
+    "runtime_written": false,
+    "reason": "The native source failed before any permitted deterministic adaptation."
+  },
+  "retry_decision": "Reject attempt 2 of 8, preserve all paid records, and retry serially from a clean prompt with the same boundary hypothesis made concrete: one connected emblem confined to the central 65 percent of the canvas, with every crystal attached to a stage."
+}
