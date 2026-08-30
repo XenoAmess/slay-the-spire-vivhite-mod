@@ -20,6 +20,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from character_profiles import CharacterProfile, ProfileStore
+from character_rotation import (CharacterRotation, CharacterRotationError,
+                                canonical_character_id)
 from client import ApiError, ConnectionDown, Sts2Client
 from decision_trace import ensure_decision_trace
 from knowledge import Knowledge
@@ -252,6 +255,9 @@ class RunContext:
     ascension: int = 0
     started_at: str = ""
     run_number: int = 0                      # 生涯序号；异步复盘按批精确取证
+    profile_id: str = ""
+    character_id: str = ""
+    profile_run_number: int = 0
     credit_tags: list = field(default_factory=list)   # ("card_pick", id) etc.
     attribution_tags: list = field(default_factory=list)  # durable run-end facts only
     decisions: list = field(default_factory=list)     # full decision log
@@ -299,10 +305,21 @@ class RunContext:
 class Agent:
     def __init__(self, cfg: dict):
         self.cfg = cfg
-        self.know = Knowledge(KNOWLEDGE_DIR)
         self.client = Sts2Client(ports=cfg["api_ports"])
         self.rng = random.Random(cfg["seed"]) if cfg.get("seed") is not None else random.Random()
-        self.policy = Policy(self.know, self.rng)
+        self.profile_store = ProfileStore(KNOWLEDGE_DIR)
+        self.rotation = CharacterRotation.from_knowledge_root(KNOWLEDGE_DIR)
+        self._profile_knowledge: dict[str, Knowledge] = {
+            profile.profile_id: Knowledge(profile)
+            for profile in self.profile_store.profiles
+        }
+        self._profile_policies: dict[str, Policy] = {
+            profile_id: Policy(know, self.rng, character_rotation=self.rotation)
+            for profile_id, know in self._profile_knowledge.items()
+        }
+        self.active_profile = self.profile_store.ironclad
+        self.know = self._profile_knowledge[self.active_profile.profile_id]
+        self.policy = self._profile_policies[self.active_profile.profile_id]
         self.ctx = RunContext()
         self.last_sig = None
         self.same_count = 0
@@ -317,6 +334,124 @@ class Agent:
         self._api_race_retry = None  # repeated refresh races, diagnostic only
         self.live_dashboard: LiveDashboardPublisher | None = None
         self.dashboard_supervisor = None
+
+    def _activate_profile(self, profile: CharacterProfile) -> None:
+        """Expose one character's paired Knowledge/Policy as the active runtime."""
+        knowledge = getattr(self, "_profile_knowledge", {}).get(profile.profile_id)
+        policies = getattr(self, "_profile_policies", {})
+        policy = policies.get(profile.profile_id)
+        if knowledge is None or policy is None:
+            # Compatibility for lightweight tests and older construction helpers:
+            # normal Agent instances eagerly own both profile runtimes.
+            knowledge = Knowledge(profile)
+            policy = Policy(
+                knowledge, getattr(self, "rng", None),
+                character_rotation=getattr(self, "rotation", None))
+            self._profile_knowledge = dict(
+                getattr(self, "_profile_knowledge", {}),
+                **{profile.profile_id: knowledge})
+            self._profile_policies = dict(
+                getattr(self, "_profile_policies", {}),
+                **{profile.profile_id: policy})
+        self.active_profile = profile
+        self.know = knowledge
+        self.policy = policy
+
+    def _bind_profile_for_state(self, state: dict) -> CharacterProfile | None:
+        """Bind an active run from the API's actual character identity.
+
+        At character selection there is no run identity yet, so the durable next
+        target selects the profile whose ascension settings should be displayed.
+        Once a run exists, only ``run.character_id`` is authoritative.
+        """
+        store = getattr(self, "profile_store", None)
+        rotation = getattr(self, "rotation", None)
+        if store is None or rotation is None:
+            return None
+
+        run = state.get("run") or {}
+        if run:
+            run_id = state.get("run_id") or run.get("run_id")
+            character_id = run.get("character_id")
+            if not run_id or not character_id:
+                return None
+            ctx = getattr(self, "ctx", None)
+            ctx_run_id = getattr(ctx, "run_id", "run_unknown")
+            # A process that first attaches to a stale GAME_OVER echo must not
+            # create an unresolved "active" rotation entry. A genuine terminal
+            # frame already has the matching live context and was observed earlier.
+            if (state.get("screen") == "GAME_OVER"
+                    and str(ctx_run_id) != str(run_id)):
+                return None
+            # If the API has already replaced an unfinished run, _track must first
+            # finalize that old context against its original profile. It invokes
+            # this binder again immediately afterwards for the replacement run.
+            if (ctx_run_id not in ("", "run_unknown", str(run_id))
+                    and not bool(getattr(ctx, "run_finalized", False))):
+                return None
+            try:
+                try:
+                    profile = store.for_character(str(character_id))
+                except KeyError:
+                    canonical = canonical_character_id(character_id)
+                    if canonical is None:
+                        raise
+                    profile = store.resolve(canonical)
+            except KeyError:
+                error = f"actual_character_unmapped:{character_id}"
+                if getattr(self, "_rotation_runtime_error", None) != error:
+                    self._rotation_runtime_error = error
+                    log(f"[agent] 角色运行时绑定失败：{error}")
+                return None
+
+            self._activate_profile(profile)
+            try:
+                rotation.observe_active_run(str(run_id), str(character_id))
+                self._rotation_runtime_error = None
+            except CharacterRotationError as exc:
+                error = f"observe_active_run_failed:{run_id}:{character_id}:{exc}"
+                if getattr(self, "_rotation_runtime_error", None) != error:
+                    self._rotation_runtime_error = error
+                    log(f"[agent] 角色轮换状态错误：{error}")
+
+            if ctx is not None:
+                ctx.profile_id = profile.profile_id
+                ctx.character_id = str(character_id)
+            return profile
+
+        if state.get("screen") == "CHARACTER_SELECT":
+            try:
+                profile = store.resolve(rotation.target_character)
+            except (CharacterRotationError, KeyError) as exc:
+                error = f"selection_profile_unavailable:{exc}"
+                if getattr(self, "_rotation_runtime_error", None) != error:
+                    self._rotation_runtime_error = error
+                    log(f"[agent] 角色轮换状态错误：{error}")
+                return None
+            self._activate_profile(profile)
+            return profile
+        return None
+
+    def _run_profile_metadata(self) -> dict:
+        """Return backward-compatible terminal/incremental run-log identity."""
+        ctx = self.ctx
+        profile = (getattr(self, "active_profile", None)
+                   or getattr(getattr(self, "know", None), "profile", None))
+        profile_id = (getattr(ctx, "profile_id", "")
+                      or getattr(profile, "profile_id", "") or "ironclad")
+        character_id = (getattr(ctx, "character_id", "")
+                        or getattr(profile, "character_id", "")
+                        or (getattr(getattr(self, "know", None),
+                                    "progression", {}) or {}).get(
+                                        "character", "IRONCLAD"))
+        profile_run_number = int(
+            getattr(ctx, "profile_run_number", 0)
+            or getattr(ctx, "run_number", 0) or 0)
+        return {
+            "profile_id": str(profile_id),
+            "character_id": str(character_id),
+            "profile_run_number": profile_run_number,
+        }
 
     # ---------------- ASCEND-VISION live telemetry ----------------
 
@@ -552,6 +687,7 @@ class Agent:
         the observation-only contract explicit.
         """
         run = state.get("run") or {}
+        self._bind_profile_for_state(state)
         run_id = state.get("run_id") or "run_unknown"
         screen = state.get("screen", "UNKNOWN")
         hp = run.get("current_hp", self.ctx.last_hp)
@@ -582,10 +718,18 @@ class Agent:
                 if restart_reason:
                     log(f"[agent] {restart_reason}；异常旧局已归档，新局动作前请求 runner 重启大脑…")
                     sys.exit(42)
+            self._bind_profile_for_state(state)
             next_run = int(self.know.stats.get("global", {}).get("runs", 0)) + 1
             review_health_eligible = bool(
                 getattr(self, "_review_health_ready_for_new_run", False))
             self.ctx.reset_for(run_id, asc, next_run)
+            profile = (getattr(self, "active_profile", None)
+                       or getattr(self.know, "profile", None))
+            self.ctx.profile_id = getattr(profile, "profile_id", "ironclad")
+            self.ctx.character_id = str(
+                run.get("character_id")
+                or getattr(profile, "character_id", "IRONCLAD"))
+            self.ctx.profile_run_number = next_run
             self.ctx.review_health_eligible = review_health_eligible
             self._review_health_ready_for_new_run = False
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
@@ -608,8 +752,11 @@ class Agent:
                     prior.get("attribution_tags"))
                 if prior.get("started_at"):
                     self.ctx.started_at = prior["started_at"]
-                if prior.get("run_number"):
-                    self.ctx.run_number = int(prior["run_number"])
+                prior_run_number = prior.get(
+                    "profile_run_number", prior.get("run_number"))
+                if prior_run_number:
+                    self.ctx.run_number = int(prior_run_number)
+                    self.ctx.profile_run_number = self.ctx.run_number
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
                     f"{len(self.ctx.combat_notes)} 条战斗记录 / "
                     f"{len(self.ctx.attribution_tags)} 条长期归因）")
@@ -1522,6 +1669,7 @@ class Agent:
             self.know.save_run_log(self.ctx.run_id, {
                 "run_id": self.ctx.run_id,
                 "run_number": self.ctx.run_number,
+                **self._run_profile_metadata(),
                 "ascension": self.ctx.ascension,
                 "started_at": self.ctx.started_at,
                 "victory": False,
@@ -1861,6 +2009,15 @@ class Agent:
     def _finalize(self, victory: bool, floor: int) -> None:
         if self.ctx.run_finalized:
             return
+        rotation = getattr(self, "rotation", None)
+        if rotation is not None and self.ctx.run_id != "run_unknown":
+            try:
+                if self.ctx.run_id in rotation.snapshot().finalized_run_ids:
+                    self.ctx.run_finalized = True
+                    log(f"[agent] 忽略重复终局通知：{self.ctx.run_id} 已完成轮换结算")
+                    return
+            except CharacterRotationError as exc:
+                log(f"[agent] 读取角色轮换终局账失败，保留本次终局：{exc}")
         self.ctx.run_finalized = True
         # 幻影局守卫（第 50~51 局复盘）：真实对局至少有涅奥事件一条决策，
         # 零决策必为结算屏回声幻影——不得入账/存日志/触发复盘与 git 存档
@@ -1883,10 +2040,12 @@ class Agent:
         # finalize_run 是生涯 runs 计数的唯一提交点；以提交后的值校正序号，
         # 让 review_queue 的第 N 局能精确关联这份原始证据。
         self.ctx.run_number = int(self.know.stats.get("global", {}).get("runs", 0))
+        self.ctx.profile_run_number = self.ctx.run_number
         log("\n" + lesson)
         path = self.know.save_run_log(self.ctx.run_id, {
             "run_id": self.ctx.run_id,
             "run_number": self.ctx.run_number,
+            **self._run_profile_metadata(),
             "ascension": self.ctx.ascension,
             "started_at": self.ctx.started_at,
             "victory": victory,
@@ -1897,6 +2056,18 @@ class Agent:
         })
         log(f"[agent] 对局日志已保存：{path.name}")
         self.know.save()
+        if rotation is not None:
+            character_id = self._run_profile_metadata()["character_id"]
+            terminal = rotation.record_terminal(
+                self.ctx.run_id,
+                terminal_persisted=True,
+                character_id=character_id or None,
+            )
+            if terminal.advanced:
+                log(f"[agent] 角色轮换已推进：{terminal.character} → "
+                    f"{terminal.next_character}")
+            else:
+                log(f"[agent] 重复终局未推进角色轮换：{self.ctx.run_id}")
         self._mark_review_run_healthy()
         # 每局结束把复盘请求投入异步队列（工作线程消化，游玩不等待；多局积压会合并追及）
         if llm_review is not None:
@@ -2189,6 +2360,10 @@ class Agent:
                     return
                 continue
 
+            # An active run is always bound from the API's actual character.  On
+            # CHARACTER_SELECT only, the durable next target selects the matching
+            # profile so ascension/policy data stay character-local.
+            self._bind_profile_for_state(state)
             self._dashboard_observe(state)
 
             # 策略热同步（第 123~124 局复盘）：长驻进程此前只在启动时执行

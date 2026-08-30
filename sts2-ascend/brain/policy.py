@@ -286,9 +286,11 @@ def _exhausts_other_cards(card: dict) -> bool:
 
 
 class Policy:
-    def __init__(self, know: Knowledge, rng: random.Random | None = None):
+    def __init__(self, know: Knowledge, rng: random.Random | None = None,
+                 character_rotation=None):
         self.know = know
         self.rng = rng or random.Random()
+        self.character_rotation = character_rotation
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
@@ -1245,22 +1247,38 @@ class Policy:
     def _character_select(self, state: dict, ctx) -> Decision:
         cs = state.get("character_select") or {}
         chars = cs.get("characters", [])
-        target = self.know.progression.get("character", "IRONCLAD")
-        chosen = None
-        for c in chars:
-            cid = (c.get("character_id") or "").upper()
-            if c.get("is_locked") or c.get("is_random"):
-                continue
-            if target in cid:
-                chosen = c
-                break
-        if chosen is None:  # fallback: first unlocked non-random (leftmost warrior)
+        rotation = getattr(self, "character_rotation", None)
+        if rotation is not None:
+            selection = rotation.resolve_selection(chars)
+            target = selection.target_character
+            if not selection.ready:
+                return Decision(
+                    None, {},
+                    f"选角界面：轮换目标 {target} 阻塞（{selection.reason}）",
+                    wait=1.0)
+            chosen = next((c for c in chars
+                           if c.get("index") == selection.option_index), None)
+            if chosen is None:
+                return Decision(
+                    None, {},
+                    f"选角界面：轮换目标 {target} 阻塞（target_payload_changed）",
+                    wait=1.0)
+        else:
+            # Compatibility for direct Policy tests/callers without an Agent.  It
+            # remains exact-target-only: an unavailable target never falls back.
+            target = self.know.progression.get("character", "IRONCLAD")
+            chosen = None
             for c in chars:
-                if not c.get("is_locked") and not c.get("is_random"):
+                cid = (c.get("character_id") or "").upper()
+                if (not c.get("is_locked") and not c.get("is_random")
+                        and str(target).upper() in cid):
                     chosen = c
                     break
         if chosen is None:
-            return Decision(None, {}, "选角界面：未找到可用角色", wait=1.0)
+            return Decision(
+                None, {},
+                f"选角界面：目标角色 {target} 不可用（target_missing_or_locked）",
+                wait=1.0)
         if not chosen.get("is_selected"):
             return Decision("select_character", {"option_index": chosen["index"]},
                             f"选择角色：{chosen.get('name')}（目标角色 {target}）",
