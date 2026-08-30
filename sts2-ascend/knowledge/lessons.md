@@ -8697,3 +8697,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1191 胜，当前目标进阶 0
+
+## 第 1192 局复盘（2026-08-30 15:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：ARMAMENTS, BREAKTHROUGH, IRON_WAVE, SECOND_WIND, IRON_WAVE, COLOSSUS, BREAKTHROUGH, PILLAGE, SECOND_WIND, FLAME_BARRIER, INFLAME, IRON_WAVE, STONE_ARMOR, HEADBUTT, RUPTURE, DISMANTLE
+- 本局遗物：吃不完的糖, PERMAFROST
+- 战斗记录：F6 Monster战 掉血14; F8 Elite战 掉血34; F9 Monster战 掉血17｜竞速审计：T4判死→实战5回合获胜; F14 Monster战 掉血15; F15 Monster战 掉血3; F17 Boss战 掉血59｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/129局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
+- 生涯战绩：0/1192 胜，当前目标进阶 0
