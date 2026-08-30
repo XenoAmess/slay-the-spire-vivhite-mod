@@ -1,0 +1,69 @@
+{
+  "asset": "InductiveCirclePower",
+  "attempt": 1,
+  "generation_id": "0140",
+  "status": "static_accepted_main_agent_reviewed",
+  "consumer_contract": {
+    "kind": "single transparent Power-status icon",
+    "loader": "VivhitePowerTemplate.AssetProfile",
+    "resource_path": "res://Vivhite/images/powers/InductiveCirclePower.png",
+    "normal_and_big_icon_share_asset": true,
+    "runtime_size": [256, 256],
+    "actual_size_checks": [256, 64, 32]
+  },
+  "generation": {
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "background": "transparent",
+    "n": 1,
+    "source_size": [1024, 1024],
+    "source_format": "RGBA8",
+    "source_sha256": "421DD420FF69187B8AF30CAC2FD943EE869904107649A56BC3A5FAD123359A9E"
+  },
+  "alpha_validation": {
+    "source_corner_alpha": [0, 0, 0, 0],
+    "source_alpha_bbox": [49, 23, 961, 979],
+    "source_bbox_touches_edge": false,
+    "source_nonzero_alpha_pixels": 345874,
+    "source_opaque_pixels": 336077,
+    "alpha_repair_performed": false
+  },
+  "sourceover_validation": {
+    "backgrounds": ["black", "white", "game-indigo"],
+    "sizes": [256, 64, 32],
+    "composites_checked": 9,
+    "composites_passed": 9,
+    "visible_outer_halo": false,
+    "visible_edge_pollution": false,
+    "notes": "All nine true SourceOver composites keep a clean, tight silhouette. The cyan-teal life core, concentric return loops, and increasing star-node progression remain clear at 64px; the loop-plus-life-core silhouette remains readable at 32px. The main agent separately reviewed the 256px, 64px, and 32px game-indigo composites and accepted the icon."
+  },
+  "main_agent_review": {
+    "reviewed_on": "2026-08-31",
+    "reviewed_composites": [
+      "inspection/256/sourceover-game-indigo.png",
+      "inspection/64/sourceover-game-indigo.png",
+      "inspection/32/sourceover-game-indigo.png"
+    ],
+    "result": "passed",
+    "scope": "static actual-size SourceOver review; not an in-game runtime capture"
+  },
+  "semantic_validation": {
+    "centered_cyan_teal_life_core": true,
+    "concentric_induction_loops": true,
+    "progressively_larger_star_nodes": true,
+    "clockwise_return_motion": true,
+    "person_or_body_part": false,
+    "mouth_element": false,
+    "weapon": false,
+    "corpse_or_enemy": false,
+    "blood_or_liquid": false,
+    "text_or_pseudo_glyph": false
+  },
+  "adaptation": {
+    "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, or creative post-processing.",
+    "runtime_path": "Vivhite/Vivhite/images/powers/InductiveCirclePower.png",
+    "runtime_sha256": "8CEBAE21E7B93A4C67F13909460BDF3A2675B837B02D31CEDF7E7E91C69CCEF6",
+    "prepared_256_byte_identical_to_runtime": true
+  },
+  "decision": "Attempt 01 satisfies the static transparent-icon contract and passed the main agent's three-size game-indigo SourceOver review. Stop at 1/8 attempts; no retry requested. Actual in-game runtime validation remains part of the later full integration pass."
+}
