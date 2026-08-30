@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class CompositeColorField : ChromaticCard
 {
     public CompositeColorField()
-        : base(2, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies, 4)
+        : base(2, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies, 8)
     {
     }
 
@@ -25,7 +25,7 @@ public sealed class CompositeColorField : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         new PowerVar<VulnerablePower>("VulnerablePower", 2),
-        ModCardVars.Int("Drain", 10)
+        ModCardVars.Int("Drain", 2)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -52,6 +52,6 @@ public sealed class CompositeColorField : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars["VulnerablePower"].UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

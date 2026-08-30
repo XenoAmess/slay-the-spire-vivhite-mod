@@ -20,11 +20,11 @@ public sealed class LuminousProjection : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 1;
+    protected override int LifeCalculationCost => 2;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 1),
+        ModCardVars.Int("LifeCost", 2),
         ModCardVars.Damage(10, ValueProp.Move)
     ];
 

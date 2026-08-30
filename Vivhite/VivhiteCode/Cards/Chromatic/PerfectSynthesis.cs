@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class PerfectSynthesis : ChromaticCard
 {
     public PerfectSynthesis()
-        : base(3, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies, 8)
+        : base(3, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies, 16)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class PerfectSynthesis : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(11, ValueProp.Move),
-        ModCardVars.Int("Drain", 40)
+        ModCardVars.Int("Drain", 8)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class PerfectSynthesis : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["Drain"].UpgradeValueBy(10);
+        DynamicVars["Drain"].UpgradeValueBy(2);
     }
 }

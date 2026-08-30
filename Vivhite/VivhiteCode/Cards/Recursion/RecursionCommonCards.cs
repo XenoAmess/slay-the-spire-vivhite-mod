@@ -16,7 +16,7 @@ namespace Vivhite.Cards.Recursion;
 public sealed class RecurrentStarlight : RecursionCard
 {
     public RecurrentStarlight()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 
@@ -52,7 +52,7 @@ public sealed class RecurrentStarlight : RecursionCard
 public sealed class TerminationCondition : RecursionCard
 {
     public TerminationCondition()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 
@@ -89,7 +89,7 @@ public sealed class TerminationCondition : RecursionCard
 public sealed class ParallelStarfall : RecursionCard
 {
     public ParallelStarfall()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AllEnemies, 3)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AllEnemies, 6)
     {
     }
 
@@ -117,7 +117,7 @@ public sealed class ParallelStarfall : RecursionCard
 public sealed class AstralSearch : RecursionCard
 {
     public AstralSearch()
-        : base(0, CardType.Skill, CardRarity.Common, TargetType.Self, 1)
+        : base(0, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
     {
     }
 
@@ -156,7 +156,7 @@ public sealed class AstralSearch : RecursionCard
 public sealed class HeuristicShield : RecursionCard
 {
     public HeuristicShield()
-        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 1)
+        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
     {
     }
 
@@ -184,7 +184,7 @@ public sealed class HeuristicShield : RecursionCard
 public sealed class SuccessorFormula : RecursionCard
 {
     public SuccessorFormula()
-        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 

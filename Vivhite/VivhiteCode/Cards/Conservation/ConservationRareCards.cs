@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Conservation;
 public sealed class ClosedManifold : ConservationCard
 {
     public ClosedManifold()
-        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 5)
+        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 10)
     {
     }
 
@@ -46,7 +46,7 @@ public sealed class AxiomOfLife : ConservationCard
     private const string DimensionUpVar = "DimensionUp";
 
     public AxiomOfLife()
-        : base(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy, 5)
+        : base(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy, 10)
     {
     }
 
@@ -88,7 +88,7 @@ public sealed class AxiomOfLife : ConservationCard
 public sealed class InfiniteExtension : ConservationCard
 {
     public InfiniteExtension()
-        : base(3, CardType.Power, CardRarity.Rare, TargetType.Self, 6)
+        : base(3, CardType.Power, CardRarity.Rare, TargetType.Self, 12)
     {
     }
 
@@ -119,7 +119,7 @@ public sealed class ConservationFirmament : ConservationCard
     private const string MultiplierVar = "Multiplier";
 
     public ConservationFirmament()
-        : base(2, CardType.Skill, CardRarity.Rare, TargetType.Self, 5)
+        : base(2, CardType.Skill, CardRarity.Rare, TargetType.Self, 10)
     {
     }
 

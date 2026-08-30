@@ -18,16 +18,16 @@ public sealed class GoldenRatio : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 2;
+    protected override int LifeCalculationCost => 4;
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin, VivhiteKeywords.Drain];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 2),
+        ModCardVars.Int("LifeCost", 4),
         ModCardVars.Int("Margin", 3),
-        ModCardVars.Int("Drain", 15),
+        ModCardVars.Int("Drain", 3),
         ModCardVars.Cards(1)
     ];
 
@@ -58,6 +58,6 @@ public sealed class GoldenRatio : VivhiteLifeCalculationCard
     protected override void OnUpgrade()
     {
         DynamicVars["Margin"].UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

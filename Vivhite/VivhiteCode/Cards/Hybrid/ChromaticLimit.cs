@@ -21,16 +21,16 @@ public sealed class ChromaticLimit : VivhiteLifeCalculationCard
 
     protected override bool HasEnergyCostX => true;
 
-    protected override int LifeCalculationCost => 4;
+    protected override int LifeCalculationCost => 8;
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Drain, VivhiteKeywords.Margin];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 4),
+        ModCardVars.Int("LifeCost", 8),
         ModCardVars.Damage(9, ValueProp.Move),
-        ModCardVars.Int("DrainPerX", 15),
+        ModCardVars.Int("DrainPerX", 3),
         ModCardVars.Int("HealingPerMargin", 10)
     ];
 
@@ -68,6 +68,6 @@ public sealed class ChromaticLimit : VivhiteLifeCalculationCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["DrainPerX"].UpgradeValueBy(5);
+        DynamicVars["DrainPerX"].UpgradeValueBy(1);
     }
 }

@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class Chiaroscuro : ChromaticCard
 {
     public Chiaroscuro()
-        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 4)
     {
     }
 
@@ -27,7 +27,7 @@ public sealed class Chiaroscuro : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Block(10, ValueProp.Move),
-        ModCardVars.Int("Drain", 25)
+        ModCardVars.Int("Drain", 5)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -46,6 +46,6 @@ public sealed class Chiaroscuro : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Block.UpgradeValueBy(4);
-        DynamicVars["Drain"].UpgradeValueBy(10);
+        DynamicVars["Drain"].UpgradeValueBy(2);
     }
 }

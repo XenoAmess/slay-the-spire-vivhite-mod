@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class CrimsonConservationLaw : ChromaticCard
 {
     public CrimsonConservationLaw()
-        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 5)
+        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 10)
     {
     }
 

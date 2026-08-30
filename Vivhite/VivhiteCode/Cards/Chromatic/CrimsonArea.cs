@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class CrimsonArea : ChromaticCard
 {
     public CrimsonArea()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class CrimsonArea : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(14, ValueProp.Move),
-        ModCardVars.Int("Drain", 20)
+        ModCardVars.Int("Drain", 4)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class CrimsonArea : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(4);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

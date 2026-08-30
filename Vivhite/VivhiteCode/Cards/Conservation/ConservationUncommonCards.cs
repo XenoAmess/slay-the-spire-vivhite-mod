@@ -18,7 +18,7 @@ public sealed class IsoperimetricWard : ConservationCard
     private const string MultiplierVar = "Multiplier";
 
     public IsoperimetricWard()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 
@@ -58,7 +58,7 @@ public sealed class TopologicalGrowth : ConservationCard
     private const string MarginVar = "Margin";
 
     public TopologicalGrowth()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 8)
     {
     }
 
@@ -98,7 +98,7 @@ public sealed class LawOfConservation : ConservationCard
     private const string PowerVar = "Power";
 
     public LawOfConservation()
-        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 3)
+        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 6)
     {
     }
 
@@ -135,7 +135,7 @@ public sealed class LifeManifold : ConservationCard
     private const string MarginVar = "Margin";
 
     public LifeManifold()
-        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 4)
+        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
     {
     }
 
@@ -168,7 +168,7 @@ public sealed class LifeManifold : ConservationCard
 public sealed class MobiusLoop : ConservationCard
 {
     public MobiusLoop()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 
@@ -219,7 +219,7 @@ public sealed class Invariant : ConservationCard
     private const string MarginVar = "Margin";
 
     public Invariant()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 1)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
     {
     }
 
@@ -257,7 +257,7 @@ public sealed class Invariant : ConservationCard
 public sealed class GeodesicVeil : ConservationCard
 {
     public GeodesicVeil()
-        : base(2, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 3)
+        : base(2, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 6)
     {
     }
 

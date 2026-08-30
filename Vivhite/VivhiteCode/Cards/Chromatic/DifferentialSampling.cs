@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class DifferentialSampling : ChromaticCard
 {
     public DifferentialSampling()
-        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 1)
+        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class DifferentialSampling : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(3, ValueProp.Move),
-        ModCardVars.Int("Drain", 10)
+        ModCardVars.Int("Drain", 2)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class DifferentialSampling : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

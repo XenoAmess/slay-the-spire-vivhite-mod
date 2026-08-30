@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class ChromaticTransition : ChromaticCard
 {
     public ChromaticTransition()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 
@@ -22,7 +22,7 @@ public sealed class ChromaticTransition : ChromaticCard
         [VivhiteKeywords.Drain, CardKeyword.Exhaust];
 
     protected override IEnumerable<DynamicVar> ChromaticVars =>
-        [ModCardVars.Int("Drain", 10)];
+        [ModCardVars.Int("Drain", 2)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -40,6 +40,6 @@ public sealed class ChromaticTransition : ChromaticCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

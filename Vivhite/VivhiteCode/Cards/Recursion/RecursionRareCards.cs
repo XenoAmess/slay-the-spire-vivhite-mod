@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Recursion;
 public sealed class ProofOfTermination : RecursionCard
 {
     public ProofOfTermination()
-        : base(2, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies, 5)
+        : base(2, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies, 10)
     {
     }
 
@@ -48,7 +48,7 @@ public sealed class ProofOfTermination : RecursionCard
 public sealed class DynamicProgramming : RecursionCard
 {
     public DynamicProgramming()
-        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 5)
+        : base(2, CardType.Power, CardRarity.Rare, TargetType.Self, 10)
     {
     }
 
@@ -78,7 +78,7 @@ public sealed class DynamicProgramming : RecursionCard
 public sealed class InfiniteStarSequence : RecursionCard
 {
     public InfiniteStarSequence()
-        : base(1, CardType.Skill, CardRarity.Rare, TargetType.Self, 4)
+        : base(1, CardType.Skill, CardRarity.Rare, TargetType.Self, 8)
     {
     }
 
@@ -118,7 +118,7 @@ public sealed class InfiniteStarSequence : RecursionCard
 public sealed class OptimalAlgorithm : RecursionCard
 {
     public OptimalAlgorithm()
-        : base(3, CardType.Power, CardRarity.Rare, TargetType.Self, 7)
+        : base(3, CardType.Power, CardRarity.Rare, TargetType.Self, 14)
     {
     }
 

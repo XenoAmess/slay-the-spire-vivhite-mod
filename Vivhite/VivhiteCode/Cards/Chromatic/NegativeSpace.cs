@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class NegativeSpace : ChromaticCard
 {
     public NegativeSpace()
-        : base(0, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(0, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 

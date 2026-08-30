@@ -25,7 +25,7 @@ public sealed class AstralMeasure : VivhiteCard
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         ModCardVars.Damage(10, ValueProp.Move),
-        ModCardVars.Int("DrainPerMargin", 5)
+        ModCardVars.Int("DrainPerMargin", 1)
     ];
 
     protected override async Task OnPlay(

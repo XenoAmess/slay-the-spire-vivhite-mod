@@ -128,7 +128,7 @@ public static class ChromaticDrainMechanics
         var upgradedPower = context.Recipient.GetPower<InfiniteCanvasUpgradedPower>();
         var normalStacks = Math.Max(0, normalPower?.Amount ?? 0);
         var upgradedStacks = Math.Max(0, upgradedPower?.Amount ?? 0);
-        var growth = checked((normalStacks * 2) + (upgradedStacks * 3));
+        var growth = checked(normalStacks + upgradedStacks);
         if (growth == 0)
         {
             return;

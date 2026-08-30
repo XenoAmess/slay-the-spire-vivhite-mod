@@ -46,7 +46,7 @@ public sealed class ClosedProjection : ConservationCard
     private const string BlockPerMarginVar = "BlockPerMargin";
 
     public ClosedProjection()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 
@@ -88,7 +88,7 @@ public sealed class TangentStarlight : ConservationCard
     private const string MarginVar = "Margin";
 
     public TangentStarlight()
-        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 1)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
     {
     }
 
@@ -123,7 +123,7 @@ public sealed class OpenSetShelter : ConservationCard
     private const string MarginVar = "Margin";
 
     public OpenSetShelter()
-        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 4)
     {
     }
 
@@ -160,7 +160,7 @@ public sealed class LocalHomeomorphism : ConservationCard
     private const string MarginVar = "Margin";
 
     public LocalHomeomorphism()
-        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 1)
+        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
     {
     }
 
@@ -197,7 +197,7 @@ public sealed class ScaleTransformation : ConservationCard
     private const string DimensionUpVar = "DimensionUp";
 
     public ScaleTransformation()
-        : base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 3)
+        : base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 6)
     {
     }
 

@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class RiemannStarArray : ChromaticCard
 {
     public RiemannStarArray()
-        : base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 3)
+        : base(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 6)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class RiemannStarArray : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(4, ValueProp.Move),
-        ModCardVars.Int("Drain", 15)
+        ModCardVars.Int("Drain", 3)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -45,6 +45,6 @@ public sealed class RiemannStarArray : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

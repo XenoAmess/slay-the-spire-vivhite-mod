@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class GoldenComposition : ChromaticCard
 {
     public GoldenComposition()
-        : base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 4)
+        : base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 8)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class GoldenComposition : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(8, ValueProp.Move),
-        ModCardVars.Int("Drain", 25)
+        ModCardVars.Int("Drain", 5)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class GoldenComposition : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(2);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

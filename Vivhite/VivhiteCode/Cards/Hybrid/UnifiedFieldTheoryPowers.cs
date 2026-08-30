@@ -43,7 +43,8 @@ public static class UnifiedFieldTheoryMechanics
 
         var normal = owner.GetPowerAmount<UnifiedFieldTheoryPower>();
         var upgraded = owner.GetPowerAmount<UnifiedFieldTheoryUpgradedPower>();
-        var percent = marginPrevented * ((normal * 2) + (upgraded * 3));
+        var percentPerMargin = checked(normal + upgraded);
+        var percent = checked(marginPrevented * percentPerMargin);
         if (percent == 0)
         {
             return;

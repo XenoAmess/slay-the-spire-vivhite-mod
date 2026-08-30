@@ -20,11 +20,11 @@ public sealed class VivhiteTransformation : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 2;
+    protected override int LifeCalculationCost => 4;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 2),
+        ModCardVars.Int("LifeCost", 4),
         ModCardVars.Power<StrengthPower>(1),
         ModCardVars.Power<DexterityPower>(1)
     ];

@@ -18,15 +18,15 @@ public sealed class UnifiedFieldTheory : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 7;
+    protected override int LifeCalculationCost => 14;
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin, VivhiteKeywords.Drain];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 7),
-        ModCardVars.Int("DrainPerMargin", 2),
+        ModCardVars.Int("LifeCost", 14),
+        ModCardVars.Int("DrainPerMargin", 1),
         ModCardVars.Int("HealingDivisor", 3)
     ];
 
@@ -56,7 +56,6 @@ public sealed class UnifiedFieldTheory : VivhiteLifeCalculationCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars["DrainPerMargin"].UpgradeValueBy(1);
         DynamicVars["HealingDivisor"].UpgradeValueBy(-1);
     }
 }

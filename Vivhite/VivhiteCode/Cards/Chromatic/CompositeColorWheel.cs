@@ -14,7 +14,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class CompositeColorWheel : ChromaticCard
 {
     public CompositeColorWheel()
-        : base(2, CardType.Attack, CardRarity.Common, TargetType.AllEnemies, 3)
+        : base(2, CardType.Attack, CardRarity.Common, TargetType.AllEnemies, 6)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class CompositeColorWheel : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(10, ValueProp.Move),
-        ModCardVars.Int("Drain", 25)
+        ModCardVars.Int("Drain", 5)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class CompositeColorWheel : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["Drain"].UpgradeValueBy(5);
+        DynamicVars["Drain"].UpgradeValueBy(1);
     }
 }

@@ -17,7 +17,7 @@ namespace Vivhite.Cards.Recursion;
 public sealed class BacktrackingSpell : RecursionCard
 {
     public BacktrackingSpell()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 3)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 6)
     {
     }
 
@@ -59,7 +59,7 @@ public sealed class BacktrackingSpell : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars["LifeCost"].UpgradeValueBy(-2);
+        DynamicVars["LifeCost"].UpgradeValueBy(-4);
     }
 }
 
@@ -67,7 +67,7 @@ public sealed class BacktrackingSpell : RecursionCard
 public sealed class ConvergenceVerdict : RecursionCard
 {
     public ConvergenceVerdict()
-        : base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 4)
+        : base(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, 8)
     {
     }
 
@@ -106,7 +106,7 @@ public sealed class ConvergenceVerdict : RecursionCard
 public sealed class DivideAndConquerCircle : RecursionCard
 {
     public DivideAndConquerCircle()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 
@@ -166,7 +166,7 @@ public sealed class DivideAndConquerCircle : RecursionCard
 public sealed class AstralPursuit : RecursionCard
 {
     public AstralPursuit()
-        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 3)
+        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 6)
     {
     }
 
@@ -205,7 +205,7 @@ public sealed class AstralPursuit : RecursionCard
 public sealed class PrefetchFuture : RecursionCard
 {
     public PrefetchFuture()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 2)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 
@@ -255,7 +255,7 @@ public sealed class PrefetchFuture : RecursionCard
 public sealed class InductiveCircle : RecursionCard
 {
     public InductiveCircle()
-        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 4)
+        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
     {
     }
 
@@ -285,7 +285,7 @@ public sealed class InductiveCircle : RecursionCard
 public sealed class EventLoop : RecursionCard
 {
     public EventLoop()
-        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 3)
+        : base(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self, 6)
     {
     }
 

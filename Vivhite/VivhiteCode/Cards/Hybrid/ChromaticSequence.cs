@@ -18,17 +18,17 @@ public sealed class ChromaticSequence : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 2;
+    protected override int LifeCalculationCost => 4;
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin, VivhiteKeywords.Drain];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        ModCardVars.Int("LifeCost", 2),
+        ModCardVars.Int("LifeCost", 4),
         ModCardVars.Cards(2),
         ModCardVars.Int("MarginPerAttack", 1),
-        ModCardVars.Int("DrainPerSkill", 5)
+        ModCardVars.Int("DrainPerSkill", 1)
     ];
 
     protected override async Task OnPlayAfterLifePayment(

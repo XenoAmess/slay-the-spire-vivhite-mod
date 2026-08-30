@@ -29,6 +29,23 @@ internal static class VivhitesCrimsonTransformationRitualAcceptanceTests
             "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
             repository.CardId(typeof(VivhitesCrimsonTransformationRitual)),
             "The generated full card ID must remain stable.");
+        AcceptanceAssert.Equal(
+            1m,
+            card.DynamicVars["LifeCostPerPhase"].BaseValue,
+            "The ritual exception must add exactly one Life Calculation per phase.");
+        RequireDeclaredMethod(typeof(VivhitesCrimsonTransformationRitual), "OnUpgrade")
+            .Invoke(card, null);
+        AcceptanceAssert.Equal(
+            1m,
+            card.DynamicVars["LifeCostPerPhase"].BaseValue,
+            "Upgrading the ritual must not double or otherwise change its per-phase Life Calculation.");
+
+        var phaseThree = VivhitesCrimsonTransformationRitualMechanics.Calculate(
+            [new CrimsonRitualStage(3, 10)]);
+        AcceptanceAssert.Equal(
+            3,
+            phaseThree.ExtraLifeCost,
+            "Ritual phase three must still add exactly three Life Calculation.");
 
         var normal = new VivhitesCrimsonTransformationRitualPower();
         var upgraded = new VivhitesCrimsonTransformationRitualUpgradedPower();
@@ -92,17 +109,17 @@ internal static class VivhitesCrimsonTransformationRitualAcceptanceTests
         var combined = VivhitesCrimsonTransformationRitualMechanics.GetCombinedLifeCost(
             attack,
             ritual.ExtraLifeCost);
-        AcceptanceAssert.Equal(4, combined, "Printed Life Calculation 1 and ritual phase 3 must gate as a total of 4.");
+        AcceptanceAssert.Equal(5, combined, "Printed Life Calculation 2 and ritual phase 3 must gate as a total of 5.");
 
         var blocked = LifeCalculation.Calculate(
-            currentHp: 4,
+            currentHp: 5,
             marginAvailable: 0,
             payerIsAlive: true,
             amount: combined);
         AcceptanceAssert.True(!blocked.CanPay, "The combined gate must reject a payment that would reduce HP below one.");
 
         var payable = LifeCalculation.Calculate(
-            currentHp: 5,
+            currentHp: 6,
             marginAvailable: 0,
             payerIsAlive: true,
             amount: combined);

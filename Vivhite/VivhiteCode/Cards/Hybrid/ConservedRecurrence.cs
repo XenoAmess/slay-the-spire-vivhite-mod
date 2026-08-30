@@ -19,13 +19,13 @@ public sealed class ConservedRecurrence : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 5;
+    protected override int LifeCalculationCost => 10;
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [CardKeyword.Exhaust];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
-        [ModCardVars.Int("LifeCost", 5)];
+        [ModCardVars.Int("LifeCost", 10)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
