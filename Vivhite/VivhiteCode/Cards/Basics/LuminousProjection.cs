@@ -35,10 +35,14 @@ public sealed class LuminousProjection : VivhiteLifeCalculationCard
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
 
-        await DamageCmd.Attack(DynamicVars.Damage.BaseValue)
+        var attack = DamageCmd.Attack(DynamicVars.Damage.BaseValue)
             .FromCard(this, cardPlay)
-            .Targeting(cardPlay.Target)
-            .Execute(choiceContext);
+            .Targeting(cardPlay.Target);
+        await VivhiteCardRules.ExecuteAttackWithGlobalDrainAsync(
+            choiceContext,
+            attack,
+            this,
+            cardPlay);
     }
 
     protected override void OnUpgrade()

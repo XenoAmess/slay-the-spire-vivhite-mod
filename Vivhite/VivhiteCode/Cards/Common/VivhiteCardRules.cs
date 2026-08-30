@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using Vivhite.Cards.Chromatic;
 using Vivhite.Cards.Hybrid;
 using Vivhite.Core;
 
@@ -39,6 +40,26 @@ public static class VivhiteCardRules
             });
     }
 
+    /// <summary>
+    /// Executes an Attack card with no card-specific Drain while still applying every global and
+    /// turn-scoped Drain modifier through the same recovery and conversion pipeline.
+    /// </summary>
+    public static Task<InfiniteDrainResult> ExecuteAttackWithGlobalDrainAsync(
+        PlayerChoiceContext choiceContext,
+        AttackCommand attackCommand,
+        CardModel card,
+        CardPlay cardPlay,
+        DrainRecoveryHandler? recoveryHandler = null)
+    {
+        return ExecuteDrainAttackAsync(
+            choiceContext,
+            attackCommand,
+            card,
+            cardPlay,
+            0m,
+            recoveryHandler);
+    }
+
     public static async Task<InfiniteDrainResult> ExecuteDrainAttackAsync(
         PlayerChoiceContext choiceContext,
         AttackCommand attackCommand,
@@ -51,12 +72,14 @@ public static class VivhiteCardRules
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(cardPlay);
 
+        DrainRecoveryHandler effectiveRecoveryHandler =
+            recoveryHandler ?? ChromaticDrainMechanics.RecoverAndConvertAsync;
         var result = await InfiniteDrain.ExecuteAttackAsync(
             choiceContext,
             attackCommand,
             card.Owner.Creature,
             cardPercent,
-            recoveryHandler,
+            effectiveRecoveryHandler,
             card,
             cardPlay);
 
