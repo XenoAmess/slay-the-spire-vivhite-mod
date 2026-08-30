@@ -267,3 +267,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-31 00:03:51 | 第 1 局 | `39a4013a` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-000351-1788105831028859000-39a4013a` | 复盘进程未成功完成 |
 <!-- rejection:20260831-002024-1788106824147277100-0a48154b -->
 | 2026-08-31 00:20:24 | 第 1198~1199 局 | `0a48154b` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-002024-1788106824147277100-0a48154b` | patch 目标已有用户 staged 内容：sts2-ascend/brain/policy.py, sts2-ascend/brain/selfcheck.py, sts2-ascend/knowledge/meta_review.md, sts2-ascend/knowledge/review_conclusion.txt |
+<!-- rejection:20260831-002214-1788106934471900000-39ff7392 -->
+| 2026-08-31 00:22:14 | 第 1 局 | `39ff7392` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-002214-1788106934471900000-39ff7392` | 复盘进程未成功完成 |
