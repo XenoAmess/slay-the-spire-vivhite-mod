@@ -2916,23 +2916,30 @@ class Policy:
                             danger_note += (
                                 f"；静态联合复核未扣除敌方滑溜{_slippery_layers:g}层的"
                                 "逐次伤害上限，维持竞速（SLIPPERY_RACE_GUARD）")
-                        # Boss 战斗端的防守复核必须与前夜预演共用翻盘比上限。
-                        # 否则同一场先被 JOINT_FLIP_TTK_CAP 判定为不可翻盘，
-                        # 进入战斗后又会被静态联合分配重新打开；1168-F33
-                        # 正是「T3 竞速判死、T4 防守线复核」的最小现场。
-                        # 只收紧 Boss 分支；非 Boss 维持原联合复核口径，键置 0
-                        # 仍是严格回滚锚点。
-                        _boss_flip_cap = 0.0
+                        # 战斗端的防守复核必须与竞速预演共用翻盘比上限。
+                        # 否则同一场先被竞速判定为不可翻盘，进入战斗后又会被
+                        # 静态联合分配重新打开；1168-F33 是 Boss 侧最小现场，
+                        # 1197-F23 则证明高血池普通战也会穿透同一条边界。
+                        # Boss 与长战大血池非 Boss 使用独立键，均保留 0 回滚锚点。
+                        _flip_cap = 0.0
+                        _flip_cap_tag = ""
                         if cctx.get("node_type") == "Boss":
-                            _boss_flip_cap = float(pol.get(
+                            _flip_cap = float(pol.get(
                                 "boss_race_joint_flip_max_ttk_ratio", 1.5))
-                        if (_feas and _boss_flip_cap > 0.0
-                                and ttk > float(tsurv) * _boss_flip_cap):
+                            _flip_cap_tag = "JOINT_FLIP_TTK_CAP"
+                        elif (cctx.get("node_type") in ("Monster", "Elite")
+                              and enemy_hp_total >= float(pol.get(
+                                  "power_commit_pool_min", 90.0))):
+                            _flip_cap = float(pol.get(
+                                "longfight_race_joint_flip_max_ttk_ratio", 1.5))
+                            _flip_cap_tag = "LONGFIGHT_JOINT_FLIP_TTK_CAP"
+                        if (_feas and _flip_cap > 0.0
+                                and ttk > float(tsurv) * _flip_cap):
                             _feas = False
                             danger_note += (
                                 f"；防守线复核虽报可行但击杀需{ttk:.0f}回合"
-                                f"＞{_boss_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
-                                "翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）")
+                                f"＞{_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
+                                f"翻盘比超限不予放行（{_flip_cap_tag}）")
                         if _feas:
                             race_lost = False
                             self._krace_latch = False

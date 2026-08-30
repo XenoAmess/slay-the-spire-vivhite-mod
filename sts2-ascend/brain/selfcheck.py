@@ -6042,9 +6042,10 @@ def main() -> int:
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
     # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。
-    def combat_flip_probe(cap, slippery=False, slippery_guard=True):
+    def combat_flip_probe(cap, slippery=False, slippery_guard=True,
+                          node_type="Boss", enemy_hp=185, longfight_cap=None):
         cap_ctx = type("CAPCTX", (), {
-            "combat": {"comp_id": "CAP_BOSS", "node_type": "Boss"},
+            "combat": {"comp_id": "CAP_BOSS", "node_type": node_type},
             "current_combat_is_hard": False, "credit_tags": []})()
         cap_state = {
             "screen": "COMBAT",
@@ -6088,6 +6089,9 @@ def main() -> int:
         cap_pol._incoming_ema = 20.0
         cap_pol._esc_rounds = 2
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
+        cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        if longfight_cap is not None:
+            cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
@@ -6109,6 +6113,26 @@ def main() -> int:
     assert "防守线复核：联合能量对账" in d_combat_cap_rb.reason \
         and "JOINT_FLIP_TTK_CAP" not in d_combat_cap_rb.reason, \
         f"Boss 战斗端翻盘比上限=0 未严格回滚: {d_combat_cap_rb.action}（{d_combat_cap_rb.reason}）"
+
+    # 3br-longfight：高血池普通/精英战同样不能用静态联合复核重开已判负的
+    # 斩杀竞速；1197-F23 的 LOUSE_PROGENITOR（Normal，134~136 血）是最小现场。
+    # 仅以当前血池达到既有长战门槛触发，低血池与专用开关关闭时严格回落旧口径。
+    d_combat_longfight = combat_flip_probe(
+        0.0, node_type="Monster", longfight_cap=1.5)
+    assert "LONGFIGHT_JOINT_FLIP_TTK_CAP" in d_combat_longfight.reason \
+        and "斩杀竞速投影" in d_combat_longfight.reason \
+        and "防守线复核：联合能量对账" not in d_combat_longfight.reason, \
+        f"高血池普通战的翻盘比上限未生效: {d_combat_longfight.action}（{d_combat_longfight.reason}）"
+    d_combat_longfight_rb = combat_flip_probe(
+        0.0, node_type="Monster", longfight_cap=0.0)
+    assert "LONGFIGHT_JOINT_FLIP_TTK_CAP" not in d_combat_longfight_rb.reason \
+        and "防守线复核：联合能量对账" in d_combat_longfight_rb.reason, \
+        f"高血池普通战开关关闭后未回滚: {d_combat_longfight_rb.action}（{d_combat_longfight_rb.reason}）"
+    d_combat_small = combat_flip_probe(
+        0.0, node_type="Monster", enemy_hp=70, longfight_cap=1.5)
+    assert "LONGFIGHT_JOINT_FLIP_TTK_CAP" not in d_combat_small.reason \
+        and "防守线复核：联合能量对账" in d_combat_small.reason, \
+        f"低血池普通战被长战翻盘闸误伤: {d_combat_small.action}（{d_combat_small.reason}）"
 
     # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把

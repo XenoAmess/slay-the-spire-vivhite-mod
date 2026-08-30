@@ -6057,3 +6057,45 @@ retry_resolution: none (no target package; local production fix)
   再删除对应的状态字段、分支和回归夹具。未做网络推送。
 
 retry_resolution: 20260830-155346-1788076426711349100-aae9b838 integrated
+
+# 2026-08-30｜第1195~1197局复盘：高血池普通战联合翻盘误放行
+
+## HYPOTHESIS
+
+最新完整失败链为 `MAHA4G9N9Y2P`（run 1197，F23，286 条决策，
+`complete_persisted_chain=True`）。F23 的 `LOUSE_PROGENITOR` 是 134~136 血的
+普通敌人；战斗端先判定击杀竞速失败，但随后因翻盘比上限只套在 Boss 分支，静态
+联合攻防复核又放开了防守线。假设：对当前血池达到长战门槛的非 Boss 使用同样的
+1.5× TTK 上限，可阻止这种已判负竞速被静态复核重开；若未来高血池战仍保持相同
+的错误防守轨迹，或低血池普通战出现该标记，则假设被证伪。
+
+## EVIDENCE
+
+- F23 决策链显示 T1/T2 仍写入防守线复核，T3 才出现致死竞速，随后第 5 回合
+  阵亡；这与“联合复核重开已判负竞速”的代码路径一致。
+- 原生 v0.111.0 `runtime/monsters.jsonl` 将 `LOUSE_PROGENITOR` 标为
+  `Normal`、初始血量 134~136；`mechanics/monsters.jsonl` 还确认
+  `CurlAndGrowMove` 获得 14 格挡并施加 5 力，拖延并非平坦伤害模型。
+- 基线 `policy.py::_combat` 的 `JOINT_FLIP_TTK_CAP` 只在 `node_type == "Boss"`
+  时读取上限，因此高血池普通战能穿透该边界。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+- `brain/knowledge.py` 新增 `longfight_race_joint_flip_max_ttk_ratio=1.5`；
+  当前存活血池达到既有 `power_commit_pool_min` 时，`Monster`/`Elite` 非 Boss
+  复核也受此闸约束，设置为 `0` 可回滚且不改变 Boss 专用键。
+- `brain/policy.py` 新增 `LONGFIGHT_JOINT_FLIP_TTK_CAP` 留痕；Boss 仍使用原
+  `JOINT_FLIP_TTK_CAP`，低血池非 Boss 不触发。
+- `brain/selfcheck.py` 覆盖高血池开启、开关关闭及低血池对照。后续 3~10 场观察：
+  ①长战标记次数与触发时血池；②`ttk/tsurv` 比值；③标记后的 `kill_race` 与
+  首个出牌；④后续战损/回合数/胜负；⑤低血池误触发次数。
+
+## VALIDATION / ROLLBACK
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。
+- `git diff --check` 通过；当前只产生静态项目改动，未写入在线学习状态。
+- 若 3 个以上高血池样本标记后仍无战损或短战阵亡改善，或出现低血池误触发，先将
+  `longfight_race_joint_flip_max_ttk_ratio` 设为 `0`，保留决策链，再按真实敌方
+  行为决定是否改为更窄的成长/意图观测闸。
+
+retry_resolution: none (no replay target; local production fix)
