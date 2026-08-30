@@ -154,6 +154,29 @@ class TtsRoutingTests(unittest.TestCase):
         engine.say_fallback.assert_not_called()
         clock.assert_not_called()
 
+    def test_edge_worker_refill_pauses_at_drained_end_and_reopens_for_live_start(self) -> None:
+        playback = edge_speaker._PlaybackBuffer(max_queue=4)
+
+        # LIVE-END leaves the main loop alive for a three-second handoff grace,
+        # but an already drained pool must not be replenished just to exit again.
+        self.assertFalse(edge_speaker._worker_refill_allowed(
+            ended=True, playback=playback))
+
+        # If work is still pending at LIVE-END, workers remain actionable until
+        # the admitted sentence has actually reached playback.
+        playback.enqueue("结尾仍有一句待合成")
+        self.assertTrue(edge_speaker._worker_refill_allowed(
+            ended=True, playback=playback))
+        playback.close()
+
+        # A back-to-back LIVE-START is consumed before ensure_workers; clearing
+        # ended must therefore reopen the exact same speaker's worker refill.
+        replacement = edge_speaker._PlaybackBuffer(max_queue=4)
+        self.assertEqual(edge_speaker._review_id_from_live_start(
+            '[LIVE-START] {"review_id": "next-review"}'), "next-review")
+        self.assertTrue(edge_speaker._worker_refill_allowed(
+            ended=False, playback=replacement))
+
     def test_unpicked_sentence_times_out_to_sapi_and_late_wav_is_discarded(self) -> None:
         ticks = iter((0.0, 1.0))
         playback = edge_speaker._PlaybackBuffer(
@@ -413,6 +436,90 @@ class TtsRoutingTests(unittest.TestCase):
 
                 self.assertEqual(result, outcome == "success")
                 self.assertFalse(mp3.exists())
+
+    def test_edge_startup_scavenger_removes_legacy_and_dead_pid_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            legacy_mp3 = root / "edge_pf_00001.mp3"
+            legacy_wav = root / "edge_pf_99999.wav"
+            dead = root / "edge_pf_111_aabbccddeeff0011_00002.mp3"
+            own = root / "edge_pf_444_aabbccddeeff0022_00003.wav"
+            live = root / "edge_pf_222_aabbccddeeff0033_00004.mp3"
+            unknown = root / "edge_pf_333_aabbccddeeff0044_00005.wav"
+            near_names = [
+                root / "edge_pf_0001.wav",
+                root / "edge_pf_00001.WAV",
+                root / "edge_pf_555_not-a-hex-nonce_00006.mp3",
+                root / "edge_pf_666_aabbccddeeff0066_00007.ogg",
+                root / "other_00008.wav",
+            ]
+            for path in [legacy_mp3, legacy_wav, dead, own, live, unknown,
+                         *near_names]:
+                path.write_bytes(b"artifact")
+
+            states = {111: False, 222: True, 333: None}
+            probe = mock.Mock(side_effect=lambda pid: states[pid])
+            stats = edge_speaker._scavenge_edge_artifacts(
+                root, current_pid=444, pid_presence=probe)
+
+            self.assertFalse(legacy_mp3.exists())
+            self.assertFalse(legacy_wav.exists())
+            self.assertFalse(dead.exists())
+            self.assertTrue(own.exists())
+            self.assertTrue(live.exists())
+            self.assertTrue(unknown.exists())
+            self.assertTrue(all(path.exists() for path in near_names))
+            self.assertEqual(probe.call_args_list, [mock.call(111), mock.call(222),
+                                                    mock.call(333)])
+            self.assertEqual(stats, {
+                "matched": 6,
+                "deleted": 3,
+                "deleted_bytes": 24,
+                "kept_self": 1,
+                "kept_live": 1,
+                "kept_unknown": 1,
+                "failed": 0,
+            })
+
+    def test_edge_startup_scavenger_keeps_pid_when_probe_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact = (
+                Path(temp_dir) / "edge_pf_777_aabbccddeeff0077_00008.wav")
+            artifact.write_bytes(b"keep")
+
+            stats = edge_speaker._scavenge_edge_artifacts(
+                Path(temp_dir), current_pid=444,
+                pid_presence=mock.Mock(side_effect=PermissionError("denied")))
+
+            self.assertTrue(artifact.exists())
+            self.assertEqual(stats["kept_unknown"], 1)
+            self.assertEqual(stats["deleted"], 0)
+
+    def test_edge_startup_scavenger_bounds_unlink_failure_logging(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            artifacts = [root / f"edge_pf_{seq:05d}.wav" for seq in range(5)]
+            for artifact in artifacts:
+                artifact.write_bytes(b"locked")
+            real_unlink = Path.unlink
+
+            def locked_unlink(path: Path, *args, **kwargs) -> None:
+                if path in artifacts:
+                    raise PermissionError("in use")
+                real_unlink(path, *args, **kwargs)
+
+            with (mock.patch.object(Path, "unlink", new=locked_unlink),
+                  mock.patch.object(edge_speaker, "log") as cleanup_log):
+                stats = edge_speaker._scavenge_edge_artifacts(
+                    root, current_pid=444, pid_presence=mock.Mock())
+
+            self.assertEqual(stats["failed"], 5)
+            self.assertEqual(stats["deleted"], 0)
+            self.assertTrue(all(path.exists() for path in artifacts))
+            cleanup_log.assert_called_once()
+            message = cleanup_log.call_args.args[0]
+            self.assertIn("删除失败 5", message)
+            self.assertIn("另 2 个", message)
 
     def test_full_edge_queue_still_drops_the_oldest_half_without_waiting(self) -> None:
         clock = mock.Mock(side_effect=AssertionError(

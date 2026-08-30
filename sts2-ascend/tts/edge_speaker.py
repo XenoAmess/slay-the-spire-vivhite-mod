@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import re
 import secrets
 import subprocess
 import sys
@@ -38,6 +39,12 @@ PLAYER_RESULT_TIMEOUT_SECONDS = 90.0
 PLAYER_WAIT_POLL_SECONDS = 0.5
 PLAYER_SHUTDOWN_JOIN_SECONDS = 5.0
 WORKER_SHUTDOWN_JOIN_SECONDS = 3.0
+EDGE_SCAVENGE_FAILURE_SAMPLE_LIMIT = 3
+
+_LEGACY_EDGE_ARTIFACT = re.compile(
+    r"^edge_pf_\d{5}\.(?:mp3|wav)$", re.ASCII)
+_INSTANCE_EDGE_ARTIFACT = re.compile(
+    r"^edge_pf_(\d+)_([0-9a-f]{16})_\d{5}\.(?:mp3|wav)$", re.ASCII)
 
 sys.path.insert(0, str(TTS_DIR))
 from speaker import (SentenceSplitter, FenceStripper, speakable, SapiSpeaker,  # noqa: E402
@@ -219,6 +226,126 @@ def _discard_wav(wav: Path | None) -> None:
         pass
 
 
+def _pid_presence(pid: int) -> bool | None:
+    """Return True/False only when process presence is known conclusively.
+
+    Scavenging is deliberately conservative: access failures and unexpected
+    platform errors return ``None`` so a possibly-live speaker's files survive.
+    """
+    if pid <= 0:
+        return None
+    if pid == os.getpid():
+        return True
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int,
+                                             ctypes.c_ulong]
+            kernel32.OpenProcess.restype = ctypes.c_void_p
+            kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return True
+            # OpenProcess documents ERROR_INVALID_PARAMETER for a PID that does
+            # not exist.  Access denied or any other result is not deletion proof.
+            return False if ctypes.get_last_error() == 87 else None
+        except Exception:
+            return None
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
+    return True
+
+
+def _scavenge_edge_artifacts(
+    root: Path = TTS_DIR, *, current_pid: int | None = None,
+    pid_presence=None,
+) -> dict[str, int]:
+    """Remove exact legacy artifacts and files owned by conclusively dead PIDs.
+
+    This runs only after the narrator lock is acquired and before this instance
+    creates a playback buffer.  It intentionally scans no prefix beyond
+    ``edge_pf_`` and never guesses when PID state cannot be read.
+    """
+    own_pid = os.getpid() if current_pid is None else int(current_pid)
+    probe = pid_presence or _pid_presence
+    stats = {
+        "matched": 0,
+        "deleted": 0,
+        "deleted_bytes": 0,
+        "kept_self": 0,
+        "kept_live": 0,
+        "kept_unknown": 0,
+        "failed": 0,
+    }
+    failure_samples: list[str] = []
+    try:
+        candidates = root.glob("edge_pf_*")
+        for path in candidates:
+            name = path.name
+            instance_match = _INSTANCE_EDGE_ARTIFACT.fullmatch(name)
+            if _LEGACY_EDGE_ARTIFACT.fullmatch(name):
+                remove = True
+            elif instance_match:
+                stats["matched"] += 1
+                owner_pid = int(instance_match.group(1))
+                if owner_pid == own_pid:
+                    stats["kept_self"] += 1
+                    continue
+                try:
+                    presence = probe(owner_pid)
+                except Exception:
+                    presence = None
+                if presence is True:
+                    stats["kept_live"] += 1
+                    continue
+                if presence is not False:
+                    stats["kept_unknown"] += 1
+                    continue
+                remove = True
+            else:
+                continue
+
+            if not instance_match:
+                stats["matched"] += 1
+            try:
+                size = path.stat().st_size
+                path.unlink()
+                stats["deleted"] += 1
+                stats["deleted_bytes"] += size
+            except OSError as exc:
+                stats["failed"] += 1
+                if len(failure_samples) < EDGE_SCAVENGE_FAILURE_SAMPLE_LIMIT:
+                    failure_samples.append(f"{name}: {exc}")
+    except OSError as exc:
+        stats["failed"] += 1
+        failure_samples.append(f"scan: {exc}")
+
+    if stats["matched"] or stats["failed"]:
+        sample_text = ""
+        if failure_samples:
+            sample_text = "；失败样例 " + " | ".join(failure_samples)
+            remaining = stats["failed"] - len(failure_samples)
+            if remaining > 0:
+                sample_text += f" | 另 {remaining} 个"
+        log(
+            "Edge 临时音频启动扫尾："
+            f"匹配 {stats['matched']}，删除 {stats['deleted']} 个/"
+            f"{stats['deleted_bytes']} 字节，保留 self {stats['kept_self']}、"
+            f"活 PID {stats['kept_live']}、PID 未知 {stats['kept_unknown']}，"
+            f"删除失败 {stats['failed']}{sample_text}"
+        )
+    return stats
+
+
 class _PlaybackBuffer:
     """Keep queue admission, synthesis results and playback order in one state.
 
@@ -389,6 +516,19 @@ _active_player_thread: threading.Thread | None = None
 _active_worker_threads: list[threading.Thread] = []
 
 
+def _worker_refill_allowed(*, ended: bool, playback: _PlaybackBuffer) -> bool:
+    """Keep workers alive for real work, not a drained LIVE-END grace period.
+
+    The main loop intentionally stays alive for three seconds after LIVE-END so
+    the same speaker can observe a back-to-back LIVE-START.  During that grace
+    period drained workers are expected to exit; refilling them before reading
+    the stream only makes each replacement observe the same ended state and
+    exit again.  A later LIVE-START clears ``ended`` and immediately reopens
+    refill after the stream state has been consumed.
+    """
+    return not ended or not playback.is_drained()
+
+
 def _close_playback_before_unlock(
     playback: _PlaybackBuffer | None = None,
     player_thread: threading.Thread | None = None,
@@ -497,6 +637,7 @@ def main() -> int:
         log("已有朗读器在跑（单实例锁），本实例退出")
         return 0
 
+    _scavenge_edge_artifacts()
     start_volume_hotkeys()
     eng = EdgeEngine()
     log(f"edge-tts 朗读器上线（统一嗓音 {VOICE}）")
@@ -631,6 +772,8 @@ def main() -> int:
 
     def ensure_workers() -> None:
         """worker 灭绝即重新拉起（双保险：退出条件收紧后仍留兜底），并大声记日志。"""
+        if not _worker_refill_allowed(ended=ended, playback=playback):
+            return
         alive = [t for t in worker_threads if t.is_alive()]
         if len(alive) < 3:
             log(f"[edge-voice] 合成线程仅存 {len(alive)}/3，重新补齐（防僵尸朗读器）")
@@ -654,7 +797,6 @@ def main() -> int:
 
     while not stop_requested():
         try:
-            ensure_workers()     # 合成线程灭绝兜底：灭绝即补齐并大声记日志
             size = STREAM_FILE.stat().st_size
             if size < state["offset"]:
                 state["offset"] = 0
@@ -704,6 +846,10 @@ def main() -> int:
                         del recent_texts[:-8]
             if ended and time.time() - end_at > 3 and q.empty() and counters["played"] >= counters["put"]:
                 break
+            # Consume LIVE-START/LIVE-END before deciding whether a dead pool is
+            # actionable.  A drained LIVE-END is normal shutdown; a subsequent
+            # LIVE-START reopens refill in this same iteration.
+            ensure_workers()
             if wait_for_stop(0.5):
                 break
         except Exception as exc:
