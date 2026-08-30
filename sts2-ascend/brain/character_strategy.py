@@ -122,9 +122,10 @@ class CardMechanics:
     """Machine-readable base mechanics for one card.
 
     ``energy`` is either a non-negative integer or ``"X"``.  ``drain_percent``
-    stores the printed value or coefficient; ``drain_percent_mode`` explains
-    whether it is flat, temporary, global, per-Margin, or per-X.  No percentage
-    field has an upper bound.
+    stores the integer printed value or coefficient after each base/upgrade value
+    is independently scaled with ``ceil(old / 5)``; ``drain_percent_mode``
+    explains whether it is flat, temporary, global, per-Margin, or per-X.  No
+    percentage field has an upper bound.
     """
 
     energy: int | str
@@ -135,7 +136,7 @@ class CardMechanics:
     base_block: int = 0
     margin_gain: int = 0
     max_hp_growth: int = 0
-    drain_percent: float = 0.0
+    drain_percent: int = 0
     drain_percent_mode: str = "flat"
     kill_heal: int = 0
     kill_draw: int = 0
@@ -169,8 +170,10 @@ class CardMechanics:
             value = getattr(self, field_name)
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{field_name} must be a non-negative integer")
-        if _finite_number("drain_percent", self.drain_percent) < 0.0:
-            raise ValueError("drain_percent cannot be negative")
+        if (isinstance(self.drain_percent, bool)
+                or not isinstance(self.drain_percent, int)
+                or self.drain_percent < 0):
+            raise ValueError("drain_percent must be a non-negative integer")
         if not self.drain_percent_mode.strip():
             raise ValueError("drain_percent_mode is required")
         object.__setattr__(self, "effects", tuple(self.effects))
@@ -235,7 +238,7 @@ def _card(
         block: int = 0,
         margin: int = 0,
         max_hp: int = 0,
-        drain: float = 0.0,
+        drain: int = 0,
         drain_mode: str = "flat",
         kill_heal: int = 0,
         kill_draw: int = 0,
@@ -282,11 +285,11 @@ def _card(
 # Basics: shared foundations rather than members of one exclusive build.
 _BASIC_CARDS = (
     _card("LUMINOUS_PROJECTION", "Luminous Projection", "弦光投影",
-          "attack", "basic", HYBRID, energy=1, life=1, damage=10, hits=1),
+          "attack", "basic", HYBRID, energy=1, life=2, damage=10, hits=1),
     _card("CLOSED_DOMAIN_MAPPING", "Closed-Domain Mapping", "闭域映射",
-          "skill", "basic", HYBRID, energy=1, life=1, block=9),
+          "skill", "basic", HYBRID, energy=1, life=2, block=9),
     _card("VIVHITE_TRANSFORMATION", "Transformation Formula: Vivhite",
-          "白绮的变身式", "ability", "basic", HYBRID, energy=1, life=2,
+          "白绮的变身式", "ability", "basic", HYBRID, energy=1, life=4,
           growth=2, effects=("gain_1_strength", "gain_1_dexterity")),
 )
 
@@ -296,54 +299,54 @@ _CONSERVATION_CARDS = (
     _card("AXIOM_RING", "Axiom Ring", "公理护环", "skill", "common",
           CONSERVATION_GEOMETRY, energy=0, margin=2),
     _card("CLOSED_PROJECTION", "Closed Projection", "闭域投影", "attack",
-          "common", CONSERVATION_GEOMETRY, energy=1, life=2, damage=14,
+          "common", CONSERVATION_GEOMETRY, energy=1, life=4, damage=14,
           hits=1, effects=("block_5_per_margin_spent_on_life_cost",)),
     _card("TANGENT_STARLIGHT", "Tangent Starlight", "切线星光", "attack",
-          "common", CONSERVATION_GEOMETRY, energy=1, life=1, damage=11,
+          "common", CONSERVATION_GEOMETRY, energy=1, life=2, damage=11,
           hits=1, margin=1),
     _card("OPEN_SET_SHELTER", "Open-Set Shelter", "开集庇护", "skill",
-          "common", CONSERVATION_GEOMETRY, energy=1, life=2, block=14,
+          "common", CONSERVATION_GEOMETRY, energy=1, life=4, block=14,
           margin=1),
     _card("LOCAL_HOMEOMORPHISM", "Local Homeomorphism", "局部同胚", "skill",
-          "common", CONSERVATION_GEOMETRY, energy=1, life=1, block=8,
+          "common", CONSERVATION_GEOMETRY, energy=1, life=2, block=8,
           margin=2),
     _card("SCALE_TRANSFORMATION", "Scale Transformation", "尺度变换", "attack",
-          "common", CONSERVATION_GEOMETRY, energy=2, life=3, damage=20,
+          "common", CONSERVATION_GEOMETRY, energy=2, life=6, damage=20,
           hits=1, max_hp=1, lethal=True, exhaust=True,
           effects=("max_hp_growth_on_lethal",)),
     _card("ISOPERIMETRIC_WARD", "Isoperimetric Ward", "等周壁垒", "skill",
-          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=2, block=12,
+          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=4, block=12,
           effects=("block_2_per_current_margin",)),
     _card("TOPOLOGICAL_GROWTH", "Topological Growth", "拓扑增生", "skill",
-          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=4, margin=3,
+          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=8, margin=3,
           max_hp=1, exhaust=True),
     _card("LAW_OF_CONSERVATION", "Law of Conservation", "守恒定律", "ability",
-          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=3,
+          "uncommon", CONSERVATION_GEOMETRY, energy=1, life=6,
           effects=("block_1_per_life_cost_prevented_by_margin",)),
     _card("LIFE_MANIFOLD", "Life Manifold", "生命流形", "ability", "uncommon",
-          CONSERVATION_GEOMETRY, energy=2, life=4,
+          CONSERVATION_GEOMETRY, energy=2, life=8,
           effects=("gain_2_margin_each_turn",)),
     _card("MOBIUS_LOOP", "Möbius Loop", "莫比乌斯回路", "skill", "uncommon",
-          CONSERVATION_GEOMETRY, energy=1, life=2, exhaust=True,
+          CONSERVATION_GEOMETRY, energy=1, life=4, exhaust=True,
           effects=("return_skill_from_discard", "returned_card_free_this_turn")),
     _card("INVARIANT", "Invariant", "不变量", "skill", "uncommon",
-          CONSERVATION_GEOMETRY, energy=1, life=1, block=10, margin=3,
+          CONSERVATION_GEOMETRY, energy=1, life=2, block=10, margin=3,
           effects=("margin_if_max_hp_grew_this_combat",)),
     _card("GEODESIC_VEIL", "Geodesic Veil", "测地护幕", "skill", "uncommon",
-          CONSERVATION_GEOMETRY, energy=2, life=3, block=24,
+          CONSERVATION_GEOMETRY, energy=2, life=6, block=24,
           effects=("retain",)),
     _card("CLOSED_MANIFOLD", "Closed Manifold", "闭合流形", "ability", "rare",
-          CONSERVATION_GEOMETRY, energy=2, life=5,
+          CONSERVATION_GEOMETRY, energy=2, life=10,
           effects=("overheal_becomes_equal_margin",)),
     _card("AXIOM_OF_LIFE", "Axiom of Life", "生命公理", "attack", "rare",
-          CONSERVATION_GEOMETRY, energy=2, life=5, damage=24, hits=1,
+          CONSERVATION_GEOMETRY, energy=2, life=10, damage=24, hits=1,
           max_hp=4, lethal=True, exhaust=True,
           effects=("max_hp_growth_on_lethal",)),
     _card("INFINITE_EXTENSION", "Infinite Extension", "无限延拓", "ability",
-          "rare", CONSERVATION_GEOMETRY, energy=3, life=6, growth=1,
+          "rare", CONSERVATION_GEOMETRY, energy=3, life=12, growth=1,
           effects=("each_max_hp_growth_gains_1_more", "bonus_does_not_recurse")),
     _card("CONSERVATION_FIRMAMENT", "Conservation Firmament", "守恒穹顶",
-          "skill", "rare", CONSERVATION_GEOMETRY, energy=2, life=5,
+          "skill", "rare", CONSERVATION_GEOMETRY, energy=2, life=10,
           exhaust=True, effects=("double_current_margin", "block_2_per_resulting_margin")),
 )
 
@@ -351,57 +354,57 @@ _CONSERVATION_CARDS = (
 # B suit: Recursive Astral.
 _RECURSIVE_CARDS = (
     _card("RECURRENT_STARLIGHT", "Recurrent Starlight", "递推星芒", "attack",
-          "common", RECURSIVE_ASTRAL, energy=1, life=2, damage=13, hits=1,
+          "common", RECURSIVE_ASTRAL, energy=1, life=4, damage=13, hits=1,
           kill_draw=2, lethal=True),
     _card("TERMINATION_CONDITION", "Termination Condition", "终止条件", "attack",
-          "common", RECURSIVE_ASTRAL, energy=1, life=2, damage=12, hits=1,
+          "common", RECURSIVE_ASTRAL, energy=1, life=4, damage=12, hits=1,
           kill_heal=5, lethal=True),
     _card("PARALLEL_STARFALL", "Parallel Starfall", "并行星雨", "attack",
-          "common", RECURSIVE_ASTRAL, energy=1, life=3, damage=6, hits=2,
+          "common", RECURSIVE_ASTRAL, energy=1, life=6, damage=6, hits=2,
           all_enemies=True),
     _card("ASTRAL_SEARCH", "Astral Search", "星图检索", "skill", "common",
-          RECURSIVE_ASTRAL, energy=0, life=1, draw=2,
+          RECURSIVE_ASTRAL, energy=0, life=2, draw=2,
           effects=("discard_1",)),
     _card("HEURISTIC_SHIELD", "Heuristic Shield", "启发式护盾", "skill",
-          "common", RECURSIVE_ASTRAL, energy=1, life=1, block=8, draw=1),
+          "common", RECURSIVE_ASTRAL, energy=1, life=2, block=8, draw=1),
     _card("SUCCESSOR_FORMULA", "Successor Formula", "后继式", "attack", "common",
-          RECURSIVE_ASTRAL, energy=0, life=2, damage=7, hits=1,
+          RECURSIVE_ASTRAL, energy=0, life=4, damage=7, hits=1,
           kill_energy=1, lethal=True),
     _card("BACKTRACKING_SPELL", "Backtracking Spell", "回溯咒文", "skill",
-          "uncommon", RECURSIVE_ASTRAL, energy=1, life=3, exhaust=True,
+          "uncommon", RECURSIVE_ASTRAL, energy=1, life=6, exhaust=True,
           effects=("return_attack_from_discard", "returned_card_free_this_turn")),
     _card("CONVERGENCE_VERDICT", "Convergence Verdict", "收敛判决", "attack",
-          "uncommon", RECURSIVE_ASTRAL, energy=2, life=4, damage=27, hits=1,
+          "uncommon", RECURSIVE_ASTRAL, energy=2, life=8, damage=27, hits=1,
           kill_draw=3, kill_energy=1, lethal=True),
     _card("DIVIDE_AND_CONQUER_CIRCLE", "Divide-and-Conquer Circle", "分治法阵",
-          "skill", "uncommon", RECURSIVE_ASTRAL, energy=1, life=2, draw=2,
+          "skill", "uncommon", RECURSIVE_ASTRAL, energy=1, life=4, draw=2,
           effects=("4_spell_damage_per_attack_drawn_to_random_enemy",)),
     _card("ASTRAL_PURSUIT", "Astral Pursuit", "星算追猎", "ability", "uncommon",
-          RECURSIVE_ASTRAL, energy=1, life=3, kill_draw=1,
+          RECURSIVE_ASTRAL, energy=1, life=6, kill_draw=1,
           effects=("triggers_on_any_enemy_death",)),
     _card("PREFETCH_FUTURE", "Prefetch Future", "预取未来", "skill", "uncommon",
-          RECURSIVE_ASTRAL, energy=1, life=2, draw=3,
+          RECURSIVE_ASTRAL, energy=1, life=4, draw=3,
           effects=("put_1_hand_card_on_draw_pile_top",)),
     _card("INDUCTIVE_CIRCLE", "Inductive Circle", "归纳法阵", "ability",
-          "uncommon", RECURSIVE_ASTRAL, energy=2, life=4, kill_heal=2,
+          "uncommon", RECURSIVE_ASTRAL, energy=2, life=8, kill_heal=2,
           effects=("increase_immediate_enemy_death_heal",)),
     _card("EVENT_LOOP", "Event Loop", "事件循环", "skill", "uncommon",
-          RECURSIVE_ASTRAL, energy=1, life=3, exhaust=True,
+          RECURSIVE_ASTRAL, energy=1, life=6, exhaust=True,
           effects=("copy_non_ability_played_this_turn", "copy_free_this_turn")),
     _card("PROOF_OF_TERMINATION", "Proof of Termination", "终止证明", "attack",
-          "rare", RECURSIVE_ASTRAL, energy=2, life=5, damage=20, hits=1,
+          "rare", RECURSIVE_ASTRAL, energy=2, life=10, damage=20, hits=1,
           all_enemies=True, kill_draw=2, kill_energy=1, lethal=True,
           exhaust=True),
     _card("DYNAMIC_PROGRAMMING", "Dynamic Programming", "动态规划", "ability",
-          "rare", RECURSIVE_ASTRAL, energy=2, life=5, growth=2,
+          "rare", RECURSIVE_ASTRAL, energy=2, life=10, growth=2,
           effects=("gain_2_calculation_per_extra_card_drawn",
                    "next_attack_each_hit_gains_all_calculation_then_reset")),
     _card("INFINITE_STAR_SEQUENCE", "Infinite Star Sequence", "无穷星序", "skill",
-          "rare", RECURSIVE_ASTRAL, energy=1, life=4, exhaust=True,
+          "rare", RECURSIVE_ASTRAL, energy=1, life=8, exhaust=True,
           effects=("draw_cards_equal_cards_previously_played_this_turn",
                    "gain_1_margin_per_card_actually_drawn")),
     _card("OPTIMAL_ALGORITHM", "Optimal Algorithm", "最优算法", "ability", "rare",
-          RECURSIVE_ASTRAL, energy=3, life=7, kill_heal=3, kill_draw=2,
+          RECURSIVE_ASTRAL, energy=3, life=14, kill_heal=3, kill_draw=2,
           kill_energy=1, effects=("triggers_on_any_enemy_death",)),
 )
 
@@ -409,86 +412,86 @@ _RECURSIVE_CARDS = (
 # C suit: Crimson Integral.
 _CRIMSON_CARDS = (
     _card("CRIMSON_AREA", "Crimson Area", "绯色面积", "attack", "common",
-          CRIMSON_INTEGRAL, energy=1, life=2, damage=14, hits=1, drain=20),
+          CRIMSON_INTEGRAL, energy=1, life=4, damage=14, hits=1, drain=4),
     _card("TRICHROMATIC_WALTZ", "Trichromatic Waltz", "三色轮舞", "attack",
-          "common", CRIMSON_INTEGRAL, energy=1, life=3, damage=4, hits=3,
-          drain=15),
+          "common", CRIMSON_INTEGRAL, energy=1, life=6, damage=4, hits=3,
+          drain=3),
     _card("COMPOSITE_COLOR_WHEEL", "Composite Color Wheel", "综合色轮", "attack",
-          "common", CRIMSON_INTEGRAL, energy=2, life=3, damage=10, hits=1,
-          all_enemies=True, drain=25),
+          "common", CRIMSON_INTEGRAL, energy=2, life=6, damage=10, hits=1,
+          all_enemies=True, drain=5),
     _card("DIFFERENTIAL_SAMPLING", "Differential Sampling", "微分取样", "attack",
-          "common", CRIMSON_INTEGRAL, energy=0, life=1, damage=3, hits=2,
-          drain=10),
+          "common", CRIMSON_INTEGRAL, energy=0, life=2, damage=3, hits=2,
+          drain=2),
     _card("CHIAROSCURO", "Chiaroscuro", "明暗对照", "skill", "common",
-          CRIMSON_INTEGRAL, energy=1, life=2, block=10, drain=25,
+          CRIMSON_INTEGRAL, energy=1, life=4, block=10, drain=5,
           drain_mode="next_attack_bonus",
           effects=("next_attack_gains_drain_percent",)),
     _card("NEGATIVE_SPACE", "Negative Space", "负空间", "skill", "common",
-          CRIMSON_INTEGRAL, energy=0, life=2, margin=1,
+          CRIMSON_INTEGRAL, energy=0, life=4, margin=1,
           effects=("apply_2_vulnerable",)),
     _card("SPECTRAL_INTEGRAL", "Spectral Integral", "光谱积分", "ability",
-          "uncommon", CRIMSON_INTEGRAL, energy=1, life=3, drain=8,
+          "uncommon", CRIMSON_INTEGRAL, energy=1, life=6, drain=2,
           drain_mode="global_combat"),
     _card("GOLDEN_COMPOSITION", "Golden Composition", "黄金构图", "attack",
-          "uncommon", CRIMSON_INTEGRAL, energy=2, life=4, damage=8, hits=3,
-          drain=25),
+          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8, damage=8, hits=3,
+          drain=5),
     _card("RIEMANN_STAR_ARRAY", "Riemann Star Array", "黎曼星阵", "attack",
-          "uncommon", CRIMSON_INTEGRAL, energy=1, life=3, damage=4,
-          drain=15, drain_mode="flat",
+          "uncommon", CRIMSON_INTEGRAL, energy=1, life=6, damage=4,
+          drain=3, drain_mode="flat",
           effects=("one_hit_per_current_hand_card",)),
     _card("CHROMATIC_TRANSITION", "Chromatic Transition", "色阶过渡", "skill",
-          "uncommon", CRIMSON_INTEGRAL, energy=1, life=2, drain=10,
+          "uncommon", CRIMSON_INTEGRAL, energy=1, life=4, drain=2,
           drain_mode="global_combat", draw=1, exhaust=True),
     _card("COLOR_CONSERVATION", "Color Conservation", "色彩守恒", "ability",
-          "uncommon", CRIMSON_INTEGRAL, energy=2, life=4,
+          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8,
           effects=("gain_block_equal_actual_drain_healing",)),
     _card("COMPOSITE_COLOR_FIELD", "Composite Color Field", "综合色域", "skill",
-          "uncommon", CRIMSON_INTEGRAL, energy=2, life=4, drain=10,
+          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8, drain=2,
           drain_mode="global_combat", exhaust=True,
           effects=("apply_2_vulnerable_to_all_enemies",)),
     _card("COMPLEMENTARY_AFTERIMAGE", "Complementary Afterimage", "补色残像",
-          "attack", "uncommon", CRIMSON_INTEGRAL, energy=1, life=3,
-          damage=12, hits=1, drain=20,
+          "attack", "uncommon", CRIMSON_INTEGRAL, energy=1, life=6,
+          damage=12, hits=1, drain=4,
           effects=("repeat_if_current_hp_increased_this_turn",)),
     _card("DEFINITE_CRIMSON_INTEGRAL", "Definite Crimson Integral", "绯红定积分",
-          "attack", "rare", CRIMSON_INTEGRAL, energy=2, life=6, damage=32,
-          hits=1, drain=60),
+          "attack", "rare", CRIMSON_INTEGRAL, energy=2, life=12, damage=32,
+          hits=1, drain=12),
     _card("CRIMSON_CONSERVATION_LAW", "Crimson Conservation Law", "血色守恒律",
-          "ability", "rare", CRIMSON_INTEGRAL, energy=2, life=5, growth=1,
+          "ability", "rare", CRIMSON_INTEGRAL, energy=2, life=10, growth=1,
           effects=("gain_1_strength_per_5_actual_drain_healing",)),
     _card("INFINITE_CANVAS", "Infinite Canvas", "无限画布", "ability", "rare",
-          CRIMSON_INTEGRAL, energy=3, life=8, drain=2,
-          drain_mode="global_growth_per_attack_that_drain_heals", growth=2),
+          CRIMSON_INTEGRAL, energy=3, life=16, drain=1,
+          drain_mode="global_growth_per_attack_that_drain_heals", growth=1),
     _card("PERFECT_SYNTHESIS", "Perfect Synthesis", "完美综合色", "attack",
-          "rare", CRIMSON_INTEGRAL, energy=3, life=8, damage=11, hits=5,
-          all_enemies=True, drain=40, exhaust=True),
+          "rare", CRIMSON_INTEGRAL, energy=3, life=16, damage=11, hits=5,
+          all_enemies=True, drain=8, exhaust=True),
 )
 
 
 # Cross-suit cards deliberately carry only the hybrid tag.
 _HYBRID_CARDS = (
     _card("GOLDEN_RATIO", "Golden Ratio", "黄金分割", "skill", "uncommon",
-          HYBRID, energy=1, life=2, margin=3, drain=15,
+          HYBRID, energy=1, life=4, margin=3, drain=3,
           drain_mode="temporary_this_turn", draw=1),
     _card("ASTRAL_MEASURE", "Astral Measure", "星体测度", "attack", "uncommon",
-          HYBRID, energy=1, damage=10, hits=1, drain=5,
+          HYBRID, energy=1, damage=10, hits=1, drain=1,
           drain_mode="per_margin_before_life_payment",
           effects=("damage_plus_margin_before_life_payment",)),
     _card("CHROMATIC_SEQUENCE", "Chromatic Sequence", "综合色序", "skill",
-          "uncommon", HYBRID, energy=1, life=2, draw=2,
+          "uncommon", HYBRID, energy=1, life=4, draw=2,
           effects=("drawn_attack_grants_1_margin",
-                   "drawn_skill_grants_5_temporary_drain_percent",
+                   "drawn_skill_grants_1_temporary_drain_percent",
                    "drawn_ability_grants_both")),
     _card("UNIFIED_FIELD_THEORY", "Unified Field Theory", "统一场论", "ability",
-          "rare", HYBRID, energy=3, life=7, drain=2,
+          "rare", HYBRID, energy=3, life=14, drain=1,
           drain_mode="per_life_cost_prevented_by_margin",
           effects=("gain_floor_actual_drain_healing_div_3_margin",)),
     _card("CONSERVED_RECURRENCE", "Conserved Recurrence", "守恒递归", "skill",
-          "rare", HYBRID, energy=2, life=5, exhaust=True,
+          "rare", HYBRID, energy=2, life=10, exhaust=True,
           effects=("return_non_ability_from_exhaust",
                    "create_free_this_turn_copy")),
     _card("CHROMATIC_LIMIT", "Chromatic Limit", "绯彩极限", "attack", "rare",
-          HYBRID, energy="X", life=4, damage=9, drain=15,
+          HYBRID, energy="X", life=8, damage=9, drain=3,
           drain_mode="per_x", effects=("damage_hits_equal_x",
                                         "gain_1_margin_per_10_actual_drain_healing")),
     _card(
@@ -694,7 +697,9 @@ def vivhite_crimson_ritual_totals(
     Every ritual instance advances independently, but summing the exposed
     phase values is algebraically identical for this turn's Attack modifiers.
     Base and upgraded powers stay separate because they contribute 10% and 15%
-    per stage respectively.
+    per stage respectively.  The ritual's 0, 1, 2, 3... extra-LifeCost sequence
+    is an explicit balance exception and is therefore not doubled with printed
+    card costs.
     """
 
     if strategy.profile_id != VIVHITE_PROFILE_ID:
@@ -1628,7 +1633,8 @@ def estimate_character_card(
     elif entry.stable_id == "DYNAMIC_PROGRAMMING":
         base_growth = max(0.0, card_dynamic_value(card, "Calculation", 2) or 0)
     elif entry.stable_id == "INFINITE_CANVAS":
-        base_growth = max(0.0, card_dynamic_value(card, "DrainGrowth", 2) or 0)
+        base_growth = max(0.0, card_dynamic_value(
+            card, "DrainGrowth", mechanics.growth) or 0)
     elif entry.stable_id == "LAW_OF_CONSERVATION":
         base_growth = max(0.0, card_dynamic_value(card, "Power", 1) or 0)
     elif entry.stable_id == "UNIFIED_FIELD_THEORY":
@@ -1659,7 +1665,7 @@ def estimate_character_card(
             sequence_drain_rate = (
                 draw_count * (skills + powers) / denominator
                 * max(0.0, card_dynamic_value(
-                    card, "DrainPerSkill", 5) or 0))
+                    card, "DrainPerSkill", 1) or 0))
     if entry.stable_id == "DIVIDE_AND_CONQUER_CIRCLE" and attack_entries:
         draw_count = max(0.0, card_dynamic_value(card, "Cards", 2) or 0)
         attack_ratio = (sum(1 for owned in attack_entries
@@ -1724,9 +1730,9 @@ def estimate_character_card(
     turn_drain = character_power_amount(
         player_powers, VIVHITE_TURN_DRAIN_POWER_ID)
     prevented_drain = margin_consumed * (
-        2.0 * character_power_amount(
+        1.0 * character_power_amount(
             player_powers, "VIVHITE_POWER_UNIFIED_FIELD_THEORY_POWER")
-        + 3.0 * character_power_amount(
+        + 1.0 * character_power_amount(
             player_powers,
             "VIVHITE_POWER_UNIFIED_FIELD_THEORY_UPGRADED_POWER"))
     card_drain = 0.0
@@ -1799,9 +1805,9 @@ def estimate_character_card(
         conversion_growth += ((floor(drain_healed / 5.0) * normal_law)
                               + (floor(drain_healed / 4.0) * upgraded_law))
         conversion_growth += (
-            2.0 * character_power_amount(
+            1.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_INFINITE_CANVAS_POWER")
-            + 3.0 * character_power_amount(
+            + 1.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_INFINITE_CANVAS_UPGRADED_POWER"))
         immediate_margin += (
             floor(drain_healed / 3.0) * character_power_amount(
