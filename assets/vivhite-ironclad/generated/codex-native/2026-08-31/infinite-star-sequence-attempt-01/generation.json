@@ -1,0 +1,109 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_INFINITE_STAR_SEQUENCE",
+  "card_type": "InfiniteStarSequence",
+  "card_name_zh": "无穷星序",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_local_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "type": "Skill",
+    "rarity": "Rare",
+    "energy_cost": 1,
+    "life_cost": 8,
+    "draw": "Twice the number of this player's cards completed before this card this turn; upgraded adds 2.",
+    "margin": "Gain 1 Margin for each card actually drawn.",
+    "exhaust": true
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "Vivhite/Vivhite/images/cards/EventLoop.png",
+      "Vivhite/Vivhite/images/cards/PrefetchFuture.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "Opaque scene generation used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "Vivhite/Vivhite/images/cards/EventLoop.png",
+      "role": "Vivhite identity, costume family, blue butterfly, calm temperament, and established refined card-illustration language only; composition was not copied."
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/PrefetchFuture.png",
+      "role": "Established magical star-chart page and astronomical archive vocabulary only; composition was not copied."
+    }
+  ],
+  "reference_sha256": {
+    "Vivhite/Vivhite/images/cards/EventLoop.png": "A3BDFFDABB5901F258F4EDE1436137E26C582129F57DAC50D4CA48E271F63E91",
+    "Vivhite/Vivhite/images/cards/PrefetchFuture.png": "CE0AA425F91307588E9A05A9F18B5449069892871697F405C3CFE19151DA9ADB"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "1F584C887057E6EF1A728DF216962F539A1DC142992B966DFCFC57640B8633A3",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054ec-4acc-7c70-9f35-06f71ad6f600/exec-b642e1fa-cf23-4c37-a043-b223f5ef4d60.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/infinite-star-sequence-attempt-01/original.png",
+  "original_sha256": "657D6EB492ED8018A3FC72BCE7F8CBFF8436DF1F0652726CA586173A43D54AC6",
+  "original_png": {
+    "width": 1448,
+    "height": 1086,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 11,
+    "y": 1,
+    "width": 1425,
+    "height": 1083,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/InfiniteStarSequence.png",
+  "runtime_sha256": "FAF9FB2A665CA96B6B04A0332A37821646C36B875B5B625FCFA9DDE260AA2B83",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepared-runtime-candidate.png",
+    "inspection/prepare-godot.log",
+    "inspection/prepare-godot.err.log",
+    "inspection/inspect_candidate.gd",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_gore_or_second_character": true,
+    "ordered_prior_card_sequence_present": true,
+    "sequence_recedes_to_infinite_vanishing_point": true,
+    "fresh_star_chart_page_at_each_visible_node": true,
+    "purple_margin_crystal_paired_with_each_new_page": true,
+    "no_attack_enemy_shield_or_self_buff_grammar": true,
+    "100x76_color_and_grayscale_sequence_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "A purple-gold ordered card sequence crosses visible computation nodes and recedes to an infinite vanishing point. Each readable node is paired with a newly retrieved blue-white star-chart page and a faceted purple Margin crystal. The chain remains legible in grayscale and at 100x76 without relying on card text, frame, attack, defense, or enemy imagery."
+}
