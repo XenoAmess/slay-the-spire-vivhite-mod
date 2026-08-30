@@ -19,3 +19,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ASTRAL_MEASURE(17分/2局)，VIVHITE_CARD_CRIMSON_AREA(17分/2局)
 - 策略进化：kill_bonus: 13.50 → 16.25（长战磨死（11回合），提升击杀奖励加快清场）；boss_atk_mult: 1.20 → 1.25（Boss 长战磨死（11回合），攻坚乘区提速）；Boss 长战磨死但高血进场（86%≥线 72%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.30 → 3.60（Boss 高血进场长战死（86%，11回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 4.50 → 5.00（Boss 高血进场长战死（11回合），缺口越深纠偏上限越高）；exploration_rate: 0.242 → 0.235（经验累积，探索衰减）
 - 生涯战绩：0/2 胜，当前目标进阶 0
+
+## 第 3 局复盘（2026-08-30 21:12）
+- 结果：💀 失败｜进阶 0｜到达层数 48｜当局评分 48
+- 死因：敌人组合 TEST_SUBJECT
+- 本局拿牌：VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_PROOF_OF_TERMINATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL
+- 本局遗物：金刚杵, KUNAI, 摆动球, 地精之角, 弹珠袋, ORNAMENTAL_FAN, 坚固钳子, 钢笔尖, CANDELABRA, 彩虹戒指
+- 战斗记录：F39 Monster战 掉血0; F40 Elite战 掉血26｜竞速审计：T2判死→实战6回合获胜; F43 Monster战 掉血0; F45 Elite战 掉血12; F46 Monster战 掉血6; F48 Boss战 掉血84｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_HEURISTIC_SHIELD(48分/2局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(48分/3局)，VIVHITE_CARD_PERFECT_SYNTHESIS(48分/2局)，VIVHITE_CARD_GEODESIC_VEIL(38分/3局)，VIVHITE_CARD_CONVERGENCE_VERDICT(29分/5局)
+- 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(17分/2局)，VIVHITE_CARD_ASTRAL_SEARCH(17分/2局)，VIVHITE_CARD_AXIOM_OF_LIFE(17分/2局)
+- 策略进化：kill_bonus: 16.25 → 18.25（长战磨死（8回合），提升击杀奖励加快清场）；boss_atk_mult: 1.25 → 1.30（Boss 长战磨死（8回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 72%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.60 → 3.90（Boss 高血进场长战死（100%，8回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 5.00 → 5.50（Boss 高血进场长战死（8回合），缺口越深纠偏上限越高）；kill_race_prior_eff: 0.55 → 0.58（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；exploration_rate: 0.235 → 0.228（经验累积，探索衰减）
+- 生涯战绩：0/3 胜，当前目标进阶 0
