@@ -7,7 +7,6 @@
  "ascension": 0,
  "started_at": "2026-08-30 20:34:27",
  "victory": false,
- "in_progress": true,
  "floor": 17,
  "decisions": [
   {
@@ -9285,6 +9284,279 @@
    "reason": "战斗：打出【拆卸】→同族神官（自我强化体优先转火：同族神官（力量+2，拖越久打越痛）｜无甲孤注抢斩杀｜致死竞速抢斩杀）；敌意图总伤27，我方36血/0甲；⚠高危Boss（329战209死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活1回合（实测23伤/回合升级桶×(1+换挡上浮0.20)→27伤/回合校准），全攻提速",
    "turn": 5,
    "energy": 3
+  },
+  {
+   "t": "20:41:11",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 36,
+   "gold": 172,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【痛击】→同族神官（自我强化体优先转火：同族神官（力量+2，拖越久打越痛）｜无甲孤注抢斩杀｜致死竞速抢斩杀）；敌意图总伤27，我方36血/0甲；⚠高危Boss（329战209死），速战速决，提速斩杀；意图升级+20，防御前置；Boss攻坚提速×1.80；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需3回合>可存活1回合（实测21伤/回合升级桶×(1+换挡上浮0.20)→26伤/回合校准），全攻提速",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "20:41:12",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 36,
+   "gold": 172,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[地狱之刃(1费)✗,打击(1费)✗,燃烧+(1费)✗]",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 36/85",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 27"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "地狱之刃",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "打击",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "燃烧+",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 27,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "INFERNAL_BLADE",
+      "name": "地狱之刃",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "STRIKE_IRONCLAD",
+      "name": "打击",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1,
+       2
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "INFLAME",
+      "name": "燃烧+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "20:41:19",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 9,
+   "gold": 172,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【怨恨】→同族神官（自我强化体优先转火：同族神官（力量+2，拖越久打越痛）｜败局竞速全攻｜致死竞速抢斩杀）；敌意图总伤22，我方9血/0甲；⚠高危Boss（329战209死），速战速决，提速斩杀；Boss攻坚提速×1.80；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需3回合>可存活0回合（实测23伤/回合升级桶×(1+换挡上浮0.20)→28伤/回合校准），全攻提速",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "20:41:20",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 9,
+   "gold": 172,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【痛击】→同族神官（自我强化体优先转火：同族神官（力量+2，拖越久打越痛）｜败局竞速全攻｜致死竞速抢斩杀）；敌意图总伤22，我方9血/0甲；⚠高危Boss（329战209死），速战速决，提速斩杀；Boss攻坚提速×1.80；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需3回合>可存活0回合（实测21伤/回合升级桶×(1+换挡上浮0.20)→25伤/回合校准），全攻提速",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "20:41:22",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 9,
+   "gold": 172,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【挑衅】→同族信徒（格挡4｜致死竞速部分格挡贬值）；敌意图总伤22，我方9血/0甲；⚠高危Boss（329战209死），速战速决，提速斩杀；Boss攻坚提速×1.80；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需2回合>可存活0回合（实测22伤/回合升级桶×(1+换挡上浮0.20)→27伤/回合校准），全攻提速",
+   "turn": 6,
+   "energy": 1
+  },
+  {
+   "t": "20:41:23",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 9,
+   "gold": 172,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[防御(1费)✗,防御(1费)✗]",
+   "turn": 6,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 9/85",
+      "回合 6",
+      "能量 0",
+      "敌方意图伤害 22"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "防御",
+      "score": null,
+      "status": "locked",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 4,
+    "incoming_damage": 22,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "DEFEND_IRONCLAD",
+      "name": "防御",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false
+     }
+    ]
+   }
   }
  ],
  "combat_notes": [
@@ -9296,7 +9568,8 @@
   "F11 Monster战 掉血4",
   "F12 Monster战 掉血14｜竞速审计：T3判死→实战4回合获胜",
   "F14 Monster战 掉血0",
-  "F15 Elite战 掉血8"
+  "F15 Elite战 掉血8",
+  "F17 Boss战 掉血62｜竞速审计：T5判死→实战6回合阵亡（阵亡）"
  ],
  "attribution_tags": [
   [
