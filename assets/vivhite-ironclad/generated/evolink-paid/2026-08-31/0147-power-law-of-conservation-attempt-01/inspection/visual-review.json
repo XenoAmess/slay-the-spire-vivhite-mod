@@ -1,0 +1,85 @@
+{
+  "asset": "LawOfConservationPower",
+  "semantic_name_zh": "守恒定律",
+  "generation_id": "0147",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_accepted_pending_game_validation",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/LawOfConservationPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, or animation frame",
+    "gameplay_semantics": "each point of Margin consumed to prevent a Life Calculation cost grants Block equal to this Power's Amount",
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "47821DE9F1BFCE05AACBE267D27E9DB2813D559A228FF403F9B35A5167ABC6BD",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [41, 19, 969, 949],
+    "nonzero_alpha_pixels": 297433,
+    "opaque_pixels_alpha_at_least_250": 277953,
+    "visible_alpha_touches_edge": false
+  },
+  "prepared_outputs": {
+    "256": {
+      "path": "inspection/256/prepared-256.png",
+      "alpha_bbox": [19, 60, 218, 126],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 12
+    },
+    "64": {
+      "path": "inspection/64/prepared-64.png",
+      "alpha_bbox": [3, 13, 58, 35],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 3
+    },
+    "32": {
+      "path": "inspection/32/prepared-32.png",
+      "alpha_bbox": [2, 6, 28, 19],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 2
+    }
+  },
+  "visual_review": {
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "semantic_result": "Three dark-gold impulse wedges are visibly stopped by a substantial violet Margin crystal; a mirrored gold-and-blue conservation bridge transfers the visual weight into one bright blue-white shield on the right.",
+    "small_size_result": "At 64px the intercepted impulse, violet crystal, symmetric bridge, and shield remain separate. At 32px the crystal-to-shield conversion remains readable without text, numbers, or color labels.",
+    "forbidden_content": {
+      "person_face_mouth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "blood_liquid_droplet_or_wound": false,
+      "text_number_equation_equality_character_or_glyph": false,
+      "particles_fog_shadow_or_long_trail": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/LawOfConservationPower.png",
+    "sha256": "D9722127CBFC303FD5D5463624597110BC14C7B87F7376486327D33BAFC4B5C1",
+    "byte_identical_to_prepared_256": true
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, creative repaint, or generated-content change.",
+  "retry_decision": "Accepted on attempt 1 of 8. Stop generation because the consumer, Alpha, SourceOver, semantic, safety-margin, and actual-size gates all pass. Real in-game Vulkan validation remains pending."
+}
