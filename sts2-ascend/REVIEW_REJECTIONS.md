@@ -188,6 +188,6 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260830-082021-1788049221626066400-4d289523 -->
 | 2026-08-30 08:20:21 | 第 1014~1085 局 | `4d289523` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8f0189ca` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8f0189ca 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-084926-1788050966599864600-61be86a3 -->
-| 2026-08-30 08:49:26 | 第 1014~1085 局 | `61be86a3` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-084926-1788050966599864600-61be86a3` | 复盘 patch 触碰 deny-only 路径边界：.selfcheck-tmp/fixed/brain.log (Git/outside/unsafe), .selfcheck-tmp/fixed/card_reward/brain.log (Git/outside/unsafe), .selfcheck-tmp/fixed/card_reward/runs/20260830-084018_AMB_CARD_REWARD.json (Git/outside/unsafe… |
+| 2026-08-30 08:49:26 | 第 1014~1085 局 | `61be86a3` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8f0189ca` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8f0189ca 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-090935-1788052175118532000-16d4a92d -->
 | 2026-08-30 09:09:35 | 第 988~1013 局 | `16d4a92d` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-090935-1788052175118532000-16d4a92d` | 复盘进程未成功完成 |
