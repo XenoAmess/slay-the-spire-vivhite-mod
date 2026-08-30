@@ -5870,3 +5870,40 @@ retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
 - 撤回：将 `kill_race_enabled` 设为 `False` 可关闭该路径；代码级撤回只需删除
   两个攻击闸的 `kill_race` 豁免、两个观测标记和对应 selfcheck 夹具。
 - 无失败包 lineage、无 replay target；本批不追加 `retry_resolution`。
+
+# 2026-08-30｜第1165~1168局复盘（Boss 战斗端翻盘比复核重开）
+
+## 一、证据与可证伪假设
+
+- 队列 requested=[1165,1166,1167,1168]，exact 命中 4/4；最新失败局
+  `ELGUE4CN2EFL` 为 F33，339 条决策链完整持久化，`complete_persisted_chain=True`。
+- 1168-F33-T3 的决策理由连续保留「斩杀竞速投影」；同一 Boss 在 T4 又出现
+  「防守线复核：联合能量对账」，随后实际在 F33 阵亡。F32 前夜已留下
+  `BOSS_RACE_COMBO_GATE` 已知组合可行 0/4 的判死账；当前代码只在前夜
+  `_boss_race_doomed` 套用 `boss_race_joint_flip_max_ttk_ratio`，战斗端救援
+  `_race_joint_feasible` 会绕过该类闸门重新清除 `race_lost`。
+- 原生 v0.111.0 资料确认 `THE_INSATIABLE` 的 `THRASH` 为双段攻击，
+  `SALIVATE` 增加力量，`LIQUIFY_GROUND` 生成 3 张抽牌区与 3 张弃牌区的
+  `FRANTIC_ESCAPE`；静态平铺联合产能对该 Boss 的长战计划存在乐观风险。
+- **HYPOTHESIS**：Boss 战斗端的联合防守复核重开，是前夜已判定无可行翻盘后
+  仍出现防守线理由的直接原因；若未来至少 3 个独立 Boss 战触发超限标记后，
+  仍无 Boss 战死亡/后段防守重开下降，则该因果假设被证伪，不再扩大收紧范围。
+
+## 二、本次最小生产改动
+
+| 项目 | 内容 |
+| --- | --- |
+| 生产行为 | `brain/policy.py::_combat` 仅在 `node_type == Boss` 时复用既有翻盘比上限；联合复核虽可行但 `ttk > cap × tsurv` 时不清除 `race_lost`。 |
+| 观测 | 超限分支追加 `JOINT_FLIP_TTK_CAP`，随后保留「斩杀竞速投影」理由，便于逐战统计。 |
+| 配置边界 | `brain/knowledge.py` 说明该键同时约束前夜预演与 Boss 战斗端；`cap<=0` 严格回落旧联合复核行为，非 Boss 不变。 |
+| 回归 | `brain/selfcheck.py` 的 `3br-combat-cap` 覆盖上限开启/超限否决与 `0` 回滚；已有前夜贴线翻盘、非 Boss 滚雪球测试继续保留。 |
+
+## 三、验证、后续指标与撤回
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。
+- 后续 3~10 局统计 Boss 战 `JOINT_FLIP_TTK_CAP` 次数、同一战斗之后的
+  「防守线复核」次数、F33/F17 后段存活与实际 Boss 战损；重点观察超限标记后是否仍
+  消耗防守能量或延长战斗。
+- 撤回：将 `boss_race_joint_flip_max_ttk_ratio` 设为 `0` 即恢复旧战斗端联合复核；
+  代码级撤回删除 `_combat` 的 Boss 限制、对应 selfcheck 夹具和本节说明即可。无失败包
+  lineage、无 replay target，本批不追加 `retry_resolution`。

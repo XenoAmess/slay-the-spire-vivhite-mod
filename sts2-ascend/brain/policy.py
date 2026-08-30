@@ -2870,6 +2870,23 @@ class Policy:
                         _feas, _mix = self._race_joint_feasible(
                             _cr_deck, enemy_hp_total, _feas_fire, my_hp,
                             _def_margin)
+                        # Boss 战斗端的防守复核必须与前夜预演共用翻盘比上限。
+                        # 否则同一场先被 JOINT_FLIP_TTK_CAP 判定为不可翻盘，
+                        # 进入战斗后又会被静态联合分配重新打开；1168-F33
+                        # 正是「T3 竞速判死、T4 防守线复核」的最小现场。
+                        # 只收紧 Boss 分支；非 Boss 维持原联合复核口径，键置 0
+                        # 仍是严格回滚锚点。
+                        _boss_flip_cap = 0.0
+                        if cctx.get("node_type") == "Boss":
+                            _boss_flip_cap = float(pol.get(
+                                "boss_race_joint_flip_max_ttk_ratio", 1.5))
+                        if (_feas and _boss_flip_cap > 0.0
+                                and ttk > float(tsurv) * _boss_flip_cap):
+                            _feas = False
+                            danger_note += (
+                                f"；防守线复核虽报可行但击杀需{ttk:.0f}回合"
+                                f"＞{_boss_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
+                                "翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）")
                         if _feas:
                             race_lost = False
                             self._krace_latch = False

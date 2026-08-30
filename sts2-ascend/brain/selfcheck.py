@@ -5858,6 +5858,67 @@ def main() -> int:
         f"贴线翻盘被翻盘比上限误伤: {_near_doomed}（{_near_note}）"
     br_ctx.rest_before_boss = False
 
+    # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
+    # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
+    # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。
+    def combat_flip_probe(cap):
+        cap_ctx = type("CAPCTX", (), {
+            "combat": {"comp_id": "CAP_BOSS", "node_type": "Boss"},
+            "current_combat_is_hard": False, "credit_tags": []})()
+        cap_state = {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": 46, "max_hp": 80,
+                            "block": 0, "energy": 3},
+                "hand": [
+                    {"index": 0, "card_id": "CAP_HIT", "name": "速攻",
+                     "playable": True, "energy_cost": 1,
+                     "requires_target": True, "valid_target_indices": [0],
+                     "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+                    {"index": 1, "card_id": "CAP_BLOCK", "name": "格挡",
+                     "playable": True, "energy_cost": 1,
+                     "requires_target": False, "rules_text": "获得8点格挡",
+                     "dynamic_values": [{"name": "Block", "current_value": 8}]},
+                ],
+                "enemies": [{"index": 0, "enemy_id": "CAP_BOSS",
+                              "name": "攻坚巨兽", "current_hp": 185,
+                              "max_hp": 341, "block": 0, "is_alive": True,
+                              "is_hittable": True,
+                              "intents": [{"total_damage": 0}]}],
+            },
+            "run": {"current_hp": 46, "max_hp": 80, "gold": 0,
+                    "floor": 33, "deck": []},
+        }
+        cap_pol = policy.Policy(
+            knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-combat-cap-"))),
+            random.Random(11))
+        # First tick establishes the combat identity; the following values isolate
+        # the already-observed, latched race-loss branch from card ranking details.
+        cap_pol.decide(cap_state, cap_ctx)
+        cap_pol._krace_turns = 3
+        cap_pol._krace_dmg = cap_pol._krace_dmg_sustained = 36.0
+        cap_pol._krace_latch = True
+        cap_pol._race_rounds = 2
+        cap_pol._race_loss_rate = 20.0
+        cap_pol._incoming_ema = 20.0
+        cap_pol._esc_rounds = 2
+        cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
+        cap_pol._race_joint_feasible = lambda *args, **kwargs: (
+            True, "固定可行点")
+        return cap_pol.decide(cap_state, cap_ctx)
+
+    d_combat_cap = combat_flip_probe(1.5)
+    assert "JOINT_FLIP_TTK_CAP" in d_combat_cap.reason \
+        and "斩杀竞速投影" in d_combat_cap.reason \
+        and "防守线复核：联合能量对账" not in d_combat_cap.reason, \
+        f"Boss 战斗端超限联合复核未被否决: {d_combat_cap.action}（{d_combat_cap.reason}）"
+    d_combat_cap_rb = combat_flip_probe(0.0)
+    assert "防守线复核：联合能量对账" in d_combat_cap_rb.reason \
+        and "JOINT_FLIP_TTK_CAP" not in d_combat_cap_rb.reason, \
+        f"Boss 战斗端翻盘比上限=0 未严格回滚: {d_combat_cap_rb.action}（{d_combat_cap_rb.reason}）"
+
     # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把
     #        KIN 实际必败局翻成回血；关闭新闸后严格回落旧存在性口径。native
