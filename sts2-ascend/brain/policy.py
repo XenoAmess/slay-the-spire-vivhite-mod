@@ -360,6 +360,7 @@ class Policy:
         self._unlock_stall = 0      # UNLOCK 已识别但 API 确认动作缺失时的独立鼠标兜底计数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
         self._intent_trend = 0      # 本回合相对上一回合的意图增量（≥0，升级幅度）
+        self._intent_spike_from_zero = False  # 本回合是否从零意图突跳（高危唤醒观测）
         # 斩杀竞速投影（第 90~91 批复盘）：本场已打出的期望总伤 / 出牌回合数
         self._krace_combat = None   # 战斗实例身份
         self._krace_dmg = 0.0       # 本场已打出攻击卡的期望总伤累计
@@ -2301,6 +2302,7 @@ class Policy:
             self._krace_potion_rounds = set()
             self._incoming_ema = 0.0
             self._esc_rounds = 0
+            self._intent_spike_from_zero = False
             # 竞速投影错账审计（第802~807局批复盘闭环实验 RACE_PROJ_CALIB_AUDIT，
             # 观测位不改判定）：stance 成长型反向偏置积案已至 ≥4 例（719/723 局
             # FUZZY 型竞速误报白损 25~30 血/次）——本账只在判死入锁时记账，
@@ -2411,6 +2413,8 @@ class Policy:
         # "边防边耗"的防守路线本身已经失效（61 局 Boss 战意图 19→21→23→25
         # 递增，每单回合都够不上 lethal，引擎持续半攻半防温水等死）
         if self._race_round != round_no:
+            self._intent_spike_from_zero = False
+            _previous_intent = int(self._intent_prev or 0)
             if self._race_round is not None and self._race_prev_hp is not None:
                 loss = max(0.0, float(self._race_prev_hp - my_hp))
                 self._race_loss_rate = (loss if self._race_rounds == 0
@@ -2423,6 +2427,8 @@ class Policy:
             # 回合边界记录增量，供姿态层提前抬防御/紧急线
             if self._race_rounds >= 1:
                 self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
+                self._intent_spike_from_zero = (
+                    _previous_intent <= 0 and int(incoming) > 0)
                 # 持续升级计数（第 92~93 批复盘）：93 局 FUZZY+SHRINKER 战意图
                 # 4→7→24→18→13→25→31 滚雪球——单看「本回合跳升」会把它当一次性
                 # 事件防御前置，而滚雪球的正确读法是「每拖一轮都更贵」。
@@ -2791,6 +2797,22 @@ class Policy:
                         # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
                         # 而当轮意图已 25），持续升级时存活分母至少取当前意图
                         loss_rate = max(loss_rate, float(incoming))
+                    # 突发唤醒火力修正（HARD_INTENT_SPIKE_FIRE）：Bygone Effigy
+                    # 的 Sleep→Wake 会一次性获得10点力量，实战意图从0跳到23后
+                    # 持续不降；普通 EMA 在首个跳升帧只有6.9，且该模式不满足
+                    # 「连续两次升级」的 esc_gate，导致高危精英继续走已被证伪的
+                    # 防守路线。仅限 Elite/Boss、从零意图突跳且当前意图高于 EMA，
+                    # 避免把普通小怪的一次性波动扩大为全局竞速。
+                    _spike_fire = (
+                        bool(pol.get("hard_combat_intent_spike_fire", True))
+                        and cctx.get("node_type") in ("Elite", "Boss")
+                        and getattr(self, "_intent_spike_from_zero", False)
+                        and float(incoming) > float(loss_rate))
+                    if _spike_fire:
+                        loss_rate = float(incoming)
+                        danger_note += (
+                            f"；突发唤醒火力取当前意图{float(incoming):.0f}"
+                            "（HARD_INTENT_SPIKE_FIRE）")
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
                     _race_margin = float(pol.get("kill_race_margin", 1.5))

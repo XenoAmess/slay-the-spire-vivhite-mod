@@ -6012,3 +6012,48 @@ retry_resolution: none (no target package; local production fix)
 ## VALIDATION
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。无 replay target，故不追加 `retry_resolution`。
+
+# 2026-08-30｜第1194局复盘：Bygone Effigy 唤醒火力滞后
+
+## HYPOTHESIS
+
+- 最新完整失败链为 `70KG7GFEB217`（run 1194，F12，146 条决策，
+  `complete_persisted_chain=True`）。Bygone Effigy 战斗从 80 血开始，T3 意图从 0
+  跳到 23，随后连续固定 23 点伤害，最终在 T8 以 9 血阵亡；T3 之后的决策理由始终
+  是“转防守节奏”，没有出现“斩杀竞速投影”。
+- 原生 v0.111.0 知识确认 `BYGONE_EFFIGY` 为 127 血精英，初始 Sleep；Wake
+  施加 `Strength+10`，其基础 Slash 为 13，因此 0→23 是可解释且会持续的唤醒跳升。
+- **HYPOTHESIS**：战斗竞速分母在一次性唤醒跳升时只取滞后的 EMA；0→23 首帧的
+  EMA 为 6.9，而持续升级门要求两次跳升，导致该精英没有及时判定防守路线失效。
+  若把当前意图只在高危 Elite/Boss 的“从零突跳”窗口纳入火力分母，未来 3~10 场
+  同类战斗应更早出现竞速留痕并减少唤醒后的无效格挡；若标记后仍保持同样的防守
+  轨迹，或在至少 3 场一次性意图很快回落的战斗中造成错误全攻，该假设即被证伪。
+
+## EVIDENCE
+
+- 失败包完整但没有 candidate/wip patch，只有最新任务快照；本次按完整证据在当前
+  HEAD 重新实现，没有读取或写入在线 `stats`、`policy`、`runs` 或运行进程。
+- 基线 `policy.py::_combat` 先以 0.7/0.3 更新 `_incoming_ema`，仅 `esc_rounds>=2`
+  时强制取当前意图。最小离线夹具复现了 0→23 后 `_incoming_ema=6.9`、
+  `esc_rounds=1` 且没有竞速理由。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+- `brain/knowledge.py` 新增默认开启的 `hard_combat_intent_spike_fire`，关闭即回滚。
+- `brain/policy.py` 按战斗实例和回合记录“从零意图突跳”；仅当节点为 Elite/Boss、
+  当前意图高于滞后火力时，竞速投影改用当前意图，并追加稳定标记
+  `HARD_INTENT_SPIKE_FIRE`。普通 Monster、无突跳和当前意图不高于 EMA 的路径不变。
+- `brain/selfcheck.py` 增加启用/关闭双向回归：启用时 T3 必须出现唤醒火力标记与
+  “斩杀竞速投影”，关闭时两者均不得出现。
+- 后续 3~10 场记录标记次数、触发时的意图/EMA、`kill_race` 选择、后续格挡能量、
+  竞速审计胜负和 Elite/Boss 战损。若出现 3 场以上错误全攻或标记后没有减少同型
+  后段损失，先关闭该开关并依据完整决策链重估窗口。
+
+## VALIDATION / ROLLBACK
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。
+- `git diff --check` 通过；最终提交前会再次复核完整 diff 与自检结果。
+- 回滚：将 `hard_combat_intent_spike_fire` 设为 `False`，恢复旧 EMA 口径；必要时
+  再删除对应的状态字段、分支和回归夹具。未做网络推送。
+
+retry_resolution: 20260830-155346-1788076426711349100-aae9b838 integrated

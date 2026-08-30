@@ -2815,6 +2815,78 @@ def main() -> int:
     assert "斩杀竞速投影" not in d_kr2.reason, f"防守可行时误触发竞速投影: {d_kr2.reason}"
     krc.combat = None
 
+    # 3ww-spike) Bygone Effigy 的原生 Sleep→Wake 会施加 10 点力量：
+    # 0→23 的一次性意图跳升随后保持固定，不能等 esc_rounds≥2 才把当前火力
+    # 纳入竞速分母。回归夹具验证高危战斗在 T3 已进入竞速；开关关闭时严格回落
+    # 旧 EMA 口径，防止普通一次性意图被全局放大。
+    def wake_race_probe(enabled):
+        wake_ctx = type("WakeCtx", (), {
+            "combat": {"comp_id": "BYGONE_EFFIGY", "node_type": "Elite"},
+            "current_combat_is_hard": True, "credit_tags": []})()
+        wake_pol = policy.Policy(know, random.Random(17))
+        wake_pol.know.policy["hard_combat_intent_spike_fire"] = enabled
+        wake_deck = [
+            {"card_id": f"WAKE_HIT_{i}", "card_type": "Attack", "energy_cost": 1,
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}
+            for i in range(3)]
+
+        def wake_card(index, card_id, name, cost, damage=0, block=0):
+            card = {"index": index, "card_id": card_id, "name": name,
+                    "playable": True, "energy_cost": cost,
+                    "requires_target": damage > 0,
+                    "valid_target_indices": [0] if damage > 0 else [],
+                    "dynamic_values": []}
+            if damage:
+                card["dynamic_values"].append(
+                    {"name": "Damage", "current_value": damage})
+                card["card_type"] = "Attack"
+            if block:
+                card["dynamic_values"].append(
+                    {"name": "Block", "current_value": block})
+                card["card_type"] = "Skill"
+            return card
+
+        def wake_state(turn_no, enemy_hp, incoming, hand):
+            return {
+                "screen": "COMBAT",
+                "available_actions": ["play_card", "end_turn"],
+                "turn": turn_no,
+                "combat": {
+                    "player": {"current_hp": 80, "max_hp": 80,
+                                "block": 0, "energy": 1},
+                    "hand": hand,
+                    "enemies": [{"index": 0, "enemy_id": "BYGONE_EFFIGY",
+                                 "name": "旧日雕像", "current_hp": enemy_hp,
+                                 "max_hp": 127, "block": 0, "is_alive": True,
+                                 "is_hittable": True,
+                                 "intents": [{"total_damage": incoming}]}],
+                },
+                "run": {"current_hp": 80, "max_hp": 80, "floor": 12,
+                        "deck": wake_deck},
+            }
+
+        for turn_no, enemy_hp in ((1, 127), (2, 117)):
+            decision = wake_pol.decide(
+                wake_state(turn_no, enemy_hp, 0,
+                           [wake_card(0, f"WAKE_T{turn_no}", "唤醒测试攻击", 1, 10)]),
+                wake_ctx)
+            wake_ctx.credit_tags.extend(decision.tags)
+        return wake_pol.decide(
+            wake_state(3, 107, 23,
+                       [wake_card(0, "WAKE_T3", "唤醒测试攻击", 1, 10),
+                        wake_card(1, "WAKE_GUARD", "唤醒测试格挡", 1, block=5)]),
+            wake_ctx)
+
+    d_wake = wake_race_probe(True)
+    assert "HARD_INTENT_SPIKE_FIRE" in d_wake.reason \
+        and "斩杀竞速投影" in d_wake.reason, \
+        f"高危突发唤醒未在竞速投影中取当前火力: {d_wake.action}（{d_wake.reason}）"
+    d_wake_rb = wake_race_probe(False)
+    assert "HARD_INTENT_SPIKE_FIRE" not in d_wake_rb.reason \
+        and "斩杀竞速投影" not in d_wake_rb.reason, \
+        f"突发唤醒火力开关未严格回滚旧 EMA: {d_wake_rb.action}（{d_wake_rb.reason}）"
+    know.policy["hard_combat_intent_spike_fire"] = True
+
     # 3wx) 升级触发竞速 + 高危姿态解除（第 92~93 批复盘）：93 局 FUZZY+SHRINKER
     #      总血量 <80，旧门 min_enemy_hp=80 永远不开账；高危姿态压攻击(×0.85)
     #      抬格挡(×1.30)对滚雪球意图（4→7→24→…→31）恰好是反向用药——7 回合
