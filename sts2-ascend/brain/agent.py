@@ -1370,7 +1370,7 @@ class Agent:
 
         run_boundary_actions = {
             "open_character_select", "embark", "continue_run",
-            "return_to_main_menu",
+            "continue_game_over", "return_to_main_menu",
         }
         if action not in run_boundary_actions and not same_run:
             return "unproven"
@@ -1432,6 +1432,22 @@ class Agent:
             old_turn, new_turn = before.get("turn"), after.get("turn")
             return ("applied" if (same_run and isinstance(old_turn, int)
                     and isinstance(new_turn, int) and new_turn > old_turn)
+                    else "unproven")
+
+        if action == "continue_game_over":
+            if before_screen != "GAME_OVER":
+                return "unproven"
+            if after_screen != "GAME_OVER":
+                return "applied"
+            before_game_over = before.get("game_over") or {}
+            after_game_over = after.get("game_over") or {}
+            if (before_game_over.get("can_continue")
+                    and not after_game_over.get("can_continue")):
+                return "applied"
+            before_phase = str(before_game_over.get("phase") or "")
+            after_phase = str(after_game_over.get("phase") or "")
+            return ("applied" if before_phase == "intro"
+                    and after_phase in ("summary_animating", "summary_ready")
                     else "unproven")
 
         if action == "use_potion":
@@ -1596,7 +1612,7 @@ class Agent:
             "open_character_select": {"CHARACTER_SELECT"},
             "embark": {"MAP", "COMBAT", "EVENT", "REST", "SHOP"},
             "continue_run": {"MAP", "COMBAT", "EVENT", "REST", "SHOP", "REWARD"},
-            "return_to_main_menu": {"MAIN_MENU", "TIMELINE"},
+            "return_to_main_menu": {"MAIN_MENU", "TIMELINE", "UNLOCK"},
         }.get(action)
         if destination is not None:
             return "applied" if after_screen in destination and after_screen != before_screen else "unproven"

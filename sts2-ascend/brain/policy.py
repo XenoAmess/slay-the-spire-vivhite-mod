@@ -936,7 +936,7 @@ class Policy:
 
         timeline = state.get("timeline") or {}
         if kind == "timeline_return":
-            if screen in ("MAIN_MENU", "TIMELINE"):
+            if screen in ("MAIN_MENU", "TIMELINE", "UNLOCK"):
                 ctx.check_timeline = True
         elif kind == "timeline_open":
             if screen == "TIMELINE" or timeline.get("can_choose_epoch"):
@@ -1226,9 +1226,16 @@ class Policy:
             self._decide_errors = 0
             if decision.action and decision.action in self._broken_actions:
                 actions = state.get("available_actions", [])
-                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
-                             "skip_reward_cards", "confirm_selection", "confirm_bundle",
-                             "dismiss_modal", "open_chest", "close_shop_inventory"):
+                # GAME_OVER and UNLOCK carry native persistence side effects. A
+                # generic proceed (or any unrelated button) is never a safe
+                # substitute for their dedicated actions: if the API contract is
+                # broken, wait for a corrected process instead of skipping score,
+                # unlock, or save work.
+                recovery_actions = (() if screen in ("GAME_OVER", "UNLOCK") else (
+                    "proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
+                    "skip_reward_cards", "confirm_selection", "confirm_bundle",
+                    "dismiss_modal", "open_chest", "close_shop_inventory"))
+                for safe in recovery_actions:
                     if safe in actions:
                         return ensure_decision_trace(
                             state, Decision(safe, {},
@@ -1248,9 +1255,11 @@ class Policy:
             # 看门狗的 abandon_run 在 MAP 等屏幕上又不可用——连续异常时改发安全动作自救：
             if self._decide_errors >= 10:
                 actions = state.get("available_actions", [])
-                for safe in ("proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
-                             "skip_reward_cards", "confirm_selection", "confirm_bundle",
-                             "dismiss_modal", "open_chest", "close_shop_inventory"):
+                recovery_actions = (() if screen in ("GAME_OVER", "UNLOCK") else (
+                    "proceed", "end_turn", "confirm_modal", "collect_rewards_and_proceed",
+                    "skip_reward_cards", "confirm_selection", "confirm_bundle",
+                    "dismiss_modal", "open_chest", "close_shop_inventory"))
+                for safe in recovery_actions:
                     if safe in actions:
                         return ensure_decision_trace(
                             state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0))
@@ -7201,17 +7210,48 @@ class Policy:
         go = state.get("game_over") or {}
         actions = state.get("available_actions", [])
         victory = bool(go.get("is_victory"))
-        if not ctx.run_finalized:
-            ctx.finalize_requested = True  # agent.py performs reflection once
-            return Decision(None, {}, f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），正在总结复盘…", wait=0.5)
-        if go.get("can_continue") and "continue_run" in actions:
-            return Decision("continue_run", {}, "结算：继续（进入下一阶段）", wait=1.5)
+        phase = str(go.get("phase") or "")
+
+        # Continue is the native NGameOverContinueButton, not main-menu
+        # continue_run. Clicking it starts AnimateRunSummary, whose score bar
+        # persists CurrentScore and grants score-based epochs. The action remains
+        # available only while the real button is visible and enabled, so a lost
+        # HTTP response is reconciled by the next authoritative state payload.
+        if go.get("can_continue") and "continue_game_over" in actions:
+            return Decision("continue_game_over", {},
+                            "结算：确认战绩，执行原生分数、解锁与存档流程", wait=1.0)
+
+        # MainMenuButton becomes actionable only after the native summary
+        # coroutine has completed its score/save work. Finalize the Brain ledger
+        # exactly once at this barrier, then click the real button on the following
+        # poll. Keeping this one poll on GAME_OVER preserves victory/floor for the
+        # existing idempotent finalizer and rotation ledger in agent.py.
         if go.get("can_return_to_main_menu") and "return_to_main_menu" in actions:
+            if not ctx.run_finalized:
+                state_run_id = str(state.get("run_id") or "")
+                ctx_run_id = str(getattr(ctx, "run_id", "") or "")
+                owns_terminal = (
+                    ctx_run_id not in ("", "run_unknown")
+                    and state_run_id in ("", "run_unknown", ctx_run_id)
+                    and bool(getattr(ctx, "decisions", ())))
+                if owns_terminal:
+                    ctx.finalize_requested = True
+                    return Decision(
+                        None, {},
+                        f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
+                        "原生结算已落盘，正在提交终局统计…",
+                        wait=0.5)
+                # Reconnecting to an old GAME_OVER echo must finish the native UI
+                # without manufacturing a zero-history duplicate terminal record.
+                # The unresolved rotation entry continues to block embark.
+                return Decision("return_to_main_menu", {},
+                                "结算：恢复旧终局界面，仅完成原生返回，不重复统计",
+                                tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)
-        if "proceed" in actions:
-            return Decision("proceed", {}, "结算：继续", wait=1.2)
-        return Decision(None, {}, "结算：等待", wait=0.8)
+        if phase == "summary_animating" or go.get("showing_summary"):
+            return Decision(None, {}, "结算：原生分数、解锁与存档动画进行中，等待", wait=0.8)
+        return Decision(None, {}, "结算：等待原生 Continue/MainMenuButton 就绪", wait=0.8)
 
     def _click_game_point(self, fx: float = 0.5, fy: float = 0.87) -> bool:
         """真实鼠标点击游戏窗口内相对坐标（解锁/提示屏确认按钮的兜底手段）。"""
@@ -7254,21 +7294,11 @@ class Policy:
             self._unlock_stall = 0
             label = f"【{items}】" if items else ""
             return Decision("confirm_unlock", {}, f"解锁新内容{label}，确认收下", wait=1.2)
-        # 双保险：曾出现 mod 已识别 NUnlockRelicsScreen，但因私有基类字段反射
-        # 漏查而永久给出 can_confirm=false/actions=[]。不要把已识别的 UNLOCK
-        # 排除在 UNKNOWN 鼠标兜底之外；连续观察后点击画面底部中央的确认按钮。
+        # UNLOCK 已有精确的 confirm_unlock 协议。按钮尚未就绪时只等待新的 API
+        # 状态，绝不盲点屏幕或绕到主菜单；断线/动画延迟也不能跳过队列项。
         self._unlock_stall += 1
-        if self._unlock_stall >= 12:
-            self._unlock_stall = 0
-            clicked = self._click_game_point(0.5, 0.89)
-            probe = (f"type={unlock.get('unlock_type') or 'unknown'}, "
-                     f"can_confirm={unlock.get('can_confirm')}, actions={actions}")
-            return Decision(None, {},
-                            f"解锁界面 API 长时间无确认动作（{probe}），"
-                            f"鼠标兜底点击{'已发送' if clicked else '失败'}",
-                            wait=1.5)
         return Decision(None, {},
-                        f"解锁界面：等待确认按钮就绪（{self._unlock_stall}/12；"
+                        f"解锁界面：等待 confirm_unlock 就绪（{self._unlock_stall}；"
                         f"type={unlock.get('unlock_type') or 'unknown'}；"
                         f"can_confirm={unlock.get('can_confirm')}；actions={actions}）",
                         wait=0.8)
