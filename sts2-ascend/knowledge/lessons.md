@@ -8719,3 +8719,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1193 胜，当前目标进阶 0
+
+## 第 1194 局复盘（2026-08-30 15:52）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：SWORD_BOOMERANG, ARMAMENTS, UPPERCUT, CINDER, TWIN_STRIKE, UPPERCUT, HOWL_FROM_BEYOND, BATTLE_TRANCE
+- 本局遗物：THE_COURIER
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血16; F8 Monster战 掉血13; F12 Elite战 掉血80（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/129局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/1194 胜，当前目标进阶 0
