@@ -2,50 +2,49 @@
 
 语言 / Languages：中文 | [English](README.en.md)
 
-一个可复制、可构建的 RitsuLib Mod 模板，提供通用的 Godot/C# 工程结构、示例内容和静态占位资源。
+`Vivhite` 是《杀戮尖塔 2》的白绮角色 Mod。白绮是一位精通数学、计算机与艺术的魔法少女、魔法大师；她以生命作为魔法演算材料，通过“耗血施法 → 击杀或汲取回血 → 继续施法”建立战斗循环。
 
-**模板包含：**
+本文描述已批准的 `0.2.0` 角色实现契约。完整 60 张卡牌目录、逐牌数值和仍待完成的运行时验收项见[《白绮角色与轮换大脑实现》](../docs/2026-08-30-白绮角色与轮换大脑实现.md)；本文不宣称这些验收已经完成。
 
-- 一个 `[ModInitializer]` 入口，外加最小自定义角色（含角色卡池、遗物池、药水池）。
-- 4 张初始打击、4 张初始防御和 1 个初始遗物示例。
-- 最小 Godot 静态占位场景：战斗模型、能量表盘、角色选择背景、商店和火堆。
-- 从原版资源复制并按模板命名的占位 PNG，复制模板后可直接替换。
-- 中英文基础本地化文件。
-- 完整的 Godot 项目、导出配置、Mod manifest 和 MSBuild 构建脚本。
+**角色概要：**
+
+- 初始属性：`78` 最大生命、`99` 金币、每回合 `3` 能量、抽 `5` 张牌。
+- 初始牌组：4 × 弦光投影、4 × 闭域映射、1 × 变身式·白绮。
+- 初始遗物：归元星盘——每当任意敌人死亡，立即回复 `4` 点生命；同一实体的同一次死亡只结算一次。
+- 专属卡池共 `60` 张：3 基础、18 普通、24 罕见、15 稀有。
+- 三套主要构筑：守恒几何、递归星算、绯彩积分，并有跨体系组合牌。
+- 所有卡牌当前统一使用 RitsuLib 占位卡图；本阶段不生成卡图。
 
 ## 学习资源
 
-- [STS2-RitsuLib](https://github.com/BAKAOLC/STS2-RitsuLib)：Slay the Spire 2 Mod 的共享框架库，本模板基于它提供内容注册、角色脚手架和 Godot 资源接入能力。
-- [RitsuLib 文档地址](https://github.com/GlitchedReme/SlayTheSpire2ModdingTutorials/tree/master/RitsuLib)：按文件阅读教程和示例。
-- [Slay the Spire 2 Modding Tutorials 网页版](https://glitchedreme.github.io/SlayTheSpire2ModdingTutorials/index.html)：完整教程站点。
-- 模板 Wiki（以 Rider 为主线）：[中文首页](https://github.com/alkaid616/Vivhite/wiki/Home) | [English Home](https://github.com/alkaid616/Vivhite/wiki/Home-EN)。
+- [STS2-RitsuLib](https://github.com/BAKAOLC/STS2-RitsuLib)：本项目用于内容注册、角色接入与 Godot 资源集成的基础库。
+- [RitsuLib 文档](https://github.com/GlitchedReme/SlayTheSpire2ModdingTutorials/tree/master/RitsuLib)：按文件组织的教程和示例。
+- [Slay the Spire 2 Modding Tutorials](https://glitchedreme.github.io/SlayTheSpire2ModdingTutorials/index.html)：完整教程站点。
 
 ## 安装与使用
 
-这个项目可以通过两种方式获得：使用 NuGet 模板自动生成，或者手动复制目录。
+### 方式 A：从源码构建（推荐）
 
-### 方式 A：使用 NuGet 模板（推荐）
+1. 安装《杀戮尖塔 2》并准备 Godot 4.5.1 Mono、.NET 9 和 RitsuLib。
+2. 按下文创建 `local.props` 并填写本机路径。
+3. 在本目录运行 `dotnet build .\Vivhite.csproj`。完整构建会生成并部署 dll、manifest 和 pck。
+4. 确认游戏的 `mods` 目录同时包含 `Vivhite` 与依赖 `STS2-RitsuLib`。
 
-```powershell
-# 安装模板
-dotnet new install STS2.RitsuLib.ModTemplate
+### 方式 B：安装构建产物
 
-# 创建新 Mod
-dotnet new ritsulibmod -n MyMod
+将以下三件套放入 `<游戏目录>\mods\Vivhite\`：
 
-# 卸载模板
-dotnet new uninstall STS2.RitsuLib.ModTemplate
+- `Vivhite.dll`
+- `Vivhite.json`
+- `Vivhite.pck`
+
+同时安装 manifest 指定版本的 `STS2-RitsuLib`。启动游戏必须使用 Vulkan；Steam 启动项为：
+
+```text
+%command% --rendering-driver vulkan
 ```
 
-`dotnet new ritsulibmod -n MyMod` 会生成名为 `MyMod` 的工程，并把模板中的 `Vivhite`、示例类名、资源文件名、资源目录、manifest 名称、namespace 和本地化 id 同步替换成新名称。
-
-### 方式 B：手动复制模板
-
-1. 复制整个目录并改名为你的 Mod 名称。
-2. 修改 `Vivhite.json` 里的 `id`、`name`、`author`、`description`。
-3. 修改 `VivhiteCode/Entry.cs` 里的 `ModId`。
-4. 如需彻底改名，同时修改 `.csproj`、`.sln`、`project.godot` 的项目名和命名空间。
-5. 把资源目录 `Vivhite/` 改成你的 `ModId`，并同步更新代码中的 `Entry.ResPath` 相关路径。
+本机若已提供游戏根目录下的 `launch_vulkan.bat`，也可以通过该脚本启动。
 
 ## 配置本机路径
 
@@ -57,202 +56,180 @@ Copy-Item .\local.props.template .\local.props
 
 | 字段 | 说明 |
 |---|---|
-| `Sts2Dir` | Slay the Spire 2 安装目录 |
-| `Sts2DataDir` | 游戏 dll 目录，通常是 `$(Sts2Dir)/data_sts2_windows_x86_64` |
-| `GodotExe` | 用于导出 pck 的 MegaDot/Godot 可执行文件 |
-| `RitsuLibDeployDir` | RitsuLib 本机部署目录，默认 `$(Sts2Dir)/mods/STS2-RitsuLib`。这是 RitsuLib 包/构建逻辑把 RitsuLib 复制到游戏 mods 目录的位置，**不是当前 Mod 自身的输出目录** |
+| `Sts2Dir` | 《杀戮尖塔 2》安装目录 |
+| `Sts2DataDir` | 游戏 dll 目录，通常为 `$(Sts2Dir)/data_sts2_windows_x86_64` |
+| `GodotExe` | 用于导出 pck 的 Godot 4.5.1 Mono 可执行文件 |
+| `RitsuLibDeployDir` | RitsuLib 的本机部署目录，默认 `$(Sts2Dir)/mods/STS2-RitsuLib`；它不是当前 Mod 的输出目录 |
 
 ## RitsuLib 版本兼容性
 
-> ⚠️ **重要：发布前请校对 manifest 与 csproj 版本对齐**
+> **发布前必须校对 manifest 与 csproj 的版本。**
 >
-> `Vivhite.json` 中 `dependencies[STS2-RitsuLib].version` **必须**与 `.csproj` 里 `STS2.RitsuLib` 包实际编译使用的版本一致。模板构建时会自动同步该依赖版本；`min_game_version` 和有意声明较低运行时下限的场景仍需人工确认。详细步骤见下方 [发布前 checklist：版本对齐](#发布前-checklist版本对齐)。
+> `Vivhite.json` 中 `dependencies[STS2-RitsuLib].version` 必须与 `.csproj` 实际编译使用的 `STS2.RitsuLib` 版本一致。构建会同步该依赖版本；`min_game_version` 仍需人工确认。
 
-### 当前版本快照（截至 2026-05-22）
+### 当前版本快照（2026-08-30）
 
 | 项 | 值 |
 |---|---|
-| STS2 游戏当前版本 | `0.106.0` |
-| RitsuLib 当前版本 | `0.3.0` |
-| 模板 manifest 状态 | `min_game_version` 与 `dependencies[STS2-RitsuLib].version` 已对齐 |
+| 目标游戏版本 | Slay the Spire 2 `0.111.0` |
+| 引擎 / SDK | Godot 4.5.1 Mono / `Godot.NET.Sdk` 4.5.1 |
+| 目标框架 | `.NET 9` / `net9.0` |
+| RitsuLib | `0.5.14` |
+| 白绮实现版本 | `0.2.0` |
 
 ### 版本对应表
 
-下表汇总主要边界版本对应的 STS2 主要目标版本，整理自 [STS2-RitsuLib Releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) 的公告。未在表中显式列出的小版本沿用所在区间；遇到边界版本时以对应 release notes 为准。
-
-| RitsuLib 版本 | 主要目标 STS2 版本 | 兼容（Compat）包 |
+| RitsuLib 版本 | 目标 STS2 版本 | 本项目状态 |
 |---|---|---|
-| `v0.3.0+`（2026-05-22 起） | `0.106.0` | `0.103.2`；删除了 `0.104.0` 兼容支持 |
-| `v0.2.29` ~ `v0.2.40` | `0.105.1` | `0.104.0`、`0.103.2` |
-| `v0.2.27` ~ `v0.2.28` | `0.105.0` | `0.104.0`、`0.103.2` |
-| `v0.2.0` ~ `v0.2.26` | `0.104.0` | 自 `v0.2.6` 起实验性提供 `0.103.2`；同步移除 `0.99.1` 兼容 |
-| `v0.0.x` / `v0.1.x` | `0.99.1` 及更早 | — |
+| `0.5.14` | `0.111.0` | 当前编译基线 |
 
-### 包选择：主线与兼容包
+切换其他版本前请先核对 [STS2-RitsuLib Releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) 与对应游戏分支；不要假设旧 API 或旧兼容包仍可直接使用。
 
-模板默认引用主线 `STS2.RitsuLib`，跟踪 NuGet 最新版本：
+### 包选择
+
+项目固定引用当前主线包：
 
 ```xml
-<PackageReference Include="STS2.RitsuLib" Version="*" GeneratePathProperty="true" />
+<PackageReference Include="STS2.RitsuLib" Version="0.5.14" GeneratePathProperty="true" />
 ```
 
-**三个 RitsuLib 包一次只能启用一个。** 仍针对老分支的代码，注释主线包并启用对应兼容包：
-
-```xml
-<!-- STS2 0.104.0 兼容分支（v0.3.0 起已停止维护） -->
-<PackageReference Include="STS2.RitsuLib.Compat.0.104.0" Version="*" />
-
-<!-- STS2 0.103.2 兼容分支 -->
-<PackageReference Include="STS2.RitsuLib.Compat.0.103.2" Version="*" />
-```
-
-兼容包只是选择对应游戏分支，并不会恢复所有旧 API；部分老 Mod 仍然需要修改并重新编译。
+一次只能启用一个 RitsuLib 主线或兼容包。切换包时必须同时复核游戏版本、公开 API、manifest 依赖版本和真机加载结果。
 
 ### 发布前 checklist：版本对齐
 
-> **`.csproj` 里的 `PackageReference` 只控制编译时拉取；`Vivhite.json` 的 `dependencies` 是游戏加载器在运行时校验的。模板会在构建时把 `STS2-RitsuLib` 依赖版本同步为实际解析到的 NuGet 版本，但 `min_game_version` 仍需人工确认。**
-
-如果发布时 manifest 没有同步到编译使用的新版 RitsuLib，玩家装了旧版 RitsuLib 仍能通过 manifest 校验、运行时却会因 API 缺失或签名变化崩掉；反过来 manifest 写得过新，会让本来能跑的玩家被错误拒绝。
-
-每次发布前请：
-
-1. 构建后确认 `Vivhite.json` 的 `dependencies[STS2-RitsuLib].version` 已同步为实际解析到的 `STS2.RitsuLib` 版本。
-2. 切换到兼容包（`Compat.0.104.0` / `Compat.0.103.2`）时，把 `min_game_version` 同步调到对应分支；`dependencies[].id` 保持 `STS2-RitsuLib`（兼容包对外暴露的 mod id 不变）。
-3. 如果 manifest 版本是作为"运行时下限"而不是编译版本（例如声明 `0.3.0+` 都可用），在发布说明里明确，并自己测过下限能跑通。
+1. 构建后确认 `Vivhite.json` 的 `dependencies[STS2-RitsuLib].version` 与实际解析的 NuGet 版本一致。
+2. 确认 `min_game_version` 与目标游戏分支一致。
+3. 确认 dll、json、pck 三件套被部署到同一 `mods/Vivhite` 目录。
+4. 使用 Vulkan 启动，并以实际加载日志确认依赖和 Mod 均被识别。
 
 ### 升级注意事项
 
-#### 升级到 RitsuLib `v0.3.0` / STS2 `0.106.0`
-
-主要变化（来自 [v0.3.0 release notes](https://github.com/BAKAOLC/STS2-RitsuLib/releases/tag/v0.3.0)）：
-
-- **破坏性变更**：移除 `RunSidecar` 相关设计，完全被 `RunSavedData` 取代。
-- 新增 `TargetType` 注册能力，支持自定义 `TargetType`。
-- 加强 Loader 的加载目标检测：分支版本文件使用哈希校验，未匹配的版本被丢弃。
-- 移除 `0.104.0` 兼容支持。
-
-#### 升级到 RitsuLib `v0.2.27` / STS2 `0.105.0`（历史）
-
-仍从更早分支（`v0.2.0` ~ `v0.2.26` / STS2 `0.104.0`）迁移时请检查：
-
-- 版本条件编译改为累积区间宏 `STS2_AT_LEAST_<ver>`；旧的 `STS2_V_<ver>` 不再推荐。
-- AnyPlayer / AnyAny 目标逻辑调整；旧卡牌目标、基础构造函数签名和注册逻辑要按新 API 检查。
-- 卡牌右下角支持额外图标数量标签，并处理与原版 UI 的冲突；自定义 UI 或图标补丁需确认显示层级和位置。
-- 保留/flush 相关 hook 和 event 有替换、移除或 `[Obsolete]` 标记；旧代码使用 `CardRetainedEvent`、`CardsFlushedEvent` 或旧 `Hook.*` 入口需迁移。
-- `Badge`、`BadgeRuntimeTemplate`、`BadgePool.CreateAll` 和 `ModBadgeTemplate` 构造签名调整；旧代码可能需更新以避免 `MissingMethodException`。
+- 本项目当前面向 STS2 `0.111.0`、RitsuLib `0.5.14` 与 Godot 4.5.1 Mono。
+- 升级 RitsuLib 或游戏版本时，应重新编译并检查卡牌命令、Hook、角色资源配置与 PCK 导出。
+- `Vivhite.json` 的运行时依赖校验和 `.csproj` 的编译时依赖是两条不同链路，二者都必须更新。
 
 ## 构建
 
 | 命令 | 行为 |
 |---|---|
 | `dotnet build .\Vivhite.csproj` | 完整构建：编译 + `CopyMod` + `ExportPCK` |
-| `... /p:RunPckExport=false` | 跳过 PCK 导出（不需要 `GodotExe`） |
-| `... /p:CopyModOnBuild=false` | 跳过复制到游戏 mods 目录（产物只留在 `bin/`） |
-| `... /p:RunPckExport=false /p:CopyModOnBuild=false` | 仅验证 C# 编译 |
+| `... /p:RunPckExport=false` | 跳过 PCK 导出 |
+| `... /p:CopyModOnBuild=false` | 跳过复制到游戏 mods 目录，产物只留在 `bin/` |
+| `... /p:RunPckExport=false /p:CopyModOnBuild=false` | 仅进行 C# 编译检查 |
 
-完整构建会在 `Build` 之后运行两个 MSBuild target：
+完整构建会在 `Build` 后运行：
 
 - **`CopyMod`**：复制 dll 和 manifest 到游戏的 `mods/Vivhite` 目录。
-- **`ExportPCK`**：调用 `GodotExe` 导出 pck 到同一个 Mod 目录。
+- **`ExportPCK`**：调用 `GodotExe`，将 pck 导出到同一 Mod 目录。
 
-> `RitsuLibDeployDir` 只控制 RitsuLib 框架自身的部署位置；当前 Mod 的 dll、manifest 和 pck 由 `ModOutputDir` 控制（默认 `$(Sts2Dir)/mods/$(MSBuildProjectName)`）。
+> `RitsuLibDeployDir` 只控制 RitsuLib 框架自身的部署位置；当前 Mod 的 dll、manifest 和 pck 由 `ModOutputDir` 控制，默认是 `$(Sts2Dir)/mods/$(MSBuildProjectName)`。
 
 ## 目录结构
 
 ```text
 Vivhite/
-├── VivhiteCode/   # C# 源码
-├── Vivhite/       # Godot 资源、本地化和占位场景
+├── VivhiteCode/   # C# 角色、卡牌、遗物与战斗规则
+├── Vivhite/       # Godot 资源与中英文本地化
 ├── Vivhite.csproj
 ├── Vivhite.json   # Mod manifest
 ├── project.godot
 └── local.props.template
 ```
 
-`res://Vivhite/...` 是 Godot/PCK 内的资源路径，对应仓库里的 `Vivhite/` 资源目录，**不是 C# namespace**。通过 NuGet 模板创建项目时，这些目录名、文件名和 namespace 会按新 Mod 名同步替换。
+`res://Vivhite/...` 是 Godot/PCK 内的资源路径，对应仓库中的 `Vivhite/` 资源目录，并非 C# namespace。
 
-## 模板内容
+## 白绮内容
 
-### 示例角色
+### 角色配置
 
 | 项 | 值 |
 |---|---|
 | 类型 | `VivhiteCharacter` |
-| 预期 id | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
-| starter 牌组 | 4 × `VivhiteStrike`、4 × `VivhiteDefend`、1 × `VivhiteRelic` |
-| 资源配置 | `CharacterAssetProfile`；模板只指定静态占位资源，未指定的音频/拖尾/转场等字段从 `PlaceholderCharacterId` 回退 |
+| 角色 ID | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
+| 初始属性 | 78 最大生命、99 金币、3 能量、每回合抽 5 张牌 |
+| 初始牌组 | 4 × 弦光投影、4 × 闭域映射、1 × 变身式·白绮 |
+| 初始遗物 | 归元星盘：每个敌人死亡时立即回复 4 生命 |
+| 卡池 | 60 张：3 基础、18 普通、24 罕见、15 稀有 |
 
-### 示例卡牌与遗物
+### 卡池与三套构筑
 
-| 类型 | 池 | 预期 id |
-|---|---|---|
-| `VivhiteStrike`（攻击） | 角色卡池 | `VIVHITE_CARD_VIVHITE_STRIKE` |
-| `VivhiteDefend`（技能） | 角色卡池 | `VIVHITE_CARD_VIVHITE_DEFEND` |
-| `VivhiteRelic` | `VivhiteRelicPool` | `VIVHITE_RELIC_VIVHITE_RELIC` |
+| 构筑 | 主要方向 |
+|---|---|
+| 守恒几何 | 用余量减免生命演算，永久增加最大生命，并把超量治疗转为资源 |
+| 递归星算 | 强化伤害、击杀回复、抽牌与能量连锁 |
+| 绯彩积分 | 通过多段伤害与可超过 100% 的汲取形成伤害、回复、格挡和力量循环 |
 
-### 静态占位资源
+另有跨体系牌连接余量、抽牌、击杀和汲取。完整 60 张牌的 ID、费用、效果和升级数值见[完整实现文档](../docs/2026-08-30-白绮角色与轮换大脑实现.md)。旧的“白绮打击”“白绮防御”“白绸结”只是已废弃的 Demo 内容，不属于本卡池。
 
-**图片**（`res://Vivhite/images/...`）：
+### 核心关键词
 
-- `cards/VivhiteStrike.png`、`cards/VivhiteDefend.png`：示例卡图。
-- `relics/VivhiteRelic.png`：示例遗物图标。
-- `characters/Vivhite_character_*.png`：角色头像、角色选择图、地图标记和能量图标。
+| 关键词 | 语义 |
+|---|---|
+| `生命演算 N` | 打牌前损失 N 点不可格挡、不会被力量修改的生命；支付后会低于 1 生命时不可打出 |
+| `余量 N` | 自动按 1:1 抵消生命演算并被消耗 |
+| `增维 N` | 永久增加 N 点最大生命，并同时增加 N 点当前生命 |
+| `汲取 N%` | 按该攻击牌实际造成的敌方生命损失乘以总汲取率回血；多段和群体伤害汇总后取整一次 |
+| `致命` | 该牌的伤害直接令目标死亡时触发对应效果 |
 
-**场景**（`res://Vivhite/scenes/characters/...`）：
+牌面汲取率与角色全局汲取率按百分点相加。汲取不计算格挡、过量伤害、自伤、荆棘或非攻击牌伤害。
 
-| 场景文件 | 用途 | 占位结构 |
-|---|---|---|
-| `Vivhite_character.tscn` | 战斗人物 | `%Visuals`、`%Bounds`、`%IntentPos`、`%CenterPos`、`%TalkPos` |
-| `Vivhite_energy_counter.tscn` | 能量表盘 | `%EnergyVfxBack`、`%Layers`、`%RotationLayers`、`%EnergyVfxFront`、`Label` |
-| `Vivhite_merchant.tscn` | 商店人物 | — |
-| `Vivhite_rest_site.tscn` | 火堆人物 | `%ControlRoot`、`%SelectionReticle`、`%Hitbox`、`%ThoughtBubbleRight`、`%ThoughtBubbleLeft` |
-| `Vivhite_character_select_bg.tscn` | 角色选择背景 | — |
+### 无人为上限
 
-这些资源只用于保证模板可见、可替换，不追求原版动画效果。复制模板后替换为自己的素材即可；如果改了路径，同步更新对应 `AssetProfile`。
+白绮机制不设置最大生命成长、余量、击杀回复、汲取百分点、汲取回复量、力量、抽牌成长或其他自定义硬上限。临时生成、复制、重复结算和从弃牌堆或消耗堆回收的牌与原牌同权，能够触发永久增维；汲取率可以超过 `100%`。
+
+保留的只有游戏自然不变量：
+
+- 当前生命不能超过最大生命。
+- 生命演算的实际费用最低为 0。
+- 支付后会低于 1 点生命的牌不可打出。
+- 手牌数量等继续遵循游戏原生规则。
+- 同一敌人的同一次死亡事件只结算一次；这是事件去重，不是回复上限。
+
+### 共用 V3 皮肤与占位卡图
+
+独立白绮角色与战士替换皮肤共用当前同一套白绮 V3 五页战斗 atlas，以及对应的商店、休息、选人、UI、Spine 和多人资源。两者仍保留不同的角色 ID、卡池、角色状态和统计数据；共享视觉资源不等于共享玩法身份。
+
+全部 60 张卡牌目前统一使用 RitsuLib 占位卡图，不进行图片生成。现有白绮创意素材不会因卡牌实现而被覆盖或重新生成。
 
 ## Manifest 格式
 
-`Vivhite.json` 是 Mod 的清单文件，游戏加载器在启动时读取它来识别 Mod、检查依赖、决定是否加载。完整示例：
+`Vivhite.json` 是 Mod 清单。`0.2.0` 实现对应的关键字段为：
 
 ```json
 {
   "id": "Vivhite",
-  "name": "Vivhite",
+  "name": "白绮 Vivhite",
   "pck_name": "Vivhite",
-  "author": "Author",
-  "description": "A starter Slay the Spire 2 mod template built on RitsuLib.",
-  "version": "0.0.0",
+  "author": "VivhiteMod",
+  "description": "新增魔法少女角色白绮：60 张专属卡牌、三套构筑与无上限生命魔法循环。",
+  "version": "0.2.0",
   "has_pck": true,
   "has_dll": true,
   "affects_gameplay": true,
-  "min_game_version": "0.106.0",
+  "min_game_version": "0.111.0",
   "dependencies": [
-    { "id": "STS2-RitsuLib", "version": "0.3.0" }
+    { "id": "STS2-RitsuLib", "version": "0.5.14" }
   ]
 }
 ```
 
 ### 字段说明
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `id` | string | Mod 唯一标识。**必须与 `Entry.ModId` 完全一致**，也建议与 `mods/<id>` 目录名一致。游戏内依赖、本地化前缀和资源路径都依赖这个值 |
-| `name` | string | Mod 列表中的显示名，可包含空格和中文 |
-| `pck_name` | string | `.pck` 文件名（不含扩展名）。**必须与 `.csproj` 实际导出的 PCK 文件名一致**，否则即使 `has_pck=true` 也加载不到资源 |
-| `author` | string | 作者名，显示用 |
-| `description` | string | Mod 简介，显示在 Mod 列表 |
-| `version` | string | 此 Mod 自身的版本号，建议 SemVer（`主.次.修`），每次发布前更新 |
-| `has_pck` | bool | 是否分发 `.pck`。纯代码 Mod 可置 `false` 并跳过 `ExportPCK` |
-| `has_dll` | bool | 是否分发 `.dll`。纯资源 Mod 可置 `false` |
-| `affects_gameplay` | bool | 是否影响游戏玩法。开启后游戏会在存档/成就等处做相应标记；仅纯视觉/本地化可设 `false` |
-| `min_game_version` | string | 兼容的最低 STS2 版本，低于该版本拒绝加载。**应与 `.csproj` 选用的 RitsuLib 包面向的游戏分支匹配**（见上文 [RitsuLib 版本兼容性](#ritsulib-版本兼容性)） |
-| `dependencies` | array | 依赖列表。每项使用 `id` + `version`。**旧版单对象 `min_version` 写法已不支持** |
-| `dependencies[].id` | string | 被依赖 Mod 的 `id`。RitsuLib 框架的 id 是 `STS2-RitsuLib` |
-| `dependencies[].version` | string | 被依赖 Mod 的最低版本。**`STS2-RitsuLib` 的版本必须与 `.csproj` 编译时的 NuGet 版本严格一致**，详见上文 [发布前 checklist：版本对齐](#发布前-checklist版本对齐) |
+| 字段 | 说明 |
+|---|---|
+| `id` | 必须与 `Entry.ModId` 和部署目录一致 |
+| `pck_name` | 必须与实际导出的 `.pck` 文件名一致 |
+| `version` | 当前白绮实现的 SemVer 版本 |
+| `has_pck` / `has_dll` | 表示该 Mod 同时分发资源包和代码程序集 |
+| `affects_gameplay` | 白绮拥有独立玩法内容，因此必须为 `true` |
+| `min_game_version` | 最低兼容 STS2 版本，应与编译目标一致 |
+| `dependencies` | 运行时依赖；RitsuLib 版本应与 NuGet 编译版本一致 |
 
 ## 开发提示
 
-- 新内容优先写 `AssetProfile`；个别历史兼容字段才考虑覆写 `Custom...Path`。
-- 角色资源字段没写时，RitsuLib 会从 `PlaceholderCharacterId` 对应的原版角色配置补齐。
-- 资源路径要以 `res://` 开头，并确认 PCK 内目录名和大小写正确。
-- `.tscn` 场景需要确认已打包进 Mod 资源；需绑定脚本时，写本地包装类并在 `Entry.Initialize()` 调用 `EnsureGodotScriptsRegistered(...)`。
+- 内容 ID 使用 `{MODID}_{类别}_{原名}`；卡牌完整 ID 为 `VIVHITE_CARD_<ID>`。
+- 新角色内容应进入白绮自己的卡池、遗物池和状态，不要因共享皮肤而写入战士身份。
+- 角色视觉资源统一指向当前 V3 五页白绮皮肤，不能回退旧单页 atlas 或独立静态战斗占位图。
+- 卡牌当前只使用占位图；实现和文档任务不应触发图片生成。
+- 新机制的平衡只能调整费用、耗血、基础数值、成长系数、稀有度和消耗属性，不能重新加入人为封顶。
+- 资源路径必须以 `res://` 开头，并确认 PCK 内目录名与大小写正确。

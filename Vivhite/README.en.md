@@ -2,50 +2,49 @@
 
 Languages: [中文](README.md) | English
 
-A copyable, buildable RitsuLib mod template providing a general Godot/C# project layout, sample content, and static placeholder assets.
+`Vivhite` is a custom character mod for Slay the Spire 2. Vivhite is a magical girl and master magician with deep knowledge of mathematics, computing, and art. She treats health as material for magical calculation and fights through a “spend health to cast → heal through kills or Drain → keep casting” loop.
 
-**What the template includes:**
+This README describes the approved `0.2.0` implementation contract. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 60-card catalog, exact values, and runtime checks that remain outstanding; this README does not claim that those checks have been completed.
 
-- A `[ModInitializer]` entry point plus a minimal custom character (with character card pool, relic pool, and potion pool).
-- Four starter strikes, four starter defends, and one starter relic as samples.
-- Minimal static Godot placeholder scenes for the combat character, energy counter, character select background, merchant, and rest site.
-- Placeholder PNG files copied from vanilla resources and renamed for the template. Replace them after copying.
-- Basic English and Simplified Chinese localization files.
-- A complete Godot project, export preset, mod manifest, and MSBuild scripts.
+**Character summary:**
+
+- Starting stats: `78` max HP, `99` gold, `3` energy per turn, and `5` cards drawn per turn.
+- Starter deck: 4 × Luminous Projection, 4 × Closed-Domain Mapping, and 1 × Vivhite Transformation.
+- Starter relic: Origin Star Chart — whenever any enemy dies, immediately heal `4` HP; each death of one entity resolves only once.
+- A dedicated `60`-card pool: 3 basic, 18 common, 24 uncommon, and 15 rare cards.
+- Three primary builds: Conservation Geometry, Recursive Star Calculus, and Crimson Integral, plus cross-build cards.
+- Every card currently uses RitsuLib placeholder art; no card art is generated in this phase.
 
 ## Learning Resources
 
-- [STS2-RitsuLib](https://github.com/BAKAOLC/STS2-RitsuLib): the shared framework library for Slay the Spire 2 mods. This template uses it for content registration, character scaffolding, and Godot resource integration.
-- [RitsuLib Documentation](https://github.com/GlitchedReme/SlayTheSpire2ModdingTutorials/tree/master/RitsuLib): tutorials and examples by file.
-- [Slay the Spire 2 Modding Tutorials site](https://glitchedreme.github.io/SlayTheSpire2ModdingTutorials/index.html): the full tutorial site.
-- Template Wiki (Rider-first): [Chinese Home](https://github.com/alkaid616/Vivhite/wiki/Home) | [English Home](https://github.com/alkaid616/Vivhite/wiki/Home-EN).
+- [STS2-RitsuLib](https://github.com/BAKAOLC/STS2-RitsuLib): the base library used for content registration, character integration, and Godot resources.
+- [RitsuLib Documentation](https://github.com/GlitchedReme/SlayTheSpire2ModdingTutorials/tree/master/RitsuLib): tutorials and examples organized by file.
+- [Slay the Spire 2 Modding Tutorials](https://glitchedreme.github.io/SlayTheSpire2ModdingTutorials/index.html): the full tutorial site.
 
 ## Install and Use
 
-You can get this project two ways: via the NuGet template (automatic rename), or by copying the directory manually.
+### Option A: build from source (recommended)
 
-### Option A: NuGet template (recommended)
+1. Install Slay the Spire 2 and prepare Godot 4.5.1 Mono, .NET 9, and RitsuLib.
+2. Create `local.props` and configure the local paths described below.
+3. Run `dotnet build .\Vivhite.csproj` from this directory. A full build creates and deploys the DLL, manifest, and PCK.
+4. Confirm that the game's `mods` directory contains both `Vivhite` and its `STS2-RitsuLib` dependency.
 
-```powershell
-# Install the template
-dotnet new install STS2.RitsuLib.ModTemplate
+### Option B: install build artifacts
 
-# Create a new mod
-dotnet new ritsulibmod -n MyMod
+Place all three artifacts in `<game directory>\mods\Vivhite\`:
 
-# Uninstall the template
-dotnet new uninstall STS2.RitsuLib.ModTemplate
+- `Vivhite.dll`
+- `Vivhite.json`
+- `Vivhite.pck`
+
+Install the `STS2-RitsuLib` version declared by the manifest as well. The game must be started with Vulkan; use this Steam launch option:
+
+```text
+%command% --rendering-driver vulkan
 ```
 
-`dotnet new ritsulibmod -n MyMod` generates a project called `MyMod` and renames `Vivhite`, sample class names, sample resource file names, resource folders, manifest names, namespaces, and localization IDs to match the new name.
-
-### Option B: manual copy
-
-1. Copy the whole directory and rename it to your mod name.
-2. Edit `Vivhite.json` and update `id`, `name`, `author`, and `description`.
-3. Edit `VivhiteCode/Entry.cs` and update `ModId`.
-4. For a full rename, also update the project name and namespace in `.csproj`, `.sln`, and `project.godot`.
-5. Rename the resource directory `Vivhite/` to your `ModId`, then update the related `Entry.ResPath` paths in code.
+If the game directory already contains `launch_vulkan.bat`, that wrapper can be used instead.
 
 ## Local Path Configuration
 
@@ -53,206 +52,184 @@ dotnet new uninstall STS2.RitsuLib.ModTemplate
 Copy-Item .\local.props.template .\local.props
 ```
 
-Set these values in `local.props` (the file is in `.gitignore`; do not commit it):
+Set these values in `local.props` (the file is ignored by Git and must not be committed):
 
 | Field | Description |
 |---|---|
-| `Sts2Dir` | Slay the Spire 2 install directory |
+| `Sts2Dir` | Slay the Spire 2 installation directory |
 | `Sts2DataDir` | Game DLL directory, usually `$(Sts2Dir)/data_sts2_windows_x86_64` |
-| `GodotExe` | MegaDot/Godot executable used to export the PCK |
-| `RitsuLibDeployDir` | Local RitsuLib deployment directory, defaulting to `$(Sts2Dir)/mods/STS2-RitsuLib`. Used by RitsuLib package/build logic to copy RitsuLib into the game's mods directory — **not** this mod's output directory |
+| `GodotExe` | Godot 4.5.1 Mono executable used to export the PCK |
+| `RitsuLibDeployDir` | Local RitsuLib deployment directory, defaulting to `$(Sts2Dir)/mods/STS2-RitsuLib`; this is not this mod's output directory |
 
 ## RitsuLib Version Compatibility
 
-> ⚠️ **Important: align the manifest's RitsuLib version with the csproj before release**
+> **Align the manifest and csproj before every release.**
 >
-> `dependencies[STS2-RitsuLib].version` in `Vivhite.json` **must exactly match** the `STS2.RitsuLib` version your `.csproj` actually compiles against. The template build auto-syncs this dependency version; `min_game_version` and intentional lower runtime-floor declarations still need manual review. See [Pre-release checklist: version alignment](#pre-release-checklist-version-alignment) below for the step-by-step procedure.
+> `dependencies[STS2-RitsuLib].version` in `Vivhite.json` must match the `STS2.RitsuLib` version actually used by the `.csproj`. The build synchronizes that dependency version, while `min_game_version` still requires manual review.
 
-### Current version snapshot (as of 2026-05-22)
+### Current version snapshot (2026-08-30)
 
 | Item | Value |
 |---|---|
-| Current STS2 game version | `0.106.0` |
-| Current RitsuLib version | `0.3.0` |
-| Template manifest status | `min_game_version` and `dependencies[STS2-RitsuLib].version` are aligned |
+| Target game | Slay the Spire 2 `0.111.0` |
+| Engine / SDK | Godot 4.5.1 Mono / `Godot.NET.Sdk` 4.5.1 |
+| Target framework | `.NET 9` / `net9.0` |
+| RitsuLib | `0.5.14` |
+| Vivhite implementation | `0.2.0` |
 
 ### Version mapping
 
-The table summarizes the mainline STS2 target for each boundary RitsuLib release, sourced from the [STS2-RitsuLib Releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) page. Patch versions not listed follow the range they sit in; check the relevant release notes for boundary versions.
-
-| RitsuLib version | Mainline STS2 target | Compat packages |
+| RitsuLib version | Target STS2 version | Project status |
 |---|---|---|
-| `v0.3.0+` (since 2026-05-22) | `0.106.0` | `0.103.2`; `0.104.0` compat removed |
-| `v0.2.29` ~ `v0.2.40` | `0.105.1` | `0.104.0`, `0.103.2` |
-| `v0.2.27` ~ `v0.2.28` | `0.105.0` | `0.104.0`, `0.103.2` |
-| `v0.2.0` ~ `v0.2.26` | `0.104.0` | `0.103.2` (experimental from `v0.2.6`); `0.99.1` compat removed in this range |
-| `v0.0.x` / `v0.1.x` | `0.99.1` and earlier | — |
+| `0.5.14` | `0.111.0` | Current compile baseline |
 
-### Package selection: mainline and compat
+Before selecting another version, consult the [STS2-RitsuLib releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) and the matching game branch. Do not assume that old APIs or compatibility packages remain drop-in replacements.
 
-The template references mainline `STS2.RitsuLib` by default, tracking the latest NuGet version:
+### Package selection
+
+The project pins the current mainline package:
 
 ```xml
-<PackageReference Include="STS2.RitsuLib" Version="*" GeneratePathProperty="true" />
+<PackageReference Include="STS2.RitsuLib" Version="0.5.14" GeneratePathProperty="true" />
 ```
 
-**Only enable one RitsuLib package at a time.** If your code still targets an older branch, comment out the mainline and enable the matching compat package:
-
-```xml
-<!-- STS2 0.104.0 compatibility branch (no longer maintained since v0.3.0) -->
-<PackageReference Include="STS2.RitsuLib.Compat.0.104.0" Version="*" />
-
-<!-- STS2 0.103.2 compatibility branch -->
-<PackageReference Include="STS2.RitsuLib.Compat.0.103.2" Version="*" />
-```
-
-Compatibility packages only select the matching game branch; they do not restore every old API. Some old mods still need code changes and recompilation.
+Enable only one mainline or compatibility package at a time. When switching packages, recheck the game version, public APIs, manifest dependency, and in-game loading behavior.
 
 ### Pre-release checklist: version alignment
 
-> **`PackageReference` in `.csproj` only controls compile-time resolution; `dependencies` in `Vivhite.json` is what the game loader checks at runtime. The template syncs the `STS2-RitsuLib` dependency version to the resolved NuGet version during build, but `min_game_version` still needs manual review.**
-
-If the manifest is not synced to the newer RitsuLib version you compile against, players with an old RitsuLib will pass the manifest check and crash at runtime due to missing APIs or signature drift. Conversely, an over-tight manifest will reject players who could otherwise run the mod.
-
-Before every release:
-
-1. After build, confirm `dependencies[STS2-RitsuLib].version` in `Vivhite.json` has been synced to the resolved `STS2.RitsuLib` version.
-2. When you switch to a compatibility package (`Compat.0.104.0` / `Compat.0.103.2`), also adjust `min_game_version` to the matching branch. Keep `dependencies[].id` as `STS2-RitsuLib` (compatibility packages expose the same mod id to the loader).
-3. If you intentionally want the manifest version to act as a **runtime floor** (e.g. declaring "`0.3.0+` works"), document this in your release notes and verify the mod runs against the declared floor.
+1. After building, confirm that `dependencies[STS2-RitsuLib].version` in `Vivhite.json` matches the resolved NuGet version.
+2. Confirm that `min_game_version` matches the target game branch.
+3. Confirm that the DLL, JSON, and PCK are deployed to the same `mods/Vivhite` directory.
+4. Launch with Vulkan and use the actual game log to confirm that both the dependency and mod are recognized.
 
 ### Upgrade notes
 
-#### Upgrading to RitsuLib `v0.3.0` / STS2 `0.106.0`
-
-Major changes (from the [v0.3.0 release notes](https://github.com/BAKAOLC/STS2-RitsuLib/releases/tag/v0.3.0)):
-
-- **Breaking**: `RunSidecar` removed, fully replaced by `RunSavedData`.
-- New `TargetType` registration capability for custom `TargetType`s.
-- Loader target detection strengthened: branch version files now use hash verification, and mismatched versions are discarded.
-- `0.104.0` compatibility removed.
-
-#### Upgrading to RitsuLib `v0.2.27` / STS2 `0.105.0` (historical)
-
-When migrating from an earlier branch (`v0.2.0` ~ `v0.2.26` / STS2 `0.104.0`), check the following:
-
-- Version conditional compilation switched to cumulative interval macros `STS2_AT_LEAST_<ver>`; legacy `STS2_V_<ver>` macros are no longer recommended.
-- AnyPlayer / AnyAny targeting logic changed; legacy card targets, base constructor signatures, and registration flows should be checked against the new API.
-- Cards support extra icon count labels in the lower-right corner with vanilla UI conflict handling; verify display order and placement for custom UI / icon patches.
-- Retain / flush hooks and events have replacements, removals, or `[Obsolete]` markers; migrate legacy uses of `CardRetainedEvent`, `CardsFlushedEvent`, or legacy `Hook.*` entry points.
-- `Badge`, `BadgeRuntimeTemplate`, `BadgePool.CreateAll`, and `ModBadgeTemplate` constructor signatures changed; legacy code may need updates to avoid `MissingMethodException`.
+- The current baseline is STS2 `0.111.0`, RitsuLib `0.5.14`, and Godot 4.5.1 Mono.
+- After upgrading RitsuLib or the game, rebuild and inspect card commands, hooks, character resource profiles, and PCK export behavior.
+- `Vivhite.json` controls runtime dependency checks, while `.csproj` controls compile-time dependencies; both paths must be updated.
 
 ## Build
 
 | Command | Behavior |
 |---|---|
 | `dotnet build .\Vivhite.csproj` | Full build: compile + `CopyMod` + `ExportPCK` |
-| `... /p:RunPckExport=false` | Skip PCK export (no `GodotExe` needed) |
-| `... /p:CopyModOnBuild=false` | Skip copying to the game's mods directory (output stays in `bin/`) |
-| `... /p:RunPckExport=false /p:CopyModOnBuild=false` | C# compile validation only |
+| `... /p:RunPckExport=false` | Skip PCK export |
+| `... /p:CopyModOnBuild=false` | Skip copying to the game's mods directory; output stays in `bin/` |
+| `... /p:RunPckExport=false /p:CopyModOnBuild=false` | C# compile check only |
 
-A full build runs two MSBuild targets after `Build`:
+A full build runs these targets after `Build`:
 
 - **`CopyMod`**: copies the DLL and manifest to the game's `mods/Vivhite` directory.
-- **`ExportPCK`**: calls `GodotExe` and exports the PCK to the same mod directory.
+- **`ExportPCK`**: invokes `GodotExe` and exports the PCK to the same mod directory.
 
-> `RitsuLibDeployDir` only controls where the RitsuLib framework itself is deployed locally. This mod's DLL, manifest, and PCK are controlled by `ModOutputDir` (default `$(Sts2Dir)/mods/$(MSBuildProjectName)`).
+> `RitsuLibDeployDir` controls only the deployment location of RitsuLib itself. This mod's DLL, manifest, and PCK are controlled by `ModOutputDir`, which defaults to `$(Sts2Dir)/mods/$(MSBuildProjectName)`.
 
 ## Directory Layout
 
 ```text
 Vivhite/
-├── VivhiteCode/   # C# source
-├── Vivhite/       # Godot resources, localization, and placeholder scenes
+├── VivhiteCode/   # C# character, cards, relics, and combat rules
+├── Vivhite/       # Godot resources and bilingual localization
 ├── Vivhite.csproj
 ├── Vivhite.json   # Mod manifest
 ├── project.godot
 └── local.props.template
 ```
 
-`res://Vivhite/...` is the Godot/PCK resource path, mapping to the repository resource directory `Vivhite/`, **not** to the C# namespace. When you create a project from the NuGet template, these directory names, file names, and namespaces are renamed consistently to match the new mod name.
+`res://Vivhite/...` is the Godot/PCK resource path mapped to the repository's `Vivhite/` resource directory; it is not a C# namespace.
 
-## Template Contents
+## Vivhite Content
 
-### Sample character
+### Character configuration
 
 | Property | Value |
 |---|---|
 | Type | `VivhiteCharacter` |
-| Expected ID | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
-| Starter deck | 4 × `VivhiteStrike`, 4 × `VivhiteDefend`, 1 × `VivhiteRelic` |
-| Assets | Configured via `CharacterAssetProfile`. The template only specifies static placeholder assets; unspecified audio, trail, transition, etc. fall back through `PlaceholderCharacterId` |
+| Character ID | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
+| Starting stats | 78 max HP, 99 gold, 3 energy, 5 cards drawn per turn |
+| Starter deck | 4 × Luminous Projection, 4 × Closed-Domain Mapping, 1 × Vivhite Transformation |
+| Starter relic | Origin Star Chart: immediately heal 4 HP whenever an enemy dies |
+| Card pool | 60 cards: 3 basic, 18 common, 24 uncommon, 15 rare |
 
-### Sample cards and relic
+### Card pool and three builds
 
-| Type | Pool | Expected ID |
-|---|---|---|
-| `VivhiteStrike` (attack) | character card pool | `VIVHITE_CARD_VIVHITE_STRIKE` |
-| `VivhiteDefend` (skill) | character card pool | `VIVHITE_CARD_VIVHITE_DEFEND` |
-| `VivhiteRelic` | `VivhiteRelicPool` | `VIVHITE_RELIC_VIVHITE_RELIC` |
+| Build | Primary direction |
+|---|---|
+| Conservation Geometry | Use Margin to offset Life Calculation, permanently grow max HP, and turn overhealing into resources |
+| Recursive Star Calculus | Increase damage, on-kill healing, card draw, and energy chains |
+| Crimson Integral | Combine multi-hit damage with Drain above 100% to create damage, healing, Block, and Strength loops |
 
-### Static placeholder assets
+Cross-build cards connect Margin, draw, kills, and Drain. The [full implementation document](../docs/2026-08-30-白绮角色与轮换大脑实现.md) lists all 60 IDs, costs, effects, and upgrades. The old Vivhite Strike, Vivhite Defend, and White Silk Knot were discarded demo content and are not part of this pool.
 
-**Images** (`res://Vivhite/images/...`):
+### Core keywords
 
-- `cards/VivhiteStrike.png`, `cards/VivhiteDefend.png`: sample card art.
-- `relics/VivhiteRelic.png`: sample relic icon.
-- `characters/Vivhite_character_*.png`: character icons, select art, map marker, and energy icons.
+| Keyword | Semantics |
+|---|---|
+| `Life Calculation N` | Before the card resolves, lose N unblocked HP unaffected by Strength; the card is unplayable if payment would leave the player below 1 HP |
+| `Margin N` | Automatically offsets Life Calculation one-for-one and is consumed |
+| `Dimension Up N` | Permanently gain N max HP and gain the same amount of current HP |
+| `Drain N%` | Heal from the actual enemy HP lost to that attack card times total Drain; aggregate multi-hit and AoE damage before rounding once |
+| `Lethal` | Triggers when that card's damage directly kills its target |
 
-**Scenes** (`res://Vivhite/scenes/characters/...`):
+Card-specific and global Drain are added as percentage points. Drain excludes blocked damage, overkill, self-damage, Thorns, and damage from non-attack cards.
 
-| Scene | Purpose | Placeholder structure |
-|---|---|---|
-| `Vivhite_character.tscn` | Combat character | `%Visuals`, `%Bounds`, `%IntentPos`, `%CenterPos`, `%TalkPos` |
-| `Vivhite_energy_counter.tscn` | Energy counter | `%EnergyVfxBack`, `%Layers`, `%RotationLayers`, `%EnergyVfxFront`, `Label` |
-| `Vivhite_merchant.tscn` | Merchant | — |
-| `Vivhite_rest_site.tscn` | Rest site | `%ControlRoot`, `%SelectionReticle`, `%Hitbox`, `%ThoughtBubbleRight`, `%ThoughtBubbleLeft` |
-| `Vivhite_character_select_bg.tscn` | Character select background | — |
+### No artificial caps
 
-These resources only exist to make the template visible and replaceable; they do not try to reproduce vanilla animation quality. After copying the template, replace them with your own assets. If you change paths, update the corresponding `AssetProfile` fields.
+Vivhite has no custom hard cap on max-HP growth, Margin, kill healing, Drain percentage, Drain healing, Strength, draw growth, or any other scaling counter. Generated cards, copies, repeated resolutions, and cards recovered from discard or exhaust have the same rights as original cards and can trigger permanent Dimension Up. Drain may exceed `100%`.
+
+Only natural engine invariants remain:
+
+- Current HP cannot exceed max HP.
+- Actual Life Calculation cost has a minimum of 0.
+- A card cannot be played if paying its cost would leave the player below 1 HP.
+- Hand size and similar state continue to follow native game rules.
+- The same death event for one enemy resolves once; this is event deduplication, not a healing cap.
+
+### Shared V3 skin and placeholder card art
+
+The independent Vivhite character and the Ironclad replacement skin use the same current Vivhite V3 five-page combat atlas, together with the matching merchant, rest-site, character-select, UI, Spine, and multiplayer resources. They retain separate character IDs, card pools, character state, and statistics; shared visuals do not merge their gameplay identities.
+
+All 60 cards currently use RitsuLib placeholder card art. This implementation phase does not generate images, and it does not overwrite or regenerate existing Vivhite creative assets.
 
 ## Manifest Format
 
-`Vivhite.json` is the mod manifest. The game loader reads it at startup to identify the mod, check dependencies, and decide whether to load. Full example:
+`Vivhite.json` is the mod manifest. The key fields for the `0.2.0` implementation are:
 
 ```json
 {
   "id": "Vivhite",
-  "name": "Vivhite",
+  "name": "白绮 Vivhite",
   "pck_name": "Vivhite",
-  "author": "Author",
-  "description": "A starter Slay the Spire 2 mod template built on RitsuLib.",
-  "version": "0.0.0",
+  "author": "VivhiteMod",
+  "description": "Adds Vivhite, a magical-girl character with 60 cards, three builds, and uncapped health-magic loops.",
+  "version": "0.2.0",
   "has_pck": true,
   "has_dll": true,
   "affects_gameplay": true,
-  "min_game_version": "0.106.0",
+  "min_game_version": "0.111.0",
   "dependencies": [
-    { "id": "STS2-RitsuLib", "version": "0.3.0" }
+    { "id": "STS2-RitsuLib", "version": "0.5.14" }
   ]
 }
 ```
 
 ### Field reference
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | string | Unique mod identifier. **Must match `Entry.ModId` exactly**, and should also match the `mods/<id>` directory name. In-game dependency lookups, localization key prefixes, and resource paths all depend on this value |
-| `name` | string | Display name shown in the mod list. May contain spaces and non-ASCII characters |
-| `pck_name` | string | `.pck` file name (without extension). **Must match the actual PCK file produced by `.csproj`**, or resources will not load even with `has_pck=true` |
-| `author` | string | Display-only author name |
-| `description` | string | Short description shown in the mod list |
-| `version` | string | Version of this mod itself. SemVer (`MAJOR.MINOR.PATCH`) is recommended. Bump on every release |
-| `has_pck` | bool | Whether the mod ships a `.pck`. Code-only mods can set `false` and skip `ExportPCK` |
-| `has_dll` | bool | Whether the mod ships a `.dll`. Resource-only mods can set `false` |
-| `affects_gameplay` | bool | Whether the mod affects gameplay. When enabled, the game flags saves/achievements/etc.; only purely cosmetic / localization mods should set this to `false` |
-| `min_game_version` | string | Minimum compatible STS2 version. Older games refuse to load. **Must align with the game branch targeted by the RitsuLib package selected in `.csproj`** (see [RitsuLib Version Compatibility](#ritsulib-version-compatibility) above) |
-| `dependencies` | array | Dependency list. Each entry uses `id` + `version`. **The legacy single-object `min_version` form is no longer supported** |
-| `dependencies[].id` | string | The depended-on mod's `id`. RitsuLib itself uses `STS2-RitsuLib` |
-| `dependencies[].version` | string | Minimum runtime version of the dependency. **The `STS2-RitsuLib` value must exactly match the NuGet version your `.csproj` actually compiles against** — see [Pre-release checklist: version alignment](#pre-release-checklist-version-alignment) above |
+| Field | Description |
+|---|---|
+| `id` | Must match `Entry.ModId` and the deployment directory |
+| `pck_name` | Must match the exported `.pck` file name |
+| `version` | SemVer version of the current Vivhite implementation |
+| `has_pck` / `has_dll` | This mod distributes both resources and a code assembly |
+| `affects_gameplay` | Must be `true` because Vivhite adds independent gameplay content |
+| `min_game_version` | Minimum compatible STS2 version; keep it aligned with the compile target |
+| `dependencies` | Runtime dependencies; the RitsuLib version must match the NuGet compile version |
 
 ## Development Tips
 
-- Prefer `AssetProfile` for new content; only override legacy `Custom...Path` fields for individual compatibility cases.
-- If a character resource field is not specified, RitsuLib fills it from the vanilla character config referenced by `PlaceholderCharacterId`.
-- Resource paths must start with `res://`; verify the directory name and casing inside the PCK are correct.
-- For `.tscn` files, make sure the scene is packed into the mod resources. If it needs a script, prefer a local wrapper class and call `EnsureGodotScriptsRegistered(...)` from `Entry.Initialize()`.
+- Content IDs follow `{MODID}_{category}_{original name}`; full card IDs use `VIVHITE_CARD_<ID>`.
+- New character content belongs to Vivhite's own pools and state. Do not write it into the Ironclad identity merely because the skin is shared.
+- Character visuals must use the current V3 five-page Vivhite skin and must not fall back to the legacy single-page atlas or a separate static combat placeholder.
+- Cards use placeholder art for now; code and documentation work must not trigger image generation.
+- Balance changes may adjust energy, HP cost, base values, scaling, rarity, and Exhaust, but must not reintroduce artificial caps.
+- Resource paths must begin with `res://`; verify directory names and case inside the PCK.
