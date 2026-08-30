@@ -349,6 +349,12 @@ DEFAULT_POLICY = {
                                     # 1.5×场均 ≈ 67，覆盖 240~243 批五局处决战的实际战损带（46~70）
     "boss_eve_safe_margin_frac": 0.10,  # 安全余量（占最大生命）：不回血的预期余量（血量-悲观战损）≤ 此值即属
                                     # 翻转带，回血直接兑换生还率——240~243 批处决差 0.4~7 点全部落在该带内
+    "boss_eve_race_audit_heal_enabled": True,  # 竞速误报的低血前夜回退闸（RACE_AUDIT_HEAL_OVERRIDE）：
+                                     # race_audit 记录「判死→实战获胜」达到样本/比例门槛时，
+                                     # 仅把 <锻造线且有效回血≥8% 的 Boss 前夜从必败上砧改回回血；
+                                     # false 可立即回滚到原竞速裁决，地图投影同步该口径
+    "boss_eve_race_audit_heal_min_latched": 6,  # 竞速误报回退的最小锁定样本数
+    "boss_eve_race_audit_heal_win_rate": 0.30,  # 判死后最终获胜比例达到此值才触发回退
     # --- Boss 攻坚（第 82~83 批复盘） ---
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---

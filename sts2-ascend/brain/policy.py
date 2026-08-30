@@ -1889,6 +1889,13 @@ class Policy:
                                   or (cur_hp - _pess > _margin
                                       and hpp_now >= eve_smith_line)))
                             or (eve_doomed and (not _flip_heal or _doom_smith_band)))
+                        _audit_heal, _audit_heal_note = (
+                            self._boss_eve_race_audit_heal(cur_hp, max_hp))
+                        if (eve_doomed and _audit_heal
+                                and _eff >= 0.08 * max_hp):
+                            _smith_proj = False
+                            if depth == 0:
+                                notes.append(_audit_heal_note)
                         will_heal = not _smith_proj
                     else:
                         will_heal = hpp_now < float(pol.get("smith_min_hp_pct", 0.55))
@@ -4261,6 +4268,45 @@ class Policy:
             return dict(_a)
         return {}
 
+    def _boss_eve_race_audit_heal(self, current_hp: float,
+                                  max_hp: float) -> tuple[bool, str]:
+        """Return whether a low-HP Boss eve should preserve the heal option.
+
+        ``race_audit`` is an outcome audit of the live race latch, not a Boss-
+        specific prior.  It is therefore only allowed to override the race
+        verdict in the narrow, reversible band where the current policy already
+        treats HP below ``boss_eve_smith_hp_pct`` as the survival zone and the
+        campfire can return a meaningful amount of HP.
+        """
+        pol = self.know.policy
+        if not bool(pol.get("boss_eve_race_audit_heal_enabled", True)):
+            return False, ""
+        audit = self.know.stats.get("race_audit")
+        if not isinstance(audit, dict):
+            return False, ""
+        try:
+            maximum = max(1.0, float(max_hp))
+            hp_pct = max(0.0, float(current_hp)) / maximum
+            smith_line = min(
+                float(pol.get("boss_eve_smith_hp_pct", 0.85)),
+                float(pol.get("boss_entry_evidence_hp_cap", 0.65)),
+            )
+            latched = max(0, int(audit.get("latched", 0) or 0))
+            won = max(0, int(audit.get("won", 0) or 0))
+            min_latched = max(1, int(pol.get(
+                "boss_eve_race_audit_heal_min_latched", 6)))
+            min_rate = clamp(float(pol.get(
+                "boss_eve_race_audit_heal_win_rate", 0.30)), 0.0, 1.0)
+        except (TypeError, ValueError, OverflowError):
+            return False, ""
+        if hp_pct >= smith_line or latched < min_latched:
+            return False, ""
+        win_rate = clamp(won / max(1, latched), 0.0, 1.0)
+        if win_rate < min_rate:
+            return False, ""
+        return True, (f"RACE_AUDIT_HEAL_OVERRIDE：竞速判死后获胜{won}/{latched}"
+                      f"（{win_rate:.0%}≥{min_rate:.0%}）")
+
     def _boss_race_doomed(self, deck: list[dict], max_hp: int,
                           floor: int | None = None,
                           potions: list | None = None) -> tuple[bool, str]:
@@ -6337,6 +6383,16 @@ class Policy:
                 _doomed, _doom_note = self._boss_race_doomed(
                     deck, max_hp, floor=run.get("floor"),
                     potions=run.get("potions") or None)
+                _audit_heal, _audit_heal_note = (
+                    self._boss_eve_race_audit_heal(cur_hp, max_hp))
+                if (_doomed and _audit_heal
+                        and eff_heal >= 0.08 * max_hp):
+                    return Decision(
+                        "choose_rest_option", {"option_index": heal["index"]},
+                        f"篝火：Boss 前夜竞速审计覆盖弃疗（当前 {hp_pct:.0%}；"
+                        f"{_audit_heal_note}；有效回血{eff_heal:.0f}点，"
+                        f"保留低血生还余量；{_doom_note}）",
+                        tags=[("rest", "heal")], wait=1.2)
                 if cur_hp - pess <= margin:
                     # 第664~674批复盘修正：悲观战损超过最大生命时（一幕 max80 vs
                     # pess≈91），「cur_hp-pess≤margin」对整个血条恒真，翻转带吞掉

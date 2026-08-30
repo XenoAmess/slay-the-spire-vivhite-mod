@@ -5856,6 +5856,36 @@ def main() -> int:
     assert not _near_doomed and "联合能量复核存在可行攻防分配" in \
         getattr(br_pol, "_race_proj_audit", ""), \
         f"贴线翻盘被翻盘比上限误伤: {_near_doomed}（{_near_note}）"
+
+    # 3br-audit-heal（RACE_AUDIT_HEAL_OVERRIDE）：全局竞速审计已显示判死后
+    # 获胜比例较高时，低于现行 Boss 锻造线且能回血≥8%的前夜不得再被单一
+    # 必败标签强制上砧；开关关闭必须严格回滚旧行为，地图投影也要保留回血。
+    br_know.stats["race_audit"] = {"latched": 10, "won": 4, "died": 6}
+    d_br_audit_heal = br_pol.decide(br_rest_weak, br_ctx)
+    assert d_br_audit_heal.tags and d_br_audit_heal.tags[0] == ("rest", "heal") \
+        and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_heal.reason, \
+        f"竞速误报达到审计门槛时低血前夜仍被迫上砧: {d_br_audit_heal.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_enabled"] = False
+    d_br_audit_rb = br_pol.decide(br_rest_weak, br_ctx)
+    assert d_br_audit_rb.tags and d_br_audit_rb.tags[0] == ("rest", "heal") \
+        and "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_rb.reason, \
+        f"竞速审计回血闸关闭后未回滚旧翻转带行为: {d_br_audit_rb.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_enabled"] = True
+
+    def br_audit_map_reason(pknow):
+        pmap = policy.Policy(pknow, random.Random(13))
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [
+                  {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
+                   "children": [{"row": 17, "col": 0}]}],
+                  "nodes": [
+                      {"row": 16, "col": 0, "node_type": "RestSite"},
+                      {"row": 17, "col": 0, "node_type": "Boss"}]},
+              "run": {"current_hp": 48, "max_hp": 80, "gold": 0,
+                      "floor": 16, "deck": br_weak_deck}}
+        return pmap.decide(st, br_ctx).reason
+    assert "RACE_AUDIT_HEAL_OVERRIDE" in br_audit_map_reason(br_know), \
+        "地图投影未镜像竞速审计回血闸"
     br_ctx.rest_before_boss = False
 
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的

@@ -5931,3 +5931,42 @@ retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
 - 若出现可复核的“闸门触发但实际可稳定获胜、且防守线本应被保留”，或 3 场以上触发后后段战损与静态翻转基线无改善，先将 `boss_race_slippery_joint_guard` 设为 `False` 回滚，再用该批观测重估机制模型；不凭单场随机结果扩大范围。
 
 retry_resolution: 20260830-134703-1788068823172152800-fa6604bd integrated
+
+# 2026-08-30｜第1173~1182局复盘：Boss 前夜竞速审计回血回退
+
+## 一、归因、假设与证据
+
+- 最新完整失败链为 `P334HXLTDVY0`（run 1182，F33，365 条决策，
+  `complete_persisted_chain=True`）；同批 F17 明确记录 T3 竞速判死、实战 8 回合获胜，
+  而 F33 在 49% 生命按竞速必败上砧后 6 回合阵亡。1175、1176、1177、1178、1180、1181
+  也出现 Boss 前夜竞速判死后 4~10 回合阵亡，前夜理由多次落在约 48%~57% 入场。
+- 原生 v0.111.0 快照确认相关目标是正式 Boss：`KNOWLEDGE_DEMON` 原生血量 379、
+  `CEREMONIAL_BEAST` 原生血量 252；问题不是目标实体缺失，而是静态竞速结论的后验可靠性。
+- 生涯 `race_audit` 为 544 次竞速锁定、252 次最终获胜（46.3%）；该审计记录的正是
+  「判死→实战获胜」，足以证伪“竞速判死可以单独否决低血回血”的强假设。
+- **HYPOTHESIS**：竞速判死在低/中生命 Boss 前夜的误报率已足以让回血成为必要的
+  风险缓冲；若仅在审计样本≥6、判死后获胜率≥30%、当前低于 65% 锻造线且回血≥8%
+  时覆盖弃疗，未来 3~10 层应提高 Boss 入场生命并减少极短 Boss 阵亡。若覆盖后至少
+  3 个独立 Boss 案例仍无改善，或出现健康区误覆盖，该假设即被证伪。
+
+## 二、本次最小生产改动
+
+- `brain/knowledge.py` 新增 `boss_eve_race_audit_heal_enabled`、最小锁定样本数和获胜率
+  三个默认旋钮；关闭 enabled 即回滚原竞速裁决。
+- `brain/policy.py` 新增纯读 `_boss_eve_race_audit_heal`，只消费已有 `race_audit`，
+  并在 `_rest` 与地图 `simulate` 两处同步：Boss 前夜低于合成锻造线且有效回血达到
+  8% 时，竞速判死不再强制上砧，理由写入 `RACE_AUDIT_HEAL_OVERRIDE`。普通篝火、
+  健康区、非 Boss 战和竞速本体均未改变。
+- `brain/selfcheck.py` 增加开启、关闭回滚和地图镜像回归夹具；没有写入在线 stats、
+  policy、runs 或运行状态。
+
+## 三、验证、后续指标与撤回
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。
+- 后续 3~10 层记录：`RACE_AUDIT_HEAL_OVERRIDE` 次数、覆盖时 Boss 入场生命、Boss 战实际
+  战损与回合数、低于 10% 残血/4~10 回合阵亡数，并对照竞速审计的判死→胜负结果。
+- 若触发覆盖的独立 Boss 战达到 3 场仍未提高入场生命或降低短战阵亡，先将
+  `boss_eve_race_audit_heal_enabled` 设为 `False`；若出现健康区或非 Boss 误触发，
+  同样立即关闭并保留决策链，之后再拆分 Boss 专属审计账。本次没有失败合入包，
+  `failed_review_replay.requested_packages=[]`，无 replay target，故不追加
+  `retry_resolution` 行。
