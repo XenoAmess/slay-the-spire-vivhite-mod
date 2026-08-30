@@ -81,11 +81,12 @@ internal static class PlayerFacingTextAcceptanceTests
         var chinese = ReadLocale(repository, "zhs");
         var staleTerms = chinese
             .Where(entry => entry.Value.Contains("生命演算", StringComparison.Ordinal) ||
+                entry.Value.Contains("咳血", StringComparison.Ordinal) ||
                 entry.Value.Contains("余量", StringComparison.Ordinal))
             .Select(entry => $"{entry.Key}: {entry.Value}")
             .ToArray();
-        AcceptanceAssert.Empty(staleTerms, "Simplified Chinese player-facing text must use 咳血 and 余裕 exclusively:");
-        AcceptanceAssert.Equal("咳血", chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.title"], "The Chinese Life Calculation keyword title must be 咳血.");
+        AcceptanceAssert.Empty(staleTerms, "Simplified Chinese player-facing text must use 謦欬 and 余裕 exclusively:");
+        AcceptanceAssert.Equal("謦欬", chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.title"], "The Chinese Life Calculation keyword title must be 謦欬.");
         AcceptanceAssert.Equal("余裕", chinese["VIVHITE_KEYWORD_MARGIN.title"], "The Chinese Margin keyword title must be 余裕.");
 
         var englishCards = ReadObject(repository, "eng", "cards.json");

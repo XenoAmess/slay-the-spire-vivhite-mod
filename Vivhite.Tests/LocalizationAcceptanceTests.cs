@@ -56,7 +56,7 @@ internal static class LocalizationAcceptanceTests
                 .ToArray();
             AcceptanceAssert.Empty(
                 missing,
-                $"Locale '{locale}' must provide non-empty title/description/smartDescription for all 60 approved cards:");
+                $"Locale '{locale}' must provide non-empty title/description/smartDescription for all 61 approved cards:");
 
             var localizedIds = entries.Keys
                 .Where(key => key.StartsWith("VIVHITE_CARD_", StringComparison.Ordinal))
@@ -123,16 +123,16 @@ internal static class LocalizationAcceptanceTests
 
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "中文咳血",
+            "中文謦欬",
             "余裕", "1");
         AssertContainsAny(
             chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "中文咳血必须说明生命不足时不可打出",
+            "中文謦欬必须说明生命不足时不可打出",
             "不可打出", "不能打出");
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_MARGIN.description"],
             "中文余裕",
-            "咳血", "消耗", "1");
+            "謦欬", "消耗", "1");
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_DIMENSION_UP.description"],
             "中文增维",
@@ -207,7 +207,7 @@ internal static class LocalizationAcceptanceTests
             }
         }
 
-        AcceptanceAssert.Equal(60, varsByCardId.Count, "DynamicVar audit must construct all 60 compiled registered cards.");
+        AcceptanceAssert.Equal(61, varsByCardId.Count, "DynamicVar audit must construct all 61 compiled registered cards.");
         foreach (var (cardId, removedAlias) in RemovedOrphanAliases)
         {
             AcceptanceAssert.True(

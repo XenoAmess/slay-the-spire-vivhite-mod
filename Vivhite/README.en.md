@@ -4,14 +4,14 @@ Languages: [中文](README.md) | English
 
 `Vivhite` is a custom character mod for Slay the Spire 2. Vivhite is a magical girl and master magician with deep knowledge of mathematics, computing, and art. She treats health as material for magical calculation and fights through a “spend health to cast → heal through kills or Drain → keep casting” loop.
 
-This README describes the approved `0.2.0` implementation contract. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 60-card catalog, exact values, and runtime checks that remain outstanding; this README does not claim that those checks have been completed.
+This README describes the approved `0.2.0` implementation contract. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 61-card catalog, exact values, and runtime checks that remain outstanding; this README does not claim that those checks have been completed.
 
 **Character summary:**
 
 - Starting stats: `78` max HP, `99` gold, `3` energy per turn, and `5` cards drawn per turn.
-- Starter deck: 4 × Luminous Projection, 4 × Closed-Domain Mapping, and 1 × Vivhite Transformation.
-- Starter relic: Origin Star Chart — whenever any enemy dies, immediately heal `4` HP; each death of one entity resolves only once.
-- A dedicated `60`-card pool: 3 basic, 18 common, 24 uncommon, and 15 rare cards.
+- Starter deck: 4 × Luminous Projection, 4 × Closed-Domain Mapping, and 1 × Vivhite's Transformation Formula.
+- Starter relic: Solitary Crown — whenever any enemy dies, immediately heal `5%` of Max HP, rounded up; each death of one entity resolves only once.
+- A dedicated `61`-card pool: 3 basic, 18 common, 24 uncommon, and 16 rare cards.
 - Three primary builds: Conservation Geometry, Recursive Star Calculus, and Crimson Integral, plus cross-build cards.
 - Every card currently uses RitsuLib placeholder art; no card art is generated in this phase.
 
@@ -147,9 +147,9 @@ Vivhite/
 | Type | `VivhiteCharacter` |
 | Character ID | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
 | Starting stats | 78 max HP, 99 gold, 3 energy, 5 cards drawn per turn |
-| Starter deck | 4 × Luminous Projection, 4 × Closed-Domain Mapping, 1 × Vivhite Transformation |
-| Starter relic | Origin Star Chart: immediately heal 4 HP whenever an enemy dies |
-| Card pool | 60 cards: 3 basic, 18 common, 24 uncommon, 15 rare |
+| Starter deck | 4 × Luminous Projection, 4 × Closed-Domain Mapping, 1 × Vivhite's Transformation Formula |
+| Starter relic | Solitary Crown: heal 5% of Max HP, rounded up, whenever an enemy dies |
+| Card pool | 61 cards: 3 basic, 18 common, 24 uncommon, 16 rare |
 
 ### Card pool and three builds
 
@@ -159,7 +159,7 @@ Vivhite/
 | Recursive Star Calculus | Increase damage, on-kill healing, card draw, and energy chains |
 | Crimson Integral | Combine multi-hit damage with Drain above 100% to create damage, healing, Block, and Strength loops |
 
-Cross-build cards connect Margin, draw, kills, and Drain. The [full implementation document](../docs/2026-08-30-白绮角色与轮换大脑实现.md) lists all 60 IDs, costs, effects, and upgrades. The old Vivhite Strike, Vivhite Defend, and White Silk Knot were discarded demo content and are not part of this pool.
+Cross-build cards connect Margin, draw, kills, and Drain, including Vivhite's Crimson Transformation Ritual, whose attack cost and damage scale without a cap each turn. The [full implementation document](../docs/2026-08-30-白绮角色与轮换大脑实现.md) lists all 61 IDs, costs, effects, and upgrades. The old Vivhite Strike, Vivhite Defend, and White Silk Knot were discarded demo content and are not part of this pool.
 
 ### Core keywords
 
@@ -189,7 +189,7 @@ Only natural engine invariants remain:
 
 The independent Vivhite character and the Ironclad replacement skin use the same current Vivhite V3 five-page combat atlas, together with the matching merchant, rest-site, character-select, UI, Spine, and multiplayer resources. They retain separate character IDs, card pools, character state, and statistics; shared visuals do not merge their gameplay identities.
 
-All 60 cards currently use RitsuLib placeholder card art. This implementation phase does not generate images, and it does not overwrite or regenerate existing Vivhite creative assets.
+All 61 cards currently use RitsuLib placeholder card art. This implementation phase does not generate images, and it does not overwrite or regenerate existing Vivhite creative assets.
 
 ## Manifest Format
 
@@ -201,7 +201,7 @@ All 60 cards currently use RitsuLib placeholder card art. This implementation ph
   "name": "白绮 Vivhite",
   "pck_name": "Vivhite",
   "author": "VivhiteMod",
-  "description": "Adds Vivhite, a magical-girl character with 60 cards, three builds, and uncapped health-magic loops.",
+  "description": "Adds Vivhite, a magical-girl character with 61 cards, three builds, and uncapped health-magic loops.",
   "version": "0.2.0",
   "has_pck": true,
   "has_dll": true,

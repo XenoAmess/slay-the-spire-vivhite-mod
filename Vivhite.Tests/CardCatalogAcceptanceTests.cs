@@ -12,7 +12,7 @@ internal static class CardCatalogAcceptanceTests
             ["Basic"] = 3,
             ["Common"] = 18,
             ["Uncommon"] = 24,
-            ["Rare"] = 15
+            ["Rare"] = 16
         };
 
     public static void ProductionSourceCompilesAndReflects(RepositorySnapshot repository)
@@ -37,12 +37,12 @@ internal static class CardCatalogAcceptanceTests
         var ids = repository.VivhitePoolCards.Select(repository.CardId).Order(StringComparer.Ordinal).ToArray();
         var expectedIds = ApprovedCardCatalog.RarityById.Keys.Order(StringComparer.Ordinal).ToArray();
 
-        AcceptanceAssert.Equal(60, expectedIds.Length, "The independent approved catalog must enumerate exactly 60 IDs.");
+        AcceptanceAssert.Equal(61, expectedIds.Length, "The independent approved catalog must enumerate exactly 61 IDs.");
         AcceptanceAssert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count(), "Reflected registered card IDs must be unique.");
         AcceptanceAssert.SetEqual(
             expectedIds,
             ids,
-            "Compiled [RegisterCard(typeof(VivhiteCardPool))] metadata must exactly match the approved 60 IDs.");
+            "Compiled [RegisterCard(typeof(VivhiteCardPool))] metadata must exactly match the approved 61 IDs.");
     }
 
     public static void HasApprovedRarityDistribution(RepositorySnapshot repository)
@@ -86,7 +86,7 @@ internal static class CardCatalogAcceptanceTests
             .Select(expected =>
                 $"{expected.Key}: expected {expected.Value}, actual {actualDistribution.GetValueOrDefault(expected.Key)}")
             .ToArray();
-        AcceptanceAssert.Empty(distributionErrors, "Rarity totals must be Basic/Common/Uncommon/Rare = 3/18/24/15:");
+        AcceptanceAssert.Empty(distributionErrors, "Rarity totals must be Basic/Common/Uncommon/Rare = 3/18/24/16:");
     }
 
     public static void HasApprovedStarterDeckAndNoLegacyCardTypes(RepositorySnapshot repository)

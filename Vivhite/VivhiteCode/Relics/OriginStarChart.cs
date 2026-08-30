@@ -12,14 +12,16 @@ namespace Vivhite.Relics;
 [RegisterCharacterStarterRelic(typeof(VivhiteCharacter))]
 public sealed class OriginStarChart : AnyEnemyDeathRelic
 {
+    private const int HealingPercent = 5;
+
     public override RelicRarity Rarity => RelicRarity.Starter;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new HealVar(4)
+        new HealVar(HealingPercent)
     ];
 
-    // Keep the existing runtime icon until a dedicated OriginStarChart asset is supplied.
+    // Keep the existing runtime icon until a dedicated Solitary Crown asset is supplied.
     public override RelicAssetProfile AssetProfile => new(
         IconPath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png",
         IconOutlinePath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png",
@@ -29,6 +31,14 @@ public sealed class OriginStarChart : AnyEnemyDeathRelic
         PlayerChoiceContext choiceContext,
         EnemyDeathEvent deathEvent)
     {
-        await Overheal.HealAsync(Owner.Creature, DynamicVars.Heal.IntValue);
+        await Overheal.HealAsync(
+            Owner.Creature,
+            CalculateHealingForMaxHp(Owner.Creature.MaxHp));
+    }
+
+    internal static int CalculateHealingForMaxHp(int maxHp)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxHp);
+        return checked((int)(((long)maxHp * HealingPercent + 99L) / 100L));
     }
 }

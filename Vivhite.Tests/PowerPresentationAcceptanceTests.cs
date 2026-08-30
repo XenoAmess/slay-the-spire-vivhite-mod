@@ -12,9 +12,9 @@ internal static class PowerPresentationAcceptanceTests
     public static void AllRegisteredPowersHaveCompleteBilingualLocalization(RepositorySnapshot repository)
     {
         AcceptanceAssert.Equal(
-            21,
+            23,
             repository.RegisteredPowers.Count,
-            "The runtime RegisterPower inventory must contain exactly the 21 audited Vivhite powers.");
+            "The runtime RegisterPower inventory must contain exactly the 23 audited Vivhite powers.");
 
         var expectedIds = repository.RegisteredPowers
             .Select(repository.PowerId)
@@ -44,13 +44,25 @@ internal static class PowerPresentationAcceptanceTests
                 $"Locale '{locale}' must never expose a raw power localization key:");
 
             var missingSmartAmount = repository.RegisteredPowers
-                .Where(type => type.Name != "ClosedManifoldPower")
+                .Where(type => type.Name != "ClosedManifoldPower" &&
+                    !type.Name.StartsWith("VivhitesCrimsonTransformationRitual", StringComparison.Ordinal))
                 .Select(repository.PowerId)
                 .Where(id => !entries[$"{id}.smartDescription"].Contains("{Amount}", StringComparison.Ordinal))
                 .ToArray();
             AcceptanceAssert.Empty(
                 missingSmartAmount,
                 $"Locale '{locale}' stack/counter power smartDescription entries must render their live Amount:");
+
+            var ritualSmartDescriptions = repository.RegisteredPowers
+                .Where(type => type.Name.StartsWith("VivhitesCrimsonTransformationRitual", StringComparison.Ordinal))
+                .Select(repository.PowerId)
+                .Select(id => entries[$"{id}.smartDescription"])
+                .Where(text => !text.Contains("{Phase}", StringComparison.Ordinal) ||
+                    !text.Contains("{DamagePercentPerPhase}", StringComparison.Ordinal))
+                .ToArray();
+            AcceptanceAssert.Empty(
+                ritualSmartDescriptions,
+                $"Locale '{locale}' ritual powers must render their independent live phase and per-phase damage rate:");
         }
     }
 
@@ -74,7 +86,7 @@ internal static class PowerPresentationAcceptanceTests
         }
 
         AcceptanceAssert.Empty(failures, "Every registered power must expose its presentation profile:");
-        AcceptanceAssert.Equal(21, profiles.Count, "The icon audit must inspect all 21 registered powers.");
+        AcceptanceAssert.Equal(23, profiles.Count, "The icon audit must inspect all 23 registered powers.");
 
         var missingPaths = profiles
             .Where(item => string.IsNullOrWhiteSpace(item.Profile.IconPath) ||

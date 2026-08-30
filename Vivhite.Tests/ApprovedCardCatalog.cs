@@ -71,6 +71,7 @@ internal static class ApprovedCardCatalog
             ["VIVHITE_CARD_PERFECT_SYNTHESIS"] = "Rare",
             ["VIVHITE_CARD_UNIFIED_FIELD_THEORY"] = "Rare",
             ["VIVHITE_CARD_CONSERVED_RECURRENCE"] = "Rare",
-            ["VIVHITE_CARD_CHROMATIC_LIMIT"] = "Rare"
+            ["VIVHITE_CARD_CHROMATIC_LIMIT"] = "Rare",
+            ["VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"] = "Rare"
         };
 }

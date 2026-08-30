@@ -1,5 +1,6 @@
 using Vivhite.Tests.Acceptance;
 using Vivhite.Tests.Mechanics;
+using Vivhite.Tests.Relics;
 
 namespace Vivhite.Tests;
 
@@ -21,14 +22,14 @@ internal static class Program
         AcceptanceTest[] tests =
         [
             new("production source compiles and reflects", CardCatalogAcceptanceTests.ProductionSourceCompilesAndReflects),
-            new("exact 60 registered card IDs", CardCatalogAcceptanceTests.HasApprovedStableIds),
-            new("rarity distribution 3/18/24/15", CardCatalogAcceptanceTests.HasApprovedRarityDistribution),
+            new("exact 61 registered card IDs", CardCatalogAcceptanceTests.HasApprovedStableIds),
+            new("rarity distribution 3/18/24/16", CardCatalogAcceptanceTests.HasApprovedRarityDistribution),
             new("starter deck 4/4/1 and legacy classes removed", CardCatalogAcceptanceTests.HasApprovedStarterDeckAndNoLegacyCardTypes),
-            new("exact bilingual 60-card localization", LocalizationAcceptanceTests.CoversExactApprovedCardSet),
+            new("exact bilingual 61-card localization", LocalizationAcceptanceTests.CoversExactApprovedCardSet),
             new("all card DynamicVars match eng/zhs placeholders", LocalizationAcceptanceTests.CardDynamicVarsMatchEveryBilingualPlaceholder),
             new("five bilingual keywords use approved mechanics", LocalizationAcceptanceTests.KeywordsDescribeApprovedMechanics),
-            new("all 21 powers have complete bilingual localization", PowerPresentationAcceptanceTests.AllRegisteredPowersHaveCompleteBilingualLocalization),
-            new("all 21 powers use a valid non-NOPE placeholder", PowerPresentationAcceptanceTests.AllRegisteredPowersUseOneExistingNonNopePlaceholder),
+            new("all 23 powers have complete bilingual localization", PowerPresentationAcceptanceTests.AllRegisteredPowersHaveCompleteBilingualLocalization),
+            new("all 23 powers use a valid non-NOPE placeholder", PowerPresentationAcceptanceTests.AllRegisteredPowersUseOneExistingNonNopePlaceholder),
             new("registered runtime models never expose raw localization keys", PlayerFacingTextAcceptanceTests.RegisteredRuntimeModelsNeverExposeRawLocalizationKeys),
             new("Chinese terms and Energy rich text match the player contract", PlayerFacingTextAcceptanceTests.ChineseTermsAndEnergyRichTextMatchThePlayerContract),
             new("native Exhaust and Retain text is not duplicated", PlayerFacingTextAcceptanceTests.NativeCardKeywordsAreNotDuplicatedInLocalizedBodies),
@@ -49,7 +50,11 @@ internal static class Program
             new("Drain recovery precedes wrapped enemy-death listeners", EnemyDeathOrderingAcceptanceTests.WrappedAttackRecoversBeforeDeathListenersAndUnwrappedDeathIsImmediate),
             new("deferred enemy-death failures are neither lost nor replayed", EnemyDeathOrderingAcceptanceTests.DeferredListenerFailuresArePreservedWithoutLossOrReplay),
             new("generated and recovered copies retain Dimension Up eligibility", GeneratedCardGrowthAcceptanceTests.GeneratedAndRecoveredCopiesRetainNormalDimensionUpEligibility),
+            new("Crimson ritual card and Power contract", VivhitesCrimsonTransformationRitualAcceptanceTests.CardAndPowerContract),
+            new("Crimson ritual phases scale without caps", _ => VivhitesCrimsonTransformationRitualAcceptanceTests.UnboundedPhasesAddLifeCostAndPercentages()),
+            new("Crimson ritual uses shared payment and printed costs", VivhitesCrimsonTransformationRitualAcceptanceTests.RuntimeUsesTheSharedPaymentGateAndEveryPrintedBaseCost),
             new("death deduplication is per entity event", DeathDeduplicationAcceptanceTests.DeduplicatesOnlyTheSameEntityDeathEvent),
+            new("Solitary Crown heals ceil(5% Max HP) without caps", SolitaryCrownRelicAcceptanceTests.UsesFivePercentMaxHpCeilingWithoutTriggerCaps),
             new("conditional card keywords match approved states", CardKeywordAcceptanceTests.ConditionalKeywordsMatchTheApprovedCardStates),
             new("Vivhite and Ironclad share the V3 five-page skin", SharedAssetsAcceptanceTests.VivhiteAndIroncladUseTheSameV3Skin),
             new("V3 skin rejects legacy and missing-page layouts", SharedAssetsAcceptanceTests.V3SkinRequiresExactFivePageLayout),
