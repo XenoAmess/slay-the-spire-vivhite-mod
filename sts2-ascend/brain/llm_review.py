@@ -1180,6 +1180,20 @@ def _sandbox_readable_corpus_paths(value):
     return value
 
 
+_APPLY_PATCH_PATH_CONTRACT = """原生 Apply Patch 的每个目标文件名必须从仓库根起算（即
+`git rev-parse --show-toplevel` 所指的目录）；当前进程 cwd 与 `-C` 已经位于该仓库根，不要再探测或
+拼接绝对父目录。目标使用正斜杠的仓库相对路径，并以 `sts2-ascend/` 开头；正确示例：
+`sts2-ascend/brain/knowledge.py`。禁止传入盘符、UNC 或任何绝对路径，禁止粘贴或重复 clone 根目录，
+也禁止缩写成 `brain/knowledge.py`。`Get-Location` 的输出只用于确认锚点，绝不能拼入 Apply Patch 路径。
+第一次编辑前分别运行 `Get-Location`，再用同一个 `sts2-ascend/...` 路径 `Test-Path` 目标；新文件则
+检查父目录。若只读的 `git rev-parse` 被命令策略拒绝，不影响使用当前已确认的仓库根和相对路径。
+若出现 `writing outside of the project`、`rejected by user approval settings`、`<clone>\\<clone>`，
+或找不到 `brain/...`，这是路径构造错误：不得原样重复。重新确认锚点，改成准确仓库相对路径后，
+只重试一次原生 Apply Patch，也不得改用 shell、脚本或重定向写入。修正后的准确相对路径仍被拒时，
+才输出 `BLOCKED_TOOL_CAPABILITY`，同时给出原始错误和修正后的目标路径。
+"""
+
+
 def build_prompt(know, cfg: dict, every: int | None = None,
                  batch_runs: list[int] | None = None,
                  closure_state: dict | None = None,
@@ -1309,6 +1323,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 不要重复上次的空终态。只有开始工作所需的初始读取或 shell 本身被 `blocked by policy` / `Access denied`、
 尚未证明本地工具可用时，才立即输出 `BLOCKED_TOOL_CAPABILITY`、原始错误与被阻断的动作并停止。
 若此前读取或 shell/测试已经成功，原生 Apply Patch 报错时必须先按原始错误分类：
+{_APPLY_PATCH_PATH_CONTRACT}
 - 包含 `Access is denied (os error 5)` 或 `WinError 5` 是 sandbox DACL 的稳定权限拒绝；不要重试，立即
   输出 `BLOCKED_TOOL_CAPABILITY`、原始错误和目标文件，交宿主修复 ACL。
 - 只有不伴随 `Access denied` / `Permission denied` 或永久权限码的 generic `Failed to write file`，或
@@ -1388,7 +1403,9 @@ def _review_invocation_prompt(rel_prompt: str) -> str:
         "解决冲突和本地 commit；禁止 push、访问其他工作区或管理在线进程。成功标准："
         "一个可证伪假设，一个最小生产行为/观测改动，SELFCHECK OK，最终 diff 复核和 commit SHA，"
         "最后才写报告。只有初始读取或 shell 本身被 blocked/access denied、尚未证明本地工具可用时，"
-        "才立即输出 BLOCKED_TOOL_CAPABILITY。已有成功读取/执行后，Apply Patch 若含 Access is denied "
+        "才立即输出 BLOCKED_TOOL_CAPABILITY。"
+        f"{_APPLY_PATCH_PATH_CONTRACT}"
+        "已有成功读取/执行后，Apply Patch 若含 Access is denied "
         "(os error 5) 或 WinError 5，表示稳定 DACL 拒绝，立即输出 BLOCKED_TOOL_CAPABILITY 并交宿主"
         "修复 ACL，不要重试。仅对不含 Access/Permission denied 或永久权限码的 generic Failed to write "
         "file，或明确 Sharing violation，对同一 patch 短暂有界退避；持续失败时在首次失败后至少再重试 "

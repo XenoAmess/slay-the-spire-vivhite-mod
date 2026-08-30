@@ -367,3 +367,37 @@ clone-local Git 元数据写入的已验证方案；它没有收紧 Luna 对 clo
 自检和建立 clone commit，再由宿主完成验收、CAS 与推送。截至本章记录时，这一轮生产闭环仍待
 重启验证；不得把零模型 canary、reported-path 熔断测试或前一批次的成功回执冒充为该事故包已经
 成功闭环。
+
+### 生产重放暴露的 Apply Patch 路径教学缺口
+
+硬边界提交并重启后，生产 Luna attempt `10760-1788047339964675900` 使用了终态命令契约：
+provider 的命令行与 PEB cwd 都精确绑定隔离 clone，真实仓 `policy.py`、`selfcheck.py`、
+`knowledge.py` 在启动前、运行中和退出后的 clean-filter、原始 SHA256、mtime 与长度均未变化。
+这证明 OS 写边界在生产环境真实生效；但该 attempt 没有完成业务闭环。
+
+Luna 已读取目标失败包、当前代码和证据，也形成了可证伪假设，但连续把原生 Apply Patch 的目标
+构造成盘符绝对路径、重复 clone 根、`brain/knowledge.py` 缩写或其他错误锚点。结果是十余次
+`writing outside of the project; rejected by user approval settings`，以及 `clone\clone\...`、
+`clone\brain\...` 等不存在路径。相对 shell 读取 `sts2-ascend/...` 始终成功，`file_change_count=0`，
+说明新证据不是权限 profile 阻止 Python/Git/普通 clone 内写入，而是宿主提示只说了“禁止绝对路径”，
+没有教清原生 Apply Patch 的仓库根相对语法，也没有把 outside-project 与 generic 写入失败分开反馈。
+
+为避免继续消耗额度，使用 `Stop-Agent.ps1 -KeepGame` 协作停止该 attempt。终态包
+`20260830-080907-1788048547255004400-feaa36b2` 准确定性为 `lifecycle_stop`，不是 Luna 提交失败；
+退出时完整证据校验尚未完成，因此没有发布任何 retry resolution，也没有 selfcheck、clone commit、
+宿主 CAS 或策略成果。拒合审计本地 commit 为 `9c15ff1d`，由下一次正常启动补推。停止期间本地直播姬
+始终保持 `Streaming`，游戏保留，没有发生直播中断。
+
+宿主随后只修教学机制，不代写 Luna 的策略成果：长任务书与实际启动短提示现在复用同一个
+Apply Patch 路径契约。契约明确每个目标必须从 `git rev-parse --show-toplevel` 所指的仓库根起算；
+当前 cwd 与 `-C` 已在该根，不必用被命令策略拒绝的绝对路径探测。目标只使用以 `sts2-ascend/` 开头
+的正斜杠相对路径，例如 `sts2-ascend/brain/knowledge.py`；禁止盘符、UNC、
+重复 clone 根和 `brain/...` 缩写，`Get-Location` 输出不得拼进补丁路径。outside-project、
+`<clone>\<clone>` 或找不到缩写目标被归类为路径构造错误：纠正为准确相对路径后只重试一次，仍失败
+才报告 `BLOCKED_TOOL_CAPABILITY`，且不得改用 shell、脚本或重定向旁路写入。这样保留 Luna 自己
+读证据、改代码、自检和提交的职责，同时把宿主已观察到的工具反馈教给下一轮。
+
+静态验收包括 `test_review_closure.py` 22/22 通过，以及完整 `brain/selfcheck.py` 输出
+`SELFCHECK OK`。下一道生产门禁仍是重启统一栈，让 Luna 对保留的失败 lineage 自己重新审核并产生
+成功 Apply Patch、selfcheck、clone commit、宿主 CAS 和远端 push；在这些回执出现前，本章仍不把
+该失败批次记为已闭环。

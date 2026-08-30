@@ -342,6 +342,18 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("generic `Failed to write file`", prompt)
         self.assertIn("明确的 `Sharing violation`", prompt)
         self.assertIn("在首次失败之后至少再重试 3 次", prompt)
+        self.assertIn(llm_review._APPLY_PATCH_PATH_CONTRACT, prompt)
+        self.assertIn("`git rev-parse --show-toplevel`", prompt)
+        self.assertIn("`sts2-ascend/brain/knowledge.py`", prompt)
+        self.assertIn("绝不能拼入 Apply Patch 路径", prompt)
+        self.assertIn("禁止粘贴或重复 clone 根目录", prompt)
+        self.assertIn("禁止缩写成 `brain/knowledge.py`", prompt)
+        self.assertIn("`writing outside of the project`", prompt)
+        self.assertIn("只重试一次原生 Apply Patch", prompt)
+        self.assertLess(
+            prompt.index("`writing outside of the project`"),
+            prompt.index("generic `Failed to write file`"),
+        )
         self.assertIn("不得管理或终止进程", prompt)
         self.assertIn("不得改用 shell、脚本、重定向等旁路写法", prompt)
         self.assertIn("全部失败才输出", prompt)
@@ -365,6 +377,18 @@ sts2-ascend/knowledge/meta_review.md
         self.assertIn("generic Failed to write file", prompt)
         self.assertIn("明确 Sharing violation", prompt)
         self.assertIn("首次失败后至少再重试 3 次", prompt)
+        self.assertIn(llm_review._APPLY_PATCH_PATH_CONTRACT, prompt)
+        self.assertIn("`git rev-parse --show-toplevel`", prompt)
+        self.assertIn("`sts2-ascend/brain/knowledge.py`", prompt)
+        self.assertIn("绝不能拼入 Apply Patch 路径", prompt)
+        self.assertIn("禁止粘贴或重复 clone 根目录", prompt)
+        self.assertIn("禁止缩写成 `brain/knowledge.py`", prompt)
+        self.assertIn("`writing outside of the project`", prompt)
+        self.assertIn("只重试一次原生 Apply Patch", prompt)
+        self.assertLess(
+            prompt.index("`writing outside of the project`"),
+            prompt.index("generic Failed to write file"),
+        )
         self.assertIn("不得管理或终止进程", prompt)
         self.assertIn("不得换用 shell/脚本/重定向等旁路写法", prompt)
         self.assertIn("全部失败才 BLOCKED", prompt)
