@@ -33,6 +33,18 @@ internal sealed class RepositorySnapshot
             .Where(type => FindAttribute(type, "RegisterCardAttribute") is not null)
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .ToArray();
+        RegisteredPowers = CompiledProductionTypes
+            .Where(type => FindAttribute(type, "RegisterPowerAttribute") is not null)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .ToArray();
+        RegisteredRelics = CompiledProductionTypes
+            .Where(type => FindAttribute(type, "RegisterRelicAttribute") is not null)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .ToArray();
+        RegisteredCharacters = CompiledProductionTypes
+            .Where(type => FindAttribute(type, "RegisterCharacterAttribute") is not null)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .ToArray();
         VivhitePoolCards = RegisteredCards
             .Where(type => AttributeContainsType(
                 FindAttribute(type, "RegisterCardAttribute")!,
@@ -52,6 +64,12 @@ internal sealed class RepositorySnapshot
     public IReadOnlyList<Type> CompiledProductionTypes { get; }
 
     public IReadOnlyList<Type> RegisteredCards { get; }
+
+    public IReadOnlyList<Type> RegisteredPowers { get; }
+
+    public IReadOnlyList<Type> RegisteredRelics { get; }
+
+    public IReadOnlyList<Type> RegisteredCharacters { get; }
 
     public IReadOnlyList<Type> VivhitePoolCards { get; }
 
@@ -120,6 +138,12 @@ internal sealed class RepositorySnapshot
         runtimeType.FullName is null ? null : _sourceTypesByFullName.GetValueOrDefault(runtimeType.FullName);
 
     public string CardId(Type cardType) => $"VIVHITE_CARD_{ToUpperSnakeCase(cardType.Name)}";
+
+    public string PowerId(Type powerType) => $"VIVHITE_POWER_{ToUpperSnakeCase(powerType.Name)}";
+
+    public string RelicId(Type relicType) => $"VIVHITE_RELIC_{ToUpperSnakeCase(relicType.Name)}";
+
+    public string CharacterId(Type characterType) => $"VIVHITE_CHARACTER_{ToUpperSnakeCase(characterType.Name)}";
 
     public static CustomAttributeData? FindAttribute(Type type, string attributeTypeName) =>
         type.GetCustomAttributesData()

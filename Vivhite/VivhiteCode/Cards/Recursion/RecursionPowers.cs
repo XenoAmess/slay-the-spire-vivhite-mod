@@ -102,7 +102,7 @@ internal sealed class DynamicProgrammingState
 /// that exact CardPlay, and is cleared only after the whole card has finished resolving.
 /// </summary>
 [RegisterPower]
-public sealed class DynamicProgrammingPower : ModPowerTemplate
+public sealed class DynamicProgrammingPower : VivhitePowerTemplate
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;

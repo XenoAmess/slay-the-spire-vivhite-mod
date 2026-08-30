@@ -19,7 +19,7 @@ namespace Vivhite.Cards.Conservation;
 /// Negative Margin changes from unrelated effects are deliberately excluded.
 /// </summary>
 [RegisterPower]
-public sealed class LawOfConservationPower : ModPowerTemplate
+public sealed class LawOfConservationPower : VivhitePowerTemplate
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -55,7 +55,7 @@ public sealed class LawOfConservationPower : ModPowerTemplate
 }
 
 [RegisterPower]
-public sealed class LifeManifoldPower : ModPowerTemplate
+public sealed class LifeManifoldPower : VivhitePowerTemplate
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -96,7 +96,7 @@ internal sealed class ClosedManifoldHpLedger
 /// misclassified: its requested heal and simultaneous current-HP gain are equal.
 /// </summary>
 [RegisterPower]
-public sealed class ClosedManifoldPower : ModPowerTemplate
+public sealed class ClosedManifoldPower : VivhitePowerTemplate
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;

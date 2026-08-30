@@ -12,7 +12,7 @@ using Vivhite.Powers;
 
 namespace Vivhite.Cards.Chromatic;
 
-public abstract class ChromaticCounterPower : ModPowerTemplate
+public abstract class ChromaticCounterPower : VivhitePowerTemplate
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;

@@ -123,16 +123,16 @@ internal static class LocalizationAcceptanceTests
 
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "中文生命演算",
-            "余量", "1");
+            "中文咳血",
+            "余裕", "1");
         AssertContainsAny(
             chinese["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "中文生命演算必须说明生命不足时不可打出",
+            "中文咳血必须说明生命不足时不可打出",
             "不可打出", "不能打出");
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_MARGIN.description"],
-            "中文余量",
-            "生命演算", "消耗", "1");
+            "中文余裕",
+            "咳血", "消耗", "1");
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_DIMENSION_UP.description"],
             "中文增维",
