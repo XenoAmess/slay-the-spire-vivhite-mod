@@ -1,9 +1,7 @@
-千一百一十八局复盘。
-事件闸门全员致死时，
-不再按均值赌命，
-改按最坏血量择损，
-十血事件选生路。
-
-2026-08-30 CARD_BURST_PICK_AUDIT 已落地。
-奖励选牌理由现在记录最终选牌的有效爆发 before/after/delta 与饥饿线；不改评分和动作。
-证据假设待未来 3~10 局用 delta 方向验证；selfcheck：SELFCHECK OK。
+一千零八十五局复盘。
+假设：致死 Boss 的结算窗不足。
+已把致死窗从四十扩至五十 tick，
+仅在 Boss 且牌仍可用时生效。
+后续三至十局看 lethal=yes 与补牌；
+无补牌则回查 payload 锁窗。
+selfcheck：SELFCHECK OK。

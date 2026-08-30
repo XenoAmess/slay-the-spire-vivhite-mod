@@ -8620,6 +8620,85 @@ def main() -> int:
     assert d_nonboss is not None and _nonboss_waits <= _deep_base + 2, \
         f"non-Boss did not use base budget: waits={_nonboss_waits}"
 
+    # LETHAL_SETTLE_EXTENSION: the target 1085/F17-T10 signature was a Boss
+    # settle timeout with 8 HP against 18 incoming damage and latent cards.
+    # It gets only the bounded final extension; harmless/non-Boss paths above
+    # remain anchored to their prior budgets.
+    lethal_know = knowledge.Knowledge(tmp)
+    lethal_pol = policy.Policy(lethal_know)
+    lethal_know.policy["end_turn_settle_recovery_ticks"] = 10
+    lethal_know.policy["end_turn_settle_recovery_ticks_boss"] = 40
+    _lethal_ticks = int(float(
+        lethal_know.policy.get("end_turn_settle_recovery_ticks_lethal", 50) or 0))
+    assert _lethal_ticks > _tier3_ticks, "lethal settle extension default invalid"
+    lethal_ctx = _SettleCtx()
+    lethal_warm = _settle_state(True)
+    lethal_warm["combat"]["player"]["current_hp"] = 8
+    lethal_warm["run"]["current_hp"] = 8
+    assert lethal_pol.decide(lethal_warm, lethal_ctx) is not None
+    _lethal_waits = 0
+    d_lethal = None
+    for _ in range(100):
+        lethal_state = _settle_state(False)
+        lethal_state["combat"]["player"]["current_hp"] = 8
+        lethal_state["run"]["current_hp"] = 8
+        d_l = lethal_pol.decide(lethal_state, lethal_ctx)
+        if d_l.action == "end_turn":
+            d_lethal = d_l
+            break
+        assert d_l.action is None and str(_lethal_ticks) in d_l.reason \
+            and "结算等待" in d_l.reason, \
+            f"lethal settle extension did not hold: {d_l.action}/{d_l.reason}"
+        _lethal_waits += 1
+    assert d_lethal is not None and _lethal_waits >= _lethal_ticks - 2 \
+        and f"预算{_lethal_ticks}" in d_lethal.reason \
+        and "lethal=yes" in d_lethal.reason, \
+        f"lethal settle extension did not close with evidence: {d_lethal and d_lethal.reason}"
+
+    lethal_know.policy["end_turn_settle_recovery_ticks_lethal"] = 0
+    lethal_off_pol = policy.Policy(lethal_know)
+    lethal_off_ctx = _SettleCtx()
+    assert lethal_off_pol.decide(lethal_warm, lethal_off_ctx) is not None
+    _lethal_off_waits = 0
+    d_lethal_off = None
+    for _ in range(80):
+        lethal_state = _settle_state(False)
+        lethal_state["combat"]["player"]["current_hp"] = 8
+        lethal_state["run"]["current_hp"] = 8
+        d_lo = lethal_off_pol.decide(lethal_state, lethal_off_ctx)
+        if d_lo.action == "end_turn":
+            d_lethal_off = d_lo
+            break
+        assert d_lo.action is None and "结算等待" in d_lo.reason, \
+            f"lethal extension rollback produced an unexpected action: {d_lo.action}/{d_lo.reason}"
+        _lethal_off_waits += 1
+    assert d_lethal_off is not None and _lethal_off_waits <= _tier3_ticks + 2 \
+        and f"预算{_tier3_ticks}" in d_lethal_off.reason \
+        and "lethal=yes" in d_lethal_off.reason, \
+        f"lethal extension rollback failed: {d_lethal_off and d_lethal_off.reason}"
+
+    lethal_know.policy["end_turn_settle_recovery_ticks_lethal"] = _lethal_ticks
+    lethal_know.policy["end_turn_settle_recovery_ticks_boss"] = 0
+    lethal_gate_off_pol = policy.Policy(lethal_know)
+    lethal_gate_ctx = _SettleCtx()
+    assert lethal_gate_off_pol.decide(lethal_warm, lethal_gate_ctx) is not None
+    _lethal_gate_waits = 0
+    d_lethal_gate = None
+    for _ in range(80):
+        lethal_state = _settle_state(False)
+        lethal_state["combat"]["player"]["current_hp"] = 8
+        lethal_state["run"]["current_hp"] = 8
+        d_lg = lethal_gate_off_pol.decide(lethal_state, lethal_gate_ctx)
+        if d_lg.action == "end_turn":
+            d_lethal_gate = d_lg
+            break
+        assert d_lg.action is None and "结算等待" in d_lg.reason, \
+            f"Boss tier-3 rollback was bypassed by lethal extension: {d_lg.action}/{d_lg.reason}"
+        _lethal_gate_waits += 1
+    assert d_lethal_gate is not None and _lethal_gate_waits <= _deep_base + 2 \
+        and f"预算{_deep_base}" in d_lethal_gate.reason, \
+        f"Boss tier-3 rollback did not restore base budget: {d_lethal_gate and d_lethal_gate.reason}"
+
     print("SELFCHECK OK")
     return 0
 

@@ -2492,9 +2492,10 @@ class Policy:
                 # 扔掉（753 局同签名基线 ×2、本批遥测复证 ×2）。规则账面
                 # （能量≥费用＋目标可选，负费用状态牌不计）与 payload 宣告冲突、
                 # 且本回合确实出过牌时，先在从 _end_stall 借来的预算内推迟提交；
-                # 预算耗尽后落回下方原「确认无牌可出」提交流——文案/审计格式
-                # 完全不变，既有统计正则与断言不受影响。
+                # 预算耗尽后落回下方原「确认无牌可出」提交流——主文案前缀与
+                # 逐张审计字段保持兼容；结算超时观测字段在下方按需扩展。
                 _settle_budget = int(float(pol.get("end_turn_settle_recovery_ticks", 10) or 0))
+                _settle_lethal = bool(combat.get("end_turn_will_kill_player")) or incoming >= (my_hp + my_block)
                 _latent = []
                 if (_settle_budget > 0 and not affordable_playable
                         and self._saw_playable_this_turn):
@@ -2531,6 +2532,18 @@ class Policy:
                             pol.get("end_turn_settle_recovery_ticks_boss", 40) or 0))
                         if _boss_budget > 0:
                             _settle_budget = max(_settle_budget, _boss_budget)
+                            # LETHAL_SETTLE_EXTENSION: the target batch showed a Boss
+                            # closing with a lethal intent while the interface was still
+                            # locked at the tier-3 boundary (F17-T10, 8 HP vs 18).
+                            # Spend only a bounded extra 10 ticks on that exact signature;
+                            # harmless closes and non-Boss floors retain their old budget.
+                            # Keeping this under the Boss gate means setting the existing
+                            # tier-3 knob to zero still restores the pre-extension path.
+                            if _settle_lethal:
+                                _lethal_budget = int(float(
+                                    pol.get("end_turn_settle_recovery_ticks_lethal", 50) or 0))
+                                if _lethal_budget > 0:
+                                    _settle_budget = max(_settle_budget, _lethal_budget)
                 if (_settle_budget > 0 and not affordable_playable
                         and self._saw_playable_this_turn
                         and self._end_stall < _settle_budget):
@@ -2558,7 +2571,8 @@ class Policy:
                         and bool(pol.get("end_turn_settle_concede_obs", True))):
                     _settle_note = (
                         f"｜结算超时收口观测 energy={energy}"
-                        f"/预算{_settle_budget}/latent={','.join(_latent)}")
+                        f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
+                        f"/latent={','.join(_latent)}")
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)

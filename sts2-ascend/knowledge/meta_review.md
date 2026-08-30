@@ -5726,3 +5726,23 @@ complete_persisted_chain=True）。生涯 0/1118，本批 8 局全败，7 局一
 2. 供给审计必须测最终落牌，而不是贪心排序首项；否则会把受控探索误报成另一种选牌行为。
 3. 复用既有 `deck_effective_burst` 和饥饿线，只增加理由观测，能在不改变策略的前提下
    直接证伪“选牌补供给”假设。
+
+## 2026-08-30｜第 1014—1085 局批复盘：致死 Boss 结算窗口
+
+### HYPOTHESIS
+
+第 1085 局 F17-T10 的 Boss 结算预算 40 tick 在致死场景中过早收口；若只把致死 Boss 的既有结算等待有界扩至 50 tick，未来 3—10 局应出现 `lethal=yes`，并可能在 40—50 tick 间重新获得 `play_card`。若没有，假设转为 payload/API 锁窗问题。
+
+### EVIDENCE
+
+运行 `7Z74W2SW09H3` 的决策 #280 显示：8/80 HP、0 格挡、18 incoming、3 能量，四张牌的费用与目标规则仍合法，但 payload 全部 `playable=false`，最终以预算 40 收口。前一决策仍有出牌，说明本次观测集中在结算收口边界。回放目标包 `20260829-225316-1788015196791448300-ab40e708` 为纯报告；后续尝试的候选改动均已核对为同一最小修复，临时 `.selfcheck-tmp` 等边界拒绝产物未纳入。
+
+### IMPLEMENTATION / EXPECTED_SIGNAL
+
+`policy.py` 在既有 Boss、latent 合法牌分支中，以 `end_turn_will_kill_player` 或 `incoming >= hp + block` 判定致死，将 `end_turn_settle_recovery_ticks_lethal`（默认 50）作为有界上限；超时理由追加 `lethal=yes|no`。`knowledge.py` 提供默认配置，`selfcheck.py` 覆盖默认、关闭扩展和非致死回落。后续重点看 3—10 局的 `lethal=yes`、40—50 tick 间的 `play_card` 恢复率及无效等待；无恢复或战损恶化时将该配置设为 0 并转查 payload/API。
+
+### VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → `SELFCHECK OK`。
+
+retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
