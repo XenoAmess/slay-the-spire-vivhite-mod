@@ -1,0 +1,78 @@
+{
+  "asset": "CrimsonConservationLawPower",
+  "status": "static_accepted_runtime_integrated",
+  "runtime_eligible": true,
+  "paid_generation_count": 1,
+  "generation_contract": {
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": []
+  },
+  "archive_checks": {
+    "prompt_content_matches_request_payload": true,
+    "secret_markers_found": false,
+    "task_record_contains_only_task_id": true
+  },
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [174, 78, 674, 878],
+    "alpha_touches_edge": false,
+    "nonzero_alpha_pixels": 218734,
+    "opaque_pixels_alpha_gte_250": 200228
+  },
+  "prepared_contracts": {
+    "256": {
+      "format": "RGBA8",
+      "size": [256, 256],
+      "alpha_bbox": [57, 37, 141, 169],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "4D1AA376EC638A1156D3EDB4885557389FB992032E30B8281A17233C06E456C7"
+    },
+    "64": {
+      "format": "RGBA8",
+      "size": [64, 64],
+      "alpha_bbox": [13, 8, 38, 45],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "E15FD78C8EAC37412542949883E19207B8AAE96A984534D69728B30CC238B866"
+    },
+    "32": {
+      "format": "RGBA8",
+      "size": [32, 32],
+      "alpha_bbox": [6, 4, 19, 24],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "BF27CEFFECF0F0C9529BA59DAD996F17F69B176309F886E9C36C761039B7EA5A"
+    }
+  },
+  "visual_checks": {
+    "sourceover_black_256": "passed",
+    "sourceover_white_256": "passed",
+    "sourceover_game_indigo_256": "passed",
+    "sourceover_all_backgrounds_64": "passed",
+    "sourceover_all_backgrounds_32": "passed",
+    "external_visible_halo": false,
+    "rectangular_alpha_pollution": false,
+    "visible_edge_contact": false,
+    "low_alpha_assessment": "bounded hard-edge antialiasing only; no visible fringe on black, white, or game-indigo SourceOver",
+    "visual_centering": "passed; the compact emblem is centered with wide empty safety space",
+    "semantic_readability_256": "passed; exactly five rigid crimson-magenta faceted pigment crystals converge into one large gold-purple Strength star core with one thick short upward arrow",
+    "semantic_readability_64": "passed; five separate source facets, the Strength star, and the upward arrow remain distinct",
+    "semantic_readability_32": "passed; the five-source fan, dominant Strength star, and upward growth silhouette remain recognizable",
+    "forbidden_blood_liquid_or_wound_semantics": false,
+    "forbidden_person_mouth_or_body_part": false,
+    "forbidden_text_number_or_pseudoglyph": false,
+    "forbidden_particles_halo_shadow_or_long_trail": false
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair. The runtime file is a byte-for-byte copy of the accepted prepared 256x256 image.",
+  "hashes": {
+    "raw_output_sha256": "9B224664EB4B54A3150011166C01211E81352BA98DF20C2C79BF2F04DBB1826F",
+    "runtime_sha256": "4D1AA376EC638A1156D3EDB4885557389FB992032E30B8281A17233C06E456C7"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/powers/CrimsonConservationLawPower.png"
+}
