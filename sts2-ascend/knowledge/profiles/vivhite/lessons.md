@@ -8,3 +8,14 @@
 - 当前高价值卡牌：VIVHITE_CARD_TERMINATION_CONDITION(17分/3局)，VIVHITE_CARD_PARALLEL_STARFALL(17分/2局)，VIVHITE_CARD_CONVERGENCE_VERDICT(17分/2局)，VIVHITE_CARD_ASTRAL_MEASURE(17分/2局)
 - 策略进化：kill_bonus: 12.00 → 13.50（长战磨死（6回合），提升击杀奖励加快清场）；boss_atk_mult: 1.15 → 1.20（Boss 长战磨死（6回合），攻坚乘区提速）；Boss 长战磨死但高血进场（84%≥线 72%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.00 → 3.30（Boss 高血进场长战死（84%，6回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 4.00 → 4.50（Boss 高血进场长战死（6回合），缺口越深纠偏上限越高）；exploration_rate: 0.250 → 0.242（经验累积，探索衰减）
 - 生涯战绩：0/1 胜，当前目标进阶 0
+
+## 第 2 局复盘（2026-08-30 20:48）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_AXIOM_OF_LIFE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_ASTRAL_SEARCH, ULTIMATE_DEFEND, VIVHITE_CARD_LAW_OF_CONSERVATION
+- 本局遗物：GORGET
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血12; F8 Monster战 掉血3; F13 Unknown战 掉血14; F15 Monster战 掉血0; F17 Boss战 掉血57（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_TERMINATION_CONDITION(17分/4局)，VIVHITE_CARD_PARALLEL_STARFALL(17分/2局)，VIVHITE_CARD_ASTRAL_SEARCH(17分/2局)，VIVHITE_CARD_AXIOM_OF_LIFE(17分/2局)，VIVHITE_CARD_CONVERGENCE_VERDICT(17分/3局)
+- 当前低价值卡牌：VIVHITE_CARD_ASTRAL_MEASURE(17分/2局)，VIVHITE_CARD_CRIMSON_AREA(17分/2局)
+- 策略进化：kill_bonus: 13.50 → 16.25（长战磨死（11回合），提升击杀奖励加快清场）；boss_atk_mult: 1.20 → 1.25（Boss 长战磨死（11回合），攻坚乘区提速）；Boss 长战磨死但高血进场（86%≥线 72%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.30 → 3.60（Boss 高血进场长战死（86%，11回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 4.50 → 5.00（Boss 高血进场长战死（11回合），缺口越深纠偏上限越高）；exploration_rate: 0.242 → 0.235（经验累积，探索衰减）
+- 生涯战绩：0/2 胜，当前目标进阶 0
