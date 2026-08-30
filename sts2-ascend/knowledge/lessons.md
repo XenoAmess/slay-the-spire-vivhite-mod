@@ -8268,3 +8268,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.42 → 0.44（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
 - 生涯战绩：0/1152 胜，当前目标进阶 0
+
+## 第 1153 局复盘（2026-08-30 09:38）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：SHRUG_IT_OFF, WHIRLWIND, DISMANTLE, WHIRLWIND, PILLAGE, HEADBUTT, CRIMSON_MANTLE, VICIOUS, STONE_ARMOR, FLAME_BARRIER, MOLTEN_FIST, INFLAME, FIEND_FIRE, SHRUG_IT_OFF, DISMANTLE, VICIOUS
+- 本局遗物：MERCURY_HOURGLASS
+- 战斗记录：F17 Boss战 掉血27｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血5; F20 Monster战 掉血17; F21 Monster战 掉血12; F22 Monster战 掉血22; F25 Elite战 掉血48｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/32局)，PACTS_END(24分/124局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.44 → 0.47（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/1153 胜，当前目标进阶 0
