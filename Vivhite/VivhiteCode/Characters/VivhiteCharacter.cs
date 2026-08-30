@@ -13,13 +13,10 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     // 白绮主题色：素白微蓝。
     public static readonly Color ThemeColor = new(0.93f, 0.94f, 0.98f);
 
-    private const string SceneRoot = $"{Entry.ResPath}/scenes/characters";
-    private const string ImageRoot = $"{Entry.ResPath}/images/characters";
-    private const string CharacterScenePath = $"{SceneRoot}/Vivhite_character.tscn";
-    private const string EnergyCounterScenePath = $"{SceneRoot}/Vivhite_energy_counter.tscn";
-    private const string MerchantScenePath = $"{SceneRoot}/Vivhite_merchant.tscn";
-    private const string RestSiteScenePath = $"{SceneRoot}/Vivhite_rest_site.tscn";
-    private const string CharacterSelectBgScenePath = $"{SceneRoot}/Vivhite_character_select_bg.tscn";
+    private const string EnergyCounterScenePath =
+        $"{Entry.ResPath}/scenes/characters/Vivhite_energy_counter.tscn";
+
+    private static CharacterAssetProfile? _assetProfile;
 
     // 角色名称颜色。
     public override Color NameColor => ThemeColor;
@@ -32,34 +29,13 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     public override CharacterGender Gender => CharacterGender.Feminine;
 
     // 初始血量和金币。
-    public override int StartingHp => 75;
+    public override int StartingHp => 78;
+    public override int MaxEnergy => 3;
     public override int StartingGold => 99;
 
-    // CharacterAssetProfile 按类别拆分。你只写需要替换的部分，其他字段会保留回退。
-    // AssetProfile 只指定模板自带的静态占位资源；没有复制的音频、拖尾、转场等资源继续从占位角色回退。
-    public override CharacterAssetProfile AssetProfile => new(
-        Scenes: new CharacterSceneAssetSet(
-            // 人物模型 tscn 路径。
-            VisualsPath: CharacterScenePath,
-            // 能量表盘 tscn 路径。
-            EnergyCounterPath: EnergyCounterScenePath,
-            // 商店人物场景。
-            MerchantAnimPath: MerchantScenePath,
-            // 篝火休息场景。
-            RestSiteAnimPath: RestSiteScenePath),
-        Ui: new CharacterUiAssetSet(
-            // 人物头像路径。
-            IconTexturePath: $"{ImageRoot}/Vivhite_character_icon.png",
-            // 人物头像轮廓。
-            IconOutlineTexturePath: $"{ImageRoot}/Vivhite_character_icon_outline.png",
-            // 人物选择背景。
-            CharacterSelectBgPath: CharacterSelectBgScenePath,
-            // 人物选择图标。
-            CharacterSelectIconPath: $"{ImageRoot}/Vivhite_character_select.png",
-            // 人物选择图标-锁定状态。
-            CharacterSelectLockedIconPath: $"{ImageRoot}/Vivhite_character_select_locked.png",
-            // 地图上的角色标记图标、表情轮盘上的角色头像。
-            MapMarkerPath: $"{ImageRoot}/Vivhite_map_marker.png"));
+    // 独立角色直接派生自已注册的 Ironclad V3 replacement profile，避免维护第二份路径清单；
+    // 唯一覆盖项是白绮自己的能量计数器。
+    public override CharacterAssetProfile AssetProfile => _assetProfile ??= CreateSharedAssetProfile();
 
     // 某个字段没写时，RitsuLib 会从占位角色配置里补齐。
     public override string? PlaceholderCharacterId => "ironclad";
@@ -73,8 +49,25 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     // 自动转换人物场景，让你不需要手动挂脚本。复制即可。
     protected override NCreatureVisuals? TryCreateCreatureVisuals()
     {
+        var visualsPath = AssetProfile.Scenes?.VisualsPath;
+        if (string.IsNullOrWhiteSpace(visualsPath))
+        {
+            return null;
+        }
+
         return RitsuGodotNodeFactories.CreateFromScenePath<NCreatureVisuals>(
-            CharacterScenePath);
+            visualsPath);
+    }
+
+    private static CharacterAssetProfile CreateSharedAssetProfile()
+    {
+        var ironcladProfile = IroncladReplacementAssets.CreateProfile();
+
+        var scenes = ironcladProfile.Scenes is null
+            ? new CharacterSceneAssetSet(EnergyCounterPath: EnergyCounterScenePath)
+            : ironcladProfile.Scenes with { EnergyCounterPath = EnergyCounterScenePath };
+
+        return CharacterAssetProfiles.WithScenes(ironcladProfile, scenes);
     }
 
     // 攻击建筑师的攻击特效列表。

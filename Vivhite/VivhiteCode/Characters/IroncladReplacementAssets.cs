@@ -259,7 +259,7 @@ internal static class IroncladReplacementAssets
         }
     }
 
-    private static CharacterAssetProfile CreateProfile()
+    internal static CharacterAssetProfile CreateProfile()
     {
         return new CharacterAssetProfile(
             Scenes: new CharacterSceneAssetSet(
