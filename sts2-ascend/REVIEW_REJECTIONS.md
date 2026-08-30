@@ -217,3 +217,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-30 15:53:46 | 第 1190~1194 局 | `aae9b838` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `da1de64b` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 da1de64b 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-162004-1788078004752138900-ae654ba3 -->
 | 2026-08-30 16:20:04 | 第 988~1013 局 | `ae654ba3` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-162004-1788078004752138900-ae654ba3` | 复盘进程未成功完成 |
+<!-- rejection:20260830-164034-1788079234451935900-91976f47 -->
+| 2026-08-30 16:40:34 | 第 988~1013 局 | `91976f47` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-164034-1788079234451935900-91976f47` | 复盘进程未成功完成 |
