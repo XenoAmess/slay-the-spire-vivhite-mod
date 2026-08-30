@@ -5861,7 +5861,7 @@ def main() -> int:
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
     # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。
-    def combat_flip_probe(cap):
+    def combat_flip_probe(cap, slippery=False, slippery_guard=True):
         cap_ctx = type("CAPCTX", (), {
             "combat": {"comp_id": "CAP_BOSS", "node_type": "Boss"},
             "current_combat_is_hard": False, "credit_tags": []})()
@@ -5886,7 +5886,9 @@ def main() -> int:
                               "name": "攻坚巨兽", "current_hp": 185,
                               "max_hp": 341, "block": 0, "is_alive": True,
                               "is_hittable": True,
-                              "intents": [{"total_damage": 0}]}],
+                              "intents": [{"total_damage": 0}],
+                              "powers": ([{"id": "SLIPPERY_POWER", "amount": 8}]
+                                         if slippery else [])}],
             },
             "run": {"current_hp": 46, "max_hp": 80, "gold": 0,
                     "floor": 33, "deck": []},
@@ -5905,16 +5907,24 @@ def main() -> int:
         cap_pol._incoming_ema = 20.0
         cap_pol._esc_rounds = 2
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
+        cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         return cap_pol.decide(cap_state, cap_ctx)
 
     d_combat_cap = combat_flip_probe(1.5)
+    d_combat_slippery = combat_flip_probe(0.0, slippery=True)
+    assert "SLIPPERY_RACE_GUARD" in d_combat_slippery.reason, \
+        f"live Slippery did not veto a static Boss race flip: {d_combat_slippery.reason}"
     assert "JOINT_FLIP_TTK_CAP" in d_combat_cap.reason \
         and "斩杀竞速投影" in d_combat_cap.reason \
         and "防守线复核：联合能量对账" not in d_combat_cap.reason, \
         f"Boss 战斗端超限联合复核未被否决: {d_combat_cap.action}（{d_combat_cap.reason}）"
     d_combat_cap_rb = combat_flip_probe(0.0)
+    d_combat_slippery_rb = combat_flip_probe(
+        0.0, slippery=True, slippery_guard=False)
+    assert "SLIPPERY_RACE_GUARD" not in d_combat_slippery_rb.reason, \
+        f"Slippery guard rollback switch did not restore old path: {d_combat_slippery_rb.reason}"
     assert "防守线复核：联合能量对账" in d_combat_cap_rb.reason \
         and "JOINT_FLIP_TTK_CAP" not in d_combat_cap_rb.reason, \
         f"Boss 战斗端翻盘比上限=0 未严格回滚: {d_combat_cap_rb.action}（{d_combat_cap_rb.reason}）"

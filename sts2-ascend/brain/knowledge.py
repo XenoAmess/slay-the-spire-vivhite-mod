@@ -38,6 +38,7 @@ _READ_RETRIES = 8
 _READ_RETRY_BASE_SECONDS = 0.01
 
 DEFAULT_POLICY = {
+    "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic
     "boss_race_feasible_hp_buffer": 0.30,  # 前夜竞速预演可行侧生存余量；0 回落旧口径
     "boss_race_joint_flip_max_ttk_ratio": 1.5,  # 联合能量复核翻盘比上限（第1098~1110局批复盘）：
     # 击杀所需回合数超过 满血可存活回合数×此比值 时，前夜预演与 Boss 战斗端

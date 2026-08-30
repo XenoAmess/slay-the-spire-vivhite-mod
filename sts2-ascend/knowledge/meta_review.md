@@ -5907,3 +5907,27 @@ retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
 - 撤回：将 `boss_race_joint_flip_max_ttk_ratio` 设为 `0` 即恢复旧战斗端联合复核；
   代码级撤回删除 `_combat` 的 Boss 限制、对应 selfcheck 夹具和本节说明即可。无失败包
   lineage、无 replay target，本批不追加 `retry_resolution`。
+
+# 2026-08-30｜第1169~1172局复盘：Boss Slippery 联合复核闸门
+
+## 1. 证据与 HYPOTHESIS
+
+- 队列 requested=[1169,1170,1171,1172] 全部 exact 命中；完整失败链为 1172（243 条决策，F17 终局，`complete_persisted_chain=True`）。四局均在 F17 Boss 失败：掉血 -56/-35/-42/-49，分别在 T2/T3/T3/T2 判死后阵亡。
+- 1172-F17-T1 先出现 `防守线复核：联合能量对账，格挡3+输出13/回合`，并打出武装；同一条决策链随后记录目标为墨影幻灵、滑溜 8 层，打击有效伤害约 1、旋风斩约 1。静态联合火力与实战机制不一致。
+- 原生 v0.111.0 目录确认 `VANTOM` / `VantomBoss`，`SLIPPERY_POWER` 的描述是下一次失去生命值只失去 1 点；这解释了上述有效伤害观测。
+- HYPOTHESIS：`brain/policy.py::_race_joint_feasible` 是不读取敌方 powers 的静态模型；Boss 战斗端在 `race_lost` 后若得到正的联合结果，就会清除 `race_lost`，把已判死的竞速重新开放为防守节奏。只要实时存在 Slippery，这个翻转结果就不可信。
+- 可证伪条件：未来 3~10 场含实时 Slippery 的 Boss 战中，若闸门已记录但仍出现同一决策的防守线复核，或这些场次没有减少“静态翻转后继续消耗防守资源”的后段损失，则该假设不足以解释剩余故障。
+
+## 2. 最小生产改动
+
+- `brain/knowledge.py` 新增默认开启的 `boss_race_slippery_joint_guard`，提供明确的回滚锚点。
+- `brain/policy.py::_combat` 仅在 Boss、实时敌方 Slippery 层数大于 0、且静态联合复核返回可行时，将 `_feas` 置为 false，保留竞速状态并追加 `SLIPPERY_RACE_GUARD`。非 Boss、无 Slippery、复核本来不可行的路径不变；前夜预演和一般卡牌的 Slippery 逐段折算未被扩大修改。
+- `brain/selfcheck.py` 增加开启与 `False` 回滚两条实战形状探针；当前失败包没有可合入的 candidate patch，只有临时 `.review-cache/python-startup/sitecustomize.py`，所以本次是在当前 HEAD 重新实现有效行为。
+
+## 3. 验证、Expected signal 与回滚
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：**SELFCHECK OK**；`git diff --check` 通过。
+- Expected signal：下 3~10 场记录 `SLIPPERY_RACE_GUARD` 的次数、触发时的 Slippery 层数、同一决策是否仍含防守线复核、Boss race audit 的判死/胜负以及 Boss 战损。闸门触发的决策不应再清除 `race_lost`。
+- 若出现可复核的“闸门触发但实际可稳定获胜、且防守线本应被保留”，或 3 场以上触发后后段战损与静态翻转基线无改善，先将 `boss_race_slippery_joint_guard` 设为 `False` 回滚，再用该批观测重估机制模型；不凭单场随机结果扩大范围。
+
+retry_resolution: 20260830-134703-1788068823172152800-fa6604bd integrated

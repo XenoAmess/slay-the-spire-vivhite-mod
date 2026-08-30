@@ -2870,6 +2870,23 @@ class Policy:
                         _feas, _mix = self._race_joint_feasible(
                             _cr_deck, enemy_hp_total, _feas_fire, my_hp,
                             _def_margin)
+                        # _race_joint_feasible is intentionally static and does
+                        # not simulate enemy powers.  A live Boss Slippery stack
+                        # therefore makes its positive joint result optimistic:
+                        # do not reopen a race already judged lost by the combat
+                        # projection.  The switch is a narrow rollback anchor.
+                        _slippery_layers = sum(
+                            self._enemy_slippery_stack(e)
+                            for e in enemies if isinstance(e, dict))
+                        _slippery_guard = (
+                            bool(pol.get("boss_race_slippery_joint_guard", True))
+                            and cctx.get("node_type") == "Boss"
+                            and _slippery_layers > 0.0)
+                        if _feas and _slippery_guard:
+                            _feas = False
+                            danger_note += (
+                                f"；静态联合复核未扣除敌方滑溜{_slippery_layers:g}层的"
+                                "逐次伤害上限，维持竞速（SLIPPERY_RACE_GUARD）")
                         # Boss 战斗端的防守复核必须与前夜预演共用翻盘比上限。
                         # 否则同一场先被 JOINT_FLIP_TTK_CAP 判定为不可翻盘，
                         # 进入战斗后又会被静态联合分配重新打开；1168-F33
