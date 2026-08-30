@@ -30,3 +30,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(17分/2局)，VIVHITE_CARD_ASTRAL_SEARCH(17分/2局)，VIVHITE_CARD_AXIOM_OF_LIFE(17分/2局)
 - 策略进化：kill_bonus: 16.25 → 18.25（长战磨死（8回合），提升击杀奖励加快清场）；boss_atk_mult: 1.25 → 1.30（Boss 长战磨死（8回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 72%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 3.60 → 3.90（Boss 高血进场长战死（100%，8回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 5.00 → 5.50（Boss 高血进场长战死（8回合），缺口越深纠偏上限越高）；kill_race_prior_eff: 0.55 → 0.58（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；exploration_rate: 0.235 → 0.228（经验累积，探索衰减）
 - 生涯战绩：0/3 胜，当前目标进阶 0
+
+## 第 4 局复盘（2026-08-30 23:09）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_INVARIANT, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_PROOF_OF_TERMINATION, PANIC_BUTTON, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_COMPOSITE_COLOR_FIELD, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_BACKTRACKING_SPELL
+- 本局遗物：BOWLER_HAT, 铜质鳞片, 准备背包, 药水腰带, CENTENNIAL_PUZZLE
+- 战斗记录：F21 Monster战 掉血0; F22 Monster战 掉血13; F25 Elite战 掉血22; F29 Monster战 掉血17; F30 Monster战 掉血28; F33 Boss战 掉血46｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_HEURISTIC_SHIELD(48分/2局)，VIVHITE_CARD_PERFECT_SYNTHESIS(48分/2局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(44分/4局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(40分/2局)，VIVHITE_CARD_PROOF_OF_TERMINATION(40分/2局)
+- 当前低价值卡牌：VIVHITE_CARD_ASTRAL_SEARCH(17分/2局)，VIVHITE_CARD_AXIOM_OF_LIFE(17分/2局)，VIVHITE_CARD_ASTRAL_MEASURE(17分/2局)
+- 策略进化：kill_bonus: 18.25 → 19.75（长战磨死（6回合），提升击杀奖励加快清场）；boss_atk_mult: 1.30 → 1.35（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.72 → 0.74（Boss 低血进场磨死（进场 59%），入场血量要求线上调）；kill_race_prior_eff: 0.58 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；exploration_rate: 0.228 → 0.221（经验累积，探索衰减）
+- 生涯战绩：0/4 胜，当前目标进阶 0
