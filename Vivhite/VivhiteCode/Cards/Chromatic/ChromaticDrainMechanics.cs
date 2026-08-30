@@ -52,7 +52,7 @@ public static class ChromaticDrainMechanics
             return healing;
         }
 
-        ChromaticTurnHealing.Mark(context.Recipient);
+        ChromaticTurnHealing.ObserveCurrentHp(context.Recipient);
 
         var blockGained = await GainConservationBlockAsync(context, actualHealing);
         var strengthGained = await GainConservationStrengthAsync(context, actualHealing);

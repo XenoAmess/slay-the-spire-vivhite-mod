@@ -48,9 +48,9 @@ public abstract class ChromaticCard : VivhiteLifeCalculationCard
 
     public override Task AfterCurrentHpChanged(Creature creature, decimal delta)
     {
-        if (delta > 0m && ReferenceEquals(creature, Owner.Creature))
+        if (ReferenceEquals(creature, Owner.Creature))
         {
-            ChromaticTurnHealing.Mark(creature);
+            ChromaticTurnHealing.ObserveCurrentHp(creature);
         }
 
         return Task.CompletedTask;
@@ -64,7 +64,14 @@ public abstract class ChromaticCard : VivhiteLifeCalculationCard
     {
         if (participants.Any(creature => ReferenceEquals(creature, Owner.Creature)))
         {
-            ChromaticTurnHealing.Reset(Owner.Creature);
+            var playerCombatState = Owner.PlayerCombatState;
+            if (playerCombatState is not null)
+            {
+                ChromaticTurnHealing.BeginTurn(
+                    combatState,
+                    Owner.Creature,
+                    playerCombatState.TurnNumber);
+            }
         }
 
         return Task.CompletedTask;
@@ -112,33 +119,100 @@ public abstract class ChromaticCard : VivhiteLifeCalculationCard
 }
 
 /// <summary>
-/// A weak-keyed turn fact used by Complementary Afterimage. Every C-suit card listens for the
-/// owner's native HP-change hook, so ordinary healing, kill healing, and Drain all count.
+/// Tracks the owner's real HP movement for Complementary Afterimage. CreatureCmd.Heal sends its
+/// requested amount to AfterCurrentHpChanged even when no HP was restored, so the hook delta is
+/// deliberately ignored. CombatState is the outer weak key, preventing a player's persistent
+/// Creature from carrying this turn's fact into the next combat.
 /// </summary>
 public static class ChromaticTurnHealing
 {
-    private sealed class State
+    private sealed class CreatureState
     {
+        public bool IsInitialized;
+        public int PreviousHp;
         public bool Increased;
+        public int? TurnNumber;
     }
 
-    private static readonly ConditionalWeakTable<Creature, State> States = new();
+    private sealed class CombatHealingState
+    {
+        public ConditionalWeakTable<Creature, CreatureState> Creatures { get; } = new();
+    }
+
+    private static readonly ConditionalWeakTable<ICombatState, CombatHealingState> CombatStates =
+        new();
 
     public static bool HasIncreased(Creature creature)
     {
         ArgumentNullException.ThrowIfNull(creature);
-        return States.TryGetValue(creature, out var state) && state.Increased;
+        var combatState = creature.CombatState;
+        if (combatState is null)
+        {
+            return false;
+        }
+
+        var state = GetState(combatState, creature);
+        ObserveCurrentHp(state, creature.CurrentHp);
+        return state.Increased;
     }
 
-    public static void Mark(Creature creature)
+    public static void ObserveCurrentHp(Creature creature)
     {
         ArgumentNullException.ThrowIfNull(creature);
-        States.GetOrCreateValue(creature).Increased = true;
+        var combatState = creature.CombatState;
+        if (combatState is null)
+        {
+            return;
+        }
+
+        ObserveCurrentHp(GetState(combatState, creature), creature.CurrentHp);
     }
 
-    public static void Reset(Creature creature)
+    public static void BeginTurn(
+        ICombatState combatState,
+        Creature creature,
+        int turnNumber)
     {
+        ArgumentNullException.ThrowIfNull(combatState);
         ArgumentNullException.ThrowIfNull(creature);
-        States.GetOrCreateValue(creature).Increased = false;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(turnNumber);
+
+        var state = GetState(combatState, creature);
+        if (state.TurnNumber == turnNumber)
+        {
+            return;
+        }
+
+        state.IsInitialized = true;
+        state.PreviousHp = creature.CurrentHp;
+        state.Increased = false;
+        state.TurnNumber = turnNumber;
+    }
+
+    private static CreatureState GetState(
+        ICombatState combatState,
+        Creature creature)
+    {
+        return CombatStates
+            .GetOrCreateValue(combatState)
+            .Creatures
+            .GetOrCreateValue(creature);
+    }
+
+    private static void ObserveCurrentHp(CreatureState state, int currentHp)
+    {
+        if (!state.IsInitialized)
+        {
+            state.IsInitialized = true;
+            state.PreviousHp = currentHp;
+            return;
+        }
+
+        if (currentHp > state.PreviousHp)
+        {
+            state.Increased = true;
+        }
+
+        state.PreviousHp = currentHp;
     }
 }
