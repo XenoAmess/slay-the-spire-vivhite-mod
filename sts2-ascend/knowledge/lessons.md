@@ -9126,3 +9126,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.50 → 0.51（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）
 - 生涯战绩：0/1230 胜，当前目标进阶 0
+
+## 第 1231 局复盘（2026-08-30 21:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：DISMANTLE, SECOND_WIND, BLUDGEON, SPITE, CINDER, HOWL_FROM_BEYOND, UPPERCUT, UNRELENTING, CINDER, ULTIMATE_STRIKE, COLOSSUS
+- 本局遗物：MANGO
+- 战斗记录：F6 Monster战 掉血6; F9 Unknown战 掉血24; F12 Monster战 掉血7; F14 Monster战 掉血4; F15 Monster战 掉血6; F17 Boss战 掉血59｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34局)，BRAND(25分/3局)，FIEND_FIRE(25分/46局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1231 胜，当前目标进阶 0
