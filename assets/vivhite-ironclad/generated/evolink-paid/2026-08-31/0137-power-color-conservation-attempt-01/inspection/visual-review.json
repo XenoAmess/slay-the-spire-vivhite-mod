@@ -1,0 +1,81 @@
+{
+  "asset": "ColorConservationPower",
+  "semantic_name_zh": "色彩守恒",
+  "generation_id": "0137",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_accepted_pending_game_validation",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/ColorConservationPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, or animation frame",
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "E8D089A01E59703FF93B8DD5394A6ED33E6A1E8BEF624620277566C862633EAA",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [31, 19, 931, 965],
+    "nonzero_alpha_pixels": 266825,
+    "opaque_pixels_alpha_at_least_250": 252996,
+    "visible_alpha_touches_edge": false
+  },
+  "prepared_outputs": {
+    "256": {
+      "path": "256/prepared-256.png",
+      "alpha_bbox": [19, 51, 213, 142],
+      "corner_alpha": [0, 0, 0, 0]
+    },
+    "64": {
+      "path": "64/prepared-64.png",
+      "alpha_bbox": [8, 14, 47, 33],
+      "corner_alpha": [0, 0, 0, 0]
+    },
+    "32": {
+      "path": "32/prepared-32.png",
+      "alpha_bbox": [4, 6, 23, 19],
+      "corner_alpha": [0, 0, 0, 0]
+    }
+  },
+  "visual_review": {
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "semantic_result": "The screen-left purple-gold segmented attack crystal points inward into one central three-sector violet/azure/gold wheel. Exactly three separate blue-white shield faces emerge on screen-right. The left and right quantities and visual mass read as an equal recovery-to-Block conversion.",
+    "small_size_result": "At 64px the three crystal units, three-color wheel, and all three shields remain individually clear. At 32px the inward flow, center wheel, and three-shield cluster remain distinguishable without relying on text.",
+    "forbidden_content": {
+      "blood_or_red_liquid": false,
+      "person_or_body_part": false,
+      "text_or_glyph": false,
+      "closed_margin_orb": false,
+      "particles_fog_shadow_or_long_trail": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/ColorConservationPower.png",
+    "sha256": "4D0060FE2BBD58B69A0126D29E198FE5786B5873FE308CB972BDA4C59E03929B",
+    "byte_identical_to_prepared_256": true
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, or creative post-processing. The runtime file is a byte-for-byte copy of the accepted prepared 256x256 image.",
+  "retry_decision": "Accepted on attempt 1 of 8. Stop generation because the consumer, Alpha, SourceOver, semantic, and actual-size gates all pass."
+}
