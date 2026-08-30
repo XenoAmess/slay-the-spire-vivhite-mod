@@ -1,0 +1,97 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+  "card_type": "RecurrentStarlight",
+  "card_name_zh": "递推星芒",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Attack",
+    "rarity": "Common",
+    "cough": 4,
+    "base_damage": 13,
+    "lethal_draw": 4,
+    "upgrade_damage": 17
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "Opaque scene generation used the built-in Codex-native path. No EvoLink endpoint, reference image, or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "E7B5FC695F514B3C396848F82416E57BBA2D7977507B5EA432D91FEE9E3DF34F",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054b2-dd82-7753-95ca-6e1254ea0053/exec-aee123f7-9e19-42c2-a05f-030ed7084f05.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/recurrent-starlight-attempt-01/original.png",
+  "original_sha256": "1C9088FD9464C88ABEA94A0FCDCC486E193FCDCC0D158461126FD87CB22A9152",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/RecurrentStarlight.png",
+  "runtime_sha256": "8C211093DC6FA536BF2B0B5F26F043ADAAD947DEE71C1A4A044EB9CAF0B62121",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-stdout.log",
+    "inspection/prepare-stderr.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_red_crimson_liquid_blood_or_mouth_magic": true,
+    "no_text_weapon_enemy_second_character_or_split_panel": true,
+    "recurrent_projectile_growth_readable": true,
+    "terminal_starburst_readable": true,
+    "lethal_draw_star_pages_readable": true,
+    "open_asymmetric_directional_attack_read": true,
+    "no_closed_shield_or_symmetric_ability_read": true,
+    "100x76_color_and_grayscale_attack_readable": true
+  },
+  "main_agent_visual_review": {
+    "status": "passed",
+    "reviewed_asset": "Vivhite/Vivhite/images/cards/RecurrentStarlight.png",
+    "conclusion": "The staged recurrent starlight attack and lethal card-draw reward are visually clear in the runtime image.",
+    "remaining_boundary": "Real Vulkan card-frame, hand-size, and enlarged-view validation remain pending."
+  },
+  "status": "static_accepted_main_agent_reviewed",
+  "acceptance_summary": "Vivhite launches a clean left-to-right sequence of increasingly large white-blue and violet stars. The largest terminal burst breaks an abstract geometric target and releases a fan of star-pages, so damage, lethal finish, and card draw remain legible as one fast attack even in grayscale and at 100x76. The full opaque city causeway supplies foreground, middle ground, and far background, with no red or crimson artifact, mouth-emitted element, weapon, text, second character, or defensive shell."
+}
