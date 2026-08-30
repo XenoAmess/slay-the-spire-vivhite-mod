@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using System.Runtime.ExceptionServices;
 using Vivhite.Powers;
 
 namespace Vivhite.Core;
@@ -226,16 +227,61 @@ public static class InfiniteDrain
         CardPlay? cardPlay = null)
     {
         ArgumentNullException.ThrowIfNull(attackCommand);
-        var completed = await attackCommand.Execute(choiceContext);
-        return await CreateAggregate()
-            .AddAttackCommand(completed)
-            .ResolveAsync(
-                choiceContext,
-                recipient,
-                DrainRate.FromPowers(recipient, cardPercent),
-                recoveryHandler,
-                completed.Attacker ?? recipient,
-                cardSource,
-                cardPlay);
+
+        using var deathScope = EnemyDeathTriggerScope.Enter();
+        InfiniteDrainResult? result = null;
+        ExceptionDispatchInfo? attackOrDrainFailure = null;
+        try
+        {
+            var completed = await attackCommand.Execute(choiceContext);
+            result = await CreateAggregate()
+                .AddAttackCommand(completed)
+                .ResolveAsync(
+                    choiceContext,
+                    recipient,
+                    DrainRate.FromPowers(recipient, cardPercent),
+                    recoveryHandler,
+                    completed.Attacker ?? recipient,
+                    cardSource,
+                    cardPlay);
+        }
+        catch (Exception exception)
+        {
+            attackOrDrainFailure = ExceptionDispatchInfo.Capture(exception);
+        }
+
+        ExceptionDispatchInfo? deferredDeathFailure = null;
+        try
+        {
+            // Native damage has already completed (including Kill/AfterDeath), but Vivhite's own
+            // listener effects remain queued. Drain and all recovery-handler conversions therefore
+            // settle before the queue is flushed and before the card resumes its Fatal branch.
+            await deathScope.FlushAsync();
+        }
+        catch (Exception exception)
+        {
+            deferredDeathFailure = ExceptionDispatchInfo.Capture(exception);
+        }
+
+        if (attackOrDrainFailure is not null)
+        {
+            if (deferredDeathFailure is not null)
+            {
+                throw new AggregateException(
+                    "The attack or Drain resolution and a deferred enemy-death listener both failed.",
+                    attackOrDrainFailure.SourceException,
+                    deferredDeathFailure.SourceException);
+            }
+
+            attackOrDrainFailure.Throw();
+        }
+
+        if (deferredDeathFailure is not null)
+        {
+            deferredDeathFailure.Throw();
+        }
+
+        return result ?? throw new InvalidOperationException(
+            "A wrapped attack completed without producing a Drain result.");
     }
 }

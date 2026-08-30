@@ -32,8 +32,13 @@ public abstract class AnyEnemyDeathPower : VivhiteCounterPower
             return Task.CompletedTask;
         }
 
-        Flash();
-        return OnAnyEnemyDeath(choiceContext, deathEvent);
+        if (EnemyDeathTriggerScope.TryEnqueue(
+                () => InvokeEnemyDeathAsync(choiceContext, deathEvent)))
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeEnemyDeathAsync(choiceContext, deathEvent);
     }
 
     public sealed override Task AfterCurrentHpChanged(Creature creature, decimal delta)
@@ -45,4 +50,12 @@ public abstract class AnyEnemyDeathPower : VivhiteCounterPower
     protected abstract Task OnAnyEnemyDeath(
         PlayerChoiceContext choiceContext,
         EnemyDeathEvent deathEvent);
+
+    private Task InvokeEnemyDeathAsync(
+        PlayerChoiceContext choiceContext,
+        EnemyDeathEvent deathEvent)
+    {
+        Flash();
+        return OnAnyEnemyDeath(choiceContext, deathEvent);
+    }
 }
