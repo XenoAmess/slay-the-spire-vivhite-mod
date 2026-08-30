@@ -220,7 +220,7 @@ public sealed class ScaleTransformation : ConservationCard
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
         var attack = await AttackAsync(choiceContext, cardPlay);
-        if (DirectlyKilled(attack, cardPlay.Target))
+        if (DirectlyKilled(attack))
         {
             await DimensionUp.ApplyAsync(
                 choiceContext,

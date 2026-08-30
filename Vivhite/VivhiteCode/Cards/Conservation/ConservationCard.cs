@@ -1,7 +1,6 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.ValueProps;
@@ -70,30 +69,34 @@ public abstract class ConservationCard : VivhiteLifeCalculationCard
             fast);
     }
 
-    protected async Task<AttackCommand> AttackAsync(
+    /// <summary>
+    /// Executes every A-suit Attack through the shared card-level Drain aggregator. A card Drain
+    /// rate of zero still includes all global and this-turn Drain powers exactly once.
+    /// </summary>
+    protected Task<InfiniteDrainResult> AttackAsync(
         PlayerChoiceContext choiceContext,
         CardPlay cardPlay)
     {
         ArgumentNullException.ThrowIfNull(cardPlay.Target);
-        return await DamageCmd.Attack(DynamicVars.Damage.BaseValue)
+        var attack = DamageCmd.Attack(DynamicVars.Damage.BaseValue)
             .FromCard(this, cardPlay)
-            .Targeting(cardPlay.Target)
-            .Execute(choiceContext);
+            .Targeting(cardPlay.Target);
+
+        return VivhiteCardRules.ExecuteDrainAttackAsync(
+            choiceContext,
+            attack,
+            this,
+            cardPlay,
+            cardPercent: 0);
     }
 
     /// <summary>
-    /// A lethal clause belongs only to the completed attack command produced by this card.
-    /// Deaths from other commands or previously dead targets do not qualify.
+    /// A-suit lethal attacks are single-target, so the aggregate reports one enemy kill exactly
+    /// when this card's completed AttackCommand directly killed its target.
     /// </summary>
-    protected static bool DirectlyKilled(AttackCommand attack, Creature target)
+    protected static bool DirectlyKilled(InfiniteDrainResult result)
     {
-        ArgumentNullException.ThrowIfNull(attack);
-        ArgumentNullException.ThrowIfNull(target);
-
-        return attack.Results
-            .SelectMany(static hit => hit)
-            .Any(result =>
-                ReferenceEquals(result.Receiver, target) &&
-                result.WasTargetKilled);
+        ArgumentNullException.ThrowIfNull(result);
+        return result.Damage.EnemyKills > 0;
     }
 }
