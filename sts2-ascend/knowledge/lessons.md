@@ -8983,3 +8983,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1217 胜，当前目标进阶 0
+
+## 第 1218 局复盘（2026-08-30 18:30）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：FLAME_BARRIER, INFERNAL_BLADE, SHRUG_IT_OFF, ROLLING_BOULDER, STONE_ARMOR, MOLTEN_FIST, FLAME_BARRIER, INFLAME, STOMP, FLASH_OF_STEEL
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Unknown战 掉血0; F6 Monster战 掉血27; F9 Elite战 掉血77｜竞速审计：T3判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34局)，BRAND(25分/3局)，FIEND_FIRE(25分/45局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：精英战阵亡但满血线进场（96%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/1218 胜，当前目标进阶 0
