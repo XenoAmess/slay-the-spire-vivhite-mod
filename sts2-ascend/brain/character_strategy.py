@@ -122,10 +122,10 @@ class CardMechanics:
     """Machine-readable base mechanics for one card.
 
     ``energy`` is either a non-negative integer or ``"X"``.  ``drain_percent``
-    stores the integer printed value or coefficient after each base/upgrade value
-    is independently scaled with ``ceil(old / 5)``; ``drain_percent_mode``
-    explains whether it is flat, temporary, global, per-Margin, or per-X.  No
-    percentage field has an upper bound.
+    stores the final integer printed value or coefficient after the complete
+    balance sequence (``ceil(old / 5)`` followed by the approved doublings);
+    ``drain_percent_mode`` explains whether it is flat, temporary, global,
+    per-Margin, or per-X.  No percentage field has an upper bound.
     """
 
     energy: int | str
@@ -139,6 +139,7 @@ class CardMechanics:
     drain_percent: int = 0
     drain_percent_mode: str = "flat"
     kill_heal: int = 0
+    death_heal_percent: int = 0
     kill_draw: int = 0
     kill_energy: int = 0
     draw: int = 0
@@ -161,6 +162,7 @@ class CardMechanics:
             "margin_gain",
             "max_hp_growth",
             "kill_heal",
+            "death_heal_percent",
             "kill_draw",
             "kill_energy",
             "draw",
@@ -241,6 +243,7 @@ def _card(
         drain: int = 0,
         drain_mode: str = "flat",
         kill_heal: int = 0,
+        death_heal_percent: int = 0,
         kill_draw: int = 0,
         kill_energy: int = 0,
         draw: int = 0,
@@ -269,6 +272,7 @@ def _card(
             drain_percent=drain,
             drain_percent_mode=drain_mode,
             kill_heal=kill_heal,
+            death_heal_percent=death_heal_percent,
             kill_draw=kill_draw,
             kill_energy=kill_energy,
             draw=draw,
@@ -288,7 +292,7 @@ _BASIC_CARDS = (
           "attack", "basic", HYBRID, energy=1, life=2, damage=10, hits=1),
     _card("CLOSED_DOMAIN_MAPPING", "Closed-Domain Mapping", "闭域映射",
           "skill", "basic", HYBRID, energy=1, life=2, block=9),
-    _card("VIVHITE_TRANSFORMATION", "Transformation Formula: Vivhite",
+    _card("VIVHITE_TRANSFORMATION", "Vivhite's Transformation Formula",
           "白绮的变身式", "ability", "basic", HYBRID, energy=1, life=4,
           growth=2, effects=("gain_1_strength", "gain_1_dexterity")),
 )
@@ -355,7 +359,7 @@ _CONSERVATION_CARDS = (
 _RECURSIVE_CARDS = (
     _card("RECURRENT_STARLIGHT", "Recurrent Starlight", "递推星芒", "attack",
           "common", RECURSIVE_ASTRAL, energy=1, life=4, damage=13, hits=1,
-          kill_draw=2, lethal=True),
+          kill_draw=4, lethal=True),
     _card("TERMINATION_CONDITION", "Termination Condition", "终止条件", "attack",
           "common", RECURSIVE_ASTRAL, energy=1, life=4, damage=12, hits=1,
           kill_heal=5, lethal=True),
@@ -363,10 +367,10 @@ _RECURSIVE_CARDS = (
           "common", RECURSIVE_ASTRAL, energy=1, life=6, damage=6, hits=2,
           all_enemies=True),
     _card("ASTRAL_SEARCH", "Astral Search", "星图检索", "skill", "common",
-          RECURSIVE_ASTRAL, energy=0, life=2, draw=2,
-          effects=("discard_1",)),
+          RECURSIVE_ASTRAL, energy=0, life=2, draw=4,
+          effects=("discard_2",)),
     _card("HEURISTIC_SHIELD", "Heuristic Shield", "启发式护盾", "skill",
-          "common", RECURSIVE_ASTRAL, energy=1, life=2, block=8, draw=1),
+          "common", RECURSIVE_ASTRAL, energy=1, life=2, block=8, draw=2),
     _card("SUCCESSOR_FORMULA", "Successor Formula", "后继式", "attack", "common",
           RECURSIVE_ASTRAL, energy=0, life=4, damage=7, hits=1,
           kill_energy=1, lethal=True),
@@ -375,25 +379,26 @@ _RECURSIVE_CARDS = (
           effects=("return_attack_from_discard", "returned_card_free_this_turn")),
     _card("CONVERGENCE_VERDICT", "Convergence Verdict", "收敛判决", "attack",
           "uncommon", RECURSIVE_ASTRAL, energy=2, life=8, damage=27, hits=1,
-          kill_draw=3, kill_energy=1, lethal=True),
+          kill_draw=6, kill_energy=1, lethal=True),
     _card("DIVIDE_AND_CONQUER_CIRCLE", "Divide-and-Conquer Circle", "分治法阵",
-          "skill", "uncommon", RECURSIVE_ASTRAL, energy=1, life=4, draw=2,
+          "skill", "uncommon", RECURSIVE_ASTRAL, energy=1, life=4, draw=4,
           effects=("4_spell_damage_per_attack_drawn_to_random_enemy",)),
     _card("ASTRAL_PURSUIT", "Astral Pursuit", "星算追猎", "ability", "uncommon",
-          RECURSIVE_ASTRAL, energy=1, life=6, kill_draw=1,
+          RECURSIVE_ASTRAL, energy=1, life=6, kill_draw=2,
           effects=("triggers_on_any_enemy_death",)),
     _card("PREFETCH_FUTURE", "Prefetch Future", "预取未来", "skill", "uncommon",
-          RECURSIVE_ASTRAL, energy=1, life=4, draw=3,
+          RECURSIVE_ASTRAL, energy=1, life=4, draw=6,
           effects=("put_1_hand_card_on_draw_pile_top",)),
     _card("INDUCTIVE_CIRCLE", "Inductive Circle", "归纳法阵", "ability",
-          "uncommon", RECURSIVE_ASTRAL, energy=2, life=8, kill_heal=2,
-          effects=("increase_immediate_enemy_death_heal",)),
+          "uncommon", RECURSIVE_ASTRAL, energy=1, life=8,
+          death_heal_percent=50,
+          effects=("increase_immediate_enemy_death_heal_percent",)),
     _card("EVENT_LOOP", "Event Loop", "事件循环", "skill", "uncommon",
           RECURSIVE_ASTRAL, energy=1, life=6, exhaust=True,
           effects=("copy_non_ability_played_this_turn", "copy_free_this_turn")),
     _card("PROOF_OF_TERMINATION", "Proof of Termination", "终止证明", "attack",
           "rare", RECURSIVE_ASTRAL, energy=2, life=10, damage=20, hits=1,
-          all_enemies=True, kill_draw=2, kill_energy=1, lethal=True,
+          all_enemies=True, kill_draw=4, kill_energy=1, lethal=True,
           exhaust=True),
     _card("DYNAMIC_PROGRAMMING", "Dynamic Programming", "动态规划", "ability",
           "rare", RECURSIVE_ASTRAL, energy=2, life=10, growth=2,
@@ -401,10 +406,10 @@ _RECURSIVE_CARDS = (
                    "next_attack_each_hit_gains_all_calculation_then_reset")),
     _card("INFINITE_STAR_SEQUENCE", "Infinite Star Sequence", "无穷星序", "skill",
           "rare", RECURSIVE_ASTRAL, energy=1, life=8, exhaust=True,
-          effects=("draw_cards_equal_cards_previously_played_this_turn",
+          effects=("draw_2_cards_per_card_previously_played_this_turn",
                    "gain_1_margin_per_card_actually_drawn")),
     _card("OPTIMAL_ALGORITHM", "Optimal Algorithm", "最优算法", "ability", "rare",
-          RECURSIVE_ASTRAL, energy=3, life=14, kill_heal=3, kill_draw=2,
+          RECURSIVE_ASTRAL, energy=3, life=14, kill_heal=3, kill_draw=4,
           kill_energy=1, effects=("triggers_on_any_enemy_death",)),
 )
 
@@ -412,78 +417,78 @@ _RECURSIVE_CARDS = (
 # C suit: Crimson Integral.
 _CRIMSON_CARDS = (
     _card("CRIMSON_AREA", "Crimson Area", "绯色面积", "attack", "common",
-          CRIMSON_INTEGRAL, energy=1, life=4, damage=14, hits=1, drain=4),
+          CRIMSON_INTEGRAL, energy=1, life=4, damage=14, hits=1, drain=16),
     _card("TRICHROMATIC_WALTZ", "Trichromatic Waltz", "三色轮舞", "attack",
           "common", CRIMSON_INTEGRAL, energy=1, life=6, damage=4, hits=3,
-          drain=3),
+          drain=12),
     _card("COMPOSITE_COLOR_WHEEL", "Composite Color Wheel", "综合色轮", "attack",
           "common", CRIMSON_INTEGRAL, energy=2, life=6, damage=10, hits=1,
-          all_enemies=True, drain=5),
+          all_enemies=True, drain=20),
     _card("DIFFERENTIAL_SAMPLING", "Differential Sampling", "微分取样", "attack",
           "common", CRIMSON_INTEGRAL, energy=0, life=2, damage=3, hits=2,
-          drain=2),
+          drain=8),
     _card("CHIAROSCURO", "Chiaroscuro", "明暗对照", "skill", "common",
-          CRIMSON_INTEGRAL, energy=1, life=4, block=10, drain=5,
+          CRIMSON_INTEGRAL, energy=1, life=4, block=10, drain=20,
           drain_mode="next_attack_bonus",
           effects=("next_attack_gains_drain_percent",)),
     _card("NEGATIVE_SPACE", "Negative Space", "负空间", "skill", "common",
           CRIMSON_INTEGRAL, energy=0, life=4, margin=1,
           effects=("apply_2_vulnerable",)),
     _card("SPECTRAL_INTEGRAL", "Spectral Integral", "光谱积分", "ability",
-          "uncommon", CRIMSON_INTEGRAL, energy=1, life=6, drain=2,
+          "uncommon", CRIMSON_INTEGRAL, energy=1, life=6, drain=8,
           drain_mode="global_combat"),
     _card("GOLDEN_COMPOSITION", "Golden Composition", "黄金构图", "attack",
           "uncommon", CRIMSON_INTEGRAL, energy=2, life=8, damage=8, hits=3,
-          drain=5),
+          drain=20),
     _card("RIEMANN_STAR_ARRAY", "Riemann Star Array", "黎曼星阵", "attack",
           "uncommon", CRIMSON_INTEGRAL, energy=1, life=6, damage=4,
-          drain=3, drain_mode="flat",
+          drain=12, drain_mode="flat",
           effects=("one_hit_per_current_hand_card",)),
     _card("CHROMATIC_TRANSITION", "Chromatic Transition", "色阶过渡", "skill",
-          "uncommon", CRIMSON_INTEGRAL, energy=1, life=4, drain=2,
-          drain_mode="global_combat", draw=1, exhaust=True),
+          "uncommon", CRIMSON_INTEGRAL, energy=1, life=4, drain=8,
+          drain_mode="global_combat", draw=2, exhaust=True),
     _card("COLOR_CONSERVATION", "Color Conservation", "色彩守恒", "ability",
-          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8,
+          "uncommon", CRIMSON_INTEGRAL, energy=0, life=8,
           effects=("gain_block_equal_actual_drain_healing",)),
     _card("COMPOSITE_COLOR_FIELD", "Composite Color Field", "综合色域", "skill",
-          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8, drain=2,
+          "uncommon", CRIMSON_INTEGRAL, energy=2, life=8, drain=8,
           drain_mode="global_combat", exhaust=True,
           effects=("apply_2_vulnerable_to_all_enemies",)),
     _card("COMPLEMENTARY_AFTERIMAGE", "Complementary Afterimage", "补色残像",
           "attack", "uncommon", CRIMSON_INTEGRAL, energy=1, life=6,
-          damage=12, hits=1, drain=4,
+          damage=12, hits=1, drain=16,
           effects=("repeat_if_current_hp_increased_this_turn",)),
     _card("DEFINITE_CRIMSON_INTEGRAL", "Definite Crimson Integral", "绯红定积分",
           "attack", "rare", CRIMSON_INTEGRAL, energy=2, life=12, damage=32,
-          hits=1, drain=12),
+          hits=1, drain=48),
     _card("CRIMSON_CONSERVATION_LAW", "Crimson Conservation Law", "血色守恒律",
           "ability", "rare", CRIMSON_INTEGRAL, energy=2, life=10, growth=1,
           effects=("gain_1_strength_per_5_actual_drain_healing",)),
     _card("INFINITE_CANVAS", "Infinite Canvas", "无限画布", "ability", "rare",
-          CRIMSON_INTEGRAL, energy=3, life=16, drain=1,
-          drain_mode="global_growth_per_attack_that_drain_heals", growth=1),
+          CRIMSON_INTEGRAL, energy=3, life=16, drain=4,
+          drain_mode="global_growth_per_attack_that_drain_heals", growth=4),
     _card("PERFECT_SYNTHESIS", "Perfect Synthesis", "完美综合色", "attack",
           "rare", CRIMSON_INTEGRAL, energy=3, life=16, damage=11, hits=5,
-          all_enemies=True, drain=8, exhaust=True),
+          all_enemies=True, drain=32, exhaust=True),
 )
 
 
 # Cross-suit cards deliberately carry only the hybrid tag.
 _HYBRID_CARDS = (
     _card("GOLDEN_RATIO", "Golden Ratio", "黄金分割", "skill", "uncommon",
-          HYBRID, energy=1, life=4, margin=3, drain=3,
-          drain_mode="temporary_this_turn", draw=1),
+          HYBRID, energy=1, life=4, margin=3, drain=12,
+          drain_mode="temporary_this_turn", draw=2),
     _card("ASTRAL_MEASURE", "Astral Measure", "星体测度", "attack", "uncommon",
-          HYBRID, energy=1, damage=10, hits=1, drain=1,
+          HYBRID, energy=1, damage=10, hits=1, drain=4,
           drain_mode="per_margin_before_life_payment",
           effects=("damage_plus_margin_before_life_payment",)),
     _card("CHROMATIC_SEQUENCE", "Chromatic Sequence", "综合色序", "skill",
-          "uncommon", HYBRID, energy=1, life=4, draw=2,
+          "uncommon", HYBRID, energy=1, life=4, draw=4, drain=4,
           effects=("drawn_attack_grants_1_margin",
-                   "drawn_skill_grants_1_temporary_drain_percent",
+                   "drawn_skill_grants_4_temporary_drain_percent",
                    "drawn_ability_grants_both")),
     _card("UNIFIED_FIELD_THEORY", "Unified Field Theory", "统一场论", "ability",
-          "rare", HYBRID, energy=3, life=14, drain=1,
+          "rare", HYBRID, energy=3, life=14, drain=4,
           drain_mode="per_life_cost_prevented_by_margin",
           effects=("gain_floor_actual_drain_healing_div_3_margin",)),
     _card("CONSERVED_RECURRENCE", "Conserved Recurrence", "守恒递归", "skill",
@@ -491,7 +496,7 @@ _HYBRID_CARDS = (
           effects=("return_non_ability_from_exhaust",
                    "create_free_this_turn_copy")),
     _card("CHROMATIC_LIMIT", "Chromatic Limit", "绯彩极限", "attack", "rare",
-          HYBRID, energy="X", life=8, damage=9, drain=3,
+          HYBRID, energy="X", life=8, damage=9, drain=12,
           drain_mode="per_x", effects=("damage_hits_equal_x",
                                         "gain_1_margin_per_10_actual_drain_healing")),
     _card(
@@ -757,7 +762,7 @@ def solitary_crown_kill_heal(max_hp: int | float | None = None) -> int:
                        else _finite_number("max hp", max_hp))
     if observed_max_hp <= 0:
         raise ValueError("max hp must be positive")
-    return int(ceil(observed_max_hp * 0.05))
+    return int(ceil(observed_max_hp * 0.20))
 
 
 def character_card_has_terminal_life_cost_lock(
@@ -983,7 +988,7 @@ def character_build_synergy(
         1 for entry in entries if any(
             token in entry.mechanics.effects
             for token in ("triggers_on_any_enemy_death",
-                          "increase_immediate_enemy_death_heal")))
+                          "increase_immediate_enemy_death_heal_percent")))
     lethal_attacks = sum(
         1 for entry in entries if entry.mechanics.lethal
         or (entry.mechanics.all_enemies and entry.mechanics.base_damage > 0))
@@ -1036,7 +1041,7 @@ def character_build_synergy(
         candidate_is_death_engine = any(
             token in mechanics.effects
             for token in ("triggers_on_any_enemy_death",
-                          "increase_immediate_enemy_death_heal"))
+                          "increase_immediate_enemy_death_heal_percent"))
         if candidate_is_death_engine:
             score += 0.55 * lethal_attacks
             if lethal_attacks:
@@ -1091,11 +1096,11 @@ def drain_healing_from_actual_damage(
         actual_enemy_hp_damage: int | float,
         drain_percent: int | float,
 ) -> float:
-    """Return the uncapped drain amount implied by realized enemy HP damage."""
+    """Return one card-level Drain aggregate, rounded up once and uncapped."""
 
     damage = _actual_amount("actual_enemy_hp_damage", actual_enemy_hp_damage)
     percent = _actual_amount("drain_percent", drain_percent)
-    return damage * percent / 100.0
+    return float(ceil(damage * percent / 100.0))
 
 
 def score_life_cost(
@@ -1614,7 +1619,9 @@ def estimate_character_card(
     if mechanics.draw > 0:
         base_draw = max(0.0, card_dynamic_value(
             card, "Cards", mechanics.draw) or 0)
-    if "discard_1" in mechanics.effects:
+    if "discard_2" in mechanics.effects:
+        base_draw = max(0.0, base_draw - 2.0)
+    elif "discard_1" in mechanics.effects:
         base_draw = max(0.0, base_draw - 1.0)
     if entry.stable_id == "VIVHITE_TRANSFORMATION":
         def transformation_power(*names: str) -> float:
@@ -1650,7 +1657,8 @@ def estimate_character_card(
             attack_entries.append(owned_entry)
     sequence_drain_rate = 0.0
     if entry.stable_id == "CHROMATIC_SEQUENCE":
-        draw_count = max(0.0, card_dynamic_value(card, "Cards", 2) or 0)
+        draw_count = max(0.0, card_dynamic_value(
+            card, "Cards", mechanics.draw) or 0)
         if attack_entries:
             attacks = sum(1 for owned in attack_entries
                           if owned.card_type == "attack")
@@ -1665,9 +1673,10 @@ def estimate_character_card(
             sequence_drain_rate = (
                 draw_count * (skills + powers) / denominator
                 * max(0.0, card_dynamic_value(
-                    card, "DrainPerSkill", 1) or 0))
+                    card, "DrainPerSkill", mechanics.drain_percent) or 0))
     if entry.stable_id == "DIVIDE_AND_CONQUER_CIRCLE" and attack_entries:
-        draw_count = max(0.0, card_dynamic_value(card, "Cards", 2) or 0)
+        draw_count = max(0.0, card_dynamic_value(
+            card, "Cards", mechanics.draw) or 0)
         attack_ratio = (sum(1 for owned in attack_entries
                             if owned.card_type == "attack")
                         / len(attack_entries))
@@ -1676,9 +1685,9 @@ def estimate_character_card(
                                   card, "SpellDamage", 4) or 0))
     if entry.stable_id == "INFINITE_STAR_SEQUENCE" \
             and cards_played_this_turn is not None:
-        sequence_draw = max(0, int(cards_played_this_turn))
+        sequence_draw = 2 * max(0, int(cards_played_this_turn))
         if card.get("upgraded"):
-            sequence_draw += 1
+            sequence_draw += 2
         base_draw += sequence_draw
         immediate_margin += sequence_draw
 
@@ -1730,9 +1739,9 @@ def estimate_character_card(
     turn_drain = character_power_amount(
         player_powers, VIVHITE_TURN_DRAIN_POWER_ID)
     prevented_drain = margin_consumed * (
-        1.0 * character_power_amount(
+        4.0 * character_power_amount(
             player_powers, "VIVHITE_POWER_UNIFIED_FIELD_THEORY_POWER")
-        + 1.0 * character_power_amount(
+        + 4.0 * character_power_amount(
             player_powers,
             "VIVHITE_POWER_UNIFIED_FIELD_THEORY_UPGRADED_POWER"))
     card_drain = 0.0
@@ -1748,7 +1757,7 @@ def estimate_character_card(
                 card, "Drain", mechanics.drain_percent) or 0)
 
     total_drain = card_drain + global_drain + turn_drain + prevented_drain
-    drain_requested = floor(actual_enemy_hp_damage * total_drain / 100.0)
+    drain_requested = ceil(actual_enemy_hp_damage * total_drain / 100.0)
     drain_projection = False
     if (entry.card_type != "attack"
             and (mechanics.drain_percent_mode in (
@@ -1771,7 +1780,7 @@ def estimate_character_card(
         future_damage = (max(opportunities, default=0)
                          if mechanics.drain_percent_mode == "next_attack_bonus"
                          else sum(opportunities))
-        drain_requested = floor(future_damage * engine_rate / 100.0)
+        drain_requested = ceil(future_damage * engine_rate / 100.0)
         total_drain = engine_rate
         drain_projection = True
 
@@ -1805,9 +1814,9 @@ def estimate_character_card(
         conversion_growth += ((floor(drain_healed / 5.0) * normal_law)
                               + (floor(drain_healed / 4.0) * upgraded_law))
         conversion_growth += (
-            1.0 * character_power_amount(
+            4.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_INFINITE_CANVAS_POWER")
-            + 1.0 * character_power_amount(
+            + 4.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_INFINITE_CANVAS_UPGRADED_POWER"))
         immediate_margin += (
             floor(drain_healed / 3.0) * character_power_amount(
@@ -1820,7 +1829,7 @@ def estimate_character_card(
     future_deaths = 0
     if any(effect in mechanics.effects for effect in (
             "triggers_on_any_enemy_death",
-            "increase_immediate_enemy_death_heal")):
+            "increase_immediate_enemy_death_heal_percent")):
         if alive_enemies:
             future_deaths = len(alive_enemies)
         elif observed_target_count is not None:
@@ -1832,6 +1841,10 @@ def estimate_character_card(
     if mechanics.kill_heal > 0:
         card_kill_heal = max(0.0, card_dynamic_value(
             card, "Heal", mechanics.kill_heal) or 0)
+    card_death_heal_percent = float(mechanics.death_heal_percent)
+    if mechanics.death_heal_percent > 0:
+        card_death_heal_percent = max(0.0, card_dynamic_value(
+            card, "Heal", mechanics.death_heal_percent) or 0)
     card_kill_draw = float(mechanics.kill_draw)
     if mechanics.kill_draw > 0:
         card_kill_draw = max(0.0, card_dynamic_value(
@@ -1839,25 +1852,36 @@ def estimate_character_card(
 
     crown_heal_per_kill = solitary_crown_kill_heal(
         max_hp_value if hp_observed else None)
+    optimal_algorithm_stacks = character_power_amount(
+        player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER")
+    base_death_heal_per_kill = (
+        crown_heal_per_kill + 3.0 * optimal_algorithm_stacks)
+    active_death_heal_percent = character_power_amount(
+        player_powers, "VIVHITE_POWER_INDUCTIVE_CIRCLE_POWER")
+    active_death_heal_bonus = ceil(
+        base_death_heal_per_kill * active_death_heal_percent / 100.0)
+    projected_base_death_heal_per_kill = (
+        base_death_heal_per_kill
+        + (card_kill_heal
+           if entry.stable_id == "OPTIMAL_ALGORITHM" else 0.0))
+    card_death_heal_bonus = (
+        ceil(projected_base_death_heal_per_kill
+             * (active_death_heal_percent + card_death_heal_percent) / 100.0)
+        - active_death_heal_bonus)
     kill_heal_requested = (
         card_kill_heal * lethal_kills
-        + card_kill_heal * future_deaths
-        + crown_heal_per_kill * kill_count)
+        + (card_kill_heal + card_death_heal_bonus) * future_deaths
+        + (base_death_heal_per_kill + active_death_heal_bonus) * kill_count)
     kill_draw = (card_kill_draw * lethal_kills
                  + card_kill_draw * future_deaths)
     kill_energy = (mechanics.kill_energy * lethal_kills
                    + mechanics.kill_energy * future_deaths)
 
     if kill_count > 0:
-        kill_heal_requested += kill_count * (
-            character_power_amount(
-                player_powers, "VIVHITE_POWER_INDUCTIVE_CIRCLE_POWER")
-            + 3.0 * character_power_amount(
-                player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER"))
         kill_draw += kill_count * (
-            character_power_amount(
+            2.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_ASTRAL_PURSUIT_POWER")
-            + 2.0 * character_power_amount(
+            + 4.0 * character_power_amount(
                 player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER"))
         kill_energy += kill_count * character_power_amount(
             player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER")

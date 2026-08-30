@@ -254,26 +254,27 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             3.0,
         )
 
-    def test_all_card_drain_values_use_integer_ceiling_old_div_five(self) -> None:
+    def test_all_card_drain_values_are_doubled_from_current_integers(self) -> None:
         expected_nonzero = {
-            "CRIMSON_AREA": 4,
-            "TRICHROMATIC_WALTZ": 3,
-            "COMPOSITE_COLOR_WHEEL": 5,
-            "DIFFERENTIAL_SAMPLING": 2,
-            "CHIAROSCURO": 5,
-            "SPECTRAL_INTEGRAL": 2,
-            "GOLDEN_COMPOSITION": 5,
-            "RIEMANN_STAR_ARRAY": 3,
-            "CHROMATIC_TRANSITION": 2,
-            "COMPOSITE_COLOR_FIELD": 2,
-            "COMPLEMENTARY_AFTERIMAGE": 4,
-            "DEFINITE_CRIMSON_INTEGRAL": 12,
-            "INFINITE_CANVAS": 1,
-            "PERFECT_SYNTHESIS": 8,
-            "GOLDEN_RATIO": 3,
-            "ASTRAL_MEASURE": 1,
-            "UNIFIED_FIELD_THEORY": 1,
-            "CHROMATIC_LIMIT": 3,
+            "CRIMSON_AREA": 16,
+            "TRICHROMATIC_WALTZ": 12,
+            "COMPOSITE_COLOR_WHEEL": 20,
+            "DIFFERENTIAL_SAMPLING": 8,
+            "CHIAROSCURO": 20,
+            "SPECTRAL_INTEGRAL": 8,
+            "GOLDEN_COMPOSITION": 20,
+            "RIEMANN_STAR_ARRAY": 12,
+            "CHROMATIC_TRANSITION": 8,
+            "COMPOSITE_COLOR_FIELD": 8,
+            "COMPLEMENTARY_AFTERIMAGE": 16,
+            "DEFINITE_CRIMSON_INTEGRAL": 48,
+            "INFINITE_CANVAS": 4,
+            "PERFECT_SYNTHESIS": 32,
+            "GOLDEN_RATIO": 12,
+            "ASTRAL_MEASURE": 4,
+            "CHROMATIC_SEQUENCE": 4,
+            "UNIFIED_FIELD_THEORY": 4,
+            "CHROMATIC_LIMIT": 12,
         }
         actual_nonzero = {
             entry.stable_id: entry.mechanics.drain_percent
@@ -289,22 +290,22 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
         self.assertEqual(
             VIVHITE_STRATEGY.card(
                 "VIVHITE_CARD_INFINITE_CANVAS").mechanics.growth,
-            1,
+            4,
         )
         self.assertIn(
-            "drawn_skill_grants_1_temporary_drain_percent",
+            "drawn_skill_grants_4_temporary_drain_percent",
             VIVHITE_STRATEGY.card(
                 "VIVHITE_CARD_CHROMATIC_SEQUENCE").mechanics.effects,
         )
         with self.assertRaises(ValueError):
             CardMechanics(energy=1, drain_percent=1.2)
 
-        # Upgraded values arrive from the live API already scaled. Consume each
-        # independently rounded integer unchanged: 12->3, 6->2, and 3->1.
+        # Upgraded values arrive from the live API already at the final doubled
+        # values. Consume each integer unchanged: 30->60, 4->8, and 2->4.
         upgraded_examples = (
-            ("Drain", 3),
-            ("DrainPerMargin", 2),
-            ("DrainGrowth", 1),
+            ("Drain", 60),
+            ("DrainPerMargin", 8),
+            ("DrainGrowth", 4),
         )
         for name, expected in upgraded_examples:
             with self.subTest(name=name):
@@ -317,6 +318,50 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
                     }, name),
                     expected,
                 )
+
+    def test_final_draw_discard_inductive_and_zero_cost_catalog_contract(self) -> None:
+        expected_draws = {
+            "RECURRENT_STARLIGHT": (0, 4),
+            "ASTRAL_SEARCH": (4, 0),
+            "HEURISTIC_SHIELD": (2, 0),
+            "CONVERGENCE_VERDICT": (0, 6),
+            "DIVIDE_AND_CONQUER_CIRCLE": (4, 0),
+            "ASTRAL_PURSUIT": (0, 2),
+            "PREFETCH_FUTURE": (6, 0),
+            "PROOF_OF_TERMINATION": (0, 4),
+            "OPTIMAL_ALGORITHM": (0, 4),
+            "CHROMATIC_TRANSITION": (2, 0),
+            "GOLDEN_RATIO": (2, 0),
+            "CHROMATIC_SEQUENCE": (4, 0),
+        }
+        actual_draws = {
+            entry.stable_id: (entry.mechanics.draw, entry.mechanics.kill_draw)
+            for entry in VIVHITE_CARD_CATALOG
+            if entry.mechanics.draw or entry.mechanics.kill_draw
+        }
+        self.assertEqual(actual_draws, expected_draws)
+
+        astral_search = VIVHITE_STRATEGY.card("VIVHITE_CARD_ASTRAL_SEARCH")
+        self.assertIn("discard_2", astral_search.mechanics.effects)
+        infinite_sequence = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_INFINITE_STAR_SEQUENCE")
+        self.assertIn(
+            "draw_2_cards_per_card_previously_played_this_turn",
+            infinite_sequence.mechanics.effects,
+        )
+
+        inductive = VIVHITE_STRATEGY.card("VIVHITE_CARD_INDUCTIVE_CIRCLE")
+        self.assertEqual(inductive.mechanics.energy, 1)
+        self.assertEqual(inductive.mechanics.death_heal_percent, 50)
+        self.assertEqual(
+            card_dynamic_value({
+                "dynamic_values": [{"name": "Heal", "current_value": 75}],
+            }, "Heal"),
+            75,
+        )
+        color_conservation = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_COLOR_CONSERVATION")
+        self.assertEqual(color_conservation.mechanics.energy, 0)
 
     def test_catalog_captures_representative_base_mechanics(self) -> None:
         luminous = VIVHITE_STRATEGY.card(
@@ -349,7 +394,7 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             (optimal.mechanics.kill_heal,
              optimal.mechanics.kill_draw,
              optimal.mechanics.kill_energy),
-            (3, 2, 1),
+            (3, 4, 1),
         )
 
         synthesis = VIVHITE_STRATEGY.card(
@@ -357,13 +402,13 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
         self.assertEqual(synthesis.mechanics.base_damage, 11)
         self.assertEqual(synthesis.mechanics.damage_hits, 5)
         self.assertTrue(synthesis.mechanics.all_enemies)
-        self.assertEqual(synthesis.mechanics.drain_percent, 8)
+        self.assertEqual(synthesis.mechanics.drain_percent, 32)
         self.assertEqual(synthesis.build_tags, (CRIMSON_INTEGRAL,))
 
         limit_card = VIVHITE_STRATEGY.card("VIVHITE_CARD_CHROMATIC_LIMIT")
         self.assertEqual(limit_card.mechanics.energy, "X")
         self.assertEqual(limit_card.mechanics.life_calculation_cost, 8)
-        self.assertEqual(limit_card.mechanics.drain_percent, 3)
+        self.assertEqual(limit_card.mechanics.drain_percent, 12)
         self.assertEqual(limit_card.mechanics.drain_percent_mode, "per_x")
 
         ritual = VIVHITE_STRATEGY.card(
@@ -495,6 +540,8 @@ class CharacterStrategyScoringTests(unittest.TestCase):
         )
 
     def test_large_realized_values_and_over_100_drain_remain_linear(self) -> None:
+        self.assertEqual(drain_healing_from_actual_damage(1, 1), 1.0)
+        self.assertEqual(drain_healing_from_actual_damage(10, 15), 2.0)
         self.assertEqual(drain_healing_from_actual_damage(80, 250), 200.0)
         self.assertEqual(
             score_drain_healing(
@@ -607,7 +654,7 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
 
         divide = self._card(
             "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE", "Skill",
-            LifeCost=4, Cards=3, SpellDamage=5)
+            LifeCost=4, Cards=6, SpellDamage=5)
         self.assertEqual(
             resolve_character_card_numbers(
                 VIVHITE_STRATEGY, divide, 5, 0, 1,
@@ -618,7 +665,7 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
     def test_state_dependent_hit_counts_use_hand_and_uncapped_x_energy(self) -> None:
         riemann = self._card(
             "VIVHITE_CARD_RIEMANN_STAR_ARRAY", "Attack",
-            LifeCost=6, Damage=5, Drain=4)
+            LifeCost=6, Damage=5, Drain=16)
         self.assertEqual(
             resolve_character_card_numbers(
                 VIVHITE_STRATEGY, riemann, 5, 0, 1,
@@ -628,7 +675,7 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
 
         limit_card = self._card(
             "VIVHITE_CARD_CHROMATIC_LIMIT", "Attack",
-            LifeCost=8, Damage=9, DrainPerX=3, HealingPerMargin=10)
+            LifeCost=8, Damage=9, DrainPerX=12, HealingPerMargin=10)
         limit_card["costs_x"] = True
         self.assertEqual(
             resolve_character_card_numbers(
@@ -783,11 +830,11 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
         self.assertIn("turns=20", long_note)
 
     def test_solitary_crown_uses_current_max_hp_after_dimension_growth(self) -> None:
-        self.assertEqual(solitary_crown_kill_heal(), 4)
-        self.assertEqual(solitary_crown_kill_heal(78), 4)
-        self.assertEqual(solitary_crown_kill_heal(100), 5)
-        self.assertEqual(solitary_crown_kill_heal(101), 6)
-        self.assertEqual(solitary_crown_kill_heal(10_000), 500)
+        self.assertEqual(solitary_crown_kill_heal(), 16)
+        self.assertEqual(solitary_crown_kill_heal(78), 16)
+        self.assertEqual(solitary_crown_kill_heal(100), 20)
+        self.assertEqual(solitary_crown_kill_heal(101), 21)
+        self.assertEqual(solitary_crown_kill_heal(10_000), 2_000)
 
         lethal = self._card(
             "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack",
@@ -804,8 +851,8 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
             player_powers=[], energy=1)
 
         self.assertEqual(after_dimension - before, 1.0)
-        self.assertIn("crown=5/kill", before_note)
-        self.assertIn("crown=6/kill", after_note)
+        self.assertIn("crown=20/kill", before_note)
+        self.assertIn("crown=21/kill", after_note)
 
     def test_terminal_life_lock_accounts_for_uncapped_margin_and_is_profile_only(self) -> None:
         card = self._card(
@@ -842,8 +889,8 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
             enemies=[self._enemy(12)], target_index=0,
             player_powers=[], energy=1)
         self.assertEqual(nonlethal, -5.0)
-        # Heal=8 plus Solitary Crown's ceil(100*5%)=5, only on lethal.
-        self.assertEqual(lethal, 8.0)
+        # Heal=8 plus Solitary Crown's ceil(100*20%)=20, only on lethal.
+        self.assertEqual(lethal, 23.0)
         self.assertIn("kills=1/lethal=1", lethal_note)
 
         scale = self._card(
@@ -866,6 +913,50 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
         self.assertEqual(no_growth, -7.5)
         self.assertGreater(growth, 300.0)
         self.assertIn("dimension=102", growth_note)
+
+    def test_inductive_percentage_and_death_power_draws_use_final_values(self) -> None:
+        inductive = self._card(
+            "VIVHITE_CARD_INDUCTIVE_CIRCLE", "Power",
+            LifeCost=8, Heal=50)
+        optimal = [{
+            "power_id": "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER",
+            "amount": 1,
+        }]
+        base_score, _ = estimate_character_card(
+            VIVHITE_STRATEGY, inductive,
+            current_hp=50, max_hp=78,
+            enemies=[self._enemy(100)], target_index=0,
+            player_powers=optimal, energy=1)
+        upgraded_score, _ = estimate_character_card(
+            VIVHITE_STRATEGY,
+            self._card(
+                "VIVHITE_CARD_INDUCTIVE_CIRCLE", "Power",
+                LifeCost=8, Heal=75),
+            current_hp=50, max_hp=78,
+            enemies=[self._enemy(100)], target_index=0,
+            player_powers=optimal, energy=1)
+        # Crown=ceil(78*20%)=16 and Optimal Algorithm=3, so 50%/75%
+        # add ceil(19*.50)=10 and ceil(19*.75)=15 respectively.
+        self.assertEqual(base_score, 0.0)
+        self.assertEqual(upgraded_score, 5.0)
+
+        lethal = self._card(
+            "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack",
+            LifeCost=2, Damage=10)
+        score, _ = estimate_character_card(
+            VIVHITE_STRATEGY, lethal,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(10)], target_index=0,
+            player_powers=[
+                {"power_id": "VIVHITE_POWER_ASTRAL_PURSUIT_POWER",
+                 "amount": 1},
+                {"power_id": "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER",
+                 "amount": 1},
+            ],
+            energy=1)
+        # -2.5 Cough + (20 Crown + 3 Optimal) healing + (2+4) draws
+        # + 1 Energy from Optimal Algorithm.
+        self.assertEqual(score, 27.5)
 
     def test_margin_payment_and_custom_power_conversions_are_live_state(self) -> None:
         growth_card = self._card(
@@ -905,13 +996,13 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
             ],
             energy=1,
         )
-        self.assertAlmostEqual(converted, 1.55)
-        self.assertIn("drain=3%/3hp", converted_note)
+        self.assertGreater(converted, 9.6)
+        self.assertIn("drain=12%/12hp", converted_note)
 
     def test_drain_uses_real_hp_loss_missing_hp_and_unbounded_percent(self) -> None:
         crimson = self._card(
             "VIVHITE_CARD_CRIMSON_AREA", "Attack",
-            LifeCost=4, Damage=14, Drain=4)
+            LifeCost=4, Damage=14, Drain=16)
         powers = [{
             "power_id": "VIVHITE_POWER_INFINITE_DRAIN_POWER",
             "amount": 80,
@@ -926,14 +1017,14 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
             current_hp=50, max_hp=100,
             enemies=[self._enemy(5, block=10)], target_index=0,
             player_powers=powers, energy=1)
-        self.assertAlmostEqual(overkill, 3.4)
-        self.assertAlmostEqual(blocked, -2.45)
-        self.assertIn("drain=84%/4hp", overkill_note)
-        self.assertIn("drain=84%/3hp", blocked_note)
+        # -5 Cough score + 20 Crown healing + ceil(5*96%)*0.85 Drain value.
+        self.assertAlmostEqual(overkill, 19.25)
+        self.assertIn("drain=96%/5hp", overkill_note)
+        self.assertIn("drain=96%/4hp", blocked_note)
 
         limit_card = self._card(
             "VIVHITE_CARD_CHROMATIC_LIMIT", "Attack",
-            LifeCost=8, Damage=9, DrainPerX=3, HealingPerMargin=10)
+            LifeCost=8, Damage=9, DrainPerX=12, HealingPerMargin=10)
         limit_card["costs_x"] = True
         five, five_note = estimate_character_card(
             VIVHITE_STRATEGY, limit_card,
@@ -945,15 +1036,15 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
             current_hp=500, max_hp=1000,
             enemies=[self._enemy(1000)], target_index=0,
             player_powers=[], energy=10)
-        self.assertAlmostEqual(five, -4.9)
-        self.assertAlmostEqual(ten, 15.45)
-        self.assertIn("drain=15%/6hp", five_note)
-        self.assertIn("drain=30%/27hp", ten_note)
+        self.assertAlmostEqual(five, 15.45)
+        self.assertAlmostEqual(ten, 94.3)
+        self.assertIn("drain=60%/27hp", five_note)
+        self.assertIn("drain=120%/108hp", ten_note)
 
     def test_global_and_temporary_drain_engines_gain_observed_attack_value(self) -> None:
         spectral = self._card(
             "VIVHITE_CARD_SPECTRAL_INTEGRAL", "Power",
-            LifeCost=6, Drain=3)
+            LifeCost=6, Drain=8)
         deck = [
             self._card("VIVHITE_CARD_CRIMSON_AREA", "Attack", Damage=100),
             self._card(
@@ -970,7 +1061,7 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
 
         golden_ratio = self._card(
             "VIVHITE_CARD_GOLDEN_RATIO", "Skill",
-            LifeCost=4, Margin=3, Drain=3, Cards=1)
+            LifeCost=4, Margin=3, Drain=12, Cards=2)
         no_temporary, _ = estimate_character_card(
             VIVHITE_STRATEGY, golden_ratio,
             current_hp=50, max_hp=100, player_powers=[], hand_cards=[],
@@ -1034,7 +1125,7 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
 
         field = self._card(
             "VIVHITE_CARD_COMPOSITE_COLOR_FIELD", "Skill",
-            LifeCost=8, Drain=3, VulnerablePower=3)
+            LifeCost=8, Drain=8, VulnerablePower=3)
         single_field, _ = estimate_character_card(
             VIVHITE_STRATEGY, field,
             current_hp=60, max_hp=100, player_powers=[],
@@ -1549,7 +1640,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
             "dynamic_values": [
                 {"name": "LifeCost", "current_value": 8},
                 {"name": "Damage", "current_value": 9},
-                {"name": "DrainPerX", "current_value": 3},
+                {"name": "DrainPerX", "current_value": 12},
             ],
         }
         enemies = [
