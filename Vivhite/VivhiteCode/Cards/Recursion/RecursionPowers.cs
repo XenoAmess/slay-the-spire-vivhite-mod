@@ -157,7 +157,14 @@ public sealed class DynamicProgrammingPower : ModPowerTemplate
         CardPlay? cardPlay)
     {
         var state = GetInternalData<DynamicProgrammingState>();
+        // Life Calculation deliberately carries the same card source, CardPlay, and dealer as
+        // the card effect. Match the native Strength/Vigor gate so only powered Attack damage
+        // against an enemy receives Calculation; self-payment and other card damage return 0.
         if (state.ArmedValue <= 0 ||
+            !props.IsPoweredAttack() ||
+            target is null ||
+            ReferenceEquals(target, Owner) ||
+            !target.IsEnemy ||
             cardSource is null ||
             cardPlay is null ||
             !ReferenceEquals(cardPlay, state.ArmedPlay) ||
