@@ -1,0 +1,125 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_ISOPERIMETRIC_WARD",
+  "card_type": "IsoperimetricWard",
+  "card_name_zh": "等周壁垒",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "type": "Skill",
+    "life_cost": 4,
+    "base_block": 12,
+    "block_per_margin": 2,
+    "upgrade_base_block": 16,
+    "upgrade_block_per_margin": 3
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/AxiomRing.png",
+      "Vivhite/Vivhite/images/cards/OpenSetShelter.png",
+      "Vivhite/Vivhite/images/cards/LocalHomeomorphism.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "Opaque scene generation used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "canonical identity and costume family only; display backdrop, frontal pose, and outer glow excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, round gold glasses, violet eyes, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/AxiomRing.png",
+      "role": "approved rendering finish and mathematical material language only; close concentric apparatus excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/OpenSetShelter.png",
+      "role": "approved defensive scene scale and palette only; open dome and left-weighted composition excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/LocalHomeomorphism.png",
+      "role": "approved identity continuity and protective Skill finish only; paired patches and mapping gesture excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/AxiomRing.png": "636F9FC9A7863594120FF43F3BD344525858C5836379B1ACFA3BD1225D4AB764",
+    "Vivhite/Vivhite/images/cards/OpenSetShelter.png": "0CEA7435083E474CBFF2F48616A47EE852A3720260C0F0FDEB1979F9C8B6C099",
+    "Vivhite/Vivhite/images/cards/LocalHomeomorphism.png": "9FE2B8867814D1632A45230471DB51668257491C2F35E8931FE4E79B097EB437"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "8BC96250CAE9DDC558C365053AEA8C82E6BC2F98E2564475E2B9EC19CDA1E65C",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05477-ddbc-7e51-9792-e187b3fe2d38/exec-50701dec-3c2d-46a0-9a18-a21b9f699e8a.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/isoperimetric-ward-attempt-01/original.png",
+  "original_sha256": "C1DF779EF3C313EBC93ECC2489B453752739FA55A0241283FBD792557FD070D2",
+  "original_png": {
+    "width": 1438,
+    "height": 1093,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 6,
+    "y": 5,
+    "width": 1425,
+    "height": 1083,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/IsoperimetricWard.png",
+  "runtime_sha256": "DF74A7DFA5B8CA28ECBBF34BBC817F6ACE5B2487130EAD25C3B22841840CAA8F",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-godot.log",
+    "inspection/inspect-godot.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "single_continuous_closed_fixed_perimeter": true,
+    "broad_maximized_safe_interior": true,
+    "violet_margin_nodes_visibly_thicken_adjacent_wall_segments": true,
+    "external_impacts_stopped_or_deflected": true,
+    "closed_centered_stable_defensive_read": true,
+    "no_outbound_attack_read": true,
+    "distinct_from_axiom_ring_open_set_shelter_and_local_homeomorphism": true,
+    "100x76_color_and_grayscale_defensive_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "A single taut white-gold closed perimeter encloses a broad calm safe floor around Vivhite; violet Margin crystals visibly reinforce adjacent blue-white wall segments while storm debris and impacts remain outside. The closed defensive silhouette survives grayscale and 100x76 inspection, and the composition does not reuse Axiom Ring's concentric apparatus, Open-Set Shelter's gap, or Local Homeomorphism's paired surfaces."
+}
+
