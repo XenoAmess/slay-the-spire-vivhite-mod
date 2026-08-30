@@ -1197,52 +1197,69 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "queued"
+  },
+  {
+   "run": 1198,
+   "time": "2026-08-30 16:26",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "21816-1788079294075495100-0",
+   "retry_same_model": true,
+   "salvage_packages": [
+    "20260830-165530-1788080130637400100-b55e4b4d"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260830-165530-1788080130637400100-b55e4b4d",
+   "replay_target": "20260830-165530-1788080130637400100-b55e4b4d",
+   "retry_count": 1,
+   "retry_after": 1788080198.9569225
+  },
+  {
+   "run": 1199,
+   "time": "2026-08-30 16:39",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "21816-1788079294075495100-1",
+   "retry_same_model": true,
+   "salvage_packages": [
+    "20260830-165530-1788080130637400100-b55e4b4d"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260830-165530-1788080130637400100-b55e4b4d",
+   "replay_target": "20260830-165530-1788080130637400100-b55e4b4d",
+   "retry_count": 1,
+   "retry_after": 1788080198.9569304
+  },
+  {
+   "run": 1202,
+   "time": "2026-08-30 16:55",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "queued"
   }
  ],
- "reviewing": {
-  "runs": [
-   1198,
-   1199
-  ],
-  "items": [
-   {
-    "run": 1198,
-    "time": "2026-08-30 16:26",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "21816-1788079294075495100-0",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   },
-   {
-    "run": 1199,
-    "time": "2026-08-30 16:39",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "21816-1788079294075495100-1",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   }
-  ],
-  "retry_group": "",
-  "started": "2026-08-30 16:41:34"
- }
+ "reviewing": null
 }
