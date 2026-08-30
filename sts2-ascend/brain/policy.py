@@ -23,15 +23,6 @@ from window_layers import reassert_viewer_topmost
 # 必须换成加性重罚才能保证闸门在任何符号区间都只降分不升分
 _ELITE_GATE_NEG_PENALTY = 50.0
 
-# Native v0.111.0 facts: the Decimillipede elite is made of these three
-# segments, each carrying REATTACH_POWER. Keep this set local to the
-# observation path; it must not become a generic learned respawn roster.
-_DECIMILLIPEDE_SEGMENT_IDS = frozenset({
-    "DECIMILLIPEDE_SEGMENT_FRONT",
-    "DECIMILLIPEDE_SEGMENT_MIDDLE",
-    "DECIMILLIPEDE_SEGMENT_BACK",
-})
-
 
 @dataclass
 class Decision:
@@ -2725,8 +2716,6 @@ class Policy:
         # 的血池与唯一的终点，必须计入竞速账；race_all_respawn_pool_credit
         # =False 一键回滚旧版（重生体一律不计入血池）。
         all_respawn = all(self._is_respawn_add(e) for e in enemies)
-        _reattach_audit = self._decimillipede_reattach_audit(
-            combat.get("enemies") or [], pol)
         _respawn_credit = all_respawn and bool(
             pol.get("race_all_respawn_pool_credit", True))
         kill_race = False
@@ -2927,9 +2916,6 @@ class Policy:
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
-
-        if _reattach_audit:
-            danger_note += f"；{_reattach_audit}"
 
         best = None  # (policy_score, card, target_index, why)
         # If the policy threshold suppresses every option, a separately-accounted
@@ -3894,33 +3880,6 @@ class Policy:
                 why += (f"｜低血承诺观测 hp={hp_pct:.0%}/意图{incoming}"
                         f"/池{pool:.0f}/承诺+{_commit:.1f}")
         return score, None, why
-
-    def _decimillipede_reattach_audit(self, raw_enemies: list[dict], pol: dict) -> str:
-        """Expose native Decimillipede reattach state without changing scoring."""
-        if not bool(pol.get("decimillipede_reattach_audit", True)):
-            return ""
-        observed: dict[str, dict] = {}
-        for enemy in raw_enemies or []:
-            if not isinstance(enemy, dict):
-                continue
-            enemy_id = str(enemy.get("enemy_id") or "").strip().upper()
-            if enemy_id in _DECIMILLIPEDE_SEGMENT_IDS:
-                observed[enemy_id] = enemy
-        if not observed:
-            return ""
-        inactive = sum(1 for enemy in observed.values()
-                       if enemy.get("is_alive") is False)
-        absent = len(_DECIMILLIPEDE_SEGMENT_IDS) - len(observed)
-        # Emit only when a segment is actually inactive or omitted. The
-        # all-alive opening frame is not useful evidence and would add noise to
-        # every card decision in the encounter.
-        if inactive <= 0 and absent <= 0:
-            return ""
-        alive = len(observed) - inactive
-        return (
-            f"DECIMILLIPEDE_REATTACH_AUDIT alive={alive}/3 inactive={inactive} "
-            f"absent={absent} native=REATTACH_POWER(2t,25hp)"
-        )
 
     def _is_respawn_add(self, enemy: dict) -> bool:
         """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。

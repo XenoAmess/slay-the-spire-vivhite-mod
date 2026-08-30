@@ -444,7 +444,6 @@ DEFAULT_POLICY = {
                                      # 全场无本体时重生体就是唯一的血池与终点，计入竞速账；
                                      # 有本体在场时仍按旧口径剔除（506 局教义不动）。
                                      # false 即回滚旧版（重生体一律不计入血池，零行为差异）
-    "decimillipede_reattach_audit": True,  # observation-only native reattach marker; false disables it
      # --- 竞速账药水授信（第654~663/675~680批复盘新增，静态键） ---
     "race_potion_flat_credit": 12.0, # Boss 竞速账里每瓶进攻类药水折算的血池削减：预留教义把进攻药水
                                      # 封存到 Boss 窗口兑现，旧竞速账却只认 deck_burst——已入库的药水
