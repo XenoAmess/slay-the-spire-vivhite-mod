@@ -2964,6 +2964,8 @@ class Policy:
         # fifth tuple field records whether this is a normal fallback or a single
         # controlled first-play trial.
         marginal_best = None  # (immediate_score, card, target_index, why, mode)
+        _reserve_ability_watch: list[str] = []
+        _reserve_ability_watch_count = 0
         # 服务端致死判定：意图数值可能被敌方增益/减益污染，本地算术会漏判——
         # 只要服务端说"结束回合会死"且缺口未补满，就按致死回合处理（第 31 局 F7 终局教训）
         forced_kill = bool(combat.get("end_turn_will_kill_player"))
@@ -3106,6 +3108,16 @@ class Policy:
                                                    all_respawn=all_respawn,
                                                    run_deck=(state.get("run") or {}).get("deck"),
                                                    block_locked=block_locked)
+            # 常规 play_card 只把最终动作写入持久决策链，落选候选 trace 不会随之
+            # 保存。能力牌预留闸若只留在候选 why，后续复盘无法区分“闸门命中”与
+            # “能力牌本来就没入选”。把命中摘要挂到本 tick 最终动作理由；这是纯
+            # 观测，开关关闭不改变分数、排序或能量预算。
+            if (bool(pol.get("ability_reserve_audit", True))
+                    and "能量预留给格挡" in why):
+                _reserve_ability_watch_count += 1
+                if len(_reserve_ability_watch) < 3:
+                    _reserve_ability_watch.append(
+                        f"{c.get('name') or c.get('card_id') or '能力牌'}({cost}费)")
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _exhausts_other_cards(c):
@@ -3166,6 +3178,15 @@ class Policy:
                                          or immediate_score > marginal_best[0]):
                     marginal_best = (immediate_score, c, target, why, mode)
 
+        reserve_ability_note = ""
+        if _reserve_ability_watch:
+            _watched = "、".join(_reserve_ability_watch)
+            if _reserve_ability_watch_count > len(_reserve_ability_watch):
+                _watched += f"等{_reserve_ability_watch_count}张"
+            reserve_ability_note = (
+                f"｜能力预留观测ABILITY_RESERVE_AUDIT：{_watched}被压下，"
+                f"保留{min_blk_cost}费格挡（能量{energy}/意图{incoming}/生命{my_hp}）")
+
         choice_mode = ""
         chosen = best if best and best[0] > pol["play_threshold"] else None
         if chosen is None and marginal_best is not None:
@@ -3192,6 +3213,8 @@ class Policy:
                 why += ("｜税牌旁观HAND_TAX_PLAY_AUDIT："
                         + "、".join(f"{_v[0]}={_v[1]}"
                                    for _v in _tax_watch.values()))
+            if reserve_ability_note and "ABILITY_RESERVE_AUDIT" not in why:
+                why += reserve_ability_note
             commit_exhaust = _exhausts_other_cards(card)
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)
@@ -3250,7 +3273,8 @@ class Policy:
                 if c.get("requires_target"):
                     params["target_index"] = tgt.get("index")
                 return Decision("play_card", params,
-                                f"战斗：僵局强攻（回合{round_no}）打出【{c.get('name')}】→{tgt.get('name')}",
+                                f"战斗：僵局强攻（回合{round_no}）打出【{c.get('name')}】→{tgt.get('name')}"
+                                f"{reserve_ability_note}",
                                 tags=[("play_card", c.get("card_id")),
                                       ("play_card_index", c.get("index"),
                                        self._card_key(c)[1])], wait=0.6)
@@ -3264,7 +3288,8 @@ class Policy:
             # a refresh-race 409.  Do not convert their temporary rotation into an
             # energy-wasting end turn when there is no non-cooling sibling to play.
             return Decision(None, {},
-                            "战斗：可用牌刚遇到状态刷新竞争，等待短冷却后继续出牌",
+                            "战斗：可用牌刚遇到状态刷新竞争，等待短冷却后继续出牌"
+                            f"{reserve_ability_note}",
                             wait=0.5)
         if can_end:
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
@@ -3343,7 +3368,7 @@ class Policy:
                                 f"{('→' + _rtname) if _rtname else ''}{_taxstop_note}，"
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
-                                f"{danger_note}",
+                                f"{danger_note}{reserve_ability_note}",
                                 tags=[("play_card", _rcid),
                                       ("play_card_index", _resc_card.get("index"),
                                        self._card_key(_resc_card)[1]),
@@ -3352,9 +3377,9 @@ class Policy:
                                        round(_rest_est, 2), round_no, "")],
                                 wait=0.6)
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{reserve_ability_note}",
                             wait=1.2)
-        return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
+        return Decision(None, {}, f"战斗：等待出牌时机{reserve_ability_note}", wait=0.7)
 
     def _score_play(self, card, enemies, incoming, my_block, round_no, pol,
                     my_hp: int = 9999, my_max_hp: int = 9999, stance: dict | None = None,

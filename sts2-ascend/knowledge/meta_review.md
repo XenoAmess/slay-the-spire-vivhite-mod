@@ -6012,3 +6012,19 @@ retry_resolution: none (no target package; local production fix)
 ## VALIDATION
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。无 replay target，故不追加 `retry_resolution`。
+
+# 2026-08-30｜1186~1189 复盘：能力牌预留闸的最终动作观测
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+假设：上一批已把非即时能力牌接入 `reserve_for_block`，但命中信息只留在落选候选的 `why`；`agent.py` 的持久 trace 刻意不保存常规 `play_card`，所以后续日志无法证伪“预留闸是否实际命中”。证据是 1189-F17-T1 决策 203/204/205 连续消耗 3→0 能量，206 在 7 点意图下以 0 格挡收口；完整链 `7VSPNDM81QJR` 共 228 条且可读。原生 v0.111.0 资料确认 AGGRESSION/JUGGLING 为 1 费能力牌、TREMBLE 为 1 费技能牌，均不提供即时格挡。预期未来 3~10 局每次命中都能在最终动作理由看到 `ABILITY_RESERVE_AUDIT` 及能量/意图/生命/最低格挡费用/被压能力牌，关闭开关只消失标记而不改变动作。
+
+## IMPLEMENTATION
+
+- `brain/knowledge.py` 新增默认开启的 `ability_reserve_audit`，设为 `False` 即关闭观测。
+- `brain/policy.py::_combat` 收集最多 3 张被“能量预留给格挡”压下的能力牌，并把有界摘要附到最终 `play_card`、残能救场、结束回合或等待理由；不改变 `_score_play` 分数、排序、能量或任何竞速判定。
+- `brain/selfcheck.py` 的 3xcr 夹具新增默认开启可见性与关闭开关后的动作一致性断言。
+
+## VALIDATION / FOLLOW-UP / ROLLBACK
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。后续统计 marker 的独立战斗数、触发时的能量/意图/生命/最低格挡费用、被压能力牌数、同回合实际格挡及 F17 T1~T2 战损。若 marker 命中至少 3 场仍无实际格挡或能力牌误压可赢窗口，将 `ability_reserve_audit=False` 保留行为并停用观测；若开关 on/off 改变动作，立即回退本次收集/拼接和夹具。无 replay target，不追加 `retry_resolution`。

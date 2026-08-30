@@ -49,6 +49,7 @@ DEFAULT_POLICY = {
                                                      # 旧的「任一组合可行即放行」口径（1132/1137/1147
                                                      # 三例 KIN 实际阵亡暴露了存在性放行的风险）
     # --- combat ---
+    "ability_reserve_audit": True,  # 能力牌因预留格挡被压下时，把摘要写入最终动作理由；仅观测，False 不改评分
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——
