@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Vivhite\local.props" Condition="Exists('..\Vivhite\local.props')" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Vivhite.Tests</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <GodotProjectDir>$([MSBuild]::EnsureTrailingSlash('$(MSBuildProjectDirectory)'))</GodotProjectDir>
+    <GodotProjectDirBase64>$([MSBuild]::ConvertToBase64('$(GodotProjectDir)'))</GodotProjectDirBase64>
+    <CopyModOnBuild>false</CopyModOnBuild>
+    <RitsuLibAutoCopy>false</RitsuLibAutoCopy>
+    <Sts2Dir Condition="'$(Sts2Dir)' == ''">$(MSBuildProgramFiles32)\Steam\steamapps\common\Slay the Spire 2</Sts2Dir>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Dir)\data_sts2_windows_x86_64</Sts2DataDir>
+    <NoWarn>$(NoWarn);MSB3270;CS0436</NoWarn>
+    <!-- Production currently has a nullable warning in an engine-owned collection path. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8602;CS8604</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Compile the exact production source into this acceptance executable. This gives the
+    tests a real assembly to reflect while deliberately avoiding a ProjectReference to
+    Vivhite.csproj and all of its PCK export, manifest sync, and live-mod deployment targets.
+  -->
+  <ItemGroup>
+    <Compile Include="..\Vivhite\VivhiteCode\**\*.cs"
+             Link="ProductionSource\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GodotSharp" Version="4.5.1" />
+    <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
+    <PackageReference Include="STS2.RitsuLib" Version="0.5.14" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="GodotProjectDir" />
+    <CompilerVisibleProperty Include="GodotProjectDirBase64" />
+    <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="0Harmony" HintPath="$(Sts2DataDir)\0Harmony.dll" Private="true" />
+    <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="true" />
+    <Reference Include="Steamworks.NET" HintPath="$(Sts2DataDir)\Steamworks.NET.dll" Private="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateAcceptanceReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Sts2DataDir)\sts2.dll')"
+           Text="Acceptance compilation requires the local sts2.dll configured by Vivhite/local.props." />
+  </Target>
+</Project>
