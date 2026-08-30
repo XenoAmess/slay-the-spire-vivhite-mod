@@ -78,6 +78,55 @@ class CharacterProfile:
         """Shared, versioned native-game facts (not character learning)."""
         return self.knowledge_root / "game"
 
+    @property
+    def strategy(self):
+        """Immutable strategy inputs resolved for this exact profile.
+
+        The import stays local so path/profile resolution remains independent
+        from the decision engine and cannot introduce an import cycle.
+        """
+        from character_strategy import resolve_character_strategy
+
+        return resolve_character_strategy(
+            profile_id=self.profile_id,
+            character_id=self.character_id,
+        )
+
+    @property
+    def strategy_parameters(self):
+        """This profile's character-specific scoring parameter instance."""
+        return self.strategy.parameters
+
+    @property
+    def card_catalog(self):
+        """This profile's immutable static card-mechanics catalog."""
+        return self.strategy.card_catalog
+
+    @property
+    def mechanic_weights(self) -> Mapping[str, float]:
+        """Read-only keyword/mechanic valuation inputs for shared algorithms."""
+        from types import MappingProxyType
+
+        parameters = self.strategy_parameters
+        return MappingProxyType({
+            "life_calculation": parameters.life_cost_weight,
+            "low_hp_fraction": parameters.low_hp_fraction,
+            "low_hp_life_cost_multiplier": (
+                parameters.low_hp_life_cost_multiplier),
+            "margin": parameters.margin_weight,
+            "drain_healing": parameters.drain_healing_weight,
+            "permanent_max_hp": parameters.permanent_max_hp_weight,
+            "kill_healing": parameters.kill_healing_weight,
+            "draw": parameters.draw_weight,
+            "energy": parameters.energy_weight,
+            "growth": parameters.growth_weight,
+        })
+
+    @property
+    def keyword_values(self) -> Mapping[str, float]:
+        """Alias for consumers that describe mechanics as card keywords."""
+        return self.mechanic_weights
+
     def path_for(self, artifact: str | None = None) -> Path:
         """Return the root or one named learned-knowledge artifact path."""
         if artifact is None or not str(artifact).strip() or _normalise(artifact) == "root":

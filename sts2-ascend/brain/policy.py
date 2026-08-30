@@ -15,6 +15,21 @@ import re
 import time
 from dataclasses import dataclass, field
 
+from character_strategy import (
+    CardCatalogEntry,
+    CharacterStrategy,
+    drain_healing_from_actual_damage,
+    resolve_character_strategy,
+    score_drain_healing,
+    score_draw,
+    score_energy,
+    score_growth,
+    score_kill_healing,
+    score_life_cost,
+    score_margin,
+    score_permanent_max_hp,
+    score_realized_mechanics,
+)
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace
 from knowledge import Knowledge, clamp
 from window_layers import reassert_viewer_topmost
@@ -285,12 +300,52 @@ def _exhausts_other_cards(card: dict) -> bool:
     return bool(re.search(r"exhaust\s+(?:a|an|another|\d+)\s+(?:random\s+)?card", text, re.I))
 
 
+def _resolve_policy_strategy(know: Knowledge, explicit_profile=None) -> CharacterStrategy:
+    """Bind Policy to one profile without importing profile path machinery."""
+
+    def _resolve(source) -> CharacterStrategy:
+        if isinstance(source, CharacterStrategy):
+            return source
+        if isinstance(source, str):
+            return resolve_character_strategy(profile_id=source)
+        strategy = getattr(source, "strategy", None)
+        if strategy is not None:
+            if not isinstance(strategy, CharacterStrategy):
+                raise TypeError("profile.strategy must be a CharacterStrategy")
+            return strategy
+        profile_id = getattr(source, "profile_id", None)
+        character_id = getattr(source, "character_id", None)
+        if profile_id is None and character_id is None:
+            raise TypeError("profile must expose profile_id and/or character_id")
+        return resolve_character_strategy(
+            profile_id=profile_id,
+            character_id=character_id,
+        )
+
+    knowledge_profile = getattr(know, "profile", None)
+    if explicit_profile is None:
+        if knowledge_profile is None:
+            return resolve_character_strategy()
+        return _resolve(knowledge_profile)
+
+    selected = _resolve(explicit_profile)
+    if knowledge_profile is not None:
+        persisted = _resolve(knowledge_profile)
+        if selected is not persisted:
+            raise ValueError(
+                "explicit Policy profile disagrees with Knowledge.profile")
+    return selected
+
+
 class Policy:
     def __init__(self, know: Knowledge, rng: random.Random | None = None,
-                 character_rotation=None):
+                 character_rotation=None, profile=None):
         self.know = know
         self.rng = rng or random.Random()
         self.character_rotation = character_rotation
+        self.character_strategy = _resolve_policy_strategy(know, profile)
+        self.strategy_parameters = self.character_strategy.parameters
+        self.card_catalog = self.character_strategy.card_catalog
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
@@ -394,6 +449,82 @@ class Policy:
         # 磁盘）在本进程内永远失败，agent 熔断后把动作名记到这里，decide
         # 拦截被拉黑动作改发安全替代，不再每 tick 重试注定失败的调用
         self._broken_actions: set = set()
+
+    def _strategy_card(self, card: dict) -> CardCatalogEntry | None:
+        card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
+        return self.character_strategy.card(card_id)
+
+    def _character_static_card_estimate(
+            self, card: dict, *, current_hp: int | float | None = None,
+            max_hp: int | float | None = None,
+            observed_target_count: int | None = None) -> tuple[float, str]:
+        """Score catalog mechanics when the API has no realized-effect payload.
+
+        This is a pre-action estimate, not telemetry.  Printed life cost is used
+        as the estimated HP payment because live Margin is not exposed; flat
+        drain uses nominal printed damage because post-block/overkill HP loss and
+        the accumulated combat drain rate are likewise unavailable.
+        """
+        entry = self._strategy_card(card)
+        if entry is None:
+            return 0.0, ""
+
+        mechanics = entry.mechanics
+        parameters = self.strategy_parameters
+        if current_hp is None or max_hp is None:
+            life_score = (
+                mechanics.life_calculation_cost * parameters.life_cost_weight)
+            hp_context = "hp-context-unobserved"
+        else:
+            life_score = score_life_cost(
+                parameters,
+                mechanics.life_calculation_cost,
+                current_hp=current_hp,
+                max_hp=max_hp,
+            )
+            hp_context = "hp-context-observed"
+
+        target_count = 1
+        if mechanics.all_enemies and observed_target_count is not None:
+            if observed_target_count < 0:
+                raise ValueError("observed_target_count cannot be negative")
+            target_count = observed_target_count
+        nominal_damage = (
+            mechanics.base_damage * mechanics.damage_hits * target_count)
+        estimated_drain_healing = 0.0
+        if (mechanics.drain_percent_mode == "flat"
+                and mechanics.drain_percent and nominal_damage):
+            estimated_drain_healing = drain_healing_from_actual_damage(
+                nominal_damage, mechanics.drain_percent)
+
+        estimate = sum((
+            life_score,
+            score_margin(parameters, mechanics.margin_gain),
+            score_drain_healing(
+                parameters,
+                estimated_drain_healing,
+                drain_percent=mechanics.drain_percent,
+            ),
+            score_permanent_max_hp(
+                parameters, mechanics.max_hp_growth),
+            score_kill_healing(parameters, mechanics.kill_heal),
+            score_draw(parameters, mechanics.draw + mechanics.kill_draw),
+            score_energy(
+                parameters, mechanics.energy_gain + mechanics.kill_energy),
+            score_growth(parameters, mechanics.growth),
+        ))
+        note = (
+            f"VIVHITE_STATIC_ESTIMATE={estimate:+.2f}"
+            f"[{entry.stable_id};{hp_context};catalog-nominal,"
+            "not-realized-margin/drain/kill-telemetry]")
+        return estimate, note
+
+    def score_character_realized_mechanics(self, **actual_amounts) -> float:
+        """Score explicitly realized character effects without integration caps."""
+        return score_realized_mechanics(
+            self.strategy_parameters,
+            **actual_amounts,
+        )
 
     def _enrich_cards(self, cards: list[dict]) -> list[dict]:
         """用版本化原生快照补齐 API 省略的静态字段，不覆盖实时状态。"""
@@ -3153,6 +3284,15 @@ class Policy:
                                                    all_respawn=all_respawn,
                                                    run_deck=(state.get("run") or {}).get("deck"),
                                                    block_locked=block_locked)
+            character_estimate, character_note = self._character_static_card_estimate(
+                c,
+                current_hp=my_hp,
+                max_hp=my_max_hp,
+                observed_target_count=len(enemies),
+            )
+            score += character_estimate
+            if character_note:
+                why += f"｜{character_note}"
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _exhausts_other_cards(c):
@@ -3529,6 +3669,10 @@ class Policy:
 
         m_self = re.search(r"失去\s*(\d+)\s*点?\s*生命|lose\s+(\d+)\s*(?:hp|health|life)", text, re.I)
         self_cost = int(next(g for g in m_self.groups() if g)) if m_self else 0
+        if self._strategy_card(card) is not None:
+            # Vivhite life calculation is priced once by the profile strategy
+            # layer.  The historical Ironclad text heuristic remains untouched.
+            self_cost = 0
         floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
 
         def _hybrid_defense() -> tuple[float, str] | None:
@@ -5206,7 +5350,8 @@ class Policy:
     def eval_reward_card(self, card: dict, deck: list[dict],
                          max_hp: int | None = None,
                          act: int | None = None,
-                         detail: list[str] | None = None) -> float:
+                         detail: list[str] | None = None,
+                         current_hp: int | None = None) -> float:
         """卡牌拾取/购买价值评估。
 
         act 给定时饥饿线换用分幕 Boss 口径（第 506~515 局批复盘新增）：
@@ -5347,7 +5492,10 @@ class Policy:
         if not card.get("upgraded") and (_cid.startswith("STRIKE_") or _cid.startswith("DEFEND_")):
             value -= 4.0
         # 自残牌在慢性失血环境下额外惩罚（BREAKTHROUGH/HEMOKINESIS 类）
-        if re.search(r"失去\s*\d+\s*点?生命|lose\s+\d+\s*(?:hp|health|life)", _text(card), re.I):
+        if (self._strategy_card(card) is None
+                and re.search(
+                    r"失去\s*\d+\s*点?生命|lose\s+\d+\s*(?:hp|health|life)",
+                    _text(card), re.I)):
             value -= 2.0
         if cost >= 3:
             value -= 1.0
@@ -5429,6 +5577,14 @@ class Policy:
             if _relief_gate >= float(pol.get("engine_bias_relief_deficit", 0.30)):
                 _learned = 0.0
         value += _learned
+        character_estimate, character_note = self._character_static_card_estimate(
+            card,
+            current_hp=current_hp,
+            max_hp=max_hp,
+        )
+        value += character_estimate
+        if detail is not None and character_note:
+            detail.append(character_note)
         return value
 
     def _reward(self, state: dict, ctx) -> Decision:
@@ -5461,10 +5617,13 @@ class Policy:
         if r.get("pending_card_choice") and cards:
             self._record_card_offer("REWARD", state, cards)
             _mh = max(1, int(run.get("max_hp", 1) or 1))
+            _hp = int(run.get("current_hp", _mh) or _mh)
             _act = self._floor_act(floor)
             def _score_card(c):
                 _det: list[str] = []
-                return (self.eval_reward_card(c, deck, max_hp=_mh, act=_act, detail=_det),
+                return (self.eval_reward_card(
+                            c, deck, max_hp=_mh, act=_act, detail=_det,
+                            current_hp=_hp),
                         c, _det)
 
             all_scored = sorted((_score_card(c) for c in cards),
@@ -6034,6 +6193,7 @@ class Policy:
         # 同一张牌在奖励端会因动态拾取门槛被拒。卡牌购买必须通过
         # max(动态拾取门槛, 商店基线)；遗物/药水不受卡组膨胀约束，维持原基线
         _shop_mh = max(1, int(run.get("max_hp", 1) or 1))
+        _shop_hp = int(run.get("current_hp", _shop_mh) or _shop_mh)
         _shop_act = self._floor_act(floor)
         shop_pick_line = max(float(pol["shop_relic_threshold"]),
                              self._pick_threshold(deck, max_hp=_shop_mh, act=_shop_act))
@@ -6051,7 +6211,9 @@ class Policy:
                     index=c.get("index"), action="buy_card", status="leak_death_block",
                     why="致死负面负载牌按守卫屏蔽（LEAK_DEATH_GUARD）")
                 continue
-            v = self.eval_reward_card(c, deck, max_hp=_shop_mh, act=_shop_act) - c.get("price", 0) / 120.0
+            v = self.eval_reward_card(
+                c, deck, max_hp=_shop_mh, act=_shop_act,
+                current_hp=_shop_hp) - c.get("price", 0) / 120.0
             if v <= shop_pick_line:
                 self._trace_candidate(
                     c.get("name") or c.get("card_id"), v,
