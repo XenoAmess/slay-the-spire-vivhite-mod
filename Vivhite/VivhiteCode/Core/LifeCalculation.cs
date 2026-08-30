@@ -17,8 +17,9 @@ public enum LifePaymentFailure
 }
 
 /// <summary>
-/// Side-effect-free quote for Life Calculation. Margin offsets the requested cost 1:1 before
-/// the remaining HP requirement is checked; HP payment always leaves at least one HP.
+/// Side-effect-free quote for Life Calculation. The effective request is never below zero;
+/// Margin offsets it 1:1 before the remaining HP requirement is checked, and HP payment always
+/// leaves at least one HP.
 /// </summary>
 public readonly record struct LifePaymentQuote(
     int Requested,
@@ -75,14 +76,14 @@ public static class LifeCalculation
     {
         ArgumentOutOfRangeException.ThrowIfNegative(currentHp);
         ArgumentOutOfRangeException.ThrowIfNegative(marginAvailable);
-        ArgumentOutOfRangeException.ThrowIfNegative(amount);
 
-        var marginConsumed = Math.Min(amount, marginAvailable);
-        var hpRequired = amount - marginConsumed;
+        var requested = Math.Max(0, amount);
+        var marginConsumed = Math.Min(requested, marginAvailable);
+        var hpRequired = requested - marginConsumed;
         var maximumHpPayable = payerIsAlive ? Math.Max(0, currentHp - 1) : 0;
 
         return new LifePaymentQuote(
-            amount,
+            requested,
             currentHp,
             marginAvailable,
             marginConsumed,
@@ -130,6 +131,7 @@ public static class LifeCalculation
         ArgumentNullException.ThrowIfNull(payer);
 
         var quote = Calculate(payer, amount);
+        var requested = quote.Requested;
         var hpBefore = payer.CurrentHp;
         if (!quote.CanPay)
         {
@@ -145,11 +147,11 @@ public static class LifeCalculation
         var marginPayment = await InfiniteMargin.ConsumeUpToAsync(
             choiceContext,
             payer,
-            amount,
+            requested,
             payer,
             cardSource);
         var marginConsumed = marginPayment.Consumed;
-        var hpRequired = amount - marginConsumed;
+        var hpRequired = requested - marginConsumed;
 
         // A power-change hook may have changed HP while margin was being consumed. Recheck at the
         // command boundary; never issue a payment that can reduce the payer to zero.
@@ -160,7 +162,7 @@ public static class LifeCalculation
                 payer.IsAlive
                     ? LifePaymentFailure.LifeChangedDuringPayment
                     : LifePaymentFailure.PayerIsDead,
-                amount,
+                requested,
                 marginConsumed,
                 0,
                 hpBefore,
@@ -173,7 +175,7 @@ public static class LifeCalculation
             return new LifePaymentResult(
                 quote,
                 LifePaymentFailure.None,
-                amount,
+                requested,
                 marginConsumed,
                 0,
                 hpBefore,
@@ -199,7 +201,7 @@ public static class LifeCalculation
             succeeded
                 ? LifePaymentFailure.None
                 : LifePaymentFailure.PaymentWasPrevented,
-            amount,
+            requested,
             marginConsumed,
             hpPaid,
             hpBefore,
