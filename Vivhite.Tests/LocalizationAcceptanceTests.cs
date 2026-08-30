@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using MegaCrit.Sts2.Core.Models;
 using Vivhite.Tests.Acceptance;
 
 namespace Vivhite.Tests;
@@ -14,6 +16,24 @@ internal static class LocalizationAcceptanceTests
         "VIVHITE_KEYWORD_DIMENSION_UP",
         "VIVHITE_KEYWORD_DRAIN",
         "VIVHITE_KEYWORD_LETHAL"
+    ];
+
+    private static readonly HashSet<string> LocalizationControlPlaceholders =
+        new(StringComparer.Ordinal)
+        {
+            "IfUpgraded",
+            "energyPrefix"
+        };
+
+    private static readonly (string CardId, string RemovedAlias)[] RemovedOrphanAliases =
+    [
+        ("VIVHITE_CARD_SCALE_TRANSFORMATION", "MaxHp"),
+        ("VIVHITE_CARD_TOPOLOGICAL_GROWTH", "MaxHp"),
+        ("VIVHITE_CARD_AXIOM_OF_LIFE", "MaxHp"),
+        ("VIVHITE_CARD_ISOPERIMETRIC_WARD", "BaseBlock"),
+        ("VIVHITE_CARD_ISOPERIMETRIC_WARD", "BlockPerMargin"),
+        ("VIVHITE_CARD_LAW_OF_CONSERVATION", "BlockPerMargin"),
+        ("VIVHITE_CARD_CONSERVATION_FIRMAMENT", "BlockMultiplier")
     ];
 
     public static void CoversExactApprovedCardSet(RepositorySnapshot repository)
@@ -132,11 +152,83 @@ internal static class LocalizationAcceptanceTests
         AssertContainsAny(
             chinese["VIVHITE_KEYWORD_LETHAL.description"],
             "中文致命必须由此牌直接杀死目标触发",
-            "直接令目标死亡", "直接杀死目标", "直接造成的伤害击杀目标", "令目标生命降至 0");
+            "直接令目标死亡", "直接杀死目标", "直接击杀目标", "直接造成的伤害击杀目标", "令目标生命降至 0");
+    }
+
+    public static void CardDynamicVarsMatchEveryBilingualPlaceholder(RepositorySnapshot repository)
+    {
+        var locales = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal)
+        {
+            ["eng"] = ReadLocale(repository, "eng"),
+            ["zhs"] = ReadLocale(repository, "zhs")
+        };
+        var varsByCardId = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        var failures = new List<string>();
+
+        foreach (var cardType in repository.VivhitePoolCards)
+        {
+            var cardId = repository.CardId(cardType);
+            CardModel card;
+            try
+            {
+                card = (CardModel?)Activator.CreateInstance(cardType)
+                    ?? throw new InvalidOperationException("constructor did not produce a CardModel");
+            }
+            catch (Exception exception)
+            {
+                failures.Add($"{cardId}: could not construct compiled card: {exception.GetBaseException().Message}");
+                continue;
+            }
+
+            var dynamicVars = card.DynamicVars.Keys.Order(StringComparer.Ordinal).ToArray();
+            varsByCardId.Add(cardId, dynamicVars);
+            foreach (var (locale, entries) in locales)
+            {
+                foreach (var suffix in new[] { "description", "smartDescription" })
+                {
+                    var key = $"{cardId}.{suffix}";
+                    if (!entries.TryGetValue(key, out var text))
+                    {
+                        failures.Add($"{key} ({locale}): localization entry is missing");
+                        continue;
+                    }
+
+                    var placeholders = PlaceholderNames(text);
+                    var missingInCode = placeholders.Except(dynamicVars, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+                    var orphanedInCode = dynamicVars.Except(placeholders, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+                    if (missingInCode.Length > 0 || orphanedInCode.Length > 0)
+                    {
+                        failures.Add(
+                            $"{key} ({locale}): placeholders/code vars differ; " +
+                            $"missing in C#=[{string.Join(", ", missingInCode)}], " +
+                            $"orphaned in C#=[{string.Join(", ", orphanedInCode)}]");
+                    }
+                }
+            }
+        }
+
+        AcceptanceAssert.Equal(60, varsByCardId.Count, "DynamicVar audit must construct all 60 compiled registered cards.");
+        foreach (var (cardId, removedAlias) in RemovedOrphanAliases)
+        {
+            AcceptanceAssert.True(
+                varsByCardId.TryGetValue(cardId, out var names) && !names.Contains(removedAlias, StringComparer.Ordinal),
+                $"Audited orphan alias {cardId}.{removedAlias} must remain removed from the compiled card DynamicVars.");
+        }
+        AcceptanceAssert.Empty(
+            failures,
+            "Every compiled card DynamicVar set must match both directions of every eng/zhs description placeholder set:");
     }
 
     private static string[] CardKeys(IReadOnlyDictionary<string, string> entries) => entries.Keys
         .Where(key => key.StartsWith("VIVHITE_CARD_", StringComparison.Ordinal))
+        .Order(StringComparer.Ordinal)
+        .ToArray();
+
+    private static string[] PlaceholderNames(string text) => Regex
+        .Matches(text, @"\{(?<name>[A-Za-z][A-Za-z0-9]*):")
+        .Select(match => match.Groups["name"].Value)
+        .Where(name => !LocalizationControlPlaceholders.Contains(name))
+        .Distinct(StringComparer.Ordinal)
         .Order(StringComparer.Ordinal)
         .ToArray();
 

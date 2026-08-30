@@ -25,18 +25,30 @@ internal static class Program
             new("rarity distribution 3/18/24/15", CardCatalogAcceptanceTests.HasApprovedRarityDistribution),
             new("starter deck 4/4/1 and legacy classes removed", CardCatalogAcceptanceTests.HasApprovedStarterDeckAndNoLegacyCardTypes),
             new("exact bilingual 60-card localization", LocalizationAcceptanceTests.CoversExactApprovedCardSet),
+            new("all card DynamicVars match eng/zhs placeholders", LocalizationAcceptanceTests.CardDynamicVarsMatchEveryBilingualPlaceholder),
             new("five bilingual keywords use approved mechanics", LocalizationAcceptanceTests.KeywordsDescribeApprovedMechanics),
             new("Margin pays before HP and payment leaves 1 HP", LifeCalculationAcceptanceTests.MarginIsConsumedBeforeHpAndPaymentLeavesOneHp),
+            new("negative Life Calculation normalizes to a free payable request", LifeCalculationAcceptanceTests.NegativeAmountsNormalizeToZeroWithoutPayment),
+            new("AutoPlay rejects unaffordable Life Calculation payments", LifeCalculationAcceptanceTests.AutoPlayShouldPlayHonorsLifePaymentLegality),
             new("compiled card flow gates and pays before effects", LifeCalculationAcceptanceTests.CompiledCardBaseGatesPlayAndPaysBeforeEffects),
             new("no artificial cap constants or static fields", UnboundedGrowthAcceptanceTests.HasNoArtificialCapConstantsOrStaticFields),
             new("Dimension Up is uncapped, stackable, and grows max/current HP", UnboundedGrowthAcceptanceTests.DimensionUpUsesUncappedStackableMaxAndCurrentHpGrowth),
             new("overheal preserves uncapped excess", UnboundedGrowthAcceptanceTests.OverhealPreservesUncappedExcess),
             new("Drain uses actual enemy HP loss and rounds once", DrainAcceptanceTests.UsesActualEnemyHpLossAndAggregatesBeforeOneRounding),
             new("Drain supports rates and healing above 100%", DrainAcceptanceTests.SupportsRatesAndHealingFarAboveOneHundredPercent),
+            new("Basic/A/B attacks use Common global Drain at cardPercent 0", CrossSuitDrainAcceptanceTests.BasicAndABAttacksUseZeroPercentCommonDrain),
+            new("Common Drain defaults to all Chromatic recovery conversions", CrossSuitDrainAcceptanceTests.CommonDrainDefaultsToChromaticRecoveryConversions),
+            new("C/Hybrid printed Drain resolves exactly once", CrossSuitDrainAcceptanceTests.ChromaticAndHybridPrintedDrainIsNotDuplicated),
+            new("Dynamic Programming only buffs powered opponent Attack damage", CrossSuitDrainAcceptanceTests.DynamicProgrammingOnlyBuffsPoweredOpponentAttackDamage),
+            new("Chromatic healing tracks actual HP gain and resets each turn", ChromaticTurnHealingAcceptanceTests.TracksOnlyActualHpIncreaseAndResetsEachTurn),
+            new("Drain recovery precedes wrapped enemy-death listeners", EnemyDeathOrderingAcceptanceTests.WrappedAttackRecoversBeforeDeathListenersAndUnwrappedDeathIsImmediate),
+            new("deferred enemy-death failures are neither lost nor replayed", EnemyDeathOrderingAcceptanceTests.DeferredListenerFailuresArePreservedWithoutLossOrReplay),
             new("generated and recovered copies retain Dimension Up eligibility", GeneratedCardGrowthAcceptanceTests.GeneratedAndRecoveredCopiesRetainNormalDimensionUpEligibility),
             new("death deduplication is per entity event", DeathDeduplicationAcceptanceTests.DeduplicatesOnlyTheSameEntityDeathEvent),
+            new("conditional card keywords match approved states", CardKeywordAcceptanceTests.ConditionalKeywordsMatchTheApprovedCardStates),
             new("Vivhite and Ironclad share the V3 five-page skin", SharedAssetsAcceptanceTests.VivhiteAndIroncladUseTheSameV3Skin),
-            new("card portraits resolve to real type-appropriate placeholders", SharedAssetsAcceptanceTests.CardPortraitsResolveToRealTypeAppropriatePlaceholders)
+            new("V3 skin rejects legacy and missing-page layouts", SharedAssetsAcceptanceTests.V3SkinRequiresExactFivePageLayout),
+            new("card portraits use RitsuLib's embedded fallback", SharedAssetsAcceptanceTests.CardPortraitsUseRitsuLibEmbeddedFallback)
         ];
 
         var failures = 0;

@@ -1,4 +1,8 @@
 using System.Reflection;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using STS2RitsuLib.Scaffolding.Content;
 using Vivhite.Cards.Common;
 using Vivhite.Core;
 using Vivhite.Tests.Acceptance;
@@ -39,6 +43,81 @@ internal static class LifeCalculationAcceptanceTests
 
         var dead = LifeCalculation.Calculate(10, 1_000, payerIsAlive: false, amount: 1);
         AcceptanceAssert.True(!dead.CanPay, "A dead payer may not play a Life Calculation card even with Margin.");
+    }
+
+    public static void NegativeAmountsNormalizeToZeroWithoutPayment(RepositorySnapshot _)
+    {
+        var directNegative = LifeCalculation.Calculate(
+            currentHp: 23,
+            marginAvailable: 11,
+            payerIsAlive: true,
+            amount: int.MinValue);
+        AssertZeroPayment(directNegative, "A directly negative Life Calculation input");
+
+        const int printedAmount = 4;
+        const int additiveModifier = -9;
+        var modifiedBelowZero = LifeCalculation.Calculate(
+            currentHp: 23,
+            marginAvailable: 11,
+            payerIsAlive: true,
+            amount: printedAmount + additiveModifier);
+        AssertZeroPayment(modifiedBelowZero, "A Life Calculation amount modified below zero");
+    }
+
+    public static void AutoPlayShouldPlayHonorsLifePaymentLegality(RepositorySnapshot repository)
+    {
+        const BindingFlags declaredInstance =
+            BindingFlags.Instance |
+            BindingFlags.Public |
+            BindingFlags.NonPublic |
+            BindingFlags.DeclaredOnly;
+        var shouldPlay = typeof(VivhiteLifeCalculationCard).GetMethods(declaredInstance)
+            .Single(method => method.Name == "ShouldPlay");
+        AcceptanceAssert.True(
+            shouldPlay.IsFinal,
+            "VivhiteLifeCalculationCard.ShouldPlay must be sealed so every Life Calculation card uses the payment gate.");
+
+        var calls = IlInspection.CalledMethods(shouldPlay);
+        AcceptanceAssert.True(
+            calls.Any(method =>
+                method.DeclaringType != typeof(VivhiteLifeCalculationCard) &&
+                method.Name == "ShouldPlay"),
+            "AutoPlay gating must preserve the inherited ShouldPlay decision first.");
+        AcceptanceAssert.True(
+            calls.Any(method =>
+                method.DeclaringType == typeof(LifeCalculation) &&
+                method.Name == nameof(LifeCalculation.CanPay)),
+            "AutoPlay gating must use the same compiled LifeCalculation.CanPay contract as manual play.");
+
+        var source = repository.RequireSourceType(typeof(VivhiteLifeCalculationCard).FullName!)
+            .Declaration.Members
+            .OfType<MethodDeclarationSyntax>()
+            .Single(method => method.Identifier.ValueText == "ShouldPlay");
+        var finalReturn = source.DescendantNodes().OfType<ReturnStatementSyntax>().Last().Expression;
+        AcceptanceAssert.True(
+            finalReturn is not null &&
+            finalReturn.DescendantNodesAndSelf().OfType<BinaryExpressionSyntax>().Any(expression =>
+                expression.IsKind(SyntaxKind.LessThanOrEqualExpression) &&
+                expression.Right is LiteralExpressionSyntax literal &&
+                Equals(literal.Token.Value, 0)) &&
+            finalReturn.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>().Any(invocation =>
+                invocation.Expression is MemberAccessExpressionSyntax access &&
+                access.Name.Identifier.ValueText == nameof(LifeCalculation.CanPay)),
+            "ShouldPlay must accept non-positive costs and otherwise return LifeCalculation.CanPay.");
+
+        var wouldReachZero = LifeCalculation.Calculate(3, 0, payerIsAlive: true, amount: 3);
+        AcceptanceAssert.True(
+            !wouldReachZero.CanPay,
+            "AutoPlay must reject a Life Calculation payment that would leave less than 1 HP.");
+
+        var marginFunded = LifeCalculation.Calculate(1, 3, payerIsAlive: true, amount: 3);
+        AcceptanceAssert.Equal(0, marginFunded.HpRequired, "Margin must be able to reduce the AutoPlay HP payment to zero.");
+        AcceptanceAssert.True(marginFunded.CanPay, "A fully Margin-funded AutoPlay request must remain allowed.");
+
+        var negative = LifeCalculation.Calculate(1, 50, payerIsAlive: true, amount: -7);
+        AcceptanceAssert.Equal(0, negative.Requested, "A negative raw AutoPlay cost must normalize to zero.");
+        AcceptanceAssert.Equal(0, negative.MarginConsumed, "A negative raw AutoPlay cost must not consume Margin.");
+        AcceptanceAssert.True(negative.CanPay, "A negative raw AutoPlay cost must remain allowed.");
     }
 
     public static void CompiledCardBaseGatesPlayAndPaysBeforeEffects(RepositorySnapshot _)
@@ -98,5 +177,15 @@ internal static class LifeCalculationAcceptanceTests
         AcceptanceAssert.True(
             marginIndex >= 0 && hpIndex > marginIndex,
             "Compiled payment flow must consume Margin before issuing native HP damage.");
+    }
+
+    private static void AssertZeroPayment(LifePaymentQuote quote, string scenario)
+    {
+        AcceptanceAssert.Equal(0, quote.Requested, $"{scenario} must normalize to zero.");
+        AcceptanceAssert.Equal(0, quote.MarginConsumed, $"{scenario} must not consume Margin.");
+        AcceptanceAssert.Equal(0, quote.HpRequired, $"{scenario} must not require or deduct HP.");
+        AcceptanceAssert.Equal(23, quote.CurrentHp, $"{scenario} must preserve current HP.");
+        AcceptanceAssert.Equal(11, quote.MarginAvailable, $"{scenario} must preserve available Margin.");
+        AcceptanceAssert.True(quote.CanPay, $"{scenario} must be payable by a living creature.");
     }
 }
