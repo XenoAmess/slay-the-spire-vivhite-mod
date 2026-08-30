@@ -24,7 +24,7 @@ public sealed class PerfectSynthesis : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(11, ValueProp.Move),
-        ModCardVars.Int("Drain", 8)
+        ModCardVars.Int("Drain", 32)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class PerfectSynthesis : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["Drain"].UpgradeValueBy(2);
+        DynamicVars["Drain"].UpgradeValueBy(8);
     }
 }

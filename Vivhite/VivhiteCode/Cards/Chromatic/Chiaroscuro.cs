@@ -27,7 +27,7 @@ public sealed class Chiaroscuro : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Block(10, ValueProp.Move),
-        ModCardVars.Int("Drain", 5)
+        ModCardVars.Int("Drain", 20)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -46,6 +46,6 @@ public sealed class Chiaroscuro : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Block.UpgradeValueBy(4);
-        DynamicVars["Drain"].UpgradeValueBy(2);
+        DynamicVars["Drain"].UpgradeValueBy(8);
     }
 }

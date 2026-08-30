@@ -33,7 +33,7 @@ public sealed class ProofOfTermination : RecursionCard
         var attack = await AttackAllAsync(choiceContext, cardPlay);
         for (var kill = 0; kill < attack.Damage.EnemyKills; kill++)
         {
-            await DrawAsync(choiceContext, 2);
+            await DrawAsync(choiceContext, 4);
             await PlayerCmd.GainEnergy(1, Owner);
         }
     }
@@ -95,7 +95,7 @@ public sealed class InfiniteStarSequence : RecursionCard
         var priorCardsPlayed = CombatManager.Instance.History.CardPlaysFinished.Count(entry =>
             entry.HappenedThisTurn(CombatState) &&
             ReferenceEquals(entry.CardPlay.Player, Owner));
-        var requestedDraw = priorCardsPlayed + (IsUpgraded ? 1 : 0);
+        var requestedDraw = 2 * (priorCardsPlayed + (IsUpgraded ? 1 : 0));
         var actuallyDrawn = (await DrawAsync(choiceContext, requestedDraw)).Count();
         if (actuallyDrawn > 0)
         {
@@ -110,7 +110,7 @@ public sealed class InfiniteStarSequence : RecursionCard
 
     protected override void OnUpgrade()
     {
-        // The upgrade adds one draw after the pre-play history count is captured.
+        // The upgrade adds two draws after the pre-play history count is captured.
     }
 }
 

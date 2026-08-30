@@ -24,7 +24,7 @@ public sealed class CrimsonArea : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(14, ValueProp.Move),
-        ModCardVars.Int("Drain", 4)
+        ModCardVars.Int("Drain", 16)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class CrimsonArea : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(4);
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

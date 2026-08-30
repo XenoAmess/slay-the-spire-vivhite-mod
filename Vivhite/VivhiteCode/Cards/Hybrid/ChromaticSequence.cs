@@ -26,9 +26,9 @@ public sealed class ChromaticSequence : VivhiteLifeCalculationCard
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         ModCardVars.Int("LifeCost", 4),
-        ModCardVars.Cards(2),
+        ModCardVars.Cards(4),
         ModCardVars.Int("MarginPerAttack", 1),
-        ModCardVars.Int("DrainPerSkill", 1)
+        ModCardVars.Int("DrainPerSkill", 4)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -72,6 +72,6 @@ public sealed class ChromaticSequence : VivhiteLifeCalculationCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Cards.UpgradeValueBy(1);
+        DynamicVars.Cards.UpgradeValueBy(2);
     }
 }

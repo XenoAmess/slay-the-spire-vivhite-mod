@@ -16,6 +16,8 @@ namespace Vivhite.Cards.Chromatic;
 /// </summary>
 public static class ChromaticDrainMechanics
 {
+    internal const int InfiniteCanvasDrainGrowthPerStack = 4;
+
     public static async Task<InfiniteDrainResult> ExecuteDrainAttackAsync(
         PlayerChoiceContext choiceContext,
         AttackCommand attackCommand,
@@ -128,7 +130,8 @@ public static class ChromaticDrainMechanics
         var upgradedPower = context.Recipient.GetPower<InfiniteCanvasUpgradedPower>();
         var normalStacks = Math.Max(0, normalPower?.Amount ?? 0);
         var upgradedStacks = Math.Max(0, upgradedPower?.Amount ?? 0);
-        var growth = checked(normalStacks + upgradedStacks);
+        var growth = checked(
+            (normalStacks + upgradedStacks) * InfiniteCanvasDrainGrowthPerStack);
         if (growth == 0)
         {
             return;

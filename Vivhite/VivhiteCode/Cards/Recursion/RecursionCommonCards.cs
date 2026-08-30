@@ -26,7 +26,7 @@ public sealed class RecurrentStarlight : RecursionCard
     protected override IEnumerable<DynamicVar> RecursionVars =>
     [
         ModCardVars.Damage(13, ValueProp.Move),
-        ModCardVars.Cards(2)
+        ModCardVars.Cards(4)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -122,7 +122,7 @@ public sealed class AstralSearch : RecursionCard
     }
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
-        [ModCardVars.Cards(2)];
+        [ModCardVars.Cards(4)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -140,7 +140,7 @@ public sealed class AstralSearch : RecursionCard
         var selected = await CardSelectCmd.FromHandForDiscard(
             choiceContext,
             Owner,
-            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 1),
+            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 2),
             static _ => true,
             this);
         await CardCmd.Discard(choiceContext, selected);
@@ -148,7 +148,7 @@ public sealed class AstralSearch : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Cards.UpgradeValueBy(1);
+        DynamicVars.Cards.UpgradeValueBy(2);
     }
 }
 
@@ -171,7 +171,7 @@ public sealed class HeuristicShield : RecursionCard
         LifePaymentResult payment)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, cardPlay);
-        await DrawAsync(choiceContext, 1);
+        await DrawAsync(choiceContext, 2);
     }
 
     protected override void OnUpgrade()

@@ -24,7 +24,7 @@ public sealed class TrichromaticWaltz : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(4, ValueProp.Move),
-        ModCardVars.Int("Drain", 3)
+        ModCardVars.Int("Drain", 12)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class TrichromaticWaltz : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

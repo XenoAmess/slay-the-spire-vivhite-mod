@@ -22,7 +22,7 @@ public sealed class InfiniteCanvas : ChromaticCard
         [VivhiteKeywords.Drain];
 
     protected override IEnumerable<DynamicVar> ChromaticVars =>
-        [ModCardVars.Int("DrainGrowth", 1)];
+        [ModCardVars.Int("DrainGrowth", 4)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -50,6 +50,6 @@ public sealed class InfiniteCanvas : ChromaticCard
 
     protected override void OnUpgrade()
     {
-        // Both normal and upgraded copies now grow Drain by one percentage point.
+        // Both normal and upgraded copies grow Drain by four percentage points.
     }
 }

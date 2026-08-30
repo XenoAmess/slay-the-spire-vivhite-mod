@@ -11,7 +11,7 @@ namespace Vivhite.Cards.Conservation;
 
 /// <summary>
 /// Shared implementation surface for the Conservation Geometry suit. The common Vivhite base
-/// supplies shared Life Calculation rules, keywords, and placeholder card art.
+/// supplies shared Life Calculation rules, keywords, and dedicated type-named card art.
 /// </summary>
 public abstract class ConservationCard : VivhiteLifeCalculationCard
 {

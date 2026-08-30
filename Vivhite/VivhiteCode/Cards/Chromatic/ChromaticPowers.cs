@@ -73,11 +73,11 @@ public sealed class CrimsonConservationLawPower : ChromaticCounterPower;
 [RegisterPower]
 public sealed class CrimsonConservationLawUpgradedPower : ChromaticCounterPower;
 
-/// <summary>Each stack grows global Drain by one point after a healing Attack.</summary>
+/// <summary>Each stack grows global Drain by four points after a healing Attack.</summary>
 [RegisterPower]
 public sealed class InfiniteCanvasPower : ChromaticCounterPower;
 
-/// <summary>Upgraded copies remain separate and also grow global Drain by one point.</summary>
+/// <summary>Upgraded copies remain separate and also grow global Drain by four points.</summary>
 [RegisterPower]
 public sealed class InfiniteCanvasUpgradedPower : ChromaticCounterPower;
 

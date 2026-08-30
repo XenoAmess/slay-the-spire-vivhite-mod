@@ -13,7 +13,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class ColorConservation : ChromaticCard
 {
     public ColorConservation()
-        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
+        : base(0, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
     {
     }
 
@@ -33,10 +33,5 @@ public sealed class ColorConservation : ChromaticCard
             1,
             Owner.Creature,
             this);
-    }
-
-    protected override void OnUpgrade()
-    {
-        EnergyCost.UpgradeBy(-1);
     }
 }

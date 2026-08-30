@@ -24,7 +24,7 @@ public sealed class GoldenComposition : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(8, ValueProp.Move),
-        ModCardVars.Int("Drain", 5)
+        ModCardVars.Int("Drain", 20)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class GoldenComposition : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(2);
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

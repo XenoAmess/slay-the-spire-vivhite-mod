@@ -24,7 +24,7 @@ public sealed class ComplementaryAfterimage : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(12, ValueProp.Move),
-        ModCardVars.Int("Drain", 4)
+        ModCardVars.Int("Drain", 16)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -39,6 +39,6 @@ public sealed class ComplementaryAfterimage : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

@@ -4,16 +4,24 @@ using STS2RitsuLib.Scaffolding.Content;
 namespace Vivhite.Powers;
 
 /// <summary>
-/// Shared presentation contract for every Vivhite power. Until dedicated power art exists,
-/// use one known-good in-pack texture instead of falling through to the engine's red NOPE icon.
+/// Shared presentation contract for every Vivhite power. Each registered power resolves to its
+/// own mod-owned transparent icon, named after the compiled power type. A missing icon is a
+/// packaging failure and can no longer be hidden by the old shared relic placeholder.
 /// </summary>
 public abstract class VivhitePowerTemplate : ModPowerTemplate
 {
-    private static readonly PowerAssetProfile PlaceholderAssetProfile = new(
-        IconPath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png",
-        BigIconPath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png");
-
-    public override PowerAssetProfile AssetProfile => PlaceholderAssetProfile;
+    public sealed override PowerAssetProfile AssetProfile
+    {
+        get
+        {
+            var iconName = GetType().Name.Replace(
+                "UpgradedPower",
+                "Power",
+                StringComparison.Ordinal);
+            var path = $"{Entry.ResPath}/images/powers/{iconName}.png";
+            return new PowerAssetProfile(IconPath: path, BigIconPath: path);
+        }
+    }
 }
 
 /// <summary>

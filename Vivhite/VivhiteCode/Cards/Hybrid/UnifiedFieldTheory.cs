@@ -26,7 +26,7 @@ public sealed class UnifiedFieldTheory : VivhiteLifeCalculationCard
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         ModCardVars.Int("LifeCost", 14),
-        ModCardVars.Int("DrainPerMargin", 1),
+        ModCardVars.Int("DrainPerMargin", 4),
         ModCardVars.Int("HealingDivisor", 3)
     ];
 

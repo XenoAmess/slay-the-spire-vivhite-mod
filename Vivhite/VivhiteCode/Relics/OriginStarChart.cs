@@ -12,7 +12,7 @@ namespace Vivhite.Relics;
 [RegisterCharacterStarterRelic(typeof(VivhiteCharacter))]
 public sealed class OriginStarChart : AnyEnemyDeathRelic
 {
-    private const int HealingPercent = 5;
+    private const int HealingPercent = 20;
 
     public override RelicRarity Rarity => RelicRarity.Starter;
 
@@ -21,11 +21,10 @@ public sealed class OriginStarChart : AnyEnemyDeathRelic
         new HealVar(HealingPercent)
     ];
 
-    // Keep the existing runtime icon until a dedicated Solitary Crown asset is supplied.
     public override RelicAssetProfile AssetProfile => new(
-        IconPath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png",
-        IconOutlinePath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png",
-        BigIconPath: $"{Entry.ResPath}/images/relics/VivhiteRelic.png");
+        IconPath: $"{Entry.ResPath}/images/relics/SolitaryCrown.png",
+        IconOutlinePath: $"{Entry.ResPath}/images/relics/SolitaryCrownOutline.png",
+        BigIconPath: $"{Entry.ResPath}/images/relics/SolitaryCrown.png");
 
     protected override async Task OnAnyEnemyDeath(
         PlayerChoiceContext choiceContext,

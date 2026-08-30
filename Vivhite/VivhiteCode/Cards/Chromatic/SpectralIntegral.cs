@@ -21,7 +21,7 @@ public sealed class SpectralIntegral : ChromaticCard
         [VivhiteKeywords.Drain];
 
     protected override IEnumerable<DynamicVar> ChromaticVars =>
-        [ModCardVars.Int("Drain", 2)];
+        [ModCardVars.Int("Drain", 8)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -38,6 +38,6 @@ public sealed class SpectralIntegral : ChromaticCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

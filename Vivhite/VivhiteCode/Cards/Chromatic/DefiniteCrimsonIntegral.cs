@@ -24,7 +24,7 @@ public sealed class DefiniteCrimsonIntegral : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         ModCardVars.Damage(32, ValueProp.Move),
-        ModCardVars.Int("Drain", 12)
+        ModCardVars.Int("Drain", 48)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -38,6 +38,6 @@ public sealed class DefiniteCrimsonIntegral : ChromaticCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(10);
-        DynamicVars["Drain"].UpgradeValueBy(3);
+        DynamicVars["Drain"].UpgradeValueBy(12);
     }
 }

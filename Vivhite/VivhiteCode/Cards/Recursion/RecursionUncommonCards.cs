@@ -77,7 +77,7 @@ public sealed class ConvergenceVerdict : RecursionCard
     protected override IEnumerable<DynamicVar> RecursionVars =>
     [
         ModCardVars.Damage(27, ValueProp.Move),
-        ModCardVars.Cards(3)
+        ModCardVars.Cards(6)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -112,7 +112,7 @@ public sealed class DivideAndConquerCircle : RecursionCard
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
     [
-        ModCardVars.Cards(2),
+        ModCardVars.Cards(4),
         ModCardVars.Int("SpellDamage", 4)
     ];
 
@@ -157,7 +157,7 @@ public sealed class DivideAndConquerCircle : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Cards.UpgradeValueBy(1);
+        DynamicVars.Cards.UpgradeValueBy(2);
         DynamicVars["SpellDamage"].UpgradeValueBy(1);
     }
 }
@@ -210,7 +210,7 @@ public sealed class PrefetchFuture : RecursionCard
     }
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
-        [ModCardVars.Cards(3)];
+        [ModCardVars.Cards(6)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -255,12 +255,12 @@ public sealed class PrefetchFuture : RecursionCard
 public sealed class InductiveCircle : RecursionCard
 {
     public InductiveCircle()
-        : base(2, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
+        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
     {
     }
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
-        [ModCardVars.Heal(2)];
+        [ModCardVars.Heal(50)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -277,7 +277,7 @@ public sealed class InductiveCircle : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Heal.UpgradeValueBy(1);
+        DynamicVars.Heal.UpgradeValueBy(25);
     }
 }
 

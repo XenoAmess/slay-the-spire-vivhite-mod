@@ -22,7 +22,7 @@ public sealed class ChromaticTransition : ChromaticCard
         [VivhiteKeywords.Drain, CardKeyword.Exhaust];
 
     protected override IEnumerable<DynamicVar> ChromaticVars =>
-        [ModCardVars.Int("Drain", 2)];
+        [ModCardVars.Int("Drain", 8)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -35,11 +35,11 @@ public sealed class ChromaticTransition : ChromaticCard
             IntVar("Drain"),
             Owner.Creature,
             this);
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
+        await CardPileCmd.Draw(choiceContext, 2, Owner, false);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

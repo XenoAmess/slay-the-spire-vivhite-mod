@@ -23,6 +23,8 @@ public sealed class UnifiedFieldTheoryUpgradedPower : VivhiteCounterPower;
 
 public static class UnifiedFieldTheoryMechanics
 {
+    internal const int DrainPercentPerMarginPerStack = 4;
+
     public static async Task AfterMarginPreventedAsync(
         PlayerChoiceContext choiceContext,
         Creature owner,
@@ -43,7 +45,8 @@ public static class UnifiedFieldTheoryMechanics
 
         var normal = owner.GetPowerAmount<UnifiedFieldTheoryPower>();
         var upgraded = owner.GetPowerAmount<UnifiedFieldTheoryUpgradedPower>();
-        var percentPerMargin = checked(normal + upgraded);
+        var percentPerMargin = checked(
+            (normal + upgraded) * DrainPercentPerMarginPerStack);
         var percent = checked(marginPrevented * percentPerMargin);
         if (percent == 0)
         {

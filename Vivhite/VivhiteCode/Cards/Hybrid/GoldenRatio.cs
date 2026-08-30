@@ -27,8 +27,8 @@ public sealed class GoldenRatio : VivhiteLifeCalculationCard
     [
         ModCardVars.Int("LifeCost", 4),
         ModCardVars.Int("Margin", 3),
-        ModCardVars.Int("Drain", 3),
-        ModCardVars.Cards(1)
+        ModCardVars.Int("Drain", 12),
+        ModCardVars.Cards(2)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -58,6 +58,6 @@ public sealed class GoldenRatio : VivhiteLifeCalculationCard
     protected override void OnUpgrade()
     {
         DynamicVars["Margin"].UpgradeValueBy(1);
-        DynamicVars["Drain"].UpgradeValueBy(1);
+        DynamicVars["Drain"].UpgradeValueBy(4);
     }
 }

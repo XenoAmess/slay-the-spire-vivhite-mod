@@ -4,9 +4,9 @@ using STS2RitsuLib.Scaffolding.Content;
 namespace Vivhite.Cards.Common;
 
 /// <summary>
-/// Lightweight base shared by all Vivhite cards. The inherited empty asset profile deliberately
-/// lets RitsuLib supply its embedded card-art placeholder, while this base exposes one extension
-/// point for native and mod-owned keywords.
+/// Lightweight base shared by all Vivhite cards. Every registered card resolves to a dedicated,
+/// mod-owned opaque portrait whose file name matches the compiled card type. Missing artwork is
+/// therefore a packaging error instead of a silent RitsuLib-placeholder fallback.
 /// </summary>
 public abstract class VivhiteCard : ModCardTemplate
 {
@@ -19,6 +19,9 @@ public abstract class VivhiteCard : ModCardTemplate
         : base(baseEnergyCost, cardType, rarity, targetType, shouldShowInCardLibrary)
     {
     }
+
+    public sealed override string CustomPortraitPath =>
+        $"{Entry.ResPath}/images/cards/{GetType().Name}.png";
 
     protected virtual IEnumerable<CardKeyword> VivhiteCanonicalKeywords => [];
 

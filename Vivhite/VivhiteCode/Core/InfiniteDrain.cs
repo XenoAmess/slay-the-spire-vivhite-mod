@@ -25,8 +25,9 @@ public readonly record struct DrainRate(
             throw new InvalidOperationException("Drain percentages cannot be negative.");
         }
 
-        // Aggregate first and truncate once. Deliberately no 100% cap.
-        return decimal.ToInt32(decimal.Floor(actualEnemyHpLoss * TotalPercent / 100m));
+        // Aggregate the complete Attack first, then round the single card-level result upward.
+        // Deliberately no 100% rate cap or healing cap.
+        return decimal.ToInt32(decimal.Ceiling(actualEnemyHpLoss * TotalPercent / 100m));
     }
 
     public static DrainRate FromPowers(Creature owner, decimal cardPercent)

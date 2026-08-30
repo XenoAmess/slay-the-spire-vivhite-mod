@@ -4,11 +4,13 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using STS2RitsuLib.Interop.AutoRegistration;
 using STS2RitsuLib.Scaffolding.Content;
 using Vivhite.Core;
 using Vivhite.Powers;
+using Vivhite.Relics;
 
 namespace Vivhite.Cards.Recursion;
 
@@ -25,7 +27,7 @@ public sealed class AstralPursuitPower : AnyEnemyDeathPower
             return;
         }
 
-        await CardPileCmd.Draw(choiceContext, Amount, player, false);
+        await CardPileCmd.Draw(choiceContext, Amount * 2, player, false);
     }
 }
 
@@ -60,16 +62,50 @@ public sealed class InductiveCirclePower : AnyEnemyDeathPower
         PlayerChoiceContext choiceContext,
         EnemyDeathEvent deathEvent)
     {
-        if (Amount > 0)
+        if (Amount <= 0)
         {
-            await Overheal.HealAsync(Owner, Amount);
+            return;
         }
+
+        var baseHealing = CalculateBaseImmediateDeathHealing(Owner);
+        var additionalHealing = CalculateAdditionalHealing(baseHealing, Amount);
+        if (additionalHealing > 0)
+        {
+            await Overheal.HealAsync(Owner, additionalHealing);
+        }
+    }
+
+    private static long CalculateBaseImmediateDeathHealing(Creature owner)
+    {
+        var crownCopies = owner.Player?.Relics.Count(static relic => relic is OriginStarChart) ?? 0;
+        var crownHealing = checked(
+            (long)crownCopies * OriginStarChart.CalculateHealingForMaxHp(owner.MaxHp));
+
+        var optimalAlgorithmStacks = owner.GetPower<OptimalAlgorithmPower>()?.Amount ?? 0;
+        var optimalAlgorithmHealing = optimalAlgorithmStacks > 0
+            ? checked((long)optimalAlgorithmStacks * OptimalAlgorithmPower.HealingPerStack)
+            : 0L;
+
+        return checked(crownHealing + optimalAlgorithmHealing);
+    }
+
+    private static int CalculateAdditionalHealing(long baseHealing, int percentagePoints)
+    {
+        if (baseHealing <= 0 || percentagePoints <= 0)
+        {
+            return 0;
+        }
+
+        var scaledHealing = checked(baseHealing * percentagePoints);
+        return checked((int)((scaledHealing + 99L) / 100L));
     }
 }
 
 [RegisterPower]
 public sealed class OptimalAlgorithmPower : AnyEnemyDeathPower
 {
+    internal const int HealingPerStack = 3;
+
     protected override async Task OnAnyEnemyDeath(
         PlayerChoiceContext choiceContext,
         EnemyDeathEvent deathEvent)
@@ -77,13 +113,13 @@ public sealed class OptimalAlgorithmPower : AnyEnemyDeathPower
         var player = Owner.Player;
         for (var copy = 0; copy < Amount; copy++)
         {
-            await Overheal.HealAsync(Owner, 3);
+            await Overheal.HealAsync(Owner, HealingPerStack);
             if (player is null)
             {
                 continue;
             }
 
-            await CardPileCmd.Draw(choiceContext, 2, player, false);
+            await CardPileCmd.Draw(choiceContext, 4, player, false);
             await PlayerCmd.GainEnergy(1, player);
         }
     }

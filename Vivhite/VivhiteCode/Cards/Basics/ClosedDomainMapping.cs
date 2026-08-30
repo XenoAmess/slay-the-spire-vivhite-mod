@@ -15,9 +15,6 @@ namespace Vivhite.Cards.Basics;
 [RegisterCharacterStarterCard(typeof(VivhiteCharacter), 4)]
 public sealed class ClosedDomainMapping : VivhiteLifeCalculationCard
 {
-    public override string CustomPortraitPath =>
-        $"{Entry.ResPath}/images/cards/ClosedDomainMapping.png";
-
     public ClosedDomainMapping()
         : base(1, CardType.Skill, CardRarity.Basic, TargetType.Self)
     {

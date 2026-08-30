@@ -30,7 +30,7 @@ public sealed class ChromaticLimit : VivhiteLifeCalculationCard
     [
         ModCardVars.Int("LifeCost", 8),
         ModCardVars.Damage(9, ValueProp.Move),
-        ModCardVars.Int("DrainPerX", 3),
+        ModCardVars.Int("DrainPerX", 12),
         ModCardVars.Int("HealingPerMargin", 10)
     ];
 
@@ -68,6 +68,6 @@ public sealed class ChromaticLimit : VivhiteLifeCalculationCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["DrainPerX"].UpgradeValueBy(1);
+        DynamicVars["DrainPerX"].UpgradeValueBy(4);
     }
 }
