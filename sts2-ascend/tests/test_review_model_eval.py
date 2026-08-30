@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 SCRIPT = (
@@ -209,6 +210,128 @@ class IsolationTests(unittest.TestCase):
 
 
 class EvaluationArtifactTests(unittest.TestCase):
+    def test_codex_runtime_environment_reaches_provider_and_host_selfcheck(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix='sts2-eval-test-') as root:
+            base = Path(root)
+            source = _source_repo(base)
+            prompt = base / 'prompt.md'
+            prompt.write_text('frozen', encoding='utf-8')
+            observed: dict[str, dict[str, str]] = {}
+
+            class Runtime:
+                pool_dir: Path
+                startup_dir: Path
+
+            def prepare_runtime(repo: Path, runner: str):
+                self.assertEqual(runner, 'codex')
+                self.assertTrue((repo / '.git').is_dir())
+                self.assertTrue((
+                    repo / 'sts2-ascend' / 'knowledge'
+                    / 'review_prompt_latest.md'
+                ).is_file())
+                runtime = Runtime()
+                runtime.pool_dir = repo / '.review-cache' / 'selfcheck-pool'
+                runtime.startup_dir = (
+                    repo / '.review-cache' / 'python-startup')
+                runtime.pool_dir.mkdir(parents=True)
+                runtime.startup_dir.mkdir(parents=True)
+                return runtime, 'STS2_ASCEND_CODEX_SELFCHECK_POOL'
+
+            def provider(_command, **kwargs):
+                observed['provider'] = dict(kwargs['env'])
+                return {'returncode': 0, 'timed_out': False}
+
+            def selfcheck(_command, **kwargs):
+                observed['selfcheck'] = dict(kwargs['env'])
+                return {'returncode': 0, 'timed_out': False}
+
+            request = review_model_eval.EvalRequest(
+                source_repo=source,
+                baseline='HEAD',
+                prompt_path=prompt,
+                output_root=base / 'results',
+                case_id='codex-selfcheck-runtime-env',
+                backend=review_model_eval.parse_backend_key(
+                    'codex:gpt-5.6-luna@max:auto-review'),
+            )
+            with (
+                mock.patch.object(
+                    review_model_eval,
+                    '_prepare_codex_windows_selfcheck_runtime',
+                    side_effect=prepare_runtime,
+                ),
+                mock.patch.dict(
+                    review_model_eval.os.environ,
+                    {'PYTHONPATH': 'inherited-pythonpath'},
+                    clear=False,
+                ),
+            ):
+                _result_dir, manifest = review_model_eval.execute_evaluation(
+                    request,
+                    binary_override='codex.CMD',
+                    provider_executor=provider,
+                    selfcheck_executor=selfcheck,
+                    acceptance_validator=lambda **_kwargs: {
+                        'status': 'rejected', 'accepted_for_merge': False,
+                    },
+                )
+
+            self.assertEqual(manifest['initialization']['status'], 'ready')
+            self.assertEqual(set(observed), {'provider', 'selfcheck'})
+            for env in observed.values():
+                pool = env['STS2_ASCEND_CODEX_SELFCHECK_POOL']
+                self.assertEqual(env['TEMP'], pool)
+                self.assertEqual(env['TMP'], pool)
+                self.assertEqual(env['TMPDIR'], pool)
+                self.assertEqual(
+                    env['PYTHONPATH'].split(review_model_eval.os.pathsep),
+                    [str(
+                        Path(pool).parent / 'python-startup'),
+                     'inherited-pythonpath'],
+                )
+
+    def test_codex_runtime_preparation_failure_never_starts_provider(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix='sts2-eval-test-') as root:
+            base = Path(root)
+            source = _source_repo(base)
+            prompt = base / 'prompt.md'
+            prompt.write_text('frozen', encoding='utf-8')
+            starts: list[str] = []
+
+            request = review_model_eval.EvalRequest(
+                source_repo=source,
+                baseline='HEAD',
+                prompt_path=prompt,
+                output_root=base / 'results',
+                case_id='codex-selfcheck-runtime-failure',
+                backend=review_model_eval.parse_backend_key(
+                    'codex:gpt-5.6-luna@max:auto-review'),
+            )
+            with mock.patch.object(
+                review_model_eval,
+                '_prepare_codex_windows_selfcheck_runtime',
+                side_effect=OSError('selfcheck pool unavailable'),
+            ):
+                _result_dir, manifest = review_model_eval.execute_evaluation(
+                    request,
+                    binary_override='codex.CMD',
+                    provider_executor=lambda *_args, **_kwargs: (
+                        starts.append('provider') or {}),
+                    selfcheck_executor=lambda *_args, **_kwargs: (
+                        starts.append('selfcheck') or {}),
+                )
+
+            self.assertEqual(starts, [])
+            self.assertEqual(manifest['initialization']['status'], 'failed')
+            self.assertEqual(
+                manifest['initialization']['error']['stage'],
+                'prepare_codex_windows_selfcheck_runtime',
+            )
+            self.assertEqual(manifest['provider']['status'], 'not_started')
+            self.assertEqual(manifest['selfcheck']['status'], 'not_started')
+
     def test_saves_transcript_metrics_patch_and_selfcheck(self) -> None:
         with tempfile.TemporaryDirectory(prefix='sts2-eval-test-') as root:
             base = Path(root)

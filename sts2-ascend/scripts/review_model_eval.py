@@ -658,6 +658,60 @@ def evaluation_environment() -> dict[str, str]:
     return env
 
 
+def _prepare_codex_windows_selfcheck_runtime(
+    sandbox_repo: Path,
+    runner: str,
+) -> tuple[object | None, str | None]:
+    '''Reuse the production Windows/Codex selfcheck bootstrap lazily.'''
+    if runner != 'codex' or os.name != 'nt':
+        return None, None
+    brain_root = ASCEND_ROOT / 'brain'
+    brain_root_text = str(brain_root)
+    inserted = brain_root_text not in sys.path
+    if inserted:
+        sys.path.insert(0, brain_root_text)
+    try:
+        from llm_review import (  # pylint: disable=import-outside-toplevel
+            _CODEX_SELFCHECK_POOL_ENV,
+            _prepare_codex_windows_selfcheck_runtime as prepare_runtime,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f'cannot load production Codex selfcheck runtime helper: {exc}'
+        ) from exc
+    finally:
+        if inserted:
+            sys.path.remove(brain_root_text)
+    runtime = prepare_runtime(sandbox_repo, runner)
+    if runtime is None:
+        raise RuntimeError(
+            'production Codex selfcheck runtime helper returned no runtime'
+        )
+    return runtime, _CODEX_SELFCHECK_POOL_ENV
+
+
+def _apply_codex_windows_selfcheck_environment(
+    env: dict[str, str],
+    runtime: object | None,
+    pool_env_name: str | None,
+) -> None:
+    if runtime is None:
+        return
+    if not pool_env_name:
+        raise RuntimeError('Codex selfcheck pool environment name is missing')
+    pool = str(runtime.pool_dir)
+    startup = str(runtime.startup_dir)
+    env['TEMP'] = pool
+    env['TMP'] = pool
+    env['TMPDIR'] = pool
+    env[pool_env_name] = pool
+    inherited_pythonpath = env.get('PYTHONPATH', '')
+    env['PYTHONPATH'] = (
+        startup
+        + (os.pathsep + inherited_pythonpath if inherited_pythonpath else '')
+    )
+
+
 def _terminate_process_tree(proc: subprocess.Popen) -> None:
     if proc.poll() is not None:
         return
@@ -1365,6 +1419,15 @@ def execute_evaluation(
             f'sts2-eval-{_slug(request.case_id)}',
         )
         manifest['provider_command'] = list(command)
+        initialization_stage = 'prepare_codex_windows_selfcheck_runtime'
+        (
+            codex_selfcheck_runtime,
+            codex_selfcheck_pool_env,
+        ) = _prepare_codex_windows_selfcheck_runtime(
+            sandbox_repo, request.backend.runner)
+        env = evaluation_environment()
+        _apply_codex_windows_selfcheck_environment(
+            env, codex_selfcheck_runtime, codex_selfcheck_pool_env)
         manifest['initialization'] = {
             'status': 'ready', 'finished_at': _utc_now(),
         }
@@ -1405,7 +1468,6 @@ def execute_evaluation(
         }
         return finish()
 
-    env = evaluation_environment()
     harness_errors: list[dict[str, str]] = []
     try:
         manifest['provider'] = provider_executor(

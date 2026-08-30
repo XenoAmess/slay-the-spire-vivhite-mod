@@ -133,6 +133,100 @@ _REVIEW_ATTEMPT_RECEIPT_NAME = "review_attempt.json"
 _REVIEW_ATTEMPT_RECEIPT_SCHEMA = 1
 _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC = 120.0
 _WINDOWS_REVIEW_ACL_REQUIRED = os.name == "nt"
+_CODEX_SELFCHECK_CACHE_REL = Path(".review-cache")
+_CODEX_SELFCHECK_POOL_ENV = "STS2_ASCEND_CODEX_SELFCHECK_POOL"
+_CODEX_SELFCHECK_SLOT_COUNT = 256
+
+
+@dataclass(frozen=True)
+class _CodexWindowsSelfcheckRuntime:
+    pool_dir: Path
+    startup_dir: Path
+
+
+_CODEX_SELFCHECK_SITECUSTOMIZE = r'''"""Host bootstrap for Codex selfcheck temp directories on Windows."""
+import os
+from pathlib import Path
+import shutil
+import sys
+import tempfile
+import threading
+
+_TARGET = "sts2-ascend/brain/selfcheck.py"
+_POOL_ENV = "STS2_ASCEND_CODEX_SELFCHECK_POOL"
+_SLOT_COUNT = 256
+_FAILURE_CODE = "REVIEW_SELFCHECK_BOOTSTRAP_FAILED"
+
+
+def _fatal(detail):
+    try:
+        sys.stderr.write(f"{_FAILURE_CODE}: {detail}\n")
+        sys.stderr.flush()
+    finally:
+        os._exit(86)
+
+
+def _install_managed_mkdtemp(pool_text):
+    pool = Path(pool_text)
+    slots = tuple(pool / f"slot-{index:03d}" for index in range(_SLOT_COUNT))
+    try:
+        if (not pool.is_dir() or pool.is_symlink()
+                or any(not slot.is_dir() or slot.is_symlink() for slot in slots)):
+            raise OSError("selfcheck pool or one of its 256 slots is unavailable")
+    except OSError as exc:
+        _fatal(f"pool initialization failed: {exc}")
+
+    lock = threading.Lock()
+    candidate_names = tempfile._get_candidate_names()
+    next_slot = 0
+
+    def managed_mkdtemp(suffix=None, prefix=None, dir=None):
+        nonlocal next_slot
+        if dir is not None and Path(dir) != pool:
+            _fatal("selfcheck temp dir override escapes the managed pool")
+        suffix = "" if suffix is None else suffix
+        prefix = tempfile.template if prefix is None else prefix
+        if not isinstance(prefix, str) or not isinstance(suffix, str):
+            _fatal("managed selfcheck mkdtemp accepts string prefix/suffix only")
+        with lock:
+            if next_slot >= len(slots):
+                _fatal("selfcheck temp pool exhausted after 256 allocations")
+            slot = slots[next_slot]
+            next_slot += 1
+            try:
+                for child in tuple(slot.iterdir()):
+                    if child.is_symlink() or child.is_file():
+                        child.unlink()
+                    else:
+                        shutil.rmtree(child)
+                for _attempt in range(100):
+                    name = prefix + next(candidate_names) + suffix
+                    candidate = slot / name
+                    try:
+                        # Python 3.14's stdlib mkdtemp uses 0700 on Windows,
+                        # producing an owner-only DACL.  0777 keeps inheritance
+                        # from the host-created slot for Codex's RestrictedToken.
+                        os.mkdir(candidate, 0o777)
+                        return str(candidate)
+                    except FileExistsError:
+                        continue
+            except OSError as exc:
+                _fatal(f"selfcheck temp slot {slot.name} is unusable: {exc}")
+            _fatal(f"selfcheck temp slot {slot.name} exhausted candidate names")
+
+    managed_mkdtemp._sts2_ascend_selfcheck_pool = True
+    tempfile.mkdtemp = managed_mkdtemp
+
+
+argv0 = (str(sys.argv[0]).replace("\\", "/").casefold()
+         if sys.argv else "")
+if (argv0.endswith(_TARGET.casefold())
+        and os.environ.get(_POOL_ENV)):
+    try:
+        _install_managed_mkdtemp(os.environ[_POOL_ENV])
+    except BaseException as exc:
+        _fatal(f"bootstrap installation failed: {exc}")
+'''
 
 
 class _ReviewSandboxAclError(RuntimeError):
@@ -194,6 +288,30 @@ def _normalize_windows_review_sandbox_acl(sandbox_root: Path) -> None:
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise _ReviewSandboxAclError(
             f"review sandbox ACL normalization failed: {exc}") from exc
+
+
+def _prepare_codex_windows_selfcheck_runtime(
+    sandbox_repo: Path, runner: str,
+) -> _CodexWindowsSelfcheckRuntime | None:
+    """Prepare inherited-ACL temp parents only for Windows Codex reviews."""
+    if runner != "codex" or not _WINDOWS_REVIEW_ACL_REQUIRED:
+        return None
+    cache_root = sandbox_repo / _CODEX_SELFCHECK_CACHE_REL
+    pool_dir = cache_root / "selfcheck-pool"
+    startup_dir = cache_root / "python-startup"
+    try:
+        cache_root.mkdir()
+        pool_dir.mkdir()
+        startup_dir.mkdir()
+        for index in range(_CODEX_SELFCHECK_SLOT_COUNT):
+            (pool_dir / f"slot-{index:03d}").mkdir()
+        (startup_dir / "sitecustomize.py").write_text(
+            _CODEX_SELFCHECK_SITECUSTOMIZE, encoding="utf-8", newline="\n")
+    except OSError as exc:
+        raise _ReviewSandboxAclError(
+            f"Codex selfcheck inherited-ACL temp pool preparation failed: {exc}") from exc
+    return _CodexWindowsSelfcheckRuntime(
+        pool_dir=pool_dir.resolve(), startup_dir=startup_dir.resolve())
 
 
 def _is_owned_review_temp(path: Path, prefix: str) -> bool:
@@ -1815,6 +1933,8 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
                 metrics_sink: dict | None = None,
                 cwd: Path | str | None = None,
                 expected_clone_root: Path | str | None = None,
+                codex_windows_selfcheck_runtime: (
+                    _CodexWindowsSelfcheckRuntime | None) = None,
                 ) -> tuple[int, str, bool, bool, bool]:
     """流式执行命令；直播落盘，队列、单事件与返回尾部均严格有界。"""
     env = dict(os.environ)
@@ -1831,6 +1951,17 @@ def _stream_run(cmd: list[str], timeout_sec: int, translate=None, *,
     # it into OpenCode makes sandbox selfchecks impersonate that startup and
     # fail when their PID cannot advance the live Brain record.
     env.pop("STS2_ASCEND_BOOT_ID", None)
+    if codex_windows_selfcheck_runtime is not None:
+        pool = str(codex_windows_selfcheck_runtime.pool_dir)
+        startup = str(codex_windows_selfcheck_runtime.startup_dir)
+        env["TEMP"] = pool
+        env["TMP"] = pool
+        env["TMPDIR"] = pool
+        env[_CODEX_SELFCHECK_POOL_ENV] = pool
+        inherited_pythonpath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = (
+            startup + (os.pathsep + inherited_pythonpath
+                       if inherited_pythonpath else ""))
     stream_started = time.monotonic()
     translator = getattr(translate, "__self__", None)
     if expected_clone_root is not None:
@@ -2410,6 +2541,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             sandbox.replay_evidence_requested
             and not sandbox.replay_evidence_complete
             and not sandbox.replay_evidence_model_started
+            and not sandbox.failure_code
             and not stopped)
         if evidence_preflight_failed:
             # No model ran and the original lineage is already the complete
@@ -7605,6 +7737,8 @@ def _run_review_sandbox(
         prompt_path = sandbox_repo / PROMPT_FILE.relative_to(REPO_DIR)
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(prompt, encoding="utf-8")
+        codex_selfcheck_runtime = _prepare_codex_windows_selfcheck_runtime(
+            sandbox_repo, runner)
         if replay_requested:
             try:
                 replay_mount = _mount_failed_review_evidence(
@@ -7646,7 +7780,8 @@ def _run_review_sandbox(
             # write barrier, while reported file_change paths are a fatal
             # runtime tripwire and forensic signal.
             cwd=sandbox_repo,
-            expected_clone_root=(sandbox_repo if runner == "codex" else None))
+            expected_clone_root=(sandbox_repo if runner == "codex" else None),
+            codex_windows_selfcheck_runtime=codex_selfcheck_runtime)
         if stopped:
             # Stop keeps the exact clone as an O(1) deferred forensic source; do
             # not spend the shutdown budget hashing or deleting a large mount.
@@ -7827,7 +7962,7 @@ def _run_review_sandbox(
         else:
             evidence_preflight_failed = bool(
                 replay_requested and replay_evidence_error
-                and not replay_model_started)
+                and not replay_model_started and not result.failure_code)
             if evidence_preflight_failed:
                 # No model process existed, so there is no model WIP to preserve.
                 # A partial mount belongs only to this disposable clone; remove it
