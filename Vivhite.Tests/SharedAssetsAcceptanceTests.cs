@@ -7,8 +7,8 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using STS2RitsuLib.Scaffolding.Characters;
 using STS2RitsuLib.Scaffolding.Content;
-using Vivhite.Cards.Common;
 using Vivhite.Characters;
+using Vivhite.Relics;
 using Vivhite.Tests.Acceptance;
 
 namespace Vivhite.Tests;
@@ -165,47 +165,12 @@ internal static class SharedAssetsAcceptanceTests
             "Only an exact five-page match may return success; every mismatch must add a validation issue.");
     }
 
-    public static void CardPortraitsUseRitsuLibEmbeddedFallback(RepositorySnapshot repository)
+    public static void EveryVivhiteCardUsesDedicatedOpaquePortraitArt(RepositorySnapshot repository)
     {
-        const BindingFlags declaredInstance =
-            BindingFlags.Instance |
-            BindingFlags.Public |
-            BindingFlags.NonPublic |
-            BindingFlags.DeclaredOnly;
-        AcceptanceAssert.True(
-            typeof(VivhiteCard).GetProperty("AssetProfile", declaredInstance) is null &&
-            typeof(VivhiteCard).GetProperty("CustomPortraitPath", declaredInstance) is null,
-            "VivhiteCard must leave AssetProfile and CustomPortraitPath to ModCardTemplate's built-in fallback.");
-
         string fallbackPath = new RitsuLibFallbackProbe().CustomPortraitPath ??
             throw new AcceptanceFailureException("RitsuLib's ModCardTemplate fallback returned null CustomPortraitPath.");
-        AcceptanceAssert.True(
-            !string.IsNullOrWhiteSpace(fallbackPath),
-            "RitsuLib's ModCardTemplate fallback must resolve to a non-empty CustomPortraitPath.");
-        AcceptanceAssert.True(
-            fallbackPath.Contains("card_art_placeholder", StringComparison.OrdinalIgnoreCase),
-            $"RitsuLib's fallback path must identify its embedded card-art placeholder; actual: {fallbackPath}");
-
-        var ritsuAssembly = typeof(ModCardTemplate).Assembly;
-        var placeholderResources = ritsuAssembly.GetManifestResourceNames()
-            .Where(name => name.EndsWith(".Assets.card_art_placeholder.png", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        AcceptanceAssert.Equal(
-            1,
-            placeholderResources.Length,
-            "The referenced RitsuLib assembly must contain exactly one embedded card-art placeholder PNG.");
-        using (var stream = ritsuAssembly.GetManifestResourceStream(placeholderResources[0]))
-        {
-            AcceptanceAssert.True(stream is not null, "RitsuLib's embedded card-art placeholder stream must be readable.");
-            Span<byte> signature = stackalloc byte[8];
-            var bytesRead = stream!.Read(signature);
-            byte[] pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-            AcceptanceAssert.True(
-                bytesRead == pngSignature.Length && signature.SequenceEqual(pngSignature),
-                "RitsuLib's embedded card-art placeholder must be a readable PNG resource.");
-        }
-
         var failures = new List<string>();
+        var portraitPaths = new List<string>();
         foreach (var cardType in repository.VivhitePoolCards)
         {
             try
@@ -223,21 +188,142 @@ internal static class SharedAssetsAcceptanceTests
                     continue;
                 }
 
-                if (!string.Equals(fallbackPath, modCard.CustomPortraitPath, StringComparison.Ordinal))
+                var portraitFileName = $"{cardType.Name}.png";
+                var expectedResourcePath = $"res://Vivhite/images/cards/{portraitFileName}";
+                if (string.Equals(fallbackPath, modCard.CustomPortraitPath, StringComparison.Ordinal) ||
+                    modCard.CustomPortraitPath?.Contains("placeholder", StringComparison.OrdinalIgnoreCase) == true ||
+                    modCard.CustomPortraitPath?.Contains("fallback", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    failures.Add($"{repository.CardId(cardType)}: still resolves to fallback art {modCard.CustomPortraitPath}.");
+                    continue;
+                }
+
+                if (!string.Equals(expectedResourcePath, modCard.CustomPortraitPath, StringComparison.Ordinal))
                 {
                     failures.Add(
-                        $"{repository.CardId(cardType)}: expected RitsuLib fallback {fallbackPath}, " +
+                        $"{repository.CardId(cardType)}: expected dedicated portrait {expectedResourcePath}, " +
                         $"actual {modCard.CustomPortraitPath ?? "<null>"}");
+                    continue;
                 }
+
+                portraitPaths.Add(expectedResourcePath);
+                var diskPath = Path.Combine(
+                    repository.GodotProjectDirectory,
+                    "images",
+                    "cards",
+                    portraitFileName);
+                ValidateOpaqueCardPng(diskPath, repository.CardId(cardType), failures);
             }
             catch (Exception exception)
             {
                 failures.Add($"{cardType.FullName}: {exception.GetBaseException().Message}");
             }
         }
+        AcceptanceAssert.Equal(61, portraitPaths.Count, "All 61 Vivhite cards must resolve dedicated portraits.");
+        AcceptanceAssert.Equal(
+            61,
+            portraitPaths.Distinct(StringComparer.Ordinal).Count(),
+            "Every Vivhite card must own a distinct portrait resource path.");
         AcceptanceAssert.Empty(
             failures,
-            "Every Vivhite card must resolve CustomPortraitPath to RitsuLib's embedded placeholder exactly once:");
+            "Vivhite card portraits must never fall back and must match the dedicated opaque-art contract:");
+    }
+
+    public static void SolitaryCrownUsesDedicatedRelicArt(RepositorySnapshot repository)
+    {
+        var profile = new OriginStarChart().AssetProfile;
+        var paths = new[] { profile.IconPath, profile.IconOutlinePath, profile.BigIconPath };
+        var failures = new List<string>();
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                !path.Contains("/images/relics/", StringComparison.Ordinal) ||
+                !path.Contains("SolitaryCrown", StringComparison.Ordinal) ||
+                path.Contains("VivhiteRelic", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("placeholder", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("fallback", StringComparison.OrdinalIgnoreCase))
+            {
+                failures.Add($"Solitary Crown uses a non-dedicated relic path: {path ?? "<null>"}");
+                continue;
+            }
+
+            ValidatePackedPng(repository, path, "Solitary Crown", failures);
+        }
+
+        AcceptanceAssert.Empty(failures, "Solitary Crown must use existing dedicated relic art for every runtime icon size:");
+    }
+
+    private static void ValidateOpaqueCardPng(string path, string cardId, ICollection<string> failures)
+    {
+        if (!File.Exists(path))
+        {
+            failures.Add($"{cardId}: runtime portrait is missing: {path}");
+            return;
+        }
+
+        using var stream = File.OpenRead(path);
+        Span<byte> header = stackalloc byte[26];
+        if (stream.Read(header) != header.Length)
+        {
+            failures.Add($"{cardId}: PNG header is truncated: {path}");
+            return;
+        }
+
+        byte[] pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        if (!header[..8].SequenceEqual(pngSignature) ||
+            !header[12..16].SequenceEqual("IHDR"u8))
+        {
+            failures.Add($"{cardId}: runtime portrait is not a PNG with an IHDR first chunk: {path}");
+            return;
+        }
+
+        var width = ReadBigEndianUInt32(header[16..20]);
+        var height = ReadBigEndianUInt32(header[20..24]);
+        var bitDepth = header[24];
+        var colorType = header[25];
+        if (width != 1000 || height != 760 || bitDepth != 8 || colorType != 2)
+        {
+            failures.Add(
+                $"{cardId}: expected opaque RGB8 PNG 1000x760, actual " +
+                $"{width}x{height}, bit depth {bitDepth}, color type {colorType}: {path}");
+        }
+    }
+
+    private static uint ReadBigEndianUInt32(ReadOnlySpan<byte> bytes) =>
+        ((uint)bytes[0] << 24) |
+        ((uint)bytes[1] << 16) |
+        ((uint)bytes[2] << 8) |
+        bytes[3];
+
+    private static void ValidatePackedPng(
+        RepositorySnapshot repository,
+        string resourcePath,
+        string label,
+        ICollection<string> failures)
+    {
+        const string prefix = "res://Vivhite/";
+        if (!resourcePath.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            failures.Add($"{label}: resource is outside the Vivhite pack: {resourcePath}");
+            return;
+        }
+
+        var diskPath = Path.Combine(
+            repository.GodotProjectDirectory,
+            resourcePath[prefix.Length..].Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(diskPath))
+        {
+            failures.Add($"{label}: PNG resource is missing: {diskPath}");
+            return;
+        }
+
+        using var stream = File.OpenRead(diskPath);
+        Span<byte> signature = stackalloc byte[8];
+        byte[] expected = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        if (stream.Read(signature) != signature.Length || !signature.SequenceEqual(expected))
+        {
+            failures.Add($"{label}: resource is not a readable PNG: {diskPath}");
+        }
     }
 
     private static MethodInfo RequireDeclaredMethod(Type type, string name)

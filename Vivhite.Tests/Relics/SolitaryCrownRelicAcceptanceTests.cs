@@ -8,20 +8,23 @@ namespace Vivhite.Tests.Relics;
 
 internal static class SolitaryCrownRelicAcceptanceTests
 {
-    public static void UsesFivePercentMaxHpCeilingWithoutTriggerCaps(RepositorySnapshot repository)
+    public static void UsesTwentyPercentMaxHpCeilingWithoutTriggerCaps(RepositorySnapshot repository)
     {
         (int MaxHp, int ExpectedHealing)[] cases =
         [
             (0, 0),
             (1, 1),
-            (19, 1),
-            (20, 1),
-            (21, 2),
-            (78, 4),
-            (100, 5),
-            (101, 6),
-            (1_000_000, 50_000),
-            (int.MaxValue, 107_374_183)
+            (4, 1),
+            (5, 1),
+            (6, 2),
+            (9, 2),
+            (10, 2),
+            (11, 3),
+            (78, 16),
+            (100, 20),
+            (101, 21),
+            (1_000_000, 200_000),
+            (int.MaxValue, 429_496_730)
         ];
 
         foreach (var (maxHp, expectedHealing) in cases)
@@ -29,7 +32,7 @@ internal static class SolitaryCrownRelicAcceptanceTests
             AcceptanceAssert.Equal(
                 expectedHealing,
                 OriginStarChart.CalculateHealingForMaxHp(maxHp),
-                $"Solitary Crown must heal ceil(5% of {maxHp} Max HP). ");
+                $"Solitary Crown must heal ceil(20% of {maxHp} Max HP). ");
         }
 
         var rejectedNegativeMaxHp = false;
@@ -76,7 +79,7 @@ internal static class SolitaryCrownRelicAcceptanceTests
         AcceptanceAssert.Equal(expectedTitle, title, $"{locale} relic title must match the approved player-facing name. ");
         AcceptanceAssert.True(
             description.Contains("{Heal}%", StringComparison.Ordinal),
-            $"{locale} relic description must present the five-point Heal variable as a percentage.");
+            $"{locale} relic description must present the twenty-point Heal variable as a percentage.");
         AcceptanceAssert.True(
             description.Contains(roundingText, StringComparison.Ordinal),
             $"{locale} relic description must explicitly state ceiling rounding.");
@@ -86,8 +89,8 @@ internal static class SolitaryCrownRelicAcceptanceTests
     [ModuleInitializer]
     internal static void RunStandalone()
     {
-        UsesFivePercentMaxHpCeilingWithoutTriggerCaps(RepositorySnapshot.Load());
-        Console.WriteLine("[PASS] Solitary Crown heals ceil(5% Max HP) per deduplicated enemy death without custom caps");
+        UsesTwentyPercentMaxHpCeilingWithoutTriggerCaps(RepositorySnapshot.Load());
+        Console.WriteLine("[PASS] Solitary Crown heals ceil(20% Max HP) per deduplicated enemy death without custom caps");
     }
 #endif
 }

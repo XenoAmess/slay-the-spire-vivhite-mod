@@ -42,9 +42,18 @@ internal static class DrainAcceptanceTests
 
         var fifteenPercent = new DrainRate(CardPercent: 15m, GlobalPercent: 0m, ThisTurnPercent: 0m);
         AcceptanceAssert.Equal(
-            1,
+            2,
             fifteenPercent.CalculateHealing(snapshot.ActualEnemyHpLoss),
-            "10 aggregate damage at 15% must floor once to 1; per-hit rounding would incorrectly produce 0.");
+            "10 aggregate damage at 15% must ceiling once to 2 after all hits and targets are aggregated.");
+        AcceptanceAssert.Equal(
+            1,
+            new DrainRate(CardPercent: 1m, GlobalPercent: 0m, ThisTurnPercent: 0m)
+                .CalculateHealing(actualEnemyHpLoss: 1),
+            "Any positive fractional Drain result must round upward to one.");
+        AcceptanceAssert.Equal(
+            0,
+            fifteenPercent.CalculateHealing(actualEnemyHpLoss: 0),
+            "Zero actual enemy HP loss must remain zero after ceiling rounding.");
 
         var publicDamageResultInputs = typeof(InfiniteDrainAggregate)
             .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)

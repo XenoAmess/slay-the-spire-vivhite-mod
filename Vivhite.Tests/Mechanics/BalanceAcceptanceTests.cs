@@ -82,27 +82,27 @@ internal static class BalanceAcceptanceTests
         "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
     ];
 
-    private static readonly DrainVarExpectation[] RoundedDrainVars =
+    private static readonly DrainVarExpectation[] DoubledDrainVars =
     [
-        new("VIVHITE_CARD_CRIMSON_AREA", "Drain", 4, 5),
-        new("VIVHITE_CARD_TRICHROMATIC_WALTZ", "Drain", 3, 4),
-        new("VIVHITE_CARD_COMPOSITE_COLOR_WHEEL", "Drain", 5, 6),
-        new("VIVHITE_CARD_DIFFERENTIAL_SAMPLING", "Drain", 2, 3),
-        new("VIVHITE_CARD_CHIAROSCURO", "Drain", 5, 7),
-        new("VIVHITE_CARD_SPECTRAL_INTEGRAL", "Drain", 2, 3),
-        new("VIVHITE_CARD_GOLDEN_COMPOSITION", "Drain", 5, 6),
-        new("VIVHITE_CARD_RIEMANN_STAR_ARRAY", "Drain", 3, 4),
-        new("VIVHITE_CARD_CHROMATIC_TRANSITION", "Drain", 2, 3),
-        new("VIVHITE_CARD_COMPOSITE_COLOR_FIELD", "Drain", 2, 3),
-        new("VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE", "Drain", 4, 5),
-        new("VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL", "Drain", 12, 15),
-        new("VIVHITE_CARD_INFINITE_CANVAS", "DrainGrowth", 1, 1),
-        new("VIVHITE_CARD_PERFECT_SYNTHESIS", "Drain", 8, 10),
-        new("VIVHITE_CARD_GOLDEN_RATIO", "Drain", 3, 4),
-        new("VIVHITE_CARD_ASTRAL_MEASURE", "DrainPerMargin", 1, 2),
-        new("VIVHITE_CARD_CHROMATIC_SEQUENCE", "DrainPerSkill", 1, 1),
-        new("VIVHITE_CARD_UNIFIED_FIELD_THEORY", "DrainPerMargin", 1, 1),
-        new("VIVHITE_CARD_CHROMATIC_LIMIT", "DrainPerX", 3, 4)
+        new("VIVHITE_CARD_CRIMSON_AREA", "Drain", 16, 20),
+        new("VIVHITE_CARD_TRICHROMATIC_WALTZ", "Drain", 12, 16),
+        new("VIVHITE_CARD_COMPOSITE_COLOR_WHEEL", "Drain", 20, 24),
+        new("VIVHITE_CARD_DIFFERENTIAL_SAMPLING", "Drain", 8, 12),
+        new("VIVHITE_CARD_CHIAROSCURO", "Drain", 20, 28),
+        new("VIVHITE_CARD_SPECTRAL_INTEGRAL", "Drain", 8, 12),
+        new("VIVHITE_CARD_GOLDEN_COMPOSITION", "Drain", 20, 24),
+        new("VIVHITE_CARD_RIEMANN_STAR_ARRAY", "Drain", 12, 16),
+        new("VIVHITE_CARD_CHROMATIC_TRANSITION", "Drain", 8, 12),
+        new("VIVHITE_CARD_COMPOSITE_COLOR_FIELD", "Drain", 8, 12),
+        new("VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE", "Drain", 16, 20),
+        new("VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL", "Drain", 48, 60),
+        new("VIVHITE_CARD_INFINITE_CANVAS", "DrainGrowth", 4, 4),
+        new("VIVHITE_CARD_PERFECT_SYNTHESIS", "Drain", 32, 40),
+        new("VIVHITE_CARD_GOLDEN_RATIO", "Drain", 12, 16),
+        new("VIVHITE_CARD_ASTRAL_MEASURE", "DrainPerMargin", 4, 8),
+        new("VIVHITE_CARD_CHROMATIC_SEQUENCE", "DrainPerSkill", 4, 4),
+        new("VIVHITE_CARD_UNIFIED_FIELD_THEORY", "DrainPerMargin", 4, 4),
+        new("VIVHITE_CARD_CHROMATIC_LIMIT", "DrainPerX", 12, 16)
     ];
 
     public static void AllFixedLifeCostsMatchTheDoubledTable(RepositorySnapshot repository)
@@ -152,12 +152,12 @@ internal static class BalanceAcceptanceTests
         }
     }
 
-    public static void AllDrainDynamicVarsMatchTheRoundedOneFifthTable(RepositorySnapshot repository)
+    public static void AllDrainDynamicVarsMatchTheDoubledCurrentTable(RepositorySnapshot repository)
     {
         var cards = ConstructAllCards(repository);
-        AcceptanceAssert.Equal(19, RoundedDrainVars.Length, "The independent rounded Drain table must contain exactly 19 DynamicVars.");
+        AcceptanceAssert.Equal(19, DoubledDrainVars.Length, "The independent doubled Drain table must contain exactly 19 DynamicVars.");
 
-        var expectedKeys = RoundedDrainVars
+        var expectedKeys = DoubledDrainVars
             .Select(expectation => $"{expectation.CardId}.{expectation.VarName}")
             .ToArray();
         var actualKeys = cards
@@ -168,9 +168,9 @@ internal static class BalanceAcceptanceTests
         AcceptanceAssert.SetEqual(
             expectedKeys,
             actualKeys,
-            "Every card-provided Drain DynamicVar must be represented exactly once in the rounded one-fifth table.");
+            "Every card-provided Drain DynamicVar must be represented exactly once in the doubled-current-value table.");
 
-        foreach (var expectation in RoundedDrainVars)
+        foreach (var expectation in DoubledDrainVars)
         {
             var card = cards[expectation.CardId];
             AssertDynamicVar(
@@ -192,7 +192,7 @@ internal static class BalanceAcceptanceTests
     public static void AllDrainDynamicVarsRemainIntegralAcrossUpgrade(RepositorySnapshot repository)
     {
         var cards = ConstructAllCards(repository);
-        foreach (var expectation in RoundedDrainVars)
+        foreach (var expectation in DoubledDrainVars)
         {
             var card = cards[expectation.CardId];
             AssertIntegral(
@@ -203,6 +203,18 @@ internal static class BalanceAcceptanceTests
                 card.DynamicVars[expectation.VarName].BaseValue,
                 $"{expectation.CardId}.{expectation.VarName} upgraded");
         }
+    }
+
+    public static void DelayedDrainPowersUseTheDoubledCardValues(RepositorySnapshot _)
+    {
+        AcceptanceAssert.Equal(
+            4,
+            Cards.Chromatic.ChromaticDrainMechanics.InfiniteCanvasDrainGrowthPerStack,
+            "Each Infinite Canvas stack must add four percentage points after a Drain-healing Attack.");
+        AcceptanceAssert.Equal(
+            4,
+            Cards.Hybrid.UnifiedFieldTheoryMechanics.DrainPercentPerMarginPerStack,
+            "Each Unified Field Theory stack must add four percentage points per Margin spent.");
     }
 
     public static void GlobalDrainPowersUseNativeIntegerAmount(RepositorySnapshot repository)
@@ -369,8 +381,8 @@ internal static class BalanceAcceptanceTests
     {
         var onUpgrade = card.GetType().GetMethod(
             "OnUpgrade",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-            ?? throw new AcceptanceFailureException($"{cardId} has no declared OnUpgrade method.");
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new AcceptanceFailureException($"{cardId} has no upgrade hook in its type hierarchy.");
         try
         {
             onUpgrade.Invoke(card, null);

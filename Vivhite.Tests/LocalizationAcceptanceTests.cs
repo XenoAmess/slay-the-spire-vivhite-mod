@@ -111,7 +111,7 @@ internal static class LocalizationAcceptanceTests
         AssertContainsAll(
             english["VIVHITE_KEYWORD_DRAIN.description"],
             "English Drain",
-            "actual", "enemi", "once");
+            "actual", "enemi", "round up", "once");
         AssertContainsAny(
             english["VIVHITE_KEYWORD_DRAIN.description"],
             "English Drain must state that rates can exceed 100%",
@@ -144,7 +144,7 @@ internal static class LocalizationAcceptanceTests
         AssertContainsAll(
             chinese["VIVHITE_KEYWORD_DRAIN.description"],
             "中文汲取",
-            "实际", "敌", "取整一次");
+            "实际", "敌", "向上取整一次");
         AssertContainsAny(
             chinese["VIVHITE_KEYWORD_DRAIN.description"],
             "中文汲取必须说明倍率可以超过 100%",

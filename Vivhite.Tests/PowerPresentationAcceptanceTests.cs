@@ -66,7 +66,7 @@ internal static class PowerPresentationAcceptanceTests
         }
     }
 
-    public static void AllRegisteredPowersUseOneExistingNonNopePlaceholder(RepositorySnapshot repository)
+    public static void AllRegisteredPowersUseDedicatedExistingIcons(RepositorySnapshot repository)
     {
         var failures = new List<string>();
         var profiles = new List<(string Id, PowerAssetProfile Profile)>();
@@ -93,27 +93,74 @@ internal static class PowerPresentationAcceptanceTests
                 string.IsNullOrWhiteSpace(item.Profile.BigIconPath))
             .Select(item => item.Id)
             .ToArray();
-        AcceptanceAssert.Empty(missingPaths, "Every registered power must provide both small and large placeholder paths:");
+        AcceptanceAssert.Empty(missingPaths, "Every registered power must provide both small and large dedicated icon paths:");
+        var expectedSemanticIcons = repository.RegisteredPowers
+            .Select(type => type.Name.Replace("UpgradedPower", "Power", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
         var iconPaths = profiles.Select(item => item.Profile.IconPath!).Distinct(StringComparer.Ordinal).ToArray();
         var bigIconPaths = profiles.Select(item => item.Profile.BigIconPath!).Distinct(StringComparer.Ordinal).ToArray();
-        AcceptanceAssert.Equal(1, iconPaths.Length, "All Vivhite powers must share one intentional placeholder icon.");
-        AcceptanceAssert.Equal(1, bigIconPaths.Length, "All Vivhite powers must share one intentional large placeholder icon.");
-        AcceptanceAssert.Equal(iconPaths[0], bigIconPaths[0], "Small and large power placeholders must resolve to the same known-good texture.");
+        AcceptanceAssert.Equal(
+            expectedSemanticIcons.Length,
+            iconPaths.Length,
+            "Each semantic Vivhite power must own a small icon; upgraded variants may share only their base power's art.");
+        AcceptanceAssert.Equal(
+            expectedSemanticIcons.Length,
+            bigIconPaths.Length,
+            "Each semantic Vivhite power must own a large icon; upgraded variants may share only their base power's art.");
 
-        var iconPath = iconPaths[0];
-        AcceptanceAssert.True(
-            !string.IsNullOrWhiteSpace(iconPath) &&
-            !iconPath.Contains("missing_power", StringComparison.OrdinalIgnoreCase) &&
-            !iconPath.Contains("power_atlas.sprites", StringComparison.OrdinalIgnoreCase),
-            $"Power icon path must not fall through to the engine NOPE icon or a nonexistent atlas region: {iconPath}");
         const string projectPrefix = "res://Vivhite/";
-        AcceptanceAssert.True(
-            iconPath.StartsWith(projectPrefix, StringComparison.Ordinal),
-            $"Power placeholder must be a Vivhite pack resource: {iconPath}");
-        var diskPath = Path.Combine(
-            repository.GodotProjectDirectory,
-            iconPath[projectPrefix.Length..].Replace('/', Path.DirectorySeparatorChar));
-        AcceptanceAssert.True(File.Exists(diskPath), $"Power placeholder resource is missing on disk: {diskPath}");
+        var assetFailures = new List<string>();
+        foreach (var (id, profile) in profiles)
+        {
+            var powerType = repository.RegisteredPowers.Single(type => repository.PowerId(type) == id);
+            var iconName = powerType.Name.Replace("UpgradedPower", "Power", StringComparison.Ordinal);
+            var expectedPath = $"{projectPrefix}images/powers/{iconName}.png";
+            foreach (var (size, iconPath) in new[]
+                     {
+                         ("small", profile.IconPath!),
+                         ("large", profile.BigIconPath!)
+                     })
+            {
+                if (!iconPath.StartsWith($"{projectPrefix}images/powers/", StringComparison.Ordinal) ||
+                    iconPath.Contains("VivhiteRelic", StringComparison.OrdinalIgnoreCase) ||
+                    iconPath.Contains("placeholder", StringComparison.OrdinalIgnoreCase) ||
+                    iconPath.Contains("fallback", StringComparison.OrdinalIgnoreCase) ||
+                    iconPath.Contains("missing_power", StringComparison.OrdinalIgnoreCase) ||
+                    iconPath.Contains("power_atlas.sprites", StringComparison.OrdinalIgnoreCase))
+                {
+                    assetFailures.Add($"{id} {size}: non-dedicated/NOPE path {iconPath}");
+                    continue;
+                }
+
+                if (!string.Equals(iconPath, expectedPath, StringComparison.Ordinal))
+                {
+                    assetFailures.Add(
+                        $"{id} {size}: expected dedicated semantic icon {expectedPath}, actual {iconPath}");
+                    continue;
+                }
+
+                var diskPath = Path.Combine(
+                    repository.GodotProjectDirectory,
+                    iconPath[projectPrefix.Length..].Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(diskPath))
+                {
+                    assetFailures.Add($"{id} {size}: resource is missing: {diskPath}");
+                }
+            }
+
+            if (id == "VIVHITE_POWER_INFINITE_MARGIN_POWER" &&
+                (!profile.IconPath!.Contains("InfiniteMargin", StringComparison.OrdinalIgnoreCase) ||
+                 !profile.BigIconPath!.Contains("InfiniteMargin", StringComparison.OrdinalIgnoreCase)))
+            {
+                assetFailures.Add(
+                    $"{id}: Margin must use its own InfiniteMargin artwork, actual {profile.IconPath} / {profile.BigIconPath}");
+            }
+        }
+
+        AcceptanceAssert.Empty(
+            assetFailures,
+            "Vivhite power icons must use existing dedicated pack resources rather than the generic relic fallback or red NOPE:");
     }
 
     private static IReadOnlyDictionary<string, string> ReadObject(

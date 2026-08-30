@@ -2,6 +2,8 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models;
 using STS2RitsuLib.Scaffolding.Content;
 using Vivhite.Cards.Common;
 using Vivhite.Core;
@@ -177,6 +179,24 @@ internal static class LifeCalculationAcceptanceTests
         AcceptanceAssert.True(
             marginIndex >= 0 && hpIndex > marginIndex,
             "Compiled payment flow must consume Margin before issuing native HP damage.");
+    }
+
+    public static void LifeCostAttacksPayBeforeAnyCardTriggeredRecovery(RepositorySnapshot repository)
+    {
+        var bypasses = repository.VivhitePoolCards
+            .Select(type => (Type: type, Card: Activator.CreateInstance(type) as CardModel))
+            .Where(entry =>
+                entry.Card?.Type == CardType.Attack &&
+                entry.Card.DynamicVars.TryGetValue("LifeCost", out var lifeCost) &&
+                lifeCost.BaseValue > 0 &&
+                !entry.Type.IsAssignableTo(typeof(VivhiteLifeCalculationCard)))
+            .Select(entry => repository.CardId(entry.Type))
+            .ToArray();
+
+        AcceptanceAssert.Empty(
+            bypasses,
+            "Every Attack with printed 謦欬 must use the sealed payment-before-effect card base, " +
+            "so 謦欬 resolves before Drain, kill healing, or any other recovery caused by that card:");
     }
 
     private static void AssertZeroPayment(LifePaymentQuote quote, string scenario)
