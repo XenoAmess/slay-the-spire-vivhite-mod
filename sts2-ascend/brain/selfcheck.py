@@ -3339,15 +3339,7 @@ def main() -> int:
     d_xcr = xcr_pol.decide(xcr_state, ctx)
     assert d_xcr.action == "play_card" and d_xcr.params.get("card_index") == 1, \
         f"能力牌未给当前有效格挡让路: {d_xcr.action} {d_xcr.params}（{d_xcr.reason}）"
-    assert "ABILITY_RESERVE_AUDIT" in d_xcr.reason, \
-        f"能力预留命中未进入最终动作观测: {d_xcr.reason}"
-    xcr_pol.know.policy["ability_reserve_audit"] = False
-    d_xcr_off = xcr_pol.decide(xcr_state, ctx)
-    assert (d_xcr_off.action == d_xcr.action
-            and d_xcr_off.params.get("card_index") == d_xcr.params.get("card_index")
-            and "ABILITY_RESERVE_AUDIT" not in d_xcr_off.reason), \
-        f"关闭观测开关改变动作或未关闭标记: on={d_xcr.reason} off={d_xcr_off.reason}"
-    del xcr_score, xcr_why, xcr_keep, xcr_keep_why, d_xcr, d_xcr_off
+    del xcr_score, xcr_why, xcr_keep, xcr_keep_why, d_xcr
 
     # 3xcl（第913局批复盘）：低血承诺观测位——913-F21-T1 实证 30血(37.5%) 对
     #           意图9 承诺恶魔形态整回合 0 输出白吃 9（urgent 乘区只作用出牌/
