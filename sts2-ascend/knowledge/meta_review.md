@@ -5798,3 +5798,37 @@ retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
 - 若混合分账改锻造后仍出现至少 2 个「账面应能赢」且实战越墙失败的反例，或全部组合
   可行局出现明显误伤，将 `boss_race_combo_gate_require_all_known` 设为 `False`；删除
   本次配置、计数分支和 selfcheck 三处改动即可零残留回退。
+
+# 2026-08-30｜第1154~1157局复盘（STONE_ARMOR 非成长能力误判）
+
+## 一、证据与主假设
+
+- 队列 requested=[1154,1155,1156,1157]，exact 命中 4/4；最新死亡局
+  `DNJ7Z4R1NW8G` 为 F22、327 条完整持久决策链，`complete_persisted_chain=True`。
+- **HYPOTHESIS**：战斗端条件成长死牌守卫把所有 `card_type=Power` 都交给
+  `_scaling_power_active`；非成长能力牌返回 False，导致合法的 `STONE_ARMOR`
+  被误判为“无自残源死牌”，浪费可用能量和覆甲收益。
+- **EVIDENCE**：1157-F22-T1 的 trace 显示 `STONE_ARMOR` 规则上
+  `playable=true`、剩余能量 1，但候选分数 `-1.227`，理由为“触发条件无自残源，
+  永不生效”；同牌此前在 F17/F19/F20/F21 多次被锁定。原生
+  `runtime/cards.jsonl` 的 `STONE_ARMOR` 描述仅为“获得4层覆甲”，没有自残前提。
+- **EXPECTED_SIGNAL**：修复后非成长能力牌不再出现该死牌理由，并可在大血池回归局
+  正常进入能力牌评分；零自残卡组中的 `RUPTURE` 仍被判为条件死牌。若未来至少
+  3 个独立战斗满足前者而战损无改善，则该假设的“评分误判是主要损失”部分被证伪，
+  不继续扩大能力牌加分。
+
+## 二、本次最小生产改动
+
+| 项目 | 内容 |
+| --- | --- |
+| 生产行为 | `brain/policy.py::_score_play` 的守卫新增 `_is_scaling_power(card)` 条件；只有确实属于成长能力牌且触发条件不满足时才返回死牌分。 |
+| 回归 | `brain/selfcheck.py` 新增带 `card_type=Power` 的 `STONE_ARMOR` 大血池夹具，断言它被选择且理由不含“死牌”；既有无自残 `RUPTURE` 夹具继续作为反向边界。 |
+| 性质边界 | 不改变普通攻击/技能评分、成长牌评分、姿态、竞速或学习参数；无配置迁移，删除新增条件与夹具即可回退。 |
+| 验证 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。 |
+
+## 三、后续观测与撤回
+
+未来 3~10 局统计非成长能力牌被选中的独立战斗数、该类牌残留“无自残源”理由数，
+以及 `RUPTURE` 无自残死牌命中数；同时对照相关战斗战损。若非成长牌仍被误杀，转查
+战斗载荷的能力类型识别；若其选择率上升但结果无差异，撤回本次条件放宽并保留
+回归证据。无 replay target，故不追加 `retry_resolution`。

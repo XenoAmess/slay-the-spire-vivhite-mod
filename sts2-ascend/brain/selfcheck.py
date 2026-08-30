@@ -4632,6 +4632,21 @@ def main() -> int:
     assert d_lf1.action == "play_card" and d_lf1.params.get("card_index") == 1 \
         and "长战加成" in d_lf1.reason, \
         f"大血池低意图窗口能力牌应压过打击（DEMON_FORM 0打病灶未愈）: {d_lf1.action}（{d_lf1.reason}）"
+    # 3zpa（本批 1157-F22 回归）：非成长能力牌不能被条件成长死牌守卫误杀。
+    #      STONE_ARMOR 的原生效果是直接获得覆甲，不依赖自残；旧条件把所有
+    #      card_type=Power 都送进 _scaling_power_active，非成长牌返回 False，
+    #      遂以「无自残源」拒绝真实可用的覆甲牌。
+    stone_state = power_state(1, 250)
+    stone_state["combat"]["hand"][1] = {
+        "index": 1, "card_id": "STONE_ARMOR_T", "name": "岩石铠甲",
+        "playable": True, "energy_cost": 1, "requires_target": False,
+        "card_type": "Power", "rules_text": "获得4层覆甲。"}
+    pol_stone = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-stone-"))), random.Random(5))
+    d_stone = pol_stone.decide(stone_state, ctx)
+    assert d_stone.action == "play_card" and d_stone.params.get("card_index") == 1 \
+        and "死牌" not in d_stone.reason, \
+        f"非成长能力牌被条件成长死牌守卫误杀: {d_stone.action}（{d_stone.reason}）"
     # ②小血池（20）：能力 6+0.7 < 打击 9 → 节奏不扭曲
     pol_lf2 = policy.Policy(know, random.Random(5))
     d_lf2 = pol_lf2.decide(power_state(1, 20), ctx)

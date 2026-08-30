@@ -3800,6 +3800,7 @@ class Policy:
         # 「力量+失去生命」同现即条件引擎，卡组无自残源一律按死牌治理
         if run_deck is not None and (
                 (is_power(card)
+                 and self._is_scaling_power(card)
                  and not self._scaling_power_active(card, run_deck))
                 or (self._self_damage_conditioned(card)
                     and not self._deck_has_self_damage(run_deck))):
