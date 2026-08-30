@@ -27,8 +27,21 @@ public abstract class VivhiteLifeCalculationCard : VivhiteCard
 
     protected virtual IEnumerable<CardKeyword> AdditionalVivhiteKeywords => [];
 
-    protected sealed override IEnumerable<CardKeyword> VivhiteCanonicalKeywords =>
-        [VivhiteKeywords.LifeCalculation, .. AdditionalVivhiteKeywords];
+    protected sealed override IEnumerable<CardKeyword> VivhiteCanonicalKeywords
+    {
+        get
+        {
+            if (LifeCalculationCost > 0)
+            {
+                yield return VivhiteKeywords.LifeCalculation;
+            }
+
+            foreach (var keyword in AdditionalVivhiteKeywords)
+            {
+                yield return keyword;
+            }
+        }
+    }
 
     protected sealed override bool IsPlayable =>
         base.IsPlayable &&

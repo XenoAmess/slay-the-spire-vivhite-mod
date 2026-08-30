@@ -170,6 +170,9 @@ public sealed class AstralPursuit : RecursionCard
     {
     }
 
+    protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
+        IsUpgraded ? [VivhiteKeywords.Margin] : [];
+
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
         CardPlay cardPlay,
