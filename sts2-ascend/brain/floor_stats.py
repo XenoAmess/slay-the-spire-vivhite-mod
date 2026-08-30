@@ -3,8 +3,9 @@
 The learning score deliberately awards +50 for a victory.  This module never
 uses that score as a displayed floor: lifetime totals come from the raw-floor
 aggregate (with a legacy migration fallback), while recent/trend data comes
-from completed run evidence.  Active run files override compact archive
-catalog entries with the same run id.
+from completed run evidence.  Ironclad and Vivhite profile views stay separate;
+old root aggregates and run logs without a character id remain Ironclad data.
+Active run files override compact archive catalog entries with the same run id.
 
 Only the Python standard library is used so the overlay can import this module
 without bringing up the agent, Godot API client, or review stack.
@@ -23,6 +24,22 @@ from typing import Any, Mapping
 
 
 _UNSET = object()
+PROFILE_IDS = ("IRONCLAD", "VIVHITE")
+PROFILE_LABELS = {"IRONCLAD": "Ironclad", "VIVHITE": "Vivhite"}
+
+
+def _profile_id(value: Any) -> str | None:
+    """Canonicalize API/content ids without discarding an unknown future id."""
+    if value in (None, ""):
+        return None
+    text = str(value).strip().upper()
+    if not text:
+        return None
+    if "VIVHITE" in text:
+        return "VIVHITE"
+    if "IRONCLAD" in text:
+        return "IRONCLAD"
+    return text
 
 
 def _number(value: Any) -> float | None:
@@ -59,6 +76,7 @@ class _RunRecord:
     run_id: str | None
     run_number: int | None
     started_at: str | None
+    profile_id: str | None
     ascension: int | None
     victory: bool
     in_progress: bool
@@ -144,6 +162,7 @@ class FloorStatsProvider:
             marker in str(row.get("reason") or "").casefold()
             for row in game_over_rows for marker in ("胜利", "victory"))
         run_id = data.get("run_id")
+        profile = data.get("profile_id", data.get("character_id", data.get("character")))
         return _RunRecord(
             file=path.name,
             source="active",
@@ -151,6 +170,7 @@ class FloorStatsProvider:
             run_number=_integer(data.get("run_number")),
             started_at=(str(data.get("started_at"))
                         if data.get("started_at") not in (None, "") else None),
+            profile_id=_profile_id(profile),
             ascension=_integer(data.get("ascension")),
             victory=victory,
             in_progress=bool(data.get("in_progress")),
@@ -170,6 +190,7 @@ class FloorStatsProvider:
         decisions = max(0, _integer(row.get("decisions")) or 0)
         victory = bool(row.get("victory"))
         storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
+        profile = row.get("profile_id", row.get("character_id", row.get("character")))
         return _RunRecord(
             file=filename,
             source="catalog",
@@ -177,6 +198,7 @@ class FloorStatsProvider:
             run_number=_integer(row.get("run_number")),
             started_at=(str(row.get("started_at"))
                         if row.get("started_at") not in (None, "") else None),
+            profile_id=_profile_id(profile),
             ascension=_integer(row.get("ascension")),
             victory=victory,
             in_progress=bool(row.get("in_progress")),
@@ -428,6 +450,133 @@ class FloorStatsProvider:
         return ({"runs": None, "wins": None, "win_rate": None,
                  "mean_floor": None, "best_floor": None}, "unavailable")
 
+    @staticmethod
+    def _records_lifetime(completed: list[_RunRecord]) -> tuple[dict[str, Any], str]:
+        floors = [record.floor for record in completed if record.floor is not None]
+        if not floors:
+            return ({"runs": None, "wins": None, "win_rate": None,
+                     "mean_floor": None, "best_floor": None}, "unavailable")
+        wins = sum(1 for record in completed if record.victory)
+        return ({
+            "runs": len(floors),
+            "wins": wins,
+            "win_rate": wins / len(floors),
+            "mean_floor": sum(floors) / len(floors),
+            "best_floor": max(floors),
+        }, "records")
+
+    def _profile_aggregates(self) -> dict[str, dict[str, Any]]:
+        """Return explicit per-profile raw aggregates, if the ledger has them.
+
+        ``stats.profiles`` is the profile-aware contract.  Accepting the same
+        object below ``stats.global`` makes the reader tolerant of an early
+        nested prototype without changing the published dashboard shape.
+        A row may be either the aggregate itself or ``{"global": aggregate}``.
+        """
+        global_stats = (self._stats.get("global")
+                        if isinstance(self._stats.get("global"), dict) else {})
+        containers = (self._stats.get("profiles"), global_stats.get("profiles"))
+        result: dict[str, dict[str, Any]] = {}
+        for container in containers:
+            if not isinstance(container, dict):
+                continue
+            for key, value in container.items():
+                if not isinstance(value, dict):
+                    continue
+                aggregate = (value.get("global")
+                             if isinstance(value.get("global"), dict) else value)
+                profile = _profile_id(
+                    aggregate.get("profile_id", aggregate.get("character_id", key)))
+                if profile in PROFILE_IDS and profile not in result:
+                    result[profile] = aggregate
+        return result
+
+    @staticmethod
+    def _raw_profile_lifetime(aggregate: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Build display metrics only from raw-floor profile counters.
+
+        Profile rows never fall back to the learning-score fields.  Legacy score
+        migration is deliberately confined to the old root aggregate in
+        ``_lifetime`` where wins/progression evidence can disambiguate it.
+        """
+        runs = _integer(aggregate.get("runs"))
+        raw_sum = _number(aggregate.get("floor_sum_raw"))
+        raw_best = _floor(aggregate.get("best_floor_raw"))
+        if runs is None or runs < 0 or raw_sum is None or raw_sum < 0 or raw_best is None:
+            return None
+        wins = _integer(aggregate.get("wins"))
+        if wins is None or wins < 0 or wins > runs:
+            wins = None
+        return {
+            "runs": runs,
+            "wins": wins,
+            "win_rate": (wins / runs) if runs and wins is not None else None,
+            "mean_floor": (raw_sum / runs) if runs else None,
+            "best_floor": raw_best if runs else None,
+        }
+
+    def _profile_lifetime(
+            self, profile: str, completed: list[_RunRecord],
+            aggregates: Mapping[str, Mapping[str, Any]]) -> tuple[dict[str, Any], str]:
+        aggregate = aggregates.get(profile)
+        if aggregate is not None:
+            lifetime = self._raw_profile_lifetime(aggregate)
+            if lifetime is not None:
+                return lifetime, "profile_raw"
+        if not aggregates and profile == "IRONCLAD":
+            # Before profile ledgers existed, the root was exclusively Ironclad.
+            # Keep its migration fallback while never copying it into Vivhite.
+            return self._lifetime(completed)
+        return self._records_lifetime(completed)
+
+    def _profile_view(
+            self, profile: str, completed: list[_RunRecord],
+            aggregates: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+        recent = completed[-self.recent_window:]
+        previous_end = max(0, len(completed) - self.recent_window)
+        previous_start = max(0, previous_end - self.comparison_window)
+        previous = completed[previous_start:previous_end]
+        recent_mean = _mean(recent)
+        previous_mean = _mean(previous)
+        trend_records = completed[-self.trend_window:]
+        trend: list[dict[str, Any]] = []
+        for index, record in enumerate(trend_records):
+            rolling = trend_records[max(0, index + 1 - self.rolling_window):index + 1]
+            trend.append({
+                "run_id": record.run_id,
+                "run_number": record.run_number,
+                "started_at": record.started_at,
+                "floor": record.floor,
+                "victory": record.victory,
+                "rolling_mean": _mean(rolling),
+            })
+        lifetime, source = self._profile_lifetime(profile, completed, aggregates)
+        return {
+            "profile_id": profile,
+            "label": PROFILE_LABELS[profile],
+            "lifetime": lifetime,
+            "recent": {
+                "window": self.recent_window,
+                "count": len(recent),
+                "mean_floor": recent_mean,
+                "best_floor": max((record.floor for record in recent
+                                   if record.floor is not None), default=None),
+            },
+            "previous": {
+                "window": self.comparison_window,
+                "count": len(previous),
+                "mean_floor": previous_mean,
+                "best_floor": max((record.floor for record in previous
+                                   if record.floor is not None), default=None),
+            },
+            "delta_mean": ((recent_mean - previous_mean)
+                           if recent_mean is not None and previous_mean is not None else None),
+            "rolling_window": self.rolling_window,
+            "rolling_mean": trend[-1]["rolling_mean"] if trend else None,
+            "trend": trend,
+            "quality": {"source": source, "completed_records": len(completed)},
+        }
+
     def _build(self, errors: list[str]) -> dict[str, Any]:
         records, duplicates = self._merged_records()
         completed = sorted(
@@ -462,6 +611,29 @@ class FloorStatsProvider:
         )
         current = self._current_from_record(auto_current[-1]) if auto_current else None
         lifetime, source = self._lifetime(completed)
+        profile_aggregates = self._profile_aggregates()
+        profile_records = {profile: [] for profile in PROFILE_IDS}
+        for record in completed:
+            # Character ids were not persisted before profile-aware telemetry;
+            # those old root records are the existing Ironclad history.
+            profile = record.profile_id or "IRONCLAD"
+            if profile in profile_records:
+                profile_records[profile].append(record)
+        profiles = {
+            profile: self._profile_view(
+                profile, profile_records[profile], profile_aggregates)
+            for profile in PROFILE_IDS
+        }
+        rolling_means = {
+            profile: profiles[profile]["rolling_mean"] for profile in PROFILE_IDS
+        }
+        ironclad_mean = rolling_means["IRONCLAD"]
+        vivhite_mean = rolling_means["VIVHITE"]
+        rolling_ratio = (
+            vivhite_mean / ironclad_mean
+            if (vivhite_mean is not None and ironclad_mean is not None
+                and ironclad_mean != 0) else None
+        )
         invalid_floor = sum(1 for record in records if record.floor is None and not record.phantom)
         return {
             "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -485,6 +657,17 @@ class FloorStatsProvider:
                            if recent_mean is not None and previous_mean is not None else None),
             "trend": trend,
             "current": current,
+            "active_profile": ((current.get("profile_id") or "IRONCLAD")
+                               if current is not None else None),
+            "profiles": profiles,
+            "profile_comparison": {
+                "rolling_window": self.rolling_window,
+                "rolling_means": rolling_means,
+                "rolling_mean_ratio": rolling_ratio,
+                "vivhite_to_ironclad_ratio": rolling_ratio,
+                "ratio_numerator": "VIVHITE",
+                "ratio_denominator": "IRONCLAD",
+            },
             "quality": {
                 "source": source,
                 "catalog_records": len(self._catalog),
@@ -502,24 +685,34 @@ class FloorStatsProvider:
 
     @staticmethod
     def _current_from_record(record: _RunRecord) -> dict[str, Any]:
-        return {
+        result = {
             "run_id": record.run_id,
             "run_number": record.run_number,
             "ascension": record.ascension,
             "floor": record.floor,
             "turn": None,
         }
+        if record.profile_id is not None:
+            result["profile_id"] = record.profile_id
+        return result
 
     @staticmethod
     def _normalize_current(current: Mapping[str, Any]) -> dict[str, Any]:
         run_id = current.get("run_id")
-        return {
+        result = {
             "run_id": str(run_id) if run_id not in (None, "") else None,
             "run_number": _integer(current.get("run_number")),
             "ascension": _integer(current.get("ascension")),
             "floor": _floor(current.get("floor")),
             "turn": _integer(current.get("turn")),
         }
+        character = current.get("character_id")
+        profile = _profile_id(current.get("profile_id", character))
+        if character not in (None, ""):
+            result["character_id"] = str(character)
+        if profile is not None:
+            result["profile_id"] = profile
+        return result
 
     def refresh(self, *, force: bool = False) -> bool:
         """Refresh changed inputs and return whether the published base changed."""
@@ -569,7 +762,9 @@ class FloorStatsProvider:
             result = copy.deepcopy(self._base)
             if current is not None:
                 result["current"] = self._normalize_current(current)
+                result["active_profile"] = (
+                    result["current"].get("profile_id") or "IRONCLAD")
             return result
 
 
-__all__ = ["FloorStatsProvider"]
+__all__ = ["FloorStatsProvider", "PROFILE_IDS"]
