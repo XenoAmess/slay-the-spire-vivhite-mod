@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import codecs
 import base64
+import contextvars
 import hashlib
 import json
 import math
@@ -43,6 +44,7 @@ import tempfile
 import threading
 import time
 from collections import deque
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 
@@ -115,6 +117,279 @@ REVIEW_CONCURRENT_PATHS = [
     "sts2-ascend/knowledge/preferred_model_state.json",
 ]
 _worker_stop = threading.Event()
+
+
+DEFAULT_PROFILE_ID = "ironclad"
+
+
+@dataclass(frozen=True)
+class _ReviewProfilePaths:
+    """All role-owned review inputs/outputs for one learning profile."""
+
+    profile_id: str
+    root: Path
+    prompt: Path
+    runs: Path
+    lessons: Path
+    policy: Path
+    report: Path
+    conclusion: Path
+    queue: Path
+
+
+@dataclass(frozen=True)
+class _ReviewProfileBinding:
+    """One scheduler-visible profile and its matching Knowledge instance."""
+
+    paths: _ReviewProfilePaths
+    know: object | None
+
+
+_active_review_profile: contextvars.ContextVar[_ReviewProfilePaths | None] = (
+    contextvars.ContextVar("sts2_ascend_review_profile", default=None)
+)
+
+
+def _normalize_profile_id(value) -> str:
+    text = (DEFAULT_PROFILE_ID if value is None
+            else str(value).strip().casefold())
+    if (not text or text in {".", ".."}
+            or any(not (char.isalnum() or char in "-_.") for char in text)):
+        raise ValueError(f"invalid review profile_id: {value!r}")
+    return text
+
+
+def _profile_id_from(owner=None, explicit=None) -> str:
+    """Resolve new profile-aware callers while keeping old callers ironclad."""
+    if explicit is not None:
+        return _normalize_profile_id(explicit)
+    candidates = []
+    if owner is not None:
+        candidates.extend((
+            getattr(owner, "profile_id", None),
+            getattr(getattr(owner, "profile", None), "profile_id", None),
+        ))
+        cfg = getattr(owner, "cfg", None)
+        if isinstance(cfg, dict):
+            candidates.append(cfg.get("profile_id"))
+        know = getattr(owner, "know", None)
+        if know is not None:
+            candidates.extend((
+                getattr(know, "profile_id", None),
+                getattr(getattr(know, "profile", None), "profile_id", None),
+            ))
+            know_root = getattr(know, "root", None)
+            if know_root is not None:
+                know_root_path = Path(know_root)
+                if know_root_path.parent.name.casefold() == "profiles":
+                    candidates.append(know_root_path.name)
+        root = getattr(owner, "root", None)
+        if root is not None:
+            root_path = Path(root)
+            if root_path.parent.name.casefold() == "profiles":
+                candidates.append(root_path.name)
+    return _normalize_profile_id(next(
+        (candidate for candidate in candidates
+         if candidate is not None and str(candidate).strip()),
+        DEFAULT_PROFILE_ID,
+    ))
+
+
+def _profile_id_for_review(know, explicit=None, queue_items=None) -> str:
+    requested = _profile_id_from(know, explicit=explicit)
+    item_profiles = {
+        _normalize_profile_id(item.get("profile_id"))
+        for item in (queue_items or []) if isinstance(item, dict)
+    }
+    if len(item_profiles) > 1:
+        raise ValueError("review batch contains mixed profile_id values")
+    if item_profiles and explicit is None:
+        item_profile = next(iter(item_profiles))
+        active = _active_review_profile.get()
+        declared = getattr(know, "profile_id", None)
+        root = getattr(know, "root", None)
+        if declared is None and root is not None:
+            root_path = Path(root)
+            if root_path.parent.name.casefold() == "profiles":
+                declared = root_path.name
+        if active is not None:
+            requested = active.profile_id
+        elif declared is None:
+            requested = item_profile
+    if item_profiles and requested != next(iter(item_profiles)):
+        raise ValueError(
+            "review batch profile_id does not match the selected knowledge profile")
+    return next(iter(item_profiles), requested)
+
+
+def _default_profile_root(profile_id: str) -> Path:
+    profile_id = _normalize_profile_id(profile_id)
+    if profile_id == DEFAULT_PROFILE_ID:
+        # The historical knowledge/ tree is the ironclad profile in place.  No
+        # migration or duplicate copy is required for old installations.
+        return Path(KNOWLEDGE_DIR)
+    return Path(KNOWLEDGE_DIR) / "profiles" / profile_id
+
+
+def _paths_for_profile(
+    profile_id=None, profile_root: Path | str | None = None, know=None,
+) -> _ReviewProfilePaths:
+    if profile_id is None and profile_root is not None:
+        candidate_root = Path(profile_root)
+        if candidate_root.parent.name.casefold() == "profiles":
+            profile_id = candidate_root.name
+    profile_id = _profile_id_from(know, explicit=profile_id)
+    explicit_root = profile_root is not None
+    if profile_root is None:
+        profile_root = getattr(know, "root", None)
+        if (profile_root is not None and profile_id != DEFAULT_PROFILE_ID
+                and Path(profile_root) == Path(KNOWLEDGE_DIR)):
+            profile_root = _default_profile_root(profile_id)
+    if profile_root is None:
+        active = _active_review_profile.get()
+        if active is not None and active.profile_id == profile_id:
+            return active
+        profile_root = _default_profile_root(profile_id)
+    root = Path(profile_root)
+    if (root.parent.name.casefold() == "profiles"
+            and _normalize_profile_id(root.name) != profile_id):
+        raise ValueError(
+            "review profile_id does not match its profiles/<id> root")
+
+    # With no profile-aware root at all, retain the patchable module constants
+    # used by older callers/tests.  A Knowledge.root or explicit profile_root is
+    # authoritative and derives every role-owned path from that one root.
+    legacy_constants = (
+        not explicit_root and getattr(know, "root", None) is None
+        and profile_id == DEFAULT_PROFILE_ID
+    )
+    prompt = Path(PROMPT_FILE) if legacy_constants else root / "review_prompt_latest.md"
+    report = Path(REVIEW_LOG) if legacy_constants else root / "meta_review.md"
+    queue_file = globals().get("QUEUE_FILE", root / "review_queue.json")
+    queue_path = Path(queue_file) if legacy_constants else root / "review_queue.json"
+    return _ReviewProfilePaths(
+        profile_id=profile_id,
+        root=root,
+        prompt=prompt,
+        runs=root / "runs",
+        lessons=root / "lessons.md",
+        policy=root / "policy.json",
+        report=report,
+        conclusion=root / "review_conclusion.txt",
+        queue=queue_path,
+    )
+
+
+def _current_profile_paths() -> _ReviewProfilePaths:
+    return _active_review_profile.get() or _paths_for_profile()
+
+
+@contextmanager
+def _review_profile_paths_scope(paths: _ReviewProfilePaths):
+    """Activate an already-resolved path set without re-deriving patched paths."""
+    token = _active_review_profile.set(paths)
+    try:
+        yield paths
+    finally:
+        _active_review_profile.reset(token)
+
+
+@contextmanager
+def _review_profile_scope(
+    profile_id=None, profile_root: Path | str | None = None, know=None,
+):
+    active = _active_review_profile.get()
+    if active is not None and profile_id is None and profile_root is None and know is None:
+        yield active
+        return
+    paths = _paths_for_profile(profile_id, profile_root, know)
+    with _review_profile_paths_scope(paths):
+        yield paths
+
+
+def _register_agent_review_binding(
+    agent, paths: _ReviewProfilePaths, know=None,
+) -> _ReviewProfileBinding:
+    """Publish a profile root to the one shared worker without global leakage."""
+    binding = _ReviewProfileBinding(paths=paths, know=know)
+    if agent is None:
+        return binding
+    try:
+        registered = dict(
+            getattr(agent, "_llm_review_profile_bindings", {}) or {})
+        registered[paths.profile_id] = binding
+        setattr(agent, "_llm_review_profile_bindings", registered)
+    except (AttributeError, TypeError):
+        # Lightweight compatibility objects may reject new attributes.  Their
+        # current ``know`` binding is still discovered below.
+        pass
+    return binding
+
+
+def _agent_review_profile_bindings(agent) -> tuple[_ReviewProfileBinding, ...]:
+    """Return every profile handled by the existing process-wide scheduler."""
+    by_profile: dict[str, _ReviewProfileBinding] = {}
+    profile_knowledge = getattr(agent, "_profile_knowledge", None)
+    if isinstance(profile_knowledge, dict):
+        for raw_profile_id, know in tuple(profile_knowledge.items()):
+            try:
+                paths = _paths_for_profile(raw_profile_id, know=know)
+            except (TypeError, ValueError):
+                continue
+            by_profile[paths.profile_id] = _ReviewProfileBinding(paths, know)
+
+    current_know = getattr(agent, "know", None)
+    try:
+        current_paths = _paths_for_profile(
+            _profile_id_from(agent), know=current_know)
+        by_profile[current_paths.profile_id] = _ReviewProfileBinding(
+            current_paths, current_know)
+    except (TypeError, ValueError):
+        pass
+
+    registered = getattr(agent, "_llm_review_profile_bindings", None)
+    if isinstance(registered, dict):
+        for binding in tuple(registered.values()):
+            if isinstance(binding, _ReviewProfileBinding):
+                by_profile[binding.paths.profile_id] = binding
+
+    if not by_profile:
+        paths = _paths_for_profile()
+        by_profile[paths.profile_id] = _ReviewProfileBinding(paths, current_know)
+    return tuple(by_profile.values())
+
+
+def _profile_binding_for_agent(agent, profile_id) -> _ReviewProfileBinding:
+    """Resolve a batch to its exact profile Knowledge instead of active Agent state."""
+    profile_id = _normalize_profile_id(profile_id)
+    for binding in _agent_review_profile_bindings(agent):
+        if binding.paths.profile_id == profile_id:
+            return binding
+    return _ReviewProfileBinding(_paths_for_profile(profile_id), None)
+
+
+def _profile_repo_path(path: Path) -> str:
+    try:
+        return Path(path).relative_to(Path(REPO_DIR)).as_posix()
+    except ValueError:
+        return Path(path).as_posix()
+
+
+def _review_concurrent_paths() -> list[str]:
+    paths = _current_profile_paths()
+    owned = [
+        paths.runs,
+        paths.root / "stats.json",
+        paths.root / "progression.json",
+        paths.policy,
+        paths.lessons,
+        paths.queue,
+        Path(PREFERRED_STATE_FILE),
+    ]
+    try:
+        return [_profile_repo_path(path) for path in owned]
+    except (TypeError, ValueError):
+        return list(REVIEW_CONCURRENT_PATHS)
 
 
 def _review_work_root() -> Path:
@@ -516,6 +791,70 @@ def _is_review_config_path(path: str) -> bool:
                 and relative[0] in {"brain", "scripts", "tts"}))
 
 
+def _profile_knowledge_path_identity(path: str) -> tuple[str, str] | None:
+    """Return ``(profile_id, tail)`` for legacy or nested knowledge paths."""
+    normalized = _normalized_review_path(path).casefold()
+    prefix = "sts2-ascend/knowledge/"
+    if normalized.startswith(prefix):
+        relative = normalized[len(prefix):]
+        parts = relative.split("/")
+        if len(parts) >= 3 and parts[0] == "profiles":
+            try:
+                return _normalize_profile_id(parts[1]), "/".join(parts[2:])
+            except ValueError:
+                return None
+        return DEFAULT_PROFILE_ID, relative
+
+    profile = _current_profile_paths()
+    profile_prefix = _profile_repo_path(profile.root).casefold().rstrip("/") + "/"
+    if normalized.startswith(profile_prefix):
+        return profile.profile_id, normalized[len(profile_prefix):]
+    return None
+
+
+def _profile_knowledge_relative_path(path: str) -> str | None:
+    identity = _profile_knowledge_path_identity(path)
+    return identity[1] if identity is not None else None
+
+
+def _is_profile_online_review_path(path: str) -> bool:
+    """Mirror existing online-state semantics below a profile knowledge root."""
+    normalized = _normalized_review_path(path)
+    identity = _profile_knowledge_path_identity(normalized)
+    relative = identity[1] if identity is not None else None
+    if relative in {"meta_review.md", "review_conclusion.txt"}:
+        return identity[0] != _current_profile_paths().profile_id
+    if relative in {
+            "review_prompt_latest.md", "lessons.md", "policy.json",
+            "review_queue.json", "stats.json", "progression.json"}:
+        return True
+    if relative is not None and relative.startswith(
+            ("runs/", "archive/", "code_backups/")):
+        return True
+    profile = _current_profile_paths()
+    report_paths = {
+        _profile_repo_path(profile.report),
+        _profile_repo_path(profile.conclusion),
+    }
+    if normalized in report_paths:
+        return False
+    exact = {
+        _profile_repo_path(profile.prompt),
+        _profile_repo_path(profile.lessons),
+        _profile_repo_path(profile.policy),
+        _profile_repo_path(profile.queue),
+        _profile_repo_path(profile.root / "stats.json"),
+        _profile_repo_path(profile.root / "progression.json"),
+    }
+    if normalized in exact:
+        return True
+    prefixes = tuple(
+        _profile_repo_path(profile.root / name).rstrip("/") + "/"
+        for name in ("runs", "archive", "code_backups")
+    )
+    return normalized.startswith(prefixes)
+
+
 def _is_review_action_path(path: str) -> bool:
     """Whether an accepted path can change production operation.
 
@@ -524,13 +863,22 @@ def _is_review_action_path(path: str) -> bool:
     satisfy the mandatory runtime-action requirement by themselves.
     """
     normalized = _normalized_review_path(path)
+    if _is_profile_online_review_path(normalized):
+        return False
     try:
         import autogit
         if autogit.classify_review_path(normalized) != autogit.REVIEW_PATH_ACCEPTED:
             return False
     except (ImportError, AttributeError):
         return False
-    if normalized in REVIEW_REPORT_PATHS:
+    profile_paths = _current_profile_paths()
+    profile_reports = {
+        _profile_repo_path(profile_paths.report),
+        _profile_repo_path(profile_paths.conclusion),
+    }
+    if (normalized in REVIEW_REPORT_PATHS or normalized in profile_reports
+            or _profile_knowledge_relative_path(normalized) in {
+                "meta_review.md", "review_conclusion.txt"}):
         return False
     pure = PurePosixPath(normalized)
     folded = tuple(part.casefold() for part in pure.parts)
@@ -712,7 +1060,7 @@ def _review_closure_state(know, cfg: dict) -> dict:
 def _recent_review_context(max_chars: int = 12000) -> str:
     """Bounded recent reports let the model count repeated evidence explicitly."""
     try:
-        text = REVIEW_LOG.read_text(encoding="utf-8")
+        text = _current_profile_paths().report.read_text(encoding="utf-8")
     except OSError:
         return ""
     if len(text) <= max_chars:
@@ -736,7 +1084,8 @@ def _historical_zero_code_context(max_sections: int = 10,
                                   max_chars: int = 30000) -> str:
     """Extract accepted zero-code reports as explicit implementation debt."""
     try:
-        lines = REVIEW_LOG.read_text(encoding="utf-8").splitlines()
+        lines = _current_profile_paths().report.read_text(
+            encoding="utf-8").splitlines()
     except OSError:
         return ""
     sections: list[str] = []
@@ -1105,7 +1454,8 @@ def _run_is_complete(data: dict) -> bool:
 
 def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> list[tuple[Path, dict]]:
     """Load exact compacted evidence by run_number, with archive hash verification."""
-    catalog = KNOWLEDGE_DIR / "archive" / "run_catalog.jsonl"
+    knowledge_root = _current_profile_paths().root
+    catalog = knowledge_root / "archive" / "run_catalog.jsonl"
     if not run_numbers or not catalog.exists():
         return []
     try:
@@ -1128,7 +1478,8 @@ def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> lis
         if not filename or filename in seen_files:
             continue
         try:
-            data = json.loads(read_run_evidence(KNOWLEDGE_DIR, filename).decode("utf-8"))
+            data = json.loads(read_run_evidence(
+                knowledge_root, filename).decode("utf-8"))
         except (OSError, RuntimeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
             continue
         if isinstance(data, dict) and _run_is_complete(data):
@@ -1176,7 +1527,7 @@ def _review_run_records(
     batch.  Both summaries and full decision-chain evidence consume this same
     resolver, preventing the two views from silently drifting apart.
     """
-    run_dir = KNOWLEDGE_DIR / "runs"
+    run_dir = _current_profile_paths().runs
     if not run_dir.exists():
         return []
     # 进行中对局不入摘要（第 218 批复盘）：增量存档的 in_progress 文件是
@@ -1312,13 +1663,14 @@ _APPLY_PATCH_PATH_CONTRACT = """原生 Apply Patch 的每个目标文件名必�
 """
 
 
-def build_prompt(know, cfg: dict, every: int | None = None,
-                 batch_runs: list[int] | None = None,
-                 closure_state: dict | None = None,
-                 salvage_packages: list[str] | None = None,
-                 salvage_attempts: list[str] | None = None,
-                 evidence_only: bool = False,
-                 log=print) -> str:
+def _build_prompt_scoped(know, cfg: dict, every: int | None = None,
+                         batch_runs: list[int] | None = None,
+                         closure_state: dict | None = None,
+                         salvage_packages: list[str] | None = None,
+                         salvage_attempts: list[str] | None = None,
+                         evidence_only: bool = False,
+                         log=print) -> str:
+    profile_paths = _current_profile_paths()
     n = int(cfg.get("max_runs_in_packet", 100))
     # A runless legacy salvage still needs a positive synthetic ``run`` value as
     # durable queue identity.  It must never borrow a real run with that number
@@ -1359,6 +1711,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         native_digest["corpus_paths"] = _sandbox_readable_corpus_paths(
             native_digest.get("corpus_paths"))
     packet = {
+        "profile_id": profile_paths.profile_id,
         "runs_summary": run_summaries,
         "run_evidence_scope": ({
             "requested": [],
@@ -1398,7 +1751,7 @@ def build_prompt(know, cfg: dict, every: int | None = None,
         "native_game_knowledge": native_digest,
     }
     lessons_tail = ""
-    lessons_path = KNOWLEDGE_DIR / "lessons.md"
+    lessons_path = profile_paths.lessons
     if lessons_path.exists():
         lessons_tail = lessons_path.read_text(encoding="utf-8")[-2500:]
 
@@ -1431,8 +1784,18 @@ def build_prompt(know, cfg: dict, every: int | None = None,
     closure_summary = "；".join(
         f"{key}={json.dumps(closure_state.get(key), ensure_ascii=False)}"
         for key in closure_summary_keys if key in closure_state)
+    prompt_rel = _profile_repo_path(profile_paths.prompt)
+    runs_rel = _profile_repo_path(profile_paths.runs)
+    lessons_rel = _profile_repo_path(profile_paths.lessons)
+    policy_rel = _profile_repo_path(profile_paths.policy)
+    report_rel = _profile_repo_path(profile_paths.report)
+    conclusion_rel = _profile_repo_path(profile_paths.conclusion)
+    queue_rel = _profile_repo_path(profile_paths.queue)
+    archive_rel = _profile_repo_path(profile_paths.root / "archive")
+    backups_rel = _profile_repo_path(profile_paths.root / "code_backups")
 
     return f"""你是「sts2-ascend」杀戮尖塔2自主学习智能体的总教练。{scope}。
+本批角色 profile_id=`{profile_paths.profile_id}`；只使用该 profile 的证据与报告路径。
 你的交付不是分析报告，而是一次由你亲自完成、可验证、可撤回的生产闭环。
 
 # 上次失败反馈（先读这一小段，再开始工作）
@@ -1453,8 +1816,9 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 
 # 数据载体
 本文件的**第一个 `json` 代码块就是完整 packet**，不存在独立的 packet JSON 文件。若工具截断
-超长单行，请本地读取 `sts2-ascend/knowledge/review_prompt_latest.md`，提取第一个 fenced `json`
+超长单行，请本地读取 `{prompt_rel}`，提取第一个 fenced `json`
 代码块并用 `json.loads` 解析。packet 内 `corpus_paths` 都是当前隔离 clone 可读的相对路径。
+该 profile 的 runs、lessons、policy 分别位于 `{runs_rel}`、`{lessons_rel}`、`{policy_rel}`。
 
 # review_closure 快速摘要
 {closure_summary}
@@ -1495,22 +1859,39 @@ def build_prompt(know, cfg: dict, every: int | None = None,
 4. 自检修复：改过任何 `.py` 后运行 `py -3 -B sts2-ascend/brain/selfcheck.py`；失败就读取具体错误、
    继续修补并重跑，直到 `SELFCHECK OK`。回读完整 diff，核对行为、证据、撤回条件和意外文件。
 5. 最后才写报告：把归因、假设、实际代码动作、未来 3~10 局指标、继续调整/撤回条件追加到
-   `sts2-ascend/knowledge/meta_review.md`。replay target 各写一行
+   `{report_rel}`。replay target 各写一行
    `retry_resolution: <package-id> integrated|no_valid_change|still_pending`。再把 100 字以内、适合口播、
-   约 10 字一停顿的短评写入 `sts2-ascend/knowledge/review_conclusion.txt`。
+   约 10 字一停顿的短评写入 `{conclusion_rel}`。
 6. 自己收口：再次回读 diff、解决冲突、确认自检，然后在当前隔离 clone 内自行 `git add` 和本地
    `git commit`，返回 commit SHA。若缺少身份，用命令级 `-c user.name=sts2-review-agent`
    `-c user.email=local@sts2-ascend.invalid`；宿主只机械验收该最终内容并用 CAS 发布，不替你审计或改写。
 
 # 写入边界
-- 禁止写在线状态：`.runtime/`，`knowledge/runs/`、`archive/`、`code_backups/`，以及 stats、progression、
-  policy、lessons、review_queue、preferred_model_state、pending_restart、lock/log/stream/flag、宿主 prompt、
+- 禁止写在线状态：`.runtime/`，`{runs_rel}/`、`{archive_rel}/`、`{backups_rel}/`，以及 stats、progression、
+  `{policy_rel}`、`{lessons_rel}`、`{queue_rel}`、preferred_model_state、pending_restart、lock/log/stream/flag、`{prompt_rel}`、
   截图和拒合清单；它们只读。任一路径段含 cache 或 `.pyc/.pyo` 也不进入成果。
 - 禁止写 `sts2-ascend/` 外路径、绝对路径、`..` 逃逸或 `.gitmodules`。允许当前隔离 clone 内为本批
   使用 git status/diff/add/commit；禁止 remote、push、reset、删除历史或改宿主/其他工作区。
 - 除自检与本批必要的只读/测试命令外，禁止启动、停止、终止或管理进程；禁止安装依赖。
 
 完成后用 200 字以内总结：假设、落地文件、自检结果、本地 commit SHA。"""
+
+
+def build_prompt(know, cfg: dict, every: int | None = None,
+                 batch_runs: list[int] | None = None,
+                 closure_state: dict | None = None,
+                 salvage_packages: list[str] | None = None,
+                 salvage_attempts: list[str] | None = None,
+                 evidence_only: bool = False,
+                 log=print, profile_id: str | None = None,
+                 profile_root: Path | str | None = None) -> str:
+    """Build one profile-local prompt; legacy callers remain ironclad/root-local."""
+    with _review_profile_scope(profile_id, profile_root, know):
+        return _build_prompt_scoped(
+            know, cfg, every, batch_runs, closure_state=closure_state,
+            salvage_packages=salvage_packages,
+            salvage_attempts=salvage_attempts,
+            evidence_only=evidence_only, log=log)
 
 
 def _review_invocation_prompt(rel_prompt: str) -> str:
@@ -2259,18 +2640,21 @@ def _run_selfcheck(log, base_dir: Path | None = None) -> bool:
     return True
 
 
-def run_review(know, log=print, model: str | None = None, every: int | None = None,
-               source: str = "fallback", runner: str | None = None,
-               backend_key: str | None = None, priority: int = 1,
-               variant: str | None = None, reasoning_effort: str | None = None,
-               approve_for_me: bool = False, sandbox_mode: str = "workspace-write",
-               batch_runs: list[int] | None = None,
-               async_mode: bool = False, _status: dict | None = None,
-               salvage_packages: list[str] | None = None,
-               salvage_attempts: list[str] | None = None,
-               replay_queue_ids: list[str] | None = None,
-               evidence_only: bool = False,
-               review_queue_items: list[dict] | None = None) -> bool:
+def _run_review_scoped(know, log=print, model: str | None = None,
+                       every: int | None = None,
+                       source: str = "fallback", runner: str | None = None,
+                       backend_key: str | None = None, priority: int = 1,
+                       variant: str | None = None,
+                       reasoning_effort: str | None = None,
+                       approve_for_me: bool = False,
+                       sandbox_mode: str = "workspace-write",
+                       batch_runs: list[int] | None = None,
+                       async_mode: bool = False, _status: dict | None = None,
+                       salvage_packages: list[str] | None = None,
+                       salvage_attempts: list[str] | None = None,
+                       replay_queue_ids: list[str] | None = None,
+                       evidence_only: bool = False,
+                       review_queue_items: list[dict] | None = None) -> bool:
     """执行一次大模型复盘。返回 True 仅表示 patch 触及 Brain 加载路径、应热重启。
 
     流程：保存在线进度 → provider 隔离复盘 → deny-only 路径分类 → 自检 → 精确提交；
@@ -2295,6 +2679,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             "salvage_packages": list(replay_packages),
             "salvage_attempts": list(replay_attempts),
             "retry_resolutions": {},
+            "profile_id": _current_profile_paths().profile_id,
         })
     if _review_stop_requested():
         if _status is not None:
@@ -2341,7 +2726,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
     # 1) 只保存在线数据。代码必须已干净；自动流程绝不替用户提交开发中的代码。
     autogit.commit_progress_result(
         f"chore(sts2-ascend): {batch_txt}后复盘前在线存档",
-        log=log, paths=REVIEW_CONCURRENT_PATHS,
+        log=log, paths=_review_concurrent_paths(),
     )
     pre_head = autogit.head()
 
@@ -2357,12 +2742,12 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         salvage_packages=replay_packages, salvage_attempts=replay_attempts,
         evidence_only=evidence_only, log=log)
     try:
-        PROMPT_FILE.write_text(prompt, encoding="utf-8")
+        _current_profile_paths().prompt.write_text(prompt, encoding="utf-8")
     except OSError:
         pass
     # 提示词包可达数万字，超过 Windows 命令行 32767 上限（WinError 206）——
     # 完整提示词落盘；命令行保留目标、授权和停止条件，避免读文件失败时退化成空报告。
-    rel_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+    rel_prompt = _profile_repo_path(_current_profile_paths().prompt)
     short_prompt = _review_invocation_prompt(rel_prompt)
     try:
         cmd = build_review_command(
@@ -2392,6 +2777,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             attempt_items.append({
                 "run": int(run),
                 "queue_id": queue_id,
+                "profile_id": _current_profile_paths().profile_id,
                 **plan.as_queue_fields(),
                 "retry_same_model": True,
                 "salvage_packages": list(replay_packages),
@@ -2408,6 +2794,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         "replay_packages": list(replay_packages),
         "replay_attempts": list(replay_attempts),
         "plan": plan.as_queue_fields(),
+        "profile_id": _current_profile_paths().profile_id,
         # Queue affinity is durable before run_review.  Once this receipt is
         # published, a host crash must not silently hand the attempt elsewhere.
         "provider_launch_affinity_committed": bool(attempt_items),
@@ -2420,6 +2807,7 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
         "source": source,
         "run": runs,
         "time": stamp,
+        "profile_id": _current_profile_paths().profile_id,
     })
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
@@ -2763,7 +3151,8 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             return False
         result = autogit.commit_patch_result(
             sandbox.patch,
-            f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 knowledge/meta_review.md）",
+            f"feat(sts2-ascend): {batch_txt} LLM 复盘变更（详见 "
+            f"{_profile_repo_path(_current_profile_paths().report)}）",
             review_paths, log=log, prepare=prepare_marker, abort_prepare=abort_marker,
             finalize_prepare=finalize_marker,
         )
@@ -2852,6 +3241,36 @@ def run_review(know, log=print, model: str | None = None, every: int | None = No
             _discard_retained_sandbox(sandbox, log=log)
 
 
+def run_review(know, log=print, model: str | None = None, every: int | None = None,
+               source: str = "fallback", runner: str | None = None,
+               backend_key: str | None = None, priority: int = 1,
+               variant: str | None = None, reasoning_effort: str | None = None,
+               approve_for_me: bool = False, sandbox_mode: str = "workspace-write",
+               batch_runs: list[int] | None = None,
+               async_mode: bool = False, _status: dict | None = None,
+               salvage_packages: list[str] | None = None,
+               salvage_attempts: list[str] | None = None,
+               replay_queue_ids: list[str] | None = None,
+               evidence_only: bool = False,
+               review_queue_items: list[dict] | None = None,
+               profile_id: str | None = None,
+               profile_root: Path | str | None = None) -> bool:
+    """Compatibility entry point with optional profile-local path selection."""
+    resolved_profile = _profile_id_for_review(
+        know, explicit=profile_id, queue_items=review_queue_items)
+    with _review_profile_scope(resolved_profile, profile_root, know):
+        return _run_review_scoped(
+            know, log=log, model=model, every=every, source=source,
+            runner=runner, backend_key=backend_key, priority=priority,
+            variant=variant, reasoning_effort=reasoning_effort,
+            approve_for_me=approve_for_me, sandbox_mode=sandbox_mode,
+            batch_runs=batch_runs, async_mode=async_mode, _status=_status,
+            salvage_packages=salvage_packages,
+            salvage_attempts=salvage_attempts,
+            replay_queue_ids=replay_queue_ids, evidence_only=evidence_only,
+            review_queue_items=review_queue_items)
+
+
 def maybe_review(agent, log=print) -> None:
     """【已废弃，保留兼容】同步复盘入口。新架构用 enqueue_review（异步不阻塞游玩）。"""
     cfg = load_llm_config()
@@ -2915,6 +3334,14 @@ def _validate_queue_item(item, label: str) -> None:
             or retry_after < 0 or not math.isfinite(float(retry_after))):
         raise ReviewQueueError(
             f"{label}.retry_after must be a finite non-negative number")
+    profile_id = item.get("profile_id")
+    if profile_id is not None:
+        if not isinstance(profile_id, str):
+            raise ReviewQueueError(f"{label}.profile_id must be a string")
+        try:
+            _normalize_profile_id(profile_id)
+        except ValueError as exc:
+            raise ReviewQueueError(f"{label}.profile_id is invalid") from exc
     every = item.get("every")
     if (every is not None and (isinstance(every, bool)
                               or not isinstance(every, int) or every <= 0)):
@@ -2946,15 +3373,28 @@ def _validate_queue_item(item, label: str) -> None:
         raise ReviewQueueError(f"{label}.salvage_attempts must be a string list")
 
 
+def _queue_item_profile_id(item: dict) -> str:
+    """Legacy queue records belong to ironclad without requiring a rewrite."""
+    return _normalize_profile_id(item.get("profile_id"))
+
+
+def _batch_profile_id(batch: list[dict]) -> str:
+    profiles = {_queue_item_profile_id(item) for item in batch}
+    if len(profiles) != 1:
+        raise ReviewQueueError("review batch contains mixed profile_id values")
+    return next(iter(profiles), DEFAULT_PROFILE_ID)
+
+
 def _queue_item_identity(item: dict) -> tuple:
     """A replay group may intentionally review a run already in the live queue."""
+    profile_id = _queue_item_profile_id(item)
     queue_id = str(item.get("queue_id") or "")
     if queue_id:
-        return ("queue_id", queue_id)
+        return (profile_id, "queue_id", queue_id)
     group = str(item.get("retry_group") or "")
     if group:
-        return ("retry_group", group, item.get("run"))
-    return ("run", item.get("run"))
+        return (profile_id, "retry_group", group, item.get("run"))
+    return (profile_id, "run", item.get("run"))
 
 
 def _reviewing_items(reviewing: dict | None) -> list[dict]:
@@ -2965,7 +3405,9 @@ def _reviewing_items(reviewing: dict | None) -> list[dict]:
     if isinstance(items, list):
         return [dict(item) for item in items if isinstance(item, dict)]
     stamp = reviewing.get("started", "")
-    return [{"run": run, "time": stamp} for run in (reviewing.get("runs") or [])]
+    profile_id = _normalize_profile_id(reviewing.get("profile_id"))
+    return [{"run": run, "time": stamp, "profile_id": profile_id}
+            for run in (reviewing.get("runs") or [])]
 
 
 def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
@@ -2976,7 +3418,9 @@ def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
     if isinstance(reviewing.get("items"), list):
         return (tuple(_queue_item_identity(item) for item in current)
                 == tuple(_queue_item_identity(item) for item in batch))
-    return ([item.get("run") for item in current]
+    reviewing_profile = _normalize_profile_id(reviewing.get("profile_id"))
+    return (reviewing_profile == _batch_profile_id(batch)
+            and [item.get("run") for item in current]
             == [item.get("run") for item in batch])
 
 
@@ -3002,6 +3446,7 @@ def _retry_affinity(item: dict) -> tuple | None:
 
 def _batch_retry_affinity(batch: list[dict]) -> tuple | None:
     """Prove that a sticky transaction has one runner/model, without silent fallback."""
+    _batch_profile_id(batch)
     affinities = [_retry_affinity(item) for item in batch]
     sticky = [affinity for affinity in affinities if affinity is not None]
     if not sticky:
@@ -3083,17 +3528,20 @@ def _select_review_batch(
     """
     cap = max(1, int(cap))
     blocked_until: list[float] = []
-    seen_groups: set[str] = set()
+    seen_groups: set[tuple[str, str]] = set()
 
     # First pass: runnable failed-package transactions always close before newer
     # ordinary batches, regardless of where crash/hold recovery appended them.
     for index, item in enumerate(pending):
         group = str(item.get("retry_group") or "")
-        if not group or group in seen_groups:
+        profile_id = _queue_item_profile_id(item)
+        group_key = (profile_id, group)
+        if not group or group_key in seen_groups:
             continue
-        seen_groups.add(group)
+        seen_groups.add(group_key)
         indexes = [offset for offset, candidate in enumerate(pending)
-                   if str(candidate.get("retry_group") or "") == group]
+                   if (str(candidate.get("retry_group") or "") == group
+                       and _queue_item_profile_id(candidate) == profile_id)]
         group_items = [pending[offset] for offset in indexes]
         _batch_retry_affinity(group_items)
         ready_at = max(_queue_item_ready_at(candidate, now)
@@ -3116,6 +3564,7 @@ def _select_review_batch(
             continue
 
         affinity = _retry_affinity(item)
+        profile_id = _queue_item_profile_id(item)
         indexes: list[int] = []
         for offset, candidate in enumerate(pending):
             if candidate.get("retry_group"):
@@ -3125,8 +3574,11 @@ def _select_review_batch(
                 blocked_until.append(candidate_ready)
                 continue
             candidate_affinity = _retry_affinity(candidate)
-            if ((affinity is None and candidate_affinity is None)
-                    or (affinity is not None and candidate_affinity == affinity)):
+            same_affinity = (
+                (affinity is None and candidate_affinity is None)
+                or (affinity is not None and candidate_affinity == affinity))
+            if (same_affinity
+                    and _queue_item_profile_id(candidate) == profile_id):
                 indexes.append(offset)
                 if len(indexes) >= cap:
                     break
@@ -3172,6 +3624,16 @@ def _validate_queue(payload) -> dict:
     if reviewing is not None:
         if not isinstance(reviewing, dict):
             raise ReviewQueueError("review queue reviewing must be null or an object")
+        reviewing_profile = reviewing.get("profile_id")
+        if reviewing_profile is not None:
+            if not isinstance(reviewing_profile, str):
+                raise ReviewQueueError(
+                    "review queue reviewing.profile_id must be a string")
+            try:
+                reviewing_profile = _normalize_profile_id(reviewing_profile)
+            except ValueError as exc:
+                raise ReviewQueueError(
+                    "review queue reviewing.profile_id is invalid") from exc
         runs = reviewing.get("runs", [])
         if not isinstance(runs, list):
             raise ReviewQueueError("review queue reviewing.runs must be a list")
@@ -3188,14 +3650,49 @@ def _validate_queue(payload) -> dict:
             if [item.get("run") for item in items] != runs:
                 raise ReviewQueueError(
                     "review queue reviewing.items runs must match reviewing.runs")
+            profile_id = _batch_profile_id(items) if items else DEFAULT_PROFILE_ID
+            if (items and reviewing_profile is not None
+                    and reviewing_profile != profile_id):
+                raise ReviewQueueError(
+                    "review queue reviewing.profile_id must match its items")
     return payload
 
 
-def _read_queue_text() -> str:
+def _validate_profile_queue(payload: dict, profile_id) -> dict:
+    """Reject cross-profile items before they can be claimed from a local root."""
+    expected = _normalize_profile_id(profile_id)
+    for item in payload.get("pending", []):
+        if _queue_item_profile_id(item) != expected:
+            raise ReviewQueueError(
+                f"review queue item belongs to another profile (expected {expected})")
+    reviewing = payload.get("reviewing")
+    if reviewing:
+        summary_profile = reviewing.get("profile_id")
+        if (summary_profile is not None
+                and _normalize_profile_id(summary_profile) != expected):
+            raise ReviewQueueError(
+                "review queue reviewing summary belongs to another profile "
+                f"(expected {expected})")
+        for item in _reviewing_items(reviewing):
+            if _queue_item_profile_id(item) != expected:
+                raise ReviewQueueError(
+                    "review queue reviewing transaction belongs to another profile "
+                    f"(expected {expected})")
+    return payload
+
+
+def _queue_path(profile_id=None, profile_root: Path | str | None = None) -> Path:
+    if profile_id is None and profile_root is None:
+        return _current_profile_paths().queue
+    return _paths_for_profile(profile_id, profile_root).queue
+
+
+def _read_queue_text(queue_file: Path | None = None) -> str:
+    queue_file = Path(queue_file or _current_profile_paths().queue)
     last_error: OSError | None = None
     for attempt in range(_QUEUE_IO_RETRIES):
         try:
-            return QUEUE_FILE.read_text(encoding="utf-8")
+            return queue_file.read_text(encoding="utf-8")
         except FileNotFoundError:
             raise
         except OSError as exc:
@@ -3206,9 +3703,14 @@ def _read_queue_text() -> str:
     raise ReviewQueueError(f"cannot read review queue: {last_error}") from last_error
 
 
-def _load_queue_unlocked() -> dict:
+def _load_queue_unlocked(*, profile_id=None,
+                         profile_root: Path | str | None = None) -> dict:
+    profile_paths = (_current_profile_paths()
+                     if profile_id is None and profile_root is None
+                     else _paths_for_profile(profile_id, profile_root))
+    queue_file = _queue_path(profile_id, profile_root)
     try:
-        raw = _read_queue_text()
+        raw = _read_queue_text(queue_file)
     except FileNotFoundError:
         return _empty_queue()
     try:
@@ -3217,23 +3719,29 @@ def _load_queue_unlocked() -> dict:
         # Keep the original file untouched for diagnosis/recovery.  Treating it as
         # an empty queue lets the next save erase pending/reviewing evidence.
         raise ReviewQueueError(f"review queue contains invalid JSON: {exc}") from exc
-    return _validate_queue(payload)
+    return _validate_profile_queue(
+        _validate_queue(payload), profile_paths.profile_id)
 
 
-def _save_queue_unlocked(q: dict) -> None:
-    _validate_queue(q)
+def _save_queue_unlocked(q: dict, *, profile_id=None,
+                         profile_root: Path | str | None = None) -> None:
+    profile_paths = (_current_profile_paths()
+                     if profile_id is None and profile_root is None
+                     else _paths_for_profile(profile_id, profile_root))
+    _validate_profile_queue(_validate_queue(q), profile_paths.profile_id)
+    queue_file = _queue_path(profile_id, profile_root)
     raw = (json.dumps(q, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
-    QUEUE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    queue_file.parent.mkdir(parents=True, exist_ok=True)
     last_error: OSError | None = None
     for attempt in range(_QUEUE_IO_RETRIES):
-        temp = QUEUE_FILE.with_name(
-            f".{QUEUE_FILE.name}.{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
+        temp = queue_file.with_name(
+            f".{queue_file.name}.{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
         try:
             with temp.open("xb") as handle:
                 handle.write(raw)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temp, QUEUE_FILE)
+            os.replace(temp, queue_file)
             return
         except OSError as exc:
             last_error = exc
@@ -3247,17 +3755,21 @@ def _save_queue_unlocked(q: dict) -> None:
     raise ReviewQueueError(f"cannot save review queue: {last_error}") from last_error
 
 
-def _load_queue() -> dict:
-    with _queue_lock:
-        return _load_queue_unlocked()
+def _load_queue(*, profile_id=None,
+                profile_root: Path | str | None = None) -> dict:
+    with _review_profile_scope(profile_id, profile_root):
+        with _queue_lock:
+            return _load_queue_unlocked()
 
 
-def _save_queue(q: dict) -> None:
-    with _queue_lock:
-        _save_queue_unlocked(q)
+def _save_queue(q: dict, *, profile_id=None,
+                profile_root: Path | str | None = None) -> None:
+    with _review_profile_scope(profile_id, profile_root):
+        with _queue_lock:
+            _save_queue_unlocked(q)
 
 
-def requeue_review_runs(runs, log=print) -> list[int]:
+def _requeue_review_runs_scoped(runs, log=print) -> list[int]:
     """Durably append explicitly recovered runs while the brain is stopped.
 
     This is intentionally permissive: an older preferred-model batch may be worth
@@ -3277,15 +3789,23 @@ def requeue_review_runs(runs, log=print) -> list[int]:
     added: list[int] = []
     with _queue_lock:
         q = _load_queue_unlocked()
+        profile_id = _current_profile_paths().profile_id
         existing = {int(item.get("run")) for item in q.get("pending", [])
-                    if item.get("run") is not None}
+                    if (item.get("run") is not None
+                        and _queue_item_profile_id(item) == profile_id)}
         existing.update(int(item["run"]) for item in
-                        _reviewing_items(q.get("reviewing")) if item.get("run"))
+                        _reviewing_items(q.get("reviewing"))
+                        if (item.get("run")
+                            and _queue_item_profile_id(item) == profile_id))
         stamp = time.strftime("%Y-%m-%d %H:%M")
         for run in normalized:
             if run in existing:
                 continue
-            q["pending"].append({"run": run, "time": stamp})
+            q["pending"].append({
+                "run": run,
+                "time": stamp,
+                "profile_id": _current_profile_paths().profile_id,
+            })
             existing.add(run)
             added.append(run)
         if added:
@@ -3295,6 +3815,13 @@ def requeue_review_runs(runs, log=print) -> list[int]:
     else:
         log("[llm] 指定历史复盘均已在队列中，无需重复入队")
     return added
+
+
+def requeue_review_runs(runs, log=print, profile_id: str | None = None,
+                        profile_root: Path | str | None = None) -> list[int]:
+    """Compatibility entry point; optional profile arguments select its queue."""
+    with _review_profile_scope(profile_id, profile_root):
+        return _requeue_review_runs_scoped(runs, log=log)
 
 
 def _brain_session_is_active() -> bool:
@@ -3365,6 +3892,7 @@ def _manifest_review_queue_fields(manifest: dict, cfg: dict) -> dict:
         raw_sticky = model_started if isinstance(model_started, bool) else True
 
     return {
+        "profile_id": _normalize_profile_id(manifest.get("profile_id")),
         "backend_key": backend_key,
         "priority": priority,
         "runner": runner,
@@ -3406,7 +3934,7 @@ def _latest_replay_binding_manifest(
     return active
 
 
-def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
+def _requeue_salvage_packages_scoped(package_names, log=print) -> dict[str, list[int]]:
     """Explicitly queue named failure packages for one-by-one model re-audit.
 
     This entry point is deliberately offline-only: callers first stop Brain via
@@ -3422,6 +3950,7 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
     queued: dict[str, list[int]] = {}
     queued_labels: dict[str, str] = {}
     cfg = load_llm_config()
+    active_profile = _current_profile_paths().profile_id
     prepared: list[tuple[str, list[int], dict, bool]] = []
     prepared_roots: set[str] = set()
     for requested_name in requested:
@@ -3450,6 +3979,11 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
             manifest = json.loads(
                 (package / "manifest.json").read_text(encoding="utf-8"))
             log(f"[llm] 指定的是 attempt {requested_name}；按 lineage 唤醒 target {name}")
+        manifest_profile = _normalize_profile_id(manifest.get("profile_id"))
+        if manifest_profile != active_profile:
+            log(f"[llm] 失败包 {name} 属于 profile={manifest_profile}；"
+                f"当前只操作 profile={active_profile} 的队列")
+            continue
         if name in prepared_roots:
             continue
         prepared_roots.add(name)
@@ -3490,7 +4024,8 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                     break
         if not runs:
             try:
-                stats = json.loads((KNOWLEDGE_DIR / "stats.json").read_text(encoding="utf-8"))
+                stats = json.loads((_current_profile_paths().root / "stats.json").read_text(
+                    encoding="utf-8"))
                 fallback_run = int(stats.get("global", {}).get("runs", 0))
             except (OSError, ValueError, TypeError, json.JSONDecodeError):
                 fallback_run = 0
@@ -3502,20 +4037,25 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
     with _queue_lock:
         q = _load_queue_unlocked()
         existing_groups = {
-            str(item.get("retry_group") or "")
+            (_queue_item_profile_id(item), str(item.get("retry_group") or ""))
             for item in [*q.get("pending", []), *_reviewing_items(q.get("reviewing"))]
             if item.get("retry_group")
         }
         stamp = time.strftime("%Y-%m-%d %H:%M")
         for name, runs, manifest, evidence_only in prepared:
-            if name in existing_groups:
-                log(f"[llm] 失败包已在重审队列中，无需重复入队：{name}")
-                continue
             lineage = _normalize_salvage_package_names(
                 manifest.get("replay_attempt_packages") or [])
             active_manifest = _latest_replay_binding_manifest(
                 name, manifest, lineage)
             affinity = _manifest_review_queue_fields(active_manifest, cfg)
+            if affinity["profile_id"] != active_profile:
+                log(f"[llm] 失败包 {name} 属于 profile={affinity['profile_id']}；"
+                    f"当前只操作 profile={active_profile} 的队列")
+                continue
+            group_key = (active_profile, name)
+            if group_key in existing_groups:
+                log(f"[llm] 失败包已在重审队列中，无需重复入队：{name}")
+                continue
             for run in runs:
                 item = {
                     "run": run,
@@ -3529,7 +4069,7 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
                     **affinity,
                 }
                 q["pending"].append(item)
-            existing_groups.add(name)
+            existing_groups.add(group_key)
             queued[name] = list(runs)
             queued_labels[name] = _review_backend_label(affinity)
         if queued:
@@ -3538,6 +4078,15 @@ def requeue_salvage_packages(package_names, log=print) -> dict[str, list[int]]:
         log(f"[llm] 已将失败包交回 {queued_labels.get(name, '原绑定复盘后端')} "
             f"独立重审队列：{name}（第 {runs} 局）")
     return queued
+
+
+def requeue_salvage_packages(
+    package_names, log=print, profile_id: str | None = None,
+    profile_root: Path | str | None = None,
+) -> dict[str, list[int]]:
+    """Queue salvage evidence into one profile queue; old packages are ironclad."""
+    with _review_profile_scope(profile_id, profile_root):
+        return _requeue_salvage_packages_scoped(package_names, log=log)
 
 
 def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
@@ -3562,7 +4111,8 @@ def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
                 break
     if not runs:
         try:
-            stats = json.loads((KNOWLEDGE_DIR / "stats.json").read_text(encoding="utf-8"))
+            stats = json.loads((_current_profile_paths().root / "stats.json").read_text(
+                encoding="utf-8"))
             run = int(stats.get("global", {}).get("runs", 0))
         except (OSError, ValueError, TypeError, json.JSONDecodeError):
             run = 0
@@ -4089,8 +4639,11 @@ def _recover_salvage_replay_queue(log=print) -> None:
         reviewing_items = _reviewing_items(reviewing)
         changed = False
         cfg = load_llm_config()
+        active_profile = _current_profile_paths().profile_id
         if resolved_targets:
             def is_resolved_item(item: dict) -> bool:
+                if _queue_item_profile_id(item) != active_profile:
+                    return False
                 item_target = str(item.get("replay_target") or "")
                 item_group = str(item.get("retry_group") or "")
                 item_queue_id = str(item.get("queue_id") or "")
@@ -4121,17 +4674,20 @@ def _recover_salvage_replay_queue(log=print) -> None:
                 *attempts.get(target, []),
             ])
             lineage = [name for name in lineage if name != target]
-            target_attempts[target] = lineage
             ids = queue_ids.get(target, set())
             active_manifest = _latest_replay_binding_manifest(
                 target, manifest, lineage)
             affinity = _manifest_review_queue_fields(active_manifest, cfg)
+            if affinity["profile_id"] != active_profile:
+                continue
+            target_attempts[target] = lineage
 
             def belongs(item: dict) -> bool:
-                return (str(item.get("replay_target") or "") == target
-                        or str(item.get("retry_group") or "") == target
-                        or (str(item.get("queue_id") or "") in ids
-                            if ids else False))
+                return (_queue_item_profile_id(item) == active_profile
+                        and (str(item.get("replay_target") or "") == target
+                             or str(item.get("retry_group") or "") == target
+                             or (str(item.get("queue_id") or "") in ids
+                                 if ids else False)))
 
             matched = False
             for collection in (q.get("pending", []), reviewing_items):
@@ -4173,6 +4729,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
             else:
                 reviewing["items"] = reviewing_items
                 reviewing["runs"] = [item["run"] for item in reviewing_items]
+                reviewing["profile_id"] = _batch_profile_id(reviewing_items)
                 groups = {str(item.get("retry_group") or "") for item in reviewing_items}
                 if len(groups) == 1:
                     reviewing["retry_group"] = next(iter(groups))
@@ -4193,7 +4750,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
             log(f"[llm] target attempt 索引暂未回写（队列已耐久）：{target}（{exc}）")
 
 
-def enqueue_review(agent, log=print) -> None:
+def _enqueue_review_scoped(agent, log=print, know=None) -> None:
     """agent.py 每局结束后调用：按节奏入队复盘请求并确保工作线程存活。
 
     绝不阻塞游玩主循环——复盘由工作线程异步执行；若一局结束时上一场复盘还没完，
@@ -4202,7 +4759,8 @@ def enqueue_review(agent, log=print) -> None:
     cfg = load_llm_config()
     if not cfg.get("enabled"):
         return
-    runs = agent.know.stats["global"]["runs"]
+    review_know = know if know is not None else agent.know
+    runs = review_know.stats["global"]["runs"]
     # 游戏线程只读取配置并耐久入队；绝不在这里 spawn `opencode models`、
     # `codex login status` 或任何其他外部探测。真正的后端计划由 worker 在
     # 认领 fresh 事务后解析并原子写回 reviewing。
@@ -4212,10 +4770,10 @@ def enqueue_review(agent, log=print) -> None:
     queued_plan = plans[0]
     every = queued_plan.every_runs
     source = "queued"
-    last_ok = agent.know.progression.get("last_successful_review_run", 0)
+    last_ok = review_know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     starved = runs - last_ok >= starve_every
-    last = agent.know.progression.get("last_llm_review_run", 0)
+    last = review_know.progression.get("last_llm_review_run", 0)
     if runs - last < every:
         return
     progression_key = "last_llm_review_run"
@@ -4226,12 +4784,19 @@ def enqueue_review(agent, log=print) -> None:
     try:
         with _queue_lock:
             q = _load_queue_unlocked()
-            reviewing_runs = set((q.get("reviewing") or {}).get("runs") or [])
+            profile_id = _current_profile_paths().profile_id
+            reviewing_runs = {
+                item.get("run") for item in _reviewing_items(q.get("reviewing"))
+                if _queue_item_profile_id(item) == profile_id
+            }
             already_queued = runs in reviewing_runs or any(
-                item.get("run") == runs for item in q["pending"])
+                item.get("run") == runs
+                and _queue_item_profile_id(item) == profile_id
+                for item in q["pending"])
             if not already_queued:
                 q["pending"].append({
                     "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
+                    "profile_id": profile_id,
                     **queued_plan.as_queue_fields(),
                     "source": source,
                 })
@@ -4240,15 +4805,34 @@ def enqueue_review(agent, log=print) -> None:
         log(f"[llm] 复盘队列持久化失败，保留原队列且不推进节奏标记：{exc}")
         return
 
-    agent.know.progression[progression_key] = runs
-    agent.know.progression["last_review_attempt_source"] = source
-    agent.know.save()
+    review_know.progression[progression_key] = runs
+    review_know.progression["last_review_attempt_source"] = source
+    review_know.save()
     starve_note = (f"（距上次成功复盘 {runs - last_ok} 局，积压追及）"
                    if starved else "")
     log(f"[llm] 复盘请求已入队（第{runs}局，worker待选后端，"
         f"待消化 {len(q['pending'])} 批{starve_note}），游玩不等待")
     if not _review_stop_requested():
         _ensure_worker(agent, log)
+
+
+def enqueue_review(agent, log=print, profile_id: str | None = None,
+                   profile_root: Path | str | None = None) -> None:
+    """Queue a review under the agent's profile; old agents remain ironclad."""
+    know = getattr(agent, "know", None)
+    resolved_profile = (
+        _profile_id_from(agent) if profile_id is None and profile_root is None
+        else profile_id)
+    with _review_profile_scope(
+            resolved_profile, profile_root, know) as profile_paths:
+        binding = _profile_binding_for_agent(agent, profile_paths.profile_id)
+        review_know = binding.know
+        if review_know is None:
+            raise ReviewQueueError(
+                "no Knowledge instance is registered for enqueue profile "
+                f"{profile_paths.profile_id}")
+        _register_agent_review_binding(agent, profile_paths, review_know)
+        _enqueue_review_scoped(agent, log=log, know=review_know)
 
 
 def _ensure_worker(agent, log) -> None:
@@ -4310,7 +4894,7 @@ def _salvage_recovery_needed() -> bool:
     return False
 
 
-def resume_review_queue(agent, log=print) -> None:
+def _resume_review_queue_scoped(agent, log=print) -> None:
     """Resume queued/interrupted reviews immediately after brain startup."""
     if _review_stop_requested():
         return
@@ -4332,6 +4916,32 @@ def resume_review_queue(agent, log=print) -> None:
         return
     if host_recovery or (llm_enabled and has_work):
         _ensure_worker(agent, log)
+
+
+def resume_review_queue(agent, log=print, profile_id: str | None = None,
+                        profile_root: Path | str | None = None) -> None:
+    """Resume profile-local queues without changing the shared worker model."""
+    if profile_id is not None or profile_root is not None:
+        know = getattr(agent, "know", None)
+        resolved_profile = profile_id
+        with _review_profile_scope(
+                resolved_profile, profile_root, know) as profile_paths:
+            binding = _profile_binding_for_agent(agent, profile_paths.profile_id)
+            if binding.know is None:
+                raise ReviewQueueError(
+                    "no Knowledge instance is registered for resume profile "
+                    f"{profile_paths.profile_id}")
+            _register_agent_review_binding(
+                agent, profile_paths, binding.know)
+            _resume_review_queue_scoped(agent, log=log)
+        return
+
+    # A normal Agent already owns all CharacterProfile Knowledge instances.
+    # Probe every local queue at startup, but keep the existing one-worker latch.
+    for binding in _agent_review_profile_bindings(agent):
+        _register_agent_review_binding(agent, binding.paths, binding.know)
+        with _review_profile_paths_scope(binding.paths):
+            _resume_review_queue_scoped(agent, log=log)
 
 
 def shutdown_worker(log=print, timeout: float = 30.0) -> bool:
@@ -4602,7 +5212,8 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
         # prompt 若未被模型修改则随后退回基线；被修改/删除时也作为越界成果保留。
         stage_all = _sandbox_git(
             repo, ["add", "--all", "--force", "--", "."], env=capture_env)
-        own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+        profile_paths = _current_profile_paths()
+        own_prompt = _profile_repo_path(profile_paths.prompt)
         prompt_path = repo.joinpath(*PurePosixPath(own_prompt).parts)
         prompt_deleted = False
         try:
@@ -4697,13 +5308,13 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
             (snapshot / "file_states.json").write_text(
                 json.dumps(file_states, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")
-        report_rel = "sts2-ascend/knowledge/meta_review.md"
+        report_rel = _profile_repo_path(profile_paths.report)
         if report_rel in changed:
             try:
                 result.diagnostic_report = _read_sandbox_text(repo, report_rel)
             except OSError as exc:
                 log(f"[llm] 读取隔离复盘报告异常：{exc}")
-        conclusion_rel = "sts2-ascend/knowledge/review_conclusion.txt"
+        conclusion_rel = _profile_repo_path(profile_paths.conclusion)
         if not result.conclusion and conclusion_rel in changed:
             try:
                 conclusion = _read_sandbox_text(repo, conclusion_rel, limit=16 * 1024)
@@ -7232,7 +7843,7 @@ def _committed_retry_resolutions(package_names, log=print) -> dict[str, tuple[st
     if not requested or not upstream or _review_stop_requested():
         return {}
     try:
-        report_path = REVIEW_LOG.relative_to(REPO_DIR).as_posix()
+        report_path = _profile_repo_path(_current_profile_paths().report)
     except ValueError:
         return {}
 
@@ -7462,6 +8073,7 @@ def _save_review_salvage(
     temp = SALVAGE_ROOT / f".{name}.tmp-{os.getpid()}-{threading.get_ident()}"
     manifest = {
         "schema": 1,
+        "profile_id": _current_profile_paths().profile_id,
         "time": time.strftime("%Y-%m-%d %H:%M:%S"),
         "failure_kind": _salvage_kind(reason, sandbox),
         "failure_code": str(sandbox.failure_code or ""),
@@ -7734,7 +8346,8 @@ def _run_review_sandbox(
             return result
         _sandbox_git(sandbox_repo, ["remote", "remove", "origin"])
 
-        prompt_path = sandbox_repo / PROMPT_FILE.relative_to(REPO_DIR)
+        prompt_path = sandbox_repo / _profile_repo_path(
+            _current_profile_paths().prompt)
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(prompt, encoding="utf-8")
         codex_selfcheck_runtime = _prepare_codex_windows_selfcheck_runtime(
@@ -7837,7 +8450,7 @@ def _run_review_sandbox(
             return result
         paths = list(dict.fromkeys(
             item.replace("\\", "/") for item in inventory.stdout.split("\0") if item))
-        own_prompt = PROMPT_FILE.relative_to(REPO_DIR).as_posix()
+        own_prompt = _profile_repo_path(_current_profile_paths().prompt)
         paths = [path for path in paths if path != own_prompt]
         accepted, transient, online, rejected = _partition_review_changes(paths)
         if online or rejected:
@@ -7882,7 +8495,7 @@ def _run_review_sandbox(
                 error="隔离复盘 patch 导出失败")
             return result
         conclusion = ""
-        conclusion_rel = "sts2-ascend/knowledge/review_conclusion.txt"
+        conclusion_rel = _profile_repo_path(_current_profile_paths().conclusion)
         if conclusion_rel in accepted:
             try:
                 conclusion_path = sandbox_repo / conclusion_rel
@@ -8075,6 +8688,9 @@ def _partition_review_changes(
     online: list[str] = []
     rejected: list[str] = []
     for raw in dict.fromkeys(_normalized_review_path(item) for item in paths):
+        if _is_profile_online_review_path(raw):
+            online.append(raw)
+            continue
         category = autogit.classify_review_path(raw)
         if category == autogit.REVIEW_PATH_ACCEPTED:
             allowed.append(autogit.normalize_paths([raw])[0])
@@ -8430,6 +9046,9 @@ def _receipt_orphan_binding(
         raise ReviewQueueError("attempt receipt contains a non-object queue item")
     for index, item in enumerate(items):
         _validate_queue_item(item, f"attempt.queue_items[{index}]")
+    item_profile = _batch_profile_id(items)
+    if _normalize_profile_id(receipt.get("profile_id")) != item_profile:
+        raise ReviewQueueError("attempt receipt profile_id summary mismatch")
     queue_ids = [str(item.get("queue_id") or "") for item in items]
     if not all(queue_ids) or len(set(queue_ids)) != len(queue_ids):
         raise ReviewQueueError("attempt receipt queue ids are missing or duplicated")
@@ -8460,7 +9079,9 @@ def _receipt_orphan_binding(
             raise ReviewQueueError(
                 f"attempt queue id is absent or ambiguous: {queue_id}")
         live = matches[0]
-        if live.get("run") != item.get("run") or _retry_affinity(live) != affinity:
+        if (live.get("run") != item.get("run")
+                or _queue_item_profile_id(live) != item_profile
+                or _retry_affinity(live) != affinity):
             raise ReviewQueueError(
                 f"attempt queue identity/affinity changed: {queue_id}")
         for key in ("retry_group", "replay_target"):
@@ -8944,6 +9565,7 @@ def _persist_reviewing_batch_metadata(batch: list[dict], log=print) -> bool:
             reviewing = dict(reviewing)
             reviewing["items"] = [dict(item) for item in batch]
             reviewing["runs"] = [item["run"] for item in batch]
+            reviewing["profile_id"] = _batch_profile_id(batch)
             q["reviewing"] = reviewing
             _save_queue_unlocked(q)
         return True
@@ -8952,7 +9574,64 @@ def _persist_reviewing_batch_metadata(batch: list[dict], log=print) -> bool:
         return False
 
 
-def _worker_loop(agent, log) -> None:
+def _claim_profile_review_batch(
+    binding: _ReviewProfileBinding, worker_cfg: dict, log=print,
+) -> tuple[list[dict], float]:
+    """Claim at most one homogeneous batch from one profile-local queue."""
+    with _review_profile_paths_scope(binding.paths):
+        retry_wait = 0.0
+        with _queue_lock:
+            q = _load_queue_unlocked()
+            pending = q.get("pending", [])
+            if not pending or q.get("reviewing"):
+                return [], retry_wait
+            approval_refreshed = _refresh_sticky_approval(pending, worker_cfg)
+            if approval_refreshed:
+                # Selection itself compares the complete sticky tuple, so
+                # normalize and durably publish old approval snapshots before
+                # the scheduler can inspect a mixed replay group.
+                _save_queue_unlocked(q)
+                log("[llm] pending sticky review execution approval "
+                    "refreshed from exact current backend config")
+            cap = max(1, min(
+                int(worker_cfg.get("review_queue_max", 100)),
+                int(worker_cfg.get("max_runs_in_packet", 100))))
+            eligible_indexes, retry_wait = _select_review_batch(
+                pending, cap, time.time())
+            if not eligible_indexes:
+                return [], retry_wait
+
+            first = pending[eligible_indexes[0]]
+            profile_id = _queue_item_profile_id(first)
+            if profile_id != binding.paths.profile_id:
+                raise ReviewQueueError(
+                    "profile-local queue contains an item for another profile")
+            retry_group = str(first.get("retry_group") or "")
+            picked = set(eligible_indexes)
+            transaction = f"{os.getpid()}-{time.time_ns()}"
+            batch = []
+            for offset, index in enumerate(eligible_indexes):
+                item = dict(pending[index])
+                item.setdefault("profile_id", profile_id)
+                item.setdefault("queue_id", f"{transaction}-{offset}")
+                batch.append(item)
+            if _batch_profile_id(batch) != binding.paths.profile_id:
+                raise ReviewQueueError(
+                    "profile-local queue selected a mixed or foreign batch")
+            q["pending"] = [item for index, item in enumerate(pending)
+                            if index not in picked]
+            q["reviewing"] = {
+                "runs": [item["run"] for item in batch],
+                "items": [dict(item) for item in batch],
+                "profile_id": profile_id,
+                "retry_group": retry_group,
+                "started": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            _save_queue_unlocked(q)
+            return batch, retry_wait
+
+
+def _worker_loop_scoped(agent, log) -> None:
     """Supervise the durable review daemon, including startup recovery.
 
     Startup maintenance touches several independently durable stores.  A locked
@@ -8978,6 +9657,11 @@ def _worker_loop(agent, log) -> None:
                 _worker_thread = None
 
 
+def _worker_loop(agent, log) -> None:
+    """Run the existing single shared scheduler across profile-local queues."""
+    _worker_loop_scoped(agent, log)
+
+
 def _worker_loop_body(agent, log) -> None:
     # 进程重启后：先清孤儿（避免与重跑的复盘双写），再把 reviewing 的对局
     # 重新入队——此前直接丢弃标记，被中断复盘覆盖的对局永远丢失复盘。
@@ -8989,15 +9673,18 @@ def _worker_loop_body(agent, log) -> None:
     _cleanup_stale_private_git_temps(log=log)
     if _review_stop_requested():
         return
+    bindings = _agent_review_profile_bindings(agent)
     _recover_deferred_salvages(log=log)
     if _review_stop_requested():
         return
     # A pre-receipt host can die after the provider edited its managed clone but
     # before `_save_review_salvage` published a pointer/package.  Preserve only
     # clones with an exact durable queue binding; ambiguous legacy roots remain.
-    _recover_unpointed_review_sandboxes(log=log)
-    if _review_stop_requested():
-        return
+    for binding in bindings:
+        with _review_profile_paths_scope(binding.paths):
+            _recover_unpointed_review_sandboxes(log=log)
+        if _review_stop_requested():
+            return
     # Operator-preserved packages may be the only surviving copy after an older
     # host accepted a prompt-truncated conclusion.  Restore that full lineage
     # before parsing historical receipts, so an old no_valid_change cannot close
@@ -9012,32 +9699,41 @@ def _worker_loop_body(agent, log) -> None:
     _recover_committed_retry_resolutions(log=log)
     if _review_stop_requested():
         return
-    _recover_salvage_replay_queue(log=log)
-    if _review_stop_requested():
-        return
+    for binding in bindings:
+        with _review_profile_paths_scope(binding.paths):
+            _recover_salvage_replay_queue(log=log)
+        if _review_stop_requested():
+            return
     _backfill_rejection_ledger(log=log)
     if _review_stop_requested():
         return
     # Startup recovery is itself a durable queue transaction.  If the file is
     # temporarily locked/unreadable, retry in place rather than letting the daemon
     # thread die (or treating the interrupted batch as empty).
-    while not _review_stop_requested():
-        try:
-            with _queue_lock:
-                q = _load_queue_unlocked()
-                if q.get("reviewing"):
-                    requeued = _restore_interrupted_reviewing(q)
-                    recovered_runs = [item.get("run") for item in requeued]
-                    if recovered_runs:
-                        log(f"[llm] 上场复盘随进程中断，优先恢复追及：第 {recovered_runs} 局")
-                    _save_queue_unlocked(q)
-            break
-        except (ReviewQueueError, OSError) as exc:
-            log(f"[llm] 复盘队列恢复失败，原文件保持不变，30s 后重试：{exc}")
-            if _wait_review_stop(30):
-                return
+    for binding in bindings:
+        while not _review_stop_requested():
+            try:
+                with _review_profile_paths_scope(binding.paths):
+                    with _queue_lock:
+                        q = _load_queue_unlocked()
+                        if q.get("reviewing"):
+                            requeued = _restore_interrupted_reviewing(q)
+                            recovered_runs = [
+                                item.get("run") for item in requeued]
+                            if recovered_runs:
+                                log("[llm] 上场复盘随进程中断，优先恢复追及："
+                                    f"profile={binding.paths.profile_id} "
+                                    f"第 {recovered_runs} 局")
+                            _save_queue_unlocked(q)
+                break
+            except (ReviewQueueError, OSError) as exc:
+                log("[llm] 复盘队列恢复失败，原文件保持不变，30s 后重试："
+                    f"profile={binding.paths.profile_id}（{exc}）")
+                if _wait_review_stop(30):
+                    return
 
     next_salvage_maintenance = time.monotonic() + 60.0
+    profile_cursor = 0
     while not _review_stop_requested():
         try:
             # request_restart 已置位 = 本进程已判定待重启（局间 sys.exit(42)）。
@@ -9045,6 +9741,7 @@ def _worker_loop_body(agent, log) -> None:
             # （复盘 C 局中完成置位 → worker 又开跑 A → 局末退场掐断 A，实证路径）。
             if getattr(agent, "request_restart", False):
                 return
+            bindings = _agent_review_profile_bindings(agent)
             if time.monotonic() >= next_salvage_maintenance:
                 # Keep the three host transactions in this order even when the
                 # first call finds nothing new.  A crash may have persisted the
@@ -9055,9 +9752,11 @@ def _worker_loop_body(agent, log) -> None:
                 _recover_committed_retry_resolutions(log=log)
                 if _review_stop_requested():
                     return
-                _recover_salvage_replay_queue(log=log)
-                if _review_stop_requested():
-                    return
+                for binding in bindings:
+                    with _review_profile_paths_scope(binding.paths):
+                        _recover_salvage_replay_queue(log=log)
+                    if _review_stop_requested():
+                        return
                 _resume_host_salvage_closures(log=log)
                 next_salvage_maintenance = time.monotonic() + 60.0
                 if _review_stop_requested():
@@ -9070,82 +9769,66 @@ def _worker_loop_body(agent, log) -> None:
                 if _wait_review_stop(30):
                     return
                 continue
-            retry_wait = 0.0
-            with _queue_lock:
-                q = _load_queue_unlocked()
-                pending = q.get("pending", [])
-                if pending and not q.get("reviewing"):
-                    approval_refreshed = _refresh_sticky_approval(
-                        pending, worker_cfg)
-                    if approval_refreshed:
-                        # Selection itself compares the complete sticky tuple, so
-                        # normalize and durably publish old approval snapshots
-                        # before the scheduler can inspect a mixed replay group.
-                        _save_queue_unlocked(q)
-                        log("[llm] pending sticky review execution approval "
-                            "refreshed from exact current backend config")
-                    cap = max(1, min(
-                        int(worker_cfg.get("review_queue_max", 100)),
-                        int(worker_cfg.get("max_runs_in_packet", 100))))
-                    now = time.time()
-                    eligible_indexes, retry_wait = _select_review_batch(
-                        pending, cap, now)
-                    if eligible_indexes:
-                        first = pending[eligible_indexes[0]]
-                        retry_group = str(first.get("retry_group") or "")
-                        picked = set(eligible_indexes)
-                        transaction = f"{os.getpid()}-{time.time_ns()}"
-                        batch = []
-                        for offset, index in enumerate(eligible_indexes):
-                            item = dict(pending[index])
-                            item.setdefault("queue_id", f"{transaction}-{offset}")
-                            batch.append(item)
-                        q["pending"] = [item for index, item in enumerate(pending)
-                                        if index not in picked]
-                        q["reviewing"] = {
-                            "runs": [p["run"] for p in batch],
-                            "items": [dict(p) for p in batch],
-                            "retry_group": retry_group,
-                            "started": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        }
-                        _save_queue_unlocked(q)
-                    else:
-                        batch = []
-                else:
-                    batch = []
+            batch: list[dict] = []
+            selected_binding: _ReviewProfileBinding | None = None
+            profile_waits: list[float] = []
+            if bindings:
+                profile_cursor %= len(bindings)
+                ordered = (
+                    bindings[profile_cursor:] + bindings[:profile_cursor])
+                for offset, binding in enumerate(ordered):
+                    candidate, candidate_wait = _claim_profile_review_batch(
+                        binding, worker_cfg, log=log)
+                    if candidate:
+                        batch = candidate
+                        selected_binding = binding
+                        selected_index = (profile_cursor + offset) % len(bindings)
+                        profile_cursor = (selected_index + 1) % len(bindings)
+                        break
+                    if candidate_wait > 0:
+                        profile_waits.append(candidate_wait)
+            retry_wait = (0.0 if batch
+                          else min(profile_waits, default=0.0))
             if batch:
                 outcome = "failed"
-                try:
-                    outcome = _run_batch_review(agent, batch, log)
-                except Exception as exc:
-                    log(f"[llm] 批次复盘异常，将保留并退避重试：{exc}")
-                    outcome = "failed"
-                if outcome == "canceled" or _review_stop_requested():
-                    return
-                # reviewing 是持久事务标记。若最终落盘暂时失败，不能返回外层
-                # 进入“reviewing 非空、永不再取批”的空转态；原地重试直到成功或停止。
-                while not _review_stop_requested():
+                assert selected_binding is not None
+                with _review_profile_paths_scope(selected_binding.paths):
                     try:
-                        delay = _finalize_review_batch(batch, outcome, log=log)
-                        break
-                    except (ReviewQueueError, OSError) as exc:
-                        log(f"[llm] 复盘批次收尾落盘失败，保留 reviewing，5s 后重试：{exc}")
-                        if _wait_review_stop(5):
-                            return
-                else:
-                    return
-                if (outcome in {"completed", "documented", "changed"}
-                        and not _review_stop_requested()):
-                    _resume_host_salvage_closures(log=log)
-                if outcome in {"failed", "replay_pending", "deferred"}:
-                    if outcome == "deferred":
-                        log(f"[llm] 当前绑定后端暂不可启动，批次原样保留，{delay:.0f}s 后重试")
+                        outcome = _run_batch_review(agent, batch, log)
+                    except Exception as exc:
+                        log(f"[llm] 批次复盘异常，将保留并退避重试：{exc}")
+                        outcome = "failed"
+                    if outcome == "canceled" or _review_stop_requested():
+                        return
+                    # reviewing 是持久事务标记。若最终落盘暂时失败，不能返回外层
+                    # 进入“reviewing 非空、永不再取批”的空转态；原地重试直到成功或停止。
+                    while not _review_stop_requested():
+                        try:
+                            delay = _finalize_review_batch(
+                                batch, outcome, log=log)
+                            break
+                        except (ReviewQueueError, OSError) as exc:
+                            log("[llm] 复盘批次收尾落盘失败，保留 reviewing，"
+                                f"5s 后重试：{exc}")
+                            if _wait_review_stop(5):
+                                return
+                    else:
+                        return
+                    if (outcome in {"completed", "documented", "changed"}
+                            and not _review_stop_requested()):
+                        _resume_host_salvage_closures(log=log)
+                    if outcome in {"failed", "replay_pending", "deferred"}:
+                        if outcome == "deferred":
+                            log("[llm] 当前绑定后端暂不可启动，批次原样保留，"
+                                f"{delay:.0f}s 后重试")
+                            retry_wait = min(30.0, max(1.0, delay))
+                            continue
+                        label = (
+                            f"失败包尚未完成 {_review_backend_label(batch[0])} 闭环"
+                            if outcome == "replay_pending" else "复盘失败")
+                        log(f"[llm] {label}，批次已放回队尾，"
+                            f"{delay:.0f}s 后继续追及")
                         retry_wait = min(30.0, max(1.0, delay))
-                        continue
-                    label = (f"失败包尚未完成 {_review_backend_label(batch[0])} 闭环"
-                             if outcome == "replay_pending" else "复盘失败")
-                    log(f"[llm] {label}，批次已放回队尾，{delay:.0f}s 后继续追及")
-                    retry_wait = min(30.0, max(1.0, delay))
             if _wait_review_stop(retry_wait or 5):
                 return
         except Exception as exc:
@@ -9169,7 +9852,7 @@ def _coerce_review_plan(value, cfg: dict) -> ReviewPlan:
         variant=variant, every_runs=max(1, int(every)), source=str(source))
 
 
-def _run_batch_review(agent, batch: list[dict], log) -> str:
+def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
     if _review_stop_requested():
         return "canceled"
     cfg = load_llm_config()
@@ -9259,8 +9942,9 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
     log(f"[llm] 异步复盘启动：覆盖第 {runs_list} 局"
         f"（{runner}/{plan.display_model}{replay_note}）")
     status: dict = {}
+    review_know = know if know is not None else agent.know
     executed = run_review(
-                          agent.know, log=log, model=model, every=every, source=source,
+                          review_know, log=log, model=model, every=every, source=source,
                           runner=runner, backend_key=plan.key, priority=plan.priority,
                           variant=plan.variant, reasoning_effort=plan.reasoning_effort,
                           approve_for_me=plan.approve_for_me,
@@ -9347,6 +10031,18 @@ def _run_batch_review(agent, batch: list[dict], log) -> str:
         return "completed"
     log(f"[llm] 异步复盘未成功，将自动重试：{status.get('reason', '未知原因')}")
     return "failed"
+
+
+def _run_batch_review(agent, batch: list[dict], log) -> str:
+    """Execute one homogeneous batch inside its profile-local path context."""
+    profile_id = _batch_profile_id(batch)
+    binding = _profile_binding_for_agent(agent, profile_id)
+    if binding.know is None:
+        raise ReviewQueueError(
+            f"no Knowledge instance is registered for review profile {profile_id}")
+    with _review_profile_paths_scope(binding.paths):
+        return _run_batch_review_scoped(
+            agent, batch, log, know=binding.know)
 
 
 def main() -> None:
