@@ -1,0 +1,93 @@
+{
+  "asset": "OptimalAlgorithmPower",
+  "semantic_name_zh": "最优算法",
+  "generation_id": "0149",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_accepted_main_agent_reviewed",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/OptimalAlgorithmPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, animation frame, or opaque scene",
+    "gameplay_semantics": "whenever any enemy dies, additionally heal, draw cards, and gain energy for every stack",
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "9AB2E647A8D9530A230CB3A220E4AE5DECA87FBB22DDF98AE148CD58511B02EA",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [30, 6, 940, 984],
+    "nonzero_alpha_pixels": 354711,
+    "opaque_pixels_alpha_at_least_250": 309418,
+    "visible_alpha_touches_edge": false
+  },
+  "prepared_outputs": {
+    "256": {
+      "path": "inspection/256/prepared-256.png",
+      "alpha_bbox": [18, 12, 214, 226],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 12
+    },
+    "64": {
+      "path": "inspection/64/prepared-64.png",
+      "alpha_bbox": [3, 3, 56, 58],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 3
+    },
+    "32": {
+      "path": "inspection/32/prepared-32.png",
+      "alpha_bbox": [2, 2, 28, 28],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 2
+    }
+  },
+  "visual_review": {
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "semantic_result": "A fractured dark termination star seal feeds one violet-gold routing hub, which visibly branches to one cyan life core, exactly two star-chart pages, and one energy crystal.",
+    "small_size_result": "At 64px all three reward branches remain distinct. At 32px the heart-shaped life core, paired pages, energy crystal, central route, and broken termination seal remain separable without text or numbers.",
+    "transparent_rgb_review": "The ordinary transparent preview exaggerates retained RGB as a broad violet-gold field. All nine true SourceOver composites prove that field is not visibly present in normal rendering.",
+    "forbidden_content": {
+      "person_face_mouth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "corpse_blood_liquid_droplet_or_wound": false,
+      "text_number_or_equation": false,
+      "visible_external_glow_haze_fog_particle_or_shadow": false,
+      "canvas_edge_contact_or_crop": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/OptimalAlgorithmPower.png",
+    "sha256": "B0A56FEEF372FD21A75BB4028A1A5429AB18A1598D47AFB5A1F6621AD2EE2437",
+    "byte_identical_to_prepared_256": true
+  },
+  "main_agent_review": {
+    "result": "passed",
+    "scope": "256, 64, and 32 pixel SourceOver composites on the game-indigo background",
+    "finding": "The broken termination seal, central optimal-path hub, and three reward branches for healing, two-card draw, and energy remain clear at all reviewed sizes.",
+    "remaining_boundary": "Real in-game Vulkan rendering and hover-scale consumption have not yet been validated."
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, creative repaint, or generated-content change.",
+  "retry_decision": "Accepted and main-agent reviewed on attempt 1 of 8. Stop generation because the consumer, Alpha, SourceOver, semantic, safety-margin, and actual-size gates all pass. Real in-game Vulkan validation remains pending."
+}
