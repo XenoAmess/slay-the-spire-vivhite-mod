@@ -8631,3 +8631,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1185 胜，当前目标进阶 0
+
+## 第 1186 局复盘（2026-08-30 14:54）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 MYTE
+- 本局拿牌：DISMANTLE, SHRUG_IT_OFF, RAGE, TAUNT, WHIRLWIND, FLAME_BARRIER, UPPERCUT, MOLTEN_FIST, DEMON_FORM, HEADBUTT, DISMANTLE, SWORD_BOOMERANG, SHRUG_IT_OFF, SWORD_BOOMERANG, RUPTURE
+- 本局遗物：STONE_CALENDAR, BRONZE_SCALES
+- 战斗记录：F17 Boss战 掉血28｜竞速审计：T2判死→实战11回合获胜; F19 Monster战 掉血14; F21 Monster战 掉血10; F24 Monster战 掉血36; F27 Monster战 掉血29; F28 Monster战 掉血24｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/129局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.42 → 0.43（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）
+- 生涯战绩：0/1186 胜，当前目标进阶 0
