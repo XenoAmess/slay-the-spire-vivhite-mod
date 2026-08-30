@@ -1,0 +1,74 @@
+{
+  "asset": "AstralPursuitMarginPower",
+  "status": "static_accepted_runtime_integrated",
+  "runtime_eligible": true,
+  "paid_generation_count": 1,
+  "generation_contract": {
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": []
+  },
+  "archive_checks": {
+    "prompt_content_matches_request_payload_after_platform_newline_normalization": true,
+    "prompt_line_count": 17,
+    "secret_markers_found": false
+  },
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [161, 48, 801, 936],
+    "alpha_touches_edge": false,
+    "nonzero_alpha_pixels": 336819,
+    "opaque_pixels_alpha_gte_250": 302969
+  },
+  "prepared_contracts": {
+    "256": {
+      "format": "RGBA8",
+      "size": [256, 256],
+      "alpha_bbox": [35, 27, 162, 187],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "9CA2078F3D2AAB531B810C423C13515CC94276554581E31B778BBEEC0EAFBCEC"
+    },
+    "64": {
+      "format": "RGBA8",
+      "size": [64, 64],
+      "alpha_bbox": [7, 6, 44, 49],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "1C8FA08DE6B7FDC6648088A3E7E5D3C8677359257F26A004D6290229C3EEE62D"
+    },
+    "32": {
+      "format": "RGBA8",
+      "size": [32, 32],
+      "alpha_bbox": [4, 2, 23, 27],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "CF221DA6CF2B43BD32B07864908C43BFAFA4A8FA04C6C5B9075FA3F4779ADBFF"
+    }
+  },
+  "visual_checks": {
+    "sourceover_black_256": "passed",
+    "sourceover_white_256": "passed",
+    "sourceover_game_indigo_256": "passed",
+    "sourceover_all_backgrounds_64": "passed",
+    "sourceover_all_backgrounds_32": "passed",
+    "external_visible_halo": false,
+    "rectangular_alpha_pollution": false,
+    "visual_centering": "passed; the intentional upper-left butterfly asymmetry remains balanced by the lower-right pursuit arc",
+    "semantic_readability_256": "passed; blue butterfly visibly pursues a preserved violet reserve core through one silver-gold orbital emblem",
+    "semantic_readability_64": "passed; butterfly wing, orbit, and violet core remain distinct",
+    "semantic_readability_32": "passed; violet core and blue butterfly accent remain distinguishable",
+    "distinct_from_infinite_margin_disk": true,
+    "forbidden_subjects_or_marks": false
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair. The runtime file is a byte-for-byte copy of the accepted prepared 256x256 image.",
+  "hashes": {
+    "raw_output_sha256": "598EE081EA09C631EA57DB1E3ABD728E2D17BE727E2D7ED12BBF607703A3E87C",
+    "runtime_sha256": "9CA2078F3D2AAB531B810C423C13515CC94276554581E31B778BBEEC0EAFBCEC"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/powers/AstralPursuitMarginPower.png"
+}
