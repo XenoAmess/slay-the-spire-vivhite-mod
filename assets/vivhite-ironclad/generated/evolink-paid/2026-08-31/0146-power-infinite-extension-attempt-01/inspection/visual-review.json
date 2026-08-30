@@ -1,0 +1,114 @@
+{
+  "asset": "InfiniteExtensionPower",
+  "archive_id": "0146",
+  "attempt": 1,
+  "paid_generation_attempts_used": 1,
+  "paid_generation_attempt_cap": 8,
+  "status": "static_accepted_pending_game_validation",
+  "consumer_contract": {
+    "source": [
+      "Vivhite/VivhiteCode/Powers/VivhiteCounterPower.cs",
+      "Vivhite/VivhiteCode/Powers/InfiniteExtensionPower.cs",
+      "Vivhite/VivhiteCode/Core/InfiniteExtension.cs",
+      "Vivhite/VivhiteCode/Core/DimensionUp.cs"
+    ],
+    "runtime_path": "Vivhite/Vivhite/images/powers/InfiniteExtensionPower.png",
+    "asset_kind": "one standalone RGBA Power icon, shared by normal and large Power display",
+    "runtime_sizes_reviewed": [
+      256,
+      64,
+      32
+    ],
+    "mechanic": "Each outer Dimension Up call gains one additional point per stack; the bonus is calculated once and never recursively invokes Dimension Up."
+  },
+  "generation": {
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "raw_png": "original.png",
+    "verbatim_prompt": "original.prompt.txt",
+    "sanitized_request": "original.request.json",
+    "task_record": "original.task.json",
+    "preflight_note": "An earlier local invocation stopped before any HTTP request because output.prompt.txt already existed. The paid request then used that preserved input file; the repository tool stripped its final newline before sending and independently archived the exact transmitted prompt bytes as original.prompt.txt."
+  },
+  "alpha_validation": {
+    "source_format": "RGBA8",
+    "source_size": [
+      1024,
+      1024
+    ],
+    "source_corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "source_alpha_bbox": [
+      105,
+      43,
+      907,
+      907
+    ],
+    "source_nonzero_alpha_pixels": 292195,
+    "source_opaque_pixels_alpha_at_least_250": 281446,
+    "source_edge_touch": false,
+    "operation": "uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair",
+    "runtime_size": [
+      256,
+      256
+    ],
+    "runtime_format": "RGBA8",
+    "runtime_corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "runtime_alpha_bbox": [
+      22,
+      51,
+      195,
+      157
+    ],
+    "runtime_sha256": "FC2F7CD56895AEBCB5381287D88BF21DA03391E510057A810FFB2125EB0771C8",
+    "runtime_matches_prepared_256_byte_for_byte": true
+  },
+  "sourceover_review": {
+    "backgrounds": [
+      "black",
+      "white",
+      "game-indigo #182139"
+    ],
+    "sizes": [
+      256,
+      64,
+      32
+    ],
+    "reviewed_images": 9,
+    "result": "passed",
+    "findings": [
+      "No visible outer halo, rectangular pollution, edge touch, shadow, fog, particles, or detached low-opacity mark.",
+      "Normal antialiasing stays tight to the material silhouette.",
+      "The purple-blue-gold core, first expansion shell, one attached extra isomorphic body, and two-level arrow hierarchy remain legible at 64px and distinguishable at 32px."
+    ]
+  },
+  "semantic_review": {
+    "result": "passed",
+    "findings": [
+      "One broad primary arrow and one smaller secondary arrow communicate a dominant expansion followed by exactly one added contribution.",
+      "The composition stops after one attached extra isomorphic body; it does not form an infinite or recursive chain.",
+      "No person, text, number, mathematical operator, weapon, blood, liquid, mouth element, or mouth-adjacent strand is present."
+    ]
+  },
+  "retry": {
+    "required": false,
+    "reason": "Attempt 01 meets the consumer, semantic, Alpha, and actual-size SourceOver contracts.",
+    "next_archive_id": null
+  },
+  "remaining_gate": "Real in-game Vulkan validation of the Power icon in normal and large UI consumers."
+}
