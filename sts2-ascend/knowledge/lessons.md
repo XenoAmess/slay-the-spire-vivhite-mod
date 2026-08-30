@@ -8389,3 +8389,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/1163 胜，当前目标进阶 0
+
+## 第 1164 局复盘（2026-08-30 10:55）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：FLASH_OF_STEEL, SHRUG_IT_OFF, UPPERCUT, SHRUG_IT_OFF, TRUE_GRIT, HEADBUTT, OFFERING, BATTLE_TRANCE, RAMPAGE, CINDER, ANGER, UNRELENTING, JUGGERNAUT, CINDER
+- 本局遗物：PETRIFIED_TOAD
+- 战斗记录：F15 Monster战 掉血1; F17 Boss战 掉血46; F19 Monster战 掉血18; F22 Monster战 掉血3; F23 Monster战 掉血13; F25 Elite战 掉血70｜竞速审计：T7判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_race_prior_eff: 0.43 → 0.44（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1164 胜，当前目标进阶 0
