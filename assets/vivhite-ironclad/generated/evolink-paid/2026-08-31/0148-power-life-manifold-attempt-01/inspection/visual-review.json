@@ -1,0 +1,87 @@
+{
+  "asset": "LifeManifoldPower",
+  "semantic_name_zh": "生命流形",
+  "generation_id": "0148",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_accepted_main_agent_reviewed",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/LifeManifoldPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, or animation frame",
+    "gameplay_semantics": "at the start of every player turn, gain Margin equal to this Power's Amount",
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "38A41267007AE727A9451AA763EF404ADCF7837E36FB588CB480A303AAB6E9E8",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [67, 60, 885, 890],
+    "nonzero_alpha_pixels": 492943,
+    "opaque_pixels_alpha_at_least_250": 464268,
+    "visible_alpha_touches_edge": false
+  },
+  "prepared_outputs": {
+    "256": {
+      "path": "inspection/256/prepared-256.png",
+      "alpha_bbox": [19, 19, 217, 218],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 12
+    },
+    "64": {
+      "path": "inspection/64/prepared-64.png",
+      "alpha_bbox": [3, 3, 58, 58],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 3
+    },
+    "32": {
+      "path": "inspection/32/prepared-32.png",
+      "alpha_bbox": [2, 2, 28, 28],
+      "corner_alpha": [0, 0, 0, 0],
+      "padding": 2
+    }
+  },
+  "visual_review": {
+    "main_agent_review": "passed",
+    "main_agent_review_scope": "256px, 64px, and 32px game-indigo SourceOver previews",
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "semantic_result": "Three interwoven purple-blue-gold closed manifold loops hold a stable cyan life core, while a prominent violet Margin crystal forms at the fixed upper-right node; repeated small crystal sockets make the recurring generation cycle visible.",
+    "small_size_result": "At 64px the closed loops, cyan life core, and generated violet crystal remain distinct. At 32px the circular recurring cradle and its bright output crystal remain readable without text or numeric marks.",
+    "forbidden_content": {
+      "person_face_mouth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "blood_liquid_droplet_or_wound": false,
+      "text_number_equation_clock_numeral_or_glyph": false,
+      "particles_fog_shadow_or_long_trail": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/LifeManifoldPower.png",
+    "sha256": "366A46CBEB0DF1C24EEAC4C4350FECAC13A1A0BA68C439D12B508AF109A1B555",
+    "byte_identical_to_prepared_256": true
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no thresholding, mask, color key, Alpha repair, erosion, expansion, creative repaint, or generated-content change.",
+  "retry_decision": "Accepted on attempt 1 of 8 and main-agent reviewed. Stop generation because the consumer, Alpha, SourceOver, semantic, safety-margin, and actual-size gates all pass. Real in-game Vulkan validation remains pending."
+}
