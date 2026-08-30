@@ -75,6 +75,8 @@ DASHBOARD_STALE_SEC = 5.0
 DECISION_ANIMATION_SEC = 0.65
 DECISION_FRESH_SEC = 20.0
 VIEW_PAGES = ("LIVE", "TREND", "REVIEW")
+STATS_PROFILE_IDS = frozenset(("ironclad", "vivhite"))
+PROFILE_DISPLAY_LABELS = {"ironclad": "战士", "vivhite": "白绮"}
 
 
 def dashboard_path(runtime_dir: Path | None = None, session_id: str | None = None) -> Path:
@@ -309,6 +311,7 @@ class StatsSource:
         self._snapshot: dict = {}
         self._revision = 0
         self._seen_revision = -1
+        self._last_profile_id: str | None = None
         self._provider = None
         if FloorStatsProvider is not None:
             try:
@@ -329,11 +332,69 @@ class StatsSource:
             )
             self._thread.start()
 
+    @staticmethod
+    def _profile_id(current: dict | None) -> str | None:
+        if not isinstance(current, dict):
+            return None
+        value = (current.get("profile_id") or current.get("character_profile")
+                 or current.get("character_id"))
+        if value in (None, ""):
+            return None
+        text = str(value).strip().casefold()
+        if "vivhite" in text:
+            return "vivhite"
+        if "ironclad" in text:
+            return "ironclad"
+        return text if text in STATS_PROFILE_IDS else None
+
+    @staticmethod
+    def _empty_profile_snapshot(profile_id: str, current: dict | None,
+                                comparison: dict | None = None) -> dict:
+        return {
+            "stale": False,
+            "active_profile": profile_id,
+            "lifetime": {
+                "runs": 0, "wins": 0, "win_rate": None,
+                "mean_floor": None, "best_floor": None,
+            },
+            "recent": {
+                "window": 20, "count": 0,
+                "mean_floor": None, "best_floor": None,
+            },
+            "previous": {
+                "window": 20, "count": 0,
+                "mean_floor": None, "best_floor": None,
+            },
+            "delta_mean": None,
+            "trend": [],
+            "current": dict(current or {}),
+            "profile_comparison": dict(comparison or {}),
+        }
+
     def set_current(self, current: dict | None) -> None:
         normalized = dict(current) if isinstance(current, dict) else None
         with self._lock:
+            explicit_profile = self._profile_id(normalized)
+            if explicit_profile is not None:
+                self._last_profile_id = explicit_profile
+            elif self._last_profile_id is not None:
+                # MAIN_MENU/REVIEW snapshots often have no character payload.
+                # Keep the just-finished profile until a concrete next run is
+                # observed; never silently fall back to the legacy root.
+                normalized = dict(normalized or {})
+                normalized["profile_id"] = self._last_profile_id
+            previous_profile = self._profile_id(self._current)
+            active_profile = self._profile_id(normalized)
             if normalized != self._current:
                 self._current = normalized
+                if active_profile is not None and active_profile != previous_profile:
+                    comparison = (self._snapshot.get("profile_comparison")
+                                  if isinstance(self._snapshot, dict) else None)
+                    self._snapshot = self._empty_profile_snapshot(
+                        active_profile, normalized,
+                        comparison if isinstance(comparison, dict) else None,
+                    )
+                    self._revision += 1
                 self._wake.set()
 
     def _run(self) -> None:
@@ -341,10 +402,17 @@ class StatsSource:
             try:
                 with self._lock:
                     current = dict(self._current) if self._current else None
+                    expected_profile = self._profile_id(current)
                 result = self._provider.snapshot(current=current)
                 if isinstance(result, dict):
                     with self._lock:
-                        if result != self._snapshot:
+                        live_profile = self._profile_id(self._current)
+                        still_current = (expected_profile == live_profile)
+                        profile_matches = (
+                            live_profile is None
+                            or result.get("active_profile") == live_profile
+                        )
+                        if still_current and profile_matches and result != self._snapshot:
                             self._snapshot = result
                             self._revision += 1
             except Exception:
@@ -1044,6 +1112,30 @@ class Viewer:
             return "—"
 
     @staticmethod
+    def _active_profile_label(dashboard: dict, stats: dict) -> str:
+        run = (dashboard.get("run")
+               if isinstance(dashboard, dict)
+               and isinstance(dashboard.get("run"), dict) else {})
+        profile_id = StatsSource._profile_id(run)
+        if profile_id is None and isinstance(stats, dict):
+            profile_id = StatsSource._profile_id({
+                "profile_id": stats.get("active_profile"),
+            })
+        if profile_id in PROFILE_DISPLAY_LABELS:
+            return PROFILE_DISPLAY_LABELS[profile_id]
+        explicit = run.get("profile_label") if isinstance(run, dict) else None
+        return str(explicit).strip() if explicit not in (None, "") else "角色未定"
+
+    @classmethod
+    def _profile_ratio_label(cls, stats: dict) -> str:
+        comparison = (stats.get("profile_comparison")
+                      if isinstance(stats, dict)
+                      and isinstance(stats.get("profile_comparison"), dict) else {})
+        ratio = comparison.get("rolling_mean_ratio")
+        rendered = cls._metric(ratio, 2)
+        return f"白绮/战士 ×{rendered}"
+
+    @staticmethod
     def _one_line(value: object, limit: int) -> str:
         text = re.sub(r"\s+", " ", str(value or "")).strip()
         return text if len(text) <= limit else text[:max(1, limit - 1)] + "…"
@@ -1082,8 +1174,13 @@ class Viewer:
         trend = [row for row in (trend or []) if isinstance(row, dict)
                  and isinstance(row.get("floor"), (int, float))][-40:]
         current = stats.get("current") if isinstance(stats, dict) else None
-        c.create_text(14, top + 4, anchor="nw", text=f"FLOOR TREND · 最近 {len(trend)} 局",
+        profile_label = self._active_profile_label({}, stats)
+        c.create_text(14, top + 4, anchor="nw",
+                      text=f"{profile_label} · FLOOR TREND · 最近 {len(trend)} 局",
                       fill=CYAN, font=self.font_tiny, tags="dash")
+        c.create_text(WIN_W - 14, top + 4, anchor="ne",
+                      text=self._profile_ratio_label(stats),
+                      fill=MAGENTA, font=self.font_tiny, tags="dash")
         if not trend:
             c.create_text(WIN_W // 2, (top + bottom) // 2, anchor="center",
                           text="等待有效完结局数据",
@@ -1151,6 +1248,7 @@ class Viewer:
         stats = self.floor_stats if isinstance(self.floor_stats, dict) else {}
         life = stats.get("lifetime") or {}
         recent = stats.get("recent") or {}
+        profile_label = self._active_profile_label(dash, stats)
         recent_count = int(recent.get("count") or 0)
         recent_label = f"近{recent_count}局均层" if recent_count else "近期均层"
         recent_best_label = f"近{recent_count}局最高" if recent_count else "近期最高"
@@ -1159,7 +1257,8 @@ class Viewer:
         if isinstance(delta, (int, float)):
             delta_txt = f"  {'▲' if delta > 1 else '▼' if delta < -1 else '≈'} {delta:+.1f}"
             delta_color = CYAN if delta > 1 else RED if delta < -1 else DIM
-        self._draw_card(7, 68, 190, "历史平均楼层", self._metric(life.get("mean_floor")))
+        self._draw_card(7, 68, 190, f"{profile_label} · 历史平均",
+                        self._metric(life.get("mean_floor")))
         self._draw_card(203, 68, 190, recent_label,
                         self._metric(recent.get("mean_floor")) + delta_txt, delta_color)
         self._draw_card(7, 111, 190, "历史最高楼层",
@@ -1181,6 +1280,9 @@ class Viewer:
         c.create_text(12, 178, anchor="nw",
                       text="LIVE DECISION · 实时策略与执行机械链",
                       fill=CYAN_DIM, font=self.font_tiny, tags="dash")
+        c.create_text(WIN_W - 12, 178, anchor="ne",
+                      text=self._profile_ratio_label(stats),
+                      fill=MAGENTA, font=self.font_tiny, tags="dash")
 
         decision = dash.get("decision") if isinstance(dash.get("decision"), dict) else {}
         stages = ("SCAN", "GATE", "RANK", "LOCK", "ACK")
@@ -1341,10 +1443,12 @@ class Viewer:
         life = stats.get("lifetime") or {}
         recent = stats.get("recent") or {}
         run = dash.get("run") if isinstance(dash.get("run"), dict) else {}
+        profile_label = self._active_profile_label(dash, stats)
         recent_count = int(recent.get("count") or 0)
         delta = stats.get("delta_mean")
         delta_txt = f"  {delta:+.1f}" if isinstance(delta, (int, float)) else ""
-        self._draw_card(7, 68, 190, "历史平均楼层", self._metric(life.get("mean_floor")))
+        self._draw_card(7, 68, 190, f"{profile_label} · 历史平均",
+                        self._metric(life.get("mean_floor")))
         self._draw_card(203, 68, 190, f"近{recent_count}局均层" if recent_count else "近期均层",
                         self._metric(recent.get("mean_floor")) + delta_txt,
                         CYAN if isinstance(delta, (int, float)) and delta >= 0 else RED)
@@ -1354,7 +1458,7 @@ class Viewer:
                         f"近{recent_count}局最高" if recent_count else "近期最高",
                         "F" + self._metric(recent.get("best_floor"), 0), MAGENTA)
         c.create_text(12, 157, anchor="nw",
-                      text=(f"RUN COMPLETE · #{run.get('run_number') or '—'} · "
+                      text=(f"{profile_label} · RUN COMPLETE · #{run.get('run_number') or '—'} · "
                             f"F{self._metric(run.get('floor'), 0)} · "
                             f"有效局 {self._metric(life.get('runs'), 0)}"),
                       fill=GOLD, font=self.font_tiny, tags="dash")
@@ -1423,13 +1527,16 @@ class Viewer:
         else:
             dash = self.dashboard if isinstance(self.dashboard, dict) else {}
             run = dash.get("run") if isinstance(dash.get("run"), dict) else {}
+            stats = self.floor_stats if isinstance(self.floor_stats, dict) else {}
+            profile_label = self._active_profile_label(dash, stats)
             decision = dash.get("decision") if isinstance(dash.get("decision"), dict) else {}
             number = run.get("run_number") or self.run_no
             mode_tag = (("MANUAL/" if self._manual_page else "AUTO/")
                         + self._view_page)
             if self.mode == "demo":
                 mode_tag = "DEMO/" + self._view_page
-            subline = (f"{mode_tag} · #{number or '—'} · F{self._metric(run.get('floor'), 0)}"
+            subline = (f"{mode_tag} · {profile_label} · #{number or '—'}"
+                       f" · F{self._metric(run.get('floor'), 0)}"
                        f" · {str(run.get('screen') or 'WAITING').upper()}")
             connection = dash.get("connection") if isinstance(dash.get("connection"), dict) else {}
             conn_status = "stale" if dash.get("_stale") else connection.get("status") or "waiting"

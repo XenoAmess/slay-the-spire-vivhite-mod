@@ -593,18 +593,34 @@ class FloorStatsProvider:
             child_profile = (child_snapshot.get("profiles") or {}).get(profile)
             if not isinstance(child_profile, dict):
                 continue
+            child_profile = copy.deepcopy(child_profile)
             child_lifetime = (child_profile.get("lifetime")
                               if isinstance(child_profile.get("lifetime"), dict) else {})
             child_quality = (child_profile.get("quality")
                              if isinstance(child_profile.get("quality"), dict) else {})
-            if (child_lifetime.get("runs") is None
-                    and not child_quality.get("completed_records")):
-                continue
-            child_profile = copy.deepcopy(child_profile)
-            child_profile["quality"]["stale"] = bool(child_snapshot.get("stale"))
-            child_profile["quality"]["errors"] = list(
+            child_errors = list(
                 (child_snapshot.get("quality") or {}).get("errors") or [])
+            child_stale = bool(child_snapshot.get("stale"))
+            child_profile.setdefault("quality", {})["stale"] = child_stale
+            child_profile["quality"]["errors"] = child_errors
+            # A clean, brand-new profile store is known to contain zero runs.
+            # Missing averages/maxima remain None so the viewer renders N/A.
+            # A stale or malformed store remains unavailable instead of
+            # inventing a zero that could hide evidence loss.
+            if (child_lifetime.get("runs") is None
+                    and not child_quality.get("completed_records")
+                    and not child_stale and not child_errors):
+                child_lifetime["runs"] = 0
+                child_lifetime["wins"] = 0
+                child_lifetime["win_rate"] = None
+            child_profile["lifetime"] = child_lifetime
+            # The nested profile is authoritative even when it is empty.  Root
+            # logs are legacy Ironclad data and must never backfill Vivhite.
             profiles[profile] = child_profile
+            child_current = child_snapshot.get("current")
+            if (current is None and isinstance(child_current, dict)
+                    and child_current.get("profile_id") == profile):
+                current = copy.deepcopy(child_current)
         rolling_means = {
             profile: profiles[profile]["rolling_mean"] for profile in PROFILE_IDS
         }
@@ -748,6 +764,19 @@ class FloorStatsProvider:
                 result["current"] = self._normalize_current(current)
                 result["active_profile"] = (
                     result["current"].get("profile_id") or self.profile_id)
+            active_profile = result.get("active_profile") or self.profile_id
+            profile_view = (result.get("profiles") or {}).get(active_profile)
+            if isinstance(profile_view, dict):
+                # Top-level keys are the compatibility contract consumed by the
+                # existing viewer.  They must describe the active profile, not
+                # whichever provider happens to own the legacy knowledge root.
+                for key in ("lifetime", "recent", "previous", "delta_mean", "trend"):
+                    if key in profile_view:
+                        result[key] = copy.deepcopy(profile_view[key])
+                result["active_profile"] = active_profile
+                profile_quality = profile_view.get("quality")
+                if isinstance(profile_quality, dict) and "stale" in profile_quality:
+                    result["stale"] = bool(profile_quality.get("stale"))
             return result
 
 

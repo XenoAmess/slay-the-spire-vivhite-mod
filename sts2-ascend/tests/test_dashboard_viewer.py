@@ -87,8 +87,13 @@ class DashboardSourceTests(unittest.TestCase):
         viewer.canvas = mock.MagicMock()
         viewer.font_tiny = viewer.font_dim = viewer.font_card = viewer.font_bold = object()
         viewer.dashboard = review_viewer.Viewer._demo_dashboard()
+        viewer.dashboard["run"].update({
+            "profile_id": "vivhite", "profile_label": "Vivhite",
+            "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+        })
         viewer.floor_stats = {
             "stale": False,
+            "active_profile": "vivhite",
             "lifetime": {"runs": 5, "wins": 1, "win_rate": 0.2,
                          "mean_floor": 18.2, "best_floor": 41},
             "recent": {"count": 5, "mean_floor": 18.2, "best_floor": 41},
@@ -99,6 +104,7 @@ class DashboardSourceTests(unittest.TestCase):
                 {"run_number": 2, "floor": 20, "rolling_mean": 15.0},
             ],
             "current": viewer.dashboard["run"],
+            "profile_comparison": {"rolling_mean_ratio": 1.5},
         }
         viewer.lines = []
         viewer.model_name = "fixture-model"
@@ -111,6 +117,63 @@ class DashboardSourceTests(unittest.TestCase):
         review_viewer.Viewer._render_dashboard(viewer, time.time())
         self.assertGreater(viewer.canvas.create_text.call_count, 10)
         self.assertEqual(viewer.auto_mode, "LIVE")
+        texts = [call.kwargs.get("text", "")
+                 for call in viewer.canvas.create_text.call_args_list]
+        self.assertIn("白绮 · 历史平均", texts)
+        self.assertIn("白绮/战士 ×1.50", texts)
+
+    def test_trend_chart_marks_active_profile_and_comparison_ratio(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer.canvas = mock.MagicMock()
+        viewer.font_tiny = viewer.font_dim = object()
+        stats = {
+            "active_profile": "vivhite",
+            "lifetime": {"mean_floor": 12.0, "best_floor": 20},
+            "trend": [
+                {"run_number": 1, "floor": 10, "rolling_mean": 10.0},
+                {"run_number": 2, "floor": 14, "rolling_mean": 12.0},
+            ],
+            "current": {"floor": 4, "profile_id": "vivhite"},
+            "profile_comparison": {"rolling_mean_ratio": 1.375},
+        }
+
+        review_viewer.Viewer._draw_trend(viewer, stats)
+
+        texts = [call.kwargs.get("text", "")
+                 for call in viewer.canvas.create_text.call_args_list]
+        self.assertIn("白绮 · FLOOR TREND · 最近 2 局", texts)
+        self.assertIn("白绮/战士 ×1.38", texts)
+
+    def test_hud_marks_active_profile(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer.canvas = mock.MagicMock()
+        viewer.font_hud = viewer.font = viewer.font_tiny = viewer.font_dim = object()
+        viewer.mode = "live"
+        viewer.dashboard = {
+            "run": {
+                "run_number": 1, "floor": 4, "screen": "COMBAT",
+                "profile_id": "vivhite",
+                "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+            },
+            "decision": {"status": "applied"},
+            "connection": {"status": "connected", "message": "API 8080"},
+            "_stale": False,
+        }
+        viewer.floor_stats = {"active_profile": "vivhite"}
+        viewer.run_no = None
+        viewer._manual_page = None
+        viewer._view_page = "LIVE"
+        viewer.interactive = False
+        viewer.win_h = 760
+        viewer.ended = False
+        viewer.flash_until = 0.0
+        viewer._volume_label = mock.Mock(return_value="")
+
+        review_viewer.Viewer._render_hud(viewer, 100.0)
+
+        texts = [call.kwargs.get("text", "")
+                 for call in viewer.canvas.create_text.call_args_list]
+        self.assertIn("AUTO/LIVE · 白绮 · #1 · F4 · COMBAT", texts)
 
     def test_auto_page_is_state_driven_and_never_rotates(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)
@@ -170,6 +233,56 @@ class DashboardSourceTests(unittest.TestCase):
                       if call.kwargs.get("text") == "review-line-3"
                       and call.kwargs.get("fill") == review_viewer.MAGENTA]
         self.assertTrue(tool_calls)
+
+
+class StatsSourceProfileTests(unittest.TestCase):
+    @staticmethod
+    def _source_without_worker() -> review_viewer.StatsSource:
+        with mock.patch.object(review_viewer, "FloorStatsProvider", None):
+            return review_viewer.StatsSource()
+
+    def test_profile_switch_replaces_old_headline_with_safe_empty_snapshot(self) -> None:
+        source = self._source_without_worker()
+        source._snapshot = {
+            "active_profile": "ironclad",
+            "lifetime": {"runs": 1228, "mean_floor": 18.3, "best_floor": 48},
+            "recent": {"count": 20, "mean_floor": 20.0, "best_floor": 33},
+        }
+
+        source.set_current({
+            "run_id": "LIVE-V", "screen": "COMBAT", "profile_id": "vivhite",
+            "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+        })
+        snapshot, changed = source.poll()
+
+        self.assertTrue(changed)
+        self.assertEqual(snapshot["active_profile"], "vivhite")
+        self.assertEqual(snapshot["lifetime"]["runs"], 0)
+        self.assertIsNone(snapshot["lifetime"]["mean_floor"])
+        self.assertIsNone(snapshot["lifetime"]["best_floor"])
+        self.assertEqual(snapshot["recent"]["count"], 0)
+        self.assertIsNone(snapshot["recent"]["mean_floor"])
+        self.assertIsNone(snapshot["recent"]["best_floor"])
+
+    def test_game_over_and_review_retain_finished_profile_until_real_switch(self) -> None:
+        source = self._source_without_worker()
+        source.set_current({
+            "run_id": "FINISHED-V", "screen": "GAME_OVER",
+            "profile_id": "vivhite",
+            "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+        })
+        self.assertEqual(source._current["profile_id"], "vivhite")
+
+        source.set_current({"screen": "MAIN_MENU"})
+        self.assertEqual(source._current["profile_id"], "vivhite")
+
+        source.set_current({
+            "run_id": "LIVE-I", "screen": "COMBAT",
+            "profile_id": "ironclad", "character_id": "IRONCLAD",
+        })
+        self.assertEqual(source._current["profile_id"], "ironclad")
+        snapshot, _changed = source.poll()
+        self.assertEqual(snapshot["active_profile"], "ironclad")
 
 
 class ViewerSingletonTests(unittest.TestCase):
