@@ -8862,3 +8862,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1206 胜，当前目标进阶 0
+
+## 第 1207 局复盘（2026-08-30 17:29）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+BRUTE_RUBY_RAIDER
+- 本局拿牌：ROLLING_BOULDER, HEADBUTT, IRON_WAVE, BREAKTHROUGH, RAMPAGE
+- 本局遗物：钢笔尖
+- 战斗记录：F2 Monster战 掉血2; F4 Monster战 掉血0; F5 Monster战 掉血0; F6 Monster战 掉血25; F7 Elite战 掉血28; F8 Monster战 掉血27（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34局)，BRAND(25分/3局)，FIEND_FIRE(25分/45局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/1207 胜，当前目标进阶 0
