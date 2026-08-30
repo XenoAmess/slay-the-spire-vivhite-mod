@@ -1,0 +1,30 @@
+{
+  "status": "static_accepted_runtime_integrated",
+  "runtime_eligible": true,
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [83, 79, 883, 855],
+    "alpha_touches_edge": false
+  },
+  "prepared_contract": {
+    "size": [256, 256],
+    "format": "RGBA8",
+    "alpha_bbox": [19, 22, 212, 211],
+    "corner_alpha": [0, 0, 0, 0],
+    "visual_center_approx": [125, 128]
+  },
+  "visual_checks": {
+    "sourceover_black": "passed",
+    "sourceover_white": "passed",
+    "sourceover_game_indigo": "passed; solid emblem is centered and reasonably fills the canvas without low-Alpha shrink or displacement",
+    "size_64": "passed",
+    "size_32": "passed",
+    "external_visible_halo": false,
+    "forbidden_subjects_or_marks": false
+  },
+  "operation": "uniform RGBA Lanczos resize and centered transparent padding by prepare_vivhite_ui_icon.gd; runtime is a byte-for-byte copy of the accepted prepared file; no Alpha repair",
+  "runtime_path": "Vivhite/Vivhite/images/powers/InfiniteMarginPower.png",
+  "runtime_sha256": "59CC49E52724EDE15E37B3C267B73569659F161198B73E91B02EB8EA0F52E1C4"
+}
