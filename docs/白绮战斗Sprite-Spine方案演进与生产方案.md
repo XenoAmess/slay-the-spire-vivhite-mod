@@ -2,7 +2,7 @@
 
 > 文档性质：长期维护的架构决策、生产规范与复盘。
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
-> 最后更新：2026-08-29。
+> 最后更新：2026-08-30。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
 > 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
 > death 已总装为 `hybrid_v3_final` 并发布为正式五页 runtime。总装器字段边界、严格五页布局、Spine runtime
@@ -11,6 +11,9 @@
 > Source/Godot/Spine 与完整不部署 PCK 已通过。2026-08-29 又完成正式部署、Vulkan 日志和有范围
 > 真机验收；选人、主要战斗动作/VFX、低血、死亡、商店与三幕篝火已覆盖。自然地图 marker、
 > 多人端到端和 `light_off` 仍保留为消费路径缺口。本轮没有付费生成或操作 Bilibili 直播。
+> 2026-08-30 已完成独立白绮角色与 Ironclad replacement 共用同一 V3 资源配置的源码接入；
+> 独立角色仅覆盖自己的 energy counter。该新增消费路径的完整构建、部署与真机验收仍待完成，
+> 不能沿用 Ironclad replacement 的既有真机结果冒充独立角色已通过。
 
 ## 1. 当前结论
 
@@ -526,6 +529,41 @@ SpineSprite、`die@1.05` 的 body/death slot 互斥。该纠正不需要修素�
 这些都不能反向证明五页人物或 Alpha 失败。完整真机矩阵见
 `2026-08-29-白绮Hybrid-V3部署与真机验收.md`。
 
+### 5.14 独立白绮角色与 Ironclad replacement 共用 V3 资源
+
+2026-08-30 获批并完成源码接入的资源契约是：Ironclad replacement 与独立 `Vivhite` 角色必须
+复用同一份已注册 `CharacterAssetProfile`。二者共同消费当前 V3 五页 combat atlas、同一套白绮
+私有骨骼、网格、权重和八动画，以及同一组 combat、merchant、rest-site、character-select、
+UI 与 multiplayer 资源。独立角色不得复制出第二套可能漂移的资源路径；它只在共享 profile 上
+覆盖自己的 `Vivhite_energy_counter.tscn`。
+
+资源共享不改变玩法身份。独立白绮继续保留自己的 character ID、卡池、最大/当前生命、能量
+状态和独立 energy counter；Ironclad replacement 仍是原战士玩法身份。共享的是视觉与场景消费
+契约，不是角色状态、牌池或计数器实例。
+
+此前独立角色使用 `scenes/characters/` 下静态占位战斗/商店/休息场景的路径，已被共享 V3
+profile 取代。旧路径只能显示占位形象，不能可靠消费当前 combat skeleton、动作事件、VFX 锚点
+和五页 atlas，而且会让同一白绮形象维护两套互相漂移的场景事实源，因此不再允许作为独立角色
+的运行时回退。`legacy-single-page` 仍可作为历史审计与精确回退包保存，但不得成为正常构建或
+独立角色加载路径；当前项目默认运行时布局已经切换为 `v3-five-page`。
+
+本次接入没有生成或修改任何创意素材，没有改动 PNG、atlas、Spine、场景、UI 或多人手势；
+现有原图、生成原图、候选和中间资产全部原样保留。当前证据边界为源码配置：
+`VivhiteCharacter.AssetProfile` 读取已注册的 Ironclad replacement profile，并只替换 energy
+counter；构建默认值指向 `v3-five-page`。本节更新时，独立白绮的最终完整构建、部署和真机
+消费尚未完成，状态不得标记为真机通过。
+
+下一道真机门禁必须同时证明：
+
+- 分别以 Ironclad 与 Vivhite character ID 进入选人、战斗、商店和休息场景，资源路径与 V3
+  五页 atlas 一致，八动画和 VFX 事件均正常；
+- Vivhite 使用自己的卡池、生命/能量状态和 energy counter，Ironclad 的玩法状态不被替换；
+- character-select、UI、地图标记与 multiplayer 手势均来自同一共享资源组；
+- 日志与 PCK 消费中没有回落到旧静态占位场景或 legacy 单页。
+
+若门禁失败，应修复共享 profile、注册顺序或 PCK 消费路径，并继续保留已验证的 V3 资源作为
+事实源；不得以恢复旧静态独立角色或 legacy 单页来掩盖接入故障。
+
 ## 6. 并行研究线：约 8 个生成语义组
 
 若继续拆件路线，推荐把 21 个独立微件收敛为约八个彼此协调的生成语义组：
@@ -765,3 +803,8 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
   cast/hurt/die、普通/伪商人视觉及三幕篝火；死亡缩略图的“双人”判断被用户与放大/slot/scene
   证据纠正为单人两腿。保留自然地图 marker、多人端到端和 `light_off` consumer 顺序三项缺口；
   没有新付费生成、Alpha 或 atlas 像素变化。
+- 2026-08-30：独立白绮角色的静态占位加载路径由共享 `CharacterAssetProfile` 取代；记录
+  Ironclad replacement 与 Vivhite 共用当前 V3 五页 combat atlas、私有骨骼/网格/动作及
+  merchant/rest/select/UI/multiplayer 资源，而 Vivhite 保留自身 ID、卡池、生命/能量和独立
+  energy counter。默认布局已改为 `v3-five-page`，禁止回退旧静态场景或 legacy 单页。本次没有
+  生成或修改创意素材；源码接入已有，完整构建、部署和双角色真机消费仍是下一道门禁。
