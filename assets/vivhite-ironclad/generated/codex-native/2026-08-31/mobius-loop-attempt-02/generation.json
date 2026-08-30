@@ -1,0 +1,85 @@
+{
+  "provider": "codex-native",
+  "tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_MOBIUS_LOOP",
+  "card_class": "MobiusLoop",
+  "attempt": 2,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "completion_context": "The image-generation call completed before the interruption accepting attempt 01 reached the worker. The candidate was preserved as required, initially left unadopted, and later explicitly selected by direct visual review as the superior current runtime.",
+  "source_size": {
+    "width": 1536,
+    "height": 1024
+  },
+  "source_png": {
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "references": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "identity and costume family only",
+      "sha256": "8ce534b001fb0d22988946f08db1f908149778889d1cb2a2fa5877f6f57302ab"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, glasses, hair, violet eyes, and temperament only",
+      "sha256": "b52b0624a3c2b2114f66a6c7ba839880d1dc89adaa91de0f5ca6bfc302160ca6"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/mobius-loop-attempt-01/original.png",
+      "role": "prior semantic candidate for astral-archive scene quality, one closed Mobius band, descending discard tiles, and one returning tile only; hand occlusion and endpoint placement explicitly excluded",
+      "sha256": "8dd5f0af82be26ac545aa9f57dfb32d170d9f20c684fac7dfa9e5a52e76ca990"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/LocalHomeomorphism.png",
+      "role": "approved rendering finish, dimensional astral architecture, and identity continuity only; paired-surface geometry excluded",
+      "sha256": "9fe2b8867814d1632a45230471db51668257491c2f35e8931fe4e79b097eb437"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "9f756893fdd87d310b6a0e0d6558851e71fda18aa08e1fabf94f6f1bfd1facd4",
+  "original_file": "original.png",
+  "original_sha256": "cc369e73cd74181a9035939ec736d4b749fc6b45dcbfc67ef270aca5246986ec",
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/MobiusLoop.png",
+  "runtime_sha256": "0d475f0350ab727c033a6c8ec0b19e48e4584165fa587a4121994f3a9299dad7",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "is_current_runtime": true,
+  "supersedes_attempt": 1,
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_costume": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "both_complete_open_hands_visible": true,
+    "single_closed_mobius_band_with_one_twist_readable": true,
+    "discard_tiles_descend_through_lower_segment": true,
+    "single_bright_retrieved_tile_lands_at_receiving_palm": true,
+    "operational_skill_not_attack_or_shield": true,
+    "100x76_color_and_grayscale_topology_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Full opaque astral-archive scene with one clear half-twisted Mobius band, dark discard tiles descending through the lower segment, exactly one bright tile returning precisely to the upper open palm, and both hands fully visible. Identity, mouth, opacity, skill-role, crop, RGB8, and small-scale readability gates pass."
+}
