@@ -229,3 +229,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-30 17:16:24 | 第 988~1013 局 | `8476f7d1` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-171624-1788081384741635200-8476f7d1` | 复盘进程未成功完成 |
 <!-- rejection:20260830-173101-1788082261169680600-2f6afd45 -->
 | 2026-08-30 17:31:01 | 第 1198~1199 局 | `2f6afd45` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-173101-1788082261169680600-2f6afd45` | patch 目标已有用户 staged 内容：sts2-ascend/brain/policy.py, sts2-ascend/brain/selfcheck.py, sts2-ascend/knowledge/meta_review.md, sts2-ascend/knowledge/review_conclusion.txt |
+<!-- rejection:20260830-173251-1788082371569973700-4ce4ae7d -->
+| 2026-08-30 17:32:51 | 第 988~1013 局 | `4ce4ae7d` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-173251-1788082371569973700-4ce4ae7d` | 复盘进程未成功完成 |
