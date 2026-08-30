@@ -8675,3 +8675,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1189 胜，当前目标进阶 0
+
+## 第 1190 局复盘（2026-08-30 15:23）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：PRODUCTION, SHRUG_IT_OFF, DISMANTLE, CINDER, THUNDERCLAP, INFLAME, THRUMMING_HATCHET, THUNDERCLAP, SWORD_BOOMERANG, FEED, FEED, ARMAMENTS, CINDER, RAGE
+- 本局遗物：BAG_OF_MARBLES, HAPPY_FLOWER
+- 战斗记录：F15 Monster战 掉血11; F17 Boss战 掉血30｜竞速审计：T2判死→实战5回合获胜; F19 Monster战 掉血0; F20 Monster战 掉血4; F21 Monster战 掉血18; F22 Monster战 掉血70｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/129局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：高速失血爆毙（4回合掉血70，每回合18≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.38（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1190 胜，当前目标进阶 0
