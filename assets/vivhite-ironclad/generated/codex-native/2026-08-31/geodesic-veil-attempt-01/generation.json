@@ -1,0 +1,121 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+  "card_type": "GeodesicVeil",
+  "card_name_zh": "测地护幕",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "energy_cost": 2,
+    "life_cost": 6,
+    "base_block": 24,
+    "upgraded_block": 30,
+    "retain": true
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/IsoperimetricWard.png",
+      "Vivhite/Vivhite/images/cards/OpenSetShelter.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "Opaque scene generation used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "canonical identity and costume family only; black display backdrop, frontal catalog pose, and outer glow excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, round gold glasses, violet eyes, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/IsoperimetricWard.png",
+      "role": "approved fantasy-card finish, cold mathematical materials, scene density, and high-defense readability only; complete circular perimeter and exact pose excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/OpenSetShelter.png",
+      "role": "approved blue-violet-gold world, full-scene depth, and defensive lighting only; open circular dome and exact composition excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/IsoperimetricWard.png": "DF74A7DFA5B8CA28ECBBF34BBC817F6ACE5B2487130EAD25C3B22841840CAA8F",
+    "Vivhite/Vivhite/images/cards/OpenSetShelter.png": "0CEA7435083E474CBFF2F48616A47EE852A3720260C0F0FDEB1979F9C8B6C099"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "28C7A6C6B3A0AF1238F7B16447D16F60541894EBF214EA759873DFA94B5C9E3C",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0549d-93a8-7c92-9987-241b3290e57d/exec-ee45997f-3f72-4935-8941-7588eb3fd6e2.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/geodesic-veil-attempt-01/original.png",
+  "original_sha256": "E883454F053F67C3CE20EA44EA4DCD89911085C8930214E900597DA8AFEE41BE",
+  "original_png": {
+    "width": 1444,
+    "height": 1089,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 9,
+    "y": 3,
+    "width": 1425,
+    "height": 1083,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/GeodesicVeil.png",
+  "runtime_sha256": "FE77F6F5C88DF7ADBB217A4264167F479CBFB13749EF713220730ECBB448EAE8",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-godot.log",
+    "inspection/prepare-godot.err.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "top_down_flexible_geodesic_veil": true,
+    "side_impact_slides_along_surface": true,
+    "suspended_accordion_fold_communicates_retain": true,
+    "no_complete_circle_sphere_dome_or_round_shield": true,
+    "no_outbound_attack_read": true,
+    "distinct_from_isoperimetric_ward_and_open_set_shelter": true,
+    "100x76_color_and_grayscale_defensive_readable": true,
+    "100x76_folded_retained_corner_present_in_silhouette": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "A vast blue-white geodesic curtain descends from above and folds around Vivhite while a screen-right crystal storm skids along its curved surface. The upper accordion-folded corner remains visibly stored for a later turn. The asymmetrical hanging canopy is immediately defensive without reusing a circular perimeter, dome, sphere, or ordinary shield, and the defensive silhouette survives grayscale and 100x76 inspection."
+}
