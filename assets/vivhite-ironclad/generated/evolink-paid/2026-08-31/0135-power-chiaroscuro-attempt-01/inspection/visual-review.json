@@ -1,0 +1,75 @@
+{
+  "asset": "ChiaroscuroPower",
+  "status": "static_accepted_runtime_integrated",
+  "runtime_eligible": true,
+  "paid_generation_count": 1,
+  "generation_contract": {
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": []
+  },
+  "archive_checks": {
+    "prompt_content_matches_request_payload_after_platform_newline_normalization": true,
+    "secret_markers_found": false
+  },
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [121, 36, 889, 948],
+    "alpha_touches_edge": false,
+    "nonzero_alpha_pixels": 240208,
+    "opaque_pixels_alpha_gte_250": 230626
+  },
+  "prepared_contracts": {
+    "256": {
+      "format": "RGBA8",
+      "size": [256, 256],
+      "alpha_bbox": [42, 49, 156, 179],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "0CF28B19EE87ED0CDF6A8A42AB4C5BC83BA6425710A3D124FF6FADFBCA8649B0"
+    },
+    "64": {
+      "format": "RGBA8",
+      "size": [64, 64],
+      "alpha_bbox": [8, 10, 43, 43],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "BE3C644CCFFE14B52E6A414C9E41AE87BDC2909B976D96666147AAB34843AF2D"
+    },
+    "32": {
+      "format": "RGBA8",
+      "size": [32, 32],
+      "alpha_bbox": [4, 4, 23, 23],
+      "corner_alpha": [0, 0, 0, 0],
+      "sha256": "09EE4F795087A5445D9FA1AA95D41ACB704DAD06C7226E51C39C72C3E1990CDE"
+    }
+  },
+  "visual_checks": {
+    "sourceover_black_256": "passed",
+    "sourceover_white_256": "passed",
+    "sourceover_game_indigo_256": "passed",
+    "sourceover_all_backgrounds_64": "passed",
+    "sourceover_all_backgrounds_32": "passed",
+    "external_visible_halo": false,
+    "rectangular_alpha_pollution": false,
+    "visible_edge_contact": false,
+    "low_alpha_assessment": "normal hard-edge antialiasing only; low-Alpha count was not used as a rejection criterion",
+    "visual_centering": "passed; the diagonal attack lozenge intentionally extends beyond the circular lens while retaining wide empty margins",
+    "semantic_readability_256": "passed; black-white split lens, outward violet-magenta-gold attack lozenge, and inward purple Drain arrow are distinct",
+    "semantic_readability_64": "passed; attack direction, chiaroscuro split, and return arrow remain recognizable",
+    "semantic_readability_32": "passed; the bold diagonal attack and black-white split remain clear, with the purple return hook still visible",
+    "forbidden_subjects_or_marks": false,
+    "closed_margin_orb": false
+  },
+  "operation": "prepare_vivhite_ui_icon.gd performed only uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair. The runtime file is a byte-for-byte copy of the accepted prepared 256x256 image.",
+  "hashes": {
+    "raw_output_sha256": "F0AAE186C6EA16731098A230815598A3305FA41D258BDBA088A2219A0E2B67C0",
+    "runtime_sha256": "0CF28B19EE87ED0CDF6A8A42AB4C5BC83BA6425710A3D124FF6FADFBCA8649B0"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/powers/ChiaroscuroPower.png"
+}
