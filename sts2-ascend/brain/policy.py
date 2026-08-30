@@ -3550,8 +3550,10 @@ class Policy:
                     score += _tax_value
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
-                if lethal and not killable and not (desperate or race_allin):
-                    # 致死威胁下 AOE 若不能减员，等于放弃生存换数值
+                if lethal and not killable and not (desperate or race_allin or kill_race):
+                    # 致死威胁下 AOE 若不能减员，等于放弃生存换数值；但
+                    # 斩杀竞速已证伪本回合防守线时，攻击仍是唯一可行救援
+                    # （1161-F14-T6：TTK 6~7 回合、仅剩 1 回合）。
                     score = min(score, floor_score)
                 if self_cost and lethal and len(killable) < len(enemies):
                     # 判死竞速豁免（第 635~640 批复盘）：竞速/孤注一掷判定的
@@ -3574,6 +3576,8 @@ class Policy:
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
                 why = f"群体伤害≈{eff}"
+                if kill_race and lethal and not killable and score > floor_score:
+                    why += "｜致死竞速抢斩杀"
                 if _tax_value:
                     why += (f"｜手牌税止损计价+{_tax_value:.1f}"
                             f"（打出即清零{_tax_save}/回合滞留税）")
@@ -3699,7 +3703,8 @@ class Policy:
             # 第 28 局 Boss 战终盘 1 血面对 11 点意图，重锤(42伤)压过防御(5甲)
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
             # 但孤注一掷/败局竞速回合例外：防守已不可能或已被证伪时，输出就是唯一的防御。
-            if lethal and not best_kill and not (desperate or race_allin):
+            # kill_race 致死回合沿用同一例外；关闭竞速时仍保留普通致死守卫。
+            if lethal and not best_kill and not (desperate or race_allin or kill_race):
                 best_s = min(best_s, floor_score)
             elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
                 # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）；
@@ -3728,6 +3733,8 @@ class Policy:
             hb = _hybrid_defense()
             if hb is not None and hb[0] > best_s:
                 return hb[0], None, hb[1]
+            if kill_race and lethal and not best_kill and best_s > floor_score:
+                why += "｜致死竞速抢斩杀"
             return best_s, best_t, why
 
         # --- 防御/技能牌（有格挡数值） ---

@@ -3369,6 +3369,40 @@ def main() -> int:
                                     kill_race=True, run_deck=[])[0]
     assert s_brk_suic < ff_thr <= s_brk_race, \
         f"自残归零的直死牌不应解禁: suic={s_brk_suic}"
+    # 3xf-audit（1161-F14-T6）：reserve_for_block=True 的致死竞速回合并不
+    #     等于仍有可行防守线；上一版把 BREAKTHROUGH/普通攻击一律压到
+    #     floor_score，导致已判定「TTK 6~7 回合、仅剩 1 回合」时继续烧防御牌。
+    #     竞速开关关闭时保留普通致死守卫，并为放行的攻击写入可观测标记。
+    ff_race_enemies = [dict(ff_enemies[0]), dict(ff_enemies[0])]
+    ff_race_enemies[1].update(index=1, enemy_id="RA_BOSS_2", name="攻坚巨兽2")
+    s_brk_reserved = ff_pol._score_play(
+        ff_brk, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    s_brk_reserved_off = ff_pol._score_play(
+        ff_brk, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=False, run_deck=[])
+    assert s_brk_reserved[0] > ff_thr > s_brk_reserved_off[0], \
+        f"预留格挡的致死竞速群攻闸未按开关切换: on={s_brk_reserved} off={s_brk_reserved_off}"
+    assert "致死竞速抢斩杀" in s_brk_reserved[2], \
+        f"致死竞速群攻放行缺少观测标记: {s_brk_reserved[2]}"
+    ff_strike = {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                 "playable": True, "energy_cost": 1, "requires_target": True,
+                 "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    s_strike_race = ff_pol._score_play(
+        ff_strike, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    s_strike_race_off = ff_pol._score_play(
+        ff_strike, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=False, run_deck=[])
+    assert s_strike_race[0] > ff_thr > s_strike_race_off[0], \
+        f"预留格挡的致死竞速单体攻击闸未按开关切换: on={s_strike_race} off={s_strike_race_off}"
+    assert "致死竞速抢斩杀" in s_strike_race[2], \
+        f"致死竞速单体攻击放行缺少观测标记: {s_strike_race[2]}"
 
     # 3xg（01:43 滑溜批补合）：滑溜是逐 hit 的 HP 伤害上限，且只有穿甲
     # 命中才掉层。评分、击杀判断和最终出牌必须共用同一条逐段结算路径。

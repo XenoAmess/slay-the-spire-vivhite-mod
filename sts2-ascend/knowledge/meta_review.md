@@ -5832,3 +5832,41 @@ retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
 以及 `RUPTURE` 无自残死牌命中数；同时对照相关战斗战损。若非成长牌仍被误杀，转查
 战斗载荷的能力类型识别；若其选择率上升但结果无差异，撤回本次条件放宽并保留
 回归证据。无 replay target，故不追加 `retry_resolution`。
+
+# 2026-08-30｜第1158~1161局复盘（致死竞速攻击候选被致死闸压低）
+
+## 一、证据与主假设
+
+- 队列 requested=[1158,1159,1160,1161]，exact 命中 4/4；最新失败局
+  `Q7DQ2SENJJRX` 为 F14，232 条决策链完整持久化，`complete_persisted_chain=True`。
+- 1161-F14-T6 的战斗载荷为 16 血、25 点来袭伤害；理由已明确记下
+  「击杀还需 6/7 回合 > 可存活 1 回合」和「全攻提速」，但实际先打 TAUNT、
+  SECOND_WIND，最后打 BREAKTHROUGH 后仍阵亡。原生语义中 BREAKTHROUGH 是
+  1 费全体 9 伤并失去 1 生命，TAUNT/SECOND_WIND 分别只提供 6/5 格挡。
+- **HYPOTHESIS**：当 `kill_race=True` 已证明防守路线撑不过来、且本回合已是
+  lethal 时，`_score_play` 仍把不能直接击杀的单体/群体攻击压到 `floor_score`；
+  这会让仍可支付的输出候选失去竞速资格，延续已被否证的防守线。
+- 代码证据与现场吻合：AOE 和单体攻击的致死闸只豁免 `desperate`/
+  `race_allin`，没有豁免 `kill_race`；而 `reserve_for_block=True` 又使该局
+  `desperate=False`。因此这是一个可复现的评分分支缺口，不是泛化的卡组输出不足。
+
+## 二、本次最小生产改动
+
+| 项目 | 内容 |
+| --- | --- |
+| 生产行为 | `brain/policy.py::_score_play` 仅在 AOE/单体的“致死且不能击杀”评分闸中加入 `kill_race` 豁免；`kill_race=False` 仍保留原致死格挡优先。 |
+| 观测 | 竞速致死且非击杀攻击实际进入候选时，理由新增 `致死竞速抢斩杀`，可按决策链统计。 |
+| 回归 | `brain/selfcheck.py` 增加预留格挡语境下 BREAKTHROUGH 与普通攻击的竞速开关正反例，并断言观测标记；既有自残归零守卫仍保留。 |
+| 边界 | 不放开能力牌/力量牌，不改变普通致死回合、`race_allin` 或自残后归零牌的原有闸门。 |
+
+## 三、验证、预期信号与撤回
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。
+- 可证伪信号：未来 3~10 局中，竞速判死且仍有可支付非击杀攻击的决策应出现
+  `致死竞速抢斩杀`，并记录该攻击不再被纯格挡候选压成 `floor_score`；F14/F17
+  竞速致死段的无输出吃伤与同型阵亡应下降。若标记出现至少 3 个独立战斗而
+  战损/存活没有改善，或普通 `kill_race=False` 致死局出现抢攻，则假设被证伪，
+  不继续扩大放行范围。
+- 撤回：将 `kill_race_enabled` 设为 `False` 可关闭该路径；代码级撤回只需删除
+  两个攻击闸的 `kill_race` 豁免、两个观测标记和对应 selfcheck 夹具。
+- 无失败包 lineage、无 replay target；本批不追加 `retry_resolution`。
