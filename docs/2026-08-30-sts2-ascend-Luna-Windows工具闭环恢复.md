@@ -457,3 +457,97 @@ clone commit、宿主 CAS、远端 push 或 retry resolution；因此它既不�
 本节只记录已确认的机制缺口和目标命令差异。加入 `windows.sandbox="unelevated"` 后的原生 Apply
 Patch canary、生产 Luna 自修、自检、clone commit、宿主 CAS 与远端 push 回执仍待后续追加；在真实
 回执出现前，不把 shell canary、静态测试或第二次维护 attempt 冒充为成功闭环。
+
+### 第三次生产重放：Luna 已经落地，宿主却拒绝了自检临时目录
+
+加入 `windows.sandbox="unelevated"` 后的第三次生产重放使用 session
+`cb922f5e4e2f46fe97ee0cfe4ca1dd93`。实际 provider 命令包含固定 Codex CLI 0.148、
+`-a never`、`luna_commit`、`--ignore-user-config` 和唯一 clone `-C`；真实仓三份策略文件在
+provider 全生命周期内始终等同 HEAD。Luna 先验证 cwd 与目标相对路径，随后第一次原生 Apply Patch
+就成功写入准确 clone，没有再发生 outside-project 或真实仓泄漏。
+
+Luna 自己读取了 72 局数据包、失败包索引、完整第 1085 局决策链和当前代码，提出
+`LETHAL_SETTLE_EXTENSION` 假设，并修改六个静态项目文件。它遇到 Python 临时目录权限失败后自行
+定位、绕过并最终取得 `SELFCHECK OK`，随后运行 `git diff --check`、只精确暂存六个成果文件，建立
+clone commit：
+
+```text
+86c8d506e78c5c6355ad934b6086d294f022e085
+```
+
+provider 自然以 0 退出，没有 timeout、stall 或 lifecycle stop。失败发生在外层宿主验收：Luna 为让
+selfcheck 通过而在 clone 根创建了 `.selfcheck-tmp/**`；宿主按设计 force-stage 全工作树并把该目录
+归为 outside/unsafe，于是整批以 `path_boundary` 拒合，保全包为
+`20260830-084926-1788050966599864600-61be86a3`，审计提交为 `ef09e1fb`。这不是 Luna 不听话、没有
+落地、自检失败或提交失败，而是宿主没有向受限 selfcheck 提供可用且会被归为 transient 的临时目录。
+维护 AI 没有手工应用 `86c8d506`，仍把该批交回 Luna 自己重审和合入。
+
+### Python 3.14 `0700` DACL 与受限 selfcheck 临时池
+
+现场和零模型 RestrictedToken 对照共同确认，只重定向 `TEMP/TMP/TMPDIR` 不足以修复问题。本机
+Python 3.14.7 的 `tempfile.mkdtemp()` 固定调用 `os.mkdir(path, 0o700)`；Windows 会把 `0700`
+转换成仅当前用户和 Administrators 可访问的保护 DACL。Codex RestrictedToken 虽能创建该目录，却
+不能再进入它创建 `runs/`，稳定得到 `WinError 5`。相同身份使用 `0o777` 创建子目录时会继承宿主
+预建父目录的 sandbox SID ACL，后续创建、写入和读取均成功。`os.stat().st_mode` 对两者都显示
+`0o777`，因此不能用 POSIX mode 数值代替 Windows ACL 实测。
+
+宿主现在只为 Windows Codex/Luna 复盘，在隔离 clone 内生成：
+
+- `.review-cache/selfcheck-pool/slot-000..255`：由宿主预建并继承可遍历 ACL 的持久父槽；
+- `.review-cache/python-startup/sitecustomize.py`：只在 `sys.argv[0]` 规范化后以
+  `sts2-ascend/brain/selfcheck.py` 结尾且专用 pool 环境变量存在时接管 `tempfile.mkdtemp`；
+- 每次分配在下一个父槽内用 `0o777` 创建新的候选子目录。`TemporaryDirectory` 只会删除候选子目录，
+  不会删除持久父槽；下一次独立 selfcheck 进程可以清空并复用同一槽；
+- 初始化、清理或 256 槽耗尽时输出稳定码 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 并以 86 退出，
+  不静默退回会再次生成 `0700` DACL 的标准实现。
+
+runtime 在宿主 prompt 写入后、失败证据挂载前准备；准备失败沿用
+`review_sandbox_acl_preflight`，不启动 provider、不冷却 Luna，也不会被 replay evidence preflight
+覆盖原 failure code。Popen 只为该 Windows Codex provider 注入 TEMP 三变量、pool 变量和
+startup-first `PYTHONPATH`；GLM、Kimi、非 Windows 和其他 Python 命令均不变。`.review-cache/**`
+继续由既有 deny-only 分类器判为 transient：不会进入自动 patch，却会在失败时完整进入取证现场。
+离线 `review_model_eval.py` lazy 复用同一生产 helper，并把同一环境同时传给 provider 与 evaluator
+宿主 selfcheck，避免生产通过而离线评测假失败。
+
+### 修复门禁、提交与当前生产重试
+
+本次宿主修复的门禁包括：
+
+- ACL/bootstrap 定向测试 13/13、evaluator 21/21；
+- sandbox ACL、evaluator、review runner、closure 组合回归 101/101；
+- 当前工作树完整 `brain/selfcheck.py` 输出 `SELFCHECK OK`；
+- 固定 SHA 的 Codex 0.148 以真实 `codex sandbox` RestrictedToken 连续启动两个独立进程，原样运行
+  `py -3 -B sts2-ascend/brain/selfcheck.py`，两轮均 exit 0 且输出 `SELFCHECK OK`；第二轮复用
+  `slot-103` 父槽但生成不同子目录，证明跨进程复用成立；
+- `.review-cache/**` 精确分类为 transient，prepare 失败不启动 provider，既有 Luna 亲和性与
+  no-cooldown 语义保持不变。
+
+生产与 evaluator 修复已作为精确四文件提交推送：
+
+```text
+5c68a2d562ae97cfeaef4599b19915bb1aef7dec
+```
+
+为守住直播最多中断两分钟的硬规则，直播姬在 `09:06:15` 意外转为 `Idle` 后立即由统一开播入口恢复，
+`09:07:59` 回到 `Streaming`，本次中断约 104 秒。统一入口同时恢复完整 session
+`558267ac39e24bc39d0de183126088f8`。新的 Luna provider 于 `09:11:44` 真实启动，实际命令再次确认
+固定 0.148、`-a never`、无 `--approve-for-me`、唯一 clone `-C`；截至本节写入时仍在自行读取证据，
+尚未出现最终 selfcheck、clone commit、宿主 CAS 或远端 push，因此此处不提前宣称该失败批次已经闭环。
+
+### 最终生产闭环
+
+同一 Luna provider 随后继续自行读取 72 局证据、当前代码、失败包和完整决策链，使用原生 Apply
+Patch 修改隔离 clone，并在受限 Windows profile 内直接完成自检与 Git 提交。终态回执为：
+
+- provider 正常 exit 0，Luna 明确输出 `SELFCHECK OK`；
+- 隔离 clone commit 为 `14f9f544af0238882c52bd2ba63c24589884a7f0`；
+- 宿主完成 deny-only 分类、二进制 patch 验收、私有 index 与 compare-and-swap，真实仓提交为
+  `8f0189cadc38b62d43d04d4de22c750dd3a12d6d`；
+- 真实仓推送成功，失败包回执更新为 integrated，持久待处理队列为空；
+- `review_active.flag` 消失，Brain 已请求重启以加载新提交。
+
+这次闭环同时证明了两层问题已经分别解决：Luna 可以在硬边界内自己读证据、使用原生工具、修代码、
+自检和提交；宿主提供的 Python 3.14 临时目录机制不会再把已经通过的成果误判为越界。维护 AI 没有
+手工应用先前的 `86c8d506`，最终成果仍由 Luna 重新审核并自行落地。闭环后直播姬保持
+`Streaming`、8080 health 为 `ready`、session 存在。按用户要求，GLM 的余额失败不进入本次诊断或
+修复范围，失败语义保持原样。
