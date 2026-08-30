@@ -3892,9 +3892,22 @@ class Policy:
         # 战略层判死必须穿透到能力牌评分，否则全攻提速只是口号
         if lethal or race_allin:
             score = min(score, floor_score)
+        # 能力/增益牌也必须遵守与攻击牌相同的能量预留：当本回合有合格格挡
+        # 且最后一点能量正好会被这张非即时牌吃掉时，长战复利不能把买命牌
+        # 挤掉。1189-F17-T1 的战栗→杂耍→好勇斗狠连续承诺留下 7 点意图、
+        # 0 格挡；reserve_for_block 原先只接入攻击分支，第三张能力牌仍能
+        # 用完最后 1 能量。只拦截会消耗预留能量的非致死牌，能量足够先留出
+        # 最便宜格挡的能力牌，以及没有可行格挡的局面，保持原评分。
+        reserve_setup_for_block = (
+            reserve_for_block and cost > 0 and not lethal and not race_allin
+            and cost + min_blk_cost > cur_energy)
+        if reserve_setup_for_block:
+            score = min(score, floor_score)
         if cost == 0:
             score += pol["free_card_bonus"]
         why = f"能力/增益牌（第{round_no}回合）"
+        if reserve_setup_for_block:
+            why += "｜能量预留给格挡"
         if lf >= 1.5:
             why += f"｜长战加成+{lf:.1f}（敌血池{pool:.0f}）"
         # 开局承诺加成（第555~653批复盘新增）：贵重力量引擎（恶魔形态等 3 费能力）

@@ -3299,6 +3299,48 @@ def main() -> int:
         f"走廊小血池误发开局承诺加成: small={_xc_small} boss={_on_score}"
     del _on_score, _why, _xc_off_score, _xc_small
 
+    # 3xcr（1189-F17-T1）：reserve_for_block 之前只约束攻击牌，能力/增益牌
+    # 的长战复利可以在最后 1 点能量继续承诺，实际留下 7 点意图与 0 格挡。
+    # 非致死时若最后能量正好被能力牌吃掉，必须让给当前已证有效的格挡；
+    # 能量仍足够同时支付能力与最便宜格挡时保持原开局承诺。
+    xcr_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-commit-reserve-"))), random.Random(5))
+    xcr_enemy = [{"index": 0, "enemy_id": "VANTOM", "name": "墨影幻灵",
+                  "current_hp": 172, "max_hp": 173, "block": 0,
+                  "is_alive": True, "is_hittable": True,
+                  "intents": [{"total_damage": 7}]}]
+    xcr_power = {"index": 0, "card_id": "AGGRESSION", "name": "好勇斗狠",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "resolved_rules_text": "在你的回合开始时，将弃牌堆的一张随机攻击牌加入手牌并升级。"}
+    xcr_score, _, xcr_why = xcr_pol._score_play(
+        xcr_power, xcr_enemy, 7, 0, 1, xcr_pol.know.policy,
+        my_hp=54, my_max_hp=80, cur_energy=1,
+        reserve_for_block=True, min_blk_cost=1, run_deck=[])
+    assert xcr_score < xcr_pol.know.policy["play_threshold"] \
+        and "能量预留给格挡" in xcr_why, \
+        f"最后能量仍被能力牌承诺吃掉: score={xcr_score} why={xcr_why}"
+    xcr_keep, _, xcr_keep_why = xcr_pol._score_play(
+        xcr_power, xcr_enemy, 7, 0, 1, xcr_pol.know.policy,
+        my_hp=54, my_max_hp=80, cur_energy=2,
+        reserve_for_block=True, min_blk_cost=1, run_deck=[])
+    assert xcr_keep > xcr_pol.know.policy["play_threshold"] \
+        and "能量预留给格挡" not in xcr_keep_why, \
+        f"仍有预留能量时能力牌被误杀: score={xcr_keep} why={xcr_keep_why}"
+    xcr_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+        "turn": 1,
+        "combat": {"player": {"current_hp": 54, "max_hp": 80, "block": 0, "energy": 1},
+                   "hand": [dict(xcr_power),
+                            {"index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                             "playable": True, "energy_cost": 1, "requires_target": False,
+                             "dynamic_values": [{"name": "Block", "current_value": 5}]}],
+                   "enemies": xcr_enemy},
+        "run": {"current_hp": 54, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+    d_xcr = xcr_pol.decide(xcr_state, ctx)
+    assert d_xcr.action == "play_card" and d_xcr.params.get("card_index") == 1, \
+        f"能力牌未给当前有效格挡让路: {d_xcr.action} {d_xcr.params}（{d_xcr.reason}）"
+    del xcr_score, xcr_why, xcr_keep, xcr_keep_why, d_xcr
+
     # 3xcl（第913局批复盘）：低血承诺观测位——913-F21-T1 实证 30血(37.5%) 对
     #           意图9 承诺恶魔形态整回合 0 输出白吃 9（urgent 乘区只作用出牌/
     #           格挡分支，能力分支零感知）。本批只落观测不改分：

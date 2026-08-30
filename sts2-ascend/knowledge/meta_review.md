@@ -5990,3 +5990,25 @@ retry_resolution: 20260830-134703-1788068823172152800-fa6604bd integrated
 `py -3 -B sts2-ascend/brain/selfcheck.py` 输出 **SELFCHECK OK**；fixture 中竞速致死的 Strike、Battle Trance 均高于部分格挡，普通致死 Strike 仍低于原闸门。`git diff --check` 通过。
 
 retry_resolution: none (no target package; local production fix)
+
+# 2026-08-30｜1186~1189 复盘：能力牌能量预留缺口
+
+## HYPOTHESIS
+
+1189-F17-T1 在仍有 7 点敌方意图、且手中存在可负担防御牌时，连续打出战栗、杂耍、好勇斗狠；第三张能力牌耗尽最后 1 点能量，随后没有格挡并在下一回合降至 47 血。假设：`reserve_for_block` 已在攻击牌分支生效，但能力/增益牌分支仍只看长战复利，因而会吃掉本应留给当前有效格挡的最后能量。若补上同一预留闸门后，合格格挡仍被能力牌抢走，则该假设被证伪。
+
+## EVIDENCE
+
+- 最新完整失败链为 `7VSPNDM81QJR`（run 1189，F17，228 条决策，`complete_persisted_chain=True`）。决策 203/204/205 分别是战栗、杂耍、好勇斗狠；决策 206 收口时能量为 0，随后决策 207 开始生命由 54 降至 47。
+- 原生 v0.111.0 知识确认 `AGGRESSION` 与 `JUGGLING` 是 1 费 Power，`TREMBLE` 是 1 费 Skill；它们都没有即时格挡数值。当前 `_combat` 已计算 `reserve_for_block`，但 `_score_play` 的能力牌分支此前没有读取它。
+- 该批后段仍有 Vantom 的滑溜逐段折算和斩杀竞速压力；本改动只验证开局预算分配，不声称单独解决后段竞速失败。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+`brain/policy.py::_score_play` 增加 `reserve_setup_for_block`：非致死、非败局竞速时，若能力牌费用加最便宜合格格挡费用超过当前能量，则将该能力牌压到禁玩线并写入“能量预留给格挡”。当前能量仍足够同时支付两者，或没有有效格挡时，保留原能力牌评分。`brain/selfcheck.py` 增加能量 1/2 点和端到端选防御回归夹具。
+
+未来 3~10 局记录：`能量预留给格挡` 出现次数、触发时 incoming/生命/能量/最便宜格挡费用、同回合最终格挡值，以及 F17 Boss 的 T1~T2 战损和短战阵亡数。预期是有合格格挡时最后能量不再被非即时能力牌消耗，同时 2 点可同时支付的窗口不减少。若 3 个独立 Boss 案例中标记出现但格挡实际不可用，或 T1~T2 战损无改善且可用能力窗口明显下降，回退本次 `reserve_setup_for_block` 分支并保留决策链重估。
+
+## VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。无 replay target，故不追加 `retry_resolution`。
