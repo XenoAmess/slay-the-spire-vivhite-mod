@@ -9016,3 +9016,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.41（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
 - 生涯战绩：0/1220 胜，当前目标进阶 0
+
+## 第 1221 局复盘（2026-08-30 19:05）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：CINDER, TAUNT, UPPERCUT, FEEL_NO_PAIN, CONFLAGRATION, PILLAGE, SWORD_BOOMERANG, UNRELENTING, DARK_EMBRACE, CONFLAGRATION, BLUDGEON, IMPERVIOUS, IMPERVIOUS, SPITE, CINDER
+- 本局遗物：水银沙漏, STONE_CRACKER
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血32｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血7; F21 Monster战 掉血0; F23 Monster战 掉血46｜竞速审计：T2判死→实战8回合获胜; F25 Monster战 掉血30（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34局)，BRAND(25分/3局)，FIEND_FIRE(25分/45局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（1回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.41 → 0.44（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）
+- 生涯战绩：0/1221 胜，当前目标进阶 0
