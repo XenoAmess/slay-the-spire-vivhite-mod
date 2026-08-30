@@ -5809,9 +5809,10 @@ def main() -> int:
         f"贴线翻盘被翻盘比上限误伤: {_near_doomed}（{_near_note}）"
     br_ctx.rest_before_boss = False
 
-    # 3br-2) per-Boss 血池全称门（第731~740批拒合成果补合）：均值判负后，
-    #        任一重复实证组合可赢即放行；全组合必败才保留死刑。native 缺失
-    #        或显式关闭旋钮均严格回落旧均值口径。
+    # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
+    #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把
+    #        KIN 实际必败局翻成回血；关闭新闸后严格回落旧存在性口径。native
+    #        缺失或显式关闭组合门仍严格回落旧均值口径。
     class _PerComboNative:
         available = True
         pools: dict = {}
@@ -5845,16 +5846,31 @@ def main() -> int:
     pc_native = _PerComboNative()
     pc_native.pools = {"PC_LIGHT": (60, 70), "PC_HEAVY": (290, 310)}
     pc_know.game_knowledge = pc_native
-    d_pc_light = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
-    assert d_pc_light.tags and d_pc_light.tags[0] == ("rest", "heal"), \
-        f"轻池可赢时应撤销均值死刑并保住低血回血: {d_pc_light.reason}"
-    assert "BOSS_RACE_COMBO_GATE" in json.dumps(d_pc_light.trace, ensure_ascii=False), \
-        f"组合门放行未进入持久决策轨迹: {d_pc_light.trace}"
+    d_pc_mixed = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_mixed.tags and d_pc_mixed.tags[0] == ("rest", "smith") \
+        and "已知组合可行1/2" in d_pc_mixed.reason, \
+        f"默认全称组合门不应被单一轻池翻盘: {d_pc_mixed.reason}"
+
+    pc_native.pools = {"PC_LIGHT": (60, 70), "PC_HEAVY": (60, 70)}
+    d_pc_all = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_all.tags and d_pc_all.tags[0] == ("rest", "heal"), \
+        f"全部已知组合可行时应撤销均值死刑并保住低血回血: {d_pc_all.reason}"
+    assert "BOSS_RACE_COMBO_GATE" in json.dumps(d_pc_all.trace, ensure_ascii=False), \
+        f"组合门放行未进入持久决策轨迹: {d_pc_all.trace}"
+
+    # 新闸的可逆对照：恢复旧「任一组合可行」口径，混合池应再次放行。
+    pc_know.policy["boss_race_combo_gate_require_all_known"] = False
+    pc_native.pools = {"PC_LIGHT": (60, 70), "PC_HEAVY": (290, 310)}
+    d_pc_legacy = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
+    assert d_pc_legacy.tags and d_pc_legacy.tags[0] == ("rest", "heal") \
+        and "BOSS_RACE_COMBO_GATE" in json.dumps(d_pc_legacy.trace, ensure_ascii=False), \
+        f"关闭全称组合闸后应回落旧存在性放行: {d_pc_legacy.reason}"
 
     pc_native.pools = {"PC_LIGHT": (290, 300), "PC_HEAVY": (300, 310)}
+    pc_know.policy["boss_race_combo_gate_require_all_known"] = True
     d_pc_heavy = policy.Policy(pc_know, random.Random(13)).decide(pc_state, pc_ctx)
     assert d_pc_heavy.tags and d_pc_heavy.tags[0] == ("rest", "smith") \
-        and "BOSS_RACE_COMBO_GATE 全称必败分账" in d_pc_heavy.reason, \
+        and "已知组合可行0/2" in d_pc_heavy.reason, \
         f"全组合必败时应维持死刑并写分账: {d_pc_heavy.reason}"
 
     pc_no_native = knowledge.Knowledge(

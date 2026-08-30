@@ -42,6 +42,10 @@ DEFAULT_POLICY = {
     "boss_race_joint_flip_max_ttk_ratio": 1.5,  # 联合能量复核翻盘比上限（第1098~1110局批复盘）：
     # 击杀所需回合数超过 满血可存活回合数×此比值 时，复核的「存在可行攻防分配」不予放行
     # （静态火力+期望格挡产能对滚雪球 Boss 系统性乐观）；<=0 严格回落旧口径（复核可直接翻盘）
+    "boss_race_combo_gate_require_all_known": True,  # Boss 未知时，组合级翻盘须让全部
+                                                     # 已有重复实证的同幕组合可行；False 回落
+                                                     # 旧的「任一组合可行即放行」口径（1132/1137/1147
+                                                     # 三例 KIN 实际阵亡暴露了存在性放行的风险）
     # --- combat ---
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds

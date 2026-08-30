@@ -4333,7 +4333,7 @@ class Policy:
                 combos = []
             if combos:
                 verdicts: list[str] = []
-                universal_doomed = True
+                combo_alive_count = 0
                 for combo_id, combo_pool in combos:
                     credited_pool = self._race_potion_credit(potions, combo_pool, floor)
                     combo_ttk = credited_pool / max(1.0, dpt)
@@ -4348,17 +4348,30 @@ class Policy:
                     verdicts.append(
                         f"{combo_id}{credited_pool:.0f}池" + ("可赢" if combo_alive else "必败"))
                     if combo_alive:
-                        universal_doomed = False
+                        combo_alive_count += 1
                 verdict_text = ",".join(verdicts)
-                if not universal_doomed:
+                _require_all_combos = bool(pol.get(
+                    "boss_race_combo_gate_require_all_known", True))
+                _combo_gate_open = (
+                    combo_alive_count == len(verdicts)
+                    if _require_all_combos else combo_alive_count > 0)
+                if _combo_gate_open:
                     # 组合全称门放行侧的对账账面（分账全文走 BOSS_RACE_COMBO_GATE
                     # 留痕，此处只挂总标签供翻转留痕引用）
+                    _gate_basis = ("全部已知组合可行"
+                                   if _require_all_combos
+                                   else "BOSS_RACE_COMBO_GATE分账")
                     self._race_proj_audit = (
-                        "均值口径判负但组合全称门放行（BOSS_RACE_COMBO_GATE分账）")
+                        f"均值口径判负但组合全称门放行（{_gate_basis}）")
                     self._trace_note(
                         "BOSS_RACE_COMBO_GATE：均值判死被组合全称门放行；" + verdict_text)
                     return False, ""
-                combo_tail = "；BOSS_RACE_COMBO_GATE 全称必败分账：" + verdict_text
+                if _require_all_combos and combo_alive_count < len(verdicts):
+                    combo_tail = (
+                        f"；BOSS_RACE_COMBO_GATE：已知组合可行{combo_alive_count}"
+                        f"/{len(verdicts)}，未满足全部已知组合可行；分账：{verdict_text}")
+                else:
+                    combo_tail = "；BOSS_RACE_COMBO_GATE 全称必败分账：" + verdict_text
         _joint_clause = ("联合能量复核：任一攻防能量分配均无法同时满足击杀与存活"
                          if not _flip_veto else
                          "联合能量复核虽报可行但被翻盘比上限否决")

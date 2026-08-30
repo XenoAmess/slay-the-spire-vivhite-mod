@@ -5746,3 +5746,55 @@ complete_persisted_chain=True）。生涯 0/1118，本批 8 局全败，7 局一
 `py -3 -B sts2-ascend/brain/selfcheck.py` → `SELFCHECK OK`。
 
 retry_resolution: `20260829-225316-1788015196791448300-ab40e708` integrated
+
+# 2026-08-30｜第1119~1153局复盘（35局 exact_batch 全败；BOSS_RACE_COMBO_GATE 全称放行收紧）
+
+## 一、证据与样本对账
+
+- `failed_review_replay.requested_packages=[]`、`attempt_packages=[]`、`packages=[]`，无失败包
+  lineage；本批按 `review_closure` 的 `action_required=true` 执行常规生产闭环。
+- 队列 `requested=[1119..1153]`，exact 命中 35/35、`missing=0`，35 局全败；死因分布为
+  一幕 Boss F17 17 局、二幕 Boss F33 6 局，其余为前中期普通战/精英战死亡。
+- 主样本为 YKNJJFFM59BX（第1153局）的完整持久决策链：412/412 条、
+  `complete_persisted_chain=True`；结构核对为 290 条 COMBAT、214 次 `play_card`、70 次
+  `end_turn`，必需字段无缺失。F17-T5 的能量1、规则账面可负担牌但 payload 全部不可出，
+  已带既有「结算超时收口观测」并非本批新故障；随后 F17 获胜，最终死于 F25 精英。
+- 本批发现三例同一生产翻案：1132、1137、1147 的 F16 篝火理由均为
+  「均值口径判负但组合全称门放行」并选择回血；三例真实 Boss 均为
+  `KIN_FOLLOWER+KIN_PRIEST`，随后 F17 分别掉血85、91、61并阵亡。对应分账均是
+  `VANTOM 可赢`、`CEREMONIAL_BEAST 必败`、`KIN_FOLLOWER+KIN_PRIEST 必败`。
+
+## 二、归因与可证伪假设
+
+**HYPOTHESIS**：Boss 尚未知时，`_per_combo_boss_pools` 的组合级翻盘若采用「任一已知组合
+可赢即放行」，会把同幕其他已知必败组合的风险丢掉；要求全部具备重复实证的同幕组合可行，
+应减少 1132/1137/1147 这类 KIN 实际必败局的前夜错误回血。
+
+**EVIDENCE**：上述三局独立对局均有相同的前夜放行痕迹、相同的 KIN 实际死因和 F17 阵亡；
+当前 stats 中一幕 `VANTOM`、`CEREMONIAL_BEAST`、`KIN_FOLLOWER+KIN_PRIEST` 均有足够
+重复 Boss 样本，因而不是无数据组合。1153 全链没有发现比组合门更直接的执行层替代故障。
+
+**EXPECTED_SIGNAL**：未来 3~10 局，混合分账（可行数小于已知组合总数）的前夜理由应出现
+`BOSS_RACE_COMBO_GATE：已知组合可行x/y，未满足全部已知组合可行`并改走锻造；
+只有全部已知组合可行才继续 `BOSS_RACE_PROJ_AUDIT` 回血。若混合局改锻造后仍出现
+明显可赢反例，假设被证伪并回退开关。
+
+## 三、本次最小生产改动
+
+| 项目 | 内容 |
+| --- | --- |
+| 生产配置 | `brain/knowledge.py` 新增 `boss_race_combo_gate_require_all_known=True`；设为 `False` 即回退旧「任一组合可行」口径。 |
+| 生产行为 | `brain/policy.py::_boss_race_doomed` 统计可行组合数；默认只有 `x/y=y/y` 才打开组合级翻盘，混合账面保留逐组合分账并进入必败/锻造路径。 |
+| 观测 | 混合分账理由新增 `已知组合可行x/y，未满足全部已知组合可行`，继续保留 `BOSS_RACE_COMBO_GATE`，可直接 grep 统计。 |
+| 性质边界 | 只改变 Boss 未知时的组合门放行条件；均值竞速、联合能量复核、翻盘比上限、战斗端出牌和无 native 数据回落均不变。 |
+| 回归 | selfcheck 覆盖混合池拒绝、全部池可行放行、关闭新闸回落旧行为、全组合失败分账。 |
+
+## 四、验证、后续指标与撤回
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。
+- 未来 3~10 局统计：① `x/y` 混合分账首发与独立对局数；② 混合分账前夜回血→F17
+  阵亡是否下降；③ 全组合可行正例的回血兑现率；④ 前夜锻造后的 F17 战损与本批
+  17 局 F17 基线对照。
+- 若混合分账改锻造后仍出现至少 2 个「账面应能赢」且实战越墙失败的反例，或全部组合
+  可行局出现明显误伤，将 `boss_race_combo_gate_require_all_known` 设为 `False`；删除
+  本次配置、计数分支和 selfcheck 三处改动即可零残留回退。
