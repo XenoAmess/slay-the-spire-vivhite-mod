@@ -1,0 +1,63 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_EVENT_LOOP",
+  "card_type": "EventLoop",
+  "card_name_zh": "事件循环",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "new_opaque_scene",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": 0,
+    "background_parameter": null
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "ECEB64C62847334FF05AD255C0E0DFC48901A8D7F8BCF19A80AED3B995756F79",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054e3-0425-7113-b0cb-bcdab7c7e1e2/exec-0a737d2c-a3d5-4ba0-af07-ecfe6eeec925.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/event-loop-attempt-01/original.png",
+  "original_sha256": "E81CFD9DDEC6D09F1106ECFC7D6052C4BF094C1AC9114DEC0376ED710C8A1668",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_inspection_crop": {
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos",
+    "sha256": "2C76BD997F3738BE88974FC57E5B8AF9A34F388D3489DACE9517812FC630AF1A",
+    "runtime_adopted": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "vivhite_identity_and_mouth_hard_ban": true,
+    "event_ring_and_zero_cost_copy_semantics": true,
+    "strict_two_page_count": false
+  },
+  "status": "rejected_not_for_runtime",
+  "rejection_reason": "The image contains three visible card-page instances: one at the gate and two at the loop endpoint. The card must depict exactly one returned original and exactly one temporary copy across the entire frame."
+}
