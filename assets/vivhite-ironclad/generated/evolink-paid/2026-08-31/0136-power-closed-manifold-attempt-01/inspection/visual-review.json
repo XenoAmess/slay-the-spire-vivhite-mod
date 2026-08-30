@@ -1,0 +1,58 @@
+{
+  "asset": "ClosedManifoldPower",
+  "attempt": "0136 / attempt-01",
+  "status": "static_accepted_pending_game_validation",
+  "consumer": "res://Vivhite/images/powers/ClosedManifoldPower.png",
+  "generation_route": {
+    "provider": "EvoLink",
+    "model": "gpt-image-2",
+    "background": "transparent",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "n": 1,
+    "reference_images": []
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "6506513147D2B77EB168DF4CA64650F523B793A406756D3A32E63C208E78B643",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "nonzero_alpha_bbox": [97, 23, 899, 975],
+    "nonzero_alpha_pixels": 243419,
+    "opaque_pixels": 229948,
+    "touches_edge": false
+  },
+  "runtime_candidate": {
+    "path": "inspection/prepared-256.png",
+    "sha256": "F5063B9710810C089DCA82B0C5D985140561CCF780C9EA56F60ECAB615653A8A",
+    "size": [256, 256],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "nonzero_alpha_bbox": [61, 27, 135, 205]
+  },
+  "sourceover": {
+    "backgrounds": ["black", "white", "game-indigo #182139"],
+    "sizes": [256, 64, 32],
+    "result": "passed",
+    "visible_halo": false,
+    "rectangular_contamination": false,
+    "shadow_or_remote_decoration": false
+  },
+  "semantic_review": {
+    "single_compact_emblem": "passed",
+    "blue_white_healing_crystal_drop": "passed",
+    "closed_gold_rimmed_purple_manifold_vessel_with_visible_inner_surface": "passed",
+    "one_detached_rising_purple_margin_diamond": "passed",
+    "two_short_thick_directional_arrows": "passed",
+    "overheal_to_equal_margin_conversion": "passed",
+    "readable_at_32px": "passed",
+    "forbidden_blood_red_liquid_person_text_weapon_particles_mist_halo_long_trail": "absent"
+  },
+  "notes": [
+    "The vessel has an integrated front facet as part of its solid container material; only the detached upper-right diamond is read as converted Margin.",
+    "The full vertical equation is taller than its width, while the prepared runtime maintains approximately 10 percent transparent safety space above and below and a compact 53 percent-width silhouette.",
+    "Preparation used only uniform RGBA Lanczos resize, centered padding, and SourceOver inspection; no thresholding, masking, color keying, extraction, or Alpha repair was performed."
+  ]
+}
