@@ -8246,3 +8246,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1150 胜，当前目标进阶 0
+
+## 第 1151 局复盘（2026-08-30 09:12）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：UPPERCUT, MOLTEN_FIST, STONE_ARMOR, UPPERCUT, UNRELENTING, THUNDERCLAP
+- 本局遗物：ANCHOR
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血2; F5 Monster战 掉血0; F6 Monster战 掉血16; F8 Monster战 掉血4; F17 Boss战 掉血76｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：DARK_SHACKLES(25分/2局)，FIEND_FIRE(25分/43局)，BRAND(25分/3局)，OFFERING(25分/32局)，PACTS_END(24分/124局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1151 胜，当前目标进阶 0
