@@ -2,3 +2,8 @@
 放开仅kill_race致死攻击，普通致死防守保持。
 新增观测标记：致死竞速抢斩杀。
 selfcheck：SELFCHECK OK。
+
+1162~1164：DECIMILLIPEDE F25 失败链显示全场重生体竞速，但原生 REATTACH_POWER 的离场段接续状态不可对账。
+唯一假设：后续该精英出现 inactive/absent 段时，决策链应能记录 2 回合/25 血接续观测，否则假设证伪。
+生产改动：新增默认开启、可回退的 DECIMILLIPEDE_REATTACH_AUDIT，仅追加理由观测，不改评分或动作。
+selfcheck：SELFCHECK OK；git diff --check 通过。

@@ -6541,6 +6541,41 @@ def main() -> int:
     assert "斩杀竞速投影" not in d_rc2.reason, \
         f"回滚键关闭后仍计入重生体血池: {d_rc2.reason}"
     rc_know.policy["race_all_respawn_pool_credit"] = True
+
+    # 3rt) Native Decimillipede reattach audit: the live payload may retain a
+    # dead segment or omit it while another segment is alive. The marker must
+    # describe that state, stay outside scoring, and have a reversible switch.
+    reattach_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-reattach-")))
+    reattach_pol = policy.Policy(reattach_know, random.Random(12))
+    reattach_ctx = type("ReattachCtx", (), {"combat": None,
+                                             "current_combat_is_hard": False,
+                                             "credit_tags": []})()
+    reattach_state = rc_state(
+        52, 24, weak_rc_deck,
+        e0="DECIMILLIPEDE_SEGMENT_FRONT",
+        e1="DECIMILLIPEDE_SEGMENT_BACK",
+        hp0=45, hp1=45)
+    reattach_state["combat"]["enemies"].append({
+        "index": 2, "enemy_id": "DECIMILLIPEDE_SEGMENT_MIDDLE",
+        "name": "DECIMILLIPEDE_SEGMENT_MIDDLE", "current_hp": 0,
+        "max_hp": 45, "block": 0, "is_alive": False,
+        "is_hittable": False, "intents": []})
+    reattach_note = reattach_pol._decimillipede_reattach_audit(
+        reattach_state["combat"]["enemies"], reattach_know.policy)
+    assert reattach_note == (
+        "DECIMILLIPEDE_REATTACH_AUDIT alive=2/3 inactive=1 absent=0 "
+        "native=REATTACH_POWER(2t,25hp)"), \
+        f"native reattach audit misreported: {reattach_note}"
+    d_reattach = reattach_pol.decide(reattach_state, reattach_ctx)
+    assert d_reattach.action in {"play_card", "end_turn"} \
+        and "DECIMILLIPEDE_REATTACH_AUDIT" in d_reattach.reason, \
+        f"native reattach audit did not reach production reason: {d_reattach}"
+    reattach_know.policy["decimillipede_reattach_audit"] = False
+    reattach_off_pol = policy.Policy(reattach_know, random.Random(12))
+    d_reattach_off = reattach_off_pol.decide(reattach_state, reattach_ctx)
+    assert "DECIMILLIPEDE_REATTACH_AUDIT" not in d_reattach_off.reason, \
+        "native reattach audit rollback switch did not disable the marker"
     # ③ 有本体在场：重生体仍按旧口径剔除（506 局教义不动）——本体 10 血 <80 且
     #    无升级轨迹，竞速不开账
     pol_rc3 = policy.Policy(rc_know, random.Random(11))
