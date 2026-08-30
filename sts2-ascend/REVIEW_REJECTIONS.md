@@ -251,3 +251,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-30 20:38:12 | 第 1198~1199 局 | `329b0e67` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-203812-1788093492430823500-329b0e67` | patch 目标已有用户 staged 内容：sts2-ascend/brain/policy.py, sts2-ascend/brain/selfcheck.py, sts2-ascend/knowledge/meta_review.md, sts2-ascend/knowledge/review_conclusion.txt |
 <!-- rejection:20260830-204003-1788093603538089400-2de10020 -->
 | 2026-08-30 20:40:03 | 第 1 局 | `2de10020` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-204003-1788093603538089400-2de10020` | 复盘进程未成功完成 |
+<!-- rejection:20260830-205223-1788094343280843800-5096e42b -->
+| 2026-08-30 20:52:23 | 第 1200~1207 局 | `5096e42b` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260830-205223-1788094343280843800-5096e42b` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
