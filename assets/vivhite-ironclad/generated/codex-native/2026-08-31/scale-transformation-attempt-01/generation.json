@@ -1,0 +1,77 @@
+{
+  "provider": "codex-native",
+  "tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+  "card_class": "ScaleTransformation",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "source_size": {
+    "width": 1536,
+    "height": 1024
+  },
+  "source_png": {
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "references": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "sha256": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "sha256": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/AxiomRing.png",
+      "sha256": "636F9FC9A7863594120FF43F3BD344525858C5836379B1ACFA3BD1225D4AB764"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+      "sha256": "207F1A5E673BE31A2199C736B1F836FD7295C205BE7B92EA9C516212798F809D"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/TangentStarlight.png",
+      "sha256": "5E986FD2094008B10479E1E6CA39FA43E0F82097610C55B4BE4FF95CE99E2FEC"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "C9CBE1DAAC9757398FB0C567CBA58EFF52988F26C15F05E9B73757625745C98A",
+  "original_file": "original.png",
+  "original_sha256": "1B20FD4527E3F40228887EFC9B934FA88AE32D4E4093C98CD02B8081766AF342",
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ScaleTransformation.png",
+  "runtime_sha256": "549033EA6D4E1B18A4325697BF1DAC1E2B0B1C945A48F7EE7780EF5DA036D481",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "vivhite_identity_and_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_or_second_character": true,
+    "ordered_five_stage_scale_transformation": true,
+    "open_asymmetric_directional_attack_read": true,
+    "abstract_nonhuman_impact_target": true,
+    "100x76_color_and_grayscale_readable": true
+  },
+  "status": "static_accepted_pending_game_validation"
+}
