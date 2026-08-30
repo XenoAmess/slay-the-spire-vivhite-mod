@@ -1,0 +1,62 @@
+{
+  "asset": "UnifiedFieldTheoryPower",
+  "semantic_name_zh": "统一场论",
+  "generation_id": "0150",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "static_rejected",
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/UnifiedFieldTheoryPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "upgraded_and_unupgraded_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, animation frame, or sprite sheet",
+    "gameplay_semantics": "Margin prevented by Cough increases global Drain; actual Drain healing creates Margin, forming a bidirectional feedback loop",
+    "required_runtime_size": [256, 256],
+    "required_runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "8F24B9092813950D410353EDCF92CAF14EAE827ABADDF37BCE0E0354DAF51BE5",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 1, 0],
+    "visible_alpha_touches_edge": true
+  },
+  "technical_gate": {
+    "prepare_tool": "tools/art/prepare_vivhite_ui_icon.gd",
+    "exit_code": 3,
+    "failure": "The native PNG has Alpha=1 at the bottom-left corner; all four source corners are required to be Alpha=0.",
+    "alpha_repair_attempted": false,
+    "prepared_256_written": false,
+    "prepared_64_written": false,
+    "prepared_32_written": false,
+    "runtime_written": false
+  },
+  "visual_review": {
+    "result": "failed",
+    "semantic_failure": "The canvas contains one large feedback-loop icon plus two additional miniature duplicate icon variants along the lower area, violating the exactly-one-icon and one-connected-silhouette contract.",
+    "main_icon_semantics": "The large icon does show a violet Margin crystal at left, a cyan life-and-drain core at right, a unified geometric center, and opposing purple-gold bridges.",
+    "sourceover_review": "Not performed because the source failed the mandatory corner-Alpha gate before deterministic adaptation.",
+    "forbidden_content": {
+      "duplicate_icon_variants": true,
+      "person_face_mouth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "blood_liquid_droplet_wound_or_vein": false,
+      "text_number_equation_or_glyph": false
+    }
+  },
+  "retry_decision": "Reject attempt 1 of 8. Preserve all paid records and the failed source. Do not repair Alpha or integrate the image. A serial retry requires a newly assigned generation ID from the main agent."
+}

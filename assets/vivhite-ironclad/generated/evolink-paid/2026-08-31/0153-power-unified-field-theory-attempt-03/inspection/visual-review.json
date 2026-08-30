@@ -1,0 +1,109 @@
+{
+  "asset": "UnifiedFieldTheoryPower",
+  "semantic_name_zh": "统一场论",
+  "generation_id": "0153",
+  "attempt": 3,
+  "attempt_limit": 8,
+  "status": "static_accepted_pending_game_validation",
+  "previous_attempts": [
+    "../0150-power-unified-field-theory-attempt-01",
+    "../0152-power-unified-field-theory-attempt-02"
+  ],
+  "consumer_contract": {
+    "runtime_path": "res://Vivhite/images/powers/UnifiedFieldTheoryPower.png",
+    "consumer": "VivhitePowerTemplate.AssetProfile",
+    "small_and_big_icon_share_same_resource": true,
+    "upgraded_and_unupgraded_share_same_resource": true,
+    "resource_kind": "one independent Power icon PNG; not an atlas, Spine attachment, region, animation frame, sprite sheet, or multi-size presentation",
+    "gameplay_semantics": "Margin prevented by Cough increases global Drain; actual Drain healing creates Margin, forming a bidirectional feedback loop",
+    "runtime_size": [256, 256],
+    "runtime_format": "RGBA8"
+  },
+  "generation_contract": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "size": "1:1",
+    "resolution": "1K",
+    "quality": "high",
+    "background": "transparent",
+    "n": 1,
+    "reference_images": [],
+    "alpha_creation_or_repair_after_generation": false
+  },
+  "source": {
+    "path": "output.png",
+    "sha256": "B2CED5C5657BEC9FE5BCC1BB87F101307C22F8F27CA934A17E07FC92D13C652A",
+    "size": [1024, 1024],
+    "format": "RGBA8",
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [65, 153, 893, 791],
+    "nonzero_alpha_pixels": 326078,
+    "opaque_pixels_alpha_at_least_250": 302267,
+    "visible_alpha_touches_edge": false
+  },
+  "accepted_preparation": {
+    "operation": "uniform RGBA Lanczos resize plus centered transparent padding; no threshold, mask, color key, Alpha repair, erosion, expansion, creative repaint, or content removal",
+    "reason": "The main agent reviewed the standard 256px, 64px, and 32px game-indigo SourceOver previews and selected the standard adaptation because it remains clear at small sizes while retaining sufficient transparent margin.",
+    "256": {
+      "path": "inspection/256/prepared-256.png",
+      "padding": 12,
+      "alpha_bbox": [19, 37, 218, 160],
+      "width_fraction": 0.8515625,
+      "corner_alpha": [0, 0, 0, 0]
+    },
+    "64": {
+      "path": "inspection/64/prepared-64.png",
+      "padding": 3,
+      "alpha_bbox": [3, 8, 58, 43],
+      "width_fraction": 0.90625,
+      "corner_alpha": [0, 0, 0, 0]
+    },
+    "32": {
+      "path": "inspection/32/prepared-32.png",
+      "padding": 2,
+      "alpha_bbox": [2, 3, 28, 23],
+      "width_fraction": 0.875,
+      "corner_alpha": [0, 0, 0, 0]
+    }
+  },
+  "audit_candidate": {
+    "status": "retained_not_selected",
+    "reason": "The central-55 adaptation is valid and remains archived, but the main agent selected the clearer standard adaptation for runtime.",
+    "paths": [
+      "inspection/central-55/256/prepared-256.png",
+      "inspection/central-55/64/prepared-64.png",
+      "inspection/central-55/32/prepared-32.png"
+    ],
+    "runtime_sha256_when_previously_staged": "B6641BA13E249FA117BA964F63C348386F381DB756949C263DEEE1DC33ACC058"
+  },
+  "visual_review": {
+    "result": "passed",
+    "sourceover_backgrounds_checked_at_each_size": [
+      "black",
+      "white",
+      "game-indigo"
+    ],
+    "sizes_checked": [256, 64, 32],
+    "sourceover_checks_passed": 9,
+    "main_agent_review_scope": "standard 256px, 64px, and 32px game-indigo SourceOver previews",
+    "visible_rectangular_halo_or_edge_pollution": false,
+    "external_emitted_light_glow_aurora_or_soft_illumination": false,
+    "semantic_result": "One connected enamel-and-gem emblem uses a violet left Margin core, cyan right life-and-drain core, unified central gemstone, and opposed upper/lower purple-cyan-gold bridges to show the closed feedback loop.",
+    "small_size_result": "At 64px and 32px the violet left node, cyan right node, central unified node, and two-way closed silhouette remain distinguishable without labels.",
+    "forbidden_content": {
+      "detached_component_or_duplicate_emblem": false,
+      "person_face_mouth_or_body_part": false,
+      "weapon_or_weapon_like_implement": false,
+      "blood_liquid_droplet_wound_or_vein": false,
+      "text_number_equation_or_glyph": false,
+      "external_glow_fog_particle_shadow_or_trail": false
+    }
+  },
+  "runtime": {
+    "path": "Vivhite/Vivhite/images/powers/UnifiedFieldTheoryPower.png",
+    "sha256": "D40A702EC7CA981EAFE3173025701284C1FA9C5236D686E44F35D9DF55F2718E",
+    "byte_identical_to": "inspection/256/prepared-256.png"
+  },
+  "retry_decision": "Accepted on attempt 3 of 8. Stop generation because native Alpha, one-connected-object semantics, standard three-size readability, sufficient transparent margin, and all nine standard SourceOver checks pass. The central-55 variant remains an unselected audit candidate. Real in-game Vulkan validation remains pending."
+}
