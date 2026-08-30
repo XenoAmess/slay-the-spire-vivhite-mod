@@ -8686,3 +8686,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：高速失血爆毙（4回合掉血70，每回合18≥14）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——爆毙证据停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.38（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
 - 生涯战绩：0/1190 胜，当前目标进阶 0
+
+## 第 1191 局复盘（2026-08-30 15:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TAUNT, EVIL_EYE, JUGGLING, HEMOKINESIS, HOWL_FROM_BEYOND, JUGGLING, ROLLING_BOULDER, RAMPAGE, STRATAGEM, TWIN_STRIKE, TAUNT, BLUDGEON, CRUELTY, BLUDGEON
+- 本局遗物：OLD_COIN, STRAWBERRY
+- 战斗记录：F6 Monster战 掉血13; F7 Monster战 掉血34; F11 Monster战 掉血19; F14 Monster战 掉血9; F15 Monster战 掉血20; F17 Boss战 掉血43｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/129局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1191 胜，当前目标进阶 0
