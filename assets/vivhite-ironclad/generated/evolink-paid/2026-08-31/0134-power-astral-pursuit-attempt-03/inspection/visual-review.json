@@ -1,0 +1,111 @@
+{
+  "status": "accepted_with_interior_low_alpha_warning",
+  "runtime_eligible": true,
+  "attempt": 3,
+  "max_attempts": 8,
+  "source_contract": {
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [94, 19, 835, 907],
+    "alpha_touches_edge": false,
+    "nonzero_alpha_pixels": 399015,
+    "opaque_pixels_alpha_ge_250": 377676,
+    "alpha_threshold_bboxes": {
+      "alpha_ge_1": [94, 19, 835, 907],
+      "alpha_ge_2": [95, 95, 834, 826],
+      "alpha_ge_4": [96, 96, 831, 824],
+      "alpha_ge_16": [97, 97, 830, 822],
+      "alpha_ge_128": [98, 97, 828, 821],
+      "alpha_ge_250": [98, 98, 827, 819]
+    },
+    "alpha_ge_1_pixels": 399015,
+    "alpha_ge_2_pixels": 394099,
+    "alpha_ge_128_pixels": 385447,
+    "alpha1_only_pixels": 4916
+  },
+  "semantic_review": {
+    "one_large_blue_butterfly_below": true,
+    "exactly_two_large_star_pages_above": true,
+    "one_short_thick_upward_gold_chevron": true,
+    "long_trajectory_absent": true,
+    "purple_margin_sphere_absent": true,
+    "closed_ring_absent": true,
+    "forbidden_subjects_or_marks": false
+  },
+  "visual_checks": {
+    "sourceover_256_black": "passed",
+    "sourceover_256_white": "passed",
+    "sourceover_256_game_indigo": "passed",
+    "sourceover_64_black": "passed; butterfly and exactly two pages remain immediately countable",
+    "sourceover_64_white": "passed",
+    "sourceover_64_game_indigo": "passed",
+    "sourceover_32_black": "passed; one butterfly below and two pages above remain distinct",
+    "sourceover_32_white": "passed",
+    "sourceover_32_game_indigo": "passed",
+    "external_visible_halo": false,
+    "rectangular_alpha_field": false,
+    "remote_low_alpha_extension": true,
+    "remote_low_alpha_is_warning_only": true
+  },
+  "prepared_contract": {
+    "size_256_alpha_bbox": [25, 33, 205, 203],
+    "size_64_alpha_bbox": [5, 7, 53, 53],
+    "size_32_alpha_bbox": [3, 2, 26, 28],
+    "operation": "uniform RGBA Lanczos resize and centered transparent padding by prepare_vivhite_ui_icon.gd; no Alpha repair"
+  },
+  "warnings": [
+    "The native source contains 4916 Alpha=1 pixels, and their A>0 bbox extends 76 pixels above the Alpha>=2 core. This remains recorded as an interior trim/packing warning.",
+    "The Alpha>=2 physical core occupies about 81 percent of source width and height instead of the requested central approximately 50 percent region.",
+    "The warning does not represent a visible halo or runtime contamination: all four native corners are Alpha=0, A>0 does not touch an edge, and every 256px, 64px, and 32px SourceOver inspection passed on black, white, and game-indigo."
+  ],
+  "superseded_rejection_record": [
+    "The solid emblem and all three requested motifs are visually excellent at 256px, 64px, and 32px, but 4916 Alpha=1 pixels extend the native A>0 top edge from y=95 for Alpha>=2 to y=19.",
+    "This 76-pixel remote Alpha=1 extension violates the explicit attempt-03 requirement that no remote low-Alpha element exist, even though it is not visibly luminous in the three SourceOver composites.",
+    "The Alpha>=2 physical core occupies about 81 percent of source width and height instead of the requested central approximately 50 percent region."
+  ],
+  "acceptance_correction": {
+    "reason": "Project AGENTS requires A>0 bbox and low-Alpha counts to be treated as risk indicators, not standalone evidence of a visible halo. Weak nonzero Alpha that does not touch an edge is not an automatic failure when real SourceOver and actual-size inspections are clean.",
+    "native_corner_alpha": [0, 0, 0, 0],
+    "native_alpha_touches_edge": false,
+    "sourceover_256_all_backgrounds": "passed",
+    "sourceover_64_all_backgrounds": "passed",
+    "sourceover_32_all_backgrounds": "passed",
+    "semantic_quality": "passed; one large blue butterfly, exactly two star-pages, and one short thick upward gold chevron are immediately readable",
+    "decision": "Accept attempt-03, retain the low-Alpha evidence as a warning, and perform no further paid retry."
+  },
+  "archive_contract": {
+    "raw_output_present": true,
+    "verbatim_prompt_present": true,
+    "sanitized_request_present": true,
+    "task_record_present": true,
+    "normalized_prompt_matches_request_input": true,
+    "request_model": "gpt-image-2",
+    "request_background": "transparent",
+    "request_n": 1,
+    "request_size": "1:1",
+    "request_resolution": "1K",
+    "request_quality": "medium"
+  },
+  "source_sha256": "29D0179F4EDA8D3607626271A89D193349F2A9617FE8B336C52074C5F72F811D",
+  "prepared_256_sha256": "7565EDAE1DAF864AD5B43BBEFB4BA45213568C35DE2366C5203E255F1904B7B9",
+  "prepared_64_sha256": "00B771489803725AEE8D0492A54FB89CF815C9E560C4025C39D528ACCC4079DF",
+  "prepared_32_sha256": "136D9125562D1249B36805B57030D44E9EBCEEE29BE471D07908BEDA0BA3A466",
+  "runtime_path": "Vivhite/Vivhite/images/powers/AstralPursuitPower.png",
+  "runtime_created": true,
+  "runtime_sha256": "7565EDAE1DAF864AD5B43BBEFB4BA45213568C35DE2366C5203E255F1904B7B9",
+  "runtime_copy_contract": {
+    "source": "inspection/256/prepared-256.png",
+    "byte_identical": true,
+    "size": [256, 256],
+    "format": "RGBA8",
+    "png_bit_depth": 8,
+    "png_color_type": 6,
+    "corner_alpha": [0, 0, 0, 0],
+    "alpha_bbox": [25, 33, 205, 203],
+    "alpha_touches_edge": false,
+    "operation": "byte-for-byte copy of the accepted deterministic adaptation; no creative change and no Alpha repair"
+  },
+  "alpha_repair_performed": false,
+  "next_action": "No further paid retry is required; the accepted deterministic 256px adaptation is integrated at the runtime path."
+}
