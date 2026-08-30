@@ -8499,3 +8499,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.39（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
 - 生涯战绩：0/1173 胜，当前目标进阶 0
+
+## 第 1174 局复盘（2026-08-30 12:00）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：INFLAME, FIGHT_ME, ANGER, ANGER, INFLAME
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血0; F6 Unknown战 掉血17; F8 Unknown战 掉血42｜竞速审计：T3判死→实战6回合获胜; F12 Monster战 掉血16; F13 Unknown战 掉血22（阵亡）
+- 当前高价值卡牌：FIEND_FIRE(25分/44局)，BRAND(25分/3局)，OFFERING(25分/33局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/128局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（3回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕
+- 生涯战绩：0/1174 胜，当前目标进阶 0
