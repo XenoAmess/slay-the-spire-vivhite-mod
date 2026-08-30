@@ -45,7 +45,7 @@ def _write_store(root: Path, prefix: str, run_count: int = 3) -> None:
 
 class NestedProfileClassifierTests(unittest.TestCase):
     def test_nested_profile_runtime_is_partitioned_without_hiding_static_files(self) -> None:
-        profile = "sts2-ascend/knowledge/characters/vivhite"
+        profile = "sts2-ascend/knowledge/profiles/vivhite"
         online = [
             f"{profile}/runs/run-1.json",
             f"{profile}/archive/manifest.json",
@@ -55,6 +55,8 @@ class NestedProfileClassifierTests(unittest.TestCase):
             f"{profile}/progression.json",
             f"{profile}/lessons.md",
             f"{profile}/review_queue.json",
+            f"{profile}/review_prompt_latest.md",
+            f"{profile}/brain.log",
             f"{profile}/.compact.lock",
         ]
         for path in online:
@@ -68,6 +70,8 @@ class NestedProfileClassifierTests(unittest.TestCase):
 
         for path in (
             f"{profile}/strategy.md",
+            f"{profile}/meta_review.md",
+            f"{profile}/review_conclusion.txt",
             "sts2-ascend/knowledge/game/v0.111.0/research.log",
             "sts2-ascend/knowledge/curated/analysis.LOCK",
         ):
@@ -89,7 +93,7 @@ class NestedProfileAutogitTests(unittest.TestCase):
         self.repo.mkdir()
         self.base = self.repo / "sts2-ascend"
         self.root_store = self.base / "knowledge"
-        self.profile_store = self.root_store / "characters" / "vivhite"
+        self.profile_store = self.root_store / "profiles" / "vivhite"
         _write_store(self.root_store, "ROOT", run_count=1)
         _write_store(self.profile_store, "PROFILE", run_count=1)
         (self.profile_store / "strategy.md").write_text("baseline\n", encoding="utf-8")
@@ -136,11 +140,11 @@ class NestedProfileAutogitTests(unittest.TestCase):
         ).stdout.splitlines())
         self.assertIn("sts2-ascend/knowledge/stats.json", committed)
         self.assertIn(
-            "sts2-ascend/knowledge/characters/vivhite/stats.json", committed)
+            "sts2-ascend/knowledge/profiles/vivhite/stats.json", committed)
         self.assertIn(
-            "sts2-ascend/knowledge/characters/vivhite/runs/profile-2.json", committed)
+            "sts2-ascend/knowledge/profiles/vivhite/runs/profile-2.json", committed)
         self.assertNotIn(
-            "sts2-ascend/knowledge/characters/vivhite/strategy.md", committed)
+            "sts2-ascend/knowledge/profiles/vivhite/strategy.md", committed)
         self.assertIn("strategy.md", self._git("status", "--short").stdout)
 
 
@@ -149,7 +153,7 @@ class NestedProfileCompactionTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="sts2-nested-compact-")
         self.project = Path(self.temp.name) / "sts2-ascend"
         self.root_store = self.project / "knowledge"
-        self.profile_store = self.root_store / "characters" / "vivhite"
+        self.profile_store = self.root_store / "profiles" / "vivhite"
         _write_store(self.root_store, "ROOT")
         _write_store(self.profile_store, "PROFILE")
         self.options = compact_knowledge.CompactionOptions(

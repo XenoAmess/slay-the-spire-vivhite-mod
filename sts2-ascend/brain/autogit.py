@@ -103,12 +103,7 @@ _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES = frozenset({
 })
 _REVIEW_ONLINE_KNOWLEDGE_SUFFIXES = (".flag", ".lock", ".log", ".stream")
 _REVIEW_ONLINE_KNOWLEDGE_PREFIXES = ("review_prompt", "screenshot")
-_REVIEW_CHARACTER_PROFILE_CONTAINERS = frozenset({
-    "characters",
-    "character_profiles",
-    "profiles",
-})
-_REVIEW_PROFILE_EXACT_RUNTIME_NAMES = frozenset({".compact.lock"})
+_REVIEW_CHARACTER_PROFILE_CONTAINERS = frozenset({"profiles"})
 
 _GIT_LOCK = threading.RLock()
 _LOCK_STATE = threading.local()
@@ -394,7 +389,7 @@ def _character_profile_relative(
     return None
 
 
-def _is_online_knowledge_tail(relative: tuple[str, ...], *, profile: bool) -> bool:
+def _is_online_knowledge_tail(relative: tuple[str, ...]) -> bool:
     if not relative:
         return False
     if relative[0] in _REVIEW_ONLINE_KNOWLEDGE_DIRS:
@@ -406,8 +401,6 @@ def _is_online_knowledge_tail(relative: tuple[str, ...], *, profile: bool) -> bo
     if any(state_name == stem or state_name.startswith(stem + ".")
            for stem in _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES):
         return True
-    if profile:
-        return name in _REVIEW_PROFILE_EXACT_RUNTIME_NAMES
     if name.endswith(_REVIEW_ONLINE_KNOWLEDGE_SUFFIXES):
         return True
     return any(name == prefix or any(name.startswith(prefix + separator)
@@ -468,11 +461,11 @@ def classify_review_path(path: str | os.PathLike[str]) -> str:
         return REVIEW_PATH_ONLINE_RUNTIME
     if len(relative) >= 2 and relative[0] == "knowledge":
         knowledge_relative = relative[1:]
-        if _is_online_knowledge_tail(knowledge_relative, profile=False):
+        if _is_online_knowledge_tail(knowledge_relative):
             return REVIEW_PATH_ONLINE_RUNTIME
         profile_relative = _character_profile_relative(knowledge_relative)
         if (profile_relative is not None
-                and _is_online_knowledge_tail(profile_relative, profile=True)):
+                and _is_online_knowledge_tail(profile_relative)):
             return REVIEW_PATH_ONLINE_RUNTIME
     return REVIEW_PATH_ACCEPTED
 
