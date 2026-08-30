@@ -26,6 +26,7 @@ from pathlib import Path
 import autogit
 from lifecycle import (SESSION_ID, clear_stop_request, pid_file, request_stop,
                        pid_path, read_git_head, stop_requested, wait_for_stop)
+from manual_control import GlobalHotkeyController
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
@@ -849,4 +850,9 @@ if __name__ == "__main__":
     if "--clear-stop" in sys.argv and SESSION_ID == "legacy":
         clear_stop_request()
     with pid_file("runner"):
-        sys.exit(main())
+        hotkeys = GlobalHotkeyController(log)
+        hotkeys.start()
+        try:
+            sys.exit(main())
+        finally:
+            hotkeys.close()

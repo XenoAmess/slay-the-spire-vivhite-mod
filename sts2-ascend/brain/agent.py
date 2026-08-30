@@ -29,6 +29,8 @@ from knowledge import Knowledge
 from lifecycle import (mark_pid_stage, pid_file, read_git_head, request_stop,
                        stop_requested, wait_for_stop)
 from live_dashboard import LiveDashboardPublisher
+from manual_control import (BrainControlPaused, PAUSE_HOTKEY, RESUME_HOTKEY,
+                            read_control_state)
 from policy import Decision, Policy
 from reflect import finalize_run
 
@@ -296,6 +298,10 @@ class RunContext:
     # observed a genuine between-run screen. A mid-run reconnect validates only
     # the tail of that run and must keep rollback protection intact.
     review_health_eligible: bool = False
+    # A run touched while the global stop hotkey owns control is a mixed human/AI
+    # sample.  Keep its partial audit trail, but never feed its terminal floor,
+    # choices or outcome into autonomous balance statistics or LLM review.
+    human_assisted: bool = False
 
     def reset_for(self, run_id: str, ascension: int, run_number: int = 0):
         self.__init__(run_id=run_id, ascension=ascension, run_number=run_number,
@@ -334,6 +340,14 @@ class Agent:
         self._api_race_retry = None  # repeated refresh races, diagnostic only
         self.live_dashboard: LiveDashboardPublisher | None = None
         self.dashboard_supervisor = None
+        initial_control = read_control_state()
+        self._manual_pause_active = False
+        self._manual_run_ids: set[str] = set()
+        # An enabled inherited session has already acknowledged its prior pause
+        # epochs.  A child born while paused must still observe the current epoch.
+        self._seen_pause_generation = (
+            initial_control.pause_generation if initial_control.enabled
+            else max(0, initial_control.pause_generation - 1))
 
     def _activate_profile(self, profile: CharacterProfile) -> None:
         """Expose one character's paired Knowledge/Policy as the active runtime."""
@@ -405,14 +419,18 @@ class Agent:
                 return None
 
             self._activate_profile(profile)
-            try:
-                rotation.observe_active_run(str(run_id), str(character_id))
-                self._rotation_runtime_error = None
-            except CharacterRotationError as exc:
-                error = f"observe_active_run_failed:{run_id}:{character_id}:{exc}"
-                if getattr(self, "_rotation_runtime_error", None) != error:
-                    self._rotation_runtime_error = error
-                    log(f"[agent] 角色轮换状态错误：{error}")
+            # A run first seen under manual control is not an autonomous quota
+            # candidate.  Binding its profile is still required so the Brain can
+            # safely resume it, but it must not occupy/advance the scheduler.
+            if str(run_id) not in getattr(self, "_manual_run_ids", set()):
+                try:
+                    rotation.observe_active_run(str(run_id), str(character_id))
+                    self._rotation_runtime_error = None
+                except CharacterRotationError as exc:
+                    error = f"observe_active_run_failed:{run_id}:{character_id}:{exc}"
+                    if getattr(self, "_rotation_runtime_error", None) != error:
+                        self._rotation_runtime_error = error
+                        log(f"[agent] 角色轮换状态错误：{error}")
 
             if ctx is not None:
                 ctx.profile_id = profile.profile_id
@@ -504,13 +522,14 @@ class Agent:
             except (OSError, json.JSONDecodeError):
                 pass
 
-    def _dashboard_observe(self, state: dict) -> None:
+    def _dashboard_observe(self, state: dict, *, connection: str = "connected",
+                           message: str = "") -> None:
         publisher = self.live_dashboard
         if publisher is None:
             return
         try:
             publisher.observe(state, run_number=self.ctx.run_number,
-                              connection="connected")
+                              connection=connection, message=message)
         except Exception:
             pass
 
@@ -545,6 +564,117 @@ class Agent:
                 decision_id=getattr(decision, "_dashboard_decision_id", None))
         except Exception:
             pass
+
+    # ---------------- manual takeover hotkeys ----------------
+
+    @staticmethod
+    def _state_run_identity(state: dict) -> str:
+        run = state.get("run") or {}
+        return str(state.get("run_id") or run.get("run_id") or "").strip()
+
+    def _mark_manual_takeover(self, state: dict, *, source: str) -> str:
+        """Mark every run straddling a human-control boundary as non-learning."""
+        ctx = self.ctx
+        current_run_id = self._state_run_identity(state)
+        ctx_run_id = str(getattr(ctx, "run_id", "") or "").strip()
+        changed = False
+
+        # The previous autonomous context is also mixed if the human crossed a
+        # run boundary before the paused reader observed the replacement state.
+        if (ctx_run_id and ctx_run_id != "run_unknown"
+                and not bool(getattr(ctx, "run_finalized", False))):
+            self._manual_run_ids.add(ctx_run_id)
+            if not bool(getattr(ctx, "human_assisted", False)):
+                ctx.human_assisted = True
+                changed = True
+
+        if current_run_id:
+            self._manual_run_ids.add(current_run_id)
+            if ctx_run_id in ("", "run_unknown") and hasattr(ctx, "reset_for"):
+                run = state.get("run") or {}
+                ascension = int(run.get("ascension", 0) or 0)
+                next_run = int((getattr(self.know, "stats", {}) or {}).get(
+                    "global", {}).get("runs", 0) or 0) + 1
+                ctx.reset_for(current_run_id, ascension, next_run)
+                ctx.character_id = str(run.get("character_id") or "")
+                ctx.profile_run_number = next_run
+                ctx.human_assisted = True
+                changed = True
+            elif ctx_run_id == current_run_id and not bool(
+                    getattr(ctx, "human_assisted", False)):
+                ctx.human_assisted = True
+                changed = True
+
+        if changed:
+            try:
+                run = state.get("run") or {}
+                self._save_run_progress(run, force=True)
+            except Exception as exc:
+                log(f"[agent] 人工接管标记增量存档失败（仍保持停手）：{exc}")
+            log(
+                f"[agent] 当前局 {current_run_id or ctx_run_id or 'none'} "
+                f"已标记为人工接管样本（{source}），不计入自动平衡/复盘")
+        return current_run_id
+
+    def _manual_control_blocks(self, state: dict) -> bool:
+        """Observe pause epochs and return whether gameplay actions are forbidden."""
+        snapshot = read_control_state()
+        seen = int(getattr(self, "_seen_pause_generation", 0) or 0)
+        if snapshot.pause_generation > seen:
+            self._mark_manual_takeover(state, source=snapshot.source)
+        self._seen_pause_generation = max(seen, snapshot.pause_generation)
+
+        if (not self._state_run_identity(state)
+                and state.get("screen") in ("MAIN_MENU", "CHARACTER_SELECT")
+                and bool(getattr(self.ctx, "human_assisted", False))
+                and not bool(getattr(self.ctx, "run_finalized", False))):
+            floor = (self.ctx.decisions[-1].get("floor", 0)
+                     if self.ctx.decisions else 0)
+            self._exclude_human_assisted_run(victory=False, floor=floor)
+
+        if snapshot.paused:
+            self._mark_manual_takeover(state, source=snapshot.source)
+            if not getattr(self, "_manual_pause_active", False):
+                self._manual_pause_active = True
+                detail = f"（状态异常：{snapshot.error}）" if snapshot.error else ""
+                log(
+                    f"[agent] Brain 已停止发送游戏操作{detail}；"
+                    f"{RESUME_HOTKEY} 恢复，{PAUSE_HOTKEY} 保持人工接管")
+            return True
+
+        if getattr(self, "_manual_pause_active", False):
+            self._manual_pause_active = False
+            log(f"[agent] Brain 已由 {RESUME_HOTKEY} 恢复自主操作")
+            self._dashboard_connection("connected", "Brain 已恢复自主操作")
+        return False
+
+    def _exclude_human_assisted_run(self, *, victory: bool, floor: int) -> None:
+        """Close a mixed run without mutating autonomous stats, policy or quota."""
+        if self.ctx.run_finalized:
+            return
+        run_id = str(self.ctx.run_id or "run_unknown")
+        self.ctx.human_assisted = True
+        self._manual_run_ids.add(run_id)
+        # Preserve the partial evidence as in-progress/excluded.  Existing floor
+        # statistics and LLM packet builders already omit in-progress logs.
+        try:
+            self._save_run_progress({"floor": int(floor or 0)}, force=True)
+        except Exception as exc:
+            log(f"[agent] 人工接管局审计存档失败：{exc}")
+        self.ctx.run_finalized = True
+        self.ctx.finalize_requested = False
+        self.ctx.combat = None
+        self.ctx.combat_agg = None
+        rotation = getattr(self, "rotation", None)
+        if rotation is not None and run_id != "run_unknown":
+            try:
+                rotation.release_human_controlled_run(run_id)
+            except CharacterRotationError as exc:
+                log(f"[agent] 人工接管局释放轮换身份失败：{exc}")
+        result = "胜利" if victory else "结束"
+        log(
+            f"[agent] 人工接管局 {run_id} 已{result}于 F{int(floor or 0)}；"
+            "不增加局数、不更新平均/最高楼层、不进入 LLM 复盘，轮换配额保持原位")
 
     # ---------------- quipper（白绮碎碎念） ----------------
 
@@ -706,10 +836,20 @@ class Agent:
         # 新进程会把旧 run_id 回声当成新对局，随后在 GAME_OVER 上二次结算出
         # 零决策幻影局（第 19/26/42/51 局四次实证，生涯统计被灌水 4 局 56 层）
         if run_id != self.ctx.run_id and screen not in ("MAIN_MENU", "GAME_OVER") and run:
-            if self.ctx.run_id != "run_unknown" and not self.ctx.run_finalized and self.ctx.decisions:
-                # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
-                log("[agent] 检测到上一局异常结束，按失败归档")
-                self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
+            if (self.ctx.run_id != "run_unknown" and not self.ctx.run_finalized
+                    and (self.ctx.decisions
+                         or bool(getattr(self.ctx, "human_assisted", False)))):
+                if bool(getattr(self.ctx, "human_assisted", False)):
+                    # Human play can return to menu or start another run while the
+                    # Brain is paused.  Never reinterpret that gap as an AI loss.
+                    self._exclude_human_assisted_run(
+                        victory=False,
+                        floor=(self.ctx.decisions[-1].get("floor", 0)
+                               if self.ctx.decisions else 0))
+                else:
+                    # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
+                    log("[agent] 检测到上一局异常结束，按失败归档")
+                    self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
                 # A pending review could not restart at the menu because the old
                 # context still needed this loss finalization. The replacement run
                 # has not been accepted or acted on yet, so hand it to the reloaded
@@ -731,6 +871,8 @@ class Agent:
                 or getattr(profile, "character_id", "IRONCLAD"))
             self.ctx.profile_run_number = next_run
             self.ctx.review_health_eligible = review_health_eligible
+            self.ctx.human_assisted = str(run_id) in getattr(
+                self, "_manual_run_ids", set())
             self._review_health_ready_for_new_run = False
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
             # 断线重连续接局史（第 218 批复盘）：大脑在局中途崩溃/签名故障自杀后，
@@ -757,6 +899,9 @@ class Agent:
                 if prior_run_number:
                     self.ctx.run_number = int(prior_run_number)
                     self.ctx.profile_run_number = self.ctx.run_number
+                if prior.get("human_assisted") or prior.get("excluded_from_learning"):
+                    self.ctx.human_assisted = True
+                    self._manual_run_ids.add(str(run_id))
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
                     f"{len(self.ctx.combat_notes)} 条战斗记录 / "
                     f"{len(self.ctx.attribution_tags)} 条长期归因）")
@@ -1678,6 +1823,9 @@ class Agent:
                 "decisions": self.ctx.decisions,
                 "combat_notes": self.ctx.combat_notes,
                 "attribution_tags": attribution_tags,
+                "human_assisted": bool(getattr(self.ctx, "human_assisted", False)),
+                "excluded_from_learning": bool(
+                    getattr(self.ctx, "human_assisted", False)),
             })
         except OSError:
             pass
@@ -2008,6 +2156,9 @@ class Agent:
 
     def _finalize(self, victory: bool, floor: int) -> None:
         if self.ctx.run_finalized:
+            return
+        if bool(getattr(self.ctx, "human_assisted", False)):
+            self._exclude_human_assisted_run(victory=victory, floor=floor)
             return
         rotation = getattr(self, "rotation", None)
         if rotation is not None and self.ctx.run_id != "run_unknown":
@@ -2360,6 +2511,17 @@ class Agent:
                     return
                 continue
 
+            # Read-only polling stays alive so the dashboard can show the exact
+            # human-owned run, but no profile tracking, policy evaluation or POST
+            # may occur while the global stop hotkey is active.
+            if self._manual_control_blocks(state):
+                self._dashboard_observe(
+                    state, connection="paused",
+                    message=f"人工接管中 · {RESUME_HOTKEY} 启动 Brain")
+                if wait_for_stop(0.2):
+                    return
+                continue
+
             # An active run is always bound from the API's actual character.  On
             # CHARACTER_SELECT only, the durable next target selects the matching
             # profile so ascension/policy data stay character-local.
@@ -2437,6 +2599,10 @@ class Agent:
                     sys.exit(42)
                 if stop_requested():
                     return
+                if self._manual_control_blocks(state):
+                    self._dashboard_outcome(
+                        "paused", "人工接管已在动作发送前生效", decision)
+                    continue
                 try:
                     resp = self.client.act(decision.action, **decision.params)
                     status = resp.get("status", "?") if isinstance(resp, dict) else "?"
@@ -2475,6 +2641,17 @@ class Agent:
                             self._dashboard_outcome(
                                 "applied", f"动作已生效；本地记账失败：{exc}", decision)
                             log(f"  ↳ 动作 {decision.action} 已成功，但本地记账失败：{exc}")
+                except BrainControlPaused:
+                    # The client owns the final pre-POST gate, closing the small
+                    # interval between policy evaluation and this call.
+                    self._mark_manual_takeover(state, source="client-action-gate")
+                    self._manual_pause_active = True
+                    self._dashboard_outcome(
+                        "paused", "人工接管已阻止动作发送", decision)
+                    self._dashboard_connection(
+                        "paused", f"人工接管中 · {RESUME_HOTKEY} 启动 Brain")
+                    log("[agent] 人工接管在最后发送闸门阻止了一次待执行动作")
+                    continue
                 except ConnectionDown:
                     self._dashboard_connection("disconnected", "动作执行时断线")
                     log("[agent] 动作执行时断线")

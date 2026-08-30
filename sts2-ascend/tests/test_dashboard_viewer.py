@@ -174,6 +174,18 @@ class DashboardSourceTests(unittest.TestCase):
         texts = [call.kwargs.get("text", "")
                  for call in viewer.canvas.create_text.call_args_list]
         self.assertIn("AUTO/LIVE · 白绮 · #1 · F4 · COMBAT", texts)
+        self.assertIn("Ctrl+Alt+F9 停止 Brain · Ctrl+Alt+F10 启动", texts)
+
+        viewer.canvas.reset_mock()
+        viewer.dashboard["connection"] = {
+            "status": "paused", "message": "人工接管中"}
+        review_viewer.Viewer._render_hud(viewer, 101.0)
+        paused_texts = [call.kwargs.get("text", "")
+                        for call in viewer.canvas.create_text.call_args_list]
+        self.assertIn("HUMAN/LIVE · 白绮 · #1 · F4 · COMBAT", paused_texts)
+        self.assertIn("人工接管中 · Ctrl+Alt+F10 启动 Brain", paused_texts)
+        self.assertEqual(
+            review_viewer.Viewer._status_color("paused"), review_viewer.GOLD)
 
     def test_auto_page_is_state_driven_and_never_rotates(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)

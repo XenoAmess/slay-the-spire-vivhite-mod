@@ -1146,7 +1146,7 @@ class Viewer:
         if key in {"pass", "chosen", "selected", "applied", "online", "connected", "ok", "success"}:
             return CYAN
         if key in {"pending", "proposed", "waiting", "wait", "starting", "reconnecting",
-                   "reconciling", "uncertain", "warn"}:
+                   "reconciling", "uncertain", "warn", "paused", "manual"}:
             return GOLD
         if key in {"reject", "rejected", "failed", "error", "offline", "disconnected",
                    "retrying", "locked"}:
@@ -1531,15 +1531,17 @@ class Viewer:
             profile_label = self._active_profile_label(dash, stats)
             decision = dash.get("decision") if isinstance(dash.get("decision"), dict) else {}
             number = run.get("run_number") or self.run_no
-            mode_tag = (("MANUAL/" if self._manual_page else "AUTO/")
-                        + self._view_page)
+            connection = dash.get("connection") if isinstance(dash.get("connection"), dict) else {}
+            conn_status = "stale" if dash.get("_stale") else connection.get("status") or "waiting"
+            mode_tag = ("HUMAN/" + self._view_page
+                        if str(conn_status).lower() == "paused"
+                        else (("MANUAL/" if self._manual_page else "AUTO/")
+                              + self._view_page))
             if self.mode == "demo":
                 mode_tag = "DEMO/" + self._view_page
             subline = (f"{mode_tag} · {profile_label} · #{number or '—'}"
                        f" · F{self._metric(run.get('floor'), 0)}"
                        f" · {str(run.get('screen') or 'WAITING').upper()}")
-            connection = dash.get("connection") if isinstance(dash.get("connection"), dict) else {}
-            conn_status = "stale" if dash.get("_stale") else connection.get("status") or "waiting"
             detail = (f"{str(decision.get('status') or 'waiting').upper()} · "
                       f"{self._one_line(connection.get('message') or '等待智能体快照', 28)}")
             state_color = self._status_color(conn_status)
@@ -1568,11 +1570,13 @@ class Viewer:
             c.create_rectangle(4, footer_y, WIN_W - 4, self.win_h - 4,
                                fill="#061423", outline=CYAN_DARK, tags="hud")
             stale = bool((self.dashboard or {}).get("_stale"))
-            if self.interactive:
+            if str(conn_status).lower() == "paused":
+                footer = "人工接管中 · Ctrl+Alt+F10 启动 Brain"
+            elif self.interactive:
                 footer = "1 LIVE · 2 TREND · 3 REVIEW · 0 AUTO"
             else:
                 footer = ("AUTO · SNAPSHOT STALE · 等待自愈" if stale
-                          else "AUTO · TOPMOST · NO-ACTIVATE · CLICK-THROUGH")
+                          else "Ctrl+Alt+F9 停止 Brain · Ctrl+Alt+F10 启动")
             c.create_text(12, footer_y + 10, anchor="nw", text=footer,
                           fill=RED if stale else DIM, font=self.font_tiny, tags="hud")
         # SELFCHECK 金色闪光

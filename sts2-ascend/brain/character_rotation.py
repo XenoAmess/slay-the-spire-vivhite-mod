@@ -601,6 +601,32 @@ class CharacterRotation:
             self._save_unlocked(updated)
             return _snapshot(updated, counts)
 
+    def release_human_controlled_run(self, run_id: object) -> RotationSnapshot:
+        """Forget one human-controlled active run without consuming a quota slot.
+
+        Manual takeover runs are deliberately excluded from autonomous balance
+        statistics.  They therefore cannot satisfy ``record_terminal``'s contract
+        that character stats were durably committed first.  Releasing only the
+        exact matching active identity keeps the scheduler on the same character
+        slot and prevents a later character-select screen from remaining blocked.
+        """
+        normalized_run_id = _normalize_run_id(run_id)
+        with self._lock:
+            state, counts, dirty = self._load_unlocked(reconcile_idle=False)
+            active = state["active_run"]
+            if active is None:
+                if dirty:
+                    self._save_unlocked(state)
+                return _snapshot(state, counts)
+            if active["run_id"] != normalized_run_id:
+                raise CharacterRotationError(
+                    f"cannot release human-controlled run {normalized_run_id!r}; "
+                    f"unresolved active run is {active['run_id']!r}")
+            updated = dict(state)
+            updated["active_run"] = None
+            self._save_unlocked(updated)
+            return _snapshot(updated, counts)
+
     def record_terminal(
             self, run_id: object, *, terminal_persisted: bool,
             character_id: object | None = None) -> TerminalResult:

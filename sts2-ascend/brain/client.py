@@ -15,6 +15,8 @@ import time
 import urllib.error
 import urllib.request
 
+from manual_control import ensure_action_allowed
+
 
 class ApiError(RuntimeError):
     def __init__(self, code: str, message: str, status: int = 0, retryable: bool = False):
@@ -77,6 +79,10 @@ class Sts2Client:
 
     def act(self, action: str, *, card_index=None, target_index=None, option_index=None, command=None,
             x=None, y=None, tool=None) -> dict:
+        # This is the final boundary before any gameplay POST.  Agent also gates
+        # its decision loop, but keeping the check here covers every future caller
+        # and narrows a hotkey race to an already in-flight request.
+        ensure_action_allowed()
         payload = {
             "action": action,
             "card_index": card_index,
