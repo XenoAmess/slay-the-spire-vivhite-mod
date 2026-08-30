@@ -18,16 +18,19 @@ from dataclasses import dataclass, field
 from character_strategy import (
     CardCatalogEntry,
     CharacterStrategy,
-    drain_healing_from_actual_damage,
+    SELECTION_COPY_FREE_BEST,
+    SELECTION_DISCARD_WORST,
+    SELECTION_RECOVER_COPY_BEST,
+    SELECTION_RECOVER_FREE_BEST,
+    SELECTION_TOPDECK_BEST,
+    character_build_synergy,
+    character_card_has_terminal_life_cost_lock,
+    character_power_amount,
+    character_selection_value,
+    estimate_character_card,
     resolve_character_strategy,
-    score_drain_healing,
-    score_draw,
-    score_energy,
-    score_growth,
-    score_kill_healing,
-    score_life_cost,
-    score_margin,
-    score_permanent_max_hp,
+    resolve_character_card_numbers,
+    resolve_character_selection_mode,
     score_realized_mechanics,
 )
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace
@@ -457,67 +460,30 @@ class Policy:
     def _character_static_card_estimate(
             self, card: dict, *, current_hp: int | float | None = None,
             max_hp: int | float | None = None,
-            observed_target_count: int | None = None) -> tuple[float, str]:
-        """Score catalog mechanics when the API has no realized-effect payload.
+            observed_target_count: int | None = None,
+            enemies: list[dict] | None = None,
+            target_index: int | None = None,
+            player_powers: list[dict] | None = None,
+            energy: int | float | None = None,
+            hand_cards: list[dict] | None = None,
+            deck_cards: list[dict] | None = None,
+            cards_played_this_turn: int | None = None) -> tuple[float, str]:
+        """Delegate character-only pre-action mechanics to its profile layer."""
 
-        This is a pre-action estimate, not telemetry.  Printed life cost is used
-        as the estimated HP payment because live Margin is not exposed; flat
-        drain uses nominal printed damage because post-block/overkill HP loss and
-        the accumulated combat drain rate are likewise unavailable.
-        """
-        entry = self._strategy_card(card)
-        if entry is None:
-            return 0.0, ""
-
-        mechanics = entry.mechanics
-        parameters = self.strategy_parameters
-        if current_hp is None or max_hp is None:
-            life_score = (
-                mechanics.life_calculation_cost * parameters.life_cost_weight)
-            hp_context = "hp-context-unobserved"
-        else:
-            life_score = score_life_cost(
-                parameters,
-                mechanics.life_calculation_cost,
-                current_hp=current_hp,
-                max_hp=max_hp,
-            )
-            hp_context = "hp-context-observed"
-
-        target_count = 1
-        if mechanics.all_enemies and observed_target_count is not None:
-            if observed_target_count < 0:
-                raise ValueError("observed_target_count cannot be negative")
-            target_count = observed_target_count
-        nominal_damage = (
-            mechanics.base_damage * mechanics.damage_hits * target_count)
-        estimated_drain_healing = 0.0
-        if (mechanics.drain_percent_mode == "flat"
-                and mechanics.drain_percent and nominal_damage):
-            estimated_drain_healing = drain_healing_from_actual_damage(
-                nominal_damage, mechanics.drain_percent)
-
-        estimate = sum((
-            life_score,
-            score_margin(parameters, mechanics.margin_gain),
-            score_drain_healing(
-                parameters,
-                estimated_drain_healing,
-                drain_percent=mechanics.drain_percent,
-            ),
-            score_permanent_max_hp(
-                parameters, mechanics.max_hp_growth),
-            score_kill_healing(parameters, mechanics.kill_heal),
-            score_draw(parameters, mechanics.draw + mechanics.kill_draw),
-            score_energy(
-                parameters, mechanics.energy_gain + mechanics.kill_energy),
-            score_growth(parameters, mechanics.growth),
-        ))
-        note = (
-            f"VIVHITE_STATIC_ESTIMATE={estimate:+.2f}"
-            f"[{entry.stable_id};{hp_context};catalog-nominal,"
-            "not-realized-margin/drain/kill-telemetry]")
-        return estimate, note
+        return estimate_character_card(
+            self.character_strategy,
+            card,
+            current_hp=current_hp,
+            max_hp=max_hp,
+            observed_target_count=observed_target_count,
+            enemies=enemies,
+            target_index=target_index,
+            player_powers=player_powers,
+            energy=energy,
+            hand_cards=hand_cards,
+            deck_cards=deck_cards,
+            cards_played_this_turn=cards_played_this_turn,
+        )
 
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
@@ -2664,6 +2630,11 @@ class Policy:
                     for card in hand:
                         if self._card_unavailable(card):
                             continue
+                        if character_card_has_terminal_life_cost_lock(
+                                self.character_strategy, card,
+                                current_hp=my_hp,
+                                player_powers=player.get("powers") or []):
+                            continue
                         cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
                         if cost < 0 or cost > energy:
                             continue
@@ -3283,12 +3254,21 @@ class Policy:
                                                    race_blk_floor=race_blk_floor,
                                                    all_respawn=all_respawn,
                                                    run_deck=(state.get("run") or {}).get("deck"),
-                                                   block_locked=block_locked)
+                                                   block_locked=block_locked,
+                                                   player_powers=player.get("powers") or [],
+                                                   observed_hand_count=len(hand))
             character_estimate, character_note = self._character_static_card_estimate(
                 c,
                 current_hp=my_hp,
                 max_hp=my_max_hp,
                 observed_target_count=len(enemies),
+                enemies=enemies,
+                target_index=target,
+                player_powers=player.get("powers") or [],
+                energy=energy,
+                hand_cards=hand,
+                deck_cards=(state.get("run") or {}).get("deck") or [],
+                cards_played_this_turn=player.get("cards_played_this_turn"),
             )
             score += character_estimate
             if character_note:
@@ -3549,7 +3529,9 @@ class Policy:
                     min_blk_cost: int = 99, cur_energy: int = 0, hopeless_race: bool = False,
                     kill_race: bool = False, race_blk_floor: bool = False,
                     all_respawn: bool = False,
-                    run_deck: list[dict] | None = None, block_locked: bool = False):
+                    run_deck: list[dict] | None = None, block_locked: bool = False,
+                    player_powers: list[dict] | None = None,
+                    observed_hand_count: int | None = None):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -3580,10 +3562,22 @@ class Policy:
         解除能量预留并提速输出；与孤注一掷互斥触发提速，避免双重放大。
         """
         dmg, block, hits = card_numbers(card)
+        dmg, block, hits = resolve_character_card_numbers(
+            self.character_strategy,
+            card,
+            dmg,
+            block,
+            hits,
+            energy=cur_energy,
+            margin=character_power_amount(
+                player_powers, "VIVHITE_POWER_INFINITE_MARGIN_POWER"),
+            hand_count=observed_hand_count,
+            player_powers=player_powers,
+        )
         declared_block = block
         if block_locked:
             block = 0
-        cost = card.get("energy_cost", 0)
+        cost = cur_energy if card.get("costs_x") else card.get("energy_cost", 0)
         text = _text(card)
         aoe = ("所有敌人" in text or "all enemies" in text.lower()
                or (card.get("target_type") or "") == "AllEnemies")
@@ -5370,7 +5364,20 @@ class Policy:
         if self._leak_death_blocked(card):
             return float(pol.get("leak_death_value", -30.0))
         dmg, block, hits = card_numbers(card)
-        cost = card.get("energy_cost", 0)
+        dmg, block, hits = resolve_character_card_numbers(
+            self.character_strategy,
+            card,
+            dmg,
+            block,
+            hits,
+            energy=3,
+            margin=0,
+            hand_count=5,
+        )
+        # Draft evaluation uses the native three-energy turn as X's nominal
+        # baseline, matching the hit expansion above instead of treating an
+        # X-cost attack as a free card.
+        cost = 3 if card.get("costs_x") else card.get("energy_cost", 0)
         value = 0.0
 
         # --- 卡组形态上下文 ---
@@ -5581,10 +5588,16 @@ class Policy:
             card,
             current_hp=current_hp,
             max_hp=max_hp,
+            deck_cards=deck,
         )
         value += character_estimate
         if detail is not None and character_note:
             detail.append(character_note)
+        synergy, synergy_note = character_build_synergy(
+            self.character_strategy, card, deck)
+        value += synergy
+        if detail is not None and synergy_note:
+            detail.append(synergy_note)
         return value
 
     def _reward(self, state: dict, ctx) -> Decision:
@@ -5800,20 +5813,56 @@ class Policy:
 
         upgrading = "upgrade" in kind or "升级" in prompt or "锻造" in prompt
         transforming = "transform" in kind or "变化" in prompt
+        reward = state.get("reward") or {}
+        reward_pending = bool(
+            reward.get("pending_card_choice")
+            and (reward.get("card_options") or "skip_reward_cards" in actions))
+        character_selection_mode = resolve_character_selection_mode(
+            self.character_strategy,
+            kind=kind,
+            prompt=prompt,
+            reward_pending=reward_pending,
+        )
         # 牌堆顶选择（第 82~83 批复盘）：头槌系攻击命中后要求"从弃牌堆选一张
         # 置于抽牌堆顶"——选最强牌正是正确语义，但它不是拿牌，不得计入
         # card_pick 污染信用账本（第 83 局实证：一局内头槌多次触发，暴走被
         # 记成 9 拿，卡牌学习数据的 picked/outcome_sum 被系统性灌水）
-        top_of_pile = any(k in blob for k in ("抽牌堆", "弃牌堆", "牌堆顶", "置顶",
-                                              "draw pile", "discard pile", "top of"))
+        top_of_pile = (
+            character_selection_mode == SELECTION_TOPDECK_BEST
+            or (not reward_pending and any(k in blob for k in (
+                "牌堆顶", "置顶", "top of the draw pile", "top of your draw pile"))))
         # 战斗中手牌强制选牌（kind=combat_hand_select）＝敌方献祭语义：
         # Vantom 每阶段结束强制从手牌交出一张（第 71 局 Boss 战五连献祭——
         # 通用"最高价值"分支把火焰屏障+×3、耸肩无视+×2 亲手喂给 Boss，
         # 伤口×2~3 在候选里却视而不见，防御核心被拆光后意图 26→32 磨死）。
         # 敌方强制的交牌永远交最不值钱者：状态牌 > 未升级基础牌 > 低价值牌。
-        tribute = ("combat_hand" in kind) and not upgrading
+        tribute = ("combat_hand" in kind) and not upgrading \
+            and not reward_pending \
+            and character_selection_mode is None and not top_of_pile
 
-        live_candidates = [c for c in cards if c["index"] not in self._sel_tried] or cards
+        # A successful click is recorded before the following state refresh.  If
+        # the payload still reports an older selected_count, another click would
+        # turn a one-card Prefetch/discard/recovery choice into a visible roll
+        # across candidates.  Wait for that accepted outcome to become observable;
+        # failed requests never enter credit_tags and remain immediately retryable.
+        try:
+            reported_selected = int(sel.get("selected_count", 0) or 0)
+        except (TypeError, ValueError):
+            reported_selected = 0
+        accepted_clicks = len(self._sel_tried)
+        if (accepted_clicks > reported_selected
+                or (accepted_clicks > 0 and reported_selected >= min_sel)):
+            return Decision(
+                None, {},
+                f"选牌界面（{kind}）：选择已被服务端接受，等待结果刷新，避免连续点选",
+                wait=0.5)
+
+        live_candidates = [c for c in cards if c["index"] not in self._sel_tried]
+        if not live_candidates:
+            return Decision(
+                None, {},
+                f"选牌界面（{kind}）：已接受选择，等待界面推进，避免重复点击",
+                wait=0.5)
         candidates = [card for card in live_candidates
                       if not self._ui_option_cooled(
                           state, "select_deck_card", card)]
@@ -5851,6 +5900,58 @@ class Policy:
                     card.get("name") or card.get("card_id"), value,
                     index=card.get("index"), action="select_deck_card",
                     why=f"{verb}无价值度")
+        elif character_selection_mode == SELECTION_DISCARD_WORST:
+            ranked_badness = [(badness(c), c) for c in candidates]
+            pick = max(ranked_badness, key=lambda row: row[0])[1]
+            tag = "card_discard"
+            reason = (f"战斗弃牌：【{pick.get('name')}】（弃掉当前最无价值牌；"
+                      f"候选：{' / '.join(c.get('name', '?') for c in candidates)}）")
+            self._trace_gate("GATE 选牌语义", "pass", "白绮弃牌：最大无价值度优先")
+            for value, candidate in ranked_badness:
+                self._trace_candidate(
+                    candidate.get("name") or candidate.get("card_id"), value,
+                    index=candidate.get("index"), action="select_deck_card",
+                    why="弃牌无价值度")
+        elif character_selection_mode in (
+                SELECTION_TOPDECK_BEST,
+                SELECTION_RECOVER_FREE_BEST,
+                SELECTION_COPY_FREE_BEST,
+                SELECTION_RECOVER_COPY_BEST):
+            deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
+            _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
+            ranked = []
+            for candidate in candidates:
+                base = self.eval_reward_card(
+                    candidate, deck, max_hp=_mh, act=_sel_act)
+                value = character_selection_value(
+                    self.character_strategy,
+                    character_selection_mode,
+                    candidate,
+                    base,
+                )
+                ranked.append((value, candidate))
+                self._trace_candidate(
+                    candidate.get("name") or candidate.get("card_id"), value,
+                    index=candidate.get("index"), action="select_deck_card",
+                    why=f"白绮子选择 {character_selection_mode}")
+            ranked.sort(key=lambda row: (
+                -row[0], str(row[1].get("card_id") or row[1].get("name") or "")))
+            best_v, pick = ranked[0]
+            tag, verb = {
+                SELECTION_TOPDECK_BEST: ("card_top_pick", "置顶"),
+                SELECTION_RECOVER_FREE_BEST: ("card_recover", "回收"),
+                SELECTION_COPY_FREE_BEST: ("card_copy", "复制"),
+                SELECTION_RECOVER_COPY_BEST: ("card_recover_copy", "回收并复制"),
+            }[character_selection_mode]
+            detail = " / ".join(
+                f"{candidate.get('name')}={value:.1f}"
+                for value, candidate in ranked)
+            reason = (f"白绮{verb}选择：【{pick.get('name')}】（价值 {best_v:.1f}；"
+                      f"候选：{detail}）")
+            self._trace_gate(
+                "GATE 选牌语义", "pass",
+                f"白绮 {character_selection_mode}：最高兑现价值优先")
         elif tribute:
             ranked_badness = [(badness(c), c) for c in candidates]
             pick = max(ranked_badness, key=lambda row: row[0])[1]

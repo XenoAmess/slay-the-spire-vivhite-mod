@@ -2087,7 +2087,8 @@ def main() -> int:
     # 3ii) 战斗中手牌献祭（第 71 局实锤）：Vantom 每阶段结束强制从手牌交一张，
     #      旧通用分支按"最高价值"点选——五连献祭把火焰屏障+×3/耸肩无视+×2 喂给
     #      Boss，伤口在候选里却视而不见，防御核心被拆光后意图 26→32 磨死。
-    #      修复后 combat_hand 选屏按 badness 交最不值钱者，且逐张递进；
+    #      修复后 combat_hand 选屏按 badness 交最不值钱者；服务端尚未刷新时等待，
+    #      只有新一轮子选屏移除已交出的牌后才继续点选；
     #      负例：普通拿牌屏（无 combat_hand 语义）仍取最高价值。
     tribute_cards = [
         {"index": 0, "card_id": "SHRUG_IT_OFF", "name": "耸肩无视+", "card_type": "Skill",
@@ -2112,8 +2113,18 @@ def main() -> int:
         f"战斗献祭必须交出最不值钱的牌（应选伤口而非耸肩无视）: {d_tb1.reason}"
     tribute_ctx.credit_tags.extend(d_tb1.tags)  # 模拟服务端成功接受第一次献祭
     d_tb2 = pol.decide(dict(tribute_state), tribute_ctx)
-    assert d_tb2.params.get("option_index") == 2 and "献祭" in d_tb2.reason, \
-        f"多次献祭应逐张交出次差者（伤口已交出后应交打击）: {d_tb2.reason}"
+    assert d_tb2.action is None and "等待" in d_tb2.reason, \
+        f"服务端未刷新时不得在同一子选屏连续点击第二张牌: {d_tb2.reason}"
+    next_tribute_state = {
+        **tribute_state,
+        "selection": {
+            **tribute_state["selection"],
+            "cards": [dict(tribute_cards[0]), dict(tribute_cards[2])],
+        },
+    }
+    d_tb3 = pol.decide(next_tribute_state, tribute_ctx)
+    assert d_tb3.params.get("option_index") == 2 and "献祭" in d_tb3.reason, \
+        f"新一轮献祭移除伤口后应交出次差的打击: {d_tb3.reason}"
     gain_state = {"screen": "CARD_SELECTION",
                   "available_actions": ["select_deck_card"],
                   "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",

@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import FrozenInstanceError
+from math import isfinite
 from pathlib import Path
+import re
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -22,13 +24,28 @@ from character_strategy import (  # noqa: E402
     IRONCLAD_PARAMETERS,
     IRONCLAD_STRATEGY,
     RECURSIVE_ASTRAL,
+    SELECTION_COPY_FREE_BEST,
+    SELECTION_DISCARD_WORST,
+    SELECTION_RECOVER_COPY_BEST,
+    SELECTION_RECOVER_FREE_BEST,
+    SELECTION_TOPDECK_BEST,
     VIVHITE_CARD_CATALOG,
     VIVHITE_CARD_IDS,
     VIVHITE_CHARACTER_ID,
+    VIVHITE_CRIMSON_RITUAL_POWER_ID,
+    VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID,
     VIVHITE_PARAMETERS,
+    VIVHITE_STARTING_RELIC_NAME_EN,
+    VIVHITE_STARTING_RELIC_NAME_ZH,
     VIVHITE_STRATEGY,
     CardMechanics,
+    card_dynamic_value,
+    character_build_synergy,
+    character_card_has_terminal_life_cost_lock,
+    estimate_character_card,
     drain_healing_from_actual_damage,
+    resolve_character_card_numbers,
+    resolve_character_selection_mode,
     resolve_character_strategy,
     score_drain_healing,
     score_draw,
@@ -38,6 +55,8 @@ from character_strategy import (  # noqa: E402
     score_margin,
     score_permanent_max_hp,
     score_realized_mechanics,
+    solitary_crown_kill_heal,
+    vivhite_crimson_ritual_totals,
 )
 from character_profiles import ProfileStore  # noqa: E402
 from knowledge import Knowledge  # noqa: E402
@@ -110,21 +129,32 @@ APPROVED_IDS = {
     "VIVHITE_CARD_UNIFIED_FIELD_THEORY",
     "VIVHITE_CARD_CONSERVED_RECURRENCE",
     "VIVHITE_CARD_CHROMATIC_LIMIT",
+    "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+}
+
+CROSS_SUIT_IDS = {
+    "VIVHITE_CARD_GOLDEN_RATIO",
+    "VIVHITE_CARD_ASTRAL_MEASURE",
+    "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+    "VIVHITE_CARD_UNIFIED_FIELD_THEORY",
+    "VIVHITE_CARD_CONSERVED_RECURRENCE",
+    "VIVHITE_CARD_CHROMATIC_LIMIT",
+    "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
 }
 
 
 class CharacterStrategyCatalogTests(unittest.TestCase):
-    def test_catalog_is_exactly_the_approved_60_ids(self) -> None:
-        self.assertEqual(len(APPROVED_IDS), 60)
-        self.assertEqual(len(VIVHITE_CARD_CATALOG), 60)
+    def test_catalog_is_exactly_the_approved_61_ids(self) -> None:
+        self.assertEqual(len(APPROVED_IDS), 61)
+        self.assertEqual(len(VIVHITE_CARD_CATALOG), 61)
         self.assertEqual(VIVHITE_CARD_IDS, APPROVED_IDS)
         self.assertEqual(
-            len({entry.stable_id for entry in VIVHITE_CARD_CATALOG}), 60)
+            len({entry.stable_id for entry in VIVHITE_CARD_CATALOG}), 61)
 
     def test_exact_rarity_distribution_and_required_fields(self) -> None:
         self.assertEqual(
             Counter(entry.rarity for entry in VIVHITE_CARD_CATALOG),
-            {"basic": 3, "common": 18, "uncommon": 24, "rare": 15},
+            {"basic": 3, "common": 18, "uncommon": 24, "rare": 16},
         )
         for entry in VIVHITE_CARD_CATALOG:
             self.assertIn(entry.card_type, {"attack", "skill", "ability"})
@@ -142,6 +172,10 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
         self.assertEqual(luminous.mechanics.life_calculation_cost, 1)
         self.assertEqual(luminous.mechanics.base_damage, 10)
         self.assertEqual(luminous.build_tags, (HYBRID,))
+
+        transformation = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_VIVHITE_TRANSFORMATION")
+        self.assertEqual(transformation.name_zh, "白绮的变身式")
 
         scale = VIVHITE_STRATEGY.card(
             "VIVHITE_CARD_SCALE_TRANSFORMATION")
@@ -178,6 +212,25 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
         self.assertEqual(limit_card.mechanics.drain_percent, 15)
         self.assertEqual(limit_card.mechanics.drain_percent_mode, "per_x")
 
+        ritual = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL")
+        self.assertEqual(ritual.card_type, "ability")
+        self.assertEqual(ritual.rarity, "rare")
+        self.assertEqual(ritual.mechanics.energy, 0)
+        self.assertEqual(ritual.build_tags, (HYBRID,))
+        self.assertEqual(ritual.name_zh, "白绮的猩红转化仪式")
+        self.assertIn(
+            "all_attacks_gain_life_cost_equal_total_ritual_phase",
+            ritual.mechanics.effects,
+        )
+        self.assertEqual(VIVHITE_STARTING_RELIC_NAME_ZH, "孤高冠冕")
+        self.assertEqual(VIVHITE_STARTING_RELIC_NAME_EN, "Solitary Crown")
+
+    def test_cross_suit_contract_is_seven_cards(self) -> None:
+        self.assertEqual(len(CROSS_SUIT_IDS), 7)
+        for card_id in CROSS_SUIT_IDS:
+            self.assertEqual(VIVHITE_STRATEGY.card(card_id).build_tags, (HYBRID,))
+
     def test_legacy_placeholder_ids_are_absent(self) -> None:
         legacy_ids = {
             "VIVHITE_CARD_VIVHITE_STRIKE",
@@ -188,6 +241,41 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             "VIVHITE_CARD_QED",
         }
         self.assertTrue(legacy_ids.isdisjoint(VIVHITE_CARD_IDS))
+
+    def test_catalog_matches_every_production_registered_card_class(self) -> None:
+        cards_root = (Path(__file__).resolve().parents[2]
+                      / "Vivhite" / "VivhiteCode" / "Cards")
+        registration = re.compile(
+            r"\[RegisterCard\(typeof\(VivhiteCardPool\)\)\]\s*"
+            r"(?:\[[^\]]+\]\s*)*public\s+sealed\s+class\s+(\w+)",
+            re.S,
+        )
+
+        def stable_id(class_name: str) -> str:
+            value = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", class_name)
+            return re.sub(
+                r"([a-z0-9])([A-Z])", r"\1_\2", value).upper()
+
+        classes = []
+        for source in cards_root.rglob("*.cs"):
+            classes.extend(registration.findall(
+                source.read_text(encoding="utf-8-sig")))
+        production_ids = {
+            f"VIVHITE_CARD_{stable_id(class_name)}"
+            for class_name in classes
+        }
+
+        # The strategy component owns the newly approved 61-card brain contract;
+        # the C# implementation is a separate component and may land just before
+        # or after this test. Accept exactly that one explicit hand-off gap only.
+        pending_ritual = {
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+        }
+        self.assertEqual(len(classes), len(production_ids))
+        self.assertFalse(production_ids - VIVHITE_CARD_IDS)
+        self.assertIn(len(production_ids), (60, 61))
+        self.assertTrue(
+            (VIVHITE_CARD_IDS - production_ids) in (set(), pending_ritual))
 
 
 class CharacterStrategyResolutionTests(unittest.TestCase):
@@ -326,6 +414,552 @@ class CharacterStrategyScoringTests(unittest.TestCase):
                 VIVHITE_PARAMETERS, 1, current_hp=1, max_hp=0)
 
 
+class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
+    @staticmethod
+    def _card(card_id: str, card_type: str, **values: int) -> dict:
+        return {
+            "card_id": card_id,
+            "name": card_id,
+            "card_type": card_type,
+            "energy_cost": 1,
+            "dynamic_values": [
+                {"name": name, "current_value": value}
+                for name, value in values.items()
+            ],
+        }
+
+    @staticmethod
+    def _enemy(hp: int, *, block: int = 0, index: int = 0) -> dict:
+        return {
+            "index": index,
+            "current_hp": hp,
+            "max_hp": hp,
+            "block": block,
+            "is_alive": True,
+            "is_hittable": True,
+        }
+
+    def test_exact_dynamic_names_do_not_turn_coefficients_into_card_numbers(self) -> None:
+        closed = self._card(
+            "VIVHITE_CARD_CLOSED_PROJECTION", "Attack",
+            LifeCost=2, Damage=18, BlockPerMargin=6)
+        self.assertIsNone(card_dynamic_value(closed, "Block"))
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, closed, 6, 6, 1,
+                energy=1, margin=2, hand_count=5),
+            (18, 12, 1),
+        )
+
+        divide = self._card(
+            "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE", "Skill",
+            LifeCost=2, Cards=3, SpellDamage=5)
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, divide, 5, 0, 1,
+                energy=1, margin=0, hand_count=5)[0],
+            0,
+        )
+
+    def test_state_dependent_hit_counts_use_hand_and_uncapped_x_energy(self) -> None:
+        riemann = self._card(
+            "VIVHITE_CARD_RIEMANN_STAR_ARRAY", "Attack",
+            LifeCost=3, Damage=5, Drain=20)
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, riemann, 5, 0, 1,
+                energy=1, margin=0, hand_count=7)[2],
+            6,
+        )
+
+        limit_card = self._card(
+            "VIVHITE_CARD_CHROMATIC_LIMIT", "Attack",
+            LifeCost=4, Damage=9, DrainPerX=15, HealingPerMargin=10)
+        limit_card["costs_x"] = True
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, limit_card, 9, 0, 1,
+                energy=37, margin=0, hand_count=1),
+            (9, 0, 37),
+        )
+
+    def test_crimson_ritual_phases_sum_and_modify_each_attack_hit_uncapped(self) -> None:
+        attack = self._card(
+            "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack",
+            LifeCost=1, Damage=10)
+        powers = [
+            {"power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID, "amount": 2},
+            {"power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID, "amount": 4},
+            {"power_id": VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID,
+             "amount": 3},
+        ]
+
+        self.assertEqual(
+            vivhite_crimson_ritual_totals(VIVHITE_STRATEGY, powers),
+            (9.0, 105.0),
+        )
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, attack, 10, 0, 1,
+                energy=1, margin=0, hand_count=1, player_powers=powers),
+            (20, 0, 1),
+        )
+        self.assertTrue(character_card_has_terminal_life_cost_lock(
+            VIVHITE_STRATEGY, attack, current_hp=10,
+            player_powers=powers))
+        self.assertFalse(character_card_has_terminal_life_cost_lock(
+            VIVHITE_STRATEGY, attack, current_hp=11,
+            player_powers=powers))
+        score, note = estimate_character_card(
+            VIVHITE_STRATEGY, attack,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(100)], target_index=0,
+            player_powers=powers, energy=1)
+        self.assertEqual(score, -12.5)
+        self.assertIn("hp-cost=10", note)
+        self.assertIn("ritual-phase=9/damage=105%", note)
+        self.assertEqual(
+            vivhite_crimson_ritual_totals(
+                IRONCLAD_STRATEGY, powers),
+            (0.0, 0.0),
+        )
+
+        unbounded = [{
+            "power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID,
+            "amount": 1000,
+        }]
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, attack, 10, 0, 1,
+                energy=1, margin=0, hand_count=1,
+                player_powers=unbounded)[0],
+            1010,
+        )
+
+    def test_crimson_ritual_reads_production_power_phase_fields(self) -> None:
+        powers = [
+            {
+                "power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID,
+                "Phase": 2,
+                "DamagePercentPerPhase": 11,
+                "amount": 999,
+            },
+            {
+                "power_id": VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID,
+                "dynamic_values": [
+                    {"name": "Phase", "current_value": 3},
+                    {"name": "DamagePercentPerPhase", "current_value": 16},
+                ],
+                "amount": 999,
+            },
+        ]
+
+        # Explicit Power fields win over the legacy amount projection:
+        # life cost = 2+3, damage = 2*11% + 3*16%.
+        self.assertEqual(
+            vivhite_crimson_ritual_totals(VIVHITE_STRATEGY, powers),
+            (5.0, 70.0),
+        )
+
+    def test_crimson_ritual_does_not_double_apply_modified_api_previews(self) -> None:
+        attack = {
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "card_type": "Attack",
+            "dynamic_values": [
+                {"name": "LifeCost", "base_value": 1,
+                 "current_value": 6, "is_modified": True},
+                {"name": "Damage", "base_value": 10,
+                 "current_value": 16, "is_modified": True},
+            ],
+        }
+        powers = [
+            {"power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID, "amount": 2},
+            {"power_id": VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID,
+             "amount": 3},
+        ]
+
+        self.assertEqual(
+            resolve_character_card_numbers(
+                VIVHITE_STRATEGY, attack, 10, 0, 1,
+                energy=1, margin=0, hand_count=1, player_powers=powers),
+            (16, 0, 1),
+        )
+        score, note = estimate_character_card(
+            VIVHITE_STRATEGY, attack,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(100)], target_index=0,
+            player_powers=powers, energy=1)
+        self.assertEqual(score, -7.5)
+        self.assertIn("hp-cost=6", note)
+        self.assertIn("ritual-phase=5/damage=65%", note)
+
+    def test_crimson_ritual_parent_has_deck_aware_uncapped_longline_value(self) -> None:
+        ritual = self._card(
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+            "Power")
+        no_attacks, _ = estimate_character_card(
+            VIVHITE_STRATEGY, ritual,
+            deck_cards=[self._card(
+                "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "Skill", Block=9)])
+        strong_deck = [self._card(
+            "VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL", "Attack",
+            LifeCost=6, Damage=100)]
+        base, base_note = estimate_character_card(
+            VIVHITE_STRATEGY, ritual, deck_cards=strong_deck)
+        upgraded = dict(ritual, upgraded=True)
+        upgraded_score, _ = estimate_character_card(
+            VIVHITE_STRATEGY, upgraded, deck_cards=strong_deck)
+        dynamic_rate = self._card(
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+            "Power", DamagePercentPerPhase=20)
+        dynamic_score, dynamic_note = estimate_character_card(
+            VIVHITE_STRATEGY, dynamic_rate, deck_cards=strong_deck)
+        long_fight, long_note = estimate_character_card(
+            VIVHITE_STRATEGY, ritual,
+            deck_cards=strong_deck,
+            enemies=[self._enemy(10_000)], target_index=0)
+
+        self.assertEqual(no_attacks, 0.0)
+        self.assertGreater(base, no_attacks)
+        self.assertGreater(upgraded_score, base)
+        self.assertGreater(dynamic_score, upgraded_score)
+        self.assertGreater(long_fight, base)
+        self.assertIn("ritual-longline=", base_note)
+        self.assertIn("rate=20%", dynamic_note)
+        self.assertIn("turns=20", long_note)
+
+    def test_solitary_crown_uses_current_max_hp_after_dimension_growth(self) -> None:
+        self.assertEqual(solitary_crown_kill_heal(), 4)
+        self.assertEqual(solitary_crown_kill_heal(78), 4)
+        self.assertEqual(solitary_crown_kill_heal(100), 5)
+        self.assertEqual(solitary_crown_kill_heal(101), 6)
+        self.assertEqual(solitary_crown_kill_heal(10_000), 500)
+
+        lethal = self._card(
+            "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack",
+            LifeCost=1, Damage=10)
+        before, before_note = estimate_character_card(
+            VIVHITE_STRATEGY, lethal,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(10)], target_index=0,
+            player_powers=[], energy=1)
+        after_dimension, after_note = estimate_character_card(
+            VIVHITE_STRATEGY, lethal,
+            current_hp=50, max_hp=101,
+            enemies=[self._enemy(10)], target_index=0,
+            player_powers=[], energy=1)
+
+        self.assertEqual(after_dimension - before, 1.0)
+        self.assertIn("crown=5/kill", before_note)
+        self.assertIn("crown=6/kill", after_note)
+
+    def test_terminal_life_lock_accounts_for_uncapped_margin_and_is_profile_only(self) -> None:
+        card = self._card(
+            "VIVHITE_CARD_LAW_OF_CONSERVATION", "Power", LifeCost=100)
+        margin_99 = [{
+            "power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+            "amount": 99,
+        }]
+        margin_1000 = [{
+            "power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+            "amount": 1000,
+        }]
+        self.assertFalse(character_card_has_terminal_life_cost_lock(
+            VIVHITE_STRATEGY, card, current_hp=2, player_powers=margin_99))
+        self.assertTrue(character_card_has_terminal_life_cost_lock(
+            VIVHITE_STRATEGY, card, current_hp=1, player_powers=margin_99))
+        self.assertFalse(character_card_has_terminal_life_cost_lock(
+            VIVHITE_STRATEGY, card, current_hp=1, player_powers=margin_1000))
+        self.assertFalse(character_card_has_terminal_life_cost_lock(
+            IRONCLAD_STRATEGY, card, current_hp=1, player_powers=[]))
+
+    def test_kill_rewards_and_dimension_up_require_an_observed_lethal(self) -> None:
+        termination = self._card(
+            "VIVHITE_CARD_TERMINATION_CONDITION", "Attack",
+            LifeCost=2, Damage=12, Heal=8)
+        nonlethal, _ = estimate_character_card(
+            VIVHITE_STRATEGY, termination,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(20)], target_index=0,
+            player_powers=[], energy=1)
+        lethal, lethal_note = estimate_character_card(
+            VIVHITE_STRATEGY, termination,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(12)], target_index=0,
+            player_powers=[], energy=1)
+        self.assertEqual(nonlethal, -2.5)
+        # Heal=8 plus Solitary Crown's ceil(100*5%)=5, only on lethal.
+        self.assertEqual(lethal, 10.5)
+        self.assertIn("kills=1/lethal=1", lethal_note)
+
+        scale = self._card(
+            "VIVHITE_CARD_SCALE_TRANSFORMATION", "Attack",
+            LifeCost=3, Damage=20, DimensionUp=2)
+        powers = [{
+            "power_id": "VIVHITE_POWER_INFINITE_EXTENSION_POWER",
+            "amount": 100,
+        }]
+        no_growth, _ = estimate_character_card(
+            VIVHITE_STRATEGY, scale,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(21)], target_index=0,
+            player_powers=powers, energy=2)
+        growth, growth_note = estimate_character_card(
+            VIVHITE_STRATEGY, scale,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(20)], target_index=0,
+            player_powers=powers, energy=2)
+        self.assertEqual(no_growth, -3.75)
+        self.assertGreater(growth, 300.0)
+        self.assertIn("dimension=102", growth_note)
+
+    def test_margin_payment_and_custom_power_conversions_are_live_state(self) -> None:
+        growth_card = self._card(
+            "VIVHITE_CARD_TOPOLOGICAL_GROWTH", "Skill",
+            LifeCost=4, Margin=4, DimensionUp=2)
+        score, note = estimate_character_card(
+            VIVHITE_STRATEGY, growth_card,
+            current_hp=100, max_hp=100,
+            player_powers=[
+                {"power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+                 "amount": 4},
+                {"power_id": "VIVHITE_POWER_INFINITE_EXTENSION_POWER",
+                 "amount": 100},
+            ],
+            energy=1,
+        )
+        # Four Margin are spent and four regained; 2 + 100 DimensionUp remains
+        # fully linear instead of stopping at any custom growth ceiling.
+        self.assertEqual(score, 306.0)
+        self.assertIn("margin=4/spent=4", note)
+
+        attack = self._card(
+            "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack",
+            LifeCost=3, Damage=100)
+        converted, converted_note = estimate_character_card(
+            VIVHITE_STRATEGY, attack,
+            current_hp=50, max_hp=200,
+            enemies=[self._enemy(500)], target_index=0,
+            player_powers=[
+                {"power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+                 "amount": 3},
+                {"power_id": "VIVHITE_POWER_LAW_OF_CONSERVATION_POWER",
+                 "amount": 2},
+                {"power_id":
+                 "VIVHITE_POWER_UNIFIED_FIELD_THEORY_UPGRADED_POWER",
+                 "amount": 1},
+            ],
+            energy=1,
+        )
+        self.assertGreater(converted, 18.0)
+        self.assertIn("drain=9%/9hp", converted_note)
+
+    def test_drain_uses_real_hp_loss_missing_hp_and_unbounded_percent(self) -> None:
+        crimson = self._card(
+            "VIVHITE_CARD_CRIMSON_AREA", "Attack",
+            LifeCost=2, Damage=14, Drain=20)
+        powers = [{
+            "power_id": "VIVHITE_POWER_INFINITE_DRAIN_POWER",
+            "amount": 80,
+        }]
+        overkill, overkill_note = estimate_character_card(
+            VIVHITE_STRATEGY, crimson,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(5)], target_index=0,
+            player_powers=powers, energy=1)
+        blocked, blocked_note = estimate_character_card(
+            VIVHITE_STRATEGY, crimson,
+            current_hp=50, max_hp=100,
+            enemies=[self._enemy(5, block=10)], target_index=0,
+            player_powers=powers, energy=1)
+        self.assertAlmostEqual(overkill, 6.75)
+        self.assertAlmostEqual(blocked, 0.9)
+        self.assertIn("drain=100%/5hp", overkill_note)
+        self.assertIn("drain=100%/4hp", blocked_note)
+
+        limit_card = self._card(
+            "VIVHITE_CARD_CHROMATIC_LIMIT", "Attack",
+            LifeCost=4, Damage=9, DrainPerX=15, HealingPerMargin=10)
+        limit_card["costs_x"] = True
+        five, five_note = estimate_character_card(
+            VIVHITE_STRATEGY, limit_card,
+            current_hp=500, max_hp=1000,
+            enemies=[self._enemy(1000)], target_index=0,
+            player_powers=[], energy=5)
+        ten, ten_note = estimate_character_card(
+            VIVHITE_STRATEGY, limit_card,
+            current_hp=500, max_hp=1000,
+            enemies=[self._enemy(1000)], target_index=0,
+            player_powers=[], energy=10)
+        self.assertAlmostEqual(five, 26.8)
+        self.assertAlmostEqual(ten, 126.0)
+        self.assertIn("drain=75%/33hp", five_note)
+        self.assertIn("drain=150%/135hp", ten_note)
+
+    def test_global_and_temporary_drain_engines_gain_observed_attack_value(self) -> None:
+        spectral = self._card(
+            "VIVHITE_CARD_SPECTRAL_INTEGRAL", "Power",
+            LifeCost=3, Drain=12)
+        deck = [
+            self._card("VIVHITE_CARD_CRIMSON_AREA", "Attack", Damage=14),
+            self._card(
+                "VIVHITE_CARD_GOLDEN_COMPOSITION", "Attack", Damage=8),
+        ]
+        without_attacks, _ = estimate_character_card(
+            VIVHITE_STRATEGY, spectral,
+            current_hp=50, max_hp=100, player_powers=[], deck_cards=[])
+        with_attacks, note = estimate_character_card(
+            VIVHITE_STRATEGY, spectral,
+            current_hp=50, max_hp=100, player_powers=[], deck_cards=deck)
+        self.assertGreater(with_attacks, without_attacks)
+        self.assertIn("drain-projected-from-observed-cards", note)
+
+        golden_ratio = self._card(
+            "VIVHITE_CARD_GOLDEN_RATIO", "Skill",
+            LifeCost=2, Margin=3, Drain=15, Cards=1)
+        temporary, temporary_note = estimate_character_card(
+            VIVHITE_STRATEGY, golden_ratio,
+            current_hp=50, max_hp=100, player_powers=[],
+            hand_cards=[self._card(
+                "VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL", "Attack",
+                Damage=32)],
+            energy=2)
+        self.assertGreater(temporary, 5.0)
+        self.assertIn("drain-projected-from-observed-cards", temporary_note)
+
+    def test_recovery_and_copy_parents_value_their_observed_child_choice(self) -> None:
+        strong_attack = self._card(
+            "VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL", "Attack",
+            LifeCost=6, Damage=32)
+        strong_skill = self._card(
+            "VIVHITE_CARD_GEODESIC_VEIL", "Skill",
+            LifeCost=3, Block=30)
+        cases = (
+            ("VIVHITE_CARD_MOBIUS_LOOP", "Skill", [strong_skill], None),
+            ("VIVHITE_CARD_BACKTRACKING_SPELL", "Skill",
+             [strong_attack], None),
+            ("VIVHITE_CARD_EVENT_LOOP", "Skill", [strong_attack], 1),
+            ("VIVHITE_CARD_CONSERVED_RECURRENCE", "Skill",
+             [strong_attack], None),
+        )
+        for card_id, card_type, observed, played in cases:
+            with self.subTest(card_id=card_id):
+                parent = self._card(card_id, card_type)
+                empty, _ = estimate_character_card(
+                    VIVHITE_STRATEGY, parent,
+                    current_hp=60, max_hp=100, player_powers=[],
+                    deck_cards=[], cards_played_this_turn=played)
+                projected, note = estimate_character_card(
+                    VIVHITE_STRATEGY, parent,
+                    current_hp=60, max_hp=100, player_powers=[],
+                    deck_cards=observed, cards_played_this_turn=played)
+                self.assertGreater(projected, empty)
+                self.assertIn("recovery-copy=", note)
+
+        event = self._card("VIVHITE_CARD_EVENT_LOOP", "Skill")
+        no_play, no_play_note = estimate_character_card(
+            VIVHITE_STRATEGY, event,
+            current_hp=60, max_hp=100, player_powers=[],
+            deck_cards=[strong_attack], cards_played_this_turn=0)
+        self.assertNotIn("recovery-copy=", no_play_note)
+        self.assertLess(no_play, 0.0)
+
+    def test_vulnerable_effects_use_dynamic_amount_and_all_enemy_scope(self) -> None:
+        negative = self._card(
+            "VIVHITE_CARD_NEGATIVE_SPACE", "Skill",
+            LifeCost=2, Margin=1, VulnerablePower=3)
+        single, single_note = estimate_character_card(
+            VIVHITE_STRATEGY, negative,
+            current_hp=60, max_hp=100, player_powers=[])
+        self.assertGreater(single, 0.0)
+        self.assertIn("vulnerable=3", single_note)
+
+        field = self._card(
+            "VIVHITE_CARD_COMPOSITE_COLOR_FIELD", "Skill",
+            LifeCost=4, Drain=10, VulnerablePower=3)
+        group, group_note = estimate_character_card(
+            VIVHITE_STRATEGY, field,
+            current_hp=60, max_hp=100, player_powers=[],
+            enemies=[self._enemy(20, index=index) for index in range(3)],
+            observed_target_count=3)
+        self.assertIn("vulnerable=9", group_note)
+        self.assertGreater(group, single)
+
+    def test_nominal_label_and_unexposed_dynamic_programming_state_are_explicit(self) -> None:
+        nominal, nominal_note = estimate_character_card(
+            VIVHITE_STRATEGY,
+            self._card("VIVHITE_CARD_AXIOM_RING", "Skill", Margin=2),
+        )
+        self.assertEqual(nominal, 2.5)
+        self.assertIn("VIVHITE_NOMINAL_ESTIMATE", nominal_note)
+
+        _score, dynamic_note = estimate_character_card(
+            VIVHITE_STRATEGY,
+            self._card(
+                "VIVHITE_CARD_DYNAMIC_PROGRAMMING", "Power",
+                LifeCost=5, Calculation=3),
+            current_hp=60, max_hp=100, player_powers=[])
+        self.assertIn(
+            "calculation-internal-not-exposed-by-api", dynamic_note)
+
+
+class CharacterStrategyBuildSynergyTests(unittest.TestCase):
+    @staticmethod
+    def _card(card_id: str) -> dict:
+        return {"card_id": card_id}
+
+    def test_each_suit_core_gains_value_from_its_engine_components(self) -> None:
+        cases = (
+            (
+                "VIVHITE_CARD_INFINITE_EXTENSION",
+                ("VIVHITE_CARD_TOPOLOGICAL_GROWTH",
+                 "VIVHITE_CARD_AXIOM_OF_LIFE"),
+                ("VIVHITE_CARD_CRIMSON_AREA",
+                 "VIVHITE_CARD_SPECTRAL_INTEGRAL"),
+            ),
+            (
+                "VIVHITE_CARD_OPTIMAL_ALGORITHM",
+                ("VIVHITE_CARD_RECURRENT_STARLIGHT",
+                 "VIVHITE_CARD_PROOF_OF_TERMINATION"),
+                ("VIVHITE_CARD_AXIOM_RING",
+                 "VIVHITE_CARD_LIFE_MANIFOLD"),
+            ),
+            (
+                "VIVHITE_CARD_SPECTRAL_INTEGRAL",
+                ("VIVHITE_CARD_CRIMSON_AREA",
+                 "VIVHITE_CARD_GOLDEN_COMPOSITION"),
+                ("VIVHITE_CARD_AXIOM_RING",
+                 "VIVHITE_CARD_LIFE_MANIFOLD"),
+            ),
+        )
+        for candidate_id, same_ids, off_ids in cases:
+            with self.subTest(candidate=candidate_id):
+                same, note = character_build_synergy(
+                    VIVHITE_STRATEGY,
+                    self._card(candidate_id),
+                    [self._card(card_id) for card_id in same_ids],
+                )
+                off, _ = character_build_synergy(
+                    VIVHITE_STRATEGY,
+                    self._card(candidate_id),
+                    [self._card(card_id) for card_id in off_ids],
+                )
+                self.assertGreater(same, off)
+                self.assertIn("VIVHITE_BUILD_SYNERGY", note)
+
+    def test_synergy_is_profile_only_and_has_no_custom_stack_cap(self) -> None:
+        candidate = self._card("VIVHITE_CARD_SPECTRAL_INTEGRAL")
+        attack = self._card("VIVHITE_CARD_CRIMSON_AREA")
+        ten, _ = character_build_synergy(
+            VIVHITE_STRATEGY, candidate, [attack] * 10)
+        hundred, _ = character_build_synergy(
+            VIVHITE_STRATEGY, candidate, [attack] * 100)
+        ironclad, note = character_build_synergy(
+            IRONCLAD_STRATEGY, candidate, [attack] * 100)
+        self.assertGreater(hundred, ten * 9)
+        self.assertEqual((ironclad, note), (0.0, ""))
+
+
 class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="sts2-strategy-policy-")
@@ -358,6 +992,53 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
             "energy_cost": 1,
             "resolved_rules_text": "",
             "dynamic_values": dynamic_values,
+        }
+
+    @staticmethod
+    def _selection_card(index: int, card_id: str, card_type: str,
+                        *, damage: int = 0, block: int = 0,
+                        energy_cost: int = 1) -> dict:
+        values = []
+        if damage:
+            values.append({"name": "Damage", "current_value": damage})
+        if block:
+            values.append({"name": "Block", "current_value": block})
+        return {
+            "index": index,
+            "card_id": card_id,
+            "name": card_id,
+            "card_type": card_type,
+            "rarity": "Common",
+            "energy_cost": energy_cost,
+            "resolved_rules_text": "",
+            "dynamic_values": values,
+        }
+
+    @staticmethod
+    def _selection_state(kind: str, prompt: str, cards: list[dict],
+                         *, selected_count: int = 0,
+                         can_confirm: bool = False,
+                         reward: dict | None = None,
+                         actions: list[str] | None = None) -> dict:
+        return {
+            "screen": "CARD_SELECTION",
+            "available_actions": actions or ["select_deck_card"],
+            "selection": {
+                "kind": kind,
+                "prompt": prompt,
+                "cards": cards,
+                "min_select": 1,
+                "max_select": 1,
+                "selected_count": selected_count,
+                "can_confirm": can_confirm,
+            },
+            "reward": reward or {},
+            "run": {
+                "floor": 5,
+                "current_hp": 60,
+                "max_hp": 78,
+                "deck": [],
+            },
         }
 
     def test_profile_exposes_isolated_strategy_catalog_and_weights(self) -> None:
@@ -396,7 +1077,36 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Policy(self.ironclad_knowledge, profile=self.store.vivhite)
 
-    def test_static_estimate_marks_non_telemetry_and_uses_strict_low_hp(self) -> None:
+    def test_every_production_card_has_a_finite_profile_reward_estimate(self) -> None:
+        type_names = {
+            "attack": "Attack",
+            "skill": "Skill",
+            "ability": "Power",
+        }
+        for entry in VIVHITE_CARD_CATALOG:
+            with self.subTest(card_id=entry.card_id):
+                card = {
+                    "card_id": entry.card_id,
+                    "name": entry.name_zh,
+                    "card_type": type_names[entry.card_type],
+                    "rarity": entry.rarity.title(),
+                    "energy_cost": (
+                        0 if entry.mechanics.energy == "X"
+                        else entry.mechanics.energy),
+                    "costs_x": entry.mechanics.energy == "X",
+                    "target_type": (
+                        "AllEnemies" if entry.mechanics.all_enemies
+                        else "AnyEnemy" if entry.card_type == "attack"
+                        else "Self"),
+                }
+                detail: list[str] = []
+                value = self.vivhite_policy.eval_reward_card(
+                    card, [], detail=detail)
+                self.assertTrue(isfinite(value))
+                self.assertTrue(any(
+                    "VIVHITE_NOMINAL_ESTIMATE" in row for row in detail))
+
+    def test_live_estimate_uses_strict_low_hp_and_identifies_context(self) -> None:
         luminous = self._card(
             "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack", damage=10)
         at_boundary, boundary_note = (
@@ -408,8 +1118,8 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
 
         self.assertEqual(at_boundary, -1.25)
         self.assertEqual(below_boundary, -2.5)
-        self.assertIn("VIVHITE_STATIC_ESTIMATE", boundary_note)
-        self.assertIn("not-realized-margin/drain/kill-telemetry", low_note)
+        self.assertIn("VIVHITE_LIVE_ESTIMATE", boundary_note)
+        self.assertIn("hp-cost=1", low_note)
         self.assertEqual(
             self.ironclad_policy._character_static_card_estimate(
                 luminous, current_hp=1, max_hp=100),
@@ -426,7 +1136,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
 
         self.assertAlmostEqual(vivhite_value - ironclad_value, 2.5)
         self.assertTrue(any(
-            "VIVHITE_STATIC_ESTIMATE=+2.50" in row for row in detail))
+            "VIVHITE_LIVE_ESTIMATE=+2.50" in row for row in detail))
 
     def test_combat_ranking_consumes_profile_estimate(self) -> None:
         calls: list[str] = []
@@ -436,7 +1146,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
 
         def _profile_estimate(card, **_kwargs):
             calls.append(card["card_id"])
-            return 10.0, "VIVHITE_STATIC_ESTIMATE_TEST"
+            return 10.0, "VIVHITE_LIVE_ESTIMATE_TEST"
 
         self.vivhite_policy._score_play = _base_score
         self.vivhite_policy._character_static_card_estimate = _profile_estimate
@@ -493,7 +1203,242 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
 
         self.assertEqual(decision.action, "play_card")
         self.assertEqual(calls, ["VIVHITE_CARD_AXIOM_RING"])
-        self.assertIn("VIVHITE_STATIC_ESTIMATE_TEST", decision.reason)
+        self.assertIn("VIVHITE_LIVE_ESTIMATE_TEST", decision.reason)
+
+    def test_vivhite_child_selection_prompts_have_explicit_semantics(self) -> None:
+        cases = (
+            ("combat_hand_select", "选择一张牌弃掉。",
+             SELECTION_DISCARD_WORST),
+            ("combat_hand_select", "选择一张手牌放到抽牌堆顶。",
+             SELECTION_TOPDECK_BEST),
+            ("combat_pile_select", "选择弃牌堆中的一张攻击牌返回手牌。",
+             SELECTION_RECOVER_FREE_BEST),
+            ("simple_grid", "选择本回合打出过的一张非能力牌进行复制。",
+             SELECTION_COPY_FREE_BEST),
+            ("combat_pile_select", "选择消耗牌堆中的一张非能力牌返回并复制。",
+             SELECTION_RECOVER_COPY_BEST),
+        )
+        for kind, prompt, expected in cases:
+            with self.subTest(prompt=prompt):
+                self.assertEqual(
+                    resolve_character_selection_mode(
+                        VIVHITE_STRATEGY, kind=kind, prompt=prompt),
+                    expected,
+                )
+                self.assertIsNone(resolve_character_selection_mode(
+                    IRONCLAD_STRATEGY, kind=kind, prompt=prompt))
+
+    def test_prefetch_discard_recovery_and_copy_do_not_reverse_pick(self) -> None:
+        strong_attack = self._selection_card(
+            1, "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack", damage=30)
+        weak_status = self._selection_card(
+            0, "TEST_STATUS", "Status")
+        strong_skill = self._selection_card(
+            1, "VIVHITE_CARD_GEODESIC_VEIL", "Skill", block=30,
+            energy_cost=2)
+        weak_skill = self._selection_card(
+            0, "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "Skill", block=1)
+        ctx = SimpleNamespace(credit_tags=[])
+        cases = (
+            ("combat_hand_select", "选择一张牌弃掉。",
+             [weak_status, strong_attack], 0, "card_discard"),
+            ("combat_hand_select", "选择一张手牌放到抽牌堆顶。",
+             [weak_status, strong_attack], 1, "card_top_pick"),
+            ("combat_pile_select", "选择弃牌堆中的一张技能牌返回手牌。",
+             [weak_skill, strong_skill], 1, "card_recover"),
+            ("simple_grid", "选择本回合打出过的一张非能力牌进行复制。",
+             [weak_status, strong_attack], 1, "card_copy"),
+            ("combat_pile_select", "选择消耗牌堆中的一张非能力牌返回并复制。",
+             [weak_status, strong_attack], 1, "card_recover_copy"),
+        )
+        for kind, prompt, cards, expected_index, expected_tag in cases:
+            with self.subTest(prompt=prompt):
+                decision = self.vivhite_policy._card_selection(
+                    self._selection_state(kind, prompt, cards), ctx)
+                self.assertEqual(decision.action, "select_deck_card")
+                self.assertEqual(
+                    decision.params["option_index"], expected_index)
+                self.assertIn(expected_tag, [tag[0] for tag in decision.tags])
+
+    def test_structural_reward_is_not_misclassified_as_discard_or_tribute(self) -> None:
+        weak = self._selection_card(0, "TEST_STATUS", "Status")
+        strong = self._selection_card(
+            1, "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack", damage=30)
+        state = self._selection_state(
+            "combat_hand_select",
+            "Choose a reward card; its rules may mention the Discard Pile.",
+            [weak, strong],
+            reward={
+                "pending_card_choice": True,
+                "card_options": [weak, strong],
+            },
+        )
+        decision = self.vivhite_policy._card_selection(
+            state, SimpleNamespace(credit_tags=[]))
+
+        self.assertEqual(decision.action, "select_deck_card")
+        self.assertEqual(decision.params["option_index"], 1)
+        tags = [tag[0] for tag in decision.tags]
+        self.assertNotIn("card_sacrifice", tags)
+        self.assertNotIn("card_discard", tags)
+
+    def test_accepted_selection_waits_at_stale_zero_and_accepted_one(self) -> None:
+        cards = [
+            self._selection_card(0, "TEST_STATUS", "Status"),
+            self._selection_card(
+                1, "VIVHITE_CARD_LUMINOUS_PROJECTION", "Attack", damage=30),
+        ]
+        state = self._selection_state(
+            "combat_hand_select",
+            "选择一张手牌放到抽牌堆顶。",
+            cards,
+        )
+        ctx = SimpleNamespace(credit_tags=[])
+        first = self.vivhite_policy._card_selection(state, ctx)
+        self.assertEqual(first.action, "select_deck_card")
+        self.assertEqual(first.params["option_index"], 1)
+
+        ctx.credit_tags = list(first.tags)
+        stale_zero = self.vivhite_policy._card_selection(state, ctx)
+        self.assertIsNone(stale_zero.action)
+        self.assertIn("等待结果刷新", stale_zero.reason)
+
+        state["selection"]["selected_count"] = 1
+        state["selection"]["can_confirm"] = False
+        accepted_one = self.vivhite_policy._card_selection(state, ctx)
+        self.assertIsNone(accepted_one.action)
+        self.assertIn("避免连续点选", accepted_one.reason)
+
+    def test_unplayable_life_cost_card_never_enters_settle_latent_roll(self) -> None:
+        combat_token = object()
+        ctx = SimpleNamespace(
+            combat=combat_token,
+            current_combat_is_hard=False,
+            stall_analysis_asked=False,
+            stall_analysis_needed=False,
+            stall_giveup=False,
+        )
+        self.vivhite_policy._turn_combat = combat_token
+        self.vivhite_policy._cur_turn = 1
+        self.vivhite_policy._saw_playable_this_turn = True
+        state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {
+                    "current_hp": 2,
+                    "max_hp": 78,
+                    "block": 0,
+                    "energy": 1,
+                    "powers": [],
+                },
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_LAW_OF_CONSERVATION",
+                    "name": "守恒定律",
+                    "playable": False,
+                    "unplayable_reason": "咳血后生命不足",
+                    "energy_cost": 1,
+                    "requires_target": False,
+                    "dynamic_values": [
+                        {"name": "LifeCost", "current_value": 3},
+                    ],
+                }],
+                "enemies": [{
+                    "index": 0,
+                    "enemy_id": "TEST_ENEMY",
+                    "name": "Test Enemy",
+                    "current_hp": 20,
+                    "max_hp": 20,
+                    "block": 0,
+                    "is_alive": True,
+                    "is_hittable": True,
+                    "intents": [],
+                }],
+            },
+            "run": {
+                "current_hp": 2,
+                "max_hp": 78,
+                "floor": 17,
+                "deck": [],
+            },
+        }
+
+        first = self.vivhite_policy._combat(state, ctx)
+        second = self.vivhite_policy._combat(state, ctx)
+        self.assertIsNone(first.action)
+        self.assertIn("确认结束", first.reason)
+        self.assertEqual(second.action, "end_turn")
+        self.assertNotIn("结算等待", first.reason + second.reason)
+
+    def test_combat_targeting_expands_chromatic_limit_with_current_energy(self) -> None:
+        card = {
+            "index": 0,
+            "card_id": "VIVHITE_CARD_CHROMATIC_LIMIT",
+            "name": "绯彩极限",
+            "playable": True,
+            "costs_x": True,
+            "energy_cost": 0,
+            "requires_target": True,
+            "target_type": "AnyEnemy",
+            "valid_target_indices": [0, 1],
+            "resolved_rules_text": "造成 9 点伤害 X 次。",
+            "dynamic_values": [
+                {"name": "LifeCost", "current_value": 4},
+                {"name": "Damage", "current_value": 9},
+                {"name": "DrainPerX", "current_value": 15},
+            ],
+        }
+        enemies = [
+            {
+                "index": 0, "name": "Low", "current_hp": 20,
+                "max_hp": 20, "block": 0, "intents": [],
+            },
+            {
+                "index": 1, "name": "Threat", "current_hp": 100,
+                "max_hp": 100, "block": 0,
+                "intents": [{"total_damage": 10}],
+            },
+        ]
+        _score, target, reason = self.vivhite_policy._score_play(
+            card, enemies, 10, 0, 1, self.vivhite_knowledge.policy,
+            my_hp=78, my_max_hp=78, stance={}, cur_energy=3,
+            player_powers=[], observed_hand_count=1)
+        self.assertEqual(target, 0)
+        self.assertIn("可击杀Low", reason)
+
+    def test_combat_scoring_passes_active_crimson_ritual_phases(self) -> None:
+        card = {
+            "index": 0,
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "name": "弦光投影",
+            "playable": True,
+            "energy_cost": 1,
+            "requires_target": True,
+            "target_type": "AnyEnemy",
+            "valid_target_indices": [0],
+            "dynamic_values": [
+                {"name": "LifeCost", "current_value": 1},
+                {"name": "Damage", "current_value": 10},
+            ],
+        }
+        enemies = [{
+            "index": 0, "name": "Ritual lethal", "current_hp": 12,
+            "max_hp": 12, "block": 0, "intents": [],
+        }]
+        powers = [{
+            "power_id": VIVHITE_CRIMSON_RITUAL_POWER_ID,
+            "amount": 2,
+        }]
+
+        _score, target, reason = self.vivhite_policy._score_play(
+            card, enemies, 0, 0, 1, self.vivhite_knowledge.policy,
+            my_hp=78, my_max_hp=78, stance={}, cur_energy=3,
+            player_powers=powers, observed_hand_count=1)
+
+        self.assertEqual(target, 0)
+        self.assertIn("可击杀Ritual lethal", reason)
 
     def test_policy_realized_scoring_is_linear_and_uncapped(self) -> None:
         actual = dict(

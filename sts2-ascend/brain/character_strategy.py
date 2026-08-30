@@ -11,7 +11,8 @@ permanent max-HP growth, draw, energy, and other growth remain linear.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import isfinite
+from math import ceil, floor, isfinite
+import re
 from typing import Final
 
 
@@ -34,6 +35,28 @@ BUILD_TAGS: Final = frozenset({
 CARD_ID_PREFIX: Final = "VIVHITE_CARD_"
 CARD_TYPES: Final = frozenset({"attack", "skill", "ability"})
 CARD_RARITIES: Final = frozenset({"basic", "common", "uncommon", "rare"})
+
+SELECTION_DISCARD_WORST: Final = "discard_worst"
+SELECTION_TOPDECK_BEST: Final = "topdeck_best"
+SELECTION_RECOVER_FREE_BEST: Final = "recover_free_best"
+SELECTION_COPY_FREE_BEST: Final = "copy_free_best"
+SELECTION_RECOVER_COPY_BEST: Final = "recover_copy_best"
+
+VIVHITE_MARGIN_POWER_ID: Final = "VIVHITE_POWER_INFINITE_MARGIN_POWER"
+VIVHITE_DRAIN_POWER_ID: Final = "VIVHITE_POWER_INFINITE_DRAIN_POWER"
+VIVHITE_TURN_DRAIN_POWER_ID: Final = (
+    "VIVHITE_POWER_INFINITE_DRAIN_THIS_TURN_POWER")
+VIVHITE_DIMENSIONALITY_POWER_ID: Final = (
+    "VIVHITE_POWER_INFINITE_DIMENSIONALITY_POWER")
+VIVHITE_EXTENSION_POWER_ID: Final = (
+    "VIVHITE_POWER_INFINITE_EXTENSION_POWER")
+VIVHITE_CRIMSON_RITUAL_POWER_ID: Final = (
+    "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_POWER")
+VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID: Final = (
+    "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER")
+VIVHITE_BASE_MAX_HP: Final = 78
+VIVHITE_STARTING_RELIC_NAME_ZH: Final = "孤高冠冕"
+VIVHITE_STARTING_RELIC_NAME_EN: Final = "Solitary Crown"
 
 
 def _finite_number(name: str, value: int | float) -> float:
@@ -263,7 +286,7 @@ _BASIC_CARDS = (
     _card("CLOSED_DOMAIN_MAPPING", "Closed-Domain Mapping", "闭域映射",
           "skill", "basic", HYBRID, energy=1, life=1, block=9),
     _card("VIVHITE_TRANSFORMATION", "Transformation Formula: Vivhite",
-          "变身式·白绮", "ability", "basic", HYBRID, energy=1, life=2,
+          "白绮的变身式", "ability", "basic", HYBRID, energy=1, life=2,
           growth=2, effects=("gain_1_strength", "gain_1_dexterity")),
 )
 
@@ -468,6 +491,20 @@ _HYBRID_CARDS = (
           HYBRID, energy="X", life=4, damage=9, drain=15,
           drain_mode="per_x", effects=("damage_hits_equal_x",
                                         "gain_1_margin_per_10_actual_drain_healing")),
+    _card(
+        "VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+        "Vivhite's Crimson Transformation Ritual",
+        "白绮的猩红转化仪式",
+        "ability",
+        "rare",
+        HYBRID,
+        energy=0,
+        effects=(
+            "ritual_phase_starts_at_0_and_increments_each_player_turn",
+            "all_attacks_gain_life_cost_equal_total_ritual_phase",
+            "all_attack_hits_gain_10_percent_damage_per_ritual_phase",
+        ),
+    ),
 )
 
 
@@ -480,8 +517,8 @@ VIVHITE_CARD_CATALOG: Final = (
 )
 VIVHITE_CARD_IDS: Final = frozenset(card.card_id for card in VIVHITE_CARD_CATALOG)
 
-if len(VIVHITE_CARD_CATALOG) != 60 or len(VIVHITE_CARD_IDS) != 60:
-    raise RuntimeError("the approved Vivhite catalog must contain 60 unique cards")
+if len(VIVHITE_CARD_CATALOG) != 61 or len(VIVHITE_CARD_IDS) != 61:
+    raise RuntimeError("the approved Vivhite catalog must contain 61 unique cards")
 
 
 IRONCLAD_PARAMETERS: Final = CharacterStrategyParameters(
@@ -561,6 +598,488 @@ def resolve_character_strategy(
 
 
 resolve_strategy = resolve_character_strategy
+
+
+def _dynamic_name(value: object) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value or "").casefold())
+
+
+def _card_dynamic_record(card: dict, name: str) -> dict | None:
+    wanted = _dynamic_name(name)
+    for collection_name in ("dynamic_values", "vars"):
+        for item in card.get(collection_name) or ():
+            if (isinstance(item, dict)
+                    and _dynamic_name(item.get("name")) == wanted):
+                return item
+    return None
+
+
+def card_dynamic_value(
+        card: dict,
+        name: str,
+        default: int | float | None = None,
+) -> float | None:
+    """Read one current API dynamic value by exact variable name.
+
+    Combat/selection payloads expose ``dynamic_values`` while ``/data/cards``
+    exposes the same records as ``vars``. Exact-name matching is intentional:
+    ``BlockPerMargin`` and ``SpellDamage`` are coefficients, not the card's
+    immediate Block or Damage.
+    """
+
+    item = _card_dynamic_record(card, name)
+    if item is not None:
+        value = item.get("current_value", item.get("base_value"))
+        if value is not None:
+            try:
+                return _finite_number(name, value)
+            except (TypeError, ValueError):
+                pass
+    return None if default is None else _finite_number(name, default)
+
+
+def _card_dynamic_preview_includes_modifier(card: dict, name: str) -> bool:
+    """Whether the API preview already folded a combat modifier into a var."""
+
+    item = _card_dynamic_record(card, name)
+    if item is None:
+        return False
+    if bool(item.get("is_modified")):
+        return True
+    current = item.get("current_value")
+    base = item.get("base_value")
+    if current is None or base is None:
+        return False
+    try:
+        return _finite_number(name, current) != _finite_number(name, base)
+    except (TypeError, ValueError):
+        return False
+
+
+def character_power_amount(
+        powers: list[dict] | tuple[dict, ...] | None,
+        power_id: str,
+) -> float:
+    """Return the uncapped amount of one exposed custom Power.
+
+    Single powers may have a null amount in an API payload; their presence is
+    represented as one. Counter powers retain their full amount.
+    """
+
+    total = 0.0
+    wanted = str(power_id).strip().upper()
+    for power in powers or ():
+        if not isinstance(power, dict):
+            continue
+        observed = str(power.get("power_id") or power.get("id") or "").upper()
+        if observed != wanted:
+            continue
+        amount = power.get("amount")
+        if amount is None:
+            total += 1.0
+            continue
+        try:
+            total += max(0.0, _finite_number("power amount", amount))
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def vivhite_crimson_ritual_totals(
+        strategy: CharacterStrategy,
+        powers: list[dict] | tuple[dict, ...] | None,
+) -> tuple[float, float]:
+    """Return uncapped (total extra LifeCost, additive damage percent).
+
+    Every ritual instance advances independently, but summing the exposed
+    phase values is algebraically identical for this turn's Attack modifiers.
+    Base and upgraded powers stay separate because they contribute 10% and 15%
+    per stage respectively.
+    """
+
+    if strategy.profile_id != VIVHITE_PROFILE_ID:
+        return 0.0, 0.0
+    extra_life_cost = 0.0
+    damage_percent = 0.0
+    ritual_ids = {
+        VIVHITE_CRIMSON_RITUAL_POWER_ID: 10.0,
+        VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID: 15.0,
+    }
+    for power in powers or ():
+        if not isinstance(power, dict):
+            continue
+        power_id = str(
+            power.get("power_id") or power.get("id") or "").strip().upper()
+        canonical_percent = ritual_ids.get(power_id)
+        if canonical_percent is None:
+            continue
+
+        def power_field(name: str) -> float | None:
+            normalized = _dynamic_name(name)
+            for key, raw_value in power.items():
+                if _dynamic_name(key) != normalized or raw_value is None:
+                    continue
+                try:
+                    return max(0.0, _finite_number(name, raw_value))
+                except (TypeError, ValueError):
+                    continue
+            value = card_dynamic_value(power, name)
+            return None if value is None else max(0.0, value)
+
+        # The production Power exposes Phase and DamagePercentPerPhase.  The
+        # current Agent payload still commonly projects DisplayAmount as amount,
+        # so retain that exact fallback without treating a phase-0 instance as 1.
+        phase = power_field("Phase")
+        if phase is None:
+            raw_amount = power.get("amount")
+            try:
+                phase = (0.0 if raw_amount is None else
+                         max(0.0, _finite_number("ritual phase", raw_amount)))
+            except (TypeError, ValueError):
+                phase = 0.0
+        percent_per_phase = power_field("DamagePercentPerPhase")
+        if percent_per_phase is None:
+            percent_per_phase = canonical_percent
+        extra_life_cost += phase
+        damage_percent += phase * percent_per_phase
+    return extra_life_cost, damage_percent
+
+
+def solitary_crown_kill_heal(max_hp: int | float | None = None) -> int:
+    """Solitary Crown healing for one death, with no custom ceiling."""
+
+    observed_max_hp = (VIVHITE_BASE_MAX_HP if max_hp is None
+                       else _finite_number("max hp", max_hp))
+    if observed_max_hp <= 0:
+        raise ValueError("max hp must be positive")
+    return int(ceil(observed_max_hp * 0.05))
+
+
+def character_card_has_terminal_life_cost_lock(
+        strategy: CharacterStrategy,
+        card: dict,
+        *,
+        current_hp: int | float,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> bool:
+    """Whether Vivhite's observed cough-blood cost makes the card illegal.
+
+    A transient combat payload may report every card as ``playable=false``
+    while an animation closes the play endpoint.  That signal therefore cannot
+    disable the existing bounded settle wait by itself.  Vivhite's life rule is
+    different: after Margin pays one-for-one, a card that would leave less than
+    one HP is deterministically illegal and must never be treated as latent.
+    """
+
+    if strategy.profile_id != VIVHITE_PROFILE_ID:
+        return False
+    life_cost = card_dynamic_value(card, "LifeCost", 0) or 0
+    entry = strategy.card(
+        str(card.get("card_id") or "").strip().upper().rstrip("+"))
+    ritual_phase, _ritual_percent = vivhite_crimson_ritual_totals(
+        strategy, player_powers)
+    if (entry is not None and entry.card_type == "attack"
+            and not _card_dynamic_preview_includes_modifier(card, "LifeCost")):
+        life_cost += ritual_phase
+    if life_cost <= 0:
+        return False
+    margin = character_power_amount(player_powers, VIVHITE_MARGIN_POWER_ID)
+    effective_cost = max(0.0, life_cost - margin)
+    return _finite_number("current hp", current_hp) - effective_cost < 1
+
+
+def resolve_character_selection_mode(
+        strategy: CharacterStrategy,
+        *,
+        kind: str,
+        prompt: str,
+        reward_pending: bool = False,
+) -> str | None:
+    """Resolve Vivhite's child-selection semantics from production prompts.
+
+    The API does not expose the source card ID for a child selection, but it does
+    preserve each card's localized ``selectionScreenPrompt``. Reward structure
+    wins before prompt matching because an offered card's rules text may itself
+    mention a discard pile.
+    """
+
+    if strategy.profile_id != VIVHITE_PROFILE_ID or reward_pending:
+        return None
+    blob = f"{kind} {prompt}".casefold()
+
+    if (("消耗牌堆" in blob and "复制" in blob)
+            or ("exhaust pile" in blob and "copy" in blob)):
+        return SELECTION_RECOVER_COPY_BEST
+    if (("本回合打出过" in blob and "复制" in blob)
+            or ("played this turn" in blob and "copy" in blob)):
+        return SELECTION_COPY_FREE_BEST
+    if (("弃牌堆" in blob and "返回" in blob)
+            or ("discard pile" in blob and "return" in blob)):
+        return SELECTION_RECOVER_FREE_BEST
+    if (("放到抽牌堆顶" in blob or "置于抽牌堆顶" in blob)
+            or ("top of" in blob and "draw pile" in blob)):
+        return SELECTION_TOPDECK_BEST
+    if ("combat_hand" in blob
+            and "弃牌堆" not in blob
+            and "discard pile" not in blob
+            and ("弃" in blob or "discard" in blob)):
+        return SELECTION_DISCARD_WORST
+    return None
+
+
+def character_selection_value(
+        strategy: CharacterStrategy,
+        mode: str | None,
+        card: dict,
+        base_value: int | float,
+) -> float:
+    """Value a child-selection candidate without contaminating shared policy."""
+
+    value = _finite_number("base selection value", base_value)
+    if strategy.profile_id != VIVHITE_PROFILE_ID:
+        return value
+    try:
+        energy = max(0.0, _finite_number(
+            "selection energy cost", card.get("energy_cost", 0) or 0))
+    except (TypeError, ValueError):
+        energy = 0.0
+    energy_value = energy * strategy.parameters.energy_weight
+    if mode in (SELECTION_RECOVER_FREE_BEST, SELECTION_COPY_FREE_BEST):
+        return value + energy_value
+    if mode == SELECTION_RECOVER_COPY_BEST:
+        return (2.0 * value) + energy_value
+    return value
+
+
+def resolve_character_card_numbers(
+        strategy: CharacterStrategy,
+        card: dict,
+        fallback_damage: int | float,
+        fallback_block: int | float,
+        fallback_hits: int | float,
+        *,
+        energy: int | float | None = None,
+        margin: int | float = 0,
+        hand_count: int | None = None,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> tuple[int, int, int]:
+    """Resolve actual pre-play numbers for a catalogued Vivhite card.
+
+    This corrects coefficient vars that the shared substring parser cannot
+    distinguish and expands state-dependent attacks/blocks from API-visible
+    energy, hand size, and Margin. Non-Vivhite cards return the shared values
+    byte-for-byte.
+    """
+
+    entry = strategy.card(str(card.get("card_id") or "").upper().rstrip("+"))
+    if entry is None:
+        return (int(fallback_damage), int(fallback_block),
+                max(0, int(fallback_hits)))
+
+    mechanics = entry.mechanics
+    current_margin = max(0, int(_finite_number("margin", margin)))
+    life_cost = max(0, int(card_dynamic_value(
+        card, "LifeCost", mechanics.life_calculation_cost) or 0))
+
+    if mechanics.base_damage > 0:
+        damage = max(0, int(card_dynamic_value(
+            card, "Damage", mechanics.base_damage) or 0))
+    else:
+        # SpellDamage and similar vars are delayed effects, not this card's hit.
+        damage = 0
+
+    if mechanics.base_block > 0:
+        block = max(0, int(card_dynamic_value(
+            card, "Block", mechanics.base_block) or 0))
+    else:
+        block = 0
+
+    repeat = card_dynamic_value(card, "Repeat")
+    if mechanics.energy == "X" or card.get("costs_x"):
+        hits = max(0, int(_finite_number("X energy", energy or 0)))
+    elif repeat is not None:
+        hits = max(0, int(repeat))
+    elif entry.stable_id == "RIEMANN_STAR_ARRAY" and hand_count is not None:
+        # The played card leaves Hand before its OnPlay body counts the pile.
+        hits = max(0, int(hand_count) - 1)
+    elif mechanics.damage_hits > 0:
+        hits = mechanics.damage_hits
+    else:
+        hits = max(0, int(fallback_hits))
+
+    if entry.stable_id == "ASTRAL_MEASURE":
+        damage += current_margin
+    elif entry.stable_id == "CLOSED_PROJECTION":
+        consumed = min(life_cost, current_margin)
+        coefficient = max(0, int(card_dynamic_value(
+            card, "BlockPerMargin", 5) or 0))
+        block = consumed * coefficient
+    elif entry.stable_id == "ISOPERIMETRIC_WARD":
+        remaining = max(0, current_margin - life_cost)
+        multiplier = max(0, int(card_dynamic_value(
+            card, "Multiplier", 2) or 0))
+        block += remaining * multiplier
+    elif entry.stable_id == "CONSERVATION_FIRMAMENT":
+        remaining = max(0, current_margin - life_cost)
+        multiplier = max(0, int(card_dynamic_value(
+            card, "Multiplier", 2) or 0))
+        block = (remaining * 2) * multiplier
+
+    _ritual_phase, ritual_damage_percent = vivhite_crimson_ritual_totals(
+        strategy, player_powers)
+    if (entry.card_type == "attack" and ritual_damage_percent > 0
+            and not _card_dynamic_preview_includes_modifier(card, "Damage")):
+        damage = floor(damage * (100.0 + ritual_damage_percent) / 100.0)
+
+    return damage, block, hits
+
+
+def character_build_synergy(
+        strategy: CharacterStrategy,
+        card: dict,
+        deck: list[dict] | tuple[dict, ...] | None,
+) -> tuple[float, str]:
+    """Return profile-only draft synergy from immutable build tags."""
+
+    candidate = strategy.card(
+        str(card.get("card_id") or "").strip().upper().rstrip("+"))
+    if candidate is None or strategy.profile_id != VIVHITE_PROFILE_ID:
+        return 0.0, ""
+
+    entries = []
+    for owned in deck or ():
+        entry = strategy.card(
+            str(owned.get("card_id") or "").strip().upper().rstrip("+"))
+        if entry is not None:
+            entries.append(entry)
+
+    tags = [entry.build_tags[0] for entry in entries]
+    candidate_tag = candidate.build_tags[0]
+    same_suit = tags.count(candidate_tag) if candidate_tag != HYBRID else 0
+    score = 0.25 * same_suit
+    reasons = [f"同系×{same_suit}"] if same_suit else []
+
+    def has_effect(entry: CardCatalogEntry, fragment: str) -> bool:
+        return any(fragment in effect for effect in entry.mechanics.effects)
+
+    margin_sources = sum(
+        1 for entry in entries if entry.mechanics.margin_gain > 0
+        or has_effect(entry, "gain_2_margin_each_turn"))
+    margin_payoffs = sum(
+        1 for entry in entries if any(
+            token in " ".join(entry.mechanics.effects)
+            for token in ("per_margin", "current_margin", "double_current_margin")))
+    dimension_cards = sum(
+        1 for entry in entries if entry.mechanics.max_hp_growth > 0)
+    extension_cards = sum(
+        1 for entry in entries if entry.stable_id == "INFINITE_EXTENSION")
+
+    death_engines = sum(
+        1 for entry in entries if any(
+            token in entry.mechanics.effects
+            for token in ("triggers_on_any_enemy_death",
+                          "increase_immediate_enemy_death_heal")))
+    lethal_attacks = sum(
+        1 for entry in entries if entry.mechanics.lethal
+        or (entry.mechanics.all_enemies and entry.mechanics.base_damage > 0))
+    draw_sources = sum(
+        1 for entry in entries if entry.mechanics.draw > 0
+        or entry.mechanics.kill_draw > 0
+        or any("draw" in effect for effect in entry.mechanics.effects))
+    draw_engines = sum(
+        1 for entry in entries if entry.stable_id in (
+            "DYNAMIC_PROGRAMMING", "INFINITE_STAR_SEQUENCE"))
+
+    drain_attacks = sum(
+        1 for entry in entries
+        if entry.card_type == "attack" and (
+            entry.mechanics.drain_percent > 0
+            or entry.mechanics.drain_percent_mode
+            in ("per_margin_before_life_payment", "per_x")))
+    drain_engines = sum(
+        1 for entry in entries if (
+            entry.mechanics.drain_percent_mode in (
+                "global_combat", "temporary_this_turn", "next_attack_bonus",
+                "global_growth_per_attack_that_drain_heals",
+                "per_life_cost_prevented_by_margin")
+            or entry.stable_id in (
+                "COLOR_CONSERVATION", "CRIMSON_CONSERVATION_LAW",
+                "INFINITE_CANVAS")))
+
+    mechanics = candidate.mechanics
+    if candidate_tag == CONSERVATION_GEOMETRY:
+        if mechanics.margin_gain > 0 or has_effect(
+                candidate, "gain_2_margin_each_turn"):
+            score += 0.45 * margin_payoffs
+            if margin_payoffs:
+                reasons.append(f"余裕供给→兑现×{margin_payoffs}")
+        if (mechanics.max_hp_growth > 0
+                or has_effect(candidate, "current_margin")
+                or has_effect(candidate, "double_current_margin")):
+            score += 0.45 * margin_sources
+            if margin_sources:
+                reasons.append(f"余裕兑现←供给×{margin_sources}")
+        if candidate.stable_id == "INFINITE_EXTENSION":
+            score += 0.75 * dimension_cards
+            if dimension_cards:
+                reasons.append(f"增维牌×{dimension_cards}")
+        elif mechanics.max_hp_growth > 0:
+            score += 0.75 * extension_cards
+            if extension_cards:
+                reasons.append(f"无限延拓×{extension_cards}")
+    elif candidate_tag == RECURSIVE_ASTRAL:
+        candidate_is_death_engine = any(
+            token in mechanics.effects
+            for token in ("triggers_on_any_enemy_death",
+                          "increase_immediate_enemy_death_heal"))
+        if candidate_is_death_engine:
+            score += 0.55 * lethal_attacks
+            if lethal_attacks:
+                reasons.append(f"击杀源×{lethal_attacks}")
+        if mechanics.lethal or (mechanics.all_enemies and mechanics.base_damage > 0):
+            score += 0.55 * death_engines
+            if death_engines:
+                reasons.append(f"死亡引擎×{death_engines}")
+        if mechanics.draw > 0 or mechanics.kill_draw > 0:
+            score += 0.35 * draw_engines
+            if draw_engines:
+                reasons.append(f"过牌引擎×{draw_engines}")
+        if candidate.stable_id in ("DYNAMIC_PROGRAMMING",
+                                   "INFINITE_STAR_SEQUENCE"):
+            score += 0.35 * draw_sources
+            if draw_sources:
+                reasons.append(f"过牌源×{draw_sources}")
+    elif candidate_tag == CRIMSON_INTEGRAL:
+        if candidate.card_type == "attack" and mechanics.drain_percent > 0:
+            score += 0.55 * drain_engines
+            if drain_engines:
+                reasons.append(f"汲取引擎×{drain_engines}")
+        if (mechanics.drain_percent_mode in (
+                "global_combat", "temporary_this_turn", "next_attack_bonus",
+                "global_growth_per_attack_that_drain_heals")
+                or candidate.stable_id in (
+                    "COLOR_CONSERVATION", "CRIMSON_CONSERVATION_LAW",
+                    "INFINITE_CANVAS")):
+            score += 0.55 * drain_attacks
+            if drain_attacks:
+                reasons.append(f"汲取攻击×{drain_attacks}")
+
+    hybrid_count = tags.count(HYBRID)
+    if candidate_tag == HYBRID:
+        distinct_suits = len(set(tags) & {
+            CONSERVATION_GEOMETRY, RECURSIVE_ASTRAL, CRIMSON_INTEGRAL})
+        score += 0.5 * distinct_suits
+        if distinct_suits:
+            reasons.append(f"跨系桥接×{distinct_suits}")
+    elif hybrid_count:
+        score += 0.2 * hybrid_count
+        reasons.append(f"混合桥×{hybrid_count}")
+
+    if score == 0.0:
+        return 0.0, ""
+    return score, (
+        f"VIVHITE_BUILD_SYNERGY={score:+.2f}[{candidate.stable_id};"
+        f"{'/'.join(reasons)}]")
 
 
 def drain_healing_from_actual_damage(
@@ -689,6 +1208,724 @@ def score_realized_mechanics(
     ))
 
 
+def _enemy_attack_outcome(
+        damage: int,
+        hits: int,
+        enemy: dict,
+) -> tuple[int, bool]:
+    """Estimate enemy HP loss after its current Block, with overkill removed."""
+
+    try:
+        hp = max(0, int(enemy.get("current_hp") or 0))
+        block = max(0, int(enemy.get("block") or 0))
+    except (TypeError, ValueError):
+        return 0, False
+    remaining = hp
+    for _ in range(max(0, hits)):
+        segment = max(0, damage)
+        absorbed = min(block, segment)
+        block -= absorbed
+        segment -= absorbed
+        lost = min(remaining, segment)
+        remaining -= lost
+        if remaining <= 0:
+            break
+    return hp - remaining, hp > 0 and remaining <= 0
+
+
+def _future_attack_damage(
+        strategy: CharacterStrategy,
+        cards: list[dict] | tuple[dict, ...] | None,
+        *,
+        energy: int,
+        margin: int,
+        target_count: int,
+        exclude_card: dict | None = None,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> list[int]:
+    """Nominal HP-damage opportunities used by persistent/turn Drain cards."""
+
+    values = []
+    excluded_index = (exclude_card or {}).get("index")
+    excluded_instance = ((exclude_card or {}).get("instance_id")
+                         or (exclude_card or {}).get("uuid"))
+    for observed in cards or ():
+        if not isinstance(observed, dict):
+            continue
+        if excluded_instance and excluded_instance in (
+                observed.get("instance_id"), observed.get("uuid")):
+            continue
+        if (excluded_instance is None and excluded_index is not None
+                and observed.get("index") == excluded_index
+                and observed.get("card_id") == (exclude_card or {}).get("card_id")):
+            continue
+        entry = strategy.card(
+            str(observed.get("card_id") or "").upper().rstrip("+"))
+        if entry is None or entry.card_type != "attack":
+            continue
+        fallback_hits = max(1, entry.mechanics.damage_hits)
+        damage, _block, hits = resolve_character_card_numbers(
+            strategy,
+            observed,
+            entry.mechanics.base_damage,
+            entry.mechanics.base_block,
+            fallback_hits,
+            energy=energy,
+            margin=margin,
+            hand_count=len(cards or ()),
+            player_powers=player_powers,
+        )
+        multiplier = target_count if entry.mechanics.all_enemies else 1
+        values.append(max(0, damage * hits * multiplier))
+    return values
+
+
+def _catalog_tactical_value(
+        strategy: CharacterStrategy,
+        card: dict,
+        *,
+        energy: int,
+        margin: int,
+        hand_count: int,
+        target_count: int,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> tuple[float, float]:
+    """Return a conservative immediate value and printed energy for one card.
+
+    Recovery/copy parents must be worth reaching their child-selection screen.
+    This intentionally counts only API/catalog-visible immediate damage, Block,
+    draw, Margin, and energy; it does not recursively estimate another recovery
+    engine or invent unavailable discard/exhaust pile contents.
+    """
+
+    entry = strategy.card(
+        str(card.get("card_id") or "").strip().upper().rstrip("+"))
+    if entry is None or entry.card_type == "ability":
+        return 0.0, 0.0
+    # A recovered X card made free has engine-specific X semantics that are not
+    # exposed by this API. Exclude it instead of pretending it receives energy.
+    if entry.mechanics.energy == "X" or card.get("costs_x"):
+        return 0.0, 0.0
+
+    mechanics = entry.mechanics
+    damage, block, hits = resolve_character_card_numbers(
+        strategy,
+        card,
+        mechanics.base_damage,
+        mechanics.base_block,
+        max(1, mechanics.damage_hits),
+        energy=energy,
+        margin=margin,
+        hand_count=hand_count,
+        player_powers=player_powers,
+    )
+    targets = max(1, target_count) if mechanics.all_enemies else 1
+    value = float(damage * hits * targets) + (0.8 * block)
+    value += score_draw(strategy.parameters, mechanics.draw)
+    value += score_margin(strategy.parameters, mechanics.margin_gain)
+    value += score_energy(strategy.parameters, mechanics.energy_gain)
+    try:
+        printed_energy = max(0.0, _finite_number(
+            "recovered card energy",
+            card.get("energy_cost", mechanics.energy) or 0))
+    except (TypeError, ValueError):
+        printed_energy = max(0.0, float(mechanics.energy))
+    return max(0.0, value), printed_energy
+
+
+def _recovery_copy_projection(
+        strategy: CharacterStrategy,
+        entry: CardCatalogEntry,
+        card: dict,
+        cards: list[dict] | tuple[dict, ...] | None,
+        *,
+        energy: int,
+        margin: int,
+        target_count: int,
+        cards_played_this_turn: int | None,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> float:
+    """Project the best eligible child choice for Vivhite recursion cards."""
+
+    rules = {
+        "MOBIUS_LOOP": ({"skill"}, 1, 1),
+        "BACKTRACKING_SPELL": ({"attack"}, 1, 1),
+        "EVENT_LOOP": ({"attack", "skill"}, 1, 1),
+        "CONSERVED_RECURRENCE": (
+            {"attack", "skill"}, 2, 2 if card.get("upgraded") else 1),
+    }
+    rule = rules.get(entry.stable_id)
+    if rule is None:
+        return 0.0
+    if entry.stable_id == "EVENT_LOOP" \
+            and cards_played_this_turn is not None \
+            and cards_played_this_turn <= 0:
+        return 0.0
+
+    allowed_types, realized_copies, free_copies = rule
+    choices = []
+    for candidate in cards or ():
+        if not isinstance(candidate, dict):
+            continue
+        candidate_entry = strategy.card(
+            str(candidate.get("card_id") or "").strip().upper().rstrip("+"))
+        if candidate_entry is None or candidate_entry.card_type not in allowed_types:
+            continue
+        if candidate_entry.stable_id in rules:
+            continue
+        immediate, printed_energy = _catalog_tactical_value(
+            strategy,
+            candidate,
+            energy=energy,
+            margin=margin,
+            hand_count=len(cards or ()),
+            target_count=target_count,
+            player_powers=player_powers,
+        )
+        choices.append(
+            (realized_copies * immediate)
+            + (free_copies * printed_energy
+               * strategy.parameters.energy_weight))
+    return max(choices, default=0.0)
+
+
+def _ritual_longline_projection(
+        strategy: CharacterStrategy,
+        entry: CardCatalogEntry,
+        card: dict,
+        cards: list[dict] | tuple[dict, ...] | None,
+        *,
+        energy: int,
+        margin: int,
+        target_count: int,
+        enemies: list[dict] | tuple[dict, ...] | None,
+        current_hp: int | float | None,
+        max_hp: int | float | None,
+) -> tuple[float, str]:
+    """Uncapped long-fight projection for one newly played ritual instance."""
+
+    if entry.stable_id != "VIVHITES_CRIMSON_TRANSFORMATION_RITUAL":
+        return 0.0, ""
+
+    attack_damage = 0.0
+    attack_count = 0
+    deck_size = 0
+    for candidate in cards or ():
+        if not isinstance(candidate, dict):
+            continue
+        deck_size += 1
+        candidate_entry = strategy.card(
+            str(candidate.get("card_id") or "").strip().upper().rstrip("+"))
+        if candidate_entry is None or candidate_entry.card_type != "attack":
+            continue
+        mechanics = candidate_entry.mechanics
+        damage, _block, hits = resolve_character_card_numbers(
+            strategy,
+            candidate,
+            mechanics.base_damage,
+            mechanics.base_block,
+            max(1, mechanics.damage_hits),
+            energy=energy,
+            margin=margin,
+            hand_count=len(cards or ()),
+            player_powers=None,
+        )
+        multiplier = max(1, target_count) if mechanics.all_enemies else 1
+        attack_damage += max(0.0, float(damage * hits * multiplier))
+        attack_count += 1
+
+    if deck_size > 0 and attack_count > 0:
+        # Five draws is the native turn baseline, not a gameplay growth cap.
+        expected_damage_per_turn = attack_damage * 5.0 / deck_size
+        expected_attacks_per_turn = attack_count * 5.0 / deck_size
+    elif deck_size > 0:
+        expected_damage_per_turn = 0.0
+        expected_attacks_per_turn = 0.0
+    else:
+        # No live deck context (for example /data/cards): use the 78-HP starter's
+        # conservative two basic attacks per turn as the nominal baseline.
+        expected_damage_per_turn = 20.0
+        expected_attacks_per_turn = 2.0
+
+    alive = [enemy for enemy in (enemies or ())
+             if enemy.get("is_alive", True) and enemy.get("is_hittable", True)]
+    if alive and expected_damage_per_turn > 0:
+        hp_pool = sum(max(0.0, float(enemy.get("current_hp") or 0))
+                      + max(0.0, float(enemy.get("block") or 0))
+                      for enemy in alive)
+        future_turns = max(1, int(ceil(hp_pool / expected_damage_per_turn)))
+    else:
+        future_turns = 3
+    phase_sum = future_turns * (future_turns + 1) / 2.0
+
+    default_percent = 15.0 if card.get("upgraded") else 10.0
+    percent_per_phase = default_percent
+    observed_percent = card_dynamic_value(card, "DamagePercentPerPhase")
+    if observed_percent is not None:
+        percent_per_phase = max(0.0, observed_percent)
+
+    extra_damage = (expected_damage_per_turn
+                    * percent_per_phase / 100.0 * phase_sum)
+    future_life_cost = expected_attacks_per_turn * phase_sum
+    if current_hp is not None and max_hp is not None:
+        future_life_score = score_life_cost(
+            strategy.parameters,
+            future_life_cost,
+            current_hp=current_hp,
+            max_hp=max_hp,
+        )
+    else:
+        future_life_score = (
+            future_life_cost * strategy.parameters.life_cost_weight)
+    value = extra_damage + future_life_score
+    return value, (
+        f"ritual-longline={value:g}/turns={future_turns}/"
+        f"phase-sum={phase_sum:g}/rate={percent_per_phase:g}%")
+
+
+def estimate_character_card(
+        strategy: CharacterStrategy,
+        card: dict,
+        *,
+        current_hp: int | float | None = None,
+        max_hp: int | float | None = None,
+        observed_target_count: int | None = None,
+        enemies: list[dict] | tuple[dict, ...] | None = None,
+        target_index: int | None = None,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+        energy: int | float | None = None,
+        hand_cards: list[dict] | tuple[dict, ...] | None = None,
+        deck_cards: list[dict] | tuple[dict, ...] | None = None,
+        cards_played_this_turn: int | None = None,
+        reward_x_energy: int = 3,
+) -> tuple[float, str]:
+    """State-aware nominal estimate for one catalogued Vivhite card.
+
+    API dynamic values override catalog bases. Observable Margin and Drain Powers,
+    target HP/Block, current missing HP, lethal conditions, X energy, hand size,
+    and persistent child effects all participate. Natural engine constraints such
+    as current missing HP and remaining enemy HP are respected; no custom gameplay
+    ceiling is introduced for Margin, Drain rate, healing, growth, draw, or energy.
+    """
+
+    entry = strategy.card(
+        str(card.get("card_id") or "").strip().upper().rstrip("+"))
+    if entry is None:
+        return 0.0, ""
+
+    mechanics = entry.mechanics
+    parameters = strategy.parameters
+    powers_observed = player_powers is not None
+    margin_before = int(character_power_amount(
+        player_powers, VIVHITE_MARGIN_POWER_ID)) if powers_observed else 0
+    x_energy = max(0, int(_finite_number(
+        "energy", reward_x_energy if energy is None else energy)))
+    life_cost = max(0, int(card_dynamic_value(
+        card, "LifeCost", mechanics.life_calculation_cost) or 0))
+    ritual_life_cost, ritual_damage_percent = vivhite_crimson_ritual_totals(
+        strategy, player_powers)
+    if (entry.card_type == "attack" and ritual_life_cost > 0
+            and not _card_dynamic_preview_includes_modifier(card, "LifeCost")):
+        life_cost += int(ritual_life_cost)
+    margin_consumed = min(life_cost, margin_before)
+    hp_cost = life_cost - margin_consumed
+    margin_spend_score = -score_margin(parameters, margin_consumed)
+
+    hp_observed = current_hp is not None and max_hp is not None
+    if hp_observed:
+        hp_value = _finite_number("current_hp", current_hp)
+        max_hp_value = _finite_number("max_hp", max_hp)
+        if max_hp_value <= 0:
+            raise ValueError("max_hp must be positive")
+        life_score = score_life_cost(
+            parameters,
+            hp_cost,
+            current_hp=hp_value,
+            max_hp=max_hp_value,
+        )
+        hp_after_payment = max(0.0, hp_value - hp_cost)
+        missing_after_payment = max(0.0, max_hp_value - hp_after_payment)
+    else:
+        hp_value = max_hp_value = None
+        life_score = hp_cost * parameters.life_cost_weight
+        missing_after_payment = None
+
+    fallback_hits = max(1, mechanics.damage_hits)
+    damage, _block, hits = resolve_character_card_numbers(
+        strategy,
+        card,
+        mechanics.base_damage,
+        mechanics.base_block,
+        fallback_hits,
+        energy=x_energy,
+        margin=margin_before,
+        hand_count=len(hand_cards or ()) if hand_cards is not None else None,
+        player_powers=player_powers,
+    )
+
+    alive_enemies = [enemy for enemy in (enemies or ())
+                     if enemy.get("is_alive", True)
+                     and enemy.get("is_hittable", True)]
+    target_count = 1
+    if mechanics.all_enemies:
+        if alive_enemies:
+            target_count = len(alive_enemies)
+        elif observed_target_count is not None:
+            if observed_target_count < 0:
+                raise ValueError("observed_target_count cannot be negative")
+            target_count = observed_target_count
+
+    actual_enemy_hp_damage = 0
+    kill_count = 0
+    if damage > 0 and hits > 0 and alive_enemies:
+        if mechanics.all_enemies:
+            attack_targets = alive_enemies
+        else:
+            selected = next((enemy for enemy in alive_enemies
+                             if enemy.get("index") == target_index), None)
+            attack_targets = [selected] if selected is not None else []
+        for enemy in attack_targets:
+            hp_loss, killed = _enemy_attack_outcome(damage, hits, enemy)
+            actual_enemy_hp_damage += hp_loss
+            kill_count += int(killed)
+    elif damage > 0 and hits > 0:
+        actual_enemy_hp_damage = damage * hits * target_count
+
+    immediate_margin = float(mechanics.margin_gain)
+    if mechanics.margin_gain > 0:
+        immediate_margin = float(card_dynamic_value(
+            card, "Margin", mechanics.margin_gain) or 0)
+    if entry.stable_id == "INVARIANT" and character_power_amount(
+            player_powers, VIVHITE_DIMENSIONALITY_POWER_ID) <= 0:
+        immediate_margin = 0.0
+    if entry.stable_id == "CONSERVATION_FIRMAMENT":
+        immediate_margin += max(0, margin_before - life_cost)
+    if entry.stable_id == "LIFE_MANIFOLD":
+        immediate_margin += max(0.0, card_dynamic_value(card, "Margin", 2) or 0)
+
+    base_draw = float(mechanics.draw)
+    base_growth = float(mechanics.growth)
+    extra_damage_value = 0.0
+    if mechanics.draw > 0:
+        base_draw = max(0.0, card_dynamic_value(
+            card, "Cards", mechanics.draw) or 0)
+    if "discard_1" in mechanics.effects:
+        base_draw = max(0.0, base_draw - 1.0)
+    if entry.stable_id == "VIVHITE_TRANSFORMATION":
+        def transformation_power(*names: str) -> float:
+            for name in names:
+                value = card_dynamic_value(card, name)
+                if value is not None:
+                    return max(0.0, value)
+            return 1.0
+
+        # ModCardVars.Power names have appeared in both short and model-name
+        # forms across API builds; exact matching within each known spelling still
+        # prevents unrelated coefficient vars from leaking into the estimate.
+        base_growth = (
+            transformation_power("Strength", "StrengthPower")
+            + transformation_power("Dexterity", "DexterityPower"))
+    elif entry.stable_id == "DYNAMIC_PROGRAMMING":
+        base_growth = max(0.0, card_dynamic_value(card, "Calculation", 2) or 0)
+    elif entry.stable_id == "INFINITE_CANVAS":
+        base_growth = max(0.0, card_dynamic_value(card, "DrainGrowth", 2) or 0)
+    elif entry.stable_id == "LAW_OF_CONSERVATION":
+        base_growth = max(0.0, card_dynamic_value(card, "Power", 1) or 0)
+    elif entry.stable_id == "UNIFIED_FIELD_THEORY":
+        base_growth = max(0.0, card_dynamic_value(
+            card, "DrainPerMargin", mechanics.drain_percent) or 0)
+
+    observed_cards = deck_cards if deck_cards is not None else hand_cards
+    attack_entries = []
+    for observed in observed_cards or ():
+        owned_entry = strategy.card(
+            str(observed.get("card_id") or "").upper().rstrip("+"))
+        if owned_entry is not None:
+            attack_entries.append(owned_entry)
+    sequence_drain_rate = 0.0
+    if entry.stable_id == "CHROMATIC_SEQUENCE":
+        draw_count = max(0.0, card_dynamic_value(card, "Cards", 2) or 0)
+        if attack_entries:
+            attacks = sum(1 for owned in attack_entries
+                          if owned.card_type == "attack")
+            skills = sum(1 for owned in attack_entries
+                         if owned.card_type == "skill")
+            powers = sum(1 for owned in attack_entries
+                         if owned.card_type == "ability")
+            denominator = len(attack_entries)
+            immediate_margin += (draw_count * (attacks + powers) / denominator
+                                 * max(0.0, card_dynamic_value(
+                                     card, "MarginPerAttack", 1) or 0))
+            sequence_drain_rate = (
+                draw_count * (skills + powers) / denominator
+                * max(0.0, card_dynamic_value(
+                    card, "DrainPerSkill", 5) or 0))
+    if entry.stable_id == "DIVIDE_AND_CONQUER_CIRCLE" and attack_entries:
+        draw_count = max(0.0, card_dynamic_value(card, "Cards", 2) or 0)
+        attack_ratio = (sum(1 for owned in attack_entries
+                            if owned.card_type == "attack")
+                        / len(attack_entries))
+        extra_damage_value = (draw_count * attack_ratio
+                              * max(0.0, card_dynamic_value(
+                                  card, "SpellDamage", 4) or 0))
+    if entry.stable_id == "INFINITE_STAR_SEQUENCE" \
+            and cards_played_this_turn is not None:
+        sequence_draw = max(0, int(cards_played_this_turn))
+        if card.get("upgraded"):
+            sequence_draw += 1
+        base_draw += sequence_draw
+        immediate_margin += sequence_draw
+
+    recovery_projection = _recovery_copy_projection(
+        strategy,
+        entry,
+        card,
+        observed_cards,
+        energy=x_energy,
+        margin=margin_before,
+        target_count=target_count,
+        cards_played_this_turn=cards_played_this_turn,
+        player_powers=player_powers,
+    )
+    vulnerable_projection = 0.0
+    if any(effect in mechanics.effects for effect in (
+            "apply_2_vulnerable", "apply_2_vulnerable_to_all_enemies")):
+        vulnerable = max(0.0, card_dynamic_value(
+            card, "VulnerablePower", 2) or 0)
+        applies_to_all = (
+            "apply_2_vulnerable_to_all_enemies" in mechanics.effects)
+        if applies_to_all:
+            if alive_enemies:
+                vulnerable_targets = len(alive_enemies)
+            elif observed_target_count is not None:
+                vulnerable_targets = max(0, observed_target_count)
+            else:
+                vulnerable_targets = 1
+        else:
+            vulnerable_targets = 1
+        vulnerable_projection = score_growth(
+            parameters, vulnerable * vulnerable_targets)
+
+    ritual_projection, ritual_note = _ritual_longline_projection(
+        strategy,
+        entry,
+        card,
+        observed_cards,
+        energy=x_energy,
+        margin=margin_before,
+        target_count=target_count,
+        enemies=alive_enemies,
+        current_hp=current_hp,
+        max_hp=max_hp,
+    )
+
+    global_drain = character_power_amount(
+        player_powers, VIVHITE_DRAIN_POWER_ID)
+    turn_drain = character_power_amount(
+        player_powers, VIVHITE_TURN_DRAIN_POWER_ID)
+    prevented_drain = margin_consumed * (
+        2.0 * character_power_amount(
+            player_powers, "VIVHITE_POWER_UNIFIED_FIELD_THEORY_POWER")
+        + 3.0 * character_power_amount(
+            player_powers,
+            "VIVHITE_POWER_UNIFIED_FIELD_THEORY_UPGRADED_POWER"))
+    card_drain = 0.0
+    if entry.card_type == "attack":
+        if mechanics.drain_percent_mode == "per_x":
+            card_drain = max(0.0, card_dynamic_value(
+                card, "DrainPerX", mechanics.drain_percent) or 0) * x_energy
+        elif mechanics.drain_percent_mode == "per_margin_before_life_payment":
+            card_drain = max(0.0, card_dynamic_value(
+                card, "DrainPerMargin", mechanics.drain_percent) or 0) * margin_before
+        elif mechanics.drain_percent_mode == "flat":
+            card_drain = max(0.0, card_dynamic_value(
+                card, "Drain", mechanics.drain_percent) or 0)
+
+    total_drain = card_drain + global_drain + turn_drain + prevented_drain
+    drain_requested = floor(actual_enemy_hp_damage * total_drain / 100.0)
+    drain_projection = False
+    if (entry.card_type != "attack"
+            and (mechanics.drain_percent_mode in (
+                "global_combat", "temporary_this_turn", "next_attack_bonus")
+                 or sequence_drain_rate > 0)):
+        engine_rate = (sequence_drain_rate if sequence_drain_rate > 0 else
+                       max(0.0, card_dynamic_value(
+                           card, "Drain", mechanics.drain_percent) or 0))
+        future_cards = (deck_cards if mechanics.drain_percent_mode == "global_combat"
+                        and deck_cards is not None else hand_cards or deck_cards)
+        opportunities = _future_attack_damage(
+            strategy,
+            future_cards,
+            energy=x_energy,
+            margin=max(0, margin_before - life_cost),
+            target_count=max(1, target_count),
+            exclude_card=card,
+            player_powers=player_powers,
+        )
+        future_damage = (max(opportunities, default=0)
+                         if mechanics.drain_percent_mode == "next_attack_bonus"
+                         else sum(opportunities))
+        drain_requested = floor(future_damage * engine_rate / 100.0)
+        total_drain = engine_rate
+        drain_projection = True
+
+    if missing_after_payment is None:
+        drain_healed = float(drain_requested)
+        drain_excess = 0.0
+    else:
+        drain_healed = min(float(drain_requested), missing_after_payment)
+        drain_excess = max(0.0, float(drain_requested) - drain_healed)
+    closed_manifold = character_power_amount(
+        player_powers, "VIVHITE_POWER_CLOSED_MANIFOLD_POWER") > 0
+    if closed_manifold:
+        immediate_margin += drain_excess
+
+    if entry.stable_id == "CHROMATIC_LIMIT" and drain_healed > 0:
+        healing_per_margin = max(1.0, card_dynamic_value(
+            card, "HealingPerMargin", 10) or 10)
+        immediate_margin += floor(drain_healed / healing_per_margin)
+
+    conversion_block = margin_consumed * character_power_amount(
+        player_powers, "VIVHITE_POWER_LAW_OF_CONSERVATION_POWER")
+    conversion_growth = prevented_drain
+    if drain_healed > 0:
+        conversion_block += drain_healed * character_power_amount(
+            player_powers, "VIVHITE_POWER_COLOR_CONSERVATION_POWER")
+        normal_law = character_power_amount(
+            player_powers, "VIVHITE_POWER_CRIMSON_CONSERVATION_LAW_POWER")
+        upgraded_law = character_power_amount(
+            player_powers,
+            "VIVHITE_POWER_CRIMSON_CONSERVATION_LAW_UPGRADED_POWER")
+        conversion_growth += ((floor(drain_healed / 5.0) * normal_law)
+                              + (floor(drain_healed / 4.0) * upgraded_law))
+        conversion_growth += (
+            2.0 * character_power_amount(
+                player_powers, "VIVHITE_POWER_INFINITE_CANVAS_POWER")
+            + 3.0 * character_power_amount(
+                player_powers, "VIVHITE_POWER_INFINITE_CANVAS_UPGRADED_POWER"))
+        immediate_margin += (
+            floor(drain_healed / 3.0) * character_power_amount(
+                player_powers, "VIVHITE_POWER_UNIFIED_FIELD_THEORY_POWER")
+            + floor(drain_healed / 2.0) * character_power_amount(
+                player_powers,
+                "VIVHITE_POWER_UNIFIED_FIELD_THEORY_UPGRADED_POWER"))
+
+    lethal_kills = kill_count if mechanics.lethal else 0
+    future_deaths = 0
+    if any(effect in mechanics.effects for effect in (
+            "triggers_on_any_enemy_death",
+            "increase_immediate_enemy_death_heal")):
+        if alive_enemies:
+            future_deaths = len(alive_enemies)
+        elif observed_target_count is not None:
+            future_deaths = max(0, observed_target_count)
+        else:
+            future_deaths = 1
+
+    card_kill_heal = float(mechanics.kill_heal)
+    if mechanics.kill_heal > 0:
+        card_kill_heal = max(0.0, card_dynamic_value(
+            card, "Heal", mechanics.kill_heal) or 0)
+    card_kill_draw = float(mechanics.kill_draw)
+    if mechanics.kill_draw > 0:
+        card_kill_draw = max(0.0, card_dynamic_value(
+            card, "Cards", mechanics.kill_draw) or 0)
+
+    crown_heal_per_kill = solitary_crown_kill_heal(
+        max_hp_value if hp_observed else None)
+    kill_heal_requested = (
+        card_kill_heal * lethal_kills
+        + card_kill_heal * future_deaths
+        + crown_heal_per_kill * kill_count)
+    kill_draw = (card_kill_draw * lethal_kills
+                 + card_kill_draw * future_deaths)
+    kill_energy = (mechanics.kill_energy * lethal_kills
+                   + mechanics.kill_energy * future_deaths)
+
+    if kill_count > 0:
+        kill_heal_requested += kill_count * (
+            character_power_amount(
+                player_powers, "VIVHITE_POWER_INDUCTIVE_CIRCLE_POWER")
+            + 3.0 * character_power_amount(
+                player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER"))
+        kill_draw += kill_count * (
+            character_power_amount(
+                player_powers, "VIVHITE_POWER_ASTRAL_PURSUIT_POWER")
+            + 2.0 * character_power_amount(
+                player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER"))
+        kill_energy += kill_count * character_power_amount(
+            player_powers, "VIVHITE_POWER_OPTIMAL_ALGORITHM_POWER")
+        immediate_margin += kill_count * character_power_amount(
+            player_powers, "VIVHITE_POWER_ASTRAL_PURSUIT_MARGIN_POWER")
+    if entry.stable_id == "ASTRAL_PURSUIT" and card.get("upgraded"):
+        immediate_margin += future_deaths
+
+    missing_after_drain = (None if missing_after_payment is None
+                           else max(0.0, missing_after_payment - drain_healed))
+    if missing_after_drain is None:
+        kill_healed = float(kill_heal_requested)
+        kill_excess = 0.0
+    else:
+        kill_healed = min(float(kill_heal_requested), missing_after_drain)
+        kill_excess = max(0.0, float(kill_heal_requested) - kill_healed)
+    if closed_manifold:
+        immediate_margin += kill_excess
+
+    dimension = float(mechanics.max_hp_growth)
+    if mechanics.max_hp_growth > 0:
+        dimension = max(0.0, card_dynamic_value(
+            card, "DimensionUp", mechanics.max_hp_growth) or 0)
+    applications = lethal_kills if mechanics.lethal else int(dimension > 0)
+    extension = character_power_amount(
+        player_powers, VIVHITE_EXTENSION_POWER_ID)
+    permanent_growth = applications * (dimension + (extension if dimension > 0 else 0))
+
+    estimate = sum((
+        life_score,
+        margin_spend_score,
+        score_margin(parameters, immediate_margin),
+        score_drain_healing(
+            parameters, drain_healed, drain_percent=total_drain),
+        score_permanent_max_hp(parameters, permanent_growth),
+        score_kill_healing(parameters, kill_healed),
+        score_draw(parameters, base_draw + kill_draw),
+        score_energy(parameters, mechanics.energy_gain + kill_energy),
+        score_growth(parameters, base_growth + conversion_growth),
+        conversion_block,
+        extra_damage_value,
+        recovery_projection,
+        vulnerable_projection,
+        ritual_projection,
+    ))
+
+    context = "live" if (hp_observed or powers_observed or alive_enemies) else "nominal"
+    notes = [
+        f"dynamic={'yes' if card.get('dynamic_values') or card.get('vars') else 'no'}",
+        f"hp-cost={hp_cost}",
+        f"margin={margin_before}/spent={margin_consumed}",
+        f"drain={total_drain:g}%/{drain_healed:g}hp",
+        f"kills={kill_count}/lethal={lethal_kills}",
+        f"crown={crown_heal_per_kill}/kill",
+        f"dimension={permanent_growth:g}",
+    ]
+    if ritual_life_cost or ritual_damage_percent:
+        notes.append(
+            f"ritual-phase={ritual_life_cost:g}/damage={ritual_damage_percent:g}%")
+    if ritual_note:
+        notes.append(ritual_note)
+    if drain_projection:
+        notes.append("drain-projected-from-observed-cards")
+    if recovery_projection:
+        notes.append(f"recovery-copy={recovery_projection:g}")
+    if vulnerable_projection:
+        notes.append(f"vulnerable={vulnerable_projection:g}")
+    if entry.stable_id == "DYNAMIC_PROGRAMMING" and powers_observed:
+        notes.append("calculation-internal-not-exposed-by-api")
+    return estimate, (
+        f"VIVHITE_{context.upper()}_ESTIMATE={estimate:+.2f}"
+        f"[{entry.stable_id};{';'.join(notes)}]")
+
+
 __all__ = [
     "BUILD_TAGS",
     "CONSERVATION_GEOMETRY",
@@ -699,17 +1936,35 @@ __all__ = [
     "IRONCLAD_PROFILE_ID",
     "IRONCLAD_STRATEGY",
     "RECURSIVE_ASTRAL",
+    "SELECTION_COPY_FREE_BEST",
+    "SELECTION_DISCARD_WORST",
+    "SELECTION_RECOVER_COPY_BEST",
+    "SELECTION_RECOVER_FREE_BEST",
+    "SELECTION_TOPDECK_BEST",
     "VIVHITE_CARD_CATALOG",
     "VIVHITE_CARD_IDS",
+    "VIVHITE_BASE_MAX_HP",
     "VIVHITE_CHARACTER_ID",
+    "VIVHITE_CRIMSON_RITUAL_POWER_ID",
+    "VIVHITE_CRIMSON_RITUAL_UPGRADED_POWER_ID",
     "VIVHITE_PARAMETERS",
     "VIVHITE_PROFILE_ID",
+    "VIVHITE_STARTING_RELIC_NAME_EN",
+    "VIVHITE_STARTING_RELIC_NAME_ZH",
     "VIVHITE_STRATEGY",
     "CardCatalogEntry",
     "CardMechanics",
     "CharacterStrategy",
     "CharacterStrategyParameters",
+    "card_dynamic_value",
+    "character_build_synergy",
+    "character_card_has_terminal_life_cost_lock",
+    "character_power_amount",
+    "character_selection_value",
     "drain_healing_from_actual_damage",
+    "estimate_character_card",
+    "resolve_character_card_numbers",
+    "resolve_character_selection_mode",
     "resolve_character_strategy",
     "resolve_strategy",
     "score_drain_healing",
@@ -721,4 +1976,6 @@ __all__ = [
     "score_margin",
     "score_permanent_max_hp",
     "score_realized_mechanics",
+    "solitary_crown_kill_heal",
+    "vivhite_crimson_ritual_totals",
 ]
