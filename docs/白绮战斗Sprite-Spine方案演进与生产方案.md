@@ -14,6 +14,10 @@
 > 2026-08-30 已完成独立白绮角色与 Ironclad replacement 共用同一 V3 资源配置的源码接入；
 > 独立角色仅覆盖自己的 energy counter。该新增消费路径的完整构建、部署与真机验收仍待完成，
 > 不能沿用 Ironclad replacement 的既有真机结果冒充独立角色已通过。
+> 上述共享结论已被用户 2026-08-31 的新需求取代：当前源码不再为 `IRONCLAD` 注册 Vivhite
+> replacement，原版战士恢复游戏原生资源；只有独立白绮拥有 V3 五页 profile。该新路由已通过
+> 静态测试、完整 Release/PCK 部署与 Vulkan 真机验证；新截图分别证明战士原版选人／战斗和
+> 白绮 V3 选人／战斗，未复用旧版战士替换截图冒充证据。
 > 2026-08-31 又完成眼镜镜片透明 VFX、白绮专属卡牌轨迹透明粒子和角色选择不透明阈值 mask
 > 的素材候选；三项生成与静态／隔离证据已归档，但正式发布契约、正确角色接线、PCK 与安装后
 > Vulkan 尚未全部闭环。本文件保留旧消费者与 30 文件发布结果作为历史基线，不把候选提前写成
@@ -577,6 +581,42 @@ PCK 通过内容校验并原子部署。重启日志确认 V3 replacement 注册
 若门禁失败，应修复共享 profile、注册顺序或 PCK 消费路径，并继续保留已验证的 V3 资源作为
 事实源；不得以恢复旧静态独立角色或 legacy 单页来掩盖接入故障。
 
+#### 5.14.1 战士恢复原版、白绮独占 V3 profile
+
+2026-08-31，用户明确以新需求取代本节上方 2026-08-30 的“双角色共享白绮外观”结论。历史记录
+继续保留，用于解释既有代码、部署证据和目录命名；当前有效资源所有权改为：
+
+- `Entry.Initialize()` 不再调用任何 Ironclad replacement 注册器，Vivhite 源码中也不再出现
+  `RegisterCharacterAssetReplacement`、`VanillaCharacterIds.Ironclad` 或针对原版战士音频 getter
+  的 Harmony 前缀。由于没有 Mod 侧替换注册，原版 `IRONCLAD` 继续解析游戏自己的战斗、商店、
+  休息、选人、UI、Spine、音频和多人资源。
+- 原 `IroncladReplacementAssets` 重构为 `VivhiteCharacterAssets`。它只负责创建并 fail-closed
+  校验独立白绮的 `CharacterAssetProfile`，仍精确消费 neutral、death、attack、attack-heavy、
+  cast 五页 V3 atlas 及对应 scene、UI、Spine、音频和多人资源。
+- `VivhiteCharacter` 在该 profile 上继续局部覆盖自己的 energy counter 与 card trail。白绮角色
+  ID、卡池、状态和资源链不依赖战士替换注册。
+- 物理目录 `res://Vivhite/skins/ironclad/` 暂不迁移。它是历史打包路径和既有 PCK 契约，不再
+  表示资源由 Ironclad 消费；本次没有生成、重绘、移动或改写 PNG、atlas、Spine、scene、UI
+  或多人素材，也没有回退旧单页 atlas。
+
+源码门禁新增三项 Python 测试：禁止重新出现战士替换／虚拟音频补丁具体符号；确认独立白绮拥有
+V3 profile 及能量／轨迹局部覆盖；确认精确五页顺序和战斗、商店、休息、选人、UI、多人资源仍
+完整。相关 Python 美术测试共 `8/8` 通过。主线程复核后又把三个旧 C# 验收组从已删除的
+`IroncladReplacementAssets` 重构到 `VivhiteCharacterAssets`／Vivhite-only 所有权，删除期待
+`TryRegister`、`PrefixIronclad*` 和 Harmony 音频覆盖存在的断言；`Vivhite.Tests` 实际编译为
+0 warning / 0 error，自托管验收运行 `63/63` 通过。最终
+`dotnet build /p:RunPckExport=false /p:CopyModOnBuild=false` 通过 34 文件、4 套 Spine 和 Godot
+合同检查，为 0 warning / 0 error。
+
+主线程随后用同一批 DLL、manifest、PCK 完成 Release 构建与原子部署：34 文件、4 套 Spine、
+323-entry PCK 全部通过。统一入口以 Vulkan 启动后，真实 Ironclad 存档在第 2 层战斗显示原版
+持剑模型；其自然终局后，角色选择页也显示原版 Ironclad 全屏立绘。再选择独立 Vivhite 并开启
+run `JHH9X7Y4EVZG`，选人页显示白绮专属立绘，第 2 层战斗显示 V3 白绮 Spine、专属头像、孤高冠冕、
+能量 UI 和初始牌图。启动／切场日志没有 Vivhite 对 `IRONCLAD` 的 replacement 注册或皮肤加载
+异常。四张新证据位于 `docs/evidence/2026-08-31-skin-routing/`；这使“战士原版、白绮 V3”的
+选人／战斗路由门禁升级为真机通过。商店、休息、完整动作／音频以及新增 VFX 的动态观感继续在
+自然对局中补充，但不再阻塞本次角色资源所有权结论。
+
 ### 5.15 眼镜 VFX、白绮卡牌轨迹与角色选择转场候选
 
 2026-08-31 新增的三项素材分属三个不同消费者，不能被合并成“同一套透明特效”：
@@ -953,3 +993,16 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
   `89 + 3`；共享皮肤根由 `legacy=26 / V3=30` 加上眼镜脚本／贴图与转场贴图／材质四项，目标
   为 `legacy=30 / V3=34`。白绮轨迹位于皮肤根外，不改变 `30/34` 且只能挂 Vivhite profile。
   以上仍是最终合同目标／离线候选，真实 PCK 门禁和安装后 Vulkan 总装尚待执行。
+- 2026-08-31：用户以“战士恢复原版、只有独立白绮使用白绮皮肤”的新需求取代 2026-08-30
+  双角色共享外观结论。入口移除 Ironclad replacement 注册，资源 provider 改为 Vivhite-only，
+  删除战士音频 Harmony 覆盖；保留历史 `skins/ironclad` 物理目录和精确 V3 五页素材不变。新增
+  路由测试与完整美术静态回归均通过，无部署构建 0 error；部署和两角色 Vulkan 截图仍由主线程
+  完成，旧版战士白绮外观证据不得冒充新路由验收。
+- 2026-08-31：补齐主线程复核发现的 C# 验收缺口。三组资源测试改为
+  `VivhiteCharacterAssets`／Vivhite-only 契约，明确验证 Ironclad 无注册、白绮独占完整 profile
+  与角色局部 card trail；删除期待旧 replacement/Harmony 行为的断言。`Vivhite.Tests` 实际运行
+  `63/63`、Python 门禁 `8/8`、最终不部署构建 0 warning / 0 error。
+- 2026-08-31：主线程完成 Release 构建、34 文件／4 Spine／323-entry PCK 原子部署与 Vulkan
+  真机路由验证。新截图覆盖原版 Ironclad 选人／战斗和独立 Vivhite V3 选人／战斗；日志没有
+  Vivhite→`IRONCLAD` replacement 注册。由此角色资源所有权门禁正式通过，动态 VFX 细项仍按
+  各自消费者继续观察。

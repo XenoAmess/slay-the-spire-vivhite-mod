@@ -107,7 +107,7 @@ SourceOver 合成，并在实际叠层和动画中复核。
 | `0104–0107` | V3 完整动作姿势 | 普攻 `0104`、重击 `0106`、施法 `0107` 已进入 `hybrid_v3_final`，通过总装版精确 Vulkan，并于 2026-08-29 随正式五页 runtime 部署和真机消费通过；`0105` 归档未采用。 |
 | `0108–0117` | 初始卡图透明误链批次 | `0108–0114` 因口部猩红长条等问题拒绝；`0115–0117` 消除了口部异物并验证攻／防／能力轮廓，但仍是无场景透明 vignette，属于素材类型错误，只作审计和有限动作参考，不得进入卡图运行时。 |
 | `0191–0192` | 眼镜镜片数学星光透明 VFX | `0191` 因长射线、轨道和连线在脸旁可能读成突出长条而淘汰；`0192` 收敛为镜片局部闭合折射与孤立星点，作为离线 Vulkan 候选保留，安装后施法观察仍待完成。 |
-| `0193–0194` | 白绮专属卡牌轨迹透明粒子 | `0193` 因暗色衬底、边缘 Alpha 与小尺寸过密淘汰；`0194` 通过静态纹理和真实 SourceOver 验收，但只能挂独立 Vivhite profile，不得注入共享 Ironclad profile。 |
+| `0193–0194` | 白绮专属卡牌轨迹透明粒子 | `0193` 因暗色衬底、边缘 Alpha 与小尺寸过密淘汰；`0194` 通过静态纹理和真实 SourceOver 验收，只能挂独立 Vivhite profile；当前源码已彻底取消 Ironclad 的 Vivhite replacement。 |
 
 全局计数还包含四位编号标签位于 `0118–0156`、`0160–0171` 的其他请求归档，以及编号
 `0190` 的请求归档；其中 `0144`、`0152`、`0153` 各被两个不同请求复用，不能由这些编号
@@ -911,10 +911,11 @@ SourceOver 没有暗衬底、矩形光幕、裁切或可见 trim 缝；`48/24/16
 这张轨迹是**独立白绮玩法 profile** 的资源，不属于两角色共用皮肤。此前临时 wiring patch
 把 `TrailPath` 写入 `IroncladReplacementAssets.CreateProfile().Vfx`，会让原版战士替换身份也
 消费白绮专属轨迹，并让战士皮肤门禁错误依赖该资源；该接线结论已被审计否决，不能沿用。
-正确接线必须保持共享 Ironclad profile 的 VFX 不变，只在 `VivhiteCharacter` 构造自己的 profile
-时通过 `WithVfx` 或等价的角色局部覆盖设置轨迹，并把相关 RequiredAssets 限定在白绮角色链。
-当前只有静态纹理和隔离场景契约通过；修正后的 profile 接线、PCK、真实飞牌尺寸与残留清理
-仍是下一道门禁。
+2026-08-31 的新角色路由进一步取消了 Ironclad 的整套 Vivhite replacement，因此当前正确接线
+只允许 `VivhiteCharacter` 从 `VivhiteCharacterAssets` 构造自己的 profile，再通过 `WithVfx`
+或等价的角色局部覆盖设置轨迹，并把相关 RequiredAssets 限定在白绮角色链。静态纹理、隔离场景、
+修正后的 profile、正式 PCK 与白绮真机战斗消费均已通过；真实飞牌运动中的尺寸与残留清理仍可
+在后续自然出牌时继续观察，不能仅凭静态战斗截图宣称动态门禁完成。
 
 #### 10.7.3 角色选择不透明全屏阈值 mask
 
@@ -957,15 +958,16 @@ FadeOut/FadeIn 的方向、完整覆盖与清理，才能升级为真机通过�
   `legacy=30 / V3=34`，即 legacy 的 `26 + 4 = 30`、V3 的 `30 + 4 = 34`。这里的 legacy
   数量只用于精确合同／回退包审计，不授权生产运行时回退到 legacy。
 - 白绮卡牌轨迹场景 `Vivhite/Vivhite/scenes/vfx/card_trail_vivhite.tscn` 与贴图
-  `Vivhite/Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png` 均在共享皮肤根外，
+  `Vivhite/Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png` 均在历史皮肤打包根外，
   所以轨迹贴图虽然计入 `RuntimeArtInventory=92`，却不改变皮肤根的 `30/34`；它只能挂独立
-  Vivhite profile，不能挂共享 Ironclad profile。
+  Vivhite profile。当前源码不再存在可注入的 Ironclad Vivhite profile。
 
-上述 `92` 与 `30/34` 目前只能标记为最终合同目标和离线候选。仍须把精确集合接入正式 inventory、
-JSON contract、publisher 与 validator，构建并挂载真实 PCK，再在安装游戏的 Vulkan 总装中分别
-验证眼镜施法显示／清理、角色选择 FadeOut/FadeIn 和白绮飞牌轨迹。真实 PCK 门禁与 Vulkan
-总装尚待执行；在两道门禁完成前不得宣称 `RuntimeArtInventory=92` 或 `legacy=30 / V3=34`
-已经生产通过。
+2026-08-31 的完整 Release 构建已经让精确 `92` 位图 inventory、V3 `34` 文件皮肤集合、4 套
+Spine、Godot 资源合同与 323-entry PCK 通过，并原子部署到安装游戏。Vulkan 真机已分别证明原版
+Ironclad 选人／战斗不消费该集合，以及独立 Vivhite 选人／战斗消费 V3 profile；对应证据位于
+`docs/evidence/2026-08-31-skin-routing/`。因此 inventory、PCK 和角色路由可标记为生产通过。
+眼镜施法显示／清理、角色选择 FadeOut/FadeIn 动态方向与白绮飞牌轨迹运动残留仍是各自消费者的
+后续视觉门禁，不能由本轮静态选人／战斗截图替代。
 
 三项素材共同冻结的状态规则是：生成归档和静态／隔离验收可以采用，运行时接线仍须经过
 正式资源契约、构建、PCK 与安装后 Vulkan。不得因为素材本体通过就提前写成已发布，也不得
@@ -1117,3 +1119,8 @@ EvoLink 透明链。
   `89 + 3`；共享皮肤根由 `legacy=26 / V3=30` 加上眼镜脚本／贴图与转场贴图／材质四项，目标
   为 `legacy=30 / V3=34`。白绮轨迹位于皮肤根外，不改变 `30/34` 且只能挂 Vivhite profile。
   以上仍是最终合同目标／离线候选，真实 PCK 门禁和安装后 Vulkan 总装尚待执行。
+- 2026-08-31：角色资源所有权改为 Vivhite-only：原版 Ironclad 不再注册或消费 Vivhite
+  replacement，独立白绮继续使用历史 `skins/ironclad` 物理目录中的 V3 五页资源，并局部覆盖
+  专属卡牌轨迹。本次不生成、重绘或迁移图片；随后完整 Release 构建、92 位图／34 文件合同、
+  323-entry PCK 与安装后 Vulkan 路由通过。新实机截图证明战士恢复原版、白绮独占 V3；三个新增
+  消费者各自的动态动画观感仍按上文独立门禁继续观察。
