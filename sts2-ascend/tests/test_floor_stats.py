@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 
 
@@ -395,6 +397,90 @@ class FloorStatsProviderTests(unittest.TestCase):
         second = provider.snapshot()
         self.assertEqual(second["updated_at"], first["updated_at"])
         self.assertEqual(second["recent"], first["recent"])
+
+    def test_fresh_session_live_run_filters_only_conflicting_current_log(self) -> None:
+        knowledge = self.root / "knowledge"
+        stale = _run(
+            "OLD_CRASH_RUN", 1, 4, in_progress=True,
+            started_at="2026-08-28 06:10:09",
+        )
+        _write_json(knowledge / "runs" / "old-crash-run.json", stale)
+        _write_json(knowledge / "stats.json", {
+            "global": {
+                "runs": 0, "wins": 0, "floors_total": 0.0,
+                "best_floor": 0, "floor_sum_raw": 0.0, "best_floor_raw": 0,
+            },
+        })
+        runtime = self.root / ".runtime"
+        session_id = "fresh-session"
+        _write_json(runtime / "session.json", {
+            "session_id": session_id,
+            "state": "running",
+            "started_at": "2026-08-31T15:17:03+08:00",
+        })
+        live_path = runtime / f"live_dashboard.{session_id}.json"
+        _write_json(live_path, {
+            "schema": "sts2.ascend-live/v1",
+            "session_id": session_id,
+            "run": {"run_id": "ACTUAL_LIVE_RUN", "profile_id": "vivhite"},
+        })
+
+        provider = FloorStatsProvider(
+            knowledge, refresh_interval=0, _discover_profiles=False)
+        snapshot = provider.snapshot()
+
+        self.assertIsNone(snapshot["current"])
+        self.assertEqual(snapshot["quality"]["excluded_in_progress"], 1)
+
+        _write_json(live_path, {
+            "schema": "sts2.ascend-live/v1",
+            "session_id": session_id,
+            "run": {"run_id": "OLD_CRASH_RUN", "profile_id": "ironclad"},
+        })
+        resumed = provider.snapshot(force=True)
+        self.assertEqual(resumed["current"]["run_id"], "OLD_CRASH_RUN")
+
+    def test_crash_run_remains_current_without_fresh_conflicting_evidence(self) -> None:
+        knowledge = self.root / "knowledge"
+        crash_run = _run(
+            "RECOVERABLE_CRASH_RUN", 1, 4, in_progress=True,
+            started_at="2026-08-28 06:10:09",
+        )
+        _write_json(knowledge / "runs" / "recoverable.json", crash_run)
+        _write_json(knowledge / "stats.json", {
+            "global": {
+                "runs": 0, "wins": 0, "floors_total": 0.0,
+                "best_floor": 0, "floor_sum_raw": 0.0, "best_floor_raw": 0,
+            },
+        })
+        runtime = self.root / ".runtime"
+        session_id = "reconnect-session"
+        _write_json(runtime / "session.json", {
+            "session_id": session_id,
+            "state": "running",
+            "started_at": "2026-08-31T15:17:03+08:00",
+        })
+        live_path = runtime / f"live_dashboard.{session_id}.json"
+        _write_json(live_path, {
+            "schema": "sts2.ascend-live/v1",
+            "session_id": session_id,
+            "run": {"run_id": "A_DIFFERENT_OLD_RUN"},
+        })
+        old = time.time() - 60.0
+        os.utime(live_path, (old, old))
+
+        stale_live = FloorStatsProvider(
+            knowledge, refresh_interval=0, _discover_profiles=False).snapshot()
+        self.assertEqual(stale_live["current"]["run_id"], "RECOVERABLE_CRASH_RUN")
+
+        _write_json(live_path, {
+            "schema": "sts2.ascend-live/v1",
+            "session_id": session_id,
+            "run": {"run_id": "RECOVERABLE_CRASH_RUN"},
+        })
+        resumed = FloorStatsProvider(
+            knowledge, refresh_interval=0, _discover_profiles=False).snapshot()
+        self.assertEqual(resumed["current"]["run_id"], "RECOVERABLE_CRASH_RUN")
 
 
 if __name__ == "__main__":

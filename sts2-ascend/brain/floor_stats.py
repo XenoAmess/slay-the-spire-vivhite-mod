@@ -45,6 +45,8 @@ except ImportError:  # pragma: no cover - package import fallback
 
 
 _UNSET = object()
+_LIVE_DASHBOARD_SCHEMA = "sts2.ascend-live/v1"
+_LIVE_DASHBOARD_FRESH_SEC = 5.0
 PROFILE_IDS = ("ironclad", "vivhite")
 PROFILE_LABELS = {"ironclad": "Ironclad", "vivhite": "Vivhite"}
 PROFILE_CHARACTER_IDS = {
@@ -314,6 +316,7 @@ class FloorStatsProvider:
         self._card_evidence_errors: list[str] = []
         self._active: dict[Path, tuple[tuple[int, int], _RunRecord]] = {}
         self._invalid_active: set[Path] = set()
+        self._live_run_id: object | str | None = _UNSET
         self._base: dict[str, Any] | None = None
         self._last_errors: tuple[str, ...] = ()
         self._profile_providers: dict[str, FloorStatsProvider] = {}
@@ -343,6 +346,54 @@ class FloorStatsProvider:
         if not isinstance(data, dict):
             raise ValueError("root JSON value is not an object")
         return data
+
+    def _runtime_dir(self) -> Path | None:
+        """Resolve the stack runtime adjacent to this profile's knowledge root."""
+        for candidate in (self.root, *self.root.parents):
+            if candidate.name.casefold() == "knowledge":
+                return candidate.parent / ".runtime"
+        return None
+
+    def _read_fresh_live_run_id(self) -> str | None:
+        """Return the authoritative run id from this stack's fresh live session.
+
+        A durable ``in_progress`` log may legitimately outlive the process that
+        wrote it and later be resumed after a crash.  Therefore age alone never
+        retires it.  We only have contrary evidence when the currently running
+        session's own, still-fresh dashboard explicitly reports another run.
+        """
+        runtime_dir = self._runtime_dir()
+        if runtime_dir is None:
+            return None
+        try:
+            session = self._load_object(runtime_dir / "session.json")
+            if str(session.get("state") or "").strip().casefold() != "running":
+                return None
+            session_id = str(session.get("session_id") or "").strip()
+            if not session_id:
+                return None
+            live_path = runtime_dir / f"live_dashboard.{session_id}.json"
+            live_stat = live_path.stat()
+            if max(0.0, time.time() - live_stat.st_mtime) > _LIVE_DASHBOARD_FRESH_SEC:
+                return None
+            live = self._load_object(live_path)
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+            return None
+        if (live.get("schema") != _LIVE_DASHBOARD_SCHEMA
+                or str(live.get("session_id") or "").strip() != session_id):
+            return None
+        run = live.get("run")
+        if not isinstance(run, Mapping):
+            return None
+        run_id = str(run.get("run_id") or "").strip()
+        return run_id or None
+
+    def _refresh_live_run_id(self) -> bool:
+        run_id = self._read_fresh_live_run_id()
+        if run_id == self._live_run_id:
+            return False
+        self._live_run_id = run_id
+        return True
 
     def _catalog_row_with_recovered_identity(
             self, row: dict[str, Any]) -> dict[str, Any]:
@@ -1217,7 +1268,9 @@ class FloorStatsProvider:
         auto_current = sorted(
             (record for record in records
              if (record.in_progress and not record.phantom
-                  and not record.excluded_from_statistics)),
+                  and not record.excluded_from_statistics
+                  and (not isinstance(self._live_run_id, str)
+                       or record.run_id == self._live_run_id))),
             key=lambda record: record.sort_key,
         )
         current = self._current_from_record(auto_current[-1]) if auto_current else None
@@ -1378,6 +1431,7 @@ class FloorStatsProvider:
             self._last_check = now
             errors: list[str] = []
             changed = False
+            changed |= self._refresh_live_run_id()
             changed |= self._refresh_json(
                 self.root / "stats.json", "_stats_sig", "_stats", errors)
             changed |= self._refresh_json(
