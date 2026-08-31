@@ -2901,7 +2901,9 @@ class Policy:
                 # 无法机械计数，接口实际锁定时长也从未入账。此后「结算闸门武装
                 # 且 latent 非空」的预算耗尽收口在 reason 追加独立标记（能量/
                 # 实际预算/latent 名单），随持久决策链可 grep 计数并与时间戳
-                # 对账锁定时长，为是否再加预算档位供数。观测键
+                # 对账锁定时长，为是否再加预算档位供数。1199-F33 再次暴露了
+                # 「账面可出但接口未开」与真·无牌可出的差别，故同时记下收口时
+                # 的 hp/block/incoming，供下一决策的实际掉血量证伪；观测键
                 # end_turn_settle_concede_obs=false 或基旋钮置 0 即整体关闭，
                 # 文案前缀与审计格式不变，既有统计正则不受影响。
                 _settle_note = ""
@@ -2910,7 +2912,8 @@ class Policy:
                     _settle_note = (
                         f"｜结算超时收口观测 energy={energy}"
                         f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
-                        f"/latent={','.join(_latent)}")
+                        f"/latent={','.join(_latent)}"
+                        f"/hp={my_hp}/block={my_block}/incoming={incoming}")
                 if self._saw_playable_this_turn:
                     if self._end_stall < 2:
                         return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)

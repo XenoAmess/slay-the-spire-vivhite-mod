@@ -6099,3 +6099,41 @@ retry_resolution: 20260830-155346-1788076426711349100-aae9b838 integrated
   行为决定是否改为更窄的成长/意图观测闸。
 
 retry_resolution: none (no replay target; local production fix)
+
+# 2026-08-31｜第1198~1199局复盘：结算超时收口状态观测
+
+## HYPOTHESIS
+
+第 1199 局 F33 的 `SETTLE_TIMEOUT_CONCEDE_OBS` 只记录能量、预算、lethal 和
+latent，无法区分「规则上仍有防御牌但 play_card 接口未重开」与「确实没有可用
+防守」。假设：追加收口瞬间 `hp`、`block`、`incoming` 后，可以用下一决策的
+实际掉血量检验这两类状态；若后续样本无法对账，则该解释被证伪。
+
+## EVIDENCE
+
+- 完整持久链包含第 1198 局 `FNLETTNUW0W4`（F17）和第 1199 局
+  `3HDJ9UH4AZ5K`（F33）；两局均为失败链，证据包完整且逐文件校验通过。
+- 第 1199 局决策 386 在 F33 收口时记录 `hp=62/block=0/incoming=28`，
+  latent 为 `重振精神+(1)`；下一决策 HP 为 34。原生知识确认 SecondWind
+  为 1 费、获得 5 格挡的技能，Normality 为不可用诅咒。
+- 现有基线标记已有结算等待预算和独立关闭键，但没有收口状态快照；当前仅有
+  少量独立样本，不能凭单局直接行为化。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+- `brain/policy.py` 在既有 `SETTLE_TIMEOUT_CONCEDE_OBS` 文案末尾追加
+  `hp`、`block`、`incoming`，不改变等待预算、候选评分或 `end_turn` 判定。
+- `brain/selfcheck.py` 的 3z-3 夹具断言 `hp=19`、`block=0`、`incoming=18`，
+  并保留观测键关闭后的旧文案回归。
+- 后续 3–10 局对账 `incoming-block` 与下一状态实际掉血、接口锁定时长和
+  latent 类型；至少 3 个独立样本前不新增预算档位。若对账失败或误报，关闭
+  `end_turn_settle_concede_obs` 并保留链路供复核。
+
+## VALIDATION / ROLLBACK
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。
+- `git diff --check` 通过；本次只修改静态项目文件，没有写入在线学习状态或运行进程。
+- 回滚：将 `end_turn_settle_concede_obs` 设为 `False`，或移除新增的三个观测字段；
+  如后续样本支持行为化，再另开复盘批次提出最小预算变更。
+
+retry_resolution: 20260830-165530-1788080130637400100-b55e4b4d integrated

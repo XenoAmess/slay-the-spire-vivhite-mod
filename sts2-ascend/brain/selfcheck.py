@@ -8881,8 +8881,9 @@ def main() -> int:
     # 3z-3) 结算超时收口观测位（第892~912局批复盘 SETTLE_TIMEOUT_CONCEDE_OBS
     #       回归夹具）：912-F17-T6 形态——深预算耗尽后的收口（能量2+打击✗ 且
     #       账面可出）必须在 reason 追加「结算超时收口观测」标记（能量/预算/
-    #       latent 名单入账，供跨局 grep 计数与锁定时长对账）；观测键置 False
-    #       即整体关闭、文案回到旧口径；latent 为空（真·资源耗尽）不进标记。
+    #       latent 名单与收口时 hp/block/incoming 入账，供跨局 grep 计数、锁定
+    #       时长对账及下一状态掉血量证伪）；观测键置 False 即整体关闭、文案回到
+    #       旧口径；latent 为空（真·资源耗尽）不进标记。
     conc_know = knowledge.Knowledge(tmp)
     conc_pol = policy.Policy(conc_know)
     conc_know.policy["end_turn_settle_recovery_ticks"] = 10
@@ -8901,7 +8902,10 @@ def main() -> int:
         and "确认无牌可出（能量耗尽或全部不可用）" in d_conc.reason \
         and "结算超时收口观测" in d_conc.reason \
         and "energy=2" in d_conc.reason \
-        and "打击(1)" in d_conc.reason, \
+        and "打击(1)" in d_conc.reason \
+        and "hp=19" in d_conc.reason \
+        and "block=0" in d_conc.reason \
+        and "incoming=18" in d_conc.reason, \
         f"结算超时收口观测标记缺失: {d_conc and d_conc.reason}"
     conc_know.policy["end_turn_settle_concede_obs"] = False
     off_ctx = _SettleCtx()
