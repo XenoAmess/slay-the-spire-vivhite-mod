@@ -19,7 +19,8 @@ BRAIN = Path(__file__).resolve().parents[1] / "brain"
 sys.path.insert(0, str(BRAIN))
 
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace  # noqa: E402
-from live_dashboard import LiveDashboardPublisher, MAX_BYTES, SCHEMA  # noqa: E402
+from live_dashboard import (JSON_ENCODING, LiveDashboardPublisher, MAX_BYTES,
+                            SCHEMA)  # noqa: E402
 from policy import Decision, Policy  # noqa: E402
 import agent as agent_module  # noqa: E402
 
@@ -180,6 +181,12 @@ class LiveDashboardPublisherTests(unittest.TestCase):
             decision = ensure_decision_trace(
                 state, Decision("choose_reward_card", {"option_index": 5},
                                 "候选：Alpha=2.5 / Beta=7.0"))
+            decision.trace["observation"] = {
+                "title": "奖励选择",
+                "facts": ["生命四十一", "余裕三点"],
+            }
+            decision.trace["selected"]["reason"] = "选择星图检索：保持过牌"
+            decision.trace["explanation"] = ["先满足生存线", "再保留输出"]
             publisher.observe(state, run_number=42)
             decision_id = publisher.propose(state, decision, run_number=42)
             publisher.outcome("pending", "服务端排队", decision_id=decision_id)
@@ -188,12 +195,21 @@ class LiveDashboardPublisherTests(unittest.TestCase):
 
             raw = publisher.path.read_bytes()
             self.assertLessEqual(len(raw), MAX_BYTES)
-            payload = json.loads(raw.decode("utf-8"))
+            self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
+            decoded = raw.decode(JSON_ENCODING)
+            self.assertIn('"title":"奖励选择"', decoded)
+            payload = json.loads(decoded)
             self.assertEqual(payload["schema"], SCHEMA)
             self.assertEqual(payload["session_id"], "session-test")
             self.assertEqual(payload["run"]["run_number"], 42)
             self.assertEqual(payload["decision"]["status"], "applied")
             self.assertEqual(payload["decision"]["outcome"]["message"], "状态确认")
+            self.assertEqual(payload["decision"]["observation"]["facts"],
+                             ["生命四十一", "余裕三点"])
+            self.assertEqual(payload["decision"]["selected"]["reason"],
+                             "选择星图检索：保持过牌")
+            self.assertEqual(payload["decision"]["explanation"],
+                             ["先满足生存线", "再保留输出"])
             self.assertEqual(payload["history"][-1]["decision_id"], decision_id)
             self.assertEqual(payload["history"][-1]["status"], "applied")
             self.assertFalse(list(Path(root).glob("*.tmp")))
@@ -209,7 +225,7 @@ class LiveDashboardPublisherTests(unittest.TestCase):
             second_id = publisher.propose(state, second)
             publisher.close(timeout=2.0)
 
-            payload = json.loads(publisher.path.read_text(encoding="utf-8"))
+            payload = json.loads(publisher.path.read_text(encoding=JSON_ENCODING))
             self.assertEqual(first_id, second_id)
             self.assertEqual(payload["decision"]["repeat_count"], 2)
             self.assertEqual(payload["decision"]["status"], "waiting")

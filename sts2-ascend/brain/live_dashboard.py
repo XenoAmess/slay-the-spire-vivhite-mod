@@ -14,6 +14,7 @@ from lifecycle import RUNTIME_DIR, SESSION_ID
 
 
 SCHEMA = "sts2.ascend-live/v1"
+JSON_ENCODING = "utf-8-sig"
 MAX_BYTES = 128 * 1024
 MAX_STRING = 1000
 TERMINAL_STATUSES = frozenset({"applied", "retrying", "rejected", "failed"})
@@ -256,7 +257,7 @@ class LiveDashboardPublisher:
 
     def _encode(self, snapshot: dict) -> bytes:
         safe = _safe(snapshot)
-        raw = json.dumps(safe, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        raw = json.dumps(safe, ensure_ascii=False, separators=(",", ":")).encode(JSON_ENCODING)
         if len(raw) <= MAX_BYTES:
             return raw
         decision = safe.get("decision") or {}
@@ -264,7 +265,7 @@ class LiveDashboardPublisher:
         decision["gates"] = list(decision.get("gates") or [])[:8]
         decision["explanation"] = list(decision.get("explanation") or [])[:1]
         safe["history"] = list(safe.get("history") or [])[-1:]
-        raw = json.dumps(safe, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        raw = json.dumps(safe, ensure_ascii=False, separators=(",", ":")).encode(JSON_ENCODING)
         if len(raw) <= MAX_BYTES:
             return raw
         # A future custom trace may still be pathological after pruning.  Emit a
@@ -289,7 +290,7 @@ class LiveDashboardPublisher:
             "history": [],
         }
         return json.dumps(compact, ensure_ascii=False,
-                          separators=(",", ":")).encode("utf-8")
+                          separators=(",", ":")).encode(JSON_ENCODING)
 
     def _write(self, snapshot: dict) -> None:
         self.runtime_dir.mkdir(parents=True, exist_ok=True)

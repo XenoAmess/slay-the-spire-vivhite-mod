@@ -18,6 +18,30 @@ import review_viewer  # noqa: E402
 
 
 class DashboardSourceTests(unittest.TestCase):
+    def test_utf8_signature_preserves_chinese_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-dashboard-utf8-") as root:
+            path = Path(root) / "live.json"
+            payload = {
+                "schema": review_viewer.DASHBOARD_SCHEMA,
+                "seq": 1,
+                "run": {"floor": 15},
+                "decision": {
+                    "observation": {"facts": ["屏幕 战斗", "生命四十一"]},
+                    "selected": {"reason": "先满足生存线，再保留输出"},
+                },
+            }
+            path.write_text(json.dumps(payload, ensure_ascii=False),
+                            encoding="utf-8-sig")
+
+            snapshot, changed = review_viewer.DashboardSource(path).poll(
+                time.time(), force=True)
+
+            self.assertTrue(changed)
+            self.assertEqual(snapshot["decision"]["observation"]["facts"],
+                             ["屏幕 战斗", "生命四十一"])
+            self.assertEqual(snapshot["decision"]["selected"]["reason"],
+                             "先满足生存线，再保留输出")
+
     def test_accepts_v1_and_preserves_last_good_on_corruption(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-dashboard-") as root:
             path = Path(root) / "live.json"

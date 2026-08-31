@@ -299,7 +299,10 @@ class DashboardSource:
         try:
             stat = self.path.stat()
             if force or stat.st_mtime_ns != self.last_mtime_ns:
-                payload = json.loads(self.path.read_text(encoding="utf-8"))
+                # The publisher writes UTF-8 with a signature so Windows tools do
+                # not reinterpret Chinese telemetry as the active ANSI code page.
+                # ``utf-8-sig`` also accepts legacy snapshots without a signature.
+                payload = json.loads(self.path.read_text(encoding="utf-8-sig"))
                 if not isinstance(payload, dict) or payload.get("schema") != DASHBOARD_SCHEMA:
                     raise ValueError("unsupported live dashboard schema")
                 if not isinstance(payload.get("run", {}), dict):
