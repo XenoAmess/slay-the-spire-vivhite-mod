@@ -1,0 +1,21 @@
+[ext_resource type="Script" uid="uid://cnuel1eg8skdq" path="res://src/Core/Nodes/NTransition.cs" id="7_a2w36"]
+[ext_resource type="Material" uid="uid://ci0um5dvn65fr" path="res://materials/transitions/fight_transition_mat.tres" id="8_gs5rr"]
+
+[node name="GameTransitionRect" type="ColorRect" parent="."]
+unique_name_in_owner = true
+z_as_relative = false
+material = ExtResource("8_gs5rr")
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = -60.0
+offset_right = 320.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(1280, 600)
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+script = ExtResource("7_a2w36")

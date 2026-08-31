@@ -1,0 +1,45 @@
+{
+  "schema": "vivhite-codex-native-generation-result/v1",
+  "semantic_asset_id": "vivhite-character-select-transition",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "accepted-static-runtime-candidate",
+  "provider_route": "Codex built-in image_gen",
+  "evolink_used": false,
+  "generated_at_utc": "2026-08-31T03:14:15.6876397Z",
+  "native_return": {
+    "provider_cache_path": "C:/Users/xenoa/.codex/generated_images/01a055c0-779b-7883-bc1c-308677e8d474/exec-15c85ae0-0784-4317-8fda-2d88cef33856.png",
+    "preserved_workspace_path": "original.png",
+    "sha256": "6eb7b9331b505b5356715aa845cb817dfc8e0e3992cec206fedb3224c03bd5ea",
+    "bytes": 1935976,
+    "width": 1831,
+    "height": 859,
+    "godot_format_enum": 4,
+    "pixel_format": "RGB8",
+    "opaque_pixels": 1572829,
+    "transparent_pixels": 0
+  },
+  "runtime_adaptation": {
+    "operation": "center crop to exact 32:15 followed by one Lanczos resize",
+    "crop": { "x": 3, "y": 2, "width": 1824, "height": 855 },
+    "width": 2560,
+    "height": 1200,
+    "pixel_format": "RGB8",
+    "pre_normalization_sha256": "1c13a2e711c37e1d931a6f3bef677f3e0f30ce685fb77f5278a26d78db3e2b42",
+    "pre_normalization_archive_path": "runtime/vivhite_character_select_transition.png",
+    "consumer_preserving_normalization": "R_out=R_in; G_out=R_in; B_out=R_in",
+    "normalization_reason": "The generated RGB values differed by at most 7/255. The verified shader samples only red, so red-channel replication makes the runtime file strict grayscale without changing any sampled value.",
+    "final_sha256": "82015b8f5aa1c6dd9fa57b9d757e009f35fca67d8818b269af4ab6f49ff252d2",
+    "final_archive_path": "runtime/vivhite_character_select_transition_strict_grayscale.png",
+    "runtime_resource_path": "Vivhite/Vivhite/skins/ironclad/transitions/vivhite_character_select_transition.png"
+  },
+  "controls_not_exposed_by_tool": [
+    "internal model identifier",
+    "seed",
+    "exact output dimensions",
+    "quality preset",
+    "token count"
+  ],
+  "secrets_recorded": false,
+  "retry_decision": "Stopped after attempt 1 because the candidate passed the semantic, forbidden-element, opacity, framing, and threshold-progression gates."
+}

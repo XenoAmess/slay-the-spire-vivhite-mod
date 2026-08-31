@@ -1,0 +1,107 @@
+{
+  "schema": "vivhite.transparent-art-attempt-acceptance/v1",
+  "semantic_asset": "combat_eye_and_glasses_magic_vfx",
+  "attempt": 2,
+  "attempt_limit": 8,
+  "status": "accepted_offline_vulkan_candidate",
+  "generation": {
+    "provider": "EvoLink",
+    "endpoint": "https://api.evolink.ai/v1/images/generations",
+    "model": "gpt-image-2",
+    "background": "transparent",
+    "task_id": "task-unified-1788145413-r8jlh4zl",
+    "source_sha256": "a6291cc1617b9b5be5648eb2971ea67f76e61261718506b7963bd83788d239d8"
+  },
+  "technical_alpha": {
+    "status": "pass",
+    "source_format": "RGBA8",
+    "source_size": [1024, 1024],
+    "source_alpha_bbox": [105, 36, 905, 948],
+    "source_corner_alpha": [0, 0, 0, 0],
+    "runtime_format": "RGBA8",
+    "runtime_size": [512, 512],
+    "runtime_alpha_bbox": [143, 201, 183, 175],
+    "runtime_corner_alpha": [0, 0, 0, 0],
+    "runtime_sha256": "e3cf3797953dd97d32dd2092a71909d0b5ebaa3d79b1424d041aa79b55c70b0d",
+    "runtime_adaptation": "uniform RGBA Lanczos resize plus centered transparent padding; no Alpha repair",
+    "sourceover_backgrounds": [
+      "sourceover-black.png",
+      "sourceover-white.png",
+      "sourceover-game-indigo.png"
+    ],
+    "rectangular_haze_visible": false,
+    "edge_reaching_glow_visible": false,
+    "alpha_created_or_repaired_by_postprocessing": false
+  },
+  "creative_and_consumer_fit": {
+    "status": "pass",
+    "description": "A restrained compact cluster of blue-violet closed lens facets with three isolated antique-gold star accents.",
+    "forbidden_content_check": {
+      "red_or_crimson": false,
+      "magenta_or_pink": false,
+      "blood_or_liquid": false,
+      "weapon": false,
+      "mouth_or_face": false,
+      "mouth_or_face_protrusion": false,
+      "long_linear_strokes": false,
+      "strand_or_thread": false,
+      "ribbon_or_tail": false,
+      "connector_or_constellation_path": false
+    },
+    "runtime_readability": {
+      "texture_rect_pixels": [500, 500],
+      "texture_rect_scale": [0.22, 0.28],
+      "spine_scene_scale": 0.28,
+      "projected_square_pixels": [30.8, 39.2],
+      "projected_nonzero_alpha_bbox_pixels_approx": [11.3, 13.4],
+      "placement": "eye_attach_slot at the gold-glasses and eye region",
+      "same_frame_eye_on_off_visual_check": "pass"
+    }
+  },
+  "consumer_contract": {
+    "original_scene": "assets/ironclad-v0.111.0/combat/scene.tscn",
+    "decompiled_controller": ".work/sts2-decompiled-v0.111.0/MegaCrit/sts2/Core/Nodes/Vfx/NIroncladVfx.cs",
+    "production_scene": "Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn",
+    "runtime_texture": "Vivhite/Vivhite/skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png",
+    "runtime_controller": "Vivhite/Vivhite/skins/ironclad/scenes/vfx/vivhite_combat_vfx.gd",
+    "event_contract": [
+      "cast_eyes_start shows EyeMagic",
+      "clear_vfx hides EyeMagic",
+      "starting a non-cast animation hides EyeMagic",
+      "attack_slash_start and heavy_slash_start retain the existing slash tween behavior"
+    ],
+    "removed_runtime_dependencies": [
+      "res://src/Core/Nodes/Vfx/NIroncladVfx.cs",
+      "res://images/vfx/characters/ironclad_eye_fire_base.png",
+      "the Ironclad fire shader and its fire/noise/mask textures"
+    ]
+  },
+  "offline_vulkan_acceptance": {
+    "status": "pass",
+    "display_server": "Windows",
+    "rendering_driver": "vulkan",
+    "canvas": [1280, 900],
+    "sequence_count": 25,
+    "checkpoint_count": 104,
+    "failed_sequences": 0,
+    "errors": 0,
+    "actual_custom_controller_sequences": 25,
+    "simulation_sequences": 0,
+    "same_frame_ab_frames": [
+      "runtime-vulkan/cast-source-active-eye-on.png",
+      "runtime-vulkan/cast-source-active-eye-off.png",
+      "runtime-vulkan/cast-target-active-eye-on.png",
+      "runtime-vulkan/cast-target-active-eye-off.png"
+    ],
+    "full_summary": "runtime-vulkan/transition-summary.json",
+    "contact_sheet": "runtime-vulkan/all-transition-checkpoints.png",
+    "limitation": "The standalone Vulkan harness loaded the formal scene resource and used the production Spine data, slots, transforms, texture, and actual VivhiteCombatVfx script in a programmatic production topology. It could not instantiate the game-owned NCreatureVisuals C# root outside the sts2 assembly. Final installed-game observation remains the integration gate."
+  },
+  "reference_eligibility": "accepted_runtime_source; may be used only within the clean transparent-art chain",
+  "next_gate": "Main thread updates shared integration contracts, builds/deploys, and confirms one cast_eyes_start/clear_vfx cycle in the installed game.",
+  "notes": [
+    "Attempt 1 remains preserved and rejected; it is not eligible as a later-generation reference.",
+    "No public documentation was edited in this component task.",
+    "No commit was created."
+  ]
+}

@@ -1,0 +1,23 @@
+Use case: stylized-concept
+Asset type: one complete opaque full-screen grayscale transition-mask illustration for a 2D game screen wipe
+
+Consumer contract:
+The final runtime texture is 2560x1200 and fills an overscanned full-screen ColorRect. A shader samples only the image red channel and progressively thresholds it: bright regions become black first, middle values next, and the darkest regions last. Create many broad continuous tonal ramps and layered value bands, not a binary logo or line drawing. The image itself is never shown as color art.
+
+Input images:
+Image 1 defines only the vanilla transition-mask medium: a dark-dominant, fully opaque, full-bleed grayscale field with broad layered values. Do not copy its flame shapes.
+Image 2 defines White Qi's costume family, blue butterfly ornament, magical-girl proportions, and restrained demeanor. Ignore all text and layout in that reference.
+Image 3 defines White Qi's silver bob hair, purple eyes, round gold glasses, face, and cool expression.
+
+Primary request:
+Create one ultra-wide mathematical-magic screen-wipe mask themed around White Qi. Place exactly one recognizable White Qi magical girl near the center in a calm three-quarter pose, with both empty hands open near the lower center. Surround her with a huge full-frame system of concentric geometric constructions, topology-like loops, tessellated planes, orbital curves, butterfly-wing symmetry, and broad calculation-like magical fields. Keep her closed mouth and face completely clear. The magic originates from the space around her empty hands and the large background construction, never from her face.
+
+Style/medium:
+Strict monochrome grayscale RGB artwork, fully opaque, matte, graphic painterly shapes with roughly eight to twelve broad tonal levels plus controlled soft ramps. Dark charcoal is the dominant base. Broad mid-gray forms connect the composition. Small near-white seeds are distributed among ring vertices and butterfly motifs in every quadrant so the wipe begins across the frame, then expands through medium bands, then fills the darkest field last. No color tint at all.
+
+Composition/framing:
+Ultra-wide 32:15 composition, full bleed to every edge. The primary figure, complete butterfly, empty hands, face, and central rings all remain within the middle 68 percent of canvas height so a taller source can be center-cropped safely. Continue broad abstract geometry through all four edges; no empty canvas, vignette boundary, frame, or border. Preserve useful large shapes at game-screen scale; avoid dense hairline detail.
+
+Constraints:
+Exactly one person and one continuous scene. White Qi has silver bob hair, purple eyes represented by grayscale value, round gold glasses, a blue-butterfly shape represented in grayscale, and her black-white-blue-violet magical-girl costume represented in grayscale. No sword, staff, wand, book, shield, handheld orb, computer, brush, tool, or other prop. No readable text, letters, numbers, equations, logo, signature, watermark, UI, panel, sprite sheet, atlas, or multiple views. No red or crimson color. No blood, liquid, droplet, strand, filament, ribbon, bar, or line near the mouth or face. No magic may originate from, cross, touch, point toward, or appear to leave the mouth, nose, lips, or face edge. Specifically exclude thin crimson magic threads and any red bar by the mouth. No transparent or translucent area.
+

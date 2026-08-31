@@ -1,0 +1,44 @@
+{
+  "schema": "vivhite-codex-native-generation-request/v1",
+  "semantic_asset_id": "vivhite-character-select-transition",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "prepared-before-generation",
+  "provider_route": "Codex built-in image_gen",
+  "mode": "generate with local references",
+  "use_case": "stylized-concept",
+  "n": 1,
+  "transparency": "forbidden; opaque full-frame output requested in prompt",
+  "requested_composition": "32:15 ultra-wide; runtime target 2560x1200",
+  "public_size_control": "not exposed by built-in tool; actual returned dimensions recorded after generation",
+  "public_quality_control": "not exposed by built-in tool",
+  "internal_model": "not exposed",
+  "seed": "not exposed",
+  "token_count": "not exposed",
+  "prompt_path": "prompt.txt",
+  "consumer_contract_path": "consumer-contract.md",
+  "references": [
+    {
+      "path": "inspection/source/original-ironclad-transition-decoded.png",
+      "sha256": "766ab00b2df8423b9469f25371ee7addda34a73dbf8b295baaf6ce9cb823ef62",
+      "role": "grayscale wipe-mask medium and full-frame tonal distribution only; flames must not be copied"
+    },
+    {
+      "path": "../../../../references/character-design.png",
+      "workspace_path": "assets/vivhite-ironclad/references/character-design.png",
+      "sha256": "a3f2e19eb243d0313360df644c1cdf397d891d42d8a53aabd38cca87b6f69d0e",
+      "role": "costume family, butterfly, proportions, and demeanor only; embedded text ignored"
+    },
+    {
+      "path": "../../../../references/face-reference.jpg",
+      "workspace_path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "sha256": "b52b0624a3c2b2114f66a6c7ba839880d1dc89adaa91de0f5ca6bfc302160ca6",
+      "role": "face, silver bob, purple eyes, round gold glasses, and expression"
+    }
+  ],
+  "planned_outputs": {
+    "unaltered_model_return": "original.png",
+    "inspection": "inspection/candidate/",
+    "runtime_candidate": "runtime/vivhite_character_select_transition.png"
+  }
+}

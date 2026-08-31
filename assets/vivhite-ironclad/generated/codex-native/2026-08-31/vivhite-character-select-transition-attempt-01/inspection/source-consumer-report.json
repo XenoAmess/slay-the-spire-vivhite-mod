@@ -1,0 +1,81 @@
+{
+  "schema": "vivhite-character-select-transition-consumer-scan/v1",
+  "assembly_path": "G:\\SteamLibrary\\steamapps\\common\\Slay the Spire 2\\data_sts2_windows_x86_64\\sts2.dll",
+  "assembly_sha256": "0861bfa1df347538d932f22d580e75420f08082792eb914e53b4882764acdbe9",
+  "target_getter": "MegaCrit.Sts2.Core.Models.CharacterModel.get_CharacterSelectTransitionPath",
+  "target_metadata_token": "0x06001954",
+  "callers": [
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Models.CharacterModel",
+      "method": "System.Collections.Generic.IEnumerable\u00601[System.String] get_AssetPathsCharacterSelect()",
+      "il_offset": 45,
+      "opcode": "call"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Models.CharacterModel",
+      "method": "System.Collections.Generic.IEnumerable\u00601[System.String] get_AssetPaths()",
+      "il_offset": 64,
+      "opcode": "call"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.MainMenu.NMainMenu\u002B\u003COnContinueButtonPressedAsync\u003Ed__64",
+      "method": "Void MoveNext()",
+      "il_offset": 346,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.DailyRun.NDailyRunLoadScreen\u002B\u003CStartRun\u003Ed__32",
+      "method": "Void MoveNext()",
+      "il_offset": 194,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.DailyRun.NDailyRunScreen\u002B\u003CStartNewMultiplayerRun\u003Ed__54",
+      "method": "Void MoveNext()",
+      "il_offset": 225,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.DailyRun.NDailyRunScreen\u002B\u003CStartNewSingleplayerRun\u003Ed__53",
+      "method": "Void MoveNext()",
+      "il_offset": 265,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CustomRun.NCustomRunLoadScreen\u002B\u003CStartRun\u003Ed__27",
+      "method": "Void MoveNext()",
+      "il_offset": 194,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CustomRun.NCustomRunScreen\u002B\u003CStartNewMultiplayerRun\u003Ed__45",
+      "method": "Void MoveNext()",
+      "il_offset": 255,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CustomRun.NCustomRunScreen\u002B\u003CStartNewSingleplayerRun\u003Ed__44",
+      "method": "Void MoveNext()",
+      "il_offset": 260,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect.NCharacterSelectScreen\u002B\u003CStartNewMultiplayerRun\u003Ed__56",
+      "method": "Void MoveNext()",
+      "il_offset": 366,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect.NCharacterSelectScreen\u002B\u003CStartNewSingleplayerRun\u003Ed__55",
+      "method": "Void MoveNext()",
+      "il_offset": 370,
+      "opcode": "callvirt"
+    },
+    {
+      "declaring_type": "MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect.NMultiplayerLoadGameScreen\u002B\u003CStartRun\u003Ed__34",
+      "method": "Void MoveNext()",
+      "il_offset": 194,
+      "opcode": "callvirt"
+    }
+  ]
+}

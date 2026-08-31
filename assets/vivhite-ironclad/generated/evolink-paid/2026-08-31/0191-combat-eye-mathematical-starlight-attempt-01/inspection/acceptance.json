@@ -1,0 +1,39 @@
+{
+  "schema": "vivhite.transparent-art-attempt-acceptance/v1",
+  "semantic_asset": "combat_eye_and_glasses_magic_vfx",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "status": "rejected_preserved",
+  "source_sha256": "e01644ffadeded26672157e21e112e5244f56504395c3600aa32e90a9c3bf07b",
+  "technical_alpha": {
+    "status": "pass",
+    "format": "RGBA8",
+    "size": [1024, 1024],
+    "corner_alpha": [0, 0, 0, 0],
+    "sourceover_backgrounds": [
+      "sourceover-black.png",
+      "sourceover-white.png",
+      "sourceover-game-indigo.png"
+    ],
+    "rectangular_haze_visible": false,
+    "edge_reaching_glow_visible": false
+  },
+  "creative_and_consumer_fit": {
+    "status": "fail",
+    "reasons": [
+      "The central star has a conspicuous elongated vertical spike.",
+      "The constellation and orbit introduce several connected linear strokes instead of a restrained lens-local glow.",
+      "At the small face-adjacent runtime size, those strokes can read as protruding strips beside the face, violating the explicit no-long-strip constraint.",
+      "The silhouette reads as a complex emblem rather than a compact glasses-lens refraction."
+    ],
+    "forbidden_content_check": {
+      "red_or_crimson": false,
+      "blood_or_liquid": false,
+      "weapon": false,
+      "mouth_or_face": false,
+      "long_linear_strokes": true
+    }
+  },
+  "reference_eligibility": "do_not_use_for_later_generation",
+  "next_attempt_single_hypothesis": "Remove every line, orbit, ray tail, and connected constellation path; use only compact closed lens facets plus isolated tiny gold star points."
+}
