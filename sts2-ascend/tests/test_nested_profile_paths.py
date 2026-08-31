@@ -85,6 +85,22 @@ class NestedProfileClassifierTests(unittest.TestCase):
             autogit.REVIEW_PATH_ONLINE_RUNTIME,
         )
 
+    def test_reset_archives_are_local_runtime_evidence_not_review_input(self) -> None:
+        paths = (
+            "sts2-ascend/knowledge/profile_reset_archives/vivhite/"
+            "20260831T081050.489211Z/stats.json",
+            "sts2-ascend/knowledge/rotation_reset_archives/vivhite/"
+            "20260831T084216.171841Z/manifest.json",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertEqual(
+                    autogit.classify_review_path(path),
+                    autogit.REVIEW_PATH_ONLINE_RUNTIME,
+                )
+                with self.assertRaises(ValueError):
+                    autogit.validate_review_paths([path])
+
 
 class NestedProfileAutogitTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -146,6 +162,67 @@ class NestedProfileAutogitTests(unittest.TestCase):
         self.assertNotIn(
             "sts2-ascend/knowledge/profiles/vivhite/strategy.md", committed)
         self.assertIn("strategy.md", self._git("status", "--short").stdout)
+
+    def test_default_checkpoint_does_not_rediscover_tracked_reset_archives(self) -> None:
+        archive_roots = (
+            self.root_store / "profile_reset_archives" / "vivhite" / "profile-snapshot",
+            self.root_store / "rotation_reset_archives" / "vivhite" / "rotation-snapshot",
+        )
+        for index, archive in enumerate(archive_roots, start=1):
+            _write_store(archive, f"ARCHIVE{index}", run_count=1)
+        self._git("add", "-f", *(
+            archive.relative_to(self.repo).as_posix() for archive in archive_roots))
+        self._git("commit", "-m", "track historical reset evidence")
+
+        (self.root_store / "stats.json").write_text(
+            '{"global":{"runs":2}}\n', encoding="utf-8")
+        for archive in archive_roots:
+            (archive / "stats.json").write_text(
+                '{"archived":true,"changed":true}\n', encoding="utf-8")
+
+        result = autogit.commit_progress_result(
+            "checkpoint must exclude reset evidence", push=False)
+
+        self.assertTrue(result.created, result.reason)
+        committed = set(self._git(
+            "diff-tree", "--no-commit-id", "--name-only", "-r", result.commit,
+        ).stdout.splitlines())
+        self.assertIn("sts2-ascend/knowledge/stats.json", committed)
+        for archive in archive_roots:
+            archive_stats = (archive / "stats.json").relative_to(self.repo).as_posix()
+            self.assertNotIn(archive_stats, committed)
+            self.assertIn(archive_stats, self._git("status", "--short").stdout)
+
+    def test_explicit_autogit_refuses_reset_archive_and_ancestor_specs(self) -> None:
+        for path in (
+            "sts2-ascend/knowledge/profile_reset_archives/vivhite/snapshot/stats.json",
+            "sts2-ascend/knowledge/rotation_reset_archives",
+            "sts2-ascend/knowledge",
+        ):
+            with self.subTest(path=path):
+                before = self._git("rev-parse", "HEAD").stdout.strip()
+                result = autogit.commit_progress_result(
+                    "must refuse local reset evidence", paths=[path], push=False)
+                self.assertFalse(result.created)
+                self.assertIn("reset", result.reason)
+                self.assertEqual(
+                    self._git("rev-parse", "HEAD").stdout.strip(), before)
+
+    def test_project_ignore_keeps_new_reset_archives_local(self) -> None:
+        project_ignore = Path(__file__).resolve().parents[1] / ".gitignore"
+        (self.base / ".gitignore").write_text(
+            project_ignore.read_text(encoding="utf-8"), encoding="utf-8")
+        paths = (
+            "sts2-ascend/knowledge/profile_reset_archives/vivhite/new/manifest.json",
+            "sts2-ascend/knowledge/rotation_reset_archives/vivhite/new/manifest.json",
+        )
+        for path in paths:
+            absolute = self.repo / path
+            absolute.parent.mkdir(parents=True, exist_ok=True)
+            absolute.write_text('{"sha256":"preserved"}\n', encoding="utf-8")
+            with self.subTest(path=path):
+                ignored = self._git("check-ignore", "-v", "--no-index", path)
+                self.assertIn("sts2-ascend/.gitignore", ignored.stdout)
 
 
 class NestedProfileCompactionTests(unittest.TestCase):

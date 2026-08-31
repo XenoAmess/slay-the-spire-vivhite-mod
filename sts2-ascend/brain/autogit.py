@@ -51,13 +51,17 @@ _KNOWLEDGE_STORE_MARKERS = frozenset({
     "policy.json",
     "lessons.md",
 })
+_LOCAL_RECOVERY_KNOWLEDGE_DIRS = frozenset({
+    "profile_reset_archives",
+    "rotation_reset_archives",
+})
 _KNOWLEDGE_STORE_SCAN_PRUNE = frozenset({
     ".runtime",
     "archive",
     "code_backups",
     "game",
     "runs",
-})
+}) | _LOCAL_RECOVERY_KNOWLEDGE_DIRS
 # 旧 marker 缺少 paths 时 runner 仍需要一个进程内兜底集合。新复盘验收不再把
 # 这 11 个文件当作边界；``validate_review_paths(..., allowlist=...)`` 仅为旧 API/
 # 测试保留精确名单模式。
@@ -88,7 +92,7 @@ _REVIEW_ONLINE_KNOWLEDGE_DIRS = frozenset({
     "archive",
     "code_backups",
     "runs",
-})
+}) | _LOCAL_RECOVERY_KNOWLEDGE_DIRS
 _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES = frozenset({
     "lessons",
     "pending_restart",
@@ -474,6 +478,17 @@ def classify_review_path(path: str | os.PathLike[str]) -> str:
 def _path_in_specs(path: str, specs: Sequence[str]) -> bool:
     value = path.replace("\\", "/").rstrip("/")
     return any(value == spec or value.startswith(spec.rstrip("/") + "/") for spec in specs)
+
+
+def _progress_spec_overlaps_local_recovery(spec: str) -> bool:
+    """Return whether a progress pathspec could stage local reset evidence."""
+    archives = tuple(
+        f"sts2-ascend/knowledge/{name}"
+        for name in _LOCAL_RECOVERY_KNOWLEDGE_DIRS
+    )
+    return _path_in_specs(spec, archives) or any(
+        _path_in_specs(archive, (spec,)) for archive in archives
+    )
 
 
 def validate_review_paths(
@@ -950,6 +965,17 @@ def commit_progress_result(
             # durable journal; the legacy probe below repairs pre-journal runs.
             _recover_pending_progress_indexes_unlocked(log=log)
             specs = normalize_paths(default_progress_paths() if paths is None else paths)
+            recovery_specs = [
+                spec for spec in specs
+                if _progress_spec_overlaps_local_recovery(spec)
+            ]
+            if recovery_specs:
+                reason = (
+                    "本地 profile/rotation reset 恢复归档禁止进入自动 Git："
+                    + ", ".join(recovery_specs[:8])
+                )
+                log(f"[git] {reason}")
+                return CommitResult(False, reason=reason)
             # 可选的精确文件在旧安装中可能尚不存在；忽略既不存在也从未 tracked
             # 的 pathspec，但保留已删除的 tracked 路径以便提交 deletion。
             effective_specs = []
