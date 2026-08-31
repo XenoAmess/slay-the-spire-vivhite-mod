@@ -220,7 +220,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260830-164034-1788079234451935900-91976f47 -->
 | 2026-08-30 16:40:34 | 第 988~1013 局 | `91976f47` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-164034-1788079234451935900-91976f47` | 复盘进程未成功完成 |
 <!-- rejection:20260830-165530-1788080130637400100-b55e4b4d -->
-| 2026-08-30 16:55:30 | 第 1198~1199 局 | `b55e4b4d` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-165530-1788080130637400100-b55e4b4d` | patch 目标已有用户 staged 内容：sts2-ascend/brain/policy.py, sts2-ascend/brain/selfcheck.py, sts2-ascend/knowledge/meta_review.md, sts2-ascend/knowledge/review_conclusion.txt |
+| 2026-08-30 16:55:30 | 第 1198~1199 局 | `b55e4b4d` | review_failure | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `40909a4a` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 40909a4a 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260830-165717-1788080237967447400-416a6409 -->
 | 2026-08-30 16:57:17 | 第 988~1013 局 | `416a6409` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260830-165717-1788080237967447400-416a6409` | 复盘进程未成功完成 |
 <!-- rejection:20260830-171338-1788081218546501400-b4f5d73c -->
