@@ -3078,7 +3078,23 @@ class Policy:
             # 防守姿态压着攻击把 7 回合磨死在意图 31 的滚雪球下。升级型敌人
             # （毛绒伏地虫/仪式兽/墨影幻灵）的杀伤来自时间而非血量，血池小≠竞速豁免
             esc_gate = getattr(self, "_esc_rounds", 0) >= 2
-            if enemy_hp_total >= float(pol.get("kill_race_min_enemy_hp", 80.0)) or esc_gate:
+            _race_pool_gate = float(pol.get("kill_race_min_enemy_hp", 80.0))
+            _live_enemy_count = sum(
+                1 for e in enemies
+                if isinstance(e, dict) and e.get("is_alive", True))
+            # 低池多敌爆发观测只增加可复核留痕，不打开 kill_race、不改变评分。
+            if (bool(pol.get("low_pool_burst_race_obs", True))
+                    and not esc_gate
+                    and _live_enemy_count >= 2
+                    and 0 < enemy_hp_total < _race_pool_gate
+                    and my_hp / max(1.0, float(my_max_hp)) <= 0.55
+                    and float(incoming) >= max(10.0, float(my_hp) * 0.75)):
+                danger_note += (
+                    f"；低池多敌爆发观测：血池{enemy_hp_total:.0f}<门槛"
+                    f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
+                    f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
+                    "（LOW_POOL_BURST_RACE_OBS）")
+            if enemy_hp_total >= _race_pool_gate or esc_gate:
                 # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
                 # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的
                 # 正是这两回合（252 局 F5 劫掠者三连：T1~T3 意图 22→32 还在打坚毅

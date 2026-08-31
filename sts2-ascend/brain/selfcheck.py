@@ -6164,6 +6164,54 @@ def main() -> int:
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把
     #        KIN 实际必败局翻成回血；关闭新闸后严格回落旧存在性口径。native
     #        缺失或显式关闭组合门仍严格回落旧均值口径。
+    # 3br-low-pool-observation：低血、多敌、近致死但血池为78时只应留下观测，
+    # 不得打开现有 kill_race；关闭开关后动作、参数和竞速锁应完全回归。
+    low_pool_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-low-pool-race-")))
+    low_pool_pol = policy.Policy(low_pool_know, random.Random(17))
+    low_pool_ctx = SimpleNamespace(
+        combat={"comp_id": "LOW_POOL_RUBY", "node_type": "Monster"},
+        current_combat_is_hard=False, credit_tags=[])
+    low_pool_state = {
+        "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+        "turn": 1,
+        "combat": {
+            "player": {"current_hp": 27, "max_hp": 80, "block": 0, "energy": 1},
+            "hand": [{"index": 0, "card_id": "LOW_POOL_STRIKE", "name": "test strike",
+                       "playable": True, "energy_cost": 1, "requires_target": True,
+                       "valid_target_indices": [0, 1, 2],
+                       "dynamic_values": [{"name": "Damage", "current_value": 20}]}],
+            "enemies": [
+                {"index": 0, "enemy_id": "ASSASSIN_RUBY_RAIDER", "name": "assassin",
+                 "current_hp": 23, "max_hp": 23, "block": 0, "is_alive": True,
+                 "is_hittable": True, "intents": [{"total_damage": 8}]},
+                {"index": 1, "enemy_id": "AXE_RUBY_RAIDER", "name": "axe",
+                 "current_hp": 22, "max_hp": 22, "block": 0, "is_alive": True,
+                 "is_hittable": True, "intents": [{"total_damage": 7}]},
+                {"index": 2, "enemy_id": "BRUTE_RUBY_RAIDER", "name": "brute",
+                 "current_hp": 33, "max_hp": 33, "block": 0, "is_alive": True,
+                 "is_hittable": True, "intents": [{"total_damage": 7}]},
+            ],
+        },
+        "run": {"current_hp": 27, "max_hp": 80, "gold": 0, "floor": 8,
+                "deck": []},
+    }
+    d_low_pool = low_pool_pol.decide(low_pool_state, low_pool_ctx)
+    assert "LOW_POOL_BURST_RACE_OBS" in d_low_pool.reason \
+        and "斩杀竞速投影" not in d_low_pool.reason \
+        and not low_pool_pol._krace_latch, \
+        f"low-pool observation or race latch mismatch: {d_low_pool.action}/{d_low_pool.reason}"
+    low_pool_know.policy["low_pool_burst_race_obs"] = False
+    low_pool_off_ctx = SimpleNamespace(
+        combat={"comp_id": "LOW_POOL_RUBY_OFF", "node_type": "Monster"},
+        current_combat_is_hard=False, credit_tags=[])
+    d_low_pool_off = low_pool_pol.decide(low_pool_state, low_pool_off_ctx)
+    assert ("LOW_POOL_BURST_RACE_OBS" not in d_low_pool_off.reason
+            and d_low_pool_off.action == d_low_pool.action
+            and d_low_pool_off.params == d_low_pool.params
+            and not low_pool_pol._krace_latch), \
+        f"low-pool observation switch changed action or remained latched: {d_low_pool_off.action}/{d_low_pool_off.reason}"
+
     class _PerComboNative:
         available = True
         pools: dict = {}

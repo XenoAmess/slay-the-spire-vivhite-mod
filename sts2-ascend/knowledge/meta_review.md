@@ -6137,3 +6137,38 @@ latent，无法区分「规则上仍有防御牌但 play_card 接口未重开」
   如后续样本支持行为化，再另开复盘批次提出最小预算变更。
 
 retry_resolution: 20260830-165530-1788080130637400100-b55e4b4d integrated
+
+# 2026-08-31｜第1200~1207局复盘：低池多敌爆发观测
+
+## HYPOTHESIS
+
+`kill_race_min_enemy_hp=80` 可能使低血、多敌、近致死的小血池战失去竞速审计。
+最新完整失败链 `FW25WS2JWRRN`（第1207局，134条决策）显示 F8-T1 为 27/80
+血、敌方总意图 22；劫掠者三连最大生命为 23+22+33=78，F8 三回合内阵亡且
+没有 `斩杀竞速投影`。假设只主张先增加观测，不直接改变 80 血行为门槛。
+
+## EVIDENCE
+
+- 队列 1200~1207 为 exact_batch 8/8；完整链逐动作记录确认 F8 的 T1/T2/T3
+  依次为 27、14、14 血，T1 意图 22、T3 意图 32，最终 F8 阵亡。
+- 原生 v0.111.0 runtime 确认 `ASSASSIN_RUBY_RAIDER`、`AXE_RUBY_RAIDER`、
+  `BRUTE_RUBY_RAIDER` 最大初始生命分别为 23、22、33。
+- complete evidence index 的目标与六次尝试指定文件共 562 个，逐项存在且哈希匹配；
+  候选 selfcheck 已通过，但因宿主 staged 目标冲突未自动合入，本次在当前 HEAD 重实现。
+
+## IMPLEMENTATION / EXPECTED_SIGNAL
+
+- `brain/knowledge.py` 增加默认开启的 `low_pool_burst_race_obs`。
+- `brain/policy.py` 在现有竞速开账门未满足时，对至少两名存活敌人、血池低于现有
+  80 门槛、我方生命比例 ≤55%、当前意图 ≥`max(10,75%当前生命)` 的回合追加
+  `LOW_POOL_BURST_RACE_OBS` reason；不改 `kill_race`、评分、姿态、药水或路径。
+- `brain/selfcheck.py` 覆盖 78 血池正例、竞速锁未打开，以及关闭开关后的 reason、
+  动作和参数回归。未来 3~10 局统计标记次数、血池、敌人数、意图、血甲、后续战损、
+  回合数和胜负；若标记样本仍短战阵亡/高损，再评估行为闸，否则假设被证伪。
+
+## VALIDATION / ROLLBACK
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：**SELFCHECK OK**。
+- 回滚：将 `low_pool_burst_race_obs` 设为 `false`；不影响既有竞速判定。
+
+retry_resolution: 20260830-174849-1788083329181414800-8d04cda9 integrated

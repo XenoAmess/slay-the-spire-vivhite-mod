@@ -389,6 +389,7 @@ DEFAULT_POLICY = {
     "deck_thin_discount": 0.35,   # 单薄期每缺 1 张核心牌降低拾取门槛的幅度（门槛只升不降曾让 91 局整场只拿 6 张牌）
     # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
     "kill_race_enabled": True,
+    "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "end_turn_settle_recovery_ticks_boss": 40,  # BOSS_SETTLE_TIER3: Boss-only settle recovery budget.
     "end_turn_settle_recovery_ticks_lethal": 50,  # LETHAL_SETTLE_EXTENSION: lethal Boss settle windows get a bounded final 10-tick extension.
     "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）
