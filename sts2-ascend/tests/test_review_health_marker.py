@@ -17,6 +17,20 @@ sys.path.insert(0, str(BRAIN))
 import agent as agent_module  # noqa: E402
 
 
+def _verified_state(run_id: str, floor: int) -> dict:
+    return {
+        "screen": "GAME_OVER",
+        "run_id": run_id,
+        "run": {"run_id": run_id, "floor": floor},
+        "game_over": {
+            "phase": "summary_ready",
+            "save_status": "verified",
+            "save_verified": True,
+            "save_error": None,
+        },
+    }
+
+
 @contextmanager
 def _lock(**_kwargs):
     yield
@@ -52,8 +66,8 @@ class ReviewHealthMarkerTests(unittest.TestCase):
         self.assertEqual(instance._pending_review_restart_at_safe_boundary(
             {"screen": "GAME_OVER"}), "")
 
-        # A menu-like screen must not discard an unarchived run context. The
-        # existing new-run detector will finalize that abandoned run first.
+        # A menu-like screen must not discard an unarchived run context.  It stays
+        # blocked until the old run's native GAME_OVER save proof is observed.
         instance.ctx.run_id = "unfinished-run"
         instance.ctx.run_finalized = False
         self.assertEqual(instance._pending_review_restart_at_safe_boundary(
@@ -122,12 +136,14 @@ class ReviewHealthMarkerTests(unittest.TestCase):
                 mock.patch.object(agent_module, "autogit", None), \
                 mock.patch.object(agent_module, "log") as logged:
             # Regression: this used to raise SystemExit(42) directly on GAME_OVER.
-            instance._finalize(victory=False, floor=1)
+            instance._finalize(
+                victory=False, floor=1,
+                native_save_state=_verified_state("finished-run", 1))
 
         self.assertTrue(instance.ctx.run_finalized)
         self.assertTrue(logged.called)
 
-    def test_abandoned_run_finalizes_before_new_run_restart_handoff(self) -> None:
+    def test_disappeared_run_blocks_new_run_and_restart_without_finalizing(self) -> None:
         instance = object.__new__(agent_module.Agent)
         instance.ctx = agent_module.RunContext()
         instance.ctx.reset_for("old-run", 0, 7)
@@ -137,24 +153,25 @@ class ReviewHealthMarkerTests(unittest.TestCase):
         instance._review_health_ready_for_new_run = False
         instance.know = SimpleNamespace(
             stats={"global": {"runs": 7}}, load_run_log=lambda _run_id: None)
-
-        def finalize_old(**_kwargs) -> None:
-            instance.ctx.run_finalized = True
-
-        instance._finalize = mock.Mock(side_effect=finalize_old)
+        instance._save_run_progress = mock.Mock(return_value=True)
+        instance._finalize = mock.Mock()
         fresh = {
             "screen": "EVENT",
             "run_id": "new-run",
             "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
                     "ascension": 0, "floor": 0},
         }
-        with mock.patch.object(agent_module, "log"), \
-                self.assertRaises(SystemExit) as raised:
+        with mock.patch.object(agent_module, "log"):
             instance._track(fresh)
 
-        self.assertEqual(raised.exception.code, 42)
-        instance._finalize.assert_called_once()
+        instance._finalize.assert_not_called()
         self.assertEqual(instance.ctx.run_id, "old-run")
+        self.assertTrue(instance.ctx.finalize_requested)
+        self.assertTrue(instance._native_save_transition_blocked)
+        self.assertEqual(
+            instance.ctx.native_save_wait["replacement_run_id"], "new-run")
+        instance._save_run_progress.assert_called_once_with(
+            {"floor": 5}, force=True)
 
     def test_track_requires_empty_main_menu_before_complete_run_eligibility(self) -> None:
         instance = object.__new__(agent_module.Agent)

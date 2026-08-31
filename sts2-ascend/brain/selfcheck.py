@@ -4326,8 +4326,9 @@ def main() -> int:
     #      死亡路径下战斗账先行落库，掉血经暂存照样归因，事件死亡标志保持关闭
     ag.ctx.reset_for("RUN_EVT3", 0)
 
-    def evt_chain_state(screen, hp, gold, deck_len, comp="VEG_BUG"):
-        st = {"screen": screen, "run_id": "RUN_EVT3",
+    def evt_chain_state(screen, hp, gold, deck_len, comp="VEG_BUG",
+                        run_id="RUN_EVT3"):
+        st = {"screen": screen, "run_id": run_id,
               "run": {"current_hp": hp, "max_hp": 80, "gold": gold, "floor": 14,
                       "deck": [{"card_id": f"C{i}"} for i in range(deck_len)]}}
         if screen == "COMBAT":
@@ -4357,12 +4358,15 @@ def main() -> int:
         f"事件战聚合账未正确标记/累计（敌人组合账数据源被破坏）: {agg3}"
     # 死亡路径：战斗账先于事件账落库，掉血经暂存归因；事件死亡标志保持关闭
     ag.ctx.reset_for("RUN_EVT4", 0)
-    track_accepted(ag, evt_chain_state("EVENT", 80, 50, 1),
+    track_accepted(ag, evt_chain_state(
+        "EVENT", 80, 50, 1, run_id="RUN_EVT4"),
                    policy.Decision(action="choose_event_option",
                                    tags=[("event_choice", "VEG4_EV", "FIGHT")]))
-    ag._track(evt_chain_state("COMBAT", 80, 50, 1, comp="VEG4_BUG"),
+    ag._track(evt_chain_state(
+        "COMBAT", 80, 50, 1, comp="VEG4_BUG", run_id="RUN_EVT4"),
               policy.Decision(action=None))
-    ag._track(evt_chain_state("GAME_OVER", 0, 50, 1, comp="VEG4_BUG"),
+    ag._track(evt_chain_state(
+        "GAME_OVER", 0, 50, 1, comp="VEG4_BUG", run_id="RUN_EVT4"),
               policy.Decision(action=None))
     ev_dead = tknow.stats["events"]["VEG4_EV"]["FIGHT"]
     assert ev_dead["n"] == 1 and ev_dead["hp_delta_sum"] == -80.0 \
@@ -5816,7 +5820,18 @@ def main() -> int:
     raw = json.loads(log_path.read_text(encoding="utf-8"))
     assert raw.get("in_progress") is True and raw.get("floor") == 6, \
         f"增量稿应带进行中标记: {raw.get('in_progress')}/{raw.get('floor')}"
-    ag_fin._finalize(victory=False, floor=6)
+    ag_fin._finalize(
+        victory=False, floor=6,
+        native_save_state={
+            "screen": "GAME_OVER", "run_id": "RUN_FIN",
+            "run": {"run_id": "RUN_FIN", "floor": 6},
+            "game_over": {
+                "phase": "summary_ready",
+                "save_status": "verified",
+                "save_verified": True,
+                "save_error": None,
+            },
+        })
     raw = json.loads(log_path.read_text(encoding="utf-8"))
     assert "in_progress" not in raw and raw.get("floor") == 6 and raw.get("victory") is False, \
         f"终稿语义缺失: in_progress={'in_progress' in raw}, floor={raw.get('floor')}"

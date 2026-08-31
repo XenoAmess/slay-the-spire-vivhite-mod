@@ -292,6 +292,12 @@ class RunContext:
     # that exact once-applied result across a transient write failure so the next
     # GAME_OVER poll can retry persistence without applying learning twice.
     pending_terminal_persistence: dict | None = None
+    # An autonomous run may temporarily disappear from the API because of a
+    # reconnect/race, or permanently disappear after a crash/abandon.  Neither is
+    # native GAME_OVER save proof.  Persist this wait record with the incremental
+    # run log and keep the old context authoritative until the same run resumes or
+    # its verified GAME_OVER frame is observed.
+    native_save_wait: dict | None = None
     rest_before_boss: bool = False   # 本次地图选择指向 Boss 前夜的篝火（_rest 消费）
     rest_proj_hp_pct: float | None = None
     rest_next_fight_loss_frac: float = 0.0
@@ -359,7 +365,10 @@ class Agent:
         self._seen_pause_generation = (
             initial_control.pause_generation if initial_control.enabled
             else max(0, initial_control.pause_generation - 1))
+        self._rotation_unresolved_run_id = ""
+        self._native_save_transition_blocked = False
         self._recover_persisted_terminal_rotation()
+        self._recover_pending_native_save_context()
 
     def _activate_profile(self, profile: CharacterProfile) -> None:
         """Expose one character's paired Knowledge/Policy as the active runtime."""
@@ -434,6 +443,7 @@ class Agent:
             "run_id", "run_number", "profile_id", "character_id",
             "profile_run_number", "ascension", "started_at", "victory",
             "floor", "decisions", "combat_notes", "attribution_tags",
+            "native_save",
         )
         if any(key not in terminal for key in required):
             log(f"[agent] 跨进程终局恢复证据不完整，保持阻塞：{run_id}")
@@ -450,7 +460,9 @@ class Agent:
                 or not terminal["started_at"].strip()
                 or not isinstance(terminal.get("decisions"), list)
                 or not isinstance(terminal.get("combat_notes"), list)
-                or not isinstance(terminal.get("attribution_tags"), list)):
+                or not isinstance(terminal.get("attribution_tags"), list)
+                or not self._persisted_native_save_proof_matches(
+                    terminal.get("native_save"), run_id)):
             log(f"[agent] 跨进程终局恢复拒绝非完整自动对局：{run_id}")
             return False
 
@@ -492,6 +504,108 @@ class Agent:
             # non-excluded stale journal without replaying this terminal.
             log(f"[agent] 跨进程终局已恢复，学习事务清理稍后自愈：{exc}")
         log(f"[agent] 跨进程终局恢复完成：{run_id}，下一角色 {result.next_character}")
+        return True
+
+    @staticmethod
+    def _persisted_native_save_proof_matches(proof: object,
+                                               run_id: str) -> bool:
+        """Validate the exact proof persisted with an autonomous terminal."""
+        return (
+            isinstance(proof, dict)
+            and str(proof.get("run_id") or "") == str(run_id)
+            and proof.get("phase") == "summary_ready"
+            and proof.get("save_status") == "verified"
+            and proof.get("save_verified") is True
+            and proof.get("save_error") is None
+        )
+
+    def _recover_pending_native_save_context(self) -> bool:
+        """Restore an old run that disappeared before native save verification.
+
+        Rotation owns the durable active identity.  A matching incremental log
+        supplies the old context needed to retry a later GAME_OVER echo.  Missing
+        or malformed context never releases/replaces that active identity: the
+        process keeps a lightweight unresolved marker and blocks actions instead.
+        """
+        rotation = getattr(self, "rotation", None)
+        store = getattr(self, "profile_store", None)
+        if rotation is None or store is None:
+            return False
+        try:
+            snapshot = rotation.snapshot()
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 无法读取待验证旧局轮换证据，保持阻塞：{exc}")
+            return False
+
+        run_id = str(snapshot.active_run_id or "").strip()
+        character_id = str(snapshot.active_character_id or "").strip()
+        self._rotation_unresolved_run_id = run_id
+        if not run_id or not character_id:
+            return False
+        try:
+            profile = store.for_character(character_id)
+        except KeyError:
+            return False
+        knowledge = getattr(self, "_profile_knowledge", {}).get(
+            profile.profile_id)
+        if knowledge is None:
+            return False
+        try:
+            prior = knowledge.load_run_log(run_id)
+        except (OSError, ValueError) as exc:
+            log(f"[agent] 无法读取待验证旧局增量证据，保持阻塞：{exc}")
+            return False
+        if not isinstance(prior, dict):
+            return False
+        wait = prior.get("native_save_wait")
+        decisions = prior.get("decisions")
+        if (not bool(prior.get("in_progress"))
+                or str(prior.get("run_id") or "") != run_id
+                or str(prior.get("profile_id") or "") != profile.profile_id
+                or canonical_character_id(prior.get("character_id"))
+                != snapshot.active_character
+                or bool(prior.get("human_assisted"))
+                or bool(prior.get("excluded_from_learning"))
+                or not isinstance(wait, dict)
+                or wait.get("state") != "awaiting_native_save"
+                or str(wait.get("old_run_id") or "") != run_id
+                or not isinstance(decisions, list)
+                or not decisions):
+            return False
+
+        run_number = prior.get(
+            "profile_run_number", prior.get("run_number", 0))
+        if (not isinstance(run_number, int) or isinstance(run_number, bool)
+                or run_number <= 0):
+            return False
+        ascension = prior.get("ascension", 0)
+        if (not isinstance(ascension, int) or isinstance(ascension, bool)
+                or ascension < 0):
+            return False
+
+        self._activate_profile(profile)
+        self.ctx.reset_for(run_id, ascension, run_number)
+        self.ctx.profile_id = profile.profile_id
+        self.ctx.character_id = character_id
+        self.ctx.profile_run_number = run_number
+        self.ctx.decisions = copy.deepcopy(decisions)
+        self.ctx.combat_notes = copy.deepcopy(
+            prior.get("combat_notes") or [])
+        self.ctx.attribution_tags = _durable_attribution_tags(
+            prior.get("attribution_tags"))
+        self.ctx.started_at = str(prior.get("started_at") or self.ctx.started_at)
+        prior_deck = self._normalize_run_deck(prior.get("deck_snapshot"))
+        if prior_deck is not None:
+            self.ctx.deck_snapshot = prior_deck
+        raw_changes = prior.get("deck_changes")
+        if isinstance(raw_changes, list):
+            self.ctx.deck_changes = [
+                copy.deepcopy(row) for row in raw_changes
+                if isinstance(row, dict)
+            ]
+        self.ctx.native_save_wait = copy.deepcopy(wait)
+        self.ctx.finalize_requested = True
+        log(f"[agent] 恢复待原生存档验证旧局：{run_id}；统计、轮换与复盘保持阻塞")
         return True
 
     def _bind_profile_for_state(self, state: dict) -> CharacterProfile | None:
@@ -657,7 +771,7 @@ class Agent:
             pass
 
     def _dashboard_connection(self, status: str, message: str = "") -> None:
-        publisher = self.live_dashboard
+        publisher = getattr(self, "live_dashboard", None)
         if publisher is None:
             return
         try:
@@ -1033,6 +1147,77 @@ class Agent:
 
     # ---------------- run context tracking ----------------
 
+    def _hold_disappeared_run_for_native_save(self, state: dict) -> None:
+        """Persist a fail-closed wait when the API stops exposing the old run."""
+        old_run_id = str(getattr(self.ctx, "run_id", "") or "run_unknown")
+        replacement_run_id = self._state_run_identity(state)
+        screen = str(state.get("screen") or "UNKNOWN")
+        floor = int(
+            (self.ctx.decisions[-1].get("floor", 0)
+             if self.ctx.decisions else 0) or 0)
+        existing = getattr(self.ctx, "native_save_wait", None)
+        first_seen = (
+            existing.get("first_seen_at")
+            if isinstance(existing, dict) else None)
+        persisted_replacement = (
+            replacement_run_id
+            or (existing.get("replacement_run_id")
+                if isinstance(existing, dict) else None))
+        wait = {
+            "state": "awaiting_native_save",
+            "reason": (
+                "replacement_run_observed_before_verified_game_over"
+                if replacement_run_id
+                else "between_run_screen_observed_before_verified_game_over"),
+            "old_run_id": old_run_id,
+            "replacement_run_id": persisted_replacement or None,
+            "observed_screen": screen,
+            "first_seen_at": first_seen or time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        changed = wait != existing
+        self.ctx.native_save_wait = wait
+        self.ctx.finalize_requested = True
+        self._rotation_unresolved_run_id = old_run_id
+        self._native_save_transition_blocked = True
+        try:
+            saved = self._save_run_progress({"floor": floor}, force=True)
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            saved = False
+            self._disappeared_run_persist_error = str(exc)[:240]
+        if saved:
+            self._disappeared_run_persist_error = None
+
+        marker = (old_run_id, replacement_run_id, screen, bool(saved))
+        if changed or getattr(self, "_disappeared_run_log_marker", None) != marker:
+            self._disappeared_run_log_marker = marker
+            persistence = "证据已落盘" if saved else "证据落盘失败，将持续重试"
+            error = str(getattr(
+                self, "_disappeared_run_persist_error", "") or "")
+            if error:
+                persistence += f"（{error}）"
+            log(
+                f"[agent] 活动旧局 {old_run_id} 从 API 消失；{persistence}，"
+                "等待同一局原生 GAME_OVER 存档验证；不统计、不轮换、不复盘")
+
+    def _resume_temporarily_missing_run(self, state: dict) -> bool:
+        """Cancel the wait when the exact old live run reappears."""
+        wait = getattr(self.ctx, "native_save_wait", None)
+        if not isinstance(wait, dict):
+            return False
+        run_id = self._state_run_identity(state)
+        if (not run_id or run_id != str(self.ctx.run_id)
+                or state.get("screen") == "GAME_OVER"
+                or not (state.get("run") or {})):
+            return False
+        self.ctx.native_save_wait = None
+        self.ctx.finalize_requested = False
+        self._rotation_unresolved_run_id = ""
+        self._native_save_transition_blocked = False
+        self._disappeared_run_log_marker = None
+        self._save_run_progress(state.get("run") or {}, force=True)
+        log(f"[agent] 暂时消失的旧局 {run_id} 已恢复，取消原生终局等待并继续游玩")
+        return True
+
     def _track(self, state: dict, decision=None) -> None:
         """Apply observations from the state returned by the game.
 
@@ -1043,9 +1228,50 @@ class Agent:
         the observation-only contract explicit.
         """
         run = state.get("run") or {}
-        self._bind_profile_for_state(state)
-        run_id = state.get("run_id") or "run_unknown"
+        run_id = self._state_run_identity(state) or "run_unknown"
         screen = state.get("screen", "UNKNOWN")
+        self._native_save_transition_blocked = False
+
+        ctx_run_id = str(getattr(self.ctx, "run_id", "") or "run_unknown")
+        unresolved_run_id = str(
+            getattr(self, "_rotation_unresolved_run_id", "") or "")
+        if ctx_run_id == "run_unknown" and unresolved_run_id:
+            # A restart can retain the rotation's old active identity while the API
+            # already exposes a different/new run.  Never let a missing incremental
+            # log turn that condition into an implicit replacement or quota flip.
+            if run_id != unresolved_run_id or screen == "GAME_OVER":
+                self._native_save_transition_blocked = True
+                marker = (unresolved_run_id, run_id, screen)
+                if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
+                    self._unresolved_rotation_log_marker = marker
+                    log(
+                        f"[agent] 轮换账仍有未验证旧局 {unresolved_run_id}；"
+                        f"当前 API={run_id}/{screen}，保持阻塞等待可恢复证据")
+                return
+            self._rotation_unresolved_run_id = ""
+
+        active_old_run = (
+            ctx_run_id not in ("", "run_unknown")
+            and not bool(getattr(self.ctx, "run_finalized", False)))
+        replacement_observed = (
+            active_old_run and run_id not in ("run_unknown", ctx_run_id))
+        between_run_disappearance = (
+            active_old_run and run_id == "run_unknown" and not run
+            and screen in ("MAIN_MENU", "CHARACTER_SELECT"))
+        if replacement_observed or between_run_disappearance:
+            if bool(getattr(self.ctx, "human_assisted", False)):
+                # Human play is excluded rather than finalized into autonomous
+                # statistics/quota; this remains independent of native score proof.
+                self._exclude_human_assisted_run(
+                    victory=False,
+                    floor=(self.ctx.decisions[-1].get("floor", 0)
+                           if self.ctx.decisions else 0))
+            else:
+                self._hold_disappeared_run_for_native_save(state)
+                return
+
+        self._resume_temporarily_missing_run(state)
+        self._bind_profile_for_state(state)
         hp = run.get("current_hp", self.ctx.last_hp)
         gold = run.get("gold", self.ctx.last_gold)
         asc = run.get("ascension", self.ctx.ascension)
@@ -1062,28 +1288,6 @@ class Agent:
         # 新进程会把旧 run_id 回声当成新对局，随后在 GAME_OVER 上二次结算出
         # 零决策幻影局（第 19/26/42/51 局四次实证，生涯统计被灌水 4 局 56 层）
         if run_id != self.ctx.run_id and screen not in ("MAIN_MENU", "GAME_OVER") and run:
-            if (self.ctx.run_id != "run_unknown" and not self.ctx.run_finalized
-                    and (self.ctx.decisions
-                         or bool(getattr(self.ctx, "human_assisted", False)))):
-                if bool(getattr(self.ctx, "human_assisted", False)):
-                    # Human play can return to menu or start another run while the
-                    # Brain is paused.  Never reinterpret that gap as an AI loss.
-                    self._exclude_human_assisted_run(
-                        victory=False,
-                        floor=(self.ctx.decisions[-1].get("floor", 0)
-                               if self.ctx.decisions else 0))
-                else:
-                    # previous run vanished without GAME_OVER (crash/abandon) — close it out as a loss
-                    log("[agent] 检测到上一局异常结束，按失败归档")
-                    self._finalize(victory=False, floor=self.ctx.decisions[-1].get("floor", 0))
-                # A pending review could not restart at the menu because the old
-                # context still needed this loss finalization. The replacement run
-                # has not been accepted or acted on yet, so hand it to the reloaded
-                # Brain before reset_for erases that last safe boundary.
-                restart_reason = self._pending_review_restart_reason()
-                if restart_reason:
-                    log(f"[agent] {restart_reason}；异常旧局已归档，新局动作前请求 runner 重启大脑…")
-                    sys.exit(42)
             self._bind_profile_for_state(state)
             # Capture the character-local baseline before any event/combat/card
             # observation from this run can mutate Knowledge.  Reconnect reuses
@@ -2152,13 +2356,13 @@ class Agent:
                 log(f"  ↳ 临时轮转目标失败（保持无永久惩罚）：{defer_exc}")
         return True
 
-    def _save_run_progress(self, run: dict, force: bool = False) -> None:
+    def _save_run_progress(self, run: dict, force: bool = False) -> bool:
         """对局日志增量存档（第 218 批复盘）：旧实现只在终局落盘——大脑在局
         中途崩溃/自杀重启（218 局 F23 签名故障）时，前半局决策与战斗记录全灭，
         重连进程另起新账把深局记成残缺局。现在每 15 条决策（或换层）落盘一次，
         重连时按 run_id 接续，崩溃最多丢失最近十几条决策。"""
         if not self.ctx.decisions or self.ctx.run_id == "run_unknown":
-            return
+            return False
         # 终局定稿后禁止增量覆盖（第 369 局复盘）：结算屏之后的「回主菜单/
         # 检查时间线」等后继决策会以增量稿格式（in_progress=true/victory=
         # false/floor=当前屏）盖回已定稿日志——141 个已完成局被永久打上
@@ -2166,7 +2370,7 @@ class Agent:
         # 当样本（第 263~369 局的复盘数据包因此整体失真）。定稿只出自
         # _finalize 的 save_run_log，此后对局日志一律只读。
         if self.ctx.run_finalized:
-            return
+            return False
         # A pause/profile transition can change the active ``self.know`` alias
         # before this mixed run's audit record is written.  The context identity
         # remains authoritative, exactly as it is for the learning rollback.
@@ -2182,7 +2386,7 @@ class Agent:
             last_a = mark[2] if len(mark) >= 3 else -1
             if (len(self.ctx.decisions) - last_n < 15 and floor == last_f
                     and len(attribution_tags) == last_a):
-                return
+                return False
         self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
         try:
             payload = {
@@ -2207,9 +2411,13 @@ class Agent:
             deck_changes = getattr(self.ctx, "deck_changes", None)
             if isinstance(deck_changes, list) and deck_changes:
                 payload["deck_changes"] = copy.deepcopy(deck_changes)
+            native_save_wait = getattr(self.ctx, "native_save_wait", None)
+            if isinstance(native_save_wait, dict):
+                payload["native_save_wait"] = copy.deepcopy(native_save_wait)
             knowledge.save_run_log(self.ctx.run_id, payload)
+            return True
         except OSError:
-            pass
+            return False
 
     def _mark_review_run_healthy(self) -> None:
         """Retire a review rollback marker only after reloaded code completes runs.
@@ -2538,7 +2746,8 @@ class Agent:
     # ---------------- reflection ----------------
 
     def _finalize(self, victory: bool, floor: int,
-                  final_run: dict | None = None) -> None:
+                  final_run: dict | None = None, *,
+                  native_save_state: dict | None = None) -> None:
         if self.ctx.run_finalized:
             return
         if bool(getattr(self.ctx, "human_assisted", False)):
@@ -2588,6 +2797,14 @@ class Agent:
             log(f"[agent] ⚠ 忽略断线重连残缺对局（仅 {len(self.ctx.decisions)} 条决策却到 F{floor}），"
                 "不计入统计")
             return
+        native_save_proof = self._verified_native_save_proof(
+            native_save_state or {})
+        if native_save_proof is None:
+            # This is deliberately before reflection/stat mutation.  A vanished,
+            # abandoned or malformed terminal can retain retry evidence, but it can
+            # never manufacture a loss, consume quota or enter LLM review.
+            self.ctx.finalize_requested = True
+            return
         pending = getattr(self.ctx, "pending_terminal_persistence", None)
         if pending is None:
             # Normal GAME_OVER states retain RunState, and the MCP/API therefore
@@ -2620,6 +2837,7 @@ class Agent:
                 "combat_notes": self.ctx.combat_notes,
                 "attribution_tags": _durable_attribution_tags(
                     self.ctx.attribution_tags),
+                "native_save": native_save_proof,
             }
             if final_deck is not None:
                 payload["final_deck"] = copy.deepcopy(final_deck)
@@ -2658,6 +2876,9 @@ class Agent:
         self.ctx.run_finalized = True
         self.ctx.finalize_requested = False
         self.ctx.pending_terminal_persistence = None
+        self.ctx.native_save_wait = None
+        self._rotation_unresolved_run_id = ""
+        self._native_save_transition_blocked = False
         self.runs_played += 1
         victory = bool(pending["victory"])
         floor = int(pending["floor"])
@@ -2965,6 +3186,17 @@ class Agent:
     def _native_game_over_save_barrier(self, state: dict) -> tuple[str, str]:
         """Return the native-save verdict and publish each distinct error once."""
         verdict, reason = self._native_game_over_save_verdict(state)
+        if verdict == "verified":
+            expected_run_id = str(
+                getattr(self.ctx, "run_id", "") or "").strip()
+            observed_run_id = self._state_run_identity(state)
+            if (expected_run_id not in ("", "run_unknown")
+                    and observed_run_id
+                    and observed_run_id != expected_run_id):
+                verdict = "blocked"
+                reason = (
+                    "native_save_run_mismatch="
+                    f"expected:{expected_run_id[:80]},observed:{observed_run_id[:80]}")
         if verdict != "blocked":
             self._native_save_barrier_last_error = None
             return verdict, reason
@@ -2981,6 +3213,23 @@ class Agent:
             if callable(dashboard):
                 dashboard("degraded", message)
         return verdict, reason
+
+    def _verified_native_save_proof(self, state: dict) -> dict | None:
+        """Return a normalized, run-bound proof only for the exact verified DTO."""
+        verdict, _reason = self._native_game_over_save_barrier(state)
+        if verdict != "verified":
+            return None
+        game_over = state.get("game_over") or {}
+        run_id = str(getattr(self.ctx, "run_id", "") or "").strip()
+        if run_id in ("", "run_unknown"):
+            return None
+        return {
+            "run_id": run_id,
+            "phase": game_over.get("phase"),
+            "save_status": game_over.get("save_status"),
+            "save_verified": game_over.get("save_verified"),
+            "save_error": None,
+        }
 
     def _apply_native_game_over_return_barrier(self, state: dict,
                                                 decision: Decision) -> Decision:
@@ -3110,7 +3359,13 @@ class Agent:
                 self._finalize(
                     bool(go.get("is_victory")), int(floor or 0),
                     final_run=state.get("run"),
+                    native_save_state=state,
                 )
+                continue
+
+            if getattr(self, "_native_save_transition_blocked", False):
+                if wait_for_stop(self.cfg["poll_interval"]):
+                    return
                 continue
 
             # A response-lost POST can still be settling after the first fresh GET.

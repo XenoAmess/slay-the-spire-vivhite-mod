@@ -25,6 +25,20 @@ from floor_stats import (  # noqa: E402
 VIVHITE = "VIVHITE_CHARACTER_VIVHITE_CHARACTER"
 
 
+def _verified_state(run_id: str = "RUN-DECK", floor: int = 5) -> dict:
+    return {
+        "screen": "GAME_OVER",
+        "run_id": run_id,
+        "run": {"run_id": run_id, "floor": floor},
+        "game_over": {
+            "phase": "summary_ready",
+            "save_status": "verified",
+            "save_verified": True,
+            "save_error": None,
+        },
+    }
+
+
 def _write_json(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
@@ -127,7 +141,8 @@ class TerminalDeckPersistenceTests(unittest.TestCase):
               mock.patch.object(agent_module, "autogit", None),
               mock.patch.object(agent_module, "log")):
             brain._finalize(False, 5, final_run={
-                "floor": 5, "deck": terminal_deck})
+                "floor": 5, "deck": terminal_deck},
+                native_save_state=_verified_state())
 
         self.assertEqual(len(know.saved_payloads), 1)
         payload = know.saved_payloads[0]
@@ -153,7 +168,9 @@ class TerminalDeckPersistenceTests(unittest.TestCase):
               mock.patch.object(agent_module, "llm_review", None),
               mock.patch.object(agent_module, "autogit", None),
               mock.patch.object(agent_module, "log")):
-            brain._finalize(False, 5, final_run=None)
+            brain._finalize(
+                False, 5, final_run=None,
+                native_save_state=_verified_state())
 
         self.assertEqual(len(know.saved_payloads), 1)
         self.assertNotIn("final_deck", know.saved_payloads[0])

@@ -308,6 +308,7 @@ class NativeGameOverSaveRunLoopTests(unittest.TestCase):
         # as ``final_run``; the HEAD baseline has the original two-argument API.
         if "final_run" in call.kwargs:
             self.assertIs(call.kwargs["final_run"], state["run"])
+        self.assertIs(call.kwargs["native_save_state"], state)
         instance.client.act.assert_not_called()
 
     def test_human_assisted_terminal_is_still_blocked_before_exclusion_finalize(

@@ -18,6 +18,20 @@ from character_rotation import CharacterRotation, IRONCLAD, VIVHITE  # noqa: E40
 from policy import Policy  # noqa: E402
 
 
+def _verified_state(run_id: str = "run-v", floor: int = 12) -> dict:
+    return {
+        "screen": "GAME_OVER",
+        "run_id": run_id,
+        "run": {"run_id": run_id, "floor": floor},
+        "game_over": {
+            "phase": "summary_ready",
+            "save_status": "verified",
+            "save_verified": True,
+            "save_error": None,
+        },
+    }
+
+
 def _characters(*, include_vivhite: bool = True,
                 vivhite_locked: bool = False) -> list[dict]:
     result = [{
@@ -114,6 +128,13 @@ def _persist_crash_window(
         "decisions": [{"screen": "GAME_OVER", "floor": 12}],
         "combat_notes": ["F12 Normal战"],
         "attribution_tags": [["card_pick", "CARD_A"]],
+        "native_save": {
+            "run_id": run_id,
+            "phase": "summary_ready",
+            "save_status": "verified",
+            "save_verified": True,
+            "save_error": None,
+        },
     }
     payload.update(log_overrides or {})
     if persist_log:
@@ -180,6 +201,14 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
             ("unpersisted-run-number", {
                 "run_number": 2, "profile_run_number": 2}),
             ("malformed-victory", {"victory": 1}),
+            ("missing-native-save", {"native_save": None}),
+            ("wrong-native-save-run", {"native_save": {
+                "run_id": "different-run",
+                "phase": "summary_ready",
+                "save_status": "verified",
+                "save_verified": True,
+                "save_error": None,
+            }}),
         )
         for label, overrides in cases:
             with self.subTest(label=label), tempfile.TemporaryDirectory(
@@ -339,7 +368,9 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                     mock.patch.object(agent_module, "llm_review", None), \
                     mock.patch.object(agent_module, "autogit", None), \
                     mock.patch.object(agent_module, "log"):
-                instance._finalize(victory=False, floor=12)
+                instance._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
 
                 self.assertEqual(
                     events, ["terminal_log", "character_stats", "rotation"])
@@ -348,12 +379,21 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                     know.saved_log["character_id"], VIVHITE_CHARACTER_ID)
                 self.assertEqual(know.saved_log["profile_run_number"], 7)
                 self.assertEqual(know.saved_log["run_number"], 7)
+                self.assertEqual(know.saved_log["native_save"], {
+                    "run_id": "run-v",
+                    "phase": "summary_ready",
+                    "save_status": "verified",
+                    "save_verified": True,
+                    "save_error": None,
+                })
                 self.assertEqual(real_rotation.target_character, IRONCLAD)
 
                 # Simulate a repeated terminal callback after a process-local latch
                 # was lost. The durable run-id ledger prevents duplicate learning.
                 instance.ctx.run_finalized = False
-                instance._finalize(victory=False, floor=12)
+                instance._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
 
             reflected.assert_called_once()
             self.assertEqual(
@@ -382,8 +422,12 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                     mock.patch.object(agent_module, "llm_review", None), \
                     mock.patch.object(agent_module, "autogit", None), \
                     mock.patch.object(agent_module, "log"):
-                first_process._finalize(victory=False, floor=12)
-                reconnected_process._finalize(victory=False, floor=12)
+                first_process._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
+                reconnected_process._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
 
             self.assertEqual(
                 events, ["terminal_log", "character_stats", "rotation"])
@@ -414,7 +458,9 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                     mock.patch.object(agent_module, "llm_review", None), \
                     mock.patch.object(agent_module, "autogit", None), \
                     mock.patch.object(agent_module, "log"):
-                instance._finalize(victory=False, floor=12)
+                instance._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
 
             self.assertEqual(events, ["terminal_log", "character_stats"])
             rotation.record_terminal.assert_not_called()
@@ -430,7 +476,9 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
             with mock.patch.object(agent_module, "llm_review", None), \
                     mock.patch.object(agent_module, "autogit", None), \
                     mock.patch.object(agent_module, "log"):
-                instance._finalize(victory=False, floor=12)
+                instance._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
 
             reflected.assert_called_once()
             self.assertEqual(events, [
