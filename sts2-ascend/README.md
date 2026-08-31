@@ -3,7 +3,7 @@
 基于 [CharTyr/STS2-Agent](https://github.com/CharTyr/STS2-Agent)（游戏内 HTTP API mod，AGPL-3.0）构建的
 **会自动玩、会思考、会进化的杀戮尖塔2智能体**。
 
-- 严格轮换游玩白绮（Vivhite）与战士（Ironclad），全新状态第一局选择白绮
+- 分角色游玩白绮（Vivhite）与战士（Ironclad）：首次追平前按 VVVVI 推进；白绮追平后下一局为 Ironclad，此后永久 1:1
 - 每个决策都产出中文局势分析与理由（见 `knowledge/brain.log`）
 - **每局结束后自动复盘**：把结果归因到卡牌/遗物/敌人/事件选项，突变策略参数，写进 `knowledge/lessons.md`
 - 以通关为目标，胜利后自动提升进阶（Ascension）继续挑战更高难度
@@ -29,7 +29,7 @@
 大脑**不依赖任何第三方包**（纯 Python 标准库），也**不修改上游 mod**——只是它的 HTTP 客户端。
 MCP server（上游附带）对本项目不是必需的。
 
-## 双角色 Profile 与严格轮换
+## 双角色 Profile 与追赶轮换
 
 双角色共用同一套 `Policy` 决策算法；`Agent` 为每个角色创建相互独立的 `Knowledge` / `Policy`
 运行实例，角色差异通过 `CharacterProfile`、角色目录和参数实例表达：
@@ -43,18 +43,56 @@ MCP server（上游附带）对本项目不是必需的。
 `character_id` 和角色内递增的 `profile_run_number`；两套 `stats.json`、`policy.json`、
 `progression.json`、`lessons.md` 与 `runs/` 不交叉读写。
 
+楼层统计也以 Profile 为硬边界，不能把两人的样本合并后再按标签显示。Ironclad 的生涯平均/最高
+优先来自历史根目录自己的 `floor_sum_raw / runs` 与 `best_floor_raw`；Vivhite 只读取
+`knowledge/profiles/vivhite/` 下对应字段，聚合不可用时也只回退到同一 Profile 的有效完结局。两人的
+“近 20 局平均”和“近 20 局最高”分别从各自最近 20 个有效完结局计算，某一方样本不足时只显示
+该方现有样本或 `N/A`，绝不从另一方回填。旧库缺少
+raw-floor 字段时的胜利加分反推兼容只属于 Ironclad 历史；没有角色字段的根目录逐局日志同样只归
+Ironclad。进行中局、人工接管局和零决策幻影局都不进入这些生涯或近 20 局指标。
+
 `CharacterRotation` 的持久状态位于 `knowledge/character_rotation.json`。没有活动对局和轮换历史时，
-目标固定为 Vivhite；之后严格执行 Vivhite → Ironclad → Vivhite。活动对局始终以 API 的实际
-`run.character_id` 绑定 Profile，只有终局日志与角色统计成功保存后才翻转目标；重复终局按 `run_id`
-幂等去重。目标角色缺失、锁定或载荷不完整时停在选角界面并记录原因，不回退到其他可用角色。
+目标固定为 Vivhite；仅在首次追平前，且 Vivhite 在各自 `stats.global.runs` 中已成功保存的总局数少于 Ironclad 时，
+目标角色按 Vivhite → Vivhite → Vivhite → Vivhite → Ironclad（VVVVI）追赶序列推进。每局终局
+成功保存后都会重新比较双方总局数；任一白绮局使双方追平，就立即退出追赶模式，下一局明确选择 Ironclad，
+随后永久按 Ironclad → Vivhite → Ironclad 的 1:1 严格交替；即使白绮短暂落后一局也不重返 4:1，且不补齐当前五局序列。活动对局始终以 API
+的实际 `run.character_id` 绑定 Profile，只有终局日志与角色统计成功保存后才推进配额；重复终局按
+`run_id` 幂等去重。目标角色缺失、锁定或载荷不完整时停在选角界面并记录原因，不回退到其他角色。
 
-Vivhite 的初始评分参数已独立定义：实际生命演算每点 `-1.25`，当前生命严格低于 35% 时风险
-权重变为两倍；余量每点 `+1.25`；汲取按实际回复量的 `85%` 计分；永久最大生命每点 `+3.0`；
-击杀回复按实际回复量计分。评分工具不裁剪余量、永久成长、击杀回复、汲取百分比或汲取回复量。
-60 张白绮卡牌目录和这些无裁剪评分工具已有定向回归；它们接入在线 `Policy` 的完整消费路径仍需
-全栈验证，不能仅凭静态目录测试视为生产生效。
+Vivhite 的 `CharacterProfile` 绑定独立的 61 卡静态目录和评分参数。余裕先按 `1:1` 抵扣謦欬；
+抵扣后真正损失的生命每点计 `-1.25`，当前生命严格低于最大生命 35% 时该风险权重变为两倍，支付后
+会低于 1 点生命的牌判定为不可打出。实际获得余裕每点计 `+1.25`，消耗余裕按同一资源价值扣回；
+余裕数量及收益不做自定义封顶。
 
-分角色楼层统计只使用 `floor_sum_raw` / `best_floor_raw`，驾驶舱分别展示两名角色，并计算同窗口
+61 卡目录直接保存现行最终整数：固定牌面謦欬已翻倍，猩红转化仪式的 `0,1,2,3...` 阶段謦欬是
+不翻倍的明确特例；同时带謦欬和抽牌的牌，其抽牌数已经翻倍，若有弃牌则弃牌数同步翻倍。运行时
+汲取只使用牌面、全局与本回合效果相加后的最终总率，不重放“旧值调整”或“翻倍”等配置演进；
+多段与群攻先汇总整张攻击造成的实际敌方生命损失，再按最终总率计算并只向上取整一次。评分只对
+实际回复生命按每点 `+0.85` 计收益，不按牌面
+理论回复伪造满血收益；汲取率可超过 100%，也不对比例或回复量做自定义裁剪。永久最大生命每点
+`+3.0`，击杀实际回血每点 `+1.0`；孤高冠冕按最大生命 20% 向上取整，归纳法阵按 50%/75%
+放大即时死亡回复。战士继续使用自己的参数实例，不消费白绮目录或这些白绮专属估值。
+
+## 原生终局分数与解锁落盘
+
+Brain 不再在 `GAME_OVER` 直接调用返回主菜单。Agent HTTP API 暴露动作 `continue_game_over`，
+Brain 通过通用动作端点调用它；MCP 的 full profile 额外暴露同名独立工具，guided/layered profile
+则通过通用 `act` 提交该动作。三条入口推进的是同一原生流程，协议分为：
+
+1. `game_over.phase=intro` 时只允许 `continue_game_over`，真实点击原生 Continue。
+2. `summary_animating` 期间等待游戏执行分数条、角色解锁计算与原生结算协程。
+3. 只有原生 MainMenuButton 真实可见且可用时进入 `summary_ready`；此时 Brain 才幂等持久化本局
+   统计与轮换记录，下一次轮询再执行 `return_to_main_menu`。
+
+`summary_ready + MainMenuButton 可用` 是这里采用的原生 UI 生命周期落盘屏障；Brain 不读取或比对
+游戏存档文件来额外宣称落盘验证成功。
+
+`continue_game_over` 真实点击 `NGameOverContinueButton`；返回动作也只真实点击
+`NReturnToMainMenuButton`，禁止直接调用会绕过总结协程的 `ReturnToMainMenu` 私有路径。其后出现的每个
+`UNLOCK` 屏只通过 `confirm_unlock` 顺序确认；按钮未就绪时等待，不盲点屏幕、不提前开始下一局。
+HTTP 回执丢失或重连依赖真实按钮和 phase 恢复，既不会重复 Continue，也不会重复写终局统计。
+
+分角色楼层统计只使用 `floor_sum_raw` / `best_floor_raw`；驾驶舱 UI 显示当前活动角色的一套四指标，并显示同窗口
 Vivhite÷Ironclad 滚动平均楼层比。LLM 复盘的目标契约是队列项携带 `profile_id`、单批只含一个
 Profile，且 prompt、runs、stats、lessons、policy、报告和队列均按角色隔离；该链路仍处于最终
 集成验证阶段，在相关提交与回归完成前不得视为已生产验证。
@@ -92,6 +130,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
 
 `Stack ready` 表示 brain 与游戏 API 已就绪。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
+
+全栈运行时可随时把游戏交还给玩家：`Ctrl+Alt+F9` 全局停止 Brain 发送操作，
+`Ctrl+Alt+F10` 恢复自主操作。暂停采用 runner 驻留的控制权切换，游戏与驾驶舱不会关闭。
+F9 一旦触及当前局，该局便永久标记为 `human_assisted` / `excluded_from_learning`；
+所属 Profile 的在线 `stats` 立即回滚到该局开始前已经持久化的基线。
+F10 在同一局只恢复 Brain 发送操作，不会重新开启本局学习；排除标记与回滚事务会持久化，Brain 或整套重启后仍保持。
+整局日志继续以 `in_progress=true` 的审计记录保留，不伪装为自动完结局。
+该局不增加自动总局数，不更新生涯或近 20 局楼层指标，也不进入终局
+`stats`、`policy`、`progression`、`lessons`、LLM 复盘或角色轮换配额。
+若完整栈已经退出，快捷键监听也不存在，仍需用 `Start-Agent.ps1` 冷启动。
 
 ## 它如何"进化"
 
@@ -380,9 +428,10 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 
 驾驶舱固定提供三类信息：
 
-- **楼层统计**：历史平均、近 20 局平均、历史最高、近 20 局最高，以及最近 40 个有效完结局的
-  原始楼层线和 5 局滚动均线。当前局独立显示，不混入历史均值；归档 catalog 与活动 run 按
-  `run_id` 去重，活动证据优先，进行中局、零决策幻影局和坏 JSON 不会被伪装成 0 楼。
+- **楼层统计**：UI 显示当前活动角色的一套四指标（历史平均、近 20 局平均、历史最高、近 20 局最高）、该角色最近 40 个有效完结局的原始楼层线与 5 局滚动均线，并显示双角色同窗口滚动平均楼层比值。
+  底层 `profiles` 分别保存白绮与战士数据，样本不共享、互不回填；UI 不并排显示两套指标卡片。
+  当前局独立显示，不混入历史均值；归档 catalog 与活动 run 按 `run_id` 去重，活动证据优先，
+  进行中局、人工接管局、零决策幻影局和坏 JSON 不会被伪装成 0 楼。
 - **机械决策链**：以 `SCAN → GATE → RANK → LOCK → ACK` 展示当前观察、规则闸门、前三候选、
   最终动作、说明文本及 `proposed/pending/reconciling/applied/retrying/rejected/failed` 等执行结果。
   规则直达型动作只画真实经过的线性节点，不编造候选、概率或“思维链”。
