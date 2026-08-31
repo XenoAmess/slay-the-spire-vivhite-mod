@@ -1,6 +1,8 @@
-import json, glob
+import glob
+import json
+from pathlib import Path
 
-OUT = open(r'D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\tmp_review_dump.txt', 'w', encoding='utf-8')
+OUT = Path(__file__).with_name('tmp_review_dump.txt').open('w', encoding='utf-8')
 
 RUNS = {
     '374': 'HXLXGQC548M2',
