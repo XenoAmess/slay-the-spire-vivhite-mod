@@ -1330,9 +1330,15 @@ class FloorStatsProvider:
         }
         ironclad_mean = rolling_means["ironclad"]
         vivhite_mean = rolling_means["vivhite"]
+        rolling_samples_complete = all(
+            _integer((profiles[profile].get("recent") or {}).get("count"))
+            == self.rolling_window
+            for profile in PROFILE_IDS
+        )
         rolling_ratio = (
             vivhite_mean / ironclad_mean
-            if (vivhite_mean is not None and ironclad_mean is not None
+            if (rolling_samples_complete
+                and vivhite_mean is not None and ironclad_mean is not None
                 and ironclad_mean != 0) else None
         )
         invalid_floor = sum(1 for record in records if record.floor is None and not record.phantom)

@@ -63,6 +63,14 @@ class ProfileFloorStatsTests(unittest.TestCase):
             },
         })
 
+    def _write_profile_history(
+            self, root: Path, floors: list[int], character_id: str,
+            prefix: str) -> None:
+        self._write_stats(root, floors)
+        for number, floor in enumerate(floors, 1):
+            data = _run(f"{prefix}-{number}", number, floor, character_id)
+            _write_json(root / "runs" / f"{prefix.lower()}-{number}.json", data)
+
     def test_human_assisted_runs_never_enter_available_profile_statistics(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-profile-assisted-stats-") as temp:
             root = Path(temp)
@@ -170,8 +178,8 @@ class ProfileFloorStatsTests(unittest.TestCase):
             self.assertEqual([row["run_id"] for row in vivhite["trend"]],
                              ["V-LEGACY"])
             comparison = snapshot["profile_comparison"]
-            self.assertEqual(comparison["rolling_mean_ratio"], 2.0)
-            self.assertEqual(comparison["vivhite_to_ironclad_ratio"], 2.0)
+            self.assertIsNone(comparison["rolling_mean_ratio"])
+            self.assertIsNone(comparison["vivhite_to_ironclad_ratio"])
 
     def test_real_compaction_catalog_keeps_exclusions_after_takeover(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-profile-compact-exclusion-") as temp:
@@ -280,11 +288,71 @@ class ProfileFloorStatsTests(unittest.TestCase):
                 "ironclad": 10.0,
                 "vivhite": 20.0,
             })
-            self.assertEqual(comparison["rolling_mean_ratio"], 2.0)
-            self.assertEqual(comparison["vivhite_to_ironclad_ratio"], 2.0)
+            self.assertIsNone(comparison["rolling_mean_ratio"])
+            self.assertIsNone(comparison["vivhite_to_ironclad_ratio"])
             self.assertEqual(snapshot["lifetime"], ironclad["lifetime"])
             self.assertEqual(snapshot["recent"], ironclad["recent"])
             self.assertEqual(snapshot["trend"], ironclad["trend"])
+
+    def test_rolling_ratio_is_none_at_zero_of_twenty(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-profile-ratio-0-of-20-") as temp:
+            root = Path(temp)
+            vivhite_root = root / "profiles" / "vivhite"
+            self._write_profile_history(root, [10] * 20, "IRONCLAD", "I")
+            self._write_profile_history(
+                vivhite_root, [], "VIVHITE_CHARACTER_VIVHITE_CHARACTER", "V")
+
+            snapshot = FloorStatsProvider(
+                root, refresh_interval=0, recent_window=20,
+                rolling_window=20).snapshot()
+            comparison = snapshot["profile_comparison"]
+
+            self.assertEqual(snapshot["profiles"]["ironclad"]["recent"]["count"], 20)
+            self.assertEqual(snapshot["profiles"]["vivhite"]["recent"]["count"], 0)
+            self.assertIsNone(comparison["rolling_mean_ratio"])
+            self.assertIsNone(comparison["vivhite_to_ironclad_ratio"])
+
+    def test_rolling_ratio_is_none_at_one_of_twenty(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-profile-ratio-1-of-20-") as temp:
+            root = Path(temp)
+            vivhite_root = root / "profiles" / "vivhite"
+            self._write_profile_history(root, [10] * 20, "IRONCLAD", "I")
+            self._write_profile_history(
+                vivhite_root, [20],
+                "VIVHITE_CHARACTER_VIVHITE_CHARACTER", "V")
+
+            snapshot = FloorStatsProvider(
+                root, refresh_interval=0, recent_window=20,
+                rolling_window=20).snapshot()
+            comparison = snapshot["profile_comparison"]
+
+            self.assertEqual(snapshot["profiles"]["ironclad"]["recent"]["count"], 20)
+            self.assertEqual(snapshot["profiles"]["vivhite"]["recent"]["count"], 1)
+            self.assertEqual(comparison["rolling_means"], {
+                "ironclad": 10.0,
+                "vivhite": 20.0,
+            })
+            self.assertIsNone(comparison["rolling_mean_ratio"])
+            self.assertIsNone(comparison["vivhite_to_ironclad_ratio"])
+
+    def test_rolling_ratio_is_published_at_twenty_of_twenty(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-profile-ratio-20-of-20-") as temp:
+            root = Path(temp)
+            vivhite_root = root / "profiles" / "vivhite"
+            self._write_profile_history(root, [10] * 20, "IRONCLAD", "I")
+            self._write_profile_history(
+                vivhite_root, [20] * 20,
+                "VIVHITE_CHARACTER_VIVHITE_CHARACTER", "V")
+
+            snapshot = FloorStatsProvider(
+                root, refresh_interval=0, recent_window=20,
+                rolling_window=20).snapshot()
+            comparison = snapshot["profile_comparison"]
+
+            self.assertEqual(snapshot["profiles"]["ironclad"]["recent"]["count"], 20)
+            self.assertEqual(snapshot["profiles"]["vivhite"]["recent"]["count"], 20)
+            self.assertEqual(comparison["rolling_mean_ratio"], 2.0)
+            self.assertEqual(comparison["vivhite_to_ironclad_ratio"], 2.0)
 
     def test_legacy_root_is_ironclad_and_uses_raw_floor_counters(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-profile-legacy-") as temp:
@@ -494,7 +562,7 @@ class ProfileFloorStatsTests(unittest.TestCase):
             }, run_number=9)
             publisher.close(timeout=2.0)
 
-            payload = json.loads(publisher.path.read_text(encoding="utf-8"))
+            payload = json.loads(publisher.path.read_text(encoding="utf-8-sig"))
             run = payload["run"]
             self.assertEqual(
                 run["character_id"], "VIVHITE_CHARACTER_VIVHITE_CHARACTER")
