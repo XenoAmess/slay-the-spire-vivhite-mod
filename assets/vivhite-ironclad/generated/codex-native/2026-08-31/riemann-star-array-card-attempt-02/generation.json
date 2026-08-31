@@ -1,0 +1,94 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+  "card_type": "RiemannStarArray",
+  "card_name_zh": "黎曼星阵",
+  "attempt": 2,
+  "attempt_limit": 8,
+  "generation_mode": "edit_with_reference",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Attack",
+    "rarity": "Uncommon",
+    "cough": 6,
+    "damage_per_card_in_hand": 4,
+    "drain_percent": 12,
+    "upgrade_damage_per_card_in_hand": 5,
+    "upgrade_drain_percent": 16
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/riemann-star-array-card-attempt-01/original.png"
+    ],
+    "background_parameter": null,
+    "note": "Attempt 01 was the edit target. The complete opaque image stayed on the built-in Codex-native path; no EvoLink request was used."
+  },
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/codex-native/2026-08-31/riemann-star-array-card-attempt-01/original.png": "0B11743B14579A182E2F30A61957499723B37D517F3D1525109D56737417775E"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "8E73B5D81B668A9F2A2D974E46388F6229D7F13AC954A17980832270FBC9CFAC",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0550d-eb05-7863-8017-bf52bc9cdb9e/exec-2ea6aeee-473a-4bf4-84f2-3d0b74dec546.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/riemann-star-array-card-attempt-02/original.png",
+  "original_sha256": "239BBBFCC31CF1C12C53662909A7AF285DEC41C17D84EFCAB8806A9604DD41CC",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/RiemannStarArray.png",
+  "runtime_sha256": "8F00BDEAF7EA45AB694F820990287ECD25705AFFF852962922EA00950B0A19B8",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/detail-five-term-array.png",
+    "inspection/detail-terminal-impacts.png",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_red_liquid_or_mouth_emitted_magic": true,
+    "no_text_weapon_second_character_or_card_ui": true,
+    "five_blank_integration_slabs_and_five_star_cores": true,
+    "open_asymmetric_repeated_attack": true,
+    "remote_single_target_sequence": true,
+    "separate_lower_cyan_return_circuit": true,
+    "100x76_color_and_grayscale_attack_readable": true,
+    "accepted_by_main_agent": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "The selected runtime scene presents five blank hand-partition slabs and five star cores as a scalable repeated attack, a clear rapid sequence against one remote abstract target, and a separate cyan return circuit below the action. The main agent explicitly accepted the five-to-six-term visual density and froze this attempt for runtime. Mouth, weapon, text, UI, blood, liquid, and red-strand bans pass."
+}
