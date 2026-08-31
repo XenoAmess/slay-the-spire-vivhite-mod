@@ -104,7 +104,20 @@ class DashboardSourceTests(unittest.TestCase):
                 {"run_number": 2, "floor": 20, "rolling_mean": 15.0},
             ],
             "current": viewer.dashboard["run"],
-            "profile_comparison": {"rolling_mean_ratio": 1.5},
+            "profiles": {
+                "ironclad": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+                "vivhite": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+            },
+            "profile_comparison": {
+                "rolling_window": 20,
+                "rolling_mean_ratio": 1.5,
+            },
         }
         viewer.lines = []
         viewer.model_name = "fixture-model"
@@ -120,7 +133,7 @@ class DashboardSourceTests(unittest.TestCase):
         texts = [call.kwargs.get("text", "")
                  for call in viewer.canvas.create_text.call_args_list]
         self.assertIn("白绮 · 历史平均", texts)
-        self.assertIn("白绮/战士 ×1.50", texts)
+        self.assertIn("白绮/战士 · 近20局 ×1.50", texts)
 
     def test_trend_chart_marks_active_profile_and_comparison_ratio(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)
@@ -134,7 +147,20 @@ class DashboardSourceTests(unittest.TestCase):
                 {"run_number": 2, "floor": 14, "rolling_mean": 12.0},
             ],
             "current": {"floor": 4, "profile_id": "vivhite"},
-            "profile_comparison": {"rolling_mean_ratio": 1.375},
+            "profiles": {
+                "ironclad": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+                "vivhite": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+            },
+            "profile_comparison": {
+                "rolling_window": 20,
+                "rolling_mean_ratio": 1.375,
+            },
         }
 
         review_viewer.Viewer._draw_trend(viewer, stats)
@@ -142,7 +168,56 @@ class DashboardSourceTests(unittest.TestCase):
         texts = [call.kwargs.get("text", "")
                  for call in viewer.canvas.create_text.call_args_list]
         self.assertIn("白绮 · FLOOR TREND · 最近 2 局", texts)
-        self.assertIn("白绮/战士 ×1.38", texts)
+        self.assertIn("白绮/战士 · 近20局 ×1.38", texts)
+
+    def test_profile_ratio_waits_for_two_complete_rolling_20_samples(self) -> None:
+        stats = {
+            "profiles": {
+                "ironclad": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+                "vivhite": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 4},
+                },
+            },
+            "profile_comparison": {
+                "rolling_window": 20,
+                "rolling_mean_ratio": 1.375,
+            },
+        }
+
+        label = review_viewer.Viewer._profile_ratio_label(stats)
+
+        self.assertEqual(label, "近20局采样 · 白绮 4/20 · 战士 20/20")
+        self.assertNotIn("×", label)
+
+    def test_profile_ratio_rejects_mismatched_sample_windows(self) -> None:
+        stats = {
+            "profiles": {
+                "ironclad": {
+                    "rolling_window": 5,
+                    "recent": {"window": 20, "count": 20},
+                },
+                "vivhite": {
+                    "rolling_window": 20,
+                    "recent": {"window": 20, "count": 20},
+                },
+            },
+            "profile_comparison": {
+                "rolling_window": 20,
+                "rolling_mean_ratio": 1.375,
+            },
+        }
+
+        label = review_viewer.Viewer._profile_ratio_label(stats)
+
+        self.assertEqual(
+            label,
+            "近20局采样口径待同步 · 白绮 20/20 · 战士 20/20",
+        )
+        self.assertNotIn("×", label)
 
     def test_profile_card_and_vivhite_build_panel_shows_both_profiles(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)
@@ -320,6 +395,26 @@ class StatsSourceProfileTests(unittest.TestCase):
     def _source_without_worker() -> review_viewer.StatsSource:
         with mock.patch.object(review_viewer, "FloorStatsProvider", None):
             return review_viewer.StatsSource()
+
+    def test_provider_uses_formal_rolling_20_window(self) -> None:
+        provider = mock.MagicMock()
+        worker = mock.MagicMock()
+        with mock.patch.object(
+                review_viewer, "FloorStatsProvider", return_value=provider) as factory, \
+                mock.patch.object(review_viewer.threading, "Thread",
+                                  return_value=worker):
+            source = review_viewer.StatsSource()
+
+        self.assertIs(source._provider, provider)
+        factory.assert_called_once_with(
+            review_viewer.KNOWLEDGE_DIR,
+            refresh_interval=1.0,
+            recent_window=20,
+            comparison_window=20,
+            trend_window=40,
+            rolling_window=20,
+        )
+        worker.start.assert_called_once_with()
 
     def test_profile_switch_replaces_old_headline_with_safe_empty_snapshot(self) -> None:
         source = self._source_without_worker()

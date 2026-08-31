@@ -106,6 +106,7 @@ DECISION_FRESH_SEC = 20.0
 VIEW_PAGES = ("LIVE", "TREND", "REVIEW")
 STATS_PROFILE_IDS = frozenset(("ironclad", "vivhite"))
 PROFILE_DISPLAY_LABELS = {"ironclad": "战士", "vivhite": "白绮"}
+PROFILE_COMPARISON_WINDOW = 20
 
 
 def dashboard_path(runtime_dir: Path | None = None, session_id: str | None = None) -> Path:
@@ -347,10 +348,10 @@ class StatsSource:
                 self._provider = FloorStatsProvider(
                     KNOWLEDGE_DIR,
                     refresh_interval=1.0,
-                    recent_window=20,
-                    comparison_window=20,
+                    recent_window=PROFILE_COMPARISON_WINDOW,
+                    comparison_window=PROFILE_COMPARISON_WINDOW,
                     trend_window=40,
-                    rolling_window=5,
+                    rolling_window=PROFILE_COMPARISON_WINDOW,
                 )
             except Exception:
                 self._provider = None
@@ -1160,9 +1161,44 @@ class Viewer:
         comparison = (stats.get("profile_comparison")
                       if isinstance(stats, dict)
                       and isinstance(stats.get("profile_comparison"), dict) else {})
+        profiles = (stats.get("profiles")
+                    if isinstance(stats, dict)
+                    and isinstance(stats.get("profiles"), dict) else {})
+
+        counts: dict[str, int] = {}
+        windows_match = comparison.get("rolling_window") == PROFILE_COMPARISON_WINDOW
+        for profile_id in ("vivhite", "ironclad"):
+            profile = profiles.get(profile_id)
+            profile = profile if isinstance(profile, dict) else {}
+            recent = profile.get("recent")
+            recent = recent if isinstance(recent, dict) else {}
+            raw_count = recent.get("count")
+            count = (int(raw_count)
+                     if isinstance(raw_count, (int, float)) and raw_count >= 0 else 0)
+            counts[profile_id] = min(count, PROFILE_COMPARISON_WINDOW)
+            windows_match = windows_match and (
+                recent.get("window") == PROFILE_COMPARISON_WINDOW
+                and profile.get("rolling_window") == PROFILE_COMPARISON_WINDOW
+            )
+
+        progress = (
+            f"白绮 {counts['vivhite']}/{PROFILE_COMPARISON_WINDOW} · "
+            f"战士 {counts['ironclad']}/{PROFILE_COMPARISON_WINDOW}"
+        )
+        samples_complete = all(
+            counts[profile_id] == PROFILE_COMPARISON_WINDOW
+            for profile_id in ("vivhite", "ironclad")
+        )
+        if not samples_complete:
+            return f"近{PROFILE_COMPARISON_WINDOW}局采样 · {progress}"
+        if not windows_match:
+            return f"近{PROFILE_COMPARISON_WINDOW}局采样口径待同步 · {progress}"
+
         ratio = comparison.get("rolling_mean_ratio")
+        if not isinstance(ratio, (int, float)) or not math.isfinite(float(ratio)):
+            return f"近{PROFILE_COMPARISON_WINDOW}局采样完成 · 比值待计算"
         rendered = cls._metric(ratio, 2)
-        return f"白绮/战士 ×{rendered}"
+        return f"白绮/战士 · 近{PROFILE_COMPARISON_WINDOW}局 ×{rendered}"
 
     @staticmethod
     def _one_line(value: object, limit: int) -> str:
