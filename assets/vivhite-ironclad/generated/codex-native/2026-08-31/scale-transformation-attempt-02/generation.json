@@ -1,0 +1,131 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in image_gen tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+  "card_type": "ScaleTransformation",
+  "card_name_zh": "尺度变换",
+  "attempt": 2,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed landscape card scene",
+  "request": {
+    "tool": "built-in image_gen",
+    "source_session_id": "01a05470-252b-7202-b5d3-b4263e9b4297",
+    "source_log": "C:/Users/xenoa/.codex/sessions/2026/08/31/rollout-2026-08-31T04-50-30-01a05470-252b-7202-b5d3-b4263e9b4297.jsonl",
+    "tool_call_line": 3086,
+    "generation_end_line": 3087,
+    "call_id": "exec-e9e76be2-4478-47be-a710-24f048205827",
+    "tool_call_recorded_at_utc": "2026-08-30T21:00:26.619Z",
+    "completed_at_utc": "2026-08-30T21:01:27.633Z",
+    "status": "completed",
+    "prompt_file": "prompt.txt",
+    "prompt_matches_tool_call_after_removing_one_trailing_newline": true,
+    "tool_revised_prompt_matches_tool_call_exactly": true,
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-01/original.png",
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+      "Vivhite/Vivhite/images/cards/TangentStarlight.png"
+    ],
+    "num_last_images_to_include_provided": false,
+    "transparent_background": false,
+    "background_parameter_provided": false
+  },
+  "references": [
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-01/original.png",
+      "sha256": "1B20FD4527E3F40228887EFC9B934FA88AE32D4E4093C98CD02B8081766AF342"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "sha256": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "sha256": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+      "sha256": "207F1A5E673BE31A2199C736B1F836FD7295C205BE7B92EA9C516212798F809D"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/TangentStarlight.png",
+      "sha256": "5E986FD2094008B10479E1E6CA39FA43E0F82097610C55B4BE4FF95CE99E2FEC"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "59081329F8D0B290DD04D4F956BFAD8802446D26532A85B899829AB5FF720FAF",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05470-252b-7202-b5d3-b4263e9b4297/exec-e9e76be2-4478-47be-a710-24f048205827.png",
+  "repository_copy_completed_at_utc": "2026-08-30T21:01:51.804Z",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-02/original.png",
+  "original_sha256": "E854FEC416115140E5AC577EABDAD9BA81D93E8946EA5B20FA2D1B53F086C803",
+  "built_in_output_and_repository_original_are_byte_identical": true,
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos",
+    "output": "inspection/prepared-runtime-candidate.png",
+    "output_sha256": "9627ABE768953DF91F68337ABBF695E50C9F467CC57213171AD4FD24CD1F4E70"
+  },
+  "inspection": {
+    "godot_version": "4.5.1.stable.mono.official.f62fdbde1",
+    "prepare_exit_code": 0,
+    "inspect_exit_code": 0,
+    "prepared_runtime_format": "1000x760 RGB8",
+    "outputs": [
+      {
+        "path": "inspection/centered-25x19-1000x760-rgb8.png",
+        "sha256": "9627ABE768953DF91F68337ABBF695E50C9F467CC57213171AD4FD24CD1F4E70"
+      },
+      {
+        "path": "inspection/centered-25x19-1000x760-gray.png",
+        "sha256": "83AA834E5F9F785CD570B13BB9B10C5F95C19E75BF5C88A26FCB6E17F2088855"
+      },
+      {
+        "path": "inspection/thumbnail-250x190-color.png",
+        "sha256": "9C04D5133E70DDDAAFD9F74032943030047029DCBB3527B5CDBF7A7B521090B4"
+      },
+      {
+        "path": "inspection/thumbnail-250x190-gray.png",
+        "sha256": "D9A3DD4AE3B9FE5D83AB77A7CFB538E302E34555A2FADAA3EC54DB92364EE56B"
+      },
+      {
+        "path": "inspection/thumbnail-100x76-color.png",
+        "sha256": "FD5D6BB6D416E86E87D579887787A49C6B79CEA93D1C8BB15DF35A582450D09D"
+      },
+      {
+        "path": "inspection/thumbnail-100x76-gray.png",
+        "sha256": "F8E250DE6B95EACCEEB0BA9F16D5B2378A07CE9DF21C6972640AEB9FC69C176B"
+      }
+    ],
+    "logs": [
+      "inspection/prepare-godot.log",
+      "inspection/prepare-godot.err.log",
+      "inspection/inspect-godot.log",
+      "inspection/inspect-godot.err.log"
+    ]
+  },
+  "runtime_adopted": false,
+  "status": "inspected_rejected_not_for_runtime",
+  "rejection_reason": "The centered 25:19 crop leaves Vivhite's rear coordinate-anchoring hand touching and crossing the left edge. The attempt-03 prompt explicitly identifies this remaining defect and uses attempt-02 as its Image 1 reference.",
+  "evidence_recovery": {
+    "recovered_on": "2026-08-31",
+    "method": "Cross-checked the original Codex JSONL tool call and image_generation_end event, the unchanged built-in output, repository file hashes, PNG IHDR metadata, Godot logs, and inspection derivatives. No unavailable field was inferred."
+  }
+}

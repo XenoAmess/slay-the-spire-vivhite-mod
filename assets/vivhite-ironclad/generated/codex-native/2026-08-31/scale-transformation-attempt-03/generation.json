@@ -1,0 +1,98 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in image_gen tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+  "card_type": "ScaleTransformation",
+  "card_name_zh": "尺度变换",
+  "attempt": 3,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed landscape card scene",
+  "request": {
+    "tool": "built-in image_gen",
+    "source_session_id": "01a05470-252b-7202-b5d3-b4263e9b4297",
+    "source_log": "C:/Users/xenoa/.codex/sessions/2026/08/31/rollout-2026-08-31T04-50-30-01a05470-252b-7202-b5d3-b4263e9b4297.jsonl",
+    "tool_call_line": 3117,
+    "generation_end_line": 3118,
+    "call_id": "exec-259335a0-0b99-4ed9-85bf-3c33970aa349",
+    "tool_call_recorded_at_utc": "2026-08-30T21:03:36.955Z",
+    "completed_at_utc": "2026-08-30T21:05:13.414Z",
+    "status": "completed",
+    "prompt_file": "prompt.txt",
+    "prompt_matches_tool_call_after_removing_one_trailing_newline": true,
+    "tool_revised_prompt_matches_tool_call_exactly": true,
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-02/original.png",
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+      "Vivhite/Vivhite/images/cards/TangentStarlight.png"
+    ],
+    "num_last_images_to_include_provided": false,
+    "transparent_background": false,
+    "background_parameter_provided": false
+  },
+  "references": [
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-02/original.png",
+      "sha256": "E854FEC416115140E5AC577EABDAD9BA81D93E8946EA5B20FA2D1B53F086C803"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "sha256": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "sha256": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+      "sha256": "207F1A5E673BE31A2199C736B1F836FD7295C205BE7B92EA9C516212798F809D"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/TangentStarlight.png",
+      "sha256": "5E986FD2094008B10479E1E6CA39FA43E0F82097610C55B4BE4FF95CE99E2FEC"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "44A1797979EC6CB99F55B9F1BE64D0EA71CE88A859C0279B7142CCB85B5C3838",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05470-252b-7202-b5d3-b4263e9b4297/exec-259335a0-0b99-4ed9-85bf-3c33970aa349.png",
+  "repository_copy_completed_at_utc": "2026-08-30T21:06:21.612Z",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/scale-transformation-attempt-03/original.png",
+  "original_sha256": "DAEE2D209B131AD3FADEC63AEB5A567B32AE7558D7D08FA347D481E161CD5B13",
+  "built_in_output_and_repository_original_are_byte_identical": true,
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "post_generation_state": {
+    "first_turn_aborted_at_utc": "2026-08-30T21:06:45.355Z",
+    "first_turn_abort_reason": "interrupted",
+    "prompt_file_recovered_from_exact_tool_call_in_follow_up_turn": true,
+    "follow_up_turn_aborted_at_utc": "2026-08-30T21:08:46.077Z",
+    "follow_up_turn_abort_reason": "interrupted"
+  },
+  "deterministic_crop": null,
+  "inspection_outputs": [],
+  "runtime_adopted": false,
+  "status": "generation_completed_turn_aborted_uninspected_not_adopted",
+  "evidence_gaps": [
+    "No deterministic centered 25:19 crop was produced for attempt-03.",
+    "No 1000x760 RGB8 runtime candidate was produced for attempt-03.",
+    "No color or grayscale inspection thumbnails were produced for attempt-03.",
+    "No Godot preparation or inspection logs exist for attempt-03.",
+    "No historical visual acceptance decision was completed.",
+    "The image was never copied to the runtime ScaleTransformation card path."
+  ],
+  "evidence_recovery": {
+    "recovered_on": "2026-08-31",
+    "method": "Cross-checked the original Codex JSONL tool call, image_generation_end and turn_aborted events, the unchanged built-in output, repository file hashes, and PNG IHDR metadata. Missing post-generation work is recorded as missing rather than reconstructed."
+  }
+}
