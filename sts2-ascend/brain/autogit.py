@@ -115,6 +115,7 @@ _MACHINE_PROGRESS_SUBJECT = re.compile(
     r"第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
 _PROGRESS_INDEX_PENDING_NAME = "sts2-ascend-progress-index-pending.json"
 _MACHINE_INDEX_TAKEOVER_POLICY = "machine-owned-takeover-v1"
+_EXACT_INDEX_SNAPSHOT_POLICY = "exact-target-snapshot-v1"
 _INDEX_LOCK_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 
@@ -628,6 +629,7 @@ def _add_progress_index_pending_unlocked(
     parent: str, commit: str, specs: Sequence[str], message: str, *,
     expected_index: bytes | None = None,
     consume_machine_staging: bool = False,
+    transaction_kind: str = "progress",
 ) -> None:
     entries = _read_progress_index_pending_unlocked()
     if entries is None:
@@ -638,11 +640,15 @@ def _add_progress_index_pending_unlocked(
         "paths": list(specs),
         "message": message[:240],
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "transaction_kind": transaction_kind,
     }
     if consume_machine_staging:
         if expected_index is None or not _machine_owned_progress_specs(specs):
             raise ValueError("machine-owned staged 接管缺少受控路径或 index 快照")
         entry["index_policy"] = _MACHINE_INDEX_TAKEOVER_POLICY
+        entry["expected_index_sha256"] = _index_snapshot_digest(expected_index)
+    elif expected_index is not None:
+        entry["index_policy"] = _EXACT_INDEX_SNAPSHOT_POLICY
         entry["expected_index_sha256"] = _index_snapshot_digest(expected_index)
     entries = [item for item in entries if str(item.get("commit") or "") != commit]
     entries.append(entry)
@@ -683,7 +689,7 @@ def _index_lock_error(result: subprocess.CompletedProcess[str]) -> bool:
 def _sync_progress_index_unlocked(
     parent: str, commit: str, specs: Sequence[str], expected_index: bytes, *, log=print,
 ) -> bool:
-    """Synchronise machine-owned paths while preserving any external staging.
+    """Synchronise private-index target paths while preserving external staging.
 
     A failed ``git restore --staged`` may leave the real index at ``parent``
     after the ref already moved to ``commit``.  Every retry re-reads the exact
@@ -694,11 +700,11 @@ def _sync_progress_index_unlocked(
     for attempt in range(attempts):
         if not _validated_progress_pair_unlocked(
                 parent, commit, specs, timeout=10):
-            log("[git] progress index 重试前提交关系或目标路径已变化；保留当前 index")
+            log("[git] private index 重试前提交关系或目标路径已变化；保留当前 index")
             return False
         current_index = _index_entries_unlocked(specs, timeout=10)
         if current_index != expected_index:
-            log("[git] progress index 重试前发现目标暂存内容已被外部修改；保留用户 index")
+            log("[git] private index 重试前发现目标暂存内容已被外部修改；保留用户 index")
             return False
         synced = _run_git([
             "restore", "--staged", f"--source={commit}", "--", *specs,
@@ -707,14 +713,14 @@ def _sync_progress_index_unlocked(
             verified = _index_matches_commit_unlocked(commit, specs, timeout=10)
             if verified is True:
                 return True
-            log("[git] progress index 同步后校验不一致；保留当前 index 等待下次精确恢复")
+            log("[git] private index 同步后校验不一致；保留当前 index 等待下次精确恢复")
             return False
         if not _index_lock_error(synced) or attempt + 1 >= attempts:
             detail = ((synced.stderr or "") + (synced.stdout or "")).strip()[:200]
-            log(f"[git] progress index 同步失败，已保留耐久恢复记录：{detail}")
+            log(f"[git] private index 同步失败，已保留耐久恢复记录：{detail}")
             return False
         delay = _INDEX_LOCK_RETRY_DELAYS[attempt]
-        log(f"[git] progress index 遇到瞬时锁，第{attempt + 1}次重试前等待 {delay:.2f}s")
+        log(f"[git] private index 遇到瞬时锁，第{attempt + 1}次重试前等待 {delay:.2f}s")
         time.sleep(delay)
     return False
 
@@ -762,22 +768,26 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
         if matched_commit is True:
             continue
         index_policy = str(entry.get("index_policy") or "")
-        if index_policy == _MACHINE_INDEX_TAKEOVER_POLICY:
+        if index_policy in {
+                _MACHINE_INDEX_TAKEOVER_POLICY, _EXACT_INDEX_SNAPSHOT_POLICY}:
             expected_digest = str(entry.get("expected_index_sha256") or "")
-            if (not _machine_owned_progress_specs(specs)
+            machine_takeover = index_policy == _MACHINE_INDEX_TAKEOVER_POLICY
+            if ((machine_takeover and not _machine_owned_progress_specs(specs))
                     or re.fullmatch(r"[0-9a-f]{64}", expected_digest) is None):
-                log(f"[git] progress index {commit[:8]} 的机器接管记录无效；保留记录与当前 index")
+                log(f"[git] private index {commit[:8]} 的精确快照记录无效；"
+                    "保留记录与当前 index")
                 remaining.append(entry)
                 continue
             expected = _index_entries_unlocked(specs, timeout=10)
             if (_index_snapshot_digest(expected) != expected_digest
                     or _index_entries_unlocked(specs, timeout=10) != expected):
-                log(f"[git] progress index {commit[:8]} 的机器路径 staged 快照已变化；"
-                    "保留当前 index，交给本轮在线存档接管最新状态")
+                log(f"[git] private index {commit[:8]} 的目标 staged 快照已变化；"
+                    "保留当前 index 与耐久记录，绝不覆盖用户 staged 内容")
                 remaining.append(entry)
                 continue
             if _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
-                log(f"[git] 已从耐久记录完成机器路径 staged 接管 {commit[:8]}")
+                kind = str(entry.get("transaction_kind") or "private-index")
+                log(f"[git] 已从耐久记录完成 {kind} index 同步 {commit[:8]}")
             else:
                 remaining.append(entry)
             continue
@@ -1117,6 +1127,10 @@ def commit_patch_result(
             handle.write(patch_bytes)
         try:
             with repository_lock(timeout=min(lock_timeout, remaining(lock_timeout))):
+                # A prior review commit may have moved HEAD while index.lock kept
+                # the real index at its parent. Repair that exact snapshot before
+                # interpreting the resulting staged path as user intent.
+                _recover_pending_progress_indexes_unlocked(log=log)
                 staged = _staged_paths_unlocked(timeout=remaining(90))
                 overlap = [path for path in staged if _path_in_specs(path, validated)]
                 if overlap:
@@ -1146,6 +1160,7 @@ def commit_patch_result(
                     provisional = None
                     prepared = False
                     worktree_applied = False
+                    index_journaled = False
                     try:
                         read = tx_git(["read-tree", before], env=env)
                         cached = tx_git(
@@ -1203,7 +1218,28 @@ def commit_patch_result(
                                     abort_prepare(provisional)
                                 break
 
+                        try:
+                            # Publish recovery intent before either the worktree
+                            # or branch ref changes. A failed CAS leaves an inert
+                            # entry which the validated-parent check discards.
+                            _add_progress_index_pending_unlocked(
+                                before, provisional.commit, validated, message,
+                                expected_index=original_target_index,
+                                transaction_kind="review_patch",
+                            )
+                            index_journaled = True
+                        except Exception as exc:
+                            last_error = f"patch index 恢复记录发布失败：{exc}"
+                            if prepared and abort_prepare is not None:
+                                abort_prepare(provisional)
+                            prepared = False
+                            break
+
                         if _symbolic_head_unlocked(timeout=remaining(90)) != transaction_ref:
+                            if index_journaled:
+                                _remove_progress_index_pending_unlocked(
+                                    provisional.commit)
+                                index_journaled = False
                             if prepared and abort_prepare is not None:
                                 abort_prepare(provisional)
                             prepared = False
@@ -1217,6 +1253,10 @@ def commit_patch_result(
                             timeout=120)
                         if applied.returncode != 0:
                             last_error = "patch 应用工作树失败：" + applied.stderr.strip()
+                            if index_journaled:
+                                _remove_progress_index_pending_unlocked(
+                                    provisional.commit)
+                                index_journaled = False
                             if prepared and abort_prepare is not None:
                                 abort_prepare(provisional)
                             prepared = False
@@ -1236,6 +1276,10 @@ def commit_patch_result(
                                 ], timeout=120)
                                 if undone.returncode == 0:
                                     worktree_applied = False
+                                    if index_journaled:
+                                        _remove_progress_index_pending_unlocked(
+                                            provisional.commit)
+                                        index_journaled = False
                                     if prepared and abort_prepare is not None:
                                         abort_prepare(provisional)
                                     prepared = False
@@ -1264,6 +1308,10 @@ def commit_patch_result(
                                 return CommitResult(False, before_head=before,
                                                     reason="CAS 失败后的工作树恢复失败：" + undone.stderr.strip())
                             worktree_applied = False
+                            if index_journaled:
+                                _remove_progress_index_pending_unlocked(
+                                    provisional.commit)
+                                index_journaled = False
                             if prepared and abort_prepare is not None:
                                 abort_prepare(provisional)
                             prepared = False
@@ -1283,15 +1331,19 @@ def commit_patch_result(
                             current_target_index = _index_entries_unlocked(
                                 validated, timeout=remaining(90))
                             if current_target_index == original_target_index:
-                                sync = tx_git([
-                                    "restore", "--staged", f"--source={provisional.commit}",
-                                    "--", *validated,
-                                ])
-                                if sync.returncode != 0:
+                                sync_ok = _sync_progress_index_unlocked(
+                                    before, provisional.commit, validated,
+                                    original_target_index, log=log)
+                                if sync_ok:
+                                    _remove_progress_index_pending_unlocked(
+                                        provisional.commit)
+                                    index_journaled = False
+                                else:
                                     log("[git] patch commit 已建立，但真实 index 同步失败；"
-                                        "用户 index 未被强制覆盖：" + sync.stderr.strip()[:200])
+                                        "用户 index 未被强制覆盖，耐久恢复记录已保留")
                             else:
-                                log("[git] patch 事务期间目标 index 被外部进程修改；已保留其内容")
+                                log("[git] patch 事务期间目标 index 被外部进程修改；"
+                                    "已保留其内容与耐久恢复记录")
                         except Exception as exc:
                             log(f"[git] patch commit 已建立，真实 index 后处理异常；"
                                 f"用户 index 未被覆盖：{exc}")

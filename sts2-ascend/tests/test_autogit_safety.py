@@ -78,6 +78,33 @@ class AutoGitSafetyTests(unittest.TestCase):
         self._git("restore", f"--source={parent}", "--", relative)
         return parent, commit
 
+    def _tracked_patch_from_head(self, relative: str, contents: str) -> bytes:
+        self._write(relative, contents)
+        patch = subprocess.run(
+            ["git", "-C", str(self.repo), "diff", "--binary", "HEAD", "--", relative],
+            check=True, capture_output=True,
+        ).stdout
+        self._git("restore", "--worktree", "--source=HEAD", "--", relative)
+        return patch
+
+    def _commit_review_with_locked_index(
+        self, patch: bytes, relative: str,
+    ) -> autogit.CommitResult:
+        original_run = autogit._run_git
+
+        def persistent_lock(args, **kwargs):
+            if args[:2] == ["restore", "--staged"]:
+                return subprocess.CompletedProcess(
+                    args, 128, "",
+                    "fatal: Unable to create '.git/index.lock': File exists",
+                )
+            return original_run(args, **kwargs)
+
+        with (mock.patch.object(autogit, "_run_git", side_effect=persistent_lock),
+              mock.patch.object(autogit.time, "sleep")):
+            return autogit.commit_patch_result(
+                patch, "review commit with locked index", [relative], push=False)
+
     def test_brain_auto_commit_subject_is_tagged_once_and_legacy_subjects_still_match(self) -> None:
         legacy = "chore(sts2-ascend): 第900局存档"
         tagged = "[brain:auto] chore(sts2-ascend): 第900局存档"
@@ -640,6 +667,92 @@ class AutoGitSafetyTests(unittest.TestCase):
         self.assertFalse(rejected.created)
         self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), second_before)
         self.assertEqual(self._read(path), "VALUE = 7\n")
+
+    def test_review_index_lock_recovers_before_next_staged_overlap_check(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        first_patch = self._tracked_patch_from_head(path, "VALUE = 2\n")
+
+        first = self._commit_review_with_locked_index(first_patch, path)
+
+        self.assertTrue(first.created, first.reason)
+        self.assertEqual(
+            self._git("diff", "--cached", "--name-only").stdout.strip(), path)
+        journal = json.loads(
+            autogit._progress_index_pending_path().read_text(encoding="utf-8"))
+        entry = journal["entries"][0]
+        self.assertEqual(entry["transaction_kind"], "review_patch")
+        self.assertEqual(
+            entry["index_policy"], autogit._EXACT_INDEX_SNAPSHOT_POLICY)
+        self.assertRegex(entry["expected_index_sha256"], r"^[0-9a-f]{64}$")
+
+        second_patch = self._tracked_patch_from_head(path, "VALUE = 3\n")
+        second = autogit.commit_patch_result(
+            second_patch, "next review recovers first index", [path], push=False)
+
+        self.assertTrue(second.created, second.reason)
+        self.assertEqual(self._git("diff", "--cached", "--name-only").stdout, "")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+        self.assertEqual(self._git("show", f"HEAD:{path}").stdout, "VALUE = 3\n")
+
+    def test_review_new_file_d_plus_untracked_is_recovered_from_journal(self) -> None:
+        path = "sts2-ascend/brain/new_review_module.py"
+        self._write(path, "VALUE = 1\n")
+        self._git("add", path)
+        patch = subprocess.run(
+            ["git", "-C", str(self.repo), "diff", "--cached", "--binary", "--", path],
+            check=True, capture_output=True,
+        ).stdout
+        self._git("restore", "--staged", "--", path)
+        (self.repo / path).unlink()
+
+        result = self._commit_review_with_locked_index(patch, path)
+
+        self.assertTrue(result.created, result.reason)
+        status = self._git(
+            "status", "--porcelain=v1", "--untracked-files=all", "--", path,
+        ).stdout.splitlines()
+        self.assertEqual(status, [f"D  {path}", f"?? {path}"])
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+
+        with autogit.repository_lock():
+            autogit._recover_pending_progress_indexes_unlocked(
+                log=lambda _message: None)
+
+        self.assertEqual(
+            self._git(
+                "status", "--porcelain=v1", "--untracked-files=all", "--", path,
+            ).stdout,
+            "",
+        )
+        self.assertEqual(self._read(path), "VALUE = 1\n")
+        self.assertFalse(autogit._progress_index_pending_path().exists())
+
+    def test_review_recovery_never_overwrites_later_user_staging(self) -> None:
+        path = "sts2-ascend/brain/policy.py"
+        first_patch = self._tracked_patch_from_head(path, "VALUE = 2\n")
+        first = self._commit_review_with_locked_index(first_patch, path)
+        self.assertTrue(first.created, first.reason)
+
+        intended_patch = self._tracked_patch_from_head(path, "VALUE = 3\n")
+        self._write(path, "VALUE = 99\n")
+        self._git("add", path)
+        cached_before = self._git("diff", "--cached", "--binary", "--", path).stdout
+        messages: list[str] = []
+
+        rejected = autogit.commit_patch_result(
+            intended_patch, "must preserve later user staging", [path],
+            push=False, log=messages.append)
+
+        self.assertFalse(rejected.created)
+        self.assertIn("staged", rejected.reason)
+        self.assertEqual(
+            self._git("diff", "--cached", "--binary", "--", path).stdout,
+            cached_before,
+        )
+        self.assertEqual(self._read(path), "VALUE = 99\n")
+        self.assertEqual(self._git("show", f"HEAD:{path}").stdout, "VALUE = 2\n")
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+        self.assertTrue(any("目标 staged 快照已变化" in message for message in messages))
 
     def test_patch_cas_failure_undoes_worktree_and_prepared_marker(self) -> None:
         path = "sts2-ascend/brain/policy.py"
