@@ -281,3 +281,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-31 14:55:34 | 第 1198~1199 局 | `d29e0ff4` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-145534-1788159334581299100-d29e0ff4` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
 <!-- rejection:20260831-150712-1788160032476370700-19278260 -->
 | 2026-08-31 15:07:12 | 第 1198~1199 局 | `19278260` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-150712-1788160032476370700-19278260` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
+<!-- rejection:20260831-151502-1788160502183440900-f949fb44 -->
+| 2026-08-31 15:15:02 | 第 1198~1199 局 | `f949fb44` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-151502-1788160502183440900-f949fb44` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
