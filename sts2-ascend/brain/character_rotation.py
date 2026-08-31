@@ -601,6 +601,54 @@ class CharacterRotation:
             self._save_unlocked(updated)
             return _snapshot(updated, counts)
 
+    def reconcile_native_continue(
+            self, expected_run_id: object, actual_run_id: object,
+            character_id: object) -> RotationSnapshot:
+        """Replace a stale active identity proven by the native Continue path.
+
+        The game can preserve one playable native save while the HTTP run id
+        previously recorded by Brain no longer exists.  This transition is not
+        a terminal result: it must preserve the scheduled character slot, quota
+        phase, counters and finalized ledger.  Callers must supply the exact old
+        identity they observed before selecting the game's native Continue action.
+        """
+        normalized_expected = _normalize_run_id(expected_run_id)
+        normalized_actual = _normalize_run_id(actual_run_id)
+        if normalized_actual == normalized_expected:
+            raise CharacterRotationError(
+                "native continue reconciliation requires a different run_id")
+        character, normalized_character_id = _normalize_character(character_id)
+
+        with self._lock:
+            state, counts, _dirty = self._load_unlocked(reconcile_idle=False)
+            active = state["active_run"]
+            if active is None:
+                raise CharacterRotationError(
+                    f"cannot reconcile {normalized_expected!r}; no active run exists")
+            if active["run_id"] != normalized_expected:
+                raise CharacterRotationError(
+                    f"cannot reconcile {normalized_expected!r}; unresolved active "
+                    f"run is {active['run_id']!r}")
+            if active["character"] != character:
+                raise CharacterRotationError(
+                    f"native continue changed character from {active['character']} "
+                    f"to {character}")
+            finalized_character = state["finalized_runs"].get(normalized_actual)
+            if finalized_character is not None:
+                raise CharacterRotationError(
+                    f"native continue run {normalized_actual!r} is already finalized "
+                    f"as {finalized_character}")
+
+            updated = dict(state)
+            updated["active_run"] = {
+                "run_id": normalized_actual,
+                "character": character,
+                "character_id": normalized_character_id,
+                "scheduled_character": active.get("scheduled_character"),
+            }
+            self._save_unlocked(updated)
+            return _snapshot(updated, counts)
+
     def release_human_controlled_run(self, run_id: object) -> RotationSnapshot:
         """Forget one human-controlled active run without consuming a quota slot.
 

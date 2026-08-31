@@ -466,6 +466,46 @@ class CharacterRotationTests(unittest.TestCase):
             ("run-i", "run-v"),
         )
 
+    def test_native_continue_replaces_only_identity_without_consuming_slot(
+            self) -> None:
+        self.rotation.observe_active_run("stale-v", VIVHITE_ID)
+        before = self.rotation.snapshot()
+
+        after = self.rotation.reconcile_native_continue(
+            "stale-v", "native-v", VIVHITE_ID)
+
+        self.assertEqual(after.active_run_id, "native-v")
+        self.assertEqual(after.active_character, VIVHITE)
+        self.assertEqual(after.next_character, before.next_character)
+        self.assertEqual(after.catchup_index, before.catchup_index)
+        self.assertEqual(after.schedule_mode, before.schedule_mode)
+        self.assertEqual(after.finalized_run_ids, before.finalized_run_ids)
+        persisted = json.loads(self.state_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            persisted["active_run"]["scheduled_character"],
+            VIVHITE,
+        )
+
+    def test_native_continue_requires_exact_old_identity(self) -> None:
+        self.rotation.observe_active_run("stale-v", VIVHITE_ID)
+
+        with self.assertRaises(CharacterRotationError):
+            self.rotation.reconcile_native_continue(
+                "different-old", "native-v", VIVHITE_ID)
+
+        self.assertEqual(
+            self.rotation.snapshot().active_run_id, "stale-v")
+
+    def test_native_continue_cannot_change_character(self) -> None:
+        self.rotation.observe_active_run("stale-v", VIVHITE_ID)
+
+        with self.assertRaises(CharacterRotationError):
+            self.rotation.reconcile_native_continue(
+                "stale-v", "native-i", IRONCLAD_ID)
+
+        self.assertEqual(
+            self.rotation.snapshot().active_run_id, "stale-v")
+
     def test_unknown_terminal_character_cannot_guess_and_advance(self) -> None:
         with self.assertRaises(CharacterRotationError):
             self.rotation.record_terminal(

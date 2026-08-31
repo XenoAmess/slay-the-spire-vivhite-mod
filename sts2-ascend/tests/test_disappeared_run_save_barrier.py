@@ -173,6 +173,8 @@ class DisappearedRunNativeSaveBarrierTests(unittest.TestCase):
 
         self.assertFalse(instance._native_save_transition_blocked)
         self.assertEqual(instance._rotation_unresolved_run_id, "old-vivhite")
+        self.assertEqual(
+            instance._native_continue_recovery_expected, "old-vivhite")
         logger.assert_called_once()
         self.assertIn("原生继续入口", logger.call_args.args[0])
 
@@ -181,6 +183,54 @@ class DisappearedRunNativeSaveBarrierTests(unittest.TestCase):
         instance._track(non_resumable_menu)
         self.assertTrue(instance._native_save_transition_blocked)
         self.assertEqual(instance._rotation_unresolved_run_id, "old-vivhite")
+
+    def test_native_continue_same_character_replaces_stale_id_without_scoring(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-native-continue-") as raw:
+            root = Path(raw)
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", root):
+                original = agent_module.Agent({"api_ports": [], "seed": 903})
+                original.rotation.observe_active_run(
+                    "old-vivhite", VIVHITE_CHARACTER_ID)
+                restarted = agent_module.Agent({"api_ports": [], "seed": 904})
+
+            before_stats = self._stats_snapshot(restarted)
+            before_rotation = restarted.rotation.snapshot()
+            menu = {
+                "screen": "MAIN_MENU",
+                "run_id": "run_unknown",
+                "run": {},
+                "available_actions": ["continue_run", "abandon_run"],
+            }
+            restarted._track(menu)
+            restarted._track(_live_state(
+                "native-vivhite", screen="COMBAT", floor=0))
+
+            after = restarted.rotation.snapshot()
+            self.assertEqual(after.active_run_id, "native-vivhite")
+            self.assertEqual(after.active_character, VIVHITE)
+            self.assertEqual(after.next_character, before_rotation.next_character)
+            self.assertEqual(after.catchup_index, before_rotation.catchup_index)
+            self.assertEqual(
+                after.finalized_run_ids, before_rotation.finalized_run_ids)
+            self.assertEqual(restarted.ctx.run_id, "native-vivhite")
+            self.assertFalse(restarted._native_save_transition_blocked)
+            before_global = before_stats.get("global", {})
+            after_global = restarted.know.stats.get("global", {})
+            for key in (
+                    "runs", "wins", "losses", "floors_total",
+                    "floor_sum_raw", "best_floor", "best_floor_raw"):
+                self.assertEqual(
+                    after_global.get(key), before_global.get(key), key)
+
+            old_log = restarted._profile_knowledge["vivhite"].load_run_log(
+                "old-vivhite")
+            self.assertIsNotNone(old_log)
+            self.assertFalse(old_log["in_progress"])
+            self.assertTrue(old_log["lost_native_save"])
+            self.assertTrue(old_log["excluded_from_learning"])
+            self.assertEqual(
+                old_log["replacement_run_id"], "native-vivhite")
 
     def test_save_error_does_not_account_verified_terminal_accounts_once(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-disappeared-finalize-") as raw:

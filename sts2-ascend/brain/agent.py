@@ -367,6 +367,7 @@ class Agent:
             else max(0, initial_control.pause_generation - 1))
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
+        self._native_continue_recovery_expected = ""
         self._recover_persisted_terminal_rotation()
         self._recover_pending_native_save_context()
 
@@ -1213,10 +1214,58 @@ class Agent:
         self.ctx.finalize_requested = False
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
+        self._native_continue_recovery_expected = ""
         self._disappeared_run_log_marker = None
         self._save_run_progress(state.get("run") or {}, force=True)
         log(f"[agent] 暂时消失的旧局 {run_id} 已恢复，取消原生终局等待并继续游玩")
         return True
+
+    def _archive_native_continue_replacement(
+            self, old_run_id: str, actual_run_id: str,
+            character_id: str) -> None:
+        """Exclude a vanished identity without turning it into a played run."""
+        try:
+            try:
+                profile = self.profile_store.for_character(character_id)
+            except KeyError:
+                canonical = canonical_character_id(character_id)
+                if canonical is None:
+                    raise
+                profile = self.profile_store.resolve(canonical)
+            knowledge = self._profile_knowledge[profile.profile_id]
+            knowledge.exclude_run_learning(old_run_id)
+            prior = knowledge.load_run_log(old_run_id)
+            evidence = copy.deepcopy(prior) if isinstance(prior, dict) else {
+                "run_id": old_run_id,
+                "profile_id": profile.profile_id,
+                "character_id": character_id,
+                "profile_run_number": 0,
+                "decisions": [],
+                "combat_notes": [],
+                "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            evidence.update({
+                "run_id": old_run_id,
+                "profile_id": profile.profile_id,
+                "character_id": character_id,
+                "in_progress": False,
+                "abandoned": True,
+                "lost_native_save": True,
+                "excluded_from_learning": True,
+                "replacement_run_id": actual_run_id,
+                "ended_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            })
+            evidence["native_save_wait"] = {
+                "state": "replaced_by_authoritative_native_save",
+                "old_run_id": old_run_id,
+                "replacement_run_id": actual_run_id,
+            }
+            knowledge.save_run_log(old_run_id, evidence)
+            knowledge.finish_run_learning(old_run_id)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            # Rotation is the authoritative scheduler transaction.  Evidence
+            # archival is diagnostic and must not deadlock a playable native save.
+            log(f"[agent] 旧 run_id {old_run_id} 排除证据保存失败：{exc}")
 
     def _track(self, state: dict, decision=None) -> None:
         """Apply observations from the state returned by the game.
@@ -1235,25 +1284,71 @@ class Agent:
         ctx_run_id = str(getattr(self.ctx, "run_id", "") or "run_unknown")
         unresolved_run_id = str(
             getattr(self, "_rotation_unresolved_run_id", "") or "")
-        if ctx_run_id == "run_unknown" and unresolved_run_id:
-            can_resume_from_menu = (
-                screen == "MAIN_MENU"
-                and run_id == "run_unknown"
-                and not run
-                and "continue_run" in (state.get("available_actions") or []))
-            if can_resume_from_menu:
-                # The durable rotation identity can outlive an incomplete
-                # incremental run log.  Continuing the game's own active save is
-                # the only read-safe way to recover its authoritative run_id;
-                # keep the ledger unresolved until the next API state proves an
-                # exact identity match.
-                marker = (unresolved_run_id, "continue_run", screen)
-                if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
-                    self._unresolved_rotation_log_marker = marker
-                    log(
-                        f"[agent] 轮换账仍有未验证旧局 {unresolved_run_id}；"
-                        "主菜单存在原生继续入口，先恢复存档再核对 run_id")
+        can_resume_from_menu = (
+            bool(unresolved_run_id)
+            and screen == "MAIN_MENU"
+            and run_id == "run_unknown"
+            and not run
+            and "continue_run" in (state.get("available_actions") or []))
+        if can_resume_from_menu:
+            # Remember that the next authoritative active state is a direct
+            # consequence of the game's native Continue action.  Only this narrow
+            # proof permits stale run-id replacement below.
+            self._native_continue_recovery_expected = unresolved_run_id
+            marker = (unresolved_run_id, "continue_run", screen)
+            if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
+                self._unresolved_rotation_log_marker = marker
+                log(
+                    f"[agent] 轮换账仍有未验证旧局 {unresolved_run_id}；"
+                    "主菜单存在原生继续入口，先恢复存档再核对 run_id")
+            return
+
+        recovery_expected = str(getattr(
+            self, "_native_continue_recovery_expected", "") or "")
+        if recovery_expected and unresolved_run_id:
+            if recovery_expected != unresolved_run_id:
+                self._native_save_transition_blocked = True
+                log(
+                    "[agent] 原生继续恢复身份与轮换账不一致，保持阻塞："
+                    f"{recovery_expected} != {unresolved_run_id}")
                 return
+            if run and run_id not in ("", "run_unknown") and screen != "GAME_OVER":
+                if run_id == recovery_expected:
+                    self._native_continue_recovery_expected = ""
+                    self._rotation_unresolved_run_id = ""
+                    unresolved_run_id = ""
+                else:
+                    character_id = str(run.get("character_id") or "").strip()
+                    try:
+                        self.rotation.reconcile_native_continue(
+                            recovery_expected, run_id, character_id)
+                    except (CharacterRotationError, OSError, ValueError) as exc:
+                        self._native_save_transition_blocked = True
+                        marker = (recovery_expected, run_id, character_id, str(exc))
+                        if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
+                            self._unresolved_rotation_log_marker = marker
+                            log(
+                                "[agent] 原生继续返回的活动局无法接管，保持阻塞："
+                                f"{exc}")
+                        return
+                    self._archive_native_continue_replacement(
+                        recovery_expected, run_id, character_id)
+                    self.ctx = RunContext()
+                    ctx_run_id = "run_unknown"
+                    self._rotation_unresolved_run_id = ""
+                    self._native_continue_recovery_expected = ""
+                    self._rotation_runtime_error = None
+                    self._unresolved_rotation_log_marker = None
+                    unresolved_run_id = ""
+                    log(
+                        f"[agent] 原生继续确认同角色存档：旧 run_id "
+                        f"{recovery_expected} 已排除且不计分，接管 {run_id}；"
+                        "轮换配额不变")
+            else:
+                self._native_save_transition_blocked = True
+                return
+
+        if ctx_run_id == "run_unknown" and unresolved_run_id:
             # A restart can retain the rotation's old active identity while the API
             # already exposes a different/new run.  Never let a missing incremental
             # log turn that condition into an implicit replacement or quota flip.
@@ -2897,6 +2992,7 @@ class Agent:
         self.ctx.native_save_wait = None
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
+        self._native_continue_recovery_expected = ""
         self.runs_played += 1
         victory = bool(pending["victory"])
         floor = int(pending["floor"])
