@@ -200,6 +200,85 @@ function Get-PythonExe {
     return [IO.Path]::GetFullPath($resolved)
 }
 
+function Test-DotnetSdkAvailable {
+    param([string]$DotnetExe)
+    if ([string]::IsNullOrWhiteSpace($DotnetExe) -or
+        -not (Test-Path -LiteralPath $DotnetExe -PathType Leaf)) {
+        return $false
+    }
+
+    $sdkLines = @()
+    $dotnetExit = -1
+    $savedPreference = $ErrorActionPreference
+    try {
+        # A runtime-only dotnet host exits successfully but returns no SDKs.
+        # Probe the concrete executable so an unusable PATH entry cannot mask
+        # the per-user SDK installation.
+        $ErrorActionPreference = "SilentlyContinue"
+        $sdkLines = @(& $DotnetExe --list-sdks 2>$null)
+        $dotnetExit = $LASTEXITCODE
+    }
+    catch { return $false }
+    finally { $ErrorActionPreference = $savedPreference }
+
+    if ($dotnetExit -ne 0) { return $false }
+    return @($sdkLines | Where-Object {
+        ([string]$_).Trim() -match '^\d+\.\d+\.\d+[^\s]*\s+\[[^\]]+\]$'
+    }).Count -gt 0
+}
+
+function Initialize-DotnetSdkEnvironment {
+    $pathDotnet = Get-Command dotnet.exe -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($pathDotnet -and (Test-DotnetSdkAvailable $pathDotnet.Source)) {
+        # A working PATH is authoritative. Do not rewrite an environment the
+        # caller has already configured successfully.
+        return [IO.Path]::GetFullPath($pathDotnet.Source)
+    }
+
+    $candidates = New-Object Collections.Generic.List[string]
+    if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_ROOT)) {
+        $candidates.Add((Join-Path $env:DOTNET_ROOT "dotnet.exe"))
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        $candidates.Add((Join-Path $env:LOCALAPPDATA "Microsoft\dotnet\dotnet.exe"))
+    }
+
+    $seen = @{}
+    foreach ($candidate in $candidates) {
+        try { $candidate = [IO.Path]::GetFullPath($candidate) }
+        catch { continue }
+        if ($seen.ContainsKey($candidate)) { continue }
+        $seen[$candidate] = $true
+        if (-not (Test-DotnetSdkAvailable $candidate)) { continue }
+
+        $candidateRoot = [IO.Path]::GetFullPath((Split-Path $candidate -Parent))
+        $env:DOTNET_ROOT = $candidateRoot
+        $pathContainsRoot = @(([string]$env:PATH) -split ';' | Where-Object {
+            if ([string]::IsNullOrWhiteSpace($_)) { return $false }
+            try {
+                return [string]::Equals(
+                    [IO.Path]::GetFullPath($_), $candidateRoot,
+                    [StringComparison]::OrdinalIgnoreCase)
+            }
+            catch { return $false }
+        }).Count -gt 0
+        if (-not $pathContainsRoot) {
+            $env:PATH = if ([string]::IsNullOrWhiteSpace($env:PATH)) {
+                $candidateRoot
+            } else {
+                "$candidateRoot;$env:PATH"
+            }
+        }
+        Write-Host "Using .NET SDK from $candidateRoot"
+        return $candidate
+    }
+
+    throw ("It was not possible to find any installed .NET SDKs for local fork deployment. " +
+           "Install an SDK, expose a working dotnet on PATH, or install it under " +
+           "LOCALAPPDATA\Microsoft\dotnet.")
+}
+
 New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
 try {
     $lockPath = Join-Path $runtimeDir "lifecycle.lock"
@@ -330,6 +409,10 @@ try {
             Source = $Source
         }
         if (-not [string]::IsNullOrWhiteSpace($GodotExe)) { $deployArgs.GodotExe = $GodotExe }
+        $usesLocalFork = ($Source -eq "fork") -or
+            ($Source -eq "auto" -and
+             (Test-Path -LiteralPath (Join-Path $root "third_party\STS2-Agent\.git")))
+        if ($usesLocalFork) { Initialize-DotnetSdkEnvironment | Out-Null }
         & (Join-Path $PSScriptRoot "Deploy-Mod.ps1") @deployArgs
     }
 
