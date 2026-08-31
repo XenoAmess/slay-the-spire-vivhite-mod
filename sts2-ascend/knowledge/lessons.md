@@ -9137,3 +9137,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1231 胜，当前目标进阶 0
+
+## 第 1232 局复盘（2026-08-31 21:53）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, SHRUG_IT_OFF, PILLAGE, BATTLE_TRANCE, JACKPOT, OFFERING, HEMOKINESIS, MOLTEN_FIST, DRUM_OF_BATTLE, FLAME_BARRIER, SALVO
+- 本局遗物：MEAT_ON_THE_BONE, STRAWBERRY, DEMON_TONGUE
+- 战斗记录：F9 Unknown战 掉血0; F11 Elite战 掉血49; F13 Monster战 掉血10; F14 Monster战 掉血3; F15 Elite战 掉血15; F17 Boss战 掉血42｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BRAND(25分/3局)，OFFERING(25分/35局)，FIEND_FIRE(25分/46局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1232 胜，当前目标进阶 0
