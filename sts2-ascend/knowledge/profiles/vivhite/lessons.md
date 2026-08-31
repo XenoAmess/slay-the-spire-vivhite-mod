@@ -41,3 +41,13 @@
 - 当前低价值卡牌：VIVHITE_CARD_ASTRAL_SEARCH(17分/2局)，VIVHITE_CARD_AXIOM_OF_LIFE(17分/2局)，VIVHITE_CARD_ASTRAL_MEASURE(17分/2局)
 - 策略进化：kill_bonus: 18.25 → 19.75（长战磨死（6回合），提升击杀奖励加快清场）；boss_atk_mult: 1.30 → 1.35（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.72 → 0.74（Boss 低血进场磨死（进场 59%），入场血量要求线上调）；kill_race_prior_eff: 0.58 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；exploration_rate: 0.228 → 0.221（经验累积，探索衰减）
 - 生涯战绩：0/4 胜，当前目标进阶 0
+
+## 第 1 局复盘（2026-08-31 16:43）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_ISOPERIMETRIC_WARD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_PROOF_OF_TERMINATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_INDUCTIVE_CIRCLE, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CHIAROSCURO
+- 本局遗物：吃不完的糖, GREMLIN_HORN, 永恒羽毛, 草莓, GNARLED_HAMMER, 意外光滑的石头, REPTILE_TRINKET, 锚
+- 战斗记录：F22 Monster战 掉血0; F24 Elite战 掉血0; F28 Monster战 掉血7; F30 Elite战 掉血0; F31 Monster战 掉血21; F33 Boss战 掉血36｜竞速审计：T5判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_TANGENT_STARLIGHT(33分/3局)，VIVHITE_CARD_CHIAROSCURO(33分/2局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.35 → 1.40（Boss 长战磨死（6回合），攻坚乘区提速）；boss_entry_min_hp_pct: 0.74 → 0.76（Boss 低血进场磨死（进场 42%），入场血量要求线上调）；kill_race_prior_eff: 0.61 → 0.64（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；exploration_rate: 0.221 → 0.215（经验累积，探索衰减）
+- 生涯战绩：0/1 胜，当前目标进阶 0

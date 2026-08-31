@@ -1,34 +1,989 @@
 {
  "version": 1,
  "global": {
-  "runs": 0,
+  "runs": 1,
   "wins": 0,
-  "floors_total": 0,
-  "best_floor": 0,
-  "floor_sum_raw": 0.0,
-  "best_floor_raw": 0,
-  "deaths_by_enemy": {},
+  "floors_total": 33.0,
+  "best_floor": 33,
+  "floor_sum_raw": 33.0,
+  "best_floor_raw": 33,
+  "deaths_by_enemy": {
+   "THE_INSATIABLE": 1
+  },
   "deaths_by_event": {},
   "elite_death_entry_band": {
    "low": 0,
    "healthy": 0
   }
  },
- "cards": {},
+ "cards": {
+  "VIVHITE_CARD_LUMINOUS_PROJECTION": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 0,
+   "plays": 66,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_TERMINATION_CONDITION": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_SUCCESSOR_FORMULA": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_ASTRAL_SEARCH": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 20,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 0,
+   "plays": 11,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_TANGENT_STARLIGHT": {
+   "seen": 4,
+   "offered": 4,
+   "picked": 3,
+   "plays": 39,
+   "outcome_sum": 99.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_DIFFERENTIAL_SAMPLING": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_COMPOSITE_COLOR_WHEEL": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_SCALE_TRANSFORMATION": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_ISOPERIMETRIC_WARD": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 1,
+   "plays": 5,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_LIFE_MANIFOLD": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 1,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CRIMSON_AREA": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 1,
+   "plays": 4,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_GOLDEN_COMPOSITION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 14,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_TOPOLOGICAL_GROWTH": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_EVENT_LOOP": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 1,
+   "plays": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_INFINITE_STAR_SEQUENCE": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CHIAROSCURO": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 2,
+   "plays": 5,
+   "outcome_sum": 66.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CHROMATIC_TRANSITION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 5,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 11,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_HEURISTIC_SHIELD": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_ASTRAL_PURSUIT": {
+   "seen": 3,
+   "offered": 3,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_RECURRENT_STARLIGHT": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_TRICHROMATIC_WALTZ": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 1,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_UNIFIED_FIELD_THEORY": {
+   "seen": 2,
+   "offered": 2,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_PROOF_OF_TERMINATION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 4,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_DYNAMIC_PROGRAMMING": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CLOSED_PROJECTION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 2,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_COLOR_CONSERVATION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 3,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_ASTRAL_MEASURE": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_OPEN_SET_SHELTER": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_SPECTRAL_INTEGRAL": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 0,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_RIEMANN_STAR_ARRAY": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 1,
+   "plays": 5,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_MOBIUS_LOOP": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_NEGATIVE_SPACE": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_CONSERVED_RECURRENCE": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 1,
+   "plays": 2,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_LAW_OF_CONSERVATION": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_INVARIANT": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_AXIOM_RING": {
+   "seen": 1,
+   "offered": 1,
+   "picked": 0,
+   "plays": 0,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "FRANTIC_ESCAPE": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 0,
+   "plays": 2,
+   "outcome_sum": 0.0,
+   "bias": 0.0
+  },
+  "VIVHITE_CARD_INDUCTIVE_CIRCLE": {
+   "seen": 0,
+   "offered": 0,
+   "picked": 1,
+   "plays": 0,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  }
+ },
  "card_offer_tracking": {
   "version": 2,
   "baseline_runs": 0,
-  "offers": 0,
-  "candidate_observations": 0
+  "offers": 18,
+  "candidate_observations": 60
  },
- "novelty_trials": {},
- "relics": {},
- "enemies": {},
- "events": {},
- "rooms": {},
- "rooms_act": {},
- "rooms_band": {},
- "respawn_adds": {},
+ "novelty_trials": {
+  "event": {
+   "NEOW:NEOW.pages.INITIAL.options.PRECARIOUS_SHEARS": 1,
+   "WELLSPRING:WELLSPRING.pages.INITIAL.options.BOTTLE": 1
+  },
+  "relic": {
+   "GNARLED_HAMMER": 1
+  }
+ },
+ "relics": {
+  "吃不完的糖": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "GREMLIN_HORN": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "永恒羽毛": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "草莓": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "GNARLED_HAMMER": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "意外光滑的石头": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "REPTILE_TRINKET": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  },
+  "锚": {
+   "picked": 1,
+   "outcome_sum": 33.0,
+   "bias": 0.0
+  }
+ },
+ "enemies": {
+  "FUZZY_WURM_CRAWLER": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 55.0,
+   "hp_pool_n": 1,
+   "fire_sum": 4.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "LEAF_SLIME_S+TWIG_SLIME_M+TWIG_SLIME_S": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 50.0,
+   "hp_pool_n": 1,
+   "fire_sum": 37.0,
+   "fire_rounds": 5,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "SHRINKER_BEETLE": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 39.0,
+   "hp_pool_n": 1,
+   "fire_sum": 13.0,
+   "fire_rounds": 1,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "FLYCONID+SNAPPING_JAXFRUIT": {
+   "encounters": 1,
+   "hp_lost_sum": 8.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 82.0,
+   "hp_pool_n": 1,
+   "fire_sum": 28.0,
+   "fire_rounds": 4,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "LEAF_SLIME_M+LEAF_SLIME_S+TWIG_SLIME_M+TWIG_SLIME_S": {
+   "encounters": 1,
+   "hp_lost_sum": 2.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 86.0,
+   "hp_pool_n": 1,
+   "fire_sum": 40.0,
+   "fire_rounds": 5,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "BYGONE_EFFIGY": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 127.0,
+   "hp_pool_n": 1,
+   "fire_sum": 0.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "BYRDONIS": {
+   "encounters": 1,
+   "hp_lost_sum": 8.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 81.0,
+   "hp_pool_n": 1,
+   "fire_sum": 48.0,
+   "fire_rounds": 3,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "PHROG_PARASITE": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 61.0,
+   "hp_pool_n": 1,
+   "fire_sum": 36.0,
+   "fire_rounds": 6,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "VINE_SHAMBLER": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 61.0,
+   "hp_pool_n": 1,
+   "fire_sum": 20.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "CEREMONIAL_BEAST": {
+   "encounters": 1,
+   "hp_lost_sum": 53.0,
+   "deaths": 0,
+   "wins": 1,
+   "boss_encounters": 1,
+   "boss_hp_lost_sum": 53.0,
+   "boss_deaths": 0,
+   "boss_act": {
+    "1": {
+     "encounters": 1,
+     "hp_lost_sum": 53.0,
+     "deaths": 0,
+     "hp_pool_sum": 252.0,
+     "hp_pool_n": 1,
+     "fire_sum": 116.0,
+     "fire_rounds": 9
+    }
+   },
+   "hp_pool_sum": 252.0,
+   "hp_pool_n": 1,
+   "fire_sum": 116.0,
+   "fire_rounds": 9
+  },
+  "TUNNELER": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 87.0,
+   "hp_pool_n": 1,
+   "fire_sum": 13.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "BOWLBUG_NECTAR+BOWLBUG_ROCK": {
+   "encounters": 1,
+   "hp_lost_sum": 8.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 83.0,
+   "hp_pool_n": 1,
+   "fire_sum": 33.0,
+   "fire_rounds": 3,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "SPINY_TOAD": {
+   "encounters": 1,
+   "hp_lost_sum": 15.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 118.0,
+   "hp_pool_n": 1,
+   "fire_sum": 40.0,
+   "fire_rounds": 3,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "OVICOPTER": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 130.0,
+   "hp_pool_n": 1,
+   "fire_sum": 27.0,
+   "fire_rounds": 3,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 128.0,
+   "hp_pool_n": 1,
+   "fire_sum": 46.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "MYTE": {
+   "encounters": 1,
+   "hp_lost_sum": 7.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 128.0,
+   "hp_pool_n": 1,
+   "fire_sum": 32.0,
+   "fire_rounds": 3,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "INFESTED_PRISM": {
+   "encounters": 1,
+   "hp_lost_sum": 0.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 161.0,
+   "hp_pool_n": 1,
+   "fire_sum": 26.0,
+   "fire_rounds": 2,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "HUNTER_KILLER": {
+   "encounters": 1,
+   "hp_lost_sum": 21.0,
+   "deaths": 0,
+   "wins": 1,
+   "hp_pool_sum": 121.0,
+   "hp_pool_n": 1,
+   "fire_sum": 55.0,
+   "fire_rounds": 4,
+   "boss_encounters": 0,
+   "boss_hp_lost_sum": 0.0,
+   "boss_deaths": 0
+  },
+  "THE_INSATIABLE": {
+   "encounters": 1,
+   "hp_lost_sum": 36.0,
+   "deaths": 1,
+   "wins": 0,
+   "boss_encounters": 1,
+   "boss_hp_lost_sum": 36.0,
+   "boss_deaths": 1,
+   "boss_act": {
+    "2": {
+     "encounters": 1,
+     "hp_lost_sum": 36.0,
+     "deaths": 1,
+     "hp_pool_sum": 321.0,
+     "hp_pool_n": 1,
+     "fire_sum": 40.0,
+     "fire_rounds": 3
+    }
+   },
+   "hp_pool_sum": 321.0,
+   "hp_pool_n": 1,
+   "fire_sum": 40.0,
+   "fire_rounds": 3
+  }
+ },
+ "events": {
+  "NEOW": {
+   "NEOW.pages.INITIAL.options.PRECARIOUS_SHEARS": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0,
+    "relic_delta_sum": 1.0,
+    "potion_delta_sum": 0.0,
+    "hp_min": 0.0
+   }
+  },
+  "WELLSPRING": {
+   "WELLSPRING.pages.INITIAL.options.BOTTLE": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0,
+    "relic_delta_sum": 0.0,
+    "potion_delta_sum": 0.0,
+    "hp_min": 0.0
+   }
+  },
+  "LUMINOUS_CHOIR": {
+   "LUMINOUS_CHOIR.pages.INITIAL.options.OFFER_TRIBUTE": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": -105.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0,
+    "relic_delta_sum": 1.0,
+    "potion_delta_sum": 0.0,
+    "hp_min": 0.0
+   }
+  },
+  "TEZCATARA": {
+   "TEZCATARA.pages.INITIAL.options.SEAL_OF_GOLD": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0,
+    "relic_delta_sum": 1.0,
+    "potion_delta_sum": 0.0,
+    "hp_min": 0.0
+   }
+  },
+  "SELF_HELP_BOOK": {
+   "SELF_HELP_BOOK.pages.INITIAL.options.READ_ENTIRE_BOOK": {
+    "n": 1,
+    "hp_delta_sum": 0.0,
+    "gold_delta_sum": 0.0,
+    "deaths": 0,
+    "card_delta_sum": 0.0,
+    "relic_delta_sum": 0.0,
+    "potion_delta_sum": 0.0,
+    "hp_min": 0.0
+   }
+  }
+ },
+ "rooms": {
+  "Monster": {
+   "visits": 12,
+   "outcome_sum": 396.0,
+   "hp_lost_sum": 61.0,
+   "damage_events": 12,
+   "hp_lost_max": 21.0,
+   "damage_events_surv": 12,
+   "hp_lost_max_surv": 21.0
+  },
+  "Elite": {
+   "visits": 5,
+   "outcome_sum": 165.0,
+   "hp_lost_sum": 8.0,
+   "damage_events": 5,
+   "hp_lost_max": 8.0,
+   "damage_events_surv": 5,
+   "hp_lost_max_surv": 8.0,
+   "hp_lost_sum_hi": 8.0,
+   "damage_events_hi": 5,
+   "hp_lost_max_hi": 8.0
+  },
+  "Boss": {
+   "visits": 2,
+   "outcome_sum": 66.0,
+   "hp_lost_sum": 89.0,
+   "damage_events": 2,
+   "hp_lost_max": 53.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 53.0
+  },
+  "RestSite": {
+   "visits": 6,
+   "outcome_sum": 198.0
+  },
+  "Unknown": {
+   "visits": 3,
+   "outcome_sum": 99.0
+  },
+  "Treasure": {
+   "visits": 2,
+   "outcome_sum": 66.0
+  },
+  "Ancient": {
+   "visits": 1,
+   "outcome_sum": 33.0
+  },
+  "Shop": {
+   "visits": 1,
+   "outcome_sum": 33.0
+  }
+ },
+ "rooms_act": {
+  "Monster@1": {
+   "hp_lost_sum": 10.0,
+   "damage_events": 6,
+   "hp_lost_max": 8.0,
+   "damage_events_surv": 6,
+   "hp_lost_max_surv": 8.0
+  },
+  "Elite@1": {
+   "hp_lost_sum": 8.0,
+   "damage_events": 3,
+   "hp_lost_max": 8.0,
+   "damage_events_surv": 3,
+   "hp_lost_max_surv": 8.0,
+   "hp_lost_sum_hi": 8.0,
+   "damage_events_hi": 3,
+   "hp_lost_max_hi": 8.0
+  },
+  "Boss@1": {
+   "hp_lost_sum": 53.0,
+   "damage_events": 1,
+   "hp_lost_max": 53.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 53.0
+  },
+  "Monster@2": {
+   "hp_lost_sum": 51.0,
+   "damage_events": 6,
+   "hp_lost_max": 21.0,
+   "damage_events_surv": 6,
+   "hp_lost_max_surv": 21.0
+  },
+  "Elite@2": {
+   "hp_lost_sum": 0.0,
+   "damage_events": 2,
+   "hp_lost_max": 0.0,
+   "damage_events_surv": 2,
+   "hp_lost_max_surv": 0.0,
+   "hp_lost_sum_hi": 0.0,
+   "damage_events_hi": 2,
+   "hp_lost_max_hi": 0.0
+  },
+  "Boss@2": {
+   "hp_lost_sum": 36.0,
+   "damage_events": 1,
+   "hp_lost_max": 36.0
+  }
+ },
+ "rooms_band": {
+  "Monster@1_b1": {
+   "hp_lost_sum": 8.0,
+   "damage_events": 4,
+   "hp_lost_max": 8.0,
+   "damage_events_surv": 4,
+   "hp_lost_max_surv": 8.0
+  },
+  "Monster@1_b2": {
+   "hp_lost_sum": 2.0,
+   "damage_events": 1,
+   "hp_lost_max": 2.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 2.0
+  },
+  "Elite@1_b2": {
+   "hp_lost_sum": 8.0,
+   "damage_events": 2,
+   "hp_lost_max": 8.0,
+   "damage_events_surv": 2,
+   "hp_lost_max_surv": 8.0
+  },
+  "Elite@1_b3": {
+   "hp_lost_sum": 0.0,
+   "damage_events": 1,
+   "hp_lost_max": 0.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 0.0
+  },
+  "Monster@1_b3": {
+   "hp_lost_sum": 0.0,
+   "damage_events": 1,
+   "hp_lost_max": 0.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 0.0
+  },
+  "Boss@1_b3": {
+   "hp_lost_sum": 53.0,
+   "damage_events": 1,
+   "hp_lost_max": 53.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 53.0
+  },
+  "Monster@2_b1": {
+   "hp_lost_sum": 23.0,
+   "damage_events": 4,
+   "hp_lost_max": 15.0,
+   "damage_events_surv": 4,
+   "hp_lost_max_surv": 15.0
+  },
+  "Elite@2_b2": {
+   "hp_lost_sum": 0.0,
+   "damage_events": 1,
+   "hp_lost_max": 0.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 0.0
+  },
+  "Monster@2_b2": {
+   "hp_lost_sum": 7.0,
+   "damage_events": 1,
+   "hp_lost_max": 7.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 7.0
+  },
+  "Elite@2_b3": {
+   "hp_lost_sum": 0.0,
+   "damage_events": 1,
+   "hp_lost_max": 0.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 0.0
+  },
+  "Monster@2_b3": {
+   "hp_lost_sum": 21.0,
+   "damage_events": 1,
+   "hp_lost_max": 21.0,
+   "damage_events_surv": 1,
+   "hp_lost_max_surv": 21.0
+  },
+  "Boss@2_b3": {
+   "hp_lost_sum": 36.0,
+   "damage_events": 1,
+   "hp_lost_max": 36.0
+  }
+ },
+ "respawn_adds": {
+  "WRIGGLER": {
+   "confirmations": 1
+  },
+  "TOUGH_EGG": {
+   "confirmations": 1
+  }
+ },
  "leak_death_blocks": {},
- "act_entries": []
+ "act_entries": [
+  {
+   "act": 1,
+   "floor": 2,
+   "hp_pct": 0.795,
+   "max_hp": 78,
+   "gold": 99,
+   "potions": 0,
+   "deck_size": 7,
+   "burst": 30.0
+  },
+  {
+   "act": 1,
+   "floor": 4,
+   "hp_pct": 0.859,
+   "max_hp": 78,
+   "gold": 130,
+   "potions": 1,
+   "deck_size": 9,
+   "burst": 31.0
+  },
+  {
+   "act": 2,
+   "floor": 19,
+   "hp_pct": 1.0,
+   "max_hp": 85,
+   "gold": 367,
+   "potions": 0,
+   "deck_size": 17,
+   "burst": 53.0
+  },
+  {
+   "act": 2,
+   "floor": 33,
+   "hp_pct": 0.424,
+   "max_hp": 85,
+   "gold": 115,
+   "potions": 0,
+   "deck_size": 24,
+   "burst": 60.0
+  }
+ ],
+ "phantom_repair_v1": true,
+ "race_audit": {
+  "latched": 2,
+  "won": 1,
+  "esc_won": 1,
+  "died": 1
+ }
 }
