@@ -236,28 +236,82 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertIn("last_raw_idle=", text)
 
     def test_codex_error_heartbeats_cannot_extend_prework_forever(self) -> None:
+        import threading
+
         with tempfile.TemporaryDirectory(prefix="sts2-stream-prework-") as root:
             stream = Path(root) / "review.stream"
-            command = [
-                sys.executable, "-u", "-c",
-                "import json,time\n"
-                "for index in range(30):\n"
-                " print(json.dumps({'type':'error','message':f'reconnect {index}'}),"
-                "flush=True);time.sleep(0.1)\n",
-            ]
+            payload = "".join(
+                json.dumps({"type": "error", "message": f"reconnect {index}"})
+                + "\n"
+                for index in range(10)
+            ).encode("utf-8")
+
+            class HeartbeatStdout:
+                def __init__(self, owner) -> None:
+                    self.owner = owner
+                    self.sent = False
+
+                def read1(self, _size):
+                    if not self.sent:
+                        self.sent = True
+                        return payload
+                    self.owner.terminated.wait(timeout=2)
+                    return b""
+
+                def read(self, size):
+                    return self.read1(size)
+
+                def close(self) -> None:
+                    self.owner.terminated.set()
+
+            class HeartbeatProc:
+                def __init__(self) -> None:
+                    self.pid = None
+                    self.returncode = None
+                    self.killed = False
+                    self.terminated = threading.Event()
+                    self.stdout = HeartbeatStdout(self)
+
+                def poll(self):
+                    return self.returncode
+
+                def wait(self, timeout=None):
+                    if not self.terminated.wait(timeout=timeout or 2):
+                        raise subprocess.TimeoutExpired("fake-codex", timeout)
+                    return self.returncode
+
+                def kill(self) -> None:
+                    self.killed = True
+                    self.returncode = -9
+                    self.terminated.set()
+
+            fake = HeartbeatProc()
             translator = llm_review.CodexJsonTranslator()
-            started = time.monotonic()
-            with (mock.patch.object(llm_review, "LIVE_STREAM", stream),
+            real_monotonic = time.monotonic
+
+            # The old test raced two real watchdogs (0.5s raw stall versus
+            # 0.7s pre-work) against Windows process startup.  Advance the
+            # provider clock only after diagnostics prove that error events
+            # are flowing, then cross the pre-work deadline deterministically.
+            def controlled_monotonic() -> float:
+                return 1.0 if translator.error_count >= 3 else 0.0
+
+            started = real_monotonic()
+            with (mock.patch.object(llm_review.subprocess, "Popen", return_value=fake),
+                  mock.patch.object(llm_review.time, "monotonic",
+                                    side_effect=controlled_monotonic),
+                  mock.patch.object(llm_review, "LIVE_STREAM", stream),
                   mock.patch.object(llm_review, "_review_stop_requested", return_value=False)):
                 _rc, _tail, timed_out, stopped, stalled = llm_review._stream_run(
-                    command, 5, translate=translator.feed,
+                    ["fake-codex"], 5, translate=translator.feed,
                     stall_timeout_sec=0.5, pre_work_timeout_sec=0.7)
-            elapsed = time.monotonic() - started
+            elapsed = real_monotonic() - started
 
         metrics = translator.metrics()
         self.assertFalse(timed_out)
         self.assertFalse(stopped)
         self.assertTrue(stalled)
+        self.assertTrue(fake.killed)
         self.assertLess(elapsed, 2.0)
         self.assertGreaterEqual(metrics["error_count"], 3)
         self.assertFalse(metrics["model_work_started"])
