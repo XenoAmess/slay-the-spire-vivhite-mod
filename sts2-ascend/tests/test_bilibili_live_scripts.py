@@ -10,6 +10,7 @@ SCRIPTS = ROOT / "sts2-ascend" / "scripts"
 MODULE = SCRIPTS / "BilibiliLive.psm1"
 INSTALL = SCRIPTS / "Install-BilibiliLiveBridge.ps1"
 WORKER = SCRIPTS / "Invoke-BilibiliLiveBridge.ps1"
+DAILY_STOP_WATCH = SCRIPTS / "Invoke-BilibiliLiveDailyStopWatch.ps1"
 START = SCRIPTS / "Start-BilibiliLive.ps1"
 STOP = SCRIPTS / "Stop-BilibiliLive.ps1"
 SMOKE = SCRIPTS / "Test-BilibiliLive.ps1"
@@ -30,7 +31,7 @@ def run_powershell(command: str) -> subprocess.CompletedProcess[str]:
 
 class BilibiliLiveScriptTests(unittest.TestCase):
     def test_powershell_files_parse_under_windows_powershell(self) -> None:
-        for path in (MODULE, INSTALL, WORKER, START, STOP, SMOKE):
+        for path in (MODULE, INSTALL, WORKER, DAILY_STOP_WATCH, START, STOP, SMOKE):
             escaped = str(path).replace("'", "''")
             command = (
                 "$tokens=$null;$errors=$null;"
@@ -80,6 +81,167 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         for forbidden in ("Stop-Agent.ps1", "Stop-Process", "taskkill", ".runtime", "stop.request"):
             self.assertNotIn(forbidden, text)
         self.assertIn("Invoke-LivehimeBridge -Action Stop", text)
+
+    def test_daily_stop_window_is_exact_beijing_half_open_interval(self) -> None:
+        escaped = str(MODULE).replace("'", "''")
+        command = (
+            f"Import-Module '{escaped}' -Force;"
+            "$base=[DateTimeOffset]::Parse('2026-08-28T08:20:00Z');"
+            "$w=Get-BilibiliDailyStopWindow -UtcNow $base.AddSeconds(-1);"
+            "'{0}:{1}' -f $w.InWindow,$w.Slot;"
+            "0..19|ForEach-Object{$w=Get-BilibiliDailyStopWindow "
+            "-UtcNow $base.AddMinutes($_);'{0}:{1}:{2}' -f "
+            "$w.InWindow,$w.Slot,$w.CheckCount};"
+            "$w=Get-BilibiliDailyStopWindow -UtcNow $base.AddMinutes(20);"
+            "'{0}:{1}' -f $w.InWindow,$w.Slot"
+        )
+        result = run_powershell(command)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.split(),
+            ["False:-1"]
+            + [f"True:{slot}:20" for slot in range(20)]
+            + ["False:-1"],
+        )
+
+    def test_daily_stop_state_gate_is_exact_streaming_only(self) -> None:
+        escaped = str(MODULE).replace("'", "''")
+        command = (
+            f"Import-Module '{escaped}' -Force;"
+            "@('Streaming','Idle','NotRunning','Starting','Stopping','Unknown','')|"
+            "ForEach-Object{'{0}:{1}' -f $_,(Test-BilibiliDailyStopRequired -State $_)}"
+        )
+        result = run_powershell(command)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.split(),
+            [
+                "Streaming:True",
+                "Idle:False",
+                "NotRunning:False",
+                "Starting:False",
+                "Stopping:False",
+                "Unknown:False",
+                ":False",
+            ],
+        )
+
+    def test_daily_watch_only_stops_exact_streaming_and_never_stops_services(self) -> None:
+        text = DAILY_STOP_WATCH.read_text(encoding="utf-8")
+        self.assertIn("Test-BilibiliDailyStopRequired -State $state", text)
+        self.assertLess(
+            text.index("Test-BilibiliDailyStopRequired -State $state"),
+            text.index("Invoke-LivehimeStop"),
+        )
+        self.assertIn("Get-BilibiliDailyStopWindow", text)
+        self.assertIn("Get-LivehimeStreamingState", text)
+        self.assertIn("Set-SlayTheSpireTopMost -GameDir $GameDir", text)
+        self.assertIn("Set-AscendViewerTopMost -ProjectRoot $ProjectRoot", text)
+        for forbidden in (
+            "Stop-Agent.ps1",
+            "Stop-Process",
+            "taskkill",
+            ".runtime",
+            "startlive",
+            "stoplive",
+            "api.live.bilibili.com",
+            "http://",
+            "https://",
+        ):
+            self.assertNotIn(forbidden.lower(), text.lower())
+
+    def test_installer_registers_fixed_beijing_daily_stop_task(self) -> None:
+        text = INSTALL.read_text(encoding="utf-8")
+        self.assertIn('"BilibiliLive-DailyStopWatch"', text)
+        self.assertIn('"China Standard Time"', text)
+        self.assertIn("ConvertTimeToUtc", text)
+        self.assertIn("New-ScheduledTaskTrigger -Daily -At $nextStartUtc", text)
+        self.assertIn("New-TimeSpan -Minutes 1", text)
+        self.assertIn("New-TimeSpan -Minutes 19", text)
+        self.assertIn("StopAtDurationEnd = $false", text)
+        self.assertIn("-StartWhenAvailable", text)
+        self.assertIn("New-TimeSpan -Minutes 2", text)
+        self.assertIn("$protectedDailyStopWatch", text)
+        self.assertIn("$sourceHashes.DailyStopWatch", text)
+        self.assertIn('-ProjectRoot `"$projectRoot`"', text)
+        self.assertIn('-GameDir `"$gameDir`"', text)
+        self.assertLess(text.index("$sourceHashes = @{"), text.index("Register-ScheduledTask"))
+        self.assertLess(
+            text.index('throw "Protected Livehime bridge hash verification failed."'),
+            text.index("Start-ScheduledTask"),
+        )
+
+    def test_daily_stop_rechecks_window_and_deadline_before_click(self) -> None:
+        daily = DAILY_STOP_WATCH.read_text(encoding="utf-8")
+        module = MODULE.read_text(encoding="utf-8")
+        self.assertGreaterEqual(daily.count("Get-BilibiliDailyStopWindow"), 3)
+        self.assertIn("-StopBeforeUtc $preStopWindow.WindowEnd", daily)
+        stop_start = module.index("function Invoke-LivehimeStop")
+        stop_end = module.index("function Invoke-LivehimeBridge", stop_start)
+        stop_body = module[stop_start:stop_end]
+        deadline_check = "[DateTimeOffset]::UtcNow -ge $deadlineUtc"
+        self.assertGreaterEqual(stop_body.count(deadline_check), 3)
+        self.assertLess(stop_body.rindex(deadline_check), stop_body.index("Invoke-LivehimeClick"))
+
+    def test_expired_daily_stop_deadline_fails_before_window_access(self) -> None:
+        escaped = str(MODULE).replace("'", "''")
+        command = (
+            f"Import-Module '{escaped}' -Force;"
+            "& (Get-Module BilibiliLive) {"
+            "function Get-LivehimeStreamingState { 'Streaming' };"
+            "function Wait-LivehimeWindow { throw 'WINDOW_TOUCHED' };"
+            "try { Invoke-LivehimeStop -LivehimeExe 'unused.exe' "
+            "-StopBeforeUtc ([DateTimeOffset]::UtcNow.AddSeconds(-1)) } "
+            "catch { $_.Exception.Message }}"
+        )
+        result = run_powershell(command)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.strip(),
+            "Bilibili stop deadline has passed; no Livehime click was sent.",
+        )
+        self.assertNotIn("WINDOW_TOUCHED", result.stdout)
+
+    def test_daily_worker_restores_windows_after_failed_stop_attempt(self) -> None:
+        text = DAILY_STOP_WATCH.read_text(encoding="utf-8")
+        self.assertIn("$stopAttempted = $true", text)
+        self.assertIn("if ($stopAttempted) {", text)
+        self.assertLess(text.index("$stopAttempted = $true"), text.index("Invoke-LivehimeStop"))
+        self.assertLess(text.index("Invoke-LivehimeStop"), text.index("Set-SlayTheSpireTopMost"))
+        self.assertLess(
+            text.index("Set-SlayTheSpireTopMost"),
+            text.index("Set-AscendViewerTopMost -ProjectRoot $ProjectRoot"),
+        )
+        self.assertIn("game_window_restore_error", text)
+        self.assertIn("viewer_restore_error", text)
+        self.assertLess(text.index("Set-AscendViewerTopMost"), text.index("ReleaseMutex()"))
+
+    def test_windows_daily_trigger_accepts_exact_twenty_slot_repetition(self) -> None:
+        command = (
+            "$at=[DateTime]::SpecifyKind([DateTime]'2026-08-28 08:20:00',"
+            "[DateTimeKind]::Utc);"
+            "$daily=New-ScheduledTaskTrigger -Daily -At $at;"
+            "$template=New-ScheduledTaskTrigger -Once -At $at "
+            "-RepetitionInterval (New-TimeSpan -Minutes 1) "
+            "-RepetitionDuration (New-TimeSpan -Minutes 19);"
+            "$template.Repetition.StopAtDurationEnd=$false;"
+            "$daily.Repetition=$template.Repetition;"
+            "'{0}:{1}:{2}' -f $daily.Repetition.Interval,"
+            "$daily.Repetition.Duration,$daily.Repetition.StopAtDurationEnd"
+        )
+        result = run_powershell(command)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.split(), ["PT1M:PT19M:False"])
+
+    def test_protected_workers_share_livehime_gui_mutex(self) -> None:
+        manual = WORKER.read_text(encoding="utf-8")
+        daily = DAILY_STOP_WATCH.read_text(encoding="utf-8")
+        mutex_name = "Global\\VivhiteBilibiliLiveBridge"
+        self.assertIn(mutex_name, manual)
+        self.assertIn(mutex_name, daily)
+        self.assertIn("WaitOne(0)", daily)
+        self.assertIn("ReleaseMutex()", manual)
+        self.assertIn("ReleaseMutex()", daily)
 
     def test_idle_stop_does_not_launch_livehime(self) -> None:
         text = MODULE.read_text(encoding="utf-8")
@@ -185,11 +347,13 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("Invoke-LivehimeStart", worker)
         self.assertIn("Invoke-LivehimeStop", worker)
         self.assertNotIn("Start-Agent.ps1", worker)
+        self.assertIn("BilibiliLive-DailyStopWatch", installer)
+        self.assertIn("Invoke-BilibiliLiveDailyStopWatch.ps1", installer)
 
     def test_operational_path_has_no_web_api_or_obs_transport(self) -> None:
         combined = "\n".join(
             path.read_text(encoding="utf-8")
-            for path in (MODULE, INSTALL, WORKER, START, STOP, SMOKE)
+            for path in (MODULE, INSTALL, WORKER, DAILY_STOP_WATCH, START, STOP, SMOKE)
         ).lower()
         for forbidden in (
             "startlive",
@@ -213,6 +377,9 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         self.assertIn("once every 60 seconds", text)
         self.assertIn('actual `Streaming`', text)
         self.assertIn("regardless of broadcast state", text)
+        self.assertIn("16:20", text)
+        self.assertIn("16:40", text)
+        self.assertIn("20 checks", text)
 
 
 if __name__ == "__main__":

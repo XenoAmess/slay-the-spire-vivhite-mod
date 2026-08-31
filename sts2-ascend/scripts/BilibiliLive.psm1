@@ -170,6 +170,43 @@ function Get-LivehimeStreamingState {
     return ConvertTo-LivehimeState -StatusCode $latestCode
 }
 
+function Get-BilibiliDailyStopWindow {
+    [CmdletBinding()]
+    param([DateTimeOffset]$UtcNow = [DateTimeOffset]::UtcNow)
+
+    $beijingTimeZone = [TimeZoneInfo]::FindSystemTimeZoneById("China Standard Time")
+    $beijingNow = [TimeZoneInfo]::ConvertTime($UtcNow, $beijingTimeZone)
+    $startWallClock = [DateTime]::SpecifyKind(
+        $beijingNow.Date.AddHours(16).AddMinutes(20),
+        [DateTimeKind]::Unspecified)
+    $windowStart = [DateTimeOffset]::new(
+        $startWallClock,
+        $beijingTimeZone.GetUtcOffset($startWallClock))
+    $windowEnd = $windowStart.AddMinutes(20)
+    $inWindow = $beijingNow -ge $windowStart -and $beijingNow -lt $windowEnd
+    $slot = if ($inWindow) {
+        [int][Math]::Floor(($beijingNow - $windowStart).TotalMinutes)
+    }
+    else {
+        -1
+    }
+
+    return [pscustomobject]@{
+        BeijingNow = $beijingNow
+        WindowStart = $windowStart
+        WindowEnd = $windowEnd
+        InWindow = [bool]$inWindow
+        Slot = [int]$slot
+        CheckCount = 20
+    }
+}
+
+function Test-BilibiliDailyStopRequired {
+    [CmdletBinding()]
+    param([AllowEmptyString()][string]$State)
+    return [string]::Equals($State, "Streaming", [StringComparison]::Ordinal)
+}
+
 function Wait-LivehimeStreamingState {
     param(
         [Parameter(Mandatory = $true)][string[]]$DesiredState,
@@ -476,12 +513,17 @@ function Invoke-LivehimeStop {
     param(
         [Parameter(Mandatory = $true)][string]$LivehimeExe,
         [ValidateRange(5, 120)][int]$TimeoutSeconds = 25,
-        [string]$LogPath = $script:DefaultLogPath
+        [string]$LogPath = $script:DefaultLogPath,
+        [DateTimeOffset]$StopBeforeUtc = [DateTimeOffset]::MaxValue
     )
+    $deadlineUtc = $StopBeforeUtc.ToUniversalTime()
     $state = Get-LivehimeStreamingState -LogPath $LogPath
     if ($state -in @("Idle", "NotRunning")) {
         Write-Host "Bilibili Livehime is already idle."
         return
+    }
+    if ([DateTimeOffset]::UtcNow -ge $deadlineUtc) {
+        throw "Bilibili stop deadline has passed; no Livehime click was sent."
     }
     $window = Wait-LivehimeWindow -LivehimeExe $LivehimeExe
     if ($state -eq "Stopping") {
@@ -495,8 +537,14 @@ function Invoke-LivehimeStop {
     if ($state -ne "Streaming") {
         throw "Refusing to click Livehime while its streaming state is '$state'."
     }
+    if ([DateTimeOffset]::UtcNow -ge $deadlineUtc) {
+        throw "Bilibili stop deadline has passed; no Livehime click was sent."
+    }
     Set-WindowAutomationForeground -WindowHandle $window.MainWindowHandle -TopMost
     try {
+        if ([DateTimeOffset]::UtcNow -ge $deadlineUtc) {
+            throw "Bilibili stop deadline has passed; no Livehime click was sent."
+        }
         $point = Get-LivehimeTogglePoint -WindowHandle $window.MainWindowHandle
         Invoke-LivehimeClick -X $point.X -Y $point.Y
         [void](Wait-LivehimeStreamingState -DesiredState "Idle" -TimeoutSeconds $TimeoutSeconds -LogPath $LogPath)
@@ -629,6 +677,8 @@ function Set-AscendViewerTopMost {
 }
 
 Export-ModuleMember -Function Test-IsAdministrator, ConvertTo-LivehimeState,
-    Get-LivehimeStreamingState, Invoke-LivehimeStart, Invoke-LivehimeStop,
+    Get-LivehimeStreamingState, Get-BilibiliDailyStopWindow,
+    Test-BilibiliDailyStopRequired,
+    Invoke-LivehimeStart, Invoke-LivehimeStop,
     Invoke-LivehimeBridge, Get-SlayTheSpireWindow, Set-SlayTheSpireTopMost,
     Set-AscendViewerTopMost
