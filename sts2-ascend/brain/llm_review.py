@@ -6242,6 +6242,19 @@ def _resume_replay_lineage_resolution(target_package: Path,
 _RETRY_REPLAY_TOTAL_BYTES = 256 * 1024
 _RETRY_EVIDENCE_SCHEMA = 3
 _RETRY_CANDIDATE_FILTER_SCHEMA = 1
+_RETRY_TERMINAL_EVIDENCE_SCHEMA = 1
+_RETRY_TERMINAL_EVIDENCE_STATE = "source_git_graph_unreachable_preserved"
+_RETRY_MATERIALIZATION_FAILURE_FILE = "retry_materialization_failure.json"
+_RETRY_GRAPH_UNREACHABLE_MARKERS = (
+    "needed a single revision",
+    "unable to read tree",
+    "bad tree object",
+    "failed to unpack tree object",
+    "bad object",
+    "missing blob",
+    "missing tree",
+    "pack does not match index",
+)
 _LEGACY_EMPTY_RETRY_PATH_FIELDS = (
     "all_paths",
     "allowed_paths",
@@ -6261,6 +6274,13 @@ _RETRY_SANDBOX_REQUIRED_FILES = (
     "report.md",
     "file_states.json",
     "retry_candidate_inventory.json",
+)
+_RETRY_SANDBOX_TERMINAL_REQUIRED_FILES = (
+    "manifest.json",
+    "report.md",
+    "file_states.json",
+    "wip.patch",
+    _RETRY_MATERIALIZATION_FAILURE_FILE,
 )
 _RETRY_HOST_EVIDENCE_EXCLUDE_PATHSPECS = (
     f":(exclude){_RETRY_SANDBOX_EVIDENCE_ROOT.as_posix()}",
@@ -6478,6 +6498,184 @@ def _publish_manifest_update(package: Path, manifest: dict) -> None:
         temp.unlink(missing_ok=True)
 
 
+def _retry_git_graph_unreachable(command_results) -> bool:
+    """Return whether required raw-clone Git input is durably incomplete."""
+    error = "\n".join(
+        str(getattr(result, "stderr", "") or "")
+        for _label, result in command_results
+        if getattr(result, "returncode", 0) != 0
+    ).lower()
+    return bool(error) and any(
+        marker in error for marker in _RETRY_GRAPH_UNREACHABLE_MARKERS)
+
+
+def _retry_command_failure_records(command_results) -> list[dict]:
+    records: list[dict] = []
+    for label, result in command_results:
+        if getattr(result, "returncode", 0) == 0:
+            continue
+        records.append({
+            "command": label,
+            "returncode": int(getattr(result, "returncode", -1)),
+            "stderr": str(getattr(result, "stderr", "") or "")[:1200],
+        })
+    return records
+
+
+_RETRY_TERMINAL_CURRENT_FIELDS = (
+    "retry_evidence_state",
+    "retry_evidence_terminal",
+    "retry_evidence_automatic_retry",
+    "retry_evidence_rebuildable",
+    "retry_evidence_rebuild_requires",
+    "retry_evidence_error_code",
+    "retry_evidence_error",
+    "retry_evidence_failure_record",
+    "retry_evidence_failure_observed_at",
+)
+
+
+def _clear_retry_terminal_state(manifest: dict) -> dict:
+    cleared = dict(manifest)
+    for field in _RETRY_TERMINAL_CURRENT_FIELDS:
+        cleared.pop(field, None)
+    return cleared
+
+
+def _retry_terminal_history_record(manifest: dict) -> dict:
+    return {
+        "schema": manifest.get("retry_evidence_schema"),
+        "state": manifest.get("retry_evidence_state"),
+        "materialized_at": manifest.get("retry_evidence_failure_observed_at"),
+        "error_code": manifest.get("retry_evidence_error_code"),
+        "error": manifest.get("retry_evidence_error"),
+        "failure_record": manifest.get("retry_evidence_failure_record"),
+        "migration_note": (
+            "The raw clone Git graph was unreachable. Its full original package "
+            "remained preserved until an explicit rebuild source became available."),
+    }
+
+
+def _retry_terminal_evidence_is_complete(package: Path, manifest: dict) -> bool:
+    if (manifest.get("retry_evidence_state")
+            != _RETRY_TERMINAL_EVIDENCE_STATE
+            or manifest.get("retry_evidence_terminal") is not True
+            or manifest.get("retry_evidence_ready") is True
+            or manifest.get("retry_evidence_automatic_retry") is not False
+            or manifest.get("retry_evidence_failure_record")
+            != _RETRY_MATERIALIZATION_FAILURE_FILE):
+        return False
+    failure_path = package / _RETRY_MATERIALIZATION_FAILURE_FILE
+    try:
+        failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return bool(
+        failure.get("schema") == _RETRY_TERMINAL_EVIDENCE_SCHEMA
+        and failure.get("state") == _RETRY_TERMINAL_EVIDENCE_STATE
+        and failure.get("package") == package.name
+        and str(failure.get("pre_head") or "")
+        == str(manifest.get("pre_head") or "")
+        and failure.get("raw_package_preserved") is True)
+
+
+def _publish_unreachable_retry_evidence(
+    package: Path,
+    manifest: dict,
+    repo: Path,
+    command_results,
+    log=print,
+) -> dict:
+    """Persist one terminal materialization state without altering raw evidence.
+
+    This terminal applies only to repeatedly deriving a Git candidate.  The
+    package remains replayable as complete preserved forensic evidence, and a
+    later validated candidate (or an explicit force rebuild after repairing the
+    raw clone) can replace this state.
+    """
+    failures = _retry_command_failure_records(command_results)
+    observed_at = str(manifest.get("retry_evidence_failure_observed_at") or (
+        time.strftime("%Y-%m-%d %H:%M:%S")))
+    direct_files: list[dict] = []
+    try:
+        direct_children = sorted(package.iterdir(), key=lambda path: path.name)
+    except OSError:
+        direct_children = []
+    for path in direct_children:
+        if (path.name in {"manifest.json", _RETRY_MATERIALIZATION_FAILURE_FILE}
+                or path.name.startswith(".") or path.is_symlink()
+                or not path.is_file()):
+            continue
+        try:
+            direct_files.append({"name": path.name, "bytes": path.stat().st_size})
+        except OSError:
+            direct_files.append({"name": path.name, "state": "unreadable_preserved"})
+    failure_record = {
+        "schema": _RETRY_TERMINAL_EVIDENCE_SCHEMA,
+        "state": _RETRY_TERMINAL_EVIDENCE_STATE,
+        "package": package.name,
+        "pre_head": str(manifest.get("pre_head") or ""),
+        "observed_at": observed_at,
+        "automatic_retry": False,
+        "raw_package_preserved": True,
+        "raw_sandbox_present": (package / "raw_sandbox").is_dir(),
+        "raw_repo_present": repo.is_dir(),
+        "snapshot_complete": bool(manifest.get("snapshot_complete")),
+        "provider_work_started": bool(manifest.get("provider_work_started")),
+        "direct_evidence_files": direct_files,
+        "failures": failures,
+        "rebuild": {
+            "state": "explicit_source_required",
+            "accepted_sources": [
+                "validated_candidate.patch",
+                "repaired raw_sandbox plus force_rebuild=True",
+            ],
+        },
+    }
+    failure_path = package / _RETRY_MATERIALIZATION_FAILURE_FILE
+    failure_temp = package / (
+        f".{_RETRY_MATERIALIZATION_FAILURE_FILE}.{os.getpid()}."
+        f"{threading.get_ident()}.{time.time_ns()}.tmp")
+    try:
+        failure_temp.write_text(
+            json.dumps(failure_record, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(failure_temp, failure_path)
+    finally:
+        failure_temp.unlink(missing_ok=True)
+
+    error = " ".join(
+        record.get("stderr", "").strip() for record in failures)[:1200]
+    updated = dict(manifest)
+    for field in (
+        "retry_candidate_patch", "retry_candidate_inventory",
+        "retry_candidate_bytes", "retry_candidate_sha256",
+        "retry_candidate_path_count", "retry_inventory_path_count",
+        "retry_candidate_filter_schema",
+    ):
+        updated.pop(field, None)
+    updated.update({
+        "retry_evidence_ready": False,
+        "retry_evidence_state": _RETRY_TERMINAL_EVIDENCE_STATE,
+        "retry_evidence_terminal": True,
+        "retry_evidence_automatic_retry": False,
+        "retry_evidence_rebuildable": True,
+        "retry_evidence_rebuild_requires": (
+            "validated_candidate.patch or repaired raw_sandbox with force_rebuild=True"),
+        "retry_evidence_error_code": "raw_clone_git_graph_unreachable",
+        "retry_evidence_error": error,
+        "retry_evidence_failure_record": _RETRY_MATERIALIZATION_FAILURE_FILE,
+        "retry_evidence_failure_observed_at": observed_at,
+        "retry_evidence_failure_count": int(
+            manifest.get("retry_evidence_failure_count") or 0) + 1,
+        "retry_candidate_auto_apply": False,
+    })
+    _publish_manifest_update(package, updated)
+    log("[llm] raw clone Git graph is unreachable; preserved the complete "
+        f"failure package and stopped automatic materialization retries: {package.name}")
+    return updated
+
+
 def _legacy_empty_retry_evidence_is_complete(
     package: Path,
     manifest: dict,
@@ -6643,7 +6841,9 @@ def _materialize_legacy_empty_retry_evidence(
         inventory_temp.unlink(missing_ok=True)
 
 
-def _materialize_retry_evidence(package: Path, log=print) -> dict:
+def _materialize_retry_evidence(
+    package: Path, log=print, *, force_rebuild: bool = False,
+) -> dict:
     """Build a review-only candidate from a recovered raw clone.
 
     The raw clone's HEAD, refs, stash, worktree, index and object database remain
@@ -6656,6 +6856,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     candidate_path = package / "retry_candidate.patch"
     inventory_path = package / "retry_candidate_inventory.json"
+    validated = package / "validated_candidate.patch"
     repo = _retry_raw_repo(package)
     if (manifest.get("retry_evidence_ready") is True
             and manifest.get("retry_evidence_schema") == _RETRY_EVIDENCE_SCHEMA
@@ -6663,9 +6864,14 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             and (repo is None or manifest.get("retry_candidate_filter_schema")
                  == _RETRY_CANDIDATE_FILTER_SCHEMA)):
         return manifest
+    terminal_preserved = _retry_terminal_evidence_is_complete(package, manifest)
+    if terminal_preserved and not force_rebuild and not validated.is_file():
+        return manifest
 
     previous_schema = manifest.get("retry_evidence_schema")
     previous_history = list(manifest.get("retry_evidence_history") or [])
+    if terminal_preserved:
+        previous_history.append(_retry_terminal_history_record(manifest))
     needs_filter_upgrade = bool(
         repo is not None
         and manifest.get("retry_evidence_ready") is True
@@ -6690,11 +6896,10 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                 "clone object database. Objects are intentionally preserved as "
                 "forensic evidence; schema 3 never writes there."),
         })
-    if repo is None:
+    if repo is None or validated.is_file():
         # Commit/CAS conflict packages can intentionally retain only the verified
-        # snapshot.  Promote its accepted-only patch; never fall back to a noisy
-        # all-files WIP merely because the raw clone was already discarded.
-        validated = package / "validated_candidate.patch"
+        # snapshot. A validated patch also explicitly rebuilds a package whose raw
+        # Git graph became unreachable. Never fall back to a noisy all-files WIP.
         if not validated.is_file():
             upgraded = _materialize_legacy_empty_retry_evidence(
                 package, manifest, previous_history, candidate_path,
@@ -6737,7 +6942,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                 encoding="utf-8")
             _replace_with_retry(candidate_temp, candidate_path)
             _replace_with_retry(inventory_temp, inventory_path)
-            manifest = dict(manifest)
+            manifest = _clear_retry_terminal_state(manifest)
             manifest.update({
                 "retry_evidence_ready": True,
                 "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
@@ -6807,6 +7012,23 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             else subprocess.CompletedProcess([], 0, "", ""))
         read_tree = _run_captured_stop_aware(
             ["git", "-C", str(repo), "read-tree", pre_head], env=env, timeout=60)
+        source_commands = (
+            ("verify_pre_head", verify),
+            ("enumerate_refs", refs_result),
+            ("enumerate_stash", stash_result),
+            ("read_raw_index", raw_index_names),
+            ("read_pre_head_tree", read_tree),
+        )
+        if any(result.returncode != 0 for _label, result in source_commands):
+            if _retry_git_graph_unreachable(source_commands):
+                return _publish_unreachable_retry_evidence(
+                    package, manifest, repo,
+                    (*source_commands, ("read_raw_head", raw_head_result)),
+                    log=log)
+            errors = " ".join(
+                (result.stderr or "").strip()
+                for _label, result in source_commands if result.returncode != 0)
+            raise OSError("raw clone 候选 patch 物化失败：" + errors[:800])
         stage = _run_captured_stop_aware(
             ["git", "-C", str(repo), "add", "--all", "--force", "--", ".",
              *_RETRY_HOST_EVIDENCE_EXCLUDE_PATHSPECS],
@@ -6814,11 +7036,15 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
         names = _run_captured_stop_aware(
             ["git", "-C", str(repo), "diff", "--cached", "--name-only", "-z",
              pre_head, "--"], env=env, timeout=120)
-        commands = (verify, raw_head_result, refs_result, stash_result,
-                    raw_index_names, read_tree, stage, names)
-        if any(item.returncode != 0 for item in commands):
-            errors = " ".join((item.stderr or "").strip() for item in commands
-                              if item.returncode != 0)
+        worktree_commands = (("stage_raw_worktree", stage),
+                             ("diff_raw_worktree", names))
+        if any(result.returncode != 0 for _label, result in worktree_commands):
+            if _retry_git_graph_unreachable(worktree_commands):
+                return _publish_unreachable_retry_evidence(
+                    package, manifest, repo, worktree_commands, log=log)
+            errors = " ".join(
+                (result.stderr or "").strip()
+                for _label, result in worktree_commands if result.returncode != 0)
             raise OSError("raw clone 候选 patch 物化失败：" + errors[:800])
         worktree_paths, worktree_host_evidence = _split_retry_host_evidence_paths(
             value for value in names.stdout.split("\0") if value)
@@ -6989,7 +7215,8 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
                     env=env, timeout=60)
                 if parent.returncode == 0 and parent.stdout.strip():
                     stash[key] = parent.stdout.strip()
-        raw_head = raw_head_result.stdout.strip()
+        raw_head = (raw_head_result.stdout.strip()
+                    if raw_head_result.returncode == 0 else "")
         objects: list[tuple[str, str, str, bool]] = []
         if raw_head and raw_head != pre_head:
             objects.append(("head_commit", "HEAD", raw_head, False))
@@ -7076,7 +7303,7 @@ def _materialize_retry_evidence(package: Path, log=print) -> dict:
             encoding="utf-8")
         _replace_with_retry(candidate_temp, candidate_path)
         _replace_with_retry(inventory_temp, inventory_path)
-        manifest = dict(manifest)
+        manifest = _clear_retry_terminal_state(manifest)
         manifest.update({
             "retry_evidence_ready": True,
             "retry_evidence_schema": _RETRY_EVIDENCE_SCHEMA,
@@ -7204,14 +7431,18 @@ def _mount_failed_review_evidence(
             if (manifest.get("snapshot_deferred")
                     or manifest.get("raw_sandbox_deferred")):
                 raise _RetryEvidenceUnavailable(f"失败包仍在异步补全：{name}")
-            if (manifest.get("retry_evidence_ready") is not True
-                    or manifest.get("retry_evidence_schema") != _RETRY_EVIDENCE_SCHEMA
-                    or manifest.get("retry_candidate_patch") != "retry_candidate.patch"
-                    or manifest.get("retry_candidate_inventory")
-                    != "retry_candidate_inventory.json"):
+            terminal_preserved = _retry_terminal_evidence_is_complete(
+                package, manifest)
+            candidate_ready = bool(
+                manifest.get("retry_evidence_ready") is True
+                and manifest.get("retry_evidence_schema") == _RETRY_EVIDENCE_SCHEMA
+                and manifest.get("retry_candidate_patch") == "retry_candidate.patch"
+                and manifest.get("retry_candidate_inventory")
+                == "retry_candidate_inventory.json")
+            if not candidate_ready and not terminal_preserved:
                 raise _RetryEvidenceUnavailable(
                     f"失败包 {name} 未声明 schema {_RETRY_EVIDENCE_SCHEMA} "
-                    "完整 retry candidate；wip.patch 不能替代")
+                    "完整 retry candidate，也未声明完整保全的终止物化状态")
             declared_attempts = _normalize_salvage_package_names(
                 manifest.get("replay_attempt_packages") or [])
             if role == "target" and set(declared_attempts) != set(attempts):
@@ -7225,7 +7456,10 @@ def _mount_failed_review_evidence(
                     raise _RetryEvidenceUnavailable(
                         f"attempt {name} 未指向本次 target：{requested}")
 
-            missing = [relative for relative in _RETRY_SANDBOX_REQUIRED_FILES
+            required_files = (_RETRY_SANDBOX_TERMINAL_REQUIRED_FILES
+                              if terminal_preserved
+                              else _RETRY_SANDBOX_REQUIRED_FILES)
+            missing = [relative for relative in required_files
                        if not (package / relative).is_file()]
             patch_files = sorted(
                 path for path in package.iterdir()
@@ -7237,26 +7471,42 @@ def _mount_failed_review_evidence(
                     f"失败包 {name} 缺少完整证据：{detail}")
 
             try:
-                inventory = json.loads((
-                    package / "retry_candidate_inventory.json").read_text(
-                        encoding="utf-8"))
-                inventory_paths = inventory.get("paths")
-                if not isinstance(inventory_paths, list):
-                    raise TypeError("paths 不是列表")
                 pre_head = str(manifest.get("pre_head") or "")
-                candidate_path = package / "retry_candidate.patch"
-                if (not pre_head or inventory.get("package") != name
-                        or str(inventory.get("pre_head") or "") != pre_head
-                        or inventory.get("schema") != _RETRY_EVIDENCE_SCHEMA
-                        or not candidate_path.is_file()
-                        or candidate_path.stat().st_size
-                        != (int(manifest["retry_candidate_bytes"])
-                            if manifest.get("retry_candidate_bytes") is not None else -1)):
-                    raise ValueError("candidate/inventory 与 manifest 身份或大小不一致")
+                if not pre_head:
+                    raise ValueError("manifest pre_head is missing")
                 file_states = json.loads((package / "file_states.json").read_text(
                     encoding="utf-8"))
                 if not isinstance(file_states, list):
                     raise TypeError("file_states 不是列表")
+                if terminal_preserved:
+                    inventory_paths = []
+                    for field in _LEGACY_EMPTY_RETRY_PATH_FIELDS:
+                        values = manifest.get(field)
+                        if isinstance(values, list):
+                            inventory_paths.extend(str(value) for value in values)
+                    inventory_paths.extend(
+                        str(state.get("path")) for state in file_states
+                        if isinstance(state, dict) and state.get("path"))
+                    inventory_paths = list(dict.fromkeys(inventory_paths))
+                else:
+                    inventory = json.loads((
+                        package / "retry_candidate_inventory.json").read_text(
+                            encoding="utf-8"))
+                    inventory_paths = inventory.get("paths")
+                    if not isinstance(inventory_paths, list):
+                        raise TypeError("paths 不是列表")
+                    if (inventory.get("package") != name
+                            or str(inventory.get("pre_head") or "") != pre_head
+                            or inventory.get("schema") != _RETRY_EVIDENCE_SCHEMA):
+                        raise ValueError(
+                            "candidate/inventory identity does not match manifest")
+                candidate_path = package / "retry_candidate.patch"
+                if (candidate_ready and (
+                        not candidate_path.is_file()
+                        or candidate_path.stat().st_size
+                        != (int(manifest["retry_candidate_bytes"])
+                            if manifest.get("retry_candidate_bytes") is not None else -1))):
+                    raise ValueError("candidate/inventory 与 manifest 身份或大小不一致")
             except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 raise _RetryEvidenceUnavailable(
                     f"失败包 {name} inventory 不完整：{exc}") from exc
@@ -7378,6 +7628,13 @@ def _mount_failed_review_evidence(
                 "package": name,
                 "role": role,
                 "manifest_pre_head": str(manifest.get("pre_head") or ""),
+                "retry_evidence_state": (
+                    manifest.get("retry_evidence_state") or "candidate_ready"),
+                "candidate_materialization_complete": candidate_ready,
+                "materialization_terminal": terminal_preserved,
+                "materialization_failure_record": (
+                    f"packages/{name}/{_RETRY_MATERIALIZATION_FAILURE_FILE}"
+                    if terminal_preserved else ""),
                 "root_files": root_file_records,
                 "candidate_patches": [
                     f"packages/{name}/{path.name}" for path in patch_files],
@@ -7387,6 +7644,9 @@ def _mount_failed_review_evidence(
                 "changed_file_states": changed_states,
                 "inventory_path_count": len(seen_paths),
                 "raw_clone_export": (
+                    "preserved-only because its Git graph is unreachable; original "
+                    "raw_sandbox remains in the failure package"
+                    if terminal_preserved else
                     "exact inventory paths only; original raw_sandbox remains in "
                     "the failure package"),
             })
@@ -7399,6 +7659,11 @@ def _mount_failed_review_evidence(
             "requested_packages": requested,
             "attempt_packages": attempts,
             "packages": packages,
+            "candidate_materialization_complete": all(
+                item["candidate_materialization_complete"] for item in packages),
+            "terminal_materialization_packages": [
+                item["package"] for item in packages
+                if item["materialization_terminal"]],
             "files": records,
             "file_count": len(records),
             "total_bytes": sum(int(record["bytes"]) for record in records),

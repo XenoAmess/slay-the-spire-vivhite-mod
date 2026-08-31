@@ -55,6 +55,8 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
             "raw_sandbox_deferred": False,
             "retry_evidence_ready": True,
             "retry_evidence_schema": llm_review._RETRY_EVIDENCE_SCHEMA,
+            "retry_candidate_filter_schema": (
+                llm_review._RETRY_CANDIDATE_FILTER_SCHEMA),
             "retry_candidate_patch": "retry_candidate.patch",
             "retry_candidate_inventory": "retry_candidate_inventory.json",
             "retry_candidate_bytes": len(marker * 180_000),
@@ -93,6 +95,61 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         (package / "model_output_tail.txt").write_text(
             "model tail", encoding="utf-8")
         return package
+
+    def _unreachable_graph_package(
+        self, name: str, *, target: str = "", attempts=(),
+    ) -> tuple[Path, Path, bytes]:
+        package = self.salvage / name
+        repo = package / "raw_sandbox" / "repo"
+        policy = repo / "sts2-ascend" / "brain" / "policy.py"
+        policy.parent.mkdir(parents=True)
+        _git(repo, "init", "--quiet")
+        _git(repo, "config", "user.email", "test@example.invalid")
+        _git(repo, "config", "user.name", "test")
+        policy.write_text("VALUE = 'base'\n", encoding="utf-8")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "--quiet", "-m", "base")
+        pre_head = _git(repo, "rev-parse", "HEAD")
+        tree = _git(repo, "show", "-s", "--format=%T", pre_head)
+        tree_path = repo / ".git" / "objects" / tree[:2] / tree[2:]
+        tree_bytes = tree_path.read_bytes()
+
+        policy.write_text("VALUE = 'recoverable-wip'\n", encoding="utf-8")
+        captured = package / "files" / "sts2-ascend" / "brain" / "policy.py"
+        captured.parent.mkdir(parents=True)
+        captured.write_text("VALUE = 'recoverable-wip'\n", encoding="utf-8")
+        manifest = {
+            "schema": 1,
+            "pre_head": pre_head,
+            "snapshot_complete": True,
+            "snapshot_deferred": False,
+            "raw_sandbox_included": True,
+            "raw_sandbox_deferred": False,
+            "provider_work_started": True,
+            "all_paths": ["sts2-ascend/brain/policy.py"],
+            "allowed_paths": ["sts2-ascend/brain/policy.py"],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "replay_target": target or name,
+            "replay_role": "attempt_evidence" if target else "target",
+            "replay_attempt_packages": list(attempts) if not target else None,
+        }
+        (package / "manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8")
+        (package / "report.md").write_text(
+            "RECOVERABLE_REPORT\n", encoding="utf-8")
+        (package / "file_states.json").write_text(json.dumps([{
+            "path": "sts2-ascend/brain/policy.py", "kind": "file",
+        }]), encoding="utf-8")
+        (package / "wip.patch").write_bytes(b"RECOVERABLE_WIP_PATCH\n")
+
+        # Keep the commit object and all worktree/snapshot evidence, but remove the
+        # required tree object to reproduce a historically incomplete raw clone.
+        tree_path.chmod(stat.S_IREAD | stat.S_IWRITE)
+        tree_path.unlink()
+        return package, tree_path, tree_bytes
 
     def _legacy_empty_package(self, name: str) -> Path:
         package = self.salvage / name
@@ -298,6 +355,99 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         self.assertFalse(mounted_root.exists())
         self.assertTrue(target.is_dir())
         self.assertTrue(attempt.is_dir())
+
+    def test_unreachable_attempt_becomes_terminal_preserved_evidence(self) -> None:
+        target = self._package(
+            "pkg-target", b"T", attempts=["pkg-unreachable-attempt"])
+        attempt, _tree_path, _tree_bytes = self._unreachable_graph_package(
+            "pkg-unreachable-attempt", target="pkg-target")
+        raw_git = attempt / "raw_sandbox" / "repo" / ".git"
+
+        def git_snapshot() -> dict[str, bytes]:
+            return {
+                path.relative_to(raw_git).as_posix(): path.read_bytes()
+                for path in raw_git.rglob("*") if path.is_file()
+            }
+
+        before = git_snapshot()
+        messages: list[str] = []
+        terminal = llm_review._materialize_retry_evidence(
+            attempt, log=messages.append)
+
+        self.assertEqual(git_snapshot(), before)
+        self.assertEqual(
+            terminal["retry_evidence_state"],
+            llm_review._RETRY_TERMINAL_EVIDENCE_STATE)
+        self.assertTrue(terminal["retry_evidence_terminal"])
+        self.assertFalse(terminal["retry_evidence_ready"])
+        self.assertFalse(terminal["retry_evidence_automatic_retry"])
+        self.assertEqual(terminal["retry_evidence_failure_count"], 1)
+        self.assertTrue((attempt / llm_review._RETRY_MATERIALIZATION_FAILURE_FILE)
+                        .is_file())
+        self.assertTrue(any("stopped automatic materialization retries" in message
+                            for message in messages))
+
+        # The durable terminal state is returned without another Git invocation.
+        with mock.patch.object(
+                llm_review, "_run_captured_stop_aware",
+                side_effect=AssertionError("terminal package retried Git")) as git_run:
+            again = llm_review._materialize_retry_evidence(
+                attempt, log=lambda _message: None)
+        git_run.assert_not_called()
+        self.assertEqual(again["retry_evidence_failure_count"], 1)
+
+        sandbox = self.root / "sandbox-unreachable-attempt"
+        sandbox.mkdir()
+        mount = llm_review._mount_failed_review_evidence(
+            sandbox, [target.name], [attempt.name], log=lambda _message: None)
+        index = mount["index"]
+        self.assertTrue(index["complete"])
+        self.assertFalse(index["candidate_materialization_complete"])
+        self.assertEqual(
+            index["terminal_materialization_packages"], [attempt.name])
+        attempt_entry = index["packages"][1]
+        self.assertTrue(attempt_entry["materialization_terminal"])
+        mounted_attempt = Path(mount["root"]) / "packages" / attempt.name
+        self.assertEqual((mounted_attempt / "wip.patch").read_bytes(),
+                         b"RECOVERABLE_WIP_PATCH\n")
+        self.assertEqual(
+            (mounted_attempt / "captured_files" / "sts2-ascend" / "brain"
+             / "policy.py").read_text(encoding="utf-8"),
+            "VALUE = 'recoverable-wip'\n")
+        self.assertEqual(
+            (mounted_attempt / "changed_files" / "raw_worktree" / "sts2-ascend"
+             / "brain" / "policy.py").read_text(encoding="utf-8"),
+            "VALUE = 'recoverable-wip'\n")
+        llm_review._verify_failed_review_evidence(sandbox, mount)
+
+    def test_terminal_package_rebuilds_from_validated_candidate(self) -> None:
+        package, tree_path, _tree_bytes = self._unreachable_graph_package(
+            "pkg-rebuild")
+        terminal = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        self.assertTrue(terminal["retry_evidence_terminal"])
+        self.assertFalse(tree_path.exists())
+
+        validated = b"VALIDATED_RECOVERABLE_CANDIDATE\n"
+        (package / "validated_candidate.patch").write_bytes(validated)
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["validated_candidate_paths"] = [
+            "sts2-ascend/brain/policy.py"]
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        rebuilt = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        self.assertTrue(rebuilt["retry_evidence_ready"])
+        self.assertNotIn("retry_evidence_terminal", rebuilt)
+        self.assertNotIn("retry_evidence_state", rebuilt)
+        self.assertEqual((package / "retry_candidate.patch").read_bytes(), validated)
+        self.assertTrue((package / llm_review._RETRY_MATERIALIZATION_FAILURE_FILE)
+                        .is_file())
+        self.assertEqual(
+            rebuilt["retry_evidence_history"][-1]["state"],
+            llm_review._RETRY_TERMINAL_EVIDENCE_STATE)
+        self.assertEqual(rebuilt["retry_candidate_path_count"], 1)
 
     def test_modified_mount_fails_closed_and_original_package_remains(self) -> None:
         package = self._package("pkg-target", b"X")
