@@ -125,7 +125,8 @@ class CardMechanics:
     stores the final integer printed value or coefficient after the complete
     balance sequence (``ceil(old / 5)`` followed by the approved doublings);
     ``drain_percent_mode`` explains whether it is flat, temporary, global,
-    per-Margin, or per-X.  No percentage field has an upper bound.
+    per-drawn-card type, per-Margin, or per-X.  No percentage field has an
+    upper bound.
     """
 
     energy: int | str
@@ -484,6 +485,7 @@ _HYBRID_CARDS = (
           effects=("damage_plus_margin_before_life_payment",)),
     _card("CHROMATIC_SEQUENCE", "Chromatic Sequence", "综合色序", "skill",
           "uncommon", HYBRID, energy=1, life=4, draw=4, drain=4,
+          drain_mode="per_drawn_skill",
           effects=("drawn_attack_grants_1_margin",
                    "drawn_skill_grants_4_temporary_drain_percent",
                    "drawn_ability_grants_both")),
@@ -1011,7 +1013,7 @@ def character_build_synergy(
             entry.mechanics.drain_percent_mode in (
                 "global_combat", "temporary_this_turn", "next_attack_bonus",
                 "global_growth_per_attack_that_drain_heals",
-                "per_life_cost_prevented_by_margin")
+                "per_life_cost_prevented_by_margin", "per_drawn_skill")
             or entry.stable_id in (
                 "COLOR_CONSERVATION", "CRIMSON_CONSERVATION_LAW",
                 "INFINITE_CANVAS")))

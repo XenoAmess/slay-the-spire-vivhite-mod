@@ -292,25 +292,48 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
                 "VIVHITE_CARD_INFINITE_CANVAS").mechanics.growth,
             4,
         )
+        sequence = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_CHROMATIC_SEQUENCE")
+        self.assertEqual(
+            sequence.mechanics.drain_percent_mode,
+            "per_drawn_skill",
+        )
         self.assertIn(
             "drawn_skill_grants_4_temporary_drain_percent",
-            VIVHITE_STRATEGY.card(
-                "VIVHITE_CARD_CHROMATIC_SEQUENCE").mechanics.effects,
+            sequence.mechanics.effects,
         )
         with self.assertRaises(ValueError):
             CardMechanics(energy=1, drain_percent=1.2)
 
         # Upgraded values arrive from the live API already at the final doubled
-        # values. Consume each integer unchanged: 30->60, 4->8, and 2->4.
-        upgraded_examples = (
-            ("Drain", 60),
-            ("DrainPerMargin", 8),
-            ("DrainGrowth", 4),
-        )
-        for name, expected in upgraded_examples:
-            with self.subTest(name=name):
+        # values. Consume every runtime Drain-family integer unchanged instead
+        # of applying a second scaling pass in Brain.
+        upgraded_values = {
+            ("CRIMSON_AREA", "Drain"): 20,
+            ("TRICHROMATIC_WALTZ", "Drain"): 16,
+            ("COMPOSITE_COLOR_WHEEL", "Drain"): 24,
+            ("DIFFERENTIAL_SAMPLING", "Drain"): 12,
+            ("CHIAROSCURO", "Drain"): 28,
+            ("SPECTRAL_INTEGRAL", "Drain"): 12,
+            ("GOLDEN_COMPOSITION", "Drain"): 24,
+            ("RIEMANN_STAR_ARRAY", "Drain"): 16,
+            ("CHROMATIC_TRANSITION", "Drain"): 12,
+            ("COMPOSITE_COLOR_FIELD", "Drain"): 12,
+            ("COMPLEMENTARY_AFTERIMAGE", "Drain"): 20,
+            ("DEFINITE_CRIMSON_INTEGRAL", "Drain"): 60,
+            ("INFINITE_CANVAS", "DrainGrowth"): 4,
+            ("PERFECT_SYNTHESIS", "Drain"): 40,
+            ("GOLDEN_RATIO", "Drain"): 16,
+            ("ASTRAL_MEASURE", "DrainPerMargin"): 8,
+            ("CHROMATIC_SEQUENCE", "DrainPerSkill"): 4,
+            ("UNIFIED_FIELD_THEORY", "DrainPerMargin"): 4,
+            ("CHROMATIC_LIMIT", "DrainPerX"): 16,
+        }
+        for (stable_id, name), expected in upgraded_values.items():
+            with self.subTest(card=stable_id, name=name):
                 self.assertEqual(
                     card_dynamic_value({
+                        "card_id": f"VIVHITE_CARD_{stable_id}",
                         "dynamic_values": [{
                             "name": name,
                             "current_value": expected,
@@ -464,17 +487,12 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             for class_name in classes
         }
 
-        # The strategy component owns the newly approved 61-card brain contract;
-        # the C# implementation is a separate component and may land just before
-        # or after this test. Accept exactly that one explicit hand-off gap only.
-        pending_ritual = {
-            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
-        }
+        self.assertEqual(len(classes), 61)
         self.assertEqual(len(classes), len(production_ids))
-        self.assertFalse(production_ids - VIVHITE_CARD_IDS)
-        self.assertIn(len(production_ids), (60, 61))
-        self.assertTrue(
-            (VIVHITE_CARD_IDS - production_ids) in (set(), pending_ritual))
+        self.assertEqual(production_ids, VIVHITE_CARD_IDS)
+        for card_id in production_ids:
+            with self.subTest(card_id=card_id):
+                self.assertIsNotNone(VIVHITE_STRATEGY.card(card_id))
 
 
 class CharacterStrategyResolutionTests(unittest.TestCase):
@@ -1041,6 +1059,31 @@ class CharacterStrategyDynamicEstimateTests(unittest.TestCase):
         self.assertIn("drain=60%/27hp", five_note)
         self.assertIn("drain=120%/108hp", ten_note)
 
+    def test_aoe_multihit_drain_aggregates_once_before_ceiling(self) -> None:
+        synthesis = self._card(
+            "VIVHITE_CARD_PERFECT_SYNTHESIS", "Attack",
+            LifeCost=16, Damage=1, Drain=32)
+        score, note = estimate_character_card(
+            VIVHITE_STRATEGY,
+            synthesis,
+            current_hp=50,
+            max_hp=100,
+            enemies=[
+                self._enemy(100, index=0),
+                self._enemy(100, index=1),
+                self._enemy(100, index=2),
+            ],
+            target_index=0,
+            player_powers=[],
+            energy=3,
+        )
+
+        # Fifteen total HP loss (3 enemies x 5 hits) at 32% heals
+        # ceil(15 * .32) = 5 once. Per-target or per-hit rounding would heal 6
+        # or 15 respectively.
+        self.assertAlmostEqual(score, -15.75)
+        self.assertIn("drain=32%/5hp", note)
+
     def test_global_and_temporary_drain_engines_gain_observed_attack_value(self) -> None:
         spectral = self._card(
             "VIVHITE_CARD_SPECTRAL_INTEGRAL", "Power",
@@ -1211,6 +1254,22 @@ class CharacterStrategyBuildSynergyTests(unittest.TestCase):
             IRONCLAD_STRATEGY, candidate, [attack] * 100)
         self.assertGreater(hundred, ten * 9)
         self.assertEqual((ironclad, note), (0.0, ""))
+
+    def test_chromatic_sequence_is_a_drain_engine_for_crimson_builds(self) -> None:
+        candidate = self._card("VIVHITE_CARD_CRIMSON_AREA")
+        sequence_score, note = character_build_synergy(
+            VIVHITE_STRATEGY,
+            candidate,
+            [self._card("VIVHITE_CARD_CHROMATIC_SEQUENCE")],
+        )
+        plain_bridge_score, _ = character_build_synergy(
+            VIVHITE_STRATEGY,
+            candidate,
+            [self._card("VIVHITE_CARD_CONSERVED_RECURRENCE")],
+        )
+
+        self.assertGreater(sequence_score, plain_bridge_score)
+        self.assertIn("汲取引擎×1", note)
 
 
 class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
