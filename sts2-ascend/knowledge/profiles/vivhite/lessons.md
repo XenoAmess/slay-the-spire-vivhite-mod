@@ -95,3 +95,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_CONVERGENCE_VERDICT(17分/2局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3局)，VIVHITE_CARD_CHROMATIC_SEQUENCE(22分/3局)
 - 策略进化：block_safety: 1.05 → 1.10（普通战斗阵亡，略微上调防御权重）；exploration_rate: 0.196 → 0.190（经验累积，探索衰减）
 - 生涯战绩：0/5 胜，当前目标进阶 0
+
+## 第 6 局复盘（2026-08-31 22:22）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, ROLLING_BOULDER, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_PROOF_OF_TERMINATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, FISTICUFFS, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：CANDELABRA, VAMBRACE
+- 战斗记录：F7 Monster战 掉血8; F8 Monster战 掉血23; F11 Monster战 掉血13; F12 Elite战 掉血27; F15 Monster战 掉血0; F17 Boss战 掉血78｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_EVENT_LOOP(34分/3局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/2局)，VIVHITE_CARD_CHIAROSCURO(34分/3局)，VIVHITE_CARD_ASTRAL_SEARCH(33分/3局)，VIVHITE_CARD_CHROMATIC_TRANSITION(32分/2局)
+- 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/2局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/2局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.45 → 1.50（Boss 长战磨死（6回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.20 → 4.50（Boss 高血进场长战死（100%，6回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.00 → 6.50（Boss 高血进场长战死（6回合），缺口越深纠偏上限越高）；exploration_rate: 0.190 → 0.184（经验累积，探索衰减）
+- 生涯战绩：0/6 胜，当前目标进阶 0

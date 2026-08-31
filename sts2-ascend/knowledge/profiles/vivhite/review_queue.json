@@ -68,53 +68,59 @@
    "replay_target": "20260831-200515-1788177915907021900-8589e247",
    "retry_count": 1,
    "retry_after": 1788185876.0642152
+  },
+  {
+   "run": 1,
+   "time": "2026-08-30 20:40:03",
+   "retry_group": "20260830-204003-1788093603538089400-2de10020",
+   "replay_target": "20260830-204003-1788093603538089400-2de10020",
+   "salvage_packages": [
+    "20260830-204003-1788093603538089400-2de10020"
+   ],
+   "salvage_attempts": [
+    "20260830-211435-1788095675232657900-93411a87",
+    "20260831-000351-1788105831028859000-39a4013a",
+    "20260831-002214-1788106934471900000-39ff7392",
+    "20260831-003654-1788107814855755500-90570344",
+    "20260831-005534-1788108934779063200-c2f6a548",
+    "20260831-153706-1788161826249532600-9082cba2",
+    "20260831-161753-1788164273155263100-eca1c506",
+    "20260831-190824-1788174504230356100-23ba9b51",
+    "20260831-192734-1788175654157339700-4e25bb60",
+    "20260831-194437-1788176677740156700-4d0bb1cf"
+   ],
+   "evidence_only": false,
+   "profile_id": "vivhite",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "retry_same_model": true,
+   "queue_id": "25388-1788164218188303300-0",
+   "retry_count": 4,
+   "retry_after": 1788185899.239278
+  },
+  {
+   "run": 6,
+   "time": "2026-08-31 22:27",
+   "profile_id": "vivhite",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "queued"
   }
  ],
- "reviewing": {
-  "runs": [
-   1
-  ],
-  "items": [
-   {
-    "run": 1,
-    "time": "2026-08-30 20:40:03",
-    "retry_group": "20260830-204003-1788093603538089400-2de10020",
-    "replay_target": "20260830-204003-1788093603538089400-2de10020",
-    "salvage_packages": [
-     "20260830-204003-1788093603538089400-2de10020"
-    ],
-    "salvage_attempts": [
-     "20260830-211435-1788095675232657900-93411a87",
-     "20260831-000351-1788105831028859000-39a4013a",
-     "20260831-002214-1788106934471900000-39ff7392",
-     "20260831-003654-1788107814855755500-90570344",
-     "20260831-005534-1788108934779063200-c2f6a548",
-     "20260831-153706-1788161826249532600-9082cba2",
-     "20260831-161753-1788164273155263100-eca1c506",
-     "20260831-190824-1788174504230356100-23ba9b51",
-     "20260831-192734-1788175654157339700-4e25bb60",
-     "20260831-194437-1788176677740156700-4d0bb1cf"
-    ],
-    "evidence_only": false,
-    "profile_id": "vivhite",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "retry_same_model": true,
-    "queue_id": "25388-1788164218188303300-0",
-    "retry_count": 4,
-    "retry_after": 1788185396.5631516
-   }
-  ],
-  "profile_id": "vivhite",
-  "retry_group": "20260830-204003-1788093603538089400-2de10020",
-  "started": "2026-08-31 22:17:11"
- }
+ "reviewing": null
 }
