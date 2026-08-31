@@ -1,0 +1,129 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_COMPOSITE_COLOR_FIELD",
+  "card_type": "CompositeColorField",
+  "card_name_zh": "综合色域",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "cough": 8,
+    "vulnerable_all_enemies": 2,
+    "upgraded_vulnerable_all_enemies": 3,
+    "global_drain_percent": 8,
+    "upgraded_global_drain_percent": 12,
+    "exhaust": true,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/NegativeSpace.png",
+      "Vivhite/Vivhite/images/cards/ColorConservation.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "Vivhite identity continuity and refined painted anime rendering language only; frontal presentation, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/NegativeSpace.png",
+      "role": "established opaque skill-card finish, celestial depth, empty-hand geometric manipulation, and faceted abstract enemy weakness-face language only; exact pose, chamber, single-target arrangement, cutout, and reserve crystal excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/ColorConservation.png",
+      "role": "established opaque full-scene skill finish and stable global magical system spanning separated nodes only; exact pose, machinery, pipes, symmetry, crystals, and routing excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/NegativeSpace.png": "CBE0F9D6FE7D65345DAD426370C7ABDB56C5C45D429E50E11644229C288AE635",
+    "Vivhite/Vivhite/images/cards/ColorConservation.png": "DADEE498B69D3317C7BA073B007DC114F8D31A0AB8DFBE68DE09DABFCE59979D"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "852A3709C0754304BAB0604C4F2642C1C2881A17C560BAEA364767D7FB148EEA",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0551d-8b6f-7301-9b43-088171428866/exec-70d644d5-b4f9-4109-8500-b0b07c8fef53.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/composite-color-field-card-attempt-01/original.png",
+  "original_sha256": "2994F6B4D67CF8E382B57E132D3018C8195A97CA01CEA5D9832034074052B318",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/CompositeColorField.png",
+  "runtime_sha256": "57B6619C325451C64090FCB7122712DA45C461D38B0E550662FBD2F17ED6380E",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect-godot.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_second_character_or_creature": true,
+    "exactly_three_separate_abstract_enemy_polyhedra": true,
+    "three_distinct_pale_weakness_faces": true,
+    "one_hard_edged_composite_field_spanning_all_targets": true,
+    "one_cyan_blue_closed_return_boundary": true,
+    "deployed_global_skill_read": true,
+    "no_ray_hit_explosion_projectile_or_attack_lane": true,
+    "no_closed_body_defensive_shell": true,
+    "100x76_color_and_grayscale_skill_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Vivhite calmly deploys one hard-edged composite field across a full celestial amphitheater. Exactly three separated distant polyhedra expose individually readable pale weakness faces while one broad cyan-blue perimeter closes around the entire field and returns to the casting side. The arena-spanning field, three targets, and return boundary remain countable in grayscale at 100x76 and read as a deployed global skill rather than an attack or shield; all mouth and red/crimson hard bans pass. The main agent visually accepted the runtime crop and explicitly stopped further generation.",
+  "result": "accepted_stop_after_attempt_01"
+}
