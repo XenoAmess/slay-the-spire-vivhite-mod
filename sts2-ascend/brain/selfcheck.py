@@ -7027,9 +7027,9 @@ def main() -> int:
     assert d_skip.action == "skip_reward_cards", \
         f"有跳过动作的低价值屏未跳过: {d_skip.action}（{d_skip.reason}）"
 
-    # 3zx) 解锁展示屏双通道（第551局后现场修复）：mod 正常暴露动作时走 HTTP；
-    #      已识别 UNLOCK 但 can_confirm=false/actions=[] 连续 12 tick 时，必须像
-    #      UNKNOWN 旧路由一样点击底部确认区，不能因“识别成功”反而永久等待。
+    # 3zx) 解锁展示屏只走专用 HTTP 协议：confirm_unlock 尚未就绪时持续等待，
+    #      不得退回旧 UNKNOWN 路由的鼠标盲点。原生解锁与存档可能仍在结算，
+    #      盲点会越过当前队列项；动作恢复后应立即确认并清零等待计数。
     ul_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-unlock-")))
     ul_pol = policy.Policy(ul_know)
@@ -7047,14 +7047,16 @@ def main() -> int:
                    "items": ["红头骨"], "can_confirm": False}}
     ul_clicks = []
     ul_pol._click_game_point = lambda x, y: ul_clicks.append((x, y)) or True
-    for i in range(11):
+    for i in range(24):
         d_ul_wait = ul_pol.decide(ul_stuck, ul_ctx)
         assert d_ul_wait.action is None and not ul_clicks, \
-            f"解锁兜底过早触发（tick {i + 1}）: {d_ul_wait.reason}"
-    d_ul_fallback = ul_pol.decide(ul_stuck, ul_ctx)
-    assert d_ul_fallback.action is None and ul_clicks == [(0.5, 0.89)] \
-            and "鼠标兜底点击已发送" in d_ul_fallback.reason, \
-        f"解锁无动作未触发鼠标兜底: clicks={ul_clicks}（{d_ul_fallback.reason}）"
+            f"解锁等待期间发生动作或鼠标盲点（tick {i + 1}）: " \
+            f"clicks={ul_clicks}（{d_ul_wait.reason}）"
+        assert "等待 confirm_unlock 就绪" in d_ul_wait.reason, d_ul_wait.reason
+    d_ul_recovered = ul_pol.decide(ul_ready, ul_ctx)
+    assert d_ul_recovered.action == "confirm_unlock" and ul_pol._unlock_stall == 0, \
+        f"解锁专用动作恢复后未确认或未清零等待账: " \
+        f"stall={ul_pol._unlock_stall}（{d_ul_recovered.reason}）"
 
     # 3zy-combat-margin) 有能量且存在正即时边际时不得被阈值/预留互锁为空过：
     # 真实第 554 局 F2 的 6 意图/5 甲/1 能量场景曾让第二张防御(0.03分)

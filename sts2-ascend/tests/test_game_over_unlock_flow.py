@@ -147,6 +147,46 @@ class GameOverUnlockFlowTests(unittest.TestCase):
         )
         self.assertIsNone(waiting_summary.action)
 
+    def test_unlock_wait_never_uses_mouse_fallback_and_recovers_via_api(self) -> None:
+        stuck_unlock = {
+            "screen": "UNLOCK",
+            "available_actions": [],
+            "unlock": {
+                "unlock_type": "NUnlockRelicsScreen",
+                "items": ["Relic A"],
+                "can_confirm": False,
+            },
+        }
+        clicks: list[tuple[float, float]] = []
+        self.policy._click_game_point = (
+            lambda x, y: clicks.append((x, y)) or True)
+
+        waits = [
+            self.policy._unlock_screen(stuck_unlock, self.ctx)
+            for _ in range(24)
+        ]
+
+        self.assertTrue(all(decision.action is None for decision in waits))
+        self.assertEqual(clicks, [])
+        self.assertTrue(all(
+            "等待 confirm_unlock 就绪" in decision.reason
+            for decision in waits
+        ))
+
+        ready_unlock = {
+            **stuck_unlock,
+            "available_actions": ["confirm_unlock"],
+            "unlock": {
+                **stuck_unlock["unlock"],
+                "can_confirm": True,
+            },
+        }
+        recovered = self.policy._unlock_screen(ready_unlock, self.ctx)
+
+        self.assertEqual(recovered.action, "confirm_unlock")
+        self.assertEqual(self.policy._unlock_stall, 0)
+        self.assertEqual(clicks, [])
+
     def test_legacy_game_over_actions_never_bypass_native_settlement(self) -> None:
         state = self._game_over(
             actions=["continue_run", "proceed", "return_to_main_menu"],
