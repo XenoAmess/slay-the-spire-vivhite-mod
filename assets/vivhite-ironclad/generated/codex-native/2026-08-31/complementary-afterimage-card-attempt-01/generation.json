@@ -1,0 +1,127 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE",
+  "card_type": "ComplementaryAfterimage",
+  "card_name_zh": "补色残像",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Attack",
+    "rarity": "Uncommon",
+    "cough": 6,
+    "damage": 12,
+    "conditional_hits_after_current_hp_increased_this_turn": 2,
+    "drain_percent": 16,
+    "upgrade_damage": 15,
+    "upgrade_drain_percent": 20
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/CrimsonArea.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "Vivhite identity continuity and refined painted anime rendering language only; frontal presentation, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/CrimsonArea.png",
+      "role": "established opaque chromatic attack finish, celestial architecture, spatial depth, hard-edged magic, and low cyan drain-return vocabulary only; exact pose, magenta wedge, single-hit topology, target, and composition excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/CrimsonArea.png": "6157AE89701E6A14B4FC29DE4804984058396197679EFF01553422446A85D48C"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "71C1DB098EA826F28219EA7798B47C015A8FE7EA06057F976F59CBD5DB49E448",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0551e-26a1-7432-9ba8-c56eeaa64467/exec-8a63bf43-f31a-4e68-8045-ef872490ec47.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/complementary-afterimage-card-attempt-01/original.png",
+  "original_sha256": "4BFF8BFDE0D9AAAB3B06E77A3B1DB82CEE7599F1620CB972B7D5C0481A91A12B",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ComplementaryAfterimage.png",
+  "runtime_sha256": "7F643DC614D76F197044317DEB7877F8DB455C9AE61E23E9E1EA637B03A60944",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-stdout.log",
+    "inspection/prepare-stderr.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/inspect_candidate.gd",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_second_character_human_afterimage_or_split_panel": true,
+    "open_directional_attack_read": true,
+    "one_violet_gold_first_strike_core": true,
+    "one_low_cyan_life_light_return_node": true,
+    "one_cyan_gold_conditional_afterimage_core": true,
+    "two_separate_parallel_attack_paths": true,
+    "two_separate_impacts_on_one_right_side_abstract_structure": true,
+    "no_closed_defensive_shell_or_static_power_read": true,
+    "100x76_color_and_grayscale_two_hit_sequence_readable": true,
+    "main_agent_visual_review_accepted": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Vivhite launches one violet-gold hard-edged first-strike star core along the upper lane. A low cyan faceted life-light node and closed return circuit visibly illuminate beside her, triggering a distinct cyan-gold afterimage core along a lower parallel lane. The two cores and two separated impacts on one right-side abstract structure remain legible at 100x76 and in grayscale. The afterimage is geometric rather than human, and no forbidden mouth-adjacent red or crimson element appears.",
+  "result": "accepted_stop_after_attempt_01"
+}
