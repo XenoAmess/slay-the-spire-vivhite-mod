@@ -71,13 +71,32 @@ class PublishIroncladSkinContractTests(unittest.TestCase):
                 layout.expected_runtime_file_count,
             )
 
-    def test_default_layout_remains_the_single_page_runtime(self) -> None:
+    def test_cli_can_publish_legacy_but_active_contract_remains_v3(self) -> None:
         args = publisher._parse_args([])
         self.assertEqual(args.runtime_layout, "legacy-single-page")
 
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(contract["runtimeLayout"], "legacy-single-page")
+        self.assertEqual(contract["runtimeLayout"], "v3-five-page")
         self.assertEqual(contract["expectedRuntimeFileCount"], 30)
+        v3_layout = next(
+            layout
+            for layout in contract["combatRuntimeLayouts"]
+            if layout["name"] == "v3-five-page"
+        )
+        self.assertEqual(v3_layout["expectedRuntimeFileCount"], 34)
+        self.assertEqual(
+            [page["path"] for page in v3_layout["pages"]],
+            [
+                "spine/combat/vivhite_combat.png",
+                "spine/combat/vivhite_combat_death.png",
+                "spine/combat/vivhite_combat_attack.png",
+                "spine/combat/vivhite_combat_attack_heavy.png",
+                "spine/combat/vivhite_combat_cast.png",
+            ],
+        )
+        # spineSets is the single-page base template. The PowerShell validator
+        # resolves runtimeLayout and replaces these page lists from the selected
+        # combatRuntimeLayouts profile before validating Source or PCK contents.
         for spine_set in contract["spineSets"]:
             if spine_set["name"] in {"combat", "merchant"}:
                 self.assertTrue(spine_set["exactPages"])

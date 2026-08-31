@@ -718,12 +718,12 @@ internal static class RuntimeArtInventoryAcceptanceTests
             .ToArray();
         AcceptanceAssert.True(
             assetProfileIdentifiers.Contains("_assetProfile", StringComparer.Ordinal) &&
-            assetProfileIdentifiers.Contains("CreateSharedAssetProfile", StringComparer.Ordinal),
-            "VivhiteCharacter.AssetProfile must expose its cached CreateSharedAssetProfile result.");
+            assetProfileIdentifiers.Contains("CreateVivhiteAssetProfile", StringComparer.Ordinal),
+            "VivhiteCharacter.AssetProfile must expose its cached CreateVivhiteAssetProfile result.");
 
         var factory = source.Members
             .OfType<MethodDeclarationSyntax>()
-            .Single(method => method.Identifier.ValueText == "CreateSharedAssetProfile");
+            .Single(method => method.Identifier.ValueText == "CreateVivhiteAssetProfile");
         var energyAssignment = factory.DescendantNodes()
             .OfType<AssignmentExpressionSyntax>()
             .SingleOrDefault(assignment =>
@@ -734,7 +734,7 @@ internal static class RuntimeArtInventoryAcceptanceTests
                 assignment.Ancestors().OfType<WithExpressionSyntax>().Any());
         AcceptanceAssert.True(
             energyAssignment is not null,
-            "CreateSharedAssetProfile must assign EnergyCounterScenePath into Scenes.EnergyCounterPath.");
+            "CreateVivhiteAssetProfile must assign EnergyCounterScenePath into Scenes.EnergyCounterPath.");
         AcceptanceAssert.True(
             factory.DescendantNodes()
                 .OfType<InvocationExpressionSyntax>()
@@ -743,7 +743,7 @@ internal static class RuntimeArtInventoryAcceptanceTests
                     access.Expression is IdentifierNameSyntax owner &&
                     owner.Identifier.ValueText == nameof(CharacterAssetProfiles) &&
                     access.Name.Identifier.ValueText == nameof(CharacterAssetProfiles.WithScenes)),
-            "CreateSharedAssetProfile must publish the overridden scene set through CharacterAssetProfiles.WithScenes.");
+            "CreateVivhiteAssetProfile must publish the overridden scene set through CharacterAssetProfiles.WithScenes.");
 
         var scenePathField = typeof(VivhiteCharacter).GetField(
             "EnergyCounterScenePath",
@@ -765,10 +765,10 @@ internal static class RuntimeArtInventoryAcceptanceTests
         var originalProfile = cacheField.GetValue(null);
         try
         {
-            var baseProfile = IroncladReplacementAssets.CreateProfile();
+            var baseProfile = VivhiteCharacterAssets.CreateProfile();
             var baseScenes = baseProfile.Scenes
                 ?? throw new AcceptanceFailureException(
-                    "The structural Ironclad profile has no scene asset set.");
+                    "The structural Vivhite profile has no scene asset set.");
             var seededProfile = CharacterAssetProfiles.WithScenes(
                 baseProfile,
                 baseScenes with { EnergyCounterPath = compiledScenePath });

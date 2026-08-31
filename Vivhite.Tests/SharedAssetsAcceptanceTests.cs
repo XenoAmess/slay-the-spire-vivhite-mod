@@ -20,17 +20,17 @@ namespace Vivhite.Tests;
 
 internal static class SharedAssetsAcceptanceTests
 {
-    public static void VivhiteAndIroncladUseTheSameV3Skin(RepositorySnapshot repository)
+    public static void VivhiteOwnsV3SkinAndIroncladHasNoReplacement(RepositorySnapshot repository)
     {
         var validatedGetter = RequireDeclaredMethod(
-            typeof(IroncladReplacementAssets),
+            typeof(VivhiteCharacterAssets),
             "GetValidatedV3Profile");
-        var cachedField = typeof(IroncladReplacementAssets).GetField(
+        var cachedField = typeof(VivhiteCharacterAssets).GetField(
             "ValidatedV3Profile",
             BindingFlags.Static | BindingFlags.NonPublic);
         AcceptanceAssert.True(
             cachedField?.FieldType == typeof(Lazy<CharacterAssetProfile>),
-            "The shared Ironclad V3 profile must be backed by one Lazy<CharacterAssetProfile> cache.");
+            "The Vivhite-owned V3 profile must be backed by one Lazy<CharacterAssetProfile> cache.");
         AcceptanceAssert.Equal(
             1,
             IlInspection.CalledMethods(validatedGetter).Count(method =>
@@ -38,42 +38,60 @@ internal static class SharedAssetsAcceptanceTests
                 method.Name == "get_Value"),
             "GetValidatedV3Profile must return the single cached Lazy value.");
 
-        var ironcladRegistration = RequireDeclaredMethod(
-            typeof(IroncladReplacementAssets),
-            "TryRegister");
         var vivhiteFactory = RequireDeclaredMethod(
             typeof(VivhiteCharacter),
-            "CreateSharedAssetProfile");
-        foreach (var consumer in new[] { ironcladRegistration, vivhiteFactory })
-        {
-            var calls = IlInspection.CalledMethods(consumer);
-            AcceptanceAssert.Equal(
-                1,
-                calls.Count(method =>
-                    method.DeclaringType == typeof(IroncladReplacementAssets) &&
-                    method.Name == "GetValidatedV3Profile"),
-                $"{consumer.DeclaringType?.Name}.{consumer.Name} must use the shared validated V3 entry once.");
-            AcceptanceAssert.Equal(
-                0,
-                calls.Count(method =>
-                    method.DeclaringType == typeof(IroncladReplacementAssets) &&
-                    method.Name == "CreateProfile"),
-                $"{consumer.DeclaringType?.Name}.{consumer.Name} must never call the unvalidated profile factory.");
-        }
+            "CreateVivhiteAssetProfile");
+        var vivhiteCalls = IlInspection.CalledMethods(vivhiteFactory);
+        AcceptanceAssert.Equal(
+            1,
+            vivhiteCalls.Count(method =>
+                method.DeclaringType == typeof(VivhiteCharacterAssets) &&
+                method.Name == "GetValidatedV3Profile"),
+            "VivhiteCharacter must use the Vivhite-owned validated V3 entry exactly once.");
+        AcceptanceAssert.Equal(
+            0,
+            vivhiteCalls.Count(method =>
+                method.DeclaringType == typeof(VivhiteCharacterAssets) &&
+                method.Name == "CreateProfile"),
+            "VivhiteCharacter must never bypass validation by calling the structural profile factory.");
 
         var validatedFactory = RequireDeclaredMethod(
-            typeof(IroncladReplacementAssets),
+            typeof(VivhiteCharacterAssets),
             "CreateValidatedV3Profile");
         var factoryCalls = IlInspection.CalledMethods(validatedFactory).ToArray();
         var validationIndex = Array.FindIndex(factoryCalls, method =>
-            method.DeclaringType == typeof(IroncladReplacementAssets) &&
+            method.DeclaringType == typeof(VivhiteCharacterAssets) &&
             method.Name == "ValidateRequiredAssets");
         var profileIndex = Array.FindIndex(factoryCalls, method =>
-            method.DeclaringType == typeof(IroncladReplacementAssets) &&
+            method.DeclaringType == typeof(VivhiteCharacterAssets) &&
             method.Name == "CreateProfile");
         AcceptanceAssert.True(
             validationIndex >= 0 && profileIndex > validationIndex,
             "The cached V3 entry must validate every required asset before constructing its profile.");
+
+        AcceptanceAssert.True(
+            repository.SourceTypes.All(type =>
+                type.FullName != "Vivhite.Characters.IroncladReplacementAssets"),
+            "The retired IroncladReplacementAssets production type must remain deleted.");
+        var productionSource = string.Join(
+            "\n",
+            repository.SourceDocuments.Select(document => document.Root.ToFullString()));
+        string[] forbiddenIroncladReplacementSymbols =
+        [
+            "VanillaCharacterIds.Ironclad",
+            "IroncladReplacementAssets",
+            "PrefixIroncladCharacterSelectSfx",
+            "PrefixIroncladCharacterTransitionSfx",
+            "EnsureIroncladVirtualAudioOverrides",
+            "_activeIroncladAudio"
+        ];
+        AcceptanceAssert.Empty(
+            forbiddenIroncladReplacementSymbols
+                .Where(symbol => productionSource.Contains(symbol, StringComparison.Ordinal))
+                .ToArray(),
+            "Vivhite production source must not register or patch a base-game Ironclad replacement:");
+
+        AssertVivhiteOwnsCompleteAssetProfile(VivhiteCharacterAssets.CreateProfile());
 
         var vivhiteCharacter = new VivhiteCharacter();
         AcceptanceAssert.Equal(78, vivhiteCharacter.StartingHp, "Vivhite starting HP must be 78.");
@@ -100,10 +118,72 @@ internal static class SharedAssetsAcceptanceTests
                 page))
             .Where(path => !File.Exists(path))
             .ToArray();
-        AcceptanceAssert.Empty(missingPages, "The shared V3 five-page combat skin must exist on disk:");
+        AcceptanceAssert.Empty(missingPages, "The Vivhite-owned V3 five-page combat skin must exist on disk:");
     }
 
-    public static void SharedCombatSceneUsesVivhiteEyeLensMagic(RepositorySnapshot repository)
+    private static void AssertVivhiteOwnsCompleteAssetProfile(CharacterAssetProfile profile)
+    {
+        AcceptanceAssert.True(profile.Scenes is not null, "Vivhite's V3 profile must define scene assets.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/scenes/combat.tscn",
+            profile.Scenes!.VisualsPath!,
+            "Vivhite must own the V3 combat scene.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/scenes/merchant.tscn",
+            profile.Scenes.MerchantAnimPath!,
+            "Vivhite must own the V3 merchant scene.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/scenes/rest_site.tscn",
+            profile.Scenes.RestSiteAnimPath!,
+            "Vivhite must own the V3 rest-site scene.");
+
+        AcceptanceAssert.True(profile.Ui is not null, "Vivhite's V3 profile must define UI assets.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/scenes/character_select.tscn",
+            profile.Ui!.CharacterSelectBgPath!,
+            "Vivhite must own the V3 character-select scene.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/ui/select.png",
+            profile.Ui.CharacterSelectIconPath!,
+            "Vivhite must own the unlocked character-select portrait.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/ui/select_locked.png",
+            profile.Ui.CharacterSelectLockedIconPath!,
+            "Vivhite must own the locked character-select portrait.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/ui/map_marker.png",
+            profile.Ui.MapMarkerPath!,
+            "Vivhite must own the map marker.");
+
+        AcceptanceAssert.True(profile.Spine is not null, "Vivhite's V3 profile must define Spine assets.");
+        AcceptanceAssert.Equal(
+            "res://Vivhite/skins/ironclad/spine/combat/vivhite_combat_skeleton_data.tres",
+            profile.Spine!.CombatSkeletonDataPath!,
+            "Vivhite must own the V3 combat Spine resource.");
+
+        AcceptanceAssert.True(
+            profile.Multiplayer is not null,
+            "Vivhite's V3 profile must define multiplayer hand assets.");
+        string[] multiplayerPaths =
+        [
+            profile.Multiplayer!.ArmPointingTexturePath!,
+            profile.Multiplayer.ArmRockTexturePath!,
+            profile.Multiplayer.ArmPaperTexturePath!,
+            profile.Multiplayer.ArmScissorsTexturePath!
+        ];
+        string[] expectedMultiplayerPaths =
+        [
+            "res://Vivhite/skins/ironclad/multiplayer/point.png",
+            "res://Vivhite/skins/ironclad/multiplayer/rock.png",
+            "res://Vivhite/skins/ironclad/multiplayer/paper.png",
+            "res://Vivhite/skins/ironclad/multiplayer/scissors.png"
+        ];
+        AcceptanceAssert.True(
+            multiplayerPaths.SequenceEqual(expectedMultiplayerPaths, StringComparer.Ordinal),
+            $"Vivhite multiplayer resource ownership changed: [{string.Join(", ", multiplayerPaths)}]");
+    }
+
+    public static void VivhiteCombatSceneUsesEyeLensMagic(RepositorySnapshot repository)
     {
         var skinRoot = Path.Combine(repository.GodotProjectDirectory, "skins", "ironclad");
         var scenePath = Path.Combine(skinRoot, "scenes", "combat.tscn");
@@ -133,10 +213,10 @@ internal static class SharedAssetsAcceptanceTests
         ];
         AcceptanceAssert.Empty(
             requiredSceneText.Where(fragment => !scene.Contains(fragment, StringComparison.Ordinal)).ToArray(),
-            "The shared combat scene is missing Vivhite's lens-magic wiring:");
+            "The Vivhite-owned combat scene is missing lens-magic wiring:");
         AcceptanceAssert.Empty(
             retiredSceneText.Where(fragment => scene.Contains(fragment, StringComparison.Ordinal)).ToArray(),
-            "The shared combat scene still contains retired Ironclad eye-fire wiring:");
+            "The Vivhite-owned combat scene still contains retired Ironclad eye-fire wiring:");
         AcceptanceAssert.True(File.Exists(scriptPath), "The Vivhite combat VFX GDScript must exist.");
         AcceptanceAssert.True(File.Exists(imagePath), "The Vivhite eye-lens VFX texture must exist.");
 
@@ -237,7 +317,7 @@ internal static class SharedAssetsAcceptanceTests
             "The production validator must enforce Source text, GDScript syntax, and Spine contracts:");
     }
 
-    public static void SharedSkinUsesVerifiedNativeMagicAudio(RepositorySnapshot repository)
+    public static void VivhiteProfileUsesVerifiedNativeMagicAudio(RepositorySnapshot repository)
     {
         _ = repository;
         const string select = "event:/sfx/characters/defect/defect_select";
@@ -249,50 +329,35 @@ internal static class SharedAssetsAcceptanceTests
         // These are the exact native paths exposed by the compiled v0.111.0 character model.
         var defect = new Defect();
         AcceptanceAssert.Equal(select, defect.CharacterSelectSfx, "Defect select FMOD path changed.");
-        AcceptanceAssert.Equal(transition, defect.CharacterTransitionSfx, "The shared native wipe path changed.");
+        AcceptanceAssert.Equal(transition, defect.CharacterTransitionSfx, "The native wipe path changed.");
         AcceptanceAssert.Equal(attack, defect.AttackSfx, "Defect attack FMOD path changed.");
         AcceptanceAssert.Equal(cast, defect.CastSfx, "Defect cast FMOD path changed.");
         AcceptanceAssert.Equal(death, defect.DeathSfx, "Defect death FMOD path changed.");
 
-        var profile = IroncladReplacementAssets.CreateProfile();
-        AssertAudio(profile.Audio, select, transition, attack, cast, death, "replacement profile");
+        var profile = VivhiteCharacterAssets.CreateProfile();
+        AssertAudio(profile.Audio, select, transition, attack, cast, death, "Vivhite V3 profile");
 
         // RitsuLib merges CharacterAudioAssetSet field by field. Supplying every field must
         // prevent the Ironclad placeholder from leaking back into the independent character.
         var resolved = CharacterAssetProfiles.Resolve(profile, "ironclad");
         AssertAudio(resolved.Audio, select, transition, attack, cast, death, "resolved profile");
-        var sharedCharacterProfile = profile.WithScenes(profile.Scenes!);
+        var vivhiteCharacterProfile = profile.WithScenes(profile.Scenes!);
         AssertAudio(
-            sharedCharacterProfile.Audio,
+            vivhiteCharacterProfile.Audio,
             select,
             transition,
             attack,
             cast,
             death,
-            "Vivhite shared profile");
+            "Vivhite character profile");
 
-        var registerMethod = RequireDeclaredMethod(typeof(IroncladReplacementAssets), "TryRegister");
-        var registrationCalls = IlInspection.CalledMethods(registerMethod).ToArray();
-        var virtualPatchIndex = Array.FindIndex(registrationCalls, method =>
-            method.DeclaringType == typeof(IroncladReplacementAssets) &&
-            method.Name == "EnsureIroncladVirtualAudioOverrides");
-        var registryIndex = Array.FindIndex(registrationCalls, method =>
-            method.DeclaringType == typeof(STS2RitsuLib.Content.ModContentRegistry) &&
-            method.Name == "RegisterCharacterAssetReplacement");
+        var ironclad = new Ironclad();
         AcceptanceAssert.True(
-            virtualPatchIndex >= 0 && registryIndex > virtualPatchIndex,
-            "Ironclad select/transition getters must be patched before the replacement is registered.");
-
-        AssertIroncladOnlyVirtualAudioPrefix(
-            "PrefixIroncladCharacterSelectSfx",
-            select,
-            new Ironclad(),
-            new Defect());
-        AssertIroncladOnlyVirtualAudioPrefix(
-            "PrefixIroncladCharacterTransitionSfx",
-            transition,
-            new Ironclad(),
-            new Defect());
+            !string.Equals(ironclad.CharacterSelectSfx, select, StringComparison.Ordinal) &&
+            !string.Equals(ironclad.AttackSfx, attack, StringComparison.Ordinal) &&
+            !string.Equals(ironclad.CastSfx, cast, StringComparison.Ordinal) &&
+            !string.Equals(ironclad.DeathSfx, death, StringComparison.Ordinal),
+            "The base-game Ironclad must keep native Ironclad identity audio rather than Vivhite's magic audio.");
     }
 
     private static void AssertAudio(
@@ -326,41 +391,6 @@ internal static class SharedAssetsAcceptanceTests
         array.EnumerateArray()
             .Select(value => value.GetString() ?? string.Empty)
             .ToHashSet(StringComparer.Ordinal);
-
-    private static void AssertIroncladOnlyVirtualAudioPrefix(
-        string methodName,
-        string expected,
-        Ironclad ironclad,
-        Defect otherCharacter)
-    {
-        var skinType = typeof(IroncladReplacementAssets);
-        var audioField = skinType.GetField(
-            "_activeIroncladAudio",
-            BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new AcceptanceFailureException("The active Ironclad audio field is missing.");
-        var prefix = RequireDeclaredMethod(skinType, methodName);
-        var originalAudio = audioField.GetValue(null);
-        try
-        {
-            audioField.SetValue(null, IroncladReplacementAssets.CreateProfile().Audio);
-
-            object?[] ironcladArguments = [ironclad, "original"];
-            var runOriginal = (bool)(prefix.Invoke(null, ironcladArguments)
-                ?? throw new AcceptanceFailureException($"{methodName} returned null."));
-            AcceptanceAssert.True(!runOriginal, $"{methodName} must override the base Ironclad getter.");
-            AcceptanceAssert.Equal(expected, (string)ironcladArguments[1]!, $"{methodName} result mismatch.");
-
-            object?[] otherArguments = [otherCharacter, "original"];
-            runOriginal = (bool)(prefix.Invoke(null, otherArguments)
-                ?? throw new AcceptanceFailureException($"{methodName} returned null."));
-            AcceptanceAssert.True(runOriginal, $"{methodName} must pass through for non-Ironclad characters.");
-            AcceptanceAssert.Equal("original", (string)otherArguments[1]!, $"{methodName} changed another character.");
-        }
-        finally
-        {
-            audioField.SetValue(null, originalAudio);
-        }
-    }
 
     private static void AssertArchitectAttackVfxContract(
         RepositorySnapshot repository,
@@ -424,41 +454,41 @@ internal static class SharedAssetsAcceptanceTests
         const string materialResource =
             "res://Vivhite/skins/ironclad/transitions/vivhite_character_select_transition_mat.tres";
 
-        var ironcladProfile = IroncladReplacementAssets.CreateProfile();
-        AcceptanceAssert.True(ironcladProfile.Ui is not null, "The shared profile must define UI assets.");
+        var vivhiteProfile = VivhiteCharacterAssets.CreateProfile();
+        AcceptanceAssert.True(vivhiteProfile.Ui is not null, "The Vivhite V3 profile must define UI assets.");
         AcceptanceAssert.Equal(
             materialResource,
-            ironcladProfile.Ui!.CharacterSelectTransitionPath!,
-            "The Ironclad replacement must consume the private Vivhite transition material.");
+            vivhiteProfile.Ui!.CharacterSelectTransitionPath!,
+            "Vivhite must consume its private transition material.");
 
-        var sharedVivhiteProfile = CharacterAssetProfiles.WithScenes(
-            ironcladProfile,
-            ironcladProfile.Scenes
-            ?? throw new AcceptanceFailureException("The shared profile has no scene set."));
+        var characterVivhiteProfile = CharacterAssetProfiles.WithScenes(
+            vivhiteProfile,
+            vivhiteProfile.Scenes
+            ?? throw new AcceptanceFailureException("The Vivhite V3 profile has no scene set."));
         AcceptanceAssert.Equal(
             materialResource,
-            sharedVivhiteProfile.Ui!.CharacterSelectTransitionPath!,
-            "Vivhite must retain the same transition while overriding only shared scene fields.");
+            characterVivhiteProfile.Ui!.CharacterSelectTransitionPath!,
+            "Vivhite must retain its transition while overriding character-local scene fields.");
 
-        var vivhiteFactory = RequireDeclaredMethod(typeof(VivhiteCharacter), "CreateSharedAssetProfile");
+        var vivhiteFactory = RequireDeclaredMethod(typeof(VivhiteCharacter), "CreateVivhiteAssetProfile");
         var factoryCalls = IlInspection.CalledMethods(vivhiteFactory).ToArray();
         AcceptanceAssert.Equal(
             1,
             factoryCalls.Count(method =>
                 method.DeclaringType == typeof(CharacterAssetProfiles) &&
                 method.Name == nameof(CharacterAssetProfiles.WithScenes)),
-            "Vivhite must derive its profile through the scene-only shared-profile operation.");
+            "Vivhite must derive its character profile through the scene override operation.");
         AcceptanceAssert.Equal(
             0,
             factoryCalls.Count(method =>
                 method.DeclaringType == typeof(CharacterAssetProfiles) &&
                 method.Name.Contains("Ui", StringComparison.Ordinal)),
-            "Vivhite must not replace or clear the shared transition UI field.");
+            "Vivhite must not replace or clear its V3 transition UI field.");
 
-        var defectTransition = new Defect().CharacterSelectTransitionPath;
+        var ironcladTransition = new Ironclad().CharacterSelectTransitionPath;
         AcceptanceAssert.True(
-            !string.Equals(materialResource, defectTransition, StringComparison.Ordinal),
-            "Registering the shared Ironclad/Vivhite profile must not alter another character.");
+            !string.Equals(materialResource, ironcladTransition, StringComparison.Ordinal),
+            "The base-game Ironclad must not consume Vivhite's private transition material.");
 
         var transitionDirectory = Path.Combine(
             repository.GodotProjectDirectory,
@@ -511,7 +541,7 @@ internal static class SharedAssetsAcceptanceTests
 
     public static void V3SkinRequiresExactFivePageLayout(RepositorySnapshot repository)
     {
-        var skinType = typeof(IroncladReplacementAssets);
+        var skinType = typeof(VivhiteCharacterAssets);
         var source = repository.RequireSourceType(skinType.FullName!).Declaration;
         AcceptanceAssert.True(
             source.DescendantTokens().All(token => token.ValueText != "LegacySinglePage"),

@@ -23,28 +23,28 @@ internal static class VivhiteCardTrailAcceptanceTests
     private const string ExpectedTrailSceneSha256 =
         "BA493F9C6C7665D80B1939CFA9A7C2D67D9CE9533EE910B250A57CF5D0647C6C";
 
-    public static void IsIsolatedFromTheIroncladProfile(RepositorySnapshot repository)
+    public static void IsOwnedOnlyByVivhiteCharacter(RepositorySnapshot repository)
     {
-        AssertIroncladProfileRemainsUnchanged(repository);
+        AssertVivhiteBaseProfileExcludesTheCharacterTrail(repository);
         AssertVivhiteFactoryOwnsTheTrailOverride(repository);
         AssertVivhiteTrailResources(repository);
     }
 
-    private static void AssertIroncladProfileRemainsUnchanged(RepositorySnapshot repository)
+    private static void AssertVivhiteBaseProfileExcludesTheCharacterTrail(RepositorySnapshot repository)
     {
-        var ironcladProfile = IroncladReplacementAssets.CreateProfile();
+        var baseProfile = VivhiteCharacterAssets.CreateProfile();
         AcceptanceAssert.True(
-            ironcladProfile.Vfx is null,
-            "The structural Ironclad replacement profile must retain its original null VFX override.");
+            baseProfile.Vfx is null,
+            "The structural Vivhite V3 profile must leave the character-owned trail override unset.");
 
-        var requiredAssetsField = typeof(IroncladReplacementAssets).GetField(
+        var requiredAssetsField = typeof(VivhiteCharacterAssets).GetField(
             "RequiredAssets",
             BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new AcceptanceFailureException(
-                "IroncladReplacementAssets.RequiredAssets is missing.");
+                "VivhiteCharacterAssets.RequiredAssets is missing.");
         var requiredAssets = (Array?)requiredAssetsField.GetValue(null)
             ?? throw new AcceptanceFailureException(
-                "IroncladReplacementAssets.RequiredAssets is null.");
+                "VivhiteCharacterAssets.RequiredAssets is null.");
         var requiredPaths = requiredAssets.Cast<object>()
             .Select(asset => asset.GetType().GetProperty(
                     "Path",
@@ -55,14 +55,14 @@ internal static class VivhiteCardTrailAcceptanceTests
             .ToArray();
         AcceptanceAssert.Empty(
             requiredPaths.Where(IsVivhiteTrailResource).ToArray(),
-            "The Ironclad V3 RequiredAssets gate must not depend on Vivhite-only trail resources:");
+            "The reusable Vivhite V3 RequiredAssets gate must not absorb the character-local trail resources:");
 
-        var source = repository.RequireSourceType(typeof(IroncladReplacementAssets).FullName!).Declaration;
+        var source = repository.RequireSourceType(typeof(VivhiteCharacterAssets).FullName!).Declaration;
         var sourceText = source.ToFullString();
         AcceptanceAssert.True(
             !sourceText.Contains("card_trail_vivhite", StringComparison.Ordinal) &&
             !sourceText.Contains("vivhite_card_trail_mathematical_star_0194", StringComparison.Ordinal),
-            "IroncladReplacementAssets must not mention either Vivhite-only card-trail resource.");
+            "VivhiteCharacterAssets must leave both character-local card-trail resources to VivhiteCharacter.");
     }
 
     private static void AssertVivhiteFactoryOwnsTheTrailOverride(RepositorySnapshot repository)
@@ -80,10 +80,10 @@ internal static class VivhiteCardTrailAcceptanceTests
             "VivhiteCharacter must compile the exact character-owned card-trail scene path.");
 
         var factory = typeof(VivhiteCharacter).GetMethod(
-            "CreateSharedAssetProfile",
+            "CreateVivhiteAssetProfile",
             BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new AcceptanceFailureException(
-                "VivhiteCharacter.CreateSharedAssetProfile is missing.");
+                "VivhiteCharacter.CreateVivhiteAssetProfile is missing.");
         var calls = IlInspection.CalledMethods(factory).ToArray();
         var withScenesIndex = Array.FindIndex(calls, method =>
             method.DeclaringType == typeof(CharacterAssetProfiles) &&
@@ -104,7 +104,7 @@ internal static class VivhiteCardTrailAcceptanceTests
         var source = repository.RequireSourceType(typeof(VivhiteCharacter).FullName!).Declaration;
         var factorySource = source.Members
             .OfType<MethodDeclarationSyntax>()
-            .Single(method => method.Identifier.ValueText == "CreateSharedAssetProfile");
+            .Single(method => method.Identifier.ValueText == "CreateVivhiteAssetProfile");
         var withVfxCall = factorySource.DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
             .Single(invocation =>

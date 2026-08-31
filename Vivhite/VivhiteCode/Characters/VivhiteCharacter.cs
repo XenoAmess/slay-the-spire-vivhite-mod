@@ -36,9 +36,9 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     public override int MaxEnergy => 3;
     public override int StartingGold => 99;
 
-    // 独立角色直接派生自已验证的 Ironclad V3 replacement profile，避免维护第二份路径清单；
-    // 唯一覆盖项是白绮自己的能量计数器。
-    public override CharacterAssetProfile AssetProfile => _assetProfile ??= CreateSharedAssetProfile();
+    // 独立白绮角色独占当前已验证的 V3 五页资源 profile；物理目录沿用历史
+    // skins/ironclad 路径，但不再向原版 IRONCLAD 注册任何资源替换。
+    public override CharacterAssetProfile AssetProfile => _assetProfile ??= CreateVivhiteAssetProfile();
 
     // 某个字段没写时，RitsuLib 会从占位角色配置里补齐。
     public override string? PlaceholderCharacterId => "ironclad";
@@ -56,22 +56,22 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
         if (string.IsNullOrWhiteSpace(visualsPath))
         {
             throw new InvalidOperationException(
-                "The validated Ironclad V3 profile has no combat visuals path.");
+                "The validated Vivhite V3 profile has no combat visuals path.");
         }
 
         return RitsuGodotNodeFactories.CreateFromScenePath<NCreatureVisuals>(
             visualsPath);
     }
 
-    private static CharacterAssetProfile CreateSharedAssetProfile()
+    private static CharacterAssetProfile CreateVivhiteAssetProfile()
     {
-        var ironcladProfile = IroncladReplacementAssets.GetValidatedV3Profile();
-        var scenes = ironcladProfile.Scenes
+        var baseProfile = VivhiteCharacterAssets.GetValidatedV3Profile();
+        var scenes = baseProfile.Scenes
             ?? throw new InvalidOperationException(
-                "The validated Ironclad V3 profile has no scene asset set.");
+                "The validated Vivhite V3 profile has no scene asset set.");
         scenes = scenes with { EnergyCounterPath = EnergyCounterScenePath };
 
-        var vivhiteProfile = CharacterAssetProfiles.WithScenes(ironcladProfile, scenes);
+        var vivhiteProfile = CharacterAssetProfiles.WithScenes(baseProfile, scenes);
         return CharacterAssetProfiles.WithVfx(
             vivhiteProfile,
             new CharacterVfxAssetSet(

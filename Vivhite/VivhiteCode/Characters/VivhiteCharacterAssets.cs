@@ -1,19 +1,16 @@
 using Godot;
-using HarmonyLib;
-using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Characters;
 using System.Text.Json;
-using STS2RitsuLib.Content;
 using STS2RitsuLib.Scaffolding.Characters;
 
 namespace Vivhite.Characters;
 
 /// <summary>
-/// Registers the optional, complete White Qi replacement for the Ironclad.
-/// Partial bundles are deliberately ignored so a missing PCK resource cannot
-/// leave the base-game character with a mixture of private and vanilla assets.
+/// Builds the complete, validated V3 visual profile owned exclusively by the
+/// independent Vivhite character. The physical skins/ironclad directory name is
+/// retained as a historical packaging path; this type never registers a vanilla
+/// character replacement.
 /// </summary>
-internal static class IroncladReplacementAssets
+internal static class VivhiteCharacterAssets
 {
     private const string SkinRoot = $"{Entry.ResPath}/skins/ironclad";
 
@@ -61,7 +58,7 @@ internal static class IroncladReplacementAssets
     private const string PaperHandTexturePath = $"{SkinRoot}/multiplayer/paper.png";
     private const string ScissorsHandTexturePath = $"{SkinRoot}/multiplayer/scissors.png";
 
-    // The shared skin uses the Defect's neutral, synthetic spell feedback rather than
+    // Vivhite uses the Defect's neutral, synthetic spell feedback rather than
     // Ironclad's weapon-and-blood identity. All five paths are native v0.111.0 FMOD events;
     // wipe_ironclad is also the transition used by Defect, Regent, and Necrobinder.
     private const string CharacterSelectSfx = "event:/sfx/characters/defect/defect_select";
@@ -69,12 +66,6 @@ internal static class IroncladReplacementAssets
     private const string AttackSfx = "event:/sfx/characters/defect/defect_attack";
     private const string CastSfx = "event:/sfx/characters/defect/defect_cast";
     private const string DeathSfx = "event:/sfx/characters/defect/defect_die";
-    private const string VirtualAudioPatchId = "Vivhite.IroncladReplacementAudio";
-
-    private static readonly object VirtualAudioPatchLock = new();
-    private static CharacterAudioAssetSet? _activeIroncladAudio;
-    private static bool _virtualAudioPatchesInstalled;
-
     private static readonly AtlasPageContract[] V3CombatAtlasPages =
     [
         new(
@@ -253,45 +244,6 @@ internal static class IroncladReplacementAssets
     private static readonly Lazy<CharacterAssetProfile> ValidatedV3Profile =
         new(CreateValidatedV3Profile);
 
-    public static bool TryRegister()
-    {
-        try
-        {
-            var profile = GetValidatedV3Profile();
-            var audio = profile.Audio
-                ?? throw new InvalidOperationException("The shared V3 profile has no character audio set.");
-
-            // RitsuLib 0.5.14 patches the non-virtual attack/cast/death getters for registered
-            // vanilla replacements. Character select and transition are virtual and are only
-            // consumed automatically by ModCharacterTemplate, so cover the base Ironclad getters
-            // here as well. Both prefixes pass through for every other character.
-            EnsureIroncladVirtualAudioOverrides();
-            var previousAudio = Volatile.Read(ref _activeIroncladAudio);
-            Volatile.Write(ref _activeIroncladAudio, audio);
-            try
-            {
-                ModContentRegistry.For(Entry.ModId).RegisterCharacterAssetReplacement(
-                    ModContentRegistry.VanillaCharacterIds.Ironclad,
-                    profile);
-            }
-            catch
-            {
-                Volatile.Write(ref _activeIroncladAudio, previousAudio);
-                throw;
-            }
-
-            Entry.Logger.Info($"Ironclad V3 five-page skin enabled from {SkinRoot}.");
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Entry.Logger.Error(
-                "Ironclad V3 skin failed closed; no replacement profile was registered. " +
-                exception);
-            return false;
-        }
-    }
-
     internal static CharacterAssetProfile GetValidatedV3Profile()
     {
         return ValidatedV3Profile.Value;
@@ -303,7 +255,7 @@ internal static class IroncladReplacementAssets
         if (issues.Count > 0)
         {
             throw new InvalidOperationException(
-                "The Ironclad replacement requires the complete exact V3 five-page skin and " +
+                "The Vivhite character requires the complete exact V3 five-page skin and " +
                 $"failed closed at {SkinRoot}. Issues: {string.Join("; ", issues)}");
         }
 
@@ -341,71 +293,6 @@ internal static class IroncladReplacementAssets
                 ArmRockTexturePath: RockHandTexturePath,
                 ArmPaperTexturePath: PaperHandTexturePath,
                 ArmScissorsTexturePath: ScissorsHandTexturePath));
-    }
-
-    private static void EnsureIroncladVirtualAudioOverrides()
-    {
-        lock (VirtualAudioPatchLock)
-        {
-            if (_virtualAudioPatchesInstalled)
-            {
-                return;
-            }
-
-            var selectGetter = AccessTools.PropertyGetter(
-                    typeof(CharacterModel),
-                    nameof(CharacterModel.CharacterSelectSfx))
-                ?? throw new MissingMethodException(
-                    typeof(CharacterModel).FullName,
-                    $"get_{nameof(CharacterModel.CharacterSelectSfx)}");
-            var transitionGetter = AccessTools.PropertyGetter(
-                    typeof(CharacterModel),
-                    nameof(CharacterModel.CharacterTransitionSfx))
-                ?? throw new MissingMethodException(
-                    typeof(CharacterModel).FullName,
-                    $"get_{nameof(CharacterModel.CharacterTransitionSfx)}");
-
-            var harmony = new Harmony(VirtualAudioPatchId);
-            harmony.Patch(
-                selectGetter,
-                prefix: new HarmonyMethod(
-                    typeof(IroncladReplacementAssets),
-                    nameof(PrefixIroncladCharacterSelectSfx)));
-            harmony.Patch(
-                transitionGetter,
-                prefix: new HarmonyMethod(
-                    typeof(IroncladReplacementAssets),
-                    nameof(PrefixIroncladCharacterTransitionSfx)));
-            _virtualAudioPatchesInstalled = true;
-        }
-    }
-
-    private static bool PrefixIroncladCharacterSelectSfx(
-        CharacterModel __instance,
-        ref string __result)
-    {
-        if (__instance is not Ironclad ||
-            Volatile.Read(ref _activeIroncladAudio)?.CharacterSelectSfx is not { } path)
-        {
-            return true;
-        }
-
-        __result = path;
-        return false;
-    }
-
-    private static bool PrefixIroncladCharacterTransitionSfx(
-        CharacterModel __instance,
-        ref string __result)
-    {
-        if (__instance is not Ironclad ||
-            Volatile.Read(ref _activeIroncladAudio)?.CharacterTransitionSfx is not { } path)
-        {
-            return true;
-        }
-
-        __result = path;
-        return false;
     }
 
     private static List<string> ValidateRequiredAssets()
