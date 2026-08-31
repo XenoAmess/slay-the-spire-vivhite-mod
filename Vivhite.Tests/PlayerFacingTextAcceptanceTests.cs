@@ -11,6 +11,7 @@ internal static class PlayerFacingTextAcceptanceTests
         "aromaPrinciple",
         "banter.alive.endTurnPing",
         "banter.dead.endTurnPing",
+        "bestiaryQuote",
         "cardsModifierDescription",
         "cardsModifierTitle",
         "defeatMessage",
@@ -55,9 +56,12 @@ internal static class PlayerFacingTextAcceptanceTests
         AcceptanceAssert.Equal(1, repository.RegisteredRelics.Count, "The localization audit expects exactly one registered Vivhite relic.");
         AcceptanceAssert.Equal(1, repository.RegisteredCharacters.Count, "The localization audit expects exactly one registered Vivhite character.");
 
+        var characterEntriesByLocale = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         foreach (var locale in new[] { "eng", "zhs" })
         {
             var entries = ReadLocale(repository, locale);
+            var characterEntries = ReadObject(repository, locale, "characters.json");
+            characterEntriesByLocale.Add(locale, characterEntries);
             var required = new List<string>();
             required.AddRange(repository.RegisteredCards.SelectMany(type =>
                 new[] { "title", "description", "smartDescription" }.Select(suffix => $"{repository.CardId(type)}.{suffix}")));
@@ -86,7 +90,26 @@ internal static class PlayerFacingTextAcceptanceTests
                 .Order(StringComparer.Ordinal)
                 .ToArray();
             AcceptanceAssert.Empty(selfEchoes, $"Locale '{locale}' must not store a localization key as its displayed value:");
+
+            var forbiddenCharacterValues = characterEntries
+                .Where(entry =>
+                    entry.Value.Contains("NOPE", StringComparison.OrdinalIgnoreCase) ||
+                    entry.Value.Contains("生命演算", StringComparison.Ordinal) ||
+                    entry.Value.Contains("余量", StringComparison.Ordinal) ||
+                    entry.Value.Contains("咳血", StringComparison.Ordinal) ||
+                    entry.Value.Contains("VIVHITE_", StringComparison.OrdinalIgnoreCase))
+                .Select(entry => $"{entry.Key}: {entry.Value}")
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            AcceptanceAssert.Empty(
+                forbiddenCharacterValues,
+                $"Locale '{locale}' character text must not expose NOPE, retired Chinese terms, or raw VIVHITE runtime keys:");
         }
+
+        AcceptanceAssert.SetEqual(
+            characterEntriesByLocale["eng"].Keys.ToArray(),
+            characterEntriesByLocale["zhs"].Keys.ToArray(),
+            "English and Simplified Chinese character-localization key sets must be identical.");
     }
 
     public static void ChineseTermsAndEnergyRichTextMatchThePlayerContract(RepositorySnapshot repository)
