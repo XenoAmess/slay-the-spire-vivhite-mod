@@ -1,0 +1,124 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_PERFECT_SYNTHESIS",
+  "card_type": "PerfectSynthesis",
+  "card_name_zh": "完美综合色",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 3,
+    "type": "Attack",
+    "rarity": "Rare",
+    "target": "AllEnemies",
+    "cough": 16,
+    "hits": 5,
+    "damage_per_hit": 11,
+    "drain_percent": 32,
+    "exhaust": true,
+    "upgrade_damage_per_hit": 14,
+    "upgrade_drain_percent": 40
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/composite-color-wheel-attempt-01/original.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "identity continuity and refined painted anime rendering language only; frontal pose, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; reference-sheet text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and restrained temperament only"
+    },
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/composite-color-wheel-attempt-01/original.png",
+      "role": "established full-scene finish, observatory depth, multiple abstract targets, hard-edged geometry, and lower cyan Drain-return language only; exact pose, central wheel, projectile count, targets, and composition excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "assets/vivhite-ironclad/generated/codex-native/2026-08-31/composite-color-wheel-attempt-01/original.png": "B905FAE91B5FEAE6810456812397E2983CAB1933722BFBD41D4983C362715D23"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "84F93B49D22D1D1CAEEE20F396F35A8588465FDDDCEDB669BEA25634E242595E",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0552b-25f7-7450-8d9a-f856bc7a7411/exec-5e563861-5cdd-447e-af6f-c363d5e86ebe.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/perfect-synthesis-card-attempt-01/original.png",
+  "original_sha256": "515B030B702D55A158DFB87301B9E1D38F106497EB2A6EA12920A6385125D4AC",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/PerfectSynthesis.png",
+  "runtime_sha256": "C2387A86ABB328AC3635DBAF1F041B7E8D9E1EBB9019885DD56B6D639412FF54",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect_candidate.gd",
+    "inspection/inspect-stdout.log",
+    "inspection/inspect-stderr.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_red_liquid_threads_or_mouth_emitted_magic": true,
+    "no_text_formula_weapon_or_second_character": true,
+    "exactly_five_separated_hard_edged_outbound_attack_cores": true,
+    "five_outbound_directions_remain_countable_in_grayscale": true,
+    "exactly_three_separated_remote_enemy_polyhedra": true,
+    "exactly_five_impacts_distributed_two_one_two": true,
+    "separate_lower_cyan_geometric_return_bus": true,
+    "no_closed_defensive_shell_or_static_power_read": true,
+    "100x76_color_and_grayscale_high_tier_aoe_attack_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Vivhite launches five large, spatially separated hard-edged crystalline star attacks in an open fan toward three vertically separated abstract enemy polyhedra. Five compact impacts remain visible in a 2-1-2 distribution, while a separate cyan collector bus joins below all targets and closes through the lower third back to the casting side. The five-hit multi-target attack remains countable at 100x76 and in grayscale; the scene contains no weapon, text, second character, blood, liquid, red filament, mouth-adjacent red artifact, or mouth-emitted magic."
+}
