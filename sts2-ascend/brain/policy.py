@@ -1222,7 +1222,21 @@ class Policy:
             except Exception:
                 pass
 
+    @staticmethod
+    def _normalize_dispatch_state(state: dict) -> dict:
+        """Prefer an explicit, confirmable unlock over a misreported screen."""
+        unlock = state.get("unlock")
+        if (isinstance(unlock, dict)
+                and unlock.get("unlock_type")
+                and "confirm_unlock" in (state.get("available_actions") or [])
+                and state.get("screen") != "UNLOCK"):
+            normalized = dict(state)
+            normalized["screen"] = "UNLOCK"
+            return normalized
+        return state
+
     def decide(self, state: dict, ctx) -> Decision:
+        state = self._normalize_dispatch_state(state)
         screen = state.get("screen", "UNKNOWN")
         run_key = (state.get("run_id") or (state.get("run") or {}).get("run_id")
                    or getattr(ctx, "run_id", None))

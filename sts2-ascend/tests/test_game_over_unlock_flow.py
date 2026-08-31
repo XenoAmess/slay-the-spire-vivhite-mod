@@ -13,7 +13,7 @@ ASCEND = BRAIN.parent
 MCP_ROOT = ASCEND / "third_party" / "STS2-Agent" / "mcp_server"
 sys.path.insert(0, str(BRAIN))
 
-from policy import Policy  # noqa: E402
+from policy import Decision, Policy  # noqa: E402
 
 
 class GameOverUnlockFlowTests(unittest.TestCase):
@@ -146,6 +146,28 @@ class GameOverUnlockFlowTests(unittest.TestCase):
             self.ctx,
         )
         self.assertIsNone(waiting_summary.action)
+
+    def test_misreported_card_selection_unlock_prefers_confirm_unlock(self) -> None:
+        selection_calls: list[dict] = []
+        self.policy._card_selection = lambda state, _ctx: (
+            selection_calls.append(state)
+            or Decision("select_deck_card", {"option_index": 0}, "wrong route")
+        )
+        state = {
+            "screen": "CARD_SELECTION",
+            "available_actions": ["confirm_unlock", "select_deck_card"],
+            "unlock": {
+                "unlock_type": "NUnlockCardsScreen",
+                "items": [],
+                "can_confirm": True,
+            },
+        }
+
+        decision = self.policy.decide(state, self.ctx)
+
+        self.assertEqual(decision.action, "confirm_unlock")
+        self.assertNotEqual(decision.action, "select_deck_card")
+        self.assertEqual(selection_calls, [])
 
     def test_unlock_wait_never_uses_mouse_fallback_and_recovers_via_api(self) -> None:
         stuck_unlock = {
