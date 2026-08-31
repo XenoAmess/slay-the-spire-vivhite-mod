@@ -27,9 +27,10 @@ import autogit
 from lifecycle import (SESSION_ID, clear_stop_request, pid_file, request_stop,
                        pid_path, read_git_head, stop_requested, wait_for_stop)
 from manual_control import GlobalHotkeyController
+from runtime_paths import resolve_knowledge_dir
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-KNOWLEDGE_DIR = BASE_DIR / "knowledge"
+KNOWLEDGE_DIR = resolve_knowledge_dir(BASE_DIR)
 MARKER = KNOWLEDGE_DIR / "pending_restart.json"
 ROLLBACK_TOMBSTONES = KNOWLEDGE_DIR / "review_rollback_tombstones.json"
 RESTART_CODE = 42

@@ -33,7 +33,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
-KNOWLEDGE_DIR = BASE_DIR / "knowledge"
+sys.path.insert(0, str(BASE_DIR / "brain"))
+from runtime_paths import resolve_knowledge_dir  # noqa: E402
+
+KNOWLEDGE_DIR = resolve_knowledge_dir(BASE_DIR)
 INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
 LOG_FILE = KNOWLEDGE_DIR / "tts_quipper.log"
 LOCK_FILE = KNOWLEDGE_DIR / "voice_quipper.lock"
@@ -54,7 +57,6 @@ from indextts_gpu import IndexTTSGpuEngine, SpeechService, worker_port  # noqa: 
 from indextts_client import health as owner_health  # noqa: E402
 from owner_epoch import (OWNER_FEATURE_VERSION, OWNER_PROTOCOL_VERSION,  # noqa: E402
                          code_epoch, valid_code_epoch)
-sys.path.insert(0, str(BASE_DIR / "brain"))
 from lifecycle import SESSION_ID, stop_requested, wait_for_stop  # noqa: E402
 
 OWNER_CODE_EPOCH = code_epoch(BASE_DIR)

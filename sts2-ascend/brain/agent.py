@@ -34,6 +34,7 @@ from manual_control import (BrainControlPaused, PAUSE_HOTKEY, RESUME_HOTKEY,
                             read_control_state)
 from policy import Decision, Policy
 from reflect import finalize_run
+from runtime_paths import resolve_knowledge_dir
 
 try:
     from dashboard_launcher import start_dashboard_supervisor
@@ -52,7 +53,7 @@ except Exception:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BASE_DIR.parent
-KNOWLEDGE_DIR = BASE_DIR / "knowledge"
+KNOWLEDGE_DIR = resolve_knowledge_dir(BASE_DIR)
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 _LOG_PATH = KNOWLEDGE_DIR / "brain.log"
 REVIEW_HEALTHY_RUNS = 2
