@@ -26,6 +26,50 @@ class CompactKnowledgeTests(unittest.TestCase):
             # Probe failure is fail-closed: compaction treats the PID as live.
             self.assertTrue(compact_knowledge._pid_alive(1234))
 
+    def test_catalog_summary_preserves_real_card_evidence_without_fake_empty_fields(
+            self) -> None:
+        old = {
+            "run_id": "OLD", "run_number": 1, "floor": 7,
+            "decisions": [{"screen": "COMBAT", "floor": 7}],
+        }
+        old_summary = compact_knowledge._run_summary(
+            old, "old.json", 100, "a" * 64)
+        self.assertNotIn("card_picks", old_summary)
+        self.assertNotIn("final_deck", old_summary)
+
+        explicit_empty = {
+            **old,
+            "run_id": "EMPTY",
+            "attribution_tags": [],
+            "final_deck": [],
+        }
+        empty_summary = compact_knowledge._run_summary(
+            explicit_empty, "empty.json", 101, "b" * 64)
+        self.assertEqual(empty_summary["card_picks"], [])
+        self.assertEqual(empty_summary["final_deck"], [])
+
+        real = {
+            **old,
+            "run_id": "REAL",
+            "attribution_tags": [
+                ["map_node", "MONSTER"],
+                ["card_pick", "bash"],
+                ["card_pick", "bash"],
+            ],
+            "final_deck": [
+                {"card_id": "strike", "upgraded": False, "name": "Strike"},
+                {"card_id": "bash", "upgraded": True, "name": "Bash+"},
+                {"card_id": "bash", "upgraded": False, "name": "Bash"},
+            ],
+        }
+        real_summary = compact_knowledge._run_summary(
+            real, "real.json", 102, "c" * 64)
+        self.assertEqual(real_summary["card_picks"], ["BASH", "BASH"])
+        self.assertEqual(
+            [(row["card_id"], row["upgraded"])
+             for row in real_summary["final_deck"]],
+            [("STRIKE", False), ("BASH", True), ("BASH", False)])
+
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="sts2-compact-test-")
         self.root = Path(self.temp.name)

@@ -39,9 +39,38 @@ except Exception:  # the overlay must remain fail-open if patrol setup breaks
     BroadcastWindowPatrol = None
 
 try:
-    from floor_stats import FloorStatsProvider
+    from floor_stats import (
+        FloorStatsProvider,
+        VIVHITE_BUILD_LABELS,
+        VIVHITE_BUILD_ORDER,
+        VIVHITE_SELECTION_SYSTEM_LABELS,
+        VIVHITE_SELECTION_SYSTEM_ORDER,
+    )
 except Exception:  # stats are optional to the crash-isolated viewer
     FloorStatsProvider = None
+    VIVHITE_BUILD_ORDER = (
+        "conservation_geometry", "recursive_astral", "crimson_integral",
+        "mixed", "bridge_only", "foreign", "unclassified")
+    VIVHITE_BUILD_LABELS = {
+        "conservation_geometry": "守恒几何",
+        "recursive_astral": "递归星算",
+        "crimson_integral": "绯彩积分",
+        "mixed": "混合构筑",
+        "bridge_only": "仅跨体系",
+        "foreign": "外来牌构筑",
+        "unclassified": "未分类",
+    }
+    VIVHITE_SELECTION_SYSTEM_ORDER = (
+        "conservation_geometry", "recursive_astral", "crimson_integral",
+        "bridge", "neutral", "foreign")
+    VIVHITE_SELECTION_SYSTEM_LABELS = {
+        "conservation_geometry": "守恒",
+        "recursive_astral": "递归",
+        "crimson_integral": "绯彩",
+        "bridge": "跨体系",
+        "neutral": "中性",
+        "foreign": "外来",
+    }
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")   # opencode 偶尔漏出的 ANSI 转义
 
@@ -1165,6 +1194,106 @@ class Viewer:
         c.create_text(x + 10, y + 18, anchor="nw", text=value, fill=FG,
                       font=self.font_card, tags="dash")
 
+    def _draw_profile_card_builds(
+            self, stats: dict, *, top: int = 358, bottom: int = 522) -> None:
+        """Separate card-pick systems from terminal final-deck builds."""
+        c = self.canvas
+        c.create_rectangle(7, top, WIN_W - 7, bottom, fill="#04111e",
+                           outline=CYAN_DARK, tags="dash")
+        profiles = stats.get("profiles") if isinstance(stats, dict) else {}
+        profiles = profiles if isinstance(profiles, dict) else {}
+        c.create_text(14, top + 5, anchor="nw",
+                      text="选牌体系分布 · card_pick · 分角色",
+                      fill=CYAN, font=self.font_tiny, tags="dash")
+
+        ironclad = profiles.get("ironclad")
+        ironclad = ironclad if isinstance(ironclad, dict) else {}
+        iron_choices = ironclad.get("card_choices")
+        iron_choices = iron_choices if isinstance(iron_choices, dict) else {}
+        c.create_text(
+            14, top + 22, anchor="nw",
+            text=("战士：不定义选牌体系 · "
+                  f"{int(iron_choices.get('evidence_runs') or 0)}局/"
+                  f"{int(iron_choices.get('total_picks') or 0)}次"),
+            fill=CYAN_DIM, font=self.font_tiny, tags="dash")
+
+        vivhite = profiles.get("vivhite")
+        vivhite = vivhite if isinstance(vivhite, dict) else {}
+        selection = vivhite.get("selection_system_distribution")
+        selection = selection if isinstance(selection, dict) else {}
+        selection_categories = selection.get("categories")
+        selection_categories = (
+            selection_categories if isinstance(selection_categories, dict) else {})
+        c.create_text(
+            14, top + 38, anchor="nw",
+            text=("白绮："
+                  f"{int(selection.get('evidence_runs') or 0)}局/"
+                  f"{int(selection.get('total_card_picks') or 0)}次选择"),
+            fill=GOLD, font=self.font_tiny, tags="dash")
+
+        def picked(system_id: str) -> int:
+            row = selection_categories.get(system_id)
+            return int(row.get("card_picks") or 0) if isinstance(row, dict) else 0
+
+        c.create_text(
+            14, top + 54, anchor="nw",
+            text=(f"守恒 {picked('conservation_geometry')} · "
+                  f"递归 {picked('recursive_astral')} · "
+                  f"绯彩 {picked('crimson_integral')}"),
+            fill=FG, font=self.font_tiny, tags="dash")
+        c.create_text(
+            14, top + 69, anchor="nw",
+            text=(f"跨体系 {picked('bridge')} · 中性 {picked('neutral')} · "
+                  f"外来 {picked('foreign')}"),
+            fill=DIM, font=self.font_tiny, tags="dash")
+
+        c.create_line(14, top + 87, WIN_W - 14, top + 87,
+                      fill=CYAN_DARK, tags="dash")
+        c.create_text(14, top + 94, anchor="nw",
+                      text="最终构筑分布 · 仅终局 final_deck",
+                      fill=MAGENTA, font=self.font_tiny, tags="dash")
+        c.create_text(14, top + 111, anchor="nw",
+                      text="战士：未定义构筑体系",
+                      fill=CYAN_DIM, font=self.font_tiny, tags="dash")
+        builds = vivhite.get("build_distribution")
+        builds = builds if isinstance(builds, dict) else {}
+        c.create_text(
+            14, top + 127, anchor="nw",
+            text=(f"白绮：final_deck {int(builds.get('evidence_runs') or 0)}/"
+                  f"{int(builds.get('eligible_runs') or 0)}局 · "
+                  f"缺失→未分类 {int(builds.get('missing_evidence_runs') or 0)}"),
+            fill=GOLD, font=self.font_tiny, tags="dash")
+        categories = builds.get("categories")
+        categories = categories if isinstance(categories, dict) else {}
+        positions = (
+            (14, top + 143), (109, top + 143), (203, top + 143),
+            (297, top + 143), (14, top + 157), (109, top + 157),
+            (203, top + 157),
+        )
+        short_labels = {
+            "conservation_geometry": "守恒",
+            "recursive_astral": "递归",
+            "crimson_integral": "绯彩",
+            "mixed": "混合",
+            "bridge_only": "仅跨",
+            "foreign": "外来",
+            "unclassified": "未分类",
+        }
+        for build_id, (x, y) in zip(VIVHITE_BUILD_ORDER, positions):
+            row = categories.get(build_id)
+            row = row if isinstance(row, dict) else {}
+            runs = int(row.get("runs") or 0)
+            share = row.get("share")
+            share_text = (f"{float(share) * 100:.0f}%"
+                          if isinstance(share, (int, float)) else "—")
+            label = short_labels.get(
+                build_id,
+                row.get("label") or VIVHITE_BUILD_LABELS.get(build_id, build_id))
+            c.create_text(x, y, anchor="nw",
+                          text=f"{label} {runs} · {share_text}",
+                          fill=FG if runs else DIM,
+                          font=self.font_tiny, tags="dash")
+
     def _draw_trend(self, stats: dict, *, top: int = 177, bottom: int = 470) -> None:
         c = self.canvas
         x0, x1, y0, y1 = 14, WIN_W - 14, top + 23, bottom - 8
@@ -1462,20 +1591,8 @@ class Viewer:
                             f"F{self._metric(run.get('floor'), 0)} · "
                             f"有效局 {self._metric(life.get('runs'), 0)}"),
                       fill=GOLD, font=self.font_tiny, tags="dash")
-        self._draw_trend(stats, top=177, bottom=474)
-        decision = dash.get("decision") if isinstance(dash.get("decision"), dict) else {}
-        selected = decision.get("selected") if isinstance(decision.get("selected"), dict) else {}
-        outcome = decision.get("outcome") if isinstance(decision.get("outcome"), dict) else {}
-        outcome_status = outcome.get("status") or decision.get("status") or "waiting"
-        c.create_rectangle(7, 480, WIN_W - 7, 522, fill="#061827",
-                           outline=self._status_color(outcome_status), tags="dash")
-        c.create_text(14, 486, anchor="nw", text="LAST DECISION",
-                      fill=CYAN_DIM, font=self.font_tiny, tags="dash")
-        c.create_text(14, 503, anchor="nw",
-                      text=(f"{self._one_line(selected.get('label') or selected.get('action'), 30)}"
-                            f" · {str(outcome_status).upper()} · "
-                            f"{self._one_line(outcome.get('message'), 20)}"),
-                      fill=self._status_color(outcome_status), font=self.font_tiny, tags="dash")
+        self._draw_trend(stats, top=177, bottom=352)
+        self._draw_profile_card_builds(stats, top=358, bottom=522)
         self.auto_mode = "TREND"
         self._render_review_panel(now, 528, 714, title="LIVE REVIEW · 结算复盘流")
 

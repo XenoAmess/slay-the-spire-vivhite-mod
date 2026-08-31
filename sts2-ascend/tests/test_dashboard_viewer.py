@@ -144,6 +144,74 @@ class DashboardSourceTests(unittest.TestCase):
         self.assertIn("白绮 · FLOOR TREND · 最近 2 局", texts)
         self.assertIn("白绮/战士 ×1.38", texts)
 
+    def test_profile_card_and_vivhite_build_panel_shows_both_profiles(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer.canvas = mock.MagicMock()
+        viewer.font_tiny = object()
+        stats = {
+            "profiles": {
+                "ironclad": {
+                    "card_choices": {
+                        "evidence_runs": 2, "total_picks": 3,
+                        "top_cards": [
+                            {"name": "Bash", "picked": 2, "run_count": 1},
+                        ],
+                    },
+                },
+                "vivhite": {
+                    "selection_system_distribution": {
+                        "evidence_runs": 5,
+                        "total_card_picks": 10,
+                        "categories": {
+                            "conservation_geometry": {"card_picks": 3},
+                            "recursive_astral": {"card_picks": 2},
+                            "crimson_integral": {"card_picks": 2},
+                            "bridge": {"card_picks": 1},
+                            "neutral": {"card_picks": 0},
+                            "foreign": {"card_picks": 2},
+                        },
+                    },
+                    "build_distribution": {
+                        "eligible_runs": 7,
+                        "evidence_runs": 5,
+                        "missing_evidence_runs": 2,
+                        "categories": {
+                            "conservation_geometry": {
+                                "runs": 1, "share": 1 / 7},
+                            "recursive_astral": {
+                                "runs": 1, "share": 1 / 7},
+                            "crimson_integral": {
+                                "runs": 1, "share": 1 / 7},
+                            "mixed": {"runs": 1, "share": 1 / 7},
+                            "bridge_only": {"runs": 1, "share": 1 / 7},
+                            "foreign": {"runs": 0, "share": 0},
+                            "unclassified": {"runs": 2, "share": 2 / 7},
+                        },
+                    },
+                },
+            },
+        }
+
+        review_viewer.Viewer._draw_profile_card_builds(viewer, stats)
+
+        texts = [call.kwargs.get("text", "")
+                 for call in viewer.canvas.create_text.call_args_list]
+        self.assertIn("选牌体系分布 · card_pick · 分角色", texts)
+        self.assertIn("战士：不定义选牌体系 · 2局/3次", texts)
+        self.assertIn("白绮：5局/10次选择", texts)
+        self.assertIn("守恒 3 · 递归 2 · 绯彩 2", texts)
+        self.assertIn("跨体系 1 · 中性 0 · 外来 2", texts)
+        self.assertIn("最终构筑分布 · 仅终局 final_deck", texts)
+        self.assertIn("战士：未定义构筑体系", texts)
+        self.assertIn("白绮：final_deck 5/7局 · 缺失→未分类 2", texts)
+        self.assertIn("守恒 1 · 14%", texts)
+        self.assertIn("递归 1 · 14%", texts)
+        self.assertIn("绯彩 1 · 14%", texts)
+        self.assertIn("混合 1 · 14%", texts)
+        self.assertIn("仅跨 1 · 14%", texts)
+        self.assertIn("外来 0 · 0%", texts)
+        self.assertIn("未分类 2 · 29%", texts)
+
     def test_hud_marks_active_profile(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)
         viewer.canvas = mock.MagicMock()

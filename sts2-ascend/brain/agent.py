@@ -8,6 +8,7 @@ Usage:  py -m brain            (from sts2-ascend/ directory)
 from __future__ import annotations
 
 import copy
+from collections import Counter
 import json
 import os
 import random
@@ -262,6 +263,10 @@ class RunContext:
     profile_run_number: int = 0
     credit_tags: list = field(default_factory=list)   # ("card_pick", id) etc.
     attribution_tags: list = field(default_factory=list)  # durable run-end facts only
+    # ``run.deck`` is the permanent deck exposed by the MCP/API.  ``None`` means
+    # no snapshot has ever been observed; an empty list is real evidence.
+    deck_snapshot: list[dict] | None = None
+    deck_changes: list[dict] = field(default_factory=list)
     decisions: list = field(default_factory=list)     # full decision log
     combat: dict | None = None                        # active combat tracker
     combat_agg: dict | None = None                    # 同层多段战斗聚合账（第 97~98 批复盘）
@@ -1122,6 +1127,16 @@ class Agent:
                 # novelty, card plays and UI attempts after every restart.
                 self.ctx.attribution_tags = _durable_attribution_tags(
                     prior.get("attribution_tags"))
+                prior_deck = self._normalize_run_deck(
+                    prior.get("deck_snapshot"))
+                if prior_deck is not None:
+                    self.ctx.deck_snapshot = prior_deck
+                raw_changes = prior.get("deck_changes")
+                if isinstance(raw_changes, list):
+                    self.ctx.deck_changes = [
+                        copy.deepcopy(row) for row in raw_changes
+                        if isinstance(row, dict)
+                    ]
                 if prior.get("started_at"):
                     self.ctx.started_at = prior["started_at"]
                 prior_run_number = prior.get(
@@ -1136,6 +1151,10 @@ class Agent:
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
                     f"{len(self.ctx.combat_notes)} 条战斗记录 / "
                     f"{len(self.ctx.attribution_tags)} 条长期归因）")
+
+        deck_changed = bool(
+            run and run_id == self.ctx.run_id
+            and self._observe_run_deck(run, screen))
 
         # combat enter/exit tracking
         # 战斗连续性：Boss/精英转阶段过场、结算弹层会让屏幕在 COMBAT↔MODAL 间闪断。
@@ -1253,6 +1272,10 @@ class Agent:
         # tags/ctx 副作用则统一留给 _commit_successful_action；否则 409/断线也会
         # 伪造拿牌、路线、休息和事件选择样本。
         self.ctx.last_hp, self.ctx.last_gold = hp, gold
+        if deck_changed:
+            # A permanent deck transition is sparse and materially important.
+            # Persist it immediately instead of waiting for the 15-decision cadence.
+            self._save_run_progress(run, force=True)
 
     def _commit_successful_action(self, state: dict, decision) -> None:
         """Commit one accepted HTTP action and its credit/context effects.
@@ -1341,6 +1364,102 @@ class Agent:
                 if raw == index:
                     return item
         return None
+
+    @staticmethod
+    def _normalize_run_deck(raw_deck) -> list[dict] | None:
+        """Return compact permanent-deck evidence, or ``None`` when unavailable."""
+        if not isinstance(raw_deck, list):
+            return None
+        result: list[dict] = []
+        for raw in raw_deck:
+            if not isinstance(raw, dict):
+                continue
+            card_id = str(raw.get("card_id") or "").strip().upper()
+            if not card_id:
+                continue
+            card = {
+                "card_id": card_id,
+                "upgraded": bool(raw.get("upgraded")),
+            }
+            for key in ("name", "card_type", "rarity"):
+                value = raw.get(key)
+                if value not in (None, ""):
+                    card[key] = str(value)
+            result.append(card)
+        return result
+
+    @staticmethod
+    def _deck_counts(deck: list[dict]) -> Counter:
+        return Counter(
+            (str(card.get("card_id") or "").strip().upper(),
+             bool(card.get("upgraded")))
+            for card in deck if isinstance(card, dict) and card.get("card_id")
+        )
+
+    @classmethod
+    def _deck_transition(cls, before: list[dict], after: list[dict]) -> dict:
+        """Describe only observable permanent-deck count changes.
+
+        The API does not expose stable card-instance ids.  Pairing one vanished
+        base copy with one new upgraded copy of the same card is therefore the
+        strongest available upgrade evidence; all residual count differences are
+        recorded as acquisitions/removals without inventing a gameplay cause.
+        """
+        old_counts = cls._deck_counts(before)
+        new_counts = cls._deck_counts(after)
+        removed = old_counts - new_counts
+        acquired = new_counts - old_counts
+        upgraded: list[dict] = []
+        card_ids = sorted({card_id for card_id, _upgraded in
+                           set(old_counts) | set(new_counts)})
+        for card_id in card_ids:
+            count = min(removed[(card_id, False)], acquired[(card_id, True)])
+            if count <= 0:
+                continue
+            removed[(card_id, False)] -= count
+            acquired[(card_id, True)] -= count
+            upgraded.append({"card_id": card_id, "count": count})
+
+        def rows(counts: Counter) -> list[dict]:
+            return [
+                {"card_id": card_id, "upgraded": is_upgraded, "count": count}
+                for (card_id, is_upgraded), count in sorted(counts.items())
+                if count > 0
+            ]
+
+        return {
+            "acquired": rows(acquired),
+            "removed": rows(removed),
+            "upgraded": upgraded,
+        }
+
+    def _observe_run_deck(self, run: dict, screen: str) -> bool:
+        """Update the run's permanent-deck snapshot and append a real delta."""
+        if not isinstance(run, dict) or "deck" not in run:
+            return False
+        current = self._normalize_run_deck(run.get("deck"))
+        if current is None:
+            return False
+        previous = getattr(self.ctx, "deck_snapshot", None)
+        self.ctx.deck_snapshot = current
+        if previous is None:
+            return False
+        transition = self._deck_transition(previous, current)
+        if not any(transition.values()):
+            return False
+        changes = getattr(self.ctx, "deck_changes", None)
+        if not isinstance(changes, list):
+            changes = []
+            self.ctx.deck_changes = changes
+        changes.append({
+            "sequence": len(changes) + 1,
+            "source": "run.deck_diff",
+            "floor": int(run.get("floor", 0) or 0),
+            "screen": str(screen or "UNKNOWN"),
+            "observed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            **transition,
+        })
+        return True
 
     @classmethod
     def _run_material(cls, state: dict) -> dict:
@@ -2065,7 +2184,7 @@ class Agent:
                 return
         self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
         try:
-            knowledge.save_run_log(self.ctx.run_id, {
+            payload = {
                 "run_id": self.ctx.run_id,
                 "run_number": self.ctx.run_number,
                 **self._run_profile_metadata(),
@@ -2080,7 +2199,14 @@ class Agent:
                 "human_assisted": bool(getattr(self.ctx, "human_assisted", False)),
                 "excluded_from_learning": bool(
                     getattr(self.ctx, "human_assisted", False)),
-            })
+            }
+            deck_snapshot = getattr(self.ctx, "deck_snapshot", None)
+            if isinstance(deck_snapshot, list):
+                payload["deck_snapshot"] = copy.deepcopy(deck_snapshot)
+            deck_changes = getattr(self.ctx, "deck_changes", None)
+            if isinstance(deck_changes, list) and deck_changes:
+                payload["deck_changes"] = copy.deepcopy(deck_changes)
+            knowledge.save_run_log(self.ctx.run_id, payload)
         except OSError:
             pass
 
@@ -2410,7 +2536,8 @@ class Agent:
 
     # ---------------- reflection ----------------
 
-    def _finalize(self, victory: bool, floor: int) -> None:
+    def _finalize(self, victory: bool, floor: int,
+                  final_run: dict | None = None) -> None:
         if self.ctx.run_finalized:
             return
         if bool(getattr(self.ctx, "human_assisted", False)):
@@ -2462,6 +2589,15 @@ class Agent:
             return
         pending = getattr(self.ctx, "pending_terminal_persistence", None)
         if pending is None:
+            # Normal GAME_OVER states retain RunState, and the MCP/API therefore
+            # exposes the player's permanent deck here.  Persist final_deck only
+            # from that explicit terminal payload; an older/latest snapshot is not
+            # silently promoted to terminal evidence for crash/abandon closures.
+            final_deck = None
+            if (isinstance(final_run, dict)
+                    and isinstance(final_run.get("deck"), list)):
+                self._observe_run_deck(final_run, "GAME_OVER")
+                final_deck = self._normalize_run_deck(final_run.get("deck"))
             # 终局前落库挂起的战斗聚合账（第 97~98 批复盘）：胜利结算屏触发的
             # settle 挂账后没有下一场战斗来冲销，必须在此补记，否则最后一战丢失
             self._flush_combat_agg()
@@ -2471,23 +2607,29 @@ class Agent:
             self.ctx.run_number = int(
                 self.know.stats.get("global", {}).get("runs", 0))
             self.ctx.profile_run_number = self.ctx.run_number
+            payload = {
+                "run_id": self.ctx.run_id,
+                "run_number": self.ctx.run_number,
+                **self._run_profile_metadata(),
+                "ascension": self.ctx.ascension,
+                "started_at": self.ctx.started_at,
+                "victory": bool(victory),
+                "floor": int(floor),
+                "decisions": self.ctx.decisions,
+                "combat_notes": self.ctx.combat_notes,
+                "attribution_tags": _durable_attribution_tags(
+                    self.ctx.attribution_tags),
+            }
+            if final_deck is not None:
+                payload["final_deck"] = copy.deepcopy(final_deck)
+            deck_changes = getattr(self.ctx, "deck_changes", None)
+            if isinstance(deck_changes, list) and deck_changes:
+                payload["deck_changes"] = copy.deepcopy(deck_changes)
             pending = {
                 "victory": bool(victory),
                 "floor": int(floor),
                 "lesson": lesson,
-                "payload": {
-                    "run_id": self.ctx.run_id,
-                    "run_number": self.ctx.run_number,
-                    **self._run_profile_metadata(),
-                    "ascension": self.ctx.ascension,
-                    "started_at": self.ctx.started_at,
-                    "victory": bool(victory),
-                    "floor": int(floor),
-                    "decisions": self.ctx.decisions,
-                    "combat_notes": self.ctx.combat_notes,
-                    "attribution_tags": _durable_attribution_tags(
-                        self.ctx.attribution_tags),
-                },
+                "payload": payload,
             }
             self.ctx.pending_terminal_persistence = pending
 
@@ -2764,6 +2906,95 @@ class Agent:
             return ""
         return self._pending_review_restart_reason()
 
+    @staticmethod
+    def _native_game_over_save_verdict(state: dict) -> tuple[str, str]:
+        """Classify the native GAME_OVER progress-save proof.
+
+        ``summary_ready`` only proves that the summary UI finished animating.  It
+        does not prove that ``ProgressSaveManager`` actually persisted the score,
+        epoch, and unlock state.  The Agent DTO therefore exposes a separate disk
+        verification result.  Treat that result as a strict two-field protocol:
+        only ``verified`` plus the literal boolean ``True`` is proof; a coherent
+        ``pending`` pair may be polled; every malformed or contradictory payload
+        is a terminal barrier error and must fail closed.
+        """
+        if not isinstance(state, dict) or state.get("screen") != "GAME_OVER":
+            return "blocked", "screen_not_game_over"
+        game_over = state.get("game_over")
+        if not isinstance(game_over, dict):
+            return "blocked", "game_over_not_object"
+
+        if "phase" not in game_over:
+            return "blocked", "missing_phase"
+        phase = game_over.get("phase")
+        if not isinstance(phase, str) or not phase:
+            return "blocked", "invalid_phase"
+        if phase != "summary_ready":
+            if phase in ("intro", "summary_animating"):
+                return "pending", f"phase={phase}"
+            return "blocked", f"unexpected_phase={phase[:80]}"
+
+        required = ("save_status", "save_verified", "save_error")
+        missing = [key for key in required if key not in game_over]
+        if missing:
+            return "blocked", f"missing_{'_'.join(missing)}"
+
+        status = game_over.get("save_status")
+        verified = game_over.get("save_verified")
+        save_error = game_over.get("save_error")
+        if not isinstance(status, str):
+            return "blocked", "save_status_not_string"
+        if type(verified) is not bool:
+            return "blocked", "save_verified_not_bool"
+        if save_error is not None and not isinstance(save_error, str):
+            return "blocked", "save_error_not_string_or_null"
+        error_text = (save_error or "").strip()
+
+        if status == "verified" and verified is True and not error_text:
+            return "verified", "native_progress_save_verified"
+        if status == "pending" and verified is False and not error_text:
+            return "pending", "native_progress_save_pending"
+        if status == "error" and verified is False:
+            code = error_text[:160] or "unspecified"
+            return "blocked", f"native_progress_save_error={code}"
+        return "blocked", (
+            "inconsistent_native_save_fields="
+            f"status:{status[:40]},verified:{verified},error:{bool(error_text)}")
+
+    def _native_game_over_save_barrier(self, state: dict) -> tuple[str, str]:
+        """Return the native-save verdict and publish each distinct error once."""
+        verdict, reason = self._native_game_over_save_verdict(state)
+        if verdict != "blocked":
+            self._native_save_barrier_last_error = None
+            return verdict, reason
+
+        run_id = str(state.get("run_id") or getattr(self.ctx, "run_id", "")
+                     or "run_unknown")[:120]
+        marker = (run_id, reason)
+        if getattr(self, "_native_save_barrier_last_error", None) != marker:
+            self._native_save_barrier_last_error = marker
+            message = (f"原生 GAME_OVER 存档屏障拒绝终局：run={run_id}；"
+                       f"{reason}")
+            log(f"[agent] {message}")
+            dashboard = getattr(self, "_dashboard_connection", None)
+            if callable(dashboard):
+                dashboard("degraded", message)
+        return verdict, reason
+
+    def _apply_native_game_over_return_barrier(self, state: dict,
+                                                decision: Decision) -> Decision:
+        """Prevent every GAME_OVER exit until the native save is verified."""
+        if (state.get("screen") != "GAME_OVER"
+                or getattr(decision, "action", None) != "return_to_main_menu"):
+            return decision
+        verdict, reason = self._native_game_over_save_barrier(state)
+        if verdict == "verified":
+            return decision
+        prefix = "等待" if verdict == "pending" else "阻断"
+        return Decision(
+            None, {}, f"结算：{prefix}原生分数、解锁与存档落盘证明（{reason}）",
+            wait=0.8)
+
     # ---------------- main loop ----------------
 
     def run(self) -> None:
@@ -2867,9 +3098,18 @@ class Agent:
 
             # run finalization hook (policy asked for it on GAME_OVER)
             if self.ctx.finalize_requested and not self.ctx.run_finalized:
+                native_save, _native_save_reason = \
+                    self._native_game_over_save_barrier(state)
+                if native_save != "verified":
+                    if wait_for_stop(self.cfg["poll_interval"]):
+                        return
+                    continue
                 go = state.get("game_over") or {}
                 floor = go.get("floor") or (self.ctx.decisions[-1]["floor"] if self.ctx.decisions else 0)
-                self._finalize(bool(go.get("is_victory")), int(floor or 0))
+                self._finalize(
+                    bool(go.get("is_victory")), int(floor or 0),
+                    final_run=state.get("run"),
+                )
                 continue
 
             # A response-lost POST can still be settling after the first fresh GET.
@@ -2885,6 +3125,8 @@ class Agent:
                 decision = Decision(forced, {}, "看门狗介入", wait=1.0)
             else:
                 decision = self.policy.decide(state, self.ctx)
+            decision = self._apply_native_game_over_return_barrier(
+                state, decision)
             self._dashboard_propose(state, decision, watchdog=bool(forced))
 
             # 战斗回合超限（≥100）→ 大脑自主启动 AI 死循环分析（异步，不阻塞游玩）

@@ -213,6 +213,60 @@ def _decision_list(data: dict) -> list[dict]:
     return [row for row in value if isinstance(row, dict)]
 
 
+def _card_picks(data: dict) -> list[str]:
+    raw = data.get("attribution_tags")
+    if not isinstance(raw, list):
+        raw = data.get("attribution")
+    if not isinstance(raw, list):
+        return []
+    result: list[str] = []
+    for tag in raw:
+        if not isinstance(tag, (list, tuple)) or len(tag) < 2:
+            continue
+        if str(tag[0]).strip().casefold() != "card_pick":
+            continue
+        card_id = str(tag[1] or "").strip().upper()
+        if card_id:
+            result.append(card_id)
+    return result
+
+
+def _has_card_pick_evidence(data: dict) -> bool:
+    """Whether this run actually persisted the attribution ledger.
+
+    An explicit empty ledger proves that no cards were selected.  An absent
+    ledger proves nothing and must stay distinguishable after compaction.
+    """
+    return (isinstance(data.get("attribution_tags"), list)
+            or isinstance(data.get("attribution"), list))
+
+
+def _final_deck_summary(data: dict) -> list[dict] | None:
+    """Keep compact terminal-deck evidence without inventing it for old runs."""
+    raw = data.get("final_deck")
+    if not isinstance(raw, list):
+        return None
+    result: list[dict] = []
+    for item in raw:
+        if isinstance(item, str):
+            card_id = item.strip().upper()
+            if card_id:
+                result.append({"card_id": card_id, "upgraded": False})
+            continue
+        if not isinstance(item, dict):
+            continue
+        card_id = str(item.get("card_id") or "").strip().upper()
+        if not card_id:
+            continue
+        card = {"card_id": card_id, "upgraded": bool(item.get("upgraded"))}
+        for key in ("name", "card_type", "rarity"):
+            value = item.get(key)
+            if value not in (None, ""):
+                card[key] = str(value)
+        result.append(card)
+    return result
+
+
 def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
     decisions = _decision_list(data)
     trail_floor = max((int(row.get("floor") or 0) for row in decisions), default=0)
@@ -233,6 +287,8 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         "run_id": data.get("run_id"),
         "run_number": data.get("run_number"),
         "started_at": data.get("started_at"),
+        **{key: data[key] for key in ("profile_id", "character_id")
+           if key in data},
         "ascension": data.get("ascension"),
         "victory": victory,
         "in_progress": bool(data.get("in_progress")),
@@ -243,6 +299,11 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         "last_reason": last_reason[:320],
         "phantom_candidate": not decisions and not victory,
     }
+    if _has_card_pick_evidence(data):
+        summary["card_picks"] = _card_picks(data)
+    final_deck = _final_deck_summary(data)
+    if final_deck is not None:
+        summary["final_deck"] = final_deck
     for key in ("human_assisted", "excluded_from_learning"):
         if key in data:
             summary[key] = bool(data.get(key))
@@ -810,6 +871,33 @@ def _catalog_bytes(root: Path, manifest: dict) -> bytes:
     lines.extend(json.dumps(entries[name], ensure_ascii=False, sort_keys=True,
                             separators=(",", ":")) for name in sorted(entries))
     return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def read_catalog_storage_evidence(root: Path, row: dict) -> bytes:
+    """Read the exact raw JSON addressed by one archived catalog row."""
+    storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
+    if storage.get("kind") != "zip":
+        raise ValueError("catalog row does not point to ZIP storage")
+    root = Path(root).resolve()
+    archive_rel = _safe_zip_member(str(storage.get("archive") or ""))
+    archive_path = (root / Path(PurePosixPath(archive_rel))).resolve()
+    try:
+        archive_path.relative_to(root)
+    except ValueError as exc:
+        raise RuntimeError(f"archive escapes knowledge root: {archive_rel}") from exc
+    member = _safe_zip_member(str(storage.get("member") or ""))
+    try:
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            raw = archive.read(member)
+    except (OSError, KeyError, zipfile.BadZipFile) as exc:
+        raise RuntimeError(
+            f"cannot read archived catalog evidence: {row.get('file')}") from exc
+    expected_size = int(row.get("bytes") or -1)
+    expected_sha256 = str(row.get("sha256") or "")
+    if len(raw) != expected_size or _sha256(raw) != expected_sha256:
+        raise RuntimeError(
+            f"archived catalog evidence verification failed: {row.get('file')}")
+    return raw
 
 
 def read_run_evidence(root: Path, filename: str) -> bytes:

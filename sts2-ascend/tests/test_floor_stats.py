@@ -57,6 +57,9 @@ def _catalog_row(data: dict, filename: str) -> dict:
         "run_id": data.get("run_id"),
         "run_number": data.get("run_number"),
         "started_at": data.get("started_at"),
+        # Synthetic ZIP rows in these floor tests are known Ironclad evidence;
+        # explicit identity keeps unrelated tests from requiring a fake archive.
+        "profile_id": "ironclad",
         "ascension": data.get("ascension"),
         "victory": bool(data.get("victory")),
         "in_progress": bool(data.get("in_progress")),
@@ -295,21 +298,25 @@ class FloorStatsProviderTests(unittest.TestCase):
             ("current.json", current),
         ]:
             _write_json(self.root / "runs" / name, data)
-        self._write_stats([1, 10, 12, 7])
+        # Durable aggregate counters contain only committed terminal runs.  The
+        # half-written OLD_GAME_OVER trace must not be reintroduced by records.
+        self._write_stats([1, 10, 7])
 
         snapshot = FloorStatsProvider(self.root, refresh_interval=0).snapshot()
         self.assertFalse(snapshot["stale"])
-        self.assertEqual(snapshot["lifetime"]["mean_floor"], 7.5)
-        self.assertEqual(snapshot["lifetime"]["best_floor"], 12)
-        self.assertEqual(snapshot["recent"]["count"], 4)
-        self.assertEqual(snapshot["recent"]["best_floor"], 12)
+        self.assertEqual(snapshot["lifetime"]["mean_floor"], 6.0)
+        self.assertEqual(snapshot["lifetime"]["best_floor"], 10)
+        self.assertEqual(snapshot["recent"]["count"], 3)
+        self.assertEqual(snapshot["recent"]["best_floor"], 10)
+        self.assertNotIn(
+            "OLD_GAME_OVER", [row["run_id"] for row in snapshot["trend"]])
         self.assertEqual(snapshot["previous"]["count"], 0)
         self.assertIsNone(snapshot["previous"]["mean_floor"])
         self.assertIsNone(snapshot["previous"]["best_floor"])
         self.assertIsNone(snapshot["delta_mean"])
         self.assertEqual(snapshot["current"]["run_id"], "CURRENT")
-        self.assertEqual(snapshot["quality"]["completed_records"], 4)
-        self.assertEqual(snapshot["quality"]["excluded_in_progress"], 1)
+        self.assertEqual(snapshot["quality"]["completed_records"], 3)
+        self.assertEqual(snapshot["quality"]["excluded_in_progress"], 2)
         self.assertEqual(snapshot["quality"]["excluded_phantom"], 1)
         self.assertGreaterEqual(snapshot["quality"]["duplicates"], 2)
         self.assertEqual(snapshot["quality"]["invalid_records"], 0)

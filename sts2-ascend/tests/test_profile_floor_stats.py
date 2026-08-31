@@ -81,7 +81,8 @@ class ProfileFloorStatsTests(unittest.TestCase):
                     "I-EXCLUDED", 4, 98, "IRONCLAD",
                     game_over=True, excluded_from_learning=True,
                 )),
-                (vivhite_root, _run("V-LEGACY", 1, 20, None)),
+                (vivhite_root, _run(
+                    "V-LEGACY", 1, 20, "VIVHITE_CHARACTER_VIVHITE_CHARACTER")),
                 (vivhite_root, _run(
                     "V-AUTO", 2, 28, "VIVHITE_CHARACTER_VIVHITE_CHARACTER")),
                 (vivhite_root, _run(
@@ -137,7 +138,8 @@ class ProfileFloorStatsTests(unittest.TestCase):
                     "I-HUMAN-GAME-OVER", 2, 91, "IRONCLAD",
                     in_progress=True, game_over=True, human_assisted=True,
                 )),
-                (vivhite_root, _run("V-LEGACY", 1, 22, None)),
+                (vivhite_root, _run(
+                    "V-LEGACY", 1, 22, "VIVHITE_CHARACTER_VIVHITE_CHARACTER")),
                 (vivhite_root, _run(
                     "V-EXCLUDED-GAME-OVER", 2, 92,
                     "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
@@ -182,7 +184,8 @@ class ProfileFloorStatsTests(unittest.TestCase):
                 "I-HUMAN", 2, 9, "IRONCLAD",
                 game_over=True, human_assisted=True,
             )
-            vivhite_auto = _run("V-AUTO", 1, 20, None)
+            vivhite_auto = _run(
+                "V-AUTO", 1, 20, "VIVHITE_CHARACTER_VIVHITE_CHARACTER")
             vivhite_excluded = _run(
                 "V-EXCLUDED", 2, 19,
                 "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
@@ -336,7 +339,7 @@ class ProfileFloorStatsTests(unittest.TestCase):
                          _run("I-NEW", 2, 20, "IRONCLAD")):
                 _write_json(root / "runs" / f"{data['run_id']}.json", data)
             for data in (
-                _run("V-OLD", 3, 15, None),
+                _run("V-OLD", 3, 15, "VIVHITE_CHARACTER_VIVHITE_CHARACTER"),
                 _run("V-NEW", 4, 30, "VIVHITE_CHARACTER_VIVHITE_CHARACTER"),
             ):
                 _write_json(vivhite_root / "runs" / f"{data['run_id']}.json", data)
@@ -466,7 +469,8 @@ class ProfileFloorStatsTests(unittest.TestCase):
                     "floors_total": 999.0, "best_floor": 999,
                 },
             })
-            data = _run("V-EVIDENCE", 1, 12, None)
+            data = _run(
+                "V-EVIDENCE", 1, 12, "VIVHITE_CHARACTER_VIVHITE_CHARACTER")
             _write_json(vivhite_root / "runs" / "v-evidence.json", data)
 
             snapshot = FloorStatsProvider(root, refresh_interval=0).snapshot()

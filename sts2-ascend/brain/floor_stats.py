@@ -4,7 +4,8 @@ The learning score deliberately awards +50 for a victory.  This module never
 uses that score as a displayed floor: lifetime totals come from the raw-floor
 aggregate (with a legacy migration fallback), while recent/trend data comes
 from completed run evidence.  Ironclad and Vivhite profile views stay separate;
-old root aggregates and run logs without a character id remain Ironclad data.
+historical logs without both ``profile_id`` and ``character_id`` remain
+Ironclad data regardless of their storage directory.
 Active run files override compact archive catalog entries with the same run id.
 
 Only the Python standard library is used so the overlay can import this module
@@ -13,14 +14,34 @@ without bringing up the agent, Godot API client, or review stack.
 from __future__ import annotations
 
 import copy
+from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+import hashlib
 import json
 import math
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import threading
 import time
 from typing import Any, Mapping
+import zipfile
+
+try:
+    from character_strategy import (
+        CONSERVATION_GEOMETRY,
+        CRIMSON_INTEGRAL,
+        HYBRID,
+        RECURSIVE_ASTRAL,
+        VIVHITE_CARD_CATALOG,
+    )
+except ImportError:  # pragma: no cover - package import fallback
+    from .character_strategy import (
+        CONSERVATION_GEOMETRY,
+        CRIMSON_INTEGRAL,
+        HYBRID,
+        RECURSIVE_ASTRAL,
+        VIVHITE_CARD_CATALOG,
+    )
 
 
 _UNSET = object()
@@ -30,6 +51,73 @@ PROFILE_CHARACTER_IDS = {
     "ironclad": "IRONCLAD",
     "vivhite": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
 }
+MIXED_BUILD = "mixed"
+BRIDGE_ONLY_BUILD = "bridge_only"
+FOREIGN_BUILD = "foreign"
+UNCLASSIFIED_BUILD = "unclassified"
+BRIDGE_SYSTEM = "bridge"
+NEUTRAL_SYSTEM = "neutral"
+FOREIGN_SYSTEM = "foreign"
+_VIVHITE_PRIMARY_SYSTEMS = (
+    CONSERVATION_GEOMETRY,
+    RECURSIVE_ASTRAL,
+    CRIMSON_INTEGRAL,
+)
+VIVHITE_BUILD_ORDER = (
+    *_VIVHITE_PRIMARY_SYSTEMS,
+    MIXED_BUILD,
+    BRIDGE_ONLY_BUILD,
+    FOREIGN_BUILD,
+    UNCLASSIFIED_BUILD,
+)
+VIVHITE_BUILD_LABELS = {
+    CONSERVATION_GEOMETRY: "守恒几何",
+    RECURSIVE_ASTRAL: "递归星算",
+    CRIMSON_INTEGRAL: "绯彩积分",
+    MIXED_BUILD: "混合构筑",
+    BRIDGE_ONLY_BUILD: "仅跨体系",
+    FOREIGN_BUILD: "外来牌构筑",
+    UNCLASSIFIED_BUILD: "未分类",
+}
+VIVHITE_SELECTION_SYSTEM_ORDER = (
+    *_VIVHITE_PRIMARY_SYSTEMS,
+    BRIDGE_SYSTEM,
+    NEUTRAL_SYSTEM,
+    FOREIGN_SYSTEM,
+)
+VIVHITE_SELECTION_SYSTEM_LABELS = {
+    CONSERVATION_GEOMETRY: VIVHITE_BUILD_LABELS[CONSERVATION_GEOMETRY],
+    RECURSIVE_ASTRAL: VIVHITE_BUILD_LABELS[RECURSIVE_ASTRAL],
+    CRIMSON_INTEGRAL: VIVHITE_BUILD_LABELS[CRIMSON_INTEGRAL],
+    BRIDGE_SYSTEM: "桥接",
+    NEUTRAL_SYSTEM: "中性",
+    FOREIGN_SYSTEM: "外来",
+}
+_VIVHITE_CARDS = {entry.card_id: entry for entry in VIVHITE_CARD_CATALOG}
+
+
+def _vivhite_system(card_id: str) -> str:
+    entry = _VIVHITE_CARDS.get(str(card_id or "").strip().upper())
+    if entry is None:
+        return FOREIGN_SYSTEM
+    if entry.rarity == "basic":
+        return NEUTRAL_SYSTEM
+    tag = entry.build_tags[0]
+    return BRIDGE_SYSTEM if tag == HYBRID else tag
+
+
+VIVHITE_CATALOG_SYSTEM_COUNTS = dict(Counter(
+    _vivhite_system(entry.card_id) for entry in VIVHITE_CARD_CATALOG))
+_EXPECTED_VIVHITE_SYSTEM_COUNTS = {
+    CONSERVATION_GEOMETRY: 17,
+    RECURSIVE_ASTRAL: 17,
+    CRIMSON_INTEGRAL: 17,
+    BRIDGE_SYSTEM: 7,
+    NEUTRAL_SYSTEM: 3,
+}
+if VIVHITE_CATALOG_SYSTEM_COUNTS != _EXPECTED_VIVHITE_SYSTEM_COUNTS:
+    raise RuntimeError(
+        "Vivhite statistics taxonomy must remain 17A/17B/17C/7bridge/3neutral")
 
 
 def _profile_id(value: Any) -> str | None:
@@ -44,6 +132,16 @@ def _profile_id(value: Any) -> str | None:
     if "ironclad" in text:
         return "ironclad"
     return text
+
+
+def _explicit_historical_profile_id(value: Mapping[str, Any]) -> str | None:
+    """Resolve only the two durable identity fields persisted on run logs."""
+    return (_profile_id(value.get("profile_id"))
+            or _profile_id(value.get("character_id")))
+
+
+def _historical_profile_id(value: Mapping[str, Any]) -> str:
+    return _explicit_historical_profile_id(value) or "ironclad"
 
 
 def _number(value: Any) -> float | None:
@@ -73,6 +171,62 @@ def _mean(records: list["_RunRecord"]) -> float | None:
     return (sum(floors) / len(floors)) if floors else None
 
 
+def _card_picks(data: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return durable card additions in persisted order, including duplicates."""
+    raw = data.get("attribution_tags")
+    if not isinstance(raw, list):
+        raw = data.get("attribution")
+    if not isinstance(raw, list):
+        return ()
+    result: list[str] = []
+    for tag in raw:
+        if not isinstance(tag, (list, tuple)) or len(tag) < 2:
+            continue
+        if str(tag[0]).strip().casefold() != "card_pick":
+            continue
+        card_id = str(tag[1] or "").strip().upper()
+        if card_id:
+            result.append(card_id)
+    return tuple(result)
+
+
+def _has_card_pick_evidence(data: Mapping[str, Any]) -> bool:
+    return (isinstance(data.get("attribution_tags"), list)
+            or isinstance(data.get("attribution"), list))
+
+
+@dataclass(frozen=True)
+class _DeckCard:
+    card_id: str
+    name: str | None = None
+    upgraded: bool = False
+
+
+def _final_deck(data: Mapping[str, Any]) -> tuple[_DeckCard, ...]:
+    raw = data.get("final_deck")
+    if not isinstance(raw, list):
+        return ()
+    result: list[_DeckCard] = []
+    for item in raw:
+        if isinstance(item, str):
+            card_id = item.strip().upper()
+            if card_id:
+                result.append(_DeckCard(card_id=card_id))
+            continue
+        if not isinstance(item, Mapping):
+            continue
+        card_id = str(item.get("card_id") or "").strip().upper()
+        if not card_id:
+            continue
+        name = item.get("name")
+        result.append(_DeckCard(
+            card_id=card_id,
+            name=str(name) if name not in (None, "") else None,
+            upgraded=bool(item.get("upgraded")),
+        ))
+    return tuple(result)
+
+
 @dataclass(frozen=True)
 class _RunRecord:
     file: str
@@ -91,6 +245,10 @@ class _RunRecord:
     game_over: bool
     phantom: bool
     storage_kind: str | None = None
+    card_picks: tuple[str, ...] = ()
+    card_evidence: bool = False
+    final_deck: tuple[_DeckCard, ...] = ()
+    final_deck_evidence: bool = False
 
     @property
     def identity(self) -> str:
@@ -98,8 +256,11 @@ class _RunRecord:
 
     @property
     def complete(self) -> bool:
-        # Older logs sometimes retained in_progress=true after a GAME_OVER row.
-        return self.victory or self.game_over or not self.in_progress
+        # ``in_progress`` is the durable commit boundary.  A GAME_OVER row (or
+        # even a victory bit) can be written before the terminal payload and
+        # profile aggregates are committed, so neither may promote a half-written
+        # run into completed statistics.
+        return not self.in_progress
 
     @property
     def excluded_from_statistics(self) -> bool:
@@ -109,7 +270,8 @@ class _RunRecord:
     @property
     def statistical_completion(self) -> bool:
         """A terminal run that is eligible for autonomous floor statistics."""
-        return self.complete and not self.excluded_from_statistics
+        return (not self.in_progress and self.complete
+                and not self.excluded_from_statistics)
 
     @property
     def sort_key(self) -> tuple[str, int, str]:
@@ -149,6 +311,7 @@ class FloorStatsProvider:
         self._progression: dict[str, Any] = {}
         self._catalog: list[_RunRecord] = []
         self._catalog_invalid = 0
+        self._card_evidence_errors: list[str] = []
         self._active: dict[Path, tuple[tuple[int, int], _RunRecord]] = {}
         self._invalid_active: set[Path] = set()
         self._base: dict[str, Any] | None = None
@@ -181,6 +344,34 @@ class FloorStatsProvider:
             raise ValueError("root JSON value is not an object")
         return data
 
+    def _catalog_row_with_recovered_identity(
+            self, row: dict[str, Any]) -> dict[str, Any]:
+        """Hydrate identity from legacy ZIP evidence before Ironclad fallback."""
+        if _explicit_historical_profile_id(row) is not None:
+            return row
+        storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
+        if storage.get("kind") != "zip":
+            return row
+        try:
+            try:
+                from compact_knowledge import read_catalog_storage_evidence
+            except ImportError:  # pragma: no cover - package import fallback
+                from .compact_knowledge import read_catalog_storage_evidence
+            raw = read_catalog_storage_evidence(self.root, row)
+            archived = json.loads(raw.decode("utf-8"))
+        except (ImportError, OSError, UnicodeError, json.JSONDecodeError,
+                RuntimeError, ValueError) as exc:
+            raise ValueError(
+                f"cannot recover archived profile identity for {row.get('file')}: {exc}"
+            ) from exc
+        if not isinstance(archived, dict):
+            raise ValueError("archived run root is not an object")
+        recovered = dict(row)
+        for key in ("profile_id", "character_id"):
+            if _profile_id(archived.get(key)) is not None:
+                recovered[key] = archived[key]
+        return recovered
+
     @staticmethod
     def _active_record(path: Path, data: dict[str, Any]) -> _RunRecord:
         raw_decisions = data.get("decisions")
@@ -194,10 +385,6 @@ class FloorStatsProvider:
             marker in str(row.get("reason") or "").casefold()
             for row in game_over_rows for marker in ("胜利", "victory"))
         run_id = data.get("run_id")
-        profile = data.get(
-            "character_profile",
-            data.get("profile_id", data.get("character_id", data.get("character"))),
-        )
         return _RunRecord(
             file=path.name,
             source="active",
@@ -205,7 +392,7 @@ class FloorStatsProvider:
             run_number=_integer(data.get("run_number")),
             started_at=(str(data.get("started_at"))
                         if data.get("started_at") not in (None, "") else None),
-            profile_id=_profile_id(profile),
+            profile_id=_historical_profile_id(data),
             ascension=_integer(data.get("ascension")),
             victory=victory,
             in_progress=bool(data.get("in_progress")),
@@ -216,10 +403,18 @@ class FloorStatsProvider:
             game_over=bool(game_over_rows),
             phantom=not decisions and not victory,
             storage_kind="active",
+            card_picks=_card_picks(data),
+            card_evidence=_has_card_pick_evidence(data),
+            final_deck=_final_deck(data),
+            final_deck_evidence=isinstance(data.get("final_deck"), list),
         )
 
     @staticmethod
-    def _catalog_record(row: dict[str, Any]) -> _RunRecord | None:
+    def _catalog_record(
+            row: dict[str, Any], *, card_picks: tuple[str, ...] = (),
+            card_evidence: bool = False,
+            final_deck: tuple[_DeckCard, ...] = (),
+            final_deck_evidence: bool = False) -> _RunRecord | None:
         filename = row.get("file")
         if not isinstance(filename, str) or not filename:
             return None  # schema/description header
@@ -227,10 +422,6 @@ class FloorStatsProvider:
         decisions = max(0, _integer(row.get("decisions")) or 0)
         victory = bool(row.get("victory"))
         storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
-        profile = row.get(
-            "character_profile",
-            row.get("profile_id", row.get("character_id", row.get("character"))),
-        )
         return _RunRecord(
             file=filename,
             source="catalog",
@@ -238,7 +429,7 @@ class FloorStatsProvider:
             run_number=_integer(row.get("run_number")),
             started_at=(str(row.get("started_at"))
                         if row.get("started_at") not in (None, "") else None),
-            profile_id=_profile_id(profile),
+            profile_id=_historical_profile_id(row),
             ascension=_integer(row.get("ascension")),
             victory=victory,
             in_progress=bool(row.get("in_progress")),
@@ -249,7 +440,76 @@ class FloorStatsProvider:
             game_over=str(row.get("last_screen") or "") == "GAME_OVER",
             phantom=bool(row.get("phantom_candidate")) or (not decisions and not victory),
             storage_kind=(str(storage.get("kind")) if storage.get("kind") else None),
+            card_picks=card_picks,
+            card_evidence=card_evidence,
+            final_deck=final_deck,
+            final_deck_evidence=final_deck_evidence,
         )
+
+    def _catalog_run_evidence(
+            self, row: dict[str, Any], archives: dict[Path, zipfile.ZipFile]
+    ) -> tuple[tuple[str, ...], bool, tuple[_DeckCard, ...], bool]:
+        """Hydrate optional choices/final deck from exact archived evidence.
+
+        Empty explicit arrays are evidence. Missing fields remain missing even
+        after compaction; they are never synthesized from another field.
+        """
+        picks: tuple[str, ...] = ()
+        has_card_evidence = False
+        if "card_picks" in row:
+            raw_picks = row.get("card_picks")
+            if not isinstance(raw_picks, list):
+                raise ValueError("catalog card_picks must be a list")
+            picks = _card_picks({
+                "attribution_tags": [["card_pick", value] for value in raw_picks]
+            })
+            has_card_evidence = True
+
+        deck: tuple[_DeckCard, ...] = ()
+        has_final_deck_evidence = False
+        if "final_deck" in row:
+            if not isinstance(row.get("final_deck"), list):
+                raise ValueError("catalog final_deck must be a list")
+            deck = _final_deck(row)
+            has_final_deck_evidence = True
+
+        storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
+        if storage.get("kind") != "zip":
+            return picks, has_card_evidence, deck, has_final_deck_evidence
+        archive_rel = PurePosixPath(str(storage.get("archive") or ""))
+        member = PurePosixPath(str(storage.get("member") or ""))
+        if (not archive_rel.parts or archive_rel.is_absolute()
+                or ".." in archive_rel.parts or not member.parts
+                or member.is_absolute() or ".." in member.parts):
+            raise ValueError("invalid archived run-evidence path")
+        root = self.root.resolve()
+        archive_path = root.joinpath(*archive_rel.parts).resolve()
+        try:
+            archive_path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("archived run evidence escapes profile root") from exc
+        archive = archives.get(archive_path)
+        if archive is None:
+            archive = zipfile.ZipFile(archive_path, "r")
+            archives[archive_path] = archive
+        raw = archive.read(member.as_posix())
+        expected_size = _integer(row.get("bytes"))
+        if expected_size is not None and len(raw) != expected_size:
+            raise ValueError("archived run evidence size mismatch")
+        expected_hash = str(row.get("sha256") or "").strip().casefold()
+        if expected_hash and hashlib.sha256(raw).hexdigest() != expected_hash:
+            raise ValueError("archived run evidence SHA256 mismatch")
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("archived run root is not an object")
+        if not has_card_evidence and _has_card_pick_evidence(data):
+            picks = _card_picks(data)
+            has_card_evidence = True
+        if (not has_final_deck_evidence
+                and isinstance(data.get("final_deck"), list)):
+            deck = _final_deck(data)
+            has_final_deck_evidence = True
+        return picks, has_card_evidence, deck, has_final_deck_evidence
 
     @staticmethod
     def _validate_json_source(path: Path, value: dict[str, Any]) -> None:
@@ -323,6 +583,8 @@ class FloorStatsProvider:
             return False
         records: list[_RunRecord] = []
         invalid = 0
+        archives: dict[Path, zipfile.ZipFile] = {}
+        evidence_errors: list[str] = []
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
             saw_header = False
@@ -332,12 +594,27 @@ class FloorStatsProvider:
                 row = json.loads(line)
                 if not isinstance(row, dict):
                     raise ValueError(f"line {line_number} is not an object")
+                if saw_header:
+                    row = self._catalog_row_with_recovered_identity(row)
                 if not saw_header:
                     if row.get("schema_version") != 1:
                         raise ValueError("missing or unsupported catalog header")
                     saw_header = True
                     continue
-                record = self._catalog_record(row)
+                try:
+                    picks, has_card_evidence, deck, has_deck_evidence = (
+                        self._catalog_run_evidence(row, archives))
+                except (OSError, UnicodeError, zipfile.BadZipFile, KeyError,
+                        json.JSONDecodeError, ValueError) as exc:
+                    evidence_errors.append(
+                        f"{row.get('file') or f'catalog line {line_number}'}: "
+                        f"run evidence: {exc}")
+                    picks, has_card_evidence = (), False
+                    deck, has_deck_evidence = (), False
+                record = self._catalog_record(
+                    row, card_picks=picks, card_evidence=has_card_evidence,
+                    final_deck=deck,
+                    final_deck_evidence=has_deck_evidence)
                 if record is None:
                     raise ValueError(f"line {line_number} has no run file")
                 records.append(record)
@@ -348,9 +625,13 @@ class FloorStatsProvider:
         except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
             errors.append(f"run_catalog.jsonl: {exc}")
             return False
+        finally:
+            for archive in archives.values():
+                archive.close()
         self._catalog_sig = signature
         self._catalog = records
         self._catalog_invalid = invalid
+        self._card_evidence_errors = evidence_errors[:8]
         return True
 
     def _refresh_active(self, errors: list[str]) -> bool:
@@ -417,18 +698,43 @@ class FloorStatsProvider:
     @staticmethod
     def _preserve_exclusion(
             preferred: _RunRecord, *evidence: _RunRecord) -> _RunRecord:
-        """Make exclusion sticky when duplicate evidence for one run is merged."""
+        """Make exclusions sticky and retain independent evidence channels."""
         human_assisted = preferred.human_assisted or any(
             record.human_assisted for record in evidence)
         excluded_from_learning = preferred.excluded_from_learning or any(
             record.excluded_from_learning for record in evidence)
+        card_source = preferred
+        if not preferred.card_evidence:
+            # Never transplant evidence from a half-written duplicate onto a
+            # completed preferred record: that would reintroduce its card picks
+            # through duplicate merging even though its floor was filtered out.
+            candidates = [
+                record for record in evidence
+                if record.card_evidence and not record.in_progress
+            ]
+            if candidates:
+                card_source = max(candidates, key=lambda record: (
+                    record.sort_key, record.decisions, len(record.card_picks)))
+        deck_source = preferred
+        if not preferred.final_deck_evidence:
+            candidates = [record for record in evidence
+                          if (record.final_deck_evidence
+                              and not record.in_progress)]
+            if candidates:
+                deck_source = max(candidates, key=lambda record: (
+                    record.sort_key, record.decisions, len(record.final_deck)))
         if (human_assisted == preferred.human_assisted
-                and excluded_from_learning == preferred.excluded_from_learning):
+                and excluded_from_learning == preferred.excluded_from_learning
+                and card_source is preferred and deck_source is preferred):
             return preferred
         return replace(
             preferred,
             human_assisted=human_assisted,
             excluded_from_learning=excluded_from_learning,
+            card_picks=card_source.card_picks,
+            card_evidence=card_source.card_evidence,
+            final_deck=deck_source.final_deck,
+            final_deck_evidence=deck_source.final_deck_evidence,
         )
 
     def _merged_records(self) -> tuple[list[_RunRecord], int]:
@@ -531,6 +837,282 @@ class FloorStatsProvider:
             "best_floor": max(floors),
         }, "records")
 
+    @staticmethod
+    def _card_choice_view(completed: list[_RunRecord]) -> dict[str, Any]:
+        """Aggregate filtered per-run choices without cross-profile backfill."""
+        evidence = [record for record in completed if record.card_evidence]
+        rows: dict[str, dict[str, Any]] = {}
+        total_picks = 0
+        runs_with_picks = 0
+        for record in evidence:
+            counts = Counter(record.card_picks)
+            if counts:
+                runs_with_picks += 1
+            total_picks += sum(counts.values())
+            for card_id, count in counts.items():
+                row = rows.setdefault(card_id, {
+                    "card_id": card_id,
+                    "name": (_VIVHITE_CARDS[card_id].name_zh
+                             if card_id in _VIVHITE_CARDS else card_id),
+                    "picked": 0,
+                    "run_count": 0,
+                    "wins": 0,
+                    "floor_sum": 0.0,
+                    "floor_count": 0,
+                    "best_floor": None,
+                })
+                row["picked"] += count
+                row["run_count"] += 1
+                row["wins"] += 1 if record.victory else 0
+                if record.floor is not None:
+                    row["floor_sum"] += record.floor
+                    row["floor_count"] += 1
+                    row["best_floor"] = max(
+                        record.floor, row["best_floor"] or record.floor)
+
+        cards: dict[str, dict[str, Any]] = {}
+        for card_id, raw in rows.items():
+            run_count = int(raw["run_count"])
+            floor_count = int(raw["floor_count"])
+            cards[card_id] = {
+                "card_id": card_id,
+                "name": raw["name"],
+                "picked": int(raw["picked"]),
+                "run_count": run_count,
+                "run_rate": (run_count / len(evidence)) if evidence else None,
+                "pick_share": (int(raw["picked"]) / total_picks) if total_picks else None,
+                "wins": int(raw["wins"]),
+                "win_rate": (int(raw["wins"]) / run_count) if run_count else None,
+                "mean_floor": (float(raw["floor_sum"]) / floor_count
+                               if floor_count else None),
+                "best_floor": raw["best_floor"],
+            }
+        ordered = sorted(
+            cards.values(),
+            key=lambda row: (-row["picked"], -row["run_count"], row["card_id"]),
+        )
+        return {
+            "source": "filtered_run_attribution_tags",
+            "eligible_runs": len(completed),
+            "evidence_runs": len(evidence),
+            "missing_evidence_runs": len(completed) - len(evidence),
+            "runs_with_picks": runs_with_picks,
+            "total_picks": total_picks,
+            "unique_cards": len(cards),
+            "top_cards": ordered[:5],
+            "cards": {row["card_id"]: row for row in ordered},
+        }
+
+    @staticmethod
+    def _vivhite_build_pattern(card_ids) -> str:
+        """Classify a real terminal deck by system presence, never by shares."""
+        systems = {_vivhite_system(card_id) for card_id in card_ids}
+        primary = systems.intersection(_VIVHITE_PRIMARY_SYSTEMS)
+        if len(primary) == 1:
+            return next(iter(primary))
+        if len(primary) > 1:
+            return MIXED_BUILD
+        # bridge_only really means there is no primary or foreign card.
+        # Starter/basic cards are neutral and do not prevent that classification.
+        if FOREIGN_SYSTEM in systems:
+            return FOREIGN_BUILD
+        if BRIDGE_SYSTEM in systems:
+            return BRIDGE_ONLY_BUILD
+        return UNCLASSIFIED_BUILD
+
+    @classmethod
+    def _selection_system_distribution(
+            cls, profile: str, completed: list[_RunRecord]) -> dict[str, Any]:
+        """Describe card-pick systems only; this is never a final-build proxy."""
+        if profile != "vivhite":
+            return {
+                "supported": False,
+                "source": "no_approved_ironclad_selection_system_catalog",
+                "eligible_runs": len(completed),
+                "evidence_runs": sum(record.card_evidence for record in completed),
+                "missing_evidence_runs": sum(
+                    not record.card_evidence for record in completed),
+                "total_card_picks": sum(
+                    len(record.card_picks) for record in completed
+                    if record.card_evidence),
+                "categories": {},
+            }
+        evidence = [record for record in completed if record.card_evidence]
+        raw_categories = {
+            system: {"card_picks": 0, "run_count": 0}
+            for system in VIVHITE_SELECTION_SYSTEM_ORDER
+        }
+        for record in evidence:
+            counts = Counter(_vivhite_system(card_id)
+                             for card_id in record.card_picks)
+            for system, count in counts.items():
+                raw_categories[system]["card_picks"] += count
+                raw_categories[system]["run_count"] += 1
+        total_picks = sum(
+            int(row["card_picks"]) for row in raw_categories.values())
+        categories = {
+            system: {
+                "system_id": system,
+                "label": VIVHITE_SELECTION_SYSTEM_LABELS[system],
+                "catalog_cards": int(VIVHITE_CATALOG_SYSTEM_COUNTS.get(system, 0)),
+                "card_picks": int(raw_categories[system]["card_picks"]),
+                "share": (int(raw_categories[system]["card_picks"]) / total_picks
+                          if total_picks else None),
+                "run_count": int(raw_categories[system]["run_count"]),
+            }
+            for system in VIVHITE_SELECTION_SYSTEM_ORDER
+        }
+        return {
+            "supported": True,
+            "source": "filtered_run_attribution_tags",
+            "classification": "card_pick_counts_only",
+            "eligible_runs": len(completed),
+            "evidence_runs": len(evidence),
+            "missing_evidence_runs": len(completed) - len(evidence),
+            "total_card_picks": total_picks,
+            "catalog_card_counts": dict(VIVHITE_CATALOG_SYSTEM_COUNTS),
+            "category_order": list(VIVHITE_SELECTION_SYSTEM_ORDER),
+            "categories": categories,
+        }
+
+    @staticmethod
+    def _final_deck_view(completed: list[_RunRecord]) -> dict[str, Any]:
+        """Summarize explicit terminal deck evidence without archetype inference."""
+        evidence = [record for record in completed if record.final_deck_evidence]
+        rows: dict[str, dict[str, Any]] = {}
+        total_copies = 0
+        upgraded_copies = 0
+        for record in evidence:
+            counts = Counter(card.card_id for card in record.final_deck)
+            upgrades = Counter(card.card_id for card in record.final_deck
+                               if card.upgraded)
+            names = {card.card_id: card.name for card in record.final_deck
+                     if card.name}
+            total_copies += len(record.final_deck)
+            upgraded_copies += sum(upgrades.values())
+            for card_id, count in counts.items():
+                row = rows.setdefault(card_id, {
+                    "card_id": card_id,
+                    "name": (_VIVHITE_CARDS[card_id].name_zh
+                             if card_id in _VIVHITE_CARDS
+                             else names.get(card_id) or card_id),
+                    "copies": 0,
+                    "deck_count": 0,
+                    "upgraded_copies": 0,
+                })
+                row["copies"] += count
+                row["deck_count"] += 1
+                row["upgraded_copies"] += upgrades[card_id]
+        ordered = sorted(rows.values(), key=lambda row: (
+            -row["copies"], -row["deck_count"], row["card_id"]))
+        return {
+            "source": "filtered_terminal_final_deck",
+            "eligible_runs": len(completed),
+            "evidence_runs": len(evidence),
+            "missing_evidence_runs": len(completed) - len(evidence),
+            "total_card_copies": total_copies,
+            "upgraded_copies": upgraded_copies,
+            "unique_cards": len(rows),
+            "top_cards": ordered[:5],
+            "cards": {row["card_id"]: row for row in ordered},
+        }
+
+    @classmethod
+    def _build_distribution(
+            cls, profile: str, completed: list[_RunRecord]) -> dict[str, Any]:
+        evidence = [record for record in completed if record.final_deck_evidence]
+        if profile != "vivhite":
+            return {
+                "supported": False,
+                "source": "no_approved_ironclad_archetype_catalog",
+                "eligible_runs": len(completed),
+                "evidence_runs": len(evidence),
+                "missing_evidence_runs": len(completed) - len(evidence),
+                "classified_runs": 0,
+                "unclassified_runs": None,
+                "categories": {},
+            }
+        raw_categories = {
+            build: {"runs": 0, "wins": 0, "floors": [], "card_copies": 0}
+            for build in VIVHITE_BUILD_ORDER
+        }
+        raw_composition = {
+            system: {"card_copies": 0, "run_count": 0}
+            for system in VIVHITE_SELECTION_SYSTEM_ORDER
+        }
+        unclassified_with_evidence = 0
+        for record in completed:
+            if record.final_deck_evidence:
+                system_counts = Counter(
+                    _vivhite_system(card.card_id) for card in record.final_deck)
+                for system, count in system_counts.items():
+                    raw_composition[system]["card_copies"] += count
+                    raw_composition[system]["run_count"] += 1
+                build = cls._vivhite_build_pattern(
+                    card.card_id for card in record.final_deck)
+                if build == UNCLASSIFIED_BUILD:
+                    unclassified_with_evidence += 1
+            else:
+                # Missing final_deck is deliberately not backfilled from card_pick.
+                build = UNCLASSIFIED_BUILD
+            row = raw_categories[build]
+            row["runs"] += 1
+            row["wins"] += 1 if record.victory else 0
+            if record.final_deck_evidence:
+                row["card_copies"] += len(record.final_deck)
+            if record.floor is not None:
+                row["floors"].append(record.floor)
+        eligible = len(completed)
+        unclassified = int(raw_categories[UNCLASSIFIED_BUILD]["runs"])
+        classified = eligible - unclassified
+        categories: dict[str, dict[str, Any]] = {}
+        for build in VIVHITE_BUILD_ORDER:
+            raw = raw_categories[build]
+            runs = int(raw["runs"])
+            floors = list(raw["floors"])
+            categories[build] = {
+                "build_id": build,
+                "label": VIVHITE_BUILD_LABELS[build],
+                "runs": runs,
+                "share": (runs / eligible) if eligible else None,
+                "classified_share": (
+                    runs / classified
+                    if classified and build != UNCLASSIFIED_BUILD else None),
+                "wins": int(raw["wins"]),
+                "win_rate": (int(raw["wins"]) / runs) if runs else None,
+                "mean_floor": (sum(floors) / len(floors)) if floors else None,
+                "best_floor": max(floors, default=None),
+                "card_copies": int(raw["card_copies"]),
+            }
+        composition = {
+            system: {
+                "system_id": system,
+                "label": VIVHITE_SELECTION_SYSTEM_LABELS[system],
+                "catalog_cards": int(VIVHITE_CATALOG_SYSTEM_COUNTS.get(system, 0)),
+                "card_copies": int(raw_composition[system]["card_copies"]),
+                "run_count": int(raw_composition[system]["run_count"]),
+            }
+            for system in VIVHITE_SELECTION_SYSTEM_ORDER
+        }
+        return {
+            "supported": True,
+            "source": "filtered_terminal_final_deck",
+            "classification": "primary_presence_no_share_threshold",
+            "eligible_runs": eligible,
+            "evidence_runs": len(evidence),
+            "missing_evidence_runs": eligible - len(evidence),
+            "classified_runs": classified,
+            "unclassified_runs": unclassified,
+            "unclassified_with_evidence_runs": unclassified_with_evidence,
+            "catalog_card_counts": dict(VIVHITE_CATALOG_SYSTEM_COUNTS),
+            "category_order": list(VIVHITE_BUILD_ORDER),
+            "categories": categories,
+            "composition_order": list(VIVHITE_SELECTION_SYSTEM_ORDER),
+            "composition": composition,
+            "foreign_card_runs": int(
+                raw_composition[FOREIGN_SYSTEM]["run_count"]),
+        }
+
     def _profile_view(
             self, profile: str, completed: list[_RunRecord],
             excluded_from_statistics: int = 0) -> dict[str, Any]:
@@ -556,6 +1138,18 @@ class FloorStatsProvider:
             lifetime, source = self._lifetime(completed)
         else:
             lifetime, source = self._records_lifetime(completed)
+        # The completed population is already strict at the durable
+        # ``in_progress`` boundary.  Reuse exactly that population for card and
+        # build views so every profile surface has the same eligibility rules.
+        card_completed = completed
+        card_choices = self._card_choice_view(card_completed)
+        card_choices["errors"] = (
+            list(self._card_evidence_errors) if profile == self.profile_id else [])
+        selection_systems = self._selection_system_distribution(
+            profile, card_completed)
+        final_deck_evidence = self._final_deck_view(card_completed)
+        final_deck_evidence["errors"] = (
+            list(self._card_evidence_errors) if profile == self.profile_id else [])
         return {
             "profile_id": profile,
             "character_id": PROFILE_CHARACTER_IDS[profile],
@@ -580,6 +1174,11 @@ class FloorStatsProvider:
             "rolling_window": self.rolling_window,
             "rolling_mean": trend[-1]["rolling_mean"] if trend else None,
             "trend": trend,
+            "card_choices": card_choices,
+            "selection_system_distribution": selection_systems,
+            "final_deck_evidence": final_deck_evidence,
+            "build_distribution": self._build_distribution(
+                profile, card_completed),
             "quality": {
                 "source": source,
                 "completed_records": len(completed),
@@ -617,8 +1216,8 @@ class FloorStatsProvider:
 
         auto_current = sorted(
             (record for record in records
-             if (record.in_progress and not record.complete and not record.phantom
-                 and not record.excluded_from_statistics)),
+             if (record.in_progress and not record.phantom
+                  and not record.excluded_from_statistics)),
             key=lambda record: record.sort_key,
         )
         current = self._current_from_record(auto_current[-1]) if auto_current else None
@@ -626,14 +1225,13 @@ class FloorStatsProvider:
         profile_records = {profile: [] for profile in PROFILE_IDS}
         profile_excluded = {profile: 0 for profile in PROFILE_IDS}
         for record in records:
-            profile = record.profile_id or self.profile_id
+            profile = record.profile_id or "ironclad"
             if (profile in profile_excluded and record.excluded_from_statistics
                     and not record.phantom):
                 profile_excluded[profile] += 1
         for record in completed:
-            # Character ids were not persisted before profile-aware telemetry;
-            # untagged records belong to the root currently being read.
-            profile = record.profile_id or self.profile_id
+            # Untagged history is Ironclad even inside a Vivhite profile store.
+            profile = record.profile_id or "ironclad"
             if profile in profile_records:
                 profile_records[profile].append(record)
         profiles = {
@@ -725,7 +1323,7 @@ class FloorStatsProvider:
                 "completed_records": len(completed),
                 "excluded_in_progress": sum(
                     1 for record in records
-                    if (not record.complete and not record.phantom
+                    if (record.in_progress and not record.phantom
                         and not record.excluded_from_statistics)),
                 "excluded_from_statistics": sum(
                     1 for record in records
@@ -828,7 +1426,9 @@ class FloorStatsProvider:
                 # Top-level keys are the compatibility contract consumed by the
                 # existing viewer.  They must describe the active profile, not
                 # whichever provider happens to own the legacy knowledge root.
-                for key in ("lifetime", "recent", "previous", "delta_mean", "trend"):
+                for key in ("lifetime", "recent", "previous", "delta_mean", "trend",
+                            "card_choices", "selection_system_distribution",
+                            "final_deck_evidence", "build_distribution"):
                     if key in profile_view:
                         result[key] = copy.deepcopy(profile_view[key])
                 result["active_profile"] = active_profile
@@ -838,4 +1438,12 @@ class FloorStatsProvider:
             return result
 
 
-__all__ = ["FloorStatsProvider", "PROFILE_IDS"]
+__all__ = [
+    "FloorStatsProvider",
+    "PROFILE_IDS",
+    "VIVHITE_BUILD_LABELS",
+    "VIVHITE_BUILD_ORDER",
+    "VIVHITE_CATALOG_SYSTEM_COUNTS",
+    "VIVHITE_SELECTION_SYSTEM_LABELS",
+    "VIVHITE_SELECTION_SYSTEM_ORDER",
+]
