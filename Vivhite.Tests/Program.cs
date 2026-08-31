@@ -37,6 +37,7 @@ internal static class Program
             new("all 23 powers use dedicated existing non-NOPE icons", PowerPresentationAcceptanceTests.AllRegisteredPowersUseDedicatedExistingIcons),
             new("registered runtime models never expose raw localization keys", PlayerFacingTextAcceptanceTests.RegisteredRuntimeModelsNeverExposeRawLocalizationKeys),
             new("Chinese terms and Energy rich text match the player contract", PlayerFacingTextAcceptanceTests.ChineseTermsAndEnergyRichTextMatchThePlayerContract),
+            new("base Ancient pages never expose missing-key placeholders", PlayerFacingTextAcceptanceTests.BaseAncientPagesNeverExposeMissingKeyPlaceholders),
             new("native Exhaust and Retain text is not duplicated", PlayerFacingTextAcceptanceTests.NativeCardKeywordsAreNotDuplicatedInLocalizedBodies),
             new("Margin pays before HP and payment leaves 1 HP", LifeCalculationAcceptanceTests.MarginIsConsumedBeforeHpAndPaymentLeavesOneHp),
             new("negative Life Calculation normalizes to a free payable request", LifeCalculationAcceptanceTests.NegativeAmountsNormalizeToZeroWithoutPayment),

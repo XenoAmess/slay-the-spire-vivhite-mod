@@ -37,6 +37,19 @@ internal static class PlayerFacingTextAcceptanceTests
         "VIVHITE_CARD_OPTIMAL_ALGORITHM"
     ];
 
+    private static readonly string[] BaseAncientIds =
+    [
+        "DARV",
+        "NEOW",
+        "NONUPEIPE",
+        "OROBAS",
+        "PAEL",
+        "TANX",
+        "TEZCATARA",
+        "THE_ARCHITECT",
+        "VAKUU"
+    ];
+
     public static void RegisteredRuntimeModelsNeverExposeRawLocalizationKeys(RepositorySnapshot repository)
     {
         AcceptanceAssert.Equal(1, repository.RegisteredRelics.Count, "The localization audit expects exactly one registered Vivhite relic.");
@@ -111,6 +124,37 @@ internal static class PlayerFacingTextAcceptanceTests
                 AssertReadableEnergyRichText(englishCards[$"{cardId}.{suffix}"], "[gold]1 Energy[/gold]", $"eng {cardId}.{suffix}");
                 AssertReadableEnergyRichText(chineseCards[$"{cardId}.{suffix}"], "[gold]1 点能量[/gold]", $"zhs {cardId}.{suffix}");
             }
+        }
+    }
+
+    public static void BaseAncientPagesNeverExposeMissingKeyPlaceholders(RepositorySnapshot repository)
+    {
+        var expectedKeys = BaseAncientIds
+            .SelectMany(id => new[]
+            {
+                $"{id}.pages.INITIAL.description",
+                $"{id}.pages.DONE.description"
+            })
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var locale in new[] { "eng", "zhs" })
+        {
+            var entries = ReadObject(repository, locale, "ancients.json");
+            var missing = expectedKeys
+                .Where(key => !entries.ContainsKey(key))
+                .ToArray();
+            AcceptanceAssert.Empty(
+                missing,
+                $"Locale '{locale}' must explicitly register optional base-Ancient page descriptions so absent text renders blank instead of a raw key:");
+
+            var rawKeyValues = expectedKeys
+                .Where(key => string.Equals(entries[key], key, StringComparison.Ordinal) ||
+                    LooksLikeRawRuntimeKey(entries[key]))
+                .ToArray();
+            AcceptanceAssert.Empty(
+                rawKeyValues,
+                $"Locale '{locale}' base-Ancient page descriptions must never resolve to raw localization keys:");
         }
     }
 
