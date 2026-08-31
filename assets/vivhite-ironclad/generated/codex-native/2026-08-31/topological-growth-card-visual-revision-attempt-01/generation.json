@@ -1,0 +1,122 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_TOPOLOGICAL_GROWTH",
+  "card_type": "TopologicalGrowth",
+  "card_name_zh": "拓扑增生",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "cough": 8,
+    "dimension_up": 1,
+    "upgraded_dimension_up": 2,
+    "margin": 3,
+    "upgraded_margin": 4,
+    "exhaust": true,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/NegativeSpace.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "Vivhite identity continuity and refined painted anime rendering language only; frontal presentation, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and calm analytical temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/NegativeSpace.png",
+      "role": "established opaque Skill-card finish, celestial architecture, empty-hand mathematical manipulation, and purple-blue Margin crystal language only; exact composition and giant polyhedron excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/NegativeSpace.png": "CBE0F9D6FE7D65345DAD426370C7ABDB56C5C45D429E50E11644229C288AE635"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "DF4C4F76CABDF17045F6F81EBD79B4082526DC6724C964C32B0CA71C5C44310B",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0554f-6d21-7d10-a5d4-98a9f14af234/exec-3be3c820-2f26-4422-aaae-41dc477aae2a.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/topological-growth-card-visual-revision-attempt-01/original.png",
+  "original_sha256": "4ABF4F9ABD865528D1C31E9B567A9225E9AA1488752A8EA17F561C0CC20A15A0",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "prepared_preview_path": "inspection/centered-25x19-1000x760-rgb8.png",
+  "prepared_preview_sha256": "D9177FE38FFC4473B08CDD5BC3372CF576286F909C7B3B1B9A5CF43BE60387C1",
+  "prepared_preview_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect-godot.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_book_tool_enemy_second_character": true,
+    "finite_three_state_lattice_workflow_readable": true,
+    "asymmetric_one_time_skill_read": true,
+    "no_hit_shield_or_centered_power_ascension": true,
+    "100x76_color_and_grayscale_skill_readable": true,
+    "exactly_two_process_arrows": false,
+    "terminal_margin_crystal_inside_crop_safe_area": false
+  },
+  "status": "rejected_crop_unsafe",
+  "rejection_reason": "The terminal Margin crystal became a fourth station with a third arrow, and the deterministic centered 25:19 crop cuts off the crystal's right side.",
+  "next_attempt_single_hypothesis": "Merge the Margin crystal into the third sealed/enlarged state, keep exactly two arrows, and compress all three states into the central crop-safe area.",
+  "result": "rejected_continue_to_attempt_02"
+}
