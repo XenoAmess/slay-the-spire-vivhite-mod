@@ -369,6 +369,7 @@ class Agent:
         self._native_save_transition_blocked = False
         self._native_continue_recovery_expected = ""
         self._recover_persisted_terminal_rotation()
+        self._release_persisted_human_assisted_rotation()
         self._recover_pending_native_save_context()
 
     def _activate_profile(self, profile: CharacterProfile) -> None:
@@ -519,6 +520,57 @@ class Agent:
             and proof.get("save_verified") is True
             and proof.get("save_error") is None
         )
+
+    def _release_persisted_human_assisted_rotation(self) -> bool:
+        """Release an exact, durably excluded mixed run after process restart.
+
+        The normal live close path already releases these runs without consuming
+        a schedule slot.  A process death after the exclusion log is saved but
+        before that release must not leave rotation blocked forever.  Both durable
+        exclusion flags and exact profile/character identity are required; a lone
+        or malformed flag remains fail-closed.
+        """
+        rotation = getattr(self, "rotation", None)
+        store = getattr(self, "profile_store", None)
+        if rotation is None or store is None:
+            return False
+        try:
+            snapshot = rotation.snapshot()
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 人工接管旧局轮换恢复读取失败，保持阻塞：{exc}")
+            return False
+        run_id = str(snapshot.active_run_id or "").strip()
+        character_id = str(snapshot.active_character_id or "").strip()
+        if not run_id or not character_id or snapshot.active_character is None:
+            return False
+        try:
+            profile = store.for_character(character_id)
+            knowledge = getattr(self, "_profile_knowledge", {}).get(
+                profile.profile_id)
+            evidence = knowledge.load_run_log(run_id) if knowledge is not None else None
+        except (KeyError, OSError, ValueError) as exc:
+            log(f"[agent] 人工接管旧局排除证据读取失败，保持阻塞：{exc}")
+            return False
+        if (not isinstance(evidence, dict)
+                or str(evidence.get("run_id") or "") != run_id
+                or str(evidence.get("profile_id") or "") != profile.profile_id
+                or canonical_character_id(evidence.get("character_id"))
+                != snapshot.active_character
+                or not bool(evidence.get("human_assisted"))
+                or not bool(evidence.get("excluded_from_learning"))):
+            return False
+        try:
+            rotation.release_human_controlled_run(run_id)
+            if knowledge is not None:
+                knowledge.finish_run_learning(run_id)
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 人工接管旧局轮换释放失败，保持阻塞：{exc}")
+            return False
+        self._rotation_unresolved_run_id = ""
+        log(
+            f"[agent] 进程重启恢复人工接管排除局 {run_id}；"
+            "不计局数、不进入复盘，轮换配额保持原位")
+        return True
 
     def _recover_pending_native_save_context(self) -> bool:
         """Restore an old run that disappeared before native save verification.

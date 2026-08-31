@@ -222,8 +222,35 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                     restarted = agent_module.Agent(cfg)
 
                 blocked = restarted.rotation.snapshot()
-                self.assertEqual(blocked.active_run_id, label)
-                self.assertNotIn(label, blocked.finalized_run_ids)
+            self.assertEqual(blocked.active_run_id, label)
+            self.assertNotIn(label, blocked.finalized_run_ids)
+
+    def test_restart_releases_only_fully_excluded_human_assisted_run(self) -> None:
+        with tempfile.TemporaryDirectory(
+                prefix="sts2-terminal-assisted-release-") as root:
+            knowledge_root = Path(root)
+            _persist_crash_window(
+                knowledge_root,
+                run_id="fully-excluded-assisted",
+                log_overrides={
+                    "in_progress": True,
+                    "human_assisted": True,
+                    "excluded_from_learning": True,
+                    "native_save": None,
+                },
+            )
+            cfg = {"api_ports": [], "seed": 201}
+
+            with mock.patch.object(
+                    agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                restarted = agent_module.Agent(cfg)
+
+            released = restarted.rotation.snapshot()
+            self.assertIsNone(released.active_run_id)
+            self.assertNotIn(
+                "fully-excluded-assisted", released.finalized_run_ids)
+            self.assertEqual(released.next_character, VIVHITE)
+            self.assertEqual(released.catchup_index, 0)
 
     def test_restart_requires_exact_persisted_run_sequence_and_strict_ints(
             self) -> None:
