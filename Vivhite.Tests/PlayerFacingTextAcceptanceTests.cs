@@ -91,6 +91,26 @@ internal static class PlayerFacingTextAcceptanceTests
 
     public static void ChineseTermsAndEnergyRichTextMatchThePlayerContract(RepositorySnapshot repository)
     {
+        var english = ReadLocale(repository, "eng");
+        var staleEnglishTerms = english
+            .Where(entry => entry.Value.Contains("Life Calculation", StringComparison.OrdinalIgnoreCase))
+            .Select(entry => $"{entry.Key}: {entry.Value}")
+            .ToArray();
+        AcceptanceAssert.Empty(
+            staleEnglishTerms,
+            "English player-facing text must use Cough instead of the retired term Life Calculation:");
+        AcceptanceAssert.Equal(
+            "Cough",
+            english["VIVHITE_KEYWORD_LIFE_CALCULATION.title"],
+            "The English Life Calculation mechanic must be displayed as Cough.");
+        AcceptanceAssert.Equal(
+            "Margin",
+            english["VIVHITE_KEYWORD_MARGIN.title"],
+            "The English Margin keyword title must remain Margin.");
+        AcceptanceAssert.True(
+            english["VIVHITE_KEYWORD_MARGIN.description"].Contains("Cough", StringComparison.Ordinal),
+            "The English Margin description must refer to Cough by its current player-facing name.");
+
         var chinese = ReadLocale(repository, "zhs");
         var staleTerms = chinese
             .Where(entry => entry.Value.Contains("生命演算", StringComparison.Ordinal) ||

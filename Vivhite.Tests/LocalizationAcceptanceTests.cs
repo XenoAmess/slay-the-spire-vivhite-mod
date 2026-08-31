@@ -88,18 +88,34 @@ internal static class LocalizationAcceptanceTests
         AcceptanceAssert.SetEqual(expectedKeys, english.Keys.ToArray(), "English keyword IDs must be exactly the five approved mechanics.");
         AcceptanceAssert.SetEqual(expectedKeys, chinese.Keys.ToArray(), "Chinese keyword IDs must be exactly the five approved mechanics.");
 
+        AcceptanceAssert.Equal(
+            "Cough",
+            english["VIVHITE_KEYWORD_LIFE_CALCULATION.title"],
+            "The English Cough keyword title must use the current player-facing term.");
+        AcceptanceAssert.Equal(
+            "Margin",
+            english["VIVHITE_KEYWORD_MARGIN.title"],
+            "The English Margin keyword title must use the current player-facing term.");
+        var staleEnglishKeywordText = english
+            .Where(entry => entry.Value.Contains("Life Calculation", StringComparison.OrdinalIgnoreCase))
+            .Select(entry => $"{entry.Key}: {entry.Value}")
+            .ToArray();
+        AcceptanceAssert.Empty(
+            staleEnglishKeywordText,
+            "English keyword text must use Cough instead of the retired player-facing term Life Calculation:");
+
         AssertContainsAll(
             english["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "English Life Calculation",
+            "English Cough",
             "margin", "1 hp");
         AssertContainsAny(
             english["VIVHITE_KEYWORD_LIFE_CALCULATION.description"],
-            "English Life Calculation must say an unaffordable card cannot be played",
+            "English Cough must say an unaffordable card cannot be played",
             "cannot be played", "can't be played", "unplayable");
         AssertContainsAll(
             english["VIVHITE_KEYWORD_MARGIN.description"],
             "English Margin",
-            "life calculation", "consume", "1");
+            "cough", "consume", "1");
         AssertContainsAll(
             english["VIVHITE_KEYWORD_DIMENSION_UP.description"],
             "English Dimension Up",
