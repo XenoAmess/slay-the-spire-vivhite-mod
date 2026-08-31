@@ -226,7 +226,12 @@ internal static class SharedAssetsAcceptanceTests
             "tools",
             "Validate-IroncladSkin.ps1"));
         AcceptanceAssert.Empty(
-            new[] { "Test-TextBindingContract", "forbiddenText", "--check-only", "--script", "Invoke-GodotSpineContract" }
+            new[]
+            {
+                "Test-TextBindingContract", "forbiddenText", "--check-only", "--script",
+                "Invoke-GodotSpineContract", "Get-PckEntryPathsForLogicalAsset",
+                "$logicalPath.remap", ".gdc"
+            }
                 .Where(fragment => !validator.Contains(fragment, StringComparison.Ordinal))
                 .ToArray(),
             "The production validator must enforce Source text, GDScript syntax, and Spine contracts:");

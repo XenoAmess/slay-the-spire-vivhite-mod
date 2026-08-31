@@ -1394,6 +1394,26 @@ function Read-PckTextEntry {
     }
 }
 
+function Get-PckEntryPathsForLogicalAsset {
+    param(
+        [Parameter(Mandatory = $true)][string]$ResourceRoot,
+        [Parameter(Mandatory = $true)][string]$RelativePath
+    )
+
+    $logicalPath = "$($ResourceRoot.Trim('/'))/$($RelativePath.TrimStart('/'))"
+    if ($RelativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
+        return @("$logicalPath.import")
+    }
+    if ($RelativePath.EndsWith(".gd", [StringComparison]::OrdinalIgnoreCase)) {
+        # Godot export compiles GDScript and replaces the source entry with a
+        # remap sidecar plus the bytecode payload. Runtime references continue
+        # to use res://...gd and are resolved through this pair.
+        $compiledPath = [IO.Path]::ChangeExtension($logicalPath, ".gdc").Replace('\', '/')
+        return @("$logicalPath.remap", $compiledPath)
+    }
+    return @($logicalPath)
+}
+
 function Test-PckContents {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -1433,12 +1453,9 @@ function Test-PckContents {
     $allowedPrivateEntries = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
     if ($Activation.Active) {
         foreach ($relativePath in (Get-ExpectedLogicalAssets -Contract $Contract)) {
-            $logicalPath = "$resourceRoot/$relativePath"
-            if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
-                [void]$allowedPrivateEntries.Add("$logicalPath.import")
-            }
-            else {
-                [void]$allowedPrivateEntries.Add($logicalPath)
+            foreach ($entryPath in @(Get-PckEntryPathsForLogicalAsset `
+                        -ResourceRoot $resourceRoot -RelativePath $relativePath)) {
+                [void]$allowedPrivateEntries.Add($entryPath)
             }
         }
     }
@@ -1470,17 +1487,29 @@ function Test-PckContents {
     if ($Activation.Active) {
         foreach ($relativePath in (Get-ExpectedLogicalAssets -Contract $Contract)) {
             $logicalPath = "$resourceRoot/$relativePath"
-            if ($relativePath.EndsWith(".png", [StringComparison]::OrdinalIgnoreCase)) {
-                $expectedEntry = "$logicalPath.import"
+            $expectedEntries = @(Get-PckEntryPathsForLogicalAsset `
+                -ResourceRoot $resourceRoot -RelativePath $relativePath)
+            foreach ($expectedEntry in $expectedEntries) {
+                if (-not $entryByPath.ContainsKey($expectedEntry) -or
+                    (($entryByPath[$expectedEntry].Flags -band 2) -ne 0)) {
+                    Add-ValidationError "Exported PCK is missing exact private entry '$expectedEntry' for res://$logicalPath."
+                }
             }
-            else {
-                # Private Spine JSON, wrappers, and scenes remain readable source
-                # text so their runtime references can be inspected exactly.
-                $expectedEntry = $logicalPath
-            }
-            if (-not $entryByPath.ContainsKey($expectedEntry) -or
-                (($entryByPath[$expectedEntry].Flags -band 2) -ne 0)) {
-                Add-ValidationError "Exported PCK is missing exact private entry '$expectedEntry' for res://$logicalPath."
+            if ($relativePath.EndsWith(".gd", [StringComparison]::OrdinalIgnoreCase) -and
+                $expectedEntries.Count -eq 2 -and
+                $entryByPath.ContainsKey($expectedEntries[0])) {
+                try {
+                    $remapText = Read-PckTextEntry -Path $Path -Entry $entryByPath[$expectedEntries[0]]
+                    $expectedCompiledReference = "res://$($expectedEntries[1])"
+                    if ($remapText.IndexOf($expectedCompiledReference, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+                        Add-ValidationError (
+                            "Exported GDScript remap '$($expectedEntries[0])' does not target " +
+                            "'$expectedCompiledReference'.")
+                    }
+                }
+                catch {
+                    Add-ValidationError $_.Exception.Message
+                }
             }
         }
 
