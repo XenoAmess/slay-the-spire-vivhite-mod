@@ -281,6 +281,11 @@ class RunContext:
     current_combat_is_hard: bool = False
     run_finalized: bool = False
     finalize_requested: bool = False
+    # Reflection mutates the in-memory profile before the three durable terminal
+    # artifacts (run log, profile state, rotation ledger) are published.  Retain
+    # that exact once-applied result across a transient write failure so the next
+    # GAME_OVER poll can retry persistence without applying learning twice.
+    pending_terminal_persistence: dict | None = None
     rest_before_boss: bool = False   # 本次地图选择指向 Boss 前夜的篝火（_rest 消费）
     rest_proj_hp_pct: float | None = None
     rest_next_fight_loss_frac: float = 0.0
@@ -2181,14 +2186,17 @@ class Agent:
             try:
                 if self.ctx.run_id in rotation.snapshot().finalized_run_ids:
                     self.ctx.run_finalized = True
+                    self.ctx.finalize_requested = False
+                    self.ctx.pending_terminal_persistence = None
                     log(f"[agent] 忽略重复终局通知：{self.ctx.run_id} 已完成轮换结算")
                     return
             except CharacterRotationError as exc:
                 log(f"[agent] 读取角色轮换终局账失败，保留本次终局：{exc}")
-        self.ctx.run_finalized = True
         # 幻影局守卫（第 50~51 局复盘）：真实对局至少有涅奥事件一条决策，
         # 零决策必为结算屏回声幻影——不得入账/存日志/触发复盘与 git 存档
         if not self.ctx.decisions and not victory:
+            self.ctx.run_finalized = True
+            self.ctx.finalize_requested = False
             log("[agent] ⚠ 忽略零数据幻影对局（重启落在结算屏的旧对局回声），不计入统计")
             return
         # 断线重连残缺局守卫（第 214 批复盘）：重连落在局中途的旧对局只剩尾部
@@ -2196,40 +2204,71 @@ class Agent:
         # 断章取义，入账即污染演化证据与死亡榜。正常打到 F10+ 的对局决策数
         # 必然过百，「决策极少却楼层颇深」只可能是残缺局：忽略之，不入账不演化
         if not victory and floor >= 10 and len(self.ctx.decisions) < 10:
+            self.ctx.run_finalized = True
+            self.ctx.finalize_requested = False
             log(f"[agent] ⚠ 忽略断线重连残缺对局（仅 {len(self.ctx.decisions)} 条决策却到 F{floor}），"
                 "不计入统计")
             return
+        pending = getattr(self.ctx, "pending_terminal_persistence", None)
+        if pending is None:
+            # 终局前落库挂起的战斗聚合账（第 97~98 批复盘）：胜利结算屏触发的
+            # settle 挂账后没有下一场战斗来冲销，必须在此补记，否则最后一战丢失
+            self._flush_combat_agg()
+            lesson = finalize_run(self.know, self.ctx, victory, floor)
+            # finalize_run 是生涯 runs 计数的唯一提交点；以提交后的值校正序号，
+            # 让 review_queue 的第 N 局能精确关联这份原始证据。
+            self.ctx.run_number = int(
+                self.know.stats.get("global", {}).get("runs", 0))
+            self.ctx.profile_run_number = self.ctx.run_number
+            pending = {
+                "victory": bool(victory),
+                "floor": int(floor),
+                "lesson": lesson,
+                "payload": {
+                    "run_id": self.ctx.run_id,
+                    "run_number": self.ctx.run_number,
+                    **self._run_profile_metadata(),
+                    "ascension": self.ctx.ascension,
+                    "started_at": self.ctx.started_at,
+                    "victory": bool(victory),
+                    "floor": int(floor),
+                    "decisions": self.ctx.decisions,
+                    "combat_notes": self.ctx.combat_notes,
+                    "attribution_tags": _durable_attribution_tags(
+                        self.ctx.attribution_tags),
+                },
+            }
+            self.ctx.pending_terminal_persistence = pending
+
+        # Each operation is safe to retry with the same in-memory post-reflection
+        # snapshot.  Do not mark the context finalized, leave GAME_OVER, increment
+        # max_runs, or consume the character quota until all three have succeeded.
+        terminal = None
+        try:
+            path = self.know.save_run_log(
+                self.ctx.run_id, pending["payload"])
+            self.know.save()
+            if rotation is not None:
+                character_id = pending["payload"].get("character_id")
+                terminal = rotation.record_terminal(
+                    self.ctx.run_id,
+                    terminal_persisted=True,
+                    character_id=character_id or None,
+                )
+        except Exception as exc:
+            self.ctx.finalize_requested = True
+            log(f"[agent] 终局落盘未完成，保留原生结算页稍后重试：{exc}")
+            return
+
+        self.ctx.run_finalized = True
+        self.ctx.finalize_requested = False
+        self.ctx.pending_terminal_persistence = None
         self.runs_played += 1
-        # 终局前落库挂起的战斗聚合账（第 97~98 批复盘）：胜利结算屏触发的
-        # settle 挂账后没有下一场战斗来冲销，必须在此补记，否则最后一战丢失
-        self._flush_combat_agg()
-        lesson = finalize_run(self.know, self.ctx, victory, floor)
-        # finalize_run 是生涯 runs 计数的唯一提交点；以提交后的值校正序号，
-        # 让 review_queue 的第 N 局能精确关联这份原始证据。
-        self.ctx.run_number = int(self.know.stats.get("global", {}).get("runs", 0))
-        self.ctx.profile_run_number = self.ctx.run_number
-        log("\n" + lesson)
-        path = self.know.save_run_log(self.ctx.run_id, {
-            "run_id": self.ctx.run_id,
-            "run_number": self.ctx.run_number,
-            **self._run_profile_metadata(),
-            "ascension": self.ctx.ascension,
-            "started_at": self.ctx.started_at,
-            "victory": victory,
-            "floor": floor,
-            "decisions": self.ctx.decisions,
-            "combat_notes": self.ctx.combat_notes,
-            "attribution_tags": _durable_attribution_tags(self.ctx.attribution_tags),
-        })
+        victory = bool(pending["victory"])
+        floor = int(pending["floor"])
+        log("\n" + str(pending["lesson"]))
         log(f"[agent] 对局日志已保存：{path.name}")
-        self.know.save()
-        if rotation is not None:
-            character_id = self._run_profile_metadata()["character_id"]
-            terminal = rotation.record_terminal(
-                self.ctx.run_id,
-                terminal_persisted=True,
-                character_id=character_id or None,
-            )
+        if terminal is not None:
             if terminal.advanced:
                 log(f"[agent] 角色轮换已推进：{terminal.character} → "
                     f"{terminal.next_character}")

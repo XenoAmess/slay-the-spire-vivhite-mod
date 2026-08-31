@@ -239,29 +239,56 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
             self.assertTrue(reconnected_process.ctx.run_finalized)
             self.assertEqual(real_rotation.target_character, IRONCLAD)
 
-    def test_failed_character_stats_save_does_not_flip_rotation(self) -> None:
+    def test_failed_character_stats_save_retries_without_duplicate_learning_or_flip(
+            self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-agent-finalize-fail-") as root:
             events: list[str] = []
             real_rotation = CharacterRotation.from_knowledge_root(root)
             real_rotation.observe_active_run("run-v", VIVHITE_CHARACTER_ID)
             rotation = mock.Mock(wraps=real_rotation)
             rotation.snapshot.side_effect = real_rotation.snapshot
+
+            def record_terminal(*args, **kwargs):
+                events.append("rotation")
+                return real_rotation.record_terminal(*args, **kwargs)
+
+            rotation.record_terminal.side_effect = record_terminal
             know = _FinalKnowledge(events, fail_save=True)
             instance = _finalizing_agent(rotation, know)
 
             with mock.patch.object(
-                    agent_module, "finalize_run", return_value="lesson"), \
+                    agent_module, "finalize_run", return_value="lesson") as reflected, \
                     mock.patch.object(agent_module, "llm_review", None), \
                     mock.patch.object(agent_module, "autogit", None), \
-                    mock.patch.object(agent_module, "log"), \
-                    self.assertRaises(OSError):
+                    mock.patch.object(agent_module, "log"):
                 instance._finalize(victory=False, floor=12)
 
             self.assertEqual(events, ["terminal_log", "character_stats"])
             rotation.record_terminal.assert_not_called()
+            self.assertFalse(instance.ctx.run_finalized)
+            self.assertTrue(instance.ctx.finalize_requested)
+            self.assertIsNotNone(instance.ctx.pending_terminal_persistence)
+            self.assertEqual(instance.runs_played, 0)
             snapshot = real_rotation.snapshot()
             self.assertEqual(snapshot.active_run_id, "run-v")
             self.assertEqual(snapshot.target_character, VIVHITE)
+
+            know.fail_save = False
+            with mock.patch.object(agent_module, "llm_review", None), \
+                    mock.patch.object(agent_module, "autogit", None), \
+                    mock.patch.object(agent_module, "log"):
+                instance._finalize(victory=False, floor=12)
+
+            reflected.assert_called_once()
+            self.assertEqual(events, [
+                "terminal_log", "character_stats",
+                "terminal_log", "character_stats", "rotation",
+            ])
+            self.assertTrue(instance.ctx.run_finalized)
+            self.assertFalse(instance.ctx.finalize_requested)
+            self.assertIsNone(instance.ctx.pending_terminal_persistence)
+            self.assertEqual(instance.runs_played, 1)
+            self.assertEqual(real_rotation.target_character, IRONCLAD)
 
 
 if __name__ == "__main__":
