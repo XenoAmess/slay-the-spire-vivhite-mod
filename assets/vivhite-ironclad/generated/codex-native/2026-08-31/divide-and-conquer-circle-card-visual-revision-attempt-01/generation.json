@@ -1,0 +1,102 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+  "card_type": "DivideAndConquerCircle",
+  "card_name_zh": "分治法阵",
+  "revision_reason": "The previous runtime portrait was rejected because a prominent open book violated Vivhite's no-book and no-casting-tool identity contract.",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "new_opaque_scene_with_identity_reference",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "cough": 4,
+    "draw": 4,
+    "upgraded_draw": 6,
+    "trigger": "for each drawn Attack, deal spell damage to a random enemy",
+    "spell_damage": 4,
+    "upgraded_spell_damage": 5
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "Vivhite/Vivhite/images/cards/ChromaticSequence.png"
+    ],
+    "reference_roles": [
+      "Vivhite identity, costume family, blue-butterfly ornament, painting language, and palette only; not composition or props"
+    ],
+    "reference_sha256": [
+      "92610FED38D724550447FE981612C94F8C73C67533A8503F5B8012594E0B5DA9"
+    ],
+    "num_last_images_to_include": 0,
+    "background_parameter": null,
+    "note": "A new complete opaque scene was generated through the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. The tool exposed no model, seed, sampler, token count, quality, or requested pixel-size controls, so none are inferred."
+  },
+  "prompt_sha256": "FB602FE3FF0572ACA101011D20DA99FA3BF23B59B1791DF5680CB5C4FB68CAF8",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0554f-7a63-77a0-867a-794a820af5b0/exec-9a36544d-a9b4-4700-aeab-8e4d4b41cb21.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/divide-and-conquer-circle-card-visual-revision-attempt-01/original.png",
+  "original_sha256": "44C309C5C6AE46ECAB165826F09654E358941002CA9F98E2D38834E4D1579D5C",
+  "original_png": {
+    "width": 1537,
+    "height": 1023,
+    "bit_depth": 8,
+    "color_type": 2,
+    "mode": "RGB8",
+    "alpha": false
+  },
+  "superseded_runtime_sha256": "F445993CBDFE09567F24265325714F613647F00AB95E4D270ED7C9A351D56A17",
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 106,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/DivideAndConquerCircle.png",
+  "runtime_sha256": "37F19CACDC7215D58EF59F2721CC3D5109A234318D2B83D2A9FA830FE4AA028C",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "mode": "RGB8",
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect_candidate.gd",
+    "inspection/project.godot",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_two_empty_hands": true,
+    "one_large_problem_node_splits_once_into_three_task_panels": true,
+    "one_attack_panel_emits_one_secondary_remote_star_pulse": true,
+    "neutral_panels_do_not_attack_and_remain_in_the_workflow_cluster": true,
+    "skill_workflow_dominates_over_attack_impact": true,
+    "no_book_page_scroll_card_deck_weapon_tool_device_or_held_prop": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_red_liquid_crimson_strand_or_mouth_emitted_magic": true,
+    "no_readable_text_logo_ui_second_character_or_duplicate_limb": true,
+    "100x76_color_and_grayscale_skill_readability": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "The rejected open-book composition is replaced by a tool-free one-shot divide-and-conquer workflow: one large purple-blue problem polyhedron splits into three translucent task panels; only the attack-emblem panel sends a restrained star pulse to a distant abstract enemy zone, while the two neutral panels remain non-attacking within the hand-side routing cluster. The branching workflow remains dominant in 100x76 grayscale."
+}
