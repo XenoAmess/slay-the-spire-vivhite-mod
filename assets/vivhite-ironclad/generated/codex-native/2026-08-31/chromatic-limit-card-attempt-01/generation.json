@@ -1,0 +1,136 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier, seed, sampler, token count, or explicit output-size control; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CHROMATIC_LIMIT",
+  "card_type": "ChromaticLimit",
+  "card_name_zh": "绯彩极限",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed square attack-card scene",
+  "mechanical_semantics": {
+    "energy_cost": "X",
+    "type": "Attack",
+    "rarity": "Rare",
+    "target": "AnyEnemy",
+    "cough": 8,
+    "damage_per_hit": 9,
+    "drain_percent_per_x": 12,
+    "actual_healing_per_margin": 10,
+    "upgrade_damage_per_hit": 12,
+    "upgrade_drain_percent_per_x": 16,
+    "growth_caps": false
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "requested_size_in_prompt": "1024x1024",
+    "explicit_size_parameter": null,
+    "referenced_image_paths": [
+      "Vivhite/Vivhite/images/cards/CompositeColorWheel.png",
+      "Vivhite/Vivhite/images/cards/PerfectSynthesis.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque scene used the built-in Codex-native path. EvoLink and transparent-background generation were not used. The built-in tool returned a 1254x1254 RGB8 PNG despite the 1024x1024 prompt request; the native file is preserved byte-for-byte, and a deterministic square Lanczos size adaptation is documented separately."
+  },
+  "reference_roles": [
+    {
+      "path": "Vivhite/Vivhite/images/cards/CompositeColorWheel.png",
+      "role": "established deep-indigo mathematical observatory world, polished anime-fantasy finish, crystalline material language, and purple-blue-gold palette only; central wheel, character, projectile arrangement, and target count excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/PerfectSynthesis.png",
+      "role": "separated hard-edged multi-hit lanes and a distinct lower cyan return circuit remaining readable at thumbnail size only; character, five-hit count, three-target layout, and exact composition excluded"
+    }
+  ],
+  "reference_sha256": {
+    "Vivhite/Vivhite/images/cards/CompositeColorWheel.png": "8B8D5A539DA6375C9C9C612E904EB40C309E9E86168424ECB4382D0E07136AAA",
+    "Vivhite/Vivhite/images/cards/PerfectSynthesis.png": "C2387A86ABB328AC3635DBAF1F041B7E8D9E1EBB9019885DD56B6D639412FF54"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "455F155D0C8E48D649F6BDF570FAF59884E0034656880EE21B3CC18A17B4450D",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0553a-e638-7860-b910-2b769ee703ed/exec-64053da8-f1fe-4afe-916f-a0a56e6e4771.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/chromatic-limit-card-attempt-01/original.png",
+  "original_sha256": "5E543C90BE0568F45C9F0A1AC18B0C5384D28AD91D1633649D3226498A7E2FE5",
+  "original_png": {
+    "width": 1254,
+    "height": 1254,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_square_size_adaptation": {
+    "reason": "The user required a 1024x1024 opaque source, while the built-in tool returned a 1254x1254 opaque square and exposes no explicit size parameter.",
+    "tool": "inspection/prepare_square_source.gd",
+    "operation": "uniform square-to-square Lanczos resize; no crop, repaint, mask, alpha modification, or content-aware adjustment",
+    "output_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/chromatic-limit-card-attempt-01/source-1024x1024-rgb8.png",
+    "output_sha256": "A92C970213441BFD1866DD863FAC4468585B8742DDE289ECBE18158DD76FB5F3",
+    "output_png": {
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "color_type": 2,
+      "alpha": false
+    }
+  },
+  "deterministic_runtime_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "source": "source-1024x1024-rgb8.png",
+    "x": 12,
+    "y": 132,
+    "width": 1000,
+    "height": 760,
+    "resize": "1000x760",
+    "interpolation": "Lanczos",
+    "note": "The crop already equals the runtime dimensions, so the final resize does not alter dimensions."
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ChromaticLimit.png",
+  "runtime_sha256": "8FB5C446EDFE8328165AF1F4AE2C0488F02BC6ECD82691A8B9EC3821B15F507E",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect_candidate.gd",
+    "inspection/inspect-godot.log",
+    "inspection/prepare_square_source.gd",
+    "inspection/prepare-square-source.log",
+    "inspection/prepare-runtime.log",
+    "inspection/runtime-from-native-1254-preliminary.png",
+    "inspection/inspect-parse-failure.log",
+    "inspection/inspect-native-size-mismatch.log",
+    "inspection/prepare-square-source-parse-failure.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "no_character_or_mouth_risk": true,
+    "no_red_crimson_blood_liquid_strand_or_mouth_emission": true,
+    "no_text_letter_number_formula_pseudo_glyph_weapon_or_ui": true,
+    "segmented_adjustable_concentric_dial_with_dark_empty_sockets": true,
+    "several_distinct_active_violet_blue_gold_attack_nodes": true,
+    "multiple_separated_open_rightward_attack_lanes": true,
+    "single_abstract_hostile_polyhedral_region": true,
+    "multiple_distinct_cyan_healing_return_arcs": true,
+    "return_arcs_merge_into_life_light_reservoir_and_margin_crystals": true,
+    "not_a_defensive_shell_or_static_self_buff": true,
+    "100x76_color_and_grayscale_variable_multi_hit_loop_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "A segmented mathematical dial shows both inactive sockets and a selected set of luminous violet, blue, and gold nodes. Several spatially separated attack lanes fire rightward into one hostile faceted region; each impact routes a distinct cyan return arc into a large lower life-light reservoir that crystallizes into Margin. The outgoing multi-hit fan and lower healing-return circuit remain recognizable at 100x76 and in grayscale. No character, weapon, text, UI, red/crimson line, blood, liquid, strand, or mouth-emitted element is present."
+}
