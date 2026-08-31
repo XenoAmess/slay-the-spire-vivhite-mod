@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "asset": {
+    "card_id": "VIVHITE_CARD_CLOSED_PROJECTION",
+    "card_type": "ClosedProjection",
+    "attempt": 1,
+    "provider": "codex-native"
+  },
+  "audit": {
+    "date": "2026-08-31",
+    "result": "complete_with_explicit_native_tool_provenance_limit",
+    "generated_or_edited_image_during_audit": false,
+    "git_commit_containing_core_and_runtime": "11a1dc5174dbf4e0d049f4d928a15fb5613af357"
+  },
+  "core_files": [
+    {
+      "path": "prompt.txt",
+      "role": "verbatim_prompt",
+      "sha256": "a0f0efbe7f5460dc1f15892ed7fc0cfe855c24dd40ce53a19e464cc6a800cbe6"
+    },
+    {
+      "path": "generation.json",
+      "role": "available_generation_record",
+      "sha256": "4046b5f9fc9c21f4fb09328fef6b74b4a419ee042e10e915ec072845fe408c29"
+    },
+    {
+      "path": "original.png",
+      "role": "unmodified_native_output",
+      "sha256": "4ebddf31c37cb245dcd02190a26f8635146af9e8f3fb6da5094fcd0327ce82dc",
+      "png": {
+        "width": 1536,
+        "height": 1024,
+        "bit_depth": 8,
+        "color_type": 2,
+        "alpha": false,
+        "native_cabx_chunk_bytes": 21844
+      }
+    }
+  ],
+  "adopted_runtime": {
+    "path": "Vivhite/Vivhite/images/cards/ClosedProjection.png",
+    "sha256": "207f1a5e673be31a2199c736b1f836fd7295c205be7b92ea9c516212798f809d",
+    "png": {
+      "width": 1000,
+      "height": 760,
+      "bit_depth": 8,
+      "color_type": 2,
+      "alpha": false
+    },
+    "reproduced_byte_for_byte_from_original": true
+  },
+  "deterministic_runtime_derivation": {
+    "tool_path": "tools/art/prepare_vivhite_card_portrait.gd",
+    "tool_sha256_at_audit": "fb5c6d21c60af745c3ab2e4fa7c3ef729d72e7e000199c127226aff4a039d4cf",
+    "crop": {
+      "x": 105,
+      "y": 8,
+      "width": 1325,
+      "height": 1007
+    },
+    "resize": {
+      "width": 1000,
+      "height": 760,
+      "interpolation": "Lanczos",
+      "output_format": "RGB8"
+    }
+  },
+  "inspection_files": [
+    {
+      "path": "inspection/centered-25x19-1000x760-rgb8.png",
+      "sha256": "207f1a5e673be31a2199c736b1f836fd7295c205be7b92ea9c516212798f809d",
+      "width": 1000,
+      "height": 760,
+      "color_type": 2
+    },
+    {
+      "path": "inspection/centered-25x19-1000x760-gray.png",
+      "sha256": "f5593d71860d41032acb9055f6f9d53fd77b8abe04ef9678e804d897fae07e48",
+      "width": 1000,
+      "height": 760,
+      "color_type": 0
+    },
+    {
+      "path": "inspection/thumbnail-250x190-color.png",
+      "sha256": "7a3d898a65c4e1aff23415f567b744c61bd04029b62c9035616fd024dfaf1cc5",
+      "width": 250,
+      "height": 190,
+      "color_type": 2
+    },
+    {
+      "path": "inspection/thumbnail-250x190-gray.png",
+      "sha256": "78f5029e6cc09bb6823ef48269e98c696956acccaa4a24c2e8b50f5f84c22439",
+      "width": 250,
+      "height": 190,
+      "color_type": 0
+    },
+    {
+      "path": "inspection/thumbnail-100x76-color.png",
+      "sha256": "c6178a6f086b6a33a644db07af4c16b4bc962ebe58fb3d9dbd66b8feca034b39",
+      "width": 100,
+      "height": 76,
+      "color_type": 2
+    },
+    {
+      "path": "inspection/thumbnail-100x76-gray.png",
+      "sha256": "45c14b471fe73724f81fbeb6e1f032d11ac8e282ef85435ed91536061c97d1e2",
+      "width": 100,
+      "height": 76,
+      "color_type": 0
+    }
+  ],
+  "inspection_reproduction": {
+    "all_six_files_reproduced_byte_for_byte": true,
+    "audit_script_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/axiom-ring-attempt-01/inspection/inspect_candidate.gd",
+    "audit_script_sha256": "8ba90fb00a3b40b95523264cab4be518fc81ffdb4f394a95675b375ecefe3d50",
+    "script_was_historically_stored_in_this_package": false,
+    "note": "The external contemporaneous standard inspector was used only to verify the already-present inspection outputs; it is not represented as the original historical invocation script."
+  },
+  "support_files": [
+    {
+      "path": "prepare-godot.log",
+      "sha256": "a382d9bdd44068672540e191b8c45a6e38c5879f5e5b11f7a4e2eeb1a5f7d9ec"
+    },
+    {
+      "path": "prepare-godot.err.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "empty": true
+    },
+    {
+      "path": "inspection/inspect-godot.log",
+      "sha256": "c4f96364c63df223c18528d007de89fc8317ce2b1f234fb3b0b8acae5f1f24ca"
+    },
+    {
+      "path": "inspection/inspect-godot.err.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "empty": true
+    },
+    {
+      "path": "inspection/project.godot",
+      "sha256": "c0b467011aef78020f95f56981c50c987b71d7991c5c362cc575ac7ecb9d731d"
+    },
+    {
+      "path": "inspection/assessment.md",
+      "sha256": "68344a8a7ff1c4884ad25f5043ff9b2941c517174fa489350f5faea7aa3222e2"
+    }
+  ],
+  "declared_reference_hashes_verified": true,
+  "secret_scan": {
+    "text_findings": 0,
+    "png_text_chunks": 0,
+    "cabx_credential_pattern_findings": 0
+  },
+  "unavailable_native_tool_fields": [
+    "internal_model_id",
+    "request_id",
+    "seed",
+    "quality",
+    "requested_output_size",
+    "raw_request_envelope"
+  ],
+  "limitations": [
+    "No unavailable native-tool request field was inferred or fabricated.",
+    "The retained caBX chunk was credential-scanned but not cryptographically validated.",
+    "Static evidence acceptance does not claim in-game card-frame validation."
+  ]
+}
