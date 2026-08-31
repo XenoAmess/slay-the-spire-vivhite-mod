@@ -61,8 +61,8 @@ public sealed class TerminationCondition : RecursionCard
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
     [
-        ModCardVars.Damage(12, ValueProp.Move),
-        ModCardVars.Heal(5)
+        ModCardVars.Damage(16, ValueProp.Move),
+        ModCardVars.Heal(10)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
@@ -80,8 +80,8 @@ public sealed class TerminationCondition : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(4);
-        DynamicVars.Heal.UpgradeValueBy(3);
+        DynamicVars.Damage.UpgradeValueBy(6);
+        DynamicVars.Heal.UpgradeValueBy(5);
     }
 }
 
@@ -184,7 +184,7 @@ public sealed class HeuristicShield : RecursionCard
 public sealed class SuccessorFormula : RecursionCard
 {
     public SuccessorFormula()
-        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
+        : base(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 2)
     {
     }
 
@@ -192,7 +192,7 @@ public sealed class SuccessorFormula : RecursionCard
         [VivhiteKeywords.Lethal];
 
     protected override IEnumerable<DynamicVar> RecursionVars =>
-        [ModCardVars.Damage(7, ValueProp.Move)];
+        [ModCardVars.Damage(10, ValueProp.Move)];
 
     protected override async Task OnPlayAfterLifePayment(
         PlayerChoiceContext choiceContext,
@@ -209,6 +209,6 @@ public sealed class SuccessorFormula : RecursionCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(3);
+        DynamicVars.Damage.UpgradeValueBy(4);
     }
 }

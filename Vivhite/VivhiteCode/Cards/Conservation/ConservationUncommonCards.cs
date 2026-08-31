@@ -64,7 +64,7 @@ public sealed class TopologicalGrowth : ConservationCard
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
-        new IntVar(DimensionUpVar, 1),
+        new IntVar(DimensionUpVar, 2),
         new IntVar(MarginVar, 3)
     ];
 

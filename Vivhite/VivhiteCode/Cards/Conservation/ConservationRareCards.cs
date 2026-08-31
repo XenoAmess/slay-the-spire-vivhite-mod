@@ -53,7 +53,7 @@ public sealed class AxiomOfLife : ConservationCard
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
         new DamageVar(24, ValueProp.Move),
-        new IntVar(DimensionUpVar, 4)
+        new IntVar(DimensionUpVar, 6)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -80,7 +80,7 @@ public sealed class AxiomOfLife : ConservationCard
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(8);
-        DynamicVars[DimensionUpVar].UpgradeValueBy(1);
+        DynamicVars[DimensionUpVar].UpgradeValueBy(2);
     }
 }
 
@@ -100,9 +100,10 @@ public sealed class InfiniteExtension : ConservationCard
         CardPlay cardPlay,
         LifePaymentResult payment)
     {
-        await Vivhite.Core.InfiniteExtension.ApplyAsync(
+        await Vivhite.Core.InfiniteExtension.GainAsync(
             choiceContext,
             Owner.Creature,
+            2,
             Owner.Creature,
             this);
     }

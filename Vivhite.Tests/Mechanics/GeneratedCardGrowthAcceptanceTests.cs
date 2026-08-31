@@ -202,7 +202,7 @@ internal static class GeneratedCardGrowthAcceptanceTests
                 actionQueues,
                 expectedEnergySpent: 1,
                 expectedLifeLost: 8,
-                expectedDimensionUp: 1);
+                expectedDimensionUp: 2);
             playedDimensionUpSources.Add(eventLoopSource);
             AcceptanceAssert.True(
                 playerCombatState.ExhaustPile.Cards.Contains(eventLoopSource),
@@ -248,7 +248,7 @@ internal static class GeneratedCardGrowthAcceptanceTests
                 actionQueues,
                 expectedEnergySpent: 0,
                 expectedLifeLost: 8,
-                expectedDimensionUp: 1);
+                expectedDimensionUp: 2);
             playedDimensionUpSources.Add(eventLoopClone);
             AcceptanceAssert.True(
                 playerCombatState.ExhaustPile.Cards.Contains(eventLoopClone),
@@ -304,14 +304,14 @@ internal static class GeneratedCardGrowthAcceptanceTests
                 actionQueues,
                 expectedEnergySpent: 1,
                 expectedLifeLost: 8,
-                expectedDimensionUp: 1);
+                expectedDimensionUp: 2);
             playedDimensionUpSources.Add(eventLoopSource);
             await PlayCardThroughProductionActionAsync(
                 conservedRecurrenceClone,
                 actionQueues,
                 expectedEnergySpent: 0,
                 expectedLifeLost: 5,
-                expectedDimensionUp: 1);
+                expectedDimensionUp: 2);
             playedDimensionUpSources.Add(conservedRecurrenceClone);
 
             const int settlements = 105;
@@ -326,20 +326,20 @@ internal static class GeneratedCardGrowthAcceptanceTests
                     actionQueues,
                     expectedEnergySpent: 1,
                     expectedLifeLost: 5,
-                    expectedDimensionUp: 1);
+                    expectedDimensionUp: 2);
                 playedDimensionUpSources.Add(source);
 
                 if (growth == 30)
                 {
-                    AssertGrowthCheckpoint(owner, expectedGrowth: 30, expectedMaxHp: 2078, expectedCurrentHp: 1909);
+                    AssertGrowthCheckpoint(owner, expectedGrowth: 60, expectedMaxHp: 2108, expectedCurrentHp: 1939);
                 }
                 else if (growth == 100)
                 {
-                    AssertGrowthCheckpoint(owner, expectedGrowth: 100, expectedMaxHp: 2148, expectedCurrentHp: 1629);
+                    AssertGrowthCheckpoint(owner, expectedGrowth: 200, expectedMaxHp: 2248, expectedCurrentHp: 1729);
                 }
             }
 
-            AssertGrowthCheckpoint(owner, expectedGrowth: 105, expectedMaxHp: 2153, expectedCurrentHp: 1609);
+            AssertGrowthCheckpoint(owner, expectedGrowth: 210, expectedMaxHp: 2258, expectedCurrentHp: 1714);
             AcceptanceAssert.Equal(
                 150,
                 playerCombatState.Energy,

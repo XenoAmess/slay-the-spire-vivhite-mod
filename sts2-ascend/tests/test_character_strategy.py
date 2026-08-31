@@ -164,16 +164,16 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             self.assertTrue(entry.card_id.endswith(entry.stable_id))
             self.assertIsInstance(entry.mechanics, CardMechanics)
 
-    def test_all_printed_life_costs_are_doubled_except_ritual_phases(self) -> None:
+    def test_all_printed_life_costs_match_approved_balance_table(self) -> None:
         expected_nonzero = {
             "LUMINOUS_PROJECTION": 2,
             "CLOSED_DOMAIN_MAPPING": 2,
             "VIVHITE_TRANSFORMATION": 4,
             "CLOSED_PROJECTION": 4,
             "TANGENT_STARLIGHT": 2,
-            "OPEN_SET_SHELTER": 4,
+            "OPEN_SET_SHELTER": 2,
             "LOCAL_HOMEOMORPHISM": 2,
-            "SCALE_TRANSFORMATION": 6,
+            "SCALE_TRANSFORMATION": 4,
             "ISOPERIMETRIC_WARD": 4,
             "TOPOLOGICAL_GROWTH": 8,
             "LAW_OF_CONSERVATION": 6,
@@ -190,11 +190,11 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             "PARALLEL_STARFALL": 6,
             "ASTRAL_SEARCH": 2,
             "HEURISTIC_SHIELD": 2,
-            "SUCCESSOR_FORMULA": 4,
+            "SUCCESSOR_FORMULA": 2,
             "BACKTRACKING_SPELL": 6,
             "CONVERGENCE_VERDICT": 8,
             "DIVIDE_AND_CONQUER_CIRCLE": 4,
-            "ASTRAL_PURSUIT": 6,
+            "ASTRAL_PURSUIT": 4,
             "PREFETCH_FUTURE": 4,
             "INDUCTIVE_CIRCLE": 8,
             "EVENT_LOOP": 6,
@@ -207,12 +207,12 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
             "COMPOSITE_COLOR_WHEEL": 6,
             "DIFFERENTIAL_SAMPLING": 2,
             "CHIAROSCURO": 4,
-            "NEGATIVE_SPACE": 4,
+            "NEGATIVE_SPACE": 2,
             "SPECTRAL_INTEGRAL": 6,
             "GOLDEN_COMPOSITION": 8,
             "RIEMANN_STAR_ARRAY": 6,
             "CHROMATIC_TRANSITION": 4,
-            "COLOR_CONSERVATION": 8,
+            "COLOR_CONSERVATION": 4,
             "COMPOSITE_COLOR_FIELD": 8,
             "COMPLEMENTARY_AFTERIMAGE": 6,
             "DEFINITE_CRIMSON_INTEGRAL": 12,
@@ -401,14 +401,17 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
 
         scale = VIVHITE_STRATEGY.card(
             "VIVHITE_CARD_SCALE_TRANSFORMATION")
-        self.assertEqual(scale.mechanics.max_hp_growth, 1)
+        self.assertEqual(scale.mechanics.energy, 1)
+        self.assertEqual(scale.mechanics.life_calculation_cost, 4)
+        self.assertEqual(scale.mechanics.max_hp_growth, 2)
         self.assertTrue(scale.mechanics.lethal)
         self.assertTrue(scale.mechanics.exhaust)
         self.assertEqual(scale.build_tags, (CONSERVATION_GEOMETRY,))
 
         termination = VIVHITE_STRATEGY.card(
             "VIVHITE_CARD_TERMINATION_CONDITION")
-        self.assertEqual(termination.mechanics.kill_heal, 5)
+        self.assertEqual(termination.mechanics.base_damage, 16)
+        self.assertEqual(termination.mechanics.kill_heal, 10)
         self.assertEqual(termination.build_tags, (RECURSIVE_ASTRAL,))
 
         optimal = VIVHITE_STRATEGY.card(
@@ -447,6 +450,50 @@ class CharacterStrategyCatalogTests(unittest.TestCase):
         )
         self.assertEqual(VIVHITE_STARTING_RELIC_NAME_ZH, "孤高冠冕")
         self.assertEqual(VIVHITE_STARTING_RELIC_NAME_EN, "Solitary Crown")
+
+    def test_priority_weak_card_and_dimension_buffs_are_in_catalog(self) -> None:
+        expected = {
+            "AXIOM_RING": {"energy": 0, "margin_gain": 3},
+            "OPEN_SET_SHELTER": {
+                "energy": 1, "life_calculation_cost": 2,
+                "base_block": 14, "margin_gain": 2,
+            },
+            "SCALE_TRANSFORMATION": {
+                "energy": 1, "life_calculation_cost": 4,
+                "base_damage": 20, "max_hp_growth": 2,
+            },
+            "TOPOLOGICAL_GROWTH": {"max_hp_growth": 2},
+            "AXIOM_OF_LIFE": {"max_hp_growth": 6},
+            "INFINITE_EXTENSION": {"growth": 2},
+            "TERMINATION_CONDITION": {
+                "base_damage": 16, "kill_heal": 10,
+            },
+            "SUCCESSOR_FORMULA": {
+                "energy": 0, "life_calculation_cost": 2,
+                "base_damage": 10,
+            },
+            "ASTRAL_PURSUIT": {
+                "energy": 0, "life_calculation_cost": 4,
+                "kill_draw": 2,
+            },
+            "NEGATIVE_SPACE": {
+                "energy": 0, "life_calculation_cost": 2, "margin_gain": 2,
+            },
+            "COLOR_CONSERVATION": {
+                "energy": 0, "life_calculation_cost": 4,
+            },
+        }
+        for stable_id, mechanics in expected.items():
+            with self.subTest(card=stable_id):
+                actual = VIVHITE_STRATEGY.card(
+                    f"VIVHITE_CARD_{stable_id}").mechanics
+                for field, value in mechanics.items():
+                    self.assertEqual(getattr(actual, field), value)
+
+        extension = VIVHITE_STRATEGY.card(
+            "VIVHITE_CARD_INFINITE_EXTENSION")
+        self.assertIn(
+            "each_max_hp_growth_gains_2_more", extension.mechanics.effects)
 
     def test_cross_suit_contract_is_seven_cards(self) -> None:
         self.assertEqual(len(CROSS_SUIT_IDS), 7)
@@ -1446,9 +1493,9 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         ironclad_value = self.ironclad_policy.eval_reward_card(
             axiom, [], max_hp=100, current_hp=100)
 
-        self.assertAlmostEqual(vivhite_value - ironclad_value, 2.5)
+        self.assertAlmostEqual(vivhite_value - ironclad_value, 3.75)
         self.assertTrue(any(
-            "VIVHITE_LIVE_ESTIMATE=+2.50" in row for row in detail))
+            "VIVHITE_LIVE_ESTIMATE=+3.75" in row for row in detail))
 
     def test_combat_ranking_consumes_profile_estimate(self) -> None:
         calls: list[str] = []

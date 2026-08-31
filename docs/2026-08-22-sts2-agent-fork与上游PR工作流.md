@@ -24,7 +24,11 @@ sts2-ascend 子项目基于上游 mod [CharTyr/STS2-Agent](https://github.com/Ch
 - 约定（用户指定）：
   1. 以后发现问题先在 **fork 的 `main`** 上改 → 真机验证 → 推 `origin main`
   2. 确认闭环后 → 单独拉 `fix/*` 分支 → `gh pr create --repo CharTyr/STS2-Agent` 提给上游
-  3. 上游合并后通过 `git fetch upstream` 同步回官方实现
+  3. PR 提交后约 10 分钟主动回看，不把“已创建 PR”视为工作结束：
+     - 同时检查 Conversation、reviews、inline review comments 和 checks，避免只看其中一个入口而漏掉反馈。
+     - 对每条意见逐项分析；合理的意见立即修复、验证并推送到该 PR 分支，不合理或不适用的意见则在 PR 中写明具体技术理由。
+     - 修复推送后再次回看上述评论与检查入口，确认新提交没有引入新的审核意见或失败检查；如仍有反馈，继续按同一规则闭环。
+  4. 上游合并后通过 `git fetch upstream` 同步回官方实现
 
 ## 踩过的坑
 
@@ -40,3 +44,9 @@ sts2-ascend 子项目基于上游 mod [CharTyr/STS2-Agent](https://github.com/Ch
 5. **构建上游 mod 的环境变量**：csproj 默认引用 `C:\Program Files (x86)\...` 的游戏 DLL，
    本机必须设 `STS2_DATA_DIR=G:\SteamLibrary\...\data_sts2_windows_x86_64`，
    且 dotnet 在本机非标准位置（需 `DOTNET_ROOT` + PATH）。
+
+## 2026-08-31 PR #54 审核闭环实例
+
+- 回看 [PR #54](https://github.com/CharTyr/STS2-Agent/pull/54) 时，Sourcery 指出事件选项动态变量虽然已在状态载荷格式化时注入，但 `BuildEventOptionSignature` 仍直接格式化标题与描述；玩家提交含 `{Gold}`、`{HpLoss}` 等变量的选项后，签名计算可能抛错。该意见成立，并非仅是风格建议。
+- 修复提交 `8d949ba` 让签名路径同样先注入 `eventModel.DynamicVars` 再格式化，补充签名回归后目标测试 `51/51` 通过；已在原 review thread 回复并标记解决。
+- 修复推送后再次检查 reviews、inline comments 与 checks：Sourcery 对 `8d949ba` 给出 `Approved`，对应检查为 `SUCCESS`。Codex 额度提示与 Sourcery reviewer guide 不包含代码问题，无需修改。

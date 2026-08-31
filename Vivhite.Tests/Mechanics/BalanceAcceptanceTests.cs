@@ -1,16 +1,18 @@
 using System.Reflection;
 using MegaCrit.Sts2.Core.Models;
+using Vivhite.Cards.Conservation;
 using Vivhite.Cards.Common;
 using Vivhite.Cards.Hybrid;
 using Vivhite.Core;
 using Vivhite.Powers;
 using Vivhite.Tests.Acceptance;
+using InfiniteExtensionCard = Vivhite.Cards.Conservation.InfiniteExtension;
 
 namespace Vivhite.Tests.Mechanics;
 
 internal static class BalanceAcceptanceTests
 {
-    private static readonly IReadOnlyDictionary<string, int> DoubledFixedLifeCosts =
+    private static readonly IReadOnlyDictionary<string, int> ApprovedFixedLifeCosts =
         new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["VIVHITE_CARD_LUMINOUS_PROJECTION"] = 2,
@@ -19,9 +21,9 @@ internal static class BalanceAcceptanceTests
 
             ["VIVHITE_CARD_CLOSED_PROJECTION"] = 4,
             ["VIVHITE_CARD_TANGENT_STARLIGHT"] = 2,
-            ["VIVHITE_CARD_OPEN_SET_SHELTER"] = 4,
+            ["VIVHITE_CARD_OPEN_SET_SHELTER"] = 2,
             ["VIVHITE_CARD_LOCAL_HOMEOMORPHISM"] = 2,
-            ["VIVHITE_CARD_SCALE_TRANSFORMATION"] = 6,
+            ["VIVHITE_CARD_SCALE_TRANSFORMATION"] = 4,
             ["VIVHITE_CARD_ISOPERIMETRIC_WARD"] = 4,
             ["VIVHITE_CARD_TOPOLOGICAL_GROWTH"] = 8,
             ["VIVHITE_CARD_LAW_OF_CONSERVATION"] = 6,
@@ -39,11 +41,11 @@ internal static class BalanceAcceptanceTests
             ["VIVHITE_CARD_PARALLEL_STARFALL"] = 6,
             ["VIVHITE_CARD_ASTRAL_SEARCH"] = 2,
             ["VIVHITE_CARD_HEURISTIC_SHIELD"] = 2,
-            ["VIVHITE_CARD_SUCCESSOR_FORMULA"] = 4,
+            ["VIVHITE_CARD_SUCCESSOR_FORMULA"] = 2,
             ["VIVHITE_CARD_BACKTRACKING_SPELL"] = 6,
             ["VIVHITE_CARD_CONVERGENCE_VERDICT"] = 8,
             ["VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE"] = 4,
-            ["VIVHITE_CARD_ASTRAL_PURSUIT"] = 6,
+            ["VIVHITE_CARD_ASTRAL_PURSUIT"] = 4,
             ["VIVHITE_CARD_PREFETCH_FUTURE"] = 4,
             ["VIVHITE_CARD_INDUCTIVE_CIRCLE"] = 8,
             ["VIVHITE_CARD_EVENT_LOOP"] = 6,
@@ -57,12 +59,12 @@ internal static class BalanceAcceptanceTests
             ["VIVHITE_CARD_COMPOSITE_COLOR_WHEEL"] = 6,
             ["VIVHITE_CARD_DIFFERENTIAL_SAMPLING"] = 2,
             ["VIVHITE_CARD_CHIAROSCURO"] = 4,
-            ["VIVHITE_CARD_NEGATIVE_SPACE"] = 4,
+            ["VIVHITE_CARD_NEGATIVE_SPACE"] = 2,
             ["VIVHITE_CARD_SPECTRAL_INTEGRAL"] = 6,
             ["VIVHITE_CARD_GOLDEN_COMPOSITION"] = 8,
             ["VIVHITE_CARD_RIEMANN_STAR_ARRAY"] = 6,
             ["VIVHITE_CARD_CHROMATIC_TRANSITION"] = 4,
-            ["VIVHITE_CARD_COLOR_CONSERVATION"] = 8,
+            ["VIVHITE_CARD_COLOR_CONSERVATION"] = 4,
             ["VIVHITE_CARD_COMPOSITE_COLOR_FIELD"] = 8,
             ["VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE"] = 6,
             ["VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL"] = 12,
@@ -107,10 +109,10 @@ internal static class BalanceAcceptanceTests
         new("VIVHITE_CARD_CHROMATIC_LIMIT", "DrainPerX", 12, 16)
     ];
 
-    public static void AllFixedLifeCostsMatchTheDoubledTable(RepositorySnapshot repository)
+    public static void AllFixedLifeCostsMatchTheApprovedTable(RepositorySnapshot repository)
     {
         var cards = ConstructAllCards(repository);
-        AcceptanceAssert.Equal(58, DoubledFixedLifeCosts.Count, "The independent doubled LifeCost table must contain exactly 58 cards.");
+        AcceptanceAssert.Equal(58, ApprovedFixedLifeCosts.Count, "The independent approved LifeCost table must contain exactly 58 cards.");
 
         var actualFixedCards = cards
             .Where(entry =>
@@ -120,7 +122,7 @@ internal static class BalanceAcceptanceTests
             .Order(StringComparer.Ordinal)
             .ToArray();
         AcceptanceAssert.SetEqual(
-            DoubledFixedLifeCosts.Keys.ToArray(),
+            ApprovedFixedLifeCosts.Keys.ToArray(),
             actualFixedCards,
             "Exactly the approved 58 cards must expose a nonzero fixed LifeCost DynamicVar.");
 
@@ -134,7 +136,7 @@ internal static class BalanceAcceptanceTests
             "Only Axiom Ring, Astral Measure, and the Crimson ritual may have zero or no fixed LifeCost.");
 
         var paymentBindingFailures = new List<string>();
-        foreach (var (cardId, expectedBase) in DoubledFixedLifeCosts)
+        foreach (var (cardId, expectedBase) in ApprovedFixedLifeCosts)
         {
             var card = cards[cardId];
             AssertDynamicVar(cardId, card, "LifeCost", expectedBase, "base");
@@ -340,6 +342,84 @@ internal static class BalanceAcceptanceTests
             repository.RegisteredPowers.Contains(typeof(InfiniteDrainPower)) &&
             repository.RegisteredPowers.Contains(typeof(InfiniteDrainThisTurnPower)),
             "Both integer-backed global Drain powers must remain registered.");
+    }
+
+    public static void PriorityWeakCardAndDimensionBuffsMatchApprovedValues(
+        RepositorySnapshot repository)
+    {
+        var cards = ConstructAllCards(repository);
+
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_AXIOM_RING"],
+            ("Margin", 3, 5));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_OPEN_SET_SHELTER"],
+            ("LifeCost", 2, 2), ("Block", 14, 18), ("Margin", 2, 3));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_SCALE_TRANSFORMATION"],
+            ("LifeCost", 4, 4), ("Damage", 20, 26), ("DimensionUp", 2, 3));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_TOPOLOGICAL_GROWTH"],
+            ("DimensionUp", 2, 3));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_AXIOM_OF_LIFE"],
+            ("DimensionUp", 6, 8));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_TERMINATION_CONDITION"],
+            ("LifeCost", 4, 4), ("Damage", 16, 22), ("Heal", 10, 15));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_SUCCESSOR_FORMULA"],
+            ("LifeCost", 2, 2), ("Damage", 10, 14));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_ASTRAL_PURSUIT"],
+            ("LifeCost", 4, 4));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_NEGATIVE_SPACE"],
+            ("LifeCost", 2, 2), ("Margin", 2, 3), ("VulnerablePower", 2, 3));
+        AssertBaseAndUpgrade(cards["VIVHITE_CARD_COLOR_CONSERVATION"],
+            ("LifeCost", 4, 4));
+
+        AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_AXIOM_RING"].EnergyCost.Canonical, "Axiom Ring must cost zero Energy.");
+        AcceptanceAssert.Equal(1, cards["VIVHITE_CARD_OPEN_SET_SHELTER"].EnergyCost.Canonical, "Open-Set Shelter must cost one Energy.");
+        AcceptanceAssert.Equal(1, cards["VIVHITE_CARD_SCALE_TRANSFORMATION"].EnergyCost.Canonical, "Scale Transformation must cost one Energy.");
+        AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_SUCCESSOR_FORMULA"].EnergyCost.Canonical, "Successor Formula must cost zero Energy.");
+        AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_ASTRAL_PURSUIT"].EnergyCost.Canonical, "Astral Pursuit must cost zero Energy.");
+        AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_NEGATIVE_SPACE"].EnergyCost.Canonical, "Negative Space must cost zero Energy.");
+        AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_COLOR_CONSERVATION"].EnergyCost.Canonical, "Color Conservation must cost zero Energy.");
+
+        var dimensionCardIds = cards
+            .Where(entry => entry.Value.DynamicVars.ContainsKey("DimensionUp"))
+            .Select(entry => entry.Key)
+            .ToArray();
+        AcceptanceAssert.SetEqual(
+            ["VIVHITE_CARD_SCALE_TRANSFORMATION", "VIVHITE_CARD_TOPOLOGICAL_GROWTH", "VIVHITE_CARD_AXIOM_OF_LIFE"],
+            dimensionCardIds,
+            "Exactly the three approved cards must expose fixed Dimension Up values:");
+
+        var extensionSource = string.Concat(
+            repository.RequireSourceType(typeof(InfiniteExtensionCard).FullName!)
+                .Declaration.ToFullString().Where(character => !char.IsWhiteSpace(character)));
+        AcceptanceAssert.True(
+            extensionSource.Contains(
+                "InfiniteExtension.GainAsync(choiceContext,Owner.Creature,2,Owner.Creature,this)",
+                StringComparison.Ordinal),
+            "Infinite Extension must grant two extra Dimension Up points per card.");
+        var extensionQuote = DimensionUp.Calculate(amount: 5, infiniteExtensionStacks: 2);
+        AcceptanceAssert.Equal(2, extensionQuote.InfiniteExtensionBonus, "Two Extension points must add exactly two growth.");
+        AcceptanceAssert.Equal(7, extensionQuote.RequestedTotal, "Extension growth must remain non-recursive.");
+
+        static void AssertBaseAndUpgrade(
+            CardModel card,
+            params (string Name, int Base, int Upgraded)[] values)
+        {
+            foreach (var (name, baseValue, _) in values)
+            {
+                AcceptanceAssert.Equal(
+                    (decimal)baseValue,
+                    card.DynamicVars[name].BaseValue,
+                    $"{card.GetType().Name}.{name} base mismatch.");
+            }
+
+            InvokeOnUpgrade(card.GetType().Name, card);
+            foreach (var (name, _, upgradedValue) in values)
+            {
+                AcceptanceAssert.Equal(
+                    (decimal)upgradedValue,
+                    card.DynamicVars[name].BaseValue,
+                    $"{card.GetType().Name}.{name} upgrade mismatch.");
+            }
+        }
     }
 
     private static IReadOnlyDictionary<string, CardModel> ConstructAllCards(RepositorySnapshot repository)

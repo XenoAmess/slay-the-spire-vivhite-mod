@@ -166,7 +166,7 @@ public sealed class DivideAndConquerCircle : RecursionCard
 public sealed class AstralPursuit : RecursionCard
 {
     public AstralPursuit()
-        : base(1, CardType.Power, CardRarity.Uncommon, TargetType.Self, 6)
+        : base(0, CardType.Power, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 

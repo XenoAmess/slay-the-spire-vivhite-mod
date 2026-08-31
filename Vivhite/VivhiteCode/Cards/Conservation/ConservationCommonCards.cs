@@ -21,7 +21,7 @@ public sealed class AxiomRing : ConservationCard
     }
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
-        [new IntVar(MarginVar, 2)];
+        [new IntVar(MarginVar, 3)];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin];
@@ -36,7 +36,7 @@ public sealed class AxiomRing : ConservationCard
 
     protected override void OnUpgrade()
     {
-        DynamicVars[MarginVar].UpgradeValueBy(1);
+        DynamicVars[MarginVar].UpgradeValueBy(2);
     }
 }
 
@@ -123,7 +123,7 @@ public sealed class OpenSetShelter : ConservationCard
     private const string MarginVar = "Margin";
 
     public OpenSetShelter()
-        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 4)
+        : base(1, CardType.Skill, CardRarity.Common, TargetType.Self, 2)
     {
     }
 
@@ -132,7 +132,7 @@ public sealed class OpenSetShelter : ConservationCard
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
         new BlockVar(14, ValueProp.Move),
-        new IntVar(MarginVar, 1)
+        new IntVar(MarginVar, 2)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
@@ -197,14 +197,14 @@ public sealed class ScaleTransformation : ConservationCard
     private const string DimensionUpVar = "DimensionUp";
 
     public ScaleTransformation()
-        : base(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 6)
+        : base(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, 4)
     {
     }
 
     protected override IEnumerable<DynamicVar> ConservationVars =>
     [
         new DamageVar(20, ValueProp.Move),
-        new IntVar(DimensionUpVar, 1)
+        new IntVar(DimensionUpVar, 2)
     ];
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>

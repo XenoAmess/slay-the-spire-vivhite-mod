@@ -13,7 +13,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class ColorConservation : ChromaticCard
 {
     public ColorConservation()
-        : base(0, CardType.Power, CardRarity.Uncommon, TargetType.Self, 8)
+        : base(0, CardType.Power, CardRarity.Uncommon, TargetType.Self, 4)
     {
     }
 

@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Chromatic;
 public sealed class NegativeSpace : ChromaticCard
 {
     public NegativeSpace()
-        : base(0, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, 4)
+        : base(0, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, 2)
     {
     }
 
@@ -25,7 +25,7 @@ public sealed class NegativeSpace : ChromaticCard
     protected override IEnumerable<DynamicVar> ChromaticVars =>
     [
         new PowerVar<VulnerablePower>("VulnerablePower", 2),
-        ModCardVars.Int("Margin", 1)
+        ModCardVars.Int("Margin", 2)
     ];
 
     protected override async Task OnPlayAfterLifePayment(
