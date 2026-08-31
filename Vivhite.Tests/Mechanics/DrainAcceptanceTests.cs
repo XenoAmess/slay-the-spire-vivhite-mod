@@ -1,6 +1,7 @@
 using System.Reflection;
 using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.ValueProps;
 using Vivhite.Core;
 using Vivhite.Tests.Acceptance;
@@ -80,6 +81,94 @@ internal static class DrainAcceptanceTests
             12_500,
             thousandScale.CalculateHealing(actualEnemyHpLoss: 1_000),
             "A 1,000-point actual-damage input at 1,250% must scale linearly to 12,500 healing.");
+    }
+
+    public static async Task ResolveAsyncPassesTheAggregateUncappedCeilingRequest(RepositorySnapshot _)
+    {
+        var attacker = EngineTestObjects.CreateCreature(currentHp: 30, maxHp: 30, enemy: false);
+        var enemyOne = EngineTestObjects.CreateCreature(currentHp: 0, maxHp: 30, enemy: true);
+        var enemyTwo = EngineTestObjects.CreateCreature(currentHp: 0, maxHp: 30, enemy: true);
+        var enemyThree = EngineTestObjects.CreateCreature(currentHp: 0, maxHp: 30, enemy: true);
+
+        var multiHit = Command(
+            attacker,
+            [Damage(enemyOne, actualHpLoss: 3, blocked: 7, overkill: 20)],
+            [Damage(enemyOne, actualHpLoss: 2)]);
+        var areaHit = Command(
+            attacker,
+            [
+                Damage(enemyTwo, actualHpLoss: 4, killed: true),
+                Damage(enemyThree, actualHpLoss: 1, killed: true)
+            ]);
+
+        DrainRecoveryContext? capturedFifteenPercent = null;
+        var fifteenPercentResult = await InfiniteDrain.CreateAggregate()
+            .AddAttackCommand(multiHit)
+            .AddAttackCommand(areaHit)
+            .ResolveAsync(
+                new ThrowingPlayerChoiceContext(),
+                attacker,
+                new DrainRate(CardPercent: 15m, GlobalPercent: 0m, ThisTurnPercent: 0m),
+                context =>
+                {
+                    capturedFifteenPercent = context;
+                    return Task.FromResult(new DrainRecoveryOutcome(context.Amount, Healed: context.Amount));
+                });
+
+        AcceptanceAssert.True(
+            capturedFifteenPercent is not null,
+            "ResolveAsync must invoke the supplied recovery handler with the calculated request.");
+        AcceptanceAssert.Equal(
+            10,
+            fifteenPercentResult.Damage.ActualEnemyHpLoss,
+            "ResolveAsync must aggregate all hits and all enemy targets before calculating Drain.");
+        AcceptanceAssert.Equal(
+            7,
+            fifteenPercentResult.Damage.EnemyBlockedDamage,
+            "Blocked damage must remain diagnostic and must not enter the recovery request.");
+        AcceptanceAssert.Equal(
+            20,
+            fifteenPercentResult.Damage.EnemyOverkillDamage,
+            "Overkill damage must remain diagnostic and must not enter the recovery request.");
+        AcceptanceAssert.Equal(
+            2,
+            capturedFifteenPercent!.Amount,
+            "ResolveAsync must pass ceil(10 aggregate actual enemy HP loss * 15%) = 2 to DrainRecoveryContext.");
+        AcceptanceAssert.Equal(
+            2,
+            fifteenPercentResult.RecoveryRequested,
+            "ResolveAsync must expose the same single-ceiling request in its result.");
+        AcceptanceAssert.Equal(
+            2,
+            fifteenPercentResult.Recovery.Requested,
+            "The recovery handler outcome must retain the exact request supplied by ResolveAsync.");
+
+        DrainRecoveryContext? capturedAboveOneHundredPercent = null;
+        var uncappedResult = await InfiniteDrain.CreateAggregate()
+            .AddAttackCommand(Command(
+                attacker,
+                [Damage(enemyOne, actualHpLoss: 8, blocked: 80, overkill: 800)]))
+            .ResolveAsync(
+                new ThrowingPlayerChoiceContext(),
+                attacker,
+                new DrainRate(CardPercent: 125m, GlobalPercent: 0m, ThisTurnPercent: 0m),
+                context =>
+                {
+                    capturedAboveOneHundredPercent = context;
+                    return Task.FromResult(new DrainRecoveryOutcome(context.Amount, Healed: context.Amount));
+                });
+
+        AcceptanceAssert.True(
+            capturedAboveOneHundredPercent is not null,
+            "ResolveAsync must invoke recovery for Drain rates above 100%.");
+        AcceptanceAssert.Equal(
+            10,
+            capturedAboveOneHundredPercent!.Amount,
+            "125% Drain on 8 actual HP loss must request 10, without rate, damage, or recovery clamping.");
+        AcceptanceAssert.Equal(
+            10,
+            uncappedResult.RecoveryRequested,
+            "ResolveAsync must preserve an above-damage recovery request end to end.");
     }
 
     private static DamageResult Damage(

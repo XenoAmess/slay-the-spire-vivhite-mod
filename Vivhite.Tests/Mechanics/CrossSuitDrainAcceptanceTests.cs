@@ -49,6 +49,51 @@ internal static class CrossSuitDrainAcceptanceTests
         "VIVHITE_CARD_CHROMATIC_LIMIT"
     ];
 
+    private enum PrintedDrainExpression
+    {
+        DrainDynamicVar,
+        RecordedMarginTimesDrainPerMargin,
+        EnergyXTimesDrainPerX
+    }
+
+    private sealed record PrintedDrainContract(
+        string RouteMethod,
+        int CardPercentArgumentIndex,
+        PrintedDrainExpression Expression);
+
+    private static readonly IReadOnlyDictionary<string, PrintedDrainContract> PrintedDrainContracts =
+        new Dictionary<string, PrintedDrainContract>(StringComparer.Ordinal)
+        {
+            ["VIVHITE_CARD_TRICHROMATIC_WALTZ"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_COMPOSITE_COLOR_WHEEL"] =
+                new("DrainAllAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_CRIMSON_AREA"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_DIFFERENTIAL_SAMPLING"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_GOLDEN_COMPOSITION"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_RIEMANN_STAR_ARRAY"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL"] =
+                new("DrainTargetAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_PERFECT_SYNTHESIS"] =
+                new("DrainAllAsync", 2, PrintedDrainExpression.DrainDynamicVar),
+            ["VIVHITE_CARD_ASTRAL_MEASURE"] =
+                new(
+                    nameof(VivhiteCardRules.ExecuteDrainAttackAsync),
+                    4,
+                    PrintedDrainExpression.RecordedMarginTimesDrainPerMargin),
+            ["VIVHITE_CARD_CHROMATIC_LIMIT"] =
+                new(
+                    nameof(VivhiteCardRules.ExecuteDrainAttackAsync),
+                    4,
+                    PrintedDrainExpression.EnergyXTimesDrainPerX)
+        };
+
     public static void BasicAndABAttacksUseZeroPercentCommonDrain(RepositorySnapshot repository)
     {
         string[] namespaces =
@@ -235,6 +280,204 @@ internal static class CrossSuitDrainAcceptanceTests
             rate.TotalPercent,
             "Printed, global, and turn-scoped percentages must each enter the final rate once.");
     }
+
+    public static void EveryPrintedDrainAttackPassesApprovedDynamicVarExpression(
+        RepositorySnapshot repository)
+    {
+        string[] namespaces = ["Vivhite.Cards.Chromatic", "Vivhite.Cards.Hybrid"];
+        var attacks = RegisteredAttacksInNamespaces(repository, namespaces);
+        AcceptanceAssert.SetEqual(
+            ExpectedPrintedDrainAttackIds,
+            attacks.Select(repository.CardId).ToArray(),
+            "The complete printed-Drain Attack set must remain covered by argument contracts.");
+        AcceptanceAssert.SetEqual(
+            ExpectedPrintedDrainAttackIds,
+            PrintedDrainContracts.Keys.ToArray(),
+            "Every printed-Drain Attack must have one explicit source argument contract.");
+
+        var failures = new List<string>();
+        foreach (var cardType in attacks)
+        {
+            var cardId = repository.CardId(cardType);
+            if (!PrintedDrainContracts.TryGetValue(cardId, out var contract))
+            {
+                failures.Add($"{cardId}: missing printed-Drain argument contract");
+                continue;
+            }
+
+            var source = RequireSourceMethod(repository, cardType, RequirePlayMethod(cardType).Name);
+            var invocations = source.DescendantNodes()
+                .OfType<InvocationExpressionSyntax>()
+                .Where(invocation => InvokedName(invocation) == contract.RouteMethod)
+                .ToArray();
+            if (invocations.Length != 1)
+            {
+                failures.Add(
+                    $"{cardId}: expected one source call to {contract.RouteMethod}, actual {invocations.Length}");
+                continue;
+            }
+
+            var invocation = invocations[0];
+            var cardPercent = ArgumentAtParameter(
+                invocation,
+                "cardPercent",
+                contract.CardPercentArgumentIndex);
+            if (cardPercent is null)
+            {
+                failures.Add(
+                    $"{cardId}: {contract.RouteMethod} did not supply its card-percent argument");
+                continue;
+            }
+
+            if (!MatchesPrintedDrainExpression(cardPercent.Expression, contract.Expression))
+            {
+                failures.Add(
+                    $"{cardId}: expected {Describe(contract.Expression)}, actual " +
+                    cardPercent.Expression.NormalizeWhitespace().ToFullString());
+            }
+
+            switch (contract.Expression)
+            {
+                case PrintedDrainExpression.RecordedMarginTimesDrainPerMargin:
+                    AssertCapturedBeforeRoute(
+                        source,
+                        invocation,
+                        cardId,
+                        localName: "margin",
+                        producerName: nameof(InfiniteMargin.GetAmount),
+                        producerQualifier: nameof(InfiniteMargin),
+                        failures: failures);
+                    break;
+                case PrintedDrainExpression.EnergyXTimesDrainPerX:
+                    AssertCapturedBeforeRoute(
+                        source,
+                        invocation,
+                        cardId,
+                        localName: "x",
+                        producerName: "ResolveEnergyXValue",
+                        producerQualifier: null,
+                        failures: failures);
+                    break;
+            }
+        }
+
+        AcceptanceAssert.Empty(
+            failures,
+            "Every printed-Drain Attack must pass its approved DynamicVar expression; " +
+            "multi-hit and AoE cards may not substitute zero or a hard-coded rate:");
+    }
+
+    private static ArgumentSyntax? ArgumentAtParameter(
+        InvocationExpressionSyntax invocation,
+        string parameterName,
+        int positionalIndex)
+    {
+        var named = invocation.ArgumentList.Arguments.SingleOrDefault(argument =>
+            argument.NameColon?.Name.Identifier.ValueText == parameterName);
+        if (named is not null)
+        {
+            return named;
+        }
+
+        var arguments = invocation.ArgumentList.Arguments;
+        return arguments.Count > positionalIndex && arguments[positionalIndex].NameColon is null
+            ? arguments[positionalIndex]
+            : null;
+    }
+
+    private static bool MatchesPrintedDrainExpression(
+        ExpressionSyntax expression,
+        PrintedDrainExpression expected)
+    {
+        expression = UnwrapParentheses(expression);
+        return expected switch
+        {
+            PrintedDrainExpression.DrainDynamicVar => IsIntVarCall(expression, "Drain"),
+            PrintedDrainExpression.RecordedMarginTimesDrainPerMargin =>
+                IsIdentifierTimesIntVar(expression, "margin", "DrainPerMargin"),
+            PrintedDrainExpression.EnergyXTimesDrainPerX =>
+                IsIdentifierTimesIntVar(expression, "x", "DrainPerX"),
+            _ => false
+        };
+    }
+
+    private static bool IsIdentifierTimesIntVar(
+        ExpressionSyntax expression,
+        string identifier,
+        string dynamicVar)
+    {
+        expression = UnwrapParentheses(expression);
+        return expression is BinaryExpressionSyntax multiplication &&
+            multiplication.IsKind(SyntaxKind.MultiplyExpression) &&
+            UnwrapParentheses(multiplication.Left) is IdentifierNameSyntax left &&
+            left.Identifier.ValueText == identifier &&
+            IsIntVarCall(UnwrapParentheses(multiplication.Right), dynamicVar);
+    }
+
+    private static bool IsIntVarCall(ExpressionSyntax expression, string dynamicVar) =>
+        expression is InvocationExpressionSyntax invocation &&
+        InvokedName(invocation) == "IntVar" &&
+        invocation.ArgumentList.Arguments.Count == 1 &&
+        invocation.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax literal &&
+        literal.IsKind(SyntaxKind.StringLiteralExpression) &&
+        literal.Token.ValueText == dynamicVar;
+
+    private static ExpressionSyntax UnwrapParentheses(ExpressionSyntax expression)
+    {
+        while (expression is ParenthesizedExpressionSyntax parenthesized)
+        {
+            expression = parenthesized.Expression;
+        }
+        return expression;
+    }
+
+    private static void AssertCapturedBeforeRoute(
+        MethodDeclarationSyntax source,
+        InvocationExpressionSyntax route,
+        string cardId,
+        string localName,
+        string producerName,
+        string? producerQualifier,
+        ICollection<string> failures)
+    {
+        var declarations = source.DescendantNodes()
+            .OfType<VariableDeclaratorSyntax>()
+            .Where(declaration => declaration.Identifier.ValueText == localName)
+            .ToArray();
+        if (declarations.Length != 1)
+        {
+            failures.Add($"{cardId}: expected one captured local '{localName}', actual {declarations.Length}");
+            return;
+        }
+
+        var declaration = declarations[0];
+        var initializer = declaration.Initializer?.Value;
+        var capturesApprovedValue = initializer is not null &&
+            initializer.DescendantNodesAndSelf()
+                .OfType<InvocationExpressionSyntax>()
+                .Any(invocation =>
+                    InvokedName(invocation) == producerName &&
+                    (producerQualifier is null ||
+                        invocation.Expression is MemberAccessExpressionSyntax access &&
+                        access.Expression is IdentifierNameSyntax qualifier &&
+                        qualifier.Identifier.ValueText == producerQualifier));
+        if (!capturesApprovedValue || declaration.SpanStart >= route.SpanStart)
+        {
+            failures.Add(
+                $"{cardId}: '{localName}' must snapshot " +
+                $"{(producerQualifier is null ? string.Empty : producerQualifier + ".")}{producerName} " +
+                "before the Drain route");
+        }
+    }
+
+    private static string Describe(PrintedDrainExpression expression) => expression switch
+    {
+        PrintedDrainExpression.DrainDynamicVar => "IntVar(\"Drain\")",
+        PrintedDrainExpression.RecordedMarginTimesDrainPerMargin =>
+            "recorded margin * IntVar(\"DrainPerMargin\")",
+        PrintedDrainExpression.EnergyXTimesDrainPerX => "x * IntVar(\"DrainPerX\")",
+        _ => expression.ToString()
+    };
 
     public static void DynamicProgrammingOnlyBuffsPoweredOpponentAttackDamage(RepositorySnapshot repository)
     {

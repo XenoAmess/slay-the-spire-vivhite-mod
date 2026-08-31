@@ -1,10 +1,15 @@
+using System.Buffers.Binary;
 using System.Collections;
+using System.IO.Compression;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Characters;
 using STS2RitsuLib.Scaffolding.Characters;
 using STS2RitsuLib.Scaffolding.Content;
 using Vivhite.Characters;
@@ -74,6 +79,8 @@ internal static class SharedAssetsAcceptanceTests
         AcceptanceAssert.Equal(78, vivhiteCharacter.StartingHp, "Vivhite starting HP must be 78.");
         AcceptanceAssert.Equal(3, vivhiteCharacter.MaxEnergy, "Vivhite must start each turn with 3 energy.");
         AcceptanceAssert.Equal(99, vivhiteCharacter.StartingGold, "Vivhite starting gold must be 99.");
+        AssertArchitectAttackVfxContract(repository, vivhiteCharacter);
+        AssertCharacterSelectTransitionContract(repository);
 
         string[] v3Pages =
         [
@@ -94,6 +101,407 @@ internal static class SharedAssetsAcceptanceTests
             .Where(path => !File.Exists(path))
             .ToArray();
         AcceptanceAssert.Empty(missingPages, "The shared V3 five-page combat skin must exist on disk:");
+    }
+
+    public static void SharedCombatSceneUsesVivhiteEyeLensMagic(RepositorySnapshot repository)
+    {
+        var skinRoot = Path.Combine(repository.GodotProjectDirectory, "skins", "ironclad");
+        var scenePath = Path.Combine(skinRoot, "scenes", "combat.tscn");
+        var scriptPath = Path.Combine(skinRoot, "scenes", "vfx", "vivhite_combat_vfx.gd");
+        var imagePath = Path.Combine(skinRoot, "scenes", "vfx", "vivhite_eye_lens_glint.png");
+        var scene = File.ReadAllText(scenePath);
+        var script = File.ReadAllText(scriptPath);
+
+        string[] requiredSceneText =
+        [
+            "[ext_resource type=\"Script\" path=\"res://Vivhite/skins/ironclad/scenes/vfx/vivhite_combat_vfx.gd\" id=\"4_vfx\"]",
+            "[ext_resource type=\"Texture2D\" path=\"res://Vivhite/skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png\" id=\"5_eye_magic\"]",
+            "[node name=\"VivhiteCombatVfx\" type=\"Node\" parent=\"Visuals\"]",
+            "[node name=\"EyeMagic\" type=\"TextureRect\" parent=\"Visuals/EyeSlot\"]",
+            "texture = ExtResource(\"5_eye_magic\")"
+        ];
+        string[] retiredSceneText =
+        [
+            "res://src/Core/Nodes/Vfx/NIroncladVfx.cs",
+            "[node name=\"NIroncladVfx\"",
+            "[node name=\"EyeFire\"",
+            "EyeFireMaterial",
+            "vfx_stepped_shader_fire_flat.tres",
+            "ironclad_eye_fire_base.png",
+            "res://images/vfx/fire/",
+            "res://images/vfx/environment/fire/"
+        ];
+        AcceptanceAssert.Empty(
+            requiredSceneText.Where(fragment => !scene.Contains(fragment, StringComparison.Ordinal)).ToArray(),
+            "The shared combat scene is missing Vivhite's lens-magic wiring:");
+        AcceptanceAssert.Empty(
+            retiredSceneText.Where(fragment => scene.Contains(fragment, StringComparison.Ordinal)).ToArray(),
+            "The shared combat scene still contains retired Ironclad eye-fire wiring:");
+        AcceptanceAssert.True(File.Exists(scriptPath), "The Vivhite combat VFX GDScript must exist.");
+        AcceptanceAssert.True(File.Exists(imagePath), "The Vivhite eye-lens VFX texture must exist.");
+
+        string[] requiredScriptText =
+        [
+            "extends Node",
+            "_spine_sprite.get_node(\"SlashVfxSlot\")",
+            "_spine_sprite.get_node(\"EyeSlot/EyeMagic\") as TextureRect",
+            "_spine_sprite.connect(\"animation_event\", Callable(self, \"_on_animation_event\"))",
+            "\"cast_eyes_start\":",
+            "_eye_magic.visible = true",
+            "\"clear_vfx\":",
+            "_eye_magic.visible = false"
+        ];
+        AcceptanceAssert.Empty(
+            requiredScriptText.Where(fragment => !script.Contains(fragment, StringComparison.Ordinal)).ToArray(),
+            "The Vivhite combat VFX GDScript is missing its Spine-event bridge:");
+        AcceptanceAssert.Empty(
+            new[] { "NIroncladVfx", "EyeFire", "ironclad_eye_fire_base.png", "vfx_stepped_shader_fire_flat.tres" }
+                .Where(fragment => script.Contains(fragment, StringComparison.Ordinal))
+                .ToArray(),
+            "The Vivhite combat VFX GDScript still depends on retired eye-fire code:");
+
+        var contractPath = Path.Combine(repository.RootDirectory, "Vivhite", "tools", "ironclad-skin.contract.json");
+        using var contract = JsonDocument.Parse(File.ReadAllText(contractPath));
+        var contractRoot = contract.RootElement;
+        var requiredResources = JsonStringSet(contractRoot.GetProperty("requiredResources"));
+        AcceptanceAssert.Empty(
+            new[]
+            {
+                "scenes/vfx/vivhite_combat_vfx.gd",
+                "scenes/vfx/vivhite_eye_lens_glint.png"
+            }.Where(path => !requiredResources.Contains(path)).ToArray(),
+            "The private skin source allowlist is missing Vivhite eye-VFX resources:");
+
+        var combatBinding = contractRoot.GetProperty("sceneBindings")
+            .EnumerateArray()
+            .Single(binding => binding.GetProperty("scene").GetString() == "scenes/combat.tscn");
+        var sceneRequired = JsonStringSet(combatBinding.GetProperty("requiredText"));
+        var sceneForbidden = JsonStringSet(combatBinding.GetProperty("forbiddenText"));
+        AcceptanceAssert.Empty(
+            requiredSceneText.Where(fragment => !sceneRequired.Contains(fragment)).ToArray(),
+            "The combat scene contract is missing Vivhite eye-VFX requirements:");
+        AcceptanceAssert.Empty(
+            retiredSceneText.Where(fragment =>
+                sceneRequired.Any(required => required.Contains(fragment, StringComparison.Ordinal))).ToArray(),
+            "Retired Ironclad eye-fire text must never remain in combat requiredText:");
+        AcceptanceAssert.Empty(
+            new[]
+            {
+                "res://src/Core/Nodes/Vfx/NIroncladVfx.cs",
+                "[node name=\"EyeFire\"",
+                "res://shaders/vfx/vfx_stepped_shader_fire_flat.tres",
+                "res://images/vfx/characters/ironclad_eye_fire_base.png"
+            }.Where(fragment => !sceneForbidden.Contains(fragment)).ToArray(),
+            "The combat scene contract must explicitly reject retired eye-fire dependencies:");
+
+        var textBinding = contractRoot.GetProperty("textBindings")
+            .EnumerateArray()
+            .Single(binding => binding.GetProperty("path").GetString() == "scenes/vfx/vivhite_combat_vfx.gd");
+        AcceptanceAssert.Equal(
+            "gdscript",
+            textBinding.GetProperty("kind").GetString()!,
+            "The Vivhite VFX controller must use the GDScript syntax gate.");
+        var contractScriptRequired = JsonStringSet(textBinding.GetProperty("requiredText"));
+        AcceptanceAssert.Empty(
+            requiredScriptText.Where(fragment => !contractScriptRequired.Contains(fragment)).ToArray(),
+            "The GDScript source contract is missing required event semantics:");
+
+        var combatSpine = contractRoot.GetProperty("spineSets")
+            .EnumerateArray()
+            .Single(set => set.GetProperty("name").GetString() == "combat");
+        var spineSlots = JsonStringSet(combatSpine.GetProperty("slots"));
+        var spineEvents = JsonStringSet(combatSpine.GetProperty("events"));
+        AcceptanceAssert.Empty(
+            new[] { "slash_mesh", "eye_attach_slot" }.Where(value => !spineSlots.Contains(value)).ToArray(),
+            "The combat Spine contract lost a VFX attachment slot:");
+        AcceptanceAssert.Empty(
+            new[] { "attack_slash_start", "heavy_slash_start", "cast_eyes_start", "clear_vfx" }
+                .Where(value => !spineEvents.Contains(value))
+                .ToArray(),
+            "The combat Spine contract lost a VFX event:");
+
+        var validator = File.ReadAllText(Path.Combine(
+            repository.RootDirectory,
+            "Vivhite",
+            "tools",
+            "Validate-IroncladSkin.ps1"));
+        AcceptanceAssert.Empty(
+            new[] { "Test-TextBindingContract", "forbiddenText", "--check-only", "--script", "Invoke-GodotSpineContract" }
+                .Where(fragment => !validator.Contains(fragment, StringComparison.Ordinal))
+                .ToArray(),
+            "The production validator must enforce Source text, GDScript syntax, and Spine contracts:");
+    }
+
+    public static void SharedSkinUsesVerifiedNativeMagicAudio(RepositorySnapshot repository)
+    {
+        _ = repository;
+        const string select = "event:/sfx/characters/defect/defect_select";
+        const string transition = "event:/sfx/ui/wipe_ironclad";
+        const string attack = "event:/sfx/characters/defect/defect_attack";
+        const string cast = "event:/sfx/characters/defect/defect_cast";
+        const string death = "event:/sfx/characters/defect/defect_die";
+
+        // These are the exact native paths exposed by the compiled v0.111.0 character model.
+        var defect = new Defect();
+        AcceptanceAssert.Equal(select, defect.CharacterSelectSfx, "Defect select FMOD path changed.");
+        AcceptanceAssert.Equal(transition, defect.CharacterTransitionSfx, "The shared native wipe path changed.");
+        AcceptanceAssert.Equal(attack, defect.AttackSfx, "Defect attack FMOD path changed.");
+        AcceptanceAssert.Equal(cast, defect.CastSfx, "Defect cast FMOD path changed.");
+        AcceptanceAssert.Equal(death, defect.DeathSfx, "Defect death FMOD path changed.");
+
+        var profile = IroncladReplacementAssets.CreateProfile();
+        AssertAudio(profile.Audio, select, transition, attack, cast, death, "replacement profile");
+
+        // RitsuLib merges CharacterAudioAssetSet field by field. Supplying every field must
+        // prevent the Ironclad placeholder from leaking back into the independent character.
+        var resolved = CharacterAssetProfiles.Resolve(profile, "ironclad");
+        AssertAudio(resolved.Audio, select, transition, attack, cast, death, "resolved profile");
+        var sharedCharacterProfile = profile.WithScenes(profile.Scenes!);
+        AssertAudio(
+            sharedCharacterProfile.Audio,
+            select,
+            transition,
+            attack,
+            cast,
+            death,
+            "Vivhite shared profile");
+
+        var registerMethod = RequireDeclaredMethod(typeof(IroncladReplacementAssets), "TryRegister");
+        var registrationCalls = IlInspection.CalledMethods(registerMethod).ToArray();
+        var virtualPatchIndex = Array.FindIndex(registrationCalls, method =>
+            method.DeclaringType == typeof(IroncladReplacementAssets) &&
+            method.Name == "EnsureIroncladVirtualAudioOverrides");
+        var registryIndex = Array.FindIndex(registrationCalls, method =>
+            method.DeclaringType == typeof(STS2RitsuLib.Content.ModContentRegistry) &&
+            method.Name == "RegisterCharacterAssetReplacement");
+        AcceptanceAssert.True(
+            virtualPatchIndex >= 0 && registryIndex > virtualPatchIndex,
+            "Ironclad select/transition getters must be patched before the replacement is registered.");
+
+        AssertIroncladOnlyVirtualAudioPrefix(
+            "PrefixIroncladCharacterSelectSfx",
+            select,
+            new Ironclad(),
+            new Defect());
+        AssertIroncladOnlyVirtualAudioPrefix(
+            "PrefixIroncladCharacterTransitionSfx",
+            transition,
+            new Ironclad(),
+            new Defect());
+    }
+
+    private static void AssertAudio(
+        CharacterAudioAssetSet? audio,
+        string select,
+        string transition,
+        string attack,
+        string cast,
+        string death,
+        string label)
+    {
+        AcceptanceAssert.True(audio is not null, $"{label} must define all character audio fields.");
+        AcceptanceAssert.Equal(select, audio!.CharacterSelectSfx!, $"{label} select sound mismatch.");
+        AcceptanceAssert.Equal(transition, audio.CharacterTransitionSfx!, $"{label} transition sound mismatch.");
+        AcceptanceAssert.Equal(attack, audio.AttackSfx!, $"{label} attack sound mismatch.");
+        AcceptanceAssert.Equal(cast, audio.CastSfx!, $"{label} cast sound mismatch.");
+        AcceptanceAssert.Equal(death, audio.DeathSfx!, $"{label} death sound mismatch.");
+
+        var identityPaths = new[] { audio.CharacterSelectSfx, audio.AttackSfx, audio.CastSfx, audio.DeathSfx };
+        AcceptanceAssert.Empty(
+            identityPaths.Where(path =>
+                path is null ||
+                path.Contains("ironclad", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("blood", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("slash", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("blade", StringComparison.OrdinalIgnoreCase)).ToArray(),
+            $"{label} must not contain weapon, blood, or Ironclad identity events:");
+    }
+
+    private static HashSet<string> JsonStringSet(JsonElement array) =>
+        array.EnumerateArray()
+            .Select(value => value.GetString() ?? string.Empty)
+            .ToHashSet(StringComparer.Ordinal);
+
+    private static void AssertIroncladOnlyVirtualAudioPrefix(
+        string methodName,
+        string expected,
+        Ironclad ironclad,
+        Defect otherCharacter)
+    {
+        var skinType = typeof(IroncladReplacementAssets);
+        var audioField = skinType.GetField(
+            "_activeIroncladAudio",
+            BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new AcceptanceFailureException("The active Ironclad audio field is missing.");
+        var prefix = RequireDeclaredMethod(skinType, methodName);
+        var originalAudio = audioField.GetValue(null);
+        try
+        {
+            audioField.SetValue(null, IroncladReplacementAssets.CreateProfile().Audio);
+
+            object?[] ironcladArguments = [ironclad, "original"];
+            var runOriginal = (bool)(prefix.Invoke(null, ironcladArguments)
+                ?? throw new AcceptanceFailureException($"{methodName} returned null."));
+            AcceptanceAssert.True(!runOriginal, $"{methodName} must override the base Ironclad getter.");
+            AcceptanceAssert.Equal(expected, (string)ironcladArguments[1]!, $"{methodName} result mismatch.");
+
+            object?[] otherArguments = [otherCharacter, "original"];
+            runOriginal = (bool)(prefix.Invoke(null, otherArguments)
+                ?? throw new AcceptanceFailureException($"{methodName} returned null."));
+            AcceptanceAssert.True(runOriginal, $"{methodName} must pass through for non-Ironclad characters.");
+            AcceptanceAssert.Equal("original", (string)otherArguments[1]!, $"{methodName} changed another character.");
+        }
+        finally
+        {
+            audioField.SetValue(null, originalAudio);
+        }
+    }
+
+    private static void AssertArchitectAttackVfxContract(
+        RepositorySnapshot repository,
+        VivhiteCharacter character)
+    {
+        string[] expected =
+        [
+            "vfx/vfx_attack_lightning",
+            "vfx/vfx_starry_impact",
+            "vfx/vfx_attack_lightning",
+            "vfx/vfx_starry_impact",
+            "vfx/vfx_attack_lightning"
+        ];
+        string[] forbiddenFragments =
+        [
+            "blood",
+            "slash",
+            "rock",
+            "blade",
+            "dagger",
+            "stab",
+            "sword",
+            "thrash"
+        ];
+
+        var runtimePaths = character.GetArchitectAttackVfx();
+        AcceptanceAssert.True(
+            runtimePaths.SequenceEqual(expected, StringComparer.Ordinal),
+            $"Vivhite's Architect VFX must preserve five magical hits. Actual: [{string.Join(", ", runtimePaths)}]");
+        var independentlyMutablePaths = character.GetArchitectAttackVfx();
+        AcceptanceAssert.True(
+            !ReferenceEquals(runtimePaths, independentlyMutablePaths),
+            "Each Architect VFX request must return a fresh list because The Architect shuffles it in place.");
+        runtimePaths.Clear();
+        AcceptanceAssert.True(
+            independentlyMutablePaths.SequenceEqual(expected, StringComparer.Ordinal),
+            "Mutating one Architect VFX list must not affect a later request.");
+
+        var source = repository.RequireSourceType(typeof(VivhiteCharacter).FullName!).Declaration;
+        var method = source.Members
+            .OfType<MethodDeclarationSyntax>()
+            .Single(member => member.Identifier.ValueText == nameof(VivhiteCharacter.GetArchitectAttackVfx));
+        var sourcePaths = method.DescendantNodes()
+            .OfType<LiteralExpressionSyntax>()
+            .Select(literal => literal.Token.ValueText)
+            .Where(value => value.StartsWith("vfx/", StringComparison.Ordinal))
+            .ToArray();
+        AcceptanceAssert.True(
+            sourcePaths.SequenceEqual(expected, StringComparer.Ordinal),
+            "The production Architect VFX source must contain only the approved native lightning and starry paths.");
+        AcceptanceAssert.Empty(
+            sourcePaths.Where(path => forbiddenFragments.Any(fragment =>
+                path.Contains(fragment, StringComparison.OrdinalIgnoreCase))).ToArray(),
+            "Vivhite's Architect VFX must not reintroduce weapon, blood, or rock-impact semantics:");
+    }
+
+    private static void AssertCharacterSelectTransitionContract(RepositorySnapshot repository)
+    {
+        const string textureResource =
+            "res://Vivhite/skins/ironclad/transitions/vivhite_character_select_transition.png";
+        const string materialResource =
+            "res://Vivhite/skins/ironclad/transitions/vivhite_character_select_transition_mat.tres";
+
+        var ironcladProfile = IroncladReplacementAssets.CreateProfile();
+        AcceptanceAssert.True(ironcladProfile.Ui is not null, "The shared profile must define UI assets.");
+        AcceptanceAssert.Equal(
+            materialResource,
+            ironcladProfile.Ui!.CharacterSelectTransitionPath!,
+            "The Ironclad replacement must consume the private Vivhite transition material.");
+
+        var sharedVivhiteProfile = CharacterAssetProfiles.WithScenes(
+            ironcladProfile,
+            ironcladProfile.Scenes
+            ?? throw new AcceptanceFailureException("The shared profile has no scene set."));
+        AcceptanceAssert.Equal(
+            materialResource,
+            sharedVivhiteProfile.Ui!.CharacterSelectTransitionPath!,
+            "Vivhite must retain the same transition while overriding only shared scene fields.");
+
+        var vivhiteFactory = RequireDeclaredMethod(typeof(VivhiteCharacter), "CreateSharedAssetProfile");
+        var factoryCalls = IlInspection.CalledMethods(vivhiteFactory).ToArray();
+        AcceptanceAssert.Equal(
+            1,
+            factoryCalls.Count(method =>
+                method.DeclaringType == typeof(CharacterAssetProfiles) &&
+                method.Name == nameof(CharacterAssetProfiles.WithScenes)),
+            "Vivhite must derive its profile through the scene-only shared-profile operation.");
+        AcceptanceAssert.Equal(
+            0,
+            factoryCalls.Count(method =>
+                method.DeclaringType == typeof(CharacterAssetProfiles) &&
+                method.Name.Contains("Ui", StringComparison.Ordinal)),
+            "Vivhite must not replace or clear the shared transition UI field.");
+
+        var defectTransition = new Defect().CharacterSelectTransitionPath;
+        AcceptanceAssert.True(
+            !string.Equals(materialResource, defectTransition, StringComparison.Ordinal),
+            "Registering the shared Ironclad/Vivhite profile must not alter another character.");
+
+        var transitionDirectory = Path.Combine(
+            repository.GodotProjectDirectory,
+            "skins",
+            "ironclad",
+            "transitions");
+        var texturePath = Path.Combine(
+            transitionDirectory,
+            "vivhite_character_select_transition.png");
+        var materialPath = Path.Combine(
+            transitionDirectory,
+            "vivhite_character_select_transition_mat.tres");
+        AcceptanceAssert.True(File.Exists(texturePath), $"Transition texture is missing: {texturePath}");
+        AcceptanceAssert.True(File.Exists(materialPath), $"Transition material is missing: {materialPath}");
+
+        var pixels = DecodeRgb8Png(texturePath, out var width, out var height);
+        AcceptanceAssert.Equal(2560, width, "Transition texture width changed.");
+        AcceptanceAssert.Equal(1200, height, "Transition texture height changed.");
+        AcceptanceAssert.Empty(
+            Enumerable.Range(0, pixels.Length / 3)
+                .Where(index =>
+                {
+                    var offset = index * 3;
+                    return pixels[offset] != pixels[offset + 1] ||
+                        pixels[offset + 1] != pixels[offset + 2];
+                })
+                .Take(1)
+                .Select(index => $"pixel {index % width},{index / width}")
+                .ToArray(),
+            "Transition texture must remain strict grayscale RGB8:");
+
+        var materialText = File.ReadAllText(materialPath);
+        string[] requiredMaterialText =
+        [
+            textureResource,
+            "shader_type canvas_item;",
+            "uniform sampler2D transitionTex;",
+            "uniform float threshold : hint_range(0,1);",
+            "float falloff = 1.0 - texture(transitionTex, UV).r;",
+            "float remap  = mix(-0.1, 1.1, threshold);",
+            "falloff = step(falloff, remap);",
+            "COLOR.a = falloff;",
+            "shader_parameter/threshold = 0.332"
+        ];
+        AcceptanceAssert.Empty(
+            requiredMaterialText.Where(text =>
+                materialText.IndexOf(text, StringComparison.Ordinal) < 0).ToArray(),
+            "Transition material must preserve the native red-channel threshold shader:");
     }
 
     public static void V3SkinRequiresExactFivePageLayout(RepositorySnapshot repository)
@@ -231,7 +639,7 @@ internal static class SharedAssetsAcceptanceTests
 
     public static void SolitaryCrownUsesDedicatedRelicArt(RepositorySnapshot repository)
     {
-        var profile = new OriginStarChart().AssetProfile;
+        var profile = new SolitaryCrown().AssetProfile;
         var paths = new[] { profile.IconPath, profile.IconOutlinePath, profile.BigIconPath };
         var failures = new List<string>();
         foreach (var path in paths)
@@ -287,6 +695,142 @@ internal static class SharedAssetsAcceptanceTests
                 $"{cardId}: expected opaque RGB8 PNG 1000x760, actual " +
                 $"{width}x{height}, bit depth {bitDepth}, color type {colorType}: {path}");
         }
+    }
+
+    private static byte[] DecodeRgb8Png(string path, out int width, out int height)
+    {
+        using var stream = File.OpenRead(path);
+        Span<byte> signature = stackalloc byte[8];
+        stream.ReadExactly(signature);
+        byte[] expectedSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+        if (!signature.SequenceEqual(expectedSignature))
+        {
+            throw new AcceptanceFailureException($"Transition texture is not a PNG: {path}");
+        }
+
+        width = 0;
+        height = 0;
+        var sawHeader = false;
+        var sawImageData = false;
+        var sawEnd = false;
+        using var compressed = new MemoryStream();
+        Span<byte> lengthBytes = stackalloc byte[4];
+        Span<byte> typeBytes = stackalloc byte[4];
+        Span<byte> crcBytes = stackalloc byte[4];
+        while (!sawEnd)
+        {
+            stream.ReadExactly(lengthBytes);
+            var length = BinaryPrimitives.ReadUInt32BigEndian(lengthBytes);
+            if (length > int.MaxValue || length > stream.Length - stream.Position - 8)
+            {
+                throw new AcceptanceFailureException($"Transition PNG has an invalid chunk length: {length}");
+            }
+            stream.ReadExactly(typeBytes);
+            var data = new byte[(int)length];
+            stream.ReadExactly(data);
+            stream.ReadExactly(crcBytes);
+            var chunkType = Encoding.ASCII.GetString(typeBytes);
+
+            switch (chunkType)
+            {
+                case "IHDR":
+                    if (sawHeader || data.Length != 13)
+                    {
+                        throw new AcceptanceFailureException("Transition PNG has an invalid IHDR chunk.");
+                    }
+                    width = checked((int)BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(0, 4)));
+                    height = checked((int)BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(4, 4)));
+                    if (width <= 0 || height <= 0 ||
+                        data[8] != 8 || data[9] != 2 ||
+                        data[10] != 0 || data[11] != 0 || data[12] != 0)
+                    {
+                        throw new AcceptanceFailureException(
+                            "Transition PNG must be non-interlaced opaque RGB8 (bit depth 8, color type 2)."
+                        );
+                    }
+                    sawHeader = true;
+                    break;
+                case "IDAT":
+                    if (!sawHeader)
+                    {
+                        throw new AcceptanceFailureException("Transition PNG has IDAT before IHDR.");
+                    }
+                    compressed.Write(data);
+                    sawImageData = true;
+                    break;
+                case "tRNS":
+                    throw new AcceptanceFailureException("Transition PNG must not contain transparency.");
+                case "IEND":
+                    if (data.Length != 0 || !sawImageData)
+                    {
+                        throw new AcceptanceFailureException("Transition PNG has an invalid IEND chunk.");
+                    }
+                    sawEnd = true;
+                    break;
+            }
+        }
+        if (!sawHeader || !sawImageData || stream.Position != stream.Length)
+        {
+            throw new AcceptanceFailureException("Transition PNG structure is incomplete or has trailing bytes.");
+        }
+
+        var rowBytes = checked(width * 3);
+        var filtered = new byte[checked((rowBytes + 1) * height)];
+        compressed.Position = 0;
+        using (var zlib = new ZLibStream(compressed, CompressionMode.Decompress, leaveOpen: true))
+        {
+            zlib.ReadExactly(filtered);
+            if (zlib.ReadByte() != -1)
+            {
+                throw new AcceptanceFailureException("Transition PNG expands beyond its declared dimensions.");
+            }
+        }
+
+        var pixels = new byte[checked(rowBytes * height)];
+        var previous = new byte[rowBytes];
+        var current = new byte[rowBytes];
+        var sourceOffset = 0;
+        for (var y = 0; y < height; y++)
+        {
+            var filter = filtered[sourceOffset++];
+            if (filter > 4)
+            {
+                throw new AcceptanceFailureException($"Transition PNG uses invalid row filter {filter}.");
+            }
+            for (var index = 0; index < rowBytes; index++)
+            {
+                var raw = filtered[sourceOffset++];
+                var left = index >= 3 ? current[index - 3] : 0;
+                var above = previous[index];
+                var upperLeft = index >= 3 ? previous[index - 3] : 0;
+                var predictor = filter switch
+                {
+                    0 => 0,
+                    1 => left,
+                    2 => above,
+                    3 => (left + above) / 2,
+                    4 => Paeth(left, above, upperLeft),
+                    _ => 0
+                };
+                current[index] = (byte)((raw + predictor) & 0xff);
+            }
+            Buffer.BlockCopy(current, 0, pixels, y * rowBytes, rowBytes);
+            (previous, current) = (current, previous);
+        }
+        return pixels;
+    }
+
+    private static int Paeth(int left, int above, int upperLeft)
+    {
+        var estimate = left + above - upperLeft;
+        var leftDistance = Math.Abs(estimate - left);
+        var aboveDistance = Math.Abs(estimate - above);
+        var upperLeftDistance = Math.Abs(estimate - upperLeft);
+        if (leftDistance <= aboveDistance && leftDistance <= upperLeftDistance)
+        {
+            return left;
+        }
+        return aboveDistance <= upperLeftDistance ? above : upperLeft;
     }
 
     private static uint ReadBigEndianUInt32(ReadOnlySpan<byte> bytes) =>

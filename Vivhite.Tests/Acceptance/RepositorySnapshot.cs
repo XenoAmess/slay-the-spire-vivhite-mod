@@ -141,7 +141,17 @@ internal sealed class RepositorySnapshot
 
     public string PowerId(Type powerType) => $"VIVHITE_POWER_{ToUpperSnakeCase(powerType.Name)}";
 
-    public string RelicId(Type relicType) => $"VIVHITE_RELIC_{ToUpperSnakeCase(relicType.Name)}";
+    public string RelicId(Type relicType)
+    {
+        var registration = FindAttribute(relicType, "RegisterRelicAttribute");
+        var fixedPublicEntry = registration?.NamedArguments
+            .Where(argument => argument.MemberName == "FullPublicEntry")
+            .Select(argument => argument.TypedValue.Value as string)
+            .SingleOrDefault();
+        return string.IsNullOrWhiteSpace(fixedPublicEntry)
+            ? $"VIVHITE_RELIC_{ToUpperSnakeCase(relicType.Name)}"
+            : fixedPublicEntry;
+    }
 
     public string CharacterId(Type characterType) => $"VIVHITE_CHARACTER_{ToUpperSnakeCase(characterType.Name)}";
 
