@@ -305,3 +305,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-31 19:12:04 | 第 988~1013 局 | `d84fc6f7` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-191204-1788174724727929400-d84fc6f7` | 复盘进程未成功完成 |
 <!-- rejection:20260831-192734-1788175654157339700-4e25bb60 -->
 | 2026-08-31 19:27:34 | 第 1 局 | `4e25bb60` | selfcheck | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-192734-1788175654157339700-4e25bb60` | 复盘自检失败 |
+<!-- rejection:20260831-193023-1788175823329329900-6b261c24 -->
+| 2026-08-31 19:30:23 | 第 988~1013 局 | `6b261c24` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-193023-1788175823329329900-6b261c24` | 复盘进程未成功完成 |
