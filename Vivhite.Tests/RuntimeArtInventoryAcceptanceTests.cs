@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using STS2RitsuLib.Scaffolding.Characters;
@@ -124,6 +125,38 @@ internal static class RuntimeArtInventoryAcceptanceTests
             "Layers")
     ];
 
+    private static readonly string[] RetiredRuntimePlaceholderPaths =
+    [
+        "images/cards/VivhiteStrike.png",
+        "images/cards/VivhiteDefend.png",
+        "images/relics/VivhiteRelic.png",
+        "images/characters/Vivhite_character_select.png",
+        "images/characters/Vivhite_character_icon.png",
+        "images/characters/Vivhite_character_icon_outline.png",
+        "images/characters/Vivhite_character_select_locked.png",
+        "images/characters/Vivhite_map_marker.png",
+        "scenes/characters/Vivhite_character.tscn",
+        "scenes/characters/Vivhite_merchant.tscn",
+        "scenes/characters/Vivhite_rest_site.tscn",
+        "scenes/characters/Vivhite_character_select_bg.tscn"
+    ];
+
+    private static readonly string[] ExpectedTwiceReferencedSkinPngs =
+    [
+        "spine/combat/vivhite_combat.png",
+        "scenes/vfx/vivhite_eye_lens_glint.png",
+        "transitions/vivhite_character_select_transition.png",
+        "ui/icon.png",
+        "ui/icon_outline.png",
+        "ui/select.png",
+        "ui/select_locked.png",
+        "ui/map_marker.png",
+        "multiplayer/point.png",
+        "multiplayer/rock.png",
+        "multiplayer/paper.png",
+        "multiplayer/scissors.png"
+    ];
+
     private const byte MeaningfulAlphaThreshold = 16;
     private const byte NearOpaqueAlphaThreshold = 224;
     private const byte StrongBoundaryAlphaThreshold = 64;
@@ -240,6 +273,205 @@ internal static class RuntimeArtInventoryAcceptanceTests
             "Interior A=255 samples do not make the RGBA VFX fully opaque; its canvas must remain transparent.");
     }
 
+    public static void HasNoRetiredRuntimePlaceholdersOrPngOrphans(RepositorySnapshot repository)
+    {
+        var retiredFilesStillPresent = RetiredRuntimePlaceholderPaths
+            .Select(relativePath => Path.Combine(
+                repository.GodotProjectDirectory,
+                relativePath.Replace('/', Path.DirectorySeparatorChar)))
+            .Where(File.Exists)
+            .Select(path => Path.GetRelativePath(repository.RootDirectory, path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Empty(
+            retiredFilesStillPresent,
+            "Retired Vivhite placeholders and their self-contained legacy scenes must stay out of the runtime project:");
+
+        // Runtime semantics and the skin contract are intentionally constructed through
+        // independent sources. Do not merge either list before validating its own shape.
+        var runtimePngReferences = BuildInventory(repository)
+            .Select(asset => NormalizeFilePath(asset.Path))
+            .ToArray();
+        AcceptanceAssert.Equal(
+            92,
+            runtimePngReferences.Length,
+            "The independently constructed semantic runtime inventory must contain exactly 92 PNG references.");
+        var duplicateRuntimePngReferences = runtimePngReferences
+            .GroupBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() != 1)
+            .Select(group => $"{group.Key}: {group.Count()} references")
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Empty(
+            duplicateRuntimePngReferences,
+            "The 92 semantic runtime PNG references must be path-unique before any skin-contract merge:");
+        var runtimePngSet = runtimePngReferences.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        AcceptanceAssert.Equal(
+            92,
+            runtimePngSet.Count,
+            "The semantic runtime PNG set must remain exactly 92 after duplicate rejection.");
+
+        var contractPath = Path.Combine(
+            repository.RootDirectory,
+            "Vivhite",
+            "tools",
+            "ironclad-skin.contract.json");
+        using var contract = JsonDocument.Parse(File.ReadAllBytes(contractPath));
+        var contractRoot = contract.RootElement;
+        var skinRoot = Path.Combine(repository.GodotProjectDirectory, "skins", "ironclad");
+        var contractPngReferences = new List<string>(30);
+
+        void AddSkinPngReference(string relativePath)
+        {
+            AcceptanceAssert.True(
+                relativePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase),
+                $"Skin-contract PNG reference must end in .png: {relativePath}");
+            contractPngReferences.Add(NormalizeFilePath(Path.Combine(
+                skinRoot,
+                relativePath.Replace('/', Path.DirectorySeparatorChar))));
+        }
+
+        var v3Layout = contractRoot.GetProperty("combatRuntimeLayouts")
+            .EnumerateArray()
+            .Single(layout => string.Equals(
+                layout.GetProperty("name").GetString(),
+                "v3-five-page",
+                StringComparison.Ordinal));
+        foreach (var page in v3Layout.GetProperty("pages").EnumerateArray())
+        {
+            AddSkinPngReference(page.GetProperty("path").GetString() ?? string.Empty);
+        }
+        foreach (var resource in contractRoot.GetProperty("requiredResources").EnumerateArray())
+        {
+            var relativePath = resource.GetString() ?? string.Empty;
+            if (relativePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            {
+                AddSkinPngReference(relativePath);
+            }
+        }
+        foreach (var dimension in contractRoot.GetProperty("pngDimensions").EnumerateArray())
+        {
+            AddSkinPngReference(dimension.GetProperty("path").GetString() ?? string.Empty);
+        }
+
+        AcceptanceAssert.Equal(
+            30,
+            contractPngReferences.Count,
+            "The real V3 skin contract must expose exactly 30 PNG references across pages, required resources, and dimension records.");
+        var contractPngGroups = contractPngReferences
+            .GroupBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        AcceptanceAssert.Equal(
+            18,
+            contractPngGroups.Length,
+            "The 30 real skin-contract PNG references must resolve to exactly 18 unique files.");
+        AcceptanceAssert.Equal(
+            6,
+            contractPngGroups.Count(group => group.Count() == 1),
+            "Exactly six skin PNGs must be referenced once by the contract.");
+        AcceptanceAssert.Equal(
+            12,
+            contractPngGroups.Count(group => group.Count() == 2),
+            "Exactly twelve skin PNGs must be referenced twice by the contract.");
+        var unexpectedContractMultiplicities = contractPngGroups
+            .Where(group => group.Count() is not (1 or 2))
+            .Select(group => $"{group.Key}: {group.Count()} references")
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Empty(
+            unexpectedContractMultiplicities,
+            "No skin PNG may occur with a multiplicity outside the approved six-singleton/twelve-double structure:");
+        var expectedTwiceReferencedSkinPngs = ExpectedTwiceReferencedSkinPngs
+            .Select(relativePath => NormalizeFilePath(Path.Combine(
+                skinRoot,
+                relativePath.Replace('/', Path.DirectorySeparatorChar))))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var actualTwiceReferencedSkinPngs = contractPngGroups
+            .Where(group => group.Count() == 2)
+            .Select(group => group.Key)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.SetEqual(
+            expectedTwiceReferencedSkinPngs,
+            actualTwiceReferencedSkinPngs,
+            "The contract's twelve duplicated PNG references must be the approved page/resource/dimension overlaps.");
+
+        var contractPngSet = contractPngGroups
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var runtimeSkinIntersection = runtimePngSet
+            .Intersect(contractPngSet, StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var expectedRuntimeSkinIntersection = new[]
+        {
+            NormalizeFilePath(Path.Combine(
+                skinRoot,
+                "scenes", "vfx", "vivhite_eye_lens_glint.png")),
+            NormalizeFilePath(Path.Combine(
+                skinRoot,
+                "transitions", "vivhite_character_select_transition.png"))
+        }.Order(StringComparer.Ordinal).ToArray();
+        AcceptanceAssert.Equal(
+            2,
+            runtimeSkinIntersection.Length,
+            "The semantic runtime and skin-contract PNG sets must intersect in exactly two files.");
+        AcceptanceAssert.SetEqual(
+            expectedRuntimeSkinIntersection,
+            runtimeSkinIntersection,
+            "The only runtime/skin overlap must be the eye-lens glint and character-select transition.");
+
+        var contractExclusivePngs = contractPngSet
+            .Except(runtimePngSet, StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Equal(
+            16,
+            contractExclusivePngs.Length,
+            "After removing the exact two-file overlap, the real skin contract must own exactly 16 PNGs outside the semantic runtime inventory.");
+
+        var expectedProjectPngSet = runtimePngSet
+            .Union(contractPngSet, StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        AcceptanceAssert.Equal(
+            108,
+            expectedProjectPngSet.Count,
+            "The independently validated 92 runtime and 18 skin PNG sets with a two-file overlap must union to exactly 108 files.");
+        var actualProjectPngs = Directory
+            .EnumerateFiles(repository.GodotProjectDirectory, "*.png", SearchOption.AllDirectories)
+            .Select(NormalizeFilePath)
+            .ToArray();
+        var duplicateActualProjectPngs = actualProjectPngs
+            .GroupBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() != 1)
+            .Select(group => $"{group.Key}: {group.Count()} filesystem entries")
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Empty(
+            duplicateActualProjectPngs,
+            "The materialized project PNG scan must not contain path duplicates:");
+        var actualProjectPngSet = actualProjectPngs.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        AcceptanceAssert.Equal(
+            108,
+            actualProjectPngSet.Count,
+            "The cleaned Vivhite Godot project must contain exactly 108 unique PNG files.");
+        var missingProjectPngs = expectedProjectPngSet
+            .Except(actualProjectPngSet, StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var extraProjectPngs = actualProjectPngSet
+            .Except(expectedProjectPngSet, StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        AcceptanceAssert.Empty(
+            missingProjectPngs,
+            "Every independently derived runtime/skin PNG must exist in the project; missing files:");
+        AcceptanceAssert.Empty(
+            extraProjectPngs,
+            "Every project PNG must belong to the independently derived runtime or skin set; orphan/extra files:");
+    }
+
     private static IReadOnlyList<RuntimeAsset> BuildInventory(RepositorySnapshot repository)
     {
         var imagesRoot = Path.Combine(repository.GodotProjectDirectory, "images");
@@ -300,6 +532,9 @@ internal static class RuntimeArtInventoryAcceptanceTests
             IsOpaque: false));
         return assets;
     }
+
+    private static string NormalizeFilePath(string path) =>
+        Path.GetFullPath(path).Replace('\\', '/');
 
     private static void AssertCategoryCount(
         IReadOnlyCollection<RuntimeAsset> inventory,
