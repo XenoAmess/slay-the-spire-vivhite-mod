@@ -226,7 +226,7 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         last_reason = str(game_over[-1].get("reason") or "")
     elif decisions:
         last_reason = str(decisions[-1].get("reason") or "")
-    return {
+    summary = {
         "file": name,
         "sha256": sha256,
         "bytes": size,
@@ -243,6 +243,10 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         "last_reason": last_reason[:320],
         "phantom_candidate": not decisions and not victory,
     }
+    for key in ("human_assisted", "excluded_from_learning"):
+        if key in data:
+            summary[key] = bool(data.get(key))
+    return summary
 
 
 def _scan_runs(root: Path) -> list[RunRecord]:

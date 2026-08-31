@@ -13,7 +13,7 @@ without bringing up the agent, Godot API client, or review stack.
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import json
 import math
@@ -84,6 +84,8 @@ class _RunRecord:
     ascension: int | None
     victory: bool
     in_progress: bool
+    human_assisted: bool
+    excluded_from_learning: bool
     floor: int | None
     decisions: int
     game_over: bool
@@ -98,6 +100,16 @@ class _RunRecord:
     def complete(self) -> bool:
         # Older logs sometimes retained in_progress=true after a GAME_OVER row.
         return self.victory or self.game_over or not self.in_progress
+
+    @property
+    def excluded_from_statistics(self) -> bool:
+        """Whether durable run metadata excludes this run from all aggregates."""
+        return self.human_assisted or self.excluded_from_learning
+
+    @property
+    def statistical_completion(self) -> bool:
+        """A terminal run that is eligible for autonomous floor statistics."""
+        return self.complete and not self.excluded_from_statistics
 
     @property
     def sort_key(self) -> tuple[str, int, str]:
@@ -197,6 +209,8 @@ class FloorStatsProvider:
             ascension=_integer(data.get("ascension")),
             victory=victory,
             in_progress=bool(data.get("in_progress")),
+            human_assisted=bool(data.get("human_assisted")),
+            excluded_from_learning=bool(data.get("excluded_from_learning")),
             floor=max(valid_floors) if valid_floors else None,
             decisions=len(decisions),
             game_over=bool(game_over_rows),
@@ -228,6 +242,8 @@ class FloorStatsProvider:
             ascension=_integer(row.get("ascension")),
             victory=victory,
             in_progress=bool(row.get("in_progress")),
+            human_assisted=bool(row.get("human_assisted")),
+            excluded_from_learning=bool(row.get("excluded_from_learning")),
             floor=_floor(row.get("floor")),
             decisions=decisions,
             game_over=str(row.get("last_screen") or "") == "GAME_OVER",
@@ -395,7 +411,25 @@ class FloorStatsProvider:
                     left.floor if left.floor is not None else -1)
         right_key = (not right.phantom, right.sort_key, right.decisions,
                      right.floor if right.floor is not None else -1)
-        return left if left_key >= right_key else right
+        preferred = left if left_key >= right_key else right
+        return FloorStatsProvider._preserve_exclusion(preferred, left, right)
+
+    @staticmethod
+    def _preserve_exclusion(
+            preferred: _RunRecord, *evidence: _RunRecord) -> _RunRecord:
+        """Make exclusion sticky when duplicate evidence for one run is merged."""
+        human_assisted = preferred.human_assisted or any(
+            record.human_assisted for record in evidence)
+        excluded_from_learning = preferred.excluded_from_learning or any(
+            record.excluded_from_learning for record in evidence)
+        if (human_assisted == preferred.human_assisted
+                and excluded_from_learning == preferred.excluded_from_learning):
+            return preferred
+        return replace(
+            preferred,
+            human_assisted=human_assisted,
+            excluded_from_learning=excluded_from_learning,
+        )
 
     def _merged_records(self) -> tuple[list[_RunRecord], int]:
         catalog: dict[str, _RunRecord] = {}
@@ -420,12 +454,17 @@ class FloorStatsProvider:
                 # An active real trace is authoritative, including a continuation
                 # that is currently in progress.  A phantom duplicate is ignored.
                 if record.phantom and not previous.phantom:
+                    catalog[identity] = self._preserve_exclusion(
+                        previous, previous, record)
                     continue
                 if (record.floor is None and previous.floor is not None
                         and not previous.phantom):
                     # Valid JSON can still contain an entirely unusable floor.
                     # Active precedence must not erase cleaner persisted evidence.
+                    catalog[identity] = self._preserve_exclusion(
+                        previous, previous, record)
                     continue
+                record = self._preserve_exclusion(record, previous, record)
             catalog[identity] = record
         return list(catalog.values()), duplicates
 
@@ -493,7 +532,8 @@ class FloorStatsProvider:
         }, "records")
 
     def _profile_view(
-            self, profile: str, completed: list[_RunRecord]) -> dict[str, Any]:
+            self, profile: str, completed: list[_RunRecord],
+            excluded_from_statistics: int = 0) -> dict[str, Any]:
         recent = completed[-self.recent_window:]
         previous_end = max(0, len(completed) - self.recent_window)
         previous_start = max(0, previous_end - self.comparison_window)
@@ -540,14 +580,19 @@ class FloorStatsProvider:
             "rolling_window": self.rolling_window,
             "rolling_mean": trend[-1]["rolling_mean"] if trend else None,
             "trend": trend,
-            "quality": {"source": source, "completed_records": len(completed)},
+            "quality": {
+                "source": source,
+                "completed_records": len(completed),
+                "excluded_from_statistics": excluded_from_statistics,
+            },
         }
 
     def _build(self, errors: list[str]) -> dict[str, Any]:
         records, duplicates = self._merged_records()
         completed = sorted(
             (record for record in records
-             if record.complete and not record.phantom and record.floor is not None),
+             if (record.statistical_completion and not record.phantom
+                 and record.floor is not None)),
             key=lambda record: record.sort_key,
         )
         recent = completed[-self.recent_window:]
@@ -572,12 +617,19 @@ class FloorStatsProvider:
 
         auto_current = sorted(
             (record for record in records
-             if record.in_progress and not record.complete and not record.phantom),
+             if (record.in_progress and not record.complete and not record.phantom
+                 and not record.excluded_from_statistics)),
             key=lambda record: record.sort_key,
         )
         current = self._current_from_record(auto_current[-1]) if auto_current else None
         lifetime, source = self._lifetime(completed)
         profile_records = {profile: [] for profile in PROFILE_IDS}
+        profile_excluded = {profile: 0 for profile in PROFILE_IDS}
+        for record in records:
+            profile = record.profile_id or self.profile_id
+            if (profile in profile_excluded and record.excluded_from_statistics
+                    and not record.phantom):
+                profile_excluded[profile] += 1
         for record in completed:
             # Character ids were not persisted before profile-aware telemetry;
             # untagged records belong to the root currently being read.
@@ -585,7 +637,8 @@ class FloorStatsProvider:
             if profile in profile_records:
                 profile_records[profile].append(record)
         profiles = {
-            profile: self._profile_view(profile, profile_records[profile])
+            profile: self._profile_view(
+                profile, profile_records[profile], profile_excluded[profile])
             for profile in PROFILE_IDS
         }
         for profile, provider in self._profile_providers.items():
@@ -671,7 +724,12 @@ class FloorStatsProvider:
                 "active_records": len(self._active),
                 "completed_records": len(completed),
                 "excluded_in_progress": sum(
-                    1 for record in records if not record.complete and not record.phantom),
+                    1 for record in records
+                    if (not record.complete and not record.phantom
+                        and not record.excluded_from_statistics)),
+                "excluded_from_statistics": sum(
+                    1 for record in records
+                    if record.excluded_from_statistics and not record.phantom),
                 "excluded_phantom": sum(1 for record in records if record.phantom),
                 "invalid_records": (self._catalog_invalid + len(self._invalid_active)
                                     + invalid_floor),

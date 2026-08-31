@@ -52,7 +52,7 @@ def _catalog_row(data: dict, filename: str) -> dict:
             floors.append(int(float(value)))
         except (TypeError, ValueError):
             pass
-    return {
+    row = {
         "file": filename,
         "run_id": data.get("run_id"),
         "run_number": data.get("run_number"),
@@ -67,6 +67,10 @@ def _catalog_row(data: dict, filename: str) -> dict:
         "storage": {"kind": "zip", "archive": "archive/test.zip",
                     "member": f"runs/{filename}"},
     }
+    for key in ("human_assisted", "excluded_from_learning"):
+        if key in data:
+            row[key] = data[key]
+    return row
 
 
 class RawFloorAccountingTests(unittest.TestCase):
@@ -142,6 +146,30 @@ class FloorStatsProviderTests(unittest.TestCase):
         empty_catalog = FloorStatsProvider(self.root, refresh_interval=0).snapshot()
         self.assertFalse(empty_catalog["stale"])
         self.assertEqual(empty_catalog["quality"]["catalog_records"], 0)
+
+    def test_exclusion_is_sticky_across_catalog_and_active_duplicates(self) -> None:
+        legacy = _run("LEGACY", 1, 7)
+        assisted = _run(
+            "ASSISTED", 2, 99, in_progress=True, game_over=True)
+        assisted["human_assisted"] = True
+        self._write_catalog([_catalog_row(assisted, "assisted.json")])
+        _write_json(self.root / "runs" / "legacy.json", legacy)
+
+        # The active trace is authoritative for gameplay evidence, but an older
+        # duplicate's durable exclusion flag must never be erased by omission.
+        active_duplicate = copy.deepcopy(assisted)
+        active_duplicate.pop("human_assisted")
+        _write_json(self.root / "runs" / "assisted.json", active_duplicate)
+        self._write_stats([7])
+
+        snapshot = FloorStatsProvider(self.root, refresh_interval=0).snapshot()
+
+        self.assertEqual(snapshot["recent"]["count"], 1)
+        self.assertEqual(snapshot["recent"]["mean_floor"], 7.0)
+        self.assertEqual([row["run_id"] for row in snapshot["trend"]], ["LEGACY"])
+        self.assertEqual(snapshot["quality"]["completed_records"], 1)
+        self.assertEqual(snapshot["quality"]["excluded_from_statistics"], 1)
+        self.assertTrue((self.root / "runs" / "assisted.json").is_file())
 
     def test_sources_that_disappear_preserve_last_good_and_mark_stale(self) -> None:
         archived = _run("ARCHIVED", 1, 5)
