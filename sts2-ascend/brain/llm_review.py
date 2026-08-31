@@ -976,56 +976,8 @@ def _restart_marker_payload(
     }
 
 
-def _infer_recent_report_only_streak(limit: int = 20) -> int:
-    """Bootstrap the durable streak from recent accepted review commits.
-
-    This migration makes the first review after deploying the gate aware of the
-    already accepted report-only batches.  It reads commit paths only; no tree
-    fingerprint or repository-wide hash is created.
-    """
-    try:
-        proc = subprocess.run(
-            [
-                "git", "-C", str(REPO_DIR), "log", "--no-renames",
-                f"-n{max(1, limit)}", "--fixed-strings", "--grep=LLM 复盘变更",
-                "--format=__STS2_REVIEW_COMMIT__%H", "--name-only",
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=20,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-    except (OSError, subprocess.SubprocessError):
-        return 0
-    if proc.returncode != 0:
-        return 0
-
-    commits: list[list[str]] = []
-    current: list[str] | None = None
-    for raw in proc.stdout.splitlines():
-        line = raw.strip().replace("\\", "/")
-        if line.startswith("__STS2_REVIEW_COMMIT__"):
-            if current is not None:
-                commits.append(current)
-            current = []
-        elif line and current is not None:
-            current.append(line)
-    if current is not None:
-        commits.append(current)
-
-    streak = 0
-    for paths in commits:
-        if _review_action_paths(paths):
-            break
-        if paths:
-            streak += 1
-    return streak
-
-
 def _review_closure_state(know, cfg: dict) -> dict:
-    """Build the host-owned anti-stagnation state embedded in the next prompt."""
+    """Build anti-stagnation state from this profile's durable progression only."""
     limit = _positive_int(cfg.get("review_report_only_limit"), 2)
     run_threshold = _positive_int(cfg.get("review_evidence_run_threshold"), 3)
     batch_threshold = _positive_int(cfg.get("review_evidence_batch_threshold"), 2)
@@ -1035,8 +987,11 @@ def _review_closure_state(know, cfg: dict) -> dict:
         streak = stored
         source = "progression"
     else:
-        streak = _infer_recent_report_only_streak()
-        source = "git_history_bootstrap"
+        # A missing field belongs to this profile's still-empty history.  Git
+        # commit history is shared by every character and must never bootstrap
+        # one profile from another profile's accepted reviews.
+        streak = 0
+        source = "profile_default"
     require_every_batch = bool(cfg.get("review_require_action_every_batch", True))
     required = require_every_batch or streak >= limit
     return {
@@ -1443,8 +1398,22 @@ def _clip_summary_text(value) -> str:
     return text[:RUN_SUMMARY_TEXT_CHARS - 1] + "…"
 
 
+def _run_is_excluded_from_review(data) -> bool:
+    """Return whether a persisted run/context is barred from autonomous review."""
+    if isinstance(data, dict):
+        return bool(
+            data.get("human_assisted") or data.get("excluded_from_learning"))
+    return bool(
+        getattr(data, "human_assisted", False)
+        or getattr(data, "excluded_from_learning", False))
+
+
 def _run_is_complete(data: dict) -> bool:
-    """Exclude a genuine incremental checkpoint while tolerating old dirty stamps."""
+    """Accept autonomous terminal evidence while tolerating old dirty stamps."""
+    # Manual/mixed evidence stays excluded even when a stale incremental file
+    # contains GAME_OVER or an older writer cleared its in_progress marker.
+    if _run_is_excluded_from_review(data):
+        return False
     if not data.get("in_progress"):
         return True
     trail = data.get("decisions") or []
@@ -4819,6 +4788,9 @@ def _enqueue_review_scoped(agent, log=print, know=None) -> None:
 def enqueue_review(agent, log=print, profile_id: str | None = None,
                    profile_root: Path | str | None = None) -> None:
     """Queue a review under the agent's profile; old agents remain ironclad."""
+    if _run_is_excluded_from_review(getattr(agent, "ctx", None)):
+        log("[llm] 人工接管/排除局不进入自动复盘队列")
+        return
     know = getattr(agent, "know", None)
     resolved_profile = (
         _profile_id_from(agent) if profile_id is None and profile_root is None

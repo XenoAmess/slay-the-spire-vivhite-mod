@@ -236,7 +236,7 @@ retry_resolution_extra: pkg-a integrated
         self.assertEqual(llm_review._review_closure_gate_error(
             state, [REPORT, AGENT], code_change), "")
 
-    def test_bootstrap_counts_report_only_commits_until_last_runtime_action(self) -> None:
+    def test_vivhite_missing_streak_ignores_ironclad_git_history(self) -> None:
         output = """__STS2_REVIEW_COMMIT__new
 
 sts2-ascend/knowledge/meta_review.md
@@ -250,8 +250,21 @@ sts2-ascend/brain/policy.py
 sts2-ascend/knowledge/meta_review.md
 """
         completed = SimpleNamespace(returncode=0, stdout=output)
-        with mock.patch.object(llm_review.subprocess, "run", return_value=completed):
-            self.assertEqual(llm_review._infer_recent_report_only_streak(), 2)
+        know = SimpleNamespace(
+            profile_id="vivhite",
+            progression={"character": "VIVHITE_CHARACTER_VIVHITE_CHARACTER"},
+        )
+        with mock.patch.object(
+                llm_review.subprocess, "run", return_value=completed) as git_run:
+            state = llm_review._review_closure_state(know, {
+                "review_require_action_every_batch": False,
+                "review_report_only_limit": 2,
+            })
+
+        git_run.assert_not_called()
+        self.assertEqual(state["consecutive_report_only"], 0)
+        self.assertEqual(state["state_source"], "profile_default")
+        self.assertFalse(state["action_required"])
 
     def test_state_is_host_owned_and_hard_required_even_after_implementation(self) -> None:
         know = SimpleNamespace(progression={

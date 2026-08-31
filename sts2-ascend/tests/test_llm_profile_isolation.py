@@ -179,6 +179,119 @@ class LlmProfileIsolationTests(unittest.TestCase):
             self.assertIn((silent / "policy.json").as_posix(), prompt)
             self.assertIn((silent / "review_queue.json").as_posix(), prompt)
 
+    def test_manual_game_over_runs_never_enter_vivhite_prompt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-manual-prompt-") as temp:
+            root = Path(temp) / "profiles" / "vivhite"
+            runs = root / "runs"
+            runs.mkdir(parents=True)
+            blocked = (
+                {
+                    "run_id": "HUMAN_GAME_OVER",
+                    "run_number": 7,
+                    "in_progress": True,
+                    "human_assisted": True,
+                    "decisions": [{"screen": "GAME_OVER"}],
+                    "combat_notes": ["HUMAN_PROMPT_POLLUTION"],
+                },
+                {
+                    "run_id": "EXCLUDED_GAME_OVER",
+                    "run_number": 8,
+                    "in_progress": False,
+                    "excluded_from_learning": True,
+                    "decisions": [{"screen": "GAME_OVER"}],
+                    "combat_notes": ["EXCLUDED_PROMPT_POLLUTION"],
+                },
+            )
+            for item in blocked:
+                (runs / f"run-{item['run_number']:03d}.json").write_text(
+                    json.dumps(item), encoding="utf-8")
+            know = _knowledge(root, "vivhite", runs=8)
+
+            prompt = llm_review.build_prompt(
+                know,
+                {"max_runs_in_packet": 10, "review_every_runs": 1},
+                batch_runs=[7, 8],
+                closure_state={"action_required": False},
+                profile_id="vivhite",
+                profile_root=root,
+            )
+
+            packet_raw = prompt.split("```json\n", 1)[1].split("\n```", 1)[0]
+            packet = json.loads(packet_raw)
+            self.assertEqual(packet["runs_summary"], [])
+            self.assertNotIn("HUMAN_GAME_OVER", prompt)
+            self.assertNotIn("EXCLUDED_GAME_OVER", prompt)
+            self.assertNotIn("HUMAN_PROMPT_POLLUTION", prompt)
+            self.assertNotIn("EXCLUDED_PROMPT_POLLUTION", prompt)
+
+    def test_archived_manual_game_over_runs_never_enter_review_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-manual-archive-") as temp:
+            root = Path(temp) / "profiles" / "vivhite"
+            archive = root / "archive"
+            archive.mkdir(parents=True)
+            entries = (
+                {"run_number": 9, "file": "human-game-over.json"},
+                {"run_number": 10, "file": "excluded-game-over.json"},
+            )
+            (archive / "run_catalog.jsonl").write_text(
+                "\n".join(json.dumps(item) for item in entries) + "\n",
+                encoding="utf-8",
+            )
+            archived = {
+                "human-game-over.json": {
+                    "run_id": "ARCHIVED_HUMAN_GAME_OVER",
+                    "run_number": 9,
+                    "in_progress": True,
+                    "human_assisted": True,
+                    "decisions": [{"screen": "GAME_OVER"}],
+                },
+                "excluded-game-over.json": {
+                    "run_id": "ARCHIVED_EXCLUDED_GAME_OVER",
+                    "run_number": 10,
+                    "excluded_from_learning": True,
+                    "decisions": [{"screen": "GAME_OVER"}],
+                },
+            }
+
+            def read_evidence(_root, filename):
+                return json.dumps(archived[filename]).encode("utf-8")
+
+            with (mock.patch(
+                    "compact_knowledge.read_run_evidence",
+                    side_effect=read_evidence),
+                  llm_review._review_profile_scope(
+                      "vivhite", profile_root=root)):
+                records = llm_review._requested_archived_runs({9, 10}, set())
+
+            self.assertEqual(records, [])
+
+    def test_manual_game_over_context_never_enters_vivhite_queue(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-review-manual-queue-") as temp:
+            root = Path(temp) / "profiles" / "vivhite"
+            know = _knowledge(root, "vivhite", runs=9)
+            agent = SimpleNamespace(
+                know=know,
+                profile_id="vivhite",
+                cfg={"profile_id": "vivhite"},
+                ctx=SimpleNamespace(
+                    profile_id="vivhite",
+                    human_assisted=True,
+                    excluded_from_learning=True,
+                    decisions=[{"screen": "GAME_OVER"}],
+                ),
+            )
+            messages: list[str] = []
+
+            with (mock.patch.object(llm_review, "load_llm_config") as load_cfg,
+                  mock.patch.object(llm_review, "_ensure_worker") as ensure_worker):
+                llm_review.enqueue_review(agent, log=messages.append)
+
+            load_cfg.assert_not_called()
+            ensure_worker.assert_not_called()
+            know.save.assert_not_called()
+            self.assertFalse((root / "review_queue.json").exists())
+            self.assertTrue(any("不进入自动复盘队列" in item for item in messages))
+
     def test_enqueue_persists_profile_id_in_profile_queue(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-review-enqueue-profile-") as temp:
             root = Path(temp) / "profiles" / "silent"
