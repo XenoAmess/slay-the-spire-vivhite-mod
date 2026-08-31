@@ -297,3 +297,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-31 16:39:37 | 第 1198~1199 局 | `46475d21` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `40909a4a` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 40909a4a 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260831-165458-1788166498526619200-82f9abd2 -->
 | 2026-08-31 16:54:58 | 第 1198~1199 局 | `82f9abd2` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `40909a4a` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 40909a4a 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260831-184844-1788173324354937500-5cd00c27 -->
+| 2026-08-31 18:48:44 | 第 988~1013 局 | `5cd00c27` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-184844-1788173324354937500-5cd00c27` | 复盘进程未成功完成 |
