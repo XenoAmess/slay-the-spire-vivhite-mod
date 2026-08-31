@@ -351,6 +351,8 @@ class Policy:
         self.card_catalog = self.character_strategy.card_catalog
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
+        self._terminal_life_lock_signature = None
+        self._terminal_life_lock_stall = 0
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_instance_key = None  # exact live reward payload; repeated rewards may share text
@@ -1152,6 +1154,8 @@ class Policy:
             self._cur_turn = None
             self._end_stall = 0
             self._saw_playable_this_turn = False
+            self._terminal_life_lock_signature = None
+            self._terminal_life_lock_stall = 0
             self._failed_this_turn = set()
             self._card_cooldowns = {}
             self._failed_hand_len = -1
@@ -2390,6 +2394,8 @@ class Policy:
             self._failed_hand_len = -1
             self._saw_playable_this_turn = False
             self._end_stall = 0
+            self._terminal_life_lock_signature = None
+            self._terminal_life_lock_stall = 0
         # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
         # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
         # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
@@ -2606,6 +2612,47 @@ class Policy:
                     f"{c.get('name')}({c.get('energy_cost', '?')}费)"
                     f"{'✓' if (c.get('playable') and not self._card_unavailable(c)) else '✗'}"
                     for c in hand) or "空手"
+                non_curse_cards = [
+                    card for card in hand
+                    if str(card.get("card_type") or card.get("rarity") or "").casefold()
+                    != "curse"
+                ]
+                all_terminal_life_locked = bool(non_curse_cards) and all(
+                    character_card_has_terminal_life_cost_lock(
+                        self.character_strategy, card,
+                        current_hp=my_hp,
+                        player_powers=player.get("powers") or [])
+                    for card in non_curse_cards
+                )
+                if all_terminal_life_locked:
+                    life_lock_signature = (
+                        my_hp,
+                        tuple(self._card_key(card) for card in non_curse_cards),
+                    )
+                    if life_lock_signature == self._terminal_life_lock_signature:
+                        self._terminal_life_lock_stall += 1
+                    else:
+                        self._terminal_life_lock_signature = life_lock_signature
+                        self._terminal_life_lock_stall = 1
+                    if self._terminal_life_lock_stall < 2:
+                        return Decision(
+                            None, {},
+                            f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬不可支付，"
+                            f"确认结束（{self._terminal_life_lock_stall}/2，{hand_desc}）",
+                            wait=0.5)
+                    self._terminal_life_lock_signature = None
+                    self._terminal_life_lock_stall = 0
+                    self._end_stall = 0
+                    _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+                    _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                                    f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+                    return Decision(
+                        "end_turn", {},
+                        f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
+                        f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                        wait=1.2)
+                self._terminal_life_lock_signature = None
+                self._terminal_life_lock_stall = 0
                 if affordable_playable:
                     if self._end_stall < 30:
                         return Decision(
@@ -2738,9 +2785,13 @@ class Policy:
                     f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
                     f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
                     wait=1.2)
+            self._terminal_life_lock_signature = None
+            self._terminal_life_lock_stall = 0
             return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
         self._end_stall = 0
         self._saw_playable_this_turn = True
+        self._terminal_life_lock_signature = None
+        self._terminal_life_lock_stall = 0
 
         # 敌方组合历史战绩 → 战斗姿态与药水门槛的共同输入，必须先于药水分级读取：
         # 高危组合自动转防守（见 knowledge.enemy_stance；Boss 房间反转姿态：

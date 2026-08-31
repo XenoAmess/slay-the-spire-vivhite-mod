@@ -1684,6 +1684,156 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertEqual(second.action, "end_turn")
         self.assertNotIn("结算等待", first.reason + second.reason)
 
+    def test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks(self) -> None:
+        combat_token = object()
+        ctx = SimpleNamespace(
+            combat=combat_token,
+            current_combat_is_hard=False,
+            stall_analysis_asked=False,
+            stall_analysis_needed=False,
+            stall_giveup=False,
+        )
+        state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {
+                    "current_hp": 1,
+                    "max_hp": 78,
+                    "block": 0,
+                    "energy": 3,
+                    "powers": [],
+                },
+                "hand": [
+                    {
+                        "index": 0,
+                        "card_id": "GUILTY",
+                        "name": "愧疚",
+                        "card_type": "Curse",
+                        "rarity": "Curse",
+                        "playable": False,
+                        "energy_cost": -1,
+                        "requires_target": False,
+                        "dynamic_values": [],
+                    },
+                    {
+                        "index": 1,
+                        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                        "name": "弦光投影",
+                        "card_type": "Attack",
+                        "playable": False,
+                        "energy_cost": 1,
+                        "requires_target": True,
+                        "valid_target_indices": [0],
+                        "dynamic_values": [
+                            {"name": "LifeCost", "current_value": 2},
+                        ],
+                    },
+                    {
+                        "index": 2,
+                        "card_id": "VIVHITE_CARD_GOLDEN_RATIO",
+                        "name": "黄金分割",
+                        "card_type": "Skill",
+                        "playable": False,
+                        "energy_cost": 1,
+                        "requires_target": False,
+                        "dynamic_values": [
+                            {"name": "LifeCost", "current_value": 4},
+                        ],
+                    },
+                ],
+                "enemies": [{
+                    "index": 0,
+                    "enemy_id": "TEST_ENEMY",
+                    "name": "Test Enemy",
+                    "current_hp": 20,
+                    "max_hp": 20,
+                    "block": 0,
+                    "is_alive": True,
+                    "is_hittable": True,
+                    "intents": [],
+                }],
+            },
+            "run": {
+                "current_hp": 1,
+                "max_hp": 78,
+                "floor": 17,
+                "deck": [],
+            },
+        }
+
+        first = self.vivhite_policy._combat(state, ctx)
+        second = self.vivhite_policy._combat(state, ctx)
+
+        self.assertIsNone(first.action)
+        self.assertIn("謦欬不可支付", first.reason)
+        self.assertIn("1/2", first.reason)
+        self.assertEqual(second.action, "end_turn")
+        self.assertIn("謦欬会令生命低于1", second.reason)
+        self.assertNotIn("手牌未就绪", first.reason + second.reason)
+
+    def test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard(self) -> None:
+        combat_token = object()
+        ctx = SimpleNamespace(
+            combat=combat_token,
+            current_combat_is_hard=False,
+            stall_analysis_asked=False,
+            stall_analysis_needed=False,
+            stall_giveup=False,
+        )
+        state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {
+                    "current_hp": 3,
+                    "max_hp": 78,
+                    "block": 0,
+                    "energy": 3,
+                    "powers": [],
+                },
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                    "name": "闭域映射",
+                    "card_type": "Skill",
+                    "playable": False,
+                    "energy_cost": 1,
+                    "requires_target": False,
+                    "dynamic_values": [
+                        {"name": "LifeCost", "current_value": 2},
+                    ],
+                }],
+                "enemies": [{
+                    "index": 0,
+                    "enemy_id": "TEST_ENEMY",
+                    "name": "Test Enemy",
+                    "current_hp": 20,
+                    "max_hp": 20,
+                    "block": 0,
+                    "is_alive": True,
+                    "is_hittable": True,
+                    "intents": [],
+                }],
+            },
+            "run": {
+                "current_hp": 3,
+                "max_hp": 78,
+                "floor": 17,
+                "deck": [],
+            },
+        }
+
+        waits = [self.vivhite_policy._combat(state, ctx) for _ in range(14)]
+        timeout = self.vivhite_policy._combat(state, ctx)
+
+        self.assertTrue(all(decision.action is None for decision in waits))
+        self.assertIn("14/15", waits[-1].reason)
+        self.assertEqual(timeout.action, "end_turn")
+        self.assertIn("手牌长时间未就绪", timeout.reason)
+
     def test_combat_targeting_expands_chromatic_limit_with_current_energy(self) -> None:
         card = {
             "index": 0,
