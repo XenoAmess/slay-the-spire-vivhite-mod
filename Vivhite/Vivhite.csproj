@@ -16,7 +16,10 @@
         <GodotExportPreset>Windows Desktop</GodotExportPreset>
         <Sts2Dir Condition="'$(Sts2Dir)' == ''">$(MSBuildProgramFiles32)\Steam\steamapps\common\Slay the Spire 2</Sts2Dir>
         <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Dir)\data_sts2_windows_x86_64</Sts2DataDir>
-        <ModOutputDir>$(Sts2Dir)\mods\$(MSBuildProjectName)\</ModOutputDir>
+        <!-- Do not leave a trailing backslash here: MSBuild Exec quotes this value,
+             and Windows command-line parsing would escape the closing quote and
+             swallow every PowerShell parameter that follows it. -->
+        <ModOutputDir>$(Sts2Dir)\mods\$(MSBuildProjectName)</ModOutputDir>
         <!-- All three artifacts are produced away from the live Mod directory first. -->
         <ModDeploymentTransactionId Condition="'$(ModDeploymentTransactionId)' == ''">$([System.Guid]::NewGuid().ToString('N'))</ModDeploymentTransactionId>
         <ModCandidateRoot Condition="'$(ModCandidateRoot)' == ''">$(MSBuildProjectDirectory)\obj\$(Configuration)\$(TargetFramework)\mod-candidate\$(ModDeploymentTransactionId)\</ModCandidateRoot>

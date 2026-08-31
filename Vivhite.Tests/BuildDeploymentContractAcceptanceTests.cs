@@ -168,6 +168,9 @@ internal static class BuildDeploymentContractAcceptanceTests
         AcceptanceAssert.Equal("true", defaultProperties["RunPckExport"], "Normal builds must export PCK.");
         AcceptanceAssert.Equal("true", defaultProperties["CopyModOnBuild"], "Normal builds must publish one full batch.");
         AcceptanceAssert.True(
+            !Path.EndsInDirectorySeparator(defaultProperties["ModOutputDir"]),
+            "The default live Mod directory must not end in a separator because MSBuild Exec quotes it before later PowerShell arguments.");
+        AcceptanceAssert.True(
             !IsPathInside(defaultProperties["ModPckPath"], defaultProperties["ModOutputDir"]),
             "The evaluated PCK candidate path must be outside the live Mod directory.");
 
