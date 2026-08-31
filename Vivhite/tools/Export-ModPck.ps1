@@ -214,6 +214,63 @@ function Enter-DeploymentLock {
     throw "Timed out after $TimeoutSeconds seconds waiting for the Vivhite deployment lock for '$CanonicalLivePath'. Last error: $lastError"
 }
 
+function Move-DirectoryWithRetry {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceDirectory,
+        [Parameter(Mandatory = $true)][string]$DestinationDirectory,
+        [Parameter(Mandatory = $true)][string]$Subject,
+        [ValidateRange(100, 120000)][int]$TimeoutMilliseconds = 30000
+    )
+
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    $delayMilliseconds = 100
+    $attempt = 0
+    $lastError = ""
+
+    while ($true) {
+        $attempt++
+        try {
+            [IO.Directory]::Move($SourceDirectory, $DestinationDirectory)
+            if ($attempt -gt 1) {
+                Write-Host "[vivhite-deploy] $Subject succeeded after $attempt attempts."
+            }
+            return
+        }
+        catch {
+            $rootFailure = $_.Exception
+            while ($null -ne $rootFailure.InnerException) {
+                $rootFailure = $rootFailure.InnerException
+            }
+            if (-not ($rootFailure -is [IO.IOException]) -and
+                -not ($rootFailure -is [UnauthorizedAccessException])) {
+                throw
+            }
+
+            $lastError = $rootFailure.Message
+            $sourceExists = [IO.Directory]::Exists($SourceDirectory)
+            $destinationExists = [IO.Directory]::Exists($DestinationDirectory)
+            if (-not $sourceExists -and $destinationExists) {
+                Write-Host "[vivhite-deploy] $Subject completed while Windows reported a transient move error."
+                return
+            }
+            if (-not $sourceExists -or $destinationExists) {
+                throw
+            }
+
+            $remainingMilliseconds = [int][Math]::Ceiling(($deadline - [DateTime]::UtcNow).TotalMilliseconds)
+            if ($remainingMilliseconds -le 0) {
+                throw "$Subject remained blocked for $TimeoutMilliseconds ms after $attempt attempts. Last error: $lastError"
+            }
+            if ($attempt -eq 1) {
+                Write-Host "[vivhite-deploy] $Subject is temporarily blocked; retrying for up to $TimeoutMilliseconds ms. Last error: $lastError"
+            }
+            $sleepMilliseconds = [Math]::Min($delayMilliseconds, $remainingMilliseconds)
+            Start-Sleep -Milliseconds $sleepMilliseconds
+            $delayMilliseconds = [Math]::Min($delayMilliseconds * 2, 1000)
+        }
+    }
+}
+
 function Get-OwnedTransactionResidues {
     param(
         [Parameter(Mandatory = $true)][string]$ParentDirectory,
@@ -796,12 +853,12 @@ try {
 
     $switchStarted = $true
     if ($liveExisted) {
-        [IO.Directory]::Move($liveDirectory, $backupDirectory)
+        Move-DirectoryWithRetry $liveDirectory $backupDirectory "Backing up the live Vivhite batch"
         $backupCreated = $true
     }
     Invoke-InjectedFailure "AfterLiveBackup"
 
-    [IO.Directory]::Move($siblingStagingDirectory, $liveDirectory)
+    Move-DirectoryWithRetry $siblingStagingDirectory $liveDirectory "Promoting the staged Vivhite batch"
     $stagePromoted = $true
     Invoke-InjectedFailure "AfterStagePromotion"
 
@@ -831,14 +888,14 @@ try {
     if (-not $committed -and $switchStarted) {
         try {
             if ($stagePromoted -and [IO.Directory]::Exists($liveDirectory)) {
-                [IO.Directory]::Move($liveDirectory, $failedDirectory)
+                Move-DirectoryWithRetry $liveDirectory $failedDirectory "Quarantining the failed Vivhite batch"
                 $stagePromoted = $false
             }
             if ($backupCreated -and [IO.Directory]::Exists($backupDirectory)) {
                 if ([IO.Directory]::Exists($liveDirectory)) {
                     throw "Cannot restore the previous batch because the live path is occupied: $liveDirectory"
                 }
-                [IO.Directory]::Move($backupDirectory, $liveDirectory)
+                Move-DirectoryWithRetry $backupDirectory $liveDirectory "Restoring the previous Vivhite batch"
                 $backupCreated = $false
             }
             elseif ($liveExisted -and -not [IO.Directory]::Exists($liveDirectory)) {
