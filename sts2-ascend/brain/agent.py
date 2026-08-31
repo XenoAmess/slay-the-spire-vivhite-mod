@@ -1236,6 +1236,24 @@ class Agent:
         unresolved_run_id = str(
             getattr(self, "_rotation_unresolved_run_id", "") or "")
         if ctx_run_id == "run_unknown" and unresolved_run_id:
+            can_resume_from_menu = (
+                screen == "MAIN_MENU"
+                and run_id == "run_unknown"
+                and not run
+                and "continue_run" in (state.get("available_actions") or []))
+            if can_resume_from_menu:
+                # The durable rotation identity can outlive an incomplete
+                # incremental run log.  Continuing the game's own active save is
+                # the only read-safe way to recover its authoritative run_id;
+                # keep the ledger unresolved until the next API state proves an
+                # exact identity match.
+                marker = (unresolved_run_id, "continue_run", screen)
+                if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
+                    self._unresolved_rotation_log_marker = marker
+                    log(
+                        f"[agent] 轮换账仍有未验证旧局 {unresolved_run_id}；"
+                        "主菜单存在原生继续入口，先恢复存档再核对 run_id")
+                return
             # A restart can retain the rotation's old active identity while the API
             # already exposes a different/new run.  Never let a missing incremental
             # log turn that condition into an implicit replacement or quota flip.

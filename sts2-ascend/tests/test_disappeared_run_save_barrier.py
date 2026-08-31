@@ -155,6 +155,33 @@ class DisappearedRunNativeSaveBarrierTests(unittest.TestCase):
             self.assertFalse(restarted.ctx.finalize_requested)
             self.assertIsNone(restarted.ctx.native_save_wait)
 
+    def test_restart_without_incremental_log_uses_native_continue_to_recover(
+            self) -> None:
+        instance = object.__new__(agent_module.Agent)
+        instance.ctx = agent_module.RunContext()
+        instance._rotation_unresolved_run_id = "old-vivhite"
+        instance._native_save_transition_blocked = False
+
+        resumable_menu = {
+            "screen": "MAIN_MENU",
+            "run_id": "run_unknown",
+            "run": {},
+            "available_actions": ["continue_run", "abandon_run"],
+        }
+        with mock.patch.object(agent_module, "log") as logger:
+            instance._track(resumable_menu)
+
+        self.assertFalse(instance._native_save_transition_blocked)
+        self.assertEqual(instance._rotation_unresolved_run_id, "old-vivhite")
+        logger.assert_called_once()
+        self.assertIn("原生继续入口", logger.call_args.args[0])
+
+        non_resumable_menu = copy.deepcopy(resumable_menu)
+        non_resumable_menu["available_actions"] = ["open_character_select"]
+        instance._track(non_resumable_menu)
+        self.assertTrue(instance._native_save_transition_blocked)
+        self.assertEqual(instance._rotation_unresolved_run_id, "old-vivhite")
+
     def test_save_error_does_not_account_verified_terminal_accounts_once(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-disappeared-finalize-") as raw:
             root = Path(raw)
