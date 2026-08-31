@@ -77,9 +77,9 @@ public sealed class InductiveCirclePower : AnyEnemyDeathPower
 
     private static long CalculateBaseImmediateDeathHealing(Creature owner)
     {
-        var crownCopies = owner.Player?.Relics.Count(static relic => relic is OriginStarChart) ?? 0;
+        var crownCopies = owner.Player?.Relics.Count(static relic => relic is SolitaryCrown) ?? 0;
         var crownHealing = checked(
-            (long)crownCopies * OriginStarChart.CalculateHealingForMaxHp(owner.MaxHp));
+            (long)crownCopies * SolitaryCrown.CalculateHealingForMaxHp(owner.MaxHp));
 
         var optimalAlgorithmStacks = owner.GetPower<OptimalAlgorithmPower>()?.Amount ?? 0;
         var optimalAlgorithmHealing = optimalAlgorithmStacks > 0

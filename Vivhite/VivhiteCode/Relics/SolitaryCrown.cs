@@ -8,9 +8,11 @@ using Vivhite.Core;
 
 namespace Vivhite.Relics;
 
-[RegisterRelic(typeof(VivhiteRelicPool))]
+[RegisterRelic(
+    typeof(VivhiteRelicPool),
+    FullPublicEntry = "VIVHITE_RELIC_ORIGIN_STAR_CHART")]
 [RegisterCharacterStarterRelic(typeof(VivhiteCharacter))]
-public sealed class OriginStarChart : AnyEnemyDeathRelic
+public sealed class SolitaryCrown : AnyEnemyDeathRelic
 {
     private const int HealingPercent = 20;
 
