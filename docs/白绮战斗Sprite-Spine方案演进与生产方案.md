@@ -2,7 +2,7 @@
 
 > 文档性质：长期维护的架构决策、生产规范与复盘。
 > 当前基线：Slay the Spire 2 v0.111.0、Godot 4.5.1、Spine 4.2.43。
-> 最后更新：2026-08-30。
+> 最后更新：2026-08-31。
 > 关联手册：[白绮 AI 生成图 Prompt 工程手册](白绮AI生成图Prompt工程手册.md)。
 > 当前实现状态：V3 的 neutral、`attack_peak`、`attack_heavy_peak`、`cast_peak`、hurt 与
 > death 已总装为 `hybrid_v3_final` 并发布为正式五页 runtime。总装器字段边界、严格五页布局、Spine runtime
@@ -14,6 +14,10 @@
 > 2026-08-30 已完成独立白绮角色与 Ironclad replacement 共用同一 V3 资源配置的源码接入；
 > 独立角色仅覆盖自己的 energy counter。该新增消费路径的完整构建、部署与真机验收仍待完成，
 > 不能沿用 Ironclad replacement 的既有真机结果冒充独立角色已通过。
+> 2026-08-31 又完成眼镜镜片透明 VFX、白绮专属卡牌轨迹透明粒子和角色选择不透明阈值 mask
+> 的素材候选；三项生成与静态／隔离证据已归档，但正式发布契约、正确角色接线、PCK 与安装后
+> Vulkan 尚未全部闭环。本文件保留旧消费者与 30 文件发布结果作为历史基线，不把候选提前写成
+> 已发布生产版。
 
 ## 1. 当前结论
 
@@ -573,6 +577,122 @@ PCK 通过内容校验并原子部署。重启日志确认 V3 replacement 注册
 若门禁失败，应修复共享 profile、注册顺序或 PCK 消费路径，并继续保留已验证的 V3 资源作为
 事实源；不得以恢复旧静态独立角色或 legacy 单页来掩盖接入故障。
 
+### 5.15 眼镜 VFX、白绮卡牌轨迹与角色选择转场候选
+
+2026-08-31 新增的三项素材分属三个不同消费者，不能被合并成“同一套透明特效”：
+
+1. 眼镜镜片星光是 combat 场景中贴近眼睛和金框眼镜的独立透明 `TextureRect` VFX；
+2. 卡牌轨迹是白绮角色 profile 在飞牌过程中重复、旋转的小尺寸透明粒子，不属于共享皮肤；
+3. 角色选择转场是 `NTransition` 全屏消费、只读取红通道的完全不透明灰度阈值 mask。
+
+#### 5.15.1 眼镜镜片星光与 combat 事件
+
+透明生成 attempt 1 完整保存在
+`assets/vivhite-ironclad/generated/evolink-paid/2026-08-31/0191-combat-eye-mathematical-starlight-attempt-01/`。
+它的原始 PNG、逐字 Prompt、脱敏 request、task 和三底 SourceOver 均保留。虽然文件 Alpha
+门禁通过，但长纵向射线、轨道和相连星座线在脸旁可能变成突出长条，因此按消费者适配淘汰，
+且不得作为后续参考。这条失败事实不被第二轮成功覆盖。
+
+attempt 2 位于
+`assets/vivhite-ironclad/generated/evolink-paid/2026-08-31/0192-combat-eye-mathematical-lens-glint-attempt-02/`。
+EvoLink 请求为 `gpt-image-2`、`background: "transparent"`、`n=1`，归档包含 `output.png`、
+`output.prompt.txt`、`output.request.json`、`output.task.json` 与完整 `inspection/`。原图是
+`1024×1024 RGBA8`；运行时只做等比 Lanczos 缩放和透明居中留白，得到
+`512×512 RGBA8`，没有 Alpha 修补。四角和四边为 0，黑／白／游戏靛蓝 SourceOver 无矩形
+光幕或裁切。成品是闭合蓝紫镜片折射与孤立金色星点，没有红／猩红色、液体、血、丝线、
+飘带、长连线、武器、嘴边异物或脸部突出物。
+
+候选把 [combat.tscn](../Vivhite/Vivhite/skins/ironclad/scenes/combat.tscn) 中的外部原版
+`NIroncladVfx` / `EyeFire` 依赖改为自有 `VivhiteCombatVfx` 和 `EyeMagic`，贴图为
+`Vivhite/Vivhite/skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png`，控制器为
+`vivhite_combat_vfx.gd`。事件契约保持 `cast_eyes_start` 显示、`clear_vfx` 清理，启动非
+cast 动画也必须清理；slash 的既有 tween 节奏保持。隔离 Windows Vulkan 已跑 25 组序列、
+104 个 checkpoint，但独立 harness 无法实例化游戏程序集持有的正式 `NCreatureVisuals` 根节点，
+故状态只能是离线 Vulkan 候选。正式 `ironclad-skin.contract.json`、publisher、PCK 与安装游戏
+中的一次完整 cast 显示／清理仍须完成。前文关于 `NIroncladVfx` 的 2026-08-28/29 结果继续
+作为当时生产基线，不被静默改写成当时已经使用新眼镜 VFX。
+
+#### 5.15.2 卡牌轨迹必须只属于 Vivhite profile
+
+透明 attempt 1 位于
+`assets/vivhite-ironclad/generated/evolink-paid/2026-08-31/0193-card-trail-mathematical-star-attempt-01/`，
+专项证据位于 `assets/vivhite-ironclad/evaluation/card-trail-vfx/0193-mathematical-star/`。原图
+四角为 `[1,0,1,0]`，四边共有 832 个 `A=1` 像素，白底 SourceOver 可见宽暗五边形衬底，
+而且在 `16–48 px` 重复粒子尺寸下过密，因此淘汰；原图、Prompt、request 和 task 均保留。
+
+attempt 2 位于
+`assets/vivhite-ironclad/generated/evolink-paid/2026-08-31/0194-card-trail-mathematical-star-attempt-02/`，
+专项证据位于 `assets/vivhite-ironclad/evaluation/card-trail-vfx/0194-mathematical-star/`。它同样
+通过 EvoLink 原生透明链生成并完整保存原图、Prompt、request、task。`1024×1024 RGBA8`
+原图四角全透明，19 个边缘 `A=1` 只记为不可见 trim 警告；确定性等比缩至
+`256×256 RGBA8` 后四边非零 Alpha 为 0。黑、白、游戏靛蓝 SourceOver 与 `48/24/16 px`
+检查没有暗衬底、矩形光幕或裁切，并且没有人物、脸、嘴、武器、书、工具、红／猩红丝线、
+血液、液体、文字或水印。运行时纹理是
+`Vivhite/Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png`。
+
+角色隔离是该部件的硬契约。临时 patch 曾把 `CardTrailScenePath` 写入
+`IroncladReplacementAssets.CreateProfile().Vfx`，这样会让战士替换身份也得到白绮专属轨迹，
+并让共享皮肤 fail-closed 门禁错误依赖白绮玩法资源；该接线已经被审计否决。正确实现必须保持
+Ironclad 共享 profile 的 `Vfx` 不变，仅在 `VivhiteCharacter` 构造独立角色 profile 时用
+`WithVfx` 或等价局部覆盖设置 `card_trail_vivhite.tscn`，相关 RequiredAssets 也只能挂白绮角色
+链。`0194` 当前只是静态运行时纹理和隔离场景契约通过；正确接线、PCK、真机飞牌尺寸与粒子
+清理尚未通过，不能记作已部署。
+
+#### 5.15.3 角色选择转场是全屏不透明 mask
+
+消费审计确认该素材由 `NTransition : ColorRect` 全屏 overscan 使用，shader 只读取
+`transitionTex.r` 并按连续阈值逐像素展开黑色遮罩。它不是彩色人物插画、透明叠层、Spine
+attachment、spritesheet 或 atlas；因此使用 Codex 原生 ImageGen attempt 1，明确未使用
+EvoLink。完整追加式归档为
+`assets/vivhite-ironclad/generated/codex-native/2026-08-31/vivhite-character-select-transition-attempt-01/`：
+`original.png` 是未经后处理原图，`prompt.txt` 为逐字 Prompt，`generation.request.json` 与
+`generation.result.json` 记录公开请求和返回事实，`consumer-contract.md` 与 `inspection/`
+记录消费者、材质和阈值证据。
+
+原生返回为 `1831×859 RGB8`。确定性中央裁切和一次 Lanczos 适配后，依据 shader 只读取红
+通道的事实复制 R 到 G/B，形成 `2560×1200 RGB8` 严格灰度、完全不透明 mask；没有创建
+Alpha，预归一化版本也仍保留。阈值接触表显示多个象限分阶段展开，不是二值 logo 或单点爆开。
+人物双手为空，没有武器、书、工具、红／猩红元素、血液、嘴边长条、细丝或从脸部发出的结构。
+候选运行时文件为
+`Vivhite/Vivhite/skins/ironclad/transitions/vivhite_character_select_transition.png` 和
+`vivhite_character_select_transition_mat.tres`。
+
+当前 `.tmp/vivhite-transition-wiring.patch` 只证明 profile 候选接线方向，严格资源契约仍未同步。
+接入时这两项转场资源和眼部脚本／贴图会使 V3 皮肤发布集合从历史 30 文件增加到 34 文件；
+只有 JSON contract、publisher、Source validator 和 PCK 都按同一精确集合通过后，才能替换
+5.13 的 30 文件生产基线。最终还必须在安装游戏中观察 FadeOut/FadeIn 的阈值方向、全屏覆盖、
+无卡黑和清理；在此之前只标记静态 mask/material 候选。
+
+#### 5.15.4 最终库存合同目标（离线候选）
+
+以下数字冻结的是本批三项素材接线后的**最终合同目标／离线候选口径**，不是已经发布或已经
+通过真机的事实：
+
+- `RuntimeArtInventory=92`。既有基线是 89 张位图，即 61 张卡图、19 张能力图、2 张孤高冠冕
+  图和 7 张能量图；本批加入眼镜镜片贴图、角色选择转场贴图、白绮专属卡牌轨迹贴图三张新
+  位图，因此精确关系是 `89 + 3 = 92`。
+- 共享皮肤根 `Vivhite/Vivhite/skins/ironclad/` 的历史合同基线是
+  `legacy=26 / V3=30`。眼镜消费者向皮肤根加入
+  `scenes/vfx/vivhite_combat_vfx.gd` 与 `scenes/vfx/vivhite_eye_lens_glint.png` 两项；转场向
+  皮肤根加入 `transitions/vivhite_character_select_transition.png` 与
+  `transitions/vivhite_character_select_transition_mat.tres` 两项。因此最终合同目标必须精确为
+  `legacy=30 / V3=34`，即 legacy 的 `26 + 4 = 30`、V3 的 `30 + 4 = 34`。这里的 legacy
+  数量只用于精确合同／回退包审计，不授权生产运行时回退到 legacy。
+- 白绮卡牌轨迹场景 `Vivhite/Vivhite/scenes/vfx/card_trail_vivhite.tscn` 与贴图
+  `Vivhite/Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png` 均在共享皮肤根外，
+  所以轨迹贴图虽然计入 `RuntimeArtInventory=92`，却不改变皮肤根的 `30/34`；它只能挂独立
+  Vivhite profile，不能挂共享 Ironclad profile。
+
+上述 `92` 与 `30/34` 目前只能标记为最终合同目标和离线候选。仍须把精确集合接入正式 inventory、
+JSON contract、publisher 与 validator，构建并挂载真实 PCK，再在安装游戏的 Vulkan 总装中分别
+验证眼镜施法显示／清理、角色选择 FadeOut/FadeIn 和白绮飞牌轨迹。真实 PCK 门禁与 Vulkan
+总装尚待执行；在两道门禁完成前不得宣称 `RuntimeArtInventory=92` 或 `legacy=30 / V3=34`
+已经生产通过。
+
+三项共同回退原则是：保留 2026-08-29 已部署五页 runtime 作为历史可验证基线，并保留所有
+新旧尝试原件；集成失败时修正资源契约或角色 profile，不恢复原版眼火、不把白绮轨迹注入战士，
+也不把不透明转场改走 EvoLink 透明链。
+
 ## 6. 并行研究线：约 8 个生成语义组
 
 若继续拆件路线，推荐把 21 个独立微件收敛为约八个彼此协调的生成语义组：
@@ -822,3 +942,14 @@ preview 的硬编码轴直接升级成生产真值，再用 Prompt 强迫美术�
 - 2026-08-31：根据用户对初始卡图的直接反馈，新增跨 Sprite、Spine、UI 与卡图统一生效的
   口部硬禁令；撤销用嘴边“猩红魔法丝”表现“謦欬”的设计，命中嘴边红线、血丝、红色液体
   或口中延伸魔力的候选只能保留审计，不得进入生产或作为新参考。
+- 2026-08-31：新增三项运行时美术候选的消费与接线记录。眼镜镜片 VFX 保留 EvoLink
+  attempt 1 长射线淘汰事实，attempt 2 以原生 Alpha、三底 SourceOver 和隔离 Vulkan 收敛为
+  自有 `VivhiteCombatVfx/EyeMagic` 候选；卡牌轨迹保留 attempt 1 暗衬底淘汰事实并采用
+  attempt 2 数学星，明确其只能通过 Vivhite 局部 `WithVfx` 接线、不得污染共享 Ironclad
+  profile；角色选择转场按 `NTransition` 不透明阈值 mask 消费契约使用 Codex 原生 ImageGen
+  attempt 1，形成 `2560×1200 RGB8` 严格灰度且未调用 EvoLink。三项均补记原图、Prompt、
+  request 与归档路径；正式 34 文件资源契约、PCK 和安装后 Vulkan 仍是下一道门禁。
+- 2026-08-31：补齐三项候选的最终库存合同口径：`RuntimeArtInventory=92` 来自位图基线
+  `89 + 3`；共享皮肤根由 `legacy=26 / V3=30` 加上眼镜脚本／贴图与转场贴图／材质四项，目标
+  为 `legacy=30 / V3=34`。白绮轨迹位于皮肤根外，不改变 `30/34` 且只能挂 Vivhite profile。
+  以上仍是最终合同目标／离线候选，真实 PCK 门禁和安装后 Vulkan 总装尚待执行。
