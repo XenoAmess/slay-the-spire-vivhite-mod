@@ -1,0 +1,127 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+  "card_type": "ChromaticSequence",
+  "card_name_zh": "综合色序",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "cough": 4,
+    "draw": 4,
+    "upgraded_draw": 6,
+    "margin_per_attack_drawn": 1,
+    "drain_percent_this_turn_per_skill_drawn": 4,
+    "power_drawn_grants_both": true
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/AstralSearch.png",
+      "Vivhite/Vivhite/images/cards/LawOfConservation.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "Vivhite identity continuity and refined painted anime rendering language only; frontal presentation, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/AstralSearch.png",
+      "role": "abstract-card retrieval and manipulation semantics only; markings, exact card arrangement, paths, architecture, and pose excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/LawOfConservation.png",
+      "role": "violet-blue Margin crystal language and ordered mathematical-magic rendering family only; exact balance layout, cubes, pose, chamber, and power composition excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/AstralSearch.png": "6BB8C396906A20935A885EB0C5A33DE9325B63E78FFFEF7195FF0C74680D82B8",
+    "Vivhite/Vivhite/images/cards/LawOfConservation.png": "0171965730142FCF2C8317105F97F16E6905B9CE2C2A47626F593A8D70F41854"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "C3DA222848011FBE5B316B080B2EEFCF1F42A82EF4628A34AB030A88C8FDB098",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05538-375b-7f93-bc75-ba7fa321b6e6/exec-961c8a6a-97de-4721-8edb-198c4ad3a889.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/chromatic-sequence-card-attempt-01/original.png",
+  "original_sha256": "BE967FC71CEF526FA9AF7DF1FE26859E02EF140952C4DBB8E2BF150849ADD656",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ChromaticSequence.png",
+  "runtime_sha256": "92610FED38D724550447FE981612C94F8C73C67533A8503F5B8012594E0B5DA9",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_enemy_second_character_or_split_panel": true,
+    "single_vertical_blank_card_input_column": true,
+    "exactly_three_distinct_sorting_destinations": true,
+    "attack_star_core_outputs_margin_crystal": true,
+    "skill_composition_outputs_closed_return_loop": true,
+    "power_vertical_array_outputs_both": true,
+    "no_hit_explosion_projectile_or_outgoing_attack": true,
+    "no_closed_defensive_shell": true,
+    "100x76_color_and_grayscale_classification_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "A single vertical column of blank abstract cards branches into three topologically distinct destinations: an open attack star core yielding a violet-blue Margin crystal, an organized skill composition yielding a cyan closed return loop, and a sustained vertical power array yielding both. The input-routing-output grammar remains readable in grayscale at 100x76 as controlled search and classification rather than attack or defense; all mouth and red/crimson hard bans pass.",
+  "result": "accepted_stop_after_attempt_01"
+}
