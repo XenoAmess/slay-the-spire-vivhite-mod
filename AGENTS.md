@@ -4,9 +4,11 @@
 
 Slay the Spire 2（杀戮尖塔2）角色 Mod「白绮 Vivhite」。
 
-- 新增角色**白绮**：专属卡池/遗物池/药水池、初始卡组（4 白绮打击 + 4 白绮防御）、初始遗物（白绸结）。
+- 新增角色**白绮**：61 张专属卡牌（3 基础、18 普通、24 罕见、16 稀有）；初始卡组为
+  4 × 弦光投影、4 × 闭域映射、1 × 白绮的变身式；初始遗物为孤高冠冕。
+- 旧“白绮打击 / 白绮防御 / 白绸结”仅属于已废弃占位设计，不得重新注册、接入卡池或作为当前实现依据。
 - 基于基础库 **RitsuLib**（游戏内依赖 mod id：`STS2-RitsuLib`）。
-- Mod id：`Vivhite`。内容 ID 规则：`{MODID}_{类别}_{原名}`（如 `VIVHITE_CARD_VIVHITE_STRIKE`）。
+- Mod id：`Vivhite`。内容 ID 规则：`{MODID}_{类别}_{原名}`（如 `VIVHITE_CARD_LUMINOUS_PROJECTION`）。
 
 ## 技术栈与环境
 
