@@ -2,18 +2,18 @@
 
 Languages: [中文](README.md) | English
 
-`Vivhite` is a custom character mod for Slay the Spire 2. Vivhite is a magical girl and master magician with deep knowledge of mathematics, computing, and art. She treats health as material for magical calculation and fights through a “spend health to cast → heal through kills or Drain → keep casting” loop.
+`Vivhite` is a custom character mod for Slay the Spire 2. Vivhite is a magical girl and master magician with deep knowledge of mathematics, computing, and art. She treats health as material for magical calculation and fights through a “pay Cough (謦欬) to cast → heal through kills or Drain → keep casting” loop.
 
-This README describes the approved `0.2.0` implementation contract. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 61-card catalog, exact values, and runtime checks that remain outstanding; this README does not claim that those checks have been completed.
+This README describes the current `0.2.0` implementation. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 61-card catalog and exact values. The final runtime-bitmap contract contains `92` entries, and the legacy/V3 skin publication-validation contract is `30/34`; the unified static gate, same-build full PCK, and Vulkan in-game verification remain pending and are not claimed as passed here.
 
 **Character summary:**
 
 - Starting stats: `78` max HP, `99` gold, `3` energy per turn, and `5` cards drawn per turn.
 - Starter deck: 4 × Luminous Projection, 4 × Closed-Domain Mapping, and 1 × Vivhite's Transformation Formula.
-- Starter relic: Solitary Crown — whenever any enemy dies, immediately heal `5%` of Max HP, rounded up; each death of one entity resolves only once.
+- Starter relic: Solitary Crown — whenever any enemy dies, immediately heal `20%` of Max HP, rounded up; each death of one entity resolves only once.
 - A dedicated `61`-card pool: 3 basic, 18 common, 24 uncommon, and 16 rare cards.
 - Three primary builds: Conservation Geometry, Recursive Star Calculus, and Crimson Integral, plus cross-build cards.
-- Every card currently uses RitsuLib placeholder art; no card art is generated in this phase.
+- The art contract contains `92` runtime bitmaps: the existing 89 content bitmaps plus one lens glint, one Vivhite-only card trail, and one character-select transition.
 
 ## Learning Resources
 
@@ -148,54 +148,54 @@ Vivhite/
 | Character ID | `VIVHITE_CHARACTER_VIVHITE_CHARACTER` |
 | Starting stats | 78 max HP, 99 gold, 3 energy, 5 cards drawn per turn |
 | Starter deck | 4 × Luminous Projection, 4 × Closed-Domain Mapping, 1 × Vivhite's Transformation Formula |
-| Starter relic | Solitary Crown: heal 5% of Max HP, rounded up, whenever an enemy dies |
+| Starter relic | Solitary Crown: heal 20% of Max HP, rounded up, whenever an enemy dies |
 | Card pool | 61 cards: 3 basic, 18 common, 24 uncommon, 16 rare |
 
 ### Card pool and three builds
 
 | Build | Primary direction |
 |---|---|
-| Conservation Geometry | Use Margin to offset Life Calculation, permanently grow max HP, and turn overhealing into resources |
+| Conservation Geometry | Use Margin (余裕) to offset Cough (謦欬), permanently grow max HP, and turn overhealing into resources |
 | Recursive Star Calculus | Increase damage, on-kill healing, card draw, and energy chains |
 | Crimson Integral | Combine multi-hit damage with Drain above 100% to create damage, healing, Block, and Strength loops |
 
-Cross-build cards connect Margin, draw, kills, and Drain, including Vivhite's Crimson Transformation Ritual, whose attack cost and damage scale without a cap each turn. The [full implementation document](../docs/2026-08-30-白绮角色与轮换大脑实现.md) lists all 61 IDs, costs, effects, and upgrades. The old Vivhite Strike, Vivhite Defend, and White Silk Knot were discarded demo content and are not part of this pool.
+Cross-build cards connect Margin (余裕), draw, kills, and Drain, including Vivhite's Crimson Transformation Ritual, which adds uncapped Cough (謦欬) and damage to Attacks as turns advance. It is the exception to the fixed-Cough doubling rule: runtime `LifeCostPerPhase=1`, so its extra Cough on Attacks increases by exactly `+1` per phase and is not doubled with other fixed Cough costs. The [full implementation document](../docs/2026-08-30-白绮角色与轮换大脑实现.md) lists all 61 IDs, costs, effects, and upgrades. The old Vivhite Strike, Vivhite Defend, and White Silk Knot were discarded demo content and are not part of the current registration, starter deck, or card pool.
 
 ### Core keywords
 
 | Keyword | Semantics |
 |---|---|
-| `Life Calculation N` | Before the card resolves, lose N unblocked HP unaffected by Strength; the card is unplayable if payment would leave the player below 1 HP |
-| `Margin N` | Automatically offsets Life Calculation one-for-one and is consumed |
+| `Cough (謦欬) N` | Before the card effect and any healing caused by that card resolve, lose N unblocked HP unaffected by Strength; the card is unplayable if payment would leave the player below 1 HP |
+| `Margin (余裕) N` | Automatically offsets Cough one-for-one and is consumed |
 | `Dimension Up N` | Permanently gain N max HP and gain the same amount of current HP |
-| `Drain N%` | Heal from the actual enemy HP lost to that attack card times total Drain; aggregate multi-hit and AoE damage before rounding once |
+| `Drain N%` | After the whole Attack resolves, aggregate actual enemy HP lost across all hits and targets, multiply by total Drain, and round the single final healing result up once |
 | `Lethal` | Triggers when that card's damage directly kills its target |
 
-Card-specific and global Drain are added as percentage points. Drain excludes blocked damage, overkill, self-damage, Thorns, and damage from non-attack cards.
+Printed, combat-global, and turn-temporary Drain are added as percentage points. Total Drain and final Drain healing have no custom hard cap. Drain excludes blocked damage, overkill, self-damage, Thorns, and damage from non-attack cards.
 
 ### No artificial caps
 
-Vivhite has no custom hard cap on max-HP growth, Margin, kill healing, Drain percentage, Drain healing, Strength, draw growth, or any other scaling counter. Generated cards, copies, repeated resolutions, and cards recovered from discard or exhaust have the same rights as original cards and can trigger permanent Dimension Up. Drain may exceed `100%`.
+Vivhite has no custom hard cap on max-HP growth, Margin (余裕), kill healing, Drain percentage, Drain healing, Strength, draw growth, or any other scaling counter. Generated cards, copies, repeated resolutions, and cards recovered from discard or exhaust have the same rights as original cards and can trigger permanent Dimension Up. Drain may exceed `100%`.
 
 Only natural engine invariants remain:
 
 - Current HP cannot exceed max HP.
-- Actual Life Calculation cost has a minimum of 0.
+- Actual Cough cost has a minimum of 0.
 - A card cannot be played if paying its cost would leave the player below 1 HP.
 - Hand size and similar state continue to follow native game rules.
 - The same death event for one enemy resolves once; this is event deduplication, not a healing cap.
 
-### Shared V3 skin and placeholder card art
+### Shared V3 skin and runtime-art contract
 
 The independent Vivhite character and the Ironclad replacement skin use the same current Vivhite V3 five-page combat atlas, together with the matching merchant, rest-site, character-select, UI, Spine, and multiplayer resources. They retain separate character IDs, card pools, character state, and statistics; shared visuals do not merge their gameplay identities.
 
-All 61 cards currently use RitsuLib placeholder card art. This implementation phase does not generate images, and it does not overwrite or regenerate existing Vivhite creative assets.
+The final runtime-bitmap contract contains `92` entries: 61 card-art bitmaps, 19 semantic Power icons, 2 Solitary Crown assets, 7 energy-UI assets, plus one lens glint, one Vivhite-only card trail, and one character-select transition. Adding the eye controller/bitmap and transition bitmap/material under the skin publication root makes the exact legacy-single-page and v3-five-page contracts `30` and `34` files respectively, or `30/34`.
 
-### Brain manual-takeover isolation
+The card-trail scene and bitmap live outside the skin publication root and are attached only by the `VivhiteCharacter` profile through its own `WithVfx`; they are not added to `IroncladReplacementAssets`, so Ironclad does not inherit the trail. `92` and `30/34` describe the final source-resource/consumer contract, not a claim that the full PCK has been deployed from the same build or that Vulkan in-game verification has passed.
 
-Once a run crosses a `Ctrl+Alt+F9` manual-takeover boundary, it remains permanently marked `human_assisted=true` and `excluded_from_learning=true`. Brain restores that run's profile-local online Knowledge `stats` to the durable pre-run baseline. `Ctrl+Alt+F10` resumes action sending only: learning writes remain disabled for the same run, including after a Brain restart. Normal learning resumes only on the next run that was not touched by manual takeover.
+### External Brain controls (not a Mod feature)
 
-Existing and subsequent incremental decision/combat logs for that run remain available as `in_progress=true` audit evidence, but the run does not follow normal `finalize_run`: it does not increase runs or wins and does not contribute to average/highest/recent-20 floors, terminal card/relic/room attribution, that run's `policy.json` / `progression.json` / `lessons.md` evolution, LLM review, or Vivhite/Ironclad rotation quota.
+`Ctrl+Alt+F9` (manual takeover) and `Ctrl+Alt+F10` (resume automation) belong only to the resident `sts2-ascend` Brain stack; they are not Vivhite Mod gameplay hotkeys. See [sts2-ascend Brain manual-takeover hotkeys](../docs/2026-08-30-sts2-ascend-Brain人工接管快捷键.md) for the complete behavior.
 
 ## Manifest Format
 
@@ -236,6 +236,6 @@ Existing and subsequent incremental decision/combat logs for that run remain ava
 - Content IDs follow `{MODID}_{category}_{original name}`; full card IDs use `VIVHITE_CARD_<ID>`.
 - New character content belongs to Vivhite's own pools and state. Do not write it into the Ironclad identity merely because the skin is shared.
 - Character visuals must use the current V3 five-page Vivhite skin and must not fall back to the legacy single-page atlas or a separate static combat placeholder.
-- Cards use placeholder art for now; code and documentation work must not trigger image generation.
+- New or revised card art and transparent VFX must follow the [Vivhite card-art production specification](../docs/白绮卡牌图片生成技术规范.md) and the applicable living art documents; complete opaque scenes and explicitly alpha-dependent assets use their respective required generation paths.
 - Balance changes may adjust energy, HP cost, base values, scaling, rarity, and Exhaust, but must not reintroduce artificial caps.
 - Resource paths must begin with `res://`; verify directory names and case inside the PCK.
