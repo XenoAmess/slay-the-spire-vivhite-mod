@@ -254,22 +254,22 @@ function Initialize-DotnetSdkEnvironment {
 
         $candidateRoot = [IO.Path]::GetFullPath((Split-Path $candidate -Parent))
         $env:DOTNET_ROOT = $candidateRoot
-        $pathContainsRoot = @(([string]$env:PATH) -split ';' | Where-Object {
-            if ([string]::IsNullOrWhiteSpace($_)) { return $false }
-            try {
-                return [string]::Equals(
-                    [IO.Path]::GetFullPath($_), $candidateRoot,
-                    [StringComparison]::OrdinalIgnoreCase)
+        $remainingPath = @(([string]$env:PATH) -split ';' | Where-Object {
+            $isCandidateRoot = $false
+            if (-not [string]::IsNullOrWhiteSpace($_)) {
+                try {
+                    $isCandidateRoot = [string]::Equals(
+                        [IO.Path]::GetFullPath($_), $candidateRoot,
+                        [StringComparison]::OrdinalIgnoreCase)
+                }
+                catch { $isCandidateRoot = $false }
             }
-            catch { return $false }
-        }).Count -gt 0
-        if (-not $pathContainsRoot) {
-            $env:PATH = if ([string]::IsNullOrWhiteSpace($env:PATH)) {
-                $candidateRoot
-            } else {
-                "$candidateRoot;$env:PATH"
-            }
-        }
+            return -not $isCandidateRoot
+        })
+        # The fork build invokes bare `dotnet`.  A validated root that merely
+        # appears later in PATH still loses to an earlier runtime-only host, so
+        # always move it to the first position and remove every later duplicate.
+        $env:PATH = (@($candidateRoot) + $remainingPath) -join ';'
         Write-Host "Using .NET SDK from $candidateRoot"
         return $candidate
     }
