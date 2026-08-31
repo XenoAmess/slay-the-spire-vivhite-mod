@@ -353,6 +353,7 @@ class Agent:
         self._seen_pause_generation = (
             initial_control.pause_generation if initial_control.enabled
             else max(0, initial_control.pause_generation - 1))
+        self._recover_persisted_terminal_rotation()
 
     def _activate_profile(self, profile: CharacterProfile) -> None:
         """Expose one character's paired Knowledge/Policy as the active runtime."""
@@ -375,6 +376,117 @@ class Agent:
         self.active_profile = profile
         self.know = knowledge
         self.policy = policy
+
+    def _recover_persisted_terminal_rotation(self) -> bool:
+        """Finish a terminal rotation publication interrupted by process death.
+
+        ``_finalize`` writes the final run log and character profile before it
+        calls ``record_terminal``.  A crash in that narrow window loses only the
+        process-local retry object, while the durable rotation ledger still owns
+        an active run.  Recover exclusively from that exact active identity and
+        require both final-log shape and the matching profile run count.  Any
+        missing, malformed, in-progress, or human-assisted evidence leaves the
+        active slot untouched (fail closed).
+        """
+        rotation = getattr(self, "rotation", None)
+        store = getattr(self, "profile_store", None)
+        if rotation is None or store is None:
+            return False
+        try:
+            snapshot = rotation.snapshot()
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 跨进程终局恢复无法读取轮换状态，保持阻塞：{exc}")
+            return False
+
+        run_id = str(snapshot.active_run_id or "").strip()
+        character_id = str(snapshot.active_character_id or "").strip()
+        if not run_id or not character_id or snapshot.active_character is None:
+            return False
+        try:
+            profile = store.for_character(character_id)
+        except KeyError as exc:
+            log(f"[agent] 跨进程终局恢复找不到角色 profile，保持阻塞：{exc}")
+            return False
+        if canonical_character_id(profile.character_id) != snapshot.active_character:
+            log(f"[agent] 跨进程终局恢复角色不一致，保持阻塞：{run_id}")
+            return False
+
+        knowledge = getattr(self, "_profile_knowledge", {}).get(
+            profile.profile_id)
+        if knowledge is None:
+            log(f"[agent] 跨进程终局恢复缺少角色知识库，保持阻塞：{run_id}")
+            return False
+        try:
+            terminal = knowledge.load_run_log(run_id)
+        except (OSError, ValueError) as exc:
+            log(f"[agent] 跨进程终局恢复无法读取终局日志，保持阻塞：{exc}")
+            return False
+        if not isinstance(terminal, dict):
+            return False
+
+        required = (
+            "run_id", "run_number", "profile_id", "character_id",
+            "profile_run_number", "ascension", "started_at", "victory",
+            "floor", "decisions", "combat_notes", "attribution_tags",
+        )
+        if any(key not in terminal for key in required):
+            log(f"[agent] 跨进程终局恢复证据不完整，保持阻塞：{run_id}")
+            return False
+        if (str(terminal.get("run_id") or "") != run_id
+                or str(terminal.get("profile_id") or "") != profile.profile_id
+                or canonical_character_id(terminal.get("character_id"))
+                != snapshot.active_character
+                or bool(terminal.get("in_progress"))
+                or bool(terminal.get("human_assisted"))
+                or bool(terminal.get("excluded_from_learning"))
+                or not isinstance(terminal.get("victory"), bool)
+                or not isinstance(terminal.get("started_at"), str)
+                or not terminal["started_at"].strip()
+                or not isinstance(terminal.get("decisions"), list)
+                or not isinstance(terminal.get("combat_notes"), list)
+                or not isinstance(terminal.get("attribution_tags"), list)):
+            log(f"[agent] 跨进程终局恢复拒绝非完整自动对局：{run_id}")
+            return False
+
+        profile_run_number = terminal.get("profile_run_number")
+        run_number = terminal.get("run_number")
+        persisted_runs = (getattr(knowledge, "stats", {}).get("global", {})
+                          .get("runs"))
+        def valid_integer(value) -> bool:
+            return (isinstance(value, int)
+                    and not isinstance(value, bool) and value >= 0)
+
+        if (not valid_integer(run_number)
+                or run_number <= 0
+                or not valid_integer(profile_run_number)
+                or profile_run_number <= 0
+                or run_number != profile_run_number
+                or not valid_integer(terminal.get("ascension"))
+                or not valid_integer(terminal.get("floor"))
+                or not valid_integer(persisted_runs)
+                or persisted_runs != profile_run_number):
+            log(f"[agent] 跨进程终局恢复尚无角色统计落盘证明，保持阻塞：{run_id}")
+            return False
+
+        try:
+            result = rotation.record_terminal(
+                run_id,
+                terminal_persisted=True,
+                character_id=terminal["character_id"],
+            )
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 跨进程终局恢复写入失败，保持阻塞：{exc}")
+            return False
+
+        try:
+            knowledge.finish_run_learning(run_id)
+        except (OSError, ValueError) as exc:
+            # The rotation write above is already atomic and durable.  Learning
+            # journal cleanup is independent and a later run can supersede a
+            # non-excluded stale journal without replaying this terminal.
+            log(f"[agent] 跨进程终局已恢复，学习事务清理稍后自愈：{exc}")
+        log(f"[agent] 跨进程终局恢复完成：{run_id}，下一角色 {result.next_character}")
+        return True
 
     def _bind_profile_for_state(self, state: dict) -> CharacterProfile | None:
         """Bind an active run from the API's actual character identity.

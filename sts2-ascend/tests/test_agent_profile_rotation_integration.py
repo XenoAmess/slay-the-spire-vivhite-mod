@@ -89,7 +89,160 @@ def _finalizing_agent(rotation, know: _FinalKnowledge) -> agent_module.Agent:
     return instance
 
 
+def _persist_crash_window(
+        knowledge_root: Path, *, run_id: str = "restart-terminal-v",
+        persist_log: bool = True, persist_stats: bool = True,
+        persisted_runs: int = 1,
+        log_overrides: dict | None = None) -> CharacterRotation:
+    """Publish selected pre-rotation terminal artifacts, then simulate death."""
+    cfg = {"api_ports": [], "seed": 17}
+    with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge_root):
+        first_process = agent_module.Agent(cfg)
+    first_process.rotation.observe_active_run(run_id, VIVHITE_CHARACTER_ID)
+    knowledge = first_process._profile_knowledge["vivhite"]
+    knowledge.stats["global"]["runs"] = persisted_runs
+    payload = {
+        "run_id": run_id,
+        "run_number": 1,
+        "profile_id": "vivhite",
+        "character_id": VIVHITE_CHARACTER_ID,
+        "profile_run_number": 1,
+        "ascension": 3,
+        "started_at": "2026-08-31 10:00:00",
+        "victory": False,
+        "floor": 12,
+        "decisions": [{"screen": "GAME_OVER", "floor": 12}],
+        "combat_notes": ["F12 Normal战"],
+        "attribution_tags": [["card_pick", "CARD_A"]],
+    }
+    payload.update(log_overrides or {})
+    if persist_log:
+        knowledge.save_run_log(run_id, payload)
+    if persist_stats:
+        knowledge.save()
+    return first_process.rotation
+
+
 class AgentProfileRotationIntegrationTests(unittest.TestCase):
+    def test_restart_recovers_fully_persisted_terminal_before_rotation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-terminal-recovery-") as root:
+            knowledge_root = Path(root)
+            old_rotation = _persist_crash_window(knowledge_root)
+            self.assertEqual(
+                old_rotation.snapshot().active_run_id, "restart-terminal-v")
+
+            cfg = {"api_ports": [], "seed": 18}
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                restarted = agent_module.Agent(cfg)
+
+            recovered = restarted.rotation.snapshot()
+            self.assertIsNone(recovered.active_run_id)
+            self.assertEqual(recovered.finalized_run_ids, ("restart-terminal-v",))
+            self.assertEqual(recovered.next_character, IRONCLAD)
+
+            # A second process sees the durable run-id ledger and cannot advance
+            # this terminal a second time.
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                replay = agent_module.Agent(cfg)
+            replayed = replay.rotation.snapshot()
+            self.assertEqual(replayed.finalized_run_ids, ("restart-terminal-v",))
+            self.assertEqual(replayed.next_character, IRONCLAD)
+
+    def test_restart_requires_both_final_log_and_persisted_profile_stats(self) -> None:
+        cases = (
+            ("log-only", True, False),
+            ("stats-only", False, True),
+        )
+        for label, persist_log, persist_stats in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory(
+                    prefix=f"sts2-terminal-{label}-") as root:
+                knowledge_root = Path(root)
+                _persist_crash_window(
+                    knowledge_root, run_id=label,
+                    persist_log=persist_log, persist_stats=persist_stats)
+                cfg = {"api_ports": [], "seed": 19}
+                with mock.patch.object(
+                        agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                    restarted = agent_module.Agent(cfg)
+
+                blocked = restarted.rotation.snapshot()
+                self.assertEqual(blocked.active_run_id, label)
+                self.assertNotIn(label, blocked.finalized_run_ids)
+                self.assertEqual(blocked.next_character, VIVHITE)
+
+    def test_restart_never_recovers_in_progress_or_assisted_logs(self) -> None:
+        cases = (
+            ("in-progress", {"in_progress": True}),
+            ("human-assisted", {"human_assisted": True}),
+            ("learning-excluded", {"excluded_from_learning": True}),
+            ("wrong-run-id", {"run_id": "different-run"}),
+            ("wrong-profile", {"profile_id": "ironclad"}),
+            ("unpersisted-run-number", {
+                "run_number": 2, "profile_run_number": 2}),
+            ("malformed-victory", {"victory": 1}),
+        )
+        for label, overrides in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory(
+                    prefix=f"sts2-terminal-{label}-") as root:
+                knowledge_root = Path(root)
+                _persist_crash_window(
+                    knowledge_root, run_id=label, log_overrides=overrides)
+                cfg = {"api_ports": [], "seed": 20}
+                with mock.patch.object(
+                        agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                    restarted = agent_module.Agent(cfg)
+
+                blocked = restarted.rotation.snapshot()
+                self.assertEqual(blocked.active_run_id, label)
+                self.assertNotIn(label, blocked.finalized_run_ids)
+
+    def test_restart_requires_exact_persisted_run_sequence_and_strict_ints(
+            self) -> None:
+        cases = (
+            ("stats-ahead", 2, {}),
+            ("bool-run-number", 1, {"run_number": True}),
+            ("bool-profile-run-number", 1, {"profile_run_number": True}),
+        )
+        for label, persisted_runs, overrides in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory(
+                    prefix=f"sts2-terminal-{label}-") as root:
+                knowledge_root = Path(root)
+                _persist_crash_window(
+                    knowledge_root, run_id=label,
+                    persisted_runs=persisted_runs,
+                    log_overrides=overrides)
+                cfg = {"api_ports": [], "seed": 22}
+                with mock.patch.object(
+                        agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                    restarted = agent_module.Agent(cfg)
+
+                blocked = restarted.rotation.snapshot()
+                self.assertEqual(blocked.active_run_id, label)
+                self.assertNotIn(label, blocked.finalized_run_ids)
+                self.assertEqual(blocked.next_character, VIVHITE)
+
+    def test_restart_rotation_write_failure_stays_blocked_and_retries(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-terminal-write-fail-") as root:
+            knowledge_root = Path(root)
+            _persist_crash_window(knowledge_root, run_id="write-fail")
+            cfg = {"api_ports": [], "seed": 21}
+            with mock.patch.object(
+                    CharacterRotation, "record_terminal",
+                    side_effect=OSError("injected rotation write failure")), \
+                    mock.patch.object(
+                        agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                failed = agent_module.Agent(cfg)
+
+            blocked = failed.rotation.snapshot()
+            self.assertEqual(blocked.active_run_id, "write-fail")
+            self.assertNotIn("write-fail", blocked.finalized_run_ids)
+
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", knowledge_root):
+                retried = agent_module.Agent(cfg)
+            recovered = retried.rotation.snapshot()
+            self.assertIsNone(recovered.active_run_id)
+            self.assertEqual(recovered.finalized_run_ids, ("write-fail",))
+
     def test_policy_first_selects_vivhite_and_never_falls_back(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-agent-rotation-") as root:
             rotation = CharacterRotation.from_knowledge_root(root)
