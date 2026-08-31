@@ -1,0 +1,91 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CRIMSON_CONSERVATION_LAW",
+  "card_type": "CrimsonConservationLaw",
+  "card_name_zh": "血色守恒律",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_without_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Power",
+    "rarity": "Rare",
+    "cough": 10,
+    "strength_per_actual_drain_healing": 5,
+    "upgraded_strength_per_actual_drain_healing": 4,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "4998F57307051263B7DBC1A33DBE76F62D45C18851F0390FD83503C04BBC905F",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05527-aef2-71b2-8455-9200305a013a/exec-075397c2-68d3-44eb-8afb-08d51bea481d.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-01/original.png",
+  "original_sha256": "007CC0708A1642DC9E4C946E21CD2E839C2FCC73E0BA0552856B044FED830D97",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "candidate_runtime_sha256": "CAE031C87244A0F93CC950F05AC94C059F9A91A1AC5637832407EDC07EA16CB2",
+  "candidate_runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-stdout.log",
+    "inspection/prepare-stderr.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_enemy_second_character_hit_or_shield": true,
+    "stable_vertical_persistent_power_read": true,
+    "lower_five_input_crystals_present_in_original": true,
+    "upper_five_to_one_repeat_present": true,
+    "single_golden_strength_core_present": true,
+    "all_five_lower_crystals_complete_after_centered_crop": false,
+    "all_five_lower_crystals_equal_and_countable_at_100x76": false
+  },
+  "status": "rejected_static_crop_failure",
+  "acceptance_summary": "The sustained five-to-one conservation system, identity, opaque scene, and hard bans all succeed in the source. The deterministic centered crop cuts several lower input crystals at the left edge, so the required five complete equal-sized crystals are not reliably countable at 100x76.",
+  "result": "rejected_continue_with_attempt_02"
+}

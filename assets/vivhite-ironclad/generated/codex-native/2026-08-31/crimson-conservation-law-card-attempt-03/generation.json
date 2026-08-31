@@ -1,0 +1,105 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CRIMSON_CONSERVATION_LAW",
+  "card_type": "CrimsonConservationLaw",
+  "card_name_zh": "血色守恒律",
+  "attempt": 3,
+  "attempt_limit": 8,
+  "generation_mode": "edit_with_single_reference",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Power",
+    "rarity": "Rare",
+    "cough": 10,
+    "strength_per_actual_drain_healing": 5,
+    "upgraded_strength_per_actual_drain_healing": 4,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-02/original.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque edit used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-02/original.png",
+      "sha256": "EF19D6D8BE373B7F0672D21D9E2AAAA882A434D2EEA550D193187C80852DD733",
+      "role": "edit target defining the accepted inward-safe framing and all scene elements; only the lower four-node topology was replaced with a frozen five-vertex pentagon"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "FE3E46FF531DC6353A62728248A6CE4C28C38436CAE650581577AD39046238BB",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05527-aef2-71b2-8455-9200305a013a/exec-1345f8ad-6dc0-4814-a446-0a25b5323f3c.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-03/original.png",
+  "original_sha256": "C9CE046D5DBB18D0B2E7EA1125A0C9B130562263ACCC6E39FA1B9B66A455E2DB",
+  "original_png": {
+    "width": 1448,
+    "height": 1086,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 11,
+    "y": 1,
+    "width": 1425,
+    "height": 1083,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/CrimsonConservationLaw.png",
+  "runtime_sha256": "6164FC7DB44F3D97F9E6C91E66EA25C4F05C18C09C5F3FFC859E57B3A33A8393",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/prepared-runtime-candidate.png",
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-stdout.log",
+    "inspection/prepare-stderr.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_enemy_second_character_hit_or_shield": true,
+    "stable_vertical_persistent_power_read": true,
+    "lower_loop_complete_after_centered_crop": true,
+    "lower_input_crystal_count_exactly_five": true,
+    "lower_input_crystals_equal_complete_and_separated": true,
+    "upper_five_to_one_repeat_present": true,
+    "single_golden_strength_core_present": true,
+    "five_to_one_conversion_readable_at_100x76_color": true,
+    "five_to_one_conversion_readable_at_100x76_grayscale": true,
+    "main_agent_visual_review_accepted": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Five complete equal cyan crystals occupy the five vertices of a closed lower pentagon, feed the central conservation hub, and map to one fixed golden strength star. A smaller five-to-one module repeats above. The sustained Power topology remains clear in color and grayscale at 100x76, and all forbidden mouth, blood, weapon, attack, and shield elements are absent.",
+  "result": "accepted_stop_after_attempt_03"
+}
