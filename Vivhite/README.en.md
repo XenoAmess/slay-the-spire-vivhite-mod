@@ -191,6 +191,12 @@ The independent Vivhite character and the Ironclad replacement skin use the same
 
 All 61 cards currently use RitsuLib placeholder card art. This implementation phase does not generate images, and it does not overwrite or regenerate existing Vivhite creative assets.
 
+### Brain manual-takeover isolation
+
+Once a run crosses a `Ctrl+Alt+F9` manual-takeover boundary, it remains permanently marked `human_assisted=true` and `excluded_from_learning=true`. Brain restores that run's profile-local online Knowledge `stats` to the durable pre-run baseline. `Ctrl+Alt+F10` resumes action sending only: learning writes remain disabled for the same run, including after a Brain restart. Normal learning resumes only on the next run that was not touched by manual takeover.
+
+Existing and subsequent incremental decision/combat logs for that run remain available as `in_progress=true` audit evidence, but the run does not follow normal `finalize_run`: it does not increase runs or wins and does not contribute to average/highest/recent-20 floors, terminal card/relic/room attribution, that run's `policy.json` / `progression.json` / `lessons.md` evolution, LLM review, or Vivhite/Ironclad rotation quota.
+
 ## Manifest Format
 
 `Vivhite.json` is the mod manifest. The key fields for the `0.2.0` implementation are:

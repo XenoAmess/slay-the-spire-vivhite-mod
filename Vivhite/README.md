@@ -191,6 +191,12 @@ Vivhite/
 
 全部 61 张卡牌目前统一使用 RitsuLib 占位卡图，不进行图片生成。现有白绮创意素材不会因卡牌实现而被覆盖或重新生成。
 
+### Brain 人工接管局隔离
+
+只要某局跨过一次 `Ctrl+Alt+F9` 人工接管边界，该局便永久标记为 `human_assisted=true`、`excluded_from_learning=true`。Brain 将该局在所属 Profile 中产生的在线 Knowledge `stats` 增量回滚到局前持久基线；`Ctrl+Alt+F10` 只恢复动作发送，同一局后续学习写入仍保持禁用，Brain 重启也不得解除。下一局未被人工边界触及时才恢复正常学习。
+
+该局已有及随后产生的增量决策/战斗日志继续以 `in_progress=true` 保留为审计证据，但不走正常 `finalize_run`：不增加总局数或胜场，不进入平均/最高/近 20、终局卡牌/遗物/房间归因、该局的 `policy.json` / `progression.json` / `lessons.md` 演化、LLM 复盘或白绮/战士轮换配额。
+
 ## Manifest 格式
 
 `Vivhite.json` 是 Mod 清单。`0.2.0` 实现对应的关键字段为：
