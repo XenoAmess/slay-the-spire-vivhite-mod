@@ -117,7 +117,7 @@ func _audit(repo_root: String) -> Dictionary:
 	var result := {
 		"repo_root": repo_root,
 		"expected": CARD_NAMES.size() + POWER_NAMES.size() + RELIC_NAMES.size()
-			+ ENERGY_NAMES.size() + 1,
+			+ ENERGY_NAMES.size() + 1 + 3,
 		"accepted": 0,
 		"errors": [],
 		"assets": []
@@ -156,6 +156,26 @@ func _audit(repo_root: String) -> Dictionary:
 		vivhite_root.path_join("images/characters/energy_text.png"),
 		Vector2i(24, 24),
 		"energy_text",
+		result
+	)
+	_audit_transparent(
+		vivhite_root.path_join("skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png"),
+		Vector2i(512, 512),
+		"vfx",
+		result
+	)
+	_audit_grayscale_opaque(
+		vivhite_root.path_join(
+			"skins/ironclad/transitions/vivhite_character_select_transition.png"
+		),
+		Vector2i(2560, 1200),
+		"vfx",
+		result
+	)
+	_audit_transparent(
+		vivhite_root.path_join("images/vfx/vivhite_card_trail_mathematical_star_0194.png"),
+		Vector2i(256, 256),
+		"vfx",
 		result
 	)
 	return result
@@ -209,6 +229,26 @@ func _audit_transparent(
 			)
 		):
 			errors.append("nonzero Alpha touches an image edge: %s" % bbox)
+	_finish_asset(path, kind, image, errors, result)
+
+
+func _audit_grayscale_opaque(
+	path: String,
+	expected_size: Vector2i,
+	kind: String,
+	result: Dictionary
+) -> void:
+	var decoded := _decode(path, expected_size, kind, result)
+	if decoded.is_empty():
+		return
+	var image: Image = decoded.image
+	var errors: Array = decoded.errors
+	if image.get_format() != Image.FORMAT_RGB8:
+		errors.append("expected RGB8, got format %d" % int(image.get_format()))
+	if not _is_fully_opaque(image):
+		errors.append("contains Alpha below 255")
+	if not _is_strict_grayscale(image):
+		errors.append("contains non-grayscale RGB pixels")
 	_finish_asset(path, kind, image, errors, result)
 
 
@@ -291,6 +331,17 @@ func _is_fully_opaque(image: Image) -> bool:
 	var bytes: PackedByteArray = rgba.get_data()
 	for index in range(3, bytes.size(), 4):
 		if bytes[index] != 255:
+			return false
+	return true
+
+
+func _is_strict_grayscale(image: Image) -> bool:
+	var rgb := image.duplicate()
+	if rgb.get_format() != Image.FORMAT_RGB8:
+		rgb.convert(Image.FORMAT_RGB8)
+	var bytes: PackedByteArray = rgb.get_data()
+	for index in range(0, bytes.size(), 3):
+		if bytes[index] != bytes[index + 1] or bytes[index] != bytes[index + 2]:
 			return false
 	return true
 
