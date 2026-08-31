@@ -660,7 +660,13 @@ class Agent:
             # A run first seen under manual control is not an autonomous quota
             # candidate.  Binding its profile is still required so the Brain can
             # safely resume it, but it must not occupy/advance the scheduler.
-            if str(run_id) not in getattr(self, "_manual_run_ids", set()):
+            native_recovery_expected = str(getattr(
+                self, "_native_continue_recovery_expected", "") or "")
+            native_recovery_pending = bool(
+                native_recovery_expected
+                and str(run_id) != native_recovery_expected)
+            if (str(run_id) not in getattr(self, "_manual_run_ids", set())
+                    and not native_recovery_pending):
                 try:
                     rotation.observe_active_run(str(run_id), str(character_id))
                     self._rotation_runtime_error = None

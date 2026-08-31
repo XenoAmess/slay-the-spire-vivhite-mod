@@ -203,8 +203,16 @@ class DisappearedRunNativeSaveBarrierTests(unittest.TestCase):
                 "available_actions": ["continue_run", "abandon_run"],
             }
             restarted._track(menu)
-            restarted._track(_live_state(
-                "native-vivhite", screen="COMBAT", floor=0))
+            native_state = _live_state(
+                "native-vivhite", screen="COMBAT", floor=0)
+            # The production loop binds the actual profile before transition
+            # tracking.  That early bind must not emit a false rotation error.
+            restarted._bind_profile_for_state(native_state)
+            self.assertIsNone(getattr(
+                restarted, "_rotation_runtime_error", None))
+            self.assertEqual(
+                restarted.rotation.snapshot().active_run_id, "old-vivhite")
+            restarted._track(native_state)
 
             after = restarted.rotation.snapshot()
             self.assertEqual(after.active_run_id, "native-vivhite")
