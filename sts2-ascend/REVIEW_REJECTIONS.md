@@ -293,3 +293,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-08-31 16:02:36 | 第 988~1013 局 | `8a06cee9` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-160236-1788163356144258200-8a06cee9` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
 <!-- rejection:20260831-161753-1788164273155263100-eca1c506 -->
 | 2026-08-31 16:17:53 | 第 1 局 | `eca1c506` | 维护中断/取消（lifecycle_stop） | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 维护中断/取消（非 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-161753-1788164273155263100-eca1c506` | 维护停机取消 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 复盘并全量保全；非模型提交失败 |
+<!-- rejection:20260831-163937-1788165577282377100-46475d21 -->
+| 2026-08-31 16:39:37 | 第 1198~1199 局 | `46475d21` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-163937-1788165577282377100-46475d21` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
