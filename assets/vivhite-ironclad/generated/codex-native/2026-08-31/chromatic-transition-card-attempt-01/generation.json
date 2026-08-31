@@ -1,0 +1,127 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CHROMATIC_TRANSITION",
+  "card_type": "ChromaticTransition",
+  "card_name_zh": "色阶过渡",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Skill",
+    "rarity": "Uncommon",
+    "cough": 4,
+    "global_drain_percent": 8,
+    "upgraded_global_drain_percent": 12,
+    "draw": 2,
+    "exhaust": true,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "Vivhite/Vivhite/images/cards/NegativeSpace.png",
+      "Vivhite/Vivhite/images/cards/AstralSearch.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "Vivhite identity continuity and refined painted anime rendering language only; frontal presentation, black field, halo, and framing excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "white/deep-indigo/violet/gold costume family and blue butterfly ornament only; text, layout, and background excluded"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, short silver hair, violet eyes, round gold glasses, naturally closed mouth, and restrained temperament only"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/NegativeSpace.png",
+      "role": "established opaque skill-card finish, celestial architectural depth, empty-hand manipulation, and non-combat transformation readability only; exact pose, chamber, and geometry excluded"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/AstralSearch.png",
+      "role": "abstract-card retrieval semantics only; exact card count, markings, paths, machinery, and observatory excluded"
+    }
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "Vivhite/Vivhite/images/cards/NegativeSpace.png": "CBE0F9D6FE7D65345DAD426370C7ABDB56C5C45D429E50E11644229C288AE635",
+    "Vivhite/Vivhite/images/cards/AstralSearch.png": "6BB8C396906A20935A885EB0C5A33DE9325B63E78FFFEF7195FF0C74680D82B8"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "EA8F26A78FE974872F2830D450B972A925355829F940BE839A85CBE2AEAA36C9",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05513-0d3b-7283-8390-d0e0d4fd4c8d/exec-51c51599-b9e8-4073-b25b-98cc39561bd9.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/chromatic-transition-card-attempt-01/original.png",
+  "original_sha256": "3FFB4CE1E932257AD44F6AE013E089AF6305C3F11F41448CE3EA4347DB119B83",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "runtime_path": "Vivhite/Vivhite/images/cards/ChromaticTransition.png",
+  "runtime_sha256": "7878A926457928B98F56C8BACB2285F72D5F55A498B6BFAEA12078E82FBF85E8",
+  "runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect-godot.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_enemy_second_character_or_split_panel": true,
+    "discrete_indigo_violet_blue_silver_transition_gates": true,
+    "exactly_two_blank_abstract_cards_retrieved": true,
+    "cyan_blue_closed_floor_return_ring": true,
+    "controlled_skill_conversion_read": true,
+    "no_hit_explosion_projectile_or_outgoing_attack": true,
+    "no_closed_defensive_shell": true,
+    "100x76_color_and_grayscale_skill_readable": true
+  },
+  "status": "static_accepted_pending_game_validation",
+  "acceptance_summary": "Vivhite calmly transitions through discrete indigo, violet, blue, and silver-white spectral gates while exactly two blank cards drift into her open hand. A low cyan closed circulation ring is inscribed in the floor. The stepped-state, retrieval, and return-loop topology remains readable in grayscale at 100x76 as controlled skill conversion rather than attack or defense; all mouth and red/crimson hard bans pass.",
+  "result": "accepted_stop_after_attempt_01"
+}
