@@ -38,6 +38,25 @@ _POLICY_TX_LOCKS: dict[str, threading.RLock] = {}
 _READ_RETRIES = 8
 _READ_RETRY_BASE_SECONDS = 0.01
 
+
+def relic_stats_key(value: object) -> str | None:
+    """Return a safe persistent relic identity, or ``None`` when text is corrupt.
+
+    The HTTP client decodes API responses as strict UTF-8, but U+FFFD can still
+    already be present in a valid JSON string when an upstream localized label
+    was decoded with replacement.  Relic statistics use their identity as a JSON
+    object key, so accepting that sentinel turns one damaged display label into a
+    permanent, unmergeable relic record.  Keep existing historical rows intact,
+    but never create or increment such a key from a new run.
+    """
+    if not isinstance(value, str):
+        return None
+    key = value.strip()
+    if not key or "\ufffd" in key:
+        return None
+    return key
+
+
 DEFAULT_POLICY = {
     "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic
     "boss_race_feasible_hp_buffer": 0.30,  # 前夜竞速预演可行侧生存余量；0 回落旧口径
@@ -2090,7 +2109,10 @@ class Knowledge:
             e.setdefault("offered", 0)
             e["picked"] += 1
             e["outcome_sum"] += outcome
-        for rid in picked_relics:
+        for raw_rid in picked_relics:
+            rid = relic_stats_key(raw_rid)
+            if rid is None:
+                continue
             e = self.stats["relics"].setdefault(rid, {"picked": 0, "outcome_sum": 0.0, "bias": 0.0})
             e["picked"] += 1
             e["outcome_sum"] += outcome

@@ -26,7 +26,7 @@ from character_rotation import (CharacterRotation, CharacterRotationError,
                                 canonical_character_id)
 from client import ApiError, ConnectionDown, Sts2Client
 from decision_trace import ensure_decision_trace
-from knowledge import Knowledge
+from knowledge import Knowledge, relic_stats_key
 from lifecycle import (mark_pid_stage, pid_file, read_git_head, request_stop,
                        stop_requested, wait_for_stop)
 from live_dashboard import LiveDashboardPublisher
@@ -151,7 +151,60 @@ def _durable_attribution_tags(raw_tags) -> list[tuple]:
         if (not isinstance(raw, (tuple, list)) or len(raw) < 2
                 or raw[0] not in _DURABLE_ATTRIBUTION_KINDS):
             continue
-        result.append(tuple(raw))
+        tag = tuple(raw)
+        if tag[0] == "relic_pick":
+            key = relic_stats_key(tag[1])
+            if key is None:
+                continue
+            tag = (tag[0], key, *tag[2:])
+        result.append(tag)
+    return result
+
+
+def _run_relic_id_counts(state: dict | None) -> Counter:
+    """Count stable relic IDs in one API state, excluding damaged identifiers."""
+    run = state.get("run") if isinstance(state, dict) else None
+    counts: Counter = Counter()
+    for relic in ((run or {}).get("relics") or []):
+        if not isinstance(relic, dict):
+            continue
+        relic_id = relic_stats_key(relic.get("relic_id"))
+        if relic_id is not None:
+            counts[relic_id] += 1
+    return counts
+
+
+def _resolved_relic_pick_tags(raw_tags, before: dict | None,
+                              after: dict | None) -> list[tuple]:
+    """Canonicalize relic credits with the post-action inventory when possible.
+
+    Simple reward payloads currently expose only a localized ``description``.
+    The action response does expose the resulting run inventory, including stable
+    ``relic_id`` values.  A single inventory addition therefore replaces the one
+    localized relic tag.  If no exact addition is observable, clean legacy labels
+    remain compatible while U+FFFD-bearing labels are dropped at this boundary.
+    """
+    tags = [tuple(raw) for raw in (raw_tags or [])
+            if isinstance(raw, (tuple, list)) and raw]
+    relic_positions = [index for index, tag in enumerate(tags)
+                       if tag[0] == "relic_pick" and len(tag) >= 2]
+    additions = list((_run_relic_id_counts(after)
+                      - _run_relic_id_counts(before)).elements())
+    canonical_addition = (additions[0]
+                          if len(relic_positions) == 1 and len(additions) == 1
+                          else None)
+
+    result: list[tuple] = []
+    for tag in tags:
+        if tag[0] != "relic_pick":
+            result.append(tag)
+            continue
+        if len(tag) < 2:
+            continue
+        key = canonical_addition or relic_stats_key(tag[1])
+        if key is None:
+            continue
+        result.append((tag[0], key, *tag[2:]))
     return result
 
 
@@ -237,18 +290,37 @@ def _decision_log_entry(state: dict, decision, *, timestamp: str | None = None) 
                 "playable": card.get("playable"),
                 "requires_target": card.get("requires_target"),
                 "valid_target_indices": list(card.get("valid_target_indices") or [])[:8],
-                "why_not_playable": card.get("why_not_playable")
-                    or card.get("disabled_reason"),
+                "unplayable_reason": card.get("unplayable_reason"),
+                "unplayable_reason_raw": card.get("unplayable_reason_raw"),
+                "unplayable_preventer_id": card.get("unplayable_preventer_id"),
+                "unplayable_preventer_type": card.get("unplayable_preventer_type"),
+                "why_not_playable": card.get("unplayable_reason")
+                    or card.get("why_not_playable") or card.get("disabled_reason"),
             }
             hand.append({key: value for key, value in card_evidence.items()
                          if value is not None and value != []})
-        entry["turn_end_state"] = {
+        turn_end_state = {
             "block": player.get("block"),
             "incoming_damage": incoming,
             "available_actions": [str(value)
                                   for value in (state.get("available_actions") or [])[:32]],
             "hand": hand,
         }
+        readiness = combat.get("action_readiness")
+        if isinstance(readiness, dict):
+            readiness_keys = (
+                "can_use_combat_actions", "reason", "actions_settled",
+                "running_action_type", "ready_action_type", "modal_open",
+                "modal_type", "player_actions_disabled", "combat_in_progress",
+                "combat_over_or_ending", "combat_room_mode", "hand_in_card_play",
+                "hand_in_card_selection", "hand_mode", "local_turn_ready",
+                "snapshot_stable", "player_action_phase",
+            )
+            turn_end_state["action_readiness"] = {
+                key: readiness.get(key) for key in readiness_keys
+                if readiness.get(key) is not None
+            }
+        entry["turn_end_state"] = turn_end_state
     return entry
 
 
@@ -1653,7 +1725,8 @@ class Agent:
             # Persist it immediately instead of waiting for the 15-decision cadence.
             self._save_run_progress(run, force=True)
 
-    def _commit_successful_action(self, state: dict, decision) -> None:
+    def _commit_successful_action(self, state: dict, decision,
+                                  observed_state: dict | None = None) -> None:
         """Commit one accepted HTTP action and its credit/context effects.
 
         ``_track`` is deliberately observation-only.  The API may reject a request
@@ -1661,13 +1734,17 @@ class Agent:
         none of those attempts may enter the learning ledger.  Once the response is
         accepted, use the *pre-action* state to establish event/rest snapshots, append
         all credit tags, count successful card plays, and persist the decision trail.
+        ``observed_state`` is the server's post-action state when available; it is
+        used only to replace localized relic reward labels with stable relic IDs.
         """
         run = state.get("run") or {}
         screen = state.get("screen", "UNKNOWN")
         hp = run.get("current_hp", self.ctx.last_hp)
         gold = run.get("gold", self.ctx.last_gold)
+        transaction_tags = _resolved_relic_pick_tags(
+            decision.tags, state, observed_state)
 
-        for tag in decision.tags:
+        for tag in transaction_tags:
             if tag[0] == "event_choice":
                 # 事件内换项抉择先行结算（第 214 批复盘）：同一事件未离场就改选
                 # 其他选项（滑脚木桥「再撑一会」单局八连后才换跨越），旧逻辑直接
@@ -1708,7 +1785,7 @@ class Agent:
             if tag and tag[0] in _DURABLE_ATTRIBUTION_KINDS:
                 self.ctx.attribution_tags.append(tuple(tag))
 
-        for tag in decision.tags:
+        for tag in transaction_tags:
             if tag[0] == "play_card" and tag[1]:
                 self.know.commit_card_play(tag[1])
 
@@ -2421,7 +2498,7 @@ class Agent:
             return "retry"
         self._ambiguous_action = None
         try:
-            self._commit_successful_action(before, decision)
+            self._commit_successful_action(before, decision, observed_state=state)
             log(f"[agent] 动作 {decision.action} 丢失回执；已由下一状态确认成功并补交事务账")
             self._dashboard_outcome("applied", "下一状态已确认动作生效", decision)
             return "applied"
@@ -3210,7 +3287,8 @@ class Agent:
             hand.append(tuple((key, freeze(card.get(key))) for key in (
                 "index", "card_id", "instance_id", "uuid", "upgraded", "playable",
                 "energy_cost", "costs_x", "requires_target", "valid_target_indices",
-                "dynamic_values") if key in card))
+                "dynamic_values", "unplayable_reason", "unplayable_reason_raw",
+                "unplayable_preventer_id", "unplayable_preventer_type") if key in card))
 
         enemies = []
         for enemy in combat.get("enemies") or []:
@@ -3232,7 +3310,8 @@ class Agent:
                   ("floor", "current_hp", "max_hp", "gold", "ascension")),
             tuple(player.get(key) for key in
                   ("current_hp", "max_hp", "block", "energy")),
-            tuple(hand), tuple(enemies), screen_payload,
+            tuple(hand), tuple(enemies),
+            freeze(combat.get("action_readiness") or {}), screen_payload,
         )
 
     def _watchdog(self, state: dict):
@@ -3611,7 +3690,12 @@ class Agent:
                         # HTTP 回执确认后才提交 credit/ctx 和记账。把记账异常与动作
                         # 失败分开：服务端已经执行成功时，不得反过来拉黑该动作。
                         try:
-                            self._commit_successful_action(state, decision)
+                            response_state = resp.get("state") \
+                                if isinstance(resp, dict) else None
+                            self._commit_successful_action(
+                                state, decision,
+                                observed_state=response_state
+                                if isinstance(response_state, dict) else None)
                             self._api_race_retry = None
                             self._dashboard_outcome("applied", f"服务端回执：{status}", decision)
                         except Exception as exc:
