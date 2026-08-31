@@ -1,0 +1,603 @@
+{
+  "ai_generation": "none",
+  "asset": "Vivhite energy_big.png",
+  "consumer_evidence": {
+    "all_pool_big_energy_paths": "Vivhite/Vivhite/images/characters/energy_big.png",
+    "energy_counter_scene": "Vivhite/Vivhite/scenes/characters/Vivhite_energy_counter.tscn",
+    "pool_paths": [
+      "Vivhite/VivhiteCode/Characters/VivhiteCardPool.cs:19",
+      "Vivhite/VivhiteCode/Characters/VivhiteRelicPool.cs:13",
+      "Vivhite/VivhiteCode/Characters/VivhitePotionPool.cs:13"
+    ],
+    "ritsulib_contract": "EnergyIconHelper.GetPath(string) is prefix-patched to return the mapped BigEnergyIconPath directly when the pool implements IModBigEnergyIconPool",
+    "runtime_audit_contract": "tools/art/audit_vivhite_runtime_art.gd requires energy_big.png to be 256x256 native RGBA8 with transparent corners and non-edge-touching Alpha",
+    "scene_control_size": [
+      128,
+      128
+    ],
+    "scene_draw_order": [
+      "Layer1",
+      "Layer2",
+      "Layer3",
+      "Layer4",
+      "Layer5"
+    ],
+    "setup_pose_rotation_degrees": {
+      "Layer2": 0,
+      "Layer3": 0
+    },
+    "source_texture_size": [
+      256,
+      256
+    ],
+    "vanilla_helper_contract": "EnergyIconHelper.GetPath builds images/atlases/ui_atlas.sprites/card/energy_<lowercase>.tres; vanilla Ironclad and Silent regions are 74x74, Defect has a 71x72 region plus margins yielding 74x74 logical size"
+  },
+  "creative_change": "none",
+  "five_layer_runtime_timeline": {
+    "copy_operation": "byte-identical archive copy; no decode or re-encode",
+    "expected_file_count": 60,
+    "files": [
+      {
+        "byte_identical": true,
+        "file": "t0p00-actual-128-rgba.png",
+        "sha256": "45b0bd2212c46e8729bbb9cd4a8e8968b518957a93fefc9324f369e3a1b2f4e5"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-black-128.png",
+        "sha256": "40656d036ba0dca3820579b7c5da5e217acabf1b1b321556aafc1ef28e531cf4"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-black-64.png",
+        "sha256": "0d26244b263b94b308b8c94dc32dd362f5b2ef0cb0dec28b0e0c4cdf4fb42735"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-black-32.png",
+        "sha256": "0aa93273463cd002597341c6bb121708eb98c227b742807dbc7be2cc6426eb61"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-white-128.png",
+        "sha256": "6d4c24b2c1da5037b964a767d8ca3cf0339ff051db2aedc1c5fc61a0b2702bd6"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-white-64.png",
+        "sha256": "7310b0ea0bef57045bd0bb4cb9dd5a6399f36043dad7a29255051a59bf360c48"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-white-32.png",
+        "sha256": "4a0eb98907820267f445d9abafe22530be86f76251797bfacd4b0e34ceade26b"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-game-indigo-128.png",
+        "sha256": "362fbdd8a9ed50bfa4ef4e99844210fb7440023e1746dbbccce8084c41c4c874"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-game-indigo-64.png",
+        "sha256": "52a406118096ff612410176c9d498bc8ee32a78a556abb0063b1d19a59acab26"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p00-game-indigo-32.png",
+        "sha256": "793fad3edc4a1eb93df0ed06309cf88f2a327ed41a92afb0cd6e34bf8d4f0a5c"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-actual-128-rgba.png",
+        "sha256": "0eee5ce02dff5f5f0ddadd4711bbd1ef82d65e691a5072dd340d1b35e7628770"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-black-128.png",
+        "sha256": "72cc8bced814a6d31bb675fdf7692c92139f97c581ed1461e6c0b5f01a342b9b"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-black-64.png",
+        "sha256": "c56b352889971b3f31dfc4fdcf297a3ab4dc82a9b62f3fa7c92dee2439fdc400"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-black-32.png",
+        "sha256": "0ecfd57f23a1a95e399cdc1b0706006497383d553164fe4571c159d11fa8d369"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-white-128.png",
+        "sha256": "220c690dd23fc696bd2699ed31d308ba4c06817aa574869c5e5794e45360659c"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-white-64.png",
+        "sha256": "0c52626e40b58141eb2664310b67ee269bca49d7c2dd0a9f5f12c99cafa843d1"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-white-32.png",
+        "sha256": "df99cb83afee88fb6e77383fdd1e3232b2aa2a90f621f0267754f59f01af36b7"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-game-indigo-128.png",
+        "sha256": "2c6ad9794d2cd0d137c83d1c22e61dbd4c951db5a6eb471cae97856aa4544270"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-game-indigo-64.png",
+        "sha256": "bf0d51e5bed3be02beddb3d23bf817ce03f246eb44d09822db32a9c8eecf9503"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p25-game-indigo-32.png",
+        "sha256": "df055e88cc4c60c4c5ab10ae6c85f8afaeeb84bd2f50dc2049a2bc92bba4133f"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-actual-128-rgba.png",
+        "sha256": "dfb972ec3908b2a981cdffd56627db04f1d4d61be74cc59aefdcfdd42bc31f87"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-black-128.png",
+        "sha256": "1b82aaf90d9b2ee3c43c687a44626ea33e867ec63238104dde434856d03d9926"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-black-64.png",
+        "sha256": "1e2aca5890cc9a1a4547031caaf49c24453d3af91637e27aafc139129eaab221"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-black-32.png",
+        "sha256": "20832902f4357c4c26cc66831ec2690a4037714dc39e6054dc9622fac95389ae"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-white-128.png",
+        "sha256": "3aa4b453bf75a39178c45ccfc83fea029c480321f5f6bf45a03b3e916a8d50c4"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-white-64.png",
+        "sha256": "24d00c47a517f9548bc8c41229340f8e2be8daf28a8d256829428e9f145d7d34"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-white-32.png",
+        "sha256": "d4098a07668b0b1ddeecca3600aeba1a31128d7d39a5afa44f25b1bc26724bd1"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-game-indigo-128.png",
+        "sha256": "e6a403dc399279ae46c9f29a8fce8c391005cdf73daef2849d1e454c3f739ee2"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-game-indigo-64.png",
+        "sha256": "e090a60ac7d78e768beabf951af6a722e861e4dc1fc0a45b9a13449d22aa5587"
+      },
+      {
+        "byte_identical": true,
+        "file": "t0p50-game-indigo-32.png",
+        "sha256": "45f5185235a7a505224a62277758098a65483823ca10a3decc21aa334ac0e58a"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-actual-128-rgba.png",
+        "sha256": "1fada8fcf74af78639a26b7114231034fa2d5d5a69c7b2f5a71b46e04e83403e"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-black-128.png",
+        "sha256": "7021e1c1ab741442469d31ff411602a504367d034ac034bae6dd5dfdecb7dd48"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-black-64.png",
+        "sha256": "b983c46f2d89968ec47160d97a9154584734de0ed6f0f9a15bc14ba45af7ca14"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-black-32.png",
+        "sha256": "7bbbf99e1507b487588ac4b234555e33c81ecfb7d357f2c0c843e4d36818f784"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-white-128.png",
+        "sha256": "ac18ad32ac1bc86540abd0098cf1911a3d63775f9e861c0af0dedeb94f8f5585"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-white-64.png",
+        "sha256": "f9f772957cd79d866fc0c7057912bd12cec365d054ee0463b49712f9031a3abe"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-white-32.png",
+        "sha256": "fa9755e2430c10382345733c8f83049f6210788a2b5ebdb560156c7d001af587"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-game-indigo-128.png",
+        "sha256": "0ed02c928786eddd64b64613ca632ccd69cd5c63b1e1c0376f4f77cc3e7a2ba2"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-game-indigo-64.png",
+        "sha256": "5e735f50086128cc8a256b8018cfb5fe2733e82d59a14f25559e38a18c2c8c5b"
+      },
+      {
+        "byte_identical": true,
+        "file": "t1p00-game-indigo-32.png",
+        "sha256": "f01366e1d37c71d6538033f259c35610b150e26e37ecb481c7fa4135ec4e0559"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-actual-128-rgba.png",
+        "sha256": "f9e769c038fd946267ae81168d827fcc06e74bccd2226ff032c2c26b3f14eff3"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-black-128.png",
+        "sha256": "b8e082d35fbbc753b180a6f50aa9d3be35909d68df2e92235f4b9d094e3e2d79"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-black-64.png",
+        "sha256": "124abf771975843e960051a941270f3c1f7d80a21f1edbc3bddc8b6934927325"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-black-32.png",
+        "sha256": "ac8840d8a4b38641d361689be9057dd4847eda6ca3a8ea7d19400760e0f72d8a"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-white-128.png",
+        "sha256": "08e65d08a5eb075e2bcca95e8d97f25547bea456da4f0e7d4408bd358b811b1b"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-white-64.png",
+        "sha256": "b69ef37af33586f753d4a90d5dc22dd3c29379a323424ee879c9f16ac15e8afc"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-white-32.png",
+        "sha256": "259fafa701395a8dd2496afd3759c1a62800d66130e1a29b470945d20ba1ae94"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-game-indigo-128.png",
+        "sha256": "362dee8bdc38a286dcb05b056e17b805759710193bdee847a4258637c28dd2fb"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-game-indigo-64.png",
+        "sha256": "340f5bbf46a003711254ee0bbd6b5e0fce2431f3879eb04922cba6bac69609d3"
+      },
+      {
+        "byte_identical": true,
+        "file": "t2p00-game-indigo-32.png",
+        "sha256": "6ca4e5b8127c1f22ce4f670fa1ac969e2350fa654997e63b53fdf3d0d69da898"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-actual-128-rgba.png",
+        "sha256": "a4dd320a5ab3b300512fa41f39eaee3d15cec2f0b63feb5c1200a453cb956dbd"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-black-128.png",
+        "sha256": "d1c1a5da5a29e9b061c91aa84b1bdce48cf2a3367378315be3278a5272611703"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-black-64.png",
+        "sha256": "0f25596379858440cf4880c11c0cbaafc2aee1157b2e8539ecfcd824b7860f67"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-black-32.png",
+        "sha256": "53cdf7e420d458a44b44550eaa8a5b4ddd1a8ea835731f104ca5e718a1940a61"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-white-128.png",
+        "sha256": "63b2876d43fa54a0b4ca2185a892dfcfbc1fada50fad664df14d013515813292"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-white-64.png",
+        "sha256": "2904cc02952afd068e681cfa007faab73e3cf0ee42384c140cb8608eb6704e6d"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-white-32.png",
+        "sha256": "ccbf1d6df869100a8c05fcfd58819e735bf8605ab269efeb1866c27e7b77e2c0"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-game-indigo-128.png",
+        "sha256": "31098347d8ce48debf5fcb21869b905fb37bddac6f3d1766c8b6a94b1d5aea15"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-game-indigo-64.png",
+        "sha256": "00b541847f369c5a50ac275017d390205693f4676caa31f77accd09994c5476d"
+      },
+      {
+        "byte_identical": true,
+        "file": "t3p00-game-indigo-32.png",
+        "sha256": "56bba4174056f1030b4dd1977d3e4228a12d3ed0862dbb55f3e9d2efabbcfd8e"
+      }
+    ],
+    "provenance": "existing five-layer runtime consumer acceptance evidence",
+    "rotation_degrees_per_second": {
+      "Layer2": 30.0,
+      "Layer3": 60.0
+    },
+    "source": ".tmp/energy-composite",
+    "time_seconds": [
+      0.0,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      3.0
+    ]
+  },
+  "forbidden_operations_confirmed_absent": [
+    "crop",
+    "resize of source or runtime output",
+    "threshold",
+    "mask",
+    "color key",
+    "Alpha cleanup",
+    "Alpha shrink/expand",
+    "recolor",
+    "creative redraw"
+  ],
+  "generated_at_local_date": "2026-08-31",
+  "operation": "Godot Image.blend_rect standard SourceOver at unchanged 256x256 canvas, setup pose rotation 0, in Layer1 -> Layer2 -> Layer3 -> Layer4 -> Layer5 order",
+  "runtime_output": {
+    "alpha_bbox": [
+      28,
+      26,
+      191,
+      219
+    ],
+    "archive_copy": "energy_big.png",
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "format": "RGBA8",
+    "nonzero_alpha_pixels": 22918,
+    "opaque_pixels_alpha_ge_250": 20987,
+    "previous_sha256": "5a0be66752f8d26bd857f11b4e78fb490ac47c93819c259cd8f363dfb73a11e7",
+    "relative_path": "Vivhite/Vivhite/images/characters/energy_big.png",
+    "sha256": "ca117da971f5999b3075238283979cbca423c07b7137a1692e00288e3ebe3df0",
+    "size": [
+      256,
+      256
+    ]
+  },
+  "setup_pose_sourceover": {
+    "background_rgb": {
+      "black": "#000000",
+      "game-indigo": "#182139",
+      "white": "#ffffff"
+    },
+    "files": [
+      {
+        "background": "black",
+        "relative_path": "setup-pose-sourceover/black-256.png",
+        "sha256": "2b649ff6645a99316bb9678556a177165f433300be05fe4c97b92b3cc8411ae0",
+        "size": [
+          256,
+          256
+        ]
+      },
+      {
+        "background": "white",
+        "relative_path": "setup-pose-sourceover/white-256.png",
+        "sha256": "9ad117c2d533d510945394aac7912698f98fe51f6c6fbb5c143cff8760204424",
+        "size": [
+          256,
+          256
+        ]
+      },
+      {
+        "background": "game-indigo",
+        "relative_path": "setup-pose-sourceover/game-indigo-256.png",
+        "sha256": "0aef05acb763deaaa8cce9de6dc5627d255c306c7939a6048d052ebf89a12821",
+        "size": [
+          256,
+          256
+        ]
+      },
+      {
+        "background": "black",
+        "relative_path": "setup-pose-sourceover/black-64.png",
+        "sha256": "f8d782f5648cf5931397dc8c3b5936e2e4e4e18ab8090d80c25f82def444b491",
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "background": "white",
+        "relative_path": "setup-pose-sourceover/white-64.png",
+        "sha256": "0b35f7ac66e8b7886d08e8ca3079879439ef12ab4baa9c2eaa3b488aa90f19d2",
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "background": "game-indigo",
+        "relative_path": "setup-pose-sourceover/game-indigo-64.png",
+        "sha256": "ed7367b31cb6e713475737d430b315c5ed5c37b6a5145d2204acdf4e54367df9",
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "background": "black",
+        "relative_path": "setup-pose-sourceover/black-32.png",
+        "sha256": "7849bc8085ea908894fdac693316e22d2057cfcdb8e09f6f4bc490aa248871ed",
+        "size": [
+          32,
+          32
+        ]
+      },
+      {
+        "background": "white",
+        "relative_path": "setup-pose-sourceover/white-32.png",
+        "sha256": "fd8d7ea7bf220b3085a284f6baa8f8e31de9fffb9d496c8da736682fe7bb534b",
+        "size": [
+          32,
+          32
+        ]
+      },
+      {
+        "background": "game-indigo",
+        "relative_path": "setup-pose-sourceover/game-indigo-32.png",
+        "sha256": "cc40ce7a374bba422bf5fd9f8408f3e918ecb222112247d920a409f1f59cf9a6",
+        "size": [
+          32,
+          32
+        ]
+      }
+    ],
+    "sizes": [
+      256,
+      64,
+      32
+    ],
+    "visual_conclusion": "Main-agent visual review passed: the five-layer setup-pose composition is clear, its open center is suitable for the energy-cost number, and its transparent edges show no visible rectangular pollution. The prior 256, 64, and 32 pixel black, white, and #182139 game-indigo checks also remain passed."
+  },
+  "sources": [
+    {
+      "alpha_bbox": [
+        46,
+        40,
+        164,
+        164
+      ],
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "format": "RGBA8",
+      "layer": 1,
+      "relative_path": "Vivhite/Vivhite/images/characters/Vivhite_energy_orb_layer_1.png",
+      "sha256": "1cee2f998c31d0fd91ed545433d78aa18bcf3a05d39aebe1caa46dd289f495bc",
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "alpha_bbox": [
+        37,
+        32,
+        182,
+        185
+      ],
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "format": "RGBA8",
+      "layer": 2,
+      "relative_path": "Vivhite/Vivhite/images/characters/Vivhite_energy_orb_layer_2.png",
+      "sha256": "10e79f7b50843ed76f332dbe0afeb9dc0b8ef76e536fa6841635c38853ea2408",
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "alpha_bbox": [
+        59,
+        45,
+        155,
+        178
+      ],
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "format": "RGBA8",
+      "layer": 3,
+      "relative_path": "Vivhite/Vivhite/images/characters/Vivhite_energy_orb_layer_3.png",
+      "sha256": "0b268925cf92008daee340f219b16266dc23da4eccfd99bc1cf5cce4941dfab5",
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "alpha_bbox": [
+        40,
+        41,
+        160,
+        172
+      ],
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "format": "RGBA8",
+      "layer": 4,
+      "relative_path": "Vivhite/Vivhite/images/characters/Vivhite_energy_orb_layer_4.png",
+      "sha256": "c3954ea2e934a892b5c4f7776dc90f1f65fe771fa15863b066374a8781ea8143",
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "alpha_bbox": [
+        28,
+        26,
+        180,
+        219
+      ],
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "format": "RGBA8",
+      "layer": 5,
+      "relative_path": "Vivhite/Vivhite/images/characters/Vivhite_energy_orb_layer_5.png",
+      "sha256": "f2082bc54f4a619619de2f5a7de2c67921c5166649be5c1a15382ec6c40fdd8f",
+      "size": [
+        256,
+        256
+      ]
+    }
+  ],
+  "status": "main_agent_visual_pass_archived"
+}
