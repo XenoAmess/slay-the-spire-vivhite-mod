@@ -99,7 +99,8 @@ def _state_candidates(state: dict, decision) -> list[dict]:
             playable = raw.get("playable")
             status = "chosen" if is_selected else (
                 "locked" if locked or playable is False else "available")
-            why = (raw.get("why_not_playable") or raw.get("disabled_reason")
+            why = (raw.get("unplayable_reason") or raw.get("unplayable_reason_raw")
+                   or raw.get("why_not_playable") or raw.get("disabled_reason")
                    or raw.get("description") or raw.get("option_id") or "")
             score = raw.get("score", raw.get("value"))
             rows.append(_candidate(_item_label(raw, f"{fallback} {index}"), index,

@@ -23,6 +23,10 @@ from character_strategy import (
     SELECTION_RECOVER_COPY_BEST,
     SELECTION_RECOVER_FREE_BEST,
     SELECTION_TOPDECK_BEST,
+    VIVHITE_MARGIN_POWER_ID,
+    VIVHITE_PROFILE_ID,
+    _card_dynamic_preview_includes_modifier,
+    card_dynamic_value,
     character_build_synergy,
     character_card_has_terminal_life_cost_lock,
     character_power_amount,
@@ -32,6 +36,7 @@ from character_strategy import (
     resolve_character_card_numbers,
     resolve_character_selection_mode,
     score_realized_mechanics,
+    vivhite_crimson_ritual_totals,
 )
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace
 from knowledge import Knowledge, clamp
@@ -95,8 +100,71 @@ def card_numbers(card: dict) -> tuple[int, int, int]:
     return dmg, block, hits
 
 
+def _rescue_block_tradeoff(
+        card: dict,
+        useful_block: int,
+        *,
+        character_strategy: CharacterStrategy | None = None,
+        player_powers: list[dict] | tuple[dict, ...] | None = None,
+) -> tuple[float, bool, float, float]:
+    """Return (net survival, independent benefit, HP paid, Margin value spent).
+
+    The residual-energy rescue is a forced-play boundary, so Vivhite Block must
+    pay for its real cough-blood and consumed Margin before it can qualify.
+    Non-Vivhite cards keep the historical useful-Block value unchanged.
+    """
+
+    if (character_strategy is None
+            or character_strategy.profile_id != VIVHITE_PROFILE_ID):
+        return float(useful_block), False, 0.0, 0.0
+
+    entry = character_strategy.card(
+        str(card.get("card_id") or "").strip().upper().rstrip("+"))
+    base_life_cost = (
+        entry.mechanics.life_calculation_cost if entry is not None else 0)
+    life_cost = max(0.0, float(card_dynamic_value(
+        card, "LifeCost", base_life_cost) or 0.0))
+    observed_type = str(card.get("card_type") or "").casefold()
+    is_vivhite_attack = (
+        (entry is not None and entry.card_type == "attack")
+        or observed_type == "attack")
+    if (is_vivhite_attack
+            and not _card_dynamic_preview_includes_modifier(card, "LifeCost")):
+        ritual_life_cost, _ritual_damage = vivhite_crimson_ritual_totals(
+            character_strategy, player_powers)
+        life_cost += ritual_life_cost
+
+    margin_before = max(0.0, character_power_amount(
+        player_powers, VIVHITE_MARGIN_POWER_ID))
+    margin_consumed = min(life_cost, margin_before)
+    actual_cough = life_cost - margin_consumed
+    margin_value_spent = (
+        margin_consumed
+        * max(0.0, float(character_strategy.parameters.margin_weight)))
+
+    # Only immediate, unconditional side benefits may waive a non-positive
+    # Block trade. Conditional kill/growth effects deliberately do not qualify.
+    damage, _block, _hits = card_numbers(card)
+    independent_benefit = damage > 0
+    if entry is not None:
+        mechanics = entry.mechanics
+        conditional_margin = any(
+            "margin_if" in effect for effect in mechanics.effects)
+        independent_benefit = independent_benefit or any((
+            mechanics.draw > 0,
+            mechanics.energy_gain > 0,
+            mechanics.margin_gain > 0 and not conditional_margin,
+        ))
+
+    net_survival = (
+        float(useful_block) - actual_cough - margin_value_spent)
+    return net_survival, independent_benefit, actual_cough, margin_value_spent
+
+
 def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
-                         is_unavailable=None, race_mode: bool = False) -> str:
+                         is_unavailable=None, race_mode: bool = False,
+                         character_strategy: CharacterStrategy | None = None,
+                         player_powers=None) -> str:
     """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。"""
     try:
         gap = int(incoming) - int(my_block)
@@ -114,7 +182,19 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                 continue
             damage, block, hits = card_numbers(card)
             if block > 0:
-                candidate = (min(int(block), gap), -cost, card.get("name") or "")
+                useful = min(int(block), gap)
+                net, independent, actual_cough, margin_spent = (
+                    _rescue_block_tradeoff(
+                        card,
+                        useful,
+                        character_strategy=character_strategy,
+                        player_powers=player_powers,
+                    ))
+                if net <= 0.0 and not independent:
+                    continue
+                candidate = (
+                    net, -cost, card.get("name") or "", useful,
+                    actual_cough, margin_spent)
                 if best_block is None or candidate[:2] > best_block[:2]:
                     best_block = candidate
             elif race_mode and damage > 0:
@@ -125,7 +205,9 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
         if best_block is not None:
             notes.append(
                 f"⚠残能空漏审计(IDLE_LEAK_BLK)：能量{int(energy)}空过，"
-                f"受击净缺口{gap}，可负担格挡【{best_block[2]}】可抵{best_block[0]}")
+                f"受击净缺口{gap}，可负担格挡【{best_block[2]}】可抵{best_block[3]}，"
+                f"扣除謦欬{best_block[4]:g}/余裕机会成本{best_block[5]:g}后"
+                f"净保命{best_block[0]:g}")
         if race_mode and best_attack is not None:
             notes.append(
                 f"⚠残能空漏审计(IDLE_LEAK_RACE)：竞速态残能{int(energy)}，"
@@ -180,7 +262,9 @@ def hand_end_turn_tax(hand: list | None) -> tuple[int, str]:
 
 def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                             is_unavailable=None, block_locked: bool = False,
-                            allow_taxstop: bool = True):
+                            allow_taxstop: bool = True,
+                            character_strategy: CharacterStrategy | None = None,
+                            player_powers=None):
     """残能救场候选（第698~770批复盘闭环实验）。
 
     「评估后无值得出的牌」分支在剩有能量且意图缺口>0 时空过结束回合，
@@ -189,7 +273,8 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
     5血/3甲手握【岩石铠甲】仍空过——死牌守卫把无条件的即时能力牌
     STONE_ARMOR 误判成「触发条件无自残源」的死牌）。本兜底只在既定
     评分全线拒绝后的 end_turn 边界生效，不重排全手评分、不触碰姿态学习：
-      ① 可负担格挡（净效益=min(block,gap) 最大者，同值取低费）；
+      ① 可负担格挡（净保命=min(block,gap)-实际謦欬-余裕机会成本；
+         仅净保命>0 或另有独立确定收益者入选，同值取低费）；
       ② 「获得N层覆甲」类立即生效的防性能力（runtime 实证 StoneArmor 为
          CardType.Power 即时 OnPlay 施加 PlatingPower——为死牌守卫误杀
          类建立文本旁路）；
@@ -235,7 +320,16 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                         tax_best = cand
             if block > 0 and not block_locked:
                 useful = min(int(block), gap)
-                cand = (useful, -cost, c)
+                net, independent, _actual_cough, _margin_spent = (
+                    _rescue_block_tradeoff(
+                        c,
+                        useful,
+                        character_strategy=character_strategy,
+                        player_powers=player_powers,
+                    ))
+                if net <= 0.0 and not independent:
+                    continue
+                cand = (net, -cost, c)
                 if blk_best is None or cand[:2] > blk_best[:2]:
                     blk_best = cand
             elif (not block_locked and block <= 0 and dmg <= 0
@@ -408,9 +502,14 @@ class Policy:
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
         self._race_round = None     # 已采样的回合号
-        self._race_prev_hp = None   # 回合边界观测血量
-        self._race_loss_rate = 0.0  # 近期每回合净损血 EMA
+        self._race_prev_hp = None   # 上一个回合开始时的观测血量
+        self._race_loss_rate = 0.0  # 回合开始→下一回合开始的净损血 EMA（允许回血为负）
         self._race_rounds = 0       # 完成的回合边界采样数
+        self._race_tick_round = None  # 上一个逐 tick HP 观测所属回合
+        self._race_tick_hp = None     # 上一个逐 tick HP 观测值
+        self._race_same_round_heal = 0.0  # 本场同回合内已观察到的净回血
+        self._race_same_round_loss = 0.0  # 本场同回合内已观察到的自损/费用净扣血
+        self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
         self._desp_combat = None    # 战斗实例身份（假孤注观测确认用）
         self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
@@ -541,6 +640,17 @@ class Policy:
         key = self._card_key(card)
         return (index in self._failed_this_turn or key in self._failed_this_turn
                 or self._card_cooldowns.get(key, 0) > 0)
+
+    @staticmethod
+    def _native_card_unplayable_reason(card: dict) -> str:
+        """Return an explicit native CanPlay rejection, not a transient API lock."""
+        if card.get("playable") is not False:
+            return ""
+        for key in ("unplayable_reason", "unplayable_reason_raw"):
+            value = str(card.get(key) or "").strip()
+            if value and value.casefold() not in {"none", "null"}:
+                return value
+        return ""
 
     @staticmethod
     def _tick_cooldown_map(values: dict) -> None:
@@ -2422,6 +2532,11 @@ class Policy:
             self._race_prev_hp = None
             self._race_loss_rate = 0.0
             self._race_rounds = 0
+            self._race_tick_round = None
+            self._race_tick_hp = None
+            self._race_same_round_heal = 0.0
+            self._race_same_round_loss = 0.0
+            self._race_zero_intent_rounds = 0
             self._intent_prev = 0
             self._intent_trend = 0
             self._krace_dmg = 0.0
@@ -2538,15 +2653,30 @@ class Policy:
             ctx.combat["obs_fire_sum"] = self._vit_fire_sum
             ctx.combat["obs_fire_rounds"] = self._vit_fire_rounds
 
-        # 败局竞速采样：回合边界记录净损血 EMA。取上一回合结束时的血量与本回合
-        # 开始时的差值——已包含我方全部防御决策的净效果，速率居高不下即代表
-        # "边防边耗"的防守路线本身已经失效（61 局 Boss 战意图 19→21→23→25
-        # 递增，每单回合都够不上 lethal，引擎持续半攻半防温水等死）
+        # 败局竞速采样：回合边界记录净损血 EMA。必须比较「上一回合开始」与
+        # 「本回合开始」，才能把本回合内的自损费用、汲取/其他回血、格挡与敌方
+        # 行动一起纳入真实生存账。旧代码在每个决策 tick 都覆盖 _race_prev_hp，
+        # 实际只量到了回合结束后的敌方伤害；白绮的謦欬与汲取被同时抹掉，Boss
+        # 的零伤害行动也会被下一次高意图覆盖，6D0T5BPUDMG6-F17 因此在 T3 把
+        # 实际 9 回合获胜的续航战误判为只剩 3~4 回合。
+        # 同回合逐 tick 差值只作「已经真实发生过回血/自损」的窄门证据；不拿
+        # 预测卡面值替代实测，也不把跨回合敌方伤害误记成謦欬。
+        if self._race_tick_round == round_no and self._race_tick_hp is not None:
+            _same_round_delta = float(my_hp) - float(self._race_tick_hp)
+            if _same_round_delta > 0.0:
+                self._race_same_round_heal += _same_round_delta
+            elif _same_round_delta < 0.0:
+                self._race_same_round_loss += -_same_round_delta
+        self._race_tick_round = round_no
+        self._race_tick_hp = my_hp
+
         if self._race_round != round_no:
             self._intent_spike_from_zero = False
             _previous_intent = int(self._intent_prev or 0)
             if self._race_round is not None and self._race_prev_hp is not None:
-                loss = max(0.0, float(self._race_prev_hp - my_hp))
+                # 保留负值：回合首血量上升就是本场续航已经兑现，不应裁成 0 后
+                # 又回退到敌方原始意图。EMA 仍让最近回合拥有更高权重。
+                loss = float(self._race_prev_hp - my_hp)
                 self._race_loss_rate = (loss if self._race_rounds == 0
                                         else 0.7 * self._race_loss_rate + 0.3 * loss)
                 self._race_rounds += 1
@@ -2567,6 +2697,8 @@ class Policy:
                     self._esc_rounds += 1
             else:
                 self._intent_trend = 0
+            if int(incoming) <= 0:
+                self._race_zero_intent_rounds += 1
             # 意图 EMA（第 90~91 批复盘）：斩杀竞速投影的「可存活回合」分母——
             # 净损速率含我方格挡决策的净效果，开局头两回合用它会被格挡稀释，
             # 意图 EMA 才是敌人火力本身的账
@@ -2576,7 +2708,8 @@ class Policy:
                 self._incoming_ema = 0.7 * self._incoming_ema + 0.3 * float(incoming)
             self._intent_prev = int(incoming)
             self._race_round = round_no
-        self._race_prev_hp = my_hp
+            # 只在回合边界更新；同回合出牌后的謦欬/汲取不能覆盖起点。
+            self._race_prev_hp = my_hp
 
         # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
         # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
@@ -2608,10 +2741,16 @@ class Policy:
                 # 均无法区分「资源不济」「评分拒绝」「接口失真」。此后终端留痕
                 # 自带能量+逐张审计（名称(费用)✓规则可玩/✗不可玩），复盘可直接
                 # 对照运营端的断言链定位拒因；前缀保持不变，供既有统计正则兼容。
-                _audit = ",".join(
-                    f"{c.get('name')}({c.get('energy_cost', '?')}费)"
-                    f"{'✓' if (c.get('playable') and not self._card_unavailable(c)) else '✗'}"
-                    for c in hand) or "空手"
+                def _card_audit(c: dict) -> str:
+                    available = bool(c.get("playable")) and not self._card_unavailable(c)
+                    if available:
+                        mark = "✓"
+                    else:
+                        native_reason = self._native_card_unplayable_reason(c)
+                        mark = f"✗[{native_reason or 'unknown_can_play'}]"
+                    return f"{c.get('name')}({c.get('energy_cost', '?')}费){mark}"
+
+                _audit = ",".join(_card_audit(c) for c in hand) or "空手"
                 non_curse_cards = [
                     card for card in hand
                     if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -2691,12 +2830,18 @@ class Policy:
                                 current_hp=my_hp,
                                 player_powers=player.get("powers") or []):
                             continue
+                        # CardModel.CanPlay rejection reasons are card-rule locks
+                        # (RingingPower, resources, keywords, custom hooks), not
+                        # action-queue/UI transients.  Waiting 40 ticks cannot reopen
+                        # them; only a missing reason remains eligible for settle wait.
+                        if self._native_card_unplayable_reason(card):
+                            continue
                         cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
                         if cost < 0 or cost > energy:
                             continue
                         if card.get("requires_target") and not card.get("valid_target_indices"):
                             continue
-                        _latent.append(f"{card.get('name')}({cost})")
+                        _latent.append(f"{card.get('name')}({cost})[unknown_can_play]")
                     # 深预算（第833~842局批复盘闭环实验 END_TURN_SETTLE_DEEP_BUDGET）：
                     # 839局F17[201]/840局F17[212][222] 三例真窗口——仪式兽 Boss 决胜段
                     # 打出牌/牌堆顶选择后 payload 整体✗ 超过基预算 6 秒，随后以
@@ -2737,9 +2882,13 @@ class Policy:
                         and self._saw_playable_this_turn
                         and self._end_stall < _settle_budget):
                     if _latent:
+                        _readiness_reason = str(
+                            (combat.get("action_readiness") or {}).get("reason")
+                            or "unknown_interface_state")
                         return Decision(
                             None, {},
                             f"战斗：结算等待——账面仍有可负担目标牌（{','.join(_latent)}），"
+                            f"接口状态={_readiness_reason}，"
                             f"待接口重开（{self._end_stall}/{_settle_budget}）",
                             wait=0.6)
                 # 结算超时收口观测位（第892~912局批复盘闭环实验
@@ -2971,9 +3120,33 @@ class Policy:
                         dpt_src = (f"{dpt_src}{_up_tag}{_up:.2f})"
                                    f"→{dpt:.0f}伤/回合校准")
                 if dpt > 0:
-                    loss_rate = self._race_loss_rate if (
-                        self._race_rounds and self._race_loss_rate >= 1.0) else max(1.0, self._incoming_ema)
-                    if esc_gate:
+                    # 白绮 Boss 续航实测（6D0T5BPUDMG6-F17）：只有在同一场已经
+                    # 观察到汲取等同回合回血、至少两个完整回合首边界，并实际见过
+                    # Boss 的零伤害行动后，才用「回合首→回合首」净 HP EMA 估算
+                    # 生存期。这个窄门同时包含謦欬净成本、汲取净回复、格挡结果和
+                    # Boss 行动周期；不会因一瓶药、单帧卡面预测或普通角色回血就
+                    # 放宽竞速。分母仍保留 1 HP/回合的保守底值，避免一次过量回血
+                    # 被解释为无限生命。
+                    _boss_sustain_net_hp = (
+                        self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                        and cctx.get("node_type") == "Boss"
+                        and self._race_rounds >= 2
+                        and self._race_same_round_heal > 0.0
+                        and self._race_zero_intent_rounds > 0)
+                    if _boss_sustain_net_hp:
+                        loss_rate = max(0.0, float(self._race_loss_rate))
+                        danger_note += (
+                            f"；Boss续航按本场净HP计价：净损EMA{loss_rate:.1f}/回合，"
+                            f"同回合回血{self._race_same_round_heal:.0f}、"
+                            f"自损/费用{self._race_same_round_loss:.0f}、"
+                            f"零伤害回合{self._race_zero_intent_rounds}"
+                            "（BOSS_SUSTAIN_NET_HP）")
+                    else:
+                        loss_rate = (
+                            self._race_loss_rate
+                            if self._race_rounds and self._race_loss_rate >= 1.0
+                            else max(1.0, self._incoming_ema))
+                    if esc_gate and not _boss_sustain_net_hp:
                         # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
                         # 而当轮意图已 25），持续升级时存活分母至少取当前意图
                         loss_rate = max(loss_rate, float(incoming))
@@ -2987,6 +3160,7 @@ class Policy:
                         bool(pol.get("hard_combat_intent_spike_fire", True))
                         and cctx.get("node_type") in ("Elite", "Boss")
                         and getattr(self, "_intent_spike_from_zero", False)
+                        and not _boss_sustain_net_hp
                         and float(incoming) > float(loss_rate))
                     if _spike_fire:
                         loss_rate = float(incoming)
@@ -3503,7 +3677,9 @@ class Policy:
             audit_note = idle_leak_audit_note(
                 hand, energy, incoming, my_block,
                 is_unavailable=self._card_unavailable,
-                race_mode=bool(race_allin or kill_race))
+                race_mode=bool(race_allin or kill_race),
+                character_strategy=self.character_strategy,
+                player_powers=player.get("powers") or [])
             # 手牌滞留税披露（HAND_END_TAX，第808~812局批复盘）：毒素/感染型
             # 回合结束手牌伤害不进格挡结算，评估收口与强制收口两侧都需显形。
             _tax_total, _tax_detail = hand_end_turn_tax(hand)
@@ -3527,7 +3703,9 @@ class Policy:
                     hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
                     block_locked=block_locked,
-                    allow_taxstop=_taxstop_on)
+                    allow_taxstop=_taxstop_on,
+                    character_strategy=self.character_strategy,
+                    player_powers=player.get("powers") or [])
             if _resc_card is not None:
                 _rcid = (_resc_card.get("card_id") or "").upper().rstrip("+")
                 _rest_dmg, _, _rhits = card_numbers(_resc_card)

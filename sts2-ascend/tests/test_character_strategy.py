@@ -1834,6 +1834,148 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertEqual(timeout.action, "end_turn")
         self.assertIn("手牌长时间未就绪", timeout.reason)
 
+    def test_f17_ringing_native_hook_rejection_skips_forty_tick_settle(self) -> None:
+        combat_token = object()
+        ctx = SimpleNamespace(
+            combat=combat_token,
+            current_combat_is_hard=False,
+            stall_analysis_asked=False,
+            stall_analysis_needed=False,
+            stall_giveup=False,
+        )
+        self.vivhite_policy._turn_combat = combat_token
+        self.vivhite_policy._cur_turn = 1
+        self.vivhite_policy._saw_playable_this_turn = True
+
+        cards = [
+            ("VIVHITE_CARD_TANGENT_STARLIGHT", "切线星光", 1, True),
+            ("VIVHITE_CARD_ASTRAL_SEARCH", "星图检索", 0, False),
+            ("VIVHITE_CARD_LUMINOUS_PROJECTION", "弦光投影", 1, True),
+            ("VIVHITE_CARD_CHIAROSCURO", "明暗对照+", 1, False),
+        ]
+        hand = []
+        for index, (card_id, name, cost, requires_target) in enumerate(cards):
+            hand.append({
+                "index": index,
+                "card_id": card_id,
+                "name": name,
+                "card_type": "Attack" if requires_target else "Skill",
+                "playable": False,
+                "energy_cost": cost,
+                "requires_target": requires_target,
+                "valid_target_indices": [0] if requires_target else [],
+                "unplayable_reason": "blocked_by_hook",
+                "unplayable_reason_raw": "BlockedByHook",
+                "unplayable_preventer_id": "RINGING_POWER",
+                "unplayable_preventer_type": "RingingPower",
+                "dynamic_values": [
+                    {"name": "LifeCost", "current_value": 2},
+                ],
+            })
+        state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 1,
+            "combat": {
+                "action_readiness": {
+                    "can_use_combat_actions": True,
+                    "reason": "ready",
+                    "actions_settled": True,
+                    "modal_open": False,
+                },
+                "player": {
+                    "current_hp": 50,
+                    "max_hp": 78,
+                    "block": 0,
+                    "energy": 1,
+                    "powers": [{"power_id": "RINGING_POWER", "amount": 1}],
+                },
+                "hand": hand,
+                "enemies": [{
+                    "index": 0,
+                    "enemy_id": "CEREMONIAL_BEAST",
+                    "name": "Ceremonial Beast",
+                    "current_hp": 100,
+                    "max_hp": 100,
+                    "block": 0,
+                    "is_alive": True,
+                    "is_hittable": True,
+                    "intents": [],
+                }],
+            },
+            "run": {"current_hp": 50, "max_hp": 78, "floor": 17, "deck": []},
+        }
+
+        first = self.vivhite_policy._combat(state, ctx)
+        second = self.vivhite_policy._combat(state, ctx)
+
+        self.assertIsNone(first.action)
+        self.assertIn("确认结束", first.reason)
+        self.assertEqual(second.action, "end_turn")
+        self.assertNotIn("结算等待", first.reason + second.reason)
+        self.assertIn("blocked_by_hook", second.reason)
+
+    def test_missing_can_play_reason_keeps_settle_and_reports_queue_state(self) -> None:
+        combat_token = object()
+        ctx = SimpleNamespace(
+            combat=combat_token,
+            current_combat_is_hard=False,
+            stall_analysis_asked=False,
+            stall_analysis_needed=False,
+            stall_giveup=False,
+        )
+        self.vivhite_policy._turn_combat = combat_token
+        self.vivhite_policy._cur_turn = 1
+        self.vivhite_policy._saw_playable_this_turn = True
+        state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 1,
+            "combat": {
+                "action_readiness": {
+                    "can_use_combat_actions": False,
+                    "reason": "game_action_running",
+                    "actions_settled": False,
+                    "running_action_type": "TestQueuedAction",
+                    "modal_open": False,
+                },
+                "player": {
+                    "current_hp": 50,
+                    "max_hp": 78,
+                    "block": 0,
+                    "energy": 1,
+                    "powers": [],
+                },
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+                    "name": "星图检索",
+                    "card_type": "Skill",
+                    "playable": False,
+                    "energy_cost": 0,
+                    "requires_target": False,
+                    "dynamic_values": [
+                        {"name": "LifeCost", "current_value": 2},
+                    ],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "CEREMONIAL_BEAST",
+                    "name": "Ceremonial Beast", "current_hp": 100,
+                    "max_hp": 100, "block": 0, "is_alive": True,
+                    "is_hittable": True, "intents": [],
+                }],
+            },
+            "run": {"current_hp": 50, "max_hp": 78, "floor": 17, "deck": []},
+        }
+
+        decision = self.vivhite_policy._combat(state, ctx)
+
+        self.assertIsNone(decision.action)
+        self.assertIn("结算等待", decision.reason)
+        self.assertIn("unknown_can_play", decision.reason)
+        self.assertIn("接口状态=game_action_running", decision.reason)
+        self.assertIn("1/40", decision.reason)
+
     def test_combat_targeting_expands_chromatic_limit_with_current_energy(self) -> None:
         card = {
             "index": 0,

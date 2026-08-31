@@ -16,7 +16,12 @@ sys.path.insert(0, str(BRAIN))
 
 import agent as agent_module  # noqa: E402
 import llm_review  # noqa: E402
-from policy import Decision, idle_leak_audit_note  # noqa: E402
+from character_strategy import VIVHITE_STRATEGY  # noqa: E402
+from policy import (  # noqa: E402
+    Decision,
+    idle_energy_rescue_pick,
+    idle_leak_audit_note,
+)
 
 
 class IdleLeakAuditTests(unittest.TestCase):
@@ -58,6 +63,77 @@ class IdleLeakAuditTests(unittest.TestCase):
         self.assertEqual(idle_leak_audit_note([object()], "dirty", None, {}), "")
 
 
+class VivhiteIdleEnergyRescueTests(unittest.TestCase):
+    @staticmethod
+    def _closed_domain_mapping(*, card_id="VIVHITE_CARD_CLOSED_DOMAIN_MAPPING"):
+        return {
+            "index": 0,
+            "card_id": card_id,
+            "name": "闭域映射",
+            "card_type": "Skill",
+            "playable": True,
+            "energy_cost": 1,
+            "dynamic_values": [
+                {"name": "LifeCost", "base_value": 2, "current_value": 2},
+                {"name": "Block", "base_value": 9, "current_value": 9},
+            ],
+        }
+
+    def _pick(self, card, *, gap, powers=None):
+        return idle_energy_rescue_pick(
+            [card],
+            energy=1,
+            incoming=gap,
+            my_block=0,
+            character_strategy=VIVHITE_STRATEGY,
+            player_powers=powers or [],
+        )
+
+    def test_f14_gap_two_cough_two_does_not_force_block(self) -> None:
+        card, kind = self._pick(self._closed_domain_mapping(), gap=2)
+
+        self.assertIsNone(card)
+        self.assertEqual(kind, "")
+        note = idle_leak_audit_note(
+            [self._closed_domain_mapping()],
+            energy=1,
+            incoming=2,
+            my_block=0,
+            character_strategy=VIVHITE_STRATEGY,
+            player_powers=[],
+        )
+        self.assertNotIn("IDLE_LEAK_BLK", note)
+
+    def test_f17_gap_four_cough_two_still_forces_block(self) -> None:
+        card, kind = self._pick(self._closed_domain_mapping(), gap=4)
+
+        self.assertEqual(card["card_id"], "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING")
+        self.assertEqual(kind, "block")
+
+    def test_independent_draw_benefit_can_force_nonpositive_block_trade(self) -> None:
+        card = self._closed_domain_mapping(
+            card_id="VIVHITE_CARD_HEURISTIC_SHIELD")
+        card["name"] = "启发式护盾"
+        card["dynamic_values"][1].update(base_value=8, current_value=8)
+
+        picked, kind = self._pick(card, gap=2)
+
+        self.assertEqual(picked["card_id"], "VIVHITE_CARD_HEURISTIC_SHIELD")
+        self.assertEqual(kind, "block")
+
+    def test_consumed_margin_is_not_treated_as_free_block(self) -> None:
+        margin = [{
+            "power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+            "amount": 2,
+        }]
+
+        card, kind = self._pick(
+            self._closed_domain_mapping(), gap=2, powers=margin)
+
+        self.assertIsNone(card)
+        self.assertEqual(kind, "")
+
+
 class PersistedDecisionEvidenceTests(unittest.TestCase):
     def test_end_turn_keeps_energy_hand_intent_and_bounded_trace(self) -> None:
         state = {
@@ -93,6 +169,62 @@ class PersistedDecisionEvidenceTests(unittest.TestCase):
         self.assertTrue(row["turn_end_state"]["hand"][0]["playable"])
         self.assertNotIn("rules_text", row["turn_end_state"]["hand"][0])
         self.assertEqual(row["trace"]["selected"]["action"], "end_turn")
+
+    def test_end_turn_persists_native_can_play_and_action_readiness_diagnostics(self) -> None:
+        state = {
+            "screen": "COMBAT",
+            "turn": 6,
+            "available_actions": ["end_turn"],
+            "run": {"floor": 17, "current_hp": 41, "gold": 99},
+            "combat": {
+                "action_readiness": {
+                    "can_use_combat_actions": False,
+                    "reason": "game_action_running",
+                    "actions_settled": False,
+                    "running_action_type": "QueuedCardAction",
+                    "ready_action_type": None,
+                    "modal_open": False,
+                    "player_actions_disabled": False,
+                    "snapshot_stable": False,
+                },
+                "player": {
+                    "current_hp": 41, "max_hp": 78,
+                    "block": 0, "energy": 1,
+                },
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+                    "name": "星图检索",
+                    "card_type": "Skill",
+                    "energy_cost": 0,
+                    "playable": False,
+                    "requires_target": False,
+                    "unplayable_reason": "blocked_by_hook",
+                    "unplayable_reason_raw": "BlockedByHook",
+                    "unplayable_preventer_id": "RINGING_POWER",
+                    "unplayable_preventer_type": "RingingPower",
+                }],
+                "enemies": [{"is_alive": True, "intents": []}],
+            },
+        }
+
+        row = agent_module._decision_log_entry(
+            state, Decision("end_turn", {}, "原生规则阻止出牌"),
+            timestamp="16:33:17")
+
+        end_state = row["turn_end_state"]
+        self.assertEqual(
+            end_state["action_readiness"]["reason"], "game_action_running")
+        self.assertFalse(end_state["action_readiness"]["actions_settled"])
+        self.assertEqual(
+            end_state["hand"][0]["unplayable_reason"], "blocked_by_hook")
+        self.assertEqual(
+            end_state["hand"][0]["unplayable_reason_raw"], "BlockedByHook")
+        self.assertEqual(
+            end_state["hand"][0]["unplayable_preventer_id"], "RINGING_POWER")
+        self.assertEqual(
+            end_state["hand"][0]["unplayable_preventer_type"], "RingingPower")
+        self.assertEqual(row["trace"]["candidates"][0]["why"], "blocked_by_hook")
 
     def test_routine_card_action_stays_compact_but_keeps_turn_and_energy(self) -> None:
         state = {
