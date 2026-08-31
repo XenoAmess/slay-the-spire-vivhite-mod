@@ -1,5 +1,7 @@
 using System.Reflection;
 using MegaCrit.Sts2.Core.Models;
+using Vivhite.Cards.Common;
+using Vivhite.Cards.Hybrid;
 using Vivhite.Core;
 using Vivhite.Powers;
 using Vivhite.Tests.Acceptance;
@@ -131,25 +133,59 @@ internal static class BalanceAcceptanceTests
             actualWithoutFixedCost,
             "Only Axiom Ring, Astral Measure, and the Crimson ritual may have zero or no fixed LifeCost.");
 
+        var paymentBindingFailures = new List<string>();
         foreach (var (cardId, expectedBase) in DoubledFixedLifeCosts)
         {
             var card = cards[cardId];
             AssertDynamicVar(cardId, card, "LifeCost", expectedBase, "base");
+            CollectLifeCalculationCostBindingFailure(
+                paymentBindingFailures,
+                cardId,
+                card,
+                "base");
 
             InvokeOnUpgrade(cardId, card);
             var expectedUpgraded = cardId == "VIVHITE_CARD_BACKTRACKING_SPELL" ? 2 : expectedBase;
             AssertDynamicVar(cardId, card, "LifeCost", expectedUpgraded, "upgraded");
+            CollectLifeCalculationCostBindingFailure(
+                paymentBindingFailures,
+                cardId,
+                card,
+                "upgraded");
         }
-
         foreach (var cardId in CardsWithoutFixedLifeCost)
         {
             var card = cards[cardId];
+            if (cardId == "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL")
+            {
+                AssertDynamicVar(cardId, card, "LifeCostPerPhase", 1, "base");
+            }
+            AssertZeroCostExceptionUsesTheApprovedPaymentPath(cardId, card, "base");
             InvokeOnUpgrade(cardId, card);
             AcceptanceAssert.True(
                 !card.DynamicVars.TryGetValue("LifeCost", out var upgradedLifeCost) ||
                 upgradedLifeCost.BaseValue == 0m,
                 $"{cardId} must still have zero or no fixed LifeCost after upgrade.");
+            AssertZeroCostExceptionUsesTheApprovedPaymentPath(cardId, card, "upgraded");
         }
+
+        var ritual = cards["VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"];
+        AssertDynamicVar(
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+            ritual,
+            "LifeCostPerPhase",
+            1,
+            "upgraded");
+        var ritualPhaseProbe = VivhitesCrimsonTransformationRitualMechanics.Calculate(
+            [new CrimsonRitualStage(37, 10)]);
+        AcceptanceAssert.Equal(
+            37,
+            ritualPhaseProbe.ExtraLifeCost,
+            "The Crimson ritual exception must add exactly one Cough per phase without the global doubling.");
+
+        AcceptanceAssert.Empty(
+            paymentBindingFailures,
+            "All 58 fixed-Cough cards must read their displayed LifeCost DynamicVar at the runtime payment entry:");
     }
 
     public static void AllDrainDynamicVarsMatchTheDoubledCurrentTable(RepositorySnapshot repository)
@@ -367,6 +403,90 @@ internal static class BalanceAcceptanceTests
             actual,
             $"{cardId}.{varName} has the wrong {state} value.");
         AssertIntegral(actual, $"{cardId}.{varName} {state}");
+    }
+
+    private static void CollectLifeCalculationCostBindingFailure(
+        ICollection<string> failures,
+        string cardId,
+        CardModel card,
+        string state)
+    {
+        var lifeCost = card.DynamicVars["LifeCost"];
+        var original = lifeCost.BaseValue;
+        var initialRuntimeCost = ReadLifeCalculationCost(cardId, card);
+        if (initialRuntimeCost != (int)original)
+        {
+            failures.Add(
+                $"{cardId} ({state}) displays {original} but pays {initialRuntimeCost}.");
+            return;
+        }
+
+        var probe = checked((int)original + 101);
+        try
+        {
+            lifeCost.BaseValue = probe;
+            var runtimeProbe = ReadLifeCalculationCost(cardId, card);
+            if (runtimeProbe != probe)
+            {
+                failures.Add(
+                    $"{cardId} ({state}) kept paying {runtimeProbe} after its LifeCost DynamicVar changed to {probe}.");
+            }
+        }
+        finally
+        {
+            lifeCost.BaseValue = original;
+        }
+    }
+
+    private static int ReadLifeCalculationCost(string cardId, CardModel card)
+    {
+        for (var cursor = card.GetType(); cursor is not null; cursor = cursor.BaseType)
+        {
+            var property = cursor.GetProperty(
+                "LifeCalculationCost",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            if (property is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                return (int)(property.GetValue(card) ??
+                    throw new AcceptanceFailureException(
+                        $"{cardId}.LifeCalculationCost returned null."));
+            }
+            catch (TargetInvocationException exception)
+            {
+                throw new AcceptanceFailureException(
+                    $"{cardId}.LifeCalculationCost failed: {exception.GetBaseException().Message}");
+            }
+        }
+
+        throw new AcceptanceFailureException(
+            $"{cardId} has no runtime LifeCalculationCost payment property.");
+    }
+
+    private static void AssertZeroCostExceptionUsesTheApprovedPaymentPath(
+        string cardId,
+        CardModel card,
+        string state)
+    {
+        if (cardId == "VIVHITE_CARD_ASTRAL_MEASURE")
+        {
+            AcceptanceAssert.True(
+                card is not VivhiteLifeCalculationCard,
+                $"{cardId} must remain outside the fixed-Cough payment base in its {state} state.");
+            return;
+        }
+
+        AcceptanceAssert.True(
+            card is VivhiteLifeCalculationCard,
+            $"{cardId} must use the shared payment base in its {state} state.");
+        AcceptanceAssert.Equal(
+            0,
+            ReadLifeCalculationCost(cardId, card),
+            $"{cardId} must enter the shared payment path with zero printed LifeCost in its {state} state.");
     }
 
     private static void AssertIntegral(decimal value, string contract)

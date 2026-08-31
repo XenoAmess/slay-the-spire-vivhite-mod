@@ -21,7 +21,7 @@ public sealed class ChromaticLimit : VivhiteLifeCalculationCard
 
     protected override bool HasEnergyCostX => true;
 
-    protected override int LifeCalculationCost => 8;
+    protected override int LifeCalculationCost => IntVar("LifeCost");
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Drain, VivhiteKeywords.Margin];

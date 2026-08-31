@@ -18,7 +18,7 @@ public sealed class UnifiedFieldTheory : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 14;
+    protected override int LifeCalculationCost => IntVar("LifeCost");
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin, VivhiteKeywords.Drain];

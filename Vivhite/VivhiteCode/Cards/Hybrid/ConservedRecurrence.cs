@@ -19,7 +19,7 @@ public sealed class ConservedRecurrence : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 10;
+    protected override int LifeCalculationCost => IntVar("LifeCost");
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [CardKeyword.Exhaust];

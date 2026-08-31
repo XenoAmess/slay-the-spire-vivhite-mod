@@ -15,7 +15,7 @@ namespace Vivhite.Cards.Conservation;
 /// </summary>
 public abstract class ConservationCard : VivhiteLifeCalculationCard
 {
-    private readonly int _lifeCalculationCost;
+    private readonly int _baseLifeCalculationCost;
 
     protected ConservationCard(
         int energyCost,
@@ -26,10 +26,11 @@ public abstract class ConservationCard : VivhiteLifeCalculationCard
         : base(energyCost, type, rarity, targetType)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(lifeCalculationCost);
-        _lifeCalculationCost = lifeCalculationCost;
+        _baseLifeCalculationCost = lifeCalculationCost;
     }
 
-    protected sealed override int LifeCalculationCost => _lifeCalculationCost;
+    protected sealed override int LifeCalculationCost =>
+        _baseLifeCalculationCost == 0 ? 0 : IntVar("LifeCost");
 
     /// <summary>
     /// Card-specific dynamic values. Life Calculation is injected once here so every card uses
@@ -38,9 +39,9 @@ public abstract class ConservationCard : VivhiteLifeCalculationCard
     protected virtual IEnumerable<DynamicVar> ConservationVars => [];
 
     protected sealed override IEnumerable<DynamicVar> CanonicalVars =>
-        LifeCalculationCost == 0
+        _baseLifeCalculationCost == 0
             ? ConservationVars
-            : [new HpLossVar("LifeCost", LifeCalculationCost), .. ConservationVars];
+            : [new HpLossVar("LifeCost", _baseLifeCalculationCost), .. ConservationVars];
 
     protected Task GainMarginAsync(
         PlayerChoiceContext choiceContext,

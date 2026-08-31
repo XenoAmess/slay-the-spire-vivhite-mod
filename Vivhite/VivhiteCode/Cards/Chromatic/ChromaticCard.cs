@@ -17,7 +17,7 @@ namespace Vivhite.Cards.Chromatic;
 /// </summary>
 public abstract class ChromaticCard : VivhiteLifeCalculationCard
 {
-    private readonly int _lifeCalculationCost;
+    private readonly int _baseLifeCalculationCost;
 
     protected ChromaticCard(
         int energyCost,
@@ -28,15 +28,15 @@ public abstract class ChromaticCard : VivhiteLifeCalculationCard
         : base(energyCost, type, rarity, targetType)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(lifeCalculationCost);
-        _lifeCalculationCost = lifeCalculationCost;
+        _baseLifeCalculationCost = lifeCalculationCost;
     }
 
-    protected sealed override int LifeCalculationCost => _lifeCalculationCost;
+    protected sealed override int LifeCalculationCost => IntVar("LifeCost");
 
     protected virtual IEnumerable<DynamicVar> ChromaticVars => [];
 
     protected sealed override IEnumerable<DynamicVar> CanonicalVars =>
-        [new HpLossVar("LifeCost", LifeCalculationCost), .. ChromaticVars];
+        [new HpLossVar("LifeCost", _baseLifeCalculationCost), .. ChromaticVars];
 
     protected virtual IEnumerable<CardKeyword> ChromaticKeywords => [];
 

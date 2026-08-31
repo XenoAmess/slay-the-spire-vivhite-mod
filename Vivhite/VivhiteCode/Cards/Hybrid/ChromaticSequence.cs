@@ -18,7 +18,7 @@ public sealed class ChromaticSequence : VivhiteLifeCalculationCard
     {
     }
 
-    protected override int LifeCalculationCost => 4;
+    protected override int LifeCalculationCost => IntVar("LifeCost");
 
     protected override IEnumerable<CardKeyword> AdditionalVivhiteKeywords =>
         [VivhiteKeywords.Margin, VivhiteKeywords.Drain];

@@ -22,7 +22,7 @@ public sealed class ClosedDomainMapping : VivhiteLifeCalculationCard
 
     public override bool GainsBlock => true;
 
-    protected override int LifeCalculationCost => 2;
+    protected override int LifeCalculationCost => IntVar("LifeCost");
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
