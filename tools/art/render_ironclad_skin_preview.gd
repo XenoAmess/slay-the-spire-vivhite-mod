@@ -4,11 +4,18 @@ const DEFAULT_RESOURCE := "res://Vivhite/skins/ironclad/spine/combat/vivhite_com
 const DEFAULT_ANIMATION := "idle_loop"
 const DEFAULT_SIZE := Vector2i(1024, 1024)
 const MARGIN := 0.08
+const SPINE_UPDATE_MODE_MANUAL := 2
 
 var _exit_code := 0
 
 
 func _initialize() -> void:
+	# Exact-time acceptance frames must neither receive focus nor advance while
+	# waiting for Vulkan draw completion. Keep the helper off-screen and put the
+	# SpineSprite in manual update mode below.
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+		DisplayServer.window_set_position(Vector2i(-32000, -32000))
 	call_deferred("_render_preview")
 
 
@@ -153,6 +160,7 @@ func _render_preview() -> void:
 		quit(_exit_code)
 		return
 	stage.add_child(sprite)
+	sprite.call("set_update_mode", SPINE_UPDATE_MODE_MANUAL)
 	sprite.set("skeleton_data_res", skeleton_data)
 
 	var bounds_position := Vector2(
