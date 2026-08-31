@@ -5,8 +5,8 @@ Performs the final read-only Vivhite PCK content gate.
 .DESCRIPTION
 Validates a completed Vivhite PCK without building, deploying, starting the game,
 or modifying the PCK. The gate verifies the existing V3 Ironclad skin contract,
-the exact 289 player-facing localization keys per language, current Cough/Margin
-terminology, and all 89 runtime art imports. It mounts the PCK in an empty
+the exact 314 player-facing localization keys across six files per language,
+current Cough/Margin terminology, and all 92 runtime art imports. It mounts the PCK in an empty
 temporary Godot project so repository source files cannot mask missing packed
 resources.
 
@@ -419,6 +419,7 @@ if ([string]::IsNullOrWhiteSpace($PowerShellExe)) {
 $pckFullPath = [IO.Path]::GetFullPath($PckPath)
 $godotFullPath = [IO.Path]::GetFullPath($GodotExe)
 $skinValidator = Join-Path $repoFullPath "Vivhite\tools\Validate-IroncladSkin.ps1"
+$skinContract = Join-Path $repoFullPath "Vivhite\tools\ironclad-skin.contract.json"
 $artAudit = Join-Path $repoFullPath "tools\art\audit_vivhite_runtime_art.gd"
 $godotProject = Join-Path $repoFullPath "Vivhite"
 $tempBase = [IO.Path]::GetFullPath((Join-Path $repoFullPath ".tmp")).TrimEnd('\', '/')
@@ -521,8 +522,11 @@ try {
     Assert-FileExists -Path $pckFullPath -Label "PCK"
     Assert-FileExists -Path $godotFullPath -Label "Godot executable"
     Assert-FileExists -Path $skinValidator -Label "Skin validator"
+    Assert-FileExists -Path $skinContract -Label "Skin contract"
     Assert-FileExists -Path $artAudit -Label "Runtime-art audit"
     Assert-FileExists -Path (Join-Path $godotProject "project.godot") -Label "Godot project"
+
+    $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
 
     $pckHashBefore = (Get-FileHash -LiteralPath $pckFullPath -Algorithm SHA256).Hash
     $inputEvidence = [ordered]@{
@@ -555,7 +559,8 @@ config/name="VivhitePckGate"
 renderer/rendering_method="gl_compatibility"
 '@
 
-    # Layer 1: source art must still match the 89-item canonical runtime set.
+    # Layer 1: source art must match the exact 92-item canonical runtime set.
+    $sourceArtReportPath = Join-Path $gateRoot "source-art-report.json"
     $sourceArtResult = Invoke-CapturedProcess -FilePath $godotFullPath `
         -ArgumentList @(
             "--headless",
@@ -564,7 +569,7 @@ renderer/rendering_method="gl_compatibility"
             "--script", $artAudit,
             "--",
             "--repo-root", $repoFullPath,
-            "--report", (Join-Path $gateRoot "source-art-report.json")
+            "--report", $sourceArtReportPath
         ) `
         -WorkingDirectory $workRoot `
         -ConsoleLogPath (Join-Path $gateRoot "source-art.console.log") `
@@ -572,8 +577,50 @@ renderer/rendering_method="gl_compatibility"
     if ($sourceArtResult.ExitCode -ne 0) {
         throw "Source runtime-art audit failed with exit code $($sourceArtResult.ExitCode)."
     }
+    Assert-FileExists -Path $sourceArtReportPath -Label "Source runtime-art report"
+    $sourceArtReport = [IO.File]::ReadAllText($sourceArtReportPath, $strictUtf8) | ConvertFrom-Json
+    $sourceExpectedProperty = $sourceArtReport.PSObject.Properties["expected"]
+    $sourceAcceptedProperty = $sourceArtReport.PSObject.Properties["accepted"]
+    $sourceErrorsProperty = $sourceArtReport.PSObject.Properties["errors"]
+    if ($null -eq $sourceExpectedProperty -or $null -eq $sourceAcceptedProperty -or
+        $null -eq $sourceErrorsProperty) {
+        throw "Source runtime-art report is missing expected, accepted, or errors."
+    }
+    $sourceExpected = [int]$sourceExpectedProperty.Value
+    $sourceAccepted = [int]$sourceAcceptedProperty.Value
+    $sourceErrors = @($sourceErrorsProperty.Value)
+    if ($sourceExpected -ne 92 -or $sourceAccepted -ne 92 -or $sourceErrors.Count -ne 0) {
+        throw (
+            "Source runtime-art report is expected=$sourceExpected, accepted=$sourceAccepted, " +
+            "errors=$($sourceErrors.Count); required exactly 92/92 with zero errors.")
+    }
 
-    # Layer 2: isolate the existing validator because its error path calls exit.
+    # Layer 2: pin the source/published skin contract to 30/34, then isolate the
+    # existing PCK validator because its error path calls exit.
+    $skinContractDocument = [IO.File]::ReadAllText($skinContract, $strictUtf8) | ConvertFrom-Json
+    $skinSourceCountProperty = $skinContractDocument.PSObject.Properties["expectedRuntimeFileCount"]
+    $skinLayoutsProperty = $skinContractDocument.PSObject.Properties["combatRuntimeLayouts"]
+    if ($null -eq $skinSourceCountProperty -or $null -eq $skinLayoutsProperty) {
+        throw "Skin contract is missing expectedRuntimeFileCount or combatRuntimeLayouts."
+    }
+    $v3Layouts = @($skinLayoutsProperty.Value | Where-Object {
+        [string]$_.name -eq "v3-five-page"
+    })
+    if ($v3Layouts.Count -ne 1) {
+        throw "Skin contract must declare exactly one v3-five-page layout; found $($v3Layouts.Count)."
+    }
+    $skinPublishedCountProperty = $v3Layouts[0].PSObject.Properties["expectedRuntimeFileCount"]
+    if ($null -eq $skinPublishedCountProperty) {
+        throw "The v3-five-page skin contract is missing expectedRuntimeFileCount."
+    }
+    $skinSourceCount = [int]$skinSourceCountProperty.Value
+    $skinPublishedCount = [int]$skinPublishedCountProperty.Value
+    if ($skinSourceCount -ne 30 -or $skinPublishedCount -ne 34) {
+        throw (
+            "Skin resource contract is source=$skinSourceCount, published=$skinPublishedCount; " +
+            "expected source=30, published=34.")
+    }
+
     $skinResult = Invoke-CapturedProcess -FilePath $PowerShellExe `
         -ArgumentList @(
             "-NoProfile",
@@ -595,14 +642,14 @@ renderer/rendering_method="gl_compatibility"
     }
 
     # Layer 3: build an exact manifest from the current localization and art facts.
-    $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
     $localization = @()
     $expectedFileCounts = [ordered]@{
         "cards.json" = 188
         "powers.json" = 69
-        "characters.json" = 19
+        "characters.json" = 20
         "card_keywords.json" = 10
         "relics.json" = 3
+        "ancients.json" = 24
     }
 
     foreach ($locale in @("eng", "zhs")) {
@@ -617,18 +664,28 @@ renderer/rendering_method="gl_compatibility"
             if ($keyCount -ne $expectedCount) {
                 throw "$locale/$fileName source count is $keyCount; expected $expectedCount."
             }
+            $expectedEmptyValues = if ($fileName -eq "ancients.json") { 18 } else { 0 }
+            $actualEmptyValues = @($document.PSObject.Properties | Where-Object {
+                $_.Value -is [string] -and ([string]$_.Value).Length -eq 0
+            }).Count
+            if ($actualEmptyValues -ne $expectedEmptyValues) {
+                throw (
+                    "$locale/$fileName source intentional-empty count is $actualEmptyValues; " +
+                    "expected $expectedEmptyValues.")
+            }
 
             $localeTotal += $keyCount
             $localization += [ordered]@{
                 locale = $locale
                 path = "res://Vivhite/localization/$locale/$fileName"
                 keys = $expectedCount
+                intentional_empty_values = $expectedEmptyValues
                 sha256 = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant()
             }
         }
 
-        if ($localeTotal -ne 289) {
-            throw "$locale source localization total is $localeTotal; expected 289."
+        if ($localeTotal -ne 314) {
+            throw "$locale source localization total is $localeTotal; expected 314."
         }
     }
 
@@ -682,8 +739,26 @@ renderer/rendering_method="gl_compatibility"
         width = 24
         height = 24
     }
-    if ($art.Count -ne 89) {
-        throw "Runtime art manifest contains $($art.Count) entries; expected 89."
+    $art += [ordered]@{
+        category = "vfx"
+        path = "res://Vivhite/skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png"
+        width = 512
+        height = 512
+    }
+    $art += [ordered]@{
+        category = "vfx"
+        path = "res://Vivhite/skins/ironclad/transitions/vivhite_character_select_transition.png"
+        width = 2560
+        height = 1200
+    }
+    $art += [ordered]@{
+        category = "vfx"
+        path = "res://Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png"
+        width = 256
+        height = 256
+    }
+    if ($art.Count -ne 92) {
+        throw "Runtime art manifest contains $($art.Count) entries; expected 92."
     }
 
     $manifest = [ordered]@{
@@ -723,14 +798,59 @@ func _initialize() -> void:
 		return
 
 	var errors: Array[String] = []
+	var expected_locale_keys := {
+		"cards.json": 188,
+		"powers.json": 69,
+		"characters.json": 20,
+		"card_keywords.json": 10,
+		"relics.json": 3,
+		"ancients.json": 24,
+	}
+	var expected_locale_empty_values := {
+		"cards.json": 0,
+		"powers.json": 0,
+		"characters.json": 0,
+		"card_keywords.json": 0,
+		"relics.json": 0,
+		"ancients.json": 18,
+	}
 	var locale_counts := {"eng": 0, "zhs": 0}
 	var locale_files := {"eng": 0, "zhs": 0}
 	var locale_text := {"eng": "", "zhs": ""}
+	var seen_locale_files := {"eng": {}, "zhs": {}}
 
 	for entry_value in manifest["localization"]:
 		var entry: Dictionary = entry_value
 		var locale := str(entry["locale"])
 		var resource_path := str(entry["path"])
+		if not locale_counts.has(locale):
+			errors.append("unexpected localization locale: %s" % locale)
+			continue
+		var file_name := resource_path.get_file()
+		if not expected_locale_keys.has(file_name):
+			errors.append("unexpected localization file: %s" % resource_path)
+			continue
+		var expected_keys := int(entry["keys"])
+		if expected_keys != int(expected_locale_keys[file_name]):
+			errors.append(
+				"manifest key contract is wrong: %s has %d, expected %d"
+				% [resource_path, expected_keys, int(expected_locale_keys[file_name])]
+			)
+		var expected_empty_values := int(entry.get("intentional_empty_values", -1))
+		if expected_empty_values != int(expected_locale_empty_values[file_name]):
+			errors.append(
+				"manifest intentional-empty contract is wrong: %s has %d, expected %d"
+				% [
+					resource_path,
+					expected_empty_values,
+					int(expected_locale_empty_values[file_name]),
+				]
+			)
+		var locale_seen: Dictionary = seen_locale_files[locale]
+		if locale_seen.has(file_name):
+			errors.append("duplicate localization file: %s" % resource_path)
+			continue
+		locale_seen[file_name] = true
 		if not FileAccess.file_exists(resource_path):
 			errors.append("missing localization file: %s" % resource_path)
 			continue
@@ -749,7 +869,6 @@ func _initialize() -> void:
 			errors.append("invalid localization JSON: %s" % resource_path)
 			continue
 
-		var expected_keys := int(entry["keys"])
 		if parsed.size() != expected_keys:
 			errors.append(
 				"wrong key count: %s has %d, expected %d"
@@ -758,21 +877,39 @@ func _initialize() -> void:
 
 		locale_counts[locale] = int(locale_counts.get(locale, 0)) + parsed.size()
 		locale_files[locale] = int(locale_files.get(locale, 0)) + 1
+		var actual_empty_values := 0
 		for key_value in parsed.keys():
 			var key := str(key_value)
 			var value := str(parsed[key_value])
+			if value.is_empty():
+				actual_empty_values += 1
 			locale_text[locale] = str(locale_text.get(locale, "")) + "\n" + value
 			if value.strip_edges() == key:
 				errors.append("raw localization key echo: %s" % key)
 			if value.to_upper().contains("NOPE"):
 				errors.append("NOPE text found in localization value: %s" % key)
+		if actual_empty_values != expected_empty_values:
+			errors.append(
+				"wrong intentional-empty count: %s has %d, expected %d"
+				% [resource_path, actual_empty_values, expected_empty_values]
+			)
+
+	for locale_value in seen_locale_files.keys():
+		var locale := str(locale_value)
+		var locale_seen: Dictionary = seen_locale_files[locale]
+		for file_name_value in expected_locale_keys.keys():
+			var file_name := str(file_name_value)
+			if not locale_seen.has(file_name):
+				errors.append(
+					"missing localization manifest entry: %s/%s" % [locale, file_name]
+				)
 
 	var eng_text := str(locale_text["eng"])
 	var zhs_text := str(locale_text["zhs"])
-	if int(locale_counts["eng"]) != 289 or int(locale_files["eng"]) != 5:
-		errors.append("English localization is not 289 keys across 5 files")
-	if int(locale_counts["zhs"]) != 289 or int(locale_files["zhs"]) != 5:
-		errors.append("Chinese localization is not 289 keys across 5 files")
+	if int(locale_counts["eng"]) != 314 or int(locale_files["eng"]) != 6:
+		errors.append("English localization is not 314 keys across 6 files")
+	if int(locale_counts["zhs"]) != 314 or int(locale_files["zhs"]) != 6:
+		errors.append("Chinese localization is not 314 keys across 6 files")
 	if not eng_text.contains("Cough") or not eng_text.contains("Margin"):
 		errors.append("English Cough/Margin terminology is missing")
 	if eng_text.contains("Life Calculation"):
@@ -783,7 +920,7 @@ func _initialize() -> void:
 		if zhs_text.contains(retired):
 			errors.append("retired Chinese term remains: %s" % retired)
 
-	var loaded_counts := {"card": 0, "power": 0, "crown": 0, "energy": 0}
+	var loaded_counts := {"card": 0, "power": 0, "crown": 0, "energy": 0, "vfx": 0}
 	for entry_value in manifest["art"]:
 		var entry: Dictionary = entry_value
 		var category := str(entry["category"])
@@ -847,7 +984,7 @@ func _initialize() -> void:
 				continue
 		loaded_counts[category] = int(loaded_counts.get(category, 0)) + 1
 
-	var expected_counts := {"card": 61, "power": 19, "crown": 2, "energy": 7}
+	var expected_counts := {"card": 61, "power": 19, "crown": 2, "energy": 7, "vfx": 3}
 	for category in expected_counts:
 		if int(loaded_counts.get(category, 0)) != int(expected_counts[category]):
 			errors.append(
@@ -865,13 +1002,14 @@ func _initialize() -> void:
 		quit(4)
 		return
 
-	print("[PASS] localization eng: 289/289 keys; 5/5 files byte-identical; Cough/Margin present")
-	print("[PASS] localization zhs: 289/289 keys; 5/5 files byte-identical; 謦欬/余裕 present")
+	print("[PASS] localization eng: 314/314 keys; 6/6 files byte-identical; ancients 24 keys / 18 intentional empty overrides; Cough/Margin present")
+	print("[PASS] localization zhs: 314/314 keys; 6/6 files byte-identical; ancients 24 keys / 18 intentional empty overrides; 謦欬/余裕 present")
 	print("[PASS] cards: 61/61 packed imports resolve and decode")
 	print("[PASS] powers: 19/19 packed imports resolve and decode")
 	print("[PASS] crown: 2/2 packed imports resolve and decode")
 	print("[PASS] energy: 7/7 packed imports resolve and decode")
-	print("[PASS] runtime art: 89/89")
+	print("[PASS] VFX: 3/3 eye, character-select transition, and Vivhite-only card trail")
+	print("[PASS] runtime art: 92/92")
 	print("[PASS] NOPE fallback guard: 0 missing, 0 undecodable, 0 generic/NOPE import targets")
 	quit(0)
 '@
