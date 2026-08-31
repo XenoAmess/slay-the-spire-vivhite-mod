@@ -43,6 +43,13 @@ MCP server（上游附带）对本项目不是必需的。
 `character_id` 和角色内递增的 `profile_run_number`；两套 `stats.json`、`policy.json`、
 `progression.json`、`lessons.md` 与 `runs/` 不交叉读写。
 
+卡牌数据同样以 Profile 为边界：奖励选牌写入各自的 `card_picks`，终局构筑写入各自的
+`final_deck`，选牌体系分布与终局构筑分布分别统计、分别展示。`final_deck` 只接受有效
+`GAME_OVER` 终局载荷中的 MCP `run.deck`；轮询期间的牌组快照、断线缓存和旧活动局状态都不能
+被提升为终局证据。压缩归档保留 `profile_id` / `character_id`；旧 ZIP catalog 缺身份时先从校验后的
+归档原始 JSON 恢复，只有 catalog 与原始 JSON 都无身份时才按历史兼容归入 Ironclad，不能因物理目录
+位置把显式 Vivhite 记录改归战士。
+
 楼层统计也以 Profile 为硬边界，不能把两人的样本合并后再按标签显示。Ironclad 的生涯平均/最高
 优先来自历史根目录自己的 `floor_sum_raw / runs` 与 `best_floor_raw`；Vivhite 只读取
 `knowledge/profiles/vivhite/` 下对应字段，聚合不可用时也只回退到同一 Profile 的有效完结局。两人的
@@ -81,16 +88,26 @@ Brain 通过通用动作端点调用它；MCP 的 full profile 额外暴露同�
 
 1. `game_over.phase=intro` 时只允许 `continue_game_over`，真实点击原生 Continue。
 2. `summary_animating` 期间等待游戏执行分数条、角色解锁计算与原生结算协程。
-3. 只有原生 MainMenuButton 真实可见且可用时进入 `summary_ready`；此时 Brain 才幂等持久化本局
-   统计与轮换记录，下一次轮询再执行 `return_to_main_menu`。
+3. 只有原生 MainMenuButton 真实可见且可用时进入 `summary_ready`；Agent 此时暴露
+   `save_status`、`save_verified` 与 `save_error`，但 `summary_ready` 本身不等于落盘成功。
+4. `save_status=pending` 时 Brain 只等待；`error`、字段缺失、类型错误或字段矛盾都 fail closed。
+   只有 `save_status=verified`、`save_verified=true` 且 `save_error` 为空时，Brain 才幂等保存终局日志、
+   角色统计与轮换记录，并在下一次轮询执行 `return_to_main_menu`。
 
-`summary_ready + MainMenuButton 可用` 是这里采用的原生 UI 生命周期落盘屏障；Brain 不读取或比对
-游戏存档文件来额外宣称落盘验证成功。
+原生验证会重新只读打开当前 Profile 的真实 `progress.save`，把反序列化结果与当前完整
+`ProgressState` 做递归语义比对。读取失败、损坏或不一致都不得结算、推进轮换或离开终局屏；
+`human_assisted` 只能决定本局是否进入学习，不能绕过这个原生存档屏障。
 
 `continue_game_over` 真实点击 `NGameOverContinueButton`；返回动作也只真实点击
 `NReturnToMainMenuButton`，禁止直接调用会绕过总结协程的 `ReturnToMainMenu` 私有路径。其后出现的每个
 `UNLOCK` 屏只通过 `confirm_unlock` 顺序确认；按钮未就绪时等待，不盲点屏幕、不提前开始下一局。
-HTTP 回执丢失或重连依赖真实按钮和 phase 恢复，既不会重复 Continue，也不会重复写终局统计。
+HTTP 回执丢失或重连依赖真实按钮、phase 和存档验证状态恢复，既不会重复 Continue，也不会重复写终局统计。
+
+动作 POST 的“不重放”由本地 `XenoAmess/STS2-Agent` fork 的 MCP `Sts2Client` 实现：动作响应读取结果
+不确定时只发送一次原 POST，随后立即且只执行一次不重试的真实 `GET /state`，并
+返回 `outcome_unknown`，并在 `reconciliation` 中附带取得的状态或结构化错误。对账 GET 成功只代表
+取得状态，调用方仍须按动作语义判定结果；证据不足时只能继续只读 GET，绝不能重发原动作。
+普通非动作 GET/HEAD 继续保留原有重试语义。
 
 分角色楼层统计只使用 `floor_sum_raw` / `best_floor_raw`；驾驶舱 UI 显示当前活动角色的一套四指标，并显示同窗口
 Vivhite÷Ironclad 滚动平均楼层比。LLM 复盘的目标契约是队列项携带 `profile_id`、单批只含一个
@@ -132,7 +149,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 `Stack ready` 表示 brain 与游戏 API 已就绪。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
 
 全栈运行时可随时把游戏交还给玩家：`Ctrl+Alt+F9` 全局停止 Brain 发送操作，
-`Ctrl+Alt+F10` 恢复自主操作。暂停采用 runner 驻留的控制权切换，游戏与驾驶舱不会关闭。
+`Ctrl+Alt+F10` 恢复自主操作。暂停采用 runner 驻留的控制权切换，游戏、runner 与驾驶舱都不会关闭。
 F9 一旦触及当前局，该局便永久标记为 `human_assisted` / `excluded_from_learning`；
 所属 Profile 的在线 `stats` 立即回滚到该局开始前已经持久化的基线。
 F10 在同一局只恢复 Brain 发送操作，不会重新开启本局学习；排除标记与回滚事务会持久化，Brain 或整套重启后仍保持。
@@ -426,12 +443,15 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 `TOPMOST`，再把驾驶舱排到游戏上方。空闲、启动中、停止中、直播姬未运行、状态未知或读取失败时
 绝不触碰游戏窗口。这条巡检只使用 Python 标准库、Livehime 本地日志和 Win32，LLM/token 消耗为 0。
 
-驾驶舱固定提供三类信息：
+驾驶舱固定提供四类信息：
 
 - **楼层统计**：UI 显示当前活动角色的一套四指标（历史平均、近 20 局平均、历史最高、近 20 局最高）、该角色最近 40 个有效完结局的原始楼层线与 5 局滚动均线，并显示双角色同窗口滚动平均楼层比值。
   底层 `profiles` 分别保存白绮与战士数据，样本不共享、互不回填；UI 不并排显示两套指标卡片。
   当前局独立显示，不混入历史均值；归档 catalog 与活动 run 按 `run_id` 去重，活动证据优先，
   进行中局、人工接管局、零决策幻影局和坏 JSON 不会被伪装成 0 楼。
+- **选牌与终局构筑**：当前 Profile 分别展示奖励选牌体系分布和有效终局牌组的构筑分布；
+  Vivhite 与 Ironclad 各自聚合，不共享样本。前者只消费成功选牌记录，后者只消费终局 MCP
+  `run.deck` 写成的 `final_deck`，进行中牌组、人工接管局和被排除局不能进入任一分布。
 - **机械决策链**：以 `SCAN → GATE → RANK → LOCK → ACK` 展示当前观察、规则闸门、前三候选、
   最终动作、说明文本及 `proposed/pending/reconciling/applied/retrying/rejected/failed` 等执行结果。
   规则直达型动作只画真实经过的线性节点，不编造候选、概率或“思维链”。
