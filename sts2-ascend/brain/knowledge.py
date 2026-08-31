@@ -829,7 +829,27 @@ class Knowledge:
         root = self.root
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / "runs").mkdir(exist_ok=True)
+        # Per-profile rollback journal for the currently active run.  Online
+        # learning is intentionally saved during a run, so an in-memory snapshot
+        # alone cannot undo samples already written before a human presses F9.
+        # The journal survives Brain restarts and is removed only when that exact
+        # run is closed.  Separate Knowledge roots keep character profiles
+        # isolated without a process-global switch.
+        self._run_learning_lock = threading.RLock()
+        self._run_learning_id = ""
+        self._run_learning_baseline: dict | None = None
+        self._run_learning_excluded = False
         self.stats = _load_json(root / "stats.json", DEFAULT_STATS)
+        # F9 persists the exclusion bit before restoring stats.json.  If the
+        # process dies in that narrow window, construction itself must complete
+        # the rollback: MAIN_MENU/GAME_OVER restarts may never call
+        # begin_run_learning before another save or legacy mutation occurs.
+        journal = self._load_run_learning_journal()
+        if journal is not None and bool(journal.get("excluded_from_learning")):
+            self._run_learning_id = self._normalise_run_id(journal["run_id"])
+            self._run_learning_baseline = copy.deepcopy(journal["stats"])
+            self._run_learning_excluded = True
+            self._restore_run_learning_baseline(persist=True)
         self.policy = _load_json(root / "policy.json", DEFAULT_POLICY)
         progression_defaults = copy.deepcopy(DEFAULT_PROGRESSION)
         if self.profile is not None:
@@ -1045,8 +1065,141 @@ class Knowledge:
 
     # ---------- persistence ----------
 
+    @property
+    def _run_learning_journal_path(self) -> Path:
+        return self.root / ".active_run_learning.json"
+
+    @staticmethod
+    def _normalise_run_id(run_id: str) -> str:
+        return str(run_id or "").strip()
+
+    def _load_run_learning_journal(self) -> dict | None:
+        path = self._run_learning_journal_path
+        if not path.exists():
+            return None
+        payload = _load_json(path, {})
+        if (not isinstance(payload, dict)
+                or int(payload.get("version", 0) or 0) != 1
+                or not self._normalise_run_id(payload.get("run_id"))
+                or not isinstance(payload.get("stats"), dict)):
+            raise ValueError(f"invalid active-run learning journal: {path}")
+        return payload
+
+    def _write_run_learning_journal(self) -> None:
+        if not self._run_learning_id or self._run_learning_baseline is None:
+            raise RuntimeError("active-run learning journal has no baseline")
+        _save_json(self._run_learning_journal_path, {
+            "version": 1,
+            "run_id": self._run_learning_id,
+            "excluded_from_learning": bool(self._run_learning_excluded),
+            "stats": self._run_learning_baseline,
+        })
+
+    def _restore_run_learning_baseline(self, *, persist: bool) -> None:
+        if self._run_learning_baseline is None:
+            raise RuntimeError("cannot restore active-run learning without a baseline")
+        self.stats = copy.deepcopy(self._run_learning_baseline)
+        if persist:
+            _save_json(self.root / "stats.json", self.stats)
+
+    def begin_run_learning(self, run_id: str) -> None:
+        """Open or resume the durable learning transaction for one profile/run.
+
+        A normal reconnect keeps already accumulated autonomous samples while the
+        original baseline remains available for a later F9.  If the journal says
+        the run was previously excluded, reconnect restores the baseline before
+        any new policy tick can learn from that run again.
+        """
+        run_id = self._normalise_run_id(run_id)
+        if not run_id or run_id == "run_unknown":
+            return
+        with self._run_learning_lock:
+            if self._run_learning_id == run_id:
+                if self._run_learning_excluded:
+                    self._restore_run_learning_baseline(persist=True)
+                return
+
+            journal = self._load_run_learning_journal()
+            if journal is not None and self._normalise_run_id(
+                    journal.get("run_id")) == run_id:
+                self._run_learning_id = run_id
+                self._run_learning_baseline = copy.deepcopy(journal["stats"])
+                self._run_learning_excluded = bool(
+                    journal.get("excluded_from_learning"))
+                if self._run_learning_excluded:
+                    self._restore_run_learning_baseline(persist=True)
+                return
+
+            # A stale excluded journal must be honoured before another run in the
+            # same profile starts.  A stale autonomous journal leaves its already
+            # persisted samples intact, matching normal crash/reconnect behaviour.
+            if journal is not None and bool(journal.get("excluded_from_learning")):
+                self.stats = copy.deepcopy(journal["stats"])
+                _save_json(self.root / "stats.json", self.stats)
+
+            self._run_learning_id = run_id
+            self._run_learning_baseline = copy.deepcopy(self.stats)
+            self._run_learning_excluded = False
+            self._write_run_learning_journal()
+
+    def exclude_run_learning(self, run_id: str) -> bool:
+        """Rollback and permanently suppress learning for this mixed run.
+
+        The exclusion bit is journalled before restoring ``stats.json``.  A crash
+        between those writes therefore fails closed: the next Brain process sees
+        the bit and completes the rollback instead of accepting partial samples.
+        """
+        run_id = self._normalise_run_id(run_id)
+        if not run_id or run_id == "run_unknown":
+            return False
+        with self._run_learning_lock:
+            if self._run_learning_id != run_id:
+                self.begin_run_learning(run_id)
+            if self._run_learning_id != run_id:
+                return False
+            self._run_learning_excluded = True
+            self._write_run_learning_journal()
+            self._restore_run_learning_baseline(persist=True)
+            return True
+
+    def run_learning_is_excluded(self, run_id: str | None = None) -> bool:
+        with self._run_learning_lock:
+            if run_id is not None and self._run_learning_id != self._normalise_run_id(run_id):
+                return False
+            return bool(self._run_learning_id and self._run_learning_excluded)
+
+    def finish_run_learning(self, run_id: str) -> None:
+        """Close one exact run transaction after terminal persistence succeeds."""
+        run_id = self._normalise_run_id(run_id)
+        if not run_id or run_id == "run_unknown":
+            return
+        with self._run_learning_lock:
+            if self._run_learning_id != run_id:
+                journal = self._load_run_learning_journal()
+                if journal is None or self._normalise_run_id(
+                        journal.get("run_id")) != run_id:
+                    return
+                self._run_learning_id = run_id
+                self._run_learning_baseline = copy.deepcopy(journal["stats"])
+                self._run_learning_excluded = bool(
+                    journal.get("excluded_from_learning"))
+            if self._run_learning_excluded:
+                self._restore_run_learning_baseline(persist=True)
+            self._run_learning_journal_path.unlink(missing_ok=True)
+            self._run_learning_id = ""
+            self._run_learning_baseline = None
+            self._run_learning_excluded = False
+
+    def _learning_write_allowed(self) -> bool:
+        return not self.run_learning_is_excluded()
+
     def save(self) -> None:
-        _save_json(self.root / "stats.json", self.stats)
+        with self._run_learning_lock:
+            if self._run_learning_excluded:
+                # Direct aggregate updates in legacy call sites cannot leak on an
+                # exit/save even if they bypass a commit_* guard.
+                self._restore_run_learning_baseline(persist=False)
+            _save_json(self.root / "stats.json", self.stats)
         self._save_policy_merged()
         _save_json(self.root / "progression.json", self.progression)
 
@@ -1397,6 +1550,8 @@ class Knowledge:
         ``ctx.credit_tags``.  Rejected HTTP attempts therefore cannot consume a
         persistent sample or close the exploration gate.
         """
+        if not self._learning_write_allowed():
+            return
         domain = str(domain or "").strip().lower()
         key = str(key or "").strip()
         if not domain or not key:
@@ -1413,6 +1568,8 @@ class Knowledge:
                            fire_sum: float | None = None,
                            fire_rounds: int | None = None,
                            act: int | None = None) -> None:
+        if not self._learning_write_allowed():
+            return
         e = self.stats["enemies"].setdefault(comp_id, {"encounters": 0, "hp_lost_sum": 0.0, "deaths": 0, "wins": 0})
         e["encounters"] += 1
         e["hp_lost_sum"] += max(0.0, hp_lost)
@@ -1606,6 +1763,8 @@ class Knowledge:
         旧调用按存活处理保持兼容），查询端 room_damage_worst 各层级优先返回
         成熟存活尾部；死亡样本照旧入全量账（场均/死亡率先验不受影响）。
         """
+        if not self._learning_write_allowed():
+            return
         e = self.stats["rooms"].setdefault(
             node_type, {"visits": 0, "outcome_sum": 0.0, "hp_lost_sum": 0.0, "damage_events": 0})
         e["hp_lost_sum"] = e.get("hp_lost_sum", 0.0) + max(0.0, hp_lost)
@@ -1758,6 +1917,8 @@ class Knowledge:
     def commit_event_option(self, event_id: str, option_key: str, hp_delta: float,
                             gold_delta: float, died: bool, deck_delta: int = 0,
                             relic_delta: int = 0, potion_delta: int = 0) -> None:
+        if not self._learning_write_allowed():
+            return
         opts = self.stats["events"].setdefault(event_id, {})
         e = opts.setdefault(option_key, {"n": 0, "hp_delta_sum": 0.0, "gold_delta_sum": 0.0, "deaths": 0})
         e["n"] += 1
@@ -1785,6 +1946,8 @@ class Knowledge:
         Callers that own the whole reward screen should use ``commit_card_offer``;
         it deduplicates duplicate ids and also maintains offer-level audit totals.
         """
+        if not self._learning_write_allowed():
+            return
         card_id = str(card_id or "").upper().rstrip("+")
         if not card_id:
             return
@@ -1801,6 +1964,8 @@ class Knowledge:
         one base id inside an offer, so ``seen`` means "offers containing this card",
         not evaluator invocations or candidate slots.
         """
+        if not self._learning_write_allowed():
+            return 0
         unique = []
         known = set()
         for raw in card_ids or []:
@@ -1824,6 +1989,8 @@ class Knowledge:
         return len(unique)
 
     def commit_card_play(self, card_id: str) -> None:
+        if not self._learning_write_allowed():
+            return
         e = self.stats["cards"].setdefault(card_id, self._empty_card_stats())
         e.setdefault("offered", 0)
         e["plays"] += 1
@@ -1838,6 +2005,8 @@ class Knowledge:
         生效门槛是 ≥2 场独立战斗的实证（is_known_respawn_add），单场误报
         （如连续两次高估伤害被格挡救活）不会污染名册。
         """
+        if not self._learning_write_allowed():
+            return
         if not enemy_key:
             return
         d = self.stats.setdefault("respawn_adds", {})
@@ -1863,6 +2032,8 @@ class Knowledge:
         「守卫在生产端是否仍在正确显形」，效果评价归拾取端深负计价与对局结果。
         eval_reward_card 保持纯函数，本计数绝不进评分路径。
         """
+        if not self._learning_write_allowed():
+            return
         cid = str(card_id or "").upper().rstrip("+")
         if not cid:
             return
@@ -1880,6 +2051,8 @@ class Knowledge:
         爆发吞吐落账，让「二幕消耗战死因」能对照进幕就绪度做定量归因。
         列表封顶 60 条（约 15~20 局的进幕样本），防 stats.json 无界膨胀。
         """
+        if not self._learning_write_allowed():
+            return
         d = self.stats.setdefault("act_entries", [])
         d.append(dict(entry))
         if len(d) > 60:
@@ -1894,6 +2067,8 @@ class Knowledge:
                        picked_relics: list[str], visited_rooms: list[str],
                        died_to_enemy: str | None, died_to_event: str | None,
                        raw_floor: float | None = None) -> None:
+        if not self._learning_write_allowed():
+            return
         g = self.stats["global"]
         g["runs"] += 1
         g["wins"] += 1 if victory else 0

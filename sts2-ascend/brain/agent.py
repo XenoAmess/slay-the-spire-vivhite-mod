@@ -577,31 +577,122 @@ class Agent:
         run = state.get("run") or {}
         return str(state.get("run_id") or run.get("run_id") or "").strip()
 
+    def _knowledge_for_run_learning(
+            self, *, state: dict | None = None,
+            profile_id: str = "") -> tuple[Knowledge | None, CharacterProfile | None]:
+        """Resolve the exact profile store that owns one run's learning journal."""
+        stores = getattr(self, "_profile_knowledge", {}) or {}
+        profiles = getattr(self, "profile_store", None)
+        if profile_id and profile_id in stores:
+            profile = None
+            if profiles is not None:
+                try:
+                    profile = profiles.resolve(profile_id)
+                except KeyError:
+                    pass
+            return stores[profile_id], profile
+
+        run = (state or {}).get("run") or {}
+        character_id = str(run.get("character_id") or "").strip()
+        if profiles is not None and character_id:
+            try:
+                try:
+                    profile = profiles.for_character(character_id)
+                except KeyError:
+                    canonical = canonical_character_id(character_id)
+                    if canonical is None:
+                        raise
+                    profile = profiles.resolve(canonical)
+            except KeyError:
+                log(f"[agent] 无法为人工接管局解析角色学习库：{character_id}")
+                return None, None
+            knowledge = stores.get(profile.profile_id)
+            if knowledge is None:
+                active = getattr(self, "active_profile", None)
+                if getattr(active, "profile_id", None) == profile.profile_id:
+                    knowledge = getattr(self, "know", None)
+            return knowledge, profile
+
+        return getattr(self, "know", None), getattr(self, "active_profile", None)
+
+    @staticmethod
+    def _begin_run_learning(knowledge, run_id: str) -> None:
+        begin = getattr(knowledge, "begin_run_learning", None)
+        if callable(begin):
+            begin(run_id)
+
+    @staticmethod
+    def _exclude_run_learning(knowledge, run_id: str) -> None:
+        exclude = getattr(knowledge, "exclude_run_learning", None)
+        if callable(exclude):
+            exclude(run_id)
+
+    @staticmethod
+    def _finish_run_learning(knowledge, run_id: str) -> None:
+        finish = getattr(knowledge, "finish_run_learning", None)
+        if callable(finish):
+            finish(run_id)
+
+    @staticmethod
+    def _run_learning_is_excluded(knowledge, run_id: str) -> bool:
+        check = getattr(knowledge, "run_learning_is_excluded", None)
+        return bool(callable(check) and check(run_id))
+
     def _mark_manual_takeover(self, state: dict, *, source: str) -> str:
         """Mark every run straddling a human-control boundary as non-learning."""
         ctx = self.ctx
         current_run_id = self._state_run_identity(state)
         ctx_run_id = str(getattr(ctx, "run_id", "") or "").strip()
         changed = False
+        processed: set[tuple[int, str]] = set()
+
+        def exclude_scope(knowledge, run_id: str) -> None:
+            nonlocal changed
+            if knowledge is None or not run_id or run_id == "run_unknown":
+                return
+            key = (id(knowledge), run_id)
+            if key in processed:
+                return
+            if self._run_learning_is_excluded(knowledge, run_id):
+                processed.add(key)
+                return
+            self._begin_run_learning(knowledge, run_id)
+            if self._run_learning_is_excluded(knowledge, run_id):
+                processed.add(key)
+                return
+            self._exclude_run_learning(knowledge, run_id)
+            processed.add(key)
+            changed = True
 
         # The previous autonomous context is also mixed if the human crossed a
         # run boundary before the paused reader observed the replacement state.
         if (ctx_run_id and ctx_run_id != "run_unknown"
                 and not bool(getattr(ctx, "run_finalized", False))):
             self._manual_run_ids.add(ctx_run_id)
+            old_knowledge, _old_profile = self._knowledge_for_run_learning(
+                profile_id=str(getattr(ctx, "profile_id", "") or ""))
+            exclude_scope(old_knowledge, ctx_run_id)
             if not bool(getattr(ctx, "human_assisted", False)):
                 ctx.human_assisted = True
                 changed = True
 
         if current_run_id:
             self._manual_run_ids.add(current_run_id)
+            current_knowledge, current_profile = self._knowledge_for_run_learning(
+                state=state)
+            exclude_scope(current_knowledge, current_run_id)
             if ctx_run_id in ("", "run_unknown") and hasattr(ctx, "reset_for"):
+                if current_profile is not None and current_knowledge is not None:
+                    self._activate_profile(current_profile)
                 run = state.get("run") or {}
                 ascension = int(run.get("ascension", 0) or 0)
-                next_run = int((getattr(self.know, "stats", {}) or {}).get(
+                next_run = int((getattr(current_knowledge or self.know,
+                                        "stats", {}) or {}).get(
                     "global", {}).get("runs", 0) or 0) + 1
                 ctx.reset_for(current_run_id, ascension, next_run)
                 ctx.character_id = str(run.get("character_id") or "")
+                if current_profile is not None:
+                    ctx.profile_id = current_profile.profile_id
                 ctx.profile_run_number = next_run
                 ctx.human_assisted = True
                 changed = True
@@ -660,12 +751,24 @@ class Agent:
         run_id = str(self.ctx.run_id or "run_unknown")
         self.ctx.human_assisted = True
         self._manual_run_ids.add(run_id)
+        knowledge, _profile = self._knowledge_for_run_learning(
+            profile_id=str(getattr(self.ctx, "profile_id", "") or ""))
+        # Re-apply the rollback at close so even a legacy/direct stats mutation
+        # after F10 cannot survive the mixed run.
+        self._begin_run_learning(knowledge, run_id)
+        self._exclude_run_learning(knowledge, run_id)
         # Preserve the partial evidence as in-progress/excluded.  Existing floor
         # statistics and LLM packet builders already omit in-progress logs.
         try:
             self._save_run_progress({"floor": int(floor or 0)}, force=True)
         except Exception as exc:
             log(f"[agent] 人工接管局审计存档失败：{exc}")
+        try:
+            self._finish_run_learning(knowledge, run_id)
+        except Exception as exc:
+            # The exclusion marker and restored stats were persisted first.  A
+            # leftover journal therefore remains fail-closed on the next process.
+            log(f"[agent] 人工接管局学习快照清理失败（隔离仍有效）：{exc}")
         self.ctx.run_finalized = True
         self.ctx.finalize_requested = False
         self.ctx.combat = None
@@ -864,6 +967,12 @@ class Agent:
                     log(f"[agent] {restart_reason}；异常旧局已归档，新局动作前请求 runner 重启大脑…")
                     sys.exit(42)
             self._bind_profile_for_state(state)
+            # Capture the character-local baseline before any event/combat/card
+            # observation from this run can mutate Knowledge.  Reconnect reuses
+            # the durable journal instead of replacing the original baseline.
+            self._begin_run_learning(self.know, str(run_id))
+            journal_excluded = self._run_learning_is_excluded(
+                self.know, str(run_id))
             next_run = int(self.know.stats.get("global", {}).get("runs", 0)) + 1
             review_health_eligible = bool(
                 getattr(self, "_review_health_ready_for_new_run", False))
@@ -876,8 +985,12 @@ class Agent:
                 or getattr(profile, "character_id", "IRONCLAD"))
             self.ctx.profile_run_number = next_run
             self.ctx.review_health_eligible = review_health_eligible
-            self.ctx.human_assisted = str(run_id) in getattr(
-                self, "_manual_run_ids", set())
+            self.ctx.human_assisted = (
+                str(run_id) in getattr(self, "_manual_run_ids", set())
+                or journal_excluded)
+            if self.ctx.human_assisted:
+                self._manual_run_ids.add(str(run_id))
+                self._exclude_run_learning(self.know, str(run_id))
             self._review_health_ready_for_new_run = False
             log(f"\n[agent] ===== 新对局开始：{run_id}（进阶 {asc}）=====")
             # 断线重连续接局史（第 218 批复盘）：大脑在局中途崩溃/签名故障自杀后，
@@ -907,6 +1020,7 @@ class Agent:
                 if prior.get("human_assisted") or prior.get("excluded_from_learning"):
                     self.ctx.human_assisted = True
                     self._manual_run_ids.add(str(run_id))
+                    self._exclude_run_learning(self.know, str(run_id))
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
                     f"{len(self.ctx.combat_notes)} 条战斗记录 / "
                     f"{len(self.ctx.attribution_tags)} 条长期归因）")
@@ -1821,6 +1935,13 @@ class Agent:
         # _finalize 的 save_run_log，此后对局日志一律只读。
         if self.ctx.run_finalized:
             return
+        # A pause/profile transition can change the active ``self.know`` alias
+        # before this mixed run's audit record is written.  The context identity
+        # remains authoritative, exactly as it is for the learning rollback.
+        knowledge, _profile = self._knowledge_for_run_learning(
+            profile_id=str(getattr(self.ctx, "profile_id", "") or ""))
+        if knowledge is None:
+            knowledge = self.know
         floor = run.get("floor", 0)
         attribution_tags = _durable_attribution_tags(self.ctx.attribution_tags)
         if not force:
@@ -1832,7 +1953,7 @@ class Agent:
                 return
         self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
         try:
-            self.know.save_run_log(self.ctx.run_id, {
+            knowledge.save_run_log(self.ctx.run_id, {
                 "run_id": self.ctx.run_id,
                 "run_number": self.ctx.run_number,
                 **self._run_profile_metadata(),
@@ -2145,7 +2266,9 @@ class Agent:
         # 「（阵亡）」后缀保持全链断言兼容，审计段插在其前
         _ra = self.policy.pop_race_audit()
         note = f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
-        if _ra.get("latched"):
+        learning_allowed = getattr(self.know, "_learning_write_allowed", None)
+        if (_ra.get("latched")
+                and (not callable(learning_allowed) or learning_allowed())):
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
@@ -2185,6 +2308,7 @@ class Agent:
         if rotation is not None and self.ctx.run_id != "run_unknown":
             try:
                 if self.ctx.run_id in rotation.snapshot().finalized_run_ids:
+                    self._finish_run_learning(self.know, self.ctx.run_id)
                     self.ctx.run_finalized = True
                     self.ctx.finalize_requested = False
                     self.ctx.pending_terminal_persistence = None
@@ -2195,6 +2319,7 @@ class Agent:
         # 幻影局守卫（第 50~51 局复盘）：真实对局至少有涅奥事件一条决策，
         # 零决策必为结算屏回声幻影——不得入账/存日志/触发复盘与 git 存档
         if not self.ctx.decisions and not victory:
+            self._finish_run_learning(self.know, self.ctx.run_id)
             self.ctx.run_finalized = True
             self.ctx.finalize_requested = False
             log("[agent] ⚠ 忽略零数据幻影对局（重启落在结算屏的旧对局回声），不计入统计")
@@ -2204,8 +2329,22 @@ class Agent:
         # 断章取义，入账即污染演化证据与死亡榜。正常打到 F10+ 的对局决策数
         # 必然过百，「决策极少却楼层颇深」只可能是残缺局：忽略之，不入账不演化
         if not victory and floor >= 10 and len(self.ctx.decisions) < 10:
+            knowledge, _profile = self._knowledge_for_run_learning(
+                profile_id=str(getattr(self.ctx, "profile_id", "") or ""))
+            if knowledge is None:
+                knowledge = self.know
+            try:
+                # finish_run_learning restores an excluded journal before
+                # unlinking it.  Do this before publishing run_finalized so a
+                # failed cleanup remains retryable and fail-closed.
+                self._finish_run_learning(knowledge, self.ctx.run_id)
+            except Exception as exc:
+                self.ctx.finalize_requested = True
+                log(f"[agent] 残缺终局学习快照清理失败，保留结算页重试：{exc}")
+                return
             self.ctx.run_finalized = True
             self.ctx.finalize_requested = False
+            self.ctx.pending_terminal_persistence = None
             log(f"[agent] ⚠ 忽略断线重连残缺对局（仅 {len(self.ctx.decisions)} 条决策却到 F{floor}），"
                 "不计入统计")
             return
@@ -2255,6 +2394,7 @@ class Agent:
                     terminal_persisted=True,
                     character_id=character_id or None,
                 )
+            self._finish_run_learning(self.know, self.ctx.run_id)
         except Exception as exc:
             self.ctx.finalize_requested = True
             log(f"[agent] 终局落盘未完成，保留原生结算页稍后重试：{exc}")
