@@ -77,13 +77,73 @@ class PublishIroncladSkinContractTests(unittest.TestCase):
 
         contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(contract["runtimeLayout"], "legacy-single-page")
-        self.assertEqual(contract["expectedRuntimeFileCount"], 26)
+        self.assertEqual(contract["expectedRuntimeFileCount"], 30)
         for spine_set in contract["spineSets"]:
             if spine_set["name"] in {"combat", "merchant"}:
                 self.assertTrue(spine_set["exactPages"])
                 self.assertEqual(
                     spine_set["pages"], ["spine/combat/vivhite_combat.png"]
                 )
+
+    def test_eye_vfx_and_transition_round_trip_preserve_all_four_resources(self) -> None:
+        script_relative = publisher.COMBAT_VFX_SCRIPT
+        eye_relative = publisher.EYE_LENS_GLINT_TEXTURE
+        texture_relative = publisher.CHARACTER_SELECT_TRANSITION_TEXTURE
+        material_relative = publisher.CHARACTER_SELECT_TRANSITION_MATERIAL
+        runtime_root = REPO_ROOT / "Vivhite" / "Vivhite" / "skins" / "ironclad"
+        script_data = (runtime_root / script_relative).read_bytes()
+        eye_data = (runtime_root / eye_relative).read_bytes()
+        texture_data = (runtime_root / texture_relative).read_bytes()
+        material_data = (runtime_root / material_relative).read_bytes()
+        preserved = {
+            script_relative: script_data,
+            eye_relative: eye_data,
+            texture_relative: texture_data,
+            material_relative: material_data,
+        }
+
+        for layout in publisher.RUNTIME_LAYOUTS.values():
+            expected = publisher._expected_output_paths(layout)
+            for relative, original in preserved.items():
+                self.assertIn(relative, expected)
+
+        outputs = publisher._load_private_runtime_outputs(
+            runtime_root,
+            publisher.RUNTIME_LAYOUTS["v3-five-page"],
+        )
+        for relative, original in preserved.items():
+            self.assertEqual(outputs[relative], original)
+
+        decoded = publisher._decode_rgba8_png(
+            texture_data,
+            texture_relative,
+            expected_color_type=2,
+            bytes_per_pixel=3,
+        )
+        self.assertEqual((decoded.width, decoded.height), (2560, 1200))
+        self.assertTrue(publisher._rgb8_png_is_strict_grayscale(decoded))
+
+        changed_shader = material_data.replace(
+            b"texture(transitionTex, UV).r",
+            b"texture(transitionTex, UV).g",
+        )
+        self.assertNotEqual(changed_shader, material_data)
+        with self.assertRaisesRegex(publisher.PublishError, "missing"):
+            publisher._validate_private_runtime_file(
+                material_relative,
+                changed_shader,
+                publisher.RUNTIME_LAYOUTS["v3-five-page"],
+            )
+
+        combat_scene_relative = "scenes/combat.tscn"
+        combat_scene = (runtime_root / combat_scene_relative).read_bytes()
+        legacy_scene = combat_scene + b'\n[node name="EyeFire" type="TextureRect"]\n'
+        with self.assertRaisesRegex(publisher.PublishError, "forbidden legacy VFX"):
+            publisher._validate_private_runtime_file(
+                combat_scene_relative,
+                legacy_scene,
+                publisher.RUNTIME_LAYOUTS["v3-five-page"],
+            )
 
     def test_v3_atlas_requires_exact_five_page_order_and_regions(self) -> None:
         layout = publisher.RUNTIME_LAYOUTS["v3-five-page"]

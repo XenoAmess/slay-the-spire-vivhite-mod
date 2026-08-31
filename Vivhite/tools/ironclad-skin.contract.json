@@ -1,11 +1,11 @@
 {
   "resourceRoot": "Vivhite/skins/ironclad",
   "runtimeLayout": "legacy-single-page",
-  "expectedRuntimeFileCount": 26,
+  "expectedRuntimeFileCount": 30,
   "combatRuntimeLayouts": [
     {
       "name": "legacy-single-page",
-      "expectedRuntimeFileCount": 26,
+      "expectedRuntimeFileCount": 30,
       "pages": [
         {
           "path": "spine/combat/vivhite_combat.png",
@@ -30,7 +30,7 @@
     },
     {
       "name": "v3-five-page",
-      "expectedRuntimeFileCount": 30,
+      "expectedRuntimeFileCount": 34,
       "pages": [
         {
           "path": "spine/combat/vivhite_combat.png",
@@ -114,9 +114,13 @@
     "spine/rest_site/rest_site_skeleton_data.tres",
     "spine/character_select/character_select_skeleton_data.tres",
     "scenes/combat.tscn",
+    "scenes/vfx/vivhite_combat_vfx.gd",
+    "scenes/vfx/vivhite_eye_lens_glint.png",
     "scenes/merchant.tscn",
     "scenes/rest_site.tscn",
     "scenes/character_select.tscn",
+    "transitions/vivhite_character_select_transition.png",
+    "transitions/vivhite_character_select_transition_mat.tres",
     "ui/icon.png",
     "ui/icon_outline.png",
     "ui/select.png",
@@ -132,6 +136,13 @@
       "path": "spine/combat/vivhite_combat.png",
       "width": 3072,
       "height": 2304
+    },
+    {
+      "path": "scenes/vfx/vivhite_eye_lens_glint.png",
+      "width": 512,
+      "height": 512,
+      "bitDepth": 8,
+      "colorType": 6
     },
     {
       "path": "spine/rest_site/restsite_ironclad.png",
@@ -164,6 +175,14 @@
       "height": 195
     },
     {
+      "path": "transitions/vivhite_character_select_transition.png",
+      "width": 2560,
+      "height": 1200,
+      "bitDepth": 8,
+      "colorType": 2,
+      "strictGrayscale": true
+    },
+    {
       "path": "ui/map_marker.png",
       "width": 49,
       "height": 64
@@ -194,23 +213,36 @@
       "scene": "scenes/combat.tscn",
       "skeletonData": "spine/combat/vivhite_combat_skeleton_data.tres",
       "requiredText": [
-        "[node name=\"NIroncladVfx\" type=\"Node\" parent=\"Visuals\"]",
+        "[ext_resource type=\"Script\" path=\"res://Vivhite/skins/ironclad/scenes/vfx/vivhite_combat_vfx.gd\" id=\"4_vfx\"]",
+        "[ext_resource type=\"Texture2D\" path=\"res://Vivhite/skins/ironclad/scenes/vfx/vivhite_eye_lens_glint.png\" id=\"5_eye_magic\"]",
+        "[node name=\"VivhiteCombatVfx\" type=\"Node\" parent=\"Visuals\"]",
+        "script = ExtResource(\"4_vfx\")",
         "[node name=\"SlashVfxSlot\" type=\"SpineSlotNode\" parent=\"Visuals\"]",
         "slot_name = \"slash_mesh\"",
         "[node name=\"EyeSlot\" type=\"SpineSlotNode\" parent=\"Visuals\"]",
         "slot_name = \"eye_attach_slot\"",
-        "[node name=\"EyeFire\" type=\"TextureRect\" parent=\"Visuals/EyeSlot\"]",
+        "[node name=\"EyeMagic\" type=\"TextureRect\" parent=\"Visuals/EyeSlot\"]",
         "scale = Vector2(0.22, 0.28)",
+        "mouse_filter = 2",
+        "texture = ExtResource(\"5_eye_magic\")",
         "[sub_resource type=\"Shader\" id=\"VivhiteMagicArcShader\"]",
         "uniform vec2 step = vec2(0.0, 0.02)",
         "float runtime_fade = 1.0 - clamp(step.x, 0.0, 1.0)",
         "base.a *= runtime_fade * clamp(master_step, 0.0, 1.0) * clamp(opacity, 0.0, 1.0)",
         "shader = SubResource(\"VivhiteMagicArcShader\")",
         "shader_parameter/ColorParameter = Color(1, 1, 1, 1)",
-        "shader_parameter/OuterColor = Color(0.46, 0.1, 0.96, 1)",
-        "shader_parameter/InnerColor = Color(0.32, 0.94, 1, 1)",
         "shader_parameter/step = Vector2(0, 0.02)",
         "shader_parameter/master_step = 1.0"
+      ],
+      "forbiddenText": [
+        "res://src/Core/Nodes/Vfx/NIroncladVfx.cs",
+        "[node name=\"NIroncladVfx\"",
+        "res://images/vfx/fire/",
+        "res://images/vfx/environment/fire/",
+        "res://shaders/vfx/vfx_stepped_shader_fire_flat.tres",
+        "res://images/vfx/characters/ironclad_eye_fire_base.png",
+        "[sub_resource type=\"ShaderMaterial\" id=\"EyeFireMaterial\"]",
+        "[node name=\"EyeFire\""
       ]
     },
     {
@@ -230,6 +262,52 @@
     {
       "scene": "scenes/character_select.tscn",
       "skeletonData": "spine/character_select/character_select_skeleton_data.tres"
+    }
+  ],
+  "textBindings": [
+    {
+      "path": "scenes/vfx/vivhite_combat_vfx.gd",
+      "kind": "gdscript",
+      "references": [],
+      "requiredText": [
+        "extends Node",
+        "var _eye_magic: TextureRect",
+        "_spine_sprite.get_node(\"SlashVfxSlot\")",
+        "_spine_sprite.get_node(\"EyeSlot/EyeMagic\") as TextureRect",
+        "_spine_sprite.connect(\"animation_event\", Callable(self, \"_on_animation_event\"))",
+        "_spine_sprite.connect(\"animation_started\", Callable(self, \"_on_animation_started\"))",
+        "\"cast_eyes_start\":",
+        "_eye_magic.visible = true",
+        "\"clear_vfx\":",
+        "_eye_magic.visible = false"
+      ],
+      "forbiddenText": [
+        "NIroncladVfx",
+        "EyeFire",
+        "ironclad_eye_fire_base.png",
+        "vfx_stepped_shader_fire_flat.tres"
+      ]
+    },
+    {
+      "path": "transitions/vivhite_character_select_transition_mat.tres",
+      "kind": "godot-resource",
+      "references": [
+        "transitions/vivhite_character_select_transition.png"
+      ],
+      "requiredText": [
+        "[gd_resource type=\"ShaderMaterial\" load_steps=3 format=3]",
+        "shader_type canvas_item;",
+        "uniform sampler2D transitionTex;",
+        "uniform float threshold : hint_range(0,1);",
+        "float falloff = 1.0 - texture(transitionTex, UV).r;",
+        "float remap  = mix(-0.1, 1.1, threshold);",
+        "falloff = step(falloff, remap);",
+        "COLOR.a = falloff;",
+        "resource_local_to_scene = true",
+        "shader_parameter/threshold = 0.332",
+        "shader_parameter/transitionTex = ExtResource(\"1_transition\")"
+      ],
+      "forbiddenText": []
     }
   ],
   "spineSets": [

@@ -16,6 +16,9 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
     private const string EnergyCounterScenePath =
         $"{Entry.ResPath}/scenes/characters/Vivhite_energy_counter.tscn";
 
+    private const string CardTrailScenePath =
+        $"{Entry.ResPath}/scenes/vfx/card_trail_vivhite.tscn";
+
     private static CharacterAssetProfile? _assetProfile;
 
     // 角色名称颜色。
@@ -68,19 +71,26 @@ public sealed class VivhiteCharacter : ModCharacterTemplate<VivhiteCardPool, Viv
                 "The validated Ironclad V3 profile has no scene asset set.");
         scenes = scenes with { EnergyCounterPath = EnergyCounterScenePath };
 
-        return CharacterAssetProfiles.WithScenes(ironcladProfile, scenes);
+        var vivhiteProfile = CharacterAssetProfiles.WithScenes(ironcladProfile, scenes);
+        return CharacterAssetProfiles.WithVfx(
+            vivhiteProfile,
+            new CharacterVfxAssetSet(
+                TrailPath: CardTrailScenePath,
+                TrailStyle: null));
     }
 
     // 攻击建筑师的攻击特效列表。
     public override List<string> GetArchitectAttackVfx()
     {
+        // The Architect shuffles this fresh list in place and plays every entry as one hit.
+        // Preserve its five-hit cadence with spell effects that do not imply weapons or gore.
         return
         [
-            "vfx/vfx_attack_blunt",
-            "vfx/vfx_heavy_blunt",
-            "vfx/vfx_attack_slash",
-            "vfx/vfx_bloody_impact",
-            "vfx/vfx_rock_shatter"
+            "vfx/vfx_attack_lightning",
+            "vfx/vfx_starry_impact",
+            "vfx/vfx_attack_lightning",
+            "vfx/vfx_starry_impact",
+            "vfx/vfx_attack_lightning"
         ];
     }
 }

@@ -1,0 +1,116 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://src/Core/Nodes/Vfx/NCardTrailVfx.cs" id="1_trail_vfx"]
+[ext_resource type="Texture2D" path="res://Vivhite/images/vfx/vivhite_card_trail_mathematical_star_0194.png" id="2_math_star"]
+[ext_resource type="Script" path="res://src/Core/Nodes/Vfx/NCardTrail.cs" id="3_trail_line"]
+[ext_resource type="CanvasItemMaterial" path="res://themes/canvas_item_material_additive_shared.tres" id="4_additive"]
+
+[sub_resource type="Curve" id="Curve_outer_width"]
+_data = [Vector2(0, 0.111037), 0.0, 0.0, 0, 0, Vector2(0.839578, 0.663793), -2.61019, -2.61019, 0, 0, Vector2(0.922468, 0.94341), 0.0, 0.0, 0, 0, Vector2(1, 0.685611), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="Gradient" id="Gradient_outer_alpha"]
+offsets = PackedFloat32Array(0, 0.141431, 0.522463)
+colors = PackedColorArray(0, 0, 0, 0, 0.25, 0.25, 0.25, 0.305882, 1, 1, 1, 1)
+
+[sub_resource type="Curve" id="Curve_inner_width"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.801075, 0.571397), -3.15833, -3.15833, 0, 0, Vector2(0.900922, 0.367031), 0.0, 0.0, 0, 0, Vector2(0.938291, 0.930834), 0.0, 0.0, 0, 0, Vector2(1, 0.742201), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Gradient" id="Gradient_inner_alpha"]
+offsets = PackedFloat32Array(0.261231, 0.647255, 0.821549)
+colors = PackedColorArray(0, 0, 0, 0, 0.25, 0.25, 0.25, 0.305882, 1, 1, 1, 1)
+
+[sub_resource type="Gradient" id="Gradient_big_sparks"]
+offsets = PackedFloat32Array(0, 0.62, 1)
+colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0.68, 1, 1, 1, 0)
+
+[sub_resource type="Gradient" id="Gradient_little_sparks"]
+offsets = PackedFloat32Array(0, 0.48, 1)
+colors = PackedColorArray(1, 0.93, 0.66, 1, 0.64, 0.88, 1, 0.62, 0.48, 0.27, 1, 0)
+
+[node name="CardTrailVivhite" type="Node2D"]
+show_behind_parent = true
+script = ExtResource("1_trail_vfx")
+
+[node name="Trails" type="Node2D" parent="."]
+
+[node name="OuterTrail" type="Line2D" parent="Trails"]
+modulate = Color(0.34, 0.13, 1, 0.68)
+material = ExtResource("4_additive")
+width = 84.0
+width_curve = SubResource("Curve_outer_width")
+default_color = Color(1, 1, 1, 0.752941)
+gradient = SubResource("Gradient_outer_alpha")
+joint_mode = 2
+script = ExtResource("3_trail_line")
+
+[node name="InnerTrail" type="Line2D" parent="Trails"]
+modulate = Color(0.58, 0.9, 1, 0.58)
+material = ExtResource("4_additive")
+width = 48.0
+width_curve = SubResource("Curve_inner_width")
+gradient = SubResource("Gradient_inner_alpha")
+joint_mode = 2
+script = ExtResource("3_trail_line")
+
+[node name="Sprites" type="Node2D" parent="."]
+
+[node name="BigSparks" type="CPUParticles2D" parent="Sprites"]
+material = ExtResource("4_additive")
+amount = 36
+lifetime = 1.4
+randomness = 0.5
+lifetime_randomness = 0.8
+fract_delta = false
+texture = ExtResource("2_math_star")
+emission_shape = 3
+emission_rect_extents = Vector2(24, 24)
+direction = Vector2(5, -5)
+gravity = Vector2(0, 0)
+initial_velocity_min = 18.0
+initial_velocity_max = 42.0
+angular_velocity_min = -38.0
+angular_velocity_max = 38.0
+damping_min = 1.0
+damping_max = 5.0
+angle_min = -180.0
+angle_max = 180.0
+scale_amount_min = 0.08
+scale_amount_max = 0.2
+color_ramp = SubResource("Gradient_big_sparks")
+
+[node name="LittleSparks" type="CPUParticles2D" parent="Sprites"]
+material = ExtResource("4_additive")
+amount = 64
+lifetime = 0.3
+explosiveness = 0.35
+randomness = 1.0
+lifetime_randomness = 1.0
+fract_delta = false
+texture = ExtResource("2_math_star")
+emission_shape = 3
+emission_rect_extents = Vector2(24, 24)
+particle_flag_align_y = true
+direction = Vector2(0, -5)
+gravity = Vector2(0, 1960)
+initial_velocity_max = 480.0
+angular_velocity_min = -50.0
+angular_velocity_max = 50.0
+angle_min = -180.0
+angle_max = 180.0
+scale_amount_min = 0.015
+scale_amount_max = 0.04
+color_ramp = SubResource("Gradient_little_sparks")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Sprites"]
+modulate = Color(0.43, 0.2, 1, 0.68)
+material = ExtResource("4_additive")
+scale = Vector2(1.1, 1.054)
+texture = ExtResource("2_math_star")
+
+[node name="Sprite2D3" type="Sprite2D" parent="Sprites"]
+modulate = Color(0.76, 0.94, 1, 0.5)
+material = ExtResource("4_additive")
+scale = Vector2(0.9, 0.9)
+texture = ExtResource("2_math_star")

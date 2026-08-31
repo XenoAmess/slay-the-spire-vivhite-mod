@@ -127,6 +127,12 @@ function Get-ExpectedLogicalAssets {
         Add-RequiredPath -Set $required -RelativePath ([string]$binding.scene)
         Add-RequiredPath -Set $required -RelativePath ([string]$binding.skeletonData)
     }
+    foreach ($binding in @(Get-JsonPropertyValue -Object $Contract -Name "textBindings")) {
+        Add-RequiredPath -Set $required -RelativePath ([string]$binding.path)
+        foreach ($reference in @($binding.references)) {
+            Add-RequiredPath -Set $required -RelativePath ([string]$reference)
+        }
+    }
     $resourceRoot = ([string]$Contract.resourceRoot).Replace('\', '/').Trim('/')
     foreach ($spineSet in @($Contract.spineSets)) {
         Add-RequiredPath -Set $required -RelativePath ([string]$spineSet.skeletonData)
@@ -157,6 +163,29 @@ function Get-ExpectedLogicalAssets {
     }
 
     return $required
+}
+
+function Test-TextBindingContract {
+    param(
+        [Parameter(Mandatory = $true)][string]$Label,
+        [Parameter(Mandatory = $true)][string]$Text,
+        [Parameter(Mandatory = $true)]$Binding
+    )
+
+    foreach ($requiredText in @(Get-JsonPropertyValue -Object $Binding -Name "requiredText")) {
+        $required = [string]$requiredText
+        if (-not [string]::IsNullOrEmpty($required) -and
+            $Text.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
+            Add-ValidationError "$Label is missing required contract text '$required'."
+        }
+    }
+    foreach ($forbiddenText in @(Get-JsonPropertyValue -Object $Binding -Name "forbiddenText")) {
+        $forbidden = [string]$forbiddenText
+        if (-not [string]::IsNullOrEmpty($forbidden) -and
+            $Text.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
+            Add-ValidationError "$Label contains forbidden retired contract text '$forbidden'."
+        }
+    }
 }
 
 function Get-SkinActivationState {
@@ -268,10 +297,69 @@ function Get-PngDimensions {
         return [pscustomobject]@{
             Width = [int]$width
             Height = [int]$height
+            BitDepth = [int]$header[24]
+            ColorType = [int]$header[25]
+            CompressionMethod = [int]$header[26]
+            FilterMethod = [int]$header[27]
+            InterlaceMethod = [int]$header[28]
         }
     }
     finally {
         $stream.Dispose()
+    }
+}
+
+function Test-StrictGrayscalePng {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    try {
+        Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+    }
+    catch {
+        throw "System.Drawing is required for strict grayscale validation: $($_.Exception.Message)"
+    }
+
+    $source = $null
+    $bitmap = $null
+    $bitmapData = $null
+    try {
+        $source = [Drawing.Bitmap]::new($Path)
+        $rectangle = New-Object Drawing.Rectangle(0, 0, $source.Width, $source.Height)
+        $pixelFormat = [Drawing.Imaging.PixelFormat]::Format24bppRgb
+        $bitmap = [Drawing.Bitmap]$source.Clone($rectangle, $pixelFormat)
+        if ($null -eq $bitmap) {
+            throw "Could not decode the PNG as 24-bit RGB pixels."
+        }
+
+        $bitmapData = $bitmap.LockBits(
+            $rectangle,
+            [Drawing.Imaging.ImageLockMode]::ReadOnly,
+            $pixelFormat)
+        $row = [byte[]]::new($bitmap.Width * 3)
+        for ($y = 0; $y -lt $bitmap.Height; $y++) {
+            $rowPointer = [IntPtr]::Add($bitmapData.Scan0, $y * $bitmapData.Stride)
+            [Runtime.InteropServices.Marshal]::Copy($rowPointer, $row, 0, $row.Length)
+            for ($x = 0; $x -lt $bitmap.Width; $x++) {
+                $offset = $x * 3
+                $blue = $row[$offset]
+                $green = $row[$offset + 1]
+                $red = $row[$offset + 2]
+                if ($red -ne $green -or $green -ne $blue) {
+                    throw "Pixel ($x,$y) is RGB($red,$green,$blue), not strict grayscale."
+                }
+            }
+        }
+    }
+    finally {
+        if ($null -ne $bitmapData -and $null -ne $bitmap) {
+            $bitmap.UnlockBits($bitmapData)
+        }
+        if ($null -ne $bitmap) {
+            $bitmap.Dispose()
+        }
+        if ($null -ne $source) {
+            $source.Dispose()
+        }
     }
 }
 
@@ -286,6 +374,9 @@ function Get-ExpectedPngDimensions {
         $relativePath = ([string]$entry.path).Replace('\', '/').TrimStart('/')
         $width = [int64]$entry.width
         $height = [int64]$entry.height
+        $bitDepthValue = Get-JsonPropertyValue -Object $entry -Name "bitDepth"
+        $colorTypeValue = Get-JsonPropertyValue -Object $entry -Name "colorType"
+        $strictGrayscaleValue = Get-JsonPropertyValue -Object $entry -Name "strictGrayscale"
         if ([string]::IsNullOrWhiteSpace($relativePath)) {
             Add-ValidationError "The PNG dimension contract contains an empty path."
             continue
@@ -305,9 +396,28 @@ function Get-ExpectedPngDimensions {
             Add-ValidationError "PNG dimension contract contains a duplicate path: $relativePath"
             continue
         }
+        if ($null -ne $bitDepthValue -and ([int]$bitDepthValue -lt 1 -or [int]$bitDepthValue -gt 16)) {
+            Add-ValidationError "PNG format contract has invalid bit depth for '$relativePath': $bitDepthValue."
+            continue
+        }
+        if ($null -ne $colorTypeValue -and [int]$colorTypeValue -notin @(0, 2, 3, 4, 6)) {
+            Add-ValidationError "PNG format contract has invalid color type for '$relativePath': $colorTypeValue."
+            continue
+        }
+        $strictGrayscale = $null -ne $strictGrayscaleValue -and [bool]$strictGrayscaleValue
+        if ($strictGrayscale -and
+            ($null -eq $bitDepthValue -or [int]$bitDepthValue -ne 8 -or
+             $null -eq $colorTypeValue -or [int]$colorTypeValue -ne 2)) {
+            Add-ValidationError (
+                "Strict grayscale PNG '$relativePath' must explicitly declare bitDepth 8 and colorType 2.")
+            continue
+        }
         $dimensions.Add($relativePath, [pscustomobject]@{
                 Width = [int]$width
                 Height = [int]$height
+                BitDepth = if ($null -eq $bitDepthValue) { $null } else { [int]$bitDepthValue }
+                ColorType = if ($null -eq $colorTypeValue) { $null } else { [int]$colorTypeValue }
+                StrictGrayscale = $strictGrayscale
             })
     }
 
@@ -759,7 +869,8 @@ function Invoke-GodotSpineContract {
         [Parameter(Mandatory = $true)][string]$ProjectRoot,
         [Parameter(Mandatory = $true)][string]$GodotPath,
         [Parameter(Mandatory = $true)][string]$GameRoot,
-        [Parameter(Mandatory = $true)][string]$RuntimeLayout
+        [Parameter(Mandatory = $true)][string]$RuntimeLayout,
+        [Parameter(Mandatory = $true)]$Contract
     )
 
     if ([string]::IsNullOrWhiteSpace($GodotPath)) {
@@ -853,6 +964,26 @@ function Invoke-GodotSpineContract {
             if ($importExitCode -ne 0) {
                 Add-ValidationError "Godot asset import exited with code $importExitCode."
                 return
+            }
+
+            foreach ($binding in @(Get-JsonPropertyValue -Object $Contract -Name "textBindings")) {
+                if (-not [string]::Equals([string]$binding.kind, "gdscript", [StringComparison]::OrdinalIgnoreCase)) {
+                    continue
+                }
+                $scriptResourcePath = Get-ResourcePath `
+                    -ResourceRoot ([string]$Contract.resourceRoot) `
+                    -RelativePath ([string]$binding.path)
+                Write-Host "[ironclad-skin] Checking GDScript syntax for '$scriptResourcePath'..."
+                $scriptOutput = @()
+                $scriptExitCode = -1
+                $scriptOutput = & $consoleExe --headless --path $ProjectRoot --check-only --script $scriptResourcePath 2>&1
+                $scriptExitCode = $LASTEXITCODE
+                foreach ($line in @($scriptOutput)) {
+                    Write-Host $line
+                }
+                if ($scriptExitCode -ne 0) {
+                    Add-ValidationError "Godot GDScript check failed for '$scriptResourcePath' with code $scriptExitCode."
+                }
             }
 
             Write-Host "[ironclad-skin] Loading Spine resources through Godot and the game's Spine GDExtension..."
@@ -956,6 +1087,26 @@ function Test-SourceAssets {
                     "PNG dimensions do not match for '$resourceRoot/$relativePath': " +
                     "got $($actual.Width)x$($actual.Height), expected $($expected.Width)x$($expected.Height).")
             }
+            if ($null -ne $expected.BitDepth -and $actual.BitDepth -ne $expected.BitDepth) {
+                Add-ValidationError (
+                    "PNG bit depth does not match for '$resourceRoot/$relativePath': " +
+                    "got $($actual.BitDepth), expected $($expected.BitDepth).")
+            }
+            if ($null -ne $expected.ColorType -and $actual.ColorType -ne $expected.ColorType) {
+                Add-ValidationError (
+                    "PNG color type does not match for '$resourceRoot/$relativePath': " +
+                    "got $($actual.ColorType), expected $($expected.ColorType).")
+            }
+            if ($expected.StrictGrayscale) {
+                try {
+                    Test-StrictGrayscalePng -Path $fullPath
+                }
+                catch {
+                    Add-ValidationError (
+                        "PNG strict grayscale contract failed for '$resourceRoot/$relativePath': " +
+                        $_.Exception.Message)
+                }
+            }
         }
         catch {
             Add-ValidationError "Invalid PNG '$resourceRoot/$relativePath': $($_.Exception.Message)"
@@ -1047,6 +1198,25 @@ function Test-SourceAssets {
 
     }
 
+    foreach ($binding in @(Get-JsonPropertyValue -Object $Contract -Name "textBindings")) {
+        $relativePath = [string]$binding.path
+        $kind = [string]$binding.kind
+        if (-not [string]::Equals($kind, "gdscript", [StringComparison]::OrdinalIgnoreCase) -and
+            -not [string]::Equals($kind, "godot-resource", [StringComparison]::OrdinalIgnoreCase)) {
+            Add-ValidationError "Text binding '$relativePath' declares unsupported kind '$kind'."
+            continue
+        }
+        $textPath = Get-SafeChildPath -BasePath $Activation.AssetRoot -RelativePath $relativePath
+        $text = [IO.File]::ReadAllText($textPath)
+        Test-TextBindingContract -Label "Text binding '$relativePath'" -Text $text -Binding $binding
+        foreach ($reference in @($binding.references)) {
+            $expectedReference = Get-ResourcePath -ResourceRoot $resourceRoot -RelativePath ([string]$reference)
+            if ($text.IndexOf($expectedReference, [StringComparison]::Ordinal) -lt 0) {
+                Add-ValidationError "Text binding '$relativePath' must reference '$expectedReference'."
+            }
+        }
+    }
+
     foreach ($binding in @($Contract.sceneBindings)) {
         $sceneRelative = [string]$binding.scene
         $skeletonDataRelative = [string]$binding.skeletonData
@@ -1056,14 +1226,7 @@ function Test-SourceAssets {
         if ($sceneText.IndexOf($expectedReference, [StringComparison]::Ordinal) -lt 0) {
             Add-ValidationError "Scene '$sceneRelative' must reference '$expectedReference'."
         }
-        $requiredSceneTexts = Get-JsonPropertyValue -Object $binding -Name "requiredText"
-        foreach ($requiredText in @($requiredSceneTexts)) {
-            $requiredSceneText = [string]$requiredText
-            if (-not [string]::IsNullOrEmpty($requiredSceneText) -and
-                $sceneText.IndexOf($requiredSceneText, [StringComparison]::Ordinal) -lt 0) {
-                Add-ValidationError "Scene '$sceneRelative' is missing required contract text '$requiredSceneText'."
-            }
-        }
+        Test-TextBindingContract -Label "Scene '$sceneRelative'" -Text $sceneText -Binding $binding
         foreach ($nodeType in @($Contract.forbiddenSerializedSceneNodeTypes)) {
             $forbiddenNodeType = "type=`"$([string]$nodeType)`""
             if ($sceneText.IndexOf($forbiddenNodeType, [StringComparison]::Ordinal) -ge 0) {
@@ -1105,7 +1268,8 @@ function Test-SourceAssets {
         -ProjectRoot $ProjectRoot `
         -GodotPath $GodotExe `
         -GameRoot $Sts2Dir `
-        -RuntimeLayout ([string]$Contract.runtimeLayout)
+        -RuntimeLayout ([string]$Contract.runtimeLayout) `
+        -Contract $Contract
     if ($script:ValidationErrors.Count -gt 0) {
         Stop-Validation "Godot Spine contract check failed."
     }
@@ -1427,7 +1591,7 @@ function Test-PckContents {
         }
 
         $inspectableExtensions = New-Object "System.Collections.Generic.HashSet[string]" ([StringComparer]::OrdinalIgnoreCase)
-        foreach ($extension in @(".tres", ".tscn", ".spatlas", ".spjson")) {
+        foreach ($extension in @(".tres", ".tscn", ".spatlas", ".spjson", ".gd")) {
             [void]$inspectableExtensions.Add($extension)
         }
         foreach ($entry in $index.Entries) {
@@ -1452,6 +1616,31 @@ function Test-PckContents {
             }
         }
 
+        foreach ($binding in @(Get-JsonPropertyValue -Object $Contract -Name "textBindings")) {
+            $relativePath = [string]$binding.path
+            $entryPath = "$resourceRoot/$relativePath"
+            if (-not $entryByPath.ContainsKey($entryPath)) {
+                continue
+            }
+            try {
+                $text = Read-PckTextEntry -Path $Path -Entry $entryByPath[$entryPath]
+                Test-TextBindingContract -Label "Exported text binding '$relativePath'" -Text $text -Binding $binding
+                foreach ($reference in @($binding.references)) {
+                    $expectedReference = Get-ResourcePath `
+                        -ResourceRoot $resourceRoot `
+                        -RelativePath ([string]$reference)
+                    if ($text.IndexOf($expectedReference, [StringComparison]::Ordinal) -lt 0) {
+                        Add-ValidationError (
+                            "Exported text binding '$relativePath' lost private reference " +
+                            "'$expectedReference'.")
+                    }
+                }
+            }
+            catch {
+                Add-ValidationError $_.Exception.Message
+            }
+        }
+
         foreach ($binding in @($Contract.sceneBindings)) {
             $sceneRelative = [string]$binding.scene
             $scenePath = "$resourceRoot/$sceneRelative"
@@ -1468,14 +1657,7 @@ function Test-PckContents {
                 if ($text.IndexOf($skeletonDataResource, [StringComparison]::Ordinal) -lt 0) {
                     Add-ValidationError "Exported scene '$sceneRelative' lost its private skeleton-data reference '$skeletonDataResource'."
                 }
-                $requiredSceneTexts = Get-JsonPropertyValue -Object $binding -Name "requiredText"
-                foreach ($requiredText in @($requiredSceneTexts)) {
-                    $requiredSceneText = [string]$requiredText
-                    if (-not [string]::IsNullOrEmpty($requiredSceneText) -and
-                        $text.IndexOf($requiredSceneText, [StringComparison]::Ordinal) -lt 0) {
-                        Add-ValidationError "Exported scene '$sceneRelative' lost required contract text '$requiredSceneText'."
-                    }
-                }
+                Test-TextBindingContract -Label "Exported scene '$sceneRelative'" -Text $text -Binding $binding
                 foreach ($nodeType in @($Contract.forbiddenSerializedSceneNodeTypes)) {
                     $forbiddenNodeType = "type=`"$([string]$nodeType)`""
                     if ($text.IndexOf($forbiddenNodeType, [StringComparison]::Ordinal) -ge 0) {
@@ -1489,6 +1671,7 @@ function Test-PckContents {
                 Add-ValidationError $_.Exception.Message
             }
         }
+
     }
     else {
         foreach ($entry in $index.Entries) {

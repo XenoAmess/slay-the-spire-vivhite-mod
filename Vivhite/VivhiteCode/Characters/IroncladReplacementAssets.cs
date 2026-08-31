@@ -1,4 +1,7 @@
 using Godot;
+using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Characters;
 using System.Text.Json;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Scaffolding.Characters;
@@ -36,6 +39,9 @@ internal static class IroncladReplacementAssets
     private const string CharacterSelectAtlasPagePath = $"{SkinRoot}/spine/character_select/characterselect_ironclad.png";
 
     private const string CombatScenePath = $"{SkinRoot}/scenes/combat.tscn";
+    private const string CombatVfxScriptPath = $"{SkinRoot}/scenes/vfx/vivhite_combat_vfx.gd";
+    private const string EyeLensGlintTexturePath =
+        $"{SkinRoot}/scenes/vfx/vivhite_eye_lens_glint.png";
     private const string MerchantScenePath = $"{SkinRoot}/scenes/merchant.tscn";
     private const string RestSiteScenePath = $"{SkinRoot}/scenes/rest_site.tscn";
     private const string CharacterSelectScenePath = $"{SkinRoot}/scenes/character_select.tscn";
@@ -44,12 +50,30 @@ internal static class IroncladReplacementAssets
     private const string IconOutlineTexturePath = $"{SkinRoot}/ui/icon_outline.png";
     private const string CharacterSelectIconPath = $"{SkinRoot}/ui/select.png";
     private const string CharacterSelectLockedIconPath = $"{SkinRoot}/ui/select_locked.png";
+    private const string CharacterSelectTransitionTexturePath =
+        $"{SkinRoot}/transitions/vivhite_character_select_transition.png";
+    private const string CharacterSelectTransitionMaterialPath =
+        $"{SkinRoot}/transitions/vivhite_character_select_transition_mat.tres";
     private const string MapMarkerPath = $"{SkinRoot}/ui/map_marker.png";
 
     private const string PointingHandTexturePath = $"{SkinRoot}/multiplayer/point.png";
     private const string RockHandTexturePath = $"{SkinRoot}/multiplayer/rock.png";
     private const string PaperHandTexturePath = $"{SkinRoot}/multiplayer/paper.png";
     private const string ScissorsHandTexturePath = $"{SkinRoot}/multiplayer/scissors.png";
+
+    // The shared skin uses the Defect's neutral, synthetic spell feedback rather than
+    // Ironclad's weapon-and-blood identity. All five paths are native v0.111.0 FMOD events;
+    // wipe_ironclad is also the transition used by Defect, Regent, and Necrobinder.
+    private const string CharacterSelectSfx = "event:/sfx/characters/defect/defect_select";
+    private const string CharacterTransitionSfx = "event:/sfx/ui/wipe_ironclad";
+    private const string AttackSfx = "event:/sfx/characters/defect/defect_attack";
+    private const string CastSfx = "event:/sfx/characters/defect/defect_cast";
+    private const string DeathSfx = "event:/sfx/characters/defect/defect_die";
+    private const string VirtualAudioPatchId = "Vivhite.IroncladReplacementAudio";
+
+    private static readonly object VirtualAudioPatchLock = new();
+    private static CharacterAudioAssetSet? _activeIroncladAudio;
+    private static bool _virtualAudioPatchesInstalled;
 
     private static readonly AtlasPageContract[] V3CombatAtlasPages =
     [
@@ -152,6 +176,13 @@ internal static class IroncladReplacementAssets
         new("character-select atlas", CharacterSelectAtlasPath, typeof(Resource), "SpineAtlasResource"),
         new("character-select atlas page", CharacterSelectAtlasPagePath, typeof(Texture2D)),
         new("combat scene", CombatScenePath, typeof(PackedScene)),
+        new("combat VFX script", CombatVfxScriptPath, typeof(Script)),
+        new(
+            "eye-lens glint texture",
+            EyeLensGlintTexturePath,
+            typeof(Texture2D),
+            ExpectedWidth: 512,
+            ExpectedHeight: 512),
         new("merchant scene", MerchantScenePath, typeof(PackedScene)),
         new("rest-site scene", RestSiteScenePath, typeof(PackedScene)),
         new("character-select scene", CharacterSelectScenePath, typeof(PackedScene)),
@@ -159,6 +190,16 @@ internal static class IroncladReplacementAssets
         new("character icon outline", IconOutlineTexturePath, typeof(Texture2D)),
         new("character-select portrait", CharacterSelectIconPath, typeof(Texture2D)),
         new("locked character-select portrait", CharacterSelectLockedIconPath, typeof(Texture2D)),
+        new(
+            "character-select transition texture",
+            CharacterSelectTransitionTexturePath,
+            typeof(Texture2D),
+            ExpectedWidth: 2560,
+            ExpectedHeight: 1200),
+        new(
+            "character-select transition material",
+            CharacterSelectTransitionMaterialPath,
+            typeof(ShaderMaterial)),
         new("map marker", MapMarkerPath, typeof(Texture2D)),
         new("multiplayer pointing hand", PointingHandTexturePath, typeof(Texture2D)),
         new("multiplayer rock hand", RockHandTexturePath, typeof(Texture2D)),
@@ -184,13 +225,20 @@ internal static class IroncladReplacementAssets
             "character-select skeleton data",
             CharacterSelectSkeletonDataPath,
             [CharacterSelectSkeletonFilePath, CharacterSelectAtlasPath]),
-        new("combat scene", CombatScenePath, [CombatSkeletonDataPath]),
+        new(
+            "combat scene",
+            CombatScenePath,
+            [CombatSkeletonDataPath, CombatVfxScriptPath, EyeLensGlintTexturePath]),
         new("merchant scene", MerchantScenePath, [MerchantSkeletonDataPath]),
         new("rest-site scene", RestSiteScenePath, [RestSiteSkeletonDataPath]),
         new(
             "character-select scene",
             CharacterSelectScenePath,
-            [CharacterSelectSkeletonDataPath])
+            [CharacterSelectSkeletonDataPath]),
+        new(
+            "character-select transition material",
+            CharacterSelectTransitionMaterialPath,
+            [CharacterSelectTransitionTexturePath])
     ];
 
     private static readonly string[] ForbiddenVanillaSkeletonReferences =
@@ -210,9 +258,27 @@ internal static class IroncladReplacementAssets
         try
         {
             var profile = GetValidatedV3Profile();
-            ModContentRegistry.For(Entry.ModId).RegisterCharacterAssetReplacement(
-                ModContentRegistry.VanillaCharacterIds.Ironclad,
-                profile);
+            var audio = profile.Audio
+                ?? throw new InvalidOperationException("The shared V3 profile has no character audio set.");
+
+            // RitsuLib 0.5.14 patches the non-virtual attack/cast/death getters for registered
+            // vanilla replacements. Character select and transition are virtual and are only
+            // consumed automatically by ModCharacterTemplate, so cover the base Ironclad getters
+            // here as well. Both prefixes pass through for every other character.
+            EnsureIroncladVirtualAudioOverrides();
+            var previousAudio = Volatile.Read(ref _activeIroncladAudio);
+            Volatile.Write(ref _activeIroncladAudio, audio);
+            try
+            {
+                ModContentRegistry.For(Entry.ModId).RegisterCharacterAssetReplacement(
+                    ModContentRegistry.VanillaCharacterIds.Ironclad,
+                    profile);
+            }
+            catch
+            {
+                Volatile.Write(ref _activeIroncladAudio, previousAudio);
+                throw;
+            }
 
             Entry.Logger.Info($"Ironclad V3 five-page skin enabled from {SkinRoot}.");
             return true;
@@ -260,14 +326,86 @@ internal static class IroncladReplacementAssets
                 CharacterSelectBgPath: CharacterSelectScenePath,
                 CharacterSelectIconPath: CharacterSelectIconPath,
                 CharacterSelectLockedIconPath: CharacterSelectLockedIconPath,
+                CharacterSelectTransitionPath: CharacterSelectTransitionMaterialPath,
                 MapMarkerPath: MapMarkerPath),
             Spine: new CharacterSpineAssetSet(
                 CombatSkeletonDataPath: CombatSkeletonDataPath),
+            Audio: new CharacterAudioAssetSet(
+                CharacterSelectSfx: CharacterSelectSfx,
+                CharacterTransitionSfx: CharacterTransitionSfx,
+                AttackSfx: AttackSfx,
+                CastSfx: CastSfx,
+                DeathSfx: DeathSfx),
             Multiplayer: new CharacterMultiplayerAssetSet(
                 ArmPointingTexturePath: PointingHandTexturePath,
                 ArmRockTexturePath: RockHandTexturePath,
                 ArmPaperTexturePath: PaperHandTexturePath,
                 ArmScissorsTexturePath: ScissorsHandTexturePath));
+    }
+
+    private static void EnsureIroncladVirtualAudioOverrides()
+    {
+        lock (VirtualAudioPatchLock)
+        {
+            if (_virtualAudioPatchesInstalled)
+            {
+                return;
+            }
+
+            var selectGetter = AccessTools.PropertyGetter(
+                    typeof(CharacterModel),
+                    nameof(CharacterModel.CharacterSelectSfx))
+                ?? throw new MissingMethodException(
+                    typeof(CharacterModel).FullName,
+                    $"get_{nameof(CharacterModel.CharacterSelectSfx)}");
+            var transitionGetter = AccessTools.PropertyGetter(
+                    typeof(CharacterModel),
+                    nameof(CharacterModel.CharacterTransitionSfx))
+                ?? throw new MissingMethodException(
+                    typeof(CharacterModel).FullName,
+                    $"get_{nameof(CharacterModel.CharacterTransitionSfx)}");
+
+            var harmony = new Harmony(VirtualAudioPatchId);
+            harmony.Patch(
+                selectGetter,
+                prefix: new HarmonyMethod(
+                    typeof(IroncladReplacementAssets),
+                    nameof(PrefixIroncladCharacterSelectSfx)));
+            harmony.Patch(
+                transitionGetter,
+                prefix: new HarmonyMethod(
+                    typeof(IroncladReplacementAssets),
+                    nameof(PrefixIroncladCharacterTransitionSfx)));
+            _virtualAudioPatchesInstalled = true;
+        }
+    }
+
+    private static bool PrefixIroncladCharacterSelectSfx(
+        CharacterModel __instance,
+        ref string __result)
+    {
+        if (__instance is not Ironclad ||
+            Volatile.Read(ref _activeIroncladAudio)?.CharacterSelectSfx is not { } path)
+        {
+            return true;
+        }
+
+        __result = path;
+        return false;
+    }
+
+    private static bool PrefixIroncladCharacterTransitionSfx(
+        CharacterModel __instance,
+        ref string __result)
+    {
+        if (__instance is not Ironclad ||
+            Volatile.Read(ref _activeIroncladAudio)?.CharacterTransitionSfx is not { } path)
+        {
+            return true;
+        }
+
+        __result = path;
+        return false;
     }
 
     private static List<string> ValidateRequiredAssets()

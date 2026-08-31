@@ -94,9 +94,22 @@ PRIVATE_RUNTIME_FILES_WITHOUT_COMBAT_PAGES = (
     "spine/character_select/characterselect_ironclad.png",
     "spine/character_select/character_select_skeleton_data.tres",
     "scenes/combat.tscn",
+    "scenes/vfx/vivhite_combat_vfx.gd",
+    "scenes/vfx/vivhite_eye_lens_glint.png",
     "scenes/merchant.tscn",
     "scenes/rest_site.tscn",
     "scenes/character_select.tscn",
+    "transitions/vivhite_character_select_transition.png",
+    "transitions/vivhite_character_select_transition_mat.tres",
+)
+
+COMBAT_VFX_SCRIPT = "scenes/vfx/vivhite_combat_vfx.gd"
+EYE_LENS_GLINT_TEXTURE = "scenes/vfx/vivhite_eye_lens_glint.png"
+CHARACTER_SELECT_TRANSITION_TEXTURE = (
+    "transitions/vivhite_character_select_transition.png"
+)
+CHARACTER_SELECT_TRANSITION_MATERIAL = (
+    "transitions/vivhite_character_select_transition_mat.tres"
 )
 
 LEGACY_COMBAT_PAGES = (
@@ -145,10 +158,10 @@ V3_FIVE_PAGE_COMBAT_PAGES = LEGACY_COMBAT_PAGES + (
 
 RUNTIME_LAYOUTS = {
     "legacy-single-page": RuntimeLayoutContract(
-        "legacy-single-page", LEGACY_COMBAT_PAGES, 26
+        "legacy-single-page", LEGACY_COMBAT_PAGES, 30
     ),
     "v3-five-page": RuntimeLayoutContract(
-        "v3-five-page", V3_FIVE_PAGE_COMBAT_PAGES, 30
+        "v3-five-page", V3_FIVE_PAGE_COMBAT_PAGES, 34
     ),
 }
 
@@ -218,6 +231,8 @@ PRIVATE_ATLAS_REQUIREMENTS = {
 PRIVATE_NON_COMBAT_PNG_DIMENSIONS = {
     "spine/rest_site/restsite_ironclad.png": (2048, 2048),
     "spine/character_select/characterselect_ironclad.png": (3713, 2427),
+    EYE_LENS_GLINT_TEXTURE: (512, 512),
+    CHARACTER_SELECT_TRANSITION_TEXTURE: (2560, 1200),
 }
 
 PRIVATE_TEXT_REQUIREMENTS = {
@@ -247,6 +262,15 @@ PRIVATE_TEXT_REQUIREMENTS = {
         "[gd_scene",
         f"{RUNTIME_RESOURCE_ROOT}/spine/combat/"
         "vivhite_combat_skeleton_data.tres",
+        f"{RUNTIME_RESOURCE_ROOT}/{COMBAT_VFX_SCRIPT}",
+        f"{RUNTIME_RESOURCE_ROOT}/{EYE_LENS_GLINT_TEXTURE}",
+    ),
+    COMBAT_VFX_SCRIPT: (
+        "extends Node",
+        '"cast_eyes_start":',
+        "_eye_magic.visible = true",
+        '"clear_vfx":',
+        "_eye_magic.visible = false",
     ),
     "scenes/merchant.tscn": (
         "[gd_scene",
@@ -260,6 +284,35 @@ PRIVATE_TEXT_REQUIREMENTS = {
         "[gd_scene",
         f"{RUNTIME_RESOURCE_ROOT}/spine/character_select/"
         "character_select_skeleton_data.tres",
+    ),
+    CHARACTER_SELECT_TRANSITION_MATERIAL: (
+        '[gd_resource type="ShaderMaterial" load_steps=3 format=3]',
+        f"{RUNTIME_RESOURCE_ROOT}/{CHARACTER_SELECT_TRANSITION_TEXTURE}",
+        "shader_type canvas_item;",
+        "uniform sampler2D transitionTex;",
+        "uniform float threshold : hint_range(0,1);",
+        "float falloff = 1.0 - texture(transitionTex, UV).r;",
+        "float remap  = mix(-0.1, 1.1, threshold);",
+        "falloff = step(falloff, remap);",
+        "COLOR.a = falloff;",
+        "resource_local_to_scene = true",
+        "shader_parameter/threshold = 0.332",
+        'shader_parameter/transitionTex = ExtResource("1_transition")',
+    ),
+}
+
+PRIVATE_TEXT_FORBIDDEN = {
+    "scenes/combat.tscn": (
+        "res://src/Core/Nodes/Vfx/NIroncladVfx.cs",
+        '[node name="NIroncladVfx"',
+        "res://images/vfx/characters/ironclad_eye_fire_base.png",
+        '[node name="EyeFire"',
+    ),
+    COMBAT_VFX_SCRIPT: (
+        "NIroncladVfx",
+        "EyeFire",
+        "ironclad_eye_fire_base.png",
+        "vfx_stepped_shader_fire_flat.tres",
     ),
 }
 
@@ -362,13 +415,23 @@ def _paeth_predictor(left: int, above: int, upper_left: int) -> int:
     return upper_left
 
 
-def _decode_rgba8_png(data: bytes, label: str) -> DecodedRgba8Png:
-    """Decode the exact PNG subset used by the checked-in art without Pillow.
+def _decode_rgba8_png(
+    data: bytes,
+    label: str,
+    *,
+    expected_color_type: int = 6,
+    bytes_per_pixel: int = 4,
+) -> DecodedRgba8Png:
+    """Decode a non-interlaced 8-bit truecolor PNG without Pillow.
 
-    The publisher deliberately accepts only 8-bit, non-interlaced RGBA PNGs.
+    Existing private art uses RGBA8. The character-select transition is the
+    sole RGB8 call site and passes color type 2 with three bytes per pixel.
     CRCs, chunk ordering, the zlib stream, scanline sizes, and all PNG filters
     are validated so a malformed file cannot pass by merely having a signature.
     """
+
+    if (expected_color_type, bytes_per_pixel) not in ((6, 4), (2, 3)):
+        raise ValueError("Only RGB8 and RGBA8 truecolor PNG contracts are supported.")
 
     if not data.startswith(PNG_SIGNATURE):
         raise PublishError(f"Expected a real PNG file: {label}")
@@ -428,13 +491,14 @@ def _decode_rgba8_png(data: bytes, label: str) -> DecodedRgba8Png:
                 )
             if (bit_depth, color_type, compression, filter_method, interlace) != (
                 8,
-                6,
+                expected_color_type,
                 0,
                 0,
                 0,
             ):
                 raise PublishError(
-                    f"PNG must be RGBA8 and non-interlaced: {label} "
+                    f"PNG must be {'RGB8' if expected_color_type == 2 else 'RGBA8'} "
+                    f"and non-interlaced: {label} "
                     f"(depth={bit_depth}, color={color_type}, interlace={interlace})"
                 )
             saw_ihdr = True
@@ -466,7 +530,7 @@ def _decode_rgba8_png(data: bytes, label: str) -> DecodedRgba8Png:
     if not saw_ihdr or not saw_idat or not saw_iend:
         raise PublishError(f"Incomplete PNG structure: {label}")
 
-    stride = width * 4
+    stride = width * bytes_per_pixel
     expected_raw_size = height * (stride + 1)
     expected_pixel_size = height * stride
     if expected_pixel_size > PNG_MAX_DECODED_BYTES:
@@ -506,12 +570,12 @@ def _reconstruct_rgba8_row(
     filtered: bytes,
     previous: bytes,
     filter_type: int,
+    bytes_per_pixel: int = 4,
 ) -> bytes:
     if filter_type == 0:
         return filtered
 
     reconstructed = bytearray(len(filtered))
-    bytes_per_pixel = 4
     if filter_type == 1:
         for index, value in enumerate(filtered):
             left = reconstructed[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
@@ -556,6 +620,24 @@ def _rgba8_png_pixels_equal(first: DecodedRgba8Png, second: DecodedRgba8Png) -> 
             return False
         first_previous = first_row
         second_previous = second_row
+    return True
+
+
+def _rgb8_png_is_strict_grayscale(decoded: DecodedRgba8Png) -> bool:
+    stride = decoded.width * 3
+    previous = bytes(stride)
+    for row_index in range(decoded.height):
+        row_offset = row_index * (stride + 1)
+        row = _reconstruct_rgba8_row(
+            decoded.filtered_scanlines[row_offset + 1 : row_offset + 1 + stride],
+            previous,
+            decoded.filtered_scanlines[row_offset],
+            bytes_per_pixel=3,
+        )
+        for offset in range(0, len(row), 3):
+            if row[offset] != row[offset + 1] or row[offset + 1] != row[offset + 2]:
+                return False
+        previous = row
     return True
 
 
@@ -767,7 +849,20 @@ def _validate_private_runtime_file(
     layout: RuntimeLayoutContract,
 ) -> None:
     if relative.endswith(".png"):
-        decoded = _decode_rgba8_png(data, f"private-runtime/{relative}")
+        if relative == CHARACTER_SELECT_TRANSITION_TEXTURE:
+            decoded = _decode_rgba8_png(
+                data,
+                f"private-runtime/{relative}",
+                expected_color_type=2,
+                bytes_per_pixel=3,
+            )
+            if not _rgb8_png_is_strict_grayscale(decoded):
+                raise PublishError(
+                    "Character-select transition must be strict grayscale RGB8: "
+                    f"{relative}"
+                )
+        else:
+            decoded = _decode_rgba8_png(data, f"private-runtime/{relative}")
         expected_dimensions = _private_png_dimensions(layout).get(relative)
         if expected_dimensions is None:
             raise PublishError(
@@ -884,6 +979,12 @@ def _validate_private_runtime_file(
         if required_text not in text:
             raise PublishError(
                 f"Private runtime resource is missing {required_text!r}: {relative}"
+            )
+    for forbidden_text in PRIVATE_TEXT_FORBIDDEN.get(relative, ()):
+        if forbidden_text in text:
+            raise PublishError(
+                f"Private runtime resource contains forbidden legacy VFX "
+                f"{forbidden_text!r}: {relative}"
             )
 
 
