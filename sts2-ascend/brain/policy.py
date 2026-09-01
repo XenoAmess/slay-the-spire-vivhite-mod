@@ -4554,10 +4554,6 @@ class Policy:
                 if target is not None:
                     params["target_index"] = target
                 kind = "攻击" if is_damage else "增益"
-                self._trace_candidate(
-                    name or p.get("potion_id") or f"药水{p['index']}", None,
-                    index=p["index"], action="use_potion",
-                    why=f"药水分类={kind}；hard={hard}；premium={premium}")
                 return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
                                 tags=[("use_potion", p.get("potion_id")),
                                       ("potion_attempt", p["index"],
@@ -4578,11 +4574,6 @@ class Policy:
                 _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
                                   or _gap_now >= _hp_now)
                 if (_hp_now < _pot_line * _max_now) or _def_emergency:
-                    self._trace_candidate(
-                        name or p.get("potion_id") or f"药水{p['index']}", None,
-                        index=p["index"], action="use_potion",
-                        why=(f"药水分类=防御/回复；hp={_hp_now}/{_max_now}；"
-                             f"emergency={_def_emergency}"))
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
                                     f"（交药线 {_pot_line:.0%}）",
@@ -4616,11 +4607,6 @@ class Policy:
                 if target is not None:
                     params["target_index"] = target
                 when_txt = "硬仗开局" if early_premium else "低血兜底"
-                self._trace_candidate(
-                    name or p.get("potion_id") or f"药水{p['index']}", None,
-                    index=p["index"], action="use_potion",
-                    why=(f"POTION_UNKNOWN_FALLBACK；{when_txt}；"
-                         f"potion_id={p.get('potion_id') or ''}"))
                 return Decision("use_potion", params,
                                 f"战斗：{when_txt}使用药水【{name}】（描述无法分类，宁滥勿囤）",
                                 tags=[("use_potion", p.get("potion_id")),
