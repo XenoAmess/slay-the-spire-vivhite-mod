@@ -29,6 +29,10 @@ public partial class Entry
         // 这一步和 RitsuLib 的内容自动注册不是同一件事，两个都需要保留。
         RitsuLibFramework.EnsureGodotScriptsRegistered(assembly, Logger);
 
+        // The promo capture surface is opt-in and only hides native debug
+        // labels for a recording process. It is not part of normal runtime.
+        PromoCaptureSurface.InstallIfEnabled();
+
         // 自动注册扫描会读取当前程序集里的 RegisterCard/RegisterRelic 等 attribute。
         // 新增内容类后，只要 attribute 写对，通常不需要在入口里手动逐个注册。
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, assembly);
