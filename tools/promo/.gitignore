@@ -2,3 +2,8 @@
 *.egg-info/
 build/
 dist/
+
+# Real capture runs can contain large media and remain process evidence, but
+# must never be staged accidentally with the project source.
+runs/*
+!runs/README.md
