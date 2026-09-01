@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SteamworksDir Condition="'$(SteamworksDir)' == ''">__STEAMWORKS_DIR_REQUIRED__</SteamworksDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Steamworks.NET" HintPath="$(SteamworksDir)\Steamworks.NET.dll" Private="true" />
+    <None Include="$(SteamworksDir)\steam_api64.dll" Link="steam_api64.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="ValidateSteamworksDir" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SteamworksDir)\Steamworks.NET.dll')"
+           Text="Steamworks.NET.dll was not found under SteamworksDir='$(SteamworksDir)'." />
+    <Error Condition="!Exists('$(SteamworksDir)\steam_api64.dll')"
+           Text="steam_api64.dll was not found under SteamworksDir='$(SteamworksDir)'." />
+  </Target>
+</Project>
