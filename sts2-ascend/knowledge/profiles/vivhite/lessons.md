@@ -139,3 +139,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/2局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/2局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.60 → 1.65（Boss 长战磨死（7回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.10 → 5.40（Boss 高血进场长战死（100%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 7.50 → 8.00（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.173 → 0.168（经验累积，探索衰减）
 - 生涯战绩：0/9 胜，当前目标进阶 0
+
+## 第 10 局复盘（2026-09-01 21:24）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：FASTEN, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_TERMINATION_CONDITION, PANIC_BUTTON, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_OF_LIFE, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：LANTERN, BAG_OF_PREPARATION
+- 战斗记录：F6 Monster战 掉血30; F7 Monster战 掉血4; F9 Monster战 掉血0; F11 Monster战 掉血0; F13 Elite战 掉血36; F17 Boss战 掉血64｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_CHROMATIC_LIMIT(34分/2局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/4局)，VIVHITE_CARD_CHIAROSCURO(33分/6局)，VIVHITE_CARD_ASTRAL_SEARCH(33分/4局)，VIVHITE_CARD_SCALE_TRANSFORMATION(33分/2局)
+- 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/2局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/3局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.65 → 1.70（Boss 长战磨死（5回合），攻坚乘区提速）；Boss 长战磨死但高血进场（82%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.40 → 5.70（Boss 高血进场长战死（82%，5回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 8.00 → 8.50（Boss 高血进场长战死（5回合），缺口越深纠偏上限越高）；exploration_rate: 0.168 → 0.163（经验累积，探索衰减）
+- 生涯战绩：0/10 胜，当前目标进阶 0
