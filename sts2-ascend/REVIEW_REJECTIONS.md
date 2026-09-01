@@ -335,3 +335,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-01 18:26:02 | 第 988~1013 局 | `b8782991` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-182602-1788258362421297600-b8782991` | 复盘进程未成功完成 |
 <!-- rejection:20260901-194607-1788263167630673200-7a9e39b0 -->
 | 2026-09-01 19:46:07 | 第 3~4 局 | `7a9e39b0` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260901-194607-1788263167630673200-7a9e39b0` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
+<!-- rejection:20260901-203540-1788266140071956100-08087ea7 -->
+| 2026-09-01 20:35:40 | 第 988~1013 局 | `08087ea7` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-203540-1788266140071956100-08087ea7` | 复盘进程未成功完成 |
