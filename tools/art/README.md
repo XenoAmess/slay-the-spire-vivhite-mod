@@ -1,4 +1,88 @@
-# Ironclad art extraction helper
+# 白绮 / Ironclad art pipeline
+
+这是白绮 Vivhite 的美术研究、提取、Spine 构建、离线渲染与发布前验收工具集。
+这里的脚本属于**制作与证据链**，不是游戏运行时入口；默认不会启动、停止或控制
+Slay the Spire 2、Brain、直播或 Steam。正式运行时只消费经过发布器门禁的
+`Vivhite/Vivhite/skins/ironclad/` 资源。
+
+![Vivhite workshop preview](../../workshop/preview.jpg)
+
+## 从哪里开始
+
+| 目的 | 入口 | 产物 / 边界 |
+| --- | --- | --- |
+| 提取游戏研究模板 | [`extract_ironclad_assets.py`](extract_ironclad_assets.py) | 只读读取 v0.111.0 PCK，写入 `assets/ironclad-v0.111.0/` |
+| 原生透明生图 | [`evolink_transparent_image.py`](evolink_transparent_image.py) | 仅 EvoLink `gpt-image-2` + `background=transparent`；每次尝试追加归档 |
+| Atlas region 主源 | [`atlas_region_tool.gd`](atlas_region_tool.gd) | `assets/vivhite-ironclad/custom/**`；禁止整页重绘与 Alpha 修补 |
+| 私有运行时 rig | `build_vivhite_*_rig.gd` | 写正式 runtime 前先在 `candidates/` 或 `.work/` 验收 |
+| 候选研究 | [`candidates/README.md`](candidates/README.md) | 所有候选默认 research-only / fail-closed，不得直接部署 |
+| 多方案战斗对照 | [`compare/preview/README.md`](compare/preview/README.md) | 使用真实 Spine GDExtension 的隐藏 Vulkan，输出只在 `.work/` |
+| 选人、休息、多人 UI 验收 | [`candidates/character_select_acceptance/README.md`](candidates/character_select_acceptance/README.md)、[`candidates/rest_site_acceptance/README.md`](candidates/rest_site_acceptance/README.md)、[`evaluations/multiplayer_gestures/README.md`](evaluations/multiplayer_gestures/README.md) | 离线证据，不改变运行时素材 |
+| 发布前镜像与契约 | [`publish_ironclad_skin.py`](publish_ironclad_skin.py) | 只从已验收私有源生成完整运行时资源；随后才允许 `dotnet build` |
+
+## 路径与运行模式（容易混淆的部分）
+
+仓库根目录是所有命令的工作目录。`tools/art` 是一个最小 Godot 项目，而
+`Vivhite` 是带游戏扩展与正式资源路径的 Godot .NET 项目：
+
+```text
+tools/art/                         # 本地脚本与候选源码（本目录不等于 runtime）
+assets/ironclad-v0.111.0/          # 只读、版本化的游戏提取模板
+assets/vivhite-ironclad/           # 生成原图、Prompt/请求归档、已验收制作源
+Vivhite/tools/candidates/<name>/   # 候选输出；PCK 排除，禁止复制到 skins/
+.work/                             # 临时 Vulkan 帧、报告、隔离 stage（可删除/重建）
+Vivhite/Vivhite/skins/ironclad/    # 唯一正式运行时资源，由发布器镜像维护
+```
+
+因此：
+
+1. **构建器**通常以 `--path tools/art` 启动，脚本会把输出解析到仓库根下的
+   `Vivhite/tools/candidates/<name>/`；这两个路径不是同一个目录。
+2. 需要读取 `res://tools/candidates/...`、游戏 Spine 类或正式场景的**验证器/渲染器**
+   应使用 `--path Vivhite`，或直接使用候选目录提供的 `Invoke-*.ps1` 包装器。
+3. 预览输出必须位于仓库 `.work/` 下；包装器会拒绝越界路径并使用新目录，避免
+   把旧报告误当成新验收。
+4. `Vivhite/tools/candidates/` 中的 `.import`、`.uid` 是 Godot 缓存，不是候选的
+   authored 文件；不能提交、发布或拿来判断 Alpha。
+
+## 全局制作与验收闸门
+
+- 新的透明主体只能通过 EvoLink `gpt-image-2` 原生透明响应；不要使用抠图、色键、
+  洪水填充、阈值、蒙版或任何代码 Alpha 修补。完整契约见仓库根 [`AGENTS.md`](../../AGENTS.md)。
+- 在任何生成调用前，先判断 PNG 是单帧、atlas/spritesheet、tile sheet 还是多区域拼图，
+  并同时核对相邻 atlas/Spine 元数据与实际 C#/GDScript 消费者。没有消费者证据时，
+  只能记录证据缺口，不能把整页当插画交给模型。
+- 每次付费尝试都要在 `assets/vivhite-ironclad/generated/` 追加保存未经后处理原图、
+  逐字 Prompt、去秘密的请求参数；同一语义素材最多 8 次，失败候选也不能覆盖或删除。
+- Alpha 验收必须程序化读取 RGBA 通道，并分别 SourceOver 到黑、白和接近真实场景的
+  底色；四角应为 `Alpha=0`，内部主体应接近不透明。低 Alpha 触边只是需要复核的警告，
+  不能单凭黑底缩略图或 `Alpha>0` bbox 判定光晕。
+- 候选的“通过”只表示它满足该候选自己的结构/渲染证据，不表示生产资格。只有
+  `hybrid_v3_final` 等明确通过完整 Source/Godot/PCK 门禁的资源，才可由发布器写入
+  正式 runtime；semantic 灰盒永远保持 `deployable=false`。
+- 离线 Vulkan 渲染使用 `WINDOW_FLAG_NO_FOCUS` 和屏幕外位置，且同一项目的 Spine
+  扩展由 mutex 串行化。它不会获得 UAC，也不应替代真机验收。
+
+## 常用检查顺序
+
+```powershell
+# 1) 仅在需要更新游戏模板时提取（默认不清理任何无关文件）
+py -3 -B .\tools\art\extract_ironclad_assets.py
+
+# 2) 构建/验证具体候选；优先使用候选 README 中的包装器
+Get-Content .\tools\art\candidates\README.md
+
+# 3) 发布前从私有源镜像并运行正式构建门禁
+py -3 -B .\tools\art\publish_ironclad_skin.py
+dotnet build .\Vivhite\Vivhite.csproj
+
+# 4) 仅运行 Python 静态契约测试（不会启动游戏）
+py -3 -B -m unittest discover -s .\tools\art\tests -p 'test_*.py' -v
+```
+
+如果某一步失败，先保存 `.work/` 中的完整 stdout/stderr、JSON 报告和输入哈希，
+再修复源或消费者契约；不要通过 `--allow-unchanged`、复制旧 `.import` 或手工修改
+候选 JSON 绕过门禁。`--allow-unchanged` 只允许写入 `.work/` 的调查目录。
 
 ## EvoLink native-transparent image generation
 

@@ -1,25 +1,29 @@
-# Semantic right-leg research candidate
+# semantic_right_leg：屏幕右 / 近侧腿研究候选
 
-This isolated candidate audits the screen-right / near-leg semantic group. It
-does not modify the runtime skin and makes no paid image request.
+本目录审计角色朝屏幕右时的屏幕右（近侧）腿：`0083` 大腿、`0100` 小腿、被方向
+阻断的 `0064` 靴子，并对比三段冻结顺序与“小腿+靴一体”的二段拓扑。它只做
+SourceOver 诊断，不修改运行时皮肤、不调用付费生图。
 
-The builder SourceOver-composites the untouched `0083` thigh, `0100` lower
-leg, and direction-blocked `0064` boot at setup, the authored `+82°` knee
-extreme, and the authored `-18°` ankle extreme. It also compares the frozen
-three-piece order with a two-piece topology in which the lower leg and boot
-would be one newly generated attachment and the ankle degree of freedom is
-removed.
+## 事实与结论
 
-Run from the repository root:
+- `candidate.json` 记录 12 个来源哈希、固定 7/9/11 层关系、setup/`+82°` 膝极限和
+  `-18°` 踝极限。三件路线被明确阻断；二件路线只是下一轮新透明生成的建议。
+- 输出的五张 contact sheet（black/white/game、轴向冲突和 0064–0071 对照）是诊断
+  图，不是 spritesheet/atlas，也不能把 `0100 + 0064` flatten 后放进 runtime。
+- 状态必须保持 `research_only_not_publishable`；validator 通过不等于拓扑已有生产资格。
+
+## 命令
 
 ```powershell
-$godot = 'C:\Users\xenoa\AppData\Local\Temp\opencode\godot\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64.exe'
-& $godot --headless --path tools/art --script res://candidates/semantic_right_leg/build_semantic_right_leg_candidate.gd -- build-semantic-right-leg-candidate
-& $godot --headless --path tools/art --script res://candidates/semantic_right_leg/validate_semantic_right_leg_candidate.gd -- validate-semantic-right-leg-candidate
+& $godot --headless --path .\tools\art `
+  --script res://candidates/semantic_right_leg/build_semantic_right_leg_candidate.gd -- `
+  build-semantic-right-leg-candidate
+& $godot --headless --path .\tools\art `
+  --script res://candidates/semantic_right_leg/validate_semantic_right_leg_candidate.gd -- `
+  validate-semantic-right-leg-candidate
 ```
 
-The PNGs under `Vivhite/tools/candidates/semantic_right_leg/` are opaque
-diagnostic contact sheets, not spritesheet or atlas inputs. In particular,
-`0100 + 0064` must never be flattened into runtime art; a production two-piece
-route requires a new native-transparent lower-leg/boot union after its topology
-is approved.
+builder 和 validator 都支持 `--output-root PATH`，默认根为
+`Vivhite/tools/candidates/semantic_right_leg/`。两者会核对已验收来源、split consumer
+和层序；所有输出留在候选/`.work`，失败时保留 JSON 与接触表。要继续生成，必须先
+通过结构性二段方案门禁，并重新走 EvoLink 原生透明、相邻膝/踝极限和 Alpha 验收。
