@@ -53,6 +53,9 @@ def _default_ffmpeg() -> str:
     if configured and configured.strip():
         return configured
     repo_root = Path(__file__).resolve().parents[3]
+    # Keep the provisioned in-place candidate first.  Every known candidate is
+    # expected to be the pinned build, while preflight verifies the selected
+    # binary's capability, exact location, and hash before a production run.
     candidates = (
         Path(r"C:\ffmpeg\bin\ffmpeg.exe"),
         Path(r"C:\ffmpeg\promo-9.0.1\bin\ffmpeg.exe"),
@@ -166,11 +169,21 @@ def _cue_for(config: Any, chapter_id: str, cue_id: str) -> tuple[str, str, str]:
             subtitles = cue.get("subtitles", {})
         if not isinstance(narration, Mapping) or not isinstance(subtitles, Mapping):
             raise VivhitePromoError(f"cue {cue_id!r} has malformed localized text")
-        zh = str(narration.get("zh-CN", "")).strip()
-        zh_sub = str(subtitles.get("zh-CN", zh)).strip()
-        en_sub = str(subtitles.get("en", narration.get("en", "")).strip())
-        if not zh or not zh_sub or not en_sub:
+        # Never stringify malformed values: ``None`` must not become a
+        # seemingly valid subtitle or TTS phrase.
+        zh_value = narration.get("zh-CN")
+        zh_sub_value = subtitles.get("zh-CN", zh_value)
+        en_sub_value = subtitles.get("en")
+        if en_sub_value is None:
+            en_sub_value = narration.get("en")
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (zh_value, zh_sub_value, en_sub_value)
+        ):
             raise VivhitePromoError(f"cue {cue_id!r} needs zh-CN and en text")
+        zh = zh_value.strip()
+        zh_sub = zh_sub_value.strip()
+        en_sub = en_sub_value.strip()
         return zh, zh_sub, en_sub
     raise VivhitePromoError(f"chapter {chapter_id!r} lacks cue {cue_id!r}")
 
@@ -738,7 +751,10 @@ def validate_only_project(path: str | Path) -> Mapping[str, Any]:
     policy = load_policy(policy_path if policy_path.is_file() else None)
     validate_project_config(config, policy=policy)
     storyboard = load_storyboard(config_path.parent / policy.storyboard_path)
-    variants = load_variants(config_path.parent / VARIANTS_RELATIVE_PATH)
+    variants = load_variants(
+        config_path.parent / VARIANTS_RELATIVE_PATH,
+        storyboard=storyboard,
+    )
     claim_path = config_path.parent / policy.claims_path
     claims_count = 0
     if claim_path.is_file():

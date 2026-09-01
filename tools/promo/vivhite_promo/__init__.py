@@ -30,6 +30,17 @@ from .claims import (
     parse_claims,
     validate_claim_bindings,
 )
+from .semantic_audit import (
+    ClaimSemanticAudit,
+    SemanticAuditError,
+    SemanticAuditReport,
+    ValidatorResult,
+    audit_claims,
+    enforce_semantic_gate,
+    run_semantic_audit,
+    semantic_audit,
+    validate_semantic_gate,
+)
 from .pipeline import VivhitePromoError, compose, validate_only_project
 from .preset import (
     ADAPTER_ID,
@@ -81,6 +92,15 @@ __all__ = [
     "load_claims",
     "parse_claims",
     "validate_claim_bindings",
+    "SemanticAuditError",
+    "ValidatorResult",
+    "ClaimSemanticAudit",
+    "SemanticAuditReport",
+    "audit_claims",
+    "enforce_semantic_gate",
+    "run_semantic_audit",
+    "semantic_audit",
+    "validate_semantic_gate",
     "ShotBinding",
     "VivhiteAdapter",
     "VivhiteAdapterError",

@@ -12,6 +12,10 @@ from .capture_contract import (
     load_capture_contract,
 )
 from .claims import ClaimValidationReport, load_claims, validate_claim_bindings
+from .semantic_audit import (
+    SemanticAuditReport,
+    audit_claims,
+)
 from .preset import (
     BGM_STEM_IDS,
     CAPTURE_CONTRACT_RELATIVE_PATH,
@@ -272,6 +276,65 @@ class VivhiteAdapter:
                     + "; ".join(claims_report.blockers)
                 )
         return VivhiteCaptureCandidate(contract=contract, shots=tuple(shots), claims=claims_report)
+
+    def audit_semantics(
+        self,
+        candidate: VivhiteCaptureCandidate,
+        *,
+        validator: Any | None = None,
+        validator_results: Mapping[str, Any] | None = None,
+        required_shot_ids: tuple[str, ...] | None = None,
+        allow_declared_verified: bool = False,
+        claims_path: str | Path | None = None,
+    ) -> SemanticAuditReport:
+        """Run the explicit project semantic gate for a loaded capture.
+
+        The adapter owns the location and identity of the Vivhite claims
+        ledger, while :func:`vivhite_promo.semantic_audit.audit_claims` owns
+        the generic structural checks.  A domain validator is deliberately an
+        injected dependency: this method never calls xAR technical audit,
+        review, or sign-off operations and never interprets game state itself.
+
+        ``validator`` should accept ``(claim, contract, project_root)``; the
+        gate also accepts the shorter ``(claim, contract)`` and ``(claim)``
+        forms for small offline validators.  The optional result map is an
+        alternative for a previously recorded project-side validator output.
+        """
+
+        if not isinstance(candidate, VivhiteCaptureCandidate):
+            raise VivhiteAdapterError("candidate must be a VivhiteCaptureCandidate")
+        selected = Path(claims_path) if claims_path is not None else self.claims_path
+        if selected is None:
+            selected = self._root() / CLAIMS_RELATIVE_PATH
+        selected = selected.expanduser().resolve()
+        if not selected.is_file():
+            raise VivhiteAdapterError(f"Vivhite semantic claims ledger is missing: {selected}")
+        try:
+            claims = load_claims(selected)
+            report = audit_claims(
+                claims,
+                candidate.contract,
+                project_root=self._root(),
+                validator=validator,
+                validator_results=validator_results,
+                required_shot_ids=(
+                    tuple(required_shot_ids)
+                    if required_shot_ids is not None
+                    else tuple(SHOT_IDS)
+                ),
+                allow_declared_verified=allow_declared_verified,
+            )
+        except Exception as exc:
+            # Keep the adapter boundary stable while retaining the detailed
+            # report/exception text for the project run log.
+            if isinstance(exc, VivhiteAdapterError):
+                raise
+            raise VivhiteAdapterError(f"Vivhite semantic audit could not run: {exc}") from exc
+        return report
+
+    # The alternate spelling is useful to callers that use a verb-first gate
+    # name; both methods have identical fail-closed behavior.
+    semantic_audit = audit_semantics
 
     def to_xar_receipt(self, candidate: VivhiteCaptureCandidate) -> Any:
         """Project a verified sidecar into xAR's generic CaptureReceipt.

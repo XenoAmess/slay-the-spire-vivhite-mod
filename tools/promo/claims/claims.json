@@ -27,7 +27,7 @@
       "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr"],
       "validator_id": "vivhite.catalog.starter.v1",
       "status": "pending",
-      "source_refs": ["Vivhite/VivhiteCode/Characters/Vivhite.cs", "Vivhite/VivhiteCode/Relics/SolitaryCrownRelic.cs"]
+      "source_refs": ["Vivhite/VivhiteCode/Characters/VivhiteCharacter.cs", "Vivhite/VivhiteCode/Relics/SolitaryCrown.cs"]
     },
     {
       "claim_id": "claim-cough-payment",
@@ -79,7 +79,13 @@
       "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"],
       "validator_id": "vivhite.archetype.conservation.v1",
       "status": "pending",
-      "source_refs": ["Vivhite/VivhiteCode/Cards"]
+      "source_refs": [
+        "Vivhite/VivhiteCode/Cards/Conservation/ConservationCard.cs",
+        "Vivhite/VivhiteCode/Cards/Conservation/ConservationCommonCards.cs",
+        "Vivhite/VivhiteCode/Cards/Conservation/ConservationUncommonCards.cs",
+        "Vivhite/VivhiteCode/Cards/Conservation/ConservationRareCards.cs",
+        "Vivhite/VivhiteCode/Cards/Conservation/ConservationPowers.cs"
+      ]
     },
     {
       "claim_id": "claim-recursive-star-calculus",
@@ -105,7 +111,7 @@
       "evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"],
       "validator_id": "vivhite.archetype.crimson.v1",
       "status": "pending",
-      "source_refs": ["Vivhite/VivhiteCode/Core/CrimsonTransformationRitual.cs", "Vivhite.Tests/Mechanics/VivhitesCrimsonTransformationRitualAcceptanceTests.cs"]
+      "source_refs": ["Vivhite/VivhiteCode/Cards/Hybrid/VivhitesCrimsonTransformationRitual.cs", "Vivhite.Tests/Mechanics/VivhitesCrimsonTransformationRitualAcceptanceTests.cs"]
     },
     {
       "claim_id": "claim-unified-field",
@@ -118,7 +124,11 @@
       "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after", "runtime.manifest"],
       "validator_id": "vivhite.archetype.unified.v1",
       "status": "pending",
-      "source_refs": ["Vivhite/VivhiteCode/Cards", "Vivhite.Tests/Mechanics/CrossSuitDrainAcceptanceTests.cs"]
+      "source_refs": [
+        "Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheory.cs",
+        "Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheoryPowers.cs",
+        "Vivhite.Tests/Mechanics/CrossSuitDrainAcceptanceTests.cs"
+      ]
     },
     {
       "claim_id": "claim-catalog-size",

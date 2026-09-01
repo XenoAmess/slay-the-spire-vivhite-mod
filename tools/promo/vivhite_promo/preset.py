@@ -94,6 +94,45 @@ class VivhitePolicy:
     preserve_failed_attempts: bool = True
 
     def validate(self) -> None:
+        # This is a project preset, not a user-selectable generic profile.
+        # Keep the identity and release geometry pinned so a stale or copied
+        # JSON cannot silently make the adapter certify another runtime.
+        canonical = {
+            "project_id": PROJECT_ID,
+            "adapter_id": ADAPTER_ID,
+            "preset_id": PRESET_ID,
+            "game_version": GAME_VERSION,
+            "mod_id": MOD_ID,
+            "mod_version": MOD_VERSION,
+            "pck_name": PCK_NAME,
+            "pck_version": MOD_VERSION,
+            "ritsu_lib_id": RITSULIB_ID,
+            "ritsu_lib_version": RITSULIB_VERSION,
+            "narration_locale": NARRATION_LOCALE,
+            "target_duration_seconds": TARGET_DURATION_SECONDS,
+            "duration_limit_seconds": DURATION_LIMIT_SECONDS,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "fps": FPS,
+            "capture_contract_path": CAPTURE_CONTRACT_RELATIVE_PATH,
+            "storyboard_path": STORYBOARD_RELATIVE_PATH,
+            "claims_path": CLAIMS_RELATIVE_PATH,
+            "require_vulkan": True,
+            "forbid_overlays": True,
+            "forbid_loading": True,
+            "forbid_console": True,
+            "preserve_failed_attempts": True,
+        }
+        for field_name, expected in canonical.items():
+            observed = getattr(self, field_name)
+            if observed != expected:
+                raise VivhitePresetError(
+                    f"{field_name} must remain pinned to {expected!r}; got {observed!r}"
+                )
+        if tuple(self.subtitle_locales) != SUBTITLE_LOCALES:
+            raise VivhitePresetError(
+                f"subtitle locales must remain {SUBTITLE_LOCALES!r}"
+            )
         if self.voice != VOICE:
             raise VivhitePresetError(
                 f"voice must remain pinned to the ZhongGuo phase-one voice {VOICE!r}"
@@ -104,18 +143,6 @@ class VivhitePolicy:
             raise VivhitePresetError(
                 "include_bgm must remain false until the project explicitly adopts "
                 "and audits a licensed BGM policy"
-            )
-        if self.target_duration_seconds <= 0 or self.duration_limit_seconds <= self.target_duration_seconds:
-            raise VivhitePresetError("target duration must be positive and below the duration limit")
-        if self.width <= 0 or self.height <= 0 or self.fps <= 0:
-            raise VivhitePresetError("render geometry and fps must be positive")
-        if self.pck_name != PCK_NAME or self.pck_version != self.mod_version:
-            raise VivhitePresetError(
-                f"PCK identity must remain {PCK_NAME!r} at the current Mod version"
-            )
-        if self.ritsu_lib_id != RITSULIB_ID or self.ritsu_lib_version != RITSULIB_VERSION:
-            raise VivhitePresetError(
-                f"RitsuLib dependency must remain {RITSULIB_ID} {RITSULIB_VERSION}"
             )
         if len(self.subtitle_locales) != len(set(self.subtitle_locales)):
             raise VivhitePresetError("subtitle locales must be unique")
@@ -482,8 +509,19 @@ def load_variant(path: str | Path) -> Mapping[str, Any]:
     return payload
 
 
-def load_variants(directory: str | Path) -> tuple[Mapping[str, Any], ...]:
-    """Load all canonical variant manifests in deterministic order."""
+def load_variants(
+    directory: str | Path,
+    *,
+    storyboard: Mapping[str, Any] | None = None,
+) -> tuple[Mapping[str, Any], ...]:
+    """Load all canonical variant manifests in deterministic order.
+
+    When the validated storyboard is supplied, its editorial shot lists are
+    the source of truth.  Keeping this check at the project boundary prevents
+    a short-cut manifest from silently drifting to a different set of claims
+    while retaining the old one-argument loader ABI for callers that only need
+    structural variant validation.
+    """
 
     root = Path(directory)
     rows: list[Mapping[str, Any]] = []
@@ -492,6 +530,23 @@ def load_variants(directory: str | Path) -> tuple[Mapping[str, Any], ...]:
         if not path.is_file():
             raise VivhitePresetError(f"missing variant manifest: {path}")
         rows.append(load_variant(path))
+    if storyboard is not None:
+        declared = storyboard.get("variants")
+        if not isinstance(declared, Mapping):
+            raise VivhitePresetError("storyboard.variants must be an object")
+        for row in rows:
+            variant_id = str(row["variant_id"])
+            storyboard_row = declared.get(variant_id)
+            if not isinstance(storyboard_row, Mapping):
+                raise VivhitePresetError(
+                    f"storyboard.variants lacks canonical variant {variant_id!r}"
+                )
+            expected = storyboard_row.get("shot_ids")
+            actual = row.get("source_shots")
+            if not isinstance(expected, list) or actual != expected:
+                raise VivhitePresetError(
+                    f"variant {variant_id!r} source_shots do not match storyboard.variants"
+                )
     return tuple(rows)
 
 

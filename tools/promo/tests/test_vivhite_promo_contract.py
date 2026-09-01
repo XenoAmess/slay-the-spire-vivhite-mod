@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parents[3]
 PROMO_ROOT = ROOT / "tools" / "promo"
 SCHEMA_PATH = PROMO_ROOT / "schemas" / "vivhite-promo-capture-v1.schema.json"
 PROJECT_PATH = PROMO_ROOT / "project.json"
+PRESET_PATH = PROMO_ROOT / "preset.json"
+FFMPEG_LOCK_PATH = PROMO_ROOT / "ffmpeg-lock.json"
 STORYBOARD_PATH = PROMO_ROOT / "storyboard.json"
 CLAIMS_PATH = PROMO_ROOT / "claims" / "claims.json"
 FIXTURE_ROOT = PROMO_ROOT / "fixtures" / "minimal_capture"
@@ -288,6 +290,108 @@ class VivhitePromoContractTests(unittest.TestCase):
                 violations.append(f"{key}={value!r}")
         self.assertFalse(violations, "capture enables forbidden UI: " + ", ".join(violations))
 
+    def test_preset_keeps_capture_policy_fail_closed(self) -> None:
+        preset = importlib.import_module("vivhite_promo.preset")
+        policy = preset.load_policy(PRESET_PATH)
+        self.assertTrue(policy.require_vulkan)
+        self.assertTrue(policy.forbid_overlays)
+        self.assertTrue(policy.forbid_loading)
+        self.assertTrue(policy.forbid_console)
+        self.assertTrue(policy.preserve_failed_attempts)
+
+    def test_voice_and_bgm_policy_are_pinned(self) -> None:
+        preset = importlib.import_module("vivhite_promo.preset")
+        policy = preset.load_policy(PRESET_PATH)
+        self.assertEqual(policy.voice, "zh-CN-XiaoxiaoNeural")
+        self.assertFalse(policy.include_bgm)
+        request = preset.build_narration_request("离线旁白契约测试")
+        self.assertEqual(request.voice, "zh-CN-XiaoxiaoNeural")
+
+        for override in (
+            {"voice": "zh-CN-YunxiNeural"},
+            {"include_bgm": True},
+            {"game_version": "0.110.0"},
+            {"mod_version": "0.2.0"},
+            {"width": 1280},
+        ):
+            with self.subTest(override=override), tempfile.TemporaryDirectory(
+                prefix="vivhite-promo-policy-"
+            ) as raw:
+                path = Path(raw) / "preset.json"
+                payload = _read_json(PRESET_PATH)
+                payload.update(override)
+                path.write_text(
+                    json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+                with self.assertRaises(preset.VivhitePresetError):
+                    preset.load_policy(path)
+
+        adapter_module = importlib.import_module("vivhite_promo.adapter")
+        with self.assertRaisesRegex(adapter_module.VivhiteAdapterError, "invalid Vivhite promo policy"):
+            adapter_module.VivhiteAdapter(
+                policy=preset.VivhitePolicy(include_bgm=True),
+                project_root=PROMO_ROOT,
+            )
+        with self.assertRaises(preset.VivhitePresetError):
+            preset.build_narration_request(
+                "不应使用替代声线",
+                policy=preset.VivhitePolicy(voice="zh-CN-YunxiNeural"),
+            )
+
+    def test_variant_manifests_match_storyboard_editorial_lists(self) -> None:
+        preset = importlib.import_module("vivhite_promo.preset")
+        storyboard = preset.load_storyboard(STORYBOARD_PATH)
+        variants = preset.load_variants(
+            PROMO_ROOT / "variants",
+            storyboard=storyboard,
+        )
+        self.assertEqual(3, len(variants))
+        with tempfile.TemporaryDirectory(prefix="vivhite-promo-variants-") as raw:
+            variant_root = Path(raw)
+            for source in (PROMO_ROOT / "variants").glob("*.json"):
+                (variant_root / source.name).write_text(
+                    source.read_text(encoding="utf-8"), encoding="utf-8"
+                )
+            broken_path = variant_root / "cut-15.json"
+            broken = _read_json(broken_path)
+            broken["source_shots"] = ["S01-identity", "S03-cough"]
+            broken_path.write_text(
+                json.dumps(broken, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(preset.VivhitePresetError, "do not match storyboard"):
+                preset.load_variants(variant_root, storyboard=storyboard)
+
+    def test_claim_source_refs_resolve_in_project(self) -> None:
+        """Every pending claim starts with an auditable source reference."""
+
+        claims = _read_json(CLAIMS_PATH)
+        self.assertIsInstance(claims.get("claims"), list)
+        for claim in claims["claims"]:
+            self.assertIsInstance(claim, dict)
+            claim_id = str(claim.get("claim_id", ""))
+            refs = claim.get("source_refs")
+            self.assertTrue(refs, claim_id)
+            for reference in refs:
+                relative = Path(str(reference))
+                self.assertFalse(relative.is_absolute(), (claim_id, reference))
+                self.assertNotIn("..", relative.parts, (claim_id, reference))
+                self.assertTrue((ROOT / relative).exists(), (claim_id, reference))
+
+    def test_ffmpeg_lock_pins_in_place_windows_install(self) -> None:
+        lock = _read_json(FFMPEG_LOCK_PATH)
+        self.assertEqual(lock.get("format_version"), 1)
+        self.assertEqual(lock.get("kind"), "vivhite_promo_ffmpeg_lock")
+        self.assertIn("tpad", lock.get("required_filters", []))
+        install = lock.get("windows_install")
+        self.assertIsInstance(install, dict)
+        self.assertEqual(install.get("directory"), "C:/ffmpeg/bin")
+        for tool in ("ffmpeg", "ffprobe"):
+            with self.subTest(tool=tool):
+                entry = install.get(tool)
+                self.assertIsInstance(entry, dict)
+                self.assertRegex(str(entry.get("file")), r"^[^/\\]+\.exe$")
+                self.assertRegex(str(entry.get("sha256")), r"^[A-Fa-f0-9]{64}$")
+
     def test_loader_and_validator_accept_minimal_fixture(self) -> None:
         loaded = _call_contract_loader(
             self.capture_contract, self.contract_path, FIXTURE_ROOT
@@ -372,10 +476,13 @@ class VivhitePromoContractTests(unittest.TestCase):
         entry_points = document.get("project", {}).get("entry-points", {})
         adapters = entry_points.get("xar_promo.adapters", {})
         presets = entry_points.get("xar_promo.presets", {})
+        composers = entry_points.get("xar_promo.composers", {})
         self.assertIn("vivhite", adapters)
         self.assertIn("vivhite-player-10m", presets)
+        self.assertIn("vivhite-player-10m", composers)
         self.assertIn(":", str(adapters["vivhite"]))
         self.assertIn(":", str(presets["vivhite-player-10m"]))
+        self.assertIn(":", str(composers["vivhite-player-10m"]))
 
     def test_validate_only_is_keyword_and_does_not_spawn_processes(self) -> None:
         pipeline = importlib.import_module("vivhite_promo.pipeline")
@@ -387,7 +494,7 @@ class VivhitePromoContractTests(unittest.TestCase):
         # This is a source-level safety contract in addition to the runtime
         # smoke test below: validate-only must be an explicit branch, not a
         # value silently ignored by a producer implementation.
-        source = inspect.getsource(compose)
+        source = inspect.getsource(pipeline)
         self.assertIn("validate_only", source)
         self.assertRegex(source, r"if\s+validate_only|validate_only\s*:")
 
@@ -417,6 +524,36 @@ class VivhitePromoContractTests(unittest.TestCase):
             except (AssertionError, KeyError, TypeError, ValueError, RuntimeError):
                 # Input diagnostics are acceptable; process execution is not.
                 pass
+            validate_project = getattr(pipeline, "validate_only_project", None)
+            self.assertIsNotNone(validate_project)
+            report = validate_project(PROJECT_PATH)
+            self.assertEqual(report.get("status"), "validated")
+            self.assertEqual(report.get("xar_invocation"), "deferred")
+
+            # Exercise the real composer with a valid checked-in config.  It
+            # should build an in-memory invocation (ten planned shots) while
+            # leaving capture resolution and all external execution deferred.
+            preset = importlib.import_module("vivhite_promo.preset")
+            adapter = importlib.import_module("vivhite_promo.adapter")
+            config = preset.load_project_config(PROJECT_PATH)
+            with tempfile.TemporaryDirectory(prefix="vivhite-promo-plan-") as raw:
+                invocation = compose(
+                    config,
+                    {},
+                    config_path=PROJECT_PATH,
+                    run_path=None,
+                    workdir=Path(raw),
+                    adapter_factory=adapter.create_adapter,
+                    preset_factory=preset.create_preset,
+                    validate_only=True,
+                )
+                self.assertEqual(len(invocation.draft.segments), 10)
+                self.assertTrue(
+                    all(
+                        segment.visual_source.requires_resolution
+                        for segment in invocation.draft.segments
+                    )
+                )
         finally:
             for name, original in originals.items():
                 setattr(subprocess, name, original)

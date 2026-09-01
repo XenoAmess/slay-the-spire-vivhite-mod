@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "kind": "vivhite_promo_ffmpeg_lock",
+  "distribution": "ffmpeg-9.0.1-full_build-shared-www.gyan.dev",
+  "required_filters": [
+    "tpad"
+  ],
+  "windows_install": {
+    "directory": "C:/ffmpeg/bin",
+    "ffmpeg": {
+      "file": "ffmpeg.exe",
+      "sha256": "CF6B46DF53D3672E86AF7662358BBD2B21C90CC78C133F3F81F46E63ACC387B3"
+    },
+    "ffprobe": {
+      "file": "ffprobe.exe",
+      "sha256": "0C49675A5F3098B881B1508368DEB22E23D22FE56FA7A197DF1B98C4E5EA79BF"
+    }
+  },
+  "installation_note": "The prior C:/ffmpeg/bin binaries are replaced in place only after they are backed up and the replacement bytes match this lock."
+}
