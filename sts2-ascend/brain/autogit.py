@@ -31,6 +31,7 @@ DEFAULT_PROGRESS_PATHS = (
     "sts2-ascend/knowledge/runs",
     "sts2-ascend/knowledge/stats.json",
     "sts2-ascend/knowledge/progression.json",
+    "sts2-ascend/knowledge/character_rotation.json",
     "sts2-ascend/knowledge/review_queue.json",
     "sts2-ascend/knowledge/policy.json",
     "sts2-ascend/knowledge/lessons.md",
@@ -94,6 +95,8 @@ _REVIEW_ONLINE_KNOWLEDGE_DIRS = frozenset({
     "runs",
 }) | _LOCAL_RECOVERY_KNOWLEDGE_DIRS
 _REVIEW_ONLINE_KNOWLEDGE_STATE_NAMES = frozenset({
+    "active_run_learning",
+    "character_rotation",
     "lessons",
     "pending_restart",
     "policy",

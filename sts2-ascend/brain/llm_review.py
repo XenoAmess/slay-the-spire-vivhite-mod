@@ -111,6 +111,7 @@ REVIEW_CONCURRENT_PATHS = [
     "sts2-ascend/knowledge/runs",
     "sts2-ascend/knowledge/stats.json",
     "sts2-ascend/knowledge/progression.json",
+    "sts2-ascend/knowledge/character_rotation.json",
     "sts2-ascend/knowledge/policy.json",
     "sts2-ascend/knowledge/lessons.md",
     "sts2-ascend/knowledge/review_queue.json",
@@ -384,6 +385,7 @@ def _review_concurrent_paths() -> list[str]:
         paths.policy,
         paths.lessons,
         paths.queue,
+        Path(KNOWLEDGE_DIR) / "character_rotation.json",
         Path(PREFERRED_STATE_FILE),
     ]
     try:

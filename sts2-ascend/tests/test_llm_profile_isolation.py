@@ -45,6 +45,22 @@ def _knowledge(root: Path, profile_id: str, runs: int = 1) -> SimpleNamespace:
 
 
 class LlmProfileIsolationTests(unittest.TestCase):
+    def test_review_checkpoint_paths_include_only_active_profile_and_global_rotation(self) -> None:
+        with llm_review._review_profile_scope("vivhite"):
+            paths = llm_review._review_concurrent_paths()
+
+        profile = "sts2-ascend/knowledge/profiles/vivhite"
+        self.assertEqual(set(paths), {
+            f"{profile}/runs",
+            f"{profile}/stats.json",
+            f"{profile}/progression.json",
+            f"{profile}/policy.json",
+            f"{profile}/lessons.md",
+            f"{profile}/review_queue.json",
+            "sts2-ascend/knowledge/character_rotation.json",
+            "sts2-ascend/knowledge/preferred_model_state.json",
+        })
+
     def test_legacy_queue_items_default_to_ironclad_without_rewrite(self) -> None:
         payload = {
             "pending": [{"run": 1, "time": "legacy"}],

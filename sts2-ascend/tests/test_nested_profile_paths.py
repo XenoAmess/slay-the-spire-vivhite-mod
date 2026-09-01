@@ -53,6 +53,8 @@ class NestedProfileClassifierTests(unittest.TestCase):
             f"{profile}/.stats.snapshot.tmp",
             f"{profile}/policy.json",
             f"{profile}/progression.json",
+            f"{profile}/character_rotation.json",
+            f"{profile}/.active_run_learning.json",
             f"{profile}/lessons.md",
             f"{profile}/review_queue.json",
             f"{profile}/review_prompt_latest.md",
@@ -82,6 +84,16 @@ class NestedProfileClassifierTests(unittest.TestCase):
         # The legacy store at knowledge/ remains governed by the same rules.
         self.assertEqual(
             autogit.classify_review_path("sts2-ascend/knowledge/stats.json"),
+            autogit.REVIEW_PATH_ONLINE_RUNTIME,
+        )
+        self.assertEqual(
+            autogit.classify_review_path(
+                "sts2-ascend/knowledge/character_rotation.json"),
+            autogit.REVIEW_PATH_ONLINE_RUNTIME,
+        )
+        self.assertEqual(
+            autogit.classify_review_path(
+                "sts2-ascend/knowledge/.active_run_learning.json"),
             autogit.REVIEW_PATH_ONLINE_RUNTIME,
         )
 
@@ -145,6 +157,14 @@ class NestedProfileAutogitTests(unittest.TestCase):
             '{"global":{"runs":1}}\n', encoding="utf-8")
         (self.profile_store / "runs" / "profile-2.json").write_text(
             json.dumps(_run_payload("PROFILE_2", 2)), encoding="utf-8")
+        (self.root_store / "character_rotation.json").write_text(
+            '{"next_profile_id":"vivhite"}\n', encoding="utf-8")
+        (self.profile_store / "character_rotation.json").write_text(
+            '{"must_remain_profile_local":true}\n', encoding="utf-8")
+        (self.root_store / ".active_run_learning.json").write_text(
+            '{"run_id":"root-active"}\n', encoding="utf-8")
+        (self.profile_store / ".active_run_learning.json").write_text(
+            '{"run_id":"profile-active"}\n', encoding="utf-8")
         (self.profile_store / "strategy.md").write_text("user static edit\n", encoding="utf-8")
 
         result = autogit.commit_progress_result(
@@ -159,9 +179,32 @@ class NestedProfileAutogitTests(unittest.TestCase):
             "sts2-ascend/knowledge/profiles/vivhite/stats.json", committed)
         self.assertIn(
             "sts2-ascend/knowledge/profiles/vivhite/runs/profile-2.json", committed)
+        self.assertIn(
+            "sts2-ascend/knowledge/character_rotation.json", committed)
+        self.assertNotIn(
+            "sts2-ascend/knowledge/profiles/vivhite/character_rotation.json",
+            committed,
+        )
+        self.assertNotIn(
+            "sts2-ascend/knowledge/.active_run_learning.json", committed)
+        self.assertNotIn(
+            "sts2-ascend/knowledge/profiles/vivhite/.active_run_learning.json",
+            committed,
+        )
         self.assertNotIn(
             "sts2-ascend/knowledge/profiles/vivhite/strategy.md", committed)
-        self.assertIn("strategy.md", self._git("status", "--short").stdout)
+        status = self._git("status", "--short").stdout
+        self.assertIn(
+            "sts2-ascend/knowledge/profiles/vivhite/character_rotation.json",
+            status,
+        )
+        self.assertIn(
+            "sts2-ascend/knowledge/.active_run_learning.json", status)
+        self.assertIn(
+            "sts2-ascend/knowledge/profiles/vivhite/.active_run_learning.json",
+            status,
+        )
+        self.assertIn("strategy.md", status)
 
     def test_default_checkpoint_does_not_rediscover_tracked_reset_archives(self) -> None:
         archive_roots = (
