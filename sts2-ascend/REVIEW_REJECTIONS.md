@@ -326,7 +326,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260901-141659-1788243419045268000-791bf521 -->
 | 2026-09-01 14:16:59 | 第 988~1013 局 | `791bf521` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-141659-1788243419045268000-791bf521` | 复盘进程未成功完成 |
 <!-- rejection:20260901-145334-1788245614111999000-aa35baff -->
-| 2026-09-01 14:53:34 | 第 3~4 局 | `aa35baff` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-145334-1788245614111999000-aa35baff` | 复盘 patch 触碰 deny-only 路径边界：docs/2026-09-01-白绮Boss竞速同回合掉血观测.md (Git/outside/unsafe) |
+| 2026-09-01 14:53:34 | 第 3~4 局 | `aa35baff` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `cf589ff2` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 cf589ff2 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260901-151956-1788247196381449800-33dc9e78 -->
 | 2026-09-01 15:19:56 | 第 1 局 | `33dc9e78` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260901-151956-1788247196381449800-33dc9e78` | 隔离复盘异常：Command '['git', '-C', 'G:\\workspace\\slay-the-spire-vivhite-mod\\sts2-ascend\\knowledge\\code_backups\\review_work\\sts2-review-sandbox-4v8lpdy0\\repo', 'add', '--all', '--force', '--', '.']' timed out after 120 seconds |
 <!-- rejection:20260901-160345-1788249825795469700-db988477 -->
