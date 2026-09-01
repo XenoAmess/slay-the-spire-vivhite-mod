@@ -187,31 +187,295 @@ function Get-ReadyApiPort {
     return $null
 }
 
-function Get-PythonExe {
+function Add-UniquePath {
+    param(
+        [Collections.Generic.List[string]]$List,
+        [string]$Value,
+        [switch]$Directory
+    )
+    if ($null -eq $List -or [string]::IsNullOrWhiteSpace($Value)) { return }
+    $candidate = $Value.Trim().Trim('"')
+    if ([string]::IsNullOrWhiteSpace($candidate) -or $candidate -match '^(?i)registry::') {
+        return
+    }
+    try { $candidate = [IO.Path]::GetFullPath($candidate) } catch { return }
+    if ($Directory) {
+        if (-not (Test-Path -LiteralPath $candidate -PathType Container)) { return }
+    } elseif (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        return
+    }
+    foreach ($existing in $List) {
+        if ([string]::Equals($existing, $candidate, [StringComparison]::OrdinalIgnoreCase)) {
+            return
+        }
+    }
+    $List.Add($candidate)
+}
+
+function Invoke-PythonRuntimeProbe {
+    param(
+        [string]$PythonExe,
+        [string]$PythonHome = ""
+    )
+
+    # Do not trust sys.prefix alone: a copied/embeddable python.exe can exit 0
+    # while pointing at the current working directory and still emit the
+    # "platform independent libraries <prefix>" warning.  Import encodings,
+    # json and pathlib, then return their actual origins for a path-bound check.
+    $probeCode = @'
+import encodings
+import json
+import pathlib
+import sys
+import sysconfig
+
+stdlib = pathlib.Path(sysconfig.get_path("stdlib")).resolve()
+encoding_file = pathlib.Path(encodings.__file__).resolve()
+if not stdlib.is_dir() or not encoding_file.is_file():
+    raise RuntimeError("stdlib probe did not resolve to files")
+payload = {
+    "executable": str(pathlib.Path(sys.executable).resolve()),
+    "prefix": str(pathlib.Path(sys.prefix).resolve()),
+    "base_prefix": str(pathlib.Path(sys.base_prefix).resolve()),
+    "stdlib": str(stdlib),
+    "encodings": str(encoding_file),
+    "version": [int(sys.version_info[0]), int(sys.version_info[1])],
+    "path": [str(pathlib.Path(item).resolve()) for item in sys.path if item],
+}
+print(json.dumps(payload, separators=(",", ":")))
+'@
+    # PowerShell's native argument conversion can strip quotes from a
+    # multi-line -c payload.  Encode the probe so the exact Python source
+    # reaches the child on Windows PowerShell 5.1 as well as pwsh.
+    $probeEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($probeCode))
+    $probeShim = "exec(__import__('base64').b64decode('$probeEncoded'))"
+    $oldHome = [Environment]::GetEnvironmentVariable("PYTHONHOME", "Process")
+    $oldPath = [Environment]::GetEnvironmentVariable("PYTHONPATH", "Process")
+    $lines = @()
+    $pythonExit = -1
+    try {
+        if ([string]::IsNullOrWhiteSpace($PythonHome)) {
+            [Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "Process")
+        } else {
+            [Environment]::SetEnvironmentVariable("PYTHONHOME", $PythonHome, "Process")
+        }
+        # PYTHONPATH can make a broken interpreter appear healthy by importing
+        # project-local shims.  The production child inherits the caller's
+        # value only after the selected home has passed this clean probe.
+        [Environment]::SetEnvironmentVariable("PYTHONPATH", $null, "Process")
+        $savedPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "SilentlyContinue"
+            $lines = @(& $PythonExe -S -c $probeShim 2>$null)
+            $pythonExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $savedPreference
+        }
+    } catch {
+        $lines = @()
+        $pythonExit = -1
+    } finally {
+        [Environment]::SetEnvironmentVariable("PYTHONHOME", $oldHome, "Process")
+        [Environment]::SetEnvironmentVariable("PYTHONPATH", $oldPath, "Process")
+    }
+    if ($pythonExit -ne 0 -or $lines.Count -eq 0) { return $null }
+    for ($index = $lines.Count - 1; $index -ge 0; $index--) {
+        try {
+            $payload = ([string]$lines[$index]).Trim() | ConvertFrom-Json -ErrorAction Stop
+            if ($payload -and $payload.stdlib -and $payload.encodings) { return $payload }
+        } catch { }
+    }
+    return $null
+}
+
+function Test-PythonPathWithin {
+    param([string]$Child, [string]$Parent)
+    if ([string]::IsNullOrWhiteSpace($Child) -or [string]::IsNullOrWhiteSpace($Parent)) {
+        return $false
+    }
+    try {
+        $childFull = [IO.Path]::GetFullPath($Child).TrimEnd('\')
+        $parentFull = [IO.Path]::GetFullPath($Parent).TrimEnd('\')
+    } catch { return $false }
+    if ([string]::Equals($childFull, $parentFull, [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+    return $childFull.StartsWith($parentFull + '\', [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Get-PythonRegistryPaths {
+    $roots = @(
+        "Registry::HKEY_CURRENT_USER\Software\Python\PythonCore",
+        "Registry::HKEY_LOCAL_MACHINE\Software\Python\PythonCore",
+        "Registry::HKEY_CURRENT_USER\Software\WOW6432Node\Python\PythonCore",
+        "Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node\Python\PythonCore"
+    )
+    $paths = New-Object Collections.Generic.List[string]
+    foreach ($registryRoot in $roots) {
+        $versions = @(Get-ChildItem -LiteralPath $registryRoot -ErrorAction SilentlyContinue)
+        foreach ($version in $versions) {
+            $installKey = Join-Path $version.PSPath "InstallPath"
+            $install = Get-ItemProperty -LiteralPath $installKey -ErrorAction SilentlyContinue
+            if ($install) {
+                foreach ($propertyName in @("ExecutablePath", "(default)")) {
+                    if ($install.PSObject.Properties[$propertyName]) {
+                        $paths.Add([string]$install.$propertyName)
+                    }
+                }
+            }
+            $pythonPathKey = Join-Path $version.PSPath "PythonPath"
+            $pythonPath = Get-ItemProperty -LiteralPath $pythonPathKey -ErrorAction SilentlyContinue
+            if ($pythonPath -and $pythonPath.PSObject.Properties["(default)"]) {
+                foreach ($entry in ([string]$pythonPath."(default)" -split ';')) {
+                    $paths.Add($entry)
+                }
+            }
+        }
+    }
+    return @($paths)
+}
+
+function Get-PythonRuntime {
     $launcher = Get-Command py.exe -CommandType Application -ErrorAction SilentlyContinue
     if (-not $launcher) {
         throw "Python 3 launcher unavailable: expected 'py -3'."
     }
-    $lines = @()
-    $pythonExit = -1
+
+    $exeCandidates = New-Object Collections.Generic.List[string]
+    $homeCandidates = New-Object Collections.Generic.List[string]
+    $registryPaths = @(Get-PythonRegistryPaths)
+
+    # Keep a caller-provided home as a candidate, but accept it only after the
+    # executable proves that its standard library actually comes from there.
+    Add-UniquePath $homeCandidates ([Environment]::GetEnvironmentVariable("PYTHONHOME", "Process")) -Directory
+
+    $launcherExeLines = @()
+    $launcherExit = -1
     $savedPreference = $ErrorActionPreference
     try {
-        # Some valid Windows Python installs print a harmless prefix warning to
-        # stderr. Probe by exit code/stdout instead of promoting native stderr.
         $ErrorActionPreference = "SilentlyContinue"
-        $lines = @(& $launcher.Source -3 -c "import sys; print(sys.executable)" 2>$null)
-        $pythonExit = $LASTEXITCODE
-    } finally {
-        $ErrorActionPreference = $savedPreference
+        $launcherExeLines = @(& $launcher.Source -3 -c "import sys; print(sys.executable)" 2>$null)
+        $launcherExit = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $savedPreference }
+    if ($launcherExit -eq 0 -and $launcherExeLines.Count -gt 0) {
+        Add-UniquePath $exeCandidates ([string]$launcherExeLines[-1])
     }
-    if ($pythonExit -ne 0 -or $lines.Count -eq 0) {
-        throw "Python 3 launcher unavailable: expected 'py -3'."
+    # py -0p exposes installations the default launcher selection may hide.
+    $allLauncherLines = @()
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        $allLauncherLines = @(& $launcher.Source -0p 2>$null)
+    } finally { $ErrorActionPreference = $savedPreference }
+    foreach ($line in $allLauncherLines) {
+        if ([string]$line -match '(?i)([A-Z]:\\.*?\.exe)\s*$') {
+            Add-UniquePath $exeCandidates $Matches[1]
+        }
     }
-    $resolved = ([string]$lines[-1]).Trim()
-    if (-not (Test-Path -LiteralPath $resolved)) {
-        throw "Resolved Python executable does not exist: $resolved"
+    foreach ($registryPath in $registryPaths) {
+        if ([string]$registryPath -match '(?i)\.exe\s*$') {
+            Add-UniquePath $exeCandidates $registryPath
+        }
+        foreach ($entry in ([string]$registryPath -split ';')) {
+            Add-UniquePath $homeCandidates $entry -Directory
+        }
     }
-    return [IO.Path]::GetFullPath($resolved)
+    $pathPython = Get-Command python.exe -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($pathPython) { Add-UniquePath $exeCandidates $pathPython.Source }
+
+    # A complete install is normally adjacent to the executable.  Dynamic
+    # environment roots cover per-user and machine installs without embedding
+    # an account name or assuming a drive letter.
+    $dynamicRoots = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        $dynamicRoots += Join-Path $env:LOCALAPPDATA "Programs\Python"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        $dynamicRoots += Join-Path $env:ProgramFiles "Python"
+    }
+    if (-not [string]::IsNullOrWhiteSpace(${env:ProgramFiles(x86)})) {
+        $dynamicRoots += Join-Path ${env:ProgramFiles(x86)} "Python"
+    }
+    foreach ($dynamicRoot in $dynamicRoots) {
+        foreach ($installDir in @(Get-ChildItem -LiteralPath $dynamicRoot -Directory -ErrorAction SilentlyContinue)) {
+            Add-UniquePath $homeCandidates $installDir.FullName -Directory
+            Add-UniquePath $exeCandidates (Join-Path $installDir.FullName "python.exe")
+        }
+    }
+
+    if ($exeCandidates.Count -eq 0) {
+        throw "Python 3 executable discovery returned no candidates."
+    }
+
+    # First collect each executable's own adjacent home and the paths emitted
+    # by an unconfigured probe.  This handles a registry entry whose
+    # ExecutablePath points at a copied binary while PythonPath points at the
+    # complete installation.
+    $probeCache = @{}
+    foreach ($pythonExe in @($exeCandidates)) {
+        $exeParent = Split-Path $pythonExe -Parent
+        Add-UniquePath $homeCandidates $exeParent -Directory
+        $probe = Invoke-PythonRuntimeProbe $pythonExe
+        if ($probe) {
+            $probeCache[$pythonExe] = $probe
+            foreach ($pathEntry in @($probe.path)) {
+                $entry = [string]$pathEntry
+                if ($entry -match '(?i)[\\/]Lib$' -or $entry -match '(?i)[\\/]DLLs$') {
+                    Add-UniquePath $homeCandidates (Split-Path $entry -Parent) -Directory
+                }
+            }
+            Add-UniquePath $homeCandidates ([string]$probe.prefix) -Directory
+            Add-UniquePath $homeCandidates ([string]$probe.base_prefix) -Directory
+            Add-UniquePath $homeCandidates (Split-Path ([string]$probe.stdlib) -Parent) -Directory
+        }
+    }
+
+    foreach ($pythonExe in @($exeCandidates)) {
+        $homesForExe = New-Object Collections.Generic.List[string]
+        foreach ($homeCandidate in $homeCandidates) {
+            Add-UniquePath $homesForExe $homeCandidate -Directory
+        }
+        # Empty home means “use the executable's own compiled search path” and
+        # is intentionally tested last for a deterministic self-contained exe.
+        $homesForExe.Add("")
+        foreach ($pythonHome in $homesForExe) {
+            $probe = if ($pythonHome -eq "" -and $probeCache.ContainsKey($pythonExe)) {
+                $probeCache[$pythonExe]
+            } else { Invoke-PythonRuntimeProbe $pythonExe $pythonHome }
+            if (-not $probe) { continue }
+            $version = @($probe.version)
+            if ($version.Count -lt 2 -or [int]$version[0] -ne 3 -or [int]$version[1] -lt 10) {
+                continue
+            }
+            $stdlib = [string]$probe.stdlib
+            $encodings = [string]$probe.encodings
+            if (-not (Test-Path -LiteralPath $stdlib -PathType Container) -or
+                -not (Test-Path -LiteralPath $encodings -PathType Leaf) -or
+                -not (Test-PythonPathWithin $encodings $stdlib)) {
+                continue
+            }
+            $resolvedHome = if ([string]::IsNullOrWhiteSpace($pythonHome)) {
+                [string]$probe.prefix
+            } else { $pythonHome }
+            if (-not (Test-PythonPathWithin $stdlib $resolvedHome)) { continue }
+            return [pscustomobject]@{
+                Executable = [IO.Path]::GetFullPath($pythonExe)
+                Home = [IO.Path]::GetFullPath($resolvedHome)
+                Stdlib = [IO.Path]::GetFullPath($stdlib)
+                Version = ((@($version[0], $version[1]) -join "."))
+                Source = if ($pythonHome -eq "") { "executable" } else { "resolved_home" }
+            }
+        }
+    }
+    throw ("No complete Python 3.10+ runtime was found. Every candidate failed " +
+           "the encodings/json/pathlib stdlib probe; refusing to start runner/brain.")
+}
+
+function Get-PythonExe {
+    param([object]$Runtime = $null)
+    # Compatibility wrapper for callers/tests that only need the executable.
+    if ($Runtime -and $Runtime.Executable) { return [string]$Runtime.Executable }
+    return (Get-PythonRuntime).Executable
 }
 
 function Test-DotnetSdkAvailable {
@@ -412,6 +676,15 @@ try {
                        "without starting a provider: " + $_.Exception.Message)
     }
 
+    # Resolve and validate the interpreter before deployment or game launch.
+    # In particular, the Windows launcher may return a copied python.exe whose
+    # compiled prefix is missing; Get-PythonRuntime binds it to a probed,
+    # complete home or fails closed without starting the stack.
+    $pythonRuntime = Get-PythonRuntime
+    $pythonExe = Get-PythonExe -Runtime $pythonRuntime
+    $pythonHome = [string]$pythonRuntime.Home
+    $pythonStdlib = [string]$pythonRuntime.Stdlib
+
     $game = @(Get-GameProcesses)
     if (-not $SkipDeploy) {
         if ($game.Count -gt 0) {
@@ -443,7 +716,6 @@ try {
     } else {
         $gameLaunchArguments -join " "
     }
-    $pythonExe = Get-PythonExe
     $sessionId = [Guid]::NewGuid().ToString("N")
     $stopFile = Join-Path $runtimeDir "stop.$sessionId.request"
     $runnerPidFile = Join-Path $runtimeDir "runner.$sessionId.pid"
@@ -453,6 +725,24 @@ try {
 
     # A GUID-scoped sentinel prevents a late old process from being revived by a new start (ABA).
     Remove-Item -LiteralPath $stopFile -Force -ErrorAction SilentlyContinue
+
+    $previousEnv = @{
+        Session = $env:STS2_ASCEND_SESSION_ID
+        Runtime = $env:STS2_ASCEND_RUNTIME_DIR
+        Stop = $env:STS2_ASCEND_STOP_FILE
+        GameLauncher = $env:STS2_ASCEND_GAME_LAUNCHER
+        PythonHome = [Environment]::GetEnvironmentVariable("PYTHONHOME", "Process")
+        PythonPath = [Environment]::GetEnvironmentVariable("PYTHONPATH", "Process")
+    }
+    $env:STS2_ASCEND_SESSION_ID = $sessionId
+    $env:STS2_ASCEND_RUNTIME_DIR = $runtimeDir
+    $env:STS2_ASCEND_STOP_FILE = $stopFile
+    $env:STS2_ASCEND_GAME_LAUNCHER = $gameLauncher
+    # Runner uses this process environment for its child Brain generations.
+    # A validated home is mandatory; clear PYTHONPATH so a stale project/user
+    # shim cannot shadow the standard library that just passed the probe.
+    $env:PYTHONHOME = $pythonHome
+    Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
 
     if ($game.Count -eq 0) {
         Write-Host ("Launching Slay the Spire 2 (Vulkan; SteamMode={0}; args={1})..." -f
@@ -468,17 +758,6 @@ try {
                     $game[0].ProcessId, $SteamMode.ToLowerInvariant())
     }
 
-    $previousEnv = @{
-        Session = $env:STS2_ASCEND_SESSION_ID
-        Runtime = $env:STS2_ASCEND_RUNTIME_DIR
-        Stop = $env:STS2_ASCEND_STOP_FILE
-        GameLauncher = $env:STS2_ASCEND_GAME_LAUNCHER
-    }
-    $env:STS2_ASCEND_SESSION_ID = $sessionId
-    $env:STS2_ASCEND_RUNTIME_DIR = $runtimeDir
-    $env:STS2_ASCEND_STOP_FILE = $stopFile
-    $env:STS2_ASCEND_GAME_LAUNCHER = $gameLauncher
-
     $session = [ordered]@{
         session_id = $sessionId
         state = "starting"
@@ -487,6 +766,10 @@ try {
         game_dir = [IO.Path]::GetFullPath($GameDir)
         game_exe = $gameExe
         python_exe = $pythonExe
+        python_home = $pythonHome
+        python_stdlib = $pythonStdlib
+        python_version = [string]$pythonRuntime.Version
+        python_runtime_source = [string]$pythonRuntime.Source
         runner_path = $runnerPath
         steam_mode = $SteamMode.ToLowerInvariant()
         steam_launch_arguments = @($gameLaunchArguments)
@@ -577,6 +860,10 @@ try {
         else { $env:STS2_ASCEND_STOP_FILE = $previousEnv.Stop }
         if ($null -eq $previousEnv.GameLauncher) { Remove-Item Env:STS2_ASCEND_GAME_LAUNCHER -ErrorAction SilentlyContinue }
         else { $env:STS2_ASCEND_GAME_LAUNCHER = $previousEnv.GameLauncher }
+        if ($null -eq $previousEnv.PythonHome) { Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue }
+        else { $env:PYTHONHOME = $previousEnv.PythonHome }
+        if ($null -eq $previousEnv.PythonPath) { Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue }
+        else { $env:PYTHONPATH = $previousEnv.PythonPath }
     }
 } finally {
     if ($lifecycleLock) { $lifecycleLock.Dispose() }
