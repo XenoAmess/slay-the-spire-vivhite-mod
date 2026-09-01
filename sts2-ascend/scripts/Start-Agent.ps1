@@ -45,6 +45,74 @@ function Get-ObjectProperty {
     return $Default
 }
 
+function Get-GameUserDataRoot {
+    # Godot's Windows user:// root for Slay the Spire 2 is the per-user
+    # application-data directory.  Prefer the process value (which is also
+    # what the game receives) and use the known-folder API only when a caller
+    # has not supplied APPDATA.  No directory is created by this resolver.
+    $appData = [string]$env:APPDATA
+    if ([string]::IsNullOrWhiteSpace($appData)) {
+        try { $appData = [Environment]::GetFolderPath("ApplicationData") }
+        catch { $appData = "" }
+    }
+    if ([string]::IsNullOrWhiteSpace($appData)) { return $null }
+    try {
+        return [IO.Path]::GetFullPath((Join-Path $appData "SlayTheSpire2"))
+    }
+    catch { return $null }
+}
+
+function Test-LocalModConsent {
+    # NMainMenu creates the native mod-loading confirmation only while
+    # SettingsSave.ModSettings is null.  Therefore a non-null marker in the
+    # local profile is the narrow, persisted evidence that this profile has
+    # completed that one-time consent.  Keep this probe strictly read-only:
+    # never fall back to settings.save.backup, Steam's profile, or a GUI click.
+    $result = [ordered]@{
+        ready = $false
+        settings_path = ""
+        mod_settings_present = $false
+        reason = ""
+    }
+    $userDataRoot = Get-GameUserDataRoot
+    if ([string]::IsNullOrWhiteSpace([string]$userDataRoot)) {
+        $result.reason = "APPDATA is unavailable; game user directory cannot be resolved."
+        return [pscustomobject]$result
+    }
+
+    try {
+        $settingsPath = [IO.Path]::GetFullPath((Join-Path $userDataRoot "default\1\settings.save"))
+        $result.settings_path = $settingsPath
+    }
+    catch {
+        $result.reason = "The local default/1 settings path could not be resolved."
+        return [pscustomobject]$result
+    }
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+        $result.reason = "settings.save is missing for the local default/1 profile."
+        return [pscustomobject]$result
+    }
+
+    try {
+        $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 -ErrorAction Stop |
+            ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $result.reason = "settings.save is unreadable or is not valid JSON."
+        return [pscustomobject]$result
+    }
+    if (-not $settings -or -not $settings.PSObject.Properties["mod_settings"] -or
+        $null -eq $settings.mod_settings) {
+        $result.reason = "native mod-loading consent is not recorded (mod_settings is null or absent)."
+        return [pscustomobject]$result
+    }
+
+    $result.ready = $true
+    $result.mod_settings_present = $true
+    $result.reason = "native mod-loading consent marker is present."
+    return [pscustomobject]$result
+}
+
 function Get-GameLaunchArguments {
     param([string]$Mode)
 
@@ -686,6 +754,28 @@ try {
     $pythonStdlib = [string]$pythonRuntime.Stdlib
 
     $game = @(Get-GameProcesses)
+    $steamModeIsOff = [string]::Equals($SteamMode, "off", [StringComparison]::OrdinalIgnoreCase)
+    if ($steamModeIsOff -and $game.Count -gt 0) {
+        throw ("SteamMode off requires a cold game launch; the existing game process " +
+               "cannot be switched retroactively. Run the unified Stop-Agent.ps1, " +
+               "then retry so the local profile and --force-steam off are applied together.")
+    }
+    if ($steamModeIsOff) {
+        $localConsent = Test-LocalModConsent
+        if (-not $localConsent.ready) {
+            $consentPath = [string]$localConsent.settings_path
+            if ([string]::IsNullOrWhiteSpace($consentPath)) { $consentPath = "<unresolved>" }
+            $consentReason = [string]$localConsent.reason
+            throw ("SteamMode off refused before game launch: native mod-loading consent " +
+                   "is not recorded at {0} ({1}). Manual human confirmation is required: " +
+                   "launch this local profile " +
+                   "once and accept the native mod confirmation, then exit and retry. " +
+                   "Start-Agent will not click GUI/UAC, write settings, or copy Steam saves." -f
+                   $consentPath, $consentReason)
+        }
+        Write-Host ("SteamMode off consent preflight passed (read-only marker: {0})." -f
+                    [string]$localConsent.settings_path)
+    }
     if (-not $SkipDeploy) {
         if ($game.Count -gt 0) {
             throw "The game is already running, so its mod DLL may be locked. Close it or use -SkipDeploy."
