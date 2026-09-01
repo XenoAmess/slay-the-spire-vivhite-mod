@@ -3,6 +3,9 @@
 `Validate-IroncladSkin.ps1` is the build gate for the optional bundle at
 `res://Vivhite/skins/ironclad`.
 
+候选输出的集合索引见 [`candidates/README.md`](candidates/README.md)。候选目录只用于离线研究，
+不会因为存在 `.spjson` 或 PNG 就自动进入正式运行时资源。
+
 - A missing bundle, or a bundle containing only `README.md`/`.gitkeep`, is inactive and does not block normal builds.
 - Once any real file (or `.enabled`) exists, all 26 logical runtime assets are required before Spine semantic checks begin.
 - Every skeleton-data resource must reference a Mod-private Spine 4.2.43 `.spjson`. Combat and merchant share White Qi's combat JSON, atlas, and page; rest-site and character-select use their own private JSON/atlas sets. Character-select owns its atlas regions instead of inheriting the Ironclad layout. Original Ironclad skeleton references and copied `.skel`/`.spskel` are rejected in both the source tree and PCK.

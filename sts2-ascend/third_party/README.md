@@ -4,11 +4,23 @@
 
 - **上游**：https://github.com/CharTyr/STS2-Agent
 - **我方 fork**：https://github.com/XenoAmess/STS2-Agent（本地克隆在 `third_party/STS2-Agent/`，已 gitignore）
-- **基线版本**：v0.9.1（`upstream/main` / `origin/main` HEAD = `9f99876`，已包含 PR #46～#49）
+- **兼容基线**：v0.9.1（游戏 v0.111.0；已验证的 PR #46～#49 修复）。
+  `third_party/STS2-Agent/` 是被 `.gitignore` 忽略的本地 checkout，分支和 HEAD 会随维护工作变化，
+  不能把某个历史 SHA 当作当前部署事实。2026-09-01 审计时该 checkout 位于
+  `integration/native-progression-event-localization`，HEAD 为 `c9c2101`（事件变量本地化修复），
+  而不是 `main`；请以以下只读命令获取当前值：
+
+  ```powershell
+  git -C .\sts2-ascend\third_party\STS2-Agent status -sb
+  git -C .\sts2-ascend\third_party\STS2-Agent rev-parse --short HEAD
+  git -C .\sts2-ascend\third_party\STS2-Agent log -1 --oneline
+  ```
 
 ### 维护工作流（重要）
 
-fork 的 `main` 保持与官方 `upstream/main` 精确一致：
+若要把 fork 的 `main` 作为干净上游基线，先确认远端和工作树，再按团队约定同步；当前 checkout
+若处于整合/功能分支，`Deploy-Mod.ps1 -Source auto` 会按**当前 checkout**构建，不能把它描述成
+官方 release。建议在部署前记录 branch、HEAD、dirty 状态和构建日志：
 
 1. 先同步 `main`，再从最新官方基线拉独立 `fix/*` 或 `feat/*` 分支。
 2. 在独立分支修改、真机验证并推送，然后用 `gh pr create` 提给上游 `CharTyr/STS2-Agent`。
@@ -53,11 +65,12 @@ fork 的 `main` 保持与官方 `upstream/main` 精确一致：
 
 - 上游 PR：https://github.com/CharTyr/STS2-Agent/pull/48
 
-### 如何复现部署构建（从 fork main 构建并部署到游戏）
+### 如何复现部署构建（从已审计 checkout 构建并部署到游戏）
 
 ```powershell
-cd third_party/STS2-Agent
-git checkout main   # 我方维护分支
+cd sts2-ascend/third_party/STS2-Agent
+# 仅在你明确要验证 main 且确认没有未提交工作时执行：
+# git switch main
 $env:DOTNET_ROOT = "C:\Users\xenoa\AppData\Local\Microsoft\dotnet"   # 本机 SDK 位置
 $env:PATH = "$env:DOTNET_ROOT;$env:PATH"
 $env:STS2_DATA_DIR = "G:\SteamLibrary\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64"
@@ -65,5 +78,6 @@ $env:STS2_DATA_DIR = "G:\SteamLibrary\steamapps\common\Slay the Spire 2\data_sts
 ```
 
 - 注意：`-GameRoot` 只管部署；csproj 的程序集引用路径由环境变量 `STS2_DATA_DIR` 提供
-- 官方 v0.9.1 release zip 可由 `scripts/Deploy-Mod.ps1 -Source release` 下载到 `dist/`；当前所有修复
-  已上游，它与 fork `main` 同属正式基线
+- 官方 v0.9.1 release zip 可由仓库根的 `sts2-ascend/scripts/Deploy-Mod.ps1 -Source release`
+  下载到 `dist/`；它不包含本地整合分支的额外修复。只有显式 `-Source release` 才会强制使用该
+  未补丁包；默认 `auto` 优先本地 fork。部署结果应在发布记录中写明 source、branch 和 SHA。

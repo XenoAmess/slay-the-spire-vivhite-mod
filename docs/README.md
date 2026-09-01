@@ -56,6 +56,7 @@
 - [在线状态 staged 自愈](./2026-08-28-sts2-ascend在线状态staged自愈.md)
 - [异步复盘不可达 Git 树终止与重建](./2026-08-31-异步复盘不可达Git树终止与重建.md)
 - [README 契约对账](./2026-09-01-readme-contract-reconciliation.md)
+- [README 层级审计与主 README 建设](./2026-09-01-README层级审计与主README.md)
 
 ### 语音、窗口与直播（历史/受控运维）
 
@@ -275,6 +276,7 @@
 - [2026-09-01-event-loop临时复制消耗修复](./2026-09-01-event-loop临时复制消耗修复.md)
 - [2026-09-01-python运行时完整性预检](./2026-09-01-python运行时完整性预检.md)
 - [2026-09-01-readme-contract-reconciliation](./2026-09-01-readme-contract-reconciliation.md)
+- [2026-09-01-README层级审计与主README](./2026-09-01-README层级审计与主README.md)
 - [2026-09-01-steam-cloud训练存档故障复盘](./2026-09-01-steam-cloud训练存档故障复盘.md)
 - [2026-09-01-steam-off原生同意只读预检](./2026-09-01-steam-off原生同意只读预检.md)
 - [2026-09-01-Steam-on磁盘空间闸门](./2026-09-01-Steam-on磁盘空间闸门.md)
@@ -321,4 +323,3 @@
 ```
 
 报告完成后，更新相关子项目 README 的“当前入口”链接；不要把运行态 JSON、凭据、临时截图或未经验收的素材复制进 `docs/`。
-

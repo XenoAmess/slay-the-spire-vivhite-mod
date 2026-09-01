@@ -42,6 +42,7 @@
 | `scripts/Deploy-Mod.ps1` | 构建/下载并部署上游 STS2-Agent 三件套 | 只在游戏停止或用 `-SkipDeploy` |
 | `scripts/Start-BilibiliLive.ps1` / `Stop-BilibiliLive.ps1` | 直播前置证明、开播；或只下播 | 只在明确授权的直播流程使用 |
 | `third_party/README.md` | 上游 fork/release、补丁和构建关系 | 只读参考 |
+| [`docs/README.md`](docs/README.md) | Brain 局部复盘/观测记录索引（历史证据，不是运行配置） | 追加 Markdown；不改 `knowledge/` |
 | `tools/game-knowledge/README.md` | 原生游戏知识快照生成、校验与版本隔离 | 只写显式输出目录 |
 | `.runtime/` | 当前 session、PID、stop sentinel、日志、dashboard 快照 | **不要手工改/删** |
 | `knowledge/` | 在线统计、局日志、复盘队列、归档和经验 | **不要手工改**；用脚本/Brain 事务 |
