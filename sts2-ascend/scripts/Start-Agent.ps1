@@ -7,6 +7,11 @@ param(
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",
     [ValidateSet("auto", "fork", "release")][string]$Source = "auto",
     [ValidateSet("auto", "on", "off")][string]$SteamMode = "auto",
+    # Steam Cloud writes are not reliable when the client/userdata volume is
+    # nearly full.  Keep a conservative, explicit floor for unattended
+    # training; callers may raise it (or lower it only within the documented
+    # range) for a known environment.  SteamMode=off never uses this gate.
+    [ValidateRange(1048576, 1099511627776)][long]$SteamMinFreeBytes = 1GB,
     [string]$GodotExe = "",
     [switch]$SkipDeploy,
     [switch]$Foreground,
@@ -110,6 +115,169 @@ function Test-LocalModConsent {
     $result.ready = $true
     $result.mod_settings_present = $true
     $result.reason = "native mod-loading consent marker is present."
+    return [pscustomobject]$result
+}
+
+function Get-SteamInstallRoot {
+    # Steam's userdata lives beside the client, not necessarily beside the
+    # game's library (this machine has the game on G: and Steam on D:).
+    # Read-only registry probes cover the normal per-user and machine installs;
+    # if none can be resolved we fail closed for Steam-on rather than guessing
+    # a drive and risking another cloud-save loss.
+    $registryKeys = @(
+        "Registry::HKEY_CURRENT_USER\Software\Valve\Steam",
+        "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam",
+        "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Valve\Steam"
+    )
+    $candidateValues = New-Object Collections.Generic.List[string]
+    foreach ($registryKey in $registryKeys) {
+        try {
+            $properties = Get-ItemProperty -LiteralPath $registryKey -ErrorAction Stop
+            foreach ($propertyName in @("SteamPath", "InstallPath", "SteamExe")) {
+                if ($properties.PSObject.Properties[$propertyName]) {
+                    $value = [string]$properties.$propertyName
+                    if (-not [string]::IsNullOrWhiteSpace($value)) {
+                        $candidateValues.Add($value)
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    # A caller may expose a portable client through STEAM_PATH.  This is only
+    # a read-only hint; it is accepted only when the directory actually
+    # exists, and never creates or modifies anything.
+    if (-not [string]::IsNullOrWhiteSpace([string]$env:STEAM_PATH)) {
+        $candidateValues.Add([string]$env:STEAM_PATH)
+    }
+
+    foreach ($candidate in $candidateValues) {
+        $trimmed = ([string]$candidate).Trim().Trim('"')
+        if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+        try { $full = [IO.Path]::GetFullPath($trimmed) }
+        catch { continue }
+
+        # SteamExe points at the executable while SteamPath/InstallPath point
+        # at the directory.  Normalize both to the client root.
+        if (Test-Path -LiteralPath $full -PathType Leaf) {
+            try {
+                if ([string]::Equals([IO.Path]::GetFileName($full), "steam.exe",
+                                     [StringComparison]::OrdinalIgnoreCase)) {
+                    $full = [IO.Path]::GetDirectoryName($full)
+                }
+            }
+            catch { continue }
+        }
+        if ([string]::IsNullOrWhiteSpace($full) -or
+            -not (Test-Path -LiteralPath $full -PathType Container)) { continue }
+        try {
+            $normalized = [IO.Path]::GetFullPath($full)
+            $normalizedRoot = [IO.Path]::GetPathRoot($normalized)
+            if ([string]::Equals($normalized, $normalizedRoot,
+                                 [StringComparison]::OrdinalIgnoreCase)) {
+                return $normalizedRoot
+            }
+            return $normalized.TrimEnd('\')
+        }
+        catch { }
+    }
+    return $null
+}
+
+function Get-AvailableFreeBytes {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $null }
+    try {
+        $fullPath = [IO.Path]::GetFullPath($Path)
+        $driveRoot = [IO.Path]::GetPathRoot($fullPath)
+        if ([string]::IsNullOrWhiteSpace($driveRoot)) { return $null }
+        $drive = New-Object System.IO.DriveInfo($driveRoot)
+        if (-not $drive.IsReady) { return $null }
+        return [UInt64]$drive.AvailableFreeSpace
+    }
+    catch { return $null }
+}
+
+function Get-SteamDiskSpaceStatus {
+    param(
+        [string]$Mode = "auto",
+        [bool]$ColdLaunch = $true,
+        [long]$MinimumFreeBytes = 1GB
+    )
+
+    $normalizedMode = ([string]$Mode).ToLowerInvariant()
+    $result = [ordered]@{
+        required = $false
+        ready = $true
+        mode = $normalizedMode
+        cold_launch = $ColdLaunch
+        minimum_free_bytes = [UInt64][math]::Max(0, $MinimumFreeBytes)
+        free_bytes = $null
+        steam_root = ""
+        userdata_root = ""
+        drive_root = ""
+        reason = ""
+    }
+
+    # Explicit local mode has a separate user:// namespace and must not be
+    # blocked by Steam's drive.  An already-running game also needs no new
+    # Steam launch, so Start-Agent can attach its runner without this check.
+    if ($normalizedMode -eq "off") {
+        $result.reason = "SteamMode off uses the independent local profile; Steam userdata was not checked."
+        return [pscustomobject]$result
+    }
+    if (-not $ColdLaunch) {
+        $result.reason = "An existing game process will be reused; no Steam cold launch was requested."
+        return [pscustomobject]$result
+    }
+
+    $result.required = $true
+    if ($MinimumFreeBytes -lt 1MB) {
+        $result.ready = $false
+        $result.reason = "SteamMinFreeBytes must be at least 1 MiB."
+        return [pscustomobject]$result
+    }
+
+    $steamRoot = Get-SteamInstallRoot
+    if ([string]::IsNullOrWhiteSpace([string]$steamRoot)) {
+        $result.ready = $false
+        $result.reason = "Steam install root could not be resolved from the read-only registry probes."
+        return [pscustomobject]$result
+    }
+    $result.steam_root = [string]$steamRoot
+    try { $userdataRoot = [IO.Path]::GetFullPath((Join-Path $steamRoot "userdata")) }
+    catch {
+        $result.ready = $false
+        $result.reason = "Steam userdata path could not be resolved."
+        return [pscustomobject]$result
+    }
+    $result.userdata_root = $userdataRoot
+    if (-not (Test-Path -LiteralPath $userdataRoot -PathType Container)) {
+        $result.ready = $false
+        $result.reason = "Steam userdata directory is missing; refusing to guess a cloud volume."
+        return [pscustomobject]$result
+    }
+
+    try { $result.drive_root = [IO.Path]::GetPathRoot($userdataRoot) }
+    catch { $result.drive_root = "" }
+    $freeBytes = Get-AvailableFreeBytes -Path $userdataRoot
+    if ($null -eq $freeBytes) {
+        $result.ready = $false
+        $result.reason = "Available free space for the Steam userdata volume could not be read."
+        return [pscustomobject]$result
+    }
+    $result.free_bytes = [UInt64]$freeBytes
+    if ([UInt64]$freeBytes -lt [UInt64]$MinimumFreeBytes) {
+        $result.ready = $false
+        $result.reason = ("Steam userdata volume has {0} bytes free, below the {1}-byte " +
+                          "minimum; cloud save writes are blocked until space is reclaimed.") -f
+                         [UInt64]$freeBytes, [UInt64]$MinimumFreeBytes
+        return [pscustomobject]$result
+    }
+
+    $result.reason = "Steam userdata volume has enough free space for an unattended cold launch."
     return [pscustomobject]$result
 }
 
@@ -776,6 +944,25 @@ try {
         Write-Host ("SteamMode off consent preflight passed (read-only marker: {0})." -f
                     [string]$localConsent.settings_path)
     }
+    $steamDiskStatus = Get-SteamDiskSpaceStatus -Mode $SteamMode `
+        -ColdLaunch:($game.Count -eq 0) -MinimumFreeBytes $SteamMinFreeBytes
+    if (-not $steamDiskStatus.ready) {
+        $diskRoot = [string](Get-ObjectProperty $steamDiskStatus "drive_root" "<unknown>")
+        $userdataRoot = [string](Get-ObjectProperty $steamDiskStatus "userdata_root" "<unknown>")
+        $diskReason = [string](Get-ObjectProperty $steamDiskStatus "reason" "unknown disk-space error")
+        throw ("SteamMode {0} startup refused before deploy/game launch: {1} " +
+               "(userdata={2}, drive={3}, minimum_free_bytes={4}). " +
+               "Reclaim space on the Steam userdata volume and retry; " +
+               "Start-Agent will not delete files, alter Steam, invoke GUI, or request UAC." -f
+               $SteamMode.ToLowerInvariant(), $diskReason, $userdataRoot, $diskRoot,
+               $SteamMinFreeBytes)
+    }
+    if ($steamDiskStatus.required) {
+        Write-Host ("Steam userdata disk preflight passed (drive={0}, free_bytes={1}, minimum_free_bytes={2})." -f
+                    [string]$steamDiskStatus.drive_root,
+                    [string]$steamDiskStatus.free_bytes,
+                    [string]$steamDiskStatus.minimum_free_bytes)
+    }
     if (-not $SkipDeploy) {
         if ($game.Count -gt 0) {
             throw "The game is already running, so its mod DLL may be locked. Close it or use -SkipDeploy."
@@ -864,6 +1051,13 @@ try {
         steam_mode = $SteamMode.ToLowerInvariant()
         steam_launch_arguments = @($gameLaunchArguments)
         steam_mode_applied = $steamModeApplied
+        steam_disk_required = [bool]$steamDiskStatus.required
+        steam_disk_ready = [bool]$steamDiskStatus.ready
+        steam_min_free_bytes = [UInt64]$steamDiskStatus.minimum_free_bytes
+        steam_free_bytes = if ($null -eq $steamDiskStatus.free_bytes) { $null } else { [UInt64]$steamDiskStatus.free_bytes }
+        steam_userdata_root = [string]$steamDiskStatus.userdata_root
+        steam_userdata_drive = [string]$steamDiskStatus.drive_root
+        steam_disk_reason = [string]$steamDiskStatus.reason
         runner_pid = 0
         runner_creation_key = 0
         runner_pid_file = $runnerPidFile
