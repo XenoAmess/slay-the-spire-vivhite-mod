@@ -258,7 +258,7 @@ validator 会检查：
 - manifest/schema、artifact 路径安全、字节数、哈希和记录数；
 - eng/zhs 文件集合和逐 key 覆盖；
 - runtime 核心字段、原生过滤、ID 唯一性和角色初始牌组/遗物/药水引用闭包；
-- mechanics v4 深层 schema、成员行为数组、递归 `control_flow` 映射、1,724 个 PCK Model 顶层类型闭包；
+- mechanics v4 深层 schema、成员行为数组、递归 `control_flow` 映射，以及 PCK Model 顶层类型闭包（v0.111.0 快照为 1,724 个，未来版本以 manifest 为准）；
 - runtime→mechanics join、runtime 怪物是否有实质静态移动状态机；
 - 可选的安装目录实时来源哈希。
 
