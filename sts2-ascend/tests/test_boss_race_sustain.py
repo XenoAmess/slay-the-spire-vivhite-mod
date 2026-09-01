@@ -144,6 +144,7 @@ class BossRaceSustainProjectionTests(unittest.TestCase):
         self.assertEqual(policy._race_same_round_heal, 0.0)
         self.assertNotIn("BOSS_SUSTAIN_NET_HP", decision.reason)
         self.assertIn("斩杀竞速投影", decision.reason)
+        self.assertIn("RACE_SAME_ROUND_HP_LOSS_OBS", decision.reason)
         self.assertTrue(policy._krace_latch)
 
 

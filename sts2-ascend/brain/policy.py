@@ -3340,6 +3340,14 @@ class Policy:
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速"
                                         f"{_tax_fire_note}")
+                        if (bool(pol.get("race_same_round_hp_loss_obs", True))
+                                and self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                                and cctx.get("node_type") == "Boss"
+                                and self._race_same_round_loss > 0.0):
+                            danger_note += (
+                                f"；Boss竞速观测：同回合已观察HP损失"
+                                f"{self._race_same_round_loss:.0f}"
+                                "（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）")
                         if _respawn_credit:
                             danger_note += "；重生体计入血池（全场无本体）"
                         if self._krace_turns >= 2:
