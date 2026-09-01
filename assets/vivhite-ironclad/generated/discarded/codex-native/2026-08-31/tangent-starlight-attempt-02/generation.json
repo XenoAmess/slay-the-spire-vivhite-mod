@@ -1,0 +1,56 @@
+{
+  "provider": "codex-native",
+  "model": null,
+  "model_note": "The built-in image_gen tool did not expose an internal model identifier.",
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+  "card_type": "TangentStarlight",
+  "attempt": 2,
+  "generation_mode": "precise-object-edit",
+  "reference_paths": [
+    "assets/vivhite-ironclad/generated/codex-native/2026-08-31/tangent-starlight-attempt-01/original.png",
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+    "assets/vivhite-ironclad/references/character-design.png",
+    "assets/vivhite-ironclad/references/face-reference.jpg"
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/codex-native/2026-08-31/tangent-starlight-attempt-01/original.png": "c9da39fa3184d6b503e7b35e5e3d5c8a2d18a277d2ce3b9b44c1b53cb2bb764d",
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8ce534b001fb0d22988946f08db1f908149778889d1cb2a2fa5877f6f57302ab",
+    "assets/vivhite-ironclad/references/character-design.png": "a3f2e19eb243d0313360df644c1cdf397d891d42d8a53aabd38cca87b6f69d0e",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "b52b0624a3c2b2114f66a6c7ba839880d1dc89adaa91de0f5ca6bfc302160ca6"
+  },
+  "prompt_sha256": "913ac3fe4e0d267f5cd3013cc2906836b83e31dbb8eda11aa5f8c866c95626cf",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/tangent-starlight-attempt-02/original.png",
+  "original_sha256": "0238d9db508a0b22c578c83a8bd559b20cbb05499391d4dbced62a64ac0fda37",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos",
+    "archived_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/tangent-starlight-attempt-02/inspection/runtime-crop-rejected.png",
+    "sha256": "9503259883d98b19fd4e65b432c42073d8cbc7711ca0afe96028f387e87afa3a"
+  },
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "open_directional_attack_read": true,
+    "unique_tangent_relationship": true,
+    "100x76_color_and_grayscale_readable": true,
+    "critical_hands_inside_runtime_crop": false,
+    "failure_reason": "The deterministic centered 25:19 crop cuts part of the trailing hand at the left edge."
+  },
+  "runtime_path": null,
+  "status": "rejected_runtime_crop"
+}

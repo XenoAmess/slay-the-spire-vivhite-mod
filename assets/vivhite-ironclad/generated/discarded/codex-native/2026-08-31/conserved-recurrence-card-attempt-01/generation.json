@@ -1,0 +1,66 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CONSERVED_RECURRENCE",
+  "card_type": "ConservedRecurrence",
+  "card_name_zh": "守恒递归",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "new_opaque_scene",
+  "asset_contract": "single complete opaque full-bleed square card scene",
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "requested_canvas_in_prompt": "1024x1024",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": 0,
+    "background_parameter": null
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "EF4257A85BD0D16886D5C953237DE4A473E661794141C2D5A18DCB19FCAF34D3",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0553a-dbfb-7882-8743-84b5897d63f1/exec-119960d5-2e9a-4e8d-873b-2bf2529f25c9.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/conserved-recurrence-card-attempt-01/original.png",
+  "original_sha256": "DDCD944D031EC9F5EACD12C02480C0678AA2628A68692C72A6C7E7BAA05A66EA",
+  "original_png": {
+    "width": 1254,
+    "height": 1254,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false,
+    "note": "The prompt requested a 1024x1024 square, while the built-in tool returned a verifiable 1254x1254 RGB8 PNG; the original is preserved unchanged."
+  },
+  "deterministic_inspection_crop": {
+    "x": 2,
+    "y": 152,
+    "width": 1250,
+    "height": 950,
+    "resize": "1000x760",
+    "interpolation": "Lanczos",
+    "sha256": "6E95911FDBC69F7FB192EE9A51DF2758E454B3D9C6DFDC9F915AF43304CE6F4E",
+    "runtime_adopted": false
+  },
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/inspect_candidate.gd",
+    "inspection/project.godot",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "vivhite_identity_and_mouth_hard_ban": true,
+    "archive_retrieval_and_zero_cost_copy_semantics": true,
+    "non_attack_non_defense_skill_grammar": true,
+    "strict_two_page_count": false
+  },
+  "status": "rejected_not_for_runtime",
+  "rejection_reason": "The image contains three visible card-page instances: one rising above the archive and two at the upper fork. The card must depict exactly one recovered original and exactly one generated zero-cost copy across the entire frame."
+}

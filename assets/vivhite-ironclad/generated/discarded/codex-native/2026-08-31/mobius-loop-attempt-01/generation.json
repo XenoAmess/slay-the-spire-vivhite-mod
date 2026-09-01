@@ -1,0 +1,95 @@
+{
+  "provider": "codex-native",
+  "tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_MOBIUS_LOOP",
+  "card_class": "MobiusLoop",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "source_size": {
+    "width": 1536,
+    "height": 1024
+  },
+  "source_png": {
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "references": [
+    {
+      "path": "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "role": "identity and costume family only",
+      "sha256": "8ce534b001fb0d22988946f08db1f908149778889d1cb2a2fa5877f6f57302ab"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/character-design.png",
+      "role": "costume construction and blue-butterfly placement only; text and layout excluded",
+      "sha256": "a3f2e19eb243d0313360df644c1cdf397d891d42d8a53aabd38cca87b6f69d0e"
+    },
+    {
+      "path": "assets/vivhite-ironclad/references/face-reference.jpg",
+      "role": "face, glasses, hair, violet eyes, and temperament only",
+      "sha256": "b52b0624a3c2b2114f66a6c7ba839880d1dc89adaa91de0f5ca6bfc302160ca6"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/LocalHomeomorphism.png",
+      "role": "approved rendering finish and identity continuity only; paired-surface geometry excluded",
+      "sha256": "9fe2b8867814d1632a45230471db51668257491c2f35e8931fe4e79b097eb437"
+    },
+    {
+      "path": "Vivhite/Vivhite/images/cards/AxiomRing.png",
+      "role": "approved operational-skill readability and finish only; concentric composition excluded",
+      "sha256": "636f9fc9a7863594120ff43f3bd344525858c5836379b1acfa3bd1225d4ab764"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "445070fa0ad7db793d4ef274442b2e2fd4c9f7de0d6ca6719ca44f72b009a916",
+  "original_file": "original.png",
+  "original_sha256": "8dd5f0af82be26ac545aa9f57dfb32d170d9f20c684fac7dfa9e5a52e76ca990",
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "provisional_runtime_sha256": "3d3786062e55555872ed042c71dbecc3946a9c5b37b7b5289c9cbc264f76b069",
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "single_closed_mobius_band_with_one_twist_readable": true,
+    "discard_tiles_and_one_bright_retrieved_tile_readable": true,
+    "operational_skill_not_attack_or_shield": true,
+    "receiving_hand_and_empty_hand_spellcasting_readable": true,
+    "retrieved_tile_returns_to_hand_area": true,
+    "100x76_color_and_grayscale_topology_readable": true
+  },
+  "non_blocking_observations": [
+    "The guiding-side hand is occluded by the Mobius band; the card contract does not require both hands to be completely visible.",
+    "The bright returned tile stops above the receiving palm and remains clearly within the hand-return area."
+  ],
+  "historical_runtime_path": "Vivhite/Vivhite/images/cards/MobiusLoop.png",
+  "historical_runtime_sha256": "3d3786062e55555872ed042c71dbecc3946a9c5b37b7b5289c9cbc264f76b069",
+  "historical_runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "is_current_runtime": false,
+  "current_runtime_source_attempt": 2,
+  "current_runtime_sha256": "0d475f0350ab727c033a6c8ec0b19e48e4584165fa587a4121994f3a9299dad7",
+  "status": "static_accepted_superseded_by_attempt_02",
+  "acceptance_summary": "This candidate passed the static card-art contract. It was later superseded by attempt 02 after direct visual review found attempt 02's two fully visible hands and precise palm-side return endpoint superior. All attempt-01 source, prompt, crop, hashes, observations, and former runtime facts remain preserved; attempt 01 is no longer the current runtime source."
+}

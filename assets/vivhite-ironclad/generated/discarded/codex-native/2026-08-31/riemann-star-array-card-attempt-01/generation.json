@@ -1,0 +1,78 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+  "card_type": "RiemannStarArray",
+  "card_name_zh": "黎曼星阵",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_with_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 1,
+    "type": "Attack",
+    "rarity": "Uncommon",
+    "cough": 6,
+    "damage_per_card_in_hand": 4,
+    "drain_percent": 12,
+    "upgrade_damage_per_card_in_hand": 5,
+    "upgrade_drain_percent": 16
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+      "assets/vivhite-ironclad/references/character-design.png",
+      "assets/vivhite-ironclad/references/face-reference.jpg",
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/luminous-projection-attempt-01/original.png"
+    ],
+    "background_parameter": null,
+    "note": "The complete opaque scene used the built-in Codex-native path. No EvoLink request or transparent-background parameter was used."
+  },
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8CE534B001FB0D22988946F08DB1F908149778889D1CB2A2FA5877F6F57302AB",
+    "assets/vivhite-ironclad/references/character-design.png": "A3F2E19EB243D0313360DF644C1CDF397D891D42D8A53AABD38CCA87B6F69D0E",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "B52B0624A3C2B2114F66A6C7BA839880D1DC89ADAA91DE0F5CA6BFC302160CA6",
+    "assets/vivhite-ironclad/generated/codex-native/2026-08-31/luminous-projection-attempt-01/original.png": "04DDD324384A75A5CA99C3F97BA715F9894BB1EB4D89190F0AD8DB219F812084"
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "20B412F1B155E82D65082E2A52DA83F08FC689C170034FA85EE3991CE2C4AE3E",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a0550d-eb05-7863-8017-bf52bc9cdb9e/exec-2a3e8082-15da-49e1-ae0e-64b36b539e9c.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/riemann-star-array-card-attempt-01/original.png",
+  "original_sha256": "0B11743B14579A182E2F30A61957499723B37D517F3D1525109D56737417775E",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "prepared_sha256": "09312F3C6C6E25FDCF38D484D5D926C33F35C96F63BE5D18EB884F1BE13C5825",
+  "inspection_outputs": [
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/detail-five-term-array.png",
+    "inspection/detail-terminal-impacts.png",
+    "inspection/assessment.md"
+  ],
+  "status": "archived_superseded_for_terminal_count",
+  "acceptance_summary": "The source is a clean opaque scene with exactly five blank integration slabs and five star cores, clear open attack direction, and a separate cyan return circuit. Static review found only four clearly countable terminal impact bursts, so it was retained as the semantic base for one targeted edit rather than selected for runtime."
+}

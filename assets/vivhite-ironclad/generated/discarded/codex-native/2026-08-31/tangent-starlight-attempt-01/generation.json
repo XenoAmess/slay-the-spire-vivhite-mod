@@ -1,0 +1,46 @@
+{
+  "provider": "codex-native",
+  "model": null,
+  "model_note": "The built-in image_gen tool did not expose an internal model identifier.",
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+  "card_type": "TangentStarlight",
+  "attempt": 1,
+  "generation_mode": "generate",
+  "reference_paths": [
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png",
+    "assets/vivhite-ironclad/references/character-design.png",
+    "assets/vivhite-ironclad/references/face-reference.jpg",
+    "Vivhite/Vivhite/images/cards/AxiomRing.png",
+    "Vivhite/Vivhite/images/cards/ClosedProjection.png"
+  ],
+  "reference_sha256": {
+    "assets/vivhite-ironclad/generated/evolink-paid/2026-08-28/0002-master-front-clean-attempt/output.png": "8ce534b001fb0d22988946f08db1f908149778889d1cb2a2fa5877f6f57302ab",
+    "assets/vivhite-ironclad/references/character-design.png": "a3f2e19eb243d0313360df644c1cdf397d891d42d8a53aabd38cca87b6f69d0e",
+    "assets/vivhite-ironclad/references/face-reference.jpg": "b52b0624a3c2b2114f66a6c7ba839880d1dc89adaa91de0f5ca6bfc302160ca6",
+    "Vivhite/Vivhite/images/cards/AxiomRing.png": "636f9fc9a7863594120ff43f3bd344525858c5836379b1acfa3bd1225d4ab764",
+    "Vivhite/Vivhite/images/cards/ClosedProjection.png": "207f1a5e673be31a2199c736b1f836fd7295c205be7b92ea9c516212798f809d"
+  },
+  "prompt_sha256": "d736d2b923e7ac7858f09cf8e17da8096928f450de690f977fe57b2f00223813",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/tangent-starlight-attempt-01/original.png",
+  "original_sha256": "c9da39fa3184d6b503e7b35e5e3d5c8a2d18a277d2ce3b9b44c1b53cb2bb764d",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_text_weapon_enemy_or_second_character": true,
+    "open_directional_attack_read": true,
+    "unique_tangent_relationship": false,
+    "failure_reason": "The principal straight starlight enters and crosses the large circle, so the key geometry reads as a secant rather than a line touching at exactly one tangent point."
+  },
+  "runtime_path": null,
+  "status": "rejected_geometric_topology"
+}

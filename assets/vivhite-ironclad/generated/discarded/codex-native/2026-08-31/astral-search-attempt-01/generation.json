@@ -1,0 +1,64 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+  "card_type": "AstralSearch",
+  "card_name_zh": "星图检索",
+  "attempt": 1,
+  "attempt_limit": 8,
+  "generation_mode": "generate_without_references",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 0,
+    "type": "Skill",
+    "rarity": "Common",
+    "cough": 2,
+    "base_draw": 4,
+    "upgraded_draw": 6,
+    "discard": 2
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque scene used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "8C83F6473DE665108D5D3765447D01A1ECFE61620DAD75042B6F004BD000E530",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a054bc-d363-75e3-bd9a-9d1ad1241d74/exec-e1ef3630-4da8-4b84-a969-ce74cc06e1b8.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/astral-search-attempt-01/original.png",
+  "original_sha256": "FB1FD46E144F7607AF469EDF973795E244FFB5C6601A2EE8620B7EBFDE041A35",
+  "original_png": {
+    "width": 1536,
+    "height": 1024,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "x": 105,
+    "y": 8,
+    "width": 1325,
+    "height": 1007,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_and_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "selection_flow_readable": true,
+    "exactly_two_rejected_pages": false,
+    "no_attack_enemy_or_shield": true,
+    "small_grayscale_selection_readable": true
+  },
+  "status": "rejected_not_for_runtime",
+  "rejection_summary": "The archive, Vivhite identity, bright candidate convergence, opaque scene, and mouth safety pass. The right-side rejected flow contains three dark pages instead of exactly two, so the visual does not accurately represent the doubled discard count and is preserved only as attempt history."
+}

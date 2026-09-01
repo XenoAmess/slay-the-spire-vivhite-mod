@@ -1,0 +1,101 @@
+{
+  "provider": "codex-native",
+  "generation_tool": "built-in image_gen",
+  "model": null,
+  "model_note": "The built-in tool did not expose an exact internal model identifier; none is inferred.",
+  "evolink_used": false,
+  "date": "2026-08-31",
+  "card_id": "VIVHITE_CARD_CRIMSON_CONSERVATION_LAW",
+  "card_type": "CrimsonConservationLaw",
+  "card_name_zh": "血色守恒律",
+  "attempt": 2,
+  "attempt_limit": 8,
+  "generation_mode": "edit_with_single_reference",
+  "asset_contract": "single complete opaque full-bleed card scene",
+  "mechanical_semantics": {
+    "energy_cost": 2,
+    "type": "Power",
+    "rarity": "Rare",
+    "cough": 10,
+    "strength_per_actual_drain_healing": 5,
+    "upgraded_strength_per_actual_drain_healing": 4,
+    "custom_cap": null
+  },
+  "request": {
+    "tool": "built-in image_gen",
+    "prompt_file": "prompt.txt",
+    "referenced_image_paths": [
+      "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-01/original.png"
+    ],
+    "num_last_images_to_include": null,
+    "background_parameter": null,
+    "note": "The opaque edit used the built-in Codex-native path. No EvoLink endpoint or transparent-background request was used. No hidden model, seed, sampler, token count, or unsupported request parameter is inferred."
+  },
+  "reference_roles": [
+    {
+      "path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-01/original.png",
+      "sha256": "007CC0708A1642DC9E4C946E21CD2E839C2FCC73E0BA0552856B044FED830D97",
+      "role": "edit target defining the accepted identity, scene, sustained ability system, central hub, golden output, and upper repeat; only lower-loop framing was requested to change"
+    }
+  ],
+  "prompt_file": "prompt.txt",
+  "prompt_sha256": "E28FDA34036E92D74BDB11CACC1372DAB17F0C31704BBBEB3114365183330AFE",
+  "built_in_output_path": "C:/Users/xenoa/.codex/generated_images/01a05527-aef2-71b2-8455-9200305a013a/exec-80f81084-2f8d-483c-99e5-ae04f95072e9.png",
+  "original_path": "assets/vivhite-ironclad/generated/codex-native/2026-08-31/crimson-conservation-law-card-attempt-02/original.png",
+  "original_sha256": "EF19D6D8BE373B7F0672D21D9E2AAAA882A434D2EEA550D193187C80852DD733",
+  "original_png": {
+    "width": 1448,
+    "height": 1086,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "deterministic_crop": {
+    "tool": "tools/art/prepare_vivhite_card_portrait.gd",
+    "x": 11,
+    "y": 1,
+    "width": 1425,
+    "height": 1083,
+    "resize": "1000x760",
+    "interpolation": "Lanczos"
+  },
+  "candidate_runtime_sha256": "DEDCF17ECAE1D2314BBB7D7F88DADE204EBEC2C5C040871AC851457E4BA296C5",
+  "candidate_runtime_png": {
+    "width": 1000,
+    "height": 760,
+    "bit_depth": 8,
+    "color_type": 2,
+    "alpha": false
+  },
+  "inspection_outputs": [
+    "inspection/prepared-runtime-candidate.png",
+    "inspection/centered-25x19-1000x760-rgb8.png",
+    "inspection/centered-25x19-1000x760-gray.png",
+    "inspection/thumbnail-250x190-color.png",
+    "inspection/thumbnail-250x190-gray.png",
+    "inspection/thumbnail-100x76-color.png",
+    "inspection/thumbnail-100x76-gray.png",
+    "inspection/prepare-stdout.log",
+    "inspection/prepare-stderr.log",
+    "inspection/inspect-godot.log",
+    "inspection/inspect-godot-error.log",
+    "inspection/assessment.md"
+  ],
+  "visual_acceptance": {
+    "full_bleed_opaque_scene": true,
+    "foreground_middle_ground_background": true,
+    "vivhite_identity_blue_butterfly_and_two_empty_hands": true,
+    "mouth_hard_ban_passed": true,
+    "no_blood_liquid_red_or_crimson_strands": true,
+    "no_text_weapon_enemy_second_character_hit_or_shield": true,
+    "stable_vertical_persistent_power_read": true,
+    "lower_loop_complete_after_centered_crop": true,
+    "upper_five_to_one_repeat_present": true,
+    "single_golden_strength_core_present": true,
+    "lower_input_crystal_count_exactly_five": false,
+    "lower_input_crystal_count_observed": 4
+  },
+  "status": "rejected_static_topology_failure",
+  "acceptance_summary": "The revised loop is fully inside the crop and remains legible at 100x76, but it contains only four lower input crystals. The exact five-input mechanical topology is therefore wrong.",
+  "result": "rejected_continue_with_attempt_03"
+}
