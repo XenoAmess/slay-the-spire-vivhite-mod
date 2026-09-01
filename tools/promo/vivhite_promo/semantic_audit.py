@@ -25,7 +25,12 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Callable, Iterable, Mapping
 
-from .capture_contract import CaptureContractError, VivhiteCaptureContract, load_capture_contract
+from .capture_contract import (
+    CaptureContractError,
+    VivhiteCaptureContract,
+    load_capture_contract,
+    validate_capture_contract,
+)
 from .claims import Claim, ClaimsError, load_claims
 
 
@@ -237,6 +242,16 @@ def _contract_value(
         return contract
     root = None if artifact_root is None else Path(artifact_root).expanduser().resolve()
     try:
+        if isinstance(contract, Mapping):
+            if root is None:
+                raise SemanticAuditError(
+                    "artifact_root is required when contract is an in-memory mapping"
+                )
+            return validate_capture_contract(
+                contract,
+                artifact_root=root,
+                verify_files=True,
+            )
         return load_capture_contract(contract, artifact_root=root, verify_files=True)
     except (CaptureContractError, OSError, TypeError, ValueError) as exc:
         raise SemanticAuditError(f"capture contract is not valid: {exc}") from exc
