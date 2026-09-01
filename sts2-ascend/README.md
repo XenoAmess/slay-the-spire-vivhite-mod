@@ -160,12 +160,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
 
-无人训练若要避免 Steam Cloud 在跨进程恢复/退出时覆盖或删除本地的
-`profile*/saves/current_run.save`，应先用 `-SteamMode off` 冷启动整套；若游戏已经运行，参数不会
+若已完成本地 profile 的原生模组同意、且明确接受独立存档命名空间，想隔离 Steam Cloud 时可用
+`-SteamMode off` 冷启动整套；若游戏已经运行，参数不会
 改变现有进程（启动日志和 `.runtime/session.json` 会标记 `steam_mode_applied=false`），请先用统一
 `Stop-Agent.ps1` 停止后再以 `-SteamMode off` 启动。`-SteamMode on` 只是明确记录“保留 Steam 默认行为”，
 不会人为追加 `--force-steam on`。该开关只改变本次游戏进程的启动参数，不执行 UAC、人工 GUI 或 Steam
-文件修改；它也不替代原生存档/Continue 证据门禁。
+文件修改；它也不替代原生存档/Continue 证据门禁，更不是 Steam Cloud 修复。首次 off profile 若尚未完成
+原生模组同意，必须保持 fail-closed，不得自动点击确认框或把空 API 当作 Stack ready。
+
+注意：`off` 会使用独立的本地 `user://default/1` profile，不会继承 Steam profile 的
+`ModSettings`/“已同意加载模组”标记。首次运行若日志出现 `user has not yet seen the mods warning`
+并跳过 `STS2AIAgent`、RitsuLib、Vivhite，API 不会启动；无人值守时不得自动点击原生确认框，也不得
+把这种情况当成 Brain 故障。应保持训练/直播 fail-closed，待该本地 profile 已完成原生同意后再验收
+`-SteamMode off`。
 
 停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
 

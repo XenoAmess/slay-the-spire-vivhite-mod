@@ -116,8 +116,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   `--force-steam off`。它只作用于本次游戏进程，不改游戏目录、Steam 客户端或云同步文件，也不需要
   UAC/人工 GUI；会话 `session.json` 记录请求模式、参数及 `steam_mode_applied`。若游戏已在运行，参数
   不会 retroactively 改变该进程，必须先用统一 `Stop-Agent.ps1` 停止，再以 `-SteamMode off` 冷启动。
-  无人训练为避免 Steam Cloud 覆盖或删除 `profile*/saves/current_run.save`，应明确使用 `-SteamMode off`；
-  该开关不能替代原生 Continue/存档证据门禁。
+  `-SteamMode off` 只适用于已完成该本地 profile 原生初始化、且明确接受独立存档命名空间的诊断/训练会话；
+  它不能替代原生 Continue/存档证据门禁，也不能被当作 Steam Cloud 修复。`off` 使用独立的本地 `user://default/1` profile，
+  不继承 Steam profile 的 `ModSettings`/“已同意加载模组”标记；首次运行若出现
+  `user has not yet seen the mods warning` 并跳过 `STS2AIAgent`、RitsuLib、Vivhite，API 不会启动。
+  无人值守时不得自动点击原生确认框或把它误报成 Brain 故障；若该 profile 尚未完成原生同意，必须保持训练/直播
+  fail-closed，待本地 profile 已完成原生同意后再验收 off 模式。
 - **双轨并行执行（训练与复盘互不替代）**：用户同时要求“继续复盘/写报告/完善 `AGENTS.md`”和“启动游戏＋Brain 训练”时，必须在同一任务中并行推进两条独立轨道。A 轨持续记录证据、更新报告与规则；B 轨只用统一 `Start-Agent.ps1` 保持游戏、Brain、runner 和驾驶舱运行，并巡检健康状态与真实动作。A 轨等待或失败不得暂停 B 轨，B 轨阻塞或需要修复也不得让 A 轨停摆；每次汇报必须分别说明报告进度和训练进程/动作证据，不能把“报告已写完”或“Stack ready”冒充训练完成。训练巡检发现健康异常或连续状态无进展时，立即记录证据并进入修复/复核循环，不得静默等待、挂机或把“暂时无法安全恢复”写成成功。运行态文件以 `sts2-ascend/.runtime/`（由 `lifecycle.STACK_ROOT` 解析）为准，仓库根目录同名目录不是栈证据。
 - **保持下播的训练模式**：用户明确要求下播时，先确认并保持本地直播姬为 `Idle`，只调用 `Start-Agent.ps1` 启动或复用游戏＋Brain 全栈；禁止调用 `Start-BilibiliLive.ps1`、禁止自动复播，也不得为了证明训练而触碰直播姬。训练栈可以在下播状态继续运行，但仍须以真实 `/state` 和已确认动作证明训练；若证据不足则保持失败关闭并继续诊断，不得伪造动作或擅自人工接管。
 - 全栈驻留期间的人工接管只使用全局快捷键：`Ctrl+Alt+F9` 停止 Brain 发送操作并保留游戏与 runner，`Ctrl+Alt+F10` 只恢复动作发送。只要某局跨过一次 F9 人工接管边界，该局便永久标记为 `human_assisted=true`、`excluded_from_learning=true`；Brain 将其所属 Profile 的在线 Knowledge `stats` 回滚到局前持久基线，F10 后同一局的学习写入仍保持禁用，进程重启也不得解除。

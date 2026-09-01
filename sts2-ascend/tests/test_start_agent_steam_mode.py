@@ -100,6 +100,10 @@ foreach ($mode in @('auto', 'on', 'off')) {{
             self.assertIn("current_run.save", text)
         self.assertRegex(readme, r"(?i)Steam Cloud|云存档")
         self.assertRegex(agents, r"(?i)Steam Cloud|云存档")
+        self.assertIn("user has not yet seen the mods warning", readme)
+        self.assertIn("user has not yet seen the mods warning", agents)
+        self.assertIn("fail-closed", readme)
+        self.assertIn("fail-closed", agents)
 
 
 if __name__ == "__main__":

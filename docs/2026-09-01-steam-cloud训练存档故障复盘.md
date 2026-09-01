@@ -8,8 +8,8 @@
 
 1. 停栈前 runner 日志仍有 `TTT6HQGV7NAS` 在 F7/F8 的真实动作；停止哨兵时间为 17:56:56。Steam 远端的 `current_run.save.stmp` 在 17:56:44 变成 0 字节，不能证明有有效 payload。
 2. 游戏日志在 18:15 左右记录 `Syncing cloud save files to the local save directory`，紧接着记录 `Deleting modded/profile1/saves/current_run.save because it does not exist on remote`。这解释了为什么 API 随后回到 `MAIN_MENU/run_unknown`。
-3. 同一会话多次记录 `Wrote ... current_run.save` 后的 `Cloud write failed ... k_EResultIOFailure`。Steam `cloud_log.txt` 还记录 `login=false`/`offlineMode=true`、`Upload failed due to conflicts in build list` 与 `YldWriteCacheDirectoryToFile failed`；D: Steam 盘当时只剩约 1–2 MB。
-4. 复核时远端没有 `current_run.save` 或 `.backup`；`remotecache.vdf` 只保留 `size/localtime/remotetime=0/syncstate=3/persiststate=2` 等本地未上传元数据，没有存档 payload。C: 本地 save、backup、stmp 及 history 中也没有该 run。早期读取到的 0 字节 `remotecache.vdf` 是并发重写期间的瞬时快照，不能作为最终文件状态。
+3. 同一会话多次记录 `Wrote ... current_run.save` 后的 `Cloud write failed ... k_EResultIOFailure`。Steam `cloud_log.txt` 还记录 `login=false`/`offlineMode=true`、`Upload failed due to conflicts in build list` 与 `YldWriteCacheDirectoryToFile failed`；采样到的 D: 可用空间在约 0–1.8 MB 间（其中游戏日志曾报告 0.0 B）。这是直接的写入风险证据，但不能把单一容量读数当作全部根因。
+4. 复核时远端没有 `current_run.save` 或 `.backup`；`remotecache.vdf` 只保留 `size/localtime/remotetime=0/syncstate=3/persiststate=2` 等本地未上传元数据，没有存档 payload。该条目的 `localtime` 约为 17:00:03，早于最后一次本地写入约 60,967 B（17:56:43.5），所以不是最后版本的备份。C: 本地 save、backup、stmp 及 history 中也没有该 run。早期读取到的 0 字节 `remotecache.vdf` 是并发重写期间的瞬时快照，不能作为最终文件状态。
 5. 两次有序 API 采样均为 `MAIN_MENU`、`run=null`、无 `continue_run`，四类原生探针无读错且没有匹配 run；故按窄例外流程释放孤儿账本，而不是伪造终局或强行开新局。
 
 ## 修复与边界
@@ -23,4 +23,3 @@
 
 - `sts2-ascend/tests/test_start_agent_steam_mode.py` 覆盖参数映射、冷启动分支和文档审计；另有已有孤儿恢复/空播门禁回归。
 - 真实运行验证必须记录：启动日志出现 `SteamMode=off`，游戏日志显示跳过 Steam 初始化且使用本地 profile，随后 `/state` 为非菜单真实 run，并有驾驶舱 `connected`、`applied` 回执和楼层进展。
-
