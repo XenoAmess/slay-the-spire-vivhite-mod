@@ -312,7 +312,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260831-194655-1788176815145147200-8617c289 -->
 | 2026-08-31 19:46:55 | 第 1220~1231 局 | `8617c289` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8ca93e4c` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8ca93e4c 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260831-200515-1788177915907021900-8589e247 -->
-| 2026-08-31 20:05:15 | 第 3~4 局 | `8589e247` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260831-200515-1788177915907021900-8589e247` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
+| 2026-08-31 20:05:15 | 第 3~4 局 | `8589e247` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `cf589ff2` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 cf589ff2 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260831-210530-1788181530386056200-0137c292 -->
 | 2026-08-31 21:05:30 | 第 988~1013 局 | `0137c292` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-210530-1788181530386056200-0137c292` | 复盘进程未成功完成 |
 <!-- rejection:20260831-212958-1788182998899351300-7a797b70 -->
