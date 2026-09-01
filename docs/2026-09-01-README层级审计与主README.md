@@ -26,6 +26,7 @@
 - `bin/`、`obj/`、`__pycache__/` 等构建或缓存目录；
 - `.runtime/`、`sts2-ascend/knowledge/`、`.work/`、`.tmp/` 等在线状态或取证目录；
 - 一次付费生成尝试中的 `inspection/`、临时 Godot 工程和单个素材叶目录；
+- `.agents/skills/` 与 `.codex/` 等代理工具配置：它们分别以 `SKILL.md`、根 `AGENTS.md` 和配置文件为事实源，不是可独立构建/部署的应用子项目；
 - 被忽略的 `sts2-ascend/third_party/STS2-Agent/` 本地 checkout，其自身沿用上游 README，仓库只在父级说明 fork、source 与部署关系。
 
 这些目录如果逐叶复制 README，反而会造成规则漂移。它们由最近的集合级 README 统一解释，并由 manifest、参数记录、provenance 或测试报告保存逐项事实。
