@@ -3182,6 +3182,15 @@ def main() -> int:
     d_pot2 = pol_pot2.decide(pot_state("闻起来像草莓。"), potc)
     assert d_pot2.action == "use_potion" and "硬仗开局" in d_pot2.reason, \
         f"premium硬仗T1未知类别药水未被放行: {d_pot2.action}（{d_pot2.reason}）"
+    _potion_trace = d_pot2.trace or {}
+    _potion_candidates = _potion_trace.get("candidates") or []
+    assert (any(row.get("action") == "use_potion"
+                and row.get("index") == 0
+                and "能力药水" in str(row.get("label") or "")
+                and row.get("status") == "chosen"
+                for row in _potion_candidates)
+            and (_potion_trace.get("selected") or {}).get("action") == "use_potion"), \
+        f"药水决策 trace 未展示实际药水候选: {_potion_trace}"
     # 对照：非 premium 普通战中未知类别仍保留（防绕过增益保留策略）
     potc.combat = {"comp_id": "HARMLESS", "node_type": "Monster"}
     pol_pot3 = policy.Policy(know_es, random.Random(5))
