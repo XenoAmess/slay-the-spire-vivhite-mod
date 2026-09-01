@@ -126,6 +126,29 @@ $probe | ConvertTo-Json -Depth 6 -Compress
             self.assertTrue(probe["userdata_root"].lower().endswith("\\userdata"))
             self.assertEqual(probe["drive_root"], "C:\\")
 
+    def test_registry_steam_executable_is_normalized_to_client_root(self) -> None:
+        functions = helper_source()
+        with tempfile.TemporaryDirectory(prefix="sts2-steam-fixture-") as root:
+            steam_root = pathlib.Path(root) / "Steam"
+            steam_root.mkdir()
+            steam_exe = steam_root / "steam.exe"
+            steam_exe.write_bytes(b"fixture")
+            result = run_powershell(
+                f"""
+$ErrorActionPreference = 'Stop'
+{functions}
+function Get-ItemProperty {{ param([string]$LiteralPath); return [pscustomobject]@{{ SteamExe = {ps_literal(steam_exe)} }} }}
+$env:STEAM_PATH = ''
+$resolved = Get-SteamInstallRoot
+$resolved
+"""
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(
+                pathlib.Path(result.stdout.strip().splitlines()[-1]).resolve(),
+                steam_root.resolve(),
+            )
+
     def test_missing_root_or_unreadable_space_fails_closed(self) -> None:
         functions = helper_source()
         result = run_powershell(
