@@ -1,10 +1,18 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Steamworks;
 
 internal static class Program
 {
     private const string ModId = "Vivhite";
+    // The Steam SDK exposes k_cchPublishedDocumentChangeDescriptionMax=8000
+    // (the current API reference labels that legacy constant "Unused"). Keep
+    // this conservative cap in bytes, rather than UTF-16 chars, because
+    // Steamworks receives a UTF-8 native string and multibyte notes otherwise
+    // get truncated in the middle of a code point.
+    private const int MaxWorkshopChangeNoteBytes = 8000;
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     private sealed record Options(
         uint AppId,
@@ -13,12 +21,15 @@ internal static class Program
         string PreviewFile,
         string Title,
         string DescriptionFile,
+        string ChangeNoteFile,
         string Visibility,
         IReadOnlyList<string> Tags,
         ulong DependencyId,
         string Version,
         string ResultFile,
         TimeSpan Timeout);
+
+    private sealed record ValidatedInputs(string Description, string ChangeNote);
 
     private sealed record CallEnvelope<T>(T Value, bool IoFailure) where T : struct;
 
@@ -44,10 +55,11 @@ internal static class Program
     public static async Task<int> Main(string[] args)
     {
         Options options;
+        ValidatedInputs validatedInputs;
         try
         {
             options = ParseOptions(args);
-            ValidateInputs(options);
+            validatedInputs = ValidateInputs(options);
         }
         catch (Exception exception)
         {
@@ -146,7 +158,7 @@ internal static class Program
 
             receipt.published_file_id = itemId;
             receipt.url = ItemUrl(itemId);
-            await UploadItemAsync(options, (PublishedFileId_t)itemId, receipt);
+            await UploadItemAsync(options, (PublishedFileId_t)itemId, receipt, validatedInputs);
 
             if (options.DependencyId != 0)
             {
@@ -198,14 +210,18 @@ internal static class Program
         }
     }
 
-    private static async Task UploadItemAsync(Options options, PublishedFileId_t itemId, PublishReceipt receipt)
+    private static async Task UploadItemAsync(
+        Options options,
+        PublishedFileId_t itemId,
+        PublishReceipt receipt,
+        ValidatedInputs validatedInputs)
     {
         var handle = SteamUGC.StartItemUpdate((AppId_t)options.AppId, itemId);
         if (handle == UGCUpdateHandle_t.Invalid)
             throw new InvalidOperationException("StartItemUpdate returned an invalid handle.");
 
         Require(SteamUGC.SetItemTitle(handle, options.Title), "SetItemTitle");
-        Require(SteamUGC.SetItemDescription(handle, File.ReadAllText(options.DescriptionFile)), "SetItemDescription");
+        Require(SteamUGC.SetItemDescription(handle, validatedInputs.Description), "SetItemDescription");
         Require(SteamUGC.SetItemContent(handle, options.ContentDirectory), "SetItemContent");
         Require(SteamUGC.SetItemPreview(handle, options.PreviewFile), "SetItemPreview");
         Require(SteamUGC.SetItemVisibility(handle, ParseVisibility(options.Visibility)), "SetItemVisibility");
@@ -232,11 +248,8 @@ internal static class Program
             lastProgress = DateTimeOffset.UtcNow;
         }
 
-        var changeNote = receipt.created
-            ? $"Vivhite {options.Version} - initial Steam Workshop release"
-            : $"Vivhite {options.Version} - package and metadata refresh";
         var submitted = await AwaitCallAsync<SubmitItemUpdateResult_t>(
-            SteamUGC.SubmitItemUpdate(handle, changeNote),
+            SteamUGC.SubmitItemUpdate(handle, validatedInputs.ChangeNote),
             options.Timeout,
             "submit_item_update",
             ReportProgress);
@@ -399,6 +412,7 @@ internal static class Program
             Path.GetFullPath(Required("preview")),
             Required("title"),
             Path.GetFullPath(Required("description-file")),
+            Path.GetFullPath(Required("change-note-file")),
             values.GetValueOrDefault("visibility", "public"),
             tags,
             ulong.Parse(values.GetValueOrDefault("dependency-id", "0")),
@@ -407,7 +421,7 @@ internal static class Program
             TimeSpan.FromSeconds(int.Parse(values.GetValueOrDefault("timeout-seconds", "900"))));
     }
 
-    private static void ValidateInputs(Options options)
+    private static ValidatedInputs ValidateInputs(Options options)
     {
         if (options.AppId == 0)
             throw new ArgumentException("App ID must be non-zero.");
@@ -426,12 +440,82 @@ internal static class Program
             throw new FileNotFoundException("Description file does not exist.", options.DescriptionFile);
         if (options.Title.Length is < 1 or > 128)
             throw new InvalidOperationException("Workshop title must contain 1 to 128 characters.");
-        var description = File.ReadAllText(options.DescriptionFile);
+        var description = ReadStrictUtf8(options.DescriptionFile, "Workshop description");
         if (string.IsNullOrWhiteSpace(description) || description.Length > 8000)
             throw new InvalidOperationException("Workshop description must contain 1 to 8000 characters.");
+        var changeNote = ReadChangeNote(options.ChangeNoteFile);
         if (options.Timeout < TimeSpan.FromSeconds(30) || options.Timeout > TimeSpan.FromHours(2))
             throw new InvalidOperationException("Timeout must be between 30 and 7200 seconds.");
         _ = ParseVisibility(options.Visibility);
+        return new ValidatedInputs(description, changeNote);
+    }
+
+    private static string ReadChangeNote(string path)
+    {
+        if (!File.Exists(path))
+            throw new FileNotFoundException("Workshop change-note file does not exist.", path);
+
+        var fileInfo = new FileInfo(path);
+        // A UTF-8 BOM is accepted and does not count toward Steam's payload
+        // limit.  Reject oversized files before allocating a potentially
+        // unbounded buffer.
+        if (fileInfo.Length > MaxWorkshopChangeNoteBytes + 3)
+        {
+            throw new InvalidOperationException(
+                $"Workshop change note must be at most {MaxWorkshopChangeNoteBytes} UTF-8 bytes (plus an optional BOM); found {fileInfo.Length} file bytes.");
+        }
+
+        var bytes = File.ReadAllBytes(path);
+        var payload = bytes.AsSpan();
+        if (payload.StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }))
+            payload = payload[3..];
+        if (payload.Length == 0)
+            throw new InvalidOperationException("Workshop change note must contain 1 to 8000 UTF-8 bytes.");
+        if (payload.Length > MaxWorkshopChangeNoteBytes)
+        {
+            throw new InvalidOperationException(
+                $"Workshop change note must be at most {MaxWorkshopChangeNoteBytes} UTF-8 bytes; found {payload.Length}.");
+        }
+
+        string value;
+        try
+        {
+            value = StrictUtf8.GetString(payload);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidOperationException(
+                "Workshop change note must be valid UTF-8 (UTF-8 BOM is optional).", exception);
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidOperationException("Workshop change note must not be empty or whitespace-only.");
+        if (value.IndexOf('\0') >= 0)
+            throw new InvalidOperationException("Workshop change note must not contain NUL characters.");
+
+        // Re-encoding is an explicit invariant: the exact validated payload,
+        // not a replacement-character or normalized variant, is sent to Steam.
+        var roundTrip = StrictUtf8.GetBytes(value);
+        if (!roundTrip.AsSpan().SequenceEqual(payload))
+            throw new InvalidOperationException("Workshop change note failed its strict UTF-8 round-trip validation.");
+        return value;
+    }
+
+    private static string ReadStrictUtf8(string path, string fieldName)
+    {
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"{fieldName} file does not exist.", path);
+        try
+        {
+            // File.ReadAllText uses the supplied strict decoder while still
+            // honoring an optional UTF-8 BOM, matching the existing
+            // description-file behavior without replacement characters.
+            return File.ReadAllText(path, StrictUtf8);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidOperationException($"{fieldName} must be valid UTF-8.", exception);
+        }
     }
 
     private static string ItemUrl(ulong itemId) => $"https://steamcommunity.com/sharedfiles/filedetails/?id={itemId}";
