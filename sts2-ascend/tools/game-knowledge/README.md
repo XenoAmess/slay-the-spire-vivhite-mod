@@ -125,7 +125,7 @@ captured-responses/
   # enchantments、modifiers、card_pools、relic_pools、potion_pools
 ```
 
-文件内容可以是 `/data` 返回的数组，也可以是 `{ "data": [...] }` 包装对象：
+文件内容可以是 `/data` 返回的数组，也可以是 `{ "data": [...] }`、`{ "items": [...] }` 或以 collection 名为键的包装对象；导入器会统一规范化为记录数组：
 
 ```powershell
 py -3 .\game_knowledge.py extract `
@@ -155,6 +155,7 @@ extract [--game-dir DIR] [--output-root DIR] [--locales CSV]
 - `--locales`：PCK 本地化文件集合，默认 `eng,zhs`。要通过完整性校验，至少保留这两个 locale。
 - `--runtime-response-dir`、`--runtime-url`、`--discover-runtime`：三者互斥；后者只探测 `127.0.0.1:8080–8084`。
 - `--runtime-collections`：逗号分隔的安全小写名称；默认核心 7 类加扩展 10 类。未知或含路径字符的名称会被拒绝。
+- HTTP runtime 响应单个上限为 256 MiB；超限、非法 JSON 或非预期状态会 fail closed。离线文件仍应控制在合理大小并保留原始响应哈希。
 - `--mechanics-dir`：接收 `GameKnowledge.Tool extract` 的目录，并校验 assembly SHA-256 后导入。
 - `--skip-validation`：仅在中间生成阶段使用；发布/交付前不要跳过校验。
 
