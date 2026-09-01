@@ -278,7 +278,22 @@ try {
                 hero_source_sha256 = [string]$previewMetadata.hero_source_sha256
                 transition_source_sha256 = [string]$previewMetadata.transition_source_sha256
             }
-            Write-JsonAtomic -Path "$archivedPath.json" -Value $archiveRecord
+            $archiveSidecar = "$archivedPath.json"
+            if ([IO.File]::Exists($archiveSidecar)) {
+                try {
+                    $existingRecord = Read-StrictUtf8Json -Path $archiveSidecar
+                    if ([string]$existingRecord.version -ne $previousVersion -or
+                        -not [string]::Equals([string]$existingRecord.sha256, $oldOutputHash, [StringComparison]::OrdinalIgnoreCase) -or
+                        [string]$existingRecord.hero_source_sha256 -ne [string]$archiveRecord.hero_source_sha256 -or
+                        [string]$existingRecord.transition_source_sha256 -ne [string]$archiveRecord.transition_source_sha256) {
+                        throw "Preview history sidecar collision has different provenance: $archiveSidecar"
+                    }
+                }
+                catch {
+                    throw "Preview history sidecar is invalid or conflicting: $archiveSidecar. $($_.Exception.Message)"
+                }
+            }
+            else { Write-JsonAtomic -Path $archiveSidecar -Value $archiveRecord }
         }
 
         Move-Item -LiteralPath $temporaryOutput -Destination $outputFullPath -Force

@@ -139,6 +139,12 @@ function Assert-WorkshopDescriptionContract {
     if ($englishIndex -lt 0) { throw "Workshop description is missing the English section marker." }
     $zh = $description.Substring(0, $englishIndex)
     $en = $description.Substring($englishIndex)
+    $changelogSections = [Text.RegularExpressions.Regex]::Matches($description, '(?is)\[h2\](?:更新日志\s*/\s*Changelog|Changelog\s*/\s*更新日志)\[/h2\].*?(?=\[h1\]|\z)')
+    if ($changelogSections.Count -ne 2) { throw "Bilingual changelog extraction is ambiguous; expected 2 sections." }
+    foreach ($section in $changelogSections) {
+        $bulletCount = [Text.RegularExpressions.Regex]::Matches($section.Value, '(?m)^\[\*\]').Count
+        if ($bulletCount -ne 4) { throw "Each current changelog section must contain exactly 4 release bullets; found $bulletCount." }
+    }
     foreach ($term in @('钨合金棍', 'Buffer', '事件循环', 'public-beta', 'Vulkan', 'OpenGL3', 'D3D12')) {
         if ($zh.IndexOf($term, [StringComparison]::OrdinalIgnoreCase) -lt 0) { throw "Chinese changelog/description is missing required term '$term'." }
     }
