@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -20,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -41,7 +43,11 @@ RETRY_INTERVAL_SECONDS = 10
 CTRL_C_GRACE_SECONDS = 20
 STARTUP_TIMEOUT_CODE = 70
 RECONCILE_BLOCKED_CODE = 71
-STARTUP_IMPORT_SECONDS = 5
+# Import/config loading runs while the repository transaction is held.  Keep
+# this deliberately short and bounded: a slow child must not consume the
+# 115-second outage budget, but the old 5s limit was too close to the observed
+# Windows Python/Git I/O jitter to leave useful diagnostics behind.
+STARTUP_IMPORT_SECONDS = 10
 STARTUP_READY_SECONDS = 15
 STARTUP_RETRY_SECONDS = 5
 OUTAGE_BUDGET_SECONDS = 115
@@ -51,6 +57,133 @@ _SUPERSEDED_MARKER_KEY = "_superseded_marker"
 _SUPERSEDED_MARKER_RAW_KEY = "_superseded_marker_raw"
 _ROLLED_BACK_COMMITS: set[str] = set()
 _ROLLBACK_TOMBSTONE_LIMIT = 100
+_CHILD_OUTPUT_LIMIT = 8 * 1024
+_CHILD_CAPTURE_JOIN_SECONDS = 0.25
+
+
+class _ChildOutputCapture:
+    """Drain a Brain child's pipes without allowing them to deadlock startup.
+
+    The runner used to inherit the child's console handles, which meant a
+    failing generation could disappear before the supervisor knew why.  Pipes
+    are drained on daemon threads and retained as bounded tails; this keeps the
+    watchdog deterministic even if a broken child writes continuously.
+    """
+
+    def __init__(self, proc: subprocess.Popen) -> None:
+        self._lock = threading.Lock()
+        self._tails: dict[str, str] = {"stdout": "", "stderr": ""}
+        self._errors: dict[str, str] = {}
+        self._threads: list[threading.Thread] = []
+        for channel in ("stdout", "stderr"):
+            stream = getattr(proc, channel, None)
+            # unittest.mock.Mock (used by the unit tests) intentionally does
+            # not satisfy IOBase; skipping it avoids a daemon thread spinning
+            # on Mock.readline() forever while still supporting real Popen
+            # TextIOWrapper/BufferedReader and StringIO test streams.
+            if not isinstance(stream, io.IOBase):
+                continue
+            thread = threading.Thread(
+                target=self._drain,
+                args=(channel, stream),
+                name=f"sts2-brain-startup-{channel}",
+                daemon=True,
+            )
+            self._threads.append(thread)
+            thread.start()
+
+    def _drain(self, channel: str, stream: io.IOBase) -> None:
+        try:
+            while True:
+                chunk = stream.readline()
+                if not chunk:
+                    break
+                if isinstance(chunk, bytes):
+                    text = chunk.decode("utf-8", errors="replace")
+                else:
+                    text = str(chunk)
+                with self._lock:
+                    self._tails[channel] = (
+                        self._tails[channel] + text
+                    )[-_CHILD_OUTPUT_LIMIT:]
+        except Exception as exc:  # pragma: no cover - platform stream edge
+            with self._lock:
+                self._errors[channel] = f"{type(exc).__name__}: {exc}"
+
+    def finish(self, timeout: float = _CHILD_CAPTURE_JOIN_SECONDS) -> None:
+        """Wait briefly for EOF after a child has exited/been terminated."""
+        if not self._threads:
+            return
+        deadline = time.monotonic() + max(0.0, timeout)
+        for thread in self._threads:
+            remaining = max(0.0, deadline - time.monotonic())
+            if not thread.is_alive() or remaining <= 0:
+                continue
+            thread.join(remaining)
+
+    def snapshot(self) -> dict[str, str]:
+        with self._lock:
+            result = {
+                channel: value
+                for channel, value in self._tails.items()
+                if value
+            }
+            result.update({f"{channel}_error": value
+                           for channel, value in self._errors.items()})
+            return result
+
+
+def _resolved_marker_path() -> str:
+    try:
+        return str(Path(MARKER).resolve())
+    except (OSError, RuntimeError, TypeError):
+        return str(MARKER)
+
+
+def _startup_context(child_env: dict[str, str]) -> dict[str, object]:
+    """Return non-secret interpreter/marker facts for a startup audit line."""
+    executable = str(sys.executable)
+    return {
+        "exe": executable,
+        "executable": executable,
+        "prefix": str(getattr(sys, "prefix", "")),
+        "base_prefix": str(getattr(sys, "base_prefix", "")),
+        "PYTHONHOME": str(child_env.get("PYTHONHOME", "")),
+        "marker_path": _resolved_marker_path(),
+        "cwd": str(BASE_DIR),
+        "import_timeout_s": STARTUP_IMPORT_SECONDS,
+    }
+
+
+def _log_startup_event(
+        event: str,
+        context: dict[str, object],
+        elapsed: float,
+        *,
+        proc: subprocess.Popen | None = None,
+        rc: int | None = None,
+        capture: _ChildOutputCapture | None = None,
+        include_output: bool = False,
+) -> None:
+    """Write one bounded, machine-readable startup/handshake diagnostic."""
+    payload: dict[str, object] = dict(context)
+    payload["event"] = event
+    payload["elapsed_s"] = round(max(0.0, elapsed), 3)
+    if proc is not None:
+        payload["pid"] = int(getattr(proc, "pid", 0) or 0)
+    if rc is not None:
+        payload["return_code"] = int(rc)
+    if include_output and capture is not None:
+        for channel, value in capture.snapshot().items():
+            payload[f"child_{channel}_tail"] = value
+    try:
+        log("Brain startup " + json.dumps(
+            payload, ensure_ascii=False, sort_keys=True))
+    except Exception:
+        # Diagnostics must never turn a startup failure into an unbounded
+        # exception path (for example if a platform returns a non-serialisable
+        # process proxy in a test harness).
+        log(f"Brain startup event={event} elapsed={elapsed:.3f}s")
 
 
 def _time_left(deadline: float | None, cap: float) -> float:
@@ -637,6 +770,34 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
     deadline = deadline or (started + OUTAGE_BUDGET_SECONDS)
     child_env = os.environ.copy()
     proc: subprocess.Popen | None = None
+    capture: _ChildOutputCapture | None = None
+    startup_context: dict[str, object] | None = None
+    child_started: float | None = None
+
+    def startup_return(
+            event: str,
+            code: int,
+            *,
+            rc: int | None = None,
+            include_output: bool = True,
+    ) -> tuple[int, float]:
+        """Finish bounded pipe capture and emit one failure/stop audit line."""
+        if capture is not None:
+            capture.finish()
+        if startup_context is not None:
+            elapsed = (time.monotonic() - child_started
+                       if child_started is not None else 0.0)
+            _log_startup_event(
+                event,
+                startup_context,
+                elapsed,
+                proc=proc,
+                rc=rc,
+                capture=capture,
+                include_output=include_output,
+            )
+        return code, time.monotonic() - started
+
     ready_deadline = min(deadline, time.monotonic() + STARTUP_READY_SECONDS)
     # Keep the repository transaction only until every module and config byte is
     # resident. Agent/Knowledge construction may itself acquire this same lock.
@@ -658,28 +819,40 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
             child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"] = loaded_review or ""
             boot_id = os.urandom(12).hex()
             child_env["STS2_ASCEND_BOOT_ID"] = boot_id
+            startup_context = _startup_context(child_env)
+            _log_startup_event("launch", startup_context, 0.0)
+            child_started = time.monotonic()
             proc = subprocess.Popen(
                 [sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR),
-                env=child_env)
+                env=child_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            capture = _ChildOutputCapture(proc)
             import_deadline = min(
                 ready_deadline, time.monotonic() + STARTUP_IMPORT_SECONDS)
             while time.monotonic() < import_deadline:
                 rc = proc.poll()
                 if rc is not None:
                     log(f"Brain 在 imported 握手前退出（rc={rc}）；按启动失败重试")
-                    return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+                    return startup_return("exit_before_import", STARTUP_TIMEOUT_CODE,
+                                          rc=rc)
                 if _brain_pid_has_stage(
                         proc.pid, boot_id, boot_head or "", loaded_review or "",
                         "imported"):
+                    _log_startup_event(
+                        "imported", startup_context,
+                        time.monotonic() - (child_started or time.monotonic()),
+                        proc=proc)
                     break
                 if stop_requested():
                     _terminate_startup_child(proc)
-                    return 0, time.monotonic() - started
+                    return startup_return("stop_during_import", 0,
+                                          include_output=False)
                 time.sleep(0.05)
             else:
                 log(f"Brain 未在 {STARTUP_IMPORT_SECONDS}s 内完成模块/config 导入；终止本代并重试")
                 _terminate_startup_child(proc)
-                return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+                return startup_return("import_timeout", STARTUP_TIMEOUT_CODE)
     except TimeoutError:
         log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，按全局断流预算重试")
         return STARTUP_TIMEOUT_CODE, time.monotonic() - started
@@ -690,23 +863,39 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
         rc = proc.poll()
         if rc is not None:
             log(f"Brain 在 ready 握手前退出（rc={rc}）；按启动失败重试")
-            return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+            return startup_return("exit_before_ready", STARTUP_TIMEOUT_CODE, rc=rc)
         if _brain_pid_is_ready(
                 proc.pid, boot_id, boot_head or "", loaded_review or ""):
+            _log_startup_event(
+                "ready", startup_context or {},
+                time.monotonic() - (child_started or time.monotonic()),
+                proc=proc)
             break
         if stop_requested():
             _terminate_startup_child(proc)
-            return 0, time.monotonic() - started
+            return startup_return("stop_during_ready", 0,
+                                  include_output=False)
         time.sleep(0.05)
     else:
         log(f"Brain 未在 {STARTUP_READY_SECONDS}s 内完成 Agent 初始化；终止本代并重试")
         _terminate_startup_child(proc)
-        return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+        return startup_return("ready_timeout", STARTUP_TIMEOUT_CODE)
     stop_logged = False
     try:
         while True:
             try:
-                return proc.wait(timeout=0.5), time.monotonic() - started
+                rc = proc.wait(timeout=0.5)
+                if capture is not None:
+                    capture.finish()
+                if startup_context is not None:
+                    _log_startup_event(
+                        "exit_after_ready", startup_context,
+                        time.monotonic() - (child_started or time.monotonic()),
+                        proc=proc,
+                        rc=rc,
+                        capture=capture,
+                        include_output=(rc != 0))
+                return rc, time.monotonic() - started
             except subprocess.TimeoutExpired:
                 if stop_requested() and not stop_logged:
                     log("收到全栈停止请求，等待大脑保存知识库并退出…")
@@ -725,7 +914,7 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait(timeout=5)
-        return 0, time.monotonic() - started
+        return startup_return("ctrl_c", 0, include_output=False)
 
 
 def main() -> int:
