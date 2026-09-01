@@ -106,3 +106,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/2局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/2局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.45 → 1.50（Boss 长战磨死（6回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.20 → 4.50（Boss 高血进场长战死（100%，6回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.00 → 6.50（Boss 高血进场长战死（6回合），缺口越深纠偏上限越高）；exploration_rate: 0.190 → 0.184（经验累积，探索衰减）
 - 生涯战绩：0/6 胜，当前目标进阶 0
+
+## 第 7 局复盘（2026-09-01 20:43）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, FINESSE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_AXIOM_RING, EQUILIBRIUM, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHROMATIC_SEQUENCE
+- 本局遗物：GORGET, WAR_PAINT, JUZU_BRACELET, STRAWBERRY, PLANISPHERE, HORN_CLEAT, AKABEKO, WHITE_BEAST_STATUE
+- 战斗记录：F22 Monster战 掉血4; F23 Monster战 掉血4; F27 Monster战 掉血0; F28 Elite战 掉血49; F31 Elite战 掉血5; F33 Boss战 掉血90｜竞速审计：T3判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_EVENT_LOOP(34分/3局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/2局)，VIVHITE_CARD_AXIOM_RING(34分/2局)，VIVHITE_CARD_CHIAROSCURO(34分/4局)，VIVHITE_CARD_ASTRAL_SEARCH(33分/4局)
+- 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/2局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/2局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.50 → 1.55（Boss 长战磨死（8回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 4.50 → 4.80（Boss 高血进场长战死（100%，8回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 6.50 → 7.00（Boss 高血进场长战死（8回合），缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.184 → 0.179（经验累积，探索衰减）
+- 生涯战绩：0/7 胜，当前目标进阶 0
