@@ -1,0 +1,204 @@
+{
+  "format_version": 1,
+  "kind": "xar_promo_project_config",
+  "project": {
+    "id": "vivhite-player-promo",
+    "title": "Vivhite — a mathematical magic-girl character for Slay the Spire 2"
+  },
+  "pipeline": {
+    "adapter": "vivhite",
+    "preset": "vivhite-player-10m"
+  },
+  "locales": {
+    "narration": "zh-CN",
+    "subtitles": [
+      "zh-CN",
+      "en"
+    ]
+  },
+  "constraints": {
+    "duration_limit_seconds": 1200
+  },
+  "chapters": [
+    {
+      "id": "identity",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "白绮：把数学写成魔法", "en": "Vivhite: mathematics as magic"},
+      "cues": [{
+        "id": "identity-001",
+        "narration": {
+          "zh-CN": "她是白绮，一位用魔法书写几何与星算的魔法师。",
+          "en": "This is Vivhite, a mage who writes geometry and star calculus as magic."
+        },
+        "subtitles": {
+          "zh-CN": "白绮：把数学写成魔法",
+          "en": "Vivhite: mathematics as magic"
+        }
+      }],
+      "artifact_ids": ["capture-s01-identity"]
+    },
+    {
+      "id": "loadout",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "从第一手牌开始", "en": "It starts with the opening hand"},
+      "cues": [{
+        "id": "loadout-001",
+        "narration": {
+          "zh-CN": "弦光投影、闭域映射、白绮的变身式和孤高冠冕，组成她的第一道证明。",
+            "en": "Luminous Projection, Closed Domain Mapping, Vivhite's Transformation, and Solitary Crown form the first proof."
+        },
+        "subtitles": {
+          "zh-CN": "起始牌组与孤高冠冕",
+          "en": "Starter deck and Solitary Crown"
+        }
+      }],
+      "artifact_ids": ["capture-s02-loadout"]
+    },
+    {
+      "id": "cough",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "謦欬：先付出生命", "en": "Cough: pay life first"},
+      "cues": [{
+        "id": "cough-001",
+        "narration": {
+          "zh-CN": "謦欬在效果发生前支付实际生命，但白绮不会因此跌到一点以下。",
+          "en": "Cough pays real life before the effect, while Vivhite never falls below one HP."
+        },
+        "subtitles": {
+          "zh-CN": "謦欬：生命是施法成本",
+          "en": "Cough: life is the casting cost"
+        }
+      }],
+      "artifact_ids": ["capture-s03-cough"]
+    },
+    {
+      "id": "margin",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "余裕：把差额变成防线", "en": "Margin: turn the difference into defense"},
+      "cues": [{
+        "id": "margin-001",
+        "narration": {
+          "zh-CN": "余裕按一比一抵扣謦欬，让一次冒险变成下一次防守的准备。",
+          "en": "Margin offsets Cough one for one, turning risk into the next defense."
+        },
+        "subtitles": {
+          "zh-CN": "余裕按一比一抵扣謦欬",
+          "en": "Margin offsets Cough one for one"
+        }
+      }],
+      "artifact_ids": ["capture-s04-margin"]
+    },
+    {
+      "id": "drain",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "汲取：伤害最终会回到你身上", "en": "Drain: damage comes back around"},
+      "cues": [{
+        "id": "drain-001",
+        "narration": {
+          "zh-CN": "汲取等待整张攻击结算，再把敌人真正失去的生命一次收回。",
+          "en": "Drain waits for the whole attack, then returns the enemy's actual loss at once."
+        },
+        "subtitles": {
+          "zh-CN": "汲取：按实际伤害统一回收",
+          "en": "Drain: recover actual damage once"
+        }
+      }],
+      "artifact_ids": ["capture-s05-drain"]
+    },
+    {
+      "id": "conservation-geometry",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "守恒几何", "en": "Conservation Geometry"},
+      "cues": [{
+        "id": "conservation-geometry-001",
+        "narration": {
+          "zh-CN": "守恒几何把生命、格挡和能量放进同一张可计算的图。",
+          "en": "Conservation Geometry places life, block, and energy on one calculable diagram."
+        },
+        "subtitles": {
+          "zh-CN": "守恒几何：资源可以互相证明",
+          "en": "Conservation Geometry: resources prove each other"
+        }
+      }],
+      "artifact_ids": ["capture-s06-conservation-geometry"]
+    },
+    {
+      "id": "recursive-star-calculus",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "递归星算", "en": "Recursive Star Calculus"},
+      "cues": [{
+        "id": "recursive-star-calculus-001",
+        "narration": {
+          "zh-CN": "递归星算让每一次增维都成为下一次计算的起点。",
+          "en": "Recursive Star Calculus turns every dimension up into the next calculation's starting point."
+        },
+        "subtitles": {
+          "zh-CN": "递归星算：增长也是输入",
+          "en": "Recursive Star Calculus: growth is input"
+        }
+      }],
+      "artifact_ids": ["capture-s07-recursive-star-calculus"]
+    },
+    {
+      "id": "crimson-integral",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "绯彩积分", "en": "Crimson Integral"},
+      "cues": [{
+        "id": "crimson-integral-001",
+        "narration": {
+          "zh-CN": "绯彩积分把汲取、抽牌与终结压缩成一条绯色的积分路径。",
+          "en": "Crimson Integral compresses Drain, draw, and termination into one scarlet path."
+        },
+        "subtitles": {
+          "zh-CN": "绯彩积分：把伤害变成循环",
+          "en": "Crimson Integral: turn damage into a loop"
+        }
+      }],
+      "artifact_ids": ["capture-s08-crimson-integral"]
+    },
+    {
+      "id": "unified-field",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "统一场论", "en": "Unified Field Theory"},
+      "cues": [{
+        "id": "unified-field-001",
+        "narration": {
+          "zh-CN": "统一场论把不同花色的路径接在一起，寻找同一个闭环。",
+          "en": "Unified Field Theory joins the different suits and searches for one closed loop."
+        },
+        "subtitles": {
+          "zh-CN": "统一场论：跨体系闭环",
+          "en": "Unified Field Theory: a cross-system loop"
+        }
+      }],
+      "artifact_ids": ["capture-s09-unified-field"]
+    },
+    {
+      "id": "finale",
+      "type": "gameplay",
+      "state": "planned",
+      "title": {"zh-CN": "把证明带上尖塔", "en": "Take the proof up the Spire"},
+      "cues": [{
+        "id": "finale-001",
+        "narration": {
+          "zh-CN": "六十一张专属卡牌、三套构筑，以及一个仍在生长的魔法师。",
+          "en": "Sixty-one signature cards, three archetypes, and a mage that keeps growing."
+        },
+        "subtitles": {
+          "zh-CN": "白绮：61 张卡，3 套构筑",
+          "en": "Vivhite: 61 cards, 3 archetypes"
+        }
+      }],
+      "artifact_ids": ["capture-s10-finale"]
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "kind": "vivhite_promo_claims",
+  "project_id": "vivhite-player-promo",
+  "claims": [
+    {
+      "claim_id": "claim-character-identity",
+      "category": "identity",
+      "text": {
+        "zh-CN": "白绮是使用魔法的独立角色，而不是套用战士骨骼的皮肤。",
+        "en": "Vivhite is an independent magic-user, not a skin over the warrior rig."
+      },
+      "shot_ids": ["S01-identity"],
+      "evidence_roles": ["frame.begin", "frame.end", "runtime.manifest"],
+      "validator_id": "vivhite.identity.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Entry.cs", "Vivhite/Vivhite.json"]
+    },
+    {
+      "claim_id": "claim-starter-loadout",
+      "category": "content",
+      "text": {
+        "zh-CN": "白绮拥有弦光投影、闭域映射和白绮的变身式起始牌组，以及孤高冠冕。",
+        "en": "Vivhite starts with Luminous Projection, Closed Domain Mapping, Vivhite's Transformation, and Solitary Crown."
+      },
+      "shot_ids": ["S02-loadout"],
+      "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr"],
+      "validator_id": "vivhite.catalog.starter.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Characters/Vivhite.cs", "Vivhite/VivhiteCode/Relics/SolitaryCrownRelic.cs"]
+    },
+    {
+      "claim_id": "claim-cough-payment",
+      "category": "mechanic",
+      "text": {
+        "zh-CN": "謦欬在卡牌效果前支付未被阻挡的实际生命，且不会将白绮降到一点以下。",
+        "en": "Cough pays actual unblocked life before the card effect and never reduces Vivhite below one HP."
+      },
+      "shot_ids": ["S03-cough"],
+      "evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"],
+      "validator_id": "vivhite.mechanics.cough.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Core/LifeCalculation.cs", "Vivhite.Tests/Mechanics/LifeCalculationAcceptanceTests.cs"]
+    },
+    {
+      "claim_id": "claim-margin-offset",
+      "category": "mechanic",
+      "text": {
+        "zh-CN": "余裕按一比一抵扣下一次謦欬。",
+        "en": "Margin offsets the next Cough one for one."
+      },
+      "shot_ids": ["S04-margin"],
+      "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"],
+      "validator_id": "vivhite.mechanics.margin.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Core/LifeCalculation.cs", "Vivhite/VivhiteCode/Core/InfiniteMargin.cs"]
+    },
+    {
+      "claim_id": "claim-drain-settlement",
+      "category": "mechanic",
+      "text": {
+        "zh-CN": "汲取在整张攻击结算后，按敌人的实际掉血统一回复。",
+        "en": "Drain resolves after the whole attack and heals from the enemy's actual damage taken."
+      },
+      "shot_ids": ["S05-drain"],
+      "evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"],
+      "validator_id": "vivhite.mechanics.drain.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Core/DrainRecovery.cs", "Vivhite.Tests/Mechanics/DrainAcceptanceTests.cs"]
+    },
+    {
+      "claim_id": "claim-conservation-geometry",
+      "category": "archetype",
+      "text": {
+        "zh-CN": "守恒几何围绕生命、格挡和能量的资源转换展开。",
+        "en": "Conservation Geometry revolves around converting life, block, and energy."
+      },
+      "shot_ids": ["S06-conservation-geometry"],
+      "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"],
+      "validator_id": "vivhite.archetype.conservation.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Cards"]
+    },
+    {
+      "claim_id": "claim-recursive-star-calculus",
+      "category": "archetype",
+      "text": {
+        "zh-CN": "递归星算把增维后的状态作为后续计算的输入。",
+        "en": "Recursive Star Calculus feeds dimension-up state into later calculations."
+      },
+      "shot_ids": ["S07-recursive-star-calculus"],
+      "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"],
+      "validator_id": "vivhite.archetype.recursive.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Core/DimensionUp.cs", "Vivhite.Tests/Mechanics/GeneratedCardGrowthAcceptanceTests.cs"]
+    },
+    {
+      "claim_id": "claim-crimson-integral",
+      "category": "archetype",
+      "text": {
+        "zh-CN": "绯彩积分将汲取、抽牌和终结连接为一条循环路径。",
+        "en": "Crimson Integral connects Drain, draw, and termination into a loop."
+      },
+      "shot_ids": ["S08-crimson-integral"],
+      "evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"],
+      "validator_id": "vivhite.archetype.crimson.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Core/CrimsonTransformationRitual.cs", "Vivhite.Tests/Mechanics/VivhitesCrimsonTransformationRitualAcceptanceTests.cs"]
+    },
+    {
+      "claim_id": "claim-unified-field",
+      "category": "archetype",
+      "text": {
+        "zh-CN": "统一场论允许不同体系在同一局中形成混合闭环。",
+        "en": "Unified Field Theory lets different systems form a mixed loop in one run."
+      },
+      "shot_ids": ["S09-unified-field"],
+      "evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after", "runtime.manifest"],
+      "validator_id": "vivhite.archetype.unified.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite/VivhiteCode/Cards", "Vivhite.Tests/Mechanics/CrossSuitDrainAcceptanceTests.cs"]
+    },
+    {
+      "claim_id": "claim-catalog-size",
+      "category": "content",
+      "text": {
+        "zh-CN": "当前白绮内容包含六十一张专属卡牌和三套主要构筑方向。",
+        "en": "The current Vivhite content has sixty-one signature cards and three main archetypes."
+      },
+      "shot_ids": ["S10-finale"],
+      "evidence_roles": ["frame.begin", "frame.end", "runtime.manifest"],
+      "validator_id": "vivhite.catalog.count.v1",
+      "status": "pending",
+      "source_refs": ["Vivhite.Tests/ApprovedCardCatalog.cs", "Vivhite.Tests/CardCatalogAcceptanceTests.cs"]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "kind": "vivhite_promo_storyboard",
+  "title": "Vivhite player promo — proof before spectacle",
+  "target_duration_seconds": 600,
+  "canvas": {"width": 1920, "height": 1080, "fps": 60, "orientation": "landscape"},
+  "shots": [
+    {
+      "shot_id": "S01-identity",
+      "chapter_id": "identity",
+      "cue_id": "identity-001",
+      "span_id": "identity",
+      "draft_duration_seconds": 45,
+      "provenance": "staged",
+      "required_evidence_roles": ["frame.begin", "frame.end", "runtime.manifest"]
+    },
+    {
+      "shot_id": "S02-loadout",
+      "chapter_id": "loadout",
+      "cue_id": "loadout-001",
+      "span_id": "loadout",
+      "draft_duration_seconds": 50,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr"]
+    },
+    {
+      "shot_id": "S03-cough",
+      "chapter_id": "cough",
+      "cue_id": "cough-001",
+      "span_id": "cough",
+      "draft_duration_seconds": 60,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"]
+    },
+    {
+      "shot_id": "S04-margin",
+      "chapter_id": "margin",
+      "cue_id": "margin-001",
+      "span_id": "margin",
+      "draft_duration_seconds": 55,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"]
+    },
+    {
+      "shot_id": "S05-drain",
+      "chapter_id": "drain",
+      "cue_id": "drain-001",
+      "span_id": "drain",
+      "draft_duration_seconds": 65,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"]
+    },
+    {
+      "shot_id": "S06-conservation-geometry",
+      "chapter_id": "conservation-geometry",
+      "cue_id": "conservation-geometry-001",
+      "span_id": "conservation-geometry",
+      "draft_duration_seconds": 60,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"]
+    },
+    {
+      "shot_id": "S07-recursive-star-calculus",
+      "chapter_id": "recursive-star-calculus",
+      "cue_id": "recursive-star-calculus-001",
+      "span_id": "recursive-star-calculus",
+      "draft_duration_seconds": 60,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after"]
+    },
+    {
+      "shot_id": "S08-crimson-integral",
+      "chapter_id": "crimson-integral",
+      "cue_id": "crimson-integral-001",
+      "span_id": "crimson-integral",
+      "draft_duration_seconds": 60,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "state.before", "state.after", "action.receipt"]
+    },
+    {
+      "shot_id": "S09-unified-field",
+      "chapter_id": "unified-field",
+      "cue_id": "unified-field-001",
+      "span_id": "unified-field",
+      "draft_duration_seconds": 75,
+      "provenance": "natural",
+      "required_evidence_roles": ["frame.begin", "frame.end", "tooltip.ocr", "state.after", "runtime.manifest"]
+    },
+    {
+      "shot_id": "S10-finale",
+      "chapter_id": "finale",
+      "cue_id": "finale-001",
+      "span_id": "finale",
+      "draft_duration_seconds": 70,
+      "provenance": "staged",
+      "required_evidence_roles": ["frame.begin", "frame.end", "runtime.manifest"]
+    }
+  ],
+  "variants": {
+    "hero-60": {
+      "duration_limit_seconds": 60,
+      "shot_ids": ["S01-identity", "S03-cough", "S05-drain", "S09-unified-field", "S10-finale"]
+    },
+    "cut-30": {
+      "duration_limit_seconds": 30,
+      "shot_ids": ["S01-identity", "S03-cough", "S10-finale"]
+    },
+    "cut-15": {
+      "duration_limit_seconds": 15,
+      "shot_ids": ["S01-identity", "S10-finale"]
+    }
+  }
+}

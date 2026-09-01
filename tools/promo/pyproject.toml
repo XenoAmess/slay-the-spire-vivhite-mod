@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vivhite-promo-plugin"
+version = "0.1.0"
+description = "Vivhite project adapter and preset for xar-promo-toolchain"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+xar = ["xar-promo-toolchain==0.2.0"]
+
+[project.entry-points."xar_promo.adapters"]
+vivhite = "vivhite_promo.adapter:create_adapter"
+
+[project.entry-points."xar_promo.presets"]
+vivhite-player-10m = "vivhite_promo.preset:create_preset"
+
+[project.entry-points."xar_promo.composers"]
+vivhite-player-10m = "vivhite_promo.pipeline:compose"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vivhite_promo*"]

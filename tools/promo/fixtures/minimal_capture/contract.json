@@ -1,0 +1,138 @@
+{
+  "format_version": 1,
+  "kind": "vivhite_promo_capture",
+  "contract_version": 1,
+  "mode": "vivhite-promo",
+  "producer_id": "vivhite-offline-fixture-v1",
+  "run_id": "minimal-capture-fixture",
+  "capture_receipt": {
+    "producer": {"id": "vivhite-offline-fixture-v1", "version": "1"},
+    "raw_capture": {
+      "path": "media/raw-gameplay.mp4",
+      "bytes": 93,
+      "sha256": "02F153D3F35229C95193833CA102F1D1510691F19B008D240B388A3BFA7BF318",
+      "media_type": "video/mp4"
+    },
+    "duration_seconds": 600,
+    "timebase": {"unit": "seconds", "fps": 60},
+    "marks": [
+      {"label": "recording_started_after_gameplay_hud", "seconds": 0},
+      {"label": "S01-identity_begin", "seconds": 0},
+      {"label": "S01-identity_end", "seconds": 45},
+      {"label": "S02-loadout_begin", "seconds": 45},
+      {"label": "S02-loadout_end", "seconds": 95},
+      {"label": "S03-cough_begin", "seconds": 95},
+      {"label": "S03-cough_end", "seconds": 155},
+      {"label": "S04-margin_begin", "seconds": 155},
+      {"label": "S04-margin_end", "seconds": 210},
+      {"label": "S05-drain_begin", "seconds": 210},
+      {"label": "S05-drain_end", "seconds": 275},
+      {"label": "S06-conservation-geometry_begin", "seconds": 275},
+      {"label": "S06-conservation-geometry_end", "seconds": 335},
+      {"label": "S07-recursive-star-calculus_begin", "seconds": 335},
+      {"label": "S07-recursive-star-calculus_end", "seconds": 395},
+      {"label": "S08-crimson-integral_begin", "seconds": 395},
+      {"label": "S08-crimson-integral_end", "seconds": 455},
+      {"label": "S09-unified-field_begin", "seconds": 455},
+      {"label": "S09-unified-field_end", "seconds": 530},
+      {"label": "S10-finale_begin", "seconds": 530},
+      {"label": "S10-finale_end", "seconds": 600},
+      {"label": "recording_stop_requested", "seconds": 600}
+    ],
+    "clean_spans": [
+      {"id": "identity", "begin_mark": "S01-identity_begin", "end_mark": "S01-identity_end", "begin_seconds": 0, "end_seconds": 45, "provenance": "staged", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "runtime.manifest", "artifact": {"path": "evidence/runtime-manifest.txt", "bytes": 71, "sha256": "33F0B57C21BE40D339A5869F1A26EA232FEF649E5D7CA5210C92A459A11DBA47", "media_type": "text/plain"}}
+      ]},
+      {"id": "loadout", "begin_mark": "S02-loadout_begin", "end_mark": "S02-loadout_end", "begin_seconds": 45, "end_seconds": 95, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "tooltip.ocr", "artifact": {"path": "evidence/tooltip-ocr.txt", "bytes": 60, "sha256": "15F9BFE9E515DE7B351907AB5EC0308285309D3C64BB88D009C0B18EE452A6A0", "media_type": "text/plain"}}
+      ]},
+      {"id": "cough", "begin_mark": "S03-cough_begin", "end_mark": "S03-cough_end", "begin_seconds": 95, "end_seconds": 155, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "state.before", "artifact": {"path": "evidence/state-before.txt", "bytes": 63, "sha256": "AA485AFB61E5306822BB35E2EDF3BB352AD1FF51A1EE608142705D7FD5BE9A4A", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}},
+        {"role": "action.receipt", "artifact": {"path": "evidence/action-receipt.txt", "bytes": 67, "sha256": "9F7B83225CCF9FC26A1C80AAAD67DFF09F41CFEBD3AF03535597F6FD7CAEA719", "media_type": "text/plain"}}
+      ]},
+      {"id": "margin", "begin_mark": "S04-margin_begin", "end_mark": "S04-margin_end", "begin_seconds": 155, "end_seconds": 210, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "tooltip.ocr", "artifact": {"path": "evidence/tooltip-ocr.txt", "bytes": 60, "sha256": "15F9BFE9E515DE7B351907AB5EC0308285309D3C64BB88D009C0B18EE452A6A0", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}}
+      ]},
+      {"id": "drain", "begin_mark": "S05-drain_begin", "end_mark": "S05-drain_end", "begin_seconds": 210, "end_seconds": 275, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "state.before", "artifact": {"path": "evidence/state-before.txt", "bytes": 63, "sha256": "AA485AFB61E5306822BB35E2EDF3BB352AD1FF51A1EE608142705D7FD5BE9A4A", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}},
+        {"role": "action.receipt", "artifact": {"path": "evidence/action-receipt.txt", "bytes": 67, "sha256": "9F7B83225CCF9FC26A1C80AAAD67DFF09F41CFEBD3AF03535597F6FD7CAEA719", "media_type": "text/plain"}}
+      ]},
+      {"id": "conservation-geometry", "begin_mark": "S06-conservation-geometry_begin", "end_mark": "S06-conservation-geometry_end", "begin_seconds": 275, "end_seconds": 335, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "tooltip.ocr", "artifact": {"path": "evidence/tooltip-ocr.txt", "bytes": 60, "sha256": "15F9BFE9E515DE7B351907AB5EC0308285309D3C64BB88D009C0B18EE452A6A0", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}}
+      ]},
+      {"id": "recursive-star-calculus", "begin_mark": "S07-recursive-star-calculus_begin", "end_mark": "S07-recursive-star-calculus_end", "begin_seconds": 335, "end_seconds": 395, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "tooltip.ocr", "artifact": {"path": "evidence/tooltip-ocr.txt", "bytes": 60, "sha256": "15F9BFE9E515DE7B351907AB5EC0308285309D3C64BB88D009C0B18EE452A6A0", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}}
+      ]},
+      {"id": "crimson-integral", "begin_mark": "S08-crimson-integral_begin", "end_mark": "S08-crimson-integral_end", "begin_seconds": 395, "end_seconds": 455, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "state.before", "artifact": {"path": "evidence/state-before.txt", "bytes": 63, "sha256": "AA485AFB61E5306822BB35E2EDF3BB352AD1FF51A1EE608142705D7FD5BE9A4A", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}},
+        {"role": "action.receipt", "artifact": {"path": "evidence/action-receipt.txt", "bytes": 67, "sha256": "9F7B83225CCF9FC26A1C80AAAD67DFF09F41CFEBD3AF03535597F6FD7CAEA719", "media_type": "text/plain"}}
+      ]},
+      {"id": "unified-field", "begin_mark": "S09-unified-field_begin", "end_mark": "S09-unified-field_end", "begin_seconds": 455, "end_seconds": 530, "provenance": "natural", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "tooltip.ocr", "artifact": {"path": "evidence/tooltip-ocr.txt", "bytes": 60, "sha256": "15F9BFE9E515DE7B351907AB5EC0308285309D3C64BB88D009C0B18EE452A6A0", "media_type": "text/plain"}},
+        {"role": "state.after", "artifact": {"path": "evidence/state-after.txt", "bytes": 62, "sha256": "24DD7171C2412085E3DCE1EADB0F1FB5E6DA2AC38FDADD572962977933880981", "media_type": "text/plain"}},
+        {"role": "runtime.manifest", "artifact": {"path": "evidence/runtime-manifest.txt", "bytes": 71, "sha256": "33F0B57C21BE40D339A5869F1A26EA232FEF649E5D7CA5210C92A459A11DBA47", "media_type": "text/plain"}}
+      ]},
+      {"id": "finale", "begin_mark": "S10-finale_begin", "end_mark": "S10-finale_end", "begin_seconds": 530, "end_seconds": 600, "provenance": "staged", "evidence": [
+        {"role": "frame.begin", "artifact": {"path": "evidence/frame-begin.txt", "bytes": 60, "sha256": "0625DB3449AE7A469089E3241BEDA6E8AB6C52564F7EF98A46E58166631AB51A", "media_type": "text/plain"}},
+        {"role": "frame.end", "artifact": {"path": "evidence/frame-end.txt", "bytes": 58, "sha256": "B74939D88314373BC2A37251CE4CA31223BC4067D2BB52C73C768F4636A2F569", "media_type": "text/plain"}},
+        {"role": "runtime.manifest", "artifact": {"path": "evidence/runtime-manifest.txt", "bytes": 71, "sha256": "33F0B57C21BE40D339A5869F1A26EA232FEF649E5D7CA5210C92A459A11DBA47", "media_type": "text/plain"}}
+      ]}
+    ],
+    "overlap_policy": "forbid"
+  },
+  "project_context": {
+    "game_version": "0.111.0",
+    "mod_id": "Vivhite",
+    "mod_version": "0.2.1",
+    "pck_name": "Vivhite",
+    "pck_version": "0.2.1",
+    "ritsu_lib_id": "STS2-RitsuLib",
+    "ritsu_lib_version": "0.5.14",
+    "renderer": "vulkan",
+    "resolution": [1920, 1080],
+    "fps": 60,
+    "overlays_absent": true,
+    "loading_absent": true,
+    "console_absent": true
+  },
+  "shot_bindings": [
+    {"shot_id": "S01-identity", "span_id": "identity"},
+    {"shot_id": "S02-loadout", "span_id": "loadout"},
+    {"shot_id": "S03-cough", "span_id": "cough"},
+    {"shot_id": "S04-margin", "span_id": "margin"},
+    {"shot_id": "S05-drain", "span_id": "drain"},
+    {"shot_id": "S06-conservation-geometry", "span_id": "conservation-geometry"},
+    {"shot_id": "S07-recursive-star-calculus", "span_id": "recursive-star-calculus"},
+    {"shot_id": "S08-crimson-integral", "span_id": "crimson-integral"},
+    {"shot_id": "S09-unified-field", "span_id": "unified-field"},
+    {"shot_id": "S10-finale", "span_id": "finale"}
+  ],
+  "audio_stems": [
+    {"stem_id": "game", "artifact": {"path": "audio/game.wav", "bytes": 79, "sha256": "9654BB9E9A233C422CA6DF194F465E44DBFFEB12AFDE3BAE73526A9EA2D8AA22", "media_type": "audio/wav"}},
+    {"stem_id": "sfx", "artifact": {"path": "audio/sfx.wav", "bytes": 78, "sha256": "1667FFA1A5A10E0DC2B627889314EF89A53397CA36FCB4BA1CCF554B3DBC9154", "media_type": "audio/wav"}}
+  ]
+}

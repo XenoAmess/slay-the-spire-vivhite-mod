@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vivhite:promo:capture:v1",
+  "title": "Vivhite promotional capture contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "kind", "contract_version", "mode", "producer_id", "run_id", "capture_receipt", "project_context", "shot_bindings"],
+  "properties": {
+    "format_version": {"const": 1},
+    "kind": {"const": "vivhite_promo_capture"},
+    "contract_version": {"const": 1},
+    "mode": {"const": "vivhite-promo"},
+    "producer_id": {"$ref": "#/$defs/id"},
+    "run_id": {"$ref": "#/$defs/id"},
+    "capture_receipt": {"$ref": "#/$defs/receipt"},
+    "project_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["game_version", "mod_id", "mod_version", "pck_name", "pck_version", "ritsu_lib_id", "ritsu_lib_version", "renderer", "resolution", "fps", "overlays_absent", "loading_absent", "console_absent"],
+      "properties": {
+        "game_version": {"type": "string", "minLength": 1},
+        "mod_id": {"const": "Vivhite"},
+        "mod_version": {"type": "string", "minLength": 1},
+        "pck_name": {"const": "Vivhite"},
+        "pck_version": {"type": "string", "minLength": 1},
+        "ritsu_lib_id": {"const": "STS2-RitsuLib"},
+        "ritsu_lib_version": {"const": "0.5.14"},
+        "renderer": {"const": "vulkan"},
+        "resolution": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}], "items": false},
+        "fps": {"type": "integer", "minimum": 1},
+        "overlays_absent": {"const": true},
+        "loading_absent": {"const": true},
+        "console_absent": {"const": true}
+      }
+    },
+    "shot_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["shot_id", "span_id"],
+        "properties": {"shot_id": {"$ref": "#/$defs/id"}, "span_id": {"$ref": "#/$defs/id"}}
+      }
+    },
+    "audio_stems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stem_id", "artifact"],
+        "properties": {
+          "stem_id": {"$ref": "#/$defs/id"},
+          "artifact": {"$ref": "#/$defs/file"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$)).+"},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+        "media_type": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {"role": {"$ref": "#/$defs/id"}, "artifact": {"$ref": "#/$defs/file"}}
+    },
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "begin_mark", "end_mark", "provenance", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "begin_mark": {"$ref": "#/$defs/id"},
+        "end_mark": {"$ref": "#/$defs/id"},
+        "begin_seconds": {"type": "number", "minimum": 0},
+        "end_seconds": {"type": "number", "minimum": 0},
+        "provenance": {"enum": ["natural", "staged"]},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "raw_capture", "duration_seconds", "timebase", "marks", "clean_spans", "overlap_policy"],
+      "properties": {
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version"],
+          "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"type": "string", "minLength": 1}}
+        },
+        "raw_capture": {"$ref": "#/$defs/file"},
+        "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "timebase": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unit", "fps"],
+          "properties": {"unit": {"const": "seconds"}, "fps": {"type": "integer", "minimum": 1}}
+        },
+        "marks": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "seconds"],
+            "properties": {"label": {"$ref": "#/$defs/id"}, "seconds": {"type": "number", "minimum": 0}}
+          }
+        },
+        "clean_spans": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/span"}},
+        "overlap_policy": {"enum": ["forbid", "allow"]}
+      }
+    }
+  }
+}
