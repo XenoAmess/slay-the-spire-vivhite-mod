@@ -1,0 +1,4 @@
+# Capture fixtures are content-addressed test inputs. Preserve their exact
+# bytes on Windows instead of allowing core.autocrlf to rewrite synthetic media
+# or evidence newlines and invalidate the declared SHA-256 values.
+fixtures/** -text
