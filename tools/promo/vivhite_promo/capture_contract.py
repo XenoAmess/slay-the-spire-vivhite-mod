@@ -87,6 +87,15 @@ def _sha(value: Any, context: str) -> str:
 
 def _relative(value: Any, context: str) -> str:
     raw = _text(value, context)
+    # Receipt paths are portable JSON data, not host-native command-line
+    # strings.  Reject every C0 control character (and DEL) before path
+    # normalization; otherwise a newline/tab can be hidden in a filename and
+    # make the serialized contract differ from what operators review.  This
+    # mirrors the path hardening in the bundled JSON schema and xAR receipt.
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in raw):
+        raise CaptureContractError(
+            f"{context} must not contain control characters"
+        )
     if "\\" in raw:
         raise CaptureContractError(f"{context} must use portable '/' separators")
     path = PurePosixPath(raw)
