@@ -7,7 +7,7 @@
  "ascension": 0,
  "started_at": "2026-09-01 17:53:15",
  "victory": false,
- "in_progress": true,
+ "in_progress": false,
  "floor": 7,
  "decisions": [
   {
@@ -3594,7 +3594,7 @@
   ]
  ],
  "human_assisted": false,
- "excluded_from_learning": false,
+ "excluded_from_learning": true,
  "deck_snapshot": [
   {
    "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
@@ -3841,5 +3841,94 @@
    "removed": [],
    "upgraded": []
   }
- ]
+ ],
+ "abandoned": true,
+ "orphaned": true,
+ "lost_native_save": true,
+ "native_save": null,
+ "orphan_release": {
+  "state": "released",
+  "reason": "no_native_save_no_continue",
+  "evidence": {
+   "version": 1,
+   "reason": "no_native_save_no_continue",
+   "run_id": "TTT6HQGV7NAS",
+   "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+   "observed_at": "2026-09-01T10:27:44.987Z",
+   "api": {
+    "consecutive": true,
+    "samples": [
+     {
+      "screen": "MAIN_MENU",
+      "run_id": "run_unknown",
+      "run_empty": true,
+      "continue_run": false,
+      "sequence": 1,
+      "observed_at": "2026-09-01T10:27:36.850Z",
+      "state_version": 13
+     },
+     {
+      "screen": "MAIN_MENU",
+      "run_id": "run_unknown",
+      "run_empty": true,
+      "continue_run": false,
+      "sequence": 2,
+      "observed_at": "2026-09-01T10:27:37.962Z",
+      "state_version": 13
+     }
+    ],
+    "latest_state_version": 13
+   },
+   "native": {
+    "probe_complete": true,
+    "save": {
+     "status": "absent"
+    },
+    "history": {
+     "status": "no_matching_run"
+    },
+    "stmp": {
+     "status": "absent"
+    },
+    "save_match": false,
+    "history_match": false,
+    "read_errors": [],
+    "checked_paths": [
+     {
+      "kind": "current_run.save",
+      "status": "absent",
+      "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\current_run.save",
+      "bytes": 0
+     },
+     {
+      "kind": "current_run.save.backup",
+      "status": "absent",
+      "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\current_run.save.backup",
+      "bytes": 0
+     },
+     {
+      "kind": "history",
+      "status": "no_matching_run",
+      "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\history",
+      "bytes": 40131209
+     },
+     {
+      "kind": "stmp",
+      "status": "absent",
+      "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\history\\*.stmp",
+      "bytes": 0
+     }
+    ],
+    "probe_observed_at": "2026-09-01T10:27:44.987Z",
+    "api_state_version": 13
+   }
+  },
+  "attempts": 1,
+  "prepared_at": "2026-09-01T18:28:37+0800"
+ },
+ "native_save_wait": {
+  "state": "orphan_released",
+  "old_run_id": "TTT6HQGV7NAS"
+ },
+ "ended_at": "2026-09-01 18:28:37"
 }
