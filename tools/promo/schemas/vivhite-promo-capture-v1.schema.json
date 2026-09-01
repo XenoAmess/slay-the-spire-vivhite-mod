@@ -16,7 +16,7 @@
     "project_context": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["game_version", "mod_id", "mod_version", "pck_name", "pck_version", "ritsu_lib_id", "ritsu_lib_version", "renderer", "resolution", "fps", "overlays_absent", "loading_absent", "console_absent"],
+      "required": ["game_version", "mod_id", "mod_version", "pck_name", "pck_version", "ritsu_lib_id", "ritsu_lib_version", "renderer", "resolution", "fps", "overlays_absent", "loading_absent", "console_absent", "native_debug_surface_hidden", "native_debug_surface_method", "native_debug_surface_evidence_role"],
       "properties": {
         "game_version": {"type": "string", "minLength": 1},
         "mod_id": {"const": "Vivhite"},
@@ -28,9 +28,12 @@
         "renderer": {"const": "vulkan"},
         "resolution": {"type": "array", "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}], "items": false},
         "fps": {"type": "integer", "minimum": 1},
-        "overlays_absent": {"const": true},
+        "overlays_absent": {"const": true, "description": "No third-party or mod-provided overlay payload is present. This does not describe STS2's native release/debug labels."},
         "loading_absent": {"const": true},
-        "console_absent": {"const": true}
+        "console_absent": {"const": true},
+        "native_debug_surface_hidden": {"type": "boolean", "description": "Explicit visual/runtime assertion that STS2's native release/version/MODDED surface is hidden. Omission means unknown and is rejected by the production adapter."},
+        "native_debug_surface_method": {"const": "vivhite-promo-capture-surface-v1", "description": "Fixed identifier for the approved capture-only method used to hide the native debug surface."},
+        "native_debug_surface_evidence_role": {"$ref": "#/$defs/id", "description": "Evidence role in capture_receipt.clean_spans whose hash-bound artifact records the runtime/visual assertion."}
       }
     },
     "shot_bindings": {

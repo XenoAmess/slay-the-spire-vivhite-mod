@@ -759,6 +759,19 @@ def _project_context(value: Any) -> Mapping[str, object]:
     for key in ("overlays_absent", "loading_absent", "console_absent"):
         if row[key] is not True:
             raise CaptureContractError(f"project_context.{key} must be true")
+    # ``overlays_absent`` deliberately covers only third-party/mod overlay
+    # payloads.  STS2 also draws a native release/version/"MODDED" surface;
+    # that surface needs its own explicit, project-side assertion.  Keep the
+    # fields optional at the v1 parser boundary so older receipts remain
+    # readable, while the Vivhite adapter's production gate requires them.
+    native_hidden = row.get("native_debug_surface_hidden")
+    if native_hidden is not None and not isinstance(native_hidden, bool):
+        raise CaptureContractError(
+            "project_context.native_debug_surface_hidden must be boolean when present"
+        )
+    for key in ("native_debug_surface_method", "native_debug_surface_evidence_role"):
+        if row.get(key) is not None:
+            _id(row[key], f"project_context.{key}")
     return row
 
 
@@ -873,6 +886,18 @@ def validate_capture_contract(
         raise CaptureContractError("root producer_id does not match capture_receipt producer")
     context = _project_context(document.get("project_context"))
     bindings = _shot_bindings(document.get("shot_bindings"), receipt.clean_spans)
+    native_evidence_role = context.get("native_debug_surface_evidence_role")
+    if native_evidence_role is not None:
+        available_roles = {
+            evidence.role
+            for span in receipt.clean_spans
+            for evidence in span.evidence
+        }
+        if native_evidence_role not in available_roles:
+            raise CaptureContractError(
+                "project_context.native_debug_surface_evidence_role must reference "
+                "an evidence role in capture_receipt.clean_spans"
+            )
     audio_stems = _audio_stems(
         document.get("audio_stems"), root=root, verify_files=verify_files
     )

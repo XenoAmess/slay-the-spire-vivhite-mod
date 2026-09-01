@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "vivhite_promo_capture_settings",
+  "native_debug_surface": {
+    "required": true,
+    "method": "vivhite-promo-capture-surface-v1",
+    "environment_variable": "VIVHITE_PROMO_CAPTURE",
+    "enabled_value": "1",
+    "evidence_role": "runtime.manifest"
+  },
+  "obs": {
+    "version": "32.2.2",
+    "game_capture_window": "Slay the Spire 2:Engine:SlayTheSpire2.exe",
+    "capture_mode": "window",
+    "capture_cursor": false,
+    "capture_overlays": false,
+    "capture_audio": false,
+    "anti_cheat_hook": true,
+    "hook_rate": 1,
+    "monitor_capture_in_active_scene": false,
+    "audio_source": "global-wasapi-output",
+    "microphone": "disabled",
+    "use_device_timing": false,
+    "video": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "encoder": "nvenc",
+      "container": "mkv"
+    },
+    "audio": {
+      "codec": "aac",
+      "bitrate_kbps": 192,
+      "sample_rate_hz": 48000,
+      "channels": 2,
+      "tracks": 1
+    }
+  },
+  "ffmpeg": {
+    "directory": "C:/ffmpeg/bin",
+    "lock_file": "ffmpeg-lock.json",
+    "required_filters": ["tpad"]
+  },
+  "soundtrack": {
+    "bgm": "disabled",
+    "narration_voice": "zh-CN-XiaoxiaoNeural"
+  }
+}

@@ -25,6 +25,7 @@ PROMO_ROOT = ROOT / "tools" / "promo"
 SCHEMA_PATH = PROMO_ROOT / "schemas" / "vivhite-promo-capture-v1.schema.json"
 PROJECT_PATH = PROMO_ROOT / "project.json"
 PRESET_PATH = PROMO_ROOT / "preset.json"
+CAPTURE_SETTINGS_PATH = PROMO_ROOT / "capture-settings.json"
 FFMPEG_LOCK_PATH = PROMO_ROOT / "ffmpeg-lock.json"
 STORYBOARD_PATH = PROMO_ROOT / "storyboard.json"
 CLAIMS_PATH = PROMO_ROOT / "claims" / "claims.json"
@@ -233,6 +234,14 @@ class VivhitePromoContractTests(unittest.TestCase):
             "capture_receipt" in required or {"media", "marks", "clean_spans", "evidence"}.issubset(required),
             f"schema must expose either capture_receipt or direct receipt fields: {sorted(required)}",
         )
+        context_properties = self.schema["properties"]["project_context"]["properties"]
+        self.assertIn("native_debug_surface_hidden", context_properties)
+        self.assertIn("native_debug_surface_method", context_properties)
+        self.assertIn("native_debug_surface_evidence_role", context_properties)
+        self.assertIn(
+            "third-party",
+            context_properties["overlays_absent"]["description"],
+        )
 
     def test_fixture_artifacts_are_relative_and_hash_bound(self) -> None:
         self.assertEqual(self.contract.get("kind"), "vivhite_promo_capture")
@@ -267,6 +276,17 @@ class VivhitePromoContractTests(unittest.TestCase):
         self.assertEqual(context.get("fps"), 60)
         for field in ("overlays_absent", "loading_absent", "console_absent"):
             self.assertIs(context.get(field), True, f"{field} must be true")
+        self.assertIs(context.get("native_debug_surface_hidden"), True)
+        self.assertEqual(
+            context.get("native_debug_surface_method"),
+            "vivhite-promo-capture-surface-v1",
+        )
+        evidence_roles = {
+            evidence["role"]
+            for span in _receipt_payload(self.contract)["clean_spans"]
+            for evidence in span["evidence"]
+        }
+        self.assertIn(context.get("native_debug_surface_evidence_role"), evidence_roles)
 
     def test_fixture_does_not_enable_an_overlay_or_debug_surface(self) -> None:
         # Positive/visible switches are forbidden in a capture receipt.  The
@@ -295,6 +315,11 @@ class VivhitePromoContractTests(unittest.TestCase):
         policy = preset.load_policy(PRESET_PATH)
         self.assertTrue(policy.require_vulkan)
         self.assertTrue(policy.forbid_overlays)
+        self.assertTrue(policy.forbid_native_debug_surface)
+        self.assertEqual(
+            policy.native_debug_surface_method,
+            "vivhite-promo-capture-surface-v1",
+        )
         self.assertTrue(policy.forbid_loading)
         self.assertTrue(policy.forbid_console)
         self.assertTrue(policy.preserve_failed_attempts)
@@ -310,6 +335,8 @@ class VivhitePromoContractTests(unittest.TestCase):
         for override in (
             {"voice": "zh-CN-YunxiNeural"},
             {"include_bgm": True},
+            {"forbid_native_debug_surface": False},
+            {"native_debug_surface_method": "manual-crop"},
             {"game_version": "0.110.0"},
             {"mod_version": "0.2.0"},
             {"width": 1280},
@@ -392,6 +419,33 @@ class VivhitePromoContractTests(unittest.TestCase):
                 self.assertRegex(str(entry.get("file")), r"^[^/\\]+\.exe$")
                 self.assertRegex(str(entry.get("sha256")), r"^[A-Fa-f0-9]{64}$")
 
+    def test_capture_settings_record_surface_obs_and_ffmpeg_policy(self) -> None:
+        settings = _read_json(CAPTURE_SETTINGS_PATH)
+        self.assertEqual(settings.get("kind"), "vivhite_promo_capture_settings")
+        self.assertEqual(settings.get("schema_version"), 1)
+        surface = settings.get("native_debug_surface")
+        self.assertIsInstance(surface, dict)
+        self.assertTrue(surface.get("required"))
+        self.assertEqual(surface.get("method"), "vivhite-promo-capture-surface-v1")
+        self.assertEqual(surface.get("environment_variable"), "VIVHITE_PROMO_CAPTURE")
+        obs = settings.get("obs")
+        self.assertIsInstance(obs, dict)
+        self.assertEqual(obs.get("game_capture_window"), "Slay the Spire 2:Engine:SlayTheSpire2.exe")
+        self.assertFalse(obs.get("capture_overlays"))
+        self.assertFalse(obs.get("capture_audio"))
+        self.assertFalse(obs.get("monitor_capture_in_active_scene"))
+        self.assertEqual(obs.get("audio_source"), "global-wasapi-output")
+        self.assertFalse(obs.get("use_device_timing"))
+        self.assertEqual(obs.get("video", {}).get("fps"), 60)
+        self.assertEqual(obs.get("audio", {}).get("sample_rate_hz"), 48000)
+        self.assertEqual(settings.get("ffmpeg", {}).get("directory"), "C:/ffmpeg/bin")
+        self.assertIn("tpad", settings.get("ffmpeg", {}).get("required_filters", []))
+        self.assertEqual(settings.get("soundtrack", {}).get("bgm"), "disabled")
+        self.assertEqual(
+            settings.get("soundtrack", {}).get("narration_voice"),
+            "zh-CN-XiaoxiaoNeural",
+        )
+
     def test_loader_and_validator_accept_minimal_fixture(self) -> None:
         loaded = _call_contract_loader(
             self.capture_contract, self.contract_path, FIXTURE_ROOT
@@ -405,6 +459,52 @@ class VivhitePromoContractTests(unittest.TestCase):
         verify = getattr(loaded, "verify_unchanged", None)
         if callable(verify):
             _assert_validation_success(self, verify())
+
+    def test_overlay_absence_does_not_certify_native_debug_surface(self) -> None:
+        """Legacy receipts stay readable but cannot pass the production adapter."""
+
+        payload = copy.deepcopy(self.contract)
+        context = payload["project_context"]
+        for key in (
+            "native_debug_surface_hidden",
+            "native_debug_surface_method",
+            "native_debug_surface_evidence_role",
+        ):
+            context.pop(key)
+
+        # The v1 parser remains backward compatible.  The project adapter is
+        # the fail-closed production gate for the newly separated surface.
+        _assert_validation_success(
+            self,
+            _call_contract_validator(
+                self.capture_contract,
+                self.contract_path,
+                payload,
+                FIXTURE_ROOT,
+            ),
+        )
+        adapter_module = importlib.import_module("vivhite_promo.adapter")
+        adapter = adapter_module.VivhiteAdapter(project_root=PROMO_ROOT)
+        with self.assertRaisesRegex(
+            adapter_module.VivhiteAdapterError,
+            "native_debug_surface_hidden",
+        ):
+            adapter.validate_identity(context)
+
+    def test_native_debug_surface_evidence_role_must_resolve(self) -> None:
+        payload = copy.deepcopy(self.contract)
+        payload["project_context"]["native_debug_surface_evidence_role"] = (
+            "missing.runtime.manifest"
+        )
+        _assert_validation_failure(
+            self,
+            lambda: _call_contract_validator(
+                self.capture_contract,
+                self.contract_path,
+                payload,
+                FIXTURE_ROOT,
+            ),
+        )
 
     def test_tampered_raw_media_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(prefix="vivhite-promo-contract-") as raw:

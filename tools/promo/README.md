@@ -14,6 +14,7 @@ tools/promo/
 ├─ fixtures/minimal_capture/              # 离线、极小的契约 fixture
 ├─ claims/claims.json                     # 白绮语义主张及证据角色
 ├─ project.json                            # 项目配置
+├─ capture-settings.json                  # 原生 surface/OBS/FFmpeg/音频固定策略
 ├─ storyboard.json                         # 镜头与时长
 ├─ pyproject.toml                          # xAR entry points
 ├─ preflight.ps1                           # 只读预检
@@ -42,8 +43,12 @@ powershell -NoProfile -ExecutionPolicy Bypass `
 
 - 项目文件、schema、adapter/preset/composer 和 xAR entry point 是否存在；
 - `minimal_capture` 的 JSON 身份、相对路径、文件长度及 SHA-256；
-- 1920×1080/60 FPS/Vulkan 以及 `overlays_absent`、`loading_absent`、
-  `console_absent` 是否明确为 `true`；
+- 1920×1080/60 FPS/Vulkan，第三方/Mod overlay 的
+  `overlays_absent`，以及 `loading_absent`、`console_absent` 是否明确为
+  `true`；
+- STS2 原生版本/日期/`MODDED` 标签是否通过独立的
+  `native_debug_surface_*` 字段声明为已隐藏，而不是被
+  `overlays_absent` 顺带冒充；
 - JSON 中没有绝对路径、路径逃逸、用户目录或凭据样式字符串；
 - FFmpeg、ffprobe、OBS 是否可用（默认仅警告）。
 
@@ -90,6 +95,16 @@ shape 是根对象中的 `capture_receipt`，不是旧文档里的 `media` 或�
   描述 game、SFX、BGM 或旁白分轨；
 - `project_context`：游戏、Mod、PCK 和 RitsuLib 的版本/身份，Vulkan、分辨率、帧率，
   以及必须为 `true` 的 `overlays_absent`、`loading_absent`、`console_absent`。
+  这里的 `overlays_absent` **只表示第三方/Mod overlay 不存在**，不包含 STS2
+  自己绘制的右上角版本、日期和 `MODDED` 标签。原生标签由
+  `native_debug_surface_hidden`、`native_debug_surface_method` 和
+  `native_debug_surface_evidence_role` 单独描述。
+
+v1 解析器仍可读取没有 `native_debug_surface_*` 的旧 receipt，但“缺失”只表示未知，
+绝不等于隐藏；生产 adapter 必须看到 `native_debug_surface_hidden=true`、方法
+`vivhite-promo-capture-surface-v1`，以及一个确实出现在 clean-span evidence 中的
+hash-bound evidence role 才会放行。`false`、字段缺失、方法不匹配或未闭合的 role
+都保持 RED。
 
 `load_capture_contract(path, *, artifact_root=..., verify_files=True)` 会读取并
 校验 receipt 中的原始媒体、clean-span evidence 和（若提供）audio stem 文件绑定；
@@ -142,7 +157,10 @@ validator result，永远不会被这里自动转换为通过；本 gate 也不�
 正式录制必须使用精确游戏 HWND/Game Capture，并确认：
 
 - 外置 ASCEND-VISION viewer 已在该 capture session 禁用；
-- 游戏内 STS2AIAgent CanvasLayer、AI edge tab、调试面板和第三方 overlay 均不可见；
+- 游戏内 STS2AIAgent CanvasLayer、AI edge tab、第三方调试面板和 overlay 均不可见，
+  并在 contract 中只用 `overlays_absent` 表达这一层；
+- STS2 原生右上角版本/日期/`MODDED` 标签另行确认不可见，并把运行期开关和结果写入
+  `runtime.manifest` 等 hash-bound evidence；
 - 没有 loading、主菜单等待画面、控制台、鼠标/任务栏/Steam 提示；
 - 游戏、旁白、SFX 分轨保存；首片 `BGM=disabled`，不得提交或混入 BGM stem，后续如授权再由 xAR 多轨计划加入；
 - 录制前后用 `ffprobe` 复核分辨率、帧率、时长、编码、采样率和声道。
@@ -156,24 +174,31 @@ validator result，永远不会被这里自动转换为通过；本 gate 也不�
 `configure_obs.ps1` 默认只读检查当前 OBS 配置；只有明确传入 `-Apply` 才会在 OBS
 进程已关闭时写入。脚本会先把当前活动场景、profile 和 `global.ini` 复制到
 `.work/obs-backups/<UTC 时间>-<唯一后缀>/`，再设置精确的 Slay the Spire 2
-Game Capture、1920×1080、60 FPS、隐藏鼠标和 overlay。它不会启动 OBS、游戏、直播、
-WebSocket 或 Brain，也不会修改音频端点。
+Game Capture、1920×1080、60 FPS、隐藏鼠标和 overlay。当前固定窗口匹配为
+`Slay the Spire 2:Engine:SlayTheSpire2.exe`；活动场景中不允许 monitor/display
+capture。录像使用 NVENC H.264、MKV、AAC 192 kbit/s、48 kHz 双声道、单轨输出。
+它不会启动 OBS、游戏、直播、WebSocket 或 Brain，也不会修改 Windows 系统音频端点。
 
 ```powershell
 # 只读预演
 .\tools\promo\configure_obs.ps1 -Json
 
 # 关闭 OBS 后，明确应用并保留备份
-.\tools\promo\configure_obs.ps1 -Apply -Json
+.\tools\promo\configure_obs.ps1 `
+  -RecordingPath 'G:\OBS_VIDEOS\vivhite_capture_20260902' `
+  -Apply -Json
 ```
 
 当前 OBS 32.2.2 不包含 Game Capture 的进程音频源，因此配置将
 `capture_audio` 明确保持为 `false`，只启用一个全局 WASAPI 输出源（麦克风关闭，避免重复和漂移）。
+`use_device_timing=false`，Game Capture 的 `capture_cursor=false`、
+`capture_overlays=false`、`anti_cheat_hook=true`、`hook_rate=1`。这里的
+`capture_overlays=false` 只控制 OBS 能控制的 overlay，不能隐藏游戏自己绘制的 UI。
 正式取景前必须做一段短录并用 `ffprobe`/试听确认游戏声；不能把 OBS 的“正在录制”状态当作音频已录入的证明。
 
-游戏内的 `STS2AIAgent` 会始终留下右侧 `AI` 边签，OBS 的
-`capture_overlays=false` 无法移除它；Workshop `LieRenTVmod` 也会改动选人/背景资源。
-正式录制前先停止游戏并运行可逆隔离脚本：
+如果 `STS2AIAgent` 仍部署，它会留下右侧 `AI` 边签；OBS 的
+`capture_overlays=false` 无法移除它。Workshop `LieRenTVmod` 也会改动选人/背景资源。
+正式录制前先停止游戏并运行可逆隔离脚本，确认这些已知污染 payload 已经移出：
 
 ```powershell
 .\tools\promo\isolate_capture_mods.ps1 -Apply -Json
@@ -184,6 +209,26 @@ WebSocket 或 Brain，也不会修改音频端点。
 
 脚本只移动这四个已知污染目标（STS2AIAgent 三件套及 LieRenTVmod Workshop 目录），逐文件保存 SHA-256 到
 `.work/promo-capture-isolation/`，绝不删除、覆盖或触碰存档及其他 Mod。
+
+### STS2 原生 debug surface
+
+STS2 v0.111.0 的右上角版本、日期、RitsuLib/`MODDED` 标签由游戏场景自己绘制，
+不是 OBS overlay，`capture_overlays=false` 和 `overlays_absent=true` 都不能证明它们
+消失。白绮 Mod 提供仅宣传录制时启用的 `PromoCaptureSurface`：先部署当前构建，再在
+启动同一个 Vulkan 游戏进程前设置：
+
+```powershell
+$env:VIVHITE_PROMO_CAPTURE = '1'
+& 'G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.exe' `
+  --rendering-driver vulkan
+```
+
+普通启动不设置该变量，原生警告保持不变。正式 take 必须同时保存启动/runtime manifest
+和开始/结束画面证据；只有日志确认 patch 已安装、实际 Game Capture 画面确认标签不可见，
+contract 才能写 `native_debug_surface_hidden=true`。对应方法固定为
+`vivhite-promo-capture-surface-v1`，evidence role 应指向该次 run 已绑定的
+`runtime.manifest`。如果 patch 安装失败或画面仍有标签，保留失败 take 并创建新 attempt；
+不得通过裁切、模糊、遮罩或把 `overlays_absent=true` 改写成“已隐藏”来绕过门禁。
 
 本机已将 FFmpeg 9.0.1 覆盖安装到既有目录 `C:\ffmpeg\bin`；其
 `ffmpeg.exe`/`ffprobe.exe` SHA-256 见 `ffmpeg-lock.json`，并由预检同时验证 xAR

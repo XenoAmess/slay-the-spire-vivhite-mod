@@ -34,6 +34,10 @@ DURATION_LIMIT_SECONDS = 1200
 WIDTH = 1920
 HEIGHT = 1080
 FPS = 60
+# The native STS2 release/version/modded labels are a separate surface from
+# third-party overlays.  The capture-only Harmony patch in the Vivhite mod is
+# the approved way to hide them without cropping or altering recorded bytes.
+NATIVE_DEBUG_SURFACE_METHOD = "vivhite-promo-capture-surface-v1"
 CAPTURE_CONTRACT_RELATIVE_PATH = "runs/current/capture/contract.json"
 STORYBOARD_RELATIVE_PATH = "storyboard.json"
 CLAIMS_RELATIVE_PATH = "claims/claims.json"
@@ -89,6 +93,8 @@ class VivhitePolicy:
     claims_path: str = CLAIMS_RELATIVE_PATH
     require_vulkan: bool = True
     forbid_overlays: bool = True
+    forbid_native_debug_surface: bool = True
+    native_debug_surface_method: str = NATIVE_DEBUG_SURFACE_METHOD
     forbid_loading: bool = True
     forbid_console: bool = True
     preserve_failed_attempts: bool = True
@@ -119,6 +125,8 @@ class VivhitePolicy:
             "claims_path": CLAIMS_RELATIVE_PATH,
             "require_vulkan": True,
             "forbid_overlays": True,
+            "forbid_native_debug_surface": True,
+            "native_debug_surface_method": NATIVE_DEBUG_SURFACE_METHOD,
             "forbid_loading": True,
             "forbid_console": True,
             "preserve_failed_attempts": True,

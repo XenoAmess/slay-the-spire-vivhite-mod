@@ -38,6 +38,7 @@ $projectPath = Join-Path $promoRoot "project.json"
 $presetPath = Join-Path $promoRoot "preset.json"
 $claimsPath = Join-Path $promoRoot "claims\claims.json"
 $ffmpegLockPath = Join-Path $promoRoot "ffmpeg-lock.json"
+$captureSettingsPath = Join-Path $promoRoot "capture-settings.json"
 $results = New-Object "System.Collections.Generic.List[object]"
 
 function Add-Result {
@@ -292,7 +293,8 @@ try {
             "tools\promo\pyproject.toml",
             "tools\promo\configure_obs.ps1",
             "tools\promo\isolate_capture_mods.ps1",
-            "tools\promo\ffmpeg-lock.json"
+            "tools\promo\ffmpeg-lock.json",
+            "tools\promo\capture-settings.json"
         )) {
         $path = Join-Path $root $required
         if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -503,6 +505,13 @@ try {
             }
 
             $context = $contract.project_context
+            $fixtureEvidenceRoles = @(
+                @($contract.capture_receipt.clean_spans) |
+                    ForEach-Object { @($_.evidence) } |
+                    ForEach-Object { [string]$_.role }
+            )
+            # overlays_absent covers third-party/mod overlays only.  Native
+            # STS2 release/version/MODDED labels are asserted separately.
             $safeContext = ($context.mod_id -eq "Vivhite") -and
                 (-not [string]::IsNullOrWhiteSpace([string]$context.game_version)) -and
                 (-not [string]::IsNullOrWhiteSpace([string]$context.mod_version)) -and
@@ -516,10 +525,14 @@ try {
                 ([int]$context.resolution[1] -eq 1080) -and
                 ([int]$context.fps -eq 60) -and
                 ($context.overlays_absent -eq $true) -and
+                ($context.native_debug_surface_hidden -eq $true) -and
+                ($context.native_debug_surface_method -eq "vivhite-promo-capture-surface-v1") -and
+                (-not [string]::IsNullOrWhiteSpace([string]$context.native_debug_surface_evidence_role)) -and
+                ($fixtureEvidenceRoles -contains [string]$context.native_debug_surface_evidence_role) -and
                 ($context.loading_absent -eq $true) -and
                 ($context.console_absent -eq $true)
             if ($safeContext) {
-                Add-Result -Name "fixture:capture-policy" -Status pass -Message "Vulkan/1080p60 and overlay/loading/console absence are asserted"
+                Add-Result -Name "fixture:capture-policy" -Status pass -Message "Vulkan/1080p60, third-party overlay absence, and a separately hidden native debug surface are asserted"
             }
             else {
                 Add-Result -Name "fixture:capture-policy" -Status fail -Message "fixture does not prove a clean 1080p60 capture"
@@ -576,6 +589,55 @@ try {
     }
     else {
         Add-Result -Name "fixture" -Status fail -Message "minimal_capture fixture directory is missing"
+    }
+
+    try {
+        $captureSettings = Get-JsonDocument -Path $captureSettingsPath
+        $nativeSurface = $captureSettings.native_debug_surface
+        $obsSettings = $captureSettings.obs
+        $videoSettings = $obsSettings.video
+        $audioSettings = $obsSettings.audio
+        $settingsValid =
+            ($captureSettings.kind -eq "vivhite_promo_capture_settings") -and
+            ([int]$captureSettings.schema_version -eq 1) -and
+            ($nativeSurface.required -eq $true) -and
+            ($nativeSurface.method -eq "vivhite-promo-capture-surface-v1") -and
+            ($nativeSurface.environment_variable -eq "VIVHITE_PROMO_CAPTURE") -and
+            ($nativeSurface.enabled_value -eq "1") -and
+            ($obsSettings.version -eq "32.2.2") -and
+            ($obsSettings.game_capture_window -eq "Slay the Spire 2:Engine:SlayTheSpire2.exe") -and
+            ($obsSettings.capture_cursor -eq $false) -and
+            ($obsSettings.capture_overlays -eq $false) -and
+            ($obsSettings.capture_audio -eq $false) -and
+            ($obsSettings.anti_cheat_hook -eq $true) -and
+            ([int]$obsSettings.hook_rate -eq 1) -and
+            ($obsSettings.monitor_capture_in_active_scene -eq $false) -and
+            ($obsSettings.audio_source -eq "global-wasapi-output") -and
+            ($obsSettings.microphone -eq "disabled") -and
+            ($obsSettings.use_device_timing -eq $false) -and
+            ([int]$videoSettings.width -eq 1920) -and
+            ([int]$videoSettings.height -eq 1080) -and
+            ([int]$videoSettings.fps -eq 60) -and
+            ($videoSettings.encoder -eq "nvenc") -and
+            ($videoSettings.container -eq "mkv") -and
+            ($audioSettings.codec -eq "aac") -and
+            ([int]$audioSettings.bitrate_kbps -eq 192) -and
+            ([int]$audioSettings.sample_rate_hz -eq 48000) -and
+            ([int]$audioSettings.channels -eq 2) -and
+            ([int]$audioSettings.tracks -eq 1) -and
+            ($captureSettings.ffmpeg.directory -eq "C:/ffmpeg/bin") -and
+            (@($captureSettings.ffmpeg.required_filters) -contains "tpad") -and
+            ($captureSettings.soundtrack.bgm -eq "disabled") -and
+            ($captureSettings.soundtrack.narration_voice -eq "zh-CN-XiaoxiaoNeural")
+        if ($settingsValid) {
+            Add-Result -Name "capture-settings" -Status pass -Message "PromoCaptureSurface, OBS 32.2.2, FFmpeg lock path, voice, and BGM policy are recorded"
+        }
+        else {
+            Add-Result -Name "capture-settings" -Status fail -Message "capture-settings.json does not match the pinned production capture policy"
+        }
+    }
+    catch {
+        Add-Result -Name "capture-settings" -Status fail -Message $_.Exception.Message
     }
 
     $pyprojectPath = Join-Path $promoRoot "pyproject.toml"

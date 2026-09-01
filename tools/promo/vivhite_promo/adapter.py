@@ -131,6 +131,26 @@ class VivhiteAdapter:
         for key in ("overlays_absent", "loading_absent", "console_absent"):
             if context.get(key) is not True:
                 raise VivhiteAdapterError(f"capture context {key} must be true")
+        # Native STS2 release/version/modded labels are not controlled by OBS
+        # Game Capture's ``capture_overlays`` flag.  Require an explicit
+        # project-side assertion and a hash-bound evidence role, rather than
+        # treating the legacy ``overlays_absent`` flag as proof that the native
+        # debug surface is gone.
+        if self.policy.forbid_native_debug_surface:
+            if context.get("native_debug_surface_hidden") is not True:
+                raise VivhiteAdapterError(
+                    "capture context native_debug_surface_hidden must be true"
+                )
+            if context.get("native_debug_surface_method") != self.policy.native_debug_surface_method:
+                raise VivhiteAdapterError(
+                    "capture context native_debug_surface_method must be "
+                    f"{self.policy.native_debug_surface_method!r}"
+                )
+            evidence_role = context.get("native_debug_surface_evidence_role")
+            if not isinstance(evidence_role, str) or not evidence_role.strip():
+                raise VivhiteAdapterError(
+                    "capture context native_debug_surface_evidence_role is required"
+                )
         resolution = context.get("resolution")
         if tuple(resolution or ()) != (self.policy.width, self.policy.height):
             raise VivhiteAdapterError(
