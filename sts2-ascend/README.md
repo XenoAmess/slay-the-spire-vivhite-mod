@@ -124,11 +124,14 @@ Profile，且 prompt、runs、stats、lessons、policy、报告和队列均按�
 ## 快速开始
 
 ```powershell
-# 在仓库根目录：按 Source 部署 → 使用已验证的 Vulkan 启动游戏 → 后台启动 runner/brain
+# 在仓库根目录：生产训练基线（默认 auto，保留 Steam 初始化）
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1
 
-# 无人训练需要完全使用本地 modded 存档时，显式关闭本次进程的 Steam 初始化
-# （冷启动会把 --force-steam off 传给 launch_vulkan.bat）
+# 生产训练也可以显式记录 Steam-on（与 auto 一样不追加 --force-steam on）
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1 -SteamMode on
+
+# 仅诊断/隔离实验：前提是独立本地 profile 已完成原生模组同意（见下文）
+# 冷启动才会把 --force-steam off 传给 launch_vulkan.bat；这不是生产默认
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1 -SteamMode off
 
 # 完整停止 brain/runner、播报/复盘链和游戏
@@ -153,21 +156,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - `-SkipDeploy`：复用当前已部署 DLL；附着到已经运行的游戏时必须使用
 - `-Source auto|fork|release`：默认 `auto`，本地 fork clone 存在时优先构建 fork，否则用官方 release
-- `-SteamMode auto|on|off`：默认 `auto`。`auto`/`on` 不覆盖游戏默认的 Steam 初始化；只有显式
-  `off` 才在冷启动时向 `launch_vulkan.bat` 传 `--force-steam off`。这不会改写游戏目录、Steam
-  客户端或云同步文件；会话元数据会记录请求模式、实际参数和是否应用到新进程。
+- `-SteamMode auto|on|off`：生产训练默认 `auto`（保留游戏默认的 Steam 初始化；可显式写
+  `on`，但不会人为追加 `--force-steam on`）。只有显式 `off` 才在冷启动时向
+  `launch_vulkan.bat` 传 `--force-steam off`。这不会改写游戏目录、Steam 客户端或云同步文件；
+  会话元数据会记录请求模式、实际参数和是否应用到新进程。
 - `-GameDir <目录>`：自定义游戏安装目录；fork 构建可另传 `-GodotExe`
 - `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
 
-若已完成本地 profile 的原生模组同意、且明确接受独立存档命名空间，想隔离 Steam Cloud 时可用
-`-SteamMode off` 冷启动整套；这样可避免 Steam Cloud 在跨进程恢复/退出时覆盖或删除
-`profile*/saves/current_run.save`。若游戏已经运行，参数不会
+`-SteamMode off` 仅用于显式诊断/隔离实验：必须先完成独立本地 `user://default/1` profile 的
+原生模组同意，并明确接受独立存档命名空间；它不是生产训练 fallback，也不是 Steam Cloud 修复。
+在此前提下冷启动整套可让本次进程绕过 Steam Cloud 对
+`profile*/saves/current_run.save` 的跨进程覆盖/删除路径。若游戏已经运行，参数不会
 改变现有进程（启动日志和 `.runtime/session.json` 会标记 `steam_mode_applied=false`），请先用统一
-`Stop-Agent.ps1` 停止后再以 `-SteamMode off` 启动。`-SteamMode on` 只是明确记录“保留 Steam 默认行为”，
-不会人为追加 `--force-steam on`。该开关只改变本次游戏进程的启动参数，不执行 UAC、人工 GUI 或 Steam
-文件修改；它也不替代原生存档/Continue 证据门禁，更不是 Steam Cloud 修复。首次 off profile 若尚未完成
-原生模组同意，必须保持 fail-closed，不得自动点击确认框或把空 API 当作 Stack ready。
+`Stop-Agent.ps1` 停止后再以 `-SteamMode off` 启动。该开关只改变本次游戏进程的启动参数，不执行
+UAC、人工 GUI 或 Steam 文件修改；它也不替代原生存档/Continue 证据门禁。首次 off profile 若尚未
+完成原生模组同意，必须保持 fail-closed，不得自动点击确认框或把空 API 当作 Stack ready。
 
 注意：`off` 会使用独立的本地 `user://default/1` profile，不会继承 Steam profile 的
 `ModSettings`/“已同意加载模组”标记。首次运行若日志出现 `user has not yet seen the mods warning`

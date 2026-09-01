@@ -14,12 +14,12 @@
 
 ## 修复与边界
 
-- 统一启动入口新增显式 `-SteamMode auto|on|off`。只有冷启动且用户明确指定 `-SteamMode off` 时，才向 `launch_vulkan.bat` 传 `--force-steam off`，让本次无人训练使用本地存档而跳过 Steam 初始化；`session.json` 记录请求模式、实际参数和是否应用。该选项不改 Steam 客户端、云文件或游戏目录，不需要 UAC，也不宣称修复 Steam Cloud 本身。
-- `auto`/`on` 保留游戏默认 Steam 行为；已有游戏进程不会被参数追溯修改。需要切换模式时必须先用统一 `Stop-Agent.ps1`，再以 `-SteamMode off` 冷启动。
-- 无人训练建议明确使用 `-SteamMode off`，并继续执行原生 Continue、API 状态、动作回执和连续进展门禁。云同步失败、存档证据缺失时保持 Brain/直播 fail-closed；绝不复制、改名或手改 `.stmp`/`knowledge`。
+- 统一启动入口新增显式 `-SteamMode auto|on|off`。只有冷启动且用户明确指定 `-SteamMode off` 时，才向 `launch_vulkan.bat` 传 `--force-steam off`，让本次显式诊断/隔离会话使用本地存档而跳过 Steam 初始化；`session.json` 记录请求模式、实际参数和是否应用。该选项不改 Steam 客户端、云文件或游戏目录，不需要 UAC，也不宣称修复 Steam Cloud 本身。
+- 生产无人训练默认使用 `-SteamMode auto`（或显式 `on`），保留已验证 Steam profile 的原生初始化与模组同意；已有游戏进程不会被参数追溯修改。需要切换模式时必须先用统一 `Stop-Agent.ps1`，再冷启动。
+- `-SteamMode off` 仅限已完成独立 `user://default/1` profile 原生模组同意、且明确接受独立存档命名空间的显式诊断/隔离实验；它不是生产训练 fallback，也不是 Steam Cloud 修复。无论模式如何，都必须执行原生 Continue、API 状态、动作回执和连续进展门禁。云同步失败、存档证据缺失时保持 Brain/直播 fail-closed；绝不复制、改名或手改 `.stmp`/`knowledge`。
 - 直播姬本次及后续训练均保持 `Idle`；没有调用开播入口，也没有请求人工 UAC。Steam Cloud 恢复仍需用户在 Steam 客户端/磁盘空间恢复后另行处理，本流程不代替该人工步骤。
 
 ## 回归
 
 - `sts2-ascend/tests/test_start_agent_steam_mode.py` 覆盖参数映射、冷启动分支和文档审计；另有已有孤儿恢复/空播门禁回归。
-- 真实运行验证必须记录：启动日志出现 `SteamMode=off`，游戏日志显示跳过 Steam 初始化且使用本地 profile，随后 `/state` 为非菜单真实 run，并有驾驶舱 `connected`、`applied` 回执和楼层进展。
+- 真实运行验证必须按模式记录：生产基线为 `SteamMode=auto`（或显式 `on`）并确认 Steam profile/模组已加载；仅诊断 off 验证才要求启动日志出现 `SteamMode=off`、游戏日志显示跳过 Steam 初始化且使用独立本地 profile。两者随后都必须满足 `/state` 非菜单真实 run、驾驶舱 `connected`、`applied` 回执和楼层进展。

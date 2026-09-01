@@ -105,6 +105,23 @@ foreach ($mode in @('auto', 'on', 'off')) {{
         self.assertIn("fail-closed", readme)
         self.assertIn("fail-closed", agents)
 
+    def test_production_defaults_to_steam_and_off_is_diagnostic_only(self) -> None:
+        readme = (ROOT / "sts2-ascend" / "README.md").read_text(encoding="utf-8")
+        cloud_report = (
+            ROOT / "docs" / "2026-09-01-steam-cloud训练存档故障复盘.md"
+        ).read_text(encoding="utf-8")
+        local_mode = (
+            ROOT / "docs" / "2026-09-01-统一启动Steam本地存档模式.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertRegex(readme, r"生产训练基线.*默认 auto")
+        self.assertRegex(readme, r"`-SteamMode off` 仅用于显式诊断/隔离实验")
+        self.assertIn("不是生产训练 fallback，也不是 Steam Cloud 修复", readme)
+        self.assertIn("生产无人训练默认使用 `-SteamMode auto`", cloud_report)
+        self.assertIn("`-SteamMode off` 仅限已完成独立", cloud_report)
+        self.assertIn("生产训练基线是默认 `-SteamMode auto`", local_mode)
+        self.assertIn("`off` 不是生产训练的故障回退", local_mode)
+
 
 if __name__ == "__main__":
     unittest.main()
