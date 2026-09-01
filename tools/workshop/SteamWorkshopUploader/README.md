@@ -54,14 +54,15 @@ dotnet build .\tools\workshop\SteamWorkshopUploader\SteamWorkshopUploader.csproj
 会尝试按当前账号拥有的标题/metadata 查找唯一 item，非零 id 则更新指定 item。最小参数
 形状如下（路径和版本请替换为同一批次的物料）：
 
-```text
-dotnet .\tools\workshop\SteamWorkshopUploader\bin\Release\net9.0\SteamWorkshopUploader.dll \
-  --app-id 2868840 --published-file-id 3793741497 \
-  --content <directory-with-Vivhite-triplet> --preview <preview.jpg> \
-  --title <title> --description-file <description.bbcode> \
-  --change-note-file <release-note.txt> --version <semver> \
-  --visibility public --dependency-id <STS2-RitsuLib-workshop-id> \
-  --result <receipt.json> --timeout-seconds 900
+```powershell
+$uploader = '.\tools\workshop\SteamWorkshopUploader\bin\Release\net9.0\SteamWorkshopUploader.dll'
+& dotnet $uploader `
+  --app-id 2868840 --published-file-id 3793741497 `
+  --content '<directory-with-Vivhite-triplet>' --preview '<preview.jpg>' `
+  --title '<title>' --description-file '<description.bbcode>' `
+  --change-note-file '<release-note.txt>' --version '<semver>' `
+  --visibility public --dependency-id '<STS2-RitsuLib-workshop-id>' `
+  --result '<receipt.json>' --timeout-seconds 900
 ```
 
 Windows PowerShell 中建议使用 `& dotnet @args` 传参，避免路径空格转义错误。该命令是真实
@@ -91,4 +92,3 @@ py -3 -B -m unittest discover `
 | 上传后只得到 `content_uploaded` | 保留回执和日志，先核对 Workshop 远端只读元数据，再决定是否重试 |
 
 相关记录见 [`docs/2026-09-01-workshop-uploader-change-note.md`](../../../docs/2026-09-01-workshop-uploader-change-note.md)。
-
