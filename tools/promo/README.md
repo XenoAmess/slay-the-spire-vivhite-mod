@@ -9,6 +9,7 @@
 ```text
 tools/promo/
 ├─ vivhite_promo/                         # 白绮 adapter/preset/composer
+│  └─ semantic_audit.py                    # 项目侧 claims/证据语义门禁
 ├─ schemas/vivhite-promo-capture-v1.schema.json
 ├─ fixtures/minimal_capture/              # 离线、极小的契约 fixture
 ├─ claims/claims.json                     # 白绮语义主张及证据角色
