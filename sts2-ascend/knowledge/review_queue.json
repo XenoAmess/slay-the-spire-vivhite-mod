@@ -1704,41 +1704,32 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "queued"
+  },
+  {
+   "run": 1232,
+   "time": "2026-08-31 21:53",
+   "profile_id": "ironclad",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "19588-1788185361403065800-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000418-1788192258078457400-98d55cea"
+   ],
+   "salvage_attempts": [],
+   "retry_count": 2,
+   "retry_after": 1788268362.5788305,
+   "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+   "replay_target": "20260901-000418-1788192258078457400-98d55cea"
   }
  ],
- "reviewing": {
-  "runs": [
-   1232
-  ],
-  "items": [
-   {
-    "run": 1232,
-    "time": "2026-08-31 21:53",
-    "profile_id": "ironclad",
-    "backend_key": "glm-flash",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "opencode-go/glm-5.3-flash",
-    "variant": "max",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "19588-1788185361403065800-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000418-1788192258078457400-98d55cea"
-    ],
-    "salvage_attempts": [],
-    "retry_count": 2,
-    "retry_after": 1788263021.8713827,
-    "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-    "replay_target": "20260901-000418-1788192258078457400-98d55cea"
-   }
-  ],
-  "profile_id": "ironclad",
-  "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-  "started": "2026-09-01 21:04:53"
- }
+ "reviewing": null
 }
