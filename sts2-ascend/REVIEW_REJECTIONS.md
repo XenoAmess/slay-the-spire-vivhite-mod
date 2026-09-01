@@ -318,7 +318,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260831-212958-1788182998899351300-7a797b70 -->
 | 2026-08-31 21:29:58 | 第 3~4 局 | `7a797b70` | selfcheck | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-212958-1788182998899351300-7a797b70` | 复盘自检失败 |
 <!-- rejection:20260831-213314-1788183194513560500-ade6c610 -->
-| 2026-08-31 21:33:14 | 第 1220~1231 局 | `ade6c610` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260831-213314-1788183194513560500-ade6c610` | 复盘进程未成功完成 |
+| 2026-08-31 21:33:14 | 第 1220~1231 局 | `ade6c610` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8ca93e4c` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8ca93e4c 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260901-000418-1788192258078457400-98d55cea -->
 | 2026-09-01 00:04:18 | 第 1232 局 | `98d55cea` | review_failure | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-000418-1788192258078457400-98d55cea` | 创建隔离 clone 失败：error: copy-fd: write returned: No space left on device fatal: failed to copy file to 'D:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\knowledge\code_backups\review_work\sts2-review-sandbox-1ehk0cvu\repo/.git/objects/pack… |
 <!-- rejection:20260901-000605-1788192365526162900-0b9c97f5 -->
