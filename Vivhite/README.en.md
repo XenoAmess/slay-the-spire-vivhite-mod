@@ -40,13 +40,19 @@ Place all three artifacts in `<game directory>\mods\Vivhite\`:
 - `Vivhite.json`
 - `Vivhite.pck`
 
-Install the `STS2-RitsuLib` version declared by the manifest as well. The game must be started with Vulkan; use this Steam launch option:
+Install the `STS2-RitsuLib` version declared by the manifest as well. The verified runtime
+baseline is STS2 `v0.111.0` on Steam's `public-beta` branch with Vulkan; use this Steam launch option:
 
 ```text
 %command% --rendering-driver vulkan
 ```
 
 If the game directory already contains `launch_vulkan.bat`, that wrapper can be used instead.
+The game also ships `launch_opengl.bat` (`--rendering-driver opengl3`) and `launch_d3d12.bat`,
+but this Mod has not completed backend-specific in-game acceptance for either path. If Vulkan
+does not start, OpenGL3 may be tried as a game-level troubleshooting fallback; that does not
+constitute a Vivhite compatibility promise. When reporting a failure, include the actual
+renderer and `%APPDATA%\SlayTheSpire2\logs\godot.log`.
 
 ## Local Path Configuration
 
@@ -102,7 +108,9 @@ Enable only one mainline or compatibility package at a time. When switching pack
 1. After building, confirm that `dependencies[STS2-RitsuLib].version` in `Vivhite.json` matches the resolved NuGet version.
 2. Confirm that `min_game_version` matches the target game branch.
 3. Confirm that the DLL, JSON, and PCK are deployed to the same `mods/Vivhite` directory.
-4. Launch with Vulkan and use the actual game log to confirm that both the dependency and mod are recognized.
+4. Launch with the verified Vulkan path and use the actual game log to confirm that both the
+   dependency and mod are recognized. Treat OpenGL3/D3D12 as unverified troubleshooting paths;
+   a successful launch alone is not Mod compatibility evidence.
 
 ### Upgrade notes
 
@@ -205,7 +213,13 @@ No Vivhite asset replacement is registered for the base-game `IRONCLAD`, so Iron
 
 `tools/art/audit_vivhite_runtime_art.gd` and the four-layer read-only PCK gate check the current `92/92` bitmap inventory: 61 dedicated opaque card scenes, 19 Power icons, 2 Solitary Crown assets, 7 energy-UI assets, plus the lens glint, Vivhite-only card trail, and character-select transition VFX. The earlier `89/89` count was the content-bitmap baseline before these three VFX entered the release contract; it is no longer the complete inventory. The skin source/published inventories also satisfy their exact `30/34` file contract, and static card-art QA passes `61/61`.
 
-The same-build DLL, manifest, and PCK have been atomically deployed. Vulkan in-game evidence confirms Vivhite's combat skin, portrait, Solitary Crown, Margin UI, Chinese card names, and card art without red `NOPE` fallbacks or raw localization keys. That evidence does not make future builds pass automatically; later resource changes must rerun the static, PCK, and in-game gates. Native source images, verbatim prompts, generation facts, and inspection artifacts remain archived append-only under `assets/vivhite-ironclad/generated/` without overwriting existing creative assets.
+The same-build DLL, manifest, and PCK have been atomically deployed. On Steam `public-beta` / STS2
+`v0.111.0`, Vulkan in-game evidence confirms Vivhite's combat skin, portrait, Solitary Crown,
+Margin UI, Chinese card names, and card art without red `NOPE` fallbacks or raw localization keys.
+That evidence covers only this branch and backend; it does not make future builds or alternate
+renderers pass automatically. Later resource changes must rerun the static, PCK, and in-game gates.
+Native source images, verbatim prompts, generation facts, and inspection artifacts remain archived
+append-only under `assets/vivhite-ironclad/generated/` without overwriting existing creative assets.
 
 ## Manifest Format
 

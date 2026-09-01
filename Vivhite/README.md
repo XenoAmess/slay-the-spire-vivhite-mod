@@ -40,13 +40,18 @@
 - `Vivhite.json`
 - `Vivhite.pck`
 
-同时安装 manifest 指定版本的 `STS2-RitsuLib`。启动游戏必须使用 Vulkan；Steam 启动项为：
+同时安装 manifest 指定版本的 `STS2-RitsuLib`。当前已验证的运行基线是 Steam
+`public-beta` 分支上的 STS2 `v0.111.0`，并使用 Vulkan；Steam 启动项为：
 
 ```text
 %command% --rendering-driver vulkan
 ```
 
-本机若已提供游戏根目录下的 `launch_vulkan.bat`，也可以通过该脚本启动。
+本机若已提供游戏根目录下的 `launch_vulkan.bat`，也可以通过该脚本启动。游戏还提供
+`launch_opengl.bat`（`--rendering-driver opengl3`）和 `launch_d3d12.bat`，但本 Mod
+尚未完成这两个后端的专项实机验收；遇到 Vulkan 启动问题时可以把 OpenGL3 作为游戏级
+排障尝试，不能据此视为 Vivhite 的兼容承诺。反馈时请附实际渲染后端和
+`%APPDATA%\SlayTheSpire2\logs\godot.log`。
 
 ## 配置本机路径
 
@@ -102,7 +107,8 @@ Copy-Item .\local.props.template .\local.props
 1. 构建后确认 `Vivhite.json` 的 `dependencies[STS2-RitsuLib].version` 与实际解析的 NuGet 版本一致。
 2. 确认 `min_game_version` 与目标游戏分支一致。
 3. 确认 dll、json、pck 三件套被部署到同一 `mods/Vivhite` 目录。
-4. 使用 Vulkan 启动，并以实际加载日志确认依赖和 Mod 均被识别。
+4. 使用已验证的 Vulkan 启动，并以实际加载日志确认依赖和 Mod 均被识别；若改用
+   OpenGL3/D3D12，须将其视为未验证的排障路径，不要把启动成功当作 Mod 兼容通过。
 
 ### 升级注意事项
 
@@ -195,7 +201,12 @@ Vivhite/
 
 `tools/art/audit_vivhite_runtime_art.gd` 与 PCK 四层只读门禁检查当前 `92/92` 位图：61 张独立不透明卡图、19 个 Power 语义图标、2 张孤高冠冕资源、7 张能量 UI，以及眼镜星光、白绮专属卡牌轨迹和角色选择转场 3 张 VFX。早期 `89/89` 只是加入这 3 张 VFX 前的内容位图基线，不能再代表当前发布清单。皮肤源码/发布清单也已达到精确 `30/34` 文件契约，全卡静态视觉 QA 为 `61/61`。
 
-同批 DLL、manifest 与 PCK 已完成原子部署；Vulkan 实机确认白绮战斗皮肤、头像、孤高冠冕、余裕 UI、中文卡名和卡图正常，未见红色 `NOPE` 或裸本地化 key。该次证据不应被扩大成未来每次构建都自动通过；后续资源变更仍须重跑静态、PCK 与真机门禁。生成原图、逐字 Prompt、生成事实和检查图均追加式保存在 `assets/vivhite-ironclad/generated/`，不会覆盖既有创意素材。
+同批 DLL、manifest 与 PCK 已完成原子部署；在 Steam `public-beta` / STS2 `v0.111.0`
+的 Vulkan 实机中确认白绮战斗皮肤、头像、孤高冠冕、余裕 UI、中文卡名和卡图正常，
+未见红色 `NOPE` 或裸本地化 key。该次证据只覆盖上述分支和 Vulkan 后端，不应扩大成
+未来每次构建或其他后端自动通过；后续资源变更仍须重跑静态、PCK 与真机门禁。生成原图、
+逐字 Prompt、生成事实和检查图均追加式保存在 `assets/vivhite-ironclad/generated/`，
+不会覆盖既有创意素材。
 
 ## Brain 角色隔离、追及轮换与原生结算
 

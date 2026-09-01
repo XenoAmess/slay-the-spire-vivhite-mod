@@ -13,6 +13,11 @@ public enum LifePaymentFailure
     PayerIsDead,
     InsufficientLife,
     LifeChangedDuringPayment,
+    /// <summary>
+    /// The native HP-loss command did not return a result for the payer.  A result with zero
+    /// <see cref="DamageResult.UnblockedDamage"/> is still an applied command (for example,
+    /// when Buffer prevents the loss).
+    /// </summary>
     PaymentWasPrevented
 }
 
@@ -101,6 +106,26 @@ public static class LifeCalculation
     {
         ArgumentNullException.ThrowIfNull(card);
         return CanPay(card.Owner.Creature, amount);
+    }
+
+    /// <summary>
+    /// Checks whether the native HP-loss command reached the payer and completed while the payer
+    /// remained alive.  A <see cref="DamageResult"/> reports the HP that was actually lost, not
+    /// the amount requested by the command.  Native modifiers such as Tungsten Rod (and Buffer)
+    /// are therefore allowed to reduce that value without turning an otherwise completed
+    /// self-HP-loss command into a failed card payment.  A zero-loss result is intentionally still
+    /// accepted: the engine emits it for native prevention effects such as Buffer, and native
+    /// self-HP-loss cards continue their effects after that command.
+    /// </summary>
+    internal static bool WasHpPaymentApplied(
+        Creature payer,
+        IReadOnlyCollection<DamageResult> damageResults)
+    {
+        ArgumentNullException.ThrowIfNull(payer);
+        ArgumentNullException.ThrowIfNull(damageResults);
+
+        return payer.IsAlive &&
+               damageResults.Any(result => ReferenceEquals(result.Receiver, payer));
     }
 
     public static Task<LifePaymentResult> TryPayAsync(
@@ -194,7 +219,7 @@ public static class LifeCalculation
         var hpPaid = damageResults
             .Where(result => ReferenceEquals(result.Receiver, payer))
             .Sum(result => result.UnblockedDamage);
-        var succeeded = hpPaid >= hpRequired && payer.CurrentHp > 0;
+        var succeeded = WasHpPaymentApplied(payer, damageResults);
 
         return new LifePaymentResult(
             quote,

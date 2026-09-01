@@ -17,6 +17,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Vivhite.Cards.Basics;
 using Vivhite.Cards.Conservation;
 using Vivhite.Cards.Hybrid;
 using Vivhite.Cards.Recursion;
@@ -56,6 +57,14 @@ internal static class GeneratedCardGrowthAcceptanceTests
                     method.Name == "AddGeneratedCardToCombat"))
             {
                 copyFailures.Add($"{fullName}: does not add the clone through the normal generated-card pipeline");
+            }
+            if (fullName == "Vivhite.Cards.Recursion.EventLoop" &&
+                !calls.Any(method =>
+                    method.DeclaringType == typeof(CardModel) &&
+                    method.Name == nameof(CardModel.AddKeyword)))
+            {
+                copyFailures.Add(
+                    $"{fullName}: generated copies must receive the durable native Exhaust keyword");
             }
         }
         AcceptanceAssert.Empty(
@@ -134,6 +143,7 @@ internal static class GeneratedCardGrowthAcceptanceTests
                      {
                          typeof(InfiniteDimensionalityPower),
                          typeof(InfiniteMarginPower),
+                         typeof(ClosedDomainMapping),
                          typeof(TopologicalGrowth),
                          typeof(EventLoop),
                          typeof(ConservedRecurrence)
@@ -354,6 +364,71 @@ internal static class GeneratedCardGrowthAcceptanceTests
                     ReferenceEquals(playedDimensionUpSources[index], sourceProbe.CardSources[index]),
                     $"Real play {index + 1} must forward its exact generated, recovered, or production card instance through DimensionUp and PowerCmd.");
             }
+
+            // Topological Growth above already carries Exhaust itself.  Exercise Event Loop with
+            // a normal, non-Exhaust source as a regression for the one-shot-copy contract.
+            // Earlier assertions intentionally exercise both automatic and explicit selection.
+            // Clear any completed-but-unused test selections before this focused branch so the
+            // source identity below cannot be satisfied by a stale queue item.
+            selector.Cleanup();
+            var normalSource = await AddProductionCardToHandAsync<ClosedDomainMapping>(
+                combatState,
+                player,
+                trackedObjects);
+            await PlayCardThroughProductionActionAsync(
+                normalSource,
+                actionQueues,
+                expectedEnergySpent: 1,
+                // The preceding growth chain has accumulated enough Margin to cover this
+                // focused source's LifeCost; that does not affect its native keyword state.
+                expectedLifeLost: 0,
+                expectedDimensionUp: 0,
+                expectedResultPile: PileType.Discard);
+            AcceptanceAssert.True(
+                !normalSource.Keywords.Contains(CardKeyword.Exhaust),
+                "The focused Event Loop source must be a normal card without native Exhaust.");
+
+            var eventLoopForNormalSource = await AddProductionCardToHandAsync<EventLoop>(
+                combatState,
+                player,
+                trackedObjects);
+            selector.PrepareToSelect([normalSource]);
+            await PlayCardThroughProductionActionAsync(
+                eventLoopForNormalSource,
+                actionQueues,
+                expectedEnergySpent: 1,
+                // The normal source consumes the final two Margin above, so Event Loop's
+                // six-point LifeCost pays five points in HP here.
+                expectedLifeLost: 5,
+                expectedDimensionUp: 0);
+
+            var normalSourceClones = playerCombatState.Hand.Cards
+                .Where(card => card.IsClone && ReferenceEquals(card.CloneOf, normalSource))
+                .ToArray();
+            AcceptanceAssert.Equal(
+                1,
+                normalSourceClones.Length,
+                "Event Loop must create one clone when the selected source does not already Exhaust.");
+            var normalSourceClone = normalSourceClones[0];
+            AcceptanceAssert.True(
+                normalSourceClone.Keywords.Contains(CardKeyword.Exhaust),
+                "Event Loop's generated copy must expose the native Exhaust keyword even when its source does not.");
+            AcceptanceAssert.True(
+                !normalSourceClone.ExhaustOnNextPlay,
+                "Event Loop must use the durable Exhaust keyword, not the transient ExhaustOnNextPlay flag.");
+            AcceptanceAssert.True(
+                !player.RunState.ContainsCard(normalSourceClone),
+                "Event Loop's generated copy must remain combat-scoped rather than entering the run deck.");
+            trackedObjects.Add(normalSourceClone);
+            await PlayCardThroughProductionActionAsync(
+                normalSourceClone,
+                actionQueues,
+                expectedEnergySpent: 0,
+                expectedLifeLost: 2,
+                expectedDimensionUp: 0);
+            AcceptanceAssert.True(
+                playerCombatState.ExhaustPile.Cards.Contains(normalSourceClone),
+                "Event Loop's one-shot copy of a normal card must enter Exhaust after play.");
         }
         finally
         {
@@ -494,7 +569,8 @@ internal static class GeneratedCardGrowthAcceptanceTests
         ActionQueueSet actionQueues,
         int expectedEnergySpent,
         int expectedLifeLost,
-        int expectedDimensionUp)
+        int expectedDimensionUp,
+        PileType expectedResultPile = PileType.Exhaust)
     {
         var player = card.Owner;
         var playerCombatState = player.PlayerCombatState
@@ -575,10 +651,13 @@ internal static class GeneratedCardGrowthAcceptanceTests
                 ReferenceEquals(entry.CardPlay.Player, player) &&
                 entry.HappenedThisTurn(combatState)),
             $"{DescribeCard(card)} must produce exactly one real CardPlayFinished history entry.");
+        var resultPile = CardPile.Get(expectedResultPile, player)
+            ?? throw new AcceptanceFailureException(
+                $"The production player has no {expectedResultPile} pile to receive {DescribeCard(card)}.");
         AcceptanceAssert.True(
             !playerCombatState.Hand.Cards.Contains(card) &&
-            playerCombatState.ExhaustPile.Cards.Contains(card),
-            $"{DescribeCard(card)} must move from the real Hand through Play and into the real Exhaust pile.");
+            resultPile.Cards.Contains(card),
+            $"{DescribeCard(card)} must move from the real Hand through Play and into the real {expectedResultPile} pile.");
     }
 
     private static IDisposable InstallProductionCardLocalization(
@@ -590,6 +669,7 @@ internal static class GeneratedCardGrowthAcceptanceTests
             ?? throw new AcceptanceFailureException($"Production localization is not a JSON object: {productionPath}");
         var productionCards = new Dictionary<string, CardModel>(StringComparer.Ordinal)
         {
+            [repository.CardId(typeof(ClosedDomainMapping))] = ModelDb.Card<ClosedDomainMapping>(),
             [repository.CardId(typeof(TopologicalGrowth))] = ModelDb.Card<TopologicalGrowth>(),
             [repository.CardId(typeof(EventLoop))] = ModelDb.Card<EventLoop>(),
             [repository.CardId(typeof(ConservedRecurrence))] = ModelDb.Card<ConservedRecurrence>()

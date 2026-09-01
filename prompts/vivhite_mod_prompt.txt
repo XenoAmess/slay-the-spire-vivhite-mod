@@ -2,7 +2,7 @@
 这个角色会有自己的独特卡组，或许还会有新增一些遗物等。
 你可以在这里找到杀戮尖塔2的mod的制作教程：https://tutorials.sts2modding.com/
 我们基础库选择RitsuLib。
-我们机器上的杀戮尖塔2的位置在G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.exe，启动选项为%command% --rendering-driver vulkan（必须vulkan）
+我们机器上的杀戮尖塔2的位置在G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.exe，当前实机验证基线启动选项为%command% --rendering-driver vulkan；Vulkan 是已验证的默认路径，不把它误写成所有硬件上的绝对要求。游戏级 OpenGL3/D3D12 备用入口需在对应后端完成独立 Mod 验收后才能宣称兼容。
 你可以使用这个杀戮尖塔版本进行真机自测。
 上面我说的这些信息里，有些信息你要写进agents.md里，有些信息你要写进docs里，你自己决策。
 现在，你来规划并探索，一个新人物mod到底应该怎么加，然后写出一份可运行demo给我，然后自己开展真机测试。

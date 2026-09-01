@@ -4,6 +4,7 @@
 
 [b]当前版本：[/b] 0.2.0
 [b]适配游戏：[/b] Slay the Spire 2 v0.111.0
+[b]实机验证分支：[/b] Steam [code]public-beta[/code]（当前公开材料仅覆盖此分支）
 [b]语言：[/b] 简体中文 / English
 [b]必须依赖：[/b] [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295]RitsuLib 0.5.14[/url]
 
@@ -21,11 +22,14 @@
 [list=1]
 [*] 先订阅上方 RitsuLib 依赖。
 [*] 订阅本条目并等待 Steam 下载完成。
-[*] 使用 Vulkan 启动游戏；Steam 启动项设置为：[code]%command% --rendering-driver vulkan[/code]
+[*] 推荐使用已经过实机验证的 Vulkan 启动游戏；Steam 启动项设置为：[code]%command% --rendering-driver vulkan[/code]
 [*] 在 Mod 菜单启用 RitsuLib 与 Vivhite 后重启游戏。
 [/list]
 
-若遇到加载失败，请附上 [code]%APPDATA%\SlayTheSpire2\logs\godot.log[/code] 反馈。
+游戏另提供 OpenGL3（[code]--rendering-driver opengl3[/code]）和 D3D12 入口；本 Mod 尚未完成
+这两个后端的专项验收。若 Vulkan 无法启动，可以将 OpenGL3 作为游戏级排障尝试，但不代表
+本 Mod 已兼容。遇到加载失败，请附上实际渲染后端和
+[code]%APPDATA%\SlayTheSpire2\logs\godot.log[/code] 反馈。
 
 [h1]English[/h1]
 
@@ -33,6 +37,7 @@ Vivhite is an independent magical-girl character built around mathematics, compu
 
 [b]Version:[/b] 0.2.0
 [b]Target game:[/b] Slay the Spire 2 v0.111.0
+[b]In-game verification branch:[/b] Steam [code]public-beta[/code] (the current public material covers this branch only)
 [b]Languages:[/b] Simplified Chinese / English
 [b]Required dependency:[/b] [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3747602295]RitsuLib 0.5.14[/url]
 
@@ -50,9 +55,15 @@ Vivhite is an independent magical-girl character built around mathematics, compu
 [list=1]
 [*] Subscribe to RitsuLib using the dependency link above.
 [*] Subscribe to this item and let Steam finish downloading it.
-[*] Launch with Vulkan using [code]%command% --rendering-driver vulkan[/code].
+[*] Prefer the Vulkan path validated in-game: [code]%command% --rendering-driver vulkan[/code].
 [*] Enable both RitsuLib and Vivhite in the Mod menu, then restart the game.
 [/list]
+
+The game also ships OpenGL3 (`--rendering-driver opengl3`) and D3D12 launchers, but this Mod
+has not completed backend-specific acceptance for either renderer. If Vulkan does not start,
+OpenGL3 may be tried as a game-level troubleshooting fallback; that does not mean the Mod is
+compatible. Include the actual renderer and `%APPDATA%\SlayTheSpire2\logs\godot.log` when reporting
+load failures.
 
 Source code and issue tracker: [url=https://github.com/XenoAmess/slay-the-spire-vivhite-mod]GitHub[/url]
 License: GNU GPL v3

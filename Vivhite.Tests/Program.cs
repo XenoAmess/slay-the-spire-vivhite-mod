@@ -45,6 +45,8 @@ internal static class Program
             new("AutoPlay rejects unaffordable Life Calculation payments", LifeCalculationAcceptanceTests.AutoPlayShouldPlayHonorsLifePaymentLegality),
             new("compiled card flow gates and pays before effects", LifeCalculationAcceptanceTests.CompiledCardBaseGatesPlayAndPaysBeforeEffects),
             new("謦欬 attacks pay before card-triggered recovery", LifeCalculationAcceptanceTests.LifeCostAttacksPayBeforeAnyCardTriggeredRecovery),
+            new("Tungsten Rod reduced HP loss still completes payment", TungstenRodCompatibilityAcceptanceTests.ReducedHpLossStillCompletesPayment),
+            new("Life payment uses reducer-aware completion", TungstenRodCompatibilityAcceptanceTests.PaymentFlowUsesReducerAwareCompletion),
             new("no artificial cap constants or static fields", UnboundedGrowthAcceptanceTests.HasNoArtificialCapConstantsOrStaticFields),
             new("Dimension Up is uncapped, stackable, and grows max/current HP", UnboundedGrowthAcceptanceTests.DimensionUpUsesUncappedStackableMaxAndCurrentHpGrowth),
             new("overheal preserves uncapped excess", UnboundedGrowthAcceptanceTests.OverhealPreservesUncappedExcess),

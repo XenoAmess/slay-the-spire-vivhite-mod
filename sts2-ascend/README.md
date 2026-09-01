@@ -124,7 +124,7 @@ Profile，且 prompt、runs、stats、lessons、policy、报告和队列均按�
 ## 快速开始
 
 ```powershell
-# 在仓库根目录：按 Source 部署 → Vulkan 启动游戏 → 后台启动 runner/brain
+# 在仓库根目录：按 Source 部署 → 使用已验证的 Vulkan 启动游戏 → 后台启动 runner/brain
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1
 
 # 完整停止 brain/runner、播报/复盘链和游戏
@@ -138,7 +138,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - 杀戮尖塔2 v0.111.0（`scripts\Deploy-Mod.ps1 -GameDir` 可改路径）
 - `py -3`（Python 3.11+；本机 3.14 验证通过）
-- 游戏根目录有 `launch_vulkan.bat`；冷启动由脚本自动调用
+- 游戏根目录有 `launch_vulkan.bat`；冷启动由脚本自动调用。当前实机验证范围是
+  Steam `public-beta` 分支的 STS2 `v0.111.0`。
+- 游戏也提供 `launch_opengl.bat`（`--rendering-driver opengl3`）和
+  `launch_d3d12.bat`，但本栈尚未完成替代后端的 Mod/API/Spine/VFX 专项验收。遇到
+  Vulkan 启动问题可手动将 OpenGL3 作为游戏级排障尝试；Start-Agent 不会自动切换，
+  启动成功也不等于训练栈或 Mod 已兼容。
 
 启动默认在后台运行，不占住当前终端。常用参数：
 
@@ -553,7 +558,7 @@ TTS 环境在 `third_party/index-tts/`（uv 旁路，gitignore）。GPU 改造�
 
 ```
 Start-Agent.ps1（session + PID 身份记录，默认后台）
-  ├─ SlayTheSpire2.exe（Vulkan）
+  ├─ SlayTheSpire2.exe（默认 Vulkan；当前已验证：Steam public-beta / v0.111.0）
   └─ runner.py（拉起大脑 / 退出码42重启 / 崩溃自动回滚）
         └─ py -m brain（决策主循环）
               ├─ 驾驶舱监督器 → review_viewer.py（常驻、自愈、点击穿透）

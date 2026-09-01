@@ -322,6 +322,11 @@ public sealed class EventLoop : RecursionCard
         }
 
         var copy = selected.CreateClone();
+        // The copy is combat-scoped because it enters through AddGeneratedCardToCombat, but
+        // Event Loop's contract also makes it a one-shot card.  Use the durable native keyword
+        // rather than ExhaustOnNextPlay: CreateClone resets that transient flag and the engine
+        // clears it at turn end, which would let an unplayed copy survive without exhausting.
+        copy.AddKeyword(CardKeyword.Exhaust);
         copy.SetToFreeThisTurn();
         await CardPileCmd.AddGeneratedCardToCombat(
             copy,

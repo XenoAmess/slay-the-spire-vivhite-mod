@@ -7,11 +7,16 @@
 - 公开地址：<https://steamcommunity.com/sharedfiles/filedetails/?id=3793741497>。
 - 可见性：`public`。
 - 必须依赖：RitsuLib，Workshop item ID `3747602295`，Mod 版本契约 `0.5.14`。
-- 发布版本：Vivhite `0.2.0`，最低游戏版本 `0.111.0`。
+- 发布版本：Vivhite `0.2.0`，最低游戏版本 `0.111.0`；本机发布验收使用 Steam
+  `public-beta` 分支。
 
 条目先创建并完成首轮上传；随后主线程的 64 项发布验收发现中文“孤高冠冕”说明缺少“向上取整”，完成最小修正并复跑为 `64/64 PASS`。发布流程立即从修正后的当前工作树重新隔离构建，并覆盖更新同一个 item，没有创建重复条目。最终 Steam 回执时间为 `2026-09-01T01:40:57.7917231Z`，状态为 `published`，上传、依赖与可见性均完成，且不要求额外接受 Workshop 协议。
 
-## 最终发布包证据
+## 首发发布包证据（评论修复前）
+
+本节记录的是首发上传包，不包含本次评论核验后新增的 Tungsten Rod 生命支付修复、
+Event Loop `Exhaust` 修复或随后更新的源描述；公开 Workshop 当前仍对应这份旧包。
+本地修复后的三件套已重新构建并部署到测试机，但本次没有重新上传 Steam。
 
 发布脚本把三件套构建到忽略目录 `workshop/.runtime/content/Vivhite/`，没有覆盖游戏当前的 `mods/Vivhite`。最终目录只有以下三份文件，总计 `96,090,342` bytes：
 
@@ -34,7 +39,19 @@
 - 选人英雄母源 `assets/vivhite-ironclad/custom/character_select/sources/vivhite-character-select-hero-master-v1.png`，SHA256 `2CABDE503DDAE0780F5530FED0FFB8C2910C3F8289A7DFDAAEC93261E6AC781A`；
 - 选人转场 `Vivhite/Vivhite/skins/ironclad/transitions/vivhite_character_select_transition.png`，SHA256 `82015B8F5AA1C6DD9FA57B9D757E009F35FCA67D8818B269AF4AB6F49FF252D2`。
 
-发布说明为中英双语，明确列出 61 张卡牌、三套主要构筑、初始遗物、Vulkan 启动要求、RitsuLib 依赖和安装步骤。匿名请求公开页面返回 HTTP 200，并确认公开订阅入口、标题、中英文说明、English / Simplified Chinese 标签、RitsuLib Required Item 和预览图元数据均存在。
+仓库当前源描述为中英双语，明确列出 61 张卡牌、三套主要构筑、初始遗物、Vulkan 验证基线、
+RitsuLib 依赖和安装步骤；这不是对首发上传说明的追溯性描述。匿名请求公开页面返回 HTTP 200，
+并确认公开订阅入口、标题、中英文说明、English / Simplified Chinese 标签、RitsuLib Required Item
+和预览图元数据均存在。
+
+## 工坊评论复核后的说明修订
+
+发布后收到的评论指出“Vulkan 大概率不是必须”以及“只在 openbeta 测试”。本机证据确认
+游戏目录同时提供 OpenGL3/D3D12 包装脚本，且 `appmanifest_2868840.acf` 的
+`BetaKey` 为 `public-beta`；不过 Vivhite 目前只有 Vulkan 的完整实机验收。仓库源描述已
+改为“Vulkan 已验证、OpenGL3/D3D12 仅可用于游戏级排障且未作 Mod 兼容承诺”，并明确
+验证范围为 `public-beta` / `v0.111.0`。本节记录的是源文件修订；重新上传同一条目需
+另行执行发布脚本并保存新的回执，不能把本地源描述当作已上线内容。
 
 ## 上传实现与复用
 
