@@ -116,8 +116,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   `--force-steam off`。它只作用于本次游戏进程，不改游戏目录、Steam 客户端或云同步文件，也不需要
   UAC/人工 GUI；会话 `session.json` 记录请求模式、参数及 `steam_mode_applied`。若游戏已在运行，参数
   不会 retroactively 改变该进程，必须先用统一 `Stop-Agent.ps1` 停止，再以 `-SteamMode off` 冷启动。
-  `-SteamMode off` 只适用于已完成该本地 profile 原生初始化、且明确接受独立存档命名空间的诊断/训练会话；
-  它不能替代原生 Continue/存档证据门禁，也不能被当作 Steam Cloud 修复。`off` 使用独立的本地 `user://default/1` profile，
+  `-SteamMode off` 只适用于已完成该本地 profile 原生初始化、且明确接受独立存档命名空间的显式诊断/隔离实验，
+  不是生产训练 fallback；它不能替代原生 Continue/存档证据门禁，也不能被当作 Steam Cloud 修复。`off` 使用独立的本地 `user://default/1` profile，
   不继承 Steam profile 的 `ModSettings`/“已同意加载模组”标记；首次运行若出现
   `user has not yet seen the mods warning` 并跳过 `STS2AIAgent`、RitsuLib、Vivhite，API 不会启动。
   无人值守时不得自动点击原生确认框或把它误报成 Brain 故障；若该 profile 尚未完成原生同意，必须保持训练/直播
