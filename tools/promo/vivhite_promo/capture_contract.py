@@ -467,8 +467,9 @@ class VivhiteCaptureContract:
         The project sidecar intentionally uses a friendlier ``producer`` and
         ``timebase`` shape.  xAR's canonical wire contract uses an explicit
         adapter/tool identity, a string timebase, and direct file records in
-        ``clean_spans.evidence``.  Keeping this conversion explicit prevents
-        project vocabulary from leaking into the generic loader.
+        ``clean_spans.evidence``.  Project-only mode, run, state, and semantic
+        fields are deliberately omitted from this mapping; they remain bound
+        by the Vivhite sidecar and are checked by the adapter.
         """
 
         receipt = self.capture_receipt
@@ -514,12 +515,6 @@ class VivhiteCaptureContract:
                 {**item.to_mapping(), "role": "capture-evidence"}
                 for item in all_evidence.values()
             ],
-            "metadata": {
-                "vivhite_contract": CONTRACT_ID,
-                "mode": self.mode,
-                "run_id": self.run_id,
-                "audio_stems": [stem.stem_id for stem in self.audio_stems],
-            },
         }
 
     def to_mapping(self) -> dict[str, object]:
