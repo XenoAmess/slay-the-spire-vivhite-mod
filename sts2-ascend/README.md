@@ -8,22 +8,65 @@
 - **每局结束后自动复盘**：把结果归因到卡牌/遗物/敌人/事件选项，突变策略参数，写进 `knowledge/lessons.md`
 - 以通关为目标，胜利后自动提升进阶（Ascension）继续挑战更高难度
 
+> **文档定位**：这是 `sts2-ascend/` 的运行与维护手册。命令示例默认从仓库根目录
+> `G:\workspace\slay-the-spire-vivhite-mod` 执行；如果你先进入 `sts2-ascend/`，请去掉命令中的
+> `sts2-ascend/` 前缀。可执行脚本、测试和当前根目录 [`AGENTS.md`](../AGENTS.md) 是事实源；本页不把
+> 某一次运行的进程、楼层或存档状态写成永久保证。
+
+**导航**： [边界](#先看这三条运行边界) · [目录](#文档与目录导航) · [快速开始](#快速开始) ·
+[运行验收](#运行验收与只读监控) · [开发/部署](#开发部署与验收) · [复盘](#大模型复盘异步追及队列游玩零等待) ·
+[驾驶舱](#ascend-vision-直播驾驶舱) · [语音](#语音朗读ascend-voice) · [排障](#故障排查)
+
+## 先看这三条运行边界
+
+1. **只用统一入口管理全栈。** 用 `Start-Agent.ps1` 启动/复用游戏、runner、Brain、驾驶舱和按需语音，
+   用 `Stop-Agent.ps1` 停止；不要分别拉起组件、按端口泛杀 Python，也不要手工删除 `.runtime/` 或
+   `knowledge/`。脚本按 session、PID 创建身份、工作区和命令行校验目标。
+2. **`Stack ready` 不等于正在游玩。** 开始训练后的验收必须看 `/state` 的有效 `run_id`/`run`、非菜单
+   `screen`、数值 `state_version`、驾驶舱 `connected`/新鲜 heartbeat，以及最近的 `applied` 动作回执和
+   连续状态推进。只看到进程存活、`/health=ready` 或悬浮窗心跳，不能当作真实对局证据。
+3. **直播默认失败关闭。** 用户说“下播”时只确认 Livehime 为 `Idle`/`NotRunning`，继续运行训练但绝不
+   调用开播入口或自动复播。只有用户明确要求开播、真实对局证据完整且两次采样都推进，才可调用
+   `Start-BilibiliLive.ps1`；证据消失、主菜单/等待、动作停止或挂机提示出现时，立即
+   `Stop-BilibiliLive.ps1` 并确认 `Idle`。两分钟断流预算只适用于已证明真实游玩的直播会话。
+
+## 文档与目录导航
+
+| 路径 | 用途 | 是否可手工编辑运行数据 |
+| --- | --- | --- |
+| [`README.md`](README.md) | 本子项目的架构、运行、验收和排障手册 | 是（文档） |
+| [`AGENTS.md`](AGENTS.md) | 本目录附加工作规则；继承根目录规则 | 是（规则变更需审慎） |
+| `brain/` | API 客户端、策略、在线学习、复盘宿主、驾驶舱与生命周期实现 | 只改源码/配置；不要改 `knowledge/` |
+| `brain/config.json` | 端口、轮询、viewer、复盘模型链、TTS 参数 | 可改静态配置；运行时由复盘机制验收 |
+| `scripts/Start-Agent.ps1` / `Stop-Agent.ps1` | 唯一的全栈启停入口 | 通过脚本使用，不手改 `.runtime` |
+| `scripts/Deploy-Mod.ps1` | 构建/下载并部署上游 STS2-Agent 三件套 | 只在游戏停止或用 `-SkipDeploy` |
+| `scripts/Start-BilibiliLive.ps1` / `Stop-BilibiliLive.ps1` | 直播前置证明、开播；或只下播 | 只在明确授权的直播流程使用 |
+| `third_party/README.md` | 上游 fork/release、补丁和构建关系 | 只读参考 |
+| `tools/game-knowledge/README.md` | 原生游戏知识快照生成、校验与版本隔离 | 只写显式输出目录 |
+| `.runtime/` | 当前 session、PID、stop sentinel、日志、dashboard 快照 | **不要手工改/删** |
+| `knowledge/` | 在线统计、局日志、复盘队列、归档和经验 | **不要手工改**；用脚本/Brain 事务 |
+
+历史方案和事故复盘见 [`docs/2026-08-22-sts2-ascend自动游玩智能体.md`](../docs/2026-08-22-sts2-ascend自动游玩智能体.md)。
+它是历史证据与背景，不覆盖当前脚本和根 `AGENTS.md` 的操作边界。
+
 ## 架构
 
 ```
-┌─────────────────────────────┐        HTTP 127.0.0.1:8080         ┌──────────────────────────────┐
-│  Slay the Spire 2 (游戏进程) │  /state /actions/available /action │  brain/ (Python 3, 纯标准库)   │
-│  └ STS2AIAgent mod (上游)   │ ◄────────────────────────────────► │  ├ client.py    API 客户端     │
-│    暴露游戏状态 + 动作接口   │   GET /data/{cards,relics,...}     │  ├ policy.py    逐屏决策引擎   │
-└─────────────────────────────┘                                    │  ├ knowledge.py 持久化知识库   │
-                                                                   │  ├ reflect.py   赛后复盘/进化 │
-                                                                   │  └ agent.py     主循环/看门狗 │
-└─────────────────────────────┘        knowledge/ = 智能体的长期记忆（跨对局持续进化）
-                                        ├ stats.json       卡牌/遗物/敌人/事件 表现统计（增量均值+收缩估计）
-                                        ├ policy.json      可调策略权重（每局按死因/胜负自动突变）
-                                        ├ progression.json 进阶天梯（胜利即 +1）
-                                        ├ lessons.md       每局中文复盘总结（自我反思）
-                                        └ runs/*.json      每局完整决策日志
+┌─────────────────────────────┐       localhost HTTP        ┌──────────────────────────────┐
+│ Slay the Spire 2             │  ┌──────────────────────► │ brain/ (Python 3 stdlib)      │
+│ └ STS2AIAgent (上游 mod)     │  │ /state                 │ ├ client.py   API 客户端       │
+│   暴露状态、数据与动作接口    │  │ /actions/available     │ ├ policy.py   逐屏决策引擎     │
+└─────────────────────────────┘  │ /action (POST)         │ ├ agent.py    主循环/看门狗    │
+                                 │ /data/*                 │ ├ knowledge.py 持久化知识库   │
+                                 ◄──────────────────────── │ ├ reflect.py  赛后复盘/进化     │
+                                                           │ └ viewer/TTS/复盘监督器       │
+                                                           └──────────────┬───────────────┘
+                                                                          │ 原子写入
+                                                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ knowledge/（跨对局长期记忆；运行中由 Brain 事务维护，不手工编辑）                         │
+│ stats.json · policy.json · progression.json · lessons.md · runs/*.json · review_queue.json │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 大脑**不依赖任何第三方包**（纯 Python 标准库），也**不修改上游 mod**——只是它的 HTTP 客户端。
@@ -141,6 +184,48 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1 -KeepGame
 ```
 
+上述入口是幂等的：已有当前工作区的 runner 时会复用，不会再启动第二套；启动中的 session 被
+`Stop-Agent.ps1` 取消时不要立刻强行再开一套，先等哨兵协作退出或再次运行 Stop。冷启动顺序是
+“预检 Python/.NET/Steam 空间 →（可选）部署 → 启动游戏 → 写入 session → 启动 runner/Brain →
+等待 API/Brain ready”。`-ReadyTimeoutSeconds` 到期只表示等待窗口结束，runner 仍可能在后台自愈，
+不能据此宣称训练已开始；应按[运行验收](#运行验收与只读监控)确认真实对局。
+
+### 首次准备与命令约定
+
+- 在仓库根目录执行 `git status` 前先确认没有要保留的用户 staged 内容；Brain 的在线存档会自己提交，
+  不要把 `knowledge/` 或 `.runtime/` 加入人工 commit。
+- `Start-Agent.ps1` 会探测一个完整的 Python 3.10+ 标准库运行时，并清掉进程级 `PYTHONPATH`，
+  避免残留 shim 误导导入；通常不需要手工设置环境变量。fork 部署还需要 Godot 4.5.1 Mono 和
+  `.NET SDK`，可通过 `-GodotExe` 指定编辑器路径。
+- 生产训练优先 `-Source auto`：本地 `third_party/STS2-Agent/.git` 存在时构建该 checkout，否则
+  下载官方 release。想复用已经部署且游戏正在运行的 DLL，必须显式加 `-SkipDeploy`；脚本不会在
+  DLL 可能被锁定时覆盖它。
+- `py -3` 只是示例别名；若系统没有该 launcher，使用启动脚本日志中通过预检的同一 `python.exe`。
+  直接运行 Brain 模块时，从 `sts2-ascend/` 目录执行 `py -3 -m brain`，或从根目录使用下面的
+  `.\sts2-ascend\brain\*.py` 路径，避免相对导入和 `knowledge` 根目录歧义。
+- 只有显式的 `-SteamMode off` 才会把 `--force-steam off` 传给冷启动的 `launch_vulkan.bat`；
+  `auto/on` 保留游戏默认 Steam 初始化。`auto/on` 冷启动前只读检查 Steam `userdata` 所在卷，默认
+  至少保留 `1 GiB`；空间不足、路径无法解析或 Steam 云存档异常时 fail-closed，不删除/移动 Steam
+  文件、不改云元数据、不请求 UAC。
+
+### 一次性直播桥安装（可选，需人工授权）
+
+日常训练和下播不需要安装直播桥。只有要使用 `Start-BilibiliLive.ps1` 或受保护下播 worker 时，
+才由已登录用户在**交互式、明确授权的管理员 PowerShell**中运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Install-BilibiliLiveBridge.ps1
+```
+
+安装器会把当前脚本按 SHA-256 复制到 `Program Files\VivhiteBilibiliLiveBridge`，并注册
+`\Vivhite\BilibiliLive-Start`、`\Vivhite\BilibiliLive-Stop`、`\Vivhite\BilibiliLive-DailyStopWatch`
+三个最高权限、交互式任务。**无人值守时不执行安装器、不点击 UAC、不自动确认游戏或直播姬弹窗。**
+安装后普通运行只触发已经注册的 worker；任务不存在时开/下播应失败关闭并等待人工处理，而不是
+自行提权。`-WhatIf` 可预览安装器/Stop 的目标，但不会替代真实安装。
+
+`Test-BilibiliLive.ps1` 是会真实短暂开播再下播的 smoke test，只能在明确允许触碰直播且桥已安装时
+运行；用户要求下播期间不要运行它。
+
 要求：
 
 - 杀戮尖塔2 v0.111.0（`scripts\Deploy-Mod.ps1 -GameDir` 可改路径）
@@ -152,8 +237,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   Vulkan 启动问题可手动将 OpenGL3 作为游戏级排障尝试；Start-Agent 不会自动切换，
   启动成功也不等于训练栈或 Mod 已兼容。
 
+兼容性基线如下；任何一项变化都要重新跑测试并留下真机证据：
+
+| 组件 | 当前基线 | 状态 |
+| --- | --- | --- |
+| Slay the Spire 2 | `v0.111.0`，Steam `public-beta` | 已验收 |
+| 渲染器 | Vulkan（`launch_vulkan.bat`） | 默认、已验收 |
+| 其他渲染器 | OpenGL3 / D3D12 | 仅游戏级排障，未作本栈兼容承诺 |
+| 上游 STS2-Agent | `v0.9.1`（默认 release；`auto` 可用本地 fork） | 协议/API 基线 |
+| Brain | Python 3.10+ 标准库（本机已用 3.14 验证） | 无第三方 Python 依赖 |
+| fork 构建工具链 | .NET 9 + Godot 4.5.1 Mono | 仅部署 fork 时需要 |
+
 启动默认在后台运行，不占住当前终端。常用参数：
 
+- `-Version <版本>`：`Deploy-Mod.ps1` 使用的上游 release 版本，默认 `0.9.1`；`-Source fork` 时仅作
+  审计记录，不替代 fork 当前 checkout。
 - `-SkipDeploy`：复用当前已部署 DLL；附着到已经运行的游戏时必须使用
 - `-Source auto|fork|release`：默认 `auto`，本地 fork clone 存在时优先构建 fork，否则用官方 release
 - `-SteamMode auto|on|off`：生产训练默认 `auto`（保留游戏默认的 Steam 初始化；可显式写
@@ -161,6 +259,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   `launch_vulkan.bat` 传 `--force-steam off`。这不会改写游戏目录、Steam 客户端或云同步文件；
   会话元数据会记录请求模式、实际参数和是否应用到新进程。
 - `-GameDir <目录>`：自定义游戏安装目录；fork 构建可另传 `-GodotExe`
+- `-GodotExe <文件>`：显式指定 fork 构建所用的 Godot 4.5.1 Mono 编辑器；未指定时按脚本配置查找
 - `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
 - `-SteamMinFreeBytes`：Steam-on/auto 冷启动前检查 Steam `userdata` 所在卷的可用空间，默认 `1 GiB`，仅可在脚本规定的 `1 MiB`–`1 TiB` 范围内显式调整；空间不足或路径无法解析会在部署/启动前 fail-closed，不会删除或修改 Steam 文件，也不会请求 UAC。该检查不把游戏安装盘当作云存档盘；`SteamMode off` 的独立本地 profile和复用已运行游戏不走新的 Steam 冷启动空间检查。
@@ -198,6 +297,93 @@ F9 一旦触及当前局，该局便永久标记为 `human_assisted` / `excluded
 `lessons`、选牌/构筑统计、LLM 复盘或角色轮换配额。若完整栈已经退出，快捷键监听也不存在，仍需用
 `Start-Agent.ps1` 冷启动。
 
+## 运行验收与只读监控
+
+### 什么算“正在训练”
+
+启动脚本输出 `Stack ready` 后，先在当前 session 的 `.runtime/session.json` 找到 `session_id`，再做
+一次只读验收。合格样本至少同时满足：
+
+| 证据 | 合格条件 | 不合格例子 |
+| --- | --- | --- |
+| session | `state=running`，`session_id` 与 PID 记录一致 | 旧 session、正在 stop、只剩孤儿进程 |
+| API `/health` | 端口 `8080`–`8084` 之一返回 `status=ready` | 只看到端口监听、HTTP 缓存或旧日志 |
+| API `/state` | `screen` 不在菜单/等待/终局屏，`run_id` 与结构化 `run` 有效，`state_version` 为数值 | `MAIN_MENU`、`run_unknown`、`run=null`、`state_version` 缺失 |
+| Brain dashboard | `.runtime/live_dashboard.<SESSION_ID>.json` 的 schema 为 `sts2.ascend-live/v1`，session/run 与 API 一致，`connection.status=connected` 且 heartbeat 新鲜 | 另一个 session 的 dashboard、只有 viewer 进程心跳 |
+| 动作 | 最近决策的 `decision.status=applied` 且 `decision.outcome.status=applied`，有可执行 action | `proposed`/`pending`/`reconciling`、只换 `decision_id` |
+| 连续性 | 至少两次不同状态/素材签名，`state_version` 严格递增 | 重复快照、仅时间戳变化、重复提案 |
+
+可以用下面的**只读**片段快速查看（端口被占用时把 `8080` 换成实际发现的 `8081`–`8084`）：
+
+```powershell
+$session = Get-Content -Raw -Encoding utf8 .\sts2-ascend\.runtime\session.json | ConvertFrom-Json
+$sid = [string]$session.session_id
+$api = Invoke-RestMethod http://127.0.0.1:8080/state -TimeoutSec 5
+$dash = Get-Content -Raw -Encoding utf8 (Join-Path .\sts2-ascend\.runtime "live_dashboard.$sid.json") | ConvertFrom-Json
+[pscustomobject]@{
+  session = $sid
+  session_state = $session.state
+  screen = $api.data.screen
+  run_id = $api.data.run_id
+  state_version = $api.data.state_version
+  dashboard_connection = $dash.connection.status
+  decision = $dash.decision.status
+  action_receipt = $dash.decision.outcome.status
+  dashboard_heartbeat = $dash.heartbeat
+}
+```
+
+直播状态也只读检查，不要用它代替真实游玩证明：
+
+```powershell
+Import-Module .\sts2-ascend\scripts\BilibiliLive.psm1 -Force
+Get-LivehimeStreamingState       # Idle / NotRunning / Starting / Streaming / Stopping / Unknown
+```
+
+训练看护应持续观察 `state_version`、`run_id`、楼层/屏幕、dashboard 的最近 `applied` 时间和进程
+身份。状态无进展、API 回到菜单、dashboard 过期或 Brain/runner 退出时，先记录 `.runtime` 证据，
+再按[故障排查](#故障排查)修复；不要通过 POST `/action`、控制台注入动作或伪造 dashboard 来“证明”
+训练。当前 session 的运行文件以 `sts2-ascend/.runtime/` 为准，仓库根目录其他同名目录不是证据。
+
+### API 最小契约
+
+Brain 使用本机回环地址，不对外开放：
+
+| 方法 | 路径 | 用途 | 谁可以调用 |
+| --- | --- | --- | --- |
+| `GET` | `/health` | mod/API 就绪与版本 | 只读诊断、Brain |
+| `GET` | `/state` | 当前屏幕、run、楼层、`state_version` | Brain、只读诊断 |
+| `GET` | `/actions/available` | 当前可执行动作 | Brain、只读诊断 |
+| `GET` | `/data/{collection}` | 卡牌/遗物/敌人等静态数据 | Brain/知识提取器 |
+| `POST` | `/action` | 提交一次游戏动作 | **仅 Brain；不要手工重放** |
+
+单次动作的 POST 不做 transport-level 自动重放。响应不确定时 Brain 只读取新状态并按动作特定后置
+条件对账；手工重复 POST 可能重复出牌、选项或终局按钮，属于高风险操作。
+
+### 直播操作（仅在用户明确授权时）
+
+开播入口会先复用/启动完整 sts2-ascend 栈，再读取真实 `/state` 和当前 session dashboard；它要求
+连续两次新鲜、递增的游戏状态及最近 `applied` 动作，任何一步失败都不会点击 Livehime。通过后才
+调用受保护的 Livehime worker，并将游戏和驾驶舱置顶：
+
+```powershell
+# 会实际开播；不要在用户要求下播、无人值守或没有真实对局证据时运行
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-BilibiliLive.ps1 `
+  -ReadyTimeoutSeconds 120 -GameplayReadyTimeoutSeconds 30 -LiveTimeoutSeconds 30
+
+# 只下播，不停止游戏、Brain、runner、TTS 或驾驶舱
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-BilibiliLive.ps1
+```
+
+`Start-BilibiliLive.ps1` 的失败路径若发现已有不安全的 `Streaming`，会优先停止并确认 `Idle`，
+然后报告原因；它不会为了达到“两分钟”而继续空播或自动重播。已经直播时若 `/state` 回到菜单、
+动作/状态无进展、dashboard 过期或出现平台挂机/处罚提示，应立即执行只下播入口并确认
+`Get-LivehimeStreamingState` 为 `Idle`。两分钟是恢复预算，不是允许空播的宽限期。
+
+每日下播 watcher 只在安装器注册成功后存在；它按北京时间 `16:20`–`16:39` 每分钟检查一次，
+只对精确 `Streaming` 状态执行下播，其他状态或读取异常均不点击。它不会启动训练、访问 Web API、
+调用 LLM 或停止游戏。安装/更新 watcher 的管理员授权必须由用户在场完成，不能由无人值守流程代办。
+
 ## 它如何"进化"
 
 1. **在线统计**：每场战斗结束记录敌方组合与掉血量（敌人危险度模型）；每个事件选项结算
@@ -218,6 +404,57 @@ F9 一旦触及当前局，该局便永久标记为 `human_assisted` / `excluded
 未知药只在有空位、健康、低价且保留金币时试购。所有配额均以最终成功回执或动作特定状态
 效果确认为准，`pending`、失败或断线请求不伪造样本。`UNKNOWN` 屏不盲探任意动作，仍只使用
 已声明的确认/继续和延迟界面兜底。
+
+## 开发、部署与验收
+
+### Brain/协议代码
+
+Brain 是纯 Python 标准库实现，不需要 `pip install`。修改 `brain/` 后，可在不启动游戏的情况下先
+做语法检查和单元测试：
+
+```powershell
+# 从仓库根目录执行；会生成可删除的 __pycache__，不应加入 commit
+py -3 -m compileall -q .\sts2-ascend\brain
+py -3 -m unittest discover -s .\sts2-ascend\tests -p 'test_*.py' -v
+```
+
+测试夹具会隔离临时 `knowledge`/`.runtime`；不要为了让测试通过而修改线上统计或删除当前 session。
+涉及生命周期、直播或 Steam 预检时，优先运行对应的 `test_start_agent_*`、
+`test_bilibili_live_scripts.py`、`test_runner_handshake.py`、`test_window_layers.py`，再运行完整套件。
+需要真实游戏状态的验收必须使用当前安装版本和统一启停脚本，不能拿 demo viewer 或旧日志冒充真机通过。
+
+### 上游 mod 部署
+
+`Deploy-Mod.ps1` 的输出是上游 mod 的完整三件套：`STS2AIAgent.dll`、`STS2AIAgent.pck`、
+`mod_id.json`，复制到游戏目录的 `mods/` 根，而不是 `mods/sts2-ascend/`。默认 `-Source auto` 在
+本地 fork checkout 存在时从 fork 构建，否则下载 `third_party/dist/` 中的官方 release；
+`-Source release` 只用于明确的官方基线对照。游戏运行时 DLL 可能被锁定，部署前必须先停止游戏：
+
+```powershell
+# 游戏已停止时，构建/部署并显示完整输出
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Deploy-Mod.ps1 `
+  -Source auto -GameDir 'G:\SteamLibrary\steamapps\common\Slay the Spire 2'
+
+# 部署后启动；若游戏已经在运行，只能复用已部署文件并加 -SkipDeploy
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1 `
+  -SkipDeploy -SteamMode auto
+```
+
+fork 构建需要 Godot 4.5.1 Mono、.NET SDK 和 `STS2_DATA_DIR`；用 `-GodotExe` 显式指定 Godot。
+具体 fork/upstream 分支纪律和已合入修复见 [`third_party/README.md`](third_party/README.md)。
+游戏知识提取器是独立的只读流程，命令、输出 schema 和版本哈希见
+[`tools/game-knowledge/README.md`](tools/game-knowledge/README.md)，不要把快照目录当作在线学习记忆。
+
+### 发布前最小清单
+
+1. 确认游戏版本、渲染器和 `GameDir` 与当前 session 记录一致（本机验证范围：Steam `public-beta`、
+   STS2 `v0.111.0`、Vulkan）。OpenGL3/D3D12 只能作为游戏级排障尝试，尚无本栈等价专项验收。
+2. 游戏停止时部署三件套；启动后记录 `session.json`、`/health`、`/state`、dashboard 和最近
+   `applied` 回执，完成两次递增状态采样。
+3. 运行与本次改动相关的 Python/C# 测试；检查 `brain.log`、runner stdout/stderr 和游戏日志中无新
+   的启动/存档错误。测试或日志读取失败时保留现场，不直接清空 `.runtime`。
+4. 若改动了 Workshop 内容，另按根 `AGENTS.md` 的物料门禁更新 manifest、版本、双语 BBCode、
+   预览图及旧图 SHA-256 归档；`sts2-ascend` 本身不代替 Workshop 发布脚本。
 
 ## 知识库压缩（compact）
 
@@ -291,7 +528,7 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 3. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
 
 Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Agent.ps1` 冷启动时通过
-`scripts/Install-CodexCompat.ps1` 非全局安装并校验固定 SHA256。每次启动 Luna provider 前还会
+`.\sts2-ascend\scripts\Install-CodexCompat.ps1` 非全局安装并校验固定 SHA256。每次启动 Luna provider 前还会
 用本地 `exec-server fs/readFile` 对普通盘符文件执行无模型、零 token 的读取兼容能力预检；
 预检失败时不启动 provider、不冷却 Luna，并保留原批次亲和性重试。
 
@@ -380,8 +617,8 @@ Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Age
 额外保存当时的手牌、可用动作、来伤和有界 `SCAN/GATE/RANK/LOCK` 轨迹，地图、休息、事件、
 选牌、商店和药水等高信息选择也保存有界轨迹。旧 run 没有这些新增字段时仍完全兼容。
 
-手动立即触发一次（同步）复盘：`py brain/llm_review.py --now`。若故障报告证明旧批次曾完成但
-未成功合入，可在大脑停止后的切换窗口用 `py brain/llm_review.py --requeue 562,566,567`
+手动立即触发一次（同步）复盘：`py -3 .\sts2-ascend\brain\llm_review.py --now`。若故障报告证明旧批次曾完成但
+未成功合入，可在大脑停止后的切换窗口用 `py -3 .\sts2-ascend\brain\llm_review.py --requeue 562,566,567`
 把指定局追加到队尾；已在 pending/reviewing 的局会自动去重，不会抢占最新直播证据。
 配置项见 `brain/config.json` 的 `llm` 节（间隔/模型/冷却/队列上限/禁用）。
 
@@ -519,8 +756,8 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 
 手动与配置用法：
 
-- `py brain/review_viewer.py --demo`：用模拟统计与决策演示驾驶舱。
-- `py brain/review_viewer.py --attach-current`：只读轮询 `opencode.db`，回放最近一场复盘。
+- `py -3 .\sts2-ascend\brain\review_viewer.py --demo`：用模拟统计与决策演示驾驶舱。
+- `py -3 .\sts2-ascend\brain\review_viewer.py --attach-current`：只读轮询 `opencode.db`，回放最近一场复盘。
 - `--interactive`：允许拖拽/ESC 关闭、手动选择 LIVE/TREND/REVIEW，并关闭点击穿透。
 - 首选开关为 `config.json` 的 `viewer.enabled`；旧 `llm.viewer_enabled` 继续兼容。
 - viewer 的根目录和单实例锁以当前 stack session 的 `.runtime` 为准；复盘隔离 clone 继承
@@ -534,7 +771,7 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 该升级不改变直播控制边界：开播仍启动完整 sts2-ascend 栈、将杀戮尖塔2置顶后通过本地直播姬开播；
 下播仍只让哔哩哔哩直播姬下播，不停止驾驶舱、智能体、语音服务或游戏。
 
-运行 `scripts/Install-BilibiliLiveBridge.ps1` 安装受保护直播桥后，会注册每日下播巡检任务
+运行 `.\sts2-ascend\scripts\Install-BilibiliLiveBridge.ps1` 安装受保护直播桥后，会注册每日下播巡检任务
 `\Vivhite\BilibiliLive-DailyStopWatch`。它按北京时间每天 16:20 启动，在半开窗口
 `[16:20, 16:40)` 内按分钟槽检查 20 次（16:20–16:39）；只有本地直播姬
 进程与日志精确报告 `Streaming` 时才复用同一 GUI 下播流程。其余状态及读取异常全部不点击，成功
@@ -565,9 +802,9 @@ token，也不会停止游戏、Agent、TTS、驾驶舱或其他服务。20 个�
   等待中的碎碎念，但不会强行打断已经开始的那一句
 - GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；禁用 BF16、
   FlashAttention、CUDA 自定义 kernel 和 torch.compile
-- 固定参考音色 `tts/reference_voice_15s.wav` 由 `scripts/prepare_reference_voice.py` 从原始 WAV 的前 15 秒生成：
+- 固定参考音色 `tts/reference_voice_15s.wav` 由 `.\sts2-ascend\scripts\prepare_reference_voice.py` 从原始 WAV 的前 15 秒生成：
   只把超过 400ms 的低能量静段缩到 200ms，保留自然停顿并在替换前备份 WAV 和条件缓存；可先运行
-  `py -3 scripts/prepare_reference_voice.py --dry-run` 预览，再去掉 `--dry-run` 原子更新；首次生成条件缓存后，
+  `py -3 .\sts2-ascend\scripts/prepare_reference_voice.py --dry-run` 预览，再去掉 `--dry-run` 原子更新；首次生成条件缓存后，
   只在参考阶段使用的 Wav2Vec/CAMPPlus 随后从显卡卸载，不参与每句合成
 - Edge 朗读内容 = 直播窗可见内容（代码/JSON/路径/tokens 行不读）
 - GPU owner 和 Edge 朗读器各有 session-scoped 单实例锁；CUDA 不可用时只跳过白绮结论/碎碎念，
@@ -579,7 +816,7 @@ token，也不会停止游戏、Agent、TTS、驾驶舱或其他服务。20 个�
 - 兼容模式仍可选：`llm.tts_mode` = `indextts` / `hybrid` / `sapi` / `nano` / `off`
 - **音量控制**：`Ctrl+Shift+Alt+↑` 调大 / `Ctrl+Shift+Alt+↓` 调小（±10%）/ `Ctrl+Shift+Alt+M` 静音切换；
   悬浮窗 HUD 实时显示；状态存 `knowledge/voice_volume.json`（SAPI 每句现读、克隆合成按比例缩放）
-- 手动一次性朗读：先启动整套，再运行 `py -3 tts/speak_once.py <UTF-8文本文件>`；它只提交给现有 owner，不会另载模型
+- 手动一次性朗读：先启动整套，再运行 `py -3 .\sts2-ascend\tts\speak_once.py <UTF-8文本文件>`；它只提交给现有 owner，不会另载模型
 
 TTS 环境在 `third_party/index-tts/`（uv 旁路，gitignore）。GPU 改造与实测见
 `docs/2026-08-26-IndexTTS-GPU双路共享.md`；最终结论的 10～20 字强制分段与短句生成上限见
@@ -618,3 +855,53 @@ Stop-Agent.ps1：session 哨兵协作退出 → 精确进程树兜底 → 游戏
 - 日志中文乱码：`brain.log` 是 UTF-8，用 VS Code / 新版记事本打开正常；PowerShell
   `Get-Content` 默认 GBK 会显示乱码。
 - 端口：mod 默认 8080，被占用自动 8081+；大脑会探测 8080-8084。
+
+## 故障排查
+
+| 症状 | 先确认 | 安全处理 |
+| --- | --- | --- |
+| 输出 `Stack ready`，但画面停在 `MAIN_MENU`/`run_unknown` | `/state`、dashboard 的 run/屏幕和最近 `applied` 回执 | 这不是训练成功；保持直播 `Idle`，保留现场，等待 Brain 产生可验证对局或按需用 `Stop-Agent.ps1 -KeepGame` 重启智能体 |
+| `Runner is active but readiness timed out` | `.runtime/runner.<session>.err.log`、Brain PID 的 `stage`、API 8080–8084 | 不要启动第二套；先读日志，runner 会继续自愈。确认旧 session 已停后才重试 |
+| 提示 residual runner/brain/process | `session.json`、对应 `*.pid` 的 session、创建时间、命令行 | 只运行统一 `Stop-Agent.ps1`（可先 `-WhatIf`）；不要 `taskkill /IM python.exe`、不要按端口泛杀 |
+| Steam 空间预检失败 | 错误中的 `userdata` 路径/卷和 `free_bytes`，不是游戏安装盘 | 释放 Steam userdata 卷空间后重试；脚本不会删 Steam 文件、改云元数据或请求 UAC |
+| `SteamMode off refused` 或出现 `user has not yet seen the mods warning` | `APPDATA\SlayTheSpire2\default\1\settings.save` 的 `mod_settings` 是否存在 | 无人值守保持 fail-closed；需用户在本地 profile 手工完成一次原生模组确认后退出，再冷启动 `-SteamMode off` |
+| Vulkan 启动失败或 API 不可达 | 游戏日志、`launch_vulkan.bat`、mod 三件套哈希和游戏版本 | 先停止整套并重新部署；OpenGL3 只能作为人工游戏级排障，不代表 Mod/API 已通过；不要让 Brain 对着空 API 运行 |
+| viewer 不见、重复或锁冲突 | 当前 session 的 `live_dashboard.<SESSION_ID>.json`、`knowledge/viewer.lock`、`Local\\STS2_ASCEND_ASCEND_VISION` | 不手删锁；按 session 统一 Stop/Start。复盘 clone 必须继承 `STS2_ASCEND_DISABLE_VIEWER=1` |
+| 复盘 backlog、模型超时或 15/30 分钟无输出告警 | `knowledge/review_queue.json`、`review_salvage/`、runner/复盘日志 | 不暂停在线游玩或手工套失败补丁；失败现场由宿主保全，必要时停止 Brain 后用显式 `--replay-salvage` 重投 |
+| `Start-BilibiliLive.ps1` 拒绝开播 | `Reason`、`/state`、dashboard 和 Livehime 状态 | 这是预期的失败关闭：修复并重新取得两次推进样本；已有 `Streaming` 且证据失效时只执行 `Stop-BilibiliLive.ps1`，确认 `Idle` |
+| 直播桥任务不存在/启动失败 | 任务路径 `\\Vivhite\\BilibiliLive-*` 与安装器 SHA-256 | 不自动提权；由用户明确授权时一次性运行安装器，否则保持下播。不要直接点击 Livehime 或 UAC |
+
+### 诊断日志位置
+
+- 当前 session 元数据：`sts2-ascend/.runtime/session.json`
+- runner：`.runtime/runner.<SESSION_ID>.out.log` 与 `.err.log`
+- Brain：`sts2-ascend/knowledge/brain.log`（UTF-8）
+- 决策驾驶舱：`.runtime/live_dashboard.<SESSION_ID>.json`
+- 原始局证据：`knowledge/runs/` 或角色子目录 `knowledge/profiles/<profile>/runs/`
+- 复盘失败现场：`knowledge/code_backups/review_salvage/`；拒合索引：[`REVIEW_REJECTIONS.md`](REVIEW_REJECTIONS.md)
+- 游戏：`%APPDATA%\SlayTheSpire2\logs\godot.log`
+- Livehime：由 `BilibiliLive.psm1` 从本地日志读取；未知/读取异常按不安全处理，不猜测当前状态
+
+保存现场时保留对应 `session_id`、PID 创建身份、时间戳和错误原文。不要为了“清理干净”删除
+stop sentinel、PID、锁或在线知识；这些文件用于防止旧进程跨 session 复活及恢复未闭合事务。
+
+## 运行画面与证据示例
+
+仓库已经保存了几张可复核的游戏画面；它们只是 UI/素材验收样例，不是当前实时状态，也不能替代
+上面的 API + dashboard 证据。相对路径在 GitHub 与本地 Markdown 查看器中均可用：
+
+| 战斗 | 牌组/角色选择 |
+| --- | --- |
+| ![战斗出牌示例](../docs/screenshots/combat_attack.png) | ![牌组示例](../docs/screenshots/deck_view.png) |
+
+若需要替换截图，保留原始文件与来源，不要把截图或图集当作运行时贴图输入；白绮素材的生成、Alpha
+和 Spine 规则仍以根 `AGENTS.md` 及其两份美术手册为准。
+
+## 许可证与责任边界
+
+- `sts2-ascend/brain/` 的新增代码按仓库许可证与贡献约定维护；上游 `CharTyr/STS2-Agent` 为
+  AGPL-3.0-only，本项目以 HTTP 客户端方式使用，不把上游源码当作本项目代码重新发布。
+- 训练会写入本地 `knowledge/` 并可能自动 `git commit+push`；开始长时间训练前确认远端、凭据和
+  磁盘空间符合预期。不要把 API token、Codex/OpenCode 凭据或 Steam 登录数据写进配置、日志或提交。
+- 这是自动化实验工具，不保证游戏胜率、云存档无故障或跨版本兼容。升级游戏、渲染器、上游 mod 或
+  Python 后，必须重新执行预检、相关测试和真实对局验收，再把结果记录到对应文档。
