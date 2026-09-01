@@ -385,7 +385,10 @@ def _narration_resolver_factory(
 
                         return NarrationArtifact(
                             path=path,
-                            media_type="audio/mpeg" if path.suffix.lower() == ".mp3" else "audio/wav",
+                            media_type={
+                                ".mp3": "audio/mpeg",
+                                ".m4a": "audio/mp4",
+                            }.get(path.suffix.lower(), "audio/wav"),
                             origin="vivhite-prepared-narration",
                             metadata={"shot_id": shot_id},
                         )
