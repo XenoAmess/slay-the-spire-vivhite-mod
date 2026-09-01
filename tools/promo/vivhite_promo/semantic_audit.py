@@ -304,7 +304,8 @@ def _coerce_validator_result(value: Any, claim: Claim, *, source: str) -> Valida
             )
         if result.validator_id != claim.validator_id:
             raise SemanticAuditError(
-                f"validator result for {claim.claim_id!r} uses {result.validator_id!r}; expected {claim.validator_id!r}"
+                f"validator result for {claim.claim_id!r} uses "
+                f"{result.validator_id!r}; expected {claim.validator_id!r}"
             )
         return result
     if isinstance(value, Mapping):
