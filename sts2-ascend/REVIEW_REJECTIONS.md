@@ -339,3 +339,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-01 20:35:40 | 第 988~1013 局 | `08087ea7` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-203540-1788266140071956100-08087ea7` | 复盘进程未成功完成 |
 <!-- rejection:20260901-222517-1788272717140471000-71a852f2 -->
 | 2026-09-01 22:25:17 | 第 988~1013 局 | `71a852f2` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-222517-1788272717140471000-71a852f2` | 复盘进程未成功完成 |
+<!-- rejection:20260901-225418-1788274458682851200-806bd570 -->
+| 2026-09-01 22:54:18 | 第 988~1013 局 | `806bd570` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-225418-1788274458682851200-806bd570` | 复盘进程未成功完成 |
