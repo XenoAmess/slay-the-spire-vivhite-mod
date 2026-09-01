@@ -127,6 +127,10 @@ Profile，且 prompt、runs、stats、lessons、policy、报告和队列均按�
 # 在仓库根目录：按 Source 部署 → 使用已验证的 Vulkan 启动游戏 → 后台启动 runner/brain
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1
 
+# 无人训练需要完全使用本地 modded 存档时，显式关闭本次进程的 Steam 初始化
+# （冷启动会把 --force-steam off 传给 launch_vulkan.bat）
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-Agent.ps1 -SteamMode off
+
 # 完整停止 brain/runner、播报/复盘链和游戏
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-Agent.ps1
 
@@ -149,9 +153,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - `-SkipDeploy`：复用当前已部署 DLL；附着到已经运行的游戏时必须使用
 - `-Source auto|fork|release`：默认 `auto`，本地 fork clone 存在时优先构建 fork，否则用官方 release
+- `-SteamMode auto|on|off`：默认 `auto`。`auto`/`on` 不覆盖游戏默认的 Steam 初始化；只有显式
+  `off` 才在冷启动时向 `launch_vulkan.bat` 传 `--force-steam off`。这不会改写游戏目录、Steam
+  客户端或云同步文件；会话元数据会记录请求模式、实际参数和是否应用到新进程。
 - `-GameDir <目录>`：自定义游戏安装目录；fork 构建可另传 `-GodotExe`
 - `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
+
+无人训练若要避免 Steam Cloud 在跨进程恢复/退出时覆盖或删除本地的
+`profile*/saves/current_run.save`，应先用 `-SteamMode off` 冷启动整套；若游戏已经运行，参数不会
+改变现有进程（启动日志和 `.runtime/session.json` 会标记 `steam_mode_applied=false`），请先用统一
+`Stop-Agent.ps1` 停止后再以 `-SteamMode off` 启动。`-SteamMode on` 只是明确记录“保留 Steam 默认行为”，
+不会人为追加 `--force-steam on`。该开关只改变本次游戏进程的启动参数，不执行 UAC、人工 GUI 或 Steam
+文件修改；它也不替代原生存档/Continue 证据门禁。
 
 停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
 

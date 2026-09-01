@@ -1,0 +1,26 @@
+# Steam Cloud 训练存档故障复盘与隔离方案
+
+## 结论
+
+本次训练中，`TTT6HQGV7NAS` 并非 Brain 正常结束的终局，而是退出时本地 `current_run.save` 未能写入 Steam RemoteStorage，随后下一次冷启动的原生云同步按“远端不存在”删除了本地存档。现有证据无法恢复该局，因此它已通过一次性孤儿局入口标记为 `orphaned`、`excluded_from_learning`，没有计入胜负、统计或轮换配额。不能把零字节暂存文件或 `MAIN_MENU/run_unknown` 当作恢复证据。
+
+## 证据链（2026-09-01，Asia/Shanghai）
+
+1. 停栈前 runner 日志仍有 `TTT6HQGV7NAS` 在 F7/F8 的真实动作；停止哨兵时间为 17:56:56。Steam 远端的 `current_run.save.stmp` 在 17:56:44 变成 0 字节，不能证明有有效 payload。
+2. 游戏日志在 18:15 左右记录 `Syncing cloud save files to the local save directory`，紧接着记录 `Deleting modded/profile1/saves/current_run.save because it does not exist on remote`。这解释了为什么 API 随后回到 `MAIN_MENU/run_unknown`。
+3. 同一会话多次记录 `Wrote ... current_run.save` 后的 `Cloud write failed ... k_EResultIOFailure`。Steam `cloud_log.txt` 还记录 `login=false`/`offlineMode=true`、`Upload failed due to conflicts in build list` 与 `YldWriteCacheDirectoryToFile failed`；D: Steam 盘当时只剩约 1–2 MB。
+4. 复核时远端没有 `current_run.save` 或 `.backup`；`remotecache.vdf` 只保留 `size/localtime/remotetime=0/syncstate=3/persiststate=2` 等本地未上传元数据，没有存档 payload。C: 本地 save、backup、stmp 及 history 中也没有该 run。早期读取到的 0 字节 `remotecache.vdf` 是并发重写期间的瞬时快照，不能作为最终文件状态。
+5. 两次有序 API 采样均为 `MAIN_MENU`、`run=null`、无 `continue_run`，四类原生探针无读错且没有匹配 run；故按窄例外流程释放孤儿账本，而不是伪造终局或强行开新局。
+
+## 修复与边界
+
+- 统一启动入口新增显式 `-SteamMode auto|on|off`。只有冷启动且用户明确指定 `-SteamMode off` 时，才向 `launch_vulkan.bat` 传 `--force-steam off`，让本次无人训练使用本地存档而跳过 Steam 初始化；`session.json` 记录请求模式、实际参数和是否应用。该选项不改 Steam 客户端、云文件或游戏目录，不需要 UAC，也不宣称修复 Steam Cloud 本身。
+- `auto`/`on` 保留游戏默认 Steam 行为；已有游戏进程不会被参数追溯修改。需要切换模式时必须先用统一 `Stop-Agent.ps1`，再以 `-SteamMode off` 冷启动。
+- 无人训练建议明确使用 `-SteamMode off`，并继续执行原生 Continue、API 状态、动作回执和连续进展门禁。云同步失败、存档证据缺失时保持 Brain/直播 fail-closed；绝不复制、改名或手改 `.stmp`/`knowledge`。
+- 直播姬本次及后续训练均保持 `Idle`；没有调用开播入口，也没有请求人工 UAC。Steam Cloud 恢复仍需用户在 Steam 客户端/磁盘空间恢复后另行处理，本流程不代替该人工步骤。
+
+## 回归
+
+- `sts2-ascend/tests/test_start_agent_steam_mode.py` 覆盖参数映射、冷启动分支和文档审计；另有已有孤儿恢复/空播门禁回归。
+- 真实运行验证必须记录：启动日志出现 `SteamMode=off`，游戏日志显示跳过 Steam 初始化且使用本地 profile，随后 `/state` 为非菜单真实 run，并有驾驶舱 `connected`、`applied` 回执和楼层进展。
+

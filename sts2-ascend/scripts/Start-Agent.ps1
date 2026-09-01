@@ -6,6 +6,7 @@ param(
     [string]$Version = "0.9.1",
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",
     [ValidateSet("auto", "fork", "release")][string]$Source = "auto",
+    [ValidateSet("auto", "on", "off")][string]$SteamMode = "auto",
     [string]$GodotExe = "",
     [switch]$SkipDeploy,
     [switch]$Foreground,
@@ -42,6 +43,19 @@ function Get-ObjectProperty {
     param([object]$Value, [string]$Name, [object]$Default = $null)
     if ($Value -and $Value.PSObject.Properties[$Name]) { return $Value.$Name }
     return $Default
+}
+
+function Get-GameLaunchArguments {
+    param([string]$Mode)
+
+    # The game's normal path (auto/on) initializes Steam as usual.  Only an
+    # explicit off request is allowed to override platform initialization;
+    # this keeps the local-save choice visible in the Start-Agent invocation
+    # without changing the game directory or Steam client files.
+    if ([string]::Equals($Mode, "off", [StringComparison]::OrdinalIgnoreCase)) {
+        return @("--force-steam", "off")
+    }
+    return @()
 }
 
 function Normalize-SessionId {
@@ -422,6 +436,13 @@ try {
     if (-not (Test-Path -LiteralPath $gameExe)) {
         throw "Game executable not found: $gameExe"
     }
+    $gameLaunchArguments = @(Get-GameLaunchArguments -Mode $SteamMode)
+    $steamModeApplied = ($game.Count -eq 0)
+    $steamLaunchDescription = if ($gameLaunchArguments.Count -eq 0) {
+        "<game default>"
+    } else {
+        $gameLaunchArguments -join " "
+    }
     $pythonExe = Get-PythonExe
     $sessionId = [Guid]::NewGuid().ToString("N")
     $stopFile = Join-Path $runtimeDir "stop.$sessionId.request"
@@ -434,10 +455,17 @@ try {
     Remove-Item -LiteralPath $stopFile -Force -ErrorAction SilentlyContinue
 
     if ($game.Count -eq 0) {
-        Write-Host "Launching Slay the Spire 2 (Vulkan)..."
-        Start-Process -FilePath $gameLauncher -WorkingDirectory $GameDir -WindowStyle Hidden | Out-Null
+        Write-Host ("Launching Slay the Spire 2 (Vulkan; SteamMode={0}; args={1})..." -f
+                    $SteamMode.ToLowerInvariant(), $steamLaunchDescription)
+        if ($gameLaunchArguments.Count -gt 0) {
+            Start-Process -FilePath $gameLauncher -ArgumentList $gameLaunchArguments `
+                -WorkingDirectory $GameDir -WindowStyle Hidden | Out-Null
+        } else {
+            Start-Process -FilePath $gameLauncher -WorkingDirectory $GameDir -WindowStyle Hidden | Out-Null
+        }
     } else {
-        Write-Host "Game already running (pid $($game[0].ProcessId))."
+        Write-Host ("Game already running (pid {0}); SteamMode={1} was not applied to the existing process." -f
+                    $game[0].ProcessId, $SteamMode.ToLowerInvariant())
     }
 
     $previousEnv = @{
@@ -460,6 +488,9 @@ try {
         game_exe = $gameExe
         python_exe = $pythonExe
         runner_path = $runnerPath
+        steam_mode = $SteamMode.ToLowerInvariant()
+        steam_launch_arguments = @($gameLaunchArguments)
+        steam_mode_applied = $steamModeApplied
         runner_pid = 0
         runner_creation_key = 0
         runner_pid_file = $runnerPidFile
