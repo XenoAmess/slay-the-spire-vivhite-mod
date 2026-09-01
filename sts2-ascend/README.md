@@ -161,7 +161,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
 
 若已完成本地 profile 的原生模组同意、且明确接受独立存档命名空间，想隔离 Steam Cloud 时可用
-`-SteamMode off` 冷启动整套；若游戏已经运行，参数不会
+`-SteamMode off` 冷启动整套；这样可避免 Steam Cloud 在跨进程恢复/退出时覆盖或删除
+`profile*/saves/current_run.save`。若游戏已经运行，参数不会
 改变现有进程（启动日志和 `.runtime/session.json` 会标记 `steam_mode_applied=false`），请先用统一
 `Stop-Agent.ps1` 停止后再以 `-SteamMode off` 启动。`-SteamMode on` 只是明确记录“保留 Steam 默认行为”，
 不会人为追加 `--force-steam on`。该开关只改变本次游戏进程的启动参数，不执行 UAC、人工 GUI 或 Steam
