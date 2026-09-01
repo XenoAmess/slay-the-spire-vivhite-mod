@@ -163,6 +163,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - `-GameDir <目录>`：自定义游戏安装目录；fork 构建可另传 `-GodotExe`
 - `-Foreground`：只用于 runner 调试；此时 `Ctrl+C` 会协作停止 Python 栈，但不会代替完整 Stop 关闭游戏
 - `-ReadyTimeoutSeconds 120`：等待 brain + API 就绪；超时只警告，后台 runner 仍继续自愈
+- `-SteamMinFreeBytes`：Steam-on/auto 冷启动前检查 Steam `userdata` 所在卷的可用空间，默认 `1 GiB`，仅可在脚本规定的 `1 MiB`–`1 TiB` 范围内显式调整；空间不足或路径无法解析会在部署/启动前 fail-closed，不会删除或修改 Steam 文件，也不会请求 UAC。该检查不把游戏安装盘当作云存档盘；`SteamMode off` 的独立本地 profile和复用已运行游戏不走新的 Steam 冷启动空间检查。
 
 `-SteamMode off` 仅用于显式诊断/隔离实验：必须先完成独立本地 `user://default/1` profile 的
 原生模组同意，并明确接受独立存档命名空间；它不是生产训练 fallback，也不是 Steam Cloud 修复。
@@ -181,7 +182,11 @@ UAC、人工 GUI 或 Steam 文件修改；它也不替代原生存档/Continue �
 
 停止脚本默认给 Python 组件 40 秒保存/退出，再做身份校验后的精确兜底；游戏先关窗，20 秒后才强停。可用 `-WhatIf` 预览目标。不要直接结束某个 Python——runner 会重拉 brain，也会遗留播报/复盘子进程。
 
-`Stack ready` 表示 brain 与游戏 API 已就绪。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
+`Stack ready` 只表示当前 session 的 brain 与游戏 API 已就绪，**不等于真实对局、正在操作或具备开播资格**。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
+
+真实游玩和直播资格是独立的失败关闭门禁：开播入口在触碰 Livehime 前必须只读确认 `/state` 为非 `MAIN_MENU`/`run_unknown`/等待界面的有效 `run`，`state_version` 为合法数值且在推进，驾驶舱为 `connected`，并有近期 Brain 决策及动作回执 `outcome.status=applied`。随后还必须看到两次不同的状态/素材签名和递增的 `state_version`；刷新心跳、重复提案或只更换 `decision_id` 都不算进展。若任一证据缺失，禁止调用 `Start-BilibiliLive.ps1` 或自动复播；已经在 `Streaming` 时立即调用 `Stop-BilibiliLive.ps1` 并确认 `Idle`，不得为了两分钟断流预算继续空播。
+
+用户明确要求保持下播时，先核验 Livehime 为 `Idle`，只调用或复用统一 `Start-Agent.ps1` 运行游戏＋Brain；绝不调用 `Start-BilibiliLive.ps1`、自动复播入口或任何人工 GUI/UAC。下播训练也必须以真实 `/state`、有效 `run`、近期 `applied` 回执和连续状态进展证明实际游玩；若出现 `MAIN_MENU`、`run_unknown`、终局/孤儿账本阻塞、连续无新动作或证据过期，Brain 保持 fail-closed 并进入诊断/修复，不伪造动作或把健康检查当训练成功。直播中若这些证据丢失，或出现挂机提示/处罚弹窗，同样立即下播确认 `Idle`，修复并重新取得证据前不得复播。
 
 全栈运行时可随时把游戏交还给玩家：`Ctrl+Alt+F9` 全局停止 Brain 发送操作，
 `Ctrl+Alt+F10` 恢复自主操作。暂停采用 runner 驻留的控制权切换，游戏、runner 与驾驶舱都不会关闭。
