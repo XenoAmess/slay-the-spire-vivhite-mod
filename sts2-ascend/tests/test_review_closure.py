@@ -122,6 +122,26 @@ retry_resolution_extra: pkg-a integrated
                          "第 698~730 局范围内的 4 局")
         self.assertEqual(llm_review._batch_description([3, 2, 1]), "第 1~3 局")
 
+    def test_online_checkpoint_subject_names_profile_and_local_run(self) -> None:
+        self.assertEqual(
+            llm_review._online_checkpoint_commit_message("vivhite", [1], 99),
+            "chore(sts2-ascend): 第1局后复盘前在线存档"
+            "（角色：白绮/Vivhite，第1局）",
+        )
+        self.assertEqual(
+            llm_review._online_checkpoint_commit_message(
+                "ironclad", [2, 4, 3], 99),
+            "chore(sts2-ascend): 第2~4局后复盘前在线存档"
+            "（角色：战士/Ironclad，第2~4局）",
+        )
+        # Missing fallback metadata is explicit; it must not borrow another
+        # profile's/global run number.
+        self.assertEqual(
+            llm_review._online_checkpoint_commit_message("vivhite", None, 0),
+            "chore(sts2-ascend): 局号未知后复盘前在线存档"
+            "（角色：白绮/Vivhite，局号未知）",
+        )
+
     def test_default_policy_requires_runtime_action_every_batch(self) -> None:
         cfg = llm_review.load_llm_config()
         self.assertTrue(cfg["review_require_action_every_batch"])

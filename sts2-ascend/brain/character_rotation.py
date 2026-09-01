@@ -19,8 +19,11 @@ half-advanced rotation.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+import copy
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -38,6 +41,21 @@ CATCHUP_MODE = "catchup_4_to_1"
 STATE_FILENAME = "character_rotation.json"
 STATE_VERSION = 2
 LEGACY_STATE_VERSION = 1
+ORPHAN_EVIDENCE_VERSION = 1
+ORPHAN_RELEASE_REASON = "no_native_save_no_continue"
+# A prepared orphan transaction may be retried a small, persisted number of
+# times after a process/CAS failure.  Keeping the cap here (next to the proof
+# schema) makes an accidental hot-loop impossible; an operator can inspect the
+# retained marker and supply a new explicit transaction after rollback.
+ORPHAN_RELEASE_MAX_ATTEMPTS = 3
+
+# A missing native save is only actionable when the read-only probe can say so
+# explicitly.  These values are deliberately narrower than a generic
+# ``missing``/``false`` flag: callers must distinguish an absent/empty artifact
+# from a probe that failed to read the game profile.
+_ORPHAN_ARTIFACT_STATES = frozenset({
+    "absent", "missing", "empty", "zero_byte", "no_matching_run",
+})
 
 READY = "ready"
 BLOCKED = "blocked"
@@ -65,6 +83,10 @@ class RotationSnapshot:
     catchup_completed: bool
     vivhite_runs: int
     ironclad_runs: int
+    # Run IDs explicitly released as unrecoverable orphans.  They are kept out
+    # of ``finalized_run_ids`` on purpose: an orphan is not a terminal game
+    # result and must never be counted as a played loss or consume a slot.
+    orphaned_run_ids: tuple[str, ...] = ()
 
     @property
     def target_character(self) -> str:
@@ -106,6 +128,24 @@ class TerminalResult:
     next_character: str
     quota_consumed: bool
     schedule_mode: str
+
+
+@dataclass(frozen=True)
+class OrphanReleaseResult:
+    """Outcome of an explicit, evidence-backed orphan release.
+
+    ``released`` is false for an idempotent replay of the same evidence.  No
+    field in this result represents a terminal outcome; in particular
+    ``quota_consumed`` is permanently false.
+    """
+
+    run_id: str
+    character: str
+    released: bool
+    next_character: str
+    quota_consumed: bool
+    schedule_mode: str
+    reason: str = ORPHAN_RELEASE_REASON
 
 
 @dataclass(frozen=True)
@@ -158,6 +198,347 @@ def _normalize_character(character_id: object) -> tuple[str, str]:
     return character, str(character_id).strip()
 
 
+def _orphan_text(value: object, field: str, *, max_len: int = 240) -> str:
+    """Validate a bounded audit string without accepting implicit coercion."""
+    if not isinstance(value, str) or not value.strip():
+        raise CharacterRotationError(
+            f"orphan evidence {field} must be a non-empty string")
+    text = value.strip()
+    if len(text) > max_len:
+        raise CharacterRotationError(
+            f"orphan evidence {field} is too long")
+    return text
+
+
+def _orphan_artifact_state(value: object, field: str) -> str:
+    state = _orphan_text(value, field, max_len=64).casefold()
+    if state not in _ORPHAN_ARTIFACT_STATES:
+        raise CharacterRotationError(
+            f"orphan evidence {field} has unsupported state: {value!r}")
+    return state
+
+
+def _orphan_state_version(value: object, field: str) -> int | float | str:
+    """Validate one bounded API state marker without guessing its semantics."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise CharacterRotationError(
+            f"orphan evidence {field} state_version is invalid")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise CharacterRotationError(
+            f"orphan evidence {field} state_version is non-finite")
+    if isinstance(value, str):
+        value = _orphan_text(value, field, max_len=80)
+    elif value < 0:
+        raise CharacterRotationError(
+            f"orphan evidence {field} state_version is negative")
+    return value
+
+
+def _orphan_timestamp(value: object, field: str) -> tuple[str, datetime]:
+    """Validate an ISO-8601 audit timestamp and return a comparable instant."""
+    text = _orphan_text(value, field, max_len=80)
+    candidate = text[:-1] + "+00:00" if text.endswith(("Z", "z")) else text
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError as exc:
+        raise CharacterRotationError(
+            f"orphan evidence {field} is not ISO-8601") from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return text, parsed.astimezone(timezone.utc)
+
+
+def _validate_orphan_evidence(
+        evidence: object, expected_run_id: str,
+        expected_character: str, expected_character_id: str | None = None,
+) -> dict[str, Any]:
+    """Validate and normalize a read-only orphan probe result.
+
+    This is intentionally a *negative* proof contract.  A caller cannot pass a
+    bare ``orphaned=True`` flag: it must provide two consecutive API snapshots
+    and a completed native-file probe with no matching run and no read errors.
+    Only bounded, non-secret fields are copied into the rotation ledger.
+    """
+    if not isinstance(evidence, Mapping):
+        raise CharacterRotationError("orphan evidence must be an object")
+    if evidence.get("version") != ORPHAN_EVIDENCE_VERSION:
+        raise CharacterRotationError(
+            "unsupported orphan evidence version: "
+            f"{evidence.get('version')!r}")
+    run_id = _normalize_run_id(evidence.get("run_id"))
+    if run_id != expected_run_id:
+        raise CharacterRotationError(
+            f"orphan evidence run_id {run_id!r} does not match "
+            f"active run {expected_run_id!r}")
+    reason = _orphan_text(evidence.get("reason"), "reason", max_len=96)
+    if reason != ORPHAN_RELEASE_REASON:
+        raise CharacterRotationError(
+            f"unsupported orphan release reason: {reason!r}")
+    evidence_character, normalized_id = _normalize_character(
+        evidence.get("character_id"))
+    if evidence_character != expected_character:
+        raise CharacterRotationError(
+            f"orphan evidence character disagrees with active run: "
+            f"{evidence_character!r} != {expected_character!r}")
+    if expected_character_id is not None:
+        expected_character_norm = _normalize_character(expected_character_id)[1]
+        if normalized_id != expected_character_norm:
+            raise CharacterRotationError(
+                "orphan evidence character_id does not match active identity")
+
+    observed_at, observed_instant = _orphan_timestamp(
+        evidence.get("observed_at"), "observed_at")
+    api = evidence.get("api")
+    if not isinstance(api, Mapping):
+        raise CharacterRotationError("orphan evidence api must be an object")
+    raw_samples = api.get("samples")
+    if not isinstance(raw_samples, list) or len(raw_samples) < 2:
+        raise CharacterRotationError(
+            "orphan evidence requires at least two API snapshots")
+    if api.get("consecutive") is not True:
+        raise CharacterRotationError(
+            "orphan evidence API snapshots are not marked consecutive")
+    samples: list[dict[str, Any]] = []
+    for index, raw_sample in enumerate(raw_samples[:8]):
+        if not isinstance(raw_sample, Mapping):
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} is not an object")
+        screen = _orphan_text(raw_sample.get("screen"),
+                              f"api.samples[{index}].screen", max_len=64)
+        sample_run_id = _orphan_text(
+            raw_sample.get("run_id"),
+            f"api.samples[{index}].run_id", max_len=96)
+        if screen != "MAIN_MENU" or sample_run_id != "run_unknown":
+            raise CharacterRotationError(
+                "orphan evidence API samples must be MAIN_MENU/run_unknown")
+        if raw_sample.get("run_empty") is not True:
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} has a run payload")
+        if raw_sample.get("continue_run") is not False:
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} does not prove "
+                "continue_run is absent")
+        sequence = raw_sample.get("sequence")
+        observed_sample_at = raw_sample.get("observed_at")
+        sample_version = raw_sample.get("state_version")
+        if sample_version is None:
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} lacks state_version marker")
+        if sequence is None and observed_sample_at is None:
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} lacks ordering metadata")
+        if sequence is not None and (
+                isinstance(sequence, bool) or not isinstance(sequence, int)
+                or sequence < 0):
+            raise CharacterRotationError(
+                f"orphan evidence api sample {index} sequence is invalid")
+        sample_instant = None
+        if observed_sample_at is not None:
+            observed_sample_at, sample_instant = _orphan_timestamp(
+                observed_sample_at,
+                f"api.samples[{index}].observed_at")
+        if sample_version is not None:
+            sample_version = _orphan_state_version(
+                sample_version, f"api.samples[{index}]")
+        # Keep only stable, bounded facts; arbitrary API payloads do not belong
+        # in the rotation ledger and could contain secrets or huge data.
+        normalized_sample = {
+            "screen": screen,
+            "run_id": sample_run_id,
+            "run_empty": True,
+            "continue_run": False,
+        }
+        if sequence is not None:
+            normalized_sample["sequence"] = sequence
+        if observed_sample_at is not None:
+            normalized_sample["observed_at"] = observed_sample_at
+        if sample_version is not None:
+            normalized_sample["state_version"] = sample_version
+        samples.append(normalized_sample)
+
+    # At least one monotonic marker must distinguish the two observations.  A
+    # caller cannot satisfy this by duplicating the same stale frame twice.
+    ordered = False
+    sequences = [row.get("sequence") for row in samples]
+    if all(value is not None for value in sequences):
+        ordered = all(a < b for a, b in zip(sequences, sequences[1:]))
+    if not ordered:
+        times = [row.get("observed_at") for row in samples]
+        if all(value is not None for value in times):
+            try:
+                instants = [
+                    _orphan_timestamp(value, "api.sample.observed_at")[1]
+                    for value in times
+                ]
+                ordered = all(a < b for a, b in zip(instants, instants[1:]))
+            except CharacterRotationError:
+                ordered = False
+    if not ordered:
+        versions = [row.get("state_version") for row in samples]
+        if all(value is not None for value in versions):
+            # A state_version is a freshness marker, not necessarily a counter;
+            # only use it as an ordering fallback when its native values are
+            # directly comparable.  Equal versions remain valid when sequence
+            # or timestamps establish the two distinct observations.
+            try:
+                ordered = all(a < b for a, b in zip(versions, versions[1:]))
+            except TypeError:
+                ordered = False
+    if not ordered:
+        raise CharacterRotationError(
+            "orphan evidence API snapshots are not distinct and ordered")
+
+    native = evidence.get("native")
+    if not isinstance(native, Mapping):
+        raise CharacterRotationError("orphan evidence native must be an object")
+    if native.get("probe_complete") is not True:
+        raise CharacterRotationError(
+            "orphan evidence native probe is incomplete")
+    read_errors = native.get("read_errors")
+    if not isinstance(read_errors, list) or read_errors:
+        raise CharacterRotationError(
+            "orphan evidence native probe has read errors")
+
+    def artifact_status(key: str, aliases: tuple[str, ...] = ()) -> str:
+        raw = native.get(key)
+        if isinstance(raw, Mapping):
+            raw = raw.get("status")
+        if raw is None:
+            for alias in aliases:
+                raw = native.get(alias)
+                if isinstance(raw, Mapping):
+                    raw = raw.get("status")
+                if raw is not None:
+                    break
+        return _orphan_artifact_state(raw, f"native.{key}")
+
+    save_status = artifact_status(
+        "save", ("save_status", "save_backup", "current_run_save",
+                  "current_run.save", "current_run.save.backup"))
+    history_status = artifact_status(
+        "history", ("history_status", "run_history", "history_dir"))
+    stmp_raw = native.get("stmp")
+    if isinstance(stmp_raw, Mapping):
+        stmp_raw = stmp_raw.get("status")
+    if stmp_raw is None:
+        stmp_raw = native.get("stmp_status", "absent")
+    stmp_status = _orphan_artifact_state(stmp_raw, "native.stmp")
+    if native.get("save_match") is not False:
+        raise CharacterRotationError(
+            "orphan evidence native save match is not explicitly false")
+    if native.get("history_match") is not False:
+        raise CharacterRotationError(
+            "orphan evidence native history match is not explicitly false")
+    api_latest_version = api.get("latest_state_version")
+    if api_latest_version is not None:
+        api_latest_version = _orphan_state_version(
+            api_latest_version, "api.latest_state_version")
+        latest_sample_version = samples[-1].get("state_version")
+        if (latest_sample_version is None
+                or api_latest_version != latest_sample_version):
+            raise CharacterRotationError(
+                "orphan evidence latest state_version does not match sample")
+    probe_observed_at = native.get("probe_observed_at")
+    if probe_observed_at is None:
+        probe_observed_at = native.get("observed_at")
+    if probe_observed_at is not None:
+        probe_observed_at, probe_instant = _orphan_timestamp(
+            probe_observed_at, "native.probe_observed_at")
+        latest_sample_time = samples[-1].get("observed_at")
+        if latest_sample_time is not None:
+            latest_instant = _orphan_timestamp(
+                latest_sample_time, "api.samples[-1].observed_at")[1]
+            if probe_instant < latest_instant:
+                raise CharacterRotationError(
+                    "orphan native probe predates the latest API snapshot")
+        if observed_instant < probe_instant:
+            raise CharacterRotationError(
+                "orphan evidence observed_at predates native probe")
+    probe_state_version = native.get("api_state_version")
+    if probe_state_version is not None:
+        probe_state_version = _orphan_state_version(
+            probe_state_version, "native.api_state_version")
+        latest_sample_version = samples[-1].get("state_version")
+        if (latest_sample_version is None
+                or probe_state_version != latest_sample_version):
+            raise CharacterRotationError(
+                "orphan native probe is not bound to latest API state_version")
+    checked_paths = native.get("checked_paths")
+    if not isinstance(checked_paths, list) or not checked_paths:
+        raise CharacterRotationError(
+            "orphan evidence must list checked native paths")
+    normalized_paths: list[dict[str, Any]] = []
+    for index, raw_path in enumerate(checked_paths[:32]):
+        if not isinstance(raw_path, Mapping):
+            raise CharacterRotationError(
+                f"orphan evidence checked path {index} is not an object")
+        kind = _orphan_text(raw_path.get("kind"),
+                            f"native.checked_paths[{index}].kind", max_len=40)
+        status = _orphan_artifact_state(
+            raw_path.get("status"),
+            f"native.checked_paths[{index}].status")
+        # Absolute paths are useful for an audit but are not needed to replay
+        # the decision.  Retain a bounded display path only.
+        path_text = _orphan_text(raw_path.get("path"),
+                                 f"native.checked_paths[{index}].path", max_len=260)
+        row: dict[str, Any] = {"kind": kind, "status": status, "path": path_text}
+        if "bytes" in raw_path:
+            bytes_value = raw_path.get("bytes")
+            if (isinstance(bytes_value, bool) or not isinstance(bytes_value, int)
+                    or bytes_value < 0 or bytes_value > 2**63 - 1):
+                raise CharacterRotationError(
+                    f"orphan evidence checked path {index} bytes is invalid")
+            row["bytes"] = bytes_value
+        digest = raw_path.get("sha256")
+        if digest is not None:
+            digest = _orphan_text(digest,
+                                  f"native.checked_paths[{index}].sha256", max_len=128)
+            row["sha256"] = digest
+        normalized_paths.append(row)
+
+    path_kinds = {str(row["kind"]).casefold() for row in normalized_paths}
+    if not any(kind in path_kinds for kind in (
+            "save", "save_backup", "progress", "progress.save",
+            "current_run_save", "current_run.save")):
+        raise CharacterRotationError(
+            "orphan evidence must check the native save path")
+    if not any(kind in path_kinds for kind in (
+            "history", "run_history", "history_dir", "history_file")):
+        raise CharacterRotationError(
+            "orphan evidence must check the native history path")
+
+    normalized_api = {
+        "consecutive": True,
+        "samples": samples,
+    }
+    if api_latest_version is not None:
+        normalized_api["latest_state_version"] = api_latest_version
+    normalized_native = {
+        "probe_complete": True,
+        "save": {"status": save_status},
+        "history": {"status": history_status},
+        "stmp": {"status": stmp_status},
+        "save_match": False,
+        "history_match": False,
+        "read_errors": [],
+        "checked_paths": normalized_paths,
+    }
+    if probe_observed_at is not None:
+        normalized_native["probe_observed_at"] = probe_observed_at
+    if probe_state_version is not None:
+        normalized_native["api_state_version"] = probe_state_version
+
+    return {
+        "version": ORPHAN_EVIDENCE_VERSION,
+        "reason": reason,
+        "run_id": run_id,
+        "character_id": normalized_id,
+        "observed_at": observed_at,
+        "api": normalized_api,
+        "native": normalized_native,
+    }
+
+
 def _default_state(counts: PersistedRunCounts) -> dict[str, Any]:
     catchup_completed = counts.vivhite_caught_up
     return {
@@ -170,6 +551,7 @@ def _default_state(counts: PersistedRunCounts) -> dict[str, Any]:
         "last_completed_character": None,
         "active_run": None,
         "finalized_runs": {},
+        "orphaned_runs": {},
     }
 
 
@@ -223,6 +605,60 @@ def _validated_run_ledger(
     return finalized, active
 
 
+def _validated_orphan_ledger(
+        data: Mapping[str, Any], path: Path,
+        finalized: Mapping[str, str],
+) -> dict[str, dict[str, Any]]:
+    """Validate the non-terminal orphan audit ledger.
+
+    Older rotation files have no ``orphaned_runs`` key and are treated as an
+    empty ledger.  Orphan IDs may never overlap finalized IDs; keeping the two
+    sets disjoint is what prevents a recovery record from being mistaken for a
+    completed loss by downstream readers.
+    """
+    raw_orphans = data.get("orphaned_runs", {})
+    if raw_orphans is None:
+        raw_orphans = {}
+    if not isinstance(raw_orphans, Mapping):
+        raise CharacterRotationError(f"orphaned_runs is not an object: {path}")
+    orphaned: dict[str, dict[str, Any]] = {}
+    for raw_run_id, raw_entry in raw_orphans.items():
+        run_id = _normalize_run_id(raw_run_id)
+        if run_id in finalized:
+            raise CharacterRotationError(
+                f"run_id {run_id!r} is both orphaned and finalized in {path}")
+        if not isinstance(raw_entry, Mapping):
+            raise CharacterRotationError(
+                f"orphaned entry for {run_id!r} is not an object")
+        entry_run_id = _normalize_run_id(raw_entry.get("run_id"))
+        if entry_run_id != run_id:
+            raise CharacterRotationError(
+                f"orphaned entry run_id disagrees for {run_id!r}")
+        character = raw_entry.get("character")
+        character_id = raw_entry.get("character_id")
+        actual, normalized_character_id = _normalize_character(character_id)
+        if character not in ROTATION or actual != character:
+            raise CharacterRotationError(
+                f"orphaned character fields disagree for {run_id!r}")
+        reason = _orphan_text(raw_entry.get("reason"), "orphaned.reason", max_len=96)
+        if reason != ORPHAN_RELEASE_REASON:
+            raise CharacterRotationError(
+                f"invalid orphaned reason for {run_id!r}: {reason!r}")
+        released_at = _orphan_text(
+            raw_entry.get("released_at"), "orphaned.released_at", max_len=80)
+        evidence = _validate_orphan_evidence(
+            raw_entry.get("evidence"), run_id, actual, normalized_character_id)
+        orphaned[run_id] = {
+            "run_id": run_id,
+            "character": character,
+            "character_id": normalized_character_id,
+            "reason": reason,
+            "released_at": released_at,
+            "evidence": evidence,
+        }
+    return orphaned
+
+
 def _validated_v2_state(data: object, path: Path) -> dict[str, Any]:
     if not isinstance(data, Mapping):
         raise CharacterRotationError(f"rotation state is not an object: {path}")
@@ -267,6 +703,10 @@ def _validated_v2_state(data: object, path: Path) -> dict[str, Any]:
         raise CharacterRotationError(
             f"invalid last_completed_character in {path}: {last_completed!r}")
     finalized, active = _validated_run_ledger(data, path, legacy=False)
+    orphaned = _validated_orphan_ledger(data, path, finalized)
+    if active is not None and active["run_id"] in orphaned:
+        raise CharacterRotationError(
+            f"run_id {active['run_id']!r} is both active and orphaned in {path}")
     if (active is not None
             and active.get("scheduled_character") is not None
             and active["scheduled_character"] != next_character):
@@ -282,6 +722,7 @@ def _validated_v2_state(data: object, path: Path) -> dict[str, Any]:
         "last_completed_character": last_completed,
         "active_run": active,
         "finalized_runs": finalized,
+        "orphaned_runs": orphaned,
     }
 
 
@@ -333,6 +774,7 @@ def _load_or_migrate_state(
         "last_completed_character": None,
         "active_run": active,
         "finalized_runs": finalized,
+        "orphaned_runs": {},
     }
     return _validated_v2_state(migrated, path), True
 
@@ -427,6 +869,7 @@ def _snapshot(
         catchup_completed=state["catchup_completed"],
         vivhite_runs=counts.vivhite,
         ironclad_runs=counts.ironclad,
+        orphaned_run_ids=tuple(state.get("orphaned_runs", {})),
     )
 
 
@@ -498,6 +941,21 @@ class CharacterRotation:
             if dirty:
                 self._save_unlocked(state)
             return _snapshot(state, counts)
+
+    def orphan_record(self, run_id: object) -> dict[str, Any] | None:
+        """Return one immutable orphan audit row, if the CAS already landed.
+
+        Startup recovery uses this read-only accessor to distinguish a crash
+        after the rotation CAS from a crash before it.  It deliberately returns
+        a deep copy and never creates, removes, or promotes a ledger entry.
+        """
+        normalized_run_id = _normalize_run_id(run_id)
+        with self._lock:
+            state, _counts, dirty = self._load_unlocked(reconcile_idle=False)
+            if dirty:
+                self._save_unlocked(state)
+            row = state.get("orphaned_runs", {}).get(normalized_run_id)
+            return copy.deepcopy(row) if isinstance(row, Mapping) else None
 
     @property
     def target_character(self) -> str:
@@ -575,6 +1033,13 @@ class CharacterRotation:
                 if dirty:
                     self._save_unlocked(state)
                 return _snapshot(state, counts)
+            if normalized_run_id in state.get("orphaned_runs", {}):
+                # An explicitly released orphan can never silently come back as
+                # a fresh run with the same ID.  Requiring a new authoritative
+                # native identity prevents stale API echoes from reoccupying the
+                # scheduler slot after recovery.
+                raise CharacterRotationError(
+                    f"orphaned run {normalized_run_id!r} cannot be reactivated")
 
             active = state["active_run"]
             if active is not None:
@@ -638,6 +1103,10 @@ class CharacterRotation:
                 raise CharacterRotationError(
                     f"native continue run {normalized_actual!r} is already finalized "
                     f"as {finalized_character}")
+            if normalized_actual in state.get("orphaned_runs", {}):
+                raise CharacterRotationError(
+                    f"native continue run {normalized_actual!r} was already "
+                    "released as an orphan")
 
             updated = dict(state)
             updated["active_run"] = {
@@ -648,6 +1117,98 @@ class CharacterRotation:
             }
             self._save_unlocked(updated)
             return _snapshot(updated, counts)
+
+    def release_orphan_run(
+            self, run_id: object, *, evidence: object,
+            character_id: object | None = None,
+    ) -> OrphanReleaseResult:
+        """Release one exact active run after a complete negative proof.
+
+        This is intentionally separate from :meth:`record_terminal` and
+        :meth:`release_human_controlled_run`.  It records an audit entry in the
+        durable rotation state but never adds the ID to ``finalized_runs``,
+        changes ``next_character``/catch-up counters, or consumes a quota slot.
+        The evidence validator is fail-closed and accepts only two consecutive
+        ``MAIN_MENU/run_unknown`` snapshots plus a successful native-file probe
+        showing no matching save/history.
+        """
+        normalized_run_id = _normalize_run_id(run_id)
+        explicit_character = None
+        explicit_character_id = None
+        if character_id is not None:
+            explicit_character, explicit_character_id = _normalize_character(
+                character_id)
+
+        with self._lock:
+            state, counts, _dirty = self._load_unlocked(reconcile_idle=False)
+            existing = state.get("orphaned_runs", {}).get(normalized_run_id)
+            if existing is not None:
+                # A retry is safe only when it carries byte-for-byte equivalent
+                # normalized evidence and, if supplied, the same character.
+                normalized_evidence = _validate_orphan_evidence(
+                    evidence, normalized_run_id, existing["character"],
+                    existing["character_id"])
+                if explicit_character is not None \
+                        and explicit_character != existing["character"]:
+                    raise CharacterRotationError(
+                        f"orphan run {normalized_run_id!r} character mismatch")
+                if normalized_evidence != existing["evidence"]:
+                    raise CharacterRotationError(
+                        f"orphan run {normalized_run_id!r} evidence changed")
+                return OrphanReleaseResult(
+                    run_id=normalized_run_id,
+                    character=existing["character"],
+                    released=False,
+                    next_character=state["next_character"],
+                    quota_consumed=False,
+                    schedule_mode=state["schedule_mode"],
+                )
+
+            if normalized_run_id in state["finalized_runs"]:
+                raise CharacterRotationError(
+                    f"cannot release finalized run {normalized_run_id!r} as orphan")
+            active = state.get("active_run")
+            if active is None or active["run_id"] != normalized_run_id:
+                active_id = active["run_id"] if active else None
+                raise CharacterRotationError(
+                    f"cannot release orphan {normalized_run_id!r}; unresolved "
+                    f"active run is {active_id!r}")
+            if (explicit_character is not None
+                    and explicit_character != active["character"]):
+                raise CharacterRotationError(
+                    f"orphan character for {normalized_run_id!r} disagrees with "
+                    f"active character {active['character']}")
+            normalized_evidence = _validate_orphan_evidence(
+                evidence, normalized_run_id, active["character"],
+                active["character_id"])
+
+            orphaned = dict(state.get("orphaned_runs", {}))
+            orphaned[normalized_run_id] = {
+                "run_id": normalized_run_id,
+                "character": active["character"],
+                "character_id": active["character_id"],
+                "reason": ORPHAN_RELEASE_REASON,
+                "released_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "evidence": normalized_evidence,
+            }
+            updated = dict(state)
+            updated["active_run"] = None
+            updated["orphaned_runs"] = orphaned
+            # Do not touch any schedule/terminal fields.  _save_unlocked also
+            # revalidates the disjoint finalized/orphaned ledgers atomically.
+            self._save_unlocked(updated)
+            return OrphanReleaseResult(
+                run_id=normalized_run_id,
+                character=active["character"],
+                released=True,
+                next_character=updated["next_character"],
+                quota_consumed=False,
+                schedule_mode=updated["schedule_mode"],
+            )
+
+    # Descriptive alias used by recovery callers; keeping one implementation
+    # avoids a second, less strict path that could accidentally consume quota.
+    release_unrecoverable_orphan = release_orphan_run
 
     def release_human_controlled_run(self, run_id: object) -> RotationSnapshot:
         """Forget one human-controlled active run without consuming a quota slot.
@@ -695,6 +1256,12 @@ class CharacterRotation:
             # Delay parity reconciliation until this terminal has consumed (or
             # deliberately not consumed) its scheduled slot.
             state, counts, dirty = self._load_unlocked(reconcile_idle=False)
+            if normalized_run_id in state.get("orphaned_runs", {}):
+                # Orphan releases are audit-only records, never terminal
+                # outcomes.  A later stale GAME_OVER echo must not promote one
+                # back into the completed ledger or consume a schedule slot.
+                raise CharacterRotationError(
+                    f"orphaned run {normalized_run_id!r} cannot be finalized")
             finalized_character = state["finalized_runs"].get(normalized_run_id)
             if finalized_character is not None:
                 if (explicit_character is not None
@@ -799,6 +1366,10 @@ __all__ = [
     "CharacterRotationError",
     "CharacterRotationStateMachine",
     "IRONCLAD",
+    "ORPHAN_EVIDENCE_VERSION",
+    "ORPHAN_RELEASE_MAX_ATTEMPTS",
+    "ORPHAN_RELEASE_REASON",
+    "OrphanReleaseResult",
     "PersistedRunCounts",
     "READY",
     "RotationSnapshot",
@@ -808,4 +1379,5 @@ __all__ = [
     "TerminalResult",
     "VIVHITE",
     "canonical_character_id",
+    "_validate_orphan_evidence",
 ]

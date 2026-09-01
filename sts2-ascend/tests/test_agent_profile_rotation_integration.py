@@ -427,6 +427,30 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
                 events, ["terminal_log", "character_stats", "rotation"])
             rotation.record_terminal.assert_called_once()
 
+    def test_terminal_checkpoint_subject_names_profile_local_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-agent-subject-") as root:
+            events: list[str] = []
+            rotation = CharacterRotation.from_knowledge_root(root)
+            rotation.observe_active_run("run-v", VIVHITE_CHARACTER_ID)
+            know = _FinalKnowledge(events)
+            instance = _finalizing_agent(rotation, know)
+
+            with (mock.patch.object(
+                    agent_module, "finalize_run", return_value="lesson"),
+                  mock.patch.object(agent_module, "llm_review", None),
+                  mock.patch.object(agent_module.autogit, "commit_progress") as commit,
+                  mock.patch.object(agent_module, "log")):
+                instance._finalize(
+                    victory=False, floor=12,
+                    native_save_state=_verified_state())
+
+            subject = commit.call_args.args[0]
+            self.assertEqual(
+                subject,
+                "chore(sts2-ascend): 第7局存档（角色：白绮/Vivhite，第7局；"
+                "负 F12 进阶3，生涯 0胜/7局）",
+            )
+
     def test_reconnected_terminal_echo_cannot_repeat_stats_or_rotation(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-agent-reconnect-") as root:
             events: list[str] = []

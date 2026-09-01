@@ -19,10 +19,16 @@ PATROL = ROOT / "sts2-ascend" / "brain" / "broadcast_window_patrol.py"
 
 
 def run_powershell(command: str) -> subprocess.CompletedProcess[str]:
+    # Windows PowerShell inherits the system GBK code page when stdout is
+    # redirected.  Force UTF-8 in the child before any command output so the
+    # Chinese proof diagnostics cannot make the test reader fail during decode.
+    command = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8;" + command
     return subprocess.run(
         ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=30,
         check=False,
@@ -69,6 +75,8 @@ class BilibiliLiveScriptTests(unittest.TestCase):
                 ],
                 cwd=ROOT,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=30,
                 check=False,
@@ -259,9 +267,150 @@ class BilibiliLiveScriptTests(unittest.TestCase):
         text = START.read_text(encoding="utf-8")
         self.assertIn('Join-Path $PSScriptRoot "Start-Agent.ps1"', text)
         self.assertIn("-SkipDeploy", text)
-        self.assertLess(text.index("& $startAgent"), text.index("Invoke-LivehimeBridge"))
-        self.assertLess(text.index("Invoke-LivehimeBridge"), text.index("Set-SlayTheSpireTopMost"))
+        # The fail-closed recovery helper contains a Stop bridge call before
+        # startup by design; assert ordering against the actual Start action.
+        self.assertLess(text.index("& $startAgent"), text.index("Invoke-LivehimeBridge -Action Start"))
+        self.assertLess(text.index("Invoke-LivehimeBridge -Action Start"), text.index("Set-SlayTheSpireTopMost"))
         self.assertLess(text.index("Set-SlayTheSpireTopMost"), text.index("Set-AscendViewerTopMost"))
+
+    def test_start_has_fail_closed_gameplay_preflight_before_livehime_click(self) -> None:
+        text = START.read_text(encoding="utf-8")
+        self.assertIn("Wait-AscendLiveGameplayReady", text)
+        self.assertIn("Test-AscendLiveGameplayProof", text)
+        self.assertIn("GameplayPassiveScreens", text)
+        self.assertIn("run_unknown", text)
+        self.assertIn("available_actions", text)
+        self.assertIn("two progressing Brain/game samples", text)
+        self.assertIn('connectionStatus -ne "connected"', text)
+        self.assertIn('outcomeStatus -ne "applied"', text)
+        self.assertIn("stateVersion -notmatch '^\\d+$'", text)
+        self.assertIn("currentStateVersion -gt $previousStateVersion", text)
+        gate = text.index("Wait-AscendLiveGameplayReady -ProjectRoot")
+        bridge = text.index("Invoke-LivehimeBridge -Action Start")
+        self.assertLess(gate, bridge)
+        self.assertIn("No stream was started", text)
+        failed_gate = text.index("if (-not $gameplayProof.Ready)")
+        stop_existing = text.index("Stop-UnsafeExistingLivehime -Reason $gameplayProof.Reason", failed_gate)
+        self.assertLess(failed_gate, stop_existing)
+        self.assertLess(stop_existing, bridge)
+        helper = text.index("function Stop-UnsafeExistingLivehime")
+        helper_stop = text.index("Invoke-LivehimeBridge -Action Stop", helper)
+        self.assertLess(helper, helper_stop)
+        self.assertIn('if ($liveState -eq "Streaming")', text)
+        self.assertIn('if ($state -ne "Idle")', text)
+        # A pre-existing stream is checked and, when unsafe, stopped before the
+        # unified stack startup can take any time.
+        early_probe = text.index("$existingProof = Get-AscendLiveGameplayProof")
+        early_stop = text.index("Stop-UnsafeExistingLivehime -Reason $existingProof.Reason", early_probe)
+        self.assertLess(early_probe, early_stop)
+        self.assertLess(early_stop, text.index("& $startAgent"))
+        state_read = text.index("$liveState = Get-LivehimeStreamingState")
+        should_process = text.index("$PSCmdlet.ShouldProcess")
+        self.assertLess(should_process, state_read)
+        self.assertLess(state_read, text.index("& $startAgent"))
+
+    def test_gameplay_proof_rejects_menu_and_accepts_progressing_fixture(self) -> None:
+        """Exercise the pure validator through PowerShell AST extraction.
+
+        Extracting only the function keeps this test read-only: no Start-Agent,
+        Livehime task, game process, or UAC path is invoked.
+        """
+        import json
+        import tempfile
+
+        escaped = str(START).replace("'", "''")
+        with tempfile.TemporaryDirectory(prefix="bilibili-gameplay-proof-") as raw:
+            root = pathlib.Path(raw)
+            session = {"session_id": "a" * 32, "state": "running"}
+            api = {
+                "Port": 8080,
+                "Data": {
+                    "screen": "COMBAT", "run_id": "RUN-42", "turn": 2,
+                    "state_version": 12,
+                    "available_actions": ["play_card"],
+                    "run": {"floor": 3, "current_hp": 40, "gold": 99,
+                            "character_id": "IRONCLAD"},
+                },
+            }
+            now = "2026-09-01T08:00:10Z"
+            dashboard = {
+                "schema": "sts2.ascend-live/v1", "session_id": "a" * 32,
+                "heartbeat": "2026-09-01T08:00:09Z",
+                "connection": {
+                    "status": "connected", "at": "2026-09-01T08:00:09Z",
+                },
+                "run": {
+                    "run_id": "RUN-42", "screen": "COMBAT", "floor": 3,
+                    "character_id": "IRONCLAD",
+                },
+                "decision": {
+                    "decision_id": "d-1", "status": "applied",
+                    "selected": {"action": "play_card"},
+                    "outcome": {"status": "applied", "at": "2026-09-01T08:00:09Z"},
+                },
+            }
+            proposed_dashboard = json.loads(json.dumps(dashboard))
+            proposed_dashboard["decision"]["status"] = "proposed"
+            proposed_dashboard["decision"]["outcome"] = {
+                "status": "proposed", "at": "2026-09-01T08:00:09Z",
+            }
+            disconnected_dashboard = json.loads(json.dumps(dashboard))
+            disconnected_dashboard["connection"]["status"] = "disconnected"
+            menu_api = json.loads(json.dumps(api))
+            menu_api["Data"]["screen"] = "MAIN_MENU"
+            menu_api["Data"]["run_id"] = "run_unknown"
+            menu_api["Data"]["run"] = None
+            fixtures = {
+                "session": session, "api": api, "menu": menu_api,
+                "dashboard": dashboard, "proposed": proposed_dashboard,
+                "disconnected": disconnected_dashboard,
+            }
+            paths = {}
+            for name, value in fixtures.items():
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(value), encoding="utf-8")
+                paths[name] = str(path).replace("'", "''")
+            command = (
+                "$tokens=$null;$errors=$null;"
+                f"$ast=[Management.Automation.Language.Parser]::ParseFile('{escaped}',"
+                "[ref]$tokens,[ref]$errors);"
+                "$defs=@('$script:GameplayPassiveScreens=@(\"\", \"UNKNOWN\", "
+                "\"WAITING\", \"TITLE\", \"MAIN_MENU\", \"CHARACTER_SELECT\", "
+                "\"PROFILE_SELECT\", \"RUN_HISTORY\", \"CREDITS\", \"GAME_OVER\", "
+                "\"VICTORY\", \"RUN_COMPLETE\");',"
+                "'$script:GameplayDecisionStatuses=@(\"applied\");');"
+                "$names=@('Get-AscendProperty','Test-AscendRunId',"
+                "'ConvertTo-AscendUtcTimestamp','New-AscendGameplayProof',"
+                "'Test-AscendLiveGameplayProof');"
+                "foreach($name in $names){"
+                "$fn=$ast.Find({param($n)$n -is "
+                "[Management.Automation.Language.FunctionDefinitionAst] "
+                "-and $n.Name -eq $name},$true);"
+                "if($null -eq $fn){throw ('missing function: '+$name)};"
+                "$defs += $fn.Extent.Text};"
+                ". ([scriptblock]::Create(($defs -join [Environment]::NewLine)));"
+                f"$s=Get-Content -Raw -LiteralPath '{paths['session']}'|ConvertFrom-Json;"
+                f"$a=Get-Content -Raw -LiteralPath '{paths['api']}'|ConvertFrom-Json;"
+                f"$d=Get-Content -Raw -LiteralPath '{paths['dashboard']}'|ConvertFrom-Json;"
+                "$ok=Test-AscendLiveGameplayProof -Session $s -ApiState $a -Dashboard $d "
+                f"-NowUtc ([DateTimeOffset]::Parse('{now}'));"
+                "$m=Get-Content -Raw -LiteralPath '" + paths["menu"] + "'|ConvertFrom-Json;"
+                "$bad=Test-AscendLiveGameplayProof -Session $s -ApiState $m -Dashboard $d "
+                f"-NowUtc ([DateTimeOffset]::Parse('{now}'));"
+                f"$p=Get-Content -Raw -LiteralPath '{paths['proposed']}'|ConvertFrom-Json;"
+                "$stalled=Test-AscendLiveGameplayProof -Session $s -ApiState $a -Dashboard $p "
+                f"-NowUtc ([DateTimeOffset]::Parse('{now}'));"
+                f"$c=Get-Content -Raw -LiteralPath '{paths['disconnected']}'|ConvertFrom-Json;"
+                "$disconnected=Test-AscendLiveGameplayProof -Session $s -ApiState $a -Dashboard $c "
+                f"-NowUtc ([DateTimeOffset]::Parse('{now}'));"
+                "'{0}:{1}:{2}:{3}:{4}' -f $ok.Ready,$bad.Ready,$stalled.Ready,"
+                "$disconnected.Ready,$bad.Reason"
+            )
+            result = run_powershell(command)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            fields = result.stdout.strip().split(":", 4)
+            self.assertEqual(fields[0:4], ["True", "False", "False", "False"])
+            self.assertIn("不是实际对局", fields[4])
 
     def test_viewer_reorder_does_not_take_focus(self) -> None:
         module = MODULE.read_text(encoding="utf-8")

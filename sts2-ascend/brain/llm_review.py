@@ -1037,6 +1037,27 @@ def _batch_description(batch_runs) -> str:
     return f"第 {runs[0]}~{runs[-1]} 局范围内的 {len(runs)} 局"
 
 
+def _online_checkpoint_commit_message(
+        profile_id: str, batch_runs: list[int] | None, fallback_run: int) -> str:
+    """Build the profile-aware subject for the pre-review online checkpoint.
+
+    Review queue numbers are profile-local.  The explicit fallback is likewise
+    read from the selected ``Knowledge`` instance, never from a cross-profile
+    aggregate, and an empty/invalid value is rendered as ``局号未知`` by the
+    formatter rather than guessed.
+    """
+    import autogit  # delayed to preserve standalone llm_review imports
+
+    profile_runs = batch_runs if batch_runs else [fallback_run]
+    if batch_runs:
+        batch_txt = _batch_description(batch_runs).replace(" ", "")
+    else:
+        batch_txt = autogit.profile_run_description(profile_runs)
+    context = autogit.profile_run_context(profile_id, profile_runs)
+    return (
+        f"chore(sts2-ascend): {batch_txt}后复盘前在线存档（{context}）")
+
+
 def _historical_zero_code_context(max_sections: int = 10,
                                   max_chars: int = 30000) -> str:
     """Extract accepted zero-code reports as explicit implementation debt."""
@@ -2692,11 +2713,17 @@ def _run_review_scoped(know, log=print, model: str | None = None,
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
     runs = know.stats["global"]["runs"]
+    # ``batch_runs`` is already expressed in the selected profile's counter.
+    # Keep that identity in the checkpoint subject instead of leaving a bare
+    # number that can be mistaken for the other character's/global run count.
+    profile_id = _current_profile_paths().profile_id
     batch_txt = (_batch_description(batch_runs).replace(" ", "")
                  if batch_runs else f"第{runs}局")
+    checkpoint_message = _online_checkpoint_commit_message(
+        profile_id, batch_runs, runs)
     # 1) 只保存在线数据。代码必须已干净；自动流程绝不替用户提交开发中的代码。
     autogit.commit_progress_result(
-        f"chore(sts2-ascend): {batch_txt}后复盘前在线存档",
+        checkpoint_message,
         log=log, paths=_review_concurrent_paths(),
     )
     pre_head = autogit.head()

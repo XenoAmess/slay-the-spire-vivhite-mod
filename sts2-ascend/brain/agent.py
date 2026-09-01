@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import copy
 from collections import Counter
+from collections.abc import Mapping
 import json
+import math
 import os
 import random
 import re
@@ -22,8 +24,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from character_profiles import CharacterProfile, ProfileStore
-from character_rotation import (CharacterRotation, CharacterRotationError,
-                                canonical_character_id)
+from character_rotation import (
+    ORPHAN_EVIDENCE_VERSION,
+    ORPHAN_RELEASE_MAX_ATTEMPTS,
+    ORPHAN_RELEASE_REASON,
+    CharacterRotation,
+    CharacterRotationError,
+    OrphanReleaseResult,
+    canonical_character_id,
+    _validate_orphan_evidence,
+)
 from client import ApiError, ConnectionDown, Sts2Client
 from decision_trace import ensure_decision_trace
 from knowledge import Knowledge, relic_stats_key
@@ -57,6 +67,64 @@ KNOWLEDGE_DIR = resolve_knowledge_dir(BASE_DIR)
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
 _LOG_PATH = KNOWLEDGE_DIR / "brain.log"
 REVIEW_HEALTHY_RUNS = 2
+
+
+def _normalise_action_token(value: object, *, _depth: int = 0) -> str | None:
+    """Extract one stable action token from API string/object DTO variants."""
+    if isinstance(value, str):
+        token = value.strip().casefold()
+        if not token:
+            return None
+        return re.sub(r"[\s-]+", "_", token)
+    if _depth >= 2 or not isinstance(value, Mapping):
+        return None
+    tokens: list[str] = []
+    for key in ("name", "action", "action_id", "id", "type"):
+        candidate = value.get(key)
+        if isinstance(candidate, Mapping):
+            nested = _normalise_action_token(candidate, _depth=_depth + 1)
+            if nested:
+                tokens.append(nested)
+        elif isinstance(candidate, str):
+            token = _normalise_action_token(candidate, _depth=_depth + 1)
+            if token:
+                tokens.append(token)
+    if not tokens:
+        return None
+    # Returning the first stable token keeps this helper scalar; callers that
+    # need to be conservative inspect every recognized field separately below.
+    return tokens[0]
+
+
+def _normalise_available_actions(actions: object) -> set[str] | None:
+    """Normalize string/object action DTOs, or return None for malformed data."""
+    if not isinstance(actions, list):
+        return None
+    names: set[str] = set()
+    for item in actions[:64]:
+        if isinstance(item, str):
+            token = _normalise_action_token(item)
+            if token is None:
+                return None
+            names.add(token)
+            continue
+        if not isinstance(item, Mapping):
+            return None
+        recognized = False
+        for key in ("name", "action", "action_id", "id", "type"):
+            candidate = item.get(key)
+            if isinstance(candidate, Mapping):
+                token = _normalise_action_token(candidate)
+            elif isinstance(candidate, str):
+                token = _normalise_action_token(candidate)
+            else:
+                token = None
+            if token:
+                recognized = True
+                names.add(token)
+        if not recognized:
+            return None
+    return names
 
 
 def log(msg: str = "") -> None:
@@ -440,9 +508,18 @@ class Agent:
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
         self._native_continue_recovery_expected = ""
+        # Orphan recovery is opt-in and evidence driven.  The production loop
+        # may install a read-only probe in this hook; absent a probe/evidence,
+        # the existing native-save wait remains fail-closed forever.
+        self._orphan_recovery_evidence_provider = None
+        self._orphan_recovery_samples: list[tuple] = []
+        self._orphan_recovery_sequence = 0
+        self._orphan_recovery_last_error = None
+        self._orphan_release_pending = None
         self._recover_persisted_terminal_rotation()
         self._release_persisted_human_assisted_rotation()
         self._recover_pending_native_save_context()
+        self._recover_pending_orphan_release()
 
     def _activate_profile(self, profile: CharacterProfile) -> None:
         """Expose one character's paired Knowledge/Policy as the active runtime."""
@@ -731,6 +808,536 @@ class Agent:
         self.ctx.native_save_wait = copy.deepcopy(wait)
         self.ctx.finalize_requested = True
         log(f"[agent] 恢复待原生存档验证旧局：{run_id}；统计、轮换与复盘保持阻塞")
+        return True
+
+    def _recover_pending_orphan_release(self) -> bool:
+        """Recover a prepared orphan transaction without guessing its outcome.
+
+        ``release_unrecoverable_orphan`` publishes the profile log before the
+        rotation CAS.  A process can therefore die in either half of that
+        transaction.  On startup we classify the durable pair in a bounded way:
+
+        * active + ``prepared`` means the exact run remains blocking; retain the
+          normalized proof as a pending marker and wait for an explicit retry;
+        * orphan-ledger + ``prepared`` means the CAS already landed, so only
+          idempotent audit-log cleanup is safe;
+        * anything malformed or split-brain remains untouched/fail-closed.
+
+        No native save is inferred here and no HTTP action is sent.
+        """
+        rotation = getattr(self, "rotation", None)
+        store = getattr(self, "profile_store", None)
+        if rotation is None or store is None:
+            return False
+        try:
+            snapshot = rotation.snapshot()
+        except (CharacterRotationError, OSError, ValueError) as exc:
+            log(f"[agent] 孤儿释放事务恢复读取失败，保持阻塞：{exc}")
+            return False
+
+        active_id = str(snapshot.active_run_id or "").strip()
+        candidate_ids: list[str] = []
+        if active_id:
+            candidate_ids.append(active_id)
+        # A CAS may have completed immediately before process death.  Inspect a
+        # bounded tail of the audit ledger so recovery cannot become an
+        # unbounded filesystem scan.
+        candidate_ids.extend(
+            run_id for run_id in reversed(snapshot.orphaned_run_ids[-8:])
+            if run_id not in candidate_ids)
+        recovered = False
+
+        for run_id in candidate_ids:
+            try:
+                if active_id == run_id:
+                    character_id = str(snapshot.active_character_id or "").strip()
+                else:
+                    record = rotation.orphan_record(run_id)
+                    character_id = str(
+                        (record or {}).get("character_id") or "").strip()
+                if not character_id:
+                    continue
+                profile = store.for_character(character_id)
+                knowledge = getattr(self, "_profile_knowledge", {}).get(
+                    profile.profile_id)
+                if knowledge is None:
+                    continue
+                prior = knowledge.load_run_log(run_id)
+                if not isinstance(prior, dict):
+                    continue
+                marker = prior.get("orphan_release")
+                wait = prior.get("native_save_wait")
+                if not isinstance(marker, dict) or not isinstance(wait, dict):
+                    continue
+                marker_state = marker.get("state")
+                wait_state = wait.get("state")
+                identity_ok = (
+                    str(prior.get("run_id") or "") == run_id
+                    and str(prior.get("profile_id") or "")
+                    == profile.profile_id
+                    and canonical_character_id(prior.get("character_id"))
+                    == (snapshot.active_character if active_id == run_id
+                        else canonical_character_id(character_id)))
+                if not identity_ok:
+                    # An active row must match the ledger exactly.  For a
+                    # completed CAS, the orphan ledger below supplies the same
+                    # independent identity check before log cleanup.
+                    log(f"[agent] 孤儿释放日志身份不一致，保持阻塞：{run_id}")
+                    continue
+                expected_character = (
+                    snapshot.active_character if active_id == run_id
+                    else canonical_character_id(character_id))
+                if expected_character is None:
+                    continue
+                normalized = _validate_orphan_evidence(
+                    marker.get("evidence"), run_id, expected_character,
+                    character_id)
+
+                if active_id == run_id:
+                    if marker_state != "prepared" \
+                            or wait_state != "orphan_release_prepared" \
+                            or str(wait.get("old_run_id") or "") != run_id:
+                        # An active row paired with a released/unknown marker is
+                        # split-brain; never repair it by clearing active_run.
+                        log(f"[agent] 孤儿释放 active/marker 不一致，保持阻塞：{run_id}")
+                        continue
+                    raw_attempts = marker.get("attempts", 1)
+                    if (isinstance(raw_attempts, bool)
+                            or not isinstance(raw_attempts, int)
+                            or raw_attempts < 1):
+                        log(f"[agent] 孤儿释放 attempts 无效，保持阻塞：{run_id}")
+                        continue
+                    self._rotation_unresolved_run_id = run_id
+                    self._native_save_transition_blocked = True
+                    self.ctx.native_save_wait = copy.deepcopy(wait)
+                    self._orphan_release_pending = {
+                        "run_id": run_id,
+                        "character_id": character_id,
+                        "evidence": normalized,
+                        "attempts": raw_attempts,
+                        "retry_limit": ORPHAN_RELEASE_MAX_ATTEMPTS,
+                    }
+                    log(
+                        f"[agent] 恢复孤儿释放 prepared 事务 {run_id}；"
+                        f"保持 active 阻塞，等待显式重试（{raw_attempts}/"
+                        f"{ORPHAN_RELEASE_MAX_ATTEMPTS}）")
+                    return True
+
+                # The rotation CAS already landed.  Only reconcile the audit
+                # marker; never synthesize a missing run log or terminal entry.
+                record = rotation.orphan_record(run_id)
+                if not isinstance(record, dict):
+                    continue
+                if (record.get("character_id") != character_id
+                        or record.get("evidence") != normalized
+                        or record.get("reason") != ORPHAN_RELEASE_REASON):
+                    log(f"[agent] 孤儿释放 CAS/日志证据不一致，保留现场：{run_id}")
+                    continue
+                if marker_state == "prepared":
+                    if wait_state != "orphan_release_prepared":
+                        continue
+                    payload = copy.deepcopy(prior)
+                    payload["orphan_release"] = copy.deepcopy(marker)
+                    payload["orphan_release"]["state"] = "released"
+                    payload["native_save_wait"] = copy.deepcopy(wait)
+                    payload["native_save_wait"]["state"] = "orphan_released"
+                    try:
+                        knowledge.save_run_log(run_id, payload)
+                    except (OSError, ValueError, TypeError) as exc:
+                        log(f"[agent] 孤儿释放审计收尾失败，将重试：{exc}")
+                        continue
+                elif marker_state != "released" or wait_state != "orphan_released":
+                    continue
+                try:
+                    self._finish_run_learning(knowledge, run_id)
+                except (OSError, ValueError, TypeError) as exc:
+                    log(f"[agent] 孤儿释放学习事务收尾失败，将重试：{exc}")
+                recovered = True
+            except (CharacterRotationError, KeyError, OSError, ValueError, TypeError) as exc:
+                log(f"[agent] 孤儿释放 prepared 证据无效，保持阻塞：{run_id}：{exc}")
+                continue
+        return recovered
+
+    @staticmethod
+    def _orphan_api_sample(state: dict) -> dict:
+        """Reduce one *explicitly shaped* menu payload for orphan proofing.
+
+        Missing fields are not interpreted as safe defaults.  The ordinary API
+        reader may omit optional values on unrelated screens, but a negative
+        orphan proof must see an explicit ``run_id``, empty ``run`` payload,
+        action list (string/object DTOs are normalized), and numeric
+        state-version marker.
+        """
+        if not isinstance(state, dict):
+            return {
+                "screen": "",
+                "run_id": "",
+                "run_empty": False,
+                "continue_run": True,
+                "state_version": None,
+                "valid": False,
+            }
+        run_present = "run" in state
+        run = state.get("run")
+        # The live API uses an explicit JSON null when no run exists.  An empty
+        # object can also be a truncated/failed DTO and is never authoritative
+        # for a negative proof.
+        run_empty = run is None
+        actions = state.get("available_actions")
+        action_names = _normalise_available_actions(actions)
+        actions_valid = action_names is not None
+        version = state.get("state_version")
+        try:
+            version_valid = (
+                isinstance(version, (int, float))
+                and not isinstance(version, bool)
+                and math.isfinite(float(version))
+                and version >= 0)
+        except (OverflowError, TypeError, ValueError):
+            version_valid = False
+        screen = state.get("screen")
+        run_id = state.get("run_id")
+        valid = (
+            isinstance(screen, str) and screen == "MAIN_MENU"
+            and isinstance(run_id, str) and run_id == "run_unknown"
+            and run_present and run_empty and actions_valid and version_valid)
+        return {
+            "screen": screen if isinstance(screen, str) else "",
+            "run_id": run_id if isinstance(run_id, str) else "",
+            "run_empty": bool(run_empty),
+            "continue_run": (
+                "continue_run" in action_names if actions_valid else True),
+            "state_version": version,
+            "valid": valid,
+        }
+
+    def _orphan_recovery_evidence_for_state(
+            self, state: dict, run_id: str) -> object | None:
+        """Ask an explicitly installed read-only probe for orphan evidence.
+
+        There is deliberately no implicit filesystem guess here.  A missing
+        ``progress.save`` on one profile can be a cloud-sync race or a different
+        native slot, so the normal process remains blocked until a probe that
+        understands the game's save layout supplies the complete evidence
+        contract.  Tests and a one-shot operator tool can install a callable in
+        ``_orphan_recovery_evidence_provider``; it must not send game actions.
+        """
+        provider = getattr(self, "_orphan_recovery_evidence_provider", None)
+        if not callable(provider):
+            return None
+        try:
+            try:
+                return provider(state, run_id)
+            except TypeError:
+                # Keep a small compatibility affordance for one-argument probe
+                # callables, while still treating all probe failures as unknown.
+                return provider(state)
+        except Exception as exc:
+            marker = str(exc)[:240]
+            if getattr(self, "_orphan_recovery_last_error", None) != marker:
+                self._orphan_recovery_last_error = marker
+                log(f"[agent] 孤儿旧局原生探针失败，保持阻塞：{marker}")
+            return None
+
+    def _orphan_evidence_matches_state(
+            self, evidence: dict, state: dict) -> bool:
+        """Bind a probe proof to the newest API frame just observed.
+
+        The native scan may be several seconds old (or may have been copied
+        from a previous session).  Stable menu facts alone are therefore not
+        enough when a live ``state`` is available: the last evidence sample and
+        native probe marker must describe this exact frame.  The stopped
+        one-shot path has no live frame and therefore performs only schema and
+        ledger checks.
+        """
+        try:
+            samples = evidence.get("api", {}).get("samples", [])
+            latest = samples[-1] if isinstance(samples, list) and samples else None
+        except AttributeError:
+            return False
+        if not isinstance(latest, dict):
+            return False
+        current = self._orphan_api_sample(state)
+        if not current.get("valid"):
+            return False
+        for key in ("screen", "run_id", "run_empty", "continue_run"):
+            if latest.get(key) != current.get(key):
+                return False
+        current_version = current.get("state_version")
+        if current_version is not None:
+            # Require an explicit latest marker when the API exposes one; this
+            # blocks replay of a proof captured under another state epoch.
+            if latest.get("state_version") != current_version:
+                return False
+            api = evidence.get("api") or {}
+            declared = api.get("latest_state_version")
+            if declared is not None and declared != current_version:
+                return False
+            native = evidence.get("native") or {}
+            probe_version = native.get("api_state_version")
+            # A filesystem scan without the API epoch it was paired with can be
+            # an old cloud-sync snapshot.  In the live path require the probe's
+            # explicit marker; the stopped one-shot path has no current frame
+            # and is validated by its operator-supplied timestamp/evidence.
+            if probe_version is None or probe_version != current_version:
+                return False
+        return True
+
+    def release_unrecoverable_orphan(
+            self, evidence: object, *, state: dict | None = None,
+    ) -> OrphanReleaseResult:
+        """Close an exact lost run without inventing a terminal outcome.
+
+        This is the explicit one-shot recovery entry point.  It is safe to call
+        while the game is stopped or from a running Brain; it performs no HTTP
+        action and never edits ``knowledge`` directly.  All profile changes go
+        through :class:`Knowledge`'s rollback journal, and the rotation ledger
+        records a separate ``orphaned_runs`` audit row rather than a terminal.
+
+        ``state`` is optional for a stopped one-shot caller.  When supplied it
+        must itself be the current empty MAIN_MENU frame; the evidence still
+        carries the two-snapshot requirement and native probe details.
+        """
+        rotation = getattr(self, "rotation", None)
+        store = getattr(self, "profile_store", None)
+        if rotation is None or store is None:
+            raise CharacterRotationError("orphan recovery dependencies are unavailable")
+        snapshot = rotation.snapshot()
+        run_id = str(snapshot.active_run_id or "").strip()
+        character_id = str(snapshot.active_character_id or "").strip()
+        if not run_id or not character_id or snapshot.active_character is None:
+            # A stopped one-shot replay after a successful release has no active
+            # slot.  Let the rotation ledger perform its exact idempotence check
+            # when the evidence names an already-audited orphan; every other
+            # no-active case remains an error.
+            candidate_run_id = (
+                str(evidence.get("run_id") or "").strip()
+                if isinstance(evidence, dict) else "")
+            if (candidate_run_id
+                    and candidate_run_id in snapshot.orphaned_run_ids):
+                return rotation.release_orphan_run(
+                    candidate_run_id, evidence=evidence)
+            raise CharacterRotationError("no exact active run is available for orphan recovery")
+        if state is not None:
+            sample = self._orphan_api_sample(state)
+            if not sample.get("valid"):
+                raise CharacterRotationError(
+                    "orphan recovery requires an explicit empty MAIN_MENU "
+                    "frame with numeric state_version and no continue_run")
+
+        normalized_evidence = _validate_orphan_evidence(
+            evidence, run_id, snapshot.active_character, character_id)
+        if state is not None and not self._orphan_evidence_matches_state(
+                normalized_evidence, state):
+            raise CharacterRotationError(
+                "orphan evidence is stale or not bound to the latest API state")
+        try:
+            profile = store.for_character(character_id)
+        except KeyError as exc:
+            raise CharacterRotationError(
+                f"orphan recovery profile is unavailable: {character_id}") from exc
+        knowledge = getattr(self, "_profile_knowledge", {}).get(profile.profile_id)
+        if knowledge is None:
+            # A stopped one-shot caller may construct a lightweight Agent with
+            # only the durable stores.  Creating this exact profile Knowledge is
+            # still a normal transactional API operation, not a JSON edit.
+            knowledge = Knowledge(profile)
+
+        prior = knowledge.load_run_log(run_id)
+        if not isinstance(prior, dict):
+            prior = {}
+
+        # A crash can leave the durable run log in the prepared phase while
+        # rotation still owns the active slot.  Retries must carry the exact
+        # same proof and are capped; silently replacing a prepared proof would
+        # make the audit trail ambiguous and could turn a transient probe race
+        # into an irreversible release.
+        prior_marker = prior.get("orphan_release")
+        prior_attempts = 0
+        if isinstance(prior_marker, dict):
+            prior_state = prior_marker.get("state")
+            if prior_state == "prepared":
+                raw_attempts = prior_marker.get("attempts", 1)
+                if (isinstance(raw_attempts, bool)
+                        or not isinstance(raw_attempts, int)
+                        or raw_attempts < 1):
+                    raise CharacterRotationError(
+                        "orphan recovery prepared marker has invalid attempts")
+                prior_attempts = raw_attempts
+                if prior_attempts >= ORPHAN_RELEASE_MAX_ATTEMPTS:
+                    raise CharacterRotationError(
+                        "orphan recovery retry limit reached; inspect/rollback "
+                        "the prepared marker before retrying")
+            elif prior_state in ("released", "rolled_back"):
+                raise CharacterRotationError(
+                    f"orphan recovery run {run_id!r} has terminal marker "
+                    f"{prior_state!r} while still active")
+
+        if isinstance(prior_marker, dict) and prior_marker.get("state") == "prepared":
+            previous_evidence = _validate_orphan_evidence(
+                prior_marker.get("evidence"), run_id,
+                snapshot.active_character, character_id)
+            if normalized_evidence != previous_evidence:
+                raise CharacterRotationError(
+                    "orphan recovery retry evidence differs from prepared proof")
+
+        self._begin_run_learning(knowledge, run_id)
+        if not self._exclude_run_learning(knowledge, run_id):
+            # ``exclude_run_learning`` returns None in older test doubles; only
+            # an explicit False means the rollback was not accepted.
+            if hasattr(knowledge, "run_learning_is_excluded") \
+                    and not self._run_learning_is_excluded(knowledge, run_id):
+                raise CharacterRotationError(
+                    "orphan recovery could not establish the learning rollback")
+
+        # Preserve every existing incremental decision/trace as audit evidence;
+        # only the terminal classification is changed.  No stats, progression,
+        # policy, review queue, or finalized-run entry is synthesized.
+        payload = copy.deepcopy(prior)
+        payload.update({
+            "run_id": run_id,
+            "profile_id": profile.profile_id,
+            "character_id": character_id,
+            "in_progress": False,
+            "victory": False,
+            "abandoned": True,
+            "orphaned": True,
+            "lost_native_save": True,
+            "excluded_from_learning": True,
+            "human_assisted": False,
+            # Explicitly state that no native terminal proof exists; this keeps
+            # the normal terminal-recovery validator from accepting the row.
+            "native_save": None,
+            "orphan_release": {
+                "state": "prepared",
+                "reason": ORPHAN_RELEASE_REASON,
+                "evidence": normalized_evidence,
+                "attempts": prior_attempts + 1,
+                "prepared_at": (
+                    prior_marker.get("prepared_at")
+                    if isinstance(prior_marker, dict)
+                    and isinstance(prior_marker.get("prepared_at"), str)
+                    and prior_marker.get("prepared_at").strip()
+                    else time.strftime("%Y-%m-%dT%H:%M:%S%z")),
+            },
+            "native_save_wait": {
+                "state": "orphan_release_prepared",
+                "old_run_id": run_id,
+            },
+            "ended_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        })
+        # Ensure a missing old log still has the shape expected by audit readers,
+        # without pretending that it was a real terminal run.
+        payload.setdefault("run_number", 0)
+        payload.setdefault("profile_run_number", 0)
+        payload.setdefault("ascension", 0)
+        payload.setdefault("started_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+        payload.setdefault("floor", 0)
+        payload.setdefault("decisions", [])
+        payload.setdefault("combat_notes", [])
+        payload.setdefault("attribution_tags", [])
+
+        # The log is published before the rotation CAS.  If the process dies in
+        # between, the durable ``orphan_release_prepared`` row is enough for a
+        # later one-shot retry; active_run remains blocking until that retry.
+        knowledge.save_run_log(run_id, payload)
+        result = rotation.release_orphan_run(
+            run_id, evidence=normalized_evidence, character_id=character_id)
+
+        payload["orphan_release"]["state"] = "released"
+        payload["native_save_wait"]["state"] = "orphan_released"
+        try:
+            knowledge.save_run_log(run_id, payload)
+        except (OSError, ValueError, TypeError) as exc:
+            # The rotation ledger already contains the complete bounded proof;
+            # retain a pending marker for an operator retry but do not turn this
+            # non-terminal cleanup failure into a fake game result.
+            log(f"[agent] 孤儿旧局轮换已释放，但审计日志更新失败：{exc}")
+        try:
+            self._finish_run_learning(knowledge, run_id)
+        except (OSError, ValueError, TypeError) as exc:
+            # Exclusion was durably written before the release.  Knowledge's
+            # next begin/finish transaction will restore the baseline again; the
+            # scheduler is nevertheless safe to continue with a new run.
+            log(f"[agent] 孤儿旧局学习事务清理稍后自愈：{exc}")
+
+        # Drop the old in-memory context only after the exact rotation CAS.  A
+        # fresh menu tick will select the durable next character and start a new
+        # autonomous run; no terminal hook, review enqueue, or quota increment is
+        # invoked for the orphan.
+        self.ctx = RunContext()
+        self._rotation_unresolved_run_id = ""
+        self._native_continue_recovery_expected = ""
+        self._native_save_transition_blocked = False
+        self._orphan_recovery_samples = []
+        self._orphan_recovery_sequence = 0
+        self._orphan_recovery_last_error = None
+        self._orphan_release_pending = None
+        self._review_health_ready_for_new_run = True
+        log(
+            f"[agent] 已按原生负证据排除孤儿旧局 {run_id}；"
+            "不计局数、不消耗轮换配额，下一轮从局间边界重新开局")
+        return result
+
+    # Short alias for one-shot callers and tests.
+    release_orphan_once = release_unrecoverable_orphan
+
+    def retry_pending_orphan_release(
+            self, *, state: dict | None = None,
+    ) -> OrphanReleaseResult:
+        """Retry the exact persisted prepared proof once, on explicit demand.
+
+        This helper never obtains a new filesystem/API fact and never loops.  It
+        is useful after a process restart when ``_recover_pending_orphan_release``
+        restored a write-ahead marker; callers that have a newer native probe
+        should call :meth:`release_unrecoverable_orphan` with that proof instead.
+        """
+        pending = getattr(self, "_orphan_release_pending", None)
+        if not isinstance(pending, dict) or not pending.get("evidence"):
+            raise CharacterRotationError(
+                "no prepared orphan release is pending for explicit retry")
+        return self.release_unrecoverable_orphan(
+            copy.deepcopy(pending["evidence"]), state=state)
+
+    def _try_release_unrecoverable_orphan(self, state: dict) -> bool:
+        """Attempt the opt-in orphan transaction at a safe menu boundary."""
+        unresolved = str(getattr(self, "_rotation_unresolved_run_id", "") or "")
+        sample = self._orphan_api_sample(state)
+        candidate = (
+            unresolved
+            and sample.get("valid")
+            and sample["screen"] == "MAIN_MENU"
+            and sample["run_id"] == "run_unknown"
+            and sample["run_empty"]
+            and not sample["continue_run"])
+        if not candidate:
+            self._orphan_recovery_samples = []
+            self._orphan_recovery_sequence = 0
+            return False
+        previous = list(getattr(self, "_orphan_recovery_samples", []) or [])
+        self._orphan_recovery_sequence = int(
+            getattr(self, "_orphan_recovery_sequence", 0) or 0) + 1
+        # Store a local monotonic sample number even when the game keeps the
+        # same state_version for both GETs.  The external evidence provider must
+        # copy its own ordering metadata into the persisted proof; this counter
+        # only prevents one in-process tick from masquerading as two samples.
+        sample_key = (self._orphan_recovery_sequence,
+                      tuple(sorted(sample.items())))
+        samples = previous + [sample_key]
+        self._orphan_recovery_samples = samples[-8:]
+        if len(self._orphan_recovery_samples) < 2:
+            return False
+        evidence = self._orphan_recovery_evidence_for_state(state, unresolved)
+        if evidence is None:
+            return False
+        try:
+            self.release_unrecoverable_orphan(evidence, state=state)
+        except (CharacterRotationError, OSError, ValueError, TypeError) as exc:
+            marker = str(exc)[:240]
+            if getattr(self, "_orphan_recovery_last_error", None) != marker:
+                self._orphan_recovery_last_error = marker
+                log(f"[agent] 孤儿旧局证据未通过，继续阻塞：{marker}")
+            return False
         return True
 
     def _bind_profile_for_state(self, state: dict) -> CharacterProfile | None:
@@ -1410,21 +2017,46 @@ class Agent:
         run_id = self._state_run_identity(state) or "run_unknown"
         screen = state.get("screen", "UNKNOWN")
         self._native_save_transition_blocked = False
+        action_names = _normalise_available_actions(
+            state.get("available_actions"))
+        continue_available = (
+            action_names is not None and "continue_run" in action_names)
 
         ctx_run_id = str(getattr(self.ctx, "run_id", "") or "run_unknown")
         unresolved_run_id = str(
             getattr(self, "_rotation_unresolved_run_id", "") or "")
+        pending_orphan = getattr(self, "_orphan_release_pending", None)
+        pending_orphan_id = str(
+            (pending_orphan or {}).get("run_id") or "").strip()
+        # A prepared orphan proof is a write-ahead transaction.  Until its
+        # explicit retry succeeds, neither a spontaneous old-run echo nor the
+        # native Continue button may bypass the pending marker.  A fresh empty
+        # menu frame is the sole place where the opt-in provider is consulted.
+        if (pending_orphan_id and pending_orphan_id == unresolved_run_id
+                and not (screen == "MAIN_MENU" and run_id == "run_unknown"
+                         and not run
+                         and not continue_available)):
+            self._native_save_transition_blocked = True
+            marker = (pending_orphan_id, run_id, screen, "prepared")
+            if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
+                self._unresolved_rotation_log_marker = marker
+                log(
+                    f"[agent] 孤儿释放事务 {pending_orphan_id} 尚未完成；"
+                    "拒绝继续/旧局回声，等待显式证据重试")
+            return
         can_resume_from_menu = (
             bool(unresolved_run_id)
             and screen == "MAIN_MENU"
             and run_id == "run_unknown"
             and not run
-            and "continue_run" in (state.get("available_actions") or []))
+            and continue_available)
         if can_resume_from_menu:
             # Remember that the next authoritative active state is a direct
             # consequence of the game's native Continue action.  Only this narrow
             # proof permits stale run-id replacement below.
             self._native_continue_recovery_expected = unresolved_run_id
+            self._orphan_recovery_samples = []
+            self._orphan_recovery_sequence = 0
             marker = (unresolved_run_id, "continue_run", screen)
             if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
                 self._unresolved_rotation_log_marker = marker
@@ -1483,6 +2115,12 @@ class Agent:
             # already exposes a different/new run.  Never let a missing incremental
             # log turn that condition into an implicit replacement or quota flip.
             if run_id != unresolved_run_id or screen == "GAME_OVER":
+                # A separately installed native-file probe may prove that the
+                # old identity is truly gone.  Require two consecutive empty menu
+                # observations before consulting it; with no probe this remains
+                # the historical fail-closed block.
+                if self._try_release_unrecoverable_orphan(state):
+                    return
                 self._native_save_transition_blocked = True
                 marker = (unresolved_run_id, run_id, screen)
                 if getattr(self, "_unresolved_rotation_log_marker", None) != marker:
@@ -3147,8 +3785,24 @@ class Agent:
         if autogit is not None:
             g = self.know.stats["global"]
             result = "胜" if victory else "负"
+            # The run context carries the selected character's profile-local
+            # counter.  Use it as the subject's authoritative number; the
+            # aggregate-looking ``global`` mapping is retained only for the
+            # historical career summary in the parentheses.
+            profile_meta = self._run_profile_metadata()
+            profile_run_number = (
+                profile_meta.get("profile_run_number") or g.get("runs") or 0)
+            profile_run_numbers = [profile_run_number] if profile_run_number else []
+            profile_context = autogit.profile_run_context(
+                profile_meta.get("profile_id"),
+                profile_run_numbers,
+            )
+            subject_run_description = autogit.profile_run_description(
+                profile_run_numbers)
             autogit.commit_progress(
-                f"chore(sts2-ascend): 第{g['runs']}局存档（{result} F{floor} 进阶{self.ctx.ascension}，生涯 {g['wins']}胜/{g['runs']}局）",
+                f"chore(sts2-ascend): {subject_run_description}存档（{profile_context}；"
+                f"{result} F{floor} 进阶{self.ctx.ascension}，"
+                f"生涯 {g['wins']}胜/{g['runs']}局）",
                 log=log)
         # LLM 复盘提交了变更：终局证据已归档，但不能直接停在 GAME_OVER
         # 重启。新进程若仍看到同一终局帧，胜利局会被重复结算；先由旧进程
@@ -3789,6 +4443,59 @@ def main() -> None:
             if agent.live_dashboard is not None:
                 agent.live_dashboard.close(timeout=1.0)
             agent.know.save()
+
+
+def release_orphan_run_once(
+        knowledge_root: str | os.PathLike[str], evidence: object,
+) -> OrphanReleaseResult:
+    """Run the explicit orphan transaction without starting the game.
+
+    This small operator/test entry point constructs only the durable profile and
+    rotation stores, then delegates to the same :class:`Agent` transaction used
+    by the live loop.  It never discovers a port, launches a process, sends an
+    HTTP action, or asks for UAC.  Callers must provide the complete negative
+    evidence contract; missing/weak evidence raises ``CharacterRotationError``.
+
+    A caller coordinating with a live stack should prefer the in-process Agent
+    method so its lifecycle lock remains authoritative.  This helper exists for
+    a stopped-stack one-shot recovery and is intentionally not wired into normal
+    startup, so ordinary restarts stay fail-closed.
+    """
+    root = Path(knowledge_root)
+    store = ProfileStore(root)
+    rotation = CharacterRotation.from_knowledge_root(root)
+    # Build a deliberately minimal shell: the transaction only touches these
+    # durable dependencies and RunContext.  Avoiding ``Agent.__init__`` keeps a
+    # stopped-stack recovery from re-running unrelated migrations or probes.
+    instance = object.__new__(Agent)
+    instance.rotation = rotation
+    instance.profile_store = store
+    instance._profile_knowledge = {}
+    instance.ctx = RunContext()
+    instance._rotation_unresolved_run_id = ""
+    instance._native_continue_recovery_expected = ""
+    instance._native_save_transition_blocked = True
+    instance._orphan_recovery_samples = []
+    instance._orphan_recovery_sequence = 0
+    instance._orphan_recovery_last_error = None
+    instance._review_health_ready_for_new_run = False
+    snapshot = rotation.snapshot()
+    character_id = str(snapshot.active_character_id or "").strip()
+    if not character_id and isinstance(evidence, dict):
+        # Idempotent replay after the first release has no active slot from
+        # which to derive the character.  The rotation method still validates
+        # the evidence against its durable orphan row; this fallback only lets
+        # it reach that exact check.
+        character_id = str(evidence.get("character_id") or "").strip()
+    if not character_id:
+        raise CharacterRotationError(
+            "no exact active run is available for orphan recovery")
+    profile = store.for_character(character_id)
+    knowledge = Knowledge(profile)
+    instance._profile_knowledge[profile.profile_id] = knowledge
+    instance.active_profile = profile
+    instance.know = knowledge
+    return Agent.release_unrecoverable_orphan(instance, evidence)
 
 
 if __name__ == "__main__":

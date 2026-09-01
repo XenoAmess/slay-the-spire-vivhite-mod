@@ -119,11 +119,94 @@ _HEX_COMMIT = re.compile(r"^[0-9a-fA-F]{40,64}$")
 _BRAIN_AUTO_COMMIT_PREFIX = "[brain:auto]"
 _MACHINE_PROGRESS_SUBJECT = re.compile(
     r"^(?:\[brain:auto\]\s+)?chore\(sts2-ascend\): "
-    r"第.+(?:局存档(?:[（(].*[）)])?|局后复盘前在线存档)$")
+    # Numeric subjects are the normal path; ``局号未知`` is an explicit,
+    # fail-closed metadata fallback and must remain machine-owned as well so
+    # index recovery does not mistake it for a user's staged commit.
+    r"(?:第.+局|局号未知)(?:存档|后复盘前在线存档)"
+    r"(?:[（(].*[）)])?$")
 _PROGRESS_INDEX_PENDING_NAME = "sts2-ascend-progress-index-pending.json"
 _MACHINE_INDEX_TAKEOVER_POLICY = "machine-owned-takeover-v1"
 _EXACT_INDEX_SNAPSHOT_POLICY = "exact-target-snapshot-v1"
 _INDEX_LOCK_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4, 0.8)
+
+# Human-readable labels used only in Brain-owned progress commit subjects.  Keep
+# the stable profile id beside the localized name so a log remains searchable
+# even when the UI/localization wording changes.  Unknown profiles retain their
+# normalized id beside an explicit ``未知角色`` marker rather than silently
+# borrowing another character's name.
+_PROFILE_COMMIT_LABELS = {
+    "ironclad": "战士/Ironclad",
+    "character_ironclad": "战士/Ironclad",
+    "ironclad_character": "战士/Ironclad",
+    "ironclad_character_ironclad": "战士/Ironclad",
+    "vivhite": "白绮/Vivhite",
+    "character_vivhite": "白绮/Vivhite",
+    "vivhite_character": "白绮/Vivhite",
+    "vivhite_character_vivhite": "白绮/Vivhite",
+    "vivhite_character_vivhite_character": "白绮/Vivhite",
+}
+
+
+def profile_commit_label(profile_id: object) -> str:
+    """Return a stable bilingual character label for an auto-commit subject."""
+    normalized = str(profile_id or "").strip().casefold()
+    if not normalized:
+        return "未知角色"
+    return _PROFILE_COMMIT_LABELS.get(normalized, f"未知角色/{normalized}")
+
+
+def _normalise_commit_run_numbers(run_numbers: object) -> tuple[int, ...]:
+    """Normalize profile-local run numbers without accepting booleans/fractions."""
+    if run_numbers is None:
+        return ()
+    if isinstance(run_numbers, bool):
+        return ()
+    if isinstance(run_numbers, int):
+        values = (run_numbers,)
+    elif isinstance(run_numbers, str):
+        values = (run_numbers,)
+    else:
+        try:
+            values = tuple(run_numbers)
+        except TypeError:
+            values = ()
+    normalized: set[int] = set()
+    for value in values:
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            number = value
+        elif isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()):
+            number = int(value.strip())
+        else:
+            continue
+        if number > 0:
+            normalized.add(number)
+    return tuple(sorted(normalized))
+
+
+def profile_run_description(run_numbers: object) -> str:
+    """Format one or more profile-local run numbers for a commit subject."""
+    numbers = _normalise_commit_run_numbers(run_numbers)
+    if not numbers:
+        return "局号未知"
+    if len(numbers) == 1:
+        return f"第{numbers[0]}局"
+    if len(numbers) == numbers[-1] - numbers[0] + 1:
+        return f"第{numbers[0]}~{numbers[-1]}局"
+    return f"第{numbers[0]}~{numbers[-1]}局范围内的{len(numbers)}局"
+
+
+def profile_run_context(profile_id: object, run_numbers: object) -> str:
+    """Format the character and its *profile-local* run number(s).
+
+    ``run_numbers`` deliberately means the selected character profile's counter,
+    not the aggregate/global counter.  Callers that lack trustworthy metadata
+    may pass an empty value; the resulting ``局号未知`` is explicit instead of
+    guessing from another profile.
+    """
+    run_description = profile_run_description(run_numbers)
+    return f"角色：{profile_commit_label(profile_id)}，{run_description}"
 
 
 @dataclass(frozen=True)

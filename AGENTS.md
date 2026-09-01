@@ -23,7 +23,7 @@ Slay the Spire 2（杀戮尖塔2）角色 Mod「白绮 Vivhite」。
 | --- | --- |
 | 游戏目录 | `G:\SteamLibrary\steamapps\common\Slay the Spire 2` |
 | 游戏 exe | `G:\SteamLibrary\steamapps\common\Slay the Spire 2\SlayTheSpire2.exe` |
-| 启动方式 | `%command% --rendering-driver vulkan`（**必须 vulkan**；游戏根目录 `launch_vulkan.bat` 已封装） |
+| 启动方式 | `%command% --rendering-driver vulkan`（本机统一训练/验收固定使用 Vulkan；这不是对所有硬件的绝对兼容性承诺；游戏根目录 `launch_vulkan.bat` 已封装） |
 | mod 部署目录 | `<游戏目录>\mods\<ModId>\`（dll + json + pck 三件套） |
 | 游戏日志 | `%APPDATA%\SlayTheSpire2\logs\godot.log`（当前会话） |
 | .NET SDK | `C:\Users\xenoa\AppData\Local\Microsoft\dotnet`（9.0.317 + 8.0.30 运行时） |
@@ -111,6 +111,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 
 - 用户说“启动/停止整套”“游戏 + brain + 播报员”时，AI **只使用上述统一入口**。不要分别拉起组件，不要泛杀 `python` / `uv` / `opencode`，也不要按 8080–8084 端口杀进程。
 - `Start-Agent.ps1` 默认后台运行且幂等。`-SkipDeploy` 复用已部署 DLL；游戏已经运行时必须使用它，否则脚本会拒绝部署以避免 DLL 锁。`-Foreground` 仅用于调试，完整停止仍使用 `Stop-Agent.ps1`。
+- **双轨并行执行（训练与复盘互不替代）**：用户同时要求“继续复盘/写报告/完善 `AGENTS.md`”和“启动游戏＋Brain 训练”时，必须在同一任务中并行推进两条独立轨道。A 轨持续记录证据、更新报告与规则；B 轨只用统一 `Start-Agent.ps1` 保持游戏、Brain、runner 和驾驶舱运行，并巡检健康状态与真实动作。A 轨等待或失败不得暂停 B 轨，B 轨阻塞或需要修复也不得让 A 轨停摆；每次汇报必须分别说明报告进度和训练进程/动作证据，不能把“报告已写完”或“Stack ready”冒充训练完成。训练巡检发现健康异常或连续状态无进展时，立即记录证据并进入修复/复核循环，不得静默等待、挂机或把“暂时无法安全恢复”写成成功。运行态文件以 `sts2-ascend/.runtime/`（由 `lifecycle.STACK_ROOT` 解析）为准，仓库根目录同名目录不是栈证据。
+- **保持下播的训练模式**：用户明确要求下播时，先确认并保持本地直播姬为 `Idle`，只调用 `Start-Agent.ps1` 启动或复用游戏＋Brain 全栈；禁止调用 `Start-BilibiliLive.ps1`、禁止自动复播，也不得为了证明训练而触碰直播姬。训练栈可以在下播状态继续运行，但仍须以真实 `/state` 和已确认动作证明训练；若证据不足则保持失败关闭并继续诊断，不得伪造动作或擅自人工接管。
 - 全栈驻留期间的人工接管只使用全局快捷键：`Ctrl+Alt+F9` 停止 Brain 发送操作并保留游戏与 runner，`Ctrl+Alt+F10` 只恢复动作发送。只要某局跨过一次 F9 人工接管边界，该局便永久标记为 `human_assisted=true`、`excluded_from_learning=true`；Brain 将其所属 Profile 的在线 Knowledge `stats` 回滚到局前持久基线，F10 后同一局的学习写入仍保持禁用，进程重启也不得解除。
   该局已有及随后产生的增量决策/战斗日志继续以 `in_progress=true` 保留为审计证据，但不走正常 `finalize_run`，不增加总局数或胜场，不进入平均/最高/近 20、该局终局的 `policy.json` / `progression.json` / `lessons.md` 演化、LLM 复盘或轮换配额。完整栈退出后快捷键监听不存在，冷启动仍走 `Start-Agent.ps1`。
 - Windows 上 Luna 只使用 `scripts/Install-CodexCompat.ps1` 安装到用户缓存并经固定版本/SHA256 校验的兼容 Codex CLI；`Start-Agent.ps1` 冷启动会自动就绪该缓存。每次 Luna provider 启动前必须再次核对固定 SHA256，并通过本地无模型 `exec-server fs/readFile` 普通盘符读取兼容能力预检；失败时不得启动 provider 或消耗 token，必须保持 Luna 原批次亲和性且不新增冷却。
@@ -121,7 +123,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - ASCEND-VISION 的资源根目录和 `knowledge/viewer.lock` 必须通过 `lifecycle.STACK_ROOT` 解析；复盘 clone、自检目录或备份副本不得按自身 `__file__` 建立独立 viewer 锁。复盘子进程必须继承 `STS2_ASCEND_DISABLE_VIEWER=1`。
 - 楼层展示必须使用真实楼层口径 `floor_sum_raw` / `best_floor_raw`；历史 `floors_total` / `best_floor` 保留“真实楼层 + 胜利 50 分”的学习评分语义，不得拿来显示平均或最高楼层。
 - 直播控制语义不变：开播仍先启动完整 sts2-ascend 栈并将杀戮尖塔2置于顶部，再通过本地哔哩哔哩直播姬开播；下播只操作直播姬，不停止任何服务、智能体或游戏。
-- Bilibili 开播及开播后的恢复、修复或重载过程中，直播最多允许中断两分钟；所有操作必须围绕该硬性死线安排，一旦直播中断，恢复 `Streaming` 立即成为最高优先级。
+- Bilibili 开播及开播后的恢复、修复或重载过程中，**仅对已证明真实游玩的会话**适用“直播最多允许中断两分钟”的预算；在该前提成立时，所有恢复操作必须围绕硬性死线安排，一旦直播中断，恢复 `Streaming` 立即成为最高优先级。若真实游玩证据丢失、失效或无法证明，立即调用 `Stop-BilibiliLive.ps1` 下播并确认 `Idle`，不得为了两分钟预算继续空播或自动复播。
+- **禁止空播/挂机硬闸（2026-09-01 事故复盘）**：`Stack ready`、`/health=ready` 或直播姬进程存活都不等于正在游玩。开播或断流恢复前，必须同时确认游戏已进入真实对局（不得是 `MAIN_MENU`、`run_unknown` 或等待界面），并由 `/state` 的有效 `run`/`state_version`、驾驶舱 `connected` 心跳、近期 `applied` 动作回执及连续状态进展共同证明 Brain 正在实际操作；若 API 没有可继续的真实对局、Brain 处于终局/孤儿账本阻塞，或连续巡检没有新的已确认动作/状态进展，禁止开播和自动复播。用户明确要求保持下播时，只调用 `Start-Agent.ps1` 启动 brain＋游戏栈，禁止调用 `Start-BilibiliLive.ps1` 或任何自动复播入口。直播中一旦发现主菜单/等待界面、平台挂机提示或处罚弹窗、决策/动作停止，或无法证明仍在实际操作，必须立即调用 `Stop-BilibiliLive.ps1` 下播并确认状态为 `Idle`，不得为了守两分钟红线继续空播；修复并重新证明真实游玩前不得再次开播。该硬闸源于 2026-09-01 直播姬因游戏长期停在主菜单被平台判定挂机、切断本场直播并取消 7 天直播推荐资格的事故。
+- **孤儿运行恢复证据门禁**：Brain 报告存在跨进程未闭合的旧 `run_id` 时，默认只有与该 `run_id` 匹配的原生 Continue/API 证据（例如 `/state` 非菜单且提供 `continue_run`，或可验证的原生存档/历史记录）才能解除阻塞。若已证明原生存档不可恢复，唯一允许的窄例外是版本化 `no_native_save_no_continue` 负证据：同一 GUID session 内持有生命周期锁完成至少两次有序 `GET /state` 与 `/actions/available` 交叉采样（明确 `MAIN_MENU`、`run_unknown`、`run=null`、无 `continue_run`、数值 `state_version`），并对同一 `profile1/saves` 根下的 `current_run.save`、`current_run.save.backup`、`history`、`.stmp` 四类原生对象完成无读错且无匹配 run 的探针；随后必须经过统一 `Stop-Agent.ps1` 的同 session sentinel，再由一次性 `release_orphan_run.py --apply` 事务写入 orphan 审计行。该例外只解除精确 active slot、标记 `orphaned/excluded_from_learning`，绝不伪造终局、统计、学习或轮换配额；证据哈希/绑定、路径类别或 Stop sentinel 任一不符都保持阻塞。`run_unknown`、`MAIN_MENU`、进程存活、dashboard 心跳、日志、缓存或零字节 `.stmp` 单独都不是恢复证据；不得手改 `knowledge`、清除 active-run/轮换账、复制或改名临时文件、从外部注入动作，亦不得为“继续训练”强行开新局。证据缺失时保持全栈可观测地运行并修复/等待机制产生权威证据；允许进程继续驻留，但 Brain 动作发送和直播必须保持失败关闭。
+- **HP 支付语义复盘规则**：`CreatureCmd.Damage` 返回的 `DamageResult.UnblockedDamage` 是经过原生减伤/阻挡后的实际掉血，不是请求值；Tungsten Rod 或 Buffer 将其降为 0 时，只要付款者仍存活且结果集合包含付款者，不能把支付误判为失败。只有没有付款者结果或付款者死亡才阻止后续卡牌效果；新增生命支付逻辑必须保留原生 `ValueProp`，并覆盖 1 点、多点、零实际掉血和真实阻止的回归测试。
 - 窗口层巡检必须区分两条不变量：ASCEND-VISION 自身约 500ms 的无激活置顶永远运行；游戏窗口巡检仅在本地直播姬实际为 `Streaming` 时每 60 秒运行，按当前 session 的完整 `game_exe` 精确定位，先无激活恢复游戏 TOPMOST、再恢复 viewer。非 Streaming 或任何状态/窗口读取失败都不得触碰游戏；该路径只允许本地标准库/Win32，不调用 LLM 或网络，token 消耗为 0。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
 - `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。

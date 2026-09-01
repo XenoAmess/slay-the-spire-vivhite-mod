@@ -108,11 +108,44 @@ class AutoGitSafetyTests(unittest.TestCase):
     def test_brain_auto_commit_subject_is_tagged_once_and_legacy_subjects_still_match(self) -> None:
         legacy = "chore(sts2-ascend): 第900局存档"
         tagged = "[brain:auto] chore(sts2-ascend): 第900局存档"
+        profile_subject = (
+            "chore(sts2-ascend): 第1局后复盘前在线存档"
+            "（角色：白绮/Vivhite，第1局）")
 
         self.assertEqual(autogit.brain_auto_commit_message(legacy), tagged)
         self.assertEqual(autogit.brain_auto_commit_message(tagged), tagged)
         self.assertIsNotNone(autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(legacy))
         self.assertIsNotNone(autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(tagged))
+        self.assertIsNotNone(
+            autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(profile_subject))
+        self.assertIsNotNone(autogit._MACHINE_PROGRESS_SUBJECT.fullmatch(
+            "chore(sts2-ascend): 局号未知后复盘前在线存档"
+            "（角色：未知角色，局号未知）"))
+        self.assertEqual(
+            autogit.profile_run_context("vivhite", [1]),
+            "角色：白绮/Vivhite，第1局",
+        )
+        self.assertEqual(
+            autogit.profile_run_context(
+                "VIVHITE_CHARACTER_VIVHITE_CHARACTER", [1]),
+            "角色：白绮/Vivhite，第1局",
+        )
+        self.assertEqual(
+            autogit.profile_run_context("ironclad", [4, 2, 3]),
+            "角色：战士/Ironclad，第2~4局",
+        )
+        self.assertEqual(
+            autogit.profile_run_context("vivhite", []),
+            "角色：白绮/Vivhite，局号未知",
+        )
+        self.assertEqual(
+            autogit.profile_commit_label("character_ironclad"),
+            "战士/Ironclad",
+        )
+        self.assertEqual(
+            autogit.profile_commit_label("future_character"),
+            "未知角色/future_character",
+        )
 
         path = "sts2-ascend/knowledge/stats.json"
         self._write(path, '{"runs": 2}\n')
