@@ -1,7 +1,8 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$RepoRoot = "",
-    [string]$OutputPath = ""
+    [string]$OutputPath = "",
+    [string]$MetadataPath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -11,15 +12,125 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 }
 $repoFullPath = [IO.Path]::GetFullPath($RepoRoot)
-if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $OutputPath = Join-Path $repoFullPath "workshop\preview.jpg"
+
+function Read-StrictUtf8Json {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not [IO.File]::Exists($Path)) { throw "Workshop metadata is missing: $Path" }
+    try {
+        $encoding = [Text.UTF8Encoding]::new($false, $true)
+        return [IO.File]::ReadAllText($Path, $encoding) | ConvertFrom-Json
+    }
+    catch {
+        throw "Workshop metadata is not valid UTF-8 JSON: $Path. $($_.Exception.Message)"
+    }
 }
+
+function Get-Sha256Hex {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not [IO.File]::Exists($Path)) { throw "Cannot hash missing file: $Path" }
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
+}
+
+function Resolve-RepoPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Root
+    )
+    if ([IO.Path]::IsPathRooted($Value)) { return [IO.Path]::GetFullPath($Value) }
+    return [IO.Path]::GetFullPath((Join-Path $Root ($Value -replace '/', '\')))
+}
+
+function Assert-RepoChildPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Root,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+    $rootPrefix = $Root.TrimEnd('\') + '\'
+    if (-not $Path.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "$Label must stay inside the repository: $Path"
+    }
+    if ($Path.IndexOf('\.git\', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+        $Path.IndexOf('\.runtime\', [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        throw "$Label cannot use Git metadata or ignored runtime paths: $Path"
+    }
+}
+
+function Set-ObjectProperty {
+    param(
+        [Parameter(Mandatory = $true)][object]$Object,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][object]$Value
+    )
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        Add-Member -InputObject $Object -MemberType NoteProperty -Name $Name -Value $Value
+    }
+    else { $Object.$Name = $Value }
+}
+
+function Write-JsonAtomic {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][object]$Value
+    )
+    $parent = [IO.Path]::GetDirectoryName($Path)
+    if (-not [string]::IsNullOrWhiteSpace($parent)) { [void][IO.Directory]::CreateDirectory($parent) }
+    $temporary = "$Path.$([Guid]::NewGuid().ToString('N')).tmp"
+    try {
+        $encoding = [Text.UTF8Encoding]::new($false, $true)
+        [IO.File]::WriteAllText($temporary, ($Value | ConvertTo-Json -Depth 12), $encoding)
+        Move-Item -LiteralPath $temporary -Destination $Path -Force
+    }
+    finally {
+        if ([IO.File]::Exists($temporary)) { Remove-Item -LiteralPath $temporary -Force }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($MetadataPath)) {
+    $MetadataPath = Join-Path $repoFullPath "workshop\workshop-item.json"
+}
+$metadataFullPath = [IO.Path]::GetFullPath($MetadataPath)
+$config = Read-StrictUtf8Json -Path $metadataFullPath
+if ([string]$config.app_id -ne "2868840") { throw "Workshop metadata App ID must be 2868840." }
+$version = [string]$config.version
+if ($version -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
+    throw "Workshop metadata version is not a SemVer-like value: '$version'."
+}
+if ($null -eq $config.preview) { throw "Workshop metadata must contain a preview object with the previous artifact hash." }
+$previewMetadata = $config.preview
+$previousVersion = [string]$previewMetadata.version
+$previousHash = [string]$previewMetadata.sha256
+if ($previousVersion -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
+    throw "Workshop preview metadata has an invalid previous version: '$previousVersion'."
+}
+if ($previousHash -notmatch '^[0-9A-Fa-f]{64}$') {
+    throw "Workshop preview metadata must contain a 64-character SHA-256 hash."
+}
+$historyRelative = [string]$previewMetadata.history_dir
+if ([string]::IsNullOrWhiteSpace($historyRelative)) { throw "Workshop preview metadata must declare history_dir." }
+$historyFullPath = Resolve-RepoPath -Value $historyRelative -Root $repoFullPath
+Assert-RepoChildPath -Path $historyFullPath -Root $repoFullPath -Label "preview.history_dir"
+
+$configuredOutputPath = Resolve-RepoPath -Value ([string]$config.preview_file) -Root $repoFullPath
+if ([string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath = $configuredOutputPath }
 $outputFullPath = [IO.Path]::GetFullPath($OutputPath)
+$metadataOwnsOutput = [string]::Equals($outputFullPath, $configuredOutputPath, [StringComparison]::OrdinalIgnoreCase)
 $heroPath = Join-Path $repoFullPath "assets\vivhite-ironclad\custom\character_select\sources\vivhite-character-select-hero-master-v1.png"
 $transitionPath = Join-Path $repoFullPath "Vivhite\Vivhite\skins\ironclad\transitions\vivhite_character_select_transition.png"
 foreach ($sourcePath in @($heroPath, $transitionPath)) {
     if (-not [IO.File]::Exists($sourcePath)) {
         throw "Required approved preview source is missing: $sourcePath"
+    }
+}
+$heroHash = Get-Sha256Hex -Path $heroPath
+$transitionHash = Get-Sha256Hex -Path $transitionPath
+$outputExisted = [IO.File]::Exists($outputFullPath)
+$oldOutputHash = ""
+if ($outputExisted) {
+    $oldOutputHash = Get-Sha256Hex -Path $outputFullPath
+    if ($metadataOwnsOutput -and -not [string]::Equals($oldOutputHash, $previousHash, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Existing preview hash does not match workshop-item.json preview.sha256; refusing to overwrite an untracked artifact."
     }
 }
 
@@ -29,6 +140,8 @@ $graphics = [Drawing.Graphics]::FromImage($canvas)
 $hero = $null
 $transition = $null
 $attributes = $null
+$temporaryOutput = "$outputFullPath.$([Guid]::NewGuid().ToString('N')).tmp.jpg"
+$archivedPath = ""
 try {
     $graphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
     $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
@@ -97,7 +210,7 @@ try {
         try { $graphics.DrawLine($linePen, 54, 354, 386, 354) } finally { $linePen.Dispose() }
 
         $chipY = 404
-        foreach ($chip in @("61 CARDS", "3 BUILDS", "V0.2.0")) {
+        foreach ($chip in @("61 CARDS", "3 BUILDS", "V$version")) {
             $chipBrush = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(130, 78, 57, 145))
             try { $graphics.FillRectangle($chipBrush, [Drawing.RectangleF]::new(52, $chipY, 210, 52)) } finally { $chipBrush.Dispose() }
             $graphics.DrawString($chip, $fontChip, $brushWhite, 72, $chipY + 11)
@@ -120,7 +233,7 @@ try {
     $parameters = [Drawing.Imaging.EncoderParameters]::new(1)
     try {
         $parameters.Param[0] = $quality
-        $canvas.Save($outputFullPath, $jpegCodec, $parameters)
+        $canvas.Save($temporaryOutput, $jpegCodec, $parameters)
     }
     finally { $parameters.Dispose(); $quality.Dispose() }
 }
@@ -132,16 +245,76 @@ finally {
     $canvas.Dispose()
 }
 
-$file = [IO.FileInfo]::new($outputFullPath)
-if ($file.Length -ge 1000000) {
-    throw "Workshop preview exceeds Steam's 1 MB limit: $($file.Length) bytes."
+$newFile = [IO.FileInfo]::new($temporaryOutput)
+if ($newFile.Length -ge 1000000) {
+    Remove-Item -LiteralPath $temporaryOutput -Force -ErrorAction SilentlyContinue
+    throw "Workshop preview exceeds Steam's 1 MB limit: $($newFile.Length) bytes."
 }
+$newHash = Get-Sha256Hex -Path $temporaryOutput
+
+try {
+    if ($metadataOwnsOutput) {
+        [void][IO.Directory]::CreateDirectory($historyFullPath)
+        $needsArchive = $outputExisted -and (
+            -not [string]::Equals($oldOutputHash, $newHash, [StringComparison]::OrdinalIgnoreCase) -or
+            -not [string]::Equals($previousVersion, $version, [StringComparison]::Ordinal))
+        if ($needsArchive) {
+            $archiveStem = "preview-v$previousVersion-sha256-$($oldOutputHash.ToLowerInvariant())"
+            $archivedPath = Join-Path $historyFullPath "$archiveStem.jpg"
+            if ([IO.File]::Exists($archivedPath)) {
+                $existingArchiveHash = Get-Sha256Hex -Path $archivedPath
+                if (-not [string]::Equals($existingArchiveHash, $oldOutputHash, [StringComparison]::OrdinalIgnoreCase)) {
+                    throw "Preview history name collision has a different hash: $archivedPath"
+                }
+            }
+            else { Copy-Item -LiteralPath $outputFullPath -Destination $archivedPath }
+            $archiveRecord = [ordered]@{
+                schema = 1
+                artifact = "workshop/preview.jpg"
+                version = $previousVersion
+                sha256 = $oldOutputHash
+                bytes = ([IO.FileInfo]::new($outputFullPath)).Length
+                archived_utc = [DateTime]::UtcNow.ToString("O")
+                hero_source_sha256 = [string]$previewMetadata.hero_source_sha256
+                transition_source_sha256 = [string]$previewMetadata.transition_source_sha256
+            }
+            Write-JsonAtomic -Path "$archivedPath.json" -Value $archiveRecord
+        }
+
+        Move-Item -LiteralPath $temporaryOutput -Destination $outputFullPath -Force
+        $newFile = [IO.FileInfo]::new($outputFullPath)
+        $previewRecord = [ordered]@{
+            version = $version
+            sha256 = $newHash
+            bytes = $newFile.Length
+            width = 1024
+            height = 1024
+            history_dir = $historyRelative
+            hero_source_sha256 = $heroHash
+            transition_source_sha256 = $transitionHash
+        }
+        Set-ObjectProperty -Object $config -Name "preview" -Value ([pscustomobject]$previewRecord)
+        Write-JsonAtomic -Path $metadataFullPath -Value $config
+    }
+    else {
+        Move-Item -LiteralPath $temporaryOutput -Destination $outputFullPath -Force
+        $newFile = [IO.FileInfo]::new($outputFullPath)
+    }
+}
+catch {
+    if ([IO.File]::Exists($temporaryOutput)) { Remove-Item -LiteralPath $temporaryOutput -Force -ErrorAction SilentlyContinue }
+    throw
+}
+
 [pscustomobject]@{
     Path = $outputFullPath
+    Version = $version
     Width = 1024
     Height = 1024
-    Bytes = $file.Length
-    SHA256 = (Get-FileHash -LiteralPath $outputFullPath -Algorithm SHA256).Hash
-    HeroSourceSHA256 = (Get-FileHash -LiteralPath $heroPath -Algorithm SHA256).Hash
-    TransitionSourceSHA256 = (Get-FileHash -LiteralPath $transitionPath -Algorithm SHA256).Hash
+    Bytes = $newFile.Length
+    SHA256 = $newHash
+    ArchivedPath = $archivedPath
+    MetadataPath = $metadataFullPath
+    HeroSourceSHA256 = $heroHash
+    TransitionSourceSHA256 = $transitionHash
 } | Format-List
