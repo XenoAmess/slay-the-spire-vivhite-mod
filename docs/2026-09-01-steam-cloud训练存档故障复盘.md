@@ -23,3 +23,25 @@
 
 - `sts2-ascend/tests/test_start_agent_steam_mode.py` 覆盖参数映射、冷启动分支和文档审计；另有已有孤儿恢复/空播门禁回归。
 - 真实运行验证必须按模式记录：生产基线为 `SteamMode=auto`（或显式 `on`）并确认 Steam profile/模组已加载；仅诊断 off 验证才要求启动日志出现 `SteamMode=off`、游戏日志显示跳过 Steam 初始化且使用独立本地 profile。两者随后都必须满足 `/state` 非菜单真实 run、驾驶舱 `connected`、`applied` 回执和楼层进展。
+
+## 二次复现与处置（session `6b3a1ff9d80845ed97742a0f2d50324f`）
+
+2026-09-01 19:37:57 以 Steam-on 冷启动后，Brain 握手在 0.699 秒内完成；API 与驾驶舱均连接，白绮 run `4MALNYXSZ5CV` 从 F3 推进到 F17，最后连续决策 `-282`（出牌）、`-283`（出牌）、`-285`（结束回合）均收到服务端 `completed` 回执。故障不是挂机或 API 假就绪。
+
+19:45 起 D: 可用空间耗尽，游戏仍能写本地文件但 Steam RemoteStorage 暂存写入失败。当前日志中的关键成对记录为：
+
+- `godot.log:1814-1815`：写入 71,753 bytes 后 `Cloud write failed ... k_EResultIOFailure`；
+- `godot.log:1854-1855`：写入 72,656 bytes 后同一错误；
+- `godot.log:1903-1904`：写入 75,565 bytes 后同一错误；
+- `godot.log:1922-1923`：写入 76,381 bytes 后同一错误；`progress.save` 同时失败。
+
+停止前后的只读快照（均未手工改动）如下：
+
+| 位置 | 大小 | SHA-256 | 结论 |
+|---|---:|---|---|
+| 本地 `current_run.save` | 76,381 | `5A93B23CA7B96CF003BD6CDF25212532EE6A178B204C20E0A6F7C3AE43358F2A` | 保留最新本地局面 |
+| 本地 `.backup` | 75,565 | `D277AC07B85A54ADBB79D8A146FEAF33A6D4F633C50423E5ACC494E454CEE7D6` | 可作本地回退证据 |
+| Steam remote `current_run.save` | 70,759 | `EA2AA271F70DB260611E15D408F5408A0C8ABEFB5FFE78D740A6C42E04EBD6D1` | 落后且不一致 |
+| Steam remote `.stmp` | 0 | `E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855` | 无有效上传载荷 |
+
+`Stop-Agent.ps1` 于 19:46:07 发布 session sentinel，Brain 以 `rc=0` 退出，游戏随后有序关闭；没有开播、键鼠操作或 UAC。由于 D: 仍为 0 bytes，当前训练标记为“动作稳定、存档不稳定”，不得再次冷启动或开播，直到用户释放磁盘并验证本地/远端存档重新一致。该次运行的完整审计日志仍保留在 `knowledge/profiles/vivhite/runs/20260901-193925_4MALNYXSZ5CV.json`；该运行不应被当作已安全终局。
