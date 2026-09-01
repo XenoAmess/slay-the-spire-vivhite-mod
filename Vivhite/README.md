@@ -2,6 +2,16 @@
 
 语言 / Languages：中文 | [English](README.en.md)
 
+<p align="center">
+  <img src="../workshop/preview.jpg" alt="白绮 Vivhite 预览图" width="420">
+</p>
+
+<p align="center">
+  <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3793741497">Steam 创意工坊</a>
+  · <a href="README.en.md">English README</a>
+  · <a href="../docs/2026-08-30-白绮角色与轮换大脑实现.md">完整卡牌与机制表</a>
+</p>
+
 `Vivhite` 是《杀戮尖塔 2》的白绮角色 Mod。白绮是一位精通数学、计算机与艺术的魔法少女、魔法大师；她以生命作为魔法演算材料，通过“支付謦欬施法 → 击杀或汲取回血 → 继续施法”建立战斗循环。
 
 本文描述当前 `0.2.1` 角色实现。完整 61 张卡牌目录与逐牌数值见[《白绮角色与轮换大脑实现》](../docs/2026-08-30-白绮角色与轮换大脑实现.md)。当前运行时位图门禁为 `92/92`：它在既有 `89/89` 内容位图基线上纳入了 3 张独立 VFX，并已完成同批三件套原子部署与 Vulkan 实机验证。
@@ -14,6 +24,17 @@
 - 专属卡池共 `61` 张：3 基础、18 普通、24 罕见、16 稀有。
 - 三套主要构筑：守恒几何、递归星算、绯彩积分，并有跨体系组合牌。
 - 运行时位图门禁已达到 `92/92`：61 张卡图、19 个 Power 图标、2 张孤高冠冕资源、7 张能量 UI 资源和 3 张独立 VFX。
+
+> **文档范围**：本文件是 `Vivhite/` Godot/.NET Mod 子项目的开发与安装说明；仓库根目录的自动游玩、复盘、直播和发布流程见根 [README](../README.md) 与 [`sts2-ascend/README.md`](../sts2-ascend/README.md)。
+
+## 快速导航
+
+- [安装与使用](#安装与使用)：玩家安装三件套，或开发者从源码构建。
+- [配置本机路径](#配置本机路径)：创建被 Git 忽略的 `local.props`。
+- [构建与验收](#构建与验收)：C# 编译、PCK/Spine 门禁和接受测试。
+- [目录结构与代码导览](#目录结构与代码导览)：从入口定位角色、卡池、资源和本地化。
+- [内容与机制](#白绮内容)：角色数值、构筑、关键词和不变量。
+- [发布前检查](#发布前检查)：三件套一致性、素材门禁与 Workshop 物料。
 
 ## 学习资源
 
@@ -116,7 +137,7 @@ Copy-Item .\local.props.template .\local.props
 - 升级 RitsuLib 或游戏版本时，应重新编译并检查卡牌命令、Hook、角色资源配置与 PCK 导出。
 - `Vivhite.json` 的运行时依赖校验和 `.csproj` 的编译时依赖是两条不同链路，二者都必须更新。
 
-## 构建
+## 构建与验收
 
 | 命令 | 行为 |
 |---|---|
@@ -134,7 +155,51 @@ Copy-Item .\local.props.template .\local.props
 
 > `RitsuLibDeployDir` 只控制 RitsuLib 框架自身的部署位置；当前 Mod 的 dll、manifest 和 pck 由 `ModOutputDir` 控制，默认是 `$(Sts2Dir)/mods/$(MSBuildProjectName)`。
 
-## 目录结构
+### 从仓库根目录运行的验收命令
+
+下面的命令不会启动游戏，也不会请求 UAC。接受测试项目会编译当前
+`Vivhite/VivhiteCode` 源码的副本，并将 `CopyModOnBuild` 固定为 `false`，因此不会
+覆盖已安装的 Mod：
+
+```powershell
+# 还原测试依赖（首次或 packages.lock/assets 变化后执行）
+dotnet restore .\Vivhite.Tests\Vivhite.Tests.csproj
+
+# 运行生产源码、卡牌表、本地化、机制、资源和部署契约验收
+dotnet run --project .\Vivhite.Tests\Vivhite.Tests.csproj --no-restore -c Release
+```
+
+当前接受测试入口包含 66 项检查；以命令最后的 `Result:` 行为准，不要只看编译成功。
+若只想检查 C# 代码而不导出 PCK，请在 `Vivhite/` 目录运行：
+
+```powershell
+dotnet build .\Vivhite.csproj -c Release `
+  /p:RunPckExport=false /p:CopyModOnBuild=false
+```
+
+### Spine 源码与 PCK 门禁
+
+完整构建会自动执行 `Validate-IroncladSkin.ps1` 的 Source 阶段和 `Export-ModPck.ps1`
+的 PCK 阶段。需要单独定位美术问题时，可从仓库根目录执行只读检查：
+
+```powershell
+# 源码阶段：检查 V3 五页 Spine、场景绑定和私有资源引用
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\Vivhite\tools\Validate-IroncladSkin.ps1 `
+  -ProjectDir .\Vivhite -Phase Source `
+  -GodotExe $GodotExe -Sts2Dir $Sts2Dir -RuntimeLayout v3-five-page
+
+# 已导出的 PCK：检查包内布局、本地化和 92 项运行时位图
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\tools\test\Verify-VivhitePck.ps1 `
+  -PckPath $PckPath -GodotExe $GodotExe
+```
+
+`$GodotExe`、`$Sts2Dir` 和 `$PckPath` 必须替换为真实的本机绝对路径。门禁失败时会保留
+证据目录；不要直接修改或删除旧的可用 PCK 来“让检查通过”。资源变更后必须重新导出
+并将同一批 `Vivhite.dll`、`Vivhite.json`、`Vivhite.pck` 一起部署。
+
+## 目录结构与代码导览
 
 ```text
 Vivhite/
@@ -147,6 +212,33 @@ Vivhite/
 ```
 
 `res://Vivhite/...` 是 Godot/PCK 内的资源路径，对应仓库中的 `Vivhite/` 资源目录，并非 C# namespace。
+
+### C# 入口与内容注册
+
+| 路径 | 职责 | 修改后应检查 |
+|---|---|---|
+| `VivhiteCode/Entry.cs` | 初始化 RitsuLib、扫描 attribute 并注册本程序集 | `ModId`、manifest `id` 与部署目录保持 `Vivhite` |
+| `VivhiteCode/Characters/VivhiteCharacter.cs` | 角色初始属性、资源 profile、音效与角色专属 VFX | 不要注册 `IRONCLAD` 资源替换 |
+| `VivhiteCode/Characters/VivhiteCharacterAssets.cs` | V3 五页 Spine、UI、场景、多人手势的精确资源契约 | 重新跑 Source/PCK/真机门禁 |
+| `VivhiteCode/Characters/*Pool.cs` | 卡牌、遗物、药水池及能量图标 | 新内容必须进入白绮自己的池 |
+| `VivhiteCode/Cards/Common` | 共享卡牌基类、关键词、生命支付和通用规则 | `謦欬`、`余裕`、`汲取` 的原生结算顺序 |
+| `VivhiteCode/Cards/Conservation` | 守恒几何体系 | 卡牌 ID 与中英本地化同时新增 |
+| `VivhiteCode/Cards/Recursion` | 递归星算体系 | 稀有度与升级值验收 |
+| `VivhiteCode/Cards/Hybrid` | 绯彩积分及跨体系卡 | 无人为硬上限、Drain 只汇总一次 |
+| `VivhiteCode/Powers`、`Relics` | 状态能力与孤高冠冕 | Power 图标、遗物图和本地化完整 |
+
+### Godot 资源与本地化
+
+`Vivhite/`（第二层同名目录）会被打入 PCK：
+
+- `images/cards/`：61 张专属卡图；`images/powers/`：23 个已注册 Power 中的 19 个专属图标。
+- `images/characters/`：能量计数器和文字/大图能量资源。
+- `skins/ironclad/`：历史物理路径下的白绮 V3 私有 profile，包含 combat、merchant、rest-site、character-select 四组场景/Spine 资源；它不表示给原版战士换皮。
+- `localization/eng` 与 `localization/zhs`：卡牌、Power、角色、关键词、遗物和古代文本；两种语言必须同步维护。
+- `scenes/`：角色能量计数器与白绮专属卡牌轨迹等 Godot 场景。
+
+资源路径必须写成 `res://Vivhite/...`，并区分大小写。新增资源不能只放在仓库里：必须被
+场景或 C# 消费、进入 PCK、通过对应门禁，并在实际游戏中观察到正确结果。
 
 ## 白绮内容
 
@@ -199,7 +291,7 @@ Vivhite/
 
 原版 `IRONCLAD` 不再注册任何 Vivhite 资源替换，因此继续使用游戏原生的战斗、商店、休息、选人、UI、Spine、音频和多人资源。只有独立白绮角色从 `VivhiteCharacterAssets` 获取当前白绮 V3 五页资源 profile，并在其上局部覆盖白绮自己的能量计数器和卡牌轨迹。该 profile 沿用历史物理目录 `res://Vivhite/skins/ironclad/`，但目录名不表示资源所有权，也不会触发战士替换。
 
-`tools/art/audit_vivhite_runtime_art.gd` 与 PCK 四层只读门禁检查当前 `92/92` 位图：61 张独立不透明卡图、19 个 Power 语义图标、2 张孤高冠冕资源、7 张能量 UI，以及眼镜星光、白绮专属卡牌轨迹和角色选择转场 3 张 VFX。早期 `89/89` 只是加入这 3 张 VFX 前的内容位图基线，不能再代表当前发布清单。皮肤源码/发布清单也已达到精确 `30/34` 文件契约，全卡静态视觉 QA 为 `61/61`。
+`../tools/art/audit_vivhite_runtime_art.gd` 与 PCK 四层只读门禁检查当前 `92/92` 位图：61 张独立不透明卡图、19 个 Power 语义图标、2 张孤高冠冕资源、7 张能量 UI，以及眼镜星光、白绮专属卡牌轨迹和角色选择转场 3 张 VFX。早期 `89/89` 只是加入这 3 张 VFX 前的内容位图基线，不能再代表当前发布清单。皮肤源码/发布清单也已达到精确 `30/34` 文件契约，全卡静态视觉 QA 为 `61/61`。
 
 同批 DLL、manifest 与 PCK 已完成原子部署；在 Steam `public-beta` / STS2 `v0.111.0`
 的 Vulkan 实机中确认白绮战斗皮肤、头像、孤高冠冕、余裕 UI、中文卡名和卡图正常，
@@ -207,6 +299,31 @@ Vivhite/
 未来每次构建或其他后端自动通过；后续资源变更仍须重跑静态、PCK 与真机门禁。生成原图、
 逐字 Prompt、生成事实和检查图均追加式保存在 `assets/vivhite-ironclad/generated/`，
 不会覆盖既有创意素材。
+
+<details>
+<summary>查看一次已验收的白绮战斗画面</summary>
+
+<p align="center">
+  <img src="../docs/evidence/2026-08-31-skin-routing/04-vivhite-combat-v3.png" alt="白绮 V3 战斗实机画面" width="960">
+</p>
+
+</details>
+
+### 美术变更的最小闭环
+
+1. 先判断素材是单幅成品、单帧、atlas/spritesheet 还是多区域 PNG；同时阅读相邻的
+   `.spatlas`、`.spjson`、`.tres`、`.tscn` 和实际消费者代码，确认 region、slot、动画、
+   锚点、缩放和尺寸契约。
+2. 透明素材只能通过仓库规定的 EvoLink `gpt-image-2` 原生透明路径生成，且请求使用
+   `background: "transparent"`；不得用抠图、色键、蒙版或后处理制造 Alpha。生成原图、
+   完整 Prompt 和去秘密请求参数必须追加保存，单一语义素材最多八次付费尝试。
+3. 通过真实 RGBA/SourceOver Alpha 检查后，才允许做不改变创意内容的尺寸适配、切片和
+   atlas 打包；不能把 packed atlas 当成整幅插画交给模型重绘。
+4. 最后依次跑静态资源、Spine Source、PCK 和真机门禁。失败的原图和中间结果必须保留，
+   不能用旧占位图或原版战士骨骼掩盖缺口。
+
+长期规则与修订记录见 [AGENTS.md](../AGENTS.md)、[白绮 AI 生成图 Prompt 工程手册](../docs/白绮AI生成图Prompt工程手册.md)
+和[白绮战斗 Sprite/Spine 生产方案](../docs/白绮战斗Sprite-Spine方案演进与生产方案.md)。
 
 ## Brain 角色隔离、追及轮换与原生结算
 
@@ -260,3 +377,46 @@ GAME OVER 阶段由 MCP 暴露真实的 `continue_game_over` 动作。Brain 先�
 - 新卡图必须先核对消费者与[卡图生成技术规范](../docs/白绮卡牌图片生成技术规范.md)；完整不透明场景图走 Codex 原生生成，透明独立素材才走 EvoLink。
 - 新机制的平衡只能调整费用、耗血、基础数值、成长系数、稀有度和消耗属性，不能重新加入人为封顶。
 - 资源路径必须以 `res://` 开头，并确认 PCK 内目录名与大小写正确。
+
+## 常见问题排查
+
+| 现象 | 首先检查 | 正确处理 |
+|---|---|---|
+| `Could not find sts2.dll` | `local.props` 的 `Sts2Dir` / `Sts2DataDir` | 指向包含 `data_sts2_windows_x86_64\sts2.dll` 的实际游戏目录；不要把仓库路径当作游戏目录 |
+| `GodotExe is required for PCK export` | `GodotExe` 是否存在且为 4.5.1 Mono | 配置可执行文件；只做 C# 编译时显式使用 `/p:RunPckExport=false /p:CopyModOnBuild=false` |
+| `VIVH001` split deployment | 是否把 `RunPckExport=false` 与 `CopyModOnBuild=true` 组合 | 让完整构建同时导出并部署三件套，或保持复制关闭；不要逐文件拷贝 |
+| 游戏出现红色 `NOPE` / 裸本地化 key | DLL、PCK、JSON 是否来自同一批；PCK 是否含新资源 | 停止游戏后重新执行完整构建和原子部署，再查看 `%APPDATA%\SlayTheSpire2\logs\godot.log` |
+| V3 Spine 门禁失败 | `Vivhite/tools/README.md` 与 `ironclad-skin.contract.json` | 按契约补齐私有五页资源；不得复制原版 `.skel`/`.spskel` 或序列化 `SpineMesh2D` |
+| 卡牌能看到但文字缺失 | `Vivhite/localization/eng` 与 `zhs` 是否同时有 key、占位符是否一致 | 同步两种语言文件并运行接受测试；不要在卡牌类里硬编码玩家文案 |
+
+报告问题时请附：Mod 版本、STS2 分支/版本、渲染后端、复现步骤、相关资源路径和
+`godot.log` 中的第一处错误。不要上传 API key、Steam 凭据或临时签名 URL。
+
+## 发布前检查
+
+一次可发布的版本必须满足以下闭环：
+
+1. 更新 `Vivhite/Vivhite.json` 版本，并确认 `STS2-RitsuLib` 版本与
+   `Vivhite.csproj` 的 `PackageReference` 一致；`min_game_version` 需人工复核。
+2. 运行 66 项接受测试，以及完整 Release 构建；确认 Source/PCK 门禁、`92/92` 运行时
+   位图和本地化契约均通过。
+3. 停止占用文件的游戏进程后，将同一候选批次的 `Vivhite.dll`、`Vivhite.json`、
+   `Vivhite.pck` 原子部署到 `<游戏目录>\mods\Vivhite\`；禁止只替换 DLL 或 PCK。
+4. 从仓库根目录运行 Workshop 发布脚本时，不得使用 `-SkipPreview` 绕过物料门禁：
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass `
+     -File .\tools\workshop\Publish-VivhiteWorkshop.ps1 `
+     -PublishedFileId 3793741497 -Visibility public
+   ```
+
+   发布脚本会检查并同步 `workshop/workshop-item.json`、
+   `workshop/description.bbcode`、`workshop/preview.jpg` 和版本归档；Steam change note
+   必须来自本次发布记录。上传只复用已登录客户端，不应启动需要人工 UAC 的 GUI。
+5. 保存发布回执、远端只读元数据和本地预览 SHA-256；再在目标游戏版本/渲染后端做一次
+   安装后验收。发布成功不等于未来版本或其他后端自动兼容。
+
+相关的构建门禁实现位于 `Vivhite.csproj`、`Vivhite/tools/Export-ModPck.ps1`、
+`Vivhite/tools/Validate-IroncladSkin.ps1` 和 `tools/test/Verify-VivhitePck.ps1`；需要修改
+生命周期、自动游玩或直播时，请回到仓库根 README 和 `sts2-ascend/` 文档，不要在本子项目
+README 中复制另一套启动入口。
