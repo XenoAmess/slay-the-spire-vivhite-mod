@@ -1,5 +1,7 @@
 # 白绮屏幕左侧／远侧腿：语义拆件研究结论
 
+> **状态：** `research_gate_passed=true`、`production_gate_passed=false`（以 [`summary.json`](summary.json) 为准）。返回总索引：[`evaluation/README.md`](../README.md)。
+
 ## 结论
 
 这组证据只通过了**研究门禁**，没有通过生产门禁，也不是可发布的 atlas 或 spritesheet。最终拓扑固定为：
@@ -47,3 +49,5 @@ Godot_v4.5.1-stable_mono_win64_console.exe --headless --path tools/art `
 ```
 
 下一道生产门禁是：取得经批准的协调两件制美术，完成真 Alpha 与相邻部件 SourceOver 验收，将 lower-leg-with-boot 绑定到膝链并置于大腿后方，再以真实 Spine/Godot Vulkan 对全部战斗动画和整身 draw order 采样。未完成前不得接入 runtime。
+
+原始研究批次分别位于 [`0078-split-leg-left-thigh-attempt-07/`](../../generated/evolink-paid/2026-08-28/0078-split-leg-left-thigh-attachment-attempt-07/)、[`0088-split-leg-left-lower-attempt-01/`](../../generated/evolink-paid/2026-08-28/0088-split-leg-left-lower-attachment-attempt-01/) 和 [`0063-split-leg-left-boot-attempt-08/`](../../generated/evolink-paid/2026-08-28/0063-split-leg-left-boot-attachment-attempt-08/)。这些链接用于追溯，不能改变三者“研究证据”的状态。

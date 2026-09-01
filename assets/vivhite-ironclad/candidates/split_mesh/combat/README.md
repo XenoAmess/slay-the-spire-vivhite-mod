@@ -3,6 +3,10 @@
 这是“拆件 + 层级骨链 + 整图落地”的 **Hybrid 离线对照候选**，不是可发布素材，也不会被复制到
 `Vivhite/Vivhite/skins/ironclad/`。
 
+> **状态：** `preview_only_not_publishable`（以 [`candidate.json`](candidate.json) 为准）
+
+返回上级索引：[`candidates/README.md`](../../README.md) · [`candidates/split_mesh/README.md`](../README.md)。证据型语义拆件报告：[`evaluation/README.md`](../../../evaluation/README.md)。
+
 ## 当前能验证什么
 
 - 15 个可见部件分别挂在 33 根层级骨骼上，另有 1 根完全隔离的侧卧落地骨；手臂是
@@ -72,3 +76,11 @@
 
 脚本拒绝把输出目录指向 `Vivhite/Vivhite/skins/ironclad`，不会部署、重启或操作
 游戏，也不会发起任何 EvoLink 调用。
+
+## 证据原件
+
+- 候选描述、消费契约、风险和 `deployable=false`：[`candidate.json`](candidate.json)；
+- 战斗母源：[`custom/combat/sources/`](../../../custom/combat/sources/)；
+- 侧卧死亡源：[`vivhite-combat-death-side-collapse-v2.png`](../../../custom/combat/sources/vivhite-combat-death-side-collapse-v2.png)。
+
+上述链接仅用于复核，不改变候选的发布状态。任何将候选提升为生产资产的动作都必须先获得新部件、完成相邻 SourceOver 与整身 Vulkan 门禁，并更新对应验收报告。

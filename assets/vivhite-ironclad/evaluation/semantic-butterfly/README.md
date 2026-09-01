@@ -2,6 +2,8 @@
 
 本目录只保存 `0030-split-butterfly-attachment-attempt-01` 的最终隔离验收证据，不是正式 runtime 资源，也未启动或操作游戏。验收没有新增 EvoLink 付费调用，也没有修改原图 Alpha。
 
+> **状态：** `isolated_graybox_not_runtime`。总索引：[`evaluation/README.md`](../README.md)。
+
 ## 固化证据
 
 | 文件 | 内容 | SHA-256 |
@@ -11,6 +13,8 @@
 | `component-analysis.json` | 原生 Alpha、pivot、消费者、层序和剩余生产门禁 | `2C0CD2925D02E7365D51C86FC8B8F5AD70A549612F54994A5472877C65C89590` |
 
 `vulkan-summary.json` 中保留了 16 张逐帧输出的相对名称、SHA-256 和测量值；本目录不重复保存这些逐帧 PNG，接触表用于视觉复核，渲染工具可确定性重新生成逐帧文件。
+
+原始蓝蝶输入：[`0030-split-butterfly-attachment-attempt-01/`](../../generated/evolink-paid/2026-08-28/0030-split-butterfly-attachment-attempt-01/)。候选制作副本：[`custom/combat/parts/normal/vivhite-butterfly-v1.png`](../../custom/combat/parts/normal/vivhite-butterfly-v1.png)。这些链接用于追溯，不因本报告通过而自动打包。
 
 ## 结果
 
@@ -31,3 +35,7 @@
 `0030` 原图可直接作为一个不拆分的刚性 Spine region，不需要重生、传统抠图或 Alpha 修补。它仍不是可直接部署的 runtime 文件：必须在统一生产头骨架中创建唯一蓝蝶 slot，将其放在前发 slot 之前，并保留 `die@1.05s` 解绑；合并完整身体后还需做战斗与商店的全身协调验收。
 
 Godot 自动生成的 `.import`、`.uid` 和 `.godot` 缓存不属于本验收证据，禁止加入 Git。
+
+## 晋级门禁
+
+总装必须采用“后发 → 头脸 → 蓝蝶 → 前发 → 前景右臂”的层序，保留 `die@1.05s` 的唯一蓝蝶解绑，并在真实 combat 场景重新验证 EyeFire、最大旋转和商店 seek。完成前，本目录中的接触表只作为研究证据。

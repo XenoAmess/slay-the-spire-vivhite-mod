@@ -1,5 +1,7 @@
 # V3 独立死亡动作验收
 
+> **状态：** 离线帧/切换契约通过，仍需完整 VFX、相邻动作中断和真机复测。返回总索引：[`evaluation/README.md`](../README.md)。
+
 本目录保留 `hybrid_death_v3` 的可复核离线证据，不是正式 runtime 资源。
 
 - 美术源：`assets/vivhite-ironclad/custom/combat/sources/vivhite-combat-death-side-collapse-v2.png`
@@ -11,3 +13,5 @@
 - 连续性：实体左边界跳变从旧方案的 `61px` 降至 `16px`，实体底边跳变 `1px`；落地序列为 `684, 686, 680, 684, 684px`。
 
 `die-exact-character-only.png` 与 `die-exact-composite.png` 当前逐像素相同，因为该专项验收会清空刀光、眼火和法阵，专门证明人物切换本身。完整动作集整合后仍须复测场景 VFX、相邻动作中断和用户真机观感。
+
+源图可在 [`custom/combat/sources/vivhite-combat-death-side-collapse-v2.png`](../../custom/combat/sources/vivhite-combat-death-side-collapse-v2.png) 复核；候选与帧摘要仅保存在本目录，不能直接替换正式运行时 atlas。

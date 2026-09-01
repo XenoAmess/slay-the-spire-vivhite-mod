@@ -1,5 +1,7 @@
 # 躯干 + 裙摆语义组离线消费审计
 
+> 返回总索引：[`evaluation/README.md`](../README.md)。本目录所有图像和候选骨架均为离线证据，不是部署清单。
+
 日期：2026-08-28  
 状态：`contract_frozen_existing_art_rejected_not_publishable`  
 结论：现有 `0054` 只能作为失败证据，不能进入生产 atlas；本目录不包含可部署美术。
@@ -23,6 +25,8 @@
 5. 上述缺陷在真实 `0.28` 接触表中仍可辨认，并非只在 `0.70` 检查放大下出现。
 
 因此，`0054`、从它复制出来的候选页以及 `0018` 的邻接裁样都只能留作灰盒证据；真实可发布附件数量为 **0**。
+
+对应付费批次的实际路径为 [`0054-split-torso-attachment-attempt-07/`](../../generated/evolink-paid/2026-08-28/0054-split-torso-attachment-attempt-07/)、[`0018-combat-body-master-attempt-01/`](../../generated/evolink-paid/2026-08-28/0018-combat-body-master-attempt-01/) 和 [`0022-combat-body-master-attempt-05/`](../../generated/evolink-paid/2026-08-28/0022-combat-body-master-attempt-05/)。文中的 `0054/output.png` 等简称均指这些批次内的实际输出，不是本目录缺失的文件。
 
 ## 冻结的下一版生产规格
 

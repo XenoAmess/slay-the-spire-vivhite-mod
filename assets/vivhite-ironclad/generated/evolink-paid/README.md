@@ -1,15 +1,17 @@
-# EvoLink paid-generation archive
+# EvoLink 付费生成追加式归档
 
-This directory is append-only. Every EvoLink generation attempt must retain:
+本目录是所有付费透明生成的事实源，按 `YYYY-MM-DD/<编号>-<语义>-attempt-<N>/` 分组。当前有 2026-08-28 与 2026-08-31 两批历史记录；叶目录可能包含原图命名为 `output.png` 或批次专用的 PNG，但归档规则不变。
 
-- the raw model output PNG;
-- the exact prompt sent to the model;
-- the non-secret request parameters actually sent to the API.
+每次调用必须同时保留：
 
-Attempts remain here even when rejected or unused. Never overwrite or delete a
-prior attempt. API keys, authorization headers, temporary signed result URLs,
-and other credentials must never be stored here.
+- 模型返回的未经后处理原始 PNG；
+- 实际发送的逐字 Prompt；
+- 去除秘密后的实际请求参数（endpoint、model、size、resolution、quality、background、n 与参考图路径/URL）。
 
-Each attempt uses its own dated, numbered directory. Accepted art may be copied
-to an active authoring path after Alpha and visual review; the archived raw
-output remains unchanged.
+失败、拒绝、未采用和达到上限的尝试都必须保留，不能覆盖、删除、移动或重编号既有批次。API Key、Authorization 头、临时签名下载 URL 和其他凭据不得写入此目录。一个语义素材最多 8 次调整 Prompt 的付费尝试；第 8 次仍不合格时停止，交由人工评审，不得借新名字重置额度。
+
+## 晋级与复核
+
+归档原图保持不变；通过真实 RGBA/Alpha、黑白/实际场景 SourceOver、相邻部件叠层和用途尺寸检查后，才可以复制到 [`../../custom/`](../../custom/README.md) 或 [`../../approved/`](../../approved/README.md)。复制是派生工作副本，不得反向覆盖归档。每次晋级都应在对应 `evaluation/` 报告中记录源路径和 SHA-256。
+
+本目录不直接提供运行时资源，也不应被当作“所有批次均可用”的清单；请先阅读候选或验收报告。
