@@ -2,7 +2,7 @@
   "active_run": {
     "character": "VIVHITE",
     "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
-    "run_id": "0VMZW70V3AQ1",
+    "run_id": "TTT6HQGV7NAS",
     "scheduled_character": "VIVHITE"
   },
   "catchup_completed": false,
@@ -26,6 +26,89 @@
   },
   "last_completed_character": "VIVHITE",
   "next_character": "VIVHITE",
+  "orphaned_runs": {
+    "0VMZW70V3AQ1": {
+      "character": "VIVHITE",
+      "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+      "evidence": {
+        "api": {
+          "consecutive": true,
+          "latest_state_version": 13,
+          "samples": [
+            {
+              "continue_run": false,
+              "observed_at": "2026-09-01T09:37:03.596Z",
+              "run_empty": true,
+              "run_id": "run_unknown",
+              "screen": "MAIN_MENU",
+              "sequence": 1,
+              "state_version": 13
+            },
+            {
+              "continue_run": false,
+              "observed_at": "2026-09-01T09:37:04.165Z",
+              "run_empty": true,
+              "run_id": "run_unknown",
+              "screen": "MAIN_MENU",
+              "sequence": 2,
+              "state_version": 13
+            }
+          ]
+        },
+        "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+        "native": {
+          "api_state_version": 13,
+          "checked_paths": [
+            {
+              "bytes": 0,
+              "kind": "current_run.save",
+              "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\current_run.save",
+              "status": "absent"
+            },
+            {
+              "bytes": 0,
+              "kind": "current_run.save.backup",
+              "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\current_run.save.backup",
+              "status": "absent"
+            },
+            {
+              "bytes": 40131209,
+              "kind": "history",
+              "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\history",
+              "status": "no_matching_run"
+            },
+            {
+              "bytes": 0,
+              "kind": "stmp",
+              "path": "C:\\Users\\xenoa\\AppData\\Roaming\\SlayTheSpire2\\steam\\76561198273714027\\modded\\profile1\\saves\\history\\*.stmp",
+              "status": "absent"
+            }
+          ],
+          "history": {
+            "status": "no_matching_run"
+          },
+          "history_match": false,
+          "probe_complete": true,
+          "probe_observed_at": "2026-09-01T09:37:10.891Z",
+          "read_errors": [],
+          "save": {
+            "status": "absent"
+          },
+          "save_match": false,
+          "stmp": {
+            "status": "absent"
+          }
+        },
+        "observed_at": "2026-09-01T09:37:10.891Z",
+        "reason": "no_native_save_no_continue",
+        "run_id": "0VMZW70V3AQ1",
+        "version": 1
+      },
+      "reason": "no_native_save_no_continue",
+      "released_at": "2026-09-01 17:39:11",
+      "run_id": "0VMZW70V3AQ1"
+    }
+  },
   "schedule_mode": "catchup_4_to_1",
   "version": 2
 }
