@@ -287,6 +287,42 @@ py -3 -B .\tools\promo\render_capture_candidate.py `
 commit，并在每个 variant 前后复核 raw、contract、旁白和 FFmpeg/ffprobe 字节，
 任何输入变化都会保留已生成的 partial、拒绝写入 batch manifest。
 
+### 十分钟 full master
+
+`render_full_master.py` 将同一份已封存的 OBS raw 和长片 EDL 组装为一个
+1920×1080/60、H.264/AAC、48 kHz 双声道的 600 秒初稿。它只消费 capture
+contract、EDL 和已生成的旁白；不会启动游戏、OBS、OCR、TTS 或发布客户端，且
+不会用循环/补帧伪造缺失的镜头。首片不加入 BGM，游戏声和晓晓旁白在同一条
+可审计的 FFmpeg filtergraph 中混合，双语字幕写入独立 ASS 文件。
+
+先用最终旁白批次生成新的 EDL（`--source-start` 必须来自 capture receipt，
+不可凭空猜测），再把每个 segment 的 source window/span/provenance 与真实
+clean span 对齐：
+
+```powershell
+py -3 -B .\tools\promo\build_full_master_edl.py `
+  --source-start <capture-source-seconds> `
+  --narration-root run-20260902T-full-master-tts-a4/narration `
+  --output .\tools\promo\runs\<run-id>\notes\full-master-edl.json
+
+$env:PYTHONPATH = 'tools/promo;G:\workspace\xar_promo_toolchain\src'
+py -3 -B .\tools\promo\render_full_master.py `
+  --raw .\tools\promo\runs\<run-id>\raw\capture.mkv `
+  --capture-contract .\tools\promo\runs\<run-id>\capture\contract.json `
+  --edl .\tools\promo\runs\<run-id>\notes\full-master-edl.json `
+  --narration-root .\tools\promo\runs\run-20260902T-full-master-tts-a4\narration `
+  --output-root .\tools\promo\runs\<new-sibling-run-id>-full-master `
+  --ffmpeg C:\ffmpeg\bin\ffmpeg.exe `
+  --ffprobe C:\ffmpeg\bin\ffprobe.exe
+```
+
+输出 run 会保留规范化 EDL、完整 argv/filtergraph、xAR 执行日志、字幕、partial
+和 `review/full-master-deliverable-probe.json`。输出目录必须是 raw 所属 run 的
+新 sibling；已有目录和已有文件都不会被覆盖。缺少旁白、span 不足、哈希变化或
+最终编码不符合 1080p60/H.264/AAC 契约时命令 fail-closed，并保留失败现场。
+产物始终标记为 `preliminary`；技术/语义审计、人工审看、signoff 和 export 仍
+是后续门禁。
+
 ## 故障处理
 
 预检、录制、渲染或审计失败时保留完整原始文件、partial、日志和失败报告，创建
