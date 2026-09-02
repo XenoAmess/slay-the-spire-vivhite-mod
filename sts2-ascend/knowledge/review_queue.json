@@ -1896,8 +1896,8 @@
    "deferred_hold_until": 0
   },
   {
-   "run": 1234,
-   "time": "2026-09-02 16:49",
+   "run": 1232,
+   "time": "2026-08-31 21:53",
    "profile_id": "ironclad",
    "backend_key": "glm-flash",
    "priority": 1,
@@ -1909,25 +1909,29 @@
    "sandbox": "workspace-write",
    "every": 1,
    "source": "preferred",
-   "run_id": "7254YJGZR839",
-   "queue_id": "15484-1788338993630726800-0",
-   "retry_same_model": true,
-   "salvage_packages": [],
+   "queue_id": "19588-1788185361403065800-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000418-1788192258078457400-98d55cea"
+   ],
    "salvage_attempts": [],
-   "retry_count": 2,
-   "retry_after": 1788339297.9077406,
+   "retry_count": 5,
+   "retry_after": 1788340153.3200448,
+   "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+   "replay_target": "20260901-000418-1788192258078457400-98d55cea",
+   "review_epoch": "",
    "deferred_count": 0,
    "deferred_hold_until": 0
   }
  ],
  "reviewing": {
   "runs": [
-   1232
+   1234
   ],
   "items": [
    {
-    "run": 1232,
-    "time": "2026-08-31 21:53",
+    "run": 1234,
+    "time": "2026-09-02 16:49",
     "profile_id": "ironclad",
     "backend_key": "glm-flash",
     "priority": 1,
@@ -1939,23 +1943,19 @@
     "sandbox": "workspace-write",
     "every": 1,
     "source": "preferred",
-    "queue_id": "19588-1788185361403065800-0",
+    "run_id": "7254YJGZR839",
+    "queue_id": "15484-1788338993630726800-0",
     "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000418-1788192258078457400-98d55cea"
-    ],
+    "salvage_packages": [],
     "salvage_attempts": [],
-    "retry_count": 4,
-    "retry_after": 1788339243.036785,
-    "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-    "replay_target": "20260901-000418-1788192258078457400-98d55cea",
-    "review_epoch": "",
+    "retry_count": 2,
+    "retry_after": 1788339297.9077406,
     "deferred_count": 0,
     "deferred_hold_until": 0
    }
   ],
   "profile_id": "ironclad",
-  "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-  "started": "2026-09-02 16:54:03"
+  "retry_group": "",
+  "started": "2026-09-02 16:54:57"
  }
 }
