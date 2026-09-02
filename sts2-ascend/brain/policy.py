@@ -100,6 +100,27 @@ def card_numbers(card: dict) -> tuple[int, int, int]:
     return dmg, block, hits
 
 
+# 幕边界常量（生涯 320 场一幕 Boss 全部 F17、24 场二幕 Boss 全部 F33 实证；
+# 三幕按 51 估算）——_floor_act/_floors_to_boss 的唯一口径，不再各写一份
+_ACT_BOSS_FLOORS = (17, 33, 51)
+
+
+def _lethal_gap_check(gap: float, hp: float, max_hp: float,
+                      forced_kill: bool) -> tuple[bool, bool]:
+    """致死/惨胜判定的单点实现（原为 _combat 内两份逐字复制 + _score_play
+    内一份同公式变体）：
+
+    致死 = 当前伤害缺口吞掉整管血；或补防后剩余缺口把血量打穿到 12% 皮血线
+    （惨胜防线 pyrrhic，第 36 局 Boss 战实证）；或服务端判定结束回合致死且
+    缺口未补满（第 31 局 F7 终局实证，gap>0 时以服务端为准）。
+
+    返回 (lethal, pyrrhic)。同一语义只此一处，任何调整不再靠三处人工同步。
+    """
+    pyrrhic = gap > 0 and (hp - gap) <= 0.12 * max_hp
+    lethal = gap >= hp or pyrrhic or (forced_kill and gap > 0)
+    return lethal, pyrrhic
+
+
 def _rescue_block_tradeoff(
         card: dict,
         useful_block: int,
@@ -510,8 +531,6 @@ class Policy:
         self._race_same_round_heal = 0.0  # 本场同回合内已观察到的净回血
         self._race_same_round_loss = 0.0  # 本场同回合内已观察到的自损/费用净扣血
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
-        self._desp_combat = None    # 战斗实例身份（假孤注观测确认用）
-        self._desp_streak = 0       # 连续观测到"致死且无可负担格挡"的 tick 数
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
         self._stall_min_hp = 99999  # 本场敌人总血量的历史最低值
         self._stall_no_progress = 0  # 连续无进展回合数
@@ -2621,10 +2640,6 @@ class Policy:
             # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
             # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
             self._race_audit = {"latched": False, "latch_round": None, "esc": False}
-        # 假孤注确认窗同样按战斗实例隔离：上一场的计数绝不带入下一场
-        if self._desp_combat is not ctx.combat:
-            self._desp_combat = ctx.combat
-            self._desp_streak = 0
         # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
         # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
         if self._focus_combat is not ctx.combat:
@@ -3343,7 +3358,9 @@ class Policy:
                                     f"×{1.0 + _fire_grow:.2f}计价拖延成本")
                         _feas, _mix = self._race_joint_feasible(
                             _cr_deck, enemy_hp_total, _feas_fire, my_hp,
-                            _def_margin)
+                            _def_margin,
+                            energy=float(((state.get("run") or {}).get(
+                                "max_energy")) or 3))
                         # _race_joint_feasible is intentionally static and does
                         # not simulate enemy powers.  A live Boss Slippery stack
                         # therefore makes its positive joint result optimistic:
@@ -3455,9 +3472,8 @@ class Policy:
         # 防御预留能量：防御因只多挡 1 点被溢出规则压到 0.03，打击又被固定
         # -8，二者互相压死后带着能量结束回合。现在低边际防御不再制造预留。
         gap_now = max(0, incoming - my_block)
-        reserve_lethal = (gap_now >= my_hp
-                          or (gap_now > 0 and (my_hp - gap_now) <= 0.12 * my_max_hp)
-                          or (forced_kill and gap_now > 0))
+        reserve_lethal, _ = _lethal_gap_check(gap_now, my_hp, my_max_hp,
+                                              forced_kill)
         reserve_urgent = (gap_now > 0 and my_hp / max(1, my_max_hp)
                           < float(stance.get("urgent_hp_pct", 0.45)))
         reserve_blk_boost = 1.8 if reserve_lethal else (1.4 if reserve_urgent else 1.0)
@@ -3515,9 +3531,8 @@ class Policy:
         exhaust_penalty_step = float(pol.get("exhaust_play_penalty", 3.0))
         exhaust_unclog_bonus = float(pol.get("exhaust_unclog_bonus", 2.0))
         gap_pre = max(0, incoming - my_block)
-        lethal_now = (gap_pre >= my_hp
-                      or (gap_pre > 0 and (my_hp - gap_pre) <= 0.12 * my_max_hp)
-                      or (forced_kill and gap_pre > 0))
+        lethal_now, _ = _lethal_gap_check(gap_pre, my_hp, my_max_hp,
+                                          forced_kill)
         self._trace_gate(
             "GATE 致死检查", "warn" if lethal_now else "pass",
             f"伤害缺口 {gap_pre} / 当前生命 {my_hp}"
@@ -3936,8 +3951,7 @@ class Policy:
         # （第 31 局 F7 终局：17 血对 18 意图，本地补 5 甲后误判安全改打打击，阵亡）
         # 惨胜防线（pyrrhic）：补防后剩余缺口虽不致死，却会把血量打穿到 12% 皮血线
         # （第 36 局 Boss 战：20 血对 27 意图，8 甲硬吃 19 剩 1 血，下回合必死）
-        pyrrhic = gap > 0 and (my_hp - gap) <= 0.12 * my_max_hp
-        lethal = gap >= my_hp or pyrrhic or (forced_kill and gap > 0)
+        lethal, pyrrhic = _lethal_gap_check(gap, my_hp, my_max_hp, forced_kill)
         # 孤注一掷（第 59 局 Boss 战 T6 实证）：致死缺口在手、却没有任何可负担的
         # 格挡牌时，旧逻辑把全部非击杀攻击压到禁玩线、3 能量原样结束回合白吃
         # 13 刀——无甲可补时防御已不可能，唯一活路是抢斩杀让敌人意图作废。
@@ -4504,15 +4518,19 @@ class Policy:
         except Exception:
             return False
 
-    def _enemy_strength_stack(self, enemy: dict) -> float:
-        """读取敌人当前持有的力量类增益层数；无法识别时保持旧行为。"""
+    def _enemy_power_stack(self, enemy: dict, *keywords: str) -> float:
+        """读取敌人当前持有的某类增益层数（力量/滑溜同构账本合并，原
+        _enemy_strength_stack 与 _enemy_slippery_stack 逐字重复）；无法识别时
+        保持旧行为（返回 0）。身份取 id/power_id/name 三字段拼集，中英文
+        关键词均可命中。"""
         total = 0.0
         for power in (enemy.get("powers") or []):
             if not isinstance(power, dict):
                 continue
-            power_id = str(power.get("id") or power.get("power_id")
-                           or power.get("name") or "")
-            if "strength" not in power_id.lower() and "力量" not in power_id:
+            identity = " ".join(str(power.get(key) or "")
+                                for key in ("id", "power_id", "name"))
+            low = identity.lower()
+            if not any(k.lower() in low or k in identity for k in keywords):
                 continue
             amount = next((power.get(key) for key in ("amount", "stack", "value", "count")
                            if power.get(key) is not None), None)
@@ -4524,25 +4542,13 @@ class Policy:
                 total += amount_value
         return total
 
+    def _enemy_strength_stack(self, enemy: dict) -> float:
+        """读取敌人当前持有的力量类增益层数；无法识别时保持旧行为。"""
+        return self._enemy_power_stack(enemy, "strength", "力量")
+
     def _enemy_slippery_stack(self, enemy: dict) -> float:
         """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
-        total = 0.0
-        for power in (enemy.get("powers") or []):
-            if not isinstance(power, dict):
-                continue
-            identity = " ".join(str(power.get(key) or "")
-                                for key in ("id", "power_id", "name"))
-            if "slipper" not in identity.lower() and "滑溜" not in identity:
-                continue
-            amount = next((power.get(key) for key in ("amount", "stack", "value", "count")
-                           if power.get(key) is not None), None)
-            try:
-                amount_value = float(amount)
-            except (TypeError, ValueError):
-                continue
-            if amount_value > 0:
-                total += amount_value
-        return total
+        return self._enemy_power_stack(enemy, "slipper", "滑溜")
 
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
                     ignore_respawn: bool = False) -> float:
@@ -4702,7 +4708,8 @@ class Policy:
     def _race_joint_feasible(self, deck: list[dict], pool: float, fire: float,
                              my_hp: float, margin: float,
                              eff: float | None = None,
-                             blk_eff: float | None = None) -> tuple[bool, str]:
+                             blk_eff: float | None = None,
+                             energy: float | None = None) -> tuple[bool, str]:
         """联合能量口径的竞速可行性对账（第460局批复盘新增）。
 
         旧防守线复核的能量双算缺陷：进攻线按「满能量全攻」算击杀回合数，
@@ -4732,7 +4739,11 @@ class Policy:
             blk_eff = max(0.05, float(pol.get(
                 "kill_race_blk_eff",
                 float(pol.get("kill_race_prior_eff", 0.55)))))
-        energy = 3.0
+        # 能量预算默认 3（一局的标准每回合能量）；战斗端调用方应传入
+        # run.max_energy——第 4 点能量（遗物/角色机制）下旧硬编码 3.0 会
+        # 系统性低估联合可行域（能分配的格挡/进攻档位整体少一档）
+        if energy is None:
+            energy = 3.0
         steps = max(1, int(round(energy)))
         pts = []
         for eb in range(steps + 1):
@@ -5169,9 +5180,9 @@ class Policy:
             f = int(floor_no or 1)
         except (TypeError, ValueError):
             return 1
-        if f <= 17:
+        if f <= _ACT_BOSS_FLOORS[0]:
             return 1
-        if f <= 33:
+        if f <= _ACT_BOSS_FLOORS[1]:
             return 2
         return 3
 
@@ -5182,11 +5193,11 @@ class Policy:
         生涯 320 场一幕 Boss 全部落在 F17、24 场二幕 Boss 全部落在 F33——
         幕边界是可靠常量，无需地图负载即可推算。
         """
-        if floor_no <= 17:
-            return 17 - floor_no
-        if floor_no <= 33:
-            return 33 - floor_no
-        return 51 - floor_no
+        if floor_no <= _ACT_BOSS_FLOORS[0]:
+            return _ACT_BOSS_FLOORS[0] - floor_no
+        if floor_no <= _ACT_BOSS_FLOORS[1]:
+            return _ACT_BOSS_FLOORS[1] - floor_no
+        return _ACT_BOSS_FLOORS[2] - floor_no
 
     def _hold_offensive_potion(self, ctx, run: dict, pol: dict, combat: dict) -> bool:
         """Boss 前夜进攻药水预留判定（第 380~385 批复盘新增）。
