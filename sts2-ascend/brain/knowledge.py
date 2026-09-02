@@ -1565,10 +1565,13 @@ class Knowledge:
         hp_avg = e["hp_delta_sum"] / e["n"]
         gold_avg = e["gold_delta_sum"] / e["n"]
         card_avg = float(e.get("card_delta_sum", 0.0)) / e["n"]
-        # 死亡率同经 DEATH_SHRINK_K 收缩：n=1~3 的一次死亡旧例 -13~-40 永久
+        # 死亡率经 DEATH_SHRINK_K 收缩：n=1~3 的一次死亡旧例 -13~-40 永久
         # 重罚，选项被打入冷宫后再无采样机会（无衰减×探索枯竭的复合死锁）；
-        # 收缩后惩罚仍在但随真实样本收敛，大样本口径不变
-        death_rate = (e["deaths"] + DEATH_SHRINK_K * DEATH_RATE_PRIOR) / (e["n"] + DEATH_SHRINK_K)
+        # 收缩后惩罚仍在但随真实样本收敛。零死亡证据的选项不受先验注入影响
+        # （death_rate=0）——有信息先验只对真实死亡样本生效
+        death_rate = (0.0 if e["deaths"] <= 0 else
+                      (e["deaths"] + DEATH_SHRINK_K * DEATH_RATE_PRIOR)
+                      / (e["n"] + DEATH_SHRINK_K))
         card_term = (-2.0 * card_avg) if card_avg > 0 else (1.0 * card_avg)
         relic_avg = float(e.get("relic_delta_sum", 0.0)) / e["n"]
         potion_avg = float(e.get("potion_delta_sum", 0.0)) / e["n"]
