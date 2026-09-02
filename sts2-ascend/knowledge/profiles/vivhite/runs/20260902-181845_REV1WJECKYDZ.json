@@ -7,7 +7,6 @@
  "ascension": 0,
  "started_at": "2026-09-02 18:18:45",
  "victory": false,
- "in_progress": true,
  "floor": 17,
  "decisions": [
   {
@@ -10147,6 +10146,519 @@
    "reason": "战斗：打出【微分取样】→灵魂异鱼（单体伤害≈8.0｜VIVHITE_LIVE_ESTIMATE=-1.65[DIFFERENTIAL_SAMPLING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方31血/31甲；意图升级+13，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA11.8/回合，同回合回血10、自损/费用57、零伤害回合2（BOSS_SUSTAIN_NET_HP）",
    "turn": 5,
    "energy": 1
+  },
+  {
+   "t": "18:24:55",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 30,
+   "gold": 24,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【分治法阵】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=+5.96[DIVIDE_AND_CONQUER_CIRCLE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方30血/31甲；意图升级+13，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA11.8/回合，同回合回血10、自损/费用58、零伤害回合2（BOSS_SUSTAIN_NET_HP）",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "18:24:57",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 26,
+   "gold": 24,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],启发式护盾(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],开集庇护(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 26/78",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "启发式护盾",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 31,
+    "incoming_damage": 13,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+      "name": "启发式护盾",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_OPEN_SET_SHELTER",
+      "name": "开集庇护",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:25:01",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 27,
+   "gold": 24,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→灵魂异鱼（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-5.00[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方27血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.7/回合，同回合回血11、自损/费用62、零伤害回合3（BOSS_SUSTAIN_NET_HP）",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "18:25:02",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 25,
+   "gold": 24,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【并行星雨】（群体伤害≈14.0｜VIVHITE_LIVE_ESTIMATE=-15.00[PARALLEL_STARFALL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方25血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.7/回合，同回合回血11、自损/费用64、零伤害回合3（BOSS_SUSTAIN_NET_HP）",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "18:25:03",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 19,
+   "gold": 24,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡9｜溢出大挡贬值/抽牌2｜VIVHITE_LIVE_ESTIMATE=-3.00[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方19血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.7/回合，同回合回血11、自损/费用70、零伤害回合3（BOSS_SUSTAIN_NET_HP）",
+   "turn": 6,
+   "energy": 1
+  },
+  {
+   "t": "18:25:06",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 17,
+   "gold": 24,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[呼唤(1费)✗[not_enough_energy],呼唤(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy]]",
+   "turn": 6,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 17/78",
+      "回合 6",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "呼唤",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "呼唤",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "BECKON",
+      "name": "呼唤",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "BECKON",
+      "name": "呼唤",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:25:11",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 5,
+   "gold": 24,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯色面积】→灵魂异鱼（单体伤害≈15.0｜败局竞速全攻｜VIVHITE_LIVE_ESTIMATE=-7.45[CRIMSON_AREA;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=16%/3hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤24，我方5血/0甲；意图升级+24，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.4/回合，同回合回血11、自损/费用84、零伤害回合3（BOSS_SUSTAIN_NET_HP）",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "18:25:12",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 4,
+   "gold": 24,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（白绮的变身式✗,呼唤✓,呼唤✓,递推星芒✗），结束回合（敌意图总伤24，我方4血/0甲）；警告：结束回合可能致死！；意图升级+24，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.4/回合，同回合回血11、自损/费用85、零伤害回合3（BOSS_SUSTAIN_NET_HP）",
+   "turn": 7,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 4/78",
+      "回合 7",
+      "能量 2",
+      "敌方意图伤害 24"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "warn",
+      "value": "伤害缺口 24 / 当前生命 4；服务端判定结束回合致死"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "warn",
+      "value": "败局竞速=True；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "呼唤",
+      "score": -50.0,
+      "status": "rejected",
+      "why": "能力/增益牌（第7回合）",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "呼唤",
+      "score": -50.0,
+      "status": "rejected",
+      "why": "能力/增益牌（第7回合）",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 24,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 1,
+      "card_id": "BECKON",
+      "name": "呼唤",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "BECKON",
+      "name": "呼唤",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:25:17",
+   "screen": "GAME_OVER",
+   "floor": 17,
+   "hp": 0,
+   "gold": 24,
+   "action": "continue_game_over",
+   "params": {},
+   "reason": "结算：确认战绩，执行原生分数、解锁与存档流程"
   }
  ],
  "combat_notes": [
@@ -10158,7 +10670,8 @@
   "F7 Elite战 掉血0",
   "F11 Elite战 掉血35｜竞速审计：T2判死→实战8回合获胜",
   "F12 Monster战 掉血16",
-  "F15 Monster战 掉血0"
+  "F15 Monster战 掉血0",
+  "F17 Boss战 掉血78｜竞速审计：T2判死→实战7回合阵亡（阵亡）"
  ],
  "attribution_tags": [
   [
@@ -10302,9 +10815,14 @@
    "Boss"
   ]
  ],
- "human_assisted": false,
- "excluded_from_learning": false,
- "deck_snapshot": [
+ "native_save": {
+  "run_id": "REV1WJECKYDZ",
+  "phase": "summary_ready",
+  "save_status": "verified",
+  "save_verified": true,
+  "save_error": null
+ },
+ "final_deck": [
   {
    "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
    "upgraded": false,

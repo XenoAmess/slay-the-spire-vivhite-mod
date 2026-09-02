@@ -249,3 +249,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/4局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/4局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（78%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.90 → 7.20（Boss 高血进场长战死（78%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 10.50 → 11.00（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.128 → 0.124（经验累积，探索衰减）
 - 生涯战绩：0/19 胜，当前目标进阶 0
+
+## 第 20 局复盘（2026-09-02 18:25）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_OPEN_SET_SHELTER, STRATAGEM, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_ASTRAL_PURSUIT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：FESTIVE_POPPER, BLOOD_VIAL, RAINBOW_RING
+- 战斗记录：F6 Monster战 掉血8; F7 Elite战 掉血0; F11 Elite战 掉血35｜竞速审计：T2判死→实战8回合获胜; F12 Monster战 掉血16; F15 Monster战 掉血0; F17 Boss战 掉血78｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COLOR_CONSERVATION(40分/2局)，VIVHITE_CARD_PERFECT_SYNTHESIS(39分/5局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/4局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(33分/5局)，FINESSE(33分/2局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/4局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/4局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 7.20 → 7.50（Boss 高血进场长战死（100%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 11.00 → 11.50（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）；exploration_rate: 0.124 → 0.120（经验累积，探索衰减）
+- 生涯战绩：0/20 胜，当前目标进阶 0
