@@ -2604,6 +2604,243 @@ class Policy:
             return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
         return None
 
+    def _combat_readiness_wait(
+            self, state, ctx, combat, player, hand, energy, round_no, pol,
+            can_end, my_hp, my_block, incoming) -> Decision | None:
+        """接口就绪阶梯（从 _combat 提取，行为与原内联实现严格等价）：
+        謦欬致死锁、play_card 接口恢复等待、END_TURN_SETTLE_GATE 结算等待
+        预算阶梯与超时收口。所有路径返回 Decision（主方法直接返回）。
+        """
+        # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
+        # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
+        # 实测：回合过渡窗口可达 5 秒（空手→能量回满→手牌逐张浮现→play_card 开放），
+        # 因此用"本回合是否进入过可出牌状态"区分两种情形：
+        #   - 已进入过 → 现在没的出 = 真的出完了，短确认即结束回合（不拖节奏）
+        #   - 从未进入 → 还在抽牌/开局触发动画里，必须长耐心等待（15 次≈9 秒）
+        if can_end:
+            self._end_stall += 1
+            hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
+            affordable_playable = False
+            for card in hand:
+                if (not card.get("playable") or self._card_unavailable(card)):
+                    continue
+                cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
+                if cost <= energy:
+                    affordable_playable = True
+                    break
+            # play_card can disappear briefly after animations/refreshes even
+            # though the payload already exposes affordable cards.  This is not
+            # “played everything”: the old two-tick confirmation discarded
+            # full-energy Strike/Defend hands.  Give the endpoint a long recovery
+            # window, then end only as a final anti-hang fallback for stale data.
+            # 强制结束回合审计（第753局批复盘闭环实验 END_TURN_LEFTOVER_ENERGY_AUDIT，
+            # 纯观测不改判定）：此前三条强制 end_turn 留痕只写「无牌可出」，
+            # 能量余量与逐张手牌的可玩性/费用不入账——698-F9、704-F8/F13
+            # 三例「非零意图空过」与 753 局 Boss 战 T6(剩2能量)/T9(剩1能量)
+            # 均无法区分「资源不济」「评分拒绝」「接口失真」。此后终端留痕
+            # 自带能量+逐张审计（名称(费用)✓规则可玩/✗不可玩），复盘可直接
+            # 对照运营端的断言链定位拒因；前缀保持不变，供既有统计正则兼容。
+            def _card_audit(c: dict) -> str:
+                available = bool(c.get("playable")) and not self._card_unavailable(c)
+                if available:
+                    mark = "✓"
+                else:
+                    native_reason = self._native_card_unplayable_reason(c)
+                    mark = f"✗[{native_reason or 'unknown_can_play'}]"
+                return f"{c.get('name')}({c.get('energy_cost', '?')}费){mark}"
+
+            _audit = ",".join(_card_audit(c) for c in hand) or "空手"
+            non_curse_cards = [
+                card for card in hand
+                if str(card.get("card_type") or card.get("rarity") or "").casefold()
+                != "curse"
+            ]
+            all_terminal_life_locked = bool(non_curse_cards) and all(
+                character_card_has_terminal_life_cost_lock(
+                    self.character_strategy, card,
+                    current_hp=my_hp,
+                    player_powers=player.get("powers") or [])
+                for card in non_curse_cards
+            )
+            if all_terminal_life_locked:
+                life_lock_signature = (
+                    my_hp,
+                    tuple(self._card_key(card) for card in non_curse_cards),
+                )
+                if life_lock_signature == self._terminal_life_lock_signature:
+                    self._terminal_life_lock_stall += 1
+                else:
+                    self._terminal_life_lock_signature = life_lock_signature
+                    self._terminal_life_lock_stall = 1
+                if self._terminal_life_lock_stall < 2:
+                    return Decision(
+                        None, {},
+                        f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬不可支付，"
+                        f"确认结束（{self._terminal_life_lock_stall}/2，{hand_desc}）",
+                        wait=0.5)
+                self._terminal_life_lock_signature = None
+                self._terminal_life_lock_stall = 0
+                self._end_stall = 0
+                _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+                _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                                f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+                return Decision(
+                    "end_turn", {},
+                    f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
+                    f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                    wait=1.2)
+            self._terminal_life_lock_signature = None
+            self._terminal_life_lock_stall = 0
+            if affordable_playable:
+                if self._end_stall < 30:
+                    return Decision(
+                        None, {},
+                        f"战斗：仍有可负担牌但 play_card 暂不可用，等待接口恢复"
+                        f"（{self._end_stall}/30，{hand_desc}，能量{energy}）",
+                        wait=0.6)
+                self._end_stall = 0
+                return Decision(
+                    "end_turn", {},
+                    f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
+                    f"｜能量{energy}｜[{_audit}]",
+                    wait=1.2)
+            # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
+            # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
+            # policy 键 end_turn_settle_recovery_ticks<=0 可立即回滚旧两拍流）：
+            # 790 局 F17-T6/T9 实测——打出余烬+/火焰屏障后剩 1 能量收口时，
+            # payload 把余下打击/挑衅整体标 ✗ 且 available_actions 撤走了
+            # play_card，而这两张按费用与合法目标在规则层面仍可出；旧两拍
+            # (~1s) 确认跨不过出牌结算动画，把 Boss 决胜段的攻击窗口提前
+            # 扔掉（753 局同签名基线 ×2、本批遥测复证 ×2）。规则账面
+            # （能量≥费用＋目标可选，负费用状态牌不计）与 payload 宣告冲突、
+            # 且本回合确实出过牌时，先在从 _end_stall 借来的预算内推迟提交；
+            # 预算耗尽后落回下方原「确认无牌可出」提交流——主文案前缀与
+            # 逐张审计字段保持兼容；结算超时观测字段在下方按需扩展。
+            _settle_budget = int(float(pol.get("end_turn_settle_recovery_ticks", 10) or 0))
+            _settle_lethal = bool(combat.get("end_turn_will_kill_player")) or incoming >= (my_hp + my_block)
+            _latent = []
+            if (_settle_budget > 0 and not affordable_playable
+                    and self._saw_playable_this_turn):
+                for card in hand:
+                    if self._card_unavailable(card):
+                        continue
+                    if character_card_has_terminal_life_cost_lock(
+                            self.character_strategy, card,
+                            current_hp=my_hp,
+                            player_powers=player.get("powers") or []):
+                        continue
+                    # CardModel.CanPlay rejection reasons are card-rule locks
+                    # (RingingPower, resources, keywords, custom hooks), not
+                    # action-queue/UI transients.  Waiting 40 ticks cannot reopen
+                    # them; only a missing reason remains eligible for settle wait.
+                    if self._native_card_unplayable_reason(card):
+                        continue
+                    cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
+                    if cost < 0 or cost > energy:
+                        continue
+                    if card.get("requires_target") and not card.get("valid_target_indices"):
+                        continue
+                    _latent.append(f"{card.get('name')}({cost})[unknown_can_play]")
+                # 深预算（第833~842局批复盘闭环实验 END_TURN_SETTLE_DEEP_BUDGET）：
+                # 839局F17[201]/840局F17[212][222] 三例真窗口——仪式兽 Boss 决胜段
+                # 打出牌/牌堆顶选择后 payload 整体✗ 超过基预算 6 秒，随后以
+                # 2 闲置能量强行收口，意图 15~20 无格挡入体（840[212] 手牌防御
+                # 本可挡 12，直接 -17 血；839[201] 手牌快照还残留刚打出的暴走）。
+                # 闲置能量≥2 且账面仍有可负担目标牌时把等待上限放宽到深预算：
+                # 空转只发生在「规则账面可出而接口未开」的真窗口，良性不可打出
+                # （晕眩/藏宝图/费用不足，834[200]/841[333][403]）不进 latent、
+                # 零影响；深旋钮置 0 或基旋钮置 0 即回滚旧口径。
+                if _latent and energy >= 2:
+                    _settle_budget = max(
+                        _settle_budget,
+                        int(float(pol.get("end_turn_settle_recovery_ticks_deep", 22) or 0)))
+                # BOSS_SETTLE_TIER3: historical settle observations found 17/21
+                # Boss-layer locks surviving the deep budget, including four
+                # latent-card windows with only one energy. Extend only the
+                # rule-playable/interface-closed window; zero or non-Boss paths
+                # retain the existing base/deep semantics.
+                if (_latent and self._floors_to_boss(
+                        int((state.get("run") or {}).get("floor") or 0)) == 0):
+                    _boss_budget = int(float(
+                        pol.get("end_turn_settle_recovery_ticks_boss", 40) or 0))
+                    if _boss_budget > 0:
+                        _settle_budget = max(_settle_budget, _boss_budget)
+                        # LETHAL_SETTLE_EXTENSION: the target batch showed a Boss
+                        # closing with a lethal intent while the interface was still
+                        # locked at the tier-3 boundary (F17-T10, 8 HP vs 18).
+                        # Spend only a bounded extra 10 ticks on that exact signature;
+                        # harmless closes and non-Boss floors retain their old budget.
+                        # Keeping this under the Boss gate means setting the existing
+                        # tier-3 knob to zero still restores the pre-extension path.
+                        if _settle_lethal:
+                            _lethal_budget = int(float(
+                                pol.get("end_turn_settle_recovery_ticks_lethal", 50) or 0))
+                            if _lethal_budget > 0:
+                                _settle_budget = max(_settle_budget, _lethal_budget)
+            if (_settle_budget > 0 and not affordable_playable
+                    and self._saw_playable_this_turn
+                    and self._end_stall < _settle_budget):
+                if _latent:
+                    _readiness_reason = str(
+                        (combat.get("action_readiness") or {}).get("reason")
+                        or "unknown_interface_state")
+                    return Decision(
+                        None, {},
+                        f"战斗：结算等待——账面仍有可负担目标牌（{','.join(_latent)}），"
+                        f"接口状态={_readiness_reason}，"
+                        f"待接口重开（{self._end_stall}/{_settle_budget}）",
+                        wait=0.6)
+            # 结算超时收口观测位（第892~912局批复盘闭环实验
+            # SETTLE_TIMEOUT_CONCEDE_OBS，纯观测不改判定）：
+            # 912-F17-T6 实证——打出御血术+后 payload 整体✗，深预算 22 tick
+            # （≈13s）耗尽仍未重开，闲置能量 3、手牌突破+/头槌+/防御/痛击
+            # 账面全部可出，按「确认无牌可出」强行收口、零格挡吃意图 15
+            # （18→3 血），决胜段能量白扔。该签名已是 753-T6/T9、790-F17-T6/T9、
+            # 839/840、912-T6 第五代，但旧留痕与真·无牌可出逐字同文、跨局
+            # 无法机械计数，接口实际锁定时长也从未入账。此后「结算闸门武装
+            # 且 latent 非空」的预算耗尽收口在 reason 追加独立标记（能量/
+            # 实际预算/latent 名单），随持久决策链可 grep 计数并与时间戳
+            # 对账锁定时长，为是否再加预算档位供数。1199-F33 再次暴露了
+            # 「账面可出但接口未开」与真·无牌可出的差别，故同时记下收口时
+            # 的 hp/block/incoming，供下一决策的实际掉血量证伪；观测键
+            # end_turn_settle_concede_obs=false 或基旋钮置 0 即整体关闭，
+            # 文案前缀与审计格式不变，既有统计正则不受影响。
+            _settle_note = ""
+            if (_settle_budget > 0 and _latent
+                    and bool(pol.get("end_turn_settle_concede_obs", True))):
+                _settle_note = (
+                    f"｜结算超时收口观测 energy={energy}"
+                    f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
+                    f"/latent={','.join(_latent)}"
+                    f"/hp={my_hp}/block={my_block}/incoming={incoming}")
+            if self._saw_playable_this_turn:
+                if self._end_stall < 2:
+                    return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
+                self._end_stall = 0
+                _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+                _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                                f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+                return Decision(
+                    "end_turn", {},
+                    f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
+                    wait=1.2)
+            if self._end_stall < 15:
+                return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
+            self._end_stall = 0
+            _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
+            _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
+                            f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+            return Decision(
+                "end_turn", {},
+                f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
+                f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                wait=1.2)
+        self._terminal_life_lock_signature = None
+        self._terminal_life_lock_stall = 0
+        return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
+
+
     def _combat(self, state: dict, ctx) -> Decision:
         combat = state.get("combat") or {}
         player = combat.get("player") or {}
@@ -2804,235 +3041,12 @@ class Policy:
             # 只在回合边界更新；同回合出牌后的謦欬/汲取不能覆盖起点。
             self._race_prev_hp = my_hp
 
-        # 关键时序规则：mod 只在手牌就绪后暴露 play_card，而 end_turn 可能更早出现。
-        # 没看到 play_card 就急着 end_turn 会把还没抽好的整回合手牌白白扔掉。
-        # 实测：回合过渡窗口可达 5 秒（空手→能量回满→手牌逐张浮现→play_card 开放），
-        # 因此用"本回合是否进入过可出牌状态"区分两种情形：
-        #   - 已进入过 → 现在没的出 = 真的出完了，短确认即结束回合（不拖节奏）
-        #   - 从未进入 → 还在抽牌/开局触发动画里，必须长耐心等待（15 次≈9 秒）
         if not can_play:
-            if can_end:
-                self._end_stall += 1
-                hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
-                affordable_playable = False
-                for card in hand:
-                    if (not card.get("playable") or self._card_unavailable(card)):
-                        continue
-                    cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
-                    if cost <= energy:
-                        affordable_playable = True
-                        break
-                # play_card can disappear briefly after animations/refreshes even
-                # though the payload already exposes affordable cards.  This is not
-                # “played everything”: the old two-tick confirmation discarded
-                # full-energy Strike/Defend hands.  Give the endpoint a long recovery
-                # window, then end only as a final anti-hang fallback for stale data.
-                # 强制结束回合审计（第753局批复盘闭环实验 END_TURN_LEFTOVER_ENERGY_AUDIT，
-                # 纯观测不改判定）：此前三条强制 end_turn 留痕只写「无牌可出」，
-                # 能量余量与逐张手牌的可玩性/费用不入账——698-F9、704-F8/F13
-                # 三例「非零意图空过」与 753 局 Boss 战 T6(剩2能量)/T9(剩1能量)
-                # 均无法区分「资源不济」「评分拒绝」「接口失真」。此后终端留痕
-                # 自带能量+逐张审计（名称(费用)✓规则可玩/✗不可玩），复盘可直接
-                # 对照运营端的断言链定位拒因；前缀保持不变，供既有统计正则兼容。
-                def _card_audit(c: dict) -> str:
-                    available = bool(c.get("playable")) and not self._card_unavailable(c)
-                    if available:
-                        mark = "✓"
-                    else:
-                        native_reason = self._native_card_unplayable_reason(c)
-                        mark = f"✗[{native_reason or 'unknown_can_play'}]"
-                    return f"{c.get('name')}({c.get('energy_cost', '?')}费){mark}"
-
-                _audit = ",".join(_card_audit(c) for c in hand) or "空手"
-                non_curse_cards = [
-                    card for card in hand
-                    if str(card.get("card_type") or card.get("rarity") or "").casefold()
-                    != "curse"
-                ]
-                all_terminal_life_locked = bool(non_curse_cards) and all(
-                    character_card_has_terminal_life_cost_lock(
-                        self.character_strategy, card,
-                        current_hp=my_hp,
-                        player_powers=player.get("powers") or [])
-                    for card in non_curse_cards
-                )
-                if all_terminal_life_locked:
-                    life_lock_signature = (
-                        my_hp,
-                        tuple(self._card_key(card) for card in non_curse_cards),
-                    )
-                    if life_lock_signature == self._terminal_life_lock_signature:
-                        self._terminal_life_lock_stall += 1
-                    else:
-                        self._terminal_life_lock_signature = life_lock_signature
-                        self._terminal_life_lock_stall = 1
-                    if self._terminal_life_lock_stall < 2:
-                        return Decision(
-                            None, {},
-                            f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬不可支付，"
-                            f"确认结束（{self._terminal_life_lock_stall}/2，{hand_desc}）",
-                            wait=0.5)
-                    self._terminal_life_lock_signature = None
-                    self._terminal_life_lock_stall = 0
-                    self._end_stall = 0
-                    _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
-                    _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
-                                    f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
-                    return Decision(
-                        "end_turn", {},
-                        f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
-                        f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}",
-                        wait=1.2)
-                self._terminal_life_lock_signature = None
-                self._terminal_life_lock_stall = 0
-                if affordable_playable:
-                    if self._end_stall < 30:
-                        return Decision(
-                            None, {},
-                            f"战斗：仍有可负担牌但 play_card 暂不可用，等待接口恢复"
-                            f"（{self._end_stall}/30，{hand_desc}，能量{energy}）",
-                            wait=0.6)
-                    self._end_stall = 0
-                    return Decision(
-                        "end_turn", {},
-                        f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
-                        f"｜能量{energy}｜[{_audit}]",
-                        wait=1.2)
-                # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
-                # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
-                # policy 键 end_turn_settle_recovery_ticks<=0 可立即回滚旧两拍流）：
-                # 790 局 F17-T6/T9 实测——打出余烬+/火焰屏障后剩 1 能量收口时，
-                # payload 把余下打击/挑衅整体标 ✗ 且 available_actions 撤走了
-                # play_card，而这两张按费用与合法目标在规则层面仍可出；旧两拍
-                # (~1s) 确认跨不过出牌结算动画，把 Boss 决胜段的攻击窗口提前
-                # 扔掉（753 局同签名基线 ×2、本批遥测复证 ×2）。规则账面
-                # （能量≥费用＋目标可选，负费用状态牌不计）与 payload 宣告冲突、
-                # 且本回合确实出过牌时，先在从 _end_stall 借来的预算内推迟提交；
-                # 预算耗尽后落回下方原「确认无牌可出」提交流——主文案前缀与
-                # 逐张审计字段保持兼容；结算超时观测字段在下方按需扩展。
-                _settle_budget = int(float(pol.get("end_turn_settle_recovery_ticks", 10) or 0))
-                _settle_lethal = bool(combat.get("end_turn_will_kill_player")) or incoming >= (my_hp + my_block)
-                _latent = []
-                if (_settle_budget > 0 and not affordable_playable
-                        and self._saw_playable_this_turn):
-                    for card in hand:
-                        if self._card_unavailable(card):
-                            continue
-                        if character_card_has_terminal_life_cost_lock(
-                                self.character_strategy, card,
-                                current_hp=my_hp,
-                                player_powers=player.get("powers") or []):
-                            continue
-                        # CardModel.CanPlay rejection reasons are card-rule locks
-                        # (RingingPower, resources, keywords, custom hooks), not
-                        # action-queue/UI transients.  Waiting 40 ticks cannot reopen
-                        # them; only a missing reason remains eligible for settle wait.
-                        if self._native_card_unplayable_reason(card):
-                            continue
-                        cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
-                        if cost < 0 or cost > energy:
-                            continue
-                        if card.get("requires_target") and not card.get("valid_target_indices"):
-                            continue
-                        _latent.append(f"{card.get('name')}({cost})[unknown_can_play]")
-                    # 深预算（第833~842局批复盘闭环实验 END_TURN_SETTLE_DEEP_BUDGET）：
-                    # 839局F17[201]/840局F17[212][222] 三例真窗口——仪式兽 Boss 决胜段
-                    # 打出牌/牌堆顶选择后 payload 整体✗ 超过基预算 6 秒，随后以
-                    # 2 闲置能量强行收口，意图 15~20 无格挡入体（840[212] 手牌防御
-                    # 本可挡 12，直接 -17 血；839[201] 手牌快照还残留刚打出的暴走）。
-                    # 闲置能量≥2 且账面仍有可负担目标牌时把等待上限放宽到深预算：
-                    # 空转只发生在「规则账面可出而接口未开」的真窗口，良性不可打出
-                    # （晕眩/藏宝图/费用不足，834[200]/841[333][403]）不进 latent、
-                    # 零影响；深旋钮置 0 或基旋钮置 0 即回滚旧口径。
-                    if _latent and energy >= 2:
-                        _settle_budget = max(
-                            _settle_budget,
-                            int(float(pol.get("end_turn_settle_recovery_ticks_deep", 22) or 0)))
-                    # BOSS_SETTLE_TIER3: historical settle observations found 17/21
-                    # Boss-layer locks surviving the deep budget, including four
-                    # latent-card windows with only one energy. Extend only the
-                    # rule-playable/interface-closed window; zero or non-Boss paths
-                    # retain the existing base/deep semantics.
-                    if (_latent and self._floors_to_boss(
-                            int((state.get("run") or {}).get("floor") or 0)) == 0):
-                        _boss_budget = int(float(
-                            pol.get("end_turn_settle_recovery_ticks_boss", 40) or 0))
-                        if _boss_budget > 0:
-                            _settle_budget = max(_settle_budget, _boss_budget)
-                            # LETHAL_SETTLE_EXTENSION: the target batch showed a Boss
-                            # closing with a lethal intent while the interface was still
-                            # locked at the tier-3 boundary (F17-T10, 8 HP vs 18).
-                            # Spend only a bounded extra 10 ticks on that exact signature;
-                            # harmless closes and non-Boss floors retain their old budget.
-                            # Keeping this under the Boss gate means setting the existing
-                            # tier-3 knob to zero still restores the pre-extension path.
-                            if _settle_lethal:
-                                _lethal_budget = int(float(
-                                    pol.get("end_turn_settle_recovery_ticks_lethal", 50) or 0))
-                                if _lethal_budget > 0:
-                                    _settle_budget = max(_settle_budget, _lethal_budget)
-                if (_settle_budget > 0 and not affordable_playable
-                        and self._saw_playable_this_turn
-                        and self._end_stall < _settle_budget):
-                    if _latent:
-                        _readiness_reason = str(
-                            (combat.get("action_readiness") or {}).get("reason")
-                            or "unknown_interface_state")
-                        return Decision(
-                            None, {},
-                            f"战斗：结算等待——账面仍有可负担目标牌（{','.join(_latent)}），"
-                            f"接口状态={_readiness_reason}，"
-                            f"待接口重开（{self._end_stall}/{_settle_budget}）",
-                            wait=0.6)
-                # 结算超时收口观测位（第892~912局批复盘闭环实验
-                # SETTLE_TIMEOUT_CONCEDE_OBS，纯观测不改判定）：
-                # 912-F17-T6 实证——打出御血术+后 payload 整体✗，深预算 22 tick
-                # （≈13s）耗尽仍未重开，闲置能量 3、手牌突破+/头槌+/防御/痛击
-                # 账面全部可出，按「确认无牌可出」强行收口、零格挡吃意图 15
-                # （18→3 血），决胜段能量白扔。该签名已是 753-T6/T9、790-F17-T6/T9、
-                # 839/840、912-T6 第五代，但旧留痕与真·无牌可出逐字同文、跨局
-                # 无法机械计数，接口实际锁定时长也从未入账。此后「结算闸门武装
-                # 且 latent 非空」的预算耗尽收口在 reason 追加独立标记（能量/
-                # 实际预算/latent 名单），随持久决策链可 grep 计数并与时间戳
-                # 对账锁定时长，为是否再加预算档位供数。1199-F33 再次暴露了
-                # 「账面可出但接口未开」与真·无牌可出的差别，故同时记下收口时
-                # 的 hp/block/incoming，供下一决策的实际掉血量证伪；观测键
-                # end_turn_settle_concede_obs=false 或基旋钮置 0 即整体关闭，
-                # 文案前缀与审计格式不变，既有统计正则不受影响。
-                _settle_note = ""
-                if (_settle_budget > 0 and _latent
-                        and bool(pol.get("end_turn_settle_concede_obs", True))):
-                    _settle_note = (
-                        f"｜结算超时收口观测 energy={energy}"
-                        f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
-                        f"/latent={','.join(_latent)}"
-                        f"/hp={my_hp}/block={my_block}/incoming={incoming}")
-                if self._saw_playable_this_turn:
-                    if self._end_stall < 2:
-                        return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
-                    self._end_stall = 0
-                    _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
-                    _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
-                                    f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
-                    return Decision(
-                        "end_turn", {},
-                        f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                        f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
-                        wait=1.2)
-                if self._end_stall < 15:
-                    return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
-                self._end_stall = 0
-                _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
-                _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
-                                f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
-                return Decision(
-                    "end_turn", {},
-                    f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
-                    wait=1.2)
-            self._terminal_life_lock_signature = None
-            self._terminal_life_lock_stall = 0
-            return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
+            # 接口就绪阶梯（提取段，行为与原内联实现严格等价）：
+            # 回合过渡/謦欬致死锁/结算等待闸门的全部分支见 _combat_readiness_wait
+            return self._combat_readiness_wait(
+                state, ctx, combat, player, hand, energy, round_no, pol,
+                can_end, my_hp, my_block, incoming)
         self._end_stall = 0
         self._saw_playable_this_turn = True
         self._terminal_life_lock_signature = None
