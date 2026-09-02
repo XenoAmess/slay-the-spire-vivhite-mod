@@ -274,31 +274,6 @@
    "deferred_hold_until": 0
   },
   {
-   "run": 17,
-   "time": "2026-09-02 17:59",
-   "profile_id": "vivhite",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "run_id": "NW1RXWD3KMTM",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
-   "queue_id": "21820-1788343165295176000-0",
-   "retry_same_model": true,
-   "salvage_packages": [],
-   "salvage_attempts": [],
-   "retry_count": 3,
-   "retry_after": 1788343616.6288466,
-   "deferred_count": 0,
-   "deferred_hold_until": 0
-  },
-  {
    "run": 14,
    "time": "2026-09-02 17:16",
    "profile_id": "vivhite",
@@ -326,9 +301,35 @@
  ],
  "reviewing": {
   "runs": [
+   17,
    18
   ],
   "items": [
+   {
+    "run": 17,
+    "time": "2026-09-02 17:59",
+    "profile_id": "vivhite",
+    "backend_key": "glm-flash",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "opencode-go/glm-5.3-flash",
+    "variant": "max",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "preferred",
+    "run_id": "NW1RXWD3KMTM",
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "queue_id": "21820-1788343165295176000-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": [],
+    "retry_count": 3,
+    "retry_after": 1788343616.6288466,
+    "deferred_count": 0,
+    "deferred_hold_until": 0
+   },
    {
     "run": 18,
     "time": "2026-09-02 18:05",
@@ -348,11 +349,15 @@
     "queue_id": "21820-1788343554370731000-0",
     "retry_same_model": true,
     "salvage_packages": [],
-    "salvage_attempts": []
+    "salvage_attempts": [],
+    "retry_count": 1,
+    "retry_after": 1788343622.0389965,
+    "deferred_count": 0,
+    "deferred_hold_until": 0
    }
   ],
   "profile_id": "vivhite",
   "retry_group": "",
-  "started": "2026-09-02 18:05:54"
+  "started": "2026-09-02 18:07:16"
  }
 }
