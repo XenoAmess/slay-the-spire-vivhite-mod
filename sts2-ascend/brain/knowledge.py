@@ -83,7 +83,10 @@ DEFAULT_POLICY = {
     "play_threshold": 0.4,        # min score to bother playing a card
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
-    "elite_soft_hp_pct": 0.62,    # 精英灰区下限：血量介于 soft~min 之间谨慎进精英（0.5 权重），不再一刀切规避
+    "elite_soft_hp_pct": 0.40,    # 精英灰区下限：血量介于 soft~min(hard) 之间谨慎进精英（0.5 权重+悲观复核 veto），
+                                  # 不再一刀切规避。必须满足 soft < min（代码 fallback 与 reflect 间距均为 min-0.15）——
+                                  # 旧值 0.62 高于旧 min 0.55 倒挂，灰区（soft≤hpp<hard）成为空集，
+                                  # soft 以下的 0.1 硬规避先行截获，灰区谨慎权重/悲观复核/健康进场子账本全部沦为死代码
     "elite_grey_safety_mult": 1.5,  # 灰区精英悲观系数（第 86~87 批复盘）：均值战损×此值做尾部复核——87 局 86% 血进旧日雕像实测 -54 ≈ 均值 3 倍
     "elite_grey_proj_floor": 0.60,  # 灰区精英悲观投影线（旧舒适线语义，仅作旧库回退）：悲观投影战后血量低于此值 → 整条候选路径规避精英
     "elite_grey_survival_floor": 0.40,  # 灰区精英悲观生存线（第 122 局复盘）：复核问题改为「悲观情形是否仍能活命」——旧舒适线 60% 在实测先验下需入场血量 ≥95%~104%，灰区分支沦为死代码、精英被事实硬门在 ≥90% 血（122 局仅 45 次到访，遗物断供）
@@ -180,6 +183,10 @@ DEFAULT_POLICY = {
     "deck_overflow_penalty": 0.9, # 软上限之上每超一张的扣分
     "min_block_cards": 5,         # 格挡来源（含初始防牌）少于该数 → 格挡技能增值
     "pick_threshold_per_overflow": 1.5,  # 拿牌门槛随膨胀抬升：每超软上限一张，门槛 +1.5（第 65 局 24 张卡组实证：固定阈值压不住注水）
+    "pick_threshold_starve_relief": 2.5,  # 输出饥饿降门槛（第514~517批接通消费端）：卡组爆发低于竞速及格线时
+                                          # 按缺口深度比例降低拿牌门槛（深缺口最多 -2.5）。该键此前只在
+                                          # 铁甲运行库 policy.json 演化写入、DEFAULT 缺键——白绮等缺键
+                                          # profile 走 fallback 0.0，饥饿降门槛对其永不生效
     # --- 卡组构建补丁（第 71 局复盘） ---
     "duplicate_pick_penalty": 3.0,  # 卡组已有≥2张同(基础)id牌后，每再拿一张的减分（71 局 SHRUG×5/FB×4 实证）
     "unplayed_min_picked": 4,       # 「拿了不打」判定的最小生涯拾取局数
@@ -207,6 +214,9 @@ DEFAULT_POLICY = {
     "event_exploration_near_best_margin": 2.0,
     "event_exploration_min_hp_pct": 0.70,
     "event_exploration_min_value": -1.0,
+    "event_relic_value": 2.5,     # 事件选项结算的遗物计价（event_option_value，净增量遗物数×此值）；
+                                  # 此前仅以消费端 fallback 2.5 存活，不入 DEFAULT 则不可演化、不进配置面
+    "event_potion_value": 1.0,    # 事件选项结算的药水计价（药水位有限且品质随机，半价处理；fallback 1.0 同上）
     "event_worst_margin_frac": 0.05,  # 最坏情况闸门的生存余量（占最大生命，第 255~257 批次复盘）：
                                       # 选项历史单次最差生命增量 hp_min 满足 当前血+hp_min ≤ 余量 时
                                       # 判定「吃下即死」——7RJ9 局 31% 血选均值 +10.5 的「休息」，
