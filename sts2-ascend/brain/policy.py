@@ -3050,6 +3050,18 @@ class Policy:
         # 低血线接 potion_block_hp_pct（第 236 局复盘）：block_safety 顶格后
         # 爆毙证据的接替旋钮——TNWN 局 40%~50% 血的硬仗干瞪眼、拖到 10/80
         # 才喝药；交药线随演化提前，放血判定与防御/回复分支共用同一条线
+        # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
+        # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
+        # 唯一可能翻转时间线的动作是抢在死亡倒计时之前终止战斗。
+        # 该判定只依赖已采样的净损 EMA 与当前血量，上移到药水判定之前——
+        # 竞速判死（race_allin 本 tick / _krace_latch 此前 tick 已武装的
+        # 斩杀竞速迟滞锁）同样是「值得动用增益药水」的弹药全押场合，
+        # 旧顺序下投影判死的战斗与 premium 各门槛全部错开时药水进不了场
+        race_allin = (
+            self._race_rounds >= 1 and self._race_loss_rate >= 1.0
+            and my_hp <= float(pol.get("hopeless_race_hp_frac", 0.6)) * my_max_hp
+            and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
+        )
         _potion_line = float(pol.get("potion_block_hp_pct", 0.35))
         low_hp_bleeding = my_hp <= _potion_line * my_max_hp and block_gap > 0
         # premium：值得动用增益药水的场合（硬房/真致死/高危组合/意图滚雪球确认）。
@@ -3068,20 +3080,13 @@ class Policy:
                        or block_gap >= my_hp
                        or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp
                        or bool(stance.get("danger"))
-                       or getattr(self, "_esc_rounds", 0) >= 2)
+                       or getattr(self, "_esc_rounds", 0) >= 2
+                       or race_allin
+                       or bool(getattr(self, "_krace_latch", False)))
         hard = (premium or low_hp_bleeding)
         potion_dec = self._maybe_potion(state, ctx, hard, premium)
         if potion_dec is not None:
             return potion_dec
-
-        # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
-        # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
-        # 唯一可能翻转时间线的动作是抢在死亡倒计时之前终止战斗
-        race_allin = (
-            self._race_rounds >= 1 and self._race_loss_rate >= 1.0
-            and my_hp <= float(pol.get("hopeless_race_hp_frac", 0.6)) * my_max_hp
-            and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
-        )
 
         # 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地）：
         # 91 局一幕 Boss 战实证——65 血入场、输出 ~25/回合、仪式兽 252 血，
@@ -3434,7 +3439,9 @@ class Policy:
         for c in hand:
             cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
             _dmg, block, _hits = card_numbers(c)
-            if (not c.get("playable") or self._card_unavailable(c)
+            # 锁窗（block_locked，应急按钮族）格挡根本无效：_score_play 把锁窗
+            # 格挡清零、纯防牌压成死牌，预留循环同样不得为买不到的格挡空留能量
+            if (block_locked or not c.get("playable") or self._card_unavailable(c)
                     or block <= 0 or cost > energy):
                 continue
             useful = min(block, gap_now)
@@ -4258,8 +4265,14 @@ class Policy:
             elif self_cost:
                 if best_kill and len(enemies) == 1:
                     pass  # 击杀最后一个敌人直接终局，自残值得
-                elif lethal and not desperate:
+                elif lethal and not (desperate or race_allin or kill_race):
                     best_s = min(best_s, floor_score)
+                elif lethal and my_hp - self_cost > 0:
+                    # 判死竞速豁免与群体面同口径（对齐第 635~640 批教义）：判死局
+                    # 唯一翻盘路径是把每分能量押进输出——能斩杀的单体自残牌在
+                    # race_allin/kill_race 下旧例被压到禁玩线，与 AOE 分支不对称；
+                    # 自残归零的直死牌不豁免（终局教训保留），豁免按半价复利计价
+                    best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * 0.5
                 else:
                     best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))  # 血越少自残越贵
             if cost == 0:
