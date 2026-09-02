@@ -1,0 +1,175 @@
+{
+ "run_id": "0TH6YGKM0BJB",
+ "run_number": 1236,
+ "profile_id": "ironclad",
+ "character_id": "IRONCLAD",
+ "profile_run_number": 1236,
+ "ascension": 0,
+ "started_at": "2026-09-02 18:25:45",
+ "victory": false,
+ "in_progress": true,
+ "floor": 1,
+ "decisions": [
+  {
+   "t": "18:25:45",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「卷轴箱」（经验价值 2.1）；卷轴箱=2.1(n=74) / 橙型香盒=1.8(n=40) / 白银熔炉=1.3(n=23)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "卷轴箱",
+      "score": 2.061,
+      "status": "chosen",
+      "why": "经验样本 74",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "橙型香盒",
+      "score": 1.75,
+      "status": "rejected",
+      "why": "经验样本 40",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "白银熔炉",
+      "score": 1.304,
+      "status": "rejected",
+      "why": "经验样本 23",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "卷轴箱",
+     "params": {
+      "option_index": 1
+     },
+     "score": 2.061
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "18:25:56",
+   "screen": "BUNDLE_SELECTION",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_bundle",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "卡包选择：选包0（总价值 22.7）；包0[武装、挑衅、劫掠]=22.7 / 包1[飞剑回旋镖、铁斩波、惊逃]=11.2"
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "card_pick",
+   "ARMAMENTS"
+  ],
+  [
+   "card_pick",
+   "TAUNT"
+  ],
+  [
+   "card_pick",
+   "PILLAGE"
+  ]
+ ],
+ "human_assisted": false,
+ "excluded_from_learning": false,
+ "deck_snapshot": [
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御"
