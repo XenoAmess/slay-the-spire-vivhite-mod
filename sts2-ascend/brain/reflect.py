@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 
 from knowledge import Knowledge, clamp
+from character_strategy import VIVHITE_PROFILE_ID, resolve_character_strategy
 
 # bounded ranges for every mutable policy knob
 BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
@@ -89,6 +90,11 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 战场归属正确：证据来自具体组合战，回应也只作用于这些组合战，不再扰动全局。
     # 下限 0.30 即旧硬编码锚点；上限 0.60 防极端防御姿态彻底放弃输出拖长战斗
     "danger_comp_blk_boost": (0.30, 0.60),
+    # 白绮专属机制权重（policy.json 覆盖键 vivhite_param_life_cost_weight）：
+    # 謦欬生命支付每点的估值，默认锚点 -1.25（character_strategy 目录值）。
+    # 謦欬卡组阵亡收紧（更负），部分胜利/胜利回收；下限 -3.0 防生命支付
+    # 被估到「永不打出」锁死整套机制，上限 -0.5 防支付代价被低估回旧病
+    "vivhite_param_life_cost_weight": (-3.0, -0.5),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -238,6 +244,19 @@ def _adj_danger_comp_blk(know: Knowledge, changes: list[str], evidence: str) -> 
     return len(changes) > pre
 
 
+_VIVHITE_STRATEGY_CACHE = None
+
+
+def _is_vivhite_life_card(card_id) -> bool:
+    """謦欬（生命支付）牌判定：白绮静态目录内 life_calculation_cost > 0 的牌。"""
+    global _VIVHITE_STRATEGY_CACHE
+    if _VIVHITE_STRATEGY_CACHE is None:
+        _VIVHITE_STRATEGY_CACHE = resolve_character_strategy(
+            profile_id=VIVHITE_PROFILE_ID)
+    entry = _VIVHITE_STRATEGY_CACHE.card(str(card_id or "").rstrip("+"))
+    return entry is not None and entry.mechanics.life_calculation_cost > 0
+
+
 def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
     """Commit statistics, evolve policy, write lessons. Returns the lesson text."""
     pol = know.policy
@@ -275,6 +294,11 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
     # 归因错位：109 局正是这样把 block_safety 1.05→1.10 推高的。摆烂死对
     # 攻防旋钮均无责，只留痕并把注意力指向卡组输出手段的丢失
     stall_death = bool((ctx.died_in_combat or {}).get("stall"))
+    # 白绮 profile 守卫：謦欬生命支付的专属演化通道只作用于白绮库
+    _profile = getattr(know, "profile", None)
+    _vivhite_profile = bool(
+        _profile is not None
+        and getattr(_profile, "profile_id", None) == VIVHITE_PROFILE_ID)
     if not victory:
         if died_to_enemy and ctx.death_hp_pct_at_entry is not None and ctx.death_was_elite and not stall_death:
             if ctx.death_hp_pct_at_entry < pol["elite_min_hp_pct"] + 0.15:
@@ -502,6 +526,20 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         # 事件致死的证据由统计层吸收（event_option_value 的死亡率惩罚），
         # 不再调整任何策略参数——旧 exploration_rate 是零消费的 legacy 旋钮，
         # 每局伪变异只在 lessons 里制造假「策略进化」噪声（已拆除）
+        # 白绮专属死因承接（謦欬生命支付的反馈闭环）：白绮的机制估值权重
+        # 旧例冻结在不可变 dataclass，0 胜死亡证据只能流向 Ironclad 时代的
+        # 格挡语义旋钮（归因错位——生命支付决策错误永不产生任何参数调整）。
+        # 以本局拿牌中的謦欬密度为证据：謦欬卡组（≥2 张生命支付牌）阵亡时
+        # 生命支付权重向保守收紧（謦欬实际代价被低估的证据）；权重经
+        # vivhite_param_* 覆盖键写入本 profile 的 policy.json（BOUNDS 钳制）
+        if _vivhite_profile and died_to_enemy and not stall_death:
+            _life_picks = [cid for cid in picked_cards
+                           if _is_vivhite_life_card(cid)]
+            if len(_life_picks) >= 2:
+                know.policy.setdefault("vivhite_param_life_cost_weight", -1.25)
+                _adj(know, "vivhite_param_life_cost_weight", -0.05, changes,
+                     f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
+                     "——生命支付权重向保守收紧")
         # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增，第509~515局批复盘
         # 重开通道）：该旋钮的回收通道此前只挂整局胜利——0/494 生涯里被「Boss
         # 高血进场长战死」证据一路压到 0.37 触底后永不回升，形成死锁：折算率
@@ -555,6 +593,10 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             if pol.get("potion_block_hp_pct", 0.35) > 0.35:
                 _adj(know, "potion_block_hp_pct", -0.025, changes,
                      f"行至 F{final_floor}——药水交药线部分胜利回收")
+            # 白绮生命支付权重的部分胜利回收（锚点 -1.25，半量步长）
+            if _vivhite_profile and pol.get("vivhite_param_life_cost_weight", -1.25) < -1.25:
+                _adj(know, "vivhite_param_life_cost_weight", 0.025, changes,
+                     f"行至 F{final_floor}——白绮生命支付权重部分胜利回收（锚点-1.25）")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
@@ -592,6 +634,10 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         if pol.get("danger_comp_blk_boost", 0.30) > 0.30:
             _adj(know, "danger_comp_blk_boost", -0.05, changes,
                  "胜利证明当前组合防御姿态可行，小幅回收")
+        # 白绮生命支付权重的胜利回收（锚点 -1.25，与部分胜利通道同向加倍）
+        if _vivhite_profile and pol.get("vivhite_param_life_cost_weight", -1.25) < -1.25:
+            _adj(know, "vivhite_param_life_cost_weight", 0.05, changes,
+                 "胜利证明当前生命支付估值可行，小幅回收")
         if ctx.rests_healed_at_full > 0:
             _adj(know, "rest_heal_threshold", -0.03, changes, "存在满血休息浪费，降低回血阈值")
 

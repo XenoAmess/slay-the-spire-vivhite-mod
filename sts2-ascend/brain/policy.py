@@ -13,7 +13,7 @@ import math
 import random
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, replace
 
 from character_strategy import (
     CardCatalogEntry,
@@ -584,6 +584,30 @@ class Policy:
                     and entry.mechanics.base_block > 0)
         return "DEFEND" in str(card.get("card_id") or "").upper().rstrip("+")
 
+    def _effective_strategy_parameters(self):
+        """应用 policy.json 覆盖后的角色机制参数。
+
+        白绮的机制估值权重（life_cost_weight/margin_weight/drain_healing_weight
+        等 10 项）旧例冻结在不可变 dataclass——白绮 0 胜的死亡证据没有任何
+        承接旋钮，只能流向 Ironclad 时代设计的通用旋钮（格挡语义错位）。
+        policy.json 的 ``{profile_id}_param_<字段名>`` 键（如
+        vivhite_param_life_cost_weight）覆盖同名字段；缺键保持目录默认，
+        无键角色（Ironclad）行为不变。policy.json 热同步（20s）后下一次
+        评分即时生效，与 LLM 复盘 patch 的既有节奏一致。
+        """
+        params = self.character_strategy.parameters
+        prefix = f"{self.character_strategy.profile_id}_param_"
+        pol = self.know.policy
+        try:
+            overrides = {f.name: pol[prefix + f.name]
+                         for f in fields(params)
+                         if prefix + f.name in pol}
+        except (TypeError, KeyError):
+            return params
+        if not overrides:
+            return params
+        return replace(params, **overrides)
+
     def _character_static_card_estimate(
             self, card: dict, *, current_hp: int | float | None = None,
             max_hp: int | float | None = None,
@@ -597,8 +621,12 @@ class Policy:
             cards_played_this_turn: int | None = None) -> tuple[float, str]:
         """Delegate character-only pre-action mechanics to its profile layer."""
 
+        strategy = self.character_strategy
+        eff = self._effective_strategy_parameters()
+        if eff is not strategy.parameters:
+            strategy = replace(strategy, parameters=eff)
         return estimate_character_card(
-            self.character_strategy,
+            strategy,
             card,
             current_hp=current_hp,
             max_hp=max_hp,
@@ -615,7 +643,7 @@ class Policy:
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
         return score_realized_mechanics(
-            self.strategy_parameters,
+            self._effective_strategy_parameters(),
             **actual_amounts,
         )
 
