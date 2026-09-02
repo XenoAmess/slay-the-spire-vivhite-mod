@@ -9170,3 +9170,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.50 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1234 胜，当前目标进阶 0
+
+## 第 1235 局复盘（2026-09-02 17:48）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：HEADBUTT, HAND_OF_GREED, DEMON_FORM, ARMAMENTS, DISMANTLE, SHRUG_IT_OFF, RUPTURE, CRIMSON_MANTLE, THUNDERCLAP, ULTIMATE_STRIKE, PILLAGE, DEMON_FORM, RAMPAGE, INFLAME, BREAKTHROUGH, MOLTEN_FIST, SWORD_BOOMERANG, BLUDGEON, FEED, BATTLE_TRANCE, JUGGLING, UPPERCUT, INFLAME, SHRUG_IT_OFF
+- 本局遗物：PERMAFROST, GORGET, ORICHALCUM
+- 战斗记录：F17 Boss战 掉血32｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血0; F20 Monster战 掉血0; F22 Monster战 掉血26; F30 Monster战 掉血56｜竞速审计：T7判死→实战8回合获胜; F31 Monster战 掉血22（阵亡）
+- 当前高价值卡牌：BRAND(25分/3局)，OFFERING(25分/35局)，FIEND_FIRE(25分/46局)，PRIMAL_FORCE(24分/7局)，PACTS_END(24分/130局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/5局)，BULLY(10分/5局)，HAVOC(10分/4局)
+- 策略进化：普通战斗短时阵亡（2回合）但 block_safety 2.10/药水交药线/组合姿态斜率三级全顶格——短时死亡证据停止吸收并留痕；kill_race_prior_eff: 0.47 → 0.49（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）
+- 生涯战绩：0/1235 胜，当前目标进阶 0
