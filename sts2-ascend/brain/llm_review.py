@@ -46,6 +46,7 @@ import time
 from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from lifecycle import stop_requested
@@ -230,6 +231,165 @@ def _default_profile_root(profile_id: str) -> Path:
         # migration or duplicate copy is required for old installations.
         return Path(KNOWLEDGE_DIR)
     return Path(KNOWLEDGE_DIR) / "profiles" / profile_id
+
+
+def _timestamp_utc_digits(value) -> int | None:
+    """Parse an archive/manifest timestamp into ``YYYYMMDDhhmmss`` UTC.
+
+    Old salvage manifests used ``time.strftime`` (local wall time), while
+    reset archives use an ISO UTC timestamp.  Comparing their raw digits is
+    incorrect as soon as the two zones differ, so normalize both before the
+    legacy migration fence is evaluated.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return None
+    aware: datetime | None = None
+    # ISO-8601 values (the reset archive format).
+    try:
+        candidate = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if candidate.tzinfo is not None:
+            aware = candidate.astimezone(timezone.utc)
+    except (TypeError, ValueError, OverflowError):
+        aware = None
+    if aware is None:
+        for fmt, width in (
+                ("%Y-%m-%d %H:%M:%S", 19),
+                ("%Y%m%d-%H%M%S", 15),
+                ("%Y%m%d%H%M%S", 14)):
+            try:
+                naive = datetime.strptime(text[:width], fmt)
+            except (TypeError, ValueError):
+                continue
+            # ``astimezone()`` interprets a naive datetime in the host's local
+            # zone (the same zone used by time.strftime in the old writer).
+            try:
+                aware = naive.astimezone().astimezone(timezone.utc)
+            except (ValueError, OSError, OverflowError):
+                aware = None
+            if aware is not None:
+                break
+    if aware is None:
+        return None
+    try:
+        return int(aware.strftime("%Y%m%d%H%M%S"))
+    except (ValueError, OverflowError):
+        return None
+
+
+def _latest_profile_reset_info(profile_id: str) -> tuple[str, int | None] | None:
+    """Return the newest completed full-reset epoch and a conservative fence.
+
+    Older reset transactions predate ``review_epoch``.  Their archive is still
+    an authoritative lifecycle fence, so legacy salvage created before it must
+    not be silently reintroduced into the new numeric run namespace.
+    """
+    profile_id = _normalize_profile_id(profile_id)
+    root = Path(KNOWLEDGE_DIR) / "profile_reset_archives" / profile_id
+    if not root.is_dir():
+        return None
+    candidates: list[tuple[str, int | None, Path]] = []
+    try:
+        manifests = sorted(root.glob("*/manifest.json"), key=lambda p: p.parent.name)
+    except OSError:
+        return None
+    for path in manifests:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            continue
+        if (not isinstance(payload, dict)
+                or payload.get("status") != "completed"
+                or not str(payload.get("schema") or "").startswith(
+                    "sts2-ascend-profile-reset/")):
+            continue
+        created = str(payload.get("created_at_utc") or "").strip()
+        epoch = str(payload.get("review_epoch") or "").strip()
+        if not epoch:
+            epoch = f"reset:{created or path.parent.name}"
+        fence: int | None = None
+        # ISO timestamps are only used as a coarse ordering fence.  Keeping the
+        # integer avoids a timezone dependency when comparing legacy local-time
+        # manifest stamps below; explicit epochs remain the strong identity.
+        fence = _timestamp_utc_digits(created)
+        if fence is None:
+            fence = _timestamp_utc_digits(path.parent.name)
+        candidates.append((epoch, fence, path))
+    if not candidates:
+        return None
+    epoch, fence, _path = max(
+        candidates,
+        key=lambda row: (row[1] if row[1] is not None else 0, row[2].parent.name),
+    )
+    return epoch, fence
+
+
+def _profile_review_epoch(knowledge=None, profile_id: str | None = None) -> str:
+    """Resolve the current profile's reset generation without mutating knowledge."""
+    resolved = _normalize_profile_id(
+        profile_id if profile_id is not None else _current_profile_paths().profile_id)
+    # A completed reset archive is the transaction's commit record.  Prefer it
+    # over a possibly stale progression file so a failed/partial reset can
+    # never accidentally reuse the previous generation.
+    reset_info = _latest_profile_reset_info(resolved)
+    if reset_info:
+        return reset_info[0]
+    progression = getattr(knowledge, "progression", None)
+    if isinstance(progression, dict):
+        declared = str(progression.get("review_epoch") or "").strip()
+        if declared:
+            return declared
+    try:
+        path = _default_profile_root(resolved) / "progression.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            declared = str(payload.get("review_epoch") or "").strip()
+            if declared:
+                return declared
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return ""
+
+
+def _manifest_timestamp_digits(manifest: dict, package: Path | None = None) -> int | None:
+    values = [manifest.get("time")]
+    if package is not None:
+        values.append(package.name)
+    for value in values:
+        parsed = _timestamp_utc_digits(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _replay_manifest_matches_current_epoch(
+        manifest: dict, package: Path | None = None,
+        profile_id: str | None = None) -> bool:
+    """Fail closed for replay evidence that cannot be tied to this reset epoch."""
+    raw_profile = profile_id if profile_id is not None else manifest.get("profile_id")
+    # A missing profile marker is only historically safe for the original
+    # ironclad root.  It must never be guessed as Vivhite after a reset, where
+    # the numeric run namespace starts over.
+    if (raw_profile is None or not str(raw_profile).strip()) and (
+            _current_profile_paths().profile_id != DEFAULT_PROFILE_ID):
+        return False
+    resolved = _normalize_profile_id(raw_profile)
+    current = _profile_review_epoch(profile_id=resolved)
+    declared = str(manifest.get("review_epoch") or "").strip()
+    if declared:
+        return not current or declared == current
+    reset_info = _latest_profile_reset_info(resolved)
+    if reset_info is None:
+        # No reset fence exists; retain historical compatibility for old installs.
+        return True
+    _epoch, fence = reset_info
+    if fence is None:
+        return False
+    created = _manifest_timestamp_digits(manifest, package)
+    # Legacy manifest times are local wall-clock values while archive names are
+    # UTC.  A date/time strictly after the fence is sufficient to accept; equal
+    # or unparseable values remain fail-closed.
+    return created is not None and created > fence
 
 
 def _paths_for_profile(
@@ -1038,7 +1198,9 @@ def _batch_description(batch_runs) -> str:
 
 
 def _online_checkpoint_commit_message(
-        profile_id: str, batch_runs: list[int] | None, fallback_run: int) -> str:
+        profile_id: str, batch_runs: list[int] | None, fallback_run: int,
+        *, replay_target: str = "", replay_attempt_no: int | None = None,
+        run_ids: list[str] | None = None, review_epoch: str = "") -> str:
     """Build the profile-aware subject for the pre-review online checkpoint.
 
     Review queue numbers are profile-local.  The explicit fallback is likewise
@@ -1054,6 +1216,18 @@ def _online_checkpoint_commit_message(
     else:
         batch_txt = autogit.profile_run_description(profile_runs)
     context = autogit.profile_run_context(profile_id, profile_runs)
+    if replay_target:
+        details = [f"失败包：{str(replay_target)}"]
+        if replay_attempt_no is not None and int(replay_attempt_no) > 0:
+            details.append(f"重审第{int(replay_attempt_no)}次")
+        stable_ids = _normalized_run_ids(run_ids)
+        if len(stable_ids) == 1:
+            details.append(f"原局ID：{stable_ids[0]}")
+        elif stable_ids:
+            details.append("原局ID：" + ",".join(stable_ids))
+        if str(review_epoch or "").strip():
+            details.append(f"复盘代际：{str(review_epoch).strip()}")
+        context = context + "；" + "；".join(details)
     return (
         f"chore(sts2-ascend): {batch_txt}后复盘前在线存档（{context}）")
 
@@ -1444,11 +1618,14 @@ def _run_is_complete(data: dict) -> bool:
                for item in trail)
 
 
-def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> list[tuple[Path, dict]]:
+def _requested_archived_runs(
+        run_numbers: set[int], seen_files: set[str],
+        run_ids: list[str] | None = None) -> list[tuple[Path, dict]]:
     """Load exact compacted evidence by run_number, with archive hash verification."""
     knowledge_root = _current_profile_paths().root
     catalog = knowledge_root / "archive" / "run_catalog.jsonl"
-    if not run_numbers or not catalog.exists():
+    requested_ids = set(_normalized_run_ids(run_ids))
+    if (not run_numbers and not requested_ids) or not catalog.exists():
         return []
     try:
         from compact_knowledge import read_run_evidence
@@ -1464,7 +1641,13 @@ def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> lis
             entry = json.loads(line)
         except (json.JSONDecodeError, TypeError):
             continue
-        if not isinstance(entry, dict) or entry.get("run_number") not in run_numbers:
+        if not isinstance(entry, dict):
+            continue
+        entry_id = str(entry.get("run_id") or "").strip()
+        if requested_ids:
+            if entry_id not in requested_ids:
+                continue
+        elif entry.get("run_number") not in run_numbers:
             continue
         filename = str(entry.get("file") or "")
         if not filename or filename in seen_files:
@@ -1474,7 +1657,9 @@ def _requested_archived_runs(run_numbers: set[int], seen_files: set[str]) -> lis
                 knowledge_root, filename).decode("utf-8"))
         except (OSError, RuntimeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
             continue
-        if isinstance(data, dict) and _run_is_complete(data):
+        if (isinstance(data, dict) and _run_is_complete(data)
+                and (not requested_ids
+                     or str(data.get("run_id") or "").strip() in requested_ids)):
             rows.append((Path(filename), data))
             seen_files.add(filename)
     return rows
@@ -2641,6 +2826,8 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                        approve_for_me: bool = False,
                        sandbox_mode: str = "workspace-write",
                        batch_runs: list[int] | None = None,
+                       batch_run_ids: list[str] | None = None,
+                       review_epoch: str | None = None,
                        async_mode: bool = False, _status: dict | None = None,
                        salvage_packages: list[str] | None = None,
                        salvage_attempts: list[str] | None = None,
@@ -2713,14 +2900,41 @@ def _run_review_scoped(know, log=print, model: str | None = None,
 
     import autogit  # 延迟导入，避免 standalone 运行时的循环依赖
     runs = know.stats["global"]["runs"]
+    effective_batch_runs = [int(value) for value in (batch_runs or [runs])]
+    if batch_run_ids is None and review_queue_items:
+        batch_run_ids = [item.get("run_id") for item in review_queue_items
+                         if isinstance(item, dict)]
+    effective_batch_run_ids = _normalized_run_ids(
+        batch_run_ids, expected_len=len(effective_batch_runs))
+    effective_review_epoch = str(
+        review_epoch
+        or next((str(item.get("review_epoch") or "").strip()
+                 for item in (review_queue_items or [])
+                 if isinstance(item, dict) and str(item.get("review_epoch") or "").strip()),
+        "")
+        or _profile_review_epoch(know)).strip()
+    # Keep the rest of this transaction on one normalized batch representation;
+    # a missing stable ID intentionally remains an evidence-only legacy replay.
+    batch_runs = effective_batch_runs
     # ``batch_runs`` is already expressed in the selected profile's counter.
     # Keep that identity in the checkpoint subject instead of leaving a bare
     # number that can be mistaken for the other character's/global run count.
     profile_id = _current_profile_paths().profile_id
     batch_txt = (_batch_description(batch_runs).replace(" ", "")
                  if batch_runs else f"第{runs}局")
+    replay_attempt_no = None
+    if replay_target:
+        for item in (review_queue_items or []):
+            try:
+                candidate = int(item.get("replay_attempt_no") or 0)
+            except (TypeError, ValueError):
+                candidate = 0
+            replay_attempt_no = max(replay_attempt_no or 0, candidate)
+        replay_attempt_no = replay_attempt_no or (len(replay_attempts) + 1)
     checkpoint_message = _online_checkpoint_commit_message(
-        profile_id, batch_runs, runs)
+        profile_id, batch_runs, runs, replay_target=replay_target,
+        replay_attempt_no=replay_attempt_no,
+        run_ids=effective_batch_run_ids, review_epoch=effective_review_epoch)
     # 1) 只保存在线数据。代码必须已干净；自动流程绝不替用户提交开发中的代码。
     autogit.commit_progress_result(
         checkpoint_message,
@@ -2737,8 +2951,9 @@ def _run_review_scoped(know, log=print, model: str | None = None,
         f"本批{closure_note}（{closure_state['state_source']}）")
     prompt = build_prompt(
         know, cfg, every, batch_runs, closure_state=closure_state,
+        batch_run_ids=effective_batch_run_ids,
         salvage_packages=replay_packages, salvage_attempts=replay_attempts,
-        evidence_only=evidence_only, log=log)
+        evidence_only=evidence_only, review_epoch=effective_review_epoch, log=log)
     try:
         _current_profile_paths().prompt.write_text(prompt, encoding="utf-8")
     except OSError:
@@ -2771,7 +2986,7 @@ def _run_review_scoped(know, log=print, model: str | None = None,
     attempt_runs = list(batch_runs or [runs])
     if (not attempt_items and replay_queue_ids
             and len(replay_queue_ids) == len(attempt_runs)):
-        for run, queue_id in zip(attempt_runs, replay_queue_ids):
+        for index, (run, queue_id) in enumerate(zip(attempt_runs, replay_queue_ids)):
             attempt_items.append({
                 "run": int(run),
                 "queue_id": queue_id,
@@ -2780,12 +2995,18 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                 "retry_same_model": True,
                 "salvage_packages": list(replay_packages),
                 "salvage_attempts": list(replay_attempts),
+                **({"run_id": effective_batch_run_ids[index]}
+                   if index < len(effective_batch_run_ids) else {}),
+                **({"review_epoch": effective_review_epoch}
+                   if effective_review_epoch else {}),
                 **({"replay_target": replay_target} if replay_target else {}),
             })
     attempt_receipt = {
         "attempt_id": review_id,
         "pre_head": pre_head,
         "batch_runs": attempt_runs,
+        "batch_run_ids": list(effective_batch_run_ids),
+        "review_epoch": effective_review_epoch,
         "queue_items": attempt_items,
         "replay_queue_ids": list(replay_queue_ids),
         "replay_target": replay_target,
@@ -2806,6 +3027,9 @@ def _run_review_scoped(know, log=print, model: str | None = None,
         "run": runs,
         "time": stamp,
         "profile_id": _current_profile_paths().profile_id,
+        "review_epoch": effective_review_epoch,
+        "batch_run_ids": list(effective_batch_run_ids),
+        "replay_target": replay_target,
     })
     _launch_viewer(cfg, log)
     _launch_speaker(cfg, log)
@@ -2828,6 +3052,8 @@ def _run_review_scoped(know, log=print, model: str | None = None,
     def save_failure(reason: str) -> Path | None:
         package = _save_review_salvage(
             pre_head, reason, sandbox, batch_runs=(batch_runs or [runs]),
+            batch_run_ids=effective_batch_run_ids,
+            review_epoch=effective_review_epoch,
             runner=runner, model=model, backend_key=state_key,
             variant=variant or "", reasoning_effort=reasoning_effort or "",
             priority=plan.priority, approve_for_me=plan.approve_for_me,
@@ -2888,6 +3114,35 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                 "不能算作模型的纯报告。")
             if _status is not None:
                 _status["failure_code"] = sandbox.failure_code
+        rate_limit_info = None
+        if not capability_error and not stopped:
+            rate_limit_info = _provider_rate_limit_info(sandbox, cfg)
+            if rate_limit_info is not None:
+                # HTTP 429 is a provider capacity response, not a model-quality
+                # failure.  Make the classification durable before the generic
+                # rc/timeout branches can charge preferred cooldown.
+                sandbox.failure_code = rate_limit_info["failure_code"]
+                rate_limit_reason = (
+                    f"provider 返回 HTTP 429（{rate_limit_info['message'] or 'rate limit'}）；"
+                    f"{rate_limit_info['retry_after_seconds']:.0f}s 后复用原后端")
+                if not sandbox.error:
+                    sandbox.error = rate_limit_reason
+                if _status is not None:
+                    _status.update({
+                        "outcome": "deferred",
+                        "deferred_kind": rate_limit_info["deferred_kind"],
+                        "reason": rate_limit_reason,
+                        "deferred_reason": rate_limit_reason,
+                        "failure_code": rate_limit_info["failure_code"],
+                        "provider_rate_limit": dict(rate_limit_info),
+                        "retry_after_seconds": rate_limit_info[
+                            "retry_after_seconds"],
+                        # A 429 proves the selected provider was reached even
+                        # when it emitted no model token; never allow startup
+                        # fallback to hand this lineage to another model.
+                        "startup_unavailable": False,
+                        "provider_launch_attempted": True,
+                    })
         resolutions = _validated_retry_resolutions(
             sandbox, replay_packages, log=log)
         confirmed_no_change = bool(replay_packages) and all(
@@ -2989,6 +3244,10 @@ def _run_review_scoped(know, log=print, model: str | None = None,
             return False
         if sandbox.error or stopped:
             save_failure(sandbox.error or "协作停止留下的部分复盘现场")
+        if rate_limit_info is not None:
+            log("[llm] provider HTTP 429；不记 preferred cooldown、不切换模型，"
+                f"保留原 runner/model 亲和性，{rate_limit_info['retry_after_seconds']:.0f}s 后重试")
+            return False
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
             if _status is not None:
@@ -3307,6 +3566,101 @@ _QUEUE_IO_RETRIES = 8
 _QUEUE_IO_RETRY_BASE_SECONDS = 0.01
 _REVIEW_RETRY_BASE_SECONDS = 60
 _REVIEW_RETRY_MAX_SECONDS = 15 * 60
+_REVIEW_DEFERRED_BASE_SECONDS = 60
+_REVIEW_DEFERRED_MAX_SECONDS = 15 * 60
+# Provider rate-limit responses are advisory input from an external runner.  A
+# malicious/malformed Retry-After must never turn into an unbounded worker sleep
+# or a permanent queue hold.  The ordinary deferred ceiling is the hard upper
+# bound; deployments may lower it with the explicit config knob below.
+_PROVIDER_RATE_LIMIT_FAILURE_CODE = "provider_http_429"
+_PROVIDER_RATE_LIMIT_DEFERRED_KIND = "provider_rate_limit"
+# Host/preflight deferrals must not consume the model retry budget, but they
+# also must not monopolize the worker forever.  After a bounded number of
+# deferrals the transaction is parked for an hour; maintenance or an explicit
+# replay request can wake it once the missing evidence/host capability returns.
+_REVIEW_DEFERRED_HOLD_AFTER = 5
+_REVIEW_DEFERRED_HOLD_SECONDS = 60 * 60
+
+
+def _bounded_provider_retry_delay(value, cfg: dict | None = None) -> float:
+    """Normalize a provider Retry-After to a bounded queue delay.
+
+    ``None``/invalid values intentionally fall back to the normal deferred base
+    delay.  A positive minimum avoids a hot loop when a service returns
+    ``Retry-After: 0`` while still honoring the server value whenever it is
+    within the host's configured safety ceiling.
+    """
+    config = cfg if isinstance(cfg, dict) else {}
+    cap_value = config.get(
+        "provider_rate_limit_max_retry_seconds", _REVIEW_DEFERRED_MAX_SECONDS)
+    try:
+        cap = float(cap_value)
+    except (TypeError, ValueError, OverflowError):
+        cap = float(_REVIEW_DEFERRED_MAX_SECONDS)
+    if not math.isfinite(cap):
+        cap = float(_REVIEW_DEFERRED_MAX_SECONDS)
+    cap = min(float(_REVIEW_DEFERRED_MAX_SECONDS), max(1.0, cap))
+    try:
+        delay = float(value)
+    except (TypeError, ValueError, OverflowError):
+        delay = float(_REVIEW_DEFERRED_BASE_SECONDS)
+    if not math.isfinite(delay):
+        delay = float(_REVIEW_DEFERRED_BASE_SECONDS)
+    return min(cap, max(1.0, delay))
+
+
+def _provider_rate_limit_info(sandbox: "SandboxReviewResult", cfg: dict) -> dict | None:
+    """Read the runner translator's structured 429 signal, if terminal.
+
+    Only an explicit status/flag emitted by ``review_runners`` is accepted.  A
+    random ``429`` in a model's normal output is therefore not enough to alter
+    queue affinity.  A provider that returned a valid patch with exit 0 wins;
+    the signal is terminal only when the sandbox itself failed or produced no
+    accepted work.
+    """
+    metrics = (sandbox.provider_metrics
+               if isinstance(getattr(sandbox, "provider_metrics", None), dict)
+               else {})
+    nested = metrics.get("rate_limit")
+    nested = nested if isinstance(nested, dict) else {}
+    detected = bool(metrics.get("rate_limit_detected")
+                    or metrics.get("rate_limited")
+                    or nested)
+    if not detected:
+        return None
+    status_value = (metrics.get("rate_limit_status")
+                    if metrics.get("rate_limit_status") is not None
+                    else nested.get("status_code", 429))
+    try:
+        status_code = int(status_value)
+    except (TypeError, ValueError, OverflowError):
+        status_code = 0
+    if status_code != 429:
+        return None
+    # A clean successful patch should not be thrown away merely because a
+    # provider emitted a transient reconnect warning earlier in its stream.
+    if sandbox.rc == 0 and not sandbox.timed_out and not sandbox.stalled \
+            and not sandbox.error and bool(sandbox.paths and sandbox.patch):
+        return None
+    raw_delay = metrics.get("retry_after_seconds")
+    if raw_delay is None:
+        raw_delay = metrics.get("rate_limit_retry_after_seconds")
+    if raw_delay is None:
+        raw_delay = nested.get("retry_after_seconds")
+    delay = _bounded_provider_retry_delay(raw_delay, cfg)
+    message = str(metrics.get("rate_limit_message")
+                  or nested.get("message") or "HTTP 429 provider rate limit")
+    source = str(metrics.get("rate_limit_source")
+                 or nested.get("source") or "provider")
+    return {
+        "status_code": 429,
+        "retry_after_seconds": delay,
+        "retry_after_raw": raw_delay,
+        "message": " ".join(message.split())[:500],
+        "source": source[:120],
+        "failure_code": _PROVIDER_RATE_LIMIT_FAILURE_CODE,
+        "deferred_kind": _PROVIDER_RATE_LIMIT_DEFERRED_KIND,
+    }
 
 
 class ReviewQueueError(RuntimeError):
@@ -3322,12 +3676,17 @@ def _validate_queue_item(item, label: str) -> None:
         raise ReviewQueueError(f"{label} is not a run object")
     run = item.get("run")
     retry_count = item.get("retry_count", 0)
+    deferred_count = item.get("deferred_count", 0)
     retry_after = item.get("retry_after", 0)
     if isinstance(run, bool) or not isinstance(run, int) or run <= 0:
         raise ReviewQueueError(f"{label}.run must be a positive integer")
     if (isinstance(retry_count, bool) or not isinstance(retry_count, int)
             or retry_count < 0):
         raise ReviewQueueError(f"{label}.retry_count must be a non-negative integer")
+    if (isinstance(deferred_count, bool)
+            or not isinstance(deferred_count, int) or deferred_count < 0):
+        raise ReviewQueueError(
+            f"{label}.deferred_count must be a non-negative integer")
     if (isinstance(retry_after, bool) or not isinstance(retry_after, (int, float))
             or retry_after < 0 or not math.isfinite(float(retry_after))):
         raise ReviewQueueError(
@@ -3347,6 +3706,7 @@ def _validate_queue_item(item, label: str) -> None:
     for key in (
         "backend_key", "runner", "model", "variant", "reasoning_effort",
         "sandbox", "source", "retry_group", "queue_id", "replay_target",
+        "run_id", "review_epoch", "deferred_kind", "deferred_reason",
     ):
         value = item.get(key)
         if value is not None and not isinstance(value, str):
@@ -3369,6 +3729,20 @@ def _validate_queue_item(item, label: str) -> None:
                                   or any(not isinstance(value, str)
                                          for value in attempts))):
         raise ReviewQueueError(f"{label}.salvage_attempts must be a string list")
+    hold_until = item.get("deferred_hold_until", 0)
+    if (isinstance(hold_until, bool)
+            or not isinstance(hold_until, (int, float))
+            or hold_until < 0 or not math.isfinite(float(hold_until))):
+        raise ReviewQueueError(
+            f"{label}.deferred_hold_until must be a finite non-negative number")
+    rate_limit_delay = item.get("deferred_retry_after_seconds")
+    if (rate_limit_delay is not None
+            and (isinstance(rate_limit_delay, bool)
+                 or not isinstance(rate_limit_delay, (int, float))
+                 or rate_limit_delay < 0
+                 or not math.isfinite(float(rate_limit_delay)))):
+        raise ReviewQueueError(
+            f"{label}.deferred_retry_after_seconds must be a finite non-negative number")
 
 
 def _queue_item_profile_id(item: dict) -> str:
@@ -3384,15 +3758,48 @@ def _batch_profile_id(batch: list[dict]) -> str:
 
 
 def _queue_item_identity(item: dict) -> tuple:
-    """A replay group may intentionally review a run already in the live queue."""
+    """Return an identity that survives profile resets and same-number runs.
+
+    ``run`` is only a display/cadence number.  A profile reset deliberately
+    starts that number at one again, so queue de-duplication must prefer the
+    stable native ``run_id`` and reset ``review_epoch`` whenever either is
+    available.  Legacy records retain the old numeric fallback for compatibility.
+    """
     profile_id = _queue_item_profile_id(item)
+    epoch = str(item.get("review_epoch") or "")
+    run_id = str(item.get("run_id") or "")
     queue_id = str(item.get("queue_id") or "")
     if queue_id:
-        return (profile_id, "queue_id", queue_id)
+        return (profile_id, "queue_id", epoch, queue_id)
     group = str(item.get("retry_group") or "")
     if group:
-        return (profile_id, "retry_group", group, item.get("run"))
-    return (profile_id, "run", item.get("run"))
+        return (profile_id, "retry_group", group, epoch,
+                run_id or item.get("run"))
+    if run_id:
+        return (profile_id, "run_id", epoch, run_id)
+    return (profile_id, "run", epoch, item.get("run"))
+
+
+def _normalized_run_ids(values, expected_len: int | None = None) -> list[str]:
+    """Normalize opaque native run IDs while preserving their batch order.
+
+    An ID list is usable only when it is complete and unique for the associated
+    numeric batch.  Returning an empty list for malformed/partial metadata is
+    intentional: callers then enter evidence-only mode instead of silently
+    pairing one run's evidence with another run's number.
+    """
+    if not isinstance(values, list):
+        return []
+    result: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if (not text or text == "run_unknown" or "\x00" in text
+                or len(text) > 256 or text in result):
+            return []
+        result.append(text)
+    if expected_len is not None and len(result) != expected_len:
+        return []
+    return result
 
 
 def _reviewing_items(reviewing: dict | None) -> list[dict]:
@@ -3404,8 +3811,31 @@ def _reviewing_items(reviewing: dict | None) -> list[dict]:
         return [dict(item) for item in items if isinstance(item, dict)]
     stamp = reviewing.get("started", "")
     profile_id = _normalize_profile_id(reviewing.get("profile_id"))
-    return [{"run": run, "time": stamp, "profile_id": profile_id}
-            for run in (reviewing.get("runs") or [])]
+    # Older queue files stored only ``runs`` at the top level, but a replay
+    # transaction still had its group/lineage there.  Propagate those fields
+    # into the compatibility items so reset-epoch quarantine can remove the
+    # exact legacy transaction instead of losing its identity during recovery.
+    common = {"time": stamp, "profile_id": profile_id}
+    for key in (
+            "retry_group", "replay_target", "review_epoch", "source",
+            "runner", "model", "backend_key", "variant", "reasoning_effort",
+            "sandbox", "every", "retry_same_model", "salvage_packages",
+            "salvage_attempts"):
+        if key in reviewing:
+            common[key] = reviewing[key]
+    runs = list(reviewing.get("runs") or [])
+    run_ids = reviewing.get("run_ids")
+    if not isinstance(run_ids, list):
+        run_ids = reviewing.get("batch_run_ids")
+    run_ids = _normalized_run_ids(run_ids, len(runs))
+    return [
+        {
+            "run": run,
+            **common,
+            **({"run_id": run_ids[index]} if run_ids else {}),
+        }
+        for index, run in enumerate(runs)
+    ]
 
 
 def _reviewing_matches_batch(reviewing: dict | None, batch: list[dict]) -> bool:
@@ -3503,6 +3933,7 @@ def _refresh_sticky_approval(batch: list[dict], cfg: dict) -> bool:
 def _queue_item_ready_at(item: dict, now: float) -> float:
     """Combine per-attempt backoff with the bound preferred-model cooldown."""
     ready_at = float(item.get("retry_after", 0) or 0)
+    ready_at = max(ready_at, float(item.get("deferred_hold_until", 0) or 0))
     affinity = _retry_affinity(item)
     if affinity is not None and affinity[2] == "preferred":
         ready_at = max(
@@ -3993,11 +4424,18 @@ def _requeue_salvage_packages_scoped(package_names, log=print) -> dict[str, list
                 f"交由宿主闭环恢复而不重复消耗模型：{name}")
             continue
         manifest = dict(manifest)
+        previous_epoch = str(manifest.get("review_epoch") or "").strip()
+        current_epoch = _profile_review_epoch(profile_id=active_profile)
         manifest.update({
             "replay_enqueue_pending": True,
             "replay_target": name,
             "replay_role": "target",
+            "replay_auto_requeue_blocked": False,
         })
+        if previous_epoch and previous_epoch != current_epoch:
+            manifest["legacy_review_epoch"] = previous_epoch
+        if current_epoch:
+            manifest["review_epoch"] = current_epoch
         manifest.setdefault("replay_attempt_packages", [])
         _publish_manifest_update(package, manifest)
         runs: list[int] = []
@@ -4064,8 +4502,16 @@ def _requeue_salvage_packages_scoped(package_names, log=print) -> dict[str, list
                     "salvage_attempts": _normalize_salvage_package_names(
                         manifest.get("replay_attempt_packages") or []),
                     "evidence_only": evidence_only,
+                    "deferred_count": 0,
+                    "deferred_hold_until": 0,
                     **affinity,
                 }
+                if current_epoch:
+                    item["review_epoch"] = current_epoch
+                run_ids = _manifest_batch_run_ids(manifest)
+                index = runs.index(run)
+                if index < len(run_ids):
+                    item["run_id"] = run_ids[index]
                 q["pending"].append(item)
             existing_groups.add(group_key)
             queued[name] = list(runs)
@@ -4088,16 +4534,27 @@ def requeue_salvage_packages(
 
 
 def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
-    """Return queue-compatible runs; old runless packages use evidence-only mode."""
-    runs: list[int] = []
+    """Return queue-compatible runs and whether replay must be evidence-only.
+
+    A numeric ``batch_runs`` without the matching stable ``batch_run_ids`` is
+    ambiguous after a profile reset.  Keep the queue identity for scheduling,
+    but never let such a legacy package select a same-number run from the new
+    profile as if it were the original evidence.
+    """
+    raw_runs: list[int] = []
     for value in manifest.get("batch_runs") or []:
         try:
             run = int(value)
         except (TypeError, ValueError):
             continue
-        if run > 0 and run not in runs:
-            runs.append(run)
-    evidence_only = not runs
+        if run > 0:
+            raw_runs.append(run)
+    run_ids = _manifest_batch_run_ids(manifest, expected_len=len(raw_runs))
+    has_stable_batch = bool(raw_runs and run_ids)
+    # Preserve one queue item per stable ID.  Legacy numeric manifests are
+    # de-duplicated for scheduling only and are always evidence-only.
+    runs = list(raw_runs) if has_stable_batch else list(dict.fromkeys(raw_runs))
+    evidence_only = not has_stable_batch
     if not runs:
         for value in (manifest.get("current_run"), manifest.get("run")):
             try:
@@ -4116,6 +4573,18 @@ def _manifest_replay_runs(manifest: dict) -> tuple[list[int], bool]:
             run = 0
         runs = [max(1, run)]
     return runs, evidence_only
+
+
+def _manifest_batch_run_ids(
+        manifest: dict, expected_len: int | None = None) -> list[str]:
+    """Read stable run IDs aligned with ``batch_runs`` from a salvage manifest."""
+    values = manifest.get("batch_run_ids")
+    if values is None:
+        values = manifest.get("run_ids")
+    if expected_len is None:
+        raw_runs = manifest.get("batch_runs")
+        expected_len = len(raw_runs) if isinstance(raw_runs, list) else None
+    return _normalized_run_ids(values, expected_len=expected_len)
 
 
 def _review_hold_packages() -> list[tuple[Path, Path, dict]]:
@@ -4489,7 +4958,21 @@ def _reset_hold_manifest_for_full_replay(
 
 def _recover_review_holds(log=print) -> list[str]:
     """Restore operator-held lineages deleted/closed by a pre-fix review host."""
-    records = _review_hold_packages()
+    records = []
+    for record in _review_hold_packages():
+        _container, package, manifest = record
+        try:
+            profile_id = _normalize_profile_id(manifest.get("profile_id"))
+        except ValueError:
+            continue
+        if not _replay_manifest_matches_current_epoch(
+                manifest, package, profile_id=profile_id):
+            # Keep the complete hold as audit evidence, but do not resurrect a
+            # pre-reset numeric run into the new profile namespace.  An explicit
+            # offline replay can opt in after the operator verifies its identity.
+            log(f"[llm] review_hold 属于旧 profile reset epoch，保持原件不回灌：{package.name}")
+            continue
+        records.append(record)
     if not records or _review_stop_requested():
         return []
     groups: dict[str, list[tuple[Path, Path, dict]]] = {}
@@ -4586,6 +5069,8 @@ def _recover_salvage_replay_queue(log=print) -> None:
     targets: dict[str, tuple[Path, dict]] = {}
     attempts: dict[str, list[str]] = {}
     queue_ids: dict[str, set[str]] = {}
+    stale_targets: set[str] = set()
+    stale_packages: dict[str, tuple[Path, dict]] = {}
     packages = (sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name)
                 if SALVAGE_ROOT.is_dir() else [])
     for package in packages:
@@ -4604,6 +5089,22 @@ def _recover_salvage_replay_queue(log=print) -> None:
         if not normalized:
             continue
         target = normalized[0]
+        try:
+            manifest_profile = _normalize_profile_id(manifest.get("profile_id"))
+        except ValueError:
+            continue
+        if not _replay_manifest_matches_current_epoch(
+                manifest, package, profile_id=manifest_profile):
+            stale_targets.add(target)
+            stale_packages.setdefault(target, (package, manifest))
+            continue
+        # A prior startup may have recorded the lifecycle fence already.  The
+        # package remains intact for audit/explicit replay, but auto-recovery
+        # must not keep rebuilding its old numeric queue item.
+        if manifest.get("replay_auto_requeue_blocked"):
+            stale_targets.add(target)
+            stale_packages.setdefault(target, (package, manifest))
+            continue
         manifest_queue_ids = {
             str(value) for value in (manifest.get("replay_queue_ids") or [])
             if str(value)}
@@ -4628,7 +5129,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
         else:
             attempts.setdefault(target, []).append(package.name)
 
-    if not targets and not resolved_targets:
+    if not targets and not resolved_targets and not stale_targets:
         return
     target_attempts: dict[str, list[str]] = {}
     with _queue_lock:
@@ -4638,6 +5139,25 @@ def _recover_salvage_replay_queue(log=print) -> None:
         changed = False
         cfg = load_llm_config()
         active_profile = _current_profile_paths().profile_id
+        if stale_targets:
+            def is_stale_item(item: dict) -> bool:
+                if _queue_item_profile_id(item) != active_profile:
+                    return False
+                target = str(item.get("replay_target")
+                            or item.get("retry_group") or "")
+                return target in stale_targets
+
+            pending_before = len(q.get("pending", []))
+            q["pending"] = [item for item in q.get("pending", [])
+                            if not is_stale_item(item)]
+            filtered_reviewing = [item for item in reviewing_items
+                                  if not is_stale_item(item)]
+            if (len(q["pending"]) != pending_before
+                    or len(filtered_reviewing) != len(reviewing_items)):
+                reviewing_items = filtered_reviewing
+                changed = True
+                log("[llm] 已隔离跨 profile reset epoch 的旧 replay 队列："
+                    f"{sorted(stale_targets)}")
         if resolved_targets:
             def is_resolved_item(item: dict) -> bool:
                 if _queue_item_profile_id(item) != active_profile:
@@ -4679,6 +5199,10 @@ def _recover_salvage_replay_queue(log=print) -> None:
             if affinity["profile_id"] != active_profile:
                 continue
             target_attempts[target] = lineage
+            target_epoch = str(manifest.get("review_epoch") or "").strip()
+            if not target_epoch:
+                target_epoch = _profile_review_epoch(profile_id=active_profile)
+            target_run_ids = _manifest_batch_run_ids(manifest)
 
             def belongs(item: dict) -> bool:
                 return (_queue_item_profile_id(item) == active_profile
@@ -4698,6 +5222,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "replay_target": target,
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
+                        "review_epoch": target_epoch,
                         **affinity,
                     }
                     if any(item.get(key) != value for key, value in desired.items()):
@@ -4706,7 +5231,7 @@ def _recover_salvage_replay_queue(log=print) -> None:
             if not matched:
                 runs, evidence_only = _manifest_replay_runs(manifest)
                 stamp = str(manifest.get("time") or time.strftime("%Y-%m-%d %H:%M"))
-                for run in runs:
+                for index, run in enumerate(runs):
                     item = {
                         "run": run,
                         "time": stamp,
@@ -4715,8 +5240,14 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "salvage_packages": [target],
                         "salvage_attempts": list(lineage),
                         "evidence_only": evidence_only,
+                        "deferred_count": 0,
+                        "deferred_hold_until": 0,
                         **affinity,
                     }
+                    if target_epoch:
+                        item["review_epoch"] = target_epoch
+                    if index < len(target_run_ids):
+                        item["run_id"] = target_run_ids[index]
                     q["pending"].append(item)
                 changed = True
                 log(f"[llm] 已从失败包原子意图恢复 "
@@ -4733,6 +5264,28 @@ def _recover_salvage_replay_queue(log=print) -> None:
                     reviewing["retry_group"] = next(iter(groups))
         if changed:
             _save_queue_unlocked(q)
+
+    # Mark stale packages after the queue transaction.  This is an auditable
+    # fence, not deletion: an operator may explicitly invoke the offline replay
+    # command after checking the original run identity.
+    for target, (package, manifest) in stale_packages.items():
+        if manifest.get("replay_auto_requeue_blocked"):
+            continue
+        try:
+            updated = dict(manifest)
+            updated.update({
+                "replay_auto_requeue_blocked": True,
+                "replay_auto_requeue_block_reason": (
+                    "profile_reset_epoch_mismatch_or_unproven_legacy_identity"),
+                "replay_auto_requeue_blocked_at": time.strftime(
+                    "%Y-%m-%d %H:%M:%S"),
+                "replay_auto_requeue_epoch": _profile_review_epoch(
+                    profile_id=updated.get("profile_id")),
+            })
+            _publish_manifest_update(package, updated)
+            log(f"[llm] 旧 replay 失败包已保全并标记需显式唤醒：{target}")
+        except OSError as exc:
+            log(f"[llm] 旧 replay 隔离标记暂未写入（仍不回灌）：{target}（{exc}）")
 
     # Queue durability comes first.  This secondary index is helpful but can be
     # reconstructed from attempt manifests after a crash at any instruction.
@@ -4783,21 +5336,51 @@ def _enqueue_review_scoped(agent, log=print, know=None) -> None:
         with _queue_lock:
             q = _load_queue_unlocked()
             profile_id = _current_profile_paths().profile_id
+            review_epoch = _profile_review_epoch(review_know)
+            run_id = str(getattr(getattr(agent, "ctx", None), "run_id", "") or "").strip()
+            if run_id == "run_unknown":
+                run_id = ""
             reviewing_runs = {
-                item.get("run") for item in _reviewing_items(q.get("reviewing"))
+                _queue_item_identity(item) for item in _reviewing_items(q.get("reviewing"))
                 if _queue_item_profile_id(item) == profile_id
             }
-            already_queued = runs in reviewing_runs or any(
-                item.get("run") == runs
-                and _queue_item_profile_id(item) == profile_id
-                for item in q["pending"])
+            def same_live_run(item: dict) -> bool:
+                if (_queue_item_profile_id(item) != profile_id
+                        or item.get("run") != runs):
+                    return False
+                item_epoch = str(item.get("review_epoch") or "")
+                if review_epoch and item_epoch and item_epoch != review_epoch:
+                    return False
+                item_run_id = str(item.get("run_id") or "").strip()
+                if run_id and item_run_id and item_run_id != run_id:
+                    return False
+                # A legacy replay item with only the same numeric run must not
+                # suppress a fresh post-reset run.  Legacy ordinary queue rows
+                # remain idempotent when no stronger identity is available.
+                if (run_id and not item_run_id
+                        and (item.get("retry_group") or item.get("replay_target")
+                             or item.get("salvage_packages"))):
+                    return False
+                if review_epoch and not item_epoch and item.get("retry_group"):
+                    return False
+                return True
+            already_queued = any(same_live_run(item) for item in q["pending"])
             if not already_queued:
-                q["pending"].append({
+                already_queued = any(
+                    same_live_run(item)
+                    for item in _reviewing_items(q.get("reviewing")))
+            if not already_queued:
+                item = {
                     "run": runs, "time": time.strftime("%Y-%m-%d %H:%M"),
                     "profile_id": profile_id,
                     **queued_plan.as_queue_fields(),
                     "source": source,
-                })
+                }
+                if run_id:
+                    item["run_id"] = run_id
+                if review_epoch:
+                    item["review_epoch"] = review_epoch
+                q["pending"].append(item)
                 _save_queue_unlocked(q)
     except (ReviewQueueError, OSError) as exc:
         log(f"[llm] 复盘队列持久化失败，保留原队列且不推进节奏标记：{exc}")
@@ -4888,7 +5471,9 @@ def _salvage_recovery_needed() -> bool:
             except (OSError, ValueError, TypeError, json.JSONDecodeError):
                 continue
             if (manifest.get("replay_enqueue_pending")
-                    or manifest.get("retry_resolution_state") in host_states):
+                    and not manifest.get("replay_auto_requeue_blocked")):
+                return True
+            if manifest.get("retry_resolution_state") in host_states:
                 return True
     except OSError:
         return False
@@ -5174,22 +5759,200 @@ def _read_sandbox_text(repo: Path, relative: str, limit: int = 2 * 1024 * 1024) 
 
 
 def _copy_snapshot_file(source: Path, destination: Path) -> int:
-    """可停机的大文件复制；停止时原 clone 继续作为完整权威现场保留。"""
+    """可停机的大文件复制；停止时原 clone继续作为完整权威现场保留。
+
+    ``copytree(..., dirs_exist_ok=True)`` is intentionally used by deferred
+    salvage recovery so a partially copied package can be resumed.  A plain
+    ``destination.open("wb")`` followed by ``copystat`` is not resumable on
+    Windows, though: failed-review Git objects are commonly read-only and the
+    first pass copies that attribute onto the destination.  The next pass then
+    fails before it can reach the manifest transaction which clears the pointer.
+
+    Copy through a private sibling and restore a write bit after metadata copy.
+    This keeps an interrupted destination intact, makes retries idempotent, and
+    still preserves the source metadata that is useful for forensic inspection.
+    """
     source = Path(source)
     destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_symlink() or destination.is_symlink():
+        raise OSError("snapshot copy only accepts regular files")
+
+    def make_writable(path: Path) -> None:
+        """Clear the Windows read-only bit without changing other mode bits."""
+        try:
+            mode = stat.S_IMODE(path.stat().st_mode)
+            os.chmod(path, mode | stat.S_IWRITE)
+        except FileNotFoundError:
+            return
+        except OSError:
+            # The subsequent open/replace reports the authoritative error.  Do
+            # not turn a transient chmod failure into a false success.
+            pass
+
+    # A previous copy may have applied source directory metadata to the parent.
+    # Make the nearest existing parent writable before creating the destination.
+    parent = destination.parent
+    probe = parent
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    if probe.exists():
+        make_writable(probe)
+    parent.mkdir(parents=True, exist_ok=True)
+    make_writable(parent)
+    make_writable(destination)
+
+    temporary = destination.with_name(
+        f".{destination.name}.copy-{os.getpid()}-{threading.get_ident()}-"
+        f"{time.time_ns()}.tmp")
     total = 0
-    with source.open("rb") as reader, destination.open("wb") as writer:
-        while True:
-            if _review_stop_requested():
-                raise _ReviewStopped()
-            chunk = reader.read(1024 * 1024)
-            if not chunk:
-                break
-            writer.write(chunk)
-            total += len(chunk)
-    shutil.copystat(source, destination, follow_symlinks=False)
-    return total
+    try:
+        with source.open("rb") as reader, temporary.open("xb") as writer:
+            while True:
+                if _review_stop_requested():
+                    raise _ReviewStopped()
+                chunk = reader.read(1024 * 1024)
+                if not chunk:
+                    break
+                writer.write(chunk)
+                total += len(chunk)
+            writer.flush()
+            os.fsync(writer.fileno())
+        shutil.copystat(source, temporary, follow_symlinks=False)
+        # Keep evidence resumable.  On POSIX this only adds owner write; on
+        # Windows os.chmod also clears FILE_ATTRIBUTE_READONLY.
+        make_writable(temporary)
+        make_writable(destination)
+        os.replace(temporary, destination)
+        return total
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+_SNAPSHOT_COPY_MARKER_SCHEMA = 1
+
+
+def _snapshot_tree_signature(root: Path) -> dict:
+    """Return a bounded structural signature for a copied forensic tree.
+
+    The signature is deliberately metadata-only: full file hashes are computed
+    later by ``_materialize_retry_evidence``.  Here we only need to distinguish
+    a complete tree from a copy interrupted halfway through, including when the
+    source pointer has disappeared before the next worker starts.
+    """
+    root = Path(root)
+    if root.is_symlink() or not root.is_dir():
+        raise OSError(f"snapshot tree is not a real directory: {root}")
+    digest = hashlib.sha256()
+    file_count = 0
+    byte_count = 0
+    for walk_root, directories, files in os.walk(
+            root, topdown=True, followlinks=False):
+        base = Path(walk_root)
+        kept_dirs: list[str] = []
+        for name in sorted(directories):
+            path = base / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                target = os.readlink(path)
+                record = f"L\0{relative}\0{target}\n".encode("utf-8", "surrogateescape")
+                digest.update(record)
+            else:
+                kept_dirs.append(name)
+                digest.update(f"D\0{relative}\n".encode("utf-8"))
+        directories[:] = kept_dirs
+        for name in sorted(files):
+            path = base / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                target = os.readlink(path)
+                digest.update(
+                    f"L\0{relative}\0{target}\n".encode("utf-8", "surrogateescape"))
+                continue
+            size = path.stat().st_size
+            file_count += 1
+            byte_count += size
+            digest.update(f"F\0{relative}\0{size}\n".encode("utf-8"))
+    return {
+        "file_count": file_count,
+        "byte_count": byte_count,
+        "sha256": digest.hexdigest(),
+    }
+
+
+def _snapshot_copy_marker_path(package: Path, kind: str) -> Path:
+    if kind not in {"raw_sandbox", "captured_snapshot"}:
+        raise ValueError(f"unknown snapshot copy kind: {kind}")
+    return Path(package) / f".{kind}.copy-complete.json"
+
+
+def _publish_snapshot_copy_marker(
+        package: Path, kind: str, target: Path, source: Path) -> None:
+    """Publish a structural completion marker only after the tree is complete."""
+    signature = _snapshot_tree_signature(target)
+    marker = {
+        "schema": _SNAPSHOT_COPY_MARKER_SCHEMA,
+        "kind": kind,
+        "target": target.name,
+        "source_name": source.name,
+        "signature": signature,
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    path = _snapshot_copy_marker_path(package, kind)
+    temporary = path.with_name(
+        f".{path.name}.{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
+    try:
+        temporary.write_text(
+            json.dumps(marker, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _verified_snapshot_copy_marker(
+        package: Path, kind: str, target: Path) -> bool:
+    """Accept a source-less target only when its durable marker still matches."""
+    path = _snapshot_copy_marker_path(package, kind)
+    try:
+        marker = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(marker, dict)
+                or marker.get("schema") != _SNAPSHOT_COPY_MARKER_SCHEMA
+                or marker.get("kind") != kind
+                or marker.get("target") != target.name):
+            return False
+        expected = marker.get("signature")
+        if not isinstance(expected, dict):
+            return False
+        return _snapshot_tree_signature(target) == expected
+    except (FileNotFoundError, OSError, ValueError, TypeError,
+            json.JSONDecodeError):
+        return False
+
+
+def _make_snapshot_tree_writable(root: Path) -> None:
+    """Make an existing partial destination resumable after source copystat."""
+    root = Path(root)
+    if not root.exists() or root.is_symlink() or not root.is_dir():
+        return
+    for walk_root, directories, files in os.walk(
+            root, topdown=True, followlinks=False):
+        base = Path(walk_root)
+        directories[:] = [
+            name for name in directories if not (base / name).is_symlink()]
+        for name in (*directories, *files):
+            path = base / name
+            if path.is_symlink():
+                continue
+            try:
+                os.chmod(path, stat.S_IMODE(path.stat().st_mode) | stat.S_IWRITE)
+            except OSError:
+                # The copy operation will fail closed if this path remains
+                # unwritable; do not silently mark a partial tree complete.
+                continue
+        try:
+            os.chmod(base, stat.S_IMODE(base.stat().st_mode) | stat.S_IWRITE)
+        except OSError:
+            continue
 
 
 def _capture_sandbox_wip(repo: Path, pre_head: str,
@@ -8268,6 +9031,8 @@ def _file_sha256(path: Path) -> str:
 def _save_review_salvage(
     pre_head: str, reason: str, sandbox: SandboxReviewResult, *,
     batch_runs: list[int] | None = None, runner: str = "opencode",
+    batch_run_ids: list[str] | None = None,
+    review_epoch: str | None = None,
     model: str = "", source: str = "", backend_key: str = "",
     variant: str = "", reasoning_effort: str = "",
     priority: int = 1, approve_for_me: bool = False,
@@ -8333,6 +9098,23 @@ def _save_review_salvage(
     target_name = _normalize_salvage_package_names([replay_target])
     target_name = target_name[0] if target_name else name
     replay_role = "attempt_evidence" if target_name != name else "target"
+    normalized_batch_runs: list[int] = []
+    for value in (batch_runs or []):
+        try:
+            run = int(value)
+        except (TypeError, ValueError):
+            continue
+        if run > 0:
+            normalized_batch_runs.append(run)
+    stable_run_ids = _normalized_run_ids(
+        batch_run_ids, expected_len=len(normalized_batch_runs))
+    if batch_run_ids and not stable_run_ids:
+        log("[llm] 失败包 run_id 列表不完整/重复；按 evidence-only 保存，"
+            "不把数字局号当作原局证据")
+    resolved_review_epoch = str(
+        review_epoch or _profile_review_epoch(profile_id=
+                                               _current_profile_paths().profile_id)
+        or "").strip()
     queue_ids = list(dict.fromkeys(
         str(value) for value in (replay_queue_ids or []) if str(value)))
     final = SALVAGE_ROOT / name
@@ -8346,7 +9128,9 @@ def _save_review_salvage(
         "reason": reason,
         "pre_head": pre_head,
         "current_head": _current_head_for_salvage(),
-        "batch_runs": list(batch_runs or []),
+        "batch_runs": normalized_batch_runs,
+        "batch_run_ids": stable_run_ids,
+        "review_epoch": resolved_review_epoch,
         "runner": runner,
         "model": model,
         "backend_key": backend_key,
@@ -8365,6 +9149,7 @@ def _save_review_salvage(
             or sandbox.failure_code in {
                 "runner_cli_preflight", "review_sandbox_acl_preflight",
                 "runner_codex_filesystem_preflight",
+                _PROVIDER_RATE_LIMIT_FAILURE_CODE,
             }),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
@@ -8378,6 +9163,18 @@ def _save_review_salvage(
             dict(sandbox.provider_metrics)
             if isinstance(getattr(sandbox, "provider_metrics", None), dict)
             else {}),
+        # Keep a compact, queryable copy of a provider 429 classification in the
+        # salvage manifest.  The full translator metrics/transcript remain the
+        # forensic source; this field only drives safe sticky requeue recovery.
+        "provider_rate_limit": (
+            dict(sandbox.provider_metrics.get("rate_limit") or {})
+            if isinstance(getattr(sandbox, "provider_metrics", None), dict)
+            and isinstance(sandbox.provider_metrics.get("rate_limit"), dict)
+            else {}),
+        "provider_rate_limit_detected": bool(
+            isinstance(getattr(sandbox, "provider_metrics", None), dict)
+            and (sandbox.provider_metrics.get("rate_limit_detected")
+                 or sandbox.provider_metrics.get("rate_limited"))),
         "provider_work_started": bool(
             getattr(sandbox, "provider_work_started", False)),
         "provider_transcript_rel": (
@@ -9137,22 +9934,36 @@ def _recover_deferred_salvages(log=print) -> None:
                 if not _is_owned_review_temp(raw, "sts2-review-sandbox-"):
                     raise OSError(f"不安全的 raw sandbox 指针：{raw}")
                 target = package / "raw_sandbox"
-                if not raw.is_dir() and not target.exists():
-                    raise OSError(f"raw sandbox 已不存在：{raw}")
-                if raw.is_dir():
+                if target.is_symlink() or getattr(target, "is_junction", lambda: False)():
+                    raise OSError(f"raw sandbox 目标是链接，拒绝写入：{target}")
+                source_available = raw.is_dir() and not raw.is_symlink()
+                if not source_available:
+                    # A pointer may outlive the temporary clone (for example
+                    # after an orderly cleanup).  Only a marker published after
+                    # a complete copy can prove that an existing target is safe;
+                    # a merely present/partial directory is never promoted.
+                    if (not target.is_dir()
+                            or not _verified_snapshot_copy_marker(
+                                package, "raw_sandbox", target)):
+                        raise OSError(
+                            f"raw sandbox 源已不存在且目标没有完整复制证明：{raw}")
+                if source_available:
                     # manifest/pointer remains deferred until copytree returns;
                     # a partial target is safely completed on the next retry.
+                    _make_snapshot_tree_writable(target)
                     shutil.copytree(
                         raw, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
+                    _publish_snapshot_copy_marker(
+                        package, "raw_sandbox", target, raw)
                 manifest.update({
                     "raw_sandbox_included": True,
                     "raw_sandbox_deferred": False,
                     "raw_sandbox_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
                 cleanup = (SandboxReviewResult(retained_sandbox_dir=str(raw))
-                           if raw.is_dir() else None)
+                           if source_available else None)
                 completed.append((raw_pointer, cleanup))
 
             if snapshot_pointer.is_file():
@@ -9161,20 +9972,30 @@ def _recover_deferred_salvages(log=print) -> None:
                 if not _is_owned_review_temp(snapshot, "sts2-review-snapshot-"):
                     raise OSError(f"不安全的 snapshot 指针：{snapshot}")
                 target = package / "captured_snapshot"
-                if not snapshot.is_dir() and not target.exists():
-                    raise OSError(f"snapshot 已不存在：{snapshot}")
-                if snapshot.is_dir():
+                if target.is_symlink() or getattr(target, "is_junction", lambda: False)():
+                    raise OSError(f"snapshot 目标是链接，拒绝写入：{target}")
+                source_available = snapshot.is_dir() and not snapshot.is_symlink()
+                if not source_available:
+                    if (not target.is_dir()
+                            or not _verified_snapshot_copy_marker(
+                                package, "captured_snapshot", target)):
+                        raise OSError(
+                            f"snapshot 源已不存在且目标没有完整复制证明：{snapshot}")
+                if source_available:
+                    _make_snapshot_tree_writable(target)
                     shutil.copytree(
                         snapshot, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
+                    _publish_snapshot_copy_marker(
+                        package, "captured_snapshot", target, snapshot)
                 manifest.update({
                     "snapshot_included": True,
                     "snapshot_deferred": False,
                     "snapshot_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
                 cleanup = (SandboxReviewResult(snapshot_dir=str(snapshot))
-                           if snapshot.is_dir() else None)
+                           if source_available else None)
                 completed.append((snapshot_pointer, cleanup))
 
             manifest_temp = package / (
@@ -9771,20 +10592,53 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
         if outcome == "deferred":
             pending = list(q.get("pending", []))
             seen = {_queue_item_identity(item) for item in pending}
-            ready_at = time.time() + 60.0
+            now = time.time()
+            delays: list[float] = []
             for item in batch:
                 identity = _queue_item_identity(item)
                 if identity in seen:
                     continue
                 deferred = dict(item)
+                deferred_count = int(deferred.get("deferred_count", 0) or 0) + 1
+                deferred_kind = str(deferred.get("deferred_kind") or "")
+                explicit_rate_delay = (
+                    deferred.get("deferred_retry_after_seconds")
+                    if deferred_kind == _PROVIDER_RATE_LIMIT_DEFERRED_KIND
+                    else None)
+                if explicit_rate_delay is not None:
+                    delay = _bounded_provider_retry_delay(explicit_rate_delay)
+                else:
+                    delay = min(
+                        _REVIEW_DEFERRED_MAX_SECONDS,
+                        _REVIEW_DEFERRED_BASE_SECONDS
+                        * (2 ** min(deferred_count - 1, 20)),
+                    )
+                deferred["deferred_count"] = deferred_count
                 deferred["retry_after"] = max(
-                    float(deferred.get("retry_after", 0) or 0), ready_at)
+                    float(deferred.get("retry_after", 0) or 0), now + delay)
+                # A provider supplied a bounded retry window; keep reusing the
+                # same runner/model instead of parking the lineage in the host
+                # preflight hold after five responses.
+                if (deferred_kind != _PROVIDER_RATE_LIMIT_DEFERRED_KIND
+                        and deferred_count >= _REVIEW_DEFERRED_HOLD_AFTER):
+                    hold_until = now + _REVIEW_DEFERRED_HOLD_SECONDS
+                    deferred["deferred_hold_until"] = max(
+                        float(deferred.get("deferred_hold_until", 0) or 0),
+                        hold_until)
+                    deferred.setdefault(
+                        "deferred_reason",
+                        "host/preflight 连续不可用，等待维护或显式重审唤醒")
+                    log(
+                        f"[llm] 复盘批次连续主机延迟 {deferred_count} 次；"
+                        f"暂挂至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(hold_until))}，"
+                        "不再占用重试队首")
                 pending.append(deferred)
                 seen.add(identity)
+                delays.append(float(delay))
             q["pending"] = pending
             q["reviewing"] = None
             _save_queue_unlocked(q)
-            return 60.0
+            return max(delays, default=0.0)
         if outcome not in {"failed", "replay_pending"}:
             return 0.0
 
@@ -9804,6 +10658,8 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
                 retry_item.update({
                     "retry_count": retry_count,
                     "retry_after": time.time() + delay,
+                    "deferred_count": 0,
+                    "deferred_hold_until": 0,
                     # A model field is only a preference hint on fresh queued work.
                     # Sticky affinity must be explicitly published before launch
                     # or recovered from a provider-started failure manifest.
@@ -10262,6 +11118,28 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
         log(f"[llm] {plan.display_model} 复盘提交回执：commit={status['commit'][:12]} "
             f"pushed={bool(status.get('pushed'))}")
     outcome = status.get("outcome", "changed" if executed else "failed")
+    if (outcome == "deferred"
+            and status.get("deferred_kind") == _PROVIDER_RATE_LIMIT_DEFERRED_KIND):
+        # Carry the server-advised delay on each queue item.  The finalizer uses
+        # this explicit value instead of charging the ordinary model retry
+        # backoff, while the already-published plan/salvage fields remain intact.
+        rate_delay = _bounded_provider_retry_delay(
+            status.get("retry_after_seconds"), load_llm_config())
+        rate_reason = str(
+            status.get("deferred_reason") or status.get("reason")
+            or "provider HTTP 429")[:800]
+        ready_at = time.time() + rate_delay
+        for item in batch:
+            item["retry_same_model"] = True
+            item["deferred_kind"] = _PROVIDER_RATE_LIMIT_DEFERRED_KIND
+            item["deferred_reason"] = rate_reason
+            item["deferred_retry_after_seconds"] = rate_delay
+            try:
+                previous_ready = float(item.get("retry_after", 0) or 0)
+            except (TypeError, ValueError, OverflowError):
+                previous_ready = 0.0
+            item["retry_after"] = max(previous_ready, ready_at)
+        _persist_reviewing_batch_metadata(batch, log=log)
     if outcome == "canceled" or status.get("canceled"):
         return "canceled"
     if outcome == "deferred":
@@ -10272,6 +11150,9 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
             log("[llm] 复盘宿主启动预检失败；模型未工作、未冷却，"
                 f"保留 {plan.display_model} 原批次亲和性后延迟重试："
                 f"{status.get('reason', '本地 CLI 参数错误')}")
+        elif status.get("deferred_kind") == _PROVIDER_RATE_LIMIT_DEFERRED_KIND:
+            log("[llm] provider HTTP 429；不记 preferred cooldown、不切换模型，"
+                f"保留 {plan.display_model} 原批次亲和性，{rate_delay:.0f}s 后重试")
         else:
             log("[llm] 失败包证据预检尚未就绪；provider 未启动，"
                 f"保留 {plan.display_model} 原批次亲和性后延迟重试："
