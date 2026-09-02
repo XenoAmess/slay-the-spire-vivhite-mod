@@ -283,6 +283,10 @@ py -3 -B .\tools\promo\render_capture_candidate.py `
 找不到或发现多个 receipt 会直接失败。每个输出仍需独立的 xAR 技术审计、白绮
 语义审计和人工 1.0× 审看后，才可进入 signoff/export。
 
+`--output-root` 必须是尚不存在的新 sibling run；脚本会记录实际 xAR source
+commit，并在每个 variant 前后复核 raw、contract、旁白和 FFmpeg/ffprobe 字节，
+任何输入变化都会保留已生成的 partial、拒绝写入 batch manifest。
+
 ## 故障处理
 
 预检、录制、渲染或审计失败时保留完整原始文件、partial、日志和失败报告，创建
