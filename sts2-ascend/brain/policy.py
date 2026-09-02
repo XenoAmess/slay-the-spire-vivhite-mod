@@ -2841,321 +2841,15 @@ class Policy:
         return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
 
 
-    def _combat(self, state: dict, ctx) -> Decision:
-        combat = state.get("combat") or {}
-        player = combat.get("player") or {}
-        # 应急按钮族施加 NO_BLOCK_POWER 后，卡牌格挡面在锁窗内无效。
-        block_locked = any(
-            "NO_BLOCK" in str(power.get("power_id") or power.get("id")
-                              or power.get("power") or "").upper()
-            or (power.get("name") or "") == "不可格挡"
-            for power in (player.get("powers") or [])
-            if isinstance(power, dict))
-        enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
-        hand = self._enrich_cards(combat.get("hand", []))
-        energy = player.get("energy", 0)
-        round_no = state.get("turn") or 1
-        pol = self.know.policy
-        actions = state.get("available_actions", [])
-        can_play = "play_card" in actions
-        can_end = "end_turn" in actions
+    def _combat_kill_race_projection(
+            self, state, cctx, pol, enemies, hand, incoming, my_hp,
+            my_max_hp, my_block, round_no, stance, stance_defensive_tone,
+            race_allin, danger_note):
+        """斩杀竞速投影与竞速姿态改写（从 _combat 提取，行为严格等价）。
 
-        # Round numbers restart at one for every combat.  Pair them with the Agent's
-        # stable combat object; otherwise a T1→T1 transition can inherit “already saw
-        # playable cards” and end the new combat's still-loading opening hand early.
-        if self._turn_combat is not ctx.combat or self._cur_turn != round_no:
-            self._turn_combat = ctx.combat
-            self._cur_turn = round_no
-            self._failed_this_turn = set()
-            self._failed_hand_len = -1
-            self._saw_playable_this_turn = False
-            self._end_stall = 0
-            self._terminal_life_lock_signature = None
-            self._terminal_life_lock_stall = 0
-        # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
-        # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
-        # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
-        if len(hand) != self._failed_hand_len:
-            self._failed_this_turn = set()
-            self._card_cooldowns = {}
-        self._failed_hand_len = len(hand)
-        if self._potion_combat is not ctx.combat:
-            self._potion_combat = ctx.combat
-            self._potion_tried = set()
-            self._potion_cooldowns = {}
-        if self._novel_trial_combat is not ctx.combat:
-            self._novel_trial_combat = ctx.combat
-            self._novel_trials = set()
-        if self._kills_combat is not ctx.combat:
-            self._kills_combat = ctx.combat
-            self._combat_kills = {}
-            self._respawn_reported = set()
-        # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
-        # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
-        if ctx.combat is None or self._race_combat is not ctx.combat:
-            self._race_combat = ctx.combat
-            self._race_round = None
-            self._race_prev_hp = None
-            self._race_loss_rate = 0.0
-            self._race_rounds = 0
-            self._race_tick_round = None
-            self._race_tick_hp = None
-            self._race_same_round_heal = 0.0
-            self._race_same_round_loss = 0.0
-            self._race_zero_intent_rounds = 0
-            self._intent_prev = 0
-            self._intent_trend = 0
-            self._krace_dmg = 0.0
-            self._krace_turns = 0
-            self._krace_round = None
-            self._krace_latch = False
-            self._krace_dmg_sustained = 0.0
-            self._krace_potion_rounds = set()
-            self._incoming_ema = 0.0
-            self._esc_rounds = 0
-            self._intent_spike_from_zero = False
-            # 竞速投影错账审计（第802~807局批复盘闭环实验 RACE_PROJ_CALIB_AUDIT，
-            # 观测位不改判定）：stance 成长型反向偏置积案已至 ≥4 例（719/723 局
-            # FUZZY 型竞速误报白损 25~30 血/次）——本账只在判死入锁时记账，
-            # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
-            # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
-            self._race_audit = {"latched": False, "latch_round": None, "esc": False}
-        # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
-        # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
-        if self._focus_combat is not ctx.combat:
-            self._focus_combat = ctx.combat
-            self._focus_index = None
-
-        if not enemies:
-            # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
-            # 旧逻辑直接结束回合白扔能量（整轮输出窗口作废，战斗被拖长多吃意图）。
-            # 手牌能量俱在时先等几个 tick，过场通常会自行恢复。
-            if can_end:
-                playable_left = any(c.get("playable") and c.get("energy_cost", 0) <= energy
-                                    for c in hand)
-                if playable_left and energy > 0:
-                    self._phase_stall += 1
-                    if self._phase_stall <= 6:
-                        return Decision(None, {}, f"战斗：暂无可打目标但手牌能量俱在（疑似转阶段过场），等待（{self._phase_stall}/6）", wait=0.7)
-                    self._phase_stall = 0
-                    return Decision("end_turn", {}, "战斗：转阶段等待超时，结束回合保底", wait=1.0)
-                self._phase_stall = 0
-                return Decision("end_turn", {}, "战斗：场上无有效敌人，结束回合", wait=1.0)
-            return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
-        self._phase_stall = 0
-
-        # ---- 战斗僵局检测与升级（提取为 _combat_stall_check）----
-        enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
-        stall_dec = self._combat_stall_check(ctx, enemy_hp_total, round_no,
-                                             can_end)
-        if stall_dec is not None:
-            return stall_dec
-
-        incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
-        my_block = player.get("block", 0)
-        my_hp = player.get("current_hp", 1)
-        my_max_hp = max(1, player.get("max_hp", my_hp))
-        block_gap = max(0, incoming - my_block)
-
-        # 敌方血池/火力观测写入侧（第 214 批补全）：第 138~141 批铺好了 agent 合并
-        # 与 knowledge 入库/读取端，但本写入侧在复盘回滚中丢失——全库 hp_pool_n=0、
-        # fire_rounds=0，boss_vitals_worst 恒 (None,None)，「Boss 攻坚投影」成了
-        # 无米之炊。血池只在见到本战斗实例的首个有效帧采样（召唤物尚未登场，天然
-        # 贴合「非召唤杂兵」口径，多阶段战斗逐段各采、agent 端取最大段）；火力按
-        # 回合边界采格挡前意图总伤。消费端（攻坚投影/篝火精算）留待后续复盘接线
-        if isinstance(ctx.combat, dict):
-            if self._vit_combat is not ctx.combat:
-                self._vit_combat = ctx.combat
-                self._vit_pool_max = 0.0
-                self._vit_fire_sum = 0.0
-                self._vit_fire_rounds = 0
-                self._vit_round_seen = None
-            if self._vit_pool_max <= 0.0:
-                pool = sum(float(e.get("max_hp", 0) or 0) for e in combat.get("enemies", [])
-                           if e.get("is_alive"))
-                if pool > 0.0:
-                    self._vit_pool_max = pool
-            if self._vit_round_seen != round_no:
-                self._vit_round_seen = round_no
-                self._vit_fire_sum += float(incoming)
-                self._vit_fire_rounds += 1
-            ctx.combat["obs_hp_pool"] = self._vit_pool_max
-            ctx.combat["obs_fire_sum"] = self._vit_fire_sum
-            ctx.combat["obs_fire_rounds"] = self._vit_fire_rounds
-
-        # 败局竞速采样：回合边界记录净损血 EMA。必须比较「上一回合开始」与
-        # 「本回合开始」，才能把本回合内的自损费用、汲取/其他回血、格挡与敌方
-        # 行动一起纳入真实生存账。旧代码在每个决策 tick 都覆盖 _race_prev_hp，
-        # 实际只量到了回合结束后的敌方伤害；白绮的謦欬与汲取被同时抹掉，Boss
-        # 的零伤害行动也会被下一次高意图覆盖，6D0T5BPUDMG6-F17 因此在 T3 把
-        # 实际 9 回合获胜的续航战误判为只剩 3~4 回合。
-        # 同回合逐 tick 差值只作「已经真实发生过回血/自损」的窄门证据；不拿
-        # 预测卡面值替代实测，也不把跨回合敌方伤害误记成謦欬。
-        if self._race_tick_round == round_no and self._race_tick_hp is not None:
-            _same_round_delta = float(my_hp) - float(self._race_tick_hp)
-            if _same_round_delta > 0.0:
-                self._race_same_round_heal += _same_round_delta
-            elif _same_round_delta < 0.0:
-                self._race_same_round_loss += -_same_round_delta
-        self._race_tick_round = round_no
-        self._race_tick_hp = my_hp
-
-        if self._race_round != round_no:
-            self._intent_spike_from_zero = False
-            _previous_intent = int(self._intent_prev or 0)
-            if self._race_round is not None and self._race_prev_hp is not None:
-                # 保留负值：回合首血量上升就是本场续航已经兑现，不应裁成 0 后
-                # 又回退到敌方原始意图。EMA 仍让最近回合拥有更高权重。
-                loss = float(self._race_prev_hp - my_hp)
-                self._race_loss_rate = (loss if self._race_rounds == 0
-                                        else 0.7 * self._race_loss_rate + 0.3 * loss)
-                self._race_rounds += 1
-            # 意图升级轨迹采样（第 84~85 批复盘）：84 局毛绒伏地虫战意图
-            # 4→7→24→18→9→25→31、85 局仪式兽 Boss 战 18→20→22→24→26——
-            # 升级型敌人每拖一轮就更难挡，而旧引擎只看"本回合意图"，在升级
-            # 前夜（低意图回合）照常倾泻输出，两局均在意图跳升后 2~3 回合内死亡。
-            # 回合边界记录增量，供姿态层提前抬防御/紧急线
-            if self._race_rounds >= 1:
-                self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
-                self._intent_spike_from_zero = (
-                    _previous_intent <= 0 and int(incoming) > 0)
-                # 持续升级计数（第 92~93 批复盘）：93 局 FUZZY+SHRINKER 战意图
-                # 4→7→24→18→13→25→31 滚雪球——单看「本回合跳升」会把它当一次性
-                # 事件防御前置，而滚雪球的正确读法是「每拖一轮都更贵」。
-                # 趋势≥2 的边界累计出现 2 次即认定持续升级（供竞速投影开门）
-                if self._intent_trend >= 2:
-                    self._esc_rounds += 1
-            else:
-                self._intent_trend = 0
-            if int(incoming) <= 0:
-                self._race_zero_intent_rounds += 1
-            # 意图 EMA（第 90~91 批复盘）：斩杀竞速投影的「可存活回合」分母——
-            # 净损速率含我方格挡决策的净效果，开局头两回合用它会被格挡稀释，
-            # 意图 EMA 才是敌人火力本身的账
-            if self._race_rounds == 0:
-                self._incoming_ema = float(incoming)
-            else:
-                self._incoming_ema = 0.7 * self._incoming_ema + 0.3 * float(incoming)
-            self._intent_prev = int(incoming)
-            self._race_round = round_no
-            # 只在回合边界更新；同回合出牌后的謦欬/汲取不能覆盖起点。
-            self._race_prev_hp = my_hp
-
-        if not can_play:
-            # 接口就绪阶梯（提取段，行为与原内联实现严格等价）：
-            # 回合过渡/謦欬致死锁/结算等待闸门的全部分支见 _combat_readiness_wait
-            return self._combat_readiness_wait(
-                state, ctx, combat, player, hand, energy, round_no, pol,
-                can_end, my_hp, my_block, incoming)
-        self._end_stall = 0
-        self._saw_playable_this_turn = True
-        self._terminal_life_lock_signature = None
-        self._terminal_life_lock_stall = 0
-
-        # 敌方组合历史战绩 → 战斗姿态与药水门槛的共同输入，必须先于药水分级读取：
-        # 高危组合自动转防守（见 knowledge.enemy_stance；Boss 房间反转姿态：
-        # 斩杀线不足时压攻击=拖长战斗多吃意图）。第 64 局实证：
-        # FLYCONID+SNAPPING_JAXFRUIT 场均掉血 25.8（32% 血条）但死亡率仅 15%，
-        # 姿态中性 + 药水被"非精英房不用"锁死，异鱼之油拖到 9 血才掏出来。
-        cctx = getattr(ctx, "combat", None) or {}
-        comp_id = cctx.get("comp_id") or None
-        stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
-        comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
-        ramp_relief_note = self._apply_growth_ramp_stance_relief(
-            stance, comp_id, cctx.get("node_type"),
-            getattr(self, "_esc_rounds", 0))
-        # 姿态方向决定文案（第 84~85 批复盘）：高危 Boss 姿态实为提速进攻，
-        # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志。
-        # tone 记入独立变量：若后续斩杀竞速投影解除防御压制（93 局实证），
-        # 文案必须同步改写——矛盾留痕等于投毒复盘
-        stance_defensive_tone = False
-        if stance.get("danger"):
-            stance_defensive_tone = stance.get("atk_mult", 1.0) < 1.0
-            tone = "提速斩杀" if not stance_defensive_tone else "转防守节奏"
-            danger_note = f"；⚠{stance['danger']}，{tone}"
-            if ramp_relief_note:
-                danger_note += f"；{ramp_relief_note}"
-        else:
-            danger_note = ""
-        # 税负战斗防守姿态成本观测（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
-        # 812-F9 全链实证——PHROG 塞手的 INFECTION「不能被打出，回合结束时每张
-        # 3伤」不进格挡结算管线，高危组合姿态「转防守节奏」把战斗拖长，每多拖
-        # 一轮多付 3~12 点不可格挡税；姿态的 blk_mult 只挡意图挡不住税，
-        # 防守节奏在税负战斗里反向放大成本（807-F23 毒素两回合 20 点同族）。
-        # 本观测位只在「高危防守姿态 × 手牌税>0」交集出现时把税额与构成追加进
-        # 战斗留痕，供复盘按独立对局计数「防守节奏 × 税负复利」共现率，为姿态端
-        # 折减/提速行为化预注册供数；分值、判决、姿态零改动（纯观测锚）。
-        # hand_tax_stance_obs=false 即整体关闭。
-        if stance_defensive_tone and bool(pol.get("hand_tax_stance_obs", True)):
-            _stance_tax, _stance_tax_detail = hand_end_turn_tax(hand)
-            if _stance_tax > 0:
-                danger_note += (
-                    f"；税负战斗防守观测：手牌税{_stance_tax:.0f}/回合随拖延复利"
-                    f"（HAND_TAX_STANCE_OBS:{_stance_tax_detail}）")
-        # 意图升级防御前置（第 84~85 批复盘）：升级型敌人意图跳升回合，
-        # 格挡价值与紧急线同步上调——现在多挡一点，是为升级后的更难回合买血
-        esc = int(getattr(self, "_intent_trend", 0) or 0)
-        if esc > 0:
-            stance["blk_mult"] = round(stance.get("blk_mult", 1.0) * (1.0 + min(0.24, 0.04 * esc)), 3)
-            stance["urgent_hp_pct"] = round(min(0.65, stance.get("urgent_hp_pct", 0.45) + min(0.10, 0.02 * esc)), 3)
-            danger_note += f"；意图升级+{esc}，防御前置"
-        # Boss 攻坚提速（第 82~83 批复盘）：生涯死亡榜前四名中三个是 Boss
-        # （同族双子 190+58 血 12 死、仪式兽 252 血 10 死、墨影幻灵 173 血 8 死），
-        # Boss 意图逐轮升级、拖一轮就多吃一轮整套意图——第 82 局以 95% 血进
-        # 一幕 Boss 仍被两阶段共 81 点战损处决。全体 Boss 战给攻击评分加全局
-        # 乘区（与高危姿态叠加），缩短战斗本身就是最大的减伤。
-        if cctx.get("node_type") == "Boss":
-            boss_boost = float(pol.get("boss_atk_mult", 1.15))
-            if boss_boost > 1.0:
-                stance["atk_mult"] = round(stance.get("atk_mult", 1.0) * boss_boost, 3)
-                danger_note += f"；Boss攻坚提速×{boss_boost:.2f}"
-
-        # 药水使用门槛：精英/Boss、致死威胁、"低血量且有缺口"，以及
-        # "敌方组合本身就是硬仗"（场均战损 ≥ potion_comp_loss_frac × 最大生命——
-        # 对这类组合按普通战囤药水等于把救命资源带进坟墓）。
-        # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
-        # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
-        # 低血线接 potion_block_hp_pct（第 236 局复盘）：block_safety 顶格后
-        # 爆毙证据的接替旋钮——TNWN 局 40%~50% 血的硬仗干瞪眼、拖到 10/80
-        # 才喝药；交药线随演化提前，放血判定与防御/回复分支共用同一条线
-        # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
-        # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
-        # 唯一可能翻转时间线的动作是抢在死亡倒计时之前终止战斗。
-        # 该判定只依赖已采样的净损 EMA 与当前血量，上移到药水判定之前——
-        # 竞速判死（race_allin 本 tick / _krace_latch 此前 tick 已武装的
-        # 斩杀竞速迟滞锁）同样是「值得动用增益药水」的弹药全押场合，
-        # 旧顺序下投影判死的战斗与 premium 各门槛全部错开时药水进不了场
-        race_allin = (
-            self._race_rounds >= 1 and self._race_loss_rate >= 1.0
-            and my_hp <= float(pol.get("hopeless_race_hp_frac", 0.6)) * my_max_hp
-            and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
-        )
-        _potion_line = float(pol.get("potion_block_hp_pct", 0.35))
-        low_hp_bleeding = my_hp <= _potion_line * my_max_hp and block_gap > 0
-        # premium：值得动用增益药水的场合（硬房/真致死/高危组合/意图滚雪球确认）。
-        # 普通消耗战哪怕低血也留着——第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，
-        # Boss 战空手阵亡。姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损
-        # 0.30×血条）比姿态门槛（0.25 / 0.28×血条）更迟钝，头号杀手 FUZZY+SHRINKER
-        # （29.3%/场均18.7<24）恰好从两条药水门槛的缝隙漏网——88 局 F8 姿态系统
-        # 从第 1 回合就警告「⚠高危组合」，攻击药水却被锁到 20 血、格挡药水 33 血才
-        # 掏出（意图已滚到 38）。同一份历史证据已经把姿态推入防守，药水门必须同步
-        # 开启，否则「知道危险」和「动用储备」脱节。
-        # 意图滚雪球确认（_esc_rounds≥2，第 255 批复盘补第四条缝）：低死亡率低战损
-        # 的升级型组合（252 局 F5 劫掠者三连，8 战仅 1 死、场均 26.4 恰好压线）
-        # 三条历史门槛全部漏网，能量药水睡到 19 血才掏——增益的价值随剩余战斗
-        # 时长衰减，等血量跌破线再喝等于把复利窗口烧掉；持续升级确认即视为硬仗
-        premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
-                       or block_gap >= my_hp
-                       or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp
-                       or bool(stance.get("danger"))
-                       or getattr(self, "_esc_rounds", 0) >= 2
-                       or race_allin
-                       or bool(getattr(self, "_krace_latch", False)))
-        hard = (premium or low_hp_bleeding)
-        potion_dec = self._maybe_potion(state, ctx, hard, premium)
-        if potion_dec is not None:
-            return potion_dec
-
+        返回 (kill_race, all_respawn, stance, danger_note)：stance 在段内被
+        竞速姿态改写原地调整并显式返回；danger_note 累加竞速对账留痕。
+        """
         # 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地）：
         # 91 局一幕 Boss 战实证——65 血入场、输出 ~25/回合、仪式兽 252 血，
         # 击杀需 ~9 回合而意图 18→24 每回合滚升，引擎却还在用挑衅(挡6)/武装
@@ -3481,6 +3175,331 @@ class Policy:
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
+        return kill_race, all_respawn, stance, danger_note
+
+
+    def _combat(self, state: dict, ctx) -> Decision:
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+        # 应急按钮族施加 NO_BLOCK_POWER 后，卡牌格挡面在锁窗内无效。
+        block_locked = any(
+            "NO_BLOCK" in str(power.get("power_id") or power.get("id")
+                              or power.get("power") or "").upper()
+            or (power.get("name") or "") == "不可格挡"
+            for power in (player.get("powers") or [])
+            if isinstance(power, dict))
+        enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
+        hand = self._enrich_cards(combat.get("hand", []))
+        energy = player.get("energy", 0)
+        round_no = state.get("turn") or 1
+        pol = self.know.policy
+        actions = state.get("available_actions", [])
+        can_play = "play_card" in actions
+        can_end = "end_turn" in actions
+
+        # Round numbers restart at one for every combat.  Pair them with the Agent's
+        # stable combat object; otherwise a T1→T1 transition can inherit “already saw
+        # playable cards” and end the new combat's still-loading opening hand early.
+        if self._turn_combat is not ctx.combat or self._cur_turn != round_no:
+            self._turn_combat = ctx.combat
+            self._cur_turn = round_no
+            self._failed_this_turn = set()
+            self._failed_hand_len = -1
+            self._saw_playable_this_turn = False
+            self._end_stall = 0
+            self._terminal_life_lock_signature = None
+            self._terminal_life_lock_stall = 0
+        # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
+        # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
+        # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
+        if len(hand) != self._failed_hand_len:
+            self._failed_this_turn = set()
+            self._card_cooldowns = {}
+        self._failed_hand_len = len(hand)
+        if self._potion_combat is not ctx.combat:
+            self._potion_combat = ctx.combat
+            self._potion_tried = set()
+            self._potion_cooldowns = {}
+        if self._novel_trial_combat is not ctx.combat:
+            self._novel_trial_combat = ctx.combat
+            self._novel_trials = set()
+        if self._kills_combat is not ctx.combat:
+            self._kills_combat = ctx.combat
+            self._combat_kills = {}
+            self._respawn_reported = set()
+        # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
+        # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
+        if ctx.combat is None or self._race_combat is not ctx.combat:
+            self._race_combat = ctx.combat
+            self._race_round = None
+            self._race_prev_hp = None
+            self._race_loss_rate = 0.0
+            self._race_rounds = 0
+            self._race_tick_round = None
+            self._race_tick_hp = None
+            self._race_same_round_heal = 0.0
+            self._race_same_round_loss = 0.0
+            self._race_zero_intent_rounds = 0
+            self._intent_prev = 0
+            self._intent_trend = 0
+            self._krace_dmg = 0.0
+            self._krace_turns = 0
+            self._krace_round = None
+            self._krace_latch = False
+            self._krace_dmg_sustained = 0.0
+            self._krace_potion_rounds = set()
+            self._incoming_ema = 0.0
+            self._esc_rounds = 0
+            self._intent_spike_from_zero = False
+            # 竞速投影错账审计（第802~807局批复盘闭环实验 RACE_PROJ_CALIB_AUDIT，
+            # 观测位不改判定）：stance 成长型反向偏置积案已至 ≥4 例（719/723 局
+            # FUZZY 型竞速误报白损 25~30 血/次）——本账只在判死入锁时记账，
+            # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
+            # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
+            self._race_audit = {"latched": False, "latch_round": None, "esc": False}
+        # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
+        # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
+        if self._focus_combat is not ctx.combat:
+            self._focus_combat = ctx.combat
+            self._focus_index = None
+
+        if not enemies:
+            # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
+            # 旧逻辑直接结束回合白扔能量（整轮输出窗口作废，战斗被拖长多吃意图）。
+            # 手牌能量俱在时先等几个 tick，过场通常会自行恢复。
+            if can_end:
+                playable_left = any(c.get("playable") and c.get("energy_cost", 0) <= energy
+                                    for c in hand)
+                if playable_left and energy > 0:
+                    self._phase_stall += 1
+                    if self._phase_stall <= 6:
+                        return Decision(None, {}, f"战斗：暂无可打目标但手牌能量俱在（疑似转阶段过场），等待（{self._phase_stall}/6）", wait=0.7)
+                    self._phase_stall = 0
+                    return Decision("end_turn", {}, "战斗：转阶段等待超时，结束回合保底", wait=1.0)
+                self._phase_stall = 0
+                return Decision("end_turn", {}, "战斗：场上无有效敌人，结束回合", wait=1.0)
+            return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
+        self._phase_stall = 0
+
+        # ---- 战斗僵局检测与升级（提取为 _combat_stall_check）----
+        enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
+        stall_dec = self._combat_stall_check(ctx, enemy_hp_total, round_no,
+                                             can_end)
+        if stall_dec is not None:
+            return stall_dec
+
+        incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
+        my_block = player.get("block", 0)
+        my_hp = player.get("current_hp", 1)
+        my_max_hp = max(1, player.get("max_hp", my_hp))
+        block_gap = max(0, incoming - my_block)
+
+        # 敌方血池/火力观测写入侧（第 214 批补全）：第 138~141 批铺好了 agent 合并
+        # 与 knowledge 入库/读取端，但本写入侧在复盘回滚中丢失——全库 hp_pool_n=0、
+        # fire_rounds=0，boss_vitals_worst 恒 (None,None)，「Boss 攻坚投影」成了
+        # 无米之炊。血池只在见到本战斗实例的首个有效帧采样（召唤物尚未登场，天然
+        # 贴合「非召唤杂兵」口径，多阶段战斗逐段各采、agent 端取最大段）；火力按
+        # 回合边界采格挡前意图总伤。消费端（攻坚投影/篝火精算）留待后续复盘接线
+        if isinstance(ctx.combat, dict):
+            if self._vit_combat is not ctx.combat:
+                self._vit_combat = ctx.combat
+                self._vit_pool_max = 0.0
+                self._vit_fire_sum = 0.0
+                self._vit_fire_rounds = 0
+                self._vit_round_seen = None
+            if self._vit_pool_max <= 0.0:
+                pool = sum(float(e.get("max_hp", 0) or 0) for e in combat.get("enemies", [])
+                           if e.get("is_alive"))
+                if pool > 0.0:
+                    self._vit_pool_max = pool
+            if self._vit_round_seen != round_no:
+                self._vit_round_seen = round_no
+                self._vit_fire_sum += float(incoming)
+                self._vit_fire_rounds += 1
+            ctx.combat["obs_hp_pool"] = self._vit_pool_max
+            ctx.combat["obs_fire_sum"] = self._vit_fire_sum
+            ctx.combat["obs_fire_rounds"] = self._vit_fire_rounds
+
+        # 败局竞速采样：回合边界记录净损血 EMA。必须比较「上一回合开始」与
+        # 「本回合开始」，才能把本回合内的自损费用、汲取/其他回血、格挡与敌方
+        # 行动一起纳入真实生存账。旧代码在每个决策 tick 都覆盖 _race_prev_hp，
+        # 实际只量到了回合结束后的敌方伤害；白绮的謦欬与汲取被同时抹掉，Boss
+        # 的零伤害行动也会被下一次高意图覆盖，6D0T5BPUDMG6-F17 因此在 T3 把
+        # 实际 9 回合获胜的续航战误判为只剩 3~4 回合。
+        # 同回合逐 tick 差值只作「已经真实发生过回血/自损」的窄门证据；不拿
+        # 预测卡面值替代实测，也不把跨回合敌方伤害误记成謦欬。
+        if self._race_tick_round == round_no and self._race_tick_hp is not None:
+            _same_round_delta = float(my_hp) - float(self._race_tick_hp)
+            if _same_round_delta > 0.0:
+                self._race_same_round_heal += _same_round_delta
+            elif _same_round_delta < 0.0:
+                self._race_same_round_loss += -_same_round_delta
+        self._race_tick_round = round_no
+        self._race_tick_hp = my_hp
+
+        if self._race_round != round_no:
+            self._intent_spike_from_zero = False
+            _previous_intent = int(self._intent_prev or 0)
+            if self._race_round is not None and self._race_prev_hp is not None:
+                # 保留负值：回合首血量上升就是本场续航已经兑现，不应裁成 0 后
+                # 又回退到敌方原始意图。EMA 仍让最近回合拥有更高权重。
+                loss = float(self._race_prev_hp - my_hp)
+                self._race_loss_rate = (loss if self._race_rounds == 0
+                                        else 0.7 * self._race_loss_rate + 0.3 * loss)
+                self._race_rounds += 1
+            # 意图升级轨迹采样（第 84~85 批复盘）：84 局毛绒伏地虫战意图
+            # 4→7→24→18→9→25→31、85 局仪式兽 Boss 战 18→20→22→24→26——
+            # 升级型敌人每拖一轮就更难挡，而旧引擎只看"本回合意图"，在升级
+            # 前夜（低意图回合）照常倾泻输出，两局均在意图跳升后 2~3 回合内死亡。
+            # 回合边界记录增量，供姿态层提前抬防御/紧急线
+            if self._race_rounds >= 1:
+                self._intent_trend = max(0, int(incoming) - int(self._intent_prev))
+                self._intent_spike_from_zero = (
+                    _previous_intent <= 0 and int(incoming) > 0)
+                # 持续升级计数（第 92~93 批复盘）：93 局 FUZZY+SHRINKER 战意图
+                # 4→7→24→18→13→25→31 滚雪球——单看「本回合跳升」会把它当一次性
+                # 事件防御前置，而滚雪球的正确读法是「每拖一轮都更贵」。
+                # 趋势≥2 的边界累计出现 2 次即认定持续升级（供竞速投影开门）
+                if self._intent_trend >= 2:
+                    self._esc_rounds += 1
+            else:
+                self._intent_trend = 0
+            if int(incoming) <= 0:
+                self._race_zero_intent_rounds += 1
+            # 意图 EMA（第 90~91 批复盘）：斩杀竞速投影的「可存活回合」分母——
+            # 净损速率含我方格挡决策的净效果，开局头两回合用它会被格挡稀释，
+            # 意图 EMA 才是敌人火力本身的账
+            if self._race_rounds == 0:
+                self._incoming_ema = float(incoming)
+            else:
+                self._incoming_ema = 0.7 * self._incoming_ema + 0.3 * float(incoming)
+            self._intent_prev = int(incoming)
+            self._race_round = round_no
+            # 只在回合边界更新；同回合出牌后的謦欬/汲取不能覆盖起点。
+            self._race_prev_hp = my_hp
+
+        if not can_play:
+            # 接口就绪阶梯（提取段，行为与原内联实现严格等价）：
+            # 回合过渡/謦欬致死锁/结算等待闸门的全部分支见 _combat_readiness_wait
+            return self._combat_readiness_wait(
+                state, ctx, combat, player, hand, energy, round_no, pol,
+                can_end, my_hp, my_block, incoming)
+        self._end_stall = 0
+        self._saw_playable_this_turn = True
+        self._terminal_life_lock_signature = None
+        self._terminal_life_lock_stall = 0
+
+        # 敌方组合历史战绩 → 战斗姿态与药水门槛的共同输入，必须先于药水分级读取：
+        # 高危组合自动转防守（见 knowledge.enemy_stance；Boss 房间反转姿态：
+        # 斩杀线不足时压攻击=拖长战斗多吃意图）。第 64 局实证：
+        # FLYCONID+SNAPPING_JAXFRUIT 场均掉血 25.8（32% 血条）但死亡率仅 15%，
+        # 姿态中性 + 药水被"非精英房不用"锁死，异鱼之油拖到 9 血才掏出来。
+        cctx = getattr(ctx, "combat", None) or {}
+        comp_id = cctx.get("comp_id") or None
+        stance = self.know.enemy_stance(comp_id, cctx.get("node_type"), my_max_hp)
+        comp_expected_loss = self.know.enemy_danger(comp_id) if comp_id else 0.0
+        ramp_relief_note = self._apply_growth_ramp_stance_relief(
+            stance, comp_id, cctx.get("node_type"),
+            getattr(self, "_esc_rounds", 0))
+        # 姿态方向决定文案（第 84~85 批复盘）：高危 Boss 姿态实为提速进攻，
+        # 旧文案一律写"转防守节奏"，与真实 atk_mult>1 自相矛盾，污染复盘日志。
+        # tone 记入独立变量：若后续斩杀竞速投影解除防御压制（93 局实证），
+        # 文案必须同步改写——矛盾留痕等于投毒复盘
+        stance_defensive_tone = False
+        if stance.get("danger"):
+            stance_defensive_tone = stance.get("atk_mult", 1.0) < 1.0
+            tone = "提速斩杀" if not stance_defensive_tone else "转防守节奏"
+            danger_note = f"；⚠{stance['danger']}，{tone}"
+            if ramp_relief_note:
+                danger_note += f"；{ramp_relief_note}"
+        else:
+            danger_note = ""
+        # 税负战斗防守姿态成本观测（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
+        # 812-F9 全链实证——PHROG 塞手的 INFECTION「不能被打出，回合结束时每张
+        # 3伤」不进格挡结算管线，高危组合姿态「转防守节奏」把战斗拖长，每多拖
+        # 一轮多付 3~12 点不可格挡税；姿态的 blk_mult 只挡意图挡不住税，
+        # 防守节奏在税负战斗里反向放大成本（807-F23 毒素两回合 20 点同族）。
+        # 本观测位只在「高危防守姿态 × 手牌税>0」交集出现时把税额与构成追加进
+        # 战斗留痕，供复盘按独立对局计数「防守节奏 × 税负复利」共现率，为姿态端
+        # 折减/提速行为化预注册供数；分值、判决、姿态零改动（纯观测锚）。
+        # hand_tax_stance_obs=false 即整体关闭。
+        if stance_defensive_tone and bool(pol.get("hand_tax_stance_obs", True)):
+            _stance_tax, _stance_tax_detail = hand_end_turn_tax(hand)
+            if _stance_tax > 0:
+                danger_note += (
+                    f"；税负战斗防守观测：手牌税{_stance_tax:.0f}/回合随拖延复利"
+                    f"（HAND_TAX_STANCE_OBS:{_stance_tax_detail}）")
+        # 意图升级防御前置（第 84~85 批复盘）：升级型敌人意图跳升回合，
+        # 格挡价值与紧急线同步上调——现在多挡一点，是为升级后的更难回合买血
+        esc = int(getattr(self, "_intent_trend", 0) or 0)
+        if esc > 0:
+            stance["blk_mult"] = round(stance.get("blk_mult", 1.0) * (1.0 + min(0.24, 0.04 * esc)), 3)
+            stance["urgent_hp_pct"] = round(min(0.65, stance.get("urgent_hp_pct", 0.45) + min(0.10, 0.02 * esc)), 3)
+            danger_note += f"；意图升级+{esc}，防御前置"
+        # Boss 攻坚提速（第 82~83 批复盘）：生涯死亡榜前四名中三个是 Boss
+        # （同族双子 190+58 血 12 死、仪式兽 252 血 10 死、墨影幻灵 173 血 8 死），
+        # Boss 意图逐轮升级、拖一轮就多吃一轮整套意图——第 82 局以 95% 血进
+        # 一幕 Boss 仍被两阶段共 81 点战损处决。全体 Boss 战给攻击评分加全局
+        # 乘区（与高危姿态叠加），缩短战斗本身就是最大的减伤。
+        if cctx.get("node_type") == "Boss":
+            boss_boost = float(pol.get("boss_atk_mult", 1.15))
+            if boss_boost > 1.0:
+                stance["atk_mult"] = round(stance.get("atk_mult", 1.0) * boss_boost, 3)
+                danger_note += f"；Boss攻坚提速×{boss_boost:.2f}"
+
+        # 药水使用门槛：精英/Boss、致死威胁、"低血量且有缺口"，以及
+        # "敌方组合本身就是硬仗"（场均战损 ≥ potion_comp_loss_frac × 最大生命——
+        # 对这类组合按普通战囤药水等于把救命资源带进坟墓）。
+        # 第 30~32 局连续三局带着可用药水进坟墓（敏捷/缚魂全程未用）——
+        # 启发式引擎等不到"完美时机"，低血量时增益/攻击药水必须立即兑现。
+        # 低血线接 potion_block_hp_pct（第 236 局复盘）：block_safety 顶格后
+        # 爆毙证据的接替旋钮——TNWN 局 40%~50% 血的硬仗干瞪眼、拖到 10/80
+        # 才喝药；交药线随演化提前，放血判定与防御/回复分支共用同一条线
+        # 败局竞速（第 60~61 局复盘新增）：按近期净损速率外推，horizon 回合内
+        # 必被打空血条时，被动防守已被证伪——解除能量预留并提速输出，
+        # 唯一可能翻转时间线的动作是抢在死亡倒计时之前终止战斗。
+        # 该判定只依赖已采样的净损 EMA 与当前血量，上移到药水判定之前——
+        # 竞速判死（race_allin 本 tick / _krace_latch 此前 tick 已武装的
+        # 斩杀竞速迟滞锁）同样是「值得动用增益药水」的弹药全押场合，
+        # 旧顺序下投影判死的战斗与 premium 各门槛全部错开时药水进不了场
+        race_allin = (
+            self._race_rounds >= 1 and self._race_loss_rate >= 1.0
+            and my_hp <= float(pol.get("hopeless_race_hp_frac", 0.6)) * my_max_hp
+            and my_hp <= self._race_loss_rate * float(pol.get("hopeless_race_horizon", 2.0))
+        )
+        _potion_line = float(pol.get("potion_block_hp_pct", 0.35))
+        low_hp_bleeding = my_hp <= _potion_line * my_max_hp and block_gap > 0
+        # premium：值得动用增益药水的场合（硬房/真致死/高危组合/意图滚雪球确认）。
+        # 普通消耗战哪怕低血也留着——第 36 局 F15 把异鱼之油倒进净损 2 血的顺风波，
+        # Boss 战空手阵亡。姿态联动（第 88 局复盘）：药水门槛（死亡率 0.30 / 战损
+        # 0.30×血条）比姿态门槛（0.25 / 0.28×血条）更迟钝，头号杀手 FUZZY+SHRINKER
+        # （29.3%/场均18.7<24）恰好从两条药水门槛的缝隙漏网——88 局 F8 姿态系统
+        # 从第 1 回合就警告「⚠高危组合」，攻击药水却被锁到 20 血、格挡药水 33 血才
+        # 掏出（意图已滚到 38）。同一份历史证据已经把姿态推入防守，药水门必须同步
+        # 开启，否则「知道危险」和「动用储备」脱节。
+        # 意图滚雪球确认（_esc_rounds≥2，第 255 批复盘补第四条缝）：低死亡率低战损
+        # 的升级型组合（252 局 F5 劫掠者三连，8 战仅 1 死、场均 26.4 恰好压线）
+        # 三条历史门槛全部漏网，能量药水睡到 19 血才掏——增益的价值随剩余战斗
+        # 时长衰减，等血量跌破线再喝等于把复利窗口烧掉；持续升级确认即视为硬仗
+        premium = bool(ctx.current_combat_is_hard or combat.get("end_turn_will_kill_player")
+                       or block_gap >= my_hp
+                       or comp_expected_loss >= float(pol.get("potion_comp_loss_frac", 0.30)) * my_max_hp
+                       or bool(stance.get("danger"))
+                       or getattr(self, "_esc_rounds", 0) >= 2
+                       or race_allin
+                       or bool(getattr(self, "_krace_latch", False)))
+        hard = (premium or low_hp_bleeding)
+        potion_dec = self._maybe_potion(state, ctx, hard, premium)
+        if potion_dec is not None:
+            return potion_dec
+
+        # 斩杀竞速投影（提取段，行为与原内联实现严格等价）：
+        # 投影/迟滞锁/联合复核/竞速姿态改写全部分支见 _combat_kill_race_projection
+        kill_race, all_respawn, stance, danger_note = (
+            self._combat_kill_race_projection(
+                state, cctx, pol, enemies, hand, incoming, my_hp, my_max_hp,
+                my_block, round_no, stance, stance_defensive_tone, race_allin,
+                danger_note))
 
         best = None  # (policy_score, card, target_index, why)
         # If the policy threshold suppresses every option, a separately-accounted
