@@ -347,24 +347,37 @@
    "retry_after": 1788345140.5891285,
    "deferred_count": 0,
    "deferred_hold_until": 0
-  },
-  {
-   "run": 19,
-   "time": "2026-09-02 18:18",
-   "profile_id": "vivhite",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "queued",
-   "run_id": "05AMDPJ0TSW9",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   19
+  ],
+  "items": [
+   {
+    "run": 19,
+    "time": "2026-09-02 18:18",
+    "profile_id": "vivhite",
+    "backend_key": "glm-flash",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "opencode-go/glm-5.3-flash",
+    "variant": "max",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "preferred",
+    "run_id": "05AMDPJ0TSW9",
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "queue_id": "21820-1788344308247011100-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "vivhite",
+  "retry_group": "",
+  "started": "2026-09-02 18:18:28"
+ }
 }
