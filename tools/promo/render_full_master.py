@@ -821,12 +821,20 @@ def build_filtergraph(
         input_index = len(edl.segments) + cue_index
         delay_ms = int(round(timeline_start * 1000.0))
         delay = f",adelay={delay_ms}|{delay_ms}" if delay_ms > 0 else ""
+        # Fade the source clip in its own local time before moving it onto the
+        # master timeline.  Applying ``afade`` after ``adelay`` with ``st=0``
+        # fades the leading delay silence and places the fade-out before the
+        # spoken samples, effectively muting every cue whose offset is > 0.
+        # Keeping the fades before the delay also makes the graph portable
+        # across FFmpeg versions whose ``adelay`` timestamp behavior differs.
+        fade_out_start = max(0.0, clip_duration - 0.05)
         cue_rows.append(
             f"[{input_index}:a]aresample={SAMPLE_RATE}:async=0,"
             f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
             f"atrim=duration={_format_seconds(clip_duration)},asetpts=PTS-STARTPTS"
-            f"{delay},afade=t=in:st=0:d=0.03,"
-            f"afade=t=out:st={_format_seconds(max(0.0, timeline_end - timeline_start - 0.05))}:d=0.05[n{cue_index}]"
+            f",afade=t=in:st=0:d=0.03,"
+            f"afade=t=out:st={_format_seconds(fade_out_start)}:d=0.05"
+            f"{delay}[n{cue_index}]"
         )
     graph.extend(cue_rows)
     game_chain = "[gamecat]volume=6.000000dB"

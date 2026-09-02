@@ -157,6 +157,13 @@ class FullMasterEdlTests(unittest.TestCase):
         self.assertIn("concat=n=2:v=1:a=1", graph)
         self.assertIn("[vcat]ass=filename='C\\:/promo/subtitles/master.ass'", graph)
         self.assertIn("adelay=100|100", graph)
+        # Fades must be applied in the local clip timeline before adelay;
+        # otherwise delayed narration is faded out before it reaches the mix.
+        self.assertLess(
+            graph.index("afade=t=in:st=0:d=0.03"),
+            graph.index("adelay=100|100"),
+        )
+        self.assertIn("afade=t=out:st=0.750000:d=0.05,adelay=100|100", graph)
         # A full master may shorten a source span, but it must not invent
         # frames by cloning/looping a short clip.
         self.assertNotIn("tpad=", graph)
