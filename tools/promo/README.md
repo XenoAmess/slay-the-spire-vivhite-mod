@@ -266,6 +266,23 @@ marks、清洁画面字段，以及 composer 的 `validate_only=True` 不得启�
 首片目标为 1920×1080 横屏约 10 分钟；60/30/15 秒版本必须从新的配置快照和
 run 生成。技术审计通过不等于白绮语义审计或人工发布批准。
 
+### 当前录制的候选短片
+
+项目侧 `render_capture_candidate.py` 只接受与原始录屏同一 run 的哈希绑定
+capture contract，并且会在渲染前后重新校验原始字节和 clean span。它只生成
+`preliminary` 候选，不执行语义审核、人工 review、signoff 或发布：
+
+```powershell
+py -3 -B .\tools\promo\render_capture_candidate.py `
+  --raw .\tools\promo\runs\<run-id>\raw\capture.mkv `
+  --capture-contract .\tools\promo\runs\<run-id>\partial-candidate-contract.json `
+  --output-root .\tools\promo\runs\<new-run-id>-candidates
+```
+
+若省略 `--capture-contract`，脚本只会在 raw 所属 run 中按固定候选路径推断；
+找不到或发现多个 receipt 会直接失败。每个输出仍需独立的 xAR 技术审计、白绮
+语义审计和人工 1.0× 审看后，才可进入 signoff/export。
+
 ## 故障处理
 
 预检、录制、渲染或审计失败时保留完整原始文件、partial、日志和失败报告，创建
