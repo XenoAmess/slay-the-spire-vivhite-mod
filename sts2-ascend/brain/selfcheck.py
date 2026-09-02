@@ -2023,7 +2023,12 @@ def main() -> int:
     #      注水照单全收（SHRUG_IT_OFF×5 成 24 张卡组），-0.9/张 减分压不住 8 分
     #      格挡牌——软上限形同虚设。超软上限后门槛每张 +1.5，越臃肿越只拿精品；
     #      小卡组行为不变（同一张牌在空卡组下照常可拿）。
-    bloated = [{"card_id": f"BLOAT_ATK_{i}", "card_type": "Attack", "energy_cost": 1}
+    bloated = [{"card_id": f"BLOAT_ATK_{i}", "card_type": "Attack", "energy_cost": 1,
+                # 数值达标的膨胀卡组（9 伤 1 费）：第514~517批「输出饥饿降门槛」
+                # （pick_threshold_starve_relief）进入 DEFAULT 后，零数值假卡组的
+                # burst=0 会触发深缺口减免把门槛降穿——本场景验证的是「输出达标
+                # 但臃肿」的卡组跳过平庸牌，攻击牌面值必须让 burst 越过饥饿线
+                "dynamic_values": [{"name": "Damage", "current_value": 9}]}
                for i in range(22)]
     mid_skill = {"index": 0, "card_id": "GUARD_SMALL", "name": "小盾", "card_type": "Skill",
                  "energy_cost": 1, "rules_text": "获得4点格挡",
@@ -4970,8 +4975,10 @@ def main() -> int:
         f"常规锻造线接替未生效: {sknow.policy['smith_min_hp_pct']}"
     assert abs(sknow.policy["boss_eve_smith_hp_pct"] - 0.60) < 1e-9, \
         f"普通节点证据错位吸收前夜锻造线: {sknow.policy['boss_eve_smith_hp_pct']}"
-    assert abs(sknow.policy["block_safety"] - 2.1) < 1e-9, \
+    assert abs(sknow.policy["block_safety"] - 2.09) < 1e-9, \
         f"防御棘轮被代偿加码: {sknow.policy['block_safety']}"
+    # 注：F23 跨幕局触发 F18+ 部分胜利回收（block_safety 2.1 顶格 → -0.01），
+    # 长战接替链对该键保持零加码——两通道对账净额 2.09，单向加码语义不破
     assert abs(sknow.policy["power_longfight_hp_div"] - 30.0) < 1e-9, \
         f"锻造线有余量时四级旋钮被误吸（防双吃失效）: {sknow.policy['power_longfight_hp_div']}"
     assert "常规锻造线" in slesson, f"接替留痕缺失: {slesson}"
@@ -5040,18 +5047,21 @@ def main() -> int:
     uctx.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
                            "rounds": 5, "hp_lost": 71.0}
     ulesson = reflect.finalize_run(uknow, uctx, victory=False, final_floor=33)
-    assert abs(uknow.policy["block_safety"] - 2.1) < 1e-9, \
+    assert abs(uknow.policy["block_safety"] - 2.09) < 1e-9, \
         f"顶格后爆毙仍加码: {uknow.policy['block_safety']}"
-    assert abs(uknow.policy["potion_block_hp_pct"] - 0.40) < 1e-9, \
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.375) < 1e-9, \
         f"爆毙证据未接替到药水交药线: {uknow.policy['potion_block_hp_pct']}"
+    # 注：F33 跨幕局的 F18+ 部分胜利回收与接替同局对账——block_safety 顶格
+    # 零加码 -0.01 → 2.09；potion 接替 +0.05 后回收 -0.025 → 净 0.375
     assert "药水提前交药线" in ulesson, f"接替旋钮留痕缺失: {ulesson}"
     # ② 短时死亡（<4回合）+ 顶格：同一接替旋钮继续吸收
     uctx2 = _RC()
     uctx2.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
                             "rounds": 3, "hp_lost": 14.0}
     ulesson2 = reflect.finalize_run(uknow, uctx2, victory=False, final_floor=23)
-    assert abs(uknow.policy["potion_block_hp_pct"] - 0.45) < 1e-9, \
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.40) < 1e-9, \
         f"短时死亡证据未接替到药水交药线: {uknow.policy['potion_block_hp_pct']}"
+    # 注：0.375 + 接替 0.05 - F18+ 回收 0.025 = 0.40
     assert "药水提前交药线" in ulesson2, f"短时死亡接替留痕缺失: {ulesson2}"
     # ③ 双重顶格：交药线也到 0.80 上限 → 第三级接替（第470局批复盘）：
     #    证据改接高危组合防御姿态斜率 danger_comp_blk_boost（+0.05）
@@ -5060,17 +5070,28 @@ def main() -> int:
     uctx_b.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
                              "rounds": 5, "hp_lost": 71.0}
     ulesson_b = reflect.finalize_run(uknow, uctx_b, victory=False, final_floor=33)
-    assert abs(uknow.policy["potion_block_hp_pct"] - 0.80) < 1e-9, \
+    assert abs(uknow.policy["potion_block_hp_pct"] - 0.775) < 1e-9, \
         f"双重顶格后接替旋钮仍被加码: {uknow.policy['potion_block_hp_pct']}"
-    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.35) < 1e-9, \
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.325) < 1e-9, \
         f"三级接替（组合姿态斜率）未吸收爆毙证据: {uknow.policy['danger_comp_blk_boost']}"
+    # 注：potion 顶格 0.80 本局无接替移动，F18+ 回收 -0.025 → 0.775；
+    # danger 接替 +0.05 至 0.35 后同局回收 -0.025 → 净 0.325
     assert "组合防御姿态斜率" in ulesson_b, f"三级接替留痕缺失: {ulesson_b}"
     # ③-bis 三级全顶格：斜率也到 0.60 上限 → 显式封账留痕
+    # （F18+ 部分胜利回收会把前序局的顶格值拉离上限——场景前提要求显式三顶格）
+    uknow.policy["block_safety"] = 2.1
+    uknow.policy["potion_block_hp_pct"] = 0.80
     uknow.policy["danger_comp_blk_boost"] = 0.60
     ulesson_b2 = reflect.finalize_run(uknow, uctx_b, victory=False, final_floor=33)
-    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.60) < 1e-9, \
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.575) < 1e-9, \
         f"三级顶格后仍被加码: {uknow.policy['danger_comp_blk_boost']}"
+    # 注：danger 显式顶格 0.60、接替未生效，F18+ 回收 -0.025 → 0.575
     assert "爆毙证据停止吸收" in ulesson_b2, f"三级全顶格封账留痕缺失: {ulesson_b2}"
+    # ③-s 短时死亡的三级全顶格封账（同 ③-bis，显式重置顶格前提——
+    # 上局的 F18+ 回收已把三键拉离上限）
+    uknow.policy["block_safety"] = 2.1
+    uknow.policy["potion_block_hp_pct"] = 0.80
+    uknow.policy["danger_comp_blk_boost"] = 0.60
     uctx_s = _RC()
     uctx_s.died_in_combat = {"comp_id": "OVICOPTER", "node_type": "Monster",
                              "rounds": 3, "hp_lost": 14.0}
@@ -5084,8 +5105,9 @@ def main() -> int:
     uctx3.died_in_combat = {"comp_id": "CRUSHER+ROCKET", "node_type": "Boss",
                             "rounds": 5, "hp_lost": 71.0}
     reflect.finalize_run(uknow, uctx3, victory=False, final_floor=33)
-    assert abs(uknow.policy["block_safety"] - 2.05) < 1e-9, \
+    assert abs(uknow.policy["block_safety"] - 2.04) < 1e-9, \
         f"有余量时爆毙证据未吸收: {uknow.policy['block_safety']}"
+    # 注：爆毙接替 +0.05 至 2.05，F18+ 回收 -0.01 → 净 2.04（同局对冲）
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
         f"防御有余量时接替旋钮被误吸: {uknow.policy['potion_block_hp_pct']}"
     # ⑤ 胜利释放：只回收被棘轮抬高的部分（>0.35 锚点），健康值不被推低
@@ -5093,13 +5115,16 @@ def main() -> int:
     reflect.finalize_run(uknow, _RC(), victory=True, final_floor=20)
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
         f"胜利未释放药水交药线（单向棘轮复发）: {uknow.policy['potion_block_hp_pct']}"
-    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.55) < 1e-9, \
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.50) < 1e-9, \
         f"胜利未回收组合姿态斜率: {uknow.policy['danger_comp_blk_boost']}"
+    # 注：danger 历经死亡局 F18+ 回收至 0.55（③-s 后 0.575 → ④ 后 0.55），
+    # 本局胜利回收 -0.05 → 0.50
     reflect.finalize_run(uknow, _RC(), victory=True, final_floor=21)
     assert abs(uknow.policy["potion_block_hp_pct"] - 0.35) < 1e-9, \
         f"健康交药线被胜利误推: {uknow.policy['potion_block_hp_pct']}"
-    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.50) < 1e-9, \
+    assert abs(uknow.policy["danger_comp_blk_boost"] - 0.45) < 1e-9, \
         f"健康姿态斜率被胜利误推: {uknow.policy['danger_comp_blk_boost']}"
+    # 注：0.50 > 0.30 锚点，本局再回收 -0.05 → 0.45
 
     # 3zs) 「拿了不打」偏置封禁 + 榜单过滤（第 228 批复盘）：DISINTEGRATION 类
     #      不可打出牌（7拿0打）靠幸存者偏差把 outcome 抬到 33、bias 涨到 +4 上限，
@@ -8467,7 +8492,11 @@ def main() -> int:
     direct_thin_deck = (
         [{"card_id": f"OFFER_WALL_{i}", "card_type": "Skill", "energy_cost": 1,
           "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(6)]
-        + [{"card_id": f"BASIC_STRIKE_{i}", "card_type": "Attack", "energy_cost": 1}
+        + [{"card_id": f"BASIC_STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
+            # 打击加面值（9 伤）：pick_threshold_starve_relief 进 DEFAULT 后，
+            # 零数值假打击 burst=0 触发深饥饿减免把门槛打到 0，正价值牌改走
+            # 「≥门槛」路径——本场景验证的是单薄保底路径，burst 须接近及格线
+            "dynamic_values": [{"name": "Damage", "current_value": 9}]}
            for i in range(4)])
     direct_pebble = {
         "index": 0, "card_id": "OFFER_PEBBLE", "name": "小卵石",
