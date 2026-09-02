@@ -172,3 +172,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/3局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/3局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.70 → 1.75（Boss 长战磨死（6回合），攻坚乘区提速）；Boss 长战磨死但高血进场（94%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 5.70 → 6.00（Boss 高血进场长战死（94%，6回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 8.50 → 9.00（Boss 高血进场长战死（6回合），缺口越深纠偏上限越高）；exploration_rate: 0.158 → 0.154（经验累积，探索衰减）
 - 生涯战绩：0/12 胜，当前目标进阶 0
+
+## 第 13 局复盘（2026-09-02 16:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：PANACHE, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, MASTER_OF_STRATEGY, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：JUZU_BRACELET, ODDLY_SMOOTH_STONE
+- 战斗记录：F6 Unknown战 掉血0; F7 Elite战 掉血24; F13 Monster战 掉血0; F14 Monster战 掉血6; F15 Monster战 掉血0; F17 Boss战 掉血74｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_CHROMATIC_LIMIT(34分/2局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/4局)，VIVHITE_CARD_ASTRAL_SEARCH(33分/4局)，EQUILIBRIUM(33分/2局)，VIVHITE_CARD_CHIAROSCURO(29分/8局)
+- 当前低价值卡牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(17分/3局)，VIVHITE_CARD_TRICHROMATIC_WALTZ(17分/2局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(17分/2局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_atk_mult: 1.75 → 1.80（Boss 长战磨死（7回合），攻坚乘区提速）；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.00 → 6.30（Boss 高血进场长战死（100%，7回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 9.00 → 9.50（Boss 高血进场长战死（7回合），缺口越深纠偏上限越高）；exploration_rate: 0.154 → 0.149（经验累积，探索衰减）
+- 生涯战绩：0/13 胜，当前目标进阶 0
