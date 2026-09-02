@@ -216,3 +216,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(17分/3局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.30 → 6.60（Boss 高血进场长战死（100%，10回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 9.50 → 10.00（Boss 高血进场长战死（10回合），缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.140 → 0.136（经验累积，探索衰减）
 - 生涯战绩：0/16 胜，当前目标进阶 0
+
+## 第 17 局复盘（2026-09-02 17:59）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_ISOPERIMETRIC_WARD, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_COMPOSITE_COLOR_FIELD, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_COMPOSITE_COLOR_FIELD, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：ORICHALCUM, WHETSTONE
+- 战斗记录：F15 Elite战 掉血31; F17 Boss战 掉血34｜竞速审计：T5判死→实战10回合获胜; F19 Monster战 掉血0; F21 Monster战 掉血20; F23 Monster战 掉血30; F24 Monster战 掉血32｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(40分/4局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/4局)，VIVHITE_CARD_CHIAROSCURO(34分/13局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/4局)，EQUILIBRIUM(33分/2局)
+- 当前低价值卡牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(19分/4局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.60 → 6.90（非 Boss 长战磨死（5回合）且 kill_bonus 顶格，攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 10.00 → 10.50（非 Boss 长战磨死（5回合）且 kill_bonus 顶格，缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.136 → 0.132（经验累积，探索衰减）
+- 生涯战绩：0/17 胜，当前目标进阶 0
