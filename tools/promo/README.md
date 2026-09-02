@@ -343,6 +343,10 @@ py -3 -B .\tools\promo\render_full_master.py `
 旁白批次派生，未从已签署 MP4 偷转码；每个版本都有独立 EDL、filtergraph、
 partial、probe、字幕和 alias。批次清单：
 [`batch-manifest.json`](runs/run-20260902T-preview-full-master-a2/batch-manifest.json)。
+后置补全的 run manifest 与 36 项检查见
+[`run-manifest-v2.json`](runs/run-20260902T-preview-full-master-a2/run-manifest-v2.json)
+和 [`postflight-validation.json`](runs/run-20260902T-preview-full-master-a2/review/postflight-validation.json)；
+首版 `run-manifest.json` 原样保留作历史写入证据。
 
 | 版本 | 成片 | 时长 | SHA-256 |
 |---|---|---:|---|
