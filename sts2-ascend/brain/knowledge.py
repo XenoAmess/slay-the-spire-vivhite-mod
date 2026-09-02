@@ -38,6 +38,17 @@ SHRINK_K = 6.0  # shrinkage strength toward prior mean
 DEATH_SHRINK_K = 4.0
 DEATH_RATE_PRIOR = 0.10
 
+# 在线统计的每局乘法衰减系数（半衰期约 200 局，稳态等效 ~286 局滑窗）。
+# 根治旧样本永不退场：1234 局生涯里早期弱卡组时代的敌人/房间/事件统计
+# 主导当前决策（代码内 396 批健康精英子账、479 批存活尾部子账都是为此
+# 打的补丁）。分子分母同乘、比率保持；里程碑字段（global.runs/floors/
+# best_floor）与 progression/policy 不衰减；hp_min（事件重尾安全证据，
+# 「吃下即死」闸门的唯一来源）与 bias（reflect 演化状态而非样本计数）
+# 跳过衰减；novelty_trials（探索配额去重）与 respawn_adds（跨局安全名册）
+# 等记账语义字段不衰减。
+STAT_DECAY_PER_RUN = 0.9965
+_STAT_DECAY_SKIP_KEYS = frozenset({"hp_min", "bias"})
+
 _MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
 _SAVE_LOCKS_GUARD = threading.Lock()
 _SAVE_LOCKS: dict[str, threading.Lock] = {}
@@ -2110,12 +2121,71 @@ class Knowledge:
 
     # ---------- run-end commits ----------
 
+    def _decay_stats(self) -> None:
+        """每局终局（本局入账前）对在线统计做整体乘法衰减，半衰期约 200 局。
+
+        见 STAT_DECAY_PER_RUN 注释。分子分母同乘故比率口径不变；衰减到
+        噪声级的条目直接清除，避免浮点残渣累积；本局新样本在衰减后入账，
+        始终全价。二层账本（events 的 id→option）逐层处理。
+        """
+        factor = STAT_DECAY_PER_RUN
+        skip = _STAT_DECAY_SKIP_KEYS
+
+        def decay_node(node: dict) -> None:
+            for key, value in list(node.items()):
+                if key in skip or isinstance(value, bool):
+                    continue
+                if isinstance(value, (int, float)):
+                    node[key] = value * factor
+                elif isinstance(value, dict):
+                    decay_node(value)
+
+        # 条目主计数字段：衰减后低于 0.5 视为噪声级,清除
+        count_field = {"enemies": "encounters", "cards": "picked",
+                       "relics": "picked", "rooms": "visits",
+                       "rooms_act": "damage_events", "rooms_band": "damage_events"}
+        for section, counter in count_field.items():
+            table = self.stats.get(section)
+            if not isinstance(table, dict):
+                continue
+            decay_node(table)
+            for key in [k for k, e in table.items()
+                        if isinstance(e, dict)
+                        and float(e.get(counter, 0.0) or 0.0) < 0.5]:
+                del table[key]
+        # events 是 id -> option -> 账本的二层结构
+        events = self.stats.get("events")
+        if isinstance(events, dict):
+            decay_node(events)
+            for event_id in list(events.keys()):
+                opts = events.get(event_id)
+                if not isinstance(opts, dict):
+                    continue
+                for opt_key in [k for k, e in opts.items()
+                                if isinstance(e, dict)
+                                and float(e.get("n", 0.0) or 0.0) < 0.5]:
+                    del opts[opt_key]
+                if not opts:
+                    del events[event_id]
+        # 死亡榜与精英死亡分带（纯计数）同口径衰减,展示变为近因加权
+        g = self.stats.get("global") or {}
+        for book_key in ("deaths_by_enemy", "deaths_by_event",
+                         "elite_death_entry_band"):
+            book = g.get(book_key)
+            if isinstance(book, dict):
+                decay_node(book)
+                for key in [k for k, v in book.items()
+                            if isinstance(v, (int, float)) and not isinstance(v, bool)
+                            and v < 0.5]:
+                    del book[key]
+
     def commit_run_end(self, outcome: float, victory: bool, picked_cards: list[str],
                        picked_relics: list[str], visited_rooms: list[str],
                        died_to_enemy: str | None, died_to_event: str | None,
                        raw_floor: float | None = None) -> None:
         if not self._learning_write_allowed():
             return
+        self._decay_stats()
         g = self.stats["global"]
         g["runs"] += 1
         g["wins"] += 1 if victory else 0

@@ -145,8 +145,12 @@ class RelicStatsEncodingTests(unittest.TestCase):
 
             # Historical evidence is not silently rewritten, while the same bad
             # label cannot receive another run's credit or create a fresh row.
-            self.assertEqual(know.stats["relics"][BROKEN_RELIC_NAME]["picked"], 4)
-            self.assertEqual(know.stats["relics"][BROKEN_RELIC_NAME]["outcome_sum"], 80.0)
+            # 每局入账前的全库统计衰减（STAT_DECAY_PER_RUN）会等比收缩所有
+            # 历史计数——它不针对损坏键（不加新账、不清零、不单独改写），
+            # 断言因此按衰减后的精确值核对
+            decay = knowledge.STAT_DECAY_PER_RUN
+            self.assertAlmostEqual(know.stats["relics"][BROKEN_RELIC_NAME]["picked"], 4 * decay)
+            self.assertAlmostEqual(know.stats["relics"][BROKEN_RELIC_NAME]["outcome_sum"], 80.0 * decay)
             self.assertEqual(know.stats["relics"]["ANCHOR"]["picked"], 1)
 
     def test_durable_run_attribution_omits_corrupt_relic_label(self) -> None:
