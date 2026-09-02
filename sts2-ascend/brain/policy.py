@@ -558,6 +558,32 @@ class Policy:
         card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
         return self.character_strategy.card(card_id)
 
+    def _is_basic_card(self, card: dict) -> bool:
+        """基础牌统一判定：角色静态目录 rarity=="basic" 优先；无目录角色
+        （Ironclad）回退 STRIKE/DEFEND 子串。旧实现只认子串，对白绮基础牌
+        （弦光投影/闭域映射/变身式）全面失效——good_cards 从 F1 起虚高、
+        精英卡组门槛恒过、付费删牌名单空转、单薄保底永不触发。"""
+        entry = self._strategy_card(card)
+        if entry is not None:
+            return entry.rarity == "basic"
+        cid = str(card.get("card_id") or "").upper().rstrip("+")
+        return "STRIKE" in cid or "DEFEND" in cid
+
+    def _is_basic_strike(self, card: dict) -> bool:
+        """基础攻击牌（打击等价物）。"""
+        entry = self._strategy_card(card)
+        if entry is not None:
+            return entry.rarity == "basic" and entry.card_type == "attack"
+        return "STRIKE" in str(card.get("card_id") or "").upper().rstrip("+")
+
+    def _is_basic_defend(self, card: dict) -> bool:
+        """基础防御牌（防御等价物）：目录内 basic 且带格挡的技能牌。"""
+        entry = self._strategy_card(card)
+        if entry is not None:
+            return (entry.rarity == "basic" and entry.card_type == "skill"
+                    and entry.mechanics.base_block > 0)
+        return "DEFEND" in str(card.get("card_id") or "").upper().rstrip("+")
+
     def _character_static_card_estimate(
             self, card: dict, *, current_hp: int | float | None = None,
             max_hp: int | float | None = None,
@@ -1757,8 +1783,7 @@ class Policy:
         # 卡组强度：非基础牌数量（精英进场门槛之一）
         good_cards = 0
         for c in run.get("deck", []):
-            cid = (c.get("card_id") or "").upper()
-            if "STRIKE" in cid or "DEFEND" in cid or is_bad_card(c):
+            if self._is_basic_card(c) or is_bad_card(c):
                 continue
             good_cards += 1
 
@@ -5413,9 +5438,7 @@ class Policy:
     def _deck_good_count(self, deck: list[dict]) -> int:
         """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
         return sum(1 for c in deck
-                   if not ("STRIKE" in (c.get("card_id") or "").upper()
-                           or "DEFEND" in (c.get("card_id") or "").upper()
-                           or is_bad_card(c)))
+                   if not (self._is_basic_card(c) or is_bad_card(c)))
 
     @staticmethod
     def _state_has_explicit_card_offer(state: dict) -> bool:
@@ -5484,7 +5507,7 @@ class Policy:
         cid = str(card.get("card_id") or "").upper().rstrip("+")
         if not cid or is_bad_card(card):
             return False
-        if not card.get("upgraded") and ("STRIKE" in cid or "DEFEND" in cid):
+        if not card.get("upgraded") and self._is_basic_card(card):
             return False
         if self._is_never_played_dead(cid) or self.know.card_is_proven_bad(cid):
             return False
@@ -5664,10 +5687,9 @@ class Policy:
         ratio = n_attack / len(deck) if deck else 0.45  # 无卡组上下文（升级/删除）按中性占比
         n_block = sum(1 for c in deck
                       if (is_skill(c) and card_numbers(c)[1] > 0)
-                      or "DEFEND" in (c.get("card_id") or "").upper()) if deck else 0
+                      or self._is_basic_defend(c)) if deck else 0
         good_cards = sum(1 for c in deck
-                         if not ("STRIKE" in (c.get("card_id") or "").upper()
-                                 or "DEFEND" in (c.get("card_id") or "").upper()
+                         if not (self._is_basic_card(c)
                                  or is_bad_card(c))) if deck else 0
 
         def _is_aoe(c: dict) -> bool:
@@ -5793,7 +5815,7 @@ class Policy:
         cid = (card.get("card_id") or "").upper()
         # 奖励端不拿未升级的基础打/防牌（生涯从奖励拾取 STRIKE_IRONCLAD×10 次）。
         # 删除/变化场景里该惩罚反而抬高其"最该删"排序，语义自洽
-        if not card.get("upgraded") and ("STRIKE" in cid or "DEFEND" in cid):
+        if not card.get("upgraded") and self._is_basic_card(card):
             value -= 4.0
         # 同名重复递减（第 71 局实锤）：单局拿进 SHRUG_IT_OFF×5 / FLAME_BARRIER×4——
         # 同名牌边际收益骤减且稀释抽牌质量。按基础 id（去升级后缀）计数，
@@ -6154,15 +6176,14 @@ class Policy:
                 return 100
             if t == "status":
                 return 90
-            cid = (c.get("card_id") or "").upper()
-            if "STRIKE" in cid and not c.get("upgraded"):
+            if self._is_basic_strike(c) and not c.get("upgraded"):
                 return 50
             # 删牌语义扩展（第514~517批复盘）：未升级防御在打击之后、普通牌之前——
             # 防御技面值保底分(~8.7)让它们在拾取端持续注水（DEFEND 生涯 12848 次），
             # 而 junk 名单只认打击，防御臃肿永不可逆；输出饥饿主矛盾下，
             # 超出 min_block_cards 的冗余防御是「删掉最不心疼」的候选。
             # 仅付费删牌/变化生效，战斗献祭(tribute)不适用
-            if for_removal and "DEFEND" in cid and not c.get("upgraded"):
+            if for_removal and self._is_basic_defend(c) and not c.get("upgraded"):
                 return 40
             return -self.eval_reward_card(c, [])
 
@@ -6537,10 +6558,10 @@ class Policy:
             # 高于 min_block_cards 时才把未升级防御列为可删，防御底线不失守。
             _n_block = sum(1 for c in deck
                            if (is_skill(c) and card_numbers(c)[1] > 0)
-                           or "DEFEND" in (c.get("card_id") or "").upper())
+                           or self._is_basic_defend(c))
             junk = [c for c in deck if is_bad_card(c)
-                    or ("STRIKE" in (c.get("card_id") or "").upper() and not c.get("upgraded"))
-                    or ("DEFEND" in (c.get("card_id") or "").upper() and not c.get("upgraded")
+                    or (self._is_basic_strike(c) and not c.get("upgraded"))
+                    or (self._is_basic_defend(c) and not c.get("upgraded")
                         and _n_block > float(pol.get("min_block_cards", 5)))]
             # 膨胀卡组的重复注水（第435~440批复盘）：旧 junk 判据只认诅咒/状态/
             # 未升级打击——打击升完或拿光后，31 张的臃肿卡组（本批 781P 局
