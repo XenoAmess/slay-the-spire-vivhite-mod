@@ -499,8 +499,9 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                                 f"普通战斗短时阵亡（{rounds}回合）但 block_safety "
                                 f"{pol['block_safety']:.2f}/药水交药线/组合姿态斜率"
                                 "三级全顶格——短时死亡证据停止吸收并留痕")
-        if died_to_event:
-            _adj(know, "exploration_rate", -0.03, changes, "事件致死，收敛探索")
+        # 事件致死的证据由统计层吸收（event_option_value 的死亡率惩罚），
+        # 不再调整任何策略参数——旧 exploration_rate 是零消费的 legacy 旋钮，
+        # 每局伪变异只在 lessons 里制造假「策略进化」噪声（已拆除）
         # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增，第509~515局批复盘
         # 重开通道）：该旋钮的回收通道此前只挂整局胜利——0/494 生涯里被「Boss
         # 高血进场长战死」证据一路压到 0.37 触底后永不回升，形成死锁：折算率
@@ -594,11 +595,8 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
             elif mean > global_avg + 8:
                 e["bias"] = clamp(e.get("bias", 0.0) + 0.2, -4.0, 4.0)
 
-    # exploration decays with experience
-    old_exp = pol["exploration_rate"]
-    pol["exploration_rate"] = clamp(old_exp * pol["exploration_decay"], pol["exploration_min"], 1.0)
-    if abs(pol["exploration_rate"] - old_exp) > 1e-9:
-        changes.append(f"exploration_rate: {old_exp:.3f} → {pol['exploration_rate']:.3f}（经验累积，探索衰减）")
+    # exploration_rate 每局衰减段已拆除：该旋钮零消费（事件选择为确定性
+    # 欠采样轮转），逐局衰减与事件致死调整在 lessons 里制造假进化日志
 
     # ---------------- progression ladder ----------------
     prog = know.progression

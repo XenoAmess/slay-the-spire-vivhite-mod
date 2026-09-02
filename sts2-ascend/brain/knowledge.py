@@ -96,7 +96,7 @@ DEFAULT_POLICY = {
     "shop_potion_gold": 60,       # 药水档（第 248 批复盘）：低于 shop_min_gold 但够买药水时商店保留中等权重——药水是爆毙通道唯一稳定补给，140 硬线曾让低金币段商店整体离场（237 局 120+ 金死携从未进店）
     "room_weights": {"Monster": 1.2, "Elite": 2.0, "RestSite": 1.0, "Shop": 1.1,
                      "Treasure": 1.4, "Unknown": 1.15, "Event": 1.1, "Boss": 10.0},
-    "lookahead_weight": 0.35,     # 1-step lookahead contribution on map
+    # lookahead_weight 死键已移除（地图为 DFS 多步模拟，无一档前瞻消费方）
     # --- rewards / shop ---
     "card_pick_threshold": 2.0,   # min value to take a reward card (skip otherwise)
     "rarity_bonus": {"Common": 0.0, "Uncommon": 0.8, "Rare": 1.6},
@@ -203,9 +203,8 @@ DEFAULT_POLICY = {
                                           # 门控：格挡来源≥min_block_cards 且非基础牌≥deck_thin_core 才生效；
                                           # 带抽牌的功能技不贬。0 = 关闭
     # --- events ---
-    "exploration_rate": 0.25,     # legacy review knob; event selection no longer depends on RNG
-    "exploration_decay": 0.97,    # per-run decay
-    "exploration_min": 0.05,
+    # （exploration_rate/decay/min 三个 legacy 死键已移除：零决策消费，
+    #  逐局伪变异只制造假进化日志；运行库 policy.json 的残留键无害）
     # 事件改用确定性欠采样轮转：仅高血、近优、非显著负收益且未触发重尾 veto
     # 的选项有资格；每局/每候选均有硬上限，避免 epsilon 实践上永远不命中。
     "event_exploration_enabled": True,
@@ -503,7 +502,8 @@ DEFAULT_POLICY = {
                                              # 可能中途兑付进普通房，提前放行会造成假可行）；
                                              # floor 缺失或窗口外原账不动
     # --- 执行端补丁键（第 79 局复盘） ---
-    "desperate_confirm_ticks": 2,  # 孤注一掷观测确认窗：致死且无可负担格挡须连续 N tick 一致才允许孤注（防手牌渲染瞬时不完整触发假孤注，79局F23 实证）
+    # desperate_confirm_ticks 死键已移除：孤注确认窗的消费代码从未接线，
+    # 键值只在 DEFAULT 空转
     # --- 绝境投影与统计口径（第 96 局复盘） ---
     "rest_dire_proj_pct": 0.45,   # 绝境投影线：路径投影进Boss血量低于此值时，篝火回血优先于锻造（96局F22 在79%血锻造后 F23-37/F31强制精英阵亡）
     "proven_bad_margin": 3.0,     # 「统计实锤差牌」判定边际：场均低于全局均值此值即硬回避（旧 4.0 让 SETUP_STRIKE 9.4/BULLY 10.0 长期卡在缝隙反复被拿）
@@ -1027,9 +1027,8 @@ class Knowledge:
             rba = self.progression.setdefault("runs_by_ascension", {})
             for asc, cnt in by_asc.items():
                 rba[asc] = max(0, int(rba.get(asc, 0)) - cnt)
-            decay = float(self.policy.get("exploration_decay", 0.97)) or 0.97
-            self.policy["exploration_rate"] = clamp(
-                float(self.policy.get("exploration_rate", 0.25)) / (decay ** n_phantom), 0.0, 1.0)
+            # 幻影修复不再反向补偿 exploration_rate（该 legacy 死键已移除，
+            # 伪变异通道一并关闭）
             self.save()
         self.stats["phantom_repair_v1"] = True
 
