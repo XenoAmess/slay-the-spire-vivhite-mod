@@ -1,21 +1,6 @@
 {
  "pending": [
   {
-   "run": 1233,
-   "time": "2026-09-01 20:59",
-   "profile_id": "ironclad",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "queued"
-  },
-  {
    "run": 988,
    "time": "2026-08-29 09:09",
    "backend_key": "glm-flash",
@@ -1902,7 +1887,7 @@
    "every": 1,
    "source": "preferred",
    "queue_id": "19588-1788185361403065800-0",
-   "retry_same_model": true,
+   "retry_same_model": false,
    "salvage_packages": [
     "20260901-000418-1788192258078457400-98d55cea"
    ],
@@ -1916,5 +1901,33 @@
    "deferred_hold_until": 0
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   1233
+  ],
+  "items": [
+   {
+    "run": 1233,
+    "time": "2026-09-01 20:59",
+    "profile_id": "ironclad",
+    "backend_key": "glm-flash",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "opencode-go/glm-5.3-flash",
+    "variant": "max",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "preferred",
+    "queue_id": "15484-1788338591012351300-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "",
+  "started": "2026-09-02 16:43:11"
+ }
 }
