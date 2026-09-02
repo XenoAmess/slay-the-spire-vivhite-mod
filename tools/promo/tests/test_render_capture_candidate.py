@@ -131,6 +131,28 @@ class CandidateRenderSubtitleTests(unittest.TestCase):
         with self.assertRaises(VivhiteAdapterError):
             VivhiteAdapter().validate_identity(data["project_context"])
 
+    def test_render_inputs_reject_mutated_sidecar(self) -> None:
+        class StableCapture:
+            def verify_unchanged(self) -> None:
+                return None
+
+        with tempfile.TemporaryDirectory(prefix="vivhite-candidate-input-") as raw:
+            contract_path = Path(raw) / "contract.json"
+            contract_path.write_bytes(b"contract")
+            contract_record = candidate.file_record(contract_path)
+            path = Path(raw) / "narration.mp3"
+            path.write_bytes(b"before")
+            record = candidate.file_record(path)
+            path.write_bytes(b"after")
+            with self.assertRaisesRegex(RuntimeError, "narration input changed"):
+                candidate.verify_render_inputs(
+                    capture_contract=StableCapture(),
+                    contract_path=contract_path,
+                    capture_provenance={"contract": contract_record},
+                    narration_inputs=(record,),
+                    tool_inputs={},
+                )
+
     def test_capture_binding_checks_fixture_hash_and_provenance(self) -> None:
         fixture = PROMO_ROOT / "fixtures" / "minimal_capture"
         raw = fixture / "media" / "raw-gameplay.mp4"

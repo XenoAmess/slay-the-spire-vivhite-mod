@@ -218,7 +218,10 @@ def load_capture_binding(raw: Path, contract_path: Path) -> tuple[Any, dict[str,
 def _verify_file_record(path: Path, expected: Mapping[str, Any], label: str) -> None:
     """Rehash a sidecar/input record and fail closed on mutation."""
 
-    actual = file_record(path)
+    try:
+        actual = file_record(path)
+    except OSError as exc:
+        raise RuntimeError(f"{label} is missing or unreadable: {path}") from exc
     expected_bytes = expected.get("bytes")
     expected_sha = str(expected.get("sha256", "")).upper()
     if actual["bytes"] != expected_bytes or actual["sha256"] != expected_sha:
@@ -229,17 +232,42 @@ def _verify_file_record(path: Path, expected: Mapping[str, Any], label: str) -> 
         )
 
 
-def narration_input_records(narration_root: Path) -> tuple[dict[str, Any], ...]:
-    """Snapshot every narration input used by the selected variants."""
+def verify_render_inputs(
+    *,
+    capture_contract: Any,
+    contract_path: Path,
+    capture_provenance: Mapping[str, Any],
+    narration_inputs: Iterable[Mapping[str, Any]],
+    tool_inputs: Mapping[str, Mapping[str, Any]],
+) -> None:
+    """Verify every immutable input at each render boundary."""
 
-    records: dict[str, dict[str, Any]] = {}
+    capture_contract.verify_unchanged()
+    _verify_file_record(contract_path, capture_provenance["contract"], "capture contract")
+    for record in narration_inputs:
+        _verify_file_record(Path(str(record["path"])), record, "narration input")
+    for tool_id, record in tool_inputs.items():
+        _verify_file_record(Path(str(record["path"])), record, f"{tool_id} executable")
+
+
+def narration_input_paths(narration_root: Path) -> dict[str, Path]:
+    """Resolve every narration input once for the whole candidate batch."""
+
+    paths: dict[str, Path] = {}
     for spec in VARIANTS.values():
         for _delay, shot_id, _zh, _en in spec["cues"]:
             path = (narration_root / f"{shot_id}.mp3").resolve()
             if not path.is_file():
                 raise FileNotFoundError(path)
-            records[path.as_posix()] = file_record(path)
-    return tuple(records.values())
+            paths[shot_id] = path
+    return paths
+
+
+def narration_input_records(narration_root: Path) -> tuple[dict[str, Any], ...]:
+    """Snapshot every narration input used by the selected variants."""
+
+    paths = narration_input_paths(narration_root)
+    return tuple(file_record(path) for path in paths.values())
 
 
 def containing_capture_span(contract: Any, start_seconds: float, duration_seconds: float) -> Any:
@@ -310,7 +338,7 @@ def write_ass(path: Path, cues: Iterable[tuple[float, str, str, str]], duration:
     path.write_text("".join(lines), encoding="utf-8", newline="\n")
 
 
-def load_xar(source: Path | None) -> None:
+def load_xar(source: Path | None) -> dict[str, Any]:
     selected = source
     if selected is None:
         env = os.environ.get("XAR_PROMO_TOOLCHAIN_SOURCE")
@@ -318,7 +346,47 @@ def load_xar(source: Path | None) -> None:
     src = selected.expanduser().resolve() / "src"
     if not src.is_dir():
         raise RuntimeError(f"xAR source directory is missing: {src}")
+    # This helper is normally a fresh CLI process, but fail closed when an
+    # embedding process already imported xAR from another checkout.  A stale
+    # parent or submodule would make the recorded commit differ from the code
+    # actually used by the planner.
+    for module_name, module in tuple(sys.modules.items()):
+        if module_name != "xar_promo" and not module_name.startswith("xar_promo."):
+            continue
+        module_file = getattr(module, "__file__", None)
+        if module_file and not _is_within(Path(module_file), src):
+            raise RuntimeError(
+                "xAR modules are already loaded from another source; start a "
+                "fresh candidate-render process"
+            )
     sys.path.insert(0, str(src))
+    commit: str | None = None
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(src.parent), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        if completed.returncode == 0:
+            candidate = completed.stdout.strip()
+            if candidate:
+                commit = candidate
+    except OSError:
+        pass
+    try:
+        import xar_promo
+
+        version = getattr(xar_promo, "__version__", None)
+    except Exception:
+        version = None
+    return {
+        "source_root": src.parent.as_posix(),
+        "git_commit": commit,
+        "package_version": version,
+    }
 
 
 def probe(path: Path, ffprobe: Path) -> dict[str, Any]:
@@ -347,6 +415,8 @@ def run_variant(
     ffprobe: Path,
     capture_contract: Any,
     capture_provenance: Mapping[str, Any],
+    narration_paths: Mapping[str, Path],
+    xar_provenance: Mapping[str, Any],
 ) -> dict[str, Any]:
     from xar_promo.audio import AudioMixSpec, AudioStem, DuckWindow
     from xar_promo.render import RenderOptions, execute_render_plan, plan_render
@@ -376,7 +446,10 @@ def run_variant(
     duck_windows: list[DuckWindow] = []
     cues = list(spec["cues"])
     for index, (delay, shot_id, _zh, _en) in enumerate(cues):
-        cue_path = (narration_root / f"{shot_id}.mp3").resolve()
+        try:
+            cue_path = narration_paths[shot_id]
+        except KeyError as exc:
+            raise FileNotFoundError(narration_root / f"{shot_id}.mp3") from exc
         if not cue_path.is_file():
             raise FileNotFoundError(cue_path)
         next_start = cues[index + 1][0] if index + 1 < len(cues) else duration
@@ -459,6 +532,7 @@ def run_variant(
         "filtergraph": plan.commands[0].spec.argv[plan.commands[0].spec.argv.index("-filter_complex") + 1],
         "planner": "xar_promo.render.plan_render",
         "executor": "xar_promo.render.execute_render_plan",
+        "xar": dict(xar_provenance),
     }
     (variant_root / "logs" / "render-plan.json").write_text(
         json.dumps(plan_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
@@ -507,6 +581,7 @@ def run_variant(
         },
         "subtitles": {"burned_in": True, "file": file_record(ass_path)},
         "technical_probe": bound_probe,
+        "xar": dict(xar_provenance),
         "audits": {"technical": "pending_write", "semantic": "pending", "human_review": "pending", "signoff": False},
         "warning": "Candidate only; no semantic claim has been certified and no human signoff/export approval has been performed.",
     }
@@ -548,16 +623,31 @@ def main() -> int:
     )
     validate_output_root(raw, output_root)
     capture_contract, capture_provenance = load_capture_binding(raw, contract_path)
-    narration_inputs = narration_input_records(narration_root)
-    tool_inputs = {
+    narration_paths = narration_input_paths(narration_root)
+    narration_inputs = tuple(file_record(path) for path in narration_paths.values())
+    tool_inputs: dict[str, dict[str, Any]] = {
         "ffmpeg": file_record(ffmpeg),
         "ffprobe": file_record(ffprobe),
     }
-    load_xar(args.xar_source)
+    xar_provenance = load_xar(args.xar_source)
+    verify_render_inputs(
+        capture_contract=capture_contract,
+        contract_path=contract_path,
+        capture_provenance=capture_provenance,
+        narration_inputs=narration_inputs,
+        tool_inputs=tool_inputs,
+    )
     output_root.parent.mkdir(parents=True, exist_ok=True)
     output_root.mkdir()
     results = []
     for variant_id, spec in VARIANTS.items():
+        verify_render_inputs(
+            capture_contract=capture_contract,
+            contract_path=contract_path,
+            capture_provenance=capture_provenance,
+            narration_inputs=narration_inputs,
+            tool_inputs=tool_inputs,
+        )
         results.append(
             run_variant(
                 variant_id=variant_id,
@@ -569,21 +659,27 @@ def main() -> int:
                 ffprobe=ffprobe,
                 capture_contract=capture_contract,
                 capture_provenance=capture_provenance,
+                narration_paths=narration_paths,
+                xar_provenance=xar_provenance,
             )
+        )
+        verify_render_inputs(
+            capture_contract=capture_contract,
+            contract_path=contract_path,
+            capture_provenance=capture_provenance,
+            narration_inputs=narration_inputs,
+            tool_inputs=tool_inputs,
         )
     # FFmpeg has now consumed every variant.  A raw/evidence mutation during
     # rendering invalidates the entire candidate batch; retain any produced
     # files as an incomplete attempt and refuse to publish a batch manifest.
-    capture_contract.verify_unchanged()
-    _verify_file_record(
-        contract_path,
-        capture_provenance["contract"],
-        "capture contract",
+    verify_render_inputs(
+        capture_contract=capture_contract,
+        contract_path=contract_path,
+        capture_provenance=capture_provenance,
+        narration_inputs=narration_inputs,
+        tool_inputs=tool_inputs,
     )
-    for record in narration_inputs:
-        _verify_file_record(Path(str(record["path"])), record, "narration input")
-    for tool_id, record in tool_inputs.items():
-        _verify_file_record(Path(str(record["path"])), record, f"{tool_id} executable")
     capture_provenance["verification"] = "hash-bound-and-unchanged-before-and-after-render"
     parent_manifest = {
         "schema_version": 1,
@@ -594,6 +690,7 @@ def main() -> int:
         "ffmpeg": dict(tool_inputs["ffmpeg"]),
         "ffprobe": dict(tool_inputs["ffprobe"]),
         "voice": VOICE,
+        "xar": dict(xar_provenance),
         "narration_inputs": list(narration_inputs),
         "external_bgm": False,
         "variants": results,
