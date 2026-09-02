@@ -535,6 +535,26 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         # （触底/触顶空转或纯胜利局）不覆盖历史方向
         if _kr_net:
             pol["kill_race_prior_eff_last_step"] = _kr_net
+        # 部分胜利释放扩展到其余单向棘轮旋钮（对标第 494 批 kill_race_prior_eff
+        # 通道）：零胜生涯（0/1234 实测）里整局胜利回收永不触发，防御权重/
+        # 灰区悲观系数/组合防御斜率/药水交药线被死亡证据单向推向 BOUNDS 上限，
+        # 顶格后靠接替链继续向下游传导——全键顶格是系统稳态而非边角。跨过幕界
+        # （F18+ = 一幕 Boss 已实战击败）同样证伪「当前参数必死」，按胜利释放的
+        # 半量步长、只回收被推离默认锚点的部分，给每条棘轮开反向通道；
+        # 半量步长 + 锚点护栏保证回收速度不超过证据累积速度，健康值不被推过锚点
+        if final_floor >= 18:
+            if pol["block_safety"] > 1.0:
+                _adj(know, "block_safety", -0.01, changes,
+                     f"行至 F{final_floor}（一幕Boss已实战击败）——防御权重部分胜利回收")
+            if pol["elite_grey_safety_mult"] > 1.5:
+                _adj(know, "elite_grey_safety_mult", -0.05, changes,
+                     f"行至 F{final_floor}——灰区悲观系数部分胜利回收")
+            if pol.get("danger_comp_blk_boost", 0.30) > 0.30:
+                _adj(know, "danger_comp_blk_boost", -0.025, changes,
+                     f"行至 F{final_floor}——组合防御姿态斜率部分胜利回收")
+            if pol.get("potion_block_hp_pct", 0.35) > 0.35:
+                _adj(know, "potion_block_hp_pct", -0.025, changes,
+                     f"行至 F{final_floor}——药水交药线部分胜利回收")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
