@@ -292,16 +292,39 @@ commit，并在每个 variant 前后复核 raw、contract、旁白和 FFmpeg/ffp
 本次完整主片的 run-relative 交付包见
 [`docs/2026-09-02-白绮宣传片完整主片渲染回执.md`](../../docs/2026-09-02-白绮宣传片完整主片渲染回执.md)。当前可复核文件为：
 
-- [`run-20260902T-full-master-delivery-a2/renders/full-master.mp4`](runs/run-20260902T-full-master-delivery-a2/renders/full-master.mp4)
-- [`run-manifest.json`](runs/run-20260902T-full-master-delivery-a2/run-manifest.json)
-- [`full-master-artifact-index.json`](runs/run-20260902T-full-master-delivery-a2/review/full-master-artifact-index.json)
-- [`full-master-evidence-coverage.json`](runs/run-20260902T-full-master-delivery-a2/review/full-master-evidence-coverage.json)
+- [`run-20260902T-full-master-delivery-a4/renders/full-master.mp4`](runs/run-20260902T-full-master-delivery-a4/renders/full-master.mp4)
+- [`run-manifest.json`](runs/run-20260902T-full-master-delivery-a4/run-manifest.json)
+- [`full-master-artifact-index.json`](runs/run-20260902T-full-master-delivery-a4/review/full-master-artifact-index.json)
+- [`full-master-evidence-coverage.json`](runs/run-20260902T-full-master-delivery-a4/review/full-master-evidence-coverage.json)
 
 该版本是 600 秒、1920×1080/60 的 `master-draft-preserved`：旁白使用
-`zh-CN-XiaoxiaoNeural`，不加入外部 BGM，保留游戏声和中英字幕。素材目前是
-`visual-only-staged`，所以技术/语义审计、独立 1.0× 人工审看、signoff 和 export
-仍明确为 pending/false；不得把它称为已发布成片。`a1` 是旧的 metadata 尝试，`a2`
-修正了 package-facing probe 与 producer manifest 的内部哈希一致性。
+`zh-CN-XiaoxiaoNeural`，不加入外部 BGM，保留游戏声和中英字幕。主片文件为
+`209,336,732` bytes，SHA-256 为
+`B50D787748D0D58570BC0C70D9C6D871BF92FDAC72D74ABDEDEE5A20C3D057D8`。
+当前门禁为 `capture_contract=passed`、`technical_audit=passed`、
+`semantic_audit=pending`、`human_review=user-delegated-assumed-pass`
+（无独立 1.0× 观察记录）、`signoff=false`、`export=false`；不得把它称为已发布成片。
+`a1`、`a2`、`a3` 是保全的历史尝试，`a4` 是修正旁白淡化顺序并重新闭合哈希的 canonical run，
+历史目录均未覆盖。
+
+关键 sidecar 的实际字节与 SHA-256：
+
+| 文件 | bytes | SHA-256 |
+|---|---:|---|
+| `run-manifest.json` | 3,722 | `A838918771ABD6EECFC75B0D3A8589F22A6923BF96B63D304784F01AD06C7469` |
+| `review/full-master-artifact-index.json` | 39,684 | `EF08F6271BBC1324B94480460FB5F3400AF3D90845D978FED304D4B5160D8D6F` |
+| `review/full-master-evidence-coverage.json` | 5,056 | `49E4EAE2E94F6468CB6350EC144BE91243E3FB8075DEE226A7ABF8F455687BBC` |
+| `review/full-master-deliverable-probe.json` | 1,674 | `2204AAD9E15A9F83E426D0CFEC3A65BC34B7C3B6A8AEA4765FFC70CDE5F70318` |
+| `review/audio-technical-audit.json` | 3,800 | `2695DD84722292DCE0AB5CDD688E6BE00A95BFA5A4D3199147225A16DC7BE6B6` |
+
+本批固定使用 xAR Promo Toolchain `v0.2.1`（tag commit
+`fb160b1eac10cbf1758ccf729f85b14c08e0c6e9`；本机 source worktree
+`G:/workspace/xar_promo_toolchain-v0.2.1-tag`）。可从
+[GitHub Release v0.2.1](https://github.com/XenoAmess/xar_promo_toolchain/releases/tag/v0.2.1)
+复核发布物：wheel（190,405 bytes）SHA-256
+`f8de0711415e7fce2bf07a34d3db4edc0593f32ba1cb61034946665e27014621`，
+sdist（13,281,238 bytes）SHA-256
+`56a712c03078a67a856f861d8c619dcdbd17967a4f26645c9c6e1643d14e4ad5`。
 
 `render_full_master.py` 将同一份已封存的 OBS raw 和长片 EDL 组装为一个
 1920×1080/60、H.264/AAC、48 kHz 双声道的 600 秒初稿。它只消费 capture
@@ -339,26 +362,32 @@ py -3 -B .\tools\promo\render_full_master.py `
 
 ### 60/30/15 秒短版
 
-短版从同一份 delivery-a2 raw、capture contract、staged EDL 和 Xiaoxiao
+短版从 a4 的同一份 raw/capture-contract lineage、staged EDL 和 Xiaoxiao
 旁白批次派生，未从已签署 MP4 偷转码；每个版本都有独立 EDL、filtergraph、
 partial、probe、字幕和 alias。批次清单：
-[`batch-manifest.json`](runs/run-20260902T-preview-full-master-a2/batch-manifest.json)。
-后置补全的 run manifest 与 36 项检查见
-[`run-manifest-v2.json`](runs/run-20260902T-preview-full-master-a2/run-manifest-v2.json)
-和 [`postflight-validation.json`](runs/run-20260902T-preview-full-master-a2/review/postflight-validation.json)；
-首版 `run-manifest.json` 原样保留作历史写入证据。
+[`batch-manifest.json`](runs/run-20260902T-preview-full-master-a4/batch-manifest.json)。
+run manifest 与客观检查见 [`run-manifest.json`](runs/run-20260902T-preview-full-master-a4/run-manifest.json)
+和 [`postflight-validation.json`](runs/run-20260902T-preview-full-master-a4/review/postflight-validation.json)。
+批次清单 bytes/SHA-256 为 `15,558` /
+`D5C13BE2A3BE66961F89620A997370F22B2CE3F6F2D258732E61C8421D4585B7`；
+postflight bytes/SHA-256 为 `10,045` /
+`05EC8614893F725E7F883EDF5F8B1B6C20B6B1125496CE3CA7A7161595176AB2`。
 
 | 版本 | 成片 | 时长 | SHA-256 |
 |---|---|---:|---|
-| Hero | [`vivhite-player-hero-60.mp4`](runs/run-20260902T-preview-full-master-a2/hero-60/renders/vivhite-player-hero-60.mp4) | 60.000 s | `1E3CEEAF620D342FEE9D9188C945129FFEC9496BD8B3075F65B1E4BF1B5317DF` |
-| Cut | [`vivhite-player-cut-30.mp4`](runs/run-20260902T-preview-full-master-a2/cut-30/renders/vivhite-player-cut-30.mp4) | 30.000 s | `299564FFB2878DD20ACA62EA4D88258D0FA0708B9ACF38C1C2EEFD7EDADBDE89` |
-| Bumper | [`vivhite-player-cut-15.mp4`](runs/run-20260902T-preview-full-master-a2/cut-15/renders/vivhite-player-cut-15.mp4) | 15.000 s | `6F14C6C81EF2FAD6953F8CE5495597CABEC752F0A58B06EEB5E2ABE9E5D85FFD` |
+| Hero | [`vivhite-player-hero-60.mp4`](runs/run-20260902T-preview-full-master-a4/hero-60/renders/vivhite-player-hero-60.mp4) | 60.000 s / 20,092,648 bytes | `2AC54EAE8204E1F69F141DA68566136EC388651BB420FF848105B115C3D28EF5` |
+| Cut | [`vivhite-player-cut-30.mp4`](runs/run-20260902T-preview-full-master-a4/cut-30/renders/vivhite-player-cut-30.mp4) | 30.000 s / 9,702,759 bytes | `EE2D15DDB0E8F1D0BF77F65E82C589DBAD0ADF3B144380076C71950CBACDF777` |
+| Bumper | [`vivhite-player-cut-15.mp4`](runs/run-20260902T-preview-full-master-a4/cut-15/renders/vivhite-player-cut-15.mp4) | 15.000 s / 4,914,451 bytes | `6F14C6C81EF2FAD6953F8CE5495597CABEC752F0A58B06EEB5E2ABE9E5D85FFD` |
 
-三者均为 `preliminary`/`semantic pending`，无 signoff 或 export approval；当前
-canonical batch 是 `a2`，`a1` 作为字节相同的历史成功 attempt 保留。批次
-状态和每个变体的技术字段以其 probe 与 manifest 为准。短版脚本为
+三者均为 `preliminary`；客观 technical checks 已通过，但 `semantic_audit=pending`、
+`human_review=pending`（未记录独立 1.0× 观察）、`signoff=false`、`export=false`。
+当前 canonical batch 是 `a4`，旧批次仅作为历史 attempt 保留。批次状态和每个变体的技术字段以
+其 probe、manifest 与 postflight 报告为准。短版脚本为
 `render_preview_variants.py`，只做项目侧 EDL 派生和调用通用 renderer，不启动
 游戏、OBS、OCR 或发布客户端。
+
+`tools/promo/runs/` 是本机 `.gitignore` 下的内容寻址保全 bundle；上述链接只在此工作区可复核，
+原始视频、旁白和运行态文件不随源码提交，也不代表已上传或已发布到平台。
 
 ## 故障处理
 
