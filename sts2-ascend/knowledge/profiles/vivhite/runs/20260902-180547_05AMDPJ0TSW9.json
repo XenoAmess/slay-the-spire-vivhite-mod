@@ -7,7 +7,6 @@
  "ascension": 0,
  "started_at": "2026-09-02 18:05:47",
  "victory": false,
- "in_progress": true,
  "floor": 33,
  "decisions": [
   {
@@ -16473,6 +16472,1284 @@
      }
     }
    }
+  },
+  {
+   "t": "18:16:51",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 71,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【终止条件+】→知识恶魔（单体伤害≈22.0｜VIVHITE_LIVE_ESTIMATE=-5.00[TERMINATION_CONDITION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤0，我方71血/0甲；Boss攻坚提速×1.80",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "18:16:52",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 67,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【递推星芒+】→知识恶魔（单体伤害≈17.0｜VIVHITE_LIVE_ESTIMATE=-5.00[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤0，我方67血/0甲；Boss攻坚提速×1.80",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "18:16:53",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 63,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯色面积】→知识恶魔（单体伤害≈14.0｜VIVHITE_LIVE_ESTIMATE=-2.45[CRIMSON_AREA;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=16%/3hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤0，我方63血/0甲；Boss攻坚提速×1.80",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "18:16:54",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 62,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[并行星雨(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy]]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 62/91",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "并行星雨",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_PARALLEL_STARFALL",
+      "name": "并行星雨",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:17:13",
+   "screen": "CARD_SELECTION",
+   "floor": 33,
+   "hp": 62,
+   "gold": 326,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【心灵腐化】（价值 -19.9）；候选：心灵腐化=-19.9",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F33",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F33",
+      "生命 62/91"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 -19.90 / 门槛 18.50；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "心灵腐化",
+      "score": -19.9,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "心灵腐化",
+     "params": {
+      "option_index": 1
+     },
+     "score": -19.9
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "18:17:15",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 62,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【生命公理】→知识恶魔（单体伤害≈24.0｜VIVHITE_LIVE_ESTIMATE=-12.50[AXIOM_OF_LIFE;dynamic=yes;hp-cost=10;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤17，我方62血/0甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；防守线复核虽报可行但击杀需8回合＞1.5×可存活4回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）；斩杀竞速投影：击杀还需8回合>可存活4回合（先验43伤/回合），全攻提速；Boss竞速观测：同回合已观察HP损失9（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 6
+  },
+  {
+   "t": "18:17:17",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 52,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【黎曼星阵】→知识恶魔（单体伤害≈12.0｜VIVHITE_LIVE_ESTIMATE=-5.80[RIEMANN_STAR_ARRAY;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=12%/2hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤17，我方52血/0甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；斩杀竞速投影：击杀还需19回合>可存活3回合（实测12伤/回合×(1+换挡上浮0.35)→16伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失19（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 4
+  },
+  {
+   "t": "18:17:18",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 48,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【微分取样】→知识恶魔（单体伤害≈6.0｜VIVHITE_LIVE_ESTIMATE=-1.65[DIFFERENTIAL_SAMPLING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤17，我方48血/0甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；斩杀竞速投影：击杀还需15回合>可存活3回合（实测14伤/回合×(1+换挡上浮0.35)→19伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失23（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "18:17:19",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 47,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡8/抽牌2｜VIVHITE_LIVE_ESTIMATE=-0.50[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤17，我方47血/0甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；斩杀竞速投影：击杀还需12回合>可存活3回合（实测17伤/回合×(1+换挡上浮0.35)→23伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失24（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "18:17:20",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 45,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【色阶过渡】（功能牌（抽牌2/回能）｜VIVHITE_LIVE_ESTIMATE=+21.65[CHROMATIC_TRANSITION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=8%/29hp;kills=0/lethal=0;crown=19/kill;dimension=0;drain-projected-from-observed-cards]）；敌意图总伤17，我方45血/8甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；斩杀竞速投影：击杀还需12回合>可存活3回合（实测17伤/回合×(1+换挡上浮0.35)→23伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失26（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "18:17:21",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 41,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯色面积+】→知识恶魔（单体伤害≈18.0｜竞速格挡下限预留｜VIVHITE_LIVE_ESTIMATE=+0.10[CRIMSON_AREA;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=28%/6hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤17，我方41血/8甲；意图升级+17，防御前置；Boss攻坚提速×1.80；突发唤醒火力取当前意图17（HARD_INTENT_SPIKE_FIRE）；斩杀竞速投影：击杀还需12回合>可存活2回合（实测17伤/回合×(1+换挡上浮0.35)→23伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失30（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "18:17:22",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 43,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],局部同胚(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy]]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 43/91",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 8,
+    "incoming_damage": 17,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:17:26",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 37,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯红定积分】→知识恶魔（单体伤害≈32.0｜VIVHITE_LIVE_ESTIMATE=+0.30[DEFINITE_CRIMSON_INTEGRAL;dynamic=yes;hp-cost=12;margin=0/spent=0;drain=56%/18hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤24，我方37血/0甲；意图升级+7，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.8/回合，同回合回血2、自损/费用36、零伤害回合1（BOSS_SUSTAIN_NET_HP）；对账火力取意图24（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需9回合>可存活3回合（实测26伤/回合升级桶×(1+换挡上浮0.20)→31伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失36（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 3,
+   "energy": 4
+  },
+  {
+   "t": "18:17:27",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 43,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【切线星光】→知识恶魔（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-0.40[TANGENT_STARLIGHT;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤24，我方43血/0甲；意图升级+7，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.8/回合，同回合回血8、自损/费用36、零伤害回合1（BOSS_SUSTAIN_NET_HP）；对账火力取意图24（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需7回合>可存活3回合（实测28伤/回合升级桶×(1+换挡上浮0.20)→34伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失36（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "18:17:29",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 42,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→知识恶魔（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-1.65[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=1;margin=1/spent=1;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤24，我方42血/0甲；意图升级+7，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.8/回合，同回合回血8、自损/费用37、零伤害回合1（BOSS_SUSTAIN_NET_HP）；对账火力取意图24（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需6回合>可存活3回合（实测32伤/回合升级桶×(1+换挡上浮0.20)→38伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失37（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "18:17:30",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 42,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【妙计】（格挡4/抽牌1）；敌意图总伤24，我方42血/0甲；意图升级+7，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.8/回合，同回合回血8、自损/费用37、零伤害回合1（BOSS_SUSTAIN_NET_HP）；对账火力取意图24（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活3回合（实测35伤/回合升级桶×(1+换挡上浮0.20)→42伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失37（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 3,
+   "energy": 0
+  },
+  {
+   "t": "18:17:31",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 42,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],黄金分割+(1费)✗[not_enough_energy]]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 42/91",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 24"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "黄金分割+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 4,
+    "incoming_damage": 24,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GOLDEN_RATIO",
+      "name": "黄金分割+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:17:35",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 24,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【终止条件+】→知识恶魔（单体伤害≈22.0｜败局竞速全攻｜VIVHITE_LIVE_ESTIMATE=-8.30[TERMINATION_CONDITION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=8%/2hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤11，我方24血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.6/回合，同回合回血8、自损/费用39、零伤害回合1（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活2回合（实测35伤/回合升级桶×(1+换挡上浮0.20)→42伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失39（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 4,
+   "energy": 4
+  },
+  {
+   "t": "18:17:36",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 22,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→知识恶魔（单体伤害≈10.0｜败局竞速全攻｜VIVHITE_LIVE_ESTIMATE=-4.15[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤11，我方22血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.6/回合，同回合回血8、自损/费用41、零伤害回合1（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活2回合（实测32伤/回合升级桶×(1+换挡上浮0.20)→38伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失41（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "18:17:37",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 21,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【补色残像】→知识恶魔（单体伤害≈12.0｜败局竞速全攻｜致死竞速抢斩杀｜VIVHITE_LIVE_ESTIMATE=-12.45[COMPLEMENTARY_AFTERIMAGE;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=24%/3hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤11，我方21血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.6/回合，同回合回血8、自损/费用42、零伤害回合1（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活2回合（实测34伤/回合升级桶×(1+换挡上浮0.20)→41伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失42（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "18:17:38",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 21,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜致死竞速部分格挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.00[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤11，我方21血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.6/回合，同回合回血8、自损/费用42、零伤害回合1（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活2回合（实测37伤/回合升级桶×(1+换挡上浮0.20)→45伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失42（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "18:17:38",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 19,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（色彩守恒✓），结束回合（敌意图总伤11，我方19血/9甲）；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA13.6/回合，同回合回血8、自损/费用44、零伤害回合1（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活1回合（实测37伤/回合升级桶×(1+换挡上浮0.20)→45伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失44（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 19/91",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 2 / 当前生命 19"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "warn",
+      "value": "败局竞速=True；斩杀竞速=True"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "色彩守恒",
+      "score": -57.479,
+      "status": "rejected",
+      "why": "能力/增益牌（第4回合）｜长战加成+2.6（敌血池157）｜VIVHITE_LIVE_ESTIMATE=-10.00[COLOR_CONSERVATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=8%/0hp;kills=0/lethal=0;cro",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_COLOR_CONSERVATION",
+      "name": "色彩守恒",
+      "energy_cost": 0,
+      "playable": true,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:17:42",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 18,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【并行星雨】（群体伤害≈12.0｜VIVHITE_LIVE_ESTIMATE=-14.15[PARALLEL_STARFALL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤0，我方18血/0甲；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA11.3/回合，同回合回血8、自损/费用45、零伤害回合2（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；防守线复核虽报可行但击杀需4回合＞1.5×可存活2回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）；斩杀竞速投影：击杀还需4回合>可存活2回合（实测37伤/回合升级桶×(1+换挡上浮0.20)→45伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失45（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 5,
+   "energy": 5
+  },
+  {
+   "t": "18:17:43",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 13,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（明暗对照✓,羽化✓,综合色域✓），结束回合（敌意图总伤0，我方13血/0甲）；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA11.3/回合，同回合回血8、自损/费用50、零伤害回合2（BOSS_SUSTAIN_NET_HP）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；防守线复核虽报可行但击杀需5回合＞1.5×可存活1回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）；斩杀竞速投影：击杀还需5回合>可存活1回合（实测32伤/回合升级桶×(1+换挡上浮0.20)→39伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失50（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 5,
+   "energy": 4,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 13/91",
+      "回合 5",
+      "能量 4",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 13"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "warn",
+      "value": "败局竞速=True；斩杀竞速=True"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "明暗对照",
+      "score": -7.68,
+      "status": "rejected",
+      "why": "格挡10｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-10.00[CHIAROSCURO;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=20%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0;d",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色域",
+      "score": -41.98,
+      "status": "rejected",
+      "why": "能力/增益牌（第5回合）｜长战加成+2.9（敌血池175）｜VIVHITE_LIVE_ESTIMATE=+6.65[COMPOSITE_COLOR_FIELD;dynamic=yes;hp-cost=8;margin=0/spent=0;drain=8%/29hp;kills=0/lethal=0;",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "羽化",
+      "score": -50.0,
+      "status": "rejected",
+      "why": "能力/增益牌（第5回合）｜长战加成+2.9（敌血池175）",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CHIAROSCURO",
+      "name": "明暗对照",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "METAMORPHOSIS",
+      "name": "羽化",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_COMPOSITE_COLOR_FIELD",
+      "name": "综合色域",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:18:01",
+   "screen": "CARD_SELECTION",
+   "floor": 33,
+   "hp": 13,
+   "gold": 326,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【懒惰】（价值 -19.9）；候选：懒惰=-19.9",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F33",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F33",
+      "生命 13/91"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 -19.90 / 门槛 18.50；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "懒惰",
+      "score": -19.9,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "懒惰",
+     "params": {
+      "option_index": 1
+     },
+     "score": -19.9
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "18:18:05",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 13,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→知识恶魔（单体伤害≈10.0｜败局竞速全攻｜致死竞速抢斩杀｜VIVHITE_LIVE_ESTIMATE=-4.15[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤19，我方13血/0甲；意图升级+19，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.4/回合，同回合回血8、自损/费用50、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图19（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测32伤/回合升级桶×(1+换挡上浮0.20)→39伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失50（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 6,
+   "energy": 4
+  },
+  {
+   "t": "18:18:06",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 12,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【妙计】（格挡4｜致死竞速部分格挡贬值/抽牌1）；敌意图总伤19，我方12血/0甲；意图升级+19，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.4/回合，同回合回血8、自损/费用51、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图19（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测28伤/回合升级桶×(1+换挡上浮0.20)→34伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失51（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "18:18:07",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 12,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡8｜致死竞速部分格挡贬值/抽牌2｜VIVHITE_LIVE_ESTIMATE=-3.00[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤19，我方12血/4甲；意图升级+19，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA9.4/回合，同回合回血8、自损/费用51、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图19（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测28伤/回合升级桶×(1+换挡上浮0.20)→34伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失51（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "18:18:08",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 10,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量2｜[明暗对照(1费)✗[blocked_by_hook],闭域映射(1费)✗[blocked_by_hook],羽化(2费)✗[blocked_by_hook],弦光投影(1费)✗[blocked_by_hook]]",
+   "turn": 6,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 10/91",
+      "回合 6",
+      "能量 2",
+      "敌方意图伤害 19"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "明暗对照",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "羽化",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 12,
+    "incoming_damage": 19,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CHIAROSCURO",
+      "name": "明暗对照",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 2,
+      "card_id": "METAMORPHOSIS",
+      "name": "羽化",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:18:11",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 7,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【切线星光】→知识恶魔（单体伤害≈11.0｜败局竞速全攻｜致死竞速抢斩杀｜VIVHITE_LIVE_ESTIMATE=-2.90[TANGENT_STARLIGHT;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=8%/1hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤30，我方7血/0甲；意图升级+11，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA8.4/回合，同回合回血8、自损/费用56、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图30（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测28伤/回合升级桶×(1+换挡上浮0.20)→34伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失56（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 7,
+   "energy": 4
+  },
+  {
+   "t": "18:18:13",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 6,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【局部同胚】（格挡8｜致死竞速部分格挡贬值｜VIVHITE_LIVE_ESTIMATE=-1.25[LOCAL_HOMEOMORPHISM;dynamic=yes;hp-cost=1;margin=1/spent=1;drain=8%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤30，我方6血/0甲；意图升级+11，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA8.4/回合，同回合回血8、自损/费用57、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图30（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测26伤/回合升级桶×(1+换挡上浮0.20)→31伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失57（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "18:18:14",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 5,
+   "gold": 326,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜致死竞速部分格挡贬值｜VIVHITE_LIVE_ESTIMATE=-2.50[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=0;margin=2/spent=2;drain=8%/0hp;kills=0/lethal=0;crown=19/kill;dimension=0]）；敌意图总伤30，我方5血/8甲；意图升级+11，防御前置；Boss攻坚提速×1.80；Boss续航按本场净HP计价：净损EMA8.4/回合，同回合回血8、自损/费用58、零伤害回合2（BOSS_SUSTAIN_NET_HP）；对账火力取意图30（EMA滞后修正）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需5回合>可存活1回合（实测26伤/回合升级桶×(1+换挡上浮0.20)→31伤/回合校准），全攻提速；Boss竞速观测：同回合已观察HP损失58（需与自损/费用核对，RACE_SAME_ROUND_HP_LOSS_OBS）",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "18:18:15",
+   "screen": "COMBAT",
+   "floor": 33,
+   "hp": 5,
+   "gold": 326,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量1｜[色彩守恒(0费)✗[blocked_by_hook]]",
+   "turn": 7,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F33",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F33",
+      "生命 5/91",
+      "回合 7",
+      "能量 1",
+      "敌方意图伤害 30"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "色彩守恒",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 17,
+    "incoming_damage": 30,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_COLOR_CONSERVATION",
+      "name": "色彩守恒",
+      "energy_cost": 0,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ]
+   }
+  },
+  {
+   "t": "18:18:23",
+   "screen": "GAME_OVER",
+   "floor": 33,
+   "hp": 0,
+   "gold": 326,
+   "action": "continue_game_over",
+   "params": {},
+   "reason": "结算：确认战绩，执行原生分数、解锁与存档流程"
   }
  ],
  "combat_notes": [
@@ -16492,7 +17769,8 @@
   "F23 Monster战 掉血0",
   "F24 Elite战 掉血42",
   "F30 Elite战 掉血47",
-  "F31 Monster战 掉血0"
+  "F31 Monster战 掉血0",
+  "F33 Boss战 掉血71｜竞速审计：T2判死→实战7回合阵亡（阵亡）"
  ],
  "attribution_tags": [
   [
@@ -16752,9 +18030,14 @@
    "Boss"
   ]
  ],
- "human_assisted": false,
- "excluded_from_learning": false,
- "deck_snapshot": [
+ "native_save": {
+  "run_id": "05AMDPJ0TSW9",
+  "phase": "summary_ready",
+  "save_status": "verified",
+  "save_verified": true,
+  "save_error": null
+ },
+ "final_deck": [
   {
    "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
    "upgraded": false,
