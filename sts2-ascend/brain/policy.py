@@ -2561,6 +2561,49 @@ class Policy:
             changed = True
         return "斜率反转：成长型组合，解除攻击压制" if changed else ""
 
+    def _combat_stall_check(self, ctx, enemy_hp_total: float, round_no: int,
+                            can_end: bool) -> Decision | None:
+        """战斗僵局检测与升级（从 _combat 提取，行为与原内联实现严格等价）。
+
+        实证（第 107 局）：坚毅(True Grit)每回合消耗随机牌，360+ 回合后攻击牌
+        全部进消耗堆，敌人 INKLET 剩 1 血永远不死 → 无限死循环。机制：
+          turn≥60 → 置标志请求 agent 启动 AI 死循环分析（一场一次）
+          turn≥100 且 20 回合无掉血进展 → 判定死循环，摆烂送死结束本局
+          turn≥120 或 AI 判 offense → 绕过评分阈值，有攻击牌就打（在出牌段）
+        第 109 局复盘加急：旧线(150/30)下无输出卡组的僵局要拖 3 小时+，
+        runner 被拖到异常退出（rc=4294967295）丢掉前 8 层决策日志——
+        「无进展」计数只在敌人总血量下降时归零，正常磨血战不受收紧影响。
+        """
+        if self._stall_combat is not ctx.combat:
+            self._stall_combat = ctx.combat
+            self._stall_min_hp = enemy_hp_total
+            self._stall_no_progress = 0
+            self._stall_turn_seen = round_no
+            self._exhaust_plays = 0
+        if self._stall_turn_seen != round_no:
+            if enemy_hp_total < self._stall_min_hp:
+                self._stall_min_hp = enemy_hp_total
+                self._stall_no_progress = 0
+            else:
+                self._stall_no_progress += 1
+            self._stall_turn_seen = round_no
+
+        if round_no >= 60 and not getattr(ctx, "stall_analysis_asked", False):
+            ctx.stall_analysis_asked = True
+            ctx.stall_analysis_needed = True   # agent 主循环拾取并启动 AI 死循环分析
+
+        giveup = (getattr(ctx, "force_giveup", False)
+                  or (round_no >= 100 and self._stall_no_progress >= 20
+                      and not getattr(ctx, "stall_grind_grace", False)))
+        if giveup:
+            ctx.stall_giveup = True   # 复盘归因标记：摆烂死不得喂给攻防旋钮（reflect 消费）
+            if can_end:
+                return Decision("end_turn", {},
+                                f"战斗：僵局判定无伤害手段（回合{round_no}，{self._stall_no_progress}回合无进展），摆烂送死以终结本局",
+                                tags=[("stall_giveup", round_no)], wait=0.8)
+            return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
+        return None
+
     def _combat(self, state: dict, ctx) -> Decision:
         combat = state.get("combat") or {}
         player = combat.get("player") or {}
@@ -2664,44 +2707,12 @@ class Policy:
             return Decision(None, {}, "战斗：等待敌人就绪", wait=0.7)
         self._phase_stall = 0
 
-        # ---- 战斗僵局检测与升级 ----
-        # 实证（第 107 局）：坚毅(True Grit)每回合消耗随机牌，360+ 回合后攻击牌全部进消耗堆，
-        # 敌人 INKLET 剩 1 血永远不死 → 无限死循环。机制：
-        #   turn≥60 → 置标志请求 agent 启动 AI 死循环分析（一场一次）
-        #   turn≥100 且 20 回合无掉血进展 → 判定死循环，摆烂送死结束本局
-        #   turn≥120 或 AI 判 offense → 绕过评分阈值，有攻击牌就打
-        # 第 109 局复盘加急：旧线(150/30)下无输出卡组的僵局要拖 3 小时+，
-        # runner 被拖到异常退出（rc=4294967295）丢掉前 8 层决策日志——
-        # 「无进展」计数只在敌人总血量下降时归零，正常磨血战不受收紧影响
+        # ---- 战斗僵局检测与升级（提取为 _combat_stall_check）----
         enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
-        if self._stall_combat is not ctx.combat:
-            self._stall_combat = ctx.combat
-            self._stall_min_hp = enemy_hp_total
-            self._stall_no_progress = 0
-            self._stall_turn_seen = round_no
-            self._exhaust_plays = 0
-        if self._stall_turn_seen != round_no:
-            if enemy_hp_total < self._stall_min_hp:
-                self._stall_min_hp = enemy_hp_total
-                self._stall_no_progress = 0
-            else:
-                self._stall_no_progress += 1
-            self._stall_turn_seen = round_no
-
-        if round_no >= 60 and not getattr(ctx, "stall_analysis_asked", False):
-            ctx.stall_analysis_asked = True
-            ctx.stall_analysis_needed = True   # agent 主循环拾取并启动 AI 死循环分析
-
-        giveup = (getattr(ctx, "force_giveup", False)
-                  or (round_no >= 100 and self._stall_no_progress >= 20
-                      and not getattr(ctx, "stall_grind_grace", False)))
-        if giveup:
-            ctx.stall_giveup = True   # 复盘归因标记：摆烂死不得喂给攻防旋钮（reflect 消费）
-            if can_end:
-                return Decision("end_turn", {},
-                                f"战斗：僵局判定无伤害手段（回合{round_no}，{self._stall_no_progress}回合无进展），摆烂送死以终结本局",
-                                tags=[("stall_giveup", round_no)], wait=0.8)
-            return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
+        stall_dec = self._combat_stall_check(ctx, enemy_hp_total, round_no,
+                                             can_end)
+        if stall_dec is not None:
+            return stall_dec
 
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
         my_block = player.get("block", 0)
