@@ -8,7 +8,7 @@
  "started_at": "2026-09-02 17:17:08",
  "victory": false,
  "in_progress": true,
- "floor": 4,
+ "floor": 12,
  "decisions": [
   {
    "t": "17:17:08",
@@ -1804,11 +1804,3738 @@
      "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
     ]
    }
+  },
+  {
+   "t": "17:18:20",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 292,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "17:18:21",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 292,
+   "action": "buy_card",
+   "params": {
+    "option_index": 6
+   },
+   "reason": "商店：购买卡牌【大奖】（168金，价值27.8≥门槛2.0）",
+   "trace": {
+    "observation": {
+     "title": "SHOP · F5",
+     "facts": [
+      "屏幕 SHOP",
+      "楼层 F5",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "SHOP"
+     },
+     {
+      "label": "GATE 商店成交门槛",
+      "status": "pass",
+      "value": "最高 27.75 / 基线 1.00 / 卡牌线 2.00"
+     },
+     {
+      "label": "GATE 购买资格",
+      "status": "pass",
+      "value": "金币 292；冷却阻塞=False"
+     },
+     {
+      "label": "GATE 输出与药水预留",
+      "status": "warn",
+      "value": "输出饥饿=True；进攻药加价=0.0"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "buy_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "大奖",
+      "score": 27.754,
+      "status": "chosen",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 6,
+      "action": "buy_card"
+     },
+     {
+      "label": "收敛判决",
+      "score": 18.45,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 1,
+      "action": "buy_card"
+     },
+     {
+      "label": "补色残像",
+      "score": 13.168,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 0,
+      "action": "buy_card"
+     },
+     {
+      "label": "事件循环",
+      "score": 9.956,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 3,
+      "action": "buy_card"
+     },
+     {
+      "label": "不变量",
+      "score": 9.349,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 2,
+      "action": "buy_card"
+     },
+     {
+      "label": "草莓",
+      "score": 3.807,
+      "status": "rejected",
+      "why": "遗物价值减价格成本",
+      "index": 0,
+      "action": "buy_relic"
+     },
+     {
+      "label": "急躁",
+      "score": 3.092,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 5,
+      "action": "buy_card"
+     },
+     {
+      "label": "能量药水",
+      "score": 2.2,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 1,
+      "action": "buy_potion"
+     }
+    ],
+    "selected": {
+     "action": "buy_card",
+     "label": "大奖",
+     "params": {
+      "option_index": 6
+     },
+     "score": 27.754
+    },
+    "explanation": [
+     "商店候选均使用本次货架评估已经得到的净价值。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:22",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 124,
+   "action": "buy_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "商店：购买卡牌【收敛判决】（77金，价值16.8≥门槛2.0）",
+   "trace": {
+    "observation": {
+     "title": "SHOP · F5",
+     "facts": [
+      "屏幕 SHOP",
+      "楼层 F5",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "SHOP"
+     },
+     {
+      "label": "GATE 商店成交门槛",
+      "status": "pass",
+      "value": "最高 16.75 / 基线 1.00 / 卡牌线 2.00"
+     },
+     {
+      "label": "GATE 购买资格",
+      "status": "pass",
+      "value": "金币 124；冷却阻塞=False"
+     },
+     {
+      "label": "GATE 输出与药水预留",
+      "status": "warn",
+      "value": "输出饥饿=True；进攻药加价=0.0"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "buy_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "收敛判决",
+      "score": 16.754,
+      "status": "chosen",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 1,
+      "action": "buy_card"
+     },
+     {
+      "label": "补色残像",
+      "score": 12.351,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 0,
+      "action": "buy_card"
+     },
+     {
+      "label": "事件循环",
+      "score": 9.956,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 3,
+      "action": "buy_card"
+     },
+     {
+      "label": "不变量",
+      "score": 9.349,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 2,
+      "action": "buy_card"
+     },
+     {
+      "label": "急躁",
+      "score": 3.092,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 5,
+      "action": "buy_card"
+     },
+     {
+      "label": "能量药水",
+      "score": 2.2,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 1,
+      "action": "buy_potion"
+     },
+     {
+      "label": "复制药水",
+      "score": 0.583,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 0,
+      "action": "buy_potion"
+     },
+     {
+      "label": "混沌药水",
+      "score": 0.392,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 2,
+      "action": "buy_potion"
+     }
+    ],
+    "selected": {
+     "action": "buy_card",
+     "label": "收敛判决",
+     "params": {
+      "option_index": 1
+     },
+     "score": 16.754
+    },
+    "explanation": [
+     "商店候选均使用本次货架评估已经得到的净价值。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:23",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 47,
+   "action": "buy_card",
+   "params": {
+    "option_index": 3
+   },
+   "reason": "商店：购买卡牌【事件循环】（38金，价值24.2≥门槛2.0）",
+   "trace": {
+    "observation": {
+     "title": "SHOP · F5",
+     "facts": [
+      "屏幕 SHOP",
+      "楼层 F5",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "SHOP"
+     },
+     {
+      "label": "GATE 商店成交门槛",
+      "status": "pass",
+      "value": "最高 24.21 / 基线 1.00 / 卡牌线 2.00"
+     },
+     {
+      "label": "GATE 购买资格",
+      "status": "pass",
+      "value": "金币 47；冷却阻塞=False"
+     },
+     {
+      "label": "GATE 输出与药水预留",
+      "status": "pass",
+      "value": "输出饥饿=False；进攻药加价=0.0"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "buy_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环",
+      "score": 24.206,
+      "status": "chosen",
+      "why": "卡牌净价值；门槛 2.00",
+      "index": 3,
+      "action": "buy_card"
+     }
+    ],
+    "selected": {
+     "action": "buy_card",
+     "label": "事件循环",
+     "params": {
+      "option_index": 3
+     },
+     "score": 24.206
+    },
+    "explanation": [
+     "商店候选均使用本次货架评估已经得到的净价值。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:24",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 9,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "17:18:25",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 9,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "17:18:27",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 78,
+   "gold": 9,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Unknown(5,2)（路径分 22.91，预计进 Boss 血量 83%）；候选：Unknown(5,2)=22.91 / Monster(5,3)=22.59|前期需要战斗积累卡牌",
+   "trace": {
+    "observation": {
+     "title": "MAP · F5",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F5",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 22.91"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 83%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Unknown(5,2)",
+      "score": 22.908,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "2",
+       "projected_hp": "0.8296330231608439"
+      }
+     },
+     {
+      "label": "Monster(5,3)",
+      "score": 22.59,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "3",
+       "projected_hp": "0.9298610280469427"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Unknown(5,2)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 22.908,
+     "target": {
+      "row": "5",
+      "col": "2",
+      "projected_hp": "0.8296330231608439"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:29",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【茂密的植被】：选择「休息」（经验价值 0.0）；休息=0.0(n=0) / 坚持跋涉=0.0(n=0)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F6",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F6",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "2 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "pass",
+      "value": "生命 100%；配额 1/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "休息",
+      "score": 0.0,
+      "status": "chosen",
+      "why": "经验样本 0",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "坚持跋涉",
+      "score": 0.0,
+      "status": "rejected",
+      "why": "经验样本 0",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "休息",
+     "params": {
+      "option_index": 1
+     },
+     "score": 0.0
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:31",
+   "screen": "EVENT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【茂密的植被】：选择「战！」（经验价值 0.0）；战！=0.0(n=0)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F6",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F6",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "1 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "pass",
+      "value": "生命 100%；配额 1/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "战！",
+      "score": 0.0,
+      "status": "chosen",
+      "why": "经验样本 0",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "战！",
+     "params": {
+      "option_index": 0
+     },
+     "score": 0.0
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:35",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 1
+   },
+   "reason": "战斗：打出【收敛判决】→扭动虫（可击杀扭动虫｜VIVHITE_LIVE_ESTIMATE=+5.00[CONVERGENCE_VERDICT;dynamic=yes;hp-cost=8;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=16/kill;dimension=0]）；敌意图总伤12，我方78血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:18:35",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【事件循环】（能力/增益牌（第1回合）｜长战加成+1.9（敌血池58）｜VIVHITE_LIVE_ESTIMATE=+21.50[EVENT_LOOP;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;recovery-copy=29]）；敌意图总伤12，我方78血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:18:37",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 72,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 9,
+    "target_index": 2
+   },
+   "reason": "战斗：打出【收敛判决】→扭动虫（可击杀扭动虫｜VIVHITE_LIVE_ESTIMATE=+11.00[CONVERGENCE_VERDICT;dynamic=yes;hp-cost=8;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=16/kill;dimension=0]）；敌意图总伤12，我方72血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:18:37",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→扭动虫（延续集火：扭动虫（重复轮换火力=拖延减员）｜VIVHITE_LIVE_ESTIMATE=-2.50[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方78血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:18:39",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 76,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→扭动虫（可击杀扭动虫｜VIVHITE_LIVE_ESTIMATE=+1.50[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方76血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:18:40",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 78,
+   "gold": 9,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[大奖(3费)✗[not_enough_energy],白绮的变身式(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 78/78",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 6"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "大奖",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 6,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "JACKPOT",
+      "name": "大奖",
+      "energy_cost": 3,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:18:44",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 72,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【分治法阵】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=+5.86[DIVIDE_AND_CONQUER_CIRCLE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方72血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:18:45",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 68,
+   "gold": 9,
+   "action": "play_card",
+   "params": {
+    "card_index": 5,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【收敛判决】→扭动虫（可击杀扭动虫｜VIVHITE_LIVE_ESTIMATE=+13.00[CONVERGENCE_VERDICT;dynamic=yes;hp-cost=8;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=16/kill;dimension=0]）；敌意图总伤0，我方68血/0甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:18:45",
+   "screen": "REWARD",
+   "floor": 6,
+   "hp": 76,
+   "gold": 9,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：19金币"
+  },
+  {
+   "t": "17:18:46",
+   "screen": "REWARD",
+   "floor": 6,
+   "hp": 76,
+   "gold": 28,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：易伤药水"
+  },
+  {
+   "t": "17:18:47",
+   "screen": "REWARD",
+   "floor": 6,
+   "hp": 76,
+   "gold": 28,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:18:48",
+   "screen": "CARD_SELECTION",
+   "floor": 6,
+   "hp": 76,
+   "gold": 28,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【启发式护盾】（价值 14.2）；候选：启发式护盾=14.2 / 明暗对照=12.9 / 切线星光=10.4",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F6",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F6",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 14.18 / 门槛 2.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "启发式护盾",
+      "score": 14.18,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": 12.9,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": 10.403,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "启发式护盾",
+     "params": {
+      "option_index": 0
+     },
+     "score": 14.18
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:49",
+   "screen": "REWARD",
+   "floor": 6,
+   "hp": 76,
+   "gold": 28,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:18:51",
+   "screen": "MAP",
+   "floor": 6,
+   "hp": 76,
+   "gold": 28,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：RestSite(6,2)（路径分 22.35，预计进 Boss 血量 81%）；候选：RestSite(6,2)=22.35",
+   "trace": {
+    "observation": {
+     "title": "MAP · F6",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F6",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 22.35"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 81%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "RestSite(6,2)",
+      "score": 22.354,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "6",
+       "col": "2",
+       "projected_hp": "0.8116728061353015"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "RestSite(6,2)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 22.354,
+     "target": {
+      "row": "6",
+      "col": "2",
+      "projected_hp": "0.8116728061353015"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:53",
+   "screen": "REST",
+   "floor": 7,
+   "hp": 76,
+   "gold": 28,
+   "action": "choose_rest_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "篝火：锻造升级（血量 97% ≥ 安全线 55%，升级降低后续战损）",
+   "trace": {
+    "observation": {
+     "title": "REST · F7",
+     "facts": [
+      "屏幕 REST",
+      "楼层 F7",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REST"
+     },
+     {
+      "label": "GATE 当前生命线",
+      "status": "pass",
+      "value": "当前 97% / 锻造安全线 55%"
+     },
+     {
+      "label": "GATE 锻造资格",
+      "status": "pass",
+      "value": "锻造选项=True；可升级牌=16"
+     },
+     {
+      "label": "GATE 路径生存投影",
+      "status": "pass",
+      "value": "Boss入场投影=81%；前方连续战损=17%"
+     },
+     {
+      "label": "GATE Boss 前夜",
+      "status": "pass",
+      "value": "前夜=False"
+     },
+     {
+      "label": "LOCK 篝火规则命中",
+      "status": "pass",
+      "value": "smith｜篝火：锻造升级（血量 97% ≥ 安全线 55%，升级降低后续战损）"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_rest_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "锻造",
+      "score": null,
+      "status": "chosen",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 1,
+      "action": "choose_rest_option"
+     },
+     {
+      "label": "休息",
+      "score": null,
+      "status": "rejected",
+      "why": "规则型候选，不伪造概率或分数",
+      "index": 0,
+      "action": "choose_rest_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_rest_option",
+     "label": "锻造",
+     "params": {
+      "option_index": 1
+     },
+     "score": null
+    },
+    "explanation": [
+     "篝火是规则直达决策：展示命中的稳定规则，不制造候选概率。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:54",
+   "screen": "CARD_SELECTION",
+   "floor": 7,
+   "hp": 76,
+   "gold": 28,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 14
+   },
+   "reason": "升级卡牌：【事件循环】",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F7",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F7",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "升级；输出饥饿=False；竞速必败=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环",
+      "score": 25.023,
+      "status": "chosen",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 14,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "大奖",
+      "score": 22.788,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 12,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": 16.673,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 11,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "启发式护盾",
+      "score": 14.43,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 15,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": 14.195,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 9,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "收敛判决",
+      "score": 13.416,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 13,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": 10.302,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 10,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": 3.0,
+      "status": "rejected",
+      "why": "升级目标价值（真实卡组上下文）",
+      "index": 8,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "事件循环",
+     "params": {
+      "option_index": 14
+     },
+     "score": 25.023
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:55",
+   "screen": "REST",
+   "floor": 7,
+   "hp": 76,
+   "gold": 28,
+   "action": "proceed",
+   "params": {},
+   "reason": "篝火：无可选项目，离开"
+  },
+  {
+   "t": "17:18:57",
+   "screen": "MAP",
+   "floor": 7,
+   "hp": 76,
+   "gold": 28,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Elite(7,2)（路径分 21.93，预计进 Boss 血量 81%；血量与卡组达标，精英奖励价值高）；候选：Elite(7,2)=21.93|血量与卡组达标，精英奖励价值高",
+   "trace": {
+    "observation": {
+     "title": "MAP · F7",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F7",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 21.93"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 81%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Elite(7,2)",
+      "score": 21.926,
+      "status": "chosen",
+      "why": "血量与卡组达标，精英奖励价值高",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "7",
+       "col": "2",
+       "projected_hp": "0.8116728061353015"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Elite(7,2)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 21.926,
+     "target": {
+      "row": "7",
+      "col": "2",
+      "projected_hp": "0.8116728061353015"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:18:59",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 76,
+   "gold": 28,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【能力药水】",
+   "turn": 1,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F8",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F8",
+      "生命 76/78",
+      "回合 1",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:19:00",
+   "screen": "CARD_SELECTION",
+   "floor": 8,
+   "hp": 76,
+   "gold": 28,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【白绮的猩红转化仪式】（价值 9.9）；候选：白绮的猩红转化仪式=9.9 / 生命流形=1.0 / 最优算法=-0.6",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F8",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F8",
+      "生命 76/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 9.93 / 门槛 2.00；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "白绮的猩红转化仪式",
+      "score": 9.929,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "生命流形",
+      "score": 1.05,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "最优算法",
+      "score": -0.55,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "白绮的猩红转化仪式",
+     "params": {
+      "option_index": 2
+     },
+     "score": 9.929
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:02",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 76,
+   "gold": 28,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【易伤药水】",
+   "turn": 1,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F8",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F8",
+      "生命 76/78",
+      "回合 1",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "6 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的猩红转化仪式",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 5,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 1,
+      "target_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:19:03",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 76,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【白绮的猩红转化仪式】（能力/增益牌（第1回合）｜长战加成+4.2（敌血池127）｜VIVHITE_LIVE_ESTIMATE=+3.94[VIVHITES_CRIMSON_TRANSFORMATION_RITUAL;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-longline=3.9375/turns=6/phase-sum=21/rate=10%]）；敌意图总伤0，我方76血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:19:04",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 76,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【事件循环+】（能力/增益牌（第1回合）｜长战加成+4.2（敌血池127）｜VIVHITE_LIVE_ESTIMATE=+23.50[EVENT_LOOP;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%;recovery-copy=31]）；敌意图总伤0，我方76血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:19:05",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 70,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【闭域投影】→旧日雕像（单体伤害≈15.0｜VIVHITE_LIVE_ESTIMATE=-6.25[CLOSED_PROJECTION;dynamic=yes;hp-cost=5;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤0，我方70血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:19:06",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 66,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→旧日雕像（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-3.75[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=3;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤0，我方66血/0甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:19:06",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 64,
+   "gold": 28,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（开集庇护✓,闭域映射✓），结束回合（敌意图总伤0，我方64血/0甲）",
+   "turn": 1,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F8",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F8",
+      "生命 64/78",
+      "回合 1",
+      "能量 1",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 64"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "开集庇护",
+      "score": 0.073,
+      "status": "rejected",
+      "why": "格挡14｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=+0.00[OPEN_SET_SHELTER;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -2.5,
+      "status": "rejected",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-2.50[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_OPEN_SET_SHELTER",
+      "name": "开集庇护",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:19:10",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 64,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→旧日雕像（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-3.75[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=3;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤0，我方64血/0甲",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:19:11",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 61,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【白绮的变身式】（能力/增益牌（第2回合）｜长战加成+2.2（敌血池67）｜VIVHITE_LIVE_ESTIMATE=-3.00[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤0，我方61血/0甲",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "17:19:12",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 57,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡9｜溢出大挡贬值/抽牌2｜VIVHITE_LIVE_ESTIMATE=-0.50[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤0，我方57血/0甲",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:19:14",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 55,
+   "gold": 28,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],收敛判决(2费)✗[not_enough_energy],分治法阵(1费)✗[not_enough_energy]]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F8",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F8",
+      "生命 55/78",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "收敛判决",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CONVERGENCE_VERDICT",
+      "name": "收敛判决",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+      "name": "分治法阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:19:18",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 55,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【大奖】→旧日雕像（单体伤害≈26.0）；敌意图总伤23，我方55血/0甲；意图升级+23，防御前置",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:19:19",
+   "screen": "COMBAT",
+   "floor": 8,
+   "hp": 53,
+   "gold": 28,
+   "action": "play_card",
+   "params": {
+    "card_index": 5,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【后继式】→旧日雕像（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-3.75[SUCCESSOR_FORMULA;dynamic=yes;hp-cost=3;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;ritual-phase=1/damage=10%]）；敌意图总伤23，我方53血/0甲；意图升级+23，防御前置",
+   "turn": 3,
+   "energy": 0
+  },
+  {
+   "t": "17:19:19",
+   "screen": "REWARD",
+   "floor": 8,
+   "hp": 65,
+   "gold": 28,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：35金币"
+  },
+  {
+   "t": "17:19:20",
+   "screen": "REWARD",
+   "floor": 8,
+   "hp": 65,
+   "gold": 63,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：紫水晶茄子"
+  },
+  {
+   "t": "17:19:21",
+   "screen": "REWARD",
+   "floor": 8,
+   "hp": 65,
+   "gold": 63,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:19:22",
+   "screen": "CARD_SELECTION",
+   "floor": 8,
+   "hp": 65,
+   "gold": 63,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "选择卡牌：【守恒递归】（价值 46.9）；候选：守恒递归=46.9 / 开集庇护=14.2 / 测地护幕=0.7",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F8",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F8",
+      "生命 65/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 46.91 / 门槛 2.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "守恒递归",
+      "score": 46.91,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": 14.195,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "测地护幕",
+      "score": 0.671,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "守恒递归",
+     "params": {
+      "option_index": 2
+     },
+     "score": 46.91
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:23",
+   "screen": "REWARD",
+   "floor": 8,
+   "hp": 65,
+   "gold": 63,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:19:25",
+   "screen": "MAP",
+   "floor": 8,
+   "hp": 65,
+   "gold": 63,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(8,2)（路径分 20.85，预计进 Boss 血量 91%；前期需要战斗积累卡牌）；候选：Monster(8,2)=20.85|前期需要战斗积累卡牌",
+   "trace": {
+    "observation": {
+     "title": "MAP · F8",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F8",
+      "生命 65/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 20.85"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 91%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(8,2)",
+      "score": 20.852,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "8",
+       "col": "2",
+       "projected_hp": "0.9087930917314395"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(8,2)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 20.852,
+     "target": {
+      "row": "8",
+      "col": "2",
+      "projected_hp": "0.9087930917314395"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:27",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 65,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【守恒递归】（能力/增益牌（第1回合）｜长战加成+2.2（敌血池65）｜VIVHITE_LIVE_ESTIMATE=+43.50[CONSERVED_RECURRENCE;dynamic=yes;hp-cost=10;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;recovery-copy=56]）；敌意图总伤0，我方65血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:19:28",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 55,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→方柱构装体（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-2.50[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方55血/0甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:19:30",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 53,
+   "gold": 63,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy]]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F9",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F9",
+      "生命 53/78",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "3 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:19:33",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 53,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【大奖】→方柱构装体（单体伤害≈25.0）；敌意图总伤9，我方53血/0甲；意图升级+9，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:19:34",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 53,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【事件循环+】（能力/增益牌（第2回合）｜VIVHITE_LIVE_ESTIMATE=+21.50[EVENT_LOOP;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;recovery-copy=29]）；敌意图总伤9，我方53血/0甲；意图升级+9，防御前置",
+   "turn": 2,
+   "energy": 0
+  },
+  {
+   "t": "17:19:35",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 47,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 6,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【大奖】→方柱构装体（单体伤害≈25.0）；敌意图总伤9，我方47血/0甲；意图升级+9，防御前置",
+   "turn": 2,
+   "energy": 0
+  },
+  {
+   "t": "17:19:35",
+   "screen": "COMBAT",
+   "floor": 9,
+   "hp": 47,
+   "gold": 63,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【后继式】→方柱构装体（可击杀方柱构装体｜VIVHITE_LIVE_ESTIMATE=+14.50[SUCCESSOR_FORMULA;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=16/kill;dimension=0]）；敌意图总伤9，我方47血/0甲；意图升级+9，防御前置",
+   "turn": 2,
+   "energy": 0
+  },
+  {
+   "t": "17:19:36",
+   "screen": "REWARD",
+   "floor": 9,
+   "hp": 61,
+   "gold": 63,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：14金币"
+  },
+  {
+   "t": "17:19:37",
+   "screen": "REWARD",
+   "floor": 9,
+   "hp": 61,
+   "gold": 77,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：15金币"
+  },
+  {
+   "t": "17:19:38",
+   "screen": "REWARD",
+   "floor": 9,
+   "hp": 61,
+   "gold": 92,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：力量药水"
+  },
+  {
+   "t": "17:19:38",
+   "screen": "REWARD",
+   "floor": 9,
+   "hp": 61,
+   "gold": 92,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:19:39",
+   "screen": "CARD_SELECTION",
+   "floor": 9,
+   "hp": 61,
+   "gold": 92,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "选择卡牌：【等周壁垒】（价值 9.6）；候选：等周壁垒=9.6 / 公理护环=7.1 / 星算追猎=6.3",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F9",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F9",
+      "生命 61/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 9.55 / 门槛 2.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "等周壁垒",
+      "score": 9.554,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "公理护环",
+      "score": 7.071,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "星算追猎",
+      "score": 6.35,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "等周壁垒",
+     "params": {
+      "option_index": 0
+     },
+     "score": 9.554
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:40",
+   "screen": "REWARD",
+   "floor": 9,
+   "hp": 61,
+   "gold": 92,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:19:42",
+   "screen": "MAP",
+   "floor": 9,
+   "hp": 61,
+   "gold": 92,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Treasure(9,3)（路径分 19.51，预计进 Boss 血量 91%）；候选：Treasure(9,3)=19.51",
+   "trace": {
+    "observation": {
+     "title": "MAP · F9",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F9",
+      "生命 61/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 19.51"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 91%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Treasure(9,3)",
+      "score": 19.506,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "9",
+       "col": "3",
+       "projected_hp": "0.9067724805083333"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Treasure(9,3)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 19.506,
+     "target": {
+      "row": "9",
+      "col": "3",
+      "projected_hp": "0.9067724805083333"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:44",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 61,
+   "gold": 92,
+   "action": "open_chest",
+   "params": {},
+   "reason": "宝箱：开启"
+  },
+  {
+   "t": "17:19:45",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 61,
+   "gold": 143,
+   "action": "choose_treasure_relic",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "宝箱：选择遗物【剃刀牙】（价值 0.00）"
+  },
+  {
+   "t": "17:19:46",
+   "screen": "CHEST",
+   "floor": 10,
+   "hp": 61,
+   "gold": 143,
+   "action": "proceed",
+   "params": {},
+   "reason": "宝箱：离开"
+  },
+  {
+   "t": "17:19:48",
+   "screen": "MAP",
+   "floor": 10,
+   "hp": 61,
+   "gold": 143,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "路径规划：Elite(10,4)（路径分 18.85，预计进 Boss 血量 91%；血量与卡组达标，精英奖励价值高）；候选：RestSite(10,2)=17.36 / Unknown(10,3)=17.85 / Elite(10,4)=18.85|血量与卡组达标，精英奖励价值高",
+   "trace": {
+    "observation": {
+     "title": "MAP · F10",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F10",
+      "生命 61/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "pass",
+      "value": "系数 1.00"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "3 条候选；最高 18.85"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 91%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Elite(10,4)",
+      "score": 18.853,
+      "status": "chosen",
+      "why": "血量与卡组达标，精英奖励价值高",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "10",
+       "col": "4",
+       "projected_hp": "0.9067724805083333"
+      }
+     },
+     {
+      "label": "Unknown(10,3)",
+      "score": 17.848,
+      "status": "rejected",
+      "why": "",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "10",
+       "col": "3",
+       "projected_hp": "0.9071817188835968"
+      }
+     },
+     {
+      "label": "RestSite(10,2)",
+      "score": 17.363,
+      "status": "rejected",
+      "why": "",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "10",
+       "col": "2",
+       "projected_hp": "0.9376102498642697"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Elite(10,4)",
+     "params": {
+      "option_index": 2
+     },
+     "score": 18.853,
+     "target": {
+      "row": "10",
+      "col": "4",
+      "projected_hp": "0.9067724805083333"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:19:50",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 61,
+   "gold": 143,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【力量药水】",
+   "turn": 1,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F11",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F11",
+      "生命 61/78",
+      "回合 1",
+      "能量 3",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "启发式护盾",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "17:19:51",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 61,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【闭域投影】→多尼斯异鸟（单体伤害≈16.0｜VIVHITE_LIVE_ESTIMATE=-5.00[CLOSED_PROJECTION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤17，我方61血/0甲",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "17:19:52",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 57,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡8/抽牌2｜VIVHITE_LIVE_ESTIMATE=-0.50[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤17，我方57血/0甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "17:19:54",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 55,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【分治法阵】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=+4.65[DIVIDE_AND_CONQUER_CIRCLE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤17，我方55血/8甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "17:19:55",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 51,
+   "gold": 143,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],白绮的变身式(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F11",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F11",
+      "生命 51/78",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 8,
+    "incoming_damage": 17,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:19:59",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 42,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【收敛判决】→多尼斯异鸟（单体伤害≈29.0｜VIVHITE_LIVE_ESTIMATE=-10.00[CONVERGENCE_VERDICT;dynamic=yes;hp-cost=8;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方42血/0甲",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "17:19:59",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 34,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→多尼斯异鸟（单体伤害≈12.0｜败局竞速全攻｜VIVHITE_LIVE_ESTIMATE=-2.50[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方34血/0甲",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "17:20:00",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 32,
+   "gold": 143,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（事件循环+✓,开集庇护✗,等周壁垒✗），结束回合（敌意图总伤12，我方32血/0甲）",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F11",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F11",
+      "生命 32/78",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 12 / 当前生命 32"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "warn",
+      "value": "败局竞速=True；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环+",
+      "score": -27.0,
+      "status": "rejected",
+      "why": "能力/增益牌（第2回合）｜VIVHITE_LIVE_ESTIMATE=+21.50[EVENT_LOOP;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0;re",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_EVENT_LOOP",
+      "name": "事件循环+",
+      "energy_cost": 0,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_OPEN_SET_SHELTER",
+      "name": "开集庇护",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_ISOPERIMETRIC_WARD",
+      "name": "等周壁垒",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "why_not_playable": "not_enough_energy"
+     }
+    ]
+   }
+  },
+  {
+   "t": "17:20:04",
+   "screen": "COMBAT",
+   "floor": 11,
+   "hp": 20,
+   "gold": 143,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【大奖】→多尼斯异鸟（可击杀多尼斯异鸟）；敌意图总伤19，我方20血/0甲；意图升级+7，防御前置",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "17:20:05",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 143,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：39金币"
+  },
+  {
+   "t": "17:20:06",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 182,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：15金币"
+  },
+  {
+   "t": "17:20:07",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：能量药水"
+  },
+  {
+   "t": "17:20:07",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：古茶具套装"
+  },
+  {
+   "t": "17:20:08",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "17:20:09",
+   "screen": "CARD_SELECTION",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【启发式护盾】（价值 14.6）；候选：启发式护盾=14.6 / 并行星雨=7.4 / 归纳法阵=7.3",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F11",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F11",
+      "生命 36/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 14.63 / 门槛 2.00；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "启发式护盾",
+      "score": 14.63,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "并行星雨",
+      "score": 7.354,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "归纳法阵",
+      "score": 7.35,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "启发式护盾",
+     "params": {
+      "option_index": 1
+     },
+     "score": 14.63
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "17:20:10",
+   "screen": "REWARD",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "17:20:12",
+   "screen": "MAP",
+   "floor": 11,
+   "hp": 36,
+   "gold": 197,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(11,3)（路径分 7.57，预计进 Boss 血量 88%；低血尾部定价：Monster先验6→8（实测单场最差30）；低血尾部生存复核：单场最差30打完仅剩6(≤8)，尾部罚分）；候选：Monster(11,3)=7.57|低血尾部定价：Monster先验6→8（实测单场最差30）；低血尾部生存复核：单场最差30打完仅剩6(≤8)，尾部罚分 / Unknown(11,5)=-25.62|低血尾部定价：Unknown先验1→6（实测单场最差37）；低血尾部生存复核：单场最差37打完仅剩0(≤8)，尾部罚分",
+   "trace": {
+    "observation": {
+     "title": "MAP · F11",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F11",
+      "生命 36/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "血量46%<62%，规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 7.57"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 88%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(11,3)",
+      "score": 7.567,
+      "status": "chosen",
+      "why": "低血尾部定价：Monster先验6→8（实测单场最差30）；低血尾部生存复核：单场最差30打完仅剩6(≤8)，尾部罚分",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "11",
+       "col": "3",
+       "projected_hp": "0.8803734457039835"
+      }
+     },
+     {
+      "label": "Unknown(11,5)",
+      "score": -25.618,
+      "status": "rejected",
+      "why": "低血尾部定价：Unknown先验1→6（实测单场最差37）；低血尾部生存复核：单场最差37打完仅剩0(≤8)，尾部罚分",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "11",
+       "col": "5",
+       "projected_hp": "0.900059944327883"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(11,3)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 7.567,
+     "target": {
+      "row": "11",
+      "col": "3",
+      "projected_hp": "0.8803734457039835"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "17:20:15",
+   "screen": "COMBAT",
+   "floor": 12,
+   "hp": 36,
+   "gold": 197,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【能量药水】",
+   "turn": 1,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F12",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F12",
+      "生命 36/78",
+      "回合 1",
+      "能量 3",
+      "敌方意图伤害 4"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域投影",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "收敛判决",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "守恒递归",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
   }
  ],
  "combat_notes": [
   "F2 Monster战 掉血1",
-  "F3 Monster战 掉血0"
+  "F3 Monster战 掉血0",
+  "F4 Monster战 掉血0",
+  "F6 Unknown战 掉血2",
+  "F8 Elite战 掉血11",
+  "F9 Monster战 掉血4",
+  "F11 Elite战 掉血25"
  ],
  "attribution_tags": [
   [
@@ -1838,6 +5565,78 @@
   [
    "map_node",
    "Shop"
+  ],
+  [
+   "card_pick",
+   "JACKPOT"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_CONVERGENCE_VERDICT"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_EVENT_LOOP"
+  ],
+  [
+   "map_node",
+   "Unknown"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_HEURISTIC_SHIELD"
+  ],
+  [
+   "map_node",
+   "RestSite"
+  ],
+  [
+   "map_node",
+   "Elite"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
+  ],
+  [
+   "relic_pick",
+   "AMETHYST_AUBERGINE"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_CONSERVED_RECURRENCE"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_ISOPERIMETRIC_WARD"
+  ],
+  [
+   "map_node",
+   "Treasure"
+  ],
+  [
+   "relic_pick",
+   "RAZOR_TOOTH"
+  ],
+  [
+   "map_node",
+   "Elite"
+  ],
+  [
+   "relic_pick",
+   "VENERABLE_TEA_SET"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_HEURISTIC_SHIELD"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ],
  "human_assisted": false,
@@ -1926,6 +5725,55 @@
    "name": "分治法阵",
    "card_type": "Skill",
    "rarity": "Uncommon"
+  },
+  {
+   "card_id": "JACKPOT",
+   "upgraded": false,
+   "name": "大奖",
+   "card_type": "Attack",
+   "rarity": "Rare"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CONVERGENCE_VERDICT",
+   "upgraded": false,
+   "name": "收敛判决",
+   "card_type": "Attack",
+   "rarity": "Uncommon"
+  },
+  {
+   "card_id": "VIVHITE_CARD_EVENT_LOOP",
+   "upgraded": true,
+   "name": "事件循环+",
+   "card_type": "Skill",
+   "rarity": "Uncommon"
+  },
+  {
+   "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+   "upgraded": false,
+   "name": "启发式护盾",
+   "card_type": "Skill",
+   "rarity": "Common"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CONSERVED_RECURRENCE",
+   "upgraded": false,
+   "name": "守恒递归",
+   "card_type": "Skill",
+   "rarity": "Rare"
+  },
+  {
+   "card_id": "VIVHITE_CARD_ISOPERIMETRIC_WARD",
+   "upgraded": false,
+   "name": "等周壁垒",
+   "card_type": "Skill",
+   "rarity": "Uncommon"
+  },
+  {
+   "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+   "upgraded": false,
+   "name": "启发式护盾",
+   "card_type": "Skill",
+   "rarity": "Common"
   }
  ],
  "deck_changes": [
@@ -1970,6 +5818,133 @@
    "acquired": [
     {
      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 4,
+   "source": "run.deck_diff",
+   "floor": 5,
+   "screen": "SHOP",
+   "observed_at": "2026-09-02 17:18:22",
+   "acquired": [
+    {
+     "card_id": "JACKPOT",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 5,
+   "source": "run.deck_diff",
+   "floor": 5,
+   "screen": "SHOP",
+   "observed_at": "2026-09-02 17:18:23",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_CONVERGENCE_VERDICT",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 6,
+   "source": "run.deck_diff",
+   "floor": 5,
+   "screen": "SHOP",
+   "observed_at": "2026-09-02 17:18:24",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_EVENT_LOOP",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 7,
+   "source": "run.deck_diff",
+   "floor": 6,
+   "screen": "REWARD",
+   "observed_at": "2026-09-02 17:18:49",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 8,
+   "source": "run.deck_diff",
+   "floor": 7,
+   "screen": "REST",
+   "observed_at": "2026-09-02 17:18:55",
+   "acquired": [],
+   "removed": [],
+   "upgraded": [
+    {
+     "card_id": "VIVHITE_CARD_EVENT_LOOP",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "sequence": 9,
+   "source": "run.deck_diff",
+   "floor": 8,
+   "screen": "REWARD",
+   "observed_at": "2026-09-02 17:19:23",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_CONSERVED_RECURRENCE",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 10,
+   "source": "run.deck_diff",
+   "floor": 9,
+   "screen": "REWARD",
+   "observed_at": "2026-09-02 17:19:40",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_ISOPERIMETRIC_WARD",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 11,
+   "source": "run.deck_diff",
+   "floor": 11,
+   "screen": "REWARD",
+   "observed_at": "2026-09-02 17:20:10",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
      "upgraded": false,
      "count": 1
     }
