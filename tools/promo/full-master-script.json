@@ -1,0 +1,395 @@
+{
+  "format_version": 1,
+  "kind": "vivhite_promo_full_master_script",
+  "project_id": "vivhite-player-promo",
+  "title": "白绮：把数学写成魔法",
+  "target_duration_seconds": 600,
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "orientation": "landscape"
+  },
+  "audio_policy": {
+    "voice": "zh-CN-XiaoxiaoNeural",
+    "rate": "+0%",
+    "pitch": "+0Hz",
+    "volume": "+0%",
+    "include_bgm": false,
+    "game_audio": "from-capture",
+    "mix_note": "旁白作为独立 stem；不加入 BGM。最终混音仍需记录 FFmpeg filtergraph。"
+  },
+  "subtitle_policy": {
+    "locales": ["zh-CN", "en"],
+    "format": "ASS",
+    "playres": [1920, 1080],
+    "safe_area": {
+      "left": 80,
+      "right": 80,
+      "bottom": 78
+    },
+    "style": {
+      "zh_cn": {
+        "font": "Microsoft YaHei",
+        "size": 46,
+        "alignment": 2,
+        "margin_v": 78
+      },
+      "en": {
+        "font": "Arial",
+        "size": 34,
+        "alignment": 2,
+        "margin_v": 30
+      }
+    },
+    "bilingual_layout": "中文主行；英文第二行；每个 cue 独立绑定到同一段旁白，不把整章压成一条长字幕。"
+  },
+  "semantic_policy": {
+    "source_verified_cues_may_narrate": true,
+    "runtime_only_facts_require_receipt": true,
+    "unverified_runtime_language": "避免使用‘实测证明’、‘必然’和‘已平衡’等措辞；仅描述当前源码、localization、测试或已绑定实录能够支持的事实。",
+    "old_placeholder_cards_forbidden": true
+  },
+  "chapters": [
+    {
+      "chapter_id": "identity",
+      "shot_id": "S01-identity",
+      "window": {"start_seconds": 0, "end_seconds": 45},
+      "cues": [
+        {
+          "cue_id": "S01-01",
+          "anchor_seconds": 0,
+          "subtitle_window_seconds": 14,
+          "narration_zh": "这里是白绮。她以独立角色身份进入尖塔，拥有自己的角色数值、卡池和遗物池。",
+          "subtitle_zh": "白绮：独立角色、独立卡池与遗物池",
+          "subtitle_en": "Vivhite: an independent character, card pool, and relic pool",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Characters/VivhiteCharacter.cs", "Vivhite.Tests/CardCatalogAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S01-02",
+          "anchor_seconds": 16,
+          "subtitle_window_seconds": 13,
+          "narration_zh": "她的施法媒介不是一件武器，而是一套把生命、格挡、抽牌和伤害放进同一张图里的规则。",
+          "subtitle_zh": "把资源写进同一张可计算的图",
+          "subtitle_en": "Put life, block, draw, and damage on one calculable map",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite/VivhiteCode/Core/LifeCalculation.cs"]}
+        },
+        {
+          "cue_id": "S01-03",
+          "anchor_seconds": 31,
+          "subtitle_window_seconds": 14,
+          "narration_zh": "所以每一张牌都像一次演算：先问代价能否支付，再让效果发生，最后把结果交给下一步。",
+          "subtitle_zh": "先支付，再结算，再把结果传给下一步",
+          "subtitle_en": "Pay first, resolve second, and pass the result forward",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/LifeCalculation.cs", "Vivhite.Tests/Program.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "loadout",
+      "shot_id": "S02-loadout",
+      "window": {"start_seconds": 45, "end_seconds": 95},
+      "cues": [
+        {
+          "cue_id": "S02-01",
+          "anchor_seconds": 45,
+          "subtitle_window_seconds": 16,
+          "narration_zh": "白绮的基础配置是七十八点生命、三点能量、每回合抽五张牌，以及九十九枚金币。",
+          "subtitle_zh": "基础配置：78 生命、3 能量、5 抽牌",
+          "subtitle_en": "Base setup: 78 HP, 3 energy, and 5 cards drawn each turn",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Characters/VivhiteCharacter.cs", "docs/2026-08-30-白绮角色与轮换大脑实现.md"]}
+        },
+        {
+          "cue_id": "S02-02",
+          "anchor_seconds": 62,
+          "subtitle_window_seconds": 17,
+          "narration_zh": "起始牌组由四张弦光投影、四张闭域映射和一张白绮的变身式组成。攻击、防守与能力，从第一手牌就开始互相证明。",
+          "subtitle_zh": "起始牌组：弦光投影、闭域映射、白绮的变身式",
+          "subtitle_en": "Starter deck: Luminous Projection, Closed Domain Mapping, and Vivhite's Transformation",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Cards/Basics/LuminousProjection.cs", "Vivhite/VivhiteCode/Cards/Basics/ClosedDomainMapping.cs", "Vivhite/VivhiteCode/Cards/Basics/VivhiteTransformation.cs", "Vivhite.Tests/CardCatalogAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S02-03",
+          "anchor_seconds": 79,
+          "subtitle_window_seconds": 16,
+          "narration_zh": "初始遗物是孤高冠冕。每当一个敌人死亡，它按当前最大生命的百分之二十向上取整回复；同一个死亡事件只结算一次。",
+          "subtitle_zh": "孤高冠冕：每次敌人死亡，回复最大生命的 20%（向上取整）",
+          "subtitle_en": "Solitary Crown: each enemy death heals 20% of Max HP, rounded up",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Relics/SolitaryCrown.cs", "Vivhite.Tests/Relics/SolitaryCrownRelicAcceptanceTests.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "cough",
+      "shot_id": "S03-cough",
+      "window": {"start_seconds": 95, "end_seconds": 155},
+      "cues": [
+        {
+          "cue_id": "S03-01",
+          "anchor_seconds": 95,
+          "subtitle_window_seconds": 15,
+          "narration_zh": "白绮的核心代价叫做謦欬。它在牌面效果之前支付生命，支付的是实际落到角色身上的生命损失。",
+          "subtitle_zh": "謦欬：牌面效果之前支付生命",
+          "subtitle_en": "Cough: pay life before the card effect",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/LifeCalculation.cs", "Vivhite.Tests/Mechanics/LifeCalculationAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S03-02",
+          "anchor_seconds": 113,
+          "subtitle_window_seconds": 17,
+          "narration_zh": "出牌前先检查能否支付；如果余裕不够，就从生命中补足，但支付后至少保留一点生命。不能支付的牌，不会先扣血再回滚。",
+          "subtitle_zh": "先检查可支付性；生命最低保留 1 点",
+          "subtitle_en": "Check payment first; HP can never fall below 1",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/LifeCalculation.cs", "Vivhite.Tests/Mechanics/LifeCalculationAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S03-03",
+          "anchor_seconds": 133,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "这让高伤害不再只是数字比较，而是一道风险判断：现在支付多少，才能让下一张牌仍然有资格被打出。",
+          "subtitle_zh": "高伤害，也是一道支付与风险判断题",
+          "subtitle_en": "High damage becomes a payment and risk decision",
+          "evidence": {"mode": "editorial", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "margin",
+      "shot_id": "S04-margin",
+      "window": {"start_seconds": 155, "end_seconds": 210},
+      "cues": [
+        {
+          "cue_id": "S04-01",
+          "anchor_seconds": 155,
+          "subtitle_window_seconds": 14,
+          "narration_zh": "余裕把这道代价题改写成储备。每一点余裕，按一比一抵消下一次謦欬，并在支付时被消耗。",
+          "subtitle_zh": "余裕：按一比一抵消謦欬",
+          "subtitle_en": "Margin: offset Cough one for one",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/InfiniteMargin.cs", "Vivhite/VivhiteCode/Core/LifeCalculation.cs"]}
+        },
+        {
+          "cue_id": "S04-02",
+          "anchor_seconds": 172,
+          "subtitle_window_seconds": 17,
+          "narration_zh": "公理护环不花费能量就能获得三点余裕。接着打出闭域投影：謦欬四，造成十四点伤害，每消耗一点余裕再获得五点格挡。",
+          "subtitle_zh": "公理护环 → 闭域投影：余裕转成格挡",
+          "subtitle_en": "Axiom Ring → Closed Projection: turn Margin into block",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite/VivhiteCode/Cards/Conservation/ConservationCard.cs"]}
+        },
+        {
+          "cue_id": "S04-03",
+          "anchor_seconds": 193,
+          "subtitle_window_seconds": 17,
+          "narration_zh": "如果这时有三点余裕，四点謦欬只需要再支付一点生命，同时换来十五点格挡。危险没有消失，但它已经被编进下一步防线。",
+          "subtitle_zh": "3 余裕抵扣 3 謦欬：再付 1 生命，获得 15 格挡",
+          "subtitle_en": "3 Margin offsets 3 Cough: pay 1 HP, gain 15 block",
+          "evidence": {"mode": "runtime_observed_if_bound", "refs": ["tools/promo/runs/run-20260902T013900Z-full-master-a1/evidence/S04-axiom-after.png", "tools/promo/runs/run-20260902T013900Z-full-master-a1/evidence/S04-closed-after-final.png"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "drain",
+      "shot_id": "S05-drain",
+      "window": {"start_seconds": 210, "end_seconds": 275},
+      "cues": [
+        {
+          "cue_id": "S05-01",
+          "anchor_seconds": 210,
+          "subtitle_window_seconds": 16,
+          "narration_zh": "汲取不看牌面写着多少伤害，而看敌人最终实际失去了多少生命。整张攻击结算完，才统一计算回复。",
+          "subtitle_zh": "汲取只读取敌人的实际生命损失",
+          "subtitle_en": "Drain reads the enemy's actual HP loss",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/DrainRecovery.cs", "Vivhite.Tests/Mechanics/DrainAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S05-02",
+          "anchor_seconds": 229,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "多段攻击和群体攻击先汇总实际损失，再向上取整一次；格挡、过量伤害、自伤和荆棘，都不应该偷偷放大这条回路。",
+          "subtitle_zh": "多段先汇总，最后只取整一次",
+          "subtitle_en": "Aggregate multi-hit damage, then round once",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite.Tests/Mechanics/DrainAcceptanceTests.cs", "docs/2026-08-30-白绮角色与轮换大脑实现.md"]}
+        },
+        {
+          "cue_id": "S05-03",
+          "anchor_seconds": 251,
+          "subtitle_window_seconds": 19,
+          "narration_zh": "回复发生在死亡监听之前。于是一次攻击可以先把生命收回，再交给孤高冠冕处理每一个独立的死亡事件。",
+          "subtitle_zh": "先结算汲取，再处理死亡触发",
+          "subtitle_en": "Resolve Drain before death-trigger listeners",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite.Tests/Mechanics/EnemyDeathOrderingAcceptanceTests.cs", "Vivhite/VivhiteCode/Relics/SolitaryCrown.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "conservation-geometry",
+      "shot_id": "S06-conservation-geometry",
+      "window": {"start_seconds": 275, "end_seconds": 335},
+      "cues": [
+        {
+          "cue_id": "S06-01",
+          "anchor_seconds": 275,
+          "subtitle_window_seconds": 15,
+          "narration_zh": "守恒几何把余裕、生命和防御放在同一张资源表里：先把代价变成储备，再把储备变成安全窗口。",
+          "subtitle_zh": "守恒几何：代价、储备与防线",
+          "subtitle_en": "Conservation Geometry: cost, reserve, and defense",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite/VivhiteCode/Cards/Conservation"]}
+        },
+        {
+          "cue_id": "S06-02",
+          "anchor_seconds": 293,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "增维会永久增加最大生命，也同时增加当前生命。无限延拓的额外成长按一次外层调用结算，不会把自己递归成无穷触发。",
+          "subtitle_zh": "增维：永久增加最大生命与当前生命",
+          "subtitle_en": "Dimension Up: permanently increase Max HP and current HP",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/DimensionUp.cs", "Vivhite.Tests/Mechanics/UnboundedGrowthAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S06-03",
+          "anchor_seconds": 315,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "闭合流形把超量治疗转成等量余裕；守恒穹顶再让余裕翻倍并兑换格挡。生命没有凭空消失，只是换了一个坐标。",
+          "subtitle_zh": "超量治疗 → 余裕 → 格挡",
+          "subtitle_en": "Overheal → Margin → block",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/Overheal.cs", "Vivhite/VivhiteCode/Cards/Conservation/ConservationPowers.cs", "docs/2026-08-30-白绮角色与轮换大脑实现.md"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "recursive-star-calculus",
+      "shot_id": "S07-recursive-star-calculus",
+      "window": {"start_seconds": 335, "end_seconds": 395},
+      "cues": [
+        {
+          "cue_id": "S07-01",
+          "anchor_seconds": 335,
+          "subtitle_window_seconds": 15,
+          "narration_zh": "递归星算把击杀当成下一步的输入。递推星芒命中致命时抽牌，后继式命中致命时补回能量。",
+          "subtitle_zh": "递归星算：击杀是下一步的输入",
+          "subtitle_en": "Recursive Star Calculus: kills become the next input",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite.Tests/Mechanics/GeneratedCardGrowthAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S07-02",
+          "anchor_seconds": 353,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "终止证明对所有敌人造成伤害；每杀死一个敌人，就各自抽四张牌并获得一点能量，然后这张牌消耗掉。",
+          "subtitle_zh": "终止证明：每个击杀独立抽四张牌并获得能量",
+          "subtitle_en": "Proof of Termination: each kill grants four cards and energy",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite.Tests/Program.cs"]}
+        },
+        {
+          "cue_id": "S07-03",
+          "anchor_seconds": 374,
+          "subtitle_window_seconds": 17,
+          "narration_zh": "击杀、回血、抽牌和能量回流不是同一个触发被重复播放，而是按实体和事件顺序各自结算。",
+          "subtitle_zh": "每个死亡事件只按顺序结算一次",
+          "subtitle_en": "Each death event resolves once, in order",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite.Tests/Mechanics/EnemyDeathOrderingAcceptanceTests.cs", "Vivhite/VivhiteCode/Relics/AnyEnemyDeathRelic.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "crimson-integral",
+      "shot_id": "S08-crimson-integral",
+      "window": {"start_seconds": 395, "end_seconds": 455},
+      "cues": [
+        {
+          "cue_id": "S08-01",
+          "anchor_seconds": 395,
+          "subtitle_window_seconds": 15,
+          "narration_zh": "绯彩积分从多段攻击开始：每一击都记录实际损失，汲取率则作为百分点累加，而不是被偷偷截成一个上限。",
+          "subtitle_zh": "绯彩积分：多段攻击与可叠加汲取",
+          "subtitle_en": "Crimson Integral: multi-hit attacks and additive Drain",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Core/DrainRecovery.cs", "docs/2026-08-30-白绮角色与轮换大脑实现.md"]}
+        },
+        {
+          "cue_id": "S08-02",
+          "anchor_seconds": 413,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "白绮的猩红转化仪式本身不花生命。它从阶段零开始，每回合推进一阶段；阶段为 N 时，本回合所有攻击额外支付 N 点謦欬，每一击伤害增加百分之十乘 N。",
+          "subtitle_zh": "猩红转化仪式：阶段推进，攻击代价与每击伤害同步增长",
+          "subtitle_en": "Crimson Ritual: each phase raises attack cost and per-hit damage",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Cards/Hybrid/VivhitesCrimsonTransformationRitual.cs", "Vivhite.Tests/Mechanics/VivhitesCrimsonTransformationRitualAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S08-03",
+          "anchor_seconds": 434,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "阶段、额外謦欬和伤害增幅都没有人为封顶；真正的答案不是盲目叠高，而是用余裕、汲取和终止时机承担增长。",
+          "subtitle_zh": "增长没有人工封顶；构筑要回答它的代价",
+          "subtitle_en": "Growth has no artificial cap; the build must answer its cost",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite.Tests/Mechanics/VivhitesCrimsonTransformationRitualAcceptanceTests.cs", "Vivhite.Tests/Mechanics/UnboundedGrowthAcceptanceTests.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "unified-field",
+      "shot_id": "S09-unified-field",
+      "window": {"start_seconds": 455, "end_seconds": 530},
+      "cues": [
+        {
+          "cue_id": "S09-01",
+          "anchor_seconds": 455,
+          "subtitle_window_seconds": 16,
+          "narration_zh": "统一场论把余裕和汲取接到同一条反馈线上。它的謦欬是十四点，打出后，每一点被余裕抵消的耗血都会增加四个百分点全局汲取。",
+          "subtitle_zh": "统一场论：余裕抵扣，换成全局汲取",
+          "subtitle_en": "Unified Field Theory: convert Margin prevention into global Drain",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheory.cs", "Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheoryPowers.cs"]}
+        },
+        {
+          "cue_id": "S09-02",
+          "anchor_seconds": 474,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "汲取实际回复 H 点生命后，未升级的统一场论获得向下取整的 H 除以三点余裕；升级版把分母改为二。",
+          "subtitle_zh": "实际回复 H：获得 floor(H/3) 或 floor(H/2) 余裕",
+          "subtitle_en": "Actual healing H grants floor(H/3), or floor(H/2) when upgraded",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheoryPowers.cs", "Vivhite.Tests/Mechanics/CrossSuitDrainAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S09-03",
+          "anchor_seconds": 496,
+          "subtitle_window_seconds": 20,
+          "narration_zh": "于是一次成功的抵扣可以提高汲取，一次真实的回复又能补回余裕。跨体系不是一句口号，而是由实际事件串起来的闭环。",
+          "subtitle_zh": "余裕 → 汲取 → 实际回复 → 余裕",
+          "subtitle_en": "Margin → Drain → actual healing → Margin",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite/VivhiteCode/Cards/Hybrid/UnifiedFieldTheoryPowers.cs", "Vivhite.Tests/Mechanics/CrossSuitDrainAcceptanceTests.cs"]}
+        }
+      ]
+    },
+    {
+      "chapter_id": "finale",
+      "shot_id": "S10-finale",
+      "window": {"start_seconds": 530, "end_seconds": 600},
+      "cues": [
+        {
+          "cue_id": "S10-01",
+          "anchor_seconds": 530,
+          "subtitle_window_seconds": 15,
+          "narration_zh": "当前白绮卡池严格收录六十一张专属卡：三张基础牌、十八张普通牌、二十四张罕见牌和十六张稀有牌。",
+          "subtitle_zh": "61 张专属卡：3 基础、18 普通、24 罕见、16 稀有",
+          "subtitle_en": "61 signature cards: 3 basic, 18 common, 24 uncommon, 16 rare",
+          "evidence": {"mode": "source_verified", "refs": ["Vivhite.Tests/ApprovedCardCatalog.cs", "Vivhite.Tests/CardCatalogAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S10-02",
+          "anchor_seconds": 548,
+          "subtitle_window_seconds": 16,
+          "narration_zh": "守恒几何、递归星算和绯彩积分是三条核心路线，跨体系牌则把它们连接起来；它们不是互相排斥的标签，而是不同的演算顺序。",
+          "subtitle_zh": "三条核心路线，外加跨体系连接",
+          "subtitle_en": "Three core routes, connected by cross-system cards",
+          "evidence": {"mode": "source_verified", "refs": ["docs/2026-08-30-白绮角色与轮换大脑实现.md", "Vivhite.Tests/CardCatalogAcceptanceTests.cs"]}
+        },
+        {
+          "cue_id": "S10-03",
+          "anchor_seconds": 567,
+          "subtitle_window_seconds": 18,
+          "narration_zh": "这就是白绮：用生命支付，用余裕周转，用实际结果证明下一次施法。把她带进尖塔，看看你的公式会走到哪里。",
+          "subtitle_zh": "白绮：让你的公式继续向前",
+          "subtitle_en": "Vivhite: take your formula farther up the Spire",
+          "evidence": {"mode": "editorial", "refs": ["Vivhite/Vivhite.json", "Vivhite.Tests/Program.cs"]}
+        }
+      ]
+    }
+  ]
+}

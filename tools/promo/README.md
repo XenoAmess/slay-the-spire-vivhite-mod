@@ -289,6 +289,20 @@ commit，并在每个 variant 前后复核 raw、contract、旁白和 FFmpeg/ffp
 
 ### 十分钟 full master
 
+本次完整主片的 run-relative 交付包见
+[`docs/2026-09-02-白绮宣传片完整主片渲染回执.md`](../../docs/2026-09-02-白绮宣传片完整主片渲染回执.md)。当前可复核文件为：
+
+- [`run-20260902T-full-master-delivery-a2/renders/full-master.mp4`](runs/run-20260902T-full-master-delivery-a2/renders/full-master.mp4)
+- [`run-manifest.json`](runs/run-20260902T-full-master-delivery-a2/run-manifest.json)
+- [`full-master-artifact-index.json`](runs/run-20260902T-full-master-delivery-a2/review/full-master-artifact-index.json)
+- [`full-master-evidence-coverage.json`](runs/run-20260902T-full-master-delivery-a2/review/full-master-evidence-coverage.json)
+
+该版本是 600 秒、1920×1080/60 的 `master-draft-preserved`：旁白使用
+`zh-CN-XiaoxiaoNeural`，不加入外部 BGM，保留游戏声和中英字幕。素材目前是
+`visual-only-staged`，所以技术/语义审计、独立 1.0× 人工审看、signoff 和 export
+仍明确为 pending/false；不得把它称为已发布成片。`a1` 是旧的 metadata 尝试，`a2`
+修正了 package-facing probe 与 producer manifest 的内部哈希一致性。
+
 `render_full_master.py` 将同一份已封存的 OBS raw 和长片 EDL 组装为一个
 1920×1080/60、H.264/AAC、48 kHz 双声道的 600 秒初稿。它只消费 capture
 contract、EDL 和已生成的旁白；不会启动游戏、OBS、OCR、TTS 或发布客户端，且
@@ -322,6 +336,25 @@ py -3 -B .\tools\promo\render_full_master.py `
 最终编码不符合 1080p60/H.264/AAC 契约时命令 fail-closed，并保留失败现场。
 产物始终标记为 `preliminary`；技术/语义审计、人工审看、signoff 和 export 仍
 是后续门禁。
+
+### 60/30/15 秒短版
+
+短版从同一份 delivery-a2 raw、capture contract、staged EDL 和 Xiaoxiao
+旁白批次派生，未从已签署 MP4 偷转码；每个版本都有独立 EDL、filtergraph、
+partial、probe、字幕和 alias。批次清单：
+[`batch-manifest.json`](runs/run-20260902T-preview-full-master-a2/batch-manifest.json)。
+
+| 版本 | 成片 | 时长 | SHA-256 |
+|---|---|---:|---|
+| Hero | [`vivhite-player-hero-60.mp4`](runs/run-20260902T-preview-full-master-a2/hero-60/renders/vivhite-player-hero-60.mp4) | 60.000 s | `1E3CEEAF620D342FEE9D9188C945129FFEC9496BD8B3075F65B1E4BF1B5317DF` |
+| Cut | [`vivhite-player-cut-30.mp4`](runs/run-20260902T-preview-full-master-a2/cut-30/renders/vivhite-player-cut-30.mp4) | 30.000 s | `299564FFB2878DD20ACA62EA4D88258D0FA0708B9ACF38C1C2EEFD7EDADBDE89` |
+| Bumper | [`vivhite-player-cut-15.mp4`](runs/run-20260902T-preview-full-master-a2/cut-15/renders/vivhite-player-cut-15.mp4) | 15.000 s | `6F14C6C81EF2FAD6953F8CE5495597CABEC752F0A58B06EEB5E2ABE9E5D85FFD` |
+
+三者均为 `preliminary`/`semantic pending`，无 signoff 或 export approval；当前
+canonical batch 是 `a2`，`a1` 作为字节相同的历史成功 attempt 保留。批次
+状态和每个变体的技术字段以其 probe 与 manifest 为准。短版脚本为
+`render_preview_variants.py`，只做项目侧 EDL 派生和调用通用 renderer，不启动
+游戏、OBS、OCR 或发布客户端。
 
 ## 故障处理
 
