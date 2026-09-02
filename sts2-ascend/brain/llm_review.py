@@ -1568,14 +1568,36 @@ def _stats_digest(know) -> dict:
         for rid, e in know.stats.get("relics", {}).items()
         if isinstance(e, dict) and e.get("picked")
     ]
-    return {
+    # 全量 digest 实测 82K 字符（events 30K / relics 13K / cards 11K / enemies
+    # 10K）且随局数只增不减——复盘模型的增量信号集中在高样本/高偏差条目，
+    # 长尾只该按需深读（stats.json 在隔离 clone 内可直接读）。窗口化：
+    # 各账本取 top-N，其余给 omitted 计数，证据可追踪、体量有上界。
+    cards.sort(key=lambda x: -(x["picked"] + x["plays"]))
+    omitted_cards = max(0, len(cards) - 40)
+    cards = cards[:40]
+    relics.sort(key=lambda x: -x["picked"])
+    omitted_relics = max(0, len(relics) - 40)
+    relics = relics[:40]
+    omitted_enemies = max(0, len(enemies) - 30)
+    enemies = enemies[:30]
+    # 死亡榜 top10（global 是 know.stats 的活引用，先浅拷贝再裁剪）
+    g = dict(g)
+    for book_key in ("deaths_by_enemy", "deaths_by_event"):
+        book = g.get(book_key)
+        if isinstance(book, dict) and len(book) > 10:
+            ranked = sorted(book.items(),
+                            key=lambda kv: -(kv[1] if isinstance(kv[1], (int, float)) else 0))
+            g[book_key] = dict(ranked[:10])
+            g[book_key]["__omitted__"] = len(ranked) - 10
+    events_digest, events_omitted = _events_digest(know.stats["events"])
+    digest = {
         "stats_version": know.stats.get("version"),
         "global": g,
         "progression": know.progression,
         "cards": cards,
         "relics": relics,
         "enemies": enemies,
-        "events": know.stats["events"],
+        "events": events_digest,
         "rooms": know.stats.get("rooms", {}),
         "rooms_act": know.stats.get("rooms_act", {}),
         "rooms_band": know.stats.get("rooms_band", {}),
@@ -1588,6 +1610,116 @@ def _stats_digest(know) -> dict:
         "recent_act_entries": list(know.stats.get("act_entries") or [])[-12:],
         "policy": know.policy,
     }
+    omitted = {}
+    if omitted_cards:
+        omitted["cards"] = omitted_cards
+    if omitted_relics:
+        omitted["relics"] = omitted_relics
+    if omitted_enemies:
+        omitted["enemies"] = omitted_enemies
+    if events_omitted:
+        omitted["events"] = events_omitted
+    if omitted:
+        # 长尾条目仍在 stats.json（隔离 clone 内可直接读取），此处只给计数
+        digest["omitted_long_tail"] = omitted
+        digest["long_tail_available_in"] = "knowledge stats.json（完整账本）"
+    return digest
+
+
+def _events_digest(events: dict, per_event: int = 3,
+                   max_events: int = 30) -> tuple[dict, dict]:
+    """事件账本窗口化：每事件保留样本最多的 per_event 个选项，事件按总样本
+    排序最多保留 max_events 个；返回 (digest, omitted 计数)。"""
+    out: dict = {}
+    omitted_options = 0
+    for event_id, opts in (events or {}).items():
+        if not isinstance(opts, dict):
+            continue
+        ranked = sorted(
+            ((k, v) for k, v in opts.items() if isinstance(v, dict)),
+            key=lambda kv: -(kv[1].get("n", 0) or 0))
+        out[event_id] = dict(ranked[:per_event])
+        omitted_options += max(0, len(ranked) - per_event)
+    omitted_events = 0
+    if len(out) > max_events:
+        ranked_events = sorted(
+            out.items(),
+            key=lambda kv: -sum(v.get("n", 0) or 0
+                                for v in kv[1].values() if isinstance(v, dict)))
+        omitted_events = len(ranked_events) - max_events
+        out = dict(ranked_events[:max_events])
+    omitted = {}
+    if omitted_options:
+        omitted["options"] = omitted_options
+    if omitted_events:
+        omitted["events"] = omitted_events
+    return out, omitted
+
+
+# packet 总字符预算：各段自身上限之外的全局护栏。实测正常 100 局批次
+# packet 可达 ~410K 字符（决策链 183K + stats 82K + summaries 87K + …），
+# 输入即占 200K 上下文的 60~90%，工具读取/自检/patch 空间告罄——超时与
+# 队列积压随之放大。超预算时按固定顺序降采样并在 packet_budget_note 留痕；
+# 所有被裁内容都在 runs/*.json、stats.json 与 meta_review.md 可按需深读。
+_PACKET_CHAR_BUDGET = 200_000
+
+
+def _enforce_packet_budget(packet: dict,
+                           budget: int = _PACKET_CHAR_BUDGET) -> dict:
+    def _size(value) -> int:
+        return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+
+    if _size(packet) <= budget:
+        return packet
+    packet = dict(packet)
+    notes: list[str] = []
+    # 第 1 档：runs_summary 的逐局文本收紧（combat_notes/key_reasons 各留 2 条）
+    summaries = packet.get("runs_summary")
+    if isinstance(summaries, list) and summaries:
+        tightened = []
+        for summary in summaries:
+            if isinstance(summary, dict):
+                summary = dict(summary)
+                summary["combat_notes"] = (summary.get("combat_notes") or [])[:2]
+                summary["key_reasons"] = (summary.get("key_reasons") or [])[:2]
+            tightened.append(summary)
+        packet["runs_summary"] = tightened
+        notes.append("runs_summary 逐局 notes/reasons 收紧到各 2 条")
+    # 第 2 档：stats_digest 窗口减半
+    if _size(packet) > budget:
+        digest = packet.get("stats_digest")
+        if isinstance(digest, dict):
+            digest = dict(digest)
+            for key in ("cards", "relics"):
+                rows = digest.get(key)
+                if isinstance(rows, list) and len(rows) > 20:
+                    digest[key] = rows[:20]
+                    notes.append(f"stats_digest.{key} 截到 top20")
+            enemies = digest.get("enemies")
+            if isinstance(enemies, list) and len(enemies) > 15:
+                digest["enemies"] = enemies[:15]
+                notes.append("stats_digest.enemies 截到 top15")
+            packet["stats_digest"] = digest
+    # 第 3 档：失败局决策链尾部保留数减半（聚合表不动）
+    if _size(packet) > budget:
+        chain = packet.get("decision_chain_evidence")
+        full = (chain or {}).get("full_failure_run") if isinstance(chain, dict) else None
+        if isinstance(full, dict) and isinstance(full.get("decisions"), list) \
+                and len(full["decisions"]) > 45:
+            chain = dict(chain)
+            full = dict(full)
+            rows = full["decisions"]
+            full["decisions"] = rows[:15] + rows[-15:]
+            full["budget_tail_halved"] = True
+            chain["full_failure_run"] = full
+            packet["decision_chain_evidence"] = chain
+            notes.append("失败局决策链预算内再收紧（首15+尾15）")
+    if notes:
+        packet["packet_budget_note"] = (
+            f"packet 超 {_PACKET_CHAR_BUDGET} 字符预算，已降采样："
+            + "；".join(notes)
+            + "。被裁内容在 runs/*.json、stats.json、meta_review.md 可按需深读")
+    return packet
 
 
 def _clip_summary_text(value) -> str:
@@ -1756,16 +1888,76 @@ def _recent_run_summaries(n: int, batch_runs: list[int] | None = None) -> list[d
             for _, data, evidence_match in _review_run_records(n, batch_runs)]
 
 
+# 失败局决策链的有界聚合：实测最新失败局 273 条决策 / 167K 字符逐条不裁剪
+# 就占掉 packet 的 ~53%，120K+ token 输入把 200K 上下文压到工具/输出空间
+# 告罄（复盘超时与积压的上游病因之一）。聚合口径：短链（≤38 条）照旧全保真；
+# 长链保留尾部 30 条（死亡前链）、每层首末各一条（楼层边界）、全部非战斗
+# 选择屏与战斗内非 play_card/end_turn 的例行动作；其余按 (screen, action)
+# 聚合计数表。完整链始终持久化在 runs/*.json，经 full_chain_available_in
+# drill-in，证据零丢失。
+_FAILURE_CHAIN_TAIL_FULL = 30
+_FAILURE_CHAIN_MAX_FULL = _FAILURE_CHAIN_TAIL_FULL + 8
+_FAILURE_CHAIN_REASON_CHARS = 300
+
+
+def _compress_failure_decisions(
+        decisions: list[dict]) -> tuple[list[dict], list[dict], int]:
+    """Split a failed run's chain into bounded full-fidelity rows + aggregates."""
+    if len(decisions) <= _FAILURE_CHAIN_MAX_FULL:
+        return decisions, [], 0
+    keep: set[int] = set()
+    for i in range(len(decisions) - _FAILURE_CHAIN_TAIL_FULL, len(decisions)):
+        keep.add(i)
+    first_by_floor: dict = {}
+    last_by_floor: dict = {}
+    for i, row in enumerate(decisions):
+        floor = row.get("floor", 0)
+        if floor not in first_by_floor:
+            first_by_floor[floor] = i
+        last_by_floor[floor] = i
+    keep.update(first_by_floor.values())
+    keep.update(last_by_floor.values())
+    for i, row in enumerate(decisions):
+        if row.get("screen") != "COMBAT" or row.get("action") not in (
+                "play_card", "end_turn"):
+            keep.add(i)
+    kept: list[dict] = []
+    aggregates: dict = {}
+    omitted = 0
+    for i, row in enumerate(decisions):
+        if i in keep:
+            clipped = dict(row)
+            reason = str(clipped.get("reason") or "")
+            if len(reason) > _FAILURE_CHAIN_REASON_CHARS:
+                clipped["reason"] = reason[:_FAILURE_CHAIN_REASON_CHARS - 1] + "…"
+            kept.append(clipped)
+            continue
+        omitted += 1
+        key = (str(row.get("screen")), str(row.get("action")))
+        agg = aggregates.setdefault(key, {"screen": key[0], "action": key[1],
+                                          "count": 0, "floors": set()})
+        agg["count"] += 1
+        agg["floors"].add(row.get("floor", 0))
+    agg_list = [{
+        "screen": agg["screen"], "action": agg["action"], "count": agg["count"],
+        "floor_min": min(agg["floors"]), "floor_max": max(agg["floors"]),
+    } for agg in aggregates.values()]
+    agg_list.sort(key=lambda item: -item["count"])
+    return kept, agg_list, omitted
+
+
 def _primary_failure_decision_chain(
         n: int, batch_runs: list[int] | None = None,
         records: list[tuple[Path, dict, str]] | None = None) -> dict:
-    """Return every persisted decision from the newest exact failed run.
+    """Return the bounded high-fidelity slice of the newest exact failed run.
 
     A 100-run queue currently contains roughly 6.6 MB of decision JSON and does
     not fit safely alongside tools in the review model's context.  The newest
     failed run is therefore the mandatory full-fidelity case; the other queued
-    runs keep their bounded summaries.  Nothing inside the selected decision list
-    is clipped or sampled, including legacy rows that predate rich trace fields.
+    runs keep their bounded summaries.  Long chains are compressed by
+    ``_compress_failure_decisions`` (tail + floor boundaries + non-routine
+    choices kept verbatim, the rest aggregated); the complete persisted chain
+    remains in the evidence file for drill-in.
     """
     records = records if records is not None else _review_run_records(n, batch_runs)
     eligible = []
@@ -1786,9 +1978,13 @@ def _primary_failure_decision_chain(
         eligible, key=lambda item: (item[0], item[1].name))
     decisions = [row for row in (data.get("decisions") or [])
                  if isinstance(row, dict)]
-    serialized = json.dumps(decisions, ensure_ascii=False, separators=(",", ":"))
+    kept, aggregates, omitted = _compress_failure_decisions(decisions)
+    serialized = json.dumps(kept, ensure_ascii=False, separators=(",", ":"))
     return {
-        "selection_policy": "newest_exact_failed_run_full; other_runs_summarized",
+        "selection_policy": ("newest_exact_failed_run_full; other_runs_summarized"
+                             if not omitted else
+                             "newest_exact_failed_run_bounded_tail_plus_aggregates"
+                             "; other_runs_summarized"),
         "full_failure_run": {
             "run_id": data.get("run_id"),
             "run_number": summary.get("run_number"),
@@ -1797,9 +1993,15 @@ def _primary_failure_decision_chain(
             "victory": False,
             "floor": summary.get("floor"),
             "decision_count": len(decisions),
+            "kept_decisions": len(kept),
+            "omitted_decisions": omitted,
             "serialized_chars": len(serialized),
-            "complete_persisted_chain": True,
-            "decisions": decisions,
+            "complete_persisted_chain": not omitted,
+            "full_chain_available_in": (
+                None if not omitted else
+                f"runs/{path.name}（完整 {len(decisions)} 条，可按需逐条深读）"),
+            "decision_aggregates": aggregates,
+            "decisions": kept,
         },
     }
 
@@ -1952,6 +2154,7 @@ def _build_prompt_scoped(know, cfg: dict, every: int | None = None,
     # Whitespace-only compaction: _stats_digest's fields and values are left
     # intact.  This saves prompt tokens without silently weakening statistical
     # evidence; full stats.json remains available for on-demand inspection.
+    packet = _enforce_packet_budget(packet)
     packet_json = json.dumps(packet, ensure_ascii=False, separators=(",", ":"))
     retry_feedback_json = json.dumps(
         retry_feedback, ensure_ascii=False, separators=(",", ":"))
@@ -2028,7 +2231,10 @@ def _build_prompt_scoped(know, cfg: dict, every: int | None = None,
 
 # 交付顺序（严格执行）
 1. 工具与证据：读取本任务书、`git status --short` 和完成一个最高价值问题所需的最小证据。若最新
-   死亡局有 `decision_chain_evidence.full_failure_run`，必须先逐条阅读并检查 decisions；涉及卡牌、怪物、遗物、
+   死亡局有 `decision_chain_evidence.full_failure_run`，必须先逐条阅读并检查 decisions；当
+   `complete_persisted_chain=false` 时该字段是「尾部 30 条 + 每层首末 + 全部非战斗选择」的全文切片，
+   被省略的例行出牌/结束回合已并入 `decision_aggregates` 计数表，完整链可经 `full_chain_available_in`
+   指向的 runs 文件按需深读。涉及卡牌、怪物、遗物、
    药水或事件时，优先查 `native_game_knowledge` 与对应 runtime/mechanics JSONL，不能用旧版记忆代替。
 2. 假设：先写一句 `HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL`，引用具体局、楼层、回合或动作。
 3. 落地：立即用 Apply Patch 对生产行为、配置或运行时观测做一个最小可逆改动。你被明确授权修改或
