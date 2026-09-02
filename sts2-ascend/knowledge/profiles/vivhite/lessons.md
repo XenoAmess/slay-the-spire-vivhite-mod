@@ -227,3 +227,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(19分/4局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 6.60 → 6.90（非 Boss 长战磨死（5回合）且 kill_bonus 顶格，攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 10.00 → 10.50（非 Boss 长战磨死（5回合）且 kill_bonus 顶格，缺口越深纠偏上限越高）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；exploration_rate: 0.136 → 0.132（经验累积，探索衰减）
 - 生涯战绩：0/17 胜，当前目标进阶 0
+
+## 第 18 局复盘（2026-09-02 18:05）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_INDUCTIVE_CIRCLE
+- 本局遗物：VAJRA, PETRIFIED_TOAD, POTION_BELT
+- 战斗记录：F6 Monster战 掉血0; F9 Elite战 掉血0; F11 Unknown战 掉血2; F13 Monster战 掉血10; F14 Elite战 掉血3; F17 Boss战 掉血78｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(40分/4局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/4局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(34分/4局)，EQUILIBRIUM(33分/2局)，VIVHITE_CARD_CHIAROSCURO(33分/14局)
+- 当前低价值卡牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM(17分/2局)，VIVHITE_CARD_PREFETCH_FUTURE(19分/4局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4局)
+- 策略进化：block_safety: 1.25 → 1.30（高速失血爆毙（5回合掉血78，每回合16≥14）——按「没挡住」证据上调防御权重）；exploration_rate: 0.132 → 0.128（经验累积，探索衰减）
+- 生涯战绩：0/18 胜，当前目标进阶 0
