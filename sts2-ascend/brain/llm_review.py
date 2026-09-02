@@ -2953,9 +2953,8 @@ def _run_review_scoped(know, log=print, model: str | None = None,
         f"本批{closure_note}（{closure_state['state_source']}）")
     prompt = build_prompt(
         know, cfg, every, batch_runs, closure_state=closure_state,
-        batch_run_ids=effective_batch_run_ids,
         salvage_packages=replay_packages, salvage_attempts=replay_attempts,
-        evidence_only=evidence_only, review_epoch=effective_review_epoch, log=log)
+        evidence_only=evidence_only, log=log)
     try:
         _current_profile_paths().prompt.write_text(prompt, encoding="utf-8")
     except OSError:
