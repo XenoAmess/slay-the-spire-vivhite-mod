@@ -1,7 +1,7 @@
 """LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
-  - runner-aware 优先链依次尝试 OpenCode/GLM、Codex/Luna、OpenCode/Kimi；
+  - runner-aware 优先链依次尝试 OpenCode/GLM、OpenCode/DeepSeek、Codex/Luna、OpenCode/Kimi；
   - 每局结束只耐久入队，外部 CLI/模型探测全部由后台 worker 完成；
   - 已经启动过模型的失败事务固定原 runner/model/effort 重审，不静默换模型。
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
@@ -875,10 +875,12 @@ def load_llm_config() -> dict:
         "max_runs_in_packet": 100,
         # 优先模型链（按优先级；条目形如 provider/model[@variant]）：
         # GLM-5.3-Flash (2x usage) · OpenCode Go · max
+        # DeepSeek-V4-Flash · AMD Radeon OpenAI-compatible API
         "preferred_models": [
             "opencode-go/glm-5.3-flash@max",
+            "amd-radeon/DeepSeek-V4-Flash",
         ],
-        # 新版优先读取 runner-aware 链；缺省/空值继续兼容上面的旧两级配置。
+        # 新版优先读取 runner-aware 链；缺省/空值继续兼容上面的旧配置。
         "review_model_chain": None,
         "preferred_every_runs": 1,
         # 失败冷却：超时/硬失败统一 5 分钟（短冷却，别让模型长期缺席复盘）

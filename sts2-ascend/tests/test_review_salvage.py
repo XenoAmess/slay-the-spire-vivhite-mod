@@ -39,7 +39,10 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg["stall_warn_min"], 15)
         self.assertEqual(cfg["stall_timeout_min"], 30)
         self.assertEqual(cfg["pre_work_timeout_min"], 5)
-        self.assertEqual(cfg["preferred_models"], ["opencode-go/glm-5.3-flash@max"])
+        self.assertEqual(
+            cfg["preferred_models"],
+            ["opencode-go/glm-5.3-flash@max", "amd-radeon/DeepSeek-V4-Flash"],
+        )
         self.assertEqual(int(cfg["timeout_min"] * 60), 28800)
 
     def test_stream_keeps_full_file_but_only_bounded_memory_tail(self) -> None:

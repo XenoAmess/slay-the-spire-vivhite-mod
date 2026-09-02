@@ -29,6 +29,17 @@ $gameLauncher = [IO.Path]::GetFullPath((Join-Path $GameDir "launch_vulkan.bat"))
 $utf8NoBom = New-Object Text.UTF8Encoding($false)
 $lifecycleLock = $null
 
+# Detached Brain/provider children only inherit the current process environment.
+# Import the user-scoped AMD credential when this shell predates the credential;
+# never print or serialize its value into session.json/logs.
+if ([string]::IsNullOrWhiteSpace([string]$env:AMD_RADEON_API_KEY)) {
+    $amdRadeonApiKey = [Environment]::GetEnvironmentVariable(
+        "AMD_RADEON_API_KEY", [EnvironmentVariableTarget]::User)
+    if (-not [string]::IsNullOrWhiteSpace([string]$amdRadeonApiKey)) {
+        $env:AMD_RADEON_API_KEY = [string]$amdRadeonApiKey
+    }
+}
+
 function Write-Utf8Json {
     param([string]$Path, [object]$Value)
     $json = $Value | ConvertTo-Json -Depth 6

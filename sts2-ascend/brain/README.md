@@ -58,7 +58,7 @@ health ready → state/available_actions → policy candidate → final action g
 
 每个角色有独立 Profile；rotation 记录局号、active slot 和 catch-up/1:1 轮换。对局证据先写 `runs/` 与 `in_progress`，原生终局和存档确认后才 finalize；人工接管、不可恢复孤儿局和不完整终局不会增加胜率、楼层或策略配额。
 
-复盘模型由配置驱动的 OpenCode/GLM → Codex/Luna → OpenCode/Kimi 链处理。模型开始工作后必须保持 runner/model/variant/审批/sandbox 亲和性；失败包和拒合现场写入 `knowledge/code_backups/`，由机制重新投递，不由维护者手工代写策略。自动 Git 事务统一使用 `[brain:auto]` 前缀，维护性改动使用 `[agent:task]`。
+复盘模型由配置驱动的 OpenCode/GLM → OpenCode/DeepSeek → Codex/Luna → OpenCode/Kimi 链处理。模型开始工作后必须保持 runner/model/variant/审批/sandbox 亲和性；失败包和拒合现场写入 `knowledge/code_backups/`，由机制重新投递，不由维护者手工代写策略。自动 Git 事务统一使用 `[brain:auto]` 前缀，维护性改动使用 `[agent:task]`。
 
 ## 停止与人工接管
 

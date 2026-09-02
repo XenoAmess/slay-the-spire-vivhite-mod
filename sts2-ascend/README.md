@@ -521,12 +521,17 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 要求是相对安全、有界、可观测、可记录、可继续调整或撤回，不要求证明绝对安全；拿不准行为
 改法时先落地运行时观测，也不能用“参数顶格/耦合较宽/再看几局”代替交付。
 
-模型按 runner-aware **三级优先链**逐条检查；OpenCode 使用 `opencode models`，Codex 使用
+模型按 runner-aware **四级优先链**逐条检查；OpenCode 使用 `opencode models`，Codex 使用
 本机登录状态与 bundled model catalog 做不产生付费轮次的可用性探测：
 
 1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
-2. `gpt-5.6-luna@max` — Codex CLI · 隔离 clone custom profile · `approval=never`
-3. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
+2. `amd-radeon/DeepSeek-V4-Flash` — DeepSeek-V4-Flash · AMD Radeon OpenAI-compatible API
+3. `gpt-5.6-luna@max` — Codex CLI · 隔离 clone custom profile · `approval=never`
+4. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
+
+DeepSeek 的 AMD Radeon provider 配置位于仓库根 `opencode.json`；API key 只从进程环境变量
+`AMD_RADEON_API_KEY` 读取，禁止写入该文件、Brain 配置、日志或 Git。未设置 key 时，OpenCode
+会将该 provider 视为不可用并按优先链继续尝试下一项。
 
 Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Agent.ps1` 冷启动时通过
 `.\sts2-ascend\scripts\Install-CodexCompat.ps1` 非全局安装并校验固定 SHA256。每次启动 Luna provider 前还会

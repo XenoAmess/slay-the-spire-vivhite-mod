@@ -1,4 +1,4 @@
-"""Runner-adapter regressions for the GLM -> Luna -> Kimi review chain."""
+"""Runner-adapter regressions for the GLM -> DeepSeek -> Luna -> Kimi chain."""
 from __future__ import annotations
 
 import json
@@ -35,6 +35,33 @@ from review_runners import (  # noqa: E402
 
 
 class ReviewPlanTests(unittest.TestCase):
+    def test_amd_provider_uses_environment_secret_and_exact_endpoint(self) -> None:
+        provider = json.loads(
+            (ASCEND.parent / "opencode.json").read_text(encoding="utf-8")
+        )["provider"]["amd-radeon"]
+
+        self.assertEqual(provider["options"]["baseURL"],
+                         "https://developer.amd.com.cn/radeon/api/v1")
+        self.assertEqual(provider["options"]["apiKey"],
+                         "{env:AMD_RADEON_API_KEY}")
+        self.assertEqual(list(provider["models"]), ["DeepSeek-V4-Flash"])
+        self.assertNotIn("rc-", json.dumps(provider))
+
+    def test_production_chain_places_deepseek_after_glm(self) -> None:
+        cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))["llm"]
+
+        plans = review_plans_from_config(cfg)
+
+        self.assertEqual(
+            [(plan.priority, plan.key, plan.runner, plan.model) for plan in plans],
+            [
+                (1, "glm-flash", "opencode", "opencode-go/glm-5.3-flash"),
+                (2, "deepseek-v4-flash", "opencode", "amd-radeon/DeepSeek-V4-Flash"),
+                (3, "luna-max", "codex", "gpt-5.6-luna"),
+                (4, "kimi-k3", "opencode", "kimi-for-coding/k3"),
+            ],
+        )
+
     def test_production_luna_denies_approval_with_workspace_sandbox(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
 
