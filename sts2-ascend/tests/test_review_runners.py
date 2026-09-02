@@ -23,10 +23,13 @@ import review_runners  # noqa: E402
 import autogit  # noqa: E402
 from review_runners import (  # noqa: E402
     CodexJsonTranslator,
+    ProviderRateLimit,
     ReviewPlan,
     RunnerToolPathEscape,
     bind_review_workdir,
     build_review_command,
+    detect_provider_rate_limit,
+    parse_retry_after,
     review_plans_from_config,
 )
 
@@ -203,6 +206,70 @@ class ReviewPlanTests(unittest.TestCase):
 
 
 class CodexTranslatorTests(unittest.TestCase):
+    def test_structured_http_429_records_retry_after_without_model_work(self) -> None:
+        translator = CodexJsonTranslator()
+        rendered = translator.feed(json.dumps({
+            "type": "turn.failed",
+            "error": {
+                "message": "Too Many Requests",
+                "response": {
+                    "status_code": 429,
+                    "headers": {"Retry-After": "75"},
+                },
+            },
+        }))
+
+        metrics = translator.metrics()
+
+        self.assertTrue(rendered)
+        self.assertTrue(metrics["rate_limit_detected"])
+        self.assertTrue(metrics["rate_limited"])
+        self.assertEqual(metrics["rate_limit_status"], 429)
+        self.assertEqual(metrics["retry_after_seconds"], 75.0)
+        self.assertEqual(metrics["rate_limit"]["status_code"], 429)
+        self.assertFalse(metrics["model_work_started"])
+
+    def test_rate_limit_uses_largest_retry_after_across_reconnect_events(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed(json.dumps({
+            "type": "error",
+            "error": {"status": 429},
+            "headers": {"retry-after": 15},
+        }))
+        translator.feed(json.dumps({
+            "type": "error",
+            "message": "HTTP 429: Too Many Requests; Retry-After: 90",
+        }))
+
+        metrics = translator.metrics()
+
+        self.assertEqual(metrics["retry_after_seconds"], 90.0)
+        self.assertEqual(metrics["rate_limit_retry_after_seconds"], 90.0)
+
+    def test_ordinary_errors_and_model_shell_output_do_not_become_rate_limits(self) -> None:
+        translator = CodexJsonTranslator()
+        translator.feed(json.dumps({
+            "type": "error",
+            "error": {
+                "status_code": 500,
+                "message": "upstream mentioned HTTP 429 while reporting a 500",
+            },
+        }))
+        translator.feed(json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "status": "failed",
+                "aggregated_output": "fixture expects HTTP 429 but assertion failed",
+            },
+        }))
+        translator.feed("ordinary task 429 failed")
+
+        metrics = translator.metrics()
+
+        self.assertFalse(metrics["rate_limit_detected"])
+        self.assertIsNone(metrics["retry_after_seconds"])
+
     def test_jsonl_translation_records_work_usage_and_tool_metrics(self) -> None:
         translator = CodexJsonTranslator(ASCEND)
         events = [
@@ -474,6 +541,24 @@ class CodexTranslatorTests(unittest.TestCase):
 
 
 class OpencodeTranslatorTests(unittest.TestCase):
+    def test_opencode_error_code_and_retry_after_are_structured(self) -> None:
+        translator = llm_review.OpencodeJsonTranslator()
+
+        translator.feed(json.dumps({
+            "type": "error",
+            "error": {
+                "code": "rate_limit_exceeded",
+                "message": "request rejected",
+                "headers": {"retry_after": 42},
+            },
+        }))
+
+        metrics = translator.metrics()
+        self.assertTrue(metrics["rate_limit_detected"])
+        self.assertEqual(metrics["rate_limit_status"], 429)
+        self.assertEqual(metrics["retry_after_seconds"], 42.0)
+        self.assertFalse(metrics["model_work_started"])
+
     def test_non_object_event_part_and_tokens_payloads_never_raise(self) -> None:
         translator = llm_review.OpencodeJsonTranslator()
 
@@ -488,6 +573,45 @@ class OpencodeTranslatorTests(unittest.TestCase):
         metrics = translator.metrics()
         self.assertEqual(metrics["non_json_lines"], 2)
         self.assertFalse(metrics["model_work_started"])
+
+
+class ProviderRateLimitParsingTests(unittest.TestCase):
+    def test_retry_after_accepts_delta_and_http_date(self) -> None:
+        self.assertEqual(parse_retry_after("12.5"), 12.5)
+        self.assertEqual(
+            parse_retry_after(
+                "Wed, 21 Oct 2015 07:28:00 GMT", now=1445412420.0),
+            60.0,
+        )
+        for malformed in (True, -1, "-1", "NaN", "wait 12 seconds"):
+            with self.subTest(value=malformed):
+                self.assertIsNone(parse_retry_after(malformed))
+
+    def test_explicit_status_is_returned_as_a_serializable_signal(self) -> None:
+        signal = detect_provider_rate_limit({
+            "error": {
+                "http_status": "429",
+                "message": "capacity unavailable",
+            },
+            "headers": {"RETRY-AFTER": "30"},
+        })
+
+        self.assertIsInstance(signal, ProviderRateLimit)
+        assert signal is not None
+        self.assertEqual(signal.status_code, 429)
+        self.assertEqual(signal.retry_after_seconds, 30.0)
+        self.assertEqual(signal.as_dict()["status_code"], 429)
+
+    def test_incidental_number_or_non_429_status_is_not_rate_limit(self) -> None:
+        fixtures = (
+            "ordinary request 429 failed",
+            {"type": "error", "message": "socket reset"},
+            {"status_code": 503, "message": "HTTP 429 appeared in a log excerpt"},
+            {"code": 500, "error": "rate_limit_exceeded fixture text"},
+        )
+        for fixture in fixtures:
+            with self.subTest(fixture=fixture):
+                self.assertIsNone(detect_provider_rate_limit(fixture))
 
 
 class ReviewResolverTests(unittest.TestCase):

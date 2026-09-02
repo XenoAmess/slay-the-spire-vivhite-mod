@@ -8,13 +8,246 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass, replace
+from email.utils import parsedate_to_datetime
 import hashlib
 import json
 import os
 from pathlib import Path, PureWindowsPath
+import re
 import shutil
 import time
-from typing import Iterable
+from typing import Any, Iterable
+
+
+@dataclass(frozen=True)
+class ProviderRateLimit:
+    """A provider-side HTTP 429 signal extracted from a runner event.
+
+    The review host deliberately receives a small, structured record instead of
+    having to grep a provider's localized output.  ``retry_after_seconds`` is
+    an advisory delay; the queue host must still apply its own upper bound before
+    persisting it.  A missing header is represented by ``None`` and never means
+    that the request is immediately safe to retry.
+    """
+
+    status_code: int = 429
+    retry_after_seconds: float | None = None
+    message: str = ""
+    source: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status_code": self.status_code,
+            "retry_after_seconds": self.retry_after_seconds,
+            "message": self.message,
+            "source": self.source,
+        }
+
+
+# A descriptive alias makes call sites read naturally while retaining one
+# concrete type for JSONL translators and tests.
+RateLimitSignal = ProviderRateLimit
+
+
+_RETRY_AFTER_KEYS = frozenset({
+    "retry-after", "retry_after", "retryafter",
+})
+_STATUS_KEYS = frozenset({
+    "status", "status_code", "status-code", "statuscode",
+    "http_status", "http-status", "httpstatus", "http_code", "http-code",
+    "httpcode", "response_status", "response-status", "responsestatus",
+    "code", "error_code", "error-code", "errorcode",
+})
+_STATUS_CODE_RE = re.compile(
+    r"(?i)\b(?:https?\s*/?\s*\d(?:\.\d)?\s*[:=]?\s*|"
+    r"http(?:[_ -]?status|[_ -]?code)?\s*[:=]?\s*|"
+    r"status(?:[_ -]?code)?\s*[:=]?\s*)429\b")
+_429_PHRASE_RE = re.compile(
+    r"(?i)\b(?:429\s*(?:[-:|]\s*)?(?:too\s+many\s+requests|"
+    r"rate[_ -]?limit(?:ed|\s+exceeded)?)|"
+    r"(?:too\s+many\s+requests|rate[_ -]?limit(?:ed|\s+exceeded)|"
+    r"rate_limit_exceeded|too_many_requests)\s*(?:\(|\[|[-:|,]\s*)?"
+    r"(?:http\s*)?429\b)")
+_RATE_LIMIT_TOKEN_RE = re.compile(
+    r"(?i)\b(?:rate_limit_exceeded|too_many_requests)\b")
+_RETRY_AFTER_TEXT_RE = re.compile(
+    r"(?im)\bretry[\s_-]*after\s*[:=]\s*([^\r\n;]+)")
+
+
+def parse_retry_after(value: Any, *, now: float | None = None) -> float | None:
+    """Parse a Retry-After delta or HTTP date into non-negative seconds.
+
+    Provider payloads are untrusted.  Booleans, NaN/Infinity, negative values,
+    and malformed dates are rejected.  Date values are evaluated against the
+    supplied wall clock (or ``time.time``) so tests and callers can be
+    deterministic.
+    """
+
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if number < 0 or number != number or number in (float("inf"), float("-inf")):
+            return None
+        return number
+    text = str(value).strip()
+    if not text:
+        return None
+    # Header deltas are decimal seconds in practice.  Do not accept arbitrary
+    # text with a number embedded in it; that caused ordinary error messages to
+    # become accidental retry delays in earlier host implementations.
+    if re.fullmatch(r"\+?(?:\d+(?:\.\d*)?|\.\d+)", text):
+        try:
+            number = float(text.lstrip("+"))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if number != number or number in (float("inf"), float("-inf")):
+            return None
+        return max(0.0, number)
+    try:
+        target = parsedate_to_datetime(text)
+        if target is None:
+            return None
+        if target.tzinfo is None:
+            # RFC 7231 dates are GMT; a naive parser result is therefore safest
+            # when explicitly treated as UTC rather than local wall time.
+            from datetime import timezone
+            target = target.replace(tzinfo=timezone.utc)
+        seconds = target.timestamp() - (time.time() if now is None else float(now))
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+    if seconds != seconds or seconds in (float("inf"), float("-inf")):
+        return None
+    return max(0.0, seconds)
+
+
+def _normalized_payload_key(value: Any) -> str:
+    return str(value or "").strip().casefold().replace(" ", "_")
+
+
+def _status_from_payload(value: Any, path: str = "") -> tuple[int | None, str]:
+    """Find an explicit HTTP status field without trusting arbitrary text."""
+
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized = _normalized_payload_key(key).replace("_", "-")
+            if normalized in _STATUS_KEYS:
+                try:
+                    if isinstance(child, bool):
+                        continue
+                    number = int(str(child).strip())
+                except (TypeError, ValueError, OverflowError):
+                    number = None
+                if number is not None and 100 <= number <= 599:
+                    return number, f"{path}.{key}" if path else str(key)
+            found = _status_from_payload(
+                child, f"{path}.{key}" if path else str(key))
+            if found[0] is not None:
+                return found
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            found = _status_from_payload(child, f"{path}[{index}]")
+            if found[0] is not None:
+                return found
+    return None, ""
+
+
+def _retry_after_from_payload(value: Any, *, now: float | None = None) -> float | None:
+    """Find a case-insensitive Retry-After field or header line."""
+
+    if isinstance(value, dict):
+        # Prefer an explicit header over numbers mentioned in a message.
+        for key, child in value.items():
+            normalized = _normalized_payload_key(key).replace("_", "-")
+            if normalized in _RETRY_AFTER_KEYS:
+                parsed = parse_retry_after(child, now=now)
+                if parsed is not None:
+                    return parsed
+        for key, child in value.items():
+            parsed = _retry_after_from_payload(
+                child, now=now)
+            if parsed is not None:
+                return parsed
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            parsed = _retry_after_from_payload(child, now=now)
+            if parsed is not None:
+                return parsed
+    elif isinstance(value, str):
+        match = _RETRY_AFTER_TEXT_RE.search(value)
+        if match:
+            return parse_retry_after(match.group(1).strip(), now=now)
+    return None
+
+
+def _payload_text(value: Any, *, limit: int = 2000) -> str:
+    """Produce bounded text solely for descriptive phrase matching."""
+
+    if isinstance(value, str):
+        return value[:limit]
+    if isinstance(value, dict):
+        pieces: list[str] = []
+        # Error/message fields carry the useful provider wording.  Include all
+        # values as a fallback because different runner versions use different
+        # field names, but cap the aggregate to avoid unbounded diagnostics.
+        preferred = ("error", "message", "detail", "reason", "body", "output")
+        ordered = [*(value.get(key) for key in preferred if key in value),
+                   *(child for key, child in value.items() if key not in preferred)]
+        for child in ordered:
+            if child is None or isinstance(child, (dict, list, tuple)):
+                if isinstance(child, (dict, list, tuple)):
+                    pieces.append(_payload_text(child, limit=max(1, limit - sum(map(len, pieces)))))
+            else:
+                pieces.append(str(child))
+            if sum(map(len, pieces)) >= limit:
+                break
+        return " ".join(pieces)[:limit]
+    if isinstance(value, (list, tuple)):
+        return " ".join(_payload_text(child, limit=limit) for child in value)[:limit]
+    return str(value)[:limit]
+
+
+def detect_provider_rate_limit(
+    payload: Any, *, now: float | None = None,
+    allow_bare_error_token: bool | None = None,
+) -> ProviderRateLimit | None:
+    """Return a 429 signal only for explicit status or unambiguous wording.
+
+    Merely seeing the digits ``429`` in a normal model/tool message is not
+    enough.  A structured status field, an HTTP/status-code phrase, or the
+    canonical provider error tokens is required.  This keeps ordinary errors,
+    source snippets and user text from triggering model-affinity recovery.
+    """
+
+    status, status_source = _status_from_payload(payload)
+    text = _payload_text(payload)
+    text_status = bool(_STATUS_CODE_RE.search(text) or _429_PHRASE_RE.search(text))
+    if allow_bare_error_token is None:
+        allow_bare_error_token = isinstance(payload, (dict, list, tuple))
+    token_status = bool(
+        allow_bare_error_token and _RATE_LIMIT_TOKEN_RE.search(text))
+    if status != 429 and not text_status and not token_status:
+        return None
+    # An explicit non-429 status wins over an incidental phrase in its message.
+    if status is not None and status != 429:
+        return None
+    retry_after = _retry_after_from_payload(payload, now=now)
+    if status == 429:
+        source = status_source or "status"
+    elif text_status:
+        source = "message"
+    else:
+        source = "error_code"
+    message = " ".join(text.split())[:500]
+    return ProviderRateLimit(
+        status_code=429,
+        retry_after_seconds=retry_after,
+        message=message,
+        source=source,
+    )
 
 
 @dataclass(frozen=True)
@@ -232,6 +465,7 @@ class _TranslatorBase:
         self.error_count = 0
         self.non_json_lines = 0
         self.model_work_started = False
+        self.rate_limit: ProviderRateLimit | None = None
         self.usage: dict[str, int] = {}
         self.started_monotonic = 0.0
         self.first_event_after_sec: float | None = None
@@ -255,8 +489,33 @@ class _TranslatorBase:
         if self.first_event_after_sec is None:
             self.first_event_after_sec = max(0.0, time.monotonic() - self.started_monotonic)
 
+    def _record_rate_limit(self, payload: Any) -> bool:
+        """Record one provider 429 without changing model-work accounting."""
+        signal = detect_provider_rate_limit(payload)
+        if signal is None:
+            return False
+        current = self.rate_limit
+        # If a stream retries several times, retain the most conservative server
+        # delay while preserving the first useful diagnostic/source.
+        if current is None:
+            self.rate_limit = signal
+        else:
+            current_delay = current.retry_after_seconds
+            signal_delay = signal.retry_after_seconds
+            if (current_delay is None and signal_delay is not None) or (
+                    current_delay is not None and signal_delay is not None
+                    and signal_delay > current_delay):
+                self.rate_limit = ProviderRateLimit(
+                    status_code=429,
+                    retry_after_seconds=signal_delay,
+                    message=current.message or signal.message,
+                    source=current.source or signal.source,
+                )
+        return True
+
     def metrics(self) -> dict:
-        return {
+        signal = self.rate_limit
+        payload = {
             "event_count": self.event_count,
             "error_count": self.error_count,
             "non_json_lines": self.non_json_lines,
@@ -264,7 +523,21 @@ class _TranslatorBase:
             "first_event_after_sec": self.first_event_after_sec,
             "first_model_work_after_sec": self.first_model_work_after_sec,
             "usage": dict(self.usage),
+            # Keep both the descriptive and compact keys stable for older host
+            # callers while making the nested record the canonical form.
+            "rate_limit_detected": signal is not None,
+            "rate_limited": signal is not None,
+            "rate_limit_status": signal.status_code if signal else None,
+            "retry_after_seconds": (
+                signal.retry_after_seconds if signal else None),
+            "rate_limit_retry_after_seconds": (
+                signal.retry_after_seconds if signal else None),
+            "rate_limit_message": signal.message if signal else "",
+            "rate_limit_source": signal.source if signal else "",
         }
+        if signal is not None:
+            payload["rate_limit"] = signal.as_dict()
+        return payload
 
 
 class OpencodeJsonTranslator(_TranslatorBase):
@@ -281,16 +554,29 @@ class OpencodeJsonTranslator(_TranslatorBase):
             return []
         if not text.startswith("{"):
             self.non_json_lines += 1
+            self._record_rate_limit(text)
             return [text]
         try:
             event = json.loads(text)
         except json.JSONDecodeError:
             self.non_json_lines += 1
+            self._record_rate_limit(text)
             return [text]
         if not isinstance(event, dict):
             self.non_json_lines += 1
             return [text]
         self._event()
+        # Only error-shaped events are allowed to contribute text-based 429
+        # signals.  Explicit nested status fields remain safe regardless of the
+        # event type and are handled by the same structured parser.
+        self._record_rate_limit(
+            event if (str(event.get("type") or "").casefold() in {
+                "error", "failed", "failure", "provider_error"}
+                or isinstance(event.get("error"), (dict, list, str))
+                or event.get("status") == 429)
+            else {key: event[key] for key in (
+                "status", "status_code", "http_status", "headers",
+                "response", "error") if key in event})
         raw_part = event.get("part")
         if raw_part is not None and not isinstance(raw_part, dict):
             self.non_json_lines += 1
@@ -335,6 +621,7 @@ class OpencodeJsonTranslator(_TranslatorBase):
             return [f"· tokens {total} ·"] if total else []
         if part_type == "error" or event.get("type") == "error":
             self.error_count += 1
+            self._record_rate_limit(part)
         return []
 
 
@@ -507,15 +794,21 @@ class CodexJsonTranslator(_TranslatorBase):
         if not text:
             return []
         if not text.startswith("{"):
+            self._record_rate_limit(text)
             return self._non_json(text)
         try:
             event = json.loads(text)
         except json.JSONDecodeError:
+            self._record_rate_limit(text)
             return self._non_json(text)
         if not isinstance(event, dict):
             return self._non_json(text)
         self._event()
         event_type = str(event.get("type") or "")
+        if event_type.casefold() in {
+                "error", "turn.failed", "turn.error", "provider_error",
+        } or isinstance(event.get("error"), (dict, list, str)):
+            self._record_rate_limit(event)
         if event_type == "thread.started":
             self.thread_id = str(event.get("thread_id") or "")[:128]
             return [f"· Codex thread {self.thread_id[:12]} ·"] if self.thread_id else []
