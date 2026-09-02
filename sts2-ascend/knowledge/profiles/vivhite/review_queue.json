@@ -1,31 +1,6 @@
 {
  "pending": [
   {
-   "run": 13,
-   "time": "2026-09-02 16:58",
-   "profile_id": "vivhite",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "run_id": "ZN088DZ9PK6Q",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
-   "queue_id": "21820-1788339523730817500-0",
-   "retry_same_model": true,
-   "salvage_packages": [],
-   "salvage_attempts": [],
-   "retry_count": 23,
-   "retry_after": 1788357878.219563,
-   "deferred_count": 0,
-   "deferred_hold_until": 0
-  },
-  {
    "run": 17,
    "time": "2026-09-02 17:59",
    "profile_id": "vivhite",
@@ -341,17 +316,72 @@
    "retry_after": 1788358459.1892643,
    "deferred_count": 0,
    "deferred_hold_until": 0
+  },
+  {
+   "run": 5,
+   "time": "2026-08-31 22:15",
+   "profile_id": "vivhite",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "26148-1788192356094080600-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000605-1788192365526162900-0b9c97f5"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
+   "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
+   "retry_count": 25,
+   "retry_after": 1788358555.1564267,
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "deferred_count": 0,
+   "deferred_hold_until": 0
+  },
+  {
+   "run": 6,
+   "time": "2026-08-31 22:27",
+   "profile_id": "vivhite",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "26148-1788192356094080600-1",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000605-1788192365526162900-0b9c97f5"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
+   "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
+   "retry_count": 25,
+   "retry_after": 1788358555.1564355,
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "deferred_count": 0,
+   "deferred_hold_until": 0
   }
  ],
  "reviewing": {
   "runs": [
-   5,
-   6
+   13
   ],
   "items": [
    {
-    "run": 5,
-    "time": "2026-08-31 22:15",
+    "run": 13,
+    "time": "2026-09-02 16:58",
     "profile_id": "vivhite",
     "backend_key": "glm-flash",
     "priority": 1,
@@ -363,51 +393,20 @@
     "sandbox": "workspace-write",
     "every": 1,
     "source": "preferred",
-    "queue_id": "26148-1788192356094080600-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000605-1788192365526162900-0b9c97f5"
-    ],
-    "salvage_attempts": [],
-    "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
-    "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
-    "retry_count": 24,
-    "retry_after": 1788357643.2611828,
+    "run_id": "ZN088DZ9PK6Q",
     "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
-    "deferred_count": 0,
-    "deferred_hold_until": 0
-   },
-   {
-    "run": 6,
-    "time": "2026-08-31 22:27",
-    "profile_id": "vivhite",
-    "backend_key": "glm-flash",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "opencode-go/glm-5.3-flash",
-    "variant": "max",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "preferred",
-    "queue_id": "26148-1788192356094080600-1",
+    "queue_id": "21820-1788339523730817500-0",
     "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000605-1788192365526162900-0b9c97f5"
-    ],
+    "salvage_packages": [],
     "salvage_attempts": [],
-    "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
-    "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
-    "retry_count": 24,
-    "retry_after": 1788357643.2612064,
-    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "retry_count": 23,
+    "retry_after": 1788357878.219563,
     "deferred_count": 0,
     "deferred_hold_until": 0
    }
   ],
   "profile_id": "vivhite",
-  "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
-  "started": "2026-09-02 22:00:46"
+  "retry_group": "",
+  "started": "2026-09-02 22:04:38"
  }
 }
