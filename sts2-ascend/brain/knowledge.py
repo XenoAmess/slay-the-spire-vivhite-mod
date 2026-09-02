@@ -29,6 +29,15 @@ from native_knowledge import NativeGameKnowledge
 
 SHRINK_K = 6.0  # shrinkage strength toward prior mean
 
+# 死亡率收缩（与 SHRINK_K 同族）：二项计数在小样本下噪声极大——3 战 1 死
+# 裸率 33% 即越过 25% 姿态门槛，但真实死亡率 10% 的组合也有 ~27% 概率
+# 观察到 ≥1/3。加 K 个按先验死亡率的虚拟样本把点估计拉向基准：
+# n=3,d=1 → 0.20（不再误触发）；n=41,d=12 → 0.276（FUZZY+SHRINKER 真高危
+# 仍越过 0.25 门槛）；n≥20 后与裸率几乎无差。事件选项的死亡率惩罚同口径，
+# 避免 n=1~3 的一次死亡被 -40 永久打入冷宫、再无翻身采样机会。
+DEATH_SHRINK_K = 4.0
+DEATH_RATE_PRIOR = 0.10
+
 _MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
 _SAVE_LOCKS_GUARD = threading.Lock()
 _SAVE_LOCKS: dict[str, threading.Lock] = {}
@@ -1397,8 +1406,11 @@ class Knowledge:
         # 姿态输出完全中性——防御姿态门槛必须低于药水解锁门槛（0.30），
         # 且斜率收紧到 1/0.15（40% 死亡率即接近满档）
         stance_rate_gate = float(self.policy.get("danger_comp_stance_death_rate", 0.25))
-        if n >= 3 and deaths / n >= stance_rate_gate:
-            sev_parts.append((deaths / n - stance_rate_gate) / 0.15)  # 死亡率越高收得越紧
+        # 死亡率经 DEATH_SHRINK_K 收缩（见文件头）：小样本裸率的二项噪声不再
+        # 直接触发姿态收紧；大样本真高危（41战12死）行为不变
+        shrunk_rate = (deaths + DEATH_SHRINK_K * DEATH_RATE_PRIOR) / (n + DEATH_SHRINK_K)
+        if n >= 3 and shrunk_rate >= stance_rate_gate:
+            sev_parts.append((shrunk_rate - stance_rate_gate) / 0.15)  # 死亡率越高收得越紧
         frac_thr = float(self.policy.get("comp_loss_stance_frac", 0.28))
         if n >= 3 and max_hp and e.get("hp_lost_sum", 0.0) / n >= float(max_hp) * frac_thr:
             loss_frac = e["hp_lost_sum"] / n / float(max_hp)
@@ -1542,7 +1554,10 @@ class Knowledge:
         hp_avg = e["hp_delta_sum"] / e["n"]
         gold_avg = e["gold_delta_sum"] / e["n"]
         card_avg = float(e.get("card_delta_sum", 0.0)) / e["n"]
-        death_rate = e["deaths"] / e["n"]
+        # 死亡率同经 DEATH_SHRINK_K 收缩：n=1~3 的一次死亡旧例 -13~-40 永久
+        # 重罚，选项被打入冷宫后再无采样机会（无衰减×探索枯竭的复合死锁）；
+        # 收缩后惩罚仍在但随真实样本收敛，大样本口径不变
+        death_rate = (e["deaths"] + DEATH_SHRINK_K * DEATH_RATE_PRIOR) / (e["n"] + DEATH_SHRINK_K)
         card_term = (-2.0 * card_avg) if card_avg > 0 else (1.0 * card_avg)
         relic_avg = float(e.get("relic_delta_sum", 0.0)) / e["n"]
         potion_avg = float(e.get("potion_delta_sum", 0.0)) / e["n"]
