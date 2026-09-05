@@ -47,6 +47,24 @@ from window_layers import reassert_viewer_topmost
 _ELITE_GATE_NEG_PENALTY = 50.0
 
 
+# These cards can recover/copy another card and therefore must never become
+# one another's preferred child.  The static projection already applies the
+# same rule in character_strategy._recovery_copy_projection; keep execution
+# aligned with that model so a free copy cannot recursively manufacture the
+# next free copy forever.
+_VIVHITE_RECURSION_CARD_IDS = frozenset({
+    "VIVHITE_CARD_MOBIUS_LOOP",
+    "VIVHITE_CARD_BACKTRACKING_SPELL",
+    "VIVHITE_CARD_EVENT_LOOP",
+    "VIVHITE_CARD_CONSERVED_RECURRENCE",
+})
+
+
+def _is_vivhite_recursion_card(card: dict) -> bool:
+    card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
+    return card_id in _VIVHITE_RECURSION_CARD_IDS
+
+
 @dataclass
 class Decision:
     action: str | None = None          # None = wait (do nothing this tick)
@@ -500,6 +518,10 @@ class Policy:
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
+        # A forced all-recursion selection is a semantic dead end.  Remember
+        # only that combat object so the executor finishes the selection but
+        # does not immediately play the recovered recursion card again.
+        self._recursive_selection_block_combat = None
         self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
         self._card_cooldowns: dict[tuple, int] = {}  # exact card slot/identity refresh races
         self._failed_hand_len = -1  # 记录失败时的手牌数量：index 是位置序号，手牌一变即失效
@@ -1350,6 +1372,7 @@ class Policy:
             self._phase_stall = 0
             self._turn_combat = None
             self._cur_turn = None
+            self._recursive_selection_block_combat = None
             self._end_stall = 0
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
@@ -3246,6 +3269,18 @@ class Policy:
             if isinstance(power, dict))
         enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
         hand = self._enrich_cards(combat.get("hand", []))
+        recursion_blocked = []
+        if (self._recursive_selection_block_combat is not None
+                and self._recursive_selection_block_combat is ctx.combat):
+            recursion_blocked = [c for c in hand
+                                 if _is_vivhite_recursion_card(c)]
+            hand = [c for c in hand if not _is_vivhite_recursion_card(c)]
+            for card in recursion_blocked:
+                self._trace_candidate(
+                    card.get("name") or card.get("card_id"), -9999.0,
+                    index=card.get("index"), action="play_card",
+                    why="VIVHITE_RECURSION_CHAIN_BREAK: skip recursion card "
+                         "after an all-recursion child selection")
         energy = player.get("energy", 0)
         round_no = state.get("turn") or 1
         pol = self.know.policy
@@ -6509,9 +6544,34 @@ class Policy:
                     candidate.get("name") or candidate.get("card_id"), value,
                     index=candidate.get("index"), action="select_deck_card",
                     why=f"白绮子选择 {character_selection_mode}")
-            ranked.sort(key=lambda row: (
-                -row[0], str(row[1].get("card_id") or row[1].get("name") or "")))
-            best_v, pick = ranked[0]
+            recursive_mode = character_selection_mode in (
+                SELECTION_RECOVER_FREE_BEST,
+                SELECTION_COPY_FREE_BEST,
+                SELECTION_RECOVER_COPY_BEST,
+            )
+            safe_ranked = (
+                [row for row in ranked
+                 if not _is_vivhite_recursion_card(row[1])]
+                if recursive_mode else ranked
+            )
+            recursion_chain_break = recursive_mode and not safe_ranked
+            if recursion_chain_break:
+                # The UI requires a choice.  Pick the least valuable recursive
+                # child, then suppress recursion cards for this combat so the
+                # mandatory fallback cannot restart the closed chain.
+                ranked.sort(key=lambda row: (
+                    row[0], str(row[1].get("card_id")
+                                or row[1].get("name") or "")))
+                best_v, pick = ranked[0]
+                self._recursive_selection_block_combat = ctx.combat
+            else:
+                safe_ranked.sort(key=lambda row: (
+                    -row[0], str(row[1].get("card_id")
+                                 or row[1].get("name") or "")))
+                best_v, pick = safe_ranked[0]
+                ranked.sort(key=lambda row: (
+                    -row[0], str(row[1].get("card_id")
+                                 or row[1].get("name") or "")))
             tag, verb = {
                 SELECTION_TOPDECK_BEST: ("card_top_pick", "置顶"),
                 SELECTION_RECOVER_FREE_BEST: ("card_recover", "回收"),
@@ -6523,9 +6583,19 @@ class Policy:
                 for value, candidate in ranked)
             reason = (f"白绮{verb}选择：【{pick.get('name')}】（价值 {best_v:.1f}；"
                       f"候选：{detail}）")
+            if recursion_chain_break:
+                reason += (" VIVHITE_RECURSION_CHAIN_BREAK: only recursive "
+                           "children remain; choose the least valuable and "
+                           "stop recursion cards for this combat")
+            elif recursive_mode and len(safe_ranked) != len(ranked):
+                reason += (" VIVHITE_RECURSION_CHILD_EXCLUDED: recursive "
+                           "children excluded to match value projection")
             self._trace_gate(
-                "GATE 选牌语义", "pass",
-                f"白绮 {character_selection_mode}：最高兑现价值优先")
+                "GATE 选牌语义", "warn" if recursion_chain_break else "pass",
+                ("VIVHITE_RECURSION_CHAIN_BREAK: mandatory recursive-only "
+                 "fallback; suppress recursion for this combat"
+                 if recursion_chain_break else
+                 f"白绮 {character_selection_mode}：最高兑现价值优先"))
         elif tribute:
             ranked_badness = [(badness(c), c) for c in candidates]
             pick = max(ranked_badness, key=lambda row: row[0])[1]

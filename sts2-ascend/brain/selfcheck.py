@@ -2415,6 +2415,95 @@ def main() -> int:
         ("缺 self_hp_loss 字段的旧记录只许单档收紧: "
          f"{vknow_old.policy.get('vivhite_param_life_cost_weight')}")
 
+    # Vivhite recursion selection must execute the same child exclusion used by
+    # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
+    # (or Event Loop), return to combat for free, and reopen the same selection
+    # forever.  An all-recursion UI is mandatory, so choose once and suppress the
+    # recovered recursion cards for only this combat.
+    recursion_combat = {"comp_id": "RECURSION_FIXTURE", "node_type": "Monster"}
+    recursion_ctx = SimpleNamespace(
+        run_id="RUN_RECURSION_FIXTURE", combat=recursion_combat,
+        current_combat_is_hard=False, credit_tags=[], force_offense=False,
+        stall_analysis_asked=False, stall_analysis_needed=False,
+        stall_giveup=False)
+
+    def _recursion_card(index: int, card_id: str, name: str,
+                        card_type: str = "Skill", energy_cost: int = 1):
+        return {
+            "index": index, "card_id": card_id, "name": name,
+            "card_type": card_type, "playable": True,
+            "energy_cost": energy_cost, "dynamic_values": [],
+        }
+
+    def _recursion_selection(cards):
+        return {
+            "screen": "CARD_SELECTION", "run_id": "RUN_RECURSION_FIXTURE",
+            "available_actions": ["select_deck_card"],
+            "selection": {
+                "kind": "combat_pile_select",
+                "prompt": "从消耗牌堆选择一张非能力牌返回手牌并复制。",
+                "cards": cards, "min_select": 1, "selected_count": 0,
+                "can_confirm": False,
+            },
+            "run": {"run_id": "RUN_RECURSION_FIXTURE", "floor": 25,
+                    "current_hp": 50, "max_hp": 78, "deck": cards},
+        }
+
+    recursion_cards = [
+        _recursion_card(0, "VIVHITE_CARD_CONSERVED_RECURRENCE",
+                        "Conserved Recurrence"),
+        _recursion_card(1, "VIVHITE_CARD_EVENT_LOOP", "Event Loop"),
+    ]
+    normal_child = _recursion_card(
+        2, "VIVHITE_CARD_LUMINOUS_PROJECTION", "Luminous Projection",
+        card_type="Attack")
+    recursion_policy_safe = policy.Policy(
+        _vivhite_know("sts2-selfcheck-recursion-safe-"), random.Random(23))
+    recursion_safe = recursion_policy_safe.decide(
+        _recursion_selection(recursion_cards + [normal_child]), recursion_ctx)
+    assert recursion_safe.action == "select_deck_card" \
+        and recursion_safe.params.get("option_index") == 2, \
+        f"recursive child displaced safe child: {recursion_safe}"
+    assert "VIVHITE_RECURSION_CHILD_EXCLUDED" in recursion_safe.reason, \
+        f"recursive child exclusion lacks audit token: {recursion_safe.reason}"
+
+    recursion_policy_break = policy.Policy(
+        _vivhite_know("sts2-selfcheck-recursion-break-"), random.Random(29))
+    recursion_forced = recursion_policy_break.decide(
+        _recursion_selection(recursion_cards), recursion_ctx)
+    assert recursion_forced.action == "select_deck_card", recursion_forced
+    assert "VIVHITE_RECURSION_CHAIN_BREAK" in recursion_forced.reason, \
+        f"all-recursion fallback lacks chain-break audit: {recursion_forced.reason}"
+    assert recursion_policy_break._recursive_selection_block_combat is recursion_combat
+
+    recursion_combat_state = {
+        "screen": "COMBAT", "run_id": "RUN_RECURSION_FIXTURE",
+        "available_actions": ["play_card", "end_turn"], "turn": 4,
+        "combat": {
+            "player": {"current_hp": 50, "max_hp": 78, "block": 0,
+                       "energy": 3, "powers": [], "cards_played_this_turn": 1},
+            "hand": recursion_cards + [{
+                **normal_child, "dynamic_values": [
+                    {"name": "Damage", "current_value": 12}],
+                "requires_target": True, "valid_target_indices": [0],
+            }],
+            "enemies": [{
+                "index": 0, "enemy_id": "TEST_ENEMY", "name": "Test Enemy",
+                "current_hp": 40, "max_hp": 40, "block": 0,
+                "is_alive": True, "is_hittable": True,
+                "intents": [{"total_damage": 0}],
+            }],
+        },
+        "run": {"run_id": "RUN_RECURSION_FIXTURE", "floor": 25,
+                "current_hp": 50, "max_hp": 78,
+                "deck": recursion_cards + [normal_child]},
+    }
+    recursion_after = recursion_policy_break.decide(
+        recursion_combat_state, recursion_ctx)
+    assert recursion_after.action == "play_card" \
+        and recursion_after.params.get("card_index") == 2, \
+        f"forced recursive child restarted the chain: {recursion_after}"
+
     # 3prb) 謦欬自付隔离竞速生存分母（第 21~48 局批复盘，
     #      VIVHITE_RACE_SELF_LOSS_EXCLUDE）：race_audit 台账本 profile 判死后
     #      实战获胜 31/75=41.3%（本批 20/45=44.4%），越过 30% 预注册线——
