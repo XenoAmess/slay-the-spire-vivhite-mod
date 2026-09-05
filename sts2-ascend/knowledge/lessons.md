@@ -9247,3 +9247,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.895914473738941局)，BULLY(10分/4.895914473738941局)，HAVOC(10分/3.9167315789911537局)
 - 策略进化：potion_block_hp_pct: 0.78 → 0.80（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.52 → 0.55（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.40 → 2.35（行至 F21——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.55 → 0.52（行至 F21——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.80 → 0.78（行至 F21——药水交药线部分胜利回收）
 - 生涯战绩：0/1241 胜，当前目标进阶 0
+
+## 第 1242 局复盘（2026-09-05 17:53）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：ARMAMENTS, FLAME_BARRIER, SPITE, HEMOKINESIS, UNRELENTING, FEED, CINDER, EQUILIBRIUM, ARMAMENTS, UNMOVABLE, INFLAME, STOMP, BREAKTHROUGH, DARK_EMBRACE, HOWL_FROM_BEYOND
+- 本局遗物：ODDLY_SMOOTH_STONE, RIPPLE_BASIN
+- 战斗记录：F12 Monster战 掉血3; F17 Boss战 掉血50｜竞速审计：T2判死→实战10回合获胜; F19 Monster战 掉血15; F21 Monster战 掉血1; F24 Monster战 掉血1; F28 Elite战 掉血89｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/35.140988118691局)，FIEND_FIRE(25分/44.88476471234388局)，PRIMAL_FORCE(24分/6.8302902823131975局)，PACTS_END(24分/127.8343214287523局)，MANGLE(24分/119.04220206317287局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.878778773080855局)，BULLY(10分/4.878778773080855局)，HAVOC(10分/3.903023018464685局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.55 → 0.58（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.35 → 2.30（行至 F28——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.52 → 0.50（行至 F28——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.78 → 0.75（行至 F28——药水交药线部分胜利回收）
+- 生涯战绩：0/1242 胜，当前目标进阶 0
