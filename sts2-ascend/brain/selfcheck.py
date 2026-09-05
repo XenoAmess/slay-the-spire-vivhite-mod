@@ -7674,6 +7674,11 @@ def main() -> int:
     loop_agent = fresh_amb_agent("loop_gate", "AMB_LOOP")
     loop_state = json.loads(json.dumps(amb_reward_state))
     loop_state["run_id"] = "AMB_LOOP"
+    # Agent.run now fails closed until the API proves the configured native
+    # save profile.  This focused loop fixture predates that contract, so make
+    # the synthetic state explicit instead of accidentally exercising the
+    # profile guard forever.
+    loop_state["native_profile_id"] = loop_agent.cfg["native_profile_id"]
     loop_agent.ctx.run_id = "AMB_LOOP"
     loop_decision = loop_agent.policy.decide(loop_state, loop_agent.ctx)
     loop_agent._remember_ambiguous_action(loop_state, loop_decision)
@@ -7696,8 +7701,6 @@ def main() -> int:
 
         def state(self):
             self.state_reads += 1
-            if self.state_reads > 3:
-                raise AssertionError("未知成功等待未在第三帧释放")
             return json.loads(json.dumps(loop_state))
 
         def act(self, action, **params):
@@ -7715,7 +7718,14 @@ def main() -> int:
     old_review_module = agent.llm_review
     old_autogit_module = agent.autogit
     try:
-        agent.stop_requested = lambda: False
+        # If the third fresh frame does not release the ambiguous action, allow
+        # one more state read and then leave the production loop so the detailed
+        # assertion below fails.  Raising from ``state()`` would be caught by
+        # Agent.run's deliberate transport-exception boundary and turn a test
+        # regression into an infinite selfcheck.  ``> 3`` also keeps the final
+        # send gate open on the expected third frame.
+        agent.stop_requested = lambda: (
+            loop_client.state_reads > 3 and not loop_client.actions)
         agent.wait_for_stop = lambda _seconds: bool(loop_client.actions)
         agent.llm_review = None
         agent.autogit = None
@@ -7737,6 +7747,7 @@ def main() -> int:
     generic_agent = fresh_amb_agent("generic_exception", "AMB_GENERIC")
     generic_state = json.loads(json.dumps(amb_reward_state))
     generic_state["run_id"] = "AMB_GENERIC"
+    generic_state["native_profile_id"] = generic_agent.cfg["native_profile_id"]
     generic_agent.ctx.run_id = "AMB_GENERIC"
 
     class GenericLostClient:
