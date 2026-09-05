@@ -9313,3 +9313,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.793995706833291局)，BULLY(10分/4.793995706833291局)，HAVOC(10分/3.8351965654666333局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.57 → 0.57（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）；kill_race_prior_eff: 0.57 → 0.60（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F33——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.45 → 0.42（行至 F33——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.70 → 0.67（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1247 胜，当前目标进阶 0
+
+## 第 1248 局复盘（2026-09-05 22:12）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：TRUE_GRIT, BREAKTHROUGH, STONE_ARMOR, ANGER, RAMPAGE, THUNDERCLAP, RUPTURE, INFLAME, SHRUG_IT_OFF, SHRUG_IT_OFF, TWIN_STRIKE, FLAME_BARRIER, ANGER, CONFLAGRATION, CINDER, PROWESS, MOLTEN_FIST, INFLAME, HOWL_FROM_BEYOND, HEMOKINESIS, SWORD_BOOMERANG
+- 本局遗物：ANCHOR, HAPPY_FLOWER, SPARKLING_ROUGE
+- 战斗记录：F19 Monster战 掉血4｜自损10; F22 Monster战 掉血5｜自损11; F24 Monster战 掉血16｜自损22; F27 Unknown战 掉血8｜自损3; F30 Monster战 掉血21｜自损27; F33 Boss战 掉血74｜自损50｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34.409454470357495局)，FIEND_FIRE(25分/43.95039384110627局)，PACTS_END(24分/127.15575423337498局)，PRIMAL_FORCE(24分/6.688103410603125局)，MANGLE(24分/116.56408801336876局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.777216721859375局)，BULLY(10分/4.777216721859375局)，HAVOC(10分/3.8217733774875002局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.60 → 0.58（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；kill_race_prior_eff: 0.58 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F33——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.42 → 0.40（行至 F33——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.67 → 0.65（行至 F33——药水交药线部分胜利回收）
+- 生涯战绩：0/1248 胜，当前目标进阶 0
