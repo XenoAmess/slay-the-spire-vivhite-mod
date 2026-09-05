@@ -423,6 +423,11 @@ DEFAULT_POLICY = {
                                      # 进场 Boss 掉血正好 51 阵亡，+24 回血即买活）。审计度量的是判死
                                      # 标签本身的失真率，与「安全区血量线」语义无关，故解耦为专用键，
                                      # 仍受 boss_entry_evidence_hp_cap 封顶；调回 0.45 即恢复旧带行为
+    "boss_entry_doom_waiver_audit_gate": True,  # 竞速必败豁免的审计否决闸（第 53~88 局批复盘新增，
+                                     # RACE_AUDIT_DOOM_WAIVER_GATE）：race_audit 判死后获胜率达到
+                                     # boss_eve_race_audit_heal_min_latched/_win_rate 同阈时，「必败」
+                                     # 标签已被历史证伪，路径投影不得再免掉 Boss 入场血量线续航罚分；
+                                     # False 立即回滚到判死即豁免的旧口径
     # --- Boss 攻坚（第 82~83 批复盘） ---
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---

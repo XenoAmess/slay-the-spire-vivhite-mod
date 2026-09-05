@@ -6297,6 +6297,44 @@ def main() -> int:
     br_pol.know.policy["boss_eve_smith_hp_pct"] = 0.65
     br_ctx.rest_before_boss = False
 
+    # 3br-waiver-gate（RACE_AUDIT_DOOM_WAIVER_GATE，第 53~88 局批复盘）：竞速审计
+    # 台账判死后实战获胜 41/95（43%≥30%）时，「竞速必败」标签已被历史证伪——篝火端
+    # 已由 RACE_AUDIT_HEAL_OVERRIDE 保住回血，路径投影不得再把判死当确定结论整幕
+    # 豁免 Boss 入场血量线；开关关闭或台账低于门槛时必须严格回落旧豁免口径。
+    # 注意复用 br_audit_map_reason 的图缺 nodes[].children，路径走不到 Boss 行
+    # （_to_boss=False），豁免/否决两侧都不会显形；本夹具自带带 children 的图。
+    def br_gate_map_reason(pknow):
+        pmap = policy.Policy(pknow, random.Random(13))
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [
+                  {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
+                   "children": [{"row": 17, "col": 0}]}],
+                  "nodes": [
+                      {"row": 16, "col": 0, "node_type": "RestSite",
+                       "children": [{"row": 17, "col": 0}]},
+                      {"row": 17, "col": 0, "node_type": "Boss"}]},
+              "run": {"current_hp": 48, "max_hp": 80, "gold": 0,
+                      "floor": 16, "deck": br_weak_deck}}
+        return pmap.decide(st, br_ctx).reason
+    br_ctx.rest_before_boss = True
+    _wg_reason = br_gate_map_reason(br_know)
+    assert "RACE_AUDIT_DOOM_WAIVER_GATE" in _wg_reason \
+        and "入场血量线豁免" not in _wg_reason, \
+        f"审计否决闸未否决必败入场线豁免: {_wg_reason}"
+    br_pol.know.policy["boss_entry_doom_waiver_audit_gate"] = False
+    _wg_rb = br_gate_map_reason(br_know)
+    assert "入场血量线豁免" in _wg_rb \
+        and "RACE_AUDIT_DOOM_WAIVER_GATE" not in _wg_rb, \
+        f"审计否决闸关闭后未严格回滚旧豁免口径: {_wg_rb}"
+    br_pol.know.policy["boss_entry_doom_waiver_audit_gate"] = True
+    br_know.stats["race_audit"] = {"latched": 10, "won": 2, "died": 8}
+    _wg_low = br_gate_map_reason(br_know)
+    assert "入场血量线豁免" in _wg_low \
+        and "RACE_AUDIT_DOOM_WAIVER_GATE" not in _wg_low, \
+        f"台账判死胜率低于门槛时豁免被误否决: {_wg_low}"
+    br_know.stats["race_audit"] = {"latched": 10, "won": 4, "died": 6}
+    br_ctx.rest_before_boss = False
+
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
     # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。

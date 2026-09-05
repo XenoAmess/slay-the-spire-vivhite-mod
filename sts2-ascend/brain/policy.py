@@ -2304,7 +2304,30 @@ class Policy:
             # （本批 2RSHS 局 F9「预计进Boss血量 75%<75%」），final_pct 的
             # 表示误差会把它判成不达标吃续航罚分并留下自相矛盾的留痕——
             # 二值判定必须带 epsilon，比例罚分（血量地板）不受影响不动
-            if _to_boss and eve_doomed:
+            # 审计闸（第 53~88 局批复盘新增）：竞速审计台账判死后实战获胜
+            # 41/95（43%≥30%，本批 run 63 篝火留痕）——「必败」标签被历史证据
+            # 证伪时，篝火端已由 RACE_AUDIT_HEAL_OVERRIDE 保住回血，路径端豁免
+            # 却仍把判死当确定结论、整幕免掉续航罚分。同账同阈否决豁免，入场线
+            # 恢复计价；台账不足、判死可靠或开关关闭时旧豁免严格不变
+            _doom_waiver = _to_boss and eve_doomed
+            if _doom_waiver and bool(pol.get("boss_entry_doom_waiver_audit_gate", True)):
+                _audit = self.know.stats.get("race_audit")
+                if isinstance(_audit, dict):
+                    try:
+                        _lat = max(0, int(_audit.get("latched", 0) or 0))
+                        _won = max(0, int(_audit.get("won", 0) or 0))
+                        _min_lat = max(1, int(pol.get(
+                            "boss_eve_race_audit_heal_min_latched", 6)))
+                        _min_rate = clamp(float(pol.get(
+                            "boss_eve_race_audit_heal_win_rate", 0.30)), 0.0, 1.0)
+                        if _lat >= _min_lat and _won / max(1, _lat) >= _min_rate:
+                            _doom_waiver = False
+                            notes.append(
+                                f"竞速判死后获胜{_won}/{_lat}，Boss入场线豁免被审计闸否决"
+                                "（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价")
+                    except (TypeError, ValueError, OverflowError):
+                        pass
+            if _doom_waiver:
                 # 竞速必败豁免（第524局批复盘新增）：_boss_race_doomed 判死的
                 # 对局里满血进场也追不上击杀曲线，入场血量已被多批实证为非生死
                 # 变量（本批 75%~100% 进场全数整管打空）——续航罚分只会把选路

@@ -147,3 +147,41 @@ retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
 ## REPLAY
 
 retry_resolution: 20260901-000605-1788192365526162900-0b9c97f5 no_valid_change（完整 lineage 可读：provider 未开始工作、候选 patch 0 字节经认证为空，当前 HEAD 无其可重实现内容；本批假设与改动全部基于 runs 5~6 原始证据独立得出）
+
+
+# 第 53~88 局批复盘：竞速判死台账 43% 假阳性已闸住篝火端，路径端必败豁免仍裸奔——入场线豁免接入同一审计闸
+
+日期：2026-09-06
+
+## HYPOTHESIS
+
+race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批 run 63 篝火留痕）已把「竞速必败」标签证伪为近半数假阳性；篝火端早由 RACE_AUDIT_HEAL_OVERRIDE 按同账同阈保住回血，而路径投影的「竞速必败预演成立→Boss 入场血量线豁免」（eve_doomed 即整幕免掉续航罚分）是消费链上最后一个仍把判死当确定结论的裸奔口。给豁免接入同一台账闸后，假阳性体制下入场线恢复计价，路径端重新获得「续航路线 vs 战力路线」的真实分辨力。
+
+该假设可证伪：未来 3~10 局若 RACE_AUDIT_DOOM_WAIVER_GATE 留痕出现但被闸幕里的入场血量分布、休整/续航路线占比与 Boss 战结局均无变化，或豁免继续触发而闸从不显形，则假设不成立，置 `boss_entry_doom_waiver_audit_gate=False` 一键回滚到判死即豁免旧口径。
+
+## EVIDENCE
+
+- 本批 8 局全负、7 局死于 Boss（F17×3/F33×2/F48/F28 精英）。run 63/68/78/83 的路径留痕均含「竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分不计）」——豁免在四个独立对局整幕生效。
+- 同批 run 63 篝火留痕「RACE_AUDIT_HEAL_OVERRIDE：竞速判死后获胜41/95（43%≥30%）」——同一本台账已在篝火端否决必败弃疗，路径端豁免却无任何对账。
+- 最新死亡局 run 88（ZX6TDLQSV0W7，F17 灵魂异鱼）176 条决策链已逐条检查：F16 前夜组合全称门放行判可行→回血 8 点→100% 进场，实战 5 回合阵亡（掉血80｜自损62，T1 即付 8 血黄金构图）；竞速审计 T2 判死。预演两个方向都在错：判死的 43% 实战获胜，判可行的整管打空。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：路径投影的必败豁免改为先算 `_doom_waiver`，`boss_entry_doom_waiver_audit_gate`（默认开）且 race_audit 达到 `boss_eve_race_audit_heal_min_latched`/`_win_rate` 同阈时否决豁免、入场血量线续航罚分照常计价，并留「竞速判死后获胜W/L，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE）」可 grep 标记；台账缺失/不足、判死可靠、开关关闭或台账字段异常时严格回落旧豁免口径。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `boss_entry_doom_waiver_audit_gate=True`（False 即整体回滚），复用既有审计阈值键不新增旋钮。
+- sts2-ascend/brain/selfcheck.py：3br-waiver-gate 夹具锁定三分支——台账 40%≥30% 时豁免被否决且带 GATE 留痕；开关关闭严格回滚旧豁免；台账 20%<30% 时豁免不误伤。夹具图自带 nodes[].children（旧 br_audit_map_reason 的图缺 children，_to_boss=False，两侧留痕都不会显形）。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：判死幕的路径理由出现 RACE_AUDIT_DOOM_WAIVER_GATE 留痕且可与同决策 eve_doom_note/竞速预演账面对账；被闸幕里「进Boss血量预计X%<Y%，优先续航路线」留痕回归、休整/续航节点占比上升；「竞速必败预演成立…豁免」触发率下降。有效信号：被闸幕的 Boss 入场血量分布上移或 Boss 战损/结局改善。证伪/回滚条件：闸留痕出现 3 局以上但入场血量、选路与 Boss 结局均无变化，或闸把判死可靠幕（台账 <30%）误伤——置 False 整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含新 3br-waiver-gate 夹具）。
+- 独立探针：台账 41/95 时豁免被否决并带 GATE 留痕；无台账时旧豁免原样触发。
+- git diff --check 通过（仅宿主挂载的超长路径资产删除遗留告警，与本批无关）；完整 diff 已回读，仅 knowledge.py/policy.py/selfcheck.py 三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
