@@ -336,7 +336,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260901-194607-1788263167630673200-7a9e39b0 -->
 | 2026-09-01 19:46:07 | 第 3~4 局 | `7a9e39b0` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `cf589ff2` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 cf589ff2 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260901-203540-1788266140071956100-08087ea7 -->
-| 2026-09-01 20:35:40 | 第 988~1013 局 | `08087ea7` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-203540-1788266140071956100-08087ea7` | 复盘进程未成功完成 |
+| 2026-09-01 20:35:40 | 第 988~1013 局 | `08087ea7` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `276b4010` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 276b4010 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260901-222517-1788272717140471000-71a852f2 -->
 | 2026-09-01 22:25:17 | 第 988~1013 局 | `71a852f2` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-222517-1788272717140471000-71a852f2` | 复盘进程未成功完成 |
 <!-- rejection:20260901-225418-1788274458682851200-806bd570 -->
