@@ -242,6 +242,29 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
         self.assertTrue(llm_review._remove_failed_review_evidence(
             sandbox, log=lambda _message: None))
 
+    def test_ready_package_missing_report_is_repaired_from_manifest_only(self) -> None:
+        package = self._package("pkg-target", b"R")
+        (package / "report.md").unlink()
+        manifest_path = package / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.update({
+            "reason": "provider exited before producing a report",
+            "failure_code": "process_exit",
+            "provider_work_started": False,
+        })
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        repaired = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+
+        report = (package / "report.md").read_text(encoding="utf-8")
+        self.assertIn("not model output", report)
+        self.assertIn("process_exit", report)
+        self.assertIn("provider exited before producing a report", report)
+        self.assertTrue(repaired["report_recovered_from_manifest"])
+        self.assertEqual(
+            repaired["report_recovery_source"], "manifest_host_facts_only")
+
     def test_legacy_empty_upgrade_rejects_every_inconsistent_near_miss(self) -> None:
         cases = (
             "captured-file",
@@ -252,7 +275,6 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
             "deferred-snapshot",
             "missing-path-field",
             "missing-pre-head",
-            "missing-report",
             "included-captured-snapshot",
             "included-non-git-raw-sandbox",
         )
@@ -280,8 +302,6 @@ class FailedReviewEvidenceMountTests(unittest.TestCase):
                     manifest.pop("sandbox_sibling_paths")
                 elif case == "missing-pre-head":
                     manifest.pop("pre_head")
-                elif case == "missing-report":
-                    (package / "report.md").unlink()
                 elif case == "included-captured-snapshot":
                     manifest["snapshot_included"] = True
                     captured = package / "captured_snapshot" / "files"

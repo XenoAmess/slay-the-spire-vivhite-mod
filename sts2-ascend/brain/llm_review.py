@@ -2395,8 +2395,13 @@ def _preferred_cooldown_remaining(entry: str) -> float:
 
 def _mark_preferred_failure(cfg: dict, log, entry: str, reason: str, kind: str = "failure") -> None:
     """优先后端失败冷却（按稳定 backend key 独立计时）。"""
-    key = "preferred_timeout_cooldown_min" if kind == "timeout" else "preferred_failure_cooldown_min"
-    cooldown_min = float(cfg.get(key, 30 if kind == "timeout" else 60))
+    if kind == "timeout":
+        key, fallback = "preferred_timeout_cooldown_min", 30
+    elif kind == "unavailable":
+        key, fallback = "provider_unavailable_cooldown_min", 1440
+    else:
+        key, fallback = "preferred_failure_cooldown_min", 60
+    cooldown_min = float(cfg.get(key, fallback))
     durable = _write_entry_state(entry, {
         "unavailable_until": time.time() + cooldown_min * 60,
         "last_failure": reason,
@@ -3256,7 +3261,7 @@ def _run_review_scoped(know, log=print, model: str | None = None,
     translator = translator_for_runner(runner)
     sandbox = SandboxReviewResult(error="复盘尚未运行")
 
-    def save_failure(reason: str) -> Path | None:
+    def save_failure(reason: str, *, enqueue_replay: bool = True) -> Path | None:
         package = _save_review_salvage(
             pre_head, reason, sandbox, batch_runs=(batch_runs or [runs]),
             batch_run_ids=effective_batch_run_ids,
@@ -3272,12 +3277,16 @@ def _run_review_scoped(know, log=print, model: str | None = None,
             review_sandbox_name=sandbox.review_sandbox_name,
             review_attempt_receipt_schema=(
                 sandbox.review_attempt_receipt_schema),
+            replay_enqueue_pending=enqueue_replay,
             prompt_text=prompt,
             invocation_prompt=short_prompt,
             log=log)
         if package is not None and _status is not None:
             _status["salvage_package"] = package.name
-            _status["new_salvage_package"] = package.name
+            if enqueue_replay:
+                _status["new_salvage_package"] = package.name
+            else:
+                _status["audit_salvage_package"] = package.name
         return package
 
     try:
@@ -3322,6 +3331,7 @@ def _run_review_scoped(know, log=print, model: str | None = None,
             if _status is not None:
                 _status["failure_code"] = sandbox.failure_code
         rate_limit_info = None
+        provider_unavailable_info = None
         if not capability_error and not stopped:
             rate_limit_info = _provider_rate_limit_info(sandbox, cfg)
             if rate_limit_info is not None:
@@ -3348,6 +3358,27 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                         # when it emitted no model token; never allow startup
                         # fallback to hand this lineage to another model.
                         "startup_unavailable": False,
+                        "provider_launch_attempted": True,
+                    })
+            if rate_limit_info is None:
+                provider_unavailable_info = _provider_unavailable_info(sandbox)
+            if provider_unavailable_info is not None:
+                sandbox.failure_code = provider_unavailable_info["failure_code"]
+                unavailable_reason = (
+                    f"provider account unavailable "
+                    f"(HTTP {provider_unavailable_info['status_code']}: "
+                    f"{provider_unavailable_info['message'] or provider_unavailable_info['reason']})")
+                sandbox.error = unavailable_reason
+                if _status is not None:
+                    _status.update({
+                        "outcome": "failed",
+                        "reason": unavailable_reason,
+                        "failure_code": provider_unavailable_info["failure_code"],
+                        "provider_unavailable": dict(provider_unavailable_info),
+                        # The CLI reached the account gate but no model work
+                        # started. Clear batch affinity so the scheduler can
+                        # immediately select the next configured tier.
+                        "startup_unavailable": True,
                         "provider_launch_attempted": True,
                     })
         resolutions = _validated_retry_resolutions(
@@ -3402,7 +3433,9 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                     "reason": (sandbox.replay_evidence_error
                                or sandbox.error
                                or "failed-package evidence unavailable"),
-                    "startup_unavailable": False,
+                    # No provider was launched. Do not pin this host evidence
+                    # failure to whichever backend happened to be selected.
+                    "startup_unavailable": True,
                     "provider_launch_attempted": False,
                 })
             log("[llm] 完整失败包证据尚不可用；未启动模型、未消费回执、"
@@ -3449,11 +3482,25 @@ def _run_review_scoped(know, log=print, model: str | None = None,
             log("[llm] Windows 隔离仓 ACL 预检失败；provider 未启动，"
                 "完整保全宿主现场并维持原模型亲和性，稍后重试")
             return False
-        if sandbox.error or stopped:
+        if provider_unavailable_info is not None:
+            # Preserve the full provider transcript/clone for audit, but a
+            # no-work account failure is not a model patch that another model
+            # must replay. Keeping it out of the replay lineage prevents one
+            # exhausted account from poisoning every lower-priority backend.
+            save_failure(sandbox.error, enqueue_replay=False)
+        elif sandbox.error or stopped:
             save_failure(sandbox.error or "协作停止留下的部分复盘现场")
         if rate_limit_info is not None:
             log("[llm] provider HTTP 429；不记 preferred cooldown、不切换模型，"
                 f"保留原 runner/model 亲和性，{rate_limit_info['retry_after_seconds']:.0f}s 后重试")
+            return False
+        if provider_unavailable_info is not None:
+            if source == "preferred":
+                _mark_preferred_failure(
+                    cfg, log, state_key,
+                    provider_unavailable_info["reason"], kind="unavailable")
+            log("[llm] provider account has insufficient credits; preserved an "
+                "audit-only failure package and advanced to the next review tier")
             return False
         # 停止批次永不合入 patch，也永不消费队列，让新进程重做该批。
         if stopped:
@@ -3781,6 +3828,8 @@ _REVIEW_DEFERRED_MAX_SECONDS = 15 * 60
 # bound; deployments may lower it with the explicit config knob below.
 _PROVIDER_RATE_LIMIT_FAILURE_CODE = "provider_http_429"
 _PROVIDER_RATE_LIMIT_DEFERRED_KIND = "provider_rate_limit"
+_PROVIDER_UNAVAILABLE_FAILURE_CODE = "provider_account_unavailable"
+_PROVIDER_UNAVAILABLE_KIND = "provider_unavailable"
 # Host/preflight deferrals must not consume the model retry budget, but they
 # also must not monopolize the worker forever.  After a bounded number of
 # deferrals the transaction is parked for an hour; maintenance or an explicit
@@ -3867,6 +3916,44 @@ def _provider_rate_limit_info(sandbox: "SandboxReviewResult", cfg: dict) -> dict
         "source": source[:120],
         "failure_code": _PROVIDER_RATE_LIMIT_FAILURE_CODE,
         "deferred_kind": _PROVIDER_RATE_LIMIT_DEFERRED_KIND,
+    }
+
+
+def _provider_unavailable_info(sandbox: "SandboxReviewResult") -> dict | None:
+    """Read an explicit account-credit failure emitted by a runner adapter."""
+    metrics = (sandbox.provider_metrics
+               if isinstance(getattr(sandbox, "provider_metrics", None), dict)
+               else {})
+    nested = metrics.get("provider_unavailable")
+    nested = nested if isinstance(nested, dict) else {}
+    if not (metrics.get("provider_unavailable_detected") or nested):
+        return None
+    reason = str(metrics.get("provider_unavailable_reason")
+                 or nested.get("reason") or "")
+    if reason != "insufficient_credits":
+        return None
+    raw_status = (metrics.get("provider_unavailable_status")
+                  if metrics.get("provider_unavailable_status") is not None
+                  else nested.get("status_code", 0))
+    try:
+        status_code = int(raw_status)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if status_code not in {401, 402, 403}:
+        return None
+    if sandbox.rc == 0 and not sandbox.error and bool(sandbox.paths and sandbox.patch):
+        return None
+    message = str(metrics.get("provider_unavailable_message")
+                  or nested.get("message") or "provider credits unavailable")
+    source = str(metrics.get("provider_unavailable_source")
+                 or nested.get("source") or "provider")
+    return {
+        "status_code": status_code,
+        "reason": reason,
+        "message": " ".join(message.split())[:500],
+        "source": source[:120],
+        "failure_code": _PROVIDER_UNAVAILABLE_FAILURE_CODE,
+        "deferred_kind": _PROVIDER_UNAVAILABLE_KIND,
     }
 
 
@@ -7840,6 +7927,50 @@ def _materialize_legacy_empty_retry_evidence(
         inventory_temp.unlink(missing_ok=True)
 
 
+def _ensure_retry_report(package: Path, manifest: dict, log=print) -> dict:
+    """Backfill a missing report from durable host facts without inventing work."""
+    report = package / "report.md"
+    if report.is_file() and not report.is_symlink():
+        return manifest
+    if report.exists() or report.is_symlink():
+        raise OSError(f"retry report is not a regular file: {report}")
+    recovered_at = time.strftime("%Y-%m-%d %H:%M:%S")
+    reason = " ".join(str(manifest.get("reason") or "unknown host failure").split())
+    failure_code = str(manifest.get("failure_code") or "unclassified")
+    provider_started = bool(manifest.get("provider_work_started"))
+    body = (
+        "# Host-recovered review diagnostic\n\n"
+        "The original attempt did not persist `report.md`. This file was "
+        "reconstructed only from the package manifest; it is not model output.\n\n"
+        f"- failure_code: `{failure_code}`\n"
+        f"- provider_work_started: `{str(provider_started).lower()}`\n"
+        f"- recorded_reason: {reason}\n"
+    )
+    report_temp = package / (
+        f".report.md.tmp-{os.getpid()}-{threading.get_ident()}")
+    manifest_path = package / "manifest.json"
+    manifest_temp = package / (
+        f".manifest.json.tmp-{os.getpid()}-{threading.get_ident()}")
+    updated = dict(manifest)
+    updated.update({
+        "report_recovered_from_manifest": True,
+        "report_recovered_at": recovered_at,
+        "report_recovery_source": "manifest_host_facts_only",
+    })
+    try:
+        report_temp.write_text(body, encoding="utf-8")
+        _replace_with_retry(report_temp, report)
+        manifest_temp.write_text(
+            json.dumps(updated, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+        _replace_with_retry(manifest_temp, manifest_path)
+    finally:
+        report_temp.unlink(missing_ok=True)
+        manifest_temp.unlink(missing_ok=True)
+    log(f"[llm] repaired missing retry report from manifest facts: {package.name}")
+    return updated
+
+
 def _materialize_retry_evidence(
     package: Path, log=print, *, force_rebuild: bool = False,
 ) -> dict:
@@ -7853,6 +7984,7 @@ def _materialize_retry_evidence(
     """
     manifest_path = package / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = _ensure_retry_report(package, manifest, log=log)
     candidate_path = package / "retry_candidate.patch"
     inventory_path = package / "retry_candidate_inventory.json"
     validated = package / "validated_candidate.patch"
@@ -9250,6 +9382,7 @@ def _save_review_salvage(
     review_attempt_id: str = "", review_sandbox_name: str = "",
     review_attempt_receipt_schema: int = 0,
     startup_orphan_recovery: bool = False,
+    replay_enqueue_pending: bool = True,
     prompt_text: str = "", invocation_prompt: str = "", log=print,
 ) -> Path | None:
     """原子保存全部失败成果供同一复盘模型重审；永不自动应用。"""
@@ -9275,8 +9408,16 @@ def _save_review_salvage(
                   "非模型提交失败")
     snapshot = Path(sandbox.snapshot_dir) if sandbox.snapshot_dir else None
     retained = Path(sandbox.retained_sandbox_dir) if sandbox.retained_sandbox_dir else None
-    deferred_raw = bool(sandbox.stopped and retained is not None)
-    deferred_snapshot = bool(sandbox.stopped and snapshot is not None)
+    # Always publish large forensic sources as durable pointers first.  A local
+    # clone contains the repository's full object database and used to block the
+    # only review worker for minutes while copytree duplicated it synchronously.
+    # The maintenance pass moves same-volume trees atomically (or resumes a
+    # checked copy), while this call remains bounded and can advance the queue.
+    deferred_raw = bool(retained is not None)
+    # The snapshot contains only captured changed files and is normally small;
+    # retain the established atomic package behavior outside lifecycle stop.
+    deferred_snapshot = bool(
+        snapshot is not None and (sandbox.stopped or retained is not None))
     snapshot_patch = snapshot / "wip.patch" if snapshot is not None else None
     patch = sandbox.wip_patch or sandbox.patch
     if deferred_raw or deferred_snapshot:
@@ -9351,13 +9492,13 @@ def _save_review_salvage(
         "every": every,
         # Host preflight failures happen before provider work, but must not
         # revoke the already durable runner/model binding.
-        "retry_same_model": bool(
+        "retry_same_model": bool(replay_enqueue_pending and (
             getattr(sandbox, "provider_work_started", False)
             or sandbox.failure_code in {
                 "runner_cli_preflight", "review_sandbox_acl_preflight",
                 "runner_codex_filesystem_preflight",
                 _PROVIDER_RATE_LIMIT_FAILURE_CODE,
-            }),
+            })),
         "return_code": sandbox.rc,
         "timed_out": sandbox.timed_out,
         "stalled": sandbox.stalled,
@@ -9382,6 +9523,15 @@ def _save_review_salvage(
             isinstance(getattr(sandbox, "provider_metrics", None), dict)
             and (sandbox.provider_metrics.get("rate_limit_detected")
                  or sandbox.provider_metrics.get("rate_limited"))),
+        "provider_unavailable": (
+            dict(sandbox.provider_metrics.get("provider_unavailable") or {})
+            if isinstance(getattr(sandbox, "provider_metrics", None), dict)
+            and isinstance(
+                sandbox.provider_metrics.get("provider_unavailable"), dict)
+            else {}),
+        "provider_unavailable_detected": bool(
+            isinstance(getattr(sandbox, "provider_metrics", None), dict)
+            and sandbox.provider_metrics.get("provider_unavailable_detected")),
         "provider_work_started": bool(
             getattr(sandbox, "provider_work_started", False)),
         "provider_transcript_rel": (
@@ -9405,7 +9555,7 @@ def _save_review_salvage(
         # This linkage is published in the same atomic package rename as the
         # forensic bytes.  A crash before the worker can update review_queue.json
         # is therefore recoverable and idempotently becomes exactly one target job.
-        "replay_enqueue_pending": True,
+        "replay_enqueue_pending": bool(replay_enqueue_pending),
         "replay_target": target_name,
         "replay_role": replay_role,
         "replay_attempt_no": len(existing_attempts) + (1 if replay_role == "attempt_evidence" else 0),
@@ -9434,8 +9584,9 @@ def _save_review_salvage(
         SALVAGE_ROOT.mkdir(parents=True, exist_ok=True)
         temp.mkdir()
         if deferred_raw or deferred_snapshot:
-            # Stop 临界区不复制任何可能很大的文件；只发布很小的持久指针包。
-            # 新 Brain 启动后在后台把完整快照搬入本包。
+            # Never copy a potentially multi-GB clone on the failure hot path.
+            # The exact source stays owned under review_work until maintenance
+            # has durably moved/copied it into this package.
             (temp / "files").mkdir()
             (temp / "file_states.json").write_text("[]\n", encoding="utf-8")
         elif snapshot is not None and snapshot.is_dir():
@@ -10122,7 +10273,7 @@ def _kill_orphan_review_processes(log) -> None:
 
 
 def _recover_deferred_salvages(log=print) -> None:
-    """新 worker 异步补齐 Stop 临界区保留的 raw clone 或完整快照。"""
+    """Complete pointer-first forensic packages outside the failure hot path."""
     if not SALVAGE_ROOT.is_dir():
         return
     for package in sorted(SALVAGE_ROOT.iterdir(), key=lambda path: path.name):
@@ -10154,7 +10305,19 @@ def _recover_deferred_salvages(log=print) -> None:
                                 package, "raw_sandbox", target)):
                         raise OSError(
                             f"raw sandbox 源已不存在且目标没有完整复制证明：{raw}")
-                if source_available:
+                moved = False
+                if source_available and not target.exists():
+                    try:
+                        # review_work and review_salvage normally share one
+                        # volume. Rename preserves every Git/cache/ignored byte
+                        # without duplicating the repository object database.
+                        os.replace(raw, target)
+                        moved = True
+                    except OSError:
+                        # Legacy system-temp sources may live on another volume.
+                        # The checked resumable copy remains the safe fallback.
+                        moved = False
+                if source_available and not moved:
                     # manifest/pointer remains deferred until copytree returns;
                     # a partial target is safely completed on the next retry.
                     _make_snapshot_tree_writable(target)
@@ -10162,6 +10325,7 @@ def _recover_deferred_salvages(log=print) -> None:
                         raw, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
+                if source_available:
                     _publish_snapshot_copy_marker(
                         package, "raw_sandbox", target, raw)
                 manifest.update({
@@ -10170,7 +10334,7 @@ def _recover_deferred_salvages(log=print) -> None:
                     "raw_sandbox_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
                 cleanup = (SandboxReviewResult(retained_sandbox_dir=str(raw))
-                           if source_available else None)
+                           if source_available and not moved else None)
                 completed.append((raw_pointer, cleanup))
 
             if snapshot_pointer.is_file():
@@ -10188,12 +10352,20 @@ def _recover_deferred_salvages(log=print) -> None:
                                 package, "captured_snapshot", target)):
                         raise OSError(
                             f"snapshot 源已不存在且目标没有完整复制证明：{snapshot}")
-                if source_available:
+                moved = False
+                if source_available and not target.exists():
+                    try:
+                        os.replace(snapshot, target)
+                        moved = True
+                    except OSError:
+                        moved = False
+                if source_available and not moved:
                     _make_snapshot_tree_writable(target)
                     shutil.copytree(
                         snapshot, target, dirs_exist_ok=True, symlinks=True,
                         ignore_dangling_symlinks=True,
                         copy_function=_copy_snapshot_file)
+                if source_available:
                     _publish_snapshot_copy_marker(
                         package, "captured_snapshot", target, snapshot)
                 manifest.update({
@@ -10202,7 +10374,7 @@ def _recover_deferred_salvages(log=print) -> None:
                     "snapshot_recovered_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
                 cleanup = (SandboxReviewResult(snapshot_dir=str(snapshot))
-                           if source_available else None)
+                           if source_available and not moved else None)
                 completed.append((snapshot_pointer, cleanup))
 
             manifest_temp = package / (
@@ -10214,13 +10386,14 @@ def _recover_deferred_salvages(log=print) -> None:
             # Once the raw clone is safely inside the ignored failure package,
             # derive a private-index candidate for the next GLM audit.  This is
             # outside the Stop critical path and never applies the candidate.
-            try:
-                manifest = _materialize_retry_evidence(package, log=log)
-            except _ReviewStopped:
-                raise
-            except Exception as exc:
-                log(f"[llm] 延迟现场已补全，{_review_backend_label(manifest)} "
-                    f"重审候选证据稍后懒物化：{exc}")
+            if manifest.get("replay_enqueue_pending") is True:
+                try:
+                    manifest = _materialize_retry_evidence(package, log=log)
+                except _ReviewStopped:
+                    raise
+                except Exception as exc:
+                    log(f"[llm] 延迟现场已补全，{_review_backend_label(manifest)} "
+                        f"重审候选证据稍后懒物化：{exc}")
             # 先让项目内完整副本与 manifest 落稳，再清系统临时现场；只有清理
             # 成功才撤指针。若此处崩溃/权限失败，下次启动仍能精确重试而不泄漏。
             for pointer, item in completed:
@@ -10236,7 +10409,7 @@ def _recover_deferred_salvages(log=print) -> None:
             # new worker already revisits every deferred package here, so backfill
             # the idempotent tracked index after the full manifest is durable.
             _record_review_rejection(package, manifest, log=log)
-            log(f"[llm] 已异步补全停止复盘的完整失败现场：{package}")
+            log(f"[llm] 已补全复盘的完整失败现场：{package}")
         except Exception as exc:
             log(f"[llm] 延迟补全失败复盘现场异常；保留指针供下次重试：{exc}")
 
@@ -11075,6 +11248,9 @@ def _worker_loop_body(agent, log) -> None:
                 # Keep the three host transactions in this order even when the
                 # first call finds nothing new.  A crash may have persisted the
                 # receipt state but not yet acknowledged its queue items.
+                _recover_deferred_salvages(log=log)
+                if _review_stop_requested():
+                    return
                 _recover_review_holds(log=log)
                 if _review_stop_requested():
                     return

@@ -29,6 +29,7 @@ from review_runners import (  # noqa: E402
     bind_review_workdir,
     build_review_command,
     detect_provider_rate_limit,
+    detect_provider_unavailable,
     parse_retry_after,
     review_plans_from_config,
 )
@@ -577,6 +578,25 @@ class CodexTranslatorTests(unittest.TestCase):
 
 
 class OpencodeTranslatorTests(unittest.TestCase):
+    def test_opencode_credits_error_is_structured_without_model_work(self) -> None:
+        translator = llm_review.OpencodeJsonTranslator()
+
+        translator.feed(json.dumps({
+            "type": "error",
+            "error": {
+                "name": "CreditsError",
+                "status_code": 401,
+                "message": "Insufficient balance",
+            },
+        }))
+
+        metrics = translator.metrics()
+        self.assertTrue(metrics["provider_unavailable_detected"])
+        self.assertEqual(metrics["provider_unavailable_status"], 401)
+        self.assertEqual(
+            metrics["provider_unavailable_reason"], "insufficient_credits")
+        self.assertFalse(metrics["model_work_started"])
+
     def test_opencode_error_code_and_retry_after_are_structured(self) -> None:
         translator = llm_review.OpencodeJsonTranslator()
 
@@ -648,6 +668,27 @@ class ProviderRateLimitParsingTests(unittest.TestCase):
         for fixture in fixtures:
             with self.subTest(fixture=fixture):
                 self.assertIsNone(detect_provider_rate_limit(fixture))
+
+    def test_credit_detector_requires_provider_error_evidence(self) -> None:
+        signal = detect_provider_unavailable({
+            "type": "error",
+            "error": {
+                "name": "CreditsError",
+                "status": 401,
+                "message": "Insufficient balance",
+            },
+        })
+        self.assertIsNotNone(signal)
+        assert signal is not None
+        self.assertEqual(signal.status_code, 401)
+        self.assertEqual(signal.reason, "insufficient_credits")
+        for ordinary in (
+            "the documentation says insufficient balance",
+            {"status": 401, "message": "invalid access token"},
+            {"type": "message", "message": "balance is low"},
+        ):
+            with self.subTest(ordinary=ordinary):
+                self.assertIsNone(detect_provider_unavailable(ordinary))
 
 
 class ReviewResolverTests(unittest.TestCase):

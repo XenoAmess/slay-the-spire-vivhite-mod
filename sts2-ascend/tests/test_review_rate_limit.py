@@ -77,6 +77,39 @@ class ProviderRateLimitTests(unittest.TestCase):
         self.assertIsNone(
             llm_review._provider_rate_limit_info(successful_patch, {}))
 
+    def test_provider_unavailable_info_accepts_only_structured_credit_failure(self) -> None:
+        sandbox = llm_review.SandboxReviewResult(
+            rc=1,
+            error="provider failed",
+            provider_metrics={
+                "provider_unavailable": {
+                    "status_code": 401,
+                    "reason": "insufficient_credits",
+                    "message": "Insufficient balance",
+                    "source": "error.status_code",
+                },
+            },
+        )
+
+        info = llm_review._provider_unavailable_info(sandbox)
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info["status_code"], 401)
+        self.assertEqual(info["failure_code"], "provider_account_unavailable")
+        self.assertEqual(info["deferred_kind"], "provider_unavailable")
+        self.assertEqual(info["reason"], "insufficient_credits")
+
+        ordinary_auth = llm_review.SandboxReviewResult(
+            rc=1,
+            provider_metrics={
+                "provider_unavailable_detected": True,
+                "provider_unavailable_status": 401,
+                "provider_unavailable_reason": "invalid_token",
+            },
+        )
+        self.assertIsNone(llm_review._provider_unavailable_info(ordinary_auth))
+
     def test_bounded_provider_retry_delay_enforces_global_and_configured_caps(self) -> None:
         # A provider cannot extend the queue delay beyond the host's hard ceiling,
         # even when a malformed/overly generous local setting is supplied.

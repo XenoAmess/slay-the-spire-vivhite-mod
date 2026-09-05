@@ -824,7 +824,7 @@ class ReviewSalvageTests(unittest.TestCase):
             self.assertEqual(
                 status["deferred_kind"], "replay_evidence_preflight")
             self.assertEqual(status["reason"], evidence_error)
-            self.assertFalse(status["startup_unavailable"])
+            self.assertTrue(status["startup_unavailable"])
             self.assertFalse(status["provider_launch_attempted"])
             self.assertFalse(status["provider_work_started"])
             save.assert_not_called()

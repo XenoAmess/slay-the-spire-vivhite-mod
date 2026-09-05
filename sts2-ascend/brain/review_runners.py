@@ -49,6 +49,30 @@ class ProviderRateLimit:
 RateLimitSignal = ProviderRateLimit
 
 
+@dataclass(frozen=True)
+class ProviderUnavailable:
+    """A structured provider account/billing failure with no model work.
+
+    Catalog probes only prove that a model id exists.  Providers can still
+    reject the paid request because the account has no remaining balance.  The
+    host needs this signal to cool that backend and continue down the configured
+    priority chain instead of retrying it every few minutes.
+    """
+
+    status_code: int
+    reason: str
+    message: str = ""
+    source: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status_code": self.status_code,
+            "reason": self.reason,
+            "message": self.message,
+            "source": self.source,
+        }
+
+
 _RETRY_AFTER_KEYS = frozenset({
     "retry-after", "retry_after", "retryafter",
 })
@@ -72,6 +96,13 @@ _RATE_LIMIT_TOKEN_RE = re.compile(
     r"(?i)\b(?:rate_limit_exceeded|too_many_requests)\b")
 _RETRY_AFTER_TEXT_RE = re.compile(
     r"(?im)\bretry[\s_-]*after\s*[:=]\s*([^\r\n;]+)")
+_CREDIT_UNAVAILABLE_RE = re.compile(
+    r"(?i)\b(?:insufficient\s+(?:account\s+)?(?:balance|credits?)|"
+    r"(?:account\s+)?(?:balance|credits?)\s+(?:is\s+)?(?:exhausted|depleted)|"
+    r"billing[_ -]?(?:quota|balance)\s+(?:is\s+)?(?:exhausted|depleted))\b")
+_CREDIT_ERROR_TOKEN_RE = re.compile(
+    r"(?i)\b(?:credits?error|insufficient[_-](?:balance|credits?)|"
+    r"billing[_-](?:quota|balance)[_-](?:exhausted|depleted))\b")
 
 
 def parse_retry_after(value: Any, *, now: float | None = None) -> float | None:
@@ -247,6 +278,31 @@ def detect_provider_rate_limit(
         retry_after_seconds=retry_after,
         message=message,
         source=source,
+    )
+
+
+def detect_provider_unavailable(payload: Any) -> ProviderUnavailable | None:
+    """Return only explicit account-credit/billing unavailability signals.
+
+    Ordinary authentication errors and prose mentioning a low balance are not
+    enough.  The payload must carry an unambiguous credit marker and either a
+    structured 401/402/403 status or a provider error token such as
+    ``CreditsError``.
+    """
+
+    status, status_source = _status_from_payload(payload)
+    text = _payload_text(payload)
+    credit_phrase = bool(_CREDIT_UNAVAILABLE_RE.search(text))
+    credit_token = bool(_CREDIT_ERROR_TOKEN_RE.search(text))
+    if not (credit_phrase or credit_token):
+        return None
+    if status not in {401, 402, 403} and not credit_token:
+        return None
+    return ProviderUnavailable(
+        status_code=int(status or 402),
+        reason="insufficient_credits",
+        message=" ".join(text.split())[:500],
+        source=status_source or ("error_code" if credit_token else "message"),
     )
 
 
@@ -466,6 +522,7 @@ class _TranslatorBase:
         self.non_json_lines = 0
         self.model_work_started = False
         self.rate_limit: ProviderRateLimit | None = None
+        self.provider_unavailable: ProviderUnavailable | None = None
         self.usage: dict[str, int] = {}
         self.started_monotonic = 0.0
         self.first_event_after_sec: float | None = None
@@ -513,8 +570,18 @@ class _TranslatorBase:
                 )
         return True
 
+    def _record_provider_unavailable(self, payload: Any) -> bool:
+        """Record a terminal account/billing error without claiming model work."""
+        signal = detect_provider_unavailable(payload)
+        if signal is None:
+            return False
+        if self.provider_unavailable is None:
+            self.provider_unavailable = signal
+        return True
+
     def metrics(self) -> dict:
         signal = self.rate_limit
+        unavailable = self.provider_unavailable
         payload = {
             "event_count": self.event_count,
             "error_count": self.error_count,
@@ -534,9 +601,20 @@ class _TranslatorBase:
                 signal.retry_after_seconds if signal else None),
             "rate_limit_message": signal.message if signal else "",
             "rate_limit_source": signal.source if signal else "",
+            "provider_unavailable_detected": unavailable is not None,
+            "provider_unavailable_status": (
+                unavailable.status_code if unavailable else None),
+            "provider_unavailable_reason": (
+                unavailable.reason if unavailable else ""),
+            "provider_unavailable_message": (
+                unavailable.message if unavailable else ""),
+            "provider_unavailable_source": (
+                unavailable.source if unavailable else ""),
         }
         if signal is not None:
             payload["rate_limit"] = signal.as_dict()
+        if unavailable is not None:
+            payload["provider_unavailable"] = unavailable.as_dict()
         return payload
 
 
@@ -555,12 +633,14 @@ class OpencodeJsonTranslator(_TranslatorBase):
         if not text.startswith("{"):
             self.non_json_lines += 1
             self._record_rate_limit(text)
+            self._record_provider_unavailable(text)
             return [text]
         try:
             event = json.loads(text)
         except json.JSONDecodeError:
             self.non_json_lines += 1
             self._record_rate_limit(text)
+            self._record_provider_unavailable(text)
             return [text]
         if not isinstance(event, dict):
             self.non_json_lines += 1
@@ -569,7 +649,7 @@ class OpencodeJsonTranslator(_TranslatorBase):
         # Only error-shaped events are allowed to contribute text-based 429
         # signals.  Explicit nested status fields remain safe regardless of the
         # event type and are handled by the same structured parser.
-        self._record_rate_limit(
+        error_payload = (
             event if (str(event.get("type") or "").casefold() in {
                 "error", "failed", "failure", "provider_error"}
                 or isinstance(event.get("error"), (dict, list, str))
@@ -577,6 +657,8 @@ class OpencodeJsonTranslator(_TranslatorBase):
             else {key: event[key] for key in (
                 "status", "status_code", "http_status", "headers",
                 "response", "error") if key in event})
+        self._record_rate_limit(error_payload)
+        self._record_provider_unavailable(error_payload)
         raw_part = event.get("part")
         if raw_part is not None and not isinstance(raw_part, dict):
             self.non_json_lines += 1
@@ -622,6 +704,7 @@ class OpencodeJsonTranslator(_TranslatorBase):
         if part_type == "error" or event.get("type") == "error":
             self.error_count += 1
             self._record_rate_limit(part)
+            self._record_provider_unavailable(part)
         return []
 
 
@@ -787,6 +870,7 @@ class CodexJsonTranslator(_TranslatorBase):
     def _non_json(self, text: str) -> list[str]:
         self.non_json_lines += 1
         self._record_tool_access_error(text)
+        self._record_provider_unavailable(text)
         return [text]
 
     def feed(self, raw: str) -> list[str]:
@@ -809,6 +893,7 @@ class CodexJsonTranslator(_TranslatorBase):
                 "error", "turn.failed", "turn.error", "provider_error",
         } or isinstance(event.get("error"), (dict, list, str)):
             self._record_rate_limit(event)
+            self._record_provider_unavailable(event)
         if event_type == "thread.started":
             self.thread_id = str(event.get("thread_id") or "")[:128]
             return [f"· Codex thread {self.thread_id[:12]} ·"] if self.thread_id else []
