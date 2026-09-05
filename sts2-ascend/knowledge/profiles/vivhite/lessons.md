@@ -997,3 +997,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/3.958768422143609局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.820167460364199局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.550182697373895局)
 - 策略进化：block_safety: 1.95 → 2.00（高速失血爆毙（5回合掉血84，每回合17≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿23张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.67 → 0.70（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.00 → 1.99（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/87 胜，当前目标进阶 0
+
+## 第 88 局复盘（2026-09-06 01:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：POTION_BELT, LANTERN
+- 战斗记录：F4 Monster战 掉血0｜自损12; F5 Monster战 掉血0｜自损20; F8 Unknown战 掉血1｜自损15; F12 Elite战 掉血12｜自损31; F14 Monster战 掉血0｜自损10; F17 Boss战 掉血80｜自损62｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(36分/30.260537745950113局)，VIVHITE_CARD_CHROMATIC_LIMIT(36分/19.541074472722183局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/11.680884696047492局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(33分/19.964965180159616局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/21.394642194128064局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/3.9449127326661064局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.803296874252925局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.520257057933087局)
+- 策略进化：block_safety: 1.99 → 2.04（高速失血爆毙（5回合掉血80，每回合16≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/88 胜，当前目标进阶 0
