@@ -1140,3 +1140,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.7479250772278165局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.605396918762858局)，ROLLING_BOULDER(21分/3.1798012604001284局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.66 → 0.63（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.63 → 0.65（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F48（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F48——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/100 胜，当前目标进阶 0
+
+## 第 101 局复盘（2026-09-06 07:37）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHROMATIC_SEQUENCE, ROLLING_BOULDER, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：WAR_PAINT, LANTERN
+- 战斗记录：F15 Monster战 掉血0｜自损15; F17 Boss战 掉血57｜自损93｜竞速审计：T8判死→实战9回合获胜; F19 Monster战 掉血0｜自损12; F21 Monster战 掉血20｜自损44; F22 Unknown战 掉血12｜自损34; F24 Elite战 掉血93｜自损77｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(44分/2.8383204231747956局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/20.65296287548762局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/34.760258632810455局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/24.37556128327863局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/16.046200786700158局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.731307339457519局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.589278029547188局)，ROLLING_BOULDER(22分/4.168671955988728局)
+- 策略进化：精英战阵亡但满血线进场（100%≥80%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.65 → 0.66（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.05 → 2.04（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F24——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/101 胜，当前目标进阶 0
