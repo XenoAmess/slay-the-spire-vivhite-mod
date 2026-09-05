@@ -9214,3 +9214,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.947683535625局)，BULLY(10分/4.947683535625局)，HAVOC(10分/3.9581468285000008局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1238 胜，当前目标进阶 0
+
+## 第 1239 局复盘（2026-09-05 14:44）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 MYTE
+- 本局拿牌：TAUNT, THUNDERCLAP, CONFLAGRATION, EVIL_EYE, INFLAME, OFFERING, SWORD_BOOMERANG, CONFLAGRATION, BREAKTHROUGH, CINDER, DEMON_FORM, PROWESS, BRAND, MOLTEN_FIST, INFLAME, SWORD_BOOMERANG, TAUNT, THUNDERCLAP, HEADBUTT
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F14 Monster战 掉血4; F15 Monster战 掉血17; F17 Boss战 掉血43｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血8; F21 Monster战 掉血45; F22 Monster战 掉血27｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/35.5125665027522局)，FIEND_FIRE(25分/45.35937311790289局)，PRIMAL_FORCE(24分/6.902513300550439局)，PACTS_END(24分/129.18603272450815局)，MANGLE(24分/120.30094609530764局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.930366643250313局)，BULLY(10分/4.930366643250313局)，HAVOC(11分/3.944293314600251局)
+- 策略进化：potion_block_hp_pct: 0.78 → 0.80（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.49 → 0.52（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F22——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.57 → 0.55（行至 F22——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.80 → 0.78（行至 F22——药水交药线部分胜利回收）
+- 生涯战绩：0/1239 胜，当前目标进阶 0
