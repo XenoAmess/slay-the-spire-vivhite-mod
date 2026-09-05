@@ -366,25 +366,35 @@ class ReviewOrphanRecoveryTests(unittest.TestCase):
         self.modify_candidate(repo)
         self.write_receipt(root, items, attempt_id="copy-transaction")
         original_copytree = shutil.copytree
+        original_replace = llm_review.os.replace
+
+        def force_checked_copy(source, destination, *args, **kwargs):
+            if (Path(source) == root
+                    and Path(destination).name == "raw_sandbox"):
+                raise OSError("simulated cross-volume move")
+            return original_replace(source, destination, *args, **kwargs)
 
         def fail_raw_copy(source, destination, *args, **kwargs):
             if Path(destination).name == "raw_sandbox":
                 raise OSError("simulated raw copy failure")
             return original_copytree(source, destination, *args, **kwargs)
 
-        with mock.patch.object(
-                llm_review.shutil, "copytree", side_effect=fail_raw_copy):
+        with (mock.patch.object(
+                llm_review.os, "replace", side_effect=force_checked_copy),
+              mock.patch.object(
+                  llm_review.shutil, "copytree", side_effect=fail_raw_copy)):
             recovered = llm_review._recover_unpointed_review_sandboxes(
                 log=lambda _message: None)
-        self.assertEqual(recovered, [])
-        self.assertTrue(root.is_dir())
-        self.assertEqual(self.packages(), [])
-
-        recovered = llm_review._recover_unpointed_review_sandboxes(
-            log=lambda _message: None)
         self.assertEqual(len(recovered), 1)
-        self.assertFalse(root.exists())
+        self.assertTrue(root.is_dir())
+        self.assertEqual(len(self.packages()), 1)
         package = self.packages()[0]
+        self.assertTrue((package / "raw_sandbox_pointer.txt").is_file())
+
+        llm_review._recover_deferred_salvages(log=lambda _message: None)
+        self.assertFalse(root.exists())
+        self.assertFalse((package / "raw_sandbox_pointer.txt").exists())
+        self.assertTrue((package / "raw_sandbox" / "repo" / ".git").is_dir())
         original_copytree(package / "raw_sandbox", root)
         before = [path.name for path in self.packages()]
 

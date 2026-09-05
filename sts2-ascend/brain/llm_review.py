@@ -568,6 +568,8 @@ _REVIEW_HOLD_CLOSURE_DIR = ".closed"
 _REVIEW_HOLD_CLOSURE_SCHEMA = 1
 _REVIEW_ATTEMPT_RECEIPT_NAME = "review_attempt.json"
 _REVIEW_ATTEMPT_RECEIPT_SCHEMA = 1
+_REVIEW_PRE_PROVIDER_DISPOSABLE_NAME = ".pre_provider_disposable.json"
+_REVIEW_PRE_PROVIDER_DISPOSABLE_SCHEMA = 1
 _LEGACY_REVIEW_SANDBOX_CLOCK_SKEW_SEC = 120.0
 _WINDOWS_REVIEW_ACL_REQUIRED = os.name == "nt"
 _CODEX_SELFCHECK_CACHE_REL = Path(".review-cache")
@@ -828,6 +830,56 @@ def _cleanup_stale_private_git_temps(log=print, *, min_age_sec: float = 300.0) -
         if age < max(0.0, min_age_sec):
             continue
         _discard_owned_review_temp(child, prefix, log=log)
+
+
+def _cleanup_stale_pre_provider_sandboxes(
+    log=print, *, min_age_sec: float = 300.0,
+) -> list[str]:
+    """Reap only explicitly marked clones that never launched a provider.
+
+    The marker is created with the sandbox root and must be removed before the
+    durable attempt receipt is published.  Its continued presence therefore
+    proves that no provider process could have produced work in the clone.
+    """
+    root = _review_work_root()
+    if not root.is_dir():
+        return []
+    now = time.time()
+    try:
+        children = list(root.iterdir())
+    except OSError as exc:
+        log(f"[llm] pre-provider sandbox startup scan failed: {exc}")
+        return []
+    pointed = _pointed_review_sandbox_roots()
+    removed: list[str] = []
+    for child in children:
+        if (not child.is_dir()
+                or not child.name.startswith("sts2-review-sandbox-")):
+            continue
+        marker_path = child / _REVIEW_PRE_PROVIDER_DISPOSABLE_NAME
+        receipt_path = child / _REVIEW_ATTEMPT_RECEIPT_NAME
+        try:
+            if child.resolve() in pointed:
+                continue
+            if (marker_path.is_symlink() or not marker_path.is_file()
+                    or receipt_path.exists() or receipt_path.is_symlink()):
+                continue
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            age = max(0.0, now - child.stat().st_mtime)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if (marker.get("schema") != _REVIEW_PRE_PROVIDER_DISPOSABLE_SCHEMA
+                or marker.get("sandbox_name") != child.name
+                or marker.get("provider_launch_allowed") is not False
+                or age < max(0.0, min_age_sec)):
+            continue
+        if _discard_owned_review_temp(
+                child, "sts2-review-sandbox-", log=log):
+            removed.append(child.name)
+    if removed:
+        log("[llm] removed stale pre-provider disposable sandboxes: "
+            + ", ".join(removed))
+    return removed
 
 # Prompt working-set bounds.  Full traces remain available in runs/*.json (or
 # the compact archive catalog); the inline packet should carry evidence, not
@@ -5986,7 +6038,10 @@ def _bounded_sandbox_sibling_paths(
                 # The host publishes this durable attempt binding before the
                 # provider starts.  Its bytes are checked separately after the
                 # provider exits, so it is not a model-written sibling escape.
-                if entry.name == _REVIEW_ATTEMPT_RECEIPT_NAME:
+                if entry.name in {
+                    _REVIEW_ATTEMPT_RECEIPT_NAME,
+                    _REVIEW_PRE_PROVIDER_DISPOSABLE_NAME,
+                }:
                     continue
                 if len(found) >= max(1, limit):
                     found.append("[additional-siblings-omitted]")
@@ -6412,22 +6467,11 @@ def _discard_sandbox_snapshot(result: SandboxReviewResult, log=print) -> bool:
     if not result.snapshot_dir:
         return True
     snapshot = Path(result.snapshot_dir)
-    try:
-        resolved = snapshot.resolve()
-        if _is_owned_review_temp(resolved, "sts2-review-snapshot-"):
-            def remove_readonly(function, path, _exc_info) -> None:
-                os.chmod(path, stat.S_IWRITE)
-                function(path)
-
-            shutil.rmtree(resolved, onerror=remove_readonly)
-            result.snapshot_dir = ""
-            return True
-        else:
-            log(f"[llm] 补合快照路径校验失败，保留供人工检查：{resolved}")
-            return False
-    except OSError as exc:
-        log(f"[llm] 补合快照清理失败，已保留：{snapshot}（{exc}）")
-        return False
+    if _discard_owned_review_temp(
+            snapshot, "sts2-review-snapshot-", log=log):
+        result.snapshot_dir = ""
+        return True
+    return False
 
 
 def _discard_retained_sandbox(result: SandboxReviewResult, log=print) -> bool:
@@ -6435,22 +6479,11 @@ def _discard_retained_sandbox(result: SandboxReviewResult, log=print) -> bool:
     if not result.retained_sandbox_dir:
         return True
     sandbox = Path(result.retained_sandbox_dir)
-    try:
-        resolved = sandbox.resolve()
-        if not _is_owned_review_temp(resolved, "sts2-review-sandbox-"):
-            log(f"[llm] 原始隔离仓路径校验失败，保留供人工检查：{resolved}")
-            return False
-
-        def remove_readonly(function, path, _exc_info) -> None:
-            os.chmod(path, stat.S_IWRITE)
-            function(path)
-
-        shutil.rmtree(resolved, onerror=remove_readonly)
+    if _discard_owned_review_temp(
+            sandbox, "sts2-review-sandbox-", log=log):
         result.retained_sandbox_dir = ""
         return True
-    except OSError as exc:
-        log(f"[llm] 原始隔离仓清理失败，已保留：{sandbox}（{exc}）")
-        return False
+    return False
 
 
 def _salvage_kind(reason: str, sandbox: SandboxReviewResult) -> str:
@@ -7844,6 +7877,91 @@ def _legacy_empty_retry_evidence_is_complete(
     return True
 
 
+def _legacy_pre_provider_empty_retry_evidence_is_complete(
+    package: Path,
+    manifest: dict,
+) -> bool:
+    """Recognize an old clone/setup failure that could not contain model work."""
+    pre_head = manifest.get("pre_head")
+    if (not isinstance(pre_head, str) or len(pre_head) != 40
+            or any(char not in "0123456789abcdefABCDEF" for char in pre_head)
+            or manifest.get("current_head") != pre_head):
+        return False
+    previous_schema = manifest.get("retry_evidence_schema")
+    if (manifest.get("retry_evidence_ready") is True
+            or (previous_schema is not None
+                and (type(previous_schema) is not int
+                     or previous_schema >= _RETRY_EVIDENCE_SCHEMA))):
+        return False
+    if (manifest.get("provider_work_started") is not False
+            or manifest.get("return_code") != -1
+            or manifest.get("snapshot_complete") is not False
+            or manifest.get("snapshot_deferred") is not False
+            or manifest.get("raw_sandbox_deferred") is not False
+            or manifest.get("snapshot_included") is not False
+            or manifest.get("raw_sandbox_included") is not True
+            or manifest.get("provider_transcript_rel") not in (None, "")):
+        return False
+    metrics = manifest.get("provider_metrics")
+    if (not isinstance(metrics, dict)
+            or metrics.get("model_work_started") is not False
+            or metrics.get("usage") not in (None, {})):
+        return False
+    for field in (
+        "event_count", "command_count", "file_change_count", "tool_count",
+        "blocked_tool_count", "tool_path_escape_count",
+    ):
+        if metrics.get(field) not in (None, 0):
+            return False
+    if (type(manifest.get("patch_bytes")) is not int
+            or manifest.get("patch_bytes") != 0
+            or manifest.get("patch_sha256") != _EMPTY_PATCH_SHA256):
+        return False
+    for field in _LEGACY_EMPTY_RETRY_PATH_FIELDS:
+        value = manifest.get(field)
+        if not isinstance(value, list) or value:
+            return False
+
+    validated = package / "validated_candidate.patch"
+    if validated.exists() or validated.is_symlink():
+        return False
+    for pointer_name in ("snapshot_pointer.txt", "raw_sandbox_pointer.txt"):
+        pointer = package / pointer_name
+        if pointer.exists() or pointer.is_symlink():
+            return False
+
+    try:
+        wip = package / "wip.patch"
+        report = package / "report.md"
+        file_states_path = package / "file_states.json"
+        files_root = package / "files"
+        raw_root = package / "raw_sandbox"
+        captured_root = package / "captured_snapshot"
+        raw_is_junction = getattr(raw_root, "is_junction", lambda: False)
+        captured_is_junction = getattr(captured_root, "is_junction", lambda: False)
+        if (wip.is_symlink() or not wip.is_file() or wip.stat().st_size != 0
+                or report.is_symlink() or not report.is_file()
+                or file_states_path.is_symlink() or not file_states_path.is_file()
+                or files_root.is_symlink() or not files_root.is_dir()
+                or raw_root.is_symlink() or raw_is_junction()
+                or not raw_root.is_dir()
+                or captured_root.exists() or captured_root.is_symlink()
+                or captured_is_junction()):
+            return False
+        file_states = json.loads(file_states_path.read_text(encoding="utf-8"))
+        if not isinstance(file_states, list) or file_states:
+            return False
+        if any(raw_root.iterdir()):
+            return False
+        for path in files_root.rglob("*"):
+            is_junction = getattr(path, "is_junction", lambda: False)
+            if path.is_symlink() or is_junction() or not path.is_dir():
+                return False
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return True
+
+
 def _materialize_legacy_empty_retry_evidence(
     package: Path,
     manifest: dict,
@@ -7853,8 +7971,27 @@ def _materialize_legacy_empty_retry_evidence(
     log=print,
 ) -> dict | None:
     """Upgrade a strongly proven zero-change legacy package to schema 3."""
-    if not _legacy_empty_retry_evidence_is_complete(package, manifest):
+    complete_snapshot = _legacy_empty_retry_evidence_is_complete(package, manifest)
+    pre_provider_failure = (
+        _legacy_pre_provider_empty_retry_evidence_is_complete(package, manifest))
+    if not complete_snapshot and not pre_provider_failure:
         return None
+
+    origin = (
+        "legacy_certified_empty" if complete_snapshot
+        else "legacy_pre_provider_certified_empty")
+    source_detail = (
+        "strongly proven legacy zero-change snapshot" if complete_snapshot
+        else "strongly proven pre-provider clone/setup failure with no candidate")
+    raw_evidence = (
+        "unavailable_not_fabricated" if complete_snapshot
+        else "empty_pre_provider_directory_preserved")
+    source_kind = (
+        "legacy_zero_change_snapshot" if complete_snapshot
+        else "legacy_pre_provider_zero_candidate")
+    source_label = (
+        "complete empty snapshot and empty binary patch" if complete_snapshot
+        else "provider never launched and every candidate surface is empty")
 
     candidate_temp = package / (
         f".retry_candidate.patch.{os.getpid()}.{threading.get_ident()}.tmp")
@@ -7873,11 +8010,11 @@ def _materialize_legacy_empty_retry_evidence(
             "candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "package": package.name,
             "pre_head": str(manifest.get("pre_head") or ""),
-            "origin": "legacy_certified_empty",
-            "source": "legacy_certified_empty",
-            "source_detail": "strongly proven legacy zero-change snapshot",
+            "origin": origin,
+            "source": origin,
+            "source_detail": source_detail,
             "original_prompt_evidence": prompt_status,
-            "raw_sandbox_evidence": "unavailable_not_fabricated",
+            "raw_sandbox_evidence": raw_evidence,
             "auto_apply": False,
             "path_count": 0,
             "paths": [],
@@ -7887,8 +8024,8 @@ def _materialize_legacy_empty_retry_evidence(
             "rejected_or_unexpected_paths": [],
             "sandbox_sibling_paths": [],
             "sources": [{
-                "kind": "legacy_zero_change_snapshot",
-                "label": "complete empty snapshot and empty binary patch",
+                "kind": source_kind,
+                "label": source_label,
                 "paths": [],
                 "accepted_candidate_paths": [],
                 "candidate_bytes": 0,
@@ -7909,12 +8046,16 @@ def _materialize_legacy_empty_retry_evidence(
             "candidate_bytes": 0,
             "candidate_path_count": 0,
             "candidate_sha256": _EMPTY_PATCH_SHA256,
-            "origin": "legacy_certified_empty",
+            "origin": origin,
             "original_prompt_evidence": prompt_status,
-            "raw_sandbox_evidence": "unavailable_not_fabricated",
+            "raw_sandbox_evidence": raw_evidence,
             "migration_note": (
                 "Legacy zero-change snapshot upgraded only after its manifest, "
-                "empty patch, empty file inventory and captured files all agreed."),
+                "empty patch, empty file inventory and captured files all agreed."
+                if complete_snapshot else
+                "Legacy pre-provider evidence upgraded only after the launch state, "
+                "manifest, empty patch, empty inventories and preserved roots all "
+                "agreed that no retry candidate ever existed."),
         })
         upgraded = dict(manifest)
         upgraded.update({
@@ -7923,10 +8064,10 @@ def _materialize_legacy_empty_retry_evidence(
             "retry_candidate_filter_schema": _RETRY_CANDIDATE_FILTER_SCHEMA,
             "retry_evidence_history": history,
             "retry_evidence_materialized_at": materialized_at,
-            "retry_evidence_origin": "legacy_certified_empty",
-            "retry_evidence_source": "legacy_certified_empty",
+            "retry_evidence_origin": origin,
+            "retry_evidence_source": origin,
             "retry_original_prompt_evidence": prompt_status,
-            "retry_raw_sandbox_evidence": "unavailable_not_fabricated",
+            "retry_raw_sandbox_evidence": raw_evidence,
             "retry_candidate_patch": candidate_path.name,
             "retry_candidate_inventory": inventory_path.name,
             "retry_candidate_bytes": 0,
@@ -7936,8 +8077,10 @@ def _materialize_legacy_empty_retry_evidence(
             "retry_candidate_auto_apply": False,
         })
         _publish_manifest_update(package, upgraded)
-        log("[llm] upgraded strongly-proven legacy zero-change retry evidence: "
-            f"{package.name}")
+        log(("[llm] upgraded strongly-proven legacy zero-change retry evidence: "
+             if complete_snapshot else
+             "[llm] upgraded strongly-proven legacy pre-provider empty retry evidence: ")
+            + package.name)
         return upgraded
     finally:
         candidate_temp.unlink(missing_ok=True)
@@ -9750,6 +9893,7 @@ def _run_review_sandbox(
     transcript_rel = ".git/sts2-review-provider-events.jsonl"
     receipt_bytes = b""
     published_receipt: dict = {}
+    disposable_marker = sandbox_root / _REVIEW_PRE_PROVIDER_DISPOSABLE_NAME
     try:
         _normalize_windows_review_sandbox_acl(sandbox_root)
         if runner == "codex":
@@ -9771,6 +9915,12 @@ def _run_review_sandbox(
                     error=preflight_error,
                     failure_code="runner_codex_filesystem_preflight")
                 return result
+        disposable_marker.write_text(json.dumps({
+            "schema": _REVIEW_PRE_PROVIDER_DISPOSABLE_SCHEMA,
+            "sandbox_name": sandbox_root.name,
+            "provider_launch_allowed": False,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         clone = _run_captured_stop_aware([
             "git", "clone", "--quiet", "--no-hardlinks", "--no-checkout",
             str(REPO_DIR), str(sandbox_repo),
@@ -9815,6 +9965,9 @@ def _run_review_sandbox(
         receipt_payload.setdefault("batch_runs", [])
         receipt_payload.setdefault("queue_items", [])
         receipt_payload.setdefault("replay_queue_ids", [])
+        # Remove the pre-provider cleanup authorization before publishing the
+        # durable receipt. If either transition fails, no provider is launched.
+        disposable_marker.unlink()
         published_receipt, receipt_bytes = _publish_review_attempt_receipt(
             sandbox_root, receipt_payload)
         replay_model_started = True
@@ -10789,6 +10942,25 @@ def _recover_bound_review_sandbox(
     )
     if saved is None:
         log(f"[llm] orphan review sandbox preservation failed; clone retained: {root}")
+    else:
+        # The pointer-first hot path intentionally avoids copying a multi-GB
+        # clone. Complete this newly published same-volume move immediately;
+        # otherwise startup recovery leaves one full review_work duplicate until
+        # a later maintenance tick (or forever if the process restarts again).
+        _recover_deferred_salvages(log=log)
+        try:
+            saved_manifest = json.loads(
+                (saved / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            log("[llm] orphan review sandbox manifest could not be verified; "
+                f"clone retained: {root} ({exc})")
+        else:
+            if _orphan_salvage_is_complete(saved, saved_manifest, root):
+                cleanup = SandboxReviewResult(retained_sandbox_dir=str(root))
+                _discard_retained_sandbox(cleanup, log=log)
+            else:
+                log("[llm] orphan review sandbox copy is not complete; "
+                    f"clone retained: {root}")
     return saved
 
 
@@ -11190,6 +11362,7 @@ def _worker_loop_body(agent, log) -> None:
     if _review_stop_requested():
         return
     _cleanup_stale_private_git_temps(log=log)
+    _cleanup_stale_pre_provider_sandboxes(log=log)
     if _review_stop_requested():
         return
     bindings = _agent_review_profile_bindings(agent)
@@ -11262,6 +11435,9 @@ def _worker_loop_body(agent, log) -> None:
                 return
             bindings = _agent_review_profile_bindings(agent)
             if time.monotonic() >= next_salvage_maintenance:
+                _cleanup_stale_pre_provider_sandboxes(log=log)
+                if _review_stop_requested():
+                    return
                 # Keep the three host transactions in this order even when the
                 # first call finds nothing new.  A crash may have persisted the
                 # receipt state but not yet acknowledged its queue items.

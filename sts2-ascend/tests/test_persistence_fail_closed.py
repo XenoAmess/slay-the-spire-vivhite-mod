@@ -2172,6 +2172,131 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             inventory["candidate_filter_schema"],
             llm_review._RETRY_CANDIDATE_FILTER_SCHEMA)
 
+    def test_legacy_pre_provider_clone_failure_becomes_empty_retry_candidate(self) -> None:
+        name = "pkg-legacy-pre-provider-empty"
+        package = llm_review.SALVAGE_ROOT / name
+        (package / "files").mkdir(parents=True)
+        (package / "raw_sandbox").mkdir()
+        (package / "wip.patch").write_bytes(b"")
+        (package / "report.md").write_text("", encoding="utf-8")
+        (package / "file_states.json").write_text("[]\n", encoding="utf-8")
+        pre_head = "c" * 40
+        (package / "manifest.json").write_text(json.dumps({
+            "schema": 1,
+            "pre_head": pre_head,
+            "current_head": pre_head,
+            "return_code": -1,
+            "provider_work_started": False,
+            "provider_transcript_rel": "",
+            "provider_metrics": {
+                "event_count": 0,
+                "model_work_started": False,
+                "usage": {},
+            },
+            "snapshot_complete": False,
+            "snapshot_deferred": False,
+            "raw_sandbox_deferred": False,
+            "snapshot_included": False,
+            "raw_sandbox_included": True,
+            "all_paths": [],
+            "allowed_paths": [],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "patch_bytes": 0,
+            "patch_sha256": llm_review._EMPTY_PATCH_SHA256,
+            "replay_attempt_packages": [],
+        }), encoding="utf-8")
+
+        manifest = llm_review._materialize_retry_evidence(
+            package, log=lambda _message: None)
+        self.assertEqual(manifest["retry_evidence_schema"], 3)
+        self.assertEqual(
+            manifest["retry_evidence_origin"],
+            "legacy_pre_provider_certified_empty")
+        self.assertEqual((package / "retry_candidate.patch").read_bytes(), b"")
+
+        sandbox_repo = Path(self.temp.name) / "retry-pre-provider-mount"
+        sandbox_repo.mkdir()
+        mounted = llm_review._mount_failed_review_evidence(
+            sandbox_repo, [name], log=lambda _message: None)
+        self.assertTrue(mounted["index"]["candidate_materialization_complete"])
+        self.assertEqual(mounted["index"]["terminal_materialization_packages"], [])
+
+    def test_legacy_pre_provider_empty_rejects_any_provider_work(self) -> None:
+        package = llm_review.SALVAGE_ROOT / "pkg-provider-started"
+        (package / "files").mkdir(parents=True)
+        (package / "raw_sandbox").mkdir()
+        (package / "wip.patch").write_bytes(b"")
+        (package / "report.md").write_text("", encoding="utf-8")
+        (package / "file_states.json").write_text("[]\n", encoding="utf-8")
+        pre_head = "d" * 40
+        manifest = {
+            "pre_head": pre_head,
+            "current_head": pre_head,
+            "return_code": -1,
+            "provider_work_started": True,
+            "provider_transcript_rel": "",
+            "provider_metrics": {"model_work_started": True, "usage": {}},
+            "snapshot_complete": False,
+            "snapshot_deferred": False,
+            "raw_sandbox_deferred": False,
+            "snapshot_included": False,
+            "raw_sandbox_included": True,
+            "all_paths": [],
+            "allowed_paths": [],
+            "transient_artifact_paths": [],
+            "online_runtime_paths": [],
+            "rejected_or_unexpected_paths": [],
+            "sandbox_sibling_paths": [],
+            "patch_bytes": 0,
+            "patch_sha256": llm_review._EMPTY_PATCH_SHA256,
+        }
+        self.assertFalse(
+            llm_review._legacy_pre_provider_empty_retry_evidence_is_complete(
+                package, manifest))
+
+    def test_stale_marked_pre_provider_sandbox_is_reaped(self) -> None:
+        work_root = (
+            self.repo_dir / "sts2-ascend" / "knowledge" / "code_backups"
+            / "review_work")
+        sandbox = work_root / "sts2-review-sandbox-disposable"
+        sandbox.mkdir(parents=True)
+        (sandbox / "partial-clone.pack").write_bytes(b"disposable")
+        (sandbox / llm_review._REVIEW_PRE_PROVIDER_DISPOSABLE_NAME).write_text(
+            json.dumps({
+                "schema": llm_review._REVIEW_PRE_PROVIDER_DISPOSABLE_SCHEMA,
+                "sandbox_name": sandbox.name,
+                "provider_launch_allowed": False,
+            }), encoding="utf-8")
+
+        removed = llm_review._cleanup_stale_pre_provider_sandboxes(
+            log=lambda _message: None, min_age_sec=0)
+        self.assertEqual(removed, [sandbox.name])
+        self.assertFalse(sandbox.exists())
+
+    def test_pre_provider_reaper_never_removes_receipted_sandbox(self) -> None:
+        work_root = (
+            self.repo_dir / "sts2-ascend" / "knowledge" / "code_backups"
+            / "review_work")
+        sandbox = work_root / "sts2-review-sandbox-receipted"
+        sandbox.mkdir(parents=True)
+        marker = {
+            "schema": llm_review._REVIEW_PRE_PROVIDER_DISPOSABLE_SCHEMA,
+            "sandbox_name": sandbox.name,
+            "provider_launch_allowed": False,
+        }
+        (sandbox / llm_review._REVIEW_PRE_PROVIDER_DISPOSABLE_NAME).write_text(
+            json.dumps(marker), encoding="utf-8")
+        (sandbox / llm_review._REVIEW_ATTEMPT_RECEIPT_NAME).write_text(
+            json.dumps({"schema": 1}), encoding="utf-8")
+
+        removed = llm_review._cleanup_stale_pre_provider_sandboxes(
+            log=lambda _message: None, min_age_sec=0)
+        self.assertEqual(removed, [])
+        self.assertTrue(sandbox.is_dir())
+
     def test_crash_after_package_publish_recovers_one_target_from_queue_id(self) -> None:
         package = llm_review.SALVAGE_ROOT / "pkg-crash-window"
         package.mkdir()
