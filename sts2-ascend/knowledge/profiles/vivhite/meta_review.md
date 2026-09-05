@@ -107,3 +107,43 @@ retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 5~6 局批复盘：前夜竞速预演不扣滑溜破层期，对墨影幻灵贴线局误判可行→翻转带回血——开局滑溜破层税入预演
+
+日期：2026-09-06
+
+## HYPOTHESIS
+
+前夜竞速预演（_boss_race_doomed/BOSS_RACE_PROJ_AUDIT）可行侧 ttk 口径 pool/dpt 不扣除开局自挂滑溜 Boss 的破层期：VANTOM（墨影幻灵，原生 mechanics SlipperyAmt=8，AfterAddedToRoom 自挂 8 层 SlipperyPower，每层把一次命中压到只失 1 血）的前 8 次命中近乎零产出，预演因此对该 Boss 系统性乐观，把贴线必败局判成「竞速预演可行」并在篝火翻转带回血而非锻造。
+
+该假设可证伪：若未来 3~10 局含滑溜 Boss 组合池的幕里，BOSS_RACE_SLIPPERY_TAX 留痕出现但回血/锻造分布与 Boss 战结局均无变化（或标记只在明显无关对局出现），则假设不成立，oss_race_slippery_tax_per_layer=0 一键回滚。
+
+## EVIDENCE
+
+- 第 5 局 NM71E9ZJ3DVR：F15 篝火「竞速预演判可行——击杀需9回合＞满血可存活7回合，但联合能量复核存在可行攻防分配（血池252、火力11、先验28/回合），回血23点」→ F17 墨影幻灵实战 3 回合阵亡（掉血53）。
+- 第 6 局 ETE5DESYP28G（完整 234 条决策链已逐条读，F15~F17 段 35 条全检）：F15 篝火同款判可行（击杀需7＞可存活7，联合复核放行，药水授信-12血池）→ 回血15点、78 血 100% 进场 → 实战 T1~T3 逐 hit≈1.0（滑溜8层烧墙），T3 战斗端投影「击杀还需15回合>可存活5回合」，6 回合阵亡（掉血78，自损/费用 75 另有謦欬账）。
+- 同型旧证：1232 局 F17 VANTOM 8 层开局投影「击杀还需9回合」，实战 T7 阵亡累计仅 ~57 伤（SLIPPERY_TTK_OBS 注释登记）。三个独立对局（5/6/1232）同一失真方向，达 evidence_run_threshold。
+- 原生 v0.111.0 mechanics：全怪物仅 VANTOM/INKLET 开局自挂 SlipperyPower；VANTOM SlipperyAmt 表达式 AscensionHelper.GetValueIfAscension (AscensionLevel.ToughEnemies, 9, 8)，asc0=8 层；SLIPPERY_POWER 描述「下一次要失去生命值时只会失去1点」。
+- 生产现状：战斗端已有 SLIPPERY_RACE_GUARD（挡静态复核翻案）与 SLIPPERY_TTK_OBS（ttk 未扣破层期留痕），均不改判决；前夜预演 _boss_race_doomed 与 _race_joint_feasible 完全无滑溜口径——这是消费链上最后一处未堵的乐观口。
+- failed_review_replay 目标包 20260901-000605-1788192365526162900-0b9c97f5：manifest/inventory/retry_evidence_history 全部可读且一致——宿主创建隔离 clone 时 D 盘 No space left，provider 未开始工作，retry_candidate.patch 0 字节、路径数 0，legacy_pre_provider_certified_empty 认证空 lineage，无可重实现内容。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：新增 _native_slippery_layers（解析 mechanics SlipperyAmt 末尾字面量，native 缺失/无属性/异常一律返回 0）与 _act_slippery_tax（同幕已有重复实证的组合池内取最大开局滑溜层数 × per_layer，有界悲观）；_boss_race_doomed 可行侧 ttk 加计破层税并贯通联合能量复核（新增 	tk_tax 参数，默认 0 严格旧口径）与组合全称门（逐组合只对本组合滑溜成员加计，分账留「滑+N.N」标记）；可行侧 BOSS_RACE_PROJ_AUDIT 账面与判死 note 均带「开局滑溜破层税+N.N回合已计入（组合N层，BOSS_RACE_SLIPPERY_TAX）」。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 oss_race_slippery_tax_per_layer=0.25（8 层 ≈ +2.0 回合，对应 ~3~4 hit/回合的破层速率）；0 严格回滚旧口径。
+- sts2-ascend/brain/selfcheck.py：3br-slip-tax 夹具锁定四分支——非滑溜组合不加税；滑溜组合贴线卡组（3×15伤）税后由可赢翻为必败且带滑+2.0/组合门 0/1 分账；per_layer=0 严格回滚；税后仍可赢的强卡组（3×20伤）可行侧账面自报破层税；端到端翻转带内同一篝火裸口径回血、税后必败弃疗改锻造。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：一幕前夜篝火理由出现 BOSS_RACE_SLIPPERY_TAX 留痕（可行侧账面或判死 note）；对墨影幻灵幕的贴线对局锻造占比上升、100% 进场整管打空案例减少；战斗端 SLIPPERY_TTK_OBS 与前夜税可逐局对账（预演 ttk 与实战破层期量级吻合）。有效信号：F17 对 VANTOM 的战损下降或首胜。证伪/回滚条件：10 局内税留痕出现但对 VANTOM 战损/结局无变化，或税把非滑溜 Boss（仪式兽/KIN）前夜误伤率推高（判死后获胜样本）——置 oss_race_slippery_tax_per_layer=0 即整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含新 3br-slip-tax 夹具，改后复跑仍 OK）。
+- py -3 -B sts2-ascend/tests/test_boss_race_sustain.py：2 tests OK。
+- git diff --check 通过；完整 diff 已回读，仅 knowledge.py/policy.py/selfcheck.py 三个生产/测试文件 + 本报告与口播短评；未触碰在线状态（runs/stats/policy.json/lessons.md 等只读路径零改动）；工作树中宿主挂载的 .review_evidence/ 与无关超长路径资产删除遗留不纳入本批。
+
+## REPLAY
+
+retry_resolution: 20260901-000605-1788192365526162900-0b9c97f5 no_valid_change（完整 lineage 可读：provider 未开始工作、候选 patch 0 字节经认证为空，当前 HEAD 无其可重实现内容；本批假设与改动全部基于 runs 5~6 原始证据独立得出）

@@ -4809,7 +4809,8 @@ class Policy:
                              my_hp: float, margin: float,
                              eff: float | None = None,
                              blk_eff: float | None = None,
-                             energy: float | None = None) -> tuple[bool, str]:
+                             energy: float | None = None,
+                             ttk_tax: float = 0.0) -> tuple[bool, str]:
         """联合能量口径的竞速可行性对账（第460局批复盘新增）。
 
         旧防守线复核的能量双算缺陷：进攻线按「满能量全攻」算击杀回合数，
@@ -4864,7 +4865,9 @@ class Policy:
         def _ok(b: float, d: float) -> bool:
             if d <= 1e-9:
                 return False
-            ttk = float(pool) / d
+            # ttk_tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：开局滑溜 Boss
+            # 的破层期折算回合数，由调用方按同幕组合池加计；默认 0 严格旧口径
+            ttk = float(pool) / d + max(0.0, float(ttk_tax))
             net = max(1.0, float(fire) - b)
             return ttk <= float(my_hp) / net + float(margin)
 
@@ -5029,8 +5032,8 @@ class Policy:
         self._race_proj_audit = ""
         if not pol.get("kill_race_enabled", True):
             return False, ""
-        pool, fire = self.know.boss_race_vitals(
-            self._floor_act(floor) if floor else None)
+        act_no = self._floor_act(floor) if floor else None
+        pool, fire = self.know.boss_race_vitals(act_no)
         if not pool or not fire or not max_hp:
             return False, ""
         # 第654~663/675~680批复盘：Boss 窗口内的随身进攻药水按保守折算冲抵
@@ -5057,6 +5060,21 @@ class Policy:
         ttk = pool_eff / max(1.0, dpt)
         tsurv = float(max_hp) / max(1.0, fire)
         tsurv_feas = hp_feas / max(1.0, fire)
+        # 开局滑溜破层税（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘新增）：预演
+        # ttk 口径 pool/dpt 不扣开局自挂滑溜的破层期——VANTOM 开局 8 层、每层
+        # 把一次命中压到只失 1 血，破层期输出近零。第5/6局 F15 篝火对墨影
+        # 幻灵均判「竞速预演可行」→翻转带回血 23/15 点，实战 F17 分别 3/6
+        # 回合阵亡，战斗端 T3 投影「击杀还需15回合>可存活5回合」。同幕已有
+        # 重复实证的组合池含滑溜 Boss 时，可行侧 ttk 与联合能量复核按
+        # 层数×boss_race_slippery_tax_per_layer 加收破层回合（只加在击杀侧，
+        # 存活侧不动）；该键=0 严格回滚旧口径。
+        _slip_per_layer = max(0.0, float(pol.get(
+            "boss_race_slippery_tax_per_layer", 0.25)))
+        _slip_tax, _slip_detail = self._act_slippery_tax(act_no, _slip_per_layer)
+        _slip_tail = (f"，开局滑溜破层税+{_slip_tax:.1f}回合已计入"
+                      f"（{_slip_detail}，BOSS_RACE_SLIPPERY_TAX）"
+                      if _slip_tax > 1e-9 else "")
+        ttk += _slip_tax
         if ttk <= tsurv_feas + margin:
             # BOSS_RACE_PROJ_AUDIT（第919~987局批复盘）：预演判「可赢」的账面
             # 此前完全不可见——F33 二幕 Boss 0/12 全灭的前夜翻转留痕全部无预演
@@ -5065,12 +5083,13 @@ class Policy:
             self._race_proj_audit = (
                 f"击杀需{ttk:.0f}回合≤满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合、"
-                f"先验输出{dpt:.0f}/回合{_pot_tail}）")
+                f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}）")
             return False, ""
         # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
         _feasible, _ = self._race_joint_feasible(
-            deck or [], pool_eff, fire, hp_feas, margin, eff=eff)
+            deck or [], pool_eff, fire, hp_feas, margin, eff=eff,
+            ttk_tax=_slip_tax)
         # 翻盘比上限（JOINT_FLIP_TTK_CAP，第1098~1110局批复盘）：复核的火力是
         # 静态均值、格挡按期望产能授信，而 Boss 意图逐轮滚雪球——1098 前夜
         # 「击杀需15回合＞满血可存活6回合（2.5×）仍判可行→回血 98% 进场→实战
@@ -5090,14 +5109,13 @@ class Policy:
             self._race_proj_audit = (
                 f"击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合，但联合能量复核"
                 f"存在可行攻防分配（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合、"
-                f"先验输出{dpt:.0f}/回合{_pot_tail}）")
+                f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}）")
             return False, ""
         # 均值口径已判负时，用合格的组合级 native 血池逐一复核。这里只
         # 放宽均值误杀，不凭无样本组合造结论；native/分幕样本缺失时原账不动。
         combo_tail = ""
         if bool(pol.get("boss_race_per_combo_gate", True)):
             try:
-                act_no = self._floor_act(floor) if floor else None
                 combos = self._per_combo_boss_pools(act_no)
             except Exception:
                 combos = []
@@ -5106,9 +5124,18 @@ class Policy:
                 combo_alive_count = 0
                 for combo_id, combo_pool in combos:
                     credited_pool = self._race_potion_credit(potions, combo_pool, floor)
-                    combo_ttk = credited_pool / max(1.0, dpt)
+                    # 组合级破层税：只对成员确含开局滑溜 Boss 的组合加计，
+                    # 非滑溜组合（如仪式兽）的翻盘裁决不被池内他者污染
+                    _c_layers = 0.0
+                    if _slip_per_layer > 0.0:
+                        for _mid in [p for p in str(combo_id).split("+") if p]:
+                            _c_layers = max(_c_layers,
+                                            self._native_slippery_layers(_mid))
+                    _c_tax = _c_layers * _slip_per_layer
+                    combo_ttk = credited_pool / max(1.0, dpt) + _c_tax
                     combo_feasible, _ = self._race_joint_feasible(
-                        deck or [], credited_pool, fire, hp_feas, margin, eff=eff)
+                        deck or [], credited_pool, fire, hp_feas, margin, eff=eff,
+                        ttk_tax=_c_tax)
                     # 组合级复核同样受翻盘比上限约束（JOINT_FLIP_TTK_CAP）：
                     # 1090 组合门放行→实战 -66 与 1098 均值复核翻案同族
                     if combo_feasible and _flip_cap > 0 \
@@ -5116,7 +5143,9 @@ class Policy:
                         combo_feasible = False
                     combo_alive = combo_ttk <= tsurv_feas + margin or combo_feasible
                     verdicts.append(
-                        f"{combo_id}{credited_pool:.0f}池" + ("可赢" if combo_alive else "必败"))
+                        f"{combo_id}{credited_pool:.0f}池"
+                        + (f"滑+{_c_tax:.1f}" if _c_tax > 1e-9 else "")
+                        + ("可赢" if combo_alive else "必败"))
                     if combo_alive:
                         combo_alive_count += 1
                 verdict_text = ",".join(verdicts)
@@ -5147,7 +5176,7 @@ class Policy:
                          "联合能量复核虽报可行但被翻盘比上限否决")
         note = (f"竞速预演：击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合"
                 f"（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合，"
-                f"先验输出{dpt:.0f}/回合{_pot_tail}；{_joint_clause}），"
+                f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}；{_joint_clause}），"
                 f"必败局的伤害会流到打死为止"
                 + _flip_veto + combo_tail)
         _cal = self._native_boss_hp_calibration()
@@ -5193,6 +5222,60 @@ class Policy:
             return result
         except Exception:
             return []
+
+    def _native_slippery_layers(self, monster_id: str) -> float:
+        """读取原生 mechanics 里该怪物开局自挂的滑溜层数（SlipperyAmt 属性）。
+
+        VANTOM 的 AfterAddedToRoom 自挂 SlipperyPower SlipperyAmt 层（asc0=8），
+        表达式形如 ``AscensionHelper.GetValueIfAscension (..., 9, 8)``，取末尾
+        字面量作为非进阶口径。native 不可用/无该属性/解析失败一律返回 0
+        （保守，调用方行为与旧版严格一致）。
+        """
+        try:
+            native = getattr(self.know, "game_knowledge", None)
+            if native is None or not getattr(native, "available", False):
+                return 0.0
+            mech = ((native.lookup("monsters", monster_id) or {})
+                    .get("mechanics") or {})
+            for prop in mech.get("properties") or []:
+                if str(prop.get("name") or "") != "SlipperyAmt":
+                    continue
+                for expr in prop.get("expressions") or []:
+                    nums = re.findall(r"\d+", str(expr))
+                    if nums:
+                        return float(int(nums[-1]))
+            return 0.0
+        except Exception:
+            return 0.0
+
+    def _act_slippery_tax(self, act: int | None, per_layer: float) -> tuple[float, str]:
+        """前夜竞速预演的开局滑溜破层税（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）。
+
+        Boss 未知但同幕已有重复实证的组合池可枚举（_per_combo_boss_pools 同一
+        资格口径）：任一组合成员开局自挂滑溜时，可行侧 ttk 按 层数×per_layer
+        加收破层回合——每层把一次命中压到只失 1 血，按 ~3~4 hit/回合的破层
+        速率每层约 0.25~0.33 回合零产出。不知实际 Boss 是谁，取组合池内最大
+        层数（有界悲观）；返回 (加收回合, 明细注)。无合格组合/native 缺失/
+        层数为 0 时返回 (0.0, "")，行为与旧版严格一致。
+        """
+        if per_layer <= 0.0:
+            return 0.0, ""
+        try:
+            layers_max = 0.0
+            detail = ""
+            for combo_id, _pool in self._per_combo_boss_pools(act):
+                combo_layers = 0.0
+                for member_id in [p for p in str(combo_id).split("+") if p]:
+                    combo_layers = max(combo_layers,
+                                       self._native_slippery_layers(member_id))
+                if combo_layers > layers_max:
+                    layers_max = combo_layers
+                    detail = f"{combo_id}{combo_layers:g}层"
+            if layers_max <= 0.0:
+                return 0.0, ""
+            return layers_max * per_layer, detail
+        except Exception:
+            return 0.0, ""
 
     def _native_boss_hp_calibration(self) -> str:
         """doom 留痕的 native 血池校准注（第 681~686 批复盘新增，纯观测）。

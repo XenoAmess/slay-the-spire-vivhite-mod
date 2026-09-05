@@ -6545,6 +6545,90 @@ def main() -> int:
         and "BOSS_RACE_COMBO_GATE" not in d_pc_off.reason, \
         f"组合门关闭时应回落均值判死: {d_pc_off.reason}"
 
+    # 3br-slip-tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：前夜竞速预演可行侧
+    #     ttk 口径 pool/dpt 不扣开局滑溜 Boss 的破层期——第5/6局 F15 篝火对墨影
+    #     幻灵（VANTOM 开局自挂 8 层滑溜，每层把一次命中压到只失 1 血）均判
+    #     「竞速预演可行」→翻转带回血 23/15 点，实战 F17 分别 3/6 回合阵亡
+    #     （战斗端 T3 投影「击杀还需15回合>可存活5回合」）。同幕已有重复实证的
+    #     组合池含滑溜 Boss 时，可行侧 ttk 与联合能量复核按 层数×0.25 加收破层
+    #     回合并留痕；per_layer=0 或组合池无滑溜成员时严格回滚旧口径。
+    class _SlipTaxNative(_PerComboNative):
+        slippery: dict = {}
+
+        def lookup(self, category, monster_id):
+            base = super().lookup(category, monster_id)
+            if base is None:
+                return None
+            layers = self.slippery.get(monster_id, 0)
+            base["mechanics"] = {"properties": ([{
+                "name": "SlipperyAmt",
+                "expressions": [
+                    "AscensionHelper.GetValueIfAscension "
+                    f"(AscensionLevel.ToughEnemies, {layers + 1}, {layers})"],
+            }] if layers else [])}
+            return base
+
+    st_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sliptax-")))
+    st_enemy = _pc_enemy(320.0)
+    st_enemy["boss_encounters"] = 3
+    st_enemy["boss_hp_lost_sum"] = 120.0
+    st_know.stats["enemies"]["SLIP_BOSS"] = st_enemy
+    st_native = _SlipTaxNative()
+    st_native.pools = {"SLIP_BOSS": (150, 180)}
+    st_native.slippery = {"SLIP_BOSS": 8}
+    st_know.game_knowledge = st_native
+    st_pol = policy.Policy(st_know, random.Random(13))
+    # 3×15伤（burst=45→先验24.75）：池160/火10——裸 ttk 6.5 ≤ 5.6+1.5 贴线可赢；
+    # 8 层×0.25=+2.0 破层税后 ttk 8.5 越线，联合复核（纯攻击卡组格挡=0）同败。
+    st_deck = [{"card_id": f"ST_A{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+               for i in range(3)]
+    st_native.slippery = {}
+    _st_raw_doomed, _st_raw_note = st_pol._boss_race_doomed(st_deck, 80, floor=16)
+    assert not _st_raw_doomed \
+        and "BOSS_RACE_SLIPPERY_TAX" not in getattr(st_pol, "_race_proj_audit", ""), \
+        f"非滑溜组合不得加收破层税: {_st_raw_doomed}（{_st_raw_note}）"
+    st_native.slippery = {"SLIP_BOSS": 8}
+    _st_tax_doomed, _st_tax_note = st_pol._boss_race_doomed(st_deck, 80, floor=16)
+    assert _st_tax_doomed and "BOSS_RACE_SLIPPERY_TAX" in _st_tax_note \
+        and "滑+2.0" in _st_tax_note and "已知组合可行0/1" in _st_tax_note, \
+        f"滑溜组合池未加收破层税或缺留痕: {_st_tax_doomed}（{_st_tax_note}）"
+    st_know.policy["boss_race_slippery_tax_per_layer"] = 0.0
+    _st_rb_doomed, _st_rb_note = st_pol._boss_race_doomed(st_deck, 80, floor=16)
+    assert not _st_rb_doomed \
+        and "BOSS_RACE_SLIPPERY_TAX" not in getattr(st_pol, "_race_proj_audit", ""), \
+        f"per_layer=0 应严格回滚旧口径: {_st_rb_doomed}（{_st_rb_note}）"
+    st_know.policy["boss_race_slippery_tax_per_layer"] = 0.25
+    # 强卡组对照（3×20伤，先验33/回合）：税后 ttk 6.9 仍可赢，可行侧账面必须
+    # 自报破层税，供复盘对账贴线局的失真方向与量级。
+    st_big_deck = [{"card_id": f"ST_B{i}", "card_type": "Attack", "energy_cost": 1,
+                    "dynamic_values": [{"name": "Damage", "current_value": 20}]}
+                   for i in range(3)]
+    _st_big_doomed, _st_big_note = st_pol._boss_race_doomed(st_big_deck, 80, floor=16)
+    assert not _st_big_doomed \
+        and "BOSS_RACE_SLIPPERY_TAX" in getattr(st_pol, "_race_proj_audit", ""), \
+        f"税后仍可赢的可行侧账面缺破层税对账: {_st_big_doomed}（{_st_big_note}）"
+    # 端到端：翻转带内（30/80，高于紧急线）同一篝火，裸口径回血、税后改锻造。
+    st_rest = {
+        "screen": "REST", "available_actions": ["choose_rest_option"],
+        "rest": {"options": [
+            {"index": 0, "option_id": "HEAL", "title": "休息", "is_enabled": True},
+            {"index": 1, "option_id": "SMITH", "title": "锻造", "is_enabled": True}]},
+        "run": {"current_hp": 30, "max_hp": 80, "gold": 0, "floor": 16,
+                "deck": st_deck}}
+    st_native.slippery = {}
+    d_st_heal = policy.Policy(st_know, random.Random(13)).decide(st_rest, pc_ctx)
+    assert d_st_heal.tags and d_st_heal.tags[0] == ("rest", "heal") \
+        and "BOSS_RACE_PROJ_AUDIT" in d_st_heal.reason, \
+        f"裸口径贴线可行的前夜应维持回血: {d_st_heal.action}（{d_st_heal.reason}）"
+    st_native.slippery = {"SLIP_BOSS": 8}
+    d_st_smith = policy.Policy(st_know, random.Random(13)).decide(st_rest, pc_ctx)
+    assert d_st_smith.tags and d_st_smith.tags[0] == ("rest", "smith") \
+        and "必败弃疗改锻造" in d_st_smith.reason \
+        and "BOSS_RACE_SLIPPERY_TAX" in d_st_smith.reason, \
+        f"破层税后的贴线前夜应转锻造并带留痕: {d_st_smith.action}（{d_st_smith.reason}）"
+
     # 3br-3) 残能救场守卫（第698~770批复盘闭环）：本批 89 例带能量空过横跨
     #        40 局（16 例缺口>0，742 局 F17-T2 死亡战手握岩石铠甲仍空过）。
     #        意图缺口>0 且剩能量时 end_turn 边界必须先尝试 primitive 救场：

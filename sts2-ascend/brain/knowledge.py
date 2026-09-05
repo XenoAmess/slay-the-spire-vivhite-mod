@@ -79,6 +79,11 @@ def relic_stats_key(value: object) -> str | None:
 
 DEFAULT_POLICY = {
     "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic
+    "boss_race_slippery_tax_per_layer": 0.25,  # 前夜竞速预演的开局滑溜破层税（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：
+    # 同幕已有重复实证的 Boss 组合池含开局自挂滑溜的成员（VANTOM 8层，每层把一次命中压到1血）时，
+    # 可行侧 ttk 与联合能量复核按 层数×此值 加收破层回合——预演口径 pool/dpt 此前不扣破层期，
+    # 第5/6局 F15 篝火对墨影幻灵判可行→翻转带回血 23/15 点→F17 实战 3/6 回合阵亡
+    # （战斗端 T3 投影击杀还需15回合）。取组合池最大层数（Boss 未知时的有界悲观）；0 严格回滚旧口径
     "boss_race_feasible_hp_buffer": 0.30,  # 前夜竞速预演可行侧生存余量；0 回落旧口径
     "boss_race_joint_flip_max_ttk_ratio": 1.5,  # 联合能量复核翻盘比上限（第1098~1110局批复盘）：
     # 击杀所需回合数超过 满血可存活回合数×此比值 时，前夜预演与 Boss 战斗端
