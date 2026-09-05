@@ -865,3 +865,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.128881901688856局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.027296388160717局)，ROLLING_BOULDER(21分/3.4711022032326175局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.65 → 0.65（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿23张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.65 → 0.68（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.84 → 1.83（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/75 胜，当前目标进阶 0
+
+## 第 76 局复盘（2026-09-05 23:28）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：TINY_MAILBOX, JUZU_BRACELET, BOOK_OF_FIVE_RINGS, BAG_OF_MARBLES, PENDULUM, LANTERN
+- 战斗记录：F19 Monster战 掉血11｜自损25; F22 Monster战 掉血0｜自损10; F27 Elite战 掉血0｜自损36; F29 Elite战 掉血37｜自损58; F31 Monster战 掉血0｜自损12; F33 Boss战 掉血74｜自损48｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(35分/27.503965753135173局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/10.168741432021543局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/14.317212121971865局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(33分/18.758718413663857局)，EQUILIBRIUM(33分/2.6399593468830247局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.114430815032945局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.0097008508021545局)，ROLLING_BOULDER(21分/3.4589533455213037局)
+- 策略进化：block_safety: 1.83 → 1.88（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿22张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.68 → 0.71（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.88 → 1.87（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/76 胜，当前目标进阶 0
