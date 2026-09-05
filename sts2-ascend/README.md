@@ -535,8 +535,8 @@ mechanics v4 还用规范化的嵌套语句树保留 if/else 与 switch case 到
 
 1. `opencode-go/glm-5.3-flash@max` — GLM-5.3-Flash (2x usage) · OpenCode Go · max
 2. `amd-radeon/DeepSeek-V4-Flash` — DeepSeek-V4-Flash · AMD Radeon OpenAI-compatible API
-3. `gpt-5.6-luna@max` — Codex CLI · 隔离 clone custom profile · `approval=never`
-4. 兜底 `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
+3. `kimi-for-coding/k3`，常规新任务每 5 局一次（同样走异步队列）
+4. 兜底 `gpt-5.6-luna@max` — Codex CLI · 隔离 clone custom profile · `approval=never`
 
 DeepSeek 的 AMD Radeon provider 配置位于仓库根 `opencode.json`；API key 只从进程环境变量
 `AMD_RADEON_API_KEY` 读取，禁止写入该文件、Brain 配置、日志或 Git。未设置 key 时，OpenCode
@@ -550,6 +550,7 @@ Windows 上 Luna 固定使用用户缓存中的 Codex CLI `0.148.0`；`Start-Age
 前两级均按每局优先复盘；Kimi 的 5 局门槛只控制常规新任务，已有失败包的逐包重审不会因此
 永久等不到第 5 局。模型已经开始产生语义输出/工具事件后，失败事务固定原 runner、模型、推理强度
 和审批模式重试；若 CLI 在模型工作开始前就不可用，才允许按优先链顺位交给下一层。
+因此 Luna 只接手新任务中前三级均不可用的场景；已经绑定 Luna 的失败包仍保留原批次亲和性，不会因默认顺序调整被静默改派。
 **429 限流是例外的可恢复运输层中断**：无论发生在模型工作开始前还是之后，都必须保留原
 runner/model、`retry_group`、transcript 和失败包 lineage；读取并尊重 `Retry-After`（缺失时用
 有上限的指数退避），将同一批次以 `deferred` 方式排回原队列，不能跳级、不能进入普通硬失败

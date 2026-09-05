@@ -9,5 +9,5 @@
 - 维护 AI 对整体架构与机制正确性负责，GLM 对具体复盘成果负责。GLM 犯错、卡住或不提交时，先修提示、证据、反馈、自检、观测、队列、提交和自愈机制，使它下次自行闭环；不得把维护 AI 代写具体成果当作长期解决方案。
 - 失败合入的机制故障修好后，必须重新调用 GLM，由它自行复审失败包、补合、解决冲突、自检和提交。维护 AI 只建设失败现场输入、队列、反馈和验收机制，不默认手工替它补代码。
 - 提交来源必须可辨识：维护 Agent 的额外功能/修复提交使用 `[agent:task] ` 标题前缀；运行中 Brain 的存档、复盘、恢复和拒合清单提交由 `autogit` 使用 `[brain:auto] `。只约定新提交，不改写历史，也不设阻断用户提交的硬钩子。
-- 生产复盘 runner 是可配置四级链：OpenCode/GLM → OpenCode/DeepSeek-V4-Flash → Codex/Luna（max + auto-review）→ OpenCode/Kimi。Start、Stop 与 Brain 孤儿回收只能按当前 session、受管 review clone 和 runner 调用形状识别，不得把具体模型名或审批参数写死进生命周期匹配。
+- 生产复盘 runner 是可配置四级链：OpenCode/GLM → OpenCode/DeepSeek-V4-Flash → OpenCode/Kimi → Codex/Luna（max + auto-review）。Start、Stop 与 Brain 孤儿回收只能按当前 session、受管 review clone 和 runner 调用形状识别，不得把具体模型名或审批参数写死进生命周期匹配。
 - 子进程收到服务端明确可重试的 HTTP 429 时，优先复用同一 canonical task/runner/model 和原有 retry lineage；先保全 partial、transcript、日志与锁，再尊重 `Retry-After` 或执行有上限的指数退避。不得并行复制任务、静默切换模型或把可恢复 429 标为永久 cooldown/blocked；硬配额耗尽或明确永久拒绝才转入普通失败保全。详见 [429 中断恢复规范](../docs/2026-09-02-429子任务恢复与复用规范.md)。

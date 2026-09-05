@@ -1,7 +1,7 @@
 """LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
-  - runner-aware 优先链依次尝试 OpenCode/GLM、OpenCode/DeepSeek、Codex/Luna、OpenCode/Kimi；
+  - runner-aware 优先链依次尝试 OpenCode/GLM、OpenCode/DeepSeek、OpenCode/Kimi、Codex/Luna；
   - 每局结束只耐久入队，外部 CLI/模型探测全部由后台 worker 完成；
   - 已经启动过模型的失败事务固定原 runner/model/effort 重审，不静默换模型。
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
@@ -2537,7 +2537,7 @@ def resolve_review_plan(
         log(f"[llm] 不支持的复盘 runner={plan.runner}，看下一优先")
         reasons.append(f"{plan.key}:runner-unsupported")
     reason = ",".join(reasons) or "no-available-backend"
-    log(f"[llm] 三级复盘后端当前均不可用；队列保留等待（{reason}）")
+    log(f"[llm] 四级复盘后端当前均不可用；队列保留等待（{reason}）")
     return replace(plans[-1], available=False, unavailable_reason=reason)
 
 

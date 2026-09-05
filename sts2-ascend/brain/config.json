@@ -60,23 +60,23 @@
     "every_runs": 1,
     "source": "preferred"
    },
+  {
+    "key": "kimi-k3",
+    "priority": 3,
+    "runner": "opencode",
+    "model": "kimi-for-coding/k3",
+    "every_runs": 5,
+    "source": "preferred"
+   },
    {
     "key": "luna-max",
-    "priority": 3,
+    "priority": 4,
     "runner": "codex",
     "model": "gpt-5.6-luna",
     "reasoning_effort": "max",
     "approve_for_me": false,
     "sandbox": "workspace-write",
     "every_runs": 1,
-    "source": "preferred"
-   },
-   {
-    "key": "kimi-k3",
-    "priority": 4,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "every_runs": 5,
     "source": "fallback"
    }
   ],

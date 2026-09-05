@@ -1,4 +1,4 @@
-"""Runner-adapter regressions for the GLM -> DeepSeek -> Luna -> Kimi chain."""
+"""Runner-adapter regressions for the GLM -> DeepSeek -> Kimi -> Luna chain."""
 from __future__ import annotations
 
 import json
@@ -47,7 +47,7 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertEqual(list(provider["models"]), ["DeepSeek-V4-Flash"])
         self.assertNotIn("rc-", json.dumps(provider))
 
-    def test_production_chain_places_deepseek_after_glm(self) -> None:
+    def test_production_chain_places_luna_last(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))["llm"]
 
         plans = review_plans_from_config(cfg)
@@ -57,8 +57,17 @@ class ReviewPlanTests(unittest.TestCase):
             [
                 (1, "glm-flash", "opencode", "opencode-go/glm-5.3-flash"),
                 (2, "deepseek-v4-flash", "opencode", "amd-radeon/DeepSeek-V4-Flash"),
-                (3, "luna-max", "codex", "gpt-5.6-luna"),
-                (4, "kimi-k3", "opencode", "kimi-for-coding/k3"),
+                (3, "kimi-k3", "opencode", "kimi-for-coding/k3"),
+                (4, "luna-max", "codex", "gpt-5.6-luna"),
+            ],
+        )
+        self.assertEqual(
+            [(plan.key, plan.source) for plan in plans],
+            [
+                ("glm-flash", "preferred"),
+                ("deepseek-v4-flash", "preferred"),
+                ("kimi-k3", "preferred"),
+                ("luna-max", "fallback"),
             ],
         )
 
@@ -724,30 +733,49 @@ class ReviewResolverTests(unittest.TestCase):
         self.assertEqual(status["retry_resolutions"], {})
         mark.assert_not_called()
 
-    def test_glm_cooldown_selects_luna_before_kimi(self) -> None:
-        cfg = {
-            "review_model_chain": [
-                {"key": "glm", "priority": 1, "runner": "opencode",
-                 "model": "glm", "variant": "max"},
-                {"key": "luna", "priority": 2, "runner": "codex",
-                 "model": "gpt-5.6-luna", "reasoning_effort": "max"},
-                {"key": "kimi", "priority": 3, "runner": "opencode",
-                 "model": "kimi", "every_runs": 5},
-            ],
-        }
+    def test_production_chain_selects_kimi_before_probing_luna(self) -> None:
+        cfg = json.loads((BRAIN / "config.json").read_text(
+            encoding="utf-8"))["llm"]
 
         with (mock.patch.object(
                   llm_review, "_preferred_cooldown_remaining",
-                  side_effect=lambda key: 60.0 if key == "glm" else 0.0),
+                  side_effect=lambda key: (
+                      60.0 if key in {"glm-flash", "deepseek-v4-flash"}
+                      else 0.0)),
               mock.patch.object(llm_review, "runner_binary",
                                 side_effect=lambda _cfg, runner: runner + ".exe"),
-              mock.patch.object(llm_review, "_query_codex_models",
-                                return_value={"gpt-5.6-luna": {"max"}}),
+              mock.patch.object(llm_review, "_query_codex_models") as codex_probe,
               mock.patch.object(llm_review, "_query_available_models",
-                                return_value={"glm", "kimi"})):
+                                return_value={
+                                    "opencode-go/glm-5.3-flash",
+                                    "amd-radeon/DeepSeek-V4-Flash",
+                                    "kimi-for-coding/k3",
+                                })):
             selected = llm_review.resolve_review_plan(cfg, log=lambda _message: None)
 
-        self.assertEqual((selected.key, selected.runner), ("luna", "codex"))
+        self.assertEqual((selected.key, selected.runner), ("kimi-k3", "opencode"))
+        codex_probe.assert_not_called()
+
+    def test_production_chain_uses_luna_only_after_three_unavailable_entries(
+            self) -> None:
+        cfg = json.loads((BRAIN / "config.json").read_text(
+            encoding="utf-8"))["llm"]
+
+        with (mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0.0),
+              mock.patch.object(llm_review, "runner_binary",
+                                side_effect=lambda _cfg, runner: runner + ".exe"),
+              mock.patch.object(llm_review, "_query_available_models",
+                                return_value=set()),
+              mock.patch.object(llm_review, "_query_codex_models",
+                                return_value={"gpt-5.6-luna": {"max"}})):
+            selected = llm_review.resolve_review_plan(
+                cfg, log=lambda _message: None)
+
+        self.assertEqual(
+            (selected.key, selected.runner, selected.source, selected.priority),
+            ("luna-max", "codex", "fallback", 4),
+        )
 
     def test_codex_probe_propagates_lifecycle_stop(self) -> None:
         llm_review._review_probe_cache.clear()
