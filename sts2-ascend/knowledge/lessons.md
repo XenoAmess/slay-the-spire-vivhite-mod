@@ -9269,3 +9269,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.861703047375072局)，BULLY(10分/4.861703047375072局)，HAVOC(10分/3.8893624379000586局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.58 → 0.56（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1243 胜，当前目标进阶 0
+
+## 第 1244 局复盘（2026-09-05 19:27）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：SHRUG_IT_OFF, EVIL_EYE, HEADBUTT, ULTIMATE_DEFEND, EVIL_EYE, UNRELENTING, CINDER, THUNDERCLAP, TAUNT, HOWL_FROM_BEYOND, FLAME_BARRIER, CRUELTY, IMPERVIOUS, POMMEL_STRIKE, HOWL_FROM_BEYOND, RUPTURE, SWORD_BOOMERANG, RUPTURE, HEADBUTT, FEED, BREAKTHROUGH, BLUDGEON, PACTS_END
+- 本局遗物：LETTER_OPENER, PARRYING_SHIELD
+- 战斗记录：F21 Monster战 掉血0｜自损4; F22 Monster战 掉血6｜自损12; F24 Monster战 掉血12｜自损10; F27 Monster战 掉血41｜自损59; F29 Monster战 掉血17｜自损23; F31 Unknown战 掉血28｜自损20（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34.89543167896462局)，FIEND_FIRE(25分/44.571121197725205局)，PRIMAL_FORCE(24分/6.782561921392965局)，PACTS_END(24分/127.94104714918855局)，MANGLE(24分/118.21036491570594局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.84468708670926局)，BULLY(10分/4.84468708670926局)，HAVOC(10分/3.8757496693674085局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.56 → 0.57（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.30 → 2.25（行至 F31——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.50 → 0.47（行至 F31——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.75 → 0.72（行至 F31——药水交药线部分胜利回收）
+- 生涯战绩：0/1244 胜，当前目标进阶 0
