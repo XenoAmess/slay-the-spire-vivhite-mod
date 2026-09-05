@@ -9324,3 +9324,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.777216721859375局)，BULLY(10分/4.777216721859375局)，HAVOC(10分/3.8217733774875002局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.60 → 0.58（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；kill_race_prior_eff: 0.58 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F33——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.42 → 0.40（行至 F33——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.67 → 0.65（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1248 胜，当前目标进阶 0
+
+## 第 1249 局复盘（2026-09-05 22:45）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_NECTAR+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：HEMOKINESIS, HEADBUTT, STOMP, HEMOKINESIS, IRON_WAVE, TRUE_GRIT, MOLTEN_FIST, HEADBUTT, SHRUG_IT_OFF, PYRE, TRUE_GRIT, BLUDGEON, CONFLAGRATION, JUGGERNAUT, FINESSE, BURNING_PACT
+- 本局遗物：BRONZE_SCALES, UNSETTLING_LAMP, BOWLER_HAT, LUCKY_FYSH
+- 战斗记录：F14 Monster战 掉血7｜自损13; F17 Boss战 掉血38｜自损34｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血24｜自损28; F20 Monster战 掉血16｜自损22; F21 Monster战 掉血17｜自损17｜竞速审计：T2判死→实战6回合获胜; F23 Monster战 掉血33｜自损14（阵亡）
+- 当前高价值卡牌：OFFERING(25分/34.289021379711244局)，FIEND_FIRE(25分/43.7965674626624局)，PACTS_END(24分/126.71070909355817局)，PRIMAL_FORCE(24分/6.664695048666014局)，MANGLE(24分/116.15611370532197局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.760496463332868局)，BULLY(10分/4.760496463332868局)，HAVOC(10分/3.8083971706662942局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.61 → 0.64（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F23——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.40 → 0.37（行至 F23——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.65 → 0.62（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1249 胜，当前目标进阶 0
