@@ -171,45 +171,36 @@
    "every": 1,
    "source": "queued",
    "run_id": "3VJU8P1HNSV7"
+  },
+  {
+   "run": 1232,
+   "time": "2026-08-31 21:53",
+   "profile_id": "ironclad",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "19588-1788185361403065800-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000418-1788192258078457400-98d55cea"
+   ],
+   "salvage_attempts": [],
+   "retry_count": 26,
+   "retry_after": 1788597057.1927638,
+   "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+   "replay_target": "20260901-000418-1788192258078457400-98d55cea",
+   "review_epoch": "",
+   "deferred_count": 6,
+   "deferred_hold_until": 1788599757.1927638,
+   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
   }
  ],
- "reviewing": {
-  "runs": [
-   1232
-  ],
-  "items": [
-   {
-    "run": 1232,
-    "time": "2026-08-31 21:53",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "queue_id": "19588-1788185361403065800-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000418-1788192258078457400-98d55cea"
-    ],
-    "salvage_attempts": [],
-    "retry_count": 26,
-    "retry_after": 1788587503.986005,
-    "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-    "replay_target": "20260901-000418-1788192258078457400-98d55cea",
-    "review_epoch": "",
-    "deferred_count": 5,
-    "deferred_hold_until": 1788590203.986005,
-    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
-   }
-  ],
-  "profile_id": "ironclad",
-  "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-  "started": "2026-09-05 16:14:27"
- }
+ "reviewing": null
 }
