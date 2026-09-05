@@ -70,3 +70,40 @@ retry_resolution: 20260831-200515-1788177915907021900-8589e247 integrated
 ## REPLAY
 
 retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
+
+# 第 21~48 局批复盘：竞速生存分母把謦欬自付当敌方磨损，判死后 41% 实战获胜——自付隔离出 tsurv
+
+日期：2026-09-05
+
+## HYPOTHESIS
+
+白绮竞速判死的「可存活回合」分母（`_race_loss_rate` 回合首→回合首净损 EMA）把自愿支付的謦欬生命费用计入敌方磨损：T1 换挡倾泻直接压扁 tsurv → 判死 → 败局竞速全攻再付更多生命 → 自证死期闭环。把同回合实测自付从边界净损中隔离（敌方归属口径），虚假判死率应降到 30% 预注册线以下。
+
+该假设可证伪：race_audit 台账按判死入锁与实战结局逐场对照，未来 3~10 局 won/latched 不降至 <30%（或平均楼层/判死后死亡率显著恶化）即不成立，`vivhite_race_self_loss_exclude=False` 一键恢复混合口径。
+
+## EVIDENCE
+
+- race_audit 台账（本 profile stats）：判死入锁 75 场、实战获胜 31 场 = 41.3%；本批 21~52 局战斗记录可对照的 45 场中 20 场判死后获胜 = 44.4%，且 36/45 在 T2 即入锁（最早允许时刻）——越过「判死→获胜 >30% 行为化收紧」预注册线（esc 桶 44.2% 收紧为先例）。
+- 批内最新死亡局 run 48（2CT4ZDKZ0JSA，F17 乐加维林族母）完整决策链已读：T1 自付 16 血（85→69，并行星雨 hp-cost 6、尺度变换+ 4、星图检索 2×2、弦光投影 2），T2 边界净损样本 16 全部来自自付；终盘 3 血仍打出 hp-cost 2 的星图检索跌至 1 血、全手牌被謦欬锁死后中 21 意图阵亡。
+- 上一批（7~20 局）的 自损N 战斗记录段在本批 52 局零显形：该改动 19:09 才提交，晚于全部 52 局结束时间，属部署时序而非观测失效；本批不改该链路。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：新增 `_race_prev_same_round_loss` 回合边界快照（初始化/战斗重置同步）；白绮且 `vivhite_race_self_loss_exclude`（默认开）时，边界净损减去上一回合同回合 tick 差值实测的自付量后再进 EMA——敌方回合间行动天然落在边界采样之外，汲取/回血仍留账内（D0T5BPUDMG6 续航口径不动）；判决现场在 tsurv 计算前追加「已隔离謦欬实付N（VIVHITE_RACE_SELF_LOSS_EXCLUDE）」留痕。已知口径边界：同回合敌方反伤（荆棘类）会被一并隔离，属有界乐观偏置，已在注释登记。
+- sts2-ascend/brain/selfcheck.py：3prb 夹具锁定三分支——T1 零意图自付 16 后开关开启时首边界样本为 0 且留痕在场；回滚键关闭时严格回落混合口径 16 且无留痕；自损账原始口径 16 不变。
+- sts2-ascend/tests/test_boss_race_sustain.py：续航夹具 EMA 断言由混合口径 8.5 更新为敌方归属口径 1.5（T1 自付 10 不再计入），注释登记批次依据；同文件判死锁存、续航开门、自损账显示断言不变。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：race_audit won/latched 降至 <30%；战斗理由出现 VIVHITE_RACE_SELF_LOSS_EXCLUDE 留痕且可与同决策 hp-cost/敌方意图对账；竞速入锁时刻后移（T2 占比下降）。证伪/回滚条件：10 局内 won 率不降、died/latched 异常飙升或平均楼层显著下滑——置 `vivhite_race_self_loss_exclude=False` 即整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含新 3prb 夹具）。
+- py -3 -B sts2-ascend/tests/test_boss_race_sustain.py：2 tests OK。
+- git diff --check 通过；完整 diff 已回读，仅 3 个生产/测试文件 + 本报告与口播短评，无在线状态、无无关文件（工作树中宿主挂载的超长路径资产删除遗留不纳入本批）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

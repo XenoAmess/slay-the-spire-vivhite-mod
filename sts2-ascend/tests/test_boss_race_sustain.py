@@ -128,9 +128,13 @@ class BossRaceSustainProjectionTests(unittest.TestCase):
     def test_observed_qingke_drain_and_zero_turn_use_net_hp_survival(self) -> None:
         policy, decision = self._reach_turn_three(observe_heal=True)
 
-        # Turn-start samples are 85→75 (-10) and 75→70 (-5): EMA 8.5.
-        # Intra-turn observations separately prove Qingke/self-cost and drain.
-        self.assertAlmostEqual(policy._race_loss_rate, 8.5)
+        # Turn-start samples are 85→75 and 75→70.  Since the 21~48-run review
+        # (VIVHITE_RACE_SELF_LOSS_EXCLUDE), the T1 drop of 10 is measured
+        # intra-turn Qingke self-payment and no longer counts as enemy
+        # attrition in the survival denominator: round samples become 0 and 5,
+        # so the EMA is 1.5 instead of the old blended 8.5.  The raw
+        # same-round ledgers keep the full self-paid account for display.
+        self.assertAlmostEqual(policy._race_loss_rate, 1.5)
         self.assertEqual(policy._race_same_round_loss, 10.0)
         self.assertEqual(policy._race_same_round_heal, 2.0)
         self.assertEqual(policy._race_zero_intent_rounds, 1)

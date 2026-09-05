@@ -530,6 +530,7 @@ class Policy:
         self._race_tick_hp = None     # 上一个逐 tick HP 观测值
         self._race_same_round_heal = 0.0  # 本场同回合内已观察到的净回血
         self._race_same_round_loss = 0.0  # 本场同回合内已观察到的自损/费用净扣血
+        self._race_prev_same_round_loss = 0.0  # 自损账在上一个回合边界时的累计快照
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
         self._stall_min_hp = 99999  # 本场敌人总血量的历史最低值
@@ -2995,6 +2996,18 @@ class Policy:
                         danger_note += (
                             f"；突发唤醒火力取当前意图{float(incoming):.0f}"
                             "（HARD_INTENT_SPIKE_FIRE）")
+                    # 謦欬自付隔离留痕（第 21~48 局批复盘）：生存分母改按敌方
+                    # 归属口径后，复盘必须能在判决现场直接看到已隔离的实测
+                    # 自付量，否则无法对账 tsurv 变化来源。纯留痕不改判定。
+                    if (self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                            and bool(pol.get("vivhite_race_self_loss_exclude",
+                                             True))
+                            and self._race_rounds >= 1
+                            and self._race_prev_same_round_loss > 0.0):
+                        danger_note += (
+                            f"；竞速生存分母按敌方归属口径（已隔离謦欬实付"
+                            f"{self._race_prev_same_round_loss:.0f}，"
+                            "VIVHITE_RACE_SELF_LOSS_EXCLUDE）")
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
                     _race_margin = float(pol.get("kill_race_margin", 1.5))
@@ -3242,6 +3255,7 @@ class Policy:
             self._race_tick_hp = None
             self._race_same_round_heal = 0.0
             self._race_same_round_loss = 0.0
+            self._race_prev_same_round_loss = 0.0
             self._race_zero_intent_rounds = 0
             self._intent_prev = 0
             self._intent_trend = 0
@@ -3347,9 +3361,31 @@ class Policy:
                 # 保留负值：回合首血量上升就是本场续航已经兑现，不应裁成 0 后
                 # 又回退到敌方原始意图。EMA 仍让最近回合拥有更高权重。
                 loss = float(self._race_prev_hp - my_hp)
+                # 謦欬自付隔离（第 21~48 局批复盘，VIVHITE_RACE_SELF_LOSS_EXCLUDE）：
+                # 白绮竞速生存投影的边界净损此前把自愿支付的生命费用当作敌方
+                # 磨损计入 EMA——T1 换挡倾泻（2CT4ZDKZ0JSA-F17 首回合自付 16
+                # 血）直接压扁 tsurv，判死后败局全攻再付更多生命，形成自证死期
+                # 闭环；race_audit 台账本 profile 判死后实战获胜 31/75=41.3%
+                # （本批 20/45=44.4%），越过 30% 预注册线。自付账由同回合
+                # tick 差值实测（敌方回合间行动天然落在边界采样之外），边界净损
+                # 减去上一回合实测自付即为敌方归属磨损；汲取/回血仍留账内
+                # （D0T5BPUDMG6 续航口径不动）。已知口径边界：同回合敌方反伤
+                # （荆棘类）会被一并隔离，属可接受的有界乐观偏置。
+                # vivhite_race_self_loss_exclude=False 即恢复混合口径。
+                if (bool(pol.get("vivhite_race_self_loss_exclude", True))
+                        and self.character_strategy.profile_id
+                        == VIVHITE_PROFILE_ID):
+                    _self_paid_round = max(
+                        0.0, self._race_same_round_loss
+                        - self._race_prev_same_round_loss)
+                    if _self_paid_round > 0.0:
+                        loss -= _self_paid_round
                 self._race_loss_rate = (loss if self._race_rounds == 0
                                         else 0.7 * self._race_loss_rate + 0.3 * loss)
                 self._race_rounds += 1
+            # 自损账快照只在回合边界推进：下一边界用差值还原本回合实测自付，
+            # 与旋钮开关无关，保证中途改键也不污染相邻回合的差分口径。
+            self._race_prev_same_round_loss = self._race_same_round_loss
             # 意图升级轨迹采样（第 84~85 批复盘）：84 局毛绒伏地虫战意图
             # 4→7→24→18→9→25→31、85 局仪式兽 Boss 战 18→20→22→24→26——
             # 升级型敌人每拖一轮就更难挡，而旧引擎只看"本回合意图"，在升级

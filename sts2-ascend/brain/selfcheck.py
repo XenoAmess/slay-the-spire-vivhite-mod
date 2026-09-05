@@ -2415,6 +2415,79 @@ def main() -> int:
         ("缺 self_hp_loss 字段的旧记录只许单档收紧: "
          f"{vknow_old.policy.get('vivhite_param_life_cost_weight')}")
 
+    # 3prb) 謦欬自付隔离竞速生存分母（第 21~48 局批复盘，
+    #      VIVHITE_RACE_SELF_LOSS_EXCLUDE）：race_audit 台账本 profile 判死后
+    #      实战获胜 31/75=41.3%（本批 20/45=44.4%），越过 30% 预注册线——
+    #      边界净损 EMA 把自愿生命支付计入敌方磨损，T1 换挡倾泻
+    #      （2CT4ZDKZ0JSA-F17 首回合自付 16 血）压扁 tsurv，判死后败局全攻
+    #      再付更多生命，形成自证死期闭环。夹具：Boss 零意图开局 T1 自付
+    #      85→69，开关开启时首个边界样本为 0（敌方归属口径）且判决现场带
+    #      隔离留痕；回滚键关闭时严格回落混合口径 16 且无留痕。
+    def _vrace_state(turn_no, hp_now, incoming):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 85, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                    "name": "弦光投影", "card_type": "Attack", "playable": True,
+                    "energy_cost": 1, "requires_target": True,
+                    "valid_target_indices": [0],
+                    "dynamic_values": [{"name": "Damage", "current_value": 10}],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "RITUAL_BEAST", "name": "仪式兽",
+                    "current_hp": 168, "max_hp": 252, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": incoming}],
+                }],
+            },
+            "run": {"current_hp": hp_now, "max_hp": 85, "gold": 0, "floor": 17,
+                    "deck": [{
+                        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                        "card_type": "Attack", "energy_cost": 1,
+                        "dynamic_values": [
+                            {"name": "Damage", "current_value": 10}],
+                    }]},
+        }
+
+    def _vrace_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "RITUAL_BEAST", "node_type": "Boss"},
+            current_combat_is_hard=True, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    vknow_ex = _vivhite_know("sts2-selfcheck-vhrace-excl-")
+    vpol_ex = policy.Policy(vknow_ex, random.Random(11))
+    vctx_ex = _vrace_ctx()
+    vpol_ex.decide(_vrace_state(1, 85, 0), vctx_ex)   # T1：Boss 零伤害行动
+    vpol_ex.decide(_vrace_state(1, 69, 0), vctx_ex)   # T1 内謦欬自付 16
+    d_vx = vpol_ex.decide(_vrace_state(2, 69, 12), vctx_ex)  # T2 边界采样
+    assert vpol_ex._race_same_round_loss == 16.0, \
+        f"自损账实测口径漂移: {vpol_ex._race_same_round_loss}"
+    assert vpol_ex._race_loss_rate == 0.0, \
+        ("謦欬自付被计入竞速生存分母（应为敌方归属口径 0）: "
+         f"{vpol_ex._race_loss_rate}")
+    assert "VIVHITE_RACE_SELF_LOSS_EXCLUDE" in d_vx.reason, \
+        f"判决现场缺自付隔离留痕: {d_vx.reason}"
+    vknow_rb = _vivhite_know("sts2-selfcheck-vhrace-rb-")
+    vknow_rb.policy["vivhite_race_self_loss_exclude"] = False
+    vpol_rb = policy.Policy(vknow_rb, random.Random(11))
+    vctx_rb = _vrace_ctx()
+    vpol_rb.decide(_vrace_state(1, 85, 0), vctx_rb)
+    vpol_rb.decide(_vrace_state(1, 69, 0), vctx_rb)
+    d_vx_rb = vpol_rb.decide(_vrace_state(2, 69, 12), vctx_rb)
+    assert vpol_rb._race_loss_rate == 16.0, \
+        ("回滚键关闭后未恢复混合口径（应为 16）: "
+         f"{vpol_rb._race_loss_rate}")
+    assert "VIVHITE_RACE_SELF_LOSS_EXCLUDE" not in d_vx_rb.reason, \
+        f"回滚键关闭后仍出现隔离留痕: {d_vx_rb.reason}"
+
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
     #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
     #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、
