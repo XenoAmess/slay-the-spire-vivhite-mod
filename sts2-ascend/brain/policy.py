@@ -65,6 +65,21 @@ def _is_vivhite_recursion_card(card: dict) -> bool:
     return card_id in _VIVHITE_RECURSION_CARD_IDS
 
 
+def _vivhite_combat_scope(state: dict, ctx) -> tuple[str, int] | None:
+    """Return a stable combat key that also exists on a mid-selection restart."""
+    run = state.get("run") or {}
+    run_id = state.get("run_id") or run.get("run_id") \
+        or getattr(ctx, "run_id", None)
+    floor = run.get("floor")
+    if not run_id or floor is None:
+        return None
+    try:
+        floor = int(floor)
+    except (TypeError, ValueError):
+        return None
+    return str(run_id), floor
+
+
 @dataclass
 class Decision:
     action: str | None = None          # None = wait (do nothing this tick)
@@ -518,10 +533,10 @@ class Policy:
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
-        # A forced all-recursion selection is a semantic dead end.  Remember
-        # only that combat object so the executor finishes the selection but
-        # does not immediately play the recovered recursion card again.
-        self._recursive_selection_block_combat = None
+        # A forced all-recursion selection is a semantic dead end.  Bind it to
+        # run+floor because a Brain restarted on CARD_SELECTION has no ctx.combat
+        # object yet; object identity therefore cannot bridge back to COMBAT.
+        self._recursive_selection_block_scope = None
         self._failed_this_turn: set = set()  # 本回合打出失败的卡牌实例（hand index，非 card_id）
         self._card_cooldowns: dict[tuple, int] = {}  # exact card slot/identity refresh races
         self._failed_hand_len = -1  # 记录失败时的手牌数量：index 是位置序号，手牌一变即失效
@@ -1372,7 +1387,7 @@ class Policy:
             self._phase_stall = 0
             self._turn_combat = None
             self._cur_turn = None
-            self._recursive_selection_block_combat = None
+            self._recursive_selection_block_scope = None
             self._end_stall = 0
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
@@ -3270,8 +3285,9 @@ class Policy:
         enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
         hand = self._enrich_cards(combat.get("hand", []))
         recursion_blocked = []
-        if (self._recursive_selection_block_combat is not None
-                and self._recursive_selection_block_combat is ctx.combat):
+        if (self._recursive_selection_block_scope is not None
+                and self._recursive_selection_block_scope
+                == _vivhite_combat_scope(state, ctx)):
             recursion_blocked = [c for c in hand
                                  if _is_vivhite_recursion_card(c)]
             hand = [c for c in hand if not _is_vivhite_recursion_card(c)]
@@ -6563,7 +6579,8 @@ class Policy:
                     row[0], str(row[1].get("card_id")
                                 or row[1].get("name") or "")))
                 best_v, pick = ranked[0]
-                self._recursive_selection_block_combat = ctx.combat
+                self._recursive_selection_block_scope = \
+                    _vivhite_combat_scope(state, ctx)
             else:
                 safe_ranked.sort(key=lambda row: (
                     -row[0], str(row[1].get("card_id")

@@ -2422,7 +2422,9 @@ def main() -> int:
     # recovered recursion cards for only this combat.
     recursion_combat = {"comp_id": "RECURSION_FIXTURE", "node_type": "Monster"}
     recursion_ctx = SimpleNamespace(
-        run_id="RUN_RECURSION_FIXTURE", combat=recursion_combat,
+        # Match a Brain restarted while the native game is already on the child
+        # selection: ctx.combat is not reconstructed until COMBAT returns.
+        run_id="RUN_RECURSION_FIXTURE", combat=None,
         current_combat_is_hard=False, credit_tags=[], force_offense=False,
         stall_analysis_asked=False, stall_analysis_needed=False,
         stall_giveup=False)
@@ -2474,7 +2476,8 @@ def main() -> int:
     assert recursion_forced.action == "select_deck_card", recursion_forced
     assert "VIVHITE_RECURSION_CHAIN_BREAK" in recursion_forced.reason, \
         f"all-recursion fallback lacks chain-break audit: {recursion_forced.reason}"
-    assert recursion_policy_break._recursive_selection_block_combat is recursion_combat
+    assert recursion_policy_break._recursive_selection_block_scope \
+        == ("RUN_RECURSION_FIXTURE", 25)
 
     recursion_combat_state = {
         "screen": "COMBAT", "run_id": "RUN_RECURSION_FIXTURE",
@@ -2498,6 +2501,7 @@ def main() -> int:
                 "current_hp": 50, "max_hp": 78,
                 "deck": recursion_cards + [normal_child]},
     }
+    recursion_ctx.combat = recursion_combat
     recursion_after = recursion_policy_break.decide(
         recursion_combat_state, recursion_ctx)
     assert recursion_after.action == "play_card" \
