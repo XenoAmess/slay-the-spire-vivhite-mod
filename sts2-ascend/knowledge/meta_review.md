@@ -6349,3 +6349,105 @@ retry_resolution: none (no replay target; local production fix)
   悲观台账继续累积；1240 完整链逐动作核对：F6 单场 -56 后 7 血连走 F7/F8
   强制战（单候选 least-bad）、F9 回血、F11 唯一候选 Monster 进场 31 血——
   选路端无更优候选，死因=卡组输出密度与 F6 爆发战损，不单列立案。
+
+# 2026-09-06｜第 1232 局批复盘（异步追及队列单局 exact_batch 失败；失败包 98d55cea 复审零产出 no_valid_change；滑溜破层期竞速投影观测 SLIPPERY_TTK_OBS 落地）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260901-000418-1788192258078457400-98d55cea]
+  （role=target），attempt_packages=[]（无 lineage）。已逐字段核对包内联 manifest：
+  failure_kind=review_failure、return_code=-1、reason=宿主创建隔离 clone 失败
+  「No space left on device」（D 盘 pack 拷贝中断）、selfcheck_state=not_run、
+  command_count=0、file_change_count=0、patch_bytes=0（e3b0c44 空串哈希）、
+  provider_work_started=false、model_work_started=false——**模型从未开始工作，
+  本包零产出**，失败根因在宿主磁盘容量而非策略/代码。
+- **底因核对（当前 HEAD）**：与生产代码无关（宿主环境容量故障），无可重实现
+  成果、无冲突可解、无成果可验。按契约写 no_valid_change（非 still_pending：
+  无 attempt lineage，target manifest 已完整读毕，不存在未读项）。
+
+retry_resolution: 20260901-000418-1788192258078457400-98d55cea no_valid_change
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速投影的 ttk 口径（血池/dpt）未计入敌方滑溜层的破层
+  期——每层滑溜把一次命中压到只失 1 血，等于把「（单 hit 面值-1）×层数」的
+  账面输出凭空授信；对滑溜 Boss（VANTOM 8 层开局，生涯 327 战 201 死，第一
+  杀手族）ttk 被系统性低估，贴线局（|ttk−tsurv|≤margin）的「可赢/判死」判决
+  与留白口径存在定向失真。本批只上观测位：若后续滑溜局贴线样本出现「投影
+  可赢/贴线→实战阵亡」且破层期修正后翻案 ≥3 局则行为化；若留痕差距普遍
+  <1 回合或从不改变判决方向，则假设证伪、观测位降级知识留档。
+- **EVIDENCE**：run 1232（GVFWX2XJJ6DT，F17 VANTOM 阵亡，273 条完整链逐条
+  深读，F17 战斗 33 条全核）：T1 投影「击杀还需9回合>可存活6回合（先验20伤/
+  回合）」、T2 latch 判死、T7 阵亡；链上逐条「滑溜N层，逐段折算≈1.0，预计破
+  1层」——前 5 回合每次命中 ≈1.0，T7 阵亡时累计仅 ~57 伤（血池 ~173），
+  **9 回合击杀在 8 层滑溜破层期约束下数学不可达**，ttk 低估约 2~4 回合（判决
+  方向本局碰巧不变：判死成立）。代码侧：policy.py `ttk = enemy_hp_total /
+  max(1.0, dpt)` 无任何敌方 power 口径；同函数内 SLIPPERY_RACE_GUARD 注释自认
+  「_race_joint_feasible is intentionally static and does not simulate enemy
+  powers」——守卫只挡「静态复核翻案重开」，初始 race_lost 判定与留痕中的 ttk
+  数字本身仍是乐观口径。原生知识：SLIPPERY_POWER「下一次要失去生命值时只会
+  失去1点生命」Counter 型；runtime monsters.jsonl VANTOM=Boss 173 血。
+- **EXPECTED_SIGNAL**：未来 3~10 局滑溜敌人对局的决策链出现
+  「滑溜N层在账：ttk未扣破层期（SLIPPERY_TTK_OBS）」留痕；可复核指标
+  ① 留痕出现率与独立对局数；② 层数折算破层期与 ttk 的差距 ≥1.5 回合的样本
+  计数；③ 贴线局「投影可赢→实战阵亡」且修正后翻案的样本数；④ 滑溜局竞速
+  审计「判死→胜负」台账续记。
+
+## 一、样本与部署时序审读（固定首步骤）
+
+- 队列 requested=[1232]，exact 命中 1/1、missing=0；主样本 GVFWX2XJJ6DT 的
+  完整持久决策链（273 条，complete_persisted_chain=false，packet 内为尾部 30+
+  每层首末+全部非战斗选择的 118 条切片，例行出牌已并入 decision_aggregates；
+  F17 战斗段已从 runs/20260831-214514_GVFWX2XJJ6DT.json 按需深读全量 33 条）。
+- **部署时序**：本局 2026-08-31 21:45 启程。RACE_AUDIT_HEAL_OVERRIDE 血量
+  上限解耦（boss_eve_race_audit_heal_hp_cap，第 1236~1240 批，2026-09-05
+  落盘）晚于本局——**本局 F16 前夜 46% 弃疗改锻造为该修复的 pre-fix 证据**
+  （旧耦合闸 <45% 才把前夜交还审计回血带），不构成已部署杠杆的失效指控，
+  不重复立案。反事实核算：回血 +26→68 进场，T7 阵亡点改为 ~17 血存活，但
+  血池尚余 ~116、意图 28+ 滚雪球，仍数学必败——本局弃疗方向本身正确，
+  锻造的余烬+ 在 T6 兑现 24 伤（全场唯一大 hit）。
+
+## 二、归因分析（补充执行层核查）
+
+1. **主死因**：卡组输出密度不足 vs VANTOM 滑溜 8 层 + 意图滚雪球（T3 意图
+   12→26、T7 28）。F1 起路径留痕全程「输出饥饿战损上浮 ×1.28→×1.20」，
+   拿牌端饥饿旋钮 lessons 载明全顶格停止吸收，不重复立案。
+2. **执行层**：F17 全 33 条逐动作核对——每回合 end_turn 均能量 0（零白扔）、
+   目标选择合规、滑溜破层次序有「烧墙审计」逐 hit 留痕、T6/T7 格挡与孤注
+   分配合理（T7 改全防也只能多活 1 回合，竞速结论不变）；无第五代结算超时
+   收口签名。竞速审计本局记「T2判死→实战7回合阵亡」——悲观台账分母 +1
+   （非分子），判决准确性样本。
+3. **ttk 口径失真（本批主假设现场）**：见 HYPOTHESIS/EVIDENCE 段；失真方向为
+   「击杀比账面更难」，本局判决方向未被翻转，但贴线局存在定向风险敞口。
+
+## 三、本次调整（观测位 ×1：SLIPPERY_TTK_OBS）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **SLIPPERY_TTK_OBS**（竞速投影 ttk 未扣滑溜破层期；证据 run：1232-F17 完整链 [逐动作核算]；同族守卫 SLIPPERY_RACE_GUARD 只挡翻案、不修正判决口径） |
+| 代码动作 | brain/policy.py 竞速开账段：ttk 计算后读取全场滑溜层数（守卫复用同一读数，消除重复求和），层数>0 时 danger_note 追加「滑溜N层在账：ttk未扣破层期（每层一次命中仅失1血，SLIPPERY_TTK_OBS）」；brain/knowledge.py DEFAULT_POLICY 新增 `slippery_ttk_obs: True`；brain/selfcheck.py 3br-ttk-obs 四断言 |
+| 不改 | ttk/tsurv 计算、race_lost 判决、联合复核、卡牌评分、路径与篝火决策、竞速审计台账口径 |
+| 回滚 | `slippery_ttk_obs: False` 即整体关闭（selfcheck 3br-ttk-obs ④ 为对照锚）；或删除 knowledge/policy/selfcheck 三处改动零残留 |
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check`
+  通过；改动仅限 sts2-ascend 静态项目文件，无在线状态写入、无进程操作。
+- selfcheck 3br-ttk-obs：① 滑溜 8 层 Boss 留痕必须出现且含层数；② 无滑溜
+  目标不得误挂；③ 观测独立于守卫开关（守卫关闭时留痕仍在——观测覆盖
+  「守卫未拦截的贴线判决」正是本观测的意义）；④ 观测开关关闭严格回滚
+  无留痕（守卫行为不受影响）。既有 SLIPPERY_RACE_GUARD / JOINT_FLIP_TTK_CAP /
+  LONGFIGHT 断言全部原样通过。
+- 指标（未来 3~10 局）：见 EXPECTED_SIGNAL ①~④。
+- 继续调整条件：留痕累计 ≥3 个独立对局（evidence_run_threshold）且出现 ≥1 例
+  贴线「投影可赢→实战阵亡」破层期翻案 → 下一批把破层期计入 ttk（行为化最小
+  闭环）；滑溜局留痕普遍伴随判决方向不变 → 观测位降级知识留档。
+- 撤回条件：`slippery_ttk_obs: False`；或删除三处改动。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 生涯 0/1232；一幕 Boss（F17）阵亡型延续。F11 Elite（BYRDONIS）单场 -49
+  为全场最大出血点（满血 85 进场，「血量与卡组达标」口径），与 F5 -44
+  （竞速审计 T4判死→实战8回合获胜，pre-fix 证据）合计 93 血——两场合计占
+  全程战损 70%+，但均已有在产观测/修复承接（精英灰区系数、竞速审计台账），
+  本批不单列立案。

@@ -6301,7 +6301,8 @@ def main() -> int:
     # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。
     def combat_flip_probe(cap, slippery=False, slippery_guard=True,
-                          node_type="Boss", enemy_hp=185, longfight_cap=None):
+                          node_type="Boss", enemy_hp=185, longfight_cap=None,
+                          ttk_obs=True):
         cap_ctx = type("CAPCTX", (), {
             "combat": {"comp_id": "CAP_BOSS", "node_type": node_type},
             "current_combat_is_hard": False, "credit_tags": []})()
@@ -6351,6 +6352,7 @@ def main() -> int:
         if longfight_cap is not None:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
+        cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         return cap_pol.decide(cap_state, cap_ctx)
@@ -6371,6 +6373,24 @@ def main() -> int:
     assert "防守线复核：联合能量对账" in d_combat_cap_rb.reason \
         and "JOINT_FLIP_TTK_CAP" not in d_combat_cap_rb.reason, \
         f"Boss 战斗端翻盘比上限=0 未严格回滚: {d_combat_cap_rb.action}（{d_combat_cap_rb.reason}）"
+
+    # 3br-ttk-obs：滑溜层在账时竞速投影必须留下「ttk 未扣破层期」观测
+    # （SLIPPERY_TTK_OBS，第1232局批复盘）：1232-F17 VANTOM 8 层开局投影
+    # 「击杀还需9回合」，实战逐 hit≈1.0、T7 阵亡时累计仅 ~57 伤。观测只留痕，
+    # 不改 ttk/判决/评分；无滑溜目标不得误挂，开关关闭严格回滚无留痕。
+    assert "SLIPPERY_TTK_OBS" in d_combat_slippery.reason \
+        and "滑溜8层在账" in d_combat_slippery.reason, \
+        f"滑溜在账时竞速投影缺少破层期观测: {d_combat_slippery.reason}"
+    assert "SLIPPERY_TTK_OBS" not in d_combat_cap.reason, \
+        f"无滑溜目标误挂破层期观测: {d_combat_cap.reason}"
+    assert "SLIPPERY_TTK_OBS" in d_combat_slippery_rb.reason \
+        and "SLIPPERY_RACE_GUARD" not in d_combat_slippery_rb.reason, \
+        f"滑溜观测应独立于守卫开关留痕: {d_combat_slippery_rb.reason}"
+    d_combat_slippery_noobs = combat_flip_probe(
+        0.0, slippery=True, ttk_obs=False)
+    assert "SLIPPERY_TTK_OBS" not in d_combat_slippery_noobs.reason \
+        and "SLIPPERY_RACE_GUARD" in d_combat_slippery_noobs.reason, \
+        f"滑溜观测独立开关未严格回滚: {d_combat_slippery_noobs.reason}"
 
     # 3br-longfight：高血池普通/精英战同样不能用静态联合复核重开已判负的
     # 斩杀竞速；1197-F23 的 LOUSE_PROGENITOR（Normal，134~136 血）是最小现场。

@@ -3010,6 +3010,25 @@ class Policy:
                             "VIVHITE_RACE_SELF_LOSS_EXCLUDE）")
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
+                    # 滑溜破层期观测（SLIPPERY_TTK_OBS，第1232局批复盘）：
+                    # ttk 口径 pool/dpt 未计入滑溜层——每层把一次命中压到只失
+                    # 1 血。1232 局 F17 VANTOM 8 层开局，投影「击杀还需9回合
+                    # （先验20伤/回合）」，实战前 5 回合逐 hit≈1.0、T7 阵亡时
+                    # 累计仅 ~57 伤，9 回合击杀在破层期约束下数学不可达。
+                    # 静态复核侧已有 SLIPPERY_RACE_GUARD 挡翻案重开，但判决与
+                    # 留痕里的 ttk 数字本身仍是未扣破层期的乐观口径。此处只在
+                    # 竞速开账且层数>0 时留痕层数与未修正 ttk，供复盘对账贴线局
+                    # 的「可赢/判死」失真方向与量级；ttk/tsurv、判决与评分均不
+                    # 变，slippery_ttk_obs=False 即关闭（回滚＝无留痕旧版）。
+                    _race_slippery_layers = sum(
+                        self._enemy_slippery_stack(e)
+                        for e in enemies if isinstance(e, dict))
+                    if (bool(pol.get("slippery_ttk_obs", True))
+                            and _race_slippery_layers > 0.0):
+                        danger_note += (
+                            f"；滑溜{_race_slippery_layers:g}层在账："
+                            f"ttk{ttk:.0f}未扣破层期"
+                            "（每层一次命中仅失1血，SLIPPERY_TTK_OBS）")
                     _race_margin = float(pol.get("kill_race_margin", 1.5))
                     # 竞速迟滞锁（第632局批复盘新增）：投影逐 tick 重算时，
                     # 实测口径切换、EMA 滞后、小怪阵亡缩池都会让判定在阈值
@@ -3101,9 +3120,7 @@ class Policy:
                         # therefore makes its positive joint result optimistic:
                         # do not reopen a race already judged lost by the combat
                         # projection.  The switch is a narrow rollback anchor.
-                        _slippery_layers = sum(
-                            self._enemy_slippery_stack(e)
-                            for e in enemies if isinstance(e, dict))
+                        _slippery_layers = _race_slippery_layers
                         _slippery_guard = (
                             bool(pol.get("boss_race_slippery_joint_guard", True))
                             and cctx.get("node_type") == "Boss"
