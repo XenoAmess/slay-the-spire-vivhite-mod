@@ -1,15 +1,33 @@
 # 白绮宣传片生产工具
 
+当前生产主线是 **导演 v2（540 秒、多个独立 take）**，入口见
+[`v2/README.md`](./v2/README.md) 和 [`v2/storyboard.json`](./v2/storyboard.json)。本文后半的
+600 秒 full master、a4 与从 a4 派生的短版均为保留的 **v1 兼容/失败参考**，
+不得作为 v2 机制镜头、旁白或 EDL 的来源。实际录制、导出与人工复核状态见
+[`制作进度`](../../docs/2026-09-02-白绮宣传片-v2-制作进度.md)；离线源码测试不会
+自动启动游戏、OBS、录制、TTS 或渲染。
+
 这里是白绮宣传视频的**项目侧**适配层。它把 STS2 的录制产物转换为
 `xar_promo_toolchain` 能够审计的媒体、时间线和证据；它不把游戏逻辑、录屏器
 或 Brain 运行时塞进 xAR 通用核心。
 
 ## 目录和责任边界
 
+源码、测试、分镜/旁白输入及采用素材的制作配方纳入 Git；真实媒体与单次运行现场留在
+已忽略的 `runs/<run-id>/`。不要整目录忽略 `v2/` 或通配忽略 `archive_*.py`。
+2026-09-05 的旧试拍脚本、根目录临时截图和扫描日志已保全迁入 run，恢复清单与
+具体边界见 [`工作区归档记录`](../../docs/2026-09-05-宣传片工作区归档与提交边界.md)。
+
 ```text
 tools/promo/
+├─ v2/                                     # 540 秒导演版 storyboard 与交接入口
 ├─ vivhite_promo/                         # 白绮 adapter/preset/composer
+│  ├─ director_v2.py                    # v2 storyboard/take manifest/多源 EDL 离线门
+│  ├─ action_evidence_v2.py             # 正式动作三联证据门
+│  ├─ title_cards_v2.py                 # xAR TitleCardSpec 项目侧工厂
+│  ├─ media_gate_v2.py                  # 540s/32,400 帧成片 ffprobe 门
 │  └─ semantic_audit.py                    # 项目侧 claims/证据语义门禁
+├─ schemas/vivhite-promo-action-evidence-v2.schema.json
 ├─ schemas/vivhite-promo-capture-v1.schema.json
 ├─ fixtures/minimal_capture/              # 离线、极小的契约 fixture
 ├─ claims/claims.json                     # 白绮语义主张及证据角色
@@ -263,8 +281,9 @@ marks、清洁画面字段，以及 composer 的 `validate_only=True` 不得启�
   → export
 ```
 
-首片目标为 1920×1080 横屏约 10 分钟；60/30/15 秒版本必须从新的配置快照和
-run 生成。技术审计通过不等于白绮语义审计或人工发布批准。
+下述旧流程的首片目标是 1920×1080 横屏约 10 分钟，现仅作 v1 兼容说明。
+v2 的权威规格是 540 秒；60/30/15 秒版本必须分别从同一批 v2 新 take
+生成独立 EDL。技术审计通过不等于白绮语义审计或人工发布批准。
 
 ### 当前录制的候选短片
 
