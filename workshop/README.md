@@ -174,6 +174,7 @@ GUI 操作，应停止并等待用户处理；无人值守时不自动点击、�
 - [预览历史说明](preview-history/README.md)
 - [Workshop 物料门禁记录](../docs/2026-09-01-workshop物料版本与预览门禁.md)
 - [0.2.1 发布回执](../docs/2026-09-01-vivhite-0.2.1-workshop更新回执.md)
+- [0.2.2 发布回执](../docs/2026-09-05-vivhite-0.2.2-workshop更新回执.md)
 
 ## English quick reference
 
