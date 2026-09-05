@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Vivhite.Cards.Chromatic;
@@ -336,15 +337,32 @@ internal static class FinalBalanceAcceptanceTests
             "Inductive Circle must not consume or reset its percentage after a death, turn, or combat trigger:");
     }
 
-    public static void ColorConservationCostsZeroBeforeAndAfterUpgrade(RepositorySnapshot _)
+    public static void ColorConservationUpgradeReducesCoughAndKeepsZeroEnergy(RepositorySnapshot _)
     {
-        var card = new ColorConservation();
-        AcceptanceAssert.Equal(0, card.EnergyCost.Canonical, "Color Conservation must cost zero Energy.");
-        InvokeOnUpgrade("VIVHITE_CARD_COLOR_CONSERVATION", card);
+        var card = MakeMutableForUpgrade(new ColorConservation());
+        AcceptanceAssert.Equal(0, card.EnergyCost.GetWithModifiers(CostModifiers.None), "Color Conservation must cost zero Energy.");
+        AcceptanceAssert.Equal(4, card.DynamicVars["LifeCost"].IntValue, "Base Color Conservation must cost 4 Cough.");
+        card.UpgradeInternal();
+        AcceptanceAssert.Equal(2, card.DynamicVars["LifeCost"].IntValue, "Upgrading Color Conservation must reduce Cough to 2.");
         AcceptanceAssert.Equal(
             0,
-            card.EnergyCost.Canonical,
+            card.EnergyCost.GetWithModifiers(CostModifiers.None),
             "Upgraded Color Conservation must remain a legal zero-Energy card, never a negative-cost sentinel.");
+    }
+
+    public static void InfiniteCanvasUpgradeReducesEnergyAndPreservesDrainGrowth(RepositorySnapshot _)
+    {
+        var card = MakeMutableForUpgrade(new InfiniteCanvas());
+        AcceptanceAssert.Equal(3, card.EnergyCost.GetWithModifiers(CostModifiers.None), "Base Infinite Canvas must cost 3 Energy.");
+        AcceptanceAssert.Equal(16, card.DynamicVars["LifeCost"].IntValue, "Base Infinite Canvas must cost 16 Cough.");
+        AcceptanceAssert.Equal(4, card.DynamicVars["DrainGrowth"].IntValue, "Base Infinite Canvas must grow Drain by 4 percentage points.");
+        card.UpgradeInternal();
+        AcceptanceAssert.Equal(2, card.EnergyCost.GetWithModifiers(CostModifiers.None), "Upgrading Infinite Canvas must reduce Energy to 2.");
+        AcceptanceAssert.True(card.EnergyCost.WasJustUpgraded, "The energy cost upgrade must be highlighted in the native upgrade preview.");
+        AcceptanceAssert.Equal(16, card.DynamicVars["LifeCost"].IntValue, "Upgraded Infinite Canvas must still cost 16 Cough.");
+        AcceptanceAssert.Equal(4, card.DynamicVars["DrainGrowth"].IntValue, "The cost upgrade must preserve the existing 4-point Drain growth.");
+        card.FinalizeUpgradeInternal();
+        AcceptanceAssert.Equal(2, card.EnergyCost.GetWithModifiers(CostModifiers.None), "The reduced energy cost must survive upgrade finalization.");
     }
 
     public static void FinalDrawAndInductiveTextMatchesRuntime(RepositorySnapshot repository)

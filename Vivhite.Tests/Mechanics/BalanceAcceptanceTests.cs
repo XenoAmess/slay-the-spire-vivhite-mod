@@ -147,7 +147,9 @@ internal static class BalanceAcceptanceTests
                 "base");
 
             InvokeOnUpgrade(cardId, card);
-            var expectedUpgraded = cardId == "VIVHITE_CARD_BACKTRACKING_SPELL" ? 2 : expectedBase;
+            var expectedUpgraded = cardId is "VIVHITE_CARD_BACKTRACKING_SPELL" or "VIVHITE_CARD_COLOR_CONSERVATION"
+                ? 2
+                : expectedBase;
             AssertDynamicVar(cardId, card, "LifeCost", expectedUpgraded, "upgraded");
             CollectLifeCalculationCostBindingFailure(
                 paymentBindingFailures,
@@ -368,7 +370,7 @@ internal static class BalanceAcceptanceTests
         AssertBaseAndUpgrade(cards["VIVHITE_CARD_NEGATIVE_SPACE"],
             ("LifeCost", 2, 2), ("Margin", 2, 3), ("VulnerablePower", 2, 3));
         AssertBaseAndUpgrade(cards["VIVHITE_CARD_COLOR_CONSERVATION"],
-            ("LifeCost", 4, 4));
+            ("LifeCost", 4, 2));
 
         AcceptanceAssert.Equal(0, cards["VIVHITE_CARD_AXIOM_RING"].EnergyCost.Canonical, "Axiom Ring must cost zero Energy.");
         AcceptanceAssert.Equal(1, cards["VIVHITE_CARD_OPEN_SET_SHELTER"].EnergyCost.Canonical, "Open-Set Shelter must cost one Energy.");

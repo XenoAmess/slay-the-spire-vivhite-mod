@@ -34,4 +34,9 @@ public sealed class ColorConservation : ChromaticCard
             Owner.Creature,
             this);
     }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars["LifeCost"].UpgradeValueBy(-2);
+    }
 }

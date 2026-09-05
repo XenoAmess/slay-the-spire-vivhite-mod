@@ -50,6 +50,6 @@ public sealed class InfiniteCanvas : ChromaticCard
 
     protected override void OnUpgrade()
     {
-        // Both normal and upgraded copies grow Drain by four percentage points.
+        EnergyCost.UpgradeBy(-1);
     }
 }
