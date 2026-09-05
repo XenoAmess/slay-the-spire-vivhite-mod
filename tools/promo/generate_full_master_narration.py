@@ -20,6 +20,7 @@ script is bound to ``zh-CN-XiaoxiaoNeural`` and no external BGM stem.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import hashlib
 import json
 import os
@@ -149,6 +150,7 @@ def _load_script(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
             rows.append(
                 {
                     "cue_id": cue_id,
+                    "subshot_id": cue.get("subshot_id"),
                     "chapter_id": chapter_id,
                     "shot_id": shot_id,
                     "anchor_seconds": absolute_anchor,
@@ -156,6 +158,8 @@ def _load_script(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
                     "narration_zh": text.strip(),
                     "subtitle_zh": zh.strip(),
                     "subtitle_en": en.strip(),
+                    "tts_rate": cue.get("tts_rate"),
+                    "runtime_binding": cue.get("runtime_binding"),
                     "evidence": cue.get("evidence", {}),
                     "chapter_window": {
                         "start_seconds": chapter_start,
@@ -347,9 +351,15 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
     for index, row in enumerate(rows):
         cue_id = row["cue_id"]
         text_path = narration_dir / f"{cue_id}.zh-CN.txt"
+        subtitle_zh_path = narration_dir / f"{cue_id}.subtitle.zh-CN.txt"
+        subtitle_en_path = narration_dir / f"{cue_id}.subtitle.en.txt"
         destination = narration_dir / f"{cue_id}.mp3"
         text_path.write_text(row["narration_zh"] + "\n", encoding="utf-8", newline="\n")
+        subtitle_zh_path.write_text(row["subtitle_zh"] + "\n", encoding="utf-8", newline="\n")
+        subtitle_en_path.write_text(row["subtitle_en"] + "\n", encoding="utf-8", newline="\n")
         request = build_request(row["narration_zh"])
+        if row.get("tts_rate") is not None:
+            request = replace(request, rate=str(row["tts_rate"]))
         # The project preset's request has the authoritative cache salt.  The
         # explicit check prevents a future provider change from silently
         # mixing this long-form run with another voice or project.
@@ -359,9 +369,11 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
         record: dict[str, Any] = {
             "index": index,
             "cue_id": cue_id,
+            "subshot_id": row.get("subshot_id"),
             "chapter_id": row["chapter_id"],
             "shot_id": row["shot_id"],
             "anchor_seconds": row["anchor_seconds"],
+            "subtitle_window_seconds": row["subtitle_window_seconds"],
             "text": row["narration_zh"],
             "voice": request_voice,
             "rate": getattr(request, "rate", RATE),
@@ -371,6 +383,10 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
             "cache_salt": getattr(request, "cache_salt", CACHE_SALT),
             "destination": destination.relative_to(run_root).as_posix(),
             "script_artifact": file_record(text_path, run_root),
+            "subtitle_artifacts": {
+                "zh-CN": file_record(subtitle_zh_path, run_root),
+                "en": file_record(subtitle_en_path, run_root),
+            },
             "status": "pending",
         }
         try:
@@ -419,6 +435,11 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
                         "audio_format": record["audio_format"],
                         "cache_salt": record["cache_salt"],
                     },
+                    "subtitles": {
+                        "zh-CN": row["subtitle_zh"],
+                        "en": row["subtitle_en"],
+                        "artifacts": record["subtitle_artifacts"],
+                    },
                     "timeline": {
                         "anchor_seconds": row["anchor_seconds"],
                         "subtitle_window_seconds": row["subtitle_window_seconds"],
@@ -464,6 +485,11 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
                         "volume": record["volume"],
                         "audio_format": record["audio_format"],
                         "cache_salt": record["cache_salt"],
+                    },
+                    "subtitles": {
+                        "zh-CN": row["subtitle_zh"],
+                        "en": row["subtitle_en"],
+                        "artifacts": record["subtitle_artifacts"],
                     },
                     "status": "failed",
                     "error": record["error"],
@@ -543,6 +569,80 @@ def generate(script_path: Path, run_root: Path, ffprobe: Path) -> int:
         },
     }
     write_json(run_root / "logs" / "full-master-narration-manifest.json", manifest)
+    if script.get("revision_id") == "director-v2":
+        all_verified = not failures and len(requests) == len(rows)
+        cue_assets: list[dict[str, Any]] = []
+        for row, record in zip(rows, requests, strict=True):
+            audio = None
+            if isinstance(record.get("artifact"), dict):
+                audio = {
+                    **record["artifact"],
+                    "duration_seconds": record.get("duration_seconds"),
+                }
+            cue_assets.append(
+                {
+                    "cue_id": row["cue_id"],
+                    "chapter_id": row["chapter_id"],
+                    "shot_id": row["shot_id"],
+                    "subshot_id": row.get("subshot_id"),
+                    "anchor_seconds": row["anchor_seconds"],
+                    "subtitle_window_seconds": row["subtitle_window_seconds"],
+                    "status": "production_verified"
+                    if record.get("status") in {"generated", "cache-hit"}
+                    else "failed",
+                    "provider_status": record.get("status"),
+                    "voice": record["voice"],
+                    "rate": record["rate"],
+                    "narration_zh": row["narration_zh"],
+                    "subtitle_zh": row["subtitle_zh"],
+                    "subtitle_en": row["subtitle_en"],
+                    "runtime_binding": row.get("runtime_binding"),
+                    "audio": audio,
+                    "script_artifact": record["script_artifact"],
+                    "subtitle_artifacts": record["subtitle_artifacts"],
+                    "metadata_artifact": record.get("metadata_artifact"),
+                }
+            )
+        source_storyboard_path = script_path.parent / str(
+            script.get("source_storyboard", "storyboard.json")
+        )
+        source_storyboard = (
+            file_record(source_storyboard_path, script_path.parent)
+            if source_storyboard_path.is_file()
+            else None
+        )
+        write_json(
+            run_root / "logs" / "director-v2-narration-manifest.json",
+            {
+                "kind": "vivhite_promo_narration_manifest_v2",
+                "schema_version": 2,
+                "revision_id": "director-v2",
+                "run_id": run_root.name,
+                "take_batch_id": run_root.name,
+                "path_base": "run_root",
+                "status": "production_verified" if all_verified else "failed",
+                "voice": VOICE,
+                "rate_policy": "per_cue; default +0%",
+                "bgm": False,
+                "target_timeline_seconds": script["target_duration_seconds"],
+                "technical_verification": "sha256 + bytes + ffprobe positive duration",
+                "authoring_script": file_record(script_path, script_path.parent),
+                "source_storyboard": source_storyboard,
+                "selection": script.get("selection"),
+                "global_subtitles": subtitle_manifest.get("files", {}),
+                "summary": {
+                    "requested": len(requests),
+                    "production_verified": sum(
+                        1
+                        for item in requests
+                        if item.get("status") in {"generated", "cache-hit"}
+                    ),
+                    "failed": len(failures),
+                    "total_audio_seconds": manifest["summary"]["total_audio_seconds"],
+                },
+                "cues": cue_assets,
+            },
+        )
     write_json(
         run_root / "logs" / "full-master-narration-failures.json",
         {"schema": "vivhite-promo-full-master-tts-failures-v1", "failures": failures},

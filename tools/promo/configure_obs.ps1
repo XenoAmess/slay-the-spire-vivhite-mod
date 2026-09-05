@@ -225,6 +225,12 @@ Set-ObjectProperty -Object $gameSource.settings -Name "allow_transparency" -Valu
 Set-ObjectProperty -Object $gameSource.settings -Name "anti_cheat_hook" -Value $true
 Set-ObjectProperty -Object $gameSource.settings -Name "hook_rate" -Value 1
 
+$recordingPathResolved = [IO.Path]::GetFullPath($RecordingPath)
+# OBS config strings use C-style escaping.  Writing a raw Windows path makes
+# sequences such as `\r` and `\a` parse as control characters, which OBS then
+# rejects as a bad output path.  Keep the filesystem path raw for validation
+# and the run manifest, but escape every separator in basic.ini.
+$recordingPathIni = $recordingPathResolved.Replace('\', '\\')
 $updatedProfile = Set-IniActiveKeys -Text $profileText -Section "Video" -Values @{
     BaseCX = 1920
     BaseCY = 1080
@@ -238,7 +244,7 @@ $updatedProfile = Set-IniActiveKeys -Text $profileText -Section "Video" -Values 
 $updatedProfile = Set-IniActiveKeys -Text $updatedProfile -Section "SimpleOutput" -Values @{
     RecEncoder = "nvenc"
     RecQuality = "Small"
-    FilePath = $RecordingPath
+    FilePath = $recordingPathIni
     RecFormat = "mkv"
     RecFormat2 = "mkv"
     RecAudioEncoder = "aac"
@@ -246,7 +252,6 @@ $updatedProfile = Set-IniActiveKeys -Text $updatedProfile -Section "SimpleOutput
     RecTracks = 1
     UseAdvanced = "false"
 }
-$recordingPathResolved = [IO.Path]::GetFullPath($RecordingPath)
 $sceneJson = $scene | ConvertTo-Json -Depth 100
 $result = [ordered]@{
     status = if ($Apply) { "ready-to-apply" } else { "dry-run" }

@@ -1,0 +1,30 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory=$true)][string]$OutputDirectory,
+    [Parameter(Mandatory=$true)][string]$AttemptId,
+    [Parameter(Mandatory=$true)][int]$GameProcessId,
+    [Parameter(Mandatory=$true)][int]$ObsProcessId,
+    [string]$RunId='run-20260903T0012-director-v2-a1',
+    [int]$ClosedX=760,[int]$ClosedY=950,[int]$WaltzX=1510,[int]$WaltzY=950,
+    [int]$TargetX=1200,[int]$TargetY=620,
+    [double]$PreRollSeconds=2.0,[double]$AfterClosedSeconds=2.4,
+    [double]$WaltzSettlementSeconds=5.0,[double]$ResultHoldSeconds=3.0
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+Import-Module (Join-Path $PSScriptRoot '..\..\test\GameTest.psm1') -ErrorAction Stop
+. (Join-Path $PSScriptRoot 'promo_capture_operator_common.ps1')
+$out=Assert-NewOperatorAttempt -OutputDirectory $OutputDirectory -AttemptId $AttemptId
+$game=Resolve-UniqueOperatorProcess -ProcessName 'SlayTheSpire2' -ProcessId $GameProcessId
+$obs=Resolve-UniqueOperatorProcess -ProcessName 'obs64' -ProcessId $ObsProcessId
+$events=New-Object 'System.Collections.Generic.List[object]'
+$baseTick=[Diagnostics.Stopwatch]::GetTimestamp();$recordingStarted=$false;$recordingStopped=$false;$source=$null;$failure=$null
+function Add-T18Mark([string]$Name,[hashtable]$Details=$null){$tick=[Diagnostics.Stopwatch]::GetTimestamp();$entry=[ordered]@{name=$Name;utc=[DateTimeOffset]::UtcNow.ToString('o');monotonic_tick=[int64]$tick;elapsed_seconds=[Math]::Round((($tick-$baseTick)/[double][Diagnostics.Stopwatch]::Frequency),6)};if($null-ne $Details){foreach($key in $Details.Keys){$entry[[string]$key]=$Details[$key]}};[void]$events.Add([pscustomobject]$entry);$entry|ConvertTo-Json -Depth 10 -Compress|Add-Content -LiteralPath (Join-Path $out 'operator-events.ndjson') -Encoding UTF8}
+function Wait-T18([double]$Seconds){Sleep-OperatorSeconds -Seconds $Seconds}
+function Focus-Game{Set-WindowForeground -ProcessId $GameProcessId;Wait-T18 0.12}
+function Drag-T18([string]$Name,[int]$FromX,[int]$FromY,[int]$DropX,[int]$DropY){Move-Mouse -X $FromX -Y $FromY;Add-T18Mark "$Name.hover_begin" @{x=$FromX;y=$FromY};Wait-T18 1.5;Add-T18Mark "$Name.hover_end" @{x=$FromX;y=$FromY};[GameInputNative]::mouse_event([GameInputNative]::MOUSEEVENTF_LEFTDOWN,0,0,0,0);Add-T18Mark "$Name.pointer_down" @{x=$FromX;y=$FromY};Start-Sleep -Milliseconds 100;foreach($point in @(@($FromX,840),@($FromX,720),@($DropX,$DropY))){[GameInputNative]::SetCursorPos($point[0],$point[1])|Out-Null;Start-Sleep -Milliseconds 110};[GameInputNative]::mouse_event([GameInputNative]::MOUSEEVENTF_LEFTUP,0,0,0,0);Add-T18Mark "$Name.pointer_up" @{x=$DropX;y=$DropY}}
+function Start-ObsT18{Add-T18Mark 'recording.start_request' @{method='uia_stable_automation_id'};Invoke-ObsRecordToggle -Process $obs -ExpectedAction start;if(-not(Wait-ObsRecordState -Process $obs -ExpectedState recording -TimeoutMilliseconds 5000)){throw 'OBS did not enter recording state'};$script:recordingStarted=$true;Add-T18Mark 'recording.start_returned' @{method='uia_stable_automation_id'};Wait-T18 0.9;Focus-Game}
+function Stop-ObsT18{if(-not $recordingStarted-or $recordingStopped){return};Add-T18Mark 'recording.stop_request' @{method='uia_stable_automation_id'};Invoke-ObsRecordToggle -Process $obs -ExpectedAction stop;if(-not(Wait-ObsRecordState -Process $obs -ExpectedState stopped -TimeoutMilliseconds 5000)){throw 'OBS did not stop'};Wait-T18 0.8;$script:recordingStopped=$true;Add-T18Mark 'recording.stop_returned' @{method='uia_stable_automation_id'};$deadline=[DateTime]::UtcNow.AddSeconds(8);do{$files=@(Get-ChildItem -LiteralPath $out -Filter *.mkv -File -ErrorAction SilentlyContinue);if($files.Count){$script:source=$files|Sort-Object LastWriteTimeUtc -Descending|Select-Object -First 1;break};Start-Sleep -Milliseconds 250}while([DateTime]::UtcNow-lt $deadline);if($null-eq $source){throw "OBS did not write MKV under $out"};Add-T18Mark 'recording.file_closed' @{path=$source.FullName;bytes=[int64]$source.Length;sha256=(Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash}}
+try{Focus-Game;Add-T18Mark 'formal_sequence.ready';Start-ObsT18;Add-T18Mark 'formal_sequence.clean_preroll_begin';Wait-T18 $PreRollSeconds;Add-T18Mark 'formal_sequence.clean_preroll_end';Drag-T18 'closed_domain_mapping' $ClosedX $ClosedY $ClosedX 580;Add-T18Mark 'closed_domain_mapping.settlement_begin';Wait-T18 $AfterClosedSeconds;Add-T18Mark 'closed_domain_mapping.settlement_end';Drag-T18 'trichromatic_waltz' $WaltzX $WaltzY $TargetX $TargetY;Add-T18Mark 'trichromatic_waltz.settlement_begin';Wait-T18 $WaltzSettlementSeconds;Add-T18Mark 'trichromatic_waltz.settlement_end';Move-Mouse -X 1800 -Y 500;Add-T18Mark 'formal_sequence.clean_result_hold_begin';Wait-T18 $ResultHoldSeconds;Add-T18Mark 'formal_sequence.clean_result_hold_end'}catch{$failure=$_.Exception.Message;try{Add-T18Mark 'formal_sequence.error' @{message=$failure}}catch{}}finally{try{Stop-ObsT18}catch{$failure=if($failure){$failure}else{$_.Exception.Message};try{Add-T18Mark 'recording.stop_error' @{message=$failure}}catch{}}}
+$final=[ordered]@{schema_version=2;kind='vivhite_promo_t18_operator_marks';status=if($failure){'failed'}else{'completed'};run_id=$RunId;take_id='T18';attempt_id=$AttemptId;output_directory=$out;game_process=Get-OperatorProcessRecord -Process $game;obs_process=Get-OperatorProcessRecord -Process $obs;coordinates=[ordered]@{closed_domain_mapping=@{x=$ClosedX;y=$ClosedY;drop_y=580};trichromatic_waltz=@{x=$WaltzX;y=$WaltzY};target=@{x=$TargetX;y=$TargetY}};recording=[ordered]@{started=$recordingStarted;stopped=$recordingStopped;source_file=if($source){$source.FullName}else{$null};source_bytes=if($source){[int64]$source.Length}else{$null};source_sha256=if($source){(Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash}else{$null};operator_marks_not_native=$true};events=@($events|ForEach-Object{$_});error=$failure}
+$json=$final|ConvertTo-Json -Depth 20;[IO.File]::WriteAllText((Join-Path $out 'operator-marks.json'),$json,[Text.UTF8Encoding]::new($false));$final|ConvertTo-Json -Depth 8 -Compress;if($failure){exit 1}

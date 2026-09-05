@@ -15,6 +15,12 @@ internal static class PromoCaptureSurface
     private const string EnableVariable = "VIVHITE_PROMO_CAPTURE";
     private const string HarmonyId = "Vivhite.PromoCaptureSurface";
     private static Harmony? _harmony;
+    private static readonly HashSet<ulong> WatchedManagers = new();
+    private static readonly string[] AdditionalCaptureSurfacePatterns =
+    {
+        "RitsuLibMainMenuModSettings*",
+        "*RitsuToast*",
+    };
 
     public static void InstallIfEnabled()
     {
@@ -78,6 +84,13 @@ internal static class PromoCaptureSurface
     {
         try
         {
+            // RitsuLib appends version/compatibility badges after the stock
+            // labels have been prepared.  The manager itself is a plain Node,
+            // so keep every CanvasItem below this debug-only subtree hidden
+            // for the life of the capture scene.  This also covers children
+            // that are added after our Harmony postfix has returned.
+            HideCanvasDescendants(__instance);
+            WatchLateDebugChildren(__instance);
             Hide(__instance, "%ReleaseInfo");
             Hide(__instance, "%ModdedWarning");
             Hide(__instance, "%DebugSeed");
@@ -87,6 +100,55 @@ internal static class PromoCaptureSurface
         {
             Entry.Logger.Warn(
                 $"Promo capture surface could not hide native debug labels: {exception.GetType().Name}: {exception.Message}");
+        }
+    }
+
+    private static void WatchLateDebugChildren(NDebugInfoLabelManager manager)
+    {
+        var instanceId = manager.GetInstanceId();
+        if (!WatchedManagers.Add(instanceId))
+        {
+            return;
+        }
+
+        var tree = manager.GetTree();
+        tree.ProcessFrame += () =>
+        {
+            if (GodotObject.IsInstanceValid(manager))
+            {
+                HideCanvasDescendants(manager);
+                HideAdditionalCaptureSurfaces(manager.GetTree().Root);
+            }
+            else
+            {
+                WatchedManagers.Remove(instanceId);
+            }
+        };
+    }
+
+    private static void HideAdditionalCaptureSurfaces(Node sceneRoot)
+    {
+        foreach (var pattern in AdditionalCaptureSurfacePatterns)
+        {
+            foreach (var node in sceneRoot.FindChildren(pattern, string.Empty, true, false))
+            {
+                if (node is CanvasItem item)
+                {
+                    item.Visible = false;
+                }
+            }
+        }
+    }
+
+    private static void HideCanvasDescendants(Node owner)
+    {
+        foreach (var child in owner.GetChildren())
+        {
+            if (child is CanvasItem item)
+            {
+                item.Visible = false;
+            }
+            HideCanvasDescendants(child);
         }
     }
 

@@ -1,0 +1,474 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vivhite:promo:action-evidence:v2",
+  "title": "Vivhite production formal-action evidence contract v2",
+  "description": "Production-only project semantic gate. External JSON envelopes and cross-file relationships are additionally enforced by vivhite_promo.action_evidence_v2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "profile", "timebase", "run_id", "take_id",
+    "subshot_id", "action_id", "action_kind", "capture_identity",
+    "recording_start_frame", "display_span", "state_before",
+    "action_receipt", "state_after"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "kind": {"const": "vivhite_promo_action_evidence"},
+    "profile": {"const": "production"},
+    "timebase": {"$ref": "#/$defs/timebase"},
+    "run_id": {"$ref": "#/$defs/id"},
+    "take_id": {"$ref": "#/$defs/id"},
+    "subshot_id": {"$ref": "#/$defs/id"},
+    "action_id": {"$ref": "#/$defs/id"},
+    "action_kind": {"$ref": "#/$defs/action_kind"},
+    "capture_identity": {"$ref": "#/$defs/capture_identity"},
+    "recording_start_frame": {"type": "integer", "minimum": 0},
+    "display_span": {"$ref": "#/$defs/display_span"},
+    "staged_setup": {"$ref": "#/$defs/staged_setup_ref"},
+    "state_before": {"$ref": "#/$defs/state_before_ref"},
+    "action_receipt": {"$ref": "#/$defs/action_receipt_ref"},
+    "state_after": {"$ref": "#/$defs/state_after_ref"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "sha256": {"type": "string", "pattern": "^[A-F0-9]{64}$"},
+    "action_kind": {
+      "description": "Shared enum for mechanism, reward/map, campfire and shop pointer actions. Console/debug/direct-API actions are excluded.",
+      "enum": [
+        "play_card", "end_turn", "choose_reward_card", "choose_map_node",
+        "choose_rest_option", "buy_card", "buy_relic", "buy_potion"
+      ]
+    },
+    "production_payload_value": {
+      "description": "Recursively excludes explicit non-production provenance/status markers; the Python gate additionally applies case/separator normalization.",
+      "oneOf": [
+        {
+          "type": "object",
+          "propertyNames": {
+            "not": {
+              "enum": [
+                "direct_api", "directapi", "is_direct_api", "isdirectapi", "brain", "is_brain", "isbrain",
+                "console", "is_console", "isconsole", "debug", "is_debug", "isdebug",
+                "fixture", "is_fixture", "isfixture", "synthetic", "is_synthetic",
+                "issynthetic", "pending", "is_pending", "ispending",
+                "failed", "is_failed", "isfailed"
+              ]
+            }
+          },
+          "additionalProperties": {"$ref": "#/$defs/production_payload_value"}
+        },
+        {
+          "type": "array",
+          "items": {"$ref": "#/$defs/production_payload_value"}
+        },
+        {
+          "type": "string",
+          "not": {
+            "enum": [
+              "direct_api", "directapi", "brain", "console", "debug", "fixture",
+              "synthetic", "pending", "failed"
+            ]
+          }
+        },
+        {"type": "number"},
+        {"type": "boolean"},
+        {"type": "null"}
+      ]
+    },
+    "production_payload_object": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "direct_api", "directapi", "is_direct_api", "isdirectapi", "brain", "is_brain", "isbrain",
+            "console", "is_console", "isconsole", "debug", "is_debug", "isdebug",
+            "fixture", "is_fixture", "isfixture", "synthetic", "is_synthetic",
+            "issynthetic", "pending", "is_pending", "ispending",
+            "failed", "is_failed", "isfailed"
+          ]
+        }
+      },
+      "additionalProperties": {"$ref": "#/$defs/production_payload_value"}
+    },
+    "timebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "fps"],
+      "properties": {"unit": {"const": "frames"}, "fps": {"const": 60}}
+    },
+    "capture_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id", "game_run_id", "game_process_id",
+        "source_video_artifact_id", "run_id", "take_id", "subshot_id",
+        "action_id"
+      ],
+      "properties": {
+        "session_id": {"$ref": "#/$defs/id"},
+        "game_run_id": {"$ref": "#/$defs/id"},
+        "game_process_id": {"$ref": "#/$defs/id"},
+        "source_video_artifact_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "take_id": {"$ref": "#/$defs/id"},
+        "subshot_id": {"$ref": "#/$defs/id"},
+        "action_id": {"$ref": "#/$defs/id"}
+      }
+    },
+    "display_span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["begin_frame", "end_frame"],
+      "properties": {
+        "begin_frame": {"type": "integer", "minimum": 0},
+        "end_frame": {"type": "integer", "minimum": 1}
+      }
+    },
+    "artifact": {
+      "description": "Mandatory immutable binding to a production JSON envelope below artifact_root.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256", "media_type", "document_kind"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*:)(?!.*\\\\)(?!.*//)(?!.*[\\u0000-\\u001F\\u007F])(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))(?!.*(?:^|/)[^/]*[. ](?:/|$)).+\\.json$"
+        },
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "media_type": {"const": "application/json"},
+        "document_kind": {
+          "enum": [
+            "vivhite_promo_state_snapshot", "vivhite_promo_action_receipt",
+            "vivhite_promo_staged_setup"
+          ]
+        }
+      }
+    },
+    "state_before_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {"role": {"const": "state.before"}, "artifact": {"$ref": "#/$defs/artifact"}}
+    },
+    "action_receipt_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {"role": {"const": "action.receipt"}, "artifact": {"$ref": "#/$defs/artifact"}}
+    },
+    "state_after_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "artifact"],
+      "properties": {"role": {"const": "state.after"}, "artifact": {"$ref": "#/$defs/artifact"}}
+    },
+    "staged_setup_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["provenance", "setup_end_frame", "artifact"],
+      "properties": {
+        "provenance": {"const": "staged_setup"},
+        "setup_end_frame": {"type": "integer", "minimum": 0},
+        "artifact": {"$ref": "#/$defs/artifact"}
+      }
+    },
+    "state_snapshot_document": {
+      "description": "Required external state backing JSON; the Python gate validates it after hashing.",
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "kind", "profile", "status", "role",
+        "capture_identity", "frame", "monotonic_seconds", "state_version",
+        "observation_seq", "payload"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "kind": {"const": "vivhite_promo_state_snapshot"},
+        "profile": {"const": "production"},
+        "status": {"const": "observed"},
+        "role": {"enum": ["state.before", "state.after"]},
+        "capture_identity": {"$ref": "#/$defs/capture_identity"},
+        "frame": {"type": "integer", "minimum": 0},
+        "monotonic_seconds": {"type": "number", "minimum": 0},
+        "state_version": {"type": "integer", "minimum": 1},
+        "observation_seq": {"type": "integer", "minimum": 0},
+        "payload": {
+          "allOf": [
+            {"$ref": "#/$defs/production_payload_object"},
+            {
+              "required": ["run_id", "state_version"],
+              "properties": {
+                "run_id": {"$ref": "#/$defs/id"},
+                "state_version": {"type": "integer", "minimum": 1}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "state_binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sha256", "state_version", "observation_seq"],
+      "properties": {
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "state_version": {"type": "integer", "minimum": 1},
+        "observation_seq": {"type": "integer", "minimum": 0}
+      }
+    },
+    "delivery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status"], "properties": {"status": {"const": "sent"}}
+    },
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status"], "properties": {"status": {"const": "applied"}}
+    },
+    "receipt_pointer": {
+      "description": "One real left click. x/y are game-client pixel coordinates and intentionally live only here; duplicated frames/times must equal the receipt envelope under the Python gate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "button", "x", "y", "down_frame", "up_frame",
+        "down_monotonic_seconds", "up_monotonic_seconds"
+      ],
+      "properties": {
+        "button": {"const": "left"},
+        "x": {"type": "integer", "minimum": 0, "maximum": 1919},
+        "y": {"type": "integer", "minimum": 0, "maximum": 1079},
+        "down_frame": {"type": "integer", "minimum": 0},
+        "up_frame": {"type": "integer", "minimum": 0},
+        "down_monotonic_seconds": {"type": "number", "minimum": 0},
+        "up_monotonic_seconds": {"type": "number", "minimum": 0}
+      }
+    },
+    "action_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "card", "end_turn_button", "reward_card", "map_node",
+            "rest_option", "shop_item"
+          ]
+        },
+        "id": {"$ref": "#/$defs/id"}
+      }
+    },
+    "action_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "action_kind", "parameters"],
+      "properties": {
+        "request_id": {
+          "description": "Must equal capture_identity.action_id under the Python gate.",
+          "$ref": "#/$defs/id"
+        },
+        "action_kind": {"$ref": "#/$defs/action_kind"},
+        "parameters": {"type": "object"}
+      }
+    },
+    "receipt_payload": {
+      "description": "Auditable pointer, target, and semantic request. Target/request equality and envelope pointer equality are enforced cross-field by the Python gate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer", "target", "request"],
+      "properties": {
+        "pointer": {"$ref": "#/$defs/receipt_pointer"},
+        "target": {"$ref": "#/$defs/action_target"},
+        "request": {"$ref": "#/$defs/action_request"}
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "card"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "play_card"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["card_id"],
+                  "properties": {"card_id": {"$ref": "#/$defs/id"}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {
+              "properties": {
+                "kind": {"const": "end_turn_button"},
+                "id": {"const": "end_turn"}
+              }
+            },
+            "request": {
+              "properties": {
+                "action_kind": {"const": "end_turn"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["control"],
+                  "properties": {"control": {"const": "end_turn"}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "reward_card"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "choose_reward_card"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["card_id"],
+                  "properties": {"card_id": {"$ref": "#/$defs/id"}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "map_node"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "choose_map_node"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["node_id"],
+                  "properties": {"node_id": {"$ref": "#/$defs/id"}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {
+              "properties": {
+                "kind": {"const": "rest_option"},
+                "id": {"const": "rest"}
+              }
+            },
+            "request": {
+              "properties": {
+                "action_kind": {"const": "choose_rest_option"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["option"],
+                  "properties": {"option": {"const": "rest"}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "shop_item"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "buy_card"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["item_id", "item_kind"],
+                  "properties": {
+                    "item_id": {"$ref": "#/$defs/id"},
+                    "item_kind": {"const": "card"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "shop_item"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "buy_relic"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["item_id", "item_kind"],
+                  "properties": {
+                    "item_id": {"$ref": "#/$defs/id"},
+                    "item_kind": {"const": "relic"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "target": {"properties": {"kind": {"const": "shop_item"}}},
+            "request": {
+              "properties": {
+                "action_kind": {"const": "buy_potion"},
+                "parameters": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["item_id", "item_kind"],
+                  "properties": {
+                    "item_id": {"$ref": "#/$defs/id"},
+                    "item_kind": {"const": "potion"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "action_receipt_document": {
+      "description": "Required external formal pointer receipt JSON; the Python gate validates bindings and timing.",
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "kind", "profile", "role", "capture_identity",
+        "action_kind", "input_origin", "status", "stable", "applied",
+        "delivery", "outcome", "settled", "state_version",
+        "observation_seq", "pointer_down_frame", "pointer_up_frame",
+        "settled_frame", "pointer_down_monotonic_seconds",
+        "pointer_up_monotonic_seconds", "settled_monotonic_seconds",
+        "state_before_binding", "state_after_binding", "payload"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "kind": {"const": "vivhite_promo_action_receipt"},
+        "profile": {"const": "production"},
+        "role": {"const": "action.receipt"},
+        "capture_identity": {"$ref": "#/$defs/capture_identity"},
+        "action_kind": {"$ref": "#/$defs/action_kind"},
+        "input_origin": {"const": "game_ui_pointer"},
+        "status": {"const": "completed"},
+        "stable": {"const": true},
+        "applied": {"const": true},
+        "delivery": {"$ref": "#/$defs/delivery"},
+        "outcome": {"$ref": "#/$defs/outcome"},
+        "settled": {"const": true},
+        "state_version": {"type": "integer", "minimum": 1},
+        "observation_seq": {"type": "integer", "minimum": 0},
+        "pointer_down_frame": {"type": "integer", "minimum": 0},
+        "pointer_up_frame": {"type": "integer", "minimum": 0},
+        "settled_frame": {"type": "integer", "minimum": 0},
+        "pointer_down_monotonic_seconds": {"type": "number", "minimum": 0},
+        "pointer_up_monotonic_seconds": {"type": "number", "minimum": 0},
+        "settled_monotonic_seconds": {"type": "number", "minimum": 0},
+        "state_before_binding": {"$ref": "#/$defs/state_binding"},
+        "state_after_binding": {"$ref": "#/$defs/state_binding"},
+        "payload": {"$ref": "#/$defs/receipt_payload"}
+      }
+    },
+    "staged_setup_document": {
+      "description": "Required external setup audit JSON; it cannot satisfy a formal action role.",
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "kind", "profile", "provenance", "capture_identity", "setup_end_frame", "payload"],
+      "properties": {
+        "schema_version": {"const": 2},
+        "kind": {"const": "vivhite_promo_staged_setup"},
+        "profile": {"const": "production"},
+        "provenance": {"const": "staged_setup"},
+        "capture_identity": {"$ref": "#/$defs/capture_identity"},
+        "setup_end_frame": {"type": "integer", "minimum": 0},
+        "payload": {"$ref": "#/$defs/production_payload_object"}
+      }
+    }
+  }
+}

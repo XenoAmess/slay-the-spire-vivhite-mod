@@ -1,0 +1,681 @@
+{
+  "schema_version": 2,
+  "kind": "vivhite_capture_runbook_v2",
+  "status": "capture_authorized_not_started",
+  "storyboard_binding": {
+    "path": "tools/promo/v2/storyboard.json",
+    "revision_id": "director-v2"
+  },
+  "authorization": {
+    "media_operations_authorized": true,
+    "authorized_at_local_date": "2026-09-03",
+    "scope": ["game_launch", "obs", "capture", "render"]
+  },
+  "recording_contract": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "playback_speed": 1,
+    "one_independent_source_per_take": true,
+    "setup_phase": "before_recording_mark_only",
+    "recording_mark": "first clean game-only frame after every staged setup surface is closed",
+    "pre_roll_seconds": 2,
+    "mechanism_hover_seconds": {"minimum": 1.5, "maximum": 2},
+    "post_result_seconds": {"minimum": 3, "maximum": 4},
+    "formal_action_to_settlement_uncut": true,
+    "system_cursor_recorded": false,
+    "attempt_policy": "append_only_new_attempt_file",
+    "forbidden_after_recording_mark": [
+      "console",
+      "system_cursor",
+      "OBS",
+      "taskbar",
+      "Brain/AI panel",
+      "ASCEND-VISION",
+      "native debug label",
+      "MODDED label",
+      "loading screen",
+      "old placeholder cards",
+      "old Ironclad replacement"
+    ]
+  },
+  "batches": [
+    {
+      "batch_id": "B01-identity-and-early-run",
+      "purpose": "先锁定白绮身份、初始配置、奖励和地图反馈",
+      "take_ids": ["T01", "T02", "T07"]
+    },
+    {
+      "batch_id": "B02-conservation-and-dimension",
+      "purpose": "在短战斗中集中拍謦欬、余裕、守恒、增维与致命",
+      "take_ids": ["T03", "T04", "T05", "T06", "T08", "T09"]
+    },
+    {
+      "batch_id": "B03-tower-life-and-library",
+      "purpose": "拍真实篝火、商店和 61 张牌库浏览",
+      "take_ids": ["T10", "T13", "T19"]
+    },
+    {
+      "batch_id": "B04-drain-and-recursion",
+      "purpose": "拍多段汲取、色彩守恒与终止证明死亡链",
+      "take_ids": ["T11", "T12", "T14", "T15"]
+    },
+    {
+      "batch_id": "B05-climax-and-finale",
+      "purpose": "拍猩红连续链、绯彩补镜、统一场论与收束素材",
+      "take_ids": ["T16", "T17", "T18", "T20"]
+    }
+  ],
+  "t06_source_binding": {
+    "status": "bound",
+    "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+    "class_name": "TangentStarlight",
+    "base_class": "ConservationCard",
+    "rarity": "Common",
+    "registered_pool": "VivhiteCardPool",
+    "source_path": "Vivhite/VivhiteCode/Cards/Conservation/ConservationCommonCards.cs",
+    "localization_key": "VIVHITE_CARD_TANGENT_STARLIGHT.title",
+    "localized_title": "切线星光",
+    "selection_reason": "当前源码中已注册、可进入奖励池的守恒 Common；其支付→伤害→余裕链与 T05 两张牌不重复",
+    "current_source_baseline": {
+      "life_cost": 2,
+      "damage": 11,
+      "margin_gain": 1,
+      "numeric_authority_at_capture": "current_runtime_tooltip_hud_and_receipts"
+    }
+  },
+  "takes": [
+    {
+      "take_id": "T01",
+      "name": "标准模式进入白绮选人并确认",
+      "requirement": "required",
+      "batch_id": "B01-identity-and-early-run",
+      "source_file_template": "raw/takes/T01/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "自然导航到主菜单；不得用控制台或旧 Ironclad replacement 进入选人页",
+        "确认当前部署中的独立白绮角色、初始属性与孤高冠冕可用"
+      ],
+      "clean_frame_gate": [
+        "画面仅含游戏主菜单，1920×1080，无系统鼠标、overlay、loading 或 MODDED/debug 标签",
+        "从第一个干净游戏帧起建立录制标记，然后静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "standard_mode", "instruction": "点击标准模式并等待角色列表完整出现", "continuous": true},
+        {"input": "game_ui_click", "target": "VIVHITE_CHARACTER_VIVHITE_CHARACTER", "instruction": "用游戏内高亮移动到白绮头像", "continuous": true},
+        {"input": "game_ui_wait", "target": "vivhite_portrait_animation", "instruction": "完整保留白绮立绘动画 6–8 秒，名称和属性不得裁掉", "continuous": true},
+        {"input": "game_ui_click", "target": "confirm_character", "instruction": "真实点击确认选择并等待游戏进入下一状态", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "画面清楚显示独立角色名白绮、78/78、99 金币、孤高冠冕与角色描述",
+        "高亮移动、立绘动画和确认选择均为真实游戏反馈"
+      ],
+      "reject_if": [
+        "任何帧仍显示铁甲战士身份、旧替换皮肤、被裁掉的名称/属性或任一禁画元素"
+      ]
+    },
+    {
+      "take_id": "T02",
+      "name": "初始配置与起始牌组浏览",
+      "requirement": "required",
+      "batch_id": "B01-identity-and-early-run",
+      "source_file_template": "raw/takes/T02/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "使用刚创建的白绮新局自然进入首个可操作地图/战斗前界面",
+        "保持初始 78 HP、99 金币和孤高冠冕，不注入旧占位卡"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 可见且无控制台、overlay、loading、系统鼠标",
+        "从干净 HUD 建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_wait", "target": "starting_hud", "instruction": "保留 78 HP、99 金币和孤高冠冕完整 HUD", "continuous": true},
+        {"input": "game_ui_click", "target": "deck_button", "instruction": "点击打开牌组", "continuous": true},
+        {"input": "game_ui_hover", "target": "VIVHITE_CARD_LUMINOUS_PROJECTION", "instruction": "悬停弦光投影并让 tooltip 清楚出现", "continuous": true},
+        {"input": "game_ui_hover", "target": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "instruction": "悬停闭域映射并让 tooltip 清楚出现", "continuous": true},
+        {"input": "game_ui_hover", "target": "VIVHITE_CARD_VIVHITE_TRANSFORMATION", "instruction": "悬停白绮的变身式并让 tooltip 清楚出现", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "HUD 数值、遗物和三种起始牌 tooltip 均来自当前运行时并可读"
+      ],
+      "reject_if": [
+        "出现旧占位牌、铁甲战士名称、遮挡 tooltip 的鼠标/overlay 或任一禁画元素"
+      ]
+    },
+    {
+      "take_id": "T03",
+      "name": "基础牌謦欬支付后结算",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T03/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 布置弦光投影在手牌、余裕为 0、玩家生命严格高于当前 tooltip 謦欬值",
+        "敌人无格挡且能承受本次攻击；完成布置后关闭控制台并确认其不在录制源中"
+      ],
+      "clean_frame_gate": [
+        "完整战斗 HUD、牌面、玩家生命与敌人生命均可见",
+        "建立录制标记，先静置 2 秒，再悬停牌面 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_LUMINOUS_PROJECTION", "instruction": "真实点击弦光投影并从点击连续录到生命支付与敌人伤害全部结算", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "运行时画面与回执共同显示生命支付先于攻击伤害，且玩家仍存活"
+      ],
+      "reject_if": [
+        "卡牌由控制台/direct API 打出、动作中切、加速、敌人提前死亡遮挡结果或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T04",
+      "name": "变身式支付后获得力量与敏捷",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T04/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 布置未升级白绮的变身式、余裕 0、力量 0、敏捷 0，生命严格高于 tooltip 謦欬值",
+        "关闭全部布置界面并回到完整战斗 HUD"
+      ],
+      "clean_frame_gate": [
+        "玩家生命、力量/敏捷区域和完整手牌同时可见",
+        "建立录制标记，静置 2 秒并悬停变身式 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_VIVHITE_TRANSFORMATION", "instruction": "真实点击变身式，连续录到謦欬完成且力量、敏捷均出现", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "事件顺序是支付成功后才出现力量和敏捷，数值以当前 HUD/tooltip 为准"
+      ],
+      "reject_if": [
+        "支付未发生、属性在正式点击前已存在、动作中切/加速或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T05",
+      "name": "公理护环接闭域投影",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T05/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 将未升级公理护环与闭域投影放入手牌；余裕 0、敏捷 0、无虚弱/脆弱/格挡修正",
+        "选择可承受闭域投影的敌人并关闭控制台；正式链中不得再次布置"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示余裕 0、手牌两张目标牌、玩家生命和敌人生命",
+        "建立录制标记并静置 2 秒；每次出牌前悬停目标牌 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_AXIOM_RING", "instruction": "真实点击公理护环并等余裕从 0 变为当前 tooltip 给出的值（当前基线 3）", "continuous": true},
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_CLOSED_PROJECTION", "instruction": "不停止录制、不插入 setup，真实点击闭域投影并录到余裕抵扣、剩余支付、伤害与格挡全部结算", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "当前基线清楚出现余裕 0→3→0、剩余支付 1、敌人受击与 15 格挡；若编译版本数值变化则以 runtime tooltip/HUD/receipt 重新绑定"
+      ],
+      "reject_if": [
+        "两张牌不在同一连续 source、第二张由非 UI 方式触发、结算被剪断或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T06",
+      "name": "切线星光的支付—伤害—余裕短链",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T06/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "先运行 capture_runbook_v2 validate，确认切线星光仍是注册于 VivhiteCardPool 的 Common 奖励卡",
+        "以 staged_setup 放入未升级切线星光；余裕 0、玩家生命严格高于 runtime 謦欬值，敌人可承受攻击",
+        "关闭控制台和所有 setup 表面；不得把布置过程放进展示 span"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示余裕 0、双方生命和切线星光牌面",
+        "建立录制标记，静置 2 秒并悬停切线星光 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_TANGENT_STARLIGHT", "instruction": "真实点击切线星光，连续录到謦欬、伤害和余裕增长全部结算", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "当前基线为支付 2、造成 11 伤害、余裕 0→1；正式判断只使用当次 runtime tooltip/HUD/receipt",
+        "动作和 T05 的公理护环/闭域投影不重复，且敌人存活以保留干净结果"
+      ],
+      "reject_if": [
+        "源码校验不再把该牌认定为奖励池守恒卡、敌人提前死亡、动作中切/加速或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T07",
+      "name": "战斗奖励、地图选路与白绮标记移动",
+      "requirement": "required",
+      "batch_id": "B01-identity-and-early-run",
+      "source_file_template": "raw/takes/T07/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "自然完成一场战斗并停在真实卡牌奖励页；至少有一张当前白绮卡牌可选",
+        "记录当前路径位置，保持游戏自身白绮蝴蝶地图标记可见"
+      ],
+      "clean_frame_gate": [
+        "完整奖励界面可见，无控制台、overlay、系统鼠标和 loading",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_hover", "target": "offered_vivhite_reward_card", "instruction": "悬停实际出现的白绮奖励卡并展示 tooltip", "continuous": true},
+        {"input": "game_ui_click", "target": "offered_vivhite_reward_card", "instruction": "真实点击选择该奖励卡并等待奖励页反馈", "continuous": true},
+        {"input": "game_ui_click", "target": "map_button", "instruction": "点击打开全图并短暂展示路线", "continuous": true},
+        {"input": "game_ui_click", "target": "available_map_node", "instruction": "真实点击可达节点，连续录到白绮蝴蝶标记移动完成", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "奖励选择、地图打开、节点选择与白绮标记移动均有真实 UI 回执"
+      ],
+      "reject_if": [
+        "奖励卡并非当次真实 offer、节点不可达、移动反馈缺失或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T08",
+      "name": "拓扑增生稳定展示增维",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T08/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 放入拓扑增生并提供至少 8 余裕；当前生命和最大生命都必须完整可见",
+        "保证玩家存活、没有会混淆 Max HP/HP 变化的同时触发效果，然后关闭控制台"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示出牌前当前/最大生命、余裕和拓扑增生",
+        "建立录制标记，静置 2 秒并悬停牌面 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_TOPOLOGICAL_GROWTH", "instruction": "真实点击拓扑增生，连续录到支付、增维以及当前/最大生命同步变化全部结束", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "当前生命和最大生命均出现可见正增量，且变化源可由本次真实出牌回执追溯"
+      ],
+      "reject_if": [
+        "只看到 Max HP 但当前 HP 不可辨、余裕不足导致不稳定、动作中切或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T09",
+      "name": "尺度变换真实击杀触发致命增维",
+      "requirement": "required",
+      "batch_id": "B02-conservation-and-dimension",
+      "source_file_template": "raw/takes/T09/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 放入尺度变换，把一个目标调到可被当前 runtime 牌面真实击杀的低血状态",
+        "保留至少另一个敌人在正式动作后存活；禁止用 kill 命令代替本次正式击杀，随后关闭控制台"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 同时显示目标低血、另一敌人、玩家当前/最大生命和尺度变换",
+        "建立录制标记，静置 2 秒并悬停牌面 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_SCALE_TRANSFORMATION", "instruction": "真实点击尺度变换指向低血目标，连续录到伤害、死亡和致命增维完全结算", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "击杀由尺度变换的真实攻击完成，随后当前/最大生命因致命增维可见增长，另一敌人仍存活"
+      ],
+      "reject_if": [
+        "控制台 kill 进入正式段、目标未死、所有敌人死亡导致 HUD 提前收起或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T10",
+      "name": "Act 2 或 Act 3 篝火休息",
+      "requirement": "required",
+      "batch_id": "B03-tower-life-and-library",
+      "source_file_template": "raw/takes/T10/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "使用 Act 2 或 Act 3 的真实可达篝火节点，玩家处于明确缺血状态",
+        "在进入节点前完成受控准备并关闭所有 setup/console 表面"
+      ],
+      "clean_frame_gate": [
+        "从地图上可见的可达篝火节点开始，HUD 和节点无任何遮挡",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "campfire_map_node", "instruction": "真实点击篝火节点并等待稳定篝火场景及白绮休息动画出现", "continuous": true},
+        {"input": "game_ui_wait", "target": "vivhite_campfire_animation", "instruction": "完整保留一段白绮篝火美术动画", "continuous": true},
+        {"input": "game_ui_click", "target": "rest_option", "instruction": "真实点击休息并等待实际回血数值结算", "continuous": true},
+        {"input": "game_ui_click", "target": "return_to_map", "instruction": "离开篝火并回到地图", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "入场、休息、HP 正增量与返回地图均有真实界面反馈"
+      ],
+      "reject_if": [
+        "玩家满血、休息未产生实际回血、使用 Act 1 不稳定替代场景或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T11",
+      "name": "三色轮舞多段汲取",
+      "requirement": "required",
+      "batch_id": "B04-drain-and-recursion",
+      "source_file_template": "raw/takes/T11/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 放入三色轮舞，玩家明确缺血，目标在三段攻击后仍存活",
+        "移除会遮挡三段伤害或回血的额外死亡/反击效果，关闭控制台"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示双方生命与三色轮舞，目标无致死风险",
+        "建立录制标记，静置 2 秒并悬停牌面 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_TRICHROMATIC_WALTZ", "instruction": "真实点击三色轮舞，连续录完三段攻击，再录到全部攻击之后的一次实际回血", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "三次真实伤害先完整结束，随后只有一次聚合汲取回血且 actual_healing>0"
+      ],
+      "reject_if": [
+        "目标中途死亡、玩家满血、没有实际回血、三段动画被剪断/加速或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T12",
+      "name": "实际恢复通过色彩守恒转为格挡",
+      "requirement": "required",
+      "batch_id": "B04-drain-and-recursion",
+      "source_file_template": "raw/takes/T12/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 使 VIVHITE_POWER_COLOR_CONSERVATION_POWER 生效并放入复合色轮",
+        "玩家明确缺血，所有目标承受 AoE 后仍存活；关闭控制台且 setup 不进入展示 span"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 同时显示色彩守恒、玩家 HP/格挡、全部敌人和复合色轮",
+        "建立录制标记，静置 2 秒并悬停牌面 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_COMPOSITE_COLOR_WHEEL", "instruction": "真实点击复合色轮，连续录到 AoE、实际汲取回血及色彩守恒格挡转换全部结束", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "actual_healing>0 且格挡在该实际恢复后出现正增量，所有目标存活"
+      ],
+      "reject_if": [
+        "满血导致 actual_healing=0、敌人死亡混入事件链、格挡来源不明或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T13",
+      "name": "普通商店完成一次真实购买",
+      "requirement": "required",
+      "batch_id": "B03-tower-life-and-library",
+      "source_file_template": "raw/takes/T13/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "自然进入普通商店，确保货架上至少有一张可支付的白绮卡牌或白绮遗物",
+        "购买前金币足够且完整货架、白绮与商人都可见"
+      ],
+      "clean_frame_gate": [
+        "商店全景、金币和货架完整可见，无系统鼠标、overlay 或其他禁画元素",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_hover", "target": "purchasable_vivhite_item", "instruction": "悬停一张当前白绮卡牌或遗物并展示 tooltip 与价格", "continuous": true},
+        {"input": "game_ui_click", "target": "purchasable_vivhite_item", "instruction": "真实点击购买并等待物品加入及金币扣减", "continuous": true},
+        {"input": "game_ui_click", "target": "close_shop_inventory", "instruction": "关闭库存/货架界面", "continuous": true},
+        {"input": "game_ui_click", "target": "leave_shop", "instruction": "真实离开商店并等待返回地图", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "购买前后金币出现真实负增量，目标物品购买成功，关闭库存和离店都有回执"
+      ],
+      "reject_if": [
+        "金币不足、购买对象不是当次货架物、购买未成功、离店缺失或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T14",
+      "name": "终止证明真实击杀链",
+      "requirement": "required",
+      "batch_id": "B04-drain-and-recursion",
+      "source_file_template": "raw/takes/T14/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 保持初始遗物 VIVHITE_RELIC_ORIGIN_STAR_CHART（孤高冠冕），使星算追猎能力与正数全局/本回合汲取生效",
+        "优先布置 2 个低血敌人（允许 2–3），均会被当前终止证明真实击杀；手牌只保留终止证明及至多一张干扰牌，抽牌堆至少 8 张",
+        "按 runtime 数值设置缺血：终止证明支付并完成预计汲取后仍至少缺 1 HP，推荐仍缺 ceil(MaxHP×20%)，保证孤高冠冕产生 actual_crown_healing>0",
+        "记录出牌前 HP、MaxHP、能量、手牌/抽牌数量、汲取率和敌人 HP，然后关闭控制台"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示孤高冠冕、星算追猎、汲取、玩家缺血、2–3 个低血敌人、能量和手牌",
+        "建立录制标记，静置 2 秒并悬停终止证明 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_PROOF_OF_TERMINATION", "instruction": "真实点击终止证明，从点击连续录到 AoE 击杀、聚合汲取、孤高冠冕、抽牌与能量动画全部落定", "continuous": true}
+      ],
+      "single_continuous_source": true,
+      "critical_assertions": [
+        "starter_relic_is_solitary_crown",
+        "actual_crown_healing_greater_than_zero",
+        "actual_drain_healing_greater_than_zero",
+        "actual_draw_delta_greater_than_zero",
+        "actual_energy_gain_greater_than_zero"
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "真实击杀数为 2–3，汲取先结算；随后至少一次孤高冠冕实际回血、抽牌与能量正增量均清楚可见",
+        "事件序列来自同一次卡牌点击，最终 UI 动画完全落定后再保留 3–4 秒"
+      ],
+      "reject_if": [
+        "控制台 kill 进入正式段、冠冕因已满血而 actual_healing=0、无抽牌/能量正增量、事件互相遮挡不可读或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T15",
+      "name": "终止证明击杀链条件拆分",
+      "requirement": "conditional",
+      "batch_id": "B04-drain-and-recursion",
+      "activation_condition": "T14 事件过密导致汲取、冠冕、抽牌或能量 UI 互相遮挡",
+      "source_file_template": "raw/takes/T15/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "只有 T14 回看确认 UI 遮挡后才启用；建立全新的独立 attempt，不复制或伪装 T14",
+        "重新 staged_setup：孤高冠冕、星算追猎、正数汲取、优先 2 个可被终止证明击杀的敌人、至少 8 张抽牌空间",
+        "设置足够缺血，使汲取后仍缺至少 1 HP（推荐一整次冠冕回复量），保证 actual_crown_healing>0，然后关闭控制台"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 可见且较 T14 更简洁；冠冕、星算追猎、汲取、HP、能量、手牌和敌人均无遮挡",
+        "建立录制标记，静置 2 秒并悬停终止证明 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_PROOF_OF_TERMINATION", "instruction": "重新真实点击终止证明，连续录到完整击杀、汲取、冠冕、抽牌与能量链；不得只录一个孤立结果窗", "continuous": true}
+      ],
+      "single_continuous_source": true,
+      "critical_assertions": [
+        "starter_relic_is_solitary_crown",
+        "actual_crown_healing_greater_than_zero",
+        "actual_drain_healing_greater_than_zero",
+        "actual_draw_delta_greater_than_zero",
+        "actual_energy_gain_greater_than_zero"
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "同一真实点击中所有正增量与冠冕实际回血可读；该 take 只作为 T14 事件密度的条件补镜"
+      ],
+      "reject_if": [
+        "T14 没有遮挡却无理由启用、把 T14 后半段伪装成独立 T15、冠冕实际回血为 0 或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T16",
+      "name": "猩红转化仪式 phase 0 到 phase 1 攻击的连续链",
+      "requirement": "required",
+      "batch_id": "B05-climax-and-finale",
+      "source_file_template": "raw/takes/T16/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 将未升级猩红转化仪式置于当前手牌，并确保下一回合能抽到弦光投影",
+        "玩家有足够生命和能量；敌人能在回合间攻击后让玩家存活且能承受 phase 1 弦光投影",
+        "正式录制开始前完成全部牌序/敌人布置并关闭控制台，链中绝不再次 setup"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示 phase 0 前状态、猩红转化仪式和稳定敌人",
+        "建立录制标记并静置 2 秒；悬停每张将点击的牌 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL", "instruction": "真实点击猩红转化仪式并等 phase 0 能力出现", "continuous": true},
+        {"input": "game_ui_click", "target": "end_turn_button", "instruction": "在同一原始文件中真实点击结束回合并连续等待 phase 1 与新手牌稳定", "continuous": true},
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_LUMINOUS_PROJECTION", "instruction": "不插入 setup，悬停后真实点击 phase 1 弦光投影并录到额外謦欬与增伤全部结算", "continuous": true}
+      ],
+      "single_continuous_source": true,
+      "setup_between_formal_actions_allowed": false,
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "同一 MKV 连续包含仪式牌点击、结束回合、phase 1 状态和攻击牌点击；phase 1 额外謦欬与伤害均可见"
+      ],
+      "reject_if": [
+        "任意两次正式动作之间停止/重启录制、切镜、控制台布置、phase 未到 1、目标提前死亡或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T17",
+      "name": "绯彩积分构筑路线独立补镜",
+      "requirement": "required",
+      "batch_id": "B05-climax-and-finale",
+      "source_file_template": "raw/takes/T17/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "准备一套以绯彩积分为主题的当前白绮牌组或战斗状态；只用于路线补镜，不声称完全平衡或必然无限成长",
+        "结束所有受控布置并关闭控制台/overlay"
+      ],
+      "clean_frame_gate": [
+        "完整牌组或战斗 HUD 显示至少两项绯彩路线元素且名称可辨",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_scroll", "target": "crimson_build_cards", "instruction": "使用游戏自身牌库/牌组滚动浏览绯彩积分核心牌", "continuous": true},
+        {"input": "game_ui_hover", "target": "crimson_build_core_card", "instruction": "悬停一张核心绯彩牌并保留清楚 tooltip", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "素材能在约 12 秒剪辑中清楚表达第三条构筑路线，且所有牌均为当前白绮实现"
+      ],
+      "reject_if": [
+        "出现旧牌、旧 Ironclad replacement、平衡性绝对承诺或任一禁画元素"
+      ]
+    },
+    {
+      "take_id": "T18",
+      "name": "统一场论完整资源闭环",
+      "requirement": "required",
+      "batch_id": "B05-climax-and-finale",
+      "source_file_template": "raw/takes/T18/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "以 staged_setup 让未升级统一场论能力预先生效；从当次 tooltip 绑定 HealingDivisor（当前未升级基线 3，升级版 2）",
+        "优先使用当前基线：初始余裕 2、全局/本回合汲取 0、手牌为闭域映射与三色轮舞、能量至少 2",
+        "玩家至少缺 HealingDivisor 点生命；敌人无格挡且生命高于三色轮舞全部三击的实际伤害，力量/虚弱/易伤等修正为 0",
+        "按 runtime 预演确认闭域映射消耗余裕后能提高汲取，三色轮舞 actual_healing≥HealingDivisor；关闭控制台后不得再布置"
+      ],
+      "clean_frame_gate": [
+        "完整 HUD 显示统一场论、余裕、汲取、缺血、两张正式牌与能存活的目标",
+        "建立录制标记，静置 2 秒；每张正式牌点击前悬停 1.5–2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "hover_seconds": {"minimum": 1.5, "maximum": 2},
+      "formal_sequence": [
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "instruction": "真实点击闭域映射，连续录到余裕抵扣謦欬、余裕下降和汲取百分比增长全部稳定", "continuous": true},
+        {"input": "game_ui_click", "target": "VIVHITE_CARD_TRICHROMATIC_WALTZ", "instruction": "不停止录制、不插入 setup，真实点击三色轮舞并录到实际伤害、实际回血及余裕回流全部稳定", "continuous": true}
+      ],
+      "single_continuous_source": true,
+      "critical_assertions": [
+        "margin_decreases_after_cough",
+        "drain_percent_increases_after_margin_offset",
+        "drain_attack_actual_damage_greater_than_zero",
+        "actual_healing_at_least_runtime_divisor",
+        "final_margin_greater_than_post_cough_margin"
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "同一 MKV 按顺序显示余裕抵扣→汲取增长→真实掉血→actual_healing≥runtime divisor→余裕正回流",
+        "当前基线可形成余裕 2→0、总汲取约 20%、三击实际掉血 12、回血 3、余裕回到 1；正式证据以当次 runtime 为准"
+      ],
+      "reject_if": [
+        "统一场论在正式段才被打出、两张牌之间插入 setup/切镜、玩家满血、敌人死亡、回血不足 divisor、余裕未回流或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T19",
+      "name": "61 张专属卡牌的牌库与卡组浏览",
+      "requirement": "required",
+      "batch_id": "B03-tower-life-and-library",
+      "source_file_template": "raw/takes/T19/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "打开当前编译版本的白绮牌库/卡组并确认 runtime manifest 仍为 61 张专属卡牌",
+        "过滤掉旧占位卡并选择能同时看到三条构筑路线的排序/分页起点"
+      ],
+      "clean_frame_gate": [
+        "牌库界面全屏可见，白绮卡框、名称和总量证据无遮挡",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_scroll", "target": "vivhite_card_library", "instruction": "使用游戏自身滚动快速浏览当前 61 张白绮专属卡牌", "continuous": true},
+        {"input": "game_ui_hover", "target": "representative_build_cards", "instruction": "依次短悬停守恒、递归和绯彩代表牌，tooltip 数值以当前运行时为准", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "运行时 manifest 与牌库共同支持 61 张，并能辨认三条路线的代表牌"
+      ],
+      "reject_if": [
+        "计数不是 61、混入废弃占位卡、快速滚动导致牌名全不可读或出现禁画元素"
+      ]
+    },
+    {
+      "take_id": "T20",
+      "name": "白绮主标题轮廓与 idle 收束",
+      "requirement": "required",
+      "batch_id": "B05-climax-and-finale",
+      "source_file_template": "raw/takes/T20/{attempt_id}.mkv",
+      "setup_before_mark": [
+        "准备当前白绮选人立绘或干净战斗 idle，保留足够负空间供后期主标题与 CTA 使用",
+        "确认 Workshop 状态文字将在后期绑定当前真实回执；本 take 不伪造发布状态"
+      ],
+      "clean_frame_gate": [
+        "白绮身份明确、画面无旧战士残片、控制台、overlay、系统鼠标或 loading",
+        "建立录制标记并静置 2 秒"
+      ],
+      "pre_roll_seconds": 2,
+      "formal_sequence": [
+        {"input": "game_ui_wait", "target": "vivhite_clean_idle", "instruction": "连续保留一段白绮选人动画或战斗 idle，供片头轮廓、提问过桥与片尾 CTA 分别取不同干净窗口", "continuous": true}
+      ],
+      "post_result_seconds": {"minimum": 3, "maximum": 4},
+      "accept_if": [
+        "身份清楚、动画稳定、负空间足够，且不同使用窗口都来自同一批新拍 take"
+      ],
+      "reject_if": [
+        "出现旧 Ironclad replacement、静帧卡顿、遮挡角色名称/属性或任一禁画元素"
+      ]
+    }
+  ]
+}

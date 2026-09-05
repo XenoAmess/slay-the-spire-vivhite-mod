@@ -1,0 +1,1880 @@
+{
+  "schema_version": 2,
+  "kind": "vivhite_promo_storyboard_v2",
+  "project_id": "vivhite-player-promo",
+  "revision_id": "director-v2",
+  "status": "preproduction_draft",
+  "title": "白绮：把生命写成魔法",
+  "target_duration_seconds": 540,
+  "timebase": {
+    "frames_per_second": 60,
+    "target_frames": 32400
+  },
+  "director_sections": [
+    {"section_id": "D01-cold-open", "title": "冷开场", "timeline": {"start_seconds": 0, "end_seconds": 18, "duration_seconds": 18, "start_frame": 0, "end_frame": 1080, "duration_frames": 1080}},
+    {"section_id": "D02-main-title", "title": "主标题与开场白", "timeline": {"start_seconds": 18, "end_seconds": 28, "duration_seconds": 10, "start_frame": 1080, "end_frame": 1680, "duration_frames": 600}},
+    {"section_id": "D03-character-select", "title": "选人界面", "timeline": {"start_seconds": 28, "end_seconds": 58, "duration_seconds": 30, "start_frame": 1680, "end_frame": 3480, "duration_frames": 1800}},
+    {"section_id": "D04-loadout", "title": "初始配置", "timeline": {"start_seconds": 58, "end_seconds": 78, "duration_seconds": 20, "start_frame": 3480, "end_frame": 4680, "duration_frames": 1200}},
+    {"section_id": "D05-cough", "title": "謦欬", "timeline": {"start_seconds": 78, "end_seconds": 120, "duration_seconds": 42, "start_frame": 4680, "end_frame": 7200, "duration_frames": 2520}},
+    {"section_id": "D06-margin", "title": "余裕与守恒", "timeline": {"start_seconds": 120, "end_seconds": 168, "duration_seconds": 48, "start_frame": 7200, "end_frame": 10080, "duration_frames": 2880}},
+    {"section_id": "D07-reward-map", "title": "奖励与地图", "timeline": {"start_seconds": 168, "end_seconds": 188, "duration_seconds": 20, "start_frame": 10080, "end_frame": 11280, "duration_frames": 1200}},
+    {"section_id": "D08-dimension-fatal", "title": "增维与致命", "timeline": {"start_seconds": 188, "end_seconds": 232, "duration_seconds": 44, "start_frame": 11280, "end_frame": 13920, "duration_frames": 2640}},
+    {"section_id": "D09-campfire", "title": "篝火", "timeline": {"start_seconds": 232, "end_seconds": 252, "duration_seconds": 20, "start_frame": 13920, "end_frame": 15120, "duration_frames": 1200}},
+    {"section_id": "D10-drain", "title": "汲取与转化", "timeline": {"start_seconds": 252, "end_seconds": 306, "duration_seconds": 54, "start_frame": 15120, "end_frame": 18360, "duration_frames": 3240}},
+    {"section_id": "D11-shop", "title": "商店", "timeline": {"start_seconds": 306, "end_seconds": 330, "duration_seconds": 24, "start_frame": 18360, "end_frame": 19800, "duration_frames": 1440}},
+    {"section_id": "D12-recursive", "title": "递归星算", "timeline": {"start_seconds": 330, "end_seconds": 382, "duration_seconds": 52, "start_frame": 19800, "end_frame": 22920, "duration_frames": 3120}},
+    {"section_id": "D13-crimson-unified", "title": "绯彩积分与统一场论", "timeline": {"start_seconds": 382, "end_seconds": 448, "duration_seconds": 66, "start_frame": 22920, "end_frame": 26880, "duration_frames": 3960}},
+    {"section_id": "D14-cards-builds", "title": "61 张卡与三套构筑", "timeline": {"start_seconds": 448, "end_seconds": 496, "duration_seconds": 48, "start_frame": 26880, "end_frame": 29760, "duration_frames": 2880}},
+    {"section_id": "D15-finale", "title": "Finale 与 CTA", "timeline": {"start_seconds": 496, "end_seconds": 540, "duration_seconds": 44, "start_frame": 29760, "end_frame": 32400, "duration_frames": 2640}}
+  ],
+  "round_scope": {
+    "mode": "production_authorized",
+    "game_launch_allowed": true,
+    "obs_allowed": true,
+    "capture_allowed": true,
+    "render_allowed": true,
+    "network_tts_allowed": false
+  },
+  "legacy_policy": {
+    "storyboard_v1": "preserve_only",
+    "full_master_a4": "failed_reference_only",
+    "legacy_raw_media": "preserve_only_not_v2_source",
+    "overwrite_legacy_artifacts": false
+  },
+  "master": {
+    "duration_seconds": 540,
+    "canvas": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "orientation": "landscape"
+    },
+    "video": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "codec": "h264",
+      "pixel_format": "yuv420p"
+    },
+    "audio": {
+      "codec": "aac",
+      "sample_rate_hz": 48000,
+      "channels": 2,
+      "channel_layout": "stereo",
+      "bgm": "disabled",
+      "game_audio": "from_capture",
+      "mix_policy": {
+        "duck_game_ambience_during_narration": true,
+        "keep_game_sfx_audible_during_narration": true,
+        "foreground_sfx_events": [
+          "attack",
+          "healing",
+          "card_draw",
+          "map_node_click"
+        ]
+      }
+    },
+    "narration_voice": "zh-CN-XiaoxiaoNeural",
+    "bgm": false,
+    "narration_target_fraction": 0.55,
+    "subtitle_locales": [
+      "zh-CN",
+      "en"
+    ],
+    "subtitle_safe_zone": "upper_safe_area_during_combat"
+  },
+  "canonical_shot_ids": [
+    "S01-identity",
+    "S02-loadout",
+    "S03-cough",
+    "S04-margin",
+    "S05-drain",
+    "S06-conservation-geometry",
+    "S07-recursive-star-calculus",
+    "S08-crimson-integral",
+    "S09-unified-field",
+    "S10-finale"
+  ],
+  "take_policy": {
+    "minimum_independent_takes": 19,
+    "maximum_independent_takes": 20,
+    "conditional_take_id": "T15",
+    "required_take_ids": [
+      "T01",
+      "T02",
+      "T03",
+      "T04",
+      "T05",
+      "T06",
+      "T07",
+      "T08",
+      "T09",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T16",
+      "T17",
+      "T18",
+      "T19",
+      "T20"
+    ],
+    "conditional_take": {
+      "take_id": "T15",
+      "condition": "T14 的死亡事件过密并导致 UI 动画互相遮挡时启用",
+      "fallback_take_id": "T14"
+    },
+    "capture_rule": "one_independent_recording_per_take",
+    "pre_action_handle_seconds": 2,
+    "post_result_handle_seconds": {
+      "minimum": 3,
+      "maximum": 4
+    }
+  },
+  "edit_policy": {
+    "mechanism_title_card_max_seconds": 3,
+    "tower_title_card_max_seconds": 1.8,
+    "end_card_max_seconds": 7,
+    "mechanism_action_speed": 1,
+    "mechanism_action_must_be_uncut": true,
+    "static_gameplay_max_seconds": 4,
+    "static_gameplay_exceptions": [
+      {
+        "kind": "character_selection_animation",
+        "minimum_seconds": 6,
+        "maximum_seconds": 8
+      }
+    ],
+    "digital_push_percent": {
+      "minimum": 5,
+      "maximum": 8
+    },
+    "default_transition": "hard_cut_on_game_sfx",
+    "short_fades_allowed_only_for": [
+      "intro",
+      "campfire",
+      "finale"
+    ],
+    "long_crossfades_allowed": false,
+    "console_must_end_before_recording_mark": true,
+    "system_cursor_visible": false,
+    "numbers_source": "current_runtime_tooltip_hud_and_receipts"
+  },
+  "acceptance_gates": {
+    "identity": {
+      "required_visible_text": [
+        "白绮",
+        "78/78",
+        "99"
+      ],
+      "required_relic": "孤高冠冕",
+      "forbidden_identity": "铁甲战士",
+      "character_description_required": true,
+      "portrait_animation_hold_seconds": {"minimum": 6, "maximum": 8},
+      "portrait_push": "extremely_subtle",
+      "must_not_crop_name_or_attributes": true
+    },
+    "mechanism_action": {
+      "required_evidence_roles": [
+        "state.before",
+        "action.receipt",
+        "state.after"
+      ],
+      "real_card_click_required": true,
+      "game_resolution_required": true,
+      "staged_setup_excluded_from_display": true
+    },
+    "tower_life": {
+      "map_requires_receipt": true,
+      "campfire_requires_receipt": true,
+      "shop_requires_receipt": true
+    },
+    "forbidden_visuals": [
+      "console",
+      "Brain/AI panel",
+      "ASCEND-VISION",
+      "native debug label",
+      "MODDED label",
+      "OBS",
+      "taskbar",
+      "system cursor",
+      "loading screen",
+      "old placeholder cards",
+      "old Ironclad replacement"
+    ],
+    "forbidden_claims": [
+      "已经完全平衡",
+      "必然无限成长"
+    ]
+  },
+  "evidence_catalog": [
+    {
+      "ref_id": "director-plan-v2",
+      "role": "director.plan",
+      "path": "docs/2026-09-02-白绮宣传片导演分镜计划-v2.md",
+      "status": "available"
+    },
+    {
+      "ref_id": "runtime-build-manifest",
+      "role": "runtime.manifest",
+      "path": null,
+      "status": "pending"
+    }
+  ],
+  "takes": [
+    {
+      "take_id": "T01",
+      "name": "标准模式进入白绮选人并确认",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "natural_navigation",
+      "staged_setup_allowed": false,
+      "formal_display": {
+        "real_input": true,
+        "game_resolution": true,
+        "playback_speed": 1,
+        "uncut_action": true
+      },
+      "source": {
+        "artifact": null,
+        "in_seconds": null,
+        "out_seconds": null,
+        "status": "capture_pending"
+      },
+      "evidence_refs": [
+        {"ref_id": "T01-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T01-mode-entry-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T01-highlight-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T01-confirm-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T01-runtime-manifest", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T01-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T02",
+      "name": "初始配置与起始牌组浏览",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "natural_navigation",
+      "staged_setup_allowed": false,
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T02-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T02-tooltip-ocr", "role": "tooltip.ocr", "path": null, "status": "pending"},
+        {"ref_id": "T02-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T02-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T03",
+      "name": "基础牌謦欬支付后结算",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "initial_margin": 0,
+          "player_hp_strictly_greater_than_runtime_life_cost": true,
+          "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION"
+        }
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_luminous_projection",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "state_before_ref": "T03-state-before",
+            "receipt_ref": "T03-action-receipt",
+            "state_after_ref": "T03-state-after",
+            "required_observations": [
+              "HP payment resolves while the player remains alive",
+              "attack damage resolves after HP payment"
+            ]
+          }
+        ],
+        "expected_post_payment_resolution": "enemy_damage",
+        "required_event_order": ["HP payment resolves before attack damage"],
+        "event_sequence_ref": "T03-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T03-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T03-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T03-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T03-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T03-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T03-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T04",
+      "name": "变身式支付后获得力量与敏捷",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "initial_margin": 0,
+          "player_hp_strictly_greater_than_runtime_life_cost": true,
+          "strength_before": 0,
+          "dexterity_before": 0,
+          "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION"
+        }
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_vivhite_transformation",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+            "state_before_ref": "T04-state-before",
+            "receipt_ref": "T04-action-receipt",
+            "state_after_ref": "T04-state-after",
+            "required_observations": [
+              "HP payment resolves while the player remains alive",
+              "Strength appears after successful payment",
+              "Dexterity appears after successful payment"
+            ]
+          }
+        ],
+        "required_event_order": [
+          "HP payment resolves before Strength and Dexterity are applied"
+        ],
+        "event_sequence_ref": "T04-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T04-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T04-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T04-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T04-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T04-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T04-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T05",
+      "name": "公理护环接闭域投影",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "cards_unupgraded": [
+            "VIVHITE_CARD_AXIOM_RING",
+            "VIVHITE_CARD_CLOSED_PROJECTION"
+          ],
+          "initial_margin": 0,
+          "dexterity": 0,
+          "frail": false
+        }
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_axiom_ring",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_AXIOM_RING",
+            "state_before_ref": "T05-state-before",
+            "receipt_ref": "T05-axiom-ring-receipt",
+            "state_after_ref": "T05-state-after-axiom-ring",
+            "required_observations": ["margin becomes 3"]
+          },
+          {
+            "step_id": "play_closed_projection",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_CLOSED_PROJECTION",
+            "state_before_ref": "T05-state-after-axiom-ring",
+            "receipt_ref": "T05-closed-projection-receipt",
+            "state_after_ref": "T05-state-after",
+            "required_observations": [
+              "margin changes from 3 to 0",
+              "remaining HP payment is 1",
+              "enemy takes resolved damage",
+              "player gains 15 block"
+            ]
+          }
+        ],
+        "event_sequence_ref": "T05-event-sequence"
+      },
+      "evidence_refs": [
+        {"ref_id": "T05-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T05-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T05-axiom-ring-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T05-state-after-axiom-ring", "role": "state.intermediate", "path": null, "status": "pending"},
+        {"ref_id": "T05-closed-projection-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T05-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T05-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T05-tooltip-ocr", "role": "tooltip.ocr", "path": null, "status": "pending"},
+        {"ref_id": "T05-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T06",
+      "name": "不同守恒牌的资源转换短链",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "card_selection_status": "bound_from_current_source",
+      "card_selection_gate": {
+        "must_bind_specific_card_id_before_recording_mark": true,
+        "required_card_family": "conservation",
+        "must_not_duplicate_card_ids": [
+          "VIVHITE_CARD_AXIOM_RING",
+          "VIVHITE_CARD_CLOSED_PROJECTION"
+        ],
+        "cannot_transition_to_observed_while_status_pending": true
+      },
+      "card_selection_binding": {
+        "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+        "class_name": "TangentStarlight",
+        "localized_title": "切线星光",
+        "rarity": "Common",
+        "registered_pool": "VivhiteCardPool",
+        "source_path": "Vivhite/VivhiteCode/Cards/Conservation/ConservationCommonCards.cs",
+        "localization_path": "Vivhite/Vivhite/localization/zhs/cards.json",
+        "binding_validator": "vivhite_promo.capture_runbook_v2.resolve_t06_reward_card",
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts"
+      },
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+          "card_unupgraded": true,
+          "initial_margin": 0,
+          "player_hp_strictly_greater_than_runtime_life_cost": true,
+          "target_survives_formal_action": true
+        }
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_tangent_starlight",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+            "state_before_ref": "T06-state-before",
+            "receipt_ref": "T06-action-receipt",
+            "state_after_ref": "T06-state-after",
+            "required_observations": [
+              "HP payment resolves while the player remains alive",
+              "enemy takes resolved damage and survives",
+              "margin increases after attack damage resolves"
+            ]
+          }
+        ],
+        "required_event_order": [
+          "HP payment resolves before attack damage",
+          "attack damage resolves before Margin gain"
+        ]
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T06-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T06-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T06-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T06-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T06-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T07",
+      "name": "战斗奖励、地图选路与白绮标记移动",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "natural_navigation",
+      "staged_setup_allowed": false,
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T07-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T07-reward-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T07-state-after-reward", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T07-state-before-map", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T07-map-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T07-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T07-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T08",
+      "name": "拓扑增生稳定展示增维",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {"margin_minimum": 8}
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_topological_growth",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_TOPOLOGICAL_GROWTH",
+            "state_before_ref": "T08-state-before",
+            "receipt_ref": "T08-action-receipt",
+            "state_after_ref": "T08-state-after",
+            "required_observations": [
+              "preset Margin offsets the runtime Cough cost",
+              "maximum HP increases",
+              "current HP increases with Dimension Up"
+            ]
+          }
+        ]
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T08-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T08-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T08-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T08-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T08-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T09",
+      "name": "真实卡牌击杀触发致命增维",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "formal_target_is_low_hp_and_lethal": true,
+          "another_enemy_survives_formal_action": true
+        }
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_scale_transformation",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+            "state_before_ref": "T09-state-before",
+            "receipt_ref": "T09-action-receipt",
+            "state_after_ref": "T09-state-after",
+            "required_observations": [
+              "real card damage kills the formal target",
+              "Lethal triggers Dimension Up",
+              "maximum and current HP increase",
+              "another enemy remains alive"
+            ]
+          }
+        ],
+        "event_sequence_ref": "T09-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T09-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T09-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T09-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T09-death-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T09-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T09-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T10",
+      "name": "Act 2 或 Act 3 篝火休息",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "scene_requirements": {
+        "act": [2, 3],
+        "player_missing_hp_before_rest": true,
+        "complete_character_rest_animation": true,
+        "actual_healing_visible_in_hud": true,
+        "return_to_map_required": true
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T10-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T10-campfire-entry-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T10-rest-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T10-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T10-return-map-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T10-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T10-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T11",
+      "name": "三色轮舞多段汲取",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "player_missing_hp": true,
+          "target_survives_all_three_hits": true
+        }
+      },
+      "formal_action_chain": {
+        "numeric_authority": "current_runtime_tooltip_hud_and_receipts",
+        "steps": [
+          {
+            "step_id": "play_trichromatic_waltz",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_TRICHROMATIC_WALTZ",
+            "state_before_ref": "T11-state-before",
+            "receipt_ref": "T11-action-receipt",
+            "state_after_ref": "T11-state-after",
+            "required_observations": [
+              "all three attack hits resolve",
+              "target survives all three hits",
+              "one actual healing event resolves after all attacks",
+              "actual_healing is greater than 0"
+            ]
+          }
+        ],
+        "required_event_order": [
+          "three attack hits resolve before one actual healing event"
+        ],
+        "event_sequence_ref": "T11-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T11-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T11-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T11-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T11-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T11-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T12",
+      "name": "实际恢复继续转为格挡",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "power_active": "VIVHITE_POWER_COLOR_CONSERVATION_POWER",
+          "player_missing_hp": true,
+          "all_targets_survive_formal_attack": true
+        }
+      },
+      "formal_action_chain": {
+        "steps": [
+          {
+            "step_id": "play_drain_aoe",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_COMPOSITE_COLOR_WHEEL",
+            "state_before_ref": "T12-state-before",
+            "receipt_ref": "T12-action-receipt",
+            "state_after_ref": "T12-state-after"
+          }
+        ],
+        "required_event_order": [
+          "attack damage resolves",
+          "actual_healing is greater than 0",
+          "block increases from Color Conservation"
+        ]
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T12-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T12-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T12-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T12-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T12-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T13",
+      "name": "普通商店完成一次真实购买",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "scene_requirements": {
+        "ordinary_shop": true,
+        "vivhite_and_merchant_wide_shot": true,
+        "complete_shelf_visible": true,
+        "hover_vivhite_card_or_relic": true,
+        "gold_delta_visible": true,
+        "close_inventory_required": true,
+        "leave_shop_required": true
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T13-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T13-shop-entry-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T13-purchase-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T13-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T13-tooltip-ocr", "role": "tooltip.ocr", "path": null, "status": "pending"},
+        {"ref_id": "T13-close-inventory-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T13-leave-shop-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T13-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T14",
+      "name": "终止证明真实击杀链",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "power_active": "VIVHITE_POWER_ASTRAL_PURSUIT_POWER",
+          "enemy_count_range": {"minimum": 2, "maximum": 3},
+          "all_enemies_low_hp_and_lethal_to_formal_card": true,
+          "player_missing_hp": true,
+          "missing_hp_sufficient_for_visible_actual_drain_healing": true,
+          "effective_global_or_turn_drain_percent_greater_than_zero": true,
+          "hand_has_room_for_visible_draws": true,
+          "draw_pile_has_cards_for_visible_draws": true
+        }
+      },
+      "formal_action_chain": {
+        "kill_count": {"minimum": 2, "maximum": 3},
+        "steps": [
+          {
+            "step_id": "play_proof_of_termination",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_PROOF_OF_TERMINATION",
+            "state_before_ref": "T14-state-before",
+            "receipt_ref": "T14-action-receipt",
+            "state_after_ref": "T14-state-after",
+            "required_observations": [
+              "actual_drain_healing is greater than 0",
+              "actual_draw_delta is greater than 0"
+            ]
+          }
+        ],
+        "required_event_order": [
+          "Drain resolves before deferred death rewards"
+        ],
+        "unordered_required_events": [
+          "Solitary Crown recovery resolves",
+          "card draw resolves",
+          "energy gain resolves"
+        ],
+        "runtime_order_status": "pending",
+        "draw_observation": {
+          "actual_draw_delta_minimum": 1,
+          "must_not_assume_all_requested_draws_enter_hand": true
+        },
+        "event_sequence_ref": "T14-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T14-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T14-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T14-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T14-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T14-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T15",
+      "name": "终止证明击杀链条件拆分",
+      "independent": true,
+      "requirement": "conditional",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "activation_condition": "T14 事件过密导致汲取、冠冕、抽牌或能量 UI 互相遮挡",
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "power_active": "VIVHITE_POWER_ASTRAL_PURSUIT_POWER",
+          "enemy_count_range": {"minimum": 2, "maximum": 3},
+          "all_enemies_low_hp_and_lethal_to_formal_card": true,
+          "player_missing_hp": true,
+          "missing_hp_sufficient_for_visible_actual_drain_healing": true,
+          "effective_global_or_turn_drain_percent_greater_than_zero": true,
+          "hand_has_room_for_visible_draws": true,
+          "draw_pile_has_cards_for_visible_draws": true
+        }
+      },
+      "formal_action_chain": {
+        "steps": [
+          {
+            "step_id": "play_proof_of_termination_split_take",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_PROOF_OF_TERMINATION",
+            "state_before_ref": "T15-state-before",
+            "receipt_ref": "T15-action-receipt",
+            "state_after_ref": "T15-state-after",
+            "required_observations": [
+              "actual_drain_healing is greater than 0",
+              "actual_draw_delta is greater than 0"
+            ]
+          }
+        ],
+        "draw_observation": {
+          "actual_draw_delta_minimum": 1,
+          "must_not_assume_all_requested_draws_enter_hand": true
+        },
+        "event_sequence_ref": "T15-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T15-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T15-action-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T15-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T15-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T15-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T16",
+      "name": "猩红转化仪式 phase 0 到 phase 1 攻击的连续链",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "formal_action_chain": {
+        "continuity_group": "T16-crimson-phase0-to-phase1",
+        "single_continuous_source": true,
+        "steps": [
+          {
+            "step_id": "play_crimson_transformation_ritual",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+            "state_before_ref": "T16-state-before",
+            "receipt_ref": "T16-ritual-receipt",
+            "state_after_ref": "T16-state-phase0"
+          },
+          {
+            "step_id": "end_turn",
+            "input": "end_turn_click",
+            "state_before_ref": "T16-state-phase0",
+            "receipt_ref": "T16-end-turn-receipt",
+            "state_after_ref": "T16-state-phase1"
+          },
+          {
+            "step_id": "play_phase1_attack",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "state_before_ref": "T16-state-before-attack",
+            "receipt_ref": "T16-phase1-attack-receipt",
+            "state_after_ref": "T16-state-final",
+            "required_observations": [
+              "phase 1 adds Cough to the attack",
+              "phase 1 increases resolved attack damage"
+            ]
+          }
+        ],
+        "event_sequence_ref": "T16-event-sequence"
+      },
+      "evidence_refs": [
+        {"ref_id": "T16-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T16-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T16-ritual-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T16-state-phase0", "role": "state.intermediate", "path": null, "status": "pending"},
+        {"ref_id": "T16-end-turn-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T16-state-phase1", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T16-state-before-attack", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T16-phase1-attack-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T16-state-final", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T16-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T16-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T17",
+      "name": "绯彩积分构筑路线独立补镜",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "montage",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": false},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T17-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T17-runtime-manifest", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T17-lineage", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T17-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T18",
+      "name": "统一场论完整资源闭环",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "mechanism_action",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "recording_mark_setup": {
+        "provenance": "staged_setup",
+        "must_finish_before_recording_mark": true,
+        "excluded_from_display": true,
+        "required_state": {
+          "power_active": "VIVHITE_POWER_UNIFIED_FIELD_THEORY_POWER",
+          "player_missing_hp": true,
+          "runtime_healing_divisor": {
+            "unupgraded": 3,
+            "upgraded": 2,
+            "selected_value": "bind_from_current_runtime_tooltip"
+          },
+          "actual_healing_at_least_selected_divisor": true,
+          "missing_hp_at_least_selected_divisor": true,
+          "drain_attack_actual_damage_greater_than_zero": true,
+          "drain_rate_sufficient_for_selected_divisor": true,
+          "margin_greater_than_zero": true,
+          "target_survives_first_formal_action": true,
+          "target_survives_drain_attack": true
+        }
+      },
+      "formal_action_chain": {
+        "steps": [
+          {
+            "step_id": "consume_margin_with_cough_skill",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+            "state_before_ref": "T18-state-before",
+            "receipt_ref": "T18-cough-card-receipt",
+            "state_after_ref": "T18-state-after-cough",
+            "required_observations": ["margin decreases", "Drain percentage increases"]
+          },
+          {
+            "step_id": "play_drain_attack",
+            "input": "card_click",
+            "card_id": "VIVHITE_CARD_TRICHROMATIC_WALTZ",
+            "state_before_ref": "T18-state-after-cough",
+            "receipt_ref": "T18-drain-attack-receipt",
+            "state_after_ref": "T18-state-after",
+            "required_observations": [
+              "actual healing is at least the current runtime tooltip divisor",
+              "final margin is strictly greater than margin after the Cough action"
+            ]
+          }
+        ],
+        "margin_return_assertion": {
+          "healing_divisor_source": "current_runtime_tooltip",
+          "unupgraded_formula": "floor(actual_healing / 3)",
+          "upgraded_formula": "floor(actual_healing / 2)",
+          "actual_healing_must_be_at_least_selected_divisor": true,
+          "final_margin_strictly_greater_than_after_cough": true
+        },
+        "required_event_order": [
+          "Margin offsets Cough",
+          "Drain percentage increases",
+          "Drain attack deals real damage",
+          "actual healing resolves",
+          "Margin returns"
+        ],
+        "event_sequence_ref": "T18-event-sequence"
+      },
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T18-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T18-state-before", "role": "state.before", "path": null, "status": "pending"},
+        {"ref_id": "T18-cough-card-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T18-state-after-cough", "role": "state.intermediate", "path": null, "status": "pending"},
+        {"ref_id": "T18-drain-attack-receipt", "role": "action.receipt", "path": null, "status": "pending"},
+        {"ref_id": "T18-state-after", "role": "state.after", "path": null, "status": "pending"},
+        {"ref_id": "T18-event-sequence", "role": "action.sequence", "path": null, "status": "pending"},
+        {"ref_id": "T18-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T19",
+      "name": "61 张专属卡牌的牌库与卡组浏览",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "ui_gameplay",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": true},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T19-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T19-runtime-manifest", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T19-tooltip-ocr", "role": "tooltip.ocr", "path": null, "status": "pending"},
+        {"ref_id": "T19-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    },
+    {
+      "take_id": "T20",
+      "name": "白绮主标题轮廓与 idle 收束",
+      "independent": true,
+      "requirement": "required",
+      "asset_type": "montage",
+      "capture_status": "not_started",
+      "setup_provenance": "staged_setup",
+      "staged_setup_allowed": true,
+      "allowed_uses": ["main_title_silhouette", "question_bridge", "vivhite_idle", "version_status_overlay"],
+      "forbidden_uses": ["build_route_montage"],
+      "formal_display": {"real_input": true, "game_resolution": true, "playback_speed": 1, "uncut_action": false},
+      "source": {"artifact": null, "in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+      "evidence_refs": [
+        {"ref_id": "T20-frame-begin", "role": "frame.begin", "path": null, "status": "pending"},
+        {"ref_id": "T20-runtime-manifest", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T20-workshop-status-receipt", "role": "workshop.readonly_metadata", "path": null, "status": "pending"},
+        {"ref_id": "T20-lineage", "role": "runtime.manifest", "path": null, "status": "pending"},
+        {"ref_id": "T20-frame-end", "role": "frame.end", "path": null, "status": "pending"}
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "shot_id": "S01-identity",
+      "chapter_id": "identity",
+      "title": "冷开场、主标题与选人",
+      "timeline": {"start_seconds": 0, "end_seconds": 58, "duration_seconds": 58},
+      "subshots": [
+        {
+          "subshot_id": "S01-01-cough-highlight",
+          "asset_type": "montage",
+          "take": {"take_id": "T03", "independent": true},
+          "timeline": {"start_seconds": 0, "end_seconds": 2.4, "duration_seconds": 2.4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C001", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "montage_lineage": {
+            "source_subshot_id": "S03-02-basic-payment",
+            "reuse_kind": "editorial_excerpt",
+            "formal_action_claimed": false
+          },
+          "evidence_refs": ["T03-frame-begin", "T03-event-sequence", "T03-frame-end"]
+        },
+        {
+          "subshot_id": "S01-02-margin-highlight",
+          "asset_type": "montage",
+          "take": {"take_id": "T05", "independent": true},
+          "timeline": {"start_seconds": 2.4, "end_seconds": 4.8, "duration_seconds": 2.4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C002", "kind": "narration", "narration_zh": "如果生命不是终点，它还能被写成什么？", "subtitle_zh": "如果生命不是终点，它还能被写成什么？", "subtitle_en": "If life is not the endpoint, what else can it become?", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T05-state-before", "T05-axiom-ring-receipt", "T05-closed-projection-receipt", "T05-event-sequence", "T05-state-after"]
+        },
+        {
+          "subshot_id": "S01-03-drain-highlight",
+          "asset_type": "montage",
+          "take": {"take_id": "T11", "independent": true},
+          "timeline": {"start_seconds": 4.8, "end_seconds": 7.2, "duration_seconds": 2.4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C003", "kind": "narration_continuation", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T11-state-before", "T11-action-receipt", "T11-event-sequence", "T11-state-after"]
+        },
+        {
+          "subshot_id": "S01-04-kill-chain-highlight",
+          "asset_type": "montage",
+          "take": {"take_id": "T14", "independent": true},
+          "timeline": {"start_seconds": 7.2, "end_seconds": 9.6, "duration_seconds": 2.4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C004", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T14-state-before", "T14-action-receipt", "T14-state-after"]
+        },
+        {
+          "subshot_id": "S01-05-map-highlight",
+          "asset_type": "montage",
+          "take": {"take_id": "T07", "independent": true},
+          "timeline": {"start_seconds": 9.6, "end_seconds": 12, "duration_seconds": 2.4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C005", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T07-map-receipt", "T07-state-after"]
+        },
+        {
+          "subshot_id": "S01-06-question-bridge",
+          "asset_type": "montage",
+          "take": {"take_id": "T20", "independent": true},
+          "timeline": {"start_seconds": 12, "end_seconds": 18, "duration_seconds": 6},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C006", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T20-frame-begin", "T20-lineage"]
+        },
+        {
+          "subshot_id": "S01-07-main-title",
+          "asset_type": "montage",
+          "take": {"take_id": "T20", "independent": true},
+          "timeline": {"start_seconds": 18, "end_seconds": 23, "duration_seconds": 5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "visual_requirements": {
+            "start_from_black": true,
+            "vivhite_silhouette_reveals_from_black": true,
+            "title_lines": ["白绮 VIVHITE", "把生命写成魔法"],
+            "short_fade_allowed": true
+          },
+          "cue": {"cue_id": "C007A", "kind": "main_title", "narration_zh": "生命也好，希望也罢，这些无趣的东西，你们尽管拿去。", "subtitle_zh": "白绮 VIVHITE｜把生命写成魔法", "subtitle_en": "VIVHITE | Write life into magic", "voice_asset": null, "audio_timeline": {"start_seconds": 18, "end_seconds": 22.8, "duration_seconds": 4.8}},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T20-lineage"]
+        },
+        {
+          "subshot_id": "S01-08-main-title-continuation",
+          "asset_type": "montage",
+          "take": {"take_id": "T20", "independent": true},
+          "timeline": {"start_seconds": 23, "end_seconds": 28, "duration_seconds": 5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {"cue_id": "C007B", "kind": "narration", "narration_zh": "我的魔法，从来不需要被理解。", "subtitle_zh": "我的魔法，从来不需要被理解。", "subtitle_en": "My magic has never needed to be understood.", "voice_asset": null, "audio_timeline": {"start_seconds": 23, "end_seconds": 26.4, "duration_seconds": 3.4}},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T20-lineage"]
+        },
+        {
+          "subshot_id": "S01-09-character-selection-j-cut",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T01", "independent": true},
+          "timeline": {"start_seconds": 28, "end_seconds": 38, "duration_seconds": 10},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "selection_requirements": {
+            "enter_from_mode": "标准模式",
+            "open_character_list": true,
+            "move_highlight_to": "白绮"
+          },
+          "cue": {
+            "cue_id": "C008A",
+            "kind": "narration",
+            "narration_zh": "我只是……想要成为我自己。",
+            "subtitle_zh": "我只是……想要成为我自己。",
+            "subtitle_en": "I only want… to become myself.",
+            "voice_asset": null,
+            "audio_timeline": {"start_seconds": 26.5, "end_seconds": 33, "duration_seconds": 6.5},
+            "j_cut": {
+              "visual_cut_seconds": 28,
+              "audio_starts_before_visual": true,
+              "audio_crosses_visual_cut": true
+            }
+          },
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T01-frame-begin", "T01-mode-entry-receipt", "T01-highlight-receipt", "T01-runtime-manifest"]
+        },
+        {
+          "subshot_id": "S01-10-character-selection",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T01", "independent": true},
+          "timeline": {"start_seconds": 38, "end_seconds": 58, "duration_seconds": 20},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "selection_requirements": {
+            "portrait_animation_hold_seconds": {"minimum": 6, "maximum": 8},
+            "digital_push": "extremely_subtle",
+            "must_not_crop_name_or_attributes": true,
+            "required_visible": ["白绮", "78/78", "99 金币", "孤高冠冕", "角色描述"],
+            "confirm_and_enter_game": true
+          },
+          "cue": {"cue_id": "C008B", "kind": "narration", "narration_zh": "从标准模式进入角色列表。让名字、生命、金币与孤高冠冕先替她完成自我介绍。", "subtitle_zh": "独立角色白绮｜78/78｜99 金币｜孤高冠冕", "subtitle_en": "Vivhite | 78/78 HP | 99 gold | Solitary Crown", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T01-highlight-receipt", "T01-confirm-receipt", "T01-runtime-manifest", "T01-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S02-loadout",
+      "chapter_id": "loadout",
+      "title": "初始配置",
+      "timeline": {"start_seconds": 58, "end_seconds": 78, "duration_seconds": 20},
+      "subshots": [
+        {
+          "subshot_id": "S02-01-starting-status",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T02", "independent": true},
+          "timeline": {"start_seconds": 58, "end_seconds": 66, "duration_seconds": 8},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C009", "kind": "narration", "narration_zh": "进入尖塔，先看当前版本真实呈现的生命、金币与初始遗物。", "subtitle_zh": "初始状态以当前 HUD 为准", "subtitle_en": "The current HUD is the source of truth", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T02-frame-begin", "T02-state-after"]
+        },
+        {
+          "subshot_id": "S02-02-starter-deck",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T02", "independent": true},
+          "timeline": {"start_seconds": 66, "end_seconds": 78, "duration_seconds": 12},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C010", "kind": "narration", "narration_zh": "弦光投影、闭域映射与白绮的变身式，构成这套公式的第一行。", "subtitle_zh": "弦光投影｜闭域映射｜白绮的变身式", "subtitle_en": "Luminous Projection | Closed Domain Mapping | Vivhite's Transformation", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T02-tooltip-ocr", "T02-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S03-cough",
+      "chapter_id": "cough",
+      "title": "謦欬",
+      "timeline": {"start_seconds": 78, "end_seconds": 120, "duration_seconds": 42},
+      "subshots": [
+        {
+          "subshot_id": "S03-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 78, "end_seconds": 80.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C011", "kind": "title_card", "narration_zh": "", "subtitle_zh": "謦欬：先支付，再结算", "subtitle_en": "Cough: pay first, resolve second", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "謦欬：先支付，再结算", "english_subtitle": "Cough: pay first, resolve second", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S03-02-basic-payment",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T03", "independent": true},
+          "timeline": {"start_seconds": 80.5, "end_seconds": 99, "duration_seconds": 18.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C012", "kind": "narration", "narration_zh": "謦欬先处理可支付性与生命代价，然后伤害或格挡才开始结算。", "subtitle_zh": "生命支付发生在牌面效果之前", "subtitle_en": "Life is paid before the card effect", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T03-state-before", "T03-action-receipt", "T03-event-sequence", "T03-state-after"]
+        },
+        {
+          "subshot_id": "S03-03-transformation-payment",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T04", "independent": true},
+          "timeline": {"start_seconds": 99, "end_seconds": 120, "duration_seconds": 21},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C013", "kind": "narration", "narration_zh": "余裕会优先抵扣代价；只有支付成功，变身式的力量与敏捷才会出现。", "subtitle_zh": "余裕优先｜支付成功后执行牌效", "subtitle_en": "Margin first | Resolve only after successful payment", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T04-state-before", "T04-action-receipt", "T04-event-sequence", "T04-state-after"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S04-margin",
+      "chapter_id": "margin",
+      "title": "余裕与守恒",
+      "timeline": {"start_seconds": 120, "end_seconds": 188, "duration_seconds": 68},
+      "subshots": [
+        {
+          "subshot_id": "S04-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 120, "end_seconds": 122.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C014", "kind": "title_card", "narration_zh": "", "subtitle_zh": "余裕：把代价变成防线", "subtitle_en": "Margin: turn cost into defense", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "余裕：把代价变成防线", "english_subtitle": "Margin: turn cost into defense", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S04-02-axiom-closed-chain",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T05", "independent": true},
+          "timeline": {"start_seconds": 122.5, "end_seconds": 151, "duration_seconds": 28.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+          "cue": {"cue_id": "C015", "kind": "narration", "narration_zh": "公理护环先建立余裕，闭域投影再把抵扣掉的代价写成格挡。", "subtitle_zh": "余裕抵扣謦欬，并转化为格挡", "subtitle_en": "Margin offsets Cough and becomes block", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T05-frame-begin", "T05-state-before", "T05-axiom-ring-receipt", "T05-state-after-axiom-ring", "T05-closed-projection-receipt", "T05-event-sequence", "T05-tooltip-ocr", "T05-state-after", "T05-frame-end"]
+        },
+        {
+          "subshot_id": "S04-03-second-conservation-chain",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T06", "independent": true},
+          "timeline": {"start_seconds": 151, "end_seconds": 168, "duration_seconds": 17},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C016", "kind": "narration", "narration_zh": "换一条守恒路径，代价仍然可以被储存、搬运，再在需要的坐标上兑现。", "subtitle_zh": "同一资源关系，不同守恒路径", "subtitle_en": "The same resource relation, a different conservation path", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T06-state-before", "T06-action-receipt", "T06-state-after"]
+        },
+        {
+          "subshot_id": "S04-04-card-reward",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T07", "independent": true},
+          "timeline": {"start_seconds": 168, "end_seconds": 176, "duration_seconds": 8},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C017", "kind": "narration", "narration_zh": "一场战斗结束，下一张白绮卡牌让公式开始偏向新的方向。", "subtitle_zh": "真实选择战斗奖励", "subtitle_en": "Choose a real combat reward", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T07-state-before", "T07-reward-receipt", "T07-state-after-reward"]
+        },
+        {
+          "subshot_id": "S04-05-map-route",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T07", "independent": true},
+          "timeline": {"start_seconds": 176, "end_seconds": 188, "duration_seconds": 12},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C018", "kind": "narration", "narration_zh": "打开地图，路线被点亮，白绮的蝴蝶标记走向下一个节点。", "subtitle_zh": "路线选择也会改变构筑的下一步", "subtitle_en": "Route choice changes the build's next step", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T07-state-before-map", "T07-map-receipt", "T07-state-after", "T07-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S06-conservation-geometry",
+      "chapter_id": "conservation-geometry",
+      "title": "增维、致命与篝火",
+      "timeline": {"start_seconds": 188, "end_seconds": 252, "duration_seconds": 64},
+      "subshots": [
+        {
+          "subshot_id": "S06-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 188, "end_seconds": 190.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C019", "kind": "title_card", "narration_zh": "", "subtitle_zh": "增维与致命：改写生命上限", "subtitle_en": "Dimension Up and Fatal: rewrite maximum life", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "增维与致命：改写生命上限", "english_subtitle": "Dimension Up and Fatal: rewrite maximum life", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S06-02-topology-growth",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T08", "independent": true},
+          "timeline": {"start_seconds": 190.5, "end_seconds": 212, "duration_seconds": 21.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C020", "kind": "narration", "narration_zh": "拓扑增生把预先积累的余裕变成增维，让最大生命与当前生命同步向上。", "subtitle_zh": "增维同步提高最大生命与当前生命", "subtitle_en": "Dimension Up raises maximum and current life together", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T08-state-before", "T08-action-receipt", "T08-state-after"]
+        },
+        {
+          "subshot_id": "S06-03-fatal-growth",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T09", "independent": true},
+          "timeline": {"start_seconds": 212, "end_seconds": 232, "duration_seconds": 20},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+          "cue": {"cue_id": "C021", "kind": "narration", "narration_zh": "由白绮打出的卡牌完成真实击杀，致命才触发增维。", "subtitle_zh": "真实卡牌击杀触发致命与增维", "subtitle_en": "A real card kill triggers Fatal and Dimension Up", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T09-state-before", "T09-action-receipt", "T09-death-receipt", "T09-event-sequence", "T09-state-after"]
+        },
+        {
+          "subshot_id": "S06-04-campfire-title",
+          "asset_type": "tower_title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 232, "end_seconds": 233.8, "duration_seconds": 1.8},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C022", "kind": "title_card", "narration_zh": "", "subtitle_zh": "篝火｜CAMPFIRE", "subtitle_en": "CAMPFIRE", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "篝火", "english_subtitle": "CAMPFIRE", "duration_seconds": 1.8},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S06-05-campfire-rest",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T10", "independent": true},
+          "timeline": {"start_seconds": 233.8, "end_seconds": 252, "duration_seconds": 18.2},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "tower_life_requirements": {
+            "act": [2, 3],
+            "enter_from_map": true,
+            "complete_rest_animation": true,
+            "player_missing_hp_before_rest": true,
+            "actual_healing_visible": true,
+            "return_to_map": true
+          },
+         "cue": {"cue_id": "C023", "kind": "narration", "narration_zh": "在塔的中段停下来，看完整的休息动画，再让缺失的生命真实回到 HUD。", "subtitle_zh": "选择休息，并显示实际回血", "subtitle_en": "Rest and show the real healing result", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T10-frame-begin", "T10-state-before", "T10-campfire-entry-receipt", "T10-rest-receipt", "T10-state-after", "T10-return-map-receipt", "T10-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S05-drain",
+      "chapter_id": "drain",
+      "title": "汲取、转化与商店",
+      "timeline": {"start_seconds": 252, "end_seconds": 330, "duration_seconds": 78},
+      "subshots": [
+        {
+          "subshot_id": "S05-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 252, "end_seconds": 254.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C024", "kind": "title_card", "narration_zh": "", "subtitle_zh": "汲取：只认实际掉血", "subtitle_en": "Drain: only actual life loss counts", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "汲取：只认实际掉血", "english_subtitle": "Drain: only actual life loss counts", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S05-02-multihit-drain",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T11", "independent": true},
+          "timeline": {"start_seconds": 254.5, "end_seconds": 282.5, "duration_seconds": 28},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C025", "kind": "narration", "narration_zh": "三色轮舞的三段攻击全部结束之后，汲取才根据敌人实际失去的生命完成一次恢复。", "subtitle_zh": "多段攻击先汇总，汲取随后一次结算", "subtitle_en": "Aggregate every hit, then resolve Drain once", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T11-state-before", "T11-action-receipt", "T11-event-sequence", "T11-state-after"]
+        },
+        {
+          "subshot_id": "S05-03-heal-to-block",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T12", "independent": true},
+          "timeline": {"start_seconds": 282.5, "end_seconds": 306, "duration_seconds": 23.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C026", "kind": "narration", "narration_zh": "恢复并不一定停在生命栏里；另一条路径会把已经确认的恢复继续转成格挡。", "subtitle_zh": "实际恢复继续转化为格挡", "subtitle_en": "Confirmed healing continues into block", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T12-state-before", "T12-action-receipt", "T12-state-after"]
+        },
+        {
+          "subshot_id": "S05-04-shop-title",
+          "asset_type": "tower_title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 306, "end_seconds": 307.8, "duration_seconds": 1.8},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C027", "kind": "title_card", "narration_zh": "", "subtitle_zh": "商店｜SHOP", "subtitle_en": "SHOP", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "商店", "english_subtitle": "SHOP", "duration_seconds": 1.8},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S05-05-shop-purchase",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T13", "independent": true},
+          "timeline": {"start_seconds": 307.8, "end_seconds": 330, "duration_seconds": 22.2},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "tower_life_requirements": {
+            "ordinary_shop": true,
+            "vivhite_and_merchant_wide_shot": true,
+            "complete_shelf_visible": true,
+            "hover_vivhite_card_or_relic": true,
+            "real_purchase": true,
+            "gold_delta_visible": true,
+            "close_inventory": true,
+            "leave_shop": true
+          },
+         "cue": {"cue_id": "C028", "kind": "narration", "narration_zh": "在普通商店看完整货架，悬停白绮的卡牌，完成购买，再让金币变化证明交易。", "subtitle_zh": "真实购买｜金币变化｜离开商店", "subtitle_en": "Real purchase | gold changes | leave the shop", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T13-shop-entry-receipt", "T13-state-before", "T13-tooltip-ocr", "T13-purchase-receipt", "T13-state-after", "T13-close-inventory-receipt", "T13-leave-shop-receipt", "T13-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S07-recursive-star-calculus",
+      "chapter_id": "recursive-star-calculus",
+      "title": "递归星算",
+      "timeline": {"start_seconds": 330, "end_seconds": 382, "duration_seconds": 52},
+      "subshots": [
+        {
+          "subshot_id": "S07-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 330, "end_seconds": 332.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C029", "kind": "title_card", "narration_zh": "", "subtitle_zh": "递归星算：死亡成为下一步输入", "subtitle_en": "Recursive Star Calculus: death becomes the next input", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "递归星算：死亡成为下一步输入", "english_subtitle": "Recursive Star Calculus: death becomes the next input", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S07-02-termination-chain-a",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T14", "independent": true},
+          "timeline": {"start_seconds": 332.5, "end_seconds": 357, "duration_seconds": 24.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+          "cue": {"cue_id": "C030", "kind": "narration", "narration_zh": "终止证明真正击杀低血敌人。汲取先落定；随后，冠冕、星算追猎与终止证明把恢复、抽牌和能量接入下一步。", "subtitle_zh": "汲取先结算｜死亡奖励随后接入", "subtitle_en": "Drain resolves first | death rewards follow", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T14-state-before", "T14-action-receipt", "T14-event-sequence", "T14-state-after"]
+        },
+        {
+          "subshot_id": "S07-03-termination-chain-b",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T15", "independent": true, "requirement": "conditional", "fallback_take_id": "T14"},
+          "timeline": {"start_seconds": 357, "end_seconds": 382, "duration_seconds": 25},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+          "conditional_edit": {
+            "activation_condition": "T14 的汲取、冠冕、抽牌或能量 UI 事件互相遮挡",
+            "split_is_editorial_metadata_only": true,
+            "audience_must_not_see_production_instruction": true,
+            "fallback_take_id": "T14",
+            "fallback_mode": "result_event_continuation",
+            "continuation_of_subshot_id": "S07-02-termination-chain-a",
+            "must_be_source_contiguous": true,
+            "must_not_overlap_source": true,
+            "fallback_has_formal_input": false
+          },
+          "cue": {"cue_id": "C031", "kind": "narration", "narration_zh": "每一次死亡，都把恢复、手牌与能量交给下一步；递归因此不是回头，而是继续向前。", "subtitle_zh": "死亡奖励清楚呈现，成为下一步输入", "subtitle_en": "Death rewards remain visible and become the next input", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T15-state-before", "T15-action-receipt", "T15-event-sequence", "T15-state-after"],
+          "fallback_evidence_refs": ["T14-event-sequence", "T14-state-after", "T14-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S08-crimson-integral",
+      "chapter_id": "crimson-integral",
+      "title": "绯彩积分",
+      "timeline": {"start_seconds": 382, "end_seconds": 415, "duration_seconds": 33},
+      "subshots": [
+        {
+          "subshot_id": "S08-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 382, "end_seconds": 384.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C032", "kind": "title_card", "narration_zh": "", "subtitle_zh": "绯彩积分：让回合成为变量", "subtitle_en": "Crimson Integral: make the turn a variable", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "绯彩积分：让回合成为变量", "english_subtitle": "Crimson Integral: make the turn a variable", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S08-02-crimson-phase-zero",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T16", "independent": true},
+          "continuity_group": "T16-crimson-phase0-to-phase1",
+          "must_be_source_contiguous": true,
+          "timeline": {"start_seconds": 384.5, "end_seconds": 402.5, "duration_seconds": 18},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C033", "kind": "narration", "narration_zh": "猩红转化仪式从 phase 0 开始。完成这一回合，让下一阶段由游戏自己推进。", "subtitle_zh": "phase 0 → 结束回合", "subtitle_en": "phase 0 → end turn", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T16-frame-begin", "T16-state-before", "T16-ritual-receipt", "T16-state-phase0", "T16-end-turn-receipt", "T16-state-phase1", "T16-event-sequence"]
+        },
+        {
+          "subshot_id": "S08-03-crimson-phase-one",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T16", "independent": true},
+          "continuity_group": "T16-crimson-phase0-to-phase1",
+          "must_be_source_contiguous": true,
+          "timeline": {"start_seconds": 402.5, "end_seconds": 415, "duration_seconds": 12.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+          "cue": {"cue_id": "C034", "kind": "narration", "narration_zh": "phase 1 的攻击承担额外謦欬，同时让每一击变得更重。", "subtitle_zh": "phase 1：额外謦欬与伤害", "subtitle_en": "phase 1: additional Cough and damage", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T16-state-before-attack", "T16-phase1-attack-receipt", "T16-state-final", "T16-event-sequence", "T16-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S09-unified-field",
+      "chapter_id": "unified-field",
+      "title": "统一场论",
+      "timeline": {"start_seconds": 415, "end_seconds": 448, "duration_seconds": 33},
+      "subshots": [
+        {
+          "subshot_id": "S09-01-title",
+          "asset_type": "title_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 415, "end_seconds": 417.5, "duration_seconds": 2.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C035", "kind": "title_card", "narration_zh": "", "subtitle_zh": "统一场论：让资源回到起点", "subtitle_en": "Unified Field Theory: return resources to the origin", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "统一场论：让资源回到起点", "english_subtitle": "Unified Field Theory: return resources to the origin", "duration_seconds": 2.5},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2"]
+        },
+        {
+          "subshot_id": "S09-02-unified-field-chain",
+          "asset_type": "mechanism_action",
+          "take": {"take_id": "T18", "independent": true},
+          "timeline": {"start_seconds": 417.5, "end_seconds": 444, "duration_seconds": 26.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "action_window": {"full_view_before": true, "hover_seconds": {"minimum": 1.5, "maximum": 2}, "formal_action_to_settlement_uncut": true, "playback_speed": 1, "result_hold_seconds": {"minimum": 2, "maximum": 4}, "max_no_visible_change_seconds": 4},
+         "cue": {"cue_id": "C036", "kind": "narration", "narration_zh": "余裕抵扣代价，汲取随之增长，实际回血落地，余裕再度回流。不同体系在这一刻闭合。", "subtitle_zh": "余裕抵扣 → 汲取增长 → 实际回血 → 余裕回流", "subtitle_en": "Margin offset → Drain growth → real healing → Margin returns", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T18-frame-begin", "T18-state-before", "T18-cough-card-receipt", "T18-state-after-cough", "T18-drain-attack-receipt", "T18-event-sequence", "T18-state-after"]
+        },
+        {
+          "subshot_id": "S09-03-unified-field-result",
+          "asset_type": "gameplay",
+          "take": {"take_id": "T18", "independent": true},
+          "timeline": {"start_seconds": 444, "end_seconds": 448, "duration_seconds": 4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C037", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T18-event-sequence", "T18-state-after", "T18-frame-end"]
+        }
+      ]
+    },
+    {
+      "shot_id": "S10-finale",
+      "chapter_id": "finale",
+      "title": "61 张卡、三条路线与 Finale",
+      "timeline": {"start_seconds": 448, "end_seconds": 540, "duration_seconds": 92},
+      "subshots": [
+        {
+          "subshot_id": "S10-01-card-library",
+          "asset_type": "ui_gameplay",
+          "take": {"take_id": "T19", "independent": true},
+          "timeline": {"start_seconds": 448, "end_seconds": 462, "duration_seconds": 14},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C038", "kind": "narration", "narration_zh": "六十一张专属卡牌，不是一条固定答案，而是一组可以被重新组合的语言。", "subtitle_zh": "61 张专属卡牌", "subtitle_en": "61 signature cards", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T19-frame-begin", "T19-runtime-manifest", "T19-tooltip-ocr", "T19-frame-end"]
+        },
+        {
+          "subshot_id": "S10-02-conservation-route",
+          "asset_type": "montage",
+          "take": {"take_id": "T05", "independent": true},
+          "timeline": {"start_seconds": 462, "end_seconds": 473, "duration_seconds": 11},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C039", "kind": "narration", "narration_zh": "守恒几何，把支付转成防线。", "subtitle_zh": "构筑路线一｜守恒几何", "subtitle_en": "Build route I | Conservation Geometry", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T05-axiom-ring-receipt", "T05-closed-projection-receipt", "T05-event-sequence", "T05-state-after"]
+        },
+        {
+          "subshot_id": "S10-03-recursive-route",
+          "asset_type": "montage",
+          "take": {"take_id": "T14", "independent": true},
+          "timeline": {"start_seconds": 473, "end_seconds": 484, "duration_seconds": 11},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C040", "kind": "narration", "narration_zh": "递归星算，让死亡成为下一步输入。", "subtitle_zh": "构筑路线二｜递归星算", "subtitle_en": "Build route II | Recursive Star Calculus", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T14-action-receipt", "T14-event-sequence", "T14-state-after"]
+        },
+        {
+          "subshot_id": "S10-04-crimson-route",
+          "asset_type": "montage",
+          "take": {"take_id": "T17", "independent": true},
+          "timeline": {"start_seconds": 484, "end_seconds": 496, "duration_seconds": 12},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C041", "kind": "narration", "narration_zh": "绯彩积分，让回合与生命一起参与计算。它们是三条构筑路线，不是平衡或无限成长的承诺。", "subtitle_zh": "构筑路线三｜绯彩积分", "subtitle_en": "Build route III | Crimson Integral", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T17-frame-begin", "T17-lineage", "T17-runtime-manifest", "T17-frame-end"]
+        },
+        {
+          "subshot_id": "S10-05-finale-cough",
+          "asset_type": "montage",
+          "take": {"take_id": "T03", "independent": true},
+          "timeline": {"start_seconds": 496, "end_seconds": 499.5, "duration_seconds": 3.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C042", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "montage_lineage": {
+            "source_subshot_id": "S03-02-basic-payment",
+            "reuse_kind": "editorial_excerpt",
+            "formal_action_claimed": false
+          },
+          "evidence_refs": ["T03-frame-begin", "T03-event-sequence", "T03-frame-end"]
+        },
+        {
+          "subshot_id": "S10-06-finale-margin",
+          "asset_type": "montage",
+          "take": {"take_id": "T05", "independent": true},
+          "timeline": {"start_seconds": 499.5, "end_seconds": 503, "duration_seconds": 3.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C043", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T05-closed-projection-receipt", "T05-state-after"]
+        },
+        {
+          "subshot_id": "S10-07-finale-drain",
+          "asset_type": "montage",
+          "take": {"take_id": "T11", "independent": true},
+          "timeline": {"start_seconds": 503, "end_seconds": 506.5, "duration_seconds": 3.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C044", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T11-action-receipt", "T11-state-after"]
+        },
+        {
+          "subshot_id": "S10-08-finale-kill-chain",
+          "asset_type": "montage",
+          "take": {"take_id": "T14", "independent": true},
+          "timeline": {"start_seconds": 506.5, "end_seconds": 510, "duration_seconds": 3.5},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C045", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T14-action-receipt", "T14-event-sequence"]
+        },
+        {
+          "subshot_id": "S10-09-finale-map",
+          "asset_type": "montage",
+          "take": {"take_id": "T07", "independent": true},
+          "timeline": {"start_seconds": 510, "end_seconds": 514, "duration_seconds": 4},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C046", "kind": "game_audio_only", "narration_zh": "", "subtitle_zh": "", "subtitle_en": "", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T07-map-receipt", "T07-state-after"]
+        },
+        {
+          "subshot_id": "S10-10-idle-cta",
+          "asset_type": "gameplay",
+          "take": {"take_id": "T20", "independent": true},
+          "timeline": {"start_seconds": 514, "end_seconds": 526, "duration_seconds": 12},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+         "cue": {"cue_id": "C047", "kind": "narration", "narration_zh": "这就是白绮：用生命支付，用余裕周转，让每一次回转成为未来的基石。", "subtitle_zh": "用生命支付，用余裕周转", "subtitle_en": "Pay with life. Circulate with Margin.", "voice_asset": null},
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T20-frame-begin", "T20-frame-end"]
+        },
+        {
+          "subshot_id": "S10-11-version-and-workshop-status",
+          "asset_type": "montage",
+          "take": {"take_id": "T20", "independent": true},
+          "timeline": {"start_seconds": 526, "end_seconds": 533, "duration_seconds": 7},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "capture_pending"},
+          "cue": {
+            "cue_id": "C048",
+            "kind": "narration",
+            "narration_zh": "和白绮一同走进尖塔，看看你的公式能走多远。",
+            "subtitle_zh": "61 张专属卡牌｜三条核心路线｜当前版本与 Workshop 状态",
+            "subtitle_en": "61 cards | three core routes | current version and Workshop status",
+            "voice_asset": null,
+            "template_fields": ["runtime_version", "workshop_status"],
+            "template_evidence": {
+              "runtime_version": "T20-runtime-manifest",
+              "workshop_status": "T20-workshop-status-receipt"
+            }
+          },
+          "provenance": "runtime_observed",
+          "observation_status": "pending",
+          "evidence_refs": ["T20-runtime-manifest", "T20-workshop-status-receipt"]
+        },
+        {
+          "subshot_id": "S10-12-clean-end-card",
+          "asset_type": "end_card",
+          "take": {"take_id": null, "independent": false, "generator": "xar.TitleCardSpec"},
+          "timeline": {"start_seconds": 533, "end_seconds": 540, "duration_seconds": 7},
+          "source": {"in_seconds": null, "out_seconds": null, "status": "render_pending"},
+          "cue": {"cue_id": "C049", "kind": "end_card", "narration_zh": "", "subtitle_zh": "白绮 VIVHITE", "subtitle_en": "VIVHITE", "voice_asset": null},
+          "title_card": {"factory": "vivhite_promo.title_cards_v2.create_title_card_spec_v2", "chinese_title": "白绮", "english_subtitle": "VIVHITE", "duration_seconds": 7},
+          "provenance": "editorial_derived",
+          "evidence_refs": ["director-plan-v2", "runtime-build-manifest"]
+        }
+      ]
+    }
+  ],
+  "variants": {
+    "hero-60": {
+      "duration_seconds": 60,
+      "target_duration_seconds": 60,
+      "independent_edl": true,
+      "source": "same_v2_take_batch",
+      "from_signed_master": false,
+      "planned_edl_path": "tools/promo/v2/edl/hero-60.json",
+      "edl_status": "not_started"
+    },
+    "cut-30": {
+      "duration_seconds": 30,
+      "target_duration_seconds": 30,
+      "independent_edl": true,
+      "source": "same_v2_take_batch",
+      "from_signed_master": false,
+      "planned_edl_path": "tools/promo/v2/edl/cut-30.json",
+      "edl_status": "not_started"
+    },
+    "cut-15": {
+      "duration_seconds": 15,
+      "target_duration_seconds": 15,
+      "independent_edl": true,
+      "source": "same_v2_take_batch",
+      "from_signed_master": false,
+      "planned_edl_path": "tools/promo/v2/edl/cut-15.json",
+      "edl_status": "not_started"
+    }
+  }
+}

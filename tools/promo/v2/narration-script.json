@@ -1,0 +1,776 @@
+{
+  "schema_version": 1,
+  "kind": "vivhite_promo_full_master_script",
+  "project_id": "vivhite-player-promo",
+  "revision_id": "director-v2",
+  "title": "白绮：把生命写成魔法",
+  "target_duration_seconds": 540.0,
+  "source_storyboard": "storyboard.json",
+  "audio_policy": {
+    "voice": "zh-CN-XiaoxiaoNeural",
+    "include_bgm": false,
+    "game_audio": "duck ambience under narration; keep key SFX foregrounded"
+  },
+  "cue_policy": {
+    "one_tts_request_per_narrated_cue": true,
+    "one_bilingual_subtitle_event_per_narrated_cue": true,
+    "runtime_numbers_must_not_be_hardcoded": true
+  },
+  "selection": {
+    "narrated_cue_count": 30,
+    "narrated_cue_ids": [
+      "C002",
+      "C007A",
+      "C007B",
+      "C008A",
+      "C008B",
+      "C009",
+      "C010",
+      "C012",
+      "C013",
+      "C015",
+      "C016",
+      "C017",
+      "C018",
+      "C020",
+      "C021",
+      "C023",
+      "C025",
+      "C026",
+      "C028",
+      "C030",
+      "C031",
+      "C033",
+      "C034",
+      "C036",
+      "C038",
+      "C039",
+      "C040",
+      "C041",
+      "C047",
+      "C048"
+    ],
+    "intentionally_silent_cue_count": 21,
+    "intentionally_silent_cue_ids": [
+      "C001",
+      "C003",
+      "C004",
+      "C005",
+      "C006",
+      "C011",
+      "C014",
+      "C019",
+      "C022",
+      "C024",
+      "C027",
+      "C029",
+      "C032",
+      "C035",
+      "C037",
+      "C042",
+      "C043",
+      "C044",
+      "C045",
+      "C046",
+      "C049"
+    ]
+  },
+  "chapters": [
+    {
+      "chapter_id": "identity",
+      "shot_id": "S01-identity",
+      "window": {
+        "start_seconds": 0.0,
+        "end_seconds": 58.0
+      },
+      "cues": [
+        {
+          "cue_id": "C002",
+          "subshot_id": "S01-02-margin-highlight",
+          "anchor_seconds": 2.4,
+          "subtitle_window_seconds": 4.800000000000001,
+          "narration_zh": "如果生命不是终点，它还能被写成什么？",
+          "subtitle_zh": "如果生命不是终点，它还能被写成什么？",
+          "subtitle_en": "If life is not the endpoint, what else can it become?",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T05-state-before",
+              "T05-axiom-ring-receipt",
+              "T05-closed-projection-receipt",
+              "T05-event-sequence",
+              "T05-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C007A",
+          "subshot_id": "S01-07-main-title",
+          "anchor_seconds": 18.0,
+          "subtitle_window_seconds": 4.800000000000001,
+          "narration_zh": "生命也好，希望也罢，这些无趣的东西，你们尽管拿去。",
+          "subtitle_zh": "白绮 VIVHITE｜把生命写成魔法",
+          "subtitle_en": "VIVHITE | Write life into magic",
+          "tts_rate": "+15%",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T20-lineage"
+            ]
+          }
+        },
+        {
+          "cue_id": "C007B",
+          "subshot_id": "S01-08-main-title-continuation",
+          "anchor_seconds": 23.0,
+          "subtitle_window_seconds": 3.3999999999999986,
+          "narration_zh": "我的魔法，从来不需要被理解。",
+          "subtitle_zh": "我的魔法，从来不需要被理解。",
+          "subtitle_en": "My magic has never needed to be understood.",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T20-lineage"
+            ]
+          }
+        },
+        {
+          "cue_id": "C008A",
+          "subshot_id": "S01-09-character-selection-j-cut",
+          "anchor_seconds": 26.5,
+          "subtitle_window_seconds": 6.5,
+          "narration_zh": "我只是……想要成为我自己。",
+          "subtitle_zh": "我只是……想要成为我自己。",
+          "subtitle_en": "I only want… to become myself.",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T01-frame-begin",
+              "T01-mode-entry-receipt",
+              "T01-highlight-receipt",
+              "T01-runtime-manifest"
+            ]
+          }
+        },
+        {
+          "cue_id": "C008B",
+          "subshot_id": "S01-10-character-selection",
+          "anchor_seconds": 38.0,
+          "subtitle_window_seconds": 20.0,
+          "narration_zh": "从标准模式进入角色列表。让名字、生命、金币与孤高冠冕先替她完成自我介绍。",
+          "subtitle_zh": "独立角色白绮｜生命与金币以当前 HUD 为准｜孤高冠冕",
+          "subtitle_en": "Vivhite | current HP and gold in the HUD | Solitary Crown",
+          "runtime_binding": {
+            "status": "pending",
+            "deferred_fields": [
+              "initial_hp",
+              "initial_gold"
+            ],
+            "must_not_bake_into_tts_or_subtitle": true
+          },
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T01-highlight-receipt",
+              "T01-confirm-receipt",
+              "T01-runtime-manifest",
+              "T01-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "loadout",
+      "shot_id": "S02-loadout",
+      "window": {
+        "start_seconds": 58.0,
+        "end_seconds": 78.0
+      },
+      "cues": [
+        {
+          "cue_id": "C009",
+          "subshot_id": "S02-01-starting-status",
+          "anchor_seconds": 58.0,
+          "subtitle_window_seconds": 8.0,
+          "narration_zh": "进入尖塔，先看当前版本真实呈现的生命、金币与初始遗物。",
+          "subtitle_zh": "初始状态以当前 HUD 为准",
+          "subtitle_en": "The current HUD is the source of truth",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T02-frame-begin",
+              "T02-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C010",
+          "subshot_id": "S02-02-starter-deck",
+          "anchor_seconds": 66.0,
+          "subtitle_window_seconds": 12.0,
+          "narration_zh": "弦光投影、闭域映射与白绮的变身式，构成这套公式的第一行。",
+          "subtitle_zh": "弦光投影｜闭域映射｜白绮的变身式",
+          "subtitle_en": "Luminous Projection | Closed Domain Mapping | Vivhite's Transformation",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T02-tooltip-ocr",
+              "T02-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "cough",
+      "shot_id": "S03-cough",
+      "window": {
+        "start_seconds": 78.0,
+        "end_seconds": 120.0
+      },
+      "cues": [
+        {
+          "cue_id": "C012",
+          "subshot_id": "S03-02-basic-payment",
+          "anchor_seconds": 80.5,
+          "subtitle_window_seconds": 18.5,
+          "narration_zh": "謦欬先处理可支付性与生命代价，然后伤害或格挡才开始结算。",
+          "subtitle_zh": "生命支付发生在牌面效果之前",
+          "subtitle_en": "Life is paid before the card effect",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T03-state-before",
+              "T03-action-receipt",
+              "T03-event-sequence",
+              "T03-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C013",
+          "subshot_id": "S03-03-transformation-payment",
+          "anchor_seconds": 99.0,
+          "subtitle_window_seconds": 21.0,
+          "narration_zh": "余裕会优先抵扣代价；只有支付成功，变身式的力量与敏捷才会出现。",
+          "subtitle_zh": "余裕优先｜支付成功后执行牌效",
+          "subtitle_en": "Margin first | Resolve only after successful payment",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T04-state-before",
+              "T04-action-receipt",
+              "T04-event-sequence",
+              "T04-state-after"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "margin",
+      "shot_id": "S04-margin",
+      "window": {
+        "start_seconds": 120.0,
+        "end_seconds": 188.0
+      },
+      "cues": [
+        {
+          "cue_id": "C015",
+          "subshot_id": "S04-02-axiom-closed-chain",
+          "anchor_seconds": 122.5,
+          "subtitle_window_seconds": 28.5,
+          "narration_zh": "公理护环先建立余裕，闭域投影再把抵扣掉的代价写成格挡。",
+          "subtitle_zh": "余裕抵扣謦欬，并转化为格挡",
+          "subtitle_en": "Margin offsets Cough and becomes block",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T05-frame-begin",
+              "T05-state-before",
+              "T05-axiom-ring-receipt",
+              "T05-state-after-axiom-ring",
+              "T05-closed-projection-receipt",
+              "T05-event-sequence",
+              "T05-tooltip-ocr",
+              "T05-state-after",
+              "T05-frame-end"
+            ]
+          }
+        },
+        {
+          "cue_id": "C016",
+          "subshot_id": "S04-03-second-conservation-chain",
+          "anchor_seconds": 151.0,
+          "subtitle_window_seconds": 17.0,
+          "narration_zh": "换一条守恒路径，代价仍然可以被储存、搬运，再在需要的坐标上兑现。",
+          "subtitle_zh": "同一资源关系，不同守恒路径",
+          "subtitle_en": "The same resource relation, a different conservation path",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T06-state-before",
+              "T06-action-receipt",
+              "T06-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C017",
+          "subshot_id": "S04-04-card-reward",
+          "anchor_seconds": 168.0,
+          "subtitle_window_seconds": 8.0,
+          "narration_zh": "一场战斗结束，下一张白绮卡牌让公式开始偏向新的方向。",
+          "subtitle_zh": "真实选择战斗奖励",
+          "subtitle_en": "Choose a real combat reward",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T07-state-before",
+              "T07-reward-receipt",
+              "T07-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C018",
+          "subshot_id": "S04-05-map-route",
+          "anchor_seconds": 176.0,
+          "subtitle_window_seconds": 12.0,
+          "narration_zh": "打开地图，路线被点亮，白绮的蝴蝶标记走向下一个节点。",
+          "subtitle_zh": "路线选择也会改变构筑的下一步",
+          "subtitle_en": "Route choice changes the build's next step",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T07-map-receipt",
+              "T07-state-after",
+              "T07-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "conservation-geometry",
+      "shot_id": "S06-conservation-geometry",
+      "window": {
+        "start_seconds": 188.0,
+        "end_seconds": 252.0
+      },
+      "cues": [
+        {
+          "cue_id": "C020",
+          "subshot_id": "S06-02-topology-growth",
+          "anchor_seconds": 190.5,
+          "subtitle_window_seconds": 21.5,
+          "narration_zh": "拓扑增生把预先积累的余裕变成增维，让最大生命与当前生命同步向上。",
+          "subtitle_zh": "增维同步提高最大生命与当前生命",
+          "subtitle_en": "Dimension Up raises maximum and current life together",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T08-state-before",
+              "T08-action-receipt",
+              "T08-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C021",
+          "subshot_id": "S06-03-fatal-growth",
+          "anchor_seconds": 212.0,
+          "subtitle_window_seconds": 20.0,
+          "narration_zh": "由白绮打出的卡牌完成真实击杀，致命才触发增维。",
+          "subtitle_zh": "真实卡牌击杀触发致命与增维",
+          "subtitle_en": "A real card kill triggers Fatal and Dimension Up",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T09-state-before",
+              "T09-action-receipt",
+              "T09-death-receipt",
+              "T09-event-sequence",
+              "T09-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C023",
+          "subshot_id": "S06-05-campfire-rest",
+          "anchor_seconds": 233.8,
+          "subtitle_window_seconds": 18.19999999999999,
+          "narration_zh": "在塔的中段停下来，看完整的休息动画，再让缺失的生命真实回到 HUD。",
+          "subtitle_zh": "选择休息，并显示实际回血",
+          "subtitle_en": "Rest and show the real healing result",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T10-frame-begin",
+              "T10-state-before",
+              "T10-campfire-entry-receipt",
+              "T10-rest-receipt",
+              "T10-state-after",
+              "T10-return-map-receipt",
+              "T10-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "drain",
+      "shot_id": "S05-drain",
+      "window": {
+        "start_seconds": 252.0,
+        "end_seconds": 330.0
+      },
+      "cues": [
+        {
+          "cue_id": "C025",
+          "subshot_id": "S05-02-multihit-drain",
+          "anchor_seconds": 254.5,
+          "subtitle_window_seconds": 28.0,
+          "narration_zh": "三色轮舞的三段攻击全部结束之后，汲取才根据敌人实际失去的生命完成一次恢复。",
+          "subtitle_zh": "多段攻击先汇总，汲取随后一次结算",
+          "subtitle_en": "Aggregate every hit, then resolve Drain once",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T11-state-before",
+              "T11-action-receipt",
+              "T11-event-sequence",
+              "T11-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C026",
+          "subshot_id": "S05-03-heal-to-block",
+          "anchor_seconds": 282.5,
+          "subtitle_window_seconds": 23.5,
+          "narration_zh": "恢复并不一定停在生命栏里；另一条路径会把已经确认的恢复继续转成格挡。",
+          "subtitle_zh": "实际恢复继续转化为格挡",
+          "subtitle_en": "Confirmed healing continues into block",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T12-state-before",
+              "T12-action-receipt",
+              "T12-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C028",
+          "subshot_id": "S05-05-shop-purchase",
+          "anchor_seconds": 307.8,
+          "subtitle_window_seconds": 22.19999999999999,
+          "narration_zh": "在普通商店看完整货架，悬停白绮的卡牌，完成购买，再让金币变化证明交易。",
+          "subtitle_zh": "真实购买｜金币变化｜离开商店",
+          "subtitle_en": "Real purchase | gold changes | leave the shop",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T13-shop-entry-receipt",
+              "T13-state-before",
+              "T13-tooltip-ocr",
+              "T13-purchase-receipt",
+              "T13-state-after",
+              "T13-close-inventory-receipt",
+              "T13-leave-shop-receipt",
+              "T13-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "recursive-star-calculus",
+      "shot_id": "S07-recursive-star-calculus",
+      "window": {
+        "start_seconds": 330.0,
+        "end_seconds": 382.0
+      },
+      "cues": [
+        {
+          "cue_id": "C030",
+          "subshot_id": "S07-02-termination-chain-a",
+          "anchor_seconds": 332.5,
+          "subtitle_window_seconds": 24.5,
+          "narration_zh": "终止证明真正击杀低血敌人。汲取先落定；随后，冠冕、星算追猎与终止证明把恢复、抽牌和能量接入下一步。",
+          "subtitle_zh": "汲取先结算｜死亡奖励随后接入",
+          "subtitle_en": "Drain resolves first | death rewards follow",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T14-state-before",
+              "T14-action-receipt",
+              "T14-event-sequence",
+              "T14-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C031",
+          "subshot_id": "S07-03-termination-chain-b",
+          "anchor_seconds": 357.0,
+          "subtitle_window_seconds": 25.0,
+          "narration_zh": "每一次死亡，都把恢复、手牌与能量交给下一步；递归因此不是回头，而是继续向前。",
+          "subtitle_zh": "死亡奖励清楚呈现，成为下一步输入",
+          "subtitle_en": "Death rewards remain visible and become the next input",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T15-state-before",
+              "T15-action-receipt",
+              "T15-event-sequence",
+              "T15-state-after"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "crimson-integral",
+      "shot_id": "S08-crimson-integral",
+      "window": {
+        "start_seconds": 382.0,
+        "end_seconds": 415.0
+      },
+      "cues": [
+        {
+          "cue_id": "C033",
+          "subshot_id": "S08-02-crimson-phase-zero",
+          "anchor_seconds": 384.5,
+          "subtitle_window_seconds": 14.5,
+          "narration_zh": "猩红转化仪式从 phase 0 开始。完成这一回合，让下一阶段由游戏自己推进。",
+          "subtitle_zh": "phase 0 → 结束回合",
+          "subtitle_en": "phase 0 → end turn",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T16-frame-begin",
+              "T16-state-before",
+              "T16-ritual-receipt",
+              "T16-state-phase0",
+              "T16-end-turn-receipt",
+              "T16-state-phase1",
+              "T16-event-sequence"
+            ]
+          }
+        },
+        {
+          "cue_id": "C034",
+          "subshot_id": "S08-03-crimson-phase-one",
+          "anchor_seconds": 399.0,
+          "subtitle_window_seconds": 16.0,
+          "narration_zh": "phase 1 的攻击承担额外謦欬，同时让每一击变得更重。",
+          "subtitle_zh": "phase 1：额外謦欬与伤害",
+          "subtitle_en": "phase 1: additional Cough and damage",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T16-state-before-attack",
+              "T16-phase1-attack-receipt",
+              "T16-state-final",
+              "T16-event-sequence",
+              "T16-frame-end"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "unified-field",
+      "shot_id": "S09-unified-field",
+      "window": {
+        "start_seconds": 415.0,
+        "end_seconds": 448.0
+      },
+      "cues": [
+        {
+          "cue_id": "C036",
+          "subshot_id": "S09-02-unified-field-chain",
+          "anchor_seconds": 417.5,
+          "subtitle_window_seconds": 26.5,
+          "narration_zh": "余裕抵扣代价，汲取随之增长，实际回血落地，余裕再度回流。不同体系在这一刻闭合。",
+          "subtitle_zh": "余裕抵扣 → 汲取增长 → 实际回血 → 余裕回流",
+          "subtitle_en": "Margin offset → Drain growth → real healing → Margin returns",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T18-frame-begin",
+              "T18-state-before",
+              "T18-cough-card-receipt",
+              "T18-state-after-cough",
+              "T18-drain-attack-receipt",
+              "T18-event-sequence",
+              "T18-state-after"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "chapter_id": "finale",
+      "shot_id": "S10-finale",
+      "window": {
+        "start_seconds": 448.0,
+        "end_seconds": 540.0
+      },
+      "cues": [
+        {
+          "cue_id": "C038",
+          "subshot_id": "S10-01-card-library",
+          "anchor_seconds": 448.0,
+          "subtitle_window_seconds": 14.0,
+          "narration_zh": "一整套专属卡牌，不是一条固定答案，而是一组可以被重新组合的语言。",
+          "subtitle_zh": "专属卡牌构成完整牌库",
+          "subtitle_en": "A complete library of signature cards",
+          "runtime_binding": {
+            "status": "pending",
+            "deferred_fields": [
+              "signature_card_count"
+            ],
+            "must_not_bake_into_tts_or_subtitle": true
+          },
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T19-frame-begin",
+              "T19-runtime-manifest",
+              "T19-tooltip-ocr",
+              "T19-frame-end"
+            ]
+          }
+        },
+        {
+          "cue_id": "C039",
+          "subshot_id": "S10-02-conservation-route",
+          "anchor_seconds": 462.0,
+          "subtitle_window_seconds": 11.0,
+          "narration_zh": "守恒几何，把支付转成防线。",
+          "subtitle_zh": "构筑路线一｜守恒几何",
+          "subtitle_en": "Build route I | Conservation Geometry",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T05-axiom-ring-receipt",
+              "T05-closed-projection-receipt",
+              "T05-event-sequence",
+              "T05-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C040",
+          "subshot_id": "S10-03-recursive-route",
+          "anchor_seconds": 473.0,
+          "subtitle_window_seconds": 11.0,
+          "narration_zh": "递归星算，让死亡成为下一步输入。",
+          "subtitle_zh": "构筑路线二｜递归星算",
+          "subtitle_en": "Build route II | Recursive Star Calculus",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T14-action-receipt",
+              "T14-event-sequence",
+              "T14-state-after"
+            ]
+          }
+        },
+        {
+          "cue_id": "C041",
+          "subshot_id": "S10-04-crimson-route",
+          "anchor_seconds": 484.0,
+          "subtitle_window_seconds": 12.0,
+          "narration_zh": "绯彩积分，让回合与生命一起参与计算。它们是三条构筑路线，不是平衡或无限成长的承诺。",
+          "subtitle_zh": "构筑路线三｜绯彩积分",
+          "subtitle_en": "Build route III | Crimson Integral",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T17-frame-begin",
+              "T17-lineage",
+              "T17-runtime-manifest",
+              "T17-frame-end"
+            ]
+          }
+        },
+        {
+          "cue_id": "C047",
+          "subshot_id": "S10-10-idle-cta",
+          "anchor_seconds": 514.0,
+          "subtitle_window_seconds": 12.0,
+          "narration_zh": "这就是白绮：用生命支付，用余裕周转，让每一次回转成为未来的基石。",
+          "subtitle_zh": "用生命支付，用余裕周转",
+          "subtitle_en": "Pay with life. Circulate with Margin.",
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T20-frame-begin",
+              "T20-frame-end"
+            ]
+          }
+        },
+        {
+          "cue_id": "C048",
+          "subshot_id": "S10-11-version-and-workshop-status",
+          "anchor_seconds": 526.0,
+          "subtitle_window_seconds": 7.0,
+          "narration_zh": "和白绮一同走进尖塔，看看你的公式能走多远。",
+          "subtitle_zh": "专属卡牌｜三条核心路线｜当前版本与 Workshop 状态",
+          "subtitle_en": "Signature cards | three core routes | current version and Workshop status",
+          "runtime_binding": {
+            "status": "pending",
+            "deferred_fields": [
+              "signature_card_count",
+              "runtime_version",
+              "workshop_status"
+            ],
+            "must_not_bake_into_tts_or_subtitle": true
+          },
+          "evidence": {
+            "mode": "runtime_observed_if_bound",
+            "provenance": "runtime_observed",
+            "refs": [
+              "T20-runtime-manifest",
+              "T20-workshop-status-receipt"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
