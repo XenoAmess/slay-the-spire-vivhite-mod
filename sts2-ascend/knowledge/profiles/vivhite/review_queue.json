@@ -1,64 +1,6 @@
 {
  "pending": [
   {
-   "run": 5,
-   "time": "2026-08-31 22:15",
-   "profile_id": "vivhite",
-   "backend_key": "luna-max",
-   "priority": 2,
-   "runner": "codex",
-   "model": "gpt-5.6-luna",
-   "variant": "",
-   "reasoning_effort": "max",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "queue_id": "26148-1788192356094080600-0",
-   "retry_same_model": false,
-   "salvage_packages": [
-    "20260901-000605-1788192365526162900-0b9c97f5"
-   ],
-   "salvage_attempts": [],
-   "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
-   "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
-   "retry_count": 26,
-   "retry_after": 1788615131.941877,
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
-   "deferred_count": 9,
-   "deferred_hold_until": 1788617831.941877,
-   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
-  },
-  {
-   "run": 6,
-   "time": "2026-08-31 22:27",
-   "profile_id": "vivhite",
-   "backend_key": "luna-max",
-   "priority": 2,
-   "runner": "codex",
-   "model": "gpt-5.6-luna",
-   "variant": "",
-   "reasoning_effort": "max",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "queue_id": "26148-1788192356094080600-1",
-   "retry_same_model": false,
-   "salvage_packages": [
-    "20260901-000605-1788192365526162900-0b9c97f5"
-   ],
-   "salvage_attempts": [],
-   "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
-   "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
-   "retry_count": 26,
-   "retry_after": 1788615131.941877,
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
-   "deferred_count": 9,
-   "deferred_hold_until": 1788617831.941877,
-   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
-  },
-  {
    "run": 53,
    "time": "2026-09-05 19:35",
    "profile_id": "vivhite",
@@ -141,9 +83,79 @@
    "run_id": "NMN3WFW0S9L5",
    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
    "queue_id": "8876-1788616751619416400-0",
-   "deferred_count": 4,
-   "retry_after": 1788617663.258922
+   "deferred_count": 5,
+   "retry_after": 1788618565.9025393,
+   "deferred_hold_until": 1788621265.9025393,
+   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   5,
+   6
+  ],
+  "items": [
+   {
+    "run": 5,
+    "time": "2026-08-31 22:15",
+    "profile_id": "vivhite",
+    "backend_key": "kimi-k3",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "kimi-for-coding/k3",
+    "variant": "",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 5,
+    "source": "preferred",
+    "queue_id": "26148-1788192356094080600-0",
+    "retry_same_model": true,
+    "salvage_packages": [
+     "20260901-000605-1788192365526162900-0b9c97f5"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
+    "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
+    "retry_count": 26,
+    "retry_after": 1788615131.941877,
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "deferred_count": 9,
+    "deferred_hold_until": 1788617831.941877,
+    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
+   },
+   {
+    "run": 6,
+    "time": "2026-08-31 22:27",
+    "profile_id": "vivhite",
+    "backend_key": "kimi-k3",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "kimi-for-coding/k3",
+    "variant": "",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 5,
+    "source": "preferred",
+    "queue_id": "26148-1788192356094080600-1",
+    "retry_same_model": true,
+    "salvage_packages": [
+     "20260901-000605-1788192365526162900-0b9c97f5"
+    ],
+    "salvage_attempts": [],
+    "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
+    "replay_target": "20260901-000605-1788192365526162900-0b9c97f5",
+    "retry_count": 26,
+    "retry_after": 1788615131.941877,
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "deferred_count": 9,
+    "deferred_hold_until": 1788617831.941877,
+    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
+   }
+  ],
+  "profile_id": "vivhite",
+  "retry_group": "20260901-000605-1788192365526162900-0b9c97f5",
+  "started": "2026-09-05 22:17:13"
+ }
 }
