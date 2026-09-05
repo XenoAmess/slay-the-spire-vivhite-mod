@@ -5,7 +5,7 @@
 图，在隔离目录生成可上传的三件套。
 
 当前条目：<https://steamcommunity.com/sharedfiles/filedetails/?id=3793741497><br>
-当前物料版本：`0.2.1` · App ID：`2868840` · 可见性：`public`<br>
+当前物料版本：`0.2.2` · App ID：`2868840` · 可见性：`public`<br>
 当前实机证据范围：Slay the Spire 2 `v0.111.0`、Steam `public-beta`、Vulkan。
 
 ![Vivhite Workshop preview](preview.jpg)
@@ -40,7 +40,7 @@ flowchart LR
 路径。预览生成器只消费仓库中已经验收的白绮选人母源和转场源图，并记录其 SHA-256；它不是
 AI 生图入口，也不会把运行时 atlas 当成整幅插画重绘。
 
-## 物料契约（0.2.1 快照）
+## 物料契约（0.2.2 快照）
 
 `workshop-item.json` 当前关键字段如下：
 
@@ -49,10 +49,10 @@ AI 生图入口，也不会把运行时 atlas 当成整幅插画重绘。
 | `app_id` | `2868840` | Slay the Spire 2 的 Steam App ID |
 | `published_file_id` | `3793741497` | 更新现有条目；默认不会创建重复条目 |
 | `dependency_id` | `3747602295` | RitsuLib Workshop 条目；发布时以依赖项方式附加/确认 |
-| `version` | `0.2.1` | 与打包的 `Vivhite.json` 版本必须相同 |
-| `preview.version` | `0.2.1` | 必须与顶层版本相同 |
-| `preview.sha256` | `17D3DCF4560FC10D13634784CA7CAE2A8718EBAF6EDC333DAE9000E80CA00F86` | 当前 `preview.jpg` 的完整 SHA-256 |
-| `preview.bytes` | `170282` | 当前预览文件大小；尺寸固定为 `1024×1024` |
+| `version` | `0.2.2` | 与打包的 `Vivhite.json` 版本必须相同 |
+| `preview.version` | `0.2.2` | 必须与顶层版本相同 |
+| `preview.sha256` | `DC9A57B681C91F610AE4068BCCC18CC54B12C53552BEFACF69C5071BE34AA161` | 当前 `preview.jpg` 的完整 SHA-256 |
+| `preview.bytes` | `170357` | 当前预览文件大小；尺寸固定为 `1024×1024` |
 
 发布时上传器目录必须**恰好**包含以下三个文件，不能夹带目录、缓存或旧版本：
 

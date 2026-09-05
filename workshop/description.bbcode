@@ -2,7 +2,7 @@
 
 白绮是一位精通数学、计算机与艺术的魔法少女。她以生命作为魔法演算材料，通过“謦欬施法 → 击杀或汲取回血 → 继续施法”建立战斗循环。
 
-[b]当前版本：[/b] 0.2.1
+[b]当前版本：[/b] 0.2.2
 [b]适配游戏：[/b] Slay the Spire 2 v0.111.0
 [b]实机验证分支：[/b] Steam [code]public-beta[/code]（当前公开材料仅覆盖此分支）
 [b]语言：[/b] 简体中文 / English
@@ -32,19 +32,19 @@
 [code]%APPDATA%\SlayTheSpire2\logs\godot.log[/code] 反馈。
 
 [h2]更新日志 / Changelog[/h2]
-[h3]0.2.1（2026-09-01）[/h3]
+[h3]0.2.2（2026-09-05）[/h3]
 [list]
-[*] 修复生命支付结算：钨合金棍、Buffer 等原生减伤把实际掉血降为 0 时，不再误判支付失败；牌面的后续效果仍会继续结算。
-[*] 修复事件循环：生成牌仅在当前战斗内临时存在，费用为 0，打出后消耗（Exhaust），不会进入牌组。
-[*] 更新实机验证范围：Steam [code]public-beta[/code] / Slay the Spire 2 v0.111.0，使用 Vulkan。
-[*] OpenGL3 与 D3D12 尚未完成 Mod 专项兼容验收，不作兼容承诺。
+[*] 修复“色彩守恒”的升级：謦欬生命消耗现在会从 4 降至 2，不再出现升级后没有数值变化。
+[*] 修复“无限画布”的升级：能量费用现在会从 3 降至 2，同时继续切换为升级版汲取成长效果。
+[*] 新增全部 61 张卡牌的升级验收，并回归覆盖钨合金棍、Buffer 的生命支付与“事件循环”临时复制语义。
+[*] 继续适配 Steam [code]public-beta[/code] / Slay the Spire 2 v0.111.0，并使用 Vulkan 完成发布构建验收；OpenGL3 与 D3D12 尚未完成 Mod 专项兼容验收。
 [/list]
 
 [h1]English[/h1]
 
 Vivhite is an independent magical-girl character built around mathematics, computation, and art. Her combat loop spends HP through Cough, then recovers through kills or Drain to continue casting.
 
-[b]Version:[/b] 0.2.1
+[b]Version:[/b] 0.2.2
 [b]Target game:[/b] Slay the Spire 2 v0.111.0
 [b]In-game verification branch:[/b] Steam [code]public-beta[/code] (the current public material covers this branch only)
 [b]Languages:[/b] Simplified Chinese / English
@@ -78,10 +78,10 @@ Source code and issue tracker: [url=https://github.com/XenoAmess/slay-the-spire-
 License: GNU GPL v3
 
 [h2]Changelog / 更新日志[/h2]
-[h3]0.2.1 (2026-09-01)[/h3]
+[h3]0.2.2 (2026-09-05)[/h3]
 [list]
-[*] Fixed HP-payment resolution: when native mitigation such as Tungsten Rod or Buffer reduces actual HP loss to 0, payment is no longer misclassified as failed and the card's remaining effects still resolve.
-[*] Fixed Event Loop copies: generated cards are combat-scoped, cost 0 for this turn, and Exhaust after being played instead of entering the deck.
-[*] Updated the in-game verification scope to Steam [code]public-beta[/code] / Slay the Spire 2 v0.111.0 on Vulkan.
-[*] OpenGL3 and D3D12 have no completed Mod-specific compatibility acceptance and are not compatibility promises.
+[*] Fixed Color Conservation's upgrade: its Cough HP cost now decreases from 4 to 2 instead of receiving no numerical upgrade.
+[*] Fixed Infinite Canvas's upgrade: its Energy cost now decreases from 3 to 2 while it still switches to the upgraded Drain-growth effect.
+[*] Added upgrade acceptance for all 61 cards, including regressions for Tungsten Rod/Buffer HP payment and Event Loop's temporary-copy semantics.
+[*] Continued support for Steam [code]public-beta[/code] / Slay the Spire 2 v0.111.0 with the release build accepted on Vulkan; OpenGL3 and D3D12 still lack Mod-specific compatibility acceptance.
 [/list]

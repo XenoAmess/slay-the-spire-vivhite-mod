@@ -34,7 +34,7 @@ class WorkshopMaterialContractTests(unittest.TestCase):
 
     def test_metadata_and_preview_are_same_release(self) -> None:
         self.assertEqual(self.item["app_id"], 2868840)
-        self.assertEqual(self.item["version"], "0.2.1")
+        self.assertEqual(self.item["version"], "0.2.2")
         preview = self.item["preview"]
         self.assertEqual(preview["version"], self.item["version"])
         self.assertEqual(preview["sha256"], self.preview_hash)
@@ -64,9 +64,9 @@ class WorkshopMaterialContractTests(unittest.TestCase):
             len(re.findall(r"\[h2\](?:更新日志\s*/\s*Changelog|Changelog\s*/\s*更新日志)\[/h2\]", self.description)),
             2,
         )
-        self.assertEqual(len(re.findall(r"\[h3\]\s*0\.2\.1(?:\s|[（(])", self.description)), 2)
-        self.assertEqual(re.findall(r"\[b\]当前版本：\[/b\]\s*([^\s\[]+)", self.description), ["0.2.1"])
-        self.assertEqual(re.findall(r"\[b\]Version:\[/b\]\s*([^\s\[]+)", self.description), ["0.2.1"])
+        self.assertEqual(len(re.findall(r"\[h3\]\s*0\.2\.2(?:\s|[（(])", self.description)), 2)
+        self.assertEqual(re.findall(r"\[b\]当前版本：\[/b\]\s*([^\s\[]+)", self.description), ["0.2.2"])
+        self.assertEqual(re.findall(r"\[b\]Version:\[/b\]\s*([^\s\[]+)", self.description), ["0.2.2"])
         for term in ("钨合金棍", "Buffer", "事件循环", "public-beta", "Vulkan", "OpenGL3", "D3D12"):
             self.assertIn(term, self.description)
         for term in ("Tungsten Rod", "Event Loop"):
@@ -115,7 +115,7 @@ class WorkshopMaterialContractTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertTrue(output.exists())
             self.assertLess(output.stat().st_size, 1_000_000)
-            self.assertIn("Version                : 0.2.1", result.stdout)
+            self.assertIn("Version                : 0.2.2", result.stdout)
 
 
 if __name__ == "__main__":

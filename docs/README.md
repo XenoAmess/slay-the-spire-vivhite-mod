@@ -99,6 +99,7 @@
 
 - [Steam Workshop 发布](./2026-09-01-vivhite-steam-workshop-release.md)
 - [0.2.1 Workshop 更新回执](./2026-09-01-vivhite-0.2.1-workshop更新回执.md)
+- [Vivhite 0.2.2 版本同步记录](./2026-09-05-vivhite-0.2.2版本同步.md)
 - [Workshop 物料版本与预览门禁](./2026-09-01-workshop物料版本与预览门禁.md)
 - [Workshop uploader change note](./2026-09-01-workshop-uploader-change-note.md)
 - [创意工坊评论证据](./2026-09-01-创意工坊评论证据.md)
