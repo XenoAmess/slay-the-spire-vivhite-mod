@@ -271,3 +271,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/3.986局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.986局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/3.986局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve_bonus_base: 7.50 → 7.80（Boss 高血进场长战死（99%，10回合），拿牌端攻击饥饿基础分加码）；burst_starve_bonus_extra_max: 11.50 → 12.00（Boss 高血进场长战死（10回合），缺口越深纠偏上限越高）；vivhite_param_life_cost_weight: -1.25 → -1.30（白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/21 胜，当前目标进阶 0
+
+## 第 22 局复盘（2026-09-05 11:42）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 HAUNTED_SHIP
+- 本局拿牌：VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL
+- 本局遗物：LETTER_OPENER, VEXING_PUZZLEBOX, FESTIVE_POPPER
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血0; F7 Monster战 掉血0; F11 Elite战 掉血59; F12 Monster战 掉血19（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_CHROMATIC_LIMIT(37分/3.9720490000000006局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/5.96156125局)，VIVHITE_CARD_NEGATIVE_SPACE(33分/2.97903675局)，PANACHE(32分/2.97903675局)，VIVHITE_CARD_CHIAROSCURO(32分/16.884696000000005局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.972049局)，VIVHITE_CARD_PREFETCH_FUTURE(19分/3.9720490000000006局)，VIVHITE_CARD_CONVERGENCE_VERDICT(19分/4.972049局)
+- 策略进化：block_safety: 1.30 → 1.35（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight: -1.30 → -1.35（白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/22 胜，当前目标进阶 0
