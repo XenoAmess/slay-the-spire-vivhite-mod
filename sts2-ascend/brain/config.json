@@ -39,14 +39,12 @@
     "provider_unavailable_cooldown_min": 1440,
   "models_probe_timeout_sec": 60,
   "viewer_enabled": true,
-  "preferred_models": [
-   "opencode-go/glm-5.3-flash@max",
-   "amd-radeon/DeepSeek-V4-Flash"
-  ],
+  "preferred_models": [],
   "review_model_chain": [
    {
     "key": "glm-flash",
     "priority": 1,
+    "enabled": false,
     "runner": "opencode",
     "model": "opencode-go/glm-5.3-flash",
     "variant": "max",
@@ -56,6 +54,7 @@
    {
     "key": "deepseek-v4-flash",
     "priority": 2,
+    "enabled": false,
     "runner": "opencode",
     "model": "amd-radeon/DeepSeek-V4-Flash",
     "every_runs": 1,
@@ -63,7 +62,7 @@
    },
   {
     "key": "kimi-k3",
-    "priority": 3,
+    "priority": 1,
     "runner": "opencode",
     "model": "kimi-for-coding/k3",
     "every_runs": 5,
@@ -71,7 +70,7 @@
    },
    {
     "key": "luna-max",
-    "priority": 4,
+    "priority": 2,
     "runner": "codex",
     "model": "gpt-5.6-luna",
     "reasoning_effort": "max",

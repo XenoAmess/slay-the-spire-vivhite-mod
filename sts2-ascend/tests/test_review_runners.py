@@ -1,4 +1,4 @@
-"""Runner-adapter regressions for the GLM -> DeepSeek -> Kimi -> Luna chain."""
+"""Runner-adapter regressions for the configured Kimi -> Luna chain."""
 from __future__ import annotations
 
 import json
@@ -56,21 +56,29 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertEqual(
             [(plan.priority, plan.key, plan.runner, plan.model) for plan in plans],
             [
-                (1, "glm-flash", "opencode", "opencode-go/glm-5.3-flash"),
-                (2, "deepseek-v4-flash", "opencode", "amd-radeon/DeepSeek-V4-Flash"),
-                (3, "kimi-k3", "opencode", "kimi-for-coding/k3"),
-                (4, "luna-max", "codex", "gpt-5.6-luna"),
+                (1, "kimi-k3", "opencode", "kimi-for-coding/k3"),
+                (2, "luna-max", "codex", "gpt-5.6-luna"),
             ],
         )
         self.assertEqual(
             [(plan.key, plan.source) for plan in plans],
             [
-                ("glm-flash", "preferred"),
-                ("deepseek-v4-flash", "preferred"),
                 ("kimi-k3", "preferred"),
                 ("luna-max", "fallback"),
             ],
         )
+
+    def test_disabled_entries_are_not_runnable_plans(self) -> None:
+        plans = review_plans_from_config({
+            "review_model_chain": [
+                {"key": "off", "enabled": False, "runner": "opencode",
+                 "model": "provider/off", "priority": 1},
+                {"key": "on", "runner": "opencode",
+                 "model": "provider/on", "priority": 2},
+            ],
+        })
+
+        self.assertEqual([(plan.key, plan.priority) for plan in plans], [("on", 2)])
 
     def test_production_luna_denies_approval_with_workspace_sandbox(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
@@ -774,15 +782,13 @@ class ReviewResolverTests(unittest.TestCase):
         self.assertEqual(status["retry_resolutions"], {})
         mark.assert_not_called()
 
-    def test_production_chain_selects_kimi_before_probing_luna(self) -> None:
+    def test_production_chain_selects_kimi_without_probing_luna(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(
             encoding="utf-8"))["llm"]
 
         with (mock.patch.object(
                   llm_review, "_preferred_cooldown_remaining",
-                  side_effect=lambda key: (
-                      60.0 if key in {"glm-flash", "deepseek-v4-flash"}
-                      else 0.0)),
+                  return_value=0.0),
               mock.patch.object(llm_review, "runner_binary",
                                 side_effect=lambda _cfg, runner: runner + ".exe"),
               mock.patch.object(llm_review, "_query_codex_models") as codex_probe,
@@ -797,7 +803,7 @@ class ReviewResolverTests(unittest.TestCase):
         self.assertEqual((selected.key, selected.runner), ("kimi-k3", "opencode"))
         codex_probe.assert_not_called()
 
-    def test_production_chain_uses_luna_only_after_three_unavailable_entries(
+    def test_production_chain_uses_luna_only_after_kimi_is_unavailable(
             self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(
             encoding="utf-8"))["llm"]
@@ -815,7 +821,7 @@ class ReviewResolverTests(unittest.TestCase):
 
         self.assertEqual(
             (selected.key, selected.runner, selected.source, selected.priority),
-            ("luna-max", "codex", "fallback", 4),
+            ("luna-max", "codex", "fallback", 2),
         )
 
     def test_codex_probe_propagates_lifecycle_stop(self) -> None:
@@ -964,6 +970,48 @@ class ReviewResolverTests(unittest.TestCase):
 
         self.assertEqual(outcome, "completed")
         run.assert_called_once()
+
+    def test_disabled_sticky_backend_rebinds_without_losing_batch(self) -> None:
+        cfg = {"review_model_chain": [
+            {"key": "deepseek", "enabled": False, "runner": "opencode",
+             "model": "provider/deepseek", "priority": 1},
+            {"key": "kimi", "runner": "opencode", "model": "provider/kimi",
+             "priority": 1, "every_runs": 5},
+        ]}
+        kimi = ReviewPlan(
+            key="kimi", priority=1, runner="opencode", model="provider/kimi",
+            every_runs=5, source="preferred")
+        batch = [{
+            "run": 7, "runner": "opencode", "model": "provider/deepseek",
+            "backend_key": "deepseek", "priority": 1, "source": "preferred",
+            "every": 1, "retry_same_model": True,
+            "replay_target": "pkg-deepseek",
+            "salvage_packages": ["pkg-deepseek"],
+        }]
+        agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
+        messages: list[str] = []
+
+        def complete(*_args, **kwargs):
+            kwargs["_status"].update({
+                "outcome": "completed", "reason": "ok", "commit": "a" * 40,
+                "retry_resolutions": {"pkg-deepseek": "superseded"},
+                "unresolved_salvage_packages": [],
+            })
+            return False
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "resolve_review_plan", return_value=kimi),
+              mock.patch.object(llm_review, "runner_binary", return_value="opencode"),
+              mock.patch.object(llm_review, "_persist_reviewing_batch_metadata"),
+              mock.patch.object(llm_review, "run_review", side_effect=complete) as run):
+            outcome = llm_review._run_batch_review(agent, batch, log=messages.append)
+
+        self.assertEqual(outcome, "completed")
+        self.assertEqual(run.call_args.kwargs["model"], "provider/kimi")
+        self.assertEqual(batch[0]["backend_key"], "kimi")
+        self.assertTrue(batch[0]["retry_same_model"])
+        self.assertTrue(any("deepseek" in message and "禁用" in message
+                            for message in messages))
 
 
 class StreamAndProbeSafetyTests(unittest.TestCase):

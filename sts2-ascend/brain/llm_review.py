@@ -1,9 +1,9 @@
 """LLM 元复盘 —— 异步追及队列：游玩不等待，复盘在后台串行消化。
 
 模型策略（见 config.json 的 llm 节）：
-  - runner-aware 优先链依次尝试 OpenCode/GLM、OpenCode/DeepSeek、OpenCode/Kimi、Codex/Luna；
+  - runner-aware 优先链按配置选择已启用的 OpenCode/Kimi、Codex/Luna 等后端；
   - 每局结束只耐久入队，外部 CLI/模型探测全部由后台 worker 完成；
-  - 已经启动过模型的失败事务固定原 runner/model/effort 重审，不静默换模型。
+  - 已经启动过模型的失败事务固定原 runner/model/effort 重审；只有静态配置明确禁用后端时才迁移。
   - 失败冷却：优先模型复盘执行失败（非零退出/超时/异常）则冷却 preferred_failure_cooldown_min
     分钟，期间直接回退，避免每局白等一个超时。
 
@@ -4224,12 +4224,29 @@ def _refresh_sticky_approval(batch: list[dict], cfg: dict) -> bool:
     return refreshed
 
 
-def _queue_item_ready_at(item: dict, now: float) -> float:
+def _configured_affinity_plan(cfg: dict, affinity: tuple) -> ReviewPlan | None:
+    """Return the enabled plan matching a durable retry binding exactly."""
+    (runner, model, _source, backend_key, variant, reasoning_effort,
+     _approve_for_me, sandbox_mode, _priority) = affinity
+    matches = [
+        candidate for candidate in review_plans_from_config(cfg)
+        if (candidate.key == backend_key
+            and candidate.runner == runner
+            and candidate.model == model
+            and (candidate.variant or "") == (variant or "")
+            and (candidate.reasoning_effort or "") == (reasoning_effort or "")
+            and candidate.sandbox == sandbox_mode)
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _queue_item_ready_at(item: dict, now: float, cfg: dict | None = None) -> float:
     """Combine per-attempt backoff with the bound preferred-model cooldown."""
     ready_at = float(item.get("retry_after", 0) or 0)
     ready_at = max(ready_at, float(item.get("deferred_hold_until", 0) or 0))
     affinity = _retry_affinity(item)
-    if affinity is not None and affinity[2] == "preferred":
+    if (affinity is not None and affinity[2] == "preferred"
+            and (cfg is None or _configured_affinity_plan(cfg, affinity) is not None)):
         ready_at = max(
             ready_at,
             now + _preferred_cooldown_remaining(affinity[3]),
@@ -4238,7 +4255,7 @@ def _queue_item_ready_at(item: dict, now: float) -> float:
 
 
 def _select_review_batch(
-    pending: list[dict], cap: int, now: float,
+    pending: list[dict], cap: int, now: float, cfg: dict | None = None,
 ) -> tuple[list[int], float]:
     """Prefer a runnable retry transaction without splitting retry groups.
 
@@ -4267,7 +4284,7 @@ def _select_review_batch(
                        and _queue_item_profile_id(candidate) == profile_id)]
         group_items = [pending[offset] for offset in indexes]
         _batch_retry_affinity(group_items)
-        ready_at = max(_queue_item_ready_at(candidate, now)
+        ready_at = max(_queue_item_ready_at(candidate, now, cfg)
                        for candidate in group_items)
         if ready_at <= now:
             # Replay groups are durable transactions.  Queue construction caps
@@ -4281,7 +4298,7 @@ def _select_review_batch(
     for index, item in enumerate(pending):
         if item.get("retry_group"):
             continue
-        ready_at = _queue_item_ready_at(item, now)
+        ready_at = _queue_item_ready_at(item, now, cfg)
         if ready_at > now:
             blocked_until.append(ready_at)
             continue
@@ -4292,7 +4309,7 @@ def _select_review_batch(
         for offset, candidate in enumerate(pending):
             if candidate.get("retry_group"):
                 continue
-            candidate_ready = _queue_item_ready_at(candidate, now)
+            candidate_ready = _queue_item_ready_at(candidate, now, cfg)
             if candidate_ready > now:
                 blocked_until.append(candidate_ready)
                 continue
@@ -11099,7 +11116,7 @@ def _claim_profile_review_batch(
                 int(worker_cfg.get("review_queue_max", 100)),
                 int(worker_cfg.get("max_runs_in_packet", 100))))
             eligible_indexes, retry_wait = _select_review_batch(
-                pending, cap, time.time())
+                pending, cap, time.time(), worker_cfg)
             if not eligible_indexes:
                 return [], retry_wait
 
@@ -11366,6 +11383,14 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
         log("[llm] sticky review execution approval refreshed from exact current "
             "backend config")
     affinity = _batch_retry_affinity(batch)
+    if (affinity is not None
+            and _configured_affinity_plan(cfg, affinity) is None):
+        disabled_key = str(affinity[3] or affinity[1])
+        log("[llm] sticky backend " + disabled_key
+            + " 已由静态配置禁用；保留失败包证据并重新选择已启用后端")
+        for item in batch:
+            item["retry_same_model"] = False
+        affinity = None
     if affinity is not None:
         # A process that already produced a failure package/partial output owns
         # its retry lineage.  Never silently hand that evidence to another model.

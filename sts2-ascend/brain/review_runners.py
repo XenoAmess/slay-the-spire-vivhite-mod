@@ -377,7 +377,9 @@ def review_plans_from_config(cfg: dict) -> list[ReviewPlan]:
     plans: list[ReviewPlan] = []
     if isinstance(raw_chain, list) and raw_chain:
         usable = [item for item in raw_chain
-                  if isinstance(item, dict) and str(item.get("model") or "").strip()]
+                  if (isinstance(item, dict)
+                      and item.get("enabled", True) is not False
+                      and str(item.get("model") or "").strip())]
         for index, item in enumerate(usable):
             runner = str(item.get("runner") or "opencode").strip().lower()
             model = str(item.get("model") or "").strip()
