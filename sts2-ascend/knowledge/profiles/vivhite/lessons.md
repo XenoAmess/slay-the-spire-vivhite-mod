@@ -975,3 +975,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/3.986625967749752局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.85408660403152局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.610349668268336局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.69 → 0.66（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/85 胜，当前目标进阶 0
+
+## 第 86 局复盘（2026-09-06 01:41）
+- 结果：💀 失败｜进阶 0｜到达层数 19｜当局评分 19
+- 死因：敌人组合 TUNNELER
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CONSERVED_RECURRENCE
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F3 Monster战 掉血0｜自损10; F4 Monster战 掉血0｜自损12; F12 Monster战 掉血10｜自损22; F13 Monster战 掉血0｜自损11; F17 Boss战 掉血61｜自损65｜竞速审计：T2判死→实战10回合获胜; F19 Monster战 掉血81｜自损77（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(36分/29.46996650439117局)，VIVHITE_CARD_CHROMATIC_LIMIT(36分/19.678583494536127局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/11.763082173505403局)，VIVHITE_CARD_SUCCESSOR_FORMULA(34分/10.564811292007631局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(33分/19.101944794900177局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/3.972672776862628局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.837097300917409局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.580213444429397局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（12回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；smith_min_hp_pct: 0.55 → 0.50（饥饿带顶格，非 Boss 长战磨死证据改接常规锻造线（一次性回血换永久升级，惠及每一场走廊战））；kill_race_prior_eff: 0.66 → 0.67（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.96 → 1.95（行至 F19（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F19——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F19——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/86 胜，当前目标进阶 0
