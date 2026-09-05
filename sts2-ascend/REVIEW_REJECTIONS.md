@@ -330,7 +330,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260901-151956-1788247196381449800-33dc9e78 -->
 | 2026-09-01 15:19:56 | 第 1 局 | `33dc9e78` | review_failure | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260901-151956-1788247196381449800-33dc9e78` | 隔离复盘异常：Command '['git', '-C', 'G:\\workspace\\slay-the-spire-vivhite-mod\\sts2-ascend\\knowledge\\code_backups\\review_work\\sts2-review-sandbox-4v8lpdy0\\repo', 'add', '--all', '--force', '--', '.']' timed out after 120 seconds |
 <!-- rejection:20260901-160345-1788249825795469700-db988477 -->
-| 2026-09-01 16:03:45 | 第 988~1013 局 | `db988477` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-160345-1788249825795469700-db988477` | 复盘进程未成功完成 |
+| 2026-09-01 16:03:45 | 第 988~1013 局 | `db988477` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `276b4010` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 276b4010 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260901-182602-1788258362421297600-b8782991 -->
 | 2026-09-01 18:26:02 | 第 988~1013 局 | `b8782991` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260901-182602-1788258362421297600-b8782991` | 复盘进程未成功完成 |
 <!-- rejection:20260901-194607-1788263167630673200-7a9e39b0 -->
