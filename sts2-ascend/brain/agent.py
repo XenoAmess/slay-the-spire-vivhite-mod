@@ -1802,10 +1802,19 @@ class Agent:
             creationflags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                              | getattr(subprocess, "DETACHED_PROCESS", 0)
                              | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            # The long-lived Brain intentionally has PYTHONHOME pinned to its
+            # own interpreter.  uv selects the IndexTTS Python 3.11 venv, so
+            # inheriting that Python 3.14 stdlib root makes the child fail
+            # before quipper.py can start.  Keep lifecycle/session variables,
+            # but let uv's interpreter resolve its own runtime and imports.
+            child_env = os.environ.copy()
+            child_env.pop("PYTHONHOME", None)
+            child_env.pop("PYTHONPATH", None)
             subprocess.Popen(cmd,
                              cwd=str(BASE_DIR), stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             creationflags=creationflags, close_fds=True)
+                             creationflags=creationflags, close_fds=True,
+                             env=child_env)
             log(
                 f"[agent] IndexTTS owner 候选已启动，等待 health 确认 "
                 f"epoch {expected_epoch[:12]}；尚未宣称接管成功"
