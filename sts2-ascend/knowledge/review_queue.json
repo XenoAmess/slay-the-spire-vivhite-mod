@@ -1,35 +1,6 @@
 {
  "pending": [
   {
-   "run": 1232,
-   "time": "2026-08-31 21:53",
-   "profile_id": "ironclad",
-   "backend_key": "glm-flash",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "opencode-go/glm-5.3-flash",
-   "variant": "max",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "preferred",
-   "queue_id": "19588-1788185361403065800-0",
-   "retry_same_model": false,
-   "salvage_packages": [
-    "20260901-000418-1788192258078457400-98d55cea"
-   ],
-   "salvage_attempts": [],
-   "retry_count": 26,
-   "retry_after": 1788607727.892948,
-   "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-   "replay_target": "20260901-000418-1788192258078457400-98d55cea",
-   "review_epoch": "",
-   "deferred_count": 8,
-   "deferred_hold_until": 1788610427.892948,
-   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
-  },
-  {
    "run": 1245,
    "time": "2026-09-05 20:07",
    "profile_id": "ironclad",
@@ -43,8 +14,49 @@
    "sandbox": "workspace-write",
    "every": 5,
    "source": "queued",
-   "run_id": "2VTLXBK4GK8J"
+   "run_id": "2VTLXBK4GK8J",
+   "queue_id": "8876-1788610076204996700-0",
+   "deferred_count": 3,
+   "retry_after": 1788610507.3936
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   1232
+  ],
+  "items": [
+   {
+    "run": 1232,
+    "time": "2026-08-31 21:53",
+    "profile_id": "ironclad",
+    "backend_key": "kimi-k3",
+    "priority": 1,
+    "runner": "opencode",
+    "model": "kimi-for-coding/k3",
+    "variant": "",
+    "reasoning_effort": "",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 5,
+    "source": "preferred",
+    "queue_id": "19588-1788185361403065800-0",
+    "retry_same_model": true,
+    "salvage_packages": [
+     "20260901-000418-1788192258078457400-98d55cea"
+    ],
+    "salvage_attempts": [],
+    "retry_count": 26,
+    "retry_after": 1788607727.892948,
+    "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+    "replay_target": "20260901-000418-1788192258078457400-98d55cea",
+    "review_epoch": "",
+    "deferred_count": 8,
+    "deferred_hold_until": 1788610427.892948,
+    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+  "started": "2026-09-05 20:13:47"
+ }
 }
