@@ -145,6 +145,7 @@ DEFAULT_CONFIG = {
     "api_ports": [8080, 8081, 8082, 8083, 8084],
     "game_exe": r"G:\SteamLibrary\steamapps\common\Slay the Spire 2\launch_vulkan.bat",
     "game_process_hint": "SlayTheSpire2",
+    "native_profile_id": 1,
     "poll_interval": 0.6,
     "action_settle": 0.5,
     "watchdog_escalate_after": 25,   # identical states before trying proceed/modal
@@ -2811,10 +2812,18 @@ class Agent:
 
         run_boundary_actions = {
             "open_character_select", "embark", "continue_run",
-            "continue_game_over", "return_to_main_menu",
+            "continue_game_over", "return_to_main_menu", "switch_profile",
         }
         if action not in run_boundary_actions and not same_run:
             return "unproven"
+
+        if action == "switch_profile":
+            target = params.get("option_index")
+            before_profile = before.get("native_profile_id")
+            after_profile = after.get("native_profile_id")
+            return ("applied" if type(target) is int
+                    and after_profile == target
+                    and before_profile != after_profile else "unproven")
 
         if action == "remove_card_at_shop":
             # Opening card removal is proven only by its semantic follow-up screen.
@@ -4183,6 +4192,46 @@ class Agent:
             and str(wait.get("old_run_id") or "").strip() == expected
         )
 
+    def _native_profile_guard_decision(self, state: dict) -> Decision | None:
+        """Keep autonomous play bound to one explicit native save profile.
+
+        Character learning profiles are separate from the game's numbered save
+        profiles.  If the game remembers another numbered profile, blindly using
+        its Continue button can present an unrelated run to the orphan-recovery
+        ledger.  Switch only from a stable empty main menu through the mod's
+        native game-thread action; every other mismatch remains fail-closed.
+        """
+        target = self.cfg.get("native_profile_id")
+        if type(target) is not int or target not in (1, 2, 3):
+            return Decision(
+                None, {}, "原生存档档位配置无效，保持阻塞", wait=1.0)
+
+        observed = state.get("native_profile_id")
+        if type(observed) is not int or observed not in (1, 2, 3):
+            return Decision(
+                None, {}, "API 未提供可信原生存档档位，保持阻塞", wait=1.0)
+        if observed == target:
+            return None
+
+        actions = _normalise_available_actions(state.get("available_actions"))
+        can_switch = (
+            state.get("screen") == "MAIN_MENU"
+            and not state.get("run")
+            and self._state_run_identity(state) in (None, "run_unknown")
+            and actions is not None
+            and "switch_profile" in actions
+        )
+        if not can_switch:
+            return Decision(
+                None, {},
+                f"原生存档档位不一致：当前 profile{observed}，目标 profile{target}；"
+                "等待安全主菜单切换",
+                wait=1.0)
+        return Decision(
+            "switch_profile", {"option_index": target},
+            f"原生存档档位校准：profile{observed} → profile{target}",
+            wait=1.2)
+
     # ---------------- main loop ----------------
 
     def run(self) -> None:
@@ -4248,11 +4297,17 @@ class Agent:
                     return
                 continue
 
-            # An active run is always bound from the API's actual character.  On
-            # CHARACTER_SELECT only, the durable next target selects the matching
-            # profile so ascension/policy data stay character-local.
-            self._bind_profile_for_state(state)
+            native_profile_decision = self._native_profile_guard_decision(state)
             self._dashboard_observe(state)
+
+            # Never bind, account, or sample orphan evidence from another native
+            # game profile.  A safe main-menu switch still flows through the same
+            # decision/telemetry/action path below.
+            if native_profile_decision is None:
+                # An active run is always bound from the API's actual character.  On
+                # CHARACTER_SELECT only, the durable next target selects the matching
+                # profile so ascension/policy data stay character-local.
+                self._bind_profile_for_state(state)
 
             # 策略热同步（第 123~124 局复盘）：长驻进程此前只在启动时执行
             # setdefault——复盘会话给 DEFAULT_POLICY 新增的键（如 122 批的
@@ -4274,7 +4329,9 @@ class Agent:
             # Reconcile that action from this fresh GET *before* observation tracking:
             # event/map/rest snapshots and combat-end credit must exist before _track
             # consumes the resulting transition.
-            ambiguous_result = self._reconcile_ambiguous_action(state)
+            ambiguous_result = (
+                self._reconcile_ambiguous_action(state)
+                if native_profile_decision is None else None)
 
             # Observe the state transition before asking Policy for the next action.
             # In particular, the first combat frame must create ctx.combat before
@@ -4282,12 +4339,14 @@ class Agent:
             # former decide→track order let the first successful card tag be imported
             # and then immediately erased by Policy's new-combat resets on the next
             # tick, reopening one-per-combat trials and corrupting race counters.
-            self._track(state)
+            if native_profile_decision is None:
+                self._track(state)
 
             # run finalization hook (policy asked for it on GAME_OVER)
             native_continue_first = \
                 self._native_continue_precedes_terminal_finalize(state)
-            if (self.ctx.finalize_requested and not self.ctx.run_finalized
+            if (native_profile_decision is None
+                    and self.ctx.finalize_requested and not self.ctx.run_finalized
                     and not native_continue_first):
                 native_save, _native_save_reason = \
                     self._native_game_over_save_barrier(state)
@@ -4304,7 +4363,8 @@ class Agent:
                 )
                 continue
 
-            if getattr(self, "_native_save_transition_blocked", False):
+            if (native_profile_decision is None
+                    and getattr(self, "_native_save_transition_blocked", False)):
                 if wait_for_stop(self.cfg["poll_interval"]):
                     return
                 continue
@@ -4317,10 +4377,14 @@ class Agent:
                     return
                 continue
 
-            forced = self._watchdog(state)
-            if forced:
-                decision = Decision(forced, {}, "看门狗介入", wait=1.0)
+            forced = None
+            if native_profile_decision is not None:
+                decision = native_profile_decision
             else:
+                forced = self._watchdog(state)
+            if native_profile_decision is None and forced:
+                decision = Decision(forced, {}, "看门狗介入", wait=1.0)
+            elif native_profile_decision is None:
                 decision = self.policy.decide(state, self.ctx)
             decision = self._apply_native_game_over_return_barrier(
                 state, decision)
@@ -4339,7 +4403,9 @@ class Agent:
                 # The reviewer may finish after finalization but before a menu
                 # action starts the next run. Recheck as late as possible, directly
                 # before client.act; live-run screens remain uninterrupted.
-                restart_reason = self._pending_review_restart_at_safe_boundary(state)
+                restart_reason = (
+                    None if decision.action == "switch_profile"
+                    else self._pending_review_restart_at_safe_boundary(state))
                 if restart_reason:
                     log(f"[agent] {restart_reason}；局间安全边界请求 runner 重启大脑…")
                     sys.exit(42)

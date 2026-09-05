@@ -124,6 +124,15 @@ API `DynamicVar` 均按现行最终整数消费；Brain 运行时只把牌面、
 `+1.0`；孤高冠冕按最大生命 20% 向上取整，归纳法阵按 50%/75% 放大即时死亡回复。战士继续使用自己的
 参数实例，不消费白绮目录或这些白绮专属估值。
 
+## 原生存档档位绑定
+
+生产训练固定使用 `brain/config.json` 的 `native_profile_id=1`。Agent `/state` 以
+`native_profile_id` 报告游戏当前编号档位；若游戏记住了其他档位，Brain 不读取该档位的活动局、
+不采集孤儿负证据，也不发送其中的游玩动作。只有稳定的空 `MAIN_MENU` 且 API 明确提供
+`switch_profile` 时，Brain 才通过游戏线程调用原生 `SaveManager.SwitchProfileId`，重新载入该档位的
+Prefs/Progress 与主菜单，然后再评估 `continue_run`。档位 ID 缺失、非法，或错档时不在安全主菜单，
+一律 fail closed；不得通过改写 `profile.save`、人工点档或跨档合并 run_id 绕过。
+
 ## 原生终局分数与解锁落盘
 
 Brain 不再在 `GAME_OVER` 直接调用返回主菜单。Agent HTTP API 暴露动作 `continue_game_over`，

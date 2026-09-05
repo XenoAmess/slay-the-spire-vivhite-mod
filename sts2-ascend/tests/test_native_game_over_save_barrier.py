@@ -24,6 +24,7 @@ from policy import Decision  # noqa: E402
 
 def _summary_state(run_id: str = "native-save-run") -> dict:
     return {
+        "native_profile_id": 1,
         "screen": "GAME_OVER",
         "run_id": run_id,
         "run": {"run_id": run_id, "floor": 17},
@@ -239,6 +240,7 @@ class NativeGameOverSaveRunLoopTests(unittest.TestCase):
         instance = _bare_agent(human_assisted=human_assisted)
         instance.cfg = {
             "max_runs": 0,
+            "native_profile_id": 1,
             "poll_interval": 0.01,
             "action_settle": 0.01,
         }
