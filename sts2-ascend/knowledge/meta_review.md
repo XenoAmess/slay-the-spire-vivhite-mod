@@ -6284,3 +6284,68 @@ retry_resolution: 20260905-125536-1788584136106947800-44590bbe integrated
   必败预演在满血状态下 latch；1235 行至 F31（二幕），拿牌链 SHOP 两次购入后仍死于
   输出密度。竞速必败在 F1 即判死（1235 缺口 80%）的早 latch 现象已多批观察，本批不
   重复立案，待账面明细落地后用真实数据复核。
+
+# 2026-09-05｜第 1236~1240 局批复盘（异步追及队列 5 局 exact_batch 全败；竞速审计回血闸血量上限与锻造线旋钮解耦）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]：本批无 replay target，
+  无需重实现/解冲突；complete_evidence.required=false。
+
+retry_resolution: none (no replay target; local production fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_boss_eve_race_audit_heal` 的血量门闸复用 `boss_eve_smith_hp_pct`。
+  该旋钮承载「安全区锻造」语义，生产已演化 0.65→0.45（policy.json 实测 0.45），
+  审计纠错带被静默从 <65% 压到 <45%；45%~65% 带内的 Boss 前夜即使台账
+  「判死→实战获胜」达 47%（295/632≥30%）也照旧被「必败弃疗改锻造」。解耦为专用
+  `boss_eve_race_audit_heal_hp_cap`（默认 0.65，仍受 boss_entry_evidence_hp_cap
+  封顶）后，该带内前夜恢复审计覆盖回血；若未来 3~10 局该带内回血局仍整管打空
+  且对照上砧局存活，假设证伪。
+- **EVIDENCE**：① run 1238（QRBR37MJ6UDU，完整 runs 文件逐条核对）F16 前夜
+  64%（51/80）「必败弃疗改锻造」（悲观战损 83=场均55×1.5 判「回血买不到生还」），
+  F17 仪式兽进场 51 血、7 回合掉血正好 51 阵亡——+24 回血（eff_heal=24≥8%血条）
+  即可买活，悲观口径把实战 51 高估成 83；② run 1237（HX8Q9F6GJ78J）前夜 55%
+  同路径上砧后实战击败一幕 Boss 行至 F33——判死标签被实战直接证伪；③ run 1239
+  F17 Boss T2 判死→实战获胜；④ run 1236 前夜 41% 落在 <45% 带内，审计闸正常
+  触发（RACE_AUDIT_HEAL_OVERRIDE 回血 24 点）——同批对照证明闸本身有效、只是
+  血量门被演化旋钮压窄；⑤ 1237/1238 的「必败弃疗」决策时审计台账为
+  295/632=47%，满足既有 30% 触发线，仅因 hp≥45% 被拒。
+- **EXPECTED_SIGNAL**：未来 3~10 局，45%~65% 血、判死且审计达标的 Boss 前夜
+  reason 出现 RACE_AUDIT_HEAL_OVERRIDE 并选回血（地图投影同步镜像回血）；记录
+  触发次数、入场血量、Boss 战损与胜负，与同带历史上砧局对照生还率。
+
+## IMPLEMENTATION
+
+- `brain/knowledge.py`：新增 `boss_eve_race_audit_heal_hp_cap=0.65`（注释写明来源
+  批次、证伪证据与回滚方式：调回 0.45 即恢复旧带行为）。
+- `brain/policy.py::_boss_eve_race_audit_heal`：血量门闸由
+  `min(boss_eve_smith_hp_pct, boss_entry_evidence_hp_cap)` 改为
+  `min(boss_eve_race_audit_heal_hp_cap, boss_entry_evidence_hp_cap)`；docstring
+  记录解耦理由。审计度量的是判死标签本身的失真率，与安全区血量线语义无关；
+  锻造线旋钮的后续演化不再影响审计纠错带。其余门槛（样本数、胜率线、8% 有效
+  回血、enabled 开关）与地图镜像（policy.py:2217 消费端）零改动。
+- `brain/selfcheck.py` 3br-audit-cap 回归：模拟生产演化旋钮 0.45 后——① 44/80
+  （55%）前夜必须恢复审计回血（旧代码此断言失败，证明修复有效）；② hp_cap 调回
+  0.45 严格复原「必败弃疗改锻造」；③ 56/80（70%）超上限不得触发；④ 演化旋钮下
+  地图投影仍镜像 RACE_AUDIT_HEAL_OVERRIDE。默认环境既有 3br-audit-heal 断言
+  全部原样通过。
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 通过。
+- 指标：① 45%~65% 带内前夜 RACE_AUDIT_HEAL_OVERRIDE 触发次数；② 触发局的
+  Boss 入场血量、战损与胜负 vs 1237/1238 型上砧对照；③ 审计台账 won/latched
+  比率走向（若跌破 30% 闸门自动停触发，行为自限）；④ 触发率异常偏移即告警。
+- 回滚：`boss_eve_race_audit_heal_hp_cap` 调回 0.45（或 enabled=False 全关）即
+  复原；selfcheck 3br-audit-cap ② 为回滚锚。无在线状态写入、无进程操作。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1240）：三局一幕 Boss 阵亡（1236/1238/1239-F17）、1237 行至
+  F33 二幕 Boss 阵亡、1240 F11 NIBBIT 组合 31 血进场 7 回合阵亡。竞速审计
+  「判死→实战获胜」本批 +4（1236-F9、1237-F21、1238-F5/F12、1239-F17），
+  悲观台账继续累积；1240 完整链逐动作核对：F6 单场 -56 后 7 血连走 F7/F8
+  强制战（单候选 least-bad）、F9 回血、F11 唯一候选 Monster 进场 31 血——
+  选路端无更优候选，死因=卡组输出密度与 F6 爆发战损，不单列立案。

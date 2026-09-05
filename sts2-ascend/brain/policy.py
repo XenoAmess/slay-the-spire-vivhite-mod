@@ -4887,9 +4887,16 @@ class Policy:
 
         ``race_audit`` is an outcome audit of the live race latch, not a Boss-
         specific prior.  It is therefore only allowed to override the race
-        verdict in the narrow, reversible band where the current policy already
-        treats HP below ``boss_eve_smith_hp_pct`` as the survival zone and the
-        campfire can return a meaningful amount of HP.
+        verdict in the narrow, reversible band below
+        ``boss_eve_race_audit_heal_hp_cap`` (still capped by
+        ``boss_entry_evidence_hp_cap``) where the campfire can return a
+        meaningful amount of HP.  The gate is a dedicated key rather than
+        ``boss_eve_smith_hp_pct``: that knob carries the safe-zone smith
+        semantics and has evolved 0.65→0.45, which silently shrank the audit
+        correction band (1237 eve at 55% and 1238 eve at 64% were smithed
+        under a doom label that the audit ledger falsifies at 47%; 1238 then
+        died to the boss losing exactly its 51 entry HP — a +24 heal would
+        have bought survival).
         """
         pol = self.know.policy
         if not bool(pol.get("boss_eve_race_audit_heal_enabled", True)):
@@ -4900,8 +4907,8 @@ class Policy:
         try:
             maximum = max(1.0, float(max_hp))
             hp_pct = max(0.0, float(current_hp)) / maximum
-            smith_line = min(
-                float(pol.get("boss_eve_smith_hp_pct", 0.85)),
+            audit_cap = min(
+                float(pol.get("boss_eve_race_audit_heal_hp_cap", 0.65)),
                 float(pol.get("boss_entry_evidence_hp_cap", 0.65)),
             )
             latched = max(0, int(audit.get("latched", 0) or 0))
@@ -4912,7 +4919,7 @@ class Policy:
                 "boss_eve_race_audit_heal_win_rate", 0.30)), 0.0, 1.0)
         except (TypeError, ValueError, OverflowError):
             return False, ""
-        if hp_pct >= smith_line or latched < min_latched:
+        if hp_pct >= audit_cap or latched < min_latched:
             return False, ""
         win_rate = clamp(won / max(1, latched), 0.0, 1.0)
         if win_rate < min_rate:

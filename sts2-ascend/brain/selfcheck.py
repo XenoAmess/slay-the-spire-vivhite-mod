@@ -6144,6 +6144,34 @@ def main() -> int:
         return pmap.decide(st, br_ctx).reason
     assert "RACE_AUDIT_HEAL_OVERRIDE" in br_audit_map_reason(br_know), \
         "地图投影未镜像竞速审计回血闸"
+    # 3br-audit-cap（第 1236~1240 局批复盘）：审计纠错带此前复用
+    # boss_eve_smith_hp_pct；该旋钮为「安全区锻造」语义生产演化 0.65→0.45 后，
+    # 45%~65% 带内前夜（1237 55%、1238 64%）在台账判死→获胜 47%≥30% 证据下仍被
+    # 必败弃疗上砧——1238 以 51 血进场 Boss 掉血正好 51 阵亡（+24 回血即买活）。
+    # 专用 boss_eve_race_audit_heal_hp_cap 必须让该带恢复审计回血；hp_cap 调回
+    # 0.45 严格复原旧行为；超过上限不得触发；地图投影同步镜像。
+    br_pol.know.policy["boss_eve_smith_hp_pct"] = 0.45  # 生产演化后的旋钮值
+    br_rest_audit_mid = dict(br_rest_weak,
+                             run=dict(br_rest_weak["run"], current_hp=44))
+    d_br_audit_mid = br_pol.decide(br_rest_audit_mid, br_ctx)
+    assert d_br_audit_mid.tags and d_br_audit_mid.tags[0] == ("rest", "heal") \
+        and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_mid.reason, \
+        f"演化旋钮收窄后 45%~65% 带内前夜未恢复审计回血: {d_br_audit_mid.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap"] = 0.45
+    d_br_audit_mid_rb = br_pol.decide(br_rest_audit_mid, br_ctx)
+    assert d_br_audit_mid_rb.tags and d_br_audit_mid_rb.tags[0] == ("rest", "smith") \
+        and "必败弃疗改锻造" in d_br_audit_mid_rb.reason \
+        and "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_mid_rb.reason, \
+        f"hp_cap 调回 0.45 未严格复原旧必败弃疗行为: {d_br_audit_mid_rb.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap"] = 0.65
+    br_rest_audit_high = dict(br_rest_weak,
+                              run=dict(br_rest_weak["run"], current_hp=56))
+    d_br_audit_high = br_pol.decide(br_rest_audit_high, br_ctx)
+    assert "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_high.reason, \
+        f"超过审计回血专用上限不应触发覆盖: {d_br_audit_high.reason}"
+    assert "RACE_AUDIT_HEAL_OVERRIDE" in br_audit_map_reason(br_know), \
+        "演化旋钮下地图投影未镜像竞速审计回血闸"
+    br_pol.know.policy["boss_eve_smith_hp_pct"] = 0.65
     br_ctx.rest_before_boss = False
 
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
