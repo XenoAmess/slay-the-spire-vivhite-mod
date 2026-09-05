@@ -36,6 +36,14 @@ obj/
 /.tmp/
 /.tools/
 
+# Legacy promo diagnostics at the repository root only. New capture evidence
+# belongs in tools/promo/runs/<run-id>/; never ignore promo source or recipes.
+/tmp-*.png
+/tmp_*.png
+/tmp-t15-a01/
+/tmp_t16_frames/
+/toolspromoruns*scandiffs*.log
+
 ### Local credentials ###
 .env
 .env.*
