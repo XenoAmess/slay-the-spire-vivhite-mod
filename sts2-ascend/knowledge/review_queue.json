@@ -20,45 +20,36 @@
    "retry_after": 1788611966.1164687,
    "deferred_hold_until": 1788614666.1164687,
    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
+  },
+  {
+   "run": 1232,
+   "time": "2026-08-31 21:53",
+   "profile_id": "ironclad",
+   "backend_key": "glm-flash",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "opencode-go/glm-5.3-flash",
+   "variant": "max",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "preferred",
+   "queue_id": "19588-1788185361403065800-0",
+   "retry_same_model": false,
+   "salvage_packages": [
+    "20260901-000418-1788192258078457400-98d55cea"
+   ],
+   "salvage_attempts": [],
+   "retry_count": 26,
+   "retry_after": 1788615061.4887269,
+   "retry_group": "20260901-000418-1788192258078457400-98d55cea",
+   "replay_target": "20260901-000418-1788192258078457400-98d55cea",
+   "review_epoch": "",
+   "deferred_count": 10,
+   "deferred_hold_until": 1788617761.4887269,
+   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
   }
  ],
- "reviewing": {
-  "runs": [
-   1232
-  ],
-  "items": [
-   {
-    "run": 1232,
-    "time": "2026-08-31 21:53",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "queue_id": "19588-1788185361403065800-0",
-    "retry_same_model": true,
-    "salvage_packages": [
-     "20260901-000418-1788192258078457400-98d55cea"
-    ],
-    "salvage_attempts": [],
-    "retry_count": 26,
-    "retry_after": 1788611397.0319242,
-    "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-    "replay_target": "20260901-000418-1788192258078457400-98d55cea",
-    "review_epoch": "",
-    "deferred_count": 9,
-    "deferred_hold_until": 1788614097.0319242,
-    "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
-   }
-  ],
-  "profile_id": "ironclad",
-  "retry_group": "20260901-000418-1788192258078457400-98d55cea",
-  "started": "2026-09-05 21:15:03"
- }
+ "reviewing": null
 }
