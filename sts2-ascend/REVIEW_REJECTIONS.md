@@ -354,7 +354,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260905-125536-1788584136106947800-44590bbe -->
 | 2026-09-05 12:55:36 | 第 1233~1235 局 | `44590bbe` | process_exit | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `ad720381` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 ad720381 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260905-131421-1788585261972172700-97151089 -->
-| 2026-09-05 13:14:21 | 第 7~20 局 | `97151089` | 维护中断/取消（lifecycle_stop） | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 维护中断/取消（非 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260905-131421-1788585261972172700-97151089` | 维护停机取消 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 复盘并全量保全；非模型提交失败 |
+| 2026-09-05 13:14:21 | 第 7~20 局 | `97151089` | 维护中断/取消（lifecycle_stop） | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `d015a053` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 d015a053 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260905-133903-1788586743178618300-440b9a3e -->
 | 2026-09-05 13:39:03 | 第 7~20 局 | `440b9a3e` | provider_account_unavailable | glm-flash (opencode/opencode-go/glm-5.3-flash@max) | 待 glm-flash (opencode/opencode-go/glm-5.3-flash@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260905-133903-1788586743178618300-440b9a3e` | provider account unavailable (HTTP 401: APIError Insufficient balance. Manage your billing here: https://opencode.ai/workspace/wrk_01KVSKVY1030Z8XTD7VB26PQEN/billing 401 False remote-ORD a362e3d91fa6c54c-PDX keep-alive 177 text/plain;chars… |
 <!-- rejection:20260905-145446-1788591286570409100-8e6c77a0 -->
