@@ -4150,6 +4150,39 @@ class Agent:
             None, {}, f"结算：{prefix}原生分数、解锁与存档落盘证明（{reason}）",
             wait=0.8)
 
+    def _native_continue_precedes_terminal_finalize(self, state: dict) -> bool:
+        """Let an exact persisted run reach its authoritative native state.
+
+        A restart can restore ``finalize_requested`` from an incremental log
+        while the game exposes that same save only through the main-menu
+        Continue action.  Running the GAME_OVER save barrier first deadlocks:
+        the barrier cannot verify a menu frame, and Policy never gets a chance
+        to send Continue.  Defer finalization only for the exact, already-bound
+        recovery identity; ``_track`` still reconciles the resulting run id and
+        keeps all accounting blocked until native proof is authoritative.
+        """
+        if state.get("screen") != "MAIN_MENU" or state.get("run"):
+            return False
+        if self._state_run_identity(state) not in (None, "run_unknown"):
+            return False
+        actions = _normalise_available_actions(state.get("available_actions"))
+        if actions is None or "continue_run" not in actions:
+            return False
+
+        expected = str(getattr(
+            self, "_native_continue_recovery_expected", "") or "").strip()
+        unresolved = str(getattr(
+            self, "_rotation_unresolved_run_id", "") or "").strip()
+        ctx_run_id = str(getattr(self.ctx, "run_id", "") or "").strip()
+        wait = getattr(self.ctx, "native_save_wait", None)
+        return bool(
+            expected
+            and expected == unresolved == ctx_run_id
+            and isinstance(wait, dict)
+            and wait.get("state") == "awaiting_native_save"
+            and str(wait.get("old_run_id") or "").strip() == expected
+        )
+
     # ---------------- main loop ----------------
 
     def run(self) -> None:
@@ -4252,7 +4285,10 @@ class Agent:
             self._track(state)
 
             # run finalization hook (policy asked for it on GAME_OVER)
-            if self.ctx.finalize_requested and not self.ctx.run_finalized:
+            native_continue_first = \
+                self._native_continue_precedes_terminal_finalize(state)
+            if (self.ctx.finalize_requested and not self.ctx.run_finalized
+                    and not native_continue_first):
                 native_save, _native_save_reason = \
                     self._native_game_over_save_barrier(state)
                 if native_save != "verified":

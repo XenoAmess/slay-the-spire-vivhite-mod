@@ -184,6 +184,36 @@ class DisappearedRunNativeSaveBarrierTests(unittest.TestCase):
         self.assertTrue(instance._native_save_transition_blocked)
         self.assertEqual(instance._rotation_unresolved_run_id, "old-vivhite")
 
+    def test_restart_with_waiting_log_allows_exact_native_continue_before_finalize(
+            self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-waiting-continue-") as raw:
+            root = Path(raw)
+            original = self._agent(root)
+            original._track(_live_state("replacement-vivhite", floor=0))
+
+            with mock.patch.object(agent_module, "KNOWLEDGE_DIR", root):
+                restarted = agent_module.Agent({"api_ports": [], "seed": 905})
+            menu = {
+                "screen": "MAIN_MENU",
+                "run_id": "run_unknown",
+                "run": {},
+                "available_actions": ["continue_run", "abandon_run"],
+            }
+
+            restarted._track(menu)
+
+            self.assertTrue(restarted.ctx.finalize_requested)
+            self.assertTrue(
+                restarted._native_continue_precedes_terminal_finalize(menu))
+            decision = restarted.policy.decide(menu, restarted.ctx)
+            self.assertEqual(decision.action, "continue_run")
+
+            menu_without_continue = copy.deepcopy(menu)
+            menu_without_continue["available_actions"] = ["open_character_select"]
+            self.assertFalse(
+                restarted._native_continue_precedes_terminal_finalize(
+                    menu_without_continue))
+
     def test_native_continue_same_character_replaces_stale_id_without_scoring(
             self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-native-continue-") as raw:
