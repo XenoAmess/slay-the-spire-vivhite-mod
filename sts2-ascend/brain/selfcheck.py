@@ -2365,6 +2365,56 @@ def main() -> int:
     assert abs(rknow.policy["block_safety"] - 1.0) < 1e-9, \
         f"Boss 长战阵亡不得再动普通战防御权重: {rknow.policy['block_safety']}"
 
+    # 3pra) 謦欬实付加码（第 7~20 局批复盘）：白绮致命战实测自损占比 ≥50% 时，
+    #      生命支付权重在拿牌口径 -0.05 之上再加一档收紧；<50% 或缺
+    #      self_hp_loss 字段（旧记录）维持单档，非白绮库完全不进该通道。
+    from character_profiles import CharacterProfile
+
+    def _vivhite_know(prefix: str):
+        vroot = Path(tempfile.mkdtemp(prefix=prefix))
+        vprof = CharacterProfile(
+            profile_id="vivhite",
+            character_id="VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+            root=vroot, knowledge_root=vroot)
+        return knowledge.Knowledge(vprof)
+
+    def _vivhite_death_ctx(self_loss, hp_lost):
+        return SimpleNamespace(
+            died_to_event=None,
+            died_in_combat={"comp_id": "SOUL_FYSH", "rounds": 7,
+                            "node_type": "Boss", "hp_lost": hp_lost,
+                            "self_hp_loss": self_loss},
+            death_was_elite=False, death_hp_pct_at_entry=0.9,
+            credit_tags=[], rests_healed_at_full=0, ascension=0,
+            combat_notes=[],
+            attribution_tags=[
+                ("card_pick", "VIVHITE_CARD_LUMINOUS_PROJECTION"),
+                ("card_pick", "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING")])
+
+    vknow_hi = _vivhite_know("sts2-selfcheck-vhlife-hi-")
+    vlesson_hi = finalize_run(vknow_hi, _vivhite_death_ctx(83.0, 85.0),
+                              victory=False, final_floor=17)
+    assert abs(vknow_hi.policy["vivhite_param_life_cost_weight"] - (-1.35)) < 1e-9, \
+        ("自损占比 98%≥50% 应双档收紧（-1.25→-1.35）: "
+         f"{vknow_hi.policy.get('vivhite_param_life_cost_weight')}")
+    assert "謦欬实付加码收紧" in vlesson_hi, \
+        f"加码证据未入 lesson: {vlesson_hi[-400:]}"
+    vknow_lo = _vivhite_know("sts2-selfcheck-vhlife-lo-")
+    vlesson_lo = finalize_run(vknow_lo, _vivhite_death_ctx(20.0, 85.0),
+                              victory=False, final_floor=17)
+    assert abs(vknow_lo.policy["vivhite_param_life_cost_weight"] - (-1.30)) < 1e-9, \
+        ("自损占比 24%<50% 只许单档收紧（-1.25→-1.30）: "
+         f"{vknow_lo.policy.get('vivhite_param_life_cost_weight')}")
+    assert "謦欬实付加码收紧" not in vlesson_lo, \
+        f"低自损局不得出现加码留痕: {vlesson_lo[-400:]}"
+    vknow_old = _vivhite_know("sts2-selfcheck-vhlife-old-")
+    _old_ctx = _vivhite_death_ctx(0.0, 85.0)
+    _old_ctx.died_in_combat.pop("self_hp_loss")  # 旧记录缺字段→退回纯拿牌口径
+    finalize_run(vknow_old, _old_ctx, victory=False, final_floor=17)
+    assert abs(vknow_old.policy["vivhite_param_life_cost_weight"] - (-1.30)) < 1e-9, \
+        ("缺 self_hp_loss 字段的旧记录只许单档收紧: "
+         f"{vknow_old.policy.get('vivhite_param_life_cost_weight')}")
+
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
     #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
     #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、

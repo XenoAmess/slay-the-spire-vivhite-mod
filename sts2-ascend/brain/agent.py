@@ -3538,6 +3538,14 @@ class Agent:
         obs_pool = float(c.get("obs_hp_pool") or 0.0)
         obs_fire = float(c.get("obs_fire_sum") or 0.0)
         obs_fr = int(c.get("obs_fire_rounds") or 0)
+        # 謦欬实付观测（第 7~20 局批复盘新增）：policy 端按战斗实例累计的同回合
+        # 净扣血（自损/费用口径）在分段结算时并入聚合账——近 16 场致命 Boss 战
+        # 实测自损占掉血 59%~143%，但死亡归因此前拿不到实战自损强度，只能按
+        # 拿牌张数盲调生命支付权重。纯观测，不参与任何评分分支
+        try:
+            _seg_self_loss = float(self.policy.combat_self_hp_loss())
+        except Exception:
+            _seg_self_loss = 0.0
         agg = self.ctx.combat_agg
         # open 聚合账 = 一场多阶段战斗仍在进行：同层任何后续结算都并入它，
         # 无论本次流转是阶段切换（split）还是真实终结屏（GAME_OVER 致死等）
@@ -3555,6 +3563,8 @@ class Agent:
             agg["obs_hp_pool"] = max(float(agg.get("obs_hp_pool", 0.0) or 0.0), obs_pool)
             agg["obs_fire_sum"] = float(agg.get("obs_fire_sum", 0.0) or 0.0) + obs_fire
             agg["obs_fire_rounds"] = int(agg.get("obs_fire_rounds", 0) or 0) + obs_fr
+            agg["self_hp_loss_sum"] = (float(agg.get("self_hp_loss_sum", 0.0) or 0.0)
+                                       + _seg_self_loss)
             # 非分段流转 = 战斗真实终结：关闭挂起账（等换层/终局落库）
             agg["open"] = bool(split)
         else:
@@ -3564,7 +3574,7 @@ class Agent:
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
                    "open": bool(split), "from_event": bool(c.get("from_event")),
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
-                   "obs_fire_rounds": obs_fr}
+                   "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss}
             self.ctx.combat_agg = agg
         if died:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
@@ -3575,6 +3585,10 @@ class Agent:
                                        # 分类不能只看回合数——4 回合掉 64 血是「没挡住」
                                        # 的爆毙而非磨死，reflect 按每回合失血率分流证据
                                        "hp_lost": float(agg.get("hp_lost_sum", 0.0) or 0.0),
+                                       # 謦欬实付（第 7~20 局批复盘新增）：同回合
+                                       # 净扣血（自损/费用口径）全场累计，reflect
+                                       # 据此把实测自损占比接入生命支付权重
+                                       "self_hp_loss": float(agg.get("self_hp_loss_sum", 0.0) or 0.0),
                                        # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动送死，
                                        # 血量损失全发生在「停止防御」之后——与格挡/击杀权重无关，
                                        # 标记随死亡归因传递，reflect 据此隔离攻防旋钮
@@ -3626,6 +3640,12 @@ class Agent:
         # 「（阵亡）」后缀保持全链断言兼容，审计段插在其前
         _ra = self.policy.pop_race_audit()
         note = f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
+        # 謦欬实付留痕（第 7~20 局批复盘新增）：自损>0 时战斗记录自带
+        # 「自损N」段，复盘无需回放手牌链即可对照自损/掉血占比；口径与
+        # died_in_combat.self_hp_loss 一致，审计段与（阵亡）后缀位置不变
+        _self_loss = float(agg.get("self_hp_loss_sum", 0.0) or 0.0)
+        if _self_loss > 0.0:
+            note += f"｜自损{int(round(_self_loss))}"
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):

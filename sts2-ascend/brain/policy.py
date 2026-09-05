@@ -4868,6 +4868,15 @@ class Policy:
         credit = min(float(n) * flat, cap_frac * float(pool))
         return max(1.0, float(pool) - credit)
 
+    def combat_self_hp_loss(self) -> float:
+        """本场战斗同回合净扣血累计（自损/费用口径，与续航账注同一账本）。
+
+        agent 在战斗结算时按分段读取并累加进聚合账；口径与 BOSS_SUSTAIN 账注
+        的「自损/费用」字段严格一致（同回合逐 tick 实测差值，不含跨回合敌方
+        伤害），供死亡归因与战斗记录落库后直接复盘謦欬实付强度。
+        """
+        return float(getattr(self, "_race_same_round_loss", 0.0) or 0.0)
+
     def pop_race_audit(self) -> dict:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。
 

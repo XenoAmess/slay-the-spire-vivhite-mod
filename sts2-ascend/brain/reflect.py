@@ -540,6 +540,21 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 _adj(know, "vivhite_param_life_cost_weight", -0.05, changes,
                      f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
                      "——生命支付权重向保守收紧")
+                # 謦欬实付加码（第 7~20 局批复盘）：拿牌张数只量卡组构成，量不到
+                # 实战支付强度——本批及近期 15 场致命 Boss/终盘战实测自损占掉血
+                # 59%~143%（13/15 ≥50%：F33 自损83/掉血85、F33 119/97、F48 142/99），
+                # 謦欬实付而非敌方火力才是主杀手。致命战实测自损占比 ≥50% 时再
+                # 加一档收紧（同一 BOUNDS 钳制）；旧记录缺 self_hp_loss 字段时
+                # 退回纯拿牌口径，行为与旧版严格一致
+                _self_loss = float((ctx.died_in_combat or {}).get("self_hp_loss") or 0.0)
+                _hp_lost_self = float((ctx.died_in_combat or {}).get("hp_lost") or 0.0)
+                if (_self_loss > 0.0 and _hp_lost_self > 0.0
+                        and _self_loss >= 0.5 * _hp_lost_self):
+                    _node_self = (ctx.died_in_combat or {}).get("node_type") or "敌方"
+                    _adj(know, "vivhite_param_life_cost_weight", -0.05, changes,
+                         f"致命{_node_self}战实测自损{_self_loss:.0f}/掉血"
+                         f"{_hp_lost_self:.0f}（{_self_loss / _hp_lost_self:.0%}≥50%）"
+                         "——謦欬实付加码收紧")
         # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增，第509~515局批复盘
         # 重开通道）：该旋钮的回收通道此前只挂整局胜利——0/494 生涯里被「Boss
         # 高血进场长战死」证据一路压到 0.37 触底后永不回升，形成死锁：折算率
