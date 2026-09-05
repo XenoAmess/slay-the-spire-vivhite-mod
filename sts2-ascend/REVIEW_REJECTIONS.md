@@ -360,4 +360,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260905-145446-1788591286570409100-8e6c77a0 -->
 | 2026-09-05 14:54:46 | 第 1233~1235 局 | `8e6c77a0` | stall | deepseek-v4-flash (opencode/amd-radeon/DeepSeek-V4-Flash) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `ad720381` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 ad720381 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260905-164215-1788597735791474500-55405c52 -->
-| 2026-09-05 16:42:15 | 第 7~20 局 | `55405c52` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | 维护中断/取消（非 kimi-k3 (opencode/kimi-for-coding/k3) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260905-164215-1788597735791474500-55405c52` | 维护停机取消 kimi-k3 (opencode/kimi-for-coding/k3) 复盘并全量保全；非模型提交失败 |
+| 2026-09-05 16:42:15 | 第 7~20 局 | `55405c52` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `d015a053` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 d015a053 已推送；远端确认后精确清理对应失败包 |
