@@ -75,28 +75,31 @@
    "run_id": "AQDX5M6GB6H6",
    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
    "queue_id": "8876-1788610079508654500-0",
-   "deferred_count": 4,
-   "retry_after": 1788611061.6955662
+   "deferred_count": 5,
+   "retry_after": 1788611966.2479503,
+   "deferred_hold_until": 1788614666.2479503,
+   "deferred_reason": "host/preflight 连续不可用，等待维护或显式重审唤醒"
+  },
+  {
+   "run": 58,
+   "time": "2026-09-05 20:22",
+   "profile_id": "vivhite",
+   "backend_key": "kimi-k3",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
+   "source": "queued",
+   "run_id": "1GADJYTN9U1X",
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "queue_id": "8876-1788610925736530500-0",
+   "deferred_count": 3,
+   "retry_after": 1788611357.808106
   }
  ],
- "reviewing": {
-  "runs": [
-   58
-  ],
-  "items": [
-   {
-    "run": 58,
-    "time": "2026-09-05 20:22",
-    "profile_id": "vivhite",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "queued",
-    "run_id": "1GADJYTN9U1X",
-    "review_ep
+ "reviewing": null
+}
