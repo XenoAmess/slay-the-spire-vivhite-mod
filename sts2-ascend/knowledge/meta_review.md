@@ -6232,3 +6232,55 @@ retry_resolution: 20260829-204128-1788007288163902300-aa13bc8b no_valid_change
   997/999/1003/1004），悲观率台账继续累积；1013 完整链逐动作核对无执行层异常
   （F7 高危组合 FUZZY_WURM 族，T4/T5 致死缺口下买命格挡合规，死因=卡组输出密度
   不足，地图端 least-bad 行走无更优候选）。
+
+# 2026-09-05｜第 1233~1235 局批复盘（异步追及队列 3 局 exact_batch 全败；失败包 44590bbe 复审：attempt 观测补丁重实现，竞速必败豁免留痕接入判死账面）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260905-125536-1788584136106947800-44590bbe]
+  （role=target，failure_code=process_exit）。已核对 .review_evidence/failed_review 完整索引：
+  target 的 retry_candidate.patch 与 wip.patch 均 0 字节、report 0 字节——进程未产出任何
+  内容，无可重实现成果；lineage attempt 包 20260905-145446-1788591286570409100-8e6c77a0
+  （stall）的 retry_candidate.patch 含两处改动：① policy.py 竞速必败豁免留痕追加
+  eve_doom_note（有效，与当前 HEAD 上下文逐字匹配）；② 新建 knowledge/_packet_extract.json
+  （乱码 packet 转储，非生产成果，明确不整合）。本批按契约在当前 HEAD 自行重实现①并自检，
+  冲突无需解决；target 的 lineage 有效部分已整合。
+
+retry_resolution: 20260905-125536-1788584136106947800-44590bbe integrated
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：「竞速必败预演成立，Boss入场血量线豁免」触发时，选路留痕只有固定
+  话术、不带 _boss_race_doomed 的判死账面——eve_doom_note 自 policy.py:1979 计算后在
+  全文件无任何消费点（grep 实证），导致豁免的事后合理性（击杀需 X 回合 vs 满血可存活
+  Y 回合、血池/火力/翻盘比/组合门分账）无法从 runs/*.json 的 MAP 决策 notes 核对，竞速
+  判死的校准只能停在「触发率」层面。
+- **EVIDENCE**：① run 1233（F15 RestSite(15,0)）与 run 1234（F15 RestSite(15,4)）路径
+  规划均含「竞速必败预演成立，Boss入场血量线豁免（满血亦追不上击杀曲线，续航罚分
+  不计）」且均 F17 一幕 Boss 阵亡；② run 1235 F1（hp 80/80、爆发缺口 80%）与 F2 的
+  MAP 决策同样只有固定话术无账面明细（完整链 runs/20260902-173554_TA2AKVCUAXPS.json）；
+  ③ race_audit 台账 latched=641 / died=342，豁免高频触发但每次判死依据不可回溯。
+- **EXPECTED_SIGNAL**：改动不改任何判定与评分，只改留痕；未来 3~10 局触发豁免的 MAP
+  决策 notes 尾部带「｜竞速预演：击杀需X回合＞满血可存活Y回合（Boss血池均值…火力…
+  先验输出…；联合能量复核…）」明细，复盘可直接逐局核对豁免判死的账面与实战结局。
+
+## IMPLEMENTATION
+
+- sts2-ascend/brain/policy.py：豁免留痕 notes.append 追加 _eve_doom_tail
+  （eve_doom_note 非空时拼「｜」+账面全文）；纯观测改动，评分/罚分/判定路径零变更。
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**。
+- 指标：① 豁免留痕带账面明细的出现次数 vs 豁免总触发次数（应 100%）；② 带账面的
+  豁免局中「账面接近临界（ttk 与 tsurv 差 ≤margin）仍实战整管打空」的样本数——为后续
+  per-Boss 血池校准与翻盘比上限复核直接供数；③ 若豁免触发率或选路分布出现异常偏移
+  （理论上不可能，纯留痕），立即回滚。
+- 回滚：删除 _eve_doom_tail 两行 + 注释即复原；无策略键、无在线状态写入。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 3 局全败（生涯 0/1235→后续 1241 仍 0 胜）：1233/1234 均 F17 一幕 Boss 阵亡、竞速
+  必败预演在满血状态下 latch；1235 行至 F31（二幕），拿牌链 SHOP 两次购入后仍死于
+  输出密度。竞速必败在 F1 即判死（1235 缺口 80%）的早 latch 现象已多批观察，本批不
+  重复立案，待账面明细落地后用真实数据复核。

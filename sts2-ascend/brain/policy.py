@@ -2308,9 +2308,12 @@ class Policy:
                 # 对局里满血进场也追不上击杀曲线，入场血量已被多批实证为非生死
                 # 变量（本批 75%~100% 进场全数整管打空）——续航罚分只会把选路
                 # 推向「囤血等死」，与候选端的战力节点倾斜配套（见下方
-                # race_doom_power_bonus）。留痕供复盘核对豁免触发率
+                # race_doom_power_bonus）。留痕供复盘核对豁免触发率；
+                # 追加 eve_doom_note 判死账面（此前算出后从未被消费，
+                # 豁免只有固定话术，事后无法核对击杀/存活回合依据）
+                _eve_doom_tail = f"｜{eve_doom_note}" if eve_doom_note else ""
                 notes.append("竞速必败预演成立，Boss入场血量线豁免"
-                             "（满血亦追不上击杀曲线，续航罚分不计）")
+                             "（满血亦追不上击杀曲线，续航罚分不计）" + _eve_doom_tail)
             elif _to_boss and final_pct < need_eff - 1e-9:
                 raw_penalty += (need_eff - final_pct) * float(pol.get("boss_entry_penalty", 110.0))
                 _relax = f"（饥饿放宽自{need_pct:.0%}）" if need_eff < need_pct - 1e-9 else ""
