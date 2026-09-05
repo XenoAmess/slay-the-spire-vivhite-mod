@@ -744,3 +744,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.291233312086926局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.2249742773667895局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/6.117156834793611局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；power_longfight_bonus_max: 11.50 → 12.00（前夜锻造线触底，Boss 长战磨死证据改接能力牌长战加成上限（Boss 血池下加成恒被 7.0 封顶，抬顶让力量源更早压过打击上砧））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/64 胜，当前目标进阶 0
+
+## 第 65 局复盘（2026-09-05 21:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：MERCURY_HOURGLASS
+- 战斗记录：F5 Monster战 掉血8｜自损22; F8 Monster战 掉血7｜自损35; F9 Unknown战 掉血18｜自损20; F12 Monster战 掉血0｜自损6; F15 Monster战 掉血4｜自损2; F17 Boss战 掉血83｜自损80｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(37分/24.47495950457264局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(36分/9.558011708901908局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(35分/14.361082295581369局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/13.851731794382205局)，VIVHITE_CARD_SUCCESSOR_FORMULA(33分/7.177995064791981局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.276213995494622局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.206686867396006局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/6.0957467858718335局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.70 → 0.69（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/65 胜，当前目标进阶 0
