@@ -6172,3 +6172,63 @@ retry_resolution: 20260830-165530-1788080130637400100-b55e4b4d integrated
 - 回滚：将 `low_pool_burst_race_obs` 设为 `false`；不影响既有竞速判定。
 
 retry_resolution: 20260830-174849-1788083329181414800-8d04cda9 integrated
+
+# 2026-09-05｜第 988~1013 局批复盘（异步追及队列 26 局 exact_batch 全败；失败包 aa13bc8b 复审零产出 no_valid_change；EVENT_CARD_SCREEN_SETTLE 事件选牌屏过场挂起修复落地）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260829-204128-1788007288163902300-aa13bc8b]
+  （role=target，attempts 45 个 lineage 随包内联）。已逐包核对内联 manifest/inventory/
+  report/candidate_patch：target 本身 failure_kind=timeout，report 0 字节、candidate_patch
+  0 字节（空串哈希）、command_count=0、file_change_count=0——模型从未产出任何内容；
+  后续 attempt 包同型（timeout/process_exit/runner_tool_access_denied，均 0 字节产出）。
+  无可重实现成果、无冲突可解；按契约写 no_valid_change（lineage 内联证据全部可读，
+  不存在未读项，非 still_pending）。
+
+retry_resolution: 20260829-204128-1788007288163902300-aa13bc8b no_valid_change
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：事件选项的卡牌增减经 CARD_SELECTION 屏落地时，agent 事件结算在
+  CARD_SELECTION 首 tick 提前落库，卡组增量恒记 0——「分享知识」类拿牌选项的稀释
+  代价（-2/张）与删牌类选项的减牌账永不入账，事件经验账对该族选项失真成 0.0 平值
+  锁死，选项间只能靠样本数分散，负收益选项永远不被定价。
+- **EVIDENCE**：① stats.json 实证 BRAIN_LEECH「SHARE_KNOWLEDGE」n=152.8、
+  card_delta_sum=0.0（同批 run 998 决策：分享知识=0.0(n=125) / 把它扯下来=-5.0(n=1)）；
+  ② 原生 v0.111.0 runtime/events.jsonl 明确该选项语义「从N张随机牌中选择M张加入
+  你的牌组」——必产生 +1 卡组增量；③ run 965/967/972/980 决策链均为
+  choose_event_option(分享知识) → 次 tick CARD_SELECTION select_deck_card → 回 EVENT
+  → MAP；④ agent.py 事件结算挂起清单只有 COMBAT/MODAL，CARD_SELECTION 不在其中，
+  首 tick 即以 deck_delta=0 落库。同族受害：脑蛭 RIP 的无色卡奖励（card 0）、一切
+  经选牌屏删牌/变牌的事件选项。
+- **EXPECTED_SIGNAL**：改动后 SHARE_KNOWLEDGE 结算日志出现「卡组 +1」；stats.json
+  该键 card_delta_sum 由 0 开始累积，事件价值从 0.0 滑向 -2.0 附近（稀释计价生效）；
+  经选牌屏删牌的事件选项首次出现负 card_delta 样本。
+
+## IMPLEMENTATION
+
+- `sts2-ascend/brain/agent.py`：事件结算挂起清单 `("COMBAT", "MODAL")` →
+  `("COMBAT", "MODAL", "CARD_SELECTION")`，选牌屏与战斗/过场同等待遇——首 tick 只
+  快照 hp/金币（事件自身即时效果语义不变），不结算；真实流转屏（MAP/REWARD/
+  GAME_OVER…）落库时卡组 live 差值自然含已选/已删的牌。一行行为改动 + 证据注释。
+- `sts2-ascend/brain/selfcheck.py`：新增 3ee5 回归——① 选牌屏首 tick 必须挂起
+  （不落库、pending_event 保留）；② 选牌后返回 EVENT 屏仍不结算；③ MAP 落库
+  card_delta_sum=+1；④ 删牌型选屏同管线 card_delta_sum=-1。
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含新增 3ee5 全过）。
+- 指标：① 「分享知识」类结算日志卡组增量非零的出现率；② SHARE_KNOWLEDGE
+  card_delta_sum 累计量与事件价值滑向 -2.0 的速度；③ 经选牌屏删牌事件的负增量
+  首发样本；④ 翻案通道：若某拿牌事件实为强正收益（如定向选强牌），hp/gold/胜率
+  端证据可覆盖 -2/张稀释价，选项不会被误杀（公式已有强正收益覆盖语义）。
+- 回滚：agent.py 挂起清单移除 "CARD_SELECTION" 一行即整体复原（selfcheck 3ee5
+  为对照锚，需同步移除）；无策略键、无在线状态写入。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 26 局全败（生涯 0/1239）：一幕 Boss（F17）9 局、前中期死亡谷（F6~F15）10 局、
+  二幕段 4 局、Elite 直接致死 3 局；竞速审计「判死→实战获胜」本批 +7（989/991/993/
+  997/999/1003/1004），悲观率台账继续累积；1013 完整链逐动作核对无执行层异常
+  （F7 高危组合 FUZZY_WURM 族，T4/T5 致死缺口下买命格挡合规，死因=卡组输出密度
+  不足，地图端 least-bad 行走无更优候选）。

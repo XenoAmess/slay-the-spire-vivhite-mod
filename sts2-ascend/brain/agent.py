@@ -2310,8 +2310,17 @@ class Agent:
         # 祖先选项（event_chain，如引出强制战页的「休息」）各追加一条等额
         # 掉血样本——是「休息」而非「战！」把局面推进了强制战页，代价必须
         # 让做选择的那一环看见。金币仍按快照（战利品属战斗经济）。
+        # 选牌屏同属过场挂起（EVENT_CARD_SCREEN_SETTLE，第 988~1013 局批复盘）：
+        # 脑蛭「分享知识」原生语义是「从N张随机牌中选择M张加入牌组」，决策链
+        # 965/967/972/980 局均为 choose_event_option → 次 tick CARD_SELECTION
+        # 选牌 → 回 EVENT → MAP；旧挂起清单只有 COMBAT/MODAL，结算在
+        # CARD_SELECTION 首 tick 提前落库，卡组增量恒记 0（stats 实证：
+        # SHARE_KNOWLEDGE n=152.8、card_delta_sum=0.0）——拿牌选项的稀释
+        # 代价（-2/张）与删牌选项的减牌账永不入账，事件经验账对该族选项
+        # 失真成 0.0 平值锁死。选牌屏与战斗/过场同等待遇：只快照不结算，
+        # 真实流转屏落库时卡组 live 差值自然含已选/已删的牌。
         if self.ctx.pending_event is not None:
-            if screen in ("COMBAT", "MODAL"):
+            if screen in ("COMBAT", "MODAL", "CARD_SELECTION"):
                 if self.ctx.pending_event_own is None:
                     self.ctx.pending_event_own = (hp, gold)
             elif screen != "EVENT":

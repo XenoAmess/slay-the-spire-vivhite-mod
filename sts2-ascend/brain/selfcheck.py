@@ -1920,6 +1920,62 @@ def main() -> int:
     pe_p = tknow.stats["events"].get("COURIER_EV", {}).get("GRAB")
     assert pe_p and pe_p.get("potion_delta_sum") == 1.0 \
         and pe_p.get("relic_delta_sum") == 0.0, f"事件药水增量管线断裂: {pe_p}"
+
+    # 3ee5) 事件选牌屏过场挂起（EVENT_CARD_SCREEN_SETTLE，第 988~1013 局批复盘）：
+    #      脑蛭「分享知识」原生语义为「从N张随机牌中选择M张加入牌组」，决策链
+    #      965/967/972/980 局均为 选项→次 tick CARD_SELECTION→回 EVENT→MAP；
+    #      旧逻辑在 CARD_SELECTION 首 tick 提前结算，卡组增量恒记 0（stats 实证
+    #      SHARE_KNOWLEDGE n=152.8、card_delta_sum=0.0），稀释代价永不入账。
+    #      修复后：选牌屏 tick 只挂起不落库，MAP 落库时卡组 live 差值含已选的牌
+    ag.ctx.reset_for("RUN_EVT_CS", 0)
+    _cs_start = {"screen": "EVENT", "run_id": "RUN_EVT_CS",
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                         "deck": [{"card_id": "A"}]}}
+    track_accepted(ag, _cs_start,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "LEECH_EV", "SHARE")]))
+    #      选牌屏首 tick：卡组尚未变化，必须挂起不结算
+    ag._track({"screen": "CARD_SELECTION", "run_id": "RUN_EVT_CS",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                       "deck": [{"card_id": "A"}]}},
+              policy.Decision(action=None))
+    assert tknow.stats["events"].get("LEECH_EV", {}).get("SHARE") is None, \
+        "事件选牌屏首 tick 提前结算（卡组增量将恒记 0）"
+    assert ag.ctx.pending_event is not None, "选牌屏挂起后事件快照丢失"
+    #      选牌后回到事件屏仍不结算；真实流转屏落库时卡组增量必须含新牌
+    ag._track({"screen": "EVENT", "run_id": "RUN_EVT_CS",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                       "deck": [{"card_id": "A"}, {"card_id": "ANGER"}]}},
+              policy.Decision(action=None))
+    assert tknow.stats["events"].get("LEECH_EV", {}).get("SHARE") is None, \
+        "选牌后返回事件屏被误结算"
+    ag._track({"screen": "MAP", "run_id": "RUN_EVT_CS",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 3,
+                       "deck": [{"card_id": "A"}, {"card_id": "ANGER"}]}},
+              policy.Decision(action=None))
+    pe_cs = tknow.stats["events"].get("LEECH_EV", {}).get("SHARE")
+    assert pe_cs and pe_cs["n"] == 1 and pe_cs.get("card_delta_sum") == 1.0, \
+        f"事件选牌屏过场后卡组增量未入账: {pe_cs}"
+    #      删牌型选牌（卡组净减）同管线按负增量入账
+    ag.ctx.reset_for("RUN_EVT_RM", 0)
+    _rm_start = {"screen": "EVENT", "run_id": "RUN_EVT_RM",
+                 "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 5,
+                         "deck": [{"card_id": "A"}, {"card_id": "B"}]}}
+    track_accepted(ag, _rm_start,
+                   policy.Decision(action="choose_event_option",
+                                   tags=[("event_choice", "PURGE_EV", "REMOVE")]))
+    ag._track({"screen": "CARD_SELECTION", "run_id": "RUN_EVT_RM",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 5,
+                       "deck": [{"card_id": "A"}, {"card_id": "B"}]}},
+              policy.Decision(action=None))
+    ag._track({"screen": "MAP", "run_id": "RUN_EVT_RM",
+               "run": {"current_hp": 80, "max_hp": 80, "gold": 50, "floor": 5,
+                       "deck": [{"card_id": "A"}]}},
+              policy.Decision(action=None))
+    pe_rm = tknow.stats["events"].get("PURGE_EV", {}).get("REMOVE")
+    assert pe_rm and pe_rm["n"] == 1 and pe_rm.get("card_delta_sum") == -1.0, \
+        f"事件删牌选屏过场后负增量未入账: {pe_rm}"
+
     #      终局屏 run 载荷被清空时按「签名不变」处理——不得把死亡结算成丢光遗物
     ag.ctx.reset_for("RUN_EVT_D", 0)
     _death_start = {"screen": "EVENT", "run_id": "RUN_EVT_D",
