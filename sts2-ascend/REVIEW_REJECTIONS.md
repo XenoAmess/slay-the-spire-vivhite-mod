@@ -144,7 +144,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260829-225316-1788015196791448300-ab40e708 -->
 | 2026-08-29 22:53:16 | 第 1014~1085 局 | `ab40e708` | review_failure | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `8f0189ca` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 8f0189ca 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260829-225715-1788015435794734400-1a60dc87 -->
-| 2026-08-29 22:57:15 | 第 988~1013 局 | `1a60dc87` | review_failure | gpt-5.6-luna | 待 gpt-5.6-luna 重审/补合 | `knowledge/code_backups/review_salvage/20260829-225715-1788015435794734400-1a60dc87` | 闭环闸门拒绝纯报告：当前要求每批落地；历史连续纯报告 0 次（阈值 2）。本批必须对运行时行为或观测路径产生实质代码变化；meta_review、短评、仅 selfcheck，以及只改注释/空白来碰瓷生产路径都不算闭环。无需证明绝对安全，可做相对安全、可观测、可记录、可继续调整或撤回的改动。 |
+| 2026-08-29 22:57:15 | 第 988~1013 局 | `1a60dc87` | review_failure | luna-max (codex/gpt-5.6-luna@max) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `276b4010` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 276b4010 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260829-230100-1788015660311343600-c1cd8e66 -->
 | 2026-08-29 23:01:00 | 第 1086 局 | `c1cd8e66` | process_exit | opencode-go/glm-5.3-flash | 复盘已补合并闭环 `ac26841f` | （闭环清理） | 复盘重审结论与提交 ac26841f 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260829-231422-1788016462681869400-65abad11 -->
