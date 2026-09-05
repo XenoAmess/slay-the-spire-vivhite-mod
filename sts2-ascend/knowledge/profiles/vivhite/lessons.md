@@ -524,3 +524,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.60294798045391局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.604515776429059局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/6.561506366835067局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（82%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；deck_burst_floor: 40.00 → 41.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））；vivhite_param_life_cost_weight: -2.13 → -2.18（白绮謦欬卡组（本局拿23张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff 0.70 距锚点仅余 0.02(<步长0.03)——部分胜利释放停止，视为已达健康锚点；block_safety: 1.64 → 1.63（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.18 → -2.15（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/44 胜，当前目标进阶 0
+
+## 第 45 局复盘（2026-09-05 17:59）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_ASTRAL_SEARCH
+- 本局遗物：MANGO, VENERABLE_TEA_SET
+- 战斗记录：F5 Monster战 掉血0; F8 Monster战 掉血0; F11 Monster战 掉血0; F13 Elite战 掉血0; F15 Monster战 掉血0; F17 Boss战 掉血101（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(39分/21.06975617786767局)，PANIC_BUTTON(38分/2.867601762431046局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/7.5846045416719425局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(36分/11.300701138149005局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(36分/10.252304522507796局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.586837662522322局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/5.5848999712115575局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/6.538541094551144局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；deck_burst_floor: 41.00 → 42.00（burst_starve 双旋钮顶格，输出饥饿带加宽（顶格加分惠及更多卡组状态））；vivhite_param_life_cost_weight: -2.15 → -2.20（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/45 胜，当前目标进阶 0
