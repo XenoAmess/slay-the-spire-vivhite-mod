@@ -964,3 +964,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/4.000628166331913局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.871135578556467局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.640591739356083局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.70 → 0.69（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.02，步长 0.03→0.011）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/84 胜，当前目标进阶 0
+
+## 第 85 局复盘（2026-09-06 01:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_PARALLEL_STARFALL
+- 本局遗物：UNCEASING_TOP, LASTING_CANDY
+- 战斗记录：F7 Monster战 掉血3｜自损17; F9 Monster战 掉血0｜自损12; F11 Monster战 掉血0｜自损9; F14 Monster战 掉血0｜自损10; F15 Elite战 掉血1｜自损20; F17 Boss战 掉血87｜自损87｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_PERFECT_SYNTHESIS(36分/29.5734736622089局)，VIVHITE_CARD_CHROMATIC_LIMIT(36分/19.74770044609747局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/11.804397564982843局)，VIVHITE_CARD_SUCCESSOR_FORMULA(34分/10.601918005025219局)，VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL(33分/19.1690364223785局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(18分/3.986625967749752局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.85408660403152局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/8.610349668268336局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.69 → 0.66（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/85 胜，当前目标进阶 0
