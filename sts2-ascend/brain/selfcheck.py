@@ -2415,6 +2415,39 @@ def main() -> int:
         ("缺 self_hp_loss 字段的旧记录只许单档收紧: "
          f"{vknow_old.policy.get('vivhite_param_life_cost_weight')}")
 
+    # 3prg) 謦欬通道触底留痕与同局回收矛盾守卫（第 158~164 局批复盘）：
+    #      164 局 F25 精英阵亡自损73/掉血90=81%（双档收紧证据），但权重已在
+    #      -3.0 触底——旧版钳制零留痕，lessons 只见「-3.00→-2.98 部分胜利回收」。
+    #      ① 触底收紧必须显式封账留痕且不改值；② 致命战自损占比≥50% 的同局
+    #      F18+ 部分胜利回收必须让位并留痕；③ 非自损主导的 F18+ 死亡局回收照旧。
+    vknow_floor = _vivhite_know("sts2-selfcheck-vhlife-floor-")
+    vknow_floor.policy["vivhite_param_life_cost_weight"] = -3.0
+    vlesson_floor = finalize_run(vknow_floor, _vivhite_death_ctx(73.0, 90.0),
+                                 victory=False, final_floor=17)
+    assert abs(vknow_floor.policy["vivhite_param_life_cost_weight"] - (-3.0)) < 1e-9, \
+        ("触底钳制不得再改值: "
+         f"{vknow_floor.policy.get('vivhite_param_life_cost_weight')}")
+    assert "触底" in vlesson_floor and "停止吸收并留痕" in vlesson_floor, \
+        f"触底收紧未显式留痕: {vlesson_floor[-400:]}"
+    vknow_dom = _vivhite_know("sts2-selfcheck-vhlife-dom-")
+    vknow_dom.policy["vivhite_param_life_cost_weight"] = -2.0
+    vlesson_dom = finalize_run(vknow_dom, _vivhite_death_ctx(73.0, 90.0),
+                               victory=False, final_floor=25)
+    assert abs(vknow_dom.policy["vivhite_param_life_cost_weight"] - (-2.10)) < 1e-9, \
+        ("自损主导的同局回收必须让位（-2.00→-2.10，无 +0.025 回收）: "
+         f"{vknow_dom.policy.get('vivhite_param_life_cost_weight')}")
+    assert "部分胜利回收让位" in vlesson_dom, \
+        f"自损主导局回收让位未留痕: {vlesson_dom[-400:]}"
+    vknow_nd = _vivhite_know("sts2-selfcheck-vhlife-nd-")
+    vknow_nd.policy["vivhite_param_life_cost_weight"] = -2.0
+    vlesson_nd = finalize_run(vknow_nd, _vivhite_death_ctx(20.0, 90.0),
+                              victory=False, final_floor=25)
+    assert abs(vknow_nd.policy["vivhite_param_life_cost_weight"] - (-2.025)) < 1e-9, \
+        ("非自损主导的 F18+ 死亡局回收照旧（-2.00→-2.05→-2.025）: "
+         f"{vknow_nd.policy.get('vivhite_param_life_cost_weight')}")
+    assert "部分胜利回收让位" not in vlesson_nd, \
+        f"非自损主导局不得出现回收让位留痕: {vlesson_nd[-400:]}"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection

@@ -313,6 +313,17 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
     # 归因错位：109 局正是这样把 block_safety 1.05→1.10 推高的。摆烂死对
     # 攻防旋钮均无责，只留痕并把注意力指向卡组输出手段的丢失
     stall_death = bool((ctx.died_in_combat or {}).get("stall"))
+    # 謦欬实付主导死亡的统一判定（第 158~164 局批复盘）：致命战实测自损占掉血
+    # ≥50% 时，本局生命支付权重的全部证据都指向「支付代价被低估」。旧版该
+    # 判定只活在下方收紧通道内部，同局 F18+ 部分胜利回收仍 +0.025——164 局
+    # 自损73/掉血90=81%、权重已触底 -3.00，lessons 却只见「-3.00→-2.98
+    # 部分胜利回收」：收紧被钳制零留痕、回收照常，触底振荡且证据不可见
+    _self_loss = float((ctx.died_in_combat or {}).get("self_hp_loss") or 0.0)
+    _hp_lost_self = float((ctx.died_in_combat or {}).get("hp_lost") or 0.0)
+    _self_dominant_death = bool(
+        not victory and not stall_death
+        and _self_loss > 0.0 and _hp_lost_self > 0.0
+        and _self_loss >= 0.5 * _hp_lost_self)
     # 白绮 profile 守卫：謦欬生命支付的专属演化通道只作用于白绮库
     _profile = getattr(know, "profile", None)
     _vivhite_profile = bool(
@@ -556,24 +567,37 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                            if _is_vivhite_life_card(cid)]
             if len(_life_picks) >= 2:
                 know.policy.setdefault("vivhite_param_life_cost_weight", -1.25)
-                _adj(know, "vivhite_param_life_cost_weight", -0.05, changes,
-                     f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
-                     "——生命支付权重向保守收紧")
+
+                def _lc_tighten(why: str) -> None:
+                    # 触底留痕（第 158~164 局批复盘补齐顶格旋钮代谢）：旧版
+                    # 直接 _adj，-3.0 触底时钳制零留痕，死亡证据静默蒸发
+                    # （164 局 lessons 只见回收、不见收紧）——与同文件
+                    # kill_bonus/爆毙链的「余量不足停止加码并显式留痕」同原则
+                    _head = (know.policy["vivhite_param_life_cost_weight"]
+                             - BOUNDS["vivhite_param_life_cost_weight"][0])
+                    if _head >= 0.05 - 1e-9:
+                        _adj(know, "vivhite_param_life_cost_weight", -0.05,
+                             changes, why)
+                    else:
+                        changes.append(
+                            f"vivhite_param_life_cost_weight "
+                            f"{know.policy['vivhite_param_life_cost_weight']:.2f} "
+                            f"触底（余量 {_head:.2f}<步长0.05）——{why}；"
+                            "触底旋钮停止吸收并留痕（接替手段待复盘设计）")
+
+                _lc_tighten(f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
+                            "——生命支付权重向保守收紧")
                 # 謦欬实付加码（第 7~20 局批复盘）：拿牌张数只量卡组构成，量不到
                 # 实战支付强度——本批及近期 15 场致命 Boss/终盘战实测自损占掉血
                 # 59%~143%（13/15 ≥50%：F33 自损83/掉血85、F33 119/97、F48 142/99），
                 # 謦欬实付而非敌方火力才是主杀手。致命战实测自损占比 ≥50% 时再
                 # 加一档收紧（同一 BOUNDS 钳制）；旧记录缺 self_hp_loss 字段时
                 # 退回纯拿牌口径，行为与旧版严格一致
-                _self_loss = float((ctx.died_in_combat or {}).get("self_hp_loss") or 0.0)
-                _hp_lost_self = float((ctx.died_in_combat or {}).get("hp_lost") or 0.0)
-                if (_self_loss > 0.0 and _hp_lost_self > 0.0
-                        and _self_loss >= 0.5 * _hp_lost_self):
+                if _self_dominant_death:
                     _node_self = (ctx.died_in_combat or {}).get("node_type") or "敌方"
-                    _adj(know, "vivhite_param_life_cost_weight", -0.05, changes,
-                         f"致命{_node_self}战实测自损{_self_loss:.0f}/掉血"
-                         f"{_hp_lost_self:.0f}（{_self_loss / _hp_lost_self:.0%}≥50%）"
-                         "——謦欬实付加码收紧")
+                    _lc_tighten(f"致命{_node_self}战实测自损{_self_loss:.0f}/掉血"
+                                f"{_hp_lost_self:.0f}（{_self_loss / _hp_lost_self:.0%}≥50%）"
+                                "——謦欬实付加码收紧")
         # 竞速先验折算率的部分胜利释放（第 494 局批复盘新增，第509~515局批复盘
         # 重开通道）：该旋钮的回收通道此前只挂整局胜利——0/494 生涯里被「Boss
         # 高血进场长战死」证据一路压到 0.37 触底后永不回升，形成死锁：折算率
@@ -632,8 +656,18 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                      f"行至 F{final_floor}——药水交药线部分胜利回收")
             # 白绮生命支付权重的部分胜利回收（锚点 -1.25，半量步长）
             if _vivhite_profile and pol.get("vivhite_param_life_cost_weight", -1.25) < -1.25:
-                _adj(know, "vivhite_param_life_cost_weight", 0.025, changes,
-                     f"行至 F{final_floor}——白绮生命支付权重部分胜利回收（锚点-1.25）")
+                if _self_dominant_death:
+                    # 同局证据矛盾守卫（第 158~164 局批复盘）：致命战自损占比
+                    # ≥50% 时，本局收紧证据与回收方向相反，回收让位并显式留痕
+                    # ——164 局正是「触底钳制零留痕 + 回收 +0.025」把权重抬离
+                    # 证据钉点（-3.00→-2.98）的振荡源
+                    changes.append(
+                        f"行至 F{final_floor} 但致命战自损{_self_loss:.0f}/掉血"
+                        f"{_hp_lost_self:.0f}≥50%——生命支付权重部分胜利回收"
+                        "让位于同局謦欬实付证据")
+                else:
+                    _adj(know, "vivhite_param_life_cost_weight", 0.025, changes,
+                         f"行至 F{final_floor}——白绮生命支付权重部分胜利回收（锚点-1.25）")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")
