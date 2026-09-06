@@ -1987,3 +1987,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.6245674911729506局)，ROLLING_BOULDER(20分/4.9084772862009824局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/18.018405232596795局)
 - 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（4回合掉血68，每回合17≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 0.00 → 0.50（生命支付权重触底，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_hp_cost_play_margin: 0.50 → 1.00（生命支付权重触底，致命Monster战实测自损57/掉血68（84%≥50%）——謦欬实付加码收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.60 → 0.60（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F22 但致命战自损57/掉血68≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：0/177 胜，当前目标进阶 0
+
+## 第 178 局复盘（2026-09-07 01:29）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：BOWLER_HAT
+- 战斗记录：F6 Monster战 掉血0｜自损26（可行动段20/非行动段6，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损4（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0; F9 Monster战 掉血18｜自损29（可行动段18/非行动段11，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损18（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血77｜自损75（可行动段28/非行动段47，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.3021455413721497局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/41.584450730931444局)，SALVO(34分/9.515070670260304局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.827650586458583局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/43.140238474081414局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.6118815049538453局)，ROLLING_BOULDER(20分/4.891297615699279局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/17.955340814282707局)
+- 策略进化：精英战阵亡但满血线进场（96%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 1.00 → 1.50（生命支付权重触底，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_hp_cost_play_margin: 1.50 → 2.00（生命支付权重触底，致命Elite战实测自损75/掉血77（97%≥50%）——謦欬实付加码收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：0/178 胜，当前目标进阶 0
