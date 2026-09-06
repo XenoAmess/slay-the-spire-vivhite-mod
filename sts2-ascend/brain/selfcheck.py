@@ -2780,8 +2780,12 @@ def main() -> int:
     #      战斗记录却记「掉血61｜自损53」，53=4+24+9+16 恰为全部非致命敌方伤害
     #      逐段之和（致命一击 8→0 落在 GAME_OVER 屏未被战斗内采样）：
     #      state["turn"] 在敌方行动阶段不前进，end_turn 后敌方攻击动画期间的
-    #      轮询 tick 仍以相同回合号观测 HP 下降，被记入同回合自损主账。主账与
-    #      全部消费端零改动，仅新增 can_play 相位影子分账与战斗记录披露。
+    #      轮询 tick 仍以相同回合号观测 HP 下降，被记入同回合自损主账。
+    #      第1270~1274局批行为化（SELF_LOSS_MAIN_OWN_ONLY）：预注册条件「无自付
+    #      牌对局 Y≈N ≥3 独立对局」已达成（1270/1271/1272/1274 全场可行动段≤2；
+    #      5 局 25 场合计可行动段 29 vs 非行动段 ≈576）——主账只采可行动段
+    #      差值，非行动段桶转为披露被排除的敌方伤害量；回滚键
+    #      self_loss_main_own_only=False 严格恢复旧混合口径。
     #      夹具复刻 1265-F17 时序：T1 可行动 tick 自付 8 → 敌方行动阶段 tick
     #      （available_actions 无 play_card）掉 20 → T2 边界采样。
     def _slph_state(turn_no, hp_now, actions):
@@ -2827,15 +2831,29 @@ def main() -> int:
     slph_pol.decide(_slph_state(1, 53, ["play_card", "end_turn"]), slph_ctx)  # 可行动段自付 8
     slph_pol.decide(_slph_state(1, 33, []), slph_ctx)  # 敌方行动阶段掉 20（同回合号）
     slph_pol.decide(_slph_state(2, 33, ["play_card", "end_turn"]), slph_ctx)  # T2 边界
-    assert slph_pol._race_same_round_loss == 28.0, \
-        f"自损主账口径漂移: {slph_pol._race_same_round_loss}"
+    # 行为化后主账=可行动段口径：只采 T1 可行动 tick 自付 8，敌方行动阶段 20 排除
+    assert slph_pol._race_same_round_loss == 8.0, \
+        f"自损主账未切换可行动段口径: {slph_pol._race_same_round_loss}"
     assert slph_pol._race_same_round_loss_own == 8.0, \
         f"可行动段分账错误: {slph_pol._race_same_round_loss_own}"
     assert slph_pol._race_same_round_loss_enemy == 20.0, \
         f"非行动段分账错误: {slph_pol._race_same_round_loss_enemy}"
     assert slph_pol.combat_self_hp_loss_phases() == (8.0, 20.0), \
         f"分账读数接口漂移: {slph_pol.combat_self_hp_loss_phases()}"
-    # 回滚锚①：观测键关闭后分账停止、主账口径不变
+    # 回滚锚⓪：主账口径键关闭后严格恢复旧混合口径 28（分账不受影响）
+    slph_know_rb0 = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slph-rb0-")))
+    slph_know_rb0.policy["self_loss_main_own_only"] = False
+    slph_pol_rb0 = policy.Policy(slph_know_rb0, random.Random(7))
+    slph_ctx_rb0 = _slph_ctx()
+    slph_pol_rb0.decide(_slph_state(1, 61, ["play_card", "end_turn"]), slph_ctx_rb0)
+    slph_pol_rb0.decide(_slph_state(1, 53, ["play_card", "end_turn"]), slph_ctx_rb0)
+    slph_pol_rb0.decide(_slph_state(1, 33, []), slph_ctx_rb0)
+    assert slph_pol_rb0._race_same_round_loss == 28.0, \
+        "self_loss_main_own_only=False 未严格恢复旧混合口径"
+    assert slph_pol_rb0.combat_self_hp_loss_phases() == (8.0, 20.0), \
+        "主账口径键不应影响相位分账"
+    # 回滚锚①：观测键关闭后分账停止；主账仍按可行动段口径（两键语义正交）
     slph_know_rb = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slph-rb-")))
     slph_know_rb.policy["self_loss_phase_obs"] = False
@@ -2844,32 +2862,33 @@ def main() -> int:
     slph_pol_rb.decide(_slph_state(1, 61, ["play_card", "end_turn"]), slph_ctx_rb)
     slph_pol_rb.decide(_slph_state(1, 53, ["play_card", "end_turn"]), slph_ctx_rb)
     slph_pol_rb.decide(_slph_state(1, 33, []), slph_ctx_rb)
-    assert slph_pol_rb._race_same_round_loss == 28.0, \
-        "回滚键关闭后自损主账口径变化"
+    assert slph_pol_rb._race_same_round_loss == 8.0, \
+        "观测键关闭后主账应仍按可行动段口径（8）"
     assert slph_pol_rb.combat_self_hp_loss_phases() == (0.0, 0.0), \
         "回滚键关闭后仍在分账"
-    # 战斗记录披露：可 grep 相位段；回滚锚②：观测键关闭严格回落旧口径
+    # 战斗记录披露：可 grep 相位段；行为化后自损N=可行动段X，
+    # 非行动段Y=被排除出主账的敌方行动阶段掉血；回滚锚②：观测键关闭严格回落旧口径
     slph_ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
     slph_ag._start_combat({"max_hp": 91, "floor": 17}, "VANTOM", "Boss", 61)
     slph_ag.ctx.combat["rounds"] = 7
-    slph_ag.policy._race_same_round_loss = 28.0
+    slph_ag.policy._race_same_round_loss = 8.0
     slph_ag.policy._race_same_round_loss_own = 8.0
     slph_ag.policy._race_same_round_loss_enemy = 20.0
     slph_ag._settle_combat(33, won=False, died=True)
     slph_note = slph_ag.ctx.combat_notes[-1]
-    assert "｜自损28（可行动段8/非行动段20，SELF_LOSS_PHASE_OBS）" in slph_note, \
+    assert "｜自损8（可行动段8/非行动段20，SELF_LOSS_PHASE_OBS）" in slph_note, \
         f"战斗记录缺相位分账披露: {slph_note}"
     assert slph_note.endswith("（阵亡）"), f"（阵亡）后缀位置漂移: {slph_note}"
     slph_ag_rb = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
     slph_ag_rb.know.policy["self_loss_phase_obs"] = False
     slph_ag_rb._start_combat({"max_hp": 91, "floor": 17}, "VANTOM", "Boss", 61)
     slph_ag_rb.ctx.combat["rounds"] = 7
-    slph_ag_rb.policy._race_same_round_loss = 28.0
+    slph_ag_rb.policy._race_same_round_loss = 8.0
     slph_ag_rb.policy._race_same_round_loss_own = 8.0
     slph_ag_rb.policy._race_same_round_loss_enemy = 20.0
     slph_ag_rb._settle_combat(33, won=False, died=True)
     slph_note_rb = slph_ag_rb.ctx.combat_notes[-1]
-    assert "｜自损28" in slph_note_rb and "SELF_LOSS_PHASE_OBS" not in slph_note_rb, \
+    assert "｜自损8" in slph_note_rb and "SELF_LOSS_PHASE_OBS" not in slph_note_rb, \
         f"回滚键关闭后战斗记录未回落旧口径: {slph_note_rb}"
 
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：

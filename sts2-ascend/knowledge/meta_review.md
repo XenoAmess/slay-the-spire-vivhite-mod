@@ -6525,3 +6525,99 @@ retry_resolution: none (no replay target; local production observation)
   饥饿链/旋钮代谢全顶格、kill_race_prior_eff 换向阻尼下调中（0.54→0.49），
   均为设计内终态，不重复立案。SLIPPERY_TTK_OBS 本批 +1（1265-F17 VANTOM
   8 层留痕常开），判决方向不变，预注册行为化条件（贴线翻案 ≥1 例）未达成。
+
+# 2026-09-07｜第 1270~1274 局批复盘（异步追及队列 5 局 exact_batch 全败；SELF_LOSS_MAIN_OWN_ONLY 自损主账可行动段口径行为化）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审。
+
+retry_resolution: none (no replay target; local production behaviorization)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：自损主账 `_race_same_round_loss` 把敌方行动阶段掉血计为自损的
+  污染假设已被 SELF_LOSS_PHASE_OBS 证实；第 1245~1265 局批预注册的行为化条件
+  「无自付牌对局 Y≈N 累计 ≥3 个独立对局」本批达成——主账改为只采可行动段
+  （can_play tick）差值，Vivhite 侧 VIVHITE_RACE_SELF_LOSS_EXCLUDE 的
+  `_self_paid_round` 差分消费端随之同步恢复「只隔离真实自付」语义。
+- **EVIDENCE**：① 本批 5 局 25 场战斗记录相位分账：可行动段合计 29 vs
+  非行动段 ≈576（污染 ≈95%）；② 1274（UF9TRGCDELXE，F7 阵亡，114 条完整链
+  已逐条核对）卡组零生命支付牌（拿牌 TRUE_GRIT/MOLTEN_FIST/THUNDERCLAP/
+  HEADBUTT），5 场仍记「自损」13/12/9/34/17 且全部落在非行动段——逐条出牌
+  记录无任何自付来源；③ 1270/1271/1272 全部场次可行动段 ≤2（1270: 0/35、
+  0/44、0/41、0/9、2/42；1271: 0/12、0/18、0/6、0/27、0/20；1272: 0/37、
+  0/13、0/24、0/13、0/53）；④ 唯一例外 1273-F22（可行动段25/非行动段15），
+  单场内可行动段占优，为口径边界样本（自付牌动画期 can_play 短暂 False 的
+  披露口径之对偶：敌方伤害在我方可行动 tick 结算窗口被采入），不改整体结论；
+  ⑤ 与 1265-F17（零自付牌记自损53=全部非致命敌方伤害之和）合计独立对局 ≥5。
+- **EXPECTED_SIGNAL**：未来 3~10 局无自付牌对局战斗记录不再出现「自损N」段
+  （或 N≈真实自付量）；「（可行动段X/非行动段Y，SELF_LOSS_PHASE_OBS）」披露
+  继续留存，Y 转为「被排除出主账的敌方伤害量」读数；謦欬/御血/祭品实战局
+  自损账回归真实支付量级；Vivhite profile 竞速生存分母不再被敌方伤害喂高
+  （隔离口径同步修复的直接观测：Vivhite 局 RACE 判死口径变化可由 race_audit
+  台账对照）。
+
+## 一、样本与部署时序审读（固定首步骤）
+
+- 队列 requested=[1270..1274]，exact 命中 5/5、missing=0；最新死亡局 1274
+  （UF9TRGCDELXE）完整链 114 条（packet 内为尾部+每层首末+全部非战斗选择
+  的 57 条切片，decision_aggregates 载 COMBAT play_card 42 / end_turn 15）
+  已逐条阅读：F2~F6 拿牌 TRUE_GRIT/F3 熔融之拳/F4 闪电霹雳/F6 头槌，无任何
+  生命支付牌；F6 单场 -42（61→19）后 F7 唯一候选 Monster 被迫 19 血进场
+  （路径分 -69.03，least-bad 单候选），T3 起竞速判死全攻、T4 阵亡——执行层
+  逐动作核对无异常，死因=前期战损密度+卡组输出密度，选路端无更优候选。
+- 部署时序：SELF_LOSS_PHASE_OBS（第 1245~1265 局批落盘）先于本批全部对局，
+  本批 25 场相位分账均为该观测位的 post-fix 证据；预注册行为化条件正式达成。
+
+## 二、归因分析（本批共性）
+
+1. **自损主账污染（本批主假设现场）**：见 HYPOTHESIS/EVIDENCE 段；污染消费面
+   为战斗记录「自损N」、died_in_combat.self_hp_loss（reflect 謦欬实付加码
+   通道仅 Vivhite 守卫内消费，本 profile 无参数面影响）与 Vivhite 隔离差分。
+2. **竞速审计悲观台账续记**：本批「判死→实战获胜」+2（1270-F33、1273-F17），
+   「判死→阵亡」+3（1270-F43、1271-F27、1272-F17、1273-F23、1274-F7 中按
+   实际 5 条阵亡记录计）——台账分子分母同涨，不重复立案。
+3. **死亡谷 least-bad 链**：1274（F6 单场 -42 后 19 血强制战）与 1271
+   （绝境全候选死亡投影）同族，选路端无更优候选，已有疲劳压制/低血尾部
+   定价在产，不单列立案。
+
+## 三、本次调整（行为化 ×1：SELF_LOSS_MAIN_OWN_ONLY）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **SELF_LOSS_MAIN_OWN_ONLY**（自损主账只采可行动段差值；证据：1265-F17 + 本批 1270/1271/1272/1274 全部场次 Y≈N；预注册条件达成后按上一批既定计划行为化） |
+| 代码动作 | brain/policy.py：同回合扣血采样处主账加 `can_play or not self_loss_main_own_only` 门（默认只采可行动段）；init/读数接口注释同步；brain/knowledge.py DEFAULT_POLICY 新增 `self_loss_main_own_only: True`；brain/selfcheck.py 3slph 段更新为新口径并加回滚锚⓪（键关→主账严格回落 28 混合口径） |
+| 不改 | 相位影子分账与战斗记录披露（非行动段桶转为「被排除量」读数）、回合边界净损 EMA、竞速判定 ttk/tsurv 口径、reflect 演化通道结构、Vivhite 隔离开关本身 |
+| 回滚 | `self_loss_main_own_only: False` 即整体恢复旧混合口径（selfcheck 3slph 回滚锚⓪ 为对照锚）；或删除 policy/knowledge/selfcheck/agent 四处改动零残留 |
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check`
+  通过；改动仅限 sts2-ascend 静态项目文件，无在线状态写入、无进程操作。
+- selfcheck 3slph：① 复刻 1265-F17 时序，主账=8（可行动段口径）、分账 8/20；
+  ② 回滚锚⓪ self_loss_main_own_only=False → 主账严格回落 28 且分账不受影响；
+  ③ 回滚锚① self_loss_phase_obs=False → 分账停止、主账仍按新口径 8（两键
+  语义正交）；④ 战斗记录披露「自损8（可行动段8/非行动段20，SELF_LOSS_PHASE_
+  OBS）」且（阵亡）后缀在尾；⑤ 观测键关闭严格回落旧披露口径。既有 3prb
+  謦欬自付隔离（可行动 tick 自付 16→主账 16，口径不变）等全部断言原样通过。
+- 指标（未来 3~10 局）：① 无自付牌对局战斗记录「自损N」段消失率（应≈100%）；
+  ② 謦欬/御血/祭品实战局自损账 vs 旧混合口径的量级差；③ 非行动段桶披露
+  持续出现（证明分账仍在跑）与量级合理性；④ Vivhite profile 的 race_audit
+  台账 won/latched 走向（隔离口径修复的间接观测）。
+- 继续调整条件：若出现「真实自付被漏计导致謦欬实付加码证据断流」（自付牌
+  动画期 can_play=False 口径边界的对偶风险）累计 ≥3 个独立对局 → 下一批
+  评估按牌面生命成本补账；口径边界样本（1273-F22 型）持续占优 → 复查
+  can_play 采样口径。
+- 撤回条件：`self_loss_main_own_only: False` 即整体关闭；或删除四处改动。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1274）：一幕 Boss 阵亡 1 局（1272-F17）、前中期死亡谷
+  3 局（1271-F27、1273-F23、1274-F7）、二幕段 1 局（1270-F43）。竞速审计
+  「判死→实战获胜」本批 +2，悲观台账续记；1272/1273 前夜
+  RACE_AUDIT_HEAL_OVERRIDE 正常触发（57% 带内），审计纠错链在产。
+  kill_bonus/饥饿链/锻造线旋钮全顶格停止吸收，kill_race_prior_eff 换向
+  阻尼 0.61→0.62（部分胜利释放），均为设计内终态。SLIPPERY_TTK_OBS 本批
+  无滑溜现场；1273-F17 Boss 战竞速审计「T2判死→实战7回合获胜」台账 +1。

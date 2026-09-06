@@ -3548,8 +3548,9 @@ class Agent:
             _seg_self_loss = 0.0
         # SELF_LOSS_PHASE_OBS（第1245~1265局批复盘）：同账本的相位影子分账
         # （可行动段/非行动段）随分段并入聚合账——1265-F17 全场零自付牌却记
-        # 「掉血61｜自损53」，53=全部非致命敌方伤害之和，主账疑似把敌方行动
-        # 阶段的掉血计为自损。分账只进战斗记录留痕，不改任何消费端口径。
+        # 「掉血61｜自损53」，53=全部非致命敌方伤害之和，主账把敌方行动
+        # 阶段的掉血计为自损。第1270~1274局批主账已行为化（只采可行动段，
+        # SELF_LOSS_MAIN_OWN_ONLY），非行动段桶转为披露「被排除的敌方伤害量」。
         try:
             _seg_loss_own, _seg_loss_foe = self.policy.combat_self_hp_loss_phases()
         except Exception:
@@ -3661,9 +3662,10 @@ class Agent:
         if _self_loss > 0.0:
             note += f"｜自损{int(round(_self_loss))}"
             # SELF_LOSS_PHASE_OBS 相位分账披露（第1245~1265局批复盘）：
-            # 主账口径不变，只追加可行动段/非行动段两桶读数，供复盘直接验证
-            # 「敌方行动阶段掉血被计入自损」的污染占比。观测键关闭时段落
-            # 严格回落旧口径（selfcheck 对照锚）。
+            # 第1270~1274局批主账行为化（SELF_LOSS_MAIN_OWN_ONLY）后自损N=
+            # 可行动段X，非行动段Y=被排除出主账的敌方行动阶段掉血，供复盘
+            # 直接对账「被排除量」。观测键关闭时段落严格回落旧口径
+            # （selfcheck 对照锚）。
             if bool(self.know.policy.get("self_loss_phase_obs", True)):
                 _loss_own = float(agg.get("self_hp_loss_own_sum", 0.0) or 0.0)
                 _loss_foe = float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
