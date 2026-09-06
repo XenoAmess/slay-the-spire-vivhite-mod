@@ -2196,3 +2196,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.390977816179253局)，ROLLING_BOULDER(20分/4.592144477723857局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.68564160679989局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 78%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.45 → 0.47（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/196 胜，当前目标进阶 0
+
+## 第 197 局复盘（2026-09-07 07:56）
+- 结果：💀 失败｜进阶 0｜到达层数 3｜当局评分 3
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血10｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血68｜自损54（可行动段54/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T19判死→实战21回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.1537809626722275局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.897490058468925局)，SALVO(34分/8.90186032976561局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.868564550374012局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.328950579340514局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.3791093938226258局)，ROLLING_BOULDER(20分/4.576071972051824局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.60624186117609局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（21回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/197 胜，当前目标进阶 0
