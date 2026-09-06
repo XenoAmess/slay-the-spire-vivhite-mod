@@ -1734,3 +1734,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.9289655522730795局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.811021773521474局)，ROLLING_BOULDER(20分/5.320700530081065局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.71 → 0.68（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/154 胜，当前目标进阶 0
+
+## 第 155 局复盘（2026-09-06 21:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_RIEMANN_STAR_ARRAY
+- 本局遗物：AMETHYST_AUBERGINE, ETERNAL_FEATHER
+- 战斗记录：F6 Monster战 掉血0｜自损23（可行动段18/非行动段5，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损18（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血4｜自损22（可行动段16/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血1｜自损13（可行动段10/非行动段3，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血11｜自损23（可行动段17/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损77（可行动段40/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(41分/5.197016812454958局)，MAYHEM(38分/2.4954840957984636局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.84516589086222局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/40.42401672348317局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/16.07290484098139局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.9152141728401237局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.797683197314149局)，ROLLING_BOULDER(20分/5.302078078225781局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.68 → 0.65（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/155 胜，当前目标进阶 0
