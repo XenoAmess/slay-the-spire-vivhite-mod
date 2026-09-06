@@ -2470,10 +2470,6 @@ def main() -> int:
     #      阈值被打出（自损71/掉血78=91% 阵亡）——非致死回合謦欬实付每点按
     #      vivhite_hp_cost_play_margin 抬高该候选出牌门槛；致死回合豁免；
     #      margin=0 一键回滚（旧行为零差异）；被拦候选不得经残能救场绕行。
-    #      第 170~186 局批复盘：门落地九局拦门 172 次（104 次拦起手打击）而
-    #      致命战自损占比未降，满足预注册证伪——拦下将导致本回合无牌可出时
-    #      门让位放行评分最高被拦候选（VIVHITE_HP_PLAY_MARGIN_GATE_YIELD）；
-    #      vivhite_hp_margin_gate_yield=0 回滚旧绝对否决口径。
     def _vgate_state(hp_now, incoming):
         return {
             "screen": "COMBAT",
@@ -2522,48 +2518,11 @@ def main() -> int:
     vknow_g1.policy["vivhite_hp_cost_play_margin"] = 50.0
     vpol_g1 = policy.Policy(vknow_g1, random.Random(11))
     d_g1 = vpol_g1.decide(_vgate_state(85, 10), _vgate_ctx())
-    assert d_g1.action == "play_card", \
-        f"拦下将无牌可出带能空过时门应让位放行被拦候选: {d_g1}"
-    assert "VIVHITE_HP_PLAY_MARGIN_GATE" in d_g1.reason \
-        and "VIVHITE_HP_PLAY_MARGIN_GATE_YIELD" in d_g1.reason, \
-        f"让位缺决策链留痕（门拦截+让位放行双标记）: {d_g1.reason}"
-    vknow_g1r = _vivhite_know("sts2-selfcheck-vhgate-noyield-")
-    vknow_g1r.policy["vivhite_hp_cost_play_margin"] = 50.0
-    vknow_g1r.policy["vivhite_hp_margin_gate_yield"] = 0
-    vpol_g1r = policy.Policy(vknow_g1r, random.Random(11))
-    d_g1r = vpol_g1r.decide(_vgate_state(85, 10), _vgate_ctx())
-    assert d_g1r.action == "end_turn", \
-        f"yield=0 必须严格回滚旧绝对否决（拦下后空过）: {d_g1r}"
-    assert "謦欬出牌门拦下" in d_g1r.reason \
-        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_g1r.reason, \
-        f"yield=0 回滚分支缺拦门留痕: {d_g1r.reason}"
-
-    def _vgate_state_alt(hp_now, incoming):
-        # 手牌含未过门的替代出牌（公理护环：life_cost=0）时门维持否决不换序
-        state = _vgate_state(hp_now, incoming)
-        state["combat"]["hand"].append({
-            "index": 1,
-            "card_id": "VIVHITE_CARD_AXIOM_RING",
-            "name": "公理护环", "card_type": "Skill", "playable": True,
-            "energy_cost": 1, "requires_target": False,
-            "dynamic_values": [{"name": "Margin", "current_value": 3}],
-        })
-        state["run"]["deck"] = list(state["run"]["deck"]) + [{
-            "card_id": "VIVHITE_CARD_AXIOM_RING",
-            "card_type": "Skill", "energy_cost": 1,
-            "dynamic_values": [{"name": "Margin", "current_value": 3}],
-        }]
-        return state
-
-    vknow_g1a = _vivhite_know("sts2-selfcheck-vhgate-alt-")
-    vknow_g1a.policy["vivhite_hp_cost_play_margin"] = 50.0
-    vpol_g1a = policy.Policy(vknow_g1a, random.Random(11))
-    d_g1a = vpol_g1a.decide(_vgate_state_alt(85, 10), _vgate_ctx())
-    assert d_g1a.action == "play_card" \
-        and d_g1a.params.get("card_index") == 1, \
-        f"存在未过门替代出牌时门应维持否决并改出替代牌: {d_g1a}"
-    assert "VIVHITE_HP_PLAY_MARGIN_GATE_YIELD" not in d_g1a.reason, \
-        f"有替代出牌时不得出现让位留痕: {d_g1a.reason}"
+    assert d_g1.action == "end_turn", \
+        f"余量门生效后謦欬候选应被拦下（含残能救场绕行封堵）: {d_g1}"
+    assert "謦欬出牌门拦下" in d_g1.reason \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_g1.reason, \
+        f"拦门缺决策链留痕: {d_g1.reason}"
     vknow_g2 = _vivhite_know("sts2-selfcheck-vhgate-lethal-")
     vknow_g2.policy["vivhite_hp_cost_play_margin"] = 50.0
     vpol_g2 = policy.Policy(vknow_g2, random.Random(11))

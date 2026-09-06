@@ -3850,10 +3850,7 @@ class Policy:
         # 的謦欬牌仍被打出。非致死回合謦欬实付每点按 margin 抬高该候选的出牌
         # 门槛；被门拦下的候选同时退出 marginal/残能救场通道（付血换不空过正是
         # 本门要拦的死循环）。致死回合豁免（买命/抢斩杀当场兑现）；margin=0
-        # 一键回滚，非白绮角色零改动。
-        # 第 170~186 局批复盘起门的绝对否决退化为换序偏好：拦下将导致本回合
-        # 无牌可出（best 为空）时让位放行评分最高的被拦候选，见循环后
-        # VIVHITE_HP_PLAY_MARGIN_GATE_YIELD 段。
+        # 一键回滚，非白绮角色零改动
         _hp_play_margin = 0.0
         if (not lethal_now
                 and getattr(self.character_strategy, "profile_id", None)
@@ -3863,7 +3860,7 @@ class Policy:
                     pol.get("vivhite_hp_cost_play_margin", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_play_margin = 0.0
-        _hp_gate_blocked: list = []  # (index, name, pay, extra, score, card, target, why)
+        _hp_gate_blocked: list = []  # (index, name, pay, extra, score)
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -3958,7 +3955,7 @@ class Policy:
                                 f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
-                             _hp_pay, _hp_extra, score, c, target, why))
+                             _hp_pay, _hp_extra, score))
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
@@ -3990,27 +3987,6 @@ class Policy:
                 if mode is not None and (marginal_best is None
                                          or immediate_score > marginal_best[0]):
                     marginal_best = (immediate_score, c, target, why, mode)
-
-        # 謦欬门让位（VIVHITE_HP_PLAY_MARGIN_GATE_YIELD，第 170~186 局批复盘）：
-        # 余量门落地后 178~186 九局拦门留痕 172 次、其中 104 次拦的是起手打击
-        # 【弦光投影】，致命战自损占比却未降（186 局 F23 仍 37/51=73%）——自损
-        # 主力是 est=-24/实付8血这类远超抬升带宽的高估值牌，门从未触及；被拦的
-        # 全是边际带廉价牌，拦后 best 为空 → 带能空过（186 局 F2 连续 4 回合拦
-        # 打击空过，残能空漏审计同决策判定被拦格挡净保命+3 仍被拦死）。证据满足
-        # 第 165~169 批预注册证伪（拦门≥3 局且自损占比无变化），门由绝对否决
-        # 退化为换序偏好：存在未过门的替代出牌（best 非空）时拦下照旧；拦下将
-        # 导致本回合无牌可出时，放行评分最高的被拦候选（其 score 本就过普通
-        # 阈值）并留痕。vivhite_hp_margin_gate_yield=0 一键回滚旧绝对否决口径。
-        try:
-            _hp_gate_yield_on = bool(int(pol.get("vivhite_hp_margin_gate_yield", 1)))
-        except Exception:
-            _hp_gate_yield_on = True
-        if best is None and _hp_gate_blocked and _hp_gate_yield_on:
-            _yrow = max(_hp_gate_blocked, key=lambda row: row[4])
-            best = (_yrow[4], _yrow[5], _yrow[6],
-                    _yrow[7] + "｜謦欬门让位：拦下将无牌可出带能空过，"
-                               "放行评分最高被拦候选"
-                               "（VIVHITE_HP_PLAY_MARGIN_GATE_YIELD）")
 
         choice_mode = ""
         chosen = best if best and best[0] > pol["play_threshold"] else None
