@@ -1371,3 +1371,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.41090009077168局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.278489099257534局)，ROLLING_BOULDER(22分/3.88636674597772局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.65 → 0.64（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/121 胜，当前目标进阶 0
+
+## 第 122 局复盘（2026-09-06 14:16）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_EVENT_LOOP
+- 本局遗物：GORGET
+- 战斗记录：F9 Monster战 掉血0｜自损12; F11 Monster战 掉血0｜自损35; F13 Monster战 掉血8｜自损20; F14 Monster战 掉血0｜自损9; F15 Elite战 掉血31｜自损50｜竞速审计：T2判死→实战5回合获胜; F17 Boss战 掉血70｜自损69（阵亡）
+- 当前高价值卡牌：SALVO(44分/2.6368461187956727局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/35.14633043622444局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/24.005098117502477局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/23.58084908832913局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.87952371690554局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.395461940453979局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.263514387410133局)，ROLLING_BOULDER(22分/3.872764462366798局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.64 → 0.61（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/122 胜，当前目标进阶 0
