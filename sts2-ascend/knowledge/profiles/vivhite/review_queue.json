@@ -13,9 +13,13 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
+   "source": "preferred",
    "run_id": "UDVZRE4NNFKW",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "queue_id": "34212-1788709340835628800-0",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 166,
@@ -30,9 +34,13 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
+   "source": "preferred",
    "run_id": "YANCFVFFJ0XS",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "queue_id": "34212-1788709340835628800-1",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 167,
@@ -47,8 +55,29 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
+   "source": "preferred",
    "run_id": "C1GFTB3LKAZB",
+   "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+   "queue_id": "34212-1788709340835628800-2",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
+  },
+  {
+   "run": 168,
+   "time": "2026-09-06 23:50",
+   "profile_id": "vivhite",
+   "backend_key": "kimi-k3",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
+   "source": "queued",
+   "run_id": "T4X2EKN5YGEE",
    "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
   }
  ],
