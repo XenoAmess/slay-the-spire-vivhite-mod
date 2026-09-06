@@ -1591,3 +1591,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.11219103196124局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.988746999987641局)，ROLLING_BOULDER(21分/4.565316629613446局)
 - 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿31张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.66 → 0.67（行至 F45（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.014）；block_safety: 2.03 → 2.02（行至 F45（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F45——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F45——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/141 胜，当前目标进阶 0
+
+## 第 142 局复盘（2026-09-06 18:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_AXIOM_OF_LIFE, ROLLING_BOULDER
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F4 Monster战 掉血0｜自损8; F5 Monster战 掉血0｜自损10; F7 Monster战 掉血3｜自损17; F12 Monster战 掉血0｜自损20; F14 Monster战 掉血0｜自损15; F17 Boss战 掉血82｜自损84｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(42分/4.400056358358687局)，MAYHEM(38分/2.6118598350162125局)，VIVHITE_CARD_PERFECT_SYNTHESIS(37分/38.689830908633276局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/34.0777374400697局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(34分/24.884074975950252局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.0977983633493755局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.9747863854876844局)，ROLLING_BOULDER(20分/5.549338021409799局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.67 → 0.67（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/142 胜，当前目标进阶 0
