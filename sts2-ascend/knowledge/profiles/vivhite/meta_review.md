@@ -221,3 +221,42 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 153~157 局批复盘：謦欬成长卡组首窗实测 dpt 系统性低估，T2 即判死入锁——竞速 dpt 以同尺引擎先验为首窗下限
+
+日期：2026-09-06
+
+## HYPOTHESIS
+
+白绮斩杀竞速的实测 dpt 在开账首窗（_krace_turns 2~4）对謦欬成长卡组系统性低估：T1/T2 的能量大量买成长能力牌（回溯咒文/守恒递归，出牌估值 +59~+124 正是为后续回合产出买单），首窗实测仅 5~14 伤/回合，而同卡组引擎有效先验 31~45——ttk 被放大 3~5 倍，T2 即判死入锁。race_audit 台账 won/latched=119/250=47.6% 久高于 30% 预注册线的根源是首窗实测口径失真，而不是第 21~48 批处理的自付污染（该批謦欬隔离落地后段 88/175=50.3%，未降反升，其 <30% 目标已被证据证伪；但隔离同时压住了败局全攻自证闭环——本批五局「败局竞速」零显形——故不做整键回滚，改修首窗口径）。
+
+该假设可证伪：未来 3~10 局若 race_audit won/latched 不降至 <30%、入锁时刻不后移（T2 占比不降），或死亡形态转为长回合磨死（战斗回合数显著上升且掉血增大，914-F5 型流血复活），则假设不成立，policy.json 置 vivhite_race_dpt_prior_floor_turns=0 一键回滚裸实测口径。
+
+## EVIDENCE
+
+- stats.race_audit：latched 250 / won 119 = 47.6%；第 21~48 批落地时 31/75=41.3%，落地后段 88/175=50.3%——謦欬隔离未使假判死率下降。
+- 本批 5 局逐场对照：13 场入锁 7 场实战获胜——153-F31（T2锁→4回合胜）、154-F12（T2→7）、156-F15（T2→5）、156-F17（T2→7）、156-F31（T10→13）、157-F17（T2→9）、157-F21（T3→5）；入锁全部发生在 T2/T3 首窗。
+- 同决策留痕的口径落差：157-F22 T1「先验31伤/回合」、157-F17 T2「实测6伤/回合×1.35→7」、156-F17 T2「实测6伤/回合」、153-F31 T2「实测6伤/回合」——首窗实测为先验的 1/5~1/2。
+- 同批 run 157（LFJEC4VNJ74A，F22 CHOMPER 阵亡）302 条完整决策链已逐条检查：F21 T1/T2 回溯咒文（hp-cost 6，估值 +59.15，recovery-copy=77）与守恒递归+（hp-cost 10，估值 +124.25，recovery-copy=154）——出牌评分已把成长能力牌的未来产出计价，竞速投影却按当下实测速率判死，同一张牌在两条链路估值方向相反。
+- 上一批（93~148）同局阻尼已落地；本批 eff 0.66→0.69 为 bsd2 型纯释放，非该机制回退。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`_combat_kill_race_projection` 实测分支（_krace_turns≥2）在换挡上浮之后新增首窗先验下限——白绮且 `vivhite_race_dpt_prior_floor_turns`（默认 4）>0 且 2≤_krace_turns≤N 时，实测 dpt 以 `deck_effective_burst(deck)×kill_race_prior_eff`（与先验分支同公式、同 eff 演化键）为下限，生效时留「首窗实测X伤/回合低于引擎先验下限Y（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）」并改用先验下限口径；先验已含引擎授信与悲观折算，下限生效不再叠换挡上浮；窗口外、键=0、非白绮 profile 严格维持旧口径。先验同样反映弱卡组（无弹药卡组先验亦低），不捂住真弱卡组判死。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `vivhite_race_dpt_prior_floor_turns=4`（0=一键回滚）。
+- sts2-ascend/brain/selfcheck.py：3prf 夹具锁定四分支——开键下限生效不判死且带留痕（池 110、意图 10、实测 6→8.1 vs 先验 16.5，ttk 6.7≤阈值 10.07）；键=0 严格回滚裸实测判死（ttk 13.6>10.07）；窗口外（_krace_turns=5）不生效照常判死；非白绮 profile 不受影响。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① race_audit won/latched 降至 <30%（同阈同账，可直接与 119/250 对账）；② 入锁时刻后移，T2/T3 首窗入锁占比下降；③ 战斗理由出现 VIVHITE_RACE_DPT_PRIOR_FLOOR 留痕并可与同决策卡组先验对账。有效信号：边际假判死消失后 Boss/长战战绩改善或首胜。证伪/回滚条件：won 率不降、留痕出现但判决/结局分布无变化，或死亡形态转为长回合磨死——policy.json 置 vivhite_race_dpt_prior_floor_turns=0 即整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含新增 3prf 四分支夹具）。
+- py -3 -B sts2-ascend/tests/test_boss_race_sustain.py：2 tests OK。
+- git diff --check 通过（仅宿主挂载的超长路径资产删除遗留告警，与本批无关）；完整 diff 已回读，仅 knowledge.py/policy.py/selfcheck.py 三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

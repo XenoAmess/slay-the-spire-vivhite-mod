@@ -3020,6 +3020,39 @@ class Policy:
                         _up_tag = "升级桶×(1+换挡上浮" if esc_gate else "×(1+换挡上浮"
                         dpt_src = (f"{dpt_src}{_up_tag}{_up:.2f})"
                                    f"→{dpt:.0f}伤/回合校准")
+                # 謦欬成长卡组首窗实测 dpt 先验下限（第 153~157 局批复盘，
+                # VIVHITE_RACE_DPT_PRIOR_FLOOR）：白绮 T1/T2 的能量大量买
+                # 成长能力牌（回溯咒文/守恒递归，出牌估值 +59~+124 正是为
+                # 后续回合产出买单），开账首窗实测仅 5~14 伤/回合，而同卡组
+                # 引擎有效先验 31~45——ttk 被放大 3~5 倍、T2 即判死入锁；
+                # race_audit 台账 won/latched=119/250=47.6%（第 21~48 批
+                # 謦欬隔离落地后段 88/175=50.3%，始终未达 <30% 预注册目标），
+                # 本批 13 场入锁 7 场实战获胜且全部锁在 T2/T3 首窗。首窗
+                # （2≤_krace_turns≤N）的实测口径以同一把尺的先验
+                # （deck_effective_burst×kill_race_prior_eff，与先验分支同
+                # 公式、同 eff 键）为下限；先验同样反映弱卡组（无弹药卡组
+                # 先验亦低），不会捂住真弱卡组的判死。先验已含引擎授信与
+                # 悲观折算，下限生效时不再叠换挡上浮（避免双重计价）；窗口
+                # 外实测已脱离换挡期，严格维持旧口径。键=0 严格回滚裸实测
+                # 口径；非白绮角色零改动。
+                _prior_floor_turns = int(pol.get(
+                    "vivhite_race_dpt_prior_floor_turns", 4) or 0)
+                if (self._krace_turns >= 2 and dpt > 0
+                        and 0 < _prior_floor_turns
+                        and self._krace_turns <= _prior_floor_turns
+                        and self.character_strategy.profile_id
+                        == VIVHITE_PROFILE_ID):
+                    _floor_deck = ((state.get("run") or {}).get("deck")) or []
+                    _prior_dpt = (self.deck_effective_burst(_floor_deck)
+                                  * float(pol.get("kill_race_prior_eff",
+                                                  0.55)))
+                    if _prior_dpt > dpt:
+                        danger_note += (
+                            f"；首窗实测{dpt:.0f}伤/回合低于引擎先验下限"
+                            f"{_prior_dpt:.0f}（謦欬成长卡组换挡期，竞速dpt"
+                            "取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）")
+                        dpt = _prior_dpt
+                        dpt_src = f"先验下限{dpt:.0f}伤/回合"
                 if dpt > 0:
                     # 白绮 Boss 续航实测（6D0T5BPUDMG6-F17）：只有在同一场已经
                     # 观察到汲取等同回合回血、至少两个完整回合首边界，并实际见过

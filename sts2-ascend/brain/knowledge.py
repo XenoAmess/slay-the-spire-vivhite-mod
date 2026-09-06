@@ -462,6 +462,14 @@ DEFAULT_POLICY = {
                                      # 第 397~402 批复盘起为可演化旋钮（BOUNDS 0.35~0.55）：饥饿链
                                      # 全顶格后 Boss 竞速败北证据改接此处下调——战斗端更早全攻提速、
                                      # 篝火端 _boss_race_doomed 更早把前夜转锻造
+    "vivhite_race_dpt_prior_floor_turns": 4,  # 謦欬成长卡组首窗实测 dpt 先验下限窗口
+                                     # （VIVHITE_RACE_DPT_PRIOR_FLOOR，第 153~157 局批复盘新增，静态键）：
+                                     # 白绮 T1/T2 能量买成长能力牌导致开账首窗实测 dpt（5~14 伤/回合）
+                                     # 系统性低于同卡组引擎有效先验（31~45），ttk 放大 3~5 倍、T2 即
+                                     # 判死入锁；race_audit won/latched=119/250=47.6%（謦欬隔离后段
+                                     # 50.3%）始终高于 30% 预注册线。窗口内（2≤实测回合≤此值）实测
+                                     # dpt 以 deck_effective_burst×kill_race_prior_eff 为下限并留痕；
+                                     # 0 严格回滚裸实测口径，非白绮角色零改动
      "kill_race_osc_damp": True,      # 竞速先验折算率换向阻尼（KILL_RACE_OSC_DAMP，第915~916局批复盘新增，
                                       # 静态键）：lessons 950~968 实测两通道 ±0.03 逐局换向极限环
                                       # （0.57↔0.60↔0.63↔0.66↔0.69 往复，数十次翻向零收敛）。

@@ -2581,6 +2581,85 @@ def main() -> int:
     assert "VIVHITE_RACE_SELF_LOSS_EXCLUDE" not in d_vx_rb.reason, \
         f"回滚键关闭后仍出现隔离留痕: {d_vx_rb.reason}"
 
+    # 3prf) 謦欬成长卡组首窗实测 dpt 先验下限（第 153~157 局批复盘，
+    #      VIVHITE_RACE_DPT_PRIOR_FLOOR）：race_audit 台账 won/latched=
+    #      119/250=47.6%（第 21~48 批謦欬隔离落地后段 88/175=50.3%，始终
+    #      未达 <30% 预注册目标）；本批 13 场入锁 7 场实战获胜且全部锁在
+    #      T2/T3 首窗——白绮 T1/T2 能量买成长能力牌（回溯咒文/守恒递归），
+    #      首窗实测仅 5~14 伤/回合，同卡组引擎有效先验 31~45。夹具：Boss
+    #      池 110、意图 10 恒定、hp 70→60→60（loss_rate 10→7.0、tsurv
+    #      8.57、阈值 10.07），实测首窗 12/2=6（×1.35→8.1，ttk 13.6 判死），
+    #      卡组 4×10 伤先验 30×0.55=16.5（ttk 6.7 不判死）。四分支：开键
+    #      下限生效不判死且带留痕；键=0 严格回滚裸实测判死；窗口外
+    #      （_krace_turns=5）不生效照常判死；非白绮 profile 不受影响。
+    def _vrf_state(turn_no, hp_now):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 85, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                    "name": "弦光投影", "card_type": "Attack", "playable": True,
+                    "energy_cost": 1, "requires_target": True,
+                    "valid_target_indices": [0],
+                    "dynamic_values": [{"name": "Damage", "current_value": 10}],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "RITUAL_BEAST", "name": "仪式兽",
+                    "current_hp": 110, "max_hp": 252, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 10}],
+                }],
+            },
+            "run": {"current_hp": hp_now, "max_hp": 85, "gold": 0,
+                    "floor": 17,
+                    "deck": [{
+                        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                        "card_type": "Attack", "energy_cost": 1,
+                        "dynamic_values": [
+                            {"name": "Damage", "current_value": 10}],
+                    } for _ in range(4)]},
+        }
+
+    def _vrf_drive(vpol, vctx, krace_turns, krace_dmg):
+        vpol.decide(_vrf_state(1, 70), vctx)   # T1：边界初始化（先验分支）
+        vpol.decide(_vrf_state(2, 60), vctx)   # T2：首个边界样本 loss=10
+        vpol._krace_turns = krace_turns
+        vpol._krace_dmg = vpol._krace_dmg_sustained = krace_dmg
+        return vpol.decide(_vrf_state(3, 60), vctx)  # T3：实测分支
+
+    vknow_floor = _vivhite_know("sts2-selfcheck-vhrace-floor-")
+    vpol_floor = policy.Policy(vknow_floor, random.Random(11))
+    d_vrf_on = _vrf_drive(vpol_floor, _vrace_ctx(), 2, 12.0)
+    assert "VIVHITE_RACE_DPT_PRIOR_FLOOR" in d_vrf_on.reason, \
+        f"首窗实测低于引擎先验时下限未生效: {d_vrf_on.action}（{d_vrf_on.reason}）"
+    assert "斩杀竞速投影" not in d_vrf_on.reason, \
+        f"先验下限口径下不应判死（ttk 6.7 ≤ 阈值 10.07）: {d_vrf_on.reason}"
+    vknow_floor_rb = _vivhite_know("sts2-selfcheck-vhrace-floor-rb-")
+    vknow_floor_rb.policy["vivhite_race_dpt_prior_floor_turns"] = 0
+    vpol_floor_rb = policy.Policy(vknow_floor_rb, random.Random(11))
+    d_vrf_rb = _vrf_drive(vpol_floor_rb, _vrace_ctx(), 2, 12.0)
+    assert "斩杀竞速投影" in d_vrf_rb.reason \
+        and "VIVHITE_RACE_DPT_PRIOR_FLOOR" not in d_vrf_rb.reason, \
+        f"键=0 未严格回滚裸实测判死: {d_vrf_rb.action}（{d_vrf_rb.reason}）"
+    vknow_floor_win = _vivhite_know("sts2-selfcheck-vhrace-floor-win-")
+    vpol_floor_win = policy.Policy(vknow_floor_win, random.Random(11))
+    d_vrf_win = _vrf_drive(vpol_floor_win, _vrace_ctx(), 5, 30.0)
+    assert "斩杀竞速投影" in d_vrf_win.reason \
+        and "VIVHITE_RACE_DPT_PRIOR_FLOOR" not in d_vrf_win.reason, \
+        f"窗口外（实测第5回合）下限不应生效: {d_vrf_win.action}（{d_vrf_win.reason}）"
+    know_floor_nv = knowledge.Knowledge(Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-vhrace-floor-nv-")))
+    pol_floor_nv = policy.Policy(know_floor_nv, random.Random(11))
+    d_vrf_nv = _vrf_drive(pol_floor_nv, _vrace_ctx(), 2, 12.0)
+    assert "斩杀竞速投影" in d_vrf_nv.reason \
+        and "VIVHITE_RACE_DPT_PRIOR_FLOOR" not in d_vrf_nv.reason, \
+        f"非白绮 profile 不应受先验下限影响: {d_vrf_nv.action}（{d_vrf_nv.reason}）"
+
     # 3slph) 自损账相位分账观测位（SELF_LOSS_PHASE_OBS，第1245~1265局批复盘）：
     #      1265-F17 完整链实证——全场零自付牌（无御血术打出、VANTOM 无荆棘/反伤）
     #      战斗记录却记「掉血61｜自损53」，53=4+24+9+16 恰为全部非致命敌方伤害
