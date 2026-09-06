@@ -1756,3 +1756,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.9015109232351834局)，ROLLING_BOULDER(20分/5.2835208049519915局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/16.34914851294118局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.65 → 0.66（行至 F39（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.09 → 2.08（行至 F39（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F39——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/156 胜，当前目标进阶 0
+
+## 第 157 局复盘（2026-09-06 21:55）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_AXIOM_OF_LIFE, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_SPECTRAL_INTEGRAL, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F14 Monster战 掉血0｜自损9（可行动段8/非行动段1，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血11｜自损24（可行动段16/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血60｜自损76（可行动段27/非行动段49，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血29｜自损42（可行动段32/非行动段10，SELF_LOSS_PHASE_OBS）; F21 Unknown战 掉血15｜自损49（可行动段34/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合获胜; F22 Monster战 掉血34｜自损32（可行动段19/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(41分/5.160701358223727局)，MAYHEM(38分/2.478046276808048局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.55975008290835局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/40.14154380062366局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.960591400178824局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.8878556350038607局)，ROLLING_BOULDER(20分/5.26502848213466局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/16.291926493145887局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.66 → 0.69（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F22——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F22——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/157 胜，当前目标进阶 0
