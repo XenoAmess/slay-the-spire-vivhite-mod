@@ -1899,3 +1899,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.7276726445992256局)，ROLLING_BOULDER(20分/5.048104787941711局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/18.530960300347093局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.65 → 0.65（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）——白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧；触底旋钮停止吸收并留痕（接替手段待复盘设计）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）——致命Boss战实测自损71/掉血78（91%≥50%）——謦欬实付加码收紧；触底旋钮停止吸收并留痕（接替手段待复盘设计）
 - 生涯战绩：0/169 胜，当前目标进阶 0
+
+## 第 170 局复盘（2026-09-07 00:12）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CONSERVED_RECURRENCE
+- 本局遗物：VAMBRACE, ANCHOR
+- 战斗记录：F6 Monster战 掉血3｜自损25（可行动段16/非行动段9，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损10（可行动段10/非行动段0，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血6｜自损32（可行动段24/非行动段8，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血29｜自损52（可行动段32/非行动段20，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损18（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血82｜自损80（可行动段74/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.367632822221754局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.721238666751255局)，SALVO(34分/9.785738225412256局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/40.33209292911776局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.249440825539844局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.7146257903431286局)，ROLLING_BOULDER(20分/5.030436421183915局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/18.46610193929588局)
+- 策略进化：精英战阵亡但满血线进场（94%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）——白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧；触底旋钮停止吸收并留痕（接替手段待复盘设计）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）——致命Elite战实测自损80/掉血82（98%≥50%）——謦欬实付加码收紧；触底旋钮停止吸收并留痕（接替手段待复盘设计）
+- 生涯战绩：0/170 胜，当前目标进阶 0
