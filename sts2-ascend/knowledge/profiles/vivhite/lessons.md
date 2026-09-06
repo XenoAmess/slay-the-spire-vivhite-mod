@@ -1778,3 +1778,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.8742481402813476局)，ROLLING_BOULDER(20分/5.246600882447189局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/16.234904750419876局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 20.00 → 18.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff 0.69 距锚点仅余 0.03(<步长0.03)——部分胜利释放停止，视为已达健康锚点；block_safety: 2.07 → 2.06（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F25——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F25——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/158 胜，当前目标进阶 0
+
+## 第 159 局复盘（2026-09-06 22:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：PERMAFROST
+- 战斗记录：F5 Monster战 掉血0｜自损12（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损15（可行动段12/非行动段3，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血15｜自损26（可行动段20/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血15｜自损37（可行动段12/非行动段25，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损6（可行动段6/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血72｜自损65（可行动段49/非行动段16，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(41分/5.124639667307799局)，MAYHEM(38分/2.4607303089372827局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.27632868926651局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/39.86104472793085局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.849062777622226局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.8606882717903632局)，ROLLING_BOULDER(20分/5.228237779358624局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/18.178082583793408局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血72，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/159 胜，当前目标进阶 0
