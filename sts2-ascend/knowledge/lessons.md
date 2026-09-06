@@ -9555,3 +9555,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.438112507956583局)，BULLY(10分/4.438112507956583局)，HAVOC(10分/3.550490006365266局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.54 → 0.57（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F27——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.55 → 0.52（行至 F27——药水交药线部分胜利回收）
 - 生涯战绩：0/1269 胜，当前目标进阶 0
+
+## 第 1270 局复盘（2026-09-06 21:46）
+- 结果：💀 失败｜进阶 0｜到达层数 43｜当局评分 43
+- 死因：敌人组合 SOUL_NEXUS
+- 本局拿牌：SWORD_BOOMERANG, SHRUG_IT_OFF, SWORD_BOOMERANG, BATTLE_TRANCE, FINESSE, VICIOUS, RAMPAGE, IMPERVIOUS, HEADBUTT, MOLTEN_FIST, IRON_WAVE, FIGHT_ME, TAUNT, CINDER, DARK_EMBRACE, INFLAME, CINDER, HEADBUTT, SECOND_WIND, BLUDGEON, PROWESS, SWORD_BOOMERANG, MANGLE, BLUDGEON, CINDER, BLUDGEON, HEMOKINESIS, CINDER, BLUDGEON, CINDER, BLUDGEON
+- 本局遗物：LANTERN, AKABEKO, PEN_NIB, AMETHYST_AUBERGINE, BAG_OF_PREPARATION, ANCHOR, HORN_CLEAT
+- 战斗记录：F24 Unknown战 掉血15｜自损13（可行动段0/非行动段13，SELF_LOSS_PHASE_OBS）; F30 Elite战 掉血42｜自损35（可行动段0/非行动段35，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血58｜自损44（可行动段0/非行动段44，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合获胜; F35 Monster战 掉血50｜自损41（可行动段0/非行动段41，SELF_LOSS_PHASE_OBS）; F38 Monster战 掉血3｜自损9（可行动段0/非行动段9，SELF_LOSS_PHASE_OBS）; F43 Elite战 掉血73｜自损44（可行动段2/非行动段42，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/31.855061959939015局)，FIEND_FIRE(25分/40.68772785044438局)，MANGLE(25分/109.8697295273278局)，PRIMAL_FORCE(24分/6.191610759850229局)，PACTS_END(24分/119.64488824447601局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.422579114178735局)，BULLY(10分/4.422579114178735局)，HAVOC(11分/3.5380632913429877局)
+- 策略进化：elite_grey_safety_mult: 1.85 → 2.05（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.57 → 0.60（行至 F43（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F43（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F43——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.52 → 0.50（行至 F43——药水交药线部分胜利回收）
+- 生涯战绩：0/1270 胜，当前目标进阶 0
