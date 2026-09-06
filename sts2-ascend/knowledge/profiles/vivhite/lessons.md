@@ -1998,3 +1998,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.6118815049538453局)，ROLLING_BOULDER(20分/4.891297615699279局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/17.955340814282707局)
 - 策略进化：精英战阵亡但满血线进场（96%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 1.00 → 1.50（生命支付权重触底，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_hp_cost_play_margin: 1.50 → 2.00（生命支付权重触底，致命Elite战实测自损75/掉血77（97%≥50%）——謦欬实付加码收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：0/178 胜，当前目标进阶 0
+
+## 第 179 局复盘（2026-09-07 01:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, PANIC_BUTTON, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_ASTRAL_SEARCH, PANIC_BUTTON, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：FESTIVE_POPPER, MERCURY_HOURGLASS
+- 战斗记录：F5 Monster战 掉血22｜自损35（可行动段16/非行动段19，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损18（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F13 Unknown战 掉血8｜自损14（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血16｜自损28（可行动段14/非行动段14，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血24｜自损46（可行动段26/非行动段20，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血61｜自损76（可行动段37/非行动段39，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.2940880319773473局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/41.438905153373184局)，SALVO(34分/9.481767922914393局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.775753809405979局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/42.98924763942213局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.5992399196865072局)，ROLLING_BOULDER(20分/4.874178074044332局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/17.89249712143272局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（78%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.60 → 0.60（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.002）；vivhite_hp_cost_play_margin: 2.00 → 2.50（生命支付权重触底，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，致命Boss战实测自损76/掉血61（125%≥50%）——謦欬实付加码收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：0/179 胜，当前目标进阶 0
