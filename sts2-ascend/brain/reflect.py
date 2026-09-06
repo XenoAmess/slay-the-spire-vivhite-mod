@@ -108,7 +108,8 @@ BURST_DEATH_DPR = 14.0
 KILL_RACE_STEP = 0.03
 
 
-def _kr_flip_damped_step(pol: dict, direction: int) -> tuple[float, str]:
+def _kr_flip_damped_step(pol: dict, direction: int,
+                         reference: float | None = None) -> tuple[float, str]:
     """竞速先验折算率的换向阻尼（KILL_RACE_OSC_DAMP，第 915~916 局批复盘新增）。
 
     lessons 950~968 台账：kill_race_prior_eff 在「Boss 竞速败北下调」与
@@ -120,6 +121,18 @@ def _kr_flip_damped_step(pol: dict, direction: int) -> tuple[float, str]:
     不减速。返回 (步长, 追加到变更理由的阻尼留痕尾串)；
     knowledge/policy.json 写 kill_race_osc_damp: false 即整体关闭（回滚＝
     旧版全步长行为，零差异；last_step 记账照常保留供重启阻尼后对账）。
+
+    同局对冲修正（第 93~148 局批复盘，KILL_RACE_SAME_RUN_DAMP）：旧版同局
+    先降后释时两通道都按「上局落盘净额」各判换向，相位恰使降通道减半而
+    释通道全速——本批 lessons 实测每场 F33 型死亡（先降后释）净 +0.02
+    （0.65→0.64→0.67、0.67→0.66→0.69、0.69→0.68→0.71），0/150 胜生涯里
+    eff 被死亡局一路推到 0.70+ 逼近 0.72 上限，494 批「同局净额归零的
+    诚实对冲」前提被阻尼交互破坏，竞速败北证据名降实升。修复：调用方可
+    经 reference 传入本局已施加的带符号净步长（_kr_net），非零时优先于
+    上局落盘值参与换向判定，同局后手的释通道因此对同局先手降通道正确
+    折减，死亡局净额回到负值；reference 为 0/None（本局先手无施加）时
+    行为与旧版严格一致。policy.json 写 kill_race_same_run_damp: false
+    即整体回滚为旧版口径（reference 被忽略，零差异）。
     """
     if not pol.get("kill_race_osc_damp", True):
         return KILL_RACE_STEP, ""
@@ -127,9 +140,15 @@ def _kr_flip_damped_step(pol: dict, direction: int) -> tuple[float, str]:
         last = float(pol.get("kill_race_prior_eff_last_step", 0.0) or 0.0)
     except (TypeError, ValueError):
         last = 0.0
+    same_run = False
+    if (reference is not None and reference != 0.0
+            and pol.get("kill_race_same_run_damp", True)):
+        last = float(reference)
+        same_run = True
     if last != 0.0 and (last > 0.0) != (direction > 0.0):
         step = min(KILL_RACE_STEP, abs(last) / 2.0)
-        return step, (f"；换向阻尼：上一步 {last:+.2f}，"
+        src = "同局净步长" if same_run else "上一步"
+        return step, (f"；换向阻尼：{src} {last:+.2f}，"
                       f"步长 {KILL_RACE_STEP:.2f}→{step:.3f}")
     return KILL_RACE_STEP, ""
 
@@ -565,11 +584,14 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
         # 二幕 Boss 战——`_last_node != "Boss"` 把它也挡在门外，六局六次下调
         # 对零次释放，eff 钉死触底带。释放记的是一幕 Boss 战的反证（死于一幕
         # Boss 则 final_floor≤17，能行至 F18+ 本身就是证明），与最终 Boss 战的
-        # 降账是两场独立战斗的证据：同局先释后降净额归零不是矛盾账目，
-        # 是「一幕预演悲观被证伪 + 二幕长战确证」的诚实对冲。
+        # 降账是两场独立战斗的证据：同局先降后释按净额对冲（第 93~148 局批
+        # 复盘起释放的换向判定以本局净步长为参照——旧版两通道各按上局落盘
+        # 口径判定，相位使降减半而释全速，死亡局净额系统性 +0.02 名降实升，
+        # 见 _kr_flip_damped_step 的 KILL_RACE_SAME_RUN_DAMP 段）。
         if final_floor >= 18:
-            # 第 915~916 批复盘起步长过换向阻尼（_kr_flip_damped_step）
-            _eff_step, _eff_damp = _kr_flip_damped_step(pol, 1)
+            # 第 915~916 批复盘起步长过换向阻尼（_kr_flip_damped_step）；
+            # 第 93~148 局批复盘起同局先降后释时以本局净步长 _kr_net 判换向
+            _eff_step, _eff_damp = _kr_flip_damped_step(pol, 1, reference=_kr_net)
             _eff_head = (BOUNDS["kill_race_prior_eff"][1]
                          - pol["kill_race_prior_eff"])
             if _eff_head >= _eff_step:

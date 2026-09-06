@@ -185,3 +185,39 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 93~148 局批复盘：换向阻尼与同局对冲的相位错配——F33 型死亡局把竞速先验折算率名降实升推向上限
+
+日期：2026-09-06
+
+## HYPOTHESIS
+
+第 494 批设计「同局先降后释净额归零的诚实对冲」以两通道同步长为前提；第 915~916 批换向阻尼（KILL_RACE_OSC_DAMP）加入后，同局两通道仍各按「上局落盘净额」判换向，相位恰使降通道折半而释通道全速——F33 型死亡局（打败一幕 Boss 后死于二幕 Boss）净步长系统性为正，0/150 胜生涯里 Boss 竞速败北证据被同局释放反超，kill_race_prior_eff 单调漂向 0.72 上限，「饥饿链全顶格后的第五级下调」名存实亡。
+
+可证伪预期：本改动生效后 3~10 局内，F33 型死亡局 lessons 中 kill_race_prior_eff 的局内净变化 ≤0 且释放留痕带「换向阻尼：同局净步长」；旋钮不再单调漂向 0.72。若 F33 型死亡局净额仍 >0，或非 Boss 跨幕死亡局（bsd2 型纯释放）被误阻尼，则证伪/回滚：policy.json 写 kill_race_same_run_damp=false 一键撤回（回滚=旧版口径，零差异）。
+
+## EVIDENCE
+
+- 本批 12 局全负：7 局死于 F33（二幕 Boss，同局先降后释型）、4 局死于 F17、1 局 F27。lessons 台账逐局核对：0.65→0.64→0.67、0.67→0.66→0.69、0.69→0.68→0.71——每场 F33 型死亡净 +0.02；当前 policy.json eff=0.7033（last_step=-0.0103），距 0.72 上限仅 0.017。
+- 相位机制复现：上局净额 +0.02 → 本局降通道判换向减半（-0.009）；同局释通道仍读上局落盘 +0.02 → 同向全速 +0.03；局末落盘净 +0.021 → 下局降通道再减半……死亡证据方向被系统性反转。
+- selfcheck 旧夹具 3bs-3 e 恰好把该缺陷固化为预期（同局降 -0.015、释 +0.03、净 +0.015 落盘）——本批以新证据翻案并同步夹具。
+- failed_review_replay.requested_packages 为空，无失败包需重实现。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/reflect.py：`_kr_flip_damped_step` 新增可选 reference 参数——非零且 `kill_race_same_run_damp` 开启（默认）时优先于上局落盘值判换向，留痕改标「同局净步长」；同局释放通道（final_floor≥18）调用处传 `reference=_kr_net`。reference 为 0/None（本局降通道未施加）时行为与旧版严格一致，跨局各通道（bsd1~bsd4 型）零波及。同步更新 494 批「净额归零」旧注释为现行语义。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `kill_race_same_run_damp=True`（false=旧版口径一键回滚）。
+- sts2-ascend/brain/selfcheck.py：3bs-3 e 夹具翻案为新预期（0.63→0.6225，净 -0.0075 落盘，留痕含「同局净步长」）；新增 f) 夹具验证 same_run_damp=false 严格回滚旧净账（0.645/+0.015）；`_kr_damp_knowledge` 助手加 same_run_damp 形参。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① F33 型死亡局 lessons 出现「换向阻尼：同局净步长 -0.0X」且局内净变化 ≤0；② eff 停止向 0.72 单调漂移，竞速败北证据重新真实下拉；③ bsd2 型纯释放局（精英/普通跨幕死亡）释放步长不受本改动影响。证伪/回滚：F33 型死亡局净额仍 >0、纯释放局被误阻尼，或 10 局内 F17/F33 Boss 战绩与竞速预演口径无任何变化——policy.json 置 kill_race_same_run_damp=false 整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含翻案后的 3bs-3 e 与新增 f) 回滚夹具）。
+- git diff --check 通过；完整 diff 已回读，仅 knowledge.py/reflect.py/selfcheck.py 三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md 等只读在线状态（克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
