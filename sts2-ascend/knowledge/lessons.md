@@ -9577,3 +9577,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.407100087279109局)，BULLY(10分/4.407100087279109局)，HAVOC(10分/3.5256800698232875局)
 - 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.60 → 0.63（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F27——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.50 → 0.47（行至 F27——药水交药线部分胜利回收）
 - 生涯战绩：0/1271 胜，当前目标进阶 0
+
+## 第 1272 局复盘（2026-09-06 23:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：HOWL_FROM_BEYOND, CINDER, BATTLE_TRANCE, TAUNT, ANGER, CINDER, MOLTEN_FIST, SPITE, CINDER, RAMPAGE
+- 本局遗物：BOOK_OF_FIVE_RINGS, AMETHYST_AUBERGINE, CENTENNIAL_PUZZLE
+- 战斗记录：F4 Monster战 掉血0｜自损4（可行动段0/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血31｜自损37（可行动段0/非行动段37，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血11｜自损13（可行动段0/非行动段13，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血18｜自损24（可行动段0/非行动段24，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血16｜自损13（可行动段0/非行动段13，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血70｜自损53（可行动段0/非行动段53，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/31.632466750728454局)，FIEND_FIRE(25分/40.403412180157446局)，MANGLE(25分/109.10198732482324局)，PRIMAL_FORCE(24分/6.148345331763085局)，PACTS_END(24分/118.80883967664569局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.391675236973632局)，BULLY(10分/4.391675236973632局)，HAVOC(11分/3.5133401895789063局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.63 → 0.61（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1272 胜，当前目标进阶 0
