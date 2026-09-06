@@ -1789,3 +1789,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.8606882717903632局)，ROLLING_BOULDER(20分/5.228237779358624局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/18.178082583793408局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血72，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/159 胜，当前目标进阶 0
+
+## 第 160 局复盘（2026-09-06 22:15）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 SEWER_CLAM
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CLOSED_PROJECTION, SALVO, VIVHITE_CARD_CHROMATIC_TRANSITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损12（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损14（可行动段7/非行动段7，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损18（可行动段6/非行动段12，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血24｜自损49（可行动段23/非行动段26，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战6回合获胜; F6 Monster战 掉血0｜自损37（可行动段16/非行动段21，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血60｜自损40（可行动段27/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.4521177528560023局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.135361538854085局)，SALVO(35分/6.106703428472223局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/39.7215310713831局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.79359105790055局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.847175862839097局)，ROLLING_BOULDER(20分/5.209938947130869局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/18.114459294750134局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 18.00 → 16.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））
+- 生涯战绩：0/160 胜，当前目标进阶 0
