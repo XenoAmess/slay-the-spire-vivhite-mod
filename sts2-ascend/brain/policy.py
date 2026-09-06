@@ -567,6 +567,17 @@ class Policy:
         self._race_tick_hp = None     # 上一个逐 tick HP 观测值
         self._race_same_round_heal = 0.0  # 本场同回合内已观察到的净回血
         self._race_same_round_loss = 0.0  # 本场同回合内已观察到的自损/费用净扣血
+        # SELF_LOSS_PHASE_OBS（第1245~1265局批复盘）：主账的影子分账。state["turn"]
+        # 在敌方行动阶段不前进，end_turn 后敌方攻击动画期间的多次轮询 tick 仍以
+        # 相同回合号观测到 HP 下降——1265-F17 完整链全场零自付牌（无御血术打出，
+        # VANTOM 无荆棘/反伤），战斗记录却记「掉血61｜自损53」，53 恰为全部非致命
+        # 敌方伤害逐段之和（4+24+9+16；致命一击 8→0 落在 GAME_OVER 屏未采样）。
+        # 主账口径与全部消费端零改动，仅按采样 tick 的 can_play 拆「可行动段/
+        # 非行动段」两桶，供复盘直接验证污染占比后再决定行为化。已知口径边界：
+        # 自付牌结算动画期间 can_play 短暂为 False 的自付会误入非行动段。
+        # self_loss_phase_obs=False 即停止分账（回滚＝无主账外任何变化）。
+        self._race_same_round_loss_own = 0.0    # 可行动段（我方回合可出牌 tick）扣血
+        self._race_same_round_loss_enemy = 0.0  # 非行动段（不可出牌 tick）扣血
         self._race_prev_same_round_loss = 0.0  # 自损账在上一个回合边界时的累计快照
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
@@ -3346,6 +3357,8 @@ class Policy:
             self._race_tick_hp = None
             self._race_same_round_heal = 0.0
             self._race_same_round_loss = 0.0
+            self._race_same_round_loss_own = 0.0    # SELF_LOSS_PHASE_OBS 影子分账同步重置
+            self._race_same_round_loss_enemy = 0.0
             self._race_prev_same_round_loss = 0.0
             self._race_zero_intent_rounds = 0
             self._intent_prev = 0
@@ -3442,6 +3455,16 @@ class Policy:
                 self._race_same_round_heal += _same_round_delta
             elif _same_round_delta < 0.0:
                 self._race_same_round_loss += -_same_round_delta
+                # SELF_LOSS_PHASE_OBS 影子分账（第1245~1265局批复盘）：按采样
+                # tick 是否可出牌把扣血拆进可行动段/非行动段两桶。敌方行动阶段
+                # state["turn"] 不前进，end_turn 后的敌方伤害会逐 tick 落进同回合
+                # 主账（1265-F17：零自付牌却记自损53=全部非致命敌方伤害之和）。
+                # 分账仅供 agent 结算留痕对账，主账与全部消费端零改动。
+                if bool(pol.get("self_loss_phase_obs", True)):
+                    if can_play:
+                        self._race_same_round_loss_own += -_same_round_delta
+                    else:
+                        self._race_same_round_loss_enemy += -_same_round_delta
         self._race_tick_round = round_no
         self._race_tick_hp = my_hp
 
@@ -5006,6 +5029,17 @@ class Policy:
         伤害），供死亡归因与战斗记录落库后直接复盘謦欬实付强度。
         """
         return float(getattr(self, "_race_same_round_loss", 0.0) or 0.0)
+
+    def combat_self_hp_loss_phases(self) -> tuple:
+        """SELF_LOSS_PHASE_OBS 影子分账读数：(可行动段扣血, 非行动段扣血)。
+
+        与 combat_self_hp_loss 同一战斗实例口径；agent 结算时并读两桶写入聚合账，
+        战斗记录据此披露「自损N（可行动段X/非行动段Y）」。无自付牌的对局若普遍
+        Y≈N，主账被敌方行动阶段掉血污染的假设即被实战证实；观测键关闭时两桶
+        恒为 0，消费端不得据此伪造分账。
+        """
+        return (float(getattr(self, "_race_same_round_loss_own", 0.0) or 0.0),
+                float(getattr(self, "_race_same_round_loss_enemy", 0.0) or 0.0))
 
     def pop_race_audit(self) -> dict:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。

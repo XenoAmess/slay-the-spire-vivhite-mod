@@ -6451,3 +6451,77 @@ retry_resolution: 20260901-000418-1788192258078457400-98d55cea no_valid_change
   （竞速审计 T4判死→实战8回合获胜，pre-fix 证据）合计 93 血——两场合计占
   全程战损 70%+，但均已有在产观测/修复承接（精英灰区系数、竞速审计台账），
   本批不单列立案。
+
+# 2026-09-06｜第 1245~1265 局批复盘（异步追及队列 5 局 exact_batch 全败；有界闭环实验 ×1：SELF_LOSS_PHASE_OBS 自损账相位分账观测位）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审。
+
+retry_resolution: none (no replay target; local production observation)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：战斗「自损」主账（`_race_same_round_loss`，同回合逐 tick HP
+  差值）把敌方行动阶段的掉血计为自损——`state["turn"]` 在敌方行动阶段不前进，
+  end_turn 后敌方攻击动画期间的多次轮询 tick 以相同回合号观测到 HP 下降，
+  被全部记入同回合自损账。主账注释自认「敌方回合间行动天然落在边界采样之外」，
+  与实测矛盾。
+- **EVIDENCE**：run 1265（CTM4KB16PENR，F17 VANTOM 阵亡）完整 205 链逐条深读、
+  F17 战斗 26 条全核：全场零自付牌（御血术 F12 入组但 F17 从未打出，逐条出牌
+  记录可核），mechanics/monsters.jsonl 证 VANTOM 无荆棘/反伤（InkBlot 7 /
+  InkyLance 6×2 / Dismember 26+3 伤口，SlipperyAmt 8），战斗记录却记
+  「掉血61｜自损53」——53 恰为链上逐 tick 可核对的全部非致命敌方伤害之和
+  4+24+9+16（61→57→33→24→8；致命一击 8→0 落在 GAME_OVER 屏未被战斗内采样）。
+  同批同族：1245「掉血8｜自损14」（自损>掉血且前 11 层无自付牌）、1265-F9
+  「掉血46｜自损28」（御血术 F12 才入组，F9 无任何自付来源）、1265-F15
+  「掉血0｜自损5」。污染消费面：① 战斗记录自损段长期被 lessons/复盘当真实
+  证据引用；② Vivhite 侧 VIVHITE_RACE_SELF_LOSS_EXCLUDE 把敌方伤害一并隔离，
+  竞速生存分母被系统性高估（真实行为面，本批不动）；③ reflect 謦欬实付加码
+  的「自损占掉血 59%~143%」台账口径存疑。
+- **EXPECTED_SIGNAL**：未来 3~10 局战斗记录出现
+  「自损N（可行动段X/非行动段Y，SELF_LOSS_PHASE_OBS）」；无自付牌对局若普遍
+  Y≈N，污染假设证实 → 下一批行为化（主账只采可行动段差值，Vivhite 隔离口径
+  同步修复）；若謦欬/御血实战局 X 占主，原口径部分成立、观测位降级留档。
+
+## IMPLEMENTATION
+
+- `brain/policy.py`：新增 `_race_same_round_loss_own/_enemy` 影子分账（init +
+  战斗重置点同步清零 + 同回合扣血采样处按 can_play 拆桶 +
+  `combat_self_hp_loss_phases()` 读数接口）；主账 `_race_same_round_loss` 与
+  全部消费端（BOSS_SUSTAIN 注、RACE_SAME_ROUND_HP_LOSS_OBS、Vivhite 隔离、
+  竞速判定）零改动。
+- `brain/agent.py::_settle_combat`：分段结算并读两桶写入聚合账
+  `self_hp_loss_own_sum/foe_sum`；战斗记录自损段在观测键开启时追加
+  「（可行动段X/非行动段Y，SELF_LOSS_PHASE_OBS）」，「（阵亡）」后缀位置不变。
+- `brain/knowledge.py`：DEFAULT_POLICY 新增 `self_loss_phase_obs: True`
+  （注释载明批次证据与回滚语义）。
+- `brain/selfcheck.py`：新增 3slph 段——① 复刻 1265-F17 时序（T1 可行动自付 8、
+  敌方行动阶段同回合号掉 20、T2 边界），主账=28 不变、分账 8/20；② 观测键
+  关闭后分账停止且主账不变；③ 战斗记录带可 grep 相位段且（阵亡）后缀在尾；
+  ④ 观测键关闭后战斗记录严格回落旧口径。全套
+  `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- 指标：① SELF_LOSS_PHASE_OBS 留痕出现率与独立对局数；② 无自付牌对局的
+  Y/N 占比分布（污染直读）；③ 御血术/祭品实战局 X 段占比（口径边界：自付牌
+  结算动画期间 can_play 短暂 False 的自付会误入非行动段，按披露口径对账）；
+  ④ Vivhite 謦欬致命战的 X/Y 结构（为 VIVHITE_RACE_SELF_LOSS_EXCLUDE 修复
+  供数）。
+- 继续调整条件：无自付牌对局 Y≈N 累计 ≥3 个独立对局 → 下一批把主账改为
+  只采可行动段差值（行为化最小闭环，Vivhite 隔离口径同步修复）；X 段普遍
+  占主 → 观测位降级知识留档。
+- 撤回条件：`self_loss_phase_obs: false` 即停止分账与披露（selfcheck 3slph
+  ②④ 为对照锚）；或删除 policy/agent/knowledge/selfcheck 四处改动零残留。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1265）：4 局一幕 Boss（F17）阵亡（1245/1255/1260/1265）、
+  1250 死于 F7 死亡谷 least-bad 链（同族续挂）。三局前夜触发
+  RACE_AUDIT_HEAL_OVERRIDE 回血（44%/54%/62%）仍整管打空——入场血量与 Boss
+  生死解耦第九批实证；1265 前夜 67% 超 0.65 审计带上限走锻造，方向正确。
+  饥饿链/旋钮代谢全顶格、kill_race_prior_eff 换向阻尼下调中（0.54→0.49），
+  均为设计内终态，不重复立案。SLIPPERY_TTK_OBS 本批 +1（1265-F17 VANTOM
+  8 层留痕常开），判决方向不变，预注册行为化条件（贴线翻案 ≥1 例）未达成。

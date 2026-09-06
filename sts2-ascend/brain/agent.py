@@ -3546,6 +3546,14 @@ class Agent:
             _seg_self_loss = float(self.policy.combat_self_hp_loss())
         except Exception:
             _seg_self_loss = 0.0
+        # SELF_LOSS_PHASE_OBS（第1245~1265局批复盘）：同账本的相位影子分账
+        # （可行动段/非行动段）随分段并入聚合账——1265-F17 全场零自付牌却记
+        # 「掉血61｜自损53」，53=全部非致命敌方伤害之和，主账疑似把敌方行动
+        # 阶段的掉血计为自损。分账只进战斗记录留痕，不改任何消费端口径。
+        try:
+            _seg_loss_own, _seg_loss_foe = self.policy.combat_self_hp_loss_phases()
+        except Exception:
+            _seg_loss_own, _seg_loss_foe = 0.0, 0.0
         agg = self.ctx.combat_agg
         # open 聚合账 = 一场多阶段战斗仍在进行：同层任何后续结算都并入它，
         # 无论本次流转是阶段切换（split）还是真实终结屏（GAME_OVER 致死等）
@@ -3565,6 +3573,10 @@ class Agent:
             agg["obs_fire_rounds"] = int(agg.get("obs_fire_rounds", 0) or 0) + obs_fr
             agg["self_hp_loss_sum"] = (float(agg.get("self_hp_loss_sum", 0.0) or 0.0)
                                        + _seg_self_loss)
+            agg["self_hp_loss_own_sum"] = (float(agg.get("self_hp_loss_own_sum", 0.0) or 0.0)
+                                           + _seg_loss_own)
+            agg["self_hp_loss_foe_sum"] = (float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
+                                           + _seg_loss_foe)
             # 非分段流转 = 战斗真实终结：关闭挂起账（等换层/终局落库）
             agg["open"] = bool(split)
         else:
@@ -3574,7 +3586,9 @@ class Agent:
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
                    "open": bool(split), "from_event": bool(c.get("from_event")),
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
-                   "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss}
+                   "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss,
+                   "self_hp_loss_own_sum": _seg_loss_own,
+                   "self_hp_loss_foe_sum": _seg_loss_foe}
             self.ctx.combat_agg = agg
         if died:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
@@ -3646,6 +3660,15 @@ class Agent:
         _self_loss = float(agg.get("self_hp_loss_sum", 0.0) or 0.0)
         if _self_loss > 0.0:
             note += f"｜自损{int(round(_self_loss))}"
+            # SELF_LOSS_PHASE_OBS 相位分账披露（第1245~1265局批复盘）：
+            # 主账口径不变，只追加可行动段/非行动段两桶读数，供复盘直接验证
+            # 「敌方行动阶段掉血被计入自损」的污染占比。观测键关闭时段落
+            # 严格回落旧口径（selfcheck 对照锚）。
+            if bool(self.know.policy.get("self_loss_phase_obs", True)):
+                _loss_own = float(agg.get("self_hp_loss_own_sum", 0.0) or 0.0)
+                _loss_foe = float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
+                note += (f"（可行动段{int(round(_loss_own))}"
+                         f"/非行动段{int(round(_loss_foe))}，SELF_LOSS_PHASE_OBS）")
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):
