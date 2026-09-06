@@ -1481,3 +1481,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.258927540607884局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.131078619337003局)，ROLLING_BOULDER(21分/4.728222150755163局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 24.00 → 22.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿18张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.58 → 0.61（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F29——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F29——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/131 胜，当前目标进阶 0
+
+## 第 132 局复盘（2026-09-06 16:05）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CHROMATIC_SEQUENCE
+- 本局遗物：GORGET, BAG_OF_MARBLES, MERCURY_HOURGLASS, OLD_COIN
+- 战斗记录：F20 Monster战 掉血0｜自损21; F22 Monster战 掉血13｜自损38; F28 Unknown战 掉血0｜自损27; F30 Monster战 掉血0｜自损26; F31 Elite战 掉血2｜自损62; F33 Boss战 掉血101｜自损97｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(41分/3.528618654234595局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/33.93540356067192局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/23.75793443694829局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/28.10890457548878局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/15.33241277243107局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.244021294215757局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.116619844169323局)，ROLLING_BOULDER(21分/4.71167337322752局)
+- 策略进化：potion_block_hp_pct: 0.40 → 0.45（高速失血爆毙（7回合掉血101，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿19张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.61 → 0.64（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/132 胜，当前目标进阶 0
