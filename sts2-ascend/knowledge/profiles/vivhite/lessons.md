@@ -1723,3 +1723,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.9427652305801097局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.8244071987169836局)，ROLLING_BOULDER(20分/5.339388389444119局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（73%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.71 → 0.71（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.003）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿21张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.71 → 0.71（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.001）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/153 胜，当前目标进阶 0
+
+## 第 154 局复盘（2026-09-06 21:03）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_NEGATIVE_SPACE
+- 本局遗物：KUSARIGAMA, OLD_COIN, WHETSTONE, UNCEASING_TOP
+- 战斗记录：F5 Monster战 掉血0｜自损6（可行动段3/非行动段3，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血5｜自损18（可行动段9/非行动段9，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血1｜自损15（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损10（可行动段4/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血11｜自损34（可行动段21/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合获胜; F17 Boss战 掉血77｜自损77（可行动段27/非行动段50，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(41分/5.215270258359215局)，MAYHEM(38分/2.504248967183606局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/40.98862608214974局)，VIVHITE_CARD_CHROMATIC_LIMIT(35分/40.56599771548738局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/16.129357592555333局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.9289655522730795局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/3.811021773521474局)，ROLLING_BOULDER(20分/5.320700530081065局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.71 → 0.68（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/154 胜，当前目标进阶 0
