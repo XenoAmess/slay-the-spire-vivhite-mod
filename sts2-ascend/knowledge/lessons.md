@@ -9423,3 +9423,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.628824032560732局)，BULLY(10分/4.628824032560732局)，HAVOC(11分/3.7030592260485853局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1257 胜，当前目标进阶 0
+
+## 第 1258 局复盘（2026-09-06 12:06）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：FIGHT_ME, ANGER, FLAME_BARRIER, ANGER, FIGHT_ME, CINDER, CINDER, INFLAME, BREAKTHROUGH, ANGER, HEMOKINESIS, MANGLE, HEADBUTT, CINDER, HEMOKINESIS, INFLAME, INFLAME, MOLTEN_FIST, SHRUG_IT_OFF
+- 本局遗物：HAPPY_FLOWER, GIRYA
+- 战斗记录：F17 Boss战 掉血59｜自损45｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血4｜自损10; F20 Unknown战 掉血27｜自损33; F21 Monster战 掉血0｜自损13｜竞速审计：T3判死→实战5回合获胜; F28 Monster战 掉血37｜自损41; F31 Monster战 掉血52｜自损35｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/33.223915818836964局)，FIEND_FIRE(25分/42.43613296571029局)，PRIMAL_FORCE(24分/6.457672407825477局)，PACTS_END(24分/123.75050297328316局)，MANGLE(24分/113.54800482210119局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.61262314844677局)，BULLY(10分/4.61262314844677局)，HAVOC(11分/3.6900985187574156局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.54 → 0.57（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F31——灰区悲观系数部分胜利回收）；danger_comp_blk_boost: 0.32 → 0.30（行至 F31——组合防御姿态斜率部分胜利回收）；potion_block_hp_pct: 0.57 → 0.55（行至 F31——药水交药线部分胜利回收）
+- 生涯战绩：0/1258 胜，当前目标进阶 0
