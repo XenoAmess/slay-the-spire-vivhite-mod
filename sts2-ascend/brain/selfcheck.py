@@ -2420,6 +2420,10 @@ def main() -> int:
     #      -3.0 触底——旧版钳制零留痕，lessons 只见「-3.00→-2.98 部分胜利回收」。
     #      ① 触底收紧必须显式封账留痕且不改值；② 致命战自损占比≥50% 的同局
     #      F18+ 部分胜利回收必须让位并留痕；③ 非自损主导的 F18+ 死亡局回收照旧。
+    #      第 165~169 局批复盘起①的「停止吸收」改为改接謦欬出牌余量门
+    #      （vivhite_hp_cost_play_margin，每级 +0.5）：本批 167/168/169 局
+    #      权重触底后致命战自损占比 97%/98%/91%，估值税只改候选相对排序，
+    #      改不了「vs 结束回合」的比较；余量门也顶格（3.0）后才彻底封账留痕。
     vknow_floor = _vivhite_know("sts2-selfcheck-vhlife-floor-")
     vknow_floor.policy["vivhite_param_life_cost_weight"] = -3.0
     vlesson_floor = finalize_run(vknow_floor, _vivhite_death_ctx(73.0, 90.0),
@@ -2427,8 +2431,21 @@ def main() -> int:
     assert abs(vknow_floor.policy["vivhite_param_life_cost_weight"] - (-3.0)) < 1e-9, \
         ("触底钳制不得再改值: "
          f"{vknow_floor.policy.get('vivhite_param_life_cost_weight')}")
-    assert "触底" in vlesson_floor and "停止吸收并留痕" in vlesson_floor, \
-        f"触底收紧未显式留痕: {vlesson_floor[-400:]}"
+    assert abs(vknow_floor.policy["vivhite_hp_cost_play_margin"] - 1.0) < 1e-9, \
+        ("触底双档证据必须改接謦欬出牌余量门（0→0.5→1.0）: "
+         f"{vknow_floor.policy.get('vivhite_hp_cost_play_margin')}")
+    assert "证据改接謦欬出牌余量门" in vlesson_floor, \
+        f"触底改接未显式留痕: {vlesson_floor[-400:]}"
+    vknow_cap2 = _vivhite_know("sts2-selfcheck-vhlife-cap2-")
+    vknow_cap2.policy["vivhite_param_life_cost_weight"] = -3.0
+    vknow_cap2.policy["vivhite_hp_cost_play_margin"] = 3.0
+    vlesson_cap2 = finalize_run(vknow_cap2, _vivhite_death_ctx(73.0, 90.0),
+                                victory=False, final_floor=17)
+    assert abs(vknow_cap2.policy["vivhite_hp_cost_play_margin"] - 3.0) < 1e-9, \
+        ("余量门顶格后不得再改值: "
+         f"{vknow_cap2.policy.get('vivhite_hp_cost_play_margin')}")
+    assert "双旋钮全尽" in vlesson_cap2 and "彻底停止吸收并留痕" in vlesson_cap2, \
+        f"双旋钮全尽的封账留痕缺失: {vlesson_cap2[-400:]}"
     vknow_dom = _vivhite_know("sts2-selfcheck-vhlife-dom-")
     vknow_dom.policy["vivhite_param_life_cost_weight"] = -2.0
     vlesson_dom = finalize_run(vknow_dom, _vivhite_death_ctx(73.0, 90.0),
@@ -2447,6 +2464,71 @@ def main() -> int:
          f"{vknow_nd.policy.get('vivhite_param_life_cost_weight')}")
     assert "部分胜利回收让位" not in vlesson_nd, \
         f"非自损主导局不得出现回收让位留痕: {vlesson_nd[-400:]}"
+
+    # 3prh) 謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE，第 165~169 局批复盘）：
+    #      169 局 F17 实战 VIVHITE_LIVE_ESTIMATE=-16.30 的謦欬牌仍过普通出牌
+    #      阈值被打出（自损71/掉血78=91% 阵亡）——非致死回合謦欬实付每点按
+    #      vivhite_hp_cost_play_margin 抬高该候选出牌门槛；致死回合豁免；
+    #      margin=0 一键回滚（旧行为零差异）；被拦候选不得经残能救场绕行。
+    def _vgate_state(hp_now, incoming):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 85, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": [{
+                    "index": 0,
+                    "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                    "name": "弦光投影", "card_type": "Attack", "playable": True,
+                    "energy_cost": 1, "requires_target": True,
+                    "valid_target_indices": [0],
+                    "dynamic_values": [{"name": "Damage", "current_value": 10}],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "RITUAL_BEAST", "name": "仪式兽",
+                    "current_hp": 168, "max_hp": 252, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": incoming}],
+                }],
+            },
+            "run": {"current_hp": hp_now, "max_hp": 85, "gold": 0, "floor": 17,
+                    "deck": [{
+                        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                        "card_type": "Attack", "energy_cost": 1,
+                        "dynamic_values": [
+                            {"name": "Damage", "current_value": 10}],
+                    }]},
+        }
+
+    def _vgate_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "RITUAL_BEAST", "node_type": "Boss"},
+            current_combat_is_hard=True, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    vknow_g0 = _vivhite_know("sts2-selfcheck-vhgate-off-")
+    vpol_g0 = policy.Policy(vknow_g0, random.Random(11))
+    d_g0 = vpol_g0.decide(_vgate_state(85, 0), _vgate_ctx())
+    assert d_g0.action == "play_card", \
+        f"margin=0 回滚键必须保持旧行为（出牌）: {d_g0}"
+    vknow_g1 = _vivhite_know("sts2-selfcheck-vhgate-on-")
+    vknow_g1.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_g1 = policy.Policy(vknow_g1, random.Random(11))
+    d_g1 = vpol_g1.decide(_vgate_state(85, 10), _vgate_ctx())
+    assert d_g1.action == "end_turn", \
+        f"余量门生效后謦欬候选应被拦下（含残能救场绕行封堵）: {d_g1}"
+    assert "謦欬出牌门拦下" in d_g1.reason \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_g1.reason, \
+        f"拦门缺决策链留痕: {d_g1.reason}"
+    vknow_g2 = _vivhite_know("sts2-selfcheck-vhgate-lethal-")
+    vknow_g2.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_g2 = policy.Policy(vknow_g2, random.Random(11))
+    d_g2 = vpol_g2.decide(_vgate_state(20, 90), _vgate_ctx())
+    assert d_g2.action == "play_card", \
+        f"致死回合必须豁免余量门（买命/抢斩杀当场兑现）: {d_g2}"
 
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself

@@ -301,3 +301,45 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 165~169 局批复盘：謦欬权重触底接替手段落地——负净值謦欬仍过出牌阈值，新增出牌余量门接收取代纯留痕
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+ivhite_param_life_cost_weight 触底 -3.00 后（上批复盘已补「停止吸收并留痕」），謦欬死亡证据仍无真正的行为接替：估值税只改候选之间的相对排序，改不了「vs 结束回合」的比较——第 169 局 F17 Boss 战 T1 决策链实锤 VIVHITE_LIVE_ESTIMATE=-16.30（COMPLEMENTARY_AFTERIMAGE，hp-cost=6）与 -6.75（TERMINATION_CONDITION）两张负净值謦欬牌仍被打出，致命战自损 71/掉血 78=91% 阵亡。剩余有效杠杆是把謦欬实付折进出牌门槛本身。
+
+该假设可证伪：未来 3~10 局若 lessons 出现「证据改接謦欬出牌余量门」且决策链出现「謦欬出牌门拦下」（VIVHITE_HP_PLAY_MARGIN_GATE），但致命战自损占掉血 ≥50% 的比例不下降，或拿牌/出牌端输出饥饿显著加剧（Boss 战 ttk 与 race_audit 判死后胜率恶化），则假设证伪，policy.json 写 vivhite_hp_cost_play_margin=0 一键回滚。
+
+## EVIDENCE
+
+- 第 169 局（EUH5AA8D7P4D，F17 Boss WATERFALL_GIANT 阵亡）：自损 71/掉血 78=91%；决策链 F17 T1 逐条核到两张负净值謦欬牌连打（-16.30/-6.75），78 血 100% 进场仍阵亡；本局拿牌 14 张中 12 张生命支付牌。
+- 同批同型证据达到阈值：167 局 F17 Boss 自损 76/掉血 78=97%（12 张生命支付牌）、168 局 F17 Boss 自损 117/掉血 71（自损超敌方伤害）与 F21 自损 79/掉血 81=98%（13 张）、169 局 91%；169 局 lessons 两次出现「触底…停止吸收并留痕（接替手段待复盘设计）」——接替手段正是本批交付物。
+- 旧杠杆边界：play_threshold=0.4 存在，但 _score_play 的通用伤害分可轻易盖过 character_estimate 的负值；158/61 张白绮牌带 life_calculation_cost>0（含起手 4+4 基础牌），拿牌端「密度上限」类设计会把整套机制锁死，不可行——必须落在出牌端 vs 结束回合的比较上。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 新增 _vivhite_hp_pay（与 _rescue_block_tradeoff 同口径：LifeCost 含绯红仪式附加 − Margin 抵扣；非白绮/目录外牌恒 0）；
+  ② _combat 手牌循环新增謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE）：非致死回合謦欬实付每点按 vivhite_hp_cost_play_margin 抬高该候选的出牌门槛，仅拦「已过普通阈值但未过抬升阈值」的候选并留痕「謦欬门拒」；被拦候选同时退出 marginal_best 与残能救场通道（付血换不空过正是本门要拦的死循环），end_turn 原因披露拦下清单；致死回合豁免（买命/抢斩杀当场兑现）；margin=0 或缺键严格回滚旧行为，非白绮角色零改动。
+- sts2-ascend/brain/reflect.py：BOUNDS 新增 vivhite_hp_cost_play_margin=(0.0, 3.0)；_lc_tighten 触底分支由纯留痕改为改接——权重余量不足一步时证据改接余量门（每级 +0.5）并留痕「证据改接謦欬出牌余量门」，余量门也顶格后才「双旋钮全尽…彻底停止吸收并留痕」。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 vivhite_hp_cost_play_margin=0.0（静态键，0=关闭）。
+- sts2-ascend/brain/selfcheck.py：3prg 夹具更新（触底双档证据改接余量门 0→1.0 且留痕；双顶格封账不改值且留痕）；新增 3prh 决策链夹具（margin=0 出牌=旧行为；margin 极高时同手牌 end_turn 且带拦门留痕、残能救场不得绕行；致死回合豁免仍出牌）。
+- 回滚条件单一：policy.json 写 vivhite_hp_cost_play_margin=0 即恢复旧行为；reflect 改接段删除即恢复纯留痕。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① lessons 在謦欬卡组阵亡局出现「证据改接謦欬出牌余量门」且 margin 自 0 上行；② 决策链出现「謦欬出牌门拦下【X】实付N血」与候选「謦欬门拒」状态；③ 致命战自损占掉血比例降至 <50%，F17/F21 型自损主导阵亡减少。证伪/回滚：拦门留痕 ≥3 局但自损占比无变化，或 Boss 战 ttk/race_audit 显著恶化 → margin 归零回滚。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3prg 更新 + 3prh 新增三分支，既有夹具全部通过）。
+- py -3 -B sts2-ascend/tests/test_boss_race_sustain.py：2 tests OK。
+- 生产探针（隔离 clone 内临时 Knowledge）：margin=0 出牌=旧行为零差异；margin=50 同手牌 end_turn 且带拦门留痕、残能救场不绕行；致死回合豁免出牌；reflect 触底局 margin 0→0.5→1.0 双档改接留痕、双顶格封账留痕。
+- git diff --check 通过（仅宿主挂载的超长路径资产删除遗留告警，与本批无关）；完整 diff 已回读，仅 knowledge.py/policy.py/reflect.py/selfcheck.py 四个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

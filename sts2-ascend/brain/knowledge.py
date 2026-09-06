@@ -470,6 +470,12 @@ DEFAULT_POLICY = {
                                      # 50.3%）始终高于 30% 预注册线。窗口内（2≤实测回合≤此值）实测
                                      # dpt 以 deck_effective_burst×kill_race_prior_eff 为下限并留痕；
                                      # 0 严格回滚裸实测口径，非白绮角色零改动
+    "vivhite_hp_cost_play_margin": 0.0,  # 謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE，第 165~169 局
+                                      # 批复盘新增）：生命支付权重触底 -3.0 后的接替旋钮——估值税只改
+                                      # 候选相对排序，改不了「vs 结束回合」的比较（169 局 F17 实战
+                                      # VIVHITE_LIVE_ESTIMATE=-16.30 的謦欬牌仍被打出）。非致死回合
+                                      # 謦欬实付每点按此值抬高该候选出牌门槛；由触底证据经 reflect
+                                      # 改接上行（BOUNDS 0~3），0=关闭（一键回滚），非白绮角色零改动
      "kill_race_osc_damp": True,      # 竞速先验折算率换向阻尼（KILL_RACE_OSC_DAMP，第915~916局批复盘新增，
                                       # 静态键）：lessons 950~968 实测两通道 ±0.03 逐局换向极限环
                                       # （0.57↔0.60↔0.63↔0.66↔0.69 往复，数十次翻向零收敛）。

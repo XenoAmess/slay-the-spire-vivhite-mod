@@ -708,6 +708,31 @@ class Policy:
             cards_played_this_turn=cards_played_this_turn,
         )
 
+    def _vivhite_hp_pay(self, card: dict, player_powers) -> float:
+        """謦欬打出时的真实生命支付：LifeCost（含绯红仪式附加）− Margin 抵扣。
+
+        与 _rescue_block_tradeoff 的计价口径一致；非白绮角色或目录外牌恒 0。
+        """
+        strategy = self.character_strategy
+        if (strategy is None
+                or getattr(strategy, "profile_id", None) != VIVHITE_PROFILE_ID):
+            return 0.0
+        entry = strategy.card(
+            str(card.get("card_id") or "").strip().upper().rstrip("+"))
+        if entry is None:
+            return 0.0
+        life_cost = max(0.0, float(card_dynamic_value(
+            card, "LifeCost", entry.mechanics.life_calculation_cost) or 0.0))
+        observed_type = str(card.get("card_type") or "").casefold()
+        if ((entry.card_type == "attack" or observed_type == "attack")
+                and not _card_dynamic_preview_includes_modifier(card, "LifeCost")):
+            ritual_life_cost, _ritual_damage = vivhite_crimson_ritual_totals(
+                strategy, player_powers)
+            life_cost += ritual_life_cost
+        margin_before = max(0.0, character_power_amount(
+            player_powers, VIVHITE_MARGIN_POWER_ID))
+        return max(0.0, life_cost - min(life_cost, margin_before))
+
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
         return score_realized_mechanics(
@@ -3805,6 +3830,24 @@ class Policy:
                     _tst = "未参选（超费）" if _tcst > energy else "未参选"
                 _tax_watch[_tc.get("index")] = [
                     _tc.get("name") or _tc.get("card_id") or "税牌", _tst]
+        # 謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE，第 165~169 局批复盘新增）：
+        # life_cost_weight 触底 -3.0 后謦欬证据已无估值旋钮可接（本批 167/168/169
+        # 局致命战自损占掉血 97%/98%/91%）——估值税只改候选相对排序，改不了
+        # 「vs 结束回合」的比较；169 局 F17 实战 VIVHITE_LIVE_ESTIMATE=-16.30
+        # 的謦欬牌仍被打出。非致死回合謦欬实付每点按 margin 抬高该候选的出牌
+        # 门槛；被门拦下的候选同时退出 marginal/残能救场通道（付血换不空过正是
+        # 本门要拦的死循环）。致死回合豁免（买命/抢斩杀当场兑现）；margin=0
+        # 一键回滚，非白绮角色零改动
+        _hp_play_margin = 0.0
+        if (not lethal_now
+                and getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID):
+            try:
+                _hp_play_margin = max(0.0, float(
+                    pol.get("vivhite_hp_cost_play_margin", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                _hp_play_margin = 0.0
+        _hp_gate_blocked: list = []  # (index, name, pay, extra, score)
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -3884,15 +3927,34 @@ class Policy:
             successful_plays = self._successful_card_plays(cid)
             safe_trial = self._safe_controlled_trial(c)
             trial_already = cid in self._novel_trials
-            eligible_for_best = not (never_played_dead and trial_already)
+            # 謦欬出牌余量门：仅拦「本已过普通阈值、但未过抬升后阈值」的謦欬候选
+            # ——普通阈值都过不了的牌维持旧语义（marginal「不空过」通道不受影响）
+            _hp_gate_hit = False
+            if _hp_play_margin > 0.0:
+                _hp_pay = self._vivhite_hp_pay(c, player.get("powers") or [])
+                if _hp_pay > 0.0:
+                    _hp_extra = _hp_pay * _hp_play_margin
+                    _hp_gate_hit = (float(pol["play_threshold"]) < score
+                                    <= float(pol["play_threshold"]) + _hp_extra)
+                    if _hp_gate_hit:
+                        why += (f"｜謦欬出牌门：实付{_hp_pay:g}血×"
+                                f"{_hp_play_margin:.2f}=+{_hp_extra:.1f}门槛，"
+                                f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
+                        _hp_gate_blocked.append(
+                            (c.get("index"), c.get("name") or cid,
+                             _hp_pay, _hp_extra, score))
+            eligible_for_best = (not (never_played_dead and trial_already)
+                                 and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
                                  if enemy.get("index") == target), None)
             self._trace_candidate(
                 c.get("name") or c.get("card_id") or f"手牌 {c.get('index')}",
                 score, index=c.get("index"), action="play_card",
-                status="eligible" if eligible_for_best else "vetoed",
+                status=("eligible" if eligible_for_best
+                        else "謦欬门拒" if _hp_gate_hit else "vetoed"),
                 why=(why if eligible_for_best else
-                     f"{why}；零成功出牌否决且本场受控试用已用"),
+                     f"{why}；零成功出牌否决且本场受控试用已用"
+                     if not _hp_gate_hit else why),
                 target={"index": target,
                         "name": (target_enemy or {}).get("name", "")} if target is not None else None)
             if _tax_watch and c.get("index") in _tax_watch:
@@ -3902,7 +3964,7 @@ class Policy:
             if eligible_for_best and (best is None or score > best[0]):
                 best = (score, c, target, why)
 
-            if immediate_score > 0.0 and safe_trial:
+            if immediate_score > 0.0 and safe_trial and not _hp_gate_hit:
                 if successful_plays > 0:
                     mode = "边际收益兜底"
                 elif not trial_already:
@@ -4045,8 +4107,15 @@ class Policy:
                     _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
                 except Exception:
                     _taxstop_on = True
+                # 謦欬出牌门拦下的候选同样不得经残能救场打出——付血换「不空过」
+                # 正是本门要拦的死亡螺旋；其余候选（格挡/覆甲/止损）救场照旧
+                _resc_hand = hand
+                if _hp_gate_blocked:
+                    _blocked_idx = {row[0] for row in _hp_gate_blocked}
+                    _resc_hand = [c for c in hand
+                                  if c.get("index") not in _blocked_idx]
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
-                    hand, energy, incoming, my_block,
+                    _resc_hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
                     block_locked=block_locked,
                     allow_taxstop=_taxstop_on,
@@ -4102,8 +4171,14 @@ class Policy:
                                        _exhausts_other_cards(_resc_card),
                                        round(_rest_est, 2), round_no, "")],
                                 wait=0.6)
+            _gate_note = ""
+            if _hp_gate_blocked:
+                _gate_note = ("；謦欬出牌门拦下"
+                              + "、".join(f"【{row[1]}】实付{row[2]:g}血"
+                                          for row in _hp_gate_blocked)
+                              + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

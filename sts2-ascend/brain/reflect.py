@@ -95,6 +95,10 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 謦欬卡组阵亡收紧（更负），部分胜利/胜利回收；下限 -3.0 防生命支付
     # 被估到「永不打出」锁死整套机制，上限 -0.5 防支付代价被低估回旧病
     "vivhite_param_life_cost_weight": (-3.0, -0.5),
+    # 謦欬出牌余量门（第 165~169 局批复盘，权重触底后的接替旋钮）：非致死回合
+    # 謦欬实付每点抬高该候选出牌门槛。0=关闭（旧行为）；上限 3.0 时 6 点实付
+    # 需净值 >0.4+18 才放行，等同非致死回合禁用大额謦欬——再高无区分度
+    "vivhite_hp_cost_play_margin": (0.0, 3.0),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -578,12 +582,27 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                     if _head >= 0.05 - 1e-9:
                         _adj(know, "vivhite_param_life_cost_weight", -0.05,
                              changes, why)
+                        return
+                    # 接替手段（第 165~169 局批复盘落地）：权重触底后謦欬证据
+                    # 改接出牌端余量门 vivhite_hp_cost_play_margin（每级 +0.5，
+                    # 上限 3.0）。本批 167/168/169 局权重已触底，致命战自损占
+                    # 掉血 97%/98%/91%——估值税只改候选相对排序，改不了「vs
+                    # 结束回合」的比较；169 局 F17 实战 VIVHITE_LIVE_ESTIMATE=
+                    # -16.30 的謦欬牌仍被打出（自损71/掉血78=91% 阵亡）
+                    know.policy.setdefault("vivhite_hp_cost_play_margin", 0.0)
+                    _pm = know.policy["vivhite_hp_cost_play_margin"]
+                    _pm_head = BOUNDS["vivhite_hp_cost_play_margin"][1] - _pm
+                    if _pm_head >= 0.5 - 1e-9:
+                        _adj(know, "vivhite_hp_cost_play_margin", 0.5, changes,
+                             f"生命支付权重触底，{why}——证据改接謦欬出牌余量门"
+                             "（非致死回合謦欬实付每点抬高出牌门槛）")
                     else:
                         changes.append(
                             f"vivhite_param_life_cost_weight "
                             f"{know.policy['vivhite_param_life_cost_weight']:.2f} "
-                            f"触底（余量 {_head:.2f}<步长0.05）——{why}；"
-                            "触底旋钮停止吸收并留痕（接替手段待复盘设计）")
+                            f"触底（余量 {_head:.2f}<步长0.05）且謦欬出牌余量门 "
+                            f"{_pm:.2f} 顶格（余量 {_pm_head:.2f}<步长0.5）——{why}；"
+                            "双旋钮全尽，謦欬证据彻底停止吸收并留痕")
 
                 _lc_tighten(f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
                             "——生命支付权重向保守收紧")
