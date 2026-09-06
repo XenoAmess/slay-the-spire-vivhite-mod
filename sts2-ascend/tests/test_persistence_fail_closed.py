@@ -323,6 +323,34 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         self.assertEqual(know.progression["last_review_attempt_source"], "queued")
         know.save.assert_called_once_with()
 
+    def test_enqueue_records_every_run_while_kimi_keeps_five_run_batch_threshold(self) -> None:
+        self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
+                              encoding="utf-8")
+        know = SimpleNamespace(
+            stats={"global": {"runs": 6}},
+            progression={"last_successful_review_run": 0,
+                         "last_llm_review_run": 5},
+            save=mock.Mock(),
+        )
+        agent = SimpleNamespace(know=know)
+        plan = llm_review.ReviewPlan(
+            key="kimi-k3", priority=1, runner="opencode",
+            model="kimi-for-coding/k3", every_runs=5, source="preferred")
+        cfg = {"enabled": True, "review_every_runs": 5,
+               "review_queue_max": 100}
+
+        with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
+              mock.patch.object(llm_review, "review_plans_from_config",
+                                return_value=[plan]),
+              mock.patch.object(llm_review, "_ensure_worker")):
+            llm_review.enqueue_review(agent, log=lambda _message: None)
+
+        item = llm_review._load_queue_unlocked()["pending"][0]
+        self.assertEqual(item["run"], 6)
+        self.assertEqual(item["every"], 5)
+        self.assertEqual(know.progression["last_llm_review_run"], 6)
+        know.save.assert_called_once_with()
+
     def test_starvation_never_overrides_available_glm_preferred_plan(self) -> None:
         self.queue.write_text(json.dumps({"pending": [], "reviewing": None}),
                               encoding="utf-8")

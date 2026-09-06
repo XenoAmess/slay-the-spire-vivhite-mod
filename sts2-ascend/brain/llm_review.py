@@ -5724,13 +5724,17 @@ def _enqueue_review_scoped(agent, log=print, know=None) -> None:
     if not plans:
         return
     queued_plan = plans[0]
-    every = queued_plan.every_runs
     source = "queued"
     last_ok = review_know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     starved = runs - last_ok >= starve_every
     last = review_know.progression.get("last_llm_review_run", 0)
-    if runs - last < every:
+    # Every completed run is a durable queue row.  ``plan.every_runs`` is the
+    # provider's minimum batch size, not a second enqueue cadence.  Reusing it
+    # here made Kimi's five-run threshold apply twice after the every-run GLM
+    # providers were disabled: one row per five runs, then five rows per batch
+    # (an accidental 25-run review interval).
+    if runs - last < 1:
         return
     progression_key = "last_llm_review_run"
 
