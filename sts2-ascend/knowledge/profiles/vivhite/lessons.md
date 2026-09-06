@@ -1162,3 +1162,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.714747763769418局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.573215556443773局)，ROLLING_BOULDER(22分/4.1540816041427675局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（85%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.66 → 0.65（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.65 → 0.68（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/102 胜，当前目标进阶 0
+
+## 第 103 局复盘（2026-09-06 11:22）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_SPECTRAL_INTEGRAL
+- 本局遗物：WAR_PAINT, CENTENNIAL_PUZZLE
+- 战斗记录：F19 Monster战 掉血0｜自损15; F20 Monster战 掉血0｜自损10; F21 Monster战 掉血0｜自损10; F22 Unknown战 掉血29｜自损48; F25 Monster战 掉血6｜自损49; F27 Elite战 掉血83｜自损82（阵亡）
+- 当前高价值卡牌：SALVO(44分/2.818486949637756局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/21.508645134154435局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/35.51386263554904局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/25.2052309549214局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/15.934073947152896局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.698246146596226局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.55720930199622局)，ROLLING_BOULDER(22分/4.139542318528268局)
+- 策略进化：elite_min_hp_pct: 0.80 → 0.85（精英战阵亡，进场血量 88%，提高精英回避线）；精英战阵亡但满血线进场（88%≥85%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿19张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.68 → 0.71（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F27——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/103 胜，当前目标进阶 0
