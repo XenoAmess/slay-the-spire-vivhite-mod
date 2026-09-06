@@ -9533,3 +9533,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.469343160627256局)，BULLY(10分/4.469343160627256局)，HAVOC(11分/3.575474528501804局)
 - 策略进化：potion_block_hp_pct: 0.55 → 0.60（高速失血爆毙（4回合掉血72，每回合18≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.49 → 0.51（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F21——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.60 → 0.57（行至 F21——药水交药线部分胜利回收）
 - 生涯战绩：0/1267 胜，当前目标进阶 0
+
+## 第 1268 局复盘（2026-09-06 19:38）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：BLUDGEON, CINDER, HEMOKINESIS, HOWL_FROM_BEYOND, MOLTEN_FIST, TREMBLE, FIGHT_ME, SHRUG_IT_OFF, SHRUG_IT_OFF, RAMPAGE, PACTS_END, HEADBUTT, PYRE, TAUNT, SUCKER_PUNCH, SIDESTEP, ASSASSINATE, BREAKTHROUGH
+- 本局遗物：BOWLER_HAT, PERMAFROST, RED_MASK
+- 战斗记录：F17 Boss战 掉血32｜自损38｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血24｜自损20; F21 Monster战 掉血14｜自损13; F22 Monster战 掉血25｜自损20; F27 Monster战 掉血33｜自损39; F28 Unknown战 掉血21｜自损13｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/32.07922355433079局)，FIEND_FIRE(25分/40.974044227998576局)，PRIMAL_FORCE(24分/6.235180643391084局)，PACTS_END(24分/120.48682002107829局)，MANGLE(24分/109.63583734976864局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.45370045956506局)，BULLY(10分/4.45370045956506局)，HAVOC(11分/3.562960367652048局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.54（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.57 → 0.55（行至 F28——药水交药线部分胜利回收）
+- 生涯战绩：0/1268 胜，当前目标进阶 0
