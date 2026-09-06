@@ -9632,3 +9632,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.3305138192726425局)，BULLY(10分/4.3305138192726425局)，HAVOC(11分/3.4644110554181142局)
 - 策略进化：potion_block_hp_pct: 0.45 → 0.50（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/1276 胜，当前目标进阶 0
+
+## 第 1277 局复盘（2026-09-07 02:24）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：IRON_WAVE, BREAKTHROUGH, HOWL_FROM_BEYOND, TRUE_GRIT, CINDER, IRON_WAVE, CINDER, EVIL_EYE, UNRELENTING, HEMOKINESIS, RUPTURE, TAUNT, CINDER
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F6 Monster战 掉血1｜自损6（可行动段0/非行动段6，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血9｜自损15（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血2｜自损8（可行动段0/非行动段8，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血12｜自损6（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血9｜自损14（可行动段0/非行动段14，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血59｜自损50（可行动段4/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/31.08276002106518局)，FIEND_FIRE(25分/39.70128459232777局)，MANGLE(24分/108.19209417306243局)，PRIMAL_FORCE(24分/6.041499829267265局)，PACTS_END(24分/116.74418821495615局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.315357020905188局)，BULLY(10分/4.315357020905188局)，HAVOC(11分/3.452285616724151局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.61 → 0.58（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1277 胜，当前目标进阶 0
