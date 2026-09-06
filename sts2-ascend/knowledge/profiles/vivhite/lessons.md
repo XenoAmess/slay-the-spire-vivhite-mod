@@ -2075,3 +2075,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.524314163450431局)，ROLLING_BOULDER(20分/4.772711796058929局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/19.48872252628081局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.76 → 0.78（Boss 低血进场磨死（进场 55%），入场血量要求线上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损36/掉血43（84%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/185 胜，当前目标进阶 0
+
+## 第 186 局复盘（2026-09-07 02:44）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 MYTE
+- 本局拿牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_PREFETCH_FUTURE
+- 本局遗物：HORN_CLEAT, PRAYER_WHEEL, STONE_CALENDAR
+- 战斗记录：F15 Monster战 掉血0｜自损6（可行动段6/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血47｜自损50（可行动段39/非行动段11，SELF_LOSS_PHASE_OBS）｜竞速审计：T8判死→实战8回合获胜; F19 Monster战 掉血0｜自损27（可行动段23/非行动段4，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血11｜自损29（可行动段15/非行动段14，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血16｜自损39（可行动段24/非行动段15，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血51｜自损37（可行动段27/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.2384695987979835局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.434250168397604局)，SALVO(34分/9.251889614718738局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.417526808319696局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.94700577078579局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.511979063878355局)，ROLLING_BOULDER(20分/4.756007304772723局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.42051199743883局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿19张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损37/掉血51（73%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.49 → 0.51（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F23——药水交药线部分胜利回收）；行至 F23 但致命战自损37/掉血51≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：0/186 胜，当前目标进阶 0
