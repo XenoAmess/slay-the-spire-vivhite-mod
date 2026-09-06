@@ -9665,3 +9665,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.285202384882359局)，BULLY(10分/4.285202384882359局)，HAVOC(11分/3.428161907905887局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.55 → 0.52（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1279 胜，当前目标进阶 0
+
+## 第 1280 局复盘（2026-09-07 07:51）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：FORGOTTEN_RITUAL, MOLTEN_FIST, CINDER, STONE_ARMOR, TRUE_GRIT, JUGGLING, SWORD_BOOMERANG, THUNDERCLAP, BREAKTHROUGH, CRIMSON_MANTLE, IRON_WAVE, CONFLAGRATION, HEADBUTT, RAMPAGE
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F15 Monster战 掉血8｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血49｜自损9（可行动段9/非行动段46，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血0; F19 Monster战 掉血32｜自损3（可行动段3/非行动段10，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血13｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血35｜自损10（可行动段10/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/30.75753199960144局)，FIEND_FIRE(25分/39.28587842412452局)，MANGLE(24分/107.06004860497012局)，PRIMAL_FORCE(24分/5.97828584714938局)，PACTS_END(24分/116.51915958220896局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.2702041765352705局)，BULLY(10分/4.2702041765352705局)，HAVOC(11分/3.416163341228217局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.52 → 0.54（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F21——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.50 → 0.47（行至 F21——药水交药线部分胜利回收）
+- 生涯战绩：0/1280 胜，当前目标进阶 0
