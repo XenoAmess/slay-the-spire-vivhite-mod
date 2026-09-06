@@ -9489,3 +9489,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.532465315480949局)，BULLY(10分/4.532465315480949局)，HAVOC(11分/3.6259722523847584局)
 - 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.49 → 0.51（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.55 → 0.52（行至 F23——药水交药线部分胜利回收）
 - 生涯战绩：0/1263 胜，当前目标进阶 0
+
+## 第 1264 局复盘（2026-09-06 16:16）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：CINDER, FIGHT_ME, SHRUG_IT_OFF, SWORD_BOOMERANG, MOLTEN_FIST, SHRUG_IT_OFF, COLOSSUS, FLAME_BARRIER, RAMPAGE, THRASH, DISMANTLE, ANGER, MOLTEN_FIST, STRATAGEM, BREAKTHROUGH, CINDER, CINDER
+- 本局遗物：ICE_CREAM, NUNCHAKU, VAJRA, STRIKE_DUMMY
+- 战斗记录：F17 Boss战 掉血27｜自损33｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血11｜自损17; F21 Monster战 掉血0｜自损2; F22 Monster战 掉血35｜自损9; F29 Monster战 掉血73｜自损79｜竞速审计：T4判死→实战8回合获胜; F30 Monster战 掉血7｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/32.53229006634561局)，FIEND_FIRE(25分/41.55273551926626局)，PRIMAL_FORCE(24分/6.3232423616274716局)，PACTS_END(24分/121.1743757278742局)，MANGLE(24分/111.18426405454088局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.516601686876766局)，BULLY(10分/4.516601686876766局)，HAVOC(11分/3.613281349501412局)
+- 策略进化：potion_block_hp_pct: 0.52 → 0.57（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.51 → 0.54（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F30——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.57 → 0.55（行至 F30——药水交药线部分胜利回收）
+- 生涯战绩：0/1264 胜，当前目标进阶 0
