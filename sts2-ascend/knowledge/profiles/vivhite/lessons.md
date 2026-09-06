@@ -1250,3 +1250,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.58434071414452局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.446723201413157局)，ROLLING_BOULDER(22分/4.039182238781124局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 28.00 → 26.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））；kill_race_prior_eff: 0.55 → 0.56（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.02 → 2.01（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F31——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/110 胜，当前目标进阶 0
+
+## 第 111 局复盘（2026-09-06 12:29）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_TANGENT_STARLIGHT
+- 本局遗物：AMETHYST_AUBERGINE, TINY_MAILBOX
+- 战斗记录：F5 Monster战 掉血0｜自损12; F8 Monster战 掉血0｜自损8; F13 Unknown战 掉血2｜自损8; F14 Monster战 掉血0｜自损11; F15 Elite战 掉血6｜自损24; F17 Boss战 掉血72｜自损61｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(44分/2.7405293184081505局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/20.913729118725527局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/35.514192911861485局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/24.508069628666778局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/15.493347173194596局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.568295521645014局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.431159670208211局)，ROLLING_BOULDER(22分/4.02504510094539局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.56 → 0.55（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight: -2.98 → -3.00（白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：0/111 胜，当前目标进阶 0
