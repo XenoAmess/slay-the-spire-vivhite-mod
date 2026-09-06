@@ -1217,3 +1217,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.632815216591472局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.493742545774442局)，ROLLING_BOULDER(22分/4.081892273118967局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.64 → 0.61（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/107 胜，当前目标进阶 0
+
+## 第 108 局复盘（2026-09-06 11:56）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_EVENT_LOOP
+- 本局遗物：POTION_BELT
+- 战斗记录：F5 Monster战 掉血0｜自损2; F8 Monster战 掉血4｜自损18; F9 Monster战 掉血0｜自损8; F11 Elite战 掉血25｜自损37; F13 Unknown战 掉血0｜自损7; F17 Boss战 掉血77｜自损80｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：SALVO(44分/2.7695074863574125局)，VIVHITE_CARD_CHROMATIC_LIMIT(37分/21.134869447630976局)，VIVHITE_CARD_PERFECT_SYNTHESIS(36分/35.88971753765903局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/24.76721626615805局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/15.657172757349212局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/4.616600363333402局)，VIVHITE_CARD_LOCAL_HOMEOMORPHISM(20分/4.478014446864232局)，ROLLING_BOULDER(22分/4.067605650163051局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 76%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.61 → 0.58（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/108 胜，当前目标进阶 0
