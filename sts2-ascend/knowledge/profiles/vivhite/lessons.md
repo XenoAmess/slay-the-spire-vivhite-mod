@@ -2108,3 +2108,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.487438232174739局)，ROLLING_BOULDER(20分/4.722773514728798局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.27781856472873局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.51 → 0.54（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/188 胜，当前目标进阶 0
+
+## 第 189 局复盘（2026-09-07 03:16）
+- 结果：💀 失败｜进阶 0｜到达层数 3｜当局评分 3
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血51｜自损58（可行动段58/非行动段19，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血38｜自损22（可行动段22/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.2150478357939765局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.01117476670465局)，SALVO(34分/9.155084384032769局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.266672002791086局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/42.50460196417675局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.4752321983621277局)，ROLLING_BOULDER(20分/4.7062438074272475局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.20684619975218局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/189 胜，当前目标进阶 0
