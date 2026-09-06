@@ -9566,3 +9566,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.422579114178735局)，BULLY(10分/4.422579114178735局)，HAVOC(11分/3.5380632913429877局)
 - 策略进化：elite_grey_safety_mult: 1.85 → 2.05（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.57 → 0.60（行至 F43（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F43（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F43——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.52 → 0.50（行至 F43——药水交药线部分胜利回收）
 - 生涯战绩：0/1270 胜，当前目标进阶 0
+
+## 第 1271 局复盘（2026-09-06 22:24）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：DRAMATIC_ENTRANCE, UPPERCUT, DRAMATIC_ENTRANCE, TRUE_GRIT, DISMANTLE, CINDER, PILLAGE, DISMANTLE, SECOND_WIND, CINDER, DISMANTLE, FEED, SWORD_BOOMERANG, CINDER, INFLAME, SWORD_BOOMERANG, SHRUG_IT_OFF, PYRE, UNRELENTING
+- 本局遗物：WAR_PAINT, AMETHYST_AUBERGINE
+- 战斗记录：F17 Boss战 掉血8｜自损14（可行动段0/非行动段14，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血6｜自损12（可行动段0/非行动段12，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血12｜自损18（可行动段0/非行动段18，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血8｜自损6（可行动段0/非行动段6，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血38｜自损27（可行动段0/非行动段27，SELF_LOSS_PHASE_OBS）; F27 Elite战 掉血40｜自损20（可行动段0/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/31.74356924307923局)，FIEND_FIRE(25分/40.54532080296783局)，MANGLE(25分/109.48518547398217局)，PRIMAL_FORCE(24分/6.169940122190753局)，PACTS_END(24分/119.22613113562035局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.407100087279109局)，BULLY(10分/4.407100087279109局)，HAVOC(10分/3.5256800698232875局)
+- 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.60 → 0.63（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F27——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.50 → 0.47（行至 F27——药水交药线部分胜利回收）
+- 生涯战绩：0/1271 胜，当前目标进阶 0
