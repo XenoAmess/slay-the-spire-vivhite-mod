@@ -9478,3 +9478,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.548384661797239局)，BULLY(10分/4.548384661797239局)，HAVOC(11分/3.6387077294377903局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1262 胜，当前目标进阶 0
+
+## 第 1263 局复盘（2026-09-06 15:19）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：FINESSE, CRUELTY, TWIN_STRIKE, INFLAME, RAMPAGE, MOLTEN_FIST, SHRUG_IT_OFF, SWORD_BOOMERANG, PYRE, FIGHT_ME, UPPERCUT, EVIL_EYE, IMPERVIOUS, HEADBUTT, SHRUG_IT_OFF, MOLTEN_FIST, ARMAMENTS, RUPTURE, CINDER
+- 本局遗物：PEAR
+- 战斗记录：F15 Monster战 掉血17｜自损18; F17 Boss战 掉血52｜自损58｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血34｜自损40; F21 Monster战 掉血8｜自损8; F22 Monster战 掉血29｜自损35; F23 Monster战 掉血19｜自损15｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/32.64655300185209局)，FIEND_FIRE(25分/41.69868090242474局)，PRIMAL_FORCE(24分/6.345451441673328局)，PACTS_END(24分/121.59997564262338局)，MANGLE(24分/111.57477576973494局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.532465315480949局)，BULLY(10分/4.532465315480949局)，HAVOC(11分/3.6259722523847584局)
+- 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.49 → 0.51（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.55 → 0.52（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1263 胜，当前目标进阶 0
