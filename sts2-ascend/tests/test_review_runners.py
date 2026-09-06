@@ -898,9 +898,13 @@ class ReviewResolverTests(unittest.TestCase):
             self.assertEqual(
                 llm_review._run_batch_review(
                     agent, short_batch, log=lambda _message: None),
-                "deferred",
+                "accumulating",
             )
             run.assert_not_called()
+            self.assertTrue(all(
+                item.get("deferred_kind") == "batch_accumulation"
+                and not item.get("retry_same_model")
+                for item in short_batch))
             self.assertEqual(
                 llm_review._run_batch_review(
                     agent, full_batch, log=lambda _message: None),
@@ -941,6 +945,51 @@ class ReviewResolverTests(unittest.TestCase):
 
         self.assertEqual(wait, 0.0)
         self.assertEqual(selected, list(range(100)))
+
+    def test_scheduler_reunites_legacy_staggered_accumulation_rows(self) -> None:
+        pending = [{
+            "run": run,
+            "every": 5,
+            "deferred_count": run,
+            "retry_after": 9000.0 + run,
+            "deferred_hold_until": 12000.0 + run,
+            "deferred_reason": llm_review._LEGACY_DEFERRED_REASON,
+        } for run in range(1, 6)]
+
+        selected, wait = llm_review._select_review_batch(
+            pending, cap=100, now=1000.0)
+
+        self.assertEqual(wait, 0.0)
+        self.assertEqual(selected, list(range(5)))
+
+    def test_scheduler_waits_without_backoff_for_incomplete_accumulation(self) -> None:
+        pending = [{
+            "run": run,
+            "every": 5,
+            "deferred_kind": "batch_accumulation",
+        } for run in range(1, 5)]
+
+        selected, wait = llm_review._select_review_batch(
+            pending, cap=100, now=1000.0)
+
+        self.assertEqual(selected, [])
+        self.assertEqual(wait, 5.0)
+
+    def test_legacy_single_run_host_failure_keeps_its_backoff(self) -> None:
+        pending = [{
+            "run": 1,
+            "every": 1,
+            "deferred_count": 5,
+            "retry_after": 9000.0,
+            "deferred_hold_until": 12000.0,
+            "deferred_reason": llm_review._LEGACY_DEFERRED_REASON,
+        }]
+
+        selected, wait = llm_review._select_review_batch(
+            pending, cap=100, now=1000.0)
+
+        self.assertEqual(selected, [])
+        self.assertEqual(wait, 30.0)
 
     def test_kimi_can_retry_one_forensic_target_without_waiting_for_new_runs(self) -> None:
         plan = ReviewPlan(

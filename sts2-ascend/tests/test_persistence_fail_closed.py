@@ -400,6 +400,35 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         retry = llm_review._load_queue_unlocked()["pending"][0]
         self.assertFalse(retry["retry_same_model"])
 
+    def test_batch_accumulation_requeues_without_failure_hold(self) -> None:
+        batch = [{
+            "run": 8,
+            "queue_id": "accumulate-8",
+            "model": "kimi-for-coding/k3",
+            "every": 5,
+            "deferred_kind": "batch_accumulation",
+            "deferred_count": 12,
+            "retry_after": 5000.0,
+            "deferred_hold_until": 9000.0,
+        }]
+        self.queue.write_text(json.dumps({
+            "pending": [],
+            "reviewing": {"runs": [8], "items": batch},
+        }), encoding="utf-8")
+
+        delay = llm_review._finalize_review_batch(
+            batch, "accumulating", log=lambda _message: None)
+
+        saved = llm_review._load_queue_unlocked()
+        self.assertEqual(delay, 0.0)
+        self.assertIsNone(saved["reviewing"])
+        waiting = saved["pending"][0]
+        self.assertEqual(waiting["deferred_kind"], "batch_accumulation")
+        self.assertFalse(waiting["retry_same_model"])
+        self.assertNotIn("deferred_count", waiting)
+        self.assertNotIn("retry_after", waiting)
+        self.assertNotIn("deferred_hold_until", waiting)
+
     def test_interrupted_reviewing_returns_to_front_once_with_group_intact(self) -> None:
         recovered = [
             {"run": 8, "queue_id": "old-8", "retry_group": "pkg-a",

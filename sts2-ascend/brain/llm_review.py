@@ -3882,6 +3882,9 @@ _PROVIDER_RATE_LIMIT_FAILURE_CODE = "provider_http_429"
 _PROVIDER_RATE_LIMIT_DEFERRED_KIND = "provider_rate_limit"
 _PROVIDER_UNAVAILABLE_FAILURE_CODE = "provider_account_unavailable"
 _PROVIDER_UNAVAILABLE_KIND = "provider_unavailable"
+_BATCH_ACCUMULATION_DEFERRED_KIND = "batch_accumulation"
+_BACKEND_UNAVAILABLE_DEFERRED_KIND = "backend_unavailable"
+_LEGACY_DEFERRED_REASON = "host/preflight 连续不可用，等待维护或显式重审唤醒"
 # Host/preflight deferrals must not consume the model retry budget, but they
 # also must not monopolize the worker forever.  After a bounded number of
 # deferrals the transaction is parked for an hour; maintenance or an explicit
@@ -4292,8 +4295,34 @@ def _configured_affinity_plan(cfg: dict, affinity: tuple) -> ReviewPlan | None:
     return matches[0] if len(matches) == 1 else None
 
 
+def _is_batch_accumulation_item(item: dict) -> bool:
+    """Recognize fresh work parked only because its provider needs more runs.
+
+    Older workers mislabeled this state as host/preflight unavailability and
+    applied staggered one-hour holds.  A provider-started/sticky transaction or
+    forensic retry is never eligible for this compatibility recovery.
+    """
+    if (item.get("retry_same_model") or item.get("retry_group")
+            or item.get("replay_target") or item.get("salvage_packages")):
+        return False
+    kind = str(item.get("deferred_kind") or "")
+    if kind == _BATCH_ACCUMULATION_DEFERRED_KIND:
+        return True
+    return (
+        not kind
+        and int(item.get("every", 1) or 1) > 1
+        and int(item.get("deferred_count", 0) or 0) > 0
+        and not int(item.get("retry_count", 0) or 0)
+        and str(item.get("deferred_reason") or "") == _LEGACY_DEFERRED_REASON
+    )
+
+
 def _queue_item_ready_at(item: dict, now: float, cfg: dict | None = None) -> float:
     """Combine per-attempt backoff with the bound preferred-model cooldown."""
+    if _is_batch_accumulation_item(item):
+        # Accumulation is not a failed attempt.  In particular, ignore the
+        # staggered legacy holds that made five Kimi rows mutually unreachable.
+        return 0.0
     ready_at = float(item.get("retry_after", 0) or 0)
     ready_at = max(ready_at, float(item.get("deferred_hold_until", 0) or 0))
     affinity = _retry_affinity(item)
@@ -4375,6 +4404,19 @@ def _select_review_batch(
                 if len(indexes) >= cap:
                     break
         if indexes:
+            accumulating = [
+                pending[offset] for offset in indexes
+                if _is_batch_accumulation_item(pending[offset])
+            ]
+            if accumulating:
+                required = max(
+                    max(1, int(candidate.get("every") or 1))
+                    for candidate in accumulating)
+                distinct_runs = {
+                    int(pending[offset]["run"]) for offset in indexes}
+                if len(distinct_runs) < required:
+                    blocked_until.append(now + 5.0)
+                    continue
             return indexes, 0.0
 
     wait = min(blocked_until, default=now + 5.0) - now
@@ -11158,6 +11200,28 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
             q["reviewing"] = None
             _save_queue_unlocked(q)
             return 0.0
+        if outcome == "accumulating":
+            pending = list(q.get("pending", []))
+            seen = {_queue_item_identity(item) for item in pending}
+            for item in batch:
+                identity = _queue_item_identity(item)
+                if identity in seen:
+                    continue
+                waiting = dict(item)
+                waiting["retry_same_model"] = False
+                waiting["deferred_kind"] = _BATCH_ACCUMULATION_DEFERRED_KIND
+                waiting["deferred_reason"] = (
+                    "等待同一 profile 的复盘局数达到当前模型合批门槛")
+                for key in (
+                        "deferred_count", "deferred_hold_until", "retry_after",
+                        "deferred_retry_after_seconds"):
+                    waiting.pop(key, None)
+                pending.append(waiting)
+                seen.add(identity)
+            q["pending"] = pending
+            q["reviewing"] = None
+            _save_queue_unlocked(q)
+            return 0.0
         if outcome == "deferred":
             pending = list(q.get("pending", []))
             seen = {_queue_item_identity(item) for item in pending}
@@ -11196,7 +11260,7 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
                         hold_until)
                     deferred.setdefault(
                         "deferred_reason",
-                        "host/preflight 连续不可用，等待维护或显式重审唤醒")
+                        _LEGACY_DEFERRED_REASON)
                     log(
                         f"[llm] 复盘批次连续主机延迟 {deferred_count} 次；"
                         f"暂挂至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(hold_until))}，"
@@ -11515,7 +11579,14 @@ def _worker_loop_body(agent, log) -> None:
                     if (outcome in {"completed", "documented", "changed"}
                             and not _review_stop_requested()):
                         _resume_host_salvage_closures(log=log)
-                    if outcome in {"failed", "replay_pending", "deferred"}:
+                    if outcome in {
+                            "failed", "replay_pending", "deferred",
+                            "accumulating"}:
+                        if outcome == "accumulating":
+                            log("[llm] 复盘局数尚未达到当前模型合批门槛；"
+                                "原队列无失败退避，继续等待新局入队")
+                            retry_wait = 5.0
+                            continue
                         if outcome == "deferred":
                             log("[llm] 当前绑定后端暂不可启动，批次原样保留，"
                                 f"{delay:.0f}s 后重试")
@@ -11589,6 +11660,12 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
         # resolver immediately before launch.  This is the only cross-model handoff.
         plan = _coerce_review_plan(resolve_review_plan(cfg, log=log), cfg)
         if not plan.available:
+            reason = (getattr(plan, "unavailable_reason", "")
+                      or "no available review backend")
+            for item in batch:
+                item["deferred_kind"] = _BACKEND_UNAVAILABLE_DEFERRED_KIND
+                item["deferred_reason"] = str(reason)[:800]
+            _persist_reviewing_batch_metadata(batch, log=log)
             return "deferred"
     runner, model, source, every = (
         plan.runner, plan.model, plan.source, plan.every_runs)
@@ -11604,7 +11681,21 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
             log(
                 f"[llm] {plan.display_model} 需要至少 {plan.every_runs} 局合批；"
                 f"当前只有 {distinct_runs} 局，保留队列等待积累")
-            return "deferred"
+            for item in batch:
+                item.update(plan.as_queue_fields())
+                item["retry_same_model"] = False
+                item["deferred_kind"] = _BATCH_ACCUMULATION_DEFERRED_KIND
+                item["deferred_reason"] = (
+                    "等待同一 profile 的复盘局数达到当前模型合批门槛")
+            _persist_reviewing_batch_metadata(batch, log=log)
+            return "accumulating"
+    for item in batch:
+        if _is_batch_accumulation_item(item):
+            for key in (
+                    "deferred_kind", "deferred_reason", "deferred_count",
+                    "deferred_hold_until", "deferred_retry_after_seconds",
+                    "retry_after"):
+                item.pop(key, None)
     replay_target = next((str(item.get("replay_target") or "") for item in batch
                           if item.get("replay_target")), "")
     legacy_packages = _normalize_salvage_package_names(
