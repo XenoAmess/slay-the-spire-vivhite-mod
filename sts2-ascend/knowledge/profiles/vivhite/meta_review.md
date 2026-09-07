@@ -571,3 +571,41 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 `retry_resolution` 目标。
+
+# 第 295~305 局批复盘：Boss 分幕子账本 int() 截断计数器——前夜悲观战损虚高 7~9 倍，翻转带恒触发（BOSS_ACT_TRUNC）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+`Knowledge.commit_enemy_fight` 的 Boss 分幕子账本用 `int(old)+1` 累积 encounters/deaths/hp_pool_n/fire_rounds——在线统计每局 ×STAT_DECAY_PER_RUN(0.9965) 衰减后 int() 截断小数，+1 计数器被永久钉死在个位数，而 float 分子（hp_lost_sum/hp_pool_sum）正常累积，分幕「场均战损/血池」系统性虚高。`boss_loss_stats(act)` 消费虚高均值使前夜悲观战损（×boss_eve_pess_mult 1.5）恒超最大生命，「血量-悲观战损≤安全余量」对整个血条恒真——前夜三区裁决退化为翻转带恒触发，安全区锻造与低战损回血分支沦为死代码，裁决理由文本失真。该假设可证伪：修复后未来 3~10 局若前夜留痕「场均N」仍维持 400+ 量级，或子账 encounters 仍钉死在 1，则修复未生效或假设错误。
+
+## EVIDENCE
+
+- 在线 stats 只读核算（当前 HEAD 口径直接对账）：分幕子账 act1 合计 9080.3/21.27≈427、act2 3604.8/6.80≈530；同库全量账 13736.3/224.1≈61.3，本批实战 Boss 单场掉血 26~115——分幕均值虚高 7~9 倍。
+- 分子分母背离的唯一解释是 int() 截断：各 boss 子账 hp_lost_sum 分幕合计恰等于主账 boss_hp_lost_sum（LAGAVULIN 1948.7152728387525 逐位相等；THE_INSATIABLE/CRUSHER+ROCKET 跨幕分割求和亦精确闭合），证明 float 分子入账正常；而 encounters 主账 33.0 vs 子账 0.993（LAGAVULIN act1）——衰减对分子分母同乘，唯 int() 每写截断能制造该背离。
+- 决策链实证消费：299 局前夜「悲观战损697=场均465×1.5」（89% 血被迫回血 9 点）、303 局「必败弃疗改锻造（悲观战损869=场均579×1.5）」（69% 血上砧后 F33 阵亡）——两处「场均」与 stats 核算的 act2 虚高量级逐位吻合。
+- 同族病灶交叉印证：pool 侧 hp_pool_n 同一 int() 截断是「血池均值 2254 vs 原生 379」虚高的同根因之一，上一批 HP_POOL_READ_CLAMP 的 read_max_ratio>4 观测与本结论同向（读侧钳制仍在岗，本批不重复处理 pool 读侧）。
+- 最新死亡局 305（XZRAX8Y1DYW6，F33 知识恶魔）全链已逐条深读：T2 判死→实战 7 回合阵亡，死因是输出饥饿与自损主导（既有旋钮/观测链覆盖），本批主假设取自账本层；301/302/303 同为 F33/F48 Boss 战败北，前夜裁决账面均经同一虚高均值。
+- failed_review_replay：目标包 20260908-042545-1788812745750126400-4c86917f 完整 lineage 已读——manifest 为 process_exit(rc=1)、selfcheck 未跑、command/file_change 计数为 0，retry_candidate.patch 与 wip.patch 均 0 字节、report.md 为空；无任何候选改动可重实现。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：
+  ① `commit_enemy_fight` 同族 6 处 int() 截断计数器改浮点累积（子账 encounters/deaths/hp_pool_n/fire_rounds + 主账 hp_pool_n/fire_rounds），与主账 encounters/boss_encounters 既有浮点范式一致；读取端全部经 int() 取值，类型兼容；
+  ② 新增一次性迁移 `_repair_boss_act_trunc_counters`（随 repair_phantoms 闸门执行，自检加载真实库不触发）：分母小数部分已被 int 销毁、逐幕分布无法反推，诚实修复为作废 boss_act 子账本；读取端样本不足时按既有设计回落全量账（前 506 批长期运行的冷启动安全路径；血池读取另有 HP_POOL_READ_CLAMP 双保险），修复后的浮点计数器自新样本起正确累积，约 3 场同幕 Boss 战恢复分幕口径；标记键 stats.boss_act_trunc_repair_v1 防重复。
+- `sts2-ascend/brain/selfcheck.py`：新增 3br-act-trunc 夹具四分支——①浮点计数器跨一次衰减后正常增长（1×0.9965+1，不再钉死 1）、主账 hp_pool_n 同验；②前置态复现分幕虚高（1900/3≈633），迁移后子账作废、标记置位、boss_loss_stats(1) 回落全量账 60；③幂等与标记预置跳过；④迁移后 3 场新样本恢复分幕口径（场均 40、n=3）。
+- 不改任何评分/阈值/动作选择公式；只修账本写入口径与一次性作废不可恢复数据。撤回条件单一：git 撤回本提交（改动集中于 knowledge.py 写侧/迁移 + selfcheck 夹具）。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 前夜留痕「场均N」从 465/579 量级回落至全量账量级（~40~120，一幕偏低、二幕偏高），翻转带/安全区/必败三区分流重新可观测；② stats.json 出现 boss_act_trunc_repair_v1 标记且各 boss 子账 encounters 随对局逐局增长（>1 且不再钉死）；③ 约 3 场同幕 Boss 战后分幕口径恢复，前夜裁决在边际贴线对局（如 303 型 69% 血）出现与旧账不同的可核对结论。证伪/回滚：场均留痕不变或 encounters 仍钉死 → 修复未生效，复查消费路径与迁移标记；前夜裁决结果显著恶化（高血进场局被错误弃疗）→ 撤回本提交整体回滚。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-act-trunc 四分支；既有 3br-pool-clamp 写侧夹具的 hp_pool_n==1/2 断言在浮点下 1.0==1 兼容通过，3br-pool-read-clamp 与全部既有夹具通过；首轮迁移夹具因构造期 repair_phantoms=True 抢先置标记而失败，改 repair_phantoms=False 手动调用后通过——该插曲同时验证了生产加载路径会自动执行迁移且幂等）。
+- `git diff --check` 通过（仅宿主挂载 assets 超长路径删除遗留告警，与本批无关、不入 commit）；完整 diff 已回读：brain/knowledge.py（写侧 6 处浮点化 + 迁移方法）、brain/selfcheck.py（四分支夹具）+ 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## REPLAY
+
+retry_resolution: 20260908-042545-1788812745750126400-4c86917f no_valid_change（完整 lineage 可读：manifest process_exit rc=1、selfcheck not_run、command/file_change=0，retry_candidate.patch/wip.patch 均 0 字节、report.md 空白——失败 attempt 无任何候选改动可重实现；本批生产改动为基于当前 HEAD 的全新实现，不依赖该包内容）
