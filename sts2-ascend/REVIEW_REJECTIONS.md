@@ -369,3 +369,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-07 07:55:16 | 第 187~196 局 | `9bea4999` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `ca808d12` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 ca808d12 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260907-080038-1788739238772903000-49d588b7 -->
 | 2026-09-07 08:00:38 | 第 1275~1279 局 | `49d588b7` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `4f30969c` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 4f30969c 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260907-233006-1788795006827588200-9a96c412 -->
+| 2026-09-07 23:30:06 | 第 1295~1301 局 | `9a96c412` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | 维护中断/取消（非 kimi-k3 (opencode/kimi-for-coding/k3) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260907-233006-1788795006827588200-9a96c412` | 维护停机取消 kimi-k3 (opencode/kimi-for-coding/k3) 复盘并全量保全；非模型提交失败 |
