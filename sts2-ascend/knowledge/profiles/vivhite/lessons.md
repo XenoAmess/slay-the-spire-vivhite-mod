@@ -2515,3 +2515,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.0839284128607196局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.0631392249433818局)，ROLLING_BOULDER(20分/4.148177498893878局)
 - 策略进化：potion_block_hp_pct: 0.40 → 0.45（高速失血爆毙（6回合掉血87，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/225 胜，当前目标进阶 0
+
+## 第 226 局复盘（2026-09-07 12:26）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 TUNNELER
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CHIAROSCURO
+- 本局遗物：MERCURY_HOURGLASS, PARRYING_SHIELD
+- 战斗记录：F12 Monster战 掉血0｜自损8（可行动段8/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血4｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血0｜自损6（可行动段6/非行动段3，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血61｜自损42（可行动段42/非行动段36，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战7回合获胜; F19 Monster战 掉血63｜自损34（可行动段34/非行动段29，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血15｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.9178947553087036局)，SALVO(34分/8.04123147635214局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.20240270179078局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/13.431076745931065局)，VIVHITE_CARD_PERFECT_SYNTHESIS(34分/44.63333829990991局)
+- 当前低价值卡牌：AUTOMATION(17分/3.0731346634157073局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.05241823765608局)，ROLLING_BOULDER(20分/4.13365887764775局)
+- 策略进化：potion_block_hp_pct: 0.45 → 0.50（普通战斗短时阵亡（1回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损12/掉血15（80%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.51 → 0.52（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F21——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.50 → 0.47（行至 F21——药水交药线部分胜利回收）；行至 F21 但致命战自损12/掉血15≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：0/226 胜，当前目标进阶 0
