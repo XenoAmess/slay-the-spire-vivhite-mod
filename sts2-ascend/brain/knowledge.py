@@ -675,6 +675,10 @@ DEFAULT_POLICY = {
                                   # /自我强化/辅助体等高优先证据保持原量级可覆盖之。
                                   # 战斗实例更替自动失效，单体战与重生体不适用
 
+    "hp_pool_native_clamp_factor": 1.5,  # 血池观测写入侧原生上限钳制（第 187~196 局批复盘，HP_POOL_NATIVE_CLAMP）：
+                                          # 在线 hp_pool 台账实证虚高 4~20 倍（KNOWLEDGE_DEMON 2254 vs 原生 379），
+                                          # 竞速预演 ttk 同倍率高估、前夜系统性误判必败弃疗；超限样本封顶到
+                                          # 原生组合 max_hp 合计×本系数并计 hp_pool_native_clamp_obs；≤0 关闭回滚
     "elite_grey_starve_relief": 0.12,  # 灰区精英的输出饥饿豁免（第 136~137 批复盘）：爆发低于 deck_burst_floor 的
                                        # 卡组处于「跳过精英也必输 Boss」状态——精英是遗物/高质牌唯一稳定供给，
                                        # 全让给篝火=慢性死亡（122 批遗物断供因果链）。灰区生存线下调此值，
@@ -1691,6 +1695,56 @@ class Knowledge:
 
     # ---------- online commits ----------
 
+    def _native_hp_pool_clamp(self, comp_id: str, hp_pool: float) -> float:
+        """原生血池上限钳制（第 187~196 局批复盘新增，HP_POOL_NATIVE_CLAMP）。
+
+        本批实证：在线 hp_pool 台账相对原生快照系统性虚高 4~20 倍——
+        KNOWLEDGE_DEMON 账面 6462.6/2.87≈2254 vs 原生 379（同局 F33 实战
+        长战注「敌血池379」交叉证实）、VANTOM ≈823 vs 173、
+        CEREMONIAL_BEAST ≈1455 vs 252、LAGAVULIN_MATRIARCH ≈4801 vs 222，
+        普通怪同型（MYTE ≈3305 vs 61、TOADPOLE ≈451 vs 21）。Boss 竞速
+        预演 ttk=pool/dpt 被同倍率高估，前夜篝火系统性误判必败弃疗
+        （188 局「击杀需85回合＞满血可存活5回合」→弃疗→F33 阵亡，
+        193/195/196 同型 F33 死亡）。虚高机制（首帧采样口径之外的放大源）
+        未完全定位，故先在写入侧封顶：组合成员原生 max_hp 合计 ×
+        hp_pool_native_clamp_factor（默认 1.5，覆盖进阶血量上浮 ~5~10% 与
+        min/max 散布；≤0 关闭并严格回滚旧口径）。每次钳制记入
+        stats["hp_pool_native_clamp_obs"]（顶层键，不在 _decay_stats 衰减
+        分节内，计数不衰减），供下批复盘对账触发率与最大倍率；若未来
+        3~10 局零触发则视为假设证伪，回滚本键。native 不可用、comp 为
+        unknown、任一成员缺原生数据或任何异常时原样返回（与旧版严格一致）。
+        """
+        try:
+            factor = float(self.policy.get("hp_pool_native_clamp_factor", 1.5))
+        except Exception:
+            factor = 1.5
+        if factor <= 0.0:
+            return hp_pool
+        try:
+            native = getattr(self, "game_knowledge", None)
+            if native is None or not getattr(native, "available", False):
+                return hp_pool
+            high = 0.0
+            for mid in [p for p in str(comp_id or "").split("+") if p]:
+                rt = ((native.lookup("monsters", mid) or {}).get("runtime") or {})
+                xhp = rt.get("max_hp")
+                if not isinstance(xhp, (int, float)) or isinstance(xhp, bool):
+                    return hp_pool
+                high += float(xhp)
+            if high <= 0.0:
+                return hp_pool
+            bound = high * factor
+            if hp_pool <= bound:
+                return hp_pool
+            obs = self.stats.setdefault("hp_pool_native_clamp_obs", {})
+            obs["clamped"] = int(obs.get("clamped", 0) or 0) + 1
+            obs["max_ratio"] = max(float(obs.get("max_ratio", 0.0) or 0.0),
+                                   round(hp_pool / high, 3))
+            obs["last_comp"] = str(comp_id)
+            return bound
+        except Exception:
+            return hp_pool
+
     def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool,
                            node_type: str | None = None,
                            hp_pool: float | None = None,
@@ -1699,6 +1753,10 @@ class Knowledge:
                            act: int | None = None) -> None:
         if not self._learning_write_allowed():
             return
+        # HP_POOL_NATIVE_CLAMP（第 187~196 局批复盘）：写入侧封顶一次，
+        # 下方 Boss 分幕子账本与全量账共用同一钳制后样本
+        if hp_pool is not None and hp_pool > 0:
+            hp_pool = self._native_hp_pool_clamp(comp_id, float(hp_pool))
         e = self.stats["enemies"].setdefault(comp_id, {"encounters": 0, "hp_lost_sum": 0.0, "deaths": 0, "wins": 0})
         e["encounters"] += 1
         e["hp_lost_sum"] += max(0.0, hp_lost)

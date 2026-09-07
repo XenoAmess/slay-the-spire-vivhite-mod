@@ -343,3 +343,43 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 187~196 局批复盘：Boss 血池台账系统性虚高 4~20 倍——竞速预演 ttk 同倍率高估，前夜误判必败弃疗，写入侧原生封顶
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+在线 hp_pool 学习台账相对原生游戏快照系统性虚高 4~20 倍，导致 `boss_race_vitals` 给出的 Boss 血池均值同倍率虚高，竞速必败预演 `ttk=pool/dpt` 被系统性拉长，前夜篝火把可赢/贴线对局误判必败而弃疗转锻造，战斗端进入败局全攻姿态，构成 188/193/195/196 四局 F33 二幕 Boss 阵亡的共同上游。
+
+该假设可证伪：未来 3~10 局若 `stats.hp_pool_native_clamp_obs.clamped` 持续增长且 `max_ratio` 维持 >4，且前夜留痕中「Boss血池均值」降回原生量级（一幕 173~252、二幕 321~408）、doom 判定减少，则假设成立；若钳制计数零增长（台账本来就干净），则假设证伪，policy.json 写 `hp_pool_native_clamp_factor=0` 一键回滚。
+
+## EVIDENCE
+
+- 台账 vs 原生逐个对账（profiles/vivhite/stats.json 只读读取 × game/v0.111.0 原生 runtime/mechanics）：KNOWLEDGE_DEMON 账面 6462.6/2.87≈2254 vs 原生 379（5.9×）；VANTOM ≈823 vs 173（4.8×）；CEREMONIAL_BEAST ≈1455 vs 252（5.8×）；LAGAVULIN_MATRIARCH ≈4801 vs 222（21.6×）；KIN 双子 ≈2051 vs 248（8.3×）；普通怪同型：MYTE ≈3305 vs 61（54×）、TOADPOLE ≈451 vs 21（21×）、SHRINKER_BEETLE ≈250 vs 38（6.6×）。
+- 活数交叉证实：196 局（0VJUNJDY23ZT）F33 实战长战注记「敌血池379」与原生 KNOWLEDGE_DEMON=379 完全一致——采样口径本身正确时读数正确，但入账历史均值 2254。
+- 消费侧实锤：188 局（VVQC85H1H6TR）前夜留痕「竞速预演：击杀需85回合＞满血可存活5回合（Boss血池均值2844、火力18/回合，先验输出34/回合…）必败局的伤害会流到打死为止」→ 弃疗 → F33 阵亡；193/195/196 同型 F33 死亡。188 局按原生二幕血池 ~321~408 重估 ttk≈10~12 回合，虽仍偏劣但远非 85 回合级绝望，联合能量复核与组合门的放行空间被虚高账面整体压死。
+- 衰减与入账路径已排除：`_decay_stats` 对 sum/n 同乘保持比率；`commit_enemy_fight` 唯一写入口、agent 端分段取 max——均不改变均值口径。虚高的具体放大机制（首帧采样之外的来源）未完全定位，故本批只落写入侧封顶 + 观测，不臆改采样。
+- failed_review 目标包 20260907-075516-1788738916971161100-9bea4999 完整 lineage 已读：index.json complete=true；manifest 记录 online_runtime（宿主 git checkout 120s 超时），command_count=0、file_change_count=0；wip.patch 0 字节、report.md 0 字节；retry_candidate.patch 5424083 字节全部为新忽略文件删除快照（0 行新增、43403 行删除、0 个新文件），无任何可重实现的有效改动。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：
+  ① 新增 `Knowledge._native_hp_pool_clamp`（HP_POOL_NATIVE_CLAMP）：comp 成员原生 max_hp 合计 × `hp_pool_native_clamp_factor`（默认 1.5，覆盖进阶血量上浮与 min/max 散布）作为写入上限，超限样本封顶并把次数/最大倍率/最近组合记入 `stats["hp_pool_native_clamp_obs"]`（顶层键，不被 `_decay_stats` 衰减）；native 不可用、unknown 组合、成员缺数据、factor≤0 或任何异常一律原样返回（与旧版严格一致）；
+  ② `commit_enemy_fight` 入口处对 hp_pool 统一钳制一次，Boss 分幕子账本与全量账共用钳制后样本；
+  ③ DEFAULT_POLICY 新增 `hp_pool_native_clamp_factor=1.5`（≤0 即回滚）。
+- sts2-ascend/brain/selfcheck.py：新增 3br-pool-clamp 夹具（2254→568.5 钳制 + 观测计数/倍率断言；界内 400 原样通过；native 缺失组合 9999 原样入账；factor=0 后同型样本恢复全价）。
+- 不改任何评分/阈值/动作选择路径；只改学习台账写入。回滚条件单一：policy.json 写 `hp_pool_native_clamp_factor=0`。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① `hp_pool_native_clamp_obs.clamped` 逐局增长、`max_ratio` 维持 >4（确认虚高仍在发生并被封堵）；② 前夜/攻坚留痕的「Boss血池均值」随新样本入账逐步回落到原生量级；③ F33 型「击杀需数十回合」误判减少，篝火弃疗率下降、RACE_AUDIT 判死后实战胜率不再恶化。证伪/回滚：钳制零触发（账面本干净）→ 假设证伪回滚；钳制触发但 Boss 战战绩进一步恶化 → factor=0 回滚并重新审查原生对照口径。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-pool-clamp 四分支，既有夹具全部通过）。
+- 完整 diff 已回读：仅 brain/knowledge.py（+58）与 brain/selfcheck.py（+45）两个文件；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change（完整 lineage 已读：online_runtime 宿主 checkout 超时、模型零工作；wip.patch/report.md 均 0 字节；retry_candidate.patch 仅含忽略文件删除快照、0 行新增，无有效改动可在当前 HEAD 重实现；本批生产闭环由上方 HP_POOL_NATIVE_CLAMP 独立承担）

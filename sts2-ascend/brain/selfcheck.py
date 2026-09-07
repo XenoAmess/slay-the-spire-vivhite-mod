@@ -7031,6 +7031,51 @@ def main() -> int:
         and "BOSS_RACE_COMBO_GATE" not in d_pc_off.reason, \
         f"组合门关闭时应回落均值判死: {d_pc_off.reason}"
 
+    # 3br-pool-clamp（HP_POOL_NATIVE_CLAMP，第187~196局批复盘）：在线 hp_pool
+    #     台账实证相对原生快照虚高 4~20 倍（KNOWLEDGE_DEMON 账面 2254 vs 原生 379，
+    #     同局 F33 实战长战注「敌血池379」交叉证实），竞速预演 ttk 同倍率高估、
+    #     前夜系统性误判必败弃疗。写入侧以原生组合 max_hp 合计×1.5 封顶超限样本
+    #     并计 hp_pool_native_clamp_obs；factor<=0 / native 缺失严格回滚旧口径。
+    clamp_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-poolclamp-")))
+    clamp_native = _PerComboNative()
+    clamp_native.pools = {"CLAMP_BOSS": (379, 379)}
+    clamp_know.game_knowledge = clamp_native
+    clamp_know.commit_enemy_fight("CLAMP_BOSS", 50.0, won=False, died=True,
+                                  node_type="Boss", hp_pool=2254.0,
+                                  fire_sum=90.0, fire_rounds=5, act=2)
+    _ce = clamp_know.stats["enemies"]["CLAMP_BOSS"]
+    assert abs(_ce["hp_pool_sum"] - 379.0 * 1.5) < 1e-9 and _ce["hp_pool_n"] == 1, \
+        f"超限血池样本未被钳制到原生上限: {_ce}"
+    assert abs(_ce["boss_act"]["2"]["hp_pool_sum"] - 379.0 * 1.5) < 1e-9, \
+        f"Boss 分幕子账本未共用钳制后样本: {_ce['boss_act']}"
+    _cobs = clamp_know.stats.get("hp_pool_native_clamp_obs") or {}
+    assert _cobs.get("clamped") == 1 and abs(_cobs.get("max_ratio", 0) - 5.947) < 0.01 \
+        and _cobs.get("last_comp") == "CLAMP_BOSS", \
+        f"钳制观测计数缺失或倍率失真: {_cobs}"
+    # 界内样本原样通过（379×1.5=568.5 以内不触发）
+    clamp_know.commit_enemy_fight("CLAMP_BOSS", 10.0, won=True, died=False,
+                                  node_type="Boss", hp_pool=400.0,
+                                  fire_sum=50.0, fire_rounds=3, act=2)
+    assert abs(_ce["hp_pool_sum"] - (568.5 + 400.0)) < 1e-9 and _ce["hp_pool_n"] == 2 \
+        and _cobs.get("clamped") == 1, \
+        f"界内血池样本被误钳或观测被误增: {_ce} {_cobs}"
+    # native 无该组合数据时原样入账（与旧版严格一致）
+    clamp_know.commit_enemy_fight("NO_NATIVE_BOSS", 10.0, won=True, died=False,
+                                  node_type="Boss", hp_pool=9999.0,
+                                  fire_sum=10.0, fire_rounds=2, act=2)
+    _cn = clamp_know.stats["enemies"]["NO_NATIVE_BOSS"]
+    assert abs(_cn["hp_pool_sum"] - 9999.0) < 1e-9, \
+        f"native 缺失组合被误钳: {_cn}"
+    # factor=0 一键回滚：同型超限样本恢复全价入账
+    clamp_know.policy["hp_pool_native_clamp_factor"] = 0.0
+    clamp_know.commit_enemy_fight("CLAMP_BOSS", 10.0, won=True, died=False,
+                                  node_type="Boss", hp_pool=2254.0,
+                                  fire_sum=10.0, fire_rounds=1, act=2)
+    assert abs(_ce["hp_pool_sum"] - (568.5 + 400.0 + 2254.0)) < 1e-9 \
+        and _cobs.get("clamped") == 1, \
+        f"factor=0 未回滚到旧口径: {_ce} {_cobs}"
+
     # 3br-slip-tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：前夜竞速预演可行侧
     #     ttk 口径 pool/dpt 不扣开局滑溜 Boss 的破层期——第5/6局 F15 篝火对墨影
     #     幻灵（VANTOM 开局自挂 8 层滑溜，每层把一次命中压到只失 1 血）均判
