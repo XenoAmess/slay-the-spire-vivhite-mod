@@ -9973,3 +9973,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.874042942984106局)，BULLY(10分/3.8845062358591065局)，HAVOC(11分/3.1076049886872843局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.03 → 2.02（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F21——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F21——药水交药线部分胜利回收）
 - 生涯战绩：0/1307 胜，当前目标进阶 0
+
+## 第 1308 局复盘（2026-09-08 04:42）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 AXE_RUBY_RAIDER+BRUTE_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：CINDER, INFLAME, STOMP, DARK_EMBRACE, TWIN_STRIKE, FLAME_BARRIER, BREAKTHROUGH
+- 本局遗物：TINY_MAILBOX
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血2; F5 Monster战 掉血31; F6 Monster战 掉血6; F12 Unknown战 掉血37; F13 Monster战 掉血28（阵亡）
+- 当前高价值卡牌：OFFERING(25分/27.881489395597782局)，FIEND_FIRE(25分/35.61237626910914局)，PRIMAL_FORCE(24分/5.419274649647042局)，MANGLE(24分/99.79743743114453局)，PERFECTED_STRIKE(24分/7.313976873501041局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.856983792683662局)，BULLY(10分/3.8709104640336局)，HAVOC(11分/3.096728371226879局)
+- 策略进化：block_safety: 2.02 → 2.07（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1308 胜，当前目标进阶 0
