@@ -7168,6 +7168,70 @@ def main() -> int:
         and _cobs.get("clamped") == 1, \
         f"factor=0 未回滚到旧口径: {_ce} {_cobs}"
 
+    # 3br-pool-read-clamp（HP_POOL_READ_CLAMP，第197~224局批复盘）：写入侧封顶
+    #     只封新样本，_decay_stats 对 hp_pool_sum/n 同比缩放（比率守恒）——历史
+    #     虚高样本的账面均值永不回落：本批两次 F16 前夜留痕仍报「Boss血池均值
+    #     2986/3126」（THE_INSATIABLE 原生 321，虚高 9.3~9.7×；写侧 obs
+    #     clamped=13 确在触发但均值纹丝不动），ttk=92~99 回合同倍率高估。
+    #     读取侧 boss_race_vitals 逐组合账面均值在聚合前套用同一原生上限，
+    #     钳制事件记入 read_clamped/read_max_ratio/read_last_comp 分账（不污染
+    #     写侧 clamped）；factor=0 时读侧随写侧一并回滚旧虚高口径。
+    rd_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-poolread-")))
+    rd_native = _PerComboNative()
+    rd_native.pools = {"RD_BOSS": (379, 379)}
+    rd_know.game_knowledge = rd_native
+
+    def _rd_enemy(pool_sum):
+        return {
+            "encounters": 8, "hp_lost_sum": 320.0, "deaths": 4, "wins": 4,
+            "boss_encounters": 2, "boss_hp_lost_sum": 80.0, "boss_deaths": 1,
+            "hp_pool_sum": float(pool_sum), "hp_pool_n": 2,
+            "fire_sum": 80.0, "fire_rounds": 8,
+            "boss_act": {"2": {"hp_pool_sum": float(pool_sum), "hp_pool_n": 2,
+                               "fire_sum": 80.0, "fire_rounds": 8}},
+        }
+
+    rd_know.stats["enemies"]["RD_BOSS"] = _rd_enemy(4508.0)  # 均值 2254，虚高 5.9×
+    _rp, _rf = rd_know.boss_race_vitals(2)
+    assert _rp is not None and abs(_rp - 379.0 * 1.5) < 1e-9, \
+        f"分幕读取侧未按原生上限钳制虚高均值: {_rp}"
+    _robs = rd_know.stats.get("hp_pool_native_clamp_obs") or {}
+    assert _robs.get("read_clamped") == 1 \
+        and abs(_robs.get("read_max_ratio", 0) - 5.947) < 0.01 \
+        and _robs.get("read_last_comp") == "RD_BOSS" \
+        and "clamped" not in _robs, \
+        f"读取侧钳制观测分账缺失或污染写侧计数: {_robs}"
+    # 全量回落口径同样逐组合钳制
+    rd_know.stats["hp_pool_native_clamp_obs"] = {}
+    _rp2, _ = rd_know.boss_race_vitals()
+    assert _rp2 is not None and abs(_rp2 - 379.0 * 1.5) < 1e-9, \
+        f"全量回落读取侧未按原生上限钳制: {_rp2}"
+    # 界内均值原样通过、观测不增
+    rd_know.stats["enemies"]["RD_BOSS"] = _rd_enemy(800.0)  # 均值 400 ≤ 568.5
+    rd_know.stats["hp_pool_native_clamp_obs"] = {}
+    _rp3, _ = rd_know.boss_race_vitals(2)
+    assert _rp3 is not None and abs(_rp3 - 400.0) < 1e-9 \
+        and not (rd_know.stats.get("hp_pool_native_clamp_obs") or {}).get("read_clamped"), \
+        f"界内均值被误钳或观测被误增: {_rp3}"
+    # native 缺失组合严格维持旧虚高口径
+    rd_know.stats["enemies"]["RD_NO_NATIVE"] = _rd_enemy(19998.0)
+    del rd_know.stats["enemies"]["RD_BOSS"]
+    rd_know.stats["hp_pool_native_clamp_obs"] = {}
+    _rp4, _ = rd_know.boss_race_vitals(2)
+    assert _rp4 is not None and abs(_rp4 - 9999.0) < 1e-9 \
+        and not (rd_know.stats.get("hp_pool_native_clamp_obs") or {}).get("read_clamped"), \
+        f"native 缺失组合被读取侧误钳: {_rp4}"
+    # factor=0 一键回滚：读侧随写侧恢复旧虚高均值
+    rd_know.stats["enemies"]["RD_BOSS"] = _rd_enemy(4508.0)
+    del rd_know.stats["enemies"]["RD_NO_NATIVE"]
+    rd_know.policy["hp_pool_native_clamp_factor"] = 0.0
+    rd_know.stats["hp_pool_native_clamp_obs"] = {}
+    _rp5, _ = rd_know.boss_race_vitals(2)
+    assert _rp5 is not None and abs(_rp5 - 2254.0) < 1e-9 \
+        and not (rd_know.stats.get("hp_pool_native_clamp_obs") or {}).get("read_clamped"), \
+        f"factor=0 读取侧未回滚到旧虚高口径: {_rp5}"
+
     # 3br-slip-tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：前夜竞速预演可行侧
     #     ttk 口径 pool/dpt 不扣开局滑溜 Boss 的破层期——第5/6局 F15 篝火对墨影
     #     幻灵（VANTOM 开局自挂 8 层滑溜，每层把一次命中压到只失 1 血）均判

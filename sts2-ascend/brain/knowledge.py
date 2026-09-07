@@ -1701,6 +1701,37 @@ class Knowledge:
 
     # ---------- online commits ----------
 
+    def _native_hp_pool_bound(self, comp_id: str) -> float | None:
+        """原生血池上限（组合成员原生 max_hp 合计 × clamp_factor）。
+
+        写入侧（_native_hp_pool_clamp）与读取侧（_native_pool_mean_clamp）
+        共用同一上限口径。factor<=0（一键回滚）、native 不可用、comp 为
+        unknown、任一成员缺原生数据或任何异常时返回 None（调用方严格维持
+        旧口径）。
+        """
+        try:
+            factor = float(self.policy.get("hp_pool_native_clamp_factor", 1.5))
+        except Exception:
+            factor = 1.5
+        if factor <= 0.0:
+            return None
+        try:
+            native = getattr(self, "game_knowledge", None)
+            if native is None or not getattr(native, "available", False):
+                return None
+            high = 0.0
+            for mid in [p for p in str(comp_id or "").split("+") if p]:
+                rt = ((native.lookup("monsters", mid) or {}).get("runtime") or {})
+                xhp = rt.get("max_hp")
+                if not isinstance(xhp, (int, float)) or isinstance(xhp, bool):
+                    return None
+                high += float(xhp)
+            if high <= 0.0:
+                return None
+            return high * factor
+        except Exception:
+            return None
+
     def _native_hp_pool_clamp(self, comp_id: str, hp_pool: float) -> float:
         """原生血池上限钳制（第 187~196 局批复盘新增，HP_POOL_NATIVE_CLAMP）。
 
@@ -1720,36 +1751,51 @@ class Knowledge:
         3~10 局零触发则视为假设证伪，回滚本键。native 不可用、comp 为
         unknown、任一成员缺原生数据或任何异常时原样返回（与旧版严格一致）。
         """
-        try:
-            factor = float(self.policy.get("hp_pool_native_clamp_factor", 1.5))
-        except Exception:
-            factor = 1.5
-        if factor <= 0.0:
+        bound = self._native_hp_pool_bound(comp_id)
+        if bound is None or hp_pool <= bound:
             return hp_pool
         try:
-            native = getattr(self, "game_knowledge", None)
-            if native is None or not getattr(native, "available", False):
-                return hp_pool
-            high = 0.0
-            for mid in [p for p in str(comp_id or "").split("+") if p]:
-                rt = ((native.lookup("monsters", mid) or {}).get("runtime") or {})
-                xhp = rt.get("max_hp")
-                if not isinstance(xhp, (int, float)) or isinstance(xhp, bool):
-                    return hp_pool
-                high += float(xhp)
-            if high <= 0.0:
-                return hp_pool
-            bound = high * factor
-            if hp_pool <= bound:
-                return hp_pool
+            factor = float(self.policy.get("hp_pool_native_clamp_factor", 1.5))
+            high = bound / factor if factor > 0 else 0.0
             obs = self.stats.setdefault("hp_pool_native_clamp_obs", {})
             obs["clamped"] = int(obs.get("clamped", 0) or 0) + 1
             obs["max_ratio"] = max(float(obs.get("max_ratio", 0.0) or 0.0),
-                                   round(hp_pool / high, 3))
+                                   round(hp_pool / high, 3) if high > 0 else 0.0)
             obs["last_comp"] = str(comp_id)
-            return bound
         except Exception:
-            return hp_pool
+            pass
+        return bound
+
+    def _native_pool_mean_clamp(self, comp_id: str, mean: float) -> float:
+        """读取侧均值钳制（第 197~224 局批复盘新增，HP_POOL_READ_CLAMP）。
+
+        写入侧钳制只封新样本，而 _decay_stats 对 hp_pool_sum/n 同比缩放
+        （比率守恒）——历史虚高样本的账面均值永不随新样本回落：本批
+        197~224 局两次 F16 前夜留痕仍报「Boss血池均值2986/3126」
+        （THE_INSATIABLE 原生 321，虚高 9.3~9.7×；写侧 obs clamped=13
+        确在触发但均值纹丝不动），ttk=92~99 回合同倍率高估。读取侧在
+        boss_race_vitals 逐组合聚合时对每个组合的账面均值套用同一原生
+        上限（_native_hp_pool_bound），让消费端立即见到封顶后的口径；
+        钳制事件记入 hp_pool_native_clamp_obs 的 read_clamped /
+        read_max_ratio / read_last_comp（与写侧 clamped 分账，互不污染），
+        供下批复盘对账。factor<=0 时 bound 为 None，读侧随写侧一并回滚；
+        native 缺失或任何异常时原样返回（与旧版严格一致）。
+        """
+        bound = self._native_hp_pool_bound(comp_id)
+        if bound is None or mean <= bound:
+            return mean
+        try:
+            factor = float(self.policy.get("hp_pool_native_clamp_factor", 1.5))
+            high = bound / factor if factor > 0 else 0.0
+            obs = self.stats.setdefault("hp_pool_native_clamp_obs", {})
+            obs["read_clamped"] = int(obs.get("read_clamped", 0) or 0) + 1
+            obs["read_max_ratio"] = max(
+                float(obs.get("read_max_ratio", 0.0) or 0.0),
+                round(mean / high, 3) if high > 0 else 0.0)
+            obs["read_last_comp"] = str(comp_id)
+        except Exception:
+            pass
+        return bound
 
     def commit_enemy_fight(self, comp_id: str, hp_lost: float, won: bool, died: bool,
                            node_type: str | None = None,
@@ -1883,14 +1929,21 @@ class Knowledge:
         act 给定时优先聚合分幕子账本（第 506~515 局批复盘新增）：一幕 Boss 池
         实测血池 173~307，全幕混合均值 253 把一幕前夜系统性判死；分幕聚合量
         不足（血池 <2 场或火力 <4 轮）时回落全量口径（兼容旧库）。
+
+        读取侧均值钳制（第 197~224 局批复盘新增，HP_POOL_READ_CLAMP）：写入侧
+        封顶挡不住历史虚高样本的比率守恒滞留，逐组合账面均值在聚合前套用
+        同一原生上限（_native_pool_mean_clamp），factor<=0 时随写侧一并回滚。
         """
         if act:
             tot_pool = tot_pool_n = tot_fire = tot_fr = 0.0
-            for e in (self.stats.get("enemies") or {}).values():
+            for comp_id, e in (self.stats.get("enemies") or {}).items():
                 sub = (e.get("boss_act") or {}).get(str(int(act))) or {}
                 pn = int(sub.get("hp_pool_n", 0) or 0)
                 if pn >= 1:
-                    tot_pool += float(sub.get("hp_pool_sum", 0.0) or 0.0)
+                    sub_pool = float(sub.get("hp_pool_sum", 0.0) or 0.0)
+                    sub_mean = self._native_pool_mean_clamp(
+                        str(comp_id), sub_pool / pn)
+                    tot_pool += sub_mean * pn
                     tot_pool_n += pn
                 fr = int(sub.get("fire_rounds", 0) or 0)
                 if fr >= 1:
@@ -1902,12 +1955,14 @@ class Knowledge:
                 return pool_a, fire_a
         tot_pool = tot_pool_n = 0.0
         tot_fire = tot_fr = 0.0
-        for e in (self.stats.get("enemies") or {}).values():
+        for comp_id, e in (self.stats.get("enemies") or {}).items():
             if int(e.get("boss_encounters", 0) or 0) < 2:
                 continue
             pn = int(e.get("hp_pool_n", 0) or 0)
             if pn >= 2:
-                tot_pool += float(e.get("hp_pool_sum", 0.0) or 0.0)
+                e_mean = self._native_pool_mean_clamp(
+                    str(comp_id), float(e.get("hp_pool_sum", 0.0) or 0.0) / pn)
+                tot_pool += e_mean * pn
                 tot_pool_n += pn
             fr = int(e.get("fire_rounds", 0) or 0)
             if fr >= 4:

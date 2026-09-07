@@ -383,3 +383,43 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 ## REPLAY
 
 retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change（完整 lineage 已读：online_runtime 宿主 checkout 超时、模型零工作；wip.patch/report.md 均 0 字节；retry_candidate.patch 仅含忽略文件删除快照、0 行新增，无有效改动可在当前 HEAD 重实现；本批生产闭环由上方 HP_POOL_NATIVE_CLAMP 独立承担）
+
+# 第 197~224 局批复盘：写入侧封顶挡不住历史虚高样本的比率守恒滞留——读取侧 boss_race_vitals 逐组合均值接入同一原生上限
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+第 187~196 批落地的写入侧 HP_POOL_NATIVE_CLAMP 只封新样本，而 `_decay_stats` 对 hp_pool_sum/n 同比缩放（比率守恒）——历史虚高样本的账面均值在数学上永不随新样本回落；读取侧 `boss_race_vitals` 聚合不做同源封顶时，消费端（前夜竞速预演 ttk=pool/dpt、竞速及格线 required_deck_burst）将无限期按 4~20× 虚高血池判必败，上批 EXPECTED_SIGNAL ②「均值回落原生量级」不可能在有限局数内兑现。
+
+该假设可证伪：未来 3~10 局若 `hp_pool_native_clamp_obs.read_clamped` 逐局增长且前夜/攻坚留痕的「Boss血池均值」回落到 ≤ 原生 max_hp 合计×1.5（一幕 ≲480、二幕 ≲620）、「击杀需N回合」回到十回合级，则假设成立；若 read_clamped 零增长且留痕均值纹丝不动（消费端未走 boss_race_vitals），则假设证伪。回滚单一：policy.json 置 `hp_pool_native_clamp_factor=0`，写/读两侧同键同关。
+
+## EVIDENCE
+
+- 本批两次 F16 前夜留痕（runs 只读检索）：20260907-093535_2A4MRUCJZG8D「竞速预演：击杀需92回合＞满血可存活4回合（Boss血池均值2986、火力18/回合，先验输出32/回合…）」；20260907-112909_B0YWRLH337GZ「击杀需99回合＞满血可存活5回合（Boss血池均值3126…）」——同一留痕尾部 native 分账「THE_INSATIABLE321」，账面为原生 321 的 9.3~9.7 倍。
+- stats.json 只读对账：THE_INSATIABLE hp_pool 账面 5648.9/3.84≈1472（act 子账 1909）、KNOWLEDGE_DEMON 6838.2/2.93≈2335（原生 379）——187~196 批钳制落地后账面均值没有可观测回落。
+- `hp_pool_native_clamp_obs`（写侧）：clamped=13、max_ratio=3.667、last_comp=WRIGGLER——写入侧钳制确在逐局触发；均值不动证明缺口在读取侧而非写入侧。
+- 消费侧死循环仍在：本批 run 224（Y9EN0PX2TY6H，F17 KIN_FOLLOWER+KIN_PRIEST 阵亡）完整决策链已逐条检查，前夜弃疗/翻转裁决继续按虚高 ttk 计价；race_audit 台账 won/latched=142/324=43.8%，仍远高于 30% 预注册线。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：
+  ① 抽出 `_native_hp_pool_bound(comp_id)`（组合成员原生 max_hp 合计 × hp_pool_native_clamp_factor；factor<=0/native 缺失/任何异常返回 None），写入侧 `_native_hp_pool_clamp` 改调它，写侧行为与观测键（clamped/max_ratio/last_comp）严格不变；
+  ② 新增 `_native_pool_mean_clamp(comp_id, mean)`（HP_POOL_READ_CLAMP）：读取侧对逐组合账面均值套用同一原生上限，钳制事件记入 hp_pool_native_clamp_obs 的 `read_clamped`/`read_max_ratio`/`read_last_comp` 独立分账（不污染写侧计数），factor<=0 时 bound 为 None、读侧随写侧一并回滚；
+  ③ `boss_race_vitals` 分幕聚合与全量回落两条路径都在聚合前对每个组合的账面均值过读侧钳制（等权口径不变：钳后均值×n 累加）。
+- sts2-ascend/brain/selfcheck.py：新增 3br-pool-read-clamp 夹具五分支——分幕口径虚高均值 2254→568.5 钳制且 read 分账齐全、写侧 clamped 零污染；全量回落口径同钳；界内均值 400 原样通过且观测不增；native 缺失组合 9999 严格维持旧虚高口径；factor=0 后读侧恢复旧虚高均值 2254。
+- 不改任何评分/阈值/动作选择公式；只改学习台账读取口径。回滚条件单一：policy.json 写 `hp_pool_native_clamp_factor=0`（写/读同关）。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① `hp_pool_native_clamp_obs.read_clamped` 逐局增长、`read_max_ratio` 维持 >4（确认历史虚高仍在账面且已被读取侧封堵）；② 前夜/攻坚留痕「Boss血池均值」≤ 原生合计×1.5（一幕 ≲480、二幕 ≲620），「击杀需N回合」回到十回合级，可与同留痕尾部「native校准/分账」注直接对账；③ 边际贴线对局的前夜裁决（回血 vs 锻造）与 RACE_AUDIT 判死后胜率分布出现可观测变化。证伪/回滚：read_clamped 零增长且留痕均值不变 → 假设证伪并复查消费路径；钳制生效但 Boss 战战绩进一步恶化 → factor=0 整体撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-pool-read-clamp 五分支，既有 3br-pool-clamp 写侧夹具与全部既有夹具通过）。
+- git diff --check 通过；完整 diff 已回读：仅 brain/knowledge.py 与 brain/selfcheck.py 两个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
