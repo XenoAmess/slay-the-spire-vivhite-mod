@@ -500,3 +500,41 @@ retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 271~294 局批复盘：esc 入锁被静态联合复核逐 tick 翻案解锁——滚雪球锁持（RACE_ESC_LATCH_HOLD）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁（_krace_latch）后，静态联合能量复核（_race_joint_feasible，平铺常数火力+固定系数通胀）逐 tick 在「可行/判死」边界给出相反答案并解锁——第632批迟滞锁要消除的「提速斩杀/转防守节奏」逐 tick 摇摆病理经联合复核出口复发：防守回合给指数升级的意图送免费复利，全攻回合在残血下放弃格挡，两种策略互相打断、没有一种被连贯执行。滚雪球局的拖延成本是指数项，静态线性复核在边界上注定反复翻案；入锁后不再凭同一复核自我平反（未入锁的判死当 tick 与非滚雪球局出口保留），esc 桶假判死率应向 <30% 预注册线收敛。
+
+该假设可证伪：未来 3~10 局若决策链不出现「RACE_ESC_LATCH_HOLD」留痕（esc 入锁场景不再复现或计数口径有误），或锁持后 esc 桶 race_audit won/latched 不降反升且深局战损/楼层恶化，则假设不成立，policy.json 置 `race_esc_latch_hold=false` 一键回滚旧版逐 tick 翻案。
+
+## EVIDENCE
+
+- 最新死亡局第 294 局（NW3VAZW0D8RY，F11 TERROR_EEL 精英战阵亡）完整 77 链已逐条深读：终局战 T1「防守线复核…维持攻防节奏」→ T5「斩杀竞速投影…全攻提速」（入锁）→ T6「防守线复核…（滚雪球零余量）」（翻案解锁）→ T7 提速（再入锁）→ T8 防守（再翻案）→ T9 提速阵亡——9 个回合内提速/防守交替 7 次，翻案 tick 均带滚雪球零余量标记。
+- 同型摇摆在本批另两局独立复现（达 evidence_run_threshold=3）：281 局（CUJAVR30CKX3）F14 精英战 ADADA（T3提速→T4防守→T5提速→T6防守带滚雪球标记→T8提速）；292 局（PA72MZDBFBNL）F24 精英战 ADA（T5/T6提速→T6/T7防守带滚雪球标记→T7提速）。
+- race_audit 台账（stats 只读）：latched=414、won=173=41.8% 判死后实战获胜；esc 桶 99/(99+198)=33.3%——连续多批超第802~807批预注册的 30% 收紧线，且该桶系数杆已全部用尽：margin 零余量（454批）、fire inflate 校准 0.40→0.20（808~812批）、dpt uplift_eff 0.20（917~918批），假判死率始终未降。本批 24 局战斗注记 30+ 次「竞速审计：T{N}判死→实战{M}回合」（M 普遍 2~3×N，如 292 局 T2判死→实战14回合）同向佐证。
+- 生产现状核查（policy.py `_combat_kill_race_projection`）：`_kr_latched` 强制 race_lost=True 后，联合复核判可行即 `race_lost=False` 且 `_krace_latch=False`——迟滞锁只挡先验口径自我平反，静态复核出口每 tick 都可翻案，与 632 批 F29「七回合交替 5 次」的原始病理同构。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`if _feas:` 翻案分支新增滚雪球锁持——`_kr_latched and esc_gate and race_esc_latch_hold（默认 True）` 时不再 race_lost=False/解锁，改留「滚雪球锁持：联合复核虽报可行（…），实测入锁不翻案（RACE_ESC_LATCH_HOLD）」（复核结论保留留痕对账）；未入锁（判死当 tick）、非滚雪球局与键置 False 三条路径严格维持旧行为。不改 ttk/tsurv、判决阈值、评分或姿态公式。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `race_esc_latch_hold: True`（False=一键回滚，旧行为零差异），注释记录三局实证与台账。
+- sts2-ascend/brain/selfcheck.py：`combat_flip_probe` 增加 latched/latch_hold/esc_rounds 参数（latch_hold 默认 False，显式隔离既有翻盘比/滑溜夹具语义）；新增 3br-esc-latch-hold 四分支——① 默认开+esc+入锁+复核可行→锁持留痕、不翻案、维持竞速；② 键置 False→严格回滚旧版翻案解锁；③ 非 esc（_esc_rounds=0）→出口不变；④ 未入锁的判死当 tick（esc 仍在）→出口不变。
+- 回滚条件单一：policy.json 置 `race_esc_latch_hold=false`。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① esc 入锁战斗的决策链出现「RACE_ESC_LATCH_HOLD」留痕，可直接与 294-F11/281-F14/292-F24 同型场景对账；② 入锁后的滚雪球战斗中「提速斩杀（竞速解除防御压制）」与「维持攻防节奏不全攻」逐 tick 交替消失（本批基准：294-F11 七连交替、281-F14/292-F24 各 ≥2 次）；③ race_audit esc 桶 won/latched 向 <30% 收敛（当前 99/297=33.3%），全局 173/414=41.8% 回落。证伪/回滚：留痕从不出现 → 复查 esc 入锁场景与计数口径；锁持后 esc 桶判死后胜率不降反升、或深局平均楼层/战损显著恶化 → policy.json 置 false 整体撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-esc-latch-hold 四分支；既有 3br-combat-cap/ttk-obs/longfight 翻盘比与滑溜夹具、3prf 首窗先验下限及全部既有夹具通过；tests/test_boss_race_sustain.py 两条 _krace_latch 断言路径 _feas 均为否，不受锁持影响）。
+- 完整 diff 已回读：brain/policy.py（翻案分支 +24/-7，行为仅锁持一条）、brain/knowledge.py（纯 +11 静态键，首轮误改的既有注释缩进已还原）、brain/selfcheck.py（探针参数化 + 四分支夹具）+ 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

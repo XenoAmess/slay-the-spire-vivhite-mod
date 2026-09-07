@@ -3314,13 +3314,37 @@ class Policy:
                                 f"＞{_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
                                 f"翻盘比超限不予放行（{_flip_cap_tag}）")
                         if _feas:
-                            race_lost = False
-                            self._krace_latch = False
-                            _esc_mark = "（滚雪球零余量）" if esc_gate else ""
-                            danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
-                                            f"净火力下追平击杀所需{ttk:.0f}回合，"
-                                            f"维持攻防节奏不全攻{_esc_mark}"
-                                            f"{_tax_fire_note}")
+                            # 滚雪球锁持（RACE_ESC_LATCH_HOLD，第271~294局批复盘）：
+                            # 实测口径入锁后，esc（滚雪球）局的静态联合复核逐 tick
+                            # 在「可行/判死」边界翻案解锁——294-F11 终局战 9 个回合
+                            # 内「提速斩杀」与「转防守节奏」交替 7 次后阵亡、
+                            # 281-F14（ADADA）与 292-F24（ADA）同型且翻案 tick
+                            # 均带滚雪球零余量标记，三独立对局达证据线；这正是
+                            # 第632批迟滞锁要消除的攻防摇摆病理经联合复核出口
+                            # 复发。race_audit 台账 173/414=41.8%（esc 桶
+                            # 99/297=33.3%）判死后获胜，连续多批超 30% 预注册线，
+                            # 且 margin（454批）/fire inflate（808~812批）/dpt
+                            # uplift_eff（917~918批）系数杆已全部用尽——滚雪球局
+                            # 的拖延成本是指数项，静态平铺复核在边界上反复给出
+                            # 相反的线性答案，每拖一回合意图都在复利。入锁后不再
+                            # 凭同一静态复核自我平反，复核结论保留在留痕中对账；
+                            # 未入锁（判死当 tick）与非滚雪球局的联合复核出口
+                            # 完全不变。race_esc_latch_hold=False 一键回滚旧版
+                            # 逐 tick 翻案（零行为差异）。
+                            if (_kr_latched and esc_gate and bool(
+                                    pol.get("race_esc_latch_hold", True))):
+                                danger_note += (
+                                    f"；滚雪球锁持：联合复核虽报可行（{_mix}），"
+                                    f"实测入锁不翻案（RACE_ESC_LATCH_HOLD）"
+                                    f"{_tax_fire_note}")
+                            else:
+                                race_lost = False
+                                self._krace_latch = False
+                                _esc_mark = "（滚雪球零余量）" if esc_gate else ""
+                                danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
+                                                f"净火力下追平击杀所需{ttk:.0f}回合，"
+                                                f"维持攻防节奏不全攻{_esc_mark}"
+                                                f"{_tax_fire_note}")
                     if race_lost:
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"

@@ -7040,7 +7040,11 @@ def main() -> int:
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。
     def combat_flip_probe(cap, slippery=False, slippery_guard=True,
                           node_type="Boss", enemy_hp=185, longfight_cap=None,
-                          ttk_obs=True):
+                          ttk_obs=True, latched=True, latch_hold=False,
+                          esc_rounds=2):
+        # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
+        # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
+        # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
         cap_ctx = type("CAPCTX", (), {
             "combat": {"comp_id": "CAP_BOSS", "node_type": node_type},
             "current_combat_is_hard": False, "credit_tags": []})()
@@ -7080,12 +7084,13 @@ def main() -> int:
         cap_pol.decide(cap_state, cap_ctx)
         cap_pol._krace_turns = 3
         cap_pol._krace_dmg = cap_pol._krace_dmg_sustained = 36.0
-        cap_pol._krace_latch = True
+        cap_pol._krace_latch = latched
         cap_pol._race_rounds = 2
         cap_pol._race_loss_rate = 20.0
         cap_pol._incoming_ema = 20.0
-        cap_pol._esc_rounds = 2
+        cap_pol._esc_rounds = esc_rounds
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
+        cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
         cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
         if longfight_cap is not None:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
@@ -7149,6 +7154,35 @@ def main() -> int:
     assert "LONGFIGHT_JOINT_FLIP_TTK_CAP" not in d_combat_small.reason \
         and "防守线复核：联合能量对账" in d_combat_small.reason, \
         f"低血池普通战被长战翻盘闸误伤: {d_combat_small.action}（{d_combat_small.reason}）"
+
+    # 3br-esc-latch-hold（RACE_ESC_LATCH_HOLD，第271~294局批复盘）：esc（滚雪球）
+    # 局实测口径入锁后，静态联合复核逐 tick 在「可行/判死」边界翻案解锁——
+    # 294-F11 终局战 9 回合内提速/防守交替 7 次后阵亡、281-F14（ADADA）与
+    # 292-F24（ADA）同型（三独立对局），即第632批迟滞锁要消除的攻防摇摆经
+    # 联合复核出口复发；race_audit 173/414=41.8%（esc 桶 99/297=33.3%）连续
+    # 多批超 30% 预注册线，margin/fire inflate/dpt uplift 系数杆已用尽。
+    # 锁持只作用于「已入锁且 esc_gate」的翻案分支，复核结论保留留痕对账。
+    # 四分支：① 默认开+esc+入锁+复核可行 → 锁持留痕、不翻案、锁保持；
+    # ② 键置 False → 严格回滚旧版翻案解锁；③ 非 esc（_esc_rounds=0）→
+    # 出口不变；④ 未入锁的判死当 tick（esc 仍在）→ 出口不变（锁可后续武装）。
+    hold_pol = combat_flip_probe  # 复用同一探针（内部已注入固定可行复核点）
+    d_hold_on = hold_pol(0.0, latch_hold=True)
+    assert "RACE_ESC_LATCH_HOLD" in d_hold_on.reason \
+        and "防守线复核：联合能量对账" not in d_hold_on.reason \
+        and "斩杀竞速投影" in d_hold_on.reason, \
+        f"esc 入锁后联合复核翻案未被锁持: {d_hold_on.action}（{d_hold_on.reason}）"
+    d_hold_rb = hold_pol(0.0, latch_hold=False)
+    assert "RACE_ESC_LATCH_HOLD" not in d_hold_rb.reason \
+        and "防守线复核：联合能量对账" in d_hold_rb.reason, \
+        f"race_esc_latch_hold=False 未严格回滚逐 tick 翻案: {d_hold_rb.action}（{d_hold_rb.reason}）"
+    d_hold_noesc = hold_pol(0.0, latch_hold=True, esc_rounds=0)
+    assert "RACE_ESC_LATCH_HOLD" not in d_hold_noesc.reason \
+        and "防守线复核：联合能量对账" in d_hold_noesc.reason, \
+        f"非滚雪球局的联合复核出口被锁持误伤: {d_hold_noesc.action}（{d_hold_noesc.reason}）"
+    d_hold_fresh = hold_pol(0.0, latch_hold=True, latched=False)
+    assert "RACE_ESC_LATCH_HOLD" not in d_hold_fresh.reason \
+        and "防守线复核：联合能量对账" in d_hold_fresh.reason, \
+        f"未入锁的判死当 tick 出口被锁持误伤: {d_hold_fresh.action}（{d_hold_fresh.reason}）"
 
     # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把
