@@ -2561,6 +2561,12 @@ def main() -> int:
         f"margin=0 回滚键必须保持旧行为（出牌）: {d_g0}"
     vknow_g1 = _vivhite_know("sts2-selfcheck-vhgate-on-")
     vknow_g1.policy["vivhite_hp_cost_play_margin"] = 50.0
+    # 本夹具状态（168 血 Boss/意图 10/首 tick）会被斩杀竞速投影判负进入
+    # kill_race；第 260~270 局批复盘新增的竞速态攻击牌豁免
+    # （VIVHITE_HP_GATE_RACE_EXEMPT，默认开）在此状态下放行攻击牌——
+    # 本断言锁定的是余量门本体语义，故显式置回滚键走旧口径；
+    # 竞速态下的拦/放行行为由 3prk 双向锁定
+    vknow_g1.policy["vivhite_hp_gate_race_exempt"] = False
     vpol_g1 = policy.Policy(vknow_g1, random.Random(11))
     d_g1 = vpol_g1.decide(_vgate_state(85, 10), _vgate_ctx())
     assert d_g1.action == "end_turn", \
@@ -2620,9 +2626,12 @@ def main() -> int:
         and vpol_sb._hp_gate_stall == 1, \
         f"新战斗重置错误: stall={vpol_sb._hp_gate_stall} latch={vpol_sb._hp_gate_stall_latch}"
     # 意图未被格挡覆盖的高危拦截回合不计数、永不触发放行
+    # （意图 10 的 168 血 Boss 状态进入 kill_race；竞速态豁免默认开会放行
+    # 攻击牌，本控制组锁定的是僵局计数语义，显式置回滚键走旧口径——3prk）
     vknow_hb = _vivhite_know("sts2-selfcheck-vhgate-hi-incoming-")
     vknow_hb.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_hb.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_hb.policy["vivhite_hp_gate_race_exempt"] = False
     vpol_hb = policy.Policy(vknow_hb, random.Random(11))
     vctx_hb = _vgate_ctx()
     for _turn in (1, 2, 3, 4, 5):
@@ -2632,9 +2641,11 @@ def main() -> int:
     assert vpol_hb._hp_gate_stall == 0, \
         f"高危回合计数应持续清零: {vpol_hb._hp_gate_stall}"
     # 覆盖/未覆盖交替：计数只在连续低危链上累加
+    # （(2,10) tick 进入 kill_race，同上显式置回滚键锁定计数语义——3prk）
     vknow_mx = _vivhite_know("sts2-selfcheck-vhgate-mixed-")
     vknow_mx.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_mx.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_mx.policy["vivhite_hp_gate_race_exempt"] = False
     vpol_mx = policy.Policy(vknow_mx, random.Random(11))
     vctx_mx = _vgate_ctx()
     vpol_mx.decide(_vgate_stall(1, 0), vctx_mx)
@@ -2653,6 +2664,55 @@ def main() -> int:
             f"stall=0 回滚键下僵局放行不得触发: turn={_turn} {d_off}"
         assert "VIVHITE_HP_GATE_STALL_BREAK" not in d_off.reason, \
             f"stall=0 回滚键下不得出现放行留痕: {d_off.reason}"
+
+    # 3prk) 竞速态謦欬门攻击牌豁免（VIVHITE_HP_GATE_RACE_EXEMPT，第 260~270 局
+    #      批复盘）：斩杀竞速投影宣判（kill_race=防守线已被联合复核判不可行）
+    #      后余量门仍拦可负担付血攻击牌——270 局 F17 T4 五牌可出（含 36 伤
+    #      AoE）意图 0 整回合零输出，终局「击杀还需1回合＞可存活0」差一刀
+    #      阵亡；243/246/249/253/255/259/265/269 局同型（IDLE_LEAK_RACE 残能
+    #      审计与拦门同决策互斥），僵局放行计数在 Boss 高危回合恒被清零
+    #      （本批最高 1/6）结构性不可达。竞速态有伤害的謦欬牌免附加门槛并
+    #      留痕；键=False 严格回滚旧拦截行为（end_turn+拦门注、无豁免留痕）。
+    def _vgate_race_state(turn, hp_now):
+        st = _vgate_state(hp_now, 22)
+        st["turn"] = turn
+        st["combat"]["hand"][0]["dynamic_values"] = [
+            {"name": "Damage", "current_value": 12}]
+        st["run"]["deck"] = [
+            {"card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+             "card_type": "Attack", "energy_cost": 1,
+             "dynamic_values": [{"name": "Damage", "current_value": 12}]}
+            for _ in range(4)]
+        return st
+
+    def _vgate_race_run(exempt):
+        vk = _vivhite_know(
+            "sts2-selfcheck-vhgate-race-on-" if exempt
+            else "sts2-selfcheck-vhgate-race-off-")
+        vk.policy["vivhite_hp_gate_race_exempt"] = exempt
+        vp = policy.Policy(vk, random.Random(11))
+        vc = _vgate_ctx()
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = vp.decide(_vgate_race_state(_turn, _hp), vc)
+            vc.credit_tags.extend(_d.tags)  # 模拟服务端成功回执，积累实测速率
+        vk.policy["vivhite_hp_cost_play_margin"] = 50.0
+        return vp.decide(_vgate_race_state(3, 45), vc)
+
+    d_re = _vgate_race_run(True)
+    assert "斩杀竞速投影" in d_re.reason, \
+        f"夹具未进入斩杀竞速态（投影前提不成立）: {d_re.reason}"
+    assert d_re.action == "play_card", \
+        f"斩杀竞速宣判后付血攻击牌应免余量门附加门槛: {d_re}"
+    assert "VIVHITE_HP_GATE_RACE_EXEMPT" in d_re.reason, \
+        f"竞速态豁免缺决策链留痕: {d_re.reason}"
+    d_re_off = _vgate_race_run(False)
+    assert "斩杀竞速投影" in d_re_off.reason, \
+        f"回滚对照夹具未进入斩杀竞速态: {d_re_off.reason}"
+    assert d_re_off.action == "end_turn", \
+        f"回滚键下竞速态拦截行为必须严格回落旧版: {d_re_off}"
+    assert "謦欬出牌门拦下" in d_re_off.reason \
+        and "VIVHITE_HP_GATE_RACE_EXEMPT" not in d_re_off.reason, \
+        f"回滚键下留痕错误: {d_re_off.reason}"
 
     # 3prj) 謦欬余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY，第 244~259 局
     #      批复盘）：謦欬是全目录机制（58/61 张），余裕是唯一冲抵实付的供给端；

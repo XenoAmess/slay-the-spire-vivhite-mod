@@ -3881,6 +3881,20 @@ class Policy:
                     pol.get("vivhite_hp_cost_play_margin", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_play_margin = 0.0
+        # 竞速态攻击牌豁免（VIVHITE_HP_GATE_RACE_EXEMPT，第 260~270 局批复盘新增）：
+        # 斩杀竞速投影宣判（kill_race=防守线已被联合复核判不可行、唯一活路是提前
+        # 终结）后，余量门仍按非竞速口径把可负担的付血攻击牌压回手牌——270 局
+        # F17 T4 五牌可出（含 36 伤 AoE）意图 0 整回合零输出，终局投影「击杀还需
+        # 1 回合＞可存活 0」差一刀阵亡；243/246/249/253/255/259/265/269 局同型
+        # （IDLE_LEAK_RACE 残能审计与拦门同决策互斥）；runs240+ 拦门 end_turn
+        # 662 次中 13 次与斩杀竞速留痕同现，僵局放行计数在 Boss 高危回合恒被
+        # 清零（本批 Boss 战最高 1/6）结构性不可达。竞速宣判后付血抢斩杀本就是
+        # 该模式既定语义（致死回合早已全豁免），故 kill_race 下余量门不再拦
+        # 「有伤害的牌」；非伤害謦欬牌（成长能力/付血格挡）仍走原附加门槛。
+        # 键=False 一键回滚（旧行为零差异），非白绮角色 margin 恒 0 不受影响。
+        _hp_gate_race_exempt = (
+            _hp_play_margin > 0.0 and bool(kill_race)
+            and bool(pol.get("vivhite_hp_gate_race_exempt", True)))
         # 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘新增）：
         # 余量门顶格 3.0 后在低危长战制造放血死循环（243 局 F3 拖 56 回合
         # 自损46/掉血39；238 局 F2 拖 76 回合自损64 阵亡；235 局 F3 拖 19 回合
@@ -3990,8 +4004,13 @@ class Policy:
                 _hp_pay = self._vivhite_hp_pay(c, player.get("powers") or [])
                 if _hp_pay > 0.0:
                     _hp_extra = _hp_pay * _hp_play_margin
-                    _hp_gate_hit = (float(pol["play_threshold"]) < score
-                                    <= float(pol["play_threshold"]) + _hp_extra)
+                    _gate_band = (float(pol["play_threshold"]) < score
+                                  <= float(pol["play_threshold"]) + _hp_extra)
+                    # 竞速态豁免只放开有伤害的牌（见上方 VIVHITE_HP_GATE_RACE_EXEMPT
+                    # 段）；被豁免的候选正常参选/救场，留痕供复盘对账
+                    _gate_exempt = (_hp_gate_race_exempt
+                                    and card_numbers(c)[0] > 0)
+                    _hp_gate_hit = _gate_band and not _gate_exempt
                     if _hp_gate_hit:
                         why += (f"｜謦欬出牌门：实付{_hp_pay:g}血×"
                                 f"{_hp_play_margin:.2f}=+{_hp_extra:.1f}门槛，"
@@ -3999,6 +4018,10 @@ class Policy:
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
                              _hp_pay, _hp_extra, score))
+                    elif _gate_band and _gate_exempt:
+                        why += (f"｜竞速态謦欬门豁免：斩杀竞速宣判后攻击牌实付"
+                                f"{_hp_pay:g}血免附加门槛+{_hp_extra:.1f}"
+                                f"（VIVHITE_HP_GATE_RACE_EXEMPT）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies

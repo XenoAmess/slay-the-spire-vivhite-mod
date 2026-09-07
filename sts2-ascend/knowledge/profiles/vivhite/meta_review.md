@@ -500,3 +500,43 @@ retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 260~270 局批复盘：斩杀竞速宣判后謦欬余量门仍拦付血攻击——全攻提速留痕下整回合零输出，竞速态攻击牌豁免（VIVHITE_HP_GATE_RACE_EXEMPT）
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+斩杀竞速投影宣判（kill_race=防守线已被联合复核判不可行、唯一活路是提前终结）后，謦欬出牌余量门（顶格 3.0）仍按非竞速口径把可负担的付血攻击牌压回手牌：竞速唯一的斩杀货币就是付血攻击，拦门直接把「全攻提速」变成整回合零输出；僵局放行（STALL_BREAK）要求敌意图被格挡全覆盖才计数，Boss 高危回合恒清零（本批 Boss 战最高 1/6），对该死锁结构性不可达。该假设可证伪：未来 3~10 局若「謦欬出牌门拦下」×「斩杀竞速投影/提速斩杀」同现次数不降为零附近、或不出现 VIVHITE_HP_GATE_RACE_EXEMPT 留痕，则改动未生效；若致命战自损占掉血比从当前 ~55% 持续升至 ≥70%、或判死后死亡反而加速，则假设错误，policy.json 置 `vivhite_hp_gate_race_exempt=False` 一键回滚。
+
+## EVIDENCE
+
+- 批内最新死亡局 run 270（KYRFP8YM0Y7D，F17 KIN_FOLLOWER+KIN_PRIEST）完整决策链逐条已读：T1 起竞速开账（「击杀还需17回合>可存活6回合（先验18伤/回合），全攻提速」）；T4（20:00:59）手牌五张全可出（变身式+✓/猩红转化仪式✓/并行星雨✓/补色残像✓/开集庇护✓）、敌意图 0、我方 70 血，余量门拦下【并行星雨】实付 6 血与【补色残像】实付 6 血后整回合零输出——按当回合投影口径这两张即 ~48 伤（神官彼时 ~140 血池的 1/3）；终局 T9~T10 投影「击杀还需1回合＞1.5×可存活0回合」差一刀，1 血全手牌 blocked_by_hook 结束回合阵亡。竞速审计 T8 才判死、实战 10 回合阵亡。
+- 同型跨局证据（runs 只读扫描）：runs240+ 余量门拦下 end_turn 共 662 次，其中 13 次与斩杀竞速留痕同决策同现（243-F17×2、246-F17、247-F11、249-F17 拦三张、253-F17、255-F17×2、259-F23、265-F33、269-F7/F17×2）；243/253 局同决策内 IDLE_LEAK_RACE 残能审计（「竞速态残能1，未打可负担最高伤」）与拦门注互斥——审计说要打、门说不许打。runs260~270 内拦门 end_turn 199 次、有牌可出仍结束回合 243 次。
+- 僵局放行结构性不可达：全量 counter 分布 0:81/1:147/2:60/3:22/4:14/5:5/6:4，放行仅 20 次且全在低危普通战；Boss 高危回合（意图未被格挡覆盖）计数恒清零，本批 Boss 战最高 1/6——六回合连续低危在 Boss 竞速局数学上不可达。
+- 謦欬双旋钮（life_cost_weight -3.00 触底 / 余量门 3.00 顶格）已封账（lessons 连续「双旋钮全尽，謦欬证据彻底停止吸收并留痕」），本改动不是再加码旋钮，而是修复「模式语义互斥」：致死回合早已全豁免（买命/抢斩杀当场兑现），kill_race 是同一语义的投影版（可存活回合外推必死），门却不认。
+- 原生对账：THE_KIN_BOSS=KIN_FOLLOWER(58)+KIN_PRIEST(190)（runtime/mechanics JSONL），血池 248 与战斗内实况血池 199→82 口径一致；辅助体优先转火（T1~T2 击杀信徒）方向正确，死因是神官阶段输出断档。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 余量门装配处新增 `_hp_gate_race_exempt`（margin>0 且 kill_race 且键开）；
+  ② 拦门判定处拆分 `_gate_band`：竞速态下 `card_numbers(c)[0]>0`（有伤害的牌）的謦欬候选豁免附加门槛、正常参选/进入 marginal 与残能救场通道，并留痕「竞速态謦欬门豁免：…（VIVHITE_HP_GATE_RACE_EXEMPT）」；非伤害謦欬牌（成长能力/付血格挡）仍走原附加门槛，非竞速局、非白绮角色（margin 恒 0）、致死回合语义全部不变。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `vivhite_hp_gate_race_exempt: True`（False=一键回滚，旧行为零差异），注释登记本批实证。
+- sts2-ascend/brain/selfcheck.py：新增 3prk 夹具——三 tick 积累实测速率后 T3 进入斩杀竞速（前提断言「斩杀竞速投影」留痕在场）：键开时付血攻击免门出牌且豁免留痕在场；键关时严格回落旧版（end_turn+拦门注、无豁免留痕）。既有 3prh d_g1 与 3pri 高危/混合控制组的夹具状态（168 血 Boss/意图 10）经复核实为 kill_race 态（改动前即如此，旧行为下门照拦恰是本批修复的互斥），显式置回滚键锁定其原本锁定的门本体/僵局计数语义，并加注说明。
+- 回滚条件单一：policy.json 置 `vivhite_hp_gate_race_exempt=False`。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① Boss/竞速局「謦欬出牌门拦下」×「斩杀竞速投影/提速斩杀」同现从 13/runs240+ 降为零附近，出现 VIVHITE_HP_GATE_RACE_EXEMPT 留痕且可与同决策 hp-cost/竞速投影对账；② 竞速局「整回合零输出带牌空过」（本批 243 次有牌可出仍 end_turn 中的竞速子集）减少，致命终局「击杀还需1~2回合」差一刀形态减少、Boss 战回合数缩短或首胜；③ 哨兵指标：致命战自损占掉血比不显著恶化（本批 270 局 55%，警戒 ≥70% 持续两批）且判死后获胜率台账不因放过真放血局而恶化。证伪/回滚：留痕零出现 → 复查 kill_race 传播；自损占比飙升或死亡加速 → 置 False 整体撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（含新增 3prk 双向夹具；既有全部夹具通过；3prh/3pri 三个 kill_race 态夹具按上段说明显式置回滚键后通过）。
+- `py -3 -B sts2-ascend/tests/test_boss_race_sustain.py`：2 tests OK。
+- `git diff --check` 通过（仅宿主挂载的 assets 超长路径删除遗留告警，与本批无关、不入 commit）；完整 diff 已回读：brain/policy.py（+27/-2）、brain/knowledge.py（+10）、brain/selfcheck.py（+60）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
