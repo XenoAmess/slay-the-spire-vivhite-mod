@@ -9627,6 +9627,40 @@ def main() -> int:
     assert d_direct_thin.action == "choose_reward_card" and "单薄卡组正价值保底" in d_direct_thin.reason, \
         f"REWARD 单薄保底只阻止 skip 却未选择卡牌: {d_direct_thin.action}（{d_direct_thin.reason}）"
 
+    # 3zz-audit-cs) CARD_BURST_PICK_AUDIT 真实消费路径接线（第1290~1294批复盘）：
+    # v0.111.0 实战拿牌全部走 CARD_SELECTION/select_deck_card（896 局留痕
+    # choose_reward_card 零出现），自愿奖励分支的最终（含 UCB 后）选择必须带
+    # 同款有效爆发前后审计；观测键关闭则审计严格消失且选择不变。
+    cs_audit_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-burst-audit-cs-")))
+    cs_audit_pol = policy.Policy(cs_audit_know, random.Random(43))
+    cs_audit_ctx = DummyCtx()
+    cs_audit_ctx.run_id = "RUN_BURST_AUDIT_CS"
+    cs_audit_state = {
+        "screen": "CARD_SELECTION", "run_id": "RUN_BURST_AUDIT_CS",
+        "available_actions": ["select_deck_card", "skip_reward_cards"],
+        "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                      "min_select": 1, "selected_count": 0, "can_confirm": False,
+                      "cards": [dict(offer_card, index=0, card_id="CS_AUDIT_ATK"),
+                                {"index": 1, "card_id": "CS_AUDIT_BLK", "name": "审计格挡",
+                                 "card_type": "Skill", "energy_cost": 1,
+                                 "dynamic_values": [{"name": "Block", "current_value": 5}]}]},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 4, "deck": []}}
+    d_cs_audit = cs_audit_pol.decide(cs_audit_state, cs_audit_ctx)
+    assert (d_cs_audit.action == "select_deck_card"
+            and "CARD_BURST_PICK_AUDIT:" in d_cs_audit.reason
+            and "before=" in d_cs_audit.reason
+            and "after=" in d_cs_audit.reason
+            and "delta=" in d_cs_audit.reason
+            and "starved_before=" in d_cs_audit.reason), \
+        f"CARD_SELECTION 自愿选牌理由缺少有效爆发前后审计: {d_cs_audit.reason}"
+    cs_audit_know.policy["card_pick_burst_audit"] = False
+    d_cs_audit_off = cs_audit_pol.decide(cs_audit_state, cs_audit_ctx)
+    assert (d_cs_audit_off.action == "select_deck_card"
+            and d_cs_audit_off.params == d_cs_audit.params
+            and "CARD_BURST_PICK_AUDIT" not in d_cs_audit_off.reason), \
+        f"观测键关闭后 CARD_SELECTION 审计未消失或选择漂移: {d_cs_audit_off.reason}"
+
     # 新卡探索不是全局随机 epsilon：只在原始评分近优且跨过拿牌门槛时，UCB
     # 可用每局配额把一次选择从高样本贪心牌转给零样本新牌；因此不会永远饿死。
     explore_know = knowledge.Knowledge(

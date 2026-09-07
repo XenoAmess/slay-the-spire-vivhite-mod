@@ -6936,3 +6936,105 @@ retry_resolution: none (no replay target; local production behaviorization)
   该闸本批按既有教义工作，是否过严（1.5 比值在自损未计价时代被自付
   血进一步压低 tsurv）留作下一观察点，与主假设共用自损收窄指标验证。
 
+
+# 2026-09-07｜第 1290~1294 局复盘（异步追及队列 5 局 exact_batch 全败；CARD_BURST_PICK_AUDIT 接线修复：观测位接入真实消费路径）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审。
+
+retry_resolution: none (no replay target; local production observability fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：CARD_BURST_PICK_AUDIT（奖励选牌有效爆发审计）只接在
+  REWARD/choose_reward_card 路径，而 v0.111.0 实战拿牌全部走
+  CARD_SELECTION/select_deck_card——观测位部署在永不执行的路径上，真机
+  结构性零产出；把同一 helper 接到 CARD_SELECTION 自愿奖励分支后，「最终
+  （UCB 后）落牌是否真正补 deck_effective_burst / 越过饥饿线」首次可测量。
+- **EVIDENCE**：① 全量 896 个 runs 持久文件回扫：CARD_BURST_PICK_AUDIT
+  出现 0 次、choose_reward_card 出现 0 次、select_deck_card 选牌理由
+  8259 次——REWARD 直出路径在现行版本从未触发；② 主样本 1294 局
+  （HANNJ44EFFBB，F17 阵亡）完整链 196 条（packet 内 116 条切片 +
+  decision_aggregates）逐条核读：6 次拿牌（[6]御血术/[12]杂耍/[40]燃烧/
+  [52]凶恶/[61]无情猛攻/[71]熔融之拳）全部 select_deck_card 且理由无审计段；
+  ③ policy.py:6572 是唯一消费端，CARD_SELECTION 自愿分支（6983~7004）只拼
+  _reward_card_choice 的 explore_note，从未调用 _card_pick_burst_audit。
+- **EXPECTED_SIGNAL**：未来 3~10 局「选择卡牌：【X】」理由出现
+  CARD_BURST_PICK_AUDIT:card=…,before=…,after=…,delta=…,line=…,
+  starved_before=…,starved_after=…；≥3 个饥饿态主动选牌后可按 delta 方向
+  检验「选牌补供给」假设（delta 普遍 ≤0 即证伪，不据此加分/加门）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1290~1294]，exact 5/5、missing=0；5 局全败（生涯 0/1294）。
+- 死亡分布：一幕 Boss（F17）4 局（1290/1291/1292/1294）、二幕 Boss（F33）
+  1 局（1293，CRUSHER+ROCKET）。1293 一幕 Boss 已越墙（F17 后行至 F33）。
+- 部署时序：HP_COST_UTILITY_PRICING（1285~1289 批落盘）先于本批全部对局；
+  本批 5 局无祭品/放血族耗血功能牌入组，该杠杆首验窗口顺延（非失效）。
+  SELF_LOSS_PHASE_OBS 在 1292/1294 持续在产（可行动段自损 4/4）。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 4 局一幕 Boss 前夜竞速预演全部判死
+   （击杀需 15~23 回合＞满血可存活 5~6 回合）且全部实战兑现；1290/1293
+   RACE_AUDIT_HEAL_OVERRIDE 触发回血（41%/36% 带内）未翻盘、1291/1292/1294
+   必败弃疗改锻造亦未翻盘——前夜两端杠杆在极端竞速缺口下边际趋零，与
+   JOINT_FLIP_TTK_CAP 教义互证，不重复立案。
+2. **1294 全链核查：执行层零新缺陷。** 事件端最坏情况闸门在 F7 茂密植被
+   正确否决「休息」（hp_min -80 vs 77 血）；篝火 F8 锻造、F13 锻造预演改
+   回血、F16 前夜必败改锻造均按教义留痕；F17 Boss 战（KIN_FOLLOWER+
+   KIN_PRIEST）目标选择全程集火自强化体神官，JOINT_FLIP_TTK_CAP 在
+   T1/T2/T4 正常否决假可行翻盘，全部 6 次 end_turn 均为能量真尽的诚实
+   收口（无结算锁窗签名）。死因=卡组输出密度（先验 17 伤/回合 vs 血池
+   均值 251），执行端无罪。
+3. **观测位接线失修（本批实验靶点）**：见 HYPOTHESIS/EVIDENCE——
+   「观测先行、行为化随后」两级火箭的前提是观测位挂在真实消费路径上；
+   本次全量回扫证明 1136 批的审计从未产出过一个真机样本，其预注册指标
+   （marker 首发、delta 分布、starved 转移）全部无法结算。
+
+## 三、本次调整（观测位接线 ×1：CARD_BURST_PICK_AUDIT 接入 CARD_SELECTION）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **CARD_BURST_PICK_AUDIT 真实消费路径接线**（观测位挂在零流量路径；证据：896 局全量回扫 0 显形 + 1294 全链 6 次 select_deck_card 无审计 + policy.py 单消费端核读） |
+| 代码动作 | brain/policy.py CARD_SELECTION 自愿奖励分支：if _has_skip: 接受 offer 后、explore_note 追加 self._card_pick_burst_audit(deck, pick, max_hp=_mh, act=_sel_act)——复用既有 helper 与既有 card_pick_burst_audit 键，审计对象为 UCB 探索之后的最终落牌，与 REWARD 路径同口径 |
+| 性质边界 | 纯观测接线：不改 eval_reward_card、排序、UCB、门槛、tags 与实际选择；helper 键关闭/异常时返回空串，旧口径逐字不变；强制入组/牌堆顶/献祭/升级/删牌等语义分支照旧不追加；REWARD 路径原审计保留（零流量但零成本） |
+| 测试 | brain/selfcheck.py 新增 3zz-audit-cs 双断言（① CARD_SELECTION 自愿选牌理由必须带 CARD_BURST_PICK_AUDIT 及 before/after/delta/starved_before 字段；② 观测键置 False → 审计消失且 option_index 零漂移）。全套 py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK** |
+| 未来 3~10 局观测指标 | ①「CARD_BURST_PICK_AUDIT」在 select_deck_card 理由中的出现率与独立对局数（首发即验证接线）；② 饥饿态（starved_before=1）主动选牌的 delta 分布；③ starved_before→starved_after 转移率；④ 探索落牌（受控探索段共存）的 delta 是否系统低于贪心落牌 |
+| 继续调整条件 | 留痕 ≥3 个独立对局且饥饿态 delta 普遍 ≤0 → 「选牌补供给」证伪，按原预注册不加分不加门；delta 显著为正但未越线（starved_after 仍 1）→ 供给缺口量化入账，为拿牌端杠杆供数；留痕仍零出现 → 检查持久链 reason 截断口径而非行为 |
+| 撤回条件 | knowledge/policy.json 写 card_pick_burst_audit: false 即两条路径同时关闭（selfcheck 3zz-audit-cs ② 为对照锚）；或删除 policy.py 追加段与 selfcheck 3zz-audit-cs 零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测位接线落地，
+   非登记延后）。
+2. **HP_COST_UTILITY_PRICING（上批杠杆）**：本批 5 局无耗血功能牌入组，
+   首验窗口顺延不判失效；SELF_LOSS_PHASE_OBS 自损口径持续在产。
+3. **JOINT_FLIP_TTK_CAP**：1294-F17 T1/T2/T4 三次否决留痕入账（战斗端
+   按设计工作）；1291/1292/1294 前夜改锻造后仍阵亡——「否决后改锻造
+   战损不降」分子 +3，继续累计至预注册复核线。
+4. **SETTLE_TIMEOUT_CONCEDE_OBS / HAND_TAX_PLAY_AUDIT /
+   ENGINE_COMMIT_LOWHP_OBS / RACE_BLK_FLOOR_RESERVE**：本批无对应现场
+   （1294 全部收口能量真尽、无税负卡组、无低血承诺、无末点格挡竞争），
+   顺延不判失效。
+5. **竞速审计悲观率台账**：1290~1292/1294 前夜判死→实战应验 +4；
+   1293 F29「T3判死→实战6回合获胜」反向样本 +1，续记不重复立案。
+6. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表）：本批无新现场，续挂。
+
+## 五、新沉淀的经验知识
+
+1. **观测位部署后必须验证「路径有流量」**：1136 批审计挂在
+   choose_reward_card 上，而现行版本拿牌全部走 select_deck_card——
+   「留痕零出现」既可能是机制未触发，也可能是路径零流量；观测位的首个
+   验收动作应该是全量回扫证明消费路径真实存在，本批的 896 局回扫
+   （choose_reward_card=0）应成为同类观测位的部署 checklist。
+2. **同一决策多入口必须共享观测**：跳过守卫（第 56 局）已在 REWARD 与
+   CARD_SELECTION 间建立了「同一决策两个入口同门槛」教义；观测位同样
+   适用——凡按入口挂载的留痕，都要核对另一入口是否才是真实流量。
+3. 观察点（下批复盘核对）：① CARD_BURST_PICK_AUDIT 真机首发与 delta
+   分布；② HP_COST_UTILITY_PRICING 首验窗口；③ JOINT_FLIP_TTK_CAP
+   「否决后改锻造战损」分子累计；④ race_audit 悲观率台账续记。
+

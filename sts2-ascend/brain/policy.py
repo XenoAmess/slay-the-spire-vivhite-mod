@@ -6988,6 +6988,14 @@ class Policy:
                 _floor = 0.0 if _thin_take else pick_line
                 best_v, pick, explore_note, explore_tag = self._reward_card_choice(
                     scored, deck, state, ctx, value_floor=_floor)
+                # CARD_BURST_PICK_AUDIT 接线修复（第1290~1294批复盘）：该观测此前
+                # 只挂在 REWARD/choose_reward_card 路径，而 v0.111.0 实战拿牌全部
+                # 经 CARD_SELECTION/select_deck_card（896 局留痕 choose_reward_card
+                # 零出现、审计零显形）——自愿奖励被接受时同样追加前后有效爆发审计，
+                # 观测位只有在真实消费路径上才产生真机留痕。强制入组/牌堆顶/献祭/
+                # 升级等语义分支照旧不追加。
+                explore_note += self._card_pick_burst_audit(
+                    deck, pick, max_hp=_mh, act=_sel_act)
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
