@@ -10006,3 +10006,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.823044404186337局)，BULLY(10分/3.843861509438549局)，HAVOC(11分/3.075089207550839局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1310 胜，当前目标进阶 0
+
+## 第 1311 局复盘（2026-09-08 07:32）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：COLOSSUS, DISMANTLE, TRUE_GRIT, SHRUG_IT_OFF, FLAME_BARRIER, SHRUG_IT_OFF, HOWL_FROM_BEYOND, SWORD_BOOMERANG, HOWL_FROM_BEYOND, PYRE, UNMOVABLE, ANGER, CRUELTY, SALVO, JUGGERNAUT, EVIL_EYE, MOLTEN_FIST, BLUDGEON, RAMPAGE, HOWL_FROM_BEYOND
+- 本局遗物：BAG_OF_MARBLES, BOOK_OF_FIVE_RINGS, CENTENNIAL_PUZZLE
+- 战斗记录：F20 Monster战 掉血0; F21 Monster战 掉血0; F23 Unknown战 掉血13｜竞速审计：T3判死→实战4回合获胜; F30 Elite战 掉血15; F31 Unknown战 掉血21; F33 Boss战 掉血52｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/27.589757206260437局)，PRIMAL_FORCE(24分/5.3625711918177235局)，FIEND_FIRE(24分/36.23625354623076局)，MANGLE(24分/98.75322761512798局)，PERFECTED_STRIKE(24分/7.237448591392623局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.806163748771685局)，BULLY(10分/3.8304079941555145局)，HAVOC(11分/3.0643263953244113局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1311 胜，当前目标进阶 0
