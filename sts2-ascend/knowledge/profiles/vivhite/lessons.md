@@ -3296,3 +3296,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.267394364682904局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.206968706508141局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/33.80205452062678局)
 - 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（5回合掉血102，每回合20≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损61/掉血102（60%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.41 → 0.44（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F23——灰区悲观系数部分胜利回收）；行至 F23 但致命战自损61/掉血102≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：0/296 胜，当前目标进阶 0
+
+## 第 297 局复盘（2026-09-08 02:07）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 CALCIFIED_CULTIST+SEAPUNK
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE
+- 本局遗物：LIZARD_TAIL, UNCEASING_TOP
+- 战斗记录：F6 Monster战 掉血0｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血0; F11 Elite战 掉血29｜自损30（可行动段30/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战11回合获胜; F12 Monster战 掉血32｜自损30（可行动段30/非行动段10，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血40｜自损18（可行动段18/非行动段9，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.274878148033567局)，PANACHE(37分/2.9423795956631227局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/46.57023409326041局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/11.325310554097115局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(34分/24.721870009917108局)
+- 当前低价值卡牌：AUTOMATION(17分/3.2559584844065137局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.1957443160353627局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/33.68374732980459局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/297 胜，当前目标进阶 0
