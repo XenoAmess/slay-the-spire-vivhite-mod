@@ -4370,6 +4370,98 @@ def main() -> int:
     assert d_sl_only.action == "play_card" and d_sl_only.params.get("card_index") == 0, \
         f"滑溜单段攻击被误禁导致空过: {d_sl_only.action} {d_sl_only.params}（{d_sl_only.reason}）"
 
+    # 3sg) 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：LAGAVULIN_MATRIARCH
+    #      开局自挂沉睡 3 层（ASLEEP_POWER，zhs 原文「在失去生命时或在{Amount}
+    #      回合后苏醒」）。历史 10 场 F17 遭遇全部 T1 零意图全攻，未格挡伤害把
+    #      Boss 提前 2 回合唤醒、白吃 T2/T3 ≈37 火力。沉睡计数≥2（本回合末不会
+    #      自然苏醒）、攻击将造成未格挡伤害且非击杀时压到禁玩线；计数1/键=0/
+    #      全格挡不唤醒/可击杀四种情形严格回落旧口径。
+    sg_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sleepguard-"))
+    sg_pol = policy.Policy(knowledge.Knowledge(sg_dir), random.Random(5))
+
+    def sg_enemy(hp=222, block=0, asleep=3, *, index=0, intent=0):
+        powers = [] if asleep is None else [{
+            "power_id": "ASLEEP_POWER", "name": "沉睡", "amount": asleep,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": "LAGAVULIN_MATRIARCH", "name": "乐加维林族母",
+            "current_hp": hp, "max_hp": 222, "block": block,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    sg_strike = {
+        "index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 6}],
+    }
+    sg_aoe = {
+        "index": 1, "card_id": "CLEAVE", "name": "顺劈斩", "playable": True,
+        "energy_cost": 1, "requires_target": False,
+        "resolved_rules_text": "对所有敌人造成6点伤害。",
+        "dynamic_values": [{"name": "Damage", "current_value": 6}],
+    }
+
+    def sg_score(card, enemy, incoming=0):
+        return sg_pol._score_play(
+            dict(card), [enemy], incoming, 0, 2, sg_pol.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+
+    # ① 沉睡3层+未格挡伤害+非击杀 → 压到禁玩线并留痕；无沉睡敌人严格旧口径
+    s_sg_veto, t_sg_veto, why_sg_veto = sg_score(sg_strike, sg_enemy(asleep=3))
+    s_sg_plain, _, why_sg_plain = sg_score(sg_strike, sg_enemy(asleep=None))
+    assert math.isclose(s_sg_plain, 6.0) and "SLEEP_GUARD" not in why_sg_plain, \
+        f"无沉睡敌人旧评分回归: score={s_sg_plain} why={why_sg_plain}"
+    assert s_sg_veto <= -50.0 and t_sg_veto is None and "SLEEP_GUARD" in why_sg_veto, \
+        f"沉睡3层未格挡攻击未禁玩: score={s_sg_veto} target={t_sg_veto} why={why_sg_veto}"
+    # ② 计数1（本回合末自然苏醒）不拦截
+    s_sg_one, _, why_sg_one = sg_score(sg_strike, sg_enemy(asleep=1))
+    assert math.isclose(s_sg_one, 6.0) and "SLEEP_GUARD" not in why_sg_one, \
+        f"沉睡1层（回合末自然苏醒）不应拦截: score={s_sg_one} why={why_sg_one}"
+    # ③ 键=0 严格回滚旧口径
+    sg_pol.know.policy["sleep_guard_min_stacks"] = 0.0
+    s_sg_off, _, why_sg_off = sg_score(sg_strike, sg_enemy(asleep=3))
+    assert math.isclose(s_sg_off, 6.0) and "SLEEP_GUARD" not in why_sg_off, \
+        f"键=0 必须严格回滚: score={s_sg_off} why={why_sg_off}"
+    sg_pol.know.policy["sleep_guard_min_stacks"] = 2.0
+    # ④ 全格挡不唤醒（UnblockedDamage==0）不拦截
+    s_sg_blk, _, why_sg_blk = sg_score(sg_strike, sg_enemy(asleep=3, block=10))
+    assert math.isclose(s_sg_blk, 6.0) and "SLEEP_GUARD" not in why_sg_blk, \
+        f"全格挡攻击不应拦截（不掉血不唤醒）: score={s_sg_blk} why={why_sg_blk}"
+    # ⑤ 可击杀直接终局不拦截
+    _, _, why_sg_kill = sg_score(sg_strike, sg_enemy(hp=5, asleep=3))
+    assert why_sg_kill.startswith("可击杀") and "SLEEP_GUARD" not in why_sg_kill, \
+        f"可击杀沉睡者不应拦截: {why_sg_kill}"
+    # ⑥ AOE 同口径：群体伤害的未格挡部分同样提前唤醒
+    s_sg_aoe, _, why_sg_aoe = sg_score(sg_aoe, sg_enemy(asleep=3))
+    assert s_sg_aoe <= -50.0 and "SLEEP_GUARD" in why_sg_aoe, \
+        f"AOE 未格挡伤害未禁玩: score={s_sg_aoe} why={why_sg_aoe}"
+    # ⑦ 端到端：沉睡3层 Boss 面前只有攻击牌时结束回合而非提前唤醒
+    def sg_combat_state(hand):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {
+                "player": {"current_hp": 72, "max_hp": 80, "block": 0, "energy": 3},
+                "hand": hand, "enemies": [sg_enemy(asleep=3)],
+            },
+            "run": {"current_hp": 72, "max_hp": 80, "gold": 0, "floor": 17, "deck": []},
+        }
+
+    sg_live_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sleepguard-live-"))), random.Random(5))
+    d_sg = sg_live_pol.decide(sg_combat_state([dict(sg_strike)]), DummyCtx())
+    assert d_sg.action == "end_turn", \
+        f"沉睡3层 Boss 面前不得提前唤醒: {d_sg.action} {d_sg.params}（{d_sg.reason}）"
+    # 对照锚：无沉睡敌人同一载荷正常出牌
+    sg_live_pol2 = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sleepguard-awake-"))), random.Random(5))
+    _sg_awake_state = sg_combat_state([dict(sg_strike)])
+    _sg_awake_state["combat"]["enemies"] = [sg_enemy(asleep=None)]
+    d_sg_awake = sg_live_pol2.decide(_sg_awake_state, DummyCtx())
+    assert d_sg_awake.action == "play_card" and d_sg_awake.params.get("card_index") == 0, \
+        f"无沉睡敌人正常出牌回归: {d_sg_awake.action} {d_sg_awake.params}（{d_sg_awake.reason}）"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))

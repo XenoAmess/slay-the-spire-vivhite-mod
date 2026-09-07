@@ -97,6 +97,12 @@ DEFAULT_POLICY = {
                                                      # 旧的「任一组合可行即放行」口径（1132/1137/1147
                                                      # 三例 KIN 实际阵亡暴露了存在性放行的风险）
     # --- combat ---
+    "sleep_guard_min_stacks": 2.0,  # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：
+                                      # 敌人沉睡计数（ASLEEP_POWER）≥本值且攻击将造成未格挡
+                                      # 伤害且非击杀时，攻击候选压到禁玩线——LAGAVULIN_MATRIARCH
+                                      # 沉睡3层，失去生命即提前苏醒；历史 10 场 F17 全部 T1 零意图
+                                      # 全攻提前 2 回合唤醒 Boss 白吃 ≈37 火力。计数1（回合末自然
+                                      # 苏醒）/全格挡/可击杀不拦截；0 = 关闭（严格回滚旧口径）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

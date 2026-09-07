@@ -4366,6 +4366,16 @@ class Policy:
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
             total = dmg * hits
+            # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：LAGAVULIN_MATRIARCH
+            # 开局自挂沉睡 3 层（ASLEEP_POWER，zhs 原文「在失去生命时或在
+            # {Amount}回合后苏醒」；mechanics AfterDamageReceived：UnblockedDamage
+            # !=0 即提前唤醒并接 SLASH 19）。历史 10 场 F17 遭遇（1233/1245/1249/
+            # 1252/1260/1262/1272/1275/1282/1284）全部 T1 零意图回合全攻，把 Boss
+            # 提前 2 回合唤醒、白吃 T2/T3 ≈37 点火力，沉睡段铺垫窗口归零。沉睡计数
+            # ≥本键（默认 2，即本回合末不会自然苏醒）、攻击将造成未格挡伤害且
+            # 非击杀时，攻击候选压到禁玩线，能量让给能力/格挡/抽牌；计数 1
+            # （回合末自然苏醒）/全格挡不唤醒/可击杀/键=0 四种情形严格回落旧口径。
+            _sg_min = float(pol.get("sleep_guard_min_stacks", 2.0) or 0.0)
 
             def _effective_pool(enemy: dict) -> float:
                 try:
@@ -4424,12 +4434,18 @@ class Policy:
                 killable = []
                 slippery_notes = []
                 _burn_broken_total = 0.0
+                _sleep_veto = None
                 for e in enemies:
                     # Damage absorbed by enemy block still removes a current combat
                     # resource.  The old max(1, damage-block) valued a 6-damage Strike
                     # into 8 block as only 1 point, which routinely fell below the
                     # play threshold and ended turns with all energy unused.
                     e_eff, e_killed, e_broken = _attack_outcome(e)
+                    if _sg_min > 0 and not e_killed \
+                            and self._enemy_asleep_stack(e) >= _sg_min \
+                            and float(total) > max(0.0, float(e.get("block") or 0)):
+                        # 群体伤害同样唤醒沉睡者（UnblockedDamage!=0 口径）
+                        _sleep_veto = e.get("name") or e.get("enemy_id") or "敌人"
                     slippery = self._enemy_slippery_stack(e)
                     if slippery > 0:
                         slippery_notes.append(
@@ -4473,10 +4489,15 @@ class Policy:
                         score = min(score, floor_score)
                 if cost == 0:
                     score += pol["free_card_bonus"]
+                if _sleep_veto is not None:
+                    score = min(score, floor_score)
                 hb = _hybrid_defense()
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
                 why = f"群体伤害≈{eff}"
+                if _sleep_veto is not None:
+                    why += (f"｜沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
+                            "未格挡伤害将提前唤醒（SLEEP_GUARD）")
                 if kill_race and lethal and not killable and score > floor_score:
                     why += "｜致死竞速抢斩杀"
                 if _tax_value:
@@ -4523,6 +4544,7 @@ class Policy:
             _sticky_t = self._focus_index if len(enemies) > 1 else None
             _sticky_v = float(pol.get("target_sticky_bonus", 3.0))
             _doctrine_present = False
+            _sleep_veto = None
             for e in enemies:
                 if (not (self._is_respawn_add(e) and not all_respawn)
                         and len(enemies) > 1
@@ -4535,6 +4557,12 @@ class Policy:
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
                 eff, killed, slippery_broken = _attack_outcome(e)
+                if _sg_min > 0 and not killed \
+                        and self._enemy_asleep_stack(e) >= _sg_min \
+                        and float(total) > max(0.0, float(e.get("block") or 0)):
+                    # 沉睡保期：该目标的未格挡伤害会提前唤醒，移出打击候选
+                    _sleep_veto = e.get("name") or e.get("enemy_id") or "敌人"
+                    continue
                 slippery = self._enemy_slippery_stack(e)
                 threat = sum((it.get("total_damage") or 0) for it in e.get("intents", []))
                 # 已持有力量层数的敌人是场上的战斗时钟。旧辅助体转火会把
@@ -4592,6 +4620,12 @@ class Policy:
                                     + ("｜零意图回合" if _burn_idle else ""))
                         except Exception:
                             pass
+            # 沉睡保期禁攻收口：全部打击候选都指向沉睡者时，攻击面压到禁玩线，
+            # 混合牌仍可由下方 _hybrid_defense 按格挡面放行（能量让给铺垫）。
+            if best_t is None and _sleep_veto is not None:
+                best_s = floor_score
+                why = (f"沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
+                       "未格挡伤害将提前唤醒，铺垫牌优先（SLEEP_GUARD）")
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
@@ -4867,6 +4901,10 @@ class Policy:
     def _enemy_slippery_stack(self, enemy: dict) -> float:
         """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "slipper", "滑溜")
+
+    def _enemy_asleep_stack(self, enemy: dict) -> float:
+        """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""
+        return self._enemy_power_stack(enemy, "asleep", "沉睡")
 
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
                     ignore_respawn: bool = False) -> float:

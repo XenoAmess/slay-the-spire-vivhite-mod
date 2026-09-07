@@ -6751,3 +6751,115 @@ retry_resolution: 20260907-080038-1788739238772903000-49d588b7 no_valid_change
   （1275 必败弃疗改锻造 vs 1277~1279 审计覆盖回血）实战均未翻盘——前夜
   杠杆在极端竞速缺口（ttk/tsurv ≈1.7~2.6，超 JOINT_FLIP_TTK_CAP 1.5）下
   边际趋零，与翻盘比上限教义互证，不单列立案。
+
+
+# 2026-09-07｜第 1280~1284 局批复盘（异步追及队列 5 局 exact_batch 全败；SLEEP_GUARD 沉睡保期禁攻落地）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审。
+
+retry_resolution: none (no replay target; local production behaviorization)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：LAGAVULIN_MATRIARCH（乐加维林族母）开局自挂沉睡 3 层
+  （ASLEEP_POWER，v0.111.0 zhs 原文「在失去生命时或在{Amount}回合后苏醒」；
+  mechanics AsleepPower.AfterDamageReceived：UnblockedDamage!=0 即移除 Plating、
+  提前唤醒并 Stun 接 SLASH 19；自然苏醒同样剥 Plating）。Brain 的
+  「高危Boss提速斩杀×1.80」在 T1 零意图回合全攻出牌，未格挡伤害把 Boss
+  提前 2 回合唤醒、白吃 T2/T3 ≈37 点火力；沉睡段本应免费的 3 回合铺垫窗口
+  （能力/格挡/抽牌）归零，且提前打出的伤害对击杀毫无时间价值（血池 222，
+  迟早要打满）。修复：沉睡计数≥2（本回合末不会自然苏醒）、攻击将造成
+  未格挡伤害且非击杀时，攻击候选压到禁玩线（SLEEP_GUARD），能量让给铺垫牌。
+- **EVIDENCE**：① 原生档：mechanics/monsters.jsonl LagavulinMatriarch
+  （AfterAddedToRoom→Sleep 挂 Plating12+Asleep3、SLEEP_MOVE 空过、醒后
+  SLASH19→DISEMBOWEL 9x2→SLASH2 12+12甲→SOUL_SIPHON 循环）+
+  mechanics/powers.jsonl AsleepPower/PlatingPower + zhs powers.json；② 历史
+  10 场 F17 遭遇（1233/1245/1249/1252/1260/1262/1272/1275/1282/1284）逐条
+  核读：T1 全部「敌意图总伤0」时打出攻击牌，T2 全部「意图升级+19
+  （HARD_INTENT_SPIKE_FIRE）」——提前唤醒模式 10/10，9 场阵亡（仅 1249
+  过 Boss 后死于 F23）；③ 本批 1284（KDQVSLNKBDVJ，F17 阵亡）全链逐条：
+  卡组含 RUPTURE/INFLAME/PYRE 三张能力牌，T1 仍打出凌虐 21（≈意图0），
+  T2 起 19/18/12/0/21/22 滚动火力 7 回合整管打空——沉睡段的铺垫牌从未
+  获得免费回合；④ 1282 同族 T3 起 11 回合阵亡、1262 T1 双攻后 6 回合阵亡，
+  族母账面 9.1 战 7.4 死。
+- **EXPECTED_SIGNAL**：未来 3~10 局观测——① 族母局 T1~T3 决策链候选出现
+  「沉睡保期禁攻（SLEEP_GUARD）」留痕且 T2/T3 敌意图保持 0（自然苏醒）；
+  ② 沉睡段能量流向能力/格挡/抽牌（长战加成牌提前上场）；③ 族母 Boss 战
+  总掉血较历史 ≈51~80 带下降；④ 计数1/键=0/全格挡/可击杀四类对照零回归
+  （selfcheck 3sg 锚②③④⑤ 同口径）。若 ≥3 个独立对局显示沉睡段铺垫后
+  Boss 战掉血不降反升（如自然苏醒后意图序列错位导致更差），假设证伪、
+  键=0 回滚。
+
+## 一、样本与部署时序审读（固定首步骤）
+
+- 队列 requested=[1280~1284]，exact 命中 5/5、missing=0；最新死亡局 1284
+  （KDQVSLNKBDVJ）packet 内 112 条切片（complete_persisted_chain=false，
+  完整 202 条在 runs/20260907-101143_KDQVSLNKBDVJ.json）已逐条核读，
+  F17 Boss 战 T1~T7 全核；另按需深读 9 场历史族母遭遇（见 EVIDENCE②）。
+- 部署时序：SELF_LOSS_MAIN_OWN_ONLY（1270~1274 批）与
+  EVENT_LOWHP_FIGHT_SHY（1275~1279 批）均先于本批全部对局，本批无
+  pre-fix 误伤指控；本批 5 局战斗记录未见 3k3 留痕触发（低血零收益并列
+  事件场景未复现，观测位继续累积）。
+
+## 二、归因分析（本批共性）
+
+1. **主假设现场（族母提前唤醒，1282/1284）**：见 HYPOTHESIS/EVIDENCE 段。
+   1284 前夜预演「击杀需21回合＞满血可存活6回合」已判死（ttk/tsurv≈3.5，
+   超 JOINT_FLIP_TTK_CAP 1.5 两倍有余），竞速链判决方向无误——本改动不治
+   前夜判决，治的是战斗端把「已判死局」打得更贵的执行层漏损：免费沉睡
+   回合被提前唤醒机制吞掉，判死局的翻盘概率（铺垫牌×免费回合）被人为归零。
+2. **一幕 Boss 竞速必败四连（1281/1282/1283/1284-F17）**：前夜预演判死
+   全部实战兑现（7/11/7/7 回合阵亡）；RACE_AUDIT_HEAL_OVERRIDE 四局正常
+   触发回血（53%/54%/46%/60% 带内），DOOM_WAIVER_GATE 照常否决入场线
+   豁免——审计链在产，死因=卡组输出密度 vs 血池，与「输出饥饿证据停止
+   吸收、改接 kill_race_prior_eff」既定演化方向一致（0.47→0.44 在产）。
+3. **1280 死于 F21 二幕普通战**：过 Boss（F17 掉血49）后 F19/F20/F21
+   三连战 32/13/35 失血，竞速审计 T2 判死→5 回合阵亡——输出饥饿战损
+   上浮×1.28（缺口79%）的设计内终态，不单列立案。
+4. **历史积案对账**：SLIPPERY_TTK_OBS 本批无滑溜 Boss 现场（1283 VANTOM
+   前夜留痕在账，破层税口径对照继续累积）；END_TURN_SETTLE_GATE/
+   MYTE_TOXIC_HAND_LIABILITY/PANTOGRAPH/无色药水词表零显形；stance 成长
+   型反向偏置、RACE_BLK_FLOOR_RESERVE、RACE_POOL_ALL_RESPAWN_CREDIT
+   本批无新现场。
+
+## 三、本次调整（行为化 ×1：SLEEP_GUARD）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **SLEEP_GUARD**（沉睡保期禁攻：沉睡计数≥2 且未格挡伤害且非击杀的攻击候选压到禁玩线；证据：10 场历史族母遭遇逐条 + 原生 AsleepPower 机制档 + 1284 全链） |
+| 代码动作 | brain/policy.py `_score_play` 攻击分支：`_sg_min=float(pol.get("sleep_guard_min_stacks", 2.0))`；单体目标循环内沉睡≥键且 total>敌甲且非击杀的目标移出打击候选，全员被移出时 best_s=floor_score 并留痕「沉睡保期禁攻…（SLEEP_GUARD）」；AOE 分支同口径钳到禁玩线并留痕；混合牌仍可由 _hybrid_defense 按格挡面放行；新增 `_enemy_asleep_stack`（_enemy_power_stack 同构，id/power_id/name 三字段拼集，asleep/沉睡双语）；brain/knowledge.py DEFAULT_POLICY 新增 `sleep_guard_min_stacks: 2.0`（0=关闭严格回滚）；brain/selfcheck.py 新增 3sg 段七条锚 |
+| 不改 | 前夜竞速预演/审计链（HEAL_OVERRIDE/DOOM_WAIVER_GATE/SLIPPERY_TAX/JOINT_FLIP_TTK_CAP/COMBO_GATE）、致死/urgent/孤注一掷/败局竞速/斩杀竞速全部既有钳制、集火粘性、滑溜逐段折算与烧墙审计、计数1（回合末自然苏醒）/全格挡不唤醒/可击杀三种情形的旧口径、药水通道 |
+| 回滚 | `sleep_guard_min_stacks: 0` 即整体关闭、严格回落旧口径（selfcheck 3sg 锚③ 为对照锚）；或删除 policy/knowledge/selfcheck 三处改动零残留 |
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；改动仅限
+  sts2-ascend 静态项目文件（policy/knowledge/selfcheck + 复盘报告/短评），
+  无在线状态写入、无进程操作、无 push。
+- selfcheck 3sg：① 沉睡3层+未格挡+非击杀 → ≤-50 禁玩线且留痕 SLEEP_GUARD，
+  无沉睡敌人 6.0 旧评分零漂移；② 计数1（回合末自然苏醒）不拦截；③ 键=0
+  严格回滚；④ 全格挡（UnblockedDamage==0 不唤醒）不拦截；⑤ 可击杀直接
+  终局不拦截；⑥ AOE 未格挡同口径禁玩；⑦ 端到端沉睡 Boss 面前只有攻击牌
+  时结束回合，对照锚无沉睡正常出牌。既有 3xg 滑溜族、3k3 避战重排等
+  全部断言原样通过。
+- 指标（未来 3~10 局）：① SLEEP_GUARD 留痕出现率与独立对局数；② 族母局
+  T2/T3 敌意图保持 0 的场次占比（自然苏醒率 vs 历史 0/10）；③ 族母 Boss 战
+  总掉血分布 vs 历史 51~80 带；④ 沉睡段铺垫牌（能力/格挡/抽牌）打出计数；
+  ⑤ 四类对照（计数1/全格挡/可击杀/键=0）零回归。
+- 继续调整条件：留痕 ≥3 个独立对局且自然苏醒率显著上升、Boss 战掉血下降
+  → 视证据评估是否把同型保期扩展到其他带开局蓄力/沉睡机制的 Boss（须先
+  有原生机制档实证）；若铺垫后掉血不降反升 ≥3 例 → 键=0 回滚。
+- 撤回条件：`sleep_guard_min_stacks: 0` 即整体关闭；或删除三处改动。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1284）：一幕 Boss 竞速必败四连（1281/1282/1283/1284-F17）
+  + 1280 二幕 F21 输出饥饿失血链。竞速审计「判死→阵亡」台账本批 +4，
+  悲观率分子分母续记；kill_bonus/饥饿链/锻造线/长战加成全顶格停止吸收，
+  kill_race_prior_eff 0.47→0.44 换向阻尼在产，均为设计内终态。族母账面
+  9.1 战 7.4 死升至本批后 ≈11 战 9 死量级，已是一幕 Boss 主死因形态之一
+  （仅次于 KIN 双子与 VANTOM）——本批行为化正是对该形态的第一次机制级
+  对接（此前只有泛化的 HARD_INTENT_SPIKE_FIRE 事后识别）。
