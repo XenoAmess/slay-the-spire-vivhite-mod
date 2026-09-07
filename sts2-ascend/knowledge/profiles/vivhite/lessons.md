@@ -2207,3 +2207,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.3791093938226258局)，ROLLING_BOULDER(20分/4.576071972051824局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.60624186117609局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（21回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/197 胜，当前目标进阶 0
+
+## 第 198 局复盘（2026-09-07 08:10）
+- 结果：💀 失败｜进阶 0｜到达层数 3｜当局评分 3
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血54｜自损62（可行动段62/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血24｜自损12（可行动段12/非行动段8，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.146242729302875局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.75434884326429局)，SALVO(34分/8.87070381861143局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.816524574447705局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.184299252312826局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.367282510944247局)，ROLLING_BOULDER(20分/4.560055720149642局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.527120014661975局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/198 胜，当前目标进阶 0
