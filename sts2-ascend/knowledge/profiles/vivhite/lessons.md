@@ -2240,3 +2240,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.3437527825783966局)，ROLLING_BOULDER(20分/4.5281911907911665局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.369706131779523局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/200 胜，当前目标进阶 0
+
+## 第 201 局复盘（2026-09-07 08:39）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：TUNING_FORK, WAR_PAINT, LUCKY_FYSH
+- 战斗记录：F12 Monster战 掉血3｜自损11（可行动段11/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血1｜自损9（可行动段9/非行动段3，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血57｜自损35（可行动段35/非行动段17，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血31｜自损21（可行动段21/非行动段26，SELF_LOSS_PHASE_OBS）; F27 Unknown战 掉血26｜自损26（可行动段26/非行动段0，SELF_LOSS_PHASE_OBS）; F28 Unknown战 掉血21｜自损17（可行动段17/非行动段0，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.12378596304534局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.32792415538731局)，SALVO(34分/8.77788704654992局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.661494938435625局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/40.75337586738424局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.3320496478393724局)，ROLLING_BOULDER(20分/4.512342521623397局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.291412160318295局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Unknown战实测自损17/掉血21（81%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.47 → 0.48（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.09 → 2.08（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F28——药水交药线部分胜利回收）；行至 F28 但致命战自损17/掉血21≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：0/201 胜，当前目标进阶 0
