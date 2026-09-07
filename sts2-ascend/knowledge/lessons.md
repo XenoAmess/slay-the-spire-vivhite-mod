@@ -9753,3 +9753,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.166676298640299局)，BULLY(10分/4.166676298640299局)，HAVOC(11分/3.3333410389122387局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1287 胜，当前目标进阶 0
+
+## 第 1288 局复盘（2026-09-07 12:41）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：SECOND_WIND, RAMPAGE, BLUDGEON, SHRUG_IT_OFF, HEADBUTT, STONE_ARMOR, BREAKTHROUGH, STOMP, BREAKTHROUGH, FEED, UPPERCUT, HEADBUTT, INFERNAL_BLADE
+- 本局遗物：HORN_CLEAT
+- 战斗记录：F15 Monster战 掉血13; F17 Boss战 掉血51｜自损2（可行动段2/非行动段55，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血52; F20 Monster战 掉血1; F21 Monster战 掉血10; F23 Monster战 掉血28｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/29.90679741043973局)，FIEND_FIRE(25分/38.19925497067456局)，PRIMAL_FORCE(24分/5.812930104233081局)，PACTS_END(24分/113.29631064368154局)，MANGLE(24分/107.04671120637897局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.1520929315950585局)，BULLY(10分/4.1520929315950585局)，HAVOC(11分/3.3216743452760458局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.41 → 0.43（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.47 → 0.45（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1288 胜，当前目标进阶 0
