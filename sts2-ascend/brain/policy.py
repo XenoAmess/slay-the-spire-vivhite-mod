@@ -4423,6 +4423,15 @@ class Policy:
             # Vivhite life calculation is priced once by the profile strategy
             # layer.  The historical Ironclad text heuristic remains untouched.
             self_cost = 0
+        # 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
+        # 单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧此前都零
+        # 留痕——1303 御血术跨 10 场战斗可行动段自损 27、1305 御血术+
+        # 打出 14 次、1306-F17 非致死回合打出突破（自付1），持久链血价
+        # 留痕全部 0 条，1285~1289 批「与攻击分支同一把血价尺」的主张对
+        # 攻击路由的耗血牌永远无法用真机结算。纯观测：注记只描述已发生
+        # 的计价/未计价事实，评分、阈值与所有分支零改动；观测键
+        # hp_cost_atk_pricing_trace=0 时旧口径逐字不变。
+        _hp_atk_trace = float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
         floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
 
         def _hybrid_defense() -> tuple[float, str] | None:
@@ -4557,6 +4566,7 @@ class Policy:
                     # 斩杀竞速已证伪本回合防守线时，攻击仍是唯一可行救援
                     # （1161-F14-T6：TTK 6~7 回合、仅剩 1 回合）。
                     score = min(score, floor_score)
+                _hp_atk_note = ""
                 if self_cost and lethal and len(killable) < len(enemies):
                     # 判死竞速豁免（第 635~640 批复盘）：竞速/孤注一掷判定的
                     # 致死回合里，群体自残攻击（突破族：小额掉血换全体伤害）
@@ -4570,8 +4580,21 @@ class Policy:
                     _doomed = desperate or race_allin or bool(kill_race)
                     if _doomed and my_hp - self_cost > 0:
                         score -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * 0.5
+                        if _hp_atk_trace:
+                            _hp_atk_note = (f"｜自残{self_cost}半价计价"
+                                            "（HP_COST_ATK_PRICING）")
                     else:
                         score = min(score, floor_score)
+                        if _hp_atk_trace:
+                            _hp_atk_note = (f"｜自残{self_cost}致死禁玩"
+                                            "（HP_COST_ATK_PRICING）")
+                elif self_cost and not lethal and _hp_atk_trace:
+                    # AOE 自残在非致死语境历来未计价（与单体分支全语境计价
+                    # 不对称）——先披露、后裁决：注记只陈述未计价事实，
+                    # 评分零改动（1306-F17 70 血零意图回合打出突破自付 1，
+                    # 链上原无任何痕迹）。
+                    _hp_atk_note = (f"｜自残{self_cost}非致死未计价"
+                                    "（HP_COST_ATK_PRICING）")
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 if _sleep_veto is not None:
@@ -4579,7 +4602,7 @@ class Policy:
                 hb = _hybrid_defense()
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
-                why = f"群体伤害≈{eff}"
+                why = f"群体伤害≈{eff}" + _hp_atk_note
                 if _sleep_veto is not None:
                     why += (f"｜沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
                             "未格挡伤害将提前唤醒（SLEEP_GUARD）")
@@ -4746,14 +4769,23 @@ class Policy:
                     pass  # 击杀最后一个敌人直接终局，自残值得
                 elif lethal and not (desperate or race_allin or kill_race):
                     best_s = min(best_s, floor_score)
+                    if _hp_atk_trace:
+                        why += (f"｜自残{self_cost}致死禁玩"
+                                "（HP_COST_ATK_PRICING）")
                 elif lethal and my_hp - self_cost > 0:
                     # 判死竞速豁免与群体面同口径（对齐第 635~640 批教义）：判死局
                     # 唯一翻盘路径是把每分能量押进输出——能斩杀的单体自残牌在
                     # race_allin/kill_race 下旧例被压到禁玩线，与 AOE 分支不对称；
                     # 自残归零的直死牌不豁免（终局教训保留），豁免按半价复利计价
                     best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * 0.5
+                    if _hp_atk_trace:
+                        why += (f"｜自残{self_cost}半价计价"
+                                "（HP_COST_ATK_PRICING）")
                 else:
                     best_s -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))  # 血越少自残越贵
+                    if _hp_atk_trace:
+                        why += (f"｜自残{self_cost}计价"
+                                "（HP_COST_ATK_PRICING）")
             if cost == 0:
                 best_s += pol["free_card_bonus"]
             hb = _hybrid_defense()

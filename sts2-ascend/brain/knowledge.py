@@ -109,6 +109,12 @@ DEFAULT_POLICY = {
                                    # 可行动段自损 18，非致死回合白烧 8 血把可存活分母烧穿。
                                    # 与攻击分支同一把血价尺扣分，判死语境半价，自付归零直死
                                    # 禁玩；0 = 关闭（严格回滚旧口径）
+    "hp_cost_atk_pricing_trace": 1,  # 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
+                                     # 单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧
+                                     # 此前零留痕（1303 自损 27 / 1305 御血术+×14 / 1306-F17
+                                     # 非致死突破自付 1，链上 0 条血价痕迹），攻击路由的耗血牌
+                                     # 无法结算 1285~1289 批指标①。纯观测注记，评分零改动；
+                                     # 0 = 关闭（留痕整体消失，旧口径逐字不变）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

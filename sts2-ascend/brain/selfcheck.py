@@ -10496,6 +10496,73 @@ def main() -> int:
     assert "耗血" not in why_rb and abs(s_rb - s_trn) < 1e-9, \
         f"hp_cost_utility_pricing=0 未回滚旧口径: {s_rb}（{why_rb}）vs {s_trn}"
 
+    # 3hcat) 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
+    #      单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧此前零留痕
+    #      ——1303 御血术跨 10 场战斗可行动段自损 27、1305 御血术+打出
+    #      14 次、1306-F17 非致死回合打出突破（自付1），持久链血价留痕
+    #      全部 0 条，攻击路由的耗血牌永远无法结算 1285~1289 批指标①。
+    #      ① 非致死单体自残带「自残2计价」留痕且分数低于同面板零自付
+    #      攻击；② AOE 非致死自残带「非致死未计价」披露；③ 观测键=0
+    #      留痕整体消失且分数零漂移（纯观测锚）；④ 致死+判死竞速的
+    #      单体/AOE 豁免均带「半价计价」留痕。
+    hcat_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-hcat-"))
+    hcat_pol = policy.Policy(knowledge.Knowledge(hcat_dir), random.Random(5))
+    hcat_enemies = [{"index": 0, "enemy_id": "HCAT_BOSS", "name": "魂灵鱼",
+                     "current_hp": 120, "max_hp": 120, "block": 0,
+                     "is_alive": True, "is_hittable": True,
+                     "intents": [{"total_damage": 12}]}]
+    hcat_hemo = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术",
+                 "playable": True, "energy_cost": 1, "requires_target": True,
+                 "valid_target_indices": [0],
+                 "rules_text": "失去2点生命。造成15点伤害。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+    hcat_strike = {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                   "playable": True, "energy_cost": 1, "requires_target": True,
+                   "valid_target_indices": [0],
+                   "rules_text": "造成15点伤害。",
+                   "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+    hcat_bt = {"index": 2, "card_id": "BREAKTHROUGH", "name": "突破",
+               "playable": True, "energy_cost": 1, "requires_target": False,
+               "rules_text": "失去1点生命。对所有敌人造成9点伤害。",
+               "dynamic_values": [{"name": "Damage", "current_value": 9}]}
+    s_hemo, _, why_hemo = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    s_stk, _, why_stk = hcat_pol._score_play(
+        hcat_strike, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert s_hemo < s_stk and "自残2计价（HP_COST_ATK_PRICING）" in why_hemo, \
+        f"非致死单体自残未留血价痕: {s_hemo}（{why_hemo}）vs {s_stk}"
+    assert "自残" not in why_stk, f"零自付攻击被误加自残留痕: {why_stk}"
+    s_bt, _, why_bt = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "自残1非致死未计价（HP_COST_ATK_PRICING）" in why_bt, \
+        f"AOE 非致死自残未披露: {s_bt}（{why_bt}）"
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 0
+    s_hemo_off, _, why_hemo_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    s_bt_off, _, why_bt_off = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "自残" not in why_hemo_off and "自残" not in why_bt_off, \
+        f"观测键=0 仍有自残留痕: {why_hemo_off} / {why_bt_off}"
+    assert abs(s_hemo_off - s_hemo) < 1e-9 and abs(s_bt_off - s_bt) < 1e-9, \
+        f"观测留痕改变了评分: {s_hemo_off}vs{s_hemo} / {s_bt_off}vs{s_bt}"
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
+    s_doom, _, why_doom = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[],
+        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+    assert "自残2半价计价（HP_COST_ATK_PRICING）" in why_doom, \
+        f"判死竞速单体自残未按半价留痕: {s_doom}（{why_doom}）"
+    s_bt_doom, _, why_bt_doom = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+    assert "自残1半价计价（HP_COST_ATK_PRICING）" in why_bt_doom, \
+        f"判死竞速 AOE 自残未按半价留痕: {s_bt_doom}（{why_bt_doom}）"
+
     print("SELFCHECK OK")
     return 0
 
