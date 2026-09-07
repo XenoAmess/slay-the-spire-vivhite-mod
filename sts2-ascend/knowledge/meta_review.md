@@ -6863,3 +6863,76 @@ retry_resolution: none (no replay target; local production behaviorization)
   9.1 战 7.4 死升至本批后 ≈11 战 9 死量级，已是一幕 Boss 主死因形态之一
   （仅次于 KIN 双子与 VANTOM）——本批行为化正是对该形态的第一次机制级
   对接（此前只有泛化的 HARD_INTENT_SPIKE_FIRE 事后识别）。
+
+# 2026-09-07｜第 1285~1289 局复盘（异步追及队列 5 局 exact_batch 全败；行为化 ×1：HP_COST_UTILITY_PRICING 耗血功能牌计价）
+
+## 一、失败包闭环（固定步骤）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]——本批无
+  待 replay 的失败包，无 retry_resolution 条目。
+
+## 二、HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：「失去X点生命」换抽牌/回能的功能牌（祭品/放血族：无伤害
+  无格挡，走 `_score_play` 功能牌分支）以 `2.0+dr*1.5` 满分计价、自付血量
+  零扣减（攻击分支早有 self_cost 血价尺，功能牌分支是漏口）；Boss 战中段
+  的非致死回合打出此类牌，会把可存活分母提前烧穿，把防守线复核报可行的
+  局推进必败竞速。
+- **EVIDENCE**：1289 局（6N0QMU95NYYJ）F17 LAGAVULIN_MATRIARCH 全链
+  （248 条，完整链深读 runs/20260907-132507_6N0QMU95NYYJ.json）：
+  T6 hp32/意图12，防守线复核报「格挡10+输出10/回合混合分配即可追平击杀
+  所需6回合，维持攻防节奏不全攻」的可行口径下，打出祭品自付 6（32→26）
+  +御血术+自付 2（26→24）；T8 hp17/意图21 致死竞速中再打祭品 6（17→11）、
+  放血 3（11→8），本回合净自付 9 后吃 21 意图阵亡。全场可行动段自损 18
+  （SELF_LOSS_PHASE_OBS 18/36）；T6 的 8 点自付正是 T7「可存活2回合」→
+  T8「可存活0回合」的直接来源——不自付则 T8 以 25 血对 21 意图可存活，
+  而击杀投影仅剩 1~2 回合。同批佐证：1288-F17 Boss 可行动段自损 2、
+  1285-F3/1286-F3/1289-F5/F8 均见 SELF_LOSS_PHASE_OBS 可行动段自损记录；
+  自损观测闸（上批落地）已证明口径可信，本批是把观测接到评分的第一刀。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 战斗留痕出现「耗血N计价
+  （HP_COST_UTILITY_PRICING）」；② Boss 战可行动段自损均值较本批
+  （18/2/1/3/1）显著下降；③ 类似 1289-F17-T6 的「防守线可行+非致死」
+  局面不再烧 6+ 血换抽牌；④ 判死竞速语境（孤注一掷/败局竞速/致死斩杀
+  竞速）耗血功能牌仍半价放行——若该语境留痕消失且伴随抢斩杀失败率上升
+  ≥3 例，判定误伤并回滚。
+
+## 三、本次调整（行为化 ×1：HP_COST_UTILITY_PRICING）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **HP_COST_UTILITY_PRICING**（耗血功能牌在功能牌分支零计价的评分漏口；证据：1289-F17 全链 T6/T8 逐条 + 同批 4 局 SELF_LOSS_PHASE_OBS 可行动段自损 ≥3 个独立对局 ≥ evidence_run_threshold=3） |
+| 代码动作 | brain/policy.py `_score_play` 功能牌分支：`self_cost>0` 且旋钮开启时按攻击分支同一把血价尺 `self_cost×(1.5+3.0×(1-hp_pct))` 扣分；判死语境（desperate/race_allin/kill_race_lethal）半价（对齐第 635~640 批豁免教义）；自付归零直死任何语境压到禁玩线（终局教训保留）；致死且非判死回合维持既有「抽牌/回能救不了命」floor 不变；why 追加「耗血N计价（HP_COST_UTILITY_PRICING）」/「自付归零直死禁玩」可 grep 留痕。brain/knowledge.py DEFAULT_POLICY 新增静态键 `hp_cost_utility_pricing: 1` |
+| 不改 | 攻击/AOE 分支既有 self_cost 口径、致死非判死回合 floor、判死竞速豁免教义、Vivhite 策略层生命计价（`self._strategy_card` 通道 self_cost 清零在先，不受影响）、JOINT_FLIP_TTK_CAP/SLEEP_GUARD 等全部既有闸、药水通道 |
+| 回滚 | `hp_cost_utility_pricing: 0` 即整体关闭、严格回落旧口径（selfcheck 3hcu 锚④ 为对照锚）；或删除 policy/knowledge/selfcheck 三处改动零残留 |
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；改动仅限
+  sts2-ascend 静态项目文件（policy/knowledge/selfcheck + 复盘报告/短评），
+  无在线状态写入、无进程操作、无 push。
+- selfcheck 3hcu：① 非致死回合 40% 血，祭品（失6/抽3/回能）评分被血价
+  压过同费零自付的战斗专注并带「耗血6计价」留痕，零自付牌零漂移；
+  ② 6 血打祭品（自付归零）压到禁玩线带「自付归零直死禁玩」；
+  ③ 判死竞速（kill_race_lethal）语境半价计价留痕放行；④ 旋钮=0 严格
+  回滚（无留痕、分数与零自付同价）。既有 3sg/3htp/3br-cap 等全部断言
+  原样通过。
+- 指标（未来 3~10 局）：① HP_COST_UTILITY_PRICING 留痕出现率与独立
+  对局数；② Boss 战可行动段自损均值 vs 本批基线；③ 判死语境「耗血N
+  计价」留痕是否仍在（误伤监测）；④ 一幕 Boss 越墙率（本批 1/5：
+  1288 越墙后 F23 阵亡）是否随自损收窄回升。
+- 继续调整条件：留痕 ≥3 个独立对局且可行动段自损下降、Boss 战损收窄
+  → 视证据评估是否把同型血价推广到残能救场/事件通道（须先有其漏口
+  实证）；若判死语境找弹药被误压 ≥3 例 → 旋钮=0 回滚。
+- 撤回条件：`hp_cost_utility_pricing: 0` 即整体关闭；或删除三处改动。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1289）：1285-F7 / 1286-F17 / 1287-F15 / 1288-F23
+  （一幕 Boss 已越墙）/ 1289-F17。竞速审计「判死→阵亡」台账本批
+  1288-F23（T2判死→4回合阵亡）与 1289-F17（T4判死→8回合阵亡）续记，
+  1288-F17「T2判死→实战9回合获胜」反向样本说明判死口径偏悲观，但
+  已有 RACE_AUDIT 台账在跟踪、本批不重复立案。JOINT_FLIP_TTK_CAP 在
+  1289-F17-T6/T7 两次「防守线复核虽报可行但翻盘比超限不予放行」——
+  该闸本批按既有教义工作，是否过严（1.5 比值在自损未计价时代被自付
+  血进一步压低 tsurv）留作下一观察点，与主假设共用自损收窄指标验证。
+

@@ -10179,6 +10179,53 @@ def main() -> int:
         and f"预算{_deep_base}" in d_lethal_gate.reason, \
         f"Boss tier-3 rollback did not restore base budget: {d_lethal_gate and d_lethal_gate.reason}"
 
+    # 3hcu) 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
+    #      祭品/放血族「失去X点生命」换抽牌/回能此前在功能牌分支满分计价、
+    #      自付零扣减；1289-F17（6N0QMU95NYYJ）T6 防守线复核报可行的非致死
+    #      回合祭品自付6（32→26）、T8 祭品6+放血3（17→8），全场可行动段自损
+    #      18 直接烧穿可存活分母。① 非致死回合 40% 血：祭品（失6血/抽3/回能）
+    #      被血价压过同费零自付抽牌（战斗专注族）并带「耗血6计价」留痕；
+    #      ② 自付归零直死禁玩（压到禁玩线、留痕）；③ 判死竞速语境半价计价
+    #      仍留痕放行（找斩杀弹药教义保留）；④ hp_cost_utility_pricing=0
+    #      严格回滚旧口径（无留痕、分数回到与零自付同价）。
+    hcu_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-hcu-"))
+    hcu_pol = policy.Policy(knowledge.Knowledge(hcu_dir), random.Random(5))
+    hcu_enemies = [{"index": 0, "enemy_id": "HCU_BOSS", "name": "乐加维林族母",
+                    "current_hp": 120, "max_hp": 120, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 12}]}]
+    hcu_offering = {"index": 0, "card_id": "OFFERING", "name": "祭品",
+                    "playable": True, "energy_cost": 0, "requires_target": False,
+                    "rules_text": "失去6点生命。获得2点能量。抽3张牌。消耗。"}
+    hcu_trance = {"index": 1, "card_id": "BATTLE_TRANCE", "name": "战斗专注",
+                  "playable": True, "energy_cost": 0, "requires_target": False,
+                  "rules_text": "抽3张牌。本回合内无法再抽牌。"}
+    s_off, _, why_off = hcu_pol._score_play(
+        hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[])
+    s_trn, _, why_trn = hcu_pol._score_play(
+        hcu_trance, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert s_off < s_trn and "耗血6计价（HP_COST_UTILITY_PRICING）" in why_off, \
+        f"非致死回合耗血功能牌未被血价压过零自付抽牌: off={s_off}（{why_off}）trn={s_trn}"
+    assert "耗血" not in why_trn, f"零自付功能牌被误加耗血留痕: {why_trn}"
+    s_sui, _, why_sui = hcu_pol._score_play(
+        hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=6, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert s_sui < -40.0 and "自付归零直死禁玩" in why_sui, \
+        f"自付归零直死未禁玩: {s_sui}（{why_sui}）"
+    s_doom, _, why_doom = hcu_pol._score_play(
+        hcu_offering, hcu_enemies, 40, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+    assert "耗血6计价（HP_COST_UTILITY_PRICING）" in why_doom and s_doom > -50.0, \
+        f"判死竞速语境耗血功能牌未按半价留痕放行: {s_doom}（{why_doom}）"
+    hcu_pol.know.policy["hp_cost_utility_pricing"] = 0
+    s_rb, _, why_rb = hcu_pol._score_play(
+        hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "耗血" not in why_rb and abs(s_rb - s_trn) < 1e-9, \
+        f"hp_cost_utility_pricing=0 未回滚旧口径: {s_rb}（{why_rb}）vs {s_trn}"
+
     print("SELFCHECK OK")
     return 0
 

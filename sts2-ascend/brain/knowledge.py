@@ -103,6 +103,12 @@ DEFAULT_POLICY = {
                                       # 沉睡3层，失去生命即提前苏醒；历史 10 场 F17 全部 T1 零意图
                                       # 全攻提前 2 回合唤醒 Boss 白吃 ≈37 火力。计数1（回合末自然
                                       # 苏醒）/全格挡/可击杀不拦截；0 = 关闭（严格回滚旧口径）
+    "hp_cost_utility_pricing": 1,  # 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
+                                   # 「失去X点生命」换抽牌/回能的功能牌（祭品/放血族）此前在
+                                   # 功能牌分支满分计价、自付血量零扣减——1289-F17 Boss 战
+                                   # 可行动段自损 18，非致死回合白烧 8 血把可存活分母烧穿。
+                                   # 与攻击分支同一把血价尺扣分，判死语境半价，自付归零直死
+                                   # 禁玩；0 = 关闭（严格回滚旧口径）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

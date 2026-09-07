@@ -4727,12 +4727,33 @@ class Policy:
         dr = draw_amount(card)
         if dr > 0 or "能量" in text or "energy" in text.lower():
             score = 2.0 + dr * 1.5
+            _hp_cost_note = ""
             # 孤注一掷/败局竞速回合例外：多抽一张攻击牌就是多一分抢斩杀的弹药
             if lethal and not (desperate or race_allin or kill_race_lethal):
                 score = min(score, floor_score)  # 致死回合抽牌/回能救不了命
+            elif self_cost and float(pol.get("hp_cost_utility_pricing", 1)) > 0:
+                # 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
+                # 祭品/放血族（无伤害无格挡、「失去X点生命」换抽牌/回能）此前在
+                # 本分支以 2.0+dr*1.5 满分计价、自付血量零扣减——1289-F17
+                # （LAGAVULIN_MATRIARCH，6N0QMU95NYYJ）T6 防守线复核报可行的非
+                # 致死回合打出祭品自付6（32→26）、T8 再打祭品6+放血3（17→8），
+                # 全场可行动段自损 18（SELF_LOSS_PHASE_OBS），T6 的 8 点自付正是
+                # T8「可存活0回合」吃 21 意图阵亡的直接来源。与攻击分支同一把
+                # 血价尺扣分；判死语境（孤注一掷/败局竞速/致死斩杀竞速）半价——
+                # 那时抽牌找斩杀弹药是既定教义；自付归零直死任何语境都不豁免
+                # （终局教训保留）。旋钮=0 严格回滚旧口径。
+                if my_hp - self_cost <= 0:
+                    score = min(score, floor_score)
+                    _hp_cost_note = (f"｜耗血{self_cost}自付归零直死禁玩"
+                                     "（HP_COST_UTILITY_PRICING）")
+                else:
+                    _doomed_ctx = desperate or race_allin or kill_race_lethal
+                    score -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * (
+                        0.5 if _doomed_ctx else 1.0)
+                    _hp_cost_note = f"｜耗血{self_cost}计价（HP_COST_UTILITY_PRICING）"
             if cost == 0:
                 score += pol["free_card_bonus"]
-            why = f"功能牌（抽牌{dr}/回能）"
+            why = f"功能牌（抽牌{dr}/回能）" + _hp_cost_note
             if kill_race_lethal:
                 why += "｜致死竞速抽牌续攻"
             return score, None, why
