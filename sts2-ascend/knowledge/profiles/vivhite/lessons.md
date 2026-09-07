@@ -3417,3 +3417,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.1437781348361526局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.0856385772099832局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/33.523212093131896局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.55 → 0.52（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损42/掉血78（54%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/307 胜，当前目标进阶 0
+
+## 第 308 局复盘（2026-09-08 04:36）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CHROMATIC_SEQUENCE, FINESSE, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, ENTROPY
+- 本局遗物：LANTERN
+- 战斗记录：F8 Monster战 掉血13｜自损10（可行动段10/非行动段19，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血6｜自损27（可行动段27/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血15｜自损30（可行动段30/非行动段14，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血2｜自损22（可行动段22/非行动段9，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0｜自损12（可行动段12/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血87｜自损39（可行动段39/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.188812057248728局)，PANACHE(37分/2.831059738983018局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/10.896836964354305局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(34分/23.78656070093995局)，VIVHITE_CARD_CHROMATIC_LIMIT(33分/47.7425475415917局)
+- 当前低价值卡牌：AUTOMATION(17分/3.1327749113642263局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.0748388421897483局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/33.405880850805936局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/308 胜，当前目标进阶 0
