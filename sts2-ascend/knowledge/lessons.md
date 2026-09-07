@@ -9852,3 +9852,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.037248571704039局)，BULLY(10分/4.037248571704039局)，HAVOC(11分/3.22979885736323局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1296 胜，当前目标进阶 0
+
+## 第 1297 局复盘（2026-09-07 19:07）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：INFLAME, HEMOKINESIS, STONE_ARMOR, DISMANTLE, CINDER, FEEL_NO_PAIN, RUPTURE, CONFLAGRATION, ANGER, BREAKTHROUGH, TREMBLE, SECOND_WIND, FEEL_NO_PAIN
+- 本局遗物：PETRIFIED_TOAD, RAZOR_TOOTH
+- 战斗记录：F9 Monster战 掉血19｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血10｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血2｜自损2（可行动段2/非行动段6，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血18｜自损1（可行动段1/非行动段23，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0; F17 Boss战 掉血58｜自损3（可行动段3/非行动段53，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/28.97781504383746局)，FIEND_FIRE(25分/37.01268745566831局)，PRIMAL_FORCE(24分/5.632365482384306局)，PACTS_END(24分/110.77353462944897局)，MANGLE(24分/103.72156389124795局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.023118201703075局)，BULLY(10分/4.023118201703075局)，HAVOC(11分/3.218494561362459局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1297 胜，当前目标进阶 0
