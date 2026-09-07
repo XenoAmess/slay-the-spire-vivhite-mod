@@ -9742,6 +9742,48 @@ def main() -> int:
             and "CARD_BURST_PICK_AUDIT" not in d_cs_audit_off.reason), \
         f"观测键关闭后 CARD_SELECTION 审计未消失或选择漂移: {d_cs_audit_off.reason}"
 
+    # 3zz-audit-supply) CARD_BURST_PICK_AUDIT 落选侧供给测量（第1295~1301批
+    # 复盘）：饥饿恒真（61/61 starved_after=1）后，审计必须同时报告同一 offer
+    # 的最大有效爆发候选（offer_max）与供给留在桌上的差值（supply_left），
+    # 用于区分「offer 无供给」与「决策未拿满」；落牌侧旧口径字段逐字不变。
+    cs_audit_know.policy["card_pick_burst_audit"] = True
+    assert ("offer_max=" in d_cs_audit.reason
+            and "supply_left=" in d_cs_audit.reason), \
+        f"CARD_SELECTION 自愿选牌审计缺少落选侧供给字段: {d_cs_audit.reason}"
+    _sup_atk = {"card_id": "SUPPLY_ATK", "name": "供给攻击", "card_type": "Attack",
+                "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 9}]}
+    _sup_blk = {"card_id": "SUPPLY_BLK", "name": "供给格挡", "card_type": "Skill",
+                "energy_cost": 1,
+                "dynamic_values": [{"name": "Block", "current_value": 5}]}
+    # ① 落牌为格挡（delta+0）而 offer 含 9 伤攻击 → offer_max=SUPPLY_ATK(+9.0)、
+    #    supply_left=+9.0（供给留在桌上可计数）。
+    _s1 = cs_audit_pol._card_pick_burst_audit(
+        [], dict(_sup_blk), max_hp=80, act=1, offer=[dict(_sup_blk), dict(_sup_atk)])
+    assert ("offer_max=SUPPLY_ATK(+9.0)" in _s1
+            and "supply_left=+9.0" in _s1
+            and "delta=+0.0" in _s1), \
+        f"落选侧供给测量错误（应报攻击候选与 supply_left）: {_s1}"
+    # ② 落牌即最大供给候选 → supply_left=+0.0（决策侧已拿满）。
+    _s2 = cs_audit_pol._card_pick_burst_audit(
+        [], dict(_sup_atk), max_hp=80, act=1, offer=[dict(_sup_blk), dict(_sup_atk)])
+    assert ("offer_max=SUPPLY_ATK(+9.0)" in _s2
+            and "supply_left=+0.0" in _s2
+            and "delta=+9.0" in _s2), \
+        f"落牌即最大供给时 supply_left 应为 +0.0: {_s2}"
+    # ③ offer 缺省 → 回落旧格式（无新字段），旧消费端兼容。
+    _s3 = cs_audit_pol._card_pick_burst_audit([], dict(_sup_atk), max_hp=80, act=1)
+    assert ("CARD_BURST_PICK_AUDIT:" in _s3
+            and "offer_max=" not in _s3
+            and "supply_left=" not in _s3), \
+        f"offer 缺省时未回落旧格式: {_s3}"
+    # ④ 观测键关闭 → helper 返回空串（旧对照锚同口径）。
+    cs_audit_know.policy["card_pick_burst_audit"] = False
+    assert cs_audit_pol._card_pick_burst_audit(
+        [], dict(_sup_atk), max_hp=80, act=1,
+        offer=[dict(_sup_atk)]) == "", "观测键关闭后 helper 未返回空串"
+    cs_audit_know.policy["card_pick_burst_audit"] = True
+
     # 新卡探索不是全局随机 epsilon：只在原始评分近优且跨过拿牌门槛时，UCB
     # 可用每局配额把一次选择从高样本贪心牌转给零样本新牌；因此不会永远饿死。
     explore_know = knowledge.Knowledge(

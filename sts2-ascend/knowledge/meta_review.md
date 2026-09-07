@@ -7038,3 +7038,118 @@ retry_resolution: none (no replay target; local production observability fix)
    分布；② HP_COST_UTILITY_PRICING 首验窗口；③ JOINT_FLIP_TTK_CAP
    「否决后改锻造战损」分子累计；④ race_audit 悲观率台账续记。
 
+# 2026-09-08｜第 1295~1301 局复盘（异步追及队列 7 局 exact_batch 全败；CARD_BURST_PICK_AUDIT 首批真机样本结算：饥饿恒真；观测位扩展 ×1：落选侧供给测量 offer_max/supply_left）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260907-233006-1788795006827588200-9a96c412]
+  （role=target，lifecycle_stop：维护停机取消 kimi-k3 复盘，return_code=1、
+  selfcheck_state=not_run、patch_bytes=-1、changed_files=0——**前次尝试零产出，
+  无可重实现内容**）。attempt_packages=[]，无 lineage。
+- 结论：失败包为纯停机现场、零代码产出；本批基于当前 HEAD 自行完成常规闭环，
+  按契约对 target 写 integrated（本批闭环即该包的实质重实现）。
+
+retry_resolution: 20260907-233006-1788795006827588200-9a96c412 integrated
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：饥饿已恒真——CARD_BURST_PICK_AUDIT 首批 61 条真机样本
+  starved_before=1 → starved_after=1 占 61/61（饥饿线 96~135 vs 卡组有效爆发
+  18~58，reachable supply 不到线的一半），二元饥饿旗标不再携带判别信息；拿牌端
+  的有效问题变为「这份 offer 的最大有效爆发供给是否被拿走」。现有审计只记落牌
+  侧 delta，落选候选的供给不可见，无法区分「offer 本身无供给」（决策无罪，缺口
+  归卡池上限）与「决策把供给留在桌上」（拿牌端可加杠杆）。
+- **EVIDENCE**：runs 1296×5 / 1297×8 / 1298×5 / 1299×18 / 1300×6 / 1301×13 /
+  1302×6 共 61 条审计（1295 启程于接线部署前零显形，时序吻合）；delta 分布
+  +0.0 占 38/61（防御/功能落牌：SHRUG_IT_OFF/TAUNT/IMPERVIOUS/TRUE_GRIT…），
+  +3~+10 占 23/61（攻击/引擎落牌：DISMANTLE+10/HEMOKINESIS+9/INFLAME+6…）；
+  1301 三次落牌 delta=+0.0 时候选含攻击牌（双重打击/地狱之刃/绯红披风），其
+  落选 delta 在持久链完全不可见——「选牌补供给」按预注册不落证伪（攻击落牌
+  delta 显著为正），但 starved_after 恒 1，落进「供给缺口量化入账」分支。
+- **EXPECTED_SIGNAL**：未来 3~10 局审计段出现 `offer_max=<ID>(+X.X)` 与
+  `supply_left=+Y.Y` 字段；≥3 个独立对局后按 supply_left 分布分类：普遍 +0.0
+  → offer 供给受限、决策侧已拿满（停止拿牌端加杠杆，供给缺口归卡池质量）；
+  饥饿态 supply_left 频繁 >0 → 决策侧缺口量化，为拿牌端杠杆（权重/门槛）供数。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1295~1301]，exact 7/7、missing=0；7 局全败（生涯 0/1301）。
+- 死亡分布：一幕 Boss（F17）5 局（1295/1296/1297/1298/1300，入场 72%~100%
+  全部竞速判死应验）、二幕 Boss（F33）1 局（1301，THE_INSATIABLE -62/5 回合
+  阵亡，T2判死应验）、三幕（F48）1 局（1299，T2判死→4 回合阵亡）。
+- 主样本 1301（A9KN1XG9BB66）packet 内 202 条切片 + decision_aggregates 已
+  逐条核读；1299（JJYU5S30J5UV，floor 48，634 条完整链）按需深读 F40~F48 段。
+- 部署时序：CARD_BURST_PICK_AUDIT 接线（1290~1294 批落盘）早于 1296+ 全部
+  对局（1295 17:50 启程为首个 post-fix 局、该 run 零显形系其拿牌少且段落截断，
+  非失效）；其余在产杠杆（JOINT_FLIP_TTK_CAP/RACE_AUDIT 链/手税计价）均先于
+  本批全部对局，本批无 pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17 五局前夜竞速预演全部判死（击杀需 16 回合
+   ＞满血可存活 5~6 回合）且全部实战兑现；RACE_AUDIT_HEAL_OVERRIDE（1295/1297）
+   与必败弃疗改锻造（1296/1301）两端杠杆按教义工作——设计内终态，不重复立案。
+2. **1299 亮点与终局**：一幕 F17「T2判死→8 回合获胜」越墙 +1，二幕 F33 越墙
+   +1（-64），行至 F48 三幕 Boss 前夜 20 血「竞速审计覆盖弃疗」回血 32→51 进场，
+   竞速预演「击杀需13回合＞满血可存活7回合（池265/火力14/先验21）」判死，实战
+   4 回合阵亡——前夜判决方向正确，死于输出密度。F45 精英（-57，T2判死→6回合
+   获胜）为竞速审计反向样本 +1。
+3. **CARD_BURST_PICK_AUDIT 首批真机结算（本批实验靶点）**：见 HYPOTHESIS 段。
+   补充读数：攻击/引擎落牌 delta +3~+10 证实「选牌确实补有效爆发」，但饥饿线
+   （req=pool×fire/max_hp/eff，eff 触底 0.37 放大约 2.7 倍）在现行卡组供给下
+   结构性不可越——starved 恒 1 意味着饥饿门控行为（拿牌加分/升级攻击加成/药水
+   预留窗/地图端饥饿带）全部常开，与「旋钮顶格」的既定终态自洽。
+4. **执行层核查**：1301 F33 战 JOINT_FLIP_TTK_CAP 14 次否决假可行翻盘（战斗端
+   按设计工作）；1299/1301 长链零「结算超时收口观测」显形（SETTLE 样本仍 1/3，
+   顺延）；税牌旁观在 1299×9/1301×5 在产；本批无族母遭遇，SLEEP_GUARD 窗口
+   顺延不判失效。
+5. **竞速审计悲观率台账**：本批判死应验 +6（F17×5、F48×1），反向 +2（1299-F17/
+   F45/F46、1301-F22 计 4 场判死后获胜中的独立对局 2 个），续记不重复立案。
+
+## 三、本次调整（观测位扩展 ×1：CARD_BURST_PICK_AUDIT 落选侧供给测量）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **CARD_BURST_PICK_AUDIT_SUPPLY_SIDE**（饥饿恒真后的供给归属测量缺口；证据：61 条真机样本 starved_after 恒 1 + 38/61 落牌 delta=+0.0 时落选攻击候选供给不可见；机制先例：HAND_TAX_PLAY_AUDIT「落选侧永不入链」同款测量盲区） |
+| 代码动作 | brain/policy.py `_card_pick_burst_audit` 新增可选 `offer` 参数：给定时按同一 deck_effective_burst 口径为同 offer 全部候选补测 delta，追加 `offer_max=<ID>(+X.X)`（最大供给候选）与 `supply_left=+Y.Y`（=offer_max_delta−落牌delta，≥0）；REWARD 与 CARD_SELECTION 两个真实消费端均传入各自 scored 候选列表。候选测量异常时只省略新增字段，落牌侧旧格式逐字不变 |
+| 性质边界 | 纯观测位：不改 eval_reward_card、排序、UCB、门槛、tags 与实际选择；观测键置 False 时 helper 返回空串（selfcheck 3zz-audit-supply ④ 对照锚）；offer 缺省时回落旧格式（同 ③）；成本为有界每候选一次装箱计算（≤4 张） |
+| 测试 | brain/selfcheck.py 新增 3zz-audit-supply 四断言（① 落格挡+offer 含 9 伤攻击 → offer_max=SUPPLY_ATK(+9.0)/supply_left=+9.0；② 落牌即最大供给 → supply_left=+0.0；③ offer 缺省 → 旧格式无新字段；④ 键 False → helper 空串），并钉死 CARD_SELECTION 路径理由必须带新字段。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK** |
+| 未来 3~10 局观测指标 | ① 审计段 `supply_left` 出现率与独立对局数；② 饥饿态落牌的 supply_left 分布（+0.0 占比 vs >0 占比）；③ supply_left>0 例的 offer_max 候选与落牌价值差（决策为何未拿供给最大项：门槛/ starving 加分/探索共存）；④ 供给归属结论与后续拿牌端杠杆的对应关系 |
+| 继续调整条件 | 饥饿态 supply_left 普遍 +0.0（≥3 局）→ 「offer 无供给」定案，拿牌端不再加供给类杠杆，供给缺口归卡池质量/掉率，证据改接商店/删牌端；supply_left 频繁 >0 且落牌价值差可解释 → 按差值分布调 starved 攻击权重或门槛的最小行为闭环；留痕零出现 → 检查持久链截断口径 |
+| 撤回条件 | knowledge/policy.json 写 `card_pick_burst_audit: false` 即整审计关闭（含新增字段）；或删除 policy.py helper 的 offer 段、两处调用点参数与 selfcheck 3zz-audit-supply 断言零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测位扩展落地，
+   非登记延后）；9a96c412 失败包为零产出停机现场，对账闭环不产生新积案。
+2. **CARD_BURST_PICK_AUDIT（上批接线）**：首验通过——7 局 61 条真机留痕，
+   delta 分布与 starved 转移首结；本批扩展落选侧供给测量续账。
+3. **JOINT_FLIP_TTK_CAP**：1301 战斗端否决留痕 14 处、1299×3/1300×1 在产；
+   1301 前夜否决→改锻造→越过一幕 Boss（F17 后行至 F33）为「否决后改锻造」
+   首个非负结局样本，与 1296（改锻造仍死 F17）对冲，分子维持不结案。
+4. **SETTLE_TIMEOUT_CONCEDE_OBS / ENGINE_COMMIT_LOWHP_OBS /
+   RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD**：本批无对应现场（1299/1301 长链
+   收口均能量真尽、无低血承诺、无族母遭遇），顺延不判失效。
+5. **HP_COST_UTILITY_PRICING**：1301 拿牌含 HOWL_FROM_BEYOND 等耗血族功能牌，
+   首验窗口已开，下批核对其计价留痕。
+6. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+   血池精度 / 死亡谷 least-bad / 无色药水词表）：本批无新现场，续挂。
+
+## 五、新沉淀的经验知识
+
+1. **二元旗标饱和后必须改测边际归属**：starved 恒 1 时「是否饥饿」不再携带
+   信息，拿牌端的可证伪问题自动降级为「这份 offer 的供给是否被拿满」——观测
+   位要随旗标饱和升级到落选侧，否则 38/61 的 delta=+0.0 落牌永远说不清是
+   offer 无供给还是决策不拿。
+2. **饥饿线结构读数**：line=pool×fire/(max_hp×eff)，eff 触底 0.37 把需求线放大
+   约 2.7 倍（一幕 119 vs 实测爆发上限 ~58；二幕起 clamp 至 135=3×floor），现行
+   供给下结构性不可越——这与「饥饿链旋钮全顶格、证据停止吸收」互为表里，
+   后续任何「跨越饥饿线」为目标的提案都属证伪后方向，不得再立项。
+3. **判死后获胜样本的归属**：1299 F17/F45/F46 与 1301 F22 四场「T\d判死→实战
+   获胜」说明竞速预演悲观率仍在 30%~46% 带内波动，前夜两端杠杆（回血/锻造）
+   的边际收益只能按台账慢调，不可因单批全败加严。
+4. 观察点（下批复盘核对）：① supply_left 首发与分布；② HP_COST_UTILITY_PRICING
+   耗血功能牌计价首验（1301 已开窗口）；③ SETTLE_TIMEOUT_CONCEDE_OBS 样本
+   计数（仍 1/3）；④ race_audit 悲观率台账续记；⑤ 族母遭遇时 SLEEP_GUARD 首验。
+
+

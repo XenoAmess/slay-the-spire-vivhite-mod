@@ -6021,8 +6021,19 @@ class Policy:
 
     def _card_pick_burst_audit(self, deck: list[dict], card: dict,
                                max_hp: int | None = None,
-                               act: int | None = None) -> str:
-        """Return a side-effect-free burst delta for a picked reward card."""
+                               act: int | None = None,
+                               offer: list[dict] | None = None) -> str:
+        """Return a side-effect-free burst delta for a picked reward card.
+
+        第1295~1301局批复盘扩展（供给归属测量）：61 条真机样本显示饥饿恒真
+        （starved_after=1 占 61/61），二元饥饿旗标不再携带判别信息，拿牌端的
+        有效问题变为「这份 offer 的最大有效爆发是否被拿走」。offer 给定时
+        （同一 offer 的全部候选），为每个候选按同一 deck_effective_burst 口径
+        补测落选侧供给，追加 offer_max（最大 delta 的候选）与 supply_left
+        （=offer_max_delta−落牌delta，≥0）：supply_left 普遍 +0.0 说明决策侧
+        已拿满、供给缺口归卡池；频繁 >0 则为拿牌端杠杆提供量化缺口。纯观测，
+        候选测量异常时只省略新增字段，落牌侧旧口径逐字不变。
+        """
         if not bool(self.know.policy.get("card_pick_burst_audit", True)):
             return ""
         try:
@@ -6033,11 +6044,28 @@ class Policy:
             card_id = str(card.get("card_id") or "").upper().rstrip("+") or "?"
         except (AttributeError, TypeError, ValueError):
             return ""
-        return (
+        base = (
             f"；CARD_BURST_PICK_AUDIT:card={card_id},before={before:.1f},"
             f"after={after:.1f},delta={after - before:+.1f},line={line:.1f},"
             f"starved_before={int(before < line)},starved_after={int(after < line)}"
         )
+        if not offer:
+            return base
+        try:
+            best_id, best_delta = card_id, after - before
+            for cand in offer:
+                if not isinstance(cand, dict):
+                    continue
+                _d = float(self.deck_effective_burst(base_deck + [cand])) - before
+                if _d > best_delta:
+                    best_delta = _d
+                    best_id = (str(cand.get("card_id") or "").upper()
+                               .rstrip("+") or "?")
+            supply_left = max(0.0, best_delta - (after - before))
+            return (f"{base},offer_max={best_id}({best_delta:+.1f}),"
+                    f"supply_left={supply_left:+.1f}")
+        except (AttributeError, TypeError, ValueError):
+            return base
 
     def _deck_good_count(self, deck: list[dict]) -> int:
         """卡组中非基础、非废牌的数量（单薄/膨胀判定的共同口径）。"""
@@ -6605,7 +6633,8 @@ class Policy:
                     tags.append(explore_tag)
                 _det_note = f"；{'；'.join(_best_det)}" if _best_det else ""
                 explore_note += self._card_pick_burst_audit(
-                    deck, best, max_hp=_mh, act=_act)
+                    deck, best, max_hp=_mh, act=_act,
+                    offer=[c for _v, c, _d in all_scored])
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
                                 f"{_det_note}{explore_note}；候选：{', '.join(vals)}",
@@ -7028,9 +7057,12 @@ class Policy:
                 # 经 CARD_SELECTION/select_deck_card（896 局留痕 choose_reward_card
                 # 零出现、审计零显形）——自愿奖励被接受时同样追加前后有效爆发审计，
                 # 观测位只有在真实消费路径上才产生真机留痕。强制入组/牌堆顶/献祭/
-                # 升级等语义分支照旧不追加。
+                # 升级等语义分支照旧不追加。第1295~1301批复盘：同一 offer 的落选
+                # 候选一并供给测量（offer_max/supply_left），饥饿恒真后区分
+                # 「offer 无供给」与「供给留在桌上」。
                 explore_note += self._card_pick_burst_audit(
-                    deck, pick, max_hp=_mh, act=_sel_act)
+                    deck, pick, max_hp=_mh, act=_sel_act,
+                    offer=[c for _v, c in scored])
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
