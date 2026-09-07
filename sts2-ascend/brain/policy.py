@@ -3949,40 +3949,6 @@ class Policy:
                     _hp_extra = _hp_pay * _hp_play_margin
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
-                    # 滑溜破层豁免（VIVHITE_HP_GATE_SLIPPERY_EXEMPT，第 225~230
-                    # 局批复盘）：目标带滑溜层时每张攻击命中只失 1 血，牌的
-                    # 真实价值在破层解锁后续伤害——230 局 F17 VANTOM（开局 8
-                    # 层）T1/T2/T5 余量门拦下实付 1~2 血的低价破层攻击
-                    # （0.588/0.418/3.207 分段），真实伤害迟至 T7 才解锁
-                    # （12+17+17），竞速审计 T3 判死→实战 T7 阵亡；225 局同型。
-                    # 只豁免「实付 ≤ cap（默认 2 血）的伤害牌」：高价謦欬
-                    # （如绯红定积分实付 12）破单层照样拦——付 12 血换 1 层
-                    # 正是本门要拦的死亡螺旋。豁免在 why 留注可 grep；
-                    # 开关 False 或 cap≤0 即回滚旧语义，非滑溜战零差异。
-                    if _hp_gate_hit and bool(pol.get(
-                            "vivhite_hp_gate_slippery_exempt", True)):
-                        try:
-                            _slip_pay_cap = max(0.0, float(pol.get(
-                                "vivhite_hp_gate_slippery_pay_cap", 2.0)))
-                        except (TypeError, ValueError):
-                            _slip_pay_cap = 2.0
-                        _slip_dmg, _slip_blk, _slip_hits = card_numbers(c)
-                        if _slip_pay_cap > 0.0 and _hp_pay <= _slip_pay_cap \
-                                and _slip_dmg > 0:
-                            _slip_enemy = next(
-                                (e for e in enemies
-                                 if e.get("index") == target), None)
-                            _slip_layers = (
-                                self._enemy_slippery_stack(_slip_enemy)
-                                if _slip_enemy is not None else
-                                max((self._enemy_slippery_stack(e)
-                                     for e in enemies), default=0.0))
-                            if _slip_layers > 0:
-                                _hp_gate_hit = False
-                                why += (f"｜謦欬门滑溜破层豁免：目标滑溜"
-                                        f"{_slip_layers:g}层，实付{_hp_pay:g}血"
-                                        f"≤{_slip_pay_cap:g}，破层优先"
-                                        f"（VIVHITE_HP_GATE_SLIPPERY_EXEMPT）")
                     if _hp_gate_hit:
                         why += (f"｜謦欬出牌门：实付{_hp_pay:g}血×"
                                 f"{_hp_play_margin:.2f}=+{_hp_extra:.1f}门槛，"

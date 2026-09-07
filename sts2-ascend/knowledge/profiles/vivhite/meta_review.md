@@ -423,38 +423,3 @@ retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
-
-# 第 225~230 局批复盘：謦欬出牌门把滑溜破层低价攻击一并拦死——破层期被无谓拉长、真实伤害解锁延迟到临终回合
-
-日期：2026-09-07
-
-## HYPOTHESIS
-
-对带滑溜层的敌人（每次命中只失 1 血），謦欬出牌余量门（margin 顶格 3.00）把「实付 1~2 血的低价破层攻击」按普通謦欬牌拦下；但这类牌在滑溜期的真实价值不是面板伤害（≈1）而是破层解锁后续真实伤害——拦截它们把破层期拉长数个回合，真实伤害迟至临终回合才解锁，是 VANTOM（生涯头号杀手，权重 17.97）竞速败北的可干预环节。豁免只限实付 ≤2 血的伤害牌，高价謦欬（实付 6/12）破单层照旧拦截，门对非滑溜战的语义零变化。
-
-## EVIDENCE
-
-- 第 230 局（9RK3SJEGHJ35，F17 VANTOM 阵亡）完整决策链逐条核对：T1 謦欬门拦下尺度变换+（实付1血/0.588分）与终止条件（实付1血/0.418分），T2 拦下弦光投影+（实付2血），T5 拦下弦光投影（实付2血/3.207分）——全部被拦牌都是「1~2 血换 1 层」的高效破层攻击；T4 零意图回合手握 6 张可出牌全弃。滑溜 8 层直到 T6 末才磨到 2 层，真实伤害 T7 才解锁（12+17+17=46，Boss 173 血池远不够），竞速审计 T3 判死→实战 T7 以 2 血阵亡。
-- 第 225 局（WXDFKJQ7CCTP）同型 F17 Boss 阵亡（竞速审计 T3 判死→6 回合阵亡，自损30）；stats_digest deaths_by_enemy 首位 VANTOM 17.97。
-- 门的原设计目标（165~169 批：非滑溜致命战自损占比 91~98%）不受本豁免影响——豁免条件要求目标当前带滑溜层且实付 ≤cap，普通战/高价謦欬口径不变（selfcheck gs2/gs3/gs4 锚定）。
-- failed_review_replay.requested_packages 为空，本批无重实现义务。
-
-## PRODUCTION_CHANGE
-
-- sts2-ascend/brain/policy.py：謦欬出牌余量门判定处新增滑溜破层豁免（VIVHITE_HP_GATE_SLIPPERY_EXEMPT）——`_hp_gate_hit` 命中时，若开关开启、实付 ≤ `vivhite_hp_gate_slippery_pay_cap`（默认 2.0）、牌为伤害牌且目标（无目标牌则任一敌人）当前滑溜层 >0，则撤销拦截并在 why 追加「謦欬门滑溜破层豁免：目标滑溜N层，实付P血≤cap，破层优先」注记（决策链可 grep）；被豁免牌不进入 `_hp_gate_blocked`，正常参选与残能救场通道不受影响。
-- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增两个静态键 `vivhite_hp_gate_slippery_exempt=True`（False 一键回滚）与 `vivhite_hp_gate_slippery_pay_cap=2.0`（≤0 同回滚）。
-- sts2-ascend/brain/selfcheck.py：新增 3prh2 夹具四分支——滑溜 8 层+margin=50 时低价攻击放行且留痕；cap=0 回滚拦截；开关 False 回滚拦截；无滑溜层维持拦截且无豁免注。
-- 回滚条件单一：policy.json 写 `vivhite_hp_gate_slippery_exempt=false`（或 pay_cap=0）。
-
-## EXPECTED_SIGNAL
-
-未来 3~10 局：① 滑溜战（VANTOM 及其他自挂滑溜敌人）决策链出现 `VIVHITE_HP_GATE_SLIPPERY_EXEMPT` 注，T1~T4 低价破层攻击打出率上升、滑溜层清空回合提前（230 局口径：T6 末 2 层 → 预期 T4~T5 清零）；② VANTOM 战「竞速审计 T3 判死→实战 N 回合」的实战回合数与胜率分布改善，deaths_by_enemy 中 VANTOM 权重占比下降；③ 非滑溜致命战自损占比不回升（门语义未变）。证伪/回滚：豁免注出现但 VANTOM 战绩无变化或自损死亡回升 → `vivhite_hp_gate_slippery_exempt=false` 回滚并复查破层价值口径；豁免注零出现（滑溜战未再发生）→ 保持观察至阈值局数。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3prh2 四分支，既有 3prh 三分支与全部既有夹具通过）。
-- `git diff --check` 通过；完整 diff 已回读：仅 brain/policy.py（+34）、brain/knowledge.py（+8 静态键）、brain/selfcheck.py（+45 夹具）+ 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
-
-## REPLAY
-
-本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
