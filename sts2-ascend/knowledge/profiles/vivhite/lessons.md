@@ -2218,3 +2218,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.367282510944247局)，ROLLING_BOULDER(20分/4.560055720149642局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.527120014661975局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/198 胜，当前目标进阶 0
+
+## 第 199 局复盘（2026-09-07 08:13）
+- 结果：💀 失败｜进阶 0｜到达层数 4｜当局评分 4
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血68｜自损58（可行动段58/非行动段8，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.138730879750315局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.61170862231287局)，SALVO(34分/8.83965635524629局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.764666738437139局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.040154204929735局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.355497022155942局)，ROLLING_BOULDER(20分/4.544095525129118局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.448275094610658局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（19回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损58/掉血68（85%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/199 胜，当前目标进阶 0
