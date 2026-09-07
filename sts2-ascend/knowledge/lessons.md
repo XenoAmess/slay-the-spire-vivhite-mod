@@ -9819,3 +9819,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.079938159579608局)，BULLY(10分/4.079938159579608局)，HAVOC(11分/3.2639505276636855局)
 - 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1293 胜，当前目标进阶 0
+
+## 第 1294 局复盘（2026-09-07 17:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HEMOKINESIS, JUGGLING, SHRUG_IT_OFF, INFLAME, VICIOUS, UNRELENTING, MOLTEN_FIST, HEADBUTT, INFERNAL_BLADE
+- 本局遗物：RED_MASK, AMETHYST_AUBERGINE
+- 战斗记录：F3 Monster战 掉血3｜自损4（可行动段4/非行动段5，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血26｜自损2（可行动段2/非行动段30，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血8｜自损4（可行动段4/非行动段7，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血10｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血58｜自损4（可行动段4/非行动段53，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/29.284224460990032局)，FIEND_FIRE(25分/37.404057059393956局)，PRIMAL_FORCE(24分/5.691921726429513局)，PACTS_END(24分/110.93780942032475局)，MANGLE(24分/104.81830855229269局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.065658376021079局)，BULLY(10分/4.065658376021079局)，HAVOC(11分/3.252526700816863局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
+- 生涯战绩：0/1294 胜，当前目标进阶 0
