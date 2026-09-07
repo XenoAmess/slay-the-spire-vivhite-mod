@@ -2922,3 +2922,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.6810630181469777局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.6129871660066457局)，ROLLING_BOULDER(20分/3.643489680092692局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/262 胜，当前目标进阶 0
+
+## 第 263 局复盘（2026-09-07 18:53）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RECURRENT_STARLIGHT, DRAMATIC_ENTRANCE, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：RIPPLE_BASIN, BOOK_OF_FIVE_RINGS, LANTERN
+- 战斗记录：F15 Monster战 掉血0｜自损8（可行动段8/非行动段7，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血24｜自损30（可行动段30/非行动段25，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血35｜自损18（可行动段18/非行动段21，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损10（可行动段10/非行动段11，SELF_LOSS_PHASE_OBS）; F22 Unknown战 掉血0｜自损6（可行动段6/非行动段14，SELF_LOSS_PHASE_OBS）; F27 Elite战 掉血87｜自损19（可行动段19/非行动段43，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.562889228196895局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(34分/26.837660436745743局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/12.759152155103399局)，VIVHITE_CARD_CHROMATIC_LIMIT(33分/42.664133791077596局)，VIVHITE_CARD_PERFECT_SYNTHESIS(33分/45.77499414777657局)
+- 当前低价值卡牌：AUTOMATION(17分/3.6681792975834635局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.6003417109256226局)，ROLLING_BOULDER(20分/3.6307374662123677局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.37（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.05 → 2.04（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F27——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F27——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F27——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/263 胜，当前目标进阶 0
