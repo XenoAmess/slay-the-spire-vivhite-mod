@@ -571,3 +571,41 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 `retry_resolution` 目标。
+
+# 第 307~314 局批复盘：余裕稀缺加分观测只挂在从不执行的 REWARD 路径——真实拿牌路径补留痕（VIVHITE_MARGIN_PICK_OBS）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+第 244~259 局批上线的余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY）本体已计入 eval_reward_card 分值（3prj 夹具在证、policy.json vivhite_margin_pick_bonus=4.0 生效中），但其 detail 观测只挂在 v0.111.0 从不执行的 REWARD/choose_reward_card 路径——与第1290~1294批 CARD_BURST_PICK_AUDIT 同型接线缺口。真实拿牌路径 CARD_SELECTION/select_deck_card 的 else 分支调用 eval_reward_card 时不传 detail、理由也不渲染加分注，因此 244~259 批预注册的验证信号「决策链拿牌理由出现余裕供给稀缺加分留痕」在结构上不可能触发，余裕源假设至今无法闭环。该假设可证伪：未来 3~10 局若真实拿牌路径决策链仍零出现「余裕供给稀缺加分（卡组无条件余裕源N张，+X）」留痕，则消费路径复查有误；policy.json 置 vivhite_margin_pick_bonus=0 时留痕与加分同灭（单键回滚，旧行为零差异）。
+
+## EVIDENCE
+
+- 全文检索本批 28 个 run 文件（2026-09-08，第 290~314 局）：「余裕供给稀缺加分」0 次；244~259 批上线以来 50+ 局从未显形。run 内「余裕」仅出现在残能空漏审计的「余裕机会成本」字段，与拿牌端无关。
+- 生产现状核查（policy.py）：6643-6654 行 detail 仅在调用方传入 list 时追加；唯一渲染 detail 的消费端是 _reward 的 choose_reward_card 分支（6735 行 _det_note）——第1290~1294批已证 v0.111.0 实战拿牌全走 CARD_SELECTION/select_deck_card（896 局 choose_reward_card 零出现）；else 分支（7119 行）不传 detail、理由（7179 行）不含任何加分注。
+- 第 314 局（TM8ACYF5SKGJ，F23 MYTE 战阵亡）完整 305 链已逐条深读：全链 18 次拿牌理由（终止条件/三色轮舞/负空间等）均无任何余裕供给注；该批自损主导依旧（310 局 F27 自损31/掉血26、311 局 F24 自损12/掉血0、313 局 F2 自损28/掉血26、314 局 F19 自损55/掉血44），但余裕源是否经稀缺加分进入卡组完全不可观测，244~259 批的「零源终局占比下降」信号无法对账。
+- 相邻观测对账：同批上线的其余留痕均正常显形（STALL_BREAK 6-39 次/局、DPT_FLOOR 6-96 次/局、DOMINATES 在 310/311/313/314 四局出现）——证明 run 记录链路本身完好，唯独余裕稀缺加分留痕结构性缺失。
+- 第 306 局批预注册的 DOMINATES 后续条件（≥2/3 局标记且伴随短于投影结局）经核对不成立：310/311/314 三局标记高频出现，但竞速审计行均为「判死→实战获胜」（311-F21 T5判死→10回合胜、314-F17 T6判死→7回合胜、314-F21 T4判死→5回合胜），非「短于投影」，故本批不接生存护栏。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 新增 Policy._vivhite_margin_pick_note(pick, deck)——按 eval_reward_card 同一公式（vivhite_margin_pick_bonus × 稀缺线性衰减）重算落牌实际吃到的加分，仅当 deck 非空、bonus>0、落牌为无条件余裕源且稀缺>0 时返回「；余裕供给稀缺加分（卡组无条件余裕源N张，+X）」，否则空串；
+  ② CARD_SELECTION/select_deck_card 的 else 分支（自愿与强制拿牌共用）在组装理由前把该注追加进 explore_note——纯观测，不改任何评分/阈值/动作选择；bonus=0 时留痕与加分同灭，单键回滚。
+- sts2-ascend/brain/selfcheck.py：新增 3prk 夹具九分支——helper 六分支（零源全额留痕、≥cap 归零、bonus=0 消失、非余裕源无、条件余裕无、空卡组无）+ 真实消费路径三分支（单牌 offer 拿余裕源带精确留痕「0张，+4.0」、拿非余裕源无留痕、bonus=0 回滚后选择不变且留痕消失）。
+- 不改 knowledge.py（复用既有 vivhite_margin_pick_bonus 单键），不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链拿牌理由出现「余裕供给稀缺加分（卡组无条件余裕源N张，+X）」留痕（零源卡组拿余裕源时应为 +4.0 全额），可直接与本批 314 局 18 次无注拿牌对账；② 留痕局的终局无条件余裕源张数与 244~259 批基线（6/16 局零源）可对账，判断加分是否真实改变拿牌构成；③ 若留痕高频出现但零源终局占比与战斗自损/掉血比仍不回落，则证明是加分幅度不足而非观测缺失，下一批调 vivhite_margin_pick_bonus 或 vivhite_margin_deck_cap。证伪/回滚：留痕仍零出现 → 消费路径复查有误；留痕出现但理由分值与「+X」对不上 → 公式漂移复查；policy.json 置 vivhite_margin_pick_bonus=0 即整体撤回（加分与留痕同灭）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3prk 九分支；既有 3prj 稀缺加分八分支、3pri/3prh 謦欬门夹具与全部既有夹具通过）。
+- git diff --check 通过（仅宿主挂载的 assets 超长路径删除遗留告警，与本批无关、不入 commit）；完整 diff 已回读：brain/policy.py（+23，helper + 一行接线）、brain/selfcheck.py（+67）两个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

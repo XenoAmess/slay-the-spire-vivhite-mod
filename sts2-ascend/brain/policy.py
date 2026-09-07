@@ -675,6 +675,26 @@ class Policy:
         return not any("margin_if" in effect
                        for effect in entry.mechanics.effects)
 
+    def _vivhite_margin_pick_note(self, pick: dict, deck: list) -> str:
+        """余裕供给稀缺加分在真实拿牌路径的观测留痕（VIVHITE_MARGIN_PICK_OBS，
+        第 307~314 局批复盘）：加分本体自第 244~259 局批起已计入
+        eval_reward_card 分值，但 detail 留痕只挂在 v0.111.0 从不执行的
+        REWARD/choose_reward_card 路径（与第1290~1294批 CARD_BURST_PICK_AUDIT
+        同型接线缺口），本批 28 个 run 文件全文检索零出现——预注册验证信号
+        结构上不可能触发。此处只补观测，不改任何评分/阈值/动作选择；
+        bonus=0 时留痕与加分同灭，保持单键回滚（旧行为零差异）。"""
+        pol = self.know.policy
+        bonus = float(pol.get("vivhite_margin_pick_bonus", 0.0) or 0.0)
+        if not deck or bonus <= 0.0 or not self._vivhite_margin_source(pick):
+            return ""
+        cap = max(1.0, float(pol.get("vivhite_margin_deck_cap", 3.0) or 3.0))
+        have = sum(1 for c in deck if self._vivhite_margin_source(c))
+        scarce = clamp((cap - have) / cap, 0.0, 1.0)
+        if scarce <= 0.0:
+            return ""
+        return (f"；余裕供给稀缺加分（卡组无条件余裕源{have}张，"
+                f"+{bonus * scarce:.1f}）")
+
     def _is_basic_card(self, card: dict) -> bool:
         """基础牌统一判定：角色静态目录 rarity=="basic" 优先；无目录角色
         （Ironclad）回退 STRIKE/DEFEND 子串。旧实现只认子串，对白绮基础牌
@@ -7164,6 +7184,9 @@ class Policy:
                 explore_note += self._card_pick_burst_audit(
                     deck, pick, max_hp=_mh, act=_sel_act,
                     offer=[c for _v, c in scored])
+            # 余裕稀缺加分真实路径观测（第 307~314 局批复盘）：自愿/强制拿牌
+            # 分支都在此处补留痕，评分本体不受影响
+            explore_note += self._vivhite_margin_pick_note(pick, deck)
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/

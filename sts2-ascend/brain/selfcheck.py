@@ -2735,6 +2735,73 @@ def main() -> int:
     assert abs(v_empty_on - v_empty_off) < 1e-9, \
         f"空卡组上下文不得触发稀缺加分: on={v_empty_on} off={v_empty_off}"
 
+    # 3prk) 余裕稀缺加分真实拿牌路径观测接线（VIVHITE_MARGIN_PICK_OBS，
+    #      第 307~314 局批复盘）：加分本体自第 244~259 局批计入分值，但
+    #      detail 留痕只挂在 v0.111.0 从不执行的 REWARD/choose_reward_card
+    #      路径（与第1290~1294批 CARD_BURST_PICK_AUDIT 同型接线缺口），
+    #      本批 28 个 run 文件全文检索零出现。本夹具锁定：helper 语义
+    #      六分支 + CARD_SELECTION/select_deck_card 真实消费路径理由留痕，
+    #      且观测不改选择；bonus=0 留痕与加分同灭（单键回滚零差异）。
+    _n0 = vpol_m0._vivhite_margin_pick_note(dict(_m_axiom), list(_m_no_src_deck))
+    assert "余裕供给稀缺加分" in _n0 and "0张" in _n0 and "+4.0" in _n0, \
+        f"零源卡组余裕源候选必须带全额加分观测: {_n0!r}"
+    assert vpol_mf._vivhite_margin_pick_note(
+        dict(_m_axiom), list(_m_full_deck)) == "", \
+        "余裕源 ≥cap 后观测必须随加分一并归零"
+    assert vpol_m0b._vivhite_margin_pick_note(
+        dict(_m_axiom), list(_m_no_src_deck)) == "", \
+        "bonus=0 回滚键下观测必须消失"
+    assert vpol_m0._vivhite_margin_pick_note(
+        dict(_m_plain), list(_m_no_src_deck)) == "", \
+        "非余裕源候选不得带观测"
+    assert vpol_m0._vivhite_margin_pick_note(
+        dict(_m_invariant), list(_m_no_src_deck)) == "", \
+        "条件余裕候选不得带观测"
+    assert vpol_m0._vivhite_margin_pick_note(dict(_m_axiom), []) == "", \
+        "空卡组上下文不得带观测"
+
+    def _vmargin_sel_state(run_id, cards, deck):
+        return {
+            "screen": "CARD_SELECTION", "run_id": run_id,
+            "available_actions": ["select_deck_card"],
+            "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                          "min_select": 1, "selected_count": 0,
+                          "can_confirm": False, "cards": cards},
+            "run": {"current_hp": 70, "max_hp": 80, "floor": 4,
+                    "deck": deck}}
+
+    vknow_obs = _vivhite_know("sts2-selfcheck-vmargin-obs-")
+    vpol_obs = policy.Policy(vknow_obs, random.Random(13))
+    vobs_ctx = DummyCtx()
+    vobs_ctx.run_id = "RUN_VMARGIN_OBS"
+    _obs_offer = [dict(_m_axiom, index=0)]
+    _obs_deck = [dict(c) for c in _m_no_src_deck]
+    d_obs = vpol_obs.decide(
+        _vmargin_sel_state("RUN_VMARGIN_OBS", _obs_offer, _obs_deck), vobs_ctx)
+    assert (d_obs.action == "select_deck_card"
+            and d_obs.params.get("option_index") == 0
+            and "余裕供给稀缺加分（卡组无条件余裕源0张，+4.0）" in d_obs.reason), \
+        f"真实拿牌路径缺少余裕稀缺加分观测: {d_obs.action}（{d_obs.reason}）"
+    # 非余裕源落牌不带观测
+    d_obs_plain = vpol_obs.decide(
+        _vmargin_sel_state("RUN_VMARGIN_OBS",
+                           [dict(_m_plain, index=0)], _obs_deck), vobs_ctx)
+    assert (d_obs_plain.action == "select_deck_card"
+            and "余裕供给稀缺加分" not in d_obs_plain.reason), \
+        f"非余裕源落牌不得带观测: {d_obs_plain.reason}"
+    # bonus=0 单键回滚：选择不变、观测消失
+    vknow_obs.policy["vivhite_margin_pick_bonus"] = 0.0
+    vpol_obs2 = policy.Policy(vknow_obs, random.Random(13))
+    vobs_ctx2 = DummyCtx()
+    vobs_ctx2.run_id = "RUN_VMARGIN_OBS_OFF"
+    d_obs_off = vpol_obs2.decide(
+        _vmargin_sel_state("RUN_VMARGIN_OBS_OFF",
+                           [dict(_m_axiom, index=0)], _obs_deck), vobs_ctx2)
+    assert (d_obs_off.action == "select_deck_card"
+            and d_obs_off.params == d_obs.params
+            and "余裕供给稀缺加分" not in d_obs_off.reason), \
+        f"回滚键下观测未消失或选择漂移: {d_obs_off.reason}"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection
