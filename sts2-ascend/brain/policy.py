@@ -593,6 +593,9 @@ class Policy:
         self._stall_no_progress = 0  # 连续无进展回合数
         self._stall_turn_seen = None
         self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
+        self._hp_gate_stall = 0        # 謦欬门连续低危拦截回合数（VIVHITE_HP_GATE_STALL_BREAK 账）
+        self._hp_gate_stall_round = None  # 上次计入/清零的回合号（同回合多 tick 只动一次）
+        self._hp_gate_stall_latch = False  # 僵局放行闩锁：本场一旦放行，余量门不再回归
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
         self._unlock_stall = 0      # UNLOCK 已识别但 API 确认动作缺失时的独立鼠标兜底计数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
@@ -2689,6 +2692,9 @@ class Policy:
             self._stall_no_progress = 0
             self._stall_turn_seen = round_no
             self._exhaust_plays = 0
+            self._hp_gate_stall = 0
+            self._hp_gate_stall_round = None
+            self._hp_gate_stall_latch = False
         if self._stall_turn_seen != round_no:
             if enemy_hp_total < self._stall_min_hp:
                 self._stall_min_hp = enemy_hp_total
@@ -3860,6 +3866,28 @@ class Policy:
                     pol.get("vivhite_hp_cost_play_margin", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_play_margin = 0.0
+        # 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘新增）：
+        # 余量门顶格 3.0 后在低危长战制造放血死循环（243 局 F3 拖 56 回合
+        # 自损46/掉血39；238 局 F2 拖 76 回合自损64 阵亡；235 局 F3 拖 19 回合
+        # 自损46 阵亡）——门每回合拦下 2 血攻击牌，残能救场转而反复付 2 血
+        # 格挡，战斗永不结束。计数在 end_turn 收口处维护（只统计回合结束仍有
+        # 謦欬候选被拦、且本回合敌意图被格挡全覆盖的连续回合）；达标或已闩锁
+        # 时把本场余量门压回 0——仅撤附加门槛，普通评分/致死豁免/零付出牌均
+        # 不变。vivhite_hp_gate_stall_turns=0 一键回滚（旧行为零差异）。
+        _hp_gate_stall_break = False
+        _hp_gate_stall_limit = 0
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_gate_stall_limit = max(0, int(float(
+                    pol.get("vivhite_hp_gate_stall_turns", 0) or 0)))
+            except (TypeError, ValueError):
+                _hp_gate_stall_limit = 0
+            if _hp_gate_stall_limit > 0 and (
+                    self._hp_gate_stall_latch
+                    or self._hp_gate_stall >= _hp_gate_stall_limit):
+                _hp_play_margin = 0.0
+                _hp_gate_stall_break = True
+                self._hp_gate_stall_latch = True
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score)
         for c in hand:
             if not c.get("playable"):
@@ -3995,6 +4023,10 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             _, card, target, why = chosen
+            if _hp_gate_stall_break:
+                why += (f"｜謦欬门僵局放行：连续低危拦截{self._hp_gate_stall}回合"
+                        f"≥{_hp_gate_stall_limit}，本场余量门停用"
+                        f"（VIVHITE_HP_GATE_STALL_BREAK）")
             commit_cid = (card.get("card_id") or "").upper().rstrip("+")
             commit_trial = False
             if (not choice_mode
@@ -4185,11 +4217,25 @@ class Policy:
                                        round(_rest_est, 2), round_no, "")],
                                 wait=0.6)
             _gate_note = ""
+            if self._hp_gate_stall_round != round_no:
+                # 謦欬门僵局放行账（每回合只动一次，VIVHITE_HP_GATE_STALL_BREAK）：
+                # 回合结束仍有謦欬候选被拦、且本回合敌意图被格挡全覆盖
+                # （incoming<=my_block，拦门没换来任何减伤）才累加；无拦截或
+                # 高危（意图未被覆盖）回合即清零——只放行真正的低危放血死循环。
+                if _hp_gate_blocked and incoming <= my_block:
+                    self._hp_gate_stall += 1
+                else:
+                    self._hp_gate_stall = 0
+                self._hp_gate_stall_round = round_no
             if _hp_gate_blocked:
                 _gate_note = ("；謦欬出牌门拦下"
                               + "、".join(f"【{row[1]}】实付{row[2]:g}血"
                                           for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
+                if _hp_gate_stall_limit > 0:
+                    _gate_note += (f"；连续低危拦截{self._hp_gate_stall}"
+                                   f"/{_hp_gate_stall_limit}"
+                                   f"（VIVHITE_HP_GATE_STALL_BREAK 进度）")
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}",
                             wait=1.2)

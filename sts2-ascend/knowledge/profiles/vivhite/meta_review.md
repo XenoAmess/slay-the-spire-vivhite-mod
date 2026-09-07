@@ -423,3 +423,42 @@ retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 231~243 局批复盘：謦欬余量门顶格后在低危长战制造放血死循环——新增僵局放行（VIVHITE_HP_GATE_STALL_BREAK）
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+`vivhite_hp_cost_play_margin` 被死亡证据推至顶格 3.0 后（謦欬双旋钮全尽、证据已停止吸收），余量门在低危小怪战每回合拦下 2 血攻击牌，残能救场通道转而反复付 2 血打出格挡牌——战斗被人为拖长数十回合，累计自损反超敌方伤害，「防自杀门」异化为「放血死循环」。该假设可证伪：未来 3~10 局若低危长战（单场 ≥15 回合）仍出现「连续低危拦截 N/6」进度爬满却不出现「VIVHITE_HP_GATE_STALL_BREAK」放行留痕，或放行后该类战斗的自损/回合数不降，则本批改动未生效或假设错误。
+
+## EVIDENCE
+
+- 第 243 局（HKCW2VWRK5L0，F17 Boss VANTOM 阵亡）完整 316 链已逐条深读：F3 树枝/树叶史莱姆战拖 **56 回合**（自损46~48/掉血39）——逐回合核对，謦欬出牌门在 78 血/意图 0 下仍逐回合拦下【弦光投影】（实付2血），残能救场[IDLE_LEAK_BLK] 转而每两回合付 2 血打【闭域映射】，血线 73→20 几乎全是放血；进 Boss 前的 F3~F15 自损账（14/48/14/10/14/18/3/4）为 F17 败北埋下血债。
+- 同型死循环在本批至少三次独立复现：238 局（FJ1PPH55LQFE）F2 战 **76 回合**阵亡（自损64/掉血78，门留痕 45 次，终局 1 血全员 blocked_by_hook）；235 局（2DWFAX5CEC5Y）F3 战 19 回合阵亡（自损46/掉血68，门留痕 17 次）；239 局（DH84M6ANQSHP）F12 战敌方零伤害仍自损 64。
+- 机制根因（policy.py 现状）：余量门只按「实付×margin」抬高单卡出牌门槛，不区分攻击/格挡、不计拖延代价；被拦攻击退出残能救场，但格挡类謦欬牌仍可经救场/正常通道付血打出——低意图回合拦门没换来任何减伤，却每场累积 2 血/回合的放血。
+- 旋钮侧无路可走：lessons 尾部连续两批留痕「謦欬出牌余量门 3.00 顶格……謦欬证据彻底停止吸收并留痕」，生命支付权重 -3.00 触底——估值/门槛双通道均已饱和，本批不改旋钮、只在行为层拆死循环。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 新增每战斗僵局账 `_hp_gate_stall`/`_hp_gate_stall_round`/`_hp_gate_stall_latch`（随 `_combat_stall_check` 的战斗身份切换重置）；
+  ② end_turn 收口处维护计数（每回合只动一次）：「回合结束仍有謦欬候选被余量门拦下 且 本回合敌意图被格挡全覆盖（incoming<=my_block，拦门零减伤收益）」才累加，无拦截或高危回合清零；
+  ③ 计数达到 `vivhite_hp_gate_stall_turns`（默认 6）后本场把余量门压回 0 并闩锁——仅撤附加门槛，普通评分阈值、致死豁免、零付出牌、非白绮角色行为全部不变；出牌理由留「謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK）」，拦截回合理由追加「连续低危拦截N/M（进度）」。
+- sts2-ascend/brain/knowledge.py：新增静态键 `vivhite_hp_gate_stall_turns: 6`（0=一键回滚，旧行为零差异），注释完整记录三局实证。
+- sts2-ascend/brain/selfcheck.py：新增 3pri 夹具七分支——阈值前照旧拦截且有进度留痕、同回合多 tick 不重复计数、达标放行且有标记、闩锁后不回归、新战斗重置、意图未覆盖永不计数（含覆盖/未覆盖交替断链）、stall=0 回滚键下零放行零留痕。
+- 回滚条件单一：policy.json 置 `vivhite_hp_gate_stall_turns=0`。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链出现「连续低危拦截N/6」进度注并至少一次「VIVHITE_HP_GATE_STALL_BREAK」放行（可直接与 243-F3/238-F2 同型场景对账）；② 放行战斗的回合数与自损显著低于本批同型死循环（基准：56 回合/自损46、76 回合/自损64、19 回合/自损46）；③ 一幕小怪战后的进 Boss 血量分布上移（本批 F17 Boss 入场血 100% 仍败，但前置放血局 235/238 直接死在一幕）。证伪/回滚：进度注从未出现（门已拦不住或场景不再复现）→ 复查计数口径；放行后同型战斗自损/回合不降或高危战自损占比反弹 ≥50% → policy.json 置 0 整体撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（含新增 3pri 七分支；既有 3prh 余量门三分支与全部既有夹具通过）。
+- `git diff --check` 通过（仅宿主挂载的 assets 超长路径删除遗留告警，与本批无关、不入 commit）；完整 diff 已回读：brain/policy.py、brain/knowledge.py、brain/selfcheck.py 三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

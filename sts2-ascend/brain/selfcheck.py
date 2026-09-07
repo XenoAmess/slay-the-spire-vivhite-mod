@@ -2575,6 +2575,85 @@ def main() -> int:
     assert d_g2.action == "play_card", \
         f"致死回合必须豁免余量门（买命/抢斩杀当场兑现）: {d_g2}"
 
+    # 3pri) 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘）：
+    #      余量门顶格 3.0 后低危长战放血死循环——243 局 F3 拖 56 回合（自损46/
+    #      掉血39）、238 局 F2 拖 76 回合阵亡（自损64/掉血78）、235 局 F3 拖
+    #      19 回合阵亡（自损46/掉血68）：门每回合拦下 2 血攻击牌、救场转而反复
+    #      付 2 血格挡。只统计「回合结束仍有謦欬候选被拦且敌意图被格挡全覆盖」
+    #      的连续回合；达标后本场停用余量门并闩锁；意图未覆盖不计数；stall=0
+    #      一键回滚；新战斗重置；同回合多 tick 只计一次。
+    def _vgate_stall(turn, incoming):
+        st = _vgate_state(85, incoming)
+        st["turn"] = turn
+        return st
+
+    vknow_sb = _vivhite_know("sts2-selfcheck-vhgate-stall-")
+    vknow_sb.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_sb.policy["vivhite_hp_gate_stall_turns"] = 3
+    vpol_sb = policy.Policy(vknow_sb, random.Random(11))
+    vctx_sb = _vgate_ctx()
+    for _turn in (1, 2, 3):
+        d_sb = vpol_sb.decide(_vgate_stall(_turn, 0), vctx_sb)
+        assert d_sb.action == "end_turn", \
+            f"僵局计数未达阈值前余量门必须照旧拦截: turn={_turn} {d_sb}"
+        assert "VIVHITE_HP_GATE_STALL_BREAK 进度" in d_sb.reason, \
+            f"拦截回合缺僵局放行进度留痕: {d_sb.reason}"
+    assert vpol_sb._hp_gate_stall == 3, \
+        f"低危拦截连续计数错误: {vpol_sb._hp_gate_stall}"
+    d_sb = vpol_sb.decide(_vgate_stall(3, 0), vctx_sb)
+    assert vpol_sb._hp_gate_stall == 3, \
+        f"同回合多 tick 不得重复计数: {vpol_sb._hp_gate_stall}"
+    d_sb = vpol_sb.decide(_vgate_stall(4, 0), vctx_sb)
+    assert d_sb.action == "play_card", \
+        f"连续低危拦截达阈值后本场余量门应停用并放行: {d_sb}"
+    assert "VIVHITE_HP_GATE_STALL_BREAK" in d_sb.reason, \
+        f"僵局放行缺决策链留痕: {d_sb.reason}"
+    assert vpol_sb._hp_gate_stall_latch, "僵局放行后闩锁必须置位"
+    d_sb5 = vpol_sb.decide(_vgate_stall(5, 0), vctx_sb)
+    assert d_sb5.action == "play_card", \
+        f"闩锁后余量门不得回归: {d_sb5}"
+    # 新战斗（combat 身份变化）必须重置计数与闩锁
+    d_new = vpol_sb.decide(_vgate_stall(1, 0), _vgate_ctx())
+    assert d_new.action == "end_turn", \
+        f"新战斗必须重置僵局计数与闩锁、余量门回归: {d_new}"
+    assert not vpol_sb._hp_gate_stall_latch \
+        and vpol_sb._hp_gate_stall == 1, \
+        f"新战斗重置错误: stall={vpol_sb._hp_gate_stall} latch={vpol_sb._hp_gate_stall_latch}"
+    # 意图未被格挡覆盖的高危拦截回合不计数、永不触发放行
+    vknow_hb = _vivhite_know("sts2-selfcheck-vhgate-hi-incoming-")
+    vknow_hb.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_hb.policy["vivhite_hp_gate_stall_turns"] = 3
+    vpol_hb = policy.Policy(vknow_hb, random.Random(11))
+    vctx_hb = _vgate_ctx()
+    for _turn in (1, 2, 3, 4, 5):
+        d_hb = vpol_hb.decide(_vgate_stall(_turn, 10), vctx_hb)
+        assert d_hb.action == "end_turn", \
+            f"意图未覆盖的拦截不得累计僵局放行: turn={_turn} {d_hb}"
+    assert vpol_hb._hp_gate_stall == 0, \
+        f"高危回合计数应持续清零: {vpol_hb._hp_gate_stall}"
+    # 覆盖/未覆盖交替：计数只在连续低危链上累加
+    vknow_mx = _vivhite_know("sts2-selfcheck-vhgate-mixed-")
+    vknow_mx.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_mx.policy["vivhite_hp_gate_stall_turns"] = 3
+    vpol_mx = policy.Policy(vknow_mx, random.Random(11))
+    vctx_mx = _vgate_ctx()
+    vpol_mx.decide(_vgate_stall(1, 0), vctx_mx)
+    vpol_mx.decide(_vgate_stall(2, 10), vctx_mx)
+    assert vpol_mx._hp_gate_stall == 0, \
+        f"高危回合必须中断连续低危链: {vpol_mx._hp_gate_stall}"
+    # stall=0 一键回滚：无论多少连续低危拦截都不放行（旧行为零差异）
+    vknow_off = _vivhite_know("sts2-selfcheck-vhgate-stalloff-")
+    vknow_off.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_off.policy["vivhite_hp_gate_stall_turns"] = 0
+    vpol_off = policy.Policy(vknow_off, random.Random(11))
+    vctx_off = _vgate_ctx()
+    for _turn in (1, 2, 3, 4, 5, 6, 7):
+        d_off = vpol_off.decide(_vgate_stall(_turn, 0), vctx_off)
+        assert d_off.action == "end_turn", \
+            f"stall=0 回滚键下僵局放行不得触发: turn={_turn} {d_off}"
+        assert "VIVHITE_HP_GATE_STALL_BREAK" not in d_off.reason, \
+            f"stall=0 回滚键下不得出现放行留痕: {d_off.reason}"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection
