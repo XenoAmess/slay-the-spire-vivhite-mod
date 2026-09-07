@@ -462,3 +462,41 @@ retry_resolution: 20260907-075516-1788738916971161100-9bea4999 no_valid_change�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 244~259 局批复盘：謦欬双旋钮全尽后自损仍在放血——拿牌端零余裕源盲区，新增余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY）
+
+日期：2026-09-07
+
+## HYPOTHESIS
+
+謦欬是全目录机制（61 张目录中 58 张 life_calculation_cost>0，初始卡组 9/9 全謦欬），生命支付无法靠「少拿謦欬」回避；余裕（Margin）是唯一在支付端冲抵实付的供给。战斗端估值权重 -3.0 触底、出牌余量门 3.0 顶格（lessons 连续多批「双旋钮全尽，謦欬证据彻底停止吸收并留痕」），但拿牌端对余裕源没有任何稀缺纠偏——静态估值只给 margin_gain×1.25≈+3.75，竞争不过又一张謦欬攻击/技能，卡组长期凑不出余裕供给，自损在各楼层持续≥敌方掉血。该假设可证伪：未来 3~10 局若决策链不出现「余裕供给稀缺加分」留痕，或出现后零无条件余裕源终局占比与战斗自损/掉血比均不回落，则改动未生效或假设错误，policy.json 置 `vivhite_margin_pick_bonus=0` 一键回滚。
+
+## EVIDENCE
+
+- 终局卡组余裕源 vs 成绩对账（runs 只读，catalog margin_gain>0 口径）：本批 16 局中 6 局终局 0 张余裕源——245（F2，自损58/掉血78）、250（F4，自损70/掉血50）、247（F11）、249（F17）、257（F17）、246（F22，自损201>掉血183）——全部早亡或自损反超敌方；最深的两局 251/252（均 F33）恰为余裕源最多的 6/3 张；259 局（F23）拿 17 张生命支付牌、余裕源仅 3 张，致命战自损24/掉血31（77%）。
+- 战斗注记全批自损主导：244 F7 自损20/掉血21、250 F2 自损70/掉血50、254 F11 自损18/掉血4、259 F19 自损31/掉血31——自损≥敌方掉血在本批是常态而非尾部事件；双旋钮已饱和（255~259 lessons 反复「謦欬实付加码收紧；双旋钮全尽」），证据再无估值/门槛旋钮可接。
+- 机制根因（policy.py 现状核查）：`eval_reward_card` 对余裕源仅有 `estimate_character_card` 的 margin_gain×margin_weight(+1.25) 静态估值；余裕供给既无「卡组已有几台」的存量感知，也无稀缺加分通道（对照：成长引擎有 scaling_engine_pick_bonus 稀缺加分、AoE 有首张 +3、复制件有密度放行）——余裕源在与謦欬攻击的名额竞争中系统性落败。
+- 259 局（3ACQ9CYH7NCN，F23 CHOMPER 阵亡）决策链切片已读：EVENT/拿牌理由中余裕从未作为选取依据出现；439 决策中 COMBAT play_card 177 次，自损贯穿 F14~F23 每层（21/36/31/18/31/24）。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 新增 `Policy._vivhite_margin_source(card)`——无条件即时余裕源判定：白绮目录内 margin_gain>0 且不带 margin_if 条件（与残能救场 independent_benefit 同口径；INVARIANT 的 margin_if_max_hp_grew_this_combat 等条件余裕不计），非白绮角色/目录外牌恒 False；
+  ② `eval_reward_card` 末尾新增稀缺加分：卡组上下文非空、候选为无条件余裕源时，按卡组已有无条件余裕源数线性衰减加分（零源全额 vivhite_margin_pick_bonus、≥vivhite_margin_deck_cap 归零，防为供给囤牌反向注水），detail 留「余裕供给稀缺加分（卡组无条件余裕源N张，+X）」；空卡组上下文（升级/删除/献祭评估）与非白绮角色天然不受影响。
+- sts2-ascend/brain/knowledge.py：新增静态键 `vivhite_margin_pick_bonus: 4.0`（0=一键回滚，旧行为零差异）与 `vivhite_margin_deck_cap: 3.0`（稀缺衰减分母/供给上限），注释记录本批实证。
+- sts2-ascend/brain/selfcheck.py：新增 3prj 夹具八分支——零源全额 +4.0 且有 detail 留痕；≥cap 归零；1 张存量线性 +8/3（同卡组开/关对账，隔离卡组构成对其他语境项的串扰）；条件余裕候选不吃加分且不计入存量；非余裕源候选零差异；空卡组上下文零差异。
+- 回滚条件单一：policy.json 置 `vivhite_margin_pick_bonus=0`。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链拿牌理由出现「余裕供给稀缺加分」留痕（零源卡组场景应高频出现）；② 终局卡组零无条件余裕源占比从本批 6/16 下降，余裕源张数向 251/252（F33，6/3 张）形态靠拢；③ 战斗自损/掉血比回落（本批常态 ≥100%，目标 <50% 的謦欬实付主导线以下），一幕早亡局（245-F2/250-F4 型）减少。证伪/回滚：留痕从不出现（余裕源候选从未进入奖励池）→ 复查口径；留痕出现但自损占比与早亡率无变化，或深局余裕囤牌挤出输出致 burst 缺口恶化 → policy.json 置 0 整体撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（含新增 3prj 八分支；既有 3prh/3pri 謦欬门夹具与全部既有夹具通过；首轮跨卡组对账夹具因卡组构成串扰误判，已改同卡组开/关对账后通过）。
+- `git diff --check` 通过（仅宿主挂载的 assets 超长路径删除遗留告警，与本批无关、不入 commit）；完整 diff 已回读：brain/policy.py（+35）、brain/knowledge.py（+13）、brain/selfcheck.py（+81）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

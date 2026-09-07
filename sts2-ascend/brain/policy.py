@@ -637,6 +637,21 @@ class Policy:
         card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
         return self.character_strategy.card(card_id)
 
+    def _vivhite_margin_source(self, card: dict) -> bool:
+        """无条件即时余裕源判定（与残能救场 independent_benefit 的口径一致）：
+        白绮目录内 margin_gain>0 且不带 margin_if 条件的牌。非白绮角色、
+        目录外牌、条件余裕（如 INVARIANT 的 margin_if_max_hp_grew_this_combat）
+        一律返回 False。"""
+        strategy = self.character_strategy
+        if (strategy is None
+                or getattr(strategy, "profile_id", None) != VIVHITE_PROFILE_ID):
+            return False
+        entry = self._strategy_card(card)
+        if entry is None or entry.mechanics.margin_gain <= 0:
+            return False
+        return not any("margin_if" in effect
+                       for effect in entry.mechanics.effects)
+
     def _is_basic_card(self, card: dict) -> bool:
         """基础牌统一判定：角色静态目录 rarity=="basic" 优先；无目录角色
         （Ironclad）回退 STRIKE/DEFEND 子串。旧实现只认子串，对白绮基础牌
@@ -6488,6 +6503,26 @@ class Policy:
         value += synergy
         if detail is not None and synergy_note:
             detail.append(synergy_note)
+        # 謦欬余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY，第 244~259 局
+        # 批复盘）：謦欬是全目录机制（58/61 张），余裕是唯一冲抵实付的供给端；
+        # 本批 16 局中 6 局终局零无条件余裕源全部早亡（F2/F4/F9/F11/F17×2），
+        # 最深两局（251/252，F33）余裕源 6/3 张，自损普遍≥敌方掉血。静态估值
+        # 只给 margin_gain×1.25≈+3.75，竞争不过又一张謦欬攻击。按卡组已有
+        # 无条件余裕源数线性衰减：零源全额、≥cap 归零（防为供给囤牌的反向
+        # 注水）；bonus=0 一键回滚（旧行为零差异），空卡组上下文（升级/删除/
+        # 献祭评估）与非白绮角色天然不受影响。
+        _m_bonus = float(pol.get("vivhite_margin_pick_bonus", 0.0) or 0.0)
+        if deck and _m_bonus > 0.0 and self._vivhite_margin_source(card):
+            _m_cap = max(1.0, float(
+                pol.get("vivhite_margin_deck_cap", 3.0) or 3.0))
+            _m_have = sum(1 for c in deck if self._vivhite_margin_source(c))
+            _m_scarce = clamp((_m_cap - _m_have) / _m_cap, 0.0, 1.0)
+            if _m_scarce > 0.0:
+                value += _m_bonus * _m_scarce
+                if detail is not None:
+                    detail.append(
+                        f"余裕供给稀缺加分（卡组无条件余裕源{_m_have}张，"
+                        f"+{_m_bonus * _m_scarce:.1f}）")
         return value
 
     def _reward(self, state: dict, ctx) -> Decision:

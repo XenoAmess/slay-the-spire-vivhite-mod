@@ -2654,6 +2654,87 @@ def main() -> int:
         assert "VIVHITE_HP_GATE_STALL_BREAK" not in d_off.reason, \
             f"stall=0 回滚键下不得出现放行留痕: {d_off.reason}"
 
+    # 3prj) 謦欬余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY，第 244~259 局
+    #      批复盘）：謦欬是全目录机制（58/61 张），余裕是唯一冲抵实付的供给端；
+    #      本批 6/16 局终局零无条件余裕源全部早亡，最深两局（F33）余裕源 6/3 张。
+    #      拿牌端按卡组已有无条件余裕源数线性衰减加分（零源全额、≥cap 归零）；
+    #      条件余裕（INVARIANT）不作候选也不算存量；非余裕源候选零差异；
+    #      bonus=0 一键回滚（旧行为零差异）；非白绮角色不受影响。
+    def _vm_card(card_id, name, card_type="Skill", energy_cost=1):
+        return {"card_id": card_id, "name": name, "card_type": card_type,
+                "energy_cost": energy_cost, "dynamic_values": []}
+
+    _m_axiom = _vm_card("VIVHITE_CARD_AXIOM_RING", "公理之环")
+    _m_no_src_deck = [
+        _vm_card("VIVHITE_CARD_LUMINOUS_PROJECTION", "弦光投影", "Attack"),
+        _vm_card("VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "闭域映射"),
+        _vm_card("VIVHITE_CARD_TERMINATION_CONDITION", "终止条件", "Attack", 2),
+    ]
+    _m_full_deck = _m_no_src_deck + [
+        _vm_card("VIVHITE_CARD_AXIOM_RING", "公理之环"),
+        _vm_card("VIVHITE_CARD_GOLDEN_RATIO", "黄金比例"),
+        _vm_card("VIVHITE_CARD_TOPOLOGICAL_GROWTH", "拓扑生长"),
+    ]
+    vknow_m0 = _vivhite_know("sts2-selfcheck-vmargin-zero-")
+    vpol_m0 = policy.Policy(vknow_m0, random.Random(11))
+    v_m0_on = vpol_m0.eval_reward_card(dict(_m_axiom), list(_m_no_src_deck))
+    vknow_m0b = _vivhite_know("sts2-selfcheck-vmargin-zero-off-")
+    vknow_m0b.policy["vivhite_margin_pick_bonus"] = 0.0
+    vpol_m0b = policy.Policy(vknow_m0b, random.Random(11))
+    v_m0_off = vpol_m0b.eval_reward_card(dict(_m_axiom), list(_m_no_src_deck))
+    assert abs((v_m0_on - v_m0_off) - 4.0) < 1e-9, \
+        f"零余裕源卡组应得全额稀缺加分 +4.0: on={v_m0_on} off={v_m0_off}"
+    _m_det: list[str] = []
+    vpol_m0.eval_reward_card(dict(_m_axiom), list(_m_no_src_deck), detail=_m_det)
+    assert any("余裕供给稀缺加分" in d and "0张" in d for d in _m_det), \
+        f"稀缺加分缺 detail 留痕: {_m_det}"
+    vknow_mf = _vivhite_know("sts2-selfcheck-vmargin-full-")
+    vpol_mf = policy.Policy(vknow_mf, random.Random(11))
+    v_mf_on = vpol_mf.eval_reward_card(dict(_m_axiom), list(_m_full_deck))
+    vknow_mfb = _vivhite_know("sts2-selfcheck-vmargin-full-off-")
+    vknow_mfb.policy["vivhite_margin_pick_bonus"] = 0.0
+    vpol_mfb = policy.Policy(vknow_mfb, random.Random(11))
+    v_mf_off = vpol_mfb.eval_reward_card(dict(_m_axiom), list(_m_full_deck))
+    assert abs(v_mf_on - v_mf_off) < 1e-9, \
+        f"余裕源 ≥cap 后稀缺加分必须归零: on={v_mf_on} off={v_mf_off}"
+    # 部分存量线性衰减：1 张存量 → 加分 4.0×(3-1)/3（同卡组开/关对账，隔离
+    # 卡组构成对攻击占比/格挡计数等其他语境项的影响）
+    vknow_m1 = _vivhite_know("sts2-selfcheck-vmargin-one-")
+    vpol_m1 = policy.Policy(vknow_m1, random.Random(11))
+    _m_one_deck = _m_no_src_deck + [_vm_card("VIVHITE_CARD_GOLDEN_RATIO", "黄金比例")]
+    v_m1_on = vpol_m1.eval_reward_card(dict(_m_axiom), list(_m_one_deck))
+    vknow_m1b = _vivhite_know("sts2-selfcheck-vmargin-one-off-")
+    vknow_m1b.policy["vivhite_margin_pick_bonus"] = 0.0
+    vpol_m1b = policy.Policy(vknow_m1b, random.Random(11))
+    v_m1_off = vpol_m1b.eval_reward_card(dict(_m_axiom), list(_m_one_deck))
+    assert abs((v_m1_on - v_m1_off) - 4.0 * 2.0 / 3.0) < 1e-9, \
+        f"1 张存量应按线性衰减得 +8/3: on={v_m1_on} off={v_m1_off}"
+    # 条件余裕（INVARIANT，margin_if_max_hp_grew_this_combat）不作候选也不算存量
+    _m_invariant = _vm_card("VIVHITE_CARD_INVARIANT", "不变量")
+    v_inv_on = vpol_m0.eval_reward_card(dict(_m_invariant), list(_m_no_src_deck))
+    vknow_mib = _vivhite_know("sts2-selfcheck-vmargin-inv-off-")
+    vknow_mib.policy["vivhite_margin_pick_bonus"] = 0.0
+    vpol_mib = policy.Policy(vknow_mib, random.Random(11))
+    v_inv_off = vpol_mib.eval_reward_card(dict(_m_invariant), list(_m_no_src_deck))
+    assert abs(v_inv_on - v_inv_off) < 1e-9, \
+        f"条件余裕候选不得吃稀缺加分: on={v_inv_on} off={v_inv_off}"
+    _m_inv_deck = _m_no_src_deck + [dict(_m_invariant)]
+    v_m0_invdeck = vpol_m0.eval_reward_card(dict(_m_axiom), list(_m_inv_deck))
+    v_m0_invdeck_off = vpol_m0b.eval_reward_card(dict(_m_axiom), list(_m_inv_deck))
+    assert abs((v_m0_invdeck - v_m0_invdeck_off) - 4.0) < 1e-9, \
+        f"条件余裕不得计入卡组余裕源存量: {v_m0_invdeck} vs {v_m0_invdeck_off}"
+    # 非余裕源候选零差异（开/关键估值一致）
+    _m_plain = _vm_card("VIVHITE_CARD_TERMINATION_CONDITION", "终止条件", "Attack", 2)
+    v_pl_on = vpol_m0.eval_reward_card(dict(_m_plain), list(_m_no_src_deck))
+    v_pl_off = vpol_m0b.eval_reward_card(dict(_m_plain), list(_m_no_src_deck))
+    assert abs(v_pl_on - v_pl_off) < 1e-9, \
+        f"非余裕源候选不得受稀缺加分影响: on={v_pl_on} off={v_pl_off}"
+    # 空卡组上下文（升级/删除评估）天然不受影响
+    v_empty_on = vpol_m0.eval_reward_card(dict(_m_axiom), [])
+    v_empty_off = vpol_m0b.eval_reward_card(dict(_m_axiom), [])
+    assert abs(v_empty_on - v_empty_off) < 1e-9, \
+        f"空卡组上下文不得触发稀缺加分: on={v_empty_on} off={v_empty_off}"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection
