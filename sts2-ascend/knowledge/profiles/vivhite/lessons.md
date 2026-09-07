@@ -2471,3 +2471,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.1274838526285125局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.10640105146828局)，ROLLING_BOULDER(20分/4.206763714593868局)
 - 策略进化：potion_block_hp_pct: 0.37 → 0.42（高速失血爆毙（4回合掉血88，每回合22≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿24张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.51 → 0.52（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/221 胜，当前目标进阶 0
+
+## 第 222 局复盘（2026-09-07 11:49）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 VINE_SHAMBLER
+- 本局拿牌：PROWESS, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_VIVHITE_TRANSFORMATION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血43｜自损56（可行动段56/非行动段6，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血2｜自损13（可行动段13/非行动段3，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血33｜自损19（可行动段19/非行动段9，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.959105241496908局)，HAND_OF_GREED(34分/6.9889520333783235局)，SALVO(34分/8.154800705704726局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/41.784319182628124局)，VIVHITE_CARD_PERFECT_SYNTHESIS(34分/43.23901383508655局)
+- 当前低价值卡牌：AUTOMATION(17分/3.116537659144313局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.095528647788141局)，ROLLING_BOULDER(20分/4.19204004159279局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损19/掉血33（58%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/222 胜，当前目标进阶 0
