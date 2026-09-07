@@ -154,6 +154,29 @@ def _lethal_gap_check(gap: float, hp: float, max_hp: float,
     return lethal, pyrrhic
 
 
+def _vivhite_race_self_loss_observation(
+        self_paid_rate: float, enemy_loss_rate: float) -> str:
+    """Describe when observed Vivhite HP payment dominates enemy net loss.
+
+    The race projection deliberately excludes voluntary HP payment from its
+    survival denominator. Keep that policy unchanged for this batch, but
+    expose the narrow condition where the excluded stream is at least as large
+    as the enemy stream so later runs can falsify that exclusion with direct
+    combat evidence. Rates are observed per completed round, not card-model
+    estimates.
+    """
+    try:
+        paid = max(0.0, float(self_paid_rate))
+        enemy = max(0.0, float(enemy_loss_rate))
+    except (TypeError, ValueError, OverflowError):
+        return ""
+    if paid < 2.0 or paid < enemy:
+        return ""
+    ratio = "inf" if enemy <= 0.0 else f"{paid / enemy:.2f}"
+    return (f"竞速自付速率{paid:.1f}/回合≥敌方净损{enemy:.1f}/回合"
+            f"（比值{ratio}，VIVHITE_RACE_SELF_LOSS_DOMINATES）")
+
+
 def _rescue_block_tradeoff(
         card: dict,
         useful_block: int,
@@ -3167,6 +3190,13 @@ class Policy:
                             f"；竞速生存分母按敌方归属口径（已隔离謦欬实付"
                             f"{self._race_prev_same_round_loss:.0f}，"
                             "VIVHITE_RACE_SELF_LOSS_EXCLUDE）")
+                    if (self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                            and bool(pol.get("vivhite_race_self_loss_obs", True))
+                            and bool(pol.get("self_loss_phase_obs", True))):
+                        _self_loss_note = _vivhite_race_self_loss_observation(
+                            self._race_self_paid_rate, loss_rate)
+                        if _self_loss_note:
+                            danger_note += f"；{_self_loss_note}"
                     tsurv = my_hp / max(1.0, loss_rate)
                     ttk = enemy_hp_total / max(1.0, dpt)
                     # 滑溜破层期观测（SLIPPERY_TTK_OBS，第1232局批复盘）：
@@ -3471,6 +3501,8 @@ class Policy:
             self._race_same_round_loss_own = 0.0    # SELF_LOSS_PHASE_OBS 影子分账同步重置
             self._race_same_round_loss_enemy = 0.0
             self._race_prev_same_round_loss = 0.0
+            self._race_prev_same_round_loss_own = 0.0
+            self._race_self_paid_rate = 0.0
             self._race_zero_intent_rounds = 0
             self._intent_prev = 0
             self._intent_trend = 0
@@ -3610,12 +3642,25 @@ class Policy:
                         - self._race_prev_same_round_loss)
                     if _self_paid_round > 0.0:
                         loss -= _self_paid_round
+                # Keep a separate per-round rate from the phase shadow ledger.
+                # It remains available even when the main loss account is using
+                # its rollback/mixed mode, and never feeds the race decision.
+                _self_paid_round_obs = max(
+                    0.0, self._race_same_round_loss_own
+                    - self._race_prev_same_round_loss_own)
+                if self.character_strategy.profile_id == VIVHITE_PROFILE_ID:
+                    self._race_self_paid_rate = (
+                        _self_paid_round_obs
+                        if self._race_rounds == 0
+                        else 0.7 * self._race_self_paid_rate
+                        + 0.3 * _self_paid_round_obs)
                 self._race_loss_rate = (loss if self._race_rounds == 0
                                         else 0.7 * self._race_loss_rate + 0.3 * loss)
                 self._race_rounds += 1
             # 自损账快照只在回合边界推进：下一边界用差值还原本回合实测自付，
             # 与旋钮开关无关，保证中途改键也不污染相邻回合的差分口径。
             self._race_prev_same_round_loss = self._race_same_round_loss
+            self._race_prev_same_round_loss_own = self._race_same_round_loss_own
             # 意图升级轨迹采样（第 84~85 批复盘）：84 局毛绒伏地虫战意图
             # 4→7→24→18→9→25→31、85 局仪式兽 Boss 战 18→20→22→24→26——
             # 升级型敌人每拖一轮就更难挡，而旧引擎只看"本回合意图"，在升级

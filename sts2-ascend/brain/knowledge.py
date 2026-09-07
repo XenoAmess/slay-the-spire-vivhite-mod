@@ -364,6 +364,10 @@ DEFAULT_POLICY = {
     "race_same_round_hp_loss_obs": True,  # 竞速判死时同回合 HP 损失观测位：
                                            # 仅披露已经发生的逐 tick 扣血，供复盘核对
                                            # 自损/费用与敌方伤害，不改变竞速判定；置 False 关闭
+    "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
+                                         # 的实际生命支付，并在它达到敌方净损速率时留痕，
+                                         # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否
+                                         # 在高自损 Boss 战中过度乐观；只观测、不改判定。
     "self_loss_phase_obs": True,  # 自损账相位分账观测位（第1245~1265局批复盘）：
                                   # 同回合自损主账按采样 tick 的 can_play 影子拆成
                                   # 可行动段/非行动段两桶，战斗记录披露

@@ -3045,6 +3045,28 @@ def main() -> int:
         f"非行动段分账错误: {slph_pol._race_same_round_loss_enemy}"
     assert slph_pol.combat_self_hp_loss_phases() == (8.0, 20.0), \
         f"分账读数接口漂移: {slph_pol.combat_self_hp_loss_phases()}"
+    # 白绮 profile 走同一时序，确认新增速率来自可行动段而不是混合主账。
+    vslph_know = _vivhite_know("sts2-selfcheck-vhrace-self-loss-")
+    vslph_pol = policy.Policy(vslph_know, random.Random(7))
+    vslph_ctx = _slph_ctx()
+    vslph_pol.decide(_slph_state(1, 61, ["play_card", "end_turn"]), vslph_ctx)
+    vslph_pol.decide(_slph_state(1, 53, ["play_card", "end_turn"]), vslph_ctx)
+    vslph_pol.decide(_slph_state(1, 33, []), vslph_ctx)
+    vslph_pol.decide(_slph_state(2, 33, ["play_card", "end_turn"]), vslph_ctx)
+    assert vslph_pol._race_self_paid_rate == 8.0, \
+        f"白绮竞速自付速率未从可行动段分账更新: {vslph_pol._race_self_paid_rate}"
+    assert knowledge.DEFAULT_POLICY["vivhite_race_self_loss_obs"] is True, \
+        "白绮竞速自付观测默认键缺失或未开启"
+    assert "VIVHITE_RACE_SELF_LOSS_DOMINATES" in \
+        policy._vivhite_race_self_loss_observation(8.0, 4.0), \
+        "自付速率达到敌方净损时必须留痕"
+    assert "VIVHITE_RACE_SELF_LOSS_DOMINATES" in \
+        policy._vivhite_race_self_loss_observation(2.0, 0.0), \
+        "敌方零净损且已有实际自付时必须留痕"
+    assert policy._vivhite_race_self_loss_observation(3.0, 4.0) == "", \
+        "自付速率低于敌方净损时不应误报主导"
+    assert policy._vivhite_race_self_loss_observation(1.9, 0.0) == "", \
+        "低于2点/回合的噪声不应触发主导标记"
     # 回滚锚⓪：主账口径键关闭后严格恢复旧混合口径 28（分账不受影响）
     slph_know_rb0 = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slph-rb0-")))

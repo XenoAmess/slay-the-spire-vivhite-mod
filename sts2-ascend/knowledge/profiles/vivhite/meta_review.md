@@ -108,7 +108,6 @@ retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
 
-
 # 第 5~6 局批复盘：前夜竞速预演不扣滑溜破层期，对墨影幻灵贴线局误判可行→翻转带回血——开局滑溜破层税入预演
 
 日期：2026-09-06
@@ -538,3 +537,37 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 306 局复盘：竞速排除自付口径缺少主导性观测（VIVHITE_RACE_SELF_LOSS_DOMINATES）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+第 306 局 F17 乐加维林族母战中，`VIVHITE_RACE_SELF_LOSS_EXCLUDE` 将白绮生命支付从竞速生存分母排除；当实际自付速率达到敌方净损速率时，该口径可能高估可存活回合数并掩盖白绮自身放血。该假设可证伪：未来 3~10 局若主导标记与高自损、预测生存期失真或短战阵亡不共现，则当前怀疑不成立。
+
+## EVIDENCE
+
+- run `Q36VL8XL7NR9` 的完整 200 条决策链已逐条核对。F17 进入时生命 59，敌人原生血池 222；T1/T2 决策先后记录「已隔离謦欬实付17」与「已隔离謦欬实付30」，随后在意图 19 的窗口进入全攻竞速，T4 阵亡。
+- 当局战斗记录为 F17 敌方掉血 59、自损 36；F15 另有自损 38/敌方掉血 45。当前链路确实能记录自付，但竞速注记只说明已隔离金额，不能按回合判断自付是否已经主导生存消耗。
+- 原生知识核对：`LAGAVULIN_MATRIARCH` 为 Boss、222/222 HP；其机制含沉睡/醒来、斩击与 9×2 开膛破肚，首个零伤害窗口不能代表后续敌方净损。此前已存在的排除口径仍可能避免“自付反过来制造判死”的闭环，因此本批先增加能直接证伪的观测，不提前改判定。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增 `vivhite_race_self_loss_obs=true`，作为单键可回滚的生产观测开关。
+- `sts2-ascend/brain/policy.py`：从 `SELF_LOSS_PHASE_OBS` 的可行动段按完成回合保存实际自付速率，并在白绮竞速投影中追加 `VIVHITE_RACE_SELF_LOSS_DOMINATES`（自付速率≥敌方净损速率，且至少 2 HP/回合）及比值。该信息不进入 `loss_rate`、`tsurv`、`ttk`、评分、姿态或动作选择；`vivhite_race_self_loss_obs=false` 即撤回新增留痕。
+- `sts2-ascend/brain/selfcheck.py`：覆盖白绮分账速率更新、敌方零损、低于敌损与低于噪声门槛四分支，同时保留非白绮与旧混合口径回归。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① Boss/精英竞速链中可见 `VIVHITE_RACE_SELF_LOSS_DOMINATES` 时，战斗记录的可行动段自损应与标记速率同向；② 统计标记局的自损/敌方损耗比、投影可存活回合与实际存活回合差值，重点对账沉睡/醒来型 Boss；③ 若至少 2/3 局出现标记并伴随自损主导及短于投影的结局，则下一批可将自付接入受限生存护栏；若 3~10 局始终不出现、或标记只出现在可安全 setup 且预测兑现，则证伪本假设。撤回条件：将 `policy.json` 的 `vivhite_race_self_loss_obs` 置为 `false`，恢复无新增标记的旧行为。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check` 通过；本批 diff 仅含三个预期静态文件，未触碰 runs、stats、policy.json、lessons、review_queue、在线状态或宿主遗留 assets。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 `retry_resolution` 目标。
