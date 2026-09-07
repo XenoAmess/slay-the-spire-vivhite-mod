@@ -245,6 +245,13 @@ DEFAULT_POLICY = {
                                       # 选项历史单次最差生命增量 hp_min 满足 当前血+hp_min ≤ 余量 时
                                       # 判定「吃下即死」——7RJ9 局 31% 血选均值 +10.5 的「休息」，
                                       # 被链内强制战 -55 抬走；均值账看不见的重尾由 hp_min 补位
+    "event_lowhp_fight_shy_hp_pct": 0.45,  # 低血零收益避战重排（EVENT_LOWHP_FIGHT_SHY，
+                                      # 第 1275~1279 局批复盘）：事件候选顶值 ≤0（无实证正收益）
+                                      # 且血量低于本线时，并列候选中描述带战斗语义的选项让位
+                                      # 非战斗选项——1276 局 F11 22/80 血，重拳出击两选项全零
+                                      # 样本 0.0 平值，稳定键序把「我能打两个」排到「顺走」之前，
+                                      # 次页强制战 T2 判死 2 回合阵亡；可选战斗是生涯唯一死因
+                                      # 形态，零收益并列时低血端不应靠键序抽样战斗。0 = 关闭
     # --- potions ---
     "potion_hard_only": True,     # only spend potions in elite/boss or lethal danger
     "potion_boss_reserve_floors": 2,  # Boss 前夜进攻药水预留窗口（第 380~385 批复盘新增）：

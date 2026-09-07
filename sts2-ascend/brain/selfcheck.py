@@ -442,6 +442,51 @@ def main() -> int:
     assert d_worst4.params.get("option_index") == 1 and "强行择损" in d_worst4.reason, \
         f"全员致死时必须按最坏情况剩余血量择损（最差-8 优于最差-80）: {d_worst4.reason}"
 
+    # 3k3) 低血零收益避战重排（EVENT_LOWHP_FIGHT_SHY，第 1275~1279 局批复盘）：
+    #      1276 局 F11 22/80 血，重拳出击两选项全零样本 0.0 平值，稳定键序把
+    #      战斗项「我能打两个」(I_CAN_TAKE_THEM<NAB) 排到「顺走」前——次页
+    #      强制战 T2 判死 2 回合阵亡。低血端并列零收益候选必须让位非战斗项；
+    #      回血带外/键=0/战斗项有实证正收益三种情况严格回落旧口径。
+    shy_state = {"screen": "EVENT", "available_actions": ["choose_event_option"],
+                 "event": {"event_id": "PUNCH_OFF", "title": "重拳出击", "is_finished": False,
+                           "options": [{"index": 0, "title": "顺走", "text_key": "NAB",
+                                        "description": "将一张受伤加入到你的牌组。获得一件随机遗物。",
+                                        "is_locked": False, "is_proceed": False},
+                                       {"index": 1, "title": "我能打两个", "text_key": "I_CAN_TAKE_THEM",
+                                        "description": "和它们战斗以得到更好的奖励。",
+                                        "is_locked": False, "is_proceed": False}]},
+                 "run": {"current_hp": 22, "max_hp": 80, "gold": 0, "floor": 11, "deck": []}}
+    pol_shy = policy.Policy(know, random.Random(2))
+    d_shy = pol_shy.decide(shy_state, ctx)
+    assert d_shy.params.get("option_index") == 0 and "EVENT_LOWHP_FIGHT_SHY" in d_shy.reason, \
+        f"22 血零样本平值必须让位非战斗选项: {d_shy.reason}"
+    # 回血带外（50%≥45% 且 <70% 探索线，排除探索分支干扰）严格维持旧键序
+    shy_state["run"] = dict(shy_state["run"], current_hp=40)
+    pol_shy2 = policy.Policy(know, random.Random(2))
+    d_shy2 = pol_shy2.decide(shy_state, ctx)
+    assert d_shy2.params.get("option_index") == 1 \
+        and "EVENT_LOWHP_FIGHT_SHY" not in d_shy2.reason, \
+        f"50% 血带外不得触发避战重排（旧键序 I_CAN_TAKE_THEM<NAB 应胜出）: {d_shy2.reason}"
+    # 键=0 严格回滚旧键序
+    shy_state["run"] = dict(shy_state["run"], current_hp=22)
+    know.policy["event_lowhp_fight_shy_hp_pct"] = 0.0
+    pol_shy3 = policy.Policy(know, random.Random(2))
+    d_shy3 = pol_shy3.decide(shy_state, ctx)
+    assert d_shy3.params.get("option_index") == 1 \
+        and "EVENT_LOWHP_FIGHT_SHY" not in d_shy3.reason, \
+        f"避战键=0 必须严格回滚旧键序: {d_shy3.reason}"
+    know.policy["event_lowhp_fight_shy_hp_pct"] = 0.45
+    # 战斗项有实证正收益时价值贪心接管，避战重排不插手
+    know.stats["events"]["PUNCH_OFF"] = {
+        "I_CAN_TAKE_THEM": {"n": 2, "hp_delta_sum": 20.0, "gold_delta_sum": 0.0,
+                            "deaths": 0}}
+    pol_shy4 = policy.Policy(know, random.Random(2))
+    d_shy4 = pol_shy4.decide(shy_state, ctx)
+    assert d_shy4.params.get("option_index") == 1 \
+        and "EVENT_LOWHP_FIGHT_SHY" not in d_shy4.reason, \
+        f"战斗项实证正收益必须胜出（避战只治零收益并列）: {d_shy4.reason}"
+    del know.stats["events"]["PUNCH_OFF"]
+
     # 3l) 能量预留：缺口未补且能量不足以「攻击后再补防」时，格挡先行
     #     （第 36 批 F17 Boss 战：先挥霍输出，下轮 20 意图手持防御却 0 能量）
     def reserve_combat(hp_now, block_now, energy_now, hand):

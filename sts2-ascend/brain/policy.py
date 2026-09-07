@@ -7840,6 +7840,32 @@ class Policy:
         else:
             tied = [s for s in preview if s[0] == preview[0][0]]
             greedy_preview = min(tied, key=lambda s: (s[1], s[2]))
+        # 低血零收益避战重排（EVENT_LOWHP_FIGHT_SHY，第 1275~1279 局批复盘）：
+        # 1276 局 F11 22/80 血（28%），重拳出击 INITIAL 页「我能打两个」与
+        # 「顺走」全零样本 0.0 平值，稳定键序把战斗项排在前面——次页强制战
+        # T2 判死、2 回合阵亡。均值账对零样本并列无分辨力，而可选战斗是生涯
+        # 唯一死因形态（0/1280 全部死于战斗）：顶值 ≤0（无实证正收益）且血量
+        # 低于专线时，并列候选里描述带战斗语义的选项让位非战斗选项。受控探索
+        # 本身拒绝 <70% 血采样未知项，本规则只是把同一保守性延伸到贪心兜底；
+        # 任一选项攒出非零经验后价值贪心自动接管。键=0 严格回滚旧键序。
+        _shy_line = float(pol.get("event_lowhp_fight_shy_hp_pct", 0.45))
+        _shy_hp_pct = my_hp / max_hp
+        if (forced_risk_pick is None and 0.0 < _shy_line <= 1.0
+                and _shy_hp_pct < _shy_line and greedy_preview[0] <= 0.0):
+            _tied_top = [s for s in scored if s[0] == greedy_preview[0]]
+
+            def _fightish(s) -> bool:
+                _ft = f"{s[3].get('title') or ''} {s[3].get('description') or ''}".lower()
+                return any(_fk in _ft for _fk in (
+                    "战斗", "fight", "迎战", "决斗", "袭击"))
+
+            if len(_tied_top) > 1 and _fightish(greedy_preview):
+                _nonfight = [s for s in _tied_top if not _fightish(s)]
+                if _nonfight:
+                    greedy_preview = min(_nonfight, key=lambda s: (s[1], s[2]))
+                    veto_note += (f"；低血零收益避战重排：{_shy_hp_pct:.0%}血下"
+                                  "并列零收益候选让位非战斗选项"
+                                  "（EVENT_LOWHP_FIGHT_SHY）")
         quota = max(0, int(pol.get("event_exploration_run_quota", 1)))
         hp_pct = my_hp / max_hp
         exploration_gate = (pol.get("event_exploration_enabled", True)

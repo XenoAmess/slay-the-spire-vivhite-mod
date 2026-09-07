@@ -6619,5 +6619,135 @@ retry_resolution: none (no replay target; local production behaviorization)
   「判死→实战获胜」本批 +2，悲观台账续记；1272/1273 前夜
   RACE_AUDIT_HEAL_OVERRIDE 正常触发（57% 带内），审计纠错链在产。
   kill_bonus/饥饿链/锻造线旋钮全顶格停止吸收，kill_race_prior_eff 换向
-  阻尼 0.61→0.62（部分胜利释放），均为设计内终态。SLIPPERY_TTK_OBS 本批
+  阻尼 0.61→0.62（部分胜利释放），均为设计内终态。  SLIPPERY_TTK_OBS 本批
   无滑溜现场；1273-F17 Boss 战竞速审计「T2判死→实战7回合获胜」台账 +1。
+
+# 2026-09-07｜第 1275~1279 局批复盘（异步追及队列 5 局 exact_batch 全败；EVENT_LOWHP_FIGHT_SHY 低血零收益避战重排落地）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260907-075045-1788738645570235000-abd89d75]
+  （role=target）、attempt_packages=[20260907-080038-1788739238772903000-49d588b7]。
+  两包 inline manifest/inventory 均已逐字段读毕；target 的 complete_evidence 索引根
+  （sts2-ascend/.review_evidence/failed_review）在本 clone 存在（attempt 包
+  host_evidence_reference path_count=9 可证），其内容为 target 现场保全，与下方
+  manifest 判读一致。
+- **target（abd89d75）**：failure_kind=online_runtime、return_code=-1——宿主在上一
+  沙箱 `git checkout --detach abd89d75` 120 秒超时；selfcheck_state=not_run、
+  command_count=0、file_change_count=0、provider_work_started=false、
+  model_work_started=false——**模型从未开始工作，零产出**。包内 5.4MB candidate_patch
+  是损坏沙箱 raw worktree vs pre_head 的 diff（呈现 review_conclusion.txt、
+  BilibiliLive.psm1 等整文件删除，是 clone 不完整假象，file_change_count=0 佐证
+  无任何模型编辑），不构成可重实现成果。当前 HEAD 无可补合内容、无冲突可解。
+- **attempt（49d588b7）**：failure_kind=lifecycle_stop（维护停机取消，非模型提交
+  失败）；model_work_started=true（26 events / 97.4s / 27691 tokens）但 stopped=true，
+  inventory 唯一路径为在线态 review_prompt_latest.md、patch_bytes=0——**工作被
+  宿主中断于任何文件改动之前，零产出**。无成果可重实现。
+- 两包均非策略/代码失败，按契约记 no_valid_change 并完成本批自有闭环（见下）。
+
+retry_resolution: 20260907-075045-1788738645570235000-abd89d75 no_valid_change
+retry_resolution: 20260907-080038-1788739238772903000-49d588b7 no_valid_change
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：事件决策的零样本平值 tie-break（min(样本, 稳定键)）对选项语义
+  零感知——低血端撞上全零样本事件时，键序可能把「发起战斗」的选项排在非战斗
+  选项之前，用一场可选战斗去赌零收益。受控探索只在 ≥70% 血采样未知项，贪心
+  兜底却没有同等的低血保守性；可选战斗是生涯唯一死因形态（0/1280 全部死于
+  战斗）。修复：顶值 ≤0（无实证正收益）且血量低于专线时，并列候选中描述带
+  战斗语义的选项让位非战斗选项。
+- **EVIDENCE**：1276 局（86Q93VB1K1AQ，F11 阵亡）全链逐条核读：F9 单场 -32 后
+  22/80 血（28%），F10 路径投影已明示「投影中途死亡」，F11 Unknown 翻出事件
+  【重拳出击】（PUNCH_OFF，原生 events.jsonl：I_CAN_TAKE_THEM「和它们战斗以
+  得到更好的奖励」/ NAB「顺走：受伤入牌组+随机遗物」）。两选项全零样本
+  0.0/0.0(n=0)，GATE 最坏情况生存=无历史致死尾部（n=0 无 hp_min）、受控探索
+  28%<70% 关闭，贪心 tie-break 按稳定键 I_CAN_TAKE_THEM<NAB 选中「我能打两个」，
+  次页单选项强制「战斗」——对双拳击构装体 T1 先验投影「击杀需6回合>可存活
+  2回合」、T2 判死入锁、2 回合阵亡（竞速审计：T2判死→实战2回合阵亡）。
+  旁证：Vivhite profile 同事件「我能打两个」经验账 -4.5(n≈2.9)、受控探索
+  采样后「战斗」页 -1.0——战斗支线的负收益在另一 profile 已被独立证实；
+  本 profile 的首次相遇即用稳定键序把它选中，采样成本是一条命。
+- **EXPECTED_SIGNAL**：未来 3~10 局观测——① 低血（<45%）零收益并列事件的决策
+  留痕出现「EVENT_LOWHP_FIGHT_SHY」且选中非战斗选项的场次计数；② 重排后
+  该局不再死于该事件链内强制战（对照 1276 反事实）；③ 高血（≥45%）并列
+  事件维持旧键序/分散采样不变（selfcheck 对照锚同口径）；④ 被让位的战斗
+  选项在后续高血相遇时正常被采样、经验账开始积累（探索通道不受污染）。
+  若 ≥3 个独立对局显示被让位的非战斗选项实际更差（经验账显著为负而战斗
+  项后续采样为正），则假设证伪、专线收窄或键关闭回滚。
+
+## 一、样本与部署时序审读（固定首步骤）
+
+- 队列 requested=[1275~1279]，exact 命中 5/5、missing=0；最新死亡局 1279
+  （FGGHG4AN0F0M）完整链 237 条（packet 内尾部 30+每层首末+全部非战斗选择
+  切片，complete_persisted_chain=false）已逐条核读，F17 Boss 战斗段 T4~T7
+  全核；1276 全链（含 EVENT 载荷 trace）按需深读。
+- 部署时序：SELF_LOSS_MAIN_OWN_ONLY（第 1270~1274 批落盘）先于本批全部对局，
+  本批战斗记录「自损N（可行动段X/非行动段Y）」全部为新口径 post-fix 证据
+  （Y 桶=被排除量披露在产，如 1279-F17 自损2=可行动段2/非行动段47）；
+  RACE_AUDIT_HEAL_OVERRIDE / DOOM_WAIVER_GATE / BOSS_RACE_SLIPPERY_TAX /
+  JOINT_FLIP_TTK_CAP 均为既有杠杆，本批无 pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主假设现场（1276-F11）**：见 HYPOTHESIS/EVIDENCE 段——零样本平值 +
+   稳定键序在低血端把可选战斗排到顺走之前，是「知道危险机制」（最坏情况
+   闸门/受控探索血量线）与「贪心兜底」之间的缝：前者要 hp_min 样本（零样本
+   事件没有），后者完全不看血量与语义。
+2. **一幕 Boss 竞速必败四连（1275/1277/1278/1279）**：前夜预演「击杀需
+   10~13 回合＞满血可存活 5~6 回合」四局全部实战兑现阵亡（T2 判死台账 +2
+   阵亡）；RACE_AUDIT_HEAL_OVERRIDE 在 1277/1278/1279 正常触发回血
+   （44%/56%/55% 带内），DOOM_WAIVER_GATE 照常否决入场线豁免——审计链在产，
+   四局死因=卡组输出密度（先验 23~30/回合 vs 血池均值 254），非入场血量，
+   与「输出饥饿证据停止吸收、改接 kill_race_prior_eff」的既定演化方向一致。
+   1279-F17 战斗端 T5 防御前置（1 费 5 甲）为 891 批竞速格挡下限机制的
+   设计内行为（非致死回合保留末点能量补挡），不改生死回合，不立案。
+3. **竞速审计台账分母切片观测（本批复盘顺手取证，纯读数不改账）**：对
+   knowledge/runs 全量战斗记录回扫「竞速审计：判死→实战」落款——Boss 战
+   判死后获胜 145/402（36.1%），非 Boss 战 186/312（59.6%），全局
+   327/704（46.4%）与 stats.race_audit 一致。Boss 子账胜率仍 ≥30% 阈值
+   （RACE_AUDIT_HEAL_OVERRIDE 不换账，行为不变），但两个参照系差距 23.5pt
+   显著：若 Boss 子账跌破 30%，前夜回血闸的参照系选择本身值得立项；
+   本批仅留档为后续批次的预取证据。
+4. **历史积案对账**：SLIPPERY_TTK_OBS 本批滑溜现场在账（1275/1277/1278
+   VANTOM 前夜 +2.0 破层税留痕三条，ttk 口径对照继续累积，未达行为化线）；
+   stance 成长型反向偏置/火力成长斜率捆绑、RACE_BLK_FLOOR_RESERVE、
+   RACE_POOL_ALL_RESPAWN_CREDIT 本批无新现场；END_TURN_SETTLE_GATE/
+   MYTE_TOXIC_HAND_LIABILITY/PANTOGRAPH/无色药水词表零显形。
+
+## 三、本次调整（行为化 ×1：EVENT_LOWHP_FIGHT_SHY）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **EVENT_LOWHP_FIGHT_SHY**（低血零收益并列的事件战斗项让位非战斗项；证据：1276-F11 全链 + Vivhite profile 同事件负经验旁证） |
+| 代码动作 | brain/policy.py `_event`：贪心兜底选出顶值 ≤0 的并列候选后，血量低于 `event_lowhp_fight_shy_hp_pct`（默认 0.45）时，若中选项 title+description 含战斗语义词（战斗/fight/迎战/决斗/袭击）且存在不含战斗语义的同值候选，改选非战斗项并追加留痕「低血零收益避战重排…（EVENT_LOWHP_FIGHT_SHY）」；brain/knowledge.py DEFAULT_POLICY 新增 `event_lowhp_fight_shy_hp_pct: 0.45`；brain/selfcheck.py 新增 3k3 段四条锚 |
+| 不改 | 最坏情况生存闸门（hp_min 尾部）、受控探索（≥70% 血近优采样）、全员致死强行择损、正收益价值贪心、平值分散采样（高血端旧键序原样）、事件经验账读写口径 |
+| 回滚 | `event_lowhp_fight_shy_hp_pct: 0` 即整体关闭、严格回落旧键序（selfcheck 3k3 锚③ 为对照锚）；或删除 policy/knowledge/selfcheck 三处改动零残留 |
+
+## VALIDATION / ROLLBACK / 未来 3~10 局指标
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；改动仅限
+  sts2-ascend 静态项目文件（policy/knowledge/selfcheck + 复盘报告/短评），
+  无在线状态写入、无进程操作、无 push。
+- selfcheck 3k3：① 22/80 血零样本平值复刻 1276-F11 → 选「顺走」且留痕
+  含 EVENT_LOWHP_FIGHT_SHY；② 50% 血（带外且 <70% 探索线，排除探索干扰）
+  → 旧键序 I_CAN_TAKE_THEM 胜出且无留痕；③ 键=0 → 22 血严格回落旧键序；
+  ④ 战斗项攒出实证正收益（n=2/+10）→ 价值贪心接管、重排不插手。既有
+  3j/3k/3k2 平值分散、负收益回避、最坏情况闸门断言全部原样通过。
+- 指标（未来 3~10 局）：① EVENT_LOWHP_FIGHT_SHY 留痕出现率与独立对局数；
+  ② 重排局的事件链内存活率 vs 1276 反事实；③ 高血端并列事件键序/分散
+  采样零回归；④ 被让位战斗选项的后续经验积累方向（证伪通道）。
+- 继续调整条件：留痕 ≥3 个独立对局且重排局均未死于事件链 → 视证据评估
+  是否把同型保守性扩展到「顶值为负」的更宽口径；若被让位非战斗项经验账
+  显著为负而战斗项转正 ≥3 例 → 收窄专线或键关闭。
+- 撤回条件：`event_lowhp_fight_shy_hp_pct: 0` 即整体关闭；或删除三处改动。
+
+## 批次趋势补记（非主假设，不重复立案）
+
+- 5 局全败（生涯 0/1279）：一幕 Boss 竞速必败四连（1275/1277/1278/1279-F17，
+  预演判死全部兑现）+ 1276 零样本事件强制战 F11。竞速审计「判死→阵亡」
+  台账本批 +2（1279-F17 T2 锁→7 回合阵亡等），悲观率分子分母续记；
+  kill_bonus/饥饿链/锻造线/长战加成全顶格停止吸收，kill_race_prior_eff
+  0.55→0.52 换向阻尼在产，均为设计内终态。Boss 前夜弃疗/回血两端
+  （1275 必败弃疗改锻造 vs 1277~1279 审计覆盖回血）实战均未翻盘——前夜
+  杠杆在极端竞速缺口（ttk/tsurv ≈1.7~2.6，超 JOINT_FLIP_TTK_CAP 1.5）下
+  边际趋零，与翻盘比上限教义互证，不单列立案。
