@@ -2229,3 +2229,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.355497022155942局)，ROLLING_BOULDER(20分/4.544095525129118局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.448275094610658局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（19回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损58/掉血68（85%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/199 胜，当前目标进阶 0
+
+## 第 200 局复盘（2026-09-07 08:21）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血52｜自损60（可行动段60/非行动段0，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血3｜自损11（可行动段11/非行动段6，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损3（可行动段3/非行动段1，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血31｜自损11（可行动段11/非行动段9，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.131245321671189局)，VIVHITE_CARD_PERFECT_SYNTHESIS(35分/40.46956764213478局)，SALVO(34分/8.808717558002929局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/14.71299040485261局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/40.89651366521248局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/3.3437527825783966局)，ROLLING_BOULDER(20分/4.5281911907911665局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/22.369706131779523局)
+- 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/200 胜，当前目标进阶 0
