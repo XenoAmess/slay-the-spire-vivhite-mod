@@ -2570,3 +2570,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.0303361269442166局)，VIVHITE_CARD_GEODESIC_VEIL(19分/3.0099082120376885局)，ROLLING_BOULDER(20分/4.076090768985998局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/230 胜，当前目标进阶 0
+
+## 第 231 局复盘（2026-09-07 13:13）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_CONVERGENCE_VERDICT, JACKPOT, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：POCKETWATCH, INTIMIDATING_HELMET, LASTING_CANDY, HORN_CLEAT
+- 战斗记录：F21 Unknown战 掉血0｜自损23（可行动段23/非行动段11，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血0｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血17｜自损24（可行动段24/非行动段7，SELF_LOSS_PHASE_OBS）; F29 Monster战 掉血0｜自损37（可行动段37/非行动段7，SELF_LOSS_PHASE_OBS）; F31 Monster战 掉血3｜自损8（可行动段8/非行动段15，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血92｜自损26（可行动段26/非行动段51，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.867187790338752局)，SALVO(34分/7.901491534723052局)，VIVHITE_CARD_CHROMATIC_LIMIT(34分/42.4794025642033局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/13.197672461274948局)，VIVHITE_CARD_PERFECT_SYNTHESIS(34分/43.85770336052495局)
+- 当前低价值卡牌：AUTOMATION(17分/3.019729950499912局)，VIVHITE_CARD_GEODESIC_VEIL(19分/2.999373533295557局)，ROLLING_BOULDER(20分/4.061824451294547局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（97%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.49 → 0.46（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿18张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.46 → 0.47（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/231 胜，当前目标进阶 0
