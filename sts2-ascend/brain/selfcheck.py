@@ -2575,6 +2575,51 @@ def main() -> int:
     assert d_g2.action == "play_card", \
         f"致死回合必须豁免余量门（买命/抢斩杀当场兑现）: {d_g2}"
 
+    # 3prh2) 謦欬门滑溜破层豁免（VIVHITE_HP_GATE_SLIPPERY_EXEMPT，第 225~230
+    #        局批复盘）：目标带滑溜层时命中只失 1 血，实付 ≤ cap（默认 2）的
+    #        伤害牌不被余量门拦——230 局 F17 VANTOM T1/T2/T5 低价破层攻击被
+    #        拦、真实伤害迟至 T7 解锁后阵亡。开关 False 或 cap≤0 回滚旧语义；
+    #        无滑溜层目标维持拦截（与 3prh g1 同口径）。
+    def _vgate_slip_state(hp_now, incoming, layers):
+        st = _vgate_state(hp_now, incoming)
+        if layers > 0:
+            st["combat"]["enemies"][0]["powers"] = [
+                {"id": "SLIPPERY_POWER", "name": "滑溜", "amount": layers}]
+        return st
+
+    vknow_gs1 = _vivhite_know("sts2-selfcheck-vhgate-slipon-")
+    vknow_gs1.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_gs1 = policy.Policy(vknow_gs1, random.Random(11))
+    d_gs1 = vpol_gs1.decide(_vgate_slip_state(85, 10, 8), _vgate_ctx())
+    assert d_gs1.action == "play_card", \
+        f"滑溜目标下低价破层攻击必须豁免余量门: {d_gs1}"
+    assert "VIVHITE_HP_GATE_SLIPPERY_EXEMPT" in d_gs1.reason, \
+        f"滑溜破层豁免缺决策链留痕: {d_gs1.reason}"
+    vknow_gs2 = _vivhite_know("sts2-selfcheck-vhgate-slipcap-")
+    vknow_gs2.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_gs2.policy["vivhite_hp_gate_slippery_pay_cap"] = 0.0
+    vpol_gs2 = policy.Policy(vknow_gs2, random.Random(11))
+    d_gs2 = vpol_gs2.decide(_vgate_slip_state(85, 10, 8), _vgate_ctx())
+    assert d_gs2.action == "end_turn" \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_gs2.reason, \
+        f"cap≤0 必须回滚为拦截旧语义: {d_gs2}"
+    vknow_gs3 = _vivhite_know("sts2-selfcheck-vhgate-slipoff-")
+    vknow_gs3.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_gs3.policy["vivhite_hp_gate_slippery_exempt"] = False
+    vpol_gs3 = policy.Policy(vknow_gs3, random.Random(11))
+    d_gs3 = vpol_gs3.decide(_vgate_slip_state(85, 10, 8), _vgate_ctx())
+    assert d_gs3.action == "end_turn" \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_gs3.reason, \
+        f"开关 False 必须回滚为拦截旧语义: {d_gs3}"
+    vknow_gs4 = _vivhite_know("sts2-selfcheck-vhgate-slipzero-")
+    vknow_gs4.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_gs4 = policy.Policy(vknow_gs4, random.Random(11))
+    d_gs4 = vpol_gs4.decide(_vgate_slip_state(85, 10, 0), _vgate_ctx())
+    assert d_gs4.action == "end_turn" \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_gs4.reason \
+        and "SLIPPERY_EXEMPT" not in d_gs4.reason, \
+        f"无滑溜层目标不得触发豁免（与 g1 同口径拦截）: {d_gs4}"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection
