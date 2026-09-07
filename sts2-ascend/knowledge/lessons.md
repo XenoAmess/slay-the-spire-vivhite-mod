@@ -9874,3 +9874,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(7分/4.009037287997114局)，BULLY(10分/4.009037287997114局)，HAVOC(11分/3.2072298303976905局)
 - 策略进化：potion_block_hp_pct: 0.42 → 0.47（高速失血爆毙（6回合掉血85，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
 - 生涯战绩：0/1298 胜，当前目标进阶 0
+
+## 第 1299 局复盘（2026-09-07 20:37）
+- 结果：💀 失败｜进阶 0｜到达层数 48｜当局评分 48
+- 死因：敌人组合 AEONGLASS
+- 本局拿牌：PERFECTED_STRIKE, MOLTEN_FIST, DISMANTLE, UNRELENTING, WHIRLWIND, SWORD_BOOMERANG, FIGHT_ME, BREAKTHROUGH, TRUE_GRIT, UNRELENTING, DARK_EMBRACE, ANGER, DISMANTLE, DEMON_FORM, STOMP, SHRUG_IT_OFF, FEEL_NO_PAIN, BATTLE_TRANCE, FEEL_NO_PAIN, HEADBUTT, TAUNT, UNRELENTING, UNRELENTING, CINDER, SPITE, HOWL_FROM_BEYOND, CINDER, DEMON_FORM, CINDER
+- 本局遗物：VEXING_PUZZLEBOX, STRIKE_DUMMY, ORICHALCUM, ODDLY_SMOOTH_STONE, HAPPY_FLOWER, RED_MASK
+- 战斗记录：F33 Boss战 掉血0; F35 Monster战 掉血13; F39 Unknown战 掉血0; F45 Elite战 掉血57｜竞速审计：T2判死→实战6回合获胜; F46 Monster战 掉血18｜竞速审计：T5判死→实战7回合获胜; F48 Boss战 掉血47｜自损1（可行动段1/非行动段21，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/28.77532531676489局)，FIEND_FIRE(25分/36.75405204889997局)，PRIMAL_FORCE(24分/5.593007920484776局)，PACTS_END(24分/109.99947686284206局)，MANGLE(24分/102.9967835331669局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(7分/3.995005657489125局)，BULLY(10分/3.995005657489125局)，HAVOC(11分/3.196004525991299局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.37（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F48（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F48——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.47 → 0.45（行至 F48——药水交药线部分胜利回收）
+- 生涯战绩：0/1299 胜，当前目标进阶 0
