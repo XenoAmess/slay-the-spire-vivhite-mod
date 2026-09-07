@@ -3043,3 +3043,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/3.5417963483350556局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.476296028636155局)，ROLLING_BOULDER(20分/3.5056445327156585局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（14回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/273 胜，当前目标进阶 0
+
+## 第 274 局复盘（2026-09-07 20:47）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：VAJRA
+- 战斗记录：F4 Monster战 掉血0｜自损6（可行动段6/非行动段8，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血13｜自损12（可行动段12/非行动段9，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损12（可行动段12/非行动段24，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损6（可行动段6/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血14｜自损22（可行动段22/非行动段12，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血82｜自损49（可行动段49/非行动段29，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(41分/2.46592673498549局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(34分/12.276431641625374局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(34分/26.798059601120695局)，VIVHITE_CARD_CHROMATIC_LIMIT(33分/41.050009880619605局)，VIVHITE_CARD_PERFECT_SYNTHESIS(33分/44.043176201657786局)
+- 当前低价值卡牌：AUTOMATION(17分/3.5294000611158833局)，VIVHITE_CARD_GEODESIC_VEIL(18分/3.4641289925359287局)，ROLLING_BOULDER(20分/3.493374776851154局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损49/掉血82（60%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/274 胜，当前目标进阶 0
