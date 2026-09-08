@@ -10281,3 +10281,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.41828611704803局)，BULLY(10分/3.521277956360172局)，HAVOC(11分/2.817022365088137局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（73%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：0/1335 胜，当前目标进阶 0
+
+## 第 1336 局复盘（2026-09-09 02:36）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：BREAKTHROUGH, ARMAMENTS, SWORD_BOOMERANG, SHRUG_IT_OFF, CONFLAGRATION, FIGHT_ME, DISMANTLE, ANGER, STOMP, IMPERVIOUS, SHRUG_IT_OFF, HEMOKINESIS, UNMOVABLE, HEMOKINESIS, DISMANTLE, INFLAME, ANGER, EQUILIBRIUM, FLAME_BARRIER, VICIOUS, PILLAGE, ANGER, THUNDERCLAP, INFLAME, CINDER
+- 本局遗物：KUSARIGAMA, BAG_OF_PREPARATION, STRIKE_DUMMY, WHETSTONE, PEN_NIB
+- 战斗记录：F19 Monster战 掉血26; F21 Monster战 掉血11; F22 Unknown战 掉血18｜自损2（可行动段2/非行动段22，SELF_LOSS_PHASE_OBS）; F25 Monster战 掉血38; F27 Monster战 掉血13｜自损3（可行动段3/非行动段16，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合获胜; F30 Monster战 掉血39｜自损3（可行动段3/非行动段28，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.185084892660478局)，OFFERING(25分/25.274376725899366局)，PRIMAL_FORCE(24分/4.912534876918079局)，FIEND_FIRE(24分/33.195244032623314局)，MANGLE(24分/90.46568474610856局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.4028221156383625局)，BULLY(10分/3.5089534835129115局)，HAVOC(11分/2.807162786810329局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F30——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1336 胜，当前目标进阶 0
