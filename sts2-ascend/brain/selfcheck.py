@@ -732,6 +732,57 @@ def main() -> int:
     ctx.combat = None
     ctx.current_combat_is_hard = False
 
+    # 3k4) 自伤型攻击药水计价门（第 315~319 局批复盘新增）：污浊药水
+    #      （FOUL_POTION「对所有玩家和敌人造成12点伤害」）旧版被 is_damage
+    #      分支当纯进攻药水零计价零门槛——生涯 10 局 19 瓶、每瓶约 12 自血
+    #      从未进入决策理由；318 局 F48 Boss 死亡战 T1 连喝 3 瓶付 36 自血
+    #      （入场血 37%）后 T5 阵亡；hp≤自伤量时使用即自杀的边界无防线。
+    #      夹具：① 高血硬仗照常使用且理由披露「自伤12血（POTION_SELF_HARM_OBS）」；
+    #      ② 使用后血量将 ≤reserve（默认1）时跳过且不计 tried（回血后仍可用）；
+    #      ③ 描述无数字时回落实证默认 12；④ 非自伤攻击药水不误伤；
+    #      ⑤ potion_self_harm_gate=false 严格回滚旧行为。
+    def foul_state(hp_now: int, fdesc: str) -> dict:
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "M", "name": "小怪",
+                                    "current_hp": 60, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 10}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 10, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "FOUL_POTION", "name": "污浊药水",
+                                 "description": fdesc, "occupied": True,
+                                 "can_use": True, "usage": "anytime"}]},
+        }
+
+    _foul_desc = "对所有玩家和敌人造成12点伤害。\n也可以投掷给商人换取26金币。"
+    ctx.current_combat_is_hard = True
+    d_f1 = pol.decide(foul_state(98, _foul_desc), ctx)
+    assert d_f1.action == "use_potion" and "自伤12血（POTION_SELF_HARM_OBS）" in d_f1.reason, \
+        f"高血硬仗应使用自伤药水并披露自伤量: {d_f1.action}（{d_f1.reason}）"
+    d_f2 = pol.decide(foul_state(13, _foul_desc), ctx)
+    assert d_f2.action != "use_potion", \
+        f"使用后血量13-12=1≤reserve(1) 的自杀/贴死边界必须跳过: {d_f2.action}（{d_f2.reason}）"
+    d_f3 = pol.decide(foul_state(14, _foul_desc), ctx)
+    assert d_f3.action == "use_potion", \
+        f"使用后血量14-12=2>reserve(1) 应照常兑现: {d_f3.action}（{d_f3.reason}）"
+    d_f4 = pol.decide(foul_state(60, _foul_desc), ctx)
+    assert d_f4.action == "use_potion", \
+        f"跳过不计 tried，回血后同一瓶应可再用: {d_f4.action}（{d_f4.reason}）"
+    d_f5 = pol.decide(foul_state(13, "对所有玩家和敌人造成伤害。"), ctx)
+    assert d_f5.action != "use_potion", \
+        f"描述无数字时回落实证默认12，13-12≤1 仍应跳过: {d_f5.action}（{d_f5.reason}）"
+    d_f6 = pol.decide(foul_state(10, "对所有敌人造成20点伤害。"), ctx)
+    assert d_f6.action == "use_potion" and "POTION_SELF_HARM_OBS" not in d_f6.reason, \
+        f"非自伤攻击药水不得被自伤门误伤（旧行为不变）: {d_f6.action}（{d_f6.reason}）"
+    pol.know.policy["potion_self_harm_gate"] = False
+    d_f7 = pol.decide(foul_state(13, _foul_desc), ctx)
+    assert d_f7.action == "use_potion" and "POTION_SELF_HARM_OBS" not in d_f7.reason, \
+        f"potion_self_harm_gate=false 必须严格回滚旧行为: {d_f7.action}（{d_f7.reason}）"
+    pol.know.policy["potion_self_harm_gate"] = True
+    ctx.current_combat_is_hard = False
+
     # 3n) 精英闸门不得在负分区间反转（第 43 局 F10 实证）：
     #     低血量全路径投影死亡时，旧版 ×0.1 把精英 -110 抬到 -11 压过篝火 -109，
     #     20 血走进 BYGONE_EFFIGY 阵亡。修复后：正分乘法/负分加性重罚，

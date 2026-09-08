@@ -609,3 +609,44 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 315~319 局批复盘：自伤型攻击药水零计价零门槛——污浊药水自血入账与自杀边界（POTION_SELF_HARM_OBS）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+`_maybe_potion` 的 is_damage 分支只按描述关键词识别「攻击药水」，从不核算药水对使用者自身的伤害：污浊药水（FOUL_POTION，原生描述「对所有玩家和敌人造成12点伤害」）被当纯进攻药水在硬仗连喝——生涯 10 个独立对局共 19 瓶、每瓶约 12 自血（hp 98→86→74 逐瓶可核）合计 ~228 自血从未进入任何决策理由与留痕；318 局 F48 Boss 死亡战 T1 连喝 3 瓶付 36 自血（入场血 98 的 37%），该战自损 69/掉血 98、竞速 T2 判死→T5 阵亡。且 is_defensive 分支有交药线血量门槛，is_damage 分支完全没有——hp≤自伤量时使用即当场自杀的边界在结构上无防线。该假设可证伪：未来 3~10 局若决策链 use_potion 理由不出现「自伤N血（POTION_SELF_HARM_OBS）」留痕（自伤药水不再进背包或词表漏配），或留痕出现但自伤量与实测 hp 落差对不上，则消费路径/解析复查；policy.json 置 `potion_self_harm_gate=false` 时留痕与门槛同灭（单键回滚，旧行为零差异）。
+
+## EVIDENCE
+
+- 全文检索本 profile 全部 324 个 run 文件：污浊药水出现在 10 局（50/83/98/127/137/147/210/233/283/318），每次使用 hp 落差逐瓶可核（85→73、78→76→64、78→66→54、72→60、84→72、78→66、98→86→74 等），单瓶固定 ~12 自血；所有使用理由均为「硬仗使用攻击药水【污浊药水】」，无任何自伤披露。
+- 原生知识核对（knowledge/game/v0.111.0/runtime/potions.jsonl）：FOUL_POTION 描述「对所有玩家和敌人造成{Damage}点伤害」，Event 池、AnyTime；全词表扫描「所有玩家/all players/对自己/失去」仅 FOUL_POTION 命中自伤型——词表完备。
+- 第 318 局（DYDWW3K4A9QN，F48 阵亡）完整决策链已逐条深读：F45 连领 3 瓶污浊药水，F48 Boss 战（火炬头聚合体/女王）T1 hp 98→86→74 连喝 3 瓶后才开始出牌；该回合謦欬实付 51（自付速率 51.0/回合≥敌方净损 16.0/回合，DOMINATES 比值 3.19），全场自损 69/掉血 98，竞速 T2 判死→T5 阵亡——36 自血占入场血 37%，与謦欬实付并列最大自残来源，但决策链零留痕。
+- 生产现状核查（policy.py `_maybe_potion`）：is_damage = 描述含「伤害/damage/攻击」即命中；使用分支旧版无任何血量门槛；对照 is_defensive 分支（交药线 potion_block_hp_pct + 致死解封）——自伤边界缺口仅存在于攻击类。
+- 相邻批次预注册对账：① 307~314 批 VIVHITE_MARGIN_PICK_OBS 留痕已在 318/319 两局真实拿牌路径显形（「余裕供给稀缺加分（卡组无条件余裕源0/1/2张，+4.0/+2.7/+1.3）」），终局无条件余裕源 3/4/4/8/2 张——244~259 批「零源终局占比下降」信号成立（本批 0/5 零源），但自损/掉血比仍未回落，瓶颈不在余裕供给端；② 306 批 DOMINATES 接入生存护栏的预注册条件（≥2/3 局标记且「短于投影」结局）本批仍不成立：DOMINATES 5/5 局显形，但四场死亡审计均为判死后 1~3 回合阵亡（T7→9、T6→7、T2→5、T5→7），无短于投影案例，故本批不接护栏。
+- 台账观察（非本批动作，记录移交）：271~294 批 race_esc_latch_hold 的证伪条件「esc 桶判死后胜率不降反升」在数值上触发——race_audit esc 桶 99/297=33.3% → 116/330=35.2%（边际 17/33=51.5%），全局 173/414=41.8% → 192/452=42.5%；但在线 policy.json 显式钉有 `race_esc_latch_hold: true`，复盘写边界禁止改 policy.json，改 knowledge.py 默认值会被显式键遮蔽而无效——该回滚只能由在线学习环或宿主执行，留痕移交，本批不以无效改动冒充闭环。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（`_maybe_potion`）：
+  ① is_defensive 判定后新增自伤识别——`is_damage 且描述含「所有玩家」/"all players"` 命中药水标记 _self_harm，自伤量取描述第一个数字（解析失败回落实证默认 12，与 10 局 19 瓶实测一致）；
+  ② 使用分支新增自杀/贴死边界门——`potion_self_harm_gate`（默认开）下，使用后血量将 ≤`potion_self_harm_reserve_hp`（默认 1，只拦字面自杀）时 `continue` 跳过且不计 tried（回血后仍可用，与增益药非 premium 跳过同一语义）；
+  ③ 使用时理由追加「，自伤N血（POTION_SELF_HARM_OBS）」——纯披露，供后续批次对账自伤药水真实成本；gate 置 false 时门槛与披露同灭，旧行为零差异。
+  不改任何评分/竞速/姿态公式；非自伤药水路径严格不变。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `potion_self_harm_gate: True`（单键回滚）与 `potion_self_harm_reserve_hp: 1`（后续批次拿到披露账后再决定是否上调覆盖贴死自残），注释记录 10 局实证与 318-F48 死亡战。
+- sts2-ascend/brain/selfcheck.py：新增 3k4 夹具七分支——① hp98 高血硬仗照常使用且理由带「自伤12血（POTION_SELF_HARM_OBS）」；② hp13（13-12=1≤reserve）自杀边界跳过；③ hp14（2>1）照常兑现；④ 跳过不计 tried，hp60 后同一瓶可再用；⑤ 描述无数字回落默认 12 仍跳过；⑥ 非自伤攻击药水（「对所有敌人造成20点伤害」）hp10 照旧使用且无披露（旧行为不变）；⑦ gate=false 时 hp13 照用且无披露（严格回滚）。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链 use_potion 理由出现「自伤N血（POTION_SELF_HARM_OBS）」留痕（污浊药水生涯出现率约 1/32 局、出现即 1~3 瓶，可直接与 318-F48 T1 三瓶 36 血对账）；② 若出现 hp 接近自伤量的场面，可见自伤药水留包未用（跳过不计 tried，非锁死）；③ 披露账累计 ≥3 次后，可对账「自伤药水使用×12」与战斗注记自损的构成比例，决定是否上调 `potion_self_harm_reserve_hp` 把贴死自残（如使用后血量跌破交药线）也纳入门禁。证伪/回滚：留痕从不出现（自伤药水不再进背包或词表漏配）→ 复查消费路径与关键词；留痕出现但披露自伤量与实测 hp 落差对不上 → 数字解析复查；policy.json 置 `potion_self_harm_gate=false` 即整体撤回（门槛与披露同灭，旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3k4 七分支；既有 3k/3k3/3k3b 药水预留夹具、3prj/3prk 余裕加分夹具、3pri/3prh 謦欬门夹具与全部既有夹具通过）。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+41/-1，自伤识别+边界门+披露）、brain/knowledge.py（+14 两个静态键）、brain/selfcheck.py（+51 七分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

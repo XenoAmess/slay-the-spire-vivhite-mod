@@ -313,6 +313,20 @@ DEFAULT_POLICY = {
     "potion_exploration_max_price": 60,
     "potion_exploration_gold_reserve": 60,
     "potion_exploration_min_hp_pct": 0.55,
+    "potion_self_harm_gate": True,  # 自伤型攻击药水计价门（第 315~319 局批复盘新增）：
+                                    # 描述含「所有玩家」/"all players" 的药水（v0.111.0
+                                    # 原生词表仅 FOUL_POTION 污浊药水命中）对自己同额扣血，
+                                    # 旧版 is_damage 分支零计价零门槛——生涯 10 局 19 瓶、
+                                    # 每瓶约 12 自血合计 ~228 血从未进入决策理由；318 局
+                                    # F48 Boss 死亡战 T1 连喝 3 瓶付 36 自血（入场血 37%）
+                                    # 后 T5 阵亡。开启时：使用后血量将 ≤reserve 即跳过
+                                    # （防自杀/贴死自残，不计 tried），使用时理由披露
+                                    # 「自伤N血（POTION_SELF_HARM_OBS）」。false = 整体回滚
+    "potion_self_harm_reserve_hp": 1,  # 自伤药水使用后的最低保留血（同上批次）：旧版
+                                    # hp≤自伤量时使用即当场自杀且结构无防线（is_defensive
+                                    # 有交药线、is_damage 没有）；默认 1 只拦字面自杀，
+                                    # 后续批次拿到 POTION_SELF_HARM_OBS 披露账后再决定是否
+                                    # 上调把「贴死自残」也纳入
     # --- 战斗端补丁键（第 58~59 局复盘） ---
     "desperate_atk_mult": 1.3,    # 无甲可补的致死回合攻击提速：唯一活路是抢斩杀终结战斗
     "block_excess_value": 0.03,   # 超出当前意图缺口的溢出格挡每点评分（第 59 局 Boss 首回合溢出 34 甲白费整轮能量）

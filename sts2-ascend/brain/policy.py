@@ -5175,6 +5175,26 @@ class Policy:
             # 尊重：识别为防御/回复的药水不得再经兜底通道流失
             is_defensive = bool("格挡" in desc or "生命" in desc or "回复" in desc
                                 or "block" in desc_l or "heal" in desc_l)
+            # 自伤型攻击药水（第 315~319 局批复盘新增）：描述含「所有玩家」/
+            # "all players" 的药水（v0.111.0 原生词表中仅 FOUL_POTION 污浊药水
+            # 「对所有玩家和敌人造成12点伤害」命中）对使用者同额扣血，但
+            # is_damage 分支旧版零计价零门槛——生涯 10 局 19 瓶、每瓶约 12
+            # 自血（hp 98→86→74 逐瓶可核）合计 ~228 血从未进入任何决策理由；
+            # 318 局 F48 Boss 死亡战 T1 连喝 3 瓶付 36 自血（入场血 98 的
+            # 37%），该战自损 69/掉血 98、T2 判死→T5 阵亡；且 is_defensive
+            # 有交药线而 is_damage 无任何血量门槛，hp≤自伤量时使用即自杀的
+            # 边界在结构上无防线。此处两个有界动作：
+            #   ① 使用后血量将 ≤potion_self_harm_reserve_hp 时跳过且不计
+            #      tried（回血后仍可用——拦的是自杀/贴死自残，不是正常兑现）；
+            #   ② 使用时理由披露自伤量（POTION_SELF_HARM_OBS），供复盘对账
+            #      自伤药水的真实成本与自损账构成。
+            # policy.json 置 potion_self_harm_gate=false 整体回滚（旧行为零差异）。
+            _self_harm = is_damage and ("所有玩家" in desc
+                                        or "all players" in desc_l)
+            _self_hit = 0
+            if _self_harm:
+                _dmg_nums = re.findall(r"\d+", desc)
+                _self_hit = int(_dmg_nums[0]) if _dmg_nums else 12
             # Boss 前夜进攻药水预留（第 380~385 批复盘）：BNSJ 局实证——F4 力量/
             # F14 易伤/F15 攻击三瓶进攻药水在 Boss 前全数前倾兑付（其中两瓶倒在
             # 净损 0/-5 的普通怪房），F17 一幕 Boss 斩杀竞速差 3~7 回合空手阵亡。
@@ -5189,11 +5209,31 @@ class Policy:
             if is_buff and not premium:
                 continue
             if (is_damage or is_buff) and enemies:
+                try:
+                    _sh_gate = bool(int(pol.get("potion_self_harm_gate", 1)))
+                except Exception:
+                    _sh_gate = True
+                if _self_harm and _sh_gate:
+                    _hp_cb = (combat.get("player") or {})
+                    try:
+                        _hp_now = int(_hp_cb.get("current_hp")
+                                      or run.get("current_hp") or 1)
+                    except (TypeError, ValueError):
+                        _hp_now = 1
+                    try:
+                        _reserve = int(pol.get("potion_self_harm_reserve_hp", 1))
+                    except (TypeError, ValueError):
+                        _reserve = 1
+                    if _hp_now - _self_hit <= _reserve:
+                        continue  # 自杀/贴死边界：跳过且不计 tried，回血后仍可用
                 params = {"option_index": p["index"]}
                 if target is not None:
                     params["target_index"] = target
                 kind = "攻击" if is_damage else "增益"
-                return Decision("use_potion", params, f"战斗：硬仗使用{kind}药水【{name}】",
+                _sh_note = (f"，自伤{_self_hit}血（POTION_SELF_HARM_OBS）"
+                            if (_self_harm and _sh_gate) else "")
+                return Decision("use_potion", params,
+                                f"战斗：硬仗使用{kind}药水【{name}】{_sh_note}",
                                 tags=[("use_potion", p.get("potion_id")),
                                       ("potion_attempt", p["index"],
                                        potion_key[1])], wait=0.6)
