@@ -4275,3 +4275,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.391561348630807局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.3230886898915686局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.43894045197595局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（6回合掉血102，每回合17≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.41（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/385 胜，当前目标进阶 0
+
+## 第 386 局复盘（2026-09-08 19:30）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, EQUILIBRIUM, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：BRONZE_SCALES
+- 战斗记录：F2 Monster战 掉血0｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损4（可行动段4/非行动段10，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损4（可行动段4/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血78｜自损30（可行动段30/非行动段44，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/9.077407186560633局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.625377592928793局)，HAND_OF_GREED(33分/7.263532310959009局)，DRAMATIC_ENTRANCE(32分/5.9727545341085495局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/50.16726899558526局)
+- 当前低价值卡牌：AUTOMATION(17分/2.3831908839105993局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.3114578794769485局)，EQUILIBRIUM(20分/5.123008876003239局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/386 胜，当前目标进阶 0
