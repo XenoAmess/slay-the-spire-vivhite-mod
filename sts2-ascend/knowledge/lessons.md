@@ -10138,3 +10138,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.624330833507126局)，BULLY(10分/3.6854911147820286局)，HAVOC(11分/2.9483928918256224局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1322 胜，当前目标进阶 0
+
+## 第 1323 局复盘（2026-09-08 16:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：ARMAMENTS, SWORD_BOOMERANG, CINDER, SWORD_BOOMERANG, BLUDGEON, FORGOTTEN_RITUAL, PACTS_END, MOLTEN_FIST, DISMANTLE, THRUMMING_HATCHET, CONFLAGRATION, CRUELTY, COLOSSUS, PYRE
+- 本局遗物：REPTILE_TRINKET
+- 战斗记录：F7 Unknown战 掉血24; F9 Monster战 掉血7; F11 Monster战 掉血3; F13 Monster战 掉血10; F14 Monster战 掉血0; F17 Boss战 掉血63｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.333619844046752局)，OFFERING(25分/26.453035519877083局)，PRIMAL_FORCE(24分/5.141628654232411局)，FIEND_FIRE(24分/34.74328878647057局)，MANGLE(24分/94.6845098445709局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.608145675589851局)，BULLY(10分/3.672591895880292局)，HAVOC(11分/2.938073516704233局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1323 胜，当前目标进阶 0
