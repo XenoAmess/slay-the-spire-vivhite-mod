@@ -10910,7 +10910,10 @@ def main() -> int:
     #      14 次、1306-F17 非致死回合打出突破（自付1），持久链血价留痕
     #      全部 0 条，攻击路由的耗血牌永远无法结算 1285~1289 批指标①。
     #      ① 非致死单体自残带「自残2计价」留痕且分数低于同面板零自付
-    #      攻击；② AOE 非致死自残带「非致死未计价」披露；③ 观测键=0
+    #      攻击；② AOE 非致死自残按单体同口径补全价计价
+    #      （HP_COST_ATK_AOE_ALIGN，第1319~1324局批复盘结案落地）：
+    #      注记带「计价·AOE对齐」、幅度恰为 self_cost×(1.5+3.0×(1-hp_pct))，
+    #      行为键=0 回滚纯披露口径，清场终局豁免；③ 观测键=0
     #      留痕整体消失且分数零漂移（纯观测锚）；④ 致死+判死竞速的
     #      单体/AOE 豁免均带「半价计价」留痕。
     hcat_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-hcat-"))
@@ -10945,8 +10948,29 @@ def main() -> int:
     s_bt, _, why_bt = hcat_pol._score_play(
         hcat_bt, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
         my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
-    assert "自残1非致死未计价（HP_COST_ATK_PRICING）" in why_bt, \
-        f"AOE 非致死自残未披露: {s_bt}（{why_bt}）"
+    # ② AOE 非致死自残对齐单体全价计价（HP_COST_ATK_AOE_ALIGN）：
+    #    披露观测结案（5 独立对局、8/13 低血现场），默认口径扣减
+    #    1×(1.5+3.0×(1-70/80))=1.875；行为键=0 回滚纯披露旧口径。
+    assert "自残1计价（HP_COST_ATK_PRICING·AOE对齐）" in why_bt, \
+        f"AOE 非致死自残未按单体口径计价: {s_bt}（{why_bt}）"
+    hcat_pol.know.policy["hp_cost_atk_aoe_pricing"] = 0
+    s_bt_disc, _, why_bt_disc = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "自残1非致死未计价（HP_COST_ATK_PRICING）" in why_bt_disc, \
+        f"hp_cost_atk_aoe_pricing=0 未回滚披露口径: {s_bt_disc}（{why_bt_disc}）"
+    assert abs(s_bt - (s_bt_disc - 1.875)) < 1e-9, \
+        f"AOE 对齐计价幅度偏离单体同式: {s_bt} vs {s_bt_disc}"
+    hcat_pol.know.policy["hp_cost_atk_aoe_pricing"] = 1
+    hcat_fodder = [{"index": 0, "enemy_id": "HCAT_FODDER", "name": "杂兵",
+                    "current_hp": 5, "max_hp": 5, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 0}]}]
+    s_bt_clear, _, why_bt_clear = hcat_pol._score_play(
+        hcat_bt, hcat_fodder, 0, 0, 3, hcat_pol.know.policy,
+        my_hp=70, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "自残" not in why_bt_clear, \
+        f"清场终局 AOE 自残未豁免: {s_bt_clear}（{why_bt_clear}）"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 0
     s_hemo_off, _, why_hemo_off = hcat_pol._score_play(
         hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,

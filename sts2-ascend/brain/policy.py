@@ -4744,13 +4744,29 @@ class Policy:
                         if _hp_atk_trace:
                             _hp_atk_note = (f"｜自残{self_cost}致死禁玩"
                                             "（HP_COST_ATK_PRICING）")
-                elif self_cost and not lethal and _hp_atk_trace:
-                    # AOE 自残在非致死语境历来未计价（与单体分支全语境计价
-                    # 不对称）——先披露、后裁决：注记只陈述未计价事实，
-                    # 评分零改动（1306-F17 70 血零意图回合打出突破自付 1，
-                    # 链上原无任何痕迹）。
-                    _hp_atk_note = (f"｜自残{self_cost}非致死未计价"
-                                    "（HP_COST_ATK_PRICING）")
+                elif self_cost and not lethal:
+                    # HP_COST_ATK_AOE_ALIGN（第1319~1324局批复盘）：
+                    # HP_COST_ATK_PRICING 披露观测按预注册结案——AOE「非致死
+                    # 未计价」累计 5 个独立对局（1309/1312/1320/1321/1324≥3
+                    # 线），13 个真机现场 8 个低血（<50%：1321-F14 8/91 血
+                    # 零意图自付 1、1320-F15 26/80 血、1320-F17 35/80 血），
+                    # 触发预注册「按单体同口径补全价计价」。与单体分支同式
+                    # self_cost×(1.5+3.0×(1-hp_pct))（血越少自残越贵）；
+                    # 清场终局（全体可击杀）豁免——同单体「击杀最后一个
+                    # 敌人自残值得」教义。行为键 hp_cost_atk_aoe_pricing=0
+                    # 回滚为纯披露旧口径（评分零改动）；留痕键=0 只摘注记，
+                    # 计价本身不受影响（与单体分支键语义一致）。
+                    _aoe_align = float(pol.get("hp_cost_atk_aoe_pricing", 1)) > 0
+                    if _aoe_align and len(killable) >= len(enemies):
+                        pass  # 清场终局，自残值得（同单体教义）
+                    elif _aoe_align:
+                        score -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct))
+                        if _hp_atk_trace:
+                            _hp_atk_note = (f"｜自残{self_cost}计价"
+                                            "（HP_COST_ATK_PRICING·AOE对齐）")
+                    elif _hp_atk_trace:
+                        _hp_atk_note = (f"｜自残{self_cost}非致死未计价"
+                                        "（HP_COST_ATK_PRICING）")
                 if cost == 0:
                     score += pol["free_card_bonus"]
                 if _sleep_veto is not None:

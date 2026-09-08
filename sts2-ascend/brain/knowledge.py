@@ -115,6 +115,12 @@ DEFAULT_POLICY = {
                                      # 非致死突破自付 1，链上 0 条血价痕迹），攻击路由的耗血牌
                                      # 无法结算 1285~1289 批指标①。纯观测注记，评分零改动；
                                      # 0 = 关闭（留痕整体消失，旧口径逐字不变）
+    "hp_cost_atk_aoe_pricing": 1,  # AOE 非致死自残计价对齐（HP_COST_ATK_AOE_ALIGN，第1319~1324局批复盘）：
+                                   # HP_COST_ATK_PRICING 披露观测结案：「非致死未计价」累计 5 个
+                                   # 独立对局（1309/1312/1320/1321/1324≥3 线）、13 现场 8 低血，
+                                   # 触发预注册「按单体同口径补全价计价」——非致死语境 AOE 自残
+                                   # 按 self_cost×(1.5+3.0×(1-hp_pct)) 扣减，清场终局豁免；
+                                   # 0 = 关闭（回滚为纯披露旧口径，评分零改动）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——
