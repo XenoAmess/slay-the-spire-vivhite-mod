@@ -4704,3 +4704,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.0859137376974006局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.8983895202187195局)，REND(22分/2.4893063623031局)
 - 策略进化：elite_grey_safety_mult: 1.70 → 1.90（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Elite战实测自损22/掉血40（55%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/424 胜，当前目标进阶 0
+
+## 第 425 局复盘（2026-09-09 03:08）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RECURRENT_STARLIGHT, ENTROPY, VIVHITE_CARD_PARALLEL_STARFALL, PREP_TIME, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SUCCESSOR_FORMULA
+- 本局遗物：WAR_PAINT
+- 战斗记录：F3 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血22｜自损18（可行动段18/非行动段15，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血21｜自损18（可行动段18/非行动段15，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损6（可行动段6/非行动段16，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血36｜自损30（可行动段30/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战9回合获胜; F14 Elite战 掉血45｜自损16（可行动段16/非行动段28，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/7.917291506638637局)，HAND_OF_GREED(33分/8.273216480471268局)，DRAMATIC_ENTRANCE(33分/6.093937166647043局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/25.920367296923853局)，PREP_TIME(33分/2.7783844549611976局)
+- 当前低价值卡牌：AUTOMATION(17分/2.0786130396154596局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.888245156897954局)，REND(22分/2.4805937900350394局)
+- 策略进化：elite_grey_safety_mult: 1.90 → 2.10（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/425 胜，当前目标进阶 0
