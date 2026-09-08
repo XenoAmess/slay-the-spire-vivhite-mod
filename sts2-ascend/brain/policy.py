@@ -5658,17 +5658,6 @@ class Policy:
                 float(pol.get("boss_eve_race_audit_heal_hp_cap", 0.65)),
                 float(pol.get("boss_entry_evidence_hp_cap", 0.65)),
             )
-            # 贴线扩展带（boss_eve_race_audit_heal_hp_cap_ext，第 392~401 局
-            # 批复盘新增，静态键）：392 局前夜 65/99=65.7% 以 0.7pp 之差错过
-            # 0.65 纠错带顶，被「必败弃疗改锻造」抢走回血（+29.7→约 95 进场，
-            # 实战 F35 知识恶魔 11 回合阵亡，掉血 65=自损 36+敌方净伤 29，
-            # 65 血入场整管打空——回血即生还约 30 点）；判死台账判死后获胜
-            # 238/573=41.5%≥30% 预注册线，本批 23 次判死 16 胜 7 死（70%），
-            # 贴线带的必败标签持续被证伪。纠错带顶取 max(原上限, ext)，仅放宽
-            # 审计纠错带、不收紧既有上限；ext=0/缺省严格复原旧上限（旧行为
-            # 零差异），地图投影经同一函数自动镜像。
-            audit_cap = max(audit_cap, clamp(float(pol.get(
-                "boss_eve_race_audit_heal_hp_cap_ext", 0.0) or 0.0), 0.0, 1.0))
             latched = max(0, int(audit.get("latched", 0) or 0))
             won = max(0, int(audit.get("won", 0) or 0))
             min_latched = max(1, int(pol.get(
