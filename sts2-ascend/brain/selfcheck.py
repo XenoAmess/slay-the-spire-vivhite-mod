@@ -11083,6 +11083,82 @@ def main() -> int:
     assert "自残" not in why_allin_off and abs(s_allin_off - s_allin) < 1e-9, \
         f"全攻豁免披露非纯观测: {s_allin_off}vs{s_allin}（{why_allin_off}）"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
+    # ⑦ 自残旁观（HP_COST_ATK_PRICING 手侧扩展，第1331~1335局批复盘）：
+    #    孤注/全攻中标时手牌内其他可出单体自残攻击须随中标理由入链——
+    #    「豁免疫价」首验 5 局零出现的归属（语境回避 vs 手中无牌）只能靠
+    #    手侧旁观结算。a) 孤注语境+在手御血术 → 旁观段带牌名；b) 观测键
+    #    =0 → 旁观段消失且动作/参数不变（纯观测锚）；c) 非豁免语境同手牌
+    #    → 无旁观段；d) 在手为 AOE 自残（突破）→ 不列旁观（致死语境已
+    #    计价，非豁免盲区）。
+    def _hcat7_state(hand_cards):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 3,
+            "combat": {"player": {"current_hp": 20, "max_hp": 80,
+                                  "block": 0, "energy": 3},
+                       "hand": hand_cards,
+                       "enemies": [{"index": 0, "enemy_id": "HCAT7_BOSS",
+                                    "name": "魂灵鱼", "current_hp": 120,
+                                    "max_hp": 120, "block": 0, "is_alive": True,
+                                    "is_hittable": True,
+                                    "intents": [{"total_damage": 40}]}]},
+            "run": {"current_hp": 20, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": []}}
+    _h7_hit = {"index": 0, "card_id": "HCAT7_HIT", "name": "重击",
+               "playable": True, "energy_cost": 1, "requires_target": True,
+               "valid_target_indices": [0],
+               "rules_text": "造成20点伤害。",
+               "dynamic_values": [{"name": "Damage", "current_value": 20}]}
+    _h7_hemo = {"index": 1, "card_id": "HEMOKINESIS", "name": "御血术",
+                "playable": True, "energy_cost": 1, "requires_target": True,
+                "valid_target_indices": [0],
+                "rules_text": "失去2点生命。造成15点伤害。",
+                "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+    _h7_bt = {"index": 1, "card_id": "BREAKTHROUGH", "name": "突破",
+              "playable": True, "energy_cost": 1, "requires_target": False,
+              "rules_text": "失去1点生命。对所有敌人造成9点伤害。",
+              "dynamic_values": [{"name": "Damage", "current_value": 9}]}
+
+    def _hcat7_pol(tag):
+        return policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix=f"sts2-selfcheck-hcat7{tag}-"))),
+            random.Random(5))
+    # ⑦a 孤注语境中标非自残牌、御血术在手可出 → 旁观段带牌名
+    _q1 = _hcat7_pol("a")
+    d_h71 = _q1.decide(_hcat7_state([_h7_hit, _h7_hemo]), ctx)
+    assert d_h71.action == "play_card" and d_h71.params.get("card_index") == 0, \
+        f"⑦a 夹具重击未中标: {d_h71.action}（{d_h71.reason}）"
+    assert ("无甲孤注抢斩杀" in d_h71.reason
+            or "败局竞速全攻" in d_h71.reason), \
+        f"⑦a 夹具未进入豁免语境: {d_h71.reason}"
+    assert "自残旁观" in d_h71.reason and "御血术" in d_h71.reason, \
+        f"⑦a 在手单体自残旁观缺失: {d_h71.reason}"
+    # ⑦b 观测键=0 → 旁观段消失且动作/参数逐位不变（纯观测锚）
+    _q2 = _hcat7_pol("b")
+    _q2.know.policy["hp_cost_atk_pricing_trace"] = 0
+    d_h72 = _q2.decide(_hcat7_state([_h7_hit, _h7_hemo]), ctx)
+    assert d_h72.action == d_h71.action \
+        and d_h72.params == d_h71.params \
+        and "自残旁观" not in d_h72.reason, \
+        f"⑦b 观测键关闭后旁观未消失或行为被改: {d_h72.reason}"
+    # ⑦c 非豁免语境（高血低意图）同手牌 → 无旁观段
+    _st_c = _hcat7_state([_h7_hit, _h7_hemo])
+    _st_c["combat"]["player"]["current_hp"] = 67
+    _st_c["combat"]["enemies"][0]["intents"] = [{"total_damage": 12}]
+    _st_c["run"]["current_hp"] = 67
+    _q3 = _hcat7_pol("c")
+    d_h73 = _q3.decide(_st_c, ctx)
+    assert d_h73.action == "play_card" and d_h73.params.get("card_index") == 0 \
+        and "自残旁观" not in d_h73.reason, \
+        f"⑦c 非豁免语境误加旁观段: {d_h73.action}（{d_h73.reason}）"
+    # ⑦d 在手为 AOE 自残（突破）→ 豁免语境仍无旁观段（非本盲区）
+    _q4 = _hcat7_pol("d")
+    d_h74 = _q4.decide(_hcat7_state([_h7_hit, _h7_bt]), ctx)
+    assert d_h74.action == "play_card" and d_h74.params.get("card_index") == 0 \
+        and ("无甲孤注抢斩杀" in d_h74.reason
+             or "败局竞速全攻" in d_h74.reason) \
+        and "自残旁观" not in d_h74.reason, \
+        f"⑦d AOE 自残被误列旁观: {d_h74.action}（{d_h74.reason}）"
 
     # 3bsl) 饥饿供给纠偏（BURST_STARVE_SUPPLY_LEVER，第1307~1312局批复盘）：
     #      CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结算——61 条真机

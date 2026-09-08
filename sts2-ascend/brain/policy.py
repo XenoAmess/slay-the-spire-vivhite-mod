@@ -4205,6 +4205,52 @@ class Policy:
                 why += ("｜税牌旁观HAND_TAX_PLAY_AUDIT："
                         + "、".join(f"{_v[0]}={_v[1]}"
                                    for _v in _tax_watch.values()))
+            # 自残旁观（HP_COST_ATK_PRICING 手侧扩展，第1331~1335局批复盘）：
+            # 「豁免疫价」披露（第1325~1330局批）首验窗口 5 局零出现，但同期
+            # 15 次孤注/全攻出牌全部为非自残牌、5 局终卡组单体自残牌持有量
+            # 为 0（仅 1335 有 AOE 突破++）——「豁免语境回避自残牌」与「手中
+            # 根本没有单体自残牌」两种现实用打出侧留痕不可区分。中标 why 已
+            # 带孤注/全攻段时，扫描手牌中其他可出且能量可负担的单体自残攻击
+            # 并追加旁观段，供复盘直接结算豁免缺口归属（机制先例：
+            # HAND_TAX_PLAY_AUDIT 落选侧旁观）。纯观测不改分；沿用
+            # hp_cost_atk_pricing_trace=0 一键整体关闭。
+            if (float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
+                    and ("无甲孤注抢斩杀" in why or "败局竞速全攻" in why)):
+                _sc_byst: list = []
+                _sc_remain = max(
+                    0, energy - (energy if card.get("costs_x")
+                                 else (card.get("energy_cost") or 0)))
+                for _bc in hand:
+                    if _bc is card or not _bc.get("playable"):
+                        continue
+                    if self._card_unavailable(_bc):
+                        continue
+                    _btext = _text(_bc)
+                    if not re.search(
+                            r"失去\s*(\d+)\s*点?\s*生命"
+                            r"|lose\s+(\d+)\s*(?:hp|health|life)",
+                            _btext, re.I):
+                        continue
+                    _bd, _, _ = card_numbers(_bc)
+                    if _bd <= 0:
+                        continue  # 非攻击自残（祭品族）走功能牌路由，不在本盲区
+                    if ("所有敌人" in _btext
+                            or "all enemies" in _btext.lower()
+                            or (_bc.get("target_type") or "") == "AllEnemies"):
+                        continue  # AOE 自残致死语境已计价留痕，非豁免盲区
+                    if self._strategy_card(_bc) is not None:
+                        continue  # 白绮策略层生命计价一次性处理
+                    _bcost = (energy if _bc.get("costs_x")
+                              else (_bc.get("energy_cost") or 0))
+                    if _bcost > _sc_remain:
+                        continue
+                    _sc_byst.append(
+                        _bc.get("name") or _bc.get("card_id") or "?")
+                if _sc_byst:
+                    why += ("｜自残旁观（孤注/全攻语境在手未打，"
+                            "HP_COST_ATK_PRICING）："
+                            + "、".join(_sc_byst[:3])
+                            + ("等" if len(_sc_byst) > 3 else ""))
             commit_exhaust = _exhausts_other_cards(card)
             # 斩杀竞速记账：累计本场期望总伤与出牌回合数（实测输出速率的分子分母）
             _kd, _kb, _kh = card_numbers(card)

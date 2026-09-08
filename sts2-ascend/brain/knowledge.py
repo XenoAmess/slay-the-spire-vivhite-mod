@@ -114,6 +114,8 @@ DEFAULT_POLICY = {
                                      # 此前零留痕（1303 自损 27 / 1305 御血术+×14 / 1306-F17
                                      # 非致死突破自付 1，链上 0 条血价痕迹），攻击路由的耗血牌
                                      # 无法结算 1285~1289 批指标①。纯观测注记，评分零改动；
+                                     # 第1331~1335局批扩展：孤注/全攻中标时手牌内其他可出单体
+                                     # 自残攻击追加「自残旁观」披露（结算豁免疫价零出现归属）；
                                      # 0 = 关闭（留痕整体消失，旧口径逐字不变）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
