@@ -7160,57 +7160,6 @@ def main() -> int:
         getattr(br_pol, "_race_proj_audit", ""), \
         f"贴线翻盘被翻盘比上限误伤: {_near_doomed}（{_near_note}）"
 
-    # 3br-sp（VIVHITE_JOINT_SELF_PAY，第 337~342 局批复盘）：謦欬卡组的联合能量
-    #     复核存活账必须计入维持输出计划的謦欬自付——342 局 F17（LAGAVULIN_
-    #     MATRIARCH）前夜「联合能量复核存在可行攻防分配」（存活账只计敌方火力
-    #     12/回合，自付零计价）→ 翻转带回血 16 点 → 实战 ~T8 阵亡（自损30/
-    #     掉血80，竞速自付速率5.2/回合≥敌方净损 DOMINATES 留痕）。夹具：
-    #     3×绯彩极限（2费/30伤/目录血税8）装箱 energy=3 → burst=30/pay=8，
-    #     eff=0.55 输出16.5/回合；pool=110、fire=12、hp=80、margin=1.5 时旧口径
-    #     ttk=6.67≤80/12+1.5=8.17 账面可行，自付入账后 net=12+8=20 →
-    #     80/20+1.5=5.5<6.67 翻回判死；键=0 严格回滚；可行且带自付的可行点
-    #     描述带审计标记；非白绮角色恒零计价。
-    _sp_deck = [dict(_vm_card("VIVHITE_CARD_CHROMATIC_LIMIT", "绯彩极限",
-                              "Attack", 2),
-                     dynamic_values=[{"name": "Damage", "current_value": 30}])
-                for _ in range(3)]
-    vknow_sp = _vivhite_know("sts2-selfcheck-vjsp-")
-    vpol_sp = policy.Policy(vknow_sp, random.Random(17))
-    assert abs(vpol_sp._deck_hp_pay_burst(_sp_deck, 3.0) - 8.0) < 1e-9, \
-        f"謦欬装箱自付应为 8（3 能量只装得进一张 2 费绯彩极限）: " \
-        f"{vpol_sp._deck_hp_pay_burst(_sp_deck, 3.0)}"
-    # ① 自付入账（默认开）：旧口径账面可行的分配翻回判死
-    _sp_on_ok, _sp_on_mix = vpol_sp._race_joint_feasible(
-        _sp_deck, 110.0, 12.0, 80.0, 1.5, energy=3.0)
-    assert not _sp_on_ok, \
-        f"謦欬自付入存活账后贴线分配仍判可行: {_sp_on_mix}"
-    # ② 键=0 严格回滚旧口径：自付零计价，同一账面回到可行且无审计标记
-    vknow_sp.policy["vivhite_joint_self_pay_eff"] = 0.0
-    _sp_off_ok, _sp_off_mix = vpol_sp._race_joint_feasible(
-        _sp_deck, 110.0, 12.0, 80.0, 1.5, energy=3.0)
-    assert _sp_off_ok and "VIVHITE_JOINT_SELF_PAY" not in _sp_off_mix, \
-        f"vivhite_joint_self_pay_eff=0 应严格回滚旧口径: {_sp_off_ok}（{_sp_off_mix}）"
-    # ③ 可行且带自付：描述必须披露自付计价（pool=55、fire=6 时
-    #    ttk=3.33 ≤ 80/(6+8)+1.5=7.21 仍可行）
-    vknow_sp2 = _vivhite_know("sts2-selfcheck-vjsp-feas-")
-    vpol_sp2 = policy.Policy(vknow_sp2, random.Random(17))
-    _sp_f_ok, _sp_f_mix = vpol_sp2._race_joint_feasible(
-        _sp_deck, 55.0, 6.0, 80.0, 1.5, energy=3.0)
-    assert _sp_f_ok and "謦欬自付8.0/回合已计存活账" in _sp_f_mix \
-        and "VIVHITE_JOINT_SELF_PAY" in _sp_f_mix, \
-        f"带自付的可行点缺审计标记: {_sp_f_ok}（{_sp_f_mix}）"
-    # ④ 非白绮角色零改动（目录外角色 _deck_hp_pay_burst 恒 0）
-    nv_sp_pol = policy.Policy(knowledge.Knowledge(Path(
-        tempfile.mkdtemp(prefix="sts2-selfcheck-vjsp-nv-"))), random.Random(17))
-    _sp_nv_deck = [{"card_id": f"SP_NV{i}", "card_type": "Attack",
-                    "energy_cost": 2,
-                    "dynamic_values": [{"name": "Damage", "current_value": 30}]}
-                   for i in range(3)]
-    _sp_nv_ok, _sp_nv_mix = nv_sp_pol._race_joint_feasible(
-        _sp_nv_deck, 110.0, 12.0, 80.0, 1.5, energy=3.0)
-    assert _sp_nv_ok and "VIVHITE_JOINT_SELF_PAY" not in _sp_nv_mix, \
-        f"非白绮角色不得计入謦欬自付: {_sp_nv_ok}（{_sp_nv_mix}）"
-
     # 3br-audit-heal（RACE_AUDIT_HEAL_OVERRIDE）：全局竞速审计已显示判死后
     # 获胜比例较高时，低于现行 Boss 锻造线且能回血≥8%的前夜不得再被单一
     # 必败标签强制上砧；开关关闭必须严格回滚旧行为，地图投影也要保留回血。

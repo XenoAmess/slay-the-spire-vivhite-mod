@@ -5345,74 +5345,45 @@ class Policy:
         if energy is None:
             energy = 3.0
         steps = max(1, int(round(energy)))
-        # 謦欬自付计入联合复核存活账（VIVHITE_JOINT_SELF_PAY，第 337~342 局
-        # 批复盘）：謦欬卡组的输出计划不是免费的——342 局 F17（LAGAVULIN_
-        # MATRIARCH）前夜「联合能量复核存在可行攻防分配」（先验输出 45/回合、
-        # 存活账只计敌方火力 12/回合）→ 翻转带回血 16 点，实战 ~T8 阵亡，
-        # 全场自损 30/掉血 80，末回合「竞速自付速率 5.2/回合≥敌方净损」
-        # （VIVHITE_RACE_SELF_LOSS_DOMINATES）。账面可行的输出点每回合都在
-        # 付血，存活侧却零计价——本批六场 Boss/终盘战自损 25~48（占掉血
-        # 28%~52%）是该缺口的横断面。攻击能量 ea 对应的自付按
-        # _deck_hp_pay_burst（与 deck_burst 同一装箱计划）计入存活分母：
-        # net = fire − 格挡 + 自付×vivhite_joint_self_pay_eff；键=0 严格
-        # 回滚旧口径（pay 恒 0），非白绮角色恒 0 零改动。
-        _sp_eff = 0.0
-        if (getattr(self.character_strategy, "profile_id", None)
-                == VIVHITE_PROFILE_ID):
-            try:
-                _sp_eff = max(0.0, float(pol.get(
-                    "vivhite_joint_self_pay_eff", 1.0)))
-            except (TypeError, ValueError):
-                _sp_eff = 1.0
         pts = []
         for eb in range(steps + 1):
             ea = energy - float(eb)
             b = min(max(0.0, float(fire) - 1.0),
                     self.deck_block_burst(deck or [], float(eb)) * blk_eff)
             d = (self.deck_burst(deck or [], ea) * eff) if ea > 1e-9 else 0.0
-            pay = (self._deck_hp_pay_burst(deck or [], ea) * _sp_eff
-                   if ea > 1e-9 and _sp_eff > 0.0 else 0.0)
-            pts.append((b, d, pay))
+            pts.append((b, d))
         # Pareto 前沿：按格挡量升序（同格挡量伤害降序），保留「伤害随格挡
-        # 递减」的权衡曲线——高挡低伤与低挡高伤互不支配，都是合法战术点。
-        # (b,d) 并列时稳定排序保留先遇到的低 eb 点（自付更高），取保守账
+        # 递减」的权衡曲线——高挡低伤与低挡高伤互不支配，都是合法战术点
         frontier = []
         best_d = float("inf")
-        for b, d, pay in sorted(pts, key=lambda p: (p[0], -p[1])):
+        for b, d in sorted(pts, key=lambda p: (p[0], -p[1])):
             if d < best_d:
-                frontier.append((float(b), float(d), float(pay)))
+                frontier.append((float(b), float(d)))
                 best_d = d
 
-        def _ok(b: float, d: float, pay: float) -> bool:
+        def _ok(b: float, d: float) -> bool:
             if d <= 1e-9:
                 return False
             # ttk_tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：开局滑溜 Boss
             # 的破层期折算回合数，由调用方按同幕组合池加计；默认 0 严格旧口径
             ttk = float(pool) / d + max(0.0, float(ttk_tax))
-            net = max(1.0, float(fire) - b + pay)
+            net = max(1.0, float(fire) - b)
             return ttk <= float(my_hp) / net + float(margin)
-
-        def _pay_tail(pay: float) -> str:
-            return (f"（謦欬自付{pay:.1f}/回合已计存活账，"
-                    "VIVHITE_JOINT_SELF_PAY）" if pay > 1e-9 else "")
 
         n = len(frontier)
         # 单点与相邻点连线采样（0.05 步长近似连续混合）
         for i in range(n):
             if _ok(*frontier[i]):
-                b, d, pay = frontier[i]
-                return True, (f"格挡{b:.0f}+输出{d:.0f}/回合的分配"
-                              + _pay_tail(pay))
+                b, d = frontier[i]
+                return True, f"格挡{b:.0f}+输出{d:.0f}/回合的分配"
             if i + 1 < n:
-                b1, d1, p1 = frontier[i]
-                b2, d2, p2 = frontier[i + 1]
+                b1, d1 = frontier[i]
+                b2, d2 = frontier[i + 1]
                 for k in range(1, 20):
                     t = k / 20.0
-                    if _ok(b1 + (b2 - b1) * t, d1 + (d2 - d1) * t,
-                           p1 + (p2 - p1) * t):
+                    if _ok(b1 + (b2 - b1) * t, d1 + (d2 - d1) * t):
                         return True, (f"格挡{b1 + (b2 - b1) * t:.0f}"
-                                      f"+输出{d1 + (d2 - d1) * t:.0f}/回合的混合分配"
-                                      + _pay_tail(p1 + (p2 - p1) * t))
+                                      f"+输出{d1 + (d2 - d1) * t:.0f}/回合的混合分配")
         return False, ""
 
     def _race_potion_credit(self, potions: list | None, pool: float,
@@ -5630,7 +5601,7 @@ class Policy:
             return False, ""
         # 联合能量复核（第460局批复盘）：格挡折算率走独立的 kill_race_blk_eff
         # （第454局批复盘分家键）；攻防在同一能量预算内对账，双算可行一律砍掉
-        _feasible, _mix = self._race_joint_feasible(
+        _feasible, _ = self._race_joint_feasible(
             deck or [], pool_eff, fire, hp_feas, margin, eff=eff,
             ttk_tax=_slip_tax)
         # 翻盘比上限（JOINT_FLIP_TTK_CAP，第1098~1110局批复盘）：复核的火力是
@@ -5648,15 +5619,11 @@ class Policy:
                 f"{tsurv:.0f}回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）")
         if _feasible:
             # 同上：进攻线判负但联合能量复核可行时，账面同样自报（第709~713批
-            # 「乐观口径复核」通道的消费端对账面）；謦欬自付入存活账时附可行
-            # 点描述（VIVHITE_JOINT_SELF_PAY，第 337~342 局批复盘），供后续
-            # 批次对账自付计价是否改变前夜裁决
-            _sp_tail = (f"；{_mix}"
-                        if "VIVHITE_JOINT_SELF_PAY" in _mix else "")
+            # 「乐观口径复核」通道的消费端对账面）
             self._race_proj_audit = (
                 f"击杀需{ttk:.0f}回合＞满血可存活{tsurv:.0f}回合，但联合能量复核"
                 f"存在可行攻防分配（Boss血池均值{pool:.0f}、火力{fire:.0f}/回合、"
-                f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}）" + _sp_tail)
+                f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}）")
             return False, ""
         # 均值口径已判负时，用合格的组合级 native 血池逐一复核。这里只
         # 放宽均值误杀，不凭无样本组合造结论；native/分幕样本缺失时原账不动。
@@ -6158,39 +6125,6 @@ class Policy:
             burst += _tot
             burst_energy -= _cost
         return burst
-
-    def _deck_hp_pay_burst(self, deck: list[dict], energy: float = 3.0) -> float:
-        """与 deck_burst 同一贪心装箱的謦欬生命支付/回合（第 337~342 局批复盘）。
-
-        deck_burst 回答「这副卡组一回合能打出多少伤害」，本方法回答同一装箱
-        计划「这一回合要付多少血」——攻击牌按「伤害/能耗」降序装满 energy，
-        累计每张入箱牌的 _vivhite_hp_pay（目录口径、空 powers，不含绯红仪式
-        在场附加与 Margin 抵扣，竞速预演的保守静态账）。零出牌死牌与
-        deck_burst 同步剔除，保证两条账是同一套出牌计划。非白绮角色或无
-        生命支付牌恒 0，旧行为零差异。
-        """
-        if (getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID):
-            return 0.0
-        pay_energy, pay = energy, 0.0
-        _pay_cards = []
-        for c in deck or []:
-            d, _b, h = card_numbers(c)
-            if d > 0 and is_attack(c):
-                if self._is_never_played_dead(c.get("card_id", "")):
-                    continue
-                _cost = max(1, c.get("energy_cost", 1) or 1)
-                _pay_cards.append(
-                    (d * h / _cost, _cost, self._vivhite_hp_pay(c, [])))
-        _pay_cards.sort(reverse=True)
-        for _eff, _cost, _pay in _pay_cards:
-            if pay_energy <= 0:
-                break
-            if _cost > pay_energy:
-                continue
-            pay += _pay
-            pay_energy -= _cost
-        return pay
 
     def deck_block_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """卡组一回合期望格挡吞吐量：与 deck_burst 同式贪心，按「格挡/能耗」装满 energy。

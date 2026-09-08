@@ -92,12 +92,6 @@ DEFAULT_POLICY = {
     "longfight_race_joint_flip_max_ttk_ratio": 1.5,  # 长战大血池的非 Boss 战斗端翻盘比上限：
     # 当前存活敌血池达到 power_commit_pool_min 时，静态联合复核不能把已判负的
     # 斩杀竞速重新放行；0 严格回滚该长战闸，不影响 Boss 专用键
-    "vivhite_joint_self_pay_eff": 1.0,  # 謦欬自付计入联合能量复核存活账（VIVHITE_JOINT_SELF_PAY，
-    # 第 337~342 局批复盘）：联合复核的生存分母旧口径只算 fire−格挡，输出计划的謦欬自付
-    # 零计价——342 局 F17 前夜假可行（先验输出45/回合）→翻转带回血16点→实战 ~T8 阵亡
-    # （自损30/掉血80，竞速自付速率5.2/回合≥敌方净损 DOMINATES 留痕）。攻击能量对应的
-    # 自付按 _deck_hp_pay_burst（与 deck_burst 同一装箱）×此系数计入 net；0 严格回滚
-    # 旧口径（自付零计价），非白绮角色恒 0 零改动
     "boss_race_combo_gate_require_all_known": True,  # Boss 未知时，组合级翻盘须让全部
                                                      # 已有重复实证的同幕组合可行；False 回落
                                                      # 旧的「任一组合可行即放行」口径（1132/1137/1147
