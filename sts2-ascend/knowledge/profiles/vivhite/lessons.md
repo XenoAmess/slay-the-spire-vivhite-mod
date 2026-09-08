@@ -4000,3 +4000,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.610651794431257局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.5623716251781214局)，VIVHITE_CARD_ASTRAL_PURSUIT(23分/3.1531050319213283局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/360 胜，当前目标进阶 0
+
+## 第 361 局复盘（2026-09-08 15:10）
+- 结果：💀 失败｜进阶 0｜到达层数 3｜当局评分 3
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：VIVHITE_CARD_TANGENT_STARLIGHT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血60｜自损58（可行动段58/非行动段16，SELF_LOSS_PHASE_OBS）｜竞速审计：T21判死→实战21回合获胜; F3 Monster战 掉血18｜自损16（可行动段16/非行动段1，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/9.908986601554258局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.937935771017433局)，HAND_OF_GREED(33分/7.92894301974348局)，VIVHITE_CARD_PERFECT_SYNTHESIS(32分/47.119575293388756局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/51.637767416721594局)
+- 当前低价值卡牌：AUTOMATION(17分/2.601514513150748局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.5534033244899983局)，VIVHITE_CARD_ASTRAL_PURSUIT(23分/3.142069164309604局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/361 胜，当前目标进阶 0
