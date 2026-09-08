@@ -10017,3 +10017,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.806163748771685局)，BULLY(10分/3.8304079941555145局)，HAVOC(11分/3.0643263953244113局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1311 胜，当前目标进阶 0
+
+## 第 1312 局复盘（2026-09-08 08:21）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：SPITE, TAUNT, FIGHT_ME, UPPERCUT, FIGHT_ME, THUNDERCLAP, CONFLAGRATION, SWORD_BOOMERANG, PACTS_END, ANGER, HOWL_FROM_BEYOND, CRUELTY, PREDATOR, POUNCE, WELL_LAID_PLANS, TRUE_GRIT, BREAKTHROUGH, INFLAME, HEMOKINESIS, PILLAGE
+- 本局遗物：BELLOWS, PERMAFROST
+- 战斗记录：F17 Boss战 掉血36｜竞速审计：T2判死→实战5回合获胜; F19 Monster战 掉血5; F22 Monster战 掉血15; F23 Monster战 掉血22; F30 Monster战 掉血22｜自损1（可行动段1/非行动段27，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血40｜自损3（可行动段3/非行动段0，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：OFFERING(25分/27.49319305603853局)，PRIMAL_FORCE(24分/5.343802192646362局)，PACTS_END(24分/108.04982754233217局)，FIEND_FIRE(24分/36.109426658818954局)，MANGLE(24分/98.40759131847504局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.789342175650985局)，BULLY(10分/3.8170015661759704局)，HAVOC(11分/3.053601252940776局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1312 胜，当前目标进阶 0
