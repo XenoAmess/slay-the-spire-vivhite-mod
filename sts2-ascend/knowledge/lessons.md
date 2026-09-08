@@ -10149,3 +10149,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.608145675589851局)，BULLY(10分/3.672591895880292局)，HAVOC(11分/2.938073516704233局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1323 胜，当前目标进阶 0
+
+## 第 1324 局复盘（2026-09-08 16:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：HEMOKINESIS, SHRUG_IT_OFF, MOLTEN_FIST, SWORD_BOOMERANG, ULTIMATE_DEFEND, FEEL_NO_PAIN, TRUE_GRIT, TREMBLE, TRUE_GRIT, IRON_WAVE, ANGER, BREAKTHROUGH, CRUELTY, RUPTURE, IRON_WAVE
+- 本局遗物：PRAYER_WHEEL, BOWLER_HAT
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血1｜自损4（可行动段4/非行动段3，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损2（可行动段2/非行动段1，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血2｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血83｜自损7（可行动段7/非行动段71，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.321952174592589局)，OFFERING(25分/26.360449895557515局)，PRIMAL_FORCE(24分/5.123632953942598局)，FIEND_FIRE(24分/34.621687275717925局)，MANGLE(24分/94.3531140601149局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.592017165725287局)，BULLY(10分/3.659737824244711局)，HAVOC(11分/2.9277902593957683局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（98%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1324 胜，当前目标进阶 0
