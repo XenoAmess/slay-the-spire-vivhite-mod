@@ -10259,3 +10259,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.449377252947312局)，BULLY(10分/3.5460569155719592局)，HAVOC(11分/2.836845532457567局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1333 胜，当前目标进阶 0
+
+## 第 1334 局复盘（2026-09-09 01:04）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：TRUE_GRIT, ULTIMATE_DEFEND, PILLAGE, IRON_WAVE, FLAME_BARRIER, SWORD_BOOMERANG, ANGER, CINDER, AGGRESSION, JUGGERNAUT, SHRUG_IT_OFF, INFLAME, CINDER, DEMON_FORM, ANGER, CINDER, BLUDGEON
+- 本局遗物：VENERABLE_TEA_SET, ETERNAL_FEATHER
+- 战斗记录：F15 Monster战 掉血24; F17 Boss战 掉血61｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血0; F21 Monster战 掉血8; F23 Monster战 掉血53｜竞速审计：T3判死→实战7回合获胜; F24 Monster战 掉血19｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.2074980874208525局)，OFFERING(25分/25.4522305499246局)，PRIMAL_FORCE(24分/4.947104002914444局)，FIEND_FIRE(24分/33.42883638406607局)，MANGLE(24分/91.10228473627446局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.433804432561997局)，BULLY(10分/3.5336457163674577局)，HAVOC(11分/2.826916573093966局)
+- 策略进化：block_safety: 2.01 → 2.06（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.06 → 2.05（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1334 胜，当前目标进阶 0
