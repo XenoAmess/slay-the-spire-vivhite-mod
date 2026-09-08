@@ -10358,3 +10358,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.311168104250354局)，BULLY(10分/3.435907229521508局)，HAVOC(11分/2.748725783617206局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（10回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.39（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1342 胜，当前目标进阶 0
+
+## 第 1343 局复盘（2026-09-09 07:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：RAGE, BLUDGEON, INFLAME, WHIRLWIND, CINDER, HEMOKINESIS, INFLAME, STOMP, UNMOVABLE, BATTLE_TRANCE, INFLAME, TWIN_STRIKE
+- 本局遗物：STONE_CALENDAR
+- 战斗记录：F7 Monster战 掉血18; F8 Monster战 掉血12｜自损4（可行动段4/非行动段14，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血22; F13 Monster战 掉血8; F14 Monster战 掉血29｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血43｜自损2（可行动段2/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.107864912954491局)，PRIMAL_FORCE(24分/4.793434175905461局)，FIEND_FIRE(24分/32.39045039072031局)，OFFERING(24分/25.644240606633115局)，PERFECTED_STRIKE(24分/6.469328272466395局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.296079015885478局)，BULLY(10分/3.4238815542181826局)，HAVOC(11分/2.739105243374546局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1343 胜，当前目标进阶 0
