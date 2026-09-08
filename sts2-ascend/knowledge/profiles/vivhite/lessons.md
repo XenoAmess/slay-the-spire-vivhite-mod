@@ -4814,3 +4814,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.0140459502581005局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.7985288029748157局)，REND(22分/2.403540140390788局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 84%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_life_cost_deck_cap: 60.00 → 55.00（双旋钮全尽，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：0/434 胜，当前目标进阶 0
+
+## 第 435 局复盘（2026-09-09 04:50）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 AXE_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血37｜自损40（可行动段40/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Unknown战 掉血8｜自损11（可行动段11/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血28｜自损40（可行动段40/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/7.644510224838275局)，HAND_OF_GREED(33分/7.988172208163934局)，DRAMATIC_ENTRANCE(33分/5.88397748660558局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/25.02731049712529局)，PREP_TIME(33分/2.6826583758692473局)
+- 当前低价值卡牌：AUTOMATION(17分/2.0069967894321974局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.788733952164404局)，REND(22分/2.3951277498994203局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 55.00 → 50.00（双旋钮全尽，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_life_cost_deck_cap: 50.00 → 45.00（双旋钮全尽，致命Unknown战实测自损40/掉血28（143%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：0/435 胜，当前目标进阶 0
