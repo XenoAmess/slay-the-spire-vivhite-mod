@@ -7467,17 +7467,39 @@ def main() -> int:
         and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_mid.reason, \
         f"演化旋钮收窄后 45%~65% 带内前夜未恢复审计回血: {d_br_audit_mid.reason}"
     br_pol.know.policy["boss_eve_race_audit_heal_hp_cap"] = 0.45
+    # 第392~401批：扩展带顶 ext 生效时 audit_cap=max(原上限, ext)，复原旧行为
+    # 必须同时把 ext 置 0（否则 max(0.45, 0.75)=0.75 仍覆盖本带）
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap_ext"] = 0.0
     d_br_audit_mid_rb = br_pol.decide(br_rest_audit_mid, br_ctx)
     assert d_br_audit_mid_rb.tags and d_br_audit_mid_rb.tags[0] == ("rest", "smith") \
         and "必败弃疗改锻造" in d_br_audit_mid_rb.reason \
         and "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_mid_rb.reason, \
         f"hp_cap 调回 0.45 未严格复原旧必败弃疗行为: {d_br_audit_mid_rb.reason}"
     br_pol.know.policy["boss_eve_race_audit_heal_hp_cap"] = 0.65
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap_ext"] = 0.75
+    # 3br-audit-cap-ext（第 392~401 局批复盘，贴线扩展带）：392 局前夜
+    # 65/99=65.7% 以 0.7pp 之差错过 0.65 纠错带顶，被「必败弃疗改锻造」抢走
+    # 回血后 F35 知识恶魔 11 回合阵亡（掉血 65=自损 36+敌方净伤 29）整管打空
+    # 65 血入场——+29.7 回血即生还约 30 点；判死台账判死后获胜 238/573=
+    # 41.5%≥30% 预注册线，本批 23 次判死 16 胜 7 死（70%）。ext=0.75 下
+    # 65%~75% 贴线带必须回血并带审计留痕；ext=0 严格复原旧上限行为（同带
+    # 不再触发覆盖）。
+    br_rest_audit_band = dict(br_rest_weak,
+                              run=dict(br_rest_weak["run"], current_hp=54))
+    d_br_audit_band = br_pol.decide(br_rest_audit_band, br_ctx)
+    assert d_br_audit_band.tags and d_br_audit_band.tags[0] == ("rest", "heal") \
+        and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_band.reason, \
+        f"贴线扩展带（65%~75%）判死前夜未触发审计回血: {d_br_audit_band.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap_ext"] = 0.0
+    d_br_audit_band_rb = br_pol.decide(br_rest_audit_band, br_ctx)
+    assert "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_band_rb.reason, \
+        f"ext=0 未严格复原旧上限行为: {d_br_audit_band_rb.reason}"
+    br_pol.know.policy["boss_eve_race_audit_heal_hp_cap_ext"] = 0.75
     br_rest_audit_high = dict(br_rest_weak,
-                              run=dict(br_rest_weak["run"], current_hp=56))
+                              run=dict(br_rest_weak["run"], current_hp=62))
     d_br_audit_high = br_pol.decide(br_rest_audit_high, br_ctx)
     assert "RACE_AUDIT_HEAL_OVERRIDE" not in d_br_audit_high.reason, \
-        f"超过审计回血专用上限不应触发覆盖: {d_br_audit_high.reason}"
+        f"超过审计回血扩展上限不应触发覆盖: {d_br_audit_high.reason}"
     assert "RACE_AUDIT_HEAL_OVERRIDE" in br_audit_map_reason(br_know), \
         "演化旋钮下地图投影未镜像竞速审计回血闸"
     br_pol.know.policy["boss_eve_smith_hp_pct"] = 0.65
