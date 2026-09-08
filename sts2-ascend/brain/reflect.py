@@ -99,6 +99,15 @@ BOUNDS = {    "elite_min_hp_pct": (0.35, 0.9),
     # 謦欬实付每点抬高该候选出牌门槛。0=关闭（旧行为）；上限 3.0 时 6 点实付
     # 需净值 >0.4+18 才放行，等同非致死回合禁用大额謦欬——再高无区分度
     "vivhite_hp_cost_play_margin": (0.0, 3.0),
+    # 謦欬血税软顶（第 402~426 局批复盘接入，双旋钮全尽后的第三级接替旋钮）：
+    # 謦欬卡组阵亡证据在 life_cost_weight 触底且出牌余量门顶格后改接拿牌端——
+    # 每级 -5.0 下调软顶，让血税密度扣分（第 320~336 批机制、363~380 批接线）
+    # 在更低的卡组目录血税开始计价，从源头压低生命支付牌密度（426 局 16 次
+    # 拿牌 15 张生命支付牌、终局目录血税远超 60 软顶仍照拿，F17 两血回合全部
+    # 手牌被謦欬硬钩锁死空过阵亡）。上限 60.0 即旧锚点（一键回滚：policy.json
+    # 重置 60.0 恢复旧行为零差异）；下限 30.0 贴近起始卡组血税 20，防软顶归零
+    # 使首张謦欬牌即被计价、锁死整套机制
+    "vivhite_life_cost_deck_cap": (30.0, 60.0),
 }
 
 # 爆毙重分类阈值（第 167~176 批复盘）：长战/爆毙此前只看回合数（≥4 即长战），
@@ -597,12 +606,33 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                              f"生命支付权重触底，{why}——证据改接謦欬出牌余量门"
                              "（非致死回合謦欬实付每点抬高出牌门槛）")
                     else:
-                        changes.append(
-                            f"vivhite_param_life_cost_weight "
-                            f"{know.policy['vivhite_param_life_cost_weight']:.2f} "
-                            f"触底（余量 {_head:.2f}<步长0.05）且謦欬出牌余量门 "
-                            f"{_pm:.2f} 顶格（余量 {_pm_head:.2f}<步长0.5）——{why}；"
-                            "双旋钮全尽，謦欬证据彻底停止吸收并留痕")
+                        # 第三级接替旋钮（第 402~426 局批复盘落地）：双旋钮全尽后
+                        # 謦欬卡组阵亡证据改接拿牌端血税软顶
+                        # vivhite_life_cost_deck_cap（每级 -5.0，下限 30.0）——
+                        # 425/426 局双旋钮全尽后证据只封账留痕不吸收，而 426 局
+                        # 16 次拿牌 15 张生命支付牌（终局目录血税远超 60 软顶仍
+                        # 照拿），F17 Boss 战 T8 两血回合 4 张非诅咒手牌全被
+                        # 謦欬硬钩锁死空过、吃 21 意图阵亡；下调软顶让血税密度
+                        # 扣分（第 320~336 批机制、363~380 批已接线留痕）在更低
+                        # 卡组血税开始计价，从源头压低生命支付牌密度。
+                        know.policy.setdefault("vivhite_life_cost_deck_cap", 60.0)
+                        _cap = know.policy["vivhite_life_cost_deck_cap"]
+                        _cap_head = (_cap
+                                     - BOUNDS["vivhite_life_cost_deck_cap"][0])
+                        if _cap_head >= 5.0 - 1e-9:
+                            _adj(know, "vivhite_life_cost_deck_cap", -5.0,
+                                 changes,
+                                 f"双旋钮全尽，{why}——謦欬证据改接拿牌端血税软顶"
+                                 "（血税密度扣分在更低卡组血税开始计价）")
+                        else:
+                            changes.append(
+                                f"vivhite_param_life_cost_weight "
+                                f"{know.policy['vivhite_param_life_cost_weight']:.2f} "
+                                f"触底（余量 {_head:.2f}<步长0.05）且謦欬出牌余量门 "
+                                f"{_pm:.2f} 顶格（余量 {_pm_head:.2f}<步长0.5）且"
+                                f"血税软顶 {_cap:.2f} 触底（余量 {_cap_head:.2f}"
+                                f"<步长5.0）——{why}；三级旋钮全尽，"
+                                "謦欬证据彻底停止吸收并留痕")
 
                 _lc_tighten(f"白绮謦欬卡组（本局拿{len(_life_picks)}张生命支付牌）阵亡"
                             "——生命支付权重向保守收紧")

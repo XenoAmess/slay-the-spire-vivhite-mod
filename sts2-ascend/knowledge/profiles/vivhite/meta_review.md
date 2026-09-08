@@ -897,3 +897,39 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 402~426 局批复盘：謦欬双旋钮全尽证据只留痕不吸收——第三级接替旋钮改接拿牌端血税软顶（vivhite_life_cost_deck_cap）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+謦欬死亡证据链在 `vivhite_param_life_cost_weight` 触底（-2.975，余量 0.025<步长0.05）与 `vivhite_hp_cost_play_margin` 顶格（3.00，余量 0.00<步长0.5）后「双旋钮全尽，謦欬证据彻底停止吸收并留痕」——但拿牌端血税软顶 `vivhite_life_cost_deck_cap=60` 是从不被证据驱动的静态键，生命支付牌密度这个源头变量无任何闭环。EVIDENCE：① 425/426 局 lessons 连续两局「双旋钮全尽…彻底停止吸收并留痕」（达 evidence_batch_threshold）；② 426 局（3SCUF5ED4VJ9，F17 LAGAVULIN_MATRIARCH 阵亡）16 次拿牌 15 张生命支付牌，终局目录血税远超 60 软顶仍照拿；F17 Boss 战 T8 两血两能回合 4 张非诅咒手牌（弦光投影/并行星雨/局部同胚/三色轮舞）全部 blocked_by_hook（謦欬会令生命低于1）锁死空过，吃 21 意图阵亡——密度失控的终局形态；③ 363~380 批终局目录血税 116/108/98 远超软顶 60，血税扣分只在远段位计价、早期拿牌零约束。EXPECTED_SIGNAL：未来 3~10 局謦欬卡组阵亡且双旋钮全尽时，lessons 出现「vivhite_life_cost_deck_cap: 60.00 → 55.00（…双旋钮全尽…謦欬证据改接拿牌端血税软顶）」而非「彻底停止吸收」；选牌理由的「謦欬血税密度扣分（卡组目录血税N/软顶M…）」软顶 M 随档降至 55/50…，扣分在更低血税段位出现；终局目录血税与单局生命支付拿牌张数较 426 局（15 张）回落。证伪/回滚：留痕仍写「彻底停止吸收」→ 复查 `_lc_tighten` 消费路径；软顶下调后血税留痕密度不变且自损占比无改善、或因拿不到謦欬牌出现输出饥饿恶化 → policy.json 重置 `vivhite_life_cost_deck_cap=60.0`（BOUNDS 上限即旧锚点，恢复旧行为零差异）。
+
+## EVIDENCE
+
+- 426 局决策链尾部逐条核对（decision_chain_evidence.full_failure_run）：T7 起「击杀还需4回合>可存活1回合」全攻提速；T8 03:14:48 当前 2 生命、能量 2，全部非诅咒手牌因謦欬会令生命低于 1 被 blocked_by_hook，end_turn 后吃意图 21 → GAME_OVER。本局拿牌清单 16 张中 15 张生命支付牌。
+- lessons 对账：425 局（拿 8 张生命支付牌）与 426 局（拿 15 张）策略进化段均为「vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）…双旋钮全尽，謦欬证据彻底停止吸收并留痕」——证据连续两批零吸收。
+- 生产现状核查（reflect.py `_lc_tighten` 封账分支 / policy.py 6982~7005 血税计价）：软顶键存在于 DEFAULT_POLICY 与 policy.json 但不在 reflect.BOUNDS，任何证据通道都调不到它；血税密度扣分的留痕接线（363~380 批）已验证健康，软顶下调后信号可直接经既有「謦欬血税密度扣分（…/软顶M…）」留痕观测。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/reflect.py：① BOUNDS 新增 `vivhite_life_cost_deck_cap: (30.0, 60.0)`——上限 60.0 即旧锚点（policy.json 重置 60.0 一键回滚，旧行为零差异），下限 30.0 贴近起始卡组血税 20，防软顶归零使首张謦欬牌即被计价、锁死整套机制；② `_lc_tighten` 封账分支改为第三级接替：双旋钮全尽且软顶余量 ≥5.0 时 `_adj(deck_cap, -5.0)` 并留痕「双旋钮全尽，…謦欬证据改接拿牌端血税软顶」；软顶也触底后才写「三级旋钮全尽，謦欬证据彻底停止吸收并留痕」。自损主导局双档收紧语义不变（一次 finalize 最多 -10）。回收通道与评分主体零改动；非白绮角色不进该通道。
+- sts2-ascend/brain/knowledge.py：`vivhite_life_cost_deck_cap` DEFAULT_POLICY 注释补充第三级接替旋钮语义（键值不变）。
+- sts2-ascend/brain/policy.py：血税计价段注释更新——双旋钮全尽后证据改接本软顶（行为不变，仅注释对账）。
+- sts2-ascend/brain/selfcheck.py：3prg 夹具 cap2 修订为新契约（双旋钮全尽+软顶默认 60：双档证据改接软顶 60→55→50，留痕带「证据改接拿牌端血税软顶」且不得出现封账），新增 cap3 分支（软顶 30 触底：值不变、留痕「三级旋钮全尽…彻底停止吸收并留痕」）。
+- 不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 謦欬卡组（≥2 张生命支付牌）阵亡局 lessons 出现「vivhite_life_cost_deck_cap: 60.00 → 55.00」式软顶下调留痕（首场謦欬阵亡即可验证）；② 后续选牌理由「謦欬血税密度扣分（卡组目录血税N/软顶M，-X…）」中 M 降至 55/50…，可直接与 372/377/380 局（终局血税 116/108/98）型超顶拿牌对账——扣分开始计价的血税段位应明显前移；③ 若终局目录血税均值与单局生命支付拿牌张数较本批（426 局 15 张）回落、且自损/掉血比下行，则源头闭环成立。证伪/回滚：留痕仍写「彻底停止吸收」→ 复查 `_lc_tighten` 分支；软顶下调后血税留痕密度不变或输出饥饿链（burst_starve 侧）恶化 → policy.json 重置 `vivhite_life_cost_deck_cap=60.0` 整体撤回（BOUNDS 上限即旧锚点，旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（3prg cap2 修订+cap3 新增；既有 3prf 单双档收紧、3prg floor/dom/nd、3prh 余量门、3prl①~⑦ 血税密度、3prn 门拦格挡救场、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/reflect.py（+36/-6，BOUNDS 一项+第三级接替）、brain/knowledge.py（+4/-1 注释）、brain/policy.py（+2/-2 注释）、brain/selfcheck.py（+21/-4 夹具）四个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

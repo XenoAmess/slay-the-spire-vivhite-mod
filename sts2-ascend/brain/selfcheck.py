@@ -2523,7 +2523,10 @@ def main() -> int:
     #      第 165~169 局批复盘起①的「停止吸收」改为改接謦欬出牌余量门
     #      （vivhite_hp_cost_play_margin，每级 +0.5）：本批 167/168/169 局
     #      权重触底后致命战自损占比 97%/98%/91%，估值税只改候选相对排序，
-    #      改不了「vs 结束回合」的比较；余量门也顶格（3.0）后才彻底封账留痕。
+    #      改不了「vs 结束回合」的比较；余量门顶格（3.0）后，第 402~426 局
+    #      批复盘起改接第三级拿牌端血税软顶（vivhite_life_cost_deck_cap，
+    #      每级 -5.0，下限 30.0）——426 局 16 次拿牌 15 张生命支付牌、终局
+    #      目录血税远超 60 软顶仍照拿；软顶也触底后才彻底封账留痕。
     vknow_floor = _vivhite_know("sts2-selfcheck-vhlife-floor-")
     vknow_floor.policy["vivhite_param_life_cost_weight"] = -3.0
     vlesson_floor = finalize_run(vknow_floor, _vivhite_death_ctx(73.0, 90.0),
@@ -2544,8 +2547,24 @@ def main() -> int:
     assert abs(vknow_cap2.policy["vivhite_hp_cost_play_margin"] - 3.0) < 1e-9, \
         ("余量门顶格后不得再改值: "
          f"{vknow_cap2.policy.get('vivhite_hp_cost_play_margin')}")
-    assert "双旋钮全尽" in vlesson_cap2 and "彻底停止吸收并留痕" in vlesson_cap2, \
-        f"双旋钮全尽的封账留痕缺失: {vlesson_cap2[-400:]}"
+    assert abs(vknow_cap2.policy["vivhite_life_cost_deck_cap"] - 50.0) < 1e-9, \
+        ("双旋钮全尽的双档证据必须改接血税软顶（60→55→50）: "
+         f"{vknow_cap2.policy.get('vivhite_life_cost_deck_cap')}")
+    assert "双旋钮全尽" in vlesson_cap2 and "证据改接拿牌端血税软顶" in vlesson_cap2, \
+        f"双旋钮全尽的软顶改接留痕缺失: {vlesson_cap2[-400:]}"
+    assert "彻底停止吸收并留痕" not in vlesson_cap2, \
+        f"软顶未触底时不得封账: {vlesson_cap2[-400:]}"
+    vknow_cap3 = _vivhite_know("sts2-selfcheck-vhlife-cap3-")
+    vknow_cap3.policy["vivhite_param_life_cost_weight"] = -3.0
+    vknow_cap3.policy["vivhite_hp_cost_play_margin"] = 3.0
+    vknow_cap3.policy["vivhite_life_cost_deck_cap"] = 30.0
+    vlesson_cap3 = finalize_run(vknow_cap3, _vivhite_death_ctx(73.0, 90.0),
+                                victory=False, final_floor=17)
+    assert abs(vknow_cap3.policy["vivhite_life_cost_deck_cap"] - 30.0) < 1e-9, \
+        ("血税软顶触底后不得再改值: "
+         f"{vknow_cap3.policy.get('vivhite_life_cost_deck_cap')}")
+    assert "三级旋钮全尽" in vlesson_cap3 and "彻底停止吸收并留痕" in vlesson_cap3, \
+        f"三级旋钮全尽的封账留痕缺失: {vlesson_cap3[-400:]}"
     vknow_dom = _vivhite_know("sts2-selfcheck-vhlife-dom-")
     vknow_dom.policy["vivhite_param_life_cost_weight"] = -2.0
     vlesson_dom = finalize_run(vknow_dom, _vivhite_death_ctx(73.0, 90.0),
