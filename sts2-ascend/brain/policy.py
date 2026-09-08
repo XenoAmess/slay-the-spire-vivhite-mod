@@ -3232,6 +3232,31 @@ class Policy:
                         if _self_loss_note:
                             danger_note += f"；{_self_loss_note}"
                     tsurv = my_hp / max(1.0, loss_rate)
+                    # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘）：
+                    # 无厌沙虫 Liquify 后给玩家挂上计数沙坑（SANDPIT_POWER，初始
+                    # 4、每个敌方回合 -1），原生 AfterRemoved 在计数归零时强制
+                    # 吞噬击杀（CreatureCmd.Kill force）——这是一条与 HP/格挡
+                    # 完全无关的确定性死亡钟，而 tsurv=裸血÷火力对它完全失明：
+                    # 385 局（CXU2MG7HAY02）F33 决策 19:26:39 投影「击杀还需
+                    # 6回合>可存活16回合」，实战 T6 即阵亡（竞速审计：T2判死→
+                    # 实战6回合）。敌持沙坑计数 N 时可存活回合至多为 N（狂乱
+                    # 逃离 +1 的续命不计入保守账），超出部分判死方向一律按
+                    # 时钟封底；封底同时收紧防守线翻盘比上限的分母。计数不可见
+                    # 或键=False 严格回滚旧口径（零差异）。
+                    _sandpit_clock = 0.0
+                    if bool(pol.get("sandpit_eat_clock_cap", True)):
+                        for _sp_e in enemies:
+                            if isinstance(_sp_e, dict):
+                                _sandpit_clock = max(
+                                    _sandpit_clock,
+                                    self._enemy_power_stack(
+                                        _sp_e, "sandpit", "沙坑"))
+                    if _sandpit_clock > 0.0 and tsurv > _sandpit_clock:
+                        danger_note += (
+                            f"；沙坑吞噬钟{_sandpit_clock:g}回合封底：可存活"
+                            f"{tsurv:.0f}→{_sandpit_clock:g}（沙坑归零即被"
+                            "强制吞噬，SANDPIT_EAT_CLOCK_CAP）")
+                        tsurv = _sandpit_clock
                     ttk = enemy_hp_total / max(1.0, dpt)
                     # 滑溜破层期观测（SLIPPERY_TTK_OBS，第1232局批复盘）：
                     # ttk 口径 pool/dpt 未计入滑溜层——每层把一次命中压到只失

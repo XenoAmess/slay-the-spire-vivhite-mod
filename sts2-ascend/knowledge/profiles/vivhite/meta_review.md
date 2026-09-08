@@ -826,3 +826,38 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 381~385 局批复盘：竞速投影「可存活回合」对沙坑吞噬钟失明——SANDPIT_EAT_CLOCK_CAP 封底上线
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+战斗端斩杀竞速投影的可存活回合 `tsurv = 裸血 ÷ 火力`，只对 HP 消耗计账；而无厌沙虫（THE_INSATIABLE）Liquify 后挂上的计数沙坑（SANDPIT_POWER，初始 4、每个敌方回合 -1，原生 `SandpitPower.AfterRemoved` 在计数归零时 `CreatureCmd.Kill(force)` 强制吞噬）是一条与 HP/格挡完全无关的确定性死亡钟，投影对它完全失明——沙坑在场时 tsurv 被系统性高估，判死/翻盘判决的方向与量级同时失真。该假设可证伪：未来 3~10 局若「沙坑吞噬钟N回合封底（SANDPIT_EAT_CLOCK_CAP）」留痕从不出现（说明 API 功率载荷不可见），或留痕出现但封底后的判决与实战阵亡回合对账反而更差，则本假设不成立。
+
+## EVIDENCE
+
+- 第 385 局（CXU2MG7HAY02，F33 THE_INSATIABLE 阵亡）全链逐条核对：19:26:39 投影「击杀还需6回合>可存活16回合（实测27伤/回）」——可存活 16 回合出自裸血 72÷低意图期火力 EMA；但沙坑 Liquify 已发生（19:26:38 手牌已出现其塞入的狂乱逃离），死亡钟上限远小于 16，实战 T6 即阵亡（竞速审计：T2判死→实战6回合），19:26:51 口径急坍为「可存活2回合」。
+- 原生机制核对（knowledge/game/v0.111.0 mechanics）：`TheInsatiable.LiquifyMove` 以 `PowerCmd.Apply(..., 4m)` 挂沙坑并塞入 6 张狂乱逃离；`SandpitPower.AfterSideTurnStartLate` 每敌方回合 -1、`AfterRemoved` 触发 eat_player 强制击杀；`FranticEscape.OnPlay` 计数 +1 且本战耗能 +1——续命存在但有界，保守账不计入。
+- 死亡榜对账：THE_INSATIABLE 以 16.55 权重居死因前五（stats_digest），该 Boss 的竞速判决质量直接影响到达层数。
+- 相邻批次对账：謦欬双旋钮全尽与血税密度留痕接线（363~380 批）均已落地，本批不重复开工；failed_review_replay.requested_packages 为空，无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（`_combat_kill_race_projection`，`tsurv` 计算之后、`ttk` 与判死比较之前）：新增 SANDPIT_EAT_CLOCK_CAP——经既有 `_enemy_power_stack(e, "sandpit", "沙坑")` 读取全场敌人沙坑计数最大值 N；N>0 且 tsurv>N 时留痕「沙坑吞噬钟N回合封底：可存活X→N（沙坑归零即被强制吞噬，SANDPIT_EAT_CLOCK_CAP）」并把 tsurv 封底到 N。封底同时收紧判死比较（ttk>tsurv+margin）与防守线翻盘比上限（ttk>1.5×tsurv 不予放行）的分母；狂乱逃离 +1 续命不计入保守账；计数不可见或键=False 严格回滚旧口径（零差异）；非沙坑战斗零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `sandpit_eat_clock_cap: True`（False 一键回滚），注释记录 385 局实证。
+- sts2-ascend/brain/selfcheck.py：新增 3sec 夹具三分支——① 敌持 SANDPIT_POWER 计数 2（血 71、意图 EMA≈4 → 裸口径 tsurv≈17.8，池 200、实测 dpt 20×1.35=27 → ttk≈7.4）：封底后 7.4>2+1.5 判死、理由带封底注记与「可存活2回合」，且 Boss 翻盘比上限（1.5×2=3<7.4）不许防守复核翻案；② 无沙坑功率同口径：不封底、不判死、无注记；③ 键=False：沙坑在场也严格回滚旧口径（零差异）。
+- 不改 reflect 通道、不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 任一遭遇 THE_INSATIABLE 且 Liquify 已发生的对局，决策链理由应出现「沙坑吞噬钟N回合封底（SANDPIT_EAT_CLOCK_CAP）」，且封底后的「可存活N回合」与实战阵亡回合可直接对账（385 局型：投影 16 vs 实战 6 的失真应显著收敛）；② 封底生效场次判死/全攻提速应不迟于旧口径出现，狂乱逃离的续命价值可在封底注记旁直接读出；③ 若留痕从不出现 → 复查 API 敌人 powers 载荷是否含 SANDPIT_POWER（观测键自身即答案）；若留痕出现但对 THE_INSATIABLE 的到达层数/阵亡回合分布无改善甚至恶化 → `sandpit_eat_clock_cap=False` 整体撤回（无沙坑战斗旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3sec 三分支；既有 3prl①~⑦ 血税密度、3bsl 供给纠偏入链、3zsu 换挡上浮、3kw/3kx 复核火力与全部既有夹具通过）。
+- 完整 diff 已回读：brain/policy.py（+25，封底+留痕）、brain/knowledge.py（+4 一个静态键）、brain/selfcheck.py（+74 三分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

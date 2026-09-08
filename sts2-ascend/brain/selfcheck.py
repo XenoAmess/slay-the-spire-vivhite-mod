@@ -11145,6 +11145,80 @@ def main() -> int:
         f"cap 放宽后纠偏幅度偏离 weight×原始delta: {v_bsl_unc - v_bsl_off:.4f}"
     assert "顶格" in d_bsl.reason, f"decide() 入链理由缺顶格披露: {d_bsl.reason}"
 
+    # 3sec) 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘）：
+    #      无厌沙虫沙坑计数归零即强制吞噬（与 HP/格挡无关的死亡钟），竞速
+    #      投影 tsurv=裸血÷火力对其失明——385 局 F33 投影「可存活16回合」
+    #      实战 T6 阵亡。夹具：血 71、意图 EMA≈4 → 裸口径 tsurv≈17.8，
+    #      池 200、实测 dpt 20×1.35=27 → ttk≈7.4。① 敌持 SANDPIT_POWER
+    #      计数 2：tsurv 封底 2 → 7.4>2+1.5 判死、留痕封底注记，且 Boss
+    #      翻盘比上限（1.5×2=3<7.4）不许防守复核翻案；② 无沙坑功率：同
+    #      口径不封底、不判死、无注记；③ 键=False：沙坑在场也严格回滚旧
+    #      口径（零差异）。
+    sec_ctx = type("SECCTX", (), {"combat": {"comp_id": "SEC_RACE_COMP",
+                                             "node_type": "Boss"},
+                                  "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+
+    def sec_state(turn_no, sandpit):
+        hand = [
+            {"index": 0, "card_id": "SEC_HIT", "name": "速攻", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+            {"index": 1, "card_id": "SEC_HIT2", "name": "速攻二号", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        powers = ([{"id": "SANDPIT_POWER", "amount": sandpit}]
+                  if sandpit else [])
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": 71, "max_hp": 80, "block": 0,
+                                  "energy": 3},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "SEC_RACE_COMP",
+                                    "name": "无厌沙虫", "current_hp": 200,
+                                    "max_hp": 321, "block": 0, "is_alive": True,
+                                    "is_hittable": True, "powers": powers,
+                                    "intents": [{"total_damage": 4}]}]},
+            "run": {"current_hp": 71, "max_hp": 80, "gold": 0, "floor": 33,
+                    "deck": [{"card_id": f"SEC_D_{i}", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [{"name": "Damage",
+                                                  "current_value": 10}]}
+                             for i in range(4)]}}
+
+    def sec_policy():
+        p = policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-sec-"))),
+            random.Random(11))
+        accepted_combat(p, sec_state(1, 0), sec_ctx)
+        # 实测口径就位：两回合持续输出 40 → dpt 20，换挡上浮 ×1.35 → 27
+        p._krace_turns = 2
+        p._krace_dmg = p._krace_dmg_sustained = 40.0
+        return p
+
+    # ① 沙坑计数 2 → tsurv 封底 2，ttk≈7.4>3.5 判死且翻盘比上限不许翻案
+    pol_sec1 = sec_policy()
+    d_sec1 = pol_sec1.decide(sec_state(2, 2), sec_ctx)
+    assert ("沙坑吞噬钟2回合封底" in d_sec1.reason
+            and "SANDPIT_EAT_CLOCK_CAP" in d_sec1.reason
+            and "斩杀竞速投影" in d_sec1.reason
+            and "可存活2回合" in d_sec1.reason), \
+        f"沙坑在场未按死亡钟封底可存活: {d_sec1.action}（{d_sec1.reason}）"
+    # ② 无沙坑功率：同口径 tsurv≈17.8 不封底，ttk≈7.4 未超 → 不判死无注记
+    pol_sec2 = sec_policy()
+    d_sec2 = pol_sec2.decide(sec_state(2, 0), sec_ctx)
+    assert ("SANDPIT_EAT_CLOCK_CAP" not in d_sec2.reason
+            and "斩杀竞速投影" not in d_sec2.reason), \
+        f"无沙坑功率时误封底/误判死: {d_sec2.action}（{d_sec2.reason}）"
+    # ③ 键=False：沙坑在场也严格回滚旧口径（零差异）
+    pol_sec3 = sec_policy()
+    pol_sec3.know.policy["sandpit_eat_clock_cap"] = False
+    d_sec3 = pol_sec3.decide(sec_state(2, 2), sec_ctx)
+    assert ("SANDPIT_EAT_CLOCK_CAP" not in d_sec3.reason
+            and "斩杀竞速投影" not in d_sec3.reason), \
+        f"键=False 未回滚旧口径: {d_sec3.action}（{d_sec3.reason}）"
+
 
     print("SELFCHECK OK")
     return 0

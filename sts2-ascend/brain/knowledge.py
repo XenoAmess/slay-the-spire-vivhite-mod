@@ -508,6 +508,10 @@ DEFAULT_POLICY = {
     "kill_race_enabled": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血）；False 关闭留痕
+    "sandpit_eat_clock_cap": True,  # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘，静态键）：
+                                   # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
+                                   # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。
+                                   # False 一键回滚旧口径（零差异）
     "end_turn_settle_recovery_ticks_boss": 40,  # BOSS_SETTLE_TIER3: Boss-only settle recovery budget.
     "end_turn_settle_recovery_ticks_lethal": 50,  # LETHAL_SETTLE_EXTENSION: lethal Boss settle windows get a bounded final 10-tick extension.
     "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）
