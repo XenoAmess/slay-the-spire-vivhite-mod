@@ -687,3 +687,42 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 337~342 局批复盘：謦欬自付计入联合能量复核存活账——前夜假可行的零计价输出计划（VIVHITE_JOINT_SELF_PAY）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+謦欬卡组的联合能量复核（`_race_joint_feasible`）生存账只计敌方火力（`net = fire − 格挡`），维持账面输出计划所需的謦欬自付零计价：342 局 F17（LAGAVULIN_MATRIARCH）前夜竞速预演进攻线判负（击杀需 9 回合＞满血可存活 7 回合）后，联合复核按「先验输出 45/回合、自付零成本」报「存在可行攻防分配」（翻盘比 9/7≈1.29 低于 1.5 上限，未被否决）→ 篝火翻转带回血 16 点 → 实战 ~T8 阵亡，全场自损 30/掉血 80，末回合留痕「竞速自付速率 5.2/回合≥敌方净损（VIVHITE_RACE_SELF_LOSS_DOMINATES）」。该假设可证伪：自付计入存活分母后，此类假可行应翻回判死（前夜从回血转锻造，338/340 局「必败弃疗改锻造」语义已在真实对局触发）；若未来 3~10 局篝火理由中謦欬重税卡组的「联合能量复核存在可行攻防分配」出现率不降、或战斗端可行点描述从不出现「謦欬自付N/回合已计存活账（VIVHITE_JOINT_SELF_PAY）」，则消费路径复查有误。
+
+## EVIDENCE
+
+- 第 342 局（P5UA74ZLRPZ6，F17 阵亡）完整决策链已逐条深读：F16 篝火（hp 64/80=80%）理由含「前夜预演对账BOSS_RACE_PROJ_AUDIT：竞速预演判可行——击杀需9回合＞满血可存活7回合，但联合能量复核存在可行攻防分配（Boss血池均值333、火力12/回合、先验输出45/回合……）」→ 回血 16 点满血进场；F17 Boss 战实测首窗 dpt 仅 7/8/10/16/21 伤/回合（全程低于先验下限 45），~T8 阵亡，自损 30、末回合 DOMINATES 留痕（自付 5.2/回合≥敌方净损）——账面可行的输出计划实战每回合都在付血，存活账却一分未计。
+- 本批六场 Boss/终盘战自损横断面：337 自损48/掉血92、338 自损33/掉血73、339 自损30/掉血89、340 自损37/掉血87、341 自损25/掉血78、342 自损30/掉血80（占掉血 28%~52%）——謦欬自付是生存预算的一阶项，不是可忽略的噪声。
+- 机制出处对账：`_vivhite_race_self_loss_observation` 的 docstring 明确写着「Keep that policy unchanged for this batch, but expose the narrow condition where the excluded stream is at least as large as the enemy stream so later runs can falsify that exclusion with direct combat evidence」——342 局的假可行→阵亡正是该排除口径的直接反证（306 批预注册的「短于投影」条件针对战斗端入锁，本批是前夜消费端的假可行，同一物理量的另一出口）。
+- 出牌侧与拿牌侧现状：life_cost_weight -3.00 触底、hp_cost_play_margin 3.00 顶格（lessons 连续留痕「双旋钮全尽，謦欬证据彻底停止吸收」）；320~336 批的 VIVHITE_LIFE_COST_DECK_TAX 于 11:26 才合入，本批六局（10:26~11:30）全部跑在合入前/临界期，六局零留痕属预期而非代码故障——其预注册信号仍待未来批次验证。337~340 局终局卡组目录血税 62/108/72/114 已超软顶 60，血税密度问题依旧成立，但本批缺口在预演存活账。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  ① 新增 `_deck_hp_pay_burst(deck, energy)`——与 `deck_burst` 同一贪心装箱（伤害/能耗降序装满 energy、同步剔除零出牌死牌），累计入箱攻击牌的 `_vivhite_hp_pay`（目录口径、空 powers 的保守静态账）；非白绮角色恒 0；
+  ② `_race_joint_feasible`：白绮 profile 下按 `vivhite_joint_self_pay_eff`（默认 1.0）把攻击能量 ea 对应的装箱自付计入存活分母（`net = fire − 格挡 + 自付×eff`），Pareto 前沿与混合采样点同步携带 pay（(b,d) 并列时取自付更高的保守账）；可行点描述追加「謦欬自付N/回合已计存活账（VIVHITE_JOINT_SELF_PAY）」——战斗端 `_mix` 留痕自动携带；键=0 时 pay 恒 0，严格回滚旧口径，非白绮角色零改动；
+  ③ 前夜预演可行侧（`_boss_race_doomed`）：`_race_proj_audit` 在可行点带自付计价时附 `_mix` 描述，供后续批次对账自付计价是否改变前夜裁决。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `vivhite_joint_self_pay_eff: 1.0`（0 一键回滚，旧行为零差异），注释记录 342 局实证。
+- sts2-ascend/brain/selfcheck.py：新增 3br-sp 夹具五分支——① 装箱自付核算（3×绯彩极限 2费/30伤/血税8，energy=3 装一张 → pay=8）；② 默认开：pool=110/fire=12/hp=80 旧口径 ttk=6.67≤8.17 账面可行，自付入账后 net=20 → 5.5<6.67 翻回判死；③ 键=0 严格回滚（同一账面回到可行且无标记）；④ pool=55/fire=6 可行且带自付时描述披露「謦欬自付8.0/回合已计存活账」；⑤ 非白绮角色同账面零改动。
+- 不改 reflect 通道、不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 謦欬重税卡组（终局目录血税 >60）的前夜篝火理由中「联合能量复核存在可行攻防分配」出现率下降，相应「任一攻防能量分配均无法同时满足击杀与存活」与「必败弃疗改锻造」增多——可直接与 342 局 F16「回血16点→F17 阵亡」对账；② 战斗端防守复核留痕出现「謦欬自付N/回合已计存活账（VIVHITE_JOINT_SELF_PAY）」；③ 首场验证：任一謦欬卡组前夜出现「自付入账后判死→改锻造」即为机制兑现。证伪/回滚：留痕从不出现 → 消费路径复查；翻回判死后到达层数（floor_sum_raw 均值）较本批显著恶化（自付计价过度悲观）→ policy.json 置 `vivhite_joint_self_pay_eff=0` 整体撤回（pay 恒 0，旧口径零差异）；若留痕出现但假可行仍频发，下一批对账 `_deck_hp_pay_burst` 的静态口径（空 powers 不含 Margin 抵扣/绯红仪式在场附加）与实战实付的系统性偏差。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-sp 五分支；既有 3br/3br-audit/3br-buf/3br-cap/3br-combat-cap/3br-esc-latch-hold 联合复核与翻盘比夹具、3prl 血税密度夹具、3pri/3prh 謦欬门夹具与全部既有夹具通过）。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+79/-15，helper + 复核存活账 + 前夜留痕尾）、brain/knowledge.py（+6 一个静态键）、brain/selfcheck.py（+51 五分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
