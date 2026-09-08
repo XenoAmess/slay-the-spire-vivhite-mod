@@ -6520,9 +6520,11 @@ class Policy:
         # 空卡组上下文（升级/删除/献祭评估）burst_starved 恒 False 天然不受影响
         _sd_w = float(pol.get("burst_starve_supply_weight", 0.0) or 0.0)
         if deck and burst_starved and _sd_w > 0.0:
+            _sd_raw = 0.0
             try:
+                _sd_raw = (float(self.deck_effective_burst(deck + [card])) - burst)
                 _sd_delta = clamp(
-                    float(self.deck_effective_burst(deck + [card])) - burst,
+                    _sd_raw,
                     0.0,
                     max(0.0, float(pol.get("burst_starve_supply_delta_cap", 4.0))))
             except (AttributeError, TypeError, ValueError):
@@ -6530,9 +6532,18 @@ class Policy:
             if _sd_delta > 0.0:
                 value += _sd_w * _sd_delta
                 if detail is not None:
+                    # 顶格原始 delta 披露（第1313~1318局批复盘，纯观测）：本批
+                    # 21 条纠偏注记 13 条顶格（cap=4.0），但中标注记只剩截断后
+                    # 的 delta=+4.0，原始 +6~+10 仅在恰好附带
+                    # CARD_BURST_PICK_AUDIT 行时可见（牌堆顶选择等路径无审计
+                    # 行）——预注册的「cap 是否误伤大炸弹」评估无法从中标侧
+                    # 直接结算。顶格时补记原始 delta，评分零改动
+                    _sd_cap_note = (f"（delta={_sd_delta:+.1f}"
+                                    if _sd_raw <= _sd_delta + 1e-9 else
+                                    f"（delta={_sd_delta:+.1f}←原始{_sd_raw:+.1f}顶格")
                     detail.append(
                         f"饥饿供给纠偏+{_sd_w * _sd_delta:.1f}"
-                        f"（delta={_sd_delta:+.1f}，BURST_STARVE_SUPPLY_LEVER）")
+                        f"{_sd_cap_note}，BURST_STARVE_SUPPLY_LEVER）")
 
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
         # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠

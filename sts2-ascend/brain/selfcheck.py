@@ -10892,6 +10892,26 @@ def main() -> int:
     assert d_bsl_off.action == "select_deck_card" \
         and "BURST_STARVE_SUPPLY_LEVER" not in d_bsl_off.reason, \
         f"观测键=0 注记仍入链: {d_bsl_off.reason}"
+    # ⑥ 顶格原始 delta 披露（第1313~1318局批复盘，纯观测）：a) 夹具攻击候选
+    #    原始 delta=8>cap=4，①的注记必须带「←原始+8.0顶格」；b) cap 临时放宽
+    #    到 99 后同候选不顶格——注记不得带「顶格」且纠偏幅度恰为 weight×8
+    #    （披露不改变评分，只补记被截断的原始 delta）；c) ⑤真实 decide()
+    #    路径中标的余烬原始 delta=12>cap=4，入链理由同样带顶格披露
+    _bsl_raw_atk = bsl_pol.deck_effective_burst(bsl_starved + [dict(bsl_atk)]) - _bsl_burst
+    assert _bsl_raw_atk > _bsl_cap, "3bsl 夹具攻击候选原始 delta 未超 cap，前提被破坏"
+    assert any(f"←原始{_bsl_raw_atk:+.1f}顶格" in n for n in bsl_det), \
+        f"顶格注记缺原始 delta 披露: {bsl_det}"
+    bsl_know.policy["burst_starve_supply_delta_cap"] = 99.0
+    bsl_det_unc: list = []
+    v_bsl_unc = bsl_pol.eval_reward_card(dict(bsl_atk), bsl_starved,
+                                         detail=bsl_det_unc)
+    bsl_know.policy["burst_starve_supply_delta_cap"] = _bsl_cap
+    assert any("BURST_STARVE_SUPPLY_LEVER" in n for n in bsl_det_unc) \
+        and not any("顶格" in n for n in bsl_det_unc), \
+        f"未顶格注记误带顶格披露: {bsl_det_unc}"
+    assert abs((v_bsl_unc - v_bsl_off) - _bsl_w * _bsl_raw_atk) < 1e-9, \
+        f"cap 放宽后纠偏幅度偏离 weight×原始delta: {v_bsl_unc - v_bsl_off:.4f}"
+    assert "顶格" in d_bsl.reason, f"decide() 入链理由缺顶格披露: {d_bsl.reason}"
 
 
     print("SELFCHECK OK")

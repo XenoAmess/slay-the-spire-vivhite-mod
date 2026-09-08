@@ -7399,3 +7399,127 @@ retry_resolution: none (no replay target; local production observability change)
    战损」分子累计。
 
 
+
+# 2026-09-08｜第 1313~1318 局复盘（异步追及队列 6 局 exact_batch 全败；BURST_STARVE_SUPPLY_LEVER 首验通过 + 顶格原始 delta 披露观测位）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  retry_resolution 行；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：BURST_STARVE_SUPPLY_LEVER 的 delta_cap=4.0 顶格高频
+  （本批 21 条纠偏注记 13 条顶格，原始 delta +6~+10 被截断），预注册的
+  「顶格高频→评估 cap 是否误伤大炸弹」触发；但中标注记只留截断后的
+  delta=+4.0，原始 delta 仅在恰好附带 CARD_BURST_PICK_AUDIT 行时可见
+  （牌堆顶选择等路径无审计行，1316 箭雨、1317/1318 御血术+等 8 条顶格
+  注记原始值不可考）——cap 误伤率无法从中标侧直接结算。给顶格注记
+  追加「←原始+X顶格」披露后，未来 3~10 局可直接统计顶格中标/落选的
+  原始 delta 分布来结案 cap 评估。
+- **EVIDENCE**：1315/1316/1317/1318 共 21 条 lever 注记（4 个独立对局≥3，
+  首验通过），13 条顶格（1316 DISMANTLE raw+10、1318 HEMOKINESIS raw+9、
+  INFLAME raw+6×3 等）；本批残余 supply_left>0 5/52（9.6% vs 基线 11/61=18%，
+  杠杆方向应验），逐案复核：1314 ARMAMENTS/HEADBUTT 为部署前样本
+  （lever 09:42~10:20 间落盘，纠偏后即可翻案）；1315 燃烧反事实
+  32.7<38.1（未 decisive）；1317×2/1318 基差 11~14 分非 decisive——
+  cap 零误伤实锤，但结论只能靠逐案重建候选分得出，中标侧无直接读数。
+- **EXPECTED_SIGNAL**：未来 3~10 局，顶格中标理由出现
+  「delta=+4.0←原始+X顶格」段；配合 supply_left 行的 offer_max 原始
+  delta，cap 误伤率可直接计数（顶格落选且反事实可翻案 ≥2 例 → 上调
+  cap 至 6.0；顶格中标高频且零误伤持续 → cap 冻结结案）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1313..1318]，exact 6/6、missing=0；6 局全败（生涯 0/1318）。
+- 死亡分布：一幕 Boss（F17）3 局（1314/1316/1317，前夜判死全部应验）、
+  一幕走廊 2 局（1315 F15 幽灵船低血连战耗尽、1313 F22 一幕越墙后低血
+  死亡谷）、二幕 Boss（F33 KNOWLEDGE_DEMON）1 局（1318，T2判死→
+  4 回合阵亡应验）。
+- 主样本 1318（TBFY975PHF2X）packet 内 30 条切片 + decision_aggregates
+  （play_card 135 / end_turn 58）已逐条核读：F1 涅奥羽翼之靴合规、F33
+  终局 T1~T4 全程「致死竞速抢斩杀/败局竞速全攻」口径能量真尽收口
+  （JOINT_FLIP_TTK_CAP 5 处否决在产、HARD_INTENT_SPIKE_FIRE 意图升级
+  火力计价在产），执行层零新缺陷；死因=卡组输出密度（竞速预演击杀需
+  17~20 回合 vs 可存活 5~7 回合，血池均值 415）。
+- 部署时序：BURST_STARVE_SUPPLY_LEVER（上批落盘，10:16 后生效）覆盖
+  1315~1318 共 4 局，1313/1314 为零星 pre-fix 样本（1314 的
+  ARMAMENTS-over-HEADBUTT 即部署前遗留形态），无 pre-fix 误伤指控；
+  HP_COST_ATK_PRICING 首验累计 4 个独立对局（1309/1312/1313/1318，
+  ≥3 结案线达标）。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17 三局前夜竞速预演全部判死且实战
+   兑现（击杀需 13~16 回合＞满血可存活 6~7 回合）；1314/1318
+   RACE_AUDIT_HEAL_OVERRIDE 回血、1316/1317 必败弃疗改锻造，两端杠杆
+   按教义工作——设计内终态，不重复立案。旋钮代谢链全顶格，证据改接
+   kill_race_prior_eff（0.38→0.40 部分胜利释放+换向阻尼）与封账留痕。
+2. **BURST_STARVE_SUPPLY_LEVER 首验通过（4/3 独立对局）**：注记 21 条
+   显形，supply_left>0 自基线 18% 降至 9.6%；残余 5 例中 1 例为部署前
+   样本、4 例基差 2.4~14 分（1 例反事实非 decisive）——有界纠偏按设计
+   工作，不升格为翻案机器。顶格率 13/21 触发预注册 cap 评估，评估结论：
+   零误伤实锤但中标侧原始 delta 不可考，落地披露观测位（本次调整）。
+3. **HP_COST_ATK_PRICING 结案（4/3 独立对局）**：本批 1313×9/1318×7 条
+   全部为「自残2计价」（御血术族单体通道），AOE「非致死未计价」本批
+   零出现（累计仍 2/3 独立对局：1309/1312）——单体计价通道确证在产；
+   AOE 对齐单体口径的预注册行为化条件（≥3 独立对局且低血集中）未达线，
+   顺延不立项。
+4. **竞速审计悲观率台账**：本批判死应验 +4（1314/1316/1317 F17、1318
+   F33），反向 +3（1313 F17「T2判死→实战9回合获胜」一幕越墙、
+   1315 F12 精英、1318 F23），续记不重复立案。
+5. **1317 高血进场仍死 F17**：89% 血进 KIN_FOLLOWER+KIN_PRIEST，
+   6 回合掉 81——入场血量非生死变量的教义再获一例（入场线 0.88 顶格
+   停止上调），证据改接拿牌端输出饥饿链。
+
+## 三、本次调整（观测位 ×1：lever 顶格原始 delta 披露）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **BURST_STARVE_SUPPLY_CAP_TRACE**（lever 预注册 cap 评估的中标侧读数缺口；证据：21 条注记 13 条顶格、8 条顶格注记原始 delta 不可考、cap 误伤率只能逐案重建；机制先例：HP_COST_ATK_PRICING / CARD_BURST_PICK_AUDIT 同款「消费路径无留痕=不可结算」） |
+| 代码动作 | brain/policy.py eval_reward_card：纠偏分支保留截断前 _sd_raw，顶格（raw>cap）时注记改写为「饥饿供给纠偏+N（delta=+4.0←原始+X顶格，BURST_STARVE_SUPPLY_LEVER）」；未顶格注记与旧口径逐字一致 |
+| 性质边界 | 纯观测位：评分、阈值、cap、学习面全部零改动（selfcheck 3bsl⑥b 钉死 cap 放宽后幅度=weight×原始 delta，①②⑤ 既有锚原样通过）；weight=0 既有回滚键不变（注记整体消失） |
+| 测试 | brain/selfcheck.py 3bsl 新增 ⑥ 三断言（a) 原始 delta=8>cap=4 的夹具候选注记带「←原始+8.0顶格」；b) cap 临时放宽 99 后同候选不顶格、注记无「顶格」且幅度恰为 weight×8；c) decide() 真实选牌路径中标余烬（raw 12>cap 4）入链理由带顶格披露）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（13:07，含 3bsl①~⑤/3hcat/3br-cap 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「←原始+X顶格」注记出现率与原始 delta 分布（顶格严重度画像）；② 顶格落选且反事实可翻案（supply_left>0 行 offer_max 原始 delta>4 且基差≤weight×超出量）的独立对局数；③ lever 纠偏总量中顶格截断损失的占比（Σ(raw-cap)×weight） |
+| 继续调整条件 | 顶格落选且反事实可翻案 ≥2 个独立对局 → cap 4.0→6.0（预注册上限内）；顶格中标高频且零误伤持续 ≥3 批 → cap 冻结结案；注记零出现但审计行 supply_left 仍在 → 检查留痕接线 |
+| 撤回条件 | knowledge/policy.json 写 `burst_starve_supply_weight: 0` 即杠杆与披露整体关闭（selfcheck 3bsl②⑤ 为对照锚）；或删除 policy/selfcheck 两处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（预注册 cap 评估
+   触发即落地读数观测位，非登记延后）。
+2. **BURST_STARVE_SUPPLY_LEVER（1307~1312 批杠杆）**：首验通过——4 个
+   独立对局 21 条注记，supply_left>0 自 18% 降至 9.6%；cap 评估触发并
+   由本批观测位接续读数，杠杆本体零改动。
+3. **HP_COST_ATK_PRICING（1302~1306 批观测位）**：结案——单体计价通道
+   4 个独立对局确证在产；AOE 非致死未计价累计 2/3 独立对局，本批零
+   出现，对齐单体口径的预注册行为化条件未达线，顺延。
+4. **JOINT_FLIP_TTK_CAP**：1318×5/1315×2 否决留痕在产；「否决后改锻造
+   战损」分子本批 +2（1316/1317 改锻造仍死 F17），继续累计至复核线。
+5. **SETTLE_TIMEOUT_CONCEDE_OBS / ENGINE_COMMIT_LOWHP_OBS /
+   RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD / HAND_TAX_PLAY_AUDIT**：本批
+   无对应现场（收口均能量真尽、无低血承诺/末点格挡竞争/族母/税牌
+   落选），顺延不判失效。
+6. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表）：1313 F22、
+   1315 F15 为死亡谷/低血连战同族，续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **杠杆注记要保留「截断前真值」**：凡带 cap/clamp 的纠偏杠杆，注记只
+   写截断后值就等于丢掉顶格证据——本批 13 条顶格注记中 8 条原始 delta
+   不可考，cap 评估只能靠逐案重建候选分。披露截断前真值是一行改动，
+   省的是每批复盘的重建成本。
+2. **部署时序是首验样本的第一筛选条件**：1314 的 ARMAMENTS-over-
+   HEADBUTT 看似 lever 失效案例，核启动时间（09:42）早于杠杆落盘
+   （10:16 后）即排除——首验窗口内的反例先对部署时钟，再对机制。
+3. **pre-registered 评估的诚实结论可以是「零误伤+补读数」**：cap 评估
+   触发后，逐案复核证明零 decisive 误伤（最近一例反事实 32.7<38.1），
+   此时上调 cap 是无证据加码、冻结又无读数兜底——补一个顶格披露观测位
+   让下批可直接计数，是「评估」触发后的最小诚实闭环。
+4. 观察点（下批复盘核对）：①「←原始+X顶格」注记首发与原始 delta
+   分布；② 顶格落选反事实可翻案的独立对局计数；③ AOE「非致死未计价」
+   第 3 独立对局（结案线）；④ JOINT_FLIP_TTK_CAP「否决后改锻造战损」
+   分子累计；⑤ race_audit 悲观率台账续记。
