@@ -375,3 +375,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-08 04:25:45 | 第 295~305 局 | `4c86917f` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `c51b8252` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 c51b8252 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260908-151840-1788851920186074500-380d8ec0 -->
 | 2026-09-08 15:18:40 | 第 355~360 局 | `380d8ec0` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `dafc33dc` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 dafc33dc 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260909-003813-1788885493026293500-e77b9c21 -->
+| 2026-09-09 00:38:13 | 第 392~401 局 | `e77b9c21` | path_boundary | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260909-003813-1788885493026293500-e77b9c21` | 复盘 patch 触碰 deny-only 路径边界：tmp_392.txt (Git/outside/unsafe) |
