@@ -3846,3 +3846,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.7419953092492335局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.691286134665229局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/37.76847536159856局)
 - 策略进化：potion_block_hp_pct: 0.40 → 0.45（高速失血爆毙（6回合掉血103，每回合17≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿22张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.55 → 0.56（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/346 胜，当前目标进阶 0
+
+## 第 347 局复盘（2026-09-08 12:20）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION, PANACHE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：BAG_OF_MARBLES, RED_MASK, STRAWBERRY
+- 战斗记录：F5 Monster战 掉血8｜自损15（可行动段15/非行动段8，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损5（可行动段5/非行动段0，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损7（可行动段7/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血0｜自损18（可行动段18/非行动段15，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血4｜自损15（可行动段15/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血86｜自损25（可行动段25/非行动段60，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/10.407513877887524局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.261366465897403局)，HAND_OF_GREED(33分/7.32434077945874局)，ULTIMATE_STRIKE(32分/4.903775019291508局)，VIVHITE_CARD_PERFECT_SYNTHESIS(32分/46.40823717619742局)
+- 当前低价值卡牌：AUTOMATION(17分/2.7323983256668614局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.6818666331939007局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/38.63628569783297局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（93%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.56 → 0.55（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/347 胜，当前目标进阶 0
