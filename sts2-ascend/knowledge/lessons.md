@@ -10116,3 +10116,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.65687189005687局)，BULLY(10分/3.7114256292226284局)，HAVOC(11分/2.969140503378102局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1320 胜，当前目标进阶 0
+
+## 第 1321 局复盘（2026-09-08 15:07）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：SHRUG_IT_OFF, THUNDERCLAP, SECOND_WIND, SHRUG_IT_OFF, HEADBUTT, EVIL_EYE, FIGHT_ME, DISMANTLE, BREAKTHROUGH, SWORD_BOOMERANG, DISMANTLE, FIGHT_ME, PYRE
+- 本局遗物：BOOK_OF_FIVE_RINGS, WHITE_STAR, RED_MASK
+- 战斗记录：F9 Monster战 掉血29; F12 Monster战 掉血0; F13 Monster战 掉血6｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血31｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血25; F17 Boss战 掉血35｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.357078267711956局)，OFFERING(25分/26.639183474198912局)，PRIMAL_FORCE(24分/5.177809895328492局)，PACTS_END(24分/104.69352084309986局)，FIEND_FIRE(24分/34.98777460849105局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.640572838441671局)，BULLY(10分/3.6984356395203495局)，HAVOC(11分/2.958748511616279局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1321 胜，当前目标进阶 0
