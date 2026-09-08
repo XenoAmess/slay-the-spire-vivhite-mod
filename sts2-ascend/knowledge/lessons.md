@@ -10325,3 +10325,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.356754098365912局)，BULLY(10分/3.4722382755301644局)，HAVOC(11分/2.7777906204241316局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.04 → 2.03（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F22——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1339 胜，当前目标进阶 0
+
+## 第 1340 局复盘（2026-09-09 05:10）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：DISMANTLE, UNRELENTING, FORGOTTEN_RITUAL, HEADBUTT, UNRELENTING, TREMBLE, HOWL_FROM_BEYOND, FORGOTTEN_RITUAL, COLOSSUS, CRUELTY, HOWL_FROM_BEYOND, SHRUG_IT_OFF, DEMON_FORM, RAMPAGE, AGGRESSION
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F13 Monster战 掉血7; F15 Monster战 掉血0; F17 Boss战 掉血61｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血25; F21 Monster战 掉血27; F22 Monster战 掉血28｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.140727262138745局)，PRIMAL_FORCE(24分/4.8441196181921375局)，FIEND_FIRE(24分/32.7329447786局)，OFFERING(24分/25.915401037663262局)，MANGLE(24分/89.20579888620247局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.341505459021632局)，BULLY(10分/3.460085441565809局)，HAVOC(11分/2.768068353252647局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1340 胜，当前目标进阶 0
