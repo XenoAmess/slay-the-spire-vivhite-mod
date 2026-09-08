@@ -791,3 +791,38 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失败包为零产出 process_exit：patch_bytes=-1、无候选 patch/变更文件，无有效内容可重实现；本批已在当前 HEAD 自行完成新的生产闭环并经 SELFCHECK OK 验证）。
+
+# 第 363~380 局批复盘：謦欬血税密度扣分已计价 49 次却零留痕——拿牌路径观测接线补通（VIVHITE_LIFE_COST_DECK_TAX 入链）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+第 320~336 局批落地的謦欬血税密度扣分（VIVHITE_LIFE_COST_DECK_TAX）在 eval_reward_card 内同时做两件事：扣分本体 `value -= tax×超出比例×自身血税`（与 detail 无关、必然生效）和 detail 留痕。但 v0.111.0 实战拿牌全走 CARD_SELECTION/select_deck_card 的 `_score_sel`，该路径只把含 `BURST_STARVE_SUPPLY_LEVER` 的注记暂存进 `_sd_notes` 并随中标入链，血税注记随 `_det` 整体丢弃——第 320~336 批预注册的「决策链出现謦欬血税密度扣分留痕」信号在当前接线下结构性不可达，与条件是否达成无关。EVIDENCE：本批 18 个 run 文件全文检索 `LIFE_COST_DECK_TAX` 0 次；而逐局 deck_changes 重建卡组目录血税时间线，18 局共 49 次「拿牌前卡组目录血税 >60 且候选自身血税 >0」的资格拿牌（363×1/364×5/365×2/367×4/372×11/375×4/377×10/378×2/379×1/380×9；372 局终局血税 116、377 局 108、380 局 98），扣分条件 49 次成立、留痕 0 次——缺口在观测接线而非条件未达。EXPECTED_SIGNAL：未来 3~10 局决策链选牌理由在超顶卡组拿血税牌时出现「謦欬血税密度扣分（卡组目录血税N/软顶60，-X，VIVHITE_LIFE_COST_DECK_TAX）」，可与本批 49 次资格拿牌逐一对账；证伪：留痕仍零出现 → 消费路径复查；留痕出现但 -X 与 `2.0×超出比例×自身血税` 对不上 → 公式漂移复查。回滚：注记本体随既有键 `vivhite_life_cost_pick_tax=0` 同灭（不新增键），接线零差异。
+
+## EVIDENCE
+
+- 全文检索本批 18 个 run 文件（363~380）：`LIFE_COST_DECK_TAX` 0 次；对照同批 `RESCUE_BLOCK`（373/375/377/378/380 共 31 次）与 `STALL_UNCOVERED`（13/18 局显形）均正常入链——run 记录链路本身完好，唯独血税密度注记结构性缺失。
+- 逐局 deck_changes 重建（起始卡组目录血税 20 = 4×弦光投影2+4×闭域映射2+变身式4）：14/18 局终局目录血税 >60（最高 372 局 116），18 局共 49 次资格拿牌中 REWARD 屏 38 次、SHOP 屏 9 次、EVENT 屏 2 次——第 320~336 批「留痕+血税回落」的首场验证（任一终局血税 ≤55）本批 0/18 达成，但无法区分「扣分未生效」与「生效但幅度不足」，因为留痕根本到不了链上。
+- 生产现状核查（policy.py 7356~7370 行 `_score_sel`）：`_det` 只提取 `BURST_STARVE_SUPPLY_LEVER` 注记进 `_sd_notes`；`_pick_sd` 在自愿/强制分支统一入链（7426~7428 行）。同型接线缺口的既往病例：第1290~1294批 CARD_BURST_PICK_AUDIT、第1307~1312批 BURST_STARVE_SUPPLY_LEVER、第 307~314 批 VIVHITE_MARGIN_PICK_OBS——同一消费路径已三次补齐同类观测，本批为第四次、针对 320~336 批注记。
+- 相邻批次预注册对账：① 355~360 批 VIVHITE_HP_GATE_RESCUE_BLOCK 已在 373/375/377/378/380 五局显形（377 局 23 次），接线健康；② 343~354 批 VIVHITE_HP_GATE_STALL_UNCOVERED 13/18 局显形（377 局 15 次最高）；③ 315~319 批 POTION_SELF_HARM_OBS 本批 0 次——污浊药水生涯出现率约 1/32 局，本批 18 局未遇到属正常口径，不判失效。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（`_score_sel`，CARD_SELECTION/select_deck_card 唯一真实拿牌路径）：候选注记暂存从「只保留 BURST_STARVE_SUPPLY_LEVER」扩展为「同时保留 VIVHITE_LIFE_COST_DECK_TAX」，多条注记以「；」拼接后按既有 `_pick_sd` 通道随中标入链。纯观测接线：不改评分、不改排序、不改选择、不新增键；`vivhite_life_cost_pick_tax=0` 时注记本体不存在，接线随既有回滚键同灭、旧行为零差异；非白绮角色血税恒 0、零改动。
+- sts2-ascend/brain/selfcheck.py：3prl 夹具新增第 ⑦ 组三分支——① 超顶卡组（目录血税 72>60）强制拿绯彩极限（自身血税 8）的 decide() 理由必须带「謦欬血税密度扣分…VIVHITE_LIFE_COST_DECK_TAX」；② 同卡组拿零血税公理之环不带留痕；③ `vivhite_life_cost_pick_tax=0` 回滚键下留痕消失且 option_index 选择不变。
+- 不改 knowledge.py（复用既有 `vivhite_life_cost_pick_tax` 键，不新增静态键）、不改 reflect 通道、不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链选牌理由在卡组目录血税 >60 且中标牌自身血税 >0 时出现「謦欬血税密度扣分（卡组目录血税N/软顶60，-X，VIVHITE_LIFE_COST_DECK_TAX）」留痕——按本批节奏（49 次/18 局 ≈ 2.7 次/局）首场即可验证，可直接与 372 局（终局血税 116）/377 局（108）/380 局（98）的资格拿牌对账；② 拿到真实 -X 账后可首次回答第 320~336 批悬置问题：扣分是「未生效」（留痕对应场次血税仍照拿）还是「生效但幅度不足」（留痕场次的落选候选可见），据此决定上调 `vivhite_life_cost_pick_tax` / 下调 `vivhite_life_cost_deck_cap` 或确认 320~336 批机制空转；③ 若留痕高频出现且终局目录血税从本批均值 ~71 回落、自损/掉血比下行，则血税密度闭环成立。证伪/回滚：留痕仍零出现 → 复查 `_score_sel`/`_pick_sd` 消费路径；留痕出现但 -X 与 `tax×clamp(超出比例,0,1)×自身血税` 对不上 → 公式漂移复查；`vivhite_life_cost_pick_tax=0` 即整体撤回（注记与扣分同灭，软顶以下旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（3prl 新增第 ⑦ 组三分支；既有 3prl①~⑥ 血税密度、3prk 余裕加分真实路径、3prn 门拦格挡放行、3prm 未覆盖观测、3bsl 供给纠偏入链与全部既有夹具通过）。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+9/-4，注记暂存扩展+注释实证）、brain/selfcheck.py（+46 三分支夹具）两个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -3051,6 +3051,52 @@ def main() -> int:
     assert abs(nv_lc_pol.eval_reward_card(dict(_nv_card), _nv_deck)
                - nv_lc_pol2.eval_reward_card(dict(_nv_card), _nv_deck)) < 1e-9, \
         "非白绮角色不得受謦欬血税密度扣分影响"
+    # ⑦ 真实拿牌路径观测接线（第 363~380 局批复盘）：扣分本体自第 320~336
+    #    批计入 _v（与 detail 无关），但 detail 注记在实战唯一拿牌路径
+    #    CARD_SELECTION/select_deck_card 的 _score_sel 中只保留
+    #    BURST_STARVE_SUPPLY_LEVER 一类、血税注记随 _det 丢弃——本批 18 局
+    #    deck_changes 重建 49 次资格拿牌（候选自身血税>0 且拿牌前卡组目录
+    #    血税>60）全文检索留痕 0 次，缺口在观测接线而非条件未达。锁定：
+    #    超顶卡组强制拿血税牌的理由必须带「謦欬血税密度扣分…
+    #    VIVHITE_LIFE_COST_DECK_TAX」；零血税候选不带；tax=0 回滚键下
+    #    留痕与扣分同灭、选择不变。
+    _lc_offer = [dict(_lc_cand, index=0)]
+    _lc_obs_deck = [dict(c) for c in _lc_over]  # 目录血税 72 > 软顶 60
+    vknow_lc_obs = _vivhite_know("sts2-selfcheck-vlctax-obs-")
+    vpol_lc_obs = policy.Policy(vknow_lc_obs, random.Random(19))
+    _lc_obs_ctx = DummyCtx()
+    _lc_obs_ctx.run_id = "RUN_VLCTAX_OBS"
+    d_lc_obs = vpol_lc_obs.decide(
+        _vmargin_sel_state("RUN_VLCTAX_OBS", _lc_offer, _lc_obs_deck),
+        _lc_obs_ctx)
+    assert (d_lc_obs.action == "select_deck_card"
+            and d_lc_obs.params.get("option_index") == 0
+            and "謦欬血税密度扣分" in d_lc_obs.reason
+            and "VIVHITE_LIFE_COST_DECK_TAX" in d_lc_obs.reason), \
+        f"超顶卡组真实拿牌路径缺血税密度扣分留痕: {d_lc_obs.action}（{d_lc_obs.reason}）"
+    # 零血税候选（AXIOM_RING lc=0）在超顶卡组拿牌不带留痕
+    _lc_zero_ctx = DummyCtx()
+    _lc_zero_ctx.run_id = "RUN_VLCTAX_OBS_ZERO"
+    d_lc_zero = vpol_lc_obs.decide(
+        _vmargin_sel_state("RUN_VLCTAX_OBS_ZERO",
+                           [dict(_m_axiom, index=0)], _lc_obs_deck),
+        _lc_zero_ctx)
+    assert (d_lc_zero.action == "select_deck_card"
+            and "VIVHITE_LIFE_COST_DECK_TAX" not in d_lc_zero.reason), \
+        f"零血税候选不得带血税密度留痕: {d_lc_zero.reason}"
+    # tax=0 一键回滚：留痕消失、选择不变
+    vknow_lc_obs_off = _vivhite_know("sts2-selfcheck-vlctax-obs-off-")
+    vknow_lc_obs_off.policy["vivhite_life_cost_pick_tax"] = 0.0
+    vpol_lc_obs_off = policy.Policy(vknow_lc_obs_off, random.Random(19))
+    _lc_obs_ctx2 = DummyCtx()
+    _lc_obs_ctx2.run_id = "RUN_VLCTAX_OBS_OFF"
+    d_lc_obs_off = vpol_lc_obs_off.decide(
+        _vmargin_sel_state("RUN_VLCTAX_OBS_OFF", _lc_offer, _lc_obs_deck),
+        _lc_obs_ctx2)
+    assert (d_lc_obs_off.action == "select_deck_card"
+            and d_lc_obs_off.params == d_lc_obs.params
+            and "VIVHITE_LIFE_COST_DECK_TAX" not in d_lc_obs_off.reason), \
+        f"回滚键下留痕未消失或选择漂移: {d_lc_obs_off.reason}"
 
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself

@@ -7360,13 +7360,22 @@ class Policy:
                 # 在 eval_reward_card 内计价；候选 detail 此前只在 REWARD 路径
                 # 收集，本路径（实战真实拿牌流量）按 id 暂存供给纠偏注记，
                 # 中标后接进持久链——评分与排序口径零改动
+                # 第 363~380 局批复盘扩展（纯观测接线）：謦欬血税密度扣分
+                # （VIVHITE_LIFE_COST_DECK_TAX，第 320~336 批）的扣分本体早已
+                # 计入 _v（value -= 与 detail 无关），但 detail 注记在本路径
+                # 只保留供给纠偏一类、其余随 _det 丢弃——本批 18 个 run 文件
+                # 全文检索 0 留痕，而 deck_changes 重建显示 49 次资格拿牌
+                # （候选自身血税>0 且拿牌前卡组目录血税>60）条件成立，缺口
+                # 在观测接线而非条件未达。一并暂存该注记；tax=0 时注记本体
+                # 不存在，接线随既有回滚键同灭、旧行为零差异。
                 _det: list[str] = []
                 _v = self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act,
                                            detail=_det)
-                _sd = next((n for n in _det
-                            if "BURST_STARVE_SUPPLY_LEVER" in n), "")
-                if _sd:
-                    _sd_notes[id(c)] = _sd
+                _notes = [n for n in _det
+                          if ("BURST_STARVE_SUPPLY_LEVER" in n
+                              or "VIVHITE_LIFE_COST_DECK_TAX" in n)]
+                if _notes:
+                    _sd_notes[id(c)] = "；".join(_notes)
                 return (_v, c)
 
             scored = sorted((_score_sel(c) for c in candidates),
