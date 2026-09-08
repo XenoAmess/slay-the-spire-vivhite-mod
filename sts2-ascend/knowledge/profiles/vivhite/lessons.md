@@ -4660,3 +4660,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.115373854146347局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.939324526895605局)，REND(22分/2.5244637391328366局)
 - 策略进化：block_safety: 2.00 → 2.05（高速失血爆毙（6回合掉血84，每回合14≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损44/掉血84（52%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/420 胜，当前目标进阶 0
+
+## 第 421 局复盘（2026-09-09 02:42）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FOSSIL_STALKER
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：BAG_OF_PREPARATION, NUNCHAKU
+- 战斗记录：F3 Monster战 掉血4｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损16（可行动段16/非行动段8，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血39｜自损29（可行动段29/非行动段26，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战7回合获胜; F14 Unknown战 掉血20｜自损19（可行动段19/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T8判死→实战9回合获胜; F15 Unknown战 掉血19｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/8.0291102868358局)，HAND_OF_GREED(33分/8.390062118196957局)，DRAMATIC_ENTRANCE(33分/6.180004052020818局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.28645004769464局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/55.66660634536401局)
+- 当前低价值卡牌：AUTOMATION(17分/2.1079700456568347局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.9290368910514704局)，REND(22分/2.515628116045872局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Unknown战实测自损12/掉血19（63%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/421 胜，当前目标进阶 0
