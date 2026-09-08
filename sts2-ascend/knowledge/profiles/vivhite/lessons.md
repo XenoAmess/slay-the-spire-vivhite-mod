@@ -4253,3 +4253,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.408390579905542局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.346473006643743局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/42.74110460568432局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 84%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/383 胜，当前目标进阶 0
+
+## 第 384 局复盘（2026-09-08 19:03）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_MOBIUS_LOOP, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：GORGET, ODDLY_SMOOTH_STONE, JOSS_PAPER, PERMAFROST
+- 战斗记录：F15 Elite战 掉血1｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血35｜自损42（可行动段42/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战9回合获胜; F19 Monster战 掉血33｜自损39（可行动段39/非行动段4，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血9｜自损28（可行动段28/非行动段7，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血7｜自损27（可行动段27/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战11回合获胜; F31 Elite战 掉血85｜自损44（可行动段44/非行动段31，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/9.14128419519561局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.812738305019693局)，HAND_OF_GREED(33分/7.314645223116844局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/50.52029216717644局)，DRAMATIC_ENTRANCE(32分/5.011272050378582局)
+- 当前低价值卡牌：AUTOMATION(17分/2.3999612128758727局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.33476035112049局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.59151073956443局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Elite战实测自损44/掉血85（52%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.38（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F31——灰区悲观系数部分胜利回收）；行至 F31 但致命战自损44/掉血85≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：0/384 胜，当前目标进阶 0
