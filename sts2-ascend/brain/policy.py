@@ -170,11 +170,23 @@ def _vivhite_race_self_loss_observation(
         enemy = max(0.0, float(enemy_loss_rate))
     except (TypeError, ValueError, OverflowError):
         return ""
-    if paid < 2.0 or paid < enemy:
+    if not _vivhite_race_self_loss_dominates(paid, enemy):
         return ""
     ratio = "inf" if enemy <= 0.0 else f"{paid / enemy:.2f}"
     return (f"竞速自付速率{paid:.1f}/回合≥敌方净损{enemy:.1f}/回合"
             f"（比值{ratio}，VIVHITE_RACE_SELF_LOSS_DOMINATES）")
+
+
+def _vivhite_race_self_loss_dominates(
+        self_paid_rate: float, enemy_loss_rate: float) -> bool:
+    """Return whether observed voluntary HP payment dominates enemy loss."""
+
+    try:
+        paid = max(0.0, float(self_paid_rate))
+        enemy = max(0.0, float(enemy_loss_rate))
+    except (TypeError, ValueError, OverflowError):
+        return False
+    return paid >= 2.0 and paid >= enemy
 
 
 def _rescue_block_tradeoff(
@@ -4527,6 +4539,25 @@ class Policy:
         # 的计价/未计价事实，评分、阈值与所有分支零改动；观测键
         # hp_cost_atk_pricing_trace=0 时旧口径逐字不变。
         _hp_atk_trace = float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
+        # VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE：第362局 VANTOM F17 观测到
+        # 可行动段自付速率 13/回合、敌方净损 5/回合；在 SLIPPERY 逐 hit
+        # 限伤时，判死竞速豁免仍可能把「支付血量 > 实际移除」的单体攻击
+        # 推过出牌线。只接管已经完成至少一个边界采样、且真实自付占主导的
+        # 单体攻击候选；AOE、非白绮、关闭键、斩杀和实际回报足以覆盖支付的
+        # 候选保持旧口径。实际支付沿用 _vivhite_hp_pay（含 Margin/仪式）。
+        try:
+            _payback_gate_enabled = (
+                float(pol.get("vivhite_race_self_loss_payback_gate", 1.0) or 0.0)
+                > 0.0)
+        except (TypeError, ValueError, OverflowError):
+            _payback_gate_enabled = True
+        _vivhite_race_self_loss_payback_gate = bool(
+            _payback_gate_enabled
+            and self.character_strategy is not None
+            and self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+            and self._race_rounds >= 1
+            and _vivhite_race_self_loss_dominates(
+                self._race_self_paid_rate, self._race_loss_rate))
         floor_score = -50.0  # 生存模式禁玩线：叠加 card_value 加成后仍远低于阈值
 
         def _hybrid_defense() -> tuple[float, str] | None:
@@ -4555,6 +4586,9 @@ class Policy:
         # --- 攻击牌（有伤害数值） ---
         if dmg > 0:
             total = dmg * hits
+            _vivhite_payback_paid = (
+                self._vivhite_hp_pay(card, player_powers)
+                if _vivhite_race_self_loss_payback_gate else 0.0)
             # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：LAGAVULIN_MATRIARCH
             # 开局自挂沉睡 3 层（ASLEEP_POWER，zhs 原文「在失去生命时或在
             # {Amount}回合后苏醒」；mechanics AfterDamageReceived：UnblockedDamage
@@ -4793,6 +4827,11 @@ class Policy:
                         s += _sticky_v
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
+                _payback_blocked = bool(
+                    _vivhite_payback_paid > max(0.0, float(eff))
+                    and not killed)
+                if _payback_blocked:
+                    s = floor_score
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
                     why = f"可击杀{e['name']}" if killed else (
@@ -4803,6 +4842,10 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    if _payback_blocked:
+                        why += (f"｜VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE："
+                                f"实付{_vivhite_payback_paid:g}血>实际移除{eff:g}"
+                                "，自付速率占主导")
                     if slippery > 0:
                         why += (f"｜滑溜{slippery:g}层，逐段折算≈{eff:.1f}，"
                                 f"预计破{slippery_broken}层")

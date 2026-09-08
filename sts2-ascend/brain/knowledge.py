@@ -382,6 +382,9 @@ DEFAULT_POLICY = {
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否
                                          # 在高自损 Boss 战中过度乐观；只观测、不改判定。
+    "vivhite_race_self_loss_payback_gate": 1,  # 自付占主导时单体低回报门：仅拦
+                                                # 实付血量大于实际移除且未斩杀的
+                                                # 白绮攻击；0=关闭并回滚旧竞速豁免。
     "self_loss_phase_obs": True,  # 自损账相位分账观测位（第1245~1265局批复盘）：
                                   # 同回合自损主账按采样 tick 的 can_play 影子拆成
                                   # 可行动段/非行动段两桶，战斗记录披露

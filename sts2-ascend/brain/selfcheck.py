@@ -4775,6 +4775,57 @@ def main() -> int:
     assert mixed_target == 1 and "普通目标" in mixed_why, \
         f"滑溜逐目标状态污染普通目标: target={mixed_target} why={mixed_why}"
 
+    # 3xg-payback（第362局 VANTOM F17）：自付速率占主导且 SLIPPERY 将单发
+    # 折成 1 点实际移除时，单体生命支付攻击不得继续沿用致死竞速豁免；普通
+    # 目标的实际回报、斩杀候选和显式关闭键都必须保持可用。
+    vknow_payback = _vivhite_know("sts2-selfcheck-vhpayback-")
+    vpol_payback = policy.Policy(vknow_payback, random.Random(13))
+    vpol_payback._race_rounds = 1
+    vpol_payback._race_self_paid_rate = 13.0
+    vpol_payback._race_loss_rate = 5.0
+    payback_card = {
+        "index": 0, "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+        "name": "弦光投影", "playable": True, "energy_cost": 1,
+        "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [
+            {"name": "Damage", "current_value": 10},
+            {"name": "LifeCost", "current_value": 2},
+        ],
+    }
+    payback_slippery = vpol_payback._score_play(
+        payback_card, [sl_enemy(layers=8)], 0, 0, 2,
+        vpol_payback.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    payback_plain = vpol_payback._score_play(
+        payback_card, [sl_enemy(layers=None)], 0, 0, 2,
+        vpol_payback.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    payback_kill = vpol_payback._score_play(
+        payback_card, [sl_enemy(hp=1, layers=8)], 0, 0, 2,
+        vpol_payback.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    assert payback_slippery[0] <= -49.0 \
+            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" in payback_slippery[2], \
+        f"自付占主导时低回报单体攻击未被压低: {payback_slippery}"
+    assert payback_plain[0] > -1.0 \
+            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" not in payback_plain[2], \
+        f"普通目标实际回报被误拦: {payback_plain}"
+    assert payback_kill[0] > -1.0 and payback_kill[2].startswith("可击杀"), \
+        f"斩杀候选不应被低回报门拦截: {payback_kill}"
+    vknow_payback_off = _vivhite_know("sts2-selfcheck-vhpayback-off-")
+    vknow_payback_off.policy["vivhite_race_self_loss_payback_gate"] = 0
+    vpol_payback_off = policy.Policy(vknow_payback_off, random.Random(13))
+    vpol_payback_off._race_rounds = 1
+    vpol_payback_off._race_self_paid_rate = 13.0
+    vpol_payback_off._race_loss_rate = 5.0
+    payback_rollback = vpol_payback_off._score_play(
+        payback_card, [sl_enemy(layers=8)], 0, 0, 2,
+        vpol_payback_off.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    assert payback_rollback[0] > -1.0 \
+            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" not in payback_rollback[2], \
+        f"关闭键未恢复旧竞速评分: {payback_rollback}"
+
     # 端到端：同场重锤与双重打击应选多段牌；只有重锤时仍正常出牌而非禁玩。
     def sl_combat_state(hand):
         return {

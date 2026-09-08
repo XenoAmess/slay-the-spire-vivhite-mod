@@ -108,6 +108,38 @@ retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
 
+# 第 362 局复盘：自付主导时滑溜低回报单体生命攻击门
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+若白绮已观测到可行动段自付速率不低于敌方净损，且 SLIPPERY 将单体攻击折成的实际移除低于本次生命支付，则判死竞速豁免会错误放行低回报攻击。可证伪信号是未来 3~10 局该门的命中留痕与自付>实际移除事件是否下降。
+
+## EVIDENCE
+
+- 第 362 局 VANTOM F17 完整链：自付 13/回合、敌方净损 5/回合；T3 已判死，随后仍以生命支付攻击出牌，T7 结束时 2 HP 阵亡。
+- 原生知识 `SLIPPERY_POWER` 规定下一次失去生命只失 1 点；决策链同时记录了低回报单体攻击与 `VIVHITE_RACE_SELF_LOSS_DOMINATES`。
+- `failed_review_replay.requested_packages` 为空，无需重放失败包。
+
+## PRODUCTION_CHANGE
+
+- `policy.py` 新增默认启用的 `VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE`：仅在完成至少一个回合采样、自付占主导时，压低白绮单体“实付血量>实际移除且未斩杀”的候选；AOE、普通高回报、斩杀和非白绮路径不变。
+- `knowledge.py` 增加 `vivhite_race_self_loss_payback_gate`，设为 `0` 即回滚；`selfcheck.py` 覆盖滑溜、普通目标、斩杀和关闭键。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局应出现 `VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE`，且自付>实际移除事件减少，同时不牺牲斩杀。若命中后无改善或楼层/阵亡恶化，将该键置 `0` 并撤回本门。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check` 通过；改动仅限三处静态源码与本报告/短评，未触碰在线运行状态。
+
+## REPLAY
+
+`retry_resolution: none`（`failed_review_replay.requested_packages` 为空）。
+
 # 第 5~6 局批复盘：前夜竞速预演不扣滑溜破层期，对墨影幻灵贴线局误判可行→翻转带回血——开局滑溜破层税入预演
 
 日期：2026-09-06
