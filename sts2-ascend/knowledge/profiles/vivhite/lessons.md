@@ -4187,3 +4187,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.4595921689643894局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.4141056255407944局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/40.62153191031763局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.38（行至 F20（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.04 → 2.03（行至 F20（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F20——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F20——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/377 胜，当前目标进阶 0
+
+## 第 378 局复盘（2026-09-08 17:49）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 CALCIFIED_CULTIST+SEAPUNK
+- 本局拿牌：VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_MOBIUS_LOOP
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F4 Monster战 掉血2｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血10｜自损18（可行动段18/非行动段6，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损20（可行动段20/非行动段11，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血5｜自损20（可行动段20/非行动段3，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血17｜自损24（可行动段24/非行动段18，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血47｜自损40（可行动段40/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T11判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/9.335624880937246局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.375731352028872局)，HAND_OF_GREED(33分/7.4701521670279005局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/51.594336909029785局)，VIVHITE_CARD_AXIOM_OF_LIFE(32分/13.384255430780817局)
+- 当前低价值卡牌：AUTOMATION(17分/2.450983596373014局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.405656255851402局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/41.47935654863152局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损40/掉血47（85%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/378 胜，当前目标进阶 0
