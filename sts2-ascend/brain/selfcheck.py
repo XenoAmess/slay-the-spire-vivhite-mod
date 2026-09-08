@@ -2763,6 +2763,87 @@ def main() -> int:
         ("obs=0 回滚键下未覆盖观测账必须保持为零: "
          f"{vpol_uo._hp_gate_stall_uncovered}")
 
+    # 3prn) 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，第 355~360
+    #      局批复盘）：余量门把被拦謦欬牌全部逐出残能救场，但救场格挡通道自带
+    #      净保命>0 计价（min(block,gap)−实际謦欬−余裕机会成本）——355 局 F5
+    #      死亡战 T1 门拦闭域映射（可抵3/謦欬2/净保命1，hp33 空过后阵亡）、
+    #      362 局 F17 Boss 死亡战 T1（可抵5/净保命3，hp69）、364 局 F2/F8 五处
+    #      （净保命3）三局实证。开启时 block>0 门拦牌回到救场手牌（謦欬攻击牌
+    #      维持排除，反死循环语义不变），留痕供对账；0=一键回滚（旧行为零差异）。
+    def _vgate_block_card(index=0):
+        return {"index": index,
+                "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                "name": "闭域映射", "card_type": "Skill", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Block", "current_value": 9}]}
+
+    def _vgate_block_state(hand_cards):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": 69, "max_hp": 85, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": hand_cards,
+                "enemies": [{
+                    "index": 0, "enemy_id": "VANTOM", "name": "幻灵",
+                    "current_hp": 160, "max_hp": 220, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 10}],
+                }],
+            },
+            "run": {"current_hp": 69, "max_hp": 85, "gold": 0, "floor": 17,
+                    "deck": [{
+                        "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                        "card_type": "Skill", "energy_cost": 1,
+                        "dynamic_values": [
+                            {"name": "Block", "current_value": 9}]}]},
+        }
+
+    # ① 默认开：门拦净保命格挡必须经救场放行而非空过，且留痕可对账
+    vknow_rb = _vivhite_know("sts2-selfcheck-vhgate-rescblk-")
+    vknow_rb.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_rb = policy.Policy(vknow_rb, random.Random(11))
+    d_rb = vpol_rb.decide(_vgate_block_state([_vgate_block_card(0)]),
+                          _vgate_ctx())
+    assert d_rb.action == "play_card", \
+        f"门拦净保命格挡必须经救场放行而非空过: {d_rb}"
+    assert d_rb.params.get("card_index") == 0, \
+        f"救场放行的必须是格挡牌本身: {d_rb.params}"
+    assert "残能救场[格挡]" in d_rb.reason \
+        and "VIVHITE_HP_GATE_RESCUE_BLOCK" in d_rb.reason, \
+        f"门拦格挡放行缺决策链留痕: {d_rb.reason}"
+    # ② 混合手牌：门拦謦欬攻击维持排除，救场只放行格挡牌（反死循环不变）
+    vknow_rm = _vivhite_know("sts2-selfcheck-vhgate-rescblk-mix-")
+    vknow_rm.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_rm = policy.Policy(vknow_rm, random.Random(11))
+    _mix_hand = [
+        {"index": 0, "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         "name": "弦光投影", "card_type": "Attack", "playable": True,
+         "energy_cost": 1, "requires_target": True,
+         "valid_target_indices": [0],
+         "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+        _vgate_block_card(1),
+    ]
+    d_rm = vpol_rm.decide(_vgate_block_state(_mix_hand), _vgate_ctx())
+    assert d_rm.action == "play_card" \
+        and d_rm.params.get("card_index") == 1, \
+        f"混合手牌救场必须只放行格挡牌、维持攻击排除: {d_rm}"
+    assert "VIVHITE_HP_GATE_RESCUE_BLOCK" in d_rm.reason, \
+        f"混合手牌放行缺留痕: {d_rm.reason}"
+    # ③ 回滚键：0=恢复全部排除（旧行为零差异，门拦格挡照样空过）
+    vknow_ro = _vivhite_know("sts2-selfcheck-vhgate-rescblk-off-")
+    vknow_ro.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_ro.policy["vivhite_hp_gate_rescue_block"] = 0
+    vpol_ro = policy.Policy(vknow_ro, random.Random(11))
+    d_ro = vpol_ro.decide(_vgate_block_state([_vgate_block_card(0)]),
+                          _vgate_ctx())
+    assert d_ro.action == "end_turn", \
+        f"回滚键下门拦格挡必须恢复退出救场（旧行为）: {d_ro}"
+    assert "VIVHITE_HP_GATE_RESCUE_BLOCK" not in d_ro.reason, \
+        f"回滚键下不得出现放行留痕: {d_ro.reason}"
+
     # 3prj) 謦欬余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY，第 244~259 局
     #      批复盘）：謦欬是全目录机制（58/61 张），余裕是唯一冲抵实付的供给端；
     #      本批 6/16 局终局零无条件余裕源全部早亡，最深两局（F33）余裕源 6/3 张。

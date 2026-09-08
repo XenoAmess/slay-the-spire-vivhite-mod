@@ -4281,6 +4281,7 @@ class Policy:
                 _resc_enabled = True
             _resc_kind = ""
             _resc_card = None
+            _resc_gate_blocked_idx: set = set()
             if _resc_enabled:
                 try:
                     _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
@@ -4291,6 +4292,28 @@ class Policy:
                 _resc_hand = hand
                 if _hp_gate_blocked:
                     _blocked_idx = {row[0] for row in _hp_gate_blocked}
+                    _resc_gate_blocked_idx = set(_blocked_idx)
+                    # 门拦净保命格挡例外（VIVHITE_HP_GATE_RESCUE_BLOCK，第
+                    # 355~360 局批复盘）：救场格挡通道自带净保命>0 计价
+                    #（min(block,gap)−实际謦欬−余裕机会成本），把 block>0 的
+                    # 门拦牌一并剔除等于把净正保命换成贴脸掉血——355 局 F5
+                    # 死亡战 T1（门拦闭域映射，可抵3/謦欬2/净保命1，hp33 空过
+                    # 后阵亡）、362 局 F17 Boss 死亡战 T1（可抵5/净保命3，
+                    # hp69）、364 局 F2/F8 五处（净保命3）三局实证。开启时仅
+                    # 格挡牌回到救场手牌，打出与否仍由救场通道缺口>0/净保命
+                    # >0 裁决；謦欬攻击牌维持排除，反死循环语义不变。
+                    # vivhite_hp_gate_rescue_block=0 一键回滚（旧行为零差异）。
+                    try:
+                        _resc_blk_on = bool(int(pol.get(
+                            "vivhite_hp_gate_rescue_block", 1) or 0))
+                    except (TypeError, ValueError):
+                        _resc_blk_on = True
+                    if _resc_blk_on:
+                        _blocked_idx = {
+                            _idx for _idx in _blocked_idx
+                            if not any(c.get("index") == _idx
+                                       and card_numbers(c)[1] > 0
+                                       for c in hand)}
                     _resc_hand = [c for c in hand
                                   if c.get("index") not in _blocked_idx]
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
@@ -4336,13 +4359,17 @@ class Policy:
                             "taxstop": "手牌税止损"}.get(_resc_kind, _resc_kind)
                 _taxstop_note = (f"，清零手牌滞留税{_tax_total}/回合（{_tax_detail}）"
                                  if _resc_kind == "taxstop" else "")
+                _gate_rescue_note = ""
+                if _resc_card.get("index") in _resc_gate_blocked_idx:
+                    _gate_rescue_note = ("；门拦格挡净保命放行"
+                                         "（VIVHITE_HP_GATE_RESCUE_BLOCK）")
                 return Decision("play_card", _rparams,
                                 f"战斗：残能救场[{_kind_cn}]：剩余能量{int(energy)}"
                                 f"打出【{_resc_card.get('name')}】"
                                 f"{('→' + _rtname) if _rtname else ''}{_taxstop_note}，"
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
-                                f"{danger_note}",
+                                f"{danger_note}{_gate_rescue_note}",
                                 tags=[("play_card", _rcid),
                                       ("play_card_index", _resc_card.get("index"),
                                        self._card_key(_resc_card)[1]),

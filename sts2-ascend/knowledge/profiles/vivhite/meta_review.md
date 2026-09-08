@@ -754,3 +754,40 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 355~360 局批复盘：謦欬门把净正保命格挡一并逐出残能救场——门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE）拦下的候选被无差别逐出残能救场手牌，但救场格挡通道自带净保命>0 计价（min(block,gap)−实际謦欬−余裕机会成本）：被门拦下的謦欬格挡牌（闭域映射：付 2 血挡 9）在意图缺口>0 时本就是净正保命，把它一并排除等于把可抵伤害换成贴脸掉血——「付血换不空过」反死循环语义只适用于攻击牌，对净正保命格挡是反向伤害。该假设可证伪：未来 3~10 局若决策链「残能救场[格挡]」理由从不出现「门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）」留痕（消费路径复查），或留痕出现但同回合 hp 账与「可抵−謦欬」对不上（计价复查），则本假设不成立；policy.json 置 `vivhite_hp_gate_rescue_block=0` 即整体撤回（恢复全部排除，旧行为零差异）。
+
+## EVIDENCE
+
+- 逐局扫描本批 355~360 及相邻 361~364 全部 run 决策链，对账「謦欬出牌门拦下」与「残能空漏审计(IDLE_LEAK_BLK)」同回合共现且被拦牌正是审计认定的净正保命格挡牌：3 个独立对局命中（达 evidence_run_threshold=3）——① 355 局（R6EUW7PXRYVD）F5 死亡战 T1：门拦【闭域映射】，审计可抵3/謦欬2/净保命1，hp33 空过，该局 F5 阵亡；② 362 局（MT4U8BGXWLWW）F17 Boss 死亡战 T1：门拦【闭域映射】×3+【分治法阵】，审计可抵5/謦欬2/净保命3，hp69 空过；③ 364 局（DYGY56WTK8YQ）F2 T8、F8 T2/T4/T10/T12 五处：门拦【闭域映射】，审计可抵5/謦欬2/净保命3。
+- 本批自损主导依旧（355 局 F2 自损14/掉血8、360 局 F2 自损18/掉血0、359 局 F17 Boss 自损55/掉血89 阵亡），356/357 两局门拦 23/25 次而僵局放行 0 次——放行条件够不到的战斗中，每一滴净正保命都直接改写生死。
+- 生产现状核查（policy.py）：救场手牌过滤把全部 `_hp_gate_blocked` 下标剔除（原注释只考虑「付血换不空过正是本门要拦的死亡螺旋」），未区分攻击与格挡；救场通道 `idle_energy_rescue_pick` 格挡分支本身已用 `_rescue_block_tradeoff` 扣除实际謦欬与余裕成本并要求净保命>0、缺口>0——被排除的恰是这套计价已判定净正的牌。
+- 原生知识核对：闭域映射描述「謦欬 {LifeCost}。获得 {Block} 点格挡。」，不含「失去生命」字样，救场通道 `_SELF_COST_RE` 不会拦截——排除完全来自门拦下标过滤这一处。
+- 相邻批次预注册对账：343~354 批 VIVHITE_HP_GATE_STALL_UNCOVERED 已在 361~364 四局显形（2/2/2/10 次），但未覆盖链全部止步 1 回合即被「无拦截回合」清零——「未覆盖链≥M(M≥2)」的放行扩展在当前账目下结构性不可达，本批不接该扩展（预注册条件不满足，留痕移交后续批次）；本批改接同源但已证净正的救场端缺口。
+- failed_review_replay.requested_packages 含 20260908-151840-1788851920186074500-380d8ec0（target）：manifest 显示 process_exit、return_code=1、command_count=0、file_change_count=0、patch_bytes=-1，无任何候选 patch/变更文件可重实现；本批基于当前 HEAD 自行完成新的生产闭环。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（残能救场手牌过滤）：新增门拦净保命格挡例外——`vivhite_hp_gate_rescue_block`（默认开）下，门拦下标中 block>0 的牌（card_numbers 口径）回到救场手牌，打出与否仍由救场通道自己的缺口>0/净保命>0（扣除实际謦欬与余裕成本）裁决；謦欬攻击牌维持排除，「付血换不空过」反死循环语义不变。救场打出的牌若原在门拦清单，理由追加「；门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）」留痕供对账。0=一键回滚（恢复全部排除，旧行为零差异）；非白绮角色 `_hp_gate_blocked` 恒空、零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `vivhite_hp_gate_rescue_block: 1`（静态键，0=关闭回滚），注释记录三局实证与反死循环边界。
+- sts2-ascend/brain/selfcheck.py：新增 3prn 夹具三分支——① 默认开：门拦闭域映射（挡9/謦欬2，意图10缺口10）必须经救场打出且理由带「残能救场[格挡]」与放行留痕；② 混合手牌（门拦弦光投影+门拦闭域映射）：救场只放行格挡牌（card_index=1），攻击牌维持排除；③ 回滚键 0：门拦格挡恢复退出救场、照旧 end_turn 且无留痕。
+- 不改评分/阈值/放行账；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链出现「残能救场[格挡]…门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）」留痕，可直接与 355-F5/362-F17/364 五处空过场面逐一比对——同型场面应改为打出格挡且当回合 hp 账改善「可抵−謦欬」点；②「门拦格挡牌+IDLE_LEAK_BLK 净保命>0 却空过」的矛盾对应清零；③ 若留痕高频出现且早期怪物战（355/360 型 F2~F5）自损+掉血合计与战斗回合数下降，则接下一批评估门拦格挡在主评分端的同型豁免。证伪/回滚：留痕从不出现 → 复查救场消费路径与 card_numbers 口径；留痕出现但放行后长战自损/掉血比显著恶化（死循环复发迹象）→ policy.json 置 `vivhite_hp_gate_rescue_block=0` 整体撤回（恢复全部排除，旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3prn 三分支；既有 3prh 余量门夹具——攻击牌默认键下仍被拦且不得经救场绕行、3pri 僵局放行、3prm 未覆盖观测、3prl 血税密度等全部既有夹具通过）。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+28/-1，格挡例外过滤+放行留痕）、brain/knowledge.py（+13 静态键）、brain/selfcheck.py（+81 三分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失败包为零产出 process_exit：patch_bytes=-1、无候选 patch/变更文件，无有效内容可重实现；本批已在当前 HEAD 自行完成新的生产闭环并经 SELFCHECK OK 验证）。
