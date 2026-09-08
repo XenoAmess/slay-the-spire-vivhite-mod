@@ -687,3 +687,38 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 343~354 局批复盘：謦欬门僵局放行「连续全覆盖」条件在意图交替战中结构性不可达——未覆盖拦截观测上线（VIVHITE_HP_GATE_STALL_UNCOVERED）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 批）要求「连续 N 回合（当前 6）回合结束仍有謦欬候选被拦、且敌意图被格挡全覆盖（incoming<=my_block）」才停用余量门。在意图高低交替、我方格挡仅覆盖低峰的战斗中该条件结构性不可达：低峰回合计数、高峰回合清零，放行永不触发；余量门（已顶格 3.00）永久锁死謦欬攻击，残能救场转而每回合付 2 血格挡，战斗退化为放血死循环。该假设可证伪：未来 3~10 局若「连续未覆盖拦截N回合（VIVHITE_HP_GATE_STALL_UNCOVERED）」留痕从不出现、或出现但从不与高自损长战/阵亡共现，则「放行条件不可达是放血死循环的结构性成因」不成立。
+
+## EVIDENCE
+
+- 第 354 局（FBGRZKL1FFCQ，F3 SHRINKER_BEETLE 阵亡）完整 70 链逐条核对：敌意图 7/13 交替、我方单张闭域映射格挡 9。决策 24/26 僵局进度 1/6→2/6；T3 意图 13>甲 9 清零后全链再未出现放行。其后 16 回合每回合付 2 血格挡（VIVHITE_LIVE_ESTIMATE=-5.90→-11.80 仍打出），生命 78→1；决策 67/68 生命 1 时全手牌 blocked_by_hook 空过两回合后阵亡。战斗账：19 回合，自损 57/掉血 78，竞速审计 T17 判死→实战 19 回合阵亡。
+- 同批佐证：349 局 F3/F4 自损 22/20（掉血 12/19）、345 局 F5 自损 20/掉血 1、344 局 F9 精英自损 18；历史同型 243 局 F3 拖 56 回合、238 局 F2 76 回合、235 局 F3 19 回合——但那些是「全覆盖低危」局，本批 354 局证明「未覆盖」局同样死循环且放行机制够不到。
+- 生产现状核查（policy.py）：放行账只在 `_hp_gate_blocked and incoming <= my_block` 时累加，其余清零（含同回合多 tick 守卫）；现有链路对「被拦但意图未覆盖」的连续回合零观测——低危进度注记只在 `_hp_gate_stall_limit>0` 时渲染，未覆盖链长度完全不可见，无法直接验证放行条件是否该扩展。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `vivhite_hp_gate_uncovered_obs: 1`（静态键，0=关闭一键回滚）。
+- sts2-ascend/brain/policy.py：新增 `self._hp_gate_stall_uncovered` 观测账（初始化、新战斗重置与既有 stall 账同点）；回合收口处与低危链互斥维护——被拦且意图未覆盖的连续回合 +1，覆盖回合或无拦截回合清零；`_hp_gate_blocked` 非空且计数 >0 时在回合理由追加「；连续未覆盖拦截N回合（VIVHITE_HP_GATE_STALL_UNCOVERED）」。不改放行阈值、不改评分、不改任何动作选择；obs=0 时计数与留痕同灭，旧行为零差异；非白绮角色零改动。
+- sts2-ascend/brain/selfcheck.py：新增 3prm 夹具五分支——① 未覆盖拦截连续计数 1→3 且逐回合留痕、行为仍 end_turn；② 未覆盖回合不累计低危放行账；③ 覆盖回合清零未覆盖链且不留痕（互斥）；④ 新战斗重置观测账；⑤ obs=0 回滚键下不计数不留痕、行为零差异。
+- 不改 reflect 通道、不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链 end_turn 理由在「謦欬出牌门拦下」后出现「连续未覆盖拦截N回合（VIVHITE_HP_GATE_STALL_UNCOVERED）」，可直接量出放行条件不可达的战斗占比与持续长度（首场验证：任一长战该计数 ≥6 且同战自损/掉血 ≥0.5，即与 354 局 F3 同型对账）；② 若该留痕高频（≥2 局）且与高自损长战/阵亡共现，下一批有证据把僵局放行条件扩展为「低危链≥N 或未覆盖链≥M」；③ 若留痕从不出现，则 354 局为孤立样本，本假设证伪。撤回条件：policy.json 置 `vivhite_hp_gate_uncovered_obs=0`，计数与留痕同灭，旧行为零差异。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3prm 五分支；既有 3pri 謦欬门僵局放行夹具、3prh 余量门夹具、3prl 血税密度夹具与全部既有夹具通过）。
+- `git diff --check` 通过；完整 diff 已回读：brain/knowledge.py（+8 静态键）、brain/policy.py（+30 观测账+留痕）、brain/selfcheck.py（+54 五分支夹具）+ 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

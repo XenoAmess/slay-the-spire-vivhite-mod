@@ -2709,6 +2709,60 @@ def main() -> int:
         assert "VIVHITE_HP_GATE_STALL_BREAK" not in d_off.reason, \
             f"stall=0 回滚键下不得出现放行留痕: {d_off.reason}"
 
+    # 3prm) 謦欬门未覆盖拦截观测（VIVHITE_HP_GATE_STALL_UNCOVERED，第 343~354 局
+    #      批复盘）：354 局 F3 SHRINKER_BEETLE 意图 7/13 交替、格挡 9 只覆盖低峰，
+    #      僵局放行「连续全覆盖」条件结构性不可达（进度止步 2/6 即被高危回合清零），
+    #      余量门永久锁死謦欬攻击、残能救场反复付 2 血格挡，19 回合自损57/掉血78
+    #      阵亡。观测只在回合收口加记「有謦欬候选被拦但意图未覆盖」的连续回合数
+    #      并留痕，不改放行/评分/动作；与低危链互斥清零；obs=0 一键回滚（旧行为
+    #      零差异）；新战斗重置。
+    vknow_uc = _vivhite_know("sts2-selfcheck-vhgate-uncovered-")
+    vknow_uc.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_uc.policy["vivhite_hp_gate_stall_turns"] = 3
+    vpol_uc = policy.Policy(vknow_uc, random.Random(11))
+    vctx_uc = _vgate_ctx()
+    for _turn in (1, 2, 3):
+        d_uc = vpol_uc.decide(_vgate_stall(_turn, 10), vctx_uc)
+        assert d_uc.action == "end_turn", \
+            f"未覆盖观测不得改变放行/出牌行为: turn={_turn} {d_uc}"
+        assert f"连续未覆盖拦截{_turn}回合" in d_uc.reason \
+            and "VIVHITE_HP_GATE_STALL_UNCOVERED" in d_uc.reason, \
+            f"未覆盖拦截缺连续计数留痕: turn={_turn} {d_uc.reason}"
+    assert vpol_uc._hp_gate_stall == 0 \
+        and vpol_uc._hp_gate_stall_uncovered == 3, \
+        ("未覆盖回合不得累计低危放行账: "
+         f"stall={vpol_uc._hp_gate_stall} "
+         f"uncovered={vpol_uc._hp_gate_stall_uncovered}")
+    # 覆盖回合中断未覆盖链（与低危链互斥清零），清零后不留痕
+    d_uc2 = vpol_uc.decide(_vgate_stall(4, 0), vctx_uc)
+    assert vpol_uc._hp_gate_stall == 1 \
+        and vpol_uc._hp_gate_stall_uncovered == 0, \
+        ("覆盖回合必须清零未覆盖链: "
+         f"stall={vpol_uc._hp_gate_stall} "
+         f"uncovered={vpol_uc._hp_gate_stall_uncovered}")
+    assert "VIVHITE_HP_GATE_STALL_UNCOVERED" not in d_uc2.reason, \
+        f"未覆盖链清零后不得残留留痕: {d_uc2.reason}"
+    # 新战斗（combat 身份变化）必须重置未覆盖观测账
+    vpol_uc.decide(_vgate_stall(1, 10), _vgate_ctx())
+    assert vpol_uc._hp_gate_stall_uncovered == 1, \
+        f"新战斗未覆盖观测账重置错误: {vpol_uc._hp_gate_stall_uncovered}"
+    # obs=0 一键回滚：未覆盖拦截照旧清零低危链但不留痕、不计数（旧行为零差异）
+    vknow_uo = _vivhite_know("sts2-selfcheck-vhgate-uncovered-off-")
+    vknow_uo.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_uo.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_uo.policy["vivhite_hp_gate_uncovered_obs"] = 0
+    vpol_uo = policy.Policy(vknow_uo, random.Random(11))
+    vctx_uo = _vgate_ctx()
+    for _turn in (1, 2, 3):
+        d_uo = vpol_uo.decide(_vgate_stall(_turn, 10), vctx_uo)
+        assert d_uo.action == "end_turn", \
+            f"obs=0 回滚键下行为不得改变: turn={_turn} {d_uo}"
+        assert "VIVHITE_HP_GATE_STALL_UNCOVERED" not in d_uo.reason, \
+            f"obs=0 回滚键下不得出现未覆盖观测留痕: {d_uo.reason}"
+    assert vpol_uo._hp_gate_stall_uncovered == 0, \
+        ("obs=0 回滚键下未覆盖观测账必须保持为零: "
+         f"{vpol_uo._hp_gate_stall_uncovered}")
+
     # 3prj) 謦欬余裕供给稀缺加分（VIVHITE_MARGIN_PICK_SCARCITY，第 244~259 局
     #      批复盘）：謦欬是全目录机制（58/61 张），余裕是唯一冲抵实付的供给端；
     #      本批 6/16 局终局零无条件余裕源全部早亡，最深两局（F33）余裕源 6/3 张。

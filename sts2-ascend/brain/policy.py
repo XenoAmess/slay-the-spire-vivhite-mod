@@ -619,6 +619,7 @@ class Policy:
         self._hp_gate_stall = 0        # 謦欬门连续低危拦截回合数（VIVHITE_HP_GATE_STALL_BREAK 账）
         self._hp_gate_stall_round = None  # 上次计入/清零的回合号（同回合多 tick 只动一次）
         self._hp_gate_stall_latch = False  # 僵局放行闩锁：本场一旦放行，余量门不再回归
+        self._hp_gate_stall_uncovered = 0  # 謦欬门连续未覆盖拦截回合数（VIVHITE_HP_GATE_STALL_UNCOVERED 观测账）
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
         self._unlock_stall = 0      # UNLOCK 已识别但 API 确认动作缺失时的独立鼠标兜底计数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
@@ -2753,6 +2754,7 @@ class Policy:
             self._hp_gate_stall = 0
             self._hp_gate_stall_round = None
             self._hp_gate_stall_latch = False
+            self._hp_gate_stall_uncovered = 0
         if self._stall_turn_seen != round_no:
             if enemy_hp_total < self._stall_min_hp:
                 self._stall_min_hp = enemy_hp_total
@@ -3992,6 +3994,22 @@ class Policy:
                 _hp_play_margin = 0.0
                 _hp_gate_stall_break = True
                 self._hp_gate_stall_latch = True
+        # 謦欬门未覆盖拦截观测（VIVHITE_HP_GATE_STALL_UNCOVERED，第 343~354 局
+        # 批复盘新增，静态键）：僵局放行要求「连续 N 回合敌意图被格挡全覆盖」，
+        # 但意图高低交替、格挡仅覆盖低峰的战斗（354 局 F3 SHRINKER_BEETLE 意图
+        # 7/13 交替、格挡 9）让该条件结构性不可达——进度止步 2/6 后被高危回合
+        # 清零，余量门永久锁死謦欬攻击，残能救场反复付 2 血格挡，战斗退化为
+        # 19 回合放血死循环（自损57/掉血78 阵亡）。本键只在回合收口处加记
+        # 「有謦欬候选被拦但意图未覆盖」的连续回合数并留痕，不改放行/评分/
+        # 动作；0=关闭（一键回滚，旧行为零差异），非白绮角色零改动
+        _hp_gate_unc_obs = False
+        if (getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID):
+            try:
+                _hp_gate_unc_obs = bool(int(pol.get(
+                    "vivhite_hp_gate_uncovered_obs", 0) or 0))
+            except (TypeError, ValueError):
+                _hp_gate_unc_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score)
         for c in hand:
             if not c.get("playable"):
@@ -4326,10 +4344,18 @@ class Policy:
                 # 回合结束仍有謦欬候选被拦、且本回合敌意图被格挡全覆盖
                 # （incoming<=my_block，拦门没换来任何减伤）才累加；无拦截或
                 # 高危（意图未被覆盖）回合即清零——只放行真正的低危放血死循环。
+                # 未覆盖拦截观测账（VIVHITE_HP_GATE_STALL_UNCOVERED）：与低危链
+                # 互斥——被拦但意图未覆盖的连续回合单独计数，供复盘验证放行
+                # 条件是否结构性不可达；不改任何放行/评分行为。
                 if _hp_gate_blocked and incoming <= my_block:
                     self._hp_gate_stall += 1
+                    self._hp_gate_stall_uncovered = 0
                 else:
                     self._hp_gate_stall = 0
+                    if _hp_gate_blocked and _hp_gate_unc_obs:
+                        self._hp_gate_stall_uncovered += 1
+                    else:
+                        self._hp_gate_stall_uncovered = 0
                 self._hp_gate_stall_round = round_no
             if _hp_gate_blocked:
                 _gate_note = ("；謦欬出牌门拦下"
@@ -4340,6 +4366,10 @@ class Policy:
                     _gate_note += (f"；连续低危拦截{self._hp_gate_stall}"
                                    f"/{_hp_gate_stall_limit}"
                                    f"（VIVHITE_HP_GATE_STALL_BREAK 进度）")
+                if _hp_gate_unc_obs and self._hp_gate_stall_uncovered > 0:
+                    _gate_note += (f"；连续未覆盖拦截"
+                                   f"{self._hp_gate_stall_uncovered}回合"
+                                   f"（VIVHITE_HP_GATE_STALL_UNCOVERED）")
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}",
                             wait=1.2)
