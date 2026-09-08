@@ -861,3 +861,39 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 386~391 局批复盘：自付低回报门对滑溜破层零计价——低价烧墙破层抵扣放行（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+謦欬自付低回报门（VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE，第362局批落地）按「实付血量 > 当次实际移除」拦截单体攻击；但滑溜（SLIPPERY）把每次命中压成 1 点实际移除，而破层本身是解锁后续全额伤害的必经进度——旧口径等价于把烧墙期全部謦欬攻击判负，竞速态残能空留、坐等意图滚雪球。EVIDENCE：391 局（57DS0V8P8F55）F17 VANTOM（滑溜 8 层开局，生涯死因榜第一 22.42 权重）全链：T2/T5/T6 弦光投影（实付2血）被「实付2血>实际移除1」压到 -55.95 禁玩线（同链 7 次 PAYBACK_GATE 留痕、16 次 SLIPPERY_TTK_OBS），T4 满 3 能量零意图回合空过，意图 5→8→19→28 滚雪球，竞速审计 T6 判死→实战 T10 阵亡（自损39/掉血80，敌方伤害主导——非 362 局自杀螺旋形态）。EXPECTED_SIGNAL：未来 3~10 局滑溜战决策链出现「破层抵扣1放行：实付2≤实际移除1+破层1（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT）」，可与 391 局 T2/T5/T6 三处空过场面逐一对账（同型场面应改为打出且当回合破层+1）；证伪：留痕从不出现 → 消费路径复查；放行场次烧墙期回合数/自损占比较 391 局显著恶化（362 局螺旋复发迹象）→ policy.json 置 `vivhite_race_payback_slippery_credit=0` 整体回滚（旧口径零差异）。
+
+## EVIDENCE
+
+- 391 局 F17 VANTOM 全链逐条核对（decision_chain_evidence.full_failure_run，完整 222 条）：T2 end_turn 候选弦光投影 -55.95「实付2血>实际移除1」（能量余1）；T4 满 3 能量、意图 0，绯色面积/尺度变换被拦（实付4）空过；T5（能量余2）、T6（能量余1）弦光投影同型被拦；T7 意图已滚到 28 才因威胁分成放行。破层实际节奏 8→6(T3)→4(T5)→1(T8)→0，被拦的低价烧墙若放行可提前约 2 回合进入全额伤害段。
+- 同批佐证：390 局（RCYVJTZGU289）1 次 PAYBACK_GATE 为非滑溜目标（绯彩极限实付8>移除0，地道虫），属正确拦截且本批改动不影响（无破层即无抵扣）；386/388/389 局无 PAYBACK 留痕。
+- 历史对账：362 局批（门的起源，VANTOM F17 自付13/回合 vs 敌方净损5/回合）、760~765 局批（SLIPPERY_BURN_AUDIT 烧墙能效）、1232 局批（SLIPPERY_TTK_OBS）——同一 Boss 形态的四次独立证据；本批是「门对破层零计价」的首个行为化批次，未达阈值前未登记过「待观察」。
+- 生产现状核查（policy.py 4882 行）：`_payback_blocked = paid > max(0, eff) and not killed`，eff 在滑溜下逐段折算为 1（`_attack_outcome` 同时返回 `slippery_broken` 但未被任何裁决消费，仅用于留痕）；390 局非滑溜拦截证明门本体健康，缺口仅在破层价值零计价。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（`_score_play` 单体攻击循环）：低回报门比较从「实付 > 实际移除」改为「实付 > 实际移除 + 破层抵扣」，破层抵扣 = 本次实际破层数 × `vivhite_race_payback_slippery_credit`（默认 1.0/层）。效果边界：弦光投影型（实付2、破1层）2>1+1 不成立 → 放行；实付≥4 的高价謦欬（绯色面积/尺度变换/黄金构图/绯红定积分型）仍被拦——362 局自杀螺旋（自付13/回合主要来自高价牌）拦截边界不变；斩杀候选（not killed）与非滑溜目标（broken=0）零改动；门的总开关 `vivhite_race_self_loss_payback_gate=0` 与抵扣键 `vivhite_race_payback_slippery_credit=0` 各自独立回滚旧口径（零差异）。留痕：被拦且抵扣>0 时注记改写为「实付N血>实际移除X+破层抵扣Y」；因抵扣放行时追加「破层抵扣Y放行：实付N≤实际移除X+破层Z（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT）」供对账。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `vivhite_race_payback_slippery_credit: 1.0`，注释记录 391 局实证与 362 局边界。
+- sts2-ascend/brain/selfcheck.py：3xg-payback 夹具按新契约修订并扩到六分支——① 低价烧墙（实付2/破1层）放行且带 CREDIT 留痕、无 GATE 注记；② 高价謦欬（实付4/破1层）维持禁玩线且注记带「+破层抵扣1」；③ 普通目标不误拦；④ 斩杀候选不拦；⑤ 总开关=0 回滚；⑥ 抵扣键=0 回滚旧拦截口径（禁玩线+原注记、无放行留痕）。
+- 不改评分主体/阈值/竞速判决；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 滑溜战（VANTOM 及一切 SLIPPERY 敌人）竞速态决策链出现「破层抵扣放行（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT）」留痕，391 局 T2/T5/T6 型场面应改为打出低价烧墙牌；② 放行场次的烧墙期（首层→末层回合跨度）较 391 局（T1→T8）收敛，且竞速审计判死回合与实战阵亡回合差不再扩大；③ 若放行场次可行动段自付速率重新显著超过敌方净损（362 局螺旋形态复发），policy.json 置 `vivhite_race_payback_slippery_credit=0` 整体回滚（旧口径零差异）；若留痕从不出现，复查 `_attack_outcome` 的 broken 返回值与门激活条件。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（3xg-payback 修订为六分支；既有 3prl 血税密度、3prn 门拦格挡救场、3sec 沙坑封底、滑溜折算/集火粘性/端到端多段牌等全部既有夹具通过）。
+- `git diff` 已完整回读：brain/policy.py（+27/-1，破层抵扣+双向留痕）、brain/knowledge.py（+10 一个静态键）、brain/selfcheck.py（+34/-6 六分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

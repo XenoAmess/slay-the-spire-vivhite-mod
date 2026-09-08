@@ -4902,9 +4902,11 @@ def main() -> int:
     assert mixed_target == 1 and "普通目标" in mixed_why, \
         f"滑溜逐目标状态污染普通目标: target={mixed_target} why={mixed_why}"
 
-    # 3xg-payback（第362局 VANTOM F17）：自付速率占主导且 SLIPPERY 将单发
-    # 折成 1 点实际移除时，单体生命支付攻击不得继续沿用致死竞速豁免；普通
-    # 目标的实际回报、斩杀候选和显式关闭键都必须保持可用。
+    # 3xg-payback（第362局 VANTOM F17；第386~391局批修订破层抵扣）：自付速率
+    # 占主导且 SLIPPERY 将单发折成 1 点实际移除时，单体生命支付攻击不得继续
+    # 沿用致死竞速豁免；但破层是解锁全额伤害的必经进度，低价烧墙（实付≤移除
+    # +破层抵扣，默认 1.0/层）自本批起放行并留痕，高价謦欬（实付≥4）维持拦截；
+    # 普通目标的实际回报、斩杀候选和两个显式关闭键都必须保持可用。
     vknow_payback = _vivhite_know("sts2-selfcheck-vhpayback-")
     vpol_payback = policy.Policy(vknow_payback, random.Random(13))
     vpol_payback._race_rounds = 1
@@ -4919,8 +4921,16 @@ def main() -> int:
             {"name": "LifeCost", "current_value": 2},
         ],
     }
+    payback_card_hi = dict(payback_card, name="绯色面积", dynamic_values=[
+        {"name": "Damage", "current_value": 10},
+        {"name": "LifeCost", "current_value": 4},
+    ])
     payback_slippery = vpol_payback._score_play(
         payback_card, [sl_enemy(layers=8)], 0, 0, 2,
+        vpol_payback.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    payback_slippery_hi = vpol_payback._score_play(
+        payback_card_hi, [sl_enemy(layers=8)], 0, 0, 2,
         vpol_payback.know.policy, my_hp=80, my_max_hp=80,
         cur_energy=3, kill_race=True, run_deck=[])
     payback_plain = vpol_payback._score_play(
@@ -4931,9 +4941,16 @@ def main() -> int:
         payback_card, [sl_enemy(hp=1, layers=8)], 0, 0, 2,
         vpol_payback.know.policy, my_hp=80, my_max_hp=80,
         cur_energy=3, kill_race=True, run_deck=[])
-    assert payback_slippery[0] <= -49.0 \
-            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" in payback_slippery[2], \
-        f"自付占主导时低回报单体攻击未被压低: {payback_slippery}"
+    # 破层抵扣放行：实付2≤实际移除1+破层1，不再压禁玩线，理由带放行留痕。
+    assert payback_slippery[0] > -1.0 \
+            and "VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT" in payback_slippery[2] \
+            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE：" not in payback_slippery[2], \
+        f"低价烧墙未按破层抵扣放行: {payback_slippery}"
+    # 高价謦欬（实付4>移除1+抵扣1）维持 362 局自杀螺旋拦截边界。
+    assert payback_slippery_hi[0] <= -49.0 \
+            and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" in payback_slippery_hi[2] \
+            and "+破层抵扣1" in payback_slippery_hi[2], \
+        f"自付占主导时高价低回报单体攻击未被压低: {payback_slippery_hi}"
     assert payback_plain[0] > -1.0 \
             and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" not in payback_plain[2], \
         f"普通目标实际回报被误拦: {payback_plain}"
@@ -4952,6 +4969,21 @@ def main() -> int:
     assert payback_rollback[0] > -1.0 \
             and "VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE" not in payback_rollback[2], \
         f"关闭键未恢复旧竞速评分: {payback_rollback}"
+    # 抵扣键=0 回滚：低价烧墙恢复 362 局旧口径（禁玩线+原注记、无放行留痕）。
+    vknow_payback_nc = _vivhite_know("sts2-selfcheck-vhpayback-nc-")
+    vknow_payback_nc.policy["vivhite_race_payback_slippery_credit"] = 0
+    vpol_payback_nc = policy.Policy(vknow_payback_nc, random.Random(13))
+    vpol_payback_nc._race_rounds = 1
+    vpol_payback_nc._race_self_paid_rate = 13.0
+    vpol_payback_nc._race_loss_rate = 5.0
+    payback_no_credit = vpol_payback_nc._score_play(
+        payback_card, [sl_enemy(layers=8)], 0, 0, 2,
+        vpol_payback_nc.know.policy, my_hp=80, my_max_hp=80,
+        cur_energy=3, kill_race=True, run_deck=[])
+    assert payback_no_credit[0] <= -49.0 \
+            and "实付2血>实际移除1，自付速率占主导" in payback_no_credit[2] \
+            and "VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT" not in payback_no_credit[2], \
+        f"抵扣键=0 未回滚旧拦截口径: {payback_no_credit}"
 
     # 端到端：同场重锤与双重打击应选多段牌；只有重锤时仍正常出牌而非禁玩。
     def sl_combat_state(hand):

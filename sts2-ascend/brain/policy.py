@@ -4879,8 +4879,27 @@ class Policy:
                         s += _sticky_v
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
+                # 滑溜破层抵扣（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT，
+                # 第386~391局批复盘）：滑溜层把每次命中压成 1 点实际移除，
+                # 但破层本身是解锁后续全额伤害的必经进度，旧口径只按当次
+                # 移除计价等价于把烧墙期全部謦欬攻击判负。391 局 F17
+                # VANTOM（8 层开局）T2/T5/T6 弦光投影（实付2血）被
+                # 「实付2>移除1」压到禁玩线，竞速态残能空留，意图从 5 滚到
+                # 28，T6 判死后 T10 阵亡。每层实际破层按本键（默认 1.0/层，
+                # 0=回滚旧口径）计入回报抵扣：实付2>移除1+破层1 不再成立
+                # 即放行低价烧墙；实付≥4 的高价謦欬仍被拦，362 局自杀螺旋
+                # （自付13/回合 vs 敌方净损5/回合）的拦截边界不变。
+                _payback_break_credit = 0.0
+                if slippery_broken > 0:
+                    try:
+                        _payback_break_credit = float(slippery_broken) * float(
+                            pol.get("vivhite_race_payback_slippery_credit",
+                                    1.0) or 0.0)
+                    except (TypeError, ValueError, OverflowError):
+                        _payback_break_credit = 0.0
                 _payback_blocked = bool(
                     _vivhite_payback_paid > max(0.0, float(eff))
+                    + _payback_break_credit
                     and not killed)
                 if _payback_blocked:
                     s = floor_score
@@ -4895,9 +4914,18 @@ class Policy:
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
                     if _payback_blocked:
+                        _payback_cmp = f"实际移除{eff:g}"
+                        if _payback_break_credit > 0.0:
+                            _payback_cmp += f"+破层抵扣{_payback_break_credit:g}"
                         why += (f"｜VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE："
-                                f"实付{_vivhite_payback_paid:g}血>实际移除{eff:g}"
+                                f"实付{_vivhite_payback_paid:g}血>{_payback_cmp}"
                                 "，自付速率占主导")
+                    elif (_payback_break_credit > 0.0
+                          and _vivhite_payback_paid > max(0.0, float(eff))):
+                        why += (f"｜破层抵扣{_payback_break_credit:g}放行：实付"
+                                f"{_vivhite_payback_paid:g}≤实际移除{eff:g}"
+                                f"+破层{slippery_broken}"
+                                "（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT）")
                     if slippery > 0:
                         why += (f"｜滑溜{slippery:g}层，逐段折算≈{eff:.1f}，"
                                 f"预计破{slippery_broken}层")
