@@ -6740,6 +6740,44 @@ class Policy:
                     detail.append(
                         f"余裕供给稀缺加分（卡组无条件余裕源{_m_have}张，"
                         f"+{_m_bonus * _m_scarce:.1f}）")
+        # 謦欬卡组血税密度计价（VIVHITE_LIFE_COST_DECK_TAX，第 320~336 局
+        # 批复盘新增，静态键）：謦欬是全目录机制（58/61 张），但拿牌端对
+        # 卡组累计生命支付血税零约束——本批 17/17 局终局卡组生命支付牌
+        # 占比 88~100%（目录血税合计 38~120），实测自损 ≥ 敌方掉血 50%
+        # （321/322/328/329/330/336 六局自损反超敌方，329 局 292 vs 201）；
+        # 出牌侧双旋钮（life_cost_weight 触底 -2.98 / hp_cost_play_margin
+        # 顶格 3.00）已全尽，reflect 留痕「双旋钮全尽，謦欬证据彻底停止
+        # 吸收」。单牌估值只按自身 life_cost×weight 常数计价，不看卡组
+        # 累计血税——余裕供给（cap 3 张）追不上时，每张新謦欬牌的边际
+        # 实付递增却仍按面值计价，336 局单局拿 22 张生命支付牌（终局
+        # 血税 110）。卡组目录血税合计超出软顶后，对新增生命支付牌按
+        # 超出比例×自身血税线性扣分（soft cap 以下零差异、余裕源等
+        # 零血税候选不受影响）；tax=0 一键回滚（旧行为零差异），空卡组
+        # 上下文（升级/删除/献祭评估）与非白绮角色天然不受影响。
+        _lc_tax = float(pol.get("vivhite_life_cost_pick_tax", 0.0) or 0.0)
+        if (deck and _lc_tax > 0.0
+                and self.character_strategy.profile_id == VIVHITE_PROFILE_ID):
+            _lc_entry = self._strategy_card(card)
+            _lc_self = (max(0.0, float(_lc_entry.mechanics.life_calculation_cost))
+                        if _lc_entry is not None else 0.0)
+            if _lc_self > 0.0:
+                _lc_cap = max(1.0, float(
+                    pol.get("vivhite_life_cost_deck_cap", 60.0) or 60.0))
+                _lc_have = 0.0
+                for _lc_c in deck:
+                    _lc_ce = self._strategy_card(_lc_c)
+                    if _lc_ce is not None:
+                        _lc_have += max(0.0, float(
+                            _lc_ce.mechanics.life_calculation_cost))
+                _lc_over = clamp((_lc_have - _lc_cap) / _lc_cap, 0.0, 1.0)
+                if _lc_over > 0.0:
+                    _lc_pen = _lc_tax * _lc_over * _lc_self
+                    value -= _lc_pen
+                    if detail is not None:
+                        detail.append(
+                            f"謦欬血税密度扣分（卡组目录血税{_lc_have:.0f}"
+                            f"/软顶{_lc_cap:.0f}，-{_lc_pen:.1f}，"
+                            "VIVHITE_LIFE_COST_DECK_TAX）")
         return value
 
     def _reward(self, state: dict, ctx) -> Decision:

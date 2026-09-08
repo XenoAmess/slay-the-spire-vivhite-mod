@@ -2857,6 +2857,66 @@ def main() -> int:
             and "余裕供给稀缺加分" not in d_obs_off.reason), \
         f"回滚键下观测未消失或选择漂移: {d_obs_off.reason}"
 
+    # 3prl) 謦欬血税密度拿牌扣分（VIVHITE_LIFE_COST_DECK_TAX，第 320~336 局
+    #      批复盘）：本批 17/17 局终局卡组生命支付牌占比 88~100%（目录血税
+    #      合计 38~120）、实测自损 ≥ 敌方掉血 50%（六局反超），出牌侧双旋钮
+    #      已全尽停止吸收。软顶（默认 60）以下零差异；超顶后按 超出比例×
+    #      候选自身血税×tax 线性扣分；零血税候选（AXIOM_RING）不受影响；
+    #      tax=0 一键回滚；空卡组上下文（升级/删除评估）天然不受影响。
+    def _vlc_deck(n_projection, n_closed_proj):
+        return ([_vm_card("VIVHITE_CARD_LUMINOUS_PROJECTION",
+                          "弦光投影", "Attack")] * n_projection
+                + [_vm_card("VIVHITE_CARD_CLOSED_PROJECTION",
+                            "闭域投影", "Attack", 2)] * n_closed_proj)
+
+    _lc_cand = _vm_card("VIVHITE_CARD_CHROMATIC_LIMIT", "绯彩极限",
+                        "Attack", 2)  # 目录血税 8
+    _lc_heavy = _vlc_deck(10, 10)     # 目录血税 10×2+10×4=60 → 恰在软顶
+    _lc_over = _vlc_deck(12, 12)      # 目录血税 72 → 超出比例 (72-60)/60=0.2
+    vknow_lc = _vivhite_know("sts2-selfcheck-vlctax-")
+    vpol_lc = policy.Policy(vknow_lc, random.Random(17))
+    vknow_lcb = _vivhite_know("sts2-selfcheck-vlctax-off-")
+    vknow_lcb.policy["vivhite_life_cost_pick_tax"] = 0.0
+    vpol_lcb = policy.Policy(vknow_lcb, random.Random(17))
+    # 软顶以下（恰 60）：开/关键零差异
+    v_cap_on = vpol_lc.eval_reward_card(dict(_lc_cand), list(_lc_heavy))
+    v_cap_off = vpol_lcb.eval_reward_card(dict(_lc_cand), list(_lc_heavy))
+    assert abs(v_cap_on - v_cap_off) < 1e-9, \
+        f"血税合计未超软顶不得扣分: on={v_cap_on} off={v_cap_off}"
+    # 超顶：扣分 = 2.0 × 0.2 × 8 = 3.2
+    v_over_on = vpol_lc.eval_reward_card(dict(_lc_cand), list(_lc_over))
+    v_over_off = vpol_lcb.eval_reward_card(dict(_lc_cand), list(_lc_over))
+    assert abs((v_over_off - v_over_on) - 2.0 * 0.2 * 8.0) < 1e-9, \
+        f"超顶扣分应为 tax×超出比例×自身血税=3.2: on={v_over_on} off={v_over_off}"
+    _lc_det: list[str] = []
+    vpol_lc.eval_reward_card(dict(_lc_cand), list(_lc_over), detail=_lc_det)
+    assert any("謦欬血税密度扣分" in d and "VIVHITE_LIFE_COST_DECK_TAX" in d
+               for d in _lc_det), f"超顶扣分缺 detail 留痕: {_lc_det}"
+    # 零血税候选（AXIOM_RING lc=0）即使在超顶卡组也零差异
+    v_zero_on = vpol_lc.eval_reward_card(dict(_m_axiom), list(_lc_over))
+    v_zero_off = vpol_lcb.eval_reward_card(dict(_m_axiom), list(_lc_over))
+    assert abs(v_zero_on - v_zero_off) < 1e-9, \
+        f"零血税候选不得受密度扣分影响: on={v_zero_on} off={v_zero_off}"
+    # 空卡组上下文（升级/删除评估）天然不受影响
+    v_lempty_on = vpol_lc.eval_reward_card(dict(_lc_cand), [])
+    v_lempty_off = vpol_lcb.eval_reward_card(dict(_lc_cand), [])
+    assert abs(v_lempty_on - v_lempty_off) < 1e-9, \
+        f"空卡组上下文不得触发密度扣分: on={v_lempty_on} off={v_lempty_off}"
+    # 非白绮角色零改动（目录外角色 _strategy_card 恒 None）
+    nv_lc_know = knowledge.Knowledge(Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-vlctax-nv-")))
+    nv_lc_pol = policy.Policy(nv_lc_know, random.Random(17))
+    nv_lc_know2 = knowledge.Knowledge(Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-vlctax-nv-off-")))
+    nv_lc_know2.policy["vivhite_life_cost_pick_tax"] = 0.0
+    nv_lc_pol2 = policy.Policy(nv_lc_know2, random.Random(17))
+    _nv_card = {"card_id": "STRIKE", "name": "打击", "card_type": "Attack",
+                "energy_cost": 1, "dynamic_values": []}
+    _nv_deck = [dict(_nv_card)] * 20
+    assert abs(nv_lc_pol.eval_reward_card(dict(_nv_card), _nv_deck)
+               - nv_lc_pol2.eval_reward_card(dict(_nv_card), _nv_deck)) < 1e-9, \
+        "非白绮角色不得受謦欬血税密度扣分影响"
+
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself
     # (or Event Loop), return to combat for free, and reopen the same selection

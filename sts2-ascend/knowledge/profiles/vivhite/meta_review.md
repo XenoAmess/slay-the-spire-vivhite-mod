@@ -650,3 +650,40 @@ esc（滚雪球，_esc_rounds≥2）战斗中，实测口径竞速判死入锁�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 320~336 局批复盘：謦欬卡组血税密度拿牌计价——出牌侧双旋钮全尽后的供给端收口（VIVHITE_LIFE_COST_DECK_TAX）
+
+日期：2026-09-08
+
+## HYPOTHESIS
+
+謦欬是全目录机制（58/61 张 life_calculation_cost>0），但拿牌端对卡组累计生命支付血税零约束：单牌估值只按自身 life_cost×weight 常数计价，不看卡组已有血税总量——余裕供给（margin_deck_cap 3 张）追不上时，每张新謦欬牌的边际实付递增却仍按面值计价。EVIDENCE：本批 17/17 局终局卡组生命支付牌占比 88~100%（目录血税合计 38~120、均值 ~76），实测自损 ≥ 敌方掉血 50%，321（204 vs 130）/322（200 vs 160）/328（281 vs 256）/329（292 vs 201）/330（224 vs 209）/336（250 vs 244）六局自损反超敌方；出牌侧双旋钮已全尽（life_cost_weight -2.98 触底、hp_cost_play_margin 3.00 顶格，reflect 连续多局留痕「双旋钮全尽，謦欬证据彻底停止吸收并留痕」）；336 局单局拿 22 张生命支付牌、终局血税 110，F33 无厌沙虫战 T2 起 VIVHITE_LIVE_ESTIMATE 持续深负（-13.20/-11.90）仍靠僵局放行打出。EXPECTED_SIGNAL：未来 3~10 局终局卡组目录血税合计与自损/掉血比从 ~1.0 回落、决策链选牌理由出现「謦欬血税密度扣分」留痕；若到达层数显著恶化则 policy.json 置 vivhite_life_cost_pick_tax=0 一键回滚（扣分与留痕同灭，软顶以下旧行为零差异）。
+
+## EVIDENCE
+
+- 逐局对账本批 17 个 run 文件（320~336）：终局卡组目录血税合计 38~120，余裕源 1~6 张；战斗注记自损合计/敌方掉血合计逐局比值 0.67~1.57，17 局全部 ≥50%，六局 >100%（最高 329 局 292 vs 201=1.45）。
+- 第 336 局（2EE2CX3DTL6J，F33 阵亡于 THE_INSATIABLE）完整链已逐条阅读：终局 33 张含 30 张生命支付牌（血税 110）；F33 Boss 战 T2 hp-cost=8 margin=0/spent=0 打出绯彩极限，T5 末 hp 113、敌意图 20，T6 被一波击穿（全场掉血 137｜自损 10）——出牌侧已无可收紧空间，缺口在卡组构成。
+- reflect.py 謦欬通道现状：`vivhite_param_life_cost_weight` 触及 BOUNDS 下限 -3.0（实测 -2.98，余量 0.02<步长 0.05）后证据改接 `vivhite_hp_cost_play_margin`，该门亦顶格 3.00；连续多局 lessons 留痕「双旋钮全尽，謦欬证据彻底停止吸收并留痕」——自损证据已无在线旋钮可吸收，必须新开有界杠杆。
+- 拿牌端现状核查（policy.py `eval_reward_card`）：既有 `vivhite_margin_pick_bonus` 只奖励余裕供给端（cap 3 张，本批终局余裕源 2~6 张说明已在起效），对称的「血税密度超顶扣分」不存在；单牌 life_cost 按 weight 常数计价与卡组累计量无关。
+- 相邻批次预注册对账：307~314 批 VIVHITE_MARGIN_PICK_OBS 已在真实拿牌路径显形，本批 run 理由可见余裕稀缺加分多次触发——余裕供给端机制健康，佐证剩余缺口在血税密度侧。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py（`eval_reward_card`，余裕稀缺加分块之后）：新增 VIVHITE_LIFE_COST_DECK_TAX——白绮 profile、deck 非空、候选目录血税 >0 且卡组目录血税合计超过软顶（默认 60，约起始卡组 20 的 3 倍）时，按 `tax（默认 2.0）× clamp(超出比例,0,1) × 候选自身血税` 从拾取/购买价值线性扣分，detail 留痕「謦欬血税密度扣分（卡组目录血税N/软顶M，-X，VIVHITE_LIFE_COST_DECK_TAX）」。软顶以下零差异；零血税候选（余裕源/能力牌）不受影响；空卡组上下文（升级/删除/献祭评估）与非白绮角色天然不受影响；tax=0 一键回滚。覆盖奖励选牌、CARD_SELECTION、商店购买全部 eval_reward_card 消费端；升级/删除端传空 deck 不受影响。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 `vivhite_life_cost_pick_tax: 2.0`（静态键，0=关闭回滚）与 `vivhite_life_cost_deck_cap: 60.0`（软顶与超出比例分母），注释记录本批 17 局实证与双旋钮全尽背景。
+- sts2-ascend/brain/selfcheck.py：新增 3prl 夹具六分支——① 血税恰在软顶（60）开/关键零差异；② 超顶（72，超出比例 0.2）扣分恰为 2.0×0.2×8=3.2；③ detail 留痕带审计标记；④ 零血税候选（AXIOM_RING）超顶卡组零差异；⑤ 空卡组上下文零差异；⑥ 非白绮角色（STRIKE×20）开/关键零差异。
+- 不改 reflect 通道、不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 决策链选牌/购牌理由在卡组血税 >60 后出现「謦欬血税密度扣分（卡组目录血税N/软顶60，-X）」留痕，可直接与本批 336 局 22 张生命支付牌对账；② 终局卡组目录血税合计从本批均值 ~76 回落、自损/掉血比从 ~1.0 显著下行（首场验证：任一终局血税 ≤55 且自损/掉血 <0.8）；③ 若留痕高频出现但血税与自损比不回落，说明扣分幅度不足，下一批上调 `vivhite_life_cost_pick_tax` 或下调 `vivhite_life_cost_deck_cap`。证伪/回滚：留痕从不出现 → 复查 eval_reward_card 消费路径；到达层数（floor_sum_raw 均值）较本批显著恶化 → policy.json 置 `vivhite_life_cost_pick_tax=0` 整体撤回（扣分与留痕同灭，软顶以下旧行为零差异）。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3prl 六分支；既有 3prj/3prk 余裕加分夹具、3pri/3prh 謦欬门夹具、3prf 先验下限夹具与全部既有夹具通过）。
+- 完整 diff 已回读：brain/policy.py（+38，密度扣分+留痕）、brain/knowledge.py（+10 两个静态键）、brain/selfcheck.py（+60 六分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
