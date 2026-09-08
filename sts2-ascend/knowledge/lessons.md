@@ -10182,3 +10182,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.559929297775491局)，BULLY(10分/3.6341644912633457局)，HAVOC(11分/2.907331593010676局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1326 胜，当前目标进阶 0
+
+## 第 1327 局复盘（2026-09-08 19:13）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：POMMEL_STRIKE, HAND_OF_GREED, HOWL_FROM_BEYOND, TRUE_GRIT, UNMOVABLE, UNRELENTING, ARMAMENTS, FLAME_BARRIER, HOWL_FROM_BEYOND, MOLTEN_FIST, THUNDERCLAP, SHRUG_IT_OFF, BRAND, IRON_WAVE, CINDER, CINDER
+- 本局遗物：JUZU_BRACELET
+- 战斗记录：F15 Monster战 掉血12; F17 Boss战 掉血37｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血5; F20 Monster战 掉血13; F21 Monster战 掉血37; F22 Monster战 掉血25｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.287193616073084局)，OFFERING(25分/26.084632787983537局)，PRIMAL_FORCE(24分/5.0700228817614965局)，FIEND_FIRE(24分/34.25943042192544局)，MANGLE(24分/93.36586979403566局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.543969545233277局)，BULLY(10分/3.621444915543924局)，HAVOC(11分/2.8971559324351386局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.38（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1327 胜，当前目标进阶 0
