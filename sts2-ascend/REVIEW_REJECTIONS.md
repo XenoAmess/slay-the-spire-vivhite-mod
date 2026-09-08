@@ -373,3 +373,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-07 23:30:06 | 第 1295~1301 局 | `9a96c412` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `61fe79b9` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 61fe79b9 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260908-042545-1788812745750126400-4c86917f -->
 | 2026-09-08 04:25:45 | 第 295~305 局 | `4c86917f` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `c51b8252` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 c51b8252 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260908-151840-1788851920186074500-380d8ec0 -->
+| 2026-09-08 15:18:40 | 第 355~360 局 | `380d8ec0` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260908-151840-1788851920186074500-380d8ec0` | 复盘进程未成功完成 |
