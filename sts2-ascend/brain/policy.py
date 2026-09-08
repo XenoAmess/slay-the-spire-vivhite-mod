@@ -4583,13 +4583,17 @@ class Policy:
             # layer.  The historical Ironclad text heuristic remains untouched.
             self_cost = 0
         # 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
-        # 单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧此前都零
+        # 单体攻击分支常规语境计价、AOE 分支仅致死语境计价，两侧此前都零
         # 留痕——1303 御血术跨 10 场战斗可行动段自损 27、1305 御血术+
         # 打出 14 次、1306-F17 非致死回合打出突破（自付1），持久链血价
         # 留痕全部 0 条，1285~1289 批「与攻击分支同一把血价尺」的主张对
         # 攻击路由的耗血牌永远无法用真机结算。纯观测：注记只描述已发生
         # 的计价/未计价事实，评分、阈值与所有分支零改动；观测键
         # hp_cost_atk_pricing_trace=0 时旧口径逐字不变。
+        # 第1325~1330局批补充：单体自残在 desperate/race_allin 非斩杀语境
+        # 被 elif 链短路、计价豁免且零留痕（1329-F15 御血术+ 20 血孤注与
+        # 4 血败局全攻两次打出均无痕迹），与 AOE 同语境半价计价+留痕不
+        # 对称——豁免语境追加「豁免疫价」披露注记，计价行为不变。
         _hp_atk_trace = float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
         # VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE：第362局 VANTOM F17 观测到
         # 可行动段自付速率 13/回合、敌方净损 5/回合；在 SLIPPERY 逐 hit
@@ -4978,10 +4982,21 @@ class Policy:
                     why += "｜竞速格挡下限预留"
                 if race_allin and not best_kill:
                     why += "｜败局竞速全攻"
+                    if self_cost and _hp_atk_trace:
+                        # 竞速豁免语境计价豁免的事实披露（第1325~1330局批）
+                        why += (f"｜自残{self_cost}豁免疫价"
+                                "（HP_COST_ATK_PRICING）")
             elif desperate and not best_kill:
                 why += "｜无甲孤注抢斩杀"
+                if self_cost and _hp_atk_trace:
+                    # 孤注豁免语境计价豁免的事实披露（第1325~1330局批）
+                    why += (f"｜自残{self_cost}豁免疫价"
+                            "（HP_COST_ATK_PRICING）")
             elif race_allin and not best_kill:
                 why += "｜败局竞速全攻"
+                if self_cost and _hp_atk_trace:
+                    why += (f"｜自残{self_cost}豁免疫价"
+                            "（HP_COST_ATK_PRICING）")
             elif self_cost:
                 if best_kill and len(enemies) == 1:
                     pass  # 击杀最后一个敌人直接终局，自残值得

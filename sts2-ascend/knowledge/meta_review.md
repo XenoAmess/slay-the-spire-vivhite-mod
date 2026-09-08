@@ -7523,3 +7523,136 @@ retry_resolution: none (no replay target; local production observability change)
    分布；② 顶格落选反事实可翻案的独立对局计数；③ AOE「非致死未计价」
    第 3 独立对局（结案线）；④ JOINT_FLIP_TTK_CAP「否决后改锻造战损」
    分子累计；⑤ race_audit 悲观率台账续记。
+
+# 2026-09-08｜第 1325~1330 局复盘（异步追及队列 6 局 exact_batch 全败；观测位 ×1：HP_COST_ATK_PRICING 豁免疫价披露——单体自残孤注/败局全攻语境补留痕）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  replay target；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+retry_resolution: none (no replay target; local production observability change)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：单体自残攻击在 desperate（无甲孤注抢斩杀）/race_allin
+  （败局竞速全攻）非斩杀语境下被 elif 链短路——计价豁免且零留痕（与 AOE
+  分支同语境「半价计价+留痕」不对称，4585 注释旧称「单体全语境计价」实际
+  不覆盖豁免语境），「豁免疫价」的频率、当场血量与是否斩杀完全不可观测。
+  补披露注记后，未来 3~10 局可直接计数：若豁免高频发生在 ≤5 血非斩杀，
+  豁免疫价可能偶发自杀；若零出现，证明豁免语境实际不吃自残牌，缺口关闭。
+- **EVIDENCE**：1329（HJLLUKGSXVTB）F15 精英战（SKULKING_COLONY，阵亡局）
+  20:49:10 御血术+（自残2）20 血「无甲孤注抢斩杀」打出、20:49:18 同牌
+  4 血「败局竞速全攻」打出（4→2 血，当回合即进入 2 血吃 18 意图终局）——
+  两条理由零血价痕迹；同局 F14 20:48:31 同牌 43 血非豁免语境带
+  「自残2计价」，证明留痕通道本身在产。本批 6 局全量回扫：单体自残无留痕
+  打出恰 2 条、全部落在 1329 F15 豁免语境；AOE 自残 24 条全部有注记。
+  policy.py 4968~4984 elif 链核读：desperate/race_allin 任一成立即短路，
+  4985 `elif self_cost:` 计价分支不可达；AOE 分支 4750~4777 致死语境
+  半价计价并留痕——不对称实锤。
+- **EXPECTED_SIGNAL**：未来 3~10 局，孤注/败局全攻语境打出单体自残牌时
+  理由出现「自残N豁免疫价（HP_COST_ATK_PRICING）」；≥3 个独立对局出现
+  ≤5 血非斩杀豁免 → 立项评估豁免疫价上限（如 ≤2 血非斩杀回到半价计价）；
+  注记零出现但自残攻击牌仍在拿 → 核对持久链截断口径而非行为。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1325..1330]，exact 6/6、missing=0；6 局全败（生涯
+  0/1330）。
+- 死亡分布：一幕 Boss（F17）4 局（1325/1326/1328/1330，前夜判死全部
+  应验）、二幕走廊 1 局（1327 F22，F17「T2判死→实战9回合获胜」越墙后
+  31% 血死亡谷强制进战）、一幕精英 1 局（1329 F15 SKULKING_COLONY，
+  32% 血灰区无候选强制进场）。
+- 主样本 1330（DKQAA2A6Q7NA）packet 内 106 条切片 + decision_aggregates
+  （play_card 77 / end_turn 28）已逐条核读：F1 涅奥轰鸣海螺（经验口径
+  合规）、F6 商店删打击购余烬、F8 无色药水 33 血（41%≤50%）兜底使用
+  合规、F15 高危组合转防守节奏后 5 血半价计价收口、F17 终局 T3判死→
+  5 回合阵亡全部能量真尽收口，执行层零新缺陷；死因=卡组输出密度
+  （先验 13 伤/回合 vs 血池均值 256，竞速预演击杀需 22 回合＞满血可
+  存活 6 回合）。
+- 部署时序：BURST_STARVE_SUPPLY_CAP_TRACE（1313~1318 批落盘）早于本批
+  全部对局，本批即其首验窗口；HP_COST_ATK_PRICING、BURST_STARVE_SUPPLY_
+  LEVER、RACE_AUDIT 链均先于本批全部对局，无 pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17 四局前夜竞速预演全部判死（击杀需
+   16~22 回合＞满血可存活 6 回合）且全部实战兑现；1325/1328 必败弃疗
+   改锻造、1326/1330 RACE_AUDIT_HEAL_OVERRIDE 回血（64%/38% 带内）——
+   两端杠杆按教义工作且均未翻盘，设计内终态，不重复立案。旋钮代谢链
+   全顶格，kill_race_prior_eff 触底 0.37，Boss 输出不足证据已封账。
+2. **BURST_STARVE_SUPPLY_CAP_TRACE 首验通过（4/3 独立对局）**：顶格
+   披露注记 13 条（1325×1 raw+10、1326×6 raw+5~+6、1328×3 raw+8~+10、
+   1329×3 raw+5~+10），全部落在中标侧；本批 supply_left>0 仅 2/43
+   （1327 火焰屏障 over 双重打击 +1.0、1330 彼岸咆哮 over 双重打击
+   +4.0），两例 offer_max 原始 delta 均未超 cap、落牌价值序正确——
+   顶格落选反事实可翻案 0 例，cap 零误伤直接读数第 1 批（预注册冻结
+   结案需 ≥3 批持续，续记）。supply_left>0 频率 18%→9.6%→4.7%，
+   杠杆方向持续应验。
+3. **HP_COST_ATK_PRICING AOE「非致死未计价」结案（证伪方向）**：本批
+   4 个独立对局 24 条（1325×8/1328×7/1329×3/1330×6），累计 6 个独立
+   对局 ≥3 结案线达标；但血量分布以 55%~100% 为主（<50% 仅 1329×1
+   @47.5%、1330×2 @43.8%/33.8%）——预注册第二条件「多发生在低血
+   （<50%）场景」被真机分布证伪：1 血自付在高血段确属廉价，AOE 对齐
+   单体全价口径的行为化不立项，该观察项按证伪结案。
+4. **1329 精英灰区死亡已吸收**：F15 以 32% 血无候选强制进精英（死亡谷
+   least-bad 同族），elite_grey_safety_mult 1.65→1.85 由 lessons 在线
+   吸收，复盘侧不重复加码。
+5. **竞速审计悲观率台账**：本批判死应验 +4（1325/1326/1328/1330 F17），
+   反向 +1（1327 F17「T2判死→实战9回合获胜」），续记不重复立案。
+
+## 三、本次调整（观测位 ×1：HP_COST_ATK_PRICING 豁免疫价披露）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **HP_COST_ATK_EXEMPT_TRACE**（单体自残孤注/败局全攻豁免语境零留痕；证据：1329-F15 御血术+ 自残2 在 20 血孤注与 4 血败局全攻两次打出均无血价痕迹 + policy.py 4968~4984 elif 链短路核读 + 全批回扫单体无留痕打出恰 2 条全落豁免语境；机制先例：HP_COST_ATK_PRICING / CARD_BURST_PICK_AUDIT 同款「消费路径无留痕=不可结算」） |
+| 代码动作 | brain/policy.py 单体攻击分支三个豁免出口（reserve+race_allin 嵌套、desperate elif、race_allin elif）在 `self_cost and _hp_atk_trace` 时追加「｜自残N豁免疫价（HP_COST_ATK_PRICING）」事实披露；4585 注释同步更正为「常规语境计价+豁免语境披露」 |
+| 性质边界 | 纯观测位：评分、阈值、分支、学习面全部零改动（selfcheck 3hcat ⑤⑥ 钉死观测键 off 时评分逐位相等）；注记只描述「计价已豁免」的既有事实，不新增/取消任何豁免；Vivhite 策略层 self_cost 归零路径不受影响；既有观测键 hp_cost_atk_pricing_trace=0 一键整体关闭 |
+| 测试 | brain/selfcheck.py 3hcat 新增 ⑤⑥ 四断言（⑤ desperate 孤注语境：御血术 20 血对 40 意图非斩杀 → 带「无甲孤注抢斩杀」+「自残2豁免疫价」，键 off 注记消失且评分逐位相等；⑥ race_allin 全攻语境：hopeless_race 非致死回合 → 带「败局竞速全攻」+同款披露，键 off 同上）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（22:06，含 3hcat①~④/3bsl①~⑥/3hcu 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「豁免疫价」注记出现率与独立对局数；② 豁免打出的当场 hp% 分布（≤5 血占比）；③ 豁免打出是否 best_kill；④ 豁免打出后的当场战损与终局对照 |
+| 继续调整条件 | ≥3 个独立对局出现 ≤5 血非斩杀豁免 → 立项「低血非斩杀豁免上限」最小行为闭环（如 ≤2 血回到半价计价）；注记零出现且孤注/全攻语境仍在产 → 证明豁免语境不吃自残牌，缺口关闭；注记高频但全部斩杀/高血 → 按设计工作结案 |
+| 撤回条件 | knowledge/policy.json 写 `hp_cost_atk_pricing_trace: 0` 即含新披露在内的全部血价留痕关闭（selfcheck 3hcat③⑤⑥ 为对照锚，评分逐位不变）；或删除 policy.py 三处追加段与 selfcheck 3hcat⑤⑥ 零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测位落地，
+   非登记延后）。
+2. **BURST_STARVE_SUPPLY_CAP_TRACE（1313~1318 批观测位）**：首验通过——
+   13 条顶格披露覆盖 4 个独立对局，cap 零误伤直接读数第 1 批；预注册
+   「零误伤持续 ≥3 批 → cap 冻结结案」续记（1/3）。
+3. **HP_COST_ATK_PRICING（1302~1306 批观测位）**：AOE「非致死未计价」
+   按证伪结案（≥3 独立对局达标但低血集中条件被真机分布排除）；单体
+   豁免语境盲区由本批 HP_COST_ATK_EXEMPT_TRACE 接续观测。
+4. **BURST_STARVE_SUPPLY_LEVER（1307~1312 批杠杆）**：supply_left>0
+   4.7%（2/43），自 18%→9.6% 持续下降，杠杆按设计工作，本体零改动。
+5. **JOINT_FLIP_TTK_CAP**：「否决后改锻造战损」分子本批 +2（1325/1328
+   改锻造仍死 F17），继续累计至预注册复核线。
+6. **SETTLE_TIMEOUT_CONCEDE_OBS / ENGINE_COMMIT_LOWHP_OBS /
+   RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD / HAND_TAX_PLAY_AUDIT**：本批
+   无对应现场（收口均能量真尽、无低血承诺/末点格挡竞争/族母遭遇），
+   顺延不判失效。
+7. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表）：1327 F22、
+   1329 F15 为死亡谷无候选强制进战同族；1330 无色药水 41% 血兜底使用
+   合规（词表盲区仍以「宁滥勿囤」兜底），续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **elif 链的短路顺序就是留痕的覆盖边界**：单体血价注记挂在
+   `elif self_cost:` 分支上，desperate/race_allin 先行短路后注记永远
+   不可达——「某分支有留痕」不等于「所有到达该分支的路径有留痕」，
+   观测位验收要逐条核对 elif 链每个出口的 why 组装。
+2. **注释里的「全语境」会被代码演进悄悄证伪**：4585 旧注释宣称「单体
+   全语境计价」，豁免疫价语境的实际行为与该宣称不符却长期无人发现——
+   覆盖面宣称必须配 selfcheck 锚（本批 3hcat⑤⑥），否则注释本身就是
+   下一个观测盲区。
+3. **分布型结案要预写证伪方向**：1302~1306 批为 AOE 对齐预注册了
+   「≥3 局且低血集中」双条件，本批 24 条样本坐实第一条件、证伪第二
+   条件——证伪结案同样闭环，避免了「不对称看着不顺眼就加码」的
+   无证据行为化。
+4. 观察点（下批复盘核对）：①「豁免疫价」注记首发与当场血量分布；
+   ② cap 零误伤读数第 2 批（冻结结案 1/3→2/3）；③ JOINT_FLIP_TTK_CAP
+   「否决后改锻造战损」分子累计；④ race_audit 悲观率台账续记；
+   ⑤ 1329 类精英灰区在 elite_grey_safety_mult=1.85 下的进场率变化。

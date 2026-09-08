@@ -11048,6 +11048,41 @@ def main() -> int:
         my_hp=32, my_max_hp=80, run_deck=[], kill_race=True)
     assert "自残1半价计价（HP_COST_ATK_PRICING）" in why_bt_doom, \
         f"判死竞速 AOE 自残未按半价留痕: {s_bt_doom}（{why_bt_doom}）"
+    # ⑤ 孤注豁免语境（第1325~1330局批）：致死缺口且无可负担格挡
+    #    （desperate），单体非斩杀自残的计价被 elif 链短路豁免——须带
+    #    「豁免疫价」披露注记；观测键=0 时注记消失且评分逐位相等
+    s_dsp, _, why_dsp = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "无甲孤注抢斩杀" in why_dsp, \
+        f"孤注夹具未进入 desperate 语境: {s_dsp}（{why_dsp}）"
+    assert "自残2豁免疫价（HP_COST_ATK_PRICING）" in why_dsp, \
+        f"孤注豁免语境单体自残未披露: {s_dsp}（{why_dsp}）"
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 0
+    s_dsp_off, _, why_dsp_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "自残" not in why_dsp_off and abs(s_dsp_off - s_dsp) < 1e-9, \
+        f"孤注豁免披露非纯观测: {s_dsp_off}vs{s_dsp}（{why_dsp_off}）"
+    # ⑥ 败局竞速全攻豁免语境：hopeless_race 且单回合非致死 → race_allin，
+    #    单体非斩杀自残同样豁免疫价，须带同款披露注记且评分零漂移
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
+    s_allin, _, why_allin = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[],
+        hopeless_race=True)
+    assert "败局竞速全攻" in why_allin, \
+        f"全攻夹具未进入 race_allin 语境: {s_allin}（{why_allin}）"
+    assert "自残2豁免疫价（HP_COST_ATK_PRICING）" in why_allin, \
+        f"败局竞速豁免语境单体自残未披露: {s_allin}（{why_allin}）"
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 0
+    s_allin_off, _, why_allin_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[],
+        hopeless_race=True)
+    assert "自残" not in why_allin_off and abs(s_allin_off - s_allin) < 1e-9, \
+        f"全攻豁免披露非纯观测: {s_allin_off}vs{s_allin}（{why_allin_off}）"
+    hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
 
     # 3bsl) 饥饿供给纠偏（BURST_STARVE_SUPPLY_LEVER，第1307~1312局批复盘）：
     #      CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结算——61 条真机
