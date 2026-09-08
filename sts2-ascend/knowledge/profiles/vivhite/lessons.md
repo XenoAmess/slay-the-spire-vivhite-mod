@@ -3989,3 +3989,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.6198211685210806局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.571371425166203局)，VIVHITE_CARD_ASTRAL_PURSUIT(23分/3.164179660733897局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 82%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.59 → 0.56（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损55/掉血89（62%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/359 胜，当前目标进阶 0
+
+## 第 360 局复盘（2026-09-08 14:58）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 VINE_SHAMBLER
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损18（可行动段18/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Unknown战 掉血17｜自损14（可行动段14/非行动段17，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血24｜自损23（可行动段23/非行动段15，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血37｜自损16（可行动段16/非行动段16，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/9.943789866085556局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/27.032549694949754局)，HAND_OF_GREED(33分/7.956791791012022局)，VIVHITE_CARD_PERFECT_SYNTHESIS(32分/47.285073049060465局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/51.81913438707636局)
+- 当前低价值卡牌：AUTOMATION(17分/2.610651794431257局)，VIVHITE_CARD_GEODESIC_VEIL(18分/2.5623716251781214局)，VIVHITE_CARD_ASTRAL_PURSUIT(23分/3.1531050319213283局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/360 胜，当前目标进阶 0
