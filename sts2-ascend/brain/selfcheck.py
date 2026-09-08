@@ -2649,6 +2649,55 @@ def main() -> int:
     assert d_g2.action == "play_card", \
         f"致死回合必须豁免余量门（买命/抢斩杀当场兑现）: {d_g2}"
 
+    # 3prt) 謦欬同回合复打递增税（VIVHITE_HP_REPEAT_PLAY_TAX，第 427~433 局批复盘）：
+    #      433 局 F30 T2 守恒递归（自我复制引擎牌）六连打，90→30 血单回合自损 60
+    #      （全场自损 70 vs 敌方掉血 68），F30 出场 22 血、Boss 37% 血入场四回合
+    #      爆毙——评分循环对本回合已实付血税零记忆，余量门门带对首打与第六打
+    #      一视同仁（trace 候选分恒 33.1）。同回合第 N 次打出同名謦欬牌时余量
+    #      门带追加 实付×(N-1)×tax 递增门槛：首打零差异、复打被拦且留痕、回合
+    #      切换复打账清零；tax=0 一键回滚（旧行为零差异）。
+    vknow_rt = _vivhite_know("sts2-selfcheck-vhgate-repeat-")
+    vknow_rt.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_rt.policy["vivhite_hp_repeat_play_tax"] = 50.0
+    vpol_rt = policy.Policy(vknow_rt, random.Random(11))
+    vctx_rt = _vgate_ctx()
+    d_rt1 = vpol_rt.decide(_vgate_state(85, 0), vctx_rt)
+    assert d_rt1.action == "play_card", \
+        f"同回合首打必须照旧放行（复打税对首打零差异）: {d_rt1}"
+    # 模拟 agent 成功回执：首打 commit 追加进同一 credit_tags，下一 tick 复打
+    vctx_rt.credit_tags.append(
+        ("combat_play_commit", "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         False, False, 10.0, 1, ""))
+    d_rt2 = vpol_rt.decide(_vgate_state(83, 0), vctx_rt)
+    assert d_rt2.action == "end_turn", \
+        f"同回合第 2 次复打应被递增门槛拦下: {d_rt2}"
+    assert "謦欬出牌门拦下" in d_rt2.reason \
+        and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_rt2.reason \
+        and "VIVHITE_HP_REPEAT_PLAY_TAX" in d_rt2.reason, \
+        f"复打拦截缺决策链留痕: {d_rt2.reason}"
+    st_rt3 = _vgate_state(83, 0)
+    st_rt3["turn"] = 2
+    d_rt3 = vpol_rt.decide(st_rt3, vctx_rt)
+    assert d_rt3.action == "play_card", \
+        f"回合切换后复打账必须清零（次回合首打照旧放行）: {d_rt3}"
+    # tax=0 一键回滚：同回合复打与旧口径零差异、不留痕
+    vknow_ro2 = _vivhite_know("sts2-selfcheck-vhgate-repeat-off-")
+    vknow_ro2.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_ro2.policy["vivhite_hp_repeat_play_tax"] = 0.0
+    vpol_ro2 = policy.Policy(vknow_ro2, random.Random(11))
+    vctx_ro2 = _vgate_ctx()
+    d_ro2a = vpol_ro2.decide(_vgate_state(85, 0), vctx_ro2)
+    assert d_ro2a.action == "play_card", \
+        f"回滚键下首打必须照旧出牌: {d_ro2a}"
+    vctx_ro2.credit_tags.append(
+        ("combat_play_commit", "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         False, False, 10.0, 1, ""))
+    d_ro2b = vpol_ro2.decide(_vgate_state(83, 0), vctx_ro2)
+    assert d_ro2b.action == "play_card", \
+        f"tax=0 回滚键下同回合复打不得被复打税拦下: {d_ro2b}"
+    assert "VIVHITE_HP_REPEAT_PLAY_TAX" not in d_ro2b.reason, \
+        f"回滚键下不得出现复打税留痕: {d_ro2b.reason}"
+
     # 3pri) 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘）：
     #      余量门顶格 3.0 后低危长战放血死循环——243 局 F3 拖 56 回合（自损46/
     #      掉血39）、238 局 F2 拖 76 回合阵亡（自损64/掉血78）、235 局 F3 拖

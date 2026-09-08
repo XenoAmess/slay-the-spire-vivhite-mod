@@ -933,3 +933,38 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+# 第 427~433 局批复盘：謦欬自我复制引擎同回合复打零血税记忆——余量门带复打递增税（VIVHITE_HP_REPEAT_PLAY_TAX）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE）对同回合第 1 次与第 6 次打出同名生命支付牌一视同仁——评分循环对本回合已实付血税零记忆，自我复制引擎牌（守恒递归，create_free_this_turn_copy）的每次复打都按「首打」独立估值，单回合可形成自我放血链。该假设可证伪：未来 3~10 局若「同回合第N次复打税（VIVHITE_HP_REPEAT_PLAY_TAX）」留痕从不出现（commit 账未接线），或留痕出现但复打分仍超带顶放行（幅度不足），或对局自损峰值无改善，则本假设不成立。
+
+## EVIDENCE
+
+- 433 局（9HTP647E98VC，F33 CRUSHER+ROCKET 阵亡）F30 棘刺蟾蜍战全链逐条核对：T2 六连打守恒递归+/守恒递归（hp 90→80→70→60→50→40→30，单回合自损 60；每次 trace 候选分恒 33.1>余量门 30.4 带顶、LIVE_ESTIMATE 恒 +24.50/+23.50），直到 30 血低血惩罚把分压进门带才拦下余牌；全场自损 70 vs 敌方掉血 68，T3 竞速观测「自付速率18.0/回合≥敌方净损9.9/回合（VIVHITE_RACE_SELF_LOSS_DOMINATES）」；F30 出场 22 血，Boss 37% 血入场，T4 四回合掉血 60 爆毙（竞速审计 T2 判死→实战 4 回合阵亡，判决本身准确，败因是入场血量）。
+- 同批佐证：431 局（VBJUHSC3QQ6P，F33）F23 Monster 战自损 30/掉血 14、432 局 F17 Boss 自损 37/掉血 48——自损主导是本批常态而非孤例；433 局 F30 是单回合放血链最极端的可读样本。
+- 生产现状核查（policy.py 门带段）：_hp_extra = _hp_pay * _hp_play_margin 只看当次实付，循环内无任何同回合同名复打计数；_sync_combat_play_successes 已有服务端成功回执账（_exhaust_plays/_krace_dmg 同型先例），复打计数可直接挂在同一通道。
+- 相邻批次对账：402~426 批血税软顶（拿牌端源头）与本批不重叠——本批针对出牌端「同回合复打」这一门带盲区；386~391 批破层抵扣、381~385 批沙坑封底均不触碰门带。failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① _sync_combat_play_successes 新增謦欬同回合复打账——按 combat_play_commit 服务端成功回执逐牌计数（同名基础 id 合并，+与非+同账），回合切换即清零；② _combat 门带装载段新增静态键 ivhite_hp_repeat_play_tax（仅在余量门激活时读取），并加无 commit 回合的复打账跨回合复位（新战斗由 _combat_stall_check 战斗身份重置兜底）；③ 门带计算改为 实付×余量门 + 实付×(N-1)×复打税（N=本回合同名第几次打出）：首打零差异、复打越深带顶越高、超带顶高分仍放行（软递增非硬上限）；被拦注记带「同回合第N次复打税（VIVHITE_HP_REPEAT_PLAY_TAX）」并进门拦收口名单，过门侧追加「已计价仍过门」纯观测注记（供区分「税未接线」与「幅度不足」）；④ _hp_gate_blocked 元组扩到 6 元（repeat_count），收口留痕与僵局放行/未覆盖观测消费端同步兼容。致死回合豁免与余量门一致；僵局放行闩锁停门时本税同步停用；tax=0 一键回滚（旧行为零差异），非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 ivhite_hp_repeat_play_tax: 0.5，注释记录 433 局 F30 实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3prt 夹具四分支——① 同回合首打照旧放行（复打税零差异）；② 模拟 commit 回执后同回合第 2 次复打被递增门槛拦下，且理由带「謦欬出牌门拦下…VIVHITE_HP_REPEAT_PLAY_TAX」；③ 回合切换后复打账清零、次回合首打照旧放行；④ tax=0 回滚键下同回合复打零差异且不留痕。
+- 不改评分主体/阈值/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 任一同回合同名謦欬牌复打场面（守恒递归自我复制链为本批原型）决策链出现「同回合第N次复打税（VIVHITE_HP_REPEAT_PLAY_TAX）」留痕——按本批频率首场謦欬长战即可验证，433 局 F30 T2 型六连打应收敛为「首打放行+复打被拦」；② 单回合自损峰值（433 局 F30 T2 的 60）显著回落，自损/掉血比下行；③ 若留痕从不出现 → 复查 combat_play_commit 账与门带消费路径；若留痕出现但均为「已计价仍过门」（复打分超带顶）→ 上调 ivhite_hp_repeat_play_tax；若引擎启动受阻导致长战输出链恶化（换挡期战损上升）→ policy.json 置 ivhite_hp_repeat_play_tax=0 整体撤回（首打与旧行为零差异）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3prt 四分支；既有 3prh 余量门、3pri 僵局放行、3prm 未覆盖观测、3prl①~⑦ 血税密度、3prn 门拦格挡救场、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+63/-7，复打账+门带递增+双向留痕）、brain/knowledge.py（+10 一个静态键）、brain/selfcheck.py（+49 四分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -632,6 +632,8 @@ class Policy:
         self._hp_gate_stall_round = None  # 上次计入/清零的回合号（同回合多 tick 只动一次）
         self._hp_gate_stall_latch = False  # 僵局放行闩锁：本场一旦放行，余量门不再回归
         self._hp_gate_stall_uncovered = 0  # 謦欬门连续未覆盖拦截回合数（VIVHITE_HP_GATE_STALL_UNCOVERED 观测账）
+        self._hp_repeat_plays = {}    # 本回合同名謦欬牌已打出次数（VIVHITE_HP_REPEAT_PLAY_TAX 账）
+        self._hp_repeat_round = None  # 复打账上次重置的回合号（回合/战斗切换即清零）
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
         self._unlock_stall = 0      # UNLOCK 已识别但 API 确认动作缺失时的独立鼠标兜底计数
         self._intent_prev = 0       # 上一回合边界采样的敌意图总伤（意图升级轨迹用）
@@ -1126,6 +1128,15 @@ class Policy:
             if round_no is not None and self._krace_round != round_no:
                 self._krace_round = round_no
                 self._krace_turns += 1
+            # 謦欬同回合复打账（VIVHITE_HP_REPEAT_PLAY_TAX，第 427~433 局批复盘）：
+            # 433 局 F30 T2 守恒递归自我复制链六连打（90→30 血，单回合自损 60）——
+            # 评分循环对本回合已实付血税无记忆。按服务端成功回执逐牌计数，
+            # 回合切换即清零；新战斗在 _combat_stall_check 重置。
+            if round_no is not None and self._hp_repeat_round != round_no:
+                self._hp_repeat_round = round_no
+                self._hp_repeat_plays = {}
+            if cid:
+                self._hp_repeat_plays[cid] = self._hp_repeat_plays.get(cid, 0) + 1
             kill_id = str(raw[6] or "")
             if kill_id:
                 self._combat_kills[kill_id] = self._combat_kills.get(kill_id, 0) + 1
@@ -2767,6 +2778,8 @@ class Policy:
             self._hp_gate_stall_round = None
             self._hp_gate_stall_latch = False
             self._hp_gate_stall_uncovered = 0
+            self._hp_repeat_plays = {}
+            self._hp_repeat_round = None
         if self._stall_turn_seen != round_no:
             if enemy_hp_total < self._stall_min_hp:
                 self._stall_min_hp = enemy_hp_total
@@ -4009,6 +4022,28 @@ class Policy:
                     pol.get("vivhite_hp_cost_play_margin", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_play_margin = 0.0
+        # 謦欬同回合复打递增税（VIVHITE_HP_REPEAT_PLAY_TAX，第 427~433 局批复盘
+        # 新增，静态键）：433 局 F30 T2 守恒递归（自我复制引擎牌）六连打，
+        # 90→30 血单回合自损 60（全场自损 70 vs 敌方掉血 68），F30 出场 22 血、
+        # Boss 37% 血入场四回合爆毙——评分循环对本回合已实付血税零记忆，每次
+        # 复打都按首打估值（trace 候选分恒 33.1、LIVE_ESTIMATE 恒 +24.50，
+        # 余量门 +30 门带上限对首打与第六打一视同仁）。同回合第 N 次打出同名
+        # 謦欬牌时，在余量门带上追加 实付×(N-1)×tax 的递增门槛：首打零差异、
+        # 复打越深越难过门、超带顶的高分打出仍放行（软递增而非硬上限）。致死
+        # 回合豁免与余量门一致；tax=0 一键回滚（旧行为零差异），非白绮角色
+        # 零改动；僵局放行闩锁停用余量门时本税同步停用（防再引入放血僵局）。
+        _hp_repeat_tax = 0.0
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_repeat_tax = max(0.0, float(
+                    pol.get("vivhite_hp_repeat_play_tax", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                _hp_repeat_tax = 0.0
+        # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
+        # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
+        if self._hp_repeat_round != round_no:
+            self._hp_repeat_round = round_no
+            self._hp_repeat_plays = {}
         # 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘新增）：
         # 余量门顶格 3.0 后在低危长战制造放血死循环（243 局 F3 拖 56 回合
         # 自损46/掉血39；238 局 F2 拖 76 回合自损64 阵亡；235 局 F3 拖 19 回合
@@ -4047,7 +4082,7 @@ class Policy:
                     "vivhite_hp_gate_uncovered_obs", 0) or 0))
             except (TypeError, ValueError):
                 _hp_gate_unc_obs = False
-        _hp_gate_blocked: list = []  # (index, name, pay, extra, score)
+        _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -4133,16 +4168,33 @@ class Policy:
             if _hp_play_margin > 0.0:
                 _hp_pay = self._vivhite_hp_pay(c, player.get("powers") or [])
                 if _hp_pay > 0.0:
-                    _hp_extra = _hp_pay * _hp_play_margin
+                    _hp_rep = 0
+                    _hp_rep_extra = 0.0
+                    if _hp_repeat_tax > 0.0:
+                        _hp_rep = self._hp_repeat_plays.get(cid, 0)
+                        _hp_rep_extra = _hp_pay * _hp_rep * _hp_repeat_tax
+                    _hp_extra = _hp_pay * _hp_play_margin + _hp_rep_extra
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
-                        why += (f"｜謦欬出牌门：实付{_hp_pay:g}血×"
-                                f"{_hp_play_margin:.2f}=+{_hp_extra:.1f}门槛，"
+                        _gate_formula = (f"实付{_hp_pay:g}血×"
+                                         f"{_hp_play_margin:.2f}")
+                        if _hp_rep_extra > 0.0:
+                            _gate_formula += (
+                                f"+同回合第{_hp_rep + 1}次复打税"
+                                f"{_hp_rep_extra:.1f}"
+                                "（VIVHITE_HP_REPEAT_PLAY_TAX）")
+                        why += (f"｜謦欬出牌门：{_gate_formula}=+{_hp_extra:.1f}门槛，"
                                 f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
-                             _hp_pay, _hp_extra, score))
+                             _hp_pay, _hp_extra, score, _hp_rep))
+                    elif _hp_rep_extra > 0.0:
+                        # 复打税已计价但总分仍超带顶放行——供复盘区分「税未接线」
+                        # 与「接线但幅度不足」（纯观测，不改放行）
+                        why += (f"｜同回合第{_hp_rep + 1}次复打税"
+                                f"+{_hp_rep_extra:.1f}已计价仍过门"
+                                "（VIVHITE_HP_REPEAT_PLAY_TAX）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
@@ -4469,8 +4521,12 @@ class Policy:
                 self._hp_gate_stall_round = round_no
             if _hp_gate_blocked:
                 _gate_note = ("；謦欬出牌门拦下"
-                              + "、".join(f"【{row[1]}】实付{row[2]:g}血"
-                                          for row in _hp_gate_blocked)
+                              + "、".join(
+                                  f"【{row[1]}】实付{row[2]:g}血"
+                                  + (f"（同回合第{row[5] + 1}次复打税，"
+                                     "VIVHITE_HP_REPEAT_PLAY_TAX）"
+                                     if len(row) > 5 and row[5] > 0 else "")
+                                  for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 if _hp_gate_stall_limit > 0:
                     _gate_note += (f"；连续低危拦截{self._hp_gate_stall}"
