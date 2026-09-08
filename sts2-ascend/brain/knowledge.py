@@ -668,8 +668,18 @@ DEFAULT_POLICY = {
                                   # RAMPAGE 靠 +6 学习分在 55 局里自我强化循环拾取（106 局又拿 3 张）——学习信号保留方向、砍掉摆动幅度
     "burst_starve_bonus_base": 3.0,       # 输出饥饿对高质攻击的基础加分（原固定 +3）
     "burst_starve_bonus_extra_max": 4.0,  # 输出饥饿加分随缺口深度放大上限：106 局整场爆发 18~21(<门槛30) 只吃 +3，
-                                          # 压不过 learned value 摆动与格挡牌基础分——Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速；
-                                          # 缺口越深加成越大（burst=0 时达 base+extra_max）
+                                           # 压不过 learned value 摆动与格挡牌基础分——Boss 战实测输出 ~10-15/回合全面输掉斩杀竞速；
+                                           # 缺口越深加成越大（burst=0 时达 base+extra_max）
+    "burst_starve_supply_weight": 1.5,    # 饥饿供给纠偏（BURST_STARVE_SUPPLY_LEVER，第1307~1312局批复盘）：
+                                           # CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结算——61 条真机样本
+                                           # starved_after=1 占 61/61（饥饿恒真），supply_left>0 达 11 条、覆盖 1307~1312
+                                           # 全 6 局（1305/1306 起累计 8 个独立对局）：饥饿态下决策把 +1.0~+4.0 的爆发
+                                           # 供给留在桌上（1312-F3 TAUNT delta+0.0 压过 TWIN_STRIKE +4.0；1311 DISMANTLE
+                                           # 落牌 delta=-4.0；1310 EVIL_EYE +0.0 压过 POMMEL_STRIKE +3.0）。既有饥饿加分
+                                           # 只认「单牌总伤≥12且≥7伤/能耗」的高质攻击，小额供给牌永远竞争不过格挡/功能牌。
+                                           # 按候选自身 burst delta 给线性纠偏（每点 delta 加本权重分），0 = 关闭（严格回滚旧口径）
+    "burst_starve_supply_delta_cap": 4.0, # 供给纠偏的 delta 计入上限：防大炸弹单牌把纠偏注成主分，
+                                           # 上限取本批实测遗留分布最大值（+4.0）
     "power_starve_bonus_base": 6.0,       # 输出饥饿对力量/成长型能力牌的拾取基础加分（第 255 批复盘）：
                                           # Boss 攻坚的死因形态是「即时伤害不够、长战无成长」，战斗端已有
                                           # 能力牌长战加成，拾取端此前仍按平面 5 分定价。

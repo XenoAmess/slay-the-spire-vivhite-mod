@@ -88,7 +88,11 @@ def main() -> int:
     # 3) 针对性场景断言（decide() 吞异常保活，逻辑错误必须在这里显式暴露）
 
     # 3a) 选牌端：攻击占比 0.8 时普通攻击须被乘法衰减压到阈值以下；格挡稀缺技能须增值
-    atk_rich = ([{"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1} for i in range(8)]
+    #     夹具修复（第1307~1312批 BURST_STARVE_SUPPLY_LEVER）：8 张攻击牌此前无伤害面板，
+    #     卡组爆发 0 < 饥饿线 30，新供给纠偏会给 weak_atk 误发 +6 冲过阈值——本锚测的是
+    #     攻击占比乘法衰减，与饥饿无关；补 12 伤面板使卡组 burst=36 非饥饿，两值与旧口径逐位一致
+    atk_rich = ([{"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
+                  "dynamic_values": [{"name": "Damage", "current_value": 12}]} for i in range(8)]
                 + [{"card_id": f"DEFEND_{i}", "card_type": "Skill", "energy_cost": 1} for i in range(2)])
     weak_atk = {"card_id": "TWIN_STRIKE", "name": "双重打击", "card_type": "Attack", "energy_cost": 1,
                 "dynamic_values": [{"name": "Damage", "current_value": 4}, {"name": "Hits", "current_value": 2}]}
@@ -3597,8 +3601,13 @@ def main() -> int:
     #      89 局卡组攻击占比达标、回合爆发仍是几张 6 伤打击的水平，88% 血进
     #      一幕 Boss 11 回合仅打出 ~198 伤输掉斩杀竞速。爆发吞吐量低于
     #      deck_burst_floor 时，高质攻击（单牌总伤 ≥12 且 ≥7 伤/能耗）获得加分；
-    #      弱攻击（打击级）不得因饥饿虚高（保护 3a 的占比衰减语义）。
-    #      用同一副卡组切换门槛做隔离，排除占比上下文的混淆
+    #      弱攻击（打击级）不得因饥饿 flat 加分虚高（保护 3a 的占比衰减语义）。
+    #      用同一副卡组切换门槛做隔离，排除占比上下文的混淆。
+    #      教义演进（第1307~1312批 BURST_STARVE_SUPPLY_LEVER）：supply_left 结算
+    #      证明饥饿态决策把 +1~+4 边际供给留在桌上（8 个独立对局），弱攻击的
+    #      「实际边际 burst 供给」改按有界纠偏计价（weight×min(delta,cap)，本锚
+    #      钉死确切幅度）；flat 高质加分仍只属于 ≥12 伤且 ≥7伤/能耗 的攻击
+    #      （big_atk 差值锚不变），零边际供给的弱攻击纠偏恒为 0（3bsl④ 钉死）
     def _mk_strike(i):
         return {"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
                 "dynamic_values": [{"name": "Damage", "current_value": 6}]}
@@ -3618,8 +3627,13 @@ def main() -> int:
     know.policy["deck_burst_floor"] = saved_floor_t
     assert v_big_on - v_big_off >= 2.5, \
         f"输出饥饿未给高质攻击加分: on={v_big_on:.2f} off={v_big_off:.2f}"
-    assert abs(v_weak_on - v_weak_off) < 1e-6, \
-        f"打击级弱攻击被饥饿加成虚高: on={v_weak_on:.2f} off={v_weak_off:.2f}"
+    _delta_weak = max(0.0, min(
+        pol.deck_effective_burst(starved_deck + [dict(weak_atk)])
+        - pol.deck_effective_burst(starved_deck),
+        float(know.policy.get("burst_starve_supply_delta_cap", 4.0))))
+    _expect_weak = float(know.policy.get("burst_starve_supply_weight", 1.5)) * _delta_weak
+    assert abs((v_weak_on - v_weak_off) - _expect_weak) < 1e-6, \
+        f"打击级弱攻击的饥饿供给纠偏偏离有界口径: on={v_weak_on:.2f} off={v_weak_off:.2f} 期望差={_expect_weak:.2f}"
 
     # 3kz) 引擎复制件密度放行（第856~876局批复盘 ENGINE_DUP_DENSITY_RELEASE）：
     #      输出饥饿最终解在拿牌端引擎密度（833~842批定案），但复制件惩罚让高质
@@ -6794,8 +6808,14 @@ def main() -> int:
     _ph_b = float(ph_know.policy["power_starve_bonus_base"])
     _ph_x = float(ph_know.policy["power_starve_bonus_extra_max"])
     _ph_s = float(ph_know.policy.get("scaling_engine_pick_bonus", 7.0))
-    assert abs((v_strong - v_plain) - (_ph_b + _ph_x + _ph_s)) < 1e-9, \
-        f"饥饿成长牌加分缺失或数值不符: {v_strong - v_plain:.2f}（期望 base+extra×缺口1.0+稀缺满档）"
+    # 第1307~1312批 BURST_STARVE_SUPPLY_LEVER：活跃引擎的 deck_effective_burst
+    # 授信同时是真实边际供给，饥饿态按 weight×min(delta,cap) 追加有界纠偏
+    _ph_w = float(ph_know.policy.get("burst_starve_supply_weight", 1.5))
+    _ph_wcap = float(ph_know.policy.get("burst_starve_supply_delta_cap", 4.0))
+    _ph_supply = _ph_w * min(float(ph_know.policy.get("engine_burst_credit", 6.0)),
+                             _ph_wcap)
+    assert abs((v_strong - v_plain) - (_ph_b + _ph_x + _ph_s + _ph_supply)) < 1e-9, \
+        f"饥饿成长牌加分缺失或数值不符: {v_strong - v_plain:.2f}（期望 base+extra×缺口1.0+稀缺满档+供给纠偏{_ph_supply:.1f}）"
     eng1_deck = list(starve_deck) + [dict(pow_strong, card_id="INFLAME_E1")]
     eng2_deck = eng1_deck + [dict(pow_strong, card_id="INFLAME_E2")]
     d_eng = []
@@ -6805,10 +6825,12 @@ def main() -> int:
     _ph_c = float(ph_know.policy.get("engine_burst_credit", 6.0))
     _ph_floor = float(ph_know.policy["deck_burst_floor"])
     _ph_dc = _ph_x * (_ph_c / _ph_floor)  # 每台引擎收窄的缺口对应的 extra 衰减量
-    assert abs(d_eng[0] - (_ph_b + _ph_x + _ph_s)) < 1e-9, "零引擎稀缺加分缺失"
+    assert abs(d_eng[0] - (_ph_b + _ph_x + _ph_s + _ph_supply)) < 1e-9, "零引擎稀缺加分缺失"
     assert abs((d_eng[0] - d_eng[1]) - (_ph_dc + _ph_s / 2.0)) < 1e-9, \
         "1台引擎时稀缺未减半或缺口未随授信收窄"
-    assert abs((d_eng[1] - d_eng[2]) - (_ph_dc + _ph_s / 2.0)) < 1e-9, \
+    # 第3台引擎超出 engine_credit_cap：burst 授信 delta=0，供给纠偏随之归零——
+    # d_eng[1] 含 _ph_supply 而 d_eng[2] 不含，差值锚同步计入该差
+    assert abs((d_eng[1] - d_eng[2]) - (_ph_dc + _ph_s / 2.0 + _ph_supply)) < 1e-9, \
         "引擎数达cap后稀缺未归零或缺口未继续收窄"
     assert abs(ph_pol.deck_effective_burst(list(eng1_deck)) - _ph_c) < 1e-9, \
         "deck_effective_burst 未计入引擎授信"
@@ -10699,9 +10721,118 @@ def main() -> int:
         f"判死竞速单体自残未按半价留痕: {s_doom}（{why_doom}）"
     s_bt_doom, _, why_bt_doom = hcat_pol._score_play(
         hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+        my_hp=32, my_max_hp=80, run_deck=[], kill_race=True)
     assert "自残1半价计价（HP_COST_ATK_PRICING）" in why_bt_doom, \
         f"判死竞速 AOE 自残未按半价留痕: {s_bt_doom}（{why_bt_doom}）"
+
+    # 3bsl) 饥饿供给纠偏（BURST_STARVE_SUPPLY_LEVER，第1307~1312局批复盘）：
+    #      CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结算——61 条真机
+    #      样本 starved_after=1 占 61/61，supply_left>0 达 11 条覆盖 1307~1312
+    #      全 6 局（1305/1306 起累计 8 个独立对局），饥饿态决策把 +1.0~+4.0
+    #      爆发供给留在桌上。杠杆按候选自身 burst delta 给有界线性纠偏
+    #      （weight×min(delta,cap)）并把中标注记接进持久链。
+    #      ① 饥饿卡组+delta>0 攻击带「饥饿供给纠偏」注记且幅度恰为
+    #      weight×min(delta,cap)；② 键=0 注记消失且评分回滚到旧口径；
+    #      ③ 非饥饿卡组零影响；④ 零边际供给候选（纯格挡）纠偏恒 0；
+    #      ⑤ 真实 decide() 选牌路径注记入链、键=0 时不入链。
+    bsl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bsl-"))
+    bsl_know = knowledge.Knowledge(bsl_dir)
+    bsl_pol = policy.Policy(bsl_know, random.Random(5))
+
+    def _bsl_strike(i):
+        return {"card_id": f"STRIKE_{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+
+    def _bsl_defend(i):
+        return {"card_id": f"DEFEND_{i}", "card_type": "Skill", "energy_cost": 1,
+                "dynamic_values": [{"name": "Block", "current_value": 5}]}
+
+    bsl_starved = [_bsl_strike(0), _bsl_strike(1),
+                   _bsl_defend(0), _bsl_defend(1), _bsl_defend(2)]
+    bsl_atk = {"card_id": "BSL_ATK", "name": "供给打击", "card_type": "Attack",
+               "energy_cost": 1,
+               "dynamic_values": [{"name": "Damage", "current_value": 8}]}
+    bsl_blk = {"card_id": "BSL_BLK", "name": "供给格挡", "card_type": "Skill",
+               "energy_cost": 1,
+               "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    _bsl_w = float(bsl_know.policy.get("burst_starve_supply_weight", 1.5))
+    _bsl_cap = float(bsl_know.policy.get("burst_starve_supply_delta_cap", 4.0))
+    _bsl_burst = bsl_pol.deck_effective_burst(bsl_starved)
+    _bsl_line = bsl_pol._starve_line(None)
+    assert _bsl_burst < _bsl_line, "3bsl 夹具非饥饿，前提被破坏"
+    _bsl_delta = max(0.0, min(
+        bsl_pol.deck_effective_burst(bsl_starved + [dict(bsl_atk)]) - _bsl_burst,
+        _bsl_cap))
+    assert _bsl_delta > 0.0, "3bsl 夹具攻击候选 delta 非正，前提被破坏"
+    bsl_det: list = []
+    v_bsl_on = bsl_pol.eval_reward_card(dict(bsl_atk), bsl_starved, detail=bsl_det)
+    bsl_know.policy["burst_starve_supply_weight"] = 0.0
+    bsl_det_off: list = []
+    v_bsl_off = bsl_pol.eval_reward_card(dict(bsl_atk), bsl_starved,
+                                         detail=bsl_det_off)
+    bsl_know.policy["burst_starve_supply_weight"] = _bsl_w
+    assert any("BURST_STARVE_SUPPLY_LEVER" in n for n in bsl_det), \
+        f"饥饿供给纠偏注记缺失: {bsl_det}"
+    assert abs((v_bsl_on - v_bsl_off) - _bsl_w * _bsl_delta) < 1e-9, \
+        f"供给纠偏幅度偏离 weight×min(delta,cap): {v_bsl_on - v_bsl_off:.4f} vs {_bsl_w * _bsl_delta:.4f}"
+    assert not any("BURST_STARVE_SUPPLY_LEVER" in n for n in bsl_det_off), \
+        f"观测键=0 仍有供给纠偏注记: {bsl_det_off}"
+    # ③ 非饥饿卡组：3 张 15 伤攻击 burst=45 ≥ 线 30，注记与评分均零影响
+    bsl_fed = [{"card_id": f"BSL_BIG{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 15}]}
+               for i in range(3)]
+    bsl_det_fed: list = []
+    v_fed_on = bsl_pol.eval_reward_card(dict(bsl_atk), bsl_fed, detail=bsl_det_fed)
+    bsl_know.policy["burst_starve_supply_weight"] = 0.0
+    v_fed_off = bsl_pol.eval_reward_card(dict(bsl_atk), bsl_fed)
+    bsl_know.policy["burst_starve_supply_weight"] = _bsl_w
+    assert not any("BURST_STARVE_SUPPLY_LEVER" in n for n in bsl_det_fed) \
+        and abs(v_fed_on - v_fed_off) < 1e-9, \
+        f"非饥饿卡组被供给纠偏误伤: {v_fed_on} vs {v_fed_off}（{bsl_det_fed}）"
+    # ④ 零边际供给候选（纯格挡牌）：delta=0 → 纠偏恒 0
+    bsl_det_blk: list = []
+    v_blk_on = bsl_pol.eval_reward_card(dict(bsl_blk), bsl_starved,
+                                        detail=bsl_det_blk)
+    bsl_know.policy["burst_starve_supply_weight"] = 0.0
+    v_blk_off = bsl_pol.eval_reward_card(dict(bsl_blk), bsl_starved)
+    bsl_know.policy["burst_starve_supply_weight"] = _bsl_w
+    assert not any("BURST_STARVE_SUPPLY_LEVER" in n for n in bsl_det_blk) \
+        and abs(v_blk_on - v_blk_off) < 1e-9, \
+        f"零边际供给候选被误加纠偏: {v_blk_on} vs {v_blk_off}（{bsl_det_blk}）"
+    # ⑤ decide() 真实选牌路径：自愿奖励屏中标攻击的理由须带注记入链
+    bsl_big = {"index": 0, "card_id": "BSL_CINDER", "name": "余烬",
+               "card_type": "Attack", "energy_cost": 2,
+               "dynamic_values": [{"name": "Damage", "current_value": 18}]}
+    bsl_blk2 = dict(bsl_blk, index=1, card_id="BSL_BLK2")
+
+    def _bsl_sel_state():
+        return {"screen": "CARD_SELECTION",
+                "available_actions": ["select_deck_card", "skip_reward_cards",
+                                      "confirm_selection"],
+                "selection": {"kind": "deck_select", "prompt": "选择一张牌",
+                              "min_select": 1, "selected_count": 0,
+                              "can_confirm": False,
+                              "cards": [dict(bsl_big), dict(bsl_blk2)]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 5,
+                        "deck": [dict(c) for c in bsl_starved]}}
+
+    bsl_pol2 = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bsl2-"))),
+        random.Random(5))
+    d_bsl = bsl_pol2.decide(_bsl_sel_state(), type("BslCtx", (), {})())
+    assert d_bsl.action == "select_deck_card" and d_bsl.params.get("option_index") == 0, \
+        f"供给纠偏夹具未按预期中标攻击: {d_bsl.action}（{d_bsl.reason}）"
+    assert "BURST_STARVE_SUPPLY_LEVER" in d_bsl.reason, \
+        f"供给纠偏注记未入持久链: {d_bsl.reason}"
+    bsl_pol3 = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-bsl3-"))),
+        random.Random(5))
+    bsl_pol3.know.policy["burst_starve_supply_weight"] = 0.0
+    d_bsl_off = bsl_pol3.decide(_bsl_sel_state(), type("BslCtx3", (), {})())
+    assert d_bsl_off.action == "select_deck_card" \
+        and "BURST_STARVE_SUPPLY_LEVER" not in d_bsl_off.reason, \
+        f"观测键=0 注记仍入链: {d_bsl_off.reason}"
+
 
     print("SELFCHECK OK")
     return 0

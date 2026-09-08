@@ -6506,6 +6506,34 @@ class Policy:
         _line = self._starve_line(max_hp if deck else None, act=act)
         burst_starved = bool(deck) and burst < _line
 
+        # 饥饿供给纠偏（BURST_STARVE_SUPPLY_LEVER，第1307~1312局批复盘）：
+        # CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结算——61 条真机
+        # 样本 starved_after=1 占 61/61（饥饿恒真），supply_left>0 达 11 条、
+        # 覆盖 1307~1312 全 6 局（1305/1306 起累计 8 个独立对局，方向从
+        # 「普遍+0.0」翻转为「饥饿态频繁>0」）：饥饿态下决策把 +1.0~+4.0 的
+        # 爆发供给留在桌上（1312-F3 TAUNT delta+0.0 压过 TWIN_STRIKE +4.0；
+        # 1311 DISMANTLE 落牌 delta=-4.0；1310 EVIL_EYE +0.0 压过
+        # POMMEL_STRIKE +3.0）。既有饥饿加分只认「单牌总伤≥12且≥7伤/能耗」
+        # 的高质攻击，小额供给牌（+1~+4）永远竞争不过格挡/功能牌。按候选自身
+        # burst delta 给线性纠偏（delta 计入上限 supply_delta_cap，防大炸弹
+        # 注水），深缺口局面把同分裁决权还给供给端；weight=0 一键回滚旧口径，
+        # 空卡组上下文（升级/删除/献祭评估）burst_starved 恒 False 天然不受影响
+        _sd_w = float(pol.get("burst_starve_supply_weight", 0.0) or 0.0)
+        if deck and burst_starved and _sd_w > 0.0:
+            try:
+                _sd_delta = clamp(
+                    float(self.deck_effective_burst(deck + [card])) - burst,
+                    0.0,
+                    max(0.0, float(pol.get("burst_starve_supply_delta_cap", 4.0))))
+            except (AttributeError, TypeError, ValueError):
+                _sd_delta = 0.0
+            if _sd_delta > 0.0:
+                value += _sd_w * _sd_delta
+                if detail is not None:
+                    detail.append(
+                        f"饥饿供给纠偏+{_sd_w * _sd_delta:.1f}"
+                        f"（delta={_sd_delta:+.1f}，BURST_STARVE_SUPPLY_LEVER）")
+
         # 攻击牌边际价值乘法衰减（固定 -2.5 挡不住基础分 10+ 的攻击牌，
         # 第 18 局仍拿了 24 张近乎全攻的牌）：占比越高衰减越狠
         if is_attack(card):
@@ -7176,7 +7204,23 @@ class Policy:
             deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
             _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
-            scored = sorted(((self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act), c) for c in candidates),
+            _sd_notes: dict = {}
+
+            def _score_sel(c):
+                # BURST_STARVE_SUPPLY_LEVER 留痕接线（第1307~1312批）：杠杆本体
+                # 在 eval_reward_card 内计价；候选 detail 此前只在 REWARD 路径
+                # 收集，本路径（实战真实拿牌流量）按 id 暂存供给纠偏注记，
+                # 中标后接进持久链——评分与排序口径零改动
+                _det: list[str] = []
+                _v = self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act,
+                                           detail=_det)
+                _sd = next((n for n in _det
+                            if "BURST_STARVE_SUPPLY_LEVER" in n), "")
+                if _sd:
+                    _sd_notes[id(c)] = _sd
+                return (_v, c)
+
+            scored = sorted((_score_sel(c) for c in candidates),
                             key=lambda t: -t[0])
             for value, card in scored:
                 self._trace_candidate(
@@ -7227,6 +7271,12 @@ class Policy:
             # 余裕稀缺加分真实路径观测（第 307~314 局批复盘）：自愿/强制拿牌
             # 分支都在此处补留痕，评分本体不受影响
             explore_note += self._vivhite_margin_pick_note(pick, deck)
+            # 供给纠偏注记入链（BURST_STARVE_SUPPLY_LEVER，第1307~1312批）：
+            # 仅中标候选携带注记时追加；观测键=0 时 _sd_notes 恒空、
+            # reason 与旧口径逐字一致（selfcheck 3bsl② 为对照锚）
+            _pick_sd = _sd_notes.get(id(pick), "")
+            if _pick_sd:
+                explore_note += f"；{_pick_sd}"
             # 强制入组屏识别（第529局批复盘）：无跳过动作且最高分低于自愿
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/

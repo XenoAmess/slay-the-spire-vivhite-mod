@@ -7275,3 +7275,127 @@ retry_resolution: none (no replay target; local production observability change)
    场景血量分布；④ JOINT_FLIP_TTK_CAP「否决后改锻造战损」分子累计；
    ⑤ race_audit 悲观率台账续记。
 
+# 2026-09-08｜第 1307~1312 局复盘（异步追及队列 6 局 exact_batch 全败；supply_left 结案翻转→有界行为闭环 ×1：BURST_STARVE_SUPPLY_LEVER 饥饿供给纠偏）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  retry_resolution 行；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：饥饿态拿牌端存在可量化的决策侧供给遗留——给 starved 卡组的
+  候选牌按自身 burst delta 加小额有界纠偏分（weight×min(delta,cap)，默认
+  1.5×4.0 上限 +6.0），未来 3~10 局 supply_left>0 的频率与均值应下降、落牌
+  delta 分布上移，缺口归属从「决策遗留」回归「卡池供给」。
+- **EVIDENCE**：① CARD_BURST_PICK_AUDIT 供给扩展按 1295~1301 批预注册结案——
+  上批 2/3 独立对局（17/18 supply_left=+0.0），本批 61 条真机样本
+  starved_after=1 占 61/61（饥饿恒真确认），supply_left>0 达 11 条、覆盖
+  1307~1312 全 6 局（累计 8 个独立对局 ≥ evidence_run_threshold=3），方向从
+  「普遍+0.0」翻转为「饥饿态频繁>0」：1307 SECOND_WIND/BURNING_PACT delta+0.0
+  压过 SETUP_STRIKE +1.0；1309 UPPERCUT +1.0 压过 SPITE +4.0；1310 EVIL_EYE
+  +0.0 压过 POMMEL_STRIKE +3.0；1311 DISMANTLE 落牌 delta=-4.0；1312-F3
+  TAUNT +0.0 压过 TWIN_STRIKE +4.0。② 既有饥饿加分只认「单牌总伤≥12 且
+  ≥7伤/能耗」的高质攻击（policy.py 6527），小额供给牌（+1~+4）永远竞争不过
+  格挡/功能牌——1312 决策链 F3「挑衅=8.5 / 双重打击=3.5」逐字实证。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链拿牌理由出现「饥饿供给纠偏+N
+  （delta=+X，BURST_STARVE_SUPPLY_LEVER）」段；CARD_BURST_PICK_AUDIT 的
+  supply_left>0 出现率自本批基线 11/61（18%）下降；落牌 delta 分布上移。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1307..1312]，exact 6/6、missing=0；6 局全败（生涯 0/1312）。
+- 死亡分布：一幕 Boss（F17）2 局（1309/1310）、二幕 Boss（F33
+  THE_INSATIABLE）2 局（1311/1312）、一幕走廊 2 局（1307 F21 / 1308 F13）。
+- 主样本 1312（J7UMDVTG60HK）packet 内 192 条切片 + decision_aggregates
+  （play_card 91 / end_turn 30）已逐条核读：F1 涅奥羽翼之靴（经验价值口径
+  合规）、地图端输出饥饿上浮 ×1.29~1.30 常开、F33 终局 T2~T5 全链均为
+  「致死竞速抢斩杀/败局竞速全攻」口径下的能量真尽收口（[T2] 契约终结+
+  →坚毅→能量 0 弃置 4 张超费牌合规），执行层零新缺陷；死因=卡组输出密度
+  （实测 39~57 伤/回合 vs 血池 254 与意图升级 +12~+20 滚雪球）。
+- 部署时序：HP_COST_ATK_PRICING（上批落盘）首验窗口即本批——1309×8 条、
+  1312×3 条留痕显形（「自残1非致死未计价」×10、「自残2计价」×1），2 个
+  独立对局（2/3，下批第 3 局结案）；其余在产杠杆（JOINT_FLIP_TTK_CAP /
+  RACE_AUDIT 链 / 手税计价 / CARD_BURST_PICK_AUDIT）均先于本批全部对局，
+  无 pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17/F33 四局竞速预演判死全部实战兑现
+   （1309/1310 F17、1311/1312 F33「T2判死→实战5回合阵亡」）；前夜
+   必败弃疗改锻造（1309「当前 70%；回血后预期余量-2仍≤安全余量9」）与
+   RACE_AUDIT_HEAL_OVERRIDE（1309 RestSite 15,4）两端杠杆按教义工作——
+   设计内终态，不重复立案。旋钮代谢链全顶格，证据改接 kill_race_prior_eff
+   （0.37→0.40 部分胜利释放+换向阻尼）与封账留痕。
+2. **本批实验靶点：supply_left 结案翻转。** 预注册两分类中「普遍+0.0→决策
+   无罪」被排除（上批 17/18 为部署初期小样本），「饥饿态频繁>0→决策侧缺口」
+   成立：11 条遗留样本的 offer_max 全部是攻击牌（SETUP_STRIKE/TWIN_STRIKE/
+   SPITE/POMMEL_STRIKE/MOLTEN_FIST/BREAKTHROUGH），落牌全部是格挡/功能牌
+   （TAUNT/SECOND_WIND/STOMP/EVIL_EYE/SHRUG_IT_OFF）或低 delta 攻击——
+   深缺口（线 119.4~119.7 vs 卡组 18~24）下同分裁决权不在供给端。
+3. **竞速审计悲观率台账**：本批判死应验 +4（1309/1310 F17、1311/1312 F33），
+   反向 +2（1307 F17「T2判死→实战7回合获胜」、1312 F17「T2判死→实战5回合
+   获胜」一幕越墙），续记不重复立案。
+4. **HP_COST_ATK_PRICING 首验（2/3）**：注记分布以「非致死未计价」为主
+   （10/11），全部发生在可行动段非致死回合，与 1306-F17 场景同族；场景血量
+   分布与第 3 独立对局下批一并结案。「自残2计价」（1312 御血术族单体）证明
+   单体计价通道在产。
+5. **卡组构建**：1311/1312 拿牌 20 张左右，HOWL_FROM_BEYOND×3/×1、
+   SWORD_BOOMERANG、ANGER 等小额攻击密集入组——与本批杠杆同方向的证据：
+   决策已在拿攻击，但同 offer 内仍把更高 burst 候选留在桌上（1311 DISMANTLE
+   delta=-4.0 是最刺眼一例）。
+
+## 三、本次调整（有界行为闭环 ×1：BURST_STARVE_SUPPLY_LEVER 饥饿供给纠偏）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **BURST_STARVE_SUPPLY_LEVER**（CARD_BURST_PICK_AUDIT 供给扩展的预注册行为化后继；证据：61 条样本 supply_left>0 达 11 条、覆盖 8 个独立对局、方向翻转结案；机制先例：burst_starve_bonus/power_starve_bonus 同族缺口纠偏） |
+| 代码动作 | ① brain/knowledge.py DEFAULT_POLICY 新增 `burst_starve_supply_weight: 1.5`（每点 burst delta 的纠偏分）与 `burst_starve_supply_delta_cap: 4.0`（delta 计入上限，取本批实测遗留分布最大值，防大炸弹注水）；② brain/policy.py eval_reward_card：burst_starved 且 weight>0 时按候选自身 `deck_effective_burst(deck+[card])-burst` 的 delta 加 `_sd_w×min(delta,cap)`，detail 追加「饥饿供给纠偏+N（delta=+X，BURST_STARVE_SUPPLY_LEVER）」；③ CARD_SELECTION/select_deck_card 路径（实战真实拿牌流量）按 id 暂存候选注记，中标后接进持久链 reason |
+| 性质边界 | 有界行为杠杆：仅饥饿卡组（burst<starve_line）生效，单候选最大 +6.0（=1.5×4.0），与同屏 learned value 封顶 ±3 同量级；delta≤0 候选（格挡/功能/负供给牌）恒零纠偏；空卡组上下文（升级/删除/献祭评估）burst_starved 恒 False 天然不受影响；weight=0 一键回滚（评分与留痕与旧口径逐字一致，3bsl② 对照锚） |
+| 锚点修复 | 3a 夹具 8 张攻击牌补 12 伤面板（burst 0→36 非饥饿，原锚测占比衰减与饥饿无关，两值逐位不变）；3tt 弱攻击断言从「饥饿零加成」改为钉死有界幅度 weight×min(delta,cap)（教义演进：flat 高质加分仍只属于 ≥12 伤攻击，big_atk 差值锚不变）；3zy 成长引擎锚计入授信 delta 的有界纠偏项（第 3 台引擎超 credit cap 纠偏归零，差值锚同步） |
+| 测试 | brain/selfcheck.py 新增 3bsl 五断言（① 饥饿+delta>0 攻击注记+幅度精确；② 键=0 注记消失且评分回滚；③ 非饥饿卡组零影响；④ 零边际供给候选纠偏恒 0；⑤ decide() 真实选牌路径注记入链、键=0 不入链）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3a/3tt/3zy/3hcat/3htpa 全部既有锚通过） |
+| 未来 3~10 局观测指标 | ①「BURST_STARVE_SUPPLY_LEVER」注记出现率与独立对局数；② supply_left>0 出现率 vs 本批基线 11/61（18%）；③ 落牌 delta 分布（基线 +0.0 占 50/61）；④ 纠偏翻案局（攻击牌因注记压过格挡/功能牌）的后续战损与 Boss 竞速结果；⑤ 一幕 Boss 越墙率（基线本批 2/4） |
+| 继续调整条件 | supply_left>0 频率不降且注记高频 → 核 weight 量级（上限内可调至 2.0~2.5）；翻案后战损不降反升 ≥2 个独立对局 → 降 weight 至 0.5~1.0 或按 act 分幕；「delta=+4.0」顶格高频 → 评估 cap 是否误伤大炸弹；注记零出现但供给遗留仍在 → 检查留痕接线与饥饿判定口径 |
+| 撤回条件 | knowledge/policy.json 写 `burst_starve_supply_weight: 0` 即杠杆整体关闭（评分与留痕回滚旧口径，selfcheck 3bsl②⑤ 为对照锚）；或删除 knowledge/policy/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（预注册方向结案即
+   行为化落地，非登记延后）。
+2. **CARD_BURST_PICK_AUDIT_SUPPLY_SIDE（1295~1301 批观测位扩展）**：本批
+   结案——方向翻转为「饥饿态 supply_left 频繁>0，决策侧缺口量化」，已由
+   BURST_STARVE_SUPPLY_LEVER 接续行为化；观测位保留作为杠杆验收读数。
+3. **HP_COST_ATK_PRICING（1302~1306 批观测位）**：首验 2/3 独立对局
+   （1309×8/1312×3 条，「非致死未计价」10/11），下批第 3 局结案；
+   「非致死未计价」高频若坐实低血场景集中，按预注册对齐单体口径立项。
+4. **JOINT_FLIP_TTK_CAP / SETTLE_TIMEOUT_CONCEDE_OBS / ENGINE_COMMIT_LOWHP_OBS /
+   RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD / HAND_TAX_PLAY_AUDIT**：本批无对应
+   现场（前夜判死方向全部应验、收口均能量真尽、无低血承诺/末点格挡竞争/
+   族母/税牌落选），顺延不判失效。
+5. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+   血池精度 / 死亡谷 least-bad / 无色药水词表）：1308 F13、1307 F21 为
+   前中期战损累积同族，续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **小样本「普遍+0.0」不能直接结案**：上批 17/18 supply_left=+0.0 距
+   预注册结案线只差 1 局，本批 61 条样本即翻转为 11 条正值全覆盖——
+   分布型指标的结案线（≥3 独立对局）是防「首批样本即定论」的最低配置，
+   方向性结论必须等线。
+2. **观测位的结案文案要预写两个方向的后续动作**：1295~1301 批为
+   supply_left 预注册了「+0.0→停止加杠杆 / >0→量化供数」双方向，本批
+   翻转后直接按预注册落地行为闭环，零额外论证成本——观测位设计时
+   把「反转后干什么」写进预注册，是把观测变成闭环的最短路径。
+3. **既有锚点的「教义冲突」要用精确幅度断言替代方向断言**：3tt「弱攻击
+   不得因饥饿虚高」与新杠杆方向冲突，修法不是删锚而是把断言从「零加成」
+   收紧为「恰为 weight×min(delta,cap)」——旧教义的防护意图（flat 加分
+   不喂弱攻击）由 big_atk 差值锚继续承担，新行为的幅度被钉死。
+4. 观察点（下批复盘核对）：① BURST_STARVE_SUPPLY_LEVER 注记首发与
+   supply_left 频率变化；② HP_COST_ATK_PRICING 第 3 独立对局（结案线）
+   与「非致死未计价」场景血量分布；③ 纠偏翻案局的战损/竞速结果；
+   ④ race_audit 悲观率台账续记；⑤ JOINT_FLIP_TTK_CAP「否决后改锻造
+   战损」分子累计。
+
+
