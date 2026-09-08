@@ -10215,3 +10215,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.512217422043574局)，BULLY(10分/3.5961391638353324局)，HAVOC(11分/2.876911331068265局)
 - 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1329 胜，当前目标进阶 0
+
+## 第 1330 局复盘（2026-09-08 21:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：MOLTEN_FIST, BREAKTHROUGH, HOWL_FROM_BEYOND, CINDER, CINDER, TRUE_GRIT, REND, BURNING_PACT, ANGER, UNRELENTING
+- 本局遗物：ICE_CREAM, PERMAFROST
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血18｜自损2（可行动段2/非行动段22，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血23｜自损1（可行动段1/非行动段28，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血20; F15 Elite战 掉血5｜自损1（可行动段1/非行动段34，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血54｜自损2（可行动段2/非行动段45，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.2527987465312815局)，OFFERING(25分/25.811701635586044局)，PRIMAL_FORCE(24分/5.016973747466675局)，FIEND_FIRE(24分/33.90096396769015局)，MANGLE(24分/92.38895535385157局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.496424661066421局)，BULLY(10分/3.583552676761909局)，HAVOC(11分/2.8668421414095264局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1330 胜，当前目标进阶 0
