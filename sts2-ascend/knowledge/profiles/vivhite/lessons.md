@@ -4693,3 +4693,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.0932400779702967局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.9085695135160257局)，REND(22分/2.4980495356779726局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 84%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Boss战实测自损38/掉血75（51%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/423 胜，当前目标进阶 0
+
+## 第 424 局复盘（2026-09-09 02:59）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CRIMSON_CONSERVATION_LAW, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_DIFFERENTIAL_SAMPLING
+- 本局遗物：UNCEASING_TOP, PRAYER_WHEEL
+- 战斗记录：F2 Monster战 掉血0｜自损8（可行动段8/非行动段7，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血3｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0; F9 Elite战 掉血38｜自损22（可行动段22/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F15 Elite战 掉血40｜自损22（可行动段22/非行动段13，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/7.945099354378963局)，HAND_OF_GREED(33分/8.30227444101482局)，DRAMATIC_ENTRANCE(33分/6.115340859655839局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/26.01140722220156局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/55.08415033981514局)
+- 当前低价值卡牌：AUTOMATION(17分/2.0859137376974006局)，VIVHITE_CARD_GEODESIC_VEIL(17分/2.8983895202187195局)，REND(22分/2.4893063623031局)
+- 策略进化：elite_grey_safety_mult: 1.70 → 1.90（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Elite战实测自损22/掉血40（55%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/424 胜，当前目标进阶 0
