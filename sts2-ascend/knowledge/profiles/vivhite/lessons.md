@@ -4374,3 +4374,14 @@
 - 当前低价值卡牌：AUTOMATION(17分/2.3172732765569313局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.2198649727814552局)，EQUILIBRIUM(20分/4.981309572838898局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——致命Monster战实测自损48/掉血93（52%≥50%）——謦欬实付加码收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.42 → 0.45（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F19（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F19——药水交药线部分胜利回收）；行至 F19 但致命战自损48/掉血93≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：0/394 胜，当前目标进阶 0
+
+## 第 395 局复盘（2026-09-08 21:23）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_MOBIUS_LOOP
+- 本局遗物：BOWLER_HAT
+- 战斗记录：F2 Monster战 掉血7｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血7｜自损10（可行动段10/非行动段9，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血51｜自损42（可行动段42/非行动段22，SELF_LOSS_PHASE_OBS）｜竞速审计：T17判死→实战17回合获胜; F12 Monster战 掉血22｜自损18（可行动段18/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战5回合获胜; F14 Elite战 掉血48｜自损20（可行动段20/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/8.795439475506425局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/27.77048337976883局)，DRAMATIC_ENTRANCE(33分/6.769847424695762局)，HAND_OF_GREED(33分/7.037908238159717局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/51.56372490680094局)
+- 当前低价值卡牌：AUTOMATION(17分/2.309162820088982局)，VIVHITE_CARD_GEODESIC_VEIL(17分/3.2085954453767203局)，EQUILIBRIUM(20分/4.963874989333962局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）——白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧；双旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/395 胜，当前目标进阶 0
