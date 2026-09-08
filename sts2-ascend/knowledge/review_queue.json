@@ -13,8 +13,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "429YKJWFWLU9"
+   "source": "preferred",
+   "run_id": "429YKJWFWLU9",
+   "queue_id": "18716-1788834033441213200-0",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1314,
@@ -29,8 +33,28 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
+   "source": "preferred",
+   "run_id": "Z4SSUF1H5G7T",
+   "queue_id": "18716-1788834033441213200-1",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
+  },
+  {
+   "run": 1315,
+   "time": "2026-09-08 10:26",
+   "profile_id": "ironclad",
+   "backend_key": "kimi-k3",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
    "source": "queued",
-   "run_id": "Z4SSUF1H5G7T"
+   "run_id": "MH497PG224Y0"
   }
  ],
  "reviewing": null
