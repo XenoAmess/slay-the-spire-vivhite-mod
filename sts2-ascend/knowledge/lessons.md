@@ -10270,3 +10270,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.433804432561997局)，BULLY(10分/3.5336457163674577局)，HAVOC(11分/2.826916573093966局)
 - 策略进化：block_safety: 2.01 → 2.06（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.06 → 2.05（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1334 胜，当前目标进阶 0
+
+## 第 1335 局复盘（2026-09-09 01:42）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：HEADBUTT, PYRE, ANGER, TWIN_STRIKE, BREAKTHROUGH, FLAME_BARRIER, CONFLAGRATION, MASTER_OF_STRATEGY, ANGER, IMPERVIOUS, UNRELENTING
+- 本局遗物：FESTIVE_POPPER, BLOOD_VIAL, VENERABLE_TEA_SET, ORICHALCUM
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血0; F6 Monster战 掉血1; F8 Elite战 掉血12; F15 Elite战 掉血7｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血49｜自损3（可行动段3/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.1962718441148796局)，OFFERING(25分/25.363147742999864局)，PRIMAL_FORCE(24分/4.929789138904244局)，FIEND_FIRE(24分/33.31183545672184局)，MANGLE(24分/90.7834267396975局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.41828611704803局)，BULLY(10分/3.521277956360172局)，HAVOC(11分/2.817022365088137局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（73%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
+- 生涯战绩：0/1335 胜，当前目标进阶 0
