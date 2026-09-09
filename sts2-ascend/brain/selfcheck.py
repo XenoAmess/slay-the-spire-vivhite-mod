@@ -787,6 +787,45 @@ def main() -> int:
     pol.know.policy["potion_self_harm_gate"] = True
     ctx.current_combat_is_hard = False
 
+    # 3k5) 固化药水零甲门（第 489~504 局批复盘新增）：FORTIFIER 固化药水
+    #      「将你的格挡变为三倍」（原生 GainBlock(当前格挡×2)）在防御/回复
+    #      分支旧版只按交药线喝、不读当前格挡——504 局 F17 Boss T6（30/88，
+    #      回合首动作，上回合 9 甲已被意图 13 打穿清零）与 493 局 F33 T7
+    #      （23/96，上回合 0 甲，当场意图 30）均 0 甲倒进，净收益 0 甲；
+    #      446/451/465 局同一「交药线」理由复现。夹具：① 低血 0 甲不得喝
+    #      （跳过且不计 tried，立甲后本场仍可兑现）；② 低血 9 甲照常喝且
+    #      理由披露「实兑+18甲（FORTIFIER_BLOCK_OBS）」；③ 门关闭（置 0）
+    #      严格回滚旧行为（0 甲也喝且无观测注记）。
+    def fortifier_state(hp_now: int, blk_now: int) -> dict:
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 6,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 88, "block": blk_now,
+                                  "energy": 3},
+                       "hand": [],
+                       "enemies": [{"index": 0, "enemy_id": "SOUL_FYSH", "name": "灵魂异鱼",
+                                    "current_hp": 68, "max_hp": 163, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 0}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 88, "gold": 0, "floor": 17, "deck": [],
+                    "potions": [{"index": 0, "potion_id": "FORTIFIER", "name": "固化药水",
+                                 "description": "将你的格挡变为三倍。", "occupied": True,
+                                 "can_use": True, "usage": "combat"}]},
+        }
+
+    ctx.current_combat_is_hard = True
+    d_ft1 = pol.decide(fortifier_state(30, 0), ctx)
+    assert d_ft1.action != "use_potion", \
+        f"0甲时固化药水净收益0，不得按交药线白喝: {d_ft1.action}（{d_ft1.reason}）"
+    d_ft2 = pol.decide(fortifier_state(30, 9), ctx)
+    assert d_ft2.action == "use_potion" and "实兑+18甲（FORTIFIER_BLOCK_OBS）" in d_ft2.reason, \
+        f"有甲低血应照常喝并披露实兑甲量: {d_ft2.action}（{d_ft2.reason}）"
+    pol.know.policy["potion_fortifier_block_gate"] = 0
+    d_ft3 = pol.decide(fortifier_state(30, 0), ctx)
+    assert d_ft3.action == "use_potion" and "FORTIFIER_BLOCK_OBS" not in d_ft3.reason, \
+        f"potion_fortifier_block_gate=0 必须严格回滚旧行为: {d_ft3.action}（{d_ft3.reason}）"
+    pol.know.policy["potion_fortifier_block_gate"] = 1
+    ctx.current_combat_is_hard = False
+
     # 3n) 精英闸门不得在负分区间反转（第 43 局 F10 实证）：
     #     低血量全路径投影死亡时，旧版 ×0.1 把精英 -110 抬到 -11 压过篝火 -109，
     #     20 血走进 BYGONE_EFFIGY 阵亡。修复后：正分乘法/负分加性重罚，

@@ -5639,6 +5639,28 @@ class Policy:
                 cb_def = (state.get("combat", {}).get("player", {}) or {})
                 _hp_now = cb_def.get("current_hp", 1)
                 _max_now = max(1, cb_def.get("max_hp", 1))
+                # 固化药水零甲门（第 489~504 局批复盘）：FORTIFIER「将你的格挡
+                # 变为三倍」原生语义 GainBlock(当前格挡×2)，净收益=当前格挡×2。
+                # 格挡每回合清零而交药线只在低血触发——504 局 F17 Boss T6 与
+                # 493 局 F33 T7 均在回合开始 0 甲时把固化药水当首个动作倒进，
+                # 净收益 0 甲（493 局 T7 当场意图 30 照旧被打穿阵亡）；446/451/
+                # 465 局同一「交药线」理由复现。0 甲跳过且不计 tried，先立甲后
+                # 本场仍可兑现；使用时理由披露实兑甲量（FORTIFIER_BLOCK_OBS）
+                # 供复盘对账。policy.json 置 potion_fortifier_block_gate=0
+                # 整体回滚（旧行为零差异）。
+                _is_fortifier = (str(p.get("potion_id") or "") == "FORTIFIER"
+                                 or "变为三倍" in desc or "triple" in desc_l)
+                _fort_gain = 0
+                if _is_fortifier:
+                    try:
+                        _fort_gate = bool(int(pol.get("potion_fortifier_block_gate", 1)))
+                    except (TypeError, ValueError):
+                        _fort_gate = True
+                    if _fort_gate:
+                        _blk_now = cb_def.get("block", 0) or 0
+                        if _blk_now <= 0:
+                            continue  # 0甲倒出净收益0：不计 tried，立甲后仍可用
+                        _fort_gain = 2 * _blk_now
                 # 应急解封（第470局批复盘）：交药线未到但服务端判定结束回合
                 # 必死、或本地缺口已吞血条时，防御药水立即兑现——门槛拦的是
                 # 满血糖掷，不是救命
@@ -5648,9 +5670,11 @@ class Policy:
                 _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
                                   or _gap_now >= _hp_now)
                 if (_hp_now < _pot_line * _max_now) or _def_emergency:
+                    _fort_note = (f"，实兑+{_fort_gain}甲（FORTIFIER_BLOCK_OBS）"
+                                  if _fort_gain > 0 else "")
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
-                                    f"（交药线 {_pot_line:.0%}）",
+                                    f"（交药线 {_pot_line:.0%}）{_fort_note}",
                                     tags=[("use_potion", p.get("potion_id")),
                                           ("potion_attempt", p["index"],
                                            potion_key[1])], wait=0.6)

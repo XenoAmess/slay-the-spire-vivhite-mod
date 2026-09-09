@@ -1042,3 +1042,41 @@ SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 489~504 局批复盘：固化药水 0 甲白喝——零甲门（potion_fortifier_block_gate）+ 实兑甲量观测（FORTIFIER_BLOCK_OBS）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+固化药水（FORTIFIER「将你的格挡变为三倍」，原生 GainBlock(当前格挡×2)）因描述含「格挡」落入防御/回复分支，只按交药线 potion_block_hp_pct 喝、从不读当前格挡；格挡每回合清零，而交药线恰在低血回合触发，回合首个动作即喝必为 0 甲净收益。该假设可证伪：未来 3~10 局固化药水的任何使用都必须带「实兑+N甲（FORTIFIER_BLOCK_OBS）」且 N=2×当前格挡>0；若再出现 0 甲倒进（注记缺失或 N=0）、或门拦后该瓶在立甲回合仍无法兑现（不计 tried 失效），则本假设不成立。
+
+## EVIDENCE
+
+- 504 局（M1JG1PDTJ8RB，F17 SOUL_FYSH 阵亡，decision_chain_evidence.full_failure_run F17 段逐条核对）：T5 末 9 甲被意图 13 打穿清零；T6 首动作（17:44:09，30/88 血、意图 0）「低血量使用防御/回复药水【固化药水】（交药线 37%）」——0 甲×3=0，净收益 0 甲；T8 起 10 血被磨到 2 血，T10 意图 13 空甲阵亡。
+- 493 局（5SWGHGB9PAZV，F33 知识恶魔阵亡）：T6 末 turn_end_state block=0；T7 首动作（23/96 血、意图 30）同一「交药线 35%」理由倒进固化药水——0 甲净收益 0，当场意图 30 照旧被打穿，该战 7 回合阵亡。两局均为本批 exact_batch 证据。
+- 历史同型：446/451/465 局同一「低血量使用防御/回复药水【固化药水】（交药线 N%）」理由；生涯 FORTIFIER 类使用从未在理由中披露当前格挡。
+- 原生机制对账（native_game_knowledge.potions.FORTIFIER）：OnUse → CreatureCmd.GainBlock(target, target.Block * 2, Unpowered)——净收益严格等于当前格挡×2，0 甲恒为 0。
+- 生产现状核查（policy.py _maybe_potion is_defensive 分支）：门槛只有 `_hp_now < _pot_line * _max_now` 或应急解封，无当前格挡读数；470 批已修「未识别防御药水不得落兜底白喝」，但已识别防御药水的「药效幅度」仍不计价。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_maybe_potion is_defensive 分支新增固化药水零甲门——potion_id=="FORTIFIER" 或描述命中「变为三倍」/"triple" 时读取 combat.player.block：① 当前格挡 ≤0 跳过且不计 tried（格挡每回合清零，先立甲本场仍可兑现，应急解封同理——0 甲倒进应急也是 0）；② 使用时理由追加「实兑+2N甲（FORTIFIER_BLOCK_OBS）」披露实兑甲量，供复盘对账药效；③ 旋钮 potion_fortifier_block_gate=0 时偏移/门槛/注记全不出现，严格回落旧行为（零差异回滚）。其余药水分类、交药线、应急解封、兜底通道零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 potion_fortifier_block_gate: 1，注释记录 504/493 局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3k5 夹具三分支——① 低血 0 甲不得喝（跳过且不计 tried）；② 低血 9 甲照常喝且理由带「实兑+18甲（FORTIFIER_BLOCK_OBS）」；③ 门置 0 严格回滚旧行为（0 甲也喝且无观测注记）。
+- 不改评分主体/阈值/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 固化药水再入袋且低血时，决策理由必带「实兑+N甲（FORTIFIER_BLOCK_OBS）」且 N=2×当前格挡>0——504 局 T6 型「回合首动作 0 甲倒进」应消失（生涯 FORTIFIER 使用频次低，验证窗口可能超过 10 局，以首次出现为准）；② 0 甲低血回合该瓶保留，后续立甲回合（闭域映射/开集庇护打出后）才兑现，单场等效甲量上升；③ 若门拦后该瓶永久无法兑现（立甲回合不再被掏出）→ 复查 _potion_tried 账与 continue 路径；若立甲兑现挤压关键出牌导致战损恶化 → policy.json 置 potion_fortifier_block_gate=0 整体回滚（旧行为零差异）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3k5 三分支；既有 3k 药水分级、3k3/3k3b 进攻药预留、3k4 自伤药门、3ss-bis 交药线、3br-5/3br-6 呼唤滞留税、3kd 诅咒税、3prg 血税软顶、3prt 复打税等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+26/-1，零甲门+实兑注记）、brain/knowledge.py（+9 一个静态键）、brain/selfcheck.py（+39 三分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
