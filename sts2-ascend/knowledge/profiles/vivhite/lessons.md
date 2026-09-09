@@ -5529,3 +5529,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/3.224701583225761局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/46.93261180211268局)，ULTIMATE_DEFEND(23分/2.2105303236597234局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（14回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/499 胜，当前目标进阶 0
+
+## 第 500 局复盘（2026-09-09 16:48）
+- 结果：💀 失败｜进阶 0｜到达层数 20｜当局评分 20
+- 死因：敌人组合 THIEVING_HOPPER
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：KUSARIGAMA, JUZU_BRACELET
+- 战斗记录：F12 Monster战 掉血0｜自损3（可行动段3/非行动段12，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血0｜自损11（可行动段11/非行动段17，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损12（可行动段12/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血42｜自损25（可行动段25/非行动段28，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血39｜自损37（可行动段37/非行动段6，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血39｜自损22（可行动段22/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：FLASH_OF_STEEL(36分/2.2486507958644584局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/6.086594416274605局)，HAND_OF_GREED(33分/8.210895334576978局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/22.536221269878016局)，HEADBUTT(32分/2.139343795404796局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/3.213415127684471局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/46.76834766080529局)，ULTIMATE_DEFEND(23分/2.2027934675269143局)
+- 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损22/掉血39（56%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.38（行至 F20（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.09 → 2.08（行至 F20（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F20——灰区悲观系数部分胜利回收）；行至 F20 但致命战自损22/掉血39≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：0/500 胜，当前目标进阶 0
