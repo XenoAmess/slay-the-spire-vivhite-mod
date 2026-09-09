@@ -2713,6 +2713,10 @@ def main() -> int:
     vknow_sb = _vivhite_know("sts2-selfcheck-vhgate-stall-")
     vknow_sb.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_sb.policy["vivhite_hp_gate_stall_turns"] = 3
+    # 钉住旧门语义：僵局放行机制面向「拦门仍持续」的场景（含意图 0 回合），
+    # 自由回合减免（505~511 批）默认开启后意图 0 回合不再拦截，本夹具单独
+    # 验证旧链路与闩锁，故显式关闭减免
+    vknow_sb.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
     vpol_sb = policy.Policy(vknow_sb, random.Random(11))
     vctx_sb = _vgate_ctx()
     for _turn in (1, 2, 3):
@@ -2758,6 +2762,7 @@ def main() -> int:
     vknow_mx = _vivhite_know("sts2-selfcheck-vhgate-mixed-")
     vknow_mx.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_mx.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_mx.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
     vpol_mx = policy.Policy(vknow_mx, random.Random(11))
     vctx_mx = _vgate_ctx()
     vpol_mx.decide(_vgate_stall(1, 0), vctx_mx)
@@ -2768,6 +2773,7 @@ def main() -> int:
     vknow_off = _vivhite_know("sts2-selfcheck-vhgate-stalloff-")
     vknow_off.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_off.policy["vivhite_hp_gate_stall_turns"] = 0
+    vknow_off.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
     vpol_off = policy.Policy(vknow_off, random.Random(11))
     vctx_off = _vgate_ctx()
     for _turn in (1, 2, 3, 4, 5, 6, 7):
@@ -2787,6 +2793,7 @@ def main() -> int:
     vknow_uc = _vivhite_know("sts2-selfcheck-vhgate-uncovered-")
     vknow_uc.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_uc.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_uc.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
     vpol_uc = policy.Policy(vknow_uc, random.Random(11))
     vctx_uc = _vgate_ctx()
     for _turn in (1, 2, 3):
@@ -2830,6 +2837,59 @@ def main() -> int:
     assert vpol_uo._hp_gate_stall_uncovered == 0, \
         ("obs=0 回滚键下未覆盖观测账必须保持为零: "
          f"{vpol_uo._hp_gate_stall_uncovered}")
+
+    # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
+    #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，
+    #      余量门拦下弦光投影实付2血/绯色面积+实付4血/终止条件实付4血（合计
+    #      压制 30+ 输出），竞速审计 T4 判死→实战 7 回合阵亡；生涯 517 局文件
+    #      332 局共 2239 处「敌意图总伤0+謦欬出牌门拦下」同帧记录，本批 7 局
+    #      全部复现。自由回合自付无当回合致死可能且 LIVE_ESTIMATE 已计价血税
+    #      ——门带在此类回合是纯输出压制。意图≤0 回合余量门分量按
+    #      (1-relief) 折算，复打税分量不减免；relief=0 一键回滚（旧行为零差异）。
+    # ① 默认 relief=1.0：意图 0 回合门带撤除，已过普通阈值的謦欬攻击照常打出
+    #    且带「仅靠减免过门」纯观测注记（无减免必被拦的直接证据）
+    vknow_ft = _vivhite_know("sts2-selfcheck-vhgate-freeturn-")
+    vknow_ft.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_ft = policy.Policy(vknow_ft, random.Random(11))
+    d_ft = vpol_ft.decide(_vgate_state(85, 0), _vgate_ctx())
+    assert d_ft.action == "play_card", \
+        f"意图0自由回合减免必须放行謦欬攻击（511 局 F11 T1 形态反转）: {d_ft}"
+    assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" in d_ft.reason, \
+        f"减免过门缺决策链留痕: {d_ft.reason}"
+    # ② 同一减免下意图>0 回合门带不减免、照旧拦截（非自由回合零差异）
+    d_ft2 = vpol_ft.decide(_vgate_state(85, 10), _vgate_ctx())
+    assert d_ft2.action == "end_turn", \
+        f"意图>0 回合不得享受自由回合减免: {d_ft2}"
+    assert "謦欬出牌门拦下" in d_ft2.reason \
+        and "VIVHITE_HP_GATE_FREE_TURN_RELIEF" not in d_ft2.reason, \
+        f"非自由回合拦截语义被减免污染: {d_ft2.reason}"
+    # ③ relief=0 一键回滚：意图 0 回合照旧拦截（旧行为零差异）且不留痕
+    vknow_fo = _vivhite_know("sts2-selfcheck-vhgate-freeturn-off-")
+    vknow_fo.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_fo.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vpol_fo = policy.Policy(vknow_fo, random.Random(11))
+    d_fo = vpol_fo.decide(_vgate_state(85, 0), _vgate_ctx())
+    assert d_fo.action == "end_turn", \
+        f"relief=0 回滚键下图0回合必须恢复拦截（旧行为）: {d_fo}"
+    assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" not in d_fo.reason, \
+        f"relief=0 回滚键下不得出现减免留痕: {d_fo.reason}"
+    # ④ 复打税分量不被自由回合减免冲销（第 427~433 局批闭环守恒递归链保留）
+    vknow_fr = _vivhite_know("sts2-selfcheck-vhgate-freeturn-repeat-")
+    vknow_fr.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_fr.policy["vivhite_hp_repeat_play_tax"] = 50.0
+    vpol_fr = policy.Policy(vknow_fr, random.Random(11))
+    vctx_fr = _vgate_ctx()
+    d_fr1 = vpol_fr.decide(_vgate_state(85, 0), vctx_fr)
+    assert d_fr1.action == "play_card", \
+        f"自由回合首打必须放行（复打税对首打零差异）: {d_fr1}"
+    vctx_fr.credit_tags.append(
+        ("combat_play_commit", "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         False, False, 10.0, 1, ""))
+    d_fr2 = vpol_fr.decide(_vgate_state(83, 0), vctx_fr)
+    assert d_fr2.action == "end_turn", \
+        f"自由回合复打税分量不得被减免（同回合第2次仍应被拦）: {d_fr2}"
+    assert "VIVHITE_HP_REPEAT_PLAY_TAX" in d_fr2.reason, \
+        f"自由回合复打拦截缺复打税留痕: {d_fr2.reason}"
 
     # 3prn) 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，第 355~360
     #      局批复盘）：余量门把被拦謦欬牌全部逐出残能救场，但救场格挡通道自带

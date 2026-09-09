@@ -1042,3 +1042,39 @@ SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 505~511 局批复盘：謦欬余量门意图 0 自由回合纯输出压制——自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE，已顶格 3.0）对战斗语境零感知：门带只看「普通阈值 < 分数 ≤ 阈值+实付×margin」静态区间，不看敌意图、不看我方血线——敌意图总伤 0 的完全自由回合仍拦下已过普通阈值的謦欬攻击牌。自由回合自付本回合绝无致死可能（原生 hook 禁止自付致死），且 LIVE_ESTIMATE 已把实付血税计入分数，门带在此类回合是纯输出压制：拉长战斗、恶化竞速。该假设可证伪：未来 3~10 局若决策链从不出现「意图0自由回合减免过门（VIVHITE_HP_GATE_FREE_TURN_RELIEF）」留痕（减免未接线），或留痕出现但意图 0 回合自损主导比/单回合自损峰值显著恶化（放行有害），或精英/长战回合数与自损/掉血比无回落，则本假设不成立。
+
+## EVIDENCE
+
+- 511 局（JRTYJ0T6VAY8，F11 旧日雕像精英阵亡，decision_chain_evidence.full_failure_run 逐条核对）：T1 敌意图总伤 0、我方 45 血，门拦【弦光投影】实付2血+【绯色面积+】实付4血+【终止条件】实付4血，合计压制 30+ 点输出（连续低危拦截 1/6）；T2 意图 0 再拦弦光投影（2/6）；全程僵局放行进度止步 3/6（阈值 6），竞速审计 T4 判死→实战 7 回合阵亡——门压制的恰是本场唯一可缩短竞速的输出窗口；终段 1 血全部手牌 blocked_by_hook（原生自付致死闸实证），16 血/41 甲回合仍拦终止条件+负空间。
+- 生涯全量扫描（runs/ 517 局文件）：332 局共 2239 处「敌意图总伤0…謦欬出牌门拦下」同帧记录；本批 505~511 全部 7 局复现（505/506/507/508/509/510/511 各自的 runs 文件均命中），远超 evidence_run_threshold。506 局 F12 精英战非行动段 50、507 局 F17 Boss 非行动段 79——自由回合零输出是长非行动段的组成成分。
+- 生产现状核查（policy.py 门带段）：_hp_extra = _hp_pay × _hp_play_margin + 复打税，区间判定不含 incoming/my_hp 任何语境项；致死回合豁免与僵局放行（需连续 6 低危回合，511 局止步 3/6、354 局型交替意图结构性不可达）是仅有的两道泄压，均不覆盖「意图 0 即放行」这一更细粒度情形。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① 新增静态键读取 _hp_free_relief（仅 _hp_play_margin>0 时读取，钳 [0,1]）；② 门带计算拆分量——敌意图总伤≤0 回合余量门分量按 margin×(1-relief) 折算（relief=1.0 即自由回合撤门带、回归普通阈值），复打税分量不减免（守恒递归自我复制链在自由回合照样放血，第 427~433 局批闭环保留）；③ 被拦注记公式显示折后系数并标「意图0自由回合减免（原×N，VIVHITE_HP_GATE_FREE_TURN_RELIEF）」；④ 新增纯观测注记：无减免必被拦、仅靠减免过门的打出牌带「意图0自由回合减免过门（无减免将拦+X）」——直接区分「减免未接线」与「接线但放量」。relief=0 一键回滚（旧行为零差异），非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 vivhite_hp_gate_free_turn_relief: 1.0，注释记录 511 局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3pru 夹具四分支——① 默认 relief=1.0 意图 0 回合放行謦欬攻击且带减免留痕（511 局 F11 T1 形态反转）；② 意图>0 回合不减免、照旧拦截且无减免留痕（非自由回合零差异）；③ relief=0 回滚键下图 0 回合恢复拦截、不留痕（旧行为零差异）；④ 自由回合复打税分量不被减免冲销（同回合第 2 次复打仍拦）。3pri/3prm 四个旧夹具（vknow_sb/vknow_mx/vknow_off/vknow_uc）显式钉 relief=0——僵局放行/未覆盖观测机制面向「拦门仍持续」场景（含意图 0 回合），单独验证旧链路与闩锁。
+- 不改评分主体/阈值/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 任一意图 0 回合手握謦欬攻击牌的场面（按生涯 332/517 局命中率，首场謦欬战即可验证）出牌理由出现「意图0自由回合减免过门（VIVHITE_HP_GATE_FREE_TURN_RELIEF）」；511 局 F11 T1 型「意图0+拦 30+ 输出」应反转为「首回合输出照打」；② 「敌意图总伤0…謦欬出牌门拦下」同帧记录在决策链中消失（纯复打税拦截除外，其留痕带 VIVHITE_HP_REPEAT_PLAY_TAX）；③ 精英/Boss 战非行动段长度与自损/掉血比回落，506 局 F12（非行动段 50）、507 局 F17（非行动段 79）型长拖减少。证伪/回滚：减免留痕从不出现 → 复查静态键读取与 incoming 口径；留痕出现但自由回合自损显著抬升、或 1 血 blocked_by_hook 终段提前 → policy.json 置 vivhite_hp_gate_free_turn_relief=0 整体撤回（旧行为零差异）；复打税被误减免 → 复查两分量拆分。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3pru 四分支；既有 3prh 余量门、3pri 僵局放行、3prm 未覆盖观测、3prn 门拦格挡救场、3prt 复打税、3prg 血税软顶、3prl 血税密度、3br-5/3br-6 呼唤滞留税、3kd 诅咒税、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+43/-2，减免旋钮+门带分量拆分+双向留痕）、brain/knowledge.py（+10 一个静态键）、brain/selfcheck.py（+60，3pru 四分支+四个旧夹具钉 relief=0）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

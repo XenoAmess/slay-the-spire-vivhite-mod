@@ -4129,6 +4129,27 @@ class Policy:
                     pol.get("vivhite_hp_repeat_play_tax", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_repeat_tax = 0.0
+        # 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第 505~511
+        # 局批复盘新增，静态键）：门带对战斗语境零感知——敌意图总伤 0 的完全
+        # 自由回合仍以静态门带拦下已过普通阈值的謦欬攻击牌（511 局 F11 旧日雕像
+        # 精英战 T1：意图 0、我方 45 血，拦下弦光投影实付2血/绯色面积+实付4血/
+        # 终止条件实付4血，合计压制 30+ 点输出，竞速审计 T4 判死→实战 7 回合
+        # 阵亡）；生涯 517 局文件 332 局共 2239 处「敌意图总伤0+謦欬出牌门拦下」
+        # 同帧记录，本批 505~511 全部 7 局复现。自由回合自付本回合绝无致死
+        # 可能（原生 hook 禁止自付致死，511 局 F11 终段 1 血全 blocked_by_hook
+        # 实证），且 LIVE_ESTIMATE 已把实付血税计入分数——门带在此类回合是纯
+        # 输出压制、拉长战斗、恶化竞速。意图 0 回合余量门分量按
+        # (1-relief) 折算（relief=1.0 即撤门带、回归普通阈值）；复打税分量不减免
+        # （守恒递归自我复制链在自由回合照样放血，第 427~433 局批闭环保留）。
+        # relief=0 一键回滚（旧行为零差异），非白绮角色零改动（_hp_play_margin
+        # 恒 0 不进分支）；僵局放行闩锁停用余量门时本减免同步无意义。
+        _hp_free_relief = 0.0
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_free_relief = min(1.0, max(0.0, float(
+                    pol.get("vivhite_hp_gate_free_turn_relief", 0.0) or 0.0)))
+            except (TypeError, ValueError):
+                _hp_free_relief = 0.0
         # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
         # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
         if self._hp_repeat_round != round_no:
@@ -4263,12 +4284,21 @@ class Policy:
                     if _hp_repeat_tax > 0.0:
                         _hp_rep = self._hp_repeat_plays.get(cid, 0)
                         _hp_rep_extra = _hp_pay * _hp_rep * _hp_repeat_tax
-                    _hp_extra = _hp_pay * _hp_play_margin + _hp_rep_extra
+                    # 意图0自由回合减免只折余量门分量；复打税分量不减免
+                    _hp_margin_eff = _hp_play_margin
+                    if _hp_free_relief > 0.0 and incoming <= 0:
+                        _hp_margin_eff = _hp_play_margin * (1.0 - _hp_free_relief)
+                    _hp_extra = _hp_pay * _hp_margin_eff + _hp_rep_extra
+                    _hp_extra_full = _hp_pay * _hp_play_margin + _hp_rep_extra
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
                         _gate_formula = (f"实付{_hp_pay:g}血×"
-                                         f"{_hp_play_margin:.2f}")
+                                         f"{_hp_margin_eff:.2f}")
+                        if _hp_margin_eff != _hp_play_margin:
+                            _gate_formula += (
+                                f"（意图0自由回合减免，原×{_hp_play_margin:.2f}，"
+                                "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
                         if _hp_rep_extra > 0.0:
                             _gate_formula += (
                                 f"+同回合第{_hp_rep + 1}次复打税"
@@ -4285,6 +4315,15 @@ class Policy:
                         why += (f"｜同回合第{_hp_rep + 1}次复打税"
                                 f"+{_hp_rep_extra:.1f}已计价仍过门"
                                 "（VIVHITE_HP_REPEAT_PLAY_TAX）")
+                    if (not _hp_gate_hit and _hp_margin_eff != _hp_play_margin
+                            and float(pol["play_threshold"]) + _hp_extra
+                            < score
+                            <= float(pol["play_threshold"]) + _hp_extra_full):
+                        # 仅靠自由回合减免过门（无减免必被拦）——直接验证减免
+                        # 接线与放行规模（纯观测注记，不改评分/放行）
+                        why += (f"｜意图0自由回合减免过门（无减免将拦"
+                                f"+{_hp_extra_full - _hp_extra:.1f}，"
+                                "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
