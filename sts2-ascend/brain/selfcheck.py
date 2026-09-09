@@ -5093,6 +5093,47 @@ def main() -> int:
     assert s_plain_lethal_hit[0] < ff_thr < s_kr_lethal_hit[0], \
         f"普通致死攻击闸被误放开: plain={s_plain_lethal_hit} race={s_kr_lethal_hit}"
 
+    # 3krlf（第530~536局批复盘）：斩杀竞速判死语境下能力牌的血池长战复利撤账
+    #            （KILL_RACE_LONGFIGHT_OFF）——kill_race 判死 ⟺ 敌血池大且存活
+    #            视界被封顶，lf 却在同一血池上给能力牌最高加成（536 局 F33 无厌
+    #            沙虫 T2 判死后 T3 公理护环/负空间各带「长战加成+5.7」上砧、T5
+    #            公理护环再打出，T6 阵亡）。① 健康同局面加成原样保留；②
+    #            kill_race 非致死回合 lf 分量撤账并留痕；③ 旋钮 False 严格
+    #            回滚旧口径；④ 致死竞速回合 546 批整分 floor 不受影响。
+    krlf_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-krlf-"))
+    krlf_pol = policy.Policy(knowledge.Knowledge(krlf_dir), random.Random(5))
+    krlf_enemies = [dict(ra_enemies[0])]  # 血池 253 → lf 满档 7.0，T3 减半 3.5
+    krlf_base, _, krlf_why_base = krlf_pol._score_play(
+        dict(ra_pow), krlf_enemies, 14, 0, 3, krlf_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "长战加成+3.5" in (krlf_why_base or ""), \
+        f"对照场景失真（健康局 T3 能力牌长战加成应保留）: {krlf_why_base}"
+    krlf_on, _, krlf_why_on = krlf_pol._score_play(
+        dict(ra_pow), krlf_enemies, 14, 0, 3, krlf_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, kill_race=True, run_deck=[])
+    assert "KILL_RACE_LONGFIGHT_OFF" in (krlf_why_on or "") \
+        and "长战加成+" not in (krlf_why_on or ""), \
+        f"竞速判死能力牌复利撤账留痕缺失: {krlf_why_on}"
+    assert abs(krlf_base - krlf_on - 3.5) < 1e-9, \
+        f"撤账只应去掉血池复利分量: base={krlf_base} on={krlf_on}"
+    krlf_off_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-krlfoff-"))), random.Random(5))
+    krlf_off_pol.know.policy["kill_race_longfight_off"] = False
+    krlf_off, _, krlf_why_off = krlf_off_pol._score_play(
+        dict(ra_pow), krlf_enemies, 14, 0, 3, krlf_off_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, kill_race=True, run_deck=[])
+    assert abs(krlf_off - krlf_base) < 1e-9 \
+        and "KILL_RACE_LONGFIGHT_OFF" not in (krlf_why_off or "") \
+        and "长战加成+3.5" in (krlf_why_off or ""), \
+        f"旋钮关闭未严格回滚旧口径: off={krlf_off} base={krlf_base} why={krlf_why_off}"
+    krlf_lethal, _, _ = krlf_pol._score_play(
+        dict(ra_pow), krlf_enemies, 50, 0, 3, krlf_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, kill_race=True, run_deck=[])
+    assert krlf_lethal < krlf_pol.know.policy["play_threshold"], \
+        f"致死竞速回合能力牌整分 floor 被本旋钮改动: {krlf_lethal}"
+    del (krlf_base, krlf_why_base, krlf_on, krlf_why_on, krlf_off, krlf_why_off,
+         krlf_lethal)
+
     # 3xg（01:43 滑溜批补合）：滑溜是逐 hit 的 HP 伤害上限，且只有穿甲
     # 命中才掉层。评分、击杀判断和最终出牌必须共用同一条逐段结算路径。
     sl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-slippery-"))

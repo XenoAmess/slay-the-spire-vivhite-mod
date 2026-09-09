@@ -556,6 +556,12 @@ DEFAULT_POLICY = {
     "kill_race_margin": 1.5,         # 预计击杀回合数超出可存活回合数此余量 → 判定防守路线已被数学证伪
     "kill_race_atk_mult": 1.25,      # 竞速失败时攻击提速乘区（与 desperate/race_allin 不叠加）
     "kill_race_blk_mult": 0.70,      # 竞速失败时格挡权重乘区：买不到胜利的奢侈格挡把能量还给输出（致死当回合格挡仍由 lethal 分支兜底）
+    "kill_race_longfight_off": True,  # 竞速判死长战复利撤账（KILL_RACE_LONGFIGHT_OFF，第530~536局批复盘，
+                                     # 静态键）：kill_race 判死 ⟺ 敌血池大且存活视界被封顶，而能力牌长战加成
+                                     # 正比于同一血池——536 局 F33 沙虫 T2 判死后 T3/T5 公理护环带「长战加成+5.7」
+                                     # 上砧挤占格挡/输出能量，529~536 局同型 50+ 例。True 时 kill_race 非致死
+                                     # 回合撤掉 lf 分量（base/开局承诺/lethal/race_allin floor 不变）；
+                                     # False 一键回滚旧口径（零差异）
     "kill_race_prior_eff": 0.55,     # 首回合攻坚先验折算率（第 255 批复盘）：实测输出速率不足两回合时，
                                      # 用 deck_burst×此值做悲观 DPS 开账——Boss 战头 1~2 回合不再盲防
                                      # （252 局 F5 劫掠者三连 T1~T3 意图 22→32 还在打坚毅补防）；

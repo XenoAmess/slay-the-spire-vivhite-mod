@@ -5469,6 +5469,23 @@ class Policy:
                  pool / max(1.0, float(pol.get("power_longfight_hp_div", 30.0))))
         if round_no > 2:
             lf *= 0.5
+        # 竞速判死长战复利撤账（KILL_RACE_LONGFIGHT_OFF，第530~536局批复盘新增，
+        # 静态键）：kill_race 判死 ⟺ 击杀投影回合数>可存活回合数——敌血池越大、
+        # 存活视界越短，判死越硬；而 lf 正比于同一血池（pool/div 封顶
+        # power_longfight_bonus_max），能力牌恰在「复利视界已被投影证伪」的语境
+        # 吃到最高加成。536 局 F33 无厌沙虫 T2 判死（击杀7>存活4，沙坑吞噬钟
+        # 封底）后 T3 公理护环/负空间各带「长战加成+5.7」上砧（意图21 只补9甲
+        # 掉12）、T5 公理护环再以能力牌口径打出（意图20 仍只有9甲），T6 阵亡；
+        # 生涯扫描 529~536 局 kill_race 语境「能力/增益牌+长战加成」50+ 例
+        # （531:11/532:10/533:16/534:8/536:6）。lethal/race_allin 已由下方
+        # floor 整分兜底，此处只撤血池复利分量——base、开局承诺与致死豁免
+        # 全部不变。旋钮 False 一键回滚旧口径（零差异）。
+        _kr_lf_suppressed = False
+        _kr_lf_raw = lf
+        if (kill_race and not (lethal or race_allin) and lf > 0.0
+                and bool(pol.get("kill_race_longfight_off", True))):
+            _kr_lf_suppressed = True
+            lf = 0.0
         score = base + lf
         # 致死回合上能力=放弃格挡能量（旧规）；败局竞速局同治（第546局批复盘）：
         # 判死局的能力复利视界（3+ 回合起步）超出剩余存活视界（~2 回合），
@@ -5494,6 +5511,9 @@ class Policy:
             why += "｜能量预留给格挡"
         if lf >= 1.5:
             why += f"｜长战加成+{lf:.1f}（敌血池{pool:.0f}）"
+        elif _kr_lf_suppressed:
+            why += (f"｜竞速判死长战复利撤账（原+{_kr_lf_raw:.1f}/敌血池{pool:.0f}，"
+                    "KILL_RACE_LONGFIGHT_OFF）")
         # 开局承诺加成（第555~653批复盘新增）：贵重力量引擎（恶魔形态等 3 费能力）
         # 在 T1~T2 手握足额能量时必须能压过「先打零散小攻击、引擎改天再说」的贪心
         # 顺位——本批实证：DEMON_FORM 整批 9 局拾取/升级共 12 次仅 4 局打出，

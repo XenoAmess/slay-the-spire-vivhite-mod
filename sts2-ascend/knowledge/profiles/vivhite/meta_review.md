@@ -1115,3 +1115,39 @@ SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 530~536 局批复盘：斩杀竞速判死后能力牌仍吃血池长战复利——竞速判死长战复利撤账（KILL_RACE_LONGFIGHT_OFF）
+
+日期：2026-09-10
+
+## HYPOTHESIS
+
+kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：敌血池越大、存活视界越短，判死越硬；而能力/增益牌的长战加成 lf 正比于同一敌血池（pool/power_longfight_hp_div，封顶 power_longfight_bonus_max=7），于是能力牌恰在「复利视界已被投影证伪」的语境吃到最高加成，把能量引向 3+ 回合才能兑付的复利牌。546 批已为 lethal/race_allin 建立能力牌整分 floor（「判死局的能力复利视界超出剩余存活视界」），唯独 kill_race（非致死、非 EMA 判死口径）漏网。该假设可证伪：未来 3~10 局 kill_race 激活（决策理由带「斩杀竞速投影…全攻提速」）的回合里，能力牌理由应出现「竞速判死长战复利撤账（原+N/敌血池M，KILL_RACE_LONGFIGHT_OFF）」且不再带「长战加成+N」；若该留痕从不出现（机制未接线）或撤账后竞速局战损反而恶化（挤掉的引擎确为翻盘变量），则假设不成立。
+
+## EVIDENCE
+
+- 536 局（8XVF0UUDJG4Y，F33 无厌沙虫/THE_INSATIABLE 阵亡，完整链 runs/20260909-233604_8XVF0UUDJG4Y.json 逐条核对）：T2「斩杀竞速投影：击杀还需7回合>可存活4回合（沙坑吞噬钟4回合封底，SANDPIT_EAT_CLOCK_CAP；防守线复核翻盘比超限不予放行，JOINT_FLIP_TTK_CAP），全攻提速」——判死 latch 后：T3 意图21、59血，打出【公理护环】（能力/增益牌（第3回合）｜长战加成+5.7（敌血池136））与【负空间】（同+5.7），只补 9 甲掉 12；T5 意图20、38血，【公理护环】再以能力牌口径 +3.75 打出，仍只有 9 甲掉 11，T6 0 血 GAME_OVER。竞速审计 T2 判死→实战 5 回合阵亡，判决本身准确，败因含判死后能量仍流向复利牌。
+- 生涯扫描（runs/ 529~536 局全量）：kill_race 语境（理由含 斩杀竞速/全攻提速/竞速生存分母/竞速自付速率 标记）的「能力/增益牌+长战加成」打出共 50+ 例——529:1、530:1（守恒递归 +5.9/血池142）、531:11、532:10、533:16（含 F33 知识恶魔 T2 变身式+ 长战加成+12.0/血池293）、534:8、536:6——远超 evidence_run_threshold=3 的独立对局线。
+- 生产现状核查：_score_play 能力牌分支 lf 只在 round_no>2 减半，无任何竞速语境感知；下方 floor 仅覆盖 lethal or race_allin（policy.py 原 5477 行），kill_race 调用链（_krace_latch 武装后 race_lost=True → kill_race=True → _score_play 传参）全程未接入。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：能力牌分支新增竞速判死长战复利撤账——kill_race 且非 lethal/race_allin 时 lf 分量归零（base、开局承诺、致死豁免、race_allin/lethal 整分 floor 全部不变），why 追加「竞速判死长战复利撤账（原+N/敌血池M，KILL_RACE_LONGFIGHT_OFF）」留痕供后续对账；旋钮 kill_race_longfight_off=False 一键回滚旧口径（零差异）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 kill_race_longfight_off: True，注释记录 536 局实证与回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3krlf 夹具四分支——① 健康同局面（血池253、T3）长战加成+3.5 原样保留；② kill_race 非致死回合 lf 撤账、分差恰为 3.5 且带留痕；③ 旋钮 False 严格回滚（分数/注记与对照逐分一致）；④ 致死竞速回合 546 批整分 floor 不受影响（仍压在出牌线下）。
+- 不改竞速判决/ttk-tsurv 投影/开局承诺/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① kill_race 激活回合的能力牌理由出现「竞速判死长战复利撤账…KILL_RACE_LONGFIGHT_OFF」——按本批每局 6~16 例的频率，首个 kill_race 局即可验证；② 判死后回合的格挡/输出能量占比上升，「意图20+只补9甲同时上砧能力牌」型记录减少；③ kill_race 局竞速审计「判死→实战阵亡回合数」不再因复利白打回合而提前。证伪/撤回：留痕从不出现 → 复查 kill_race 传参与静态键读取；撤账后判死局反超率（race_audit won/latched，当前 308/736≈41.8%）显著下滑、或竞速局战损恶化 → policy.json 置 kill_race_longfight_off=false 整体撤回。后续观测点（本批不动）：先验口径 T1~T2 kill_race 下的开局承诺加成（533 局 F33 T2 变身式+ 开局承诺+6.0 同型）是否同样需要竞速语境感知，待撤账留痕积累后按证据另行立项。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3krlf 四分支；既有 3ra 败局竞速 floor、3xf/3xf-race-lethal、3xc/xcl 开局承诺、3pru HARD_ONLY、3prh/3pri/3prm/3prn/3prt 謦欬门族、3br-5/3br-6 呼唤滞留税、3kd 诅咒税、3sec 沙坑封底等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+20，撤账+留痕）、brain/knowledge.py（+6 一个静态键）、brain/selfcheck.py（+41，3krlf 四分支）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
