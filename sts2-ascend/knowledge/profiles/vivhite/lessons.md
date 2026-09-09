@@ -6079,3 +6079,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.539841318109745局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/44.03425181783189局)，VOLLEY(24分/2.3179207498744328局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（23回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/549 胜，当前目标进阶 0
+
+## 第 550 局复盘（2026-09-10 02:23）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_MOBIUS_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_BACKTRACKING_SPELL
+- 本局遗物：PENDULUM, WHETSTONE
+- 战斗记录：F4 Monster战 掉血0｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血19｜自损14（可行动段14/非行动段15，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Unknown战 掉血1｜自损8（可行动段8/非行动段7，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血0｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损44（可行动段44/非行动段25，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/5.1078662310012355局)，HAND_OF_GREED(35分/8.789056922529557局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/18.91238280819076局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/50.970938219424866局)，DRAMATIC_ENTRANCE(31分/8.034885124998988局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.523951873496361局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.880131936469475局)，VOLLEY(24分/2.3098080272498724局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.57 → 0.56（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损44/掉血78（56%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/550 胜，当前目标进阶 0
