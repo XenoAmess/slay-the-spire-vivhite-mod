@@ -5144,3 +5144,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.519120094519252局)，REND(22分/2.1635676070962155局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.45636733000978局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（29回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/464 胜，当前目标进阶 0
+
+## 第 465 局复盘（2026-09-09 10:28）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_TANGENT_STARLIGHT, SALVO, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_GOLDEN_RATIO, PREP_TIME
+- 本局遗物：LUCKY_FYSH, HORN_CLEAT
+- 战斗记录：F8 Monster战 掉血1｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损9（可行动段9/非行动段2，SELF_LOSS_PHASE_OBS）; F13 Unknown战 掉血0｜自损11（可行动段11/非行动段3，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损6（可行动段6/非行动段5，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血29｜自损10（可行动段10/非行动段34，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血72｜自损46（可行动段46/非行动段30，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.175121024473981局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/6.881272509926453局)，HAND_OF_GREED(33分/8.183635089641745局)，PREP_TIME(32分/4.35037209932055局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/24.417179425815103局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.5103031741884347局)，REND(22分/2.155995120471379局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.30427004435475局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损46/掉血72（64%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/465 胜，当前目标进阶 0
