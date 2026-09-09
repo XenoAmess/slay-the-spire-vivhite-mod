@@ -5165,6 +5165,15 @@ class Policy:
             _sticky_v = float(pol.get("target_sticky_bonus", 3.0))
             _doctrine_present = False
             _sleep_veto = None
+            # 减员成本翻案对账（REMOVAL_COST_FLIP_AUDIT，第 1361~1366 批复盘
+            # 落地、d8a11849 被宿主事务回滚后本批按当前 HEAD 重实现）：
+            # 首验窗口 5 条「减员成本加分」注记 100% 与辅助体教义同标、本批
+            # （1367~1372）再增 7 条仍全同标——「去掉减员分后该目标是否仍
+            # 中标」从留痕不可分辨，杠杆有无独立行为效应不可计数。同循环
+            # 复算去分口径（减员分剔除、被减员休眠的粘性复活），循环结束后
+            # 对中标者追加翻案/随附段；纯观测不改分，键=0 时对账段与加分同灭。
+            _winner_rem = 0.0
+            _cf_best_i, _cf_best_s = None, -1.0
             for e in enemies:
                 if (not (self._is_respawn_add(e) and not all_respawn)
                         and len(enemies) > 1
@@ -5248,8 +5257,21 @@ class Policy:
                     and not killed)
                 if _payback_blocked:
                     s = floor_score
+                # 去分对照分：减员分剔除；粘性曾被该候选的减员分休眠时复活
+                # （_doctrine_present 全局休眠口径与减员分无关，两边一致）。
+                if _payback_blocked:
+                    _rem_cf = s
+                else:
+                    _rem_cf = s - _rem_cost
+                    if (_rem_cost > 0.0 and _sticky_t is not None
+                            and not _doctrine_present
+                            and e.get("index") == _sticky_t):
+                        _rem_cf += _sticky_v
+                if _cf_best_i is None or _rem_cf > _cf_best_s:
+                    _cf_best_i, _cf_best_s = e.get("index"), _rem_cf
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
+                    _winner_rem = _rem_cost
                     why = f"可击杀{e['name']}" if killed else (
                         f"自我强化体优先转火：{e['name']}（力量+{scaler_stack:.0f}，"
                         f"拖越久打越痛）" if scaler_stack > 0 else (
@@ -5295,6 +5317,16 @@ class Policy:
                                     + ("｜零意图回合" if _burn_idle else ""))
                         except Exception:
                             pass
+            # 减员成本翻案对账收口（REMOVAL_COST_FLIP_AUDIT）：Winner 定论后
+            # 对账一次——去分口径的胜者与本口径胜者不同则记翻案（杠杆独立
+            # 改写了火线），相同则记随附（加分只放大既有选择）。
+            if _winner_rem > 0.0 and best_t is not None:
+                if _cf_best_i is not None and _cf_best_i != best_t:
+                    why += ("｜减员成本翻案（去除减员分后火线旁落，"
+                            "REMOVAL_COST_FLIP_AUDIT）")
+                else:
+                    why += ("｜减员成本随附（去除减员分后中标不变，"
+                            "REMOVAL_COST_FLIP_AUDIT）")
             # 沉睡保期禁攻收口：全部打击候选都指向沉睡者时，攻击面压到禁玩线，
             # 混合牌仍可由下方 _hybrid_defense 按格挡面放行（能量让给铺垫）。
             if best_t is None and _sleep_veto is not None:
