@@ -1404,7 +1404,12 @@ def main() -> int:
     #      ① 廉价池（≤峰值一半）获减员成本加分并留痕，火线转信徒；
     #      ② 键=0 严格回滚钉神官旧行为且留痕同灭；③ 本卡即斩目标已有
     #      kill_bonus 计价，不重复加减员成本；④ 对称池零留痕。
-    def kin_removal_state(follower_hp=58):
+    #      ⑤ 翻案对账（REMOVAL_COST_FLIP_AUDIT，第 1361~1366 批复盘）：
+    #      首验窗口 5 条注记 100% 与辅助体教义同标，杠杆独立效应不可计数——
+    #      新鲜 Policy（无粘性记忆）下 ① 情形去分后神官（10.4>信徒 9.5）
+    #      中标故记「翻案」；随附夹具（信徒意图 20 → 去分后信徒 14.0>
+    #      神官 10.4 本就中标）记「随附」；键=0 时对账段与加分同灭。
+    def kin_removal_state(follower_hp=58, follower_intent=5):
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
             "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
@@ -1420,13 +1425,32 @@ def main() -> int:
                            {"index": 1, "enemy_id": "RCT_FOLLOWER", "name": "同族信徒",
                             "current_hp": follower_hp, "max_hp": 59, "block": 0, "is_alive": True,
                             "is_hittable": True,
-                            "intents": [{"total_damage": 5}]}]},
+                            "intents": [{"total_damage": follower_intent}]}]},
             "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
 
     d_rct = pol.decide(kin_removal_state(), ctx)
     assert d_rct.action == "play_card" and d_rct.params.get("target_index") == 1 \
         and "减员成本加分" in d_rct.reason and "REMOVAL_COST_TARGET" in d_rct.reason, \
         f"廉价池信徒未获减员成本转火: {d_rct.params}（{d_rct.reason}）"
+    # 翻案/随附断言用新鲜 Policy（_focus_index=None 无粘性记忆），排除共享
+    # pol 上火线粘性残留对对账口径的干扰：
+    rct_flip_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-remcost-flip-")))
+    rct_flip_pol = policy.Policy(rct_flip_know, random.Random(11))
+    d_rct_flip = rct_flip_pol.decide(kin_removal_state(), ctx)
+    assert d_rct_flip.action == "play_card" and d_rct_flip.params.get("target_index") == 1 \
+        and "减员成本翻案" in d_rct_flip.reason \
+        and "REMOVAL_COST_FLIP_AUDIT" in d_rct_flip.reason, \
+        f"去分后神官（10.4>信徒9.5）中标，应记减员成本翻案: {d_rct_flip.params}（{d_rct_flip.reason}）"
+    # 随附夹具：信徒意图 20 → 去分口径信徒（8+20×0.3=14.0）本就压过神官
+    # （8+8×0.3=10.4），减员分只放大既有选择，应记「随附」而非「翻案」。
+    rct_pig_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-remcost-pig-")))
+    rct_pig_pol = policy.Policy(rct_pig_know, random.Random(11))
+    d_rct_pig = rct_pig_pol.decide(kin_removal_state(follower_intent=20), ctx)
+    assert d_rct_pig.action == "play_card" and d_rct_pig.params.get("target_index") == 1 \
+        and "减员成本随附" in d_rct_pig.reason and "减员成本翻案" not in d_rct_pig.reason, \
+        f"去分后仍中标的目标应记减员成本随附: {d_rct_pig.params}（{d_rct_pig.reason}）"
     rct_rb_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-remcost-rb-")))
     rct_rb_know.policy["removal_cost_bonus_max"] = 0.0
@@ -1435,6 +1459,8 @@ def main() -> int:
     assert d_rct_rb.action == "play_card" and d_rct_rb.params.get("target_index") == 0 \
         and "减员成本加分" not in d_rct_rb.reason, \
         f"removal_cost_bonus_max=0 未严格回滚钉神官旧行为: {d_rct_rb.params}（{d_rct_rb.reason}）"
+    assert "REMOVAL_COST_FLIP_AUDIT" not in d_rct_rb.reason, \
+        f"键=0 时翻案对账段须与加分同灭: {d_rct_rb.reason}"
     d_rct_kill = pol.decide(kin_removal_state(follower_hp=6), ctx)
     assert d_rct_kill.action == "play_card" and d_rct_kill.params.get("target_index") == 1 \
         and "可击杀" in d_rct_kill.reason \

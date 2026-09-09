@@ -8359,3 +8359,140 @@ retry_resolution: none (no replay target; local production behavior change)
    扫描；④ SLIPPERY_TTK_BREAK_EST 贴线计数与 ENGINE_COMMIT_LOWHP_
    DISCOUNT 第 2~3 局样本；⑤ 竞速审计悲观率台账续记。
 
+
+# 2026-09-10｜第 1361~1366 局复盘（异步追及队列 6 局 exact_batch 全败；观测位升级 ×1：REMOVAL_COST_FLIP_AUDIT 减员成本翻案对账——首验 5 条注记 100% 随附辅助体教义，杠杆独立效应不可计数）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  replay target；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+retry_resolution: none (no replay target; local production observability upgrade)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：REMOVAL_COST_TARGET（1356~1360 批落地的减员成本加分）
+  是否独立改变过任何一次火线，从现有注记不可分辨——首验窗口 5 条
+  「减员成本加分」注记 100% 与「辅助体优先转火」（+8 定向教义）同标，
+  去掉减员分后这些目标本就会中标，杠杆可能至今零独立效应。给中标理由
+  追加「去分对账」段后，未来局可零重建成本计数翻案/随附，作为该杠杆
+  保留/回调/撤回的裁决依据。
+- **EVIDENCE**：1366（DG2RDA7U7N0S）F15「愤怒→双尾鼠（辅助体优先转火…｜
+  减员成本加分+3.8（7池≤峰值19一半））」、F19「打击→盛碗虫（石）…+4.7」；
+  1364（HRY4JP2VSFDG）F31 异螨×2（+3.2/+3.1）；1365（9TSSS9B2MSJU）F5
+  「痛击→劫掠者弩手…+3.4」——5 条全部挂在零伤害意图辅助体上；头号靶
+  组合 KIN 本批 0 遭遇。policy.py 目标评分循环核读：注记只披露加分值与
+  池比，不披露「去分后是否仍中标」；反事实口径所需的全部原料（逐候选分、
+  减员分、粘性休眠语义）在同一循环内已在产。
+- **EXPECTED_SIGNAL**：未来 3~10 局，带「减员成本加分」的中标理由尾部
+  出现「减员成本翻案（去除减员分后火线旁落，REMOVAL_COST_FLIP_AUDIT）」
+  或「减员成本随附（去除减员分后中标不变，REMOVAL_COST_FLIP_AUDIT）」。
+  翻案独立对局 ≥1 → 杠杆有独立行为效应，转入 KIN 组合战损基线
+  （55 掉血/65% 死亡）裁决；连续 ≥3 批全随附且火线构成无变化 → 评估
+  回调系数或整体撤回（knowledge/policy.json 写 removal_cost_bonus_max: 0）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1361..1366]，exact 6/6、missing=0；6 局全败（生涯
+  0/1366）。死亡分布：一幕走廊早死 2 局（1361 F5、1365 F6，同组合
+  FUZZY_WURM_CRAWLER+SHRINKER_BEETLE，T3判死→实战 8/7 回合阵亡均应验）、
+  一幕 Boss（F17）1 局（1363 乐加维林族母 T4判死→8回合阵亡）、一幕
+  Boss 越墙后 3 局（1362 F33 无厌沙虫 T2判死→5回合阵亡、1364 F33
+  CRUSHER+ROCKET（22.5战21.6死）T4判死→7回合阵亡、1366 F22 OVICOPTER
+  T2判死→5回合阵亡）。
+- 主样本 1366（DG2RDA7U7N0S）packet 内 130 条切片 + 聚合表（play_card
+  103/end_turn 36）已逐条核读：F1 涅奥铅制镇纸（经验口径合规）、F2 选牌
+  带 CARD_BURST_PICK_AUDIT（supply_left=+3.0）、F17 Boss T4判死→实战
+  12回合获胜（反向样本）、F22 终局 T2~T5 全攻提速能量真尽收口（T5 最大
+  格挡 16 对意图 40、1 血数学必死）——执行层零新缺陷，死因=成长型组合
+  输出速率缺口。
+- 部署时序：上批 REMOVAL_COST_TARGET（review_closure 2026-09-09 22:12
+  落盘）早于本批全部 6 局启程——本批即其完整首验窗口；SLIPPERY_TTK_
+  BREAK_EST、ENGINE_COMMIT_LOWHP_DISCOUNT、RACE_INVULNERABLE_POOL_OBS
+  均先于本批全部对局，无 pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 1363 一幕 Boss 前夜竞速预演判死实战
+   兑现；1361/1365 早死局路径投影「输出饥饿战损上浮×1.28~1.30（缺口
+   80~85%）」顶格；旋钮代谢链全顶格（kill_bonus 20.00 顶格、
+   boss_entry_min_hp_pct 0.88 停加码），属设计内终态，不重复立案。
+2. **本批实验靶点：REMOVAL_COST_TARGET 首验不可结算（最高价值，已立项
+   观测升级）。** 5 条注记全部与辅助体教义同标——「随附」与「翻案」
+   两种现实在留痕上不可分，杠杆裁决被归属问题卡住；按 HP_COST_ATK_
+   EXEMPT_BYSTANDER 同款「注记零出现=两种现实不可分」教义，落地去分
+   对账段（详见三节）。
+3. **SLIPPERY_TTK_BREAK_EST 续记（1/3 不变）**：本批 0 条「破层期≈」
+   ——无滑溜原料在场，零出现属无原料非失效。
+4. **ENGINE_COMMIT_LOWHP_DISCOUNT 续记（1/3 不变）**：本批 0 条「低血
+   折减」——无 hp<45% 且意图>0 的开局承诺现场。
+5. **RACE_INVULNERABLE_POOL_OBS 结案维持**：本批 0 注记、无无敌帧原料；
+   「击杀还需≥100 回合」投影全批 0 条，绝迹口径不翻案。
+6. **豁免疫价/自残旁观双 0**：本批两条皆 0，终卡组单体自残牌持有量
+   低（1365 无御血术族）；上批豁免疫价 +1（1357）使双零关闭条件刚被
+   打断，本批重新累计 1/3。
+7. **竞速审计悲观率台账**：本批判死应验 +6（6 局终局各 1 条阵亡审计），
+   反向 +2（1362 F24「T4判死→实战5回合获胜」、1366 F17「T4判死→实战
+   12回合获胜」）——台账 384/839≈45.8%，仍处 30%~46% 带内偏上限，
+   续记不重复立案。
+8. **BURST_STARVE 链台账**：CARD_BURST_PICK_AUDIT 46 条，supply_left>0
+   占 2/46（4.3%，序列 18%→9.6%→4.7%→9.1%→11.1%→8.7%→4.3% 带内
+   波动）；cap=4.0 冻结封账维持，未见误伤反例。
+
+## 三、本次调整（观测位升级 ×1：REMOVAL_COST_FLIP_AUDIT 减员成本翻案对账）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **REMOVAL_COST_FLIP_AUDIT**（减员成本加分的独立效应不可计数；证据：首验窗口 5 条注记 100% 与辅助体教义同标（1364×2/1365×1/1366×2）+ KIN 头号靶组合本批 0 遭遇 + policy.py 目标循环核读无去分对照；机制先例：HP_COST_ATK_EXEMPT_BYSTANDER 同款「随附/回避两种现实不可分→补归属观测」、SLIPPERY_TTK_BREAK_EST 同款「注记携带可计数的量」） |
+| 代码动作 | ① brain/policy.py 目标评分循环：逐候选复算去分对照分（减员分剔除、被减员分休眠的粘性按同口径复活、自残回锁候选对照分=压线分），Winner 定论后若中标者带减员分则追加「减员成本翻案（去分后火线旁落）」或「减员成本随附（去分后中标不变）」段（携 REMOVAL_COST_FLIP_AUDIT 标签）；② brain/knowledge.py removal_cost_bonus_max 注释同步对账说明；③ brain/selfcheck.py 3yhr 扩展⑤三断言（新鲜 Policy 排除共享粘性记忆：KIN 夹具去分后神官 10.4>信徒 9.5 → 「翻案」；随附夹具信徒意图 20、去分后信徒 14.0 本就中标 → 「随附」且无「翻案」；键=0 → 对账段与加分同灭） |
+| 性质边界 | 纯观测位：评分、阈值、分支、学习面全部零改动（对照分只进留痕文本，不进 best_s；既有 3yhr①~④ 锚原样通过）；沿用既有键 removal_cost_bonus_max=0 一键整体关闭（减员分恒 0 时对账段同灭，selfcheck ② 扩展断言钉死）；白绮策略层不受影响 |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3yh/3yhr①~⑤/3u/3ww/3br/3hcat/3bsl/3htpa/3xcl 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「减员成本翻案」vs「随附」的出现率与独立对局数；② 翻案局的当场结局（翻案是否伴随战损改善或误伤超额）；③ KIN 组合再遇时信徒侧注记构成；④ 随附占比持续 100% 的批次数（向撤回线推进） |
+| 继续调整条件 | 翻案独立对局 ≥1 → 杠杆确认有独立效应，按 KIN 战损基线（55/65%）裁决保留/调系数；出现「翻案且当场战损超额」误伤样本 ≥2 局 → 系数下调 4.0 或加威胁下限；连续 ≥3 批全随附 → 评估回调或整体撤回 |
+| 撤回条件 | knowledge/policy.json 写 `removal_cost_bonus_max: 0` 即对账段与减员分同灭、严格回滚旧口径（selfcheck 3yhr② 扩展断言为对照锚）；或删除 policy/knowledge/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测位落地，
+   非登记延后）。
+2. **REMOVAL_COST_TARGET（1356~1360 批行为改动）**：首验窗口 5 注记/3 局
+   全部随附辅助体教义，独立效应不可结算——由本批 REMOVAL_COST_FLIP_
+   AUDIT 接续对账，行为本体不动。
+3. **SLIPPERY_TTK_BREAK_EST（1349~1355 批观测升级）**：本批 0 条（无滑溜
+   原料），读数验收期续记 1/3 不变。
+4. **ENGINE_COMMIT_LOWHP_DISCOUNT（1343~1348 批行为闭环）**：本批无低血
+   承诺原料，样本仍 1/3（1352），续记。
+5. **RACE_INVULNERABLE_POOL_OBS（1336~1342 批行为修复）**：结案维持——
+   本批 0 注记、≥100 回合投影 0 条。
+6. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：豁免疫价与旁观双 0
+   （本批第 1/3 批重新累计；上批 1357 豁免疫价 +1 曾打断双零）；≤5 血
+   非斩杀豁免累计仍 0/3。
+7. **BURST_STARVE_SUPPLY_LEVER/CAP**：supply_left>0 4.3%（2/46）带内；
+   cap=4.0 冻结封账维持。
+8. **JOINT_FLIP_TTK_CAP**：战斗端否决留痕在产（1366 F22 T2「翻盘比超限
+   不予放行」）；「否决后改锻造战损」分子本批 +0（无改锻造现场），续记。
+9. **SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD /
+   HAND_TAX_PLAY_AUDIT**：本批无对应现场（收口均能量真尽、无末点格挡
+   竞争、无族母遭遇），顺延不判失效。
+10. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+    血池精度 / 死亡谷 least-bad / 无色药水词表）：1361/1365 早死为
+    输出饥饿+成长型组合同族，续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **行为改动的首验证必须能区分「独立生效」与「随附放大」**：新定向
+   分项若只在与既有教义同标时留下注记，复盘无法分辨它是改了选择还是
+   只放大了既有选择——注册行为改动时就该同步注册「去分对照」观测段，
+   否则首验窗口白白消耗（本批 5 条注记一条都不能结算）。
+2. **反事实对账最便宜的做法是同循环复算**：评分循环里逐候选保留
+   「去分对照分」，Winner 定论后一次比对即可——不需要第二次决策、
+   不碰评分面，且休眠语义（粘性/教义）的对齐点就在同一个 elif 链里。
+3. **selfcheck 共享 Policy 的隐性状态会污染对账断言**：_focus_index
+   跨夹具残留（DummyCtx.combat 恒 None 不触发战斗实例重置）——
+   翻案/随附这类对粘性敏感的断言必须用新鲜 Policy 实例隔离。
+4. 观察点（下批复盘核对）：①「减员成本翻案/随附」首发与分布；
+   ② KIN 组合再遇时火线构成对 0/802 基线；③ 竞速审计悲观率台账
+   续记（384/839）；④ ENGINE_COMMIT_LOWHP_DISCOUNT 第 2~3 局样本；
+   ⑤ 豁免疫价/旁观双零批次累计（当前 1/3）。
