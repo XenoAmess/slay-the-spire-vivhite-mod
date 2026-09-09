@@ -6244,3 +6244,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.307251378813507局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.77125482882852局)，PANACHE(24分/7.766296723549651局)
 - 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（4回合掉血78，每回合20≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.55 → 0.57（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/564 胜，当前目标进阶 0
+
+## 第 565 局复盘（2026-09-10 05:40）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_DIFFERENTIAL_SAMPLING, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_HEURISTIC_SHIELD, THRUMMING_HATCHET, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_BACKTRACKING_SPELL, FLICK_FLACK, POUNCE, GRAND_FINALE
+- 本局遗物：CANDELABRA, MANGO, STONE_CRACKER
+- 战斗记录：F14 Unknown战 掉血0｜自损10（可行动段10/非行动段1，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血31｜自损28（可行动段28/非行动段28，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血62｜自损25（可行动段25/非行动段51，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血36｜自损27（可行动段27/非行动段21，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血45｜自损19（可行动段19/非行动段26，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血11｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/4.8461746401822525局)，FLASH_OF_STEEL(35分/2.776459498033412局)，HAND_OF_GREED(35分/8.338766687069631局)，PACTS_END(33分/2.501299270069919局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/17.943443662287777局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.29217599898766局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.61805543692762局)，PANACHE(24分/7.739114685017228局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.57 → 0.60（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F23——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F23——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/565 胜，当前目标进阶 0
