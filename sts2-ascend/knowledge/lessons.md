@@ -10413,3 +10413,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.236248935337878局)，BULLY(10分/3.3761982810714732局)，HAVOC(11分/2.7009586248571793局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
 - 生涯战绩：0/1347 胜，当前目标进阶 0
+
+## 第 1348 局复盘（2026-09-09 11:00）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：SHRUG_IT_OFF, WHIRLWIND, TWIN_STRIKE, PACTS_END, TRUE_GRIT, THRUMMING_HATCHET, ANGER, CINDER, SPITE, HEADBUTT, CINDER, PACTS_END, PILLAGE, INFLAME, BREAKTHROUGH, ANGER, PACTS_END
+- 本局遗物：LUCKY_FYSH
+- 战斗记录：F14 Monster战 掉血11; F17 Boss战 掉血61｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血22; F21 Monster战 掉血27; F22 Monster战 掉血19｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合获胜; F25 Elite战 掉血36｜自损4（可行动段4/非行动段30，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.053856660262781局)，PRIMAL_FORCE(24分/4.710134221922819局)，FIEND_FIRE(24分/31.82757147593592局)，OFFERING(24分/25.198596839750923局)，PERFECTED_STRIKE(24分/6.356904751537735局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.221422064064195局)，BULLY(10分/3.364381587087723局)，HAVOC(11分/2.6915052696701793局)
+- 策略进化：elite_grey_safety_mult: 1.90 → 2.10（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.39 → 0.39（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.00 → 1.99（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1348 胜，当前目标进阶 0
