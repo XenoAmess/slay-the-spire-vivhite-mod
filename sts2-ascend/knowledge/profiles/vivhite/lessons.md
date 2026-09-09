@@ -5760,3 +5760,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/3.9379377380627276局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/45.57679868135005局)，ULTIMATE_DEFEND(23分/2.0536188433237097局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/520 胜，当前目标进阶 0
+
+## 第 521 局复盘（2026-09-09 20:47）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_HEURISTIC_SHIELD, PANIC_BUTTON, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL
+- 本局遗物：AKABEKO, BAG_OF_MARBLES, JOSS_PAPER
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血2｜自损16（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血2｜自损24（可行动段24/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血11｜自损22（可行动段22/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血91｜自损50（可行动段50/非行动段26，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：FLASH_OF_STEEL(36分/2.089033385797134局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/5.654545812443925局)，HAND_OF_GREED(33分/7.62805612715117局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/20.936518337605154局)，DRAMATIC_ENTRANCE(31分/8.894834747488128局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/3.924154955979508局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/45.41727988596533局)，ULTIMATE_DEFEND(23分/2.0464311773720767局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损50/掉血91（55%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/521 胜，当前目标进阶 0
