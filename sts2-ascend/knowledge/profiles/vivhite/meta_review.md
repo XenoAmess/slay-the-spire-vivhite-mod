@@ -1004,3 +1004,41 @@ SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 481~488 局批复盘：知识恶魔诅咒四选同价并列+点击回执丢失——机制税分极（KNOWLEDGE_DEMON_CURSE_TAX）+ 冷却轮换观测（UI_OPTION_COOLDOWN_SUPPRESSED）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+知识恶魔「知识诅咒」强制入组屏（无跳过）对瓦解/心灵腐化/懒惰/衰朽四张诅咒用 eval_reward_card 同价评分（状态垃圾分，488 局两屏均 -14.5），并列时点击恒落 index 0 的瓦解；该点击在实战中高频丢失回执（服务端已受理但状态未见效果），被 note_action_deferred 冷却轮换静默推向第二张——轨迹只留下「候选：懒惰=-14.5」式单候选假象，复盘长期无法区分「载荷只有一张」与「轮换吞没」。最终系统性吃进对多段出牌白绮最差的懒惰（SlothPower.ShouldPlay：每回合出牌<3）：488 局 F33 14:35:44 选懒惰后，次回合打出 3 张（切线星光/启发式护盾/公理护环）即黄金分割（1费）/生命流形（2费）/星图检索（0费）全部 blocked_by_hook 锁死空过；终回合意图 30 时只剩 2 次出牌额度，11 血 9 甲阵亡。该假设可证伪：未来 3~10 局若知识恶魔战决策链从不出现「知识恶魔诅咒机制税（KNOWLEDGE_DEMON_CURSE_TAX）」留痕、或「UI_OPTION_COOLDOWN_SUPPRESSED」观测从不显形而单候选屏仍复现（则说明上游载荷真只有一张，轮换假说不成立），或分极后诅咒选择仍未脱离懒惰/衰朽，则本假设不成立。
+
+## EVIDENCE
+
+- 488 局（21JKMZZJLBQG，F33 知识恶魔阵亡，decision_chain_evidence.full_failure_run 尾部逐条核对）：14:35:44 选【懒惰】（价值 -14.5，单候选）；14:35:49 end_turn 能量 2 余【黄金分割✗/生命流形✗/星图检索✗ 全 blocked_by_hook】；14:35:54 残能救场打出闭域映射后 11 血 9 甲吃意图 30 → GAME_OVER。竞速审计 T2 判死→实战 7 回合阵亡，判决准确，败因含出牌上限被掐。
+- 生涯全量扫描（runs/）：86 屏知识恶魔诅咒决策中仅 6 屏（39/152/188/195/196/233 局）双候选且均选瓦解；其余 80 屏全部单候选、清一色吃进心灵腐化/懒惰/衰朽——474/477/478/482/486/487/488 局连续复现，达 evidence_run_threshold。
+- 原生机制对账（knowledge/game/v0.111.0/mechanics）：KnowledgeDemon._curseOfKnowledgeSets 恒为 {瓦解,X} 双选；DisintegrationPower.AfterSideTurnEndLate 每回合末 6 点不可格挡自伤；MindRotPower 抽牌-1；SlothPower.ShouldPlay=_cardsPlayedThisTurn<3（出牌上限）；WasteAwayPower 能量上限-1。
+- 生产现状核查：本地合成双候选载荷喂当前 Policy，瓦解/心灵腐化同分并列、稳定序选 index0 瓦解——评分无机制分极；note_action_deferred（agent.py:3154 回执丢失链）对 select_deck_card 设 4 tick 精确冷却，被冷却候选在 _card_selection 候选过滤后零留痕。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① 新增 _KD_CURSE_TAX_BASE 与 _knowledge_demon_curse_offset——四诅咒按机制分极：心灵腐化 -1.0（抽牌-1 最轻）、瓦解 -2.0-5.0×(1-血线)（每回合末 6 点自伤随血线加深，满血时优于懒惰/衰朽、29% 血线 -5.5 仍优于懒惰）、衰朽 -5.0（3 能卡组能量-1）、懒惰 -8.0（出牌上限 3 对多段出牌謦欬卡组最差）；旋钮 knowledge_demon_curse_tax=0 时偏移恒 0、注记不出现（同价旧口径零差异回滚）；② _score_sel 计入偏移并随中标注记入链「知识恶魔诅咒机制税±N（KNOWLEDGE_DEMON_CURSE_TAX）」；③ 候选冷却过滤处新增观测闸「GATE 候选冷却轮换」warn：被 note_action_deferred 冷却抑制的候选名写入轨迹（UI_OPTION_COOLDOWN_SUPPRESSED），后续复盘可直接区分单候选载荷与轮换吞没。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 knowledge_demon_curse_tax: 1.0，注释记录 488 局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3kd 夹具四分支——① 高血线 {瓦解,心灵腐化} 机制税后心灵腐化反超且带留痕；② 28/95 血线 {瓦解,懒惰} 瓦解反超（488 局 F33 形态反转）；③ 旋钮=0 回滚同价旧口径、稳定序回落 index0、无留痕；④ index0 被 deferred 冷却后轮换到懒惰且轨迹披露被抑制候选。
+- 不改评分主体/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 知识恶魔战（生涯 24.9 死的第一死因，482/486/487/488 连续四局遭遇）诅咒屏决策理由出现「知识恶魔诅咒机制税（KNOWLEDGE_DEMON_CURSE_TAX）」——首场遭遇即可验证；② 双候选屏优先选心灵腐化（高血线）或瓦解（低血线对懒惰），不再吃进懒惰/衰朽；③ 「GATE 候选冷却轮换（UI_OPTION_COOLDOWN_SUPPRESSED）」若显形，直接证实轮换吞没假说并披露被吞候选；若诅咒屏仍单候选但该观测从不显形，则坐实上游载荷缺卡，转 STS2-Agent fork 修复。证伪/回滚：留痕从不出现 → 复查 card_id 口径与 _score_sel 接线；分极后选瓦解导致自伤死亡链恶化（竞速生存分母被 6/回合拖垮）→ policy.json 置 knowledge_demon_curse_tax=0 整体回滚（旧口径零差异）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3kd 四分支；既有 3zw 死牌三端、3br-5/3br-6 呼唤滞留税、3prg 血税软顶、3prl 血税密度、3prn 门拦格挡救场、3prt 复打税、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+63，机制税表+助手+计价留痕+冷却观测闸）、brain/knowledge.py（+10 一个静态键）、brain/selfcheck.py（+76 四分支夹具）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

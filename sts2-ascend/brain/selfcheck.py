@@ -9048,6 +9048,82 @@ def main() -> int:
     assert d_skip.action == "skip_reward_cards", \
         f"有跳过动作的低价值屏未跳过: {d_skip.action}（{d_skip.reason}）"
 
+    # 3kd) 知识恶魔诅咒四选机制税 + 冷却轮换观测（第481~488局批复盘）：
+    #      瓦解/心灵腐化/懒惰/衰朽在 eval_reward_card 同价（状态垃圾分），
+    #      并列时点击恒落 index 0 的瓦解；其实战点击高频丢失回执后被
+    #      note_action_deferred 冷却轮换静默吞掉（全生涯 86 屏诅咒决策仅
+    #      6 屏双候选留痕），系统性吃进节奏最差的懒惰/衰朽——488 局 F33
+    #      选懒惰后次回合 3 牌全部 blocked_by_hook（SlothPower 出牌上限3）。
+    #      修复：四诅咒按机制分极（KNOWLEDGE_DEMON_CURSE_TAX），被冷却抑制
+    #      的候选写入轨迹（UI_OPTION_COOLDOWN_SUPPRESSED）。
+    kd_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kdcurse-")))
+    for _kd_id in ("DISINTEGRATION", "MIND_ROT", "SLOTH", "WASTE_AWAY"):
+        kd_know.stats["cards"][_kd_id] = {
+            "seen": 9, "picked": 9, "plays": 0, "outcome_sum": 200.0, "bias": 0.0}
+    kd_pol = policy.Policy(kd_know)
+
+    def _kd_card(index, cid, name):
+        return {"index": index, "card_id": cid, "name": name,
+                "card_type": "Status", "energy_cost": -1, "dynamic_values": []}
+
+    def _kd_state(cards, hp=90, max_hp=90, floor=33):
+        return {"screen": "CARD_SELECTION",
+                "available_actions": ["select_deck_card"],
+                "selection": {"kind": "", "prompt": "Choose", "min_select": 1,
+                              "selected_count": 0, "can_confirm": False,
+                              "cards": cards},
+                "run": {"current_hp": hp, "max_hp": max_hp, "gold": 0,
+                        "floor": floor,
+                        "deck": [dict(npd_live)] * 8}}
+
+    # ① 高血线 {瓦解, 心灵腐化}：旧口径同价并列→点击恒落 index0 瓦解；
+    #    机制税后心灵腐化（抽牌-1 最轻）必须反超
+    d_kd1 = kd_pol.decide(_kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "MIND_ROT", "心灵腐化")]), ctx)
+    assert d_kd1.action == "select_deck_card" \
+            and d_kd1.params.get("option_index") == 1, \
+        f"机制税未让心灵腐化反超同价瓦解: {d_kd1.params}（{d_kd1.reason}）"
+    assert "KNOWLEDGE_DEMON_CURSE_TAX" in d_kd1.reason, \
+        f"中标候选缺少机制税留痕: {d_kd1.reason}"
+    # ② 低血线 {瓦解, 懒惰}：懒惰（出牌上限3）对多段出牌白绮最差，
+    #    瓦解血线项 -2-5×(1-28/95)≈-5.5 仍优于懒惰 -8——488 局 F33 形态反转
+    d_kd2 = kd_pol.decide(_kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "SLOTH", "懒惰")], hp=28, max_hp=95), ctx)
+    assert d_kd2.action == "select_deck_card" \
+            and d_kd2.params.get("option_index") == 0, \
+        f"低血线下懒惰仍压过瓦解（488局F33形态未反转）: {d_kd2.params}（{d_kd2.reason}）"
+    # ③ 回滚键=0：四诅咒恢复同价，稳定序并列回落 index0，且无机制税留痕
+    kd_pol.know.policy["knowledge_demon_curse_tax"] = 0
+    d_kd3 = kd_pol.decide(_kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "MIND_ROT", "心灵腐化")], floor=34), ctx)
+    assert d_kd3.action == "select_deck_card" \
+            and d_kd3.params.get("option_index") == 0, \
+        f"knowledge_demon_curse_tax=0 未回滚同价旧口径: {d_kd3.params}"
+    assert "KNOWLEDGE_DEMON_CURSE_TAX" not in d_kd3.reason, \
+        f"回滚后仍留机制税注记: {d_kd3.reason}"
+    kd_pol.know.policy["knowledge_demon_curse_tax"] = 1.0
+    # ④ 冷却轮换观测：index0 瓦解被 deferred 冷却后，同屏候选只剩懒惰，
+    #    轨迹必须披露被抑制候选（此前完全无痕，复盘无法区分单候选载荷
+    #    与轮换吞没）
+    kd_state4 = _kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "SLOTH", "懒惰")], floor=35)
+    kd_pol.note_action_deferred("select_deck_card", [], kd_state4,
+                                {"option_index": 0})
+    d_kd4 = kd_pol.decide(dict(kd_state4), ctx)
+    assert d_kd4.action == "select_deck_card" \
+            and d_kd4.params.get("option_index") == 1, \
+        f"被冷却候选未轮换到兄弟候选: {d_kd4.params}（{d_kd4.reason}）"
+    assert "UI_OPTION_COOLDOWN_SUPPRESSED" in json.dumps(
+        d_kd4.trace, ensure_ascii=False) and "瓦解" in json.dumps(
+        d_kd4.trace, ensure_ascii=False), \
+        f"被冷却抑制候选未进入决策轨迹: {json.dumps(d_kd4.trace, ensure_ascii=False)[:400]}"
+
+
     # 3zx) 解锁展示屏只走专用 HTTP 协议：confirm_unlock 尚未就绪时持续等待，
     #      不得退回旧 UNKNOWN 路由的鼠标盲点。原生解锁与存档可能仍在结算，
     #      盲点会越过当前队列项；动作恢复后应立即确认并清零等待计数。

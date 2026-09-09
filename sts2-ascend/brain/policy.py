@@ -6382,6 +6382,46 @@ class Policy:
             return self._deck_has_self_damage(deck)
         return True
 
+    # 知识恶魔「知识诅咒」强制入组四选的机制税基准（第481~488局批复盘）：
+    # 四张诅咒在 eval_reward_card 里同价（状态垃圾分），并列时点击恒落在
+    # index 0 的瓦解上，而其实战点击高频丢失回执、被 note_action_deferred
+    # 冷却轮换静默吞掉，最终系统性吃进节奏最差的懒惰/衰朽（488 局 F33 选
+    # 懒惰后次回合 3 张牌全部 blocked_by_hook——SlothPower.ShouldPlay 出牌
+    # 上限 3）。按机制分极（值域与拾取门槛同尺）：心灵腐化（每回合抽牌-1）
+    # 最轻；瓦解（每回合末 6 点不可格挡自伤）随当前血线加深；衰朽（能量
+    # 上限-1）对 3 能白绮卡组重创；懒惰（每回合出牌≤3）对多段出牌的白绮
+    # 謦欬卡组最差。
+    _KD_CURSE_TAX_BASE = {
+        "MIND_ROT": -1.0,
+        "DISINTEGRATION": -2.0,  # 另加血线项：-5.0 × (1 - hp_frac)
+        "WASTE_AWAY": -5.0,
+        "SLOTH": -8.0,
+    }
+
+    def _knowledge_demon_curse_offset(self, card: dict, state: dict):
+        """知识恶魔诅咒强制入组屏的机制分极差（KNOWLEDGE_DEMON_CURSE_TAX）。
+
+        非四诅咒返回 None；旋钮 knowledge_demon_curse_tax=0 时返回 0.0——
+        四张诅咒恢复同价旧口径且不留痕（零差异回滚）。
+        """
+        cid = (card.get("card_id") or "").upper().rstrip("+")
+        base = self._KD_CURSE_TAX_BASE.get(cid)
+        if base is None:
+            return None
+        scale = float(self.know.policy.get("knowledge_demon_curse_tax", 1.0))
+        if scale == 0.0:
+            return 0.0
+        offset = base
+        if cid == "DISINTEGRATION":
+            run = state.get("run") or {}
+            try:
+                hp_frac = max(0.0, min(1.0, float(run.get("current_hp", 1) or 1)
+                                       / max(1.0, float(run.get("max_hp", 1) or 1))))
+            except (TypeError, ValueError):
+                hp_frac = 1.0
+            offset -= 5.0 * (1.0 - hp_frac)
+        return offset * scale
+
     def _is_never_played_dead(self, card_id: str) -> bool:
         """零出牌死牌判定（第529局批复盘新增）。
 
@@ -7413,6 +7453,19 @@ class Policy:
                           state, "select_deck_card", card)]
         if not candidates:
             return self._cooldown_wait("选牌界面")
+        # 冷却轮换观测（第481~488局批复盘）：409/回执丢失后被
+        # note_action_deferred 冷却的候选此前在决策轨迹里完全无痕——知识恶魔
+        # 诅咒屏「候选：懒惰=-14.5」式单候选留痕，实为同价的瓦解被轮换静默
+        # 吞掉（全生涯 86 屏仅 6 屏双候选）。此处把被抑制候选写进轨迹，
+        # 后续复盘可直接区分「载荷真的只有一张」与「轮换抑制」。
+        _cooled_out = [c for c in live_candidates
+                       if self._ui_option_cooled(state, "select_deck_card", c)]
+        if _cooled_out:
+            self._trace_gate(
+                "GATE 候选冷却轮换", "warn",
+                "被冷却抑制候选：" + "、".join(
+                    str(c.get("name") or c.get("card_id")) for c in _cooled_out)
+                + "（UI_OPTION_COOLDOWN_SUPPRESSED）")
 
         def badness(c, for_removal=False):
             t = card_type(c).lower()
@@ -7627,6 +7680,16 @@ class Policy:
                 _notes = [n for n in _det
                           if ("BURST_STARVE_SUPPLY_LEVER" in n
                               or "VIVHITE_LIFE_COST_DECK_TAX" in n)]
+                # 知识恶魔诅咒机制税（第481~488局批复盘）：四诅咒同价并列时
+                # 点击恒落 index 0 的瓦解，回执丢失后被冷却轮换静默推向最差
+                # 诅咒；按机制分极并随中标注记入链。旋钮=0 时本偏移恒 0、
+                # 注记不出现（旧口径零差异）
+                _curse_off = self._knowledge_demon_curse_offset(c, state)
+                if _curse_off:
+                    _v += _curse_off
+                    _notes = _notes + [
+                        f"知识恶魔诅咒机制税{_curse_off:+.1f}"
+                        "（KNOWLEDGE_DEMON_CURSE_TAX）"]
                 if _notes:
                     _sd_notes[id(c)] = "；".join(_notes)
                 return (_v, c)
