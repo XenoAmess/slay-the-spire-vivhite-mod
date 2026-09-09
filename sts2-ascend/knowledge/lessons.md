@@ -10611,3 +10611,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/3.9771587589021102局)，BULLY(10分/3.1697090445613028局)，HAVOC(11分/2.535767235649042局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1365 胜，当前目标进阶 0
+
+## 第 1366 局复盘（2026-09-10 00:42）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：PANIC_BUTTON, FLAME_BARRIER, MOLTEN_FIST, EVIL_EYE, SHRUG_IT_OFF, ANGER, BREAKTHROUGH, UNRELENTING, WHIRLWIND, PYRE, SHRUG_IT_OFF, FLAME_BARRIER, TWIN_STRIKE
+- 本局遗物：POTION_BELT, PEN_NIB
+- 战斗记录：F15 Monster战 掉血6; F17 Boss战 掉血63｜自损1（可行动段1/非行动段68，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战12回合获胜; F19 Monster战 掉血22; F20 Monster战 掉血7; F21 Monster战 掉血25｜自损1（可行动段1/非行动段23，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血26｜自损2（可行动段2/非行动段23，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.812528188782121局)，PACTS_END(25分/99.80876142041485局)，PRIMAL_FORCE(24分/4.422061088067482局)，FIEND_FIRE(24分/29.880988252170642局)，PERFECTED_STRIKE(24分/5.968114668895929局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/3.963238703245953局)，BULLY(10分/3.1586150629053384局)，HAVOC(11分/2.5268920503242702局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.98 → 1.97（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1366 胜，当前目标进阶 0
