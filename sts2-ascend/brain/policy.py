@@ -4150,6 +4150,30 @@ class Policy:
                     pol.get("vivhite_hp_gate_free_turn_relief", 0.0) or 0.0)))
             except (TypeError, ValueError):
                 _hp_free_relief = 0.0
+        # 减免硬仗限定（VIVHITE_HP_FREE_TURN_HARD_ONLY，第 512~529 局批复盘新增，
+        # 静态键）：上批减免以精英战证据立项（511 局 F11 旧日雕像意图0回合门带
+        # 压制 30+ 输出），却对全部战斗类型生效——本批 10/18 局共 60+ 处「意图0
+        # 自由回合减免过门」绝大多数落在普通 Monster 战（小啃兽/毛绒伏地虫/缩小
+        # 甲虫等；2W8Z56 局 F12 完美综合色单发实付16血亦靠减免过门），对应
+        # 513 局 F5 自损26/掉血20、514 局 F2 自损20/掉血10、529 局 F6 自损18/
+        # 掉血6 的「普通战自损≥敌方掉血」形态：普通战意图0回合高频且敌方压力
+        # 低，撤门带放行的多是「过普通阈值但未过血税门带」的边际付血，血量经济
+        # 被慢性烧穿。减免仅在硬仗（Elite/Boss，输出压制致死证据所在）生效；
+        # 普通战恢复门带（回归 505~511 前行为，放血僵局由既有 STALL_BREAK 闩锁
+        # 兜底）。hard_only=false 一键回滚（普通战恢复减免，旧行为零差异）；
+        # node_type 缺失按普通战处理（保守撤减免=回旧门带，不会放大付血）。
+        _hp_relief_hard_only = True
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_relief_hard_only = bool(int(pol.get(
+                    "vivhite_hp_gate_free_turn_relief_hard_only", 1) or 0))
+            except (TypeError, ValueError):
+                _hp_relief_hard_only = True
+        _hp_relief_hard_suppressed = False
+        if (_hp_free_relief > 0.0 and _hp_relief_hard_only
+                and cctx.get("node_type") not in ("Elite", "Boss")):
+            _hp_relief_hard_suppressed = True
+            _hp_free_relief = 0.0
         # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
         # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
         if self._hp_repeat_round != round_no:
@@ -4304,6 +4328,12 @@ class Policy:
                                 f"+同回合第{_hp_rep + 1}次复打税"
                                 f"{_hp_rep_extra:.1f}"
                                 "（VIVHITE_HP_REPEAT_PLAY_TAX）")
+                        if _hp_relief_hard_suppressed and incoming <= 0:
+                            # 普通战意图0回合被压回门带的直接证据——供复盘核对
+                            # 硬仗限定接线与普通战自损回落（纯注记，门带语义不变）
+                            _gate_formula += (
+                                "（普通战不享意图0减免，"
+                                "VIVHITE_HP_FREE_TURN_HARD_ONLY）")
                         why += (f"｜謦欬出牌门：{_gate_formula}=+{_hp_extra:.1f}门槛，"
                                 f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
                         _hp_gate_blocked.append(
@@ -4657,6 +4687,11 @@ class Policy:
                                      if len(row) > 5 and row[5] > 0 else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
+                if _hp_relief_hard_suppressed and incoming <= 0:
+                    # 普通战意图0回合被压回门带的直接证据（第 512~529 局批）：
+                    # 供复盘核对硬仗限定接线与普通战自损回落（纯注记）
+                    _gate_note += ("（普通战不享意图0减免，"
+                                   "VIVHITE_HP_FREE_TURN_HARD_ONLY）")
                 if _hp_gate_stall_limit > 0:
                     _gate_note += (f"；连续低危拦截{self._hp_gate_stall}"
                                    f"/{_hp_gate_stall_limit}"

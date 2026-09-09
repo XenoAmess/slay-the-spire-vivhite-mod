@@ -1078,3 +1078,40 @@ SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 512~529 局批复盘：意图0自由回合减免在普通怪战斗放血——减免硬仗限定（VIVHITE_HP_FREE_TURN_HARD_ONLY）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+第 505~511 批落地的謦欬门意图0自由回合减免（relief=1.0，撤余量门门带）以精英战证据立项（511 局 F11 旧日雕像意图0回合门带压制 30+ 输出），却对全部战斗类型生效。普通 Monster 战意图0回合高频出现且敌方压力低，门带被撤后「过普通阈值但未过血税门带」分位的謦欬牌持续放行付血，血量经济被慢性烧穿——这是本批普通战「自损≥敌方掉血」形态的直接驱动。该假设可证伪：未来 3~10 局普通战意图0回合若不出现「謦欬出牌门拦下…（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）」留痕（接线错误），或普通战单场自损/掉血比不回落（514 局 F2 型 20/10 依旧），或精英/Boss 战「减免过门」留痕同步消失（误伤硬仗语义），则本假设不成立。
+
+## EVIDENCE
+
+- 全量扫描本批 18 个 runs 文件：10 局共 60+ 处「意图0自由回合减免过门（无减免将拦+N）」同帧留痕（9PTGN5 22 处、3ZPZ99 15、YZNGYD 13、CJQT1E 12、2W8Z56/B1Z2RV 各 10、VMYDQG 7、GNKBZD/SGSRKC 各 5、GJCHTN 4）；逐条核对目标怪物，绝大多数为普通怪（小啃兽/毛绒伏地虫/缩小甲虫/蟾蜍蝌蚪/飞蝇菌子/异蛙寄生虫/蛮兽/雾菇/噬尸蛞蝓/树枝史莱姆/棘刺蟾蜍/海洋混混/双尾鼠等）。极端样本：2W8Z56 局 F12 普通战 T1 完美综合色 hp-cost=16 靠减免过门（无减免将拦+48.0），单发实付 16 血；205241 局 F25 棘刺蟾蜍战 T4 在 44 血时三连付 2+4+4=10 血。
+- 自损/掉血对账（本批 combat notes）：513 局 F5 Monster 自损26/掉血20、514 局 F2 自损20/掉血10（自损为敌方 2 倍）、514 局 F5 自损10/掉血0、515 局 F2 自损22/掉血14、529 局 F6 自损18/掉血6（3 倍）——普通战自损常态化追平甚至反超敌方掉血。
+- 529 局 F17 Boss 战（decision_chain_evidence.full_failure_run 逐条核对）：T4 意图0 回合预取未来实付4血+星图检索实付2血×2 均带「减免过门（无减免将拦+12.0/+6.0）」，自由回合烧 8 血后 T5 意图20 抵达、0 甲全攻再付 8 血，T6 1 血空过阵亡——硬仗减免语义本身保留（输出压制致死证据仍在），但普通战无此立项证据。
+- 生产现状核查（policy.py）：`_hp_free_relief` 只按 `incoming<=0` 折算门带，对 node_type 零感知；`cctx.get("node_type")` 在同函数上游（Boss 攻坚提速分支）已可靠可用。既有安全网：普通战恢复门带后的放血死循环由 VIVHITE_HP_GATE_STALL_BREAK 闩锁兜底（231~243 批闭环），未覆盖结构由 STALL_UNCOVERED 观测（343~354 批）。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① `_hp_free_relief` 计算后新增硬仗限定——静态键 `vivhite_hp_gate_free_turn_relief_hard_only`（默认 1）开启且 `cctx.node_type` 非 Elite/Boss 时把减免压回 0 并置 `_hp_relief_hard_suppressed` 留痕标记（node_type 缺失按普通战处理=保守回旧门带，不放大付血）；② 双向留痕：门带命中分支的 `_gate_formula` 与 end_turn 收口的 `_gate_note` 在意图0被压回门带时追加「（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）」——普通战接线与普通战自损回落均可直接从决策链核对；硬仗（Elite/Boss）减免、复打税不减免、僵局放行闩锁、margin=0 回滚全部语义不变；hard_only=0 一键回滚（普通战恢复减免，与 505~511 后行为零差异），非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 `vivhite_hp_gate_free_turn_relief_hard_only: 1`，注释记录本批 60+ 处普通战减免过门实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：3pru 新增三分支——⑤ 默认 hard_only 下普通 Monster 战意图0回合恢复拦截且留痕含 HARD_ONLY、不含减免过门注记；⑥ hard_only=0 回滚键下普通战恢复减免放行（上批行为零差异）；⑦ 默认 hard_only 下 Elite 战意图0回合减免继续生效（上批立项证据语义不变）。既有 3pru①~④（Boss ctx）不受 hard_only 影响。
+- 不改评分主体/门带数值/复打税/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 普通战意图0回合决策链出现「謦欬出牌门拦下…（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）」——按本批频率首场普通战意图0回合即可验证；② 普通战单场自损/掉血比回落（514 局 F2 型 20/10、529 局 F6 型 18/6 → ≤1.0），SELF_LOSS_PHASE_OBS 可行动段自损下行；③ 精英/Boss 战「意图0自由回合减免过门」留痕继续出现（硬仗语义不变的直接对账）。证伪/撤回：HARD_ONLY 留痕从不出现 → 复查 cctx node_type 接线和静态键读取；普通战自损比不回落 → 减免非主因，复查 LIVE_ESTIMATE 血税计价口径；普通战放血僵局复发（STALL_BREAK 进度频繁打满/闩锁）或长战输出链恶化 → policy.json 置 `vivhite_hp_gate_free_turn_relief_hard_only=0` 整体撤回（普通战恢复减免，与上批行为零差异）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3pru 新增⑤⑥⑦三分支；既有 3pru①~④、3prh 余量门、3pri 僵局放行、3prm 未覆盖观测、3prn 门拦格挡救场、3prt 复打税、3prg 血税软顶、3prl 血税密度、3br-5/3br-6 呼唤滞留税、3kd 诅咒税、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+35，硬仗限定+双向留痕）、brain/knowledge.py（+10 一个静态键）、brain/selfcheck.py（+44，3pru 三分支）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

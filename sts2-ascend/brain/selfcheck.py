@@ -2943,6 +2943,50 @@ def main() -> int:
         f"自由回合复打税分量不得被减免（同回合第2次仍应被拦）: {d_fr2}"
     assert "VIVHITE_HP_REPEAT_PLAY_TAX" in d_fr2.reason, \
         f"自由回合复打拦截缺复打税留痕: {d_fr2.reason}"
+    # ⑤ 默认 hard_only：普通 Monster 战意图0回合不享减免——门带恢复拦截且
+    #    留痕带 HARD_ONLY 标记（第 512~529 局批：60+ 处减免过门绝大多数落
+    #    普通战，普通战自损≥掉血形态压回门带）
+    def _vgate_monster_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "NIBBLET", "node_type": "Monster"},
+            current_combat_is_hard=False, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    vknow_fm = _vivhite_know("sts2-selfcheck-vhgate-freeturn-mob-")
+    vknow_fm.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_fm = policy.Policy(vknow_fm, random.Random(11))
+    d_fm = vpol_fm.decide(_vgate_state(85, 0), _vgate_monster_ctx())
+    assert d_fm.action == "end_turn", \
+        f"普通战意图0回合不得享受自由回合减免（hard_only 默认）: {d_fm}"
+    assert "謦欬出牌门拦下" in d_fm.reason \
+        and "VIVHITE_HP_FREE_TURN_HARD_ONLY" in d_fm.reason, \
+        f"普通战压回门带缺 HARD_ONLY 留痕: {d_fm.reason}"
+    assert "意图0自由回合减免过门" not in d_fm.reason, \
+        f"普通战不得出现减免过门注记: {d_fm.reason}"
+    # ⑥ hard_only=0 回滚：普通战意图0回合恢复减免（上批行为零差异）
+    vknow_fn = _vivhite_know("sts2-selfcheck-vhgate-freeturn-moboff-")
+    vknow_fn.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_fn.policy["vivhite_hp_gate_free_turn_relief_hard_only"] = 0
+    vpol_fn = policy.Policy(vknow_fn, random.Random(11))
+    d_fn = vpol_fn.decide(_vgate_state(85, 0), _vgate_monster_ctx())
+    assert d_fn.action == "play_card", \
+        f"hard_only=0 回滚键下普通战必须恢复减免放行（上批行为）: {d_fn}"
+    assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" in d_fn.reason, \
+        f"hard_only=0 回滚键下普通战减免缺留痕: {d_fn.reason}"
+    # ⑦ 硬仗（Elite）在默认 hard_only 下减免继续生效（上批立项证据语义不变）
+    vknow_fe = _vivhite_know("sts2-selfcheck-vhgate-freeturn-elite-")
+    vknow_fe.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_fe = policy.Policy(vknow_fe, random.Random(11))
+    d_fe = vpol_fe.decide(_vgate_state(85, 0), SimpleNamespace(
+        combat={"comp_id": "OLD_STATUE", "node_type": "Elite"},
+        current_combat_is_hard=True, credit_tags=[],
+        stall_analysis_asked=False, stall_analysis_needed=False,
+        stall_giveup=False))
+    assert d_fe.action == "play_card", \
+        f"默认 hard_only 下精英战意图0回合减免必须继续生效: {d_fe}"
+    assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" in d_fe.reason, \
+        f"精英战减免缺留痕: {d_fe.reason}"
 
     # 3prn) 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，第 355~360
     #      局批复盘）：余量门把被拦謦欬牌全部逐出残能救场，但救场格挡通道自带
