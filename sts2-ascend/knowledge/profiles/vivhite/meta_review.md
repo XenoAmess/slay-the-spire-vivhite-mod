@@ -1191,3 +1191,42 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 553~559 局批复盘：謦欬血税软顶 reflect 下限扩档 30.0→15.0（VIVHITE_LIFE_COST_DECK_CAP_FLOOR_EXT）
+
+日期：2026-09-10
+
+## HYPOTHESIS
+
+謦欬死亡证据链第三级旋钮 vivhite_life_cost_deck_cap 的 reflect 下限 30.0 已于 559 局触底（policy.json=30.0、余量 0.00<步长 5.0），life_cost_weight 触底（-2.98）与出牌余量门顶格（3.00）在先，三级旋钮全尽后謦欬卡组阵亡证据「彻底停止吸收并留痕」；而本批证据仍同向，下限扩至 15.0（步长 -5.0 与 60.0 锚点不变）即可让同向证据恢复吸收。可证伪：若扩档后謦欬卡组阵亡局 lessons 不再出现「证据改接拿牌端血税软顶」、deck_cap 不下调，或拿牌端出现大面积跳过/输出饥饿恶化，则假设证伪。
+
+## EVIDENCE
+
+- 559 局（EAPVYVADK63Q）lessons 尾部原文：「vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿19张生命支付牌）阵亡——三级旋钮全尽，謦欬证据彻底停止吸收并留痕」。
+- 559 局逐条核对 decision_chain_evidence.full_failure_run：F33 THE_INSATIABLE Boss 战 T5 一回合连打三张謦欬攻击（尺度变换+实付4、尺度变换+复打实付4、终止条件实付4，合计自付12血），0 格挡裸接意图20，竞速审计 T4 判死→实战 5 回合阵亡（掉血110｜自损27）；拿牌 19 张生命支付牌。
+- 555 局（PCERAVAKT7XL）F17 Boss 战 自损39/掉血30（自损反超敌方），同批 553 局 F11 Elite 自损13/掉血8、554 局 F2 自损20/掉血0——謦欬实付主导死亡的证据方向跨批次未变。
+- 代码现状逐行核对：reflect.py BOUNDS["vivhite_life_cost_deck_cap"]=(30.0, 60.0)，_lc_tighten 第三级在余量<5.0 时只追加封账留痕不改值；policy.json 当前值 30.0 恰好钉在下限，步长 -5.0 永远不可达——证据吸收通道结构性关闭。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/reflect.py：BOUNDS["vivhite_life_cost_deck_cap"] 下限 30.0→15.0（步长 -5.0、上限/锚点 60.0 不变），注释记录 559 局触底封账与本批同向证据；第三级改接注释同步更新。15.0 仍低于起始卡组血税 20，保留「防软顶归零锁死整套机制」的原始防线；回滚=下限恢复 30.0（policy.json 重置 60.0 另可整体回滚本旋钮）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 该键注释同步 BOUNDS 15.0~60.0 与扩档出处。
+- sts2-ascend/brain/policy.py：血税密度计价注释同步新下限与出处（计价公式本身不变——运行时行为差异仅来自 reflect 继续下调后的 policy 值）。
+- sts2-ascend/brain/selfcheck.py：3prg 夹具更新——旧 cap3（三旋钮全尽+软顶30.0）改为断言继续吸收（30→25→20）且不得封账；新增 cap4（软顶15.0）断言触新下限后不再改值且「三级旋钮全尽/彻底停止吸收并留痕」封账照旧。
+- 不改计价公式/步长/锚点/其他 BOUNDS/出牌侧闸门；不改 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 謦欬卡组阵亡局 lessons 重新出现「双旋钮全尽……证据改接拿牌端血税软顶」、vivhite_life_cost_deck_cap 由 30.0 逐级 25.0→20.0 下调（吸收恢复的直接对账，559 型封账文不再出现）；② 单局生命支付牌拿牌数由 559 局 19 / 426 型 15~16 降至 ≤12，终局卡组目录血税合计回落；③ 拿牌 trace 中「謦欬血税密度扣分（VIVHITE_LIFE_COST_DECK_TAX）」在更低卡组血税开始显形。证伪/撤回：封账文仍出现 → 复查 reflect 第三级分支与 BOUNDS 接线；拿牌大面积跳过、路径注记「输出饥饿」频率显著上升或 F<10 早亡增多（密度扣分过强误伤卡组构建）→ policy.json 重置 60.0 且 BOUNDS 下限回 30.0 整体撤回。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3prg 更新+新增 cap4；既有 cap2 60→55→50、floor 改接余量门、3prh 余量门族、3pri/3prm/3prn/3prt/3pru/3prv、3krlf、3kd、3br-5/3br-6、sec 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/reflect.py（+9/-3，BOUNDS 下限扩档+注释）、brain/knowledge.py（+2/-1 注释）、brain/policy.py（+2/-1 注释）、brain/selfcheck.py（+22/-6，3prg 更新+cap4）四个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不进 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

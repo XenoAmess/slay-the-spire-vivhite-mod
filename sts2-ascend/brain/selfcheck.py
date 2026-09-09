@@ -2578,8 +2578,9 @@ def main() -> int:
     #      权重触底后致命战自损占比 97%/98%/91%，估值税只改候选相对排序，
     #      改不了「vs 结束回合」的比较；余量门顶格（3.0）后，第 402~426 局
     #      批复盘起改接第三级拿牌端血税软顶（vivhite_life_cost_deck_cap，
-    #      每级 -5.0，下限 30.0）——426 局 16 次拿牌 15 张生命支付牌、终局
-    #      目录血税远超 60 软顶仍照拿；软顶也触底后才彻底封账留痕。
+    #      每级 -5.0，下限 15.0——第 553~559 批复盘由 30.0 扩档，559 局 30.0
+    #      已触底封账「三级旋钮全尽」而证据仍同向）——426 局 16 次拿牌 15 张
+    #      生命支付牌、终局目录血税远超 60 软顶仍照拿；软顶也触底后才彻底封账留痕。
     vknow_floor = _vivhite_know("sts2-selfcheck-vhlife-floor-")
     vknow_floor.policy["vivhite_param_life_cost_weight"] = -3.0
     vlesson_floor = finalize_run(vknow_floor, _vivhite_death_ctx(73.0, 90.0),
@@ -2613,11 +2614,26 @@ def main() -> int:
     vknow_cap3.policy["vivhite_life_cost_deck_cap"] = 30.0
     vlesson_cap3 = finalize_run(vknow_cap3, _vivhite_death_ctx(73.0, 90.0),
                                 victory=False, final_floor=17)
-    assert abs(vknow_cap3.policy["vivhite_life_cost_deck_cap"] - 30.0) < 1e-9, \
-        ("血税软顶触底后不得再改值: "
+    # 第 553~559 批复盘扩档后：旧下限 30.0 不再是封账点——双档证据
+    # （自损 73/90=81%≥50%）必须继续吸收（30→25→20），不得封账
+    assert abs(vknow_cap3.policy["vivhite_life_cost_deck_cap"] - 20.0) < 1e-9, \
+        ("扩档后旧下限 30.0 处必须继续改接血税软顶（30→25→20）: "
          f"{vknow_cap3.policy.get('vivhite_life_cost_deck_cap')}")
-    assert "三级旋钮全尽" in vlesson_cap3 and "彻底停止吸收并留痕" in vlesson_cap3, \
-        f"三级旋钮全尽的封账留痕缺失: {vlesson_cap3[-400:]}"
+    assert "证据改接拿牌端血税软顶" in vlesson_cap3, \
+        f"扩档后 30.0 处的软顶改接留痕缺失: {vlesson_cap3[-400:]}"
+    assert "彻底停止吸收并留痕" not in vlesson_cap3, \
+        f"软顶未触新下限 15.0 时不得封账: {vlesson_cap3[-400:]}"
+    vknow_cap4 = _vivhite_know("sts2-selfcheck-vhlife-cap4-")
+    vknow_cap4.policy["vivhite_param_life_cost_weight"] = -3.0
+    vknow_cap4.policy["vivhite_hp_cost_play_margin"] = 3.0
+    vknow_cap4.policy["vivhite_life_cost_deck_cap"] = 15.0
+    vlesson_cap4 = finalize_run(vknow_cap4, _vivhite_death_ctx(73.0, 90.0),
+                                victory=False, final_floor=17)
+    assert abs(vknow_cap4.policy["vivhite_life_cost_deck_cap"] - 15.0) < 1e-9, \
+        ("血税软顶触新下限 15.0 后不得再改值: "
+         f"{vknow_cap4.policy.get('vivhite_life_cost_deck_cap')}")
+    assert "三级旋钮全尽" in vlesson_cap4 and "彻底停止吸收并留痕" in vlesson_cap4, \
+        f"新下限 15.0 三级旋钮全尽的封账留痕缺失: {vlesson_cap4[-400:]}"
     vknow_dom = _vivhite_know("sts2-selfcheck-vhlife-dom-")
     vknow_dom.policy["vivhite_param_life_cost_weight"] = -2.0
     vlesson_dom = finalize_run(vknow_dom, _vivhite_death_ctx(73.0, 90.0),
