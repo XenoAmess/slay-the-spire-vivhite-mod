@@ -6035,3 +6035,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.603959144017009局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/44.65616353107826局)，VOLLEY(24分/2.350657585524266局)
 - 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（5回合掉血107，每回合21≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿22张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.51 → 0.54（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/545 胜，当前目标进阶 0
+
+## 第 546 局复盘（2026-09-10 01:50）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血22｜自损26（可行动段26/非行动段10，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血32｜自损36（可行动段36/非行动段10，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血24｜自损18（可行动段18/非行动段0，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/5.1800064788223406局)，HAND_OF_GREED(35分/8.913187961955932局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/19.179489251658257局)，VIVHITE_CARD_CHROMATIC_LIMIT(32分/51.69081927122421局)，DRAMATIC_ENTRANCE(31分/8.148364722529074局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.587845287012949局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/44.499866958719494局)，VOLLEY(24分/2.3424302839749314局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损18/掉血24（75%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/546 胜，当前目标进阶 0
