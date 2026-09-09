@@ -10468,3 +10468,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.162631706348599局)，BULLY(10分/3.3175269504285723局)，HAVOC(11分/2.654021560342858局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.39（行至 F37（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.99 → 1.98（行至 F37（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.25 → 2.20（行至 F37——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1352 胜，当前目标进阶 0
+
+## 第 1353 局复盘（2026-09-09 14:46）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：SWORD_BOOMERANG, CINDER, PANIC_BUTTON, UPPERCUT, SHRUG_IT_OFF, FLAME_BARRIER, STAMPEDE, UPPERCUT, BREAKTHROUGH, BATTLE_TRANCE, SPITE, NOT_YET, SHRUG_IT_OFF, SWORD_BOOMERANG
+- 本局遗物：ODDLY_SMOOTH_STONE, VENERABLE_TEA_SET
+- 战斗记录：F11 Monster战 掉血3; F14 Monster战 掉血1; F17 Boss战 掉血48｜自损2（可行动段2/非行动段52，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战12回合获胜; F19 Monster战 掉血8｜自损1（可行动段1/非行动段12，SELF_LOSS_PHASE_OBS）; F20 Unknown战 掉血18; F21 Monster战 掉血54｜自损1（可行动段1/非行动段39，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.9903236662227655局)，PACTS_END(24分/100.3922166179548局)，PRIMAL_FORCE(24分/4.628281848542908局)，MANGLE(24分/88.16209415957704局)，FIEND_FIRE(24分/31.274474230405488局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.148062495376379局)，BULLY(10分/3.3059156061020722局)，HAVOC(11分/2.6447324848816582局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.98 → 1.97（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F21——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1353 胜，当前目标进阶 0
