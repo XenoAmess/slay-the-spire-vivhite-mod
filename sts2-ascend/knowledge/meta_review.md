@@ -8084,3 +8084,140 @@ retry_resolution: none (no replay target; local production behavior closure)
    首验窗口续记（无敌帧原料在场局）；④ 豁免疫价 ≤5 血非斩杀计数
    （0/3）；⑤ 竞速审计悲观率台账与 JOINT_FLIP_TTK_CAP 改锻造分子续记。
 
+# 2026-09-09｜第 1349~1355 局复盘（异步追及队列 7 局 exact_batch 全败；观测位升级 ×1：SLIPPERY_TTK_BREAK_EST 破层期量化读数——1232 批观测位第 4 独立对局达线后的读数补齐）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  replay target；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+retry_resolution: none (no replay target; local production observability upgrade)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：SLIPPERY_TTK_OBS（1232 批观测位）只披露「ttk 未扣破层期」
+  的定性事实，失真量级（破层期占几个回合）必须靠复盘逐条手工对照层数与
+  手牌命中数重建。给注记追加「破层期≈层数÷每回合命中（当前手牌能量贪心
+  估）」的直接读数后，未来 3~10 局可零重建成本计数失真量级与其距判决
+  边界的距离——行为化与否由读数决定，不再被重建成本搁置。
+- **EVIDENCE**：1354（9UYL7WBY16YJ）F17 VANTOM ×8 条注记（滑溜 8→2 层、
+  ttk 10→7，T2判死→实战 7 回合阵亡）；1355（9VC68HE8REL4）F17 VANTOM
+  ×10 条（滑溜 8→2 层、ttk 10→25，T2判死→实战 5 回合阵亡；T2 痛击
+  「滑溜3层在账：ttk25未扣破层期」实测 5 伤/回合校准后仍不含量化）；
+  加上 1232-F17 与 1348-F22×3，观测位已覆盖 ≥4 个独立对局
+  （≥evidence_run_threshold=3）。policy.py 3332~3340 核读：注记只有层数
+  与未修正 ttk，无任何破层期长度读数；card_numbers 的 hits 口径
+  （滑溜烧墙审计同源）与 max_energy 缺省=3 均在产可复用。
+- **EXPECTED_SIGNAL**：未来 3~10 局，滑溜层在账的竞速投影注记尾部出现
+  「破层期≈+X回合（每回合H命中按当前手牌能量贪心估，SLIPPERY_TTK_BREAK_
+  EST）」；无攻击手牌时出现「破层期不可估」。计数「X≥2 且判决贴线
+  （|ttk−tsurv|≤kill_race_margin）」的独立对局数：≥3 → 立项战斗端破层
+  税行为化（前夜 BOSS_RACE_SLIPPERY_TAX 同族）；X 持续 <1 或判决始终
+  远离边界 → 观测位冻结结案。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1349..1355]，exact 7/7、missing=0；7 局全败（生涯
+  0/1355）。
+- 死亡分布：一幕走廊早死 1 局（1349 F7，路径投影中途死亡应验）、一幕
+  Boss（F17）4 局（1350/1351/1354/1355，前夜竞速预演判死全部实战兑现：
+  击杀需 18/23/17/17 回合＞满血可存活 6/7/6/6 回合）、一幕 Boss 越墙后
+  走廊 2 局（1352 F17 判死后获胜一路打到 F37 阵亡——本批最深，全程四度
+  判死后获胜（F24 精英 T3判死→5回合获胜、F33 Boss T2判死→5回合获胜
+  等）；1353 F17 T2判死→12回合获胜后死 F21）。
+- 主样本 1355（9VC68HE8REL4）packet 内 122 条切片 + 聚合表（play_card 93
+  / end_turn 31）已逐条核读：F1 涅奥药瓶皮套（经验口径合规）、F2/F3 选牌
+  均带 CARD_BURST_PICK_AUDIT（supply_left=+0.0）、F17 终局 T2~T5 全攻
+  提速能量真尽收口（T5 最大格挡 5 对意图 9、4 血数学必死）——执行层零
+  新缺陷，死因=卡组输出密度（实测 5~21 伤/回合爬坡 vs 血池 226）。
+- 部署时序：ENGINE_COMMIT_LOWHP_DISCOUNT（1343~1348 批落盘）早于本批
+  全部对局——本批即其首验窗口；SLIPPERY_TTK_OBS、RACE_INVULNERABLE_
+  POOL_OBS、HP_COST_ATK 链、BURST_STARVE 链均先于本批全部对局，无
+  pre-fix 误伤指控。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17 四局前夜竞速预演判死全部实战兑现；
+   1350/1351/1354/1355 篝火 RACE_AUDIT_HEAL_OVERRIDE 全部覆盖弃疗回血
+   （判死后获胜 372~377/810~821≈46%≥30%），回血后仍四死——判死缺口
+   2.4~3.8 倍远超单次回血能弥合的范围，设计内终态，不重复立案。旋钮
+   代谢链全顶格（kill_bonus 20.00 顶格、boss_entry_min_hp_pct 0.88 距
+   上限 0.02 停加码）。
+2. **ENGINE_COMMIT_LOWHP_DISCOUNT 首验（1/3）**：本批唯一低血承诺现场
+   1352「燃烧」hp=26%/意图24/池173 按 ×0.50 折减发放——注记逐字符合
+   设计（「开局承诺+3.0（…低血折减×0.50←原始+6.0，ENGINE_COMMIT_
+   LOWHP_DISCOUNT）」，「低血承诺观测 hp=26%」前缀保留且承诺值记折减
+   后+3.0）；当场 21 血/22 甲对意图 24 存活且该局 F24 判死后 5 回合
+   获胜——首样本方向为正，样本不足继续累计至 3 局。
+3. **SLIPPERY_TTK_OBS 第 4 独立对局达线，量化缺口落地（本次调整）**：
+   本批 18 条注记全部要靠人工重建失真量级——1232 批注册的观测位只有
+   定性披露，读数缺口实证充分，落地量化读数（详见三节）。
+4. **RACE_INVULNERABLE_POOL_OBS 续记（2/3）**：本批 0 注记、无无敌帧
+   原料在场；「击杀还需≥100 回合」投影全批 0 条（含 1352 最深 F37），
+   绝迹口径续记成立。
+5. **豁免疫价/自残旁观双 0**：本批 7 局终卡组单体自残牌持有量 0
+   （1354/1355 拿牌列表无御血术族），「无牌可豁/旁」分支续记；双零
+   批次累计继续向预注册关闭线推进。
+6. **竞速审计悲观率台账**：本批判死应验 +7（7 局终局各 1 条阵亡审计），
+   反向 +5（1352×4、1353×1）——1352 单局四度判死后获胜为近期最高，
+   台账 377/821≈46% 仍处 30%~46% 带内偏上限，续记不重复立案。
+7. **BURST_STARVE 链台账**：CARD_BURST_PICK_AUDIT 46 条，supply_left>0
+   占 4/46（8.7%，序列 18%→9.6%→4.7%→9.1%→11.1%→8.7% 带内波动）；
+   cap=4.0 冻结封账维持，未见误伤反例。
+
+## 三、本次调整（观测位升级 ×1：SLIPPERY_TTK_BREAK_EST 破层期量化读数）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **SLIPPERY_TTK_BREAK_EST**（1232 批滑溜 ttk 观测位只有定性披露、失真量级零读数；证据：本批 1354×8/1355×10 共 18 条注记（滑溜 2~8 层、ttk 6~25）全部需人工重建 + 观测位累计 ≥4 独立对局达 evidence_run_threshold + policy.py 3332~3340 核读无量化；机制先例：BURST_STARVE_SUPPLY_CAP_TRACE 同款「注记保留截断前真值，省每批重建成本」） |
+| 代码动作 | ① brain/policy.py `_combat_kill_race_projection` 滑溜观测块：按当前手牌做能量贪心命中估计（card_numbers hits 口径、伤害>0 且费用≥0、costs_x 按满能计、max_energy 缺省=3——与 3425 行联合复核同一缺省），注记尾部追加「破层期≈+X回合（每回合H命中按当前手牌能量贪心估，SLIPPERY_TTK_BREAK_EST）」，无可计价攻击命中时追加「破层期不可估」；② brain/knowledge.py `slippery_ttk_obs` 注释同步量化说明 |
+| 性质边界 | 纯观测位：ttk/tsurv、race_lost 判决、评分、阈值、学习面全部零改动（估计只进留痕文本；既有 3br-ttk-obs/3br-combat-cap/3ww-invuln 锚原样通过）；沿用既有观测键 slippery_ttk_obs=False 一键整体关闭（注记与量化段同生共灭） |
+| 测试 | brain/selfcheck.py 新增 3br-ttk-break-est 三断言（① 夹具 8 层+手牌仅速攻(10伤/1费/1hit)、max_energy 缺省 3 → 注记带「破层期≈+8.0回合」「每回合1命中」；② 无滑溜目标零误挂；③ 无攻击手牌（格挡+伤口）→「破层期不可估」且无「破层期≈」；键 off 整体回滚由既有 noobs 锚覆盖）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3br/3bsl/3hcat/3htpa/3ww 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「破层期≈+X回合」读数分布（X≥2 占比）；② X≥2 且判决贴线（\|ttk−tsurv\|≤margin）的独立对局数；③「破层期不可估」出现频率（手牌构成画像）；④ VANTOM 局破层期读数与实战破层回合的对账精度 |
+| 继续调整条件 | X≥2 且贴线 ≥3 个独立对局 → 立项战斗端破层税（ttk 加计 层数÷每回合命中，前夜 BOSS_RACE_SLIPPERY_TAX 同族）；量化读数与实战破层回合系统性偏差 ≥2 倍 → 先修估计口径（如计入多段牌实测命中率）再评估行为化；X 持续 <1 或判决始终远离边界 ≥3 批 → 观测位冻结结案 |
+| 撤回条件 | knowledge/policy.json 写 `slippery_ttk_obs: false` 即注记与量化段整体关闭（selfcheck 3br-ttk-obs noobs 锚为对照）；或删除 policy/knowledge/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测位达线即落地
+   量化读数，非登记延后）。
+2. **SLIPPERY_TTK_OBS（1232 批观测位）**：第 4 独立对局达线，由本批
+   SLIPPERY_TTK_BREAK_EST 接续量化读数，观测位不冻结、转入读数验收期。
+3. **ENGINE_COMMIT_LOWHP_DISCOUNT（1343~1348 批行为闭环）**：首验 1/3——
+   1352 折减发放逐字符合设计且当场存活、该局判死后获胜；继续累计至
+   3 局再裁决方向。
+4. **RACE_INVULNERABLE_POOL_OBS（1336~1342 批行为修复）**：续记 2/3，
+   无原料零出现非失效；≥100 回合投影绝迹口径成立。
+5. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：豁免疫价与旁观双 0，
+   终卡组单体自残牌持续 0——「无牌可豁」分支续记；≤5 血非斩杀豁免
+   累计仍 0/3。
+6. **BURST_STARVE_SUPPLY_LEVER/CAP**：supply_left>0 8.7%（4/46）带内；
+   cap=4.0 冻结封账维持。
+7. **JOINT_FLIP_TTK_CAP**：战斗端否决留痕在产；「否决后改锻造战损」
+   分子本批 +0（五局篝火均覆盖弃疗回血、无改锻造现场），续记。
+8. **SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD /
+   HAND_TAX_PLAY_AUDIT**：本批无对应现场（收口均能量真尽、无末点格挡
+   竞争、无族母遭遇、无税牌落选），顺延不判失效。
+9. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+   血池精度 / 死亡谷 least-bad / 无色药水词表）：1349 F7 早死为路径投影
+   中途死亡同族（绝境换战力教义在产），续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **观测注记要直接携带「可计数的量」，不只是定性事实**：「ttk 未扣破
+   层期」披露了新口径的存在，但失真量级要靠复盘逐条对照层数与手牌
+   重建——1232 批注册后拖了三批才补读数。观测位注册时就该问一句：
+   「下批复盘能不能只数数字不重建？」
+2. **估计口径复用同源账本**：破层期命中估计直接用 card_numbers 的
+   hits（滑溜烧墙审计同一本账）与 max_energy 缺省=3（联合复核同一
+   缺省）——同一概念绝不开第二套算法，否则对账时两边口径互相污染。
+3. **1352 型「四度判死后获胜」是悲观率台账的上限压力测试**：单局 F24
+   精英/F33 Boss 等四度翻案仍打到 F37——46% 带内偏上限时按台账慢调，
+   不因单批复判死闸加严；本批兑现 +7/反向 +5 继续维持该纪律。
+4. 观察点（下批复盘核对）：①「破层期≈+X回合」首发与 X 分布、贴线
+   计数；② ENGINE_COMMIT_LOWHP_DISCOUNT 第 2~3 局样本与当场结局；
+   ③ RACE_INVULNERABLE_POOL_OBS 续记（3/3 后结案）；④ 豁免疫价/旁观
+   双零批次数（向关闭线推进）；⑤ 竞速审计悲观率台账续记。
+

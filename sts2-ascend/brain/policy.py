@@ -3334,10 +3334,52 @@ class Policy:
                         for e in enemies if isinstance(e, dict))
                     if (bool(pol.get("slippery_ttk_obs", True))
                             and _race_slippery_layers > 0.0):
+                        # 破层期量化披露（SLIPPERY_TTK_BREAK_EST，第1349~1355局
+                        # 批复盘）：旧注记只说「未扣破层期」，失真量级要靠复盘
+                        # 逐条重建。1354-F17×8/1355-F17×10 条注记（滑溜2~8层、
+                        # ttk6~25）实证重建成本真实存在。此处按当前手牌做能量
+                        # 贪心命中估计（每费破层同源的 card_numbers hits 口径），
+                        # 追加「破层期≈层数÷每回合命中」的直接读数；ttk/tsurv、
+                        # 判决与评分仍零改动，估计只进留痕文本。
+                        _sl_hits_turn = 0.0
+                        _sl_energy = float(
+                            ((state.get("run") or {}).get("max_energy")) or 3)
+                        _sl_fillable = []
+                        for _sl_c in (hand or []):
+                            if not isinstance(_sl_c, dict):
+                                continue
+                            _sl_d, _sl_b, _sl_h = card_numbers(_sl_c)
+                            if not (_sl_d and float(_sl_d) > 0):
+                                continue
+                            try:
+                                _sl_cost = (_sl_energy if _sl_c.get("costs_x")
+                                            else float(
+                                                _sl_c.get("energy_cost") or 0))
+                            except (TypeError, ValueError):
+                                continue
+                            if _sl_cost < 0:
+                                continue
+                            _sl_fillable.append(
+                                (_sl_cost, max(1, int(_sl_h))))
+                        _sl_e_left = _sl_energy
+                        for _sl_cost, _sl_h in sorted(_sl_fillable):
+                            if _sl_cost <= _sl_e_left + 1e-9:
+                                _sl_hits_turn += _sl_h
+                                _sl_e_left -= _sl_cost
+                        if _sl_hits_turn > 0.0:
+                            _sl_break_est = (
+                                f"，破层期≈+{_race_slippery_layers / _sl_hits_turn:.1f}"
+                                f"回合（每回合{_sl_hits_turn:g}命中按当前手牌"
+                                "能量贪心估，SLIPPERY_TTK_BREAK_EST）")
+                        else:
+                            _sl_break_est = (
+                                "，破层期不可估（当前手牌无可计价攻击命中，"
+                                "SLIPPERY_TTK_BREAK_EST）")
                         danger_note += (
                             f"；滑溜{_race_slippery_layers:g}层在账："
                             f"ttk{ttk:.0f}未扣破层期"
-                            "（每层一次命中仅失1血，SLIPPERY_TTK_OBS）")
+                            "（每层一次命中仅失1血，SLIPPERY_TTK_OBS）"
+                            + _sl_break_est)
                     _race_margin = float(pol.get("kill_race_margin", 1.5))
                     # 竞速迟滞锁（第632局批复盘新增）：投影逐 tick 重算时，
                     # 实测口径切换、EMA 滞后、小怪阵亡缩池都会让判定在阈值

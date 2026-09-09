@@ -7710,7 +7710,7 @@ def main() -> int:
     def combat_flip_probe(cap, slippery=False, slippery_guard=True,
                           node_type="Boss", enemy_hp=185, longfight_cap=None,
                           ttk_obs=True, latched=True, latch_hold=False,
-                          esc_rounds=2):
+                          esc_rounds=2, hand_override=None):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -7761,6 +7761,8 @@ def main() -> int:
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
         cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
         cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        if hand_override is not None:
+            cap_state["combat"]["hand"] = hand_override
         if longfight_cap is not None:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
@@ -7803,6 +7805,33 @@ def main() -> int:
     assert "SLIPPERY_TTK_OBS" not in d_combat_slippery_noobs.reason \
         and "SLIPPERY_RACE_GUARD" in d_combat_slippery_noobs.reason, \
         f"滑溜观测独立开关未严格回滚: {d_combat_slippery_noobs.reason}"
+
+    # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
+    # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的
+    # 失真量级此前只能逐条人工重建；现在注记直接携带「层数÷每回合命中」。
+    # ① 夹具手牌仅 速攻(10伤/1费/1hit)，max_energy 缺省=3 → 8层÷1命中=+8.0；
+    # ② 无攻击手牌 → 「破层期不可估」分支；③ 观测键 off 时量化段随注记整体
+    # 消失（上方 noobs 锚已覆盖 SLIPPERY_TTK_OBS 整体缺席）；量化只进留痕
+    # 文本，ttk/判决/评分零改动（既有 3br-ttk-obs/3br-combat-cap 锚原样通过）。
+    assert "破层期≈+8.0回合" in d_combat_slippery.reason \
+        and "每回合1命中" in d_combat_slippery.reason \
+        and "SLIPPERY_TTK_BREAK_EST" in d_combat_slippery.reason, \
+        f"滑溜注记缺少破层期量化读数: {d_combat_slippery.reason}"
+    assert "破层期" not in d_combat_cap.reason, \
+        f"无滑溜目标误挂破层期量化读数: {d_combat_cap.reason}"
+    d_combat_slippery_noatk = combat_flip_probe(
+        0.0, slippery=True, hand_override=[
+            {"index": 0, "card_id": "CAP_BLOCK", "name": "格挡",
+             "playable": True, "energy_cost": 1,
+             "requires_target": False, "rules_text": "获得8点格挡",
+             "dynamic_values": [{"name": "Block", "current_value": 8}]},
+            {"index": 1, "card_id": "CAP_WOUND", "name": "伤口",
+             "playable": False, "energy_cost": -1,
+             "requires_target": False, "rules_text": "不能被打出"}])
+    assert "SLIPPERY_TTK_OBS" in d_combat_slippery_noatk.reason \
+        and "破层期不可估" in d_combat_slippery_noatk.reason \
+        and "破层期≈" not in d_combat_slippery_noatk.reason, \
+        f"无攻击手牌时破层期量化未走不可估分支: {d_combat_slippery_noatk.reason}"
 
     # 3br-longfight：高血池普通/精英战同样不能用静态联合复核重开已判负的
     # 斩杀竞速；1197-F23 的 LOUSE_PROGENITOR（Normal，134~136 血）是最小现场。
