@@ -311,17 +311,32 @@ _PLATING_RE = re.compile(r"覆甲|plating", re.I)
 _SELF_COST_RE = re.compile(
     r"失去\s*\d+\s*点?\s*生命|lose[s]?\s+\d+\s*(?:hp|health)", re.I)
 _HAND_TAX_ZHS_RE = re.compile(
-    r"在你的回合结束时[^。]*?手牌[^。]*?受到\s*(\d+)\s*点伤害")
+    r"在你的回合结束时[^。]*?手牌[^。]*?"
+    r"(?:受到\s*(\d+)\s*点伤害|失去\s*(\d+)\s*点?\s*生命)")
 _HAND_TAX_EN_RE = re.compile(
-    r"end of your turn[^.]*?hand[^.]*?lose\s+(\d+)\s+(?:hp|health)", re.I)
+    r"end of your turn[^.]*?hand[^.]*?lose\s+(\d+)\s+(?:hp|health|life)",
+    re.I)
+
+
+def _hand_tax_amount(m) -> int:
+    """滞留税正则命中取数：多捕获组（受到伤害/失去生命措辞）取首个非空。"""
+    if not m:
+        return 0
+    for g in m.groups():
+        if g:
+            return int(g)
+    return 0
 
 
 def hand_end_turn_tax(hand: list | None) -> tuple[int, str]:
     """手牌滞留型回合结束伤害合计（HAND_END_TAX，第808~812局批复盘）。
 
-    v0.111.0 corpus 实证两型：TOXIC 毒素「在你的回合结束时，如果这张牌在
-    你的手牌中，你受到5点伤害。消耗。」（可打出）与 PHROG_PARASITE 塞手的
-    INFECTION 感染「不能被打出。在你的回合结束时，……你受到3点伤害。」。
+    v0.111.0 corpus 实证三型：TOXIC 毒素「在你的回合结束时，如果这张牌在
+    你的手牌中，你受到5点伤害。消耗。」（可打出）、PHROG_PARASITE 塞手的
+    INFECTION 感染「不能被打出。在你的回合结束时，……你受到3点伤害。」，
+    以及 SOUL_FYSH 灌注的 BECKON 呼唤「……你失去6点生命。」（第461~480局
+    批复盘补入「失去N点生命」措辞——480局F17死亡战T5呼唤✓可出空过、
+    滞留税-6直送终局；「受到N点伤害」旧正则对该措辞完全不命中）。
     807 局毒素两回合 20 点直接改写生死；812 局 F9 感染税 18/43（42%）。
     该类伤害不进格挡结算管线、格挡无法抵挡，此前在出牌/收口两侧完全
     不可见。返回 (每回合总伤害, 留痕摘要)，脏载荷一律返回 (0, "")。
@@ -338,7 +353,7 @@ def hand_end_turn_tax(hand: list | None) -> tuple[int, str]:
             m = _HAND_TAX_ZHS_RE.search(t) or _HAND_TAX_EN_RE.search(t)
             if not m:
                 continue
-            total += int(m.group(1))
+            total += _hand_tax_amount(m)
             key = str(c.get("card_id") or c.get("name") or "状态牌")
             counts[key] = counts.get(key, 0) + 1
         if total <= 0:
@@ -399,14 +414,16 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                 continue
             dmg, block, hits = card_numbers(c)
             t = _text(c)
-            if _SELF_COST_RE.search(t):
+            # 滞留税牌的「失去N点生命」是持牌条件税而非打出自付（呼唤/BECKON：
+            # 回合结束时在手牌中才失血，打出反而止血）——先识别税牌身份，
+            # 不得被自残成本排除误杀（第461~480局批复盘，480局F17-T5呼唤✓空过）。
+            _m = _HAND_TAX_ZHS_RE.search(t) or _HAND_TAX_EN_RE.search(t)
+            if _SELF_COST_RE.search(t) and not _m:
                 continue
-            if allow_taxstop:
-                _m = _HAND_TAX_ZHS_RE.search(t) or _HAND_TAX_EN_RE.search(t)
-                if _m:
-                    cand = (int(_m.group(1)), -cost, c)
-                    if tax_best is None or cand[:2] > tax_best[:2]:
-                        tax_best = cand
+            if allow_taxstop and _m:
+                cand = (_hand_tax_amount(_m), -cost, c)
+                if tax_best is None or cand[:2] > tax_best[:2]:
+                    tax_best = cand
             if block > 0 and not block_locked:
                 useful = min(int(block), gap)
                 net, independent, _actual_cough, _margin_spent = (
@@ -4702,7 +4719,7 @@ class Policy:
         # 致死回合教义。运行时旋钮 hand_tax_play_pricing=0 即整体关闭回旧口径。
         _m_hand_tax = (_HAND_TAX_ZHS_RE.search(text)
                        or _HAND_TAX_EN_RE.search(text))
-        _tax_save = int(_m_hand_tax.group(1)) if _m_hand_tax else 0
+        _tax_save = _hand_tax_amount(_m_hand_tax)
         _tax_value = (_tax_save * 1.05 * float(pol.get("block_safety", 1.0))
                       * blk_boost
                       if (_tax_save
@@ -5248,6 +5265,23 @@ class Policy:
                 and ((block_locked and declared_block > 0)
                      or re.search(r"获得\s*0\s*点?\s*格挡|gain\s+0\s+block", text, re.I))):
             return -2.0, None, "锁格挡（不可格挡期间零收益，让位实伤）"
+
+        # 纯滞留税牌计价（HAND_TAX_PLAY_PRICING 纯税面分支，第461~480局批复盘）：
+        # 呼唤（BECKON，SOUL_FYSH 灌注）等「回合结束时在手牌中则失去N点生命」的
+        # 状态牌无伤害/格挡/抽牌/回能面，旧口径落入下方能力牌桶吃
+        # power_round_bonus+长战加成——480 局 F17 SOUL_FYSH 死亡战 T5 能量 1
+        # 手握呼唤被判「无值得出的牌」空过，滞留税 -6 直送终局；
+        # 20260902-165045 又以「能力/增益牌｜长战加成」名义 T2 白打。
+        # 打出即离手止血（本回合税负清零），与攻击税牌同一把等效格挡尺
+        # （1.05×block_safety×blk_boost）计价，与格挡/攻击正常竞争能量；
+        # hand_tax_play_pricing=0 回落旧能力牌口径（严格回滚锚）。
+        if _m_hand_tax and float(pol.get("hand_tax_play_pricing", 1)) > 0:
+            score = _tax_value
+            if cost == 0:
+                score += pol["free_card_bonus"]
+            return score, None, (
+                f"手牌滞留税牌（打出即清零{_tax_save}/回合滞留税，"
+                "HAND_TAX_PLAY_PRICING）")
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
         # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足

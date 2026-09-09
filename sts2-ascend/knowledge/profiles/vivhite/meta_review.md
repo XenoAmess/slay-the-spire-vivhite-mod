@@ -968,3 +968,39 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 461~480 局批复盘：呼唤（BECKON）「失去生命」措辞滞留税全链不可见——HAND_END_TAX 正则补型 + 纯税面主评分计价
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+SOUL_FYSH 灌注的状态牌呼唤（BECKON，「在你的回合结束时，如果这张牌在你的手牌中，你失去6点生命。」）使用「失去N点生命」措辞，而 HAND_END_TAX 族正则（808~812 批落地）只认「受到N点伤害」——滞留税在收口披露、残能救场 taxstop（另被 `_SELF_COST_RE` 自残排除先行误杀）、主评分三处全部不可见；同时无伤害/格挡/抽牌面的呼唤落入「能力/增益牌」桶吃 power_round_bonus+长战加成。该假设可证伪：未来 3~10 局再遇 SOUL_FYSH 时，若 end_turn 收口从不出现「手牌滞留税HAND_END_TAX=每回合6（BECKON×N）」、呼唤仍被判「无值得出的牌（呼唤✓）」空过、或仍以「能力/增益牌｜长战加成」名义白打，则本假设不成立。
+
+## EVIDENCE
+
+- 480 局（0QUF68051NMG，F17 SOUL_FYSH 阵亡，decision_chain_evidence.full_failure_run 逐条核对）：T3 末能量 0 手握呼唤，回合结束 19→13 血（-6 与 BECKON 触发值精确吻合）；T5 能量 1、手牌「终止条件✗,递推星芒✗,尺度变换✗,白绮的变身式✗,呼唤✓」被判「评估后无值得出的牌」空过，1 血/8 甲吃意图 13 阵亡——可出的呼唤未被任何通道计价（本回合止血 6 点）。
+- 历史同型三例：20260902-181845「白绮的变身式✗,呼唤✓,呼唤✓,递推星芒✗ 结束回合（敌意图24，我方4血/0甲）」（两张可出呼唤 = -12 未计价）；20260905-145057「呼唤✓,呼唤✓,黎曼星阵✗ 结束回合（24，4血/9甲）」；20260905-183531「闭域映射✓,呼唤✓,综合色轮✗」。反向误分类实证：20260902-165045「打出【呼唤】（能力/增益牌（第2回合）｜长战加成+4.3）」——1 费无效果牌吃增益桶加成。
+- 原生机制对账（native_game_knowledge / knowledge/game/v0.111.0/mechanics）：Beckon.OnTurnEndInHand → CreatureCmd.Damage(owner, 6, Unblockable|Unpowered|Move)，HasTurnEndInHandEffect=true——不可格挡、不吃力量；SOUL_FYSH BeckonMove 每次塞 2 张（抽牌堆+弃牌堆各 1）。本批 stats_digest：SOUL_FYSH 35.6 战 15.4 死，是高频 Boss。
+- 生产现状核查：`_HAND_TAX_ZHS_RE` 仅「受到\s*(\d+)\s*点伤害」一型，对「失去6点生命」零命中；`idle_energy_rescue_pick` 内 `_SELF_COST_RE`（失去N点生命）在 taxstop 识别之前执行，呼唤即使正则命中也会先被自残排除；`_score_play` 无直接数值桶对纯滞留税牌无任何特判。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① `_HAND_TAX_ZHS_RE` 补「失去\s*(\d+)\s*点?\s*生命」交替型（保持「受到N点伤害」原支不变），`_HAND_TAX_EN_RE` 补 life 词尾，新增 `_hand_tax_amount()` 多捕获组取数助手，三处取数点（hand_end_turn_tax / 救场 taxstop / _score_play 止损计价）同步切换；旁观留痕（HAND_TAX_PLAY_AUDIT，仅用真值性）自动覆盖呼唤；② `idle_energy_rescue_pick` 把滞留税识别提到 `_SELF_COST_RE` 之前——税牌的「失去生命」是持牌条件税而非打出自付，不再被自残排除误杀，税收>最佳格挡净效益时优先打出止血（通道原语义不变）；③ `_score_play` 无直接数值桶新增纯滞留税牌分支：命中滞留税且无伤害/格挡/抽牌/回能面的牌不再落入能力牌桶吃长战加成，改按与攻击税牌同一把等效格挡尺（1.05×block_safety×blk_boost）计价并留痕「手牌滞留税牌（打出即清零N/回合滞留税，HAND_TAX_PLAY_PRICING）」；`hand_tax_play_pricing=0` 严格回落旧能力牌口径，`hand_tax_stoploss=0` 关闭救场止损通道，双双回滚锚不动既有行为。
+- sts2-ascend/brain/selfcheck.py：新增 3br-5 夹具（呼唤税额识别 6/12、救场 taxstop 优先且不被自残排除、allow_taxstop=False 回落格挡、end_turn 收口披露 BECKON×1）与 3br-6 夹具（主评分「手牌滞留税牌」计价+不再误判「能力/增益牌」；旋钮=0 严格回滚旧口径）。
+- 不改评分阈值/竞速判决/reflect 通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 再遇 SOUL_FYSH（或其它塞「失去N点生命」手牌税的组合）时 end_turn 收口出现「手牌滞留税HAND_END_TAX=每回合6（BECKON×N）」披露，残能救场出现「残能救场[手牌税止损]…呼唤…清零手牌滞留税」——按 SOUL_FYSH 35.6 战的高频，数局内即可验证；② 呼唤主评分理由变为「手牌滞留税牌（打出即清零6/回合滞留税…）」，「评估后无值得出的牌（呼唤✓）」型空过与「能力/增益牌｜长战加成」型白打双双消失；③ Boss 战非行动段自损（呼唤税计入 SELF_LOSS_PHASE_OBS 非行动段）应下行，480 局 T3/T5 型「-6 未计价」不再出现。证伪/回滚：留痕从不出现 → 复查正则与运行时 description 字段口径；呼唤打出挤压关键格挡/输出导致战损恶化 → policy.json 置 `hand_tax_play_pricing=0`（回能力牌旧口径）或 `hand_tax_stoploss=0`（关救场止损）分级撤回。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（新增 3br-5/3br-6 六分支；既有 3br-4 毒素/感染税、3htp 税牌主评分、3htpa 旁观留痕、3prg 血税软顶、3prl 血税密度、3prn 门拦格挡救场、3prt 复打税、3sec 沙坑封底、3xg-payback 破层抵扣等全部既有夹具通过）。
+- `py -3 -B -m unittest sts2-ascend.tests.test_character_strategy`：57 tests OK。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+37/-8，正则补型+取数助手+救场排除序+纯税面分支）、brain/selfcheck.py（+66 两组夹具）两个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

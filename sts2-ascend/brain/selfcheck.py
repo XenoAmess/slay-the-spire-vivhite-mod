@@ -8304,6 +8304,72 @@ def main() -> int:
         and "手牌滞留税HAND_END_TAX=每回合3（INFECTION×1）" in resc_tax.reason, \
         f"end_turn 收口未披露手牌滞留税: {resc_tax.reason}"
 
+    # 3br-5) BECKON 失去生命型滞留税（第461~480局批复盘）：SOUL_FYSH 灌注的
+    #        呼唤用「你失去6点生命」措辞，旧正则只认「受到N点伤害」——480 局
+    #        F17 死亡战 T5 能量 1、呼唤✓ 可出仍空过（滞留税 -6 直送终局）；
+    #        20260902-181845/20260905-145057/20260905-183531 三例
+    #        「呼唤✓…结束回合」低血边界同源。① 税额识别（失去生命措辞）；
+    #        ② 残能救场 taxstop 不得被「失去生命」自残排除误杀，税收>格挡
+    #        净效益时优先打出呼唤止血；③ hand_tax_stoploss=0 回落格挡通道；
+    #        ④ end_turn 收口披露 BECKON 税额。
+    _beckon = {"index": 0, "card_id": "BECKON", "name": "呼唤",
+               "playable": True, "energy_cost": 1, "requires_target": False,
+               "rules_text": "在你的回合结束时，如果这张牌在你的手牌中，"
+                             " 你失去6点生命。"}
+    _tax_t, _tax_d = policy.hand_end_turn_tax([_beckon])
+    assert _tax_t == 6 and _tax_d == "BECKON×1", \
+        f"呼唤（失去生命措辞）回合结束手牌税未识别: {(_tax_t, _tax_d)}"
+    _tax_t, _tax_d = policy.hand_end_turn_tax(
+        [_beckon, dict(_beckon, index=1)])
+    assert _tax_t == 12 and _tax_d == "BECKON×2", \
+        f"两张呼唤滞留税未累计: {(_tax_t, _tax_d)}"
+    _bk_c, _bk_kind = policy.idle_energy_rescue_pick(
+        [_beckon] + _defend3, 1, 20, 0)
+    assert _bk_kind == "taxstop" and _bk_c is not None \
+        and _bk_c.get("card_id") == "BECKON", \
+        f"呼唤被自残排除误杀或未优先止损: {(_bk_kind, _bk_c)}"
+    _bk_off_c, _bk_off_kind = policy.idle_energy_rescue_pick(
+        [_beckon] + _defend3, 1, 20, 0, allow_taxstop=False)
+    assert _bk_off_kind == "block" \
+        and _bk_off_c.get("card_id") == "DEFEND_IRONCLAD", \
+        f"hand_tax_stoploss=0 时呼唤未回落格挡通道: {(_bk_off_kind, _bk_off_c)}"
+    # 收口披露夹具用不可出实例：可出呼唤经 3br-6 主评分直接打出止血，
+    # 不会走到 end_turn 边界（与 INFECTION 不可出夹具同构）。
+    resc_bk = resc_pol.decide(
+        _resc_state(resc_defend + [dict(_beckon, index=9, playable=False)],
+                    1, 0, 0), ctx)
+    assert resc_bk.action == "end_turn" \
+        and "手牌滞留税HAND_END_TAX=每回合6（BECKON×1）" in resc_bk.reason, \
+        f"end_turn 收口未披露呼唤滞留税: {resc_bk.reason}"
+
+    # 3br-6) 纯滞留税牌主评分（HAND_TAX_PLAY_PRICING 纯税面分支）：呼唤无
+    #        伤害/格挡/抽牌面，旧口径落入能力牌桶吃长战加成——480 局 F17-T5
+    #        「评估后无值得出的牌（呼唤✓）」与 20260902-165045「打出【呼唤】
+    #        能力/增益牌｜长战加成+4.3」同根。① 主评分改按等效格挡口径止损
+    #        计价并带「手牌滞留税牌」留痕；② 不再出现「能力/增益牌」误判；
+    #        ③ hand_tax_play_pricing=0 严格回落旧能力牌口径。
+    bkn_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-beckon-"))),
+        random.Random(5))
+    bkn_enemies = [{"index": 0, "enemy_id": "SOUL_FYSH", "name": "灵魂异鱼",
+                    "current_hp": 184, "max_hp": 211, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 13}]}]
+    s_bk, _, why_bk = bkn_pol._score_play(
+        dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
+        my_hp=4, my_max_hp=78, cur_energy=1, run_deck=[])
+    assert s_bk > 0 and "手牌滞留税牌" in why_bk \
+        and "能力/增益牌" not in why_bk, \
+        f"呼唤主评分未按滞留税止血计价: {s_bk}（{why_bk}）"
+    bkn_pol.know.policy["hand_tax_play_pricing"] = 0
+    s_bk_off, _, why_bk_off = bkn_pol._score_play(
+        dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
+        my_hp=4, my_max_hp=78, cur_energy=1, run_deck=[])
+    assert "手牌滞留税牌" not in why_bk_off \
+        and "能力/增益牌" in why_bk_off, \
+        f"hand_tax_play_pricing=0 未回滚旧能力牌口径: {s_bk_off}（{why_bk_off}）"
+    bkn_pol.know.policy["hand_tax_play_pricing"] = 1
+
     # 3htp) 手牌税止损计价（HAND_TAX_PLAY_PRICING，第1086局批复盘）：
     #      808~812 批的止损只装在 end_turn 残能救场与收口披露，主评分仍按
     #      牌面值计价；1086-F22-T3/T6 实证毒素（5伤+免5税/回合）评不过同费
