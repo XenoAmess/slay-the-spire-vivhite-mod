@@ -10435,3 +10435,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.206647086839971局)，BULLY(10分/3.3526062515329165局)，HAVOC(11分/2.682085001226334局)
 - 策略进化：elite_grey_safety_mult: 2.05 → 2.25（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1349 胜，当前目标进阶 0
+
+## 第 1350 局复盘（2026-09-09 12:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HOWL_FROM_BEYOND, FEEL_NO_PAIN, RAMPAGE, CINDER, PROWESS, BREAKTHROUGH, MOLTEN_FIST, RAMPAGE, HOWL_FROM_BEYOND, FEED, STONE_ARMOR, IMPERVIOUS
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F8 Monster战 掉血0; F11 Unknown战 掉血6; F13 Unknown战 掉血3｜自损1（可行动段1/非行动段8，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血25; F15 Monster战 掉血6; F17 Boss战 掉血71｜竞速审计：T5判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.03251707338503局)，PRIMAL_FORCE(24分/4.677220981513578局)，FIEND_FIRE(24分/31.60516836335495局)，OFFERING(24分/25.022515344683956局)，PERFECTED_STRIKE(24分/6.312484290360178局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.191923822036031局)，BULLY(10分/3.3408721296525514局)，HAVOC(11分/2.672697703722042局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（82%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
+- 生涯战绩：0/1350 胜，当前目标进阶 0
