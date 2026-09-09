@@ -5265,3 +5265,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.423813530982994局)，REND(22分/2.081712758627764局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.80877063013295局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损34/掉血65（52%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/475 胜，当前目标进阶 0
+
+## 第 476 局复盘（2026-09-09 12:13）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TRICHROMATIC_WALTZ, MAYHEM, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：WAR_PAINT
+- 战斗记录：F2 Monster战 掉血7｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血17｜自损16（可行动段16/非行动段15，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血34｜自损28（可行动段28/非行动段21，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血27｜自损12（可行动段12/非行动段14，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/6.6209314340466365局)，HAND_OF_GREED(33分/7.874021372008591局)，PREP_TIME(32分/5.161539029532387局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/23.493397559525494局)，VIVHITE_CARD_CHROMATIC_LIMIT(31分/52.25641009428861局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.4153301836245538局)，REND(22分/2.0744267639725673局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.655439932927486局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/476 胜，当前目标进阶 0
