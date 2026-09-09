@@ -9384,51 +9384,9 @@ def main() -> int:
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
     assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
-                          "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
+                         "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
-
-    # 3y2) 组合门放行结局台账（第434~460局批复盘 EVE_COMBO_GATE_OBS 回归
-    #     夹具）：前夜被组合全称门放行的对局，Boss 收官必须把「放行→实战
-    #     结局」累计进 stats.race_audit 并在战斗记录拼线；非 Boss 战不
-    #     消费标记，观测键关闭时零落库零拼线，标记消费后复位。
-    ra_agent.policy._eve_combo_gate_open = True
-    ra_agent.ctx.combat_agg = _ra_agg(False, True)
-    ra_agent._flush_combat_agg()
-    _cgo_stats = ra_agent.know.stats["race_audit"]
-    assert _cgo_stats.get("eve_combo_gate_open") == 1 \
-        and _cgo_stats.get("eve_combo_gate_died") == 1, \
-        f"组合门放行→实战阵亡未落库: {_cgo_stats}"
-    assert any("EVE_COMBO_GATE_OBS" in n and "实战阵亡" in n
-               for n in ra_agent.ctx.combat_notes), \
-        f"组合门放行结局未拼进战斗记录: {ra_agent.ctx.combat_notes}"
-    assert ra_agent.policy._eve_combo_gate_open is False, \
-        "组合门标记被 Boss 收官消费后未复位"
-    # 非 Boss 战不消费、不复位标记（本幕后续预演仍负责重写）
-    ra_agent.policy._eve_combo_gate_open = True
-    _cgo_agg_m = _ra_agg(True, False)
-    _cgo_agg_m["node_type"] = "Monster"
-    _cgo_agg_m["comp_id"] = "RA_COMP_M"
-    ra_agent.ctx.combat_agg = _cgo_agg_m
-    ra_agent._flush_combat_agg()
-    assert ra_agent.know.stats["race_audit"].get("eve_combo_gate_open") == 1, \
-        "非 Boss 战误消费组合门台账"
-    assert ra_agent.policy._eve_combo_gate_open is True, \
-        "非 Boss 战不应复位组合门标记"
-    # 观测键关闭：Boss 收官只复位标记，零落库零拼线（严格零行为差异）
-    ra_agent.know.policy["eve_combo_gate_audit_obs"] = False
-    ra_agent.ctx.combat_agg = _ra_agg(True, False)
-    ra_agent._flush_combat_agg()
-    _cgo_stats = ra_agent.know.stats["race_audit"]
-    assert _cgo_stats.get("eve_combo_gate_open") == 1 \
-        and "eve_combo_gate_won" not in _cgo_stats, \
-        f"观测键关闭后仍落库: {_cgo_stats}"
-    assert not any("EVE_COMBO_GATE_OBS" in n and "实战获胜" in n
-                   for n in ra_agent.ctx.combat_notes), \
-        "观测键关闭后仍拼线"
-    assert ra_agent.policy._eve_combo_gate_open is False, \
-        "观测键关闭时标记同样须复位"
-    ra_agent.know.policy["eve_combo_gate_audit_obs"] = True
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。

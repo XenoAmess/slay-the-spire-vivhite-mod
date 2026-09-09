@@ -3696,31 +3696,6 @@ class Agent:
             if _ra.get("esc"):
                 _ra_esc_key = "esc_won" if _ra_won else "esc_died"
                 _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
-        # 组合门放行结局对账（EVE_COMBO_GATE_OBS，第434~460局批复盘，纯观测位）：
-        # 前夜「均值口径判负但被组合全称门放行」的 Boss 实战结局此前零持久台账，
-        # 本批 5/5 放行局（437/442/444/448/460）全部实战判死阵亡却只能靠复盘
-        # 手工跨局 grep 对账。此处把放行→实战结局累计进 stats.race_audit
-        # （eve_combo_gate_open/_won/_died）并在战斗记录拼线；不参与任何
-        # 评分/阈值分支。非 Boss 战不消费标记（本幕后续预演仍会重写它）；
-        # eve_combo_gate_audit_obs=false 一键关闭落库与拼线（标记仍复位，
-        # 防跨幕残留），严格零行为差异
-        if (agg.get("node_type") == "Boss"
-                and bool(getattr(self.policy, "_eve_combo_gate_open", False))):
-            self.policy._eve_combo_gate_open = False
-            if (bool(self.know.policy.get("eve_combo_gate_audit_obs", True))
-                    and (not callable(learning_allowed) or learning_allowed())):
-                _cgo_won = not agg.get("died")
-                note += (f"｜前夜组合门放行→实战{'获胜' if _cgo_won else '阵亡'}"
-                         "（EVE_COMBO_GATE_OBS）")
-                _cgo_stats = self.know.stats.get("race_audit")
-                if not isinstance(_cgo_stats, dict):
-                    _cgo_stats = {}
-                    self.know.stats["race_audit"] = _cgo_stats
-                _cgo_stats["eve_combo_gate_open"] = int(
-                    _cgo_stats.get("eve_combo_gate_open", 0) or 0) + 1
-                _cgo_out = ("eve_combo_gate_won" if _cgo_won
-                            else "eve_combo_gate_died")
-                _cgo_stats[_cgo_out] = int(_cgo_stats.get(_cgo_out, 0) or 0) + 1
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")

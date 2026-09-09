@@ -565,11 +565,6 @@ class Policy:
         # 判「可行」时携带账面文本，供前夜翻转留痕对账。判死侧已有 doom 全文、
         # 数据缺失侧为空串，消费端据此区分三种现实
         self._race_proj_audit = ""
-        # 组合全称门放行标记（EVE_COMBO_GATE_OBS，第434~460局批复盘）：
-        # _boss_race_doomed 每次调用时随 _race_proj_audit 一并重写；仅当均值
-        # 口径判负但被组合全称门放行时置位，Boss 战斗收官由 agent 与实战结局
-        # 拼线落账（stats.race_audit.eve_combo_gate_*）。纯观测，不改任何判定
-        self._eve_combo_gate_open = False
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
@@ -5848,11 +5843,8 @@ class Policy:
         可立即回滚到均值口径。
         """
         pol = self.know.policy
-        # 可行侧对账账面每次调用重置（BOSS_RACE_PROJ_AUDIT 观测位，不改判定）；
-        # 组合门放行标记（EVE_COMBO_GATE_OBS）同一时钟重写，提前返回即清零，
-        # 保证 Boss 收官读到的永远是本幕最后一次预演的真实结论
+        # 可行侧对账账面每次调用重置（BOSS_RACE_PROJ_AUDIT 观测位，不改判定）
         self._race_proj_audit = ""
-        self._eve_combo_gate_open = False
         if not pol.get("kill_race_enabled", True):
             return False, ""
         act_no = self._floor_act(floor) if floor else None
@@ -5987,11 +5979,6 @@ class Policy:
                         f"均值口径判负但组合全称门放行（{_gate_basis}）")
                     self._trace_note(
                         "BOSS_RACE_COMBO_GATE：均值判死被组合全称门放行；" + verdict_text)
-                    # EVE_COMBO_GATE_OBS（第434~460局批复盘）：本批 5/5 放行局
-                    # （437/442/444/448/460）全部被实战判死推翻——放行→实战结局
-                    # 必须落持久台账，否则组合门松紧永远无证据可校。只置标记，
-                    # 判定与返回值不变
-                    self._eve_combo_gate_open = True
                     return False, ""
                 if _require_all_combos and combo_alive_count < len(verdicts):
                     combo_tail = (
