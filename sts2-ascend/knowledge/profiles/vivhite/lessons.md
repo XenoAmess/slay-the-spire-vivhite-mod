@@ -6233,3 +6233,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.322379707790774局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/42.921480008859525局)，PANACHE(24分/7.793574233366433局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.58 → 0.55（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：0/563 胜，当前目标进阶 0
+
+## 第 564 局复盘（2026-09-10 05:23）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_ASTRAL_MEASURE, BREAKTHROUGH, CRUELTY, PACTS_END, PACTS_END, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_BACKTRACKING_SPELL, PANIC_BUTTON, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：GAME_PIECE, WHETSTONE, PENDULUM, MINIATURE_CANNON
+- 战斗记录：F23 Monster战 掉血0｜自损13（可行动段13/非行动段15，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血35｜自损24（可行动段24/非行动段29，SELF_LOSS_PHASE_OBS）; F25 Unknown战 掉血0｜自损14（可行动段14/非行动段29，SELF_LOSS_PHASE_OBS）; F28 Elite战 掉血1｜自损16（可行动段16/非行动段25，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血0｜自损15（可行动段15/非行动段9，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血78｜自损34（可行动段34/非行动段12，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/4.863195825571753局)，FLASH_OF_STEEL(35分/2.7862112373641863局)，HAND_OF_GREED(35分/8.368054879146644局)，PACTS_END(33分/2.5100845660510975局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/18.00646629431789局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.307251378813507局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.77125482882852局)，PANACHE(24分/7.766296723549651局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（4回合掉血78，每回合20≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.55 → 0.57（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/564 胜，当前目标进阶 0
