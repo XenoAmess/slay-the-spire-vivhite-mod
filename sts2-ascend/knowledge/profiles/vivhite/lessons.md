@@ -6288,3 +6288,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.247265704439207局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/44.15816694825307局)，PANACHE(24分/7.658138061474681局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.55 → 0.52（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：0/568 胜，当前目标进阶 0
+
+## 第 569 局复盘（2026-09-10 06:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, HAND_OF_GREED, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TANGENT_STARLIGHT
+- 本局遗物：BAG_OF_PREPARATION, BAG_OF_MARBLES, REGAL_PILLOW
+- 战斗记录：F2 Monster战 掉血14｜自损20（可行动段20/非行动段8，SELF_LOSS_PHASE_OBS）; F7 Elite战 掉血0｜自损14（可行动段14/非行动段33，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血0｜自损8（可行动段8/非行动段8，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0; F17 Boss战 掉血90｜自损30（可行动段30/非行动段50，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/4.778683558664033局)，FLASH_OF_STEEL(35分/2.7377926590878885局)，PACTS_END(33分/2.4664644971878174局)，HAND_OF_GREED(33分/9.222635423955007局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/17.693551219516976局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.23240027447367局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/44.003613363934186局)，PANACHE(24分/7.631334578259519局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/569 胜，当前目标进阶 0
