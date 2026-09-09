@@ -2800,9 +2800,12 @@ def main() -> int:
         and vpol_sb._hp_gate_stall == 1, \
         f"新战斗重置错误: stall={vpol_sb._hp_gate_stall} latch={vpol_sb._hp_gate_stall_latch}"
     # 意图未被格挡覆盖的高危拦截回合不计数、永不触发放行
+    # （钉住全拦截口径关闭：本夹具单独验证旧「全覆盖」链路语义，
+    # 全拦截僵局放行口径由 3prv 单独验证）
     vknow_hb = _vivhite_know("sts2-selfcheck-vhgate-hi-incoming-")
     vknow_hb.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_hb.policy["vivhite_hp_gate_stall_turns"] = 3
+    vknow_hb.policy["vivhite_hp_gate_stall_any_turns"] = 0
     vpol_hb = policy.Policy(vknow_hb, random.Random(11))
     vctx_hb = _vgate_ctx()
     for _turn in (1, 2, 3, 4, 5):
@@ -2823,9 +2826,12 @@ def main() -> int:
     assert vpol_mx._hp_gate_stall == 0, \
         f"高危回合必须中断连续低危链: {vpol_mx._hp_gate_stall}"
     # stall=0 一键回滚：无论多少连续低危拦截都不放行（旧行为零差异）
+    # （钉住全拦截口径关闭：本夹具单独验证旧键回滚语义，全拦截口径的
+    # 回滚由 3prv③ 单独验证）
     vknow_off = _vivhite_know("sts2-selfcheck-vhgate-stalloff-")
     vknow_off.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_off.policy["vivhite_hp_gate_stall_turns"] = 0
+    vknow_off.policy["vivhite_hp_gate_stall_any_turns"] = 0
     vknow_off.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
     vpol_off = policy.Policy(vknow_off, random.Random(11))
     vctx_off = _vgate_ctx()
@@ -2890,6 +2896,92 @@ def main() -> int:
     assert vpol_uo._hp_gate_stall_uncovered == 0, \
         ("obs=0 回滚键下未覆盖观测账必须保持为零: "
          f"{vpol_uo._hp_gate_stall_uncovered}")
+
+    # 3prv) 謦欬门全拦截僵局放行（VIVHITE_HP_GATE_STALL_ANY，第 537~552 局
+    #      批复盘）：549 局 F2 普通战意图 7/13 交替、格挡 9 只覆盖低峰——旧
+    #      闩锁「意图全覆盖」连续链 1/6→0/6 循环 17 回合结构性不可达（高危
+    #      回合清零），余量门永久锁死謦欬攻击，残能救场反复付 2 血格挡，全程
+    #      零输出，自损50/掉血78 阵亡（538 局 F3 同型阵亡、546 局 F4 自损36/
+    #      掉血32 后 F5 阵亡；343~354 批观测账 354 局 F3 同型实证在先）。
+    #      新口径：「回合结束仍有謦欬候选被拦」的连续回合（不论覆盖）≥4 且
+    #      敌血量零进展≥3 回合 → 闩锁放行（仅撤余量门附加门槛，评分/致死
+    #      豁免不变）；0=一键回滚（旧行为零差异）；新战斗重置。
+    # ① 交替意图下旧低危链反复清零永不达标，全拦截口径第 5 个 decide 起放行
+    vknow_any = _vivhite_know("sts2-selfcheck-vhgate-stallany-")
+    vknow_any.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_any.policy["vivhite_hp_gate_stall_turns"] = 6   # 旧口径保持默认链长，交替意图下不可达
+    vknow_any.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
+    vpol_any = policy.Policy(vknow_any, random.Random(11))
+    vctx_any = _vgate_ctx()
+    for _turn in (1, 2, 3, 4):
+        d_any = vpol_any.decide(_vgate_stall(_turn, 0 if _turn % 2 else 10),
+                                vctx_any)
+        assert d_any.action == "end_turn", \
+            f"全拦截计数未达阈值前余量门必须照旧拦截: turn={_turn} {d_any}"
+        assert "VIVHITE_HP_GATE_STALL_ANY 进度" in d_any.reason, \
+            f"拦截回合缺全拦截进度留痕: turn={_turn} {d_any.reason}"
+    assert vpol_any._hp_gate_stall == 0, \
+        f"交替意图下旧低危链必须反复清零（结构性不可达）: {vpol_any._hp_gate_stall}"
+    assert vpol_any._hp_gate_stall_any == 4, \
+        f"全拦截连续计数错误: {vpol_any._hp_gate_stall_any}"
+    assert not vpol_any._hp_gate_stall_latch, "达阈值前闩锁不得置位"
+    d_any = vpol_any.decide(_vgate_stall(5, 0), vctx_any)
+    assert d_any.action == "play_card", \
+        f"连续拦截≥4 且零进展≥3 后本场余量门应停用并放行: {d_any}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_any.reason, \
+        f"全拦截放行缺决策链留痕: {d_any.reason}"
+    assert vpol_any._hp_gate_stall_latch and vpol_any._hp_gate_stall_any_fired, \
+        "全拦截放行后闩锁与分流标记必须置位"
+    d_any2 = vpol_any.decide(_vgate_stall(6, 10), vctx_any)
+    assert d_any2.action == "play_card", \
+        f"闩锁后余量门不得回归: {d_any2}"
+    # 新战斗（combat 身份变化）必须重置全拦截账、闩锁与分流标记
+    d_any3 = vpol_any.decide(_vgate_stall(1, 10), _vgate_ctx())
+    assert d_any3.action == "end_turn", \
+        f"新战斗必须重置闩锁、余量门回归: {d_any3}"
+    assert not vpol_any._hp_gate_stall_latch \
+        and not vpol_any._hp_gate_stall_any_fired \
+        and vpol_any._hp_gate_stall_any == 1, \
+        ("新战斗全拦截账重置错误: "
+         f"any={vpol_any._hp_gate_stall_any} "
+         f"latch={vpol_any._hp_gate_stall_latch} "
+         f"fired={vpol_any._hp_gate_stall_any_fired}")
+    # ② 敌血量持续推进（零进展条件不达成）时全拦截口径永不闩锁
+    vknow_np = _vivhite_know("sts2-selfcheck-vhgate-stallany-prog-")
+    vknow_np.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_np.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_np.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
+    vpol_np = policy.Policy(vknow_np, random.Random(11))
+    vctx_np = _vgate_ctx()
+
+    def _vgate_stall_prog(turn, ehp):
+        st = _vgate_state(85, 10)
+        st["turn"] = turn
+        st["combat"]["enemies"][0]["current_hp"] = ehp
+        return st
+
+    for _i, _ehp in enumerate((160, 150, 140, 130, 120), start=1):
+        d_np = vpol_np.decide(_vgate_stall_prog(_i, _ehp), vctx_np)
+        assert d_np.action == "end_turn", \
+            f"敌血量持续推进时全拦截口径不得闩锁放行: turn={_i} {d_np}"
+    assert vpol_np._hp_gate_stall_any == 5, \
+        f"推进战斗的全拦截账照累计数: {vpol_np._hp_gate_stall_any}"
+    assert not vpol_np._hp_gate_stall_latch, \
+        "零进展条件不达成时闩锁不得置位"
+    # ③ any=0 一键回滚：无论多少连续拦截都不放行、不留痕（旧行为零差异）
+    vknow_ao = _vivhite_know("sts2-selfcheck-vhgate-stallany-off-")
+    vknow_ao.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_ao.policy["vivhite_hp_gate_stall_turns"] = 0   # 旧闩锁同步关闭，隔离本键
+    vknow_ao.policy["vivhite_hp_gate_stall_any_turns"] = 0
+    vknow_ao.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3pri：钉住旧门语义
+    vpol_ao = policy.Policy(vknow_ao, random.Random(11))
+    vctx_ao = _vgate_ctx()
+    for _turn in (1, 2, 3, 4, 5, 6):
+        d_ao = vpol_ao.decide(_vgate_stall(_turn, 0), vctx_ao)
+        assert d_ao.action == "end_turn", \
+            f"any=0 回滚键下全拦截放行不得触发: turn={_turn} {d_ao}"
+        assert "VIVHITE_HP_GATE_STALL_ANY" not in d_ao.reason, \
+            f"any=0 回滚键下不得出现全拦截留痕: {d_ao.reason}"
 
     # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
     #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，

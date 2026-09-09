@@ -1151,3 +1151,43 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 537~552 局批复盘：交替意图普通战余量门永久锁死謦欬攻击——全拦截僵局放行（VIVHITE_HP_GATE_STALL_ANY）
+
+日期：2026-09-10
+
+## HYPOTHESIS
+
+謦欬余量门僵局放行闩锁（VIVHITE_HP_GATE_STALL_BREAK）只统计「本回合敌意图被格挡全覆盖」的连续拦截回合（policy.py 收口处 incoming<=my_block 才累加、否则清零）。在意图高低交替、格挡只覆盖低峰的普通 Monster 战里，该链每 1~2 回合被高危回合清零，闩锁结构性不可达，余量门永久锁死全部謦欬攻击，战斗退化为纯格挡放血死循环直至阵亡。新增「回合结束仍有謦欬候选被拦（不论覆盖）连续≥4 且敌血量零进展≥3」的全拦截放行口径后，这类战斗会在第 5 个 decide 前后闩锁放行謦欬攻击，零输出长战的回合数与自损应显著回落。该假设可证伪：未来 3~10 局若决策链从不出现「謦欬门全拦截僵局放行（VIVHITE_HP_GATE_STALL_ANY）」留痕（接线错误或条件仍不可达），或留痕出现但 549 型「意图交替+格挡覆盖低峰+零输出」长战依旧不闩锁（条件过严），或放行后早期普通战自损/战损死亡显著恶化（放行有害），则本假设不成立。
+
+## EVIDENCE
+
+- 549 局（QRCRZLGYYHLZ，F2 Monster 阵亡，完整链逐条核对 54 条）：意图 7/13 交替、每回合格挡 9——意图 13 的高危回合（incoming 13>block 9 未覆盖）把低危链清零，留痕「连续低危拦截 1/6→0/6」循环 17 回合、STALL_UNCOVERED 同步 1 回合反复清零；全程只出【闭域映射】实付 2 血×25≈50 自损、敌方零掉血，终段 2 血全部 blocked_by_hook 后阵亡（掉血78｜自损50）。
+- 538 局（L7B0Z1KJM10A，F3 阵亡，逐条核对）：同型 7/13 交替，靠残能救场双格挡（18≥13）才勉强维持低危链，闩锁第 7 回合才到 6/6，此时已 42/56 血，最终自损44/掉血56 阵亡；闩锁后留痕甚至显示「连续低危拦截0回合≥6」（计数与闩锁状态脱节的旁证）。
+- 546 局（ZHSGXY9CHY2E）：F4 Monster 掉血32｜自损36、F5 阵亡；549/538/546 构成同型早期放血死循环三连。
+- 同问题历史线：343~354 批已就 354 局 F3（SHRINKER_BEETLE 意图 7/13、格挡 9，19 回合自损57/掉血78 阵亡）立 STALL_UNCOVERED 纯观测账，距今近 200 局未行为化；本批再增 3 个独立对局（538/546/549），远超 evidence_run_threshold=3——不得再只登记待观察。
+- 生产现状核查（policy.py）：收口处只有 incoming<=my_block 一条累加口径；既有 _stall_no_progress（第 109 局账，敌血量不降才累加）可复用为「战斗零进展」合取条件。
+- 对账本批前两批留痕：HARD_ONLY 16/16 局接线（普通战不享意图0减免 101 处）；KILL_RACE_LONGFIGHT_OFF 已在 3 局出现 8 处（543/551/552，含 552 局 F33 T2 变身式撤账+12.0、T4 公理护环撤账+4.4），接线验证通过。
+- failed_review_replay.requested_packages 为空，本批无重实现义务。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：① 新增全拦截账 _hp_gate_stall_any（回合结束仍有謦欬候选被拦即累加、不论意图覆盖，无拦截回合清零）与分流标记 _hp_gate_stall_any_fired，战斗身份变化时随既有账一并重置；② 闩锁新增并列口径——静态键 vivhite_hp_gate_stall_any_turns（默认 4）达标且 _stall_no_progress≥3（敌血量零进展）时闩锁放行，同样仅撤余量门附加门槛（复打税同步停用同旧口径），普通评分/致死豁免/旧全覆盖口径不变；③ 留痕分流：全拦截口径触发的放行注记「謦欬门全拦截僵局放行：连续拦截N回合（含意图未覆盖回合）且敌血量零进展M回合≥3（VIVHITE_HP_GATE_STALL_ANY）」，end_turn 收口在拦截回合追加「连续拦截N/4含未覆盖（零进展M，STALL_ANY 进度）」；零进展合取保证推进正常的战斗不受本口径影响；any=0 一键回滚（旧行为零差异），非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 vivhite_hp_gate_stall_any_turns: 4，注释记录 549/538/546 局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3prv 夹具三分支——① 意图 0/10 交替下旧低危链反复清零（断言 _hp_gate_stall==0）而全拦截账 4 连后第 5 个 decide 闩锁放行、带 STALL_ANY 留痕、闩锁后回归检查、新战斗重置三态；② 敌血量逐回合下降（160→120）时零进展条件不达成、5 连拦截仍不闩锁（推进战斗零差异）；③ any=0 回滚键下 6 连拦截不放行、不留痕（旧行为零差异）。既有 3pri 两个旧夹具（hi-incoming 5 连高危、stalloff 7 连）显式钉 any=0——它们单独验证旧「全覆盖」链路与旧键回滚语义，新口径由 3prv 单独验证（同 3pru 钉 relief=0 的既有模式）。
+- 不改评分主体/门带数值/复打税/竞速判定/reflect 通道；不改 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：① 任一「意图交替+格挡覆盖低峰」的普通战（按 354/511/538/546/549 的历史频率，数局内必现）决策链出现「连续拦截N/4含未覆盖（STALL_ANY 进度）」并在达标后出现「謦欬门全拦截僵局放行（VIVHITE_HP_GATE_STALL_ANY）」——留痕显形即验证接线；② 549 型「17 回合零输出、自损≈50、F2/F3 阵亡」战斗消失：同型战斗在放行后转为正常输出收尾，早期 Monster 战自损/掉血比与战斗回合数回落；③ 推进正常的战斗（敌血量持续下降）不出现 STALL_ANY 留痕（零进展合取的直接对账）。证伪/撤回：留痕从不出现 → 复查 _hp_gate_blocked 口径与 _stall_no_progress 接线；留痕出现但同型零输出长战依旧 → 条件过严，考虑降阈值或放宽零进展合取；放行后早期普通战自损死亡显著恶化（如放行回合自付后吃满高意图死亡链增多）→ policy.json 置 vivhite_hp_gate_stall_any_turns=0 整体撤回（旧行为零差异）。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3prv 三分支；既有 3pri 余量门族、3prm 未覆盖观测、3prn 门拦格挡救场、3prt 复打税、3pru 自由回合减免/HARD_ONLY、3krlf 竞速撤账、3kd 诅咒税、3br-5/3br-6 呼唤滞留税、sec 沙坑封底等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+49/-2，全拦截账+闩锁并列口径+双向留痕）、brain/knowledge.py（+9 一个静态键）、brain/selfcheck.py（+92，3prv 三分支+两个旧夹具钉 any=0）三个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不进 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
