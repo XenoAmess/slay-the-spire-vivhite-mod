@@ -4153,6 +4153,96 @@ def main() -> int:
         f"突发唤醒火力开关未严格回滚旧 EMA: {d_wake_rb.action}（{d_wake_rb.reason}）"
     know.policy["hard_combat_intent_spike_fire"] = True
 
+    # 3ww-invuln) 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
+    #      WATERFALL_GIANT 击倒进 AboutToBlow 后原生 SetMaxAndCurrentHp(999999999)
+    #      +HpDisplay.InfiniteWithoutNumbers——不可击杀、随后 ExplodeMove 自爆；
+    #      1341-F17 T11 按字面血池投影「击杀还需42955326回合」判死全攻、三牌打
+    #      无敌目标、29 血零甲白吃 39 自爆意图阵亡（防御×2 在手未打）。锚：
+    #      ① 已入锁竞速在全场无敌相时解锁、投影关闭、出牌转向格挡；
+    #      ② 混合池（无敌帧+可击杀）只剔除无敌帧、竞速对可击杀部分照常；
+    #      ③ floor=0 严格回滚旧口径（字面血池判死全攻、锁持不动、注记消失）。
+    def invuln_state(turn_no, hp_now, incoming, enemy_hp, extra_enemy=None):
+        enemies = [{"index": 0, "enemy_id": "INVLN_BOSS", "name": "瀑布巨兽",
+                    "current_hp": enemy_hp, "max_hp": 240, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": incoming}]}]
+        if extra_enemy is not None:
+            enemies.append(extra_enemy)
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0,
+                                  "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "INV_HIT", "name": "竞速斩",
+                            "playable": True, "energy_cost": 1,
+                            "requires_target": True, "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage",
+                                                "current_value": 12}]},
+                           {"index": 1, "card_id": "INV_BLK", "name": "铁壁",
+                            "playable": True, "requires_target": False,
+                            "rules_text": "获得8点格挡",
+                            "dynamic_values": [{"name": "Block",
+                                                "current_value": 8}]}],
+                       "enemies": enemies},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": []}}
+
+    def invuln_probe(floor_key, mixed=False):
+        inv_know = knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-")))
+        inv_ctx = type("InvulnCtx", (), {"combat": None,
+                                         "current_combat_is_hard": True,
+                                         "credit_tags": []})()
+        inv_ctx.combat = {"comp_id": "INVLN_BOSS", "node_type": "Boss"}
+        inv_pol = policy.Policy(inv_know, random.Random(13))
+        inv_pol.know.policy["race_invulnerable_hp_floor"] = floor_key
+        d1 = inv_pol.decide(invuln_state(1, 65, 22, 200), inv_ctx)
+        inv_ctx.credit_tags.extend(d1.tags)
+        d2 = inv_pol.decide(invuln_state(2, 55, 22, 200), inv_ctx)
+        inv_ctx.credit_tags.extend(d2.tags)
+        d3 = inv_pol.decide(invuln_state(3, 45, 22, 200), inv_ctx)  # T3 实测判死入锁
+        inv_ctx.credit_tags.extend(d3.tags)
+        latched_t3 = bool(getattr(inv_pol, "_krace_latch", False))
+        extra = None
+        if mixed:
+            extra = {"index": 1, "enemy_id": "INVLN_ADD", "name": "小虫",
+                     "current_hp": 100, "max_hp": 100, "block": 0,
+                     "is_alive": True, "is_hittable": True,
+                     "intents": [{"total_damage": 0}]}
+        # T4：击倒进 AboutToBlow——原生 HP=999999999、自爆意图 39
+        d4 = inv_pol.decide(invuln_state(4, 35, 39, 999999999,
+                                         extra_enemy=extra), inv_ctx)
+        return inv_pol, d3, latched_t3, d4
+
+    iv_pol, iv_d3, iv_latched, iv_d4 = invuln_probe(100000.0)
+    assert iv_latched, \
+        f"夹具前提失败：T3 实测判死未入锁（{iv_d3.action}（{iv_d3.reason}））"
+    assert "RACE_INVULNERABLE_POOL_OBS" in iv_d4.reason \
+        and "全场无敌相" in iv_d4.reason, \
+        f"全场无敌相未留痕: {iv_d4.action}（{iv_d4.reason}）"
+    assert "斩杀竞速投影" not in iv_d4.reason \
+        and "全攻提速" not in iv_d4.reason, \
+        f"全场无敌相仍判死全攻: {iv_d4.action}（{iv_d4.reason}）"
+    assert not bool(getattr(iv_pol, "_krace_latch", False)), \
+        "全场无敌相竞速迟滞锁未解除"
+    assert iv_d4.action == "play_card" and iv_d4.params.get("card_index") == 1, \
+        f"无敌自爆回合未转向格挡: {iv_d4.action}（{iv_d4.reason}）"
+    # 混合池：无敌帧剔除、可击杀小虫照常计价，竞速与锁持不因部分无敌相解除
+    ivm_pol, ivm_d3, ivm_latched, ivm_d4 = invuln_probe(100000.0, mixed=True)
+    assert "RACE_INVULNERABLE_POOL_OBS" in ivm_d4.reason \
+        and "全场无敌相" not in ivm_d4.reason, \
+        f"混合池无敌帧注记口径错误: {ivm_d4.action}（{ivm_d4.reason}）"
+    assert bool(getattr(ivm_pol, "_krace_latch", False)), \
+        "混合池存在可击杀敌人时迟滞锁被误解除"
+    # 回滚：floor=0 → 字面血池判死全攻、锁持不动、注记消失
+    ivr_pol, ivr_d3, ivr_latched, ivr_d4 = invuln_probe(0.0)
+    assert "RACE_INVULNERABLE_POOL_OBS" not in ivr_d4.reason \
+        and "斩杀竞速投影" in ivr_d4.reason, \
+        f"floor=0 未严格回滚旧口径: {ivr_d4.action}（{ivr_d4.reason}）"
+    assert bool(getattr(ivr_pol, "_krace_latch", False)), \
+        "floor=0 时迟滞锁不应被解除"
+
     # 3wx) 升级触发竞速 + 高危姿态解除（第 92~93 批复盘）：93 局 FUZZY+SHRINKER
     #      总血量 <80，旧门 min_enemy_hp=80 永远不开账；高危姿态压攻击(×0.85)
     #      抬格挡(×1.30)对滚雪球意图（4→7→24→…→31）恰好是反向用药——7 回合

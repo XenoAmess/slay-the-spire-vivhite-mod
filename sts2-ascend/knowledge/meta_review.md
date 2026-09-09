@@ -7786,3 +7786,148 @@ retry_resolution: none (no replay target; local production observability change)
    「否决后改锻造战损」分子累计；④ race_audit 悲观率台账续记；
    ⑤ 1332 类「必败弃疗改锻造」在 F17 的翻盘率续记。
 
+# 2026-09-09｜第 1336~1342 局复盘（异步追及队列 7 局 exact_batch 全败；行为修复 ×1：RACE_INVULNERABLE_POOL_OBS 无敌帧血池剔除——瀑布巨兽击倒相竞速投影爆炸）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无失败包、无 lineage 需复审，不产生
+  replay target；按 review_closure（action_required=true、
+  last_outcome=implemented）交付本批常规闭环。
+
+retry_resolution: none (no replay target; local production behavior fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：WATERFALL_GIANT 被击倒进 AboutToBlow 相后原生
+  `SetMaxAndCurrentHp(999999999)`＋`HpDisplay.InfiniteWithoutNumbers`——
+  该相不可被玩家击杀、随后 ExplodeMove 自爆（`CreatureCmd.Kill` 自身）；
+  斩杀竞速血池按字面 1e9 计价时 ttk 爆到 4.3e7 回合、迟滞锁永不解除、
+  全攻提速把能量全部打向无敌目标而非格挡撑过自爆回合。按「HP≥1e5=
+  无敌帧」剔除出竞速血池、并在全场无敌相时解除迟滞锁后，防守线恢复，
+  同类局可存活等自爆过墙。
+- **EVIDENCE**：1341（NWYDYETE01TK）F17 瀑布巨兽：T10 06:01:26 重锤
+  「可击杀」击倒 Boss 触发 AboutToBlow，T11 06:01:30/31/32 三条出牌理由
+  「斩杀竞速投影：击杀还需42955326/45833333/44498381回合＞可存活1回合」
+  全攻提速＋无甲孤注抢斩杀＋致死竞速抢斩杀，29 血 0 甲吃 39 自爆意图
+  阵亡；end_turn 清单证实防御×2 在手未打——全防线 防御5+防御5+挑衅6=
+  16 甲＞缺口 10，本可 6 血存活、Boss 下一动自爆过墙。native
+  monsters.jsonl `WaterfallGiant.TriggerAboutToBlowState`=
+  `SetMaxAndCurrentHp(999999999m)`＋`HpDisplay.InfiniteWithoutNumbers`、
+  `ExplodeMove`=`DamageCmd.Attack(SteamEruptionDamage)`＋
+  `CreatureCmd.Kill(base.Creature)`；policy.py `ttk=enemy_hp_total/
+  max(1.0,dpt)` 与迟滞锁（`_krace_latch`→`race_lost=True` 不看血池
+  合法性）核读；原生最大合法血池 512（AEONGLASS），1e5 阈值不可能
+  误伤真实血池。全批 7 局回扫「击杀还需N回合」：≥100 回合的 3 条全部
+  落在 1341 该战，其余 6 局最大 18——缺陷为该机制独有，非普遍口径漂移。
+- **EXPECTED_SIGNAL**：未来 3~10 局，凡无敌帧敌人（瀑布巨兽击倒相等
+  HP≥1e5）在场，决策理由出现「敌无敌帧×N（HP=…，不可击杀将自爆）：
+  剔除出竞速血池（RACE_INVULNERABLE_POOL_OBS）」；全场无敌相时另出现
+  「竞速迟滞锁解除回归防守等自爆」，出牌转向格挡/生存；≥1000 回合的
+  击杀投影绝迹；混合池（无敌帧+可击杀）竞速只对可击杀部分计价。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1336..1342]，exact 7/7、missing=0；7 局全败（生涯
+  0/1342）。
+- 死亡分布：一幕 Boss（F17）2 局（1338 灵魂异鱼 -72 T2判死→10回合阵亡
+  应验、1341 瀑布巨兽 -68 T2判死→11回合阵亡应验）、一幕精英 1 局
+  （1337 F7 旧日雕像 -62 T3判死→6回合阵亡应验）、一幕 Boss 越墙后
+  走廊 4 局（1336 F17「T2判死→实战获胜」-20 越墙后死 F30、1339 F17
+  T3判死→11回合获胜后死 F22、1340 F17 T2判死→9回合获胜后死 F22、
+  1342 F17 T2判死→11回合获胜后死 F23）——F17 越墙率 4/7，为近期
+  最高批。
+- 部署时序：上批 HP_COST_ATK_EXEMPT_BYSTANDER（review_closure
+  2026-09-09 03:09:22 落盘）晚于 1336（02:23）/1337（02:59）启程、
+  早于 1338（03:31）~1342（06:32）——「自残旁观」零计数只能按窗口内
+  5 局（1338~1342）结算，1336 的「豁免疫价」首发属上一观测位
+  （22:06 部署）口径，两笔账分开记；其余在产杠杆均先于本批全部对局。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** F17 两局前夜判死全部实战兑现
+   （1338/1341），旋钮代谢链全顶格——设计内终态，不重复立案。
+   但本批 F17 越墙 4/7（判死后获胜 6 场），竞速审计悲观率仍在
+   30%~46% 带内波动，前夜两端杠杆边际收益按台账慢调，不因单批
+   加严。
+2. **1341 F17 瀑布巨兽无敌相竞速爆炸（本批新缺陷，最高价值，已立项
+   修复）**：血池口径把原生「假血条」（999999999=不可击杀叙事符号）
+   当成可击杀血量——ttk=1e9/dpt≈4.3e7 回合判死、迟滞锁武装后不再
+   重估血池合法性、孤注抢斩杀的前提「抢斩杀让敌人意图作废」在无敌帧
+   上逻辑不成立。终局回合防御×2+挑衅在手（全防 16 甲＞缺口 10），
+   本可 6 血存活等 Boss 自爆过墙——该缺陷直接改写一局生死。详见
+   HYPOTHESIS 段与三节。
+3. **BURST_STARVE_SUPPLY_CAP_TRACE 第 3 批读数（3/3，达预注册冻结线）**：
+   顶格披露注记 11 条（1336×4 raw+6.0、1338×1、1340×5 raw+6~+14、
+   1341×1 raw+8.0），全部落在中标侧；附 CARD_BURST_PICK_AUDIT 的
+   3 例 supply_left=+0.0，可见候选价值序全部正确（御血术 32.9>
+   飞剑回旋镖 30.7、拆卸 35.8>巨像 7.9、恶魔形态 31.4>好勇斗狠 8.5）
+   ——连续 3 批零误伤，预注册「≥3 批持续零误伤 → cap 冻结结案」
+   条件达成，cap=4.0 冻结，台账封账（后续只在误伤反例出现时复议）。
+4. **豁免疫价首发 1 条（1336 F27 02:34:57）**：御血术 17 血「无甲孤注
+   抢斩杀＋致死竞速抢斩杀」语境——属斩杀竞速致命回合豁免，非
+   ≤5 血非斩杀；预注册「≥3 独立对局 ≤5 血非斩杀豁免 → 评估豁免
+   上限」累计仍 0/3，续记不立项。
+5. **自残旁观窗口内读数（1338~1342 共 5 局）**：0 条；孤注/全攻出牌
+   15 条（1338×6、1339×2、1340×1、1341×2、1342×4），对照终卡组
+   单体自残牌持有量 0（1341 无自残牌；1338/1342 突破为 AOE 按设计
+   排除；1339/1340 无单体自残牌）——仍处「无牌可旁」分支，与上批
+   结论一致，归属结算顺延。
+6. **竞速审计悲观率台账**：本批判死应验 +5（1336 F30、1337 F7、
+   1338 F17、1340 F22、1341 F17），反向 +6（1336 F27、1338 F6、
+   1339 F12/F17、1340 F17、1342 F17），续记不重复立案。
+
+## 三、本次调整（行为修复 ×1：RACE_INVULNERABLE_POOL_OBS 无敌帧血池剔除）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RACE_INVULNERABLE_POOL_OBS**（无敌帧敌人血池字面计价致竞速投影爆炸＋迟滞锁不解除；证据：1341-F17 T11 三条「击杀还需4.3e7~4.6e7回合」全攻送死 + 防御×2 在手未打 + native monsters.jsonl WaterfallGiant AboutToBlow/ExplodeMove 原文 + 全批 ≥100 回合投影 3/3 集中于该战；机制先例：SANDPIT_EAT_CLOCK_CAP 同款「原生确定性机制先于 HP 账封底」） |
+| 代码动作 | ① brain/knowledge.py DEFAULT_POLICY 新增静态键 `race_invulnerable_hp_floor: 100000.0`；② brain/policy.py `_combat_kill_race_projection` 血池循环：HP≥floor（默认 1e5，原生最大合法血池 512=AEONGLASS）的敌人判定为无敌帧，剔除出 enemy_hp_total 并追加「敌无敌帧×N…剔除出竞速血池（RACE_INVULNERABLE_POOL_OBS）」注记；全场无敌相（可击杀血池=0）且迟滞锁武装时解除 `_krace_latch` 并追加「全场无敌相，竞速迟滞锁解除回归防守等自爆」注记 |
+| 性质边界 | 行为有界：只改无敌帧在场时的竞速血池口径与锁持——可击杀敌人血池、ttk/tsurv 公式、评分、阈值、学习面全部零改动；混合池只剔除无敌帧部分、竞速对可击杀敌人照常（锁不解除）；floor=0 严格回滚旧口径（血池字面计价、锁持不动、注记消失，selfcheck ③ 钉死）；白绮策略层不受影响 |
+| 测试 | brain/selfcheck.py 新增 3ww-invuln 七断言（① 夹具前提：T3 实测判死入锁；② 全场无敌相留痕含 OBS 与「全场无敌相」；③ 投影与「全攻提速」消失；④ 迟滞锁解除；⑤ 出牌转向格挡（card_index=1）；⑥ 混合池：注记在、「全场无敌相」不在、锁不解除；⑦ floor=0：注记消失、「斩杀竞速投影」复现 6.1e7 回合判死全攻、锁保持）。全套 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3ww/3ww-spike/3hcat/3bsl/3htpa 全部既有锚原样通过）；离线探针对照：floor=1e5 打出【铁壁】格挡 vs floor=0 打出【竞速斩】「击杀还需61728395回合」全攻提速，逐字复现 1341 缺陷与新行为 |
+| 未来 3~10 局观测指标 | ①「RACE_INVULNERABLE_POOL_OBS」注记首发局与当场结局（瀑布巨兽局是否过墙）；②「全场无敌相」解锁次数与解锁后出牌构成（格挡占比）；③ ≥1000 回合击杀投影出现次数（预期 0）；④ 混合池局竞速对可击杀部分的计价正确性；⑤ 无敌相回合 race_allin（净损外推）是否独立在场——若仍驱动全攻打无敌目标，列入下一假设 |
+| 继续调整条件 | ① 注记出现但解锁后仍全攻打无敌目标 → 核 race_allin/desperate 独立路径的无敌相豁免；② 出现 HP≥1e5 但可击杀的原生反例 → 上调 floor 或改机制名单；③ 瀑布巨兽局过墙率仍低 → 核自爆意图（DeathBlow）数值口径是否需入 tsurv |
+| 撤回条件 | knowledge/policy.json 写 `race_invulnerable_hp_floor: 0` 即严格回滚旧口径（selfcheck 3ww-invuln⑦ 为对照锚）；或删除 knowledge/policy/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（行为修复落地，
+   非登记延后）。
+2. **BURST_STARVE_SUPPLY_CAP_TRACE（1313~1318 批观测位）**：连续 3 批
+   零误伤（11 条顶格全中标侧、价值序全正确、supply_left=+0.0），
+   预注册冻结结案条件达成——cap=4.0 冻结封账，后续只在误伤反例
+   出现时复议。
+3. **HP_COST_ATK_EXEMPT_TRACE（1325~1330 批观测位）**：豁免疫价首发
+   1 条（1336，17 血斩杀竞速语境）；≤5 血非斩杀豁免累计 0/3，
+   续记不立项。
+4. **HP_COST_ATK_EXEMPT_BYSTANDER（1331~1335 批观测位）**：窗口内
+   5 局（1338~1342，部署时钟对齐后）旁观 0 条、终卡组单体自残牌
+   持有 0——「无牌可旁」分支续记；双零持续 ≥3 批则按预注册关闭
+   豁免缺口（当前 2/3）。
+5. **JOINT_FLIP_TTK_CAP**：1341 前夜「必败弃疗改锻造」（F17 仍阵亡）
+   分子 +1，继续累计至预注册复核线；战斗端否决留痕 1336×9/1342×1
+   在产。
+6. **SETTLE_TIMEOUT_CONCEDE_OBS / ENGINE_COMMIT_LOWHP_OBS /
+   RACE_BLK_FLOOR_RESERVE / SLEEP_GUARD / HAND_TAX_PLAY_AUDIT**：本批
+   无对应现场，顺延不判失效。
+7. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表）：1337 F7
+   为低血连战同族，续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **原生存在「假血条」叙事机制**：`HpDisplay.InfiniteWithoutNumbers`＋
+   `SetMaxAndCurrentHp(999999999)` 的 HP 不是可击杀血池而是「无敌相」
+   符号——凡消费 current_hp 的投影/血池口径，必须先问「这个量级是否
+   合法」（原生最大 512），否则一个符号值就能污染全部派生判决。
+2. **迟滞锁锁的是「时间不够」，不是「永远不可击杀」**：锁持合法性
+   前提（血池可击杀）必须随每 tick 血池重估——血池语义相变（无敌帧）
+   时锁必须能解除，否则锁把玩家钉死在逻辑不成立的前提上。
+3. **部署时钟没对齐的观测计数要拆开记**：「自残旁观」03:09 落盘、
+   1336/1337 在此前启程——跨部署边界的零出现若按全批 7 局结算会虚增
+   证据强度，窗口内外必须分两笔账。
+4. 观察点（下批复盘核对）：① RACE_INVULNERABLE_POOL_OBS 注记首发局
+   与瀑布巨兽局结局；②「全场无敌相」解锁后出牌构成；③ ≥1000 回合
+   击杀投影绝迹核对；④ 自残旁观窗口续记（双零第 3 批则关闭豁免
+   缺口）；⑤ JOINT_FLIP_TTK_CAP 分子与 race_audit 悲观率台账续记。
+

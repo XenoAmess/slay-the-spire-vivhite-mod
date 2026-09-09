@@ -117,6 +117,13 @@ DEFAULT_POLICY = {
                                      # 第1331~1335局批扩展：孤注/全攻中标时手牌内其他可出单体
                                      # 自残攻击追加「自残旁观」披露（结算豁免疫价零出现归属）；
                                      # 0 = 关闭（留痕整体消失，旧口径逐字不变）
+    "race_invulnerable_hp_floor": 100000.0,  # 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
+                                             # WATERFALL_GIANT 击倒进 AboutToBlow 相后原生 HP=999999999
+                                             # （不可击杀、随后自爆），1341-F17 T11 投影「击杀还需
+                                             # 42955326回合」判死全攻、三牌打无敌目标白吃 39 自爆阵亡。
+                                             # HP≥本值视为无敌帧剔除出竞速血池；全场无敌相时解除竞速
+                                             # 迟滞锁回归防守（原生最大合法血池 512=AEONGLASS，本值
+                                             # 1e5 不可能误伤）；0 = 关闭（严格回滚旧口径）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

@@ -3072,13 +3072,44 @@ class Policy:
         kill_race = False
         if pol.get("kill_race_enabled", True):
             enemy_hp_total = 0
+            # 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
+            # WATERFALL_GIANT 被击倒进 AboutToBlow 相后原生
+            # SetMaxAndCurrentHp(999999999)+HpDisplay.InfiniteWithoutNumbers——
+            # 该相不可被玩家击杀、随后 ExplodeMove 自爆（CreatureCmd.Kill 自身）；
+            # 1341-F17 T11 血池按字面 1e9 计价，投影「击杀还需42955326回合」判死
+            # 全攻、三牌全打无敌目标，29 血零甲白吃 39 自爆意图阵亡（防御×2 在手
+            # 未打）。HP≥floor（默认 1e5，原生最大合法血池 512=AEONGLASS）视为
+            # 无敌帧：剔除出竞速血池；全场无敌相时斩杀竞速与迟滞锁失去标的
+            # （抢斩杀无法让无敌帧敌人的意图作废，唯一正解是防守撑过自爆回合），
+            # 解除锁持回归防守节奏等其自爆。floor=0 严格回滚旧口径（血池字面
+            # 计价、锁持不动、注记消失）。
+            _invuln_floor = float(pol.get("race_invulnerable_hp_floor",
+                                          100000.0) or 0.0)
+            _invuln_count = 0
+            _invuln_hp = 0
             for e in enemies:
                 if self._is_respawn_add(e) and not _respawn_credit:
                     continue
                 try:
-                    enemy_hp_total += max(0, int(e.get("current_hp") or 0))
+                    _e_hp = max(0, int(e.get("current_hp") or 0))
                 except (TypeError, ValueError):
                     continue
+                if _invuln_floor > 0.0 and _e_hp >= _invuln_floor:
+                    _invuln_count += 1
+                    _invuln_hp += _e_hp
+                    continue
+                enemy_hp_total += _e_hp
+            if _invuln_count:
+                danger_note += (
+                    f"；敌无敌帧×{_invuln_count}（HP={_invuln_hp}≥"
+                    f"{_invuln_floor:.0f}，不可击杀将自爆）：剔除出竞速血池"
+                    "（RACE_INVULNERABLE_POOL_OBS）")
+                if (enemy_hp_total <= 0
+                        and bool(getattr(self, "_krace_latch", False))):
+                    self._krace_latch = False
+                    danger_note += (
+                        "；全场无敌相，竞速迟滞锁解除回归防守等自爆"
+                        "（RACE_INVULNERABLE_POOL_OBS）")
             # 开账门槛（第 92~93 批复盘扩展）：大血池（≥80）之外，「意图持续升级」
             # 同样必须开账——93 局 FUZZY+SHRINKER 总血量不足 80，旧门永远不开，
             # 防守姿态压着攻击把 7 回合磨死在意图 31 的滚雪球下。升级型敌人
