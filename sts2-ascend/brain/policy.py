@@ -5054,6 +5054,22 @@ class Policy:
             # 拖长战斗正是死因形态。击杀辅助消除的是未来的意图增长，
             # 给予定向转火加分（重生召唤物与单敌战斗除外）
             sup_bonus = float(pol.get("support_target_bonus", 0.0))
+            # 减员成本加分上限（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：
+            # 多敌战斗中「移除一个攻击源要花多少血」此前完全不入评分——同族
+            # 双子生涯 227 战 147 死（65%，全组合头号死因），90 场样本火线
+            # 802:0 全部钉在 190 池神官、58 池信徒零转火；原生机制核读证实
+            # 神官 Ritual 与信徒 PowerDance 的 PowerCmd.Apply 目标都是
+            # base.Creature（自我强化），旧教义「神官持续强化信徒」的前提
+            # 不成立——廉价自我强化体被评分盲区晾着每 3 回合 +2 力量滚雪球。
+            # 剩余池 ≤ 全场峰值一半的目标按不对称度加分（峰值的一半即封顶），
+            # 本卡即斩的目标已有 kill_bonus 计价不重复加；0=严格回滚旧口径。
+            _removal_cost_max = float(pol.get("removal_cost_bonus_max", 6.0) or 0.0)
+            _pool_peak = 0.0
+            if _removal_cost_max > 0.0 and len(enemies) > 1:
+                try:
+                    _pool_peak = max(_effective_pool(_pe) for _pe in enemies)
+                except Exception:
+                    _pool_peak = 0.0
             _valid = (card.get("valid_target_indices") or []) if card.get("requires_target") else []
             # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
@@ -5081,6 +5097,7 @@ class Policy:
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
                 eff, killed, slippery_broken = _attack_outcome(e)
+                _rem_cost, _rem_pool = 0.0, 0.0
                 if _sg_min > 0 and not killed \
                         and self._enemy_asleep_stack(e) >= _sg_min \
                         and float(total) > max(0.0, float(e.get("block") or 0)):
@@ -5105,13 +5122,26 @@ class Policy:
                     s = eff * atk_damp
                 else:
                     s = (eff + threat * 0.3) * atk_damp
+                    # 减员成本：廉价目标（≤峰值一半）按不对称度加分——
+                    # 即斩目标已被 kill_bonus 覆盖（not killed 门），重生体
+                    # 走上面 resp 分支天然排除；键=0 时 _pool_peak=0 整体短路。
+                    # 减员成本与粘性不叠加：粘性只是无定向教义时的集火兜底，
+                    # 「谁该挨打已有更便宜的答案」时粘性对该候选休眠（与上方
+                    # _doctrine_present 的全局休眠语义同源）。
+                    if not killed and _pool_peak > 0.0:
+                        _rem_pool = _effective_pool(e)
+                        if _rem_pool * 2.0 <= _pool_peak:
+                            _rem_cost = _removal_cost_max * (
+                                1.0 - _rem_pool / _pool_peak)
                     if scaler_stack > 0:
                         s += sup_bonus * min(1.0, scaler_stack / 7.0)
                     elif is_support:
                         s += sup_bonus
                     elif (_sticky_t is not None and not _doctrine_present
+                          and _rem_cost <= 0.0
                           and e.get("index") == _sticky_t):
                         s += _sticky_v
+                    s += _rem_cost
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
                 # 滑溜破层抵扣（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT，
@@ -5148,6 +5178,10 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    if _rem_cost > 0.0:
+                        why += (f"｜减员成本加分+{_rem_cost:.1f}"
+                                f"（{_rem_pool:.0f}池≤峰值{_pool_peak:.0f}一半，"
+                                "廉价减员优先，REMOVAL_COST_TARGET）")
                     if _payback_blocked:
                         _payback_cmp = f"实际移除{eff:g}"
                         if _payback_break_credit > 0.0:

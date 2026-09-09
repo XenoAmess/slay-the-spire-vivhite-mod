@@ -1395,6 +1395,59 @@ def main() -> int:
         and "辅助体优先转火" not in d_sup2.reason, \
         f"辅助体转攻击意图后应恢复威胁评分: {d_sup2.reason}（{d_sup2.params}）"
 
+    # 3yhr) 减员成本转火（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：
+    #      真实同族双子血池口径（神官 190 / 信徒 58——3yh 旧夹具把两者血池
+    #      写反，本夹具按原生 runtime/monsters.jsonl 校正）。1360-F17 逐回合
+    #      核读：七回合火线全程钉 190 池神官，58 池信徒每 3 回合 PowerDance
+    #      自我 +2 力量（原生核读：Ritual/PowerDance 均为自我强化，旧教义
+    #      「神官强化信徒」前提不成立），意图滚到 27 击穿 80 血阵亡。
+    #      ① 廉价池（≤峰值一半）获减员成本加分并留痕，火线转信徒；
+    #      ② 键=0 严格回滚钉神官旧行为且留痕同灭；③ 本卡即斩目标已有
+    #      kill_bonus 计价，不重复加减员成本；④ 对称池零留痕。
+    def kin_removal_state(follower_hp=58):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
+            "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [{"index": 0, "card_id": "RCT_STRIKE", "name": "打击",
+                                 "playable": True, "energy_cost": 1, "requires_target": True,
+                                 "valid_target_indices": [0, 1],
+                                 "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                       "enemies": [
+                           {"index": 0, "enemy_id": "RCT_PRIEST", "name": "同族神官",
+                            "current_hp": 190, "max_hp": 190, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": 8}]},
+                           {"index": 1, "enemy_id": "RCT_FOLLOWER", "name": "同族信徒",
+                            "current_hp": follower_hp, "max_hp": 59, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "intents": [{"total_damage": 5}]}]},
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    d_rct = pol.decide(kin_removal_state(), ctx)
+    assert d_rct.action == "play_card" and d_rct.params.get("target_index") == 1 \
+        and "减员成本加分" in d_rct.reason and "REMOVAL_COST_TARGET" in d_rct.reason, \
+        f"廉价池信徒未获减员成本转火: {d_rct.params}（{d_rct.reason}）"
+    rct_rb_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-remcost-rb-")))
+    rct_rb_know.policy["removal_cost_bonus_max"] = 0.0
+    rct_rb_pol = policy.Policy(rct_rb_know, random.Random(11))
+    d_rct_rb = rct_rb_pol.decide(kin_removal_state(), ctx)
+    assert d_rct_rb.action == "play_card" and d_rct_rb.params.get("target_index") == 0 \
+        and "减员成本加分" not in d_rct_rb.reason, \
+        f"removal_cost_bonus_max=0 未严格回滚钉神官旧行为: {d_rct_rb.params}（{d_rct_rb.reason}）"
+    d_rct_kill = pol.decide(kin_removal_state(follower_hp=6), ctx)
+    assert d_rct_kill.action == "play_card" and d_rct_kill.params.get("target_index") == 1 \
+        and "可击杀" in d_rct_kill.reason \
+        and "减员成本加分" not in d_rct_kill.reason, \
+        f"本卡即斩目标不得重复计减员成本加分: {d_rct_kill.params}（{d_rct_kill.reason}）"
+    rct_sym_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-remcost-sym-")))
+    rct_sym_pol = policy.Policy(rct_sym_know, random.Random(11))
+    d_rct_sym = rct_sym_pol.decide(kin_removal_state(follower_hp=190), ctx)
+    assert d_rct_sym.action == "play_card" and d_rct_sym.params.get("target_index") == 0 \
+        and "减员成本加分" not in d_rct_sym.reason, \
+        f"对称池不得出现减员成本加分与留痕: {d_rct_sym.params}（{d_rct_sym.reason}）"
+
     # 3x') 孤注一掷回合（第 59 局 Boss 战 T6 实证）：16 血/5 甲对 18 意图、
     #      手牌全是攻击无格挡牌——旧逻辑把全部攻击压到禁玩线，3 能量原样结束
     #      回合白吃 13 刀后下回合必死；修复后必须倾泻输出抢斩杀
