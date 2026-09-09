@@ -10688,3 +10688,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/3.8807355460208437局)，BULLY(10分/3.0928618406896167局)，HAVOC(11分/2.474289472551693局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1372 胜，当前目标进阶 0
+
+## 第 1373 局复盘（2026-09-10 06:13）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：ANGER, HOWL_FROM_BEYOND, TWIN_STRIKE, PANIC_BUTTON, RAMPAGE, VICIOUS, TRUE_GRIT, PILLAGE, RAGE, WHIRLWIND, MOLTEN_FIST, CRUELTY, SHRUG_IT_OFF, SWORD_BOOMERANG, FEED, FIGHT_ME, CINDER, STONE_ARMOR, MOLTEN_FIST
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F13 Monster战 掉血6; F14 Unknown战 掉血9; F17 Boss战 掉血64｜竞速审计：T3判死→实战10回合获胜; F19 Monster战 掉血24; F23 Monster战 掉血24; F25 Elite战 掉血56｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.7200963198405224局)，PACTS_END(25分/97.38897331708229局)，PRIMAL_FORCE(24分/4.3148515539460925局)，FIEND_FIRE(24分/29.156546240673713局)，PERFECTED_STRIKE(24分/5.823422232384388局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/3.867152971609771局)，BULLY(10分/3.0820368242472034局)，HAVOC(11分/2.4656294593977623局)
+- 策略进化：elite_grey_safety_mult: 1.90 → 2.10（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.37（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.97 → 1.96（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1373 胜，当前目标进阶 0
