@@ -10501,3 +10501,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.119076871674313局)，BULLY(10分/3.2828146943255327局)，HAVOC(11分/2.6262517554604266局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1355 胜，当前目标进阶 0
+
+## 第 1356 局复盘（2026-09-09 16:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：TWIN_STRIKE, COLOSSUS, MANGLE, UPPERCUT, THUNDERCLAP, POMMEL_STRIKE, TAUNT, HEADBUTT, MANGLE, MANGLE, MOLTEN_FIST, TWIN_STRIKE
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F6 Monster战 掉血9; F8 Monster战 掉血7; F9 Monster战 掉血6; F12 Monster战 掉血10; F14 Monster战 掉血35; F17 Boss战 掉血41｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.948571741037034局)，PRIMAL_FORCE(24分/4.579854780053559局)，PACTS_END(24分/100.33479570311071局)，FIEND_FIRE(24分/30.947240247021124局)，OFFERING(24分/24.50161900907859局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.104660102623453局)，BULLY(10分/3.2713248428953934局)，HAVOC(11分/2.617059874316315局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1356 胜，当前目标进阶 0
