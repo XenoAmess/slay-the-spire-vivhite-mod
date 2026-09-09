@@ -10457,3 +10457,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.177252088658905局)，BULLY(10分/3.3291790771987677局)，HAVOC(11分/2.6633432617590147局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1351 胜，当前目标进阶 0
+
+## 第 1352 局复盘（2026-09-09 13:45）
+- 结果：💀 失败｜进阶 0｜到达层数 37｜当局评分 37
+- 死因：敌人组合 OWL_MAGISTRATE
+- 本局拿牌：FINESSE, UNRELENTING, FIGHT_ME, MOLTEN_FIST, TRUE_GRIT, FORGOTTEN_RITUAL, SHRUG_IT_OFF, FIGHT_ME, CINDER, STOKE, DARK_EMBRACE, STONE_ARMOR, PACTS_END, SECOND_WIND, PACTS_END, UNRELENTING, DISMANTLE, DISMANTLE, TRUE_GRIT, ARMAMENTS, THUNDERCLAP, MANGLE, TWIN_STRIKE
+- 本局遗物：VENERABLE_TEA_SET, SPARKLING_ROUGE, PETRIFIED_TOAD, CENTENNIAL_PUZZLE, STRIKE_DUMMY
+- 战斗记录：F23 Monster战 掉血13｜自损1（可行动段1/非行动段6，SELF_LOSS_PHASE_OBS）; F24 Elite战 掉血43｜竞速审计：T3判死→实战5回合获胜; F33 Boss战 掉血38｜自损1（可行动段1/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合获胜; F35 Monster战 掉血44｜竞速审计：T4判死→实战6回合获胜; F36 Monster战 掉血15｜自损1（可行动段1/非行动段3，SELF_LOSS_PHASE_OBS）; F37 Monster战 掉血21｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.004338852205485局)，PACTS_END(24分/100.74482350020551局)，PRIMAL_FORCE(24分/4.644537730600008局)，MANGLE(24分/88.47174526801508局)，FIEND_FIRE(24分/31.38431934812392局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.162631706348599局)，BULLY(10分/3.3175269504285723局)，HAVOC(11分/2.654021560342858局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.39（行至 F37（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.99 → 1.98（行至 F37（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.25 → 2.20（行至 F37——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1352 胜，当前目标进阶 0
