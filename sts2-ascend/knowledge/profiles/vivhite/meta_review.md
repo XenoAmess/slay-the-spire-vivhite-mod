@@ -968,3 +968,41 @@ retry_resolution: 20260908-151840-1788851920186074500-380d8ec0 integrated（失�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 434~460 局批复盘：Boss 前夜组合全称门放行→实战结局对账台账（EVE_COMBO_GATE_OBS）
+
+日期：2026-09-09
+
+## HYPOTHESIS
+
+Boss 前夜竞速预演的「组合全称门放行」（均值口径判负被 _per_combo_boss_pools 全称门撤销）是系统性乐观通道：放行账用静态均值火力+满血可存活+native 组合池，实战判死账用当前血量+实测口径，两口径天然错位；且「放行→实战结局」此前没有任何持久台账，组合门松紧永远无法进入证据驱动调整。若该通道确为系统性乐观，未来放行局的 Boss 实战死亡率将显著过半；若放行局多数获胜，假设证伪。
+
+## EVIDENCE
+
+- 逐局扫描 434~460 批 27 份 runs 文件：前夜「竞速预演判可行——均值口径判负但组合全称门放行」（eve_feasible）共 5 局（437/442/444/448/460），5/5 在 Boss 实战被战斗端竞速投影判死入锁（T2~T7）并阵亡；对照组 eve_doomed 4 局（445/446/453/458）中 458 实战 Boss 获胜（判死侧失真 1/4）。
+- 460 局（XHDXL4DPQ2TN，已读完整 298 条决策链）：F16 篝火「竞速预演判可行——组合全称门放行（全部已知组合可行），回血27点直接兑换生还率」→ F17 T1 即「防守线复核虽报可行但击杀需12回合＞1.5×可存活5回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）→全攻提速」→ T7 入锁 → T10 阵亡（自损49/掉血68，72%≥50%）。前夜与实战对同一场 Boss 给出相反结论，中间无任何对账留痕。
+- 机制现状对账：policy.py `_boss_race_doomed` 组合门放行分支只写 `_race_proj_audit` 文本与 BOSS_RACE_COMBO_GATE 单条 trace；agent._flush_combat_agg 的 race_audit 台账只累计「战斗端入锁→结局」，不覆盖前夜放行口径——失真率只能靠复盘手工跨局 grep 重建（本批即如此）。
+- 旋钮面（只读核对 policy.json）：kill_race_prior_eff 0.36 触底、生命支付三级旋钮全尽、vivhite_life_cost_deck_cap 已触底 30.0——謦欬/输出饥饿证据均已停止吸收，本批最高价值未闭环问题转向竞速预演口径错账。
+- failed_review_replay.requested_packages 为空，无重投实现目标。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：新增 `_eve_combo_gate_open` 实例标记——`_boss_race_doomed` 每次调用与 `_race_proj_audit` 同一时钟重置（提前返回即清零，保证 Boss 收官读到的是本幕最后一次预演结论），仅在组合全称门放行分支置位；判定与返回值零改动。
+- sts2-ascend/brain/agent.py：`_flush_combat_agg` 在 Boss 收官且标记置位时消费并复位标记，把「前夜组合门放行→实战获胜/阵亡」累计进 `stats.race_audit`（eve_combo_gate_open/_won/_died，与既有 latched/won/died 台账同构并表）并在战斗记录拼线「（EVE_COMBO_GATE_OBS）」段（位置在（阵亡）后缀之前，全链断言兼容）；非 Boss 战不消费不复位；复用 `_learning_write_allowed` 闸。纯观测，不参与任何评分/阈值分支。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态观测键 `eve_combo_gate_audit_obs: True`（False 一键关闭落库与拼线，标记仍复位防跨幕残留，严格零行为差异）。
+- sts2-ascend/brain/selfcheck.py：新增 3y2 回归夹具四分支（放行→阵亡落库+拼线+复位 / 非 Boss 不消费不复位 / 观测键关闭零落库零拼线仍复位 / 计数幂等）；顺带修正 3y 夹具一处续行缩进。
+- 未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：凡前夜组合门放行的对局，Boss 战斗记录出现「前夜组合门放行→实战阵亡/获胜（EVE_COMBO_GATE_OBS）」段，`stats.race_audit` 累计 eve_combo_gate_open/_died/_won。行为化预注册线：放行后阵亡 ≥3 例且占放行局 >50%（与 race_audit 判死→获胜 30% 预注册线同构）→ 下一批收紧组合门（组合级 ttk 改与 tsurv_feas 对账，或翻盘比上限改按可行侧存活计）；放行后获胜过半 → 假设证伪，policy.json 置 `eve_combo_gate_audit_obs=false` 关闭观测回滚。放行局长期不出现（eve_combo_gate_open 不增长）同样是有信息量的负证据。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：SELFCHECK OK（3y2 新夹具四分支全过，运行日志可见「F17 Boss战 掉血40｜前夜组合门放行→实战阵亡（EVE_COMBO_GATE_OBS）（阵亡）」；3prg/3prt/3br/3sec 等全部既有夹具通过）。
+- `py -3 -B -m unittest sts2-ascend.tests.test_character_strategy`：57 tests OK。
+- `git diff --check -- sts2-ascend/` 通过；完整 diff 已回读：brain/policy.py（+14/-1，标记+重置+置位三处）、brain/agent.py（+25，Boss 收官消费端）、brain/knowledge.py（+7 一个静态键）、brain/selfcheck.py（+43/-1，3y2 夹具+缩进修正）四个生产/测试文件 + 本报告与口播短评；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

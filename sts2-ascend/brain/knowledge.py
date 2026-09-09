@@ -515,6 +515,13 @@ DEFAULT_POLICY = {
                                      # boss_eve_race_audit_heal_min_latched/_win_rate 同阈时，「必败」
                                      # 标签已被历史证伪，路径投影不得再免掉 Boss 入场血量线续航罚分；
                                      # False 立即回滚到判死即豁免的旧口径
+    "eve_combo_gate_audit_obs": True,  # 组合全称门放行结局台账（第434~460局批复盘新增，
+                                     # EVE_COMBO_GATE_OBS，纯观测键）：前夜「均值判死被组合全称门
+                                     # 放行」的 Boss 实战结局累计进 stats.race_audit
+                                     # （eve_combo_gate_open/_won/_died），战斗记录拼线
+                                     # 「前夜组合门放行→实战结局」——本批 5/5 放行局全部被实战
+                                     # 推翻，放行失真率需要持久台账才能进入证据驱动调整；
+                                     # 不改任何评分/判定，False 整体关闭
     # --- Boss 攻坚（第 82~83 批复盘） ---
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---
