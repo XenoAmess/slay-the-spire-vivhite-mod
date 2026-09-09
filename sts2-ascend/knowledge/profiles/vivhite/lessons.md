@@ -5177,3 +5177,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.492761803183局)，REND(22分/2.1409295655683054局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/43.00167063135232局)
 - 策略进化：potion_block_hp_pct: 0.40 → 0.45（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损16/掉血29（55%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.36（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F22——药水交药线部分胜利回收）；行至 F22 但致命战自损16/掉血29≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：0/467 胜，当前目标进阶 0
+
+## 第 468 局复盘（2026-09-09 10:49）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 CUBEX_CONSTRUCT
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血14｜自损28（可行动段28/非行动段7，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血14｜自损16（可行动段16/非行动段11，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血20｜自损26（可行动段26/非行动段7，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血30｜自损18（可行动段18/非行动段4，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/2.15236209615634局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/6.809271740302407局)，HAND_OF_GREED(33分/8.098007318916698局)，PREP_TIME(32分/4.304852881930131局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(32分/24.161695326301377局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(17分/2.4840371368718595局)，REND(22分/2.1334363120888162局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/42.85116478414259局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 30.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损18/掉血30（60%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：0/468 胜，当前目标进阶 0
