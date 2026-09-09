@@ -5333,16 +5333,34 @@ class Policy:
                 and self._scaling_power_active(dict(card, card_type="Power"), run_deck or [])
                 and pool >= _pool_floor):
             _commit = float(pol.get("power_round_bonus", 6.0))
-            score += _commit
-            why += f"｜开局承诺+{_commit:.1f}（引擎整回合在场复利）"
             # 低血承诺观测位（第913局批复盘）：urgent 态（gap>0 且 hp<45%）下整回合
             # 承诺的存活视界付不回复利——913-F21-T1 实证 30血(37.5%)对意图 9 整回合
             # 0 输出白吃 9，与攻击 ×0.75/格挡 ×1.4 的 urgent 乘区只作用出牌/格挡
-            # 分支、能力分支零感知同源。本观测只留痕不改分：留痕跨局计数达
-            # evidence_run_threshold（≥3 独立对局或 1 例改写生死）后，再决定是否
-            # 把承诺/长战加成纳入 urgent 折减；置 0 即关闭观测。
+            # 分支、能力分支零感知同源。观测阈值与 urgent/路由层 0.45 低血线同源；
+            # 观测阈值置 0 同时关闭观测与折减。
             _obs_line = float(pol.get("power_commit_lowhp_obs_hp_pct", 0.45))
-            if hp_pct < _obs_line and incoming > 0:
+            _lowhp_commit = hp_pct < _obs_line and incoming > 0
+            # 低血承诺折减（ENGINE_COMMIT_LOWHP_DISCOUNT，第1343~1348局批复盘）：
+            # 913 批观测位按预注册结案行为化——「低血承诺观测」留痕累计 15 个
+            # 独立对局 16 场（≥evidence_run_threshold=3 达行为化线），11/16 当场
+            # 阵亡、4/16 判死后救回、1/16 非致命，不满足「普遍伴随实战获胜且战损
+            # 无超额」的降级分支：urgent 低血态的存活视界付不起引擎整回合复利，
+            # 开局承诺按 power_commit_lowhp_discount（默认 0.5）折减，把 T1~T2
+            # 能量向即时格挡/输出倾斜。系数 ≥1.0 严格回滚旧口径（全额承诺、
+            # 注记逐字不变）；折减注记携带截断前真值（1313~1318 批教义），观测
+            # 留痕保留原前缀，跨局计数不断档。
+            _commit_disc = float(pol.get("power_commit_lowhp_discount", 0.5))
+            if _lowhp_commit and _commit_disc < 1.0:
+                _commit_raw = _commit
+                _commit = _commit * _commit_disc
+                score += _commit
+                why += (f"｜开局承诺+{_commit:.1f}（引擎整回合在场复利；"
+                        f"低血折减×{_commit_disc:.2f}←原始+{_commit_raw:.1f}，"
+                        f"ENGINE_COMMIT_LOWHP_DISCOUNT）")
+            else:
+                score += _commit
+                why += f"｜开局承诺+{_commit:.1f}（引擎整回合在场复利）"
+            if _lowhp_commit:
                 why += (f"｜低血承诺观测 hp={hp_pct:.0%}/意图{incoming}"
                         f"/池{pool:.0f}/承诺+{_commit:.1f}")
         return score, None, why

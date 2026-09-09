@@ -4769,35 +4769,60 @@ def main() -> int:
         f"能力牌未给当前有效格挡让路: {d_xcr.action} {d_xcr.params}（{d_xcr.reason}）"
     del xcr_score, xcr_why, xcr_keep, xcr_keep_why, d_xcr
 
-    # 3xcl（第913局批复盘）：低血承诺观测位——913-F21-T1 实证 30血(37.5%) 对
-    #           意图9 承诺恶魔形态整回合 0 输出白吃 9（urgent 乘区只作用出牌/
-    #           格挡分支，能力分支零感知）。本批只落观测不改分：
-    #           ① 低血+非零意图+承诺发放 → why 带「低血承诺观测」留痕；
-    #           ② 健康血量同局面 → 无观测留痕；
-    #           ③ 阈值置 0 → 低血局面也不留痕，且分值与①严格相等（纯观测
-    #           零评分影响 = 配置回滚锚）。
+    # 3xcl（第913局批复盘观测位；第1343~1348局批结案行为化）：低血承诺——
+    #           913-F21-T1 实证 30血(37.5%) 对意图9 承诺恶魔形态整回合 0 输出
+    #           白吃 9（urgent 乘区只作用出牌/格挡分支，能力分支零感知）。
+    #           观测位留痕累计 15 独立对局 16 场（11 死/4 救回/1 非致命），
+    #           达预注册行为化线，1343~1348 批落地 urgent 低血态承诺折减：
+    #           ① 低血+非零意图+承诺发放 → why 带「低血承诺观测」留痕与
+    #           「低血折减×0.50←原始+6.0」披露，分值=全额承诺-3.0；
+    #           ② 健康血量同局面 → 无观测留痕、无折减；
+    #           ③ 观测阈值置 0 → 低血局面也不留痕且不折减，分值与全额
+    #           承诺严格相等（观测/折减同源关闭锚）；
+    #           ④ 折减系数置 1.0 → 严格回滚旧口径：分值=全额承诺、留痕
+    #           保留、「低血折减」注记消失（行为回滚锚）。
     xcl_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-commit-lowhp-"))
     xcl_pol = policy.Policy(knowledge.Knowledge(xcl_dir), random.Random(5))
     xcl_pow = dict(xc_inflame)
+    # ④ 回滚锚先行：discount=1.0 → 全额承诺旧口径、无折减注记
+    xcl_pol.know.policy["power_commit_lowhp_discount"] = 1.0
+    xcl_full_score, _, xcl_full_why = xcl_pol._score_play(
+        dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
+        my_hp=30, my_max_hp=80, cur_energy=3, hopeless_race=False, run_deck=[])
+    assert "低血承诺观测" in (xcl_full_why or "") \
+        and "低血折减" not in (xcl_full_why or ""), \
+        f"discount=1.0 未严格回滚旧口径: why={xcl_full_why}"
+    # ① 默认折减 0.5：留痕+折减披露在场，分值=全额-3.0（6.0×0.5）
+    xcl_pol.know.policy["power_commit_lowhp_discount"] = 0.5
     xcl_low_score, _, xcl_low_why = xcl_pol._score_play(
         dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
         my_hp=30, my_max_hp=80, cur_energy=3, hopeless_race=False, run_deck=[])
     assert "低血承诺观测" in (xcl_low_why or ""), \
         f"低血承诺观测留痕缺失: why={xcl_low_why}"
+    assert "低血折减×0.50" in (xcl_low_why or "") \
+        and "原始+6.0" in (xcl_low_why or ""), \
+        f"低血折减披露或截断前真值缺失: why={xcl_low_why}"
+    assert abs(xcl_low_score - (xcl_full_score - 3.0)) < 1e-9, \
+        f"低血承诺折减分值错误: discounted={xcl_low_score} full={xcl_full_score}"
+    # ② 健康血量：无观测留痕、无折减
     xcl_hi_score, _, xcl_hi_why = xcl_pol._score_play(
         dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
         my_hp=77, my_max_hp=84, cur_energy=3, hopeless_race=False, run_deck=[])
-    assert "低血承诺观测" not in (xcl_hi_why or ""), \
-        f"健康血量误发观测: why={xcl_hi_why}"
+    assert "低血承诺观测" not in (xcl_hi_why or "") \
+        and "低血折减" not in (xcl_hi_why or ""), \
+        f"健康血量误发观测/折减: why={xcl_hi_why}"
+    # ③ 观测阈值置 0：低血局面不留痕、不折减，分值=全额承诺
     xcl_pol.know.policy["power_commit_lowhp_obs_hp_pct"] = 0.0
     xcl_off_score, _, xcl_off_why = xcl_pol._score_play(
         dict(xcl_pow), xc_enemies, 14, 0, 1, xcl_pol.know.policy,
         my_hp=30, my_max_hp=80, cur_energy=3, hopeless_race=False, run_deck=[])
-    assert "低血承诺观测" not in (xcl_off_why or ""), \
-        f"阈值置0观测未关闭: why={xcl_off_why}"
-    assert abs(xcl_off_score - xcl_low_score) < 1e-9, \
-        f"观测位改变了评分（必须纯观测）: on={xcl_low_score} off={xcl_off_score}"
-    del xcl_low_score, xcl_low_why, xcl_hi_score, xcl_hi_why, xcl_off_score, xcl_off_why
+    assert "低血承诺观测" not in (xcl_off_why or "") \
+        and "低血折减" not in (xcl_off_why or ""), \
+        f"阈值置0观测/折减未关闭: why={xcl_off_why}"
+    assert abs(xcl_off_score - xcl_full_score) < 1e-9, \
+        f"阈值置0未回到全额承诺口径: off={xcl_off_score} full={xcl_full_score}"
+    del (xcl_full_score, xcl_full_why, xcl_low_score, xcl_low_why,
+         xcl_hi_score, xcl_hi_why, xcl_off_score, xcl_off_why)
 
     # 3xf（第635~640批复盘）：判死竞速致死回合的群体自残攻击解禁——非群体
     #           自残在同一局面走孤注一掷通道照常上砧，旧例唯独把突破族
