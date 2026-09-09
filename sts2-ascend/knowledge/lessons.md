@@ -10369,3 +10369,14 @@
 - 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.296079015885478局)，BULLY(10分/3.4238815542181826局)，HAVOC(11分/2.739105243374546局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1343 胜，当前目标进阶 0
+
+## 第 1344 局复盘（2026-09-09 08:05）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：CINDER, STOMP, BATTLE_TRANCE, FEEL_NO_PAIN, THUNDERCLAP, CINDER, BREAKTHROUGH, HOWL_FROM_BEYOND, MOLTEN_FIST, SHRUG_IT_OFF, MOLTEN_FIST, HEMOKINESIS, PACTS_END
+- 本局遗物：RED_MASK, VENERABLE_TEA_SET, JOSS_PAPER, CHARONS_ASHES
+- 战斗记录：F9 Monster战 掉血0｜自损1（可行动段1/非行动段2，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血19｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血6; F14 Elite战 掉血14; F15 Monster战 掉血0; F17 Boss战 掉血53｜自损3（可行动段3/非行动段31，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(28分/3.0969873857591503局)，PRIMAL_FORCE(24分/4.776657156289793局)，FIEND_FIRE(24分/32.27708381435279局)，OFFERING(24分/25.554485764509902局)，PERFECTED_STRIKE(24分/6.446685623512763局)
+- 当前低价值卡牌：EXPECT_A_FIGHT(9分/4.281042739329878局)，BULLY(10分/3.411897968778419局)，HAVOC(11分/2.7295183750227356局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（66%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1344 胜，当前目标进阶 0
