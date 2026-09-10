@@ -10754,3 +10754,14 @@
 - 当前低价值卡牌：BULLY(10分/3.028477410221432局)，HAVOC(11分/2.422781928177145局)，STRIKE_IRONCLAD(12分/7.874041266575732局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.94 → 1.93（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1378 胜，当前目标进阶 0
+
+## 第 1379 局复盘（2026-09-10 12:24）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：TRUE_GRIT, WHIRLWIND, UNRELENTING, TWIN_STRIKE, CINDER, PACTS_END, DISMANTLE, MOLTEN_FIST, ANGER, INFLAME, AUTOMATION, SECOND_WIND, TWIN_STRIKE, PANIC_BUTTON, HOWL_FROM_BEYOND, JUGGLING, EXPECT_A_FIGHT, SWORD_BOOMERANG, CINDER, CINDER, TAUNT, BREAKTHROUGH, PACTS_END
+- 本局遗物：ETERNAL_FEATHER, BAG_OF_PREPARATION, REGAL_PILLOW, PEN_NIB
+- 战斗记录：F15 Monster战 掉血12; F17 Boss战 掉血38｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血0; F21 Monster战 掉血31; F28 Monster战 掉血32; F33 Boss战 掉血80｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.6426546832020366局)，PACTS_END(25分/97.36161680913574局)，FIEND_FIRE(24分/28.54959134879063局)，MANGLE(24分/86.1258260115853局)，OFFERING(24分/25.538019624456496局)
+- 当前低价值卡牌：BULLY(10分/3.017877739285657局)，HAVOC(11分/2.414302191428525局)，STRIKE_IRONCLAD(12分/7.846482122142717局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；kill_race_prior_eff: 0.39 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.01，步长 0.03→0.007）；block_safety: 1.93 → 1.92（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1379 胜，当前目标进阶 0
