@@ -10787,3 +10787,14 @@
 - 当前低价值卡牌：BULLY(10分/2.996789564112964局)，HAVOC(11分/2.3974316512903706局)，STRIKE_IRONCLAD(12分/7.791652866693716局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1381 胜，当前目标进阶 0
+
+## 第 1382 局复盘（2026-09-10 15:06）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：TWIN_STRIKE, HEMOKINESIS, BLUDGEON, SECOND_WIND, DARK_EMBRACE, JUGGLING, THRASH, HOWL_FROM_BEYOND, HEMOKINESIS, CINDER, FEEL_NO_PAIN, HEADBUTT, TRUE_GRIT, BURNING_PACT, FIGHT_ME
+- 本局遗物：GIRYA, BAG_OF_PREPARATION
+- 战斗记录：F3 Monster战 掉血0; F5 Monster战 掉血6｜自损4（可行动段4/非行动段4，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血4｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血1; F14 Unknown战 掉血10｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血57｜自损2（可行动段2/非行动段32，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.604540520409204局)，PACTS_END(25分/96.34289369767825局)，FIEND_FIRE(24分/28.250868613046674局)，MANGLE(24分/85.22466626992481局)，OFFERING(24分/25.270807845678316局)
+- 当前低价值卡牌：BULLY(10分/2.9863008006385687局)，HAVOC(11分/2.3890406405108546局)，STRIKE_IRONCLAD(12分/7.764382081660289局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1382 胜，当前目标进阶 0
