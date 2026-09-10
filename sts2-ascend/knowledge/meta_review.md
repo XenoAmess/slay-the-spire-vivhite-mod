@@ -8525,3 +8525,133 @@ retry_resolution: none (no replay target; local production observability upgrade
    计数（0/3）；⑦ SLEEP_GUARD 首 tick 穿透嫌疑（族母局 T1 攻击是否
    先于沉睡层数入快照）。
 
+# 2026-09-10｜第 1373~1377 局复盘（异步追及队列 5 局 exact_batch 全败；行为改动 ×1：ENERGY_CONVERT_RACE 回能转换加分——判死/孤注/致死竞速语境 0 费回能牌购入能量可兑现弹药零入账）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无队列内失败包，无 replay target。
+  上批（1367~1372）last_paths 关键标签存在性核读：policy.py 含
+  REMOVAL_COST_FLIP_AUDIT 对账段、knowledge.py 含 removal_cost_bonus_max
+  对账注释、selfcheck.py 含 3yhr⑤——代码账与状态账一致，无幽灵批次。
+
+retry_resolution: none (no replay target; local production behavior closure)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：判死/孤注/致死竞速的全攻提速教义下，0 费回能牌（放血族）
+  的「回能」面只按 flat 2.0 计价，手牌内因能量不足不可出的攻击弹药完全
+  不计入评分，被 HP_COST_UTILITY_PRICING 血价罚成负分后带可兑现弹药空过；
+  给「购入能量可立即兑现的最佳攻击面板」按 0.5 折算加 bounded 加分后，
+  同现场会打出回能牌而非结束回合。
+- **EVIDENCE**：1377（J36U0XHQQAPV，packet 158 条切片+聚合表已逐条核读，
+  完整 281 条经 runs 文件深读）两处原始现场——① F23 致死竞速（25 血/12 甲
+  对意图 31，斩杀竞速投影「击杀还需 6 回合>可存活 1 回合，全攻提速」）
+  手握打击✗+放血✓结束回合，该战败亡（掉血 52）：放血 0 费失 3 血回 2
+  能量（原生 mechanics/cards.jsonl Bloodletting：HpLossVar(3)+EnergyVar(2)），
+  打出即可兑现 2 张打击≈12 伤，与「全攻提速」教义直接矛盾；② F22 T5
+  （46 血、意图 0、全场重生体「解除压制以终结战斗」语境）打击✗/突破✗/
+  防御✗/放血✓空过，该场最终掉血 21。旧评分复算：2.0+1.5（free）−3×
+  (1.5+3×0.7)×0.5≈−1.9<0.4 阈值 → 跳过。另 1373/1374/1375 选牌端 3 处
+  「放血=−0.9」从不出售面佐证该族长期被低估。
+- **EXPECTED_SIGNAL**：未来 3~10 局，判死/孤注/致死竞速语境带「回能转换
+  加分+X.X（购入N能量兑现【牌】M伤，ENERGY_CONVERT_RACE）」的中标留痕
+  出现；同语境「回能牌✓+能量饥渴攻击✗空过」注记绝迹；非判死回合放血族
+  评分零漂移（selfcheck 3ecr② 钉死）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1373..1377]，exact 5/5、missing=0；5 局全败（生涯
+  0/1377）。死亡分布：一幕 Boss（F17）2 局（1374 T2判死→7回合阵亡应验、
+  1376 WATERFALL_GIANT T2判死→10回合阵亡应验）、一幕后段 2 局（1373 F25
+  精英 T2判死→7回合阵亡应验；1377 F23 盛碗虫组合 52 血阵亡）、二幕 Boss
+  （F33）1 局（1375 T2判死→7回合阵亡应验）。
+- 反向样本 +2：1373 F17（T3判死→实战 10 回合获胜）、1375 F17（T2判死→
+  实战 11 回合获胜）；竞速审计悲观率台账 385/851≈45.3%，仍处 30%~46%
+  带内，续记不重复立案。
+- 部署时序：REMOVAL_COST_FLIP_AUDIT（上批落地，review_closure
+  07:51）只覆盖 1376（08:45）/1377（09:40）两局；1376 的 1 条减员注记
+  无对账段（运行中 brain 不重载源码，属 pre-fix 留痕不误伤），1377 的
+  2 条为有效首验样本。其余在产杠杆均先于本批全部对局。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 4 局前夜/终局竞速判死全部实战兑现，
+   1375 篝火 RACE_AUDIT_HEAL_OVERRIDE（48% 血、判死后获胜 385/849≈45%
+   ≥30%）覆盖弃疗回血 27 点后仍死——判死缺口远超单次回血能弥合的范围，
+   设计内终态不重复立案；旋钮代谢链全顶格（kill_bonus 20.00、burst_starve
+   双旋钮、饥饿带、锻造线、长战加成上限均顶格，kill_race_prior_eff 触底
+   0.37），lessons 显示输出饥饿证据已彻底停止吸收。
+2. **本批实验靶点：回能转换盲区（最高价值，已立项修复）。** 全攻提速
+   教义与执行层评分之间留下一个结构性缝隙：能量饥渴的攻击弹药不被
+   「回能牌」看见。1377 一局内两处现场（F22 重生体拖延、F23 致死竞速
+   空过），后者直接发生在死亡战。
+3. **REMOVAL_COST_FLIP_AUDIT 首验（窗口内 1 局）**：1377×2 条全部
+   「随附」（F23 御血术→丝虫、头槌→石虫，去分后中标不变），翻案 0 条；
+   KIN 组合本批仅 1377 F17 Boss 遭遇（216 战 139 死口径），火线全钉神官
+   未再出现 802:0 式零转火反面——样本不足，续记。
+4. **瀑布巨兽残余观察（观察点④）**：1376 F17 终局无敌帧剔除与「全场
+   无敌相竞速迟滞锁解除回归防守」逐字符合设计（RACE_INVULNERABLE_POOL_
+   OBS）；本局无「可击杀击倒武装自爆」注记，残余计数 +0，未达立项线
+   （≥3 独立对局或单局改写生死）。
+5. **ENGINE_COMMIT_LOWHP_DISCOUNT 续记（1/3 不变）**：本批 0 条「低血
+   折减」——无 hp<45% 且意图>0 的开局承诺现场，零出现属无原料非失效。
+6. **SLEEP_GUARD 观察点⑦**：1377 F23 含 SLUMBERING_BEETLE 但全批 0 条
+   沉睡保期注记（层数低于 min_stacks 2.0 或未入快照），族母遭遇 0 场，
+   首 tick 穿透嫌疑无新原料，顺延。
+7. **SELF_LOSS_PHASE_OBS 在产**：1375/1376/1377 共 7 场带自损分段注记；
+   非行动段占比高（49/65/43）为上批已记录口径，不重复立案。
+8. **豁免疫价/自残旁观**：豁免疫价 +1（1377 F23 御血术自残 2 豁免疫价，
+   致死竞速抢斩杀语境）；≤5 血非斩杀豁免累计仍 0/3；旁观 0 条但豁免
+   非零，「双零关闭」条件不达成，续记。
+
+## 三、本次调整（行为改动 ×1：ENERGY_CONVERT_RACE 回能转换加分）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **ENERGY_CONVERT_RACE**（判死/孤注/致死竞速语境 0 费回能牌的购入能量兑现弹药零入账；证据：1377-F23 致死竞速打击✗+放血✓空过（该战败亡）+ 1377-F22 重生体语境同款空过 + 原生 Bloodletting HpLossVar(3)/EnergyVar(2) 核读 + policy.py 功能牌分支 flat 2.0 核读；机制先例：HP_COST_UTILITY_PRICING 同款血价尺、IDLE_LEAK_AUDIT 同款「可负担牌显形」通道） |
+| 代码动作 | ① brain/knowledge.py DEFAULT_POLICY 新增静态键 energy_convert_race_bonus_max: 6.0（注释载明证据与回滚语义）；② brain/policy.py _score_play 功能牌分支：判死语境（desperate/race_allin/kill_race_lethal）且回能量>0（dynamic_values Energy 面值，无数值载荷不臆造）时，扫描手牌中「现能量付不起、购入后付得起」的攻击牌，取最佳面板（伤害×段数）×0.5 封顶加分，留痕「回能转换加分+X.X（购入N能量兑现【牌】M伤，ENERGY_CONVERT_RACE）」；_score_play 新增可选 hand 参数，主调用点传入战斗手牌；③ brain/selfcheck.py 3ecr 四断言锚 |
+| 性质边界 | 行为有界：仅判死/孤注/致死竞速三语境、仅回能牌、仅攻击弹药入账，单项 ≤+6.0（同量级于既有 support 8.0/removal 6.0）；非判死语境、抽牌面值、血价尺、自付归零直死禁玩、atk_damp/学习面全部零改动；energy_convert_race_bonus_max: 0 即加分与留痕同灭严格回滚（selfcheck 3ecr③ 钉死）；白绮策略层不受影响（self._strategy_card 通道不动） |
+| 测试 | py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（3ecr① race_allin 语境放血带「+3.0（购入2能量兑现【打击】6伤）」留痕且分数=键0对照+3.0；② 非判死普通回合分数/留痕零漂移；③ 键=0 严格回滚；④ hand=None 旧调用形状不报错无留痕；3hcu/3hcat/3yhr/3xcl 等全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「回能转换加分」注记出现率与独立对局数；② 注记局当场结局（是否伴随斩杀兑现或自付误伤）；③ 判死语境「回能牌✓空过」注记是否绝迹；④ 非判死回合放血族打出率对旧基线零漂移复核 |
+| 继续调整条件 | 注记独立对局 ≥3 且无「打出后当回合自付+意图合击致死」误伤 → 杠杆确认保留；出现「购入能量兑现的是低面板牌仍抢不过阈值」反例 ≥2 → 折算率 0.5→0.7 或按次优弹药计；误伤样本 ≥2 局 → 系数封顶下调 4.0 或加「自付后血线>意图缺口」下限 |
+| 撤回条件 | knowledge/policy.json 写 energy_convert_race_bonus_max: 0 即加分与留痕同灭、严格回滚旧口径（selfcheck 3ecr③ 为对照锚）；或删除 knowledge/policy/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：RACE_INVULNERABLE_POOL_OBS 已在产
+   （policy.py race_invulnerable_hp_floor=100000、1375/1376 无敌帧剔除
+   注记在产），属已解决项的残余观察，不重复登记；本批无新增零代码债务。
+2. **REMOVAL_COST_TARGET / FLIP_AUDIT**：首验有效窗口 1 局 2 条全随附，
+   翻案 0——向「连续 ≥2 批全随附 → 评估回调/撤回」线推进，行为本体不动。
+3. **竞速审计悲观率台账**：应验 +4、反向 +2（1373 F17、1375 F17），
+   385/851≈45.3% 带内偏上限，续记不重复立案。
+4. **SLIPPERY_TTK_BREAK_EST**：本批 4 局各 1 条滑溜原料注记但无 X≥2
+   贴线样本，贴线计数仍 0/3，续记。
+5. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：豁免疫价 +1
+   （1377 F23 致死竞速语境），旁观 0 条，双零关闭条件不达成，续记。
+6. **BURST_STARVE 链**：CARD_BURST_PICK_AUDIT 在产（1377 F1 supply_left
+   +0.0 等），cap=4.0 冻结封账维持，未见误伤反例。
+7. **JOINT_FLIP_TTK_CAP**：1376 F17 翻盘比超限不予放行多条在产；「否决
+   后改锻造战损」分子本批 +0，续记。
+8. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+   血池精度 / 死亡谷 least-bad / 无色药水词表）：续挂不重复立案。
+
+## 五、新沉淀的经验知识
+
+1. **「教义已宣判」不等于「执行层看得见」**：斩杀竞速投影把「全攻提速」
+   写进了每一条注记，但功能牌分支的回能面值是 flat 2.0——能量与弹药
+   的兑换关系在评分面根本不存在。凡提速/全攻类教义落地时，必须核读
+   「转化牌」（回能、抽牌、降费）在同语境下的评分是否随之成立。
+2. **dynamic_values 是回能量的唯一可信来源**：文本通道里能量图标是
+   res:// 图片路径（description_raw 才是 {Energy:energyIcons()}），无数值
+   载荷时宁可不加分也不臆造——本段按「无 Energy 面值=0 增益」收口。
+3. ** hand 进 _score_play 的最小侵入方式**：新增可选参数默认 None，
+   旧调用形状（含 3hcu 等全部既有夹具）零漂移，由 3ecr④ 钉死。
+4. 观察点（下批复盘核对）：①「回能转换加分」首发局与当场结局；
+   ② REMOVAL_COST_FLIP_AUDIT 翻案/随附分布（当前 0/2）；③ KIN 组合
+   火线构成对 0/802 基线；④ 竞速审计悲观率台账（385/851）；⑤ 瀑布
+   巨兽「可击杀击倒武装自爆」残余计数（当前 0）；⑥ ENGINE_COMMIT_
+   LOWHP_DISCOUNT 第 2~3 局样本；⑦ SLIPPERY_TTK_BREAK_EST 贴线计数
+   （0/3）；⑧ SLEEP_GUARD 首 tick 穿透嫌疑。
+
