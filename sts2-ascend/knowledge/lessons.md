@@ -10732,3 +10732,14 @@
 - 当前低价值卡牌：BULLY(10分/3.0497885703035705局)，HAVOC(11分/2.439830856242856局)，STRIKE_IRONCLAD(12分/7.929450282789292局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：0/1376 胜，当前目标进阶 0
+
+## 第 1377 局复盘（2026-09-10 09:49）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：MOLTEN_FIST, HOWL_FROM_BEYOND, TWIN_STRIKE, CINDER, EXPECT_A_FIGHT, HEADBUTT, TRUE_GRIT, FLAME_BARRIER, ARMAMENTS, HEMOKINESIS, BREAKTHROUGH, PRIMAL_FORCE, BLUDGEON, SHRUG_IT_OFF, RAMPAGE, TREMBLE, HEADBUTT
+- 本局遗物：TUNING_FORK
+- 战斗记录：F13 Monster战 掉血1; F15 Monster战 掉血11; F17 Boss战 掉血58｜自损2（可行动段2/非行动段49，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血14｜自损2（可行动段2/非行动段18，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血21｜自损2（可行动段2/非行动段25，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血52｜自损2（可行动段2/非行动段28，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(25分/3.6682877610039917局)，PACTS_END(25分/96.03266909258747局)，FIEND_FIRE(24分/28.750492603480602局)，PERFECTED_STRIKE(24分/5.742321344822052局)，MANGLE(24分/85.72837446021968局)
+- 当前低价值卡牌：BULLY(10分/3.0391143103075082局)，HAVOC(11分/2.431291448246006局)，STRIKE_IRONCLAD(12分/7.90169720679953局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.95 → 1.94（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F23——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1377 胜，当前目标进阶 0
