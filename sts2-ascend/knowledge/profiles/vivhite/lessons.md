@@ -7025,3 +7025,14 @@
 - 当前低价值卡牌：RESTLESSNESS(17分/2.1632874840636167局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.181438395078163局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.3580621857328268局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.62 → 0.60（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.60 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.01，步长 0.03→0.007）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/635 胜，当前目标进阶 0
+
+## 第 636 局复盘（2026-09-11 07:03）
+- 结果：🏆 胜利｜进阶 0｜到达层数 48｜当局评分 98
+- 死因：无（胜利）
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION, THRUMMING_HATCHET, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_SCALE_TRANSFORMATION, PROWESS
+- 本局遗物：GORGET, RED_MASK, VAJRA, MEAL_TICKET, JUZU_BRACELET, WHETSTONE
+- 战斗记录：F38 Monster战 掉血2｜自损10（可行动段10/非行动段49，SELF_LOSS_PHASE_OBS）; F39 Unknown战 掉血9｜自损11（可行动段11/非行动段0，SELF_LOSS_PHASE_OBS）; F40 Monster战 掉血0｜自损20（可行动段20/非行动段12，SELF_LOSS_PHASE_OBS）; F43 Monster战 掉血22｜自损13（可行动段13/非行动段34，SELF_LOSS_PHASE_OBS）; F45 Monster战 掉血0｜自损16（可行动段16/非行动段6，SELF_LOSS_PHASE_OBS）; F48 Boss战 掉血87｜自损41（可行动段41/非行动段90，SELF_LOSS_PHASE_OBS）
+- 当前高价值卡牌：THRUMMING_HATCHET(41分/7.438630198097723局)，OMNISLICE(38分/3.903844044349381局)，THINKING_AHEAD(36分/2.2770690180328614局)，PROWESS(35分/17.52554091276365局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/3.7782229021274927局)
+- 当前低价值卡牌：RESTLESSNESS(17分/2.155715977869394局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.1738033606953895局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.346308968082762局)
+- 策略进化：block_safety: 2.06 → 2.04（胜利证明当前攻防平衡可行，轻微放开进攻）；elite_grey_safety_mult: 1.50 → 1.40（胜利证明当前精英规避强度足够，放宽灰区悲观系数）；boss_eve_smith_hp_pct: 0.45 → 0.50（胜利证明当前前夜回血线可行，小幅上调回收）；smith_min_hp_pct: 0.45 → 0.50（胜利证明当前常规回血线可行，小幅上调回收）；power_longfight_bonus_max: 12.00 → 11.50（胜利证明当前长战加成上限可行，小幅回收）；power_longfight_hp_div: 12.00 → 14.00（胜利证明当前长战加成折算可行，小幅回收）；vivhite_param_life_cost_weight: -2.98 → -2.93（胜利证明当前生命支付估值可行，小幅回收）；进阶提升：0 → 1（胜利解锁更高难度）
+- 生涯战绩：1/636 胜，当前目标进阶 1
