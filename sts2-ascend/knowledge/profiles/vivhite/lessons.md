@@ -6728,3 +6728,14 @@
 - 当前低价值卡牌：RESTLESSNESS(17分/2.3780832591331675局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.6914887761558948局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/42.09105684984829局)
 - 策略进化：potion_block_hp_pct: 0.40 → 0.45（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.65 → 0.68（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.45 → 0.42（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：0/608 胜，当前目标进阶 0
+
+## 第 609 局复盘（2026-09-11 00:11）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_MOBIUS_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_ASTRAL_MEASURE, MASTER_OF_STRATEGY, VIVHITE_CARD_SCALE_TRANSFORMATION, DRAMATIC_ENTRANCE, VIVHITE_CARD_TANGENT_STARLIGHT
+- 本局遗物：FESTIVE_POPPER, GREMLIN_HORN, CENTENNIAL_PUZZLE, RED_MASK, STONE_CALENDAR
+- 战斗记录：F22 Monster战 掉血0｜自损6（可行动段6/非行动段19，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血16｜自损22（可行动段22/非行动段12，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血5｜自损20（可行动段20/非行动段5，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战7回合获胜; F30 Monster战 掉血0｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血10｜自损13（可行动段13/非行动段15，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血110｜自损29（可行动段29/非行动段7，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：SEEKER_STRIKE(36分/2.1402442007967637局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/4.153367825133082局)，FLASH_OF_STEEL(35分/2.37953817250041局)，OMNISLICE(35分/3.2594036631597247局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(33分/16.371269764927572局)
+- 当前低价值卡牌：RESTLESSNESS(17分/2.3697599677262016局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.6785685654393494局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/41.94373815087383局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（7回合掉血110，每回合16≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.68 → 0.71（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/609 胜，当前目标进阶 0
