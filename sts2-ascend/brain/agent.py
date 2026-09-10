@@ -3555,16 +3555,6 @@ class Agent:
             _seg_loss_own, _seg_loss_foe = self.policy.combat_self_hp_loss_phases()
         except Exception:
             _seg_loss_own, _seg_loss_foe = 0.0, 0.0
-        # 謦欬 1HP 锁死观测（VIVHITE_HP_LOCKOUT_OBS，第 615~619 局批复盘新增）：
-        # policy 端按战斗实例累计的「全部非诅咒手牌因謦欬会令生命低于1」收口
-        # 回合数在分段结算时并入聚合账——本批 5 局中 4 局终局战出现该锁死
-        # （615-F33、616-F17、618-F45、619-F17 T9/T10），但此前只在决策
-        # reason 长文本留痕，战斗记录无计数，复盘无法量化锁死频率与致死关联。
-        # 纯观测，不参与任何评分分支
-        try:
-            _seg_tl_locks = int(self.policy.combat_terminal_life_lock_rounds())
-        except Exception:
-            _seg_tl_locks = 0
         agg = self.ctx.combat_agg
         # open 聚合账 = 一场多阶段战斗仍在进行：同层任何后续结算都并入它，
         # 无论本次流转是阶段切换（split）还是真实终结屏（GAME_OVER 致死等）
@@ -3588,8 +3578,6 @@ class Agent:
                                            + _seg_loss_own)
             agg["self_hp_loss_foe_sum"] = (float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
                                            + _seg_loss_foe)
-            agg["tl_lock_rounds"] = (int(agg.get("tl_lock_rounds", 0) or 0)
-                                     + _seg_tl_locks)
             # 非分段流转 = 战斗真实终结：关闭挂起账（等换层/终局落库）
             agg["open"] = bool(split)
         else:
@@ -3601,8 +3589,7 @@ class Agent:
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
                    "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss,
                    "self_hp_loss_own_sum": _seg_loss_own,
-                   "self_hp_loss_foe_sum": _seg_loss_foe,
-                   "tl_lock_rounds": _seg_tl_locks}
+                   "self_hp_loss_foe_sum": _seg_loss_foe}
             self.ctx.combat_agg = agg
         if died:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
@@ -3684,15 +3671,6 @@ class Agent:
                 _loss_foe = float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
                 note += (f"（可行动段{int(round(_loss_own))}"
                          f"/非行动段{int(round(_loss_foe))}，SELF_LOSS_PHASE_OBS）")
-        # 謦欬锁死披露（VIVHITE_HP_LOCKOUT_OBS，第 615~619 局批复盘新增）：
-        # 战斗记录追加「謦欬锁死N回合」段，复盘无需回放决策链即可数出
-        # 「自付到 1 血→全手 blocked_by_hook」的频率与致死关联；审计段插在
-        # 竞速审计与（阵亡）后缀之前，位置与既有断言兼容。观测键关闭时段落
-        # 严格回落旧口径（selfcheck 对照锚）
-        _tl_locks = int(agg.get("tl_lock_rounds", 0) or 0)
-        if (_tl_locks > 0
-                and bool(self.know.policy.get("vivhite_hp_lockout_obs", True))):
-            note += f"｜謦欬锁死{_tl_locks}回合（VIVHITE_HP_LOCKOUT_OBS）"
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):

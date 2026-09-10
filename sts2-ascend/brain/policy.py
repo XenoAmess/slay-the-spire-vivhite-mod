@@ -589,11 +589,6 @@ class Policy:
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
-        # 謦欬 1HP 锁死观测计数（VIVHITE_HP_LOCKOUT_OBS，第 615~619 局批复盘
-        # 新增）：本场战斗「全部非诅咒手牌因謦欬会令生命低于1」收口的回合数。
-        # 纯观测，不参与任何评分/动作分支；agent 战斗结算时按分段读取并入
-        # 聚合账（口径同 combat_self_hp_loss，按 ctx.combat 实例隔离重置）。
-        self._tl_lock_rounds = 0
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_instance_key = None  # exact live reward payload; repeated rewards may share text
@@ -2946,12 +2941,6 @@ class Policy:
                 self._terminal_life_lock_signature = None
                 self._terminal_life_lock_stall = 0
                 self._end_stall = 0
-                # VIVHITE_HP_LOCKOUT_OBS（第 615~619 局批复盘）：锁死收口回合
-                # 计数+1（纯观测；动作与旧口径严格一致——仍是确认两拍后
-                # end_turn）。615-F33/616-F17/618-F45/619-F17(T9/T10) 实证
-                # 锁死集中出现在终局战，但此前只在决策 reason 长文本留痕，
-                # combat_notes 无计数，复盘无法量化频率与致死关联。
-                self._tl_lock_rounds += 1
                 _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
                 _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
                                 f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
@@ -3737,9 +3726,6 @@ class Policy:
             # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
             # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
             self._race_audit = {"latched": False, "latch_round": None, "esc": False}
-            # VIVHITE_HP_LOCKOUT_OBS 锁死回合计数同步按战斗实例重置（多阶段
-            # Boss 每阶段 _start_combat 新建 ctx.combat，分段口径不重复累计）
-            self._tl_lock_rounds = 0
         # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
         # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
         if self._focus_combat is not ctx.combat:
@@ -6238,17 +6224,6 @@ class Policy:
         self_loss_main_own_only=False 恢复旧混合口径。
         """
         return float(getattr(self, "_race_same_round_loss", 0.0) or 0.0)
-
-    def combat_terminal_life_lock_rounds(self) -> int:
-        """本场战斗謦欬 1HP 全手锁死收口回合数（VIVHITE_HP_LOCKOUT_OBS，
-        第 615~619 局批复盘新增观测位）。
-
-        与 combat_self_hp_loss 同一战斗实例口径（按 ctx.combat 身份重置）；
-        agent 结算时按分段读取并累加进聚合账，战斗记录据此披露
-        「謦欬锁死N回合」。纯观测：计数在任何评分/动作分支之外，
-        观测键 vivhite_hp_lockout_obs=False 只停披露，计数本身无副作用。
-        """
-        return int(getattr(self, "_tl_lock_rounds", 0) or 0)
 
     def combat_self_hp_loss_phases(self) -> tuple:
         """SELF_LOSS_PHASE_OBS 影子分账读数：(可行动段扣血, 非行动段扣血)。
