@@ -132,6 +132,16 @@ DEFAULT_POLICY = {
                                              # HP≥本值视为无敌帧剔除出竞速血池；全场无敌相时解除竞速
                                              # 迟滞锁回归防守（原生最大合法血池 512=AEONGLASS，本值
                                              # 1e5 不可能误伤）；0 = 关闭（严格回滚旧口径）
+    "invuln_target_attack_veto": 1,  # 无敌帧目标禁攻（INVULN_TARGET_VETO，第1383~1387局批复盘）：
+                                     # 血池剔除只修投影侧，出牌评分侧 _attack_outcome 对无敌帧
+                                     # 目标仍返回全额伤害，race_allin（净损EMA×horizon）与无敌相
+                                     # 无关——1380-F17 眩晕相 T10 飞剑回旋镖≈9、自爆相 T11（意图
+                                     # 36）暴走≈25+打击≈6 打进 HP=999999999 目标，5 甲吃 36 阵亡；
+                                     # 同型 1379/1381 达预注册 3/3 立项线。单体分支把无敌帧目标
+                                     # 移出打击候选（混合池自动改打可击杀目标），全体候选皆无敌
+                                     # 帧时攻击压禁玩线并显式留痕；AOE 分支同口径不计其伤害贡献。
+                                     # 阈值复用 race_invulnerable_hp_floor（floor=0 时本禁攻同灭）；
+                                     # 0 = 关闭（严格回滚旧口径，无敌目标按面值计分）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

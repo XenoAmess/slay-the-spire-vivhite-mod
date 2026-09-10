@@ -4625,7 +4625,9 @@ def main() -> int:
     #      无敌目标、29 血零甲白吃 39 自爆意图阵亡（防御×2 在手未打）。锚：
     #      ① 已入锁竞速在全场无敌相时解锁、投影关闭、出牌转向格挡；
     #      ② 混合池（无敌帧+可击杀）只剔除无敌帧、竞速对可击杀部分照常；
-    #      ③ floor=0 严格回滚旧口径（字面血池判死全攻、锁持不动、注记消失）。
+    #      ③ floor=0 严格回滚旧口径（字面血池判死全攻、锁持不动、注记消失）；
+    #      ④ 无敌帧目标禁攻（INVULN_TARGET_VETO，第1383~1387局批复盘）：评分
+    #      侧单体/AOE/救场三通道同口径，键=False/floor=0 严格回滚。
     def invuln_state(turn_no, hp_now, incoming, enemy_hp, extra_enemy=None):
         enemies = [{"index": 0, "enemy_id": "INVLN_BOSS", "name": "瀑布巨兽",
                     "current_hp": enemy_hp, "max_hp": 240, "block": 0,
@@ -4707,6 +4709,99 @@ def main() -> int:
         f"floor=0 未严格回滚旧口径: {ivr_d4.action}（{ivr_d4.reason}）"
     assert bool(getattr(ivr_pol, "_krace_latch", False)), \
         "floor=0 时迟滞锁不应被解除"
+
+    # ④ 无敌帧目标禁攻（INVULN_TARGET_VETO，第1383~1387局批复盘）：血池剔除
+    #    只修投影侧，出牌评分侧 _attack_outcome 对无敌帧目标仍返回全额伤害，
+    #    race_allin 与无敌相无关——1380-F17 自爆相 T11（意图 36）暴走≈25+
+    #    打击≈6 打进 HP=999999999 目标后 5 甲吃 36 阵亡；同型 1379/1381 达
+    #    预注册 3/3 立项线。锚：单体全无敌帧压禁玩线留痕、AOE 不计其伤害
+    #    贡献、混合池改打可击杀目标、键=False/floor=0 严格回滚旧口径。
+    itv_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-"))),
+        random.Random(7))
+
+    def itv_enemy(hp=999999999, *, index=0, intent=36, name="瀑布巨兽"):
+        return {"index": index, "enemy_id": "INVLN_BOSS", "name": name,
+                "current_hp": hp, "max_hp": 240, "block": 0,
+                "is_alive": True, "is_hittable": True,
+                "intents": [{"total_damage": intent}]}
+
+    itv_strike = {
+        "index": 0, "card_id": "INV_HIT", "name": "竞速斩", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 12}]}
+    itv_aoe = {
+        "index": 1, "card_id": "INV_AOE", "name": "横扫", "playable": True,
+        "energy_cost": 1, "requires_target": False,
+        "resolved_rules_text": "对所有敌人造成10点伤害。",
+        "dynamic_values": [{"name": "Damage", "current_value": 10}]}
+
+    def itv_score(card, enemies, incoming=36):
+        return itv_pol._score_play(dict(card), enemies, incoming, 0, 4,
+                                   itv_pol.know.policy,
+                                   my_hp=30, my_max_hp=80, cur_energy=3,
+                                   run_deck=[])
+    # ④a 单体：全体候选皆无敌帧 → 压禁玩线并显式留痕
+    s_itv, t_itv, why_itv = itv_score(itv_strike, [itv_enemy()])
+    assert s_itv <= -50.0 and t_itv is None \
+        and "INVULN_TARGET_VETO" in why_itv, \
+        f"无敌帧目标攻击未禁玩: score={s_itv} target={t_itv} why={why_itv}"
+    # ④b AOE：无敌帧目标不计伤害贡献 → 零有效移除压禁玩线并留痕
+    s_itv_aoe, _, why_itv_aoe = itv_score(itv_aoe, [itv_enemy()])
+    assert s_itv_aoe <= -50.0 and "INVULN_TARGET_VETO" in why_itv_aoe, \
+        f"AOE 对无敌帧目标未禁玩: score={s_itv_aoe} why={why_itv_aoe}"
+    # ④c 混合池：无敌帧剔出候选、攻击改打可击杀目标
+    itv_mix_strike = dict(itv_strike)
+    itv_mix_strike["valid_target_indices"] = [0, 1]
+    itv_add = itv_enemy(hp=20, index=1, intent=0, name="小虫")
+    s_itv_m, t_itv_m, why_itv_m = itv_score(
+        itv_mix_strike, [itv_enemy(), itv_add])
+    assert t_itv_m == 1 and "无敌帧目标剔出打击候选" in why_itv_m, \
+        f"混合池未改打可击杀目标: score={s_itv_m} target={t_itv_m} why={why_itv_m}"
+    # ④d 键=False 严格回滚旧口径（无敌目标按面值计分中标、无注记）
+    itv_pol.know.policy["invuln_target_attack_veto"] = 0
+    s_itv_off, t_itv_off, why_itv_off = itv_score(itv_strike, [itv_enemy()])
+    assert s_itv_off > 0.0 and t_itv_off == 0 \
+        and "INVULN_TARGET_VETO" not in why_itv_off, \
+        f"invuln_target_attack_veto=0 未回滚: score={s_itv_off} why={why_itv_off}"
+    itv_pol.know.policy["invuln_target_attack_veto"] = 1
+    # ④e floor=0 时禁攻同灭（与血池剔除共用阈值口径）
+    itv_pol.know.policy["race_invulnerable_hp_floor"] = 0.0
+    s_itv_f0, t_itv_f0, why_itv_f0 = itv_score(itv_strike, [itv_enemy()])
+    assert s_itv_f0 > 0.0 and t_itv_f0 == 0 \
+        and "INVULN_TARGET_VETO" not in why_itv_f0, \
+        f"floor=0 时禁攻未同灭: score={s_itv_f0} why={why_itv_f0}"
+    itv_pol.know.policy["race_invulnerable_hp_floor"] = 100000.0
+    # ④f 端到端：自爆相（意图36）只有攻击牌时结束回合而非打进无敌目标
+    def itv_combat_state(hand, incoming=36):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 4,
+            "combat": {
+                "player": {"current_hp": 30, "max_hp": 80, "block": 0,
+                           "energy": 3},
+                "hand": hand, "enemies": [itv_enemy(intent=incoming)],
+            },
+            "run": {"current_hp": 30, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": []},
+        }
+
+    itv_live = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-live-"))),
+        random.Random(7))
+    d_itv = itv_live.decide(itv_combat_state([dict(itv_strike)]), DummyCtx())
+    assert d_itv.action == "end_turn", \
+        f"无敌帧自爆相不得把唯一攻击打进不可击杀目标: {d_itv.action} {d_itv.params}（{d_itv.reason}）"
+    # 对照锚：同一载荷键=False 时攻击照常打出（旧口径回归）
+    itv_live_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-off-"))),
+        random.Random(7))
+    itv_live_off.know.policy["invuln_target_attack_veto"] = 0
+    d_itv_off = itv_live_off.decide(itv_combat_state([dict(itv_strike)]),
+                                    DummyCtx())
+    assert d_itv_off.action == "play_card" \
+        and d_itv_off.params.get("card_index") == 0, \
+        f"invuln_target_attack_veto=0 端到端未回滚: {d_itv_off.action} {d_itv_off.params}（{d_itv_off.reason}）"
 
     # 3wx) 升级触发竞速 + 高危姿态解除（第 92~93 批复盘）：93 局 FUZZY+SHRINKER
     #      总血量 <80，旧门 min_enemy_hp=80 永远不开账；高危姿态压攻击(×0.85)

@@ -8660,3 +8660,155 @@ retry_resolution: none (no replay target; local production behavior change + obs
    撤回）；④ 竞速审计悲观率台账（本批应验 +4、反向 +1，续记）；
    ⑤ 豁免疫价/旁观双零关闭条件续记。
 
+
+# 2026-09-11｜第 1383~1387 局复盘（异步追及队列 5 局 exact_batch 全败；行为改动 ×1：INVULN_TARGET_VETO 无敌帧目标禁攻——血池剔除只修投影侧，出牌评分侧仍按面值打无敌目标）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无队列内失败包。
+- 上一批（1378~1382）last_paths 关键标签存在性核读：EXHAUST_FIZZLE_EXEMPT
+  （policy.py `_attack_exhaust_fizzle`、knowledge.py `exhaust_fizzle_exempt`、
+  selfcheck 3x 扩展断言）在当前 HEAD 全部在产，无「记录已闭环但代码不在产」
+  的幽灵分叉。
+
+retry_resolution: none (no replay target; local production behavior change + observability)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：瀑布巨兽被击倒进 AboutToBlow 相后原生
+  SetMaxAndCurrentHp(999999999)+HpDisplay.InfiniteWithoutNumbers——不可被
+  玩家击杀、随后 ExplodeMove 自爆（CreatureCmd.Kill 自身，DeathBlowIntent
+  =累积 SteamEruptionPower）。RACE_INVULNERABLE_POOL_OBS（1336~1342 批）
+  只修了竞速投影侧（血池剔除+全场无敌相解锁）；出牌评分侧
+  `_attack_outcome` 对普通目标仍返回全额伤害，race_allin（净损
+  EMA×horizon 口径，policy.py 3984）与无敌相完全无关——于是「回归防守
+  等自爆」的解锁注记在产，能量却继续按面值打进无敌目标，自爆回合的
+  格挡/铺垫被挤掉。
+- **EVIDENCE**：1380 局（KSRMNXBJ94E7）F17 逐条核读：T10（决策 252，眩晕相
+  意图 0）剔除+解锁双注记在产仍打出飞剑回旋镖≈9「败局竞速全攻」；T11
+  （决策 254~256，自爆意图 36 可见为普通意图）9 血 0 甲先打暴走≈25、
+  打击≈6 进 HP=999999999 目标，最后才打防御(5)，5 甲吃 36 阵亡。同型
+  1379 F17 T8~T9、1381 F17 T12~T13（上批核读）——三独立对局已于上批达
+  「≥3 独立对局 → 立项」预注册线（3/3），本批按预注册执行立项。
+  机制核读（mechanics/monsters.jsonl WaterfallGiant）：AboutToBlowMove 取
+  SteamEruptionDamage=GetPowerAmount<SteamEruptionPower>、EXPLODE_MOVE 以
+  DeathBlowIntent 亮出该值——自爆意图在爆炸回合真实进入 incoming，
+  tsurv 无需先入自爆口径；真正缺口在评分侧的伤害计价（本批修复点）。
+- **EXPECTED_SIGNAL**：未来 3~10 局瀑布巨兽局：①「INVULN_TARGET_VETO」
+  注记首发（无敌帧目标禁攻/剔出打击候选/不计伤害/攻击救场禁出四型）；
+  ②无敌相同帧「单体伤害≈」注记绝迹，出牌转向格挡/抽牌/能力；③自爆
+  回合格挡量上升（1380-T11 型「31 伤打进无敌目标后 5 甲吃 36」不再
+  出现）；④混合池攻击改打可击杀目标（「无敌帧目标剔出打击候选」）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1383..1387]，exact 5/5、missing=0；5 局全败（生涯
+  0/1387）。死亡分布：1383 F15（早死，输出饥饿+低血尾部同族）、
+  1384/1385 F17、1386 F17（KIN_FOLLOWER+KIN_PRIEST，T2判死→5回合阵亡
+  应验）、1387 F17（瀑布巨兽，T2判死→8回合阵亡应验，未进 AboutToBlow）。
+- 主样本 1387（MWUP0SE33XUF）packet 内 117 条切片 + 聚合表（play_card
+  87/end_turn 29）+ runs 全文 233 条已核读：F15 选牌带
+  CARD_BURST_PICK_AUDIT、F16 篝火 RACE_AUDIT_HEAL_OVERRIDE 覆盖弃疗、
+  F17 全程 8 回合链逐条在账（伤害全程有效打进本体，未触发击倒相变）。
+- 部署时序：EXHAUST_FIZZLE_EXEMPT（1378~1382 批落地）早于本批全部对局
+  ——本批 0 注记属无原料（两局终卡组均无痛殴型牌：1386 拿牌 SPITE/
+  SHRUG_IT_OFF/STONE_ARMOR/BATTLE_TRANCE/RAMPAGE/FEEL_NO_PAIN/
+  HEMOKINESIS/FIEND_FIRE/JUGGLING，1387 CINDER×3/TAUNT/SWORD_BOOMERANG/
+  TREMBLE/RAGE/ANGER/BATTLE_TRANCE/FLAME_BARRIER），零出现非失效；
+  INVULN_TARGET_VETO 为本批新落地，不覆盖本批任何对局决策（本批无敌帧
+  原料 0 条：五局 runs 全文 RACE_INVULNERABLE_POOL_OBS/999999999 均 0
+  命中），证据与修复无时序混淆。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 1384~1387 四局前夜竞速预演判死全部实战
+   兑现（击杀需 16~23 回合＞满血可存活 6 回合）；旋钮代谢链全顶格
+   （kill_bonus 20.00、burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成
+   上限、kill_race_prior_eff 触底）——判死缺口属设计内终态，不重复立案。
+2. **本批实验靶点：无敌帧相位的评分侧伤害计价（上批预注册 3/3 立项，
+   已立项修复）。** 详见 HYPOTHESIS 与三节；机制前提经原生代码核读证实
+   （TriggerAboutToBlowState/ExplodeMove/DeathBlowIntent），非估值争议。
+3. **REMOVAL_COST_FLIP_AUDIT 连续全随附第 2 批（2/2 达预注册线）**：
+   本批 1386×5、1387×1 共 6 条注记全部「随附」、0 条「翻案」（1383~1385
+   无注记）——连同上批 8 条，连续 2 批 14 条全随附，减员成本杠杆无可
+   分辨的独立行为效应。预注册动作「评估回调或整体撤回
+   （removal_cost_bonus_max: 0）」评估结论：**应撤回**。但撤回口径写
+   knowledge/policy.json（在线状态，复盘隔离仓只读；DEFAULT_POLICY 改值
+   会被 policy.json 现存 6.0 覆盖、在产无效）——登记为待宿主/在线侧执行
+   的窄动作（写 `removal_cost_bonus_max: 0`，selfcheck 3yhr⑤ 键=0 断言
+   为对照锚），不混入本批代码改动。
+4. **EXHAUST_FIZZLE_EXEMPT 首验窗口（1/?）**：本批 0 注记、0 拦截留痕，
+   终卡组无痛殴型牌（见一节），「无牌可豁」分支续记；EXHAUST_CAP_
+   SKIP_OBS 拦截绝迹第 1 批（上限从未占满），未达「绝迹 ≥2 批复核默认
+   值」线，续记。
+5. **竞速审计悲观率台账**：本批判死应验 +4（1384/1385/1386/1387 F17），
+   反向 +0——台账 388/863≈45.0%，仍处 30%~46% 带内偏上限，续记不重复
+   立案。
+6. **SLIPPERY_TTK_BREAK_EST 续记**：1386×2 条读数（破层期口径在产），
+   贴线 X≥2 计数本批 0，续记。
+7. **豁免疫价/自残旁观、ENGINE_COMMIT_LOWHP_DISCOUNT、SLEEP_GUARD 首
+   tick 穿透、JOINT_FLIP_TTK_CAP 等**：本批无对应现场（1387-F17-T6/T7
+   孤注全攻为致死竞速语境既有口径），顺延不判失效。
+
+## 三、本次调整（行为改动 ×1：INVULN_TARGET_VETO 无敌帧目标禁攻）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **INVULN_TARGET_VETO**（无敌帧相位出牌评分侧仍按面值计伤害，能量打进不可击杀目标挤掉自爆回合格挡；证据：1379/1380/1381 三独立对局达预注册 3/3 立项线 + 1380-F17 决策 252/254/255 逐条核读「剔除注记在产仍全攻」+ 原生 WaterfallGiant TriggerAboutToBlowState/ExplodeMove 机制核读 + `_attack_outcome` 对普通目标返回全额 total、race_allin 与无敌相无关的代码核读；机制先例：SLEEP_GUARD 同款「全体候选满足条件→压禁玩线并显式留痕，混合池改打其他目标」） |
+| 代码动作 | ① brain/policy.py `_score_play` 攻击分支新增 `_is_invuln_target`（阈值复用 race_invulnerable_hp_floor）：单体目标循环把无敌帧敌人移出打击候选（混合池自动改打可击杀目标），全体候选皆无敌帧时攻击面压禁玩线并留痕「无敌帧目标禁攻…（INVULN_TARGET_VETO）」，混合池中标时追加「无敌帧目标剔出打击候选」；② AOE 分支同口径：无敌帧敌人不计伤害贡献，零有效移除时压禁玩线并留痕「无敌帧目标不计伤害…」；③ 残能救场侧：全场无敌帧时攻击牌整类退出救场手牌（御血术型自残攻击救场反而倒贴血），end_turn 留痕「全场无敌帧，攻击救场禁出」；④ brain/knowledge.py DEFAULT_POLICY 新增静态键 `invuln_target_attack_veto: 1`；⑤ brain/selfcheck.py 3ww-invuln 扩展④六断言（④a 单体禁玩+留痕、④b AOE 零移除禁玩、④c 混合池改打、④d 键=False 回滚、④e floor=0 同灭、④f 端到端自爆相唯一攻击牌 end_turn + 键=False 对照打出） |
+| 性质边界 | 行为有界：只压「HP≥1e5 的无敌帧目标」一种情形（原生最大合法血池 512=AEONGLASS，无误伤面）；击倒相变前本体（HP 正常）的击杀/竞速口径零改动——「可击杀」击倒仍是唯一获胜路径，本改动不拦；全场无敌相解锁注记、竞速投影、评分面其他分支、白绮策略层、学习面全部零改动；混合池只剔无敌帧候选、其余目标照常计价；阈值与血池剔除共用 race_invulnerable_hp_floor（floor=0 时本禁攻三通道同灭），键=False 严格回滚旧口径（无敌目标按面值计分） |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3ww-invuln④ 新增六断言与 3yh/3yhr/3u/3ww①~③/3br/3hcat/3bsl/3htpa/3xcl 全部既有锚原样通过；④f 首次暴露残能救场覆盖缺口后按同一假设补齐救场侧过滤并复跑通过） |
+| 未来 3~10 局观测指标 | ①「INVULN_TARGET_VETO」四型注记首发局与当场结局（无敌相回合出牌构成：格挡/抽牌/能力占比）；②无敌相同帧「单体伤害≈/群体伤害≈」绝迹核对；③自爆回合格挡量 vs 1380-T11 基线（5 甲吃 36）；④混合池「无敌帧目标剔出打击候选」改打计数；⑤救场侧「攻击救场禁出」出现率（唯一攻击牌在手局面是否转向 end_turn） |
+| 继续调整条件 | 禁攻注记 ≥3 独立对局且自爆回合战损改善 → 杠杆封账保留；出现「混合池误剔可击杀目标」或「非瀑布巨兽合法高血目标被误压」样本 ≥1 → 复核阈值或收紧到 comp_id 白名单；「可击杀击倒武装自爆」相变（1380-T9 型 9 血击倒后必吃 36）若再达 ≥2 独立对局直接改写生死 → 立项击倒前夜豁免（击倒回合预留格挡计价） |
+| 撤回条件 | knowledge/policy.json 写 `invuln_target_attack_veto: 0` 即三通道严格回滚旧口径（selfcheck 3ww-invuln④d/④f 对照锚）；floor=0 亦同灭（④e 锚）；或删除 policy/knowledge/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（上批预注册 3/3
+   立项按线执行，行为修复落地，非登记延后）。
+2. **「无敌帧在场仍全攻」残余（1336~1342 批伴生观察）**：本批立项修复
+   （见三节），首验指标转入观察点；RACE_INVULNERABLE_POOL_OBS 封账维持
+   （本批无敌帧原料 0 条，无反例）。
+3. **REMOVAL_COST_FLIP_AUDIT（1367~1372 批观测位）**：连续 2 批 14 条全
+   「随附」达预注册撤回线（2/2）——评估结论应撤回；撤回动作（写
+   policy.json `removal_cost_bonus_max: 0`）属在线状态写，复盘隔离仓只读，
+   登记待宿主/在线侧执行（对照锚 selfcheck 3yhr⑤ 键=0 断言）；杠杆本体
+   本批不改代码。
+4. **EXHAUST_FIZZLE_EXEMPT（1378~1382 批行为修复）**：首验窗口本批无
+   原料（终卡组无痛殴型牌），0 注记 0 拦截，续记不判失效。
+5. **竞速审计悲观率台账**：应验 +4、反向 +0（388/863≈45.0% 带内偏
+   上限），续记。
+6. **SLIPPERY_TTK_BREAK_EST**：1386×2 条读数在产，X≥2 贴线 0，续记。
+7. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：本批双 0（终卡组
+   单体自残牌仅 1386 HEMOKINESIS 持证但无豁免现场），双零关闭条件不
+   达成，续记。
+8. **BURST_STARVE 链**：cap=4.0 冻结封账维持，1387-F15 选牌审计
+   supply_left=+0.0 在产，无误伤反例。
+9. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH / per-Boss
+   血池精度 / 死亡谷 least-bad / 无色药水词表 / ENGINE_COMMIT_LOWHP_
+   DISCOUNT / SLEEP_GUARD 首 tick 穿透 / JOINT_FLIP_TTK_CAP 改锻造分子）：
+   本批无对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **投影侧修复不等于行为侧修复**：RACE_INVULNERABLE_POOL_OBS 把血池/
+   投影/迟滞锁全部修对，解锁注记「回归防守等自爆」逐字在产，但出牌
+   评分侧的 `_attack_outcome` 仍按面值给无敌目标计全额伤害、race_allin
+   又走独立口径——注记说一套、评分做一套。凡「相位/状态豁免」类修复，
+   必须同时核读投影、评分、救场三条通道；本批救场侧缺口正是端到端
+   夹具（④f）首次暴露后补齐的，纯评分夹具会漏掉它。
+2. **预注册立项线到期即执行，不再消耗额外首验窗口**：「无敌帧仍全攻」
+   上批达 3/3，本批原料 0 条也无碍——立项依据是已达线的历史证据，
+   机制核读（DeathBlow 口径、无敌帧解除条件）按预注册先行完成，改动
+   一次落地并带齐回滚锚。
+3. **配置撤回动作要分清写权限边界**：REMOVAL_COST 撤回口径是写在线
+   policy.json，复盘隔离仓只读且 DEFAULT_POLICY 改值会被在线文件覆盖
+   ——达线评估结论必须显式登记「待宿主执行的窄动作+对照锚」，而不是
+   在隔离仓里做一个在产无效的默认值改动冒充撤回。
+4. 观察点（下批复盘核对）：① INVULN_TARGET_VETO 四型注记首发与自爆
+   回合格挡量；② REMOVAL_COST 宿主撤回执行核对（policy.json 键值+
+   注记绝迹）；③ EXHAUST_FIZZLE_EXEMPT 原料在场局首发；④ 竞速审计
+   悲观率台账（388/863，应验 +4 反向 +0）；⑤「可击杀击倒武装自爆」
+   相变（1380-T9 型）再计数，≥2 独立对局直接改写生死则立项击倒前夜
+   豁免；⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。

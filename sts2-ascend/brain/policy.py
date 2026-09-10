@@ -4787,6 +4787,7 @@ class Policy:
             _resc_kind = ""
             _resc_card = None
             _resc_gate_blocked_idx: set = set()
+            _resc_invuln_note = ""
             if _resc_enabled:
                 try:
                     _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
@@ -4821,6 +4822,41 @@ class Policy:
                                        for c in hand)}
                     _resc_hand = [c for c in hand
                                   if c.get("index") not in _blocked_idx]
+                # 无敌帧全场救场禁攻（INVULN_TARGET_VETO 救场侧，第1383~1387局
+                # 批复盘）：全场敌人皆为无敌帧（HP≥floor、不可击杀将自爆）时，
+                # 攻击牌救场零收益——伤害纯浪费，御血术型自残攻击反而倒贴血；
+                # 攻击整类退出救场手牌，格挡/覆甲/手牌税止损通道照旧。
+                # 阈值与主评分禁攻共用 race_invulnerable_hp_floor，键=False
+                # 或 floor=0 时同灭（旧口径零差异）。
+                try:
+                    _resc_inv_floor = float(pol.get(
+                        "race_invulnerable_hp_floor", 100000.0) or 0.0)
+                except (TypeError, ValueError):
+                    _resc_inv_floor = 100000.0
+                if (_resc_inv_floor > 0.0
+                        and bool(pol.get("invuln_target_attack_veto", True))
+                        and enemies):
+                    def _resc_invuln(e):
+                        if not isinstance(e, dict):
+                            return False
+                        try:
+                            _rh = e.get("current_hp", 0)
+                            return float(0 if _rh is None else _rh) \
+                                >= _resc_inv_floor
+                        except (TypeError, ValueError):
+                            return False
+                    if all(_resc_invuln(e) for e in enemies):
+                        _resc_kept = []
+                        for c in _resc_hand:
+                            _rd, _rb, _rh2 = card_numbers(c)
+                            if _rd and float(_rd) > 0:
+                                continue
+                            _resc_kept.append(c)
+                        if len(_resc_kept) != len(_resc_hand):
+                            _resc_invuln_note = (
+                                "；全场无敌帧，攻击救场禁出"
+                                "（INVULN_TARGET_VETO）")
+                        _resc_hand = _resc_kept
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
                     _resc_hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
@@ -4936,7 +4972,7 @@ class Policy:
                                    f"{self._hp_gate_stall_uncovered}回合"
                                    f"（VIVHITE_HP_GATE_STALL_UNCOVERED）")
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
@@ -5156,6 +5192,34 @@ class Policy:
             # 非击杀时，攻击候选压到禁玩线，能量让给能力/格挡/抽牌；计数 1
             # （回合末自然苏醒）/全格挡不唤醒/可击杀/键=0 四种情形严格回落旧口径。
             _sg_min = float(pol.get("sleep_guard_min_stacks", 2.0) or 0.0)
+            # 无敌帧目标禁攻（INVULN_TARGET_VETO，第1383~1387局批复盘）：
+            # WATERFALL_GIANT 击倒进 AboutToBlow 相后原生 HP=999999999、不可被
+            # 玩家击杀、随后 ExplodeMove 自爆（CreatureCmd.Kill 自身）。血池剔除
+            # （RACE_INVULNERABLE_POOL_OBS）只修了竞速投影侧；出牌评分侧
+            # _attack_outcome 对普通目标仍返回全额伤害，race_allin（净损 EMA
+            # ×horizon 口径）又与无敌相无关——1380 局 F17 眩晕相 T10 飞剑回旋镖
+            # ≈9「败局竞速全攻」打进无敌目标、自爆相 T11（意图 36）9 血先打
+            # 暴走≈25+打击≈6 最后才防御(5)，5 甲吃 36 阵亡；同型 1379/1381 达
+            # 预注册 3/3 立项线。无敌帧目标的伤害纯浪费：单体分支把它移出打击
+            # 候选（混合池自动改打可击杀目标），全体候选皆无敌帧时攻击牌压到
+            # 禁玩线并显式留痕，能量让给格挡/抽牌/铺垫；AOE 分支同口径不计
+            # 其伤害贡献。阈值复用 race_invulnerable_hp_floor（floor=0 时本
+            # 禁攻同灭），本键=False 严格回滚旧口径（无敌目标按面值计分）。
+            _invuln_atk_floor = float(pol.get("race_invulnerable_hp_floor",
+                                              100000.0) or 0.0)
+            _invuln_veto_on = (_invuln_atk_floor > 0.0
+                               and bool(pol.get("invuln_target_attack_veto",
+                                                True)))
+
+            def _is_invuln_target(enemy: dict) -> bool:
+                if not _invuln_veto_on or not isinstance(enemy, dict):
+                    return False
+                try:
+                    _raw_hp = enemy.get("current_hp", 0)
+                    _hp = float(0 if _raw_hp is None else _raw_hp)
+                except (TypeError, ValueError):
+                    return False
+                return _hp >= _invuln_atk_floor
 
             def _effective_pool(enemy: dict) -> float:
                 try:
@@ -5215,7 +5279,13 @@ class Policy:
                 slippery_notes = []
                 _burn_broken_total = 0.0
                 _sleep_veto = None
+                _invuln_veto = None
                 for e in enemies:
+                    if _is_invuln_target(e):
+                        # 无敌帧目标不计 AOE 伤害贡献（不可击杀，伤害纯浪费）
+                        _invuln_veto = (e.get("name") or e.get("enemy_id")
+                                        or "敌人")
+                        continue
                     # Damage absorbed by enemy block still removes a current combat
                     # resource.  The old max(1, damage-block) valued a 6-damage Strike
                     # into 8 block as only 1 point, which routinely fell below the
@@ -5285,10 +5355,17 @@ class Policy:
                     score += pol["free_card_bonus"]
                 if _sleep_veto is not None:
                     score = min(score, floor_score)
+                if _invuln_veto is not None and not killable and eff <= 0:
+                    # 全体目标皆无敌帧：AOE 零有效移除，压到禁玩线
+                    score = min(score, floor_score)
                 hb = _hybrid_defense()
                 if hb is not None and hb[0] > score:
                     return hb[0], None, hb[1]
                 why = f"群体伤害≈{eff}" + _hp_atk_note
+                if _invuln_veto is not None:
+                    why += (f"｜无敌帧目标不计伤害：{_invuln_veto}HP≥"
+                            f"{_invuln_atk_floor:.0f}，不可击杀将自爆"
+                            "（INVULN_TARGET_VETO）")
                 if _sleep_veto is not None:
                     why += (f"｜沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
                             "未格挡伤害将提前唤醒（SLEEP_GUARD）")
@@ -5355,6 +5432,7 @@ class Policy:
             _sticky_v = float(pol.get("target_sticky_bonus", 3.0))
             _doctrine_present = False
             _sleep_veto = None
+            _invuln_veto = None
             # 减员成本翻案对账（REMOVAL_COST_FLIP_AUDIT，第 1361~1366 批复盘
             # 落地、d8a11849 被宿主事务回滚后本批按当前 HEAD 重实现）：
             # 首验窗口 5 条「减员成本加分」注记 100% 与辅助体教义同标、本批
@@ -5375,6 +5453,11 @@ class Policy:
                     break
             for e in _pool:
                 resp = self._is_respawn_add(e) and not all_respawn
+                if _is_invuln_target(e):
+                    # 无敌帧目标：不可被玩家击杀，伤害纯浪费，移出打击候选
+                    # （混合池自动改打可击杀目标；全体无敌帧时下方收口压禁玩线）
+                    _invuln_veto = e.get("name") or e.get("enemy_id") or "敌人"
+                    continue
                 eff, killed, slippery_broken = _attack_outcome(e)
                 _rem_cost, _rem_pool = 0.0, 0.0
                 if _sg_min > 0 and not killed \
@@ -5523,6 +5606,17 @@ class Policy:
                 best_s = floor_score
                 why = (f"沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
                        "未格挡伤害将提前唤醒，铺垫牌优先（SLEEP_GUARD）")
+            # 无敌帧禁攻收口：全部打击候选都指向无敌帧目标时，攻击面压到禁玩线
+            # （伤害纯浪费，能量让给格挡/抽牌/铺垫）；混合池已有可击杀目标中标
+            # 时追加剔出留痕，供复盘直接计数改打率。
+            if best_t is None and _invuln_veto is not None \
+                    and _sleep_veto is None:
+                best_s = floor_score
+                why = (f"无敌帧目标禁攻：{_invuln_veto}HP≥"
+                       f"{_invuln_atk_floor:.0f}，不可击杀将自爆，伤害纯浪费，"
+                       "能量让给防守/铺垫（INVULN_TARGET_VETO）")
+            elif best_t is not None and _invuln_veto is not None:
+                why += "｜无敌帧目标剔出打击候选（INVULN_TARGET_VETO）"
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
