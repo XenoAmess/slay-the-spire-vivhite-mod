@@ -4014,6 +4014,95 @@ def main() -> int:
     assert "｜自损8" in slph_note_rb and "SELF_LOSS_PHASE_OBS" not in slph_note_rb, \
         f"回滚键关闭后战斗记录未回落旧口径: {slph_note_rb}"
 
+    # 3tlk) 謦欬 1HP 锁死观测位（VIVHITE_HP_LOCKOUT_OBS，第 615~619 局批复盘）：
+    #      本批 5 局中 4 局终局战出现「全部非诅咒手牌因謦欬会令生命低于1」收口
+    #      （615-F33、616-F17、618-F45、619-F17 T9/T10）；619 局 Boss 战 T8
+    #      自付到 1 血后 T9/T10 全手 blocked_by_hook、意图13回合零格挡阵亡。
+    #      锁死此前只在决策 reason 长文本留痕，combat_notes 无计数，复盘无法
+    #      量化频率与致死关联。观测位：policy 按战斗实例计数锁死收口回合，
+    #      agent 结算并入聚合账并披露「謦欬锁死N回合」；观测键
+    #      vivhite_hp_lockout_obs=False 严格回落旧战斗记录口径。
+    #      夹具复刻 619-F17 T10 载荷：1 血、整手 LifeCost=2、无 play_card。
+    def _tlk_state(hp_now):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn", "save_and_quit"],
+            "turn": 10,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 78, "block": 0,
+                           "energy": 1, "powers": []},
+                "hand": [{
+                    "index": 0, "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                    "name": "闭域映射", "card_type": "Skill", "playable": False,
+                    "energy_cost": 1, "requires_target": False,
+                    "dynamic_values": [{"name": "LifeCost", "current_value": 2}],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "SOUL_FYSH", "name": "灵魂异鱼",
+                    "current_hp": 60, "max_hp": 173, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 13}],
+                }],
+            },
+            "run": {"current_hp": hp_now, "max_hp": 78, "gold": 0, "floor": 17,
+                    "deck": [{"card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                              "card_type": "Skill", "energy_cost": 1}]},
+        }
+
+    def _tlk_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "SOUL_FYSH", "node_type": "Boss"},
+            current_combat_is_hard=True, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    # ① 锁死确认两拍后收口 end_turn，计数+1（动作与旧口径严格一致）
+    vknow_t1 = _vivhite_know("sts2-selfcheck-vhlockout-")
+    vpol_t1 = policy.Policy(vknow_t1, random.Random(7))
+    vctx_t1 = _tlk_ctx()
+    d_t1a = vpol_t1.decide(_tlk_state(1), vctx_t1)
+    assert d_t1a.action is None and "确认结束（1/2" in d_t1a.reason, \
+        f"锁死首拍应为有界确认等待: {d_t1a.action}（{d_t1a.reason}）"
+    assert vpol_t1.combat_terminal_life_lock_rounds() == 0, \
+        "确认等待拍不得提前计入锁死回合"
+    d_t1b = vpol_t1.decide(_tlk_state(1), vctx_t1)
+    assert d_t1b.action == "end_turn" and "会令生命低于1" in d_t1b.reason, \
+        f"锁死次拍应收口 end_turn: {d_t1b.action}（{d_t1b.reason}）"
+    assert vpol_t1.combat_terminal_life_lock_rounds() == 1, \
+        f"锁死收口回合计数错误: {vpol_t1.combat_terminal_life_lock_rounds()}"
+    # ② 战斗实例更替（ctx.combat 新对象）后计数重置，绝不跨场累计
+    vctx_t1b = _tlk_ctx()
+    vpol_t1.decide(_tlk_state(1), vctx_t1b)
+    assert vpol_t1.combat_terminal_life_lock_rounds() == 0, \
+        "换战斗后锁死计数未按实例重置"
+    # ③ 战斗记录披露段：结算时并入聚合账并可 grep；回滚锚：观测键关闭
+    #    严格回落旧口径（无披露段），（阵亡）后缀位置不变
+    tlk_ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    tlk_ag._start_combat({"max_hp": 78, "floor": 17}, "SOUL_FYSH", "Boss", 61)
+    tlk_ag.ctx.combat["rounds"] = 10
+    tlk_ag.policy._tl_lock_rounds = 2
+    tlk_ag._settle_combat(0, won=False, died=True)
+    tlk_note = tlk_ag.ctx.combat_notes[-1]
+    assert "｜謦欬锁死2回合（VIVHITE_HP_LOCKOUT_OBS）" in tlk_note, \
+        f"战斗记录缺謦欬锁死披露: {tlk_note}"
+    assert tlk_note.endswith("（阵亡）"), f"（阵亡）后缀位置漂移: {tlk_note}"
+    tlk_ag_rb = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    tlk_ag_rb.know.policy["vivhite_hp_lockout_obs"] = False
+    tlk_ag_rb._start_combat({"max_hp": 78, "floor": 17}, "SOUL_FYSH", "Boss", 61)
+    tlk_ag_rb.ctx.combat["rounds"] = 10
+    tlk_ag_rb.policy._tl_lock_rounds = 2
+    tlk_ag_rb._settle_combat(0, won=False, died=True)
+    tlk_note_rb = tlk_ag_rb.ctx.combat_notes[-1]
+    assert "謦欬锁死" not in tlk_note_rb, \
+        f"回滚键关闭后战斗记录未回落旧口径: {tlk_note_rb}"
+    # ④ 无锁死战斗不出披露段（零锁死=严格旧口径）
+    tlk_ag_zero = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    tlk_ag_zero._start_combat({"max_hp": 78, "floor": 17}, "SOUL_FYSH", "Boss", 61)
+    tlk_ag_zero.ctx.combat["rounds"] = 10
+    tlk_ag_zero._settle_combat(0, won=False, died=True)
+    assert "謦欬锁死" not in tlk_ag_zero.ctx.combat_notes[-1], \
+        "零锁死战斗不得出现披露段"
+
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
     #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
     #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、
