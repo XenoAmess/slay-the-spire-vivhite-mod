@@ -503,6 +503,42 @@ def _exhausts_other_cards(card: dict) -> bool:
     return bool(re.search(r"exhaust\s+(?:a|an|another|\d+)\s+(?:random\s+)?card", text, re.I))
 
 
+def _attack_exhaust_fizzle(card: dict, hand: list | None) -> bool:
+    """本打的「消耗其他牌」分支是否原生空转（一张牌都烧不到）。
+
+    只覆盖消耗目标限定「攻击牌」的痛殴型牌（消耗手牌中随机一张攻击牌）。
+    v0.111.0 原生 Thrash.OnPlay（mechanics/cards.jsonl 核读）：伤害先行结算，
+    随后 Hand.Cards.Where(Type == Attack) 取随机攻击牌，`cardModel != null`
+    才执行 CardCmd.Exhaust——被打出的牌已离手，手牌无其他攻击牌时取到
+    null、消耗分支整体跳过，本打零烧牌。此时消耗螺旋上限与递增罚分的
+    「防烧穿卡组」理由（107/109 局 INKLET 坚毅死循环）对该打不成立。
+    第 1378~1382 局批复盘实证：1382 局 F17 T6 手牌[防御,痛殴,防御,防御]、
+    能量2、意图0、Boss攻坚提速×1.80 在场，本场 余烬(T2)+痛殴(T3)+坚毅(T3)
+    已占满上限(24 卡组→3)，痛殴被静默 continue 跳过（trace 候选只剩三张
+    防御）、带能空过后 T7 阵亡——豁免后该打为零代价 4×2 输出。
+    重振精神型「消耗所有非攻击牌」语义相反，显式排除（保守方向：宁可不豁免，
+    不可把真烧牌放进豁免）。手牌载荷无 card_type 字段，其他攻击牌按
+    card_numbers 的伤害值>0 推断；误判方向恒为「不豁免」，不放大行为。
+    """
+    text = _text(card)
+    if not text:
+        return False
+    if re.search(r"非攻击牌|non-attack", text, re.I):
+        return False
+    if not (re.search(r"消耗.{0,6}手牌.{0,20}攻击牌", text)
+            or re.search(r"exhaust\b.{0,40}\battack\b", text, re.I)):
+        return False
+    for h in hand or []:
+        if h is card or h.get("index") == card.get("index"):
+            continue
+        try:
+            if card_numbers(h)[0] > 0:
+                return False
+        except Exception:
+            continue
+    return True
+
+
 def _resolve_policy_strategy(know: Knowledge, explicit_profile=None) -> CharacterStrategy:
     """Bind Policy to one profile without importing profile path machinery."""
 
@@ -4311,6 +4347,13 @@ class Policy:
             except (TypeError, ValueError):
                 _hp_gate_unc_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
+        # 消耗空转豁免总开关（EXHAUST_FIZZLE_EXEMPT，第 1378~1382 局批复盘，
+        # 静态键 exhaust_fizzle_exempt）：0 时 _ex_fizzle 恒 False，
+        # 上限拦截与递增罚分严格回滚旧口径。
+        try:
+            _fizzle_exempt_on = bool(int(pol.get("exhaust_fizzle_exempt", 1) or 0))
+        except (TypeError, ValueError):
+            _fizzle_exempt_on = True
         for c in hand:
             if not c.get("playable"):
                 continue
@@ -4318,8 +4361,21 @@ class Policy:
                 continue
             # 消耗类牌每场上限：防"坚毅每回合消耗随机牌→攻击牌耗尽→死循环"
             #（第 107 局实证，上限随卡组规模折算见第 109 局复盘）
-            if (_exhausts_other_cards(c) and not lethal_now
+            _ex_card = _exhausts_other_cards(c)
+            _ex_fizzle = (_fizzle_exempt_on and _ex_card
+                          and _attack_exhaust_fizzle(c, hand))
+            if (_ex_card and not _ex_fizzle and not lethal_now
                     and self._exhaust_plays >= max_exhaust_plays):
+                # 上限拦截此前是静默 continue（trace 候选里凭空消失）——1382 局
+                # F17 T6 痛殴被跳过时零留痕，复盘只能靠候选缺席反推。拦截改显式
+                # 候选留痕（EXHAUST_CAP_SKIP_OBS，纯观测），拦截行为本身不变。
+                self._trace_candidate(
+                    c.get("name") or c.get("card_id") or f"手牌 {c.get('index')}",
+                    None, index=c.get("index"), action="play_card",
+                    status="skipped",
+                    why=(f"消耗上限已满（本场{self._exhaust_plays}/"
+                         f"{max_exhaust_plays}），非致死回合跳过"
+                         "（EXHAUST_CAP_SKIP_OBS）"))
                 continue
             # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
             # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、
@@ -4361,8 +4417,16 @@ class Policy:
                 why += f"｜{character_note}"
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
-            if _exhausts_other_cards(c):
-                score -= self._exhaust_plays * exhaust_penalty_step
+            if _ex_card:
+                if _ex_fizzle:
+                    # 本打消耗分支原生空转（手牌无其他攻击牌，零烧牌）——
+                    # 递增罚分与上限共用同一份「防烧穿卡组」理由，一并豁免；
+                    # 计数器仍按既有 commit 账累加（保守方向，僵局防护不松）。
+                    why += ("｜消耗空转豁免：手牌无其他攻击牌，本打消耗分支"
+                            "原生空转不烧牌，上限拦截与递增罚分豁免"
+                            "（EXHAUST_FIZZLE_EXEMPT）")
+                else:
+                    score -= self._exhaust_plays * exhaust_penalty_step
                 # 卡手修正（第 135 局复盘）：手牌被不可出牌（感染/诅咒/状态）
                 # 占满时，「消耗一张牌」是清手牌手段而非纯代价——135 局 F11
                 # 精英战感染×3 卡手，坚毅手握整场未打，格挡与烧牌双价值空转

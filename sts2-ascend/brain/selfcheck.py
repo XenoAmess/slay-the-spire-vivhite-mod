@@ -1593,6 +1593,73 @@ def main() -> int:
         d_lethal = pol.decide(lethal_grit_state, ctx)
         assert d_lethal.action == "play_card" and d_lethal.params.get("card_index") == 1, \
             f"致死回合消耗上限必须豁免（坚毅是唯一活路）: {d_lethal.action} {d_lethal.params}（{d_lethal.reason}）"
+
+        # ④ 消耗空转豁免（EXHAUST_FIZZLE_EXEMPT，第 1378~1382 局批复盘）：
+        #    1382 局 F17 T6 手牌[防御,痛殴,防御,防御]、能量2、意图0、Boss攻坚提速
+        #    在场，本场 余烬+痛殴+坚毅 已占满上限（24 卡组→3），痛殴被静默
+        #    continue 跳过（trace 候选只剩三张防御）、带能空过后 T7 阵亡；原生
+        #    Thrash.OnPlay 在手牌无其他攻击牌时消耗分支取不到目标（cardModel
+        #    ==null 跳过 Exhaust），本打零烧牌——上限与递增罚分均应豁免。
+        DEF5 = {"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                "playable": True, "energy_cost": 1, "requires_target": False,
+                "rules_text": "获得5点格挡。",
+                "dynamic_values": [{"name": "Block", "current_value": 5}]}
+        THRH = {"index": 1, "card_id": "THRASH", "name": "痛殴",
+                "playable": True, "energy_cost": 1, "requires_target": True,
+                "valid_target_indices": [0],
+                "rules_text": "造成4点伤害两次。 消耗你的手牌中随机一张攻击牌，并将它的伤害添加给这张牌。",
+                "dynamic_values": [{"name": "Damage", "current_value": 4}]}
+        DEF6 = dict(DEF5, index=2)
+        DEF7 = dict(DEF5, index=3)
+        assert policy._exhausts_other_cards(THRH), "痛殴（消耗手牌中随机攻击牌）应识别为消耗其他牌"
+        assert policy._attack_exhaust_fizzle(THRH, [DEF5, THRH, DEF6, DEF7]), \
+            "手牌无其他攻击牌时痛殴的消耗分支应判定为空转"
+        assert not policy._attack_exhaust_fizzle(GRIT, [GRIT]), \
+            "坚毅（随机消耗任意牌）不属于攻击牌限定消耗，不得判空转"
+        fizzle_state = {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 6,
+            "combat": {"player": {"current_hp": 23, "max_hp": 80, "block": 0, "energy": 2},
+                       "hand": [DEF5, THRH, DEF6, DEF7],
+                       "enemies": [{"index": 0, "enemy_id": "SOUL_FYSH", "name": "灵魂异鱼",
+                                    "current_hp": 60, "max_hp": 211, "block": 0,
+                                    "is_alive": True, "is_hittable": True, "intents": []}]},
+            "run": {"current_hp": 23, "max_hp": 80, "gold": 8, "floor": 17,
+                    "deck": [{}] * 24},
+        }
+        _efe_saved = know.policy.get("exhaust_fizzle_exempt", "__absent__")
+        try:
+            pol._exhaust_plays = 3   # 24 卡组上限=3，占满（复现 1382-F17-T6 账面）
+            know.policy["exhaust_fizzle_exempt"] = 1
+            d_fz = pol.decide(dict(fizzle_state), ctx)
+            assert d_fz.action == "play_card" and d_fz.params.get("card_index") == 1, \
+                f"消耗空转的痛殴应越过上限与递增罚分打出: {d_fz.action} {d_fz.params}（{d_fz.reason}）"
+            assert "EXHAUST_FIZZLE_EXEMPT" in d_fz.reason, \
+                f"豁免打出必须带观测注记: {d_fz.reason}"
+            know.policy["exhaust_fizzle_exempt"] = 0
+            d_fz0 = pol.decide(dict(fizzle_state), ctx)
+            assert not (d_fz0.action == "play_card" and d_fz0.params.get("card_index") == 1), \
+                f"键=0 时痛殴必须恢复被上限拦截（严格回滚旧口径）: {d_fz0.action} {d_fz0.params}（{d_fz0.reason}）"
+            # 手牌存在其他攻击牌时消耗不空转：豁免不得放行，痛殴仍被上限拦截
+            know.policy["exhaust_fizzle_exempt"] = 1
+            STRK = {"index": 4, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                    "playable": True, "energy_cost": 1, "requires_target": True,
+                    "valid_target_indices": [0],
+                    "rules_text": "造成6点伤害。",
+                    "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+            assert not policy._attack_exhaust_fizzle(THRH, [THRH, STRK]), \
+                "手牌有其他攻击牌时痛殴消耗分支不空转，不得判豁免"
+            nofizzle_state = dict(fizzle_state)
+            nofizzle_state["combat"] = dict(fizzle_state["combat"], hand=[THRH, STRK])
+            d_nf = pol.decide(nofizzle_state, ctx)
+            assert d_nf.action == "play_card" and d_nf.params.get("card_index") == 4, \
+                f"有其他攻击牌时痛殴仍受上限拦截、打击应中标: {d_nf.action} {d_nf.params}（{d_nf.reason}）"
+            assert "EXHAUST_FIZZLE_EXEMPT" not in d_nf.reason, \
+                f"非空转打出不得带豁免注记: {d_nf.reason}"
+        finally:
+            if _efe_saved == "__absent__":
+                know.policy.pop("exhaust_fizzle_exempt", None)
+            else:
+                know.policy["exhaust_fizzle_exempt"] = _efe_saved
     finally:
         pol._exhaust_plays = ex_saved
 
