@@ -1230,3 +1230,79 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 560~576 局批复盘：SLEEP_GUARD 在产 9 场族母遭遇零留痕——敌能力快照观测落地（ENEMY_POWERS_SNAPSHOT_OBS）
+
+日期：2026-09-10
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：沉睡保期禁攻（SLEEP_GUARD，b485c249 于 2026-09-07 起在产，
+  战斗端把沉睡≥2层敌人的未格挡非击杀攻击压到禁玩线）在 vivhite profile 从未
+  显形——本批 576 局（A4JFCSM4QX1F，F17 乐加维林族母阵亡）T1~T3 三个零意图
+  回合连续打出弦光投影/终止条件（各付 2~4 血），决策理由全为「单体伤害≈N」
+  正常口径、零 SLEEP_GUARD 留痕；同代码用 API 契约载荷（power_id=
+  ASLEEP_POWER、amount=3）本地复现（direct _score_play 与 decide 端到端）拦截
+  正常、理由带 SLEEP_GUARD 注记。力量账本（自我强化体优先转火 1307 条）与
+  滑溜账本（滑溜逐段折算 32 条）证明敌方 powers 通道整体在产，但
+  _enemy_power_stack 对「单能力缺失」或「amount=null」一律静默按 0 处理——
+  载荷缺口与逻辑缺口从决策链不可分辨。该假设可证伪：下一场族母（或其他
+  Boss/Elite）战斗的首个出牌段决策理由应出现「敌能力快照：乐加维林族母
+  [ASLEEP_POWER×3,PLATING_POWER×12]（ENEMY_POWERS_SNAPSHOT_OBS）」——
+  ① 快照含 ASLEEP_POWER×≥2 而攻击仍打出 → 逻辑缺口成立，下批修 veto 接线；
+  ② 快照无 ASLEEP_POWER 或显示 ×∅ → 载荷缺口成立，下批走上游修复或名称/
+  意图兜底；③ 快照在且 SLEEP_GUARD 正常拦截（T2/T3 意图保持 0）→ 576 异常
+  为瞬态，观测位转常驻对账。
+- **EVIDENCE**：① 576 局 packet 全链 123 条切片逐条核读 + 完整链 runs/
+  20260910-073910_A4JFCSM4QX1F.json F17 全 33 条：T1 82 血起，三回合自损
+  8/10/4，Boss T4 起 14/21/22 滚动火力，T9 15 血孤注阵亡（竞速审计 T8 判死
+  →实战 9 回合）；② 全 profile 扫描：SLEEP_GUARD 留痕 0 条；2026-09-07 部署
+  后族母遭遇 9 场（541/545/548/559/563/568/574/575/576，其中 541/548/563/576
+  四场已逐条核对 F17 T1 全部提前唤醒），独立对局数 ≥ evidence_run_threshold=3；
+  ③ 原生档核读 mechanics/monsters.jsonl LagavulinMatriarch（AfterAddedToRoom→
+  Sleep 挂 Plating12+Asleep3；AsleepPower.AfterDamageReceived：UnblockedDamage
+  !=0 即剥 Plating、Stun 接 WakeUpMove）与 runtime/powers.jsonl（ASLEEP_POWER
+  id 与「沉睡」译名确认）；④ 上游 API 契约核读 CharTyr/STS2-Agent main
+  GameStateService.BuildCreaturePowerPayloads：敌 powers 以 power_id/name/
+  amount(nullable int) 上报，契约上可读；⑤ 本地复现探针（当前 HEAD）：同载荷
+  下 _score_play 返回 -50/SLEEP_GUARD 留痕、decide 端到端 end_turn——机制
+  本身无回归。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 每场 Boss/Elite 战首个出牌段决策理由
+  出现一条 ENEMY_POWERS_SNAPSHOT_OBS 快照（每场一次，第二 tick 起不重复）；
+  ② 族母局快照直接给出上述三分支判定证据；③ 普通战零快照（观测面只覆盖
+  硬仗）。证伪/撤回：快照从不出现 → 复查 cctx node_type 接线与战斗实例身份；
+  快照证明载荷完整但 SLEEP_GUARD 仍不拦截 → 按逻辑缺口修 veto；观测本身引发
+  任何评分/动作差异 → policy.json 置 enemy_powers_snapshot_obs=0 整体撤回
+  （旧行为零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：__init__ 新增 _powers_obs_combat 战斗实例身份；
+  _combat 竞速投影段后新增观测位——静态键 enemy_powers_snapshot_obs（默认 1）
+  开启且 cctx.node_type ∈ {Boss, Elite} 时，把本场首个走到出牌段 tick 的敌方
+  powers 身份（power_id×amount，amount 缺失记 ∅，无能力记「无能力」）一次性
+  追加进 danger_note 留痕；首 tick 若被药水段提前返回不消耗本次快照。评分/
+  判决/动作零改动（纯字符串注记）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  enemy_powers_snapshot_obs: 1，注释记录 9 场零留痕实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3ps 五锚——① Boss 战首 tick 快照含
+  ASLEEP_POWER×3（沉睡禁攻同帧依旧先生效）；② 同实例第二 tick 不重复；
+  ③ 新实例重新落账；④ Monster 普通战零快照；⑤ 键=0 严格回滚且动作不变。
+- 不改 SLEEP_GUARD/veto 口径、血税链、竞速投影、reflect 通道；不动 runs/
+  stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3ps 五锚新增；既有
+  3sg 七锚、3pru①~⑦、3prh/3pri/3prm/3prn/3prt/3prg/3prl、3br-5/3br-6、3kd、
+  3sec、3xg-payback 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+41，观测位+实例身份）、brain/knowledge.py（+8 一个静态键）、
+  brain/selfcheck.py（+59，3ps 五锚）三个生产/测试文件 + 本报告与口播短评；
+  未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆
+  残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

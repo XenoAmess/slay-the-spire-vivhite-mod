@@ -679,6 +679,9 @@ class Policy:
         self._vit_fire_rounds = 0   # 火力采样轮数
         self._vit_combat = None     # 战斗实例身份（观测采样隔离用，第 214 批补全写入侧）
         self._vit_round_seen = None # 上次火力采样的回合号
+        # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第 560~576 局批复盘）：
+        # 战斗实例身份（一次性快照隔离用），详见 _combat 竞速投影段后的观测位
+        self._powers_obs_combat = None
         # 同事件实例内重复选择记忆（第 214 批复盘）：滑脚木桥「再撑一会」连选 5 次，
         # 结算端 pending_event 被后选覆盖导致该选项永远 n=0——「全零并列选样本最少」
         # 规则于是每局反复选中它，单事件白掉 5 张牌。同实例内已选次数计入有效样本
@@ -3980,6 +3983,44 @@ class Policy:
                 state, cctx, pol, enemies, hand, incoming, my_hp, my_max_hp,
                 my_block, round_no, stance, stance_defensive_tone, race_allin,
                 danger_note))
+
+        # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第 560~576 局批复盘新增，
+        # 静态键）：SLEEP_GUARD 沉睡保期禁攻（b485c249 起在产）在 541/545/548/559/
+        # 563/568/574/575/576 共 9 场族母遭遇零留痕、T1 全部提前唤醒，而同一
+        # 代码用 API 契约载荷（power_id=ASLEEP_POWER、amount=3）本地复现时拦截
+        # 正常——生产载荷是否真的携带可读的沉睡层数，从决策链无法分辨（力量/
+        # 滑溜账本证明 powers 通道整体在产，但单能力缺失/amount=null 都会被
+        # _enemy_power_stack 静默按 0 处理）。本观测在 Boss/Elite 战斗实例首个
+        # 走到出牌段的 tick 把敌方 powers 身份一次性记入 danger_note 留痕（首
+        # tick 若被药水段提前返回则不消耗本次快照，下一个出牌/结束回合 tick
+        # 仍会落账），供复盘直接对账「载荷缺口 vs 逻辑缺口」。纯观测不改评分/
+        # 判决/动作；0=关闭（一键回滚，旧行为零差异）。
+        if self._powers_obs_combat is not ctx.combat:
+            try:
+                _powers_obs_on = bool(int(pol.get("enemy_powers_snapshot_obs", 1) or 0))
+            except (TypeError, ValueError):
+                _powers_obs_on = False
+            if _powers_obs_on and cctx.get("node_type") in ("Boss", "Elite"):
+                self._powers_obs_combat = ctx.combat
+                _snap_parts = []
+                for e in enemies:
+                    _ps = []
+                    for p in (e.get("powers") or []):
+                        if not isinstance(p, dict):
+                            continue
+                        _pid = str(p.get("power_id") or p.get("id")
+                                   or p.get("name") or "?")
+                        _amt = p.get("amount")
+                        try:
+                            _amt_txt = f"{float(_amt):g}" if _amt is not None else "∅"
+                        except (TypeError, ValueError):
+                            _amt_txt = "∅"
+                        _ps.append(f"{_pid}×{_amt_txt}")
+                    _snap_parts.append(
+                        f"{e.get('name') or e.get('enemy_id') or '敌人'}"
+                        f"[{','.join(_ps) if _ps else '无能力'}]")
+                danger_note += ("；敌能力快照：" + "、".join(_snap_parts)
+                                + "（ENEMY_POWERS_SNAPSHOT_OBS）")
 
         best = None  # (policy_score, card, target_index, why)
         # If the policy threshold suppresses every option, a separately-accounted

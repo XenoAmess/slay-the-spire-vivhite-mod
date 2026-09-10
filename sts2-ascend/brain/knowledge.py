@@ -103,6 +103,14 @@ DEFAULT_POLICY = {
                                       # 沉睡3层，失去生命即提前苏醒；历史 10 场 F17 全部 T1 零意图
                                       # 全攻提前 2 回合唤醒 Boss 白吃 ≈37 火力。计数1（回合末自然
                                       # 苏醒）/全格挡/可击杀不拦截；0 = 关闭（严格回滚旧口径）
+    "enemy_powers_snapshot_obs": 1,  # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第560~576局批复盘）：
+                                     # SLEEP_GUARD 在产后的 9 场族母遭遇（541/545/548/559/563/568/
+                                     # 574/575/576）零留痕、T1 全部提前唤醒，同代码按 API 契约载荷
+                                     # 本地复现拦截正常——生产载荷是否携带可读 ASLEEP_POWER 无法从
+                                     # 决策链分辨（_enemy_power_stack 对能力缺失或 amount=null 一律
+                                     # 静默按 0）。Boss/Elite 战斗实例首个出牌段 tick 把敌方 powers
+                                     # 身份一次性写进 danger_note 留痕，对账「载荷缺口 vs 逻辑缺口」；
+                                     # 纯观测不改评分；0 = 关闭（严格回滚旧口径）
     "hp_cost_utility_pricing": 1,  # 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
                                    # 「失去X点生命」换抽牌/回能的功能牌（祭品/放血族）此前在
                                    # 功能牌分支满分计价、自付血量零扣减——1289-F17 Boss 战

@@ -5617,6 +5617,65 @@ def main() -> int:
     assert d_sg_awake.action == "play_card" and d_sg_awake.params.get("card_index") == 0, \
         f"无沉睡敌人正常出牌回归: {d_sg_awake.action} {d_sg_awake.params}（{d_sg_awake.reason}）"
 
+    # 3ps) 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第560~576局批复盘）：
+    #      SLEEP_GUARD 在产后的 9 场族母遭遇（541/545/548/559/563/568/574/575/576）
+    #      零留痕、T1 全部提前唤醒，同代码按 API 契约载荷本地复现拦截正常——
+    #      生产载荷是否携带可读 ASLEEP_POWER 无法从决策链分辨。Boss/Elite 战斗
+    #      实例首个出牌段 tick 把敌方 powers 身份一次性记入 danger_note 留痕；
+    #      同实例第二 tick、普通战、键=0 三种情形严格无留痕；观测不改评分/动作。
+    class PsCtx(DummyCtx):
+        pass
+
+    def ps_ctx(node_type):
+        c = PsCtx()
+        c.combat = {"comp_id": "LAGAVULIN_MATRIARCH", "node_type": node_type}
+        return c
+
+    def ps_state(turn=1):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn,
+            "combat": {
+                "player": {"current_hp": 72, "max_hp": 80, "block": 0, "energy": 3},
+                "hand": [dict(sg_strike)],
+                "enemies": [sg_enemy(asleep=3)],
+            },
+            "run": {"current_hp": 72, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": []},
+        }
+
+    ps_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powersobs-"))
+    ps_pol = policy.Policy(knowledge.Knowledge(ps_dir), random.Random(5))
+    # ① Boss 战首个出牌段 tick：快照留痕且含沉睡层数（沉睡禁攻依旧先生效，
+    #    快照只追加在收口 danger_note 上，两口径互不干扰）
+    ps_c1 = ps_ctx("Boss")
+    d_ps1 = ps_pol.decide(ps_state(1), ps_c1)
+    assert "ENEMY_POWERS_SNAPSHOT_OBS" in (d_ps1.reason or "") \
+            and "ASLEEP_POWER×3" in (d_ps1.reason or ""), \
+        f"Boss 战首 tick 快照缺失: {d_ps1.action}（{d_ps1.reason}）"
+    # ② 同一战斗实例第二 tick：一次性口径，不再重复留痕
+    d_ps2 = ps_pol.decide(ps_state(2), ps_c1)
+    assert "ENEMY_POWERS_SNAPSHOT_OBS" not in (d_ps2.reason or ""), \
+        f"同一战斗实例快照重复留痕: {d_ps2.action}（{d_ps2.reason}）"
+    # ③ 新战斗实例（对象更替）：快照重新落账一次
+    d_ps3 = ps_pol.decide(ps_state(1), ps_ctx("Boss"))
+    assert "ENEMY_POWERS_SNAPSHOT_OBS" in (d_ps3.reason or ""), \
+        f"新战斗实例快照未重新落账: {d_ps3.action}（{d_ps3.reason}）"
+    # ④ 普通战（Monster）不快照：观测面只覆盖硬仗，控制日志体量
+    ps_dir_m = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powersobs-mon-"))
+    ps_pol_m = policy.Policy(knowledge.Knowledge(ps_dir_m), random.Random(5))
+    d_ps4 = ps_pol_m.decide(ps_state(1), ps_ctx("Monster"))
+    assert "ENEMY_POWERS_SNAPSHOT_OBS" not in (d_ps4.reason or ""), \
+        f"普通战不应出现快照留痕: {d_ps4.action}（{d_ps4.reason}）"
+    # ⑤ 键=0 严格回滚：Boss 战同样无快照，其余行为与旧口径零差异
+    ps_dir_off = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-powersobs-off-"))
+    ps_pol_off = policy.Policy(knowledge.Knowledge(ps_dir_off), random.Random(5))
+    ps_pol_off.know.policy["enemy_powers_snapshot_obs"] = 0
+    d_ps5 = ps_pol_off.decide(ps_state(1), ps_ctx("Boss"))
+    assert "ENEMY_POWERS_SNAPSHOT_OBS" not in (d_ps5.reason or "") \
+            and d_ps5.action == d_ps1.action, \
+        f"键=0 未严格回滚: {d_ps5.action}（{d_ps5.reason}）"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))
