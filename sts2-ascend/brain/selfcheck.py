@@ -11729,65 +11729,6 @@ def main() -> int:
     assert "耗血" not in why_rb and abs(s_rb - s_trn) < 1e-9, \
         f"hp_cost_utility_pricing=0 未回滚旧口径: {s_rb}（{why_rb}）vs {s_trn}"
 
-    # 3ecr) 回能转换加分（ENERGY_CONVERT_RACE，第1373~1377局批复盘）：
-    #      判死/孤注/致死竞速全攻教义下，0费回能牌（放血族）的回能面只按
-    #      flat 2.0 计价，手里因能量不足不可出的攻击弹药零入账——1377-F23
-    #      致死竞速（25血/12甲对意图31，投影击杀6回合>可存活1回合、全攻
-    #      提速）手握打击✗+放血✓空过，购入2能量即可兑现2张打击≈12伤。
-    #      ① race_allin 语境放血带「回能转换加分+3.0（购入2能量兑现
-    #      【打击】6伤）」留痕，且分数=键=0 对照+3.0；② 非判死普通回合
-    #      分数与留痕零漂移（不购弹药教义不扩张）；③ 键=0 严格回滚旧口径
-    #      （留痕与加分同灭）；④ hand=None 旧调用形状不报错、无留痕。
-    ecr_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ecr-"))
-    ecr_pol = policy.Policy(knowledge.Knowledge(ecr_dir), random.Random(5))
-    ecr_enemies = [{"index": 0, "enemy_id": "ECR_BOSS", "name": "盛碗虫（石）",
-                    "current_hp": 48, "max_hp": 48, "block": 0,
-                    "is_alive": True, "is_hittable": True,
-                    "intents": [{"total_damage": 31}]}]
-    ecr_bl = {"index": 0, "card_id": "BLOODLETTING", "name": "放血",
-              "playable": True, "energy_cost": 0, "requires_target": False,
-              "rules_text": "失去3点生命。获得2点能量。",
-              "dynamic_values": [{"name": "Energy", "current_value": 2},
-                                 {"name": "HpLoss", "current_value": 3}]}
-    ecr_strike = {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
-                  "playable": False, "energy_cost": 1, "requires_target": True,
-                  "valid_target_indices": [0],
-                  "rules_text": "造成6点伤害。",
-                  "dynamic_values": [{"name": "Damage", "current_value": 6}]}
-    ecr_hand = [ecr_bl, ecr_strike]
-    s_race, _, why_race = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 31, 12, 3, ecr_pol.know.policy,
-        my_hp=25, my_max_hp=83, cur_energy=0, run_deck=[],
-        hopeless_race=True, hand=ecr_hand)
-    assert "回能转换加分+3.0（购入2能量兑现【打击】6伤，ENERGY_CONVERT_RACE）" in why_race, \
-        f"判死竞速语境回能转换未计价: {s_race}（{why_race}）"
-    ecr_pol.know.policy["energy_convert_race_bonus_max"] = 0
-    s_race0, _, why_race0 = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 31, 12, 3, ecr_pol.know.policy,
-        my_hp=25, my_max_hp=83, cur_energy=0, run_deck=[],
-        hopeless_race=True, hand=ecr_hand)
-    assert "回能转换" not in why_race0 and abs(s_race - s_race0 - 3.0) < 1e-9, \
-        f"energy_convert_race_bonus_max=0 未回滚: {s_race} vs {s_race0}（{why_race0}）"
-    s_calm, _, why_calm = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 0, 0, 3, ecr_pol.know.policy,
-        my_hp=46, my_max_hp=83, cur_energy=0, run_deck=[], hand=ecr_hand)
-    s_calm_nh, _, why_calm_nh = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 0, 0, 3, ecr_pol.know.policy,
-        my_hp=46, my_max_hp=83, cur_energy=0, run_deck=[])
-    ecr_pol.know.policy["energy_convert_race_bonus_max"] = 6.0
-    s_calm_on, _, why_calm_on = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 0, 0, 3, ecr_pol.know.policy,
-        my_hp=46, my_max_hp=83, cur_energy=0, run_deck=[], hand=ecr_hand)
-    assert abs(s_calm - s_calm_nh) < 1e-9 and abs(s_calm - s_calm_on) < 1e-9 \
-        and "回能转换" not in why_calm and "回能转换" not in why_calm_on, \
-        f"非判死语境回能转换漂移: {s_calm}/{s_calm_nh}/{s_calm_on}"
-    s_nh, _, why_nh = ecr_pol._score_play(
-        ecr_bl, ecr_enemies, 31, 12, 3, ecr_pol.know.policy,
-        my_hp=25, my_max_hp=83, cur_energy=0, run_deck=[],
-        hopeless_race=True)
-    assert "回能转换" not in why_nh and abs(s_nh - s_race0) < 1e-9, \
-        f"hand=None 旧调用形状漂移: {s_nh}（{why_nh}）"
-
     # 3hcat) 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
     #      单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧此前零留痕
     #      ——1303 御血术跨 10 场战斗可行动段自损 27、1305 御血术+打出

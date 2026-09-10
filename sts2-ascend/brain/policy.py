@@ -4320,8 +4320,7 @@ class Policy:
                                                    run_deck=(state.get("run") or {}).get("deck"),
                                                    block_locked=block_locked,
                                                    player_powers=player.get("powers") or [],
-                                                   observed_hand_count=len(hand),
-                                                   hand=hand)
+                                                   observed_hand_count=len(hand))
             character_estimate, character_note = self._character_static_card_estimate(
                 c,
                 current_hp=my_hp,
@@ -4800,8 +4799,7 @@ class Policy:
                     all_respawn: bool = False,
                     run_deck: list[dict] | None = None, block_locked: bool = False,
                     player_powers: list[dict] | None = None,
-                    observed_hand_count: int | None = None,
-                    hand: list[dict] | None = None):
+                    observed_hand_count: int | None = None):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -5521,57 +5519,9 @@ class Policy:
                     score -= self_cost * (1.5 + 3.0 * (1.0 - hp_pct)) * (
                         0.5 if _doomed_ctx else 1.0)
                     _hp_cost_note = f"｜耗血{self_cost}计价（HP_COST_UTILITY_PRICING）"
-            # 能量转换加分（ENERGY_CONVERT_RACE，第1373~1377局批复盘）：
-            # 判死/孤注/致死竞速的全攻教义下，0费回能牌（放血族）的「回能」面
-            # 只按 flat 2.0 计价，手牌内因能量不足不可出的攻击弹药零入账——
-            # 1377-F23 致死竞速（25血/12甲对意图31，竞速投影击杀6回合>可存活
-            # 1回合、全攻提速）手握打击✗+放血✓空过；购入2能量即可兑现2张打击
-            # ≈12伤。本段按「购入能量可立即兑现的最佳攻击面板×0.5」加分
-            # （energy_convert_race_bonus_max 封顶）；自付血价照上扣减、
-            # 自付归零直死禁玩不变；非判死语境零改动；键=0 严格回滚旧口径。
-            _ec_note = ""
-            if desperate or race_allin or kill_race_lethal:
-                try:
-                    _ec_cap = float(pol.get("energy_convert_race_bonus_max", 6.0)
-                                    or 0.0)
-                except (TypeError, ValueError):
-                    _ec_cap = 0.0
-                if _ec_cap > 0:
-                    _ec_gain = 0
-                    for _dv in card.get("dynamic_values") or []:
-                        _dn = (_dv.get("name") or "").lower()
-                        if "energy" in _dn or "能量" in _dn:
-                            _ec_gain = int(_dv.get("current_value",
-                                                   _dv.get("base_value", 0)) or 0)
-                            break
-                    if _ec_gain > 0:
-                        _ec_best = 0
-                        _ec_name = ""
-                        for _oc in hand or []:
-                            if _oc is card or not isinstance(_oc, dict):
-                                continue
-                            if _oc.get("costs_x"):
-                                continue
-                            _oc_cost = int(_oc.get("energy_cost") or 0)
-                            if _oc_cost < 1 or _oc_cost <= cur_energy:
-                                continue  # 本就付得起，非购入弹药
-                            if _oc_cost > cur_energy + _ec_gain:
-                                continue  # 购入后仍付不起
-                            if self._card_unavailable(_oc):
-                                continue
-                            _od, _ob, _oh = card_numbers(_oc)
-                            _oval = int(_od) * max(1, int(_oh or 1))
-                            if _oval > _ec_best:
-                                _ec_best, _ec_name = _oval, (_oc.get("name") or "")
-                        if _ec_best > 0:
-                            _ec_bonus = min(_ec_cap, _ec_best * 0.5)
-                            score += _ec_bonus
-                            _ec_note = (f"｜回能转换加分+{_ec_bonus:.1f}"
-                                        f"（购入{_ec_gain}能量兑现【{_ec_name}】"
-                                        f"{_ec_best}伤，ENERGY_CONVERT_RACE）")
             if cost == 0:
                 score += pol["free_card_bonus"]
-            why = f"功能牌（抽牌{dr}/回能）" + _hp_cost_note + _ec_note
+            why = f"功能牌（抽牌{dr}/回能）" + _hp_cost_note
             if kill_race_lethal:
                 why += "｜致死竞速抽牌续攻"
             return score, None, why
