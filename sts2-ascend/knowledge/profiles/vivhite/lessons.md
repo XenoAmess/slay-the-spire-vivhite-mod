@@ -6376,3 +6376,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.129788923656745局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/43.92631567088884局)，PANACHE(24分/7.446318630138098局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 86%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：0/576 胜，当前目标进阶 0
+
+## 第 577 局复盘（2026-09-10 08:17）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_GOLDEN_COMPOSITION, SALVO, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_ASTRAL_SEARCH, ULTIMATE_STRIKE, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_OPEN_SET_SHELTER, AUTOMATION, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：BOOK_OF_FIVE_RINGS, LANTERN, VENERABLE_TEA_SET, WHITE_STAR, ORNAMENTAL_FAN, BLOOD_VIAL, LASTING_CANDY, PETRIFIED_TOAD, GIRYA, ANCHOR
+- 战斗记录：F21 Monster战 掉血0｜自损19（可行动段19/非行动段2，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血9｜自损19（可行动段19/非行动段4，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血16｜自损6（可行动段6/非行动段19，SELF_LOSS_PHASE_OBS）; F25 Monster战 掉血0｜自损11（可行动段11/非行动段9，SELF_LOSS_PHASE_OBS）; F28 Elite战 掉血35｜自损30（可行动段30/非行动段31，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血55｜自损20（可行动段20/非行动段29，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：SEEKER_STRIKE(36分/2.39436100997041局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/4.646508083919619局)，FLASH_OF_STEEL(35分/2.6620669827537387局)，DRAMATIC_ENTRANCE(33分/8.302161902369637局)，PACTS_END(33分/2.398243592444088局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/4.115334662423947局)，VIVHITE_CARD_CONVERGENCE_VERDICT(21分/43.772573566040734局)，PANACHE(24分/7.420256514932615局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.42 → 0.44（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F30——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F30——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：0/577 胜，当前目标进阶 0
