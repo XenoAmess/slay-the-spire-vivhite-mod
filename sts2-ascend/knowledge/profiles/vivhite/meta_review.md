@@ -1306,3 +1306,63 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+---
+
+# 白绮謦欬零压付血闸复盘（第 577~589 局批）
+
+日期：2026-09-10
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：普通 Monster 战敌方零威胁（意图≤0）的非致死/非竞速回合，
+  謦欬实付买的是「提速」，而提速在敌方不出手时零收益——余量门带（3.0 顶格）
+  只拦「阈值~阈值+实付×margin」的边际分，高分謦欬牌全额付血照过；三级旋钮
+  （life_cost_weight -3.00 / 余量门 3.00 / 血税软顶 15.00）已全尽封账，该
+  泄漏无任何既有闸门承接。
+- **EVIDENCE**：589 局 `0AP4ZV61DL0U` 完整 441 条决策逐段核对——F22 T4 敌意图
+  总伤 0、我方 90 血，仍打出分治法阵+实付 4 血买抽牌提速（全场掉血 0｜自损
+  15）；F25 Elite 掉血 0｜自损 18、F28 Elite 掉血 2｜自损 15 同批同型；
+  577-F22 掉血 9｜自损 19、578-F25 掉血 3｜自损 14 跨局复现（≥3 独立对局
+  达 evidence_run_threshold）。F33 Boss 战 T4 判死→实战 6 回合阵亡，走廊
+  慢性烧血直接压缩 Boss 容错。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 普通战「掉血≈0 自损≥12」形态消失或
+  自损显著回落；② 决策链出现「謦欬零压付血闸…VIVHITE_HP_ZERO_PRESSURE_GATE」
+  留痕且被拦候选不再经 marginal/残能救场绕行；③ 普通战 STALL_ANY/STALL_BREAK
+  闩锁不放行高频化（零威胁战唯一输出全是謦欬牌时 4 回合内有界放行兜底）；
+  ④ 普通战掉血与战斗回合数不回升。证伪/撤回：自损形态无变化 → 复查
+  node_type/意图口径接线；闩锁高频放行或掉血回升 → policy.json 置
+  vivhite_hp_zero_pressure_gate=0 一键回滚（旧行为零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：謦欬门体系新增零压付血闸——普通 Monster 战
+  意图≤0 的非致死/非竞速回合，hp_pay>0 且本打不击杀目标（可击杀/kills≥1
+  豁免：零压回合击杀买断敌方下一回合出手权）的謦欬候选视同门拦，入
+  _hp_gate_blocked 照旧退出 marginal/残能救场通道并喂僵局账；Elite/Boss 不
+  启用（505~511 批自由回合减免已证伪硬仗意图0输出压制）；意图0减免生效的
+  回合（hard_only=0 回滚口径）本闸同步不启用；end_turn 门拦披露按行追加
+  VIVHITE_HP_ZERO_PRESSURE_GATE 标记；STALL_BREAK/STALL_ANY 闩锁把余量门压 0
+  时本闸同步停用（死锁兜底）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  vivhite_hp_zero_pressure_gate: 1，注释记录跨局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3prz 五锚——① 普通战意图0高分謦欬牌
+  被视同门拦且留痕；② gate=0 回滚键恢复旧行为（打出）且零留痕；③ 击杀打
+  豁免放行；④ Elite 意图0不启用（减免语义不变）；⑤ 意图>0 普通战不启用。
+- 不改评分公式、余量门带、复打税、自由回合减免、竞速/孤注豁免、reflect
+  通道；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3prz 五锚新增；既有
+  3pru①~⑦（含 hard_only=0 回滚口径与减免交互）、3prh/3pri/3prm/3prn/3prt/
+  3prg/3prl/3prv、3sg、3ps 等全部既有夹具通过——首轮自检曾捕获本闸翻越
+  hard_only=0 减免回滚口径的交互缺口，已加减免优先约束并复跑通过）。
+- 完整 diff 已回读：brain/policy.py（+44，闸门+披露标记）、brain/knowledge.py
+  （+17 一个静态键及注释）、brain/selfcheck.py（+64，3prz 五锚）；未触碰
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的
+  assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

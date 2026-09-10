@@ -3124,6 +3124,70 @@ def main() -> int:
     assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" in d_fe.reason, \
         f"精英战减免缺留痕: {d_fe.reason}"
 
+    # 3prz) 謦欬零压付血闸（VIVHITE_HP_ZERO_PRESSURE_GATE，第 577~589 局批复盘）：
+    #      589 局 F22 T4 敌意图总伤0、我方90血仍打出分治法阵+实付4血买抽牌提速
+    #      （全场掉血0｜自损15）；577-F22 掉血9｜自损19、578-F25 掉血3｜自损14
+    #      同型。普通 Monster 战意图≤0 非致死/非竞速回合，hp_pay>0 且本打不击杀
+    #      的謦欬候选视同门拦；击杀豁免；Elite/Boss 不启用；0 一键回滚。
+    def _vzp_monster_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "NIBBLET", "node_type": "Monster"},
+            current_combat_is_hard=False, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    # ① 默认开启：普通战意图0回合高分謦欬攻击（分数超门带顶、旧行为必打出）
+    #    被视同门拦并留痕
+    vknow_z1 = _vivhite_know("sts2-selfcheck-vhzeropay-on-")
+    vknow_z1.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_z1 = policy.Policy(vknow_z1, random.Random(11))
+    d_z1 = vpol_z1.decide(_vgate_state(85, 0), _vzp_monster_ctx())
+    assert d_z1.action == "end_turn", \
+        f"普通战意图0回合付血买提速应被零压闸拦下: {d_z1}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" in d_z1.reason, \
+        f"零压闸拦截缺决策链留痕: {d_z1.reason}"
+    # ② 对照：同fixture仅关闭本闸（回滚键）必须恢复旧行为（打出）且不留痕
+    vknow_z2 = _vivhite_know("sts2-selfcheck-vhzeropay-off-")
+    vknow_z2.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_z2.policy["vivhite_hp_zero_pressure_gate"] = 0
+    vpol_z2 = policy.Policy(vknow_z2, random.Random(11))
+    d_z2 = vpol_z2.decide(_vgate_state(85, 0), _vzp_monster_ctx())
+    assert d_z2.action == "play_card", \
+        f"gate=0 回滚键下旧行为（高分謦欬牌超门带顶打出）必须恢复: {d_z2}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z2.reason, \
+        f"gate=0 回滚键下不得出现零压闸留痕: {d_z2.reason}"
+    # ③ 击杀豁免：零压回合的击杀买断敌方下一回合出手权，不得被拦
+    vknow_z3 = _vivhite_know("sts2-selfcheck-vhzeropay-kill-")
+    vknow_z3.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_z3 = policy.Policy(vknow_z3, random.Random(11))
+    _st_z3 = _vgate_state(85, 0)
+    _st_z3["combat"]["enemies"][0]["current_hp"] = 8
+    d_z3 = vpol_z3.decide(_st_z3, _vzp_monster_ctx())
+    assert d_z3.action == "play_card", \
+        f"零压回合击杀打必须豁免（买断敌方下一回合出手权）: {d_z3}"
+    # ④ 硬仗（Elite）意图0回合不启用本闸（505~511 批减免证伪语义不变）
+    vknow_z4 = _vivhite_know("sts2-selfcheck-vhzeropay-elite-")
+    vknow_z4.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_z4 = policy.Policy(vknow_z4, random.Random(11))
+    d_z4 = vpol_z4.decide(_vgate_state(85, 0), SimpleNamespace(
+        combat={"comp_id": "OLD_STATUE", "node_type": "Elite"},
+        current_combat_is_hard=True, credit_tags=[],
+        stall_analysis_asked=False, stall_analysis_needed=False,
+        stall_giveup=False))
+    assert d_z4.action == "play_card", \
+        f"精英战意图0回合不得启用零压闸（减免语义不变）: {d_z4}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z4.reason, \
+        f"精英战不得出现零压闸留痕: {d_z4.reason}"
+    # ⑤ 意图>0 的普通战回合不启用本闸（旧门带语义零差异，margin=1 放行）
+    vknow_z5 = _vivhite_know("sts2-selfcheck-vhzeropay-intent-")
+    vknow_z5.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_z5 = policy.Policy(vknow_z5, random.Random(11))
+    d_z5 = vpol_z5.decide(_vgate_state(85, 10), _vzp_monster_ctx())
+    assert d_z5.action == "play_card", \
+        f"意图>0 普通战回合不得启用零压闸: {d_z5}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z5.reason, \
+        f"意图>0 回合不得出现零压闸留痕: {d_z5.reason}"
+
     # 3prn) 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，第 355~360
     #      局批复盘）：余量门把被拦謦欬牌全部逐出残能救场，但救场格挡通道自带
     #      净保命>0 计价（min(block,gap)−实际謦欬−余裕机会成本）——355 局 F5

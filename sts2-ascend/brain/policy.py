@@ -4219,6 +4219,17 @@ class Policy:
                 and cctx.get("node_type") not in ("Elite", "Boss")):
             _hp_relief_hard_suppressed = True
             _hp_free_relief = 0.0
+        # 謦欬零压付血闸开关（VIVHITE_HP_ZERO_PRESSURE_GATE，第 577~589 局批复盘
+        # 新增，静态键；语义见下方门拦段注释）。1=启用；0 一键回滚（旧行为零
+        # 差异）。随余量门体系启停：僵局放行闩锁把 _hp_play_margin 压 0 时本闸
+        # 同步停用（防零威胁战唯一输出全是謦欬牌时死锁）。
+        _hp_zero_pressure = False
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_zero_pressure = bool(int(pol.get(
+                    "vivhite_hp_zero_pressure_gate", 1) or 0))
+            except (TypeError, ValueError):
+                _hp_zero_pressure = False
         # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
         # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
         if self._hp_repeat_round != round_no:
@@ -4425,6 +4436,36 @@ class Policy:
                         why += (f"｜意图0自由回合减免过门（无减免将拦"
                                 f"+{_hp_extra_full - _hp_extra:.1f}，"
                                 "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
+                # 謦欬零压付血闸（VIVHITE_HP_ZERO_PRESSURE_GATE，第 577~589 局批
+                # 复盘新增）：本批战斗记录反复出现「普通战敌方零威胁回合照付血」
+                # ——589 局 F22 T4 敌意图总伤0、我方90血仍打出分治法阵+实付4血
+                # 买抽牌提速（全场掉血0｜自损15）；577-F22 掉血9｜自损19、
+                # 578-F25 掉血3｜自损14 同型。意图≤0 回合提速零收益，而余量门带
+                # 只拦「阈值~阈值+实付×margin」的边际分，高分謦欬牌全额付血照过；
+                # 三级旋钮（life_cost_weight/余量门/血税软顶）已全尽封账。普通
+                # Monster 战意图≤0 的非致死/非竞速回合，hp_pay>0 且本打不击杀
+                # 目标的謦欬候选直接视同门拦（击杀豁免：零压回合的击杀买断敌方
+                # 下一回合出手权，不是买提速）。Elite/Boss 不启用——硬仗意图0
+                # 回合的输出压制已被 505~511 批自由回合减免证伪；意图0自由回合
+                # 减免生效的回合（hard_only=0 回滚口径下普通战恢复减免）本闸
+                # 同步不启用——减免即「该回合门带整体撤除」的既有判决，本闸只是
+                # 门带的零压补强，不得翻越减免。本闸拦下的候选
+                # 入 _hp_gate_blocked，照旧退出 marginal/残能救场通道并喂僵局账，
+                # STALL_BREAK/STALL_ANY 闩锁兜底死锁。0 一键回滚（旧行为零差异），
+                # 非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+                if (not _hp_gate_hit and _hp_zero_pressure and _hp_pay > 0.0
+                        and incoming <= 0 and _hp_free_relief <= 0.0
+                        and not race_allin and not kill_race
+                        and cctx.get("node_type") == "Monster"
+                        and "可击杀" not in why
+                        and not re.search(r"kills=[1-9]", why)):
+                    _hp_gate_hit = True
+                    why += (f"｜謦欬零压付血闸：普通战意图{float(incoming):.0f}"
+                            f"非竞速回合实付{_hp_pay:g}血买提速零收益，视同门拦"
+                            "（VIVHITE_HP_ZERO_PRESSURE_GATE）")
+                    _hp_gate_blocked.append(
+                        (c.get("index"), c.get("name") or cid,
+                         _hp_pay, 0.0, score, 0, "ZERO_PRESSURE"))
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
@@ -4766,6 +4807,9 @@ class Policy:
                                   + (f"（同回合第{row[5] + 1}次复打税，"
                                      "VIVHITE_HP_REPEAT_PLAY_TAX）"
                                      if len(row) > 5 and row[5] > 0 else "")
+                                  + ("（VIVHITE_HP_ZERO_PRESSURE_GATE）"
+                                     if len(row) > 6
+                                     and row[6] == "ZERO_PRESSURE" else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 if _hp_relief_hard_suppressed and incoming <= 0:
