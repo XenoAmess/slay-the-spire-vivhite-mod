@@ -1356,6 +1356,7 @@ class Knowledge:
         # 避免在运行中的大脑落盘前抢先改写/置标记）
         if repair_phantoms:
             self._repair_phantom_runs()
+            self._repair_boss_act_trunc_counters()
 
     def _repair_phantom_runs(self) -> None:
         """一次性修复：把历史上误入账的幻影局从生涯统计中扣除。
@@ -1397,6 +1398,38 @@ class Knowledge:
             # 伪变异通道一并关闭）
             self.save()
         self.stats["phantom_repair_v1"] = True
+
+    def _repair_boss_act_trunc_counters(self) -> None:
+        """一次性修复：作废被 int() 截断计数器污染的 Boss 分幕子账本。
+
+        BOSS_ACT_TRUNC（第 295~305 局批复盘首修 c51b8252，因新代码启动失败被
+        宿主安全撤销 2f782e34；第 602~614 局批基于当前 HEAD 重落地）：旧版
+        写入用 int(old)+1 累积 encounters/deaths/hp_pool_n/fire_rounds——
+        每局 ×STAT_DECAY_PER_RUN 衰减后 int() 截断小数，计数器被钉死在个位
+        数，而 float 分子（hp_lost_sum/hp_pool_sum/fire_sum）正常累积，分幕
+        「场均战损/血池」虚高 8~10 倍（vivhite 602~614 批实测：子账 act1
+        场均 455~965、act2 1007~1421 vs 全量账同组合 37.7~86.4；603/609/610
+        局前夜留痕「场均589/1139/1162×1.5」实证消费，实战单场掉血仅
+        78~100）。boss_loss_stats(act) 的虚高均值使前夜悲观战损（×1.5）恒超
+        最大生命，「血量-悲观战损≤安全余量」对整个血条恒真——翻转带恒触发、
+        判死局「回血后余量仍≤安全余量」恒真，610 局 91% 血前夜被弃疗改锻造。
+        分母历史不可恢复（int 截断已销毁小数部分，且分子分幕合计恰等于主账、
+        唯独逐幕分布无法反推），唯一诚实的修复是作废子账本：读取端
+        （boss_loss_stats/boss_race_vitals）样本不足时按既有设计回落全量账
+        （前 506 批长期行为的冷启动安全路径；血池读取另有 HP_POOL_READ_CLAMP
+        逐组合钳制双保险），修复后的浮点计数器自新样本起正确累积，约 3 场
+        同幕 Boss 战后恢复分幕口径。标记键 stats.boss_act_trunc_repair_v1
+        防重复执行。
+        """
+        if self.stats.get("boss_act_trunc_repair_v1"):
+            return
+        self.stats["boss_act_trunc_repair_v1"] = True
+        n = 0
+        for e in (self.stats.get("enemies") or {}).values():
+            if isinstance(e, dict) and e.pop("boss_act", None) is not None:
+                n += 1
+        if n:
+            self.save()
 
     def _best_raw_floor_from_history(self) -> int:
         """Best trustworthy raw floor visible in active logs or archive catalog.
@@ -2095,26 +2128,36 @@ class Knowledge:
             # 翻转带回血压过锻造，卡组成型被慢性锁死。分幕账只认 node_type==
             # "Boss" 的观测（比旧全量账混入普通战血池样本更纯），历史条目无此
             # 键即从空累积，不捏造回填；读取端样本不足时回落全量均值（兼容）
+            # 计数器必须浮点累积（BOSS_ACT_TRUNC，第 295~305 局批首修被宿主
+            # 安全撤销，第 602~614 局批重落地）：旧版 int(old)+1 在每局
+            # ×STAT_DECAY_PER_RUN 衰减后截断小数，encounters/hp_pool_n 被钉死
+            # 在个位数，而 float 分子正常累积——分幕「场均」虚高 8~10 倍
+            # （vivhite 602~614 批实测 act1 场均 455~965/act2 1007~1421 vs
+            # 全量账 37.7~86.4 与实战 78~100；603/609/610 局前夜留痕
+            # 「场均589/1139/1162」）。主账 encounters/boss_encounters 的
+            # 浮点 += 1 是本段正确范式；读取端全部经 int() 取值，类型兼容。
             if act:
                 sub = e.setdefault("boss_act", {}).setdefault(str(int(act)), {})
-                sub["encounters"] = int(sub.get("encounters", 0)) + 1
+                sub["encounters"] = float(sub.get("encounters", 0) or 0.0) + 1.0
                 sub["hp_lost_sum"] = float(sub.get("hp_lost_sum", 0.0)) + max(0.0, hp_lost)
-                sub["deaths"] = int(sub.get("deaths", 0)) + (1 if died else 0)
+                sub["deaths"] = float(sub.get("deaths", 0) or 0.0) + (1.0 if died else 0.0)
                 if hp_pool is not None and hp_pool > 0:
                     sub["hp_pool_sum"] = float(sub.get("hp_pool_sum", 0.0)) + float(hp_pool)
-                    sub["hp_pool_n"] = int(sub.get("hp_pool_n", 0)) + 1
+                    sub["hp_pool_n"] = float(sub.get("hp_pool_n", 0) or 0.0) + 1.0
                 if fire_rounds:
                     sub["fire_sum"] = float(sub.get("fire_sum", 0.0)) + max(0.0, float(fire_sum or 0.0))
-                    sub["fire_rounds"] = int(sub.get("fire_rounds", 0)) + int(fire_rounds)
+                    sub["fire_rounds"] = float(sub.get("fire_rounds", 0) or 0.0) + float(fire_rounds)
         # 血池/火力观测入账（第 138~141 批复盘新增）：供 Boss 攻坚投影与
         # Boss 前夜篝火决策使用。血池按「场」记均值样本（多阶段聚合已取最大段），
         # 火力按「轮」累加（逐轮意图采样，格挡前口径）
+        # hp_pool_n/fire_rounds 同 BOSS_ACT_TRUNC 修复：计数器浮点累积，
+        # 不再 int() 截断（个位数计数器在逐局衰减下被钉死，比率口径失真）
         if hp_pool is not None and hp_pool > 0:
             e["hp_pool_sum"] = float(e.get("hp_pool_sum", 0.0)) + float(hp_pool)
-            e["hp_pool_n"] = int(e.get("hp_pool_n", 0)) + 1
+            e["hp_pool_n"] = float(e.get("hp_pool_n", 0) or 0.0) + 1.0
         if fire_rounds:
             e["fire_sum"] = float(e.get("fire_sum", 0.0)) + max(0.0, float(fire_sum or 0.0))
-            e["fire_rounds"] = int(e.get("fire_rounds", 0)) + int(fire_rounds)
+            e["fire_rounds"] = float(e.get("fire_rounds", 0) or 0.0) + float(fire_rounds)
 
     def boss_loss_stats(self, act: int | None = None) -> tuple[float, int]:
         """全部分档 Boss 战的（场均掉血绝对值, 样本数）。

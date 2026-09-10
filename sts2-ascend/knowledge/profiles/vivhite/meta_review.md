@@ -1466,3 +1466,82 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 602~614 局批复盘：Boss 分幕子账本 int() 截断计数器——前夜悲观战损虚高 8~10 倍、91% 血前夜被必败弃疗（BOSS_ACT_TRUNC 重落地：c51b8252 被宿主安全撤销后的 HEAD 重实现）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Knowledge.commit_enemy_fight 的 Boss 分幕子账本用
+  int(old)+1 累积 encounters/deaths/hp_pool_n/fire_rounds——在线统计每局
+  ×STAT_DECAY_PER_RUN(0.9965) 比率守恒衰减后 int() 截断小数，计数器被永久
+  钉死在个位数，而 float 分子（hp_lost_sum/hp_pool_sum/fire_sum）正常累积，
+  分幕「场均战损/血池」系统性虚高 8~10 倍。oss_loss_stats(act) 消费虚高
+  均值使前夜悲观战损（×boss_eve_pess_mult 1.5）恒超最大生命：翻转带恒触发，
+  且判死局「回血后余量仍≤安全余量」对整个血条恒真——高血前夜被弃疗改锻造，
+  441~446 批「翻转带回血至上」被架空。该病灶 295~305 批已完整修复
+  （c51b8252，自检通过）但 5 分钟后因新代码启动失败被宿主安全撤销
+  （2f782e34，rollback_from_marker 机制），此后无人重落地，当前 HEAD 仍是
+  int() 截断版本。runner 自 f2c17aad（08-27）起在 stage=imported 后即释放
+  仓库锁、锁外等待 ready（Knowledge 构造可安全自取该锁），启动失败与本改动
+  无因果链证据；按 d8a11849 先例由本批基于当前 HEAD 重实现。
+- **EVIDENCE**：① 本批决策链实证消费——603 局前夜「悲观战损884=场均589
+  ×1.5」（一幕）、609 局「悲观战损1709=场均1139×1.5」、610 局「必败弃疗改
+  锻造（当前 91%；悲观战损1744=场均1162×1.5）」（二幕 F32 前夜，91% 血
+  弃疗后 F33 阵亡）——场均量级 589~1162，而本批实战 Boss 单场掉血仅
+  78~100；≥3 独立对局达 evidence_run_threshold。② clone 内在线 stats 只读
+  核算：分幕子账 act1 场均 455.8~965.0、act2 1007.2~1421.4 vs 同库全量账
+  同组合 37.7~86.4；WATERFALL_GIANT 子账 hp_lost_sum=2222.6417892319973 与
+  主账逐位相等，而子账 encounters=4.965（钉死）vs 主账 40.88——衰减对分子
+  分母同乘，唯 int() 每写截断能制造该背离。③ 614 局（X6HFURH6D3M0，F33
+  知识恶魔阵亡）全链已逐条深读：两连诅咒屏选择正确（心灵腐化/瓦解，590~595
+  批冷却等待闸口径在产），死因输出饥饿+自损（既有旋钮封账覆盖），本批主
+  假设取自账本层；602/604/613 局 F17 一幕 Boss 战自损 24~59 同链核对。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 前夜留痕「场均N」从 589~1162 量级
+  回落至全量账量级（约 40~90，一幕偏低、二幕偏高），翻转带/安全区/必败
+  三区真实分流重新可观测；② stats.json 出现 boss_act_trunc_repair_v1 标记，
+  各 boss 子账 encounters/hp_pool_n 逐局浮点增长（不再钉死个位数）；③ 约
+  3 场同幕 Boss 战后分幕口径恢复，高血前夜（610 局 91% 型）不再被恒真
+  「必败」弃疗。证伪/撤回：场均留痕不变或计数器仍钉死 → 修复未生效，复查
+  消费路径与迁移标记；前夜裁决显著恶化（贴线局被错误弃疗/回血）→ git
+  revert 本提交整体回滚（改动集中于 knowledge.py 写侧/迁移 + selfcheck
+  夹具，无评分/阈值/动作公式变更）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：
+  - commit_enemy_fight 同族 6 处 int() 截断计数器改浮点累积（子账
+    encounters/deaths/hp_pool_n/fire_rounds + 主账 hp_pool_n/fire_rounds），
+    与主账 encounters/boss_encounters 既有浮点范式一致；读取端全部经
+    int() 取值，类型兼容。
+  - 新增一次性迁移 _repair_boss_act_trunc_counters（随 repair_phantoms
+    闸门执行，自检加载真实库传 repair_phantoms=False 不触发）：分母小数
+    部分已被 int 销毁、逐幕分布无法反推，诚实修复为作废 boss_act 子账本；
+    读取端样本不足时按既有设计回落全量账（血池读取另有
+    HP_POOL_READ_CLAMP 逐组合钳制双保险），修复后的浮点计数器自新样本
+    起正确累积，约 3 场同幕 Boss 战后恢复分幕口径；标记键
+    stats.boss_act_trunc_repair_v1 防重复执行。
+- sts2-ascend/brain/selfcheck.py：新增 3br-act-trunc 夹具四分支——① 浮点
+  计数器跨一次衰减后正常增长（×0.9965+1，不再钉 1）、主账 hp_pool_n 同验；
+  ② 前置态复现分幕虚高（1900/3≈633），迁移后子账作废、标记置位、
+  boss_loss_stats(1) 回落全量账 60；③ 幂等与标记预置跳过；④ 迁移后 3 场
+  新样本恢复分幕口径（场均 40、n=3）。
+- 不改任何评分/阈值/动作选择公式；只修账本写入口径与一次性作废不可恢复
+  数据。撤回条件单一：git revert 本提交。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3br-act-trunc
+  四分支；既有 3br-pool-clamp/3br-pool-read-clamp、3prz 零压闸族、3kd 诅咒
+  税族、3ps、3sg、3br-5/3br-6、sec 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/knowledge.py
+  （+49/-6，写侧 6 处浮点化 + 一次性迁移方法）、brain/selfcheck.py（+74，
+  3br-act-trunc 四分支）；未触碰 runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主
+  挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

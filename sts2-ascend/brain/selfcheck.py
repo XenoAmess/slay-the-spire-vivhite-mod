@@ -8689,6 +8689,80 @@ def main() -> int:
         and not (rd_know.stats.get("hp_pool_native_clamp_obs") or {}).get("read_clamped"), \
         f"factor=0 读取侧未回滚到旧虚高口径: {_rp5}"
 
+    # 3br-act-trunc（BOSS_ACT_TRUNC，第295~305局批首修 c51b8252 被宿主安全撤销
+    #     2f782e34，第602~614局批重落地）：Boss 分幕子账本的 int(old)+1 计数器
+    #     在逐局 ×0.9965 衰减后截断小数，encounters/hp_pool_n 钉死个位数而
+    #     float 分子正常累积——分幕「场均战损」虚高 8~10 倍（vivhite 602~614
+    #     批实测 act1 场均 455~965/act2 1007~1421 vs 全量账 37.7~86.4；
+    #     603/609/610 局前夜留痕「场均589/1139/1162×1.5」，实战单场 78~100），
+    #     前夜翻转带恒触发、91% 血前夜被必败弃疗。修复=写侧浮点累积+一次性
+    #     作废不可恢复分母的子账本，读取端按既有 <3 样本设计回落全量账。
+    tr_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-acttrunc-")))
+    # ① 浮点计数器跨衰减存活：旧版 int() 会把 1×0.9965 截成 0 再 +1=1，
+    #    计数器永远钉在 1；修复后应保留小数并正常增长
+    tr_know.commit_enemy_fight("TR_BOSS", 40.0, won=True, died=False,
+                               node_type="Boss", hp_pool=300.0,
+                               fire_sum=60.0, fire_rounds=5, act=1)
+    tr_know._decay_stats()
+    tr_know.commit_enemy_fight("TR_BOSS", 40.0, won=False, died=True,
+                               node_type="Boss", hp_pool=300.0,
+                               fire_sum=60.0, fire_rounds=5, act=1)
+    _tr = tr_know.stats["enemies"]["TR_BOSS"]["boss_act"]["1"]
+    assert abs(_tr["encounters"] - (1.0 * knowledge.STAT_DECAY_PER_RUN + 1.0)) < 1e-9 \
+        and abs(_tr["deaths"] - 1.0) < 1e-9 \
+        and abs(_tr["hp_pool_n"] - (1.0 * knowledge.STAT_DECAY_PER_RUN + 1.0)) < 1e-9 \
+        and abs(_tr["fire_rounds"] - (5.0 * knowledge.STAT_DECAY_PER_RUN + 5.0)) < 1e-9, \
+        f"分幕计数器仍被 int() 截断或未浮点累积: {_tr}"
+    _trm = tr_know.stats["enemies"]["TR_BOSS"]
+    assert abs(_trm["hp_pool_n"] - (1.0 * knowledge.STAT_DECAY_PER_RUN + 1.0)) < 1e-9, \
+        f"主账 hp_pool_n 仍被 int() 截断: {_trm}"
+    # ② 一次性迁移作废被污染子账本：分幕场均 633 虚高 → 回落全量账 60
+    #    （repair_phantoms=False 阻止构造期自动执行，手动调用以观察前后口径）
+    rp_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-actrepair-")),
+        repair_phantoms=False)
+    rp_know.stats["enemies"]["RP_BOSS"] = {
+        "encounters": 40.0, "hp_lost_sum": 2000.0, "deaths": 10.0, "wins": 30.0,
+        "boss_encounters": 30.0, "boss_hp_lost_sum": 1800.0, "boss_deaths": 8.0,
+        "hp_pool_sum": 9000.0, "hp_pool_n": 3.0,
+        "fire_sum": 600.0, "fire_rounds": 60.0,
+        "boss_act": {"1": {"encounters": 3.9, "hp_lost_sum": 1900.0, "deaths": 1.0,
+                           "hp_pool_sum": 9000.0, "hp_pool_n": 3.9,
+                           "fire_sum": 600.0, "fire_rounds": 60.0}},
+    }
+    _bl_pre, _bn_pre = rp_know.boss_loss_stats(1)
+    assert _bn_pre == 3 and abs(_bl_pre - 1900.0 / 3) < 1e-9, \
+        f"夹具前置态未复现分幕虚高口径: {_bl_pre}/{_bn_pre}"
+    rp_know._repair_boss_act_trunc_counters()
+    assert "boss_act" not in rp_know.stats["enemies"]["RP_BOSS"] \
+        and rp_know.stats.get("boss_act_trunc_repair_v1") is True, \
+        f"迁移未作废子账本或未置标记: {rp_know.stats['enemies']['RP_BOSS']}"
+    _bl_post, _bn_post = rp_know.boss_loss_stats(1)
+    assert _bn_post == 30 and abs(_bl_post - 60.0) < 1e-9, \
+        f"迁移后未回落全量账（冷启动安全路径）: {_bl_post}/{_bn_post}"
+    # ③ 幂等：二次执行不再改动；标记预置时跳过（不触碰既有子账）
+    rp_know._repair_boss_act_trunc_counters()
+    assert "boss_act" not in rp_know.stats["enemies"]["RP_BOSS"], "迁移不幂等"
+    rp2_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-actrepair2-")),
+        repair_phantoms=False)
+    rp2_know.stats["enemies"]["RP2_BOSS"] = {
+        "encounters": 5.0, "hp_lost_sum": 200.0, "deaths": 1.0, "wins": 4.0,
+        "boss_act": {"1": {"encounters": 3.0, "hp_lost_sum": 120.0}},
+    }
+    rp2_know.stats["boss_act_trunc_repair_v1"] = True
+    rp2_know._repair_boss_act_trunc_counters()
+    assert rp2_know.stats["enemies"]["RP2_BOSS"].get("boss_act"), \
+        "标记预置时迁移仍改动既有子账本"
+    # ④ 迁移后新样本正确累积并恢复分幕口径：3 场 act1 Boss → 场均 40
+    for _i in range(3):
+        rp_know.commit_enemy_fight("RP_BOSS", 40.0, won=True, died=False,
+                                   node_type="Boss", act=1)
+    _bl_new, _bn_new = rp_know.boss_loss_stats(1)
+    assert _bn_new == 3 and abs(_bl_new - 40.0) < 1e-9, \
+        f"迁移后新样本未正确恢复分幕口径: {_bl_new}/{_bn_new}"
+
     # 3br-slip-tax（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：前夜竞速预演可行侧
     #     ttk 口径 pool/dpt 不扣开局滑溜 Boss 的破层期——第5/6局 F15 篝火对墨影
     #     幻灵（VANTOM 开局自挂 8 层滑溜，每层把一次命中压到只失 1 血）均判
