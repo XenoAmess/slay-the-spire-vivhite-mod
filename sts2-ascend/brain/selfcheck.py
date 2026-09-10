@@ -9592,9 +9592,11 @@ def main() -> int:
     assert "KNOWLEDGE_DEMON_CURSE_TAX" not in d_kd3.reason, \
         f"回滚后仍留机制税注记: {d_kd3.reason}"
     kd_pol.know.policy["knowledge_demon_curse_tax"] = 1.0
-    # ④ 冷却轮换观测：index0 瓦解被 deferred 冷却后，同屏候选只剩懒惰，
-    #    轨迹必须披露被抑制候选（此前完全无痕，复盘无法区分单候选载荷
-    #    与轮换吞没）
+    # ④ 冷却轮换观测+旧轮换行为回滚锚（钉 ui_option_cooldown_forced_wait=False，
+    #    同 3pru 钉 relief=0 的既有模式）：index0 瓦解被 deferred 冷却后，回滚
+    #    口径下同屏候选只剩懒惰并立即轮换点击，轨迹披露被抑制候选（此前完全
+    #    无痕，复盘无法区分单候选载荷与轮换吞没）
+    kd_pol.know.policy["ui_option_cooldown_forced_wait"] = False
     kd_state4 = _kd_state(
         [_kd_card(0, "DISINTEGRATION", "瓦解"),
          _kd_card(1, "SLOTH", "懒惰")], floor=35)
@@ -9603,11 +9605,67 @@ def main() -> int:
     d_kd4 = kd_pol.decide(dict(kd_state4), ctx)
     assert d_kd4.action == "select_deck_card" \
             and d_kd4.params.get("option_index") == 1, \
-        f"被冷却候选未轮换到兄弟候选: {d_kd4.params}（{d_kd4.reason}）"
+        f"回滚口径下被冷却候选未轮换到兄弟候选: {d_kd4.params}（{d_kd4.reason}）"
     assert "UI_OPTION_COOLDOWN_SUPPRESSED" in json.dumps(
         d_kd4.trace, ensure_ascii=False) and "瓦解" in json.dumps(
         d_kd4.trace, ensure_ascii=False), \
         f"被冷却抑制候选未进入决策轨迹: {json.dumps(d_kd4.trace, ensure_ascii=False)[:400]}"
+    kd_pol.know.policy["ui_option_cooldown_forced_wait"] = True
+
+    # ⑤ 强制屏冷却等待闸（第590~595局批复盘，UI_OPTION_COOLDOWN_FORCED_WAIT）：
+    #    默认口径下同一强制入组屏，最高分候选瓦解（税-2.0@满血）被短冷却抑制、
+    #    剩余只有严格更差的懒惰（税-8.0）时，必须有界等待而不是强吃次差——
+    #    595 局 F33 知识恶魔次屏强吃懒惰后 SlothPower 锁死末段 5 次出牌，
+    #    Boss 余 ~16 血时 0 血阵亡（488 局 F33 同型）
+    kd_state5 = _kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "SLOTH", "懒惰")], floor=36)
+    kd_pol.note_action_deferred("select_deck_card", [], kd_state5,
+                                {"option_index": 0})
+    d_kd5 = kd_pol.decide(dict(kd_state5), ctx)
+    assert d_kd5.action is None, \
+        f"强制屏更优候选冷却中未等待（强吃次差回归）: {d_kd5.action}（{d_kd5.reason}）"
+    assert "UI_OPTION_COOLDOWN_FORCED_WAIT" in d_kd5.reason, \
+        f"强制屏冷却等待缺留痕: {d_kd5.reason}"
+    assert "UI_OPTION_COOLDOWN_FORCED_WAIT" in json.dumps(
+        d_kd5.trace, ensure_ascii=False) and "UI_OPTION_COOLDOWN_SUPPRESSED" in json.dumps(
+        d_kd5.trace, ensure_ascii=False), \
+        f"等待决策轨迹缺闸/观测留痕: {json.dumps(d_kd5.trace, ensure_ascii=False)[:400]}"
+    # ⑥ 冷却按 decide 逐拍衰减（上界 4 拍），恢复后点击精确更优目标瓦解
+    d_kd6 = d_kd5
+    for _ in range(6):
+        if d_kd6.action == "select_deck_card":
+            break
+        d_kd6 = kd_pol.decide(dict(kd_state5), ctx)
+    assert d_kd6.action == "select_deck_card" \
+            and d_kd6.params.get("option_index") == 0, \
+        f"冷却恢复后未点击精确更优候选瓦解: {d_kd6.params}（{d_kd6.reason}）"
+    # ⑦ 被抑制候选本身更差（懒惰被冷却、剩余瓦解更优）时不等待、立即点击
+    #    剩余最优——等待闸只在抑制改变了选择时介入
+    kd_state7 = _kd_state(
+        [_kd_card(0, "SLOTH", "懒惰"),
+         _kd_card(1, "DISINTEGRATION", "瓦解")], floor=37)
+    kd_pol.note_action_deferred("select_deck_card", [], kd_state7,
+                                {"option_index": 0})
+    d_kd7 = kd_pol.decide(dict(kd_state7), ctx)
+    assert d_kd7.action == "select_deck_card" \
+            and d_kd7.params.get("option_index") == 1, \
+        f"更差候选被抑制时仍空等: {d_kd7.action}{d_kd7.params}（{d_kd7.reason}）"
+    assert "UI_OPTION_COOLDOWN_FORCED_WAIT" not in d_kd7.reason, \
+        f"更差候选抑制不应触发等待留痕: {d_kd7.reason}"
+    # ⑧ 可跳过屏（自愿奖励）不启用等待闸：更优候选心灵腐化被抑制后照旧走
+    #    旧口径（本例全候选低于门槛 → 跳过），零行为差异
+    kd_state8 = _kd_state(
+        [_kd_card(0, "DISINTEGRATION", "瓦解"),
+         _kd_card(1, "MIND_ROT", "心灵腐化")], floor=38)
+    kd_state8["available_actions"] = ["select_deck_card", "skip_reward_cards"]
+    kd_pol.note_action_deferred("select_deck_card", [], kd_state8,
+                                {"option_index": 1})
+    d_kd8 = kd_pol.decide(dict(kd_state8), ctx)
+    assert d_kd8.action is not None, \
+        f"可跳过屏被等待闸误拦: {d_kd8.reason}"
+    assert "UI_OPTION_COOLDOWN_FORCED_WAIT" not in d_kd8.reason, \
+        f"可跳过屏不应出现等待闸留痕: {d_kd8.reason}"
 
 
     # 3zx) 解锁展示屏只走专用 HTTP 协议：confirm_unlock 尚未就绪时持续等待，

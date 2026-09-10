@@ -1366,3 +1366,30 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 590~595 局批复盘：知识恶魔诅咒屏冷却吞优强吃最差——强制入组屏冷却等待闸（UI_OPTION_COOLDOWN_FORCED_WAIT）
+
+日期：2026-09-10
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：无跳过动作的强制入组选牌屏上，评分最高的候选若正处于 409/回执丢失短冷却（note_action_deferred 置 4、按 decide 逐拍衰减自动恢复），旧口径立即改点严格更差的剩余候选——瞬态刷新竞争被兑换成永久更差诅咒。改为有界等待（≤4 decide）恢复精确目标即可保住机制税排序的选择，等待期间不新发动作、冷却不会被重新武装，代价仅为数秒等待。可证伪：未来 3~10 局若知识恶魔战（或其他强制屏）决策链从不出现「UI_OPTION_COOLDOWN_FORCED_WAIT」留痕而 UI_OPTION_COOLDOWN_SUPPRESSED 仍显形（接线错误或条件仍不可达），或等待决策超过 4 拍仍不恢复点击（有界性失败），或等待恢复后诅咒选择仍未脱离懒惰/衰朽最差档（假设无效），则本假设不成立。
+- **EVIDENCE**：595 局（8WAK6DGQ5AYK，F33 知识恶魔阵亡）完整链逐条核对——两连战斗中诅咒强制屏的 GATE 候选冷却轮换 双双 warn：① 13:08:25 屏「被冷却抑制候选：心灵腐化（UI_OPTION_COOLDOWN_SUPPRESSED）」→ 强吃瓦解（机制税-3.0@80% 血线，被抑制的心灵腐化税-1.0 严格更优）；② 13:09:15 屏「被冷却抑制候选：瓦解」→ 强吃懒惰（税-8.0，对多段出牌謦欬卡组最差，被抑制的瓦解税-4.65@47% 血线严格更优）。懒惰的 SlothPower 出牌上限随后在末段 3 回合锁死 5 次出牌（13:09:20 公理护环×2(0费) blocked_by_hook、13:09:34 闭域映射、13:09:42 综合色序+闭域映射），终段 Boss 余约 16 血时我方 0 血阵亡——任一被锁的格挡/0费能力打出都足以翻转。488 局 F33「选懒惰后次回合 3 牌全 blocked_by_hook，11 血 9 甲阵亡」同型、529 局 F33 三连瓦解屏同线，独立对局证据 ≥3 达 evidence_run_threshold；481~488 批预注册的「轮换吞没」观测本批首次在实战中双屏显形，坐实吞没假说且证明现有机制税在单候选假象下被架空。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 知识恶魔战（生涯 31.5 权重第一死因，近批高频遭遇）或其他强制屏出现「选牌界面：最高分候选【X】处于短冷却……（UI_OPTION_COOLDOWN_FORCED_WAIT）」等待决策，随后 4 拍内点击恢复的精确目标；② 诅咒屏选择向机制税排序回归（高血线心灵腐化、低血线瓦解），不再吃进懒惰/衰朽；③ 懒惰诱发的出牌上限锁死形态（blocked_by_hook 成串）在 Boss 战末段消失。证伪/撤回：等待留痕从不出现且抑制观测仍显形 → 复查 _cooled_out/_score_sel 接线；等待循环超 4 拍 → 冷却衰减接线复查；等待后仍吃进最差诅咒 → policy.json 置 ui_option_cooldown_forced_wait=false 整体回滚（旧轮换口径零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_card_selection 通用拿牌分支新增强制屏冷却等待闸——无跳过动作（强制入组）且存在被冷却抑制候选时，用同一 _score_sel 口径对被抑制候选评分，其最高分严格高于剩余最高分时返回有界等待决策（wait=0.6，冷却 4 拍自动衰减恢复），轨迹追加「GATE 强制屏冷却等待」warn 与 UI_OPTION_COOLDOWN_FORCED_WAIT 留痕；可跳过屏、升级/献祭/牌堆顶等语义分支与全候选被冷却的既有 _cooldown_wait 路径不受影响。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 ui_option_cooldown_forced_wait: True，注释记录 595/488 局实证与回滚口径（False=旧轮换零差异）。
+- sts2-ascend/brain/selfcheck.py：3kd 夹具重排——④ 钉 ui_option_cooldown_forced_wait=False 保留旧轮换+观测披露断言作为回滚锚（同 3pru 钉 relief=0 的既有模式）；新增⑤默认口径更优候选被抑制必有界等待且双留痕、⑥冷却 4 拍衰减后点击精确更优目标瓦解、⑦被抑制候选本身更差时不等待立即点剩余最优、⑧可跳过自愿屏不启用等待闸。
+- 不改机制税分极值、冷却时长/衰减、_sel_tried 接受口径、reward/shop/event 其他冷却消费点；不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3kd 重排④+新增⑤⑥⑦⑧；既有 3prz 零压付血闸、3prv STALL_ANY、3pru/3prt/3prg、3sg、3ps、3br-5/3br-6、sec 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py（+32，等待闸+留痕）、brain/knowledge.py（+9 一个静态键及注释）、brain/selfcheck.py（+66/-4，3kd 重排+四新锚）；未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -8043,6 +8043,38 @@ class Policy:
             self._trace_gate(
                 "GATE 选牌语义", "pass",
                 "牌堆顶选择" if top_of_pile else "自愿奖励" if _has_skip else "强制入组")
+            # 强制屏冷却等待闸（第590~595局批复盘，UI_OPTION_COOLDOWN_FORCED_WAIT）：
+            # 无跳过动作的强制入组屏上，最高分候选若正处于 409/回执丢失的短冷却
+            # （note_action_deferred 置 4、按 decide 逐拍衰减自动恢复），旧口径
+            # 立即改点严格更差的剩余候选——595 局 F33 知识恶魔两连诅咒屏实证：
+            # 首屏心灵腐化（机制税-1.0 最优）被轮换抑制后强吃瓦解（-3.0），次屏
+            # 瓦解（-4.65）被抑制后强吃懒惰（-8.0，多段出牌卡组最差诅咒）；懒惰
+            # SlothPower 出牌上限随后 3 回合锁死公理护环×2/闭域映射/综合色序共
+            # 5 次出牌，Boss 余 ~16 血时我方 0 血阵亡（488 局 F33 同型阵亡、
+            # 529 局三连瓦解屏为历史同线证据）。瞬态刷新竞争不应兑换永久更差
+            # 诅咒：被抑制候选评分严格高于剩余最高分时，等有界冷却恢复精确目标
+            # （等待期间不新发动作，冷却不会被重新武装，上界 4 拍）；可跳过屏
+            # 与升级/献祭/置顶等语义分支不受影响。
+            # ui_option_cooldown_forced_wait=False 一键回滚旧轮换口径（零差异）。
+            if (not _has_skip and _cooled_out
+                    and bool(self.know.policy.get(
+                        "ui_option_cooldown_forced_wait", True))):
+                _sup_best_v, _sup_best_c = max(
+                    (_score_sel(c) for c in _cooled_out), key=lambda t: t[0])
+                if _sup_best_v > best_v + 1e-9:
+                    _sup_name = (_sup_best_c.get("name")
+                                 or _sup_best_c.get("card_id"))
+                    self._trace_gate(
+                        "GATE 强制屏冷却等待", "warn",
+                        f"最高分候选【{_sup_name}】冷却中"
+                        f"（{_sup_best_v:.1f}>{best_v:.1f}），等待有界恢复而非"
+                        "强吃次差（UI_OPTION_COOLDOWN_FORCED_WAIT）")
+                    return Decision(
+                        None, {},
+                        f"选牌界面（{kind}）：最高分候选【{_sup_name}】处于短冷却"
+                        f"（{_sup_best_v:.1f}>{best_v:.1f}），强制入组屏等待冷却"
+                        "恢复精确目标（UI_OPTION_COOLDOWN_FORCED_WAIT）",
+                        wait=0.6)
             if _has_skip:
                 # 只有可跳过的通用选牌屏才是自愿奖励 offer。升级/删除/献祭/
                 # 置顶均在前面的语义分支，不会污染 offered/seen。
