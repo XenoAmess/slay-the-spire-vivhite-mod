@@ -1393,3 +1393,76 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 596~601 局批复盘：零压闸误拦謦欬攻击白打窗——攻击牌豁免门拦、回归余量门带计价（VIVHITE_HP_ZP_ATTACK_EXEMPT）
+
+日期：2026-09-10
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬零压付血闸（577~589 批新增）把普通 Monster 战意图≤0
+  回合的 hp_pay>0 謦欬候选**全部**视同门拦，但其立项证据只覆盖抽牌/提速类
+  非攻击牌（589-F22 分治法阵+实付 4 血买抽牌）。对脚本循环敌人，意图 0 回合
+  恰是蓄力/空窗回合（SPINY_TOAD 的 Spikes 蓄力：原生机制确认该回合蟾蜍无
+  荆棘），謦欬攻击在此压低敌血＝缩短战斗＝减少未来意图周期，收益非零；硬拦
+  攻击牌把输出挤进需要同时防御（甚至荆棘反伤）的高压回合，拉长战斗、放大
+  总战损。把攻击牌移出门拦、回归「余量门带计价」（边际付血仍被既有门带拦）
+  即可恢复白打窗而不撤 513/514/529 放血防线。可证伪：未来 3~10 局若普通战
+  「掉血≈0 自损≥12」形态显著回升（放血防线被穿透）、STALL_ANY/STALL_BREAK
+  闩锁放行高频化，或豁免注记从不显形（接线错误），则假设不成立。
+- **EVIDENCE**：601 局（SVX64LWV96AY，F27 SPINY_TOAD 阵亡）完整链逐条核
+  对——T1 我方 47 血/4 能量/敌意图 0（Spikes 蓄力回合，无荆棘），零压闸拦
+  下整手謦欬攻击（终止条件+实付4、切线星光实付2、闭域投影+实付4）空过；
+  T2 荆棘+爆炸意图回合反而付血打进荆棘（实付约 8+荆棘反伤），全场掉血
+  47｜自损 15｜非行动段 55，8 回合阵亡。跨局：596 局 12 处、601 局 16 处
+  决策含 ZERO_PRESSURE_GATE 拦下记录，多为 67~94 血健康状态整手/大半手空过
+  （596-F22 T2 拦 6 张、601-F13 T6 拦 5 张、601-F24 T1 拦 4 张）。原生机制
+  核对（v0.111.0 mechanics/monsters.jsonl）：SPINY_TOAD 固定循环
+  Spikes(BuffIntent,+5 荆棘)→Explosion(23,−5 荆棘)→Lash(17)——意图 0 的
+  Spikes 回合与 Lash 回合是仅有两个无荆棘攻击窗，零压闸恰好封死其中一类。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 普通战意图 0 回合决策链出现「零压
+  回合謦欬攻击豁免…（VIVHITE_HP_ZP_ATTACK_EXEMPT）」注记且攻击牌按门带计
+  价打出；②「敌意图总伤0+謦欬出牌门拦下（攻击牌）」整手空过记录消失（非
+  攻击謦欬拦截留痕仍在）；③ 遭遇脚本循环敌人的战斗回合数与全场掉血下降；
+  ④ 普通战全场自损/掉血比不恶化（余量门带 3.0 顶格计价仍在）。证伪/撤回：
+  放血形态回升或闩锁高频放行 → policy.json 置 vivhite_hp_zp_attack_exempt=0
+  一键回滚（577~589 旧口径零差异）；豁免注记零显形 → 复查策略目录
+  card_type 接线。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：零压付血闸新增攻击豁免分支——默认（静态键
+  vivhite_hp_zp_attack_exempt=1）普通 Monster 战意图≤0 回合謦欬**攻击牌**
+  （策略目录 card_type=="attack" 或载荷观测类型兜底，目录外/非白绮恒否）
+  不再视同门拦，仅追加豁免注记供对账，余量门带计价/复打税/击杀豁免/
+  STALL 闩锁体系全部不变；非攻击謦欬（格挡/抽牌/增益）维持视同门拦并照
+  旧入 _hp_gate_blocked 喂僵局账；子键 0 恢复 577~589 批旧口径（攻击一并
+  门拦，旧行为零差异）；主键 vivhite_hp_zero_pressure_gate=0 仍整体回滚。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  vivhite_hp_zp_attack_exempt: 1，注释记录 601-F27 实证、原生循环机制核对
+  与回滚口径。
+- sts2-ascend/brain/selfcheck.py：3prz 重排——① 改钉新默认：意图0回合高分
+  謦欬攻击（弦光投影）按门带计价放行且留豁免注记、零压闸标记不再出现；
+  新增①b 非攻击謦欬（白绮的变身式，实付4血）维持视同门拦并留痕；新增①c
+  豁免子键=0 恢复攻击视同门拦（回滚锚）；既有②主键回滚、③击杀豁免、
+  ④Elite 不启用、⑤意图>0 不启用四锚原样通过。
+- 不改评分公式、余量门带/顶格 3.0、复打税、自由回合减免 hard_only、
+  life_cost_weight/血税软顶三级封账、竞速/孤注豁免、reflect 通道；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3prz 重排①+新增
+  ①b/①c；既有②~⑤、3pru 自由回合减免族、3prn 救场格挡、3prv STALL_ANY、
+  3prt 复打税、3prg 血税软顶、3kd 诅咒税/冷却等待、3br-5/3br-6、sec 等全部
+  既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+49/-6，豁免开关+门拦分支+注记）、brain/knowledge.py（+14 一个静态键及
+  注释）、brain/selfcheck.py（+49/-4，3prz 重排+两新锚）；未触碰
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态；克隆残留
+  assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

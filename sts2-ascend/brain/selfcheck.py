@@ -3129,6 +3129,12 @@ def main() -> int:
     #      （全场掉血0｜自损15）；577-F22 掉血9｜自损19、578-F25 掉血3｜自损14
     #      同型。普通 Monster 战意图≤0 非致死/非竞速回合，hp_pay>0 且本打不击杀
     #      的謦欬候选视同门拦；击杀豁免；Elite/Boss 不启用；0 一键回滚。
+    #      第 596~601 局批复盘修订（VIVHITE_HP_ZP_ATTACK_EXEMPT）：立项证据只覆盖
+    #      抽牌/提速类非攻击牌；601-F27 SPINY_TOAD 阵亡战 T1（意图0=Spikes 蓄力
+    #      回合、原生机制确认无荆棘）整手謦欬攻击被拦空过、输出挤进荆棘+爆炸
+    #      回合（掉血47｜自损15）实证攻击牌一并硬拦的反效果（596 局 12 处、601
+    #      局 16 处同型）。默认攻击牌不视同门拦（余量门带计价不变、豁免注记
+    #      留痕），非攻击謦欬（格挡/抽牌/增益）维持门拦；豁免子键 0 恢复旧口径。
     def _vzp_monster_ctx():
         return SimpleNamespace(
             combat={"comp_id": "NIBBLET", "node_type": "Monster"},
@@ -3136,16 +3142,51 @@ def main() -> int:
             stall_analysis_asked=False, stall_analysis_needed=False,
             stall_giveup=False)
 
-    # ① 默认开启：普通战意图0回合高分謦欬攻击（分数超门带顶、旧行为必打出）
-    #    被视同门拦并留痕
+    # ① 默认开启+攻击豁免默认：普通战意图0回合高分謦欬攻击不再视同门拦，
+    #    按余量门带计价放行并留豁免注记（596~601 批新行为锚）
     vknow_z1 = _vivhite_know("sts2-selfcheck-vhzeropay-on-")
     vknow_z1.policy["vivhite_hp_cost_play_margin"] = 1.0
     vpol_z1 = policy.Policy(vknow_z1, random.Random(11))
     d_z1 = vpol_z1.decide(_vgate_state(85, 0), _vzp_monster_ctx())
-    assert d_z1.action == "end_turn", \
-        f"普通战意图0回合付血买提速应被零压闸拦下: {d_z1}"
-    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" in d_z1.reason, \
-        f"零压闸拦截缺决策链留痕: {d_z1.reason}"
+    assert d_z1.action == "play_card", \
+        f"攻击豁免默认开：意图0回合謦欬攻击应按门带计价放行: {d_z1}"
+    assert "VIVHITE_HP_ZP_ATTACK_EXEMPT" in d_z1.reason, \
+        f"攻击豁免缺决策链留痕: {d_z1.reason}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z1.reason, \
+        f"攻击豁免后不得再视同门拦: {d_z1.reason}"
+    # ①b 非攻击謦欬（增益牌 白绮的变身式，实付4血）维持视同门拦并留痕——
+    #     577~589 批立项证据（分治法阵抽牌提速）口径不变
+    def _vzp_power_state(hp_now, incoming):
+        st = _vgate_state(hp_now, incoming)
+        st["combat"]["hand"] = [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+            "name": "白绮的变身式", "card_type": "Power", "playable": True,
+            "energy_cost": 1, "requires_target": False,
+        }]
+        st["run"]["deck"] = [{
+            "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+            "card_type": "Power", "energy_cost": 1}]
+        return st
+    vknow_z1b = _vivhite_know("sts2-selfcheck-vhzeropay-skill-")
+    vknow_z1b.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_z1b = policy.Policy(vknow_z1b, random.Random(11))
+    d_z1b = vpol_z1b.decide(_vzp_power_state(85, 0), _vzp_monster_ctx())
+    assert d_z1b.action == "end_turn", \
+        f"非攻击謦欬在意图0普通战回合应继续被零压闸拦下: {d_z1b}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" in d_z1b.reason, \
+        f"非攻击謦欬零压闸拦截缺决策链留痕: {d_z1b.reason}"
+    # ①c 豁免子键回滚：vivhite_hp_zp_attack_exempt=0 恢复 577~589 批旧口径
+    #    （攻击牌一并视同门拦，旧行为零差异）
+    vknow_z1c = _vivhite_know("sts2-selfcheck-vhzeropay-exoff-")
+    vknow_z1c.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_z1c.policy["vivhite_hp_zp_attack_exempt"] = 0
+    vpol_z1c = policy.Policy(vknow_z1c, random.Random(11))
+    d_z1c = vpol_z1c.decide(_vgate_state(85, 0), _vzp_monster_ctx())
+    assert d_z1c.action == "end_turn", \
+        f"豁免子键=0 必须恢复攻击牌视同门拦（旧行为零差异）: {d_z1c}"
+    assert "VIVHITE_HP_ZERO_PRESSURE_GATE" in d_z1c.reason, \
+        f"豁免子键=0 时零压闸拦截缺留痕: {d_z1c.reason}"
     # ② 对照：同fixture仅关闭本闸（回滚键）必须恢复旧行为（打出）且不留痕
     vknow_z2 = _vivhite_know("sts2-selfcheck-vhzeropay-off-")
     vknow_z2.policy["vivhite_hp_cost_play_margin"] = 1.0

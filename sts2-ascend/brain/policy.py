@@ -4230,6 +4230,17 @@ class Policy:
                     "vivhite_hp_zero_pressure_gate", 1) or 0))
             except (TypeError, ValueError):
                 _hp_zero_pressure = False
+        # 零压闸謦欬攻击豁免开关（VIVHITE_HP_ZP_ATTACK_EXEMPT，第 596~601 局批
+        # 复盘新增，静态键；语义见下方门拦段注释）。1=攻击牌不视同门拦（余量
+        # 门带计价不变）；0=恢复 577~589 批旧口径（攻击牌一并视同门拦，旧行为
+        # 零差异）。随零压闸启停，独立于余量门/血税旋钮。
+        _zp_attack_exempt = False
+        if _hp_zero_pressure:
+            try:
+                _zp_attack_exempt = bool(int(pol.get(
+                    "vivhite_hp_zp_attack_exempt", 1) or 0))
+            except (TypeError, ValueError):
+                _zp_attack_exempt = False
         # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
         # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
         if self._hp_repeat_round != round_no:
@@ -4453,19 +4464,49 @@ class Policy:
                 # 入 _hp_gate_blocked，照旧退出 marginal/残能救场通道并喂僵局账，
                 # STALL_BREAK/STALL_ANY 闩锁兜底死锁。0 一键回滚（旧行为零差异），
                 # 非白绮角色零改动（_hp_play_margin 恒 0 不进分支）。
+                # 謦欬零压付血闸攻击豁免（VIVHITE_HP_ZP_ATTACK_EXEMPT，第 596~601
+                # 局批复盘新增）：零压闸立项证据（577~589 批）只覆盖抽牌/提速类
+                # 非攻击牌（589-F22 T4 分治法阵+实付4血买抽牌）；本批 6/6 局实证
+                # 攻击牌被一并硬拦的反效果——601 局 F27 SPINY_TOAD 阵亡战 T1（47
+                # 血/4 能量/意图0=Spikes 蓄力回合、原生机制确认该回合无荆棘）整手
+                # 謦欬攻击（终止条件+/切线星光/闭域投影+）被拦空过，输出被挤进
+                # T2 荆棘+爆炸意图回合（全场掉血47｜自损15，8 回合阵亡）；596 局
+                # 12 处、601 局 16 处同型拦截（596-F22 T2 拦 6 张、601-F13 T6 拦
+                # 5 张，多为 67~94 血健康状态）。脚本循环敌人的意图0 回合恰是
+                # 白打/抢杀窗：压低敌血=缩短战斗=减少未来意图周期，收益非零。
+                # 攻击牌改回「余量门带计价、不视同门拦」（边际付血仍被既有门带
+                # 拦，513/514/529 放血防线不动），非攻击謦欬（格挡/抽牌/增益）
+                # 维持视同门拦；豁免注记留痕供后续批次对账放行规模与战损走向。
+                _zp_is_attack = False
+                if _zp_attack_exempt:
+                    _zp_observed = str(c.get("card_type") or "").casefold()
+                    _zp_entry = (
+                        self.character_strategy.card(cid)
+                        if getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID else None)
+                    _zp_is_attack = bool(
+                        _zp_observed == "attack"
+                        or (_zp_entry is not None
+                            and _zp_entry.card_type == "attack"))
                 if (not _hp_gate_hit and _hp_zero_pressure and _hp_pay > 0.0
                         and incoming <= 0 and _hp_free_relief <= 0.0
                         and not race_allin and not kill_race
                         and cctx.get("node_type") == "Monster"
                         and "可击杀" not in why
                         and not re.search(r"kills=[1-9]", why)):
-                    _hp_gate_hit = True
-                    why += (f"｜謦欬零压付血闸：普通战意图{float(incoming):.0f}"
-                            f"非竞速回合实付{_hp_pay:g}血买提速零收益，视同门拦"
-                            "（VIVHITE_HP_ZERO_PRESSURE_GATE）")
-                    _hp_gate_blocked.append(
-                        (c.get("index"), c.get("name") or cid,
-                         _hp_pay, 0.0, score, 0, "ZERO_PRESSURE"))
+                    if _zp_is_attack:
+                        # 纯注记：豁免不改评分/门带，只对账「本打会被零压闸拦」
+                        why += ("｜零压回合謦欬攻击豁免：攻击牌仍按余量门带计价"
+                                "参选，仅非攻击謦欬视同门拦"
+                                "（VIVHITE_HP_ZP_ATTACK_EXEMPT）")
+                    else:
+                        _hp_gate_hit = True
+                        why += (f"｜謦欬零压付血闸：普通战意图{float(incoming):.0f}"
+                                f"非竞速回合实付{_hp_pay:g}血买提速零收益，视同门拦"
+                                "（VIVHITE_HP_ZERO_PRESSURE_GATE）")
+                        _hp_gate_blocked.append(
+                            (c.get("index"), c.get("name") or cid,
+                             _hp_pay, 0.0, score, 0, "ZERO_PRESSURE"))
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
