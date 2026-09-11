@@ -11084,3 +11084,14 @@
 - 当前低价值卡牌：BULLY(10分/2.7261103376090885局)，HAVOC(11分/2.1808882700872685局)，STRIKE_IRONCLAD(12分/7.087886877783637局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1408 胜，当前目标进阶 0
+
+## 第 1409 局复盘（2026-09-12 01:44）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_NECTAR+BOWLBUG_ROCK
+- 本局拿牌：ARMAMENTS, HOWL_FROM_BEYOND, CINDER, SHRUG_IT_OFF, TWIN_STRIKE, BREAKTHROUGH, HEADBUTT, FORGOTTEN_RITUAL, CINDER, TWIN_STRIKE, IMPERVIOUS, BREAKTHROUGH, HOWL_FROM_BEYOND, CINDER, PYRE, EXPECT_A_FIGHT, ARMAMENTS, TWIN_STRIKE, BLUDGEON, FEEL_NO_PAIN, STOMP, RAGE, HEMOKINESIS
+- 本局遗物：HAPPY_FLOWER, PENDULUM, JOSS_PAPER, ANCHOR, PANTOGRAPH
+- 战斗记录：F19 Monster战 掉血12; F20 Monster战 掉血9｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血32; F27 Unknown战 掉血37｜自损5（可行动段5/非行动段28，SELF_LOSS_PHASE_OBS）; F30 Elite战 掉血37｜竞速审计：T2判死→实战6回合获胜; F31 Monster战 掉血8（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.0420709249428572局)，PROWESS(25分/5.167200573998465局)，PACTS_END(25分/93.51280680212018局)，OFFERING(25分/23.95720837664357局)，PERFECTED_STRIKE(24分/5.132880925720869局)
+- 当前低价值卡牌：BULLY(10分/2.716568951427457局)，HAVOC(11分/2.173255161141963局)，STRIKE_IRONCLAD(12分/7.063079273711395局)
+- 策略进化：block_safety: 1.81 → 1.86（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.39 → 0.40（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.86 → 1.85（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1409 胜，当前目标进阶 0
