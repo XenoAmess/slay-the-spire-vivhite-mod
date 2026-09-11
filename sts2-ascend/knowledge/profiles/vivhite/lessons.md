@@ -7157,3 +7157,14 @@
 - 当前低价值卡牌：RESTLESSNESS(17分/2.074158182249435局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.0915612601452036局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.2197071403364776局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct: 0.86 → 0.88（Boss 低血进场磨死（进场 57%），入场血量要求线上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿20张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.61 → 0.61（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））
 - 生涯战绩：1/647 胜，当前目标进阶 1
+
+## 第 648 局复盘（2026-09-11 09:40）
+- 结果：💀 失败｜进阶 1｜到达层数 14｜当局评分 14
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_HEURISTIC_SHIELD, CALAMITY, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：STRAWBERRY, POTION_BELT
+- 战斗记录：F4 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血11｜自损12（可行动段12/非行动段11，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损16（可行动段16/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Unknown战 掉血19｜自损18（可行动段18/非行动段24，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血19｜自损24（可行动段24/非行动段13，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血47｜自损18（可行动段18/非行动段26，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(41分/7.132152246880193局)，OMNISLICE(38分/3.7430023177515297局)，THINKING_AHEAD(36分/2.183251819322528局)，PROWESS(35分/17.78954690779409局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/3.622556874451684局)
+- 当前低价值卡牌：RESTLESSNESS(17分/2.066898628611562局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.0842407957346953局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.2084381653453002局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/648 胜，当前目标进阶 1
