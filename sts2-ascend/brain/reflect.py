@@ -721,6 +721,30 @@ def finalize_run(know: Knowledge, ctx, victory: bool, final_floor: int) -> str:
                 else:
                     _adj(know, "vivhite_param_life_cost_weight", 0.025, changes,
                          f"行至 F{final_floor}——白绮生命支付权重部分胜利回收（锚点-1.25）")
+            # 謦欬接替链下游双旋钮的部分胜利回收（第 685~696 局批复盘新增）：
+            # vivhite_hp_cost_play_margin（0→3.0）与 vivhite_life_cost_deck_cap
+            # （60→15）此前是纯单向棘轮——1/696 胜率生涯里收紧通道把它们推向
+            # BOUNDS 顶/底后永久封账（696 局 lessons 同局两次「三级旋钮全尽，
+            # 謦欬证据彻底停止吸收并留痕」：margin 3.00 顶格、cap 15.00 触底、
+            # weight -2.98 触底，本局仍拿 21 张生命支付牌、F31 自损27/掉血47=
+            # 57% 阵亡；559 局起同一封账形态跨批复现），与第 494 批
+            # kill_race_prior_eff 死锁及上方 block_safety 等旋钮的「全键顶格是
+            # 系统稳态」诊断同构。行至 F18+（一幕 Boss 已实战击败）证伪「顶格
+            # 门带/软顶水平必不可少」，按收紧步长的半量（-0.25 / +2.5）只回收
+            # 被推离锚点（0.0 / 60.0）的部分，让謦欬证据链恢复双向流动、在中档
+            # 水平重新检验门带/软顶对謦欬死亡占比的影响；同局自损主导死亡时与
+            # life_cost_weight 回收同守卫（证据方向相反，回收让位、不改值，
+            # 上方让位留痕已覆盖三旋钮）。回收速度（半量步长）低于证据累积
+            # 速度（全步长收紧），健康值不被推过锚点。
+            if _vivhite_profile and not _self_dominant_death:
+                if pol.get("vivhite_hp_cost_play_margin", 0.0) > 0.0:
+                    _adj(know, "vivhite_hp_cost_play_margin", -0.25, changes,
+                         f"行至 F{final_floor}——謦欬出牌余量门部分胜利回收"
+                         "（锚点0.0，半量步长）")
+                if pol.get("vivhite_life_cost_deck_cap", 60.0) < 60.0:
+                    _adj(know, "vivhite_life_cost_deck_cap", 2.5, changes,
+                         f"行至 F{final_floor}——謦欬血税软顶部分胜利回收"
+                         "（锚点60.0，半量步长）")
     else:
         _adj(know, "block_safety", -0.02, changes, "胜利证明当前攻防平衡可行，轻微放开进攻")
         _adj(know, "elite_grey_safety_mult", -0.1, changes, "胜利证明当前精英规避强度足够，放宽灰区悲观系数")

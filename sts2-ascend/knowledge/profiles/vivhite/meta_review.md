@@ -1837,3 +1837,71 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 685~696 局批复盘：謦欬接替链下游双旋钮纯单向棘轮永久封账——部分胜利回收通道补齐（margin/cap 双向化）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬证据链的三级接替旋钮中，life_cost_weight 有 F18+
+  部分胜利回收与胜利回收通道，但下游两个接替旋钮
+  vivhite_hp_cost_play_margin（0→3.0 收紧）与
+  vivhite_life_cost_deck_cap（60→15 收紧）是纯单向棘轮。在 1/696 胜率的
+  生涯里，收紧通道结构性保证它们被推向 BOUNDS 顶/底并永久封账——与第
+  494 批 kill_race_prior_eff 死锁、以及 reflect 内 block_safety 等旋钮
+  「全键顶格是系统稳态而非边角」的既有诊断同构。补上与 life_cost_weight
+  同构的 F18+ 部分胜利回收（半量步长、只回收离锚部分、自损主导同守卫
+  让位），謦欬证据链恢复双向流动，系统才能在中档门带/软顶水平重新检验
+  謦欬死亡占比，而不是永远停在「三级旋钮全尽」的封账稳态。
+- **EVIDENCE**：第 696 局（TSNBN99Z1GR0，F31 负于 HUNTER_KILLER）lessons
+  同局两次记「三级旋钮全尽，謦欬证据彻底停止吸收并留痕」（weight -2.98
+  触底余量 0.02、余量门 3.00 顶格余量 0.00、血税软顶 15.00 触底余量
+  0.00）；本局仍拿 21 张生命支付牌，致命 Monster 战自损27/掉血47=57%。
+  full_failure_run 逐条复核：F31 T4（23 血/意图 21）余量门拦下全场最高
+  伤牌【尺度变换+】（实付4血，score 8.43 ≤ 阈值0.40+门带12.0，
+  VIVHITE_HP_PLAY_MARGIN_GATE），空留 2 能量结束回合；僵局放行链
+  「连续低危拦截1/6」在 6 回合内结构不可达，T6 零甲吃 21 意图阵亡。
+  同一封账形态跨批复现：559 局 30.0 触底封账→553~559 批扩档 15.0→
+  696 局 15.0 再次触底封账；本批 685~696 共 12 局全负（进阶1），达
+  evidence_run_threshold（696/695/694 等连续多局同型留痕）。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 非自损主导的 F18+ 局 lessons
+  出现「謦欬出牌余量门部分胜利回收（锚点0.0，半量步长）」与「謦欬血税
+  软顶部分胜利回收（锚点60.0，半量步长）」条目，policy.json 中 margin
+  自 3.00 每局 -0.25 下移、cap 自 15.0 每局 +2.5 上移；② 自损主导
+  （自损≥掉血50%）死亡局双旋钮不改值、让位留痕照旧、三级封账留痕不被
+  吞；③ 旋钮离开顶/底后，后续謦欬死亡证据重新被吸收（knob 变动取代
+  「彻底停止吸收」封账）。证伪/撤回：F18+ 非自损主导局反复出现而回收
+  条目零显形→复查接线；若旋钮振荡且謦欬死亡占比无变化，说明封账稳态
+  并非约束（撤回=删除本批 reflect 新增块与 3prg2 夹具，旋钮行为逐字
+  回旧单向棘轮）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/reflect.py：finalize_run 的 F18+ 部分胜利回收段新增
+  謦欬接替链下游双旋钮回收——_vivhite_profile 且非自损主导时，
+  vivhite_hp_cost_play_margin >0 按 -0.25（收紧步长 0.5 的半量）向锚点
+  0.0 回收，vivhite_life_cost_deck_cap <60 按 +2.5（收紧步长 5.0 的半量）
+  向锚点 60.0 回收；BOUNDS 钳制与 _adj 留痕复用既有机制；自损主导死亡
+  局与 life_cost_weight 回收同一守卫让位（不改值，上方让位留痕已覆盖
+  三旋钮）。收紧通道、门带语义、BOUNDS、其余旋钮逐字不变。
+- sts2-ascend/brain/selfcheck.py：新增 3prg2 两夹具——① 非自损主导
+  F18+（floor25，自损20/掉血90）margin 3.00→2.75、cap 15.0→17.5 且
+  双留痕入 lesson；② 自损主导 F18+（floor25，自损73/掉血90，三旋钮
+  全尽初值）双旋钮不改值、无回收留痕、三级封账留痕保留。
+- 不改 play_threshold/门带公式/致死豁免/僵局放行闩锁/复打税/零压闸；
+  不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3prg2 两
+  夹具；既有 3pra/3prg 謦欬通道族、3prh 余量门族、3pri 僵局放行族、
+  3prz 零压闸族、3tsi 并入观测族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- 完整 diff 已回读：brain/reflect.py（+24，F18+ 回收段一块）、
+  brain/selfcheck.py（+39，3prg2 两夹具）；未触碰只读在线状态；克隆
+  残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -2748,6 +2748,45 @@ def main() -> int:
     assert "部分胜利回收让位" not in vlesson_nd, \
         f"非自损主导局不得出现回收让位留痕: {vlesson_nd[-400:]}"
 
+    # 3prg2) 謦欬接替链下游双旋钮的部分胜利回收（第 685~696 局批复盘）：
+    #      vivhite_hp_cost_play_margin（0→3.0）与 vivhite_life_cost_deck_cap
+    #      （60→15）原为纯单向棘轮——696 局 lessons 同局两次「三级旋钮全尽，
+    #      謦欬证据彻底停止吸收并留痕」（margin 3.00 顶格、cap 15.00 触底、
+    #      weight -2.98 触底，本局仍拿 21 张生命支付牌、F31 自损27/掉血47=
+    #      57% 阵亡）。非自损主导的 F18+ 局必须按收紧步长的半量回收
+    #      （margin -0.25、cap +2.5，只回收被推离锚点的部分）并留痕；
+    #      自损主导的同局回收让位、双旋钮不改值（与 life_cost_weight 同守卫）。
+    vknow_rel = _vivhite_know("sts2-selfcheck-vhlife-rel-")
+    vknow_rel.policy["vivhite_hp_cost_play_margin"] = 3.0
+    vknow_rel.policy["vivhite_life_cost_deck_cap"] = 15.0
+    vlesson_rel = finalize_run(vknow_rel, _vivhite_death_ctx(20.0, 90.0),
+                               victory=False, final_floor=25)
+    assert abs(vknow_rel.policy["vivhite_hp_cost_play_margin"] - 2.75) < 1e-9, \
+        ("非自损主导 F18+ 局余量门必须半量回收（3.00→2.75）: "
+         f"{vknow_rel.policy.get('vivhite_hp_cost_play_margin')}")
+    assert abs(vknow_rel.policy["vivhite_life_cost_deck_cap"] - 17.5) < 1e-9, \
+        ("非自损主导 F18+ 局血税软顶必须半量回收（15.0→17.5）: "
+         f"{vknow_rel.policy.get('vivhite_life_cost_deck_cap')}")
+    assert "謦欬出牌余量门部分胜利回收" in vlesson_rel \
+        and "謦欬血税软顶部分胜利回收" in vlesson_rel, \
+        f"下游双旋钮部分胜利回收未留痕: {vlesson_rel[-400:]}"
+    vknow_rel2 = _vivhite_know("sts2-selfcheck-vhlife-rel2-")
+    vknow_rel2.policy["vivhite_param_life_cost_weight"] = -3.0
+    vknow_rel2.policy["vivhite_hp_cost_play_margin"] = 3.0
+    vknow_rel2.policy["vivhite_life_cost_deck_cap"] = 15.0
+    vlesson_rel2 = finalize_run(vknow_rel2, _vivhite_death_ctx(73.0, 90.0),
+                                victory=False, final_floor=25)
+    assert abs(vknow_rel2.policy["vivhite_hp_cost_play_margin"] - 3.0) < 1e-9 \
+        and abs(vknow_rel2.policy["vivhite_life_cost_deck_cap"] - 15.0) < 1e-9, \
+        ("自损主导同局下游双旋钮回收必须让位（不改值）: "
+         f"{vknow_rel2.policy.get('vivhite_hp_cost_play_margin')}/"
+         f"{vknow_rel2.policy.get('vivhite_life_cost_deck_cap')}")
+    assert "謦欬出牌余量门部分胜利回收" not in vlesson_rel2 \
+        and "謦欬血税软顶部分胜利回收" not in vlesson_rel2, \
+        f"自损主导局不得出现下游旋钮回收留痕: {vlesson_rel2[-400:]}"
+    assert "三级旋钮全尽" in vlesson_rel2 and "彻底停止吸收并留痕" in vlesson_rel2, \
+        f"自损主导局三级封账留痕不得被回收通道吞掉: {vlesson_rel2[-400:]}"
+
     # 3prh) 謦欬出牌余量门（VIVHITE_HP_PLAY_MARGIN_GATE，第 165~169 局批复盘）：
     #      169 局 F17 实战 VIVHITE_LIVE_ESTIMATE=-16.30 的謦欬牌仍过普通出牌
     #      阈值被打出（自损71/掉血78=91% 阵亡）——非致死回合謦欬实付每点按
