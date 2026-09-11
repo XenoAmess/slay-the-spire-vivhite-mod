@@ -7993,3 +7993,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.316309610094419局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.3418192685657324局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/49.26334374875181局)
 - 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（5回合掉血89，每回合18≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/723 胜，当前目标进阶 1
+
+## 第 724 局复盘（2026-09-12 04:07）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TANGENT_STARLIGHT
+- 本局遗物：VENERABLE_TEA_SET, TOXIC_EGG, JOSS_PAPER
+- 战斗记录：F4 Monster战 掉血0｜自损3（可行动段3/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血6｜自损12（可行动段12/非行动段17，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血10｜自损16（可行动段16/非行动段8，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损10（可行动段10/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血9｜自损17（可行动段17/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血80｜自损22（可行动段22/非行动段50，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/8.141500954562192局)，HAND_OF_GREED(36分/10.810686455923554局)，OMNISLICE(36分/8.78974506388906局)，MAYHEM(36分/2.0842380334327353局)，PROWESS(36分/17.036944109694062局)
+- 当前低价值卡牌：CALAMITY(22分/2.3082025264590884局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.3301229011257525局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/49.09092204563118局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血80，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：1/724 胜，当前目标进阶 1
