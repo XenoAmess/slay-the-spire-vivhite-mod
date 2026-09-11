@@ -7787,8 +7787,13 @@ def main() -> int:
     #      812-F9 实证——PHROG 塞手的 INFECTION（不能被打出，回合结束每张3伤）
     #      终局 4 张=12/回合，与意图 20 合计致死；竞速投影/防守复核火力账对此
     #      零感知。税>0 的竞速判决必须带「HAND_TAX_FIRE_OBS」+税额明细留痕；
-    #      ① 无税同局面 → 留痕缺席且判决文本与有税局面一致（纯观测锚：税
-    #      观测不改变任何判决）；② 观测键置 False → 留痕消失（回滚锚）。
+    #      ① 无税同局面 → 留痕缺席；② 观测键置 False → 留痕消失（回滚锚）。
+    #      第1388~1392局批复盘起判决侧行为化（RACE_HAND_TAX_FIRE，预注册
+    #      「税后反事实翻转 ≥3 独立对局」807/812/1392 达线）：存活分母与
+    #      对账火力按 max(火力, 意图+税) 入账，留痕改「计入对账火力」；
+    #      ③ 行为锚：同局面有税（3/回合）的可存活读数严格低于无税对照；
+    #      ④ race_hand_tax_fire=False → 回滚旧口径（旧「未计入」留痕文本
+    #      复原、可存活读数与无税对照一致）。
     htx_ctx = type("HTXCTX", (), {"combat": None, "current_combat_is_hard": False,
                                   "credit_tags": []})()
     htx_ctx.combat = {"comp_id": "HTX_RACE_COMP", "node_type": "Monster"}
@@ -7827,9 +7832,10 @@ def main() -> int:
     pol_htx._krace_turns = 2
     pol_htx._krace_dmg = pol_htx._krace_dmg_sustained = 11.0
     d_htx = pol_htx.decide(htx_state(26, True), htx_ctx)
-    assert "HAND_TAX_FIRE_OBS" in d_htx.reason and "手牌税3/回合未计入对账火力" in d_htx.reason, \
-        f"手牌滞留税对账火力观测留痕缺失: {d_htx.action}（{d_htx.reason}）"
-    # ① 无税对照：判决口径一致（同判死路径），观测留痕必须缺席
+    assert "HAND_TAX_FIRE_OBS" in d_htx.reason and "手牌税3/回合计入对账火力" in d_htx.reason \
+        and "RACE_HAND_TAX_FIRE" in d_htx.reason, \
+        f"手牌滞留税对账火力入账留痕缺失: {d_htx.action}（{d_htx.reason}）"
+    # ① 无税对照：观测留痕必须缺席
     pol_htx0 = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxfire0-"))), random.Random(11))
     accepted_combat(pol_htx0, htx_state(4, False), htx_ctx)
@@ -7848,6 +7854,36 @@ def main() -> int:
     d_htx_off = pol_htx_off.decide(htx_state(26, True), htx_ctx)
     assert "HAND_TAX_FIRE_OBS" not in d_htx_off.reason, \
         f"观测键关闭后留痕未消失: {d_htx_off.reason}"
+
+    def _htx_tsurv(reason):
+        _m = re.search(r"可存活(\d+)回合", reason)
+        return int(_m.group(1)) if _m else None
+
+    # ③ 行为锚（RACE_HAND_TAX_FIRE）：同局面税 3/回合把可存活账压低——
+    #    存活分母按 max(火力, 意图+税) 入账（EMA 已含历史实付税，max 不重复
+    #    计价），1392-F17-T6 型「联合复核幻影可行」的火力缺口进账
+    _htx_t_tax = _htx_tsurv(d_htx.reason)
+    _htx_t_none = _htx_tsurv(d_htx0.reason)
+    assert _htx_t_tax is not None and _htx_t_none is not None \
+        and _htx_t_tax < _htx_t_none, \
+        f"手牌税未压低开税局面可存活读数: 有税={_htx_t_tax} 无税={_htx_t_none}" \
+        f"（{d_htx.reason}｜{d_htx0.reason}）"
+    # ④ 回滚对照：race_hand_tax_fire=False → 判决口径回旧版（可存活读数与
+    #    无税对照一致），观测留痕恢复「未计入」旧文本
+    pol_htx_roff = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxfireroff-"))),
+        random.Random(11))
+    pol_htx_roff.know.policy["race_hand_tax_fire"] = 0
+    accepted_combat(pol_htx_roff, htx_state(4, True), htx_ctx)
+    pol_htx_roff._krace_turns = 2
+    pol_htx_roff._krace_dmg = pol_htx_roff._krace_dmg_sustained = 11.0
+    d_htx_roff = pol_htx_roff.decide(htx_state(26, True), htx_ctx)
+    assert "手牌税3/回合未计入对账火力" in d_htx_roff.reason \
+        and "RACE_HAND_TAX_FIRE" not in d_htx_roff.reason, \
+        f"race_hand_tax_fire=0 回滚后旧留痕口径未复原: {d_htx_roff.reason}"
+    assert _htx_tsurv(d_htx_roff.reason) == _htx_t_none, \
+        f"race_hand_tax_fire=0 回滚后可存活读数未回旧口径: " \
+        f"{_htx_tsurv(d_htx_roff.reason)} != {_htx_t_none}（{d_htx_roff.reason}）"
     # ③ 单候选精英留痕诚实化（第808~812局批复盘）：812-F8 唯一候选时旧留痕
     #    写「其余候选评分更差，取损失最小项」属无中生有——必须写明强制进场
     htx_map_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxmap-"))

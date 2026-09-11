@@ -8812,3 +8812,160 @@ retry_resolution: none (no replay target; local production behavior change + obs
    悲观率台账（388/863，应验 +4 反向 +0）；⑤「可击杀击倒武装自爆」
    相变（1380-T9 型）再计数，≥2 独立对局直接改写生死则立项击倒前夜
    豁免；⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。
+
+# 2026-09-11｜第 1388~1392 局复盘（异步追及队列 5 局 exact_batch 全败；行为改动 ×1：RACE_HAND_TAX_FIRE 手牌滞留税入竞速判决——808~812 批预注册「税后反事实翻转 ≥3 独立对局」达线行为化）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无队列内失败包，不产生 replay target。
+- 上一批（1383~1387）last_paths 关键标签存在性核读：INVULN_TARGET_VETO
+  （policy.py 5195+/5456+/5612+ 与救场侧 4825+、knowledge.py
+  `invuln_target_attack_veto`、selfcheck 3ww④ 系列）在当前 HEAD 全部在产，
+  且本批 1391 局完成真机首验（见二.3），无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: none (no replay target; local production behavior change)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判决侧的火力账（tsurv 存活分母与防守线复核
+  _feas_fire）对手牌滞留税零感知——而该类税（毒素/感染/呼唤）是不进格挡
+  结算管线的确定性每回合 HP 伤害，「防守可行」判决会被税负翻成死亡。
+  808~812 批预注册「税后火力反事实翻转判决 ≥3 独立对局 → 下一批实施
+  对账火力=max(火力, 意图+手牌税）」：807-F23（毒素两回合 20）、812-F9
+  （感染税 12 与意图 20 合计 32 致死）之后，本批 1392 提供第三个翻转
+  独立对局，达线行为化。
+- **EVIDENCE**：1392（TTPM83HRE5P4）F17 灵魂异鱼战逐条核读——T6 起
+  HAND_TAX_FIRE_OBS:BECKON×2（12/回合）注记在产；T6 联合复核报
+  「格挡3+输出13/回合的混合分配可行」（锁持不翻案），但税后真实火力
+  ≈19~25 把 38 血可存活压到 ≈2 回合；HP 链 38→32 即 T6 末税 -6、
+  T7 末再 -6（税合计 12，占全场掉血 69 的 17%），实战 T8 阵亡
+  （竞速审计 T2判死→实战8回合阵亡应验）；可行动段自损仅 2，非行动段
+  65 中含税 12（SELF_LOSS_PHASE_OBS 口径可复算）。
+- **EXPECTED_SIGNAL**：未来 3~10 局税负战斗（SOUL_FYSH/PHROG/MYTE 族）：
+  ① 竞速判决留痕改书「手牌税N/回合计入对账火力=max（火力，意图+税）
+  （…RACE_HAND_TAX_FIRE）」；② 1392-T6 型「联合复核幻影可行」在税负
+  局减少（税后火力真实进账，防守路线不再被税负翻案）；③ 已判死局的
+  结论方向不变（税只让判死更早/更准）；④ race_audit 悲观率台账不因本
+  改动系统性越带（>46% 上限）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1388..1392]，exact 5/5、missing=0；5 局全败（生涯
+  0/1392）。死亡分布：一幕 Boss F17 两局（1388/1392）、二幕 Boss F33
+  两局（1389/1390）、一幕走廊 F23 一局（1391，HUNTER_KILLER）。
+- 主样本 1392 packet 内 30 条切片 + 聚合表（play_card 111/end_turn 47）
+  已逐条核读：F1 涅奥营养牡蛎（经验口径合规）、F2/F3 选牌带
+  CARD_BURST_PICK_AUDIT（supply_left=+0.0 在产）、F17 终局链见
+  HYPOTHESIS；1391（X1LYRGJN4TZD）F17 瀑布巨兽全链核读（veto 首验，
+  见二.3）。
+- 部署时序：INVULN_TARGET_VETO（37ab90d7，07:09 落盘）晚于
+  1388（03:02）/1389（05:41）/1390（07:03）启程、早于 1391（07:49）/
+  1392（08:40）——1389-F17-T11 剑柄打击打进无敌帧目标属 pre-fix 口径
+  （与 1379/1380/1381 同族残余），不计入 veto 失效证据；1391/1392 为
+  veto 有效窗口。RACE_HAND_TAX_FIRE 为本批新落地，不覆盖本批任何对局
+  决策，证据与修复无时序混淆。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 五局前夜/终局竞速预演判死全部实战
+   兑现或越墙后兑现（1389/1390 一幕 Boss 判死后实战获胜、二幕 Boss
+   判死阵亡）；旋钮代谢链全顶格（kill_bonus 20.00、burst_starve 双旋钮、
+   饥饿带、前夜锻造线、长战加成上限、kill_race_prior_eff 触底）——
+   判死缺口属设计内终态，不重复立案。
+2. **本批实验靶点：手牌滞留税的竞速判决侧入账（预注册达线行为化）。**
+   详见 HYPOTHESIS 与三节；机制前提经原生 runtime 语料核读
+   （BECKON「失去6点生命」/INFECTION「受到3点伤害」措辞均在
+   hand_end_turn_tax 正则口径内），非估值争议。
+3. **INVULN_TARGET_VETO 真机首验（1391，逐字符合设计）**：F17 T8 痛击
+   击倒进 AboutToBlow 后，「敌无敌帧×1（HP=999999966≥100000）剔除出
+   竞速血池+全场无敌相竞速迟滞锁解除」在产，剩余四张攻击全体弃权
+   （评估后无值得出的牌）、「全场无敌帧，攻击救场禁出」留痕在产；
+   T9 意图 33 自爆相打 坚毅+防御 补 12 甲、持 打击/暴走+ 空过——攻击
+   能量全部让给格挡，与 1380-T11 型「31 伤打进无敌目标后 5 甲吃 36」
+   相反。1391 实战 9 回合获胜。首验 1/3，续记。
+4. **REMOVAL_COST_FLIP_AUDIT 连续全随附链断裂（本批 5 随附 2 翻案）**：
+   1389 F8 双尾鼠（9池≤峰值20一半）、F25 啃咬机（16池≤峰值46一半）
+   两条「减员成本翻案（去除减员分后火线旁落）」——杠杆首次显示可分辨
+   的独立行为效应，翻案独立对局计数 1/3。上批登记的「宿主撤回窄动作
+   （policy.json 写 removal_cost_bonus_max: 0）」建议按本批新证据暂缓：
+   连续全随附批次链已断，撤回前提不再成立；翻案计数 ≥3 按 KIN 基线
+   裁决保留/调系数，或再连续 ≥2 批全随附再议撤回。
+5. **竞速审计悲观率台账**：本批判死应验 +5（1388 F17、1389 F33、
+   1390 F33、1391 F23、1392 F17），反向 +3（1389/1390/1391 F17 判死后
+   获胜）——台账 391/871≈44.9%，仍处 30%~46% 带内偏上限，续记不重复
+   立案。
+6. **SLIPPERY_TTK_BREAK_EST 续记**：1390×4 条读数（破层期口径在产），
+   贴线 X≥2 计数本批 0，续记。
+7. **EXHAUST_FIZZLE_EXEMPT / EXHAUST_CAP_SKIP_OBS**：本批 0 注记——
+   五局终卡组无痛殴型牌（1388/1389/1391/1392 拿牌清单无 Thrash 族），
+   「无牌可豁」分支续记；豁免疫价/自残旁观 1392×3（呼唤参选无附加），
+   双零关闭条件不达成，续记。
+8. **ENGINE_COMMIT_LOWHP_DISCOUNT / SLEEP_GUARD / SETTLE_TIMEOUT_
+   CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE**：本批无对应现场（无低血承诺
+   原料、无族母遭遇、无结算锁窗签名、无末点格挡竞争），顺延不判失效。
+
+## 三、本次调整（行为改动 ×1：RACE_HAND_TAX_FIRE 手牌滞留税入竞速判决）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RACE_HAND_TAX_FIRE**（竞速判决侧火力账对手牌滞留税零感知，「防守可行」被税负翻成死亡；证据：808~812 批预注册「税后反事实翻转 ≥3 独立对局 → 行为化」+ 807-F23/812-F9 两个在册翻转 + 1392-F17-T6~T8 逐条核读（BECKON×2=12/回合、联合复核幻影可行、税后 38 血可存活≈2 回合、T8 阵亡、税占掉血 12/69）；机制先例：JOINT_FEAS_FIRE_LAG 同款「对账火力取 max（EMA, 当前意图）」下限接线、SANDPIT_EAT_CLOCK_CAP 同款「确定性死亡源封底 tsurv」） |
+| 代码动作 | ① brain/policy.py `_combat_kill_race_projection`：HARD_INTENT_SPIKE_FIRE 段后新增税下限——键 `race_hand_tax_fire`（默认开）且 hand_end_turn_tax(hand)>0 且非 BOSS_SUSTAIN_NET_HP 续航口径时，`loss_rate = max(loss_rate, incoming+税)`，tsurv 与 `_feas_fire`（经 `float(loss_rate)` 同源继承）同时入账；EMA 已含历史实付税，取 max 而非相加避免重复计价，税不经 esc 上浮（不随敌方成长复利）；② 判决留痕诚实化：入账生效时 HAND_TAX_FIRE_OBS 注记改书「手牌税N/回合计入对账火力=max（火力，意图+税）（…，RACE_HAND_TAX_FIRE）」，未生效（键=0/续航口径）时保留旧「未计入」文本；③ brain/knowledge.py DEFAULT_POLICY 新增静态键 `race_hand_tax_fire: 1`，hand_tax_fire_obs 注释同步为纯留痕开关 |
+| 性质边界 | 行为有界：只改竞速判决侧存活分母与对账火力下限——评分面、出牌/格挡分支、姿态乘区、学习面、race_allin（用 _race_loss_rate 原 EMA）全部零改动；白绮 BOSS_SUSTAIN_NET_HP 续航口径显式排除本下限；误判方向恒为「税按 0 计」（hand_end_turn_tax 脏载荷返回 0 即旧口径）；键=0/False 严格回滚旧口径（判决与留痕文本同步复原） |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3htx 扩展：主锚断言改「计入对账火力…RACE_HAND_TAX_FIRE」；③ 新增行为锚——同局面税 3/回合可存活读数严格低于无税对照；④ 新增回滚锚——race_hand_tax_fire=0 时旧「未计入」文本复原且可存活读数与无税一致；3yh/3yhr/3u/3ww/3br/3hcat/3bsl/3htpa/3xcl/3hts 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ①「RACE_HAND_TAX_FIRE」注记首发局与独立对局数（税负战斗占比）；② 税负局「防守线复核…维持攻防节奏」幻影可行判决计数（应较基线下降）；③ 税后判死提前量与 race_audit 台账走向（>46% 越带即复核）；④ BOSS_SUSTAIN_NET_HP 局零叠加核对（白绮 profile 续航注记局不含税下限） |
+| 继续调整条件 | 注记局 ≥3 且税负局「幻影可行」绝迹 → 杠杆封账保留；出现「税下限误杀真续航局」（税后判死但实战防守路线明显可行）≥2 独立对局 → 评估税系数折减（如 ×0.5）或限 Boss/精英；台账 >46% 且集中于税负局 → 复核入账口径 |
+| 撤回条件 | knowledge/policy.json 写 `race_hand_tax_fire: 0` 即判决侧严格回滚旧口径（税只进观测留痕，selfcheck 3htx④ 为对照锚）；或删除 policy/knowledge/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（预注册达线即
+   行为化落地，非登记延后）。
+2. **INVULN_TARGET_VETO（1383~1387 批行为修复）**：真机首验 1/3
+   （1391，见二.3）逐字符合设计；1389-T11 打进无敌目标为 pre-fix 口径
+   （部署时钟 07:09 vs 该局 05:41），不构成失效证据；继续累计至 3 局
+   再裁决封账。
+3. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：连续全随附链
+   断裂（本批 5 随附 2 翻案），翻案独立对局 1/3——上批「应撤回」评估
+   前提（连续 ≥2 批全随附）不再成立，建议宿主暂缓执行
+   `removal_cost_bonus_max: 0` 窄动作，待翻案计数 ≥3 或重新连续全随附
+   ≥2 批再裁决。
+4. **HAND_TAX_FIRE_OBS（808~812 批观测位）**：按预注册达线行为化，
+   观测位升级为判决侧入账（本批三节）；观测键改纯留痕开关保留。
+5. **SLIPPERY_TTK_BREAK_EST**：1390×4 条读数在产，X≥2 贴线 0，续记。
+6. **EXHAUST_FIZZLE_EXEMPT / EXHAUST_CAP_SKIP_OBS**：本批无原料
+   （终卡组无痛殴型牌），零出现非失效，续记；拦截绝迹第 2 批。
+7. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：旁观 1392×3
+   （呼唤参选无附加），豁免疫价 +0；双零关闭条件不达成，续记。
+8. **BURST_STARVE 链**：cap=4.0 冻结封账维持，本批选牌审计
+   supply_left=+0.0 在产（1392 F2/F3），无误伤反例。
+9. **JOINT_FLIP_TTK_CAP / RACE_ESC_LATCH_HOLD**：1392 T6~T8、1390 F33
+   T5、1391 F17 锁持留痕在产；1392 的「虽报可行」幻影由本批税入账
+   直接治理（税后火力进账即可行判决不再凭空开出），续记复核。
+10. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    ENGINE_COMMIT_LOWHP_DISCOUNT / SLEEP_GUARD 首 tick 穿透）：本批无
+    对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **部署时钟是「修复失效」指控的第一道筛**：1389-T11 剑柄打击打进
+   无敌帧目标看似 INVULN_TARGET_VETO 失效，git 时钟（37ab90d7 落盘
+   07:09 vs 该局启程 05:41）一句话判为 pre-fix 证据——凡「新修复在
+   随后局复发」先核对局启程时刻与修复落盘时刻，再决定是否立案。
+2. **预注册线达线即行为化，不再消耗额外首验窗口**：HAND_TAX_FIRE_OBS
+   观测位 808~812 批注册时写明「≥3 翻转独立对局 → 对账火力=max（火力，
+   意图+税）」，1392 达线当批直接落地并带齐回滚锚——观测位不该成为
+   永久停车场（与 INVULN_TARGET_VETO 批「立项线到期即执行」同教义）。
+3. **观测注记文本必须与判决口径同步诚实化**：判决侧入账后留痕仍写
+   「未计入」就是新一轮无中生有——行为化同一 diff 内同步改书「计入」
+   并保留旧文本的回滚锚（键=0 复原），让 3htx 类夹具同时钉住两种口径。
+4. **观测位的反事实计数可能被同源证据跨批续命**：807/812 的翻转样本
+   沉在 5c0ef496 被回滚又重实现的 lineage 里，跨 500+ 局后才由 1392
+   补到第 3 票——注册观测位时写明「计数在册样本清单」，跨批对账不
+   用重建证据链。
+5. 观察点（下批复盘核对）：① RACE_HAND_TAX_FIRE 注记首发局与税负局
+   判决翻转；② REMOVAL_COST 翻案计数（1/3）与宿主撤回动作暂缓核对；
+   ③ INVULN_TARGET_VETO 第 2~3 局样本与自爆回合格挡量；④ 竞速审计
+   悲观率台账（391/871）；⑤ EXHAUST_FIZZLE_EXEMPT 原料在场局首发；
+   ⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。

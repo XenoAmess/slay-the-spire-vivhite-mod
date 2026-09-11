@@ -3316,6 +3316,28 @@ class Policy:
                         danger_note += (
                             f"；突发唤醒火力取当前意图{float(incoming):.0f}"
                             "（HARD_INTENT_SPIKE_FIRE）")
+                    # 手牌滞留税入竞速判决（RACE_HAND_TAX_FIRE，第1388~1392局
+                    # 批复盘）：HAND_TAX_FIRE_OBS（808~812 批观测位）预注册
+                    # 「税后火力反事实翻转判决 ≥3 独立对局 → 行为化」——
+                    # 807-F23（毒素两回合 20）、812-F9（感染税 12 与意图 20
+                    # 合计致死）之后，1392-F17 灵魂异鱼战 BECKON×2=12/回合
+                    # （T6 联合复核报「格挡3+输出13/回合可行」，税后真实火力
+                    # 把 38 血可存活压到 ≈2 回合，实战 T8 阵亡、税占全场
+                    # 掉血 12/69）——第三个翻转独立对局达线。手牌税是不进
+                    # 格挡结算管线的确定性每回合伤害，存活分母与对账火力按
+                    # max(火力, 意图+税) 入账：边界净损 EMA 已含历史实付税，
+                    # 取 max 而非相加避免重复计价；税不随 esc 上浮（它不随
+                    # 敌方成长复利）。BOSS_SUSTAIN_NET_HP 续航口径（白绮
+                    # Boss 净 HP EMA 已含实付税）不叠加本下限。键=False
+                    # 严格回滚旧口径（税只进观测留痕，判决零改动）。
+                    _race_tax_fire = 0
+                    _race_tax_applied = False
+                    if bool(pol.get("race_hand_tax_fire", True)):
+                        _race_tax_fire = hand_end_turn_tax(hand)[0]
+                    if _race_tax_fire > 0 and not _boss_sustain_net_hp:
+                        loss_rate = max(loss_rate,
+                                        float(incoming) + float(_race_tax_fire))
+                        _race_tax_applied = True
                     # 謦欬自付隔离留痕（第 21~48 局批复盘）：生存分母改按敌方
                     # 归属口径后，复盘必须能在判决现场直接看到已隔离的实测
                     # 自付量，否则无法对账 tsurv 变化来源。纯留痕不改判定。
@@ -3450,9 +3472,18 @@ class Policy:
                     if bool(pol.get("hand_tax_fire_obs", True)):
                         _tax_fire, _tax_fire_detail = hand_end_turn_tax(hand)
                         if _tax_fire > 0:
-                            _tax_fire_note = (
-                                f"；手牌税{_tax_fire:.0f}/回合未计入对账火力"
-                                f"（HAND_TAX_FIRE_OBS:{_tax_fire_detail}）")
+                            if _race_tax_applied:
+                                # 判决侧已按 max(火力, 意图+税) 入账
+                                # （RACE_HAND_TAX_FIRE，第1388~1392局批复盘），
+                                # 留痕口径同步诚实化，不再写「未计入」。
+                                _tax_fire_note = (
+                                    f"；手牌税{_tax_fire:.0f}/回合计入对账火力"
+                                    "=max(火力,意图+税)（HAND_TAX_FIRE_OBS:"
+                                    f"{_tax_fire_detail}，RACE_HAND_TAX_FIRE）")
+                            else:
+                                _tax_fire_note = (
+                                    f"；手牌税{_tax_fire:.0f}/回合未计入对账火力"
+                                    f"（HAND_TAX_FIRE_OBS:{_tax_fire_detail}）")
                     # 防守线复核（第435~440批复盘）：旧投影的可存活回合数=裸血÷意图
                     # 火力——把格挡整项忽略，而格挡吞吐恰是防守路线可行性的第一变量。
                     # 后果是自证死期的预言闭环：投影判死 → 全攻提速 blk×0.7 →
