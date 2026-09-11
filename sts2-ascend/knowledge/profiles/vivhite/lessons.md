@@ -7971,3 +7971,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.332609300735634局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/35.13720674497391局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.3653353909437995局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：1/721 胜，当前目标进阶 1
+
+## 第 722 局复盘（2026-09-12 03:36）
+- 结果：💀 失败｜进阶 1｜到达层数 6｜当局评分 6
+- 死因：敌人组合 INKLET
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血12｜自损16（可行动段16/非行动段8，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血23｜自损22（可行动段22/非行动段0，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血22｜自损26（可行动段26/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血21｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/8.198792063806051局)，OMNISLICE(36分/7.848085523505938局)，HAND_OF_GREED(36分/10.8867604160206局)，MAYHEM(36分/2.0989046544317405局)，PROWESS(36分/17.156831760830805局)
+- 当前低价值卡牌：CALAMITY(22分/2.3244451681830594局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/35.0142265213665局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.3535567170754965局)
+- 策略进化：block_safety: 1.99 → 2.04（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/722 胜，当前目标进阶 1
