@@ -8026,3 +8026,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.292073384254824局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.3068528348234114局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/48.74788695510683局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：1/726 胜，当前目标进阶 1
+
+## 第 727 局复盘（2026-09-12 04:47）
+- 结果：💀 失败｜进阶 1｜到达层数 20｜当局评分 20
+- 死因：敌人组合 BOWLBUG_NECTAR+BOWLBUG_ROCK
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：HAPPY_FLOWER, BRONZE_SCALES
+- 战斗记录：F12 Monster战 掉血18｜自损29（可行动段29/非行动段27，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血7｜自损18（可行动段18/非行动段30，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血0｜自损26（可行动段26/非行动段32，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血28｜自损41（可行动段41/非行动段38，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F19 Monster战 掉血24｜自损24（可行动段24/非行动段0，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血61｜自损25（可行动段25/非行动段31，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/8.056314045632517局)，HAND_OF_GREED(36分/10.69757107735543局)，OMNISLICE(36分/8.697775386989004局)，MAYHEM(36分/2.062430040467715局)，PROWESS(36分/16.85868157377933局)
+- 当前低价值卡牌：CALAMITY(22分/2.2840511274099327局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.2952788499015297局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/49.577269350763956局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（高速失血爆毙（4回合掉血61，每回合15≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；block_safety: 2.07 → 2.06（行至 F20（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F20——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F20——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F20——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F20——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：1/727 胜，当前目标进阶 1
