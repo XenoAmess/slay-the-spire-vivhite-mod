@@ -7916,3 +7916,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.3738621054872238局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/35.75861742395453局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.4248522263445826局)
 - 策略进化：block_safety: 1.91 → 1.96（高速失血爆毙（4回合掉血68，每回合17≥14）——按「没挡住」证据上调防御权重）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.38 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.96 → 1.95（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/716 胜，当前目标进阶 1
+
+## 第 717 局复盘（2026-09-12 02:48）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RECURRENT_STARLIGHT, THINKING_AHEAD, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD
+- 本局遗物：RED_MASK, STRIKE_DUMMY, BRONZE_SCALES, REGAL_PILLOW
+- 战斗记录：F6 Monster战 掉血0｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血0｜自损18（可行动段18/非行动段7，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血18｜自损17（可行动段17/非行动段12，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血0｜自损7（可行动段7/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血1｜自损8（可行动段8/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血77｜自损24（可行动段24/非行动段38，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/8.343789842945666局)，OMNISLICE(36分/7.98688096587722局)，MAYHEM(36分/2.136024331470741局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/2.8441278968712917局)，PROWESS(35分/16.449680880803886局)
+- 当前低价值卡牌：CALAMITY(22分/2.3655535881180185局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/35.633462262970696局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.412865243552377局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：1/717 胜，当前目标进阶 1
