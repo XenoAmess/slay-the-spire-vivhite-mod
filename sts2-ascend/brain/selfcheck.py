@@ -8380,6 +8380,11 @@ def main() -> int:
     assert d_br_urgent_smith.tags and d_br_urgent_smith.tags[0] == ("rest", "smith") \
         and "必败弃疗改锻造" in d_br_urgent_smith.reason, \
         f"乐观口径也无解时应维持必败锻造: {d_br_urgent_smith.reason}"
+    # 3br-esha-flag（BOSS_EVE_SMITH_HEAL_AUDIT，第1393~1398局批复盘）：必败弃疗
+    # 改锻造必须把「入场血+被弃封顶回血」挂上对账旗标，供紧接的 Boss 战结算
+    # 对账「回血买不到生还」判词；回血侧决策必须灭旗（见下方 audit-heal 锚）。
+    assert getattr(br_pol, "_eve_doom_smith", None) == {"hp": 20.0, "heal": 24.0}, \
+        f"必败弃疗改锻造未挂对账旗标: {getattr(br_pol, '_eve_doom_smith', None)}"
     br_pol._boss_race_doomed = _br_doomed
     br_pol._race_joint_feasible = _br_joint
     # 数据未成熟回落（无血池/火力学样的空库）：行为与旧版严格一致（翻转带回血）
@@ -8492,6 +8497,8 @@ def main() -> int:
     assert d_br_audit_heal.tags and d_br_audit_heal.tags[0] == ("rest", "heal") \
         and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_heal.reason, \
         f"竞速误报达到审计门槛时低血前夜仍被迫上砧: {d_br_audit_heal.reason}"
+    assert getattr(br_pol, "_eve_doom_smith", None) is None, \
+        f"竞速审计覆盖回血后前夜弃疗旗标未灭: {getattr(br_pol, '_eve_doom_smith', None)}"
     br_pol.know.policy["boss_eve_race_audit_heal_enabled"] = False
     d_br_audit_rb = br_pol.decide(br_rest_weak, br_ctx)
     assert d_br_audit_rb.tags and d_br_audit_rb.tags[0] == ("rest", "heal") \
@@ -10592,6 +10599,62 @@ def main() -> int:
                          "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
+
+    # 3esha) 前夜必败弃疗对账（BOSS_EVE_SMITH_HEAL_AUDIT，第1393~1398局批复盘
+    #     观测位回归夹具）：前夜「必败弃疗改锻造」挂旗后，紧接的 Boss 战阵亡
+    #     必须按「实战战损 vs 入场+弃回封顶」追加对账段——回血本可生还（flip）
+    #     与弃疗裁决成立（vindicated）两型均可 grep；获胜、非 Boss 战、键=0
+    #     三通道不得追加，且任何战斗结算都灭旗防跨场残留。
+    def _esha_agg(died, loss, node_type="Boss"):
+        return {"comp_id": "ESHA_COMP", "floor": 17, "node_type": node_type,
+                "hp_lost_sum": float(loss), "rounds": 6, "won": not died,
+                "died": died, "hp_start_pct": 0.88, "open": False,
+                "from_event": False, "obs_hp_pool": 250.0,
+                "obs_fire_sum": 40.0, "obs_fire_rounds": 3}
+
+    _esha_notes = ra_agent.ctx.combat_notes
+    # ① flip：1398 型现场（入场 70+弃回 10=80 > 实战战损 70）→ 回血本可生还+10
+    ra_agent.policy._eve_doom_smith = {"hp": 70.0, "heal": 10.0}
+    ra_agent.ctx.combat_agg = _esha_agg(True, 70.0)
+    ra_agent._flush_combat_agg()
+    _esha_n1 = _esha_notes[-1]
+    assert "前夜弃疗对账" in _esha_n1 and "回血本可生还+10" in _esha_n1 \
+        and "BOSS_EVE_SMITH_HEAL_AUDIT" in _esha_n1 \
+        and _esha_n1.endswith("（阵亡）"), \
+        f"弃疗 flip 对账段缺失或（阵亡）后缀错位: {_esha_n1}"
+    assert ra_agent.policy._eve_doom_smith is None, "对账旗标结算后未灭"
+    # ② vindicated：入场 20+弃回 24=44 ≤ 实战战损 70 → 弃疗裁决成立
+    ra_agent.policy._eve_doom_smith = {"hp": 20.0, "heal": 24.0}
+    ra_agent.ctx.combat_agg = _esha_agg(True, 70.0)
+    ra_agent._flush_combat_agg()
+    _esha_n2 = _esha_notes[-1]
+    assert "弃疗裁决成立" in _esha_n2 \
+        and "BOSS_EVE_SMITH_HEAL_AUDIT" in _esha_n2 \
+        and "回血本可生还" not in _esha_n2, \
+        f"弃疗 vindicated 对账段口径错误: {_esha_n2}"
+    # ③ 获胜 Boss 战：旗标灭但对账段不追加（doom 标签证伪由 race_audit 记账）
+    ra_agent.policy._eve_doom_smith = {"hp": 70.0, "heal": 10.0}
+    ra_agent.ctx.combat_agg = _esha_agg(False, 37.0)
+    ra_agent._flush_combat_agg()
+    assert "BOSS_EVE_SMITH_HEAL_AUDIT" not in _esha_notes[-1] \
+        and ra_agent.policy._eve_doom_smith is None, \
+        f"获胜 Boss 战误追加弃疗对账或旗标未灭: {_esha_notes[-1]}"
+    # ④ 非 Boss 阵亡：灭旗但不归因（前夜与 Boss 之间不存在其他战斗，防御口径）
+    ra_agent.policy._eve_doom_smith = {"hp": 70.0, "heal": 10.0}
+    ra_agent.ctx.combat_agg = _esha_agg(True, 70.0, node_type="Monster")
+    ra_agent._flush_combat_agg()
+    assert "BOSS_EVE_SMITH_HEAL_AUDIT" not in _esha_notes[-1] \
+        and ra_agent.policy._eve_doom_smith is None, \
+        f"非 Boss 战误追加弃疗对账或旗标未灭: {_esha_notes[-1]}"
+    # ⑤ 键=0 严格回滚：阵亡 Boss 战也不追加对账段（旗标照常灭）
+    ra_agent.know.policy["boss_eve_smith_heal_audit"] = 0
+    ra_agent.policy._eve_doom_smith = {"hp": 70.0, "heal": 10.0}
+    ra_agent.ctx.combat_agg = _esha_agg(True, 70.0)
+    ra_agent._flush_combat_agg()
+    assert "BOSS_EVE_SMITH_HEAL_AUDIT" not in _esha_notes[-1] \
+        and ra_agent.policy._eve_doom_smith is None, \
+        f"键=0 未严格回滚旧口径: {_esha_notes[-1]}"
+    ra_agent.know.policy["boss_eve_smith_heal_audit"] = 1
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。

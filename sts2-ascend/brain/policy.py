@@ -6454,6 +6454,23 @@ class Policy:
         return (float(getattr(self, "_race_same_round_loss_own", 0.0) or 0.0),
                 float(getattr(self, "_race_same_round_loss_enemy", 0.0) or 0.0))
 
+    def pop_eve_doom_smith(self) -> dict:
+        """弹出前夜「必败弃疗改锻造」对账旗标（BOSS_EVE_SMITH_HEAL_AUDIT 观测位，
+        第1393~1398局批复盘）。
+
+        前夜弃疗分支的判词是「回血买不到生还」（悲观战损=场均×pess 口径）；
+        该判词只有在紧接的 Boss 战阵亡且实战战损 < 入场血+被弃封顶回血时才被
+        实战直接证伪（1398：88% 前夜上砧，实战战损 70=入场血本身，弃回 10 点
+        本可生还+10，链上零留痕）。agent 在每场战斗收官时调用一次：有旗返回
+        {"hp", "heal"} 并清空，无旗返回空 dict——任何战斗结算都灭旗，保证
+        旗标只归因于前夜紧接的那一场战斗，不跨场/跨幕残留。
+        """
+        _f = getattr(self, "_eve_doom_smith", None)
+        self._eve_doom_smith = None
+        if isinstance(_f, dict) and _f.get("hp") is not None:
+            return dict(_f)
+        return {}
+
     def pop_race_audit(self) -> dict:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。
 
@@ -8997,6 +9014,11 @@ class Policy:
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
+        # BOSS_EVE_SMITH_HEAL_AUDIT（第1393~1398局批复盘观测位）：每次篝火裁决
+        # 先灭上一次的前夜弃疗旗标，仅「必败弃疗改锻造」分支重新挂旗——旗标
+        # 生命周期=前夜→紧接的 Boss 战结算（agent 收官弹出对账），选回血/其他
+        # 锻造分支与普通篝火一律灭旗，防止跨幕残留污染归因。
+        self._eve_doom_smith = None
         smith_ok = smith is not None and bool(upgradable)
         for option in options:
             self._trace_candidate(
@@ -9136,6 +9158,10 @@ class Policy:
                                 float(pol.get("kill_race_margin", 1.5)),
                                 eff=1.0, blk_eff=1.0)
                     if _doomed and _post_margin <= margin and not _dopt_feasible:
+                        # BOSS_EVE_SMITH_HEAL_AUDIT 挂旗：「回血买不到生还」判词
+                        # 待紧接的 Boss 战实战对账——阵亡且实战战损<入场+弃回封顶
+                        # 即被证伪（agent 结算侧弹出并追加对账段，纯观测不改决策）。
+                        self._eve_doom_smith = {"hp": cur_hp, "heal": eff_heal}
                         return Decision("choose_rest_option",
                                         {"option_index": smith["index"]},
                                         f"篝火：Boss 前夜必败弃疗改锻造（当前 {hp_pct:.0%}；"

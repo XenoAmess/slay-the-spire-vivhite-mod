@@ -585,6 +585,11 @@ DEFAULT_POLICY = {
                                      # 进场 Boss 掉血正好 51 阵亡，+24 回血即买活）。审计度量的是判死
                                      # 标签本身的失真率，与「安全区血量线」语义无关，故解耦为专用键，
                                      # 仍受 boss_entry_evidence_hp_cap 封顶；调回 0.45 即恢复旧带行为
+    "boss_eve_smith_heal_audit": 1,  # 前夜必败弃疗对账观测位（BOSS_EVE_SMITH_HEAL_AUDIT，第1393~1398局批复盘）：
+                                     # 「必败弃疗改锻造」挂旗，紧接的 Boss 战阵亡时战斗记录追加
+                                     # 「实战战损 vs 入场+弃回封顶」对账段（回血本可生还 / 弃疗裁决成立
+                                     # 两型均可 grep 计数）；纯观测不参与任何评分/分支，
+                                     # 0 时段落严格不追加（旧口径复原）
     "boss_entry_doom_waiver_audit_gate": True,  # 竞速必败豁免的审计否决闸（第 53~88 局批复盘新增，
                                      # RACE_AUDIT_DOOM_WAIVER_GATE）：race_audit 判死后获胜率达到
                                      # boss_eve_race_audit_heal_min_latched/_win_rate 同阈时，「必败」

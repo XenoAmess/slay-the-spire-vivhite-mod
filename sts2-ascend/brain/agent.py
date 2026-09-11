@@ -3654,6 +3654,10 @@ class Agent:
         # 把 stance 成长型反向偏置的系统性悲观率变成每局可检索的硬留痕；
         # 「（阵亡）」后缀保持全链断言兼容，审计段插在其前
         _ra = self.policy.pop_race_audit()
+        # BOSS_EVE_SMITH_HEAL_AUDIT（第1393~1398局批复盘观测位）：每场战斗结算
+        # 都弹出前夜弃疗旗标（灭旗防跨场残留），仅「前夜必败弃疗改锻造→紧接
+        # Boss 战阵亡」的对局追加对账段，见下方 note 组装。
+        _eve_f = self.policy.pop_eve_doom_smith()
         note = f"F{agg['floor']} {agg['node_type']}战 掉血{int(round(agg['hp_lost_sum']))}"
         # 謦欬实付留痕（第 7~20 局批复盘新增）：自损>0 时战斗记录自带
         # 「自损N」段，复盘无需回放手牌链即可对照自损/掉血占比；口径与
@@ -3696,6 +3700,32 @@ class Agent:
             if _ra.get("esc"):
                 _ra_esc_key = "esc_won" if _ra_won else "esc_died"
                 _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
+        # BOSS_EVE_SMITH_HEAL_AUDIT 对账段（第1393~1398局批复盘观测位）：前夜
+        # 「必败弃疗改锻造」的判词是「回血买不到生还」（悲观战损=场均×pess）；
+        # 1398 局 88%（70/80）前夜上砧后实战战损 70=入场血本身——弃回 10 点
+        # 本可生还+10，判词被实战证伪却零留痕。这里对「前夜挂旗→紧接 Boss 战
+        # 阵亡」追加实战对账：战损<入场+弃回即 flip（回血本可生还），否则
+        # vindicated（弃疗裁决成立），两型均可 grep 计数，供后续批次按预注册
+        # 线（flip ≥3 独立对局→复核高血段必败弃疗口径）裁决。纯观测：不参与
+        # 任何评分/阈值/学习分支；键=0 时段落严格不追加（旧口径复原）；
+        # 「（阵亡）」后缀位置不变。
+        if (_eve_f and agg.get("died") and agg.get("node_type") == "Boss"
+                and bool(self.know.policy.get("boss_eve_smith_heal_audit", True))):
+            _eve_hp = float(_eve_f.get("hp") or 0.0)
+            _eve_heal = float(_eve_f.get("heal") or 0.0)
+            _eve_cap = _eve_hp + _eve_heal
+            _eve_loss = float(agg.get("hp_lost_sum", 0.0) or 0.0)
+            if _eve_loss < _eve_cap:
+                note += (f"｜前夜弃疗对账：实战战损{int(round(_eve_loss))}＜入场"
+                         f"{int(round(_eve_hp))}+弃回{int(round(_eve_heal))}"
+                         f"={int(round(_eve_cap))}，回血本可生还"
+                         f"+{int(round(_eve_cap - _eve_loss))}"
+                         "（BOSS_EVE_SMITH_HEAL_AUDIT）")
+            else:
+                note += (f"｜前夜弃疗对账：实战战损{int(round(_eve_loss))}≥入场"
+                         f"{int(round(_eve_hp))}+弃回{int(round(_eve_heal))}"
+                         f"={int(round(_eve_cap))}，弃疗裁决成立"
+                         "（BOSS_EVE_SMITH_HEAL_AUDIT）")
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
