@@ -11062,3 +11062,14 @@
 - 当前低价值卡牌：BULLY(10分/2.7452937641092423局)，HAVOC(11分/2.196235011287392局)，STRIKE_IRONCLAD(12分/7.1377637866840375局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1406 胜，当前目标进阶 0
+
+## 第 1407 局复盘（2026-09-11 23:40）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：TWIN_STRIKE, HEADBUTT, EVIL_EYE, STOMP, INFLAME, SECOND_WIND, CONFLAGRATION, STONE_ARMOR, TRUE_GRIT, UNRELENTING, FLAME_BARRIER, THRASH, TRUE_GRIT, IRON_WAVE, HEMOKINESIS, RUPTURE
+- 本局遗物：STRIKE_DUMMY, PARRYING_SHIELD
+- 战斗记录：F15 Monster战 掉血2; F17 Boss战 掉血24｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血0; F20 Monster战 掉血24; F21 Monster战 掉血33; F22 Monster战 掉血39｜竞速审计：T5判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.056440819277765局)，PROWESS(25分/5.203561762705812局)，PACTS_END(25分/94.17084915329107局)，OFFERING(25分/24.12579338940035局)，PERFECTED_STRIKE(24分/5.16900060973152局)
+- 当前低价值卡牌：BULLY(10分/2.7356852359348602局)，HAVOC(11分/2.188548188747886局)，STRIKE_IRONCLAD(12分/7.112781613430644局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.41（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.82 → 1.81（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1407 胜，当前目标进阶 0
