@@ -7168,3 +7168,14 @@
 - 当前低价值卡牌：RESTLESSNESS(17分/2.066898628611562局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.0842407957346953局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.2084381653453002局)
 - 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/648 胜，当前目标进阶 1
+
+## 第 649 局复盘（2026-09-11 09:54）
+- 结果：💀 失败｜进阶 1｜到达层数 14｜当局评分 14
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CLOSED_PROJECTION, OMNISLICE, ULTIMATE_DEFEND, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：PRAYER_WHEEL, HORN_CLEAT
+- 战斗记录：F3 Monster战 掉血19｜自损26（可行动段26/非行动段7，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血24｜自损21（可行动段21/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T9判死→实战10回合获胜; F11 Monster战 掉血15｜自损18（可行动段18/非行动段12，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血3｜自损18（可行动段18/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血58｜自损23（可行动段23/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(41分/7.107189714016113局)，THINKING_AHEAD(36分/2.1756104379548993局)，PROWESS(35分/17.727283493616813局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/3.6098779253911033局)，SEEKER_STRIKE(35分/2.735442929554438局)
+- 当前低价值卡牌：RESTLESSNESS(17分/2.0596644834114217局)，VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.076945952949624局)，VIVHITE_CARD_GEODESIC_VEIL(21分/3.1972086317665918局)
+- 策略进化：elite_grey_safety_mult: 1.70 → 1.90（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/649 胜，当前目标进阶 1
