@@ -3797,6 +3797,40 @@ def main() -> int:
     assert "VIVHITE_RACE_SELF_LOSS_EXCLUDE" not in d_vx_rb.reason, \
         f"回滚键关闭后仍出现隔离留痕: {d_vx_rb.reason}"
 
+    # 3tsi) 自付并入存活口径观测（第 679~684 局批复盘新增，
+    #      VIVHITE_RACE_TSURV_INCLUSIVE_OBS）：DOMINATES 触发的判决现场并排披露
+    #      「可存活 excl→incl」双读数，验证隔离口径在放血局是否高估存活视界。
+    #      本批 6 局中 5 局 Boss 战 DOMINATES 留痕且全部阵亡；684-F17 T6 投影
+    #      「可存活6回合」vs 并入口径 ≈2.6 回合，实战 T10 阵亡更贴近并入侧。
+    #      复用 3prb 夹具（T1 自付 16、T2 意图 12，自付占主导成立）：开键时
+    #      判决现场带并入观测且披露自付速率；回滚键关闭时并入观测消失但
+    #      DOMINATES 留痕不变（两键语义正交）；无自付对照（T1/T2 全程满血）
+    #      DOMINATES 不触发、并入观测同样不出现。纯观测，判决/评分零改动。
+    assert knowledge.DEFAULT_POLICY["vivhite_race_tsurv_inclusive_obs"] is True, \
+        "自付并入存活口径观测默认键缺失或未开启"
+    assert "VIVHITE_RACE_TSURV_INCLUSIVE_OBS" in d_vx.reason, \
+        f"DOMINATES 判决现场缺自付并入存活口径读数: {d_vx.reason}"
+    assert "自付16.0/回合" in d_vx.reason, \
+        f"并入观测未披露实测自付速率（应为 16.0）: {d_vx.reason}"
+    vknow_tsi_rb = _vivhite_know("sts2-selfcheck-vhrace-tsi-rb-")
+    vknow_tsi_rb.policy["vivhite_race_tsurv_inclusive_obs"] = False
+    vpol_tsi_rb = policy.Policy(vknow_tsi_rb, random.Random(11))
+    vctx_tsi_rb = _vrace_ctx()
+    vpol_tsi_rb.decide(_vrace_state(1, 85, 0), vctx_tsi_rb)
+    vpol_tsi_rb.decide(_vrace_state(1, 69, 0), vctx_tsi_rb)
+    d_tsi_rb = vpol_tsi_rb.decide(_vrace_state(2, 69, 12), vctx_tsi_rb)
+    assert "VIVHITE_RACE_TSURV_INCLUSIVE_OBS" not in d_tsi_rb.reason, \
+        f"回滚键关闭后仍出现并入观测: {d_tsi_rb.reason}"
+    assert "VIVHITE_RACE_SELF_LOSS_DOMINATES" in d_tsi_rb.reason, \
+        f"回滚键不应影响 DOMINATES 留痕本体: {d_tsi_rb.reason}"
+    vknow_tsi_np = _vivhite_know("sts2-selfcheck-vhrace-tsi-np-")
+    vpol_tsi_np = policy.Policy(vknow_tsi_np, random.Random(11))
+    vctx_tsi_np = _vrace_ctx()
+    vpol_tsi_np.decide(_vrace_state(1, 85, 12), vctx_tsi_np)
+    d_tsi_np = vpol_tsi_np.decide(_vrace_state(2, 85, 12), vctx_tsi_np)
+    assert "VIVHITE_RACE_TSURV_INCLUSIVE_OBS" not in d_tsi_np.reason, \
+        f"无自付对照不应出现并入观测: {d_tsi_np.reason}"
+
     # 3prf) 謦欬成长卡组首窗实测 dpt 先验下限（第 153~157 局批复盘，
     #      VIVHITE_RACE_DPT_PRIOR_FLOOR）：race_audit 台账 won/latched=
     #      119/250=47.6%（第 21~48 批謦欬隔离落地后段 88/175=50.3%，始终

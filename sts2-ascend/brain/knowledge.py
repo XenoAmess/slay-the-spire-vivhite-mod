@@ -456,6 +456,11 @@ DEFAULT_POLICY = {
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否
                                          # 在高自损 Boss 战中过度乐观；只观测、不改判定。
+    "vivhite_race_tsurv_inclusive_obs": True,  # 自付并入存活口径观测（第 679~684 局
+                                               # 批复盘）：DOMINATES 触发的判决现场并排
+                                               # 披露「可存活 excl→incl」双读数，验证隔离
+                                               # 口径在放血局是否高估存活视界；纯观测不改
+                                               # 判定，False=回滚（无该留痕）。
     "vivhite_race_self_loss_payback_gate": 1,  # 自付占主导时单体低回报门：仅拦
                                                 # 实付血量大于实际移除且未斩杀的
                                                 # 白绮攻击；0=关闭并回滚旧竞速豁免。

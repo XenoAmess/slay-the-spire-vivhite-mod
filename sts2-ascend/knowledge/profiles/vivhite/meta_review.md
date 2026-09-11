@@ -1769,3 +1769,71 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 679~684 局批复盘：自付隔离口径只读速率比值、读不到反事实存活视界（VIVHITE_RACE_TSURV_INCLUSIVE_OBS）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速生存投影的生存分母刻意按敌方归属口径隔离謦欬自付
+  （VIVHITE_RACE_SELF_LOSS_EXCLUDE，第 21~48 批设计，防自证死期闭环）。该设计在
+  自付占主导（VIVHITE_RACE_SELF_LOSS_DOMINATES）的判死 Boss 战里可能系统性高估
+  剩余可存活回合：判决现场只能读到「自付速率≥敌方净损速率」的比值，读不到
+  「若把自付并入分母还剩几回合」的反事实视界，下游全攻提速/抢斩杀/长战撤账全部
+  按偏乐观视界执行。684-F17 T6 投影报「可存活6回合」（分母=敌方净损 4.6 隔离
+  自付 6.8/回合），并入口径 25/(2.9+6.8)≈2.6 回合，实战 T10 阵亡（4 回合后）
+  明显更贴近并入侧。本批先落地纯观测锚：DOMINATES 触发的判决现场并排披露
+  两种口径读数，后续批次用「实战阵亡回合贴近哪侧」直接判决该假设。
+- **EVIDENCE**：本批 6 局全部死于 Boss 战（679-F35/680-F17/681-F17/682-F35/
+  683-F33/684-F17），竞速审计 T2~T5 判死全部应验；其中 5 局 Boss 战出现
+  DOMINATES 留痕且全部阵亡——679 局 3 处（自付5.8≥净损3.4）、680 局 11 处
+  （8.9≥4.8）、681 局 3 处（3.9≥1.9）、683 局 5 处（8.0≥3.3）、684 局 13 处
+  （自付速率 10.7/8.1/5.3/回合 vs 敌方净损 2.1/2.9，比值最高 5.10）。682 局
+  未触发 DOMINATES（自付 13/掉血 64）作阴性对照。684 局 Boss 战逐 tick 复核：
+  T4 实付 19、T5 实付 31、T6 末投影仍按隔离口径报「可存活6回合」，T7 末
+  「可存活8回合」，而实战 T10 即阵亡；讲欬三级旋钮（life_cost_weight -2.98
+  触底/余量门 3.00 顶格/血税软顶 15.00 触底）全尽，lessons 已记「謦欬证据彻底
+  停止吸收并留痕」——估值端无旋钮可接，测量端缺口成为最高价值目标。
+  6 局达 evidence_run_threshold（679~684，其中 5 局 DOMINATES 阳性）。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 凡 DOMINATES 触发的判决现场出现
+  「竞速自付并入存活口径：可存活X→Y回合（敌方净损A+自付B/回合，
+  VIVHITE_RACE_TSURV_INCLUSIVE_OBS）」注记；② 判死 Boss 战可统计实战阵亡回合
+  贴近 excl 侧还是 incl 侧：若反复 incl≪excl 且阵亡回合贴近 incl，隔离口径
+  在放血局高估视界成立（下一批评估把某个下游消费切换到并入口径）；若两侧
+  接近或实战更贴近 excl，假设证伪。证伪/撤回：DOMINATES 高频触发而注记零显形
+  → 复查接线；观测本身被证实误导复盘 → policy.json 置
+  vivhite_race_tsurv_inclusive_obs=false 一键回滚（旧口径逐字不变）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：竞速投影 DOMINATES 留痕块内追加并入存活口径
+  观测——仅当 _self_loss_note 非空（DOMINATES 已触发）时，并排计算
+  可存活 excl=my_hp/max(1,loss_rate) 与 incl=my_hp/max(1,loss_rate+自付速率)
+  并追加注记；tsurv、判决、评分、沙坑封底等全部既有口径零改动（纯观测锚）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  vivhite_race_tsurv_inclusive_obs: True，注释记录 679~684 局实证与回滚口径
+  （False = 关闭，无该留痕，其余逐字不变）。
+- sts2-ascend/brain/selfcheck.py：新增 3tsi 四分支——① 默认键存在且为 True；
+  ② 复用 3prb 夹具（T1 自付 16、T2 意图 12，DOMINATES 成立）判决现场带
+  并入观测且披露自付 16.0/回合；③ 回滚键关闭后并入观测消失而 DOMINATES
+  留痕不变（两键语义正交）；④ 无自付对照（T1/T2 全程满血）DOMINATES 不
+  触发、并入观测同样不出现。
+- 不改 tsurv/ttk 公式、DOMINATES 阈值、隔离口径本体与任何评分分支；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3tsi 四分支；
+  既有 3prb 隔离口径族、3vt 活力火花税族、3et 激怒税族、3sg/3sg2 沉睡守卫族、
+  3ps 快照观测、3prz 零压闸族、3kd、3br、3sec 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+22，DOMINATES 块内观测）、brain/knowledge.py（+5 一个静态键及注释）、
+  brain/selfcheck.py（+34，3tsi 四分支）；未触碰 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

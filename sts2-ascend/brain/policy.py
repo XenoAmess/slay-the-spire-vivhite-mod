@@ -3357,6 +3357,28 @@ class Policy:
                             self._race_self_paid_rate, loss_rate)
                         if _self_loss_note:
                             danger_note += f"；{_self_loss_note}"
+                            # 自付并入存活口径观测（VIVHITE_RACE_TSURV_INCLUSIVE_OBS，
+                            # 第 679~684 局批复盘新增，静态键）：生存分母按敌方归属
+                            # 口径隔离謦欬自付（21~48 批设计）后，判死现场只能读到
+                            # 速率比值，读不到「若把自付并入分母还剩几回合」的反事实
+                            # 视界。本批 6 局中 5 局 Boss 战 DOMINATES 留痕且全部
+                            # 阵亡（679:3 处/680:11/681:3/683:5/684:13）；684-F17
+                            # T6 投影报「可存活6回合」，而并入口径 25/(2.9+6.8)≈2.6
+                            # 回合，实战 T10 阵亡（4 回合后）明显更贴近并入侧。此处
+                            # 只在 DOMINATES 已触发的判决现场并排披露两种口径读数，
+                            # 供后续批次统计「实战阵亡回合贴近哪侧」；tsurv、判决与
+                            # 评分零改动（纯观测锚），键=False 严格回滚旧口径。
+                            if bool(pol.get("vivhite_race_tsurv_inclusive_obs",
+                                            True)):
+                                _tsurv_excl_obs = my_hp / max(1.0, loss_rate)
+                                _tsurv_incl_obs = my_hp / max(
+                                    1.0, loss_rate + self._race_self_paid_rate)
+                                danger_note += (
+                                    f"；竞速自付并入存活口径：可存活"
+                                    f"{_tsurv_excl_obs:.1f}→{_tsurv_incl_obs:.1f}回合"
+                                    f"（敌方净损{loss_rate:.1f}+自付"
+                                    f"{self._race_self_paid_rate:.1f}/回合，"
+                                    "VIVHITE_RACE_TSURV_INCLUSIVE_OBS）")
                     tsurv = my_hp / max(1.0, loss_rate)
                     # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘）：
                     # 无厌沙虫 Liquify 后给玩家挂上计数沙坑（SANDPIT_POWER，初始
