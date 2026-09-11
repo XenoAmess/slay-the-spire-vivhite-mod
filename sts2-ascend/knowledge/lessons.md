@@ -11161,3 +11161,14 @@
 - 当前低价值卡牌：BULLY(10分/2.660017849640701局)，HAVOC(11分/2.1280142797125583局)，STRIKE_IRONCLAD(12分/6.91604640906583局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1415 胜，当前目标进阶 0
+
+## 第 1416 局复盘（2026-09-12 07:38）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, UNRELENTING, DISMANTLE, FLAME_BARRIER, DEMON_FORM, SEEKER_STRIKE, PRIMAL_FORCE, HEADBUTT, BREAKTHROUGH, FLAME_BARRIER, TAUNT, TRUE_GRIT, INFLAME
+- 本局遗物：ANCHOR, BRONZE_SCALES
+- 战斗记录：F7 Monster战 掉血0; F8 Monster战 掉血10; F12 Monster战 掉血19｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血39｜自损1（可行动段1/非行动段44，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血46｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/5.041925695334983局)，PACTS_END(25分/93.2212936894788局)，OFFERING(25分/23.376383938048704局)，PERFECTED_STRIKE(24分/5.008438101031717局)，MANGLE(24分/78.47146996393967局)
+- 当前低价值卡牌：BULLY(10分/2.650707787166959局)，HAVOC(11分/2.1205662297335643局)，STRIKE_IRONCLAD(12分/6.8918402466341局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1416 胜，当前目标进阶 0
