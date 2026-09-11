@@ -7476,3 +7476,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/2.9084269402585803局)，CALAMITY(22分/2.7312620243702845局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/36.763981637352465局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（93%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损39/掉血78（50%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/676 胜，当前目标进阶 1
+
+## 第 677 局复盘（2026-09-11 17:06）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_OF_LIFE, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_LOCAL_HOMEOMORPHISM
+- 本局遗物：HAPPY_FLOWER, SPARKLING_ROUGE
+- 战斗记录：F6 Monster战 掉血0｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损6（可行动段6/非行动段3，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损3（可行动段3/非行动段13，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血5｜自损18（可行动段18/非行动段14，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血28｜自损36（可行动段36/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血98｜自损58（可行动段58/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(40分/7.401417315230856局)，MAYHEM(36分/2.4576162727360926局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/3.2723292979911007局)，PROWESS(35分/18.926284133731624局)，OMNISLICE(35分/7.058595817189651局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/2.8982474459676753局)，CALAMITY(22分/2.7217026072849886局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/36.635307701621734局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（97%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损58/掉血98（59%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/677 胜，当前目标进阶 1
