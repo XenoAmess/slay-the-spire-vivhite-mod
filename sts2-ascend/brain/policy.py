@@ -705,6 +705,7 @@ class Policy:
         self._krace_turns = 0       # 已发生过出牌的回合数（实测输出速率的分母）
         self._krace_round = None    # 上次计回合的回合号
         self._krace_latch = False   # 竞速迟滞锁（第632局批复盘）：实测口径判死后同场维持
+        self._krace_latch_round = None  # 入锁回合号（RACE_UPSHIFT_STALE 新鲜窗账）
         self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
         self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
@@ -3172,6 +3173,7 @@ class Policy:
                 if (enemy_hp_total <= 0
                         and bool(getattr(self, "_krace_latch", False))):
                     self._krace_latch = False
+                    self._krace_latch_round = None
                     danger_note += (
                         "；全场无敌相，竞速迟滞锁解除回归防守等自爆"
                         "（RACE_INVULNERABLE_POOL_OBS）")
@@ -3235,6 +3237,30 @@ class Policy:
                     _up = max(0.0, float(pol.get(
                         "race_latch_dpt_uplift_eff" if esc_gate
                         else "race_latch_dpt_uplift", 0.0)))
+                    # 入锁新鲜窗抑制换挡上浮（RACE_UPSHIFT_STALE，第1409~1413局
+                    # 批复盘）：上浮的成立前提是「实测均值取自换挡前的防守回合」，
+                    # 而入锁后全攻回合随即进入实测窗口——1413-F17 瀑布巨兽
+                    # T5~T8 连续带「致死竞速抢斩杀」（锁后全攻已入账），投影仍
+                    # 每 tick 叠加×(1+换挡上浮0.20)（实测24~30→29~35伤/回合
+                    # 校准），同段实际回合伤害仅 9/16（均值 12.5），双重计价
+                    # 系统性高估 dpt、低估 ttk。入锁满新鲜窗（默认 2 回合）后
+                    # 实测窗已含换挡成果，上浮置零并留痕（含锁龄与未上浮口径），
+                    # 供后续局核对锁后投影 dpt 与实际回合伤害；首判 tick 与
+                    # 新鲜窗内维持原口径。race_upshift_fresh_turns=0 严格回滚
+                    # 旧版（锁后持续上浮）。
+                    _fresh_turns = int(pol.get("race_upshift_fresh_turns", 2) or 0)
+                    if (_up > 0.0 and _fresh_turns > 0
+                            and bool(getattr(self, "_krace_latch", False))
+                            and getattr(self, "_krace_latch_round", None) is not None
+                            and round_no is not None):
+                        _latch_age = int(round_no) - int(self._krace_latch_round)
+                        if _latch_age >= _fresh_turns:
+                            danger_note += (
+                                f"；入锁已{_latch_age}回合（≥新鲜窗"
+                                f"{_fresh_turns}），实测窗已含全攻换挡，"
+                                f"上浮+{_up:.2f}置零，投影维持{dpt:.0f}伤/回合"
+                                "（RACE_UPSHIFT_STALE）")
+                            _up = 0.0
                     # 出牌硬上限抑制换挡上浮（RACE_PLAY_CAP_NO_UPSHIFT，
                     # 第1404~1408局批复盘）：1408-F17 仪式兽 T6/T9 玩家带
                     # RINGING_POWER（昏眩，本回合限打1张——回合内首牌打出
@@ -3665,6 +3691,7 @@ class Policy:
                             else:
                                 race_lost = False
                                 self._krace_latch = False
+                                self._krace_latch_round = None
                                 _esc_mark = "（滚雪球零余量）" if esc_gate else ""
                                 danger_note += (f"；防守线复核：联合能量对账，{_mix}即可在"
                                                 f"净火力下追平击杀所需{ttk:.0f}回合，"
@@ -3688,6 +3715,8 @@ class Policy:
                         if self._krace_turns >= 2:
                             # 实测口径武装入锁（先验口径 T1~T2 不锁：样本不足的
                             # 误判可被下一 tick 自然纠正）
+                            if not self._krace_latch:
+                                self._krace_latch_round = round_no
                             self._krace_latch = True
                             _ra_audit = getattr(self, "_race_audit", None)
                             if isinstance(_ra_audit, dict):
@@ -3805,6 +3834,7 @@ class Policy:
             self._krace_turns = 0
             self._krace_round = None
             self._krace_latch = False
+            self._krace_latch_round = None
             self._krace_dmg_sustained = 0.0
             self._krace_potion_rounds = set()
             self._incoming_ema = 0.0

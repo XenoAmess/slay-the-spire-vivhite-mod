@@ -9233,3 +9233,116 @@ retry_resolution: 20260912-015019-1789149019971580400-cb00bc92 integrated
 4. 观察点（下批复盘核对）：① RACE_PLAY_CAP_NO_UPSHIFT 首发与计数；
    ② 昏眩回合投影 dpt vs 实战单卡伤害；③ race_audit 昏眩桶判死胜率；
    ④ 既有台账（395/877、SLIPPERY 0/3、EXHAUST_FIZZLE 空转）续盯。
+
+
+# 2026-09-12｜第 1409~1413 局复盘（异步追及队列 5 局 exact_batch 全败；行为修复 ×1：RACE_UPSHIFT_STALE 入锁新鲜窗抑制竞速换挡上浮——锁后全攻回合已进实测窗，持续上浮属双重计价）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]，complete_evidence.required=false——本批无待重放失败包，
+  无 replay target。
+- 上一批（1404~1408）last_paths 关键标签存在性核读：
+  RACE_PLAY_CAP_NO_UPSHIFT（policy.py 上浮段 + selfcheck 3pcap）在当前
+  HEAD 在产，无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: none (no replay target; local production behavior change + observability)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：换挡上浮（race_latch_dpt_uplift /
+  race_latch_dpt_uplift_eff）的成立前提是「实测均值取自换挡前的防守
+  回合」（823~832 批预注册）。竞速迟滞锁入锁后全攻回合随即进入实测
+  窗口，投影却仍逐 tick 叠加 ×(1+换挡上浮)——锁后 1~2 回合起前提
+  失效，持续上浮属双重计价，系统性高估 dpt、低估 ttk。
+- **EVIDENCE**（本轮在当前 clone 内独立复核）：1413（EJRR42AU08W2，
+  decision_chain_evidence.full_failure_run）F17 瀑布巨兽 Boss 战
+  T5~T8：出牌理由连续带「致死竞速抢斩杀」（入锁后全攻已在实测窗内），
+  同 tick 投影仍写「实测24~30伤/回合升级桶×(1+换挡上浮0.20)→29~35
+  伤/回合校准」（T5 三条、T6 两条、T7 两条、T8 三条）；同段实际回合
+  伤害 T7=5+4=9、T8=6+6+4=16（均值 12.5），远低于校准口径 29~35；
+  T8 以 8 血/0 甲对意图 10 结束回合阵亡（05:07:56 GAME_OVER）。
+- **EXPECTED_SIGNAL**：入锁满新鲜窗（默认 2 回合）后的竞速留痕带
+  「入锁已N回合（≥新鲜窗2）…上浮置零…（RACE_UPSHIFT_STALE）」且
+  不再携带「×(1+换挡上浮…)→…校准」文本；首判 tick 与新鲜窗内
+  （锁龄<2）维持原上浮口径不变。
+
+## 一、落地动作（最小可逆）
+
+- `brain/policy.py`：新增 `self._krace_latch_round` 入锁回合号（首次
+  武装入锁时记录；无敌相解锁、联合复核翻案解锁、战斗切换重置三处
+  同步清空）。竞速投影换挡上浮段在实测口径（_krace_turns≥2 且
+  dpt>0、上浮键>0）下，先核对锁龄=当前回合-入锁回合：≥新鲜窗
+  （race_upshift_fresh_turns，默认 2）时上浮置零、dpt 维持未上浮
+  口径，并向 danger_note 追加锁龄/窗口/置零幅度/未上浮读数
+  （RACE_UPSHIFT_STALE）。键=0 严格回滚旧版（锁后持续上浮）。首判
+  tick（_krace_latch 尚 False）、新鲜窗内、先验分支、昏眩抑制
+  （RACE_PLAY_CAP_NO_UPSHIFT 在其后独立判定）全部零改动；tsurv/
+  判决阈值/评分公式零改动。
+- `brain/knowledge.py`：DEFAULT_POLICY 新增静态键
+  `race_upshift_fresh_turns: 2`（含证据与回滚注释；policy.json 零
+  改动，缺键走默认）。
+- `brain/selfcheck.py`：新增 3stale 夹具（复用 pcap：实测两回合
+  40 伤→dpt20、池 400、意图 15、血 71 均判死）：① 入锁 3 回合
+  （age≥窗）→ STALE 注记在账且换挡上浮文本消失；② 入锁当回合
+  （age=0）→ 保留 ×(1+换挡上浮0.35) 且无 STALE 注记；③ 键=0 →
+  锁后超窗也保留上浮、无注记。
+
+## 二、回滚边界
+
+- `race_upshift_fresh_turns=0` 即恢复旧口径（锁后持续上浮、无注记）；
+  删除 policy.py 新鲜窗块与 `_krace_latch_round` 全部读写、
+  knowledge.py 键、selfcheck 3stale 段即完全回滚。
+- 行为面严格有界：仅在「实测口径 + 上浮键>0 + 已入锁 + 锁龄≥2」
+  四条件同时成立时改变投影 dpt（变小、ttk 变大）；首判 tick、窗内
+  tick、未入锁局、先验分支全部零差异。入锁后 race_lost 由迟滞锁
+  维持，dpt 变化只影响 ttk 留痕与联合复核/翻盘比口径，不改变锁持
+  本身。
+
+## 三、自检
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含
+  3stale①②③ 新锚与全部旧锚原样通过）。
+
+## 四、未来 3~10 局观察指标
+
+1. 入锁超过 2 回合的竞速对局中 RACE_UPSHIFT_STALE 注记首发，且同
+   tick 理由不再出现「×(1+换挡上浮」校准文本（每超窗 tick 恰一条）。
+2. 锁后超窗投影 dpt（未上浮实测均值）与锁后实际回合伤害对账：若
+   差距较 1413 的 29~35 vs 12.5 显著收敛，本修复方向成立；若实测
+   均值本身仍虚高（早期爆发回合黏住 lifetime 均值），下一杠杆是
+   锁后窗口化实测而非继续调上浮。
+3. 判死翻转核对：超窗 ttk 变大后联合复核/翻盘比口径同步变化，核对
+   race_audit 台账锁后判死局实战胜率是否仍 ≥30% 预注册线；若出现
+   新的「判死却获胜」样本集中在上浮置零后，评估窗口长度（2→3）
+   而非回滚。
+4. 竞速审计悲观率台账与 SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）
+   继续原窗口，不受本改动影响。
+
+## 五、继续调整/撤回条件
+
+- 若 3~10 局内出现「STALE 注记在账但锁后实战输出持续达到上浮口径」
+  （换挡增益需要 >2 回合才完成，如引擎慢热卡组）≥2 独立对局，把
+  窗口调长（2→3/4）而非撤回；
+- 若锁后判死局实战胜率跌破 30% 预注册线且样本集中在超窗置零段，
+  回滚键=0 并重新开观测窗；
+- 若实测均值黏性（指标 2）证实，另开窗口化实测假设，不在本键上
+  叠加补丁。
+
+## 六、新沉淀的经验知识
+
+1. **时间维度的前提失效与状态维度同构**：上一批昏眩（状态破坏
+   「换挡=更多出牌」前提）与本批锁后超窗（时间推移使前提失效）
+   是同一类缺陷——行为系数杠杆除登记「前提失效条件」清单外，还
+   必须登记「前提有效期」，入锁类闩锁状态要同步记录武装时刻。
+2. **锁后留痕自带反证**：1413-F17 的「致死竞速抢斩杀」卡面注记与
+   同 tick「换挡上浮校准」文本同框出现，即是「全攻已入实测窗」的
+   现场证据——复核竞速投影时先查锁持注记与上浮注记是否同 tick
+   共存，共存即疑似双重计价。
+3. **lifetime 均值的分母黏性**：_krace_dmg/_krace_turns 是全程
+   均值，早期爆发回合会长期抬高锁后读数；本批只切断上浮双重计
+   价，均值窗口化是预留的下一杠杆，不与本键混同。
+4. 观察点（下批复盘核对）：① RACE_UPSHIFT_STALE 首发与计数；
+   ② 锁后超窗投影 dpt vs 锁后实际回合伤害；③ race_audit 锁后
+   判死胜率；④ 既有台账（SLIPPERY 0/3、EXHAUST_FIZZLE 空转、
+   RACE_PLAY_CAP_NO_UPSHIFT 首发）续盯。

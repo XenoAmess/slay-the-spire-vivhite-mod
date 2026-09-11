@@ -13004,6 +13004,42 @@ def main() -> int:
             and "RACE_PLAY_CAP_NO_UPSHIFT" not in d_pcap3.reason), \
         f"键=False 未回滚旧口径: {d_pcap3.action}（{d_pcap3.reason}）"
 
+    # 3stale) 入锁新鲜窗抑制换挡上浮（RACE_UPSHIFT_STALE，第1409~1413局
+    #      批复盘）：1413-F17 瀑布巨兽 T5~T8 入锁后全攻回合已进入实测窗，
+    #      投影仍逐 tick 叠加×(1+换挡上浮0.20)（实测24~30→29~35伤/回合
+    #      校准），同段实际回合伤害仅 9/16（均值 12.5）——锁后持续上浮属
+    #      双重计价。夹具复用 pcap：实测两回合 40 伤 → dpt 20；池 400、
+    #      意图 15、血 71，uncapped 上浮 ×1.35 → 27，均判死。① 入锁 3
+    #      回合（age=3≥默认新鲜窗 2）：上浮置零、留痕 RACE_UPSHIFT_STALE、
+    #      无换挡上浮校准文本；② 入锁当回合（age=0<窗）：同口径保留
+    #      ×(1+换挡上浮0.35) 校准、无 STALE 注记；③ 键=0：锁后超窗也
+    #      严格回滚旧口径（保留上浮、无注记）。
+    pol_stale1 = pcap_policy()
+    pol_stale1._krace_latch = True
+    pol_stale1._krace_latch_round = 1
+    d_stale1 = pol_stale1.decide(pcap_state(4, 0), pcap_ctx)
+    assert ("斩杀竞速投影" in d_stale1.reason
+            and "RACE_UPSHIFT_STALE" in d_stale1.reason
+            and "上浮+0.35置零" in d_stale1.reason
+            and "×(1+换挡上浮" not in d_stale1.reason), \
+        f"入锁超新鲜窗未抑制换挡上浮: {d_stale1.action}（{d_stale1.reason}）"
+    pol_stale2 = pcap_policy()
+    pol_stale2._krace_latch = True
+    pol_stale2._krace_latch_round = 2
+    d_stale2 = pol_stale2.decide(pcap_state(2, 0), pcap_ctx)
+    assert ("斩杀竞速投影" in d_stale2.reason
+            and "×(1+换挡上浮0.35)" in d_stale2.reason
+            and "RACE_UPSHIFT_STALE" not in d_stale2.reason), \
+        f"入锁新鲜窗内误抑制上浮: {d_stale2.action}（{d_stale2.reason}）"
+    pol_stale3 = pcap_policy()
+    pol_stale3.know.policy["race_upshift_fresh_turns"] = 0
+    pol_stale3._krace_latch = True
+    pol_stale3._krace_latch_round = 1
+    d_stale3 = pol_stale3.decide(pcap_state(4, 0), pcap_ctx)
+    assert ("×(1+换挡上浮0.35)" in d_stale3.reason
+            and "RACE_UPSHIFT_STALE" not in d_stale3.reason), \
+        f"键=0 未回滚旧口径: {d_stale3.action}（{d_stale3.reason}）"
+
 
     print("SELFCHECK OK")
     return 0
