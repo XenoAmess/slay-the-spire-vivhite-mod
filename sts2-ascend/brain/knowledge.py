@@ -103,6 +103,17 @@ DEFAULT_POLICY = {
                                       # 沉睡3层，失去生命即提前苏醒；历史 10 场 F17 全部 T1 零意图
                                       # 全攻提前 2 回合唤醒 Boss 白吃 ≈37 火力。计数1（回合末自然
                                       # 苏醒）/全格挡/可击杀不拦截；0 = 关闭（严格回滚旧口径）
+    "potion_sleep_guard": True,  # 沉睡保期药水闸（POTION_SLEEP_GUARD，第620~636局批复盘）：
+                                 # 卡牌侧 SLEEP_GUARD 只管出牌通道，药水通道零防护——620 局
+                                 # F17 T1 对沉睡族母（ASLEEP×3）先掷攻击药水【药水形状的石头】，
+                                 # 下一 tick 快照「无能力」证明已被提前唤醒（原生 AsleepPower
+                                 # .AfterDamageReceived 以 UnblockedDamage≠0 唤醒、来源不限），
+                                 # T2 意图跳 19 触发 HARD_INTENT_SPIKE_FIRE；对照 632 局同 Boss
+                                 # 快照 [PLATING×12,ASLEEP×3] 可读、T1 收尾守卫正常拦 3 张攻击，
+                                 # 560~576 批「载荷缺口 vs 逻辑缺口」结案：泄漏通道是伤害药水。
+                                 # 伤害药水将对沉睡≥sleep_guard_min_stacks 的敌人造成未格挡伤害
+                                 # 且不击杀时跳过且不计 tried（自然苏醒后仍可兑现）；可击杀/
+                                 # 全格挡/无伤害数字不拦；False = 关闭（严格回滚旧口径）
     "enemy_powers_snapshot_obs": 1,  # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第560~576局批复盘）：
                                      # SLEEP_GUARD 在产后的 9 场族母遭遇（541/545/548/559/563/568/
                                      # 574/575/576）零留痕、T1 全部提前唤醒，同代码按 API 契约载荷

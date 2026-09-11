@@ -5884,6 +5884,85 @@ def main() -> int:
     assert d_sg_awake.action == "play_card" and d_sg_awake.params.get("card_index") == 0, \
         f"无沉睡敌人正常出牌回归: {d_sg_awake.action} {d_sg_awake.params}（{d_sg_awake.reason}）"
 
+    # 3sg2) 沉睡保期药水闸（POTION_SLEEP_GUARD，第620~636局批复盘）：卡牌侧
+    #      SLEEP_GUARD 只管出牌通道，药水通道零防护——620 局 F17 T1 对沉睡族母
+    #      先掷攻击药水【药水形状的石头】，下一 tick 快照「无能力」实锤已被提前
+    #      唤醒（原生 AsleepPower.AfterDamageReceived 以 UnblockedDamage≠0
+    #      唤醒、来源不限），T2 意图跳 19 触发 HARD_INTENT_SPIKE_FIRE；632 局
+    #      同 Boss 快照 [PLATING×12,ASLEEP×3] 可读、T1 收尾守卫正常拦牌，证明
+    #      载荷与卡牌逻辑均在产，泄漏通道是伤害药水。夹具：① 沉睡3层+未格挡
+    #      24伤+非击杀 → 不用药、留痕、不计 tried（苏醒后同一瓶可兑现）；
+    #      ② 可击杀直接放行；③ 全格挡不唤醒放行；④ 沉睡1层放行；⑤
+    #      potion_sleep_guard=False 严格回滚；⑥ AOE 伤害药水同口径拦截。
+    def sg2_state(pot_desc, enemy, *, needs_target=True):
+        pot = {"index": 0, "potion_id": "ATTACK_P", "name": "攻击药水",
+               "description": pot_desc, "occupied": True, "can_use": True,
+               "usage": "combat", "requires_target": needs_target,
+               "valid_target_indices": [0] if needs_target else []}
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": 72, "max_hp": 80, "block": 0,
+                           "energy": 3},
+                "hand": [], "enemies": [enemy]},
+            "run": {"current_hp": 72, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": [], "potions": [pot]},
+        }
+
+    def sg2_pol():
+        return policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-potionsg-"))),
+            random.Random(5))
+
+    def sg2_ctx():
+        c = DummyCtx()
+        c.combat = {"comp_id": "LAGAVULIN_MATRIARCH", "node_type": "Boss"}
+        c.current_combat_is_hard = True
+        return c
+
+    # ① 沉睡3层+未格挡24伤+非击杀 → 不用药且留痕；自然苏醒后同一瓶仍可兑现
+    p_sg2 = sg2_pol()
+    d_psg1 = p_sg2.decide(sg2_state("造成24点伤害。", sg_enemy(asleep=3)), sg2_ctx())
+    assert d_psg1.action != "use_potion", \
+        f"沉睡3层 Boss 不得用未格挡伤害药水提前唤醒: {d_psg1.action}（{d_psg1.reason}）"
+    assert "POTION_SLEEP_GUARD" in json.dumps(d_psg1.trace or {}, ensure_ascii=False), \
+        f"药水闸跳过必须留痕: {d_psg1.action}（{d_psg1.reason}）"
+    d_psg1_wake = p_sg2.decide(sg2_state("造成24点伤害。", sg_enemy(asleep=None)),
+                               sg2_ctx())
+    assert d_psg1_wake.action == "use_potion", \
+        f"自然苏醒后同一瓶必须仍可兑现（不计 tried）: {d_psg1_wake.action}（{d_psg1_wake.reason}）"
+    # ② 可击杀沉睡者直接终局，不拦
+    p_sg2b = sg2_pol()
+    d_psg2 = p_sg2b.decide(sg2_state("造成24点伤害。", sg_enemy(hp=5, asleep=3)),
+                           sg2_ctx())
+    assert d_psg2.action == "use_potion", \
+        f"伤害药水可击杀沉睡者不应拦截: {d_psg2.action}（{d_psg2.reason}）"
+    # ③ 全格挡不唤醒（UnblockedDamage==0）放行
+    p_sg2c = sg2_pol()
+    d_psg3 = p_sg2c.decide(sg2_state("造成24点伤害。", sg_enemy(asleep=3, block=30)),
+                           sg2_ctx())
+    assert d_psg3.action == "use_potion", \
+        f"全格挡伤害药水不掉血不唤醒，不应拦截: {d_psg3.action}（{d_psg3.reason}）"
+    # ④ 沉睡1层（回合末自然苏醒）放行
+    p_sg2d = sg2_pol()
+    d_psg4 = p_sg2d.decide(sg2_state("造成24点伤害。", sg_enemy(asleep=1)), sg2_ctx())
+    assert d_psg4.action == "use_potion", \
+        f"沉睡1层（回合末自然苏醒）不应拦截: {d_psg4.action}（{d_psg4.reason}）"
+    # ⑤ potion_sleep_guard=False 严格回滚旧口径
+    p_sg2e = sg2_pol()
+    p_sg2e.know.policy["potion_sleep_guard"] = False
+    d_psg5 = p_sg2e.decide(sg2_state("造成24点伤害。", sg_enemy(asleep=3)), sg2_ctx())
+    assert d_psg5.action == "use_potion" and (
+        "POTION_SLEEP_GUARD" not in json.dumps(d_psg5.trace or {}, ensure_ascii=False)), \
+        f"键=False 必须严格回滚旧行为: {d_psg5.action}（{d_psg5.reason}）"
+    # ⑥ AOE 伤害药水（无目标、全场）同口径拦截
+    p_sg2f = sg2_pol()
+    d_psg6 = p_sg2f.decide(sg2_state("对所有敌人造成20点伤害。", sg_enemy(asleep=3),
+                                     needs_target=False), sg2_ctx())
+    assert d_psg6.action != "use_potion", \
+        f"AOE 伤害药水波及沉睡者同样不得提前唤醒: {d_psg6.action}（{d_psg6.reason}）"
+
     # 3ps) 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第560~576局批复盘）：
     #      SLEEP_GUARD 在产后的 9 场族母遭遇（541/545/548/559/563/568/574/575/576）
     #      零留痕、T1 全部提前唤醒，同代码按 API 契约载荷本地复现拦截正常——

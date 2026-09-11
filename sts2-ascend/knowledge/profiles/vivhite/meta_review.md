@@ -1545,3 +1545,74 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 620~636 局批复盘：SLEEP_GUARD 只管出牌通道——伤害药水提前唤醒沉睡 Boss（POTION_SLEEP_GUARD）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：沉睡保期教义（SLEEP_GUARD，1280~1284 批）只接管出牌评分通道，
+  伤害药水通道（_maybe_potion 的 is_damage 分支）零防护——原生
+  AsleepPower.AfterDamageReceived 以 UnblockedDamage≠0 唤醒且来源不限，一瓶
+  攻击药水即可在 T1 把沉睡 Boss 提前唤醒，随后整场守卫因对象消失而永久失效。
+  补上同口径药水闸（沉睡≥sleep_guard_min_stacks、未格挡伤害、非击杀时跳过且
+  不计 tried），沉睡窗口即可跨通道保留。可证伪：未来 3~10 局若遭遇沉睡 Boss
+  且手持伤害药水的对局从不出现 POTION_SLEEP_GUARD 留痕（条件不可达/接线错），
+  或留痕出现但自然苏醒后同一瓶不再兑现（tried 误标），或族母战 T2/T3 战损较
+  本批恶化（假设方向错），则本假设不成立。
+- **EVIDENCE**：620 局 F17（乐加维林族母）T1 逐 tick 复核——02:50:27 先掷攻击
+  药水【药水形状的石头】（target_index=0），下一 tick（02:50:28）敌能力快照
+  「乐加维林族母[无能力]」（ENEMY_POWERS_SNAPSHOT_OBS）证明 ASLEEP/PLATING 已
+  被唤醒流程移除，T2 意图升级+19 触发 HARD_INTENT_SPIKE_FIRE；该场此后
+  SLEEP_GUARD 零留痕（守卫对象已消失）。对照 632 局同 Boss（F17，84/84 入场）：
+  非伤害药水开局、快照 [PLATING_POWER×12,ASLEEP_POWER×3] 证明生产载荷可读，
+  T1 收尾 tick（05:40:08）守卫正常拦下闭域投影/绯色面积/递推星芒 3 张攻击——
+  560~576 批遗留的「载荷缺口 vs 逻辑缺口」就此结案：载荷在产、卡牌侧在产，
+  泄漏通道是伤害药水。634 局 F17 同型遭遇快照同口径可读。另核 632 局 T1
+  05:40:07 弦光投影 12 伤穿透未拦但 PLATING×12 全吸收（UnblockedDamage=0，
+  次 tick 守卫对余牌照常生效证明未唤醒）——结果无害；守卫「未格挡」判定只看
+  block 不看 plating 的口径余量登记为后续观察点，本批不动。本批 17 局其余
+  死因主轴（謦欬自损 18%~43%、竞速判死后 4 场惨胜）全部落在既有旋钮封账与
+  既有教义覆盖范围内，不重开。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 遭遇沉睡 Boss 且手持伤害药水的对局
+  决策链出现「沉睡保期药水闸…（POTION_SLEEP_GUARD）」skip 候选留痕，伤害
+  药水在自然苏醒前保留在手；② 沉睡 Boss 战不再出现「伤害药水使用后快照转
+  无能力」的提前唤醒形态；③ 自然苏醒/护甲打穿后同一瓶伤害药水正常兑现
+  （不计 tried 语义）。证伪/撤回：留痕从不显形而提前唤醒仍发生 → 复查
+  is_damage/目标解析接线；沉睡1层（回合末自然苏醒）被误拦 → 复查
+  sleep_guard_min_stacks 读取；族母战 T2/T3 战损较 620（T2 意图19）显著恶化
+  → policy.json 置 potion_sleep_guard=false 一键回滚（旧行为零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_maybe_potion 新增沉睡保期药水闸——is_damage
+  药水（单体目标/AOE「所有」语义）将对沉睡计数≥sleep_guard_min_stacks 的敌人
+  造成未格挡伤害（药水伤害>目标 block）且不击杀（<目标当前 HP）时，跳过且
+  不计 tried，候选以 status=skipped 留痕（POTION_SLEEP_GUARD）；可击杀、全
+  格挡、描述无伤害数字、键=False 四种情形严格回落旧口径；buff/防御/无法分类
+  药水与既有自伤门/Boss 前夜预留/兜底通道全部不变。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  potion_sleep_guard: True，注释记录 620/632/634 局实证与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3sg2 六分支——① 沉睡3层+未格挡24伤+
+  非击杀不用药且留痕、自然苏醒后同一瓶仍可兑现（不计 tried）；② 可击杀放行；
+  ③ 全格挡放行；④ 沉睡1层放行；⑤ 键=False 严格回滚且零留痕；⑥ AOE 伤害
+  药水同口径拦截。
+- 不改 SLEEP_GUARD 卡牌侧口径、自伤药水门、进攻药预留窗、竞速/謦欬任何旋钮；
+  不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3sg2 六分支；
+  既有 3sg①~⑦ 沉睡守卫族、3ps 快照观测、3k3/3k4 药水门族、3prz 零压闸族、
+  3kd、3br 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+55，药水闸+留痕）、brain/knowledge.py（+11 一个静态键及注释）、
+  brain/selfcheck.py（+79，3sg2 六分支）；未触碰 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

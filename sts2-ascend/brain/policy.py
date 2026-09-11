@@ -6092,6 +6092,60 @@ class Policy:
             # 跳过且不计入 tried——本场若恶化成致死局仍可立即启用
             if is_buff and not premium:
                 continue
+            # 沉睡保期药水闸（POTION_SLEEP_GUARD，第 620~636 局批复盘新增）：
+            # 卡牌侧 SLEEP_GUARD（第1280~1284批）只管出牌通道，药水通道零防护——
+            # 620 局 F17 T1 对沉睡族母先掷攻击药水【药水形状的石头】（02:50:27），
+            # 下一 tick 快照「乐加维林族母[无能力]」证明已被提前唤醒（原生
+            # AsleepPower.AfterDamageReceived 以 UnblockedDamage≠0 唤醒、来源
+            # 不限），T2 意图跳 19 触发 HARD_INTENT_SPIKE_FIRE；对照 632/634 局
+            # 同 Boss 快照 [PLATING×12,ASLEEP×3] 证明载荷可读、632 局 T1 收尾
+            # tick 守卫正常拦下 3 张攻击——560~576 批遗留的「载荷缺口 vs 逻辑
+            # 缺口」就此结案：载荷在产、卡牌侧在产，泄漏通道是伤害药水。is_damage 药水将对沉睡计数≥
+            # sleep_guard_min_stacks 的敌人造成未格挡伤害且不击杀时，跳过且
+            # 不计 tried（自然苏醒后同一瓶仍可兑现）；可击杀/全格挡/描述无伤害
+            # 数字/键=False 四种情形严格回落旧口径。
+            if is_damage and enemies:
+                try:
+                    _psg_on = bool(pol.get("potion_sleep_guard", True))
+                except Exception:
+                    _psg_on = True
+                try:
+                    _psg_min = float(pol.get("sleep_guard_min_stacks", 2.0)
+                                     or 0.0)
+                except (TypeError, ValueError, OverflowError):
+                    _psg_min = 2.0
+                _psg_nums = re.findall(r"\d+", desc)
+                _psg_dmg = float(_psg_nums[0]) if _psg_nums else 0.0
+                if _psg_on and _psg_min > 0.0 and _psg_dmg > 0.0:
+                    if target is not None:
+                        _psg_affected = [e for e in enemies
+                                         if e.get("index") == target]
+                    elif "所有" in desc or "all" in desc_l:
+                        _psg_affected = list(enemies)
+                    else:
+                        _psg_affected = []
+                    _psg_wake = None
+                    for _pe in _psg_affected:
+                        try:
+                            _pe_hp = float(_pe.get("current_hp") or 9999.0)
+                            _pe_blk = max(0.0, float(_pe.get("block") or 0.0))
+                        except (TypeError, ValueError, OverflowError):
+                            continue
+                        if (self._enemy_asleep_stack(_pe) >= _psg_min
+                                and _pe_blk < _psg_dmg < _pe_hp):
+                            _psg_wake = _pe
+                            break
+                    if _psg_wake is not None:
+                        self._trace_candidate(
+                            name or p.get("potion_id"), None,
+                            index=p.get("index"), action="use_potion",
+                            status="skipped",
+                            why=(f"沉睡保期药水闸："
+                                 f"{_psg_wake.get('name') or '敌人'}沉睡"
+                                 f"≥{_psg_min:g}层，伤害{_psg_dmg:g}未格挡"
+                                 "将提前唤醒，留待自然苏醒后兑现"
+                                 "（POTION_SLEEP_GUARD）"))
+                        continue  # 不计 tried——自然苏醒后仍可兑现
             if (is_damage or is_buff) and enemies:
                 try:
                     _sh_gate = bool(int(pol.get("potion_self_harm_gate", 1)))
