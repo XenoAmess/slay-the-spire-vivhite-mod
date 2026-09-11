@@ -3621,10 +3621,17 @@ class Policy:
                             # 逐 tick 翻案（零行为差异）。
                             if (_kr_latched and esc_gate and bool(
                                     pol.get("race_esc_latch_hold", True))):
+                                # 手牌税注记去重（HAND_TAX_NOTE_DEDUP，第1399~1403局
+                                # 批复盘）：本分支成立时 race_lost 恒为 True，下方
+                                # 「斩杀竞速投影」行必定同 tick 再拼一次
+                                # _tax_fire_note——1402（V90M353NBGGD）F23-T3
+                                # 18:55:42 单条 reason 内 RACE_HAND_TAX_FIRE 出现
+                                # 2 次，按标签计数的复盘台账会把同一 tick 双计。
+                                # 锁持行不再拼税注记，由投影行统一携带（每决策
+                                # 恰好一次，税额/口径不变）。
                                 danger_note += (
                                     f"；滚雪球锁持：联合复核虽报可行（{_mix}），"
-                                    f"实测入锁不翻案（RACE_ESC_LATCH_HOLD）"
-                                    f"{_tax_fire_note}")
+                                    f"实测入锁不翻案（RACE_ESC_LATCH_HOLD）")
                             else:
                                 race_lost = False
                                 self._krace_latch = False

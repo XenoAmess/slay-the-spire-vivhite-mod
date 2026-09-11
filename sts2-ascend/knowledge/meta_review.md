@@ -8969,3 +8969,153 @@ retry_resolution: none (no replay target; local production behavior change)
    ③ INVULN_TARGET_VETO 第 2~3 局样本与自爆回合格挡量；④ 竞速审计
    悲观率台账（391/871）；⑤ EXHAUST_FIZZLE_EXEMPT 原料在场局首发；
    ⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。
+
+# 2026-09-11｜第 1399~1403 局复盘（异步追及队列 5 局 exact_batch 全败；观测修复 ×1：HAND_TAX_NOTE_DEDUP 手牌税注记去重——锁持行与投影行同 tick 双拼 _tax_fire_note，标签台账双计）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无队列内失败包，不产生 replay target。
+- 上一批（1388~1392）last_paths 关键标签存在性核读：RACE_HAND_TAX_FIRE
+  （policy.py `_race_tax_fire` 入账段与「计入对账火力」留痕、knowledge.py
+  `race_hand_tax_fire`、selfcheck 3htx③④）在当前 HEAD 全部在产，且本批
+  1400/1402 完成真机首验（见二.3），无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: none (no replay target; local production observability fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：RACE_ESC_LATCH_HOLD 锁持行与「斩杀竞速投影」行都拼接
+  `_tax_fire_note`，而锁持分支成立时 race_lost 恒为 True、投影行同 tick
+  必随——锁持+税负同场的决策会把同一条手牌税注记写两遍，按标签计数的
+  复盘台账（注记条数=证据强度的基础口径）把同一 tick 双计。
+- **EVIDENCE**：1402（V90M353NBGGD）F23-T3 18:55:42 单条 reason 内
+  「手牌税5/回合计入对账火力=max(火力,意图+税)（HAND_TAX_FIRE_OBS:
+  TOXIC×1，RACE_HAND_TAX_FIRE）」逐字出现 2 次（锁持行一次+投影行一次，
+  程序化计数 count=2；同局其余 5 条税负注记 count=1）；代码核读
+  policy.py 锁持分支（3622~3627）与投影分支（3636~3640）均内插
+  `_tax_fire_note`，锁持路径不改写 race_lost，双拼结构性必然。
+- **EXPECTED_SIGNAL**：未来 3~10 局税负+锁持同场的决策理由中
+  「RACE_HAND_TAX_FIRE」每决策恰好 1 次（投影行统一携带）；税负局
+  注记计数=实际 tick 数，台账不再虚高；判决、评分、税额入账零变化。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1399..1403]，exact 5/5、missing=0；5 局全败（生涯
+  0/1403）。死亡分布：一幕 Boss F17 两局（1399/1403）、二幕 Boss F33
+  两局（1400/1401）、二幕走廊 F25 一局（1402 THE_OBSCURA，40 血进场、
+  T5 差 2 点格挡数学必死）。
+- 主样本 1403（3FB8KGA0LWC9）packet 内 34 条切片 + 聚合表（play_card
+  68/end_turn 24）+ runs 全文 205 条已核读：F1 涅奥营养牡蛎（经验口径
+  合规）、F2/F3 选牌带 CARD_BURST_PICK_AUDIT（supply_left=+0.0 在产）、
+  F17 墨影幻灵 T4~T7 全攻提速能量真尽收口（T7 末 7 血/9 甲对意图 28
+  数学必死）——执行层零新缺陷，死因=卡组输出密度（实测 13~21 伤/回合
+  爬坡对 195 战/117 死的高危 Boss 账）。
+- 部署时序：RACE_HAND_TAX_FIRE（1388~1392 批落盘）早于本批全部对局——
+  1400×1/1402×6 注记为其有效首验；HAND_TAX_NOTE_DEDUP 为本批新落地，
+  不覆盖本批任何对局（1402 的 count=2 现场为 pre-fix 口径，即本批修复
+  对象本身），证据与修复无时序混淆。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 1399/1400/1401/1403 前夜竞速预演判死
+   全部实战兑现（击杀需 18~26 回合＞满血可存活 6~8 回合）；旋钮代谢链
+   全顶格（kill_bonus 20.00、burst_starve 双旋钮、饥饿带、前夜锻造线、
+   长战加成上限、kill_race_prior_eff 触底、boss_entry_min_hp_pct 0.88
+   逼近上限）——判死缺口属设计内终态，不重复立案。
+2. **本批实验靶点：手牌税注记同 tick 双拼（观测修复，已立项）。** 详见
+   HYPOTHESIS 与三节；缺席证据型双计会虚增税负局样本强度，属台账口径
+   缺陷而非估值争议。
+3. **REMOVAL_COST_FLIP_AUDIT 翻案独立对局达 3/3 预注册线**：1389（双尾
+   鼠/啃咬机 2 条）、1399（缩小甲虫 13池/9池 2 条）、1400（啃咬机 23池、
+   盛碗虫丝 24池、盛碗虫石 16池 3 条）——减员成本杠杆确认有可分辨的
+   独立行为效应，按预注册转入 KIN 组合战损基线（55 掉血/65% 死亡）裁决
+   保留/调系数；本批无 KIN 遭遇，裁决待 KIN 原料。「宿主撤回窄动作
+   （removal_cost_bonus_max: 0）」维持暂缓（撤回前提已不成立）。
+4. **INVULN_TARGET_VETO 首验 3/3 达封账线**：1391（上批，9 回合获胜）、
+   1401（X6TFFS7Q5YJS F17-T10，22 血 40 甲吃自爆意图 36，攻击全体弃权
+   +「全场无敌帧，攻击救场禁出」留痕逐字在产）、1402（V90M353NBGGD
+   F17-T10，32 血 42 甲吃 36 同型）——三独立对局自爆回合能量全部让位
+   格挡且全部活过自爆帧，1380-T11 型「31 伤打进无敌目标后 5 甲吃 36」
+   绝迹，杠杆封账保留。
+5. **RACE_HAND_TAX_FIRE 真机首验（1400/1402）**：注记文本逐字符合设计
+   （「手牌税N/回合计入对账火力=max(火力,意图+税)」），1402-F23-T3 锁持
+   局税后火力与锁持注记同场在产；「幻影可行」翻转样本 0（两局税负现场
+   均为已判死局，税使判死更早，设计方向），续记。
+6. **竞速审计悲观率台账**：本批判死应验 +4（1399 F17、1400 F33、1401
+   F33、1403 F17），反向 +2（1399 F6 判死后 9 回合获胜掉血 68、1402 F17
+   判死后 10 回合获胜）——台账 395/877≈45.0%，仍处 30%~46% 带内偏
+   上限，续记不重复立案。
+7. **SLIPPERY_TTK_BREAK_EST 续记**：1400×8、1403×11 条读数在产（X≥2
+   读数 1400×5、1403×7），抽核 ttk−tsurv 差均越 margin（1403 终局
+   4 vs 0），贴线计数维持 0/3，续记。
+8. **EXHAUST_FIZZLE_EXEMPT / EXHAUST_CAP_SKIP_OBS**：1402 终卡组含痛殴
+   （THRASH）但全批 0 注记 0 拦截（上限未占满），「原料在场但无空转
+   现场」分支续记；拦截绝迹第 3 批。
+9. **豁免疫价/自残旁观、ENGINE_COMMIT_LOWHP_DISCOUNT、SLEEP_GUARD 等**：
+   本批无对应现场（无 ≤5 血非斩杀豁免原料、无低血承诺开局、无族母
+   遭遇），顺延不判失效。
+
+## 三、本次调整（观测修复 ×1：HAND_TAX_NOTE_DEDUP 手牌税注记去重）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **HAND_TAX_NOTE_DEDUP**（锁持行与投影行同 tick 双拼 `_tax_fire_note`，标签台账双计同一 tick；证据：1402 F23-T3 18:55:42 单条 reason 内 RACE_HAND_TAX_FIRE 逐字 2 次（程序化 count=2）+ policy.py 锁持分支（3622~3627）与投影分支（3636~3640）均内插 `_tax_fire_note` 且锁持路径 race_lost 恒真、双拼结构性必然的代码核读；机制先例：RACE_HAND_TAX_FIRE 批「观测注记文本必须与判决口径同步诚实化」同教义——注记计数是证据强度基础口径，双计即口径失真） |
+| 代码动作 | ① brain/policy.py 锁持分支不再拼接 `_tax_fire_note`（该分支成立时 race_lost 恒为 True，下方「斩杀竞速投影」行同 tick 必随并统一携带税注记，每决策恰好一次；税额、口径、「计入/未计入」文本全部不变）；② brain/selfcheck.py 3br-esc-latch-hold 扩展⑤三断言（锁持+税负同场：RACE_ESC_LATCH_HOLD 在产、reason.count("RACE_HAND_TAX_FIRE")==1、「手牌税3/回合计入对账火力」恰好一条） |
+| 性质边界 | 纯留痕去重：判决、评分、税额入账、锁持语义、投影文本、学习面全部零改动；锁持行的复核结论文本（「虽报可行…实测入锁不翻案」）原样保留；非锁持路径（投影行单独携带、防守线复核出口行携带）不受影响；白绮策略层零改动 |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3br-esc-latch-hold⑤ 新增三断言与 3yh/3yhr/3u/3ww/3br/3hcat/3bsl/3htpa/3xcl/3htx 全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ① 税负+锁持同场决策的 RACE_HAND_TAX_FIRE 每决策计数（应恒=1）；② 税负局注记总数=独立 tick 数（对账 1402 型 count=2 绝迹）；③ RACE_HAND_TAX_FIRE 首验延续（「幻影可行」翻转样本计数）；④ 台账 395/877 走向 |
+| 继续调整条件 | 去重后注记计数与 tick 数一致且税负局判决方向无误伤 → 封账保留；若发现其他成对分支（如防守线复核出口行与后续投影行同 tick）出现同类双拼 → 同口径去重并补夹具 |
+| 撤回条件 | 恢复锁持行尾部 `{_tax_fire_note}` 拼接即回滚旧留痕口径（selfcheck 3br-esc-latch-hold⑤ count==1 断言为对照锚）；或删除 policy/selfcheck 两处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测修复落地，
+   非登记延后）。
+2. **REMOVAL_COST_TARGET / REMOVAL_COST_FLIP_AUDIT**：翻案独立对局
+   3/3 达线（1389/1399/1400），杠杆独立效应确认，转入 KIN 战损基线
+   （55/65%）裁决；宿主撤回窄动作维持暂缓，待 KIN 原料或再连续 ≥2 批
+   全随附再议。
+3. **INVULN_TARGET_VETO（1383~1387 批行为修复）**：首验 3/3 达封账线
+   （1391/1401/1402 自爆回合格挡 12/40/42 甲、全部活过自爆帧），封账
+   保留。
+4. **RACE_HAND_TAX_FIRE（1388~1392 批行为化）**：真机首验 1400×1/
+   1402×6 逐字符合设计；其留痕双拼缺陷由本批 HAND_TAX_NOTE_DEDUP
+   治理，行为口径不变。
+5. **竞速审计悲观率台账**：应验 +4、反向 +2（395/877≈45.0% 带内偏
+   上限），续记。
+6. **SLIPPERY_TTK_BREAK_EST**：1400/1403 读数在产，贴线 0/3，续记。
+7. **EXHAUST_FIZZLE_EXEMPT / EXHAUST_CAP_SKIP_OBS**：1402 痛殴持证但
+   无空转现场，0 注记 0 拦截；拦截绝迹第 3 批，续记。
+8. **HP_COST_ATK_EXEMPT_TRACE / EXEMPT_BYSTANDER**：本批双 0（1399/
+   1400/1403 单体自残牌参选无附加若干），双零关闭条件不达成，续记。
+9. **BURST_STARVE 链**：cap=4.0 冻结封账维持，1403 F2/F3 选牌审计
+   supply_left=+0.0 在产，无误伤反例。
+10. **JOINT_FLIP_TTK_CAP / RACE_ESC_LATCH_HOLD**：1402 F23 T2~T3 翻盘
+    比否决与锁持留痕在产（1402 的「虽报可行」为锁持后如实对账，非
+    幻影放行），续记。
+11. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    ENGINE_COMMIT_LOWHP_DISCOUNT / SLEEP_GUARD 首 tick 穿透 /
+    SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+    对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **同 tick 成对分支各拼同一观测注记=结构性双计**：锁持行与投影行
+   在控制流上必然同帧同现，各自内插 `_tax_fire_note` 时计数口径直接
+   翻倍——凡「同一变量被多个互斥性未证明的留痕分支共享拼接」，都要
+   核读分支间的同现关系；证据=程序化 per-reason 计数（count=2），
+   不靠肉眼。
+2. **注记计数是证据强度的基础口径，口径失真先于结论失真**：税负局
+   样本强度若按双计后的条数读，会把 1 个 tick 当 2 个样本——观测位
+   注册时应声明「每决策至多一条」不变式并配 count==1 夹具。
+3. **预注册线到期对账继续有效**：REMOVAL_COST 翻案 3/3 与 INVULN_
+   TARGET_VETO 3/3 同批达线，均按预注册执行（转入基线裁决/封账
+   保留），不消耗额外窗口。
+4. 观察点（下批复盘核对）：① HAND_TAX_NOTE_DEDUP 后税负局注记计数
+   =tick 数（1402 型 count=2 绝迹）；② REMOVAL_COST KIN 原料与基线
+   裁决（翻案 3/3 已确认独立效应）；③ RACE_HAND_TAX_FIRE 「幻影
+   可行」翻转样本计数；④ 竞速审计悲观率台账（395/877）；⑤
+   EXHAUST_FIZZLE_EXEMPT 空转现场首发（1402 痛殴型持证局续盯）；
+   ⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。

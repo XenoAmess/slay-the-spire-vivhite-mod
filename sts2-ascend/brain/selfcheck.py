@@ -8904,6 +8904,25 @@ def main() -> int:
     assert "RACE_ESC_LATCH_HOLD" not in d_hold_fresh.reason \
         and "防守线复核：联合能量对账" in d_hold_fresh.reason, \
         f"未入锁的判死当 tick 出口被锁持误伤: {d_hold_fresh.action}（{d_hold_fresh.reason}）"
+    # ⑤ 手牌税注记去重（HAND_TAX_NOTE_DEDUP，第1399~1403局批复盘）：锁持行与
+    #    同 tick 必随的斩杀竞速投影行此前各拼一次 _tax_fire_note——1402
+    #    （V90M353NBGGD）F23-T3 18:55:42 单条 reason 内 RACE_HAND_TAX_FIRE
+    #    出现 2 次，按标签计数的复盘台账双计同一 tick。修复后锁持+税负同场
+    #    每决策恰好一条「计入对账火力」注记（税额/判决/评分零改动）。
+    d_hold_tax = hold_pol(0.0, latch_hold=True, hand_override=[
+        {"index": 0, "card_id": "CAP_HIT", "name": "速攻",
+         "playable": True, "energy_cost": 1,
+         "requires_target": True, "valid_target_indices": [0],
+         "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+        {"index": 1, "card_id": "INFECTION", "name": "感染",
+         "playable": False, "energy_cost": -1,
+         "rules_text": "不能被打出。 在你的回合结束时，"
+                       "如果这张牌在你的手牌中，你受到3点伤害。"}])
+    assert "RACE_ESC_LATCH_HOLD" in d_hold_tax.reason \
+        and d_hold_tax.reason.count("RACE_HAND_TAX_FIRE") == 1 \
+        and "手牌税3/回合计入对账火力" in d_hold_tax.reason, \
+        f"锁持+税负同场手牌税注记未去重（应恰好 1 条）: " \
+        f"{d_hold_tax.action}（{d_hold_tax.reason}）"
 
     # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把
