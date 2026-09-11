@@ -1616,3 +1616,74 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 637~656 局批复盘：激怒零感知——技能牌喂 Boss 力量滚雪球（ENRAGE_SKILL_TAX）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：原生 EnragePower.AfterCardPlayed 在玩家打出 Skill 牌时给持有者
+  +Amount 力量（mechanics/powers.jsonl 实证，仅 CardType.Skill 触发），而 Brain
+  出牌评分对 ENRAGE_POWER 零感知（改动前全 brain 检索零命中）。白绮謦欬卡组大量
+  Skill 型功能牌（公理护环/启发式护盾/局部同胚/星图检索/不变量/闭域映射）在激怒
+  战中每回合喂 Boss 3~5 张 = +6~10 力量/回合，力量复利滚进未来每一刀意图。按
+  「激怒层数×计价系数」对技能牌扣分（激怒技能税），可把边际 0 费增益/抽牌压到
+  阈值下、给意图增速刹车，同时保留大额格挡与斩杀（格挡买的是当前意图，税的是
+  未来回合的力量复利）。可证伪：未来 3~10 局若激怒敌人（实验体/外骨骼/女王/
+  假商人）战斗决策链从不出现 ENRAGE_SKILL_TAX 注记（接线或载荷不可读），或注记
+  显形但激怒战意图增速不放缓、656 同型败局（T8 判死→T11 阵亡）原样重现，或
+  必要格挡被误压导致低甲吃刀，则本假设不成立。
+- **EVIDENCE**：656 局（02YF1HWCMUP3，F48 实验体 #C24 阵亡）全链逐条核对——
+  首 tick 快照「实验体 #C24[ADAPTABLE_POWER×1,ENRAGE_POWER×2]」
+  （ENEMY_POWERS_SNAPSHOT_OBS）载荷可读；T1 打 3 张技能（不变量+公理护环×2）
+  意图 20→26→30、T3~T6 每回合 1~4 张技能意图 30→40→50→60→70（≈5 技能×2 力量
+  /回合），T9 起「斩杀竞速投影：击杀还需8回合>可存活0回合」全攻仍追不上，T11
+  1 血吃意图 36 阵亡（竞速审计：T8判死→实战11回合阵亡）。同 Boss 同快照同结局：
+  592 局 F48（#C21，掉血85 阵亡）、630 局 F48（#C22，掉血111｜自损83 阵亡）——
+  3 个独立对局达 evidence_run_threshold。对照无激怒回合：重生间隙（T2/T7）意图
+  归零、战损立停，坐实滚雪球来自力量复利而非固定脚本。原生机制核对
+  （v0.111.0 mechanics/powers.jsonl）：ENRAGE_POWER「每当你打出一张技能牌时，
+  获得{Amount}点力量」，StackType=Counter、Buff。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 激怒敌人战斗决策链出现「激怒技能税：
+  技能牌喂敌+N力量（-X.X，ENRAGE_SKILL_TAX）」注记；② 激怒战中 0 费/低值技能
+  （公理护环类面板 +3.75 级）让位于攻击或结束回合，每回合技能出牌数下降；③
+  激怒战意图逐回合增速低于「技能数×Amount」的旧 1:1 口径，实验体战回合数/战损
+  改善。证伪/撤回：注记零显形而激怒遭遇仍在 → 复查 powers 载荷与类型双通道接线；
+  大额格挡（+20 级）被误压、低甲吃刀形态出现 → policy.json 置 enrage_skill_tax=0
+  一键回滚（旧行为零差异，改动集中于评分加分项与注记，无阈值/公式重写）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_combat 出牌循环前一次性汇总存活敌人激怒层数
+  （_enemy_power_stack 复用力量/滑溜/沉睡同构读取，id/power_id/name 中英文兼容）；
+  循环内每张候选在角色估价后计价激怒技能税——技能类型判定复用零压闸同型双通道
+  （白绮策略目录 card_type=="skill" 优先，目录外取载荷观测 card_type；两条都缺时
+  保守按非技能，宁可漏税不误伤），技能牌 score -= 层数×enrage_skill_tax 并追加
+  注记；攻击/能力牌（原生不触发激怒）严格零差异，馀量门/复打税/竞速/沉睡守卫/
+  零压闸等全部既有体系不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 enrage_skill_tax: 2.0，
+  注释记录 656/592/630 局实证与回滚口径（0 = 关闭，严格回滚旧口径）。
+- sts2-ascend/brain/selfcheck.py：新增 3et 五分支——① 激怒×2 在场大额格挡技能
+  照过阈值且带税注记、无激怒同牌同动作零注记；② 攻击牌激怒在场零注记；③ 双
+  激怒敌人（合计4层）边际 0 费抽牌技能被税压到阈值下改结束回合、无激怒照打；
+  ④ 键=0 严格回滚（激怒在场边际技能照打且零注记）；⑤ 能力牌激怒在场照打且
+  零注记（原生仅 Skill 触发）。
+- 不改机制税分极值、激怒层数读取语义、_score_play 任何分支公式；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3et 五分支；既有
+  3sg/3sg2 沉睡守卫族、3ps 快照观测、3k3/3k4 药水门族、3prz 零压闸族、3kd、
+  3br 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+38，循环前层数汇总+循环内计价留痕）、brain/knowledge.py（+9 一个静态键及
+  注释）、brain/selfcheck.py（+102，3et 五分支）；未触碰 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警为
+  宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -6022,6 +6022,108 @@ def main() -> int:
             and d_ps5.action == d_ps1.action, \
         f"键=0 未严格回滚: {d_ps5.action}（{d_ps5.reason}）"
 
+    # 3et) 激怒技能税（ENRAGE_SKILL_TAX，第637~656局批复盘）：原生
+    #      EnragePower.AfterCardPlayed 仅在打出 Skill 牌时给持有者 +Amount 力量
+    #     （mechanics/powers.jsonl 实证）；656 局 F48 实验体 #C24（ENRAGE×2）
+    #      每回合被打 3~5 张技能牌、意图 20→70 以 ≈+10/回合滚雪球，T11 阵亡；
+    #      592/630 局 F48 同 Boss（#C21/#C22）同型阵亡，3 局达线。每张技能牌
+    #      按「激怒层数×enrage_skill_tax」扣分并留痕；攻击/能力不触发激怒
+    #      严格零差异；键=0 一键回滚（旧行为零差异）。
+    et_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-enragetax-"))
+    et_pol = policy.Policy(knowledge.Knowledge(et_dir), random.Random(5))
+
+    def et_enemy(stacks=2, intent=10, hp=200, *, index=0):
+        powers = [] if not stacks else [{
+            "power_id": "ENRAGE_POWER", "name": "激怒", "amount": stacks,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": "TEST_SUBJECT", "name": "实验体 #C24",
+            "current_hp": hp, "max_hp": hp, "block": 0,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    et_block = {"index": 0, "card_id": "ET_GUARD", "name": "刚毅", "playable": True,
+                "card_type": "Skill", "energy_cost": 1,
+                "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    et_strike = {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                 "playable": True, "card_type": "Attack", "energy_cost": 1,
+                 "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    et_draw = {"index": 0, "card_id": "ET_SCHEME", "name": "筹划", "playable": True,
+               "card_type": "Skill", "energy_cost": 0,
+               "resolved_rules_text": "抽1张牌。", "dynamic_values": []}
+    et_power = {"index": 0, "card_id": "ET_INFLAME", "name": "斗志", "playable": True,
+                "card_type": "Power", "energy_cost": 1,
+                "resolved_rules_text": "获得2点力量。", "dynamic_values": []}
+
+    class EtCtx(DummyCtx):
+        pass
+
+    def et_ctx():
+        c = EtCtx()
+        c.combat = {"comp_id": "TEST_SUBJECT", "node_type": "Boss"}
+        return c
+
+    def et_state(hand, enemy, turn=1, hp=80):
+        enemies = enemy if isinstance(enemy, list) else [enemy]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn,
+            "combat": {
+                "player": {"current_hp": hp, "max_hp": 80, "block": 0, "energy": 3},
+                "hand": hand,
+                "enemies": enemies,
+            },
+            "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": 48,
+                    "deck": []},
+        }
+
+    # ① 激怒×2 在场：大额格挡技能照过阈值且留痕；无激怒敌人同牌同动作零注记
+    d_et1 = et_pol.decide(et_state([dict(et_block)],
+                                   et_enemy(stacks=2, intent=10)), et_ctx())
+    assert d_et1.action == "play_card" and d_et1.params.get("card_index") == 0 \
+            and "ENRAGE_SKILL_TAX" in (d_et1.reason or ""), \
+        f"激怒战中格挡技能应照打且带税注记: {d_et1.action}（{d_et1.reason}）"
+    d_et1b = et_pol.decide(et_state([dict(et_block)],
+                                    et_enemy(stacks=0, intent=10)), et_ctx())
+    assert d_et1b.action == "play_card" and d_et1b.params.get("card_index") == 0 \
+            and "ENRAGE_SKILL_TAX" not in (d_et1b.reason or ""), \
+        f"无激怒敌人不应出现税注记: {d_et1b.action}（{d_et1b.reason}）"
+    # ② 攻击牌不触发激怒：激怒×2 在场零注记
+    d_et2 = et_pol.decide(et_state([dict(et_strike)],
+                                   et_enemy(stacks=2, intent=10)), et_ctx())
+    assert d_et2.action == "play_card" \
+            and "ENRAGE_SKILL_TAX" not in (d_et2.reason or ""), \
+        f"攻击牌不得吃激怒税: {d_et2.action}（{d_et2.reason}）"
+    # ③ 双激怒敌人（合计4层）在场：边际 0 费抽牌技能被税（-8.0）压到阈值下
+    #    改结束回合；无激怒敌人时同牌照打——税的行为差异可观测
+    d_et3 = et_pol.decide(et_state([dict(et_draw)],
+                                   [et_enemy(stacks=2, intent=5),
+                                    et_enemy(stacks=2, intent=5, index=1)]), et_ctx())
+    assert d_et3.action == "end_turn", \
+        f"边际技能未被激怒税压下: {d_et3.action}（{d_et3.reason}）"
+    d_et3b = et_pol.decide(et_state([dict(et_draw)],
+                                    et_enemy(stacks=0, intent=10)), et_ctx())
+    assert d_et3b.action == "play_card", \
+        f"无激怒时边际技能应照打: {d_et3b.action}（{d_et3b.reason}）"
+    # ④ 键=0 严格回滚：激怒×2 在场边际技能照打且零注记
+    et_dir_off = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-enragetax-off-"))
+    et_pol_off = policy.Policy(knowledge.Knowledge(et_dir_off), random.Random(5))
+    et_pol_off.know.policy["enrage_skill_tax"] = 0.0
+    d_et4 = et_pol_off.decide(et_state([dict(et_draw)],
+                                       et_enemy(stacks=2, intent=10)), et_ctx())
+    assert d_et4.action == "play_card" \
+            and "ENRAGE_SKILL_TAX" not in (d_et4.reason or ""), \
+        f"键=0 必须严格回滚: {d_et4.action}（{d_et4.reason}）"
+    # ⑤ 能力牌不触发激怒（原生仅 Skill 触发）：激怒×2 在场照打且零注记
+    d_et5 = et_pol.decide(et_state([dict(et_power)],
+                                   et_enemy(stacks=2, intent=10)), et_ctx())
+    assert d_et5.action == "play_card" \
+            and "ENRAGE_SKILL_TAX" not in (d_et5.reason or ""), \
+        f"能力牌不得吃激怒税: {d_et5.action}（{d_et5.reason}）"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))

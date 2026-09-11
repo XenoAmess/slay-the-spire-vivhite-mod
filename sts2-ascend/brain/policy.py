@@ -4378,6 +4378,25 @@ class Policy:
             except (TypeError, ValueError):
                 _hp_gate_unc_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
+        # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
+        # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
+        # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
+        # 出牌评分对此零感知——656 局 F48 实验体 #C24（快照 ENRAGE×2）每回合
+        # 被打 3~5 张技能牌（不变量/公理护环×2/启发式护盾/局部同胚/星图检索），
+        # 意图 20→70 以 ≈+10/回合滚雪球（≈5 技能×2 力量），竞速审计 T8 判死、
+        # 实战 T11 阵亡；592/630 局 F48 同 Boss（#C21/#C22）同型阵亡，3 局达线。
+        # 每张被激怒敌人见证的技能牌按「层数×本键」扣分：边际 0 费增益/抽牌
+        # （面板 +3.75 级）被压到阈值下，必需的大额格挡（+20 级）照过——格的
+        # 是当前意图，税的是未来所有回合的力量复利。攻击/能力牌不触发激怒、
+        # 严格零差异；键=0 一键回滚（旧行为零差异）。
+        try:
+            _enrage_skill_tax = float(pol.get("enrage_skill_tax", 2.0) or 0.0)
+        except (TypeError, ValueError):
+            _enrage_skill_tax = 0.0
+        _enrage_stacks = 0.0
+        if _enrage_skill_tax > 0.0:
+            for _e in enemies:
+                _enrage_stacks += self._enemy_power_stack(_e, "enrage", "激怒")
         # 消耗空转豁免总开关（EXHAUST_FIZZLE_EXEMPT，第 1378~1382 局批复盘，
         # 静态键 exhaust_fizzle_exempt）：0 时 _ex_fizzle 恒 False，
         # 上限拦截与递增罚分严格回滚旧口径。
@@ -4446,6 +4465,25 @@ class Policy:
             score += character_estimate
             if character_note:
                 why += f"｜{character_note}"
+            # 激怒技能税计价段（见循环前注释）：技能类型判定复用零压闸同型
+            # 双通道——战斗手牌载荷通常无 card_type，优先策略目录（白绮全目录
+            # 可查），否则取载荷观测类型；两条都缺时保守按非技能处理（宁可
+            # 漏税不误伤攻击/能力）。激怒只由 Skill 触发，非技能严格零差异。
+            if _enrage_stacks > 0.0 and _enrage_skill_tax > 0.0:
+                _enr_cid = (c.get("card_id") or "").upper().rstrip("+")
+                _enr_entry = (
+                    self.character_strategy.card(_enr_cid)
+                    if getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID else None)
+                _enr_observed = str(c.get("card_type") or "").casefold()
+                _enr_is_skill = bool(
+                    (_enr_entry is not None and _enr_entry.card_type == "skill")
+                    or (_enr_entry is None and _enr_observed == "skill"))
+                if _enr_is_skill:
+                    _enr_tax = _enrage_stacks * _enrage_skill_tax
+                    score -= _enr_tax
+                    why += (f"｜激怒技能税：技能牌喂敌+{_enrage_stacks:g}力量"
+                            f"（-{_enr_tax:.1f}，ENRAGE_SKILL_TAX）")
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _ex_card:
