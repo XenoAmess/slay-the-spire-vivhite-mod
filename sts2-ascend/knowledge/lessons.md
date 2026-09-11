@@ -11139,3 +11139,14 @@
 - 当前低价值卡牌：BULLY(10分/2.6787361884414826局)，HAVOC(11分/2.1429889507531836局)，STRIKE_IRONCLAD(12分/6.964714089947862局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1413 胜，当前目标进阶 0
+
+## 第 1414 局复盘（2026-09-12 06:06）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：CINDER, SHRUG_IT_OFF, BATTLE_TRANCE, MOLTEN_FIST, SHRUG_IT_OFF, FIGHT_ME, HEADBUTT, DRAMATIC_ENTRANCE, EVIL_EYE, BREAKTHROUGH, PILLAGE, UPPERCUT, FEED, SWORD_BOOMERANG, PILLAGE, BATTLE_TRANCE, TREMBLE, VICIOUS, TAUNT, IRON_WAVE, WHIRLWIND, UPPERCUT, BLUDGEON, PACTS_END
+- 本局遗物：STRAWBERRY, ART_OF_WAR, PEN_NIB, PENDULUM, CANDELABRA, RIPPLE_BASIN
+- 战斗记录：F22 Monster战 掉血16｜竞速审计：T3判死→实战4回合获胜; F24 Elite战 掉血28｜自损1（可行动段1/非行动段25，SELF_LOSS_PHASE_OBS）; F27 Elite战 掉血31; F29 Monster战 掉血11; F31 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血50｜自损1（可行动段1/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/5.077405334460862局)，PACTS_END(25分/93.87728468554016局)，OFFERING(25分/23.540881734388172局)，PERFECTED_STRIKE(24分/5.0436820905600275局)，PRIMAL_FORCE(24分/4.615439903889447局)
+- 当前低价值卡牌：BULLY(10分/2.6693606117819377局)，HAVOC(11分/2.1354884894255477局)，STRIKE_IRONCLAD(12分/6.940337590633045局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.36 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.90 → 1.89（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1414 胜，当前目标进阶 0
