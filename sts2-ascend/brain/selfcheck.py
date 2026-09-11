@@ -12929,6 +12929,81 @@ def main() -> int:
             and "斩杀竞速投影" not in d_sec3.reason), \
         f"键=False 未回滚旧口径: {d_sec3.action}（{d_sec3.reason}）"
 
+    # 3pcap) 出牌硬上限抑制换挡上浮（RACE_PLAY_CAP_NO_UPSHIFT，第1404~1408局
+    #      批复盘）：1408-F17 仪式兽 T6/T9 玩家带 RINGING_POWER（昏眩，本回合
+    #      限打1张，首牌后全手牌 blocked_by_hook），竞速投影仍叠加
+    #      ×(1+换挡上浮)——换挡无法突破硬上限，上浮机制不成立。夹具：实测
+    #      两回合 40 伤 → dpt 20；池 400、意图 15、血 71 →  capped ttk=20 /
+    #      uncapped ttk=400/27≈14.8，均判死。① 玩家带 RINGING_POWER×1：
+    #      上浮置零、留痕 RACE_PLAY_CAP_NO_UPSHIFT 且无换挡上浮校准文本；
+    #      ② 无昏眩功率：同口径保留 ×(1+换挡上浮0.35) 校准、无抑制注记；
+    #      ③ 键=False：昏眩在场也严格回滚旧口径（保留上浮、无注记）。
+    pcap_ctx = type("PCAPCTX", (), {"combat": {"comp_id": "PCAP_RACE_COMP",
+                                               "node_type": "Boss"},
+                                    "current_combat_is_hard": False,
+                                    "credit_tags": []})()
+
+    def pcap_state(turn_no, ringing):
+        hand = [
+            {"index": 0, "card_id": "PC_HIT", "name": "速攻", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+            {"index": 1, "card_id": "PC_HIT2", "name": "速攻二号", "playable": True,
+             "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+             "dynamic_values": [{"name": "Damage", "current_value": 10}]}]
+        player_powers = ([{"id": "RINGING_POWER", "amount": ringing}]
+                         if ringing else [])
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": 71, "max_hp": 80, "block": 0,
+                                  "energy": 3, "powers": player_powers},
+                       "hand": hand,
+                       "enemies": [{"index": 0, "enemy_id": "PCAP_RACE_COMP",
+                                    "name": "仪式兽", "current_hp": 400,
+                                    "max_hp": 400, "block": 0, "is_alive": True,
+                                    "is_hittable": True, "powers": [],
+                                    "intents": [{"total_damage": 15}]}]},
+            "run": {"current_hp": 71, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": [{"card_id": f"PC_D_{i}", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [{"name": "Damage",
+                                                  "current_value": 10}]}
+                             for i in range(4)]}}
+
+    def pcap_policy():
+        p = policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-pcap-"))),
+            random.Random(13))
+        accepted_combat(p, pcap_state(1, 0), pcap_ctx)
+        # 实测口径就位：两回合持续输出 40 → dpt 20；uncapped 上浮 ×1.35 → 27
+        p._krace_turns = 2
+        p._krace_dmg = p._krace_dmg_sustained = 40.0
+        return p
+
+    # ① 昏眩×1 在场：上浮置零、抑制注记入账、换挡上浮校准文本消失
+    pol_pcap1 = pcap_policy()
+    d_pcap1 = pol_pcap1.decide(pcap_state(2, 1), pcap_ctx)
+    assert ("斩杀竞速投影" in d_pcap1.reason
+            and "RACE_PLAY_CAP_NO_UPSHIFT" in d_pcap1.reason
+            and "上浮+0.35置零" in d_pcap1.reason
+            and "×(1+换挡上浮" not in d_pcap1.reason), \
+        f"昏眩在场未抑制换挡上浮: {d_pcap1.action}（{d_pcap1.reason}）"
+    # ② 无昏眩功率：同口径保留换挡上浮校准、无抑制注记
+    pol_pcap2 = pcap_policy()
+    d_pcap2 = pol_pcap2.decide(pcap_state(2, 0), pcap_ctx)
+    assert ("斩杀竞速投影" in d_pcap2.reason
+            and "×(1+换挡上浮0.35)" in d_pcap2.reason
+            and "RACE_PLAY_CAP_NO_UPSHIFT" not in d_pcap2.reason), \
+        f"无昏眩功率时上浮缺失或误抑制: {d_pcap2.action}（{d_pcap2.reason}）"
+    # ③ 键=False：昏眩在场也严格回滚旧口径（保留上浮、无注记）
+    pol_pcap3 = pcap_policy()
+    pol_pcap3.know.policy["race_play_cap_no_upshift"] = False
+    d_pcap3 = pol_pcap3.decide(pcap_state(2, 1), pcap_ctx)
+    assert ("×(1+换挡上浮0.35)" in d_pcap3.reason
+            and "RACE_PLAY_CAP_NO_UPSHIFT" not in d_pcap3.reason), \
+        f"键=False 未回滚旧口径: {d_pcap3.action}（{d_pcap3.reason}）"
+
 
     print("SELFCHECK OK")
     return 0

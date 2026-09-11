@@ -9119,3 +9119,117 @@ retry_resolution: none (no replay target; local production observability fix)
    可行」翻转样本计数；④ 竞速审计悲观率台账（395/877）；⑤
    EXHAUST_FIZZLE_EXEMPT 空转现场首发（1402 痛殴型持证局续盯）；
    ⑥ SLIPPERY_TTK_BREAK_EST 贴线计数（0/3）。
+
+
+# 2026-09-12｜第 1404~1408 局复盘（异步追及队列 5 局 exact_batch 全败；行为修复 ×1：RACE_PLAY_CAP_NO_UPSHIFT 出牌硬上限抑制竞速换挡上浮——昏眩回合换挡无法突破 1 张/回合，上浮机制不成立；重审第 2 次）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[20260912-015019-1789149019971580400-cb00bc92]
+  （role=target，failure_kind=lifecycle_stop：维护停机取消 kimi-k3 复盘并全量保全，
+  非模型提交失败；selfcheck_state=not_run，retry_candidate.patch 16235B/4 路径）；
+  attempt_packages=[20260912-022900-1789151340400942800-0c021a41]（role=attempt_evidence，
+  同为 lifecycle_stop、selfcheck_state=not_run，候选 patch 与 target 同构）。
+  已按 complete_evidence.index 逐条核对两包 manifest/inventory/候选 patch/
+  changed_files：两包生产改动（policy.py 换挡上浮抑制块 + selfcheck.py 3pcap
+  夹具）逐行一致，meta_review 对账段措辞不同（target 按「无 replay target」
+  起草，attempt 已含对 target 的 integrated 对账）。本轮在当前 HEAD
+  （9b8beb58）自行重实现其仍有效部分：policy.py/selfcheck.py 两处生产改动
+  上下文逐行吻合后落地；meta_review 本节在 attempt 版基础上改写对账段以
+  符合本批现实（两包并列、重审第 2 次）；review_conclusion.txt 采用其口播稿。
+- 上一批（1399~1403）last_paths 关键标签存在性核读：HAND_TAX_NOTE_DEDUP
+  在当前 HEAD 在产，无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: 20260912-015019-1789149019971580400-cb00bc92 integrated
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速投影的换挡上浮（race_latch_dpt_uplift /
+  race_latch_dpt_uplift_eff）的正当性是「全攻换挡后每回合打出更多攻击
+  牌」（823~832 批预注册）；玩家带 RINGING_POWER（昏眩，原生 v0.111.0
+  「本回合你只能打出 Amount 张牌」，仪式兽 BeastCry 施加）的回合存在
+  硬出牌上限，换挡无法突破上限，上浮机制不成立——ttk 被系统性低估，
+  边界局的竞速判死被提前/夸大。
+- **EVIDENCE**（本轮在当前 clone 内独立复核）：1408（SZ3ZFJVU1CS3，
+  runs/20260912-002448）F17 仪式兽 T6 与 T9：end_turn 决策（索引
+  241/253）turn_end_state 逐牌 unplayable_reason=blocked_by_hook、
+  unplayable_preventer_id=RINGING_POWER；同 T6 出牌决策（索引 240）
+  理由仍写「实测20伤/回合升级桶×(1+换挡上浮0.20)→24伤/回合校准」
+  （T9 索引 252 同型「实测22伤/回合…→26伤/回合校准」）。原生知识核对：
+  runtime/powers.jsonl RINGING_POWER.description=「本回合你只能打出
+  [blue]1[/blue]张牌」、type=Debuff；mechanics/powers.jsonl
+  MegaCrit.Sts2.Core.Models.Powers.RingingPower 在册。
+- **EXPECTED_SIGNAL**：上限生效回合的竞速留痕带「本回合出牌硬上限
+  （RINGING_POWER×N）…（RACE_PLAY_CAP_NO_UPSHIFT）」且不再携带
+  「×(1+换挡上浮…)→…校准」文本；投影维持未上浮实测口径。
+
+## 一、落地动作（最小可逆）
+
+- `brain/policy.py`：新增模块常量 `RINGING_POWER_ID`；竞速投影换挡
+  上浮段在实测口径（_krace_turns≥2 且 dpt>0、上浮键>0）下，先经
+  `character_power_amount` 检测玩家 RINGING_POWER——Amount>0 时上浮
+  置零、dpt 维持未上浮口径，并向 danger_note 追加上限来源/Amount/
+  置零幅度/未上浮读数（RACE_PLAY_CAP_NO_UPSHIFT）。新键
+  `race_play_cap_no_upshift`（默认 True，缺键走默认，policy.json 零
+  改动）；=False 严格回滚旧口径（上浮照叠、无注记）。先验分支（回合
+  数不足）本就不叠上浮，零改动；tsurv/判决阈值/评分公式零改动。
+- `brain/selfcheck.py`：新增 3pcap 夹具（实测两回合 40 伤→dpt20，
+  池 400、意图 15、血 71，capped ttk=20 / uncapped ttk≈14.8 均判死）：
+  ① 玩家 RINGING_POWER×1 → 抑制注记在账且换挡上浮文本消失；② 无昏眩
+  → 保留 ×(1+换挡上浮0.35) 且无抑制注记；③ 键=False → 昏眩在场也
+  保留上浮、无注记。
+
+## 二、回滚边界
+
+- `race_play_cap_no_upshift=False` 即恢复旧口径（上限回合照叠换挡
+  上浮、无注记）；删除 policy.py 上浮段新增块与模块常量、selfcheck
+  3pcap 段即完全回滚。
+- 行为面严格有界：仅在「实测口径 + 上浮键>0 + 玩家 RINGING_POWER
+  Amount>0」三条件同时成立时改变投影 dpt（变小、ttk 变大）；其他
+  回合、其他功率、先验分支、防守复核火力（_feas_fire 不走路径）全部
+  零差异。
+
+## 三、自检
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含
+  3pcap①②③ 新锚与全部旧锚原样通过；前两失败包均因 lifecycle_stop
+  selfcheck_state=not_run，本轮已在当前 HEAD 实际跑通）。
+
+## 四、未来 3~10 局观察指标
+
+1. 仪式兽/带昏眩对局中 RACE_PLAY_CAP_NO_UPSHIFT 注记首发，且同 tick
+   理由不再出现「×(1+换挡上浮」校准文本（每上限回合恰一条）。
+2. 上限回合投影 dpt（未上浮）与实战单卡伤害对账：若实战贴近未上浮
+   口径，本修复方向成立；若实战仍显著高于（上限未真实约束输出，如
+   上限只锁部分牌型），按观察结果收紧或回滚。
+3. 判死翻转核对：上限回合 ttk 变大后竞速判死更易触发，核对
+   race_audit 台账中昏眩回合判死局的实战胜率是否仍 ≥30% 预注册线；
+   若因 ttk 夸大出现新的误判死样本，评估是否只对「全场持续上限」
+   生效而非单回合上限。
+4. 竞速审计悲观率台账（395/877）与 SLIPPERY_TTK_BREAK_EST 贴线计数
+   （0/3）继续原窗口，不受本改动影响。
+
+## 五、继续调整/撤回条件
+
+- 若 3~10 局内出现「昏眩注记在账但实战输出明显达到上浮口径」（上限
+  未真实约束）≥2 独立对局，撤回置零、改为仅留观测注记；
+- 若昏眩回合判死局实战胜率跌破 30% 预注册线且翻转样本可复现，回滚
+  键=False 并重新开观测窗；
+- 若 RINGING_POWER 之外的出牌上限功率（SLOTH 型）在竞速判死现场出现
+  ≥3 独立对局，把检测从单 ID 扩展为上限功率集合。
+
+## 六、新沉淀的经验知识
+
+1. **行为系数杠杆必须重述其机制前提**：换挡上浮的正当性写在「换挡=
+   更多出牌」上，任何破坏该前提的状态（硬出牌上限）都使杠杆失真——
+   给投影加行为系数时，同步登记「前提失效条件」清单并在判决现场检测。
+2. **blocked_by_hook 的 preventer 是机制级证据**：turn_end_state 逐牌
+   unplayable_preventer_id 直接把「为什么打不出」归因到具体功率，比
+   从行为反推上限存在更可靠；但判决 tick（出牌前）手牌尚未被锁，
+   检测必须走玩家 powers 而非手牌 blocked 状态。
+3. **lifecycle_stop 失败包的候选 patch 未经验证**：前两包 selfcheck
+   state=not_run，其报告中的「SELFCHECK OK」是未兑现声明；重实现
+   方必须在当前 HEAD 实际跑自检后才能继承该结论。
+4. 观察点（下批复盘核对）：① RACE_PLAY_CAP_NO_UPSHIFT 首发与计数；
+   ② 昏眩回合投影 dpt vs 实战单卡伤害；③ race_audit 昏眩桶判死胜率；
+   ④ 既有台账（395/877、SLIPPERY 0/3、EXHAUST_FIZZLE 空转）续盯。

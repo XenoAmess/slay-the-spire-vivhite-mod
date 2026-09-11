@@ -46,6 +46,11 @@ from window_layers import reassert_viewer_topmost
 # 必须换成加性重罚才能保证闸门在任何符号区间都只降分不升分
 _ELITE_GATE_NEG_PENALTY = 50.0
 
+# 昏眩（RINGING_POWER，原生 v0.111.0 仪式兽 BeastCry 施加的 Debuff）：
+# 「本回合你只能打出 Amount 张牌」的硬出牌上限。竞速投影的换挡上浮只承认
+# 「全攻换挡后每回合打出更多攻击牌」，在该上限生效回合机制上不成立。
+RINGING_POWER_ID = "RINGING_POWER"
+
 
 # These cards can recover/copy another card and therefore must never become
 # one another's preferred child.  The static projection already applies the
@@ -3230,6 +3235,31 @@ class Policy:
                     _up = max(0.0, float(pol.get(
                         "race_latch_dpt_uplift_eff" if esc_gate
                         else "race_latch_dpt_uplift", 0.0)))
+                    # 出牌硬上限抑制换挡上浮（RACE_PLAY_CAP_NO_UPSHIFT，
+                    # 第1404~1408局批复盘）：1408-F17 仪式兽 T6/T9 玩家带
+                    # RINGING_POWER（昏眩，本回合限打1张——回合内首牌打出
+                    # 后全手牌 blocked_by_hook，unplayable_preventer_id=
+                    # RINGING_POWER），同 tick 竞速投影仍按多卡口径叠加
+                    # ×(1+换挡上浮0.20)（实测20→24伤/回合校准）。上浮的
+                    # 正当性是「全攻换挡后每回合打出更多攻击牌」，硬出牌
+                    # 上限回合换挡无法突破上限，该机制不成立、ttk 被系统性
+                    # 低估。上限生效回合上浮置零并留痕（含上限 Amount 与
+                    # 未上浮口径），供后续局核对上限回合投影 dpt 与实际
+                    # 单卡伤害；race_play_cap_no_upshift=False 严格回滚。
+                    _play_cap_amount = 0.0
+                    if bool(pol.get("race_play_cap_no_upshift", True)):
+                        _cap_player = ((state.get("combat") or {})
+                                       .get("player") or {})
+                        _play_cap_amount = character_power_amount(
+                            _cap_player.get("powers") or [],
+                            RINGING_POWER_ID)
+                    if _up > 0.0 and _play_cap_amount > 0.0:
+                        danger_note += (
+                            f"；本回合出牌硬上限（{RINGING_POWER_ID}×"
+                            f"{_play_cap_amount:.0f}）：换挡无法突破上限，"
+                            f"上浮+{_up:.2f}置零，投影维持{dpt:.0f}伤/回合"
+                            "（RACE_PLAY_CAP_NO_UPSHIFT）")
+                        _up = 0.0
                     if _up > 0.0:
                         dpt = dpt * (1.0 + _up)
                         _up_tag = "升级桶×(1+换挡上浮" if esc_gate else "×(1+换挡上浮"
