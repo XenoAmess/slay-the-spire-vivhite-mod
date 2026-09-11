@@ -3405,41 +3405,7 @@ class Policy:
                             f"{tsurv:.0f}→{_sandpit_clock:g}（沙坑归零即被"
                             "强制吞噬，SANDPIT_EAT_CLOCK_CAP）")
                         tsurv = _sandpit_clock
-                    # 知识恶魔 Ponder 回血净口径（KNOWLEDGE_DEMON_PONDER_HEAL，
-                    # 第697~701局批复盘）：原生 PonderMove（v0.111.0
-                    # mechanics/monsters.jsonl 实证）CreatureCmd.Heal(30×players)
-                    # + StrengthPower+2，行动循环 CURSE→SLAP→OVERWHELMING→
-                    # PONDER 每 4 回合一次（诅咒计数≥3 后循环缩为 3 回合更频，
-                    # 静态键按 4 回合保守档）。ttk=pool/dpt 对敌方回血完全
-                    # 失明：701 局（V8D6QSFBP3MV）F33 知识恶魔战意图序列
-                    # 0/17/24/11/0/19/30/13/0/21 逐 tick 核对，T4/T8 两次
-                    # Ponder 实回 60 血，等效血池 379+60=439，投影 ttk 系统
-                    # 性低估 ≈14%+，判死与全攻换挡偏晚（本场 T10 掉血103 阵
-                    # 亡）。存活侧意图逐 tick 观测已含 Ponder+2 力量，无需
-                    # 改；只修 ttk 分子侧。净口径 net_dpt=dpt−heal_rate
-                    # （默认 30/4=7.5/回合；回血封顶于已损血，超低输出边缘
-                    # 有界高估，方向=更早判死，保守）。键=0 严格回滚裸口径
-                    # （零差异、无注记）；非知识恶魔敌人零改动。
-                    _kd_heal_rate = 0.0
-                    if any(isinstance(_kd_e, dict)
-                           and _kd_e.get("is_alive", True)
-                           and (str(_kd_e.get("enemy_id") or "")
-                                == "KNOWLEDGE_DEMON"
-                                or str(_kd_e.get("name") or "") == "知识恶魔")
-                           for _kd_e in enemies):
-                        _kd_heal_rate = max(0.0, float(pol.get(
-                            "knowledge_demon_ponder_heal_rate", 7.5) or 0.0))
-                    if _kd_heal_rate > 0.0:
-                        _kd_raw_ttk = enemy_hp_total / max(1.0, dpt)
-                        _kd_net_dpt = max(1.0, dpt - _kd_heal_rate)
-                        ttk = enemy_hp_total / _kd_net_dpt
-                        danger_note += (
-                            f"；知识恶魔Ponder回血{_kd_heal_rate:.1f}/回合"
-                            f"入净口径：净输出{dpt:.0f}→{_kd_net_dpt:.0f}"
-                            f"伤/回合，ttk{_kd_raw_ttk:.0f}→{ttk:.0f}回合"
-                            "（KNOWLEDGE_DEMON_PONDER_HEAL）")
-                    else:
-                        ttk = enemy_hp_total / max(1.0, dpt)
+                    ttk = enemy_hp_total / max(1.0, dpt)
                     # 滑溜破层期观测（SLIPPERY_TTK_OBS，第1232局批复盘）：
                     # ttk 口径 pool/dpt 未计入滑溜层——每层把一次命中压到只失
                     # 1 血。1232 局 F17 VANTOM 8 层开局，投影「击杀还需9回合
