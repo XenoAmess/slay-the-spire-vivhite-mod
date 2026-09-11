@@ -6124,6 +6124,118 @@ def main() -> int:
             and "ENRAGE_SKILL_TAX" not in (d_et5.reason or ""), \
         f"能力牌不得吃激怒税: {d_et5.action}（{d_et5.reason}）"
 
+    # 3vt) 活力火花技能税（VITAL_SPARK_SKILL_TAX，第657~678局批复盘）：原生
+    #      VitalSparkPower 给全部 Skill 牌附 Tainted(Amount)（打出得 Amount 层
+    #      污染，TaintedPower 令本回合受到的每次攻击伤害 +Amount、回合末移除）
+    #      ——本回合每打出一张技能牌，本回合敌人每刀 +Amount。657 局 F25 /
+    #      667 局 F30 / 672 局 F25 / 678 局 F31 四场感染棱柱（VITAL_SPARK×2）
+    #      逐 tick 实证技能牌落手即推意图 +2~4，678-F31 掉血61。仅在本回合
+    #      有攻击意图（incoming>0）时按「层数×vital_spark_skill_tax」扣技能
+    #      牌分；意图 0 回合无可放大对象零税；攻击/能力严格零差异；
+    #      键=0 一键回滚（旧行为零差异）。
+    vt_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-vsparktax-"))
+    vt_pol = policy.Policy(knowledge.Knowledge(vt_dir), random.Random(5))
+
+    def vt_enemy(stacks=2, intent=10, hp=200, *, index=0):
+        powers = [] if not stacks else [{
+            "power_id": "VITAL_SPARK_POWER", "name": "活力火花", "amount": stacks,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": "INFESTED_PRISM", "name": "感染棱柱",
+            "current_hp": hp, "max_hp": hp, "block": 0,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    vt_block = {"index": 0, "card_id": "VT_GUARD", "name": "刚毅", "playable": True,
+                "card_type": "Skill", "energy_cost": 1,
+                "dynamic_values": [{"name": "Block", "current_value": 8}]}
+    vt_strike = {"index": 1, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                 "playable": True, "card_type": "Attack", "energy_cost": 1,
+                 "requires_target": True, "valid_target_indices": [0],
+                 "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    vt_draw = {"index": 0, "card_id": "VT_SCHEME", "name": "筹划", "playable": True,
+               "card_type": "Skill", "energy_cost": 0,
+               "resolved_rules_text": "抽1张牌。", "dynamic_values": []}
+    vt_power = {"index": 0, "card_id": "VT_INFLAME", "name": "斗志", "playable": True,
+                "card_type": "Power", "energy_cost": 1,
+                "resolved_rules_text": "获得2点力量。", "dynamic_values": []}
+
+    class VtCtx(DummyCtx):
+        pass
+
+    def vt_ctx():
+        c = VtCtx()
+        c.combat = {"comp_id": "INFESTED_PRISM", "node_type": "Elite"}
+        return c
+
+    def vt_state(hand, enemy, turn=1, hp=80):
+        enemies = enemy if isinstance(enemy, list) else [enemy]
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn,
+            "combat": {
+                "player": {"current_hp": hp, "max_hp": 80, "block": 0, "energy": 3},
+                "hand": hand,
+                "enemies": enemies,
+            },
+            "run": {"current_hp": hp, "max_hp": 80, "gold": 0, "floor": 31,
+                    "deck": []},
+        }
+
+    # ① 活力火花×2+意图10：大额格挡技能照过阈值且留痕；无火花同牌同动作零注记
+    d_vt1 = vt_pol.decide(vt_state([dict(vt_block)],
+                                   vt_enemy(stacks=2, intent=10)), vt_ctx())
+    assert d_vt1.action == "play_card" and d_vt1.params.get("card_index") == 0 \
+            and "VITAL_SPARK_SKILL_TAX" in (d_vt1.reason or ""), \
+        f"火花战中格挡技能应照打且带税注记: {d_vt1.action}（{d_vt1.reason}）"
+    d_vt1b = vt_pol.decide(vt_state([dict(vt_block)],
+                                    vt_enemy(stacks=0, intent=10)), vt_ctx())
+    assert d_vt1b.action == "play_card" and d_vt1b.params.get("card_index") == 0 \
+            and "VITAL_SPARK_SKILL_TAX" not in (d_vt1b.reason or ""), \
+        f"无火花敌人不应出现税注记: {d_vt1b.action}（{d_vt1b.reason}）"
+    # ② 攻击牌不附污染：火花×2 在场零注记
+    d_vt2 = vt_pol.decide(vt_state([dict(vt_strike)],
+                                   vt_enemy(stacks=2, intent=10)), vt_ctx())
+    assert d_vt2.action == "play_card" \
+            and "VITAL_SPARK_SKILL_TAX" not in (d_vt2.reason or ""), \
+        f"攻击牌不得吃火花税: {d_vt2.action}（{d_vt2.reason}）"
+    # ③ 双火花敌人（合计4层）+攻击意图：边际 0 费抽牌技能被税（-8.0）压到
+    #    阈值下改结束回合；无火花敌人时同牌照打——税的行为差异可观测
+    d_vt3 = vt_pol.decide(vt_state([dict(vt_draw)],
+                                   [vt_enemy(stacks=2, intent=5),
+                                    vt_enemy(stacks=2, intent=5, index=1)]), vt_ctx())
+    assert d_vt3.action == "end_turn", \
+        f"边际技能未被火花税压下: {d_vt3.action}（{d_vt3.reason}）"
+    d_vt3b = vt_pol.decide(vt_state([dict(vt_draw)],
+                                    vt_enemy(stacks=0, intent=10)), vt_ctx())
+    assert d_vt3b.action == "play_card", \
+        f"无火花时边际技能应照打: {d_vt3b.action}（{d_vt3b.reason}）"
+    # ④ 键=0 严格回滚：火花×2+意图10 在场边际技能照打且零注记
+    vt_dir_off = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-vsparktax-off-"))
+    vt_pol_off = policy.Policy(knowledge.Knowledge(vt_dir_off), random.Random(5))
+    vt_pol_off.know.policy["vital_spark_skill_tax"] = 0.0
+    d_vt4 = vt_pol_off.decide(vt_state([dict(vt_draw)],
+                                       vt_enemy(stacks=2, intent=10)), vt_ctx())
+    assert d_vt4.action == "play_card" \
+            and "VITAL_SPARK_SKILL_TAX" not in (d_vt4.reason or ""), \
+        f"键=0 必须严格回滚: {d_vt4.action}（{d_vt4.reason}）"
+    # ⑤ 能力牌不附污染（原生仅 Skill 被 Afflict<Tainted>）：火花×2 在场照打
+    #    且零注记
+    d_vt5 = vt_pol.decide(vt_state([dict(vt_power)],
+                                   vt_enemy(stacks=2, intent=10)), vt_ctx())
+    assert d_vt5.action == "play_card" \
+            and "VITAL_SPARK_SKILL_TAX" not in (d_vt5.reason or ""), \
+        f"能力牌不得吃火花税: {d_vt5.action}（{d_vt5.reason}）"
+    # ⑥ 意图 0 回合（无攻击可放大）：火花×2 在场边际技能照打且零注记——
+    #    白打窗保留（与激怒税的关键语义差异）
+    d_vt6 = vt_pol.decide(vt_state([dict(vt_draw)],
+                                   vt_enemy(stacks=2, intent=0)), vt_ctx())
+    assert d_vt6.action == "play_card" \
+            and "VITAL_SPARK_SKILL_TAX" not in (d_vt6.reason or ""), \
+        f"意图0回合技能不得吃火花税: {d_vt6.action}（{d_vt6.reason}）"
+
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
     nb_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-noblock-"))

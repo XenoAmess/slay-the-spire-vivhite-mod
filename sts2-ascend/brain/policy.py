@@ -4397,6 +4397,30 @@ class Policy:
         if _enrage_skill_tax > 0.0:
             for _e in enemies:
                 _enrage_stacks += self._enemy_power_stack(_e, "enrage", "激怒")
+        # 活力火花技能税（VITAL_SPARK_SKILL_TAX，第 657~678 局批复盘新增，静态键
+        # vital_spark_skill_tax）：原生 VitalSparkPower 战前/入场即给全部 Skill 牌
+        # 附上 Tainted(Amount)（mechanics/powers.jsonl 实证：BeforeCombatStart 与
+        # AfterCardEnteredCombat 对 CardType.Skill 执行 Afflict<Tainted>；打出被附
+        # 卡时玩家获得 Amount 层污染；TaintedPower.ModifyDamageAdditive 令本回合
+        # 受到的每次攻击伤害 +Amount，回合末移除）——本回合每打出一张技能牌，
+        # 本回合敌人每刀 +Amount。出牌评分对此零感知（改动前全 brain 检索零
+        # 命中），把本回合内不断上涨的意图当作敌方行为，「意图升级，防御前置」
+        # 反而打出更多技能，形成污染放大受击的死亡螺旋——657 局 F25 / 667 局
+        # F30 / 672 局 F25 / 678 局 F31 四场感染棱柱（快照 VITAL_SPARK×2 可读，
+        # ENEMY_POWERS_SNAPSHOT_OBS）逐 tick 复核：每张技能牌落手、下一 tick
+        # 意图 +2~4；678-F31 七回合意图 15→51、掉血61（自损29另计）。与激怒税
+        # 的差异：污染只放大本回合攻击、回合末即消，故仅当本回合存在攻击意图
+        # （incoming>0）时计价；意图 0 回合无可放大对象，技能牌零税（白打窗
+        # 保留，与零压闸的「空窗回合」哲学一致）。攻击/能力不附污染严格零差异；
+        # 键=0 一键回滚（旧行为零差异）。
+        try:
+            _vspark_skill_tax = float(pol.get("vital_spark_skill_tax", 2.0) or 0.0)
+        except (TypeError, ValueError):
+            _vspark_skill_tax = 0.0
+        _vspark_stacks = 0.0
+        if _vspark_skill_tax > 0.0:
+            for _e in enemies:
+                _vspark_stacks += self._enemy_power_stack(_e, "vital_spark", "活力火花")
         # 消耗空转豁免总开关（EXHAUST_FIZZLE_EXEMPT，第 1378~1382 局批复盘，
         # 静态键 exhaust_fizzle_exempt）：0 时 _ex_fizzle 恒 False，
         # 上限拦截与递增罚分严格回滚旧口径。
@@ -4484,6 +4508,27 @@ class Policy:
                     score -= _enr_tax
                     why += (f"｜激怒技能税：技能牌喂敌+{_enrage_stacks:g}力量"
                             f"（-{_enr_tax:.1f}，ENRAGE_SKILL_TAX）")
+            # 活力火花技能税计价段（见循环前注释）：技能类型判定复用激怒税
+            # 同型双通道（策略目录优先、载荷观测兜底、皆缺按非技能）；仅在
+            # 本回合存在攻击意图（incoming>0）时计价——污染只放大本回合受击，
+            # 意图 0 回合是免费技能窗。
+            if (_vspark_stacks > 0.0 and _vspark_skill_tax > 0.0
+                    and incoming > 0):
+                _vs_cid = (c.get("card_id") or "").upper().rstrip("+")
+                _vs_entry = (
+                    self.character_strategy.card(_vs_cid)
+                    if getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID else None)
+                _vs_observed = str(c.get("card_type") or "").casefold()
+                _vs_is_skill = bool(
+                    (_vs_entry is not None and _vs_entry.card_type == "skill")
+                    or (_vs_entry is None and _vs_observed == "skill"))
+                if _vs_is_skill:
+                    _vs_tax = _vspark_stacks * _vspark_skill_tax
+                    score -= _vs_tax
+                    why += (f"｜活力火花技能税：技能牌污染+{_vspark_stacks:g}"
+                            f"放大本回合受击"
+                            f"（-{_vs_tax:.1f}，VITAL_SPARK_SKILL_TAX）")
             # 消耗递增罚分：第 1 次免费，之后每多打一次再扣一档——
             # 让坚毅在前期偶尔兑现，长战里自然让位给不可消耗的替代牌
             if _ex_card:

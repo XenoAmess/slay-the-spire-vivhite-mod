@@ -1687,3 +1687,85 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 657~678 局批复盘：活力火花零感知——技能牌污染放大本回合受击（VITAL_SPARK_SKILL_TAX）
+
+日期：2026-09-11
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：原生 VitalSparkPower 在战前/卡牌入场时给全部 Skill 牌附上
+  Tainted(Amount)（mechanics/powers.jsonl 实证：BeforeCombatStart 与
+  AfterCardEnteredCombat 对 CardType.Skill 执行 CardCmd.Afflict<Tainted>），
+  打出被附卡时玩家获得 Amount 层污染（TAINTED.description「打出时获得
+  {Amount}层污染」），TaintedPower.ModifyDamageAdditive 令本回合受到的每次
+  攻击伤害 +Amount、回合末移除——即「本回合每打出一张技能牌，本回合敌人
+  每刀 +Amount」。Brain 出牌评分对 VITAL_SPARK/TAINTED 零感知（改动前全
+  brain 检索仅无关注释命中），把本回合内不断上涨的意图当作敌方行为，
+  「意图升级，防御前置」反而打出更多技能（含格挡技能），形成污染放大受击
+  的死亡螺旋。模仿上批激怒技能税补上同型感知：本回合有攻击意图
+  （incoming>0）时技能牌按「活力火花层数×vital_spark_skill_tax」扣分；
+  意图 0 回合污染无可放大对象、技能牌零税（白打窗保留）。可证伪：未来
+  3~10 局若遭遇活力火花敌人（感染棱柱等）的战斗决策链从不出现
+  VITAL_SPARK_SKILL_TAX 注记（接线或载荷不可读），或注记显形但该类战斗
+  意图>0 回合技能出牌数不下降、678-F31 型（意图 15→51、掉血61）原样重现，
+  或意图 0 回合技能被误税/大额格挡被误压导致低甲吃刀，则假设不成立。
+- **EVIDENCE**：本批 4 个独立对局遭遇感染棱柱（VITAL_SPARK×2，快照
+  ENEMY_POWERS_SNAPSHOT_OBS 可读），逐 tick 复核技能牌落手即推意图——
+  657 局 F25（T1 启发式护盾/局部同胚后意图 15→17→19；全场掉血22｜自损10）；
+  667 局 F30（T3 局部同胚/闭域映射/星体测度/星图检索/微分取样连打，
+  意图 15→21→27→33）；672 局 F25（15:44:11~13 闭域映射+/闭域映射/切线星光
+  意图 15→19→23；全场掉血15｜自损13）；678 局 F31 最重——七回合意图
+  15→51，78 血打到 17（掉血61｜自损29），随后 F32 前夜 17 血、Boss 战
+  T3 阵亡（竞速审计 T2 判死正确）。4 局达 evidence_run_threshold。原生机制
+  核对（v0.111.0 mechanics/powers.jsonl + afflictions.jsonl + 本地化）：
+  VITAL_SPARK_POWER「所有技能牌都拥有污染2」、TAINTED「打出时获得
+  {Amount}层污染」、TAINTED_POWER「在本回合受到额外的攻击伤害」
+  （ModifyDamageAdditive 仅 IsPoweredAttack、AfterSideTurnEnd 移除）。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 活力火花敌人战斗决策链出现
+  「活力火花技能税：技能牌污染+N放大本回合受击（-X.X，VITAL_SPARK_SKILL_TAX）」
+  注记；② 该类战斗意图>0 回合边际技能（0 费抽牌/小额增益）让位于攻击或
+  结束回合，意图 0 回合技能照打（白打窗）；③ 感染棱柱战全场掉血较
+  678-F31（61）下降。证伪/撤回：注记零显形而遭遇仍在 → 复查
+  _enemy_power_stack 的 id/power_id/name 三字段接线；大额格挡被误压、
+  低甲吃刀或意图 0 回合被误税 → policy.json 置 vital_spark_skill_tax=0
+  一键回滚（旧行为零差异，改动集中于评分加分项与注记，无阈值/公式重写）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_combat 出牌循环前一次性汇总存活敌人活力火花
+  层数（_enemy_power_stack 复用力量/激怒同构读取，"vital_spark"/"活力火花"
+  中英文兼容）；循环内每张候选在角色估价后计价活力火花技能税——技能类型
+  判定复用激怒税同型双通道（白绮策略目录 card_type=="skill" 优先，目录外取
+  载荷观测 card_type；两条都缺时保守按非技能，宁可漏税不误伤），仅当
+  incoming>0（本回合存在攻击意图）时技能牌 score -= 层数×vital_spark_skill_tax
+  并追加注记；攻击/能力牌（原生不附 Tainted）严格零差异，激怒税/馀量门/
+  复打税/竞速/沉睡守卫/零压闸等全部既有体系不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  vital_spark_skill_tax: 2.0，注释记录 657/667/672/678 局实证与回滚口径
+  （0 = 关闭，严格回滚旧口径）。
+- sts2-ascend/brain/selfcheck.py：新增 3vt 六分支——① 火花×2+意图10 大额
+  格挡技能照过阈值且带税注记、无火花同牌同动作零注记；② 攻击牌火花在场
+  零注记；③ 双火花敌人（合计4层）边际 0 费抽牌技能被税压到阈值下改结束
+  回合、无火花照打；④ 键=0 严格回滚（火花在场边际技能照打且零注记）；
+  ⑤ 能力牌火花在场照打且零注记（原生仅 Skill 被附 Tainted）；⑥ 意图 0
+  回合火花×2 在场边际技能照打且零注记（白打窗保留，与激怒税的关键语义
+  差异锚）。
+- 不改机制税分极值、层数读取语义、_score_play 任何分支公式；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3vt 六分支；
+  既有 3et 激怒税族、3sg/3sg2 沉睡守卫族、3ps 快照观测、3k3/3k4 药水门族、
+  3prz 零压闸族、3kd、3br 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+45，循环前层数汇总+循环内计价留痕）、brain/knowledge.py（+9 一个静态键
+  及注释）、brain/selfcheck.py（+112，3vt 六分支）；未触碰 runs/stats/
+  policy.json/lessons.md/review_queue 等只读在线状态；克隆残留的 assets
+  超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
