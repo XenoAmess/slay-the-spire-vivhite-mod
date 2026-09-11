@@ -484,6 +484,19 @@ DEFAULT_POLICY = {
                                         # -1、瓦解 -2-5×(1-血线)、衰朽 -5、
                                         # 懒惰 -8；0=四诅咒恢复同价旧口径
                                         # （零差异回滚）。
+    "knowledge_demon_ponder_heal_rate": 7.5,  # 知识恶魔 Ponder 回血竞速净口径
+                                        # （KNOWLEDGE_DEMON_PONDER_HEAL，第697~701局
+                                        # 批复盘）：原生 PonderMove 每 4 回合回 30 血
+                                        # （mechanics/monsters.jsonl：CreatureCmd.Heal
+                                        # 30×players + 力量+2；行动循环 CURSE→SLAP→
+                                        # OVERWHELMING→PONDER），斩杀竞速投影
+                                        # ttk=pool/dpt 对回血失明——701 局 F33 两次
+                                        # Ponder 实回 60 血（等效血池 439 vs 字面
+                                        # 379），ttk 系统性低估、判死偏晚。净口径
+                                        # net_dpt=dpt−本键（30/4=7.5/回合保守档，
+                                        # 诅咒计数≥3 后循环缩为 3 回合更频）；存活侧
+                                        # 意图逐 tick 已含力量，不改。0=严格回滚裸
+                                        # 口径（零差异、无注记）。
     "ui_option_cooldown_forced_wait": True,  # 强制入组屏冷却等待闸（第590~595局批复盘，
                                         # UI_OPTION_COOLDOWN_FORCED_WAIT）：无跳过动作的
                                         # 强制选牌屏上，最高分候选被 409/回执丢失短冷却
