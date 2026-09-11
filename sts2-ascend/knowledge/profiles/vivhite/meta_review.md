@@ -1905,3 +1905,89 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 702~722 局批复盘：謦欬自付只拆相位不拆功能——格挡付/攻击付分流观测位（SELF_LOSS_ROLE_OBS）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬三级旋钮（life_cost_weight -3.00 触底、余量门 2.75
+  顶格、血税软顶 17.50 触底）封账后，本批 21 局 105 场战斗记录的可行动段
+  自付仍场场 6~45，但 SELF_LOSS_PHASE_OBS 只拆相位（可行动段/非行动段）
+  不拆功能——「放血僵局型格挡付」（余量门拦攻击→评分/残能反复付 2 血
+  格挡、战斗拖长）与「全攻提速型攻击付」（抢斩杀主动付血）在账本里不可
+  分流，而两者需要完全相反的行为化（前者=加快 STALL_ANY 放行或格挡税
+  预算，后者=收紧攻击门带或拿牌端）。新增 SELF_LOSS_ROLE_OBS：按服务端
+  已回执的 combat_play_commit 逐牌查角色静态目录血税，按
+  base_damage/base_block 拆「格挡付/攻击付/功能付」三桶并在战斗记录自损
+  段追加披露。可证伪：未来 3~10 局若战斗记录从不出现
+  「（格挡付X/攻击付Y，SELF_LOSS_ROLE_OBS）」（接线或 credit_tags 回执
+  缺失），或普通战长战（≥5 回合）分账长期一面倒却与相位/竞速账矛盾
+  （分账合计 vs 可行动段口径系统性偏差 >50%，动态费/升级差不追账所致），
+  则本观测口径不成立。
+- **EVIDENCE**：722 局（JP0GN0UDHX7M，F6 负于 INKLET，进阶1）full_failure_run
+  逐条复核——F5 缩小甲虫普通战：T1 意图0零压闸全拦；T2~T7 意图 7/13
+  交替，评分/残能每回合打 1~2 张【闭域映射】（格挡9、实付2血），余量门
+  拦下全部攻击候选，謦欬实付 14→16→20；STALL_ANY 闩锁需「连续拦截≥4
+  且敌血量零进展≥3」，T4 一张过门【终止条件】重置零进展，闩锁迟至 T8
+  才放行救场杀——全场自损26（可行动段26/非行动段4）vs 掉血22，43血进
+  21血出，随后 F6 被迫 21 血接 INKLET 阵亡。逐条按目录血税重估该场
+  自付构成：格挡付（闭域映射×6+闭域投影）≈14~16、攻击付（终止条件×2+
+  递推星芒）≈12，接近 1:1——单局单点不能定案，且现有账本无法跨局累计
+  该比值。同批同型：703-F28（可行动段27）、705-F25（27）、710-F29（29）、
+  712-F33 Boss（51）等可行动段自付 ≥16 共 12 场，达 evidence_run_threshold；
+  lessons 连续两批记「三级旋钮全尽，謦欬证据彻底停止吸收」。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 謦欬出牌局战斗记录出现
+  「（格挡付X/攻击付Y[，功能付Z]，SELF_LOSS_ROLE_OBS）」紧随
+  SELF_LOSS_PHASE_OBS 段；② 普通战长战（≥5 回合，722-F5 型）分账若
+  持续格挡付≥攻击付（尤其 ≥1.5:1）→ 下一批行为化=加快 STALL_ANY 放行
+  或格挡税预算；若攻击付主导 → 行为化=收紧攻击余量门或拿牌端密度税；
+  ③ 非白绮角色与零血税牌局战斗记录零变化（目录外/零血税三桶恒 0）。
+  证伪/撤回：留痕零显形 → 复查 combat_play_commit 接线与 credit_tags
+  回执链；分账与可行动段口径系统性偏差 >50% → 修正口径标签或改接实测
+  差值账；任何异常 → policy.json 置 self_loss_role_obs=false 一键回滚
+  （三桶停记、披露消失，旧行为零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：__init__ 新增 _self_pay_blk/_self_pay_atk/
+  _self_pay_oth 三桶（战斗实例口径，_combat 竞速采样重置段同步清零）；
+  _sync_combat_play_successes 对已回执 combat_play_commit 逐牌
+  character_strategy.card(cid) 查目录 life_calculation_cost，按
+  base_damage>0→攻击付 / base_block>0→格挡付 / 否则→功能付拆桶（游标
+  幂等复用既有 credit 机制）；新增 combat_self_pay_roles() 读数接口。
+  观测键 self_loss_role_obs=False 时三桶停记。不改任何评分/门带/闩锁/
+  动作选择；目录外（STRIKE_IRONCLAD 等）与零血税牌天然跳过。
+- sts2-ascend/brain/agent.py：分段结算并读三桶写入 combat_agg 聚合账
+  （self_pay_blk_sum/atk_sum/oth_sum，分段战斗口径与 PHASE_OBS 一致）；
+  _flush_combat_agg 在自损段 PHASE_OBS 披露后追加「（格挡付X/攻击付Y
+  [，功能付Z]，SELF_LOSS_ROLE_OBS）」——观测键关闭或三桶全零时段落严格
+  不出现，「（阵亡）」后缀与竞速审计段位置不变。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  self_loss_role_obs: True，注释记录 722-F5 实证、分流用途与回滚口径。
+- sts2-ascend/brain/selfcheck.py：新增 3slr 夹具——① 四牌混合回执拆桶
+  （格挡2/攻击4/功能4，STRIKE_IRONCLAD 跳过）；② 同一 ledger 二次同步
+  游标幂等不重复计账、增量回执续账（攻击 4→6）；③ 回滚锚①：观测键
+  关闭三桶恒 0；④ 零差异锚：非白绮角色目录外牌恒 0；⑤ 战斗记录披露
+  「（格挡付14/攻击付12，SELF_LOSS_ROLE_OBS）」与回滚锚②（键关段落
+  不出现、自损段旧口径不变）。
+- 不改主账口径（SELF_LOSS_MAIN_OWN_ONLY）、相位分账、余量门/复打税/
+  零压闸/僵局放行任何阈值与公式；不动 runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3slr 五组
+  断言；既有 3slph 相位分账族、3prh 余量门族、3pri 僵局放行族、3prz
+  零压闸族、3prg2 回收族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+45，三桶
+  初始化/重置、回执拆桶、读数接口）、brain/agent.py（+24，分段并账与
+  披露）、brain/knowledge.py（+15 一个静态键及注释）、brain/selfcheck.py
+  （+84，3slr 夹具）；未触碰只读在线状态；克隆残留的 assets 超长路径
+  删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

@@ -679,6 +679,19 @@ class Policy:
         # self_loss_phase_obs=False 即停止分账（不影响主账口径）。
         self._race_same_round_loss_own = 0.0    # 可行动段（我方回合可出牌 tick）扣血
         self._race_same_round_loss_enemy = 0.0  # 非行动段（不可出牌 tick）扣血
+        # SELF_LOSS_ROLE_OBS（第702~722局批复盘新增观测位）：按服务端已回执的
+        # combat_play_commit 逐牌查角色静态目录血税，按 base_damage/base_block
+        # 拆「格挡付/攻击付/功能付」三桶。722-F5（JP0GN0UDHX7M，缩小甲虫）逐条
+        # 链实证：可行动段自付26中格挡付（闭域映射×6+闭域投影，≈14~16）与攻击付
+        # （终止条件×2+递推星芒，≈12）接近1:1——相位分账（SELF_LOSS_PHASE_OBS）
+        # 只拆相位不拆功能，而「放血僵局型格挡付」（需加快僵局放行/压格挡税）与
+        # 「全攻提速型攻击付」（需收紧门带）要求相反的行为化方向，本批先取
+        # 3~10局全场分账定方向。纯观测不改评分/门带/动作；目录外与零血税牌
+        # 天然零差异（非白绮角色三桶恒0）；self_loss_role_obs=False 三桶停记、
+        # 战斗记录披露同步消失（旧行为零差异）。
+        self._self_pay_blk = 0.0  # 本场已回执打出的格挡牌目录血税累计
+        self._self_pay_atk = 0.0  # 本场已回执打出的攻击牌目录血税累计
+        self._self_pay_oth = 0.0  # 本场已回执打出的功能牌（非攻非格挡）目录血税累计
         self._race_prev_same_round_loss = 0.0  # 自损账在上一个回合边界时的累计快照
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
@@ -1200,6 +1213,21 @@ class Policy:
                 self._hp_repeat_plays = {}
             if cid:
                 self._hp_repeat_plays[cid] = self._hp_repeat_plays.get(cid, 0) + 1
+            # SELF_LOSS_ROLE_OBS 功能分账（第702~722局批复盘）：已回执出牌
+            # 逐张查角色静态目录血税拆「格挡付/攻击付/功能付」三桶；目录外
+            # （如 STRIKE_IRONCLAD）与零血税牌天然跳过。纯观测，不改评分。
+            if cid and bool(self.know.policy.get("self_loss_role_obs", True)):
+                _spr_entry = self.character_strategy.card(cid)
+                if _spr_entry is not None:
+                    _spr_pay = float(
+                        _spr_entry.mechanics.life_calculation_cost or 0)
+                    if _spr_pay > 0.0:
+                        if _spr_entry.mechanics.base_damage > 0:
+                            self._self_pay_atk += _spr_pay
+                        elif _spr_entry.mechanics.base_block > 0:
+                            self._self_pay_blk += _spr_pay
+                        else:
+                            self._self_pay_oth += _spr_pay
             kill_id = str(raw[6] or "")
             if kill_id:
                 self._combat_kills[kill_id] = self._combat_kills.get(kill_id, 0) + 1
@@ -3795,6 +3823,9 @@ class Policy:
             self._race_same_round_loss = 0.0
             self._race_same_round_loss_own = 0.0    # SELF_LOSS_PHASE_OBS 影子分账同步重置
             self._race_same_round_loss_enemy = 0.0
+            self._self_pay_blk = 0.0    # SELF_LOSS_ROLE_OBS 三桶同步重置
+            self._self_pay_atk = 0.0
+            self._self_pay_oth = 0.0
             self._race_prev_same_round_loss = 0.0
             self._race_prev_same_round_loss_own = 0.0
             self._race_self_paid_rate = 0.0
@@ -6557,6 +6588,19 @@ class Policy:
         """
         return (float(getattr(self, "_race_same_round_loss_own", 0.0) or 0.0),
                 float(getattr(self, "_race_same_round_loss_enemy", 0.0) or 0.0))
+
+    def combat_self_pay_roles(self) -> tuple:
+        """SELF_LOSS_ROLE_OBS 功能分账读数：(格挡付, 攻击付, 功能付)。
+
+        与 combat_self_hp_loss 同一战斗实例口径；按服务端已回执的
+        combat_play_commit 逐牌查角色静态目录血税（目录口径，动态修正/升级
+        差不追账），按 base_damage/base_block 拆桶。agent 结算时并读写入
+        聚合账，战斗记录据此披露「（格挡付X/攻击付Y[，功能付Z]，SELF_LOSS_ROLE_OBS）」。
+        观测键 self_loss_role_obs=False 时三桶恒 0，消费端不得据此伪造分账。
+        """
+        return (float(getattr(self, "_self_pay_blk", 0.0) or 0.0),
+                float(getattr(self, "_self_pay_atk", 0.0) or 0.0),
+                float(getattr(self, "_self_pay_oth", 0.0) or 0.0))
 
     def pop_race_audit(self) -> dict:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。

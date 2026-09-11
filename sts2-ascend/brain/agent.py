@@ -3555,6 +3555,15 @@ class Agent:
             _seg_loss_own, _seg_loss_foe = self.policy.combat_self_hp_loss_phases()
         except Exception:
             _seg_loss_own, _seg_loss_foe = 0.0, 0.0
+        # SELF_LOSS_ROLE_OBS（第702~722局批复盘）：同账本的功能分账（格挡付/
+        # 攻击付/功能付，目录血税口径）随分段并入聚合账——722-F5 逐条链显示
+        # 可行动段自付26中格挡付与攻击付接近1:1，两种形态需要相反的行为化
+        # （加快僵局放行 vs 收紧攻击门带），相位分账无法分流。纯观测。
+        try:
+            _seg_pay_blk, _seg_pay_atk, _seg_pay_oth = \
+                self.policy.combat_self_pay_roles()
+        except Exception:
+            _seg_pay_blk, _seg_pay_atk, _seg_pay_oth = 0.0, 0.0, 0.0
         agg = self.ctx.combat_agg
         # open 聚合账 = 一场多阶段战斗仍在进行：同层任何后续结算都并入它，
         # 无论本次流转是阶段切换（split）还是真实终结屏（GAME_OVER 致死等）
@@ -3578,6 +3587,12 @@ class Agent:
                                            + _seg_loss_own)
             agg["self_hp_loss_foe_sum"] = (float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
                                            + _seg_loss_foe)
+            agg["self_pay_blk_sum"] = (float(agg.get("self_pay_blk_sum", 0.0) or 0.0)
+                                       + _seg_pay_blk)
+            agg["self_pay_atk_sum"] = (float(agg.get("self_pay_atk_sum", 0.0) or 0.0)
+                                       + _seg_pay_atk)
+            agg["self_pay_oth_sum"] = (float(agg.get("self_pay_oth_sum", 0.0) or 0.0)
+                                       + _seg_pay_oth)
             # 非分段流转 = 战斗真实终结：关闭挂起账（等换层/终局落库）
             agg["open"] = bool(split)
         else:
@@ -3589,7 +3604,10 @@ class Agent:
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
                    "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss,
                    "self_hp_loss_own_sum": _seg_loss_own,
-                   "self_hp_loss_foe_sum": _seg_loss_foe}
+                   "self_hp_loss_foe_sum": _seg_loss_foe,
+                   "self_pay_blk_sum": _seg_pay_blk,
+                   "self_pay_atk_sum": _seg_pay_atk,
+                   "self_pay_oth_sum": _seg_pay_oth}
             self.ctx.combat_agg = agg
         if died:
             # 致死必须立即落库：died_in_combat / 入场血量 / 精英标记供复盘归因，
@@ -3671,6 +3689,21 @@ class Agent:
                 _loss_foe = float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
                 note += (f"（可行动段{int(round(_loss_own))}"
                          f"/非行动段{int(round(_loss_foe))}，SELF_LOSS_PHASE_OBS）")
+            # SELF_LOSS_ROLE_OBS 功能分账披露（第702~722局批复盘）：目录血税
+            # 口径按已回执出牌拆格挡付/攻击付/功能付——供复盘分流「放血僵局型
+            # 格挡付」（下一批行为化=加快僵局放行/压格挡税）与「全攻提速型
+            # 攻击付」（=收紧攻击门带/拿牌端），两者方向相反。观测键关闭或
+            # 三桶全零时段落严格不出现（selfcheck 对照锚），既有断言串形不变。
+            if bool(self.know.policy.get("self_loss_role_obs", True)):
+                _pay_blk = float(agg.get("self_pay_blk_sum", 0.0) or 0.0)
+                _pay_atk = float(agg.get("self_pay_atk_sum", 0.0) or 0.0)
+                _pay_oth = float(agg.get("self_pay_oth_sum", 0.0) or 0.0)
+                if _pay_blk > 0.0 or _pay_atk > 0.0 or _pay_oth > 0.0:
+                    note += (f"（格挡付{int(round(_pay_blk))}"
+                             f"/攻击付{int(round(_pay_atk))}"
+                             + (f"，功能付{int(round(_pay_oth))}"
+                                if _pay_oth > 0.0 else "")
+                             + "，SELF_LOSS_ROLE_OBS）")
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):
