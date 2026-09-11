@@ -8081,3 +8081,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.2522418980120404局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.2493865843525516局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/34.89893482531046局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 27.50 → 22.50（双旋钮全尽，致命Unknown战实测自损24/掉血44（55%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：1/731 胜，当前目标进阶 1
+
+## 第 732 局复盘（2026-09-12 05:50）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_HEURISTIC_SHIELD, PANACHE, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_RING, PREP_TIME, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_CHROMATIC_SEQUENCE
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F4 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血9｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血12｜自损13（可行动段13/非行动段24，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血3｜自损11（可行动段11/非行动段8，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损11（可行动段11/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血61｜自损14（可行动段14/非行动段30，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(38分/8.905848707325413局)，HAND_OF_GREED(36分/10.511669457395993局)，CINDER(36分/2.6514424023981373局)，OMNISLICE(36分/8.54662607255189局)，MAYHEM(36分/2.026589279718992局)
+- 当前低价值卡牌：CALAMITY(22分/2.2443590513689986局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.238013731307318局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/34.77678855342188局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：1/732 胜，当前目标进阶 1
