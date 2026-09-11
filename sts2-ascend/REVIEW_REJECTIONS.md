@@ -379,3 +379,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-09 00:38:13 | 第 392~401 局 | `e77b9c21` | path_boundary | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `3ba2200e` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 3ba2200e 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260912-015019-1789149019971580400-cb00bc92 -->
 | 2026-09-12 01:50:19 | 第 1404~1408 局 | `cb00bc92` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | 维护中断/取消（非 kimi-k3 (opencode/kimi-for-coding/k3) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260912-015019-1789149019971580400-cb00bc92` | 维护停机取消 kimi-k3 (opencode/kimi-for-coding/k3) 复盘并全量保全；非模型提交失败 |
+<!-- rejection:20260912-022900-1789151340400942800-0c021a41 -->
+| 2026-09-12 02:29:00 | 第 1404~1408 局 | `0c021a41` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | 维护中断/取消（非 kimi-k3 (opencode/kimi-for-coding/k3) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260912-022900-1789151340400942800-0c021a41` | 维护停机取消 kimi-k3 (opencode/kimi-for-coding/k3) 复盘并全量保全；非模型提交失败 |
