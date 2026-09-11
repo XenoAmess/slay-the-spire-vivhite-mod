@@ -8070,3 +8070,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.2601524315223687局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.2607993821902173局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/35.0215101106979局)
 - 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（5回合掉血84，每回合17≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.40 → 0.40（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.09 → 2.08（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F35——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F35——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 25.00 → 27.50（行至 F35——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/730 胜，当前目标进阶 1
+
+## 第 731 局复盘（2026-09-12 05:44）
+- 结果：💀 失败｜进阶 1｜到达层数 7｜当局评分 7
+- 死因：敌人组合 SEWER_CLAM
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_PARALLEL_STARFALL
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损8（可行动段8/非行动段12，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血34｜自损16（可行动段16/非行动段20，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血44｜自损24（可行动段24/非行动段19，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(38分/8.937128657627108局)，HAND_OF_GREED(36分/10.548589520718506局)，CINDER(36分/2.660755045055833局)，OMNISLICE(36分/8.576644327698835局)，MAYHEM(36分/2.0337072551118833局)
+- 当前低价值卡牌：CALAMITY(22分/2.2522418980120404局)，VIVHITE_CARD_GEODESIC_VEIL(24分/3.2493865843525516局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/34.89893482531046局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 27.50 → 22.50（双旋钮全尽，致命Unknown战实测自损24/掉血44（55%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：1/731 胜，当前目标进阶 1
