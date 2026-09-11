@@ -7531,3 +7531,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/2.857884506296888局)，CALAMITY(22分/2.6837983495610636局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/36.125099811457424局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/681 胜，当前目标进阶 1
+
+## 第 682 局复盘（2026-09-11 18:24）
+- 结果：💀 失败｜进阶 1｜到达层数 35｜当局评分 35
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：BRONZE_SCALES, PENDULUM, ORNAMENTAL_FAN, POTION_BELT, ORICHALCUM, JUZU_BRACELET, WHETSTONE, FESTIVE_POPPER, RIPPLE_BASIN
+- 战斗记录：F19 Monster战 掉血0｜自损9（可行动段9/非行动段5，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损9（可行动段9/非行动段5，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血9｜自损13（可行动段13/非行动段17，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血0｜自损13（可行动段13/非行动段32，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F33 Elite战 掉血43｜自损17（可行动段17/非行动段53，SELF_LOSS_PHASE_OBS）; F35 Boss战 掉血64｜自损13（可行动段13/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(40分/7.272796018027248局)，MAYHEM(36分/2.414907994096334局)，VIVHITE_CARD_COMPOSITE_COLOR_FIELD(35分/3.2154629950576257局)，PROWESS(35分/18.59738453074407局)，OMNISLICE(35分/6.935932047295928局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(21分/2.847881910524849局)，CALAMITY(22分/2.6744050553376局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/35.998661962117325局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（77%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.39 → 0.41（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））
+- 生涯战绩：1/682 胜，当前目标进阶 1
