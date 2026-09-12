@@ -11194,3 +11194,14 @@
 - 当前低价值卡牌：BULLY(10分/2.632185303827183局)，HAVOC(11分/2.105748243061744局)，STRIKE_IRONCLAD(12分/6.843681789950684局)
 - 策略进化：block_safety: 1.89 → 1.94（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1418 胜，当前目标进阶 0
+
+## 第 1419 局复盘（2026-09-12 10:38）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：SECOND_WIND, RAMPAGE, SWORD_BOOMERANG, SHRUG_IT_OFF, HEADBUTT, TREMBLE, FEED, FIGHT_ME, DEMON_FORM, SHRUG_IT_OFF, FEED, MOLTEN_FIST, SHRUG_IT_OFF, DARK_EMBRACE, MOLTEN_FIST
+- 本局遗物：CENTENNIAL_PUZZLE, STURDY_CLAMP
+- 战斗记录：F14 Monster战 掉血10; F17 Boss战 掉血30｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血12; F21 Monster战 掉血0; F23 Unknown战 掉血19｜竞速审计：T3判死→实战5回合获胜; F24 Elite战 掉血57｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.989170550130705局)，PACTS_END(25分/92.2458919914194局)，OFFERING(25分/23.13178998654646局)，PERFECTED_STRIKE(24分/4.956033346334314局)，MANGLE(24分/77.65039999137521局)
+- 当前低价值卡牌：BULLY(10分/2.622972655263788局)，HAVOC(11分/2.098378124211028局)，STRIKE_IRONCLAD(12分/6.819728903685856局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.38（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 1.94 → 1.93（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1419 胜，当前目标进阶 0
