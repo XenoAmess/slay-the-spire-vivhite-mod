@@ -1,0 +1,192 @@
+{
+ "run_id": "6KU66R0DDNJY",
+ "run_number": 807,
+ "profile_id": "vivhite",
+ "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+ "profile_run_number": 807,
+ "ascension": 1,
+ "started_at": "2026-09-13 01:03:41",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "01:03:42",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 78,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「卷轴箱」（经验价值 2.5）；卷轴箱=2.5(n=11.771837346825576) / 石炉加湿器=2.5(n=8.509641408065466) / 树叶药膏=0.0(n=0)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "卷轴箱",
+      "score": 2.5,
+      "status": "chosen",
+      "why": "经验样本 11.771837346825576",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "石炉加湿器",
+      "score": 2.5,
+      "status": "rejected",
+      "why": "经验样本 8.509641408065466",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "树叶药膏",
+      "score": 0.0,
+      "status": "rejected",
+      "why": "经验样本 0",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "卷轴箱",
+     "params": {
+      "option_index": 0
+     },
+     "score": 2.5
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "01:03:53",
+   "screen": "BUNDLE_SELECTION",
+   "floor": 1,
+   "hp": 78,
+   "gold": 99,
+   "action": "choose_bundle",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "卡包选择：选包1（总价值 42.4）；包0[切线星光、综合色轮、黎曼星阵]=23.9 / 包1[三色轮舞、终止条件、事件循环]=42.4"
+  },
+  {
+   "t": "01:03:54",
+   "screen": "BUNDLE_SELECTION",
+   "floor": 1,
+   "hp": 78,
+   "gold": 99,
+   "action": "confirm_bundle",
+   "params": {},
+   "reason": "卡包选择：确认"
+  },
+  {
+   "t": "01:03:55",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 78,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 78/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "01:03:58",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 78,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(1,4)（路径分 24.99，预计进 Boss 血量 78%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.16（缺口46%）；竞速判死后获胜441/1099，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计78%免于续航罚分））；候选：Monster(1,1)=17.48|前期需要战斗积累卡牌；输出饥饿战损上浮×1.16（缺口46%）；路径中段含未达标精英，投影罚分；竞速判死后获胜441/1099，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计79%免于续航罚分） / Monster(1,4)=24.99|前期需要战斗积累卡牌；输出饥饿战损上浮×1.16（缺口46%）；竞速判死后获胜441/1099，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计78%免于续航罚分） / Monster(1,6)=-78.20|前期需要战斗积累卡牌；输出饥饿战损上浮×1.16（缺口46%）；路径中段含未达标精英，投影罚分；竞速判死后获胜441/1099，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计42%<75%（饥饿放宽自88%），优�
