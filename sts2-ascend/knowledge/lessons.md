@@ -11172,3 +11172,14 @@
 - 当前低价值卡牌：BULLY(10分/2.650707787166959局)，HAVOC(11分/2.1205662297335643局)，STRIKE_IRONCLAD(12分/6.8918402466341局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1416 胜，当前目标进阶 0
+
+## 第 1417 局复盘（2026-09-12 08:44）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：EVIL_EYE, BLUDGEON, INFLAME, COLOSSUS, HOWL_FROM_BEYOND, THUNDERCLAP, CINDER, HEADBUTT, TAUNT, INFLAME, SHRUG_IT_OFF, HEADBUTT, JUGGLING, TWIN_STRIKE
+- 本局遗物：NUNCHAKU
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血2; F6 Monster战 掉血14; F13 Monster战 掉血0; F14 Monster战 掉血8; F17 Boss战 掉血54｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/5.024278955401311局)，PACTS_END(25分/92.89501916156563局)，OFFERING(25分/23.294566594265536局)，PERFECTED_STRIKE(24分/4.990908567678106局)，MANGLE(24分/78.19681981906588局)
+- 当前低价值卡牌：BULLY(10分/2.6414303099118746局)，HAVOC(11分/2.113144247929497局)，STRIKE_IRONCLAD(12分/6.867718805770881局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1417 胜，当前目标进阶 0
