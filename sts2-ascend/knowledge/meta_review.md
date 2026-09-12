@@ -9625,3 +9625,143 @@ retry_resolution: 20260912-171127-1789204287016340700-1cd367b2 no_valid_change�
    低意图空过绝迹核对；③ 竞速台账 411/917 走向；④ LETHAL_SURVIVABLE_LINE
    首发（本批未触发）续盯；⑤ SLIPPERY 0/3、EXHAUST_FIZZLE 空转、
    HP_COST 豁免疫价双零续盯。
+
+# 2026-09-13｜第 1430~1435 局复盘（异步追及队列 6 局 exact_batch 全败；观测重落地 ×1：SLEEP_GUARD_PASS_OBS 沉睡放行对账——1425~1429 批「implemented」记录被宿主安全撤销、代码不在产的分叉修复，放行侧注记重新上线）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，无
+  replay target。
+- 上一批（1425~1429）last_paths 关键标签存在性核读（历史债务第 1 条
+  「implemented 记录与在产状态分叉」固定动作）：SLEEP_GUARD_PASS_OBS、
+  sleep_guard_pass_obs、selfcheck 3sg④⑧ 放行锚**均不在当前 HEAD**——
+  656036dc（00:56 提交）在 01:03 被 961103f7「安全撤销复盘」整体回滚，
+  progression 仍记 last_outcome="implemented"，属记录与在产分叉，非策略
+  判断失败。git show 逐行核对：被撤销改动为纯观测注记（单体+AOE 两分支
+  放行侧对照披露），评分/目标/阈值零改动，selfcheck 锚设计完整；撤销
+  原因属宿主 marker 事务生命周期（prepared 未推进 committed 时恢复前任），
+  非改动本身缺陷。本批基于当前 HEAD 逐行重落地，代码行与 656036dc
+  完全一致（diff 比对仅注释措辞微差），selfcheck 3sg①~⑧ 全锚通过。
+- 再上一批（1420~1424）last_paths 核读：BARRICADE_BANK_VALUE、
+  LETHAL_SURVIVABLE_LINE、RACE_UPSHIFT_STALE 均在当前 HEAD 在产；本批
+  6 局 runs 证据中三者注记均未首发（无壁垒局、无差≤2 血可负担生还格挡
+  阵亡同型），观察点续盯不动作。
+
+retry_resolution: none (no replay target; re-land of host-reverted observability change + batch evidence review)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：SLEEP_GUARD veto 只留痕拦截侧，放行侧（攻击沉睡目标但
+  牌面≤敌甲、不造成未格挡伤害、合法不唤醒）完全无痕——1429 局 F17 族母
+  T1 痛击 8 伤打出后 T2 意图 0（眩晕）、T3 意图 19（SLASH），与
+  1404/1412 局「T3 沉睡/T4 自然醒」形态不同，疑似「提前一回合被未格挡
+  伤害唤醒」，但存活决策没有任何 veto 输入读数可复算该放行是否合法
+  （敌甲究竟 ≥8 还是 <8）。补上放行侧「牌面 vs 敌甲」对照注记后：
+  若未来注记始终牌面≤敌甲，veto 逻辑闭环、1429 属载荷/读数缺口；
+  若出现牌面>敌甲注记，即 veto 被绕过的直接铁证。
+- **EVIDENCE**：① 历史债务第 10 条 SLEEP_GUARD 先兆（1404/1412 与 1429
+  唤醒形态分叉）至今无观测手段核销；② 1425~1429 批已设计并自检通过
+  该观测（656036dc），被宿主安全撤销后证据链断裂，本批 1430~1435 的
+  runs 证据中无任何 SLEEP_GUARD 放行侧读数（rg 全量核对 6 局）；
+  ③ 本批主样本 1435（93HZCY43DZWM，kept 61/omitted 55 决策切片 + runs
+  全链 116 决策逐条核读）死亡链为 F6 小怪 -44（闪光贾克斯果力量滚雪球）
+  → 10 血进 F7 Unknown 三劫掠者伏击阵亡，与沉睡守卫无关——本批改动
+  不声称修复本批任何死亡，只恢复已设计好的观测能力。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① 遭遇沉睡敌人（族母 F17 等）且
+  攻击牌中标沉睡目标、非击杀的 tick 出现「沉睡目标攻击放行：牌面X≤敌甲Y
+  不唤醒（SLEEP_GUARD_PASS_OBS）」注记（单体与 AOE 同口径，每候选至多
+  一条）；② 注记读数全部牌面≤敌甲 → veto 闭环，1429 型提前唤醒归因
+  载荷侧；③ 一旦出现牌面>敌甲 → veto 绕过铁证，立即转行为修复批；
+  ④ 无沉睡敌人的对局零注记、评分逐分零差异（3sg③/键=False 锚为证）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1430..1435]，exact 6/6、missing=0；6 局全败（生涯
+  0/1435）。死亡分布：1430 F8 精英（规避门否决后强制进场，-53）、
+  1431/1432/1434 F17 一幕 Boss（竞速审计均 T2 判死，实战 11/10/8 回合
+  阵亡）、1433 F33 二幕 Boss（T2 判死→7 回合阵亡）、1435 F7 三劫掠者
+  （F6 -44 后 10 血进 Unknown）。
+- 竞速审计台账：本批留痕 419/935 → 420/939+，判死后获胜率 ≈44.7%，
+  连续多批稳定于 30~46% 带内偏上限，续记不动作；4 场 Boss 判死全部
+  坐实（非误杀），判死本身不是本批矛盾点。
+- 部署时序：SLEEP_GUARD_PASS_OBS 为本批重落地，不覆盖本批任何对局
+  （1430~1435 全部为 pre-fix 口径，无沉睡放行读数可回溯，无分时混淆）；
+  与 1425~1429 原版的唯一差异是落地基线（原基线 88fde0d7 → 现基线
+  7f7c8d91，二者在该文件区间逐字节相同）。
+
+## 二、落地动作（最小可逆）
+
+- brain/policy.py：① AOE 分支 `_sleep_veto = None` 旁新增 `_sleep_pass`
+  账本，敌循环内在 veto 判定之后追加 elif 放行侧读数（沉睡≥_sg_min 且
+  未击杀时记录首个放行对象敌甲）；② AOE why 在 veto 留痕后追加 elif
+  放行注记（键控 sleep_guard_pass_obs）；③ 单体收口在 INVULN 剔出留痕
+  之后、FOCUS_DRIFT_OBS 之前新增放行对账段（best_t 命中沉睡≥_sg_min
+  且非击杀时披露牌面与敌甲对照）。三分支均纯 why 文本，评分/目标/阈值
+  零改动。
+- brain/knowledge.py：DEFAULT_POLICY 新增静态键 sleep_guard_pass_obs:
+  True（含证据与回滚注释；policy.json 零改动，缺键走默认）。
+- brain/selfcheck.py：3sg④ 锚升级为「全格挡不拦截 + 放行注记在产
+  （牌面6≤敌甲10）」；新增 3sg⑧ 边界锚组（veto/可击杀/无沉睡三种
+  语境不混注、AOE 放行同口径、键=False 严格回滚旧文本）。
+
+## 三、回滚边界
+
+- sleep_guard_pass_obs=False 即恢复旧文本（注记消失，评分不动）；
+  删除 policy.py 三处放行段、knowledge.py 键、selfcheck 3sg⑧ 段并还原
+  ④ 锚即完全回滚到 7f7c8d91 口径。
+- 行为面严格有界：仅 why 留痕新增；veto 判定、禁玩线、目标选择、
+  kill_race/lethal/税/滑溜等全部派生分支输入语义逐字不变（3sg①~⑦、
+  3sg2、3lsl、3bb、3x''/3wz 等全部旧锚原样通过为证）。
+
+## 四、自检
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（含 3sg④⑧
+  新锚与 3sg①~⑦/3sg2/3lsl/3bb/3pcap/3stale/3br 等全部旧锚原样通过）。
+- 重落地保真核对：git diff 与 656036dc 的 brain 三文件改动逐行比对，
+  全部代码行一致，仅注释措辞微差（语义相同）。
+
+## 五、未来 3~10 局观察指标
+
+1. SLEEP_GUARD_PASS_OBS 注记首发局/计数与读数分布（牌面 vs 敌甲）；
+   全部牌面≤敌甲 → 1429 型提前唤醒归因载荷侧，历史债务第 10 条
+   SLEEP_GUARD 先兆可标 resolved（观测闭环侧）。
+2. 一旦出现牌面>敌甲注记 → veto 绕过铁证，立即转行为修复批（不得
+   继续只登记待观察）。
+3. 竞速审计台账（420/939 ≈44.7%）走向续盯，越出 46% 上限再评估；
+   4 场 T2 判死全坐实，判死校准暂不动作。
+4. BARRICADE_BANK_VALUE / LETHAL_SURVIVABLE_LINE 首发续盯（本批均未
+   触发）；SLIPPERY 0/3、EXHAUST_FIZZLE 空转、HP_COST 豁免疫价双零
+   续盯。
+5. 宿主「implemented 记录 vs 在产状态」分叉：本批已按债务第 1 条修复
+   一例；下批首步继续对 last_paths 做标签存在性核读。
+
+## 六、继续调整/撤回条件
+
+- 若 3~10 局内注记长期零首发但仍有沉睡敌人遭遇且攻击中标（载荷缺口：
+  enemies[].block 或 ASLEEP_POWER 读数缺失），先修载荷再评估，不得
+  直接判假设证伪；
+- 若注记出现但读数恒牌面≤敌甲 ≥3 场遭遇，标观测闭环、债务核销，
+  不撤回（纯观测无行为面可回退）；
+- 若注记引发 why 文本超长截断或撞其他留痕 ≥2 例，评估把放行注记
+  压缩为短码而非直接回滚；
+- 若宿主再次以 marker 事务理由安全撤销本批，下批按同一债务第 1 条
+  流程重落地，并把撤销事件记入分叉台账。
+
+## 七、新沉淀的经验知识
+
+1. **「implemented 记录 vs 在产状态」分叉必须每批首步核读**：1425~1429
+   批 progression 记 implemented、代码却被安全撤销，若无 last_paths
+   标签存在性核对，该观测将永久丢失误认为在产——分叉检测（rg 标签
+   签名）已固化为失败包对账的固定第二动作。
+2. **被宿主事务机制撤销的改动 ≠ 被证伪的改动**：撤销原因（marker
+   prepared→committed 未推进）与改动内容正交；重落地前逐行 diff 原
+   提交即可确认「仍有效部分」=全部，避免把基础设施故障误记为策略
+   失败而重复设计。
+3. **观测类改动的重落地成本远低于行为类**：纯 why 文本、键控回滚、
+   自锚自检三件套使重落地可机械执行；行为类改动若被撤销需重新
+   审读部署时序窗，不能直接照搬。
+4. 观察点（下批复盘核对）：① SLEEP_GUARD_PASS_OBS 首发与读数分布；
+   ② 牌面>敌甲铁证零出现核对；③ 竞速台账 420/939 走向；④
+   BARRICADE_BANK_VALUE / LETHAL_SURVIVABLE_LINE 首发续盯；⑤
+   SLIPPERY 0/3、EXHAUST_FIZZLE 空转、HP_COST 豁免疫价双零续盯。
