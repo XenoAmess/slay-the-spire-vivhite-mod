@@ -8664,3 +8664,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.2867942517935584局)，ULTIMATE_DEFEND(23分/4.524563023891796局)，RESTLESSNESS(23分/2.1491197025412108局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.38 → 0.41（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.00 → 1.99（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F21——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F21——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F21——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F21——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/784 胜，当前目标进阶 1
+
+## 第 785 局复盘（2026-09-12 20:11）
+- 结果：💀 失败｜进阶 1｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION, PROWESS, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_MOBIUS_LOOP, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：ORICHALCUM, GREMLIN_HORN, STONE_CALENDAR, CENTENNIAL_PUZZLE
+- 战斗记录：F15 Monster战 掉血0｜自损10（可行动段10/非行动段1，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血46｜自损24（可行动段24/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血30｜自损14（可行动段14/非行动段18，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损9（可行动段9/非行动段3，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血37｜自损30（可行动段30/非行动段31，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血62｜自损31（可行动段31/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/10.95443112641487局)，CINDER(36分/2.2018070515057464局)，OMNISLICE(36分/7.0972771409657485局)，HAND_OF_GREED(36分/9.595188454518047局)，MAYHEM(35分/2.5551148663808037局)
+- 当前低价值卡牌：VIVHITE_CARD_ASTRAL_PURSUIT(18分/2.278790471912281局)，ULTIMATE_DEFEND(23分/4.508727053308175局)，RESTLESSNESS(23分/2.141597783582317局)
+- 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Elite战实测自损31/掉血62（50%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.41 → 0.44（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.99 → 1.98（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F31——灰区悲观系数部分胜利回收）；行至 F31 但致命战自损31/掉血62≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：1/785 胜，当前目标进阶 1
