@@ -5141,6 +5141,52 @@ def main() -> int:
         f"紧急线以下大挡被误贬值弃用（低血量防御不得缩水）: {d_ov3.action}（{d_ov3.reason}）"
     ovc.combat = None
 
+    # 3bb) 壁垒存续格挡银行（BARRICADE_BANK_VALUE，第 1420~1424 局批复盘）：
+    #      1424 局（YKPZS7GKJW38）F17 瀑布巨兽：T1 打出壁垒后格挡不再于回合开始
+    #      移除，T9 意图 0 剩 1 能量手握防御仍被「溢出大挡贬值」评 0.0 空过，
+    #      T10 意图 25 仅 7 甲吃 18（21→3），T13 自爆 42 对 17 甲 3 血阵亡——
+    #      溢出贬值的前提（甲回合开始即消失）在壁垒存续时不成立，溢出甲应全额
+    #      转存后续回合。锚：① 壁垒存续 + 意图 0 + 手握防御 → 打出防御并带
+    #      BARRICADE_BANK_VALUE 注记；② 键=False → 空过（严格回滚）；
+    #      ③ 无壁垒 → 空过（旧口径零差异）。
+    kdir_bb = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-barricade-"))
+    know_bb = knowledge.Knowledge(kdir_bb)
+    bbc = type("BBCtx", (), {"combat": None, "current_combat_is_hard": False,
+                             "credit_tags": []})()
+    bbc.combat = {"comp_id": None, "node_type": "Monster"}
+
+    def bb_state(powers):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 9,
+            "combat": {"player": {"current_hp": 21, "max_hp": 80, "block": 0, "energy": 1,
+                                  "powers": powers},
+                       "hand": [{"index": 0, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                                 "playable": True, "energy_cost": 1,
+                                 "requires_target": False,
+                                 "dynamic_values": [{"name": "Block", "current_value": 7}]}],
+                       "enemies": [{"index": 0, "enemy_id": "BB_FOE", "name": "试法者",
+                                    "current_hp": 50, "max_hp": 60, "block": 0,
+                                    "is_alive": True, "is_hittable": True,
+                                    "intents": [{"total_damage": 0}]}]},
+            "run": {"current_hp": 21, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
+
+    pol_bb = policy.Policy(know_bb, random.Random(5))
+    d_bb_on = pol_bb.decide(bb_state([{"power_id": "BARRICADE_POWER", "amount": 1}]), bbc)
+    assert d_bb_on.action == "play_card" and d_bb_on.params.get("card_index") == 0 \
+        and "BARRICADE_BANK_VALUE" in d_bb_on.reason, \
+        f"壁垒存续时意图0回合防御仍被溢出贬值空过: {d_bb_on.action}（{d_bb_on.reason}）"
+    pol_bb.know.policy["barricade_bank_value"] = False
+    d_bb_rb = pol_bb.decide(bb_state([{"power_id": "BARRICADE_POWER", "amount": 1}]), bbc)
+    assert d_bb_rb.action == "end_turn" \
+        and "BARRICADE_BANK_VALUE" not in d_bb_rb.reason, \
+        f"键=False 未严格回滚旧口径: {d_bb_rb.action}（{d_bb_rb.reason}）"
+    pol_bb.know.policy["barricade_bank_value"] = True
+    d_bb_off = pol_bb.decide(bb_state([]), bbc)
+    assert d_bb_off.action == "end_turn" \
+        and "BARRICADE_BANK_VALUE" not in d_bb_off.reason, \
+        f"无壁垒时溢出防御被误放行（旧口径被破坏）: {d_bb_off.action}（{d_bb_off.reason}）"
+    bbc.combat = None
+
     # 3xa) 增益药水分类补「能力/power」（第 94~95 批复盘）：95 局能力药水因描述
     #      不含任何已知关键词，premium 门（高危姿态 T1 即开）形同虚设，直到
     #      20 血才被 ≤50% 兜底分支掏出。高危组合+满血+增益药水应在第 1 回合兑现；

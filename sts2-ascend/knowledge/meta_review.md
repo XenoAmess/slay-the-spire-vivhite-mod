@@ -9501,3 +9501,127 @@ ot race_allin 门放开（本批两例均非 race_allin，不预设）；
    窗口长度（1419 两例翻转均不在超窗段，暂维持 2）续盯；
    ⑤ SLIPPERY 贴线 0/3、EXHAUST_FIZZLE 空转、HP_COST 豁免疫价
    双零续盯。
+
+# 2026-09-12｜第 1420~1424 局复盘（异步追及队列 5 局 exact_batch 全败；行为修复 ×1：BARRICADE_BANK_VALUE 壁垒存续格挡银行——溢出格挡贬值的前提「甲回合开始即消失」在壁垒存续时不成立，溢出甲全额转存后续回合）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=["20260912-171127-1789204287016340700-1cd367b2"]，
+  complete_evidence.required=true，已按索引核对全部 materialization：wip.patch=0 字节、
+  report.md=0 字节、file_states=[]、manifest 记录失败原因为宿主侧 `git clone` 180 秒
+  超时（provider_work_started=false，模型未曾开始工作）——包内零产物、无可重实现内容，
+  非策略判断失败。本批改动全部基于当前 HEAD（01e2ba53）自行完成。
+- 上一批（1414~1419）last_paths 关键标签存在性核读：LETHAL_SURVIVABLE_LINE
+  （policy.py 竞速格挡覆盖段 + knowledge.py lethal_survivable_line + selfcheck 3lsl）、
+  RACE_UPSHIFT_STALE、RACE_PLAY_CAP_NO_UPSHIFT 均在当前 HEAD 在产，无
+  「记录已闭环但代码不在产」分叉。上批观察点①在本批兑现：1424-F17 T9~T12
+  「入锁已N回合（≥新鲜窗2），上浮+0.20置零（RACE_UPSHIFT_STALE）」连续在产。
+
+retry_resolution: 20260912-171127-1789204287016340700-1cd367b2 no_valid_change（包为零产物基础设施失败：clone 超时、provider 未开工、wip.patch/report 均空，无有效改动可重实现；本批生产闭环基于当前 HEAD 独立完成）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：溢出格挡贬值（第 59 局「溢出 34 甲白费整轮能量」、第 94~95 批
+  「岿然不动+ 40 挡对 7 意图」）的全部前提是「格挡在回合开始时被移除，超出当前
+  意图缺口的部分白费」。壁垒（BARRICADE_POWER，「格挡不会在你的回合开始时被
+  移除」）存续时该前提机制性失效——溢出甲全额存入后续回合，应按原价计价而非
+  跌到 block_excess_value=0.03。
+- **EVIDENCE**：1424 局（YKPZS7GKJW38，exact_batch，full_failure_run 214 决策
+  已逐条核读）F17 瀑布巨兽 Boss 战：T1（17:04:23）打出【壁垒】；T9（17:05:28）
+  意图 0、剩 1 能量、手握防御✓，候选留痕「格挡7｜溢出大挡贬值」评 0.0 空过
+  （trace 原文核对）；T10 意图 25 仅 7 甲硬吃 18（21→3）；T13 自爆 42 对
+  17 甲 3 血阵亡。若 T9 把 7 甲存入银行，T10 只吃 11——同一坏结局链条上的
+  直接可计算差值。原生知识核对：runtime/powers.jsonl BARRICADE_POWER 描述
+  「[gold]格挡[/gold]不会在你的回合开始时被移除」、cards.jsonl BARRICADE
+  「格挡不再在你的回合开始时消失」（Power/Rare/3费/ironclad）。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① 壁垒存续且意图缺口<牌面的 tick 出现
+  「壁垒存续，溢出格挡全额转存后续回合（BARRICADE_BANK_VALUE）」注记（每候选
+  至多一条）；② 壁垒局的低意图回合不再整能量空过（「评估后无值得出的牌」
+  手握可出格挡的 tick 在壁垒存续时绝迹）；③ 无壁垒局旧口径零差异（3x''/3wz
+  锚原样通过为证）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1420..1424]，exact 5/5、missing=0；5 局全败（生涯 0/1424）。
+  死亡分布：1420/1422/1424 一幕 Boss F17（竞速审计分别 T3→10 回合、T2→13
+  回合、T2→12 回合阵亡），1421 F6 小怪（29% 血低血尾部连续作战），1423 F11
+  精英（PHROG_PARASITE）。
+- 主样本 1424 full_failure_run：kept 128/omitted 86（bounded tail + aggregates），
+  Boss 战 46 决策逐条核读；1422 Boss 战「自损3（可行动段3/非行动段66，
+  SELF_LOSS_PHASE_OBS）」与 1420 篝火 RACE_AUDIT_HEAL_OVERRIDE 留痕亦已核读。
+- 部署时序：LETHAL_SURVIVABLE_LINE（1414~1419 批）早于本批全部 5 局，本批
+  未出现「差≤2 血阵亡且手握可负担生还格挡」同型死亡（1424-T10 差 4 且无
+  可负担覆盖——7 甲对 25 意图，覆盖不成立，维持全攻为正确裁决）；
+  BARRICADE_BANK_VALUE 为本批新落地，不覆盖本批任何对局（1424 现场为
+  pre-fix 口径，无时序混淆）。
+- 竞速审计台账：411/917≈44.8% 判死后获胜，与上批 409/911≈44.9% 持平，
+  带内偏上限，续记不动作。
+
+## 二、落地动作（最小可逆）
+
+- brain/policy.py：① 模块常量 BARRICADE_POWER_ID（毗邻 RINGING_POWER_ID
+  先例）；② _score_play 防御/技能牌分支在锁窗大挡留闸之后、溢出贬值之前
+  新增壁垒存续判定——useful<block 且 barricade_bank_value 且
+  character_power_amount(player_powers, BARRICADE_POWER_ID)>0 时 useful 按
+  牌面全额计并向 why 追加 BARRICADE_BANK_VALUE 注记。锁窗留闸维持原判
+  （应急按钮族的自锁代价与溢出无关）；kill_race_lethal 部分格挡贬值
+  （useful<gap）语义不变——壁垒存甲不影响「本回合缺口是否抹平」。
+- brain/knowledge.py：DEFAULT_POLICY 新增静态键 barricade_bank_value: True
+  （含证据与回滚注释；policy.json 零改动，缺键走默认）。
+- brain/selfcheck.py：新增 3bb 夹具（21 血意图 0 能量 1 手握防御）：① 壁垒
+  存续 → 打出防御并带注记；② 键=False → 空过（严格回滚）；③ 无壁垒 →
+  空过（旧口径零差异）。
+
+## 三、回滚边界
+
+- barricade_bank_value=False 即恢复旧口径（壁垒存续时溢出格挡仍按
+  block_excess_value 计价）；删除 policy.py 常量与判定段、knowledge.py 键、
+  selfcheck 3bb 段即完全回滚。
+- 行为面严格有界：仅在「壁垒 Buff 存续 + 牌面格挡超出当前意图缺口」的候选
+  上改变评分（useful=block）；无壁垒、缺口全覆盖、锁窗留闸、致死/紧急、
+  kill_race_lethal 分支逐分零差异（3x''/3wz/3lsl 锚原样通过为证）。
+
+## 四、自检
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（含 3bb①②③ 新锚
+  与 3x''/3wz/3lsl/3pcap/3stale/3br 等全部旧锚原样通过）。
+
+## 五、未来 3~10 局观察指标
+
+1. BARRICADE_BANK_VALUE 注记首发局/计数；壁垒局低意图回合的出牌顺位确实
+   「存甲优先于空过」。
+2. 壁垒局的「评估后无值得出的牌（防御✓…）」型空过应绝迹；若仍出现，核对
+   该 tick 是否锁窗留闸/謦欬门/EXHAUST_CAP 等其他通道（本键不管辖）。
+3. 壁垒局的次回合实际承伤 vs 存甲额的兑换率（1424-T9→T10 型对账）；
+   若存甲后次回合承伤未见下降 ≥3 独立对局（如意图被其他机制绕过），评估
+   是否把银行计价从全额回调到折扣价而非直接回滚。
+4. 竞速审计台账（411/917）走向不因存甲显著越出 30~46% 带；壁垒存续与
+   kill_race 同场时格挡不得挤占斩杀能量（kill_race_lethal 贬值锚 3br 续盯）。
+
+## 六、继续调整/撤回条件
+
+- 若 3~10 局内出现「壁垒存续时低意图存甲挤占斩杀/关键铺垫」≥3 独立对局
+  （存甲牌反超 best_kill 候选），评估把银行计价改为「全额但封顶低于同费
+  攻击」而非直接回滚；
+- 若壁垒局因提前存甲导致当回合输出不足、战斗拖长多掉血 ≥3 例且直接改写
+  生死链，回滚=False 并重开观测窗；
+- 若原生 payload 的壁垒 power_id 与 BARRICADE_POWER 不符（注记长期零首发
+  但壁垒局仍空过 ≥3 例），先修 ID 匹配再评估，不得直接判假设证伪。
+
+## 七、新沉淀的经验知识
+
+1. **贬值类规则的「浪费前提」要按存续类 Buff 逐一核销**：溢出格挡贬值
+   （59/94 批）与锁窗留闸（726 批）共享「甲回合开始即消失」前提，壁垒把
+   该前提机制性推翻——凡「不用就浪费」型计价，都要先查场上是否存在
+   「不消失」修正（壁垒之于格挡、RINGING 之于出牌数、无敌帧之于血池），
+   前提失效条件应登记在规则注释旁。
+2. **turn_end_state 全字段 + 候选留痕可直接算出反事实差值**：1424-T9 的
+   「若存 7 甲则 T10 吃 11」不依赖回放，一手 trace 即可闭合——死亡链复盘
+   优先找「同一链条上的可计算差值」作为假设锚点。
+3. **新增修正置于既有留闸之后**：壁垒判定放在锁窗大挡留闸后，保证应急
+   按钮族的自锁语义不被顺带改写——「最小改动」不仅是行数少，更是让每个
+   既有分支的输入语义逐字不变。
+4. 观察点（下批复盘核对）：① BARRICADE_BANK_VALUE 首发与计数；② 壁垒局
+   低意图空过绝迹核对；③ 竞速台账 411/917 走向；④ LETHAL_SURVIVABLE_LINE
+   首发（本批未触发）续盯；⑤ SLIPPERY 0/3、EXHAUST_FIZZLE 空转、
+   HP_COST 豁免疫价双零续盯。

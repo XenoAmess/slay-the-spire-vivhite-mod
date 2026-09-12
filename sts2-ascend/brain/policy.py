@@ -51,6 +51,11 @@ _ELITE_GATE_NEG_PENALTY = 50.0
 # 「全攻换挡后每回合打出更多攻击牌」，在该上限生效回合机制上不成立。
 RINGING_POWER_ID = "RINGING_POWER"
 
+# 壁垒（BARRICADE_POWER，原生 v0.111.0 铁甲战士能力牌壁垒施加的 Buff）：
+# 「格挡不会在你的回合开始时被移除」。溢出格挡贬值的前提「甲在回合开始时被
+# 移除、超出当前意图缺口的部分白费」在该能力存续时不成立。
+BARRICADE_POWER_ID = "BARRICADE_POWER"
+
 
 # These cards can recover/copy another card and therefore must never become
 # one another's preferred child.  The static projection already applies the
@@ -6004,6 +6009,22 @@ class Policy:
                 return -2.0, None, (
                     f"锁窗大挡留闸（缺口{useful}不足面值{block}，"
                     "提前打出将自锁两回合格挡，留待高意图/买命回合）")
+            # 壁垒存续格挡银行（BARRICADE_BANK_VALUE，第 1420~1424 局批复盘）：
+            # 溢出贬值的前提「格挡在回合开始时被移除，超出当前意图缺口的部分
+            # 白费」在壁垒（BARRICADE_POWER）存续时不成立——溢出甲全额存入
+            # 后续回合。1424 局 F17 瀑布巨兽：T1 已打壁垒，T9 意图 0 剩 1 能量
+            # 手握防御被「溢出大挡贬值」评 0.0 空过，T10 意图 25 仅 7 甲吃 18
+            # （21→3），T13 自爆 42 对 17 甲 3 血阵亡；若 T9 存入 7 甲，T10
+            # 只吃 11。壁垒存续时全部格挡按有用计价；键=False 一键回滚。
+            # （置于锁窗留闸之后：应急按钮族的自锁代价与溢出无关，维持原判）
+            if useful < block and bool(pol.get("barricade_bank_value", True)):
+                if character_power_amount(player_powers, BARRICADE_POWER_ID) > 0:
+                    useful = block
+                    _barricade_note = "｜壁垒存续，溢出格挡全额转存后续回合（BARRICADE_BANK_VALUE）"
+                else:
+                    _barricade_note = ""
+            else:
+                _barricade_note = ""
             # 溢出型大格挡贬值（第 94~95 批复盘）：有用量只有缺口那么大，
             # 但 2 费 40 挡在 7 点意图面前花掉的是 2 点能量——94 局 Boss 战
             # 开局 87 血对意图 7/17 连打两张岿然不动+，~56 点溢出甲 ≈ 4 能量
@@ -6021,7 +6042,7 @@ class Policy:
                 # 缺口补满后的纯溢出防牌应跌破出牌阈值，把能量还给输出）
                 score = (useful * 1.05 * pol["block_safety"]
                          + (block - useful) * float(pol.get("block_excess_value", 0.03))) * blk_boost
-                why = f"格挡{block}"
+                why = f"格挡{block}" + _barricade_note
             # 斩杀竞速已经否证长期防守；只保留能完全抹平本回合缺口的格挡。
             # 部分格挡仍可抽牌/附带其他效果，因此仅压低防御面，不抹掉抽牌价值。
             if kill_race_lethal and useful < gap:
