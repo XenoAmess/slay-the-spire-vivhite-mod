@@ -5857,6 +5857,53 @@ def main() -> int:
         sl_pol.know.policy["focus_drift_obs"] = True
         sl_pol._focus_index = None
 
+    # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
+    # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
+    # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——
+    # 反伤是敌方来源伤害，不受原生自付禁致死 hook 保护，评分侧却记成纯收益。
+    # ① 自杀式斩杀（5 血打 4 血荆棘 5 目标）：击杀口径撤销，why 不以「可击杀」
+    # 开场且显形 THORNS_REFLECT_PRICING，攻击面仍中标（按实际移除参选）；
+    # ② 非致死攻击进荆棘（80 血打 80 血荆棘目标）：攻击照常中标、附
+    # THORNS_REFLECT_OBS 未计价注记（评分零改动）；③ 健康血量斩杀荆棘目标
+    # （80 血打 4 血）：击杀口径保留并附 OBS 注记；④ thorns_reflect_pricing=0
+    # 严格回滚：自杀式斩杀恢复「可击杀」口径、双注记消失。
+    def sl_thorny(hp=80, thorns=5, *, index=0, intent=0, name="棘刺蟾蜍"):
+        _te = sl_enemy(hp=hp, layers=None, index=index, intent=intent, name=name)
+        _te["powers"] = [{"power_id": "THORNS_POWER", "name": "荆棘",
+                          "amount": thorns, "is_debuff": False}]
+        return _te
+
+    tr_card = dict(sl_strike, valid_target_indices=[0])
+    _, tr_t1, tr_why1 = sl_pol._score_play(
+        dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2, sl_pol.know.policy,
+        my_hp=5, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert tr_t1 == 0 and not tr_why1.startswith("可击杀") \
+            and "THORNS_REFLECT_PRICING" in tr_why1, \
+        f"自杀式斩杀未撤销击杀口径: target={tr_t1} why={tr_why1}"
+    _, tr_t2, tr_why2 = sl_pol._score_play(
+        dict(tr_card), [sl_thorny(hp=80, thorns=5)], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert tr_t2 == 0 and "THORNS_REFLECT_OBS" in tr_why2 \
+            and "THORNS_REFLECT_PRICING" not in tr_why2, \
+        f"非致死荆棘攻击缺未计价注记: target={tr_t2} why={tr_why2}"
+    _, tr_t3, tr_why3 = sl_pol._score_play(
+        dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert tr_t3 == 0 and tr_why3.startswith("可击杀") \
+            and "THORNS_REFLECT_OBS" in tr_why3, \
+        f"健康血量斩杀荆棘目标被误伤: target={tr_t3} why={tr_why3}"
+    sl_pol.know.policy["thorns_reflect_pricing"] = 0
+    try:
+        _, tr_t4, tr_why4 = sl_pol._score_play(
+            dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2,
+            sl_pol.know.policy,
+            my_hp=5, my_max_hp=80, cur_energy=3, run_deck=[])
+        assert tr_t4 == 0 and tr_why4.startswith("可击杀") \
+                and "THORNS_REFLECT" not in tr_why4, \
+            f"thorns_reflect_pricing=0 未严格回滚: target={tr_t4} why={tr_why4}"
+    finally:
+        sl_pol.know.policy["thorns_reflect_pricing"] = 1
+
     # 单体候选混有普通与滑溜敌人时，逐目标模拟不能把滑溜折算泄漏到普通目标。
     sl_mixed_bludgeon = dict(sl_bludgeon, valid_target_indices=[0, 1])
     _, mixed_target, mixed_why = sl_pol._score_play(

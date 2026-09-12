@@ -5719,6 +5719,37 @@ class Policy:
                     _pool_peak = max(_effective_pool(_pe) for _pe in enemies)
                 except Exception:
                     _pool_peak = 0.0
+            # 荆棘反伤计价（THORNS_REFLECT_PRICING，第784~789局批复盘）：
+            # 784-F21 棘刺蟾蜍战（SpikesMove 自挂 5 层荆棘：mechanics 实证
+            # PowerCmd.Apply<ThornsPower>(5m)；THORNS_POWER 原文「当被攻击命中
+            # 时，反击造成伤害」）：T2 三刀打进荆棘回合，hp 66→46 单回合自损
+            # 20（实付 10 + 反伤约 10），T5 我方 8 血打出「可击杀」终止条件
+            # （实付 4 血），斩杀命中触发 5 点反伤 → hp 0 当场阵亡（战斗记录
+            # F21 掉血68｜自损30）。反伤是敌方来源伤害，不受原生「自付禁致死」
+            # hook 保护，而评分侧 LIVE_ESTIMATE 只记 +4.20 上行、反伤全程零
+            # 计价——「可击杀」斩杀判定把自杀式斩杀当成纯收益。单体分支按
+            # 目标荆棘层数×命中数估算反伤：① 斩杀即自杀（支付后余血 ≤ 反伤）
+            # 的候选撤销击杀口径——kill_bonus 不再发放、why 不再以「可击杀」
+            # 开场（孤注/零压闸等击杀豁免随之失效），攻击面仍按实际移除参选，
+            # 不致饿死「唯一输出」的极端局面；② 其余反伤暴露纯留痕对账
+            # （THORNS_REFLECT_OBS），评分零改动，供后续批次统计频率后再议
+            # 全面计价；AOE 分支本期不动（784 证据全在单体口径）。键=0 严格
+            # 回滚旧口径（反伤零感知、双注记消失）。
+            try:
+                _thorns_pricing = float(
+                    pol.get("thorns_reflect_pricing", 1) or 0) > 0
+            except (TypeError, ValueError):
+                _thorns_pricing = False
+            _thorns_hp_pay = 0.0
+            if _thorns_pricing:
+                if self._strategy_card(card) is not None:
+                    try:
+                        _thorns_hp_pay = max(0.0, float(
+                            self._vivhite_hp_pay(card, player_powers) or 0.0))
+                    except Exception:
+                        _thorns_hp_pay = 0.0
+                else:
+                    _thorns_hp_pay = max(0.0, float(self_cost or 0))
             _valid = (card.get("valid_target_indices") or []) if card.get("requires_target") else []
             # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
@@ -5762,6 +5793,18 @@ class Policy:
                     continue
                 eff, killed, slippery_broken = _attack_outcome(e)
                 _rem_cost, _rem_pool = 0.0, 0.0
+                _thorns_reflect = 0.0
+                _thorns_suicide = False
+                if _thorns_pricing:
+                    _thorns_reflect = (self._enemy_power_stack(
+                        e, "thorns", "荆棘") * max(1, int(hits)))
+                    if (killed and _thorns_reflect > 0.0
+                            and float(my_hp) - _thorns_hp_pay
+                            <= _thorns_reflect):
+                        # 斩杀即自杀：撤销击杀口径（击杀奖励与各类击杀豁免
+                        # 随之失效），攻击面仍按实际移除参选
+                        killed = False
+                        _thorns_suicide = True
                 if _sg_min > 0 and not killed \
                         and self._enemy_asleep_stack(e) >= _sg_min \
                         and float(total) > max(0.0, float(e.get("block") or 0)):
@@ -5892,6 +5935,14 @@ class Policy:
                                     + ("｜零意图回合" if _burn_idle else ""))
                         except Exception:
                             pass
+                    if _thorns_suicide:
+                        why += (f"｜荆棘反伤≈{_thorns_reflect:g}≥支付后余血"
+                                f"{max(0.0, float(my_hp) - _thorns_hp_pay):g}，"
+                                "斩杀即自杀，击杀口径撤销"
+                                "（THORNS_REFLECT_PRICING）")
+                    elif _thorns_reflect > 0.0:
+                        why += (f"｜荆棘反伤≈{_thorns_reflect:g}未计价"
+                                "（THORNS_REFLECT_OBS）")
             # 减员成本翻案对账收口（REMOVAL_COST_FLIP_AUDIT）：Winner 定论后
             # 对账一次——去分口径的胜者与本口径胜者不同则记翻案（杠杆独立
             # 改写了火线），相同则记随附（加分只放大既有选择）。

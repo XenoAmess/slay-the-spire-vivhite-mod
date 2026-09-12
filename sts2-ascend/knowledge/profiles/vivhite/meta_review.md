@@ -2271,3 +2271,83 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 784~789 局批复盘：荆棘反伤零计价——自杀式斩杀闸与反伤暴露观测（THORNS_REFLECT_PRICING / THORNS_REFLECT_OBS）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：单体攻击评分与「可击杀」斩杀判定对目标持有的荆棘
+  （Thorns）反伤完全盲视。原生实证（v0.111.0 mechanics/monsters.jsonl +
+  powers.jsonl）：SpinyToad.SpikesMove 给自身 PowerCmd.Apply<ThornsPower>(5m)，
+  THORNS_POWER 原文「当被攻击命中时，反击造成伤害」。反伤是敌方来源伤害，
+  不受原生「自付禁致死」hook 保护（该 hook 只拦 LifeCost 支付），评分侧
+  VIVHITE_LIVE_ESTIMATE 对反伤零计价——「可击杀」把自杀式斩杀记成纯收益。
+- **EVIDENCE**：784 局（S90F4QXKC8UG）F21 棘刺蟾蜍阵亡战逐帧：T2 三刀
+  打进荆棘回合，hp 66→46 单回合自损 20（实付 10 + 反伤约 10）；T5 我方
+  8 血打出「可击杀棘刺蟾蜍｜VIVHITE_LIVE_ESTIMATE=+4.20」终止条件
+  （实付 4 血），斩杀命中触发 5 点反伤，hp 8→0 当场阵亡（战斗记录
+  F21 Monster战 掉血68｜自损30，其中反伤约占 25）。历史同型：601-F27
+  SPINY_TOAD 8 回合阵亡（掉血47｜自损15，596~601 批只修了意图0回合
+  攻击被拦的互补侧）。本批 6 局全负，784 是唯一「斩杀即自杀」直接死因。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 荆棘目标在场的致死语境不再
+  出现「可击杀」开场 + 同回合 hp→0 的自杀式斩杀；撤销击杀口径的留痕
+  「荆棘反伤≈N≥支付后余血M，斩杀即自杀（THORNS_REFLECT_PRICING）」
+  可直接计数；② 非致死攻击进荆棘的「荆棘反伤≈N未计价
+  （THORNS_REFLECT_OBS）」注记给出反伤暴露频率——高频（≥3 局）且
+  SPINY_TOAD 类战斗继续高自损 → 下一批把反伤接入全面计价（含 AOE
+  分支）；③ 零反伤战斗注记零显形、评分零差异。证伪/撤回：若荆棘战
+  反伤暴露罕见或撤销击杀口径后该类战斗结局无变化，撤回=
+  thorns_reflect_pricing=0（反伤零感知、双注记消失，旧口径零差异，
+  夹具④护住）并删除 3tr 夹具。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_score_play 单体攻击分支新增荆棘反伤
+  估算（_enemy_power_stack 读 thorns/荆棘 × 命中数）。斩杀即自杀
+  （killed 且支付后余血 ≤ 反伤）的候选撤销击杀口径——kill_bonus 不
+  发放、why 不以「可击杀」开场（孤注/零压闸/payback 的击杀豁免随之
+  失效），攻击面仍按实际移除参选不饿死唯一输出；其余反伤暴露只追加
+  OBS 注记，评分、阈值、门带、竞速各收口逐字不动；AOE 分支本期不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  thorns_reflect_pricing=1，注释登记 784-F21 实证与回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3tr 四分支——① 自杀式斩杀
+  （5 血打 4 血荆棘 5 目标）撤销击杀口径且注记显形、攻击面仍中标；
+  ② 非致死攻击进荆棘照常中标附 OBS 注记；③ 健康血量斩杀荆棘目标
+  击杀口径保留附 OBS 注记；④ thorns_reflect_pricing=0 严格回滚
+  （恢复「可击杀」口径、双注记消失，finally 复位）。
+- 不加新评分旋钮、不改任何既有判定路径；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3tr 四
+  分支；既有 3fdo 火线漂移族、3fe 沙坑续命族、3xg 滑溜/payback 族、
+  謦欬门族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+51，反伤估算+自杀撤销+双注记+注释）、
+  brain/knowledge.py（+12，静态键+注释）、brain/selfcheck.py
+  （+47，3tr 四分支）；未触碰只读在线状态；克隆残留的 assets 超长
+  路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：THORNS_REFLECT_PRICING 撤销次数（应只在荆棘目标
+  +低血斩杀语境显形）、THORNS_REFLECT_OBS 频率、SPINY_TOAD 类战斗
+  自损占比与结局对照。
+- 高频且仍高自损 → 下一批全面计价（含 AOE）；罕见或无效 → 撤回=
+  thorns_reflect_pricing=0（旧口径零差异，夹具④护住）。
+- 上批 FOCUS_DRIFT_OBS 备注：该注记随 772~783 批提交（21:05）落地，
+  晚于本批 784~789 局运行窗口（19:40~21:12），786-F33 CRUSHER+ROCKET
+  原始链可见火线 碾碎爪→火箭→碾碎爪 漂移但注记零显形属部署时序
+  所致，漂移行为化门禁顺延到注记实际生效后的对局窗口验证。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
