@@ -632,6 +632,13 @@ DEFAULT_POLICY = {
                                     # ——739局F33无厌沙虫战连弃7张狂乱逃离（hp 73→18）后T6阵亡，每张=一整个
                                     # 行动回合。沙坑计数可见时续命牌移出「最无价值」候选（badness=-100）；
                                     # False 一键回滚旧口径（零差异）
+    "idle_rescue_slippery_est": True,  # 残能救场滑溜破层口径（IDLE_RESCUE_SLIPPERY_EST，第744~763局批复盘，
+                                    # 静态键）：救场攻击通道按牌面值 dmg×hits 选「预估最高伤」，不认主评分端已有
+                                    # 的滑溜逐段折算——滑溜每层把一次命中压到1血，单发牌无论面值多高产出都是
+                                    # 破1层。759局F17 VANTOM（开局滑溜8层）残能救场连打【尺度变换+】预估27→
+                                    # 1层、【终止条件+】预估23→1层、【递推星芒】预估14→1层，同手1费牌破层产出
+                                    # 完全相同，高价牌白白摊薄每费破层率。滑溜敌在场时救场攻击估值改按破层数
+                                    # （命中超层部分按面值补回），同值取低费；False 一键回滚旧面值口径（零差异）
     "end_turn_settle_recovery_ticks_boss": 40,  # BOSS_SETTLE_TIER3: Boss-only settle recovery budget.
     "end_turn_settle_recovery_ticks_lethal": 50,  # LETHAL_SETTLE_EXTENSION: lethal Boss settle windows get a bounded final 10-tick extension.
     "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）

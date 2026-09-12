@@ -9473,6 +9473,104 @@ def main() -> int:
     assert _hem_c is None and _hem_kind == "", \
         f"自残成本型攻击不应作为救场弹药: {(_hem_kind, _hem_c)}"
 
+    # 3rsl) 残能救场滑溜破层口径（IDLE_RESCUE_SLIPPERY_EST，第744~763局批复盘）：
+    #      滑溜每层把一次未格挡命中压到 1 血并减 1 层，单发牌无论面值多高
+    #      产出都是破 1 层；救场攻击通道旧口径 est=dmg×hits 按面值选「预估
+    #      最高伤」——759 局 F17 VANTOM（开局滑溜8层）残能救场连打
+    #      【尺度变换+】预估27→1层、【终止条件+】预估23→1层、【递推星芒】
+    #      预估14→1层，同手 1 费牌破层产出完全相同。
+    #      ① 滑溜7层：同破1层取低费（快刺1费14伤 胜 重锤2费27伤）；
+    #      ② 滑溜7层：多段命中破多层（三连击2费5伤×3 胜 重锤27面值）；
+    #      ③ slippery_layers=0：严格回滚旧面值口径（重锤27胜）；
+    #      ④ 部分层数：滑溜2层时三连击 est=2+1×5=7 仍胜重锤（1层）；
+    #      ⑤ 端到端：滑溜敌在场且主评分全线拒绝时救场改打低费牌并留痕，
+    #         键=False 恢复面值选高价牌（生产回滚路径）。
+    rsl_heavy = {"index": 0, "card_id": "HEAVY_SINGLE", "name": "重锤",
+                 "playable": True, "energy_cost": 2, "requires_target": True,
+                 "card_type": "Attack", "rules_text": "造成27点伤害。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 27}]}
+    rsl_cheap = {"index": 1, "card_id": "CHEAP_SINGLE", "name": "快刺",
+                 "playable": True, "energy_cost": 1, "requires_target": True,
+                 "card_type": "Attack", "rules_text": "造成14点伤害。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 14}]}
+    rsl_multi = {"index": 2, "card_id": "MULTI_STAB", "name": "三连击",
+                 "playable": True, "energy_cost": 2, "requires_target": True,
+                 "card_type": "Attack", "rules_text": "造成5点伤害3次。",
+                 "dynamic_values": [{"name": "Damage", "current_value": 5},
+                                    {"name": "Hits", "current_value": 3}]}
+    _rsl1_c, _rsl1_kind = policy.idle_energy_rescue_pick(
+        [rsl_heavy, rsl_cheap], 2, 20, 0, slippery_layers=7)
+    assert _rsl1_kind == "attack" and _rsl1_c is not None \
+        and _rsl1_c.get("card_id") == "CHEAP_SINGLE", \
+        f"滑溜在场同破1层未取低费牌: {(_rsl1_kind, _rsl1_c)}"
+    _rsl2_c, _rsl2_kind = policy.idle_energy_rescue_pick(
+        [rsl_heavy, rsl_multi], 2, 20, 0, slippery_layers=7)
+    assert _rsl2_kind == "attack" and _rsl2_c is not None \
+        and _rsl2_c.get("card_id") == "MULTI_STAB", \
+        f"滑溜在场多段命中未优先于高价单发: {(_rsl2_kind, _rsl2_c)}"
+    _rsl3_c, _rsl3_kind = policy.idle_energy_rescue_pick(
+        [rsl_heavy, rsl_cheap], 2, 20, 0, slippery_layers=0)
+    assert _rsl3_kind == "attack" and _rsl3_c is not None \
+        and _rsl3_c.get("card_id") == "HEAVY_SINGLE", \
+        f"slippery_layers=0 未严格回滚旧面值口径: {(_rsl3_kind, _rsl3_c)}"
+    _rsl4_c, _rsl4_kind = policy.idle_energy_rescue_pick(
+        [rsl_heavy, rsl_multi], 2, 20, 0, slippery_layers=2)
+    assert _rsl4_kind == "attack" and _rsl4_c is not None \
+        and _rsl4_c.get("card_id") == "MULTI_STAB", \
+        f"部分层数时破层+余段面值折算失真: {(_rsl4_kind, _rsl4_c)}"
+
+    def _rsl_state(hand_cards):
+        # 覆甲死牌主评分拒绝（3br-3 已证）→ 落入残能救场；敌持滑溜7层，
+        # 间谍记录救场接线传入的 slippery_layers。
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {"player": {"current_hp": 5, "max_hp": 80,
+                                  "block": 3, "energy": 2},
+                       "hand": hand_cards,
+                       "enemies": [{"index": 0, "enemy_id": "SLIP_BOSS",
+                                    "name": "墨影幻灵", "current_hp": 60,
+                                    "max_hp": 173, "block": 0, "is_alive": True,
+                                    "is_hittable": True,
+                                    "powers": [{"id": "SLIPPERY_POWER",
+                                                "amount": 7}],
+                                    "intents": [{"total_damage": 19}]}]},
+            "run": {"current_hp": 5, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": []},
+        }
+
+    rsl_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rsl-")))
+    assert rsl_know.policy.get("idle_rescue_slippery_est") is True, \
+        "DEFAULT_POLICY 缺少 idle_rescue_slippery_est 静态键"
+    _rsl_calls = []
+    _rsl_orig = policy.idle_energy_rescue_pick
+
+    def _rsl_spy(*args, **kwargs):
+        _rsl_calls.append(kwargs.get("slippery_layers"))
+        return _rsl_orig(*args, **kwargs)
+
+    policy.idle_energy_rescue_pick = _rsl_spy
+    try:
+        d_rsl_on = policy.Policy(rsl_know, random.Random(5)).decide(
+            _rsl_state([dict(resc_armor[0])]), ctx)
+        assert d_rsl_on.action == "play_card" \
+            and "残能救场[覆甲]" in d_rsl_on.reason, \
+            f"覆甲死牌救场夹具失效: {d_rsl_on.action}（{d_rsl_on.reason}）"
+        assert _rsl_calls and abs(_rsl_calls[-1] - 7.0) < 1e-9, \
+            f"滑溜敌层数未传入救场接线: {_rsl_calls}"
+        rsl_know_off = knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rsl-off-")))
+        rsl_know_off.policy["idle_rescue_slippery_est"] = False
+        d_rsl_off = policy.Policy(rsl_know_off, random.Random(5)).decide(
+            _rsl_state([dict(resc_armor[0])]), ctx)
+        assert d_rsl_off.action == "play_card" \
+            and _rsl_calls and abs(_rsl_calls[-1]) < 1e-9, \
+            f"键=False 未严格回滚（应传0层）: {_rsl_calls}（{d_rsl_off.reason}）"
+    finally:
+        policy.idle_energy_rescue_pick = _rsl_orig
+
+
     # 3br-4) 手牌滞留税止损（HAND_END_TAX / HAND_END_TAX_STOPLOSS，第808~812局
     #        批复盘补合）：v0.111.0 corpus 实证 TOXIC（可打出，5伤/回合，打出
     #        即消耗）与 INFECTION（不可打出，3伤/回合）两类回合结束手牌伤害

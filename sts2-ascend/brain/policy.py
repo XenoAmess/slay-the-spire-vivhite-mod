@@ -373,7 +373,8 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                             is_unavailable=None, block_locked: bool = False,
                             allow_taxstop: bool = True,
                             character_strategy: CharacterStrategy | None = None,
-                            player_powers=None):
+                            player_powers=None,
+                            slippery_layers: float = 0.0):
     """残能救场候选（第698~770批复盘闭环实验）。
 
     「评估后无值得出的牌」分支在剩有能量且意图缺口>0 时空过结束回合，
@@ -396,6 +397,13 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
          allow_taxstop=False（运行时键 hand_tax_stoploss=0）即关闭。
     block_locked（应急按钮锁窗）期间格挡与覆甲收益为零，仅保留攻击与
     止损通道（止损不依赖格挡，不受 NoBlockPower 影响）。
+    slippery_layers>0（滑溜敌在场，IDLE_RESCUE_SLIPPERY_EST，第 744~763
+    局批复盘）时攻击通道改按破层口径估值：滑溜每层把一次未格挡命中压到
+    1 血并减 1 层，单发牌无论面值多高产出都是破 1 层——759 局 F17
+    VANTOM 战残能救场连打【尺度变换+】预估27→1 层、【终止条件+】预估
+    23→1 层、【递推星芒】预估14→1 层，同手 1 费牌可破同样 1 层。破层
+    口径下 est=破层数（命中数超出层数部分按面值补回），同值取低费，
+    残能换成最大破层进度；=0 严格回滚旧面值口径（零差异）。
     全部候选失败返回 (None, "")，调用方回落旧版 end_turn——语义完全可回滚：
     运行时配置键 idle_energy_rescue=False 即整体关闭。
     """
@@ -451,7 +459,18 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                 if plat_best is None or cand[:2] > plat_best[:2]:
                     plat_best = cand
             elif dmg > 0:
-                est = int(dmg) * max(1, int(hits or 1))
+                hits_n = max(1, int(hits or 1))
+                try:
+                    _slip = float(slippery_layers or 0.0)
+                except (TypeError, ValueError):
+                    _slip = 0.0
+                if _slip > 0.0:
+                    # 滑溜破层口径：每层把一次未格挡命中压到 1 血，单发牌
+                    # 面值全部折算为破层数；命中数超出层数部分按面值补回。
+                    broken = min(hits_n, max(1, int(math.ceil(_slip))))
+                    est = broken + max(0, hits_n - broken) * int(dmg)
+                else:
+                    est = int(dmg) * hits_n
                 cand = (est, -cost, c)
                 if atk_best is None or cand[:2] > atk_best[:2]:
                     atk_best = cand
@@ -5028,6 +5047,7 @@ class Policy:
                 _resc_enabled = True
             _resc_kind = ""
             _resc_card = None
+            _resc_slip = 0.0
             _resc_gate_blocked_idx: set = set()
             _resc_invuln_note = ""
             if _resc_enabled:
@@ -5099,13 +5119,26 @@ class Policy:
                                 "；全场无敌帧，攻击救场禁出"
                                 "（INVULN_TARGET_VETO）")
                         _resc_hand = _resc_kept
+                # 滑溜敌层数（IDLE_RESCUE_SLIPPERY_EST，第 744~763 局批复盘）：
+                # 救场攻击通道按牌面值选「预估最高伤」，不认主评分端已有的
+                # 滑溜逐段折算——759 局 F17 VANTOM（开局滑溜8层）残能救场
+                # 连打预估27/23/14 的高价单发各只破 1 层，同手 1 费牌破层
+                # 产出完全相同。层数传给救场后攻击估值改按破层口径（同值
+                # 取低费）；键=False 传 0 严格回滚旧面值口径（零差异）。
+                _resc_slip = 0.0
+                if bool(pol.get("idle_rescue_slippery_est", True)):
+                    for _e in (enemies or []):
+                        if isinstance(_e, dict) and _e.get("is_alive", True):
+                            _resc_slip = max(
+                                _resc_slip, self._enemy_slippery_stack(_e))
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
                     _resc_hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
                     block_locked=block_locked,
                     allow_taxstop=_taxstop_on,
                     character_strategy=self.character_strategy,
-                    player_powers=player.get("powers") or [])
+                    player_powers=player.get("powers") or [],
+                    slippery_layers=_resc_slip)
             if _resc_card is not None:
                 _rcid = (_resc_card.get("card_id") or "").upper().rstrip("+")
                 _rest_dmg, _, _rhits = card_numbers(_resc_card)
@@ -5134,10 +5167,14 @@ class Policy:
                         _rparams["target_index"] = rtarget
                     _rtname = next((e["name"] for e in (combat.get("enemies") or [])
                                     if e.get("index") == rtarget), "")
+                _resc_slip_note = (
+                    f"｜滑溜{_resc_slip:g}层破层口径（IDLE_RESCUE_SLIPPERY_EST）"
+                    if _resc_slip > 0.0 and _resc_kind == "attack" else "")
                 self._trace_gate(
                     "RESCUE 残能救场", "warn",
                     f"{_resc_kind}:【{_resc_card.get('name')}】"
-                    f"能量{energy}缺口{max(0, incoming - my_block)}")
+                    f"能量{energy}缺口{max(0, incoming - my_block)}"
+                    f"{_resc_slip_note}")
                 _kind_cn = {"block": "格挡", "plating": "覆甲", "attack": "输出",
                             "taxstop": "手牌税止损"}.get(_resc_kind, _resc_kind)
                 _taxstop_note = (f"，清零手牌滞留税{_tax_total}/回合（{_tax_detail}）"
@@ -5151,6 +5188,7 @@ class Policy:
                                 f"打出【{_resc_card.get('name')}】"
                                 f"{('→' + _rtname) if _rtname else ''}{_taxstop_note}，"
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
+                                f"{_resc_slip_note}"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
                                 f"{danger_note}{_gate_rescue_note}",
                                 tags=[("play_card", _rcid),

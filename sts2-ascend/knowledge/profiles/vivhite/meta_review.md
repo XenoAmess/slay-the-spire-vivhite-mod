@@ -2071,3 +2071,80 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 744~763 局批复盘：残能救场攻击通道按面值选牌、不认滑溜破层折算——救场滑溜破层口径（IDLE_RESCUE_SLIPPERY_EST）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：残能救场（idle_energy_rescue_pick）攻击通道按牌面值
+  dmg×hits 选「预估最高伤」，与主评分端 _attack_outcome 已有的滑溜逐段
+  折算完全脱节。滑溜敌在场时每层把一次未格挡命中压到 1 血并减 1 层，
+  单发牌无论面值多高实际产出都是破 1 层/1 血——救场却系统性打出最高
+  面值（往往最高费）牌，残能没有换成最大破层进度，每费破层率被摊薄；
+  多段命中牌（每段破 1 层）的真正优势在救场端也不可见。
+- **EVIDENCE**：759 局（9QRYBFWVZJVC）F17 VANTOM（原生 SlipperyAmt 开局
+  8 层）T11 阵亡，逐条复核：T7 残能救场[输出]打【尺度变换+】（救场审计
+  自述「未打可负担最高伤【尺度变换+】预估27」）实际 1 血破 1 层，同手
+  1 费【绯色面积】破层产出完全相同且省 1 费；T9 连打【终止条件+】预估
+  23→1 层、【递推星芒】预估14→1 层；T10 主评分侧同型（【尺度变换】预估
+  21→1 层，滑溜烧墙审计每费破层留痕已在账）。主评分端链上留痕「滑溜N
+  层，逐段折算≈1.0，预计破1层」证明折算口径在产，唯独救场端
+  est=dmg×hits 是面值。原生机制核对（v0.111.0 mechanics powers.jsonl
+  SlipperyPower + 759 链上折算留痕）证实破层产出只与命中次数挂钩。
+  另核 746 局沙虫战狂乱逃离连弃两张：弃出闸（SANDPIT_FRANTIC_DISCARD_
+  GUARD）提交于 10:36，746 局 09:06 在其之前——部署后本批无沙虫遭遇，
+  闸有效性本批不可判，留待后续沙虫局验证，不计入本批结论。
+- **EXPECTED_SIGNAL**：未来 3~10 局滑溜 Boss（VANTOM 等）战——① 残能
+  救场[输出]在滑溜在场时改选同破层产出下的最低费攻击，决策链
+  「RESCUE 残能救场」门与理由显形「滑溜N层破层口径
+  （IDLE_RESCUE_SLIPPERY_EST）」；② 多段命中牌救场优先级高于同费
+  单发高价牌（est=破层数）；③ 无滑溜战斗救场选择零变化（est 公式
+  逐字回旧）。证伪/撤回：滑溜战救场留痕显形却仍选面值最高牌 → 复查
+  _resc_slip 接线；观测期救场破层口径被证实降低存活收益 →
+  policy.json 置 idle_rescue_slippery_est=false 一键回滚（旧面值口径
+  零差异，夹具③⑤同步护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：idle_energy_rescue_pick 新增
+  slippery_layers 参数（默认 0=旧口径）；攻击通道在 >0 时按破层口径
+  估值 est=min(hits,层数)+超层段×面值，同值取低费（既有 -cost 次序
+  复用）；_combat 救场调用点新增敌持滑溜层数读取（存活敌
+  _enemy_slippery_stack 取最大），经静态键 idle_rescue_slippery_est
+  （默认 True）门控传入；救场命中攻击通道且层数>0 时 RESCUE 门与
+  play_card 理由追加破层口径留痕。格挡/覆甲/手牌税止损通道、缺口
+  条件、謦欬门排除、无敌帧禁攻逐字不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  idle_rescue_slippery_est=True，注释登记 759 局实证与回滚语义
+  （False=传 0 层严格回旧面值口径，零差异）。
+- sts2-ascend/brain/selfcheck.py：新增 3rsl 五分支——① 滑溜7层同破
+  1层取低费（快刺1费14伤胜重锤2费27伤）；② 多段命中破多层优先于
+  高价单发；③ slippery_layers=0 严格回滚旧面值口径（重锤27胜）；
+  ④ 部分层数折算（2层时三连击 est=2+1×5=7 仍胜）；⑤ 端到端接线
+  间谍：覆甲死牌救场夹具下滑溜敌层数 7.0 传入救场、键=False 传 0。
+- 不改主评分端滑溜折算（_attack_outcome 本已逐段折算）、烧墙审计、
+  竞速判决与任何其他旋钮；不动 runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3rsl 五
+  分支；既有 3br-3 救场族、3br-4 手牌税族、3fe 沙坑续命族、3sec 沙坑
+  封底族、3sg/3sg2 沉睡守卫族、3tsi 并入观测族、3prg2 謦欬回收族等
+  全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+46/-4，救场函数破层口径+调用点接线+留痕）、
+  brain/knowledge.py（+7，一个静态键及注释）、brain/selfcheck.py
+  （+98，3rsl 五分支）；未触碰 runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态；克隆残留的 assets 超长路径删除告警
+  为宿主挂载遗留，与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
