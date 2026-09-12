@@ -4201,6 +4201,7 @@ class Policy:
         reserve_blk_boost *= float(stance.get("blk_mult", 1.0))
         reserve_blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
         worthwhile_blk_costs = []
+        _worthwhile_blks = []
         for c in hand:
             cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
             _dmg, block, _hits = card_numbers(c)
@@ -4218,6 +4219,7 @@ class Policy:
                 marginal *= reserve_blk_boost
             if marginal > float(pol["play_threshold"]):
                 worthwhile_blk_costs.append(cost)
+                _worthwhile_blks.append((cost, block))
         reserve_for_block = gap_now > 0 and bool(worthwhile_blk_costs)
         min_blk_cost = min(worthwhile_blk_costs) if worthwhile_blk_costs else 99
         # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
@@ -4237,6 +4239,42 @@ class Policy:
                           and bool(kill_race) and not reserve_lethal)
         if race_blk_floor:
             min_blk_cost = min(min_blk_cost, min(race_floor_costs))
+        # 致死生还线（LETHAL_SURVIVABLE_LINE，第 1414~1419 局批复盘）：
+        # kill_race 致死回合的「非斩杀攻击让位格挡」豁免（攻击评分段致死守卫的
+        # kill_race 例外）与 reserve_for_block 的 not kill_race 屏蔽，都建立在
+        # 「防守已被证伪」前提上——但该前提只证伪了长期防守。当手牌中可负担
+        # 格挡组合足以把本回合致死缺口补回生还线（合计格挡 > 缺口-当前生命）
+        # 时，买命回合自带 5 张新牌与整管能量，期望产出不低于被转移的能量，
+        # 非斩杀攻击应恢复让位格挡。1415-F17-T5（25 血对 27 意图，1 费防御在
+        # 手，连打第 3 张打击后 0 甲差 2 血阵亡）与 1418-F17-T3（14 血对 20
+        # 意图，坚毅+防御 12 挡可负担，打余烬+防御 5 挡后差 1 血阵亡）同型：
+        # 系统已知本回合无法斩杀（not best_kill），生还格挡线仍输给非斩杀
+        # 攻击。cover 成立时恢复普通致死守卫（非斩杀攻击压禁玩线、格挡吃
+        # 1.8 lethal 增压），逐 tick 重估（补一张挡后缺口跌破生命即自动
+        # 回到竞速全攻口径）；无覆盖组合、race_allin、非致死 kill_race 回合
+        # 全部维持旧口径。lethal_survivable_line=False 严格回滚。
+        race_lethal_cover = False
+        if (bool(pol.get("lethal_survivable_line", True)) and kill_race
+                and not race_allin and reserve_lethal and gap_now > 0
+                and _worthwhile_blks):
+            _cover_need = gap_now - my_hp
+            if _cover_need > 0:
+                _cover_sum = 0.0
+                _cover_energy = energy
+                for _cst, _blk in sorted(_worthwhile_blks,
+                                         key=lambda cb: (-cb[1], cb[0])):
+                    if _cst > _cover_energy:
+                        continue
+                    _cover_sum += _blk
+                    _cover_energy -= _cst
+                    if _cover_sum > _cover_need:
+                        break
+                race_lethal_cover = _cover_sum > _cover_need
+        if race_lethal_cover:
+            danger_note += (
+                f"；致死生还线：可负担格挡组合覆盖缺口{gap_now}-生命{my_hp}"
+                "，本回合买命可生还，非斩杀攻击让位格挡"
+                "（LETHAL_SURVIVABLE_LINE）")
         # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
         # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4
@@ -4561,7 +4599,8 @@ class Policy:
                                                    run_deck=(state.get("run") or {}).get("deck"),
                                                    block_locked=block_locked,
                                                    player_powers=player.get("powers") or [],
-                                                   observed_hand_count=len(hand))
+                                                   observed_hand_count=len(hand),
+                                                   race_lethal_cover=race_lethal_cover)
             character_estimate, character_note = self._character_static_card_estimate(
                 c,
                 current_hp=my_hp,
@@ -5187,7 +5226,8 @@ class Policy:
                     all_respawn: bool = False,
                     run_deck: list[dict] | None = None, block_locked: bool = False,
                     player_powers: list[dict] | None = None,
-                    observed_hand_count: int | None = None):
+                    observed_hand_count: int | None = None,
+                    race_lethal_cover: bool = False):
         """战斗中手牌评分。
 
         注意：战斗手牌载荷没有 card_type 字段（与奖励/商店载荷不同），
@@ -5268,7 +5308,10 @@ class Policy:
         # 致死斩杀竞速是另一种 all-in：reserve_for_block 只说明存在格挡牌，
         # 不说明部分格挡能把本回合救回来。否则 lethal 仍会套用攻击×0.55 /
         # 格挡×1.8，并把 0 费抽牌压成死牌，正是 1185-F17-T6/T7 的执行缝隙。
-        kill_race_lethal = bool(kill_race and lethal)
+        # 致死生还线例外（LETHAL_SURVIVABLE_LINE，第 1414~1419 局批复盘）：
+        # 调用方已核得手牌可负担格挡组合足以把本回合致死缺口补回生还线——
+        # 「防守已被证伪」前提对该 tick 不成立，恢复普通致死守卫口径。
+        kill_race_lethal = bool(kill_race and lethal and not race_lethal_cover)
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         # 败局竞速豁免（第514~517批复盘）：判死局的致死回合不再压攻击抬格挡——
         # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留
@@ -5520,10 +5563,13 @@ class Policy:
                     score += _tax_value
                 if reserve_for_block and not killable and cost + min_blk_cost > cur_energy:
                     score -= 8.0  # 给格挡让路：这点能量留着补缺口
-                if lethal and not killable and not (desperate or race_allin or kill_race):
+                if lethal and not killable and not (
+                        (desperate or race_allin or kill_race)
+                        and not race_lethal_cover):
                     # 致死威胁下 AOE 若不能减员，等于放弃生存换数值；但
                     # 斩杀竞速已证伪本回合防守线时，攻击仍是唯一可行救援
-                    # （1161-F14-T6：TTK 6~7 回合、仅剩 1 回合）。
+                    # （1161-F14-T6：TTK 6~7 回合、仅剩 1 回合）。生还格挡
+                    # 覆盖成立的致死回合（LETHAL_SURVIVABLE_LINE）恢复本守卫。
                     score = min(score, floor_score)
                 _hp_atk_note = ""
                 if self_cost and lethal and len(killable) < len(enemies):
@@ -5833,7 +5879,11 @@ class Policy:
             # 抢走全部能量，结果无甲吃刀阵亡——非击杀攻击必须给格挡让路。
             # 但孤注一掷/败局竞速回合例外：防守已不可能或已被证伪时，输出就是唯一的防御。
             # kill_race 致死回合沿用同一例外；关闭竞速时仍保留普通致死守卫。
-            if lethal and not best_kill and not (desperate or race_allin or kill_race):
+            # 生还格挡覆盖成立的致死回合（LETHAL_SURVIVABLE_LINE）例外前提
+            # 不成立，恢复本守卫（1415-F17-T5/1418-F17-T3 差 1~2 血阵亡同型）。
+            if lethal and not best_kill and not (
+                    (desperate or race_allin or kill_race)
+                    and not race_lethal_cover):
                 best_s = min(best_s, floor_score)
             elif reserve_for_block and not best_kill and cost + min_blk_cost > cur_energy:
                 # 能量预留：先补防再输出（第 36 批 F17 Boss 战教训）；

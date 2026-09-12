@@ -13170,6 +13170,85 @@ def main() -> int:
             and "RACE_UPSHIFT_STALE" not in d_stale3.reason), \
         f"键=0 未回滚旧口径: {d_stale3.action}（{d_stale3.reason}）"
 
+    # 3lsl) 致死生还线（LETHAL_SURVIVABLE_LINE，第1414~1419局批复盘）：
+    #      kill_race 致死回合「非斩杀攻击让位格挡」豁免的前提是防守已被证伪，
+    #      但前提只证伪长期防守——可负担格挡组合足以把本回合致死缺口补回
+    #      生还线时，买命回合自带 5 张新牌+整管能量。1415-F17-T5（25 血对
+    #      27 意图，1 费防御在手仍打第 3 张打击，0 甲差 2 血阵亡）与
+    #      1418-F17-T3（14 血对 20 意图，坚毅+防御 12 挡可负担仍打余烬+
+    #      防御 5 挡，差 1 血阵亡）同型。① 单卡覆盖：防御中标+注记；
+    #      ② 键=False 严格回滚旧口径（打击中标、无注记）；③ 无覆盖
+    #      （手牌零格挡）维持孤注全攻、无注记；④ 组合覆盖：最大挡中标。
+    lsl_ctx = type("LSLCTX", (), {"combat": {"comp_id": "LSL_RACE_COMP",
+                                             "node_type": "Boss"},
+                                  "current_combat_is_hard": False,
+                                  "credit_tags": []})()
+
+    def lsl_state(hp_now, incoming, energy_now, hand):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80,
+                                  "block": 0, "energy": energy_now},
+                       "hand": hand,
+                       "enemies": [dict(ra_enemies[0],
+                                        intents=[{"total_damage": incoming}])]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 17,
+                    "deck": weak_deck}}
+
+    lsl_hit = {"index": 0, "card_id": "LSL_HIT", "name": "打击", "playable": True,
+               "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+               "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    lsl_hit2 = {"index": 1, "card_id": "LSL_HIT2", "name": "打击二号",
+                "playable": True, "energy_cost": 1, "requires_target": True,
+                "valid_target_indices": [0],
+                "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    lsl_shld = {"index": 1, "card_id": "LSL_SHLD", "name": "防御", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Block", "current_value": 5}]}
+    lsl_big = {"index": 0, "card_id": "LSL_BIG", "name": "余烬", "playable": True,
+               "energy_cost": 2, "requires_target": True, "valid_target_indices": [0],
+               "dynamic_values": [{"name": "Damage", "current_value": 18}]}
+    lsl_grit = {"index": 1, "card_id": "LSL_GRIT", "name": "坚毅", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Block", "current_value": 7}]}
+    lsl_shld2 = {"index": 2, "card_id": "LSL_SHLD2", "name": "防御二号",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "dynamic_values": [{"name": "Block", "current_value": 5}]}
+
+    def lsl_policy():
+        return policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-lsl-"))),
+            random.Random(13))
+
+    # ① 单卡覆盖：25 血对 27 意图、能量 1、手牌[打击,防御] → 防御中标+注记
+    d_lsl1 = lsl_policy().decide(lsl_state(25, 27, 1, [lsl_hit, lsl_shld]), lsl_ctx)
+    assert d_lsl1.action == "play_card" \
+        and d_lsl1.params.get("card_index") == 1 \
+        and "LETHAL_SURVIVABLE_LINE" in d_lsl1.reason, \
+        f"单卡生还覆盖致死回合未让位格挡: {d_lsl1.action}（{d_lsl1.reason}）"
+    # ② 键=False：同局面严格回滚旧口径（打击中标、无注记）
+    pol_lsl2 = lsl_policy()
+    pol_lsl2.know.policy["lethal_survivable_line"] = False
+    d_lsl2 = pol_lsl2.decide(lsl_state(25, 27, 1, [lsl_hit, lsl_shld]), lsl_ctx)
+    assert d_lsl2.action == "play_card" \
+        and d_lsl2.params.get("card_index") == 0 \
+        and "LETHAL_SURVIVABLE_LINE" not in d_lsl2.reason, \
+        f"键=False 未回滚致死全攻旧口径: {d_lsl2.action}（{d_lsl2.reason}）"
+    # ③ 无覆盖：手牌零格挡 → 孤注全攻保留（攻击中标、无注记）
+    d_lsl3 = lsl_policy().decide(lsl_state(25, 27, 1, [lsl_hit, lsl_hit2]), lsl_ctx)
+    assert d_lsl3.action == "play_card" \
+        and "LETHAL_SURVIVABLE_LINE" not in d_lsl3.reason, \
+        f"无生还覆盖的致死回合孤注全攻被误伤: {d_lsl3.action}（{d_lsl3.reason}）"
+    # ④ 组合覆盖：14 血对 20 意图、能量 3、手牌[余烬2费,坚毅7,防御5]
+    #    → 非斩杀大攻击让位，最大挡坚毅中标+注记
+    d_lsl4 = lsl_policy().decide(
+        lsl_state(14, 20, 3, [lsl_big, lsl_grit, lsl_shld2]), lsl_ctx)
+    assert d_lsl4.action == "play_card" \
+        and d_lsl4.params.get("card_index") == 1 \
+        and "LETHAL_SURVIVABLE_LINE" in d_lsl4.reason, \
+        f"组合生还覆盖致死回合未让位最大挡: {d_lsl4.action}（{d_lsl4.reason}）"
+
 
     print("SELFCHECK OK")
     return 0

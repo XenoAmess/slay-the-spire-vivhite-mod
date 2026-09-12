@@ -9346,3 +9346,158 @@ retry_resolution: none (no replay target; local production behavior change + obs
    ② 锁后超窗投影 dpt vs 锁后实际回合伤害；③ race_audit 锁后
    判死胜率；④ 既有台账（SLIPPERY 0/3、EXHAUST_FIZZLE 空转、
    RACE_PLAY_CAP_NO_UPSHIFT 首发）续盯。
+
+# 2026-09-12｜第 1414~1419 局复盘（异步追及队列 6 局 exact_batch 全败；行为修复 ×1：LETHAL_SURVIVABLE_LINE 致死生还线——kill_race 致死回合可负担生还格挡组合成立时，非斩杀攻击恢复让位格挡）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]，complete_evidence.required=false——本批无待重放失败包，
+  无 replay target。
+- 上一批（1409~1413）last_paths 关键标签存在性核读：
+  RACE_UPSHIFT_STALE（policy.py 入锁新鲜窗段 + knowledge.py
+  race_upshift_fresh_turns + selfcheck 3stale）与上一批观察点挂账的
+  RACE_PLAY_CAP_NO_UPSHIFT（policy.py RINGING_POWER 段 + selfcheck
+  3pcap）均在当前 HEAD 在产，无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: none (no replay target; local production behavior change + observability)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：kill_race 致死回合「非斩杀攻击让位格挡」的豁免
+  （攻击评分致死守卫的 kill_race 例外 + reserve_for_block 的
+  
+ot kill_race 屏蔽 → desperate 强制成立）建立在「本回合防守已被
+  证伪」前提上；但该前提只证伪了长期防守。当手牌中可负担格挡组合
+  足以把本回合致死缺口补回生还线（合计格挡 > 缺口-当前生命）时，
+  买命回合自带 5 张新牌与整管能量，期望产出不低于被转移的能量——
+  非斩杀攻击应恢复让位格挡。1185-F17 批预注册教义原文即写明「能
+  完全抹平缺口的格挡仍保留救命价值」，但代码只落地了部分格挡贬值
+  半边，生还覆盖半边从未接线。
+- **EVIDENCE**（本批两独立对局同型，死亡缺口均 ≤2）：
+  ① 1415（9G31WUTSVN70）F17 同族双子 T5：hp 25 对意图 27，手牌
+  [打击×3,原始力量,防御]，连续三张打击全部带「无甲孤注抢斩杀｜
+  致死竞速抢斩杀」（not best_kill——系统已知斩不掉神官），0 甲
+  吃 27 差 2 血阵亡；1 费防御（25+5=30>27）即生还。
+  ② 1418（4AF4EYN356ZH）F17 仪式兽 T3：hp 14 对意图 20，手牌
+  [余烬,防御,痛击,坚毅]，打余烬+防御=5 挡，差 1 血阵亡；坚毅+防御
+  =12 挡（14+12=26>20）可负担。两局 trace 逐项核读（turn_end_state
+  手牌/费用/可打出标记）+ 本地同态复现（临时脚本构造同态状态，
+  复现 desperate 抢斩杀分支后确认修复生效）。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① kill_race 致死且覆盖成立的
+  tick 出现「致死生还线…（LETHAL_SURVIVABLE_LINE）」注记（每
+  tick 至多一条，逐 tick 重估）；②「差 ≤2 血阵亡且手握可负担生还
+  格挡」型死亡（1415/1418 同型）绝迹；③ 无覆盖致死回合维持孤注
+  全攻（「无甲孤注抢斩杀」注记继续出现，3x\' 教义不回潮）；
+  ④ 竞速审计悲观率台账（409/911≈45%）不因买命显著越出 30~46% 带。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1414..1419]，exact 6/6、missing=0；6 局全败（生涯
+  0/1419）。死亡分布：一幕 Boss F17 四局（1415 同族双子 T5、1416
+  墨影幻灵、1417 瀑布巨兽 T11 自爆帧、1418 仪式兽 T3），1419 过
+  Boss 后 F24 蜂群术士精英（晕眩灌牌回合 1 能空过吃 35），1414
+  二幕 F33。
+- 主样本 1415/1418 死亡 tick 的 turn_end_state 全字段已逐条核读；
+  1419（P3Z0ENWHTG9D）packet 30 条切片 + runs 全文 360 条已核读。
+- 部署时序：RACE_UPSHIFT_STALE（1409~1413 批）早于本批全部 6 局，
+  其真机首验在本批兑现（1417-F17 T7~T11「入锁已N回合（≥新鲜窗），
+  上浮+0.20置零」连续在产）；LETHAL_SURVIVABLE_LINE 为本批新落地，
+  不覆盖本批任何对局（两例死亡现场均为 pre-fix 口径，无时序混淆）。
+- 上批观察点对账：① STALE 首发=1417-F17 共 5 tick 在产；② 1419
+  F17「T2判死→实战7回合获胜」与 F23「T3判死→实战5回合获胜」两
+  例判死翻转（反向样本 +2），F24「T2判死→4回合阵亡」应验——
+  判死翻转未集中在锁后超窗置零段（F17/F23 判死tick在先验/新鲜窗
+  口径），窗口长度暂维持 2，续盯；③ 台账 409/911≈44.9% 带内偏
+  上限，续记；④ SLIPPERY 贴线 0/3、EXHAUST_FIZZLE 空转 0 条续记。
+
+## 二、落地动作（最小可逆）
+
+- rain/policy.py：① _combat 合格格挡循环同步收集
+  _worthwhile_blks（费用,面值）；② 竞速格挡下限段后新增
+  LETHAL_SURVIVABLE_LINE 覆盖判定——kill_race 且非 race_allin 且
+  本地致死（reserve_lethal）且缺口>0 时，对合格格挡按面值降序
+  贪心装入当前能量，合计格挡 > 缺口-当前生命即 race_lethal_cover
+  成立，并向 danger_note 追加生还线注记（每 tick 重估，补挡脱险
+  后自动回到竞速口径）；③ _score_play 新增 race_lethal_cover
+  关键字参（默认 False，直调夹具全部零差异）：kill_race_lethal
+  计算排除 cover tick（恢复普通致死 攻击×0.55/格挡×1.8），单体
+  与 AOE 致死守卫的 (desperate or race_allin or kill_race) 例外
+  在 cover tick 整体失效（非斩杀攻击压禁玩线）。斩杀牌
+  （best_kill/killable）不受任何影响；race_allin（546 批定案）、
+  非致死 kill_race 回合（891 批 race_blk_floor）、无覆盖孤注
+  （59 批 desperate）全部零差异。
+- rain/knowledge.py：DEFAULT_POLICY 新增静态键
+  lethal_survivable_line: True（含证据与回滚注释；policy.json 零
+  改动，缺键走默认）。
+- rain/selfcheck.py：新增 3lsl 夹具（Boss 攻坚巨兽 253 池 +
+  弱爆发卡组先验判死竞速）：① 25 血对 27 意图能量 1 手牌
+  [打击,防御] → 防御中标+注记；② 键=False → 打击中标、无注记
+  （严格回滚）；③ 手牌零格挡 → 孤注全攻保留、无注记；④ 14 血
+  对 20 意图能量 3 手牌[余烬2费,坚毅7,防御5] → 非斩杀大攻击让位、
+  最大挡坚毅中标+注记。
+
+## 三、回滚边界
+
+- lethal_survivable_line=False 即恢复旧口径（kill_race 致死回合
+  一律全攻、无注记）；删除 policy.py 覆盖判定段/参数传递/三处
+  cover 消费、knowledge.py 键、selfcheck 3lsl 段即完全回滚。
+- 行为面严格有界：仅在「kill_race + 非 race_allin + 本地致死 +
+  可负担格挡组合覆盖生还线」四条件同时成立的 tick 改变出牌顺位
+  （非斩杀攻击压禁玩线、格挡 1.8 增压）；其他 tick 逐分零差异
+  （既有 3x\'/3xf/3rf/3z/3br 锚原样通过为证）。
+
+## 四、自检
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**
+  （含 3lsl①②③④ 新锚与 3pcap/3stale/3rf/3xf/3x\'/3br 等全部
+  旧锚原样通过）。
+- 本地同态复现（临时脚本，未入库）：1415-T5 同态状态在修复后
+  T5 各 tick 改为打出【防御】并携带 LETHAL_SURVIVABLE_LINE 注记，
+  生还线（25+5=30>27）成立。
+
+## 五、未来 3~10 局观察指标
+
+1. LETHAL_SURVIVABLE_LINE 注记首发局/计数（每覆盖 tick 恰一条）；
+   覆盖 tick 的出牌顺位确实「格挡先生还、余能再输出」。
+2. 「差 ≤2 血阵亡且手握可负担生还格挡」型死亡计数（1415/1418
+   同型应绝迹）；若仍出现，核对该 tick 是否 race_allin（本键
+   不管辖）或覆盖判定漏检（如 costs_x/0 费挡）。
+3. 竞速审计悲观率台账（409/911）走向：买命后次回合翻盘的样本
+   是生还线收益的直接证据；若判死翻转率越出 46% 带上限，评估
+   是否生还线让判死投影过度自我怀疑。
+4. 无覆盖致死回合孤注全攻注记（无甲孤注抢斩杀）继续在产，3x\'
+   教义不回潮。
+
+## 六、继续调整/撤回条件
+
+- 若 3~10 局内出现「覆盖 tick 买命后次回合仍必死且输出缺口显著
+  放大」≥3 独立对局（买命纯拖延），评估把覆盖阈值从「生还线」
+  收紧到「完全抹平缺口」而非直接回滚；
+- 若 race_allin 语境出现同型差 ≤2 血死亡 ≥3 例，再议是否把
+  
+ot race_allin 门放开（本批两例均非 race_allin，不预设）；
+- 若判死翻转率跌破 30% 下线且样本集中在覆盖 tick 后仍全攻获胜
+  （覆盖误杀翻盘），回滚=False 并重开观测窗。
+
+## 七、新沉淀的经验知识
+
+1. **例外分支要回查其前提的作用域**：致死守卫的 kill_race 例外
+   前提「防守已被证伪」来自整场投影（长期），却被无差别应用到
+   单回合（当 tick 可负担生还格挡线）——长期证伪不能推出当回合
+   证伪；凡「投影级判死驱动 tick 级豁免」的结构，都要核对豁免
+   前提的时间粒度。
+2. **教义注释与接线完整性可以对账**：1185-F17 批注释写明「能
+   完全抹平缺口的格挡仍保留救命价值」，但代码只落地部分格挡
+   贬值——注释中陈述的保留分支若找不到对应代码路径，即是
+   未接线教义；复盘时把教义原文当 checklist 逐条对代码。
+3. **屏蔽式参数（x and not kill_race）会连锁制造隐藏分支**：
+   reserve_for_block 被屏蔽不只是关掉预留罚分，还把 desperate
+   强制置真（lethal and not reserve_for_block），激活孤注
+   通道——改一处屏蔽要追完所有以该参数为输入的派生判定。
+4. 观察点（下批复盘核对）：① LETHAL_SURVIVABLE_LINE 首发与
+   计数；② 1415/1418 同型死亡绝迹核对；③ 竞速台账 409/911
+   走向与翻转样本是否集中在覆盖 tick；④ RACE_UPSHIFT_STALE
+   窗口长度（1419 两例翻转均不在超窗段，暂维持 2）续盯；
+   ⑤ SLIPPERY 贴线 0/3、EXHAUST_FIZZLE 空转、HP_COST 豁免疫价
+   双零续盯。
