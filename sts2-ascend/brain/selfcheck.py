@@ -6076,12 +6076,10 @@ def main() -> int:
     assert math.isclose(s_sg_off, 6.0) and "SLEEP_GUARD" not in why_sg_off, \
         f"键=0 必须严格回滚: score={s_sg_off} why={why_sg_off}"
     sg_pol.know.policy["sleep_guard_min_stacks"] = 2.0
-    # ④ 全格挡不唤醒（UnblockedDamage==0）不拦截；放行侧对账注记
-    #   （SLEEP_GUARD_PASS_OBS，第 1425~1429 局批复盘）披露牌面≤敌甲读数
+    # ④ 全格挡不唤醒（UnblockedDamage==0）不拦截
     s_sg_blk, _, why_sg_blk = sg_score(sg_strike, sg_enemy(asleep=3, block=10))
-    assert math.isclose(s_sg_blk, 6.0) and "SLEEP_GUARD_PASS_OBS" in why_sg_blk \
-        and "牌面6≤敌甲10" in why_sg_blk, \
-        f"全格挡攻击不应拦截且放行对账在产: score={s_sg_blk} why={why_sg_blk}"
+    assert math.isclose(s_sg_blk, 6.0) and "SLEEP_GUARD" not in why_sg_blk, \
+        f"全格挡攻击不应拦截（不掉血不唤醒）: score={s_sg_blk} why={why_sg_blk}"
     # ⑤ 可击杀直接终局不拦截
     _, _, why_sg_kill = sg_score(sg_strike, sg_enemy(hp=5, asleep=3))
     assert why_sg_kill.startswith("可击杀") and "SLEEP_GUARD" not in why_sg_kill, \
@@ -6114,23 +6112,6 @@ def main() -> int:
     d_sg_awake = sg_live_pol2.decide(_sg_awake_state, DummyCtx())
     assert d_sg_awake.action == "play_card" and d_sg_awake.params.get("card_index") == 0, \
         f"无沉睡敌人正常出牌回归: {d_sg_awake.action} {d_sg_awake.params}（{d_sg_awake.reason}）"
-    # ⑧ 沉睡放行对账（SLEEP_GUARD_PASS_OBS）：放行注记边界——可击杀不放行注记、
-    #    veto 留痕不含放行注记、AOE 放行同口径、键=False 严格回滚旧文本
-    assert "SLEEP_GUARD_PASS_OBS" not in why_sg_veto, \
-        f"veto 留痕不得混入放行注记: {why_sg_veto}"
-    assert "SLEEP_GUARD_PASS_OBS" not in why_sg_kill, \
-        f"可击杀沉睡者不得附加放行注记: {why_sg_kill}"
-    assert "SLEEP_GUARD_PASS_OBS" not in why_sg_plain, \
-        f"无沉睡敌人不得附加放行注记: {why_sg_plain}"
-    s_sg_aoe_pass, _, why_sg_aoe_pass = sg_score(sg_aoe, sg_enemy(asleep=3, block=10))
-    assert "SLEEP_GUARD_PASS_OBS" in why_sg_aoe_pass \
-        and "牌面6≤敌甲10" in why_sg_aoe_pass, \
-        f"AOE 全格挡放行对账未在产: score={s_sg_aoe_pass} why={why_sg_aoe_pass}"
-    sg_pol.know.policy["sleep_guard_pass_obs"] = False
-    s_sg_pass_off, _, why_sg_pass_off = sg_score(sg_strike, sg_enemy(asleep=3, block=10))
-    assert math.isclose(s_sg_pass_off, 6.0) and "SLEEP_GUARD" not in why_sg_pass_off, \
-        f"键=False 必须严格回滚旧文本: score={s_sg_pass_off} why={why_sg_pass_off}"
-    sg_pol.know.policy["sleep_guard_pass_obs"] = True
 
     # 3sg2) 沉睡保期药水闸（POTION_SLEEP_GUARD，第620~636局批复盘）：卡牌侧
     #      SLEEP_GUARD 只管出牌通道，药水通道零防护——620 局 F17 T1 对沉睡族母

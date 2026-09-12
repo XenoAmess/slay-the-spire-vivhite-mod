@@ -5578,7 +5578,6 @@ class Policy:
                 slippery_notes = []
                 _burn_broken_total = 0.0
                 _sleep_veto = None
-                _sleep_pass = None
                 _invuln_veto = None
                 for e in enemies:
                     if _is_invuln_target(e):
@@ -5596,15 +5595,6 @@ class Policy:
                             and float(total) > max(0.0, float(e.get("block") or 0)):
                         # 群体伤害同样唤醒沉睡者（UnblockedDamage!=0 口径）
                         _sleep_veto = e.get("name") or e.get("enemy_id") or "敌人"
-                    elif _sg_min > 0 and not e_killed \
-                            and self._enemy_asleep_stack(e) >= _sg_min:
-                        # 放行侧对账（SLEEP_GUARD_PASS_OBS）：沉睡目标在场但
-                        # 牌面≤其甲（不唤醒），记下首个放行对象与敌甲读数
-                        if _sleep_pass is None:
-                            try:
-                                _sleep_pass = max(0.0, float(e.get("block") or 0))
-                            except (TypeError, ValueError):
-                                _sleep_pass = 0.0
                     slippery = self._enemy_slippery_stack(e)
                     if slippery > 0:
                         slippery_notes.append(
@@ -5681,12 +5671,6 @@ class Policy:
                 if _sleep_veto is not None:
                     why += (f"｜沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
                             "未格挡伤害将提前唤醒（SLEEP_GUARD）")
-                elif (_sleep_pass is not None
-                        and bool(pol.get("sleep_guard_pass_obs", True))):
-                    # 放行侧对账（SLEEP_GUARD_PASS_OBS，纯观测不改分）：
-                    # veto 在产时牌面必≤敌甲；注记出现牌面>敌甲即 veto 绕过铁证
-                    why += (f"｜沉睡目标攻击放行：牌面{float(total):g}≤敌甲"
-                            f"{_sleep_pass:g}不唤醒（SLEEP_GUARD_PASS_OBS）")
                 if kill_race and lethal and not killable and score > floor_score:
                     why += "｜致死竞速抢斩杀"
                 if _tax_value:
@@ -5986,29 +5970,6 @@ class Policy:
                        "能量让给防守/铺垫（INVULN_TARGET_VETO）")
             elif best_t is not None and _invuln_veto is not None:
                 why += "｜无敌帧目标剔出打击候选（INVULN_TARGET_VETO）"
-            # 沉睡放行对账（SLEEP_GUARD_PASS_OBS，第 1425~1429 局批复盘新增，
-            # 纯观测不改分）：veto 只留痕拦截侧，放行侧（牌面≤敌甲不唤醒/可击杀）
-            # 完全无痕——1429 局 F17 族母 T1 痛击 8 伤打出后 T2 意图 0（眩晕）、
-            # T3 意图 19（SLASH），与 1404/1412 的 T3 沉睡/T4 自然醒形态不同，
-            # 属「提前一回合被未格挡伤害唤醒」，但存活决策里没有任何 veto 输入
-            # 读数可复算放行是否合法（敌甲究竟 ≥8 还是 <8）。本注在攻击牌中标
-            # 且目标沉睡≥_sg_min 且非击杀时披露牌面与敌甲对照：veto 在产时
-            # 牌面必≤敌甲（合法放行）；若未来注记出现牌面>敌甲，即为 veto
-            # 绕过的直接铁证（载荷缺口 vs 逻辑缺口一次分辨）。键=False 一键
-            # 回滚（注记消失，评分不动）。
-            if (bool(pol.get("sleep_guard_pass_obs", True))
-                    and _sg_min > 0 and best_t is not None and not best_kill):
-                _sg_pass_e = next(
-                    (e for e in _pool if e.get("index") == best_t), None)
-                if (_sg_pass_e is not None
-                        and self._enemy_asleep_stack(_sg_pass_e) >= _sg_min):
-                    try:
-                        _sg_pass_blk = max(0.0, float(
-                            _sg_pass_e.get("block") or 0))
-                    except (TypeError, ValueError):
-                        _sg_pass_blk = 0.0
-                    why += (f"｜沉睡目标攻击放行：牌面{float(total):g}≤敌甲"
-                            f"{_sg_pass_blk:g}不唤醒（SLEEP_GUARD_PASS_OBS）")
             # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
             # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
             # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合
