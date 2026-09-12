@@ -8422,3 +8422,14 @@
 - 当前低价值卡牌：CALAMITY(22分/2.020279362359912局)，ULTIMATE_DEFEND(23分/4.887378513489032局)，RESTLESSNESS(23分/2.321453232423147局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（93%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/762 胜，当前目标进阶 1
+
+## 第 763 局复盘（2026-09-12 12:43）
+- 结果：💀 失败｜进阶 1｜到达层数 35｜当局评分 35
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CHROMATIC_LIMIT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_SCALE_TRANSFORMATION, SHRUG_IT_OFF, STOMP, CONFLAGRATION, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：BAG_OF_PREPARATION, BELLOWS, VEXING_PUZZLEBOX, HAPPY_FLOWER, CENTENNIAL_PUZZLE, LETTER_OPENER
+- 战斗记录：F19 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损8（可行动段8/非行动段7，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血0｜自损21（可行动段21/非行动段6，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血1｜自损7（可行动段7/非行动段0，SELF_LOSS_PHASE_OBS）; F33 Elite战 掉血20｜自损21（可行动段21/非行动段16，SELF_LOSS_PHASE_OBS）; F35 Boss战 掉血83｜自损31（可行动段31/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：THRUMMING_HATCHET(36分/10.825807715345244局)，CINDER(36分/2.378365472544951局)，OMNISLICE(36分/7.666393333426667局)，HAND_OF_GREED(36分/10.364607065447085局)，MAYHEM(35分/2.7600043211917877局)
+- 当前低价值卡牌：CALAMITY(22分/2.0132083845916524局)，ULTIMATE_DEFEND(23分/4.87027268869182局)，RESTLESSNESS(23分/2.313328146109666局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.37（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.03 → 2.02（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F35——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F35——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F35——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：1/763 胜，当前目标进阶 1
