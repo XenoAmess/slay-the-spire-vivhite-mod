@@ -9625,3 +9625,140 @@ retry_resolution: 20260912-171127-1789204287016340700-1cd367b2 no_valid_change�
    低意图空过绝迹核对；③ 竞速台账 411/917 走向；④ LETHAL_SURVIVABLE_LINE
    首发（本批未触发）续盯；⑤ SLIPPERY 0/3、EXHAUST_FIZZLE 空转、
    HP_COST 豁免疫价双零续盯。
+
+# 2026-09-12｜第 1425~1429 局复盘（异步追及队列 5 局 exact_batch 全败；观测位 ×1：SLEEP_GUARD_PASS_OBS 沉睡放行对账——veto 只留痕拦截侧，1429 族母提前一回合被唤醒而放行输入零读数）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、packages=[]；
+  complete_evidence.required=false。本批无队列内失败包，不产生 replay target。
+- 上一批（1420~1424）last_paths 关键标签存在性核读：BARRICADE_BANK_VALUE
+  （policy.py 壁垒存续段、knowledge.py barricade_bank_value、selfcheck 3bb）、
+  LETHAL_SURVIVABLE_LINE、RACE_UPSHIFT_STALE、RACE_PLAY_CAP_NO_UPSHIFT 均在
+  当前 HEAD 在产，且 LETHAL_SURVIVABLE_LINE 本批首发（1425×3、1426×1），
+  无「记录已闭环但代码不在产」分叉。
+
+retry_resolution: none (no replay target; local production observability change)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：SLEEP_GUARD veto 只留痕拦截侧（压禁玩线的候选 why），放行侧
+  （牌面≤敌甲不唤醒/可击杀/沉睡1层）在存活决策里零读数——1429 局族母被提前
+  一回合唤醒（伤害唤醒形态），但复盘无法复算 T1 痛击放行时敌甲是 ≥8（合法
+  放行却与唤醒矛盾=veto 绕过）还是 <8（veto 条件全满足却未拦截=逻辑/载荷
+  缺口）。「首 tick 穿透嫌疑」自 1367~1372 批起连续 ≥5 批只登记「顺延不判
+  失效」，达 evidence_batch_threshold 后不得再次只登记——本批落地放行侧
+  对账注记，让后续任何一场族母战都能直接裁决。
+- **EVIDENCE**：1429（CD29S0ELVECT，exact_batch，F17 终局 41 决策逐条核读）：
+  T1（21:50:55）痛击 8 伤打出（why=「单体伤害≈8.0」，非同 tick 快照
+  [PLATING×12,ASLEEP×3] 证明沉睡层数可读），T2 意图 0、T3 意图 19（SLASH）；
+  对照 1404/1412 同 Boss「T1~T3 意图 0（沉睡）、T4 意图 19（自然醒，
+  AsleepPower.AfterSideTurnEnd 计数 3→0）」——1429 提前整一回合，且原生
+  mechanics 显示伤害唤醒（AfterDamageReceived UnblockedDamage≠0→
+  WakeUpMove+Stun→SLASH_MOVE）与 T2 零意图/T3 SLASH 形态吻合，即 T1~T2 某
+  次攻击造成了未格挡伤害。当前 HEAD 以同形态载荷（痛击 8/沉睡3/敌甲 0~7）
+  本地复现：veto 稳定压 -50 并留痕（3sg①⑦），即代码侧拦截在产——存活
+  决策缺的只是放行时的敌甲读数，无法分辨「合法放行」与「veto 绕过」。
+- **EXPECTED_SIGNAL**：未来 3~10 局族母遭遇：① 每次对沉睡≥2 目标的非击杀
+  攻击中标必带「沉睡目标攻击放行：牌面X≤敌甲Y不唤醒
+  （SLEEP_GUARD_PASS_OBS）」；② 注记全部满足 X≤Y → 1429-T1 属「载荷/机制
+  意外」方向收窄（下一步核读敌甲口径或 AsleepPower 时序），本问题按新证据
+  另立案；③ 任一注记出现 X>Y → veto 绕过铁证（载荷缺口 vs 逻辑缺口一次
+  分辨），直接立项修 veto 通道；④ 无沉睡目标局零注记、评分零差异（3sg①
+  ②⑤⑧ 锚）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1425..1429]，exact 5/5、missing=0；5 局全败（生涯 0/1429）。
+  死亡分布：1425 F27 小怪、1426 F21 小怪、1427 F17 一幕 Boss（同族神官）、
+  1428 F33 二幕 Boss（CRUSHER+ROCKET）、1429 F17 一幕 Boss（族母）。
+- 主样本 1429 full_failure_run（kept 108/omitted 76，bounded tail）Boss 战
+  41 决策逐条核读；1404/1406/1412 三场同 Boss 历史遭遇形态对账（自然醒
+  T4 vs 本局提前唤醒 T3）；原生 mechanics 核读 AsleepPower（计数醒
+  AfterSideTurnEnd / 伤害醒 AfterDamageReceived+Stun）与 PlatingPower
+  （BeforeSideTurnStart/BeforeSideTurnEndEarly GainBlock）。
+- 部署时序：SLEEP_GUARD（b485c249，09-07）与 INVULN 同段重构（37ab90d7，
+  09-11 07:09）均早于本批全部 5 局启程（09-12 18:04~21:46）；1372 局
+  （09-10）已有 veto 真机触发记录——代码侧拦截在本批窗口内在产，
+  SLEEP_GUARD_PASS_OBS 为本批新落地，不覆盖本批任何对局决策，无时序混淆。
+- 竞速审计台账：本批判死应验 +5（1425 F27、1426 F21、1427 F17、1428 F33、
+  1429 F17）、反向 +2（1425 F23、1426 F17 判死后获胜）——台账
+  413/924≈44.7%，仍处 30%~46% 带内偏上限，续记不动作。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 五局终局竞速预演判死全部实战兑现
+   （T2/T3 判死→5~11 回合阵亡）；旋钮代谢链全顶格（kill_bonus 20.00、
+   burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成上限、
+   kill_race_prior_eff 触底）——判死缺口属设计内终态，不重复立案。
+2. **本批实验靶点：沉睡守卫的放行侧可观测性（连续登记达线后的观测落地）。**
+   详见 HYPOTHESIS 与三节；机制前提（伤害醒 vs 计数醒、眩晕接续形态）经
+   原生 mechanics 语料核读，非估值争议。
+3. **1429 族母战逐回合形态**：T1 痛击 8（why 无 veto 注记）+邪眼+13 甲；
+   T2 意图 0 全攻 42 伤（打击+9/无情猛攻+20/突破+13）；T3 意图 19 起
+   每回合 12~23 火力，T11 阵亡。无论唤醒发生在 T1（痛击未格挡）还是 T2
+   （全攻未格挡），放行时的敌甲读数都不可复算——这正是本批注记要钉的账。
+4. **LETHAL_SURVIVABLE_LINE 首发（1425×3、1426×1）**：生还线注记在产，
+   1425/1426 终局非「差≤2 血且可负担覆盖」同型，续记样本。
+5. **REMOVAL_COST_FLIP_AUDIT**：本批翻案 3 条/随附 9 条（1425/1426/1428），
+   翻案独立对局累计向 3 票推进（上批 1/3），达 3 按 KIN 基线裁决保留/调
+   系数。
+6. **BARRICADE_BANK_VALUE / INVULN_TARGET_VETO / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST**：本批无对应现场（无壁垒、无敌帧、痛殴族、
+   滑溜贴线原料），零出现非失效，顺延不判失效。
+
+## 三、本次调整（观测位 ×1：SLEEP_GUARD_PASS_OBS 沉睡放行对账）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **SLEEP_GUARD_PASS_OBS**（veto 只留痕拦截侧、放行侧零读数，「首 tick 穿透嫌疑」自 1367~1372 批连续 ≥5 批纯登记达 evidence_batch_threshold；证据：1429-F17 全链（T1 痛击 8 无 veto 注记+同 tick 快照 ASLEEP×3 可读+T2 意图 0/T3 意图 19 提前一回合唤醒）+ 1404/1412 同 Boss 自然醒 T4 对照 + 原生 AsleepPower/PlatingPower mechanics + 当前 HEAD 同形态载荷复现 veto 在产；机制先例：HAND_TAX_FIRE_OBS→RACE_HAND_TAX_FIRE 同款「观测位先把放行输入钉成可计数读数」、REMOVAL_COST_FLIP_AUDIT 同款「随附/翻案归属对账」） |
+| 代码动作 | ① brain/policy.py 单体分支：无敌帧禁攻收口后新增放行对账——键 `sleep_guard_pass_obs`（默认开）且 _sg_min>0 且攻击中标且非击杀且中标目标沉睡≥_sg_min 时，why 追加「沉睡目标攻击放行：牌面X≤敌甲Y不唤醒（SLEEP_GUARD_PASS_OBS）」（X=dmg×hits 牌面、Y=中标目标 block 读数，与 veto 同口径同变量）；② AOE 分支同口径：循环内 veto elif 记录首个放行对象敌甲，why 在 veto 注记的 elif 位追加同文本；③ brain/knowledge.py DEFAULT_POLICY 新增静态键 `sleep_guard_pass_obs: True`（含证据与回滚注释；policy.json 零改动，缺键走默认） |
+| 性质边界 | 纯观测位：评分、目标选择、阈值、分支、学习面全部零改动（注记只进 why 文本；veto 条件逐字未动）；与 veto 互斥（veto 触发时 best_t=None 或 _sleep_veto 置位，注记不出现）；可击杀/沉睡1层/无沉睡目标/键=False 四种情形严格零注记零差异（selfcheck 3sg①②⑤⑧ 锚）；白绮策略层不受影响 |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3sg④ 改锚：全格挡放行必带注记且牌面6≤敌甲10；3sg⑧ 新增六断言：veto/可击杀/无沉睡三侧零注记、AOE 放行注记在产、键=False 严格回滚旧文本且评分不变；3sg①②③⑤⑥⑦ 与 3sg2/3ps/3bb/3lsl 等全部既有锚原样通过）；另以 1429-T1 同形态载荷（痛击 8/敌甲 12/沉睡3/族母真实统计）端到端复现：打出且注记「牌面8≤敌甲12不唤醒」在产 |
+| 未来 3~10 局观测指标 | ① 注记首发局与独立对局数（族母遭遇密度）；② 注记 X≤Y 恒成立率（100% = veto 通道完整，1429 按载荷/机制意外另立案）；③ 任一 X>Y 注记 = veto 绕过铁证（立即立项修通道）；④ 族母局 T1~T2 放行后的唤醒形态（T3 还是 T4）与注记读数对账 |
+| 继续调整条件 | 注记 ≥3 局且 X≤Y 恒真 + 族母仍提前唤醒 ≥2 独立对局 → 转查敌甲口径/AsleepPower 时序（机制侧）；出现 X>Y ≥1 例 → 直接立项修 veto 通道（载荷缺口按 ENEMY_POWERS_SNAPSHOT_OBS 旧例核读）；注记 ≥3 局且族母全部 T4 自然醒 → 本问题结案 |
+| 撤回条件 | knowledge/policy.json 写 `sleep_guard_pass_obs: 0` 即注记消失、严格回滚旧口径（selfcheck 3sg⑧ 键=False 锚为对照）；或删除 policy/knowledge/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（连续登记达线的
+   观察点按规则落地为生产观测，非再次顺延）。
+2. **SLEEP_GUARD 首 tick 穿透嫌疑（1367~1372 批起）**：本批 1429 提供第 2
+   个独立对局（1372-T1 熔融之拳、1429-T1 痛击/T2 全攻），且 1429 首次证明
+   「穿透 tick 沉睡层数可读」——旧的「层数未入首 tick 快照」理论被证伪，
+   问题收窄为「放行时敌甲读数不可复算」，由本批注记接管对账。
+3. **REMOVAL_COST_FLIP_AUDIT**：翻案 3/随附 9，翻案独立对局向 3 票推进，
+   维持上批裁决口径（≥3 按 KIN 基线裁决；连续 ≥2 批全随附再议撤回）。
+4. **LETHAL_SURVIVABLE_LINE（1414~1419 批）**：首发 4 条（1425/1426），
+   同型死亡未再现，续记。
+5. **RACE_HAND_TAX_FIRE（1388~1392 批）**：1426×8、1428×1 注记在产，
+   税负局判决入账通道存活，续记。
+6. **BARRICADE_BANK_VALUE（1420~1424 批）**：本批无壁垒现场（五局拿牌
+   无 BARRICADE），「无牌可豁」分支顺延；部署后首验窗口未开。
+7. **INVULN_TARGET_VETO / EXHAUST_FIZZLE_EXEMPT / SLIPPERY_TTK_BREAK_EST /
+   HP_COST 豁免疫价旁观 / ENGINE_COMMIT_LOWHP_DISCOUNT**：本批无对应
+   原料，零出现非失效，顺延不判失效。
+8. **JOINT_FLIP_TTK_CAP / RACE_ESC_LATCH_HOLD**：1429 T3~T11 锁持与
+   RACE_UPSHIFT_STALE 注记在产（×9），无误伤反例，续记。
+
+## 五、新沉淀的经验知识
+
+1. **守卫类机制必须把「放行侧」也钉成可计数读数**：veto 留痕只覆盖拦截
+   侧时，「放行是否合法」永远要靠反推（1429 敌甲 ≥8 还是 <8 无法分辨），
+   同一嫌疑可以无限顺延——放行注记把 veto 的输入对照（牌面 vs 敌甲）
+   变成每次中标自动落账的对账行，一次遭遇即可裁决。
+2. **同 Boss 历史遭遇的形态对照是最便宜的「异常唤醒」检测器**：1429 的
+   T3 意图 19 单看像自然醒，与 1404/1412「T3 沉睡/T4 醒」并排后立即暴露
+   提前一回合——机制类复盘先建「同敌人遭遇形态表」，再谈逐 tick 核读。
+3. **原生 mechanics 的「伤害醒带眩晕、计数醒不带」是时间线定锚点**：
+   AfterDamageReceived 的 Stun→SLASH_MOVE 接续把「T2 意图 0」从「仍沉睡」
+   与「被眩晕」两种解读中分辨出来——唤醒类问题先核读两种唤醒路径的
+   后续形态差异，再回推唤醒时点。
+4. **观测位改锚要同步收紧旧断言的文本口径**：新注记含家族前缀
+   （SLEEP_GUARD_PASS_OBS 含 SLEEP_GUARD 子串），旧锚「not in why」会
+   误伤——3sg④ 同步改锚为「注记在产+读数正确」，回滚锚（键=False）
+   钉住旧文本逐字复原，两种口径都有夹具。
+5. 观察点（下批复盘核对）：① SLEEP_GUARD_PASS_OBS 首发局与 X≤Y 恒真率；
+   ② 族母再遇时唤醒形态（T3/T4）与注记读数对账；③ REMOVAL_COST 翻案
+   计数（向 3 票）；④ 竞速台账 413/924 走向；⑤ BARRICADE_BANK_VALUE
+   首验原料；⑥ LETHAL_SURVIVABLE_LINE 样本（4 条）结局分布。
