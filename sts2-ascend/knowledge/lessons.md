@@ -11282,3 +11282,14 @@
 - 当前低价值卡牌：BULLY(10分/2.5593806625745局)，HAVOC(11分/2.0475045300595975局)，STRIKE_IRONCLAD(12分/6.654389722693706局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.97 → 1.96（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F21——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1426 胜，当前目标进阶 0
+
+## 第 1427 局复盘（2026-09-12 19:59）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：MOLTEN_FIST, CINDER, DISMANTLE, ARMAMENTS, FLAME_BARRIER, FLAME_BARRIER, BLUDGEON, MOLTEN_FIST, UNMOVABLE, DISMANTLE
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F6 Monster战 掉血18; F11 Monster战 掉血2; F13 Monster战 掉血3; F14 Monster战 掉血2; F15 Monster战 掉血0; F17 Boss战 掉血71｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.851173133488883局)，PACTS_END(25分/90.69092684050311局)，OFFERING(24分/23.488478773766623局)，PERFECTED_STRIKE(24分/4.818952484553203局)，MANGLE(24分/75.50263725359245局)
+- 当前低价值卡牌：BULLY(10分/2.5504228302554894局)，HAVOC(11分/2.0403382642043892局)，STRIKE_IRONCLAD(12分/6.631099358664279局)
+- 策略进化：block_safety: 1.96 → 2.01（高速失血爆毙（5回合掉血71，每回合14≥14）——按「没挡住」证据上调防御权重）
+- 生涯战绩：0/1427 胜，当前目标进阶 0
