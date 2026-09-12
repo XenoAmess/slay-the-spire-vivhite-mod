@@ -2351,3 +2351,70 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 790~806 局批复盘：竞速判死时点误差零台账——入锁 gap 分桶观测（RACE_AUDIT_LATCH_GAP）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判死入锁的「时点误差」（判死回合 → 实战终结回合的
+  gap）是「判死→全攻换挡是否自证死期」的关键变量，但 race_audit 台账
+  （RACE_AUDIT_STATS_AGGREGATION，第813~822局批）只有 latched/won/died/
+  esc_* 胜负计数，没有时间维度——每批复盘只能逐局 grep combat note 的
+  「T3判死→实战5回合」字符串。若 died gap 主体 ≥2 回合，全攻换挡在实际
+  仍可存活的窗口内持续多回合，行为化收紧（延迟换挡/减弱 blk damp）获得
+  数据支持；若主体 ≤1，判死准时、全攻无悔，后续批次应停止在该方向投入。
+- **EVIDENCE**：本批 17 局全败（生涯 1/806），17 场入锁战斗逐局核对：
+  790 T3→T10(gap7)、791 T5→T7(2)、792-F33 T3→T5(2)、793-F27 T2→T5(3)、
+  794 T2→T4(2)、795 T2→T7(5)、797 T2→T7(5)、798 T2→T3(1)、799 T2→T6(4)、
+  800 T8→T8(0)、801 T5→T6(1)、802 T2→T6(4)、803 T2→T6(4)、804 T2→T4(2)、
+  805 T2→T4(2)、806 T3→T5(2)——died gap 分布 0~8、9/16 场 T2 即入锁；
+  won 侧 793-F24 T7→T10(3)、799-F24 T5→T18(13)、806-F17 T4→T8(4)。
+  806 局（XU7AUY5SKH30，F33 无厌沙虫）完整 678 决策链已读，F33 段 29 条
+  逐条检查：T2 沙坑钟 4 回合封底（mechanics 实证 SandpitPower
+  AfterSideTurnStartLate 敌方回合 Decrement、AfterRemoved
+  CreatureCmd.Kill(force=true)、FranticEscape +1 续钟），判死方向正确、
+  实战 T5 被 20+/回合伤害击穿，狂乱逃离未打出属正确（伤害先于钟到）。
+  台账现值 latched=1099/won=441（40.1%），仍超 30% 预注册线但无法回答
+  「早多少」。
+- **EXPECTED_SIGNAL**：未来 3~10 局 stats.race_audit 新增 won_gap_*/
+  died_gap_*（le1/2_3/4_6/ge7 桶 + sum/n），随 stats digest 直接进入
+  后续 packet，无需再 grep。预注册消费规则：died_gap 均值 >2 且 4_6+ge7
+  桶占比过半 → 下一批行为化收紧换挡时点；died_gap 均值 ≤1.5 → 判死时点
+  准确，冻结该方向不再投入。证伪/撤回：本段为纯观测（无评分/阈值分支），
+  撤回=删除 agent.py 本段并恢复 selfcheck 3y 旧期望，零行为差异。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/agent.py：_flush_combat_agg 的 RACE_AUDIT_STATS_AGGREGATION
+  块追加 gap=rounds-latch_round 分桶累计（won/died 分前缀，le1/2_3/4_6/ge7
+  + sum/n；latch_round 缺失或 rounds≤0 时跳过；TypeError/ValueError 防御
+  置 None）。不参与任何评分/阈值分支，combat note 字符串与（阵亡）后缀
+  位置不变。
+- sts2-ascend/brain/selfcheck.py：3y 夹具更新——won gap5→won_gap_4_6、
+  died gap6→died_gap_4_6；新增 latch1→gap7=died_gap_ge7 与 latch8→gap0=
+  died_gap_le1 边界用例（sum=13.0/n=3）；未入锁战斗仍零改动。
+- 未触碰 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（3y 夹具全分支通过）。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：agent.py +28
+  （观测段+注释）、selfcheck.py +28/-6（夹具），无意外文件；assets/ 下
+  既有删除为克隆现场，与本批无关、未纳入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局从 packet stats_digest.race_audit 直接读 died_gap 分布，
+  按上方预注册规则决定换挡时点是否行为化收紧；won_gap 持续 ≥4 也佐证
+  「判死后仍可磨下」，与现有 40% 胜率闸互相印证。
+- 上批 THORNS_REFLECT_OBS 跟踪：本批棘刺蟾蜍战 2 场（793-F21、799-F30），
+  仅 1 条 OBS 注记、零反伤自杀、两场均存活——预注册收紧条件未达，维持
+  现状继续观察。FOCUS_DRIFT_OBS 本批 11 注记/7 局，致命场（794/805）漂移
+  均发生在已入锁败局竞速段，799-F24 带 4 注记仍获胜——后果因果不成立，
+  不满足行为化条件，同样继续观察。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

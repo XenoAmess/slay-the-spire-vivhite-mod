@@ -11073,22 +11073,50 @@ def main() -> int:
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
-    assert _ra_stats == {"latched": 1, "won": 1, "esc_won": 1}, \
-        f"判死→获胜未按 esc 分桶落库: {_ra_stats}"
+    # RACE_AUDIT_LATCH_GAP（第790~806局批复盘）：gap=8-3=5 → won_gap_4_6
+    assert _ra_stats == {"latched": 1, "won": 1, "esc_won": 1,
+                         "won_gap_4_6": 1, "won_gap_sum": 5.0,
+                         "won_gap_n": 1}, \
+        f"判死→获胜未按 esc 分桶与 gap 分桶落库: {_ra_stats}"
 
     ra_agent.policy._race_audit = {"latched": True, "latch_round": 2, "esc": False}
     ra_agent.ctx.combat_agg = _ra_agg(False, True)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
+    # gap=8-2=6 → died_gap_4_6（桶上界含 6）
     assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
-                         "died": 1}, f"判死→阵亡未按 esc 分桶落库: {_ra_stats}"
+                         "won_gap_4_6": 1, "won_gap_sum": 5.0,
+                         "won_gap_n": 1,
+                         "died": 1, "died_gap_4_6": 1,
+                         "died_gap_sum": 6.0, "died_gap_n": 1}, \
+        f"判死→阵亡未按 esc 分桶与 gap 分桶落库: {_ra_stats}"
+
+    # gap 桶边界与均值夹具：latch=1/rounds=8 → gap=7 → died_gap_ge7；
+    # latch=8/rounds=8 → gap=0 → died_gap_le1，sum/n 同步累计。
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 1, "esc": False}
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 8, "esc": False}
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert (_ra_stats.get("died_gap_ge7") == 1
+            and _ra_stats.get("died_gap_le1") == 1
+            and _ra_stats.get("died_gap_sum") == 13.0
+            and _ra_stats.get("died_gap_n") == 3), \
+        f"gap 分桶边界或均值累计错误: {_ra_stats}"
 
     ra_agent.policy._race_audit = {"latched": False, "latch_round": None, "esc": False}
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
-    assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
-                         "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
+    assert _ra_stats == {"latched": 4, "won": 1, "esc_won": 1,
+                         "won_gap_4_6": 1, "won_gap_sum": 5.0,
+                         "won_gap_n": 1,
+                         "died": 3, "died_gap_4_6": 1,
+                         "died_gap_ge7": 1, "died_gap_le1": 1,
+                         "died_gap_sum": 13.0, "died_gap_n": 3}, \
+        f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
 

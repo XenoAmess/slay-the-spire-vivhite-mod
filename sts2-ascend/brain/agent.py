@@ -3696,6 +3696,34 @@ class Agent:
             if _ra.get("esc"):
                 _ra_esc_key = "esc_won" if _ra_won else "esc_died"
                 _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
+            # 判死时点误差分桶（RACE_AUDIT_LATCH_GAP，第790~806局批复盘新增，
+            # 纯观测）：台账只有胜负计数，「判死是否系统性过早（全攻换挡在
+            # 仍可存活的窗口内自证死期）」每批只能逐局 grep combat note 的
+            # 「T3判死→实战5回合」字符串。本批 17 场入锁战斗 died gap 0~8
+            # 回合、won gap 3~13 回合，分布本身就随 stats digest 进后续
+            # packet：died gap 主体 ≥2 → 判死过早、支持行为化收紧换挡；
+            # 主体 ≤1 → 判死准时、停止该方向投入。gap=实战终结回合-
+            # latch_round，按 le1/2_3/4_6/ge7 分桶并累计 sum/n（均值可读），
+            # won/died 分前缀；不参与任何评分/阈值分支，回滚＝删除本段。
+            try:
+                _ra_lr = _ra.get("latch_round")
+                _ra_rounds = int(agg.get("rounds", 0) or 0)
+                _ra_gap = (_ra_rounds - int(_ra_lr)
+                           if _ra_lr is not None and _ra_rounds > 0 else None)
+            except (TypeError, ValueError):
+                _ra_gap = None
+            if _ra_gap is not None and _ra_gap >= 0:
+                _ra_gap_pre = "won_gap" if _ra_won else "died_gap"
+                _ra_gap_b = ("le1" if _ra_gap <= 1 else
+                             "2_3" if _ra_gap <= 3 else
+                             "4_6" if _ra_gap <= 6 else "ge7")
+                _ra_bkey = f"{_ra_gap_pre}_{_ra_gap_b}"
+                _ra_stats[_ra_bkey] = int(_ra_stats.get(_ra_bkey, 0) or 0) + 1
+                _ra_skey = f"{_ra_gap_pre}_sum"
+                _ra_nkey = f"{_ra_gap_pre}_n"
+                _ra_stats[_ra_skey] = (float(_ra_stats.get(_ra_skey, 0.0) or 0.0)
+                                       + float(_ra_gap))
+                _ra_stats[_ra_nkey] = int(_ra_stats.get(_ra_nkey, 0) or 0) + 1
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
