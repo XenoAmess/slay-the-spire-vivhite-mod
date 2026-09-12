@@ -7,8 +7,7 @@
  "ascension": 1,
  "started_at": "2026-09-12 14:19:33",
  "victory": false,
- "in_progress": true,
- "floor": 45,
+ "floor": 46,
  "decisions": [
   {
    "t": "14:19:33",
@@ -21971,6 +21970,4908 @@
    "reason": "战斗：打出【递推星芒+】→遗忘之物（辅助体优先转火：遗忘之物（零伤害意图，放生=纵容其强化队友）｜VIVHITE_LIVE_ESTIMATE=-11.90[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/kill;dimension=0]｜零压回合謦欬攻击豁免：攻击牌仍按余量门带计价参选，仅非攻击謦欬视同门拦（VIVHITE_HP_ZP_ATTACK_EXEMPT））；敌意图总伤0，我方84血/10甲",
    "turn": 1,
    "energy": 3
+  },
+  {
+   "t": "16:54:18",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 80,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（闭域映射✓,综合色序+✓,事件循环+✓,黎曼星阵✓），结束回合（敌意图总伤0，我方80血/10甲）；謦欬出牌门拦下【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【综合色序+】实付4血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【事件循环+】实付6血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【黎曼星阵】实付6血（VIVHITE_HP_PLAY_MARGIN_GATE）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 1,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 80/84",
+      "回合 1",
+      "能量 2",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 80"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环+",
+      "score": 116.027,
+      "status": "謦欬门拒",
+      "why": "能力/增益牌（第1回合）｜长战加成+12.0（敌血池156）｜VIVHITE_LIVE_ESTIMATE=+95.15[EVENT_LOOP;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/k",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": 12.868,
+      "status": "謦欬门拒",
+      "why": "功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+0.09[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=12%/2hp;kills=0/lethal=0;crown=17/kill;dimensi",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "黎曼星阵",
+      "score": 3.923,
+      "status": "謦欬门拒",
+      "why": "辅助体优先转火：遗忘之物（零伤害意图，放生=纵容其强化队友）｜VIVHITE_LIVE_ESTIMATE=-16.15[RIEMANN_STAR_ARRAY;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=12%/2hp;kills=0/lethal=0;c",
+      "index": 3,
+      "action": "play_card",
+      "target": {
+       "index": "1",
+       "name": "遗忘之物"
+      }
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/kill;dimens",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_EVENT_LOOP",
+      "name": "事件循环+",
+      "energy_cost": 0,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+      "name": "黎曼星阵",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ]
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:54:25",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 7,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯色面积+】→失落之物（自我强化体优先转火：失落之物（力量+3，拖越久打越痛）｜VIVHITE_LIVE_ESTIMATE=-8.50[CRIMSON_AREA;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=20%/4hp;kills=0/lethal=0;crown=17/kill;dimension=0]）；敌意图总伤27，我方80血/0甲；意图升级+27，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "16:54:27",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 80,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+3.49[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=12%/6hp;kills=0/lethal=0;crown=17/kill;dimension=0;drain-projected-from-observed-cards]）；敌意图总伤27，我方80血/0甲；意图升级+27，防御前置；首窗实测24伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "16:54:28",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 76,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 8
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+6.91[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=3;margin=1/spent=1;drain=12%/8hp;kills=0/lethal=0;crown=17/kill;dimension=0;drain-projected-from-observed-cards]｜同回合第2次复打税+1.5已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤27，我方76血/0甲；意图升级+27，防御前置；首窗实测24伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "16:54:30",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 73,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[黄金构图(2费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],分治法阵(1费)✗[not_enough_energy],白绮的变身式+(1费)✗[not_enough_energy],局部同胚(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],终止条件+(1费)✗[not_enough_energy],明暗对照(1费)✗[not_enough_energy],切线星光+(1费)✗[not_enough_energy]]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 73/84",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 27"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "10 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黄金构图",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 27,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GOLDEN_COMPOSITION",
+      "name": "黄金构图",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+      "name": "分治法阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 8,
+      "card_id": "VIVHITE_CARD_CHIAROSCURO",
+      "name": "明暗对照",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 9,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:54:36",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 46,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【完美综合色】（群体伤害≈90.0｜VIVHITE_LIVE_ESTIMATE=-21.23[PERFECT_SYNTHESIS;dynamic=yes;hp-cost=15;margin=1/spent=1;drain=32%/29hp;kills=0/lethal=0;crown=17/kill;dimension=0]｜零压回合謦欬攻击豁免：攻击牌仍按余量门带计价参选，仅非攻击謦欬视同门拦（VIVHITE_HP_ZP_ATTACK_EXEMPT））；敌意图总伤0，我方46血/18甲；首窗实测24伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付8，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "16:54:38",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 60,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【白绮的猩红转化仪式+】（能力/增益牌（第3回合）｜长战加成+2.0（敌血池47）｜VIVHITE_LIVE_ESTIMATE=+3.11[VIVHITES_CRIMSON_TRANSFORMATION_RITUAL;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/kill;dimension=0;ritual-longline=3.11207/turns=1/phase-sum=1/rate=15%]）；敌意图总伤0，我方60血/22甲",
+   "turn": 3,
+   "energy": 0
+  },
+  {
+   "t": "16:54:39",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 60,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（切线星光✗,星图检索✓,闭域映射✗,尺度变换+✗,尺度变换+✗,羽化✗），结束回合（敌意图总伤0，我方60血/22甲）；謦欬出牌门拦下【星图检索】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）（VIVHITE_HP_PLAY_MARGIN_GATE）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截2/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截2/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 60/84",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 60"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "星图检索",
+      "score": 7.284,
+      "status": "謦欬门拒",
+      "why": "功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=-3.95[ASTRAL_SEARCH;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/kill;dimension=0;r",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 22,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+      "name": "星图检索",
+      "energy_cost": 0,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "METAMORPHOSIS",
+      "name": "羽化",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:54:45",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 60,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【开集庇护】（格挡10｜VIVHITE_LIVE_ESTIMATE=-3.45[OPEN_SET_SHELTER;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=17/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤33，我方60血/0甲；意图升级+33，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付8，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "16:54:47",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 58,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+5.24[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=2;margin=2/spent=2;drain=12%/4hp;kills=0/lethal=0;crown=17/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤33，我方58血/10甲；意图升级+33，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付8，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "16:54:48",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 56,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 8
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+6.09[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=2;margin=2/spent=2;drain=12%/5hp;kills=0/lethal=0;crown=17/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤33，我方56血/10甲；意图升级+33，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付8，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "16:54:50",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 54,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 8
+   },
+   "reason": "战斗：打出【星图检索】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=-2.23[ASTRAL_SEARCH;dynamic=yes;hp-cost=1;margin=1/spent=1;drain=8%/0hp;kills=0/lethal=0;crown=17/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤33，我方54血/10甲；意图升级+33，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付8，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 0
+  },
+  {
+   "t": "16:54:51",
+   "screen": "CARD_SELECTION",
+   "floor": 45,
+   "hp": 53,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 6
+   },
+   "reason": "战斗弃牌：【黎曼星阵】（弃掉当前最无价值牌；候选：终止条件 / 绯色面积+ / 分治法阵 / 局部同胚 / 明暗对照 / 白绮的变身式+ / 黎曼星阵 / 黄金构图 / 切线星光 / 综合色序+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F45",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F45",
+      "生命 53/84"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黎曼星阵",
+      "score": 16.137,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "黄金构图",
+      "score": 9.542,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": 4.1,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": 0.826,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "终止条件",
+      "score": 0.19,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": -2.75,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -3.66,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 8,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "黎曼星阵",
+     "params": {
+      "option_index": 6
+     },
+     "score": 16.137
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:54:52",
+   "screen": "CARD_SELECTION",
+   "floor": 45,
+   "hp": 53,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 6
+   },
+   "reason": "战斗弃牌：【黄金构图】（弃掉当前最无价值牌；候选：终止条件 / 绯色面积+ / 分治法阵 / 局部同胚 / 明暗对照 / 白绮的变身式+ / 黄金构图 / 切线星光 / 综合色序+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F45",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F45",
+      "生命 53/84"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黄金构图",
+      "score": 9.542,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": 4.1,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": 0.826,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "终止条件",
+      "score": 0.19,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": -2.75,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -3.66,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": -3.7,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 1,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "黄金构图",
+     "params": {
+      "option_index": 6
+     },
+     "score": 9.542
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:54:55",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 53,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[终止条件(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],分治法阵(1费)✗[not_enough_energy],局部同胚(1费)✗[not_enough_energy],明暗对照(1费)✗[not_enough_energy],白绮的变身式+(1费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],综合色序+(1费)✗[not_enough_energy]]",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 53/84",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 33"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 33,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+      "name": "分治法阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CHIAROSCURO",
+      "name": "明暗对照",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0,
+       1
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:54:59",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 30,
+   "gold": 99,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【明耀酊剂】",
+   "turn": 5,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 30/84",
+      "回合 5",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:01",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 30,
+   "gold": 99,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "战斗：硬仗使用增益药水【迅捷药水】",
+   "turn": 5,
+   "energy": 4,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 30/84",
+      "回合 5",
+      "能量 4",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 1
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:03",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 30,
+   "gold": 99,
+   "action": "use_potion",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "战斗：硬仗使用增益药水【迅捷药水】",
+   "turn": 5,
+   "energy": 4,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F45",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F45",
+      "生命 30/84",
+      "回合 5",
+      "能量 4",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "递推星芒+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "事件循环+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 2
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:05",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 30,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【尺度变换+】→失落之物（可击杀失落之物｜VIVHITE_LIVE_ESTIMATE=+11.12[SCALE_TRANSFORMATION;dynamic=yes;hp-cost=5;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=17/kill;dimension=3;ritual-phase=1/damage=15%]）；敌意图总伤0，我方30血/0甲；竞速生存分母按敌方归属口径（已隔离謦欬实付14，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 5,
+   "energy": 4
+  },
+  {
+   "t": "16:55:06",
+   "screen": "COMBAT",
+   "floor": 45,
+   "hp": 44,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【尺度变换+】→遗忘之物（可击杀遗忘之物｜VIVHITE_LIVE_ESTIMATE=+12.12[SCALE_TRANSFORMATION;dynamic=yes;hp-cost=5;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=1;crown=18/kill;dimension=3;ritual-phase=1/damage=15%]｜同回合第2次复打税+2.5已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤0，我方44血/0甲；竞速生存分母按敌方归属口径（已隔离謦欬实付14，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "16:55:07",
+   "screen": "REWARD",
+   "floor": 45,
+   "hp": 59,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：10金币"
+  },
+  {
+   "t": "16:55:08",
+   "screen": "REWARD",
+   "floor": 45,
+   "hp": 59,
+   "gold": 109,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "16:55:08",
+   "screen": "CARD_SELECTION",
+   "floor": 45,
+   "hp": 59,
+   "gold": 109,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【综合色序+】（价值 35.0）；CARD_BURST_PICK_AUDIT:card=VIVHITE_CARD_CHROMATIC_SEQUENCE,before=92.0,after=92.0,delta=+0.0,line=135.0,starved_before=1,starved_after=1,offer_max=VIVHITE_CARD_CHROMATIC_SEQUENCE(+0.0),supply_left=+0.0；謦欬血税密度扣分（卡组目录血税110/软顶20，-8.0，VIVHITE_LIFE_COST_DECK_TAX）；候选：综合色序+=35.0 / 切线星光=-5.4 / 收敛判决=-11.4",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F45",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F45",
+      "生命 59/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 34.99 / 门槛 8.70；可跳过=True"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "自愿奖励"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "综合色序+",
+      "score": 34.986,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -5.36,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "收敛判决",
+      "score": -11.381,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "综合色序+",
+     "params": {
+      "option_index": 1
+     },
+     "score": 34.986
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:55:10",
+   "screen": "REWARD",
+   "floor": 45,
+   "hp": 59,
+   "gold": 109,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "16:55:14",
+   "screen": "MAP",
+   "floor": 45,
+   "hp": 59,
+   "gold": 109,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(12,5)（路径分 14.20，预计进 Boss 血量 86%；输出饥饿战损上浮×1.11（缺口32%）；竞速判死后获胜420/1047，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计86%免于续航罚分））；候选：Monster(12,5)=14.20|输出饥饿战损上浮×1.11（缺口32%）；竞速判死后获胜420/1047，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计86%免于续航罚分） / Elite(12,6)=0.97|血量66%灰区精英预计战后仅剩16%(<40%，饥饿豁免至28%)，规避精英；输出饥饿战损上浮×1.11（缺口32%）；竞速判死后获胜420/1047，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计72%<75%（饥饿放宽自88%），优先续航路线；血量66%进精英预计战后仅剩0%(需求≥39%)，规避精英（健康进场实证先验75）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F45",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F45",
+      "生命 59/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "血量66%进精英预计战后仅剩0%(需求≥39%)，规避精英（健康进场实证先验75）"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 14.20"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 86%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(12,5)",
+      "score": 14.2,
+      "status": "chosen",
+      "why": "输出饥饿战损上浮×1.11（缺口32%）；竞速判死后获胜420/1047，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计86%免于续航罚分）",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "12",
+       "col": "5",
+       "projected_hp": "0.8621322353985863"
+      }
+     },
+     {
+      "label": "Elite(12,6)",
+      "score": 0.972,
+      "status": "rejected",
+      "why": "血量66%灰区精英预计战后仅剩16%(<40%，饥饿豁免至28%)，规避精英；输出饥饿战损上浮×1.11（缺口32%）；竞速判死后获胜420/1047，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计72%<75%（饥饿放",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "12",
+       "col": "6",
+       "projected_hp": "0.7174515260407934"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(12,5)",
+     "params": {
+      "option_index": 0
+     },
+     "score": 14.2,
+     "target": {
+      "row": "12",
+      "col": "5",
+      "projected_hp": "0.8621322353985863"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "16:55:16",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 59,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【尺度变换+】→巨斧机器人（单体伤害≈29.0｜VIVHITE_LIVE_ESTIMATE=-11.90[SCALE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0]）；敌意图总伤14，我方59血/10甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "16:55:19",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 55,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【绯色面积+】→巨斧机器人（可击杀巨斧机器人｜VIVHITE_LIVE_ESTIMATE=+9.50[CRIMSON_AREA;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=20%/4hp;kills=1/lethal=0;crown=18/kill;dimension=0]）；敌意图总伤14，我方55血/10甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "16:55:20",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 73,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【白绮的猩红转化仪式+】（能力/增益牌（第1回合）｜长战加成+6.7（敌血池80）｜VIVHITE_LIVE_ESTIMATE=+9.33[VIVHITES_CRIMSON_TRANSFORMATION_RITUAL;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-longline=9.325/turns=2/phase-sum=3/rate=15%]）；敌意图总伤0，我方73血/10甲；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "16:55:21",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 73,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（闭域映射✓,局部同胚✓），结束回合（敌意图总伤0，我方73血/10甲）；全场均为已证实重生体，解除重生压制以终结战斗；謦欬出牌门拦下【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【局部同胚】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）（VIVHITE_HP_PLAY_MARGIN_GATE）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 1,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 73/90",
+      "回合 1",
+      "能量 1",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 73"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "局部同胚",
+      "score": -2.183,
+      "status": "謦欬门拒",
+      "why": "格挡8｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-3.45[LOCAL_HOMEOMORPHISM;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimensio",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimens",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:55:26",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 73,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 7
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+10.99[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=12.4138%/15hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤17，我方73血/0甲；意图升级+3，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "16:55:28",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 69,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 7
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+14.41[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=3;margin=1/spent=1;drain=12.4138%/17hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]｜同回合第2次复打税+1.5已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤17，我方69血/0甲；意图升级+3，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "16:55:29",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 66,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 7
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+16.11[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=3;margin=1/spent=1;drain=12.4138%/19hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]｜同回合第3次复打税+3.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤17，我方66血/0甲；意图升级+3，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付4，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "16:55:31",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 63,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],尺度变换+(1费)✗[not_enough_energy],终止条件+(1费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],黄金构图(2费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],明暗对照(1费)✗[not_enough_energy],终止条件(1费)✗[not_enough_energy],递推星芒+(1费)✗[not_enough_energy],完美综合色(3费)✗[not_enough_energy]]",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 63/90",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "10 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "黄金构图",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 17,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_GOLDEN_COMPOSITION",
+      "name": "黄金构图",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CHIAROSCURO",
+      "name": "明暗对照",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 8,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 9,
+      "card_id": "VIVHITE_CARD_PERFECT_SYNTHESIS",
+      "name": "完美综合色",
+      "energy_cost": 3,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:55:36",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 46,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+5.91[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=3;margin=1/spent=1;drain=12.4138%/7hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤26，我方46血/18甲；意图升级+9，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付11，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "16:55:38",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 43,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 8
+   },
+   "reason": "战斗：打出【开集庇护】（格挡10｜VIVHITE_LIVE_ESTIMATE=-1.73[OPEN_SET_SHELTER;dynamic=yes;hp-cost=1;margin=1/spent=1;drain=12%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤26，我方43血/18甲；意图升级+9，防御前置；首窗实测25伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付11，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "16:55:40",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 42,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【黎曼星阵】→巨斧机器人（单体伤害≈24.0｜VIVHITE_LIVE_ESTIMATE=-12.28[RIEMANN_STAR_ARRAY;dynamic=yes;hp-cost=5;margin=2/spent=2;drain=24%/6hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤26，我方42血/28甲；意图升级+9，防御前置；首窗实测25伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付11，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "16:55:43",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 42,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【星图检索】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=-3.95[ASTRAL_SEARCH;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=12%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤26，我方42血/28甲；意图升级+9，防御前置；首窗实测26伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付11，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 3,
+   "energy": 0
+  },
+  {
+   "t": "16:55:44",
+   "screen": "CARD_SELECTION",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 7
+   },
+   "reason": "战斗弃牌：【事件循环+】（弃掉当前最无价值牌；候选：绯色面积+ / 切线星光+ / 羽化 / 切线星光 / 闭域映射 / 白绮的变身式+ / 分治法阵 / 事件循环+ / 综合色序+ / 绯色面积+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F46",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F46",
+      "生命 40/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "事件循环+",
+      "score": 14.05,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": 5.15,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": 0.826,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "羽化",
+      "score": -0.0,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": -3.03,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 9,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -4.33,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": -4.37,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "事件循环+",
+     "params": {
+      "option_index": 7
+     },
+     "score": 14.05
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:55:45",
+   "screen": "CARD_SELECTION",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "战斗弃牌：【闭域映射】（弃掉当前最无价值牌；候选：绯色面积+ / 切线星光+ / 羽化 / 切线星光 / 闭域映射 / 白绮的变身式+ / 分治法阵 / 综合色序+ / 绯色面积+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F46",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F46",
+      "生命 40/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": 5.15,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": 0.826,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "羽化",
+      "score": -0.0,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": -3.03,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 8,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -4.33,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": -4.37,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": -6.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "闭域映射",
+     "params": {
+      "option_index": 4
+     },
+     "score": 5.15
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:55:48",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[绯色面积+(1费)✗[not_enough_energy],切线星光+(1费)✗[not_enough_energy],羽化(2费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],白绮的变身式+(1费)✗[not_enough_energy],分治法阵(1费)✗[not_enough_energy],综合色序+(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy]]",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 40/90",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 26"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "羽化",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 28,
+    "incoming_damage": 26,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "METAMORPHOSIS",
+      "name": "羽化",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+      "name": "分治法阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:55:52",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【虚弱药水】",
+   "turn": 4,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 40/90",
+      "回合 4",
+      "能量 3",
+      "敌方意图伤害 17"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0,
+      "target_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:55",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "战斗：硬仗使用攻击药水【爆炸安瓿】",
+   "turn": 4,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 40/90",
+      "回合 4",
+      "能量 3",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 1
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:56",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "use_potion",
+   "params": {
+    "option_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：硬仗使用增益药水【虚弱药水】",
+   "turn": 4,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 40/90",
+      "回合 4",
+      "能量 3",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 2,
+      "target_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "16:55:57",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 40,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【开集庇护】（格挡10｜VIVHITE_LIVE_ESTIMATE=-3.45[OPEN_SET_SHELTER;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤12，我方40血/0甲；首窗实测26伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付15，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "16:55:59",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 38,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+7.64[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=2;margin=2/spent=2;drain=12.4138%/7hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤12，我方38血/10甲；首窗实测20伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付15，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "16:56:01",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 36,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+17.89[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=0;margin=4/spent=4;drain=12.4138%/15hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤12，我方36血/10甲；首窗实测20伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付15，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "16:56:03",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 36,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[完美综合色(3费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],终止条件(1费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],终止条件+(1费)✗[not_enough_energy],局部同胚(1费)✗[not_enough_energy],黎曼星阵(1费)✗[not_enough_energy],尺度变换+(1费)✗[not_enough_energy],综合色序+(1费)✗[not_enough_energy]]",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 36/90",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "10 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "黎曼星阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_PERFECT_SYNTHESIS",
+      "name": "完美综合色",
+      "energy_cost": 3,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+      "name": "黎曼星阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 8,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 9,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:56:10",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 34,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【明暗对照】（格挡7｜VIVHITE_LIVE_ESTIMATE=-6.78[CHIAROSCURO;dynamic=yes;hp-cost=3;margin=1/spent=1;drain=20%/4hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤18，我方34血/0甲；意图升级+1，防御前置；首窗实测20伤/回合低于引擎先验下限37（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付19，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "16:56:11",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 31,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡6｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=20%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤18，我方31血/7甲；意图升级+1，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付19，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "16:56:12",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 29,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：残能救场[格挡]：剩余能量1打出【闭域映射】，拒绝带能量空过（意图18/甲13/缺口5）原裁决：评估后无值得出的牌(递推星芒+✓,黄金构图✗,终止条件+✓,绯色面积+✓,绯色面积+✓,闭域映射✓)；⚠残能空漏审计(IDLE_LEAK_BLK)：能量1空过，受击净缺口5，可负担格挡【闭域映射】可抵5，扣除謦欬2/余裕机会成本0后净保命3；意图升级+1，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付19，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗；门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "16:56:14",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 27,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[递推星芒+(1费)✗[not_enough_energy],黄金构图(2费)✗[not_enough_energy],终止条件+(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy]]",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 27/90",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 18"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "5 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "递推星芒+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "黄金构图",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 19,
+    "incoming_damage": 18,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GOLDEN_COMPOSITION",
+      "name": "黄金构图",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:56:19",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 27,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡6｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤12，我方27血/0甲；竞速生存分母按敌方归属口径（已隔离謦欬实付24，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "16:56:21",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 25,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【羽化】（能力/增益牌（第6回合）｜长战加成+1.9（敌血池46））；敌意图总伤12，我方25血/6甲；竞速生存分母按敌方归属口径（已隔离謦欬实付24，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；防守线复核：联合能量对账，格挡4+输出28/回合的混合分配即可在净火力下追平击杀所需4回合，维持攻防节奏不全攻（滚雪球零余量）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "16:56:23",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 25,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[综合色序+(1费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],白绮的变身式+(1费)✗[not_enough_energy],终止条件(1费)✗[not_enough_energy],绯色面积+(1费)✗[not_enough_energy],尺度变换+(1费)✗[not_enough_energy]]",
+   "turn": 6,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 25/90",
+      "回合 6",
+      "能量 0",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "6 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "终止条件",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 10,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_TERMINATION_CONDITION",
+      "name": "终止条件",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:56:27",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 23,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【开集庇护】（格挡10｜VIVHITE_LIVE_ESTIMATE=-9.40[OPEN_SET_SHELTER;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤18，我方23血/0甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；防守线复核：联合能量对账，格挡11+输出21/回合的混合分配即可在净火力下追平击杀所需4回合，维持攻防节奏不全攻（滚雪球零余量）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "16:56:29",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 21,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【事件循环+】（能力/增益牌（第7回合）｜长战加成+1.9（敌血池46）｜VIVHITE_LIVE_ESTIMATE=+90.70[EVENT_LOOP;dynamic=yes;hp-cost=4;margin=2/spent=2;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;recovery-copy=117]）；敌意图总伤18，我方21血/10甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；防守线复核：联合能量对账，格挡15+输出14/回合的混合分配即可在净火力下追平击杀所需4回合，维持攻防节奏不全攻（滚雪球零余量）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "16:56:31",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 17,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 6
+   },
+   "reason": "战斗：打出【开集庇护】（格挡10｜VIVHITE_LIVE_ESTIMATE=-9.40[OPEN_SET_SHELTER;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤18，我方17血/10甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活1回合（实测9伤/回合升级桶×(1+换挡上浮0.20)→11伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "16:56:33",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 15,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【综合色序+】（功能牌（抽牌6/回能）｜VIVHITE_LIVE_ESTIMATE=+6.79[CHROMATIC_SEQUENCE;dynamic=yes;hp-cost=2;margin=2/spent=2;drain=12.4138%/13hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%;drain-projected-from-observed-cards]）；敌意图总伤18，我方15血/20甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活1回合（实测9伤/回合升级桶×(1+换挡上浮0.20)→11伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "16:56:35",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 13,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 4,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【切线星光+】→巨斧机器人（单体伤害≈11.0｜VIVHITE_LIVE_ESTIMATE=-0.40[TANGENT_STARLIGHT;dynamic=yes;hp-cost=0;margin=3/spent=3;drain=8%/1hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤18，我方13血/20甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需4回合>可存活1回合（实测9伤/回合升级桶×(1+换挡上浮0.20)→11伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 1
+  },
+  {
+   "t": "16:56:37",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 10,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 8
+   },
+   "reason": "战斗：打出【星图检索】（功能牌（抽牌4/回能）｜VIVHITE_LIVE_ESTIMATE=-0.50[ASTRAL_SEARCH;dynamic=yes;hp-cost=0;margin=2/spent=2;drain=8%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤18，我方10血/20甲；意图升级+6，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付26，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；斩杀竞速投影：击杀还需2回合>可存活1回合（实测11伤/回合升级桶×(1+换挡上浮0.20)→13伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 7,
+   "energy": 0
+  },
+  {
+   "t": "16:56:37",
+   "screen": "CARD_SELECTION",
+   "floor": 46,
+   "hp": 10,
+   "gold": 109,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "战斗弃牌：【黎曼星阵】（弃掉当前最无价值牌；候选：分治法阵 / 切线星光 / 完美综合色 / 完美综合色 / 黎曼星阵 / 黎曼星阵 / 闭域投影 / 局部同胚 / 综合色序+ / 综合色序+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F46",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F46",
+      "生命 10/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黎曼星阵",
+      "score": 7.247,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "黎曼星阵",
+      "score": 7.247,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": 3.15,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": 1.53,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": 1.48,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -4.33,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": -4.35,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "黎曼星阵",
+     "params": {
+      "option_index": 4
+     },
+     "score": 7.247
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:56:39",
+   "screen": "CARD_SELECTION",
+   "floor": 46,
+   "hp": 10,
+   "gold": 109,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "战斗弃牌：【黎曼星阵】（弃掉当前最无价值牌；候选：分治法阵 / 切线星光 / 完美综合色 / 完美综合色 / 黎曼星阵 / 闭域投影 / 局部同胚 / 综合色序+ / 综合色序+）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F46",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F46",
+      "生命 10/90"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "白绮弃牌：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黎曼星阵",
+      "score": 7.247,
+      "status": "chosen",
+      "why": "弃牌无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": 3.15,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": 1.53,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": 1.48,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "分治法阵",
+      "score": -1.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "切线星光",
+      "score": -4.33,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": -4.35,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": -6.9,
+      "status": "rejected",
+      "why": "弃牌无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "黎曼星阵",
+     "params": {
+      "option_index": 4
+     },
+     "score": 7.247
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "16:56:41",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 10,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[分治法阵(1费)✗[not_enough_energy],切线星光(1费)✗[not_enough_energy],完美综合色(3费)✗[not_enough_energy],完美综合色(0费)✗[blocked_by_hook],闭域投影(0费)✗[blocked_by_hook],局部同胚(1费)✗[not_enough_energy],综合色序+(1费)✗[not_enough_energy],综合色序+(1费)✗[not_enough_energy]]",
+   "turn": 7,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 10/90",
+      "回合 7",
+      "能量 0",
+      "敌方意图伤害 18"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "分治法阵",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "完美综合色",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域投影",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "局部同胚",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 20,
+    "incoming_damage": 18,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE",
+      "name": "分治法阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_PERFECT_SYNTHESIS",
+      "name": "完美综合色",
+      "energy_cost": 3,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic, EnergyCostTooHigh",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_PERFECT_SYNTHESIS",
+      "name": "完美综合色",
+      "energy_cost": 0,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CLOSED_PROJECTION",
+      "name": "闭域投影",
+      "energy_cost": 0,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_LOCAL_HOMEOMORPHISM",
+      "name": "局部同胚",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:56:46",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 10,
+   "gold": 109,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【闭域映射】（格挡6｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;dimension=0;ritual-phase=1/damage=15%]）；敌意图总伤12，我方10血/0甲；竞速生存分母按敌方归属口径（已隔离謦欬实付39，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；滚雪球锁持：联合复核虽报可行（格挡9+输出24/回合的混合分配），实测入锁不翻案（RACE_ESC_LATCH_HOLD）；斩杀竞速投影：击杀还需2回合>可存活1回合（实测11伤/回合升级桶×(1+换挡上浮0.20)→13伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗；致死生还线：可负担格挡组合覆盖缺口12-生命10，本回合买命可生还，非斩杀攻击让位格挡（LETHAL_SURVIVABLE_LINE）",
+   "turn": 8,
+   "energy": 3
+  },
+  {
+   "t": "16:56:47",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 8,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（白绮的变身式+✓,切线星光✗,递推星芒+✗,黎曼星阵✗），结束回合（敌意图总伤12，我方8血/6甲）；竞速生存分母按敌方归属口径（已隔离謦欬实付39，VIVHITE_RACE_SELF_LOSS_EXCLUDE）；升级账：持续升级确认，防守复核按火力×1.20计价拖延成本；滚雪球锁持：联合复核虽报可行（格挡12+输出19/回合的混合分配），实测入锁不翻案（RACE_ESC_LATCH_HOLD）；斩杀竞速投影：击杀还需2回合>可存活1回合（实测10伤/回合升级桶×(1+换挡上浮0.20)→11伤/回合校准），全攻提速；重生体计入血池（全场无本体）；全场均为已证实重生体，解除重生压制以终结战斗",
+   "turn": 8,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 8/90",
+      "回合 8",
+      "能量 2",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "warn",
+      "value": "伤害缺口 6 / 当前生命 8"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "warn",
+      "value": "败局竞速=False；斩杀竞速=True"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "白绮的变身式+",
+      "score": -69.178,
+      "status": "rejected",
+      "why": "能力/增益牌（第8回合）｜VIVHITE_LIVE_ESTIMATE=-19.80[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=18/kill;di",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 6,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式+",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+      "name": "黎曼星阵",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:56:53",
+   "screen": "COMBAT",
+   "floor": 46,
+   "hp": 2,
+   "gold": 109,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：当前2生命，全部非诅咒手牌因謦欬会令生命低于1，结束回合｜能量3｜[绯色面积+(1费)✗[blocked_by_hook],黄金构图(2费)✗[blocked_by_hook],综合色序+(1费)✗[blocked_by_hook],星图检索(0费)✗[blocked_by_hook],黎曼星阵(0费)✗[blocked_by_hook],开集庇护(1费)✗[blocked_by_hook],切线星光(1费)✗[blocked_by_hook],尺度变换+(1费)✗[blocked_by_hook]]",
+   "turn": 9,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F46",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F46",
+      "生命 2/90",
+      "回合 9",
+      "能量 3",
+      "敌方意图伤害 18"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "8 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "绯色面积+",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "黄金构图",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "综合色序+",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "星图检索",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "黎曼星阵",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "切线星光",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 6,
+      "action": "play_card"
+     },
+     {
+      "label": "尺度变换+",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 7,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 18,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+      "name": "绯色面积+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GOLDEN_COMPOSITION",
+      "name": "黄金构图",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "name": "综合色序+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.ChromaticSequence",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+      "name": "星图检索",
+      "energy_cost": 0,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_ASTRAL_SEARCH",
+      "unplayable_preventer_type": "Vivhite.Cards.Recursion.AstralSearch",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_RIEMANN_STAR_ARRAY",
+      "name": "黎曼星阵",
+      "energy_cost": 0,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_OPEN_SET_SHELTER",
+      "name": "开集庇护",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_OPEN_SET_SHELTER",
+      "unplayable_preventer_type": "Vivhite.Cards.Conservation.OpenSetShelter",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_TANGENT_STARLIGHT",
+      "name": "切线星光",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 7,
+      "card_id": "VIVHITE_CARD_SCALE_TRANSFORMATION",
+      "name": "尺度变换+",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_POWER_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL_UPGRADED_POWER",
+      "unplayable_preventer_type": "Vivhite.Cards.Hybrid.VivhitesCrimsonTransformationRitualUpgradedPower",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "16:57:00",
+   "screen": "GAME_OVER",
+   "floor": 46,
+   "hp": 0,
+   "gold": 109,
+   "action": "continue_game_over",
+   "params": {},
+   "reason": "结算：确认战绩，执行原生分数、解锁与存档流程"
   }
  ],
  "combat_notes": [
@@ -21993,7 +26894,9 @@
   "F35 Monster战 掉血0｜自损6（可行动段6/非行动段0，SELF_LOSS_PHASE_OBS）",
   "F36 Monster战 掉血5｜自损24（可行动段24/非行动段3，SELF_LOSS_PHASE_OBS）",
   "F38 Monster战 掉血0｜自损8（可行动段8/非行动段10，SELF_LOSS_PHASE_OBS）",
-  "F44 Monster战 掉血0"
+  "F44 Monster战 掉血0",
+  "F45 Monster战 掉血25｜自损14（可行动段14/非行动段22，SELF_LOSS_PHASE_OBS）",
+  "F46 Monster战 掉血59｜自损41（可行动段41/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战9回合阵亡（阵亡）"
  ],
  "attribution_tags": [
   [
@@ -22311,11 +27214,24 @@
   [
    "map_node",
    "Monster"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_CHROMATIC_SEQUENCE"
+  ],
+  [
+   "map_node",
+   "Monster"
   ]
  ],
- "human_assisted": false,
- "excluded_from_learning": false,
- "deck_snapshot": [
+ "native_save": {
+  "run_id": "N25S0WHWW5SQ",
+  "phase": "summary_ready",
+  "save_status": "verified",
+  "save_verified": true,
+  "save_error": null
+ },
+ "final_deck": [
   {
    "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
    "upgraded": false,
@@ -22518,6 +27434,13 @@
    "name": "绯色面积+",
    "card_type": "Attack",
    "rarity": "Common"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+   "upgraded": true,
+   "name": "综合色序+",
+   "card_type": "Skill",
+   "rarity": "Uncommon"
   }
  ],
  "deck_changes": [
@@ -23156,6 +28079,22 @@
    "acquired": [
     {
      "card_id": "VIVHITE_CARD_CRIMSON_AREA",
+     "upgraded": true,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 41,
+   "source": "run.deck_diff",
+   "floor": 45,
+   "screen": "REWARD",
+   "observed_at": "2026-09-12 16:55:10",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
      "upgraded": true,
      "count": 1
     }
