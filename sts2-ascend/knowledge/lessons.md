@@ -11249,3 +11249,14 @@
 - 当前低价值卡牌：BULLY(10分/2.5864433771340574局)，HAVOC(11分/2.069154701707243局)，STRIKE_IRONCLAD(12分/6.724752780548555局)
 - 策略进化：elite_grey_safety_mult: 1.75 → 1.95（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1423 胜，当前目标进阶 0
+
+## 第 1424 局复盘（2026-09-12 17:05）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：HEADBUTT, ULTIMATE_STRIKE, MOLTEN_FIST, DARK_EMBRACE, SWORD_BOOMERANG, STOKE, RAGE, PANIC_BUTTON, RAGE, CINDER, MOLTEN_FIST, TRUE_GRIT, SPITE, SHRUG_IT_OFF, CINDER
+- 本局遗物：VAJRA
+- 战斗记录：F5 Monster战 掉血3; F8 Monster战 掉血10; F13 Monster战 掉血1; F14 Monster战 掉血0; F15 Monster战 掉血2; F17 Boss战 掉血65｜竞速审计：T2判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.902469103529753局)，PACTS_END(25分/90.64284952207714局)，OFFERING(25分/22.72980740564422局)，PERFECTED_STRIKE(24分/4.869907755675064局)，MANGLE(24分/76.3009969311374局)
+- 当前低价值卡牌：BULLY(10分/2.5773908253140885局)，HAVOC(11分/2.061912660251268局)，STRIKE_IRONCLAD(12分/6.701216145816636局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1424 胜，当前目标进阶 0
