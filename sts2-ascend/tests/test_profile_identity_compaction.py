@@ -65,6 +65,7 @@ def _remove_catalog_identity(profile_root: Path) -> None:
     for row in rows[1:]:
         row.pop("profile_id", None)
         row.pop("character_id", None)
+        row.pop("catalog_projection_version", None)
     path.write_text(
         "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True,
                              separators=(",", ":")) for row in rows) + "\n",

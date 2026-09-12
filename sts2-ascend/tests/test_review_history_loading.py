@@ -80,6 +80,10 @@ class ReviewHistoryLoadingTests(unittest.TestCase):
             rows = llm_review._review_run_records(10, [1])
         self.assertEqual([(row[1]["run_id"], row[2]) for row in rows],
                          [("ID-1", "exact_batch")])
+        chain = llm_review._primary_failure_decision_chain(10, [1], records=rows)
+        location = chain["full_failure_run"]["full_chain_available_in"]
+        self.assertIn("archive/run_catalog.jsonl", location)
+        self.assertIn("run-0001.json", location)
 
     def test_active_content_overrides_archived_catalog_entry(self):
         self.write_run(1)

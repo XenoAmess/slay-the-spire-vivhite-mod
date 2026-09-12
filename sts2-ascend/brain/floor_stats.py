@@ -396,32 +396,28 @@ class FloorStatsProvider:
         return True
 
     def _catalog_row_with_recovered_identity(
-            self, row: dict[str, Any]) -> dict[str, Any]:
-        """Hydrate identity from legacy ZIP evidence before Ironclad fallback."""
-        if _explicit_historical_profile_id(row) is not None:
-            return row
+            self, row: dict[str, Any], archives: dict[Path, zipfile.ZipFile]
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        """Hydrate legacy identity once and reuse the decoded evidence below."""
+        if (_explicit_historical_profile_id(row) is not None
+                or row.get("catalog_projection_version") == 1):
+            return row, None
         storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
         if storage.get("kind") != "zip":
-            return row
+            return row, None
         try:
-            try:
-                from compact_knowledge import read_catalog_storage_evidence
-            except ImportError:  # pragma: no cover - package import fallback
-                from .compact_knowledge import read_catalog_storage_evidence
-            raw = read_catalog_storage_evidence(self.root, row)
-            archived = json.loads(raw.decode("utf-8"))
-        except (ImportError, OSError, UnicodeError, json.JSONDecodeError,
-                RuntimeError, ValueError) as exc:
+            archived = self._catalog_archived_data(
+                row, archives, require_verification=True)
+        except (OSError, UnicodeError, zipfile.BadZipFile, KeyError,
+                json.JSONDecodeError, ValueError) as exc:
             raise ValueError(
                 f"cannot recover archived profile identity for {row.get('file')}: {exc}"
             ) from exc
-        if not isinstance(archived, dict):
-            raise ValueError("archived run root is not an object")
         recovered = dict(row)
         for key in ("profile_id", "character_id"):
             if _profile_id(archived.get(key)) is not None:
                 recovered[key] = archived[key]
-        return recovered
+        return recovered, archived
 
     @staticmethod
     def _active_record(path: Path, data: dict[str, Any]) -> _RunRecord:
@@ -498,7 +494,8 @@ class FloorStatsProvider:
         )
 
     def _catalog_run_evidence(
-            self, row: dict[str, Any], archives: dict[Path, zipfile.ZipFile]
+            self, row: dict[str, Any], archives: dict[Path, zipfile.ZipFile],
+            archived: dict[str, Any] | None = None,
     ) -> tuple[tuple[str, ...], bool, tuple[_DeckCard, ...], bool]:
         """Hydrate optional choices/final deck from exact archived evidence.
 
@@ -525,8 +522,32 @@ class FloorStatsProvider:
             has_final_deck_evidence = True
 
         storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
-        if storage.get("kind") != "zip":
+        if (storage.get("kind") != "zip"
+                or row.get("catalog_projection_version") == 1
+                or (has_card_evidence and has_final_deck_evidence)):
             return picks, has_card_evidence, deck, has_final_deck_evidence
+        data = (archived if archived is not None
+                else self._catalog_archived_data(row, archives))
+        if not has_card_evidence and _has_card_pick_evidence(data):
+            picks = _card_picks(data)
+            has_card_evidence = True
+        if (not has_final_deck_evidence
+                and isinstance(data.get("final_deck"), list)):
+            deck = _final_deck(data)
+            has_final_deck_evidence = True
+        return picks, has_card_evidence, deck, has_final_deck_evidence
+
+    def _catalog_archived_data(
+            self, row: dict[str, Any], archives: dict[Path, zipfile.ZipFile], *,
+            require_verification: bool = False,
+    ) -> dict[str, Any]:
+        """Read and verify one legacy run, sharing ZIP handles for this refresh.
+
+        New catalogs project every available dashboard field at archive time;
+        their absent fields mean missing original evidence. Only older, partial
+        catalogs need to decompress the full decision trace to fill those gaps.
+        """
+        storage = row.get("storage") if isinstance(row.get("storage"), dict) else {}
         archive_rel = PurePosixPath(str(storage.get("archive") or ""))
         member = PurePosixPath(str(storage.get("member") or ""))
         if (not archive_rel.parts or archive_rel.is_absolute()
@@ -545,22 +566,17 @@ class FloorStatsProvider:
             archives[archive_path] = archive
         raw = archive.read(member.as_posix())
         expected_size = _integer(row.get("bytes"))
+        expected_hash = str(row.get("sha256") or "").strip().casefold()
+        if require_verification and (expected_size is None or not expected_hash):
+            raise ValueError("archived profile identity has no size/SHA256 verification")
         if expected_size is not None and len(raw) != expected_size:
             raise ValueError("archived run evidence size mismatch")
-        expected_hash = str(row.get("sha256") or "").strip().casefold()
         if expected_hash and hashlib.sha256(raw).hexdigest() != expected_hash:
             raise ValueError("archived run evidence SHA256 mismatch")
         data = json.loads(raw.decode("utf-8"))
         if not isinstance(data, dict):
             raise ValueError("archived run root is not an object")
-        if not has_card_evidence and _has_card_pick_evidence(data):
-            picks = _card_picks(data)
-            has_card_evidence = True
-        if (not has_final_deck_evidence
-                and isinstance(data.get("final_deck"), list)):
-            deck = _final_deck(data)
-            has_final_deck_evidence = True
-        return picks, has_card_evidence, deck, has_final_deck_evidence
+        return data
 
     @staticmethod
     def _validate_json_source(path: Path, value: dict[str, Any]) -> None:
@@ -645,8 +661,10 @@ class FloorStatsProvider:
                 row = json.loads(line)
                 if not isinstance(row, dict):
                     raise ValueError(f"line {line_number} is not an object")
+                archived = None
                 if saw_header:
-                    row = self._catalog_row_with_recovered_identity(row)
+                    row, archived = self._catalog_row_with_recovered_identity(
+                        row, archives)
                 if not saw_header:
                     if row.get("schema_version") != 1:
                         raise ValueError("missing or unsupported catalog header")
@@ -654,7 +672,7 @@ class FloorStatsProvider:
                     continue
                 try:
                     picks, has_card_evidence, deck, has_deck_evidence = (
-                        self._catalog_run_evidence(row, archives))
+                        self._catalog_run_evidence(row, archives, archived))
                 except (OSError, UnicodeError, zipfile.BadZipFile, KeyError,
                         json.JSONDecodeError, ValueError) as exc:
                     evidence_errors.append(

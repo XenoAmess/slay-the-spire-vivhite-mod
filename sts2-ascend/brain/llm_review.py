@@ -50,6 +50,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from lifecycle import stop_requested
+from review_packet import enforce_packet_budget
 from review_runners import (
     CodexJsonTranslator,
     OpencodeJsonTranslator,
@@ -1718,60 +1719,8 @@ _PACKET_CHAR_BUDGET = 200_000
 
 def _enforce_packet_budget(packet: dict,
                            budget: int = _PACKET_CHAR_BUDGET) -> dict:
-    def _size(value) -> int:
-        return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
-
-    if _size(packet) <= budget:
-        return packet
-    packet = dict(packet)
-    notes: list[str] = []
-    # 第 1 档：runs_summary 的逐局文本收紧（combat_notes/key_reasons 各留 2 条）
-    summaries = packet.get("runs_summary")
-    if isinstance(summaries, list) and summaries:
-        tightened = []
-        for summary in summaries:
-            if isinstance(summary, dict):
-                summary = dict(summary)
-                summary["combat_notes"] = (summary.get("combat_notes") or [])[:2]
-                summary["key_reasons"] = (summary.get("key_reasons") or [])[:2]
-            tightened.append(summary)
-        packet["runs_summary"] = tightened
-        notes.append("runs_summary 逐局 notes/reasons 收紧到各 2 条")
-    # 第 2 档：stats_digest 窗口减半
-    if _size(packet) > budget:
-        digest = packet.get("stats_digest")
-        if isinstance(digest, dict):
-            digest = dict(digest)
-            for key in ("cards", "relics"):
-                rows = digest.get(key)
-                if isinstance(rows, list) and len(rows) > 20:
-                    digest[key] = rows[:20]
-                    notes.append(f"stats_digest.{key} 截到 top20")
-            enemies = digest.get("enemies")
-            if isinstance(enemies, list) and len(enemies) > 15:
-                digest["enemies"] = enemies[:15]
-                notes.append("stats_digest.enemies 截到 top15")
-            packet["stats_digest"] = digest
-    # 第 3 档：失败局决策链尾部保留数减半（聚合表不动）
-    if _size(packet) > budget:
-        chain = packet.get("decision_chain_evidence")
-        full = (chain or {}).get("full_failure_run") if isinstance(chain, dict) else None
-        if isinstance(full, dict) and isinstance(full.get("decisions"), list) \
-                and len(full["decisions"]) > 45:
-            chain = dict(chain)
-            full = dict(full)
-            rows = full["decisions"]
-            full["decisions"] = rows[:15] + rows[-15:]
-            full["budget_tail_halved"] = True
-            chain["full_failure_run"] = full
-            packet["decision_chain_evidence"] = chain
-            notes.append("失败局决策链预算内再收紧（首15+尾15）")
-    if notes:
-        packet["packet_budget_note"] = (
-            f"packet 超 {_PACKET_CHAR_BUDGET} 字符预算，已降采样："
-            + "；".join(notes)
-            + "。被裁内容在 runs/*.json、stats.json、meta_review.md 可按需深读")
-    return packet
+    """Keep host callers compatible while the pure packet logic stays separate."""
+    return enforce_packet_budget(packet, budget)
 
 
 def _clip_summary_text(value) -> str:
@@ -2046,6 +1995,10 @@ def _primary_failure_decision_chain(
                  if isinstance(row, dict)]
     kept, aggregates, omitted = _compress_failure_decisions(decisions)
     serialized = json.dumps(kept, ensure_ascii=False, separators=(",", ":"))
+    evidence_location = (
+        f"runs/{path.name}"
+        if (_current_profile_paths().runs / path.name).is_file() else
+        f"archive/run_catalog.jsonl (file={path.name}; read its storage.archive/member)")
     return {
         "selection_policy": ("newest_exact_failed_run_full; other_runs_summarized"
                              if not omitted else
@@ -2063,9 +2016,9 @@ def _primary_failure_decision_chain(
             "omitted_decisions": omitted,
             "serialized_chars": len(serialized),
             "complete_persisted_chain": not omitted,
-            "full_chain_available_in": (
-                None if not omitted else
-                f"runs/{path.name}（完整 {len(decisions)} 条，可按需逐条深读）"),
+            # Always retain the exact recovery location: the final packet budget
+            # may need to trim a chain that fitted this earlier local stage.
+            "full_chain_available_in": evidence_location,
             "decision_aggregates": aggregates,
             "decisions": kept,
         },
@@ -2267,6 +2220,9 @@ def _build_prompt_scoped(know, cfg: dict, every: int | None = None,
 超长单行，请本地读取 `{prompt_rel}`，提取第一个 fenced `json`
 代码块并用 `json.loads` 解析。packet 内 `corpus_paths` 都是当前隔离 clone 可读的相对路径。
 该 profile 的 runs、lessons、policy 分别位于 `{runs_rel}`、`{lessons_rel}`、`{policy_rel}`。
+历史分层摘要可查 `{archive_rel}/history_summary.md`；归档原文由
+`{archive_rel}/run_catalog.jsonl` 的 file → storage.archive/member 定位，ZIP 内保存原始 JSON。
+日期仅是历史分界，缺少版本戳的旧局不得推断其代码版本。
 
 # review_closure 快速摘要
 {closure_summary}
@@ -2298,9 +2254,9 @@ def _build_prompt_scoped(know, cfg: dict, every: int | None = None,
 # 交付顺序（严格执行）
 1. 工具与证据：读取本任务书、`git status --short` 和完成一个最高价值问题所需的最小证据。若最新
    死亡局有 `decision_chain_evidence.full_failure_run`，必须先逐条阅读并检查 decisions；当
-   `complete_persisted_chain=false` 时该字段是「尾部 30 条 + 每层首末 + 全部非战斗选择」的全文切片，
-   被省略的例行出牌/结束回合已并入 `decision_aggregates` 计数表，完整链可经 `full_chain_available_in`
-   指向的 runs 文件按需深读。涉及卡牌、怪物、遗物、
+   `complete_persisted_chain=false` 时只提供选取的原始决策切片；以 kept/omitted 数量、
+   `packet_budget_note` 和 `decision_aggregates_scope` 判断裁剪范围，不把聚合表误当完整链。
+   完整链可经 `full_chain_available_in` 指向的 runs 文件或归档 catalog 按需深读。涉及卡牌、怪物、遗物、
    药水或事件时，优先查 `native_game_knowledge` 与对应 runtime/mechanics JSONL，不能用旧版记忆代替。
 2. 假设：先写一句 `HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL`，引用具体局、楼层、回合或动作。
 3. 落地：立即用 Apply Patch 对生产行为、配置或运行时观测做一个最小可逆改动。你被明确授权修改或

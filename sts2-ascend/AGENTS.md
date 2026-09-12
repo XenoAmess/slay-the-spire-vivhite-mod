@@ -11,3 +11,4 @@
 - 提交来源必须可辨识：维护 Agent 的额外功能/修复提交使用 `[agent:task] ` 标题前缀；运行中 Brain 的存档、复盘、恢复和拒合清单提交由 `autogit` 使用 `[brain:auto] `。只约定新提交，不改写历史，也不设阻断用户提交的硬钩子。
 - 生产复盘 runner 是可配置四级链：OpenCode/GLM → OpenCode/DeepSeek-V4-Flash → OpenCode/Kimi → Codex/Luna（max + auto-review）。Start、Stop 与 Brain 孤儿回收只能按当前 session、受管 review clone 和 runner 调用形状识别，不得把具体模型名或审批参数写死进生命周期匹配。
 - 子进程收到服务端明确可重试的 HTTP 429 时，优先复用同一 canonical task/runner/model 和原有 retry lineage；先保全 partial、transcript、日志与锁，再尊重 `Retry-After` 或执行有上限的指数退避。不得并行复制任务、静默切换模型或把可恢复 429 标为永久 cooldown/blocked；硬配额耗尽或明确永久拒绝才转入普通失败保全。详见 [429 中断恢复规范](../docs/2026-09-02-429子任务恢复与复用规范.md)。
+- 历史整理使用受测工具：运行中可通过 `scripts/compact_run_history.py --archive-before YYYY-MM-DD --apply` 无损归档单一 store 的旧闭合局，保留近期与异常；原始 ZIP、manifest、catalog 和日期摘要必须一起保留。该入口不改学习/队列/运行态；完整 lessons/meta_review 压缩仍由 `brain/compact_knowledge.py` 在停栈后执行。不得把 reset 备份当在线 Profile 再压缩，也不得把无版本戳的旧局按日期猜成具体代码版本。详见 [本轮审计与验收](../docs/2026-09-12-Brain整体审计与历史压缩.md)。
