@@ -1305,6 +1305,12 @@ class AutoGitSafetyTests(unittest.TestCase):
                   mock.patch.object(llm_review, "_record_review_rejection")):
                 saved = llm_review._save_review_salvage(
                     pre_head, result.error, result, log=lambda _msg: None)
+                self.assertIsNotNone(saved)
+                assert saved is not None
+                self.assertEqual(
+                    Path((saved / "raw_sandbox_pointer.txt").read_text(
+                        encoding="utf-8").strip()), retained)
+                llm_review._recover_deferred_salvages(log=lambda _msg: None)
             self.assertIsNotNone(saved)
             assert saved is not None
             self.assertEqual(

@@ -1,7 +1,6 @@
 """Regression coverage for unittest/production log path isolation."""
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,36 +13,38 @@ import unittest
 
 ASCEND_DIR = Path(__file__).resolve().parents[1]
 PRODUCTION_KNOWLEDGE = ASCEND_DIR / "knowledge"
-PRODUCTION_LOGS = (
-    PRODUCTION_KNOWLEDGE / "brain.log",
-    PRODUCTION_KNOWLEDGE / "tts_quipper.log",
-)
 TEST_KNOWLEDGE_ENV = "STS2_ASCEND_TEST_KNOWLEDGE_DIR"
 
 
-def _file_metadata(path: Path) -> dict:
-    if not path.exists():
-        return {"exists": False}
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    stat = path.stat()
-    return {
-        "exists": True,
-        "size": stat.st_size,
-        "mtime_ns": stat.st_mtime_ns,
-        "sha256": digest.hexdigest(),
+# Observe only the probe process: the live Brain may legitimately append to its
+# logs while these tests run. Record even attempts swallowed by logger handlers.
+_PRODUCTION_WRITE_GUARD = textwrap.dedent("""
+    import os
+
+    production_log_paths = {
+        os.path.normcase(os.path.abspath(ascend / "knowledge" / name))
+        for name in ("brain.log", "tts_quipper.log")
     }
+    production_write_attempts = []
 
+    def reject_production_log_write(event, args):
+        if event != "open" or isinstance(args[0], int):
+            return
+        path, mode, flags = args
+        normalized = os.path.normcase(os.path.abspath(os.fsdecode(path)))
+        writes = (any(char in (mode or "") for char in "wax+") or
+                  flags & (os.O_WRONLY | os.O_RDWR | os.O_APPEND |
+                           os.O_CREAT | os.O_TRUNC))
+        if normalized in production_log_paths and writes:
+            production_write_attempts.append(normalized)
+            raise PermissionError("test probe attempted a production log write")
 
-def _production_log_metadata() -> dict:
-    return {str(path): _file_metadata(path) for path in PRODUCTION_LOGS}
+    sys.addaudithook(reject_production_log_write)
+""")
 
 
 class TestLogIsolationTests(unittest.TestCase):
     def test_plain_unittest_subprocess_redirects_all_three_loggers(self) -> None:
-        before = _production_log_metadata()
         with tempfile.TemporaryDirectory() as temporary:
             temporary_path = Path(temporary)
             probe_result = temporary_path / "probe-result.json"
@@ -56,6 +57,7 @@ class TestLogIsolationTests(unittest.TestCase):
                 import unittest
 
                 ascend = Path(os.environ["ASCEND_TEST_ROOT"])
+                INSTALL_PRODUCTION_WRITE_GUARD
                 sys.path.insert(0, str(ascend / "brain"))
                 sys.path.insert(0, str(ascend / "tts"))
 
@@ -81,6 +83,7 @@ class TestLogIsolationTests(unittest.TestCase):
                         agent.log("agent unittest isolation probe")
                         runner.log("runner unittest isolation probe")
                         quipper.log("quipper unittest isolation probe")
+                        self.assertEqual(production_write_attempts, [])
 
                         brain_text = (isolated / "brain.log").read_text(
                             encoding="utf-8")
@@ -93,7 +96,8 @@ class TestLogIsolationTests(unittest.TestCase):
                         Path(os.environ["ASCEND_PROBE_RESULT"]).write_text(
                             json.dumps({"isolated": str(isolated)}),
                             encoding="utf-8")
-            """), encoding="utf-8")
+            """).replace("INSTALL_PRODUCTION_WRITE_GUARD",
+                         _PRODUCTION_WRITE_GUARD), encoding="utf-8")
 
             environment = os.environ.copy()
             environment.pop(TEST_KNOWLEDGE_ENV, None)
@@ -109,8 +113,6 @@ class TestLogIsolationTests(unittest.TestCase):
                 timeout=120,
             )
 
-            after = _production_log_metadata()
-            self.assertEqual(before, after)
             self.assertEqual(
                 completed.returncode, 0,
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}")
@@ -119,7 +121,6 @@ class TestLogIsolationTests(unittest.TestCase):
                 Path(result["isolated"]).resolve(), PRODUCTION_KNOWLEDGE.resolve())
 
     def test_non_test_process_keeps_the_production_knowledge_root(self) -> None:
-        before = _production_log_metadata()
         environment = os.environ.copy()
         environment.pop(TEST_KNOWLEDGE_ENV, None)
         code = textwrap.dedent("""
@@ -128,11 +129,13 @@ class TestLogIsolationTests(unittest.TestCase):
             import sys
 
             ascend = Path(sys.argv[1]).resolve()
+            INSTALL_PRODUCTION_WRITE_GUARD
             sys.path.insert(0, str(ascend / "brain"))
             sys.path.insert(0, str(ascend / "tts"))
             import agent
             import runner
             import quipper
+            assert not production_write_attempts, production_write_attempts
             print(json.dumps({
                 "agent": str(agent.KNOWLEDGE_DIR),
                 "agent_log": str(agent._LOG_PATH),
@@ -140,7 +143,7 @@ class TestLogIsolationTests(unittest.TestCase):
                 "quipper": str(quipper.KNOWLEDGE_DIR),
                 "quipper_log": str(quipper.LOG_FILE),
             }))
-        """)
+        """).replace("INSTALL_PRODUCTION_WRITE_GUARD", _PRODUCTION_WRITE_GUARD)
         completed = subprocess.run(
             [sys.executable, "-c", code, str(ASCEND_DIR)],
             cwd=ASCEND_DIR,
@@ -150,8 +153,6 @@ class TestLogIsolationTests(unittest.TestCase):
             timeout=30,
             check=True,
         )
-        after = _production_log_metadata()
-        self.assertEqual(before, after)
         paths = json.loads(completed.stdout.strip())
         production = PRODUCTION_KNOWLEDGE.resolve()
         self.assertEqual(Path(paths["agent"]).resolve(), production)

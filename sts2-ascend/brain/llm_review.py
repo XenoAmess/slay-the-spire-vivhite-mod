@@ -11740,7 +11740,9 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
         inherited_attempts = _link_replay_attempt(
             replay_target, new_package, inherited_attempts, log=log)
     retry_group = replay_target
-    keep_sticky = not bool(status.get("startup_unavailable"))
+    # An unavailable provider in this attempt cannot erase work already bound
+    # to the inherited lineage. Disabled backends were explicitly unbound above.
+    keep_sticky = affinity is not None or not bool(status.get("startup_unavailable"))
     for item in batch:
         item.update({
             **plan.as_queue_fields(),

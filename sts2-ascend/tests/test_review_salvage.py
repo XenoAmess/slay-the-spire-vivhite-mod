@@ -39,9 +39,12 @@ class ReviewConfigurationTests(unittest.TestCase):
         self.assertEqual(cfg["stall_warn_min"], 15)
         self.assertEqual(cfg["stall_timeout_min"], 30)
         self.assertEqual(cfg["pre_work_timeout_min"], 5)
+        self.assertEqual(cfg["preferred_models"], [])
         self.assertEqual(
-            cfg["preferred_models"],
-            ["opencode-go/glm-5.3-flash@max", "amd-radeon/DeepSeek-V4-Flash"],
+            [(plan.key, plan.runner, plan.every_runs, plan.source)
+             for plan in llm_review.review_plans_from_config(cfg)],
+            [("kimi-k3", "opencode", 5, "preferred"),
+             ("luna-max", "codex", 1, "fallback")],
         )
         self.assertEqual(int(cfg["timeout_min"] * 60), 28800)
 

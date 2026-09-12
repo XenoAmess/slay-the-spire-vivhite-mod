@@ -651,7 +651,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
 
         self.assertEqual(calls, [
             "deferred", "orphan", "receipt", "queue", "ledger",
-            "receipt", "queue", "closure",
+            "deferred", "receipt", "queue", "closure",
         ])
 
     def test_worker_skips_cooled_old_batch_for_fresh_live_evidence(self) -> None:
@@ -713,11 +713,11 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         selected_snapshots: list[list[bool]] = []
         launched: list[list[bool]] = []
 
-        def inspect_select(items, cap, now):
+        def inspect_select(items, cap, now, config=None):
             selected_snapshots.append([item["approve_for_me"] for item in items])
             durable = llm_review._load_queue_unlocked()["pending"]
             self.assertEqual([item["approve_for_me"] for item in durable], [True, True])
-            return original_select(items, cap, now)
+            return original_select(items, cap, now, config)
 
         def complete(_agent, batch, _log):
             launched.append([item["approve_for_me"] for item in batch])
@@ -726,7 +726,7 @@ class ReviewQueueSafetyTests(unittest.TestCase):
 
         with (mock.patch.object(llm_review, "_review_stop_requested",
                                 return_value=False),
-              mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
+              mock.patch.object(llm_review, "_wait_review_stop", return_value=True),
               mock.patch.object(llm_review, "_kill_orphan_review_processes"),
               mock.patch.object(llm_review, "_preferred_cooldown_remaining",
                                 return_value=0),
@@ -797,7 +797,9 @@ class ReviewQueueSafetyTests(unittest.TestCase):
     def test_batch_outcome_distinguishes_failure_report_and_runtime_change(self) -> None:
         batch = [{"run": 8, "runner": "opencode", "model": "m", "every": 1,
                   "source": "preferred", "retry_same_model": True}]
-        cfg = {"opencode_bin": "opencode"}
+        cfg = {"opencode_bin": "opencode", "review_model_chain": [{
+            "key": "m", "runner": "opencode", "model": "m", "every_runs": 1,
+        }]}
 
         def result(outcome: str, changed: bool):
             agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
@@ -1258,7 +1260,11 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             return False
 
         cfg = {"opencode_bin": "opencode", "runner": "opencode",
-               "model": "kimi", "review_every_runs": 5}
+               "model": "kimi", "review_every_runs": 5,
+               "review_model_chain": [{
+                   "key": "glm", "runner": "opencode", "model": "glm",
+                   "every_runs": 1,
+               }]}
         with (mock.patch.object(llm_review, "load_llm_config", return_value=cfg),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
               mock.patch.object(llm_review, "resolve_review_plan",
@@ -1342,6 +1348,9 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         }), encoding="utf-8")
         agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
         cfg = {"review_model_chain": [
+            {"key": "luna-max", "runner": "codex", "model": "gpt-5.6-luna",
+             "reasoning_effort": "max", "approve_for_me": False,
+             "sandbox": "workspace-write"},
             {"key": "luna-max", "runner": "codex", "model": "gpt-5.6-terra",
              "reasoning_effort": "max", "approve_for_me": True},
             {"key": "luna-other", "runner": "codex", "model": "gpt-5.6-luna",
@@ -2113,6 +2122,8 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                     source="test", log=lambda _message: None)
                 self.assertIsNotNone(saved)
                 assert saved is not None
+                self.assertTrue((saved / "raw_sandbox_pointer.txt").is_file())
+                llm_review._recover_deferred_salvages(log=lambda _message: None)
                 raw_repo = saved / "raw_sandbox" / "repo"
                 self.assertEqual(
                     subprocess.run(["git", "-C", str(raw_repo), "rev-parse", "HEAD"],
@@ -2463,7 +2474,13 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             return False
 
         with (mock.patch.object(llm_review, "load_llm_config",
-                               return_value={"opencode_bin": "opencode"}),
+                               return_value={
+                                   "opencode_bin": "opencode",
+                                   "review_model_chain": [{
+                                       "key": "glm", "runner": "opencode",
+                                       "model": "glm", "every_runs": 1,
+                                   }],
+                               }),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
               mock.patch.object(llm_review, "run_review", side_effect=failed),
               mock.patch.object(llm_review, "_link_replay_attempt",
@@ -2686,7 +2703,13 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             return True
 
         with (mock.patch.object(llm_review, "load_llm_config",
-                               return_value={"opencode_bin": "opencode"}),
+                               return_value={
+                                   "opencode_bin": "opencode",
+                                   "review_model_chain": [{
+                                       "key": "glm", "runner": "opencode",
+                                       "model": "glm", "every_runs": 1,
+                                   }],
+                               }),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
               mock.patch.object(llm_review, "run_review", side_effect=accepted)):
             outcome = llm_review._run_batch_review(
@@ -2965,6 +2988,10 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                     "a" * 40, "host commit failed", sandbox,
                     batch_runs=[9], runner="codex", model="gpt-5.6-luna",
                     log=lambda _message: None)
+                self.assertIsNotNone(saved)
+                assert saved is not None
+                self.assertTrue((saved / "raw_sandbox_pointer.txt").is_file())
+                llm_review._recover_deferred_salvages(log=lambda _message: None)
 
             self.assertIsNotNone(saved)
             assert saved is not None

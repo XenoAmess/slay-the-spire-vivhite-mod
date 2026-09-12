@@ -67,5 +67,107 @@
         "build_distribution"
       ]
     }
-  ]
+  ],
+  "post_archive_runtime": {
+    "samples": [
+      {
+        "session_id": "dd710f10bcae49978d91996792159440",
+        "run_id": "CD56SCTGDVPA",
+        "floor": 21,
+        "decision_id": "dd710f10bcae49978d91996792159440-3338",
+        "outcome": {
+          "status": "applied",
+          "at": "2026-09-12T14:01:07+0800"
+        },
+        "connected": "connected",
+        "heartbeat": "2026-09-12T14:01:09+0800"
+      },
+      {
+        "session_id": "dd710f10bcae49978d91996792159440",
+        "run_id": "CD56SCTGDVPA",
+        "floor": 21,
+        "decision_id": "dd710f10bcae49978d91996792159440-3339",
+        "outcome": {
+          "status": "applied",
+          "at": "2026-09-12T14:01:11+0800"
+        },
+        "connected": "connected",
+        "heartbeat": "2026-09-12T14:01:11+0800"
+      }
+    ],
+    "api": {
+      "screen": "COMBAT",
+      "run_id": "CD56SCTGDVPA",
+      "state_version": 16,
+      "native_profile_id": 1
+    }
+  },
+  "space_accounting": {
+    "index_before_bytes": 666103,
+    "index_after_bytes": 9411328,
+    "index_growth_bytes": 8745225,
+    "run_container_savings_bytes": 340189611,
+    "working_set_logical_savings_bytes": 331444386
+  },
+  "final_runtime_verification": {
+    "checked_at": "2026-09-12T14:16:11.192173+08:00",
+    "samples": [
+      {
+        "session_id": "dd710f10bcae49978d91996792159440",
+        "run_id": "6U267TF9WJAX",
+        "decision_id": "dd710f10bcae49978d91996792159440-3984",
+        "outcome": {
+          "status": "applied",
+          "at": "2026-09-12T14:16:06+0800"
+        },
+        "connected": "connected",
+        "heartbeat": "2026-09-12T14:16:06+0800"
+      },
+      {
+        "session_id": "dd710f10bcae49978d91996792159440",
+        "run_id": "6U267TF9WJAX",
+        "decision_id": "dd710f10bcae49978d91996792159440-3987",
+        "outcome": {
+          "status": "applied",
+          "at": "2026-09-12T14:16:10+0800"
+        },
+        "connected": "connected",
+        "heartbeat": "2026-09-12T14:16:10+0800"
+      }
+    ],
+    "api": {
+      "screen": "MAP",
+      "run_id": "6U267TF9WJAX",
+      "state_version": 16,
+      "native_profile_id": 1,
+      "checked_at": "2026-09-12T14:16:37.482610+08:00"
+    },
+    "livehime_state": "Streaming",
+    "brain_pid": 39252,
+    "brain_boot_head": "cfc51fc0646fa686ff7c823ae33f257731d7cc26",
+    "brain_stage": "ready",
+    "source_reloaded_for_this_task": false
+  },
+  "validation": {
+    "checked_at": "2026-09-12T14:18:44.836336+08:00",
+    "full_discovery": {
+      "tests": 863,
+      "seconds": 346.315,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log_path": "C:\\Users\\xenoa\\AppData\\Local\\Temp\\sts2-brain-audit-complete-20260912.log",
+      "log_sha256": "4690ceebfb2acd7f1acdbb7f1ce285a6e47d93ab0b3db1ecf5b2bf124c2d0e51",
+      "scope": "current shared working tree, including existing parallel maintenance changes"
+    },
+    "focused_regressions": {
+      "tests": 133,
+      "result": "OK"
+    },
+    "selfcheck": {
+      "path": "sts2-ascend/brain/selfcheck.py",
+      "result": "SELFCHECK OK",
+      "exit_code": 0
+    }
+  }
 }

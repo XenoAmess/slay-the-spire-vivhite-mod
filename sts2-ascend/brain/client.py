@@ -102,6 +102,10 @@ class Sts2Client:
         if not self.base_url:
             if not self.discover():
                 raise ConnectionDown("API base url unknown and discovery failed")
+            if is_action:
+                # Discovery can take seconds. Recheck the existing pause gate
+                # after it; an F9 pressed during discovery must prevent the POST.
+                ensure_action_allowed()
         url = self.base_url + path
         try:
             return self._raw_request(method, url, payload, timeout=self.action_timeout if is_action else self.read_timeout)
@@ -137,7 +141,8 @@ class Sts2Client:
                 return self._decode(resp.read())
         except urllib.error.HTTPError as exc:
             try:
-                raw = exc.read()
+                with exc:
+                    raw = exc.read()
             except (urllib.error.URLError, TimeoutError, ConnectionError, OSError,
                     http.client.HTTPException) as read_exc:
                 # The server may already have executed a POST before the HTTP error
