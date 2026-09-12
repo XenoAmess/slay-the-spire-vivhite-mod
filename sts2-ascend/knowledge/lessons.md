@@ -11414,3 +11414,14 @@
 - 当前低价值卡牌：BULLY(10分/2.45393198170686局)，STRIKE_IRONCLAD(12分/6.380223152437841局)，BASH(14分/5.398650359755092局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1438 胜，当前目标进阶 0
+
+## 第 1439 局复盘（2026-09-13 06:34）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：PYRE, UNRELENTING, THUNDERCLAP, INFLAME, SECOND_WIND, THUNDERCLAP, IMPERVIOUS, SECOND_WIND, AGGRESSION, SHRUG_IT_OFF, BREAKTHROUGH, STOMP, TWIN_STRIKE, ARMAMENTS, FEEL_NO_PAIN, ASHEN_STRIKE
+- 本局遗物：PARRYING_SHIELD, RED_MASK, TUNGSTEN_ROD
+- 战斗记录：F19 Monster战 掉血15; F20 Monster战 掉血9; F21 Monster战 掉血25｜竞速审计：T3判死→实战5回合获胜; F30 Unknown战 掉血12; F31 Monster战 掉血63｜竞速审计：T4判死→实战9回合获胜; F33 Boss战 掉血38｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.7415082795501107局)，PACTS_END(25分/87.9335656791686局)，OFFERING(24分/22.520733280296415局)，PERFECTED_STRIKE(24分/4.620407504476337局)，MANGLE(24分/73.35403049456654局)
+- 当前低价值卡牌：BULLY(10分/2.445343219770886局)，STRIKE_IRONCLAD(12分/6.357892371404309局)，BASH(14分/5.37975508349595局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1439 胜，当前目标进阶 0
