@@ -9203,3 +9203,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.482336757107022局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.2379540488078433局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/30.54586138995749局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：1/833 胜，当前目标进阶 1
+
+## 第 834 局复盘（2026-09-13 06:46）
+- 结果：💀 失败｜进阶 1｜到达层数 15｜当局评分 15
+- 死因：敌人组合 CALCIFIED_CULTIST+DAMP_CULTIST
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_INVARIANT
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F4 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损10（可行动段10/非行动段0，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血11｜自损20（可行动段20/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血4｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：OMNISLICE(37分/7.891262948105347局)，HAND_OF_GREED(36分/8.080558108973118局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/8.915055727450587局)，CINDER(35分/2.8437816663327977局)，THRUMMING_HATCHET(34分/10.22174009687993局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.463148578457147局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.226621209637016局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/30.43895087509264局)
+- 策略进化：potion_block_hp_pct: 0.40 → 0.45（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损2/掉血4（50%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/834 胜，当前目标进阶 1
