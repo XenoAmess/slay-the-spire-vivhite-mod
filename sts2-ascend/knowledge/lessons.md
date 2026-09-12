@@ -11348,3 +11348,14 @@
 - 当前低价值卡牌：BULLY(10分/2.5061017659412115局)，HAVOC(11分/2.004881412752967局)，STRIKE_IRONCLAD(12分/6.515864591447156局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1432 胜，当前目标进阶 0
+
+## 第 1433 局复盘（2026-09-13 01:31）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：THUNDERCLAP, TWIN_STRIKE, BLOODLETTING, BLUDGEON, UNRELENTING, SHRUG_IT_OFF, DEMON_FORM, HEADBUTT, STOMP, SPITE, RAMPAGE, CINDER, HEMOKINESIS, PACTS_END, TRUE_GRIT, SHRUG_IT_OFF, SWORD_BOOMERANG, TRUE_GRIT, DISMANTLE, BLUDGEON, ENTROPY
+- 本局遗物：INTIMIDATING_HELMET, LANTERN, PANTOGRAPH
+- 战斗记录：F20 Monster战 掉血8; F22 Monster战 掉血15; F24 Monster战 掉血9; F27 Monster战 掉血26; F31 Monster战 掉血13; F33 Boss战 掉血80｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.750185751772344局)，PACTS_END(25分/89.80300427104375局)，OFFERING(24分/22.999516638918784局)，PERFECTED_STRIKE(24分/4.718635843476853局)，MANGLE(24分/74.91351297906465局)
+- 当前低价值卡牌：BULLY(10分/2.4973304097604174局)，STRIKE_IRONCLAD(12分/6.493059065377091局)，BASH(14分/5.494126901472918局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.00 → 1.99（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1433 胜，当前目标进阶 0
