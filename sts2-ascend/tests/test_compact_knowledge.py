@@ -186,6 +186,105 @@ class CompactKnowledgeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "active knowledge store"):
             compact_knowledge.apply_compaction(self.root)
 
+    def test_archive_before_releases_old_quality_pins_but_keeps_recent_and_active(self) -> None:
+        self._write_fixture()
+        options = compact_knowledge.CompactionOptions(
+            archive_before="2026-01-02", keep_recent=2,
+            keep_longest=12, keep_largest=12)
+        plan = compact_knowledge.plan_compaction(self.root, options)
+        self.assertEqual(
+            {record.summary["run_number"] for record in plan.archive_new},
+            {1, 2, 3, 4, 6, 7, 8, 9, 10})
+        self.assertEqual(plan.keep_reasons["20260101-000500_COMPACT_05.json"],
+                         ["in_progress"])
+        self.assertIn("invalid.json", plan.keep_reasons)
+        self.assertEqual(options.selection_rules()["archive_before"], "2026-01-02")
+
+    def test_archive_before_uses_payload_date_and_keeps_unknown_dates_and_anomalies(self) -> None:
+        rows = {
+            "old.json": {"started_at": "2026-08-01 12:00:00"},
+            "20260801-misleading.json": {"started_at": "2026-09-01T00:00:00+08:00"},
+            "missing.json": {},
+            "invalid-date.json": {"started_at": "2026-08-35 12:00:00"},
+            "invalid-time.json": {"started_at": "2026-08-01 29:99:00"},
+            "human.json": {"started_at": "2026-08-01", "human_assisted": True},
+            "excluded.json": {"started_at": "2026-08-01", "excluded_from_learning": True},
+            "orphaned.json": {"started_at": "2026-08-01", "orphaned": True},
+            "empty-victory.json": {"started_at": "2026-08-01", "decisions": []},
+        }
+        for name, extra in rows.items():
+            payload = {"run_id": name, "floor": 50, "victory": True,
+                       "decisions": [{"screen": "GAME_OVER", "floor": 50}], **extra}
+            (self.root / "runs" / name).write_text(json.dumps(payload), encoding="utf-8")
+        options = compact_knowledge.CompactionOptions(
+            archive_before="2026-09-01", keep_recent=0)
+        plan = compact_knowledge.plan_compaction(self.root, options)
+        self.assertEqual([record.name for record in plan.archive_new], ["old.json"])
+        for name in ("missing.json", "invalid-date.json", "invalid-time.json"):
+            self.assertIn("unknown_run_date", plan.keep_reasons[name])
+        self.assertIn("victory", plan.keep_reasons["20260801-misleading.json"])
+        for name in ("human.json", "excluded.json", "orphaned.json"):
+            self.assertIn("excluded_run_anomaly", plan.keep_reasons[name])
+        self.assertIn("zero_decision_anomaly", plan.keep_reasons["empty-victory.json"])
+
+    def test_archive_before_validates_calendar_date_in_cli_and_options(self) -> None:
+        args = compact_knowledge._parser().parse_args(["--archive-before", "2026-09-01"])
+        self.assertEqual(args.archive_before, "2026-09-01")
+        for value in ("2026-02-30", "20260901", "2026-W36-1", "yesterday"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    compact_knowledge.CompactionOptions(archive_before=value)
+                with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+                    compact_knowledge._parser().parse_args(["--archive-before", value])
+
+    def test_archive_before_round_trip_preserves_identity_and_only_recorded_versions(self) -> None:
+        payload = {"run_id": "VERSIONED", "run_number": 12,
+                   "profile_id": "vivhite", "profile_run_number": 8,
+                   "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+                   "native_profile_id": 1, "boot_head": "a" * 40,
+                   "boot_review_commit": "b" * 40, "game_version": "0.111.0",
+                   "started_at": "2026-08-01 12:00:00", "floor": 50,
+                   "victory": True, "decisions": [{"screen": "GAME_OVER", "floor": 50}]}
+        path = self.root / "runs" / "versioned.json"
+        raw = json.dumps(payload, ensure_ascii=False, indent=1).encode("utf-8")
+        path.write_bytes(raw)
+        options = compact_knowledge.CompactionOptions(
+            archive_before="2026-09-01", keep_recent=0)
+        result = compact_knowledge.apply_compaction(self.root, options)
+        self.assertEqual(result["archived_runs"], 1)
+        self.assertEqual(compact_knowledge.read_run_evidence(self.root, path.name), raw)
+        catalog = (self.root / compact_knowledge.CATALOG_REL).read_text(encoding="utf-8")
+        row = json.loads(catalog.splitlines()[1])
+        self.assertEqual(row["catalog_projection_version"], 1)
+        self.assertNotIn("card_picks", row)
+        self.assertNotIn("final_deck", row)
+        for key in ("run_id", "run_number", "profile_id", "profile_run_number",
+                    "character_id", "native_profile_id", "boot_head",
+                    "boot_review_commit", "game_version"):
+            self.assertEqual(row[key], payload[key])
+        self.assertNotIn("brain_version", row)
+        self.assertTrue(compact_knowledge.apply_compaction(self.root, options)["idempotent_noop"])
+
+    def test_profile_discovery_excludes_real_reset_backup_layout(self) -> None:
+        live = self.root / "profiles" / "vivhite"
+        backup = self.root / "profile_reset_archives" / "vivhite" / "20260831T081050.489211Z"
+        for store in (live, backup):
+            (store / "runs").mkdir(parents=True)
+            (store / "policy.json").write_text("{}", encoding="utf-8")
+            (store / "runs" / "old.json").write_text(json.dumps({
+                "run_id": "OLD", "started_at": "2026-08-01", "floor": 50,
+                "victory": True, "decisions": [{"screen": "GAME_OVER", "floor": 50}],
+            }), encoding="utf-8")
+        original = (backup / "runs" / "old.json").read_bytes()
+        self.assertEqual(compact_knowledge.discover_character_profile_roots(self.root),
+                         (live.resolve(),))
+        result = compact_knowledge.apply_compaction(
+            self.root, compact_knowledge.CompactionOptions(
+                archive_before="2026-09-01", keep_recent=0))
+        self.assertEqual(result["archived_runs"], 1)
+        self.assertEqual((backup / "runs" / "old.json").read_bytes(), original)
+        self.assertFalse((backup / "archive").exists())
+
     def test_prompt_bounds_keep_complete_stats_digest(self) -> None:
         self.know.save_run_log("RUN_PACKET_BOUND", {
             "run_id": "RUN_PACKET_BOUND", "victory": False, "floor": 16,

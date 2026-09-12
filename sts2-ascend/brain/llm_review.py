@@ -1814,7 +1814,7 @@ def _requested_archived_runs(
     if (not run_numbers and not requested_ids) or not catalog.exists():
         return []
     try:
-        from compact_knowledge import read_run_evidence
+        from compact_knowledge import read_catalog_storage_evidence, read_run_evidence
     except ImportError:
         return []
     rows = []
@@ -1839,8 +1839,15 @@ def _requested_archived_runs(
         if not filename or filename in seen_files:
             continue
         try:
-            data = json.loads(read_run_evidence(
-                knowledge_root, filename).decode("utf-8"))
+            # The catalog already supplies the member hash and location. Avoid
+            # reparsing the entire manifest once per archived run in a batch.
+            # A current active file still takes precedence over its old catalog.
+            active = knowledge_root / "runs" / filename
+            storage = entry.get("storage") or {}
+            raw = (read_catalog_storage_evidence(knowledge_root, entry)
+                   if not active.is_file() and storage.get("kind") == "zip"
+                   else read_run_evidence(knowledge_root, filename))
+            data = json.loads(raw.decode("utf-8"))
         except (OSError, RuntimeError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
             continue
         if (isinstance(data, dict) and _run_is_complete(data)
@@ -1891,7 +1898,9 @@ def _review_run_records(
     resolver, preventing the two views from silently drifting apart.
     """
     run_dir = _current_profile_paths().runs
-    if not run_dir.exists():
+    requested = {int(item) for item in (batch_runs or [])}
+    limit = max(0, n)
+    if not requested and not limit:
         return []
     # 进行中对局不入摘要（第 218 批复盘）：增量存档的 in_progress 文件是
     # 半局数据，混进复盘摘要会把「还在打的一局」当完整对局误读。
@@ -1900,20 +1909,25 @@ def _review_run_records(
     # 文件必为定稿后被盖脏戳的完整体，按完成局放行；真进行中的对局轨迹里
     # 不可能出现 GAME_OVER，照常排除。否则摘要把近百余局全部过滤，
     # 复盘数据包永远停留在旧局（第 263~369 局实证）。
-    requested = {int(item) for item in (batch_runs or [])}
     # 只保留提示词需要的最近 N 局与命中的批次，不把五百余局完整 JSON
     # 同时常驻内存。精确批次仍会继续从归档中补找。
-    recent: deque[tuple[Path, dict]] = deque(maxlen=max(0, n))
+    recent: deque[tuple[Path, dict]] = deque(maxlen=limit)
     selected: list[tuple[Path, dict]] = []
-    for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name):
+    # Walk newest first so recent-only packets read just N eligible files.
+    # Exact batches still scan all active identities, including legacy names,
+    # then recover any compacted members from the catalog.
+    for p in sorted(run_dir.glob("*.json"), key=lambda p: p.name, reverse=True):
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
             continue
-        if _run_is_complete(d):
-            recent.append((p, d))
+        if isinstance(d, dict) and _run_is_complete(d):
+            if len(recent) < limit:
+                recent.appendleft((p, d))
             if requested and int(d.get("run_number") or -1) in requested:
                 selected.append((p, d))
+            if not requested and len(recent) >= limit:
+                break
 
     if not requested:
         return [(path, data, "recent") for path, data in recent]

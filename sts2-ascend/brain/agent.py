@@ -3300,7 +3300,6 @@ class Agent:
             if (len(self.ctx.decisions) - last_n < 15 and floor == last_f
                     and len(attribution_tags) == last_a):
                 return False
-        self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
         try:
             payload = {
                 "run_id": self.ctx.run_id,
@@ -3328,6 +3327,7 @@ class Agent:
             if isinstance(native_save_wait, dict):
                 payload["native_save_wait"] = copy.deepcopy(native_save_wait)
             knowledge.save_run_log(self.ctx.run_id, payload)
+            self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
             return True
         except OSError:
             return False

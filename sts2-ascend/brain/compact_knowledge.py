@@ -7,6 +7,11 @@ repository scans and LLM reviews increasingly expensive.  This tool moves old
 raw traces into a verified ZIP archive while retaining a deliberately broad
 working set of recent and exceptional runs.
 
+An explicit ``--archive-before YYYY-MM-DD`` retires quality-based retention for
+older completed runs, using only their recorded ``started_at`` calendar date.
+Recent runs, active runs, anomalies and unknown dates remain in the working set;
+neither a filename nor an old date is treated as proof of a code version.
+
 Safety properties:
 
 * dry-run is the default; ``--apply`` is explicit;
@@ -36,6 +41,7 @@ import zipfile
 import zlib
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Iterator
 
@@ -62,8 +68,16 @@ _KNOWLEDGE_STORE_SCAN_PRUNE = frozenset({
     "archive",
     "code_backups",
     "game",
+    "profile_reset_archives",
     "runs",
 })
+
+
+def _archive_before_date(value: str) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise ValueError("archive-before must be a calendar date in YYYY-MM-DD format")
+    date.fromisoformat(value)
+    return value
 
 
 @dataclass(frozen=True)
@@ -75,9 +89,14 @@ class CompactionOptions:
     keep_floor_representatives: bool = True
     keep_lessons: int = DEFAULT_KEEP_LESSONS
     keep_meta_reviews: int = DEFAULT_KEEP_META_REVIEWS
+    archive_before: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.archive_before is not None:
+            _archive_before_date(self.archive_before)
 
     def selection_rules(self) -> dict:
-        return {
+        rules = {
             "recent_files": max(0, int(self.keep_recent)),
             "deep_floor_at_least": max(0, int(self.deep_floor)),
             "keep_all_victories": True,
@@ -90,6 +109,16 @@ class CompactionOptions:
             "lessons_pin_brain_sections": True,
             "meta_review_recent_sections": max(0, int(self.keep_meta_reviews)),
         }
+        if self.archive_before is not None:
+            rules.update({
+                "archive_before": self.archive_before,
+                "archive_date_field": "started_at_calendar_date",
+                "quality_pins_apply_on_or_after_archive_before": True,
+                "keep_all_victories": False,
+                "keep_unknown_run_dates": True,
+                "keep_excluded_run_anomalies": True,
+            })
+        return rules
 
 
 @dataclass
@@ -287,7 +316,11 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
         "run_id": data.get("run_id"),
         "run_number": data.get("run_number"),
         "started_at": data.get("started_at"),
-        **{key: data[key] for key in ("profile_id", "character_id")
+        **{key: data[key] for key in (
+            "profile_id", "character_id", "profile_run_number", "native_profile_id",
+            "ended_at", "version", "schema_version", "game_version", "mod_version",
+            "brain_version", "code_version", "boot_id", "boot_head",
+            "boot_review_commit", "code_commit", "review_commit")
            if key in data},
         "ascension": data.get("ascension"),
         "victory": victory,
@@ -304,7 +337,7 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
     final_deck = _final_deck_summary(data)
     if final_deck is not None:
         summary["final_deck"] = final_deck
-    for key in ("human_assisted", "excluded_from_learning"):
+    for key in ("human_assisted", "excluded_from_learning", "orphaned"):
         if key in data:
             summary[key] = bool(data.get(key))
     return summary
@@ -323,6 +356,10 @@ def _scan_runs(root: Path) -> list[RunRecord]:
             if not isinstance(data, dict):
                 raise ValueError("top-level JSON value is not an object")
             summary = _run_summary(data, path.name, len(raw), digest)
+            # This version certifies that identity and card/deck evidence were
+            # projected from raw JSON, including the deliberate absence of a
+            # field. Legacy catalog rows remain unmarked until re-projected.
+            summary["catalog_projection_version"] = 1
             records.append(RunRecord(path, path.name, raw, digest, len(raw), True, summary))
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             summary = {
@@ -376,6 +413,17 @@ def _mark(keep: dict[str, list[str]], record: RunRecord, reason: str) -> None:
         reasons.append(reason)
 
 
+def _recorded_run_date(summary: dict) -> date | None:
+    """Use the payload's valid date; do not infer chronology from file metadata."""
+    value = summary.get("started_at")
+    if not isinstance(value, str) or not re.match(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])", value):
+        return None
+    try:
+        return datetime.fromisoformat(value).date()
+    except ValueError:
+        return None
+
+
 def _select_working_set(records: list[RunRecord], options: CompactionOptions) -> dict[str, list[str]]:
     keep: dict[str, list[str]] = {}
     valid = [record for record in records if record.valid]
@@ -385,35 +433,54 @@ def _select_working_set(records: list[RunRecord], options: CompactionOptions) ->
         elif record.summary.get("phantom_candidate"):
             _mark(keep, record, "zero_decision_anomaly")
 
+    quality_candidates = valid
+    if options.archive_before is not None:
+        cutoff = date.fromisoformat(options.archive_before)
+        quality_candidates = []
+        for record in valid:
+            summary = record.summary
+            recorded_date = _recorded_run_date(summary)
+            if recorded_date is None:
+                _mark(keep, record, "unknown_run_date")
+            if not summary.get("decisions"):
+                _mark(keep, record, "zero_decision_anomaly")
+            if any(summary.get(key) for key in (
+                    "human_assisted", "excluded_from_learning", "orphaned")):
+                _mark(keep, record, "excluded_run_anomaly")
+            if recorded_date is None or recorded_date >= cutoff:
+                quality_candidates.append(record)
+
     recent_n = max(0, int(options.keep_recent))
     for record in valid[-recent_n:] if recent_n else []:
         _mark(keep, record, "recent")
 
     for record in valid:
+        if record.summary.get("in_progress"):
+            _mark(keep, record, "in_progress")
+
+    for record in quality_candidates:
         summary = record.summary
         if summary.get("victory"):
             _mark(keep, record, "victory")
-        if summary.get("in_progress"):
-            _mark(keep, record, "in_progress")
         if int(summary.get("floor") or 0) >= max(0, int(options.deep_floor)):
             _mark(keep, record, f"deep_floor>={max(0, int(options.deep_floor))}")
 
     longest_n = max(0, int(options.keep_longest))
     if longest_n:
-        longest = sorted(valid, key=lambda r: (int(r.summary.get("decisions") or 0),
+        longest = sorted(quality_candidates, key=lambda r: (int(r.summary.get("decisions") or 0),
                                                 r.size, r.name), reverse=True)[:longest_n]
         for record in longest:
             _mark(keep, record, f"top_{longest_n}_longest")
 
     largest_n = max(0, int(options.keep_largest))
     if largest_n:
-        largest = sorted(valid, key=lambda r: (r.size, r.name), reverse=True)[:largest_n]
+        largest = sorted(quality_candidates, key=lambda r: (r.size, r.name), reverse=True)[:largest_n]
         for record in largest:
             _mark(keep, record, f"top_{largest_n}_largest")
 
     if options.keep_floor_representatives:
         by_floor: dict[int, RunRecord] = {}
-        for record in valid:
+        for record in quality_candidates:
             floor = int(record.summary.get("floor") or 0)
             current = by_floor.get(floor)
             if current is None or (int(record.summary.get("decisions") or 0), record.size,
@@ -426,7 +493,7 @@ def _select_working_set(records: list[RunRecord], options: CompactionOptions) ->
     # If future progression adds multiple ascensions, retain the deepest raw
     # trace for each difficulty even when it is below the global deep threshold.
     by_ascension: dict[str, RunRecord] = {}
-    for record in valid:
+    for record in quality_candidates:
         asc = str(record.summary.get("ascension"))
         current = by_ascension.get(asc)
         if current is None or (int(record.summary.get("floor") or 0),
@@ -1127,6 +1194,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--show-run", metavar="FILENAME",
                         help="print one active/archived raw run after verification")
     parser.add_argument("--keep-recent", type=int, default=DEFAULT_KEEP_RECENT)
+    parser.add_argument("--archive-before", type=_archive_before_date, metavar="YYYY-MM-DD",
+                        help="retire older completed runs' quality pins by recorded started_at; "
+                             "keep recent/active/anomalous/undated runs")
     parser.add_argument("--deep-floor", type=int, default=DEFAULT_DEEP_FLOOR)
     parser.add_argument("--keep-longest", type=int, default=DEFAULT_KEEP_LONGEST)
     parser.add_argument("--keep-largest", type=int, default=DEFAULT_KEEP_LARGEST)
@@ -1147,6 +1217,7 @@ def main(argv: list[str] | None = None) -> int:
         keep_floor_representatives=not args.no_floor_representatives,
         keep_lessons=max(0, args.keep_lessons),
         keep_meta_reviews=max(0, args.keep_meta_reviews),
+        archive_before=args.archive_before,
     )
     if args.show_run:
         if args.apply:
