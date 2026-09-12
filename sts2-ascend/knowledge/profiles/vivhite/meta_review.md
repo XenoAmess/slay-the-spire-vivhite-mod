@@ -1905,3 +1905,89 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 723~738 局批复盘：滑溜税均值口径无差别计税——前夜 doom 留痕补无税反事实审计（SLIPPERY_TAX_MARGIN_OBS）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：前夜竞速预演均值口径的开局滑溜破层税取「同幕组合池
+  最大层数」（一幕 VANTOM 8 层×0.25=+2.0 回合），无差别加计到该幕
+  所有 Boss 前夜头条 ttk——包括不含滑溜成员的 Boss（WATERFALL_GIANT/
+  CEREMONIAL_BEAST/SOUL_FYSH 等）。组合分账（BOSS_RACE_COMBO_GATE）
+  已按组合分别计税并证明非滑溜组合税额为 0，但头条均值口径与翻盘比
+  上限否决（JOINT_FLIP_TTK_CAP）仍消费含税 ttk。若税额在边缘局单独
+  把「联合复核本可行」的前夜推过翻盘比上限、或把均值线贴线局推过
+  必败阈，弃疗改锻造会被税额单独触发，回血被冤枉。本批尚无一例被
+  税额单独翻转（三个含税前夜 724/732/738 无税口径照败），故只落地
+  可证伪的生产观测：doom 留痕回填无税反事实口径，后续 run 的决策链
+  直接统计「税额单独致败」频率。可证伪：未来 3~10 局若必败前夜留痕
+  反复显形「无税口径均值线可赢/无税口径翻盘比放行」（≥3 个独立
+  对局），则按池份额加权或移除均值侧税进入下一批；若始终只显形
+  「税未单独改变裁决」，则假设不成立、税被证成。
+- **EVIDENCE**：本批 16 局全负（进阶 1），8 局阵亡于 F17 一幕 Boss。
+  逐条核对三个一幕必败前夜——724（当前 90%）：「击杀需14回合＞满血
+  可存活8回合（Boss血池均值247…开局滑溜破层税+2.0回合已计入
+  （VANTOM8层，BOSS_RACE_SLIPPERY_TAX）」；732（78%）同型
+  「击杀需13回合…+2.0」；738（83%，UG8VJQCA90N0）全文复核：
+  「击杀需13回合＞满血可存活7回合（血池242、火力12、先验输出22、
+  +2.0 滑溜税）；联合能量复核虽报可行但被翻盘比上限否决（13＞1.5×7）；
+  BOSS_RACE_COMBO_GATE：已知组合可行1/6，分账 WATERFALL_GIANT240池
+  必败（无税）、VANTOM173池滑+2.0必败…」——实际 Boss 均为非滑溜的
+  瀑布巨兽，头条 ttk 却全含 VANTOM 的 +2.0 税。反事实核算：738 无税
+  ttk=11.0 仍＞7.1 均值阈、仍＞10.5 翻盘比上限（否决保留），724/732
+  同型——本批税额未单独翻转任何裁决，故不改判定。原生机制核对
+  （v0.111.0 mechanics/monsters.jsonl）：VANTOM 开局自挂 SlipperyAmt
+  8 层（每层把一次命中压到只失 1 血），WATERFALL_GIANT 无 SlipperyAmt；
+  其 SiphonHeal 10/15、PressureGun 20 起每用 +5、击倒后进 AboutToBlow
+  置 HP=999999999 再按 SteamEruptionPower 自爆（ExplodeMove 后
+  CreatureCmd.Kill 自身）。竞速审计对照：本批 F17 Boss 战 5 胜 8 负、
+  全部 T2~T7 判死——5 场「判死后获胜」均为 100% 满血入场
+  （723/725/727/728/730），8 场阵亡均 <100% 入场；前夜必败判死
+  3/3 全中（724/732/738 弃疗后全阵亡），前夜机械本身本批无误判证据。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 含滑溜组合幕的必败前夜 doom
+  留痕出现「滑溜税边际审计：无税ttk=X.X（SLIPPERY_TAX_MARGIN_OBS）」
+  注记；② 若某局显形「无税口径均值线可赢」或「无税口径翻盘比放行」，
+  即税额单独致败的直达证据，累计 ≥3 局后下一批按池份额加权（或
+  移除）均值侧税；③ 持续只显形「税未单独改变裁决」则税被证成。
+  证伪/撤回：注记零显形而含税前夜仍在 → 复查 _slip_tax/留痕接线；
+  观测注本身不改任何判定，撤回=删除本批 note 附加段与
+  3br-slip-margin 夹具（policy 键 boss_race_slippery_tax_per_layer=0
+  同时令税与注记一并消失，是现成一键回滚）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_boss_race_doomed doom 留痕尾部新增滑溜
+  税边际审计（仅 _slip_tax>0 时）：回填无税反事实 ttk；税单独翻转
+  均值线（无税ttk≤tsurv_feas+margin）标「无税口径均值线可赢」，税
+  单独造成翻盘比否决（联合复核可行且被 veto、无税ttk≤tsurv×
+  flip_cap）标「无税口径翻盘比放行」，皆无则标「税未单独改变裁决」。
+  判定、阈值、公式、组合门、翻盘比上限逐字不动（反事实只重算头条/
+  翻盘比算术；联合可行性在无税口径只会更宽，不重跑）。docstring
+  同步登记口径与证据。
+- sts2-ascend/brain/selfcheck.py：新增 3br-slip-margin 四分支——
+  ① 3×9伤+3×8挡（先验14.85）：无税 ttk10.8≤12、税后12.8>12，翻盘比
+  否决由税单独造成→放行标记显形、均值线标记不显形；② 3×15伤纯
+  攻击：裸口径均值线贴线可赢、税单独定罪→均值线标记显形、放行
+  标记不显形；③ 3×4伤弱 deck：无税照败→「税未单独改变裁决」且
+  双标记不显形；④ per_layer=0 严格回滚（不判死且观测注消失）。
+- 不加新旋钮、不改任何判定路径；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增
+  3br-slip-margin 四分支；既有 3br-slip-tax 滑溜税族、3br-cap
+  翻盘比族、3br-audit 对账族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+27，doom 留痕观测段+docstring）、
+  brain/selfcheck.py（+41，3br-slip-margin 四分支）；未触碰只读
+  在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，
+  与本批无关、不入 commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

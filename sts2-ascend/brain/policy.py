@@ -6681,6 +6681,15 @@ class Policy:
         必败标签；全部已知组合都追不上才维持判死。放行与判死均写入稳定的
         BOSS_RACE_COMBO_GATE 留痕；policy 键 boss_race_per_combo_gate=False
         可立即回滚到均值口径。
+        第 723~738 批复盘新增滑溜税边际审计（SLIPPERY_TAX_MARGIN_OBS，纯观测）：
+        均值口径的破层税取同幕组合池最大层数（本批一幕 VANTOM8层=+2.0 回合），
+        无差别加计到所有一幕前夜 ttk，而组合分账已证明该税只属于确含滑溜成员
+        的组合（WATERFALL_GIANT240池/CEREMONIAL_BEAST252池均无税）。本批三个
+        一幕必败前夜（724/732/738）头条 ttk 全含 +2.0 税，实际 Boss 均为非
+        滑溜的瀑布巨兽。doom 留痕回填无税反事实口径——税是否单独翻转均值线
+        或翻盘比否决；判定本身零改动，后续 run 的决策链可直接统计「税额单独
+        致败」频率，达到证据阈值后再决定按池份额加权/移除，长期零显形则税
+        被证成。
         """
         pol = self.know.policy
         # 可行侧对账账面每次调用重置（BOSS_RACE_PROJ_AUDIT 观测位，不改判定）
@@ -6834,6 +6843,24 @@ class Policy:
                 f"先验输出{dpt:.0f}/回合{_pot_tail}{_slip_tail}；{_joint_clause}），"
                 f"必败局的伤害会流到打死为止"
                 + _flip_veto + combo_tail)
+        # 滑溜税边际审计（SLIPPERY_TAX_MARGIN_OBS，第723~738局批复盘，纯观测）：
+        # 只回填无税反事实口径，不改任何判定——「无税口径均值线可赢」=税额单独
+        # 把均值线推过必败阈；「无税口径翻盘比放行」=联合复核本可行、翻盘比
+        # 否决由税额单独造成；两者皆无=税未单独改变裁决。供后续 run 的决策链
+        # 直接统计税额单独致败频率（反事实仅重算头条/翻盘比算术，联合可行性
+        # 在无税口径下只会更宽，不再重跑）。
+        if _slip_tax > 1e-9:
+            _ttk_notax = ttk - _slip_tax
+            _tax_marks: list[str] = []
+            if _ttk_notax <= tsurv_feas + margin:
+                _tax_marks.append("无税口径均值线可赢")
+            if _flip_veto and _flip_cap > 0 \
+                    and _ttk_notax <= float(tsurv) * _flip_cap:
+                _tax_marks.append("无税口径翻盘比放行")
+            note += (f"；滑溜税边际审计：无税ttk={_ttk_notax:.1f}"
+                     + ("，" + "、".join(_tax_marks)
+                        if _tax_marks else "，税未单独改变裁决")
+                     + "（SLIPPERY_TAX_MARGIN_OBS）")
         _cal = self._native_boss_hp_calibration()
         if _cal:
             note += _cal

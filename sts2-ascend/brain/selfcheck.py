@@ -9363,6 +9363,47 @@ def main() -> int:
         and "BOSS_RACE_SLIPPERY_TAX" in d_st_smith.reason, \
         f"破层税后的贴线前夜应转锻造并带留痕: {d_st_smith.action}（{d_st_smith.reason}）"
 
+    # 3br-slip-margin（SLIPPERY_TAX_MARGIN_OBS，第723~738局批复盘）：均值口径破层
+    #     税取同幕组合池最大层数无差别计税（本批一幕 VANTOM8层=+2.0 回合计入非滑溜
+    #     的瀑布巨兽前夜 724/732/738）。doom 留痕必须回填无税反事实口径：税单独
+    #     翻转均值线/翻盘比否决时显形对应标记，无翻转显形「税未单独改变裁决」；
+    #     per_layer=0 严格回滚（观测注一并消失）。判定本身与旧版零差异。
+    sm_deck = [
+        *[{"card_id": f"SM_A{i}", "card_type": "Attack", "energy_cost": 1,
+           "dynamic_values": [{"name": "Damage", "current_value": 9}]} for i in range(3)],
+        *[{"card_id": f"SM_B{i}", "card_type": "Skill", "energy_cost": 1,
+           "dynamic_values": [{"name": "Block", "current_value": 8}]} for i in range(3)]]
+    # 池160/火10，先验14.85：无税ttk10.8≤8×1.5=12、税后12.8>12——联合复核可行
+    # （格挡9+输出5分配）但翻盘比否决由税额单独造成；均值线无税照败不显形
+    st_native.slippery = {"SLIP_BOSS": 8}
+    _sm_doomed, _sm_note = st_pol._boss_race_doomed(sm_deck, 80, floor=16)
+    assert _sm_doomed and "SLIPPERY_TAX_MARGIN_OBS" in _sm_note \
+        and "无税口径翻盘比放行" in _sm_note \
+        and "无税口径均值线可赢" not in _sm_note, \
+        f"翻盘比被税单独否决时缺反事实放行标记: {_sm_doomed}（{_sm_note}）"
+    # 既有 st_deck（3×15伤纯攻击）：裸口径均值线贴线可赢（6.5≤7.1）、税单独定罪
+    _sm2_doomed, _sm2_note = st_pol._boss_race_doomed(st_deck, 80, floor=16)
+    assert _sm2_doomed and "SLIPPERY_TAX_MARGIN_OBS" in _sm2_note \
+        and "无税口径均值线可赢" in _sm2_note \
+        and "无税口径翻盘比放行" not in _sm2_note, \
+        f"税单独定罪均值线时缺反事实标记: {_sm2_doomed}（{_sm2_note}）"
+    # 弱deck（3×4伤）：无税均值线/联合复核照败 → 税未单独改变裁决
+    sm_weak = [{"card_id": f"SM_W{i}", "card_type": "Attack", "energy_cost": 1,
+                "dynamic_values": [{"name": "Damage", "current_value": 4}]}
+               for i in range(3)]
+    _sm3_doomed, _sm3_note = st_pol._boss_race_doomed(sm_weak, 80, floor=16)
+    assert _sm3_doomed and "SLIPPERY_TAX_MARGIN_OBS" in _sm3_note \
+        and "税未单独改变裁决" in _sm3_note \
+        and "无税口径均值线可赢" not in _sm3_note \
+        and "无税口径翻盘比放行" not in _sm3_note, \
+        f"无税照败时应显形税未单独改变裁决: {_sm3_doomed}（{_sm3_note}）"
+    st_know.policy["boss_race_slippery_tax_per_layer"] = 0.0
+    _sm4_doomed, _sm4_note = st_pol._boss_race_doomed(sm_deck, 80, floor=16)
+    assert not _sm4_doomed \
+        and "SLIPPERY_TAX_MARGIN_OBS" not in _sm4_note, \
+        f"per_layer=0 应严格回滚旧口径且无边际审计注: {_sm4_doomed}（{_sm4_note}）"
+    st_know.policy["boss_race_slippery_tax_per_layer"] = 0.25
+
     # 3br-3) 残能救场守卫（第698~770批复盘闭环）：本批 89 例带能量空过横跨
     #        40 局（16 例缺口>0，742 局 F17-T2 死亡战手握岩石铠甲仍空过）。
     #        意图缺口>0 且剩能量时 end_turn 边界必须先尝试 primitive 救场：
