@@ -2148,3 +2148,59 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 764~771 局批复盘：污浊药水成功支付累计观测（POTION_SELF_HARM_CUMULATIVE_OBS）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：自伤药水的生产决策会逐瓶披露「自伤 N 血」，但成功回执链
+  没有把同一场战斗已实际支付的自伤血量累计出来；因此在连续使用时，决策
+  留痕无法直接核对“这一次”与“本场已付”的关系。该问题是观测缺口，不先
+  推断应当改变药水选择或竞速判决。
+- **EVIDENCE**：771 局（`6U267TF9WJAX`）F33 Boss 战开局生命 97，
+  14:18:26、14:18:28 连续使用两瓶污浊药水，生命依次为 97→85→73；两条
+  决策都只有 `POTION_SELF_HARM_OBS` 的逐瓶自伤留痕。随后该战自损 47、
+  敌方掉血 97，链上虽已出现 `VIVHITE_RACE_SELF_LOSS_DOMINATES`，却缺少
+  两次药水支付的可核对累计账。本批 764~771 局均失败，故不把该缺口冒充为
+  单一致死因果。
+- **EXPECTED_SIGNAL**：未来 3~10 局出现污浊药水时，成功接受的首瓶应显示
+  `0→12`，同场第二瓶应显示 `12→24`（按实际伤害值）；累计只随 Agent 成功
+  回执增长，不应在拒绝/丢回执后增长，也不应跨战斗继承。药水选择、血量闸和
+  回合行为保持不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：新增本场成功支付自伤药水血量计数器；战斗
+  身份变化时清零，并消费 Agent 成功回执写入的
+  `potion_self_harm_commit` 标签。自伤闸开启时，保留原有逐瓶
+  `POTION_SELF_HARM_OBS`，追加 `POTION_SELF_HARM_CUMULATIVE_OBS` 的前后值；
+  被拒绝或丢失回执的动作不计费。
+- `sts2-ascend/brain/knowledge.py`：补充静态键注释，明确累计观测与
+  `potion_self_harm_gate=false` 的整体回滚语义。
+- `sts2-ascend/brain/selfcheck.py`：增加同战斗成功回执 `0→12→24` 夹具，
+  同时保留原有高血、贴死、自伤描述缺数字、非自伤和关闭闸门分支。
+- 不改药水选择、生命保留线、竞速判决或在线 knowledge；失败复盘包
+  `20260912-165332-1789203212819317800-ed98fc7e` 无可应用 patch，本批已基于
+  当前 HEAD 重实现并验证：`retry_resolution: 20260912-165332-1789203212819317800-ed98fc7e integrated`。
+
+## VALIDATION
+
+- `sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`；本地临时槽位由内存中的
+  受控分配器扩容，未修改业务文件。
+- `git diff --check -- sts2-ascend/` 通过，完整源码 diff 已回读；预存资产删除、
+  `.review-cache` 与证据包不进入本批成果。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：污浊药水成功回执数、逐瓶
+  `POTION_SELF_HARM_OBS` 数、累计观测序列、最终累计值与对应战斗
+  `SELF_LOSS_PHASE_OBS` 的同场自损是否一致；另检查拒绝动作是否完全没有累计。
+- 若出现 `0→12`/`12→24` 与成功回执不一致、跨战斗残留或失败动作计入，删除
+  `potion_self_harm_commit`、计数器和累计理由即可恢复原逐瓶观测；关闭
+  `potion_self_harm_gate` 已由夹具保护为旧行为。
+
+## REPLAY
+
+`retry_resolution: 20260912-165332-1789203212819317800-ed98fc7e integrated`

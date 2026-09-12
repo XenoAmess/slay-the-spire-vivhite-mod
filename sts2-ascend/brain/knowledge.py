@@ -377,7 +377,9 @@ DEFAULT_POLICY = {
                                     # F48 Boss 死亡战 T1 连喝 3 瓶付 36 自血（入场血 37%）
                                     # 后 T5 阵亡。开启时：使用后血量将 ≤reserve 即跳过
                                     # （防自杀/贴死自残，不计 tried），使用时理由披露
-                                    # 「自伤N血（POTION_SELF_HARM_OBS）」。false = 整体回滚
+                                    # 「自伤N血（POTION_SELF_HARM_OBS）」并在成功回执后
+                                    # 追加本场累计自伤（POTION_SELF_HARM_CUMULATIVE_OBS）。
+                                    # false = 整体回滚
     "potion_self_harm_reserve_hp": 1,  # 自伤药水使用后的最低保留血（同上批次）：旧版
                                     # hp≤自伤量时使用即当场自杀且结构无防线（is_defensive
                                     # 有交药线、is_damage 没有）；默认 1 只拦字面自杀，

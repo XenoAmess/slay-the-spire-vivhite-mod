@@ -744,8 +744,10 @@ def main() -> int:
     #      夹具：① 高血硬仗照常使用且理由披露「自伤12血（POTION_SELF_HARM_OBS）」；
     #      ② 使用后血量将 ≤reserve（默认1）时跳过且不计 tried（回血后仍可用）；
     #      ③ 描述无数字时回落实证默认 12；④ 非自伤攻击药水不误伤；
-    #      ⑤ potion_self_harm_gate=false 严格回滚旧行为。
-    def foul_state(hp_now: int, fdesc: str) -> dict:
+    #      ⑤ potion_self_harm_gate=false 严格回滚旧行为；⑥ 同一战斗的成功回执
+    #      将累计自伤从 0→12→24 写入可核对留痕。
+    def foul_state(hp_now: int, fdesc: str, potion_index: int = 0,
+                   potion_id: str = "FOUL_POTION") -> dict:
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 1,
             "combat": {"player": {"current_hp": hp_now, "max_hp": 80, "block": 0, "energy": 3},
@@ -755,7 +757,7 @@ def main() -> int:
                                     "is_alive": True, "is_hittable": True,
                                     "intents": [{"total_damage": 10}]}]},
             "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0, "floor": 10, "deck": [],
-                    "potions": [{"index": 0, "potion_id": "FOUL_POTION", "name": "污浊药水",
+                    "potions": [{"index": potion_index, "potion_id": potion_id, "name": "污浊药水",
                                  "description": fdesc, "occupied": True,
                                  "can_use": True, "usage": "anytime"}]},
         }
@@ -785,6 +787,21 @@ def main() -> int:
     assert d_f7.action == "use_potion" and "POTION_SELF_HARM_OBS" not in d_f7.reason, \
         f"potion_self_harm_gate=false 必须严格回滚旧行为: {d_f7.action}（{d_f7.reason}）"
     pol.know.policy["potion_self_harm_gate"] = True
+    cumulative_ctx = DummyCtx()
+    cumulative_ctx.credit_tags = []
+    cumulative_ctx.combat = {"comp_id": "FOUL_CUMULATIVE"}
+    cumulative_ctx.current_combat_is_hard = True
+    d_f8 = pol.decide(
+        foul_state(98, _foul_desc, potion_index=0,
+                   potion_id="FOUL_POTION_CUMULATIVE_1"), cumulative_ctx)
+    assert "本场累计自伤0→12血（POTION_SELF_HARM_CUMULATIVE_OBS）" in d_f8.reason, \
+        f"首瓶自伤药水必须披露累计起点: {d_f8.reason}"
+    cumulative_ctx.credit_tags.extend(d_f8.tags or [])
+    d_f9 = pol.decide(
+        foul_state(86, _foul_desc, potion_index=1,
+                   potion_id="FOUL_POTION_CUMULATIVE_2"), cumulative_ctx)
+    assert "本场累计自伤12→24血（POTION_SELF_HARM_CUMULATIVE_OBS）" in d_f9.reason, \
+        f"成功回执后第二瓶必须累计到24血: {d_f9.reason}"
     ctx.current_combat_is_hard = False
 
     # 3n) 精英闸门不得在负分区间反转（第 43 局 F10 实证）：

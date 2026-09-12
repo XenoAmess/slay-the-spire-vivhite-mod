@@ -727,6 +727,7 @@ class Policy:
         self._krace_latch_round = None  # 入锁回合号（RACE_UPSHIFT_STALE 新鲜窗账）
         self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
         self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
+        self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
         self._combat_credit_source = None
@@ -1259,6 +1260,14 @@ class Policy:
                 key = self._potion_key(raw)
                 if key is not None:
                     self._potion_tried.add(key)
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "potion_self_harm_commit"):
+                try:
+                    paid = float(raw[1] or 0.0)
+                except (TypeError, ValueError, OverflowError):
+                    paid = 0.0
+                if paid > 0.0:
+                    self._self_harm_potion_paid += paid
             elif (isinstance(raw, (tuple, list)) and len(raw) >= 3
                   and raw[0] == "event_choice"):
                 key = str(raw[2] or "")
@@ -3856,6 +3865,7 @@ class Policy:
             self._krace_latch_round = None
             self._krace_dmg_sustained = 0.0
             self._krace_potion_rounds = set()
+            self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0
             self._esc_rounds = 0
             self._intent_spike_from_zero = False
@@ -6502,11 +6512,24 @@ class Policy:
                 kind = "攻击" if is_damage else "增益"
                 _sh_note = (f"，自伤{_self_hit}血（POTION_SELF_HARM_OBS）"
                             if (_self_harm and _sh_gate) else "")
+                _potion_tags = [
+                    ("use_potion", p.get("potion_id")),
+                    ("potion_attempt", p["index"], potion_key[1]),
+                ]
+                if _self_harm and _sh_gate:
+                    _paid_before = max(
+                        0.0, float(getattr(self, "_self_harm_potion_paid", 0.0)
+                                   or 0.0))
+                    _paid_after = _paid_before + float(_self_hit)
+                    _sh_note += (
+                        f"，本场累计自伤{_paid_before:g}→{_paid_after:g}血"
+                        "（POTION_SELF_HARM_CUMULATIVE_OBS）")
+                    # Count only after Agent accepts the action; a rejected or
+                    # response-lost potion must not fabricate cumulative cost.
+                    _potion_tags.append(("potion_self_harm_commit", _self_hit))
                 return Decision("use_potion", params,
                                 f"战斗：硬仗使用{kind}药水【{name}】{_sh_note}",
-                                tags=[("use_potion", p.get("potion_id")),
-                                      ("potion_attempt", p["index"],
-                                       potion_key[1])], wait=0.6)
+                                tags=_potion_tags, wait=0.6)
             if is_defensive:
                 # 交药线接 potion_block_hp_pct（第 236 局复盘）：默认 0.35 与旧
                 # 行为一致，爆毙/短时死亡证据在 block_safety 顶格后把它逐步提前
