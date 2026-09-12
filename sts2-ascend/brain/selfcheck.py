@@ -5811,6 +5811,52 @@ def main() -> int:
     assert sticky_target == 1 and sl_pol._focus_index == 1 and "延续集火" in sticky_why, \
         f"滑溜结算重构破坏集火粘性: target={sticky_target} why={sticky_why}"
 
+    # 3fdo) FOCUS_DRIFT_OBS 火线漂移观测注（第772~783局批复盘）：783-F35
+    # CRUSHER+ROCKET 双强化体战逐张火线 0→1→0→0→1 横跳、无一减员阵亡。纯观测
+    # 不改分——① 非击杀换线（集火记忆=甲，乙威胁更高中标）：注记显形且含新旧
+    # 目标名，中线与记忆更新照旧；② 延续集火中标：无注记；③ 击杀换线：无注记
+    # 且记忆不更新；④ focus_drift_obs=False 一键回滚：换线中标但注记消失。
+    sl_pol._focus_index = 0
+    fd_enemies = [
+        sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+        sl_enemy(hp=80, layers=None, index=1, intent=30, name="乙"),
+    ]
+    fd_card = dict(sl_strike, valid_target_indices=[0, 1])
+    _, fd_target, fd_why = sl_pol._score_play(
+        fd_card, fd_enemies, 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fd_target == 1 and sl_pol._focus_index == 1 \
+            and "FOCUS_DRIFT_OBS" in fd_why and "甲→乙" in fd_why, \
+        f"火线漂移注记缺失或中线错误: target={fd_target} why={fd_why}"
+    _, fd_stay, fd_why2 = sl_pol._score_play(
+        dict(fd_card), [dict(e) for e in fd_enemies], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fd_stay == 1 and "延续集火" in fd_why2 \
+            and "FOCUS_DRIFT_OBS" not in fd_why2, \
+        f"延续集火中标误挂漂移注: target={fd_stay} why={fd_why2}"
+    sl_pol._focus_index = 0
+    _, fd_kill, fd_why3 = sl_pol._score_play(
+        dict(fd_card), [
+            sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+            sl_enemy(hp=4, layers=None, index=1, intent=30, name="乙"),
+        ], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fd_kill == 1 and fd_why3.startswith("可击杀") \
+            and "FOCUS_DRIFT_OBS" not in fd_why3 and sl_pol._focus_index == 0, \
+        f"击杀换线误挂漂移注或记忆被污染: target={fd_kill} why={fd_why3}"
+    sl_pol.know.policy["focus_drift_obs"] = False
+    try:
+        sl_pol._focus_index = 0
+        _, fd_rb, fd_why4 = sl_pol._score_play(
+            dict(fd_card), [dict(e) for e in fd_enemies], 0, 0, 2,
+            sl_pol.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+        assert fd_rb == 1 and "FOCUS_DRIFT_OBS" not in fd_why4, \
+            f"focus_drift_obs=False 未严格回滚: target={fd_rb} why={fd_why4}"
+    finally:
+        sl_pol.know.policy["focus_drift_obs"] = True
+        sl_pol._focus_index = None
+
     # 单体候选混有普通与滑溜敌人时，逐目标模拟不能把滑溜折算泄漏到普通目标。
     sl_mixed_bludgeon = dict(sl_bludgeon, valid_target_indices=[0, 1])
     _, mixed_target, mixed_why = sl_pol._score_play(

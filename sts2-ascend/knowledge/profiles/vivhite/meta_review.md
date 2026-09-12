@@ -2204,3 +2204,70 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 `retry_resolution: 20260912-165332-1789203212819317800-ed98fc7e integrated`
+
+
+# 第 772~783 局批复盘：双强化体 Boss 战火线横跳——火线漂移观测注（FOCUS_DRIFT_OBS）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：双/多自我强化体 Boss 战（生涯死因榜前二：
+  KNOWLEDGE_DEMON 35.8 死、CRUSHER+ROCKET 32.0 死）中，「自我强化体优先
+  转火」教义（力量层数互拉评分）与威胁分成逐张重算，使定向火线在多目标
+  间横跳，「减员前置」教义被稀释——每个强化体都被晾着叠力量，意图滚
+  雪球，无一减员即阵亡。本批不先改判定：先落地可证伪的生产观测，让后续
+  run 的决策链可直接 grep 统计火线漂移频率。
+- **EVIDENCE**：783 局（ABRWBA9PF6YB）F35 CRUSHER+ROCKET（双方力量
+  +2/回合）Boss 战逐张定向火线 0→1→0→0→1（碾碎爪→火箭→碾碎爪→碾碎爪
+  →火箭），T4 敌方意图滚到 49，7 回合阵亡时两敌俱存、血池从 322 仅磨到
+  约 250；竞速投影 T1 即报「击杀还需16回合>可存活4回合」。本批同型：
+  773/774/776/777 局 F33 多体 Boss 全负、772 局 F46 多体战竞速 T7 判死
+  →9 回合阵亡。既有「延续集火」粘性在强化体教义在场时整体休眠
+  （policy.py 优先序让位注释），漂移本身此前无独立留痕，复盘只能靠人工
+  逐张重建目标序列。
+- **EXPECTED_SIGNAL**：未来 3~10 局多敌战斗决策链——① 出现
+  「火线漂移观测：甲→乙（非击杀换线，FOCUS_DRIFT_OBS）」注记时可直接
+  计数；② 若 CRUSHER+ROCKET / KNOWLEDGE_DEMON / 同族双子类战斗漂移
+  高频（≥3 个独立对局反复显形）且该类战斗继续高死亡 → 下一批行为化
+  （如强化体互拉时给集火记忆加换线阻尼、或按血池份额锁定火线）；
+  ③ 若漂移罕见或漂移战照样减员获胜 → 假设证伪，火线非死因变量。
+  证伪/撤回：policy 键 `focus_drift_obs=False` 一键回滚（注记消失、
+  评分逐字零差异，夹具④护住）；观测注不改任何判定。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：单向攻击评分收口（火线记忆写入前）新增
+  FOCUS_DRIFT_OBS 留痕——`focus_drift_obs`（默认 True）且胜者非击杀、
+  集火记忆存在且胜者偏离记忆时，`why` 尾部追加新旧目标名；只追加文本，
+  评分、中线、记忆更新、击杀/沉睡/无敌帧各收口逐字不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  `focus_drift_obs=True`，注释登记 783 局实证与回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3fdo 四分支——① 非击杀换线
+  （记忆=甲，乙威胁30中标）：注记显形含「甲→乙」，中线=乙且记忆更新；
+  ② 延续集火中标无注记；③ 击杀换线无注记且记忆不被污染；④
+  `focus_drift_obs=False` 严格回滚（换线中标但注记消失，finally 复位）。
+- 不加新评分旋钮、不改任何判定路径；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fdo 四
+  分支；既有滑溜族、集火粘性、3fe/3rsl/3prg2 等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+19，观测段+注释）、brain/knowledge.py（+7，静态键
+  +注释）、brain/selfcheck.py（+46，3fdo 四分支）；未触碰只读在线状态；
+  克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：多敌 Boss/精英战 FOCUS_DRIFT_OBS 出现频率、漂移战
+  的减员时点与结局，与 CRUSHER+ROCKET / KNOWLEDGE_DEMON 死亡台账对照。
+- 漂移高频且致死 → 下一批行为化换线阻尼；漂移罕见 → 假设证伪；
+  回滚=`focus_drift_obs=False`（旧口径零差异，夹具④护住）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

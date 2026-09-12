@@ -5919,6 +5919,25 @@ class Policy:
                        "能量让给防守/铺垫（INVULN_TARGET_VETO）")
             elif best_t is not None and _invuln_veto is not None:
                 why += "｜无敌帧目标剔出打击候选（INVULN_TARGET_VETO）"
+            # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
+            # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
+            # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合
+            # 互拉评分，7 回合无一减员、意图滚到 49 阵亡；生涯死因榜
+            # CRUSHER+ROCKET 32.0 / KNOWLEDGE_DEMON 35.8 同型。本注在定向攻击
+            # 胜者偏离集火记忆且非击杀时留痕新旧目标名，供后续批次直接 grep
+            # 统计漂移频率，作为「强化体互拉是否系统性拖延减员」行为化的前哨
+            # 证据；键 focus_drift_obs=False 一键回滚（注记消失，评分不动）。
+            if (bool(pol.get("focus_drift_obs", True))
+                    and best_t is not None and not best_kill
+                    and _sticky_t is not None and best_t != _sticky_t):
+                _drift_from = next(
+                    (str(_de.get("name") or _de.get("enemy_id") or "敌人")
+                     for _de in enemies if _de.get("index") == _sticky_t), "?")
+                _drift_to = next(
+                    (str(_de.get("name") or _de.get("enemy_id") or "敌人")
+                     for _de in enemies if _de.get("index") == best_t), "?")
+                why += (f"｜火线漂移观测：{_drift_from}→{_drift_to}"
+                        "（非击杀换线，FOCUS_DRIFT_OBS）")
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:
