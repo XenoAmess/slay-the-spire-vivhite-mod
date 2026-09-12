@@ -2351,3 +2351,77 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 813~829 局批复盘：漂移观测闸门已满——教义在场换线阻尼（FOCUS_DRIFT_DAMP）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 772~783 批预登记的行为化闸门「漂移 ≥3 个独立对局反复显形
+  且该类战斗继续高死亡」已满足。双/多自我强化体战（CRUSHER+ROCKET 等）里，
+  旧集火粘性（target_sticky_bonus=3.0）在自我强化/辅助体教义在场时整体休眠，
+  教义拉力逐张重算零制衡，定向火线横跳、减员前置被稀释。给集火记忆目标一个
+  教义在场仍生效、但弱于强教义拉力的阻尼分，可按住边际互拉而不堵死合法换线。
+- **EVIDENCE**：漂移注记在产约 40 局命中 18 个 run 文件共 32 次；本批 17 局中
+  8 局 17 次（816×1、817×2、819×2、821×1、824×3、826×3、828×1、829×4）。
+  829 局（R8W897CHD0QW）F33 CRUSHER+ROCKET Boss 战逐张复核：T1 碾碎爪→
+  T2 火箭（漂移）→T3 碾碎爪→火箭（漂移）→T4 火箭，4 回合双敌俱存、
+  hp72→0 阵亡；817 局（6B05ZTBU4MLM）同组合 F33 漂移×2 同层阵亡。829-T2/T3
+  换线理由分别为「辅助体优先转火：火箭（零伤害意图）」「自我强化体优先转火：
+  火箭（力量+2）」——同一目标在支持体/强化体身份间逐张翻转，正是粘性休眠
+  留下的互拉空档。本批 17 局全负，不把漂移冒充单一致死因果，但预登记闸门
+  的「高频+继续高死亡」两条件均已客观成立。
+- **EXPECTED_SIGNAL**：未来 3~10 局教义在场多敌战——① 决策链出现
+  「换线阻尼+N（FOCUS_DRIFT_DAMP）」留痕，证明杠杆在产；② 该类战斗的
+  FOCUS_DRIFT_OBS 频率较本批（17 注/8 局）下降，力量≤3 层的边际互拉不再
+  翻盘；③ 力量≥4 层/完整辅助体教义的强拉力换线仍发生（漂移注不归零），
+  击杀换线与减员成本口径不变。证伪/撤回：若阻尼注显形而漂移频率与该类战斗
+  结局无任何变化，或阻尼被证实误挡合法换线（如辅助体残血不补刀），撤回=
+  policy.json 置 focus_drift_damp=0（旧口径零差异，夹具③护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：定向攻击评分循环新增换线阻尼——新静态键
+  focus_drift_damp（默认 4.0=support_target_bonus 一半）在教义在场
+  （_doctrine_present）、集火记忆有效、候选即记忆目标且无减员成本加分
+  （与粘性同一「已有更便宜答案」休眠语义）时加给该候选；与旧粘性经
+  elseif 链天然互斥（粘性只在无教义时生效）。胜者带阻尼时 why 尾部追加
+  「换线阻尼+N（教义在场延续集火记忆，FOCUS_DRIFT_DAMP）」，与漂移注互斥
+  显形。击杀奖励、减员成本翻案对账、滑溜/荆棘/沉睡/无敌帧各收口逐字不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增 focus_drift_damp=4.0，
+  注释登记 817/829 局实证、力量阈值语义（≤3 层按住/≥4 层放行）与 0=严格
+  回滚（加分与留痕同灭，漂移观测注不受影响）。
+- sts2-ascend/brain/selfcheck.py：新增 3fdd 四分支——① 边际互拉（乙力量
+  3 层，拉力≈3.43<4.0）被阻尼按住：甲中标、阻尼注显形、无漂移注、记忆不漂；
+  ② 强拉力（乙力量 7 层，+8.0>4.0）照常换线且漂移注保留；③
+  focus_drift_damp=0 严格回滚（同①场景乙中标、漂移注显形，finally 复位）；
+  ④ 无教义战斗零变化（旧粘性延续集火中标、阻尼注不显形）。
+- 不改竞速判决、前夜弃疗/锻造口径、謦欬门族与任何其他旋钮；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fdd 四分支；
+  既有 3fdo 火线漂移族、3tr 荆棘族、3fe 沙坑续命族、3rsl 救场滑溜族、
+  3prg2 謦欬回收族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+27，阻尼分读取+循环计价+胜者留痕）、
+  brain/knowledge.py（+10，静态键+注释）、brain/selfcheck.py（+61，
+  3fdd 四分支）；未触碰只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：FOCUS_DRIFT_DAMP 显形次数、教义在场多敌战的
+  FOCUS_DRIFT_OBS 频率（对照本批 17 注/8 局）、CRUSHER+ROCKET /
+  KNOWLEDGE_DEMON / 同族双子类战斗的减员时点与结局。
+- 漂移频率下降且该类战斗减员提前 → 闸门有效，维持现值；阻尼注显形但
+  频率/结局无变化 → 杠杆无效，撤回=focus_drift_damp=0（旧口径零差异，
+  夹具③护住）；若观测到强拉力合法换线被误挡 → 下调至 3.0 以下再验。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

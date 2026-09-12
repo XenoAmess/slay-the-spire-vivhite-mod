@@ -5779,6 +5779,15 @@ class Policy:
             # 重置托管，此处只读不写战斗身份
             _sticky_t = self._focus_index if len(enemies) > 1 else None
             _sticky_v = float(pol.get("target_sticky_bonus", 3.0))
+            # 换线阻尼（FOCUS_DRIFT_DAMP，第813~829局批复盘）：第772~783批
+            # 预登记的行为化闸门已满足——漂移注记在产 40 局命中 18 个 run 文件
+            # 32 次（本批 8/17 局 17 次），CRUSHER+ROCKET 同型 F33 Boss 战
+            # 817/829 两连阵亡（829 火线 碾碎爪→火箭→碾碎爪→火箭，4 回合
+            # 双敌俱存 hp72→0）。旧粘性在教义在场时整体休眠，互拉评分零
+            # 制衡；本键给集火记忆目标一个教义在场仍生效的阻尼分（默认 4.0
+            # = support_target_bonus 一半：力量≤3 层的边际互拉不再翻盘，
+            # 力量≥4 层/完整辅助体教义仍可换线），0=严格回滚旧口径。
+            _drift_damp = float(pol.get("focus_drift_damp", 4.0) or 0.0)
             _doctrine_present = False
             _sleep_veto = None
             _invuln_veto = None
@@ -5790,6 +5799,7 @@ class Policy:
             # 复算去分口径（减员分剔除、被减员休眠的粘性复活），循环结束后
             # 对中标者追加翻案/随附段；纯观测不改分，键=0 时对账段与加分同灭。
             _winner_rem = 0.0
+            _winner_damp = 0.0
             _cf_best_i, _cf_best_s = None, -1.0
             for e in enemies:
                 if (not (self._is_respawn_add(e) and not all_respawn)
@@ -5809,6 +5819,7 @@ class Policy:
                     continue
                 eff, killed, slippery_broken = _attack_outcome(e)
                 _rem_cost, _rem_pool = 0.0, 0.0
+                _damp_add = 0.0
                 _thorns_reflect = 0.0
                 _thorns_suicide = False
                 if _thorns_pricing:
@@ -5865,6 +5876,15 @@ class Policy:
                           and e.get("index") == _sticky_t):
                         s += _sticky_v
                     s += _rem_cost
+                    # 换线阻尼：教义在场时旧粘性休眠，互拉评分零制衡（见上方
+                    # FOCUS_DRIFT_DAMP 注释）。与减员成本不叠加（同粘性的
+                    # 「已有更便宜答案」休眠语义）；与旧粘性互斥（elseif 链
+                    # 保证只在教义在场时到达这里）。
+                    if (_drift_damp > 0.0 and _doctrine_present
+                            and _sticky_t is not None and _rem_cost <= 0.0
+                            and e.get("index") == _sticky_t):
+                        _damp_add = _drift_damp
+                        s += _damp_add
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
                 # 滑溜破层抵扣（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT，
@@ -5906,6 +5926,7 @@ class Policy:
                 if best_t is None or s > best_s:
                     best_t, best_s, best_kill = e.get("index"), s, killed
                     _winner_rem = _rem_cost
+                    _winner_damp = _damp_add
                     why = f"可击杀{e['name']}" if killed else (
                         f"自我强化体优先转火：{e['name']}（力量+{scaler_stack:.0f}，"
                         f"拖越久打越痛）" if scaler_stack > 0 else (
@@ -6009,6 +6030,12 @@ class Policy:
                         _sg_pass_blk = 0.0
                     why += (f"｜沉睡目标攻击放行：牌面{float(total):g}≤敌甲"
                             f"{_sg_pass_blk:g}不唤醒（SLEEP_GUARD_PASS_OBS）")
+            # 换线阻尼中标留痕（FOCUS_DRIFT_DAMP）：阻尼分加到了最终胜者身上
+            # 才披露，供后续批次直接计数杠杆在产频率；与 FOCUS_DRIFT_OBS 互斥
+            # （阻尼只加给记忆目标，漂移注只在偏离记忆时显形）。
+            if _winner_damp > 0.0 and best_t is not None:
+                why += (f"｜换线阻尼+{_winner_damp:.1f}（教义在场延续集火记忆，"
+                        "FOCUS_DRIFT_DAMP）")
             # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
             # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
             # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合

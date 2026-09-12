@@ -5857,6 +5857,67 @@ def main() -> int:
         sl_pol.know.policy["focus_drift_obs"] = True
         sl_pol._focus_index = None
 
+    # 3fdd) FOCUS_DRIFT_DAMP 换线阻尼（第813~829局批复盘）：旧粘性在教义在场时
+    # 整体休眠，CRUSHER+ROCKET 型双强化体互拉评分零制衡（817/829 同型 F33
+    # 阵亡、本批漂移注 17 次）。① 边际互拉被阻尼按住：记忆=甲、乙力量 3 层
+    # （教义拉力 8×3/7≈3.43<阻尼 4.0）——甲中标、阻尼注显形、无漂移注、
+    # 记忆不漂；② 强拉力仍可换线：乙力量 7 层（+8.0>4.0）——乙中标、漂移注
+    # 照常显形、阻尼注不挂（胜者没吃阻尼）、记忆更新；③ focus_drift_damp=0
+    # 严格回滚：同①场景乙中标、漂移注显形；④ 无教义战斗零变化：旧粘性
+    # 延续集火中标、阻尼注不显形。
+    def sl_str_enemy(amount, **kw):
+        e = sl_enemy(**kw)
+        e["powers"] = [{"power_id": "STRENGTH_POWER", "name": "力量",
+                        "amount": amount, "is_debuff": False}]
+        return e
+
+    sl_pol._focus_index = 0
+    fdd_enemies = [
+        sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+        sl_str_enemy(3, hp=80, layers=None, index=1, intent=5, name="乙"),
+    ]
+    fdd_card = dict(sl_strike, valid_target_indices=[0, 1])
+    _, fdd_t1, fdd_w1 = sl_pol._score_play(
+        dict(fdd_card), [dict(e) for e in fdd_enemies], 0, 0, 2,
+        sl_pol.know.policy, my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fdd_t1 == 0 and sl_pol._focus_index == 0 \
+            and "FOCUS_DRIFT_DAMP" in fdd_w1 and "FOCUS_DRIFT_OBS" not in fdd_w1, \
+        f"边际互拉未被阻尼按住或注记错误: target={fdd_t1} why={fdd_w1}"
+    sl_pol._focus_index = 0
+    _, fdd_t2, fdd_w2 = sl_pol._score_play(
+        dict(fdd_card), [
+            sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+            sl_str_enemy(7, hp=80, layers=None, index=1, intent=5, name="乙"),
+        ], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fdd_t2 == 1 and sl_pol._focus_index == 1 \
+            and "FOCUS_DRIFT_OBS" in fdd_w2 and "FOCUS_DRIFT_DAMP" not in fdd_w2, \
+        f"强教义拉力应照常换线且漂移注保留: target={fdd_t2} why={fdd_w2}"
+    sl_pol.know.policy["focus_drift_damp"] = 0
+    try:
+        sl_pol._focus_index = 0
+        _, fdd_t3, fdd_w3 = sl_pol._score_play(
+            dict(fdd_card), [dict(e) for e in fdd_enemies], 0, 0, 2,
+            sl_pol.know.policy, my_hp=80, my_max_hp=80, cur_energy=3,
+            run_deck=[])
+        assert fdd_t3 == 1 and "FOCUS_DRIFT_OBS" in fdd_w3 \
+                and "FOCUS_DRIFT_DAMP" not in fdd_w3, \
+            f"focus_drift_damp=0 未严格回滚: target={fdd_t3} why={fdd_w3}"
+    finally:
+        sl_pol.know.policy["focus_drift_damp"] = 4.0
+        sl_pol._focus_index = None
+    sl_pol._focus_index = 0
+    _, fdd_t4, fdd_w4 = sl_pol._score_play(
+        dict(fdd_card), [
+            sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+            sl_enemy(hp=80, layers=None, index=1, intent=5, name="乙"),
+        ], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fdd_t4 == 0 and "延续集火" in fdd_w4 \
+            and "FOCUS_DRIFT_DAMP" not in fdd_w4, \
+        f"无教义战斗阻尼应整体休眠: target={fdd_t4} why={fdd_w4}"
+    sl_pol._focus_index = None
+
     # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
     # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——
