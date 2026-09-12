@@ -11326,3 +11326,14 @@
 - 当前低价值卡牌：BULLY(10分/2.5237370092274403局)，HAVOC(11分/2.01898960738195局)，STRIKE_IRONCLAD(12分/6.5617162239913505局)
 - 策略进化：elite_grey_safety_mult: 1.80 → 2.00（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1430 胜，当前目标进阶 0
+
+## 第 1431 局复盘（2026-09-12 23:54）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：MOLTEN_FIST, EVIL_EYE, RAMPAGE, HEMOKINESIS, TAUNT, THUNDERCLAP, CINDER, CINDER
+- 本局遗物：AKABEKO, INTIMIDATING_HELMET, FESTIVE_POPPER
+- 战斗记录：F6 Monster战 掉血0; F8 Unknown战 掉血8｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血18｜自损4（可行动段4/非行动段20，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血9｜自损4（可行动段4/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F15 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血75｜自损2（可行动段2/非行动段71，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.783612439597138局)，PACTS_END(25分/89.42790410797423局)，OFFERING(24分/23.161362449374398局)，PERFECTED_STRIKE(24分/4.751840517049867局)，MANGLE(24分/75.44067354563313局)
+- 当前低价值卡牌：BULLY(10分/2.5149039296951443局)，HAVOC(11分/2.011923143756113局)，STRIKE_IRONCLAD(12分/6.538750217207381局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1431 胜，当前目标进阶 0
