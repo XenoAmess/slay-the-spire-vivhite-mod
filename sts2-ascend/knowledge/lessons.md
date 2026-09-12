@@ -11337,3 +11337,14 @@
 - 当前低价值卡牌：BULLY(10分/2.5149039296951443局)，HAVOC(11分/2.011923143756113局)，STRIKE_IRONCLAD(12分/6.538750217207381局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1431 胜，当前目标进阶 0
+
+## 第 1432 局复盘（2026-09-13 00:31）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SWORD_BOOMERANG, FIGHT_ME, CINDER, HEMOKINESIS, FLAME_BARRIER, SHRUG_IT_OFF, CINDER, DRAMATIC_ENTRANCE, MOLTEN_FIST, BLUDGEON, MOLTEN_FIST, HEMOKINESIS
+- 本局遗物：ORNAMENTAL_FAN
+- 战斗记录：F6 Monster战 掉血21; F7 Unknown战 掉血0; F11 Monster战 掉血0; F14 Monster战 掉血1; F15 Monster战 掉血7; F17 Boss战 掉血59｜自损4（可行动段4/非行动段64，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(25分/4.766869796058549局)，PACTS_END(25分/89.11490644359633局)，OFFERING(24分/23.08029768080159局)，PERFECTED_STRIKE(24分/4.735209075240193局)，MANGLE(24分/75.17663118822342局)
+- 当前低价值卡牌：BULLY(10分/2.5061017659412115局)，HAVOC(11分/2.004881412752967局)，STRIKE_IRONCLAD(12分/6.515864591447156局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1432 胜，当前目标进阶 0
