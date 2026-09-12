@@ -1991,3 +1991,83 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 739~743 局批复盘：沙坑续命牌价值失明——狂乱逃离出牌计价与弃出闸（FRANTIC_ESCAPE_CLOCK_VALUE / SANDPIT_FRANTIC_DISCARD_GUARD）
+
+日期：2026-09-12
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：狂乱逃离（FRANTIC_ESCAPE）在无厌沙虫（THE_INSATIABLE）
+  沙坑时钟战中的「+1 存活回合」价值对出牌评分与弃牌排序完全不可见。
+  原生实证（v0.111.0 mechanics/cards.jsonl + powers.jsonl）：FranticEscape
+  （Status/1 费/Self）OnPlay → 目标 SandpitPower 计数 +1
+  （PowerCmd.ModifyAmount 1m），且本场耗能 +1 递增；SandpitPower 每个
+  敌方回合开始 -1，归零移除时 CreatureCmd.Kill(force) 强制吞噬——一条
+  与 HP/格挡完全无关的死亡钟。时钟封底战中一张狂乱逃离 = 一个完整
+  行动回合（输出+抽牌），但 Status 身份在弃牌 badness 里吃 90 分永远
+  第一个被弃，能力牌桶在 KILL_RACE_LONGFIGHT_OFF 撤账后只给 3.7~5.7
+  分使其在时钟将尽时被判「无值得出」。每弃/拒一张 = 直接少活一回合、
+  少一回合输出。
+- **EVIDENCE**：本批 5 局全负于 F33 Boss，其中 2 局死于无厌沙虫（生涯
+  #2 死因 29.15 死）。739 局 F33 实战 6 回合阵亡：战斗弃牌链
+  07:15:51/07:16:06/07:16:07/07:16:17/07:16:18/07:16:39/07:16:40 连续
+  7 次以「弃掉当前最无价值牌」弃出狂乱逃离（hp 73→67→37→18 一路弃），
+  07:16:19 时钟=2 时投影「击杀需4回合>可存活2回合（实测36伤/回合）」
+  ——若 7 张续命牌留手逐回合打出（费用 1/2/3…递增），存活视界可达
+  6+ 回合，ttk=4 在续命口径内可达，弃牌直接葬送可赢局。743 局 F33
+  实战 7 回合阵亡：08:24:30 弃掉 1 张狂乱逃离；08:25:02 时钟=2、我方
+  14 血时手握狂乱逃离被判「评估后无值得出的牌（负空间✓,狂乱逃离✗）」，
+  下一回合被强制吞噬——拒出即少活一回合。竞速台账判死后获胜
+  406/1006（40%）与「狂乱逃离续命不计入保守账」的沙坑封底方向一致
+  （封底口径本批不改，仅计价端补盲）。
+- **EXPECTED_SIGNAL**：未来 3~10 局无厌沙虫战——① 出牌留痕显形
+  「沙坑续命+1回合（…FRANTIC_ESCAPE_CLOCK_VALUE）」，时钟≤2 的
+  非致死回合狂乱逃离得分 12 压过低值能力牌/溢出格挡被打出；② 战斗
+  弃牌/献祭留痕中狂乱逃离不再以「最无价值」身份出现（沙坑计数可见
+  时）；③ 无沙坑功率的战斗出牌与弃牌零差异。证伪/撤回：若 3+ 局
+  沙虫战续命牌被保留/打出后存活回合与结局无任何变化（续命口径同样
+  全败），说明瓶颈在输出而非续命，撤回=sandpit_frantic_play_value=0
+  且 sandpit_frantic_discard_guard=False（双键一键回滚，旧口径零
+  差异），并删除 3fe 夹具。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：新增 _is_frantic_escape（id/name 双通道
+  识别）；_score_play 能力牌桶前新增沙坑续命计价分支——非致死回合且
+  敌持沙坑计数可见时，狂乱逃离按 pol["sandpit_frantic_play_value"]
+  （默认 12.0）固定计价并留痕 FRANTIC_ESCAPE_CLOCK_VALUE（致死回合
+  HP 死亡不由时钟续命，保持旧分支竞争格挡/斩杀；0 费牌 free_card_bonus
+  照常）；_card_selection 的 badness 新增弃出闸——沙坑计数可见且
+  sandpit_frantic_discard_guard 为 True 时狂乱逃离 badness=-100 移出
+  「最无价值」候选（全候选皆续命牌时仍在同价中弃出，不堵死必选屏；
+  献祭 tribute 与白绮弃牌两路径共用 badness 同闸覆盖）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  sandpit_frantic_play_value=12.0 与 sandpit_frantic_discard_guard=True，
+  注释登记 739/743 局实证与回滚语义（0/False 一键回滚旧口径零差异）。
+- sts2-ascend/brain/selfcheck.py：新增 3fe 六分支——① 时钟=2 在场
+  按 12.0 计价并留痕；② 无沙坑功率回退能力牌桶（无注记）；③
+  play_value=0 严格回滚（与无沙坑同分）；④ 致死回合保持旧分支无
+  注记；⑤ 弃牌屏沙坑在场改弃未升级基础打击、续命牌保留；⑥
+  discard_guard=False 恢复 Status 90 最先弃出。
+- 不改沙坑封底口径（SANDPIT_EAT_CLOCK_CAP 保守账逐字不动）、竞速
+  判决、门带公式与任何其他旋钮；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fe 六
+  分支；既有 3sec 沙坑封底族、3br-slip-tax/3br-slip-margin 滑溜税族、
+  3krlf 长战撤账族、3prg2 謦欬回收族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+62，识别助手+计价分支+弃出闸）、
+  brain/knowledge.py（+13，双静态键+注释）、
+  brain/selfcheck.py（+89，3fe 六分支）；未触碰只读在线状态；克隆
+  残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入
+  commit。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

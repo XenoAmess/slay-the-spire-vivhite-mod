@@ -5997,6 +5997,38 @@ class Policy:
                 f"手牌滞留税牌（打出即清零{_tax_save}/回合滞留税，"
                 "HAND_TAX_PLAY_PRICING）")
 
+        # 沙坑续命牌计价（FRANTIC_ESCAPE_CLOCK_VALUE，第 739~743 局批复盘新增，
+        # 静态键）：无厌沙虫时钟战中狂乱逃离（FRANTIC_ESCAPE）打出即目标沙坑
+        # 计数 +1（原生 OnPlay→PowerCmd.ModifyAmount 1m，本场耗能递增）——一张
+        # =一个完整行动回合（输出+抽牌），与 HP/格挡无关的死亡钟前最贵的资源。
+        # 通用能力牌桶在 KILL_RACE_LONGFIGHT_OFF 撤账后只给 3.7~5.7 分：743 局
+        # F33 时钟=2、我方 14 血时手握狂乱逃离被判「无值得出」（狂乱逃离✗），
+        # 下一回合即被强制吞噬；739 局 F33 同战弃牌端连弃 7 张（见
+        # _card_selection 弃出闸 SANDPIT_FRANTIC_DISCARD_GUARD）。沙坑计数可见
+        # 且本回合非致死（致死回合 HP 死亡不由时钟续命，保持旧分支竞争格挡/
+        # 斩杀）时按固定续命价计价；计数不可见或键=0 严格回滚旧能力牌口径
+        # （零差异）。
+        if not lethal and self._is_frantic_escape(card):
+            _frantic_clock = 0.0
+            for _fe_e in enemies:
+                if isinstance(_fe_e, dict):
+                    _frantic_clock = max(
+                        _frantic_clock,
+                        self._enemy_power_stack(_fe_e, "sandpit", "沙坑"))
+            if _frantic_clock > 0.0:
+                try:
+                    _frantic_value = max(0.0, float(
+                        pol.get("sandpit_frantic_play_value", 12.0) or 0.0))
+                except (TypeError, ValueError):
+                    _frantic_value = 0.0
+                if _frantic_value > 0.0:
+                    score = _frantic_value
+                    if cost == 0:
+                        score += pol["free_card_bonus"]
+                    return score, None, (
+                        f"沙坑续命+1回合（时钟{_frantic_clock:g}归零即被强制吞噬，"
+                        "打出即+1，FRANTIC_ESCAPE_CLOCK_VALUE）")
+
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
         # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足
         # （撕裂族需要自残源）时，长战复利根本不存在——旧评分仍按
@@ -6195,6 +6227,15 @@ class Policy:
     def _enemy_asleep_stack(self, enemy: dict) -> float:
         """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "asleep", "沉睡")
+
+    def _is_frantic_escape(self, card: dict) -> bool:
+        """狂乱逃离（FRANTIC_ESCAPE）识别：无厌沙虫 Liquify 灌注的沙坑续命
+        状态牌，原生 OnPlay 令目标沙坑计数 +1（本场耗能递增）。id/name 双
+        通道，无法识别时保持旧行为（返回 False）。"""
+        cid = str(card.get("card_id") or card.get("id") or "").upper().rstrip("+")
+        if cid == "FRANTIC_ESCAPE":
+            return True
+        return "狂乱逃离" in str(card.get("name") or "")
 
     def _kill_bonus(self, enemy: dict, threat: float, incoming: float, pol: dict,
                     ignore_respawn: bool = False) -> float:
@@ -8283,10 +8324,31 @@ class Policy:
                     str(c.get("name") or c.get("card_id")) for c in _cooled_out)
                 + "（UI_OPTION_COOLDOWN_SUPPRESSED）")
 
+        # 沙坑时钟读数（SANDPIT_FRANTIC_DISCARD_GUARD 用，第 739~743 局批复盘）：
+        # 战斗内子选屏的 state 载荷带 combat.enemies；不可见时保持 0（闸不生效）。
+        _sel_sandpit_clock = 0.0
+        for _e in ((state.get("combat") or {}).get("enemies") or []):
+            if isinstance(_e, dict) and _e.get("is_alive", True):
+                _sel_sandpit_clock = max(
+                    _sel_sandpit_clock,
+                    self._enemy_power_stack(_e, "sandpit", "沙坑"))
+
         def badness(c, for_removal=False):
             t = card_type(c).lower()
             if t == "curse":
                 return 100
+            # 沙坑续命牌弃出闸（SANDPIT_FRANTIC_DISCARD_GUARD，第 739~743 局批复盘，
+            # 静态键）：无厌沙虫时钟战中狂乱逃离=+1 存活回合，而 Status 身份在
+            # badness 里吃 90 分永远第一个被弃——739 局 F33 无厌沙虫战弃牌链
+            # 07:15:51~07:16:40 连弃 7 张狂乱逃离（hp 73→18）后 T6 被强制吞噬，
+            # 每张都是一整个行动回合。沙坑计数可见时把它移出「最无价值」候选
+            # （真无其他候选时仍会在同价中弃出，不堵死必选屏）；计数不可见或
+            # 键=False 严格回滚旧口径（零差异）。
+            if (_sel_sandpit_clock > 0.0
+                    and bool(self.know.policy.get(
+                        "sandpit_frantic_discard_guard", True))
+                    and self._is_frantic_escape(c)):
+                return -100.0
             if t == "status":
                 return 90
             if self._is_basic_strike(c) and not c.get("upgraded"):

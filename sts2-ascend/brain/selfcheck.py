@@ -12970,6 +12970,95 @@ def main() -> int:
             and "斩杀竞速投影" not in d_sec3.reason), \
         f"键=False 未回滚旧口径: {d_sec3.action}（{d_sec3.reason}）"
 
+    # 3fe) 沙坑续命牌计价与弃出闸（FRANTIC_ESCAPE_CLOCK_VALUE /
+    #      SANDPIT_FRANTIC_DISCARD_GUARD，第 739~743 局批复盘）：无厌沙虫时钟战中
+    #      狂乱逃离打出即目标沙坑计数+1=一个完整行动回合，但 Status 身份在弃牌端
+    #      吃 90 分最先被弃（739 局 F33 弃牌链连弃 7 张、hp 73→18 后 T6 被强制
+    #      吞噬），能力牌桶在 KILL_RACE_LONGFIGHT_OFF 撤账后只给 3.7~5.7 分
+    #      （743 局 F33 时钟=2、14 血手握狂乱逃离被判「无值得出」下一回合阵亡）。
+    #      ① 出牌：时钟=2 在场按固定续命价 12 计价并留痕；② 无沙坑功率：回退
+    #      能力牌桶（零差异无注记）；③ play_value=0：沙坑在场也严格回滚能力牌
+    #      桶；④ 致死回合：HP 死亡不由时钟续命，保持旧分支；⑤ 弃牌：沙坑在场
+    #      时狂乱逃离不再按 Status 90 最先弃出（改弃未升级基础打击）；⑥
+    #      discard_guard=False：恢复 Status 90 最先弃出（零差异）。
+    vknow_fe = _vivhite_know("sts2-selfcheck-fe-")
+    vpol_fe = policy.Policy(vknow_fe, random.Random(13))
+    fe_escape = {"index": 0, "card_id": "FRANTIC_ESCAPE", "name": "狂乱逃离",
+                 "playable": True, "energy_cost": 1, "requires_target": False,
+                 "rules_text": "远离。 将沙坑的计数加1。 这张牌的耗能加1。"}
+    fe_enemy = {"index": 0, "enemy_id": "THE_INSATIABLE", "name": "无厌沙虫",
+                "current_hp": 200, "max_hp": 321, "block": 0, "is_alive": True,
+                "is_hittable": True,
+                "powers": [{"id": "SANDPIT_POWER", "amount": 2}],
+                "intents": [{"total_damage": 16}]}
+    fe_enemy_nosp = dict(fe_enemy, powers=[])
+    s_fe_on, _, why_fe_on = vpol_fe._score_play(
+        dict(fe_escape), [fe_enemy], 16, 9, 6, vpol_fe.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=1, kill_race=True, run_deck=[])
+    assert abs(s_fe_on - 12.0) < 1e-9 \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" in (why_fe_on or ""), \
+        f"沙坑在场续命牌未按固定续命价计价: {s_fe_on}（{why_fe_on}）"
+    s_fe_nosp, _, why_fe_nosp = vpol_fe._score_play(
+        dict(fe_escape), [fe_enemy_nosp], 16, 9, 6, vpol_fe.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=1, kill_race=True, run_deck=[])
+    assert "能力/增益牌" in (why_fe_nosp or "") \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fe_nosp or "") \
+        and abs(s_fe_nosp - 12.0) > 1e-9, \
+        f"无沙坑功率时未回退能力牌桶: {s_fe_nosp}（{why_fe_nosp}）"
+    vknow_fe0 = _vivhite_know("sts2-selfcheck-fe0-")
+    vknow_fe0.policy["sandpit_frantic_play_value"] = 0.0
+    vpol_fe0 = policy.Policy(vknow_fe0, random.Random(13))
+    s_fe_off, _, why_fe_off = vpol_fe0._score_play(
+        dict(fe_escape), [fe_enemy], 16, 9, 6, vpol_fe0.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=1, kill_race=True, run_deck=[])
+    assert abs(s_fe_off - s_fe_nosp) < 1e-9 \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fe_off or ""), \
+        f"play_value=0 未严格回滚能力牌桶: {s_fe_off}（{why_fe_off}）"
+    s_fe_lethal, _, why_fe_lethal = vpol_fe._score_play(
+        dict(fe_escape), [fe_enemy], 50, 0, 6, vpol_fe.know.policy,
+        my_hp=14, my_max_hp=80, cur_energy=1, kill_race=True, run_deck=[])
+    assert "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fe_lethal or ""), \
+        f"致死回合 HP 死亡不应由时钟续命计价: {s_fe_lethal}（{why_fe_lethal}）"
+    fe_sel_cards = [
+        dict(fe_escape, card_type="Status"),
+        {"index": 1, "card_id": "FE_SKILL", "name": "闭合护盾",
+         "card_type": "Skill", "energy_cost": 1,
+         "rules_text": "获得9点格挡。",
+         "dynamic_values": [{"name": "Block", "current_value": 9}]},
+        {"index": 2, "card_id": "STRIKE_VIVHITE", "name": "打击",
+         "card_type": "Attack", "energy_cost": 1, "upgraded": False,
+         "dynamic_values": [{"name": "Damage", "current_value": 6}]}]
+
+    def fe_sel_state():
+        return {"screen": "CARD_SELECTION",
+                "available_actions": ["select_deck_card"],
+                "selection": {"kind": "combat_hand_select",
+                              "prompt": "选择一张牌弃掉。",
+                              "min_select": 1, "selected_count": 0,
+                              "can_confirm": False,
+                              "cards": [dict(c) for c in fe_sel_cards]},
+                "combat": {"player": {"current_hp": 40, "max_hp": 80, "block": 0,
+                                      "energy": 3},
+                           "enemies": [dict(fe_enemy)]},
+                "run": {"current_hp": 40, "max_hp": 80, "gold": 0, "floor": 33,
+                        "deck": []}}
+
+    fe_ctx = DummyCtx()
+    fe_ctx.credit_tags = []
+    d_fe_keep = vpol_fe.decide(fe_sel_state(), fe_ctx)
+    assert d_fe_keep.params.get("option_index") == 2 \
+        and "战斗弃牌" in d_fe_keep.reason, \
+        f"沙坑在场时续命牌不应最先被弃（应弃未升级基础打击）: {d_fe_keep.reason}"
+    vknow_feg = _vivhite_know("sts2-selfcheck-feg-")
+    vknow_feg.policy["sandpit_frantic_discard_guard"] = False
+    vpol_feg = policy.Policy(vknow_feg, random.Random(13))
+    fe_ctx_rb = DummyCtx()
+    fe_ctx_rb.credit_tags = []
+    d_fe_rb = vpol_feg.decide(fe_sel_state(), fe_ctx_rb)
+    assert d_fe_rb.params.get("option_index") == 0 \
+        and "战斗弃牌" in d_fe_rb.reason, \
+        f"discard_guard=False 未恢复 Status 90 最先弃出: {d_fe_rb.reason}"
+
     # 3pcap) 出牌硬上限抑制换挡上浮（RACE_PLAY_CAP_NO_UPSHIFT，第1404~1408局
     #      批复盘）：1408-F17 仪式兽 T6/T9 玩家带 RINGING_POWER（昏眩，本回合
     #      限打1张，首牌后全手牌 blocked_by_hook），竞速投影仍叠加

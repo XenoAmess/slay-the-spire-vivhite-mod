@@ -619,9 +619,19 @@ DEFAULT_POLICY = {
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，
                                # 第1349~1355局批复盘）；False 关闭全部留痕
     "sandpit_eat_clock_cap": True,  # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘，静态键）：
-                                   # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
-                                   # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。
-                                   # False 一键回滚旧口径（零差异）
+                                    # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
+                                    # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。
+                                    # False 一键回滚旧口径（零差异）
+    "sandpit_frantic_play_value": 12.0,  # 沙坑续命牌出牌计价（FRANTIC_ESCAPE_CLOCK_VALUE，第739~743局批复盘，
+                                    # 静态键）：狂乱逃离打出即目标沙坑计数+1=一个完整行动回合，通用能力牌桶在
+                                    # KILL_RACE_LONGFIGHT_OFF 撤账后只给3.7~5.7分——743局F33时钟=2、14血手握
+                                    # 狂乱逃离被判「无值得出」下一回合被强制吞噬。沙坑计数可见且非致死回合
+                                    # 按此固定价计价；0 一键回滚旧能力牌口径（零差异）
+    "sandpit_frantic_discard_guard": True,  # 沙坑战狂乱逃离弃出闸（SANDPIT_FRANTIC_DISCARD_GUARD，第739~743局
+                                    # 批复盘，静态键）：战斗弃牌/献祭的 badness 把 Status 一律计 90 分最先弃出
+                                    # ——739局F33无厌沙虫战连弃7张狂乱逃离（hp 73→18）后T6阵亡，每张=一整个
+                                    # 行动回合。沙坑计数可见时续命牌移出「最无价值」候选（badness=-100）；
+                                    # False 一键回滚旧口径（零差异）
     "end_turn_settle_recovery_ticks_boss": 40,  # BOSS_SETTLE_TIER3: Boss-only settle recovery budget.
     "end_turn_settle_recovery_ticks_lethal": 50,  # LETHAL_SETTLE_EXTENSION: lethal Boss settle windows get a bounded final 10-tick extension.
     "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）
