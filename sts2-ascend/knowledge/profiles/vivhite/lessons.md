@@ -9192,3 +9192,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.501592330262942局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.2493266922306505局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/29.649635112852472局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.002）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.39 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.001）；block_safety: 2.08 → 2.07（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/832 胜，当前目标进阶 1
+
+## 第 833 局复盘（2026-09-13 06:41）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER, THRUMMING_HATCHET, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_SUCCESSOR_FORMULA
+- 本局遗物：ETERNAL_FEATHER, STONE_CRACKER, BOWLER_HAT
+- 战斗记录：F8 Monster战 掉血0｜自损4（可行动段4/非行动段5，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血0｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血16｜自损8（可行动段8/非行动段16，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血12｜自损8（可行动段8/非行动段18，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血71｜自损29（可行动段29/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：OMNISLICE(37分/7.9189793759210705局)，HAND_OF_GREED(36分/8.108939396862135局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/8.946368015504854局)，CINDER(35分/2.8537698608457576局)，THRUMMING_HATCHET(34分/10.25764184333159局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.482336757107022局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.2379540488078433局)，VIVHITE_CARD_CONVERGENCE_VERDICT(23分/30.54586138995749局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：1/833 胜，当前目标进阶 1
