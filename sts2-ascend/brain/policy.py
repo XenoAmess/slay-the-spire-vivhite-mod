@@ -746,7 +746,6 @@ class Policy:
         # 敌方血池/火力观测（第 138~141 批复盘）：本场学习样本，结算时经 agent 入库，
         # 供地图端 Boss 攻坚投影与 Boss 前夜篝火决策使用
         self._vit_pool_max = 0.0    # 本场观测到的敌方总血池最大值（非召唤杂兵 max_hp 合计）
-        self._vit_pool_last = 0.0   # 最近 tick 存活敌人 current_hp 合计（RACE_DEATH_POOL_OBS，第 873~899 局批复盘）
         self._vit_fire_sum = 0.0    # 本场逐轮原始意图总伤累计（格挡前口径）
         self._vit_fire_rounds = 0   # 火力采样轮数
         self._vit_combat = None     # 战斗实例身份（观测采样隔离用，第 214 批补全写入侧）
@@ -3937,7 +3936,6 @@ class Policy:
             if self._vit_combat is not ctx.combat:
                 self._vit_combat = ctx.combat
                 self._vit_pool_max = 0.0
-                self._vit_pool_last = 0.0
                 self._vit_fire_sum = 0.0
                 self._vit_fire_rounds = 0
                 self._vit_round_seen = None
@@ -3946,22 +3944,11 @@ class Policy:
                            if e.get("is_alive"))
                 if pool > 0.0:
                     self._vit_pool_max = pool
-            # RACE_DEATH_POOL_OBS（第 873~899 局批复盘）：逐 tick 采存活敌人
-            # current_hp 合计，agent 阵亡结算时披露「阵亡残血池≈N/池M」——
-            # 873~899 批 27 连负 Boss 战竞速审计判死全部实战兑现（T2/T3 判死→
-            # 4~13 回合阵亡），但战斗记录只留掉血/自损，无法区分「差一口气」
-            # （残池占比小 → 斩杀端加码）与「结构性竞速不可能」（残池占比大 →
-            # 判死后停止无效自付/路径端更早弃疗换战力）。纯观测，不参与任何
-            # 评分分支；race_death_pool_obs=False 只关结算披露，采样照留。
-            self._vit_pool_last = sum(
-                float(e.get("current_hp", 0) or 0)
-                for e in combat.get("enemies", []) if e.get("is_alive"))
             if self._vit_round_seen != round_no:
                 self._vit_round_seen = round_no
                 self._vit_fire_sum += float(incoming)
                 self._vit_fire_rounds += 1
             ctx.combat["obs_hp_pool"] = self._vit_pool_max
-            ctx.combat["obs_hp_left"] = self._vit_pool_last
             ctx.combat["obs_fire_sum"] = self._vit_fire_sum
             ctx.combat["obs_fire_rounds"] = self._vit_fire_rounds
 
