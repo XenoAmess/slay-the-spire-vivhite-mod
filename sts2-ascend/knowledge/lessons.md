@@ -11689,3 +11689,14 @@
 - 当前低价值卡牌：BULLY(10分/2.24799373556352局)，STRIKE_IRONCLAD(12分/5.844783712465158局)，BASH(14分/4.945586218239746局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1463 胜，当前目标进阶 0
+
+## 第 1464 局复盘（2026-09-14 05:09）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：SHRUG_IT_OFF, SHRUG_IT_OFF, CINDER, TRUE_GRIT, JUGGLING, CINDER, SPITE, BLUDGEON, UNRELENTING, BREAKTHROUGH, DEMON_FORM, PILLAGE, STOMP, BREAKTHROUGH, HOWL_FROM_BEYOND
+- 本局遗物：INTIMIDATING_HELMET
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血35｜竞速审计：T3判死→实战9回合获胜; F19 Monster战 掉血3; F21 Monster战 掉血11; F22 Monster战 掉血40｜自损1（可行动段1/非行动段45，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血26｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.4275143878019834局)，PACTS_END(25分/81.50612697807941局)，OFFERING(24分/20.63075411698634局)，PERFECTED_STRIKE(24分/4.2326548589129755局)，MANGLE(24分/68.1534758323887局)
+- 当前低价值卡牌：BULLY(10分/2.240125757489048局)，STRIKE_IRONCLAD(12分/5.82432696947153局)，BASH(14分/4.928276666475907局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.35 → 0.37（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.07 → 2.06（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1464 胜，当前目标进阶 0
