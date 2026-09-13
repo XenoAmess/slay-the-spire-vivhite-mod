@@ -10281,3 +10281,133 @@ retry_resolution: none (no replay target; local production behavior fix)
    核对；⑤ 竞速台账 437/974 走向；⑥ ENEMY_INTANGIBLE_CAP_OBS/
    SLEEP_GUARD_PASS_OBS/BARRICADE_BANK_VALUE 首发续盯；⑦ AOE 对喷发
    携带者的斩杀框架现场。
+
+# 2026-09-14｜第 1459~1465 局复盘（异步追及队列 7 局 exact_batch 全败；观测落地 ×1：RACE_FLIP_PYRRHIC_OBS 惨胜翻盘影子分账——表观翻盘率与真误报率分账，waiver/heal 双闸消费口径留待真账裁决）
+
+retry_resolution: none (no replay target; local production observability addition)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：race_audit 表观翻盘率（won/latched≈45%，贴 30%~46% 带上限）
+  被「惨胜翻盘」灌水——判死后获胜但单场掉血 ≥40% 最大生命的胜利，实质佐证
+  判死（该场战斗确为 run-losing），却以「误报」身份计入 won，驱动
+  RACE_AUDIT_DOOM_WAIVER_GATE / RACE_AUDIT_HEAL_OVERRIDE 放宽前夜裁决；
+  剔除惨胜后的真误报率可能显著低于表观值。
+- **EVIDENCE**：1461（0UFKAM7PWGAE）F6 缩小甲虫+毛绒伏地虫战「竞速审计：
+  T3判死→实战6回合获胜」，掉血37（61→24，最大生命80 → 46%），紧接 F8 普通战
+  以 24 血进场、全候选死亡投影强制接战、T3判死→实战7回合阵亡——惨胜直接兑现
+  判死的 run-losing 预言；1464（BHBHKN9YC4Y2）F17 Boss 战「T3判死→实战9回合
+  获胜」掉血35（≈44% of 80），F22/F23 连掉 40+26 阵亡；本批 7 场非翻盘胜利场
+  掉血 0~23（≤29% of 80），与翻盘场 35/37 清晰分层；race_audit 台账（stats）
+  仅 won/died/esc 分桶，无惨胜维度，双闸消费的是含惨胜的表观翻盘率。
+- **EXPECTED_SIGNAL**：未来 3~10 局 stats.race_audit.won_pyrrhic 读数 +
+  战斗记录「（惨胜：掉血N≥40%最大生命，RACE_FLIP_PYRRHIC_OBS）」注记逐字首发；
+  复盘可计算真误报率 (won−won_pyrrhic)/latched 与 30%~46% 带对照；判决、评分、
+  台账消费口径零变化。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1459..1465]，exact 7/7、missing=0；7 局全败（生涯 0/1465，
+  进阶 0）。死亡分布：一幕 Boss F17 五局（1459/1462/1463/1465 + 1460）、
+  F8 普通战一局（1461）、F23 二幕走出一局（1464，一幕 Boss 实战击败）。
+- 主样 1465（AXB4D98660ZL）packet 保留 114 条切片 + 聚合表（play_card 70/
+  end_turn 22）；runs 全文 206 条已核读：F17 瀑布巨兽 T1~T11 全链——
+  蒸汽喷发 99 层在账时「死亡将被拦截转自爆相，击杀口径撤销
+  （STEAM_ERUPTION_KILL_VETO_OBS）」逐字在产，无敌帧期（HP=999999993）
+  攻击全体弃出、能量转格挡（T9 双防御 12 甲），T10 以 16 血/12 甲对意图 39
+  数学必死——上批行为化机制真机首发即按设计兑现，执行层零新缺陷。
+- 部署时序：RACE_FLIP_PYRRHIC_OBS 为本批新落地，不覆盖本批任何对局
+  （1461/1464 的惨胜现场为 pre-fix 口径，即本批立项的证据本身），
+  证据与观测无时序混淆。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口（设计内终态，不重复立案）**。5 场 F17 Boss
+   判死全部实战兑现（T2×3/T4/T5 判死→7~11 回合阵亡）；旋钮代谢面全顶格
+   （kill_bonus 20.00、burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成
+   上限；boss_entry_min_hp_pct 0.88 逼近上限且「入场血量非生死变量」证据
+   停止上调；kill_race_prior_eff 换向阻尼内振荡 0.35→0.37→0.36）——
+   判死缺口属既有结论，证据链停止吸收。
+2. **本批实验靶点：惨胜翻盘灌水表观翻盘率（观测落地，已立项）**。详见
+   HYPOTHESIS 与三节；表观率账的 won 分子含异质子群，属台账口径缺陷，
+   影响 waiver/heal 双闸的证据质量，不直接误判单场判决。
+3. **1461 早死链属竞速机制设计内战果**：F6 对生涯 33.4 死杀手组合
+   （FUZZY_WURM_CRAWLER+SHRINKER_BEETLE）判死后全攻惨胜（掉血37/80=46%）→
+   F7 商店删打击买突破/挑衅 → F8 全候选死亡投影下强制接战小啃兽群、
+   T3判死→T7 阵亡；地图层零可选出口（「绝境全候选死亡投影」逐字在产），
+   单点判决无误，不重复立案。
+4. **1464 F22 长战观察点**：手持恶魔形态连续 3 个结算点
+   「(3费)✗[not_enough_energy]」逐字未出，成长型组合已正确识别
+   （「斜率反转：成长型组合，解除攻击压制」在产）——3 费能力牌在判死/
+   升级账框架下的让位窗口属评分层判断，本批仅 1 场独立现场，不足
+   evidence_run_threshold=3 立项线，记入观察点续盯。
+5. **执行面核对全部在产**：1462 滑溜烧墙（打击×N 每费破层读数→破层后
+   御血术 22 全额落账，SLIPPERY_TTK_BREAK_EST 存续）、1464 F23
+   LOW_POOL_BURST_RACE_OBS 四条读数、1461 F6 REMOVAL_COST_TARGET/
+   FLIP_AUDIT 随附注记、1461 选牌审计 supply_left=+0.0
+   （CARD_BURST_PICK_AUDIT）、8 场 SELF_LOSS_PHASE_OBS 相位分账披露
+   （主账自损全部 ≤8，无 1265 型主账污染复发）。
+
+## 三、本次调整（观测落地 ×1：RACE_FLIP_PYRRHIC_OBS 惨胜翻盘影子分账）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RACE_FLIP_PYRRHIC_OBS**（race_audit 表观翻盘率被惨胜样本灌水：1461-F6 判死T3→获胜掉血37/80≈46%、紧接 F8 以 24 血进场 T3判死→T7 阵亡；1464-F17 判死T3→获胜掉血35/80≈44%；非翻盘胜利场掉血 0~23≤29% 清晰分层；台账仅 won/died/esc 分桶，waiver/heal 双闸消费含惨胜的表观率；机制先例：HAND_TAX_NOTE_DEDUP 批「注记计数是证据强度基础口径」同教义——率账分子分母的异质性同属口径失真） |
+| 代码动作 | ① brain/knowledge.py DEFAULT_POLICY 新增静态观测键 `race_flip_pyrrhic_obs: True` 与判线 `race_flip_pyrrhic_hp_frac: 0.4`（含证据与回滚注释；policy.json 零改动，缺键走默认）；② brain/agent.py 聚合账新增 `hp_start_abs`（首段入场绝对血，多段 join 保留首段值，与 hp_start_pct 配对还原最大生命）；`_flush_combat_agg` 竞速审计分支：判死→获胜且掉血 ≥ frac×还原最大生命 → `stats.race_audit.won_pyrrhic`+1，战斗记录追加「（惨胜：掉血N≥40%最大生命，RACE_FLIP_PYRRHIC_OBS）」；③ brain/selfcheck.py 3y-pyr 五锚（达线计数+注记、未达线不计、阵亡不计、缺 hp_start_abs 旧账由 3y 精确断言回锚、观测键关闭严格回滚） |
+| 性质边界 | 纯观测：won/died/esc 原账、waiver/heal 双闸消费口径、判决/评分/学习面全部零改动；入场血/最大生命不可还原（旧聚合账缺 hp_start_abs）时跳过；键=False 严格回滚（无计数无注记）；白绮策略层零改动 |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3y-pyr 新增五锚；3y/3yr/3rs/3sev/3br/3slph 等全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ① stats.race_audit.won_pyrrhic 读数及其与 won 的比值；② 战斗记录惨胜注记逐字首发；③ 真误报率 (won−won_pyrrhic)/latched 与 30%~46% 带对照（表观率当前 ≈45% 贴上限）；④ 台账 latched/won/died 走向 |
+| 继续调整条件 | won_pyrrhic ≥ won 的 20% 且 ≥3 个独立对局 → 立项把 waiver/heal 双闸改接真误报率口径（行为化另批）；won_pyrrhic≈0 连续 ≥2 批 → 假设证伪（表观翻盘率即真误报率），观测零成本保留不删 |
+| 撤回条件 | knowledge/policy.json 设 `race_flip_pyrrhic_obs: false`（无计数无注记，selfcheck 3y-pyr 回滚锚为对照）；或删 knowledge/agent/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对照
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（观测落地，非登记延后）。
+2. **竞速审计悲观率台账**：本批判死应验 +5（1459/1460/1462/1463/1465）、
+   反向 +2（1461 F6、1464 F17——均为本批立项的惨胜样本），台账
+   ≈445/989≈45% 仍带内偏上限；本批落地惨胜分账，下批起可分辨真误报率，
+   续记不动作。
+3. **STEAM_ERUPTION_KILL_VETO（1452~1458 批行为化）**：1465 F17 真机首发
+   达标——喷发 99 层在账撤销击杀口径、无敌帧期攻击弃出能量转格挡、
+   「不可击杀将自爆：剔除出竞速血池」逐字在产；死亡为数学必死非机制
+   误伤，封账保留延续。
+4. **RESPAWN_ROSTER_NATIVE_GATE（1441~1446 批行为化）**：本批多敌组合战
+   （1461/1462/1464）「全场均为已证实重生体」注记零命中，注记绝迹延续；
+   stats.respawn_native_vetoes 读数待下批 digest 对账，续记。
+5. **INVULN_TARGET_VETO**：1465 无敌帧期（HP=999999993）攻击全体弃出、
+   T8 零意图持牌空过、T9 双防御让位在产，封账保留延续。
+6. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：本批无手牌税现场
+   （注记零命中），无双拼复发条件，顺延不判失效。
+7. **LOW_POOL_BURST_RACE_OBS**：1464 F23 四条读数在产（血池40<门槛80、
+   3敌、意图22→23、我方 25/80→5/80 逐回合披露）；其预注册条件「标记样本
+   仍短战阵亡高损→评估行为闸」本批 1 场独立现场，累计待 ≥3 独立对局再
+   裁决，续记。
+8. **REMOVAL_COST_FLIP_AUDIT / KIN**：本批无 KIN 遭遇；1461 F6 缩小甲虫
+   28池≤峰值一半的 REMOVAL_COST_TARGET 加分与 FLIP_AUDIT 随附注记在产，
+   翻案口径存续，KIN 原料顺延。
+9. **SLIPPERY_TTK_BREAK_EST**：1462 全程破层读数在产（每费破层 0.00~2.50、
+   ttk 未扣破层期），破层后全额伤害落账，续记。
+10. **SELF_LOSS_PHASE_OBS / HP_COST_ATK_PRICING**：本批 8 场相位分账披露
+    在产，突破/御血术自付计价（半价/豁免疫价）逐字符合设计，续记。
+11. 其余积案（SLEEP_GUARD_PASS_OBS / BARRICADE_BANK_VALUE /
+    EXHAUST_FIZZLE_EXEMPT / PANIC_BUTTON / PANTOGRAPH /
+    ENGINE_COMMIT_LOWHP_DISCOUNT / SETTLE_TIMEOUT_CONCEDE_OBS 等）：
+    本批无对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **率账分子的异质子群要在观测位注册时预问**：won/latched 这类二元台账
+   一旦喂给行为闸（waiver/heal），「won 里有没有其实佐证原判的子群」就是
+   口径问题而非统计细节——本批两场翻盘均为惨胜型，表观 45% 贴上限的读数
+   在分账前不能直接当误报率用。
+2. **翻盘证据必须连同代价一起入账**：判死→获胜掉血 46% 且下一战即死，
+   对「判死是否失真」是支持而非反驳证据；凡 rate 驱动的闸，分子分母
+   异质性审计应先于阈值调整。
+3. **数据配对要在落账时一次给全**：聚合账长期只有 hp_start_pct，补一个
+   hp_start_abs 字段即还原最大生命——观测位需要的数据对（pct+abs）在
+   设计时一起落账，比事后回放日志推 max_hp 便宜且无歧义。
+4. 观察点（下批复盘核对）：① won_pyrrhic 首发读数与惨胜注记逐字；
+   ② 真误报率 (won−won_pyrrhic)/latched 对账；③ 恶魔形类型 3 费能力牌
+   长战让位复发计数（1464 F22 型）；④ LOW_POOL_BURST_RACE_OBS 独立现场
+   累计；⑤ respawn_native_vetoes digest 对账；⑥ 台账 latched/won 走向；
+   ⑦ STEAM_ERUPTION_KILL_VETO_OBS eff 读数续盯。
