@@ -10347,3 +10347,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.807195905474584局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.248589596535692局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.727874425162675局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（88%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：1/937 胜，当前目标进阶 1
+
+## 第 938 局复盘（2026-09-14 06:15）
+- 结果：💀 失败｜进阶 1｜到达层数 12｜当局评分 12
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_RIEMANN_STAR_ARRAY
+- 本局遗物：JUZU_BRACELET
+- 战斗记录：F2 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损16（可行动段16/非行动段6，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损7（可行动段7/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血78｜自损39（可行动段39/非行动段31，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PREDATOR(37分/2.001344619643342局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/6.19103954506767局)，CINDER(34分/2.9471981192933523局)，FINESSE(34分/9.314854215297876局)，PROWESS(33分/13.151088710049734局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.793870719805423局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.240719532947817局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.686826864674606局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_life_cost_deck_cap: 27.50 → 22.50（双旋钮全尽，白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Elite战实测自损39/掉血78（50%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：1/938 胜，当前目标进阶 1
