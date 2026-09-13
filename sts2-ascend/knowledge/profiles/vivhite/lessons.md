@@ -9753,3 +9753,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/4.600773580991039局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.7172890145623145局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/14.172450316749037局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血66，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.46 → 0.49（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/883 胜，当前目标进阶 1
+
+## 第 884 局复盘（2026-09-13 18:48）
+- 结果：💀 失败｜进阶 1｜到达层数 28｜当局评分 28
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：GAMBLING_CHIP, BAG_OF_PREPARATION, GREMLIN_HORN, REGAL_PILLOW
+- 战斗记录：F17 Boss战 掉血48｜自损37（可行动段37/非行动段49，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血0｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血4｜自损32（可行动段32/非行动段16，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血22｜自损17（可行动段17/非行动段22，SELF_LOSS_PHASE_OBS）; F27 Unknown战 掉血18｜自损21（可行动段21/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合获胜; F28 Elite战 掉血44｜自损13（可行动段13/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PREDATOR(37分/2.4185079205599367局)，HAND_OF_GREED(35分/7.774211566009239局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/7.481509196009578局)，CINDER(35分/2.3864997974832005局)，THRUMMING_HATCHET(34分/9.497373695853879局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/4.58467087345757局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.7077785030113466局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/14.122846740640416局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.49 → 0.52（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F28——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F28——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F28——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 22.50 → 25.00（行至 F28——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：1/884 胜，当前目标进阶 1
