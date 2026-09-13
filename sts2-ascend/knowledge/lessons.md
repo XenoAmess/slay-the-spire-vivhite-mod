@@ -11601,3 +11601,14 @@
 - 当前低价值卡牌：BULLY(10分/2.311940603588752局)，STRIKE_IRONCLAD(12分/6.011045569330761局)，BASH(14分/5.086269327895256局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.43 → 0.46（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F23——药水交药线部分胜利回收）
 - 生涯战绩：0/1455 胜，当前目标进阶 0
+
+## 第 1456 局复盘（2026-09-13 22:10）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：ARMAMENTS, UNRELENTING, UNRELENTING, HEADBUTT, THRUMMING_HATCHET, CRUELTY, BLUDGEON, HEMOKINESIS, THRASH, SHRUG_IT_OFF, UNMOVABLE, CRUELTY, EXPECT_A_FIGHT, TWIN_STRIKE, HOWL_FROM_BEYOND, STONE_ARMOR
+- 本局遗物：PENDULUM
+- 战斗记录：F15 Monster战 掉血9; F17 Boss战 掉血31｜自损2（可行动段2/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合获胜; F19 Monster战 掉血6; F20 Monster战 掉血9; F22 Monster战 掉血32｜自损2（可行动段2/非行动段36，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战6回合获胜; F24 Unknown战 掉血33｜自损4（可行动段4/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.52501413023628局)，PACTS_END(25分/83.82466615488387局)，OFFERING(24分/21.217620570352683局)，PERFECTED_STRIKE(24分/4.353057784142397局)，MANGLE(24分/70.09218289174004局)
+- 当前低价值卡牌：BULLY(10分/2.3038488114761915局)，STRIKE_IRONCLAD(12分/5.990006909838104局)，BASH(14分/5.068467385247623局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.46 → 0.49（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1456 胜，当前目标进阶 0
