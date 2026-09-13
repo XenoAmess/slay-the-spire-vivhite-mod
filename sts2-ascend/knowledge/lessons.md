@@ -11722,3 +11722,14 @@
 - 当前低价值卡牌：BULLY(10分/2.2244723187271536局)，STRIKE_IRONCLAD(12分/5.783628028690606局)，BASH(14分/4.893839101199741局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1466 胜，当前目标进阶 0
+
+## 第 1467 局复盘（2026-09-14 07:54）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_NECTAR+BOWLBUG_ROCK
+- 本局拿牌：TWIN_STRIKE, HOWL_FROM_BEYOND, ANGER, CINDER, DISMANTLE, SPITE, UNRELENTING, STONE_ARMOR, IMPERVIOUS, HEMOKINESIS, FEEL_NO_PAIN, FIEND_FIRE, HEADBUTT, EXPECT_A_FIGHT, RAGE, TWIN_STRIKE, HOWL_FROM_BEYOND, ANGER, RAMPAGE
+- 本局遗物：LANTERN, STRAWBERRY, MERCURY_HOURGLASS, BAG_OF_PREPARATION, UNSETTLING_LAMP
+- 战斗记录：F17 Boss战 掉血60｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血9; F23 Monster战 掉血10｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F25 Monster战 掉血34｜自损2（可行动段2/非行动段38，SELF_LOSS_PHASE_OBS）; F27 Elite战 掉血44｜自损2（可行动段2/非行动段41，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血13（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.3916513009291354局)，PACTS_END(25分/81.64980450040083局)，OFFERING(24分/20.4148884944282局)，PERFECTED_STRIKE(24分/4.188367351485377局)，MANGLE(24分/67.44036605430519局)
+- 当前低价值卡牌：BULLY(10分/2.2166866656116087局)，STRIKE_IRONCLAD(12分/5.7633853305901885局)，BASH(14分/4.876710664345542局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（1回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.36 → 0.37（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.06 → 2.05（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F28——药水交药线部分胜利回收）
+- 生涯战绩：0/1467 胜，当前目标进阶 0
