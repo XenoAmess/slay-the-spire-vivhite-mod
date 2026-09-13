@@ -10369,3 +10369,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.780592172286104局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.2328770145824994局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.645922970648245局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血96，每回合19≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿18张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.35 → 0.37（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.07 → 2.06（行至 F48（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F48——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F48——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F48——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F48——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/939 胜，当前目标进阶 1
+
+## 第 940 局复盘（2026-09-14 06:45）
+- 结果：💀 失败｜进阶 1｜到达层数 9｜当局评分 9
+- 死因：敌人组合 CALCIFIED_CULTIST+SEAPUNK
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_ASTRAL_SEARCH, EQUILIBRIUM, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损5（可行动段5/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血22｜自损26（可行动段26/非行动段10，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血28｜自损34（可行动段34/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T9判死→实战9回合获胜; F9 Monster战 掉血28｜自损10（可行动段10/非行动段11，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/6.147778108486624局)，CINDER(34分/2.92660383563526局)，FINESSE(34分/9.24976434275493局)，PROWESS(33分/13.059192189916086局)，REND(33分/3.0398278673617583局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.7673600996831027局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.225061945031461局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.605162240250976局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：1/940 胜，当前目标进阶 1
