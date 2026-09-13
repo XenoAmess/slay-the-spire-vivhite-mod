@@ -662,6 +662,16 @@ DEFAULT_POLICY = {
                                     # KILL_RACE_LONGFIGHT_OFF 撤账后只给3.7~5.7分——743局F33时钟=2、14血手握
                                     # 狂乱逃离被判「无值得出」下一回合被强制吞噬。沙坑计数可见且非致死回合
                                     # 按此固定价计价；0 一键回滚旧能力牌口径（零差异）
+    "sandpit_frantic_imminent_value": 100.0,  # 沙坑钟末格续命价（SANDPIT_EAT_IMMINENT，第844~851局批复盘，
+                                    # 静态键）：时钟计数≤1 时原生引擎把归零吞噬投影进 end_turn_will_kill_player，
+                                    # forced_kill+gap>0 使 lethal=True，FRANTIC_ESCAPE_CLOCK_VALUE 分支被自己的
+                                    # not lethal 门整体跳过——851局F35无厌沙虫T6三条决策连续留痕「沙坑吞噬钟
+                                    # 1回合封底：可存活9→1」，能量仍全投尺度变换+/焚烧+/坚毅，结算手握2×狂乱
+                                    # 逃离空过，52血对意图20被强制吞噬（非伤害致死）。时钟≤1 且本地算术能活过
+                                    # 意图时（含仅服务端投影致死回合）按此末格价计价（压过竞速提速攻击≈41.6），
+                                    # 留痕 SANDPIT_EAT_IMMINENT；HP 驱动致死（缺口吞血/惨胜皮血线）与时钟≥2
+                                    # 非致死回合逐字不变；0 一键回滚（时钟末格回落固定价12、服务端致死投影
+                                    # 回合恢复跳过分支，零差异）
     "sandpit_frantic_discard_guard": True,  # 沙坑战狂乱逃离弃出闸（SANDPIT_FRANTIC_DISCARD_GUARD，第739~743局
                                     # 批复盘，静态键）：战斗弃牌/献祭的 badness 把 Status 一律计 90 分最先弃出
                                     # ——739局F33无厌沙虫战连弃7张狂乱逃离（hp 73→18）后T6阵亡，每张=一整个

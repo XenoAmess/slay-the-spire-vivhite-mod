@@ -2425,3 +2425,90 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 844~851 局批复盘：沙坑钟末格续命门失效——服务端致死投影下的续命优先（SANDPIT_EAT_IMMINENT）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：狂乱逃离计价（FRANTIC_ESCAPE_CLOCK_VALUE，第739~743批）
+  的 `not lethal` 门隐含假设「致死=HP 死亡」，在沙坑钟末格（计数≤1）必然
+  失效：原生引擎把沙坑归零吞噬投影进 `end_turn_will_kill_player`，
+  forced_kill+gap>0 使 lethal=True，续命分支被自己的门整体跳过，续命牌
+  落入能力桶再被 lethal/race_allin 钳到禁玩线——该回合唯一致死源就是
+  时钟，而续命牌正是唯一回答时钟的牌。
+- **EVIDENCE**：851 局（FG4Y9YMYZYCV）F35 无厌沙虫 T6（10:55:24~28）三条
+  决策连续留痕「沙坑吞噬钟1回合封底：可存活9→1（SANDPIT_EAT_CLOCK_CAP）」，
+  能量（3 费）仍依次投给尺度变换+/焚烧+/坚毅，结算手握 2×狂乱逃离(1费)✗
+  空过，52 血对意图 20 被强制吞噬（意图<血量证明非伤害致死）。用当前
+  HEAD 复算同语境：26 伤竞速提速攻击=41.6 分、格挡=3.31 分、续命牌=12
+  分——非致死路径下第三 tick 续命牌必胜出坚毅，实战却打出坚毅，唯一
+  自洽解释是服务端致死投影使 lethal=True、续命分支被跳过。原生机制
+  核验（v0.111.0 mechanics）：SandpitPower 于敌方回合开始 Decrement，
+  归零移除即 CreatureCmd.Kill(force=true) 与 HP/格挡无关；FranticEscape
+  OnPlay 令目标计数+1。历史同型：743 局时钟=2 被判「无值得出」次回合
+  吞噬、739 局连弃 7 张续命牌后 T6 吞噬、385 局封底前「可存活16回合」
+  T6 阵亡。生涯死因榜 THE_INSATIABLE 32.5 次列第二。
+- **EXPECTED_SIGNAL**：未来 3~10 局无厌沙虫战——① 时钟=1 的非 HP 致死
+  tick 决策留痕「沙坑钟末格续命优先…（SANDPIT_EAT_IMMINENT）」，续命牌
+  先于非斩杀攻击/格挡打出；② 不再出现「时钟1回合封底+手握续命牌空过
+  被吞噬」序列；③ 时钟≥2 非致死回合仍按固定价 12 计价
+  （FRANTIC_ESCAPE_CLOCK_VALUE 原样），HP 驱动致死回合双注记零显形，
+  非时钟战行为逐字不变。证伪/撤回：若末格注显形而该类战斗结局无变化，
+  或末格价被证实挤掉合法斩杀（单体秒 Boss），撤回=
+  sandpit_frantic_imminent_value=0（时钟末格回落固定价12、服务端致死
+  投影回合恢复跳过分支，旧口径零差异，夹具④护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：沙坑续命牌计价分支重构——`not lethal`
+  外门改为分支内分级：HP 驱动致死（缺口吞血 gap≥hp 或惨胜皮血线
+  pyrrhic）一律保持旧能力桶分支（3fe 夹具④语义不变）；时钟≤1 且本地
+  算术能活过意图时（含仅 forced_kill 服务端投影致死的回合），按新静态键
+  sandpit_frantic_imminent_value（默认 100，压过竞速提速攻击≈41.6）计价
+  并留痕 SANDPIT_EAT_IMMINENT（服务端投影致死语境追加「服务端致死投影
+  即沙坑钟，续命牌是唯一解」）；时钟≥2 非致死回合维持固定续命价 12 与
+  原注记逐字不变；imminent=0 时两条新路径同时关闭，严格回滚旧口径。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  sandpit_frantic_imminent_value=100.0，注释登记 851 局 F35 T6 实证、
+  原生机制依据与 0=整体回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3fei 五分支——① 时钟=1 非致死
+  按 100 计价且压过同语境 26 伤竞速提速攻击（41.6）；② 时钟=1 仅服务端
+  投影致死（forced_kill）分支不再跳过、仍按 100+投影注记；③ 时钟=1
+  HP 驱动致死（缺口吞血）双注记均无；④ imminent=0 严格回滚（时钟=1
+  非致死回落 12、投影致死恢复跳过，finally 语义由独立键保证）；⑤
+  时钟=3 服务端投影致死保持旧分支（范围护栏）。
+- 不改竞速判决、沙坑封底、弃出闸、謦欬门族与任何其他旋钮；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fei 五
+  分支；既有 3fe 沙坑续命族、3sec 沙坑封底族、3fdd 换线阻尼族、3tr
+  荆棘族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+52/-11，分支分级+双路径计价+注记+注释）、
+  brain/knowledge.py（+10，静态键+注释）、brain/selfcheck.py（+76，
+  3fei 五分支）；未触碰只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：SANDPIT_EAT_IMMINENT 显形次数、显形回合的出牌顺序
+  （续命牌是否先打）、THE_INSATIABLE 战斗的存活回合数与结局对照
+  （本批 851 局 T6 空过被吞噬为基线）；另核对时钟≥2 回合仍按 12 计价、
+  HP 致死回合双注记零显形。
+- 末格注显形且存活回合延长/结局改善 → 闸门有效，维持现值；注显形但
+  结局无变化 → 杠杆无效，撤回=sandpit_frantic_imminent_value=0（旧口径
+  零差异，夹具④护住）；若观测到末格价挤掉合法斩杀 → 下调至攻击上限
+  之下（如 45）再验。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+

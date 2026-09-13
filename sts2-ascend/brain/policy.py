@@ -6291,7 +6291,23 @@ class Policy:
         # 且本回合非致死（致死回合 HP 死亡不由时钟续命，保持旧分支竞争格挡/
         # 斩杀）时按固定续命价计价；计数不可见或键=0 严格回滚旧能力牌口径
         # （零差异）。
-        if not lethal and self._is_frantic_escape(card):
+        # 第844~851局批补充（SANDPIT_EAT_IMMINENT，静态键
+        # sandpit_frantic_imminent_value）：「非致死才计价」的隐含假设在时钟
+        # 末格（计数≤1）必然失效——原生引擎把沙坑归零吞噬投影进
+        # end_turn_will_kill_player，forced_kill+gap>0 使 lethal=True，本分支
+        # 被自己的 not lethal 门整体跳过，续命牌落入能力桶再被
+        # lethal/race_allin 钳到禁玩线：851 局 F35 无厌沙虫 T6 三条决策连续
+        # 留痕「沙坑吞噬钟1回合封底：可存活9→1」，能量仍依次投给
+        # 尺度变换+/焚烧+/坚毅，结算手握 2×狂乱逃离空过，52 血对意图 20 被
+        # 强制吞噬（意图<血量证明非伤害致死）。该回合唯一的致死源就是时钟，
+        # 而续命牌正是唯一回答时钟的牌。修复口径：HP 驱动的致死（缺口吞血/
+        # 惨胜皮血线）依旧不由时钟续命；但时钟≤1 且本地算术能活过意图时
+        # （含仅服务端投影致死的回合），续命牌改按末格续命价
+        # （默认 100，压过竞速提速攻击≈41.6 与格挡）计价并留痕
+        # SANDPIT_EAT_IMMINENT；时钟≥2 的非致死回合维持固定续命价 12 不变。
+        # imminent 键=0 整体回滚：时钟末格回落固定价 12、服务端致死投影回合
+        # 恢复跳过本分支（零差异）。
+        if self._is_frantic_escape(card):
             _frantic_clock = 0.0
             for _fe_e in enemies:
                 if isinstance(_fe_e, dict):
@@ -6299,18 +6315,43 @@ class Policy:
                         _frantic_clock,
                         self._enemy_power_stack(_fe_e, "sandpit", "沙坑"))
             if _frantic_clock > 0.0:
+                # HP 驱动致死：缺口吞掉整管血或惨胜皮血线——时钟续命救不了，
+                # 保持旧能力桶分支竞争格挡/斩杀（3fe 夹具④语义不变）。
+                _fe_hp_lethal = bool(gap >= my_hp or pyrrhic)
+                _fe_imminent = _frantic_clock <= 1.0
                 try:
-                    _frantic_value = max(0.0, float(
-                        pol.get("sandpit_frantic_play_value", 12.0) or 0.0))
+                    _fe_imminent_value = max(0.0, float(
+                        pol.get("sandpit_frantic_imminent_value", 100.0)
+                        or 0.0))
                 except (TypeError, ValueError):
-                    _frantic_value = 0.0
-                if _frantic_value > 0.0:
-                    score = _frantic_value
-                    if cost == 0:
-                        score += pol["free_card_bonus"]
-                    return score, None, (
-                        f"沙坑续命+1回合（时钟{_frantic_clock:g}归零即被强制吞噬，"
-                        "打出即+1，FRANTIC_ESCAPE_CLOCK_VALUE）")
+                    _fe_imminent_value = 0.0
+                if (not _fe_hp_lethal
+                        and (not lethal
+                             or (_fe_imminent and forced_kill
+                                 and _fe_imminent_value > 0.0))):
+                    if _fe_imminent and _fe_imminent_value > 0.0:
+                        score = _fe_imminent_value
+                        if cost == 0:
+                            score += pol["free_card_bonus"]
+                        _fe_lethal_note = (
+                            "；服务端致死投影即沙坑钟，续命牌是唯一解"
+                            if lethal else "")
+                        return score, None, (
+                            f"沙坑钟末格续命优先+1回合（时钟{_frantic_clock:g}"
+                            "归零即被强制吞噬，打出即+1，压过非斩杀出牌"
+                            f"{_fe_lethal_note}，SANDPIT_EAT_IMMINENT）")
+                    try:
+                        _frantic_value = max(0.0, float(
+                            pol.get("sandpit_frantic_play_value", 12.0) or 0.0))
+                    except (TypeError, ValueError):
+                        _frantic_value = 0.0
+                    if not lethal and _frantic_value > 0.0:
+                        score = _frantic_value
+                        if cost == 0:
+                            score += pol["free_card_bonus"]
+                        return score, None, (
+                            f"沙坑续命+1回合（时钟{_frantic_clock:g}归零即被强制吞噬，"
+                            "打出即+1，FRANTIC_ESCAPE_CLOCK_VALUE）")
 
         # --- 无直接数值：按能力牌处理，开局回合优先 ---
         # 死牌禁玩（第470局批复盘）：条件型成长引擎的触发条件卡组无法满足

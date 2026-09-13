@@ -13486,6 +13486,82 @@ def main() -> int:
         and "战斗弃牌" in d_fe_rb.reason, \
         f"discard_guard=False 未恢复 Status 90 最先弃出: {d_fe_rb.reason}"
 
+    # 3fei) 沙坑钟末格续命优先（SANDPIT_EAT_IMMINENT，第844~851局批复盘）：
+    #      时钟计数≤1 时原生引擎把归零吞噬投影进 end_turn_will_kill_player，
+    #      forced_kill+gap>0 使 lethal=True，FRANTIC_ESCAPE_CLOCK_VALUE 分支被
+    #      自己的 not lethal 门整体跳过——851 局 F35 无厌沙虫 T6 连续三 tick
+    #      留痕「沙坑吞噬钟1回合封底」，能量仍全投攻击/格挡，手握 2×狂乱逃离
+    #      空过被强制吞噬（52 血对意图 20，非伤害致死）。① 时钟=1 非致死：
+    #      按末格价 100 计价且压过同语境 26 伤竞速提速攻击（≈41.6）；② 时钟=1
+    #      仅服务端投影致死（forced_kill、本地算术活过意图）：分支不再跳过，
+    #      仍按末格价计价并追加「服务端致死投影即沙坑钟」注记；③ 时钟=1 HP
+    #      驱动致死（缺口吞血）：保持旧分支，双注记均无；④ imminent=0 严格
+    #      回滚：时钟=1 非致死回落固定价 12、服务端投影致死回合恢复跳过；
+    #      ⑤ 时钟=3 服务端投影致死：本批不接，保持旧分支（范围护栏）。
+    fei_enemy1 = dict(fe_enemy, powers=[{"id": "SANDPIT_POWER", "amount": 1}])
+    fei_enemy3 = dict(fe_enemy, powers=[{"id": "SANDPIT_POWER", "amount": 3}])
+    fei_atk = {"index": 1, "card_id": "FEI_ATK", "name": "重击",
+               "playable": True, "energy_cost": 1, "requires_target": True,
+               "rules_text": "造成26点伤害。",
+               "dynamic_values": [{"name": "Damage", "current_value": 26}]}
+    # ① 时钟=1 非致死：末格价 100 + 注记，且压过 26 伤竞速提速攻击
+    s_fei1, _, why_fei1 = vpol_fe._score_play(
+        dict(fe_escape), [fei_enemy1], 20, 0, 6, vpol_fe.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, hopeless_race=True,
+        kill_race=True, run_deck=[])
+    s_fei_atk, _, _ = vpol_fe._score_play(
+        dict(fei_atk), [fei_enemy1], 20, 0, 6, vpol_fe.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, hopeless_race=True,
+        kill_race=True, run_deck=[])
+    assert abs(s_fei1 - 100.0) < 1e-9 \
+        and "SANDPIT_EAT_IMMINENT" in (why_fei1 or "") \
+        and s_fei1 > s_fei_atk, \
+        f"时钟=1 非致死未按末格价压过攻击: esc={s_fei1} atk={s_fei_atk}（{why_fei1}）"
+    # ② 时钟=1 仅服务端投影致死：分支不再跳过，仍按末格价+投影注记
+    s_fei2, _, why_fei2 = vpol_fe._score_play(
+        dict(fe_escape), [fei_enemy1], 20, 0, 6, vpol_fe.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, forced_kill=True,
+        hopeless_race=True, kill_race=True, run_deck=[])
+    assert abs(s_fei2 - 100.0) < 1e-9 \
+        and "SANDPIT_EAT_IMMINENT" in (why_fei2 or "") \
+        and "服务端致死投影即沙坑钟" in (why_fei2 or ""), \
+        f"时钟=1 服务端投影致死回合续命分支仍被跳过: {s_fei2}（{why_fei2}）"
+    # ③ 时钟=1 HP 驱动致死（缺口吞血）：保持旧分支，双注记均无
+    s_fei3, _, why_fei3 = vpol_fe._score_play(
+        dict(fe_escape), [fei_enemy1], 60, 0, 6, vpol_fe.know.policy,
+        my_hp=50, my_max_hp=102, cur_energy=3, hopeless_race=True,
+        kill_race=True, run_deck=[])
+    assert "SANDPIT_EAT_IMMINENT" not in (why_fei3 or "") \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fei3 or ""), \
+        f"HP 驱动致死不应由时钟续命计价: {s_fei3}（{why_fei3}）"
+    # ④ imminent=0 严格回滚：时钟=1 非致死回落固定价 12；投影致死恢复跳过
+    vknow_fei0 = _vivhite_know("sts2-selfcheck-fei0-")
+    vknow_fei0.policy["sandpit_frantic_imminent_value"] = 0.0
+    vpol_fei0 = policy.Policy(vknow_fei0, random.Random(13))
+    s_fei4, _, why_fei4 = vpol_fei0._score_play(
+        dict(fe_escape), [fei_enemy1], 20, 0, 6, vpol_fei0.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, hopeless_race=True,
+        kill_race=True, run_deck=[])
+    assert abs(s_fei4 - 12.0) < 1e-9 \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" in (why_fei4 or "") \
+        and "SANDPIT_EAT_IMMINENT" not in (why_fei4 or ""), \
+        f"imminent=0 时钟=1 非致死未回落固定价12: {s_fei4}（{why_fei4}）"
+    s_fei4b, _, why_fei4b = vpol_fei0._score_play(
+        dict(fe_escape), [fei_enemy1], 20, 0, 6, vpol_fei0.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, forced_kill=True,
+        hopeless_race=True, kill_race=True, run_deck=[])
+    assert "SANDPIT_EAT_IMMINENT" not in (why_fei4b or "") \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fei4b or ""), \
+        f"imminent=0 服务端投影致死未恢复跳过分支: {s_fei4b}（{why_fei4b}）"
+    # ⑤ 时钟=3 服务端投影致死：本批不接，保持旧分支（范围护栏）
+    s_fei5, _, why_fei5 = vpol_fe._score_play(
+        dict(fe_escape), [fei_enemy3], 20, 0, 6, vpol_fe.know.policy,
+        my_hp=56, my_max_hp=102, cur_energy=3, forced_kill=True,
+        hopeless_race=True, kill_race=True, run_deck=[])
+    assert "SANDPIT_EAT_IMMINENT" not in (why_fei5 or "") \
+        and "FRANTIC_ESCAPE_CLOCK_VALUE" not in (why_fei5 or ""), \
+        f"时钟=3 服务端投影致死不应启用末格续命价: {s_fei5}（{why_fei5}）"
+
     # 3pcap) 出牌硬上限抑制换挡上浮（RACE_PLAY_CAP_NO_UPSHIFT，第1404~1408局
     #      批复盘）：1408-F17 仪式兽 T6/T9 玩家带 RINGING_POWER（昏眩，本回合
     #      限打1张，首牌后全手牌 blocked_by_hook），竞速投影仍叠加
