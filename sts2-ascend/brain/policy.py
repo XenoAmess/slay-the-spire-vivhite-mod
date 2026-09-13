@@ -5056,6 +5056,35 @@ class Policy:
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
+            # 竞速判死自付观测（KILL_RACE_HOPELESS_HP_PAY_OBS，第 900~926 局批复盘
+            # 新增，静态键）：斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的
+            # tick，出牌仍实付生命——926 局 F48 T8 投影自述击杀还需 4 回合＞可存活
+            # 1 回合，仍连打终止条件（实付3）+微分取样+（实付2），6 血付到 1 血后
+            # 结束回合阵亡；本批 26/27 局共 239 次判死投影下同帧自付出牌（含攻击/
+            # 格挡/功能牌）。判死后 39% 翻盘率（race_audit won 488/1249）使自付既
+            # 可能是翻盘燃料也可能是纯放血——现有留痕（LIVE_ESTIMATE/门拦账/相位
+            # 分账）都无法按「判死投影同帧自付」切片对账。纯观测锚：注记只披露
+            # 「判死投影下同帧实付血」事实，评分/放行/动作零改动；键=0 注记消失
+            # （旧行为零差异）。只覆盖主评分出牌位（残能救场/僵局强攻为独立出口）。
+            try:
+                _krh_obs = bool(int(float(pol.get(
+                    "kill_race_hopeless_hp_pay_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _krh_obs = False
+            if _krh_obs and kill_race:
+                _krh_pay = float(self._vivhite_hp_pay(
+                    card, player.get("powers") or []) or 0.0)
+                if _krh_pay <= 0.0 and self._strategy_card(card) is None:
+                    _m_krh = re.search(
+                        r"失去\s*(\d+)\s*点?\s*生命"
+                        r"|lose\s+(\d+)\s*(?:hp|health|life)",
+                        _text(card), re.I)
+                    if _m_krh:
+                        _krh_pay = float(next(
+                            g for g in _m_krh.groups() if g))
+                if _krh_pay > 0.0:
+                    why += (f"｜竞速判死自付{_krh_pay:g}血"
+                            "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",

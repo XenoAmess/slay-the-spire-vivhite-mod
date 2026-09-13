@@ -2762,3 +2762,80 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 900~926 局复盘：竞速判死投影下同帧自付生命切片观测（KILL_RACE_HOPELESS_HP_PAY_OBS）
+
+日期：2026-09-14
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的 tick，
+  謦欬自付出牌与引擎自身投影自相矛盾——自付既可能是翻盘燃料（race_audit
+  判死后获胜 488/1249=39%），也可能是纯放血；现有留痕（LIVE_ESTIMATE/
+  门拦账/SELF_LOSS_PHASE_OBS 相位分账）都无法按「判死投影同帧自付」这
+  一切片对账，无法裁决下一批应压价还是保价。
+- **EVIDENCE**：本批 27/27 全负（生涯 1/926），19/27 死于 Boss（F17×11、
+  F33×7、F48×1），全部带竞速判死审计。926 局（T1S9CA6D31C1）F48 永世
+  沙漏 T8 逐条核对：投影自述「击杀还需 4 回合＞可存活 1 回合」，仍连打
+  终止条件（实付3）+微分取样+（实付2），6 血付到 1 血后结束回合被 36
+  意图处决（服务端判致死）。全批程序化计数（27 个 run 文件逐决策扫描）：
+  「斩杀竞速投影：击杀还需…＞…」注记同帧 hp-cost>0 出牌 239 次/26 局
+  （≈8.9 次/局；905/914/923/926 四局各 ≥18 次），零实付出牌 98 次对照。
+- **EXPECTED_SIGNAL**：未来 3~10 局 grep KILL_RACE_HOPELESS_HP_PAY_OBS：
+  显形频率/实付额分布、与战斗结局（阵亡 vs 判死翻盘获胜）的共现。注记
+  集中阵亡场且频率维持 ≈9 次/局 → 下一批行为化（判死投影下自付压价或
+  门闸回归）；注记罕见（＜1 次/局）或集中于翻盘场 → 假设证伪维持现状；
+  回滚=kill_race_hopeless_hp_pay_obs=0（注记消失，旧行为零差异，夹具
+  ②护住回滚）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：主评分出牌位（战斗：打出【…】 Decision
+  收口前）新增观测锚——kill_race（投影判死当 tick，含锁持 tick）且本牌
+  实付>0 时 why 追加「竞速判死自付 X 血（KILL_RACE_HOPELESS_HP_PAY_OBS）」；
+  实付口径：白绮走 _vivhite_hp_pay（LifeCost+绯红仪式-Margin，与救场计
+  价同口径），非白绮走既有文本自残启发式且策略目录外才取。静态键
+  kill_race_hopeless_hp_pay_obs（默认 1；0=注记消失，一键回滚旧行为零
+  差异）。只覆盖主评分出牌位，残能救场/僵局强攻为独立出口不重复记账。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增
+  kill_race_hopeless_hp_pay_obs=1，注释登记 926 局实证与本批 239 次基线。
+- sts2-ascend/brain/selfcheck.py：新增 3krh 五分支——①白绮判死竞速实付
+  謦欬攻击注记显形带实付额；②obs=0 回滚键同驱动动作/参数逐参一致、注记
+  全灭、竞速投影本体不变；③T1/T2 謦欬攻击武装实测速率、T3 零实付功能牌
+  判死竞速下不显形；④非白绮文本自残牌（失去2点生命）同口径显形「自付2
+  血」；⑤满血轻意图防守可行对照：投影不判死、注记不显形。
+- 不改任何评分/阈值/放行/动作路径；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3krh 五
+  分支；既有 3pesc 空过升级账族、3pri/3prv/3prm/3pru/3prn 謦欬门族、
+  3fdd/3fdl 换线阻尼/翻线锁族、3ww 竞速投影族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK（首次运行出现 1 例瞬时 error，连跑两次均 OK，为夹具
+  时序抖动非本改动引入；本改动不触碰策略层）。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+29，观测锚+静态键读取）、brain/knowledge.py（+11，
+  静态键+注释）、brain/selfcheck.py（+132，3krh 五分支）；未触碰只读
+  在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批
+  无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：KILL_RACE_HOPELESS_HP_PAY_OBS 显形次数与实付额分布
+  （本批离线基线：239 次/26 局、≈8.9 次/局）、判死翻盘获胜场 vs 阵亡场
+  的共现率、致命战回合收口血量与判死自付累计的关系。
+- 行为化判据：注记集中阵亡场且频率维持 ≈9 次/局 → 判死投影下自付压价
+  或謦欬门闸回归评审；注记 ＜1 次/局或集中翻盘场 → 证伪维持现状；回滚
+  =kill_race_hopeless_hp_pay_obs=0（旧行为零差异，夹具②护住）。
+- 上批 HP_GATE_STALL_ESC_OBS 结算：本批 27 局注记 0 次并非证伪——
+  f549da39（873~899 批复盘落地）提交于 03:26，处于 926 局（03:18 开局）
+  进行中，900~926 全部执行该特性合入前的代码，属异步复盘部署时滞；
+  其首个可观测窗口为 927 局起，预登记判据顺延一批结算。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

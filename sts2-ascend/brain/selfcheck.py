@@ -3232,6 +3232,138 @@ def main() -> int:
         and "HP_GATE_STALL_ESC_OBS" not in d_eo.reason, \
         f"obs=0 回滚键下放行注记不得带升级账: {d_eo.reason}"
 
+    # 3krh) 竞速判死自付观测（KILL_RACE_HOPELESS_HP_PAY_OBS，第 900~926 局批复盘）：
+    #      斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的 tick 仍实付生命——
+    #      926 局 F48 T8 投影自述击杀还需 4 回合＞可存活 1 回合，仍连打终止条件
+    #      （实付3）+微分取样+（实付2），6 血付到 1 血后结束回合阵亡；本批 26/27
+    #      局共 239 次判死投影下同帧自付出牌。判死后 39% 翻盘率（race_audit won
+    #      488/1249）使自付既可能是翻盘燃料也可能是纯放血——现有留痕无法按
+    #      「判死投影同帧自付」切片对账。主评分出牌位披露实付额（纯观测，不改
+    #      评分/放行/动作）；0=注记消失（旧行为零差异）。
+    def _krh_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "RITUAL_BEAST", "node_type": "Boss"},
+            current_combat_is_hard=True, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    def _krh_state(turn_no, hp_now, hand, incoming=22, deck=None):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 80, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": hand,
+                "enemies": [{"index": 0, "enemy_id": "RITUAL_BEAST",
+                             "name": "仪式兽", "current_hp": 200,
+                             "max_hp": 252, "block": 0, "is_alive": True,
+                             "is_hittable": True,
+                             "intents": [{"total_damage": incoming}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0,
+                    "floor": 17, "deck": deck or []}}
+
+    def _krh_hand_vivhite():
+        return [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "name": "弦光投影", "card_type": "Attack", "playable": True,
+            "energy_cost": 1, "requires_target": True,
+            "valid_target_indices": [0],
+            "dynamic_values": [{"name": "Damage", "current_value": 10}],
+        }]
+
+    def _krh_drive(pol_obj, ctx_obj, hand_fn, incoming=22, deck=None):
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = pol_obj.decide(
+                _krh_state(_turn, _hp, hand_fn(), incoming, deck), ctx_obj)
+            ctx_obj.credit_tags.extend(_d.tags)
+        return pol_obj.decide(
+            _krh_state(3, 45, hand_fn(), incoming, deck), ctx_obj)
+
+    # ① 白绮判死竞速下实付謦欬攻击：注记显形且带实付额
+    vknow_krh = _vivhite_know("sts2-selfcheck-krhopeless-")
+    vpol_krh = policy.Policy(vknow_krh, random.Random(11))
+    d_krh = _krh_drive(vpol_krh, _krh_ctx(), _krh_hand_vivhite)
+    assert d_krh.action == "play_card" \
+        and "斩杀竞速投影" in d_krh.reason, \
+        f"夹具未进入判死竞速出牌: {d_krh.action}（{d_krh.reason}）"
+    assert "竞速判死自付" in d_krh.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_OBS" in d_krh.reason, \
+        f"判死竞速实付謦欬攻击缺观测注记: {d_krh.reason}"
+    # ② obs=0 一键回滚：同一驱动动作逐参一致、注记全灭、竞速投影本体不变
+    vknow_krh0 = _vivhite_know("sts2-selfcheck-krhopeless-off-")
+    vknow_krh0.policy["kill_race_hopeless_hp_pay_obs"] = 0
+    vpol_krh0 = policy.Policy(vknow_krh0, random.Random(11))
+    d_krh0 = _krh_drive(vpol_krh0, _krh_ctx(), _krh_hand_vivhite)
+    assert d_krh0.action == d_krh.action \
+        and d_krh0.params == d_krh.params, \
+        f"obs=0 回滚键下动作不得改变: on={d_krh.action}/{d_krh.params} " \
+        f"off={d_krh0.action}/{d_krh0.params}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_OBS" not in d_krh0.reason, \
+        f"obs=0 回滚键下不得出现观测注记: {d_krh0.reason}"
+    assert "斩杀竞速投影" in d_krh0.reason, \
+        f"obs=0 回滚键下竞速投影本体不得改变: {d_krh0.reason}"
+    # ③ 零实付出牌（策略目录外 0 费功能牌）判死竞速下不显形
+    def _krh_hand_free():
+        return [{
+            "index": 0, "card_id": "KRH_FOCUS", "name": "判死聚焦",
+            "card_type": "Skill", "playable": True, "energy_cost": 0,
+            "requires_target": False, "rules_text": "抽1张牌",
+            "dynamic_values": [],
+        }]
+    vknow_krf = _vivhite_know("sts2-selfcheck-krhopeless-free-")
+    vpol_krf = policy.Policy(vknow_krf, random.Random(11))
+    vctx_krf = _krh_ctx()
+    # T1/T2 用謦欬攻击武装实测输出速率（竞速投影为实测口径），
+    # T3 手牌只剩零实付功能牌——判死竞速下零实付出牌不得显形
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_krf.decide(
+            _krh_state(_turn, _hp, _krh_hand_vivhite()), vctx_krf)
+        vctx_krf.credit_tags.extend(_d.tags)
+    d_krf = vpol_krf.decide(_krh_state(3, 45, _krh_hand_free()), vctx_krf)
+    assert d_krf.action == "play_card" \
+        and "斩杀竞速投影" in d_krf.reason, \
+        f"零实付夹具未进入判死竞速出牌: {d_krf.action}（{d_krf.reason}）"
+    assert "KILL_RACE_HOPELESS_HP_PAY_OBS" not in d_krf.reason, \
+        f"零实付出牌不得显形判死自付注记: {d_krf.reason}"
+    # ④ 非白绮文本自残牌（御血术型）判死竞速下同口径显形
+    def _krh_hand_hemo():
+        return [{
+            "index": 0, "card_id": "KRH_HEMO", "name": "判死御血",
+            "card_type": "Attack", "playable": True, "energy_cost": 1,
+            "requires_target": True, "valid_target_indices": [0],
+            "rules_text": "失去2点生命。造成12点伤害。",
+            "dynamic_values": [{"name": "Damage", "current_value": 12}],
+        }]
+    krh_ictx = type("KRHICtx", (), {
+        "combat": {"comp_id": "RACE_BOSS", "node_type": "Boss"},
+        "current_combat_is_hard": True, "credit_tags": []})()
+    krh_ipol = policy.Policy(know, random.Random(11))
+    d_krh_hemo = _krh_drive(krh_ipol, krh_ictx, _krh_hand_hemo)
+    assert d_krh_hemo.action == "play_card" \
+        and "斩杀竞速投影" in d_krh_hemo.reason, \
+        f"非白绮夹具未进入判死竞速出牌: {d_krh_hemo.action}（{d_krh_hemo.reason}）"
+    assert "竞速判死自付2血" in d_krh_hemo.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_OBS" in d_krh_hemo.reason, \
+        f"非白绮文本自残牌缺判死自付注记: {d_krh_hemo.reason}"
+    # ⑤ 防守可行对照（满血+轻意图，击杀回合数＜可存活回合数）：
+    #    投影不判死，实付謦欬攻击也不显形
+    vknow_krn = _vivhite_know("sts2-selfcheck-krhopeless-calm-")
+    vpol_krn = policy.Policy(vknow_krn, random.Random(11))
+    vctx_krn = _krh_ctx()
+    for _turn in (1, 2):
+        _d = vpol_krn.decide(
+            _krh_state(_turn, 80, _krh_hand_vivhite(), 4), vctx_krn)
+        vctx_krn.credit_tags.extend(_d.tags)
+    d_krn = vpol_krn.decide(
+        _krh_state(3, 80, _krh_hand_vivhite(), 4), vctx_krn)
+    assert "斩杀竞速投影" not in d_krn.reason, \
+        f"防守可行时误触发竞速投影: {d_krn.reason}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_OBS" not in d_krn.reason, \
+        f"未判死时不得显形判死自付注记: {d_krn.reason}"
+
     # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
     #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，
     #      余量门拦下弦光投影实付2血/绯色面积+实付4血/终止条件实付4血（合计
