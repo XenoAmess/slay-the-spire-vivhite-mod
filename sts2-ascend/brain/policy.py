@@ -676,6 +676,7 @@ class Policy:
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
+        self._focus_drift_pending = []  # 评分侧静默换线挂账（FOCUS_DRIFT_FLUSH_OBS，第 852~856 局批复盘）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
         self._race_loss_rate = 0.0  # 回合开始→下一回合开始的净损血 EMA（允许回血为负）
@@ -3881,10 +3882,12 @@ class Policy:
             # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
             self._race_audit = {"latched": False, "latch_round": None, "esc": False}
         # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
-        # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
+        # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废；静默换线挂账
+        # （FOCUS_DRIFT_FLUSH_OBS）同生命周期一并清空
         if self._focus_combat is not ctx.combat:
             self._focus_combat = ctx.combat
             self._focus_index = None
+            self._focus_drift_pending = []
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -4886,6 +4889,21 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             _, card, target, why = chosen
+            # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，
+            # 纯观测不改分）：本 tick 评分侧静默翻线的挂账在此挂到实际打出牌
+            # 的 why 上——只有打出牌的 why 会入决策链，跨回合火线横跳从此可
+            # 直接 grep 计数。打出牌自身评分即翻线时 why 已带
+            # FOCUS_DRIFT_OBS，去重不重复补记；挂账无论是否补记都清空，
+            # 战斗实例更替由 _focus_combat 复位段连带清空。键=False 时
+            # _score_play 侧不挂账，此处零显形（严格回滚，评分逐字不动）。
+            if self._focus_drift_pending:
+                _fdf, self._focus_drift_pending = self._focus_drift_pending, []
+                if (bool(pol.get("focus_drift_flush_obs", True))
+                        and "FOCUS_DRIFT_OBS" not in why):
+                    why += ("｜火线漂移补记："
+                            + "、".join(f"{_fa}→{_fb}" for _fa, _fb in _fdf[-3:])
+                            + ("等" if len(_fdf) > 3 else "")
+                            + "（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）")
             if _hp_gate_stall_break:
                 if self._hp_gate_stall_any_fired:
                     why += (f"｜謦欬门全拦截僵局放行：连续拦截"
@@ -6083,6 +6101,16 @@ class Policy:
                      for _de in enemies if _de.get("index") == best_t), "?")
                 why += (f"｜火线漂移观测：{_drift_from}→{_drift_to}"
                         "（非击杀换线，FOCUS_DRIFT_OBS）")
+                # 火线漂移补记挂账（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘）：
+                # 本收口在每 tick 全手牌评分时被每张候选攻击牌各走一遍，翻线
+                # 注记落在被评分但未打出牌的 why 上即随弃——856 局 F33
+                # CRUSHER+ROCKET 实战打出火线 碾碎爪→火箭→碾碎爪→火箭→碾碎爪
+                # 逐回合横跳，全场 FOCUS_DRIFT_OBS 零显形（run 文件计数 0）、
+                # 阻尼注 29 次在产却管不到跨回合换线。同条件把翻线挂入
+                # _focus_drift_pending，由 _combat 收口挂到实际打出牌的 why
+                # 上；键=False 不挂账不补记（严格回滚）。
+                if bool(pol.get("focus_drift_flush_obs", True)):
+                    self._focus_drift_pending.append((_drift_from, _drift_to))
             # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
             # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
             if best_t is not None and not best_kill:

@@ -1114,6 +1114,15 @@ DEFAULT_POLICY = {
                                   # 换线，击杀换线与减员成本口径不动）。胜者带阻尼时追加
                                   # 「换线阻尼+N（FOCUS_DRIFT_DAMP）」留痕；0=严格回滚旧口径
                                   # （加分与留痕同灭，漂移观测注不受影响）。
+    "focus_drift_flush_obs": True,  # 火线漂移补记（第 852~856 局批复盘，FOCUS_DRIFT_FLUSH_OBS，纯观测不改分）：
+                                  # 856 局 F33 CRUSHER+ROCKET 实战打出火线 碾碎爪→火箭→碾碎爪→火箭→
+                                  # 碾碎爪 逐回合横跳、5 回合双敌俱存阵亡，全场 FOCUS_DRIFT_OBS 零显形
+                                  # （run 文件计数 0）、FOCUS_DRIFT_DAMP 29 次在产——集火记忆在每 tick
+                                  # 全手牌评分时被各候选攻击牌的评分副作用改写，翻线注记落在被评分但
+                                  # 未打出牌的 why 上随弃，跨回合漂移对既有观测/阻尼频率账整体隐身，
+                                  # 813~829 批预登记的「漂移频率下降→闸门有效」无法结算。本键把评分侧
+                                  # 静默翻线挂账，由 _combat 收口补记到实际打出牌的 why（打出牌已带
+                                  # FOCUS_DRIFT_OBS 时去重）；False=一键回滚（不挂账不补记，评分零差异）
 
     "hp_pool_native_clamp_factor": 1.5,  # 血池观测写入侧原生上限钳制（第 187~196 局批复盘，HP_POOL_NATIVE_CLAMP）：
                                           # 在线 hp_pool 台账实证虚高 4~20 倍（KNOWLEDGE_DEMON 2254 vs 原生 379），

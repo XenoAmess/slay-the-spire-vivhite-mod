@@ -6011,6 +6011,88 @@ def main() -> int:
         f"无教义战斗阻尼应整体休眠: target={fdd_t4} why={fdd_w4}"
     sl_pol._focus_index = None
 
+    # 3fdf) FOCUS_DRIFT_FLUSH_OBS 火线漂移补记（第852~856局批复盘）：856-F33
+    # CRUSHER+ROCKET 实战打出火线 碾碎爪→火箭→碾碎爪→火箭→碾碎爪 逐回合横跳，
+    # 全场 FOCUS_DRIFT_OBS 零显形（run 文件计数 0）、阻尼注 29 次在产——
+    # _focus_index 在每 tick 全手牌评分时被各候选攻击牌的评分副作用改写，翻线
+    # 注记落在被评分但未打出牌的 why 上随弃，跨回合漂移对观测/阻尼频率账整体
+    # 隐身。① _score_play 翻线即挂账 pending；② 端到端：先评分牌（手牌序在
+    # 前）静默翻线、打出牌只带「延续集火」——补记挂到实际打出牌且挂账清空；
+    # ③ 打出牌自身评分翻线（why 已带 FOCUS_DRIFT_OBS）去重不补记；④
+    # focus_drift_flush_obs=False 严格回滚（不挂账不补记，finally 复位）；
+    # ⑤ 战斗实例更替连带清空挂账。
+    sl_pol._focus_index = 0
+    sl_pol._focus_drift_pending = []
+    _, fdf_t1, fdf_w1 = sl_pol._score_play(
+        dict(fd_card), [dict(e) for e in fd_enemies], 0, 0, 2,
+        sl_pol.know.policy, my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fdf_t1 == 1 and "FOCUS_DRIFT_OBS" in fdf_w1 \
+            and sl_pol._focus_drift_pending == [("甲", "乙")], \
+        f"评分侧静默翻线未挂账: target={fdf_t1} why={fdf_w1} " \
+        f"pending={sl_pol._focus_drift_pending}"
+    fdf_atk_lo = {"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                  "playable": True, "energy_cost": 1, "requires_target": True,
+                  "valid_target_indices": [0, 1],
+                  "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+    fdf_atk_hi = {"index": 1, "card_id": "HEAVY_BLOW", "name": "重击",
+                  "playable": True, "energy_cost": 1, "requires_target": True,
+                  "valid_target_indices": [0, 1],
+                  "dynamic_values": [{"name": "Damage", "current_value": 10}]}
+
+    def fdf_state(hand):
+        return {"screen": "COMBAT",
+                "available_actions": ["play_card", "end_turn"], "turn": 2,
+                "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0,
+                                      "energy": 3},
+                           "hand": hand,
+                           "enemies": [dict(e) for e in fd_enemies]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
+                        "deck": []}}
+
+    sl_pol._focus_index = 0
+    sl_pol._focus_drift_pending = []
+    d_fdf2 = sl_pol.decide(fdf_state([dict(fdf_atk_lo), dict(fdf_atk_hi)]), ctx)
+    assert d_fdf2.action == "play_card" and d_fdf2.params.get("card_index") == 1 \
+            and d_fdf2.params.get("target_index") == 1 \
+            and "延续集火：乙" in d_fdf2.reason \
+            and "FOCUS_DRIFT_OBS" not in d_fdf2.reason \
+            and "甲→乙" in d_fdf2.reason \
+            and "FOCUS_DRIFT_FLUSH_OBS" in d_fdf2.reason \
+            and sl_pol._focus_drift_pending == [], \
+        f"静默翻线补记未挂到实际打出牌: {d_fdf2.params}（{d_fdf2.reason}）" \
+        f"pending={sl_pol._focus_drift_pending}"
+    sl_pol._focus_index = 0
+    sl_pol._focus_drift_pending = []
+    d_fdf3 = sl_pol.decide(fdf_state([dict(fdf_atk_hi)]), ctx)
+    assert d_fdf3.action == "play_card" \
+            and "FOCUS_DRIFT_OBS" in d_fdf3.reason \
+            and "FOCUS_DRIFT_FLUSH_OBS" not in d_fdf3.reason \
+            and sl_pol._focus_drift_pending == [], \
+        f"打出牌自身翻线被重复补记: {d_fdf3.params}（{d_fdf3.reason}）"
+    sl_pol.know.policy["focus_drift_flush_obs"] = False
+    try:
+        sl_pol._focus_index = 0
+        sl_pol._focus_drift_pending = []
+        d_fdf4 = sl_pol.decide(fdf_state([dict(fdf_atk_lo), dict(fdf_atk_hi)]), ctx)
+        assert d_fdf4.action == "play_card" \
+                and d_fdf4.params.get("card_index") == 1 \
+                and "FOCUS_DRIFT_OBS" not in d_fdf4.reason \
+                and "FOCUS_DRIFT_FLUSH_OBS" not in d_fdf4.reason \
+                and sl_pol._focus_drift_pending == [], \
+            f"focus_drift_flush_obs=False 未严格回滚: {d_fdf4.params}" \
+            f"（{d_fdf4.reason}）pending={sl_pol._focus_drift_pending}"
+    finally:
+        sl_pol.know.policy["focus_drift_flush_obs"] = True
+    sl_pol._focus_combat = object()
+    sl_pol._focus_index = 1
+    sl_pol._focus_drift_pending = [("甲", "乙")]
+    d_fdf5 = sl_pol.decide(fdf_state([dict(fdf_atk_hi)]), ctx)
+    assert d_fdf5.action == "play_card" \
+            and sl_pol._focus_combat is None \
+            and sl_pol._focus_drift_pending == [], \
+        f"战斗实例更替未连带清空挂账: pending={sl_pol._focus_drift_pending}"
+    sl_pol._focus_index = None
+
     # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
     # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——

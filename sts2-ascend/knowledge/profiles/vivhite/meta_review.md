@@ -2512,3 +2512,78 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
 
+
+# 第 852~856 局批复盘：漂移观测盲区——评分副作用静默翻线挂账补记（FOCUS_DRIFT_FLUSH_OBS）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_focus_index` 集火记忆在每 tick 全手牌评分循环里被每张候选
+  攻击牌的 `_score_play` 评分副作用改写（policy.py  Winner 收口记账），而
+  FOCUS_DRIFT_OBS 翻线注记只追加在「当下被评分那张牌」的 why 上——该牌若未
+  被打出，why 随弃，跨回合火线横跳对观测整体隐身。772~783 批的漂移频率账与
+  813~829 批预登记的「漂移频率下降→阻尼闸门有效」结算条件因此都无法成立：
+  频率计本身漏记了主导漂移路径。
+- **EVIDENCE**：856 局（WT36ZUM9GLPZ，完整 452 条决策链逐条读，F33 28 条全检）
+  CRUSHER+ROCKET Boss 战实战打出火线 T1 碾碎爪→T2 火箭→T3 碾碎爪→T4 火箭
+  →T5 碾碎爪 逐回合横跳，5 回合双敌俱存、意图滚到 49 阵亡（掉血85）；全场
+  run 文件 FOCUS_DRIFT_OBS 计数=0、FOCUS_DRIFT_DAMP=29 次在产——每次翻线都
+  由某张未打出候选牌的评分先行吸收，打出牌只见「延续集火」。本批 5 局全负，
+  FOCUS_DRIFT_OBS 合计仅 1 次（854），DAMP 注 9~74 次/局；生涯死因榜
+  CRUSHER+ROCKET 31.0 列第三。竞速审计本批 4 次判死全部兑现（852 T8→10回合、
+  853 T2→9回合、856 T3→5回合），竞速口径非本批病灶。
+- **EXPECTED_SIGNAL**：未来 3~10 局多敌教义战决策链——① 出现
+  「火线漂移补记：甲→乙（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）」
+  注记时可直接 grep 计数真实换线频率；② 若 CRUSHER+ROCKET / KNOWLEDGE_DEMON
+  类战斗补记高频（≥3 个独立对局反复显形）且继续无一减员阵亡 → 下一批行为化
+  （跨回合换线阻尼/按血池份额锁定火线）；③ 若补记罕见 → 跨回合漂移并非
+  主漂移路径，813~829 批阻尼账按旧口径继续。证伪/撤回：
+  `focus_drift_flush_obs=False` 一键回滚（不挂账不补记，评分逐字零差异，
+  夹具④护住）；纯观测注不改任何判定。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`__init__` 新增 `_focus_drift_pending` 挂账
+  （与 `_focus_index` 同战斗实例生命周期，`_focus_combat` 复位段连带清空）；
+  `_score_play` 漂移注收口在同条件（非击杀换线、focus_drift_obs 开）下把
+  翻线新旧目标名挂账；`_combat` 打出牌收口（chosen 定论后）把本 tick 挂账
+  补记到实际打出牌的 why——打出牌自身评分即翻线（why 已带 FOCUS_DRIFT_OBS）
+  时去重不重复补记；只追加文本，评分、阻尼、记忆更新、击杀/沉睡/无敌帧各
+  收口逐字不动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  `focus_drift_flush_obs=True`，注释登记 856 局实证与回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3fdf 五分支——① `_score_play` 翻线
+  即挂账 pending=[("甲","乙")]；② 端到端 decide：先评分牌（手牌序在前）
+  静默翻线、打出牌只带「延续集火：乙」——补记显形含甲→乙且挂账清空；
+  ③ 打出牌自身翻线去重不补记；④ `focus_drift_flush_obs=False` 严格回滚
+  （不挂账不补记，finally 复位）；⑤ 战斗实例更替连带清空挂账。
+- 不加新评分旋钮、不改任何判定路径；不动 runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fdf 五分支；
+  既有 3fdo 火线漂移族、3fdd 换线阻尼族、3tr 荆棘族、3fei 沙坑末格族等
+  全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+30/-1，挂账字段+战斗复位+评分侧挂账+打出侧补记）、
+  brain/knowledge.py（+9，静态键+注释）、brain/selfcheck.py（+82，3fdf
+  五分支）；未触碰只读在线状态；克隆残留的 assets 超长路径删除告警为宿主
+  挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：FOCUS_DRIFT_FLUSH_OBS 显形次数与 FOCUS_DRIFT_OBS 的
+  比例（量化旧观测盲区大小）、CRUSHER+ROCKET / KNOWLEDGE_DEMON 类战斗的
+  逐回合火线序列、减员时点与结局对照（本批 856 基线：5 次换线、无一减员、
+  T5 阵亡）。
+- 补记高频且该类战斗继续高死亡 → 下一批行为化跨回合换线阻尼；补记罕见 →
+  旧频率账有效，回到 813~829 批原结算路径；回滚=`focus_drift_flush_obs=False`
+  （旧口径零差异，夹具④护住）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
