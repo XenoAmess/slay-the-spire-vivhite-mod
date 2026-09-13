@@ -5535,17 +5535,35 @@ class Policy:
                 Slippery clamps each hit that reaches HP to one damage, and loses
                 one layer only for such an unblocked hit.  Enemy block is consumed
                 before Slippery; ordinary targets retain the established scoring
-                and overkill semantics.
+                and overkill semantics.  Intangible (INTANGIBLE_POWER 无实体)
+                instead caps every hit at one damage without any layer loss.
                 """
                 slippery = self._enemy_slippery_stack(enemy)
-                if slippery <= 0:
+                # 敌无实体逐hit封顶（ENEMY_INTANGIBLE_DMG_CAP，第1436~1440局批复盘）：
+                # 原生 IntangiblePower.ModifyDamageCap 对持有者把每段伤害上限压到 1
+                # （zhs「将本回合受到的所有伤害和生命减少效果降低为1」），旧口径按牌面
+                # 全额判「可击杀」——预测击杀落空即计入 _combat_kills，同场 ≥2 次误判
+                # 重生召唤物并写跨局名册：stats.json respawn_adds 显示 SOUL_FYSH
+                # （原生无复生机能，FadeMove 仅自挂无实体×2）已 confirmations=2 激活、
+                # WATERFALL_GIANT=1 在途，1440-F17-T1「全场均为已证实重生体」注记对
+                # 单体 Boss 在产。无实体段按每 hit 封顶 1 走同一逐段结算（格挡照常
+                # 先行吸收、不掉层、broken 恒 0），预测击杀不再穿透无实体窗口，名册
+                # 污染从源头切断；滑溜>0 时滑溜路径已把穿甲 hit 压到 1，无实体不
+                # 重复计价。enemy_intangible_dmg_cap=False 严格回滚旧牌面全额口径。
+                intangible = 0.0
+                if slippery <= 0 and bool(pol.get("enemy_intangible_dmg_cap", True)):
+                    intangible = self._enemy_intangible_stack(enemy)
+                if slippery <= 0 and intangible <= 0:
                     return float(total), float(total) >= _effective_pool(enemy), 0
                 try:
                     raw_hp = enemy.get("current_hp", 9999)
                     hp = max(0.0, float(9999 if raw_hp is None else raw_hp))
                     enemy_block = max(0.0, float(enemy.get("block", 0) or 0))
-                    layers = max(1, int(math.ceil(slippery)))
+                    layers = max(1, int(math.ceil(slippery))) if slippery > 0 else 0
                     segment_damage = max(0.0, float(dmg))
+                    if slippery <= 0:
+                        # 无实体：每 hit 伤害上限 1（不掉层）
+                        segment_damage = min(segment_damage, 1.0)
                     segment_count = max(1, int(hits))
                 except (TypeError, ValueError, OverflowError):
                     return float(total), float(total) >= _effective_pool(enemy), 0
@@ -5972,6 +5990,16 @@ class Policy:
                                     + ("｜零意图回合" if _burn_idle else ""))
                         except Exception:
                             pass
+                    # 敌无实体中标留痕（ENEMY_INTANGIBLE_CAP_OBS，第1436~1440局批
+                    # 复盘新增，纯观测不改分）：_attack_outcome 已把无实体目标的每
+                    # hit 伤害封顶 1（eff 同步折算），中标侧披露一次供复盘直接计数
+                    # 「无实体窗口攻击折价」在产频率，并核对「可击杀」不再穿透
+                    # 无实体（1440 局前 SOUL_FYSH 被误判重生体入册的污染源）。
+                    # 键=False 与击杀穿透（hp≤hits 的合法击杀）均不留痕。
+                    if (slippery <= 0 and not killed
+                            and bool(pol.get("enemy_intangible_dmg_cap", True))
+                            and self._enemy_intangible_stack(e) > 0):
+                        why += "｜敌无实体逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）"
                     if _thorns_suicide:
                         why += (f"｜荆棘反伤≈{_thorns_reflect:g}≥支付后余血"
                                 f"{max(0.0, float(my_hp) - _thorns_hp_pay):g}，"
@@ -6478,6 +6506,10 @@ class Policy:
     def _enemy_slippery_stack(self, enemy: dict) -> float:
         """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "slipper", "滑溜")
+
+    def _enemy_intangible_stack(self, enemy: dict) -> float:
+        """读取敌人的无实体层数（INTANGIBLE_POWER），兼容 id/power_id/name 载荷。"""
+        return self._enemy_power_stack(enemy, "intangible", "无实体")
 
     def _enemy_asleep_stack(self, enemy: dict) -> float:
         """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""

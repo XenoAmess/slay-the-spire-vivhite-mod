@@ -9765,3 +9765,169 @@ retry_resolution: none (no replay target; re-land of host-reverted observability
    ② 牌面>敌甲铁证零出现核对；③ 竞速台账 420/939 走向；④
    BARRICADE_BANK_VALUE / LETHAL_SURVIVABLE_LINE 首发续盯；⑤
    SLIPPERY 0/3、EXHAUST_FIZZLE 空转、HP_COST 豁免疫价双零续盯。
+
+# 2026-09-13｜第 1436~1440 局复盘（异步追及队列 5 局 exact_batch 全败；行为修复 ×1：ENEMY_INTANGIBLE_DMG_CAP 敌无实体逐 hit 伤害封顶——预测击杀不再穿透无实体窗口，重生名册污染源头切断）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，无
+  replay target。
+- 上一批（1430~1435）last_paths 关键标签存在性核读：SLEEP_GUARD_PASS_OBS
+  （policy.py AOE `_sleep_pass` 段/单体收口放行对账段、knowledge.py
+  `sleep_guard_pass_obs`、selfcheck 3sg④⑧）与 BARRICADE_BANK_VALUE、
+  LETHAL_SURVIVABLE_LINE 均在当前 HEAD 在产，无「记录已闭环但代码不在产」
+  分叉。
+- 上批观察点兑现核对：① SLEEP_GUARD_PASS_OBS 真机首发**未达成但已归因
+  部署时序**——重落地提交 07b1482f（05:38）晚于本批三场族母/前置对局
+  （1436 启程 03:55、1437 04:43、1438 05:21），1438-T2 与我一战（10≤覆甲
+  12 合法放行）无注记属 pre-fix 口径，非逻辑缺口；③ 竞速台账
+  420/939→427/951≈44.9%（应验+5：1436/1437/1438/1440 F17、1439 F33；
+  反向+4：1436 F14/F15、1439 F21/F31），带内偏上限续记；④
+  BARRICADE_BANK_VALUE/LETHAL_SURVIVABLE_LINE 本批无触发原料（无壁垒局、
+  无差≤2 血可负担生还格挡阵亡）；⑤ HP_COST 豁免疫价**首发兑现**：
+  1437-F17-T7 御血术「自残2豁免疫价（HP_COST_ATK_PRICING）」在产，双零
+  关闭条件不再成立。
+
+retry_resolution: none (no replay target; local production behavior fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_attack_outcome`（评分/击杀判断/AOE 共用的逐段结算）对
+  敌方无实体（INTANGIBLE_POWER，原生 ModifyDamageCap 把持有者每段伤害
+  上限压到 1）零感知——无实体窗口内按牌面全额判「可击杀」，实际每 hit
+  只掉 1 血、敌人存活；`commit_kill_id` 把落空的预测击杀计入
+  `_combat_kills`，同场 ≥2 次即误判重生召唤物并写入跨局名册（≥2 场独立
+  战斗激活）。无复生机能的 Boss 因此永久入册，此后每场 T1 起被重生教义
+  覆盖（「全场均为已证实重生体」注记+三重压制框架）。
+- **EVIDENCE**：① stats.json `respawn_adds` 在册读数：SOUL_FYSH
+  confirmations=2（已激活）、WATERFALL_GIANT=1（同类污染在途——其
+  AboutToBlow 无敌相同样让预测击杀落空）；② 1440（Z2ALACY0X38L）
+  F17-T1 决策 91「全场均为已证实重生体，解除重生压制以终结战斗」对单体
+  Boss 灵魂异鱼在产（重生名册 T1 生效的直接行为证据）；③ 原生机制核读：
+  mechanics/monsters.jsonl SoulFysh 无任何重生/召唤方法（BeckonMove 仅
+  灌注呼唤牌、FadeMove 仅 `PowerCmd.Apply<IntangiblePower>(2m)` 自挂）；
+  IntangiblePower.ModifyDamageCap 对 target==Owner 返回 1m（zhs「将本
+  回合受到的所有伤害和生命减少效果降低为1」）；④ 修复前 policy.py 全文
+  rg 无 intangible/无实体 任何处理，`_attack_outcome` 只建滑溜模型。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① 无实体窗口（灵魂异鱼 FadeMove
+  后等）攻击候选 eff≤hits（重锤 32→1、双重打击 5×2→2），「可击杀」不再
+  穿透无实体；中标单体攻击带「敌无实体逐hit封顶1
+  （ENEMY_INTANGIBLE_CAP_OBS）」注记（每候选至多一条）；②
+  `respawn_adds` 名册停止增长 clamp 解释型条目（WATERFALL_GIANT 停 1、
+  无新 Boss 入册）；③ 无无实体敌人的战斗评分逐分零差异（3int⑤ 回滚锚
+  +3xg 滑溜全锚原样通过为证）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1436..1440]，exact 5/5、missing=0；5 局全败（生涯
+  0/1440）。死亡分布：一幕 Boss F17 四局（1436 仪式兽/1437 族母/1438
+  族母/1440 灵魂异鱼）、二幕 Boss F33 一局（1439 无厌沙虫）。
+- 主样本 1440 packet 内 111 条切片（kept 111/omitted 134，bounded tail
+  +aggregates）已逐条核读；1437/1438/1439 终局链经 runs 全文核读
+  （1439-F33 沙虫战 21 决策、1438-F17 族母战全链、1437-F17 全链）。
+- 部署时序：ENEMY_INTANGIBLE_DMG_CAP 为本批新落地，不覆盖本批任何对局
+  （1440 的「全场重生体」注记为 pre-fix 名册在册口径，即本批修复对象
+  本身），证据与修复无时序混淆。SLEEP_GUARD_PASS_OBS 重落地（05:38）
+  晚于 1436/1437/1438 启程，早于 1439/1440——后两局无族母遭遇，首发
+  窗口顺延。
+- 主矛盾不变：输出速率缺口。5 局 Boss 竞速判死全部实战兑现（T2~T6 判
+  死→5~9 回合阵亡），旋钮代谢链全顶格——判死缺口属设计内终态，不重复
+  立案。1436-T6「昏眩出牌硬上限空 2 能量」为 RINGING 原生机制+RACE_
+  PLAY_CAP_NO_UPSHIFT 已治理口径，非新缺陷；1439-F31 重损 63 为高危
+  组合（55 战 50 死）判死后获胜的既定代价形态。
+
+## 二、落地动作（最小可逆）
+
+- brain/policy.py：① `_attack_outcome` 新增敌无实体分支——滑溜≤0 且键
+  `enemy_intangible_dmg_cap`（默认开）且目标无实体层数>0 时，走同一逐段
+  结算但每 hit 伤害封顶 1（格挡照常先行吸收、layers=0 不掉层、broken 恒
+  0）；滑溜>0 时滑溜路径已把穿甲 hit 压到 1，无实体不重复计价；layers
+  初始化改为滑溜>0 才取 max(1,ceil)（滑溜路径逐字等价，无实体路径免
+  污染 broken）；② 单体中标收口新增纯观测注记「敌无实体逐hit封顶1
+  （ENEMY_INTANGIBLE_CAP_OBS）」（键开+非击杀+目标无实体>0，每候选至多
+  一条）；③ 新增 `_enemy_intangible_stack` 辅助（id/power_id/name 三字段
+  拼集，"intangible"/"无实体" 双通道）。
+- brain/knowledge.py：DEFAULT_POLICY 新增静态键 enemy_intangible_dmg_cap:
+  True（含证据与回滚注释；policy.json 零改动，缺键走默认）。
+- brain/selfcheck.py：新增 3int 夹具（灵魂异鱼 211 池+无实体×2）：① 逐
+  hit 封顶计分（重锤 32→1/双击 5×2→2）+不穿透击杀+注记在产+无误挂滑溜
+  留痕；② 格挡先行吸收（3 甲+打击 6→移除 1，无无实体对照 6）；③ 击杀
+  边界（hp1 单段/hp2 双段合法击杀成立，hp3 不穿透）；④ AOE 同口径
+  （普通 6+无实体 1=7.0）；⑤ 键=False 严格回滚（评分复原 32、hp=15 可
+  击杀穿透复原、注记消失）；⑥ 键开 hp=15 封顶 1 不穿透（与⑤互为对照）。
+
+## 三、回滚边界
+
+- enemy_intangible_dmg_cap=False 即恢复旧牌面全额口径（评分/击杀/注记
+  零差异，selfcheck 3int⑤ 为对照锚）；删除 policy.py 无实体段/注记段/
+  辅助函数、knowledge.py 键、selfcheck 3int 段即完全回滚。
+- 行为面严格有界：仅改变「目标当前持有无实体层数>0」的候选结算与留痕；
+  无无实体敌人的战斗逐分零差异（3int 无层/零层锚、3xg 滑溜全锚、3fdo/
+  3fdd 等全部旧锚原样通过为证）；滑溜/沉睡/无敌帧/荆棘等既有通道输入
+  语义逐字不变。
+- 残留登记：stats.json 在册的 SOUL_FYSH(2)/WATERFALL_GIANT(1) 为修复前
+  污染，在线状态复盘隔离仓只读、不可在本批清除；单体 Boss 场景下名册
+  条目的评分效应被 all_respawn 解除框架中和（血池计入+压制解除），主要
+  残留是注记文本口径；本修复切断新污染源头，存量条目待宿主侧评估是否
+  清账（非本批动作）。
+
+## 四、自检
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（含 3int
+  ①~⑥ 新锚与 3xg 滑溜全锚/3fdo/3fdd/3sg/3bb/3lsl/3br/3htx 等全部旧锚
+  原样通过）。
+
+## 五、未来 3~10 局观察指标
+
+1. ENEMY_INTANGIBLE_CAP_OBS 注记首发局/计数（无实体窗口攻击折价在产
+   频率）；注记局的攻击 eff 读数确为 ≤hits。
+2. 「可击杀」穿透无实体窗口的复发计数（应=0；若出现，核对该 tick 目标
+   层数读数是否载荷缺口——payload 缺 powers 字段时本键按旧口径放行，
+   属可观测回退而非失效）。
+3. respawn_adds 名册走向：WATERFALL_GIANT 停 1、SOUL_FYSH 停 2、无新
+   Boss 条目；真重生体（WRIGGLER/EYE_WITH_TEETH 族）确认计数照常增长
+   （名册机制本身不失效）。
+4. 无实体窗口的出牌顺位：能量让给铺垫/格挡的 tick 是否增多（折价后
+   攻击分自然让位）；竞速判决方向不变（1440 型判死局结论不受折价
+   翻转）。
+5. 竞速台账 427/951 走向；SLEEP_GUARD_PASS_OBS 首发（07b1482f 后的
+   族母遭遇）续盯；BARRICADE_BANK_VALUE/LETHAL_SURVIVABLE_LINE 首发
+   续盯。
+
+## 六、继续调整/撤回条件
+
+- 若 3~10 局内出现「无实体合法击杀（hp≤hits）被折价误压致死局」≥2
+  独立对局（该杀的 1 血目标因攻击让位而拖死），评估把封顶口径改为
+  「封顶但保底原评分×小系数」而非直接回滚；
+- 若无实体注记长期零首发但灵魂异鱼遭遇 ≥2 场且 FadeMove 在场（载荷
+  缺口：payload 不带 INTANGIBLE_POWER），先修载荷再评估，不得直接判
+  假设证伪；
+- 若名册仍新增 clamp 解释型条目（如新的无敌/减伤相 Boss ≥1 确认），
+  核对该机制是否走非 ModifyDamageCap 通道（如 SetMaxAndCurrentHp 型
+  已由 race_invulnerable_hp_floor 覆盖血池侧但击杀预测侧未覆盖），
+  按同教义扩展 `_attack_outcome` 而非回滚本键；
+- 若宿主再次以 marker 事务理由安全撤销本批，下批按债务第 1 条流程
+  重落地并记入分叉台账。
+
+## 七、新沉淀的经验知识
+
+1. **「预测击杀落空→重生确认」链条要按伤害修正机制逐一核销**：重生
+   检测的反证前提「该死没死=会复活」，但原生存在一整族「该死没死=
+   伤害被修正」机制（无实体 ModifyDamageCap、AboutToBlow SetMaxAnd
+   CurrentHp、滑溜逐 hit 限伤）——凡以「落空次数」为证据的推断器，
+   都要先把结算模型与原生修正对齐，否则学习存储会被系统性污染。
+2. **跨局名册是把双刃刀**：它省掉每局重交学费，也把单次误判放大成
+   永久行为偏置（SOUL_FYSH 两场合计数次无实体窗口 → 全部后续局 T1
+   起教义覆盖）——写入跨局持久结构的确认条件，要用「机制核读排除
+   全部替代解释」的标准，而不是计数阈值。
+3. **结算模拟器是行为修复的最高杠杆点**：`_attack_outcome` 一处结算
+   同时喂养评分、击杀判断、kill_bonus、预测击杀账与 AOE——在该点
+   补齐原生修正（滑溜→无实体同构），比在各消费端分别打补丁更小、
+   更不易漏（与 INVULN_TARGET_VETO 批「投影/评分/救场三通道同核读」
+   同教义）。
+4. 观察点（下批复盘核对）：① ENEMY_INTANGIBLE_CAP_OBS 首发与 eff
+   读数；② 无实体穿透复发=0 核对；③ respawn_adds 名册零新 Boss
+   条目核对；④ 竞速台账 427/951 走向；⑤ SLEEP_GUARD_PASS_OBS 首发
+   （部署后族母遭遇）续盯；⑥ BARRICADE_BANK_VALUE/LETHAL_
+   SURVIVABLE_LINE 首发续盯。

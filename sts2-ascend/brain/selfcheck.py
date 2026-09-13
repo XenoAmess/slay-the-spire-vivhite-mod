@@ -5811,6 +5811,99 @@ def main() -> int:
     assert sticky_target == 1 and sl_pol._focus_index == 1 and "延续集火" in sticky_why, \
         f"滑溜结算重构破坏集火粘性: target={sticky_target} why={sticky_why}"
 
+    # 3int（第1436~1440局批复盘）：敌无实体（INTANGIBLE_POWER，原生
+    # ModifyDamageCap 对持有者每段伤害封顶 1）与滑溜共用逐段结算但不掉层——
+    # 评分/击杀判断不再穿透无实体窗口，预测击杀落空不再喂给 _combat_kills
+    # 误判重生体（1440 局 stats.json respawn_adds：SOUL_FYSH confirmations=2
+    # 已激活、WATERFALL_GIANT=1 在途的污染源）；键=False 严格回滚牌面全额。
+    int_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-intangible-"))
+    int_pol = policy.Policy(knowledge.Knowledge(int_dir), random.Random(5))
+
+    def int_enemy(hp=211, block=0, layers=None, *, index=0, intent=0, name="灵魂异鱼"):
+        powers = [] if layers is None else [{
+            "power_id": "INTANGIBLE_POWER", "name": "无实体", "amount": layers,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": f"SOUL_FYSH_{index}", "name": name,
+            "current_hp": hp, "max_hp": 211, "block": block,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    def int_score(card, enemy, incoming=0, pol=None):
+        use = pol or int_pol
+        return use._score_play(
+            dict(card), [enemy], incoming, 0, 2, use.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+
+    # 身份三字段合并识别（与滑溜同口径）；零层/无层严格保留旧牌面计分。
+    assert int_pol._enemy_intangible_stack(int_enemy(layers=2)) == 2, \
+        f"无实体层数读取失效: {int_enemy(layers=2)['powers']}"
+    s_int_plain, _, why_int_plain = int_score(sl_bludgeon, int_enemy(layers=None))
+    s_int_zero, _, _ = int_score(sl_bludgeon, int_enemy(layers=0))
+    assert math.isclose(s_int_plain, 32.0) and math.isclose(s_int_zero, s_int_plain), \
+        f"无无实体敌人旧评分回归: plain={s_int_plain} zero={s_int_zero}"
+    assert "ENEMY_INTANGIBLE_CAP_OBS" not in why_int_plain, \
+        f"无无实体目标误挂封顶注: {why_int_plain}"
+
+    # ① 无实体×2：每 hit 封顶 1（重锤 32→1、双击 5×2→2），不掉层不判击杀；
+    #    中标单体攻击携带纯观测注记。
+    s_int_bludgeon, _, why_int_bludgeon = int_score(sl_bludgeon, int_enemy(layers=2))
+    s_int_twin, _, why_int_twin = int_score(sl_twin, int_enemy(layers=2))
+    assert math.isclose(s_int_bludgeon, 1.0) and math.isclose(s_int_twin, 2.0), \
+        f"无实体逐hit封顶计分失效: hammer={s_int_bludgeon} twin={s_int_twin}"
+    assert not why_int_bludgeon.startswith("可击杀") \
+            and "敌无实体逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）" in why_int_bludgeon, \
+        f"无实体窗口误穿击杀或注记缺失: {why_int_bludgeon}"
+    assert "滑溜" not in why_int_bludgeon and "预计破" not in why_int_bludgeon, \
+        f"无实体结算误挂滑溜留痕: {why_int_bludgeon}"
+
+    # ② 格挡先行吸收：封顶后的 1 点先被甲吃掉（3 甲 + 打击 6 → 移除 1）。
+    s_int_blk, _, why_int_blk = int_score(sl_strike, int_enemy(block=3, layers=2))
+    s_int_blk_plain, _, _ = int_score(sl_strike, int_enemy(block=3, layers=None))
+    assert math.isclose(s_int_blk, 1.0) and math.isclose(s_int_blk_plain, 6.0), \
+        f"无实体+格挡结算错误: cap={s_int_blk} plain={s_int_blk_plain} why={why_int_blk}"
+
+    # ③ 击杀边界与逐段结算共用：hp≤hits 的合法击杀仍成立，超出不穿透。
+    _, _, why_int_hp1 = int_score(sl_bludgeon, int_enemy(hp=1, layers=2))
+    _, _, why_int_hp2t = int_score(sl_twin, int_enemy(hp=2, layers=2))
+    _, _, why_int_hp3t = int_score(sl_twin, int_enemy(hp=3, layers=2))
+    assert why_int_hp1.startswith("可击杀") and why_int_hp2t.startswith("可击杀") \
+            and not why_int_hp3t.startswith("可击杀"), \
+        f"无实体击杀边界错误: hp1={why_int_hp1} hp2t={why_int_hp2t} hp3t={why_int_hp3t}"
+
+    # ④ AOE 同口径：普通敌人按牌面、无实体敌人按逐段封顶。
+    int_aoe_enemies = [
+        int_enemy(hp=50, layers=None, index=0, name="普通敌人"),
+        int_enemy(hp=50, layers=2, index=1, name="灵魂异鱼"),
+    ]
+    s_int_aoe, t_int_aoe, why_int_aoe = int_pol._score_play(
+        sl_aoe, int_aoe_enemies, 0, 0, 2, int_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert math.isclose(s_int_aoe, 7.0) and t_int_aoe is None \
+            and "群体伤害≈7.0" in why_int_aoe, \
+        f"AOE 无实体折算错误: score={s_int_aoe} target={t_int_aoe} why={why_int_aoe}"
+
+    # ⑤ enemy_intangible_dmg_cap=False 严格回滚旧牌面全额口径（评分复原 32、
+    #    hp=15 的可击杀穿透复原、注记消失）。
+    int_pol.know.policy["enemy_intangible_dmg_cap"] = False
+    try:
+        s_int_off, _, why_int_off = int_score(sl_bludgeon, int_enemy(layers=2))
+        assert math.isclose(s_int_off, 32.0) \
+                and "ENEMY_INTANGIBLE_CAP_OBS" not in why_int_off, \
+            f"enemy_intangible_dmg_cap=False 评分未严格回滚: score={s_int_off} why={why_int_off}"
+        _, _, why_int_off15 = int_score(sl_bludgeon, int_enemy(hp=15, layers=2))
+        assert why_int_off15.startswith("可击杀"), \
+            f"enemy_intangible_dmg_cap=False 击杀穿透未复原: {why_int_off15}"
+    finally:
+        int_pol.know.policy["enemy_intangible_dmg_cap"] = True
+
+    # ⑥ 键开状态下同局面 hp=15：封顶后 1 点不再穿透（与⑤互为对照锚）。
+    s_int_hp15, _, why_int_hp15 = int_score(sl_bludgeon, int_enemy(hp=15, layers=2))
+    assert math.isclose(s_int_hp15, 1.0) and not why_int_hp15.startswith("可击杀"), \
+        f"无实体窗口可击杀穿透未修复: score={s_int_hp15} why={why_int_hp15}"
+
     # 3fdo) FOCUS_DRIFT_OBS 火线漂移观测注（第772~783局批复盘）：783-F35
     # CRUSHER+ROCKET 双强化体战逐张火线 0→1→0→0→1 横跳、无一减员阵亡。纯观测
     # 不改分——① 非击杀换线（集火记忆=甲，乙威胁更高中标）：注记显形且含新旧

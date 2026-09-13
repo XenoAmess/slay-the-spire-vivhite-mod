@@ -494,6 +494,21 @@ DEFAULT_POLICY = {
                                                   # 实付≤移除+破层抵扣的低价烧墙，
                                                   # 362局自杀螺旋的高价拦截不变；
                                                   # 0=回滚旧口径（零差异）。
+    "enemy_intangible_dmg_cap": True,  # 敌无实体逐hit伤害封顶（第1436~1440局批复盘）：
+                                       # 原生 IntangiblePower.ModifyDamageCap 对持有者
+                                       # 把每段伤害上限压到 1（zhs「将本回合受到的所有
+                                       # 伤害和生命减少效果降低为1」），_attack_outcome
+                                       # 旧口径按牌面全额判「可击杀」——预测击杀落空
+                                       # 计入 _combat_kills，同场≥2 次误判重生召唤物
+                                       # 并写跨局名册：stats.json respawn_adds 显示
+                                       # SOUL_FYSH（无复生机能，FadeMove 仅自挂无实体
+                                       # ×2）confirmations=2 已激活、WATERFALL_GIANT=1
+                                       # 在途，1440-F17-T1「全场均为已证实重生体」注记
+                                       # 对单体 Boss 在产。键=True 时无实体目标每 hit
+                                       # 封顶 1 逐段结算（格挡先行吸收、不掉层），
+                                       # 中标单体攻击附带 ENEMY_INTANGIBLE_CAP_OBS
+                                       # 纯观测注记；False=严格回滚旧牌面全额口径
+                                       # （评分/击杀/注记零差异）。
     "knowledge_demon_curse_tax": 1.0,  # 知识恶魔诅咒四选机制税（第481~488局
                                         # 批复盘）：瓦解/心灵腐化/懒惰/衰朽在
                                         # eval_reward_card 同价并列，点击恒落
